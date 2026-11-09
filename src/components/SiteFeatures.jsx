@@ -28,12 +28,24 @@ const FEATURES = {
     { Icon: IconLive, title: 'Beat real people', text: 'Blacktop is live 1v1, 2v2 and 3v3, played to 11. Compete puts five people in a pool with the same spins, and the highest overall wins.' },
     { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
+  soccer: [
+    { Icon: IconSpin, title: 'Build a striker', text: "Spin a club, land on one of its real players and take one trait from him. Haaland's finishing, Messi's dribbling, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: "He plays a full league season, the cup and Europe, and you find out if he wins the Golden Boot, the title or the Ballon d'Or." },
+    { Icon: IconLive, title: 'Play the World Cup', text: 'Spin the World Cup pool instead and build him from the 48 nations of 2026. Then take a nation through the group and the knockouts.' },
+    { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
+  ],
+  baseball: [
+    { Icon: IconSpin, title: 'Build a player', text: "Spin an MLB team, land on one of its hitters or pitchers and take one trait from him. Judge's power, Skenes's fastball, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: 'He plays 162 games and the postseason, and you find out if he wins the MVP, the Cy Young or the World Series.' },
+    { Icon: IconLive, title: 'Draft the legends', text: 'Spin the All-Time pool instead and build him from the franchise greats. Then play the season with any of the 30 clubs.' },
+    { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
+  ],
 }
 
 export default function SiteFeatures({ sport = 'nfl', className = '' }) {
-  const list = FEATURES[sport === 'bucket' ? 'bucket' : 'nfl']
+  const list = FEATURES[sport === 'bucket' || sport === 'soccer' || sport === 'baseball' ? sport : 'nfl']
   return (
-    <section className={`splash-features${sport === 'bucket' ? ' splash-features--bucket' : ''} ${className}`} aria-label="How it plays">
+    <section className={`splash-features${sport === 'bucket' ? ' splash-features--bucket' : sport === 'soccer' ? ' splash-features--soccer' : sport === 'baseball' ? ' splash-features--baseball' : ''} ${className}`} aria-label="How it plays">
       {list.map(({ Icon, title, text }, i) => (
         <div key={title} className="splash-feature" style={{ '--i': i }}>
           <span className="splash-feature-icon"><Icon /></span>

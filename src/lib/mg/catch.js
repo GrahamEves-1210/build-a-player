@@ -8,16 +8,16 @@
 //              A catch moves the chains; a miss is the next down from the same spot.
 //   release    press coverage: the corner is squared up over him at the line, he jabs, the
 //              receiver swipes the hand away and gets by.
-import { byV, clamp, circle, lerp, outcome, layer, football, rngOf, prog, easeOut, easeIn, easeInOut, themOf, ring, rr, GOOD, BAD, GOLD, text, DISPLAY, LABEL, manOf, paceOf, stage, particles, nudge } from './kit.js'
+import { byV, clamp, circle, lerp, outcome, layer, football, rngOf, prog, easeOut, easeIn, easeInOut, themOf, ring, rr, GOOD, BAD, GOLD, text, DISPLAY, LABEL, manOf, xiOf, paceOf, stage, particles, nudge } from './kit.js'
 import { nameTag, tilt, untilt, ground, stands, floodlight, vignette, paintGrass, athlete, warmAthlete, skinOf, goalPosts, rollingField, turfLine, breakupPose, ballShadow, airBall as artBall, crowdPop } from './art.js'
-import { placeStamp, put, action } from './read.js'
+import { placeStamp, put, action, tagsAll } from './read.js'
 import { calm } from './dash.js'
 import { drawTags, paintFieldFlat, flightAt, snapBall, looseBall, qbPose, SNAP_MS, SPIKE_MS, SL, SR } from './throw.js'
 
 export const how = {
   gauntlet: 'Seven QBs, side to side. Press the side of the throw as the ball reaches his hands.',
   catch: 'Three snaps. Press the shoulder the ball comes over as it drops in.',
-  release: 'He jabs at your chest. Press the side of each jab as his hand gets there.',
+  release: 'He jabs at the chest. Press the side of each jab as his hand gets there.',
 }
 const SETUP = {
   gauntlet: { n: 7, need: 4, win0: 80, win1: 130, verb: 'CAUGHT' },
@@ -418,7 +418,12 @@ const flatGrass = (view, b) => f => paintGrass(f, view, { yards: b / 5 })
 const us = c => ({ color: c.us, trim: c.trim, pants: c.trim })
 const OL_F = [-60, -30, 0, 30, 60], DL_F = [-45, -15, 15, 45]
 // who's who, from the roster: nothing outside a career
+// (the full eleven a side, career's xi: every man real, their front four too; his own man stays him)
 function menOf(g, cast) {
+  if (!g.men && cast?.us?.xi && cast?.them?.xi) {
+    const x = (side, spot, i) => xiOf(cast, side, spot, i)
+    g.men = { me: manOf(cast, 'us', g.group, 0), cb: x('them', 'db', 0), sf: x('them', 'db', 2), qb: x('us', 'qb', 0), rb: x('us', 'rb', 0), ol: [0, 1, 2, 3, 4].map(i => x('us', 'ol', i)), dl: [0, 1, 2, 3].map(i => x('them', 'dl', i)) }
+  }
   return g.men ?? (g.men = { me: manOf(cast, 'us', g.group, 0), cb: manOf(cast, 'them', 'db', 0), sf: (cast?.them?.db?.length ?? 0) > 2 ? manOf(cast, 'them', 'db', 2) : null, qb: manOf(cast, 'us', 'qb', 0), rb: manOf(cast, 'us', 'rb', 0), ol: [0, 1, 2, 3, 4].map(i => manOf(cast, 'us', 'ol', i)) })
 }
 // a real man: his number and skin now, his name at the end of the frame so nobody stands on it.
@@ -453,6 +458,8 @@ function downOf(balls, k) {
 }
 const lookOf = (m, number, skin) => (m ? { number: m.number, skin: m.skin, name: m.name } : { number, skin })
 const bare = (m, number, skin) => (m ? { number: m.number, skin: m.skin } : { number, skin })
+// (a lineman: his name once it's over, so five side by side never cover the numbers)
+const quietOf = (m, number, skin) => (m?.last ? { number: m.number, skin: m.skin, name: m.name, quiet: true } : bare(m, number, skin))
 // the two benches go by with the field; each watches it, and each stands on the apron, off the grass
 function sidelines(x, view, goalY, col, them) {
   const O = { pose: 'ready', step: null, carry: false, fall: 0, fallX: 0, size: 0.72, number: null, kit: 'pads' }
@@ -568,14 +575,15 @@ function drawCatch(ctx, g, view) {
   // ── the rest of them, at the line
   const qbY = fl(-5 - 2 * easeOut(prog(sec, 0, 0.6))), qbAge = t - b.from
   if (fl(0) - 16 < h) {
-    for (let k = 0; k < DL_F.length; k++) put(180 + DL_F[k], fl(0.9), themT, { dir: 'down', pose: on ? 'block' : 'stance', ...bare(null, 90 + k, skinOf(k + 2)), size: MEN_SIZE })
-    for (let k = 0; k < OL_F.length; k++) put(180 + OL_F[k], fl(-0.9), usT, { dir: 'up', pose: on ? 'block' : 'stance', ...bare(men.ol[k], 70 + k, skinOf(k + 9)), size: MEN_SIZE })
+    for (let k = 0; k < DL_F.length; k++) put(180 + DL_F[k], fl(0.9), themT, { dir: 'down', pose: on ? 'block' : 'stance', ...quietOf(men.dl?.[k], 90 + k, skinOf(k + 2)), size: MEN_SIZE })
+    for (let k = 0; k < OL_F.length; k++) put(180 + OL_F[k], fl(-0.9), usT, { dir: 'up', pose: on ? 'block' : 'stance', ...quietOf(men.ol[k], 70 + k, skinOf(k + 9)), size: MEN_SIZE })
   }
   if (qbY - 10 < h) {
     const wind = qbAge >= -240 && qbAge < 0, pose = wind ? 'qb-cock' : qbPose(null, qbAge)
     put(180, qbY, usT, { ...lookOf(men.qb, 7, skinOf(9)), dir: pose ? (b.wide < 0 ? 'left' : 'right') : 'up', pose, carry: !pose && qbAge < 0, size: MEN_SIZE })
     put(180 - b.wide * 26, fl(-4.5), usT, { ...lookOf(men.rb, 28, skinOf(7)), dir: 'up', pose: 'ready', size: MEN_SIZE })
   }
+  tagsAll(!!g.done && t > g.doneAt + 450)   // (it's over: every man's name, the line's too)
   action(ctx, view)
   if (sec < SNAP_MS / 1000 && los < h) snapBall(ctx, view, 180, los, 180, qbY, sec * 1000)
   // ── what happens once, in the picture: turf, the hit, the ball on the ground ──
@@ -741,7 +749,7 @@ function drawRelease(ctx, g, view) {
   const drawCB = () => { cbP = real(ctx, view, cbx, cby, men.cb, { color: them.color, trim: them.trim, pants: them.trim, dir: cbDir, step: cbShow ? null : stepNow, pose: cbPose, size }, -s * 23) }
   const drawWR = () => { wrP = real(ctx, view, wrx, wry, men.me, { ...us(c), dir: 'up', step: lostIt && endAge > 700 ? null : stepNow, pose: wrPose, carry: gotIt, size }) }
   if (wry < cby) { drawWR(); drawCB() } else { drawCB(); drawWR() }
-  for (let i = 0; i < 3; i++) athlete(ctx, view, base - s * (104 + i * 32), row - 13, { color: them.color, trim: them.trim, pants: them.trim, dir: 'down', pose: moving ? 'block' : 'stance', size: 0.98 })
+  for (let i = 0; i < 3; i++) liner(ctx, view, base - s * (104 + i * 32), row - 13, men.dl?.[i] ?? null, { color: them.color, trim: them.trim, pants: them.trim, dir: 'down', pose: moving ? 'block' : 'stance', size: 0.98 }, (i + 1) % 2)
   for (let i = 0; i < 4; i++) liner(ctx, view, base - s * (90 + i * 32), row + 13, men.ol[i], { ...us(c), dir: 'up', pose: moving ? 'block' : 'stance', size: 0.98 }, i % 2)
   const qbx = base - s * 150, qby = row + 44 + 20 * easeOut(prog(sec, 0, 0.8))
   const qbNow = won && endAge > R_THROW - 220 ? (tossAge < 0 ? 'qb-cock' : qbPose(null, tossAge)) : null

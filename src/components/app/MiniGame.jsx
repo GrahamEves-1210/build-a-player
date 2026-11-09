@@ -1,7 +1,7 @@
 import { minigameOpen } from '../../lib/ads'
 import { useEffect, useRef, useState } from 'react'
 import { GAMES, traitValue } from '../../lib/minigames'
-import { engineFor, BUCKET_GAMES } from '../../lib/mg'
+import { engineFor, BUCKET_GAMES, SOCCER_GAMES, BASEBALL_GAMES } from '../../lib/mg'
 import { byV } from '../../lib/mg/kit'
 import { seeded } from '../../lib/rng'
 import { momentSituation } from '../../lib/situations'
@@ -18,12 +18,13 @@ import MgDemo from './MgDemo'
 // are in lib/mg/. A test can finish any game through window.__bapMini.finish(score).
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 // practice and camp have no playoff game behind them: these games still need a score, so they get one that fits
-const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line'])
+// (baseball's moments too: the inning, the outs, the men on and the count are the moment)
+const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line', 'at-bat', 'walk-off', 'steal-second', 'strike-out', 'escape-jam'])
 
 // retry (Career, app): a miss can be played again for a video, once
 // labV (the test lab): plays at this grade instead of the build's
 // sim (Career's Mini Games switch): no game, the trait decides, about as an average player would do
-export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, team = null, opp = null, pos = null, cast = null, situation = null, weather = null, labV = null, sim = false, onSkipAll = null, children = null }) {
+export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, team = null, opp = null, pos = null, cast = null, situation = null, weather = null, labV = null, sim = false, onSkipAll = null, empty = false, children = null }) {
   const def = GAMES[game]
   // its own address, with no ads on it, for as long as it's open
   useEffect(() => (sim ? undefined : minigameOpen()), [sim])
@@ -84,7 +85,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   if (!def || sim) return null
   const engine = engineFor(game)
   const shown = situation ?? (NEEDS_SCORE.has(game) ? momentSituation(game, seed, { us: team?.short ?? 'HOME', them: opp?.short && opp.short !== team?.short ? opp.short : 'AWAY' }) : null)
-  const sport = BUCKET_GAMES.has(game) ? 'bucket' : 'nfl'
+  const sport = SOCCER_GAMES.has(game) ? 'soccer' : BASEBALL_GAMES.has(game) ? 'baseball' : BUCKET_GAMES.has(game) ? 'bucket' : 'nfl'
   const how = engine?.how?.[`${game}:${pos}`] ?? engine?.how?.[game] ?? def.how
   // (the traits this player has: the 40's list covers a QB's Legs and a lineman's Get Off, the cone's four positions)
   const owned = build ? def.traits.filter(t => build[t]) : []
@@ -95,12 +96,12 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
       {stage === 'intro' && (
         <div className="mg-intro">
           <p>{how}</p>
-          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} />}
+          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} empty={empty} />}
           <button className="ag-btn ag-btn--gold" onClick={() => { setStage('play'); sfx('whistle') }}>READY</button>
           {onSkipAll && <button className="ag-btn ag-btn--ghost mg-skipall" onClick={() => { sfx('tap'); onSkipAll() }}>TURN OFF KEY MOMENTS</button>}
         </div>
       )}
-      {stage === 'play' && <MgStage key={tries} home={home} superBowl={superBowl} game={game} def={def} v={v} arm={labV ?? traitValue('bomb', build)} seed={tries ? `${seed}-again` : seed} sport={sport} team={team} opp={opp} pos={pos} cast={cast} situation={shown} weather={weather} onDone={done}>{children}</MgStage>}
+      {stage === 'play' && <MgStage key={tries} home={home} superBowl={superBowl} game={game} def={def} v={v} arm={labV ?? traitValue('bomb', build)} seed={tries ? `${seed}-again` : seed} sport={sport} team={team} opp={opp} pos={pos} cast={cast} situation={shown} weather={weather} empty={empty} onDone={done}>{children}</MgStage>}
       {stage === 'done' && result && (
         <div className="mg-result">
           <b>{result.hit ? (result.score >= 0.85 ? 'ELITE' : 'GOOD') : result.out ? 'OUT OF TIME' : 'NO GOOD'}</b>

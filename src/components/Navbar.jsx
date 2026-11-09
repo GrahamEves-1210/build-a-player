@@ -38,6 +38,33 @@ const BUCKET_STEPS_MOBILE = [
   { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
 ]
 
+const SOCCER_STEPS_DESKTOP = [
+  { n: '1', title: 'Spin',       body: 'Spin a club (or a nation in World Cup) and land on one of its players.' },
+  { n: '2', title: 'Select',     body: 'Click a trait chip to put it in your build, or drag it onto its spot on the player.' },
+  { n: '3', title: 'Repeat ×10', body: 'Fill all ten trait slots, one per spin.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick a club, then play the season: the league, the cup and Europe.' },
+]
+const SOCCER_STEPS_MOBILE = [
+  { n: '1', title: 'Spin',       body: 'Spin a club (or a nation in World Cup) and land on one of its players.' },
+  { n: '2', title: 'Tap',        body: 'Tap a trait chip to put it straight into your build.' },
+  { n: '3', title: 'Repeat ×10', body: 'Fill all ten trait slots, one per spin.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick a club, then play the season: the league, the cup and Europe.' },
+]
+
+const BASEBALL_STEPS_DESKTOP = [
+  { n: '1', title: 'Spin',       body: 'Spin an MLB team and land on one of its hitters or pitchers.' },
+  { n: '2', title: 'Select',     body: 'Click a trait chip to put it in your build, or drag it onto its spot on the player.' },
+  { n: '3', title: 'Repeat ×10', body: 'Fill all ten trait slots, one per spin.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick a team, then play 162 games, the postseason and the awards.' },
+]
+const BASEBALL_STEPS_MOBILE = [
+  { n: '1', title: 'Spin',       body: 'Spin an MLB team and land on one of its hitters or pitchers.' },
+  { n: '2', title: 'Tap',        body: 'Tap a trait chip to put it straight into your build.' },
+  { n: '3', title: 'Repeat ×10', body: 'Fill all ten trait slots, one per spin.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick a team, then play 162 games, the postseason and the awards.' },
+]
+const BASEBALL_POS_NAV = { bat: { short: 'BAT', name: 'Batter', sub: 'C · IF · OF · DH' }, pit: { short: 'PIT', name: 'Pitcher', sub: 'SP · RP · CL' } }
+
 const POS_COLORS = { qb: '#95D5B2', rb: '#fb923c', wr: '#60a5fa', te: '#c084fc', db: '#f87171', dl: '#a3e635', lb: '#2dd4bf', ol: '#fbbf24' }
 const POS_NAMES  = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line' }
 const BUCKET_POS_SUB    = { guard: 'PG · SG · SF', big: 'PF · C' }
@@ -193,7 +220,7 @@ function GradesSwitch() {
     </button>
   )
 }
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isDL, isLB, isOL, position, isPlus, isBucket, bucketPosition, versusState, gradesToggle = false }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isDL, isLB, isOL, position, isPlus, isBucket, isSoccer = false, isBaseball = false, baseballPosition = 'bat', onSwitchBaseballPosition = null, bucketPosition, versusState, gradesToggle = false }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
@@ -212,7 +239,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   useEffect(() => { if (open) { try { setProfileIcon(localStorage.getItem('bap_profile_icon')) } catch {} } }, [open])
   const avatarEmoji = isPlus && profileIcon ? PROFILE_ICON_EMOJI[profileIcon] ?? null : null
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-  const STEPS = isBucket
+  const STEPS = isBaseball
+    ? (isMobile ? BASEBALL_STEPS_MOBILE : BASEBALL_STEPS_DESKTOP)
+    : isSoccer
+    ? (isMobile ? SOCCER_STEPS_MOBILE : SOCCER_STEPS_DESKTOP)
+    : isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
     : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE, isDB, isOL, isDL, isLB) : STEPS_DESKTOP(isRB, isWR, isTE, isDB, isOL, isDL, isLB))
 
@@ -281,6 +312,48 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             )}
           </div>
         </div>
+      ) : isBaseball ? (
+        // baseball: a batter or a pitcher (the switch starts a new build at the other one; off mid-season)
+        gameMode === 'salarycap' ? (
+          <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
+        ) : (
+          <div className="nav-pos-dropdown" ref={posDropRef}>
+            {onSwitchBaseballPosition ? (
+              <button className="tab-pill tab-pill-qb active nav-pos-trigger" onClick={() => setPosDropOpen(o => !o)}>
+                <span className="nav-pos-sub">{BASEBALL_POS_NAV[baseballPosition]?.sub}</span>
+                <span className="nav-pos-name">{BASEBALL_POS_NAV[baseballPosition]?.name ?? 'Batter'}</span>
+                <IconChevron up={posDropOpen} />
+              </button>
+            ) : (
+              <span className="tab-pill tab-pill-qb active nav-pos-trigger nav-pos-trigger--static">
+                <span className="nav-pos-sub">{BASEBALL_POS_NAV[baseballPosition]?.sub}</span>
+                <span className="nav-pos-name">{BASEBALL_POS_NAV[baseballPosition]?.name ?? 'Batter'}</span>
+              </span>
+            )}
+            {posDropOpen && onSwitchBaseballPosition && (
+              <div className="nav-pos-menu">
+                {['bat', 'pit'].filter(p => p !== baseballPosition).map(p => (
+                  <button key={p} className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchBaseballPosition(p) }}>
+                    <span className="nav-pos-sub">{BASEBALL_POS_NAV[p].sub}</span>
+                    {BASEBALL_POS_NAV[p].name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      ) : isSoccer ? (
+        // soccer: the striker is the one position (the goalkeeper's still to come)
+        gameMode === 'salarycap' ? (
+          <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
+        ) : (
+          <div className="nav-pos-dropdown">
+            <span className="tab-pill tab-pill-qb active nav-pos-trigger nav-pos-trigger--static">
+              <span className="nav-pos-badge" style={{ '--pos-col': '#f4f4f5' }}>ST</span>
+              <span className="nav-pos-name">Striker</span>
+            </span>
+          </div>
+        )
       ) : isBucket ? (
         gameMode === 'salarycap' ? (
           <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>

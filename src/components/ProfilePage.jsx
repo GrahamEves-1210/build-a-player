@@ -112,7 +112,11 @@ import TrophyCase from './app/TrophyCase'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
-import { IconGear, IconTrophy, IconCrown, IconFootball, IconBasketball } from './app/icons'
+import { IconGear, IconTrophy, IconCrown, IconFootball, IconBasketball, IconSoccer, IconBaseball } from './app/icons'
+import { SOCCER_LIVE } from '../lib/soccerLive'
+import SoccerCareer from './app/SoccerCareer'
+import { BASEBALL_LIVE } from '../lib/baseballLive'
+import BaseballCareer from './app/BaseballCareer'
 import { useCountUp as countUp } from '../lib/useCountUp'
 import { openBillingPortal, BILLING_DUE } from '../lib/webCheckout'
 
@@ -198,7 +202,7 @@ const PROFILE_ICONS = [
   { id: 'skull',    e: '💀' }, { id: 'goat',   e: '🐐' },
 ]
 
-export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, isPlus = false, isBucket = false, currentPool = [], isCustomMode = false, onCustomModeChange, onCustomRatingsChange, onThemeChange, onBack, onSignOut, onAdsDisabled, onOpenCustomModal, isBucketCustomMode = false, onBucketCustomModeChange, onOpenBucketCustomModal }) {
+export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, isPlus = false, isBucket = false, currentPool = [], isCustomMode = false, onCustomModeChange, onCustomRatingsChange, onThemeChange, onBack, onSignOut, onAdsDisabled, onOpenCustomModal, isBucketCustomMode = false, onBucketCustomModeChange, onOpenBucketCustomModal, isSoccer = false, isBaseball = false }) {
   const [show, setShow]           = useState(false)
   const [career, setCareer]       = useState(null)
   const [careerLoad, setCareerLoad] = useState(true)
@@ -236,7 +240,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [showRings, setShowRings] = useState(false)
   const [salaryCareer, setSalaryCareer] = useState(null)
   const [salaryCareerLoad, setSalaryCareerLoad] = useState(true)
-  const [gameSection, setGameSection] = useState((IS_APP || APP_LOOK) && isBucket ? 'bucket' : 'nfl')
+  const [gameSection, setGameSection] = useState(isBaseball && BASEBALL_LIVE ? 'baseball' : isSoccer && SOCCER_LIVE ? 'soccer' : (IS_APP || APP_LOOK) && isBucket ? 'bucket' : 'nfl')
   const [careerGame, setCareerGame] = useState(isOL ? 'ol' : isDL ? 'dl' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [adsLifetime, setAdsLifetime] = useState(false)
@@ -344,6 +348,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .not('game_mode', 'ilike', 'lb-%')
       .not('game_mode', 'ilike', 'ol-%')
       .not('game_mode', 'ilike', 'bucket-%')
+      .not('game_mode', 'ilike', 'soccer-%')
+      .not('game_mode', 'ilike', 'baseball-%')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data || data.length === 0) { setCareer(null); setCareerLoad(false); return }
@@ -974,10 +980,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             </div>
           )
 
-          if (!hasNFL && !hasBucket && !hasSalary) return null
+          // (soccer, once it's live: its section loads its own seasons, so the switch always shows)
+          if (!hasNFL && !hasBucket && !hasSalary && !SOCCER_LIVE && !BASEBALL_LIVE) return null
 
           // Show toggle whenever there's NFL data (bucket section shows empty state if no data yet)
-          const showToggle = !!hasNFL
+          const showToggle = !!hasNFL || SOCCER_LIVE || BASEBALL_LIVE
+          // the sport switch's buttons (soccer and baseball once they're live)
+          const sportIds = ['nfl', 'bucket', ...(SOCCER_LIVE ? ['soccer'] : []), ...(BASEBALL_LIVE ? ['baseball'] : [])]
           const section = showToggle ? gameSection : (hasBucket ? 'bucket' : hasSalary ? 'salary' : 'nfl')
 
           // Combined across QB/RB/WR/TE/DB/DL classic (build-a-player only — bucket is
@@ -1037,7 +1046,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               {/* Top-level game switch */}
               {/* new look: the home screen's FOOTBALL / BASKETBALL switch */}
               {showToggle && (IS_APP || APP_LOOK) && (
-                <div className={`ag-sport ag-sport--${section === 'bucket' ? 'bucket' : 'nfl'} prf-sport`} role="tablist" aria-label="Sport">
+                <div className={`ag-sport ag-sport--${sportIds.includes(section) ? section : 'nfl'} prf-sport${sportIds.length === 3 ? ' ag-sport--three' : sportIds.length === 4 ? ' ag-sport--four' : ''}`} style={sportIds.length > 2 ? { '--si': Math.max(0, sportIds.indexOf(section)) } : undefined} role="tablist" aria-label="Sport">
                   <span className="ag-sport-thumb" aria-hidden="true" />
                   <button role="tab" aria-selected={section === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${section === 'nfl' ? ' is-on' : ''}`} onClick={() => setGameSection('nfl')}>
                     <span className="ag-sport-ico"><IconFootball size={17} /></span>
@@ -1047,6 +1056,18 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                     <span className="ag-sport-ico"><IconBasketball size={17} /></span>
                     <span className="ag-sport-txt"><b>BASKETBALL</b></span>
                   </button>
+                  {SOCCER_LIVE && (
+                    <button role="tab" aria-selected={section === 'soccer'} className={`ag-sport-btn ag-sport-btn--soccer${section === 'soccer' ? ' is-on' : ''}`} onClick={() => setGameSection('soccer')}>
+                      <span className="ag-sport-ico"><IconSoccer size={17} /></span>
+                      <span className="ag-sport-txt"><b>SOCCER</b></span>
+                    </button>
+                  )}
+                  {BASEBALL_LIVE && (
+                    <button role="tab" aria-selected={section === 'baseball'} className={`ag-sport-btn ag-sport-btn--baseball${section === 'baseball' ? ' is-on' : ''}`} onClick={() => setGameSection('baseball')}>
+                      <span className="ag-sport-ico"><IconBaseball size={17} /></span>
+                      <span className="ag-sport-txt"><b>BASEBALL</b></span>
+                    </button>
+                  )}
                 </div>
               )}
               {showToggle && !(IS_APP || APP_LOOK) && (
@@ -1057,6 +1078,16 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                   <button className={`prf-game-switch-btn${section === 'bucket' ? ' active' : ''}`} onClick={() => setGameSection('bucket')}>
                     <MiniBucketLogo />
                   </button>
+                  {SOCCER_LIVE && (
+                    <button className={`prf-game-switch-btn${section === 'soccer' ? ' active' : ''}`} onClick={() => setGameSection('soccer')} aria-label="Soccer">
+                      <IconSoccer size={22} />
+                    </button>
+                  )}
+                  {BASEBALL_LIVE && (
+                    <button className={`prf-game-switch-btn${section === 'baseball' ? ' active' : ''}`} onClick={() => setGameSection('baseball')} aria-label="Baseball">
+                      <IconBaseball size={22} />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1366,6 +1397,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                   </div>
                 </>
               )}
+
+              {section === 'soccer' && SOCCER_LIVE && <SoccerCareer user={user} show={show} />}
+              {section === 'baseball' && BASEBALL_LIVE && <BaseballCareer user={user} show={show} />}
 
               {section === 'bucket' && (() => {
                 const isAlltimeBucket   = bucketCareerMode === 'alltime'

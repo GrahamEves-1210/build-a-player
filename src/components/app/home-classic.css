@@ -602,8 +602,10 @@ html.is-app .ag-home.ag-home--classic.ag-home--classic :is(.bt-art-net, .bt-art-
 
 /* fixes since then that the old page needs too */
 /* DL: the arm out to the left pushes his body right of the art's centre; WR/TE/DB art is drawn larger, so its words are shrunk back */
-.ag-home.ag-home--classic.ag-home--classic .agc-figure--dl { left: calc(50% - 9px); }
-.ag-home.ag-home--classic.ag-home--classic .agc-figure--dl .splash-stack-band-label { transform: translateX(9px); }
+.ag-home.ag-home--classic.ag-home--classic :is(.agc-figure--dl, .agc-figure--lb) { left: calc(50% - 9px); }
+.ag-home.ag-home--classic.ag-home--classic :is(.agc-figure--dl, .agc-figure--lb) .splash-stack-band-label { transform: translateX(9px); }
+.ag-home.ag-home--classic.ag-home--classic .agc-figure .splash-stack-band-label.is-sm { font-size: 9px; }
+.ag-home.ag-home--classic.ag-home--classic .agc-figure .splash-stack-band-label.is-xs { font-size: 8px; }
 .ag-home.ag-home--classic.ag-home--classic :is(.agc-figure--wr, .agc-figure--te) .splash-stack-band-label { font-size: calc(11px / 1.18); }
 .ag-home.ag-home--classic.ag-home--classic .agc-figure--db .splash-stack-band-label { font-size: calc(11px / 1.05); }
 /* DL's NEW tag: inside the tile (the row scrolls sideways, so anything above it is cut off) */
@@ -614,3 +616,20 @@ html.is-app .ag-home.ag-home--classic.ag-home--classic :is(.bt-art-net, .bt-art-
 .ag-home.ag-home--classic.ag-home--classic .agc-potd-row.is-wait { min-height: 52px; }
 .ag-home.ag-home--classic.ag-home--classic .agc-potd-row.is-wait::before { content: ''; grid-column: 1 / -1; height: 11px; width: 55%; border-radius: 2px; background: rgba(255,255,255,.07); }
 
+
+/* the classic Home, soccer: the pitch on the stage, white for the accent */
+.ag-home--soccer.ag-home--classic.ag-home--classic { background: radial-gradient(ellipse 100% 34% at 50% 0%, rgba(255,255,255,.07) 0%, transparent 70%), var(--ag-bg); }
+.ag-home--soccer.ag-home--classic.ag-home--classic .agc-stage-photo { background-image: url('/soccerbackground.webp'); background-position: center 46%; filter: saturate(.9) brightness(.95); }
+.ag-home--soccer.ag-home--classic.ag-home--classic .agc-wordmark em { color: #9a9ca1; }
+.ag-home--soccer.ag-home--classic.ag-home--classic .ag-bg-lines { background: repeating-linear-gradient(180deg, transparent 0 63px, rgba(255,255,255,.04) 63px 64px); }
+.ag-home--soccer.ag-home--classic.ag-home--classic .ag-mode--soccer { --mc: #f2f2ee; --mc2: #c6c7cb; border-color: rgba(255,255,255,.4); background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.03)), rgba(10,10,11,.8); }
+@media (min-width: 1024px) { html.app-look .ag-home--soccer.ag-home--classic.ag-home--classic .agc-figure { bottom: 50px; transform: scale(2.2); } }
+
+/* ═══ BASEBALL: the classic Home (scratchpad baseball/ART.md). The ballpark at night on the stage, the stitch
+   red for the accent, cream for the words; the classic cards keep their own tinted look, in red */
+.ag-home--baseball.ag-home--classic.ag-home--classic { background: var(--ag-bg); }
+.ag-home--baseball.ag-home--classic.ag-home--classic .agc-stage-photo { background-image: url('/baseballbackground.webp'); background-position: center 30%; filter: saturate(.92) brightness(.98); }
+.ag-home--baseball.ag-home--classic.ag-home--classic .agc-wordmark em { color: #c8102e; }
+.ag-home--baseball.ag-home--classic.ag-home--classic .ag-bg-lines { background: repeating-linear-gradient(180deg, transparent 0 63px, rgba(243,238,227,.03) 63px 64px); }
+.ag-home--baseball.ag-home--classic.ag-home--classic .ag-mode--baseball { --mc: #c8102e; --mc2: #9c0c24; border-color: rgba(200,16,46,.7); background: linear-gradient(145deg, rgba(200,16,46,.22), rgba(200,16,46,.06)), rgba(9,13,22,.82); }
+@media (min-width: 1024px) { html.app-look .ag-home--baseball.ag-home--classic.ag-home--classic .agc-figure { bottom: 50px; transform: scale(2.2); } }

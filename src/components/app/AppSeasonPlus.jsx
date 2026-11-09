@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { whenStill } from '../../lib/userScroll'
 import { createPortal } from 'react-dom'
-import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
+import { GAME_LINE, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
 import { sfx, haptic, victory, titleConfetti } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame, IconTrophy } from './icons'
@@ -15,22 +15,9 @@ import { NameTag } from './NameTag'
 const nick = opp => (opp || '').split(' ').slice(-1)[0]
 
 // ── Moment: the season pauses here ──────────────────────────────────────────
-// Moments on / off (the sim page's team card). Off: the season plays straight
-// through, no decisions; the milestones and records still fire.
-export function MomentsToggle() {
-  const [off, setOff] = useState(() => momentsOff())
-  // (a moment's own button can turn them off while this is on screen)
-  useEffect(() => {
-    const sync = () => setOff(momentsOff())
-    window.addEventListener('bap:moments-off', sync)
-    return () => window.removeEventListener('bap:moments-off', sync)
-  }, [])
-  return (
-    <button className={`sts-moments${off ? ' is-off' : ''}`} onClick={() => { setMomentsOff(!off); setOff(!off); sfx('tap') }} aria-pressed={!off} title={off ? 'Turn the season\'s moments back on' : 'Play the season straight through, no decisions'}>
-      <span className="sts-moments-knob" /><span>MOMENTS {off ? 'OFF' : 'ON'}</span>
-    </button>
-  )
-}
+// Moments on / off (the sim page's team card): components/simFlow.jsx, light enough for the soccer and baseball
+// season pages to show it without loading the season director
+export { MomentsToggle } from '../simFlow'
 
 export function MomentCard({ moment, onPick, onTurnOff = null }) {
   const [picked, setPicked] = useState(null)
@@ -90,28 +77,8 @@ export function NowCard({ game, pos, sport, team, logoFor, idx, total }) {
 }
 
 // ── Season pulse: games over .500, the playoff line, the current point ───────
-export function Pulse({ games, total, playoffWins }) {
-  const pts = useMemo(() => {
-    let d = 0
-    return games.map((g, i) => { d += g.won ? 1 : -1; return [i + 1, d] })
-  }, [games])
-  const W = 320, H = 72, pad = 6
-  const maxAbs = Math.max(4, ...pts.map(p => Math.abs(p[1])))
-  const x = i => pad + (i / total) * (W - pad * 2)
-  const y = d => H / 2 - (d / maxAbs) * (H / 2 - pad)
-  const path = pts.length ? 'M' + pts.map(p => `${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' L') : ''
-  const last = pts[pts.length - 1]
-  // the pace needed to reach the playoff line by season's end
-  const needD = playoffWins * 2 - total
-  return (
-    <svg className="sm-pulse" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-      <line x1={pad} x2={W - pad} y1={H / 2} y2={H / 2} className="sm-pulse-zero" />
-      <line x1={pad} x2={W - pad} y1={y(needD)} y2={y(needD)} className="sm-pulse-po" />
-      {path && <path d={path} className="sm-pulse-line" />}
-      {last && <circle cx={x(last[0])} cy={y(last[1])} r="3.5" className="sm-pulse-dot" />}
-    </svg>
-  )
-}
+// (it lives in components/simFlow.jsx, light enough for soccer's and baseball's season pages to share it)
+export { Pulse } from '../simFlow'
 
 // ── Wire: headlines ─────────────────────────────────────────────────────────
 export function Wire({ items }) {

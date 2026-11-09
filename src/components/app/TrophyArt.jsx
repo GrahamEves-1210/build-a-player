@@ -81,6 +81,24 @@ const LEAVES = (() => {
   return out
 })()
 
+// The Commissioner's Trophy's flags: a ring of them rising from the base, fanning out to a crown, each a
+// staff with its flag at the top, flying outward
+const WS_FLAGS = (() => {
+  const out = []
+  for (let i = 0; i < 11; i++) {
+    const t = (i - 5) / 5, dir = t < 0 ? -1 : 1
+    const bx = 32 + t * 6.2, by = 56, tx = 32 + t * 17.5, ty = 9.5 + t * t * 4.5
+    const f = (x, y) => `${x.toFixed(2)} ${y.toFixed(2)}`
+    // the staff (a thin quad), then the flag off its top
+    const staff = `M${f(bx - 0.55, by)}L${f(tx - 0.55, ty)}L${f(tx + 0.55, ty)}L${f(bx + 0.55, by)}z`
+    const flag = `M${f(tx, ty + 0.4)}L${f(tx + dir * 4.4, ty + 1.6)}L${f(tx + dir * 4.1, ty + 6.4)}L${f(tx + t * 0.9, ty + 8.6)}z`
+    out.push({ d: staff + flag })
+  }
+  return out
+})()
+// a bat standing up, barrel on top, centred on x 32 (the MVP's crossed pair turns it)
+const BAT_D = 'M29.6 8.6c0-2 1-3.2 2.4-3.2s2.4 1.2 2.4 3.2v9c0 7.6-1.3 12.4-1.3 19.6v13.6h-2.2V37.2c0-7.2-1.3-12-1.3-19.6zM29.8 50.2h4.4v1.4h-4.4z'
+
 // The metal of each trophy (what the light catches), and what isn't metal
 const ART = {
   // Championship: a ring on a velvet cushion, its gem in the game's colour
@@ -239,6 +257,146 @@ const ART = {
       </>
     ),
   },
+  // Soccer's Golden Boot: a boot on the plinth, its studs on the stone
+  boot: {
+    metal: (
+      <>
+        <path d="M19 22h15.5l1.2 19c6.5 1.4 12.6 4.6 15.4 9.6 1.4 2.6.8 5.6-2.3 6.4H19.6c-2 0-3.1-1.2-3-3.2z" fill={G} />
+        <path d="M16.6 57h33.4c-.6 2.2-2.2 3.4-4.6 3.4H19.4c-1.6 0-2.8-1.4-2.8-3.4z" fill={GD} />
+        {[20, 26, 38, 44].map(x => <rect key={x} x={x} y="60" width="3" height="4" rx=".8" fill={G} />)}
+        <ellipse cx="26.75" cy="22" rx="7.75" ry="1.8" fill={GV} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <g fill="none" stroke="#6e4f0c" strokeWidth="1" strokeLinecap="round" opacity=".75">
+        <path d="M29 41.5l6.4-1.5M30 45l6.6-1.3M31.2 48.5l6.8-1" />
+        <path d="M19.4 31h15.6" />
+      </g>
+    ),
+  },
+  // The Ballon d'Or (and the World Cup's Golden Ball): a gold football on a post
+  ballon: {
+    metal: (
+      <>
+        <path d="M29.5 46h5v18h-5z" fill={G} />
+        <rect x="26" y="45" width="12" height="3" rx="1" fill={GV} />
+        <circle cx="32" cy="27" r="17" fill={G} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <>
+        <polygon points="32,21.5 37.23,25.3 35.23,31.45 28.77,31.45 26.77,25.3" fill="#6e4f0c" opacity=".7" />
+        <g fill="none" stroke="#6e4f0c" strokeWidth="1" strokeLinecap="round" opacity=".75">
+          <path d="M32 21.5V12M37.23 25.3l9-2.9M35.23 31.45l5.6 7.7M28.77 31.45l-5.6 7.7M26.77 25.3l-9-2.9" />
+        </g>
+        <circle cx="32" cy="27" r="17" fill="none" stroke="#fff" strokeOpacity=".3" strokeWidth=".6" />
+      </>
+    ),
+  },
+  // Baseball's World Series: the Commissioner's Trophy, a crown of gold flags on a silver base with the
+  // silver ball, its longitude lines and stitches, in the middle
+  ws: {
+    metal: (
+      <>
+        <path d="M21 64l2.6-7.4h16.8L43 64z" fill={S} />
+        <rect x="22.8" y="55.4" width="18.4" height="1.8" rx=".6" fill={G} />
+        {WS_FLAGS.map((f, i) => <path key={i} d={f.d} fill={i % 2 ? GV : G} />)}
+        <circle cx="32" cy="27" r="8.2" fill={S} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <>
+        <g fill="none" stroke="#4d5660" strokeWidth=".6" opacity=".65">
+          <ellipse cx="32" cy="27" rx="3.6" ry="8.2" />
+          <path d="M23.8 27h16.4" />
+        </g>
+        <path d="M26.2 21.2c2.6 3.4 2.6 8.2 0 11.6M37.8 21.2c-2.6 3.4-2.6 8.2 0 11.6" fill="none" stroke="#c3952a" strokeWidth="1.4" strokeDasharray=".6 1" />
+        <path d="M23.6 58.2h16.8" stroke="#fff" strokeOpacity=".35" strokeWidth=".6" />
+      </>
+    ),
+  },
+  // Baseball's MVP: a gold ball on a post, two crossed bats behind it
+  bbmvp: {
+    metal: (
+      <>
+        <path d="M28.6 64l1.6-18h3.6l1.6 18z" fill={G} />
+        <rect x="26" y="44.5" width="12" height="2.8" rx="1" fill={GV} />
+        <path d={BAT_D} transform="rotate(-34 32 29)" fill={G} />
+        <path d={BAT_D} transform="rotate(34 32 29)" fill={GV} />
+        <circle cx="32" cy="27" r="8.8" fill={G} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <path d="M26.4 21c2.8 3.6 2.8 8.4 0 12M37.6 21c-2.8 3.6-2.8 8.4 0 12" fill="none" stroke="#6e4f0c" strokeWidth="1.4" strokeDasharray=".6 1" opacity=".85" />
+    ),
+  },
+  // The Cy Young: a gold ball on a fluted silver column
+  cy: {
+    metal: (
+      <>
+        <path d="M27.4 64l1.6-24.6h6l1.6 24.6z" fill={S} />
+        <rect x="25" y="37" width="14" height="3.2" rx="1" fill={G} />
+        <path d="M26.6 37l2-3.4h6.8l2 3.4z" fill={G} />
+        <circle cx="32" cy="20.5" r="12.4" fill={G} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <>
+        <path d="M30.6 41v22M33.4 41v22" stroke="#4d5660" strokeWidth=".7" opacity=".5" />
+        <path d="M23.4 11.6c4 5.2 4 12.6 0 17.8M40.6 11.6c-4 5.2-4 12.6 0 17.8" fill="none" stroke="#6e4f0c" strokeWidth="1.8" strokeDasharray=".7 1.2" opacity=".85" />
+        <path d="M23.4 11.6c4 5.2 4 12.6 0 17.8M40.6 11.6c-4 5.2-4 12.6 0 17.8" fill="none" stroke="#6e4f0c" strokeWidth=".5" opacity=".6" />
+      </>
+    ),
+  },
+  // The Silver Slugger: a silver bat standing on its knob in a gold cradle
+  slugger: {
+    metal: (
+      <>
+        <path d="M29.2 10c0-2.8 1.2-4.6 2.8-4.6s2.8 1.8 2.8 4.6v12c0 10-1.6 16-1.6 25v12h-2.4V47c0-9-1.6-15-1.6-25z" fill={S} />
+        <ellipse cx="32" cy="59.6" rx="2.8" ry="1.3" fill={S} />
+        <rect x="27" y="61" width="10" height="3" rx=".8" fill={G} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <>
+        <ellipse cx="32" cy="16" rx="1.2" ry="3.4" fill="none" stroke="#4d5660" strokeWidth=".6" opacity=".7" />
+        <path d="M30.8 50.5h2.4M30.8 52.8h2.4M30.8 55.1h2.4M30.8 57.4h2.4" stroke="#4d5660" strokeWidth=".6" opacity=".55" />
+      </>
+    ),
+  },
+  // The Gold Glove: a gold fielder's glove, its web and its fingers, on a post
+  glove: {
+    metal: (
+      <>
+        <rect x="30" y="58" width="4" height="6" fill={G} />
+        <path d="M17 28.5L25.5 16l1 20-4 5z" fill={GD} />
+        <path d="M23 50c-6-3-9.5-12-10-20-.2-3 2.6-4.4 4.4-2.4 2.6 3.4 5.1 9.4 8.1 14.4z" fill={G} />
+        <rect x="24.6" y="13" width="5.6" height="28" rx="2.8" transform="rotate(-8 27.4 41)" fill={G} />
+        <rect x="30.2" y="10" width="5.6" height="31" rx="2.8" transform="rotate(-2 33 41)" fill={GV} />
+        <rect x="35.6" y="12" width="5.4" height="29" rx="2.7" transform="rotate(5 38.3 41)" fill={G} />
+        <rect x="40.4" y="17" width="5.2" height="25" rx="2.6" transform="rotate(12 43 42)" fill={GV} />
+        <path d="M21.6 35C26 32.4 40.6 32.4 45 35c.8 4 .9 7.4.3 11-1 6.2-5.4 9.6-12.3 9.6S22 52.2 21.2 45.8c-.5-4-.4-6.8.4-10.8z" fill={G} />
+        <rect x="23" y="53.6" width="20" height="5" rx="1.6" fill={GV} />
+      </>
+    ),
+    under: <Plinth />,
+    over: (
+      <>
+        <g fill="none" stroke="#6e4f0c" strokeWidth=".8" strokeLinecap="round" opacity=".7">
+          <path d="M18.6 30.4l7-10.2M20.2 34l5.8-8.4M21.6 37.6l4.6-6.6M19 27.6l4.2 12" />
+          <path d="M30.1 31l-1.1-14M35.6 30.5l-.2-17M40.8 31.5l1.2-13" />
+        </g>
+        <rect x="29" y="46.4" width="8" height="4.2" rx="1.2" fill="#6e4f0c" opacity=".45" />
+        <path d="M23 55.8h20" stroke="#6e4f0c" strokeWidth=".7" strokeDasharray="1 1" opacity=".6" />
+      </>
+    ),
+  },
   // Blacktop wins: a gold ball on a column
   blacktop: {
     metal: (
@@ -331,6 +489,14 @@ const SHELF = [
   ['opoy', 'OPOY', h => h.opoy.total],
   ['dpoy', 'DPOY', h => h.dpoy.total],
   ['allpro', 'ALL-PRO', h => h.allpro],
+  ['boot', 'GOLDEN BOOT', h => h.boot?.total ?? 0],
+  ['ballon', 'BALLON D\'OR', h => h.ballon?.total ?? 0],
+  // baseball's (lib/trophies.js loadHardware: h.baseball)
+  ['ws', 'WS TITLES', h => h.baseball?.ws ?? 0],
+  ['bbmvp', 'MLB MVP', h => h.baseball?.mvp ?? 0],
+  ['cy', 'CY YOUNG', h => h.baseball?.cy ?? 0],
+  ['slugger', 'SLUGGER', h => h.baseball?.ss ?? 0],
+  ['glove', 'GOLD GLOVE', h => h.baseball?.gg ?? 0],
 ]
 export function TrophyShelf({ uid }) {
   const [h, setH] = useState(null)
@@ -348,7 +514,7 @@ export function TrophyShelf({ uid }) {
       <div className="fr-sub-head"><span className="ag-eyebrow">TROPHIES</span></div>
       <div className="tc-mini-row">
         {won.map((t, i) => (
-          <span key={t.label} className="tc-mini-item" style={{ '--i': i }}>
+          <span key={t.kind} className="tc-mini-item" style={{ '--i': i }}>
             <TrophyArt kind={t.kind} />
             <b>{t.n.toLocaleString()}</b>
             <small>{t.label}</small>

@@ -168,3 +168,34 @@ button.cl-yr { width: 100%; color: inherit; font: inherit; cursor: pointer; }
 .crs-yr--head { align-items: end; font-family: var(--ag-font); font-size: 11px; letter-spacing: .8px; line-height: 1.1; color: var(--ag-muted); }
 .crs-yr .is-good { color: var(--ag-a1); } .crs-yr .is-elite { color: var(--ag-gold-hi); } .crs-yr .is-low { color: #e8897a; }
 .crs-yr .is-best { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Soccer's career: the country, the coming-soon goalkeeper, a drawn match, a crest-less club, the World Cup ── */
+.cr-pos button.is-soon { opacity: .45; cursor: default; display: grid; place-content: center; gap: 2px; }
+.cr-pos button.is-soon small { font-size: 10px; letter-spacing: 1px; color: var(--ag-muted); }
+.cr-nation { display: flex; align-items: center; gap: 10px; }
+.cr-nation img { width: 34px; height: 24px; object-fit: cover; border-radius: 4px; flex: none; }
+.cr-nation select { flex: 1; min-width: 0; }
+.cr-chunk-strip .is-d { background: rgba(255,255,255,.08); color: var(--ag-text); }
+.cr-club-init { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--ag-line-hi); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--ag-text); flex: none; }
+.cr-po-side .cr-club-init { width: 72px; height: 72px; font-size: 20px; }
+.cr-po-match .cr-club-init { width: 44px; height: 44px; }
+.cr-wc { margin-top: 12px; padding: 14px; }
+.cr-wc-finish { display: block; margin: 6px 0 2px; font-family: var(--ag-display); font-size: 28px; font-weight: 400; letter-spacing: .5px; }
+.cr-wc.is-ring .cr-wc-finish { color: #f5dc8a; }
+
+/* the jersey number: a row on the PLAYER tab, its sheet (AppCareer.jsx Jersey, NumberSheet) */
+.cr-contract.cr-jersey { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+.cr-jersey > span { display: flex; flex-direction: column; gap: 3px; }
+.cr-jersey-go { padding: 6px 2px; border: 0; background: none; color: var(--ag-a1); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; cursor: pointer; }
+.cr-jersey-go:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 2px; }
+.cr-num-clash { margin: 0; }
+.cr-num-clash .cr-jersey-go { padding: 0 0 0 4px; }
+.ll-sheet.cr-num-sheet { background: #0c100e; border-color: var(--ag-line-hi); }
+.cr-num-sheet .ll-head .ag-eyebrow { color: var(--ag-muted); }
+.cr-num-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; max-height: min(46dvh, 360px); overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
+.cr-num { height: 40px; border-radius: 10px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.04); color: var(--ag-text, #fff); font-family: var(--ag-display); font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; }
+.cr-num.is-on { border-color: #fff; background: rgba(255,255,255,.16); }
+.cr-num.is-taken { opacity: .28; text-decoration: line-through; cursor: default; }
+.cr-num:not(:disabled):active { transform: scale(.94); }
+.cr-num:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 1px; }
+@media (max-width: 360px) { .cr-num-grid { grid-template-columns: repeat(6, 1fr); } }

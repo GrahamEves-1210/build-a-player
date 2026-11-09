@@ -33,7 +33,7 @@ export function makeMimics(n, seed = Date.now()) {
   let x = seed % 2147483647 || 1
   const r = () => (x = (x * 16807) % 2147483647) / 2147483647
   const names = [...NAMES].sort(() => r() - 0.5).slice(0, n)
-  const wear = slot => { const list = itemsFor(slot).filter(i => !i.free); return r() < 0.55 && list.length ? pick(list, r).id : undefined }
+  const wear = slot => { const list = itemsFor(slot).filter(i => !i.free && !i.vault); return r() < 0.55 && list.length ? pick(list, r).id : undefined }
   return names.map(name => {
     const cos = Object.fromEntries(['avatar', 'nameColor', 'nameFx', 'plate'].map(k => [k, wear(k)]).filter(([, v]) => v))
     return { name, cos: Object.keys(cos).length ? cos : null }

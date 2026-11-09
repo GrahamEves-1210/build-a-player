@@ -304,8 +304,18 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratin
 // `tr` is the squad's team strength (off/def out of 100, moved by its builds:
 // lib/squadSeason.js). The 82 games, the standings and the playoffs are decided
 // once here; every build's runBucketSimulation then plays this same season.
-export function scriptBucketSeason(team, tr, rngSeed) {
+// `allTime` (an ALL-TIME squad): the league is every franchise at its peak, the way All-Time mode
+// plays it (ALLTIME_TEAM_RATINGS for the standings and the bracket, the all-time Finals field). Those
+// ratings sit ~13 points over today's, so on this season's win scale nearly every franchise would hit
+// its ceiling (a 65-win average); the all-time league is read against its own average instead (each
+// rating less the gap between the two leagues' means), and the average franchise is a .500 team again.
+const leagueMean = (t, k) => Object.values(t).reduce((a, r) => a + r[k], 0) / Object.keys(t).length
+const AT_GAP = { off: leagueMean(ALLTIME_TEAM_RATINGS, 'off') - leagueMean(TEAM_RATINGS, 'off'), def: leagueMean(ALLTIME_TEAM_RATINGS, 'def') - leagueMean(TEAM_RATINGS, 'def') }
+const ALLTIME_LEVEL = Object.fromEntries(Object.entries(ALLTIME_TEAM_RATINGS).map(([s, r]) => [s, { off: r.off - AT_GAP.off, def: r.def - AT_GAP.def }]))
+export function scriptBucketSeason(team, tr0, rngSeed, allTime = false) {
   const rand = seededRandom(rngSeed)
+  const ratings = allTime ? ALLTIME_LEVEL : TEAM_RATINGS, elite = allTime ? ALLTIME_CONF_ELITE : CONF_ELITE
+  const tr = allTime ? { off: tr0.off - AT_GAP.off, def: tr0.def - AT_GAP.def } : tr0
   const score = (tr.off + tr.def) / 200
   const winProb = Math.max(0.13, Math.min(0.87, 0.20 + (score - 0.59) / 0.24 * 0.57))
   const allOpps = [...CONF_TEAMS.east, ...CONF_TEAMS.west].filter(s => s !== team.short)
@@ -319,10 +329,10 @@ export function scriptBucketSeason(team, tr, rngSeed) {
     games.push({ g: i + 1, won, home: rand() < 0.5, opponent: allOpps[Math.floor(rand() * allOpps.length)], mySc: won ? loserBase + margin : loserBase, oppSc: won ? loserBase : loserBase + margin })
   }
   const conf = EAST.has(team.short) ? 'east' : 'west'
-  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand)
+  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand, ratings)
   let playoffRounds = [], champion = false
   if (seed <= 10) {
-    const po = simPlayoffs(seed, Math.min(0.85, winProb + 0.04), conf, standings, rand)
+    const po = simPlayoffs(seed, Math.min(0.85, winProb + 0.04), conf, standings, rand, ratings, elite)
     playoffRounds = po.rounds
     champion = po.champion
   }

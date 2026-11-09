@@ -293,3 +293,26 @@ html.bap-reduce-motion .mg--simple .mg-result { animation-name: mg-res-fade; }
 .mg--simple .mg-sides--pro { grid-template-columns: 1fr 1.15fr 1fr; }
 .mg--simple .mg-side--punch { font-size: 21px; }
 .mg--simple .mg-pro-hold.is-held span { background: rgba(74,222,128,.7); }
+
+/* soccer: a small pitch with the goal at the top, the keeper in his own colour, the ball black and white */
+.mg--simple .mg-pitch { height: 170px; background: rgba(18,72,40,.5); }
+.mg--simple .mg-pitch-box { position: absolute; left: 18%; width: 64%; top: -2px; height: 44%; border: 2px solid rgba(255,255,255,.2); }
+.mg--simple .mg-pitch-six { position: absolute; left: 36%; width: 28%; top: -2px; height: 16%; border: 2px solid rgba(255,255,255,.2); }
+.mg--simple .mg-pitch-goal { position: absolute; left: 41%; width: 18%; top: 0; height: 7px; border: 2px solid #fff; border-top: none; background: repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, transparent 1px 4px); }
+.mg--simple .mg-pitch-spot { position: absolute; left: 50%; top: 30%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: rgba(255,255,255,.35); }
+.mg--simple .mg-dot.is-gk { background: #c6ec3a; border: 2px solid #0b1014; }
+.mg--simple .mg-dot.is-sball { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: radial-gradient(circle at 50% 50%, #16191d 0 2px, #f7f7f4 2.5px); border: 1.5px solid #0b1014; }
+.mg--simple .mg-dot.is-hide { opacity: 0; }
+.mg--simple .mg-meet i { position: absolute; left: 0; top: 0; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 1.5px dashed rgba(255,255,255,.55); }
+.mg--simple .mg-sides--three { grid-template-columns: 1fr 1fr 1fr; }
+.mg--simple .mg-sides--one { grid-template-columns: 1fr; }
+.mg--simple .mg-runup { position: relative; width: 100%; height: 30px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,.35); border: 1px solid var(--ag-line); }
+.mg--simple .mg-runup span { position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(0); background: rgba(255,255,255,.18); border-right: 3px solid #fff; }
+.mg--simple .mg-runup i { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; color: var(--ag-text-2); }
+.mg--simple .mg-keeper { height: 40px; font-size: 17px; }
+.mg--simple .mg-keeper.is-out { color: #4ade80; } .mg--simple .mg-keeper.is-set { color: #f87171; } .mg--simple .mg-keeper.is-down { color: #fbbf24; }
+.mg--simple .mg-marker { height: 40px; font-size: 17px; }
+.mg--simple .mg-marker.is-watch { color: #4ade80; }
+.mg--simple .mg-goalface { aspect-ratio: 3 / 1; background: repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, transparent 1px 9px), repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 9px), rgba(10,30,18,.5); border: 3px solid #f4f6f2; border-bottom-color: rgba(255,255,255,.25); border-radius: 2px; }
+.mg--simple .mg-goal-target { position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.06); pointer-events: none; }
+.mg--simple .mg-goal-target.is-lit { border-color: #fbbf24; background: radial-gradient(circle, #c9423a 0 22%, #f4f6f2 23% 44%, #c9423a 45% 66%, rgba(251,191,36,.55) 67%); }

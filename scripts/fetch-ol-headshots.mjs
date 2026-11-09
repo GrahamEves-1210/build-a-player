@@ -27,6 +27,11 @@ const PLAYERS = [
   ['Nick Mangold', '9615'], ['Jason Kelce', '14124'], ['Jason Peters', '6012'], ['Alan Faneca', '1459'],
   ['David DeCastro', '14935'], ['Joe Staley', '10472'], ['Max Unger', '12624'], ['Russell Okung', '13242'],
   ['Davin Joseph', '9609'], ['Michael Roos', '8455'], ['Taylor Lewan', '16708'], ['Brandon Scherff', '2511708'],
+  // the 5th legend per franchise (Nov 2026); ids checked against ESPN's bio (college, draft) and the photo.
+  // No ESPN photo: Lincoln Kennedy, Robbie Tobeck, Chris Hinton, Jim Lachey, Guy McIntyre and the pre-1990 men.
+  ['Alex Mack', '12616'], ['Andrew Norwell', '17388'], ['Travis Frederick', '15793'], ['Louis Vasquez', '12744'],
+  ['Frank Ragnow', '3128689'], ['Wade Smith', '4536'], ['Brandon Linder', '16770'], ['Matt Birk', '1562'],
+  ['Carl Nicks', '11398'], ["D'Brickashaw Ferguson", '9590'], ['Maurkice Pouncey', '13250'], ['Ali Marpet', '3165702'],
 ]
 
 const headshots = JSON.parse(fs.readFileSync(MAP, 'utf8'))

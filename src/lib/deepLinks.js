@@ -86,7 +86,11 @@ export function routeUrl(url) {
   if (path === '/shop') { goNav('shop'); return true }
   if (path === '/profile') { goNav('profile'); return true }
   if (path.startsWith('/bucket')) { if (!isBucketPage()) window.location.href = '/bucket'; return true }
-  if (path === '/' || path === '') { if (isBucketPage()) window.location.href = '/'; return true }
+  // soccer, once it's switched on (lib/soccerLive.js; main.jsx sends /soccer to football's Home until then)
+  if (path.startsWith('/soccer')) { if (!window.location.pathname.startsWith('/soccer')) window.location.href = '/soccer'; return true }
+  // baseball, the same way (lib/baseballLive.js)
+  if (path.startsWith('/baseball')) { if (!window.location.pathname.startsWith('/baseball')) window.location.href = '/baseball'; return true }
+  if (path === '/' || path === '') { if (isBucketPage() || window.location.pathname.startsWith('/soccer') || window.location.pathname.startsWith('/baseball')) window.location.href = '/'; return true }
   return false
 }
 

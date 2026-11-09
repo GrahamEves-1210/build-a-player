@@ -503,6 +503,10 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 /* DL: the arm out to the left pushes his head and body right of the art's centre: line the body up over the platform, and the words on the body */
 .ag-figure--dl { left: calc(50% - 9px); }
 .ag-figure--dl .splash-stack-band-label { transform: translateX(9px); }
+/* the DL figure's legs (SplashScreen DL_ATTRS / LB_ATTRS): a size down, the calf's word upright */
+.ag-figure .splash-stack-band-label.is-sm { font-size: 9px; }
+.ag-figure .splash-stack-band-label.is-xs { font-size: 8px; }
+.splash-stack-band-label.is-v { writing-mode: vertical-rl; line-height: 1; }
 /* LB is on the DL figure for now */
 .ag-figure--lb { left: calc(50% - 9px); }
 .ag-figure--lb .splash-stack-band-label { transform: translateX(9px); }
@@ -2863,7 +2867,7 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-stage { grid-area: stage; align-self: stretch; height: auto; min-height: 470px; margin: 0; }
   /* the figure is built at phone size; scale it up from its feet (the stage is ~520–580 tall) */
   html.app-look .ag-figure { bottom: 76px; transform: scale(1.65); transform-origin: 50% 100%; }
-  html.app-look .ag-home--bucket .ag-figure { bottom: 78px; transform: scale(1.65); }
+  html.app-look .ag-home--bucket .ag-figure, html.app-look .ag-home--soccer .ag-figure, html.app-look .ag-home--baseball .ag-figure { bottom: 78px; transform: scale(1.65); }
   html.app-look .ag-platform { bottom: 60px; transform: scale(1.7); transform-origin: 50% 50%; }
   html.app-look .ag-home-site { margin: 28px 0 0; }
 
@@ -5199,7 +5203,7 @@ html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
 
 /* Basketball build on the website: the stage keeps the app's height (the ad rail
    was squeezing it, and five cards a side piled up); the page scrolls a little more */
-[data-sport="bucket"] .game-layout.ag-drop .field-center { min-height: 500px !important; }
+[data-sport="bucket"] .game-layout.ag-drop .field-center, [data-sport="soccer"] .game-layout.ag-drop .field-center, [data-sport="baseball"] .game-layout.ag-drop .field-center { min-height: 500px !important; }
 
 
 
@@ -6179,6 +6183,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 
 /* the second row: the same cards, shorter */
 .ag-more { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.ag-more--one { grid-template-columns: 1fr; }   /* soccer: Squad Builder alone on the row (no Depth Chart beside it) */
 .ag-mc.is-small { min-height: 164px; }
 .ag-mc.is-small .ag-mc-head b { font-size: 22px; }
 
@@ -6689,3 +6694,567 @@ html:is(.is-app, .app-look) .sfb-sub { font-family: var(--ag-font); font-weight:
 /* Career: body work (durability) under the traits, the full width of the player panel */
 .cr-model-wrap .cr-traits.cr-body { grid-column: 1 / -1; grid-template-columns: 1fr; }
 .cr-body .cr-trait-av { display: grid; place-items: center; color: var(--ag-muted); }
+
+/* ═══ SOCCER (/soccer: html.is-soccer, data-sport="soccer") ══════════════════
+   Art direction (scratchpad soccer/ART.md): a classic match ball under floodlights. Chalk
+   (a warm off-white) is the accent where basketball's is orange, ink (a near-black) the
+   page and the text on chalk; greys between. Never pure #fff on pure #000 in big areas
+   (it glares), no white glows. Green only inside the pitch picture. Gold stays for trophies,
+   the table marks keep their meaning. The build figure is basketball's for now
+   (lib/soccerUi.js), so its layout rides on the basketball rules (index.css
+   :is(bucket, soccer)); the colours are here. */
+html.is-soccer, [data-sport="soccer"] {
+  --sc-ink: #07080a; --sc-panel: #111214; --sc-panel-2: #1a1b1e; --sc-grey-3: #8b8d93; --sc-grey-2: #c6c7cb;
+  --sc-chalk: #f2f2ee; --sc-chalk-2: #d9d9d5; --sc-on: #0b0c0e;
+  --sc-line: rgba(242,242,238,.12); --sc-line-hi: rgba(242,242,238,.28);
+  /* the website's scale (football's greens, basketball's oranges): greys, light to dark */
+  --g50:#f2f2ee;--g100:#e4e4e0;--g200:#c6c7cb;--g300:#a6a8ad;
+  --g400:#8b8d93;--g500:#6b6d73;--g600:#4a4c51;--g700:#2a2b2e;--g800:#111214;
+  --bg:#d9d9d6;--surface:#0e0f11;--card:#18191c;
+  --accent: #f2f2ee; --accent-hi: #ffffff; --accent-lo: rgba(242,242,238,.08); --accent-dk: #a6a8ad;
+  --btn-start: #f2f2ee; --btn-end: #d2d3cf; --btn-glow: rgba(242,242,238,.10); --btn-txt: #0b0c0e;
+  --text: #f2f2ee; --text-2: #d6d7da; --text-3: #a6a8ad; --text-4: #6b6d73;
+  --border: rgba(242,242,238,.1); --border-hi: rgba(242,242,238,.24);
+}
+html:is(.is-app, .app-look).is-soccer {
+  --ag-bg: #07080a;
+  --ag-panel: rgba(17,18,20,.86);
+  --ag-panel-2: rgba(26,27,30,.76);
+  --ag-line: rgba(242,242,238,.12);
+  --ag-line-hi: rgba(242,242,238,.28);
+  --ag-text: #f2f2ee;
+  --ag-text-2: #c6c7cb;
+  --ag-muted: rgba(242,242,238,.74);
+  --ag-glow: rgba(242,242,238,.08);   /* (the buttons' glow: a white one reads as a blur, so all but none) */
+}
+html.is-soccer .ag-tab { color: rgba(242,242,238,.42); }
+html.is-soccer .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: #f2f2ee; }
+html.is-soccer .ag-edge, html.is-soccer .ag-seam-chip { background: rgba(9,10,12,.96); }
+[data-sport="soccer"] .tpm-overlay::before { background: rgba(7,8,10,.88); }
+html:is(.is-app, .app-look).is-soccer .navbar { background: linear-gradient(180deg, #0f1012, #07080a) !important; }
+html:is(.is-app, .app-look).is-soccer .nav-pos-menu { background: linear-gradient(180deg, #141517, #08090b) !important; }
+html.app-look.is-soccer .navbar .logo-text.logo-text--small em, [data-sport="soccer"] .navbar .logo-text.logo-text--small em { color: #9a9ca1; }
+.nav-pos-trigger--static { cursor: default; }
+/* the crests that vanish on a dark panel (a black or navy crest with no light edge: Juventus, Spurs,
+   Paris FC, Everton, Lecce) sit on a light grey plate, 3px corners, wherever they show (season page,
+   spins, tables, Squad Builder, Career, cards). Every other crest reads on the ink as it is.
+   (measured: public/logos/soccer, the share of a crest's pixels darker than the panel can carry) */
+:is(img[src*="/logos/soccer/JUV."], img[src*="/logos/soccer/TOT."], img[src*="/logos/soccer/PFC."], img[src*="/logos/soccer/EVE."], img[src*="/logos/soccer/LEC."]) {
+  background-color: #c6c7cb; border-radius: 3px; padding: 2px; box-sizing: border-box; object-fit: contain;
+}
+
+/* the sports switch, three of them (FOOTBALL | BASKETBALL | SOCCER): the thumb slides by --si */
+.ag-sport.ag-sport--three { grid-template-columns: 1fr 1fr 1fr; }
+.ag-sport.ag-sport--three .ag-sport-thumb { width: calc((100% - 10px) / 3); transform: translateX(calc(var(--si, 0) * 100%)); }
+/* (the in-game switch's thumb: chalk, with a ball's seam drawn in like basketball's court lines) */
+.ag-sport--soccer .ag-sport-thumb { background: radial-gradient(circle at 50% 50%, transparent 0 9px, rgba(11,12,14,.12) 9px 10.5px, transparent 10.5px), #f2f2ee; }
+.ag-home .ag-sport--soccer .ag-sport-thumb { background: var(--hm-a); }
+.ag-sport-btn--soccer { color: color-mix(in srgb, #f2f2ee 80%, var(--ag-muted)); }
+.ag-sport--soccer .ag-sport-btn.is-on { color: #0b0c0e; }
+.ag-sport--soccer .ag-sport-btn.is-on .ag-sport-ico { background: rgba(11,12,14,.08); border-color: rgba(11,12,14,.3); }
+html.ag-sport-leaving .ag-sport.ag-sport--three .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)); }
+/* Home's flat switch: a skewed block a third wide (the two-sport one is 60% of the bar) */
+.ag-home .ag-sport.ag-sport--three .ag-sport-thumb { left: -5%; width: calc(100% / 3 + 10%); transform: translateX(calc(var(--si, 0) * 76.923%)) skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport.ag-sport--three .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 76.923%)) skewX(-14deg); }
+html.ag-sport-leaving[data-sport-to="nfl"] .ag-home .ag-sport--three .ag-sport-thumb { background: #4fd8b4; }
+html.ag-sport-leaving[data-sport-to="bucket"] .ag-home .ag-sport--three .ag-sport-thumb { background: #f97316; }
+html.ag-sport-leaving[data-sport-to="soccer"] .ag-home .ag-sport--three .ag-sport-thumb { background: #f2f2ee; }
+.ag-home .ag-sport--three .ag-sport-txt b { font-size: 19px; letter-spacing: .5px; }
+@media (max-width: 380px) { .ag-home .ag-sport--three .ag-sport-txt b { font-size: 16px; letter-spacing: 0; } }
+/* the classic Home's switch, three across */
+.ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-sport--three { grid-template-columns: 1fr 1fr 1fr; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-sport--three .agc-sport-thumb { width: calc((100% - 10px) / 3); transform: translateX(calc(var(--si, 0) * 100%)); }
+html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-sport--three .agc-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)); }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport--soccer .agc-sport-thumb { background: linear-gradient(135deg, #f2f2ee, #bfc0c4); }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport--soccer .ag-sport-btn.is-on { color: #0b0c0e; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport--three .agc-sport-txt b { font-size: 14px; letter-spacing: 1px; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport--three .agc-sport-ico { display: none; }
+
+/* Home, soccer: chalk on ink, where basketball is orange on brown. The stage is the night pitch
+   (public/soccerbackground.webp, scripts/render-soccer-background.mjs). The mode cards follow
+   basketball's: Compete in the sport's colour (chalk), Career on the stadium picture, Salary Cap
+   and Squad Builder in their own purple and gold like every sport. */
+.ag-home--soccer { --hm-on: #0b0c0e; --hm-a: #f2f2ee; background: #08090b; }
+.ag-home--soccer .ag-bg-lines { background: repeating-linear-gradient(180deg, transparent 0 63px, rgba(242,242,238,.035) 63px 64px); }
+.ag-home--soccer .ag-wordmark em { color: #9a9ca1; }
+/* (drawn half again as tall, from the top: the far goal sits low behind his legs, not as a box round his waist) */
+.ag-home--soccer .ag-stage-photo { background-image: url('/soccerbackground.webp'); background-size: auto 150%; background-position: center 0%; filter: saturate(.9) brightness(1.1); }
+.ag-home--soccer .ag-platform-ring { box-shadow: 0 0 10px rgba(242,242,238,.28); }
+.ag-home--soccer .ag-sport { background: #131416; }
+.ag-home--soccer .ag-stage .ag-positions { background: #1a1b1e; }
+.ag-home--soccer .ag-mode { background: #141518; }
+.ag-home--soccer .ag-mode.is-on { background: var(--hm-a); color: var(--hm-on); }
+.ag-home--soccer .ag-start { background: #f2f2ee; color: #0b0c0e; }
+@media (hover: hover) { .ag-home--soccer .ag-start:hover { background: #d9d9d5; } }
+.ag-home--soccer .ag-mc--career { background: linear-gradient(100deg, rgba(8,9,11,.92) 30%, rgba(8,9,11,.35)), url('/soccerbackground.webp') center 44% / cover no-repeat, #0e0f11; }
+.ag-home--soccer .ag-mc--career.has-team { background: linear-gradient(120deg, var(--team), color-mix(in srgb, var(--team) 40%, #05090c)); }
+.ag-home--soccer .ag-mc--compete { background: linear-gradient(150deg, #ecece8, #8d8f94 88%); }
+.ag-home--soccer .ag-mc--compete .ag-mc-head b { color: #0b0c0e; text-shadow: none; }
+.ag-home--soccer .ag-mc--compete .ag-mc-tag--soon { background: #0b0c0e; color: #f2f2ee; }
+.ag-home--soccer .ag-rafters { left: 46%; right: 6%; gap: 9px; }
+.ag-home--soccer .ag-home-site { background: radial-gradient(ellipse 100% 280px at 50% 0%, rgba(242,242,238,.06) 0%, transparent 70%), #08090b; }
+/* a position on its way (GK): in the bar, locked */
+.ag-stage .ag-pos--locked { opacity: 1; color: rgba(242,242,238,.4); cursor: default; }
+.ag-stage .ag-pos--locked .ag-pos-label { display: inline-flex; align-items: center; gap: 5px; }
+.ag-stage .ag-pos--locked .ag-pos-label svg { flex: none; opacity: .85; }
+.ag-stage .ag-pos--locked .ag-pos-sub { font-family: var(--ag-font); font-size: 12px; font-weight: 400; letter-spacing: 1.2px; opacity: 1; }
+/* a mode on its way (COMING SOON on the card, the card dimmed and still) */
+.ag-mc.is-soon { cursor: default; }
+.ag-mc.is-soon:active { transform: none; }
+.ag-mc.is-soon > :not(.ag-mc-head) { opacity: .4; filter: grayscale(1); }
+.ag-mc-tag.ag-mc-tag--soon { display: flex; width: fit-content; align-items: center; gap: 5px; background: #f2f2ee; color: #0b0c0e; }
+/* Squad Builder art: a 4-3-3 on a pitch, the front three lit */
+.ag-formation { position: absolute; right: 10px; bottom: 10px; width: 46%; aspect-ratio: 3 / 4; max-height: 64%; z-index: 1; border: 1.5px solid rgba(255,255,255,.32); border-radius: 2px; background: repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0 12.5%, transparent 12.5% 25%); }
+.ag-formation::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 0; border-top: 1.5px solid rgba(255,255,255,.22); }
+.ag-formation-box { position: absolute; left: 30%; right: 30%; bottom: 0; height: 15%; border: 1.5px solid rgba(255,255,255,.22); border-bottom: 0; }
+.ag-formation b { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: rgba(255,255,255,.42); }
+.ag-formation b.is-on { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.45); }
+/* the dock's fan: soccer's other sport (football) in its own colour */
+.ag-dock--soccer .ag-fan-item.is-sport .ag-fan-dot, html.is-soccer .ag-fan-item.is-sport .ag-fan-dot { color: #5edbd8; border-color: rgba(94,219,216,.5); }
+
+/* ── The build screen: chalk lines, dots and labels on the night pitch ── */
+[data-sport="soccer"] .prf-page,
+[data-sport="soccer"] .game-layout {
+  background-image: linear-gradient(rgba(8,9,11,0.74), rgba(8,9,11,0.74)), url('/soccerbackground.webp');
+  background-size: cover; background-position: center 45%;
+}
+[data-sport="soccer"] .prf-page { background-image: linear-gradient(rgba(8,9,11,0.93), rgba(8,9,11,0.93)), url('/soccerbackground.webp'); }
+[data-sport="soccer"] .prf-card { background: rgba(12,13,15,.74); border-color: rgba(242,242,238,.1); }
+[data-sport="soccer"] .cz-qb-name { color: #18191c; }
+[data-sport="soccer"] .cz-tag { background: #f2f2ee; color: #0b0c0e; }
+[data-sport="soccer"] .cz-drop-hint { border-color: rgba(242,242,238,.42); background: rgba(242,242,238,.04); }
+[data-sport="soccer"] .cz-dot { background: #f2f2ee; border-color: #c6c7cb; box-shadow: 0 0 0 2px rgba(11,12,14,.55); }
+[data-sport="soccer"] .cz-drop-zone { border-color: rgba(242,242,238,.72); background: rgba(242,242,238,.07); box-shadow: none; }
+html:is(.is-app, .app-look) [data-sport="soccer"] .cz-drop-hint, html[data-sport="soccer"]:is(.is-app, .app-look) .cz-drop-hint { border-color: rgba(242,242,238,.3) !important; }
+html:is(.is-app, .app-look)[data-sport="soccer"] .sil-wrap--app-bkt .cz-card { border-color: rgba(242,242,238,.3); }
+html:is(.is-app, .app-look)[data-sport="soccer"] .sil-wrap--app-bkt .cz-qb-name { color: #18191c !important; }
+/* tabs and chips: grey off, chalk on */
+[data-sport="soccer"] .tab-pill { border-color: rgba(242,242,238,.18); background: rgba(242,242,238,.04); }
+[data-sport="soccer"] .tab-pill.active { background: rgba(242,242,238,.15); border-color: rgba(242,242,238,.5); box-shadow: inset 0 1px 0 rgba(242,242,238,.18); }
+[data-sport="soccer"] .tab-pill-salary.active { background: rgba(168,85,247,0.22); border-color: rgba(168,85,247,0.55); box-shadow: inset 0 1px 0 rgba(168,85,247,0.25); color: #e9d5ff; }
+[data-sport="soccer"] .tab-pill.nav-pos-trigger.active { border-color: rgba(242,242,238,.32); }
+[data-sport="soccer"] .nav-pos-menu { border-color: rgba(242,242,238,.16); border-top-color: rgba(242,242,238,.3); }
+[data-sport="soccer"] .mtab.active { border-color: rgba(242,242,238,.5); background: rgba(242,242,238,.11); }
+[data-sport="soccer"] .rc-comp-switch button.is-on { color: #0b0c0e; background: #f2f2ee; }
+/* the spin wheel: a hairline grid like the pitch's mown stripes; the locked reel and the selector in chalk */
+[data-sport="soccer"] .spin-panel::before { background-image: linear-gradient(rgba(242,242,238,.05) 1px, transparent 1px); background-size: 100% 22px; }
+[data-sport="soccer"] .reel-outer.reel-locked { border-color: rgba(242,242,238,.5); box-shadow: none; }
+[data-sport="soccer"] .reel-label { background: rgba(242,242,238,.07); border-color: rgba(242,242,238,.2); }
+[data-sport="soccer"] .reel-selector { border-top-color: rgba(242,242,238,.34); border-bottom-color: rgba(242,242,238,.34); background: rgba(242,242,238,.06); }
+[data-sport="soccer"] .qb-respin-btn { border-color: rgba(242,242,238,.24); background: rgba(242,242,238,.06); }
+[data-sport="soccer"] .attr-category-line { background: rgba(242,242,238,.16); }
+[data-sport="soccer"] .right-panel-wrap::before { background-image: linear-gradient(rgba(242,242,238,.05) 1px, transparent 1px); }
+html:is(.is-app, .app-look) [data-sport="soccer"] .right-panel-wrap::before, html[data-sport="soccer"]:is(.is-app, .app-look) .right-panel-wrap::before { background-image: linear-gradient(rgba(242,242,238,.05) 1px, transparent 1px); background-size: 100% 22px; }
+html:is(.is-app, .app-look).is-soccer .spin-respin-half { font-size: 15px !important; letter-spacing: 1px !important; }
+/* buttons: chalk, flat, no glow */
+[data-sport="soccer"] .share-build-btn { border-color: rgba(242,242,238,.65); background: rgba(242,242,238,.1); color: #f2f2ee; box-shadow: none; }
+@media (hover: hover) { [data-sport="soccer"] .share-build-btn:hover { background: rgba(242,242,238,.18); border-color: #f2f2ee; box-shadow: none; } }
+[data-sport="soccer"] .ovr-number.lit { text-shadow: none; }
+[data-sport="soccer"] .drop-bar-spin:not(.is-pick) { background: #f2f2ee; color: #0b0c0e; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+[data-sport="soccer"] .nav-ghost-btn { border-color: rgba(242,242,238,.18); }
+@media (hover: hover) { [data-sport="soccer"] .nav-ghost-btn:hover { border-color: rgba(242,242,238,.42); background: rgba(242,242,238,.08); } }
+[data-sport="soccer"] .nav-ghost-btn.nav-ghost-active { background: rgba(242,242,238,.12); border-color: rgba(242,242,238,.42); }
+[data-sport="soccer"] .htp-drop-num { background: rgba(242,242,238,.14); }
+[data-sport="soccer"] .htp-drop-tip { background: rgba(242,242,238,.05); border-color: rgba(242,242,238,.16); }
+/* the website's menu (waffle) */
+[data-sport="soccer"] .waffle-btn { border-color: rgba(242,242,238,.2); }
+@media (hover: hover) { [data-sport="soccer"] .wm-row:hover { background: rgba(242,242,238,.08); } [data-sport="soccer"] .wm-social-btn:hover { background: rgba(242,242,238,.1); } }
+[data-sport="soccer"] .wm-divider { background: rgba(242,242,238,.12); }
+[data-sport="soccer"] :is(.wm-htp-body, .wm-about-body) { background: rgba(242,242,238,.04); border-color: rgba(242,242,238,.12); }
+[data-sport="soccer"] .wm-htp-num { background: rgba(242,242,238,.14); border-color: rgba(242,242,238,.3); }
+[data-sport="soccer"] .wm-about-disclaimer { border-top-color: rgba(242,242,238,.14); }
+/* sign-in keeps the main app's colours, as on basketball */
+[data-sport="soccer"] .auth-modal { --accent: #95D5B2; --accent-hi: #B7E4C7; --btn-start: #5EDBD8; --btn-end: #1fc98a; --btn-glow: rgba(94,219,216,0.30); --btn-txt: #07120a; --text: #D8F3DC; --text-2: #95D5B2; --text-3: #52B788; --text-4: #2D6A4F; }
+/* the about page and the old sim results */
+[data-sport="soccer"] .about-header { border-bottom-color: rgba(242,242,238,.2); }
+[data-sport="soccer"] .about-coming-card.active { border-color: rgba(242,242,238,.4); background: rgba(242,242,238,.06); }
+@media (hover: hover) { [data-sport="soccer"] .about-logo-item:hover { border-color: rgba(242,242,238,.36); background: rgba(242,242,238,.06); } }
+[data-sport="soccer"] .about-back-btn { box-shadow: none; }
+[data-sport="soccer"] .about-link { color: #f2f2ee; text-decoration: underline; }
+[data-sport="soccer"] .src-w { border-color: rgba(242,242,238,.32); background: rgba(242,242,238,.06); }
+[data-sport="soccer"] .src-badge-w { background: rgba(242,242,238,.24); }
+[data-sport="soccer"] .sim-final-banner { background: linear-gradient(135deg, rgba(242,242,238,.07), transparent); }
+[data-sport="soccer"] .sfb-champ { border-color: rgba(247,207,85,.45); background: linear-gradient(135deg, rgba(251,226,140,.14), rgba(201,146,15,.05)); }
+.plus-ratings-game--soccer { color: #f2f2ee; }
+.plus-ratings-box--soccer { background: rgba(242,242,238,.04); border-color: rgba(242,242,238,.16); margin-bottom: 4px; }
+/* the footers */
+[data-sport="soccer"] .build-footer-section { background: radial-gradient(ellipse 90% 280px at 50% 0%, rgba(242,242,238,.05) 0%, transparent 65%), #08090b; }
+[data-sport="soccer"] .splash-site-footer { background: #08090b; border-top-color: rgba(242,242,238,.1); }
+[data-sport="soccer"] .splash-site-footer-bottom { border-top-color: rgba(242,242,238,.08); }
+
+/* the old website's splash and its way across (Settings → Classic look) */
+[data-sport="soccer"] .splash-screen { background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(242,242,238,.07) 0%, transparent 65%), linear-gradient(rgba(8,9,11,.86), rgba(8,9,11,.86)), url('/soccerbackground.webp') center 45% / cover, #08090b; }
+[data-sport="soccer"] .logo-text em, [data-sport="soccer"] .splash-title em { color: #9a9ca1; -webkit-text-fill-color: #9a9ca1; }
+[data-sport="soccer"] .splash-glow { background: radial-gradient(circle, rgba(242,242,238,.1) 0%, transparent 68%); }
+[data-sport="soccer"] .splash-figure-glow { background: radial-gradient(ellipse, rgba(242,242,238,.18) 0%, transparent 80%); }
+[data-sport="soccer"] .splash-yard-line { background: rgba(242,242,238,.04); }
+[data-sport="soccer"] .splash-route-field { background-image: repeating-linear-gradient(180deg, transparent 0 58px, rgba(242,242,238,1) 58px 59px); background-size: auto; }
+[data-sport="soccer"] .splash-route-field--visible { opacity: .05; }
+@media (hover: hover) { [data-sport="soccer"] .splash-switch-btn:hover { border-color: rgba(242,242,238,.4); color: rgba(242,242,238,.85); } }
+[data-sport="soccer"] .smode-coming-soon { background: rgba(242,242,238,.9); color: #0b0c0e; border-top-color: rgba(242,242,238,.5); border-bottom-color: rgba(242,242,238,.5); }
+[data-sport="soccer"] .splash-mode-classic { background: rgba(242,242,238,.09); border-color: rgba(242,242,238,.46); }
+@media (hover: hover) { [data-sport="soccer"] .splash-mode-classic:hover { border-color: rgba(242,242,238,.7); box-shadow: none; } }
+[data-sport="soccer"] .splash-mode-salarycap { background: linear-gradient(145deg, rgba(168,85,247,0.28) 0%, rgba(139,92,246,0.20) 100%), rgba(10,8,15,0.70); }
+[data-sport="soccer"] .splash-mode-alltime { background: linear-gradient(145deg, rgba(212,175,55,0.28) 0%, rgba(245,200,66,0.18) 100%), rgba(13,12,5,0.70); }
+[data-sport="soccer"] .smode-badge { color: #d6d7da; background: rgba(242,242,238,.07); border-color: rgba(242,242,238,.2); }
+[data-sport="soccer"] .smode-cta { color: #f2f2ee; }
+[data-sport="soccer"] .splash-mode-salarycap .smode-cta { color: #c084fc; }
+[data-sport="soccer"] .splash-mode-salarycap .smode-badge { color: #a78bfa; background: rgba(168,85,247,0.12); border-color: rgba(168,85,247,0.25); }
+[data-sport="soccer"] .splash-mode-alltime .smode-cta { color: #e8c84a; }
+[data-sport="soccer"] .splash-mode-alltime .smode-badge { color: #d4af37; background: rgba(212,175,55,0.12); border-color: rgba(212,175,55,0.25); }
+.soccer-splash .splash-pos-btn:disabled { opacity: .4; cursor: default; }
+.splash-minigame-btn--soccer { background: rgba(242,242,238,.07); border-color: rgba(242,242,238,.46); padding: 3px 14px; }
+@media (hover: hover) { .splash-minigame-btn--soccer:hover { background: rgba(242,242,238,.13); border-color: rgba(242,242,238,.8); box-shadow: none; } }
+@media (hover: hover) { html.is-touch .splash-minigame-btn--soccer:hover { transform: none !important; box-shadow: none !important; border-color: rgba(242,242,238,.46) !important; } }
+.splash-xlink-em--soccer { color: #9a9ca1; }
+.splash-minigame-btn--soccer .splash-mg-sub { font-size: 10px; letter-spacing: 1.2px; color: #c6c7cb; }
+.splash-features--soccer { --sf-a: #f2f2ee; --sf-a-rgb: 242, 242, 238; }
+.splash-features--soccer .splash-feature-icon { color: #f2f2ee; }
+
+/* shared app screens that basketball tints: the trophy case, the tutorial, the challenge hero */
+html.is-soccer .tc-cab { background: radial-gradient(70% 38% at 50% 0%, rgba(242,242,238,.06), transparent 72%), linear-gradient(180deg, #111214 0%, #08090b 100%); }
+html.is-soccer .tc-row::before { background: linear-gradient(180deg, rgba(242,242,238,.14) 0, rgba(242,242,238,.05) 5px, transparent 5.5px), linear-gradient(180deg, #26272a 0, #1c1d20 5px, #151619 6px, #0c0d0f 100%); }
+html.is-soccer .tc-card-faces .tc-face { box-shadow: 0 0 0 2px #0e0f11; }
+html.is-soccer .tc-sheet { background: radial-gradient(90% 46% at 50% 0%, rgba(242,242,238,.07), transparent 62%), linear-gradient(180deg, rgba(18,19,21,.985), rgba(7,8,10,.985)); }
+html.is-soccer .tut-bubble { background: linear-gradient(160deg, rgba(242,242,238,.07), transparent 60%), rgb(14,15,17); }
+html.is-soccer .tut-bubble-arrow { background: rgb(22,23,26); }
+html.is-soccer .tut-bubble--above .tut-bubble-arrow { background: rgb(14,15,17); }
+.ag-screen--soccer .ag-challenge-hero { background: linear-gradient(180deg, rgba(7,8,10,.2), rgba(7,8,10,.85)), url('/soccerbackground.webp') center 45% / cover; }
+
+/* a soccer mode that's wired but not built yet: its name, COMING SOON, the way home */
+.sc-soon { display: grid; place-items: center; min-height: 100dvh; padding: 24px 16px calc(var(--app-bottom, 0px) + var(--web-rail, 0px) + 24px); background: url('/soccerbackground.webp') center 45% / cover, #07080a; }
+.sc-soon::before { content: ''; position: fixed; inset: 0; background: rgba(7,8,10,.74); pointer-events: none; }
+.sc-soon-inner { position: relative; display: grid; justify-items: center; gap: 10px; text-align: center; }
+.sc-soon-tag { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 3px; color: rgba(242,242,238,.7); }
+.sc-soon-title { margin: 0; font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: clamp(44px, 12vw, 88px); line-height: .95; letter-spacing: 1px; color: #f2f2ee; }
+.sc-soon-back { margin-top: 10px; padding: 12px 22px 10px; border: 0; border-radius: 5px; background: #f2f2ee; color: #0b0c0e; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 19px; letter-spacing: 2px; cursor: pointer; }
+.sc-soon-back:active { transform: scale(.98); }
+
+/* ═══ SOCCER: the season page (SoccerSimPage: ssp-*) ══════════════════════════
+   On the sim page's frame (simp-*); the broadcast graphics: the table, his line, match by
+   match, the cup ties, the award races. Flat panels, hairlines, small corners. */
+[data-sport="soccer"] .simp-page { background: radial-gradient(ellipse 100% 34% at 50% 0%, rgba(255,255,255,.07) 0%, transparent 70%), #060606; }
+.ssp-page .simp-col { gap: 0; }
+[data-sport="soccer"] .simp-dot-active { background: #fff; box-shadow: none; }
+[data-sport="soccer"] .simp-dot-done { background: rgba(255,255,255,.35); }
+.ssp-strip .sts-city { font-size: 12px; letter-spacing: .5px; }
+.ssp-strip-size { display: block; margin-top: 3px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1.2px; color: rgba(255,255,255,.6); }
+.ssp-crest { flex: none; display: inline-block; object-fit: contain; vertical-align: middle; }
+.ssp-crest--txt { display: inline-grid; place-items: center; border-radius: 3px; background: rgba(255,255,255,.1); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 9px; letter-spacing: .3px; color: rgba(255,255,255,.75); }
+.ssp-screen { display: flex; flex-direction: column; gap: 12px; }
+.ssp-model { margin: 4px 0 2px; }
+@media (min-width: 769px) { .ssp-model { height: 360px; } .ssp-model .sil-wrap { transform: scale(.86) !important; transform-origin: 50% 46%; } }
+
+/* the headline: where the season ended up */
+.ssp-hero { display: grid; gap: 6px; padding: 16px 16px 14px; border-radius: 10px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.ssp-hero.is-champ { background: linear-gradient(135deg, rgba(251,226,140,.16), rgba(201,146,15,.06)), #121109; box-shadow: inset 0 0 0 1px rgba(247,207,85,.4); }
+.ssp-eyebrow { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 2.4px; color: rgba(255,255,255,.62); }
+.ssp-head { margin: 0; font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: clamp(28px, 7.4vw, 40px); line-height: .98; letter-spacing: .5px; color: #fff; }
+.ssp-hero.is-champ .ssp-head { color: #f7cf55; }
+.ssp-record { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 1.2px; color: rgba(255,255,255,.6); }
+.ssp-record b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 21px; letter-spacing: 0; color: #fff; }
+.ssp-record em { font-style: normal; opacity: .4; }
+
+/* a section: its name on a hairline */
+.ssp-sec { display: grid; gap: 8px; }
+.ssp-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.16); }
+.ssp-sec-head h3 { margin: 0; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 19px; letter-spacing: 2px; color: #fff; }
+.ssp-sec-aside { font-family: var(--ag-body, system-ui, sans-serif); font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.62); text-align: right; }
+.ssp-none { margin: 0; font-size: 13px; color: rgba(255,255,255,.55); }
+
+/* his numbers */
+.ssp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ssp-tile { display: grid; align-content: center; gap: 4px; min-height: 58px; padding: 8px 6px; border-radius: 6px; background: #121214; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); text-align: center; }
+.ssp-tile b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 24px; line-height: 1; color: #fff; }
+.ssp-tile small { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 11.5px; letter-spacing: 1px; line-height: 1.05; color: rgba(255,255,255,.6); }
+.ssp-tile.is-big { grid-column: span 2; background: #f4f4f5; box-shadow: none; }
+.ssp-tile.is-big b { font-size: 38px; color: #0a0a0a; }
+.ssp-tile.is-big small { font-size: 13px; letter-spacing: 1.6px; color: #3f3f46; }
+.ssp-line-notes { margin: 0; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.66); }
+
+/* the table */
+.ssp-table { width: 100%; border-collapse: collapse; font-family: var(--ag-body, system-ui, sans-serif); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ssp-table th { padding: 4px 3px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,.5); text-align: center; }
+.ssp-table td { padding: 5px 3px; border-top: 1px solid rgba(255,255,255,.06); color: rgba(255,255,255,.82); text-align: center; }
+.ssp-table .ssp-c-pos { width: 24px; position: relative; color: rgba(255,255,255,.55); }
+.ssp-table .ssp-c-team { text-align: left; }
+.ssp-table td.ssp-c-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.ssp-table td.ssp-c-team span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 150px; }
+.ssp-table .ssp-c-pts { font-weight: 800; color: #fff; }
+.ssp-table tr.is-ucl td.ssp-c-pos { box-shadow: inset 3px 0 0 #3b82f6; }
+.ssp-table tr.is-uel td.ssp-c-pos { box-shadow: inset 3px 0 0 #f97316; }
+.ssp-table tr.is-down td.ssp-c-pos { box-shadow: inset 3px 0 0 #ef4444; }
+.ssp-table tr.is-us td { background: #f4f4f5; color: #0a0a0a; font-weight: 700; }
+.ssp-table tr.is-us td.ssp-c-pos, .ssp-table tr.is-us .ssp-c-pts { color: #0a0a0a; }
+.ssp-table.is-compact td { padding: 7px 3px; }
+
+/* match by match */
+.ssp-fx { list-style: none; margin: 0; padding: 0; display: grid; }
+.ssp-fx-row { display: grid; grid-template-columns: 38px 16px minmax(0, 1fr) auto 54px 30px; align-items: center; gap: 6px; padding: 7px 2px; border-top: 1px solid rgba(255,255,255,.06); font-size: 12.5px; }
+.ssp-fx-comp { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 11.5px; letter-spacing: .8px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; }
+.ssp-fx-ha { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 12px; color: rgba(255,255,255,.45); text-align: center; }
+.ssp-fx-opp { display: flex; align-items: center; gap: 6px; min-width: 0; color: #fff; font-weight: 600; }
+.ssp-fx-opp span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ssp-fx-score { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; font-weight: 700; color: #fff; white-space: nowrap; }
+.ssp-fx-score i { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 3px; font-style: normal; font-size: 10.5px; font-weight: 800; color: #0a0a0a; background: #a1a1aa; }
+.ssp-fx-row.is-w .ssp-fx-score i { background: #22c55e; }
+.ssp-fx-row.is-l .ssp-fx-score i { background: #ef4444; color: #fff; }
+.ssp-fx-line { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; }
+.ssp-ball { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.2px #18181b; }
+.ssp-ast { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 12px; letter-spacing: .5px; color: #93c5fd; }
+.ssp-dnp { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 11px; letter-spacing: .8px; color: rgba(255,255,255,.35); }
+.ssp-fx-rt { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; color: rgba(255,255,255,.78); }
+.ssp-fx-rt.is-motm { color: #f7cf55; }
+.ssp-more { justify-self: center; margin-top: 4px; padding: 7px 14px 6px; border: 1px solid rgba(255,255,255,.22); border-radius: 4px; background: none; color: #fff; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.6px; cursor: pointer; }
+
+/* the cup ties */
+.ssp-ties { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.ssp-tie { display: grid; grid-template-columns: minmax(78px, .9fr) minmax(0, 1.4fr) auto 64px; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 6px; background: #121214; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); font-size: 12.5px; }
+.ssp-tie.is-out { box-shadow: inset 3px 0 0 #ef4444, inset 0 0 0 1px rgba(255,255,255,.08); }
+.ssp-tie.is-final.is-won { background: linear-gradient(135deg, rgba(251,226,140,.18), rgba(201,146,15,.06)), #121109; box-shadow: inset 0 0 0 1px rgba(247,207,85,.45); }
+.ssp-tie-rnd { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1px; color: rgba(255,255,255,.6); }
+.ssp-tie-opp { display: flex; align-items: center; gap: 7px; min-width: 0; font-weight: 700; color: #fff; }
+.ssp-tie-opp span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ssp-tie-score { font-variant-numeric: tabular-nums; font-weight: 700; color: #fff; white-space: nowrap; }
+.ssp-tie-res { display: grid; justify-items: end; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1px; color: #22c55e; }
+.ssp-tie.is-out .ssp-tie-res { color: #ef4444; }
+.ssp-tie-res small { font-family: var(--ag-body, system-ui, sans-serif); font-size: 10.5px; letter-spacing: 0; font-weight: 600; color: rgba(255,255,255,.55); }
+.ssp-europe-pos { margin: 0; font-size: 13px; color: rgba(255,255,255,.72); }
+.ssp-europe-pos b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 19px; color: #fff; }
+.ssp-trophies, .ssp-ribbons { display: flex; flex-wrap: wrap; gap: 6px; }
+.ssp-trophy, .ssp-ribbons span { padding: 6px 10px 5px; border-radius: 4px; background: linear-gradient(180deg, #fbe28c, #d9a520); color: #1d1503; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.2px; line-height: 1; }
+
+/* the awards */
+.ssp-award { display: grid; gap: 8px; padding: 13px 14px; border-radius: 10px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.ssp-award.is-won { background: linear-gradient(135deg, rgba(251,226,140,.16), rgba(201,146,15,.05)), #121109; box-shadow: inset 0 0 0 1px rgba(247,207,85,.42); }
+.ssp-award-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ssp-award-head b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 22px; line-height: 1; letter-spacing: .4px; color: #fff; }
+.ssp-award.is-won .ssp-award-head b { color: #f7cf55; }
+.ssp-award-tag { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.2px; color: rgba(255,255,255,.7); text-align: right; }
+.ssp-award.is-won .ssp-award-tag { color: #fbe28c; }
+.ssp-award-note { margin: 0; font-size: 12.5px; color: rgba(255,255,255,.7); }
+.ssp-race { list-style: none; margin: 0; padding: 0; display: grid; }
+.ssp-race li { display: grid; grid-template-columns: 20px 18px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 2px; border-top: 1px solid rgba(255,255,255,.06); font-size: 13px; color: rgba(255,255,255,.85); }
+.ssp-race li.is-us { margin: 0 -6px; padding: 5px 8px; border-radius: 4px; background: #f4f4f5; color: #0a0a0a; font-weight: 700; }
+.ssp-race-rk { font-variant-numeric: tabular-nums; color: rgba(255,255,255,.5); text-align: right; }
+.ssp-race li.is-us .ssp-race-rk { color: #3f3f46; }
+.ssp-race-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ssp-race-n { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 17px; }
+
+/* the World Cup bracket: one column a round, his ties lit */
+.ssp-bracket { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(96px, 1fr); gap: 8px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+.ssp-br-col { display: flex; flex-direction: column; gap: 6px; }
+.ssp-br-rnd { flex: none; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1.4px; color: rgba(255,255,255,.55); text-align: center; }
+.ssp-br-list { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 4px; }
+.ssp-br-m { display: grid; border-radius: 4px; background: #121214; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); overflow: hidden; }
+.ssp-br-m.is-us { box-shadow: inset 0 0 0 1.5px #f4f4f5; }
+.ssp-br-t { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 5px; padding: 2px 6px; font-size: 11px; line-height: 1.25; color: rgba(255,255,255,.55); }
+.ssp-br-t em { font-style: normal; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 12.5px; letter-spacing: .6px; }
+.ssp-br-t b { font-variant-numeric: tabular-nums; }
+.ssp-br-t b small { margin-left: 2px; font-weight: 600; opacity: .7; }
+.ssp-br-t.is-w { color: #fff; }
+.ssp-br-t + .ssp-br-t { border-top: 1px solid rgba(255,255,255,.06); }
+
+/* the final report */
+.ssp-hero.is-final { padding: 18px 16px 16px; }
+.ssp-final-ovr { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; }
+.ssp-final-ovr b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 52px; line-height: .9; color: #fff; }
+.ssp-final-ovr small { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 2px; color: rgba(255,255,255,.6); }
+.ssp-final-ovr span { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 19px; letter-spacing: 1.2px; color: #fff; }
+.ssp-share { width: 100%; }
+.ssp-ghost { width: 100%; height: 46px; border: 1px solid rgba(255,255,255,.26); border-radius: 12px; background: none; color: #fff; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 17px; letter-spacing: 1.6px; cursor: pointer; }
+html:is(.is-app, .app-look)[data-sport="soccer"] .simp-cta { background: #f4f4f5; color: #0a0a0a; box-shadow: none; }
+
+/* the team spin's rows: the crest and the club */
+.ssp-reel-row { display: flex; flex-direction: row !important; align-items: center; justify-content: center; gap: 10px; }
+.ssp-reel-txt { display: grid; justify-items: start; line-height: 1.05; }
+
+@media (max-width: 420px) {
+  .ssp-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  .ssp-tile b { font-size: 20px; }
+  .ssp-tile.is-big b { font-size: 32px; }
+  .ssp-fx-row { grid-template-columns: 32px 13px minmax(0, 1fr) auto 40px 26px; gap: 5px; font-size: 12px; }
+  .ssp-tie { grid-template-columns: minmax(64px, .8fr) minmax(0, 1.4fr) auto 52px; gap: 6px; padding: 8px; }
+  .ssp-table td.ssp-c-team span { max-width: 110px; }
+}
+
+/* the season's flow (components/simFlow.jsx: soccer's and baseball's season pages, on basketball's frame) */
+.sfl-evt { min-height: 19px; margin: 0 0 6px; text-align: center; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 1.4px; color: rgba(255,255,255,.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plf-game-drawn { border-color: rgba(255,255,255,.24); background: rgba(255,255,255,.045); }
+.plf-bw-w.is-l { color: #f87171; text-shadow: none; }
+.bsim-ms-dot--d { background: rgba(255,255,255,.08); color: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.26); }
+.sfl-trophy { display: grid; place-items: center; }
+/* soccer: a dot a match (a win in white, a draw half, a defeat faint), the points under the record */
+.ssp-page .bsim-sdot--w { background: #f4f4f5; }
+.ssp-page .bsim-sdot--d { background: rgba(255,255,255,.4); }
+.ssp-page .bsim-sdot--l { background: rgba(255,255,255,.12); }
+.ssp-live-record .slr-d { color: rgba(255,255,255,.62); }
+.ssp-live-pts { margin: -2px 0 8px; text-align: center; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 2px; color: rgba(255,255,255,.62); }
+.ssp-season .ssp-hero { margin-top: 12px; }
+.ssp-first { margin: 2px 0 12px; text-align: center; font-size: 13px; color: rgba(255,255,255,.72); }
+.ssp-trophy-art { display: block; width: 120px; height: 150px; margin: 0 auto 4px; }
+.ssp-ring-art { display: block; width: 190px; height: 238px; }
+.ssp-trophy-art .tc-art, .ssp-ring-art .tc-art { display: block; width: 100%; height: 100%; }
+.ssp-ticker-crest { display: grid; place-items: center; width: 112px !important; height: 112px !important; margin: 8px auto; object-fit: contain; }
+.ssp-ticker-q { border: 2px solid rgba(255,255,255,.24); border-radius: 50%; font-family: var(--ag-display, Impact, sans-serif); font-size: 52px; color: rgba(255,255,255,.6); }
+.ssp-br-t.is-tbd em { color: rgba(255,255,255,.34); }
+.ssp-end-won { justify-content: center; margin: 2px 0 12px; }
+.ssp-legacy .ssp-award, .ssp-legacy > .ag-pop { align-self: stretch; width: 100%; text-align: left; }
+.ssp-miss-note { margin-top: 6px; font-size: 14px; color: rgba(255,255,255,.62); }
+/* the playoff controls and clocks in football's white, not basketball's orange */
+.ssp-page .plf-seg-btn--active, .ssp-page .plf-seg-btn.plf-seg-btn--pause { background: #f4f4f5; color: #0a0a0a; }
+.ssp-page .plf-progress-fill, .ssp-page .plf-series-timer-fill { background: #f4f4f5; }
+.ssp-page .plf-qd-active { background: #f4f4f5; box-shadow: none; }
+.ssp-page .plf-seg-btn-skip { background: rgba(255,255,255,.14); color: #fff; }
+@media (hover: hover) { .ssp-page .plf-seg-btn--active:hover { background: #fff; } .ssp-page .plf-seg-btn-skip:hover { background: rgba(255,255,255,.22); } }
+
+/* ═══ BASEBALL (/baseball: html.is-baseball, data-sport="baseball") ═════════════════════
+   The theme itself is components/baseball.css: it loads with the baseball chunk only, so football,
+   basketball and soccer never download it (art direction: scratchpad baseball/ART.md). Here only what
+   every sport's Home shows: the sport switch with a fourth sport on it, and baseball's button on it. */
+/* the sports switch, four of them (FOOTBALL | BASKETBALL | SOCCER | BASEBALL). Home and Profile give it
+   ag-sport--three once there are more than two; a fourth button makes it a quarter each, whatever the class */
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-thumb { width: calc((100% - 10px) / 4); transform: translateX(calc(var(--si, 0) * 100%)); }
+html.ag-sport-leaving .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)); }
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-btn { gap: 6px; padding: 0 4px; min-width: 0; }
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-ico { width: 26px; height: 26px; }
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 15px; letter-spacing: 1.2px; }
+@media (max-width: 520px) { .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-ico { display: none; } }
+/* (the in-game switch's thumb: flat stitch red, cream words) */
+.ag-sport--baseball .ag-sport-thumb { background: #c8102e; box-shadow: none; }
+.ag-sport-btn--baseball { color: color-mix(in srgb, #ef5a6c 75%, var(--ag-muted)); }
+.ag-sport--baseball .ag-sport-btn.is-on { color: #fbf7ee; }
+.ag-sport--baseball .ag-sport-btn.is-on .ag-sport-ico { background: rgba(251,247,238,.12); border-color: rgba(251,247,238,.4); }
+/* Home's flat switch: a skewed block a quarter wide (it reaches 2% past its quarter each side, so the slant clears the next word; past the ends it hides) */
+.ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-thumb { left: 0; width: 25%; transform: translateX(calc(var(--si, 0) * 100%)) skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)) skewX(-14deg); }
+html.ag-sport-leaving[data-sport-to="baseball"] .ag-home .ag-sport .ag-sport-thumb { background: #c8102e; }
+.ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-btn { padding: 0 2px; }
+.ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 16px; letter-spacing: 0; }
+@media (max-width: 380px) { .ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 14.5px; } }
+@media (min-width: 1024px) { html.app-look .ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 18px; letter-spacing: .6px; } }
+.ag-home--baseball .ag-sport-btn.is-on { color: #fbf7ee; }
+/* Home's four-sport bar: the marker is exactly one tab (it ran 4% wide and swallowed the next word's edge), with
+   the same slant, and a slanted rule between the tabs like the position row's; the end tabs' marker runs off the
+   edge so the slant never leaves a sliver of bar showing */
+.ag-home .ag-sport.ag-sport--four .ag-sport-thumb { left: 0; width: 25%; transform: translateX(calc(var(--si, 0) * 100%)) skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport.ag-sport--four .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)) skewX(-14deg); }
+.ag-home .ag-sport.ag-sport--four .ag-sport-thumb::before, .ag-home .ag-sport.ag-sport--four .ag-sport-thumb::after { content: ''; position: absolute; top: 0; bottom: 0; width: 24px; background: inherit; opacity: 0; }
+.ag-home .ag-sport.ag-sport--four .ag-sport-thumb::before { right: calc(100% - 2px); }
+.ag-home .ag-sport.ag-sport--four .ag-sport-thumb::after { left: calc(100% - 2px); }
+.ag-home .ag-sport.ag-sport--four.ag-sport--nfl .ag-sport-thumb::before, html.ag-sport-leaving[data-sport-to="nfl"] .ag-home .ag-sport.ag-sport--four .ag-sport-thumb::before { opacity: 1; }
+.ag-home .ag-sport.ag-sport--four.ag-sport--baseball .ag-sport-thumb::after, html.ag-sport-leaving[data-sport-to="baseball"] .ag-home .ag-sport.ag-sport--four .ag-sport-thumb::after { opacity: 1; }
+html.ag-sport-leaving:not([data-sport-to="nfl"]) .ag-home .ag-sport.ag-sport--four .ag-sport-thumb::before, html.ag-sport-leaving:not([data-sport-to="baseball"]) .ag-home .ag-sport.ag-sport--four .ag-sport-thumb::after { opacity: 0; }
+.ag-home .ag-sport.ag-sport--four .ag-sport-btn { position: relative; }
+.ag-home .ag-sport.ag-sport--four .ag-sport-btn + .ag-sport-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255,255,255,.14); transform: skewX(-14deg); pointer-events: none; }
+.ag-home .ag-sport.ag-sport--four .ag-sport-btn.is-on::before, .ag-home .ag-sport.ag-sport--four .ag-sport-btn.is-on + .ag-sport-btn::before { opacity: 0; }
+/* the tapped sport's word, while the block slides under it: dark on mint, orange and white, cream on red (it stayed
+   the grey of an unpicked word, and read as nothing on its new colour) */
+html.ag-sport-leaving[data-sport-to="nfl"] .ag-home .ag-sport-btn.ag-sport-btn--nfl { color: #07120a; }
+html.ag-sport-leaving[data-sport-to="bucket"] .ag-home .ag-sport-btn.ag-sport-btn--bucket { color: #1c0a02; }
+html.ag-sport-leaving[data-sport-to="soccer"] .ag-home .ag-sport-btn.ag-sport-btn--soccer { color: #0b0c0e; }
+html.ag-sport-leaving[data-sport-to="baseball"] .ag-home .ag-sport-btn.ag-sport-btn--baseball { color: #fbf7ee; }
+/* the classic Home's switch, four across */
+.ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.agc-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.agc-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .agc-sport-thumb { width: calc((100% - 10px) / 4); transform: translateX(calc(var(--si, 0) * 100%)); }
+html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.agc-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .agc-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)); }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.agc-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-btn { padding: 0 2px; min-width: 0; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.agc-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .agc-sport-txt b { font-size: 13px; letter-spacing: .6px; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.agc-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .agc-sport-ico { display: none; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport--baseball .agc-sport-thumb { background: #c8102e; box-shadow: none; }
+.ag-home.ag-home--classic.ag-home--classic .agc-sport--baseball .ag-sport-btn.is-on { color: #fbf7ee; }
+
+/* Website, phones: the spin drop-down is shorter, so its last row ends well above the bottom ad rail. Every row a little
+   tighter: the reels' window, the reveal card, the buttons, the trait chips and the gaps between them (owner, 11-07) */
+@media (max-width: 768px) {
+  html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 22px); }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body { padding-top: 0 !important; gap: 5px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-static { padding-top: 0 !important; gap: 4px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 120px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -50px; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 38px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 87px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 3px 10px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn { min-height: 42px !important; height: 42px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop :is(.spin-respin-half, .spin-reset-circle) { min-height: 38px !important; height: 38px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { gap: 4px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { min-height: 34px !important; padding: 2px 8px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-hint-text { margin: 1px 0 !important; }
+  html.app-look:not(.is-app) .drop-sheet-grip { padding: 4px 0 6px !important; }
+}
+
+/* ═══ Home: COLLEGE FOOTBALL, football's featured mode card (AppHome CFBCard) ═══════════════
+   First in MORE WAYS TO PLAY, on its own row. NCAA blue, flat, a white band of school logos
+   (public/logos/cfb): the only college colours on Home */
+.ag-mc.ag-mc--cfb { display: block; width: 100%; min-height: 150px; margin: 0 0 8px; background: #0a3d91; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 8px 18px rgba(0,0,0,.35); }
+.ag-mc--cfb .ag-mc-head b { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; text-shadow: none; }
+.ag-mc--cfb .ag-mc-head b .ag-mc-tag { margin-top: 0; }
+.ag-mc--cfb .ag-mc-head small { background: #061634; }
+.ag-cfb-band { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-evenly; height: 52px; padding: 0 10px 0 18px; background: #fff; clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%); }
+.ag-cfb-band img { display: block; width: 38px; height: 38px; object-fit: contain; }
+.ag-mc--cfb:active .ag-cfb-band img { transform: none; }
+@media (min-width: 1024px) {
+  html.app-look .ag-mc.ag-mc--cfb { min-height: 150px; margin-bottom: 12px; }
+  html.app-look .ag-cfb-band { left: auto; top: 0; width: 50%; height: auto; padding: 0 24px 0 64px; clip-path: polygon(48px 0, 100% 0, 100% 100%, 0 100%); }
+  html.app-look .ag-cfb-band img { width: 64px; height: 64px; }
+}
+/* Classic Home: the same card, on its own row of the mode grid */
+.ag-home--classic .ag-mc.ag-cfb--classic { margin: 0; min-height: 132px; }
+
+/* LB while it's coming soon (AppHome, lib/lbLive.js LB_SOON): a locked tab with a grey SOON tag */
+.ag-pos-new.ag-pos-new--soon { background: #3a3f45; color: #e8e8e8; }
+
+/* football's bar (AppHome isNfl): the offense with a DEFENSE brick at the end; tapped, the bar slides over to the
+   defense, an OFFENSE brick first. Each side its own bricks, its own lit block */
+.ag-stage .ag-positions--sides { display: block; overflow: hidden; }
+.ag-stage .ag-positions--sides::before { content: none; }
+@supports (overflow: clip) { .ag-stage .ag-positions--sides, .ag-stage .ag-positions--sides:has(.ag-pos-new) { overflow-x: clip; overflow-y: visible; } }
+.ag-side-track { display: flex; width: 200%; height: 100%; transition: transform .28s cubic-bezier(.3, .8, .3, 1); }
+.ag-side-track.is-def { transform: translateX(-50%); }
+.ag-side-panel { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); width: 50%; height: 100%; }
+.ag-side-panel::before {   /* the picked one: a solid block that slides there */
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% / var(--n)); background: var(--hm-a);
+  transform: translateX(calc(var(--i) * 100%)); transition: transform .16s ease-out;
+}
+.ag-stage .ag-side-panel > .ag-pos:first-child { border-left: 0; }
+/* the side brick: the word, an arrow under it pointing where the bar goes */
+.ag-stage .ag-pos--side { flex-direction: column; gap: 5px; background: #101716; color: #eef3f0; cursor: pointer; }
+.ag-side-word { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; line-height: 1; }
+.ag-side-arrow { display: block; fill: none; stroke: var(--hm-a); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (hover: hover) { .ag-stage .ag-pos--side:hover { color: var(--hm-a); } .ag-stage .ag-pos--to-def:hover .ag-side-arrow { translate: 3px 0; } .ag-stage .ag-pos--to-off:hover .ag-side-arrow { translate: -3px 0; } }
+.ag-side-arrow { transition: translate .15s ease-out; }
+/* a position on its way: locked, SOON under it */
+.ag-stage .ag-pos--soon { flex-direction: column; gap: 3px; }
+.ag-stage .ag-pos--soon .ag-pos-label { font-size: 20px; display: inline-flex; align-items: center; gap: 4px; }
+.ag-stage .ag-pos--soon .ag-pos-sub { font-family: var(--ag-font); font-size: 10.5px; font-weight: 400; letter-spacing: 2px; opacity: .9; }
+
+/* Home's three-sport bar, like the four's: the marker is exactly one tab with the slant, the end tabs' marker runs
+   off the edge, a slanted rule between the tabs (hidden next to the lit one) */
+.ag-home .ag-sport.ag-sport--three .ag-sport-thumb { left: 0; width: calc(100% / 3); transform: translateX(calc(var(--si, 0) * 100%)) skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport.ag-sport--three .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 100%)) skewX(-14deg); }
+.ag-home .ag-sport.ag-sport--three .ag-sport-thumb::before, .ag-home .ag-sport.ag-sport--three .ag-sport-thumb::after { content: ''; position: absolute; top: 0; bottom: 0; width: 24px; background: inherit; opacity: 0; }
+.ag-home .ag-sport.ag-sport--three .ag-sport-thumb::before { right: calc(100% - 2px); }
+.ag-home .ag-sport.ag-sport--three .ag-sport-thumb::after { left: calc(100% - 2px); }
+.ag-home .ag-sport.ag-sport--three.ag-sport--nfl .ag-sport-thumb::before, html.ag-sport-leaving[data-sport-to="nfl"] .ag-home .ag-sport.ag-sport--three .ag-sport-thumb::before { opacity: 1; }
+.ag-home .ag-sport.ag-sport--three.ag-sport--soccer .ag-sport-thumb::after { opacity: 1; }
+html.ag-sport-leaving:not([data-sport-to="nfl"]) .ag-home .ag-sport.ag-sport--three .ag-sport-thumb::before { opacity: 0; }
+.ag-home .ag-sport.ag-sport--three .ag-sport-btn { position: relative; }
+.ag-home .ag-sport.ag-sport--three .ag-sport-btn + .ag-sport-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255,255,255,.14); transform: skewX(-14deg); pointer-events: none; }
+.ag-home .ag-sport.ag-sport--three .ag-sport-btn.is-on::before, .ag-home .ag-sport.ag-sport--three .ag-sport-btn.is-on + .ag-sport-btn::before { opacity: 0; }
+/* a sport on its way (soccer while SOCCER_SOON): there, locked, its name dimmed and COMING SOON right under it
+   (laid over the name, the two words ran into each other) */
+.ag-sport-btn.is-soon { cursor: default; }
+.ag-sport-btn.is-soon :is(.ag-sport-ico, .agc-sport-ico) { display: none; }
+.ag-sport-btn.is-soon :is(.ag-sport-txt, .agc-sport-txt) { align-items: center; gap: 4px; }
+.ag-sport-btn.is-soon :is(.ag-sport-txt, .agc-sport-txt) b { opacity: .45; line-height: 1; }
+.ag-sport-btn.is-soon .ag-sport-soon {
+  white-space: nowrap; font-family: var(--ag-font) !important; font-size: 11px !important; font-weight: 400 !important;
+  letter-spacing: 2px !important; line-height: 1; color: #f2f2ee; opacity: 1 !important;
+}
+html.app-look .ag-sport-btn.is-soon:hover { color: inherit; }
+/* (Reduce Motion: the position bar changes sides without the slide) */
+html.bap-reduce-motion .ag-side-track { transition: none; }
+@media (prefers-reduced-motion: reduce) { .ag-side-track { transition: none; } }

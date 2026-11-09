@@ -1,0 +1,293 @@
+/* ═══ BASEBALL: the season page (BaseballSimPage: bbs-*) ═══════════════════════
+   Loaded with the season page's chunk only. A broadcast package on the shared sim page frame
+   (simp-page / simp-col): deep navy panels, the ball's cream for type, its stitching red for the
+   label blocks. Flat panels, hairlines, small corners: no gradients, no glows. The theme's colours
+   are tokens here so the baseball art pass (html.is-baseball) can retune them in one place. */
+.bbs-page {
+  --bb-ink: #090d16; --bb-panel: #111724; --bb-panel-2: #1a2131; --bb-navy: #15213b; --bb-cream: #f3eee3; --bb-red: #c8102e; --bb-red-hi: #d91d3b;
+  --bb-red-txt: #ef5a6c; --bb-on-red: #fbf7ee;   /* (red as words on the ink: the stitch red is too dark to read there. Words on red are cream) */
+  --bb-muted: rgba(243,238,227,.66); --bb-faint: rgba(243,238,227,.44); --bb-line: rgba(243,238,227,.12); --bb-line-hi: rgba(243,238,227,.26);
+  --bb-win: #3ccf7a; --bb-loss: #a1a1aa; --bb-gold: #f7cf55;   /* (a loss is grey: red marks what is ours) */
+  background: var(--bb-ink) !important; color: var(--bb-cream);
+  font-family: var(--ag-body, 'Outfit', system-ui, sans-serif);
+}
+.bbs-page .simp-col.bbs-col { max-width: 760px; gap: 0; }
+.bbs-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 10px; }
+.bbs-top-brand { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 16px; letter-spacing: 2.6px; color: var(--bb-cream); }
+.bbs-top-brand i { font-style: normal; color: var(--bb-red-txt); }
+.bbs-top-brand em { font-style: normal; color: var(--bb-muted); }
+.bbs-top-back { padding: 6px 10px 5px; border: 1px solid var(--bb-line-hi); border-radius: 4px; background: none; color: var(--bb-cream); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.6px; cursor: pointer; }
+@media (hover: hover) { .bbs-top-back:hover { border-color: var(--bb-cream); } }
+
+/* the scorebug */
+.bbs-hero { border-radius: 4px; overflow: hidden; background: var(--bb-panel); border-left: 6px solid var(--team-color, var(--bb-red)); }
+.bbs-hero-team { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 14px 14px 12px 12px; }
+.bbs-hero-logo { display: grid; place-items: center; width: 70px; height: 70px; border-radius: 6px; background: var(--bb-cream); }
+.bbs-hero-team small { display: block; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 2px; color: var(--bb-muted); }
+.bbs-hero-team h1 { margin: 2px 0 0; font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 30px; line-height: .95; letter-spacing: .4px; text-transform: uppercase; color: var(--bb-cream); overflow-wrap: anywhere; }
+.bbs-hero-rec { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 42px; line-height: 1; letter-spacing: .5px; font-variant-numeric: tabular-nums; }
+.bbs-hero-plate { padding: 7px 14px 6px; background: var(--bb-cream); color: var(--bb-ink); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 19px; letter-spacing: 2px; line-height: 1.1; }
+.bbs-hero-who { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; padding: 9px 14px 8px; background: var(--bb-red); color: var(--bb-on-red); }
+.bbs-hero-who b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 20px; letter-spacing: .4px; }
+.bbs-hero-who span { font-size: 14px; color: rgba(251,247,238,.88); }
+.bbs-hero-who em { margin-left: auto; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-style: normal; font-size: 18px; letter-spacing: 1.6px; }
+.bbs-hero-bio { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 7px 14px 8px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.4px; color: var(--bb-muted); }
+
+.bbs-body { display: grid; gap: 20px; padding: 18px 0 8px; }
+.bbs-sec { min-width: 0; }
+.bbs-stage { display: grid; gap: 20px; min-width: 0; scroll-margin-top: 64px; }
+html:not(.bap-reduce-motion) .bbs-stage.is-new { animation: bbs-drop .4s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes bbs-drop { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* a section's header: the red label block, the note, a hairline */
+.bbs-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; min-width: 0; }
+.bbs-hd h2 { margin: 0; padding: 6px 18px 4px 10px; background: var(--bb-red); clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 18px; letter-spacing: 2.2px; line-height: 1; color: #fff; white-space: nowrap; }
+.bbs-hd small { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.6px; color: var(--bb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bbs-hd i { flex: 1; height: 1px; min-width: 12px; background: var(--bb-line-hi); }
+.bbs-note { margin: 8px 0 0; font-size: 14px; line-height: 1.4; color: var(--bb-muted); }
+.bbs-live { color: var(--bb-cream); }
+
+/* the build */
+.bbs-build { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; margin: 0; padding: 0; }
+.bbs-build li { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-bottom: 1px solid var(--bb-line); min-width: 0; }
+.bbs-build-txt { display: grid; flex: 1; min-width: 0; line-height: 1.15; }
+.bbs-build-txt b { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 15px; letter-spacing: 1.2px; }
+.bbs-build-txt small { font-size: 12.5px; color: var(--bb-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bbs-grade { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; color: #07120a; font-weight: 800; font-size: 12.5px; }
+
+/* months */
+.bbs-months { display: grid; border-top: 1px solid var(--bb-line); }
+.bbs-month { border-bottom: 1px solid var(--bb-line); }
+.bbs-month-head { display: grid; grid-template-columns: 112px 56px 1fr 14px; align-items: center; gap: 8px; width: 100%; padding: 10px 2px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.bbs-month-head b { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 17px; letter-spacing: 1.6px; }
+.bbs-month-rec { font-family: var(--ag-display, Impact, sans-serif); font-size: 18px; font-variant-numeric: tabular-nums; }
+.bbs-month-line { font-size: 13.5px; color: var(--bb-muted); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bbs-month-chev { width: 8px; height: 8px; border-right: 1.5px solid var(--bb-muted); border-bottom: 1.5px solid var(--bb-muted); transform: rotate(45deg) translateY(-2px); }
+.bbs-month.is-open .bbs-month-chev { transform: rotate(-135deg) translateY(-2px); }
+@media (hover: hover) { .bbs-month-head:hover b { color: var(--bb-on-red); } }
+
+/* a game log */
+.bbs-log { list-style: none; margin: 0 0 8px; padding: 0; }
+.bbs-g { display: grid; grid-template-columns: 34px 22px minmax(64px, 84px) 74px 1fr; align-items: center; gap: 6px; padding: 5px 2px; border-top: 1px solid var(--bb-line); font-size: 13px; }
+.bbs-g-n { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1px; color: var(--bb-faint); }
+.bbs-g-ha { color: var(--bb-faint); font-size: 12px; }
+.bbs-g-opp { display: flex; align-items: center; gap: 5px; min-width: 0; font-weight: 700; }
+.bbs-g-res { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bbs-g-res i { display: inline-block; width: 15px; font-style: normal; font-weight: 800; }
+.bbs-g.is-w .bbs-g-res i { color: var(--bb-win); }
+.bbs-g.is-l .bbs-g-res i { color: var(--bb-loss); }
+.bbs-g-line { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--bb-cream); }
+.bbs-dnp { color: var(--bb-faint); }
+.bbs-dec { margin-left: 6px; padding: 1px 4px 0; border-radius: 3px; font-style: normal; font-size: 11px; font-weight: 800; background: var(--bb-line); }
+.bbs-dec.is-w { background: rgba(60,207,122,.18); color: var(--bb-win); }
+.bbs-dec.is-l { background: rgba(161,161,170,.16); color: var(--bb-loss); }
+.bbs-dec.is-sv, .bbs-dec.is-s { background: rgba(247,207,85,.16); color: var(--bb-gold); }
+
+/* the line */
+.bbs-slash { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+.bbs-slash b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 40px; line-height: 1; letter-spacing: .4px; font-variant-numeric: tabular-nums; }
+.bbs-slash i { font-style: normal; font-size: 30px; color: var(--bb-red-txt); }
+.bbs-slash small { margin-left: 8px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1.6px; color: var(--bb-muted); }
+.bbs-stats { display: grid; grid-template-columns: repeat(min(var(--n), 7), minmax(0, 1fr)); border-top: 1px solid var(--bb-line); }
+.bbs-stats > div { display: grid; justify-items: center; gap: 2px; padding: 11px 4px 9px; border-bottom: 1px solid var(--bb-line); border-left: 1px solid var(--bb-line); }
+.bbs-stats > div:nth-child(7n + 1) { border-left: 0; }
+.bbs-stats b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 24px; line-height: 1; letter-spacing: .3px; font-variant-numeric: tabular-nums; }
+.bbs-stats .is-big b { font-size: 28px; }
+.bbs-stats small { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 12px; letter-spacing: 1.4px; color: var(--bb-muted); white-space: nowrap; }
+
+/* the All-Star break */
+.bbs-asg { display: grid; gap: 3px; padding: 12px 14px; border-radius: 4px; background: var(--bb-panel); border-left: 4px solid var(--bb-line-hi); }
+.bbs-asg.is-in { border-left-color: var(--bb-gold); }
+.bbs-asg b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 22px; letter-spacing: .4px; }
+.bbs-asg.is-in b { color: var(--bb-gold); }
+.bbs-asg span { font-size: 14px; color: var(--bb-muted); }
+
+/* standings */
+.bbs-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.bbs-table th { padding: 6px 6px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 13px; letter-spacing: 1.4px; color: var(--bb-muted); text-align: right; border-bottom: 1px solid var(--bb-line-hi); }
+.bbs-table td { padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--bb-line); }
+.bbs-table .bbs-c-team { text-align: left; }
+.bbs-table td.bbs-c-team { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.bbs-table tr.is-us td { background: color-mix(in srgb, var(--bb-red) 16%, transparent); font-weight: 800; color: var(--bb-on-red); }
+.bbs-table tr.is-us td:first-child { box-shadow: inset 3px 0 0 var(--bb-red); }
+.bbs-field { list-style: none; margin: 0; padding: 0; }
+.bbs-field li { display: grid; grid-template-columns: 22px 20px 1fr 40px 60px; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--bb-line); font-size: 14px; }
+.bbs-field li.is-us { background: color-mix(in srgb, var(--bb-red) 16%, transparent); box-shadow: inset 3px 0 0 var(--bb-red); font-weight: 800; }
+.bbs-field li.is-out { color: var(--bb-faint); }
+.bbs-field-seed { font-family: var(--ag-display, Impact, sans-serif); font-size: 16px; text-align: center; }
+.bbs-field-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bbs-field-tag { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 12px; letter-spacing: 1.2px; color: var(--bb-muted); }
+.bbs-field-rec { text-align: right; font-variant-numeric: tabular-nums; }
+li.bbs-field-note { display: block; padding: 8px 4px 0; border: 0; font-size: 13px; color: var(--bb-faint); }
+
+/* a series */
+.bbs-series { border-radius: 4px; background: var(--bb-panel); overflow: hidden; }
+.bbs-series-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 14px; padding: 12px 14px; border-left: 4px solid var(--bb-loss); }
+.bbs-series.is-won .bbs-series-head { border-left-color: var(--bb-win); }
+.bbs-series-teams { display: flex; align-items: center; gap: 8px; }
+.bbs-series-teams b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 34px; line-height: 1; }
+.bbs-series-teams em { font-style: normal; color: var(--bb-faint); }
+.bbs-series-res { display: grid; justify-items: end; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 19px; letter-spacing: 1.6px; text-align: right; }
+.bbs-series-res small { font-size: 13px; color: var(--bb-muted); }
+.bbs-log.is-post { margin: 0; padding: 0 12px 4px; }
+.bbs-series .bbs-note { padding: 0 14px 12px; }
+
+/* the bracket */
+.bbs-bracket { display: grid; gap: 14px; }
+.bbs-br-lg { display: grid; gap: 6px; }
+.bbs-br-lgname { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 2px; color: var(--bb-muted); }
+.bbs-br-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bbs-br-col { display: grid; align-content: start; gap: 6px; }
+.bbs-br-rnd { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 12px; letter-spacing: 1.6px; color: var(--bb-faint); }
+.bbs-br-list { display: grid; gap: 6px; }
+.bbs-br-m { display: grid; border: 1px solid var(--bb-line); border-radius: 4px; background: var(--bb-panel); }
+.bbs-br-m.is-us { border-color: var(--bb-red); }
+.bbs-br-t { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 5px; padding: 4px 7px; font-size: 12.5px; color: var(--bb-muted); }
+.bbs-br-t + .bbs-br-t { border-top: 1px solid var(--bb-line); }
+.bbs-br-t.is-w { color: var(--bb-cream); font-weight: 800; }
+.bbs-br-t em { font-style: normal; }
+.bbs-br-ws { display: grid; gap: 6px; max-width: 220px; }
+
+/* the awards */
+.bbs-award { padding: 10px 0 12px; border-bottom: 1px solid var(--bb-line); }
+.bbs-award-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.bbs-award-head b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 20px; letter-spacing: .4px; }
+.bbs-award.is-won .bbs-award-head b { color: var(--bb-gold); }
+.bbs-award-tag { padding: 3px 7px 2px; border-radius: 3px; background: var(--bb-panel-2); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1.4px; color: var(--bb-muted); white-space: nowrap; }
+.bbs-award.is-won .bbs-award-tag { background: var(--bb-gold); color: var(--bb-ink); }
+.bbs-race { list-style: none; margin: 0; padding: 0; }
+.bbs-race li { display: grid; grid-template-columns: 20px 18px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 5px 2px; font-size: 14px; border-top: 1px solid var(--bb-line); }
+.bbs-race li.is-us { background: color-mix(in srgb, var(--bb-red) 16%, transparent); box-shadow: inset 3px 0 0 var(--bb-red); font-weight: 800; }
+.bbs-race-rk { font-family: var(--ag-display, Impact, sans-serif); text-align: center; color: var(--bb-muted); }
+.bbs-race-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bbs-race-line { font-size: 12.5px; color: var(--bb-muted); white-space: nowrap; }
+.bbs-race-n { font-variant-numeric: tabular-nums; }
+.bbs-honors { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.bbs-honors span { padding: 5px 9px 4px; border: 1px solid var(--bb-gold); border-radius: 3px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.4px; color: var(--bb-gold); }
+
+/* the NEXT button: says what comes next */
+.bbs-next-wrap { padding: 4px 0; }
+.bbs-next { display: grid; justify-items: center; gap: 3px; width: 100%; min-height: 62px; padding: 10px 14px 9px; border: 0; border-radius: 6px; background: var(--bb-cream); color: var(--bb-ink); cursor: pointer; transition: transform .12s ease-out; }
+.bbs-next:active { transform: scale(.98); }
+.bbs-next b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 23px; line-height: 1; letter-spacing: .6px; }
+.bbs-next small { font-size: 13px; font-weight: 600; color: var(--bb-red); }
+@media (hover: hover) { .bbs-next:hover { background: #fbf7ee; } }
+
+/* the final report */
+.bbs-final { display: grid; gap: 12px; }
+.bbs-final-head { display: grid; gap: 4px; padding: 14px; border-radius: 4px; background: var(--bb-panel); border-left: 6px solid var(--team-color, var(--bb-red)); }
+.bbs-final-head small { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 14px; letter-spacing: 1.6px; color: var(--bb-muted); }
+.bbs-final-head b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .4px; }
+.bbs-final-head.is-champ b { color: var(--bb-gold); }
+.bbs-final-head span { font-size: 14px; color: var(--bb-muted); }
+.bbs-share { width: 100%; }
+.bbs-actions { display: grid; gap: 8px; }
+.bbs-btn { width: 100%; min-height: 48px; border: 1px solid var(--bb-line-hi); border-radius: 6px; background: none; color: var(--bb-cream); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 18px; letter-spacing: 1.8px; cursor: pointer; }
+/* (the new build: cream like PLAY and the NEXT buttons. Share Season above it is the one red bar) */
+.bbs-btn.is-main { border: 0; background: var(--bb-cream); color: var(--bb-ink); }
+@media (hover: hover) { .bbs-btn:hover { border-color: var(--bb-cream); } .bbs-btn.is-main:hover { background: #fbf7ee; } }
+
+/* logos: on a cream plate where a dark logo would vanish on the navy */
+.bbs-logo { flex: none; object-fit: contain; }
+.bbs-logo--txt { display: inline-grid; place-items: center; border-radius: 3px; background: var(--bb-panel-2); font-size: 8px; font-weight: 800; color: var(--bb-muted); }
+.bbs-hero-logo .bbs-logo { width: 54px; height: 54px; }
+
+/* the team spin's rows: the logo and the club */
+.bbs-reel-row { display: flex; flex-direction: row !important; align-items: center; justify-content: center; gap: 10px; }
+.bbs-reel-txt { display: grid; justify-items: start; line-height: 1.05; }
+
+/* phones */
+@media (max-width: 560px) {
+  .bbs-hero-team h1 { font-size: 24px; }
+  .bbs-hero-rec { font-size: 34px; }
+  .bbs-hero-logo { width: 58px; height: 58px; }
+  .bbs-hero-logo .bbs-logo { width: 44px; height: 44px; }
+  .bbs-build { grid-template-columns: minmax(0, 1fr); }
+  .bbs-stats { grid-template-columns: repeat(min(var(--n), 4), minmax(0, 1fr)); }
+  .bbs-stats > div:nth-child(7n + 1) { border-left: 1px solid var(--bb-line); }
+  .bbs-stats > div:nth-child(4n + 1) { border-left: 0; }
+  .bbs-stats b { font-size: 21px; }
+  .bbs-stats .is-big b { font-size: 25px; }
+  .bbs-slash b { font-size: 32px; }
+  .bbs-month-head { grid-template-columns: 96px 46px 1fr 12px; gap: 6px; }
+  .bbs-month-head b { font-size: 15px; }
+  .bbs-month-line { font-size: 12.5px; }
+  .bbs-g { grid-template-columns: 26px 18px 54px 64px 1fr; gap: 4px; font-size: 12.5px; }
+  .bbs-br-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .bbs-br-t { padding: 3px 4px; font-size: 11.5px; grid-template-columns: 14px 1fr auto; gap: 3px; }
+  .bbs-race li { grid-template-columns: 18px 18px minmax(0, 1fr) auto; }
+  .bbs-race-line { display: none; }
+  .bbs-series-teams b { font-size: 28px; }
+}
+/* the website's bottom rail: the page's foot clears it */
+html:not(.is-app) .bbs-page { padding-bottom: calc(24px + var(--web-rail, 0px) + var(--ad-h, 0px)); }
+/* the app's dock: the page's foot clears it too */
+html.is-app .bbs-page { padding-bottom: calc(24px + var(--app-bottom, 0px)); }
+html.app-look:not(.is-app) .bbs-page { padding-bottom: calc(24px + var(--app-bottom, 0px) + var(--web-rail, 0px)); }
+/* buttons don't inherit the page's type: the month rows and the NEXT button's line in the body face */
+.bbs-month-head, .bbs-next small { font-family: var(--ag-body, 'Outfit', system-ui, sans-serif); }
+/* the bracket's seed, a step apart from the club's code */
+.bbs-br-seed { margin-right: 4px; font-size: 10px; opacity: .65; }
+
+/* ═══ The season's flow (components/simFlow.jsx): basketball's screens and controls, in baseball's colours ═══
+   Flat panels, small corners, cream type, the stitch red for what is ours. */
+.bbs-page .bbs-topbar { padding-bottom: 10px; }
+.bbs-page .simp-dot-active { background: var(--bb-cream); box-shadow: none; }
+.bbs-page .simp-dot-done { background: var(--bb-faint); }
+.bbs-page .simp-back-btn { border: 1px solid var(--bb-line-hi); border-radius: 4px; background: none; color: var(--bb-cream); box-shadow: none; }
+.bbs-hero-brand { padding: 9px 14px 0; font-size: 14px; }
+.bbs-screen { padding-top: 14px; }
+.bbs-screen .bbs-body { padding-top: 6px; }
+.bbs-page .simp-cta, .bbs-page .tipoff-spin-btn { background: var(--bb-red); color: var(--bb-on-red); border: 0; border-radius: 4px; box-shadow: none; filter: none; font-family: var(--ag-font, 'Bebas Neue', sans-serif); letter-spacing: 2px; }
+@media (hover: hover) { .bbs-page .simp-cta:hover, .bbs-page .tipoff-spin-btn:hover:not(:disabled) { background: var(--bb-red-hi); box-shadow: none; filter: none; } }
+.bbs-page .simp-ovr-num { color: var(--bb-cream); text-shadow: none; }
+.bbs-page .simp-ovr-lbl { color: var(--bb-muted); }
+.bbs-page .simp-archetype { color: var(--bb-cream); }
+.bbs-page .simp-eyebrow, .bbs-page .sawd-title, .bbs-page .goat-screen-title { color: var(--bb-red-txt); }
+.bbs-page .simp-loading-dot, .bbs-page .sawd-dot { background: var(--bb-red-txt); }
+.bbs-page .simp-live-record .slr-w { color: var(--bb-cream); }
+.bbs-page .simp-live-record .slr-l { color: var(--bb-muted); }
+.bbs-page .simp-live-record .slr-sep { color: var(--bb-faint); }
+.bbs-live-sub { margin: -2px 0 8px; text-align: center; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 2px; color: var(--bb-muted); }
+/* a dot a game: 162 of them, so small; a win in red, a loss grey */
+.bbs-page .bbs-dots { gap: 3px; }
+.bbs-page .bbs-dots .bsim-sdot { width: 9px; height: 9px; }
+.bbs-page .bsim-sdot--w { background: var(--bb-red-hi); }
+.bbs-page .bsim-sdot--l { background: var(--bb-line-hi); }
+.bbs-page .sm-pulse-line { stroke: var(--bb-red-hi); filter: none; }
+.bbs-page .sm-pulse-dot { fill: var(--bb-cream); stroke: var(--bb-red-hi); }
+.bbs-page .sm-pulse-po { stroke: var(--bb-gold); opacity: .6; }
+.bbs-page .sm-wire { background: var(--bb-panel); border: 1px solid var(--bb-line); border-radius: 4px; box-shadow: none; }
+.bbs-page .sm-wire-tag { background: var(--bb-red); color: var(--bb-on-red); border-radius: 2px; }
+.bbs-page .sm-wire-text { color: var(--bb-cream); }
+/* the postseason: the scoreboard, the controls, the series */
+.bbs-first { margin: 2px 0 12px; text-align: center; font-size: 13px; color: var(--bb-muted); }
+.bbs-page .tipoff-sub { color: var(--bb-cream); }
+.bbs-page .plf-game, .bbs-page .plf-end-card, .bbs-page .bsim-playin-card { background: var(--bb-panel); border: 1px solid var(--bb-line); border-radius: 6px; box-shadow: none; }
+.bbs-page .plf-game-won { border-color: rgba(60,207,122,.55); background: var(--bb-panel); }
+.bbs-page .plf-game-lost { border-color: var(--bb-line-hi); background: var(--bb-panel); }
+.bbs-page .plf-end-card--champ { border-color: var(--bb-gold); }
+.bbs-page .plf-champ-label { color: var(--bb-gold); text-shadow: none; }
+.bbs-page .plf-round-lbl, .bbs-page .bsim-sh-opp { color: var(--bb-muted); }
+.bbs-page .plf-progress-fill, .bbs-page .plf-series-timer-fill { background: var(--bb-red-hi); }
+.bbs-page .plf-qd-active { background: var(--bb-cream); box-shadow: none; }
+.bbs-page .plf-seg { border-radius: 4px; border-color: var(--bb-line-hi); }
+.bbs-page .plf-seg-btn--active, .bbs-page .plf-seg-btn.plf-seg-btn--pause { background: var(--bb-cream); color: var(--bb-ink); }
+.bbs-page .plf-seg-btn-skip { background: var(--bb-red); color: var(--bb-on-red); }
+@media (hover: hover) { .bbs-page .plf-seg-btn--active:hover { background: #fff; } .bbs-page .plf-seg-btn-skip:hover { background: var(--bb-red-hi); } }
+.bbs-page .po-log-toggle-btn { border-radius: 4px; border-color: var(--bb-line-hi); color: var(--bb-cream); }
+.bbs-bye { margin: 4px 0 12px; }
+.bbs-trophy-art { display: block; width: 120px; height: 150px; margin: 0 auto 4px; }
+.bbs-ring-art { display: block; width: 190px; height: 238px; }
+.bbs-trophy-art .tc-art, .bbs-ring-art .tc-art { display: block; width: 100%; height: 100%; }
+.bbs-br-m.is-tbd em { color: var(--bb-faint); }
+/* awards night */
+.bbs-page .goat-reveal-banner { background: var(--bb-panel); border: 1px solid var(--bb-gold); border-radius: 6px; box-shadow: none; }
+.bbs-page .goat-reveal-rank { color: var(--bb-gold); text-shadow: none; }
+.bbs-awards .bbs-body { align-self: stretch; width: 100%; text-align: left; }
+/* the build, one trait at a time */
+.bbs-build li { transition: opacity .25s ease, transform .25s ease; }
+.bbs-build li.is-wait { opacity: 0; transform: translateY(6px); }
+html.bap-reduce-motion .bbs-build li.is-wait { opacity: 1; transform: none; }
+.bbs-page .goat-screen-title, .bbs-page .goat-page-title { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; letter-spacing: .5px; }
+.bbs-page .goat-eyebrow { font-family: var(--ag-font, 'Bebas Neue', sans-serif); letter-spacing: 2.4px; color: var(--bb-muted); }

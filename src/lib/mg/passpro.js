@@ -14,14 +14,14 @@
 //
 // The rules are all here with no screen, in field units: x across, d up the field from the line of
 // scrimmage (the QB is at a small negative d, behind our man). The camera is pass-rush's (lib/mg/index.js).
-import { byV, clamp, lerp, outcome, rngOf, layer, manOf, paceOf, easeOut, particles, nudge, text, DISPLAY, LABEL, GOLD, GOOD, BAD } from './kit.js'
+import { byV, clamp, lerp, outcome, rngOf, layer, manOf, xiOf, paceOf, easeOut, particles, nudge, text, DISPLAY, LABEL, GOLD, GOOD, BAD } from './kit.js'
 import { tilt, untilt, ground, stands, floodlight, vignette, skinOf, airBall, warmAthlete, crowdPop } from './art.js'
 import { afterStop, fxSeed, hitFx, plantFx, landFx, pushIn } from './contact.js'
 import { paintFieldFlat, qbPose, lightFx } from './throw.js'
-import { put, action, teamOf, walk, ballInAir } from './read.js'
+import { put, action, tagsAll, teamOf, walk, ballInAir } from './read.js'
 
 export const how = {
-  'pass-pro': 'Mirror the rusher, wide or back inside, and PUNCH when he gets to you. On a bull rush, HOLD PUNCH and anchor. On a blitz, pick up the free rusher.',
+  'pass-pro': 'Mirror the rusher, wide or back inside, and PUNCH when he gets there. On a bull rush, HOLD PUNCH and anchor. On a blitz, pick up the free rusher.',
 }
 
 const YD = 20
@@ -49,6 +49,9 @@ const DRIVE_MS = 600                     // a bull with nothing in front of him:
 const BULL_IN = 260                      // a bull's first step to contact
 
 const bare = m => m && { number: m.number, skin: m.skin }
+// (from the full eleven: the man on him by name, a man off the play named once the snap's over)
+const named = m => (m?.last ? m : bare(m))
+const quiet = m => (m?.last ? { ...m, quiet: true } : bare(m))
 const seek = (m, x, d, v, dt) => {
   const dx = x - m.x, dd = d - m.d, e = Math.hypot(dx, dd)
   if (e < 0.01) return true
@@ -60,6 +63,19 @@ const far = (a, b) => Math.hypot(a.x - b.x, a.d - b.d)
 const pick = (r, list) => list[Math.floor(r() * list.length)]
 
 function castOf(cast) {
+  // the full eleven a side (career's xi): his own line by name, their four down and both backers
+  if (cast?.us?.xi && cast?.them?.xi) {
+    const x = (side, spot, i) => xiOf(cast, side, spot, i)
+    return {
+      me: cast.me ?? null,
+      ol: [0, 1, 2, 3, 4].map(i => { const m = x('us', 'ol', i); return m && !m.me ? m : null }),
+      dl: [0, 1, 2, 3].map(i => x('them', 'dl', i)),
+      lb: x('them', 'lb', 0), lb2: x('them', 'lb', 1),
+      // (he's the lineman: a cast made for a QB, practice while OL is hidden, puts the real starter behind him)
+      qb: x('us', 'qb', 0)?.me ? x('us', 'qb', 1) : x('us', 'qb', 0), rb: x('us', 'rb', 0),
+      pace: paceOf(cast, 'them', 'dl', 0),
+    }
+  }
   return {
     me: cast?.me ?? null,
     ol: [0, 1, 2, 3, 4].map(i => (cast?.us?.ol?.length > i + 1 ? bare(cast.us.ol[i + 1]) : null)),
@@ -495,18 +511,18 @@ export function draw(ctx, g, view0) {
     if (i === 2 * s) continue
     const b = snapped ? bump(g, i + 3) : 0
     const x = g.CX + i * SP
-    put(x + b * 0.6, fy(ME_D - 10 * pc + Math.abs(b) * 0.3), us, { dir: 'up', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 4), number: OL_NUM[i + 2], size: SIZE, ...who.ol[i + 2] })
+    put(x + b * 0.6, fy(ME_D - 10 * pc + Math.abs(b) * 0.3), us, { dir: 'up', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 4), number: OL_NUM[i + 2], size: SIZE, ...quiet(who.ol[i + 2]) })
   }
   // their front: the three not on him (on a twist, the man beside his end is the one looping round)
   const front = [g.CX + s * 0.55 * SP, g.CX - s * 0.55 * SP, g.CX - s * 2.4 * SP]
   front.forEach((x, i) => {
     if (i === 0 && rep.other && rep.blitz === 'stunt') return
     const b = snapped ? bump(g, i + 7) : 0
-    put(x + b, fy(RU_D - 6 - 12 * pc - Math.abs(b) * 0.4), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i * 2 + 9), number: DL_NUM[i + 1], size: SIZE, ...bare(who.dl[i + 1]) })
+    put(x + b, fy(RU_D - 6 - 12 * pc - Math.abs(b) * 0.4), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i * 2 + 9), number: DL_NUM[i + 1], size: SIZE, ...quiet(who.dl[i + 1]) })
   })
   // the linebackers, off the ball
   // (on a blitz the one on his side is the man coming: he's drawn as the rusher)
-  const lbs = rep.other && rep.blitz === 'blitz' ? [[g.CX - s * 0.2 * SP, 57, null]] : [[g.CX - s * 0.2 * SP, 57, null], [g.MX - s * 0.4 * SP, 54, bare(who.lb)]]
+  const lbs = rep.other && rep.blitz === 'blitz' ? [[g.CX - s * 0.2 * SP, 57, quiet(who.lb2)]] : [[g.CX - s * 0.2 * SP, 57, quiet(who.lb2)], [g.MX - s * 0.4 * SP, 54, quiet(who.lb)]]
   lbs.forEach(([x, number, look], i) => put(x, fy(80 + i * 4), them, { dir: 'down', pose: 'ready', skin: skinOf(i + 2), number, size: SIZE, ...look }))
   // the back stays in, on the far side of the QB, and steps up into a gap
   const rbx = qb.x - s * 34, rbd = snapped ? lerp(QB_GUN + 2, QB_GUN + 26, clamp(age / 600, 0, 1)) : QB_GUN + 2
@@ -515,7 +531,7 @@ export function draw(ctx, g, view0) {
   if (rep.other) {
     const o = rep.other, w = walk(g, `o${g.i}`, o.x, o.d, 7)
     const drop = rep.blitz === 'blitz' && snapped && ex?.type !== 'pickup' || (ex?.type === 'pickup' && g.t >= ex.commitAt - 60 && rep.blitz === 'blitz')
-    put(o.x, fy(o.d), them, { dir: drop ? (w.step == null ? 'up' : dirFrom(w, 'up')) : dirFrom(w, 'down'), step: w.step, pose: !snapped ? 'stance' : w.step == null ? 'block' : null, skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...bare(who.dl[0]) })
+    put(o.x, fy(o.d), them, { dir: drop ? (w.step == null ? 'up' : dirFrom(w, 'up')) : dirFrom(w, 'down'), step: w.step, pose: !snapped ? 'stance' : w.step == null ? 'block' : null, skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...quiet(who.dl[0]) })
   }
   // the QB: the ball comes back, he sets, it comes out at the end of his clock
   const thrown = rep.thrown != null ? g.t - rep.thrown : -1
@@ -530,7 +546,7 @@ export function draw(ctx, g, view0) {
   })
   // the man on him
   const wr = walk(g, `ru${g.i}`, ru.x, ru.d, 7)
-  const R = { dir: 'down', skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...(rep.moves[0] === 'pickup' ? (rep.blitz === 'blitz' ? bare(who.lb) : bare(who.dl[1])) : bare(who.dl[0])), step: null, pose: 'stance', squat: 0 }
+  const R = { dir: 'down', skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...(rep.moves[0] === 'pickup' ? (rep.blitz === 'blitz' ? named(who.lb) : named(who.dl[1])) : named(who.dl[0])), step: null, pose: 'stance', squat: 0, lead: true }
   if (rep.moves[0] === 'pickup') R.number = rep.blitz === 'blitz' ? (who.lb?.number ?? 54) : (who.dl[1]?.number ?? DL_NUM[1])
   const party = sack ? clamp((s2 - 560) / 170, 0, 1) : 0
   if (snapped) {
@@ -546,7 +562,7 @@ export function draw(ctx, g, view0) {
   put(ru.x, fy(ru.d), them, R)
   // him: back to the camera, kick-sliding, punching, sitting down in his anchor
   const wm = walk(g, `me${g.i}`, me.x, me.d, 7)
-  const M = { size: SIZE, number: 76, skin: skinOf(4), ...who.me, dir: 'up', pose: 'stance', step: null, squat: 0 }
+  const M = { size: SIZE, number: 76, skin: skinOf(4), ...who.me, dir: 'up', pose: 'stance', step: null, squat: 0, lead: true }
   let mdy = 0
   if (snapped) {
     const punch = clamp(1 - (g.t - rep.punchAt) / 160, 0, 1)
@@ -558,6 +574,7 @@ export function draw(ctx, g, view0) {
     else M.pose = 'block'
   }
   put(me.x, fy(me.d + mdy), us, M)
+  tagsAll(res && since > 700)   // (the snap's over: every man's name)
   action(ctx, view)
   // the ball: on the ground under the centre, back to the QB on the snap, away down the field when he throws
   if (!snapped) {

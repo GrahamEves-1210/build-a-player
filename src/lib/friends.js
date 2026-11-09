@@ -9,6 +9,8 @@
 import { useState } from 'react'
 import { supabase } from './supabase'
 import { seedCos } from './peopleCos'
+import { SOCCER_LIVE } from './soccerLive'
+import { BASEBALL_LIVE } from './baseballLive'
 
 const pair = (a, b) => `and(from_id.eq.${a},to_id.eq.${b}),and(from_id.eq.${b},to_id.eq.${a})`
 
@@ -122,22 +124,26 @@ const ratingOf = id => supabase.from('online_ratings').select('rating').eq('user
 export async function loadPublicProfile(id) {
   if (!supabase || !id) return null
   const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', id)
-  const [acct, seasons, rings, best, vs, booked, dlDpoys] = await Promise.all([
+  const [acct, seasons, rings, best, vs, booked, dlDpoys, soccerAwards, baseballAwards] = await Promise.all([
     supabase.from('accounts').select('username, cos, classic_mvps, alltime_mvps, classic_opoys, alltime_opoys, classic_dpoys, alltime_dpoys').eq('id', id).maybeSingle()
       .then(r => r.data ?? null, () => null),
     countOf(base()),
     countOf(base().eq('champion', true)),
-    supabase.from('simulations').select('game_mode, position, ovr, archetype, wins, losses, champion, playoffs, build, created_at')
+    supabase.from('simulations').select('game_mode, position, ovr, archetype, wins, losses, season_comp_pct, champion, playoffs, build, created_at')
       .eq('user_id', id).not('build', 'is', null)
       .order('ovr', { ascending: false }).order('wins', { ascending: false }).limit(3)
       .then(r => r.data ?? [], () => []),
     supabase.from('vs_results').select('result').eq('user_id', id).then(r => r.data ?? [], () => []),
     ratingOf(id),
     countOf(base().eq('season_award', 'dpoy').or('game_mode.like.dl-*,game_mode.like.lb-*')),   // DL's and LB's DPOYs have no counter on accounts
+    // soccer's: a season with an award tag (Golden Boot, Ballon d'Or…: lib/soccerAwards.js), once it's live
+    SOCCER_LIVE ? countOf(base().like('game_mode', 'soccer-%').not('season_award', 'is', null)) : Promise.resolve(0),
+    // baseball's: a season with an award beyond an All-Star nod (lib/baseballAwards.js baseballMajorAward), once it's live
+    BASEBALL_LIVE ? countOf(base().like('game_mode', 'baseball-%').not('season_award', 'is', null).neq('season_award', 'asg')) : Promise.resolve(0),
   ])
   if (acct?.cos) seedCos(id, acct.cos)
   const awards = (acct ? ['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys']
-    .reduce((s, k) => s + (Number.isFinite(acct[k]) ? acct[k] : 0), 0) : 0) + (dlDpoys ?? 0)
+    .reduce((s, k) => s + (Number.isFinite(acct[k]) ? acct[k] : 0), 0) : 0) + (dlDpoys ?? 0) + (soccerAwards ?? 0) + (baseballAwards ?? 0)
   const level = Number.isFinite(acct?.cos?.level) ? acct.cos.level : null   // only if their game shares it
   // the server's rating; before it books any (or without its table), what their game shares
   const rating = booked !== undefined && booked !== null ? booked : Number.isFinite(acct?.cos?.rating) ? acct.cos.rating : null   // null: no online games yet
@@ -158,6 +164,8 @@ export function modeLabel(gameMode, position) {
     const pos = position === 'big' ? 'Big' : position === 'guard' ? 'Guard' : 'Bucket'
     return `${pos} · ${m === 'bucket-all-time' ? 'All-Time' : 'Classic'}`
   }
+  if (m.startsWith('soccer-')) return `Striker · ${m === 'soccer-all-time' ? 'World Cup' : 'Top Divisions'}`
+  if (m.startsWith('baseball-')) return `${position === 'pit' ? 'Pitcher' : 'Batter'} · ${m === 'baseball-all-time' ? 'All-Time' : 'Current'}`
   const [head, ...rest] = m.split('-')
   const pos = POS[head] || 'QB'
   const mode = POS[head] ? rest.join('-') : m

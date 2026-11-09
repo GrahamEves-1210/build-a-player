@@ -31,7 +31,14 @@ const UNKNOWN_VAL = 3                 // a slot the server can't match to a real
 const OFF_SEED_MAX = 2
 const SEED_SLACK = 2                  // spins past one-a-slot that still count (a pick never placed)
 
-export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE, DB, DL, LB and OL pools off: not enough players to fill them
+export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'], soccer: ['st'], baseball: ['bat', 'pit'] }   // TE, DB, DL, LB and OL pools off: not enough players to fill them
+// A sport whose pools are queues of their own: soccer's TOP DIVISIONS ('current') and WORLD CUP
+// ('alltime'), each its own queue, seed and scoring; baseball's CURRENT and ALL-TIME the same, for the
+// batter and the pitcher (four queues). Football and basketball have one pool a position.
+export const COMPETE_MODES = { soccer: ['current', 'alltime'], baseball: ['current', 'alltime'] }
+export const competeMode = (sport, mode) => (COMPETE_MODES[sport] ? (COMPETE_MODES[sport].includes(mode) ? mode : COMPETE_MODES[sport][0]) : null)
+// a queue's name: the live worker's queue for it, and its "3 searching" count ('cp:' + this)
+export const competeQueue = (sport, pos, mode = null) => (COMPETE_MODES[sport] ? `${sport}-${pos}-${competeMode(sport, mode)}` : `${sport}-${pos}`)
 const NFL = {
   qb: { pool: QBS, types: TYPES, ovr: b => calcOVR(b) },
   rb: { pool: RBS, types: RB_TYPES, ovr: b => calcOVRRB(b) },
@@ -47,12 +54,18 @@ const BUCKET = {
   guard: { pool: NBA_GUARD_PLAYERS, types: GUARD_TYPES, ovr: b => calcBucketOVR(b, GUARD_TYPES, 'guard') },
   big: { pool: NBA_BIG_PLAYERS, types: BIG_TYPES, ovr: b => calcBucketOVR(b, BIG_TYPES, 'big') },
 }
-export const competeKit = (sport, pos) => (sport === 'bucket' ? BUCKET[pos] : NFL[pos]) ?? null
+// Soccer's kits come from lib/soccerKits.js, which adds them here: its rosters and season sim stay
+// out of football's and basketball's bundles (this file is in every app's). The live worker loads it
+// (live/src/compete.js); without it a soccer build scores nothing. Baseball's the same way (lib/baseballKits.js).
+const ADDED = {}
+export const addCompeteKit = (sport, kitFor) => { ADDED[sport] = kitFor }
+export const competeKit = (sport, pos, mode = null) => (ADDED[sport] ? ADDED[sport](pos, competeMode(sport, mode)) : (sport === 'bucket' ? BUCKET[pos] : NFL[pos])) ?? null
 
 // The build the server believes: every slot's rating looked up from the named
 // player (name + team), never taken from the phone
-export function scoreBuild(sport, pos, sent, seed = null, vid = null) {
-  const kit = competeKit(sport, pos)
+// (mode: soccer's pool, 'current' or 'alltime'; the other sports have none)
+export function scoreBuild(sport, pos, sent, seed = null, vid = null, mode = null) {
+  const kit = competeKit(sport, pos, mode)
   if (!kit || !sent || typeof sent !== 'object') return { ovr: 0, build: {} }
   const legal = seed ? dealtBy(sport, kit, seed, sent, vid) : null
   const build = {}
@@ -121,7 +134,7 @@ export function legalSlots({ seed, rs = null, types, pool, teams, sent }) {
   return ok
 }
 const dealtBy = (sport, kit, seed, sent, vid) =>
-  legalSlots({ seed, rs: vid ? `${seed}:${vid}` : null, types: kit.types, pool: kit.pool, teams: sport === 'bucket' ? NBA_TEAMS : TEAMS, sent })
+  legalSlots({ seed, rs: vid ? `${seed}:${vid}` : null, types: kit.types, pool: kit.pool, teams: kit.teams ?? (sport === 'bucket' ? NBA_TEAMS : TEAMS), sent })
 
 // The teams the reel shows (only those with someone to draft), in a fixed order
 const reelTeams = (teams, pool) => {

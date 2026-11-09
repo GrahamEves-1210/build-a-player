@@ -1,0 +1,5 @@
+/* Profile → BASEBALL (app/BaseballCareer.jsx): the four career tabs, Batter / Pitcher over their All-Time pair,
+   two even rows (the profile column is narrow on every screen; never a lone tab on a line of its own) */
+.bbc-toggle { display: grid; grid-template-columns: 1fr 1fr; }
+.bbc-toggle .prf-cgame-btn { min-width: 0; }
+.bbc-toggle .prf-cgame-label { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

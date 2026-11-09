@@ -1,6 +1,100 @@
 // The patch notes (components/app/AppWhatsNew.jsx), newest first. A new update: add one at the top, with a new
 // `id`, and it opens once for every returning player; the date menu goes back through the older ones.
 // Only what's new against the live site. ratings: the Ratings tab (data/ratings-patch.js) belongs to that one
+const NOV_10 = {
+  id: '2026-11-10',
+  date: 'NOV 10',
+  fullDate: 'NOV 10, 2026',
+  sections: [
+    {
+      name: 'New Mode: College Football',
+      items: [
+        'Added College Football: spin a conference, then one of its starters',
+        'QB, RB and WR, with every FBS team and its real 2026 players',
+        'A full season with the AP Top 25, conference title games and the 12-team Playoff',
+        'The season plays out live, game by game, like a football season',
+        'Title games, Playoff games and bowls play out live on the scoreboard',
+        'Heisman ceremony, position awards and All-Americans',
+        'Draft stock after every season',
+        'Enter the NFL Draft turns a college build into a Career',
+        'Sandbox works in College Football too',
+      ],
+    },
+    {
+      name: 'Career',
+      items: [
+        'Added Start in College for QB, RB and WR: pick from school offers, play a season or two, then enter the draft',
+        'Teams now rise and fall more over the years',
+        'Traits now close with age: physical traits first, then skills, and mental traits never',
+        'A trait costs double in its last year or two before it closes',
+        'Starting durability now comes from the player\'s frame, his weight for his height',
+        'Height and weight now show in Career',
+        'Durability no longer drops every season: most knocks heal over the offseason',
+        'Change the jersey number after the draft or in any offseason',
+        'The win chance shown in the playoffs is now the real chance',
+        'Every basketball playoff series and every football playoff game now has a key moment',
+        'A last-shot moment in a series now decides that game, not the whole series',
+        'Football\'s last-play moments now only come up when the game is close at the end',
+      ],
+    },
+    {
+      name: 'Key Moments',
+      items: [
+        'Every football mini game now shows all 22 real players with their names and numbers',
+        'Combine and training camp drills now play in an empty stadium',
+        'Moment cards and mini game text now use the player\'s name',
+      ],
+    },
+    {
+      name: 'Home',
+      items: [
+        'Football positions are split into offense and defense: tap DEFENSE at the end of the bar',
+      ],
+    },
+    {
+      name: 'Squad Builder',
+      items: [
+        'Added a Current / All-Time switch for football and basketball',
+        'All-Time puts the builds on a franchise\'s legends',
+      ],
+    },
+    {
+      name: 'Profile and Shop',
+      items: [
+        'Four new avatars: No. 1 Fan, Underdog, Ankle Breaker and Play Caller',
+        'Career and Squad Builder titles now count toward Rings on the profile',
+      ],
+    },
+    {
+      name: 'Rosters',
+      items: [
+        'Added Damar Hamlin to the Bills in place of C.J. Gardner-Johnson',
+        'Added Mitchell Evans to the Panthers in place of Ja\'Tavion Sanders',
+        'Moved Jessie Bates III to the Jaguars, and DeMarcco Hellams starts for the Falcons',
+        'Moved Nique Clifford to the Thunder and Walter Clayton Jr. to the Mavericks',
+        'Updated Ja\'Kobi Lane height and weight',
+        'Rating updates for Amon-Ra St. Brown, Darren Waller, Tommy Tremble, Chuba Hubbard, Kyle Monangai, Nik Bonitto and Jonathon Cooper',
+      ],
+    },
+    {
+      name: 'Fixes',
+      items: [
+        'Fixed playoff games ending in a tie with no overtime',
+        'Fixed impossible football scores like 4 points',
+        'Fixed teams scoring fewer points than the player\'s touchdowns',
+        'Fixed the NBA Finals bracket showing the result before the games were played',
+        'Fixed the playoff bracket showing the wrong opponent',
+        'Fixed basketball standings sometimes being one win off',
+        'Fixed the menu on the first season screen opening the final report',
+        'Fixed signing out on the profile page opening an old screen',
+        'Fixed the DB jersey number sitting too low on the final report',
+        'Fixed DL trait names getting cut off on Home',
+        'Fixed crossed lines on the build screen on smaller laptop screens',
+        'Interception leaders now change from year to year like the real NFL',
+      ],
+    },
+  ],
+}
 const NOV_7 = {
   id: '2026-11-07',
   date: 'NOV 7',
@@ -207,7 +301,7 @@ const NOV_5 = {
     },
   ],
 }
-export const PATCH_NOTES = [NOV_7, NOV_5]
+export const PATCH_NOTES = [NOV_10, NOV_7, NOV_5]
 export const WHATS_NEW = PATCH_NOTES[0]
 const KEY = 'bap_whatsnew'
 export const whatsNewSeen = () => { try { return localStorage.getItem(KEY) === WHATS_NEW.id } catch { return true } }

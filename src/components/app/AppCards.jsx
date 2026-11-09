@@ -3,7 +3,10 @@ import { XpIco } from './GainIcons'
 import { useProgress, getProgress, cardKey, rarityRank, RARITIES, claimSet, setReward, noteSetsReady } from '../../lib/progress'
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow, IconFootball, IconBasketball } from './icons'
+import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow, IconFootball, IconBasketball, IconSoccer, IconBaseball } from './icons'
+import { SOCCER_LIVE } from '../../lib/soccerLive'
+import { BASEBALL_LIVE } from '../../lib/baseballLive'
+import { BASEBALL_MODES } from '../../lib/baseballUi'
 import EmptyState, { PassLoader } from './EmptyState'
 
 // Card binder (dock → Cards). Every player a spin lands on is collected, across
@@ -57,11 +60,50 @@ async function loadNba() {
     photo: name => { const id = hs.default[name]; return id ? `${HEADSHOT_BASE}/nba/${id}.webp` : null },
   }
 }
+// Soccer (once it's live, SOCCER_LIVE): TOP DIVISIONS is its 'classic' pool, WORLD CUP its 'all-time' one.
+// A card's tag is the player's real position (ST, LW, AM…), the build's is always ST
+async function loadSoccer() {
+  const [pl, clubs, nations, hs] = await Promise.all([
+    import('../../data/soccer-strikers'), import('../../data/soccer-clubs'), import('../../data/soccer-nations'), import('../../data/soccer-headshots.json'),
+  ])
+  const isNation = new Set(nations.WC_NATIONS.map(t => t.short))
+  return {
+    pools: { st: { classic: pl.SOCCER_STRIKERS, 'all-time': pl.WC_STRIKERS } },
+    posLabel: { st: 'ST' },
+    tagOf: p => p.role || 'ST',
+    poolSet: { classic: ['TOP DIVISIONS', 'Every player in Europe\'s top five leagues'], 'all-time': ['WORLD CUP', 'Every player at the 2026 World Cup'] },
+    teams: [...clubs.SOCCER_CLUBS, ...nations.WC_NATIONS],
+    logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
+    photo: (name, p) => { const f = p?.espn != null ? hs.default[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null },
+  }
+}
+// Baseball (once it's live and its cards are on: BASEBALL_LIVE, BASEBALL_MODES.cards): batters and pitchers, CURRENT
+// ('classic', 2026 rosters) and ALL-TIME (franchise legends). A card's tag is his real role (SS, CF, SP, CL…); a
+// legend's decade comes from his years with the club. Photos: ESPN headshots by id (data/mlb-headshots.json)
+async function loadBaseball() {
+  const [bat, pit, lb, lp, teams, hs] = await Promise.all([
+    import('../../data/mlb-batters'), import('../../data/mlb-pitchers'), import('../../data/mlb-legend-batters'), import('../../data/mlb-legend-pitchers'),
+    import('../../data/mlb-teams'), import('../../data/mlb-headshots.json'),
+  ])
+  return {
+    pools: {
+      bat: { classic: bat.MLB_BATTERS, 'all-time': lb.MLB_LEGEND_BATTERS },
+      pit: { classic: pit.MLB_PITCHERS, 'all-time': lp.MLB_LEGEND_PITCHERS },
+    },
+    posLabel: { bat: 'BATTER', pit: 'PITCHER' },
+    tagOf: p => p.role || (p.position === 'pit' ? 'P' : 'BAT'),
+    teams: teams.MLB_TEAMS,
+    logo: t => `/logos/mlb/${t}.png`,
+    photo: (name, p) => { const f = p?.espn != null ? hs.default[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null },
+  }
+}
 const cache = {}
-const loadSport = s => (cache[s] ??= (s === 'bucket' ? loadNba() : loadNfl()))
+const loadSport = s => (cache[s] ??= (s === 'bucket' ? loadNba() : s === 'soccer' ? loadSoccer() : s === 'baseball' ? loadBaseball() : loadNfl()))
 const SPORTS = [
   { id: 'nfl',    label: 'FOOTBALL',   Icon: IconFootball },
   { id: 'bucket', label: 'BASKETBALL', Icon: IconBasketball },
+  ...(SOCCER_LIVE ? [{ id: 'soccer', label: 'SOCCER', Icon: IconSoccer }] : []),
+  ...(BASEBALL_LIVE && BASEBALL_MODES.cards ? [{ id: 'baseball', label: 'BASEBALL', Icon: IconBaseball }] : []),
 ]
 const loadAll = () => Promise.all(SPORTS.map(s => loadSport(s.id))).then(list => Object.fromEntries(SPORTS.map((s, i) => [s.id, list[i]])))
 
@@ -110,7 +152,8 @@ function buildSets(cards, data, sport) {
   for (const pos of Object.keys(data.pools)) {
     for (const mode of ['classic', 'all-time']) {
       const list = cards.filter(c => c.pos === pos && c.mode === mode)
-      push(`pos|${pos}|${mode}`, 'pos', `${mode === 'all-time' ? 'ALL-TIME ' : ''}${data.posLabel[pos]}S`, mode === 'all-time' ? 'Every legend at the position' : 'Every current player at the position', list, { gold: mode === 'all-time' })
+      const named = data.poolSet?.[mode]   // (soccer's pools have their own names)
+      push(`pos|${pos}|${mode}`, 'pos', named ? named[0] : `${mode === 'all-time' ? 'ALL-TIME ' : ''}${data.posLabel[pos]}S`, named ? named[1] : mode === 'all-time' ? 'Every legend at the position' : 'Every current player at the position', list, { gold: mode === 'all-time' })
     }
   }
   // the rarest cards
@@ -144,7 +187,7 @@ function Card({ c, data, color, i, small = false }) {
         <span className="ag-ct-name">{lastName(player.name)}</span>
         <span className="ag-ct-rar">{RARITIES[rank]}</span>
       </div>
-      {!small && <span className={`ag-ct-tag${mode === 'all-time' ? ' ag-ct-tag--at' : ''}`}>{mode === 'all-time' ? <IconStar size={10} className="ag-ct-star" /> : null}{data.posLabel[pos]}</span>}
+      {!small && <span className={`ag-ct-tag${mode === 'all-time' ? ' ag-ct-tag--at' : ''}`}>{mode === 'all-time' ? <IconStar size={10} className="ag-ct-star" /> : null}{data.tagOf ? data.tagOf(player) : data.posLabel[pos]}</span>}
       {owned && count > 1 && <span className="ag-ct-count">×{count}</span>}
     </div>
   )
@@ -309,7 +352,7 @@ export default function AppCards({ sport: startSport, onClose }) {
               <span className="ag-set-name">{openSet.title}</span>
               <span className="ag-set-count">{openSet.owned}/{openSet.total}</span>
             </div>
-            <div className="ag-set-sub">{openSet.sport === 'bucket' ? 'Basketball' : 'Football'} · {openSet.sub} · worth {setReward(openSet.total)} XP</div>
+            <div className="ag-set-sub">{openSet.sport === 'bucket' ? 'Basketball' : openSet.sport === 'soccer' ? 'Soccer' : openSet.sport === 'baseball' ? 'Baseball' : 'Football'} · {openSet.sub} · worth {setReward(openSet.total)} XP</div>
             {openSet.owned === openSet.total && !openSet.claimed && (
               <button className="ag-btn ag-btn--gold ag-set-claim" onClick={() => claim(openSet)}><IconGift size={18} /> SET COMPLETE · CLAIM <span className="gain"><XpIco /> +{setReward(openSet.total)}</span></button>
             )}

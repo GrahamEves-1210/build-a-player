@@ -12,7 +12,7 @@ import { frontRun, ballIn, easedState, easedPose, newPose, copyPose, mixPose, po
 import { castMen, teamOf } from './read.js'
 
 export const how = {
-  lockdown: 'Press the side he really drives to and slide with him. Wait out the hesitation: go early and he crosses you.',
+  lockdown: 'Press the side he really drives to and slide with him. Wait out the hesitation: go early and he crosses over.',
 }
 
 // ── The rules ───────────────────────────────────────────────────────────────
@@ -349,7 +349,7 @@ export function draw(ctx, g, view) {
   // the building: on its feet for a stop, and up and roaring when he's had to throw it away
   const sinceClank = f?.kind === 'stop' ? T - f.clank : -1
   const roar = sinceClank >= 0 && sinceClank < 2400 ? 110 : f?.kind === 'stop' ? 240 : !f && g.i > 0 ? 420 : 0
-  if (roar && !lightFx()) {
+  if (roar && !lightFx() && !view.empty) {
     crowdUp(ctx, view, G, c, 'board', T, roar)
     paintHoop(ctx, cam, c.us)
     if (sinceClank >= 0 && !reduceMotion()) camFlashes(ctx, view, G, T, 14)

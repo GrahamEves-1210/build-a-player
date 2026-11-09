@@ -18,10 +18,13 @@ import { CoinPill } from './AppShop'
 import { Form } from './OnlineRecord'
 import EmptyState from './EmptyState'
 import { RollingNumber, RollText } from './MotionText'
-import { HoopU, switchSport } from './AppHome'
+import { HoopU, switchSport, SPORTS } from './AppHome'
+import { SOCCER_POOL } from '../../lib/soccerUi'
+import { BASEBALL_POS } from '../../lib/baseballUi'
 import './home-classic.css'
-import { LB_LIVE } from '../../lib/lbLive'
-import { OL_LIVE } from '../../lib/olLive'
+import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
+import { OL_LIVE, OL_SOON } from '../../lib/olLive'
+import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
 // Oct 29), put back beside today's for comparison. lib/homeLook.js picks which one shows.
@@ -67,11 +70,11 @@ const NFL_FIGURE = {
   ol: { src: '/db-silhouette.png', scale: 1.05 },   // OL placeholder: the DB figure until OL has its own (OL_SILHOUETTE)
 }
 const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
-const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
+const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 // the open positions first (DL opened after this Home), then the ones still to come
 // (LB and OL are hidden, not shown as SOON, until their flags: lib/lbLive.js, lib/olLive.js)
-const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && o.pos !== 'ol' && o.pos !== 'lb')]
+const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && (o.pos !== 'ol' || OL_SOON) && (o.pos !== 'lb' || LB_SOON))]   // (LB and OL while they're coming soon: locked SOON tiles)
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 // the figure's bands fall one by one once a page load, then just arrive
@@ -132,17 +135,17 @@ function Hud({ user }) {
 
 function SportSwitch({ sport }) {
   const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
+  // (three sports once soccer is on: SPORTS in AppHome)
+  const three = SPORTS.length > 2
   return (
-    <div className={`agc-sport agc-sport--${sport} ag-pop`} style={{ '--d': '30ms' }} role="tablist" aria-label="Sport">
+    <div className={`agc-sport agc-sport--${sport}${three ? ' agc-sport--three' : ''}${SPORTS.length > 3 ? ' agc-sport--four' : ''} ag-pop`} style={{ '--d': '30ms', ...(three ? { '--si': Math.max(0, SPORTS.findIndex(s => s.id === sport)) } : {}) }} role="tablist" aria-label="Sport">
       <span className="agc-sport-thumb" aria-hidden="true" />
-      <button role="tab" aria-selected={sport === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${sport === 'nfl' ? ' is-on' : ''}`} onClick={() => go('nfl')}>
-        <span className="agc-sport-ico"><IconFootball size={17} /></span>
-        <span className="agc-sport-txt"><b>FOOTBALL</b></span>
-      </button>
-      <button role="tab" aria-selected={sport === 'bucket'} className={`ag-sport-btn ag-sport-btn--bucket${sport === 'bucket' ? ' is-on' : ''}`} onClick={() => go('bucket')}>
-        <span className="agc-sport-ico"><IconBasketball size={17} /></span>
-        <span className="agc-sport-txt"><b>BASKETBALL</b></span>
-      </button>
+      {SPORTS.map(({ id, label, Icon, soon }) => (
+        <button key={id} role="tab" aria-selected={sport === id} aria-disabled={soon && sport !== id ? 'true' : undefined} className={`ag-sport-btn ag-sport-btn--${id}${sport === id ? ' is-on' : ''}${soon && sport !== id ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
+          <span className="agc-sport-ico">{soon && sport !== id ? <IconLock size={15} /> : <Icon size={17} />}</span>
+          <span className="agc-sport-txt"><b>{label}</b>{soon && sport !== id && <small className="ag-sport-soon">COMING SOON</small>}</span>
+        </button>
+      ))}
     </div>
   )
 }
@@ -288,7 +291,9 @@ function PlayersOfDay() {
   )
 }
 
-export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
+export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onCompete: onCompeteIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null }) {
+  // (soccer: a mode still on its way isn't on the classic Home at all)
+  const onSquad = soon?.squad ? null : onSquadIn, onCompete = soon?.compete ? null : onCompeteIn, onCareer = soon?.career ? null : onCareerIn
   const prog = useProgress()
   // Back from a mode, home opens where it was left (as today's Home does), for a moment, until the player moves it
   const homeRef = useRef(null)
@@ -319,10 +324,14 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
   const h2h = prog.stats?.h2h ?? {}
   const btW = prog.stats?.btWins ?? 0, btG = prog.stats?.btGames ?? 0
   const isBucket = sport === 'bucket'
-  const storeKey = isBucket ? 'bucketPosition' : 'lastPosition'
+  const isSoccer = sport === 'soccer'   // the striker, on the basketball figure for now
+  const isBaseball = sport === 'baseball'   // a batter or a pitcher, on the basketball figure for now
+  const storeKey = isBaseball ? 'baseballPosition' : isSoccer ? 'soccerPosition' : isBucket ? 'bucketPosition' : 'lastPosition'
   const [position, setPosition] = useState(() => {
     let saved = null
     try { saved = localStorage.getItem(storeKey) } catch {}
+    if (isSoccer) return 'st'
+    if (isBaseball) return saved === 'pit' ? 'pit' : 'bat'
     if (isBucket) return saved === 'big' ? 'big' : 'guard'
     return POS_OPTIONS.some(o => o.pos === saved && !o.disabled) ? saved : 'qb'
   })
@@ -341,13 +350,17 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
   const pick = pos => { setPicked(true); setPosition(pos); try { localStorage.setItem(storeKey, pos) } catch {} }
   const start = mode => { try { localStorage.setItem(storeKey, position) } catch {}; onStart(mode, position) }
 
-  const positions = isBucket
+  const positions = isBaseball
+    ? ['bat', 'pit'].map(p => ({ pos: p, label: BASEBALL_POS[p].label, sub: BASEBALL_POS[p].sub }))
+    : isSoccer
+    ? [{ pos: 'st', label: 'ST', sub: 'Striker' }, { pos: 'gk', label: 'GK', disabled: true }]
+    : isBucket
     ? [{ pos: 'guard', label: 'GUARD', sub: 'PG · SG · SF' }, { pos: 'big', label: 'BIG', sub: 'PF · C' }]
     : NFL_POSITIONS
 
   const fig = NFL_FIGURE[position] ?? NFL_FIGURE.qb
-  const posShort = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
-  const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
+  const posShort = isBaseball ? (position === 'pit' ? 'PIT' : 'BAT') : isSoccer ? 'ST' : isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
+  const posName = isBaseball ? BASEBALL_POS[position]?.word ?? 'Batter' : isSoccer ? 'Striker' : isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
   const sqBuilt = squad ? squad.slots.filter(s => s.build).length : 0
   const sqLast = squad?.seasons?.[squad.seasons.length - 1] ?? null
   const btLive = !!blacktop && blacktop.phase !== 'idle'
@@ -375,8 +388,8 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
         <div className="agc-stage ag-pop" style={{ '--d': '120ms' }}>
           <div className="agc-stage-photo" />
           <div className="agc-stage-beam" />
-          <div className={`agc-figure agc-figure--${isBucket ? 'nba' : position}`} key={position}>
-            {isBucket
+          <div className={`agc-figure agc-figure--${isBucket || isSoccer || isBaseball ? 'nba' : position}`} key={position}>
+            {isBucket || isSoccer || isBaseball
               ? renderBucketFigure?.(position, ready, fast || picked)
               : (
                 <>
@@ -393,7 +406,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
         </div>
 
         {/* Position select */}
-        <div className={`ag-positions${isBucket ? ' ag-positions--two' : ''} ag-pop`} style={{ '--d': '180ms' }} role="tablist" aria-label="Position">
+        <div className={`ag-positions${isBucket || isSoccer || isBaseball ? ' ag-positions--two' : ''} ag-pop`} style={{ '--d': '180ms' }} role="tablist" aria-label="Position">
           {positions.map(o => {
             const on = o.pos === position
             if (o.disabled) {
@@ -407,7 +420,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             }
             return (
               <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {(o.pos === 'dl' || (o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE)) && <span className="ag-pos-new">NEW</span>}
+                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE)) && <span className="ag-pos-new">NEW</span>}
                 {o.players && <span className="agc-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
                 <span className="agc-pos-label">{o.label}</span>
                 {o.sub && <span className="agc-pos-sub">{o.sub}</span>}
@@ -429,13 +442,22 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
 
         {/* Modes — the website's cards */}
         <div className="ag-modes">
-          <ModeCard title="CURRENT" badge={`Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
-            tone={isBucket ? 'orange' : null} />
-          <ModeCard tone="gold" title="ALL-TIME" badge="Draft the Greats" mark={IconCrown} delay="270ms" onClick={() => start('all-time')}
+          <ModeCard title={isSoccer ? SOCCER_POOL.current.label : 'CURRENT'} badge={isSoccer ? 'Top five leagues' : `Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
+            tone={isBucket ? 'orange' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : null} />
+          <ModeCard tone="gold" title={isSoccer ? SOCCER_POOL.alltime.label : 'ALL-TIME'} badge={isSoccer ? '48 nations' : 'Draft the Greats'} mark={IconCrown} delay="270ms" onClick={() => start('all-time')}
             isNew={isBucket || NEW_ALLTIME.has(position)} />
         </div>
 
         <div className="ag-extras">
+          {/* College Football: a football mode, first and full width (logos only: lib/cfbLive.js) */}
+          {!isBucket && !isSoccer && !isBaseball && onCFB && (
+            <button className="ag-way ag-mc ag-mc--cfb ag-cfb--classic ag-pop" style={{ '--d': '240ms', gridColumn: '1 / -1' }} onClick={onCFB}>
+              <span className="ag-mc-head"><b>COLLEGE FOOTBALL<i className="ag-mc-tag">NEW</i></b><small>Conference spin · Heisman race</small></span>
+              <span className="ag-cfb-band" aria-hidden="true">
+                {CFB_CARD_SCHOOLS.map(sc => <img key={sc} src={`/logos/cfb/${sc}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
+              </span>
+            </button>
+          )}
           {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it.
               Styled like the Blacktop menu it opens: the orange 3V3 / 1V1 tags, warm panel, orange go */}
           {isBucket && onBlacktop && (
@@ -454,9 +476,9 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             <button className={`ag-crmode ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
               <CareerArt />
               <span className="ag-card-txt">
-                <span className="ag-eyebrow">{career ? `${career.sport === 'bucket' ? (career.pos === 'big' ? 'BIG' : 'GUARD') : career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'MULTI-SEASON · SAVES AS YOU GO'}</span>
+                <span className="ag-eyebrow">{career ? `${career.sport === 'bucket' ? (career.pos === 'big' ? 'BIG' : 'GUARD') : career.pos.toUpperCase()} · ${career.phase === 'college' ? 'IN COLLEGE' : career.phase === 'draft' ? (career.sport === 'soccer' ? 'ACADEMY' : 'DRAFT DAY') : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'MULTI-SEASON · SAVES AS YOU GO'}</span>
                 <span className="ag-card-title">CAREER</span>
-                <span className="ag-card-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
+                <span className="ag-card-sub">{career ? (career.phase === 'college' ? 'College first: a season or two, then the draft.' : career.phase === 'draft' ? (career.sport === 'soccer' ? 'The academy trials are waiting. Earn a first contract.' : 'The combine is waiting. Go get drafted.') : career.phase === 'season' ? `${career.sport === 'soccer' ? 'Match' : career.sport === 'bucket' || career.sport === 'baseball' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with ${career.sport === 'soccer' ? '' : 'the '}${career.fit?.name ?? ''}` : career.phase === 'offseason' ? (career.sport === 'soccer' ? 'The summer: a point to spend, the transfer window' : 'Offseason: a point to spend, a contract to sort') : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : isBaseball ? 'Build a player, get drafted, climb to the majors, play a whole career. Cooperstown on the line.' : isSoccer ? 'Build a striker, come through the academy, play a whole career. Legacy on the line.' : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
               </span>
             </button>
           )}
@@ -485,12 +507,20 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
               <span className="ag-card-title">SQUAD BUILDER</span>
               <span className="ag-card-sub">{!squad ? 'Build a few players, drop them on a real team, play a season together.'
                 : squad.phase === 'build' ? 'Your squad is waiting on its next build.'
-                : sqLast && squad.phase === 'result' ? `${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''} with the ${sqLast.team}. Run it back.`
+                : sqLast && squad.phase === 'result' ? (isSoccer ? `${sqLast.wins}-${sqLast.draws ?? 0}-${sqLast.losses}${sqLast.champion ? ', champions' : ''} with ${sqLast.team}. Run it back.` : `${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''} with the ${sqLast.team}. Run it back.`)
                 : 'The season is ready to play.'}</span>
             </span>
           </button>
           )}
-          {isBucket ? (
+          {isSoccer || isBaseball ? (
+            !soon?.salary && (
+              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '380ms', gridColumn: '1 / -1' }} onClick={() => start('salarycap')}>
+                <span className="ag-mini-flag">DAILY</span>
+                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
+                <span className="ag-mini-sub">{isBaseball ? 'Build on a budget' : 'Build a striker on a budget'}</span>
+              </button>
+            )
+          ) : isBucket ? (
             <>
               <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '380ms', gridColumn: '1 / -1' }} onClick={() => start('salarycap')}>
                 <span className="ag-mini-flag">DAILY</span>
@@ -537,8 +567,8 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
       {footer && <div className="ag-home-site">{footer}</div>}
       {/* the app has no site footer: the maker's logo and the fan-project line on their own */}
       {IS_APP && <img className="ag-home-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="132" height="44" loading="lazy" draggable={false} />}
-      {IS_APP && <Disclaimer sport={isBucket ? 'bucket' : 'nfl'} />}
-      <Tutorial onGuided={() => onStart('classic', isBucket ? 'guard' : 'qb')} />
+      {IS_APP && <Disclaimer sport={isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl'} />}
+      <Tutorial onGuided={() => onStart('classic', isBaseball ? 'bat' : isSoccer ? 'st' : isBucket ? 'guard' : 'qb')} />
     </div>
   )
 }

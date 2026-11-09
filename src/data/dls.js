@@ -131,9 +131,9 @@ const _DLS = [
   { name: "DJ Jones", short: "DJ Jones", team: 'DEN', teamName: "Denver Broncos", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 72, weight: 305, number: 93, starter: true, years: "2022-",
     attrs: { getOff: 4, speed: 5, powerMoves: 8, finesseMoves: 3, strength: 9, playRecognition: 7, bend: 3, blockShed: 8 } },
   { name: "Nik Bonitto", short: "Bonitto", team: 'DEN', teamName: "Denver Broncos", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 75, weight: 240, number: 15, starter: true, years: "2022-",
-    attrs: { getOff: 10, speed: 10, powerMoves: 7, finesseMoves: 9, strength: 6, playRecognition: 6, bend: 10, blockShed: 6 } },
+    attrs: { getOff: 11, speed: 10, powerMoves: 7, finesseMoves: 9, strength: 6, playRecognition: 6, bend: 10, blockShed: 6 } },
   { name: "Jonathon Cooper", short: "Cooper", team: 'DEN', teamName: "Denver Broncos", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 76, weight: 257, number: 0, starter: true, years: "2021-",
-    attrs: { getOff: 7, speed: 7, powerMoves: 6, finesseMoves: 7, strength: 7, playRecognition: 6, bend: 6, blockShed: 6 } }, // proposed rating
+    attrs: { getOff: 11, speed: 7, powerMoves: 6, finesseMoves: 7, strength: 7, playRecognition: 6, bend: 6, blockShed: 6 } }, // proposed rating
   { name: "Aidan Hutchinson", short: "Hutchinson", team: 'DET', teamName: "Detroit Lions", pos: 'EDGE', subpos: 'edge', skin: '#f0c4a0', height: 79, weight: 268, number: 97, starter: true, years: "2022-",
     attrs: { getOff: 11, speed: 7, powerMoves: 9, finesseMoves: 10, strength: 9, playRecognition: 9, bend: 10, blockShed: 9 } },
   { name: "DJ Wonnum", short: "Wonnum", team: 'DET', teamName: "Detroit Lions", pos: 'EDGE', subpos: 'edge', skin: '#3a2010', height: 77, weight: 262, number: 98, starter: true, years: "2026-",

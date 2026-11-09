@@ -187,7 +187,8 @@ export function paintFieldDress(x, view, ez, pyd, SL, SR) {
   x.restore()
 }
 export function layer(ctx, view, key, paint) {
-  const id = `${key}|${view.h}|${view.px}|${stage.tag}|${view.field?.id ?? ''}`
+  // (view.empty: the combine and camp's empty house, painted apart from the full one)
+  const id = `${key}|${view.h}|${view.px}|${stage.tag}|${view.field?.id ?? ''}|${view.empty ? 'E' : ''}`
   let c = layers.get(id)
   if (!c) {
     if (typeof document === 'undefined') return
@@ -586,6 +587,12 @@ export const manOf = (cast, side, group, i = 0) => {
   const p = list[i % list.length]
   return { number: p.number, skin: p.skin, name: p.name }
 }
+// The football games' full eleven a side (career's gameCast: cast.us.xi / cast.them.xi), every man real and
+// tagged with his last name. Null in the demo clips and the bots' runs: the scene keeps its own look.
+// spot: 'qb' 'rb' 'wr' 'te' 'ol' (left tackle to right tackle) | 'edge' 'dt' 'lb' 'cb' 's' |
+//   'dl' the front four, left end to right end | 'db' corner, corner, safety, safety, nickel, third safety |
+//   'off' / 'def' the eleven on the field. Each man: { name, last, short, number, skin, look: { number, skin }, me? }
+export const xiOf = (cast, side, spot, i = 0) => cast?.[side]?.xi?.[spot]?.[i] ?? null
 // a man's real speed, a little: multiply a run speed by this. (Chase runs by Higgins, nobody runs off the screen.)
 export const paceOf = (cast, side, group, i = 0) => {
   const list = cast?.[side]?.[group]

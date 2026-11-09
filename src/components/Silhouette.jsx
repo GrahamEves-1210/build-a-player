@@ -38,6 +38,8 @@ import DBFigureOverlay from './DBFigureOverlay'
 import OLFigureOverlay from './OLFigureOverlay'
 import DLFigureOverlay from './DLFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
+import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
+import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const DL_PHYS = Object.fromEntries([...DLS, ...DL_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
@@ -261,7 +263,12 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
 
 function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false, isDL = false, isLB = false }) {
   let ht, wt
-  if (isLB) {
+  // College Football: off the chip itself (a college player isn't in the NFL lookups, and a name can be in both)
+  const cfbChip = build['size']?.cfb ? build['size'] : null
+  if (cfbChip) {
+    ht = cfbChip.height ? fmtHeight(cfbChip.height) : null
+    wt = cfbChip.weight ?? null
+  } else if (isLB) {
     const lbPhys = build['size'] ? (build['size'].height ? build['size'] : LB_PHYS[build['size'].qbFull]) : null
     ht = lbPhys?.height ? fmtHeight(lbPhys.height) : null
     wt = lbPhys?.weight ?? null
@@ -364,7 +371,39 @@ function getDominantPlayer(build) {
 // `modelOnly`: just the player — figure, jersey overlay and face — with no
 // dots, cards, measurement lines or backdrop, sized to its container (the app's
 // Career model). Nothing else changes when it's off.
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL: isDLPos = false, isLB = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
+// SOCCER PLACEHOLDER: a striker is drawn on the basketball figure (SOCCER_SILHOUETTE in lib/soccerUi.js)
+// until his own art lands. Each striker trait rides on one basketball trait's spot and body part
+// (SOCCER_AS_BUCKET), so the build screen runs the basketball figure unchanged: the build, the
+// traits, the labels, the tabs and the drag are handed in under the basketball keys.
+const toBkt = t => SOCCER_AS_BUCKET[t] ?? t
+export default function Silhouette(props) {
+  const { isSoccer = false, build, types = TYPES, attrMap = ATTR, categoriesData = CATEGORIES, activeDrag } = props
+  const mapped = useMemo(() => (isSoccer ? {
+    build: soccerAsBucketBuild(build),
+    types: types.map(toBkt),
+    attrMap: Object.fromEntries(Object.entries(attrMap).map(([t, m]) => [toBkt(t), m])),
+    categoriesData: categoriesData.map(c => ({ ...c, types: c.types.map(toBkt) })),
+  } : null), [isSoccer, build, types, attrMap, categoriesData])
+  if (props.isBaseball) return <BaseballSilhouette {...props} />
+  if (!isSoccer) return <SilhouetteFigure {...props} />
+  return <SilhouetteFigure {...props} {...mapped} isBucket activeDrag={activeDrag ? { ...activeDrag, type: toBkt(activeDrag.type) } : activeDrag} />
+}
+// BASEBALL PLACEHOLDER: a batter or a pitcher on the basketball figure (BASEBALL_SILHOUETTE in lib/baseballUi.js),
+// the same way: each trait on one basketball spot (BASEBALL_AS_BUCKET, per position), only the position's ten
+function BaseballSilhouette(props) {
+  const { baseballPos = 'bat', build, types = TYPES, attrMap = ATTR, categoriesData = CATEGORIES, activeDrag } = props
+  const m = BASEBALL_AS_BUCKET[baseballPos === 'pit' ? 'pit' : 'bat']
+  const to = t => m[t] ?? t
+  const mapped = useMemo(() => ({
+    build: Object.fromEntries(Object.entries(build ?? {}).map(([t, c]) => [to(t), c])),
+    types: types.map(to),
+    attrMap: Object.fromEntries(types.map(t => [to(t), attrMap[t]])),
+    categoriesData: categoriesData.map(c => ({ ...c, types: c.types.map(to) })),
+  }), [baseballPos, build, types, attrMap, categoriesData]) // eslint-disable-line react-hooks/exhaustive-deps
+  return <SilhouetteFigure {...props} {...mapped} isBucket activeDrag={activeDrag ? { ...activeDrag, type: to(activeDrag.type) } : activeDrag} />
+}
+
+function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // OL is drawn on the DB figure — everything figure-related follows DB
   const isDBFig = isDB || isOL
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
@@ -574,7 +613,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       : ((W - cardEdgePx - lineInsetPx + zoneLineNudge) / W) * 100
     const stubPx = isMobile ? 12 : (isBucket ? 88 : 125)
     const stub   = stubPx / W * 100
-    const stubX  = zone.side === 'left' ? lineX + stub : lineX - stub
+    // (the stub stops short of its dot: on a narrower desktop window, or the wide DL figure, a dot close to its card folded the line back on itself)
+    const stubX  = zone.side === 'left' ? Math.max(lineX, Math.min(lineX + stub, dotX - 1.5)) : Math.min(lineX, Math.max(lineX - stub, dotX + 1.5))
     // Center X of the card face (for top-anchor lines)
     // Left cards: left:0, so center = half card rendered width from left
     // Right cards: right:0, so center = W minus half card rendered width
@@ -609,7 +649,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
       {isBucket && !modelOnly && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
+          {/* (baseball: the ballpark drawn taller from its foot, so the light towers stay above the frame: on a phone
+              their haze landed on the ends of the category tabs and read as a glow on them) */}
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: isBaseball ? `url('${BASEBALL_SILHOUETTE.backdrop}')` : isSoccer ? "url('/soccerbackground.webp')" : "url('/bucketbackground.webp')", backgroundSize: isBaseball ? 'auto 135%' : 'cover', backgroundPosition: isBaseball ? 'center 100%' : 'center', filter: 'blur(4px) brightness(1.4)' }} />
         </div>
       )}
       {!isBucket && !modelOnly && (
@@ -693,8 +735,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           }} />
         )}
 
-        {/* Measurement outlines — height + wingspan derived from size val */}
-        {isBucket && !modelOnly && (build?.['size'] || build?.['heightLength']) && (() => {
+        {/* Measurement outlines — height + wingspan derived from size val (not baseball's: a wingspan is a basketball number) */}
+        {isBucket && !isBaseball && !modelOnly && (build?.['size'] || build?.['heightLength']) && (() => {
           const chip = build['size'] || build['heightLength']
           const val  = chip.val ?? 5
           const col  = '#ffffff'
@@ -767,7 +809,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         <img
           src={
             isBucket
-              ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              ? (isBaseball ? (bucketPhoto ? BASEBALL_SILHOUETTE.headless : BASEBALL_SILHOUETTE.src) : isSoccer ? (bucketPhoto ? SOCCER_SILHOUETTE.headless : SOCCER_SILHOUETTE.src) : bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
               : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
               : isOL ? OL_SILHOUETTE
@@ -792,8 +834,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
-          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} /></div>
-          : <BucketFigureOverlay build={build} />)}
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} /></div>
+          : <BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100
@@ -911,7 +953,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               <path
                 key={zone.type}
                 d={d}
-                stroke={isBucket ? '#f97316' : '#e8192c'}
+                stroke={isBaseball ? '#c8102e' : isSoccer ? '#f4f4f5' : isBucket ? '#f97316' : '#e8192c'}
                 strokeWidth="0.3"
                 fill="none"
                 style={{ opacity: hidden ? 0 : 1 }}
@@ -945,7 +987,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                   invisible={hiddenFromTab && !!p}
                   isMobile={isMobile}
                   attrMap={attrMap}
-                  logoDir={isBucket ? '/logos/nba/' : '/logos/'}
+                  logoDir={logoDirProp ?? (isBucket ? '/logos/nba/' : '/logos/')}
                 />
               </div>
             )

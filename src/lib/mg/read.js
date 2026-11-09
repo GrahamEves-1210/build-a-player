@@ -5,14 +5,15 @@
 //   hot-read     11 on 11: tap the open receiver to throw it to him
 //   gap          RB behind a real line: tap the side of the hole the blocks open
 //   jump-route   you're the deep safety, the corners are on their men: tap the receiver who beats his corner
-//   pnr          5 on 5: the screen comes, the coverage decides. Tap the handler, the roller or the corner
+//   zone-drop    the linebacker's: a hook dropper off the ball, short and intermediate routes through his zone. Tap the man the QB throws to
+//   pnr         5 on 5: the screen comes, the coverage decides. Tap the handler, the roller or the corner
 //   rim-protect  a 3-on-1 fast break: they move it as they come, one goes up: tap him and go block it
 //
 // The rules are in make(); what can be tapped moves by formula there, so it plays the same with no
 // screen. Everyone else on the picture is a body with a target and a top speed, stepped in draw()
 // (bodies below): they run out of room and bump into each other, they can't teleport or pass through.
 import { reactMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion } from './kit.js'
+import { clamp, lerp, prog, outcome, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, xiOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion } from './kit.js'
 import { crowdRows, goalPosts, tilt, ground, stands, floodlight, vignette, athlete, paintGrass, skinOf, dirOf, airBall as artBall, ballShadow, nameTag, breakupPose, crowdPop } from './art.js'
 import { paintFieldFlat, qbPose, snapBall, SNAP_MS, looseBall } from './throw.js'
 import { arenaCam, dolly, arenaStage, manAt, POSE, RUN as RUN_F, liftPose, tapGap, chestOf, tagAt, tagsDown, flyTo, dropThrough, shotApex, hoopWith, AB } from './arena.js'
@@ -21,16 +22,19 @@ import { ballIn, easedState, easedPose, newPose, copyPose, smoothT, CLK, IN_HAND
 export const how = {
   'hot-read': 'Tap the receiver who gets open. Not the one with a defender closing on him.',
   gap: 'Tap the side of the hole the blocks really open. A backer filling it means no.',
-  'jump-route': "You're the deep safety. When a receiver beats his corner, tap him and jump the route. Not the double move.",
+  'jump-route': "Deep safety. When a receiver beats his corner, tap him and jump the route. Not the double move.",
+  'zone-drop': "Hook zone. Drop to the landmark and read the QB: when he opens to a man working through, tap him and break on it. Not the first look.",
   pnr: 'Big drops: tap the handler to shoot. Trap: tap the roller. Help tags the roller: tap the far corner.',
-  'rim-protect': 'Three on one, coming at you. When one goes up, tap him and block it. Too soon and he goes by you.',
+  'rim-protect': 'Three on one, coming at the rim. When one goes up, tap him and block it. Too soon and he goes by.',
 }
 
 const WORDS = {
   'hot-read':    { wait: 'FIND THE OPEN MAN', good: 'COMPLETE', wrong: 'PICKED OFF', bait: 'ROBBED', early: 'THREW IT EARLY', late: 'SACKED', win: 'DIALED IN', lose: 'NO READ', flight: 340, baitFlight: 520, stampY: 0.885, stampSize: 46, reach: 1.11, open: 'OPEN', n: 4, tap: 46, floor: 840, after: 1.6, decoy: [0, 0.55, 0.8, 0.9] },
   gap:           { wait: 'READ THE BLOCKS', good: 'NICE RUN', wrong: 'STUFFED', bait: 'BACKER FILLED', early: 'TOO EARLY', late: 'STUFFED', win: 'MOVING THE CHAINS', lose: 'NO GAIN', flight: 240, stampY: 0.885, stampSize: 46, open: 'THE HOLE', n: 3, floor: 850, decoy: [0.35, 0.7, 0.85, 0.9], beat: 1300 },
   'jump-route':  { wait: 'READ THE QB', good: 'PICK', wrong: 'WRONG MAN', bait: 'DOUBLE MOVE', early: 'TOO SOON', late: 'CAUGHT', far: 'BIG GAIN', win: 'BALL HAWK', lose: 'TORCHED', flight: 340, stampY: 0.885, stampSize: 46, open: 'OPEN', n: 4, tap: 46, floor: 930, after: 1.9, afterGood: 2.6, decoy: [0, 0.55, 0.8, 0.9] },
-  pnr:           { wait: 'READ THE COVERAGE', good: 'BUCKET', wrong: 'STOLEN', bait: 'STOLEN', early: 'STOLEN', late: 'STRIPPED', win: 'FLOOR GENERAL', lose: 'TURNOVERS', flight: 560, stampY: 0.84, open: 'OPEN', n: 3, tap: 50, floor: 985, after: 1.15, decoy: [0, 0.55, 0.8, 0.9] },
+  // (wrong man or late, the ball's complete in the window he left: a big gain. The bait is the QB looking him off)
+  'zone-drop':   { wait: 'EYES ON THE QB', good: 'PICK', wrong: 'BIG GAIN', bait: 'LOOKED OFF', early: 'JUMPED IT EARLY', late: 'BIG GAIN', far: 'BIG GAIN', win: 'SHUT DOWN', lose: 'PICKED APART', flight: 300, stampY: 0.885, stampSize: 46, open: 'OPEN', n: 4, tap: 46, floor: 930, after: 1.9, afterGood: 2.6, decoy: [0, 0.55, 0.8, 0.9] },
+  pnr:          { wait: 'READ THE COVERAGE', good: 'BUCKET', wrong: 'STOLEN', bait: 'STOLEN', early: 'STOLEN', late: 'STRIPPED', win: 'FLOOR GENERAL', lose: 'TURNOVERS', flight: 560, stampY: 0.84, open: 'OPEN', n: 3, tap: 50, floor: 985, after: 1.15, decoy: [0, 0.55, 0.8, 0.9] },
   'rim-protect': { wait: 'WATCH THE BALL', good: 'BLOCKED', wrong: 'WRONG MAN', bait: 'TOO SOON', early: 'TOO SOON', late: 'OVER HIM', win: 'SHUT DOWN', lose: 'SCORED ON', flight: 240, stampY: 0.84, open: 'HIM', n: 3, tap: 52, floor: 435, per: 0.42, after: 1.9, afterGood: 2.5, decoy: [0, 0, 0, 0] },
 }
 const NOTES = { wrong: 'Wrong read', bait: 'Took the bait', early: 'Went early', late: 'Too slow', far: 'Tackled too deep' }
@@ -78,8 +82,12 @@ const ROUTE_MEN = [['wr', 0], ['wr', 2], ['te', 0], ['wr', 1]]
 const HOT_DB = [0, 2, -1, 1]    // on X, the slot, Z; the Sam on the tight end has no data
 const J_DB = [1, 3, 4, 2]       // us.db[0] is the safety himself
 const bare = m => m && { number: m.number, skin: m.skin }
+// (a lineman on the ball: named, but his name shows once the play's over, so five side by side never cover the numbers)
+const quiet = m => m && { ...m, quiet: true }
 function fieldWho(game, cast) {
+  if (game === 'zone-drop') return zoneWho(cast)
   const off = game === 'jump-route' ? 'them' : 'us', dfn = off === 'us' ? 'them' : 'us'
+  if (cast?.[off]?.xi && cast?.[dfn]?.xi) return xiWho(game, cast, off, dfn)
   const ol = [0, 1, 2, 3, 4].map(i => manOf(cast, off, 'ol', i)), db = i => (i < 0 ? null : manOf(cast, dfn, 'db', i))
   const on = game === 'jump-route' ? J_DB : HOT_DB
   return {
@@ -96,15 +104,63 @@ function fieldWho(game, cast) {
     dl: [0, 1, 2, 3].map(i => (cast?.[dfn]?.dl?.length > i ? (game === 'gap' ? manOf(cast, dfn, 'dl', i) : bare(manOf(cast, dfn, 'dl', i))) : null)),
   }
 }
+// The full eleven a side, every man real (career's xi). Speeds as before, from the same men's groups.
+//   hot-read: the corners on X and Z, the nickel on the slot, the Sam on the tight end, the two backers, the deep safety
+//   gap: the front four, the three backers, the two safeties
+//   jump-route: the build is the safety; the other DBs take the routes (corners outside, the nickel on the slot, a safety on the tight end)
+function xiWho(game, cast, off, dfn) {
+  const x = (side, spot, i) => xiOf(cast, side, spot, i)
+  const ol = [0, 1, 2, 3, 4].map(i => x(off, 'ol', i)), dl = [0, 1, 2, 3].map(i => x(dfn, 'dl', i))
+  const line = game === 'gap' ? m => m : quiet
+  const cbs = (cast[dfn].xi.cb ?? []).filter(m => !m.me), ss = (cast[dfn].xi.s ?? []).filter(m => !m.me)
+  const def = game === 'gap' ? [x(dfn, 's', 0), x(dfn, 's', 1)]
+    : game === 'hot-read' ? [x(dfn, 'db', 0), x(dfn, 'db', 4), x(dfn, 'lb', 2), x(dfn, 'db', 1), x(dfn, 'lb', 0), x(dfn, 'lb', 1), x(dfn, 'db', 2)]
+      : [cbs[0] ?? null, cbs[2] ?? ss[1] ?? null, ss[0] ?? null, cbs[1] ?? null]
+  const on = game === 'jump-route' ? J_DB : HOT_DB
+  return {
+    qb: x(off, 'qb', 0), rb: x(off, 'rb', 0), rbPace: paceOf(cast, off, 'rb', 0),
+    rcv: ROUTE_MEN.map(([gr, i]) => x(off, gr, i)),
+    pace: ROUTE_MEN.map(([gr, i]) => paceOf(cast, off, gr, i)),
+    ol: ol.map(line), dl: dl.map(line), lb: [0, 1, 2].map(i => x(dfn, 'lb', i)), def,
+    cpace: on.map(i => (i < 0 ? 1 : paceOf(cast, dfn, 'db', i))),
+    sPace: [paceOf(cast, dfn, 'db', game === 'gap' ? 0 : 3), paceOf(cast, dfn, 'db', 1)],
+    safety: game === 'jump-route' ? manOf(cast, 'us', 'db', 0) : null,
+  }
+}
+// Zone drop: the build is a backer (us.lb[0], or the eleven's own man). The four who can be tapped: X, the slot, the
+// tight end, the back; Z runs off with his corner. def: the corners on X and Z, the two safeties, the nickel, the Sam
+const ZONE_MEN = [['wr', 0], ['wr', 2], ['te', 0], ['rb', 0]]
+function zoneWho(cast) {
+  const pace = ZONE_MEN.map(([gr, i]) => paceOf(cast, 'them', gr, i)), me = paceOf(cast, 'us', 'lb', 0)
+  if (cast?.them?.xi && cast?.us?.xi) {
+    const x = (side, spot, i) => xiOf(cast, side, spot, i), d = cast.us.xi, not = l => (l ?? []).filter(m => !m.me)
+    const cbs = not(d.cb), ss = not(d.s), lbs = not(d.lb)
+    return {
+      qb: x('them', 'qb', 0), rcv: ZONE_MEN.map(([gr, i]) => x('them', gr, i)), z: x('them', 'wr', 1), pace, cpace: [1, 1, 1, 1],
+      ol: [0, 1, 2, 3, 4].map(i => quiet(x('them', 'ol', i))), dl: [0, 1, 2, 3].map(i => quiet(x('us', 'dl', i))),
+      def: [cbs[0], cbs[1], ss[0], ss[1], cbs[2] ?? ss[2], lbs[0]].map(m => m ?? null),
+      me: (d.lb ?? []).find(m => m.me) ?? manOf(cast, 'us', 'lb', 0), sPace: [me, 1],
+    }
+  }
+  const db = i => manOf(cast, 'us', 'db', i)
+  return {
+    qb: manOf(cast, 'them', 'qb', 0), rcv: ZONE_MEN.map(([gr, i]) => manOf(cast, 'them', gr, i)), z: manOf(cast, 'them', 'wr', 1), pace, cpace: [1, 1, 1, 1],
+    ol: [0, 1, 2, 3, 4].map(i => bare(manOf(cast, 'them', 'ol', i))),
+    dl: [0, 1, 2, 3].map(i => (cast?.us?.dl?.length > i ? bare(manOf(cast, 'us', 'dl', i)) : null)),
+    def: [db(0), db(1), db(2), db(3), db(4), cast?.us?.lb?.length > 1 ? manOf(cast, 'us', 'lb', 1) : null],
+    me: manOf(cast, 'us', 'lb', 0), sPace: [me, 1],
+  }
+}
 
 export function make({ v, seed, def, game, cast }) {
   const W = WORDS[game] ?? WORDS['hot-read']
   const r = rngOf(seed)
   const quick = def?.quick ?? 1
-  const n = W.n, tapped = W.tap != null, routes = game === 'hot-read' || game === 'jump-route'
+  const n = W.n, tapped = W.tap != null, routes = game === 'hot-read' || game === 'jump-route' || game === 'zone-drop'
+  const jumpy = JUMPY[game] ?? null      // the defender's games: the safety's Jump the Route, the backer's Zone Drop
   const onCourt = game === 'pnr' || game === 'rim-protect'
   const rounds = def?.rounds ?? 4
-  const who = game === 'hot-read' || game === 'gap' || game === 'jump-route' ? fieldWho(game, cast) : null
+  const who = game === 'hot-read' || game === 'gap' || jumpy ? fieldWho(game, cast) : null
   let lastOpen = -1, yard = Math.floor(r() * 236)
   const plan = Array.from({ length: rounds }, (_, k) => {
     const p = {
@@ -138,15 +194,19 @@ export function make({ v, seed, def, game, cast }) {
         const kind = r()
         p.cut[p.open] = kind < 0.34 ? 0 : (kind < 0.67 ? 1 : -1) * (0.38 + r() * 0.3)
       }
+      if (game === 'zone-drop') { p.zone = true; p.zstem = ZR.map(s => lerp(s.stem[0], s.stem[1], r())) }   // (the routes that aren't the read: how far they go before they break)
       p.pace = who.pace; p.cpace = who.cpace       // how fast each man really is, and the man on him
     }
     return p
   })
   if (game !== 'pnr' && game !== 'rim-protect' && rounds > 1 && !plan.some(p => p.decoy)) { const p = plan[rounds - 1]; p.decoy = { k: (p.open + 1) % n, early: false, at: p.delay } }
+  // Zone drop's bait is the QB looking him off: his eyes go to a man settling in front of the backer first, then he comes
+  // back to the real one behind it. (Always the first look, and done with before the real break: the read is the second)
+  if (game === 'zone-drop') for (const p of plan) if (p.decoy) { p.decoy.early = true; p.decoy.flash = 460; p.decoy.at = PRE + 240 + r() * 140; p.delay = Math.max(p.delay, p.decoy.at + 540) }
   const pace = courtPace(game, cast)
   if (pace) for (const p of plan) p.pace = pace
 
-  const where = { 'hot-read': routeOf, 'jump-route': routeJ, pnr: pnrAt, 'rim-protect': rimAt }[game]
+  const where = { 'hot-read': routeOf, 'jump-route': routeJ, 'zone-drop': routeZ, pnr: pnrAt, 'rim-protect': rimAt }[game]
   const place = (rep, age) => { for (let k = 0; k < n; k++) { const p = where(rep, k, age, g.h); g.men[k].x = p.x; g.men[k].y = p.y } }
   const g = {
     t: 0, game, zones: tapped ? 'none' : 'three', aim: tapped, fx: [], done: null, outro: 1500, stamp: null, later: null,
@@ -220,8 +280,8 @@ export function make({ v, seed, def, game, cast }) {
   function word(kind, k, ms) {
     const rep = g.rep
     if (game === 'rim-protect' && kind === 'good') return ms <= rep.T * 0.72 ? 'BLOCKED' : 'CONTESTED'
-    if (game === 'jump-route' && kind === 'far') return `BIG GAIN · ${rep.gainYd} YDS`
-    if (game === 'jump-route' && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : rep.gainYd < 0 ? `${-rep.gainYd} YARD LOSS` : 'TACKLE'
+    if (jumpy && kind === 'far') return `BIG GAIN · ${rep.gainYd} YDS`
+    if (jumpy && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : rep.gainYd < 0 ? `${-rep.gainYd} YARD LOSS` : 'TACKLE'
     if (game === 'pnr') {
       if (kind === 'good') return k === 1 ? 'DUNK' : k === 2 ? 'THREE' : 'BUCKET'
       if (kind === 'early') return 'TOO EARLY'
@@ -231,43 +291,45 @@ export function make({ v, seed, def, game, cast }) {
   }
   function settle(kind, k, ms = 0) {
     const rep = g.rep
-    if (game === 'jump-route' && kind === 'good') {
+    if (jumpy && kind === 'good') {
       // the race: the ball's spot is fixed when he lets it go. You run at one speed from where you are.
-      const age = g.t - rep.at, land = jumpLand(rep, g.h), L = { ...routeJ(rep, k, land, g.h) }
-      const sy = safetyY(g.h), arrive = age + Math.hypot(L.x - 180, L.y - sy) / SAFETY_V
+      // (the safety from his spot deep; the backer from wherever he is in his drop, at a backer's speed)
+      const J = jumpy, age = g.t - rep.at, land = jumpLand(rep, g.h), L = { ...J.route(rep, k, land, g.h) }
+      const f0 = { ...J.from(rep, age, g.h) }, sy = f0.y, arrive = age + Math.hypot(L.x - f0.x, L.y - sy) / J.V
       rep.how = arrive <= land - PICK_BY ? 'pick' : arrive <= land + SWAT_BY ? 'swat' : 'tackle'
       rep.meet = land
       if (rep.how === 'tackle') {
         // he's caught it, and he's running. You take your angle at him, and it's wherever you meet
-        let sx = 180, syy = sy, t = age
+        let sx = f0.x, syy = sy, t = age
         for (; t < land + 2600; t += 16) {
-          const q = routeJ(rep, k, t, g.h), dx = q.x - sx, dy = q.y - syy, d = Math.hypot(dx, dy)
+          const q = J.route(rep, k, t, g.h), dx = q.x - sx, dy = q.y - syy, d = Math.hypot(dx, dy)
           if (t >= land && d <= MEET_R) break
-          sx += (dx / (d || 1)) * SAFETY_V * 16; syy += (dy / (d || 1)) * SAFETY_V * 16
+          sx += (dx / (d || 1)) * J.V * 16; syy += (dy / (d || 1)) * J.V * 16
         }
-        const q = routeJ(rep, k, t, g.h), after = Math.hypot(q.x - L.x, q.y - L.y)
+        const q = J.route(rep, k, t, g.h), after = Math.hypot(q.x - L.x, q.y - L.y)
         rep.meet = t
-        rep.gainYd = Math.round((q.y - (losJ(g.h) - 10)) / TL_PYD(g.h))   // (from the line, in the field's own yards: below zero is a loss)
+        rep.gainYd = Math.round((q.y - (J.los(g.h) - 10)) / TL_PYD(g.h))   // (from the line, in the field's own yards: below zero is a loss)
         // a big gain is ground gained: downfield after the catch, not just a long way run. (A comeback caught and taken back
         // toward the line, or across the field, was called BIG GAIN on a play that lost yards)
         void after
-        if (q.y - L.y > SHORT_GAIN) kind = 'far'
+        if (q.y - L.y > J.short) kind = 'far'
+        if (J.sticks && rep.gainYd >= J.sticks) kind = 'far'   // (a backer's tackle past the sticks is still a first down)
       }
     }
     const good = kind === 'good'
     let flight = kind === 'late' ? 0 : kind === 'bait' && W.baitFlight ? W.baitFlight : W.flight
     // the safety has to get there, at a safety's speed: from his spot to the man you tapped
-    if (game === 'jump-route') {
+    if (jumpy) {
       const age = g.t - rep.at, land = jumpLand(rep, g.h)
       flight = rep.how && (good || kind === 'far') ? Math.max(0, rep.meet - age) : Math.max(0, land - age)
     }
-    rep.res = { kind, k, at: g.t, ms, flight, beat: Math.max(W.beat ?? 0, flight + (good ? 420 * (W.afterGood ?? W.after ?? 1) : 620 * (W.after ?? 1))), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (game === 'jump-route' && rep.how !== 'pick' ? 0.6 : 1) : 0 }
+    rep.res = { kind, k, at: g.t, ms, flight, beat: Math.max(W.beat ?? 0, flight + (good ? 420 * (W.afterGood ?? W.after ?? 1) : 620 * (W.after ?? 1))), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (jumpy && rep.how !== 'pick' ? 0.6 : 1) : 0 }
     for (let m = 0; m < n; m++) g.cues[m] = null
     g.hud.dots[g.i] = good
     g.hud.prompt = null
     g.fx.push(kind === 'late' ? 'pop' : 'swoosh', good ? 'h:light' : 'h:medium')
     const txt = word(kind, k, ms)
-    g.stamp = { text: txt, good, at: g.t + (game === 'jump-route' ? (good ? flight : Math.min(flight * 0.5, 200)) : flight + (game === 'gap' ? 420 : 0)), ms: game === 'gap' ? 760 : game === 'jump-route' ? 1500 : Math.max(460, rep.res.beat - flight), size: W.stampSize ?? (txt.length > 11 ? 30 : 38) }
+    g.stamp = { text: txt, good, at: g.t + (jumpy ? (good ? flight : Math.min(flight * 0.5, 200)) : flight + (game === 'gap' ? 420 : 0)), ms: game === 'gap' ? 760 : jumpy ? 1500 : Math.max(460, rep.res.beat - flight), size: W.stampSize ?? (txt.length > 11 ? 30 : 38) }
     const made = plan.filter(p => p.res?.kind === 'good').length
     if (plan.every(p => p.res)) {
       const avg = plan.reduce((s, p) => s + p.res.score, 0) / rounds
@@ -425,12 +487,16 @@ export function put(x, y, team, o) {
   c.color = team.color; c.trim = team.trim; c.pants = team.pants ?? team.trim; c.skin = o.skin ?? '#8d5a3b'
   c.number = o.number ?? null; c.dir = o.dir ?? 'up'; c.step = o.step ?? null; c.pose = o.pose ?? null
   c.carry = !!o.carry; c.size = o.size ?? 0.9; c.fall = o.fall ?? 0; c.fallX = o.fallX ?? 0; c.kit = 'pads'; c.squat = o.squat ?? 0; c.lean = o.lean ?? 0
-  c.tag = o.name ?? null
+  c.tag = o.name ?? null; c.quiet = !!o.quiet; c.lead = !!o.lead   // (lead: the man the play's about, named even down in his stance)
 }
+// once a play's over every man's name shows, the line's too (a scene sets it for the frame: action() clears it)
+let TAG_ALL = false
+const TAGS_AFTER = 450
+export const tagsAll = on => { TAG_ALL = !!on }
 export function action(ctx, view) {
   const list = CAST.slice(0, castN).sort((a, b) => a.z - b.z)
   castN = 0
-  let n = 0
+  let n = 0, later = 0
   for (const c of list) {
     let p
     if (c.lean) {
@@ -440,13 +506,26 @@ export function action(ctx, view) {
       ctx.restore()
     } else p = athlete(ctx, view, c.x, c.y, c)
     // (on a small canvas the linemen's names only cover the numbers)
-    if (c.tag && !c.fall && !(view.px < 1.6 && (c.pose === 'block' || c.pose === 'stance'))) {
-      // his name goes down with him: a man nearer the camera stands in front of it
-      const k = Math.min(TAG_MAX, Math.max(0.8, p.s * c.size)), w = (c.tag.length * 5.6 + 6) * k
-      nameTag(ctx, view, clamp(p.x, w / 2 + 1, view.w - w / 2 - 1), p.y, c.tag, k)
-    }
+    if (!c.tag || c.fall) continue
+    const live = c.lead || !(c.quiet || (view.px < 1.6 && (c.pose === 'block' || c.pose === 'stance')))
+    if (!live && !TAG_ALL) continue
+    // his name goes down with him: a man nearer the camera stands in front of it
+    const k = Math.min(TAG_MAX, Math.max(0.8, p.s * c.size)), w = (c.tag.length * 5.6 + 6) * k
+    const tx = clamp(p.x, w / 2 + 1, view.w - w / 2 - 1)
+    if (live) { nameTag(ctx, view, tx, p.y, c.tag, k); if (TAG_ALL) placed(n++, tx, p.y, w, k) }
+    else (LATER[later] ??= {}), Object.assign(LATER[later++], { x: tx, y: p.y, w, k, tag: c.tag })
   }
+  // once it's over, the rest of the names: each where it fits, and none on top of a name already there
+  for (let i = 0; i < later; i++) {
+    const t = LATER[i]
+    let free = true
+    for (let j = 0; j < n && free; j++) { const o = PLACED[j]; if (Math.abs(o.x - t.x) < (o.w + t.w) / 2 && Math.abs(o.y - t.y) < 8.5 * Math.max(o.k, t.k)) free = false }
+    if (free) { nameTag(ctx, view, t.x, t.y, t.tag, t.k); placed(n++, t.x, t.y, t.w, t.k) }
+  }
+  TAG_ALL = false
 }
+const PLACED = [], LATER = []
+const placed = (i, x, y, w, k) => Object.assign(PLACED[i] ??= {}, { x, y, w, k })
 // a football in the air at a field point, z up off the ground, its shadow where it would fall
 export function ballInAir(ctx, view, x, y, z, ang, size = 1) {
   const q = ballShadow(ctx, view, x, y, z)
@@ -656,6 +735,7 @@ function drawHot(ctx, g, view) {
   // (he sees where it went: one hand up on a catch, both on his helmet on a pick)
   const qbAfter = !arm && caught ? (ok ? 'point-up' : 'hands-head') : arm
   put(qx, qy, us, { dir: arm ? (tx < qx ? 'left' : 'right') : 'up', carry: (!res || sacked) && age >= PRE + SNAP_MS && !(sacked && since > 90 && g.look % 2), fall, fallX: rs, skin: skinOf(9), number: 7, size: 0.9, pose: qbAfter, ...who.qb })
+  tagsAll(res && since > flight + TAGS_AFTER)   // (the play's over: everyone's name)
   action(ctx, view)
   if (sacked && once(rep, '_hit')) { hitTurf(g, view, qx, qy, 1.3); g.nudge.kick(g.t, 6, rs * -1, 0.6, 240); g.fx.push('stamp', 'h:heavy') }
   if (caught && once(rep, '_got')) { const q = tilt(view, tx, ty); g.dirt.burst('turf', q.x, q.y, g.t, { n: 5, s: q.s, spread: 1 }); g.nudge.kick(g.t, picked ? 3 : 2, 0, 1, 150); g.fx.push(picked ? 'stamp' : 'catchball', picked ? 'h:heavy' : 'h:medium'); rep.popAt = g.t; rep.popBig = picked }
@@ -710,7 +790,7 @@ function buildGap(rep, h) {
   }
   S.dl.forEach((b, i) => { b.hx = b.x; b.i = i; b.num = DL_NUM[i]; b.sk = i + 1 })
   S.ol.forEach(b => { b.hx = b.x; b.hy = b.y })
-  S.lb.forEach((b, i) => { b.hx = b.x; b.hy = b.y; b.num = G_LB[i]; b.sk = i + 5 })
+  S.lb.forEach((b, i) => { b.hx = b.x; b.hy = b.y; b.num = G_LB[i]; b.sk = i + 5; b.li = i })
   S.s.forEach((b, i) => { b.num = G_S[i]; b.sk = i + 8; b.si = i })
   S.bodies = [...S.dl, ...S.lb, ...S.s]
   S.everyone = [...S.bodies, ...S.ol, S.qb, S.rb]
@@ -833,6 +913,8 @@ function stepGap(g, rep, S, dt, h, age) {
   }
 }
 const PITCH_MS = 130
+// a defender's man: a safety, a backer (the eleven's: gap only), a lineman
+const gapWho = (who, b) => (b.si != null ? who.def[b.si] : b.li != null ? who.lb?.[b.li] ?? null : b.i != null ? who.dl[b.i] : null)
 function drawGap(ctx, g, view) {
   const { h } = view, rep = g.rep, res = rep.res, c = view.colors
   const age = g.t - rep.at, snap = age >= PRE
@@ -862,8 +944,8 @@ function drawGap(ctx, g, view) {
   defs.forEach((b, i) => {
     if (b === S.by || b === pile) return
     const w = walk(g, `l${i}`, b.x, b.y, 10)
-    if (downAge > 620 && stuffed) return put(b.x, b.y - jump(downAge, i + 3, 7), them, { dir: 'down', pose: i % 2 ? 'arms-up' : 'flex', z: b.y, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...(b.si != null ? who.def[b.si] : null) })
-    put(b.x, b.y, them, { dir: dirFrom(w, 'down'), step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...(b.si != null ? who.def[b.si] : null) })
+    if (downAge > 620 && stuffed) return put(b.x, b.y - jump(downAge, i + 3, 7), them, { dir: 'down', pose: i % 2 ? 'arms-up' : 'flex', z: b.y, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...gapWho(who, b) })
+    put(b.x, b.y, them, { dir: dirFrom(w, 'down'), step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...gapWho(who, b) })
   })
   S.ol.forEach((b, i) => put(b.x, b.y, us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 3), number: OL_NUM[i], size: G_SIZE, ...who.ol[i] }))
   // the ball's his until you pick the hole, then a quick pitch to the back
@@ -876,10 +958,11 @@ function drawGap(ctx, g, view) {
   put(rb.x, rb.y - (rbUp ? jump(downAge, 0, 3) : 0), us, { dir: rbUp ? 'down' : S.down ? 'up' : dirFrom(w, 'up'), step: S.down ? null : w.step, carry: pitched && !rbUp, fall: rbUp ? 0 : fall, fallX: rbUp ? 0 : S.down ? S.fall.x : 0, pose: rbUp ? (S.gain >= 10 ? 'point-up' : 'flex') : null, z: rb.y, skin: skinOf(6), number: 28, size: G_SIZE * 0.92, ...who.rb })
   if (pile) {
     const f2 = clamp((downAge - 120) / 130, 0, 1), sd = -S.fall.x || 1
-    put(lerp(pile.x, rb.x + sd * 13, f2), lerp(pile.y, rb.y + 2, f2), them, { dir: sd < 0 ? 'right' : 'left', pose: 'wrap', fall: clamp((downAge - 180) / 260, 0, 1), fallX: -sd, z: rb.y + 2, skin: skinOf(pile.sk), number: pile.num, size: G_SIZE * 0.92, ...(pile.si != null ? who.def[pile.si] : pile.i != null ? who.dl[pile.i] : null) })
+    put(lerp(pile.x, rb.x + sd * 13, f2), lerp(pile.y, rb.y + 2, f2), them, { dir: sd < 0 ? 'right' : 'left', pose: 'wrap', fall: clamp((downAge - 180) / 260, 0, 1), fallX: -sd, z: rb.y + 2, skin: skinOf(pile.sk), number: pile.num, size: G_SIZE * 0.92, ...gapWho(who, pile) })
   }
   const closeIn = S.down ? clamp((g.simT - S.fall.at) / 100, 0, 1) : 0
-  if (S.by) put(lerp(S.by.x, rb.x - S.fall.x * 16, closeIn), lerp(S.by.y, rb.y - 6, closeIn), them, { dir: S.fall.x > 0 ? 'right' : 'left', pose: 'wrap', fall, fallX: S.fall.x, z: rb.y + 1, skin: skinOf(S.by.sk), number: S.by.num, size: G_SIZE * 0.92, ...(S.by.si != null ? who.def[S.by.si] : S.by.i != null ? who.dl[S.by.i] : null) })
+  if (S.by) put(lerp(S.by.x, rb.x - S.fall.x * 16, closeIn), lerp(S.by.y, rb.y - 6, closeIn), them, { dir: S.fall.x > 0 ? 'right' : 'left', pose: 'wrap', fall, fallX: S.fall.x, z: rb.y + 1, skin: skinOf(S.by.sk), number: S.by.num, size: G_SIZE * 0.92, ...gapWho(who, S.by) })
+  tagsAll(downAge > TAGS_AFTER)   // (he's down: everyone's name)
   action(ctx, view)
   if (S.down && once(rep, '_hit')) { hitTurf(g, view, rb.x, rb.y, 1.2); g.nudge.kick(g.t, stuffed ? 6 : 4, S.fall.x, -0.7, 230); g.fx.push('stamp', 'h:heavy'); rep.popAt = g.t; rep.popBig = stuffed || S.gain >= 10 }
   if (res && !S.down && S.told && once(rep, '_gone')) { rep.popAt = g.t; rep.popBig = true }
@@ -1001,9 +1084,12 @@ const jumpRel = rep => rep.delay + rep.T * 0.2
 const jumpLand = (rep, h) => {
   if (rep.landH === h) return rep.land
   // (where he'll be depends on when it lands, and when it lands on where he'll be: settle it in a few goes)
-  const rel = jumpRel(rep), qy = losJ(h) - 44
+  // (_landing: while it's being worked out, a route doesn't ask where the ball lands)
+  const J = sceneOf(rep), rel = jumpRel(rep), qy = J.los(h) - 44
   let land = rel + 400
-  for (let i = 0; i < 5; i++) { const q = routeJ(rep, rep.open, land, h); land = rel + BALL_OFF + Math.hypot(q.x - 180, q.y - qy) / BALL_V }
+  rep._landing = true
+  for (let i = 0; i < 5; i++) { const q = J.route(rep, rep.open, land, h); land = rel + BALL_OFF + Math.hypot(q.x - 180, q.y - qy) / BALL_V }
+  rep._landing = false
   rep.land = land; rep.landH = h
   return land
 }
@@ -1011,13 +1097,23 @@ const jumpRun = (res, age, frozen, rep) => (!res ? age
   : res.kind === 'far' || (res.kind === 'good' && rep?.how === 'tackle') ? frozen + Math.min(age - frozen, res.flight)
   : frozen + Math.min(age - frozen, Math.max(1500, res.flight)))
 function buildJump(rep, h) { return { s: body(180, safetyY(h)), others: Array.from({ length: 10 }, () => ({ x: 0, y: 0 })), hit: false } }
-function stepJump(g, rep, S, dt, h, age) {
-  const res = rep.res, frozen = res ? res.at - rep.at : age, run = jumpRun(res, age, frozen, rep)
+// the others on the field the rules' bodies keep clear of: the routes (even places), the corners and the backers
+function othersJ(rep, S, run, h) {
   for (let k = 0; k < 4; k++) {
     const p = routeJ(rep, k, run, h); S.others[k * 2].x = p.x; S.others[k * 2].y = p.y
     const q = cornerAt(rep, k, run, h); S.others[k * 2 + 1].x = q.x; S.others[k * 2 + 1].y = q.y
   }
   for (let i = 0; i < 2; i++) { const q = backerJ(rep, i * 2 - 1, run, h); S.others[8 + i].x = q.x; S.others[8 + i].y = q.y }   // the backers underneath
+}
+// before he's broken on anything: the safety sits deep in the middle, rocking
+function idleJ(g, rep, S, b, run, h, dt) {
+  b.tx = 180 + Math.sin(g.simT / 300 + rep.ph[1]) * 5; b.ty = safetyY(h) + Math.min(14, Math.max(0, run - PRE) * 0.012); b.v = 0.09
+  seek(b, dt)
+  for (let i = 0; i < 10; i++) apart(b, S.others[i], 30, 1)
+}
+function stepJump(g, rep, S, dt, h, age) {
+  const J = sceneOf(rep), res = rep.res, frozen = res ? res.at - rep.at : age, run = jumpRun(res, age, frozen, rep)
+  J.others(rep, S, run, h)
   const b = S.s
   if (res && res.kind !== 'late') {
     // a straight shot at the man he tapped, through anyone in between, at one speed
@@ -1026,46 +1122,27 @@ function stepJump(g, rep, S, dt, h, age) {
       // he's got it, and he's gone the other way: a lane up the field, away from the man he took it from
       const left = age - jumpLand(rep, h)
       if (left > 880) { b.tx = b.x; b.ty = b.y; b.v = 0.02; seek(b, dt); return }
-      b.tx = b.x + (b.x < 180 ? 40 : -40); b.ty = b.y - 200; b.v = 0.2 * (g.who.sPace?.[0] ?? 1)
+      // (a backer up near the line takes it to the sideline, away from the big men)
+      const [rx, ry] = J.ret ?? [40, 200]
+      b.tx = b.x + (b.x < 180 ? rx : -rx); b.ty = b.y - ry; b.v = 0.2 * (g.who.sPace?.[0] ?? 1)
       seek(b, dt)
       return
     }
-    if (res.kind === 'good' && rep.how !== 'tackle') { const at = routeJ(rep, res.k, jumpLand(rep, h), h); b.tx = at.x; b.ty = at.y - 12 }
-    else { b.tx = t.x; b.ty = t.y - 12 }
-    b.v = SAFETY_V
+    if (res.kind === 'good' && rep.how !== 'tackle') { const at = J.route(rep, res.k, jumpLand(rep, h), h); b.tx = at.x; b.ty = at.y - 12 }
+    else { b.tx = t.x; b.ty = t.y + (J.meetY ?? -12) }   // (the backer comes up from deeper and meets him square)
+    b.v = J.V
     seek(b, dt)
     return
   }
-  b.tx = 180 + Math.sin(g.simT / 300 + rep.ph[1]) * 5; b.ty = safetyY(h) + Math.min(14, Math.max(0, run - PRE) * 0.012); b.v = 0.09
-  seek(b, dt)
-  for (let i = 0; i < 10; i++) apart(b, S.others[i], 30, 1)
+  J.idle(g, rep, S, b, run, h, dt)
 }
 const J_CB = [24, 21, 29, 26], J_WR = [11, 84, 87, 15]
 const QB_LOOK = (qx, x) => (Math.abs(x - qx) < 34 ? 'down' : x < qx ? 'left' : 'right')
-const Lx0 = (rep, h) => routeJ(rep, rep.open, jumpLand(rep, h), h).x   // (where the ball's coming down, across the field)
-function drawJump(ctx, g, view) {
-  const { h } = view, rep = g.rep, res = rep.res, c = view.colors
-  const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1, d = rep.decoy
-  const S = stepScene(g, h, buildJump, stepJump)
-  const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
-  const pushed = !!res && !reduceMotion()
-  if (pushed) {
-    // on the safety when he's got there. Beaten, on the man who's beaten him
-    let fx = S.s.x, fy = S.s.y
-    if (res.kind !== 'good' && res.kind !== 'far') { const p = routeJ(rep, res.kind === 'bait' ? res.k : rep.open, jumpRun(res, age, frozen, rep), h); fx = p.x; fy = p.y }
-    const q = tilt(view, fx, fy)
-    pushCam(ctx, g, view, q.x, q.y - 22 * q.s, 1.5)
-  }
-  fieldStage(ctx, view, 'jump', paintJump)
-  crowd(ctx, g, view, rep)
-  const los = losJ(h), qx = 180, qy = los - 44, snap = age >= PRE
-  const ok = res?.kind === 'good', late = res?.kind === 'late', flight = res?.flight ?? 340
-  const runAge = jumpRun(res, age, frozen, rep)
-  const picked = ok && rep.how === 'pick', swatted = ok && rep.how === 'swat', jarred = (ok && rep.how === 'tackle') || res?.kind === 'far', land = jumpLand(rep, h)
-  const missed = res && !ok && !late
-  // the matchups: each receiver and the man on him
+const Lx0 = (rep, h) => sceneOf(rep).route(rep, rep.open, jumpLand(rep, h), h).x   // (where the ball's coming down, across the field)
+// the matchups: each receiver and the man on him. (o: the play as drawJump has it; the open man and the tapped one go back on it)
+function menJ(g, view, o) {
+  const { rep, res, h, age, runAge, snap, land, picked, swatted, jarred, hitFall, us, them, who, qx } = o
   let ox = 0, oy = 0, tx = 0, ty = 0
-  const hitAt = frozen + flight, hitFall = jarred ? clamp((age - hitAt) / 280, 0, 1) : 0
   for (let k = 0; k < 4; k++) {
     const p = routeJ(rep, k, runAge, h), rx = p.x, ry = p.y
     const q = cornerAt(rep, k, runAge, h), cx = q.x, cy = q.y
@@ -1082,21 +1159,55 @@ function drawJump(ctx, g, view) {
     if (k === rep.open) { ox = rx; oy = ry }
     if (res?.k === k) { tx = rx; ty = ry }
   }
-  // the front, on each other
-  for (let i = -2; i <= 2; i++) put(180 + i * OL_GAP, los - 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), them, { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(i + 7), number: OL_NUM[i + 2], size: 0.94, ...who.ol[i + 2] })
-  for (let i = -3; i <= 3; i += 2) put(180 + i * 14, los + 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 9), number: DL_NUM[(i + 3) / 2], size: 0.94, ...who.dl[(i + 3) / 2] })
+  o.ox = ox; o.oy = oy; o.tx = tx; o.ty = ty
+}
+// the two backers underneath
+function backsJ(g, view, o) {
+  const { rep, h, age, runAge, land, picked, swatted, us } = o
   for (let i = -1; i <= 1; i += 2) {
     const q = backerJ(rep, i, runAge, h), bx = q.x, by = q.y, w = walk(g, `jb${i}`, bx, by)
     if ((picked || swatted) && age > land + 300) put(bx, by - jump(age, i + 2, 6), us, { dir: 'up', pose: 'arms-up', z: by, skin: skinOf(i + 4), number: i < 0 ? 52 : 45, size: 0.86 })
     else put(bx, by, us, { dir: 'up', step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(i + 4), number: i < 0 ? 52 : 45, size: 0.86 })
   }
+}
+// Jump the Route and Zone Drop: one play, the scene's own men (sceneOf: the safety's or the backer's)
+function drawJump(ctx, g, view) {
+  const { h } = view, rep = g.rep, res = rep.res, c = view.colors, J = sceneOf(rep)
+  const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1, d = rep.decoy
+  const S = stepScene(g, h, J.build, stepJump)
+  const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
+  // (a double move's ball goes to the man who ran it; a look-off's goes to the read, in the window the backer left)
+  const toBait = res?.kind === 'bait' && !J.lookOff
+  const pushed = !!res && !reduceMotion()
+  if (pushed) {
+    // on the safety when he's got there. Beaten, on the man who's beaten him
+    let fx = S.s.x, fy = S.s.y
+    if (res.kind !== 'good' && res.kind !== 'far') { const p = J.route(rep, toBait ? res.k : rep.open, jumpRun(res, age, frozen, rep), h); fx = p.x; fy = p.y }
+    const q = tilt(view, fx, fy)
+    pushCam(ctx, g, view, q.x, q.y - 22 * q.s, 1.5)
+  }
+  fieldStage(ctx, view, J.key, J.paint)
+  crowd(ctx, g, view, rep)
+  const los = J.los(h), qx = 180, qy = los - 44, snap = age >= PRE
+  const ok = res?.kind === 'good', late = res?.kind === 'late', flight = res?.flight ?? 340
+  const runAge = jumpRun(res, age, frozen, rep)
+  const picked = ok && rep.how === 'pick', swatted = ok && rep.how === 'swat', jarred = (ok && rep.how === 'tackle') || res?.kind === 'far', land = jumpLand(rep, h)
+  const missed = res && !ok && !late
+  const hitAt = frozen + flight, hitFall = jarred ? clamp((age - hitAt) / 280, 0, 1) : 0
+  const o = { rep, res, h, age, runAge, snap, land, picked, swatted, jarred, hitFall, us, them, who, qx, ox: 0, oy: 0, tx: 0, ty: 0 }
+  J.men(g, view, o)
+  const { ox, oy, tx, ty } = o
+  // the front, on each other
+  for (let i = -2; i <= 2; i++) put(180 + i * OL_GAP, los - 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), them, { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(i + 7), number: OL_NUM[i + 2], size: 0.94, ...who.ol[i + 2] })
+  for (let i = -3; i <= 3; i += 2) put(180 + i * 14, los + 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 9), number: DL_NUM[(i + 3) / 2], size: 0.94, ...who.dl[(i + 3) / 2] })
+  J.backs(g, view, o)
   // the QB: he scans; his shoulders open to the man he's going to, then the ball's out. On an early bait
   // they swing that way and come back: a pump. If you've run to the wrong man he doesn't wait.
-  const bx = res?.kind === 'bait' ? tx : ox, by = res?.kind === 'bait' ? ty : oy
+  const bx = toBait ? tx : ox, by = toBait ? ty : oy
   const scan = Math.sin(g.t / 520 + rep.ph[0])
   let look = scan > 0.72 ? 'left' : scan < -0.72 ? 'right' : 'down'
   if (runAge >= rep.delay || missed) look = QB_LOOK(qx, bx)
-  else if (d?.early && runAge >= d.at && runAge < d.at + FLASH) { const p = routeJ(rep, d.k, runAge, h); look = QB_LOOK(qx, p.x) }
+  else if (d?.early && runAge >= d.at && runAge < d.at + (d.flash ?? FLASH)) { const p = J.route(rep, d.k, runAge, h); look = QB_LOOK(qx, p.x) }
   const rel = jumpRel(rep)
   const fa = prog(age, rel, land)
   // his arm: cocked once he's found his man, then the release
@@ -1104,19 +1215,20 @@ function drawJump(ctx, g, view) {
   // (he's watched it get taken away)
   const qbSad = (picked || swatted) && age > land + 360
   put(qx, qy, them, { dir: qbSad ? 'down' : arm ? (bx < qx ? 'left' : 'right') : look, pose: qbSad ? (picked ? 'hands-head' : 'hips') : arm, carry: !arm && fa <= 0 && age >= PRE + SNAP_MS, skin: skinOf(2), number: 9, size: 0.9, ...who.qb })
-  // him: the safety
+  // him: the safety (or the backer)
   const b = S.s, sw = walk(g, 'safety', b.x, b.y, 9)
   const hitNow = jarred && hitFall > 0
   snapBall(ctx, view, 180, qy + 42, qx, qy, age - PRE)
   // him: high-pointing it, running it back, then pulling up to let them hear about it. A breakup gets the owner's two signals
-  const sLook = { skin: skinOf(4), number: 38, size: 0.86, ...who.safety }
+  const sLook = J.look(who)
   const atBall = (picked || swatted) && age > land - 140 && age < land + 50
-  const beatBy = res && !ok && !late && age > land + 260
+  const beatBy = res && !ok && !late && age > land + 260 && !(J.tackleFar && res.kind === 'far')   // (the backer still gets him down on a long one)
   if (atBall) put(b.x, b.y, us, { ...sLook, dir: 'up', pose: picked ? (b.x < Lx0(rep, h) ? 'catch-r' : 'catch-l') : b.x < Lx0(rep, h) ? 'swipe-r' : 'swipe-l' })
   else if (picked && age > land + 900) put(b.x, b.y - jump(age, 0, 8), us, { ...sLook, dir: 'down', pose: g.look % 2 ? 'arms-up' : 'flex', z: b.y })
   else if (swatted && age > land + 280) put(b.x, b.y, us, { ...sLook, dir: 'down', pose: breakupPose(age - land - 280, g.look + g.i) })
   else if (beatBy) put(b.x, b.y, us, { ...sLook, dir: 'up', step: null, pose: 'hips' })
-  else put(b.x, b.y, us, { ...sLook, dir: hitNow ? 'up' : dirFrom(sw, 'up'), step: hitNow ? null : sw.step, pose: hitNow ? 'wrap' : sw.step == null ? 'ready' : null, fall: hitNow ? hitFall : 0, fallX: hitNow ? (tx < 180 ? -1 : 1) : 0, carry: picked && age > land, z: hitNow ? ty + 1 : undefined })
+  else put(b.x, b.y, us, { ...sLook, dir: hitNow ? 'up' : J.facing ? J.facing(sw, res) : dirFrom(sw, 'up'), step: hitNow ? null : sw.step, pose: hitNow ? 'wrap' : sw.step == null ? 'ready' : null, fall: hitNow ? hitFall : 0, fallX: hitNow ? (tx < 180 ? -1 : 1) : 0, carry: picked && age > land, z: hitNow ? ty + 1 : undefined })
+  tagsAll(res && since > flight + TAGS_AFTER)   // (the play's over: everyone's name)
   action(ctx, view)
   if (hitFall > 0 && once(rep, '_hit')) { hitTurf(g, view, tx, ty, 1.3); g.nudge.kick(g.t, 6, tx < 180 ? -1 : 1, 0.5, 240); g.fx.push('stamp', 'h:heavy'); rep.popAt = g.t }
   if ((picked || swatted) && age >= land && once(rep, '_got')) { const q = tilt(view, b.x, b.y); g.dirt.burst('turf', q.x, q.y, g.t, { n: 6, s: q.s, spread: 1 }); g.nudge.kick(g.t, 3, 0, 1, 160); g.fx.push(picked ? 'catchball' : 'stamp', 'h:heavy'); rep.popAt = g.t; rep.popBig = picked }
@@ -1128,13 +1240,165 @@ function drawJump(ctx, g, view) {
   }
   // the ball, and where it goes
   // it was thrown at one spot, where his man would be, and it goes there whatever happens around it
-  const toK = res?.kind === 'bait' ? res.k : rep.open
-  const L = routeJ(rep, toK, land, h), Lx = L.x, Ly = L.y
+  const toK = toBait ? res.k : rep.open
+  const L = J.route(rep, toK, land, h), Lx = L.x, Ly = L.y
   if (fa > 0 && fa < 1) ballInAir(ctx, view, lerp(qx, Lx, fa), lerp(qy, Ly, fa), 34 + Math.sin(fa * Math.PI) * 44, Math.atan2(Lx - qx, qy - Ly))
   // a hand on it: it's dead on the turf
   else if (swatted && age >= land) looseBall(ctx, view, Lx, Ly + 8, age - land, true)
   if (pushed) ctx.restore()
 }
+
+// ── Zone drop ───────────────────────────────────────────────────────────────
+// Jump the Route for a backer. He's the Mike in a two-deep shell, six yards off the ball and inside. On the snap he opens
+// and gets to his hook landmark, ten yards deep, eyes on the QB. The corners are on the outside men, a safety over the top
+// of each half, the nickel and the Sam in the curl-flat. Nothing goes deep at him: X's dig, the slot's curl, the tight end
+// sitting down in the hook, the back's angle route, every one short or intermediate and working through his zone. One comes
+// open in it: the QB's shoulders open to him, and that's the man to break on. The bait is the QB's first look: a man settles
+// in front of the backer and the QB stares him down, then comes back to the real one in the window behind. Jump the first
+// look and that window's empty. Same race as the safety's (settle): the ball's spot against the backer's run, a step slower.
+const losZ = h => Math.round(h * 0.68)
+const LB_V = 0.28                 // the backer's one speed, units a ms: a step slower than the safety's
+const Z_SHORT = 6 * JUMP_YD       // a tackle within six yards of the catch is a good play
+const Z_YAC = 0.075               // the catch and run
+const Z_STEM = 54                 // the deepest the read breaks, about seven yards
+// each man's route, X's side on the left (a flipped play mirrors it). a0: his release. open: his break when he's the read
+// (the look-off's too, short and settling). soft: the route he runs when he isn't. cap: how far after the break, then he sits
+const ZR = [
+  { x: 24, y: 0, a0: 0, open: 1.5, cap: 999, soft: -2.75, softCap: 16, stem: [62, 80] },        // X: the dig across the hook, or the comeback with his corner on him
+  { x: 110, y: -12, a0: 0, open: 2.3, cap: 22, soft: -1.45, softCap: 70, stem: [14, 22] },       // the slot: the curl in the window, or the arrow to the flat with the nickel on him
+  { x: 254, y: 0, a0: 0, open: -2.7, cap: 14, soft: 1.5, softCap: 50, stem: [36, 50] },         // the tight end: sits down in the hook, or the stick out to the flat
+  { x: 206, y: -40, a0: 0.72, open: -0.85, cap: 999, soft: 1.35, softCap: 44, stem: [34, 48] }, // the back: the angle route back inside, or the check to the flat
+]
+const Z_WR = [11, 84, 87, 28], Z_DEF = [24, 21, 29, 26, 27, 45]
+// once it's his (caught, not taken away) he turns it up the field: from when the ball gets there, or never
+const yacFrom = (rep, k, h) => (k !== rep.open || rep._landing || rep.how === 'pick' || rep.how === 'swat' ? Infinity : jumpLand(rep, h))
+function routeZ(rep, k, age, h) {
+  const R = ZR[k], run = J_RUN * rep.pace[k], open = k === rep.open, s = !open && stutterOf(rep, k)
+  const caught = yacFrom(rep, k, h), t = Math.min(age, caught)
+  const bt = open ? rep.delay : s ? s.at : PRE + rep.zstem[k] / run
+  // (the read's stem stays short or intermediate: a later break is a slower, more patient release, never a deeper route)
+  const tempo = open ? clamp(Z_STEM / Math.max(1, (bt - PRE) * run), 0.72, 1) : 1
+  const stem = Math.min(Math.max(0, t - PRE) * run * tempo, Math.max(0, bt - PRE) * run * tempo)
+  const sharp = open || !!s, a = sharp ? R.open : R.soft
+  const rest = Math.min(Math.max(0, t - bt) * run * (sharp ? BURST : 1), s ? Math.min(R.cap, 24) : sharp ? R.cap : R.softCap)
+  let x = R.x + Math.sin(R.a0) * stem + Math.sin(a) * rest, y = R.y + Math.cos(R.a0) * stem + Math.cos(a) * rest
+  if (age > caught) { const go = (age - caught) * Z_YAC * rep.pace[k]; y += go; x += Math.sign(x - 180) * go * 0.2 }
+  P.x = clamp(rep.flip ? 360 - x : x, 16, 344)
+  P.y = losZ(h) - 10 + y
+  return P
+}
+// Z, wide on the far side: a go, his corner running with him. He's taking the top off, never the read
+const ZQ = { x: 0, y: 0 }
+function zRoute(rep, age, h) {
+  ZQ.x = rep.flip ? 28 : 332; ZQ.y = losZ(h) - 10 + Math.max(0, age - PRE) * J_RUN * 1.05
+  return ZQ
+}
+// the backer: lined up inside, opening to his landmark on the snap, then sitting in his window and leaning to whoever's
+// working through it (the rules ask here, so the race starts where the picture has him)
+const LBQ = { x: 0, y: 0 }
+function lbAt(rep, age, h) {
+  const los = losZ(h), pyd = TL_PYD(h), sg = rep.flip ? -1 : 1, t = easeOut(prog(age, PRE, PRE + 760))
+  let x = 180 + sg * lerp(6, 14, t)
+  const y = los + lerp(6, 10, t) * pyd
+  if (age > PRE + 300) {
+    let lean = 0
+    for (let k = 0; k < 4; k++) { const q = routeZ(rep, k, age, h), dx = q.x - x; lean += dx * Math.max(0, 1 - Math.hypot(dx, q.y - y) / 90) * 0.35 }
+    x += clamp(lean, -16, 16) * prog(age, PRE + 300, PRE + 700)
+  }
+  LBQ.x = x; LBQ.y = y
+  return LBQ
+}
+// the rest of the shell: 0 the corner on X, 1 the corner on Z, 2 3 the safeties (a deep half each), 4 the nickel, 5 the Sam
+const ZD = [null, null, { x: 112, y: 112, tx: 106, ty: 130 }, { x: 248, y: 112, tx: 254, ty: 130 }, { x: 102, y: 34, tx: 76, ty: 60, on: [1, 0] }, { x: 272, y: 30, tx: 290, ty: 58, on: [2, 3] }]
+const ZM = { x: 0, y: 0 }
+function zoneMan(rep, i, age, h) {
+  const los = losZ(h), sg = rep.flip ? -1 : 1, fx = x => (rep.flip ? 360 - x : x), t = easeOut(prog(age, PRE, PRE + 700))
+  let x, y
+  if (i === 0) {
+    // outside X and over the top of him. On the dig he lets him go inside, to the backer, and stays deep outside
+    const q = routeZ(rep, 0, Math.max(0, age - 90), h), qx = q.x, qy = q.y, x0 = fx(ZR[0].x)
+    x = x0 + clamp(qx - x0, -30, 30) - 16 * sg
+    y = Math.max(qy + lerp(40, 22, t), los + 30 + 70 * t)
+  } else if (i === 1) {
+    const q = zRoute(rep, Math.max(0, age - 90), h)
+    x = q.x + 16 * sg; y = q.y + lerp(40, 20, t)
+  } else {
+    const D = ZD[i]
+    x = fx(lerp(D.x, D.tx, t)); y = los + lerp(D.y, D.ty, t)
+    if (D.on) {
+      // the curl-flat: he widens with the man in his area. (Not the read: he's the one working inside, to the backer)
+      let ax = 0, ay = 0, wt = 0
+      for (const k of D.on) {
+        const q = routeZ(rep, k, age, h), qx = q.x, qy = q.y
+        const w = Math.max(0, 1 - Math.hypot(qx - x, qy - y) / 110) * (k === rep.open ? 1 - prog(age, rep.delay - 200, rep.delay + 150) : 1)
+        ax += (qx - x) * w; ay += (qy + 14 - y) * w; wt += w
+      }
+      const f = prog(age, PRE + 200, PRE + 700) * 0.7, m = Math.max(wt, 1)
+      x += clamp(ax / m, -30, 30) * f; y += clamp(ay / m, -20, 20) * f
+    } else {
+      // over the top: once the ball's coming out he gets downhill toward it
+      const q = routeZ(rep, rep.open, age, h), qx = q.x, f = prog(age, rep.delay, rep.delay + 500)
+      x += clamp(qx - x, -24, 24) * 0.4 * f; y -= 12 * f
+    }
+  }
+  ZM.x = clamp(x, 12, 348); ZM.y = y
+  return ZM
+}
+function buildZone(rep, h) { const q = lbAt(rep, 0, h); return { s: body(q.x, q.y), others: Array.from({ length: 10 }, () => ({ x: 0, y: 0 })), hit: false } }
+function othersZ(rep, S, run, h) {
+  for (let k = 0; k < 4; k++) { const p = routeZ(rep, k, run, h); S.others[k * 2].x = p.x; S.others[k * 2].y = p.y }
+  for (let i = 0; i < 6; i++) { const q = zoneMan(rep, i, run, h), o = S.others[i < 4 ? i * 2 + 1 : i + 4]; o.x = q.x; o.y = q.y }
+}
+// before the break he's where the rules have him. Not broken on anything at all, he comes up on the catch, a step behind it
+function idleZ(g, rep, S, b, run, h, dt) {
+  if (!rep.res) { const q = lbAt(rep, run, h); b.x = q.x; b.y = q.y; b.tx = b.x; b.ty = b.y; return }
+  const t = S.others[rep.open * 2]
+  b.tx = t.x; b.ty = t.y + 18; b.v = 0.07
+  seek(b, dt)
+}
+// a man in zone has his eyes on the QB: square to him unless he's really moving across
+const zFace = w => (w.step == null || Math.abs(w.dx) < 0.62 ? 'up' : dirFrom(w, 'up'))
+function menZ(g, view, o) {
+  const { rep, res, h, age, runAge, snap, land, picked, swatted, jarred, hitFall, us, them, who, qx } = o
+  const took = (picked || swatted) && age > land + 240
+  // Z and his corner, going
+  const z = zRoute(rep, runAge, h), zx = z.x, zy = z.y, zw = walk(g, 'zz', zx, zy)
+  put(zx, zy, them, { dir: dirFrom(zw, 'down'), step: snap ? zw.step : null, pose: snap ? null : 'ready', skin: skinOf(8), number: 15, size: 0.86, ...who.z })
+  // the shell. A takeaway: they're up for it
+  for (let i = 0; i < 6; i++) {
+    const q = zoneMan(rep, i, runAge, h), x = q.x, y = q.y, w = walk(g, `zd${i}`, x, y)
+    const look = { skin: skinOf(i * 3 + 1), number: Z_DEF[i], size: 0.86, ...who.def[i] }
+    if (took) { put(x, y - jump(age, i, 6), us, { ...look, dir: 'up', pose: 'arms-up', z: y }); continue }
+    const dir = i < 2 ? (runAge < PRE + J_HIPS ? 'up' : dirFrom(w, 'up')) : zFace(w)
+    put(x, y, us, { ...look, dir, step: snap ? w.step : null, pose: snap && w.step != null ? null : 'ready' })
+  }
+  // the four who can be the read. The ball goes to the read, whatever he's done: it's his to catch unless it's taken away
+  let ox = 0, oy = 0, tx = 0, ty = 0
+  for (let k = 0; k < 4; k++) {
+    const p = routeZ(rep, k, runAge, h), rx = p.x, ry = p.y, rw = walk(g, `zr${k}`, rx, ry)
+    const hitHim = jarred && res.k === k && hitFall > 0, toHim = k === rep.open
+    const going = toHim && age > land - 130 && age < land + 40 && !hitHim
+    const robbed = toHim && (picked || swatted) && age > land + 300
+    const has = toHim && age >= land + 40 && !picked && !swatted
+    // (sitting down in a window he turns back to the QB)
+    const still = snap && runAge > PRE + 420 ? 'up' : 'down'
+    put(rx, ry, them, { dir: hitHim ? 'down' : going || robbed ? 'up' : dirFrom(rw, still), step: snap && !hitHim && !going && !robbed ? rw.step : null, pose: going ? (rx < qx ? 'catch-r' : 'catch-l') : robbed ? 'hands-head' : snap ? null : 'ready', fall: hitHim ? hitFall : 0, fallX: hitHim ? (rx < 180 ? -1 : 1) : 0, carry: has, skin: skinOf(k * 3 + 2), number: Z_WR[k], size: 0.86, ...who.rcv[k] })
+    if (toHim) { ox = rx; oy = ry }
+    if (res?.k === k) { tx = rx; ty = ry }
+  }
+  o.ox = ox; o.oy = oy; o.tx = tx; o.ty = ty
+}
+function paintZone(f, view) {
+  const los = losZ(view.h), pyd = TL_PYD(view.h)
+  paintFieldFlat(f, view, los - 70 * pyd, pyd, view.colors.us)
+  lineColors(f, view, los, los + 13 * pyd)   // (third and thirteen: he sits short of the sticks, and a tackle short of them is a stop)
+}
+// the two defenders' games, side by side: what drawJump, stepJump and the rules (make, settle) ask of each
+const JUMPY = {
+  'jump-route': { route: routeJ, los: losJ, V: SAFETY_V, short: SHORT_GAIN, from: (rep, age, h) => ({ x: 180, y: safetyY(h) }), build: buildJump, others: othersJ, idle: idleJ, key: 'jump', paint: paintJump, men: menJ, backs: backsJ, look: who => ({ skin: skinOf(4), number: 38, size: 0.86, ...who.safety }) },
+  'zone-drop': { route: routeZ, los: losZ, V: LB_V, short: Z_SHORT, sticks: 13, from: lbAt, build: buildZone, others: othersZ, idle: idleZ, key: 'zone', paint: paintZone, men: menZ, backs: () => {}, look: who => ({ skin: skinOf(5), number: 54, size: 0.9, ...who.me }), lookOff: true, meetY: 12, tackleFar: true, ret: [-70, 60], facing: (w, res) => (res ? dirFrom(w, 'up') : zFace(w)) },
+}
+const sceneOf = rep => (rep.zone ? JUMPY['zone-drop'] : JUMPY['jump-route'])
 
 // ── The court: to scale, through the same camera ────────────────────────────
 const FT = COURT_FT
@@ -1558,4 +1822,4 @@ function drawRim(ctx, g, view) {
   if (!atIron) ballIn(ctx, G.cam, AB.x, AB.y, AB.z, spin)
 }
 
-const SCENES = { 'hot-read': drawHot, gap: drawGap, 'jump-route': drawJump, pnr: drawPnr, 'rim-protect': drawRim }
+const SCENES = { 'hot-read': drawHot, gap: drawGap, 'jump-route': drawJump, 'zone-drop': drawJump, pnr: drawPnr, 'rim-protect': drawRim }

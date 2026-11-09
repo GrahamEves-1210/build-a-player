@@ -7,7 +7,7 @@ import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, 
 import { castMen } from './read.js'
 
 export const how = {
-  board: 'Read which side it comes off. Press that side as the ball hits the gold ring: it lands in your hands at the top.',
+  board: 'Read which side it comes off. Press that side as the ball hits the gold ring: it lands in hand at the top.',
 }
 
 const RISE = 230          // press to the top of the jump

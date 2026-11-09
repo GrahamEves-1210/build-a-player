@@ -16,6 +16,7 @@
 //   sequence   3–4 calls in a row, each on its own clock
 //   route      pick a route (easy to hard), then hit its window
 //   choice     two ways to play it, each its own game
+//   penalty, oneone, header, volley, targets   soccer's own (lib/mg/penalty.js etc.; the Simple ones in MiniGameSimple.jsx)
 
 import { seeded } from './rng.js'
 
@@ -41,36 +42,63 @@ export const GAMES = {
   // ── DB (for when the position comes to Career) ──
   'jump-route':  { kind: 'reaction', traits: ['playRecognition', 'zoneIQ', 'zoneInstincts'], title: 'JUMP THE ROUTE', how: 'Four snaps, three routes. One breaks green: jump it. Red is a double move: let it go.', rounds: 4 },
   'tackle-angle':{ kind: 'lanes', traits: ['speed', 'runSupport', 'range', 'tackling'], title: 'TACKLE ANGLE', how: 'The back cuts. Take the right angle, three times.' },
+  // ── LB ── (the linebacker's Jump the Route: a hook dropper, short and intermediate routes)
+  'zone-drop':   { kind: 'reaction', traits: ['playRecognition', 'zoneInstincts', 'range'], title: 'ZONE DROP', how: 'Four snaps from the hook zone. Drop, read the QB and break on the man he opens to. He looks one off first sometimes: stay home on that one.', rounds: 4 },
   // ── DL ──
-  'pass-rush':   { kind: 'rush', traits: ['getOff', 'finesseMoves', 'powerMoves', 'passRush'], title: 'PASS RUSH', how: 'GET OFF when the ball moves. Then read him. He oversets wide: go INSIDE. He leans on you: take the EDGE. He sits back high: BULL him.' },
-  'run-stuff':   { kind: 'rush', traits: ['playRecognition', 'blockShed', 'strength', 'size', 'power'], title: 'STUFF THE RUN', how: 'Read the line and the back. Tap the side the run is going, then SHED as the back gets to you. Too soon and he cuts away.', rounds: 4 },
+  'pass-rush':   { kind: 'rush', traits: ['getOff', 'finesseMoves', 'powerMoves', 'passRush'], title: 'PASS RUSH', how: 'GET OFF when the ball moves. Then read him. He oversets wide: go INSIDE. He leans in: take the EDGE. He sits back high: BULL him.' },
+  'run-stuff':   { kind: 'rush', traits: ['playRecognition', 'blockShed', 'strength', 'size', 'power'], title: 'STUFF THE RUN', how: 'Read the line and the back. Tap the side the run is going, then SHED as the back gets there. Too soon and he cuts away.', rounds: 4 },
   // ── OL ── (a lineman plays Seal the Edge too, off his own ratings: Run Block and Anchor)
-  'pass-pro':    { kind: 'pro', traits: ['passPro', 'mobility', 'anchor', 'blitzPickup', 'length'], title: 'PASS PRO', how: 'Four snaps. Mirror the rusher, wide or back inside, and PUNCH when he gets to you. On a bull rush, HOLD PUNCH and anchor. On a blitz, pick up the free rusher.' },
+  'pass-pro':    { kind: 'pro', traits: ['passPro', 'mobility', 'anchor', 'blitzPickup', 'length'], title: 'PASS PRO', how: 'Four snaps. Mirror the rusher, wide or back inside, and PUNCH when he gets there. On a bull rush, HOLD PUNCH and anchor. On a blitz, pick up the free rusher.' },
   // ── Combine ── (a lineman's: the 40 off Mobility, the bench off Anchor, the cone off Mobility)
-  'forty':       { kind: 'dash', traits: ['legs', 'speed', 'getOff', 'range', 'mobility'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.' },
+  'forty':       { kind: 'dash', traits: ['legs', 'speed', 'getOff', 'range', 'mobility'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Speed makes every step longer.' },
   'velo':        { kind: 'velo', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Three throws. Hold to wind up and let go inside the small green window. It moves every throw and the wind-up gets faster. A stronger arm gets a bigger window.' },
   'acc':         { kind: 'routes', traits: ['accuracy'], title: 'ACCURACY DRILL', how: 'Throw to receivers on four routes: slant, out, post, go. Tap to throw. The ball takes a moment to get there, so lead him: it has to land while he\'s open (the bright part of the route). Accuracy keeps him open longer.' },
   'cone':        { kind: 'cone', traits: ['elusiveness', 'routeRunning', 'fluidity', 'bend', 'mobility'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
   'gauntlet':    { kind: 'gauntlet', traits: ['hands', 'zoneInstincts'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
-  'bench':       { kind: 'bench', traits: ['strength', 'power', 'anchor'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
+  'bench':       { kind: 'bench', traits: ['strength', 'power', 'anchor'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as possible in 12 seconds.' },
   // ── Basketball ──
   'iso':         { kind: 'lanes', need: 2, traits: ['handles', 'speed', 'playmaking'], title: 'ISO', how: 'He’s overplaying a side. Cross over and attack the other way, three times. Win two of three.', cue: 'DEFENDER' },
   'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing', 'playmaking'], title: 'PICK-AND-ROLL READ', how: 'Four trips. Roll man, corner, pull-up: one comes open in green. Hit it before the help recovers. Red is a trap: the help is already there.', rounds: 4 },
-  'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Down late, ball in your hands, clock winding down. Hit the release window.' },
+  'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Down late, ball in hand, clock winding down. Hit the release window.' },
   'free-throws': { kind: 'taps', traits: ['jumpShot', 'clutch'], title: 'FREE THROWS', how: 'Two shots with the game on the line. Hit each window. Nerves: the second one wobbles.', n: 2 },
   'post-up':     { kind: 'lanes', traits: ['finishing', 'size'], title: 'POST MOVE', how: 'He’s playing one shoulder. Spin off the other one, three times.', cue: 'DEFENDER' },
   'board':       { kind: 'timing', traits: ['rebounding', 'bounce'], title: 'CRASH THE GLASS', how: 'The shot goes up. Time the jump and take the rebound.' },
   'lockdown':    { kind: 'lanes', traits: ['perimeterDefense', 'speed'], title: 'LOCKDOWN', how: 'He probes one way, then the other. Slide with him and stay in front. Don\u2019t bite on the hesitation.' },
-  'fast-break':  { kind: 'reaction', traits: ['passing', 'basketballIQ'], title: 'FAST BREAK', how: 'Two on one, then three on two. The last man commits: hit the open teammate, or take it yourself.' },
+  'fast-break':  { kind: 'reaction', traits: ['passing', 'basketballIQ'], title: 'FAST BREAK', how: 'Two on one, then three on two. The last man commits: hit the open teammate, or keep it and score.' },
   'alley-oop':   { kind: 'timing', traits: ['bounce', 'finishing'], title: 'ALLEY-OOP', how: 'The lob comes in from the wing. Go up to meet it at the top, then throw it down.' },
-  'half-court':  { kind: 'reaction', traits: ['handles', 'jumpShot', 'finishing'], title: 'GET A BUCKET', how: 'Five on five, one possession, the shot clock running. Beat your man, read the help, and score.' },
+  'half-court':  { kind: 'reaction', traits: ['handles', 'jumpShot', 'finishing'], title: 'GET A BUCKET', how: 'Five on five, one possession, the shot clock running. Beat the man, read the help, and score.' },
   'rim-protect': { kind: 'reaction', traits: ['interiorDefense', 'bounce'], title: 'PROTECT THE RIM', how: 'Four trips, three drivers. One attacks the rim in green: meet him there. Red is a pump fake: stay down.', rounds: 4 },
   // ── Basketball combine ──
-  'sprint':      { kind: 'dash', traits: ['speed'], title: '3/4-COURT SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.', unit: 'FT', dist: 75 },
+  'sprint':      { kind: 'dash', traits: ['speed'], title: '3/4-COURT SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Speed makes every step longer.', unit: 'FT', dist: 75 },
   'lane':        { kind: 'cone', traits: ['speed', 'perimeterDefense'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },
   'spot':        { kind: 'aim', traits: ['jumpShot'], title: 'SPOT-UP SHOOTING', how: 'Four spots around the arc. Tap to lock the shot left to right, then again to lock the arc. A better jumper makes the rim bigger.', noun: 'SHOT' },
   'vert':        { kind: 'velo', traits: ['bounce'], title: 'MAX VERTICAL', how: 'Three jumps. Hold to load, and let go inside the small green window. It moves every jump. More bounce, bigger window.', noun: 'JUMP' },
-  'nbench':      { kind: 'bench', load: 0.62, traits: ['size'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
+  'nbench':      { kind: 'bench', load: 0.62, traits: ['size'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as possible in 12 seconds.' },
+  // ── Soccer: the striker ──
+  'penalty':     { kind: 'penalty', traits: ['finishing', 'composure'], title: 'PENALTY KICK', how: 'Twelve yards. Pick a corner with the stick, then hold SHOOT to start the run-up and let go to set the power: too much and it’s over the bar. STUTTER in the run-up and a keeper who’s guessing goes early: then put it the other way. Tap SHOOT at the strike for a perfect penalty.' },
+  'one-on-one':  { kind: 'oneone', traits: ['pace', 'finishing', 'composure', 'dribbling', 'firstTouch'], title: 'ONE-ON-ONE', how: 'Through on goal with a defender chasing. Run at the keeper with the stick: push up to sprint, but the touches get heavier and he’ll come and claim a loose one. Hold SHOOT, aim, and let go to strike it; tap again at contact for a perfect finish. Tap CHIP to dink a keeper who’s off his line, hold it to curl one. Cut sharply as he goes down to take it round him.' },
+  'header':      { kind: 'header', traits: ['heading', 'offBall'], title: 'HEADER', how: 'A ball into the box from the right wing. The marker’s touch-tight: when he turns to watch the winger, move and lose him. Make the run near post or far post, get under the ring, and HEAD it as the ring closes. Aim with the stick on the way up.' },
+  'volley':      { kind: 'volley', traits: ['firstTouch', 'shotPower', 'finishing'], title: 'VOLLEY', how: 'A corner’s headed out and it drops on the edge of the box, never the same way twice. Get in line with the stick. Hold SHOOT as it comes down and let go as it arrives to hit it first time, or TOUCH it as it arrives, the stick at the target, and shoot before the defender closes in.' },
+  'free-kick':   { kind: 'freekick', traits: ['finishing', 'shotPower', 'composure'], title: 'FREE KICK', how: 'Twenty-odd metres out, the wall covering the near post. Aim with the stick. CURL it over the wall into the corner on its side (the keeper can’t see it till it’s past them), or SHOOT: drive it at the keeper’s side, or low under the wall when it jumps. Hold for power and let go in the band; tap again at the strike for a perfect one.' },
+  'two-on-one':  { kind: 'counter', traits: ['linkUp', 'composure', 'finishing'], title: '2-ON-1', how: 'A break, the runner up the wing, one man back. Watch the last defender. He steps up: PASS, square it for the tap-in. He drops off to the runner: SHOOT, aim with the stick, hold for power and let go in the band. Go before he commits and he reads it; leave it too long and he’s there.' },
+  // ── Soccer's academy trial ──
+  'sprint30':    { kind: 'dash', traits: ['pace'], title: '30M SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Pace makes every step longer.', unit: 'M', dist: 30 },
+  'slalom':      { kind: 'cone', traits: ['dribbling'], title: 'DRIBBLE SLALOM', how: 'Six poles, the ball close. At each pole the arrow shows which way he takes it next: press that way as the ring closes on the ball. Early or late is a heavy touch, the wrong way clips the pole. Clean touches are the time.' },
+  'finishing':   { kind: 'targets', traits: ['finishing', 'shotPower'], title: 'FINISHING DRILL', how: 'Five balls from five spots, a target lit in the goal for each. Hold SHOOT and aim at it with the stick, let go to strike it, and tap SHOOT again at contact. Hold CURL for a placed, curled finish. Three of five in the target.' },
+  'first-touch': { kind: 'touch', traits: ['firstTouch'], title: 'FIRST TOUCH', how: 'Two tests. KEEP-UPS: it drops to one foot or the other; press that foot, LEFT or RIGHT, as it gets to it. Twelve at most. Then CONTROL: the coach drives three balls in along the ground; press the foot it comes to as it arrives and kill it dead. A point a keep-up, three a ball controlled. 15 passes.' },
+  // ── Baseball: the batter and the pitcher ── (lib/mg/atbat.js, pitch.js, steal.js; the Simple ones in MiniGameSimpleBaseball.jsx)
+  'at-bat':      { kind: 'atbat', traits: ['contact', 'power', 'eye', 'avoidK', 'clutch'], title: 'THE AT-BAT', how: 'A real at-bat, pitch by pitch. Pick up the spin out of his hand, get the zone on the ball with the stick and swing as it gets to the plate: CONTACT to put it in play, POWER to drive it. Don’t chase off the plate. Get on base.' },
+  'walk-off':    { kind: 'atbat', traits: ['clutch', 'contact', 'avoidK'], title: 'WALK-OFF', how: 'Two strikes, the winning run on base. Shorten up and protect: spoil his pitch with CONTACT, spit on the chase, and when he leaves one over the plate, drive the run in. Anything that brings him home wins it.' },
+  'steal-second':{ kind: 'steal', traits: ['speed', 'baserunning'], title: 'STEAL SECOND', how: 'On first with three pitches to go. Walk the lead out with the stick, then read the pitcher’s first move: the knee comes up toward home, GO; he spins or his foot comes down toward first, BACK. Get a jump and beat the catcher’s throw to second.' },
+  'strike-out':  { kind: 'pitch', traits: ['velocity', 'movement', 'breaking', 'control', 'command', 'composure'], title: 'STRIKE HIM OUT', how: 'A runner on third, and he needs a strikeout. Pick the pitch (the catcher puts down his sign), move his glove with the stick, then hold PITCH and let go to set the effort. Tap PITCH again on the release for a perfect one. Change speeds, change eye levels, and work his cold zones.' },
+  'escape-jam':  { kind: 'pitch', traits: ['groundball', 'composure', 'command', 'movement'], title: 'ESCAPE THE JAM', how: 'Bases loaded, one out. Get a strikeout and then the next man, or keep the ball down and get a ground ball for two. Pick the pitch, move the glove, hold PITCH to set the effort and tap it again on the release. Walk him and the run is in.' },
+  // ── Baseball's showcase (the MLB Draft Combine): the scouts behind the plate with their guns ──
+  'sixty':       { kind: 'dash', traits: ['speed'], title: '60-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Speed makes every step longer.', unit: 'YD', dist: 60 },
+  'exit-velo':   { kind: 'atbat', traits: ['power', 'contact'], title: 'EXIT VELOCITY', how: 'Batting practice, front toss behind the L-screen. Get the zone on it and drive it with POWER as it arrives. Five swings: the hardest one on the gun counts.' },
+  'arm-strength':{ kind: 'arm', traits: ['arm'], title: 'OUTFIELD ARM', how: 'Right field, a ball rolled out. Charge it, line the throw up on the plate with the stick, then hold THROW through the crow hop and let go right at the top of the meter. Three throws; the best one on the gun counts.' },
+  'pitch-velo':  { kind: 'pitch', traits: ['velocity'], title: 'FASTBALL VELOCITY', how: 'The scouts have their guns up. Five fastballs: hold PITCH and let go at the top of the meter for max effort, then tap PITCH as the ring closes on the release. The best reading counts.' },
+  'spin':        { kind: 'pitch', traits: ['breaking'], title: 'SPIN RATE', how: 'Sliders on the TrackMan. Hold PITCH to set the effort, then snap it off: tap PITCH right as the ring closes on the release. Five of them; the scouts write down the average spin.' },
+  'bullpen':     { kind: 'pitch', traits: ['control', 'command'], title: 'COMMAND TEST', how: 'The bullpen session. The catcher sets up on a different spot every pitch: move the target on to his glove with the stick, hold PITCH to set the effort, tap it again on the release. Eight pitches; hit his glove.' },
 }
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
@@ -80,10 +108,16 @@ export const PLAYOFF_GAMES = {
   te: ['catch', 'seal', 'juke-te', 'goal-line'],
   db: ['jump-route', 'tackle-angle'],
   dl: ['pass-rush', 'run-stuff'],
-  lb: ['tackle-angle', 'run-stuff', 'jump-route'],
+  lb: ['tackle-angle', 'run-stuff', 'zone-drop'],
   ol: ['pass-pro', 'seal'],
   guard: ['iso', 'pnr', 'clutch-shot', 'free-throws', 'lockdown', 'fast-break', 'half-court'],
   big: ['post-up', 'board', 'rim-protect', 'free-throws', 'clutch-shot', 'alley-oop'],
+  // soccer: the striker's big moments, every one a late chance to win it (lib/situations.js has their minutes)
+  st: ['penalty', 'one-on-one', 'header', 'volley', 'free-kick', 'two-on-one'],
+  // baseball: late and close (lib/situations.js has the inning, the outs, the men on): the batter's at-bat, his walk-off
+  // and the steal; the pitcher's strikeout and the bases-loaded jam
+  bat: ['at-bat', 'walk-off', 'steal-second'],
+  pit: ['strike-out', 'escape-jam'],
 }
 // and the ones it borrows, because the job really overlaps: a tight end beats the press, an end runs a
 // man down in the open, a guard crashes the glass, a big faces up or runs the pick-and-roll.
@@ -93,7 +127,13 @@ export const momentsOf = pos => [...(PLAYOFF_GAMES[pos] ?? PLAYOFF_GAMES.qb), ..
 // a borrowed game's grade, for a position without the game's own ratings
 const BORROWED_TRAITS = { release: ['routeRunning', 'strength'] }
 // the combine: three games a position runs (the test is its own step)
-export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'], dl: ['forty', 'bench', 'cone'], lb: ['forty', 'bench', 'gauntlet'], ol: ['forty', 'bench', 'cone'] }
+export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'], dl: ['forty', 'bench', 'cone'], lb: ['forty', 'bench', 'gauntlet'], ol: ['forty', 'bench', 'cone'],
+  // soccer's academy trial: the career's first step (raw: sprint30 { secs }, slalom { secs, made, of }, finishing { made, of },
+  // first-touch { ups, made, dead, of, pts })
+  st: ['sprint30', 'slalom', 'finishing', 'first-touch'],
+  // baseball's showcase (raw: sixty { secs }, exit-velo { mph, dist, made (95+), of }, arm-strength { mph, made (on line), of },
+  // pitch-velo { mph, of }, spin { rpm (the average), max, of }, bullpen { made (on the glove), of, miss (inches) })
+  bat: ['sixty', 'exit-velo', 'arm-strength'], pit: ['pitch-velo', 'spin', 'bullpen'] }
 
 // the trait value a game plays at: the average of its traits in the build (5 when none)
 export function traitValue(game, build, traits = null) {
@@ -122,7 +162,7 @@ export const DRILL_CALLS = [
 // the audible's looks: what the defense shows, three plays, the counter
 export const LOOKS = [
   { s: 'SIX IN THE BOX · SAFETIES DEEP', a: ['Inside run', 'Deep post', 'Quick screen'], c: 1, why: 'Two deep safeties leave the middle soft: the post.' },
-  { s: 'BLITZ · CORNERS PRESSED · ONE SAFETY', a: ['Seven-step drop', 'Hot route slant', 'Toss sweep'], c: 1, why: 'Against a blitz you get the ball out: the hot route.' },
+  { s: 'BLITZ · CORNERS PRESSED · ONE SAFETY', a: ['Seven-step drop', 'Hot route slant', 'Toss sweep'], c: 1, why: 'Against a blitz, get the ball out: the hot route.' },
   { s: 'EIGHT IN THE BOX · ONE HIGH', a: ['Inside run', 'Play-action deep', 'Draw'], c: 1, why: 'A stacked box begs for play-action over the top.' },
   { s: 'COVER 2 · SOFT CORNERS', a: ['Go route', 'Out route to the sideline', 'Fade'], c: 1, why: 'Soft corners under Cover 2: the sideline out.' },
   { s: 'NICKEL · LIGHT BOX · TWO HIGH', a: ['Power run', 'Deep shot', 'Bubble screen'], c: 0, why: 'A light box: run it down their throat.' },

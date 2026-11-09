@@ -136,6 +136,9 @@ const DEFS = {
   ],
 }
 
+// a sport that loads on its own brings its analytics (soccer's: lib/soccerStats.js)
+export const registerStats = (pos, defs) => { DEFS[pos] = defs }
+
 // The raw numbers a season keeps for these (bookSeason). Older saves don't have them.
 export function seasonRaw(pos, f, played) {
   const gp = played.length
@@ -154,6 +157,7 @@ export function seasonRaw(pos, f, played) {
   if (pos === 'dl') return { gp, multi: count(g => g.sacks >= 2) }
   if (pos === 'lb') return { gp, big: count(g => g.tackles >= 10) }
   if (pos === 'ol') return { gp, clean: count(g => (g.sacks ?? 0) === 0 && (g.pressures ?? 0) <= 1) }
+  if (pos === 'st') return { gp, mins: played.reduce((s, g) => s + (g.mins ?? 0), 0) }
   return { gp }
 }
 
@@ -164,6 +168,7 @@ const enough = (pos, s) => {
   if (pos === 'qb') return a.att >= 100
   if (pos === 'rb') return a.carries + a.recs >= 60
   if (pos === 'wr' || pos === 'te') return a.targets >= 30
+  if (pos === 'st') return (a.mins ?? 0) >= 900
   return a.gp >= 6
 }
 

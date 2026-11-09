@@ -1,0 +1,70 @@
+/* Squad Builder: soccer (AppSquad.jsx FrontLine, SquadSeason.jsx SoccerResult). The shared Squad Builder
+   look is app-game.css (.sq-*); these are only the pieces soccer adds: the front-line spots and the
+   goalkeeper tile, the pitch, the table, the cup ties, the Golden Boot race, draws. */
+
+/* the front line: three spots on one row, the goalkeeper (coming soon) under them */
+.sq-tiles--front { grid-template-columns: repeat(3, 1fr); }
+.sq-tiles--front .sq-tile, .sq-tiles--front .sq-tile:nth-child(n+4) { grid-column: span 1; }
+.sq-tiles--front .sq-tile.is-soon { grid-column: 1 / -1; }
+.sq-tile.is-soon .sq-tile-add { cursor: default; opacity: .5; border-style: dashed; grid-template-areas: 'pos n' 'name n'; }
+.sq-tile.is-soon .sq-tile-add:active { transform: none; }
+.sq-seg { margin-bottom: 2px; }
+.sq-seg button { font-size: 15px; letter-spacing: 1.6px; }
+
+/* the pitch: the attacking half, the front line at the top */
+.sq-board--pitch { aspect-ratio: 1 / .62; background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)); }
+.sq-pitch * { stroke: rgba(242,242,238,.16); }
+
+/* a crest: the logo, or the initials when a side has none */
+.sq-crest-init { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 50%; border: 1px solid var(--ag-line-hi); font-family: var(--ag-font); font-size: 9px; letter-spacing: .4px; color: var(--ag-text-2); }
+.sq-crest-init.sq-hero-logo { width: 72px; height: 72px; font-size: 22px; letter-spacing: 1px; }
+img.sq-crest-sm, .sq-crest-sm { width: 20px; height: 20px; object-fit: contain; flex: 0 0 auto; }
+.sq-game .sq-crest-init { width: 22px; height: 22px; }
+
+/* a draw */
+.sq-game.is-d .sq-game-res i { color: var(--ag-text-2); }
+.sq-log--soccer { gap: 2px; }
+.sq-log--soccer i { height: 9px; border-radius: 2px; background: rgba(255,255,255,.05); }
+.sq-log--soccer i.is-w { background: var(--ag-a1); }
+.sq-log--soccer i.is-d { background: rgba(255,255,255,.32); }
+.sq-log--soccer i.is-l { background: rgba(255,90,90,.45); }
+
+/* the league table */
+.sq-table { display: flex; flex-direction: column; gap: 1px; }
+.sq-table-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) repeat(5, 24px) 30px; align-items: center; gap: 4px; min-height: 30px; padding: 3px 6px; border-radius: 8px; font-family: var(--ag-font); font-size: 13px; letter-spacing: .5px; font-variant-numeric: tabular-nums; color: var(--ag-text-2); }
+.sq-table-row > span:not(.sq-table-team), .sq-table-row > b { text-align: center; }
+.sq-table-row > b { font-family: var(--ag-display); font-weight: 400; font-size: 16px; color: var(--ag-text); }
+.sq-table-head { min-height: 22px; font-size: 11px; letter-spacing: 1.2px; color: var(--ag-muted); }
+.sq-table-team { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sq-table-team b { font-weight: 400; color: var(--ag-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sq-table-row.is-up > span:first-child { box-shadow: inset 2px 0 0 #4ade80; }
+.sq-table-row.is-down > span:first-child { box-shadow: inset 2px 0 0 #ff8a8a; }
+.sq-table-row.is-gap { margin-top: 8px; }
+.sq-table-row.is-mine { background: color-mix(in srgb, var(--ag-a1) 12%, transparent); outline: 1px solid color-mix(in srgb, var(--ag-a1) 45%, transparent); }
+@media (max-width: 380px) { .sq-table-row { grid-template-columns: 20px minmax(0, 1fr) repeat(5, 21px) 28px; font-size: 12px; } }
+
+/* the cup and Europe */
+.sq-cup { display: flex; flex-direction: column; gap: 4px; }
+.sq-cup + .sq-cup { margin-top: 8px; }
+.sq-cup .sq-po-row { grid-template-columns: minmax(0, 1.1fr) 20px minmax(0, 1fr) auto; font-size: 13px; letter-spacing: .9px; }
+.sq-cup .sq-po-row > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ag-muted); }
+.sq-cup-opp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sq-cup .sq-po-row b { font-size: 16px; white-space: nowrap; }
+.sq-cup-note { margin: 0; padding: 0 4px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
+
+/* the Golden Boot race */
+.sq-race { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.sq-race-row { display: grid; grid-template-columns: 18px 20px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; }
+.sq-race-row.is-mine { background: color-mix(in srgb, var(--ag-a1) 10%, transparent); }
+.sq-race-n { font-family: var(--ag-font); font-size: 13px; color: var(--ag-muted); text-align: center; }
+.sq-race-who { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sq-race-who b { font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: .6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sq-race-who small { font-family: var(--ag-body); font-size: 11px; font-weight: 600; color: var(--ag-muted); }
+.sq-race-g { font-family: var(--ag-display); font-weight: 400; font-size: 18px; font-variant-numeric: tabular-nums; }
+.sq-lead .sq-crest-sm, .sq-lead .sq-crest-init { width: 28px; height: 28px; }
+
+/* a match: a man up front who didn't play */
+.sq-box-me.is-dnp { opacity: .55; border-color: var(--ag-line); background: none; }
+.sq-box-me.is-dnp .sq-bt-dnp { grid-column: 1 / -1; }
+.sq-box-me .sq-crest-init { width: 32px; height: 32px; }
+.sq-box-team .sq-crest-init { width: 34px; height: 34px; font-size: 11px; }

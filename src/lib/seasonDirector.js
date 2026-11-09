@@ -25,6 +25,10 @@ const COUNTS = {
     lb: { seasonTackles: 'tackles', seasonTFL: 'tfl', seasonSacks: 'sacks', seasonQBHits: 'qbHits', seasonPDs: 'pds', seasonINTs: 'ints', seasonPickSixes: 'pickSixes', seasonFF: 'ff', seasonFR: 'fr', seasonMissed: 'missed' },
     ol: { seasonPressures: 'pressures', seasonSacksAllowed: 'sacks', seasonPenalties: 'penalties', seasonPancakes: 'pancakes' },
   },
+  // soccer: a striker's league matches (app and gs are 0/1: an appearance, a start)
+  soccer: {
+    st: { seasonGoals: 'goals', seasonAssists: 'assists', seasonShots: 'shots', seasonSOT: 'sot', seasonXG: 'xg', seasonMins: 'mins', seasonBCM: 'bcm', seasonPens: 'pens', seasonApps: 'app', seasonStarts: 'gs' },
+  },
 }
 const BEST = {
   qb: g => g.passYds * .15 + g.tds * 12 + (g.ints === 0 ? 4 : 0) + (g.rating ?? 0) * .1,
@@ -36,6 +40,7 @@ const BEST = {
   lb: g => g.pickSixes * 7 + g.ints * 4.5 + g.sacks * 3.5 + g.ff * 3 + g.fr * 2.5 + g.tfl * 1.4 + g.pds + g.qbHits * .6 + g.tackles * .45,
   ol: g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2 + (g.won ? 1.5 : 0),
   guard: g => g.pts, big: g => g.pts,
+  st: g => (g.goals ?? 0) * 10 + (g.assists ?? 0) * 5 + (g.rating ?? 0) * 1.5 + (g.won ? 2 : 0),
 }
 // How the stat line for a game reads in a headline
 export const GAME_LINE = {
@@ -45,10 +50,18 @@ export const GAME_LINE = {
   lb: g => `${g.tackles} TKL${g.sacks ? `, ${g.sacks} sack${g.sacks === 1 ? '' : 's'}` : ''}${g.ints ? `, ${g.ints} INT` : ''}${g.ff ? `, ${g.ff} FF` : ''}`,
   ol: g => `${g.pancakes} pancake${g.pancakes === 1 ? '' : 's'}, ${g.sacks} sack${g.sacks === 1 ? '' : 's'} allowed`,
   guard: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`, big: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`,
+  st: g => (g.goals ? `${g.goals === 3 ? 'a hat-trick' : `${g.goals} goal${g.goals === 1 ? '' : 's'}`}${g.assists ? `, ${g.assists} assist${g.assists === 1 ? '' : 's'}` : ''}` : g.assists ? `${g.assists} assist${g.assists === 1 ? '' : 's'}` : `${g.shots ?? 0} shot${g.shots === 1 ? '' : 's'}`),
 }
-const BIG_GAME = { qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, lb: g => g.tackles >= 13 || g.ints >= 1 || g.sacks >= 2 || g.ff >= 2, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18 }
-const BUST_GAME = { qb: g => g.ints >= 3 || g.passYds < 150, rb: g => g.rushYds < 40, wr: g => g.recYds < 30, te: g => g.recYds < 20, db: g => false, dl: g => g.sacks === 0 && g.tfl === 0 && g.qbHits === 0 && g.tackles <= 1, lb: g => g.tackles <= 2 && g.missed >= 2, ol: g => g.sacks >= 3, guard: g => g.pts < 10, big: g => g.pts < 8 }
+const BIG_GAME = { qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, lb: g => g.tackles >= 13 || g.ints >= 1 || g.sacks >= 2 || g.ff >= 2, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18, st: g => g.goals >= 3 || (g.goals >= 2 && g.assists >= 1) }
+const BUST_GAME = { qb: g => g.ints >= 3 || g.passYds < 150, rb: g => g.rushYds < 40, wr: g => g.recYds < 30, te: g => g.recYds < 20, db: g => false, dl: g => g.sacks === 0 && g.tfl === 0 && g.qbHits === 0 && g.tackles <= 1, lb: g => g.tackles <= 2 && g.missed >= 2, ol: g => g.sacks >= 3, guard: g => g.pts < 10, big: g => g.pts < 8, st: g => !!g.gs && !g.goals && !g.assists && (g.rating ?? 7) < 6.2 }
 
+// A sport that loads on its own brings its season's shape (baseball's: lib/careerBaseball.js): its stat lines, the
+// game a team plays without him, its own totals and its playoff line
+const OWN = {}
+export function registerDirector(sport, { counts = {}, best = {}, line = {}, big = {}, bust = {}, ...rest } = {}) {
+  COUNTS[sport] = counts; Object.assign(BEST, best); Object.assign(GAME_LINE, line); Object.assign(BIG_GAME, big); Object.assign(BUST_GAME, bust)
+  OWN[sport] = rest
+}
 const clampVal = v => Math.max(1, Math.min(11, v))
 function applyMods(build, team, mods) {
   const b = { ...build }
@@ -73,15 +86,23 @@ export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY
 // always: the moments can't be switched off (Career: they're the mode)
 // locked: no moments, and the season stays exactly the one simulated (Salary Cap: its score and
 // stats went on the day's board when it was locked in, and View Results replays that same season)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null, injuryOdds = null }) {
+// onFinal (soccer's Career): the booked season again from the games as played (the table, the awards)
+// oppName: how an opponent reads in a headline (the one-off baseball page: a club's nickname, not its code)
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null }) {
   const isBucket = sport === 'bucket'
+  // soccer: a match can be drawn, a season is 34-38 matchweeks, and the table counts points
+  const isSoccer = sport === 'soccer'
+  const X = OWN[sport] ?? null
+  // (how many wins the run that books the season may be off the record: baseball's 162 games, two; the booked season's
+  // record is the games' own either way, and whether it made the playoffs is still the qualifying run's, exactly)
+  const tol = X?.tol ?? 0
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every
   // season (seeded, so a saved season picks back up the same), kept apart from
   // each other; one more before the playoffs (only if you're in)
   const rs = seeded(`stops-${seed}`)
-  const want = 2 + (rs() < 0.4 ? 1 : 0)
-  const lo = isBucket ? 8 : 2, hi = total - (isBucket ? 6 : 2), gap = isBucket ? 14 : 3
+  const want = X?.stops ? X.stops.want(rs) : 2 + (rs() < 0.4 ? 1 : 0)
+  const lo = X?.stops ? X.stops.lo : isBucket ? 8 : isSoccer ? 4 : 2, hi = total - (X?.stops ? X.stops.end : isBucket ? 6 : isSoccer ? 4 : 2), gap = X?.stops ? X.stops.gap : isBucket ? 14 : isSoccer ? 8 : 3
   const weeks = []
   for (let tries = 0; weeks.length < want && tries < 200 && hi > lo; tries++) {
     const w = lo + Math.floor(rs() * (hi - lo + 1))
@@ -89,7 +110,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   }
   const stops = weeks.sort((a, b) => a - b).map((at, i) => ({ i, at, kind: 'season', total }))
   stops.push({ i: stops.length, at: total, kind: 'playoffs', total })
-  const teamNick = team?.name?.split(' ').slice(-1)[0] ?? 'Your team'
+  const teamNick = (X?.nick ? X.nick(team) : isSoccer ? team?.name : team?.name?.split(' ').slice(-1)[0]) ?? 'Your team'
   const r = seeded(`director-${seed}`)
   // Injury cards are rare in a one-off season: decided up front, one at most, so they aren't simply
   // whichever card is left at a stop. (Career: injuryOdds, from the player's durability; without them, as before)
@@ -145,6 +166,20 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   const sitGame = (i, tag = null) => {
     // the team plays without you: a coin weighted by team strength, no stats
     const g = base.games[i]
+    if (X?.sit) { D.games[i] = { ...X.sit(g, team, r), sat: true, ...(tag ? { tags: [tag] } : {}) }; if (!D.sat.includes(i)) D.sat.push(i); return }
+    if (isSoccer) {
+      // a football score: the club's strength sets the odds, a draw about one match in four
+      const st = ((team.off ?? 5.5) + (team.def ?? 5.5)) / 20
+      const roll = r(), pW = Math.max(0.12, Math.min(0.68, 0.38 + (st - 0.55) * 1.4)), pD = 0.26
+      const my = [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)]
+      const res = roll < pW ? 'W' : roll < pW + pD ? 'D' : 'L'
+      const opp = res === 'W' ? Math.max(0, my - 1 - Math.floor(r() * 2)) : res === 'D' ? my : my + 1 + Math.floor(r() * 2)
+      const mine = res === 'W' ? Math.max(1, my) : my, oppSc = res === 'W' ? Math.min(opp, mine - 1) : opp
+      const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc'].includes(k)).map(k => [k, 0]))
+      D.games[i] = { ...g, ...zero, rating: null, motm: false, start: false, won: res === 'W', drawn: res === 'D', lost: res === 'L', result: res, mySc: mine, oppSc, sat: true, ...(tag ? { tags: [tag] } : {}) }
+      if (!D.sat.includes(i)) D.sat.push(i)
+      return
+    }
     const strength = isBucket && !team.career ? ((team.off ?? 68) + (team.def ?? 65)) / 200 : ((team.off ?? 5) + (team.def ?? 5)) / 20
     const won = r() < Math.max(.2, Math.min(.7, strength - .05))
     const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc'].includes(k)).map(k => [k, 0]))
@@ -156,10 +191,10 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   // ── Moments ────────────────────────────────────────────────────────────────
   D.ctxAt = k => {
     const games = D.games.slice(0, k)
-    const wins = games.filter(g => g.won).length, losses = games.length - wins
+    const wins = games.filter(g => g.won).length, draws = isSoccer ? games.filter(g => g.drawn).length : 0, losses = games.length - wins - draws
     let streak = 0, skid = 0
     for (let i = games.length - 1; i >= 0; i--) { if (games[i].won) { if (skid) break; streak++ } else { if (streak) break; skid++ } }
-    return { games, wins, losses, streak, skid, last: games[games.length - 1] ?? null }
+    return { games, wins, losses, streak, skid, last: games[games.length - 1] ?? null, ...(isSoccer ? { draws, points: wins * 3 + draws } : {}) }
   }
   D.used = new Set()
   // Did this record make the postseason? Decided once, from a run that posted
@@ -213,6 +248,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
         if (o.game.my != null) ng.mySc = o.game.my
         if (o.game.opp != null) ng.oppSc = o.game.opp
         if (o.game.won != null) ng.won = o.game.won
+        // (a football result: won, drawn or lost, the way the table reads it)
+        if (isSoccer && (o.game.won != null || o.game.drawn != null)) { ng.drawn = !ng.won && !!o.game.drawn; ng.lost = !ng.won && !ng.drawn; ng.result = ng.won ? 'W' : ng.drawn ? 'D' : 'L' }
         ng.tags = [...new Set([...(g.tags || []), o.tag].filter(Boolean))]
         ng.moment = true
         D.games[at] = ng
@@ -279,7 +316,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   // ── Milestones, records, headlines (called as games reveal) ───────────────
   const mdefs = [...(MILESTONES[sport]?.common ?? []), ...(MILESTONES[sport]?.[pos] ?? [])]
   // the record book: the league's marks, or a career's own where it already broke them
-  const recs = (RECORDS[sport]?.[pos] ?? []).map(rec => (recordBook?.[rec.id] && recordBook[rec.id].value > rec.value ? { ...rec, value: recordBook[rec.id].value, holder: recordBook[rec.id].holder } : rec))
+  // (soccer's are by league: the Premier League's mark is the Premier League's)
+  const recs = (RECORDS[sport]?.[pos] ?? []).filter(rec => !rec.lg || rec.lg === team?.league).map(rec => (recordBook?.[rec.id] && recordBook[rec.id].value > rec.value ? { ...rec, value: recordBook[rec.id].value, holder: recordBook[rec.id].holder } : rec))
   D.observe = k => {
     const ctx = D.ctxAt(k)
     const fresh = []
@@ -311,17 +349,18 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       }
     }
     // headlines for the game just revealed
-    const opp = g?.opponent?.split?.(' ').slice(-1)[0] ?? g?.opponent ?? ''
+    const opp = oppName && g ? oppName(g) : isSoccer ? (g?.oppName ?? g?.opponent ?? '') : g?.opponent?.split?.(' ').slice(-1)[0] ?? g?.opponent ?? ''
     if (g && !g.sat) {
-      if (ctx.streak >= 3 && ctx.streak % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'streak', name, team: teamNick, n: ctx.streak }, r) })
-      else if (ctx.skid >= 3 && ctx.skid % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'skid', name, team: teamNick, n: ctx.skid }, r) })
+      if (ctx.streak >= 3 && ctx.streak % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'streak', name, team: teamNick, n: ctx.streak, soccer: isSoccer }, r) })
+      else if (ctx.skid >= 3 && ctx.skid % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'skid', name, team: teamNick, n: ctx.skid, soccer: isSoccer }, r) })
       else if (BIG_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'big', name, team: teamNick, opp, label: GAME_LINE[pos]?.(g) ?? '' }, r) })
       else if (!g.won && BUST_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'bust', name, team: teamNick, opp }, r) })
     }
     for (const f of fresh) D.headlines.push({ at: k, text: headlineFor({ type: f.record ? 'record' : 'milestone', name, team: teamNick, label: f.label }, r) })
-    const need = isBucket ? 50 : 10, left = total - k
+    const need = X?.lines ? X.lines.clinch : isBucket ? 50 : 10, left = total - k
+    if (isSoccer) return fresh   // (no playoff line to clinch: the table says it)
     if (!D.seen.has('clinch') && ctx.wins >= need) { D.seen.add('clinch'); D.headlines.push({ at: k, text: headlineFor({ type: 'clinch', name, team: teamNick }, r) }) }
-    if (!D.seen.has('out') && ctx.wins + left < (isBucket ? 38 : 8)) { D.seen.add('out'); D.headlines.push({ at: k, text: headlineFor({ type: 'out', name, team: teamNick }, r) }) }
+    if (!D.seen.has('out') && ctx.wins + left < (X?.lines ? X.lines.out : isBucket ? 38 : 8)) { D.seen.add('out'); D.headlines.push({ at: k, text: headlineFor({ type: 'out', name, team: teamNick }, r) }) }
     return fresh
   }
 
@@ -332,7 +371,15 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     for (const [sk, gk] of Object.entries(map)) out[sk] = games.reduce((s, g) => s + (g[gk] ?? 0), 0)
     const wins = games.filter(g => g.won).length
     out.wins = wins; out.losses = games.length - wins
-    if (!isBucket) {
+    if (X?.totals) X.totals(out, games, pos)
+    else if (isSoccer) {
+      // the table's numbers, and his match rating from the matches he played
+      out.draws = games.filter(g => g.drawn).length; out.losses = games.length - wins - out.draws; out.points = wins * 3 + out.draws
+      out.seasonXG = Math.round((out.seasonXG ?? 0) * 10) / 10
+      const rated = games.filter(g => !g.sat && g.rating != null)
+      out.avgRating = rated.length ? Math.round((rated.reduce((s2, g) => s2 + g.rating, 0) / rated.length) * 100) / 100 : 0
+      out.gameLog = games.map(g => (g.won ? 'W' : g.drawn ? 'D' : 'L'))
+    } else if (!isBucket) {
       if (pos === 'rb') { out.seasonYPC = out.seasonCarries > 0 ? Math.round((out.seasonRushYds / out.seasonCarries) * 10) / 10 : 0; out.seasonLong = Math.max(0, ...games.map(g => g.long ?? 0)); out.hundredYardGames = games.filter(g => g.rushYds >= 100).length }
       if (pos === 'wr' || pos === 'te') { out.seasonYPR = out.seasonRecs > 0 ? Math.round((out.seasonRecYds / out.seasonRecs) * 10) / 10 : 0; out.seasonLong = Math.max(0, ...games.map(g => g.long ?? 0)); out.hundredYardGames = games.filter(g => g.recYds >= 100).length; out.catchRate = out.seasonTargets > 0 ? Math.round((out.seasonRecs / out.seasonTargets) * 1000) / 10 : 0 }
       // a QB who threw: at least 3 INTs; one who never got in throws none, and has no rating or
@@ -350,7 +397,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     }
     const score = BEST[pos] ?? (g => g.won ? 1 : 0)
     out.bestGame = [...games].filter(g => !g.sat).sort((a, b) => score(b) - score(a))[0] ?? games[0]
-    if (!isBucket) out.highlights = games.filter(g => g.wk <= 4 || g.wk >= 14)
+    if (!isBucket && !X) out.highlights = games.filter(g => g.wk <= 4 || g.wk >= 14)
     return out
   }
 
@@ -369,7 +416,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     // the run that books the season: same record and, once decided, the same
     // playoff fate the season already showed
     const q = D.po
-    const miss = run => Math.abs(run.wins - want) * 10 + (q != null && madeIt(run) !== q ? 100 : 0)
+    const wantD = t.draws ?? 0
+    const miss = run => Math.max(0, Math.abs(run.wins - want) - tol) * 10 + (isSoccer ? Math.abs((run.draws ?? 0) - wantD) * 6 : 0) + (q != null && madeIt(run) !== q ? 100 : 0)
     let bestRun = D.last, bestGap = miss(D.last)
     if (D.poRun && miss(D.poRun) < bestGap) { bestRun = D.poRun; bestGap = miss(D.poRun) }
     for (let i = 0; i < 80 && bestGap > 0; i++) {
@@ -381,7 +429,23 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       ...bestRun, ...t, games: D.games,
       story: { moments: D.moments, milestones: D.milestones, records: D.records.concat(D.endRecords = seasonRecords(bestRun, t)), headlines: D.headlines, xp: D.xp, sat: D.sat.length },
     }
-    if (!isBucket) D.final.hasBye = D.final.playoffs && bestRun.hasBye
+    // basketball's standings come from the run that books the season: when no run in the search posted exactly the
+    // record the games show, his row is set to the games' record (one screen, one record), and a neighbour that would
+    // now sit out of order is brought level with him (the order, and so his seed and the bracket, stay the run's)
+    // (a one-off season only: Career books its own table, lib/career.js)
+    if (isBucket && !team?.career && bestRun.wins !== t.wins && Array.isArray(bestRun.standings)) {
+      const rows = bestRun.standings.map(r => ({ ...r }))
+      const i = rows.findIndex(r => r.isUs || r.short === team?.short)
+      if (i >= 0) {
+        const set = (r, w) => { r.wins = w; if (r.losses != null) r.losses = total - w }
+        set(rows[i], t.wins)
+        for (let j = i - 1; j >= 0 && rows[j].wins < rows[j + 1].wins; j--) set(rows[j], rows[j + 1].wins)
+        for (let j = i + 1; j < rows.length && rows[j].wins > rows[j - 1].wins; j++) set(rows[j], rows[j - 1].wins)
+        D.final.standings = rows
+      }
+    }
+    if (!isBucket && !isSoccer && !X) D.final.hasBye = D.final.playoffs && bestRun.hasBye
+    if (onFinal) D.final = onFinal(D.final, t, D.games)
     D.finalized = true
     return D.final
   }

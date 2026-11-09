@@ -6,10 +6,10 @@
 //   (lib/mg/throw.js): press where the ball goes, hold to put more on it. One man comes open.
 // Either way it's a touchdown over the line, or a man tackled with his head across it: the spot's
 // where he lands.
-import { clamp, lerp, prog, outcome, rngOf, byV, easeOut, manOf, paceOf, circle, text, particles, nudge, reduceMotion } from './kit.js'
+import { clamp, lerp, prog, outcome, rngOf, byV, easeOut, manOf, xiOf, paceOf, circle, text, particles, nudge, reduceMotion } from './kit.js'
 import { breakupPose, dirOf, tilt, untilt, skinOf, airBall, ballShadow, warmQb, qbStance, athlete, crowdPop } from './art.js'
 import { paintFieldFlat, looseBall, qbPose, handsFor, HOLD_MS, YD, scatterOf, catchOf, trackOf, flightOf, arcOf, inRange, turfRing, drawHoldRing, SPIKE_MS, flightAt } from './throw.js'
-import { walk, put, action, fieldStage, ballInAir, teamOf } from './read.js'
+import { walk, put, action, tagsAll, fieldStage, ballInAir, teamOf } from './read.js'
 
 export const how = {
   'goal-line': 'Tap CUT as the ring closes on the spot. Then press the side the ball is thrown to as it gets there. At quarterback: press where the ball goes.',
@@ -402,6 +402,7 @@ export function make({ v, arm = v, seed, game, pos = null, cast = null }) {
 // the real men
 function castOf(cast, role) {
   const bare = m => m && { number: m.number, skin: m.skin }
+  if (cast?.us?.xi && cast?.them?.xi) return xiCast(cast, role)
   const named = (group, i) => manOf(cast, 'us', group, i)
   const names = { QB: named('qb', 0), X: named('wr', 0), Z: named('wr', 1), TE: named('te', 0), RB: named('rb', 0) }
   const keep = { qb: 'QB', wr: 'X', te: 'TE', rb: 'RB' }[role]
@@ -411,6 +412,23 @@ function castOf(cast, role) {
     ol: [0, 1, 2, 3, 4].map(i => bare(manOf(cast, 'us', 'ol', i))),
     dl: [0, 1, 2, 3].map(i => bare(manOf(cast, 'them', 'dl', i))),
     db: [0, 1, 2, 3].map(i => manOf(cast, 'them', 'db', i)),
+  }
+}
+
+// The full eleven a side (career's xi), every man real. While the play's on, the names that matter: you, the QB
+// and the man on you. The rest (the lines, the backers, the other receivers and DBs) show theirs once it's over
+const quiet = m => m && { ...m, quiet: true }
+function xiCast(cast, role) {
+  const x = (side, spot, i) => xiOf(cast, side, spot, i)
+  const names = { QB: x('us', 'qb', 0), X: x('us', 'wr', 0), Z: x('us', 'wr', 1), TE: x('us', 'te', 0), RB: x('us', 'rb', 0) }
+  const keep = { qb: 'QB', wr: 'X', te: 'TE', rb: 'RB' }[role]
+  for (const k of Object.keys(names)) if (k !== keep && k !== 'QB') names[k] = quiet(names[k])
+  return {
+    ...names,
+    ol: [0, 1, 2, 3, 4].map(i => quiet(x('us', 'ol', i))),
+    dl: [0, 1, 2, 3].map(i => quiet(x('them', 'dl', i))),
+    db: [0, 1, 2, 3].map(i => x('them', 'db', i)),
+    lb: [0, 1].map(i => quiet(x('them', 'lb', i))),
   }
 }
 
@@ -518,7 +536,7 @@ export function draw(ctx, g, view) {
     put(lerp(who2.x, carrier.x + s * 10, clamp(tkAge / 100, 0, 1)), fl(carrier.y) - 4, them, { ...look, dir: s < 0 ? 'right' : 'left', pose: 'wrap', fall: clamp((tkAge - 40) / 300, 0, 1), fallX: s < 0 ? 1 : -1, z: fl(carrier.y) + 1 })
   }
   g.lbs.forEach((l, i) => {
-    const w = walk(g, `lb${i}`, l.x, fl(l.y), 11), look = { dir: 'down', skin: skinOf(i + 6), number: LB_NUM[i], size: SIZE }
+    const w = walk(g, `lb${i}`, l.x, fl(l.y), 11), look = { dir: 'down', skin: skinOf(i + 6), number: LB_NUM[i], size: SIZE, ...who.lb?.[i] }
     if (carrier?.tk?.by === l && tkAge < 800) return tackler(l, look)
     if (theyWon) return put(l.x, fl(l.y) - hop(loseAge, i + 5, 7), them, { ...look, pose: i ? 'flex' : 'arms-up', z: fl(l.y) })
     if (td && tdAge > 360) return put(l.x, fl(l.y), them, { ...look, pose: 'hips' })
@@ -535,7 +553,7 @@ export function draw(ctx, g, view) {
   }
   g.defs.forEach((d, i) => {
     const w = walk(g, d.id, d.x, fl(d.y), 11), swat = res?.dq === d && since < 300, wave = res?.dq === d && since >= 420 && res.why === 'swat'
-    const man = i === g.recs.indexOf(me ?? g.open) ? who.db[i] : who.db[i] && { number: who.db[i].number, skin: who.db[i].skin }
+    const man = i === g.recs.indexOf(me ?? g.open) ? who.db[i] : who.db[i] && (who.db[i].last ? { ...who.db[i], quiet: true } : { number: who.db[i].number, skin: who.db[i].skin })
     const look = { dir: 'down', skin: skinOf(i + 3), number: DB_NUM[i], size: SIZE, ...man }
     if (carrier?.tk?.by === d && tkAge < 800) return tackler(d, look)
     if (g.diver === d) { const sd = star.x < d.x ? -1 : 1; return put(d.x, fl(d.y), them, { ...look, dir: sd < 0 ? 'left' : 'right', pose: 'dive', fall: clamp(tdAge / 280, 0, 1), fallX: sd }) }
@@ -593,6 +611,7 @@ export function draw(ctx, g, view) {
     put(q.x, qy - (w.step == null ? hop(tdAge, 4, 6) : 0), us, { ...qLook, dir: 'up', step: w.step, pose: w.step == null ? 'arms-up' : null, z: qy })
   } else if (theyWon && !sackedNow) put(q.x, qy, us, { ...qLook, dir: 'up', pose: 'hands-head' })
   else put(q.x, qy, us, { ...qLook, dir: pose ? 'side' : 'up', pose: qst ? qst.pose : pose, step: qst ? qst.step : null, fall, fallX: hitBy, carry: !qst && !b && !(sackedNow && g.dance % 2) })
+  tagsAll(theyWon || (td && tdAge > 600))   // (it's over: every man's name)
   action(ctx, view)
 
   // what comes up off the turf

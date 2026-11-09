@@ -1,6 +1,8 @@
 // Achievements (app): long-term goals that pay XP and coins when claimed, and a
 // few that unlock cosmetics you can't buy. Each reads one number from the
 // player's lifetime stats (progress.js → achStats), so progress bars are free.
+import { SOCCER_LIVE } from './soccerLive'
+import { BASEBALL_LIVE } from './baseballLive'
 
 const A = (id, group, title, desc, glyph, metric, goal, xp, coins, item = null) => ({ id, group, title, desc, glyph, metric, goal, xp, coins, item })
 
@@ -28,6 +30,31 @@ export const ACHIEVEMENTS = [
   A('fivetool',  'Builds', 'Every Position',       'Play a season at QB, RB, WR, TE, DB and DL', 'helmet', 'positions', 6, 180,  120, 'nc-fivetool'),
   A('twosport',  'Builds', 'Two-Sport Star',       'Play a season in both sports',           'basketball','twoSport', 1,   90,   60),
   A('alltime10', 'Builds', 'History Buff',         'Play 10 All-Time seasons',               'crown',    'allTime', 10,   120,  60),
+  // Soccer (new goals of its own: the ones above stay as they are for everyone). Only once it's live
+  ...(SOCCER_LIVE ? [
+    A('soccer10',  'Builds', 'Season Ticket',       'Play 10 soccer seasons',                 'soccer',   'soccerSeasons', 10, 90, 50),
+    A('threesport','Builds', 'Three-Sport Star',    'Play a season in football, basketball and soccer', 'soccer', 'threeSport', 1, 150, 100),
+    A('boot1',     'Titles', 'Golden Boot',         'Finish a season as the top scorer',      'soccer',   'soccerBoots', 1,  120,  80),
+    A('boot5',     'Titles', 'Goal Machine',        'Win 5 Golden Boots',                     'soccer',   'soccerBoots', 5,  300,  160),
+    A('ballon1',   'Titles', 'Ballon d\'Or',        'Win the Ballon d\'Or or a World Cup Golden Ball', 'crown', 'soccerBallons', 1, 240, 160),
+    A('worldcup1', 'Titles', 'World Champions',     'Win the World Cup',                      'trophy',   'worldCups', 1,    240,  160),
+  ] : []),
+  // Baseball (its own goals, like soccer's: the ones above stay as they are). Only once it's live
+  ...(BASEBALL_LIVE ? [
+    A('baseball10', 'Builds', 'Everyday Player',    'Play 10 baseball seasons',               'baseball', 'baseballSeasons', 10, 90, 50),
+    A('twoway',     'Builds', 'Two-Way Player',     'Play a baseball season as a batter and one as a pitcher', 'baseball', 'twoWay', 1, 120, 80),
+    ...(SOCCER_LIVE ? [A('foursport', 'Builds', 'Four-Sport Star', 'Play a season in football, basketball, soccer and baseball', 'baseball', 'fourSport', 1, 200, 120)] : []),
+    A('hr50',       'Builds', 'Fifty-Homer Club',   'Hit 50 home runs in a season',           'baseball', 'bestHr',  50,   180,  100),
+    A('k300',       'Builds', 'Punchout King',      'Strike out 300 batters in a season',     'baseball', 'bestK',   300,  240,  140),
+    A('ws1',        'Titles', 'Fall Classic',       'Win the World Series',                   'trophy',   'worldSeries', 1,  120,  80),
+    A('ws5',        'Titles', 'October Dynasty',    'Win 5 World Series',                     'ring',     'worldSeries', 5,  300,  160),
+    A('bbmvp1',     'Titles', 'Most Valuable',      'Win a baseball MVP',                     'crown',    'baseballMvps', 1, 240,  160),
+    A('cy1',        'Titles', 'Cy Young',           'Win the Cy Young Award',                 'baseball', 'cyYoungs', 1,   240,  160),
+    A('cy3',        'Titles', 'Ace of the Staff',   'Win 3 Cy Young Awards',                  'crown',    'cyYoungs', 3,   360,  200),
+    A('slugger1',   'Titles', 'Silver Slugger',     'Win a Silver Slugger',                   'medal',    'silverSluggers', 1, 120, 80),
+    A('glove1',     'Titles', 'Gold Glove',         'Win a Gold Glove',                       'medal',    'goldGloves', 1,  120,  80),
+    A('triple1',    'Titles', 'Triple Crown',       'Lead the league in all three Triple Crown categories', 'crown', 'tripleCrowns', 1, 480, 280),
+  ] : []),
   // Cards
   A('cards50',   'Cards', 'Collector',             'Collect 50 player cards',                'clipboard','cards',   50,   60,   40),
   A('cards250',  'Cards', 'Binder Full',           'Collect 250 player cards',               'clipboard','cards',   250,  180,  100),

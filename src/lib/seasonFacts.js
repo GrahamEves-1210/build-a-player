@@ -127,6 +127,19 @@ export const MILESTONES = {
     guard: [], big: [],
   },
 }
+// College Football (CFBSimPage, the director as 'cfb'): a 12-game season, six wins for a bowl, the same stat marks
+MILESTONES.cfb = {
+  common: [
+    { id: 'streak-4', label: '4 straight wins', test: c => c.streak >= 4 },
+    { id: 'streak-7', label: 'Seven straight', test: c => c.streak >= 7, big: true },
+    { id: 'start-5-0', label: '5-0 start', test: c => c.games.length === 5 && c.wins === 5, big: true },
+    { id: 'bowl-6', label: 'bowl eligibility', test: c => c.wins >= 6 },
+    { id: 'wins-10', label: '10 wins', test: c => c.wins >= 10 },
+    { id: 'unbeaten-6', label: 'Unbeaten at the halfway mark', test: c => c.games.length === 6 && c.losses === 0, big: true },
+    { id: 'perfect', label: 'A perfect 12-0', test: c => c.games.length === 12 && c.losses === 0, big: true },
+  ],
+  qb: MILESTONES.nfl.qb, rb: MILESTONES.nfl.rb, wr: MILESTONES.nfl.wr,
+}
 
 // ── League leaders (synthesised from the real pool around real-world scale) ─
 const LEADER_STAT = {
@@ -135,7 +148,16 @@ const LEADER_STAT = {
     rb: { key: 'seasonRushYds', label: 'RUSH YDS', base: 880, per: 220, noise: 160 },
     wr: { key: 'seasonRecYds', label: 'REC YDS', base: 930, per: 210, noise: 150 },
     te: { key: 'seasonRecYds', label: 'REC YDS', base: 620, per: 160, noise: 120 },
-    db: { key: 'seasonINTs', label: 'INT', base: 2.4, per: 1.1, noise: 1.2, int: true },
+    // Interceptions are played out as a season, not a rating plus a little noise (that put the same
+    // two or three top-rated corners on top at 7-8 every year). Real leaders, 2015-2025: 8, 7, 8, 7, 6,
+    // 10, 11, 6, 9, 9, 7 (Nelson, Hayward, Byard & Slay, Fuller/Howard/Kazee, Gilmore/White/Harris,
+    // Xavien Howard, Trevon Diggs, four tied, DaRon Bland, Kerby Joseph, Kevin Byard: pro-football-reference
+    // and Wikipedia's annual leaders list): only Howard and Byard led twice, and leaders often drop to
+    // 3-5 the next year (Diggs 11 then 3). So every DB in the pool gets an expected total from his
+    // ratings (`mu`: ~4-4.5 for the very best ball hawks, ~1.6 for an average starter), one season-long
+    // luck factor (lognormal, mean 1, `sigma`, held under `luck`) and a Poisson draw; the most picks lead.
+    // No one has had more than 11 since Lester Hayes' 13 in 1980, so the board stops at `max`.
+    db: { key: 'seasonINTs', label: 'INT', season: true, mu: rt => Math.max(0.5, 1.6 + (rt - 6) * 0.7), sigma: 0.3, luck: 1.7, max: 12, int: true },
     // a good year leads the league at 15-19 and the sixth man has about 12. Rated on the pass rush
     // alone, and from inside it comes harder (a DT in the top ten is rare)
     dl: { key: 'seasonSacks', label: 'SACKS', base: 5.5, per: 2, noise: 3.5, int: true, unique: true, rate: p => { const a = p.attrs; const r = ((a.getOff ?? 5) * 1.2 + (a.bend ?? 5) + (a.finesseMoves ?? 5) + (a.powerMoves ?? 5) * 0.8 + (a.speed ?? 5) * 0.8) / 4.8; return p.subpos === 'dt' ? r - 1.5 : r } },
@@ -181,6 +203,17 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
   }
   const rate = def.rate ?? avgAttr
   const named = new Set()   // (an all-time pool can list a player twice, once per team)
+  if (def.season) {
+    // the whole pool plays the year: expected total x a season's luck, then a Poisson count
+    const normal = () => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
+    const poisson = lam => { const L = Math.exp(-lam); let k = 0, p = 1; do { k++; p *= r() } while (p > L); return k - 1 }
+    const rows = (pool || []).filter(p => p.attrs && !named.has(p.name) && named.add(p.name))
+      .map(p => ({ name: p.name, team: p.team, value: Math.min(def.max, poisson(def.mu(rate(p)) * Math.min(def.luck, Math.exp(normal() * def.sigma - def.sigma * def.sigma / 2)))) }))
+      .sort((a, b) => b.value - a.value).slice(0, 7)
+    const mine = { name: you.name, team: you.team, value: you.value, me: true }
+    const all = [...rows, mine].sort((a, b) => b.value - a.value)
+    return { label: def.label, key: def.key, rows: all.slice(0, 6), rank: all.indexOf(mine) + 1, of: all.length }
+  }
   const rows = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name)))).sort((a, b) => rate(b) - rate(a)).slice(0, 7).map(p => {
     let v = def.base + (rate(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))
@@ -197,8 +230,10 @@ const pick = (r, a) => a[Math.floor(r() * a.length)]
 export function headlineFor(ev, r = Math.random) {
   const { name, team, opp, n, label } = ev
   switch (ev.type) {
-    case 'streak': return pick(r, [`${team} make it ${n} straight`, `${n} in a row — ${team} are rolling`, `${name} has ${team} on a ${n}-game heater`])
-    case 'skid': return pick(r, [`${team} drop ${n} straight`, `Pressure mounts: ${n}-game skid in ${team.split(' ').slice(-1)[0]} land`, `${team} searching for answers after ${n} losses`])
+    case 'streak': if (ev.soccer) return pick(r, [`${team} make it ${n} wins in a row`, `${n} straight wins for ${team}`, `${name} has ${team} flying: ${n} on the bounce`])
+      return pick(r, [`${team} make it ${n} straight`, `${n} in a row — ${team} are rolling`, `${name} has ${team} on a ${n}-game heater`])
+    case 'skid': if (ev.soccer) return pick(r, [`${team} without a win in ${n}`, `Pressure on the manager: ${n} without a win for ${team}`, `${team} searching for answers after ${n} winless`])
+      return pick(r, [`${team} drop ${n} straight`, `Pressure mounts: ${n}-game skid in ${team.split(' ').slice(-1)[0]} land`, `${team} searching for answers after ${n} losses`])
     case 'big': return pick(r, [`${name} torches ${opp}: ${label}`, `${label} — ${name} takes over vs ${opp}`, `${opp} had no answer for ${name} (${label})`])
     case 'bust': return pick(r, [`Rough night for ${name} in ${opp} loss`, `${opp} bottle up ${name}`, `${name}, ${team} stumble at ${opp}`])
     case 'milestone': return pick(r, [`${name} reaches ${label}`, `Milestone: ${label} for ${name}`, `${name} hits ${label} as ${team} keep pace`])

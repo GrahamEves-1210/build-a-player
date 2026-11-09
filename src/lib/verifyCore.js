@@ -51,7 +51,12 @@ export function dailyFor(key) {
 }
 
 // ── A season's pool, traits and OVR, as App.jsx / BucketApp.jsx pick them ─────
+// Soccer's (SoccerApp.jsx) comes from lib/soccerKits.js, which adds it here so its rosters stay out of
+// this file's other users' bundles (lib/progress.js reads the Daily from here). The live worker loads it.
+const ADDED_KITS = {}
+export const addSeasonKit = (sport, kitFor) => { ADDED_KITS[sport] = kitFor }
 export function seasonKit(sport, pos, mode) {
+  if (ADDED_KITS[sport]) return ADDED_KITS[sport](pos, mode) ?? null
   if (sport === 'bucket') {
     const big = pos === 'big', allTime = mode === 'all-time', types = big ? BIG_TYPES : GUARD_TYPES
     return {
@@ -155,6 +160,9 @@ const SAL = {
   nfl: { cols: QB_SAL_COLS, pool: QB_SAL_POOL, kit: salaryKit({ typesFor: (p, col) => col.types }), typesFor: (p, col) => col.types },
   bucket: { cols: SAL_COLS, pool: BUCKET_SAL_POOL, kit: salaryKit({ typesFor: salTypesFor }), typesFor: salTypesFor },
 }
+// Soccer's board (SoccerSalaryCap.jsx) comes from lib/soccerKits.js (baseball's batter board, 'baseball-bat', from lib/baseballKits.js), which adds it here so its rosters
+// and sim stay out of football's and basketball's bundles: { cols, pool, typesFor, score(real, row) }
+export const addSalaryKit = (sport, s) => { SAL[sport] = { ...s, kit: salaryKit({ typesFor: s.typesFor }) } }
 // Football's other positions (QBSalaryCap.jsx Change Position): Infinite boards only, each
 // from its own pool and columns (data/fb-salary.js), priced the same way
 const FB_SAL_KIT = salaryKit({ typesFor: (p, col) => col.types })
@@ -213,14 +221,18 @@ function trustedFrozen(S, frozen, date) {
   return true
 }
 const clampN = (v, lo, hi) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Math.max(lo, Math.min(hi, Number(v))) : null)
-// sport 'nfl' | 'bucket'; pos: the app's position (basketball scores a big's or a guard's
+// sport 'nfl' | 'bucket' | 'soccer'; pos: the app's position (basketball scores a big's or a guard's
 // traits); frozen: the day's frozen board if there is one; sent: what the phone reported
 // (an Infinite play's season stats, which can't be replayed)
 export function checkSalaryCap({ sport, date, infinite = false, picks, pos = 'guard', frozen = null, sent = {} }) {
   // football: QB (no pos, or 'qb') plays the daily board and Infinite; any other position Infinite only
-  const fbPos = sport !== 'bucket' && pos && pos !== 'qb' && pos !== 'guard' ? pos : null
+  // (soccer: the striker, 'st', its only board)
+  // (baseball: batters only, the 'baseball-bat' kit from lib/baseballKits.js; a pitcher's play finds no kit and is turned away)
+  const own = sport === 'baseball' ? `baseball-${pos === 'pit' ? 'pit' : 'bat'}` : sport === 'bucket' || sport === 'soccer' ? sport : null
+  const fbPos = !own && pos && pos !== 'qb' && pos !== 'guard' ? pos : null
   if (fbPos && (!infinite || !SAL[`nfl-${fbPos}`])) return { error: 'unknown position' }
-  const S = SAL[sport === 'bucket' ? 'bucket' : fbPos ? `nfl-${fbPos}` : 'nfl']
+  const S = SAL[own ?? (fbPos ? `nfl-${fbPos}` : 'nfl')]
+  if (!S) return { error: 'unknown sport' }
   if (!Array.isArray(picks) || picks.length !== S.cols.length) return { error: 'five picks' }
   const real = []
   for (let ci = 0; ci < picks.length; ci++) {
@@ -268,6 +280,9 @@ export function checkSalaryCap({ sport, date, infinite = false, picks, pos = 'gu
     try { result = runSimulation(build, TYPES, team, false) } finally { Math.random = realRandom }
     return { row: { picks: clean, overall_score: result.ovr, budget_used: spent, pass_yds: result.seasonPassYds ?? null, pass_tds: result.seasonTDs ?? null, ints: result.seasonINTs ?? null } }
   }
+
+  // soccer: its kit scores the picks (lib/soccerKits.js)
+  if (S.score) return { row: S.score(real, { picks: clean, budget_used: spent }) }
 
   // basketball (BucketSalaryCap.jsx buildFromSel + BucketApp.jsx handleSalaryCapConfirm)
   const cardAttrs = ci => Object.fromEntries(S.typesFor(real[ci], S.cols[ci]).map(t => [t, real[ci].attrs?.[t] ?? 5]))

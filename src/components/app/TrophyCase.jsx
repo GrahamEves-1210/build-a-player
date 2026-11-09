@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useProgress, tierFor, tierIndex } from '../../lib/progress'
-import { loadHardware, loadBestBuilds, loadTrophySeasons, seasonPos, modeName, seasonAwards, seasonDate } from '../../lib/trophies'
+import { loadHardware, loadBestBuilds, loadTrophySeasons, seasonPos, modeName, seasonAwards, seasonDate, seasonRecord } from '../../lib/trophies'
 import { sfx, haptic } from '../../lib/juice'
 import { TrophyArt, TrophyDefs } from './TrophyArt'
-import { IconClose, IconFootball, IconBasketball, IconRing } from './icons'
+import { IconClose, IconFootball, IconBasketball, IconSoccer, IconBaseball, IconRing } from './icons'
 import { HEADSHOT_BASE, nflHeadshot, valToGrade } from '../../utils/simulation'
 import HEADSHOTS from '../../data/headshots.json'
 import NBA_HEADSHOTS from '../../data/nba-headshots.json'
@@ -17,6 +17,11 @@ import { DL_ATTR } from '../../data/dls'
 import { LB_ATTR, LB_LIVE } from '../../data/lbs'
 import { OL_ATTR, OL_LIVE } from '../../data/ols'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
+import { SOCCER_ATTR } from '../../data/soccer-attrs'
+import { SOCCER_LIVE } from '../../lib/soccerLive'
+import { BASEBALL_LIVE } from '../../lib/baseballLive'
+import { MLB_ATTR } from '../../data/mlb-attrs'
+import { loadBaseballFaces, baseballFace } from '../../lib/baseballFaces'
 import './trophy-case.css'
 
 // Profile → Trophy Case: the player's real hardware on lit shelves (seasons: rings,
@@ -27,8 +32,8 @@ import './trophy-case.css'
 
 const TIER_GEM = { Rookie: '#9aa7a0', Starter: '#5EDBD8', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
 const ACCENT = 'var(--ag-a1, #4fd6b7)'
-const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, lb: LB_ATTR, ol: OL_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR }
-const SPORT_TINT = { nfl: '#4fd6b7', bucket: '#fb923c' }
+const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, lb: LB_ATTR, ol: OL_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR, st: SOCCER_ATTR, bat: MLB_ATTR, pit: MLB_ATTR }
+const SPORT_TINT = { nfl: '#4fd6b7', bucket: '#fb923c', soccer: '#e6e6e6', baseball: '#ef5a6c' }   // (baseball: its stitch red, lightened to read as words)
 
 const n0 = v => (Number.isFinite(v) ? v : 0)
 const fmt = v => n0(v).toLocaleString()
@@ -47,11 +52,15 @@ function shelves(h, st, ach) {
   const b2 = st.bt2 || {}, b1 = st.bt1 || {}
   const bt = { w: n0(st.btWins) + n0(b2.wins) + n0(b1.wins), g: n0(st.btGames) + n0(b2.games) + n0(b1.games), mvp: n0(st.btMvp) + n0(b2.mvp) + n0(b1.mvp) }
   const first = id => (ach?.[id] ? [['First', seasonDate(new Date(ach[id]).toISOString())]] : [])
-  const bySport = a => [['Football', a.football], ['Basketball', a.bucket]].filter(([, v]) => v > 0).map(([k, v]) => [k, fmt(v)])
+  const bySport = a => [['Football', a.football], ['Basketball', a.bucket], ['Soccer', a.soccer], ['Baseball', a.baseball]].filter(([, v]) => v > 0).map(([k, v]) => [k, fmt(v)])
+  const boot = h.boot || { total: 0, current: 0, alltime: 0 }, ballon = h.ballon || { total: 0, bdor: 0, gball: 0 }
+  const bb = h.baseball || { ws: 0, wsAt: 0, mvp: 0, cy: 0, ss: 0, gg: 0 }
+  const sports = ['football', 'basketball', ...(SOCCER_LIVE ? ['soccer'] : []), ...(BASEBALL_LIVE ? ['baseball'] : [])]
+  const ringLine = `Win the title. ${sports.slice(0, -1).join(', ')} or ${sports[sports.length - 1]}.`.replace('. f', '. F')
   return [
     { id: 'seasons', label: 'SEASONS', items: [
       { id: 'rings', art: 'rings', gem: ACCENT, label: 'RINGS', title: 'Rings', n: h.rings.total, rows: true,
-        line: 'Win the title. Football or basketball.', facts: bySport(h.rings) },
+        line: ringLine, facts: bySport(h.rings) },
       { id: 'perfect', art: 'perfect', gem: ACCENT, label: 'PERFECT', title: 'Perfect Seasons', n: h.perfect, rows: true,
         line: 'Go unbeaten in the regular season.' },
       { id: 'ovr90', art: h.ovr95 > 0 ? 'ovr95' : 'ovr90', gem: ACCENT, label: '90+ CLUB', title: '90+ Club', n: h.ovr90, rows: true,
@@ -68,7 +77,28 @@ function shelves(h, st, ach) {
       // (OL is hidden until OL_LIVE: the shelf shows only to someone who made All-Pro in the old OL mode)
       ...(OL_LIVE || h.allpro > 0 ? [{ id: 'allpro', art: 'allpro', label: 'ALL-PRO', title: 'All-Pro', n: h.allpro, rows: true,
         line: 'Make First-Team All-Pro at OL.' }] : []),
+      // soccer's (SOCCER_LIVE: lib/soccerLive.js)
+      ...(SOCCER_LIVE || boot.total > 0 ? [{ id: 'boot', art: 'boot', label: 'GOLDEN BOOT', title: 'Golden Boot', n: boot.total, rows: true,
+        line: 'Finish as top scorer in your league, or at the World Cup.',
+        facts: [['Top Divisions', fmt(boot.current)], ['World Cup', fmt(boot.alltime)]].filter(([, v]) => v !== '0') }] : []),
+      ...(SOCCER_LIVE || ballon.total > 0 ? [{ id: 'ballon', art: 'ballon', label: 'BALLON D\'OR', title: 'Ballon d\'Or', n: ballon.total, rows: true,
+        line: 'Win the Ballon d\'Or with a club season, or the Golden Ball at the World Cup.',
+        facts: [['Ballon d\'Or', fmt(ballon.bdor)], ['Golden Ball', fmt(ballon.gball)]].filter(([, v]) => v !== '0') }] : []),
     ] },
+    // baseball's own shelf (BASEBALL_LIVE: lib/baseballLive.js; shown to anyone who has won one either way)
+    ...(BASEBALL_LIVE || bb.ws + bb.mvp + bb.cy + bb.ss + bb.gg > 0 ? [{ id: 'baseball', label: 'BASEBALL', items: [
+      { id: 'ws', art: 'ws', label: 'WS TITLES', title: 'World Series', n: bb.ws, rows: true,
+        line: 'Win the World Series, as a batter or a pitcher.',
+        facts: [['Current', fmt(bb.ws - bb.wsAt)], ['All-Time', fmt(bb.wsAt)]].filter(([, v]) => v !== '0') },
+      { id: 'bbmvp', art: 'bbmvp', label: 'MVP', title: 'MVP', n: bb.mvp, rows: true,
+        line: 'Win the league MVP. Usually a hitter, now and then an ace.' },
+      { id: 'cy', art: 'cy', label: 'CY YOUNG', title: 'Cy Young Award', n: bb.cy, rows: true,
+        line: 'Win it as the best pitcher in the league.' },
+      { id: 'ss', art: 'slugger', label: 'SLUGGER', title: 'Silver Slugger', n: bb.ss, rows: true,
+        line: 'Win it as the best hitter at the position in the league.' },
+      { id: 'gg', art: 'glove', label: 'GOLD GLOVE', title: 'Gold Glove', n: bb.gg, rows: true,
+        line: 'Win it as the best fielder at the position in the league.' },
+    ] }] : []),
     { id: 'live', label: 'LIVE', live: true, items: [
       { id: 'tier', art: 'tier', gem: TIER_GEM[tier], tier: tierIndex(best), label: 'TIER', title: 'Online Tier', n: best >= TIER_LIT ? 1 : 0, word: tier.toUpperCase(),
         line: 'Best online tier. Starter starts at 900.',
@@ -110,10 +140,25 @@ function useWave(count, ready) {
 }
 
 // A face for a trait: the game's headshot, initials when there isn't one
-function Face({ name, sport, size = 26 }) {
+// (baseball: a saved build keeps names, not ids; lib/baseballFaces.js maps them, in its own lazy chunk, the first
+// time a baseball face shows. Shared by every baseball face on the page)
+let bbFaces = null
+function useBaseballFaces(on) {
+  const [faces, setFaces] = useState(bbFaces)
+  useEffect(() => {
+    if (!on || faces) return
+    let live = true
+    loadBaseballFaces().then(m => { bbFaces = m; if (live) setFaces(m) })
+    return () => { live = false }
+  }, [on, faces])
+  return faces
+}
+function Face({ name, team, sport, size = 26 }) {
   const [bad, setBad] = useState(false)
-  const id = sport === 'bucket' ? NBA_HEADSHOTS[name] : HEADSHOTS[name]
-  const src = !id || bad ? null : sport === 'bucket' ? `${HEADSHOT_BASE}/nba/${id}.webp` : nflHeadshot(id)
+  const bb = sport === 'baseball'
+  const faces = useBaseballFaces(bb)
+  const id = sport === 'soccer' || bb ? null : sport === 'bucket' ? NBA_HEADSHOTS[name] : HEADSHOTS[name]
+  const src = bad ? null : bb ? baseballFace(faces, name, team) : !id ? null : sport === 'bucket' ? `${HEADSHOT_BASE}/nba/${id}.webp` : nflHeadshot(id)
   const init = String(name || '?').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
   return (
     <span className="tc-face" style={{ width: size, height: size }} title={name}>
@@ -132,22 +177,24 @@ const traitsOf = row => Object.entries(row?.build || {})
 const lastName = n => { const w = String(n).split(' '); return /^(jr\.?|sr\.?|ii|iii|iv)$/i.test(w[w.length - 1]) && w.length > 2 ? w[w.length - 2] : w[w.length - 1] }
 const traitLabel = (pos, type) => ATTRS[pos]?.[type]?.label || type.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/-/g, ' ')
 
+const isWorldCup = row => String(row?.game_mode || '') === 'soccer-all-time'
 function Marks({ row }) {
   const awards = seasonAwards(row)
-  const perfect = row.losses === 0 && row.wins > 0
+  // (soccer: an unbeaten league season; a World Cup's three-game group doesn't count)
+  const perfect = row.losses === 0 && row.wins > 0 && !isWorldCup(row)
   if (!row.champion && !awards.length && !perfect) return null
   return (
     <span className="tc-marks">
       {row.champion && <i className="tc-mark tc-mark--ring" title="Champions"><IconRing size={12} /><span className="sr-only">Champions</span></i>}
       {awards.map(a => <i key={a} className="tc-mark tc-mark--award">{a}</i>)}
-      {perfect && <i className="tc-mark">PERFECT</i>}
+      {perfect && <i className="tc-mark">{String(row.game_mode || '').startsWith('soccer-') ? 'UNBEATEN' : 'PERFECT'}</i>}
     </span>
   )
 }
 
 const SportIcon = ({ sport, size = 13, tint = false }) => {
   const style = tint ? { color: SPORT_TINT[sport] } : undefined
-  return sport === 'bucket' ? <IconBasketball size={size} style={style} /> : <IconFootball size={size} style={style} />
+  return sport === 'bucket' ? <IconBasketball size={size} style={style} /> : sport === 'soccer' ? <IconSoccer size={size} style={style} /> : sport === 'baseball' ? <IconBaseball size={size} style={style} /> : <IconFootball size={size} style={style} />
 }
 
 export default function TrophyCase({ user }) {
@@ -168,7 +215,7 @@ export default function TrophyCase({ user }) {
   useEffect(() => load(), [load])
 
   const ready = hw !== undefined
-  const none = { football: 0, bucket: 0, total: 0, unlisted: 0 }
+  const none = { football: 0, bucket: 0, soccer: 0, total: 0, unlisted: 0 }
   const list = shelves(hw || { rings: none, perfect: 0, ovr90: 0, ovr95: 0, allpro: 0, mvp: none, opoy: none, dpoy: none }, hw ? p.stats || {} : {}, hw ? p.ach : null)
   const all = list.flatMap(s => s.items)
   const won = hw ? all.filter(t => t.n > 0).length : 0
@@ -241,18 +288,18 @@ export default function TrophyCase({ user }) {
               <button key={row.pos.key} type="button" className={`tc-card${i === 0 ? ' is-top' : ''}`}
                 style={{ '--d': `${Math.min(i, 6) * 100}ms`, '--bc': i === 0 ? 'var(--ag-gold-hi, #f2d675)' : SPORT_TINT[sport] }}
                 onClick={() => tap({ build: row })}
-                aria-label={`Best ${row.pos.label} build: ${row.ovr} OVR, ${row.wins ?? 0}-${row.losses ?? 0}, ${modeName(row).toLowerCase()}`}>
+                aria-label={`Best ${row.pos.label} build: ${row.ovr} OVR, ${seasonRecord(row) ?? '0-0'}, ${modeName(row).toLowerCase()}`}>
                 <span className="tc-card-top">
                   <span className="tc-card-pos"><SportIcon sport={sport} size={12} />{row.pos.label}</span>
                 </span>
                 <span className="tc-card-ovr"><b>{row.ovr}</b><small>OVR</small></span>
                 {row.archetype && <span className="tc-card-arch">{row.archetype}</span>}
                 <span className="tc-card-rec">
-                  {row.wins != null && <b>{row.wins}-{row.losses ?? 0}</b>}
+                  {row.wins != null && <b>{seasonRecord(row)}</b>}
                   <Marks row={row} />
                 </span>
                 <span className="tc-card-faces">
-                  {traits.slice(0, 3).map(t => <Face key={t.type} name={t.name} sport={sport} size={24} />)}
+                  {traits.slice(0, 3).map(t => <Face key={t.type} name={t.name} team={t.team} sport={sport} size={24} />)}
                   {traits.length > 3 && <em>+{traits.length - 3}</em>}
                 </span>
                 <span className="tc-card-names">{traits.slice(0, 3).map(t => lastName(t.name)).join(' · ')}</span>
@@ -315,7 +362,7 @@ function SeasonRow({ row }) {
         <small>{[row.archetype, seasonDate(row.created_at)].filter(Boolean).join(' · ')}</small>
       </span>
       <span className="tc-srow-rec">
-        {row.wins != null && <b>{row.wins}-{row.losses ?? 0}</b>}
+        {row.wins != null && <b>{seasonRecord(row)}</b>}
         <Marks row={row} />
       </span>
     </div>
@@ -390,8 +437,8 @@ function BuildSheet({ row, onClose }) {
           <span className="tc-bhero-pos"><SportIcon sport={pos.sport} size={14} tint />{pos.label} · {modeName(row)}</span>
           {row.archetype && <span className="tc-bhero-arch">{row.archetype}</span>}
           <span className="tc-bhero-rec">
-            {row.wins != null && <b>{row.wins}-{row.losses ?? 0}</b>}
-            {row.playoffs && !row.champion && <i className="tc-mark">PLAYOFFS</i>}
+            {row.wins != null && <b>{seasonRecord(row)}</b>}
+            {row.playoffs && !row.champion && <i className="tc-mark">{pos.sport === 'soccer' ? (isWorldCup(row) ? 'KNOCKOUTS' : 'UCL') : pos.sport === 'baseball' ? 'POSTSEASON' : 'PLAYOFFS'}</i>}
             <Marks row={row} />
           </span>
           <small>{seasonDate(row.created_at)}</small>
@@ -401,7 +448,7 @@ function BuildSheet({ row, onClose }) {
       <div className="tc-traits">
         {traits.map((t, i) => (
           <div key={t.type} className="tc-trait" style={{ '--d': `${Math.min(i, 9) * 40}ms` }}>
-            <Face name={t.name} sport={pos.sport} size={34} />
+            <Face name={t.name} team={t.team} sport={pos.sport} size={34} />
             <span className="tc-trait-main">
               <small>{traitLabel(pos.key, t.type)}</small>
               <b>{t.name}</b>

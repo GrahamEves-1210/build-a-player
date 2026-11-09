@@ -2,7 +2,7 @@ import { TEAMS } from './nfl-teams'
 import { OL_TYPES, olSizeGrade } from './ols'
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color, color2: t.color2 }]))
 
-// All-time offensive linemen: 4 per franchise (LT/LG/C/RG/RT, the spot he's best known for with that team).
+// All-time offensive linemen: 5 per franchise (LT/LG/C/RG/RT, the spot he's best known for with that team).
 // Graded from the record: Pro-Football-Reference bios and games, the AP All-Pro and Pro Bowl lists, the Hall of Fame,
 // PFF grades where they exist (2006 on), sacks allowed where they were charted, and what coaches and opponents said.
 // Attrs are OL_TYPES in ols.js minus size, on the same scale: F=0 D=1 D+=2 C-=2 C=3 C+=4 B-=5 B=6 B+=7 A-=8 A=9 A+=10 S=11.
@@ -24,6 +24,8 @@ const _OL_LEGENDS = [
     attrs: { length: 8, anchor: 7, passPro: 8, runBlock: 7, mobility: 7, blitzPickup: 7, discipline: 6, pancake: 6 } },
   { name: "Tom Banks", short: "Banks", team: 'ARI', teamName: "Arizona Cardinals", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 73, weight: 245, number: 54, starter: true, years: "1971-80",
     attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 6 } },
+  { name: "Ken Gray", short: "Gray", team: 'ARI', teamName: "Arizona Cardinals", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 74, weight: 245, number: 64, starter: true, years: "1958-69",
+    attrs: { length: 6, anchor: 8, passPro: 8, runBlock: 9, mobility: 9, blitzPickup: 8, discipline: 8, pancake: 8 } },
   // ATL
   { name: "Mike Kenn", short: "Kenn", team: 'ATL', teamName: "Atlanta Falcons", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 79, weight: 277, number: 78, starter: true, years: "1978-94",
     attrs: { length: 10, anchor: 8, passPro: 10, runBlock: 7, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 6 } },
@@ -33,6 +35,8 @@ const _OL_LEGENDS = [
     attrs: { length: 7, anchor: 9, passPro: 8, runBlock: 10, mobility: 7, blitzPickup: 8, discipline: 8, pancake: 10 } },
   { name: "Chris Lindstrom", short: "Lindstrom", team: 'ATL', teamName: "Atlanta Falcons", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 76, weight: 310, arm: 34.125, number: 63, starter: true, years: "2019-",
     attrs: { length: 7, anchor: 8, passPro: 9, runBlock: 10, mobility: 9, blitzPickup: 8, discipline: 9, pancake: 9 } },
+  { name: "Alex Mack", short: "Mack", team: 'ATL', teamName: "Atlanta Falcons", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 311, arm: 33, number: 51, starter: true, years: "2016-20",
+    attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 8, pancake: 7 } },
   // BAL
   { name: "Jonathan Ogden", short: "Ogden", team: 'BAL', teamName: "Baltimore Ravens", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 81, weight: 345, number: 75, starter: true, years: "1996-07",
     attrs: { length: 11, anchor: 11, passPro: 11, runBlock: 10, mobility: 9, blitzPickup: 10, discipline: 10, pancake: 10 } },
@@ -42,6 +46,8 @@ const _OL_LEGENDS = [
     attrs: { length: 10, anchor: 7, passPro: 10, runBlock: 6, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 5 } },
   { name: "Tyler Linderbaum", short: "Linderbaum", team: 'BAL', teamName: "Baltimore Ravens", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 74, weight: 305, arm: 31.125, number: 64, starter: true, years: "2022-25",
     attrs: { length: 1, anchor: 6, passPro: 7, runBlock: 9, mobility: 11, blitzPickup: 8, discipline: 9, pancake: 7 } },
+  { name: "Orlando Brown Jr.", short: "O. Brown", team: 'BAL', teamName: "Baltimore Ravens", pos: 'RT', subpos: 'RT', skin: '#5e3c22', height: 80, weight: 345, arm: 35, number: 78, starter: true, years: "2018-20",
+    attrs: { length: 9, anchor: 8, passPro: 8, runBlock: 8, mobility: 5, blitzPickup: 7, discipline: 7, pancake: 8 } },
   // BUF
   { name: "Joe DeLamielleure", short: "DeLamielleure", team: 'BUF', teamName: "Buffalo Bills", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 75, weight: 254, number: 68, starter: true, years: "1973-79, 1985",
     attrs: { length: 6, anchor: 8, passPro: 9, runBlock: 10, mobility: 9, blitzPickup: 8, discipline: 9, pancake: 9 } },
@@ -51,6 +57,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 8, passPro: 9, runBlock: 7, mobility: 8, blitzPickup: 10, discipline: 9, pancake: 6 } },
   { name: "Ruben Brown", short: "Ru. Brown", team: 'BUF', teamName: "Buffalo Bills", pos: 'LG', subpos: 'LG', skin: '#5e3c22', height: 75, weight: 300, number: 79, starter: true, years: "1995-03",
     attrs: { length: 7, anchor: 9, passPro: 8, runBlock: 9, mobility: 7, blitzPickup: 8, discipline: 6, pancake: 9 } },
+  { name: "Dion Dawkins", short: "Dawkins", team: 'BUF', teamName: "Buffalo Bills", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 320, arm: 35, number: 73, starter: true, years: "2017-",
+    attrs: { length: 9, anchor: 8, passPro: 8, runBlock: 8, mobility: 6, blitzPickup: 8, discipline: 3, pancake: 7 } },
   // CAR
   { name: "Jordan Gross", short: "Gross", team: 'CAR', teamName: "Carolina Panthers", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 76, weight: 305, number: 69, starter: true, years: "2003-13",
     attrs: { length: 7, anchor: 8, passPro: 9, runBlock: 7, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 6 } },
@@ -60,6 +68,8 @@ const _OL_LEGENDS = [
     attrs: { length: 7, anchor: 8, passPro: 7, runBlock: 8, mobility: 6, blitzPickup: 7, discipline: 7, pancake: 8 } },
   { name: "Taylor Moton", short: "Moton", team: 'CAR', teamName: "Carolina Panthers", pos: 'RT', subpos: 'RT', skin: '#5e3c22', height: 77, weight: 325, arm: 34.125, number: 72, starter: true, years: "2017-",
     attrs: { length: 7, anchor: 8, passPro: 8, runBlock: 7, mobility: 6, blitzPickup: 8, discipline: 8, pancake: 7 } },
+  { name: "Andrew Norwell", short: "Norwell", team: 'CAR', teamName: "Carolina Panthers", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 78, weight: 325, arm: 33.625, number: 68, starter: true, years: "2014-17",
+    attrs: { length: 6, anchor: 7, passPro: 8, runBlock: 8, mobility: 7, blitzPickup: 7, discipline: 8, pancake: 7 } },
   // CHI
   { name: "Jimbo Covert", short: "Covert", team: 'CHI', teamName: "Chicago Bears", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 76, weight: 271, number: 74, starter: true, years: "1983-90",
     attrs: { length: 8, anchor: 9, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 8 } },
@@ -69,6 +79,8 @@ const _OL_LEGENDS = [
     attrs: { length: 5, anchor: 9, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 10, discipline: 8, pancake: 8 } },
   { name: "Stan Jones", short: "S. Jones", team: 'CHI', teamName: "Chicago Bears", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 73, weight: 252, number: 78, starter: true, years: "1954-65",
     attrs: { length: 5, anchor: 9, passPro: 8, runBlock: 8, mobility: 7, blitzPickup: 8, discipline: 8, pancake: 8 } },
+  { name: "Danny Fortmann", short: "Fortmann", team: 'CHI', teamName: "Chicago Bears", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 72, weight: 210, number: 21, starter: true, years: "1936-43",
+    attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 10, mobility: 9, blitzPickup: 8, discipline: 9, pancake: 8 } },
   // CIN
   { name: "Anthony Muñoz", short: "Muñoz", team: 'CIN', teamName: "Cincinnati Bengals", pos: 'LT', subpos: 'LT', skin: '#b07848', height: 78, weight: 278, number: 78, starter: true, years: "1980-92",
     attrs: { length: 10, anchor: 11, passPro: 11, runBlock: 11, mobility: 11, blitzPickup: 10, discipline: 11, pancake: 11 } },
@@ -78,6 +90,8 @@ const _OL_LEGENDS = [
     attrs: { length: 9, anchor: 9, passPro: 10, runBlock: 8, mobility: 6, blitzPickup: 9, discipline: 9, pancake: 7 } },
   { name: "Max Montoya", short: "Montoya", team: 'CIN', teamName: "Cincinnati Bengals", pos: 'RG', subpos: 'RG', skin: '#b07848', height: 77, weight: 282, number: 65, starter: true, years: "1979-89",
     attrs: { length: 7, anchor: 8, passPro: 8, runBlock: 8, mobility: 7, blitzPickup: 7, discipline: 7, pancake: 7 } },
+  { name: "Bob Johnson", short: "B. Johnson", team: 'CIN', teamName: "Cincinnati Bengals", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 77, weight: 262, number: 54, starter: true, years: "1968-79",
+    attrs: { length: 6, anchor: 7, passPro: 8, runBlock: 7, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 6 } },
   // CLE
   { name: "Joe Thomas", short: "Thomas", team: 'CLE', teamName: "Cleveland Browns", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 78, weight: 312, number: 73, starter: true, years: "2007-17",
     attrs: { length: 8, anchor: 10, passPro: 11, runBlock: 9, mobility: 10, blitzPickup: 10, discipline: 11, pancake: 8 } },
@@ -87,6 +101,8 @@ const _OL_LEGENDS = [
     attrs: { length: 7, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 8 } },
   { name: "Joel Bitonio", short: "Bitonio", team: 'CLE', teamName: "Cleveland Browns", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 76, weight: 320, arm: 33.875, number: 75, starter: true, years: "2014-25",
     attrs: { length: 6, anchor: 9, passPro: 9, runBlock: 9, mobility: 9, blitzPickup: 9, discipline: 9, pancake: 8 } },
+  { name: "Dick Schafrath", short: "Schafrath", team: 'CLE', teamName: "Cleveland Browns", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 75, weight: 253, number: 77, starter: true, years: "1959-71",
+    attrs: { length: 8, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 8 } },
   // DAL
   { name: "Larry Allen", short: "Allen", team: 'DAL', teamName: "Dallas Cowboys", pos: 'LG', subpos: 'LG', skin: '#5e3c22', height: 75, weight: 325, number: 73, starter: true, years: "1994-05",
     attrs: { length: 7, anchor: 11, passPro: 9, runBlock: 11, mobility: 9, blitzPickup: 9, discipline: 8, pancake: 11 } },
@@ -96,6 +112,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 10, passPro: 10, runBlock: 10, mobility: 8, blitzPickup: 10, discipline: 10, pancake: 10 } },
   { name: "Tyron Smith", short: "T. Smith", team: 'DAL', teamName: "Dallas Cowboys", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 320, arm: 36.375, number: 77, starter: true, years: "2011-23",
     attrs: { length: 11, anchor: 9, passPro: 10, runBlock: 9, mobility: 9, blitzPickup: 8, discipline: 6, pancake: 8 } },
+  { name: "Travis Frederick", short: "Frederick", team: 'DAL', teamName: "Dallas Cowboys", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 320, arm: 33, number: 72, starter: true, years: "2013-17, 2019",
+    attrs: { length: 5, anchor: 9, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 8, pancake: 8 } },
   // DEN
   { name: "Tom Nalen", short: "Nalen", team: 'DEN', teamName: "Denver Broncos", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 75, weight: 286, number: 66, starter: true, years: "1994-07",
     attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 9, mobility: 10, blitzPickup: 10, discipline: 7, pancake: 7 } },
@@ -105,6 +123,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 9, passPro: 8, runBlock: 10, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 10 } },
   { name: "Gary Zimmerman", short: "Zimmerman", team: 'DEN', teamName: "Denver Broncos", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 78, weight: 294, number: 65, starter: true, years: "1993-97",
     attrs: { length: 9, anchor: 8, passPro: 10, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 9, pancake: 7 } },
+  { name: "Louis Vasquez", short: "Vasquez", team: 'DEN', teamName: "Denver Broncos", pos: 'RG', subpos: 'RG', skin: '#b07848', height: 77, weight: 335, number: 65, starter: true, years: "2013-15",
+    attrs: { length: 7, anchor: 9, passPro: 8, runBlock: 7, mobility: 6, blitzPickup: 8, discipline: 8, pancake: 7 } },
   // DET
   { name: "Lomas Brown", short: "L. Brown", team: 'DET', teamName: "Detroit Lions", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 76, weight: 282, number: 75, starter: true, years: "1985-95",
     attrs: { length: 8, anchor: 8, passPro: 9, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 7 } },
@@ -114,6 +134,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 10, passPro: 9, runBlock: 11, mobility: 9, blitzPickup: 8, discipline: 7, pancake: 11 } },
   { name: "Dick Stanfel", short: "Stanfel", team: 'DET', teamName: "Detroit Lions", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 75, weight: 236, number: 63, starter: true, years: "1952-55",
     attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 8 } },
+  { name: "Frank Ragnow", short: "Ragnow", team: 'DET', teamName: "Detroit Lions", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 77, weight: 311, arm: 33.125, number: 77, starter: true, years: "2018-24",
+    attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 8, pancake: 7 } },
   // GB
   { name: "Forrest Gregg", short: "Gregg", team: 'GB', teamName: "Green Bay Packers", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 76, weight: 249, number: 75, starter: true, years: "1956, 1958-70",
     attrs: { length: 8, anchor: 9, passPro: 10, runBlock: 10, mobility: 9, blitzPickup: 9, discipline: 11, pancake: 8 } },
@@ -123,6 +145,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 8, passPro: 8, runBlock: 10, mobility: 9, blitzPickup: 8, discipline: 8, pancake: 9 } },
   { name: "David Bakhtiari", short: "Bakhtiari", team: 'GB', teamName: "Green Bay Packers", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 76, weight: 310, arm: 34, number: 69, starter: true, years: "2013-23",
     attrs: { length: 8, anchor: 8, passPro: 11, runBlock: 7, mobility: 9, blitzPickup: 9, discipline: 8, pancake: 5 } },
+  { name: "Mike Michalske", short: "Michalske", team: 'GB', teamName: "Green Bay Packers", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 72, weight: 210, number: 36, starter: true, years: "1929-35, 1937",
+    attrs: { length: 5, anchor: 9, passPro: 9, runBlock: 10, mobility: 9, blitzPickup: 9, discipline: 9, pancake: 8 } },
   // HOU
   { name: "Duane Brown", short: "D. Brown", team: 'HOU', teamName: "Houston Texans", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 76, weight: 315, number: 76, starter: true, years: "2008-17",
     attrs: { length: 8, anchor: 9, passPro: 9, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 7, pancake: 7 } },
@@ -132,6 +156,8 @@ const _OL_LEGENDS = [
     attrs: { length: 5, anchor: 6, passPro: 7, runBlock: 9, mobility: 10, blitzPickup: 8, discipline: 8, pancake: 6 } },
   { name: "Eric Winston", short: "Winston", team: 'HOU', teamName: "Houston Texans", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 79, weight: 310, number: 73, starter: true, years: "2006-11",
     attrs: { length: 8, anchor: 7, passPro: 6, runBlock: 8, mobility: 8, blitzPickup: 7, discipline: 7, pancake: 6 } },
+  { name: "Wade Smith", short: "W. Smith", team: 'HOU', teamName: "Houston Texans", pos: 'LG', subpos: 'LG', skin: '#5e3c22', height: 76, weight: 295, number: 74, starter: true, years: "2010-13",
+    attrs: { length: 5, anchor: 6, passPro: 7, runBlock: 8, mobility: 9, blitzPickup: 7, discipline: 7, pancake: 5 } },
   // IND
   { name: "Jim Parker", short: "Parker", team: 'IND', teamName: "Indianapolis Colts", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 75, weight: 273, number: 77, starter: true, years: "1957-67",
     attrs: { length: 8, anchor: 10, passPro: 11, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 9 } },
@@ -141,6 +167,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 10, passPro: 8, runBlock: 11, mobility: 8, blitzPickup: 8, discipline: 7, pancake: 11 } },
   { name: "Tarik Glenn", short: "Glenn", team: 'IND', teamName: "Indianapolis Colts", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 332, number: 78, starter: true, years: "1997-06",
     attrs: { length: 8, anchor: 8, passPro: 8, runBlock: 7, mobility: 6, blitzPickup: 8, discipline: 8, pancake: 6 } },
+  { name: "Chris Hinton", short: "Hinton", team: 'IND', teamName: "Indianapolis Colts", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 76, weight: 300, number: 75, starter: true, years: "1983-89",
+    attrs: { length: 8, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 8 } },
   // JAX
   { name: "Tony Boselli", short: "Boselli", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 79, weight: 324, number: 71, starter: true, years: "1995-01",
     attrs: { length: 10, anchor: 10, passPro: 11, runBlock: 10, mobility: 10, blitzPickup: 9, discipline: 9, pancake: 9 } },
@@ -150,6 +178,8 @@ const _OL_LEGENDS = [
     attrs: { length: 7, anchor: 8, passPro: 7, runBlock: 8, mobility: 6, blitzPickup: 7, discipline: 7, pancake: 8 } },
   { name: "Vince Manuwai", short: "Manuwai", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'LG', subpos: 'LG', skin: '#b07848', height: 74, weight: 333, number: 67, starter: true, years: "2003-10",
     attrs: { length: 5, anchor: 8, passPro: 6, runBlock: 8, mobility: 5, blitzPickup: 6, discipline: 7, pancake: 8 } },
+  { name: "Brandon Linder", short: "Linder", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 78, weight: 315, arm: 34.5, number: 65, starter: true, years: "2014-21",
+    attrs: { length: 8, anchor: 7, passPro: 7, runBlock: 7, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 6 } },
   // KC
   { name: "Will Shields", short: "Shields", team: 'KC', teamName: "Kansas City Chiefs", pos: 'RG', subpos: 'RG', skin: '#5e3c22', height: 75, weight: 315, number: 68, starter: true, years: "1993-06",
     attrs: { length: 7, anchor: 10, passPro: 10, runBlock: 10, mobility: 9, blitzPickup: 10, discipline: 10, pancake: 9 } },
@@ -159,6 +189,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 9, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 8, pancake: 9 } },
   { name: "Creed Humphrey", short: "Humphrey", team: 'KC', teamName: "Kansas City Chiefs", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 302, arm: 32.5, number: 52, starter: true, years: "2021-",
     attrs: { length: 4, anchor: 8, passPro: 9, runBlock: 9, mobility: 9, blitzPickup: 10, discipline: 9, pancake: 7 } },
+  { name: "Ed Budde", short: "Budde", team: 'KC', teamName: "Kansas City Chiefs", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 77, weight: 265, number: 71, starter: true, years: "1963-76",
+    attrs: { length: 7, anchor: 9, passPro: 8, runBlock: 10, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 9 } },
   // LV
   { name: "Jim Otto", short: "Otto", team: 'LV', teamName: "Las Vegas Raiders", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 74, weight: 255, number: '00', starter: true, years: "1960-74",
     attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 10, discipline: 10, pancake: 7 } },
@@ -168,6 +200,8 @@ const _OL_LEGENDS = [
     attrs: { length: 8, anchor: 9, passPro: 9, runBlock: 10, mobility: 10, blitzPickup: 9, discipline: 9, pancake: 9 } },
   { name: "Steve Wisniewski", short: "Wisniewski", team: 'LV', teamName: "Las Vegas Raiders", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 76, weight: 305, number: 76, starter: true, years: "1989-01",
     attrs: { length: 6, anchor: 9, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 4, pancake: 9 } },
+  { name: "Lincoln Kennedy", short: "Kennedy", team: 'LV', teamName: "Las Vegas Raiders", pos: 'RT', subpos: 'RT', skin: '#5e3c22', height: 78, weight: 335, number: 72, starter: true, years: "1996-03",
+    attrs: { length: 8, anchor: 8, passPro: 8, runBlock: 8, mobility: 5, blitzPickup: 7, discipline: 8, pancake: 8 } },
   // LAC
   { name: "Ron Mix", short: "Mix", team: 'LAC', teamName: "Los Angeles Chargers", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 76, weight: 250, number: 74, starter: true, years: "1960-69",
     attrs: { length: 8, anchor: 8, passPro: 10, runBlock: 9, mobility: 10, blitzPickup: 9, discipline: 11, pancake: 8 } },
@@ -177,6 +211,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 9, passPro: 8, runBlock: 9, mobility: 7, blitzPickup: 8, discipline: 6, pancake: 9 } },
   { name: "Nick Hardwick", short: "Hardwick", team: 'LAC', teamName: "Los Angeles Chargers", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 305, number: 61, starter: true, years: "2004-14",
     attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 7, mobility: 8, blitzPickup: 9, discipline: 8, pancake: 6 } },
+  { name: "Walt Sweeney", short: "Sweeney", team: 'LAC', teamName: "Los Angeles Chargers", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 76, weight: 256, number: 78, starter: true, years: "1963-73",
+    attrs: { length: 6, anchor: 8, passPro: 9, runBlock: 9, mobility: 9, blitzPickup: 8, discipline: 8, pancake: 8 } },
   // LAR
   { name: "Jackie Slater", short: "Slater", team: 'LAR', teamName: "Los Angeles Rams", pos: 'RT', subpos: 'RT', skin: '#5e3c22', height: 76, weight: 277, number: 78, starter: true, years: "1976-95",
     attrs: { length: 8, anchor: 9, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 8 } },
@@ -186,6 +222,8 @@ const _OL_LEGENDS = [
     attrs: { length: 11, anchor: 10, passPro: 11, runBlock: 10, mobility: 10, blitzPickup: 9, discipline: 9, pancake: 10 } },
   { name: "Dennis Harrah", short: "Harrah", team: 'LAR', teamName: "Los Angeles Rams", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 77, weight: 260, number: 60, starter: true, years: "1975-87",
     attrs: { length: 7, anchor: 8, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 6, pancake: 8 } },
+  { name: "Doug Smith", short: "D. Smith", team: 'LAR', teamName: "Los Angeles Rams", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 75, weight: 259, number: 56, starter: true, years: "1978-91",
+    attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 7 } },
   // MIA
   { name: "Dwight Stephenson", short: "Stephenson", team: 'MIA', teamName: "Miami Dolphins", pos: 'C', subpos: 'C', skin: '#5e3c22', height: 74, weight: 255, number: 57, starter: true, years: "1980-87",
     attrs: { length: 6, anchor: 10, passPro: 10, runBlock: 10, mobility: 11, blitzPickup: 10, discipline: 10, pancake: 10 } },
@@ -195,6 +233,8 @@ const _OL_LEGENDS = [
     attrs: { length: 5, anchor: 9, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 10, pancake: 8 } },
   { name: "Richmond Webb", short: "Webb", team: 'MIA', teamName: "Miami Dolphins", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 78, weight: 325, number: 78, starter: true, years: "1990-00",
     attrs: { length: 9, anchor: 8, passPro: 9, runBlock: 7, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 6 } },
+  { name: "Bob Kuechenberg", short: "Kuechenberg", team: 'MIA', teamName: "Miami Dolphins", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 74, weight: 253, number: 67, starter: true, years: "1970-83",
+    attrs: { length: 5, anchor: 9, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 8 } },
   // MIN
   { name: "Ron Yary", short: "Yary", team: 'MIN', teamName: "Minnesota Vikings", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 78, weight: 255, number: 73, starter: true, years: "1968-81",
     attrs: { length: 9, anchor: 9, passPro: 9, runBlock: 10, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 9 } },
@@ -204,6 +244,8 @@ const _OL_LEGENDS = [
     attrs: { length: 9, anchor: 8, passPro: 10, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 9, pancake: 7 } },
   { name: "Mick Tingelhoff", short: "Tingelhoff", team: 'MIN', teamName: "Minnesota Vikings", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 74, weight: 237, number: 53, starter: true, years: "1962-78",
     attrs: { length: 4, anchor: 7, passPro: 8, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 10, pancake: 6 } },
+  { name: "Matt Birk", short: "Birk", team: 'MIN', teamName: "Minnesota Vikings", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 310, number: 78, starter: true, years: "1998-08",
+    attrs: { length: 6, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 7 } },
   // NE
   { name: "John Hannah", short: "Hannah", team: 'NE', teamName: "New England Patriots", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 74, weight: 265, number: 73, starter: true, years: "1973-85",
     attrs: { length: 6, anchor: 11, passPro: 10, runBlock: 11, mobility: 10, blitzPickup: 9, discipline: 9, pancake: 11 } },
@@ -213,6 +255,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 9, passPro: 8, runBlock: 9, mobility: 7, blitzPickup: 8, discipline: 6, pancake: 9 } },
   { name: "Matt Light", short: "Light", team: 'NE', teamName: "New England Patriots", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 76, weight: 305, number: 72, starter: true, years: "2001-11",
     attrs: { length: 8, anchor: 7, passPro: 8, runBlock: 6, mobility: 7, blitzPickup: 9, discipline: 8, pancake: 5 } },
+  { name: "Jon Morris", short: "Morris", team: 'NE', teamName: "New England Patriots", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 254, number: 56, starter: true, years: "1964-74",
+    attrs: { length: 6, anchor: 7, passPro: 8, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 9, pancake: 6 } },
   // NO
   { name: "Willie Roaf", short: "Roaf", team: 'NO', teamName: "New Orleans Saints", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 320, number: 77, starter: true, years: "1993-01",
     attrs: { length: 10, anchor: 10, passPro: 10, runBlock: 10, mobility: 10, blitzPickup: 9, discipline: 9, pancake: 10 } },
@@ -222,6 +266,8 @@ const _OL_LEGENDS = [
     attrs: { length: 8, anchor: 7, passPro: 10, runBlock: 8, mobility: 11, blitzPickup: 8, discipline: 7, pancake: 6 } },
   { name: "Ryan Ramczyk", short: "Ramczyk", team: 'NO', teamName: "New Orleans Saints", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 78, weight: 314, arm: 33.75, number: 71, starter: true, years: "2017-24",
     attrs: { length: 7, anchor: 8, passPro: 9, runBlock: 8, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 7 } },
+  { name: "Carl Nicks", short: "Nicks", team: 'NO', teamName: "New Orleans Saints", pos: 'LG', subpos: 'LG', skin: '#5e3c22', height: 77, weight: 343, arm: 34.75, number: 77, starter: true, years: "2008-11",
+    attrs: { length: 8, anchor: 9, passPro: 8, runBlock: 9, mobility: 6, blitzPickup: 7, discipline: 7, pancake: 9 } },
   // NYG
   { name: "Roosevelt Brown", short: "Ro. Brown", team: 'NYG', teamName: "New York Giants", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 75, weight: 255, number: 79, starter: true, years: "1953-65",
     attrs: { length: 8, anchor: 9, passPro: 9, runBlock: 9, mobility: 10, blitzPickup: 8, discipline: 8, pancake: 8 } },
@@ -231,6 +277,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 8, passPro: 8, runBlock: 9, mobility: 7, blitzPickup: 8, discipline: 8, pancake: 8 } },
   { name: "Bart Oates", short: "Oates", team: 'NYG', teamName: "New York Giants", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 75, weight: 275, number: 65, starter: true, years: "1985-93",
     attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 7, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 5 } },
+  { name: "Jack Stroud", short: "Stroud", team: 'NYG', teamName: "New York Giants", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 73, weight: 235, number: 66, starter: true, years: "1953-64",
+    attrs: { length: 5, anchor: 8, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 7, pancake: 8 } },
   // NYJ
   { name: "Winston Hill", short: "Hill", team: 'NYJ', teamName: "New York Jets", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 76, weight: 270, number: 75, starter: true, years: "1963-76",
     attrs: { length: 8, anchor: 8, passPro: 9, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 7 } },
@@ -240,6 +288,8 @@ const _OL_LEGENDS = [
     attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 9, mobility: 10, blitzPickup: 10, discipline: 9, pancake: 7 } },
   { name: "Marvin Powell", short: "Powell", team: 'NYJ', teamName: "New York Jets", pos: 'RT', subpos: 'RT', skin: '#5e3c22', height: 77, weight: 268, number: 79, starter: true, years: "1977-85",
     attrs: { length: 8, anchor: 8, passPro: 9, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 7 } },
+  { name: "D'Brickashaw Ferguson", short: "Ferguson", team: 'NYJ', teamName: "New York Jets", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 78, weight: 310, arm: 35.5, number: 60, starter: true, years: "2006-15",
+    attrs: { length: 10, anchor: 7, passPro: 9, runBlock: 6, mobility: 9, blitzPickup: 8, discipline: 9, pancake: 5 } },
   // PHI
   { name: "Jason Kelce", short: "Kelce", team: 'PHI', teamName: "Philadelphia Eagles", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 75, weight: 295, arm: 32.5, number: 62, starter: true, years: "2011-23",
     attrs: { length: 3, anchor: 8, passPro: 9, runBlock: 10, mobility: 11, blitzPickup: 11, discipline: 9, pancake: 8 } },
@@ -249,6 +299,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 10, passPro: 9, runBlock: 10, mobility: 10, blitzPickup: 8, discipline: 6, pancake: 10 } },
   { name: "Bob Brown", short: "B. Brown", team: 'PHI', teamName: "Philadelphia Eagles", pos: 'RT', subpos: 'RT', skin: '#5e3c22', height: 76, weight: 280, number: 76, starter: true, years: "1964-68",
     attrs: { length: 8, anchor: 10, passPro: 8, runBlock: 10, mobility: 7, blitzPickup: 7, discipline: 7, pancake: 11 } },
+  { name: "Al Wistert", short: "Wistert", team: 'PHI', teamName: "Philadelphia Eagles", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 73, weight: 214, number: 70, starter: true, years: "1943-51",
+    attrs: { length: 5, anchor: 8, passPro: 8, runBlock: 10, mobility: 9, blitzPickup: 8, discipline: 9, pancake: 9 } },
   // PIT
   { name: "Mike Webster", short: "Webster", team: 'PIT', teamName: "Pittsburgh Steelers", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 73, weight: 255, number: 52, starter: true, years: "1974-88",
     attrs: { length: 5, anchor: 10, passPro: 9, runBlock: 10, mobility: 8, blitzPickup: 10, discipline: 10, pancake: 9 } },
@@ -258,6 +310,8 @@ const _OL_LEGENDS = [
     attrs: { length: 7, anchor: 9, passPro: 9, runBlock: 10, mobility: 10, blitzPickup: 9, discipline: 8, pancake: 9 } },
   { name: "David DeCastro", short: "DeCastro", team: 'PIT', teamName: "Pittsburgh Steelers", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 77, weight: 316, arm: 32.375, number: 66, starter: true, years: "2012-20",
     attrs: { length: 4, anchor: 9, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 8 } },
+  { name: "Maurkice Pouncey", short: "Pouncey", team: 'PIT', teamName: "Pittsburgh Steelers", pos: 'C', subpos: 'C', skin: '#5e3c22', height: 76, weight: 304, arm: 32.5, number: 53, starter: true, years: "2010-20",
+    attrs: { length: 4, anchor: 8, passPro: 8, runBlock: 9, mobility: 10, blitzPickup: 9, discipline: 8, pancake: 8 } },
   // SF
   { name: "Bob St. Clair", short: "St. Clair", team: 'SF', teamName: "San Francisco 49ers", pos: 'RT', subpos: 'RT', skin: '#f0c4a0', height: 81, weight: 263, number: 79, starter: true, years: "1953-63",
     attrs: { length: 11, anchor: 9, passPro: 8, runBlock: 9, mobility: 7, blitzPickup: 7, discipline: 7, pancake: 9 } },
@@ -267,6 +321,8 @@ const _OL_LEGENDS = [
     attrs: { length: 8, anchor: 8, passPro: 9, runBlock: 8, mobility: 9, blitzPickup: 9, discipline: 9, pancake: 7 } },
   { name: "Trent Williams", short: "Williams", team: 'SF', teamName: "San Francisco 49ers", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 320, arm: 34.25, number: 71, starter: true, years: "2020-",
     attrs: { length: 8, anchor: 11, passPro: 10, runBlock: 11, mobility: 11, blitzPickup: 9, discipline: 8, pancake: 11 } },
+  { name: "Guy McIntyre", short: "McIntyre", team: 'SF', teamName: "San Francisco 49ers", pos: 'LG', subpos: 'LG', skin: '#5e3c22', height: 75, weight: 275, number: 62, starter: true, years: "1984-93",
+    attrs: { length: 6, anchor: 8, passPro: 9, runBlock: 8, mobility: 10, blitzPickup: 9, discipline: 9, pancake: 7 } },
   // SEA
   { name: "Walter Jones", short: "W. Jones", team: 'SEA', teamName: "Seattle Seahawks", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 325, number: 71, starter: true, years: "1997-08",
     attrs: { length: 9, anchor: 10, passPro: 11, runBlock: 10, mobility: 9, blitzPickup: 9, discipline: 10, pancake: 9 } },
@@ -276,6 +332,8 @@ const _OL_LEGENDS = [
     attrs: { length: 5, anchor: 8, passPro: 8, runBlock: 8, mobility: 8, blitzPickup: 9, discipline: 8, pancake: 6 } },
   { name: "Russell Okung", short: "Okung", team: 'SEA', teamName: "Seattle Seahawks", pos: 'LT', subpos: 'LT', skin: '#5e3c22', height: 77, weight: 310, arm: 36, number: 76, starter: true, years: "2010-15",
     attrs: { length: 11, anchor: 7, passPro: 8, runBlock: 7, mobility: 7, blitzPickup: 7, discipline: 6, pancake: 6 } },
+  { name: "Robbie Tobeck", short: "Tobeck", team: 'SEA', teamName: "Seattle Seahawks", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 76, weight: 297, number: 61, starter: true, years: "2000-06",
+    attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 7, mobility: 8, blitzPickup: 9, discipline: 8, pancake: 5 } },
   // TB
   { name: "Paul Gruber", short: "Gruber", team: 'TB', teamName: "Tampa Bay Buccaneers", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 77, weight: 292, number: 74, starter: true, years: "1988-99",
     attrs: { length: 8, anchor: 8, passPro: 8, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 6 } },
@@ -285,6 +343,8 @@ const _OL_LEGENDS = [
     attrs: { length: 6, anchor: 8, passPro: 7, runBlock: 8, mobility: 7, blitzPickup: 7, discipline: 7, pancake: 8 } },
   { name: "Tony Mayberry", short: "Mayberry", team: 'TB', teamName: "Tampa Bay Buccaneers", pos: 'C', subpos: 'C', skin: '#5e3c22', height: 76, weight: 288, number: 61, starter: true, years: "1990-99",
     attrs: { length: 5, anchor: 7, passPro: 8, runBlock: 7, mobility: 7, blitzPickup: 8, discipline: 8, pancake: 6 } },
+  { name: "Ali Marpet", short: "Marpet", team: 'TB', teamName: "Tampa Bay Buccaneers", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 76, weight: 307, arm: 33.375, number: 74, starter: true, years: "2015-21",
+    attrs: { length: 6, anchor: 7, passPro: 8, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 7 } },
   // TEN
   { name: "Bruce Matthews", short: "Matthews", team: 'TEN', teamName: "Tennessee Titans", pos: 'C', subpos: 'C', skin: '#f0c4a0', height: 77, weight: 305, number: 74, starter: true, years: "1983-01",
     attrs: { length: 8, anchor: 10, passPro: 10, runBlock: 10, mobility: 10, blitzPickup: 11, discipline: 10, pancake: 9 } },
@@ -294,6 +354,8 @@ const _OL_LEGENDS = [
     attrs: { length: 9, anchor: 8, passPro: 9, runBlock: 8, mobility: 8, blitzPickup: 8, discipline: 9, pancake: 6 } },
   { name: "Taylor Lewan", short: "Lewan", team: 'TEN', teamName: "Tennessee Titans", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 79, weight: 309, arm: 33.875, number: 77, starter: true, years: "2014-22",
     attrs: { length: 7, anchor: 8, passPro: 8, runBlock: 8, mobility: 8, blitzPickup: 7, discipline: 4, pancake: 8 } },
+  { name: "Bob Talamini", short: "Talamini", team: 'TEN', teamName: "Tennessee Titans", pos: 'LG', subpos: 'LG', skin: '#f0c4a0', height: 73, weight: 255, number: 61, starter: true, years: "1960-67",
+    attrs: { length: 5, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 8, pancake: 8 } },
   // WAS
   { name: "Joe Jacoby", short: "Jacoby", team: 'WAS', teamName: "Washington Commanders", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 79, weight: 295, number: 66, starter: true, years: "1981-93",
     attrs: { length: 10, anchor: 9, passPro: 9, runBlock: 10, mobility: 6, blitzPickup: 8, discipline: 8, pancake: 9 } },
@@ -303,5 +365,7 @@ const _OL_LEGENDS = [
     attrs: { length: 8, anchor: 8, passPro: 8, runBlock: 9, mobility: 7, blitzPickup: 8, discipline: 7, pancake: 7 } },
   { name: "Brandon Scherff", short: "Scherff", team: 'WAS', teamName: "Washington Commanders", pos: 'RG', subpos: 'RG', skin: '#f0c4a0', height: 77, weight: 315, arm: 33.375, number: 75, starter: true, years: "2015-21",
     attrs: { length: 6, anchor: 9, passPro: 8, runBlock: 9, mobility: 8, blitzPickup: 8, discipline: 7, pancake: 9 } },
+  { name: "Jim Lachey", short: "Lachey", team: 'WAS', teamName: "Washington Commanders", pos: 'LT', subpos: 'LT', skin: '#f0c4a0', height: 78, weight: 294, number: 79, starter: true, years: "1988-95",
+    attrs: { length: 9, anchor: 8, passPro: 9, runBlock: 9, mobility: 8, blitzPickup: 9, discipline: 9, pancake: 8 } },
 ]
 export const OL_LEGENDS = _OL_LEGENDS.map(p => ({ ...p, ...TEAM_COLOR[p.team], attrs: { ...p.attrs, size: olSizeGrade(p.height, p.weight) } }))

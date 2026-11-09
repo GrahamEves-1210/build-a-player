@@ -24,6 +24,7 @@
 
 import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
 import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
+import { competeQueue } from '../../src/lib/competeCore.js'
 import { Games } from './games.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
 import { playOut } from '../../src/lib/blacktopPlay.js'
@@ -100,9 +101,10 @@ export default {
       return env.AUCTION_QUEUE.get(env.AUCTION_QUEUE.idFromName(`${sport}-${pos}`)).fetch(req)
     }
     if (url.pathname === '/compete/q') {
-      const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos')
-      if (!validCompete(sport, pos)) return new Response('bad', { status: 400 })
-      return env.COMPETE_QUEUE.get(env.COMPETE_QUEUE.idFromName(`${sport}-${pos}`)).fetch(req)
+      // a queue per sport + position; soccer's per pool too (TOP DIVISIONS / WORLD CUP: competeCore competeQueue)
+      const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos'), mode = url.searchParams.get('mode')
+      if (!validCompete(sport, pos, mode)) return new Response('bad', { status: 400 })
+      return env.COMPETE_QUEUE.get(env.COMPETE_QUEUE.idFromName(competeQueue(sport, pos, mode))).fetch(req)
     }
     const cp = url.pathname.match(/^\/compete\/room\/([A-Z0-9]{6})$/)
     if (cp) return env.COMPETE_ROOM.get(env.COMPETE_ROOM.idFromName(cp[1])).fetch(req)

@@ -64,6 +64,8 @@ const btPageFor = phase => (phase === 'build' ? 'blacktop-build' : phase === 'ga
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 import { isTester } from '../lib/mimic'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
+import { SOCCER_LIVE } from '../lib/soccerLive'
+import { BASEBALL_LIVE } from '../lib/baseballLive'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -356,6 +358,24 @@ function BucketSplash({ onStart, onVersus }) {
           <div className="splash-mg-sub">FOOTBALL BUILDER</div>
         </button>
 
+        {SOCCER_LIVE && (
+          <button className="splash-minigame-btn splash-minigame-btn--soccer" onClick={() => { window.location.href = '/soccer' + (import.meta.env.DEV && /[?&]soccer=1\b/.test(window.location.search) ? '?soccer=1' : '') }}>
+            <div className="splash-xlink-logo">
+              BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--soccer">-<span className="splash-xlink-a">A</span>-</em>PLAYER
+            </div>
+            <div className="splash-mg-sub">SOCCER BUILDER</div>
+          </button>
+        )}
+
+        {BASEBALL_LIVE && (
+          <button className="splash-minigame-btn splash-minigame-btn--baseball" onClick={() => { window.location.href = '/baseball' + (import.meta.env.DEV && /[?&]baseball=1\b/.test(window.location.search) ? '?baseball=1' : '') }}>
+            <div className="splash-xlink-logo">
+              BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--baseball">-<span className="splash-xlink-a">A</span>-</em>PLAYER
+            </div>
+            <div className="splash-mg-sub">BASEBALL BUILDER</div>
+          </button>
+        )}
+
         {/* the classic look's way back (Settings → Classic look brought them here) */}
         {!IS_APP && !APP_LOOK && <button className="splash-newlook" onClick={() => setClassicLook(false)}>Switch to the new look</button>}
       </div>
@@ -414,6 +434,15 @@ export default function BucketApp() {
   const [gameKey, setGameKey]         = useState(0)
   const [mobileView, setMobileView]   = useState('spin')
   const [user, setUser]               = useState(null)
+  // Signing out while on the profile page: go Home, never fall through to whatever page sits under it
+  const hadUserRef = useRef(false)
+  useLayoutEffect(() => {
+    if (user) { hadUserRef.current = true; return }
+    if (hadUserRef.current && page === 'profile') {
+      if (window.location.pathname.endsWith('/profile')) window.history.replaceState({}, '', window.location.pathname.slice(0, -8) || '/')
+      setPage('splash')
+    }
+  }, [user, page])
   const [adsDisabled, setAdsDisabled] = useState(IS_APP)
   const [isSubscribed, setIsSubscribed] = useState(() => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } })
   const [showAuth, setShowAuth]       = useState(false)
@@ -937,8 +966,8 @@ export default function BucketApp() {
   // the squad's next player to build, on the normal build page (sandbox left on from the
   // plain modes doesn't carry in unless Squad Builder's Sandbox is unlocked: the switch goes off)
   const squadBuilding = useRef(null)   // the slot on the build page right now (Home and back resumes it)
-  const startSquadBuild = useCallback(slot => {
-    handleStart('classic', slot.pos)
+  const startSquadBuild = useCallback((slot, sq = squadRef.current) => {
+    handleStart(sq?.pool === 'alltime' ? 'all-time' : 'classic', slot.pos)   // (an ALL-TIME squad spins from the legends)
     squadBuilding.current = slot.id
     if (sandboxLocked('squad-build')) sandboxTainted.current = false
     setPage('squad-build')
@@ -946,8 +975,8 @@ export default function BucketApp() {
   const buildSquad = useCallback(sq => {
     const next = nextToBuild(sq)
     if (!next) { setPage('squad'); return }
-    if (squadBuilding.current === next.id && gameMode === 'classic' && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
-    startSquadBuild(next)
+    if (squadBuilding.current === next.id && gameMode === (sq.pool === 'alltime' ? 'all-time' : 'classic') && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
+    startSquadBuild(next, sq)
   }, [startSquadBuild, gameMode, position])
 
   // ── DAILY CHALLENGE (basketball days; lib/verifyCore.js dailyFor) ──────────
@@ -1175,7 +1204,9 @@ export default function BucketApp() {
     commitBucketRef.current?.(result)
   }, [build, activeTypes, position, gameMode])
 
-  const commitBucketSeason = useCallback((result) => {
+  // `leaving`: booked as you leave the season page mid-season (BucketSimPage's unmount), so stay
+  // where you were going: setting the page back to 'sim' dropped you on the final report
+  const commitBucketSeason = useCallback((result, { leaving = false } = {}) => {
     setSimResult(result)
     // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
     // already saved a season. Either way: no save, and no XP or coins either.
@@ -1192,9 +1223,9 @@ export default function BucketApp() {
       } }))
     }
     setShowTeamSpin(false)
-    setPage('sim')
+    if (!leaving) setPage('sim')
     track('simulate', { app: 'bucket', position, gameMode, userId: user?.id ?? null })
-    window.scrollTo({ top: 0, behavior: 'instant' })
+    if (!leaving) window.scrollTo({ top: 0, behavior: 'instant' })
 
     if (!supabase || !user || saveBlock) return
     markPlayed(buildSig(`${saveMode}-${position}`, build, activeTypes))

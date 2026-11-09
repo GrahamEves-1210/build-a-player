@@ -141,17 +141,17 @@
   --btn-txt:    #1c0a02;
 }
 
-[data-sport="bucket"] .sil-wrap {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .sil-wrap {
   transform: none;
 }
 @media (min-width: 769px) {
-  [data-sport="bucket"] .sil-wrap { transform: scale(0.75) translateY(91px); transform-origin: top center; }
-  [data-sport="bucket"] .cz-left  { transform: translateY(-50%) translateX(-20px) scale(1.2) !important; }
-  [data-sport="bucket"] .cz-right { transform: translateY(-50%) translateX(20px) scale(1.2) !important; }
-  [data-sport="bucket"] .cz-left.cz-hidden,
-  [data-sport="bucket"] .cz-left.cz-invisible  { transform: translateY(-50%) translateX(-30px) scale(1.2) !important; }
-  [data-sport="bucket"] .cz-right.cz-hidden,
-  [data-sport="bucket"] .cz-right.cz-invisible { transform: translateY(-50%) translateX(30px) scale(1.2) !important; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .sil-wrap { transform: scale(0.75) translateY(91px); transform-origin: top center; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left  { transform: translateY(-50%) translateX(-20px) scale(1.2) !important; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right { transform: translateY(-50%) translateX(20px) scale(1.2) !important; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left.cz-hidden,
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left.cz-invisible  { transform: translateY(-50%) translateX(-30px) scale(1.2) !important; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-hidden,
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-invisible { transform: translateY(-50%) translateX(30px) scale(1.2) !important; }
 }
 .sil-img--bucket {
   position: relative;
@@ -312,7 +312,7 @@
 }
 
 /* ── BUCKET: spin panel – horizontal court lines instead of diagonal ── */
-[data-sport="bucket"] .spin-panel { box-shadow: none; }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .spin-panel { box-shadow: none; }
 [data-sport="bucket"] .spin-panel::before {
   background-image: linear-gradient(rgba(251,146,60,0.10) 1px, transparent 1px);
   background-size: 100% 22px;
@@ -329,7 +329,7 @@
 /* ── BUCKET: chip redesign ── */
 .chip-photo { display: none; }
 
-[data-sport="bucket"] .attr-chip {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .attr-chip {
   border-left: 3px solid var(--chip-col);
   border-radius: 0 9px 9px 0;
   padding: 7px 10px 7px 11px;
@@ -340,10 +340,10 @@
   border-right: 1px solid rgba(255,255,255,0.05);
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-@media (hover: hover) { [data-sport="bucket"] .attr-chip:hover {
+@media (hover: hover) { :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .attr-chip:hover {
   background: rgba(255,255,255,0.07);
 } }
-[data-sport="bucket"] .chip-val {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .chip-val {
   width: 34px;
   height: 34px;
   font-size: 12px;
@@ -355,10 +355,10 @@
   border: none;
   flex-shrink: 0;
 }
-[data-sport="bucket"] .chip-hint { display: none; }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .chip-hint { display: none; }
 
 /* ── BUCKET: reveal card redesign ── */
-[data-sport="bucket"] .qb-reveal-card {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-card {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.07);
   border-left: 4px solid var(--qb-color);
@@ -367,22 +367,22 @@
   gap: 12px;
   padding: 10px 14px 10px 14px;
 }
-[data-sport="bucket"] .qb-reveal-hero .qb-avatar {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-hero .qb-avatar {
   background: transparent;
 }
-[data-sport="bucket"] .qb-reveal-name {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-name {
   font-size: 14px;
   font-weight: 900;
   color: #fff;
   letter-spacing: -0.2px;
 }
-[data-sport="bucket"] .qb-reveal-meta {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-meta {
   font-size: 11px;
   color: var(--text-3);
   margin-top: 2px;
 }
 @media (min-width: 769px) {
-  [data-sport="bucket"] .qb-reveal-card {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-card {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -396,23 +396,23 @@
     box-shadow: none;
     overflow: visible;
   }
-  [data-sport="bucket"] .qb-reveal-hero {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-hero {
     width: auto;
     min-height: unset;
     flex-shrink: 0;
     background: transparent;
   }
-  [data-sport="bucket"] .qb-reveal-hero .qb-avatar {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-hero .qb-avatar {
     width: 56px !important;
     height: 56px !important;
     background: transparent;
   }
-  [data-sport="bucket"] .qb-reveal-text {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-text {
     flex: 1;
     padding: 0;
     min-width: 0;
   }
-  [data-sport="bucket"] .qb-reveal-name {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-name {
     font-size: 13px;
     font-weight: 900;
     color: #fff;
@@ -421,13 +421,13 @@
     text-overflow: ellipsis;
     letter-spacing: -0.2px;
   }
-  [data-sport="bucket"] .qb-reveal-meta {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-meta {
     font-size: 10px;
     color: var(--text-3);
     white-space: nowrap;
     margin-top: 2px;
   }
-  [data-sport="bucket"] .qb-reveal-pos {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-pos {
     flex-shrink: 0;
     margin-left: auto;
     margin-right: -4px;
@@ -452,7 +452,7 @@
 }
 
 /* ── BUCKET: right panel ── */
-[data-sport="bucket"] .right-panel-wrap { box-shadow: none; }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .right-panel-wrap { box-shadow: none; }
 [data-sport="bucket"] .right-panel-wrap::before {
   background-image: linear-gradient(rgba(251,146,60,0.09) 1px, transparent 1px);
 }
@@ -2064,7 +2064,7 @@ a:focus-visible {
   padding: 10px 14px 10px 14px;
   overflow: visible;
 }
-[data-sport="bucket"] .qb-reveal-card::after { display: none; }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .qb-reveal-card::after { display: none; }
 
 .qb-reveal-text {
   flex: 1;
@@ -2447,8 +2447,8 @@ a:focus-visible {
   .attr-category-section { gap: 5px; }
   .attr-category-hd      { padding-bottom: 1px; }
   .chip-val              { width: 32.5px; height: 32.5px; font-size: 12px; }
-  [data-sport="bucket"] .attr-chip { padding: 0.7px 10px 0.7px 11px; min-height: 36px; }
-  [data-sport="bucket"] .chip-val  { width: 32.5px; height: 32.5px; font-size: 12px; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .attr-chip { padding: 0.7px 10px 0.7px 11px; min-height: 36px; }
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .chip-val  { width: 32.5px; height: 32.5px; font-size: 12px; }
 }
 
 /* â”€â”€ CENTER FIELD â”€â”€ */
@@ -3066,14 +3066,14 @@ a:focus-visible {
 }
 
 /* Bucket builds — slightly smaller cards and dots */
-[data-sport="bucket"] .cz-card {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-card {
   transform: translateY(-50%) translateX(0) scale(0.88);
 }
-[data-sport="bucket"] .cz-left.cz-hidden,
-[data-sport="bucket"] .cz-left.cz-invisible  { transform: translateY(-50%) translateX(-10px) scale(0.88); }
-[data-sport="bucket"] .cz-right.cz-hidden,
-[data-sport="bucket"] .cz-right.cz-invisible { transform: translateY(-50%) translateX(10px) scale(0.88); }
-[data-sport="bucket"] .cz-dot {
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left.cz-hidden,
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left.cz-invisible  { transform: translateY(-50%) translateX(-10px) scale(0.88); }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-hidden,
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-invisible { transform: translateY(-50%) translateX(10px) scale(0.88); }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-dot {
   width: 12px;
   height: 12px;
 }
@@ -3116,7 +3116,7 @@ a:focus-visible {
 }
 
 .cz-type-playmaking .cz-tag { font-size: 9px !important; letter-spacing: 0.4px; }
-[data-sport="bucket"] .cz-type-size { transform: translateY(calc(-50% - 7px)) translateX(7px) scale(0.88); }
+:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-type-size { transform: translateY(calc(-50% - 7px)) translateX(7px) scale(0.88); }
 .mobile-build .cz-type-playmaking .cz-tag { font-size: 5.5px !important; letter-spacing: 0.1px; }
 @media (min-width: 769px) {
   .cz-type-playmaking .cz-tag { font-size: 13px !important; letter-spacing: 0.5px; }
@@ -3757,7 +3757,7 @@ a:focus-visible {
 .build-slots::-webkit-scrollbar { display: none; }
 
 @media (min-width: 769px) {
-  [data-sport="bucket"] .build-slots {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .build-slots {
     transform: scale(0.9);
     transform-origin: top center;
   }
@@ -5847,6 +5847,12 @@ html.is-mac .spin-panel-scroll {
 @media (min-width: 769px) {
   .splash-stack-band-label { font-size: 13px; }
 }
+.splash-stack-band-label.is-sm { font-size: 8.5px; }
+.splash-stack-band-label.is-xs { font-size: 7.5px; }
+@media (min-width: 769px) {
+  .splash-stack-band-label.is-sm { font-size: 11px; }
+  .splash-stack-band-label.is-xs { font-size: 10px; }
+}
 
 /* Floating chips */
 /* Route/play diagrams, tiled as a repeating background so the pattern
@@ -7901,7 +7907,7 @@ html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidd
     background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
     background-size: 18px 18px;
   }
-  [data-sport="bucket"] .mobile-build .field-center {
+  :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .mobile-build .field-center {
     background: #090a0d !important;
   }
 
@@ -13188,6 +13194,13 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
+  box-shadow: none !important;
+}
+/* and every wrapper Playwire nests inside it (one painted a full-width purple band behind the ad). The ad's own
+   iframe and the close button keep theirs */
+[id^="pw-oop-bottom_rail"] *:not(iframe):not(button):not([class*="close" i]):not([id*="close" i]) {
+  background: transparent !important;
+  background-color: transparent !important;
   box-shadow: none !important;
 }
 /* Playwire's close button for the rail: kept above the ad (it sat under it), and

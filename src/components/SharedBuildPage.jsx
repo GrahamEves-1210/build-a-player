@@ -16,17 +16,20 @@ function ovrColor(ovr) {
   return '#f87171'
 }
 
-export default function SharedBuildPage({ build, types, onPlay }) {
+// A shared build (/?b=…). Football's QB by default; another sport hands in its own `attrMap`,
+// `ovr`, `arch`, `height` / `weight` and `logoDir` (soccer: /soccer?b=…, components/SoccerApp.jsx)
+export default function SharedBuildPage({ build, types, onPlay, attrMap = null, ovr: ovrIn = null, arch: archIn = null, height = null, weight = null, logoDir = '/logos/' }) {
   const [rowsVisible, setRowsVisible] = useState(0)
 
   const filled = types.filter(t => build[t])
-  const ovr    = calcOVR(build, types)
-  const arch   = getArchetype(ovr, build, types)
+  const ovr    = ovrIn ?? calcOVR(build, types)
+  const arch   = archIn ?? getArchetype(ovr, build, types)
   const color  = ovrColor(ovr)
 
-  const bodyPhys  = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
-  const heightStr = bodyPhys ? fmtHeight(bodyPhys.height) : null
-  const weightLbs = bodyPhys ? bodyPhys.weight : null
+  const bodyPhys  = !attrMap && build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
+  const heightStr = height ? fmtHeight(height) : bodyPhys ? fmtHeight(bodyPhys.height) : null
+  const weightLbs = weight ?? (bodyPhys ? bodyPhys.weight : null)
+  const hwBoth    = !!(heightStr && weightLbs)
 
   useEffect(() => {
     let i = 0
@@ -66,14 +69,14 @@ export default function SharedBuildPage({ build, types, onPlay }) {
         {/* Attribute list */}
         <div className="simp-attr-table">
           {filled.map((t, i) => {
-            const meta = ATTR[t]
+            const meta = (attrMap ?? ATTR)[t]
             const data = build[t]
             return (
               <div
                 key={t}
                 className={`simp-attr-row${i < rowsVisible ? ' simp-row-visible' : ''}`}
               >
-                <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} />
+                <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} logoDir={logoDir} />
                 <div className="simp-attr-info">
                   <span className="simp-attr-name">{meta.label}</span>
                   <span className="simp-attr-qb">{data.qbFull}</span>

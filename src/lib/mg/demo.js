@@ -248,7 +248,7 @@ function oopPilot(g) {
 }
 
 // ── read: find the man who's really open, tap him (or his lane) ──────────────────
-const SCAN = { 'hot-read': 250, gap: 250, 'jump-route': 260, pnr: 300, 'rim-protect': 40 }
+const SCAN = { 'hot-read': 250, gap: 250, 'jump-route': 260, 'zone-drop': 260, pnr: 300, 'rim-protect': 40 }
 function readPilot(g, game) {
   const scan = SCAN[game] ?? 250, aimed = g.zones === 'none'
   let rep = -1, sawOpen = false, at = Infinity, k = 0
@@ -417,7 +417,203 @@ function passproPilot(g) {
     return out.length ? out : undefined
   }
 }
-const PILOTS = { passpro: passproPilot, catch: catchPilot, cone: conePilot, cut: cutPilot, dash: dashPilot, bench: benchPilot, calls: callsPilot, fastbreak: fastbreakPilot, goalline: goallinePilot, leverage: leveragePilot, lockdown: lockdownPilot, meter: meterPilot, oop: oopPilot, halfcourt: halfcourtPilot, read: readPilot, rebound: reboundPilot, rush: rushPilot, throw: throwPilot }
+// ── soccer ──────────────────────────────────────────────────────────────────
+// (the free-control soccer games take keys, as Get a Bucket's pilot does: the arrows, SPACE, E)
+const keyer = () => {
+  const held = {}, out = []
+  return { out, key: (k, d) => { if (d && !held[k]) { held[k] = 1; out.push({ kind: 'key', zone: k }) } else if (!d && held[k]) { held[k] = 0; out.push({ kind: 'keyup', zone: k }) } }, flush: () => (out.length ? out.splice(0) : undefined) }
+}
+// penalty: aim late in the run-up at a corner, two thirds of the power, the timed finish; if he goes early, the other way
+function penaltyPilot(g) {
+  const K = keyer()
+  let side = g.tellSide ? -g.tellSide : 1, stage = 0, rel = 0
+  return () => {
+    if (g.done || g.res || g.phase === 'set') return K.flush()
+    if (stage === 0 && g.phase === 'wait' && g.t > 1300) { K.key('S', true); stage = 1; rel = g.t + g.k.fill * 0.6 }
+    if (stage >= 1 && g.struckAt == null) { if (g.kdive) side = -g.kdive; K.key(side < 0 ? 'L' : 'R', true); K.key(side < 0 ? 'R' : 'L', false); K.key('U', true) }
+    if (stage === 1 && g.t >= rel) { K.key('S', false); stage = 2 }
+    if (stage === 2 && g.k.phase === 'strike' && g.t >= g.k.strikeAt) { K.key('S', true); stage = 3 }
+    return K.flush()
+  }
+}
+// one-on-one: run at him, and from the edge of the box pick the far corner, the timed finish
+function oneononePilot(g) {
+  const K = keyer()
+  let stage = 0, rel = 0
+  return () => {
+    if (g.done || g.res || g.phase === 'set') return K.flush()
+    const b = g.bl, D = Math.hypot(b.x, b.z), near = Math.hypot(b.x - g.me.x, b.z - g.me.z)
+    if (stage === 0) { K.key('U', D > 21); if (Math.abs(g.me.x) > 3) K.key(g.me.x > 0 ? 'L' : 'R', true); else { K.key('L', false); K.key('R', false) } }
+    if (stage === 0 && D < 15.5 && near < 2.4) { K.key('U', false); const sd = -(Math.sign(g.gk.x - b.x * 0.3) || 1); K.key(sd < 0 ? 'L' : 'R', true); K.key(sd < 0 ? 'R' : 'L', false); K.key('S', true); stage = 1; rel = g.t + g.k.fill * 0.6 }
+    if (stage === 1 && g.t >= rel) { K.key('S', false); stage = 2 }
+    if (stage === 2 && g.k.phase === 'strike' && g.t >= g.k.strikeAt) { K.key('S', true); stage = 3 }
+    return K.flush()
+  }
+}
+// header: wait for him to watch the winger, then the run to the back post; up as the ring closes, away from the keeper
+function headerPilot(g) {
+  const K = keyer()
+  let go = null, jumped = false
+  return () => {
+    if (g.done || g.res) return K.flush()
+    if (g.phase === 'mark') {
+      if (go == null && g.watching && g.t > g.runMs - 700) go = g.t + REACT * 0.3
+      // (the back post: away from the side he marks you on)
+      if (go != null && g.t >= go) { const dx = -3.8 - g.me.x, dz = -8 - g.me.z; K.key('R', dx > 0.3); K.key('L', dx < -0.3); K.key('U', dz > 0.3); K.key('D', dz < -0.3) }
+      return K.flush()
+    }
+    if (!jumped && g.phase === 'cross') {
+      if (g.t < g.arriveAt - 380) { const dx = g.to.x - g.me.x, dz = g.to.z - g.me.z; K.key('R', dx > 0.2); K.key('L', dx < -0.2); K.key('U', dz > 0.2); K.key('D', dz < -0.2) }
+      else { K.key('U', false); K.key('D', false); const sd = -(Math.sign(g.gk.x - g.to.x * 0.4) || 1); K.key(sd < 0 ? 'L' : 'R', true); K.key(sd < 0 ? 'R' : 'L', false) }
+      if (g.t >= g.arriveAt - 250) { jumped = true; K.key('S', true) }
+    }
+    return K.flush()
+  }
+}
+// volley: in line with it, then first time, let go right as it gets to him
+function volleyPilot(g) {
+  const K = keyer()
+  let stage = 0
+  return () => {
+    if (g.done || g.res) return K.flush()
+    if (g.phase === 'drop' && stage < 2) {
+      if (g.t < g.arriveAt - 420) { const dx = g.land.x - g.me.x, dz = g.land.z - g.me.z; K.key('R', dx > 0.2); K.key('L', dx < -0.2); K.key('U', dz > 0.25); K.key('D', dz < -0.25) }
+      else { K.key('U', false); K.key('D', false); K.key('L', false); K.key('R', true) }
+      if (stage === 0 && g.t >= g.arriveAt - 440) { K.key('S', true); stage = 1 }
+      if (stage === 1 && g.t >= g.arriveAt) { K.key('S', false); stage = 2 }
+    }
+    return K.flush()
+  }
+}
+// slalom: the way the arrow points, as the ring closes
+function slalomPilot(g) {
+  let k = -1
+  return () => {
+    if (g.done || g.phase !== 'run' || g.k >= g.n) return
+    const c = g.cuts[g.k]
+    if (g.k !== k && g.t >= c.arrive) { k = g.k; return [{ kind: 'down', zone: c.want < 0 ? 'L' : 'R', x: 0, y: 0 }] }
+  }
+}
+// finishing: the arrows at the lit target, half the bar, the timed finish
+function finishingPilot(g) {
+  const K = keyer()
+  let shot = -1, stage = 0, rel = 0
+  return () => {
+    if (g.done) return K.flush()
+    if (g.phase !== 'aim') { K.key('S', false); return K.flush() }
+    if (g.i !== shot) { shot = g.i; stage = 0 }
+    const sh = g.shots[g.i], tx = sh.k % 2 ? 1 : -1, ty = sh.k < 2 ? 1 : sh.k < 4 ? -1 : 0
+    K.key('L', tx < 0); K.key('R', tx > 0); K.key('U', ty > 0); K.key('D', ty < 0)
+    const go = sh.spot.roll ? g.rollAt - g.k.fill * 0.5 - 180 : g.at + REACT + 200
+    if (stage === 0 && g.t >= go) { K.key('S', true); stage = 1; rel = g.t + g.k.fill * 0.5 }
+    if (stage === 1 && g.t >= rel) { K.key('S', false); stage = 2 }
+    if (stage === 2 && g.k.phase === 'strike' && g.t >= g.k.strikeAt) { K.key('S', true); stage = 3 }
+    if (stage === 3 && g.k.phase !== 'strike') K.key('S', false)
+    return K.flush()
+  }
+}
+// free kick: the curler, stick to the top corner on the wall's side, a good weight on it, the tap on the strike
+function freekickPilot(g) {
+  let st = 'aim', relAt = Infinity, tapped = false
+  return () => {
+    if (g.done) return
+    const stick = { kind: 'stick', x: g.sgn * 0.93, y: 0.8 }
+    if (st === 'aim') { if (g.phase !== 'aim' || g.t < 1300 + REACT + 200) return [stick]; st = 'hold'; relAt = g.t + 0.62 * 900; return [stick, { kind: 'key', zone: 'P' }] }
+    if (st === 'hold' && g.t >= relAt) { st = 'tap'; return [{ kind: 'keyup', zone: 'P' }] }
+    if (st === 'tap' && !tapped && g.k.phase === 'strike' && g.t >= g.k.strikeAt) { tapped = true; return [{ kind: 'key', zone: 'P' }, { kind: 'keyup', zone: 'P' }] }
+  }
+}
+// 2-on-1: wait for the last man; he steps up, square it; he drops off, shoot low away from the keeper
+function counterPilot(g) {
+  let st = 'run', at = Infinity, relAt = Infinity, tapped = false
+  return () => {
+    if (g.done) return
+    const out = [{ kind: 'stick', x: (g.gk.x > 0 ? -1 : 1) * 0.82, y: -0.35 }]
+    if (st === 'run' && g.commitAt != null && at === Infinity) at = g.t + REACT
+    if (st === 'run' && g.t >= at) {
+      if (g.goes === 'ball') { st = 'done'; out.push({ kind: 'key', zone: 'P' }, { kind: 'keyup', zone: 'P' }) }
+      else { st = 'hold'; relAt = g.t + 0.55 * 720; out.push({ kind: 'key', zone: 'S' }) }
+    } else if (st === 'hold' && g.t >= relAt) { st = 'tap'; out.push({ kind: 'keyup', zone: 'S' }) }
+    else if (st === 'tap' && !tapped && g.k.phase === 'strike' && g.t >= g.k.strikeAt) { tapped = true; out.push({ kind: 'key', zone: 'S' }, { kind: 'keyup', zone: 'S' }) }
+    return g.shot || g.pass ? out.slice(1) : out
+  }
+}
+// first touch: the foot it drops to as it gets there; then the foot the pass comes to
+function firsttouchPilot(g) {
+  let last = null
+  return () => {
+    if (g.done) return
+    if (g.phase === 'ups' && g.t >= g.nextAt && last !== `u${g.ups}`) { last = `u${g.ups}`; return [{ kind: 'down', zone: g.side < 0 ? 'L' : 'R', x: 0, y: 0 }] }
+    if (g.phase === 'pass' && !g.touch && g.t >= g.arriveAt && last !== `p${g.k}`) { last = `p${g.k}`; return [{ kind: 'down', zone: g.passes[g.k].side < 0 ? 'L' : 'R', x: 0, y: 0 }] }
+  }
+}
+// ── baseball ────────────────────────────────────────────────────────────────
+// at the plate: the zone on to where it's crossing, a swing at the strikes as it gets there (power when it's middle),
+// the takes on the ones off the plate; batting practice, power every time
+function atbatPilot(g) {
+  let id = null, plan = null
+  return () => {
+    if (g.done || g.res || g.phase !== 'flight') return [{ kind: 'stick', x: 0, y: 0 }]
+    const p = g.pitch
+    if (id !== g.relAt) { id = g.relAt; const inz = Math.abs(p.to.x) <= 0.26 && p.to.y >= 0.47 && p.to.y <= 1.09; const mid = Math.abs(p.to.x) < 0.13; plan = { go: g.tee || inz, key: g.tee || (mid && g.count.s < 2) ? 'P' : 'S', at: g.arrive - (g.tee || (mid && g.count.s < 2) ? 155 : 135) } }
+    if (g.t < g.relAt + REACT) return
+    const dx = p.to.x - g.pci.x, dy = p.to.y - g.pci.y
+    const out = [{ kind: 'stick', x: Math.abs(dx) < 0.01 ? 0 : Math.max(-1, Math.min(1, dx / 0.06)), y: Math.abs(dy) < 0.01 ? 0 : Math.max(-1, Math.min(1, dy / 0.06)) }]
+    if (plan.go && !g.swing && g.t >= plan.at) { plan.go = false; out.push({ kind: 'key', zone: plan.key }, { kind: 'keyup', zone: plan.key }) }
+    return out
+  }
+}
+// on the mound: the catcher's sign, the glove to the corner (or the bullpen's spot), just under the red line, the release
+function pitchPilot(g) {
+  let id = null, plan = null
+  return () => {
+    if (g.done || g.res) return
+    if (g.phase === 'set' && id !== `${g.n}|${g.bi}`) {
+      id = `${g.n}|${g.bi}`
+      const B = g.batters[g.bi]?.prof, away = B ? (B.hand > 0 ? 1 : -1) : 1
+      const to = g.game === 'bullpen' ? g.target : g.game === 'pitch-velo' ? { x: 0, y: 0.78 } : g.count.s === 2 ? { x: away * 0.3, y: 0.4 } : { x: away * 0.18, y: 0.6 }
+      plan = { to, ready: Math.max(g.at + 600, g.t + REACT * 2), held: false, rel: null, tapped: false, want: g.game === 'pitch-velo' ? 1 : 0.82 }
+    }
+    if (!plan) return
+    if (g.phase === 'set') {
+      const dx = plan.to.x - g.aim.x, dy = plan.to.y - g.aim.y
+      const out = [{ kind: 'stick', x: Math.abs(dx) < 0.01 ? 0 : Math.max(-1, Math.min(1, dx / 0.08)), y: Math.abs(dy) < 0.01 ? 0 : Math.max(-1, Math.min(1, dy / 0.08)) }]
+      if (!plan.held && g.t >= plan.ready && Math.hypot(dx, dy) < 0.02) { plan.held = true; plan.rel = g.t + g.k.fill * plan.want; out.push({ kind: 'key', zone: 'S' }) }
+      return out
+    }
+    const out = [{ kind: 'stick', x: 0, y: 0 }]
+    if (g.k.phase === 'power' && plan.rel != null && g.t >= plan.rel) { plan.rel = null; out.push({ kind: 'keyup', zone: 'S' }) }
+    if (g.k.phase === 'deliver' && !plan.tapped && g.t >= g.k.strikeAt) { plan.tapped = true; out.push({ kind: 'key', zone: 'S' }, { kind: 'keyup', zone: 'S' }) }
+    return out
+  }
+}
+// on first: a good lead, then the read (a beat longer on a lefty), GO on the move home, BACK on the throw over
+function stealPilot(g) {
+  let seen = null, plan = null
+  return () => {
+    if (g.done || g.res) return
+    const out = []
+    if ((g.phase === 'lead' || g.phase === 'set') && g.goAt == null && !g.dive) { const d = 3.8 - g.lead; out.push({ kind: 'stick', x: Math.abs(d) < 0.08 ? 0 : Math.max(-1, Math.min(1, d / 0.4)), y: 0 }) }
+    if (g.moveAt != null && seen !== g.moveAt) { seen = g.moveAt; plan = { at: g.moveAt + REACT + (g.lefty ? 230 : 0), key: g.move === 'home' ? 'S' : 'P' } }
+    if (plan && g.t >= plan.at) { out.push({ kind: 'key', zone: plan.key }, { kind: 'keyup', zone: plan.key }); plan = null }
+    return out.length ? out : undefined
+  }
+}
+// in right field: on line, the crow hop, let go at the top
+function ofarmPilot(g) {
+  let rep = -1, held = false
+  return () => {
+    if (g.done) return
+    if (g.rep !== rep) { rep = g.rep; held = false }
+    if (g.phase === 'field' && !held && g.t >= g.at + REACT) { held = true; return [{ kind: 'key', zone: 'S' }] }
+    if (g.phase === 'hop' && g.t - g.holdAt >= 360) return [{ kind: 'keyup', zone: 'S' }]
+    if (g.phase === 'roll' || g.phase === 'field') return [{ kind: 'stick', x: -g.aim.x / 2, y: -0.3 }]
+  }
+}
+const PILOTS = { passpro: passproPilot, catch: catchPilot, cone: conePilot, cut: cutPilot, dash: dashPilot, bench: benchPilot, calls: callsPilot, fastbreak: fastbreakPilot, goalline: goallinePilot, leverage: leveragePilot, lockdown: lockdownPilot, meter: meterPilot, oop: oopPilot, halfcourt: halfcourtPilot, read: readPilot, rebound: reboundPilot, rush: rushPilot, throw: throwPilot,
+  penalty: penaltyPilot, oneonone: oneononePilot, header: headerPilot, volley: volleyPilot, slalom: slalomPilot, finishing: finishingPilot,
+  freekick: freekickPilot, counter: counterPilot, firsttouch: firsttouchPilot,
+  atbat: atbatPilot, pitch: pitchPilot, steal: stealPilot, ofarm: ofarmPilot }
 export const pilotFor = (botName, g, game) => PILOTS[botName]?.(g, game) ?? (() => undefined)
 
 // How the demo's one rep went. Most games mark it in the first of their dots; the one-play games in done.
@@ -430,7 +626,7 @@ export function firstRep(game, g) {
   return g.done ? !!g.done.hit : null
 }
 // ms the demo keeps playing once its rep is in (the payoff), before it starts again
-export const AFTER = { default: 850, 'two-minute': 1300, bench: 300, nbench: 300 }
+export const AFTER = { default: 850, 'two-minute': 1300, bench: 300, nbench: 300, penalty: 1300, 'one-on-one': 1300, header: 1300, volley: 1300, 'free-kick': 1300, 'two-on-one': 1300, 'at-bat': 1500, 'walk-off': 1500, 'strike-out': 1500, 'escape-jam': 1500, 'steal-second': 1300 }
 
 // A short line over the demo where the game's own prompt doesn't say what the thumb does. {T}: TAP or CLICK
 export const CAPTION = {
@@ -451,6 +647,19 @@ export const CAPTION = {
   passpro: { wait: 'WATCH HIS FIRST STEP', press: '{T} THE WAY HE GOES' },
   throw: { wait: 'FIND THE OPEN MAN', press: "PRESS WHERE HE'S GOING", up: 'LET GO TO THROW' },
   halfcourt: { wait: 'SET HIM UP, THEN CROSS OVER' },
+  penalty: { wait: 'PICK A CORNER, THEN RUN UP' },
+  oneonone: { wait: 'THROUGH ON GOAL: PICK A SPOT' },
+  header: { wait: 'MOVE WHEN HE’S BALL-WATCHING' },
+  volley: { wait: 'GET IN LINE AND HIT IT FIRST TIME' },
+  slalom: { wait: 'WATCH THE RING', press: '{T} THE WAY IT POINTS' },
+  finishing: { wait: 'FIND THE TARGET AND STRIKE IT' },
+  freekick: { wait: 'AIM FOR THE CORNER OVER THE WALL', press: 'HOLD CURL…', up: 'LET GO' },
+  counter: { wait: 'WATCH THE LAST MAN', press: 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT' },
+  firsttouch: { wait: 'WATCH IT DROP', press: '{T} THE FOOT IT DROPS TO' },
+  atbat: { wait: 'PICK UP THE SPIN', press: 'SWING AS IT GETS THERE' },
+  pitch: { wait: 'SET THE GLOVE', press: 'HOLD PITCH…', up: 'TAP ON THE RELEASE' },
+  steal: { wait: 'WATCH HIS FIRST MOVE', press: 'GO ON THE LEG KICK' },
+  ofarm: { wait: 'LINE IT UP ON THE PLATE', press: 'HOLD THROUGH THE CROW HOP…', up: 'LET IT GO' },
 }
 // (per game, or game:pos, where the engine's line doesn't fit. press can be a list: the first press, the second...)
 export const CAPTION_GAME = {
@@ -462,5 +671,12 @@ export const CAPTION_GAME = {
   sneak: { wait: 'WAIT FOR THE SNAP', press: '{T} AS FAST AS YOU CAN' },
   gap: { wait: 'READ THE BLOCKS', press: '{T} THE OPEN LANE' },
   'run-stuff': { wait: 'READ THE RUN', press: ['{T} THE SIDE HE RUNS', 'SHED HIM'] },
+  'zone-drop': { wait: 'EYES ON THE QB', press: '{T} THE MAN HE THROWS TO' },
   'pass-rush': { wait: 'WATCH THE BALL', press: ['GET OFF ON THE BALL', '{T} THE MOVE THAT BEATS HIM'] },
+  sprint30: { wait: 'WAIT FOR THE WHISTLE', press: 'LEFT, RIGHT, IN RHYTHM' },
+  sixty: { wait: 'WAIT FOR THE GUN', press: 'LEFT, RIGHT, IN RHYTHM' },
+  'exit-velo': { wait: 'ZONE ON THE TOSS', press: 'DRIVE IT' },
+  'pitch-velo': { wait: 'THE GUNS ARE UP', press: 'HOLD TO THE TOP…', up: 'TAP ON THE RELEASE' },
+  spin: { wait: 'GRIP THE SLIDER', press: 'HOLD PITCH…', up: 'SNAP IT OFF' },
+  bullpen: { wait: 'THE TARGET ON HIS GLOVE', press: 'HOLD PITCH…', up: 'TAP ON THE RELEASE' },
 }

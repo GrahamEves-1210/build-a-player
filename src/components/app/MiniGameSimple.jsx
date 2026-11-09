@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { zoneWidth, powerZone, reactMs, lanesMs, callMs, routes, DRILL_CALLS, LOOKS } from '../../lib/minigames'
 import { SIMPLE_GAMES as GAMES, simpleTraitValue as traitValue } from '../../lib/minigamesSimple'
 import { valToGrade, dlBuildSpot } from '../../utils/simulation'
@@ -10,6 +10,8 @@ import WatchVideo from './WatchVideo'
 import { REWARDED_ON } from '../../lib/rewardedAd'
 import { IconCaret } from './icons'
 import './mg-simple.css'
+// (baseball's own, loaded only when one opens: nothing of it in anyone else's games)
+const BaseballSimple = lazy(() => import('./MiniGameSimpleBaseball'))
 
 // Career's SIMPLE mini games: the original quick skill games (before the canvas games,
 // commit e1255f2), with stand-ins for the moments added since (lib/minigamesSimple.js).
@@ -152,6 +154,7 @@ const LINES = {
   'seal': [['Edge sealed.', 'Walled him off.'], ['Beat on the edge.', 'Lost the leverage.']],
   'juke-te': [['Broke the tackle.', 'Extra yards.'], ['Wrapped up.', 'Down on contact.']],
   'jump-route': [['Jumped it.', 'Broke on the ball.'], ['Bit on the double move.', 'A step late.']],
+  'zone-drop': [['Read the quarterback.', 'Broke on it.'], ['Got looked off.', 'A step late out of the drop.']],
   'tackle-angle': [['Took the right angle.', 'Squared him up.'], ['Bad angle.', 'Ran right past him.']],
   'pass-rush': [['Got home.', 'In the backfield.'], ['Stoned at the line.', 'Stalemate.']],
   'run-stuff': [['Filled it hard.', 'Nothing there.'], ['Out of his gap.', 'Cut back on him.']],
@@ -167,15 +170,22 @@ const LINES = {
   'alley-oop': [['Threw it down.', 'Hammered it home.'], ['Off the fingertips.', 'Could not finish the lob.']],
   'half-court': [['Got a bucket.', 'Cooked him.'], ['Came up empty.', 'They got the stop.']],
   'pass-pro': [['Kept the pocket clean.', 'Nobody got home.'], ['The pocket caved in.', 'Beat off the edge.']],
+  'penalty': [['Sent him the wrong way.', 'Buried it.'], ['Saved.', 'He guessed right.']],
+  'one-on-one': [['Kept his cool.', 'Slotted it home.'], ['The keeper won that one.', 'Should have scored.']],
+  'header': [['Powered it in.', 'Bullet header.'], ['Couldn’t direct it.', 'Got under it.']],
+  'volley': [['Hit it on the half-volley.', 'What a strike.'], ['Skied it.', 'Didn’t catch it right.']],
+  'free-kick': [['Over the wall and in.', 'Right in the top corner.'], ['Into the wall.', 'The keeper had it covered.']],
+  'two-on-one': [['Made the right choice.', 'Finished the break.'], ['Wrong option.', 'Wasted the two-on-one.']],
 }
 const reactLine = (game, out, seed) => { const l = LINES[game]; return l ? pick1(seeded(`line-${seed}-${game}`), l[out.hit ? 0 : 1]) : null }
 // the play's own sound at the result: [made, missed] (contact, a catch, a make, the rim)
 const HIT = ['stamp', 'deny']
 const SOUND = {
   'sneak': HIT, 'seal': HIT, 'release': HIT, 'pass-rush': HIT, 'run-stuff': HIT, 'tackle-angle': HIT, 'juke': HIT, 'juke-wr': HIT, 'juke-te': HIT, 'post-up': HIT,
-  'catch': ['catchball', 'deny'], 'goal-line': ['stamp', 'deny'], 'jump-route': ['catchball', 'deny'],
+  'catch': ['catchball', 'deny'], 'goal-line': ['stamp', 'deny'], 'jump-route': ['catchball', 'deny'], 'zone-drop': ['catchball', 'deny'],
   'clutch-shot': ['make', 'rimmiss'], 'free-throws': ['make', 'rimmiss'], 'board': ['catchball', 'rimmiss'], 'rim-protect': ['stamp', 'make'],
   'lockdown': HIT, 'fast-break': ['make', 'deny'], 'alley-oop': ['make', 'rimmiss'], 'half-court': ['make', 'rimmiss'], 'pass-pro': HIT,
+  'penalty': HIT, 'one-on-one': HIT, 'header': HIT, 'volley': HIT, 'free-kick': HIT, 'two-on-one': HIT,
 }
 
 // retry (Career, app): a miss can be played again for a video, once
@@ -313,8 +323,20 @@ function Game({ def, v, seed, build, pos, onDone }) {
     case 'oop': return <Oop v={v} seed={seed} onDone={onDone} />
     case 'bucket': return <Bucket v={v} seed={seed} onDone={onDone} />
     case 'pro': return <Pro v={v} seed={seed} onDone={onDone} />
+    // soccer
+    case 'pen': return <Pen v={v} seed={seed} onDone={onDone} />
+    case 'oneone': return <OneOne v={v} seed={seed} onDone={onDone} />
+    case 'head': return <Head v={v} seed={seed} onDone={onDone} />
+    case 'vol': return <Vol v={v} seed={seed} onDone={onDone} />
+    case 'slalom': return <Slalom v={v} seed={seed} onDone={onDone} />
+    case 'goalaim': return <GoalAim v={v} seed={seed} onDone={onDone} />
+    case 'fk': return <FreeKickS v={v} seed={seed} onDone={onDone} />
+    case 'twoone': return <TwoOneS v={v} seed={seed} onDone={onDone} />
+    case 'touch': return <TouchS v={v} seed={seed} onDone={onDone} />
+    // baseball
+    case 'bbat': case 'bev': case 'bsteal': case 'bpitch': case 'bgun': case 'bcmd': return <Suspense fallback={null}><BaseballSimple def={def} v={v} seed={seed} onDone={onDone} pos={pos} /></Suspense>
     // the combine
-    case 'dash': return <Dash v={v} seed={seed} onDone={onDone} unit={def.unit} dist={def.dist} game={def.drill} pos={at} />
+    case 'dash': return <Dash v={v} seed={seed} onDone={onDone} unit={def.unit} dist={def.dist} game={def.drill} pos={at} label={def.stat} />
     case 'velo': return <Velo v={v} seed={seed} onDone={onDone} noun={def.noun} />
     case 'aim': return <Aim v={v} seed={seed} onDone={onDone} noun={def.noun} />
     case 'routes': return <Routes v={v} seed={seed} onDone={onDone} />
@@ -1320,7 +1342,7 @@ function Lockdown({ v, seed, onDone }) {
 // ── Get a Bucket: one possession, two beats ─────────────────────────────────
 // His man shows you what he's giving you. He leans a side: cross him the other way and you're downhill to the
 // rim, a layup's window. He sags off: pull up, a jumper's window (tighter). Hesitate and he's set, guess before
-// he shows anything and he picks your pocket. Then the finish: the bar, in the zone.
+// he shows anything and he picks the pocket. Then the finish: the bar, in the zone.
 function Bucket({ v, seed, onDone }) {
   const r = useRng(seed)
   const plan = useMemo(() => ({ look: r() < 0.68 ? (r() < 0.5 ? 'L' : 'R') : 'sag', delay: 650 + r() * 700, zone: 30 + r() * 40, speed: 1.55 + r() * 0.25 }), [r])
@@ -1336,7 +1358,7 @@ function Bucket({ v, seed, onDone }) {
     S.current = { at: now() + plan.delay, T, done: false, readQ: 1 }
     const ts = [
       setTimeout(() => { setCue(plan.look); haptic('light'); if (plan.look !== 'sag') moveTo(him.current, LOCK_X[plan.look] * 0.5 + 25, 30, 220); else moveTo(him.current, 50, 18, 260) }, plan.delay),
-      setTimeout(() => { if (!S.current.done) lose('CUT OFF', 'Too slow: he sat down in front of you.', true) }, plan.delay + T + 60),
+      setTimeout(() => { if (!S.current.done) lose('CUT OFF', 'Too slow: he sat down in front.', true) }, plan.delay + T + 60),
     ]
     return () => ts.forEach(clearTimeout)
   }, []) // eslint-disable-line
@@ -1353,9 +1375,9 @@ function Bucket({ v, seed, onDone }) {
     if (st.done || phase !== 'read') return
     const ts = pressAt(e)
     flash(btns.current[k], 'hit')
-    if (ts < st.at) return lose(k === 'S' ? 'FORCED IT' : 'STRIPPED', 'Went before he showed you anything.')
+    if (ts < st.at) return lose(k === 'S' ? 'FORCED IT' : 'STRIPPED', 'Went before he showed anything.')
     const want = plan.look === 'sag' ? 'S' : flip(plan.look)
-    if (k !== want) return lose(k === 'S' ? 'BLOCKED' : plan.look === 'sag' ? 'CUT OFF' : 'STRIPPED', plan.look === 'sag' ? 'He gave you the shot.' : 'Went right into him.')
+    if (k !== want) return lose(k === 'S' ? 'BLOCKED' : plan.look === 'sag' ? 'CUT OFF' : 'STRIPPED', plan.look === 'sag' ? 'He gave up the shot.' : 'Went right into him.')
     st.done = true
     st.readQ = clamp(1 - Math.max(0, ts - st.at - 380) / Math.max(1, st.T - 380), 0.5, 1)
     good(st.readQ > 0.85)
@@ -1801,11 +1823,11 @@ function Oop({ v, seed, onDone }) {
 }
 
 // ═══ The combine ═══════════════════════════════════════════════════════════
-// ── 40-yard dash: hold for the gun, then alternate feet as fast as you can ──
+// ── 40-yard dash: hold for the gun, then alternate feet as fast as possible ──
 // The time on the board is the official one, on the player's own scale (a B-speed QB runs about a
 // 4.80, a B-speed receiver a 4.48: lib/mg/combineNorms): a clean, quick go at his grade runs his
 // target; slower feet, a slow start or a stumble cost hundredths. It's what Career records.
-function Dash({ v, seed, onDone, unit = 'YDS', dist = 40, game = 'forty', pos = null }) {
+function Dash({ v, seed, onDone, unit = 'YDS', dist = 40, game = 'forty', pos = null, label = null }) {
   const r = useRng(seed)
   const [phase, setPhase] = useState('set')          // set → go
   const [flag, setFlag] = useState(null)              // 'false start' message
@@ -1819,7 +1841,7 @@ function Dash({ v, seed, onDone, unit = 'YDS', dist = 40, game = 'forty', pos = 
   // give up after 10 seconds of running
   useEffect(() => { if (phase !== 'go') return; const t = setTimeout(() => finish(now()), 10000); return () => clearTimeout(t) }, [phase]) // eslint-disable-line
   const sprint = game === 'sprint'
-  const target = dashTarget(game, pos ?? (sprint ? 'guard' : 'wr'), v)
+  const target = dashTarget(game, pos ?? (sprint ? 'guard' : game === 'sprint30' ? 'st' : 'wr'), v)
   // a quick, clean go at this grade: a good start and about 8 steps a second
   const ref = 0.26 + Math.ceil(dist / stride) / 8
   const finish = at => {
@@ -1832,7 +1854,7 @@ function Dash({ v, seed, onDone, unit = 'YDS', dist = 40, game = 'forty', pos = 
     if (callEl.current) callEl.current.textContent = secs.toFixed(2)
     say(fx.current, through ? (score >= 0.85 ? 'BURNER' : hit ? 'GOOD RUN' : 'SLOW') : 'TIME', hit ? 'hit' : 'miss')
     const how = `${through ? (react < 0.25 ? 'Great jump' : react < 0.45 ? 'Clean start' : 'Slow start') : 'Pulled up'}${s.falses ? ' · false start' : ''}${s.stumbles ? ` · ${s.stumbles} stumble${s.stumbles > 1 ? 's' : ''}` : ''}`
-    end({ score, hit, note: `${secs.toFixed(2)}s · ${how}`, raw: { secs }, stat: { label: sprint ? '3/4-COURT SPRINT' : '40-YARD DASH', value: secs.toFixed(2), unit: 'SEC', verdict: score >= 0.85 ? 'BURNER' : hit ? 'GOOD TIME' : 'SLOW TIME', sub: how } })
+    end({ score, hit, note: `${secs.toFixed(2)}s · ${how}`, raw: { secs }, stat: { label: label ?? (sprint ? '3/4-COURT SPRINT' : '40-YARD DASH'), value: secs.toFixed(2), unit: 'SEC', verdict: score >= 0.85 ? 'BURNER' : hit ? 'GOOD TIME' : 'SLOW TIME', sub: how } })
   }
   const foot = (side, e) => {
     const s = S.current
@@ -2584,6 +2606,763 @@ function Bench({ v, load = 1, onDone }) {
       </div>
       <span className="mg-hint mg-reps" ref={count}>0 REPS</span>
       <Hint touch="TAP FAST" desk="SPACE, FAST">TO LOCK IT OUT</Hint>
+    </div>
+  )
+}
+
+// ═══ Soccer: the striker's moments and the academy trial ═══════════════════════
+// The same calls as the Advanced games (lib/mg/penalty.js and the rest), on a small pitch: a goal at the top,
+// dots for the men. Every move is a Web Animation (glide / moveTo); presses are judged at their own timestamp.
+const SOC_LANE = { '-1': 36, 0: 50, 1: 64 }
+const sideOf = k => (k < 0 ? 'L' : k > 0 ? 'R' : 'C')
+function PitchTop({ children, tag = null, className = '' }) {
+  return (
+    <div className={`mg-court mg-pitch ${className}`} aria-hidden="true">
+      <span className="mg-pitch-box" /><span className="mg-pitch-six" /><span className="mg-pitch-goal" /><span className="mg-pitch-spot" />
+      {tag && <i className="mg-court-tag">{tag}</i>}
+      {children}
+    </div>
+  )
+}
+const SocBtn = ({ refFn, onPress, k, children }) => <button className="mg-side" ref={refFn} onPointerDown={primary(onPress)}>{children}{k && <Kbd k={k} />}<Fl /></button>
+
+// ── Penalty: pick your spot as the run-up ends; wait on the keeper and send him the wrong way ──
+function Pen({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const plan = useMemo(() => ({ stay: r() < 0.18, guess: r() < 0.5 ? -1 : 1, dive: -470 + r() * 470, read: r(), run: 800 + r() * 500 }), [r])
+  const late = 160 + (clamp(v, 1, 11) - 1) * 40, readP = 0.72 - (clamp(v, 1, 11) - 1) * 0.042
+  const S = useRef({ run: 0, strike: 0, dive: 0, kgoes: 0, dived: false, pressed: null, read: false, done: false, stut: false })
+  const [phase, setPhase] = useState('set')
+  const [early, setEarly] = useState(false)
+  const keeper = useRef(null), ballEl = useRef(null), fill = useRef(null), fx = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  useLayoutEffect(() => {
+    const t0 = now(), run = t0 + plan.run, strike = run + 1100, dive = strike + plan.dive
+    S.current = { run, strike, dive, kgoes: plan.stay ? 0 : plan.guess, dived: false, pressed: null, read: false, done: false }
+    if (fill.current) { fill.current.style.transform = 'scaleX(0)'; glide(fill.current, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], 1100, run, { fill: 'forwards' }) }
+    const ts = [
+      setTimeout(() => { setPhase('run'); sfx('whistle') }, Math.max(0, plan.run - 380)),
+      setTimeout(() => { const s = S.current; if (s.done) return; s.dived = true; if (s.kgoes) moveTo(keeper.current, SOC_LANE[s.kgoes] + s.kgoes * 6, 16, 300) }, dive - now()),
+      setTimeout(() => { if (S.current.pressed == null && !S.current.done) strike(0, true) }, strike + late - now()),
+    ]
+    return () => ts.forEach(clearTimeout)
+  }, []) // eslint-disable-line
+  const strike = (k, stutter) => {
+    const s = S.current
+    if (s.done) return
+    s.done = true
+    const K = s.kgoes
+    let goal, why
+    if (stutter) { goal = false; why = 'Stuttered and scuffed it' }
+    else if (k === 0) { goal = K !== 0; why = goal ? 'Down the middle' : 'Straight at him' }
+    else if (K === -k) { goal = true; why = s.read ? 'Went the other way' : 'Sent him the wrong way' }
+    else if (K === k) { goal = false; why = s.read ? 'He read it' : 'Guessed right' }
+    else { goal = (s.q ?? 0.8) >= 0.86 - (clamp(v, 1, 11) - 1) * 0.016; why = goal ? 'Tucked it in the corner' : 'He stayed big' }
+    if (!s.dived && K) moveTo(keeper.current, SOC_LANE[K] + K * 6, 16, 260)
+    moveTo(ballEl.current, stutter ? 50 : SOC_LANE[k] + k * 8, goal ? 8 : 18, 380, 'ease-in')
+    if (!stutter) flash(btns.current[sideOf(k)], goal ? 'hit' : 'miss')
+    later(() => {
+      say(fx.current, goal ? 'GOAL' : 'SAVED', goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
+      const q = s.q ?? 0.2
+      later(() => end({ score: goal ? clamp(0.6 + 0.4 * q, 0, 1) : clamp(0.12 + 0.2 * q, 0, 0.45), hit: goal, note: why }), 450)
+    }, 380)
+  }
+  const press = (k, e) => {
+    const s = S.current
+    if (s.done || s.pressed != null || phase !== 'run') return
+    const ts = pressAt(e)
+    if (ts < s.run) return
+    s.pressed = ts
+    // shown him your hips before he's gone: he reads it, often
+    if (!s.dived && ts < s.dive - 60 && plan.read < readP) { s.kgoes = k; s.read = true }
+    s.q = ts <= s.strike - 620 ? 0.74 : ts <= s.strike ? 0.78 + 0.22 * (ts - (s.strike - 620)) / 620 : 1 - 0.2 * (ts - s.strike) / late
+    haptic('light')
+    later(() => strike(k, false), Math.max(0, s.strike - now()))
+  }
+  // the stutter: a check in the run-up. A keeper who's guessing goes early on it (most of them), and you see which way
+  const stutter = e => {
+    const s = S.current
+    if (s.done || s.stut || s.pressed != null || phase !== 'run' || pressAt(e) < s.run) return
+    s.stut = true; haptic('light')
+    if (!plan.stay && plan.read > 0.3 && !s.dived) { s.dived = true; setEarly(true); moveTo(keeper.current, SOC_LANE[s.kgoes] + s.kgoes * 6, 16, 300) }
+  }
+  useKeys({ ArrowLeft: e => press(-1, e), ArrowUp: e => press(0, e), ArrowRight: e => press(1, e), a: e => press(-1, e), w: e => press(0, e), d: e => press(1, e), e: stutter, E: stutter })
+  return (
+    <div className="mg-play mg-play--soc">
+      <div className="mg-box"><Fx r={fx} /><div className="mg-runup"><span ref={fill} /><i>{phase === 'set' ? 'WAIT FOR THE WHISTLE' : early ? 'HE’S GONE EARLY' : 'RUN-UP'}</i></div></div>
+      <PitchTop tag="PENALTY">
+        <span className="mg-pt" ref={keeper} style={{ transform: at2(50, 16) }}><span className="mg-dot is-gk" /></span>
+        <span className="mg-pt" style={{ transform: at2(46, 86) }}><span className="mg-dot is-me" /></span>
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(50, 74) }}><span className="mg-dot is-sball" /></span>
+      </PitchTop>
+      <div className="mg-sides mg-sides--three">
+        <SocBtn refFn={el => { btns.current.L = el }} onPress={e => press(-1, e)} k="←">LEFT</SocBtn>
+        <SocBtn refFn={el => { btns.current.C = el }} onPress={e => press(0, e)} k="↑">MIDDLE</SocBtn>
+        <SocBtn refFn={el => { btns.current.R = el }} onPress={e => press(1, e)} k="→">RIGHT</SocBtn>
+      </div>
+      <div className="mg-sides mg-sides--one"><SocBtn refFn={el => { btns.current.ST = el }} onPress={stutter} k="E">STUTTER</SocBtn></div>
+      <Hint>PICK A CORNER · STUTTER AND THE KEEPER MIGHT GO EARLY</Hint>
+    </div>
+  )
+}
+
+// ── One-on-One: shoot while he's on the move, or wait for him to go down and round him ──
+const OO_WORD = { line: 'ON HIS LINE', out: 'ON THE MOVE', set: 'SET', down: 'DOWN' }
+function OneOne({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const t = (clamp(v, 1, 11) - 1) / 10
+  const plan = useMemo(() => ({ m1: 550 + r() * 300, s1: 300 + r() * 200, m2: 520 + r() * 200, s2: 260 + r() * 180, kside: r() < 0.5 ? -1 : 1, roll: r() }), [r])
+  const runMs = 3500 - t * 700, outAt = 500, downAt = runMs * 0.8, roundMs = 400 + t * 460, catchAt = 1800 + t * 2600
+  const S = useRef({ t0: 0, done: false })
+  const [state, setState] = useState('line')
+  const me = useRef(null), gk = useRef(null), def = useRef(null), ballEl = useRef(null), fx = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  const stateAt = el => {
+    if (el < outAt) return 'line'
+    if (el >= downAt) return 'down'
+    let a = el - outAt
+    for (const [st, d] of [['out', plan.m1], ['set', plan.s1], ['out', plan.m2], ['set', plan.s2]]) { if (a < d) return st; a -= d }
+    return 'out'
+  }
+  useLayoutEffect(() => {
+    const t0 = now() + 500
+    S.current = { t0, done: false }
+    glide(me.current, [{ transform: at2(46, 92) }, { transform: at2(48, 30) }], runMs, t0, { fill: 'forwards', easing: 'linear' })
+    glide(def.current, [{ transform: at2(36, 99) }, { transform: at2(46, 30) }], runMs * 0.97, t0, { fill: 'forwards', easing: 'ease-in' })
+    glide(gk.current, [{ transform: at2(50, 12), offset: 0 }, { transform: at2(50, 12), offset: outAt / downAt }, { transform: at2(49, 26), offset: 1 }], downAt, t0, { fill: 'forwards' })
+    let raf = 0
+    const tick = () => {
+      const s = S.current
+      if (s.done) return
+      const el = now() - t0
+      setState(stateAt(el))
+      if (el >= catchAt && el < downAt) return settle(false, 'The defender got a foot in', 'TACKLED')
+      if (el >= downAt + roundMs) return settle(false, 'Keeper smothers it at his feet', 'SMOTHERED')
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, []) // eslint-disable-line
+  useEffect(() => { if (state === 'down') moveTo(gk.current, 49 + plan.kside * 10, 28, 300) }, [state]) // eslint-disable-line
+  const settle = (goal, why, word, k = null) => {
+    const s = S.current
+    if (s.done) return
+    s.done = true
+    ;[me, def, gk].forEach(x => freeze(x.current))
+    if (k != null) flash(btns.current[sideOf(k)], goal ? 'hit' : 'miss')
+    if (goal) moveTo(ballEl.current, 50 + (k ? -plan.kside * 6 : (plan.roll < 0.5 ? -8 : 8)), 6, 360, 'ease-in')
+    say(fx.current, word, goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
+    later(() => end({ score: goal ? 0.78 : 0.2, hit: goal, note: why }), 650)
+  }
+  const press = (k, e) => {
+    const s = S.current
+    if (s.done || !s.t0) return
+    const el = pressAt(e) - s.t0, st = stateAt(el)
+    if (el < 0) return
+    if (el >= catchAt && st !== 'down') return settle(false, 'The defender got a foot in', 'TACKLED', k)
+    if (k === 0) {
+      if (st === 'down') return el - downAt <= roundMs * 0.5 && plan.roll < 0.6 + t * 0.35 ? settle(true, 'Lifted it over him', 'GOAL', 0) : settle(false, 'He got down and smothered it', 'SAVED', 0)
+      if (st === 'set') return plan.roll < (0.08 + t * 0.32) ? settle(true, 'Picked his spot past him', 'GOAL', 0) : settle(false, 'He was set and saved it', 'SAVED', 0)
+      if (el < outAt + plan.m1 * 0.3) return settle(false, 'Dragged it wide from distance', 'WIDE', 0)
+      if (el > downAt - 380) return settle(false, 'He came out and made himself big', 'SAVED', 0)
+      return plan.roll < 0.5 + t * 0.44 ? settle(true, 'Hit it before he was set', 'GOAL', 0) : settle(false, 'Good save, at full stretch', 'SAVED', 0)
+    }
+    if (el < downAt - 1100) return     // (nothing to take on yet)
+    if (st !== 'down') return settle(false, 'Went too early: he stayed on his feet', 'TOO EARLY', k)
+    if (k === plan.kside) return settle(false, 'Took it the way he was diving', 'SAVED', k)
+    settle(true, 'Took it round the keeper', 'GOAL', k)
+  }
+  // the dink: over a keeper who's come off his line (on the move toward you, or down); a keeper on his line takes it
+  const chip = e => {
+    const s = S.current
+    if (s.done || !s.t0) return
+    const el = pressAt(e) - s.t0, st = stateAt(el)
+    if (el < 0) return
+    if (el >= catchAt && st !== 'down') return settle(false, 'The defender got a foot in', 'TACKLED', 0)
+    if (st === 'line' || el < outAt + plan.m1 * 0.5) return settle(false, 'He was on his line: the chip dropped into his arms', 'SAVED', 0)
+    if (st === 'down' || el > downAt - 700) return plan.roll < 0.62 + t * 0.3 ? settle(true, 'Dinked it over him', 'GOAL', 0) : settle(false, 'Too much on the chip: over the bar', 'OVER', 0)
+    return plan.roll < 0.3 + t * 0.3 ? settle(true, 'Dinked it over him', 'GOAL', 0) : settle(false, 'Not enough on it: he backpedalled and took it', 'SAVED', 0)
+  }
+  useKeys({ ArrowLeft: e => press(-1, e), ArrowUp: e => press(0, e), ArrowRight: e => press(1, e), a: e => press(-1, e), w: e => press(0, e), d: e => press(1, e), ' ': e => press(0, e), e: chip, E: chip })
+  return (
+    <div className="mg-play mg-play--soc">
+      <div className="mg-box"><Fx r={fx} /><div className={`mg-rush mg-keeper is-${state}`}><i>KEEPER · {OO_WORD[state]}{state === 'down' ? (plan.kside < 0 ? ' ◀' : ' ▶') : ''}</i></div></div>
+      <PitchTop tag="THROUGH ON GOAL">
+        <span className="mg-pt" ref={gk} style={{ transform: at2(50, 12) }}><span className="mg-dot is-gk" /></span>
+        <span className="mg-pt" ref={def} style={{ transform: at2(36, 99) }}><span className="mg-dot is-d" /></span>
+        <span className="mg-pt" ref={me} style={{ transform: at2(46, 92) }}><span className="mg-dot is-me" /></span>
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(50, 30) }}><span className="mg-dot is-sball is-hide" /></span>
+      </PitchTop>
+      <div className="mg-sides mg-sides--three">
+        <SocBtn refFn={el => { btns.current.L = el }} onPress={e => press(-1, e)} k="←">LEFT</SocBtn>
+        <SocBtn refFn={el => { btns.current.C = el }} onPress={e => press(0, e)} k="↑">SHOOT</SocBtn>
+        <SocBtn refFn={el => { btns.current.R = el }} onPress={e => press(1, e)} k="→">RIGHT</SocBtn>
+      </div>
+      <div className="mg-sides mg-sides--one"><SocBtn refFn={el => { btns.current.CH = el }} onPress={chip} k="E">CHIP</SocBtn></div>
+      <Hint>HIT IT BEFORE HE’S SET · DINK HIM IF HE’S OFF HIS LINE · ROUND HIM WHEN HE GOES DOWN</Hint>
+    </div>
+  )
+}
+
+// ── Header: lose your marker, then go up as it gets there and pick the corner ──
+function Head({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const t = (clamp(v, 1, 11) - 1) / 10
+  const plan = useMemo(() => {
+    const looks = []; let at = 900 + r() * 500
+    const n = r() < 0.55 ? 1 : r() < 0.6 ? 2 : 0
+    for (let i = 0; i < n; i++) { const d = 150 + r() * 110; looks.push({ at, end: at + d, long: false }); at += d + 420 + r() * 520 }
+    const longMs = 330 + t * 310
+    looks.push({ at, end: at + longMs, long: true })
+    return { looks, deadline: at + longMs + 260, across: r() < 0.4, moveF: 0.06 + r() * 0.22, flight: 1000 + r() * 100 }
+  }, [r]) // eslint-disable-line
+  const W = 85 + t * 85
+  const [beat, setBeat] = useState('mark')
+  const [watch, setWatch] = useState(false)
+  const S = useRef({ t0: 0, free: false, arrive: 0, gone: false, done: false })
+  const ballEl = useRef(null), gk = useRef(null), mark = useRef(null), fx = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  useLayoutEffect(() => {
+    const t0 = now(); S.current = { t0, free: false, arrive: 0, gone: false, done: false }
+    let raf = 0
+    const tick = () => {
+      const s = S.current
+      if (s.done || s.arrive) return
+      const el = now() - t0
+      setWatch(plan.looks.some(l => el >= l.at && el < l.end))
+      if (el >= plan.deadline) return cross(false)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, []) // eslint-disable-line
+  const cross = free => {
+    const s = S.current
+    if (s.arrive) return
+    s.free = free; s.arrive = now() + 300 + plan.flight
+    setBeat('cross'); setWatch(false)
+    moveTo(mark.current, free ? 56 : 51, free ? 66 : 58, 400)
+    glide(ballEl.current, [{ transform: at2(100, 50) }, { transform: at2(74, 12) }, { transform: at2(50, 54) }], plan.flight, now() + 300, { fill: 'forwards', easing: 'linear' })
+    if (plan.across) later(() => { s.gone = true; moveTo(gk.current, 40, 14, 320) }, 300 + plan.flight * plan.moveF)
+    later(() => { if (!S.current.done) settle(null, false, 'Never got there: it flashed across goal', 'MISSED IT') }, 300 + plan.flight + W + 40)
+  }
+  const settle = (k, goal, why, word) => {
+    const s = S.current
+    if (s.done) return
+    s.done = true
+    if (k != null) { flash(btns.current[sideOf(k)], goal ? 'hit' : 'miss'); freeze(ballEl.current); moveTo(ballEl.current, k < 0 ? 37 : 63, goal ? 6 : 14, 300, 'ease-in') }
+    say(fx.current, word, goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
+    later(() => end({ score: goal ? clamp(0.6 + (s.free ? 0.15 : 0) + 0.2 * (s.q ?? 0.5), 0, 1) : 0.2, hit: goal, note: why }), 650)
+  }
+  // the run: near post or far post. Near, the near corner's the one (unless the keeper's across); far, back across him
+  const run = (post, e) => {
+    const s = S.current
+    if (beat !== 'mark' || s.arrive) return
+    const el = pressAt(e) - s.t0
+    const look = plan.looks.find(l => el >= l.at && el < l.end)
+    s.post = post
+    flash(btns.current[post], look?.long ? 'hit' : 'miss')
+    say(fx.current, look?.long ? 'LOST HIM' : 'MARKER WENT WITH HIM', look?.long ? 'hit' : 'miss')
+    cross(!!look?.long)
+  }
+  const head = (k, e) => {
+    const s = S.current
+    if (beat !== 'cross' || s.done) return
+    const e2 = pressAt(e) - s.arrive, win = s.free ? W : W * 0.62
+    if (Math.abs(e2) > win) return settle(k, false, e2 < 0 ? 'Went up too early: over the bar' : 'Too late: it came off the back of his head', 'OVER THE BAR')
+    s.q = 1 - Math.abs(e2) / win
+    const open = s.post === 'NEAR' ? (s.gone ? -1 : 1) : (s.gone ? 1 : -1)
+    if (k !== open) return settle(k, false, s.free ? 'Headed it straight at the keeper' : 'Weak header, the keeper gathered it', 'SAVED')
+    if (!s.free && s.q < 0.45) return settle(k, false, 'Couldn’t get enough on it with him on his back', 'SAVED')
+    settle(k, true, k < 0 ? 'Back across the keeper, into the far corner' : 'Flicked it in at the near post', 'GOAL')
+  }
+  useKeys({ ArrowUp: e => run('NEAR', e), ArrowDown: e => run('FAR', e), w: e => run('NEAR', e), s: e => run('FAR', e), ArrowLeft: e => head(-1, e), ArrowRight: e => head(1, e), a: e => head(-1, e), d: e => head(1, e) })
+  return (
+    <div className="mg-play mg-play--soc">
+      <div className="mg-box"><Fx r={fx} /><div className={`mg-rush mg-marker${watch ? ' is-watch' : ''}`}><i>{beat === 'mark' ? (watch ? 'HE’S BALL-WATCHING' : 'TIGHT ON HIM') : 'ATTACK IT'}</i></div></div>
+      <PitchTop tag="CROSS FROM THE RIGHT">
+        <span className="mg-pt" ref={gk} style={{ transform: at2(58, 14) }}><span className="mg-dot is-gk" /></span>
+        <span className="mg-pt" ref={mark} style={{ transform: at2(52, 70) }}><span className="mg-dot is-d" /></span>
+        <span className="mg-pt" style={{ transform: at2(46, 66) }}><span className="mg-dot is-me" /></span>
+        <span className="mg-pt mg-meet" style={{ transform: at2(50, 54) }}><i /></span>
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(100, 50) }}><span className="mg-dot is-sball" /></span>
+      </PitchTop>
+      {beat === 'mark'
+        ? <div className="mg-sides"><SocBtn refFn={el => { btns.current.NEAR = el }} onPress={e => run('NEAR', e)} k="↑">NEAR POST</SocBtn><SocBtn refFn={el => { btns.current.FAR = el }} onPress={e => run('FAR', e)} k="↓">FAR POST</SocBtn></div>
+        : <div className="mg-sides"><SocBtn refFn={el => { btns.current.L = el }} onPress={e => head(-1, e)} k="←">LEFT</SocBtn><SocBtn refFn={el => { btns.current.R = el }} onPress={e => head(1, e)} k="→">RIGHT</SocBtn></div>}
+      <Hint>{beat === 'mark' ? 'MAKE THE RUN WHEN HE’S BALL-WATCHING' : 'ATTACK IT · BACK ACROSS THE KEEPER, OR THE CORNER HE’S LEFT'}</Hint>
+    </div>
+  )
+}
+
+// ── Volley: first time as it drops, or a touch and a shot before he closes you down ──
+function Vol({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const t = (clamp(v, 1, 11) - 1) / 10
+  // (it never drops the same way twice: a high looping one, one driven back at him, one that bounces in front of him)
+  const plan = useMemo(() => { const kind = ['HIGH ONE', 'DRIVEN BACK AT HIM', 'IT’S GOING TO BOUNCE'][Math.floor(r() * 3)]; return { kind, wait: 900 + r() * 500, flight: kind === 'HIGH ONE' ? 1500 + r() * 150 : kind === 'DRIVEN BACK AT HIM' ? 1000 + r() * 120 : 1300 + r() * 150, block: 520 + r() * 260, side: r() < 0.5 ? -1 : 1 } }, [r])
+  const Wv = 42 + t * 58, Wt = 75 + t * 75, Ws = 48 + t * 60
+  const [beat, setBeat] = useState('drop')
+  const S = useRef({ drop: 0, touch: 0, ring: 0, done: false, heavy: false })
+  const ballEl = useRef(null), def = useRef(null), fx = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  useLayoutEffect(() => {
+    const start = now() + plan.wait, drop = start + plan.flight
+    S.current = { drop, touch: 0, ring: 0, done: false, heavy: false }
+    glide(ballEl.current, [{ transform: at2(52, 24) }, { transform: at2(48, 4), offset: 0.45 }, { transform: at2(45, 78) }], plan.flight, start, { fill: 'forwards', easing: 'linear' })
+    later(() => sfx('tap'), plan.wait)
+    later(() => { const s = S.current; if (!s.touch && !s.done) settle(false, 'Let it bounce: they cleared it', 'CLEARED') }, plan.wait + plan.flight + Wt * 2.2)
+  }, []) // eslint-disable-line
+  const settle = (goal, why, word, q = 0.5, k = null) => {
+    const s = S.current
+    if (s.done) return
+    s.done = true
+    if (k) flash(btns.current[k], goal ? 'hit' : 'miss')
+    freeze(def.current); freeze(ballEl.current)
+    const over = word === 'OVER THE BAR', blocked = word === 'BLOCKED'
+    moveTo(ballEl.current, goal ? 50 + plan.side * 9 : over ? 50 + plan.side * 6 : blocked ? 62 : 50 + plan.side * 4, goal ? 6 : over ? -4 : blocked ? 70 : 16, 380, 'ease-in')
+    say(fx.current, word, goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
+    const vol = !s.touch
+    later(() => end({ score: goal ? clamp((vol ? 0.72 : 0.58) + (vol ? 0.28 : 0.3) * q, 0, 1) : 0.15, hit: goal, note: why }), 650)
+  }
+  const press = (kind, e) => {
+    const s = S.current
+    if (s.done) return
+    const ts = pressAt(e)
+    if (beat === 'drop') {
+      const e2 = ts - s.drop
+      if (ts < s.drop - Wt * 2.5) return
+      if (kind === 'VOLLEY') {
+        if (Math.abs(e2) > Wv) return e2 < 0 ? settle(false, 'Leaned back and lifted it over', 'OVER THE BAR', 0, 'VOLLEY') : settle(false, 'Scuffed it, straight at the keeper', 'SAVED', 0, 'VOLLEY')
+        const q = 1 - Math.abs(e2) / Wv
+        return q >= 0.4 ? settle(true, q > 0.8 ? 'Caught it sweet on the volley' : 'Volleyed it in', 'GOAL', q, 'VOLLEY') : settle(false, 'Got it on target, the keeper got down to it', 'SAVED', q, 'VOLLEY')
+      }
+      if (kind !== 'TOUCH') return
+      if (Math.abs(e2) > Wt * 1.9) return settle(false, 'Miscontrolled it', 'MISCONTROLLED', 0, 'TOUCH')
+      s.heavy = Math.abs(e2) > Wt; s.touch = ts; s.ring = ts + 540 + (s.heavy ? 230 : 0)
+      flash(btns.current.TOUCH, s.heavy ? 'miss' : 'hit'); say(fx.current, s.heavy ? 'HEAVY TOUCH' : 'GOOD TOUCH', s.heavy ? 'miss' : 'hit'); haptic('light')
+      halt(ballEl.current); if (ballEl.current) ballEl.current.style.transform = at2(46, s.heavy ? 70 : 76)
+      glide(def.current, [{ transform: at2(58, 40) }, { transform: at2(49, 74) }], plan.block, ts, { fill: 'forwards' })
+      setBeat('shoot')
+      later(() => { if (!S.current.done) settle(false, 'Took too long: the defender closed him down', 'BLOCKED') }, s.ring + Ws - now())
+      return
+    }
+    if (ts >= s.touch + plan.block) return settle(false, 'The defender got the block in', 'BLOCKED', 0, 'SHOOT')
+    const e2 = ts - s.ring
+    if (e2 < -Ws) return settle(false, 'Snatched at it: the keeper had it covered', 'SAVED', 0.25, 'SHOOT')
+    const q = 1 - Math.abs(e2) / Ws
+    if (q >= 0.4) settle(true, 'Took a touch and finished it', 'GOAL', q, 'SHOOT'); else settle(false, 'Not enough on it: saved', 'SAVED', q, 'SHOOT')
+  }
+  useKeys({ ArrowLeft: e => press('TOUCH', e), ArrowRight: e => press('VOLLEY', e), a: e => press('TOUCH', e), d: e => press('VOLLEY', e), ' ': e => press('SHOOT', e), Enter: e => press('SHOOT', e) })
+  return (
+    <div className="mg-play mg-play--soc">
+      <div className="mg-box"><Fx r={fx} /></div>
+      <PitchTop tag={plan.kind}>
+        <span className="mg-pt" style={{ transform: at2(50, 12) }}><span className="mg-dot is-gk" /></span>
+        <span className="mg-pt" ref={def} style={{ transform: at2(58, 40) }}><span className="mg-dot is-d" /></span>
+        <span className="mg-pt" style={{ transform: at2(44, 84) }}><span className="mg-dot is-me" /></span>
+        <span className="mg-pt mg-meet" style={{ transform: at2(45, 78) }}><i /></span>
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(52, 24) }}><span className="mg-dot is-sball" /></span>
+      </PitchTop>
+      {beat === 'drop'
+        ? <div className="mg-sides"><SocBtn refFn={el => { btns.current.TOUCH = el }} onPress={e => press('TOUCH', e)} k="←">TAKE A TOUCH</SocBtn><SocBtn refFn={el => { btns.current.VOLLEY = el }} onPress={e => press('VOLLEY', e)} k="→">VOLLEY</SocBtn></div>
+        : <div className="mg-sides mg-sides--one"><SocBtn refFn={el => { btns.current.SHOOT = el }} onPress={e => press('SHOOT', e)} k="SPACE">SHOOT</SocBtn></div>}
+      <Hint>{beat === 'drop' ? 'AS IT DROPS TO HIM' : 'BEFORE THE DEFENDER CLOSES HIM DOWN'}</Hint>
+    </div>
+  )
+}
+
+// ── Dribble slalom: at each pole the arrow lights the way he takes it next; hit it before the window shuts ──
+// (the 3-cone's Simple game, two ways: clean, quick touches are the time; the wrong way clips the pole)
+function Slalom({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const t = (clamp(v, 1, 11) - 1) / 10
+  const plan = useMemo(() => { const first = r() < 0.5 ? -1 : 1; return Array.from({ length: 6 }, (_, k) => ({ gap: 300 + r() * 380, dir: k % 2 ? first : -first })) }, [r])
+  const clean = 0.45 + 25.3 / (4.1 + t * 1.2)        // (the Advanced course's clean run: about 25 m in and out of the poles)
+  const [i, setI] = useState(0)
+  const [cue, setCue] = useState(null)
+  const [scores, setScores] = useState([])
+  const R = useRef({ at: 0, done: false })
+  const slips = useRef(0), btns = useRef({}), fx = useRef(null)
+  const [end] = useOnce(onDone)
+  const T = (480 + v * 42) * 0.85 * Math.pow(0.93, i)
+  useEffect(() => {
+    setCue(null); R.current = { at: 0, done: false }
+    const t1 = setTimeout(() => { R.current.at = now(); setCue(plan[i].dir) }, plan[i].gap)
+    const t2 = setTimeout(() => settle(0, 'HEAVY TOUCH'), plan[i].gap + T)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [i]) // eslint-disable-line
+  const settle = (s, word, k = null) => {
+    if (R.current.done) return
+    R.current.done = true
+    if (k) flash(btns.current[k], s ? 'hit' : 'miss')
+    say(fx.current, s ? grade(s) : word, s ? 'hit' : 'miss')
+    if (s) good(s >= 0.85); else { bad(); slips.current++ }
+    const next = [...scores, s]
+    setScores(next)
+    if (i + 1 >= plan.length) {
+      const made = next.filter(Boolean).length
+      const sharp = made ? next.filter(Boolean).reduce((a, b) => a + b, 0) / made : 0
+      const secs = Math.round((clean + slips.current * 0.36 + (1 - sharp) * 0.3) * 100) / 100
+      const score = clamp((clean + 0.55 + 0.6 - secs) / 1.2, 0, 1), hit = score >= 0.5
+      end({ score, hit, note: `${secs.toFixed(2)}s · ${made} of ${plan.length} clean`, raw: { secs, made, of: plan.length },
+        stat: { label: 'DRIBBLE SLALOM', value: secs.toFixed(2), unit: 'SEC', verdict: hit ? (made === plan.length ? 'QUICK FEET' : 'GOOD TIME') : 'TOO SLOW', sub: `${made} of ${plan.length} clean touches` } })
+    } else setI(i + 1)
+  }
+  const go = (d, e) => {
+    const S = R.current
+    if (S.done) return
+    const ts = pressAt(e)
+    if (cue == null || ts < S.at) return settle(0, 'TOO EARLY', sideOf(d))
+    if (d !== plan[i].dir) return settle(0, 'CLIPPED THE POLE', sideOf(d))
+    settle(clamp(1 - (ts - S.at) / T * 0.6, 0.4, 1), null, sideOf(d))
+  }
+  useKeys({ ArrowLeft: e => go(-1, e), ArrowRight: e => go(1, e), a: e => go(-1, e), d: e => go(1, e) })
+  return (
+    <div className="mg-play mg-play--cone">
+      <div className="mg-box"><Fx r={fx} /><span className={`mg-cue${cue != null ? ' is-on' : ''}`}>{cue != null ? <IconCaret dir={cue < 0 ? 'left' : 'right'} size={44} /> : <i className="mg-cue-wait" />}</span></div>
+      <div className="mg-sides">
+        <SocBtn refFn={el => { btns.current.L = el }} onPress={e => go(-1, e)} k="←"><IconCaret dir="left" size={14} /> LEFT</SocBtn>
+        <SocBtn refFn={el => { btns.current.R = el }} onPress={e => go(1, e)} k="→">RIGHT <IconCaret dir="right" size={14} /></SocBtn>
+      </div>
+      <Hint touch="TAP" desk="ARROWS">THE WAY IT POINTS, AS IT LIGHTS · POLE {i + 1} OF {plan.length}</Hint>
+      <Dots n={plan.length} of={scores} />
+    </div>
+  )
+}
+
+// ── Finishing drill: a target in each corner; lock it across, then up and down ──
+const GOAL_TARGETS = [[12, 22], [88, 22], [12, 76], [88, 76], [12, 49], [88, 49]]
+const GOAL_SPOTS = ['EDGE OF THE BOX', 'LEFT CHANNEL', 'RIGHT CHANNEL', 'THE SPOT', 'FIRST TIME']
+function GoalAim({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const order = useMemo(() => { const o = []; let last = -1; for (let i = 0; i < 5; i++) { let k = Math.floor(r() * 6); if (k === last) k = (k + 1) % 6; o.push(k); last = k } return o }, [r])
+  const rad = 7 + (clamp(v, 1, 11) - 1) * 0.55            // the target's radius in % of the goal's width
+  const [i, setI] = useState(0)
+  const [axis, setAxis] = useState('x')
+  const [scores, setScores] = useState([])
+  const [shot, setShot] = useState(null)
+  const A = useRef({ t0: now(), axis: 'x', X: 50, live: true })
+  const lx = useRef(null), ly = useRef(null), fx = useRef(null)
+  const [end, ended] = useOnce(onDone)
+  const later = useTimers()
+  const speed = 1.05 + i * 0.12
+  const posAt = ts => tri(Math.max(0, ts - A.current.t0) / 1000 * speed * (A.current.axis === 'y' ? 1.2 : 1)) * 100
+  useEffect(() => { if (lx.current) { lx.current.style.transform = ''; glide(lx.current, SWEEP, 2000 / speed, A.current.t0, { iterations: Infinity }) } }, [i]) // eslint-disable-line
+  useEffect(() => { if (axis === 'y' && ly.current && A.current.live) { ly.current.style.transform = ''; glide(ly.current, SWEEP_Y, 2000 / (speed * 1.2), A.current.t0, { iterations: Infinity }) } }, [axis, i]) // eslint-disable-line
+  const tap = e => {
+    const a = A.current
+    if (!a.live || ended.current) return
+    const ts = pressAt(e), p = posAt(ts)
+    if (a.axis === 'x') { a.X = p; a.axis = 'y'; a.t0 = ts; halt(lx.current); if (lx.current) lx.current.style.transform = `translate3d(${p}%,0,0)`; haptic('light'); setAxis('y'); return }
+    a.live = false
+    halt(ly.current); if (ly.current) ly.current.style.transform = `translate3d(0,${p}%,0)`
+    const [tx, ty] = GOAL_TARGETS[order[i]], X = a.X, Y = p
+    // (the goal face is 3:1: a % down is a third of a % across)
+    const d = Math.hypot((X - tx) / rad, ((Y - ty) / 3) / rad)
+    const s = d <= 1 ? clamp(1 - d * 0.5, 0.5, 1) : 0
+    say(fx.current, s ? 'TARGET' : Math.abs(X - tx) > Math.abs(Y - ty) / 3 ? 'WIDE' : Y < ty ? 'HIGH' : 'LOW', s ? 'hit' : 'miss')
+    if (s) { good(s >= 0.85); sfx('catchball') } else bad()
+    setShot({ x: X, y: Y, hit: !!s })
+    const next = [...scores, s]
+    setScores(next)
+    if (i + 1 >= order.length) {
+      const made = next.filter(Boolean).length, hit = made >= 3
+      end({ score: hit ? 0.5 + 0.5 * (made - 3) / 2 : 0.45 * made / 3, hit, note: `${made} of 5 on target`, raw: { made, of: 5 },
+        stat: { label: 'FINISHING DRILL', value: `${made}/5`, unit: 'ON TARGET', verdict: hit ? (made === 5 ? 'PERFECT' : 'GOOD FINISHING') : 'NOT ENOUGH', sub: '' } })
+      return
+    }
+    later(() => { A.current = { t0: now(), axis: 'x', X: 50, live: true }; setI(i + 1); setAxis('x'); setShot(null) }, 520)
+  }
+  useKeys({ ' ': tap, Enter: tap })
+  const k = order[i]
+  return (
+    <div className="mg-play mg-play--aim" onPointerDown={primary(tap)}>
+      <div className="mg-box">
+        <Fx r={fx} />
+        <div className="mg-field mg-goalface">
+          {GOAL_TARGETS.map(([x, y], j) => <span key={j} className={`mg-goal-target${j === k ? ' is-lit' : ''}`} style={{ left: `${x}%`, top: `${y}%`, width: `${rad * 2}%` }} />)}
+          <span className={`mg-line-x${axis === 'x' && !shot ? ' is-live' : ''}`} ref={lx} />
+          {axis === 'y' && <span className={`mg-line-y${!shot ? ' is-live' : ''}`} ref={ly} />}
+          {shot && <span className={`mg-ball${shot.hit ? ' is-hit' : ''}`} style={{ left: `${shot.x}%`, top: `${shot.y}%` }} />}
+        </div>
+      </div>
+      <Hint touch="TAP" desk="SPACE">{GOAL_SPOTS[i]} · {axis === 'x' ? 'TO LOCK LEFT–RIGHT' : 'TO LOCK UP–DOWN'} · BALL {i + 1} OF 5</Hint>
+      <Dots n={order.length} of={scores} />
+    </div>
+  )
+}
+
+// ═══ Soccer, more: the free kick, the 2-on-1, the first-touch trial ═══════════
+// (the Simple versions of lib/mg/freekick.js, counter.js and firsttouch.js: the same calls, on the small pitch)
+
+// ── Free kick: pick the kick for the wall, then strike it in the zone ──
+// CURL goes over the wall (the keeper can't see it): the zone's the height. LOW goes under the wall when it jumps, unless
+// a man's lying behind it. DRIVEN goes at the keeper's side: he sees it all the way, so it has to be right in the middle.
+const FK_WORD = { curl: 'CURL', low: 'LOW', drive: 'DRIVEN' }
+function FreeKickS({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const plan = useMemo(() => ({ side: r() < 0.5 ? -1 : 1, sleeper: r() < 0.38, zone: 38 + r() * 24, speed: 1.45 + r() * 0.25 }), [r])
+  const [kick, setKick] = useState(null)
+  const S = useRef({ done: false, at: 0 })
+  const mark = useRef(null), zoneEl = useRef(null), fx = useRef(null), ballEl = useRef(null), gk = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  const width = zw(v) * (kick === 'low' ? 0.8 : kick === 'drive' ? 0.85 : 1)
+  const { at, dir, stop } = useSweep(mark, plan.speed)
+  const sd = plan.side
+  const choose = (k, e) => {
+    if (kick || S.current.done) return
+    S.current.at = pressAt(e)
+    flash(btns.current[k], 'hit'); haptic('light')
+    setKick(k)
+  }
+  const settle = (goal, why, word, q = 0) => {
+    const s = S.current
+    if (s.done) return
+    s.done = true
+    const over = word === 'OVER THE BAR', wall = word === 'BLOCKED'
+    moveTo(ballEl.current, goal ? 50 + sd * 11 : over ? 50 + sd * 9 : wall ? 50 + sd * 7 : 50 - sd * 4, goal ? 7 : over ? -4 : wall ? 47 : 15, 420, 'ease-in')
+    if (word === 'SAVED') moveTo(gk.current, 50 - sd * 2, 15, 300)
+    else if (goal) moveTo(gk.current, 50 + sd * 3, 16, 380)
+    say(fx.current, word, goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
+    later(() => end({ score: goal ? clamp(0.62 + 0.38 * q, 0, 1) : word === 'SAVED' ? 0.3 : 0.15, hit: goal, note: why }), 650)
+  }
+  const strike = e => {
+    const s = S.current
+    if (!kick || s.done) return
+    const ts = pressAt(e)
+    if (ts - s.at < 220) return
+    const p = at(ts) * 100, j = judgeBar(p, plan.zone, width, dir(ts))
+    stop(p); flash(zoneEl.current, j.hit ? 'hit' : 'miss')
+    const early = !j.hit && j.word === 'EARLY'
+    if (kick === 'curl') {
+      if (!j.hit) return early ? settle(false, 'Didn’t get it up: into the wall', 'BLOCKED') : settle(false, 'Too much on it: over the bar', 'OVER THE BAR')
+      return j.q >= 0.62 ? settle(true, 'Over the wall, into the corner', 'GOAL', j.q) : settle(false, 'Over the wall, but he got across to it', 'SAVED', j.q)
+    }
+    if (kick === 'low') {
+      if (plan.sleeper) return settle(false, 'Under the wall, but the man lying behind it kept it out', 'BLOCKED')
+      if (!j.hit) return early ? settle(false, 'Hit it too soon: the wall was still down', 'BLOCKED') : settle(false, 'Dragged it wide', 'WIDE')
+      return j.q >= 0.6 ? settle(true, 'Under the jumping wall and in', 'GOAL', j.q) : settle(false, 'Under the wall, straight at the keeper', 'SAVED', j.q)
+    }
+    if (!j.hit) return early ? settle(false, 'Snatched at it: into the wall', 'BLOCKED') : settle(false, 'Leaned back: over the bar', 'OVER THE BAR')
+    return j.q >= 0.84 ? settle(true, 'Drilled in at the keeper’s side', 'GOAL', j.q) : settle(false, 'He saw it all the way', 'SAVED', j.q)
+  }
+  useKeys({ ArrowLeft: e => choose('curl', e), ArrowUp: e => choose('drive', e), ArrowDown: e => choose('low', e), ArrowRight: e => choose('drive', e), ' ': strike, Enter: strike })
+  const wallX = [0, 1, 2].map(i => 50 + sd * (12 - i * 5))
+  return (
+    <div className="mg-play mg-play--soc" onPointerDown={kick ? primary(strike) : undefined}>
+      <div style={{ visibility: kick ? 'visible' : 'hidden' }}><Bar markRef={mark} zoneRef={zoneEl} fx={fx} zone={plan.zone} width={width} label={kick ? FK_WORD[kick] : null} /></div>
+      <PitchTop tag={plan.sleeper ? 'A MAN BEHIND THE WALL' : 'FREE KICK'}>
+        <span className="mg-pt" ref={gk} style={{ transform: at2(50 - sd * 5, 14) }}><span className="mg-dot is-gk" /></span>
+        {wallX.map((x, i) => <span key={i} className="mg-pt" style={{ transform: at2(x, 46) }}><span className="mg-dot is-d" /></span>)}
+        {plan.sleeper && <span className="mg-pt" style={{ transform: at2(50 + sd * 7, 40) }}><span className="mg-dot is-d" style={{ transform: 'scale(1.3,0.55)' }} /></span>}
+        <span className="mg-pt" style={{ transform: at2(50 + sd * 16, 82) }}><span className="mg-dot is-me" /></span>
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(50 + sd * 14, 76) }}><span className="mg-dot is-sball" /></span>
+      </PitchTop>
+      {!kick
+        ? <div className="mg-sides mg-sides--three">
+          <SocBtn refFn={el => { btns.current.curl = el }} onPress={e => choose('curl', e)} k="←">CURL</SocBtn>
+          <SocBtn refFn={el => { btns.current.low = el }} onPress={e => choose('low', e)} k="↓">LOW</SocBtn>
+          <SocBtn refFn={el => { btns.current.drive = el }} onPress={e => choose('drive', e)} k="→">DRIVEN</SocBtn>
+        </div>
+        : null}
+      <Hint touch="TAP" desk="SPACE">{!kick ? 'CURL OVER THE WALL · LOW UNDER IT · DRIVEN AT THE KEEPER' : 'STRIKE IT IN THE ZONE'}</Hint>
+    </div>
+  )
+}
+
+// ── 2-on-1: the last man commits. He steps up: PASS. He drops off to the runner: SHOOT ──
+const TO_WORD = { wait: 'BACKING OFF', ball: 'STEPS UP TO THE BALL', runner: 'DROPS OFF TO THE RUNNER' }
+function TwoOneS({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const t = (clamp(v, 1, 11) - 1) / 10
+  const plan = useMemo(() => ({ side: r() < 0.5 ? -1 : 1, goes: r() < 0.5 ? 'ball' : 'runner', commit: 1500 + r() * 900, fake: r() < 0.45, zone: 35 + r() * 30, speed: 1.6 + r() * 0.2 }), [r])
+  const T = 820 + t * 300
+  const [word, setWord] = useState('wait')
+  const [beat, setBeat] = useState('read')
+  const S = useRef({ t0: 0, at: Infinity, done: false })
+  const me = useRef(null), mate = useRef(null), cb = useRef(null), ballEl = useRef(null), fx = useRef(null), btns = useRef({}), mark = useRef(null), zoneEl = useRef(null)
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  const { at, dir, stop } = useSweep(mark, plan.speed)
+  const sd = plan.side
+  useLayoutEffect(() => {
+    const t0 = now(), run = plan.commit + T + 400
+    S.current = { t0, at: t0 + plan.commit, done: false }
+    glide(me.current, [{ transform: at2(50, 92) }, { transform: at2(50, 40) }], run, t0, { fill: 'forwards', easing: 'linear' })
+    glide(ballEl.current, [{ transform: at2(52, 89) }, { transform: at2(52, 37) }], run, t0, { fill: 'forwards', easing: 'linear' })
+    glide(mate.current, [{ transform: at2(50 + sd * 34, 90) }, { transform: at2(50 + sd * 22, 36) }], run, t0, { fill: 'forwards', easing: 'linear' })
+    glide(cb.current, [{ transform: at2(50 + sd * 4, 48) }, { transform: at2(50 + sd * 5, 34) }], plan.commit, t0, { fill: 'forwards' })
+    if (plan.fake) {
+      const show = plan.goes === 'ball' ? 'runner' : 'ball'
+      later(() => { if (!S.current.done) setWord(show) }, plan.commit - 700)
+      later(() => { if (!S.current.done) setWord('wait') }, plan.commit - 370)
+    }
+    later(() => {
+      if (S.current.done) return
+      setWord(plan.goes); haptic('light')
+      if (plan.goes === 'ball') moveTo(cb.current, 50, 44, T * 0.9)
+      else moveTo(cb.current, 50 + sd * 16, 32, T * 0.9)
+    }, plan.commit)
+    later(() => { if (!S.current.done && S.current.shootAt == null) settle(false, plan.goes === 'ball' ? 'He got a foot in: took too long' : 'Took too long: he got back across to block it', plan.goes === 'ball' ? 'TACKLED' : 'BLOCKED') }, plan.commit + T)
+  }, []) // eslint-disable-line
+  const settle = (goal, why, word2, q = 0.5, k = null, to = null) => {
+    const s = S.current
+    if (s.done) return
+    s.done = true
+    ;[me.current, mate.current, cb.current, ballEl.current].forEach(el => el && freeze(el))
+    if (k) flash(btns.current[k], goal ? 'hit' : 'miss')
+    if (to) moveTo(ballEl.current, to[0], to[1], 380, 'ease-in')
+    say(fx.current, word2, goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
+    later(() => end({ score: goal ? clamp(0.62 + 0.38 * q, 0, 1) : 0.14, hit: goal, note: why }), 650)
+  }
+  const press = (k, e) => {
+    const s = S.current
+    if (s.done || beat !== 'read') return
+    const ts = pressAt(e), early = ts < s.at
+    if (k === 'PASS') {
+      if (early || plan.goes !== 'ball') return settle(false, early ? 'Went too early: he read the pass and cut it out' : 'He was sitting on the pass: cut out', 'CUT OUT', 0, k, [50 + sd * 8, 36])
+      const m = spot(mate.current)
+      moveTo(ballEl.current, m.x, m.y, 260)
+      later(() => settle(true, 'Squared it for the tap-in', 'GOAL', clamp(1 - (ts - s.at) / T, 0.3, 1), k, [50 + sd * 4, 7]), 280)
+      return
+    }
+    if (early || plan.goes !== 'runner') return settle(false, early ? 'Went too early: he was there to block it' : 'He stepped up and blocked it', 'BLOCKED', 0, k, [50 + sd * 6, 50])
+    flash(btns.current.SHOOT, 'hit'); haptic('light')
+    S.current.shootAt = ts
+    setBeat('shoot')
+    later(() => { if (!S.current.done) settle(false, 'Took too long over it: he got back to block it', 'BLOCKED', 0, null, [50 + sd * 6, 50]) }, 2600)
+  }
+  const finish = e => {
+    const s = S.current
+    if (s.done || beat !== 'shoot') return
+    const ts = pressAt(e)
+    if (ts - s.shootAt < 200) return
+    const p = at(ts) * 100, j = judgeBar(p, plan.zone, zw(v), dir(ts))
+    stop(p); flash(zoneEl.current, j.hit ? 'hit' : 'miss')
+    if (!j.hit) return settle(false, j.word === 'EARLY' ? 'Snatched at it: straight at the keeper' : 'Leaned back: over the bar', j.word === 'EARLY' ? 'SAVED' : 'OVER THE BAR', 0, null, j.word === 'EARLY' ? [50, 15] : [50 - sd * 6, -4])
+    j.q >= 0.6 ? settle(true, 'Slotted it past the keeper', 'GOAL', j.q, null, [50 - sd * 10, 7]) : settle(false, 'Good save, down to his side', 'SAVED', j.q, null, [50 - sd * 7, 15])
+  }
+  useKeys({ ArrowLeft: e => press('PASS', e), ArrowRight: e => press('SHOOT', e), a: e => press('PASS', e), d: e => press('SHOOT', e), ' ': finish, Enter: finish })
+  return (
+    <div className="mg-play mg-play--soc" onPointerDown={beat === 'shoot' ? primary(finish) : undefined}>
+      {beat === 'read'
+        ? <div className="mg-box"><Fx r={fx} /><div className="mg-runup"><i>THE LAST MAN · {TO_WORD[word]}</i></div></div>
+        : <Bar markRef={mark} zoneRef={zoneEl} fx={fx} zone={plan.zone} width={zw(v)} label="FINISH" />}
+      <PitchTop tag="2 ON 1">
+        <span className="mg-pt" style={{ transform: at2(50, 12) }}><span className="mg-dot is-gk" /></span>
+        <span className="mg-pt" ref={cb} style={{ transform: at2(50 + sd * 4, 48) }}><span className="mg-dot is-d" /></span>
+        <span className="mg-pt" ref={mate} style={{ transform: at2(50 + sd * 34, 90) }}><span className="mg-dot is-mate" /></span>
+        <span className="mg-pt" ref={me} style={{ transform: at2(50, 92) }}><span className="mg-dot is-me" /></span>
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(52, 89) }}><span className="mg-dot is-sball" /></span>
+      </PitchTop>
+      {beat === 'read'
+        ? <div className="mg-sides">
+          <SocBtn refFn={el => { btns.current.PASS = el }} onPress={e => press('PASS', e)} k="←">PASS</SocBtn>
+          <SocBtn refFn={el => { btns.current.SHOOT = el }} onPress={e => press('SHOOT', e)} k="→">SHOOT</SocBtn>
+        </div>
+        : null}
+      <Hint touch="TAP" desk="SPACE">{beat === 'read' ? 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT' : 'FINISH IT IN THE ZONE'}</Hint>
+    </div>
+  )
+}
+
+// ── First touch: keep-ups (the foot it drops to, as it gets there), then kill the coach's passes dead ──
+const FT_UPS = 12, FT_BALLS = 3, FT_NEED = 15
+function TouchS({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const t = (clamp(v, 1, 11) - 1) / 10
+  const sides = useMemo(() => Array.from({ length: FT_UPS + FT_BALLS + 1 }, () => (r() < 0.5 ? -1 : 1)), [r])
+  const W = 80 + t * 80, W2 = 80 + t * 70
+  const [part, setPart] = useState('ups')
+  const [ups, setUps] = useState(0)
+  const [ctrl, setCtrl] = useState([])
+  const S = useRef({ due: Infinity, side: 1, n: 0, live: false, done: false })
+  const ballEl = useRef(null), ring = useRef(null), fx = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  // one keep-up: the ball up and down to a foot; the ring at that foot closes as it gets there
+  const drop = (n, hang) => {
+    const s = S.current, side = sides[n], due = now() + hang
+    Object.assign(s, { due, side, n, live: true })
+    const x = 50 + side * 9
+    glide(ballEl.current, [{ transform: at2(50, 72) }, { transform: at2((50 + x) / 2, 30), easing: 'ease-in' }, { transform: at2(x, 72) }], hang, now(), { fill: 'forwards', easing: 'ease-out' })
+    if (ring.current) { ring.current.style.left = `${x}%`; ring.current.style.top = '72%'; glide(ring.current, [{ transform: 'scale(2.4)', opacity: 0.2 }, { transform: 'scale(1)', opacity: 1 }], hang, now(), { fill: 'forwards' }) }
+    later(() => { if (S.current.live && S.current.n === n && S.current.due === due) missUp('It hit the floor') }, hang + W)
+  }
+  const pass = k => {
+    const s = S.current, side = sides[FT_UPS + k], travel = 1100 - k * 80, due = now() + 500 + travel
+    Object.assign(s, { due, side, n: k, live: true, pass: true })
+    const x = 50 + side * 9
+    glide(ballEl.current, [{ transform: at2(50, 8) }, { transform: at2(50, 8), offset: 500 / (500 + travel) }, { transform: at2(x, 72) }], 500 + travel, now(), { fill: 'forwards', easing: 'linear' })
+    if (ring.current) { ring.current.style.left = `${x}%`; glide(ring.current, [{ transform: 'scale(2.4)', opacity: 0 }, { transform: 'scale(2.4)', opacity: 0.2, offset: 0.55 }, { transform: 'scale(1)', opacity: 1 }], 500 + travel, now(), { fill: 'forwards' }) }
+    later(() => { if (S.current.live && S.current.pass && S.current.n === k) onPass(null) }, 500 + travel + W2)
+  }
+  useLayoutEffect(() => { later(() => drop(0, 820), 700) }, []) // eslint-disable-line
+  const missUp = why => {
+    const s = S.current
+    s.live = false
+    say(fx.current, s.n >= 8 ? `${s.n} KEEP-UPS` : 'DROPPED IT', s.n >= 8 ? 'hit' : 'miss'); bad()
+    moveTo(ballEl.current, 50 + s.side * 22, 90, 420, 'ease-in')
+    s.ups = s.n
+    later(() => { setPart('control'); pass(0) }, 1200)
+    void why
+  }
+  const onPass = tt => {
+    const s = S.current
+    s.live = false
+    const side = s.side
+    let ok = false, word = 'GOT AWAY FROM HIM'
+    if (tt) { if (tt.side !== side) word = 'WRONG FOOT'; else if (Math.abs(tt.e) <= W2 * 0.45) { ok = true; word = 'KILLED IT' } else if (Math.abs(tt.e) <= W2) { ok = true; word = 'GOOD TOUCH' } else word = 'HEAVY TOUCH' }
+    if (tt) flash(btns.current[tt.side < 0 ? 'L' : 'R'], ok ? 'hit' : 'miss')
+    say(fx.current, word, ok ? 'hit' : 'miss'); ok ? good(word === 'KILLED IT') : bad()
+    if (!ok) moveTo(ballEl.current, 50 + side * 28, 96, 500, 'ease-out')
+    const next = [...ctrl, ok]
+    setCtrl(next)
+    if (s.n + 1 >= FT_BALLS) {
+      const made = next.filter(Boolean).length, u = s.ups ?? 0, pts = u + made * 3, hit = pts >= FT_NEED
+      later(() => end({ score: hit ? 0.5 + 0.5 * (pts - FT_NEED) / (FT_UPS + FT_BALLS * 3 - FT_NEED) : 0.45 * pts / FT_NEED, hit, note: `${u} keep-ups · ${made} of ${FT_BALLS} controlled`, raw: { ups: u, made, of: FT_BALLS, pts },
+        stat: { label: 'FIRST TOUCH', value: String(pts), unit: 'POINTS', verdict: hit ? 'GOOD FEET' : 'NOT ENOUGH', sub: `${u} keep-ups · ${made} of ${FT_BALLS} controlled` } }), 700)
+    } else later(() => pass(s.n + 1), 900)
+  }
+  const press = (side, e) => {
+    const s = S.current
+    if (!s.live || s.done) return
+    const ts = pressAt(e), err = ts - s.due
+    if (s.pass) { if (err < -W2 * 3) return; return onPass({ side, e: err }) }
+    if (err < -W * 2.6) return
+    flash(btns.current[side < 0 ? 'L' : 'R'], Math.abs(err) <= W && side === s.side ? 'hit' : 'miss')
+    if (err < -W) return missUp('Swung at it too early')
+    if (side !== s.side) return missUp('Wrong foot')
+    const n = s.n + 1
+    s.live = false
+    setUps(n); good(Math.abs(err) <= W * 0.4)
+    if (n >= FT_UPS) { s.n = n; s.ups = n; say(fx.current, `${FT_UPS}: THAT’LL DO`, 'hit'); later(() => { setPart('control'); pass(0) }, 1100); return }
+    const hang = (760 - n * 17) * (Math.abs(err) <= W * 0.4 ? 1 : r() < 0.5 ? 0.84 : 1.1)
+    drop(n, hang)
+  }
+  useKeys({ ArrowLeft: e => press(-1, e), ArrowRight: e => press(1, e), a: e => press(-1, e), d: e => press(1, e) })
+  return (
+    <div className="mg-play mg-play--soc">
+      <div className="mg-box"><Fx r={fx} /><div className="mg-runup"><i>{part === 'ups' ? `KEEP-UPS · ${ups}` : `CONTROL · ${ctrl.filter(Boolean).length} OF ${FT_BALLS} · ${S.current.ups ?? ups} KEEP-UPS`}</i></div></div>
+      <div className="mg-court mg-pitch" aria-hidden="true">
+        <i className="mg-court-tag">{part === 'ups' ? 'KEEP IT UP' : 'KILL IT DEAD'}</i>
+        <span className="mg-pt" style={{ transform: at2(50, 8), visibility: part === 'control' ? 'visible' : 'hidden' }}><span className="mg-dot is-mate" /></span>
+        <span className="mg-pt" style={{ transform: at2(50, 80) }}><span className="mg-dot is-me" /></span>
+        <span ref={ring} style={{ position: 'absolute', left: '50%', top: '72%', width: 22, height: 22, margin: '-11px 0 0 -11px', borderRadius: '50%', border: '2px solid rgba(255,255,255,.85)', pointerEvents: 'none' }} />
+        <span className="mg-pt" ref={ballEl} style={{ transform: at2(50, 72) }}><span className="mg-dot is-sball" /></span>
+      </div>
+      <div className="mg-sides">
+        <SocBtn refFn={el => { btns.current.L = el }} onPress={e => press(-1, e)} k="←">LEFT FOOT</SocBtn>
+        <SocBtn refFn={el => { btns.current.R = el }} onPress={e => press(1, e)} k="→">RIGHT FOOT</SocBtn>
+      </div>
+      <Hint>{part === 'ups' ? 'THE FOOT IT DROPS TO, AS IT GETS THERE' : 'THE FOOT IT COMES TO, AS IT ARRIVES'}</Hint>
+      {part === 'control' && <Dots n={FT_BALLS} of={ctrl} />}
     </div>
   )
 }

@@ -5,7 +5,7 @@
 //   audible      one look, one call
 //   two-minute   an actual drive: down, distance and clock are real and move with every play.
 //                It runs until the touchdown, the clock, fourth down or a turnover
-import { keyCap, THREE_KEYS, clamp, lerp, outcome, football, rngOf, prog, easeOut, easeInOut, themOf, GOOD, BAD, text, DISPLAY, rr, manOf, paceOf, particles, nudge } from './kit.js'
+import { keyCap, THREE_KEYS, clamp, lerp, outcome, football, rngOf, prog, easeOut, easeInOut, themOf, GOOD, BAD, text, DISPLAY, rr, manOf, xiOf, paceOf, particles, nudge } from './kit.js'
 import { nameTag,  goalPosts, breakupPose, tilt, untilt, athlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, rollingField, turfLine, stands, floodlight, vignette, crowdPop, warmAthlete } from './art.js'
 import { callMs } from '../minigames.js'
 import { momentSituation } from '../situations.js'
@@ -89,17 +89,17 @@ const MESH = [[0, 'cross'], [2, 'cross']]
 export const LOOKS = [
   { id: 'zero', form: 'zero', s: 'COVER 0', sub: 'NO SAFETY · SEVEN COMING', why: 'No safety and seven coming.|Get it out now. The slant beats press.',
     a: [P('QUICK SLANT', true, 'catch', 'BIG GAIN', 1, 'slant', { gain: 18 }), P('FOUR VERTS', false, 'sack', 'SACKED', 0, 'go', { sk: VERTS }), P('INSIDE ZONE', false, 'stuff', 'STUFFED', 3, 'inside')] },
-  { id: 'light', form: 'light', s: 'LIGHT BOX', sub: 'SIX IN THE BOX · TWO DEEP', why: 'Six in the box and two deep.|You have the numbers. Run it.',
+  { id: 'light', form: 'light', s: 'LIGHT BOX', sub: 'SIX IN THE BOX · TWO DEEP', why: 'Six in the box and two deep.|The numbers are there. Run it.',
     a: [P('INSIDE ZONE', true, 'run', 'BIG GAIN', 3, 'inside', { gain: 13 }), P('FOUR VERTS', false, 'pick', 'PICKED OFF', 1, 'seam', { sk: VERTS }), P('FADE', false, 'swat', 'INCOMPLETE', 0, 'fade')] },
   { id: 'eight', form: 'eight', s: 'EIGHT IN THE BOX', sub: 'ONE HIGH · PRESS CORNERS', why: 'Eight up and one deep.|Fake the run and throw over the top.',
     a: [P('PLAY ACTION', true, 'catch', 'BIG GAIN', 1, 'post', { gain: 27 }), P('POWER', false, 'stuff', 'STUFFED', 3, 'power'), P('DRAW', false, 'stuff', 'STUFFED', 3, 'draw')] },
   { id: 'cover2', form: 'cover2', s: 'COVER 2', sub: 'CORNERS SQUAT · TWO DEEP', why: 'Corners sit in the flat, safeties split deep.|Smash drops it in the hole between them.',
     a: [P('SMASH', true, 'catch', 'BIG GAIN', 1, 'corner', { gain: 19, sk: [[1, 'corner'], [0, 'hitch']] }), P('QUICK OUT', false, 'pick', 'PICKED OFF', 0, 'out'), P('HITCH', false, 'swat', 'INCOMPLETE', 0, 'hitch')] },
-  { id: 'cover3', form: 'cover3', s: 'COVER 3', sub: 'SOFT CORNERS · ONE HIGH', why: 'Corners bail and give you eight yards.|Take the hitch every time.',
+  { id: 'cover3', form: 'cover3', s: 'COVER 3', sub: 'SOFT CORNERS · ONE HIGH', why: 'Corners bail and give up eight yards.|Take the hitch every time.',
     a: [P('HITCH', true, 'catch', 'GOOD GAIN', 0, 'hitch', { gain: 9 }), P('GO ROUTE', false, 'swat', 'INCOMPLETE', 2, 'go'), P('POWER', false, 'stuff', 'STUFFED', 3, 'power')] },
   { id: 'cover1', form: 'cover1', s: 'COVER 1', sub: 'MAN UP · PRESS CORNERS', why: 'Man across the board.|Crossers run them into each other.',
     a: [P('MESH', true, 'catch', 'BIG GAIN', 0, 'cross', { gain: 14, sk: MESH }), P('HITCH', false, 'swat', 'INCOMPLETE', 2, 'hitch'), P('BUBBLE', false, 'stuff', 'STUFFED', 1, 'screen')] },
-  { id: 'cover4', form: 'cover4', s: 'COVER 4', sub: 'FOUR DEEP · NOTHING SHORT', why: 'Four deep, and they want you to throw deep.|Take the stick underneath.',
+  { id: 'cover4', form: 'cover4', s: 'COVER 4', sub: 'FOUR DEEP · NOTHING SHORT', why: 'Four deep, and they want the deep throw.|Take the stick underneath.',
     a: [P('STICK', true, 'catch', 'GOOD GAIN', 1, 'stick', { gain: 8 }), P('GO ROUTE', false, 'pick', 'PICKED OFF', 2, 'go'), P('POST', false, 'pick', 'PICKED OFF', 1, 'post')] },
   { id: 'overload', form: 'overload', s: 'OVERLOAD', sub: 'THREE OFF THE {NEAR} EDGE', why: 'Three off the {NEAR} edge, nobody {FAR}.|Throw it away from the heat.',
     a: [P('SCREEN {FAR}', true, 'catch', 'BIG GAIN', 2, 'screen', { gain: 16 }), P('SWEEP {NEAR}', false, 'stuff', 'STUFFED', 3, 'sweep'), P('DEEP POST', false, 'sack', 'SACKED', 1, 'post')] },
@@ -118,14 +118,14 @@ const HAIL = () => P('HAIL MARY', false, 'swat', 'INCOMPLETE', 2, 'go', { sk: VE
 const CHECK = () => P('CHECKDOWN', false, 'catch', 'SHORT OF THE STICKS', 3, 'flat', { short: 1 })
 export const DRIVE_READS = [
   { id: 'quick', can: s => s.down <= 2 && s.dist >= 6 && s.to >= 1 && s.clock >= 60, form: 'cover3', why: 'Plenty of clock and soft corners.|Take the easy yards underneath.', a: () => [P('QUICK HITCH', true, 'catch', 'GOOD GAIN', 0, 'hitch', { g: [5, 9] }), SHOT(), SPIKEW()] },
-  { id: 'soft', can: s => s.down === 1 && s.to >= 2 && s.clock >= 55, form: 'prevent', why: 'They are playing way back and you have timeouts.|The draw walks through it.', a: () => [P('DRAW', true, 'run', 'GOOD GAIN', 3, 'draw', { g: [6, 11] }), HAIL(), SPIKEW()] },
+  { id: 'soft', can: s => s.down === 1 && s.to >= 2 && s.clock >= 55, form: 'prevent', why: 'They are playing way back, with timeouts left.|The draw walks through it.', a: () => [P('DRAW', true, 'run', 'GOOD GAIN', 3, 'draw', { g: [6, 11] }), HAIL(), SPIKEW()] },
   { id: 'medium', can: s => s.down >= 2 && s.dist >= 6 && s.dist <= 10 && s.to >= 1, form: 'cover2', why: 'Second chance, plenty of road.|Hit the slant behind the backers.', a: () => [P('SLANT', true, 'catch', 'GOOD GAIN', 1, 'slant', { g: [7, 11] }), HAIL(), SPIKEW()] },
   { id: 'nots', can: s => s.to === 0 && s.clock > 30, form: 'cover4', why: 'No timeouts.|Only the sideline stops this clock.', a: () => [OUT(), DIG(), DRAWP('CLOCK RUNS')] },
-  { id: 'short', can: s => s.dist <= 5 && s.to >= 1, form: 'cover1', why: 'Short yardage, timeouts in your pocket.|Just move the chains.', a: () => [SLANT(), SPIKEW(), SHOT()] },
+  { id: 'short', can: s => s.dist <= 5 && s.to >= 1, form: 'cover1', why: 'Short yardage, timeouts in the pocket.|Just move the chains.', a: () => [SLANT(), SPIKEW(), SHOT()] },
   { id: 'long', can: s => s.dist >= 11 && s.down >= 2, form: 'light', why: 'Long yardage. Throw past the sticks.|A checkdown only sets up the next down.', a: () => [P('DEEP DIG', true, 'catch', 'FIRST DOWN', 1, 'dig', { g: [13, 17] }), CHECK(), DRAWP('SHORT OF THE STICKS')] },
-  { id: 'spike', can: s => s.running && s.to === 0 && s.clock <= 50 && s.down === 1, form: 'prevent', why: 'Clock running, no timeouts.|Spike it. You still have three downs.', a: () => [P('SPIKE IT', true, 'spike', 'CLOCK STOPPED', 0, null), DRAWP('CLOCK RUNS'), DIG()] },
-  { id: 'chunk', can: s => s.running && s.to === 1 && s.clock <= 75 && s.dist >= 5, form: 'cover2', why: 'Get the chunk and the sideline.|It saves your last timeout.', a: () => [OUT(), DRAWP('CLOCK RUNS'), HAIL()] },
-  { id: 'power', can: s => s.dist <= 3 && s.down >= 2 && s.to >= 1, form: 'light', why: 'Six in the box, a timeout in your pocket.|You can afford the run.', a: () => [P('POWER', true, 'run', 'FIRST DOWN', 3, 'power', { g: [3, 7] }), HAIL(), SPIKEW()] },
+  { id: 'spike', can: s => s.running && s.to === 0 && s.clock <= 50 && s.down === 1, form: 'prevent', why: 'Clock running, no timeouts.|Spike it. Three downs left.', a: () => [P('SPIKE IT', true, 'spike', 'CLOCK STOPPED', 0, null), DRAWP('CLOCK RUNS'), DIG()] },
+  { id: 'chunk', can: s => s.running && s.to === 1 && s.clock <= 75 && s.dist >= 5, form: 'cover2', why: 'Get the chunk and the sideline.|It saves the last timeout.', a: () => [OUT(), DRAWP('CLOCK RUNS'), HAIL()] },
+  { id: 'power', can: s => s.dist <= 3 && s.down >= 2 && s.to >= 1, form: 'light', why: 'Six in the box, a timeout in the pocket.|There is room for the run.', a: () => [P('POWER', true, 'run', 'FIRST DOWN', 3, 'power', { g: [3, 7] }), HAIL(), SPIKEW()] },
   { id: 'chains', fallback: 1, can: () => true, form: 'cover3', why: 'A hurry-up down. Get past the sticks,|get out of bounds, keep it moving.', a: () => [OUT(), DRAWP('CLOCK RUNS'), HAIL()] },
 ]
 // the last call: it has to reach the end zone
@@ -134,7 +134,7 @@ export const LAST_READS = [
   { id: 'end4', can: s => s.down === 4, form: 'cover3', why: 'Down {TRAIL}. Three points does nothing.|Go win it.', a: s => [P('CORNER ROUTE', true, 'catch', 'TOUCHDOWN', 1, 'corner'), P('FIELD GOAL', false, 'kick', `STILL DOWN ${s.trail - 3}`, 0, null), P('SPIKE IT', false, 'spike', 'TURNOVER ON DOWNS', 0, null)] },
   { id: 'endto', can: s => s.to === 0 && s.dist <= 6, form: 'eight', why: 'No timeouts. A run short of the line ends it.|An incomplete fade stops the clock.', a: () => [FADE('FADE'), P('QB SNEAK', false, 'stuff', 'STUFFED', 3, 'inside'), SPIKEW()] },
   { id: 'endlow', can: s => s.clock <= 25, form: 'prevent', why: 'Clock is nearly gone. No more underneath.|It has to reach the end zone.', a: () => [P('END ZONE SHOT', true, 'catch', 'TOUCHDOWN', 2, 'go'), DRAWP('STUFFED'), SPIKEW()] },
-  { id: 'endany', can: () => true, form: 'cover1', why: 'Down {TRAIL} and you need all of it.|Take your shot at the end zone.', a: () => [FADE('END ZONE FADE'), DRAWP('STUFFED'), SPIKEW()] },
+  { id: 'endany', can: () => true, form: 'cover1', why: 'Down {TRAIL}, and it takes all of it.|Take the shot at the end zone.', a: () => [FADE('END ZONE FADE'), DRAWP('STUFFED'), SPIKEW()] },
 ]
 const START_G = 68
 // how long the score, the clock and the down sit there before the first play clock starts
@@ -399,7 +399,7 @@ function sprite(view, key, paint) {
   const id = `${key}|${view.h}|${view.px}`
   let c = sprites.get(id)
   if (!c) {
-    if (sprites.size > 14) sprites.clear()
+    if (sprites.size > 14) { sprites.clear(); PRE_TAGS.clear() }
     c = document.createElement('canvas')
     c.width = Math.ceil(view.w * view.px); c.height = Math.ceil(view.h * view.px)
     const x = c.getContext('2d')
@@ -577,7 +577,10 @@ export function draw(ctx, g, view) {
     if (!c.td && c.G0 > c.st.dist) chainStick(ctx, view, SR + 5, los + dy - c.st.dist * pyd)
   }
   if (!playing) {
-    ctx.drawImage(sprite(view, `pre|${baseKey}`, x => drawSet(x, view, c, los, pyd, col, them, 0)), 0, 0, w, h)
+    // (the names stay off the baked picture: drawn over it each frame, sharp on the stage's name layer)
+    const preId = `pre|${baseKey}|${view.h}|${view.px}`
+    ctx.drawImage(sprite(view, `pre|${baseKey}`, x => { TAG_SINK = []; drawSet(x, view, c, los, pyd, col, them, 0); PRE_TAGS.set(preId, TAG_SINK); TAG_SINK = null }), 0, 0, w, h)
+    for (const t of PRE_TAGS.get(preId) ?? []) nameTag(ctx, view, t.x, t.y, t.name, t.k)
     const qbLook = castOf(c, view.cast).qb
     warmQb({ color: col.us, trim: col.trim, pants: col.trim, skin: qbLook?.skin ?? skinOf(QB_NUM * 7), number: qbLook?.number ?? QB_NUM, kit: 'pads' })
     // what comes after, a few a frame, so the payoff doesn't cost a frame: his reactions, both sidelines
@@ -658,6 +661,9 @@ export function draw(ctx, g, view) {
 
 // one man on the field, in the broadcast's look
 const M = { color: '', trim: '', pants: null, skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, size: 1, pose: null, fall: 0, fallX: 0, lift: 0 }
+// a picture being baked keeps its names here instead (they're drawn live over it), by the picture
+let TAG_SINK = null
+const PRE_TAGS = new Map()
 function drawCast(ctx, view, list, col, them) {
   // back to front; a man with his arms round another is drawn on top of him
   list.sort((a, b) => a.y + (a.top ? 2 : 0) - (b.y + (b.top ? 2 : 0)))
@@ -679,7 +685,9 @@ function drawCast(ctx, view, list, col, them) {
     // his name goes down with him: a man nearer the camera stands in front of it
     if (m.look && !m.fall) {
       const q = tilt(view, m.x, m.y)
-      nameTag(ctx, view, q.x, q.y + (m.lo ? 7.5 * q.s : 0), m.look.name, m.ol ? 0.72 : Math.max(0.8, q.s * (m.size ?? 0.86)))
+      const ty = q.y + (m.lo ? 7.5 * q.s : 0), tk = m.ol ? 0.72 : Math.max(0.8, q.s * (m.size ?? 0.86))
+      if (TAG_SINK) TAG_SINK.push({ x: q.x, y: ty, name: m.look.name, k: tk })
+      else nameTag(ctx, view, q.x, ty, m.look.name, tk)
     }
   }
 }
@@ -696,6 +704,21 @@ function castOf(c, cast) {
     // (and the front four, when the roster has them)
     def: spots.map((at, i) => (at >= 0 ? manOf(cast, 'them', 'db', at) : c.form[i].t === 'd' && seen.d < dls ? manOf(cast, 'them', 'dl', seen.d++) : null)),
     defPace: spots.map(at => (at >= 0 ? paceOf(cast, 'them', 'db', at) : 1)),
+  }
+  // the full eleven a side (career's xi): every man real, the backers too. Speeds as before
+  if (cast.us?.xi && cast.them?.xi) {
+    const x = (side, spot, i) => xiOf(cast, side, spot, i), used = new Set(), n = { d: 0, l: 0, c: 0, s: 0, n: 0 }
+    const SPOT = { d: ['dl'], l: ['lb'], c: ['cb'], s: ['s'], n: ['cb', 's'] }
+    const START = { d: 0, l: 0, c: 0, s: 0, n: 2 }   // (the nickel: the third corner, else a third safety)
+    const pick = t => {
+      for (const sp of SPOT[t]) for (let k = (t === 'n' ? START.n : 0) + (t === 'n' ? 0 : n[t]); k < 6; k++) { const m = x('them', sp, k); if (m && !used.has(m)) { used.add(m); n[t]++; return m } }
+      return null
+    }
+    Object.assign(c.men, {
+      ol: OL.map((_, i) => x('us', 'ol', i)), wr: WR_CAST.map(i => x('us', 'wr', i)),
+      te: x('us', 'te', 0), rb: x('us', 'rb', 0), qb: x('us', 'qb', 0),
+      def: c.form.map(d => pick(d.t)),
+    })
   }
   return c.men
 }

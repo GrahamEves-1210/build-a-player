@@ -15,6 +15,7 @@ export const key = m => str(m?.key, 64) || null
 export const keyOk = (keys, vid, k) => !keys?.[vid] || keys[vid] === k
 export const reject = (ws, why = 'seat') => { send(ws, { t: 'taken', why }); try { ws.close(1000, 'seat taken') } catch {} }
 import { whoIs } from './auth.js'
+import { competeMode } from '../../src/lib/competeCore.js'
 export const accept = (self) => {
   const [client, server] = Object.values(new WebSocketPair())
   server.accept()
@@ -49,13 +50,15 @@ export class BaseQueue {
   constructor(state, env, cfg) {
     this.env = env; this.cfg = cfg
     this.conns = new Map()      // ws → { ...pub, dev, ts }
-    this.sport = null; this.pos = null
+    this.sport = null; this.pos = null; this.mode = null
     this.timer = null; this.startsAt = null
   }
   async fetch(req) {
     const url = new URL(req.url)
     this.sport ??= url.searchParams.get('sport'); this.pos ??= url.searchParams.get('pos')
-    if (this.cfg.kind && !this.count) this.count = countPoster(this.env, `${this.cfg.kind}:${this.sport}-${this.pos}`)
+    // a sport with pools of its own (soccer's TOP DIVISIONS / WORLD CUP: competeCore COMPETE_MODES); null for the others
+    this.mode ??= competeMode(this.sport, url.searchParams.get('mode'))
+    if (this.cfg.kind && !this.count) this.count = countPoster(this.env, `${this.cfg.kind}:${this.sport}-${this.pos}${this.mode ? `-${this.mode}` : ''}`)
     return accept(this)
   }
   waiting() {
@@ -102,7 +105,7 @@ export class BaseQueue {
     const players = list.map(pub)
     const keys = Object.fromEntries(list.map(p => [p.vid, p.key || null]))
     const ns = this.env[this.cfg.room]
-    await ns.get(ns.idFromName(code)).fetch('https://live/init', { method: 'POST', body: JSON.stringify({ code, sport: this.sport, pos: this.pos, players, keys }) })
+    await ns.get(ns.idFromName(code)).fetch('https://live/init', { method: 'POST', body: JSON.stringify({ code, sport: this.sport, pos: this.pos, ...(this.mode ? { mode: this.mode } : {}), players, keys }) })
     const vids = new Set(players.map(p => p.vid))
     for (const [ws, p] of this.conns) if (vids.has(p.vid)) { send(ws, { t: 'match', code, players }); this.conns.delete(ws); try { ws.close(1000, 'matched') } catch {} }
     this.rearm(false); this.broadcast()

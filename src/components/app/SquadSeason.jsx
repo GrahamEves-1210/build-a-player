@@ -2,7 +2,7 @@ import { Component, memo, useCallback, useEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom'
 import { POS_LABEL, POS_NAME } from '../../lib/squad'
 import {
-  teamOf, logoOf, isTeamResult, seasonBox, seasonBoxReady, seasonBoxSoon, scheduleOf, roleOf, photoFor, fbMore, bkMore, teamGrade,
+  teamOf, logoOf, isTeamResult, seasonBox, seasonBoxReady, seasonBoxSoon, scheduleOf, roleOf, photoFor, fbMore, bkMore, teamGrade, soccerMatch, soccerOrdinal,
 } from '../../lib/squadSeason'
 import { HONOR_NAME, leadersOf } from '../../lib/teamSeason'
 import { Bracket, WeekStrip } from './AppSeason'
@@ -24,6 +24,15 @@ export const Face = ({ src, name, mine = false, size = 44 }) => (
   <span className={`tk-hs sq-face${mine ? ' is-mine' : ''}`} style={{ width: size, height: size }}>{src ? <img src={src} alt="" loading="lazy" draggable={false} /> : (name || '?').slice(0, 1)}</span>
 )
 
+// A team's crest (soccer: a club's or a nation's; a side outside the data shows its initials)
+export function TeamCrest({ sport, short, pool, className, size }) {
+  const src = logoOf(sport, short, pool)
+  if (src) return <img className={className} src={src} alt="" loading="lazy" style={size ? { width: size, height: size } : undefined} />
+  return <span className={`sq-crest-init${className ? ` ${className}` : ''}`} style={size ? { width: size, height: size } : undefined}>{String(short ?? '?').slice(0, 3)}</span>
+}
+// soccer's record: W–D–L
+export const soccerRecord = r => `${r.wins ?? 0}–${r.draws ?? 0}–${r.losses ?? 0}`
+
 // A render error in the new view never takes the result away: the old view takes over
 export class SafeView extends Component {
   constructor(props) { super(props); this.state = { failed: false } }
@@ -34,6 +43,13 @@ export class SafeView extends Component {
 
 // How the season ended
 export function outcome(r) {
+  if (r.sport === 'soccer') {
+    if (r.pool === 'alltime') return r.champion ? 'World Champions' : r.finish === 'Group stage' ? `Out in the group · ${soccerOrdinal(r.seed ?? 4)} in Group ${r.group ?? ''}` : /^(Runners-up|Third place|Fourth place)$/.test(r.finish ?? '') ? r.finish : `Out in the ${r.finish ?? 'knockouts'}`
+    const lg = r.league?.name ?? 'the league'
+    if (r.champion) return `${lg} Champions`
+    if (r.relegated) return `Relegated · ${soccerOrdinal(r.seed)} in ${lg === 'the league' ? lg : `the ${lg}`}`
+    return `${soccerOrdinal(r.seed ?? 0)} in ${/^(La Liga|Serie A|Ligue 1|Bundesliga)$/.test(lg) ? lg : `the ${lg}`}`
+  }
   if (r.sport === 'bucket') {
     if (r.champion) return 'NBA Champions'
     const last = r.rounds?.[r.rounds.length - 1]
@@ -421,7 +437,7 @@ function SeasonReveal({ r, sport, games, onDone }) {
       <div className="sq-hero ag-pop" style={{ '--tc': team?.color ?? 'var(--ag-a1)' }}>
         <img className="sq-hero-logo" src={logoOf(sport, r.team)} alt="" />
         <span className="sq-hero-txt">
-          <span className="ag-eyebrow">{team?.name ?? r.team} · {inPo ? 'PLAYOFFS' : 'REGULAR SEASON'}</span>
+          <span className="ag-eyebrow">{team?.name ?? r.team}{r.pool === 'alltime' ? ' · ALL-TIME' : ''} · {inPo ? 'PLAYOFFS' : 'REGULAR SEASON'}</span>
           <b className="sq-hero-rec">{w}<i>–</i>{l}</b>
           <small className="sq-hero-out">{k < reg.length ? `${bk ? 'GAME' : 'WEEK'} ${k} OF ${reg.length}` : r.playoffs ? 'PLAYOFF BOUND' : 'MISSED THE PLAYOFFS'}</small>
         </span>
@@ -444,8 +460,357 @@ function SeasonReveal({ r, sport, games, onDone }) {
   )
 }
 
+
+// ── Soccer: the season as the side played it ────────────────────────────────
+// The side first (the record, where it finished, what it won), then the builds' lines, the awards
+// races, the men around them up front, the league table (the World Cup: the group), the cup and
+// Europe (the knockouts), and every match (tap one for who scored).
+const SOCCER_ROUND = { league: 'LEAGUE', cup: 'CUP', ucl: 'CHAMPIONS LEAGUE', uel: 'EUROPA LEAGUE', wc: 'WORLD CUP' }
+const tieScore = x => {
+  const [my, op] = x.agg ?? x.legs?.[0] ?? [0, 0]
+  return `${my}-${op}${x.sh ? ` (${x.sh[0]}-${x.sh[1]} P)` : x.et ? ' AET' : ''}`
+}
+// who an award went to: a man of the squad's (a build by its name and the player's, a real teammate by his), or the field's
+function winnerOf(w, r, owner) {
+  if (!w) return null
+  if (w.k) {
+    const p = r.roster?.find(x => x.k === w.k)
+    return { name: p?.n ?? '—', sub: p?.s ? `${p.tag} · ${owner}` : `${p?.tag ?? ''} · ${r.team}`, mine: !!p?.s, ours: true, team: r.team }
+  }
+  return { name: w.name, sub: w.team, team: w.team, mine: false, ours: false }
+}
+const SoccerHead = memo(function SoccerHead({ r }) {
+  const team = teamOf('soccer', r.team, r.pool)
+  return (
+    <div className={`sq-hero ag-pop${r.champion ? ' is-champ' : ''}`} style={{ '--tc': team?.color ?? 'var(--ag-a1)' }}>
+      <TeamCrest sport="soccer" short={r.team} pool={r.pool} className="sq-hero-logo" />
+      <span className="sq-hero-txt">
+        <span className="ag-eyebrow">{team?.name ?? r.team}{r.pool === 'alltime' ? ` · GROUP ${r.group ?? ''}` : r.league ? ` · ${r.league.name.toUpperCase()}` : ''}</span>
+        <b className="sq-hero-rec">{r.wins}<i>–</i>{r.draws}<i>–</i>{r.losses}</b>
+        <small className="sq-hero-out">{r.champion && <IconTrophy size={14} />} {outcome(r)}</small>
+      </span>
+    </div>
+  )
+})
+const SoccerTeamLine = memo(function SoccerTeamLine({ r }) {
+  const st = r.strength ?? {}
+  const delta = (now, was) => { const a = teamGrade('soccer', now, r.pool), b = teamGrade('soccer', was, r.pool); return a === b ? null : <i className={(now ?? 0) > (was ?? 0) ? 'is-up' : 'is-down'}>from {b}</i> }
+  const games = r.pool === 'alltime' ? (r.fx ?? []).length : (r.wins + r.draws + r.losses)
+  const gf = r.pool === 'alltime' ? (r.fx ?? []).reduce((a, f) => a + f.my, 0) : r.gf
+  const ga = r.pool === 'alltime' ? (r.fx ?? []).reduce((a, f) => a + f.op, 0) : r.ga
+  const more = r.pool === 'alltime'
+    ? [`${r.points} PTS IN THE GROUP`, `${r.trophies?.length ? 'WORLD CHAMPIONS' : (r.finish ?? '').toUpperCase()}`]
+    : [`${r.points} PTS`, `GD ${r.gd > 0 ? '+' : ''}${r.gd}`, ...(r.trophies?.length ? [r.trophies.join(' · ').toUpperCase()] : [])]
+  return (
+    <section className="sq-card sq-tl ag-pop" style={{ '--d': '40ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">THE SIDE · {games} {r.pool === 'alltime' ? 'MATCHES' : 'LEAGUE MATCHES'}</span></div>
+      <div className="sq-tl-cells">
+        <span><small>SCORED</small><b>{gf}</b></span>
+        <span><small>CONCEDED</small><b>{ga}</b></span>
+        <span><small>ATTACK</small><b>{teamGrade('soccer', st.off, r.pool)}</b>{delta(st.off, st.baseOff)}</span>
+        <span><small>DEFENCE</small><b>{teamGrade('soccer', st.def, r.pool)}</b>{delta(st.def, st.baseDef)}</span>
+      </div>
+      <p className="sq-tl-more">{more.filter(Boolean).join(' · ')}</p>
+    </section>
+  )
+})
+const soccerMore = (t, club) => [
+  ...(club && t.allGoals !== t.goals ? [`${t.allGoals} ${t.allGoals === 1 ? 'GOAL' : 'GOALS'} ALL COMPS`] : []),
+  `${fmt(t.mins)} MIN`, `${t.shots} SHOTS`, `${fmt(r1(t.xg))} xG`, ...(t.hatTricks ? [`${t.hatTricks} HAT-TRICK${t.hatTricks > 1 ? 'S' : ''}`] : []), ...(t.motm ? [`${t.motm} MOTM`] : []),
+]
+const SoccerLines = memo(function SoccerLines({ r, squad, owner }) {
+  const bySlot = Object.fromEntries((squad?.slots ?? []).map(s => [s.id, s]))
+  const club = r.pool !== 'alltime'
+  return (
+    <section className="sq-lines ag-pop" style={{ '--d': '80ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">{owner.toUpperCase()}'S BUILDS{club ? ' · LEAGUE' : ''}</span></div>
+      {r.lines.map(l => {
+        const t = r.tot?.[`b:${l.id}`] ?? {}
+        return (
+          <div key={l.id} className={`sq-line${l.awards?.length ? ' is-award' : ''}`}>
+            <div className="sq-line-top">
+              <Face src={l.face} name={l.tag} mine />
+              <span className="sq-row-txt">
+                <b>{l.name ?? 'Striker'}</b>
+                <small>{l.tag} · {owner}{bySlot[l.id] ? '' : ' · cut'}</small>
+              </span>
+              {l.awards?.[0] && <span className="sq-award"><IconTrophy size={13} /> {l.awards[0].toUpperCase()}</span>}
+              {!l.awards?.length && l.honor && <span className="sq-honor">{l.honor.split(' · ')[0]}</span>}
+              <span className="sq-ovr"><b>{l.ovr}</b><small>OVR</small></span>
+            </div>
+            <div className="sq-stats">{l.stats.map(([k, v]) => <span key={k}><b>{fmt(v)}</b><small>{k}</small></span>)}</div>
+            <p className="sq-line-more">{[...(l.awards ?? []).slice(1).map(a => a.toUpperCase()), ...(l.awards?.length && l.honor ? [l.honor] : !l.awards?.length && l.honor?.includes(' · ') ? [l.honor.split(' · ').slice(1).join(' · ')] : []), ...soccerMore(t, club)].join(' · ')}</p>
+          </div>
+        )
+      })}
+    </section>
+  )
+})
+// the awards: who won each, and the Golden Boot race
+const SoccerAwards = memo(function SoccerAwards({ r, owner }) {
+  const A = r.awards ?? {}
+  const rows = [A.boot, A.poty, A.bdo, A.ball].filter(Boolean)
+  if (!rows.length) return null
+  const raceName = x => { const w = winnerOf(x, r, owner); return w }
+  return (
+    <section className="sq-card ag-pop" style={{ '--d': '100ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">THE AWARDS</span></div>
+      {rows.map(a => {
+        const w = winnerOf(a.winner, r, owner)
+        return (
+          <div key={a.name} className={`sq-lead${w?.mine ? ' is-mine' : ''}`}>
+            <span className="sq-lead-lbl">{a.name.toUpperCase()}</span>
+            {w?.ours ? <Face src={photoFor('soccer', r.roster.find(p => p.k === a.winner.k), Object.fromEntries((r.lines ?? []).map(l => [l.id, l.face])))} name={w.name} mine={w.mine} size={28} /> : <TeamCrest sport="soccer" short={w?.team} pool={r.pool} className="sq-crest-sm" />}
+            <span className="sq-lead-who"><b>{w?.mine ? w.name : lastName(w?.name)}</b><small>{w?.sub}{a.shared ? ' · SHARED' : ''}</small></span>
+            {a.winner?.goals != null && <span className="sq-lead-val"><b>{a.winner.goals}</b><small>GOALS</small></span>}
+          </div>
+        )
+      })}
+      {A.race?.length > 0 && (
+        <div className="sq-race">
+          <span className="sq-mates-pos">{(A.boot?.name ?? 'GOLDEN BOOT').toUpperCase()} RACE</span>
+          {A.race.map((x, i) => {
+            const w = raceName(x)
+            return (
+              <div key={`${x.k ?? x.name}-${i}`} className={`sq-race-row${w?.mine ? ' is-mine' : ''}`}>
+                <span className="sq-race-n">{i + 1}</span>
+                <TeamCrest sport="soccer" short={x.team} pool={r.pool} className="sq-crest-sm" />
+                <span className="sq-race-who"><b>{w?.mine ? w.name : lastName(w?.name)}</b>{w?.mine && <small>{w.sub}</small>}</span>
+                <b className="sq-race-g">{x.goals}</b>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+})
+// the men up front who aren't builds: the side's own forwards (and the goals of the rest of the XI)
+const SoccerMates = memo(function SoccerMates({ r }) {
+  const real = (r.roster ?? []).filter(p => !p.s)
+  return (
+    <section className="sq-card sq-mates ag-pop" style={{ '--d': '120ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">SURROUNDING TALENT</span></div>
+      {real.map(p => {
+        const t = r.tot?.[p.k] ?? {}, m = r.mates?.find(x => x.k === p.k)
+        return (
+          <div key={p.k} className="sq-mate">
+            <Face src={photoFor('soccer', p)} name={p.n} size={26} />
+            <span className="sq-mate-who"><b>{lastName(p.n)}</b><small>{p.tag} · {p.o}{m?.awards?.length ? ` · ${m.awards.join(', ').toUpperCase()}` : m?.honor ? ` · ${m.honor}` : ''}</small></span>
+            <span className="sq-mate-line">{t.goals} G · {t.assists} A · {t.apps} APPS</span>
+          </div>
+        )
+      })}
+      <div className="sq-mate">
+        <span className="tk-hs sq-face" style={{ width: 26, height: 26 }}>XI</span>
+        <span className="sq-mate-who"><b>The rest of the XI</b><small>MIDFIELD AND DEFENCE</small></span>
+        <span className="sq-mate-line">{r.others ?? 0} G</span>
+      </div>
+    </section>
+  )
+})
+// the league table (the World Cup: the group), the side's row lit
+const SoccerTable = memo(function SoccerTable({ r }) {
+  const [all, setAll] = useState(false)
+  const rows = r.standings ?? []
+  if (!rows.length) return null
+  const club = r.pool !== 'alltime'
+  const me = rows.findIndex(x => x.short === r.team)
+  const size = rows.length
+  // (the top four, the side's place and the bottom three; FULL TABLE shows the lot)
+  const shown = all || !club ? rows : rows.filter((x, i) => i < 4 || Math.abs(i - me) <= 1 || i >= size - 3)
+  const zone = i => (!club ? (i < 2 ? ' is-up' : '') : i < 4 ? ' is-up' : i >= size - 3 ? ' is-down' : '')
+  return (
+    <section className="sq-card ag-pop" style={{ '--d': '140ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">{club ? (r.league?.name ?? 'THE LEAGUE').toUpperCase() : `GROUP ${r.group ?? ''}`}</span></div>
+      <div className="sq-table" role="table">
+        <div className="sq-table-row sq-table-head" role="row"><span>#</span><span>{club ? 'CLUB' : 'NATION'}</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GD</span><span>PTS</span></div>
+        {shown.map((x, j) => {
+          const i = rows.indexOf(x)
+          const gap = j > 0 && i - rows.indexOf(shown[j - 1]) > 1
+          return (
+            <div key={x.short} className={`sq-table-row${x.short === r.team ? ' is-mine' : ''}${zone(i)}${gap ? ' is-gap' : ''}`} role="row">
+              <span>{x.pos ?? i + 1}</span>
+              <span className="sq-table-team"><TeamCrest sport="soccer" short={x.short} pool={r.pool} className="sq-crest-sm" /><b>{x.name ?? x.short}</b></span>
+              <span>{x.played}</span><span>{x.wins}</span><span>{x.draws}</span><span>{x.losses}</span><span>{x.gd > 0 ? `+${x.gd}` : x.gd}</span><b>{x.points}</b>
+            </div>
+          )
+        })}
+      </div>
+      {club && size > shown.length && <button className="ag-btn ag-btn--ghost sq-more-btn" onClick={() => { setAll(true); sfx('tap') }}>FULL TABLE</button>}
+      {club && all && <button className="ag-btn ag-btn--ghost sq-more-btn" onClick={() => { setAll(false); sfx('tap') }}>SHORT TABLE</button>}
+    </section>
+  )
+})
+// the cup and Europe (the World Cup: the knockouts), tie by tie
+const SoccerCups = memo(function SoccerCups({ r }) {
+  const ties = r.rounds ?? []
+  const club = r.pool !== 'alltime'
+  const groups = club
+    ? [[r.cup?.name ?? 'CUP', ties.filter(x => x.comp === 'cup'), r.cup?.result], ...(r.europe ? [[r.europe.name, ties.filter(x => x.comp === r.europe.comp), r.europe.result, r.europe.position]] : [])]
+    : [['THE KNOCKOUTS', ties, r.finish]]
+  if (!groups.some(([, list, res]) => list.length || res)) return null
+  return (
+    <section className="sq-po ag-pop" style={{ '--d': '160ms' }}>
+      {groups.map(([name, list, res, place]) => (
+        <div key={name} className="sq-cup">
+          <div className="ag-card-head"><span className="ag-eyebrow">{String(name).toUpperCase()}{res ? ` · ${String(res).toUpperCase()}` : ''}</span></div>
+          {place != null && <p className="sq-cup-note">{soccerOrdinal(place)} in the league phase</p>}
+          {list.map((x, i) => (
+            <div key={i} className={`sq-po-row${x.won ? ' is-w' : ' is-l'}`}>
+              <span>{String(x.name ?? '').toUpperCase()}</span>
+              <TeamCrest sport="soccer" short={x.o} pool={r.pool} className="sq-crest-sm" />
+              <span className="sq-cup-opp">{x.on ?? x.o}</span>
+              <b>{tieScore(x)}</b>
+            </div>
+          ))}
+          {!list.length && <p className="sq-cup-note">{club && name === r.europe?.name ? 'Out in the league phase' : 'No ties played'}</p>}
+        </div>
+      ))}
+    </section>
+  )
+})
+function SoccerGameRow({ g, r, onOpen }) {
+  const Tag = onOpen ? 'button' : 'div'
+  const res = g.won ? 'W' : g.drawn ? 'D' : 'L'
+  return (
+    <Tag className={`sq-game${g.won ? ' is-w' : g.drawn ? ' is-d' : ' is-l'}${g.po ? ' is-po' : ''}`} {...(onOpen && { onClick: () => onOpen(g), 'aria-label': `${g.label}, ${g.home ? 'vs' : 'at'} ${g.oppName ?? g.opp}, ${g.my} to ${g.op}` })}>
+      <span className="sq-game-lbl">{g.comp === 'league' ? g.label : (SOCCER_ROUND[g.comp] === 'WORLD CUP' ? g.label : `${g.comp === 'cup' ? 'CUP' : g.comp.toUpperCase()} · ${g.label}`).replace('LEAGUE PHASE', 'LP').replace('MATCHDAY ', 'MD')}</span>
+      <TeamCrest sport="soccer" short={g.opp} pool={r.pool} />
+      <span className="sq-game-opp">{g.neutral ? 'v' : g.home ? 'vs' : '@'} {g.oppName ?? g.opp}</span>
+      <b className="sq-game-res"><i>{res}</i> {g.my}-{g.op}{g.sh ? ` (${g.sh[0]}-${g.sh[1]} P)` : g.et ? ' AET' : ''}</b>
+      {onOpen && <IconCaret dir="right" size={11} className="sq-game-go" />}
+    </Tag>
+  )
+}
+const SoccerSchedule = memo(function SoccerSchedule({ r, games, onOpen }) {
+  const [comp, setComp] = useState('league')
+  const club = r.pool !== 'alltime'
+  const tabs = club ? [['league', 'LEAGUE'], ['cups', 'CUP AND EUROPE']] : null
+  const shown = !club ? games : comp === 'league' ? games.filter(g => g.comp === 'league') : games.filter(g => g.comp !== 'league')
+  return (
+    <section className="sq-card ag-pop" style={{ '--d': '180ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">{club ? 'EVERY MATCH' : 'THE WORLD CUP'}</span></div>
+      {tabs && (
+        <div className="ag-seg sq-seg" role="tablist" aria-label="Competition">
+          {tabs.map(([id, text]) => <button key={id} role="tab" aria-selected={comp === id} className={comp === id ? 'is-on' : ''} onClick={() => { setComp(id); sfx('tap') }}>{comp === id && <span className="ag-seg-pill" />}{text}</button>)}
+        </div>
+      )}
+      <div className="sq-games">{shown.map(g => <SoccerGameRow key={g.i} g={g} r={r} onOpen={onOpen} />)}</div>
+    </section>
+  )
+})
+// one match: the score, and what each man up front did
+function SoccerMatchSheet({ r, g, owner, faces, onClose }) {
+  useEffect(() => { const k = e => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
+  const men = soccerMatch(r, g.i)
+  const ours = men.reduce((a, m) => a + m.goals, 0)
+  const team = teamOf('soccer', r.team, r.pool)
+  return createPortal(
+    <div className="ss-overlay sq-box-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ss-sheet sq-box" role="dialog" aria-modal="true" aria-labelledby="sq-box-title">
+        <div className="ss-head">
+          <span className="ag-eyebrow">{g.label} · {g.neutral ? 'V' : g.home ? 'VS' : 'AT'} {(g.oppName ?? g.opp ?? '').toUpperCase()}</span>
+          <button className="ss-close" onClick={onClose} aria-label="Close"><IconClose size={15} /></button>
+        </div>
+        <div className={`sq-box-score${g.won ? ' is-w' : ' is-l'}`} id="sq-box-title">
+          <span className="sq-box-team"><TeamCrest sport="soccer" short={r.team} pool={r.pool} /><b>{r.team}</b></span>
+          <span className="sq-box-pts"><b>{g.my}</b><i>–</i><b>{g.op}</b></span>
+          <span className="sq-box-team"><TeamCrest sport="soccer" short={g.opp} pool={r.pool} /><b>{g.opp}</b></span>
+          <span className="sq-box-final">{g.won ? 'WIN' : g.drawn ? 'DRAW' : 'LOSS'}{g.sh ? ` · ${g.sh[0]}-${g.sh[1]} ON PENS` : g.et ? ' · AFTER EXTRA TIME' : ''}</span>
+        </div>
+        <div className="sq-box-sec">
+          <span className="sq-box-h">{(team?.name ?? r.team).toUpperCase()} UP FRONT</span>
+          {men.map(({ p, mins, goals, assists, rating }) => (
+            <div key={p.k} className={`sq-box-me${mins ? '' : ' is-dnp'}`}>
+              <Face src={p.s ? faces[p.s] : photoFor('soccer', p)} name={p.s ? p.tag : p.n} mine={!!p.s} size={32} />
+              <span className="sq-row-txt"><b>{p.s ? p.n : lastName(p.n)}</b><small>{p.tag}{p.s ? ` · ${owner}` : ''}</small></span>
+              <span className="sq-box-me-cells">{mins
+                ? [['MIN', mins], ['G', goals], ['A', assists], ['RTG', rating ? fmt(r1(rating)) : '—']].map(([k, v]) => <span key={k}><b>{v}</b><small>{k}</small></span>)
+                : <span className="sq-bt-dnp">DID NOT PLAY</span>}</span>
+            </div>
+          ))}
+          {g.my - ours > 0 && <p className="sq-cup-note">The rest of the XI: {g.my - ours} {g.my - ours === 1 ? 'goal' : 'goals'}</p>}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+// the season playing out: the matches light up one by one and the points build; then the knockouts
+function SoccerReveal({ r, games, onDone }) {
+  const club = r.pool !== 'alltime'
+  const main = useMemo(() => (club ? games.filter(g => g.comp === 'league') : games), [games, club])
+  const [k, setK] = useState(0)
+  const doneRef = useRef(onDone); doneRef.current = onDone
+  useEffect(() => {
+    let t, i = 0
+    const step = club ? 2 : 1, every = club ? 140 : 520
+    const tick = () => {
+      i = Math.min(main.length, i + step); setK(i)
+      if (i < main.length) { t = setTimeout(tick, every); return }
+      sfx(r.champion ? 'claim' : 'tap')
+      t = setTimeout(() => doneRef.current(), 1100)
+    }
+    t = setTimeout(tick, 400)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = main.slice(0, k)
+  const w = shown.filter(g => g.won).length, d = shown.filter(g => g.drawn).length, l = shown.length - w - d
+  const team = teamOf('soccer', r.team, r.pool)
+  return (
+    <div className="sq-reveal">
+      <div className="sq-hero ag-pop" style={{ '--tc': team?.color ?? 'var(--ag-a1)' }}>
+        <TeamCrest sport="soccer" short={r.team} pool={r.pool} className="sq-hero-logo" />
+        <span className="sq-hero-txt">
+          <span className="ag-eyebrow">{team?.name ?? r.team} · {club ? (r.league?.name ?? 'THE LEAGUE').toUpperCase() : 'THE WORLD CUP'}</span>
+          <b className="sq-hero-rec">{w}<i>–</i>{d}<i>–</i>{l}</b>
+          <small className="sq-hero-out">{k < main.length ? `${club ? 'MATCHWEEK' : 'MATCH'} ${k} OF ${main.length}${club ? ` · ${w * 3 + d} PTS` : ''}` : outcome(r)}</small>
+        </span>
+      </div>
+      <section className="sq-po">
+        <div className="sq-log sq-log--soccer" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${club ? Math.ceil(main.length / 2) : main.length}, 1fr)` }}>{main.map((g, i) => <i key={i} className={i < k ? (g.won ? 'is-w' : g.drawn ? 'is-d' : 'is-l') : ''} />)}</div>
+        <div className="sq-games">{shown.slice(-4).reverse().map(g => <SoccerGameRow key={g.i} g={g} r={r} />)}</div>
+      </section>
+      <button className="ag-btn ag-btn--ghost sq-reveal-skip" onClick={() => { sfx('tap'); onDone() }}>SKIP TO THE RESULTS</button>
+    </div>
+  )
+}
+function SoccerResult({ squad, owner, rewards, reveal, onRevealed }) {
+  const raw = squad.last
+  const r = useMemo(() => ({ ...raw, rounds: raw.rounds ?? [], lines: raw.lines ?? [], roster: raw.roster ?? [], tot: raw.tot ?? {} }), [raw])
+  const games = useMemo(() => scheduleOf(r), [r])
+  const faces = useMemo(() => Object.fromEntries(r.lines.map(l => [l.id, l.face])), [r])
+  const [playing, setPlaying] = useState(() => reveal && !reducedMotion())
+  const finish = useCallback(() => { setPlaying(false); onRevealed?.() }, [onRevealed])
+  useEffect(() => { if (reveal && !playing) onRevealed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [open, setOpen] = useState(null)
+  const onOpen = useCallback(g => { setOpen(g); sfx('tap') }, [])
+  const close = useCallback(() => setOpen(null), [])
+  if (playing) return <SoccerReveal r={r} games={games} onDone={finish} />
+  return (
+    <>
+      <SoccerHead r={r} />
+      {r.sandbox && <p className="sq-note">SANDBOX squad: just for fun, no XP or coins.</p>}
+      <SoccerTeamLine r={r} />
+      <SoccerLines r={r} squad={squad} owner={owner} />
+      {rewards}
+      <SoccerAwards r={r} owner={owner} />
+      <SoccerMates r={r} />
+      <SoccerTable r={r} />
+      <SoccerCups r={r} />
+      <SoccerSchedule r={r} games={games} onOpen={onOpen} />
+      {open && <SoccerMatchSheet r={r} g={open} owner={owner} faces={faces} onClose={close} />}
+    </>
+  )
+}
+
 // ── The whole result ─────────────────────────────────────────────────────────
-export function TeamResult({ sport, squad, owner, rewards, reveal = false, onRevealed }) {
+// (soccer has its own: the table, the cup and Europe)
+export function TeamResult(props) {
+  return props.sport === 'soccer' ? <SoccerResult {...props} /> : <SquadTeamResult {...props} />
+}
+function SquadTeamResult({ sport, squad, owner, rewards, reveal = false, onRevealed }) {
   // (a result missing a list reads it as empty: a damaged save never takes the screen down)
   const raw = squad.last
   const r = useMemo(() => ({ ...raw, rounds: raw.rounds ?? [], lines: raw.lines ?? [], games: raw.games ?? [], honors: raw.honors ?? {} }), [raw])
@@ -468,7 +833,7 @@ export function TeamResult({ sport, squad, owner, rewards, reveal = false, onRev
       <div className={`sq-hero ag-pop${r.champion ? ' is-champ' : ''}`} style={{ '--tc': team?.color ?? 'var(--ag-a1)' }}>
         <img className="sq-hero-logo" src={logoOf(sport, r.team)} alt="" />
         <span className="sq-hero-txt">
-          <span className="ag-eyebrow">{team?.name ?? r.team}</span>
+          <span className="ag-eyebrow">{team?.name ?? r.team}{r.pool === 'alltime' ? ' · ALL-TIME' : ''}</span>
           <b className="sq-hero-rec">{r.wins}<i>–</i>{r.losses}</b>
           <small className="sq-hero-out">{r.champion && <IconTrophy size={14} />} {outcome(r)}</small>
         </span>

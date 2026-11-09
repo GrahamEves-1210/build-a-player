@@ -6,7 +6,7 @@
 //   bomb         deep routes, the ball long in the air
 //   third-long   3rd & 9: past the yellow line; the further past it, the bigger the score
 //   acc          the combine: no defense, four routes, each quicker. 3 of 4 passes
-import { byV, clamp, lerp, outcome, layer, rngOf, prog, easeOut, easeIn, themOf, text, DISPLAY, LABEL, manOf, paceOf, paintFieldDress, particles, nudge, reduceMotion } from './kit.js'
+import { byV, clamp, lerp, outcome, layer, rngOf, prog, easeOut, easeIn, themOf, text, DISPLAY, LABEL, manOf, xiOf, paceOf, paintFieldDress, particles, nudge, reduceMotion } from './kit.js'
 import { goalPosts, breakupPose, tilt, untilt, ground, stands, floodlight, vignette, athlete, warmAthlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, nameTag, crowdPop } from './art.js'
 
 export const how = {
@@ -164,7 +164,8 @@ function mkTeams(r, calls, Mx, cast, bomb = false) {
     const [g, i] = OFF_ROLE[id]
     return base * paceOf(cast, 'us', g, i)
   }
-  const lookO = id => { const [g, i] = OFF_ROLE[id]; return manOf(cast, 'us', g, i) }
+  // (every man on the field a real one, the full eleven a side: xiOf; the old groups when a cast has none)
+  const lookO = id => { const [g, i] = OFF_ROLE[id]; return xiOf(cast, 'us', g, i) ?? manOf(cast, 'us', g, i) }
   // the ball is on a hash, or the middle of the field; the interior goes with it, the wideouts don't
   const BX = [HASH_L, 180, HASH_R][Math.floor(r() * 3)]
   const IN = x => x - 180 + BX
@@ -187,7 +188,7 @@ function mkTeams(r, calls, Mx, cast, bomb = false) {
   const RB = mk('RB', Mx(rbX), -42, route(call.RB, rbX, -42), pacey('RB', RB_V))
   const QB = mk('QB', Mx(BX), -42, null, 0, 0.82)
   // (left to right on the screen, whichever way the play's flipped)
-  const OL = [-46, -23, 0, 23, 46].map((d, i) => { const o = mk(`OL${i}`, Mx(BX + d), -9, null, 0, 0.84); o.look = manOf(cast, 'us', 'ol', flipped ? 4 - i : i); o.lo = (flipped ? 4 - i : i) % 2; return o })
+  const OL = [-46, -23, 0, 23, 46].map((d, i) => { const o = mk(`OL${i}`, Mx(BX + d), -9, null, 0, 0.84); o.look = xiOf(cast, 'us', 'ol', flipped ? 4 - i : i) ?? manOf(cast, 'us', 'ol', flipped ? 4 - i : i); o.lo = (flipped ? 4 - i : i) % 2; return o })
   for (const p of [X, H, Z, TE, RB, QB]) p.look = lookO(p.id)
   const off = [...OL, TE, X, H, Z, RB, QB]
   const backs = [X, H, Z, TE, RB].filter(p => p.path)
@@ -227,10 +228,10 @@ function mkTeams(r, calls, Mx, cast, bomb = false) {
     const has = (cast?.them?.db?.length ?? 0) > ri
     const v = (db ? DB_V * (has ? paceOf(cast, 'them', 'db', ri) : 1) : LB_V)
     const spot = job.z ? [Mx(job.z[0]), job.z[1]] : null
-    return { id, x, y, x0: x, y0: y, mark, spot, spot0: spot, third: !!job.z && job.z[1] >= 150, deep: !!job.deep, half: job.half ? (Mx(180 + job.half * 60) < 180 ? -1 : 1) : 0, aimX: x, aimY: y, drive: 0, flip: null, v, look: db && has ? manOf(cast, 'them', 'db', ri) : null, scale: 0.78, face: Math.PI, spd: 0, side: 'd', kind: job.deep ? 'safety' : job.z ? 'zone' : 'man' }
+    return { id, x, y, x0: x, y0: y, mark, spot, spot0: spot, third: !!job.z && job.z[1] >= 150, deep: !!job.deep, half: job.half ? (Mx(180 + job.half * 60) < 180 ? -1 : 1) : 0, aimX: x, aimY: y, drive: 0, flip: null, v, look: (db ? xiOf(cast, 'them', 'db', ri) ?? (id === 'S2' ? xiOf(cast, 'them', 'lb', 2) : null) : xiOf(cast, 'them', 'lb', id === 'LB1' ? 1 : 0)) ?? (db && has ? manOf(cast, 'them', 'db', ri) : null), scale: 0.78, face: Math.PI, spd: 0, side: 'd', kind: job.deep ? 'safety' : job.z ? 'zone' : 'man' }
   }
   // the down four
-  const DL = [-58, -20, 20, 58].map((d, i) => ({ id: `DL${i}`, x: Mx(BX + d), y: 10, x0: Mx(BX + d), y0: 10, scale: 0.84, face: Math.PI, spd: 0, side: 'd', kind: 'dl', look: cast?.them?.dl?.length > i ? manOf(cast, 'them', 'dl', i) : null, lo: (i + 1) % 2 }))
+  const DL = [-58, -20, 20, 58].map((d, i) => ({ id: `DL${i}`, x: Mx(BX + d), y: 10, x0: Mx(BX + d), y0: 10, scale: 0.84, face: Math.PI, spd: 0, side: 'd', kind: 'dl', look: xiOf(cast, 'them', 'dl', i) ?? (cast?.them?.dl?.length > i ? manOf(cast, 'them', 'dl', i) : null), lo: (i + 1) % 2 }))
   const back = []
   back.push(dk('CB0', X.x, press ? 12 : 46, cov.cb[0]), dk('CB1', Z.x, press ? 12 : 46, cov.cb[1]))
   back.push(dk('N', nickel ? H.x : Mx(BX), nickel ? 34 : 44, cov.n))
@@ -1340,7 +1341,8 @@ function drawBroadcast(ctx, g, view) {
     if (p.look && !((p === under && (sack ? fall0 : fallMan) > 0) || (p === onTop && fall > 0))) {
       const q = tilt(view, p.x, fl(p.y)), line = p.id.startsWith('OL') || p.kind === 'dl'
       // (on a small canvas the linemen's names only cover the numbers: skill players keep theirs)
-      if (!(line && view.px < 1.6)) nameTag(ctx, view, q.x, q.y + (line && p.lo ? 7.5 * q.s : 0), p.look.name, line ? 0.72 : Math.max(0.8, q.s * 0.86))
+      // (once it's over and they're up, every man's name, the line's too)
+      if (!(line && view.px < 1.6 && !(g.done && after > 900))) nameTag(ctx, view, q.x, q.y + (line && p.lo ? 7.5 * q.s : 0), p.look.name, line ? 0.72 : Math.max(0.8, q.s * 0.86))
     }
   }
   // loose ball

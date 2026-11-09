@@ -67,11 +67,11 @@ const _TES = [
     attrs: { speed: 4, blocking: 10, vertical: 4, routeRunning: 3, strength: 8, hands: 4, awareness: 4, size: 5, afterCatch: 4 } },
   // CAR
   { name: 'Tommy Tremble',     short: 'Tremble',     team: 'CAR', teamName: 'Carolina Panthers',      skin: '#b07848', height: 75, weight: 251, starter: true,  captain: true,  number: 82,
-    attrs: { speed: 5, blocking: 7, vertical: 4, routeRunning: 4, strength: 7, hands: 5, awareness: 6, size: 4, afterCatch: 7 } },
-  { name: "Ja'Tavion Sanders", short: 'Sanders',     team: 'CAR', teamName: 'Carolina Panthers',      skin: '#5e3c22', height: 76, weight: 252, starter: false, number: 0,
-    attrs: { speed: 7, blocking: 2, vertical: 5, routeRunning: 6, strength: 3, hands: 6, awareness: 4, size: 7, afterCatch: 4 } },
+    attrs: { speed: 6, blocking: 7, vertical: 4, routeRunning: 5, strength: 7, hands: 6, awareness: 6, size: 4, afterCatch: 7 } },
+  { name: 'Mitchell Evans',        short: 'Evans',        team: 'CAR', teamName: 'Carolina Panthers',      skin: '#f0c4a0', height: 77, weight: 258, starter: false, number: 84,
+    attrs: { speed: 4, blocking: 6, vertical: 4, routeRunning: 5, strength: 6, hands: 4, awareness: 5, size: 9, afterCatch: 3 } },
   { name: 'Darren Waller',         short: 'Waller',       team: 'CAR', teamName: 'Carolina Panthers', skin: '#5e3c22', height: 78, weight: 245, starter: false, number: 88,
-    attrs: { speed: 5, blocking: 3, vertical: 6, routeRunning: 6, strength: 4, hands: 6, awareness: 6, size: 9, afterCatch: 5 } },
+    attrs: { speed: 8, blocking: 2, vertical: 6, routeRunning: 6, strength: 4, hands: 7, awareness: 6, size: 9, afterCatch: 5 } },
   // CHI
   { name: 'Colston Loveland',  short: 'Loveland',    team: 'CHI', teamName: 'Chicago Bears',          skin: '#f0c4a0', height: 78, weight: 241, starter: true,  captain: true,  number: 84,
     attrs: { speed: 7, blocking: 4, vertical: 7, routeRunning: 9, strength: 4, hands: 8, awareness: 7, size: 10, afterCatch: 8 } },

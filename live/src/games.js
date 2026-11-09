@@ -21,7 +21,7 @@ const PER_SIZE = 12                // the most one mode lists
 const MAX_GAMES = 120
 const COUNT_STALE_MS = 3 * 60 * 1000   // a queue that hasn't posted for three minutes is empty (a redeploy drops them)
 const COUNT_EVERY_MS = 3000            // the menus hear the counts at most this often
-const COUNT_KEY = /^(cp|au):[a-z]{2,8}-[a-z]{2,8}$|^bt:[123]$/
+const COUNT_KEY = /^(cp|au):[a-z]{2,8}-[a-z]{2,8}(-[a-z]{2,8})?$|^bt:[123]$/   // (soccer's: cp:soccer-st-current / -alltime; baseball's: cp:baseball-bat-current … cp:baseball-pit-alltime)
 
 const sizeOf = v => (v === 1 || v === 2 ? v : 3)
 const scoreOf = s => (Array.isArray(s) && s.length === 2 && s.every(n => Number.isInteger(n) && n >= 0 && n <= 99) ? [s[0], s[1]] : null)

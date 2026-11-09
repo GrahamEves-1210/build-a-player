@@ -47,13 +47,15 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
   // how many are waiting in each position's queue (lib/liveCounts.js), while the lobby's up
   const lobbyUp = cp.phase !== 'busy' && au?.phase !== 'busy' && !auctionOn && !['queue', 'build', 'result'].includes(cp.phase)
   const waiting = useLiveCounts(lobbyUp)
-  const qKey = pos => `${showAuction ? 'au' : 'cp'}:${sport === 'bucket' ? 'bucket' : 'nfl'}-${pos}`
+  // (a tab can name its own queue: soccer's tabs are its two pools, TOP DIVISIONS and WORLD CUP)
+  const qKey = pos => { const q = !showAuction && positions.find(o => o.pos === pos)?.q; return q ? `cp:${q}` : `${showAuction ? 'au' : 'cp'}:${sport === 'bucket' ? 'bucket' : 'nfl'}-${pos}` }
   const auPositions = positions.filter(o => (AUCTION_POS[sport === 'bucket' ? 'bucket' : 'nfl'] ?? []).includes(o.pos))
   // the auction has no DB: switching to it moves you to a position it has
   useEffect(() => { if (showAuction && !auctionOn && auPositions.length && !auPositions.some(o => o.pos === position)) onPosition(auPositions[0].pos) }, [showAuction, position]) // eslint-disable-line react-hooks/exhaustive-deps
   const [now, setNow] = useState(Date.now())
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [])
-  const isBucket = sport === 'bucket'
+  const isBucket = sport === 'bucket', isSoccer = sport === 'soccer', isBaseball = sport === 'baseball'
+  const sportName = isBaseball ? 'BASEBALL' : isSoccer ? 'SOCCER' : isBucket ? 'BASKETBALL' : 'FOOTBALL'
   // The pool's over: the winner sees their own victory, everyone else sees the winner's
   const cheered = useRef(null)
   useEffect(() => {
@@ -64,6 +66,8 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
     setTimeout(() => (top.vid === cp.me.vid ? victory() : victory({ of: top.cos ?? {} })), 500)
   }, [cp.phase, cp.match?.code, cp.ranked]) // eslint-disable-line react-hooks/exhaustive-deps
   const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
+  // soccer's tabs are pools of strikers: ST · TOP DIVISIONS, ST · WORLD CUP
+  const poolName = isSoccer ? `ST · ${posName}` : posName
 
   let body
   if (cp.phase === 'busy' || au?.phase === 'busy') {
@@ -83,11 +87,11 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
       <>
         <div className="cp-finding ag-pop">
           <span className="cp-pulse" />
-          <span className="ag-eyebrow">FINDING A POOL · {posName}</span>
+          <span className="ag-eyebrow">FINDING A POOL · {poolName}</span>
           <b className="cp-count">{Math.min(cp.queue.length, POOL_SIZE)}<i>/{POOL_SIZE}</i></b>
           <span className="cp-sub">{cp.queue.length >= POOL_SIZE ? 'Starting…' : cp.queue.length < MIN_POOL ? 'Waiting for another player. Pools are real players only.' : `Starts in ${Math.max(0, FILL_AFTER_SECS - cp.waited)}s with ${cp.queue.length}, or as soon as ${POOL_SIZE} are in. Every join resets the clock.`}</span>
-          <LinkPill link={cp.link} onRetry={cp.retry} room={`${isBucket ? 'BASKETBALL' : 'FOOTBALL'} ${posName.toUpperCase()} POOL`} />
-          <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
+          <LinkPill link={cp.link} onRetry={cp.retry} room={`${sportName} ${poolName.toUpperCase()} POOL`} />
+          <span className="cp-sub cp-sub--room">Friends find you by picking the same {isBaseball ? 'sport, position and pool' : `sport and ${isSoccer ? 'pool' : 'position'}`}.</span>
         </div>
         <div className="cp-seats">{seats.map((p, i) => <Seat key={i} p={p} i={i} me={cp.me.vid} />)}</div>
         <div className="cp-actions">
@@ -108,7 +112,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
           <div className={`cp-podium ag-pop${me?.place === 1 ? ' is-win' : ''}`}>
             <span className="ag-eyebrow">POOL {cp.match.code} · FINAL</span>
             <b className="cp-place">{mine ? ord(me.place) : 'DNF'}</b>
-            <span className="cp-sub">{mine ? (me.place === 1 ? 'You took the pool.' : `of ${cp.ranked.length} · ${mine.ovr} OVR`) : 'Time ran out before you locked in.'}</span>
+            <span className="cp-sub">{mine ? (me.place === 1 ? `${cp.me.name || 'Guest'} took the pool.` : `of ${cp.ranked.length} · ${mine.ovr} OVR`) : 'Time ran out before you locked in.'}</span>
             {mine && <span className="cp-reward"><span className="gain"><XpIco /> +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[0]}</span> · <span className="gain"><span className="coin-ico coin-ico--sm" /> +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[1]}</span>{me.place < cp.ranked.length ? ` · beat ${cp.ranked.length - me.place}` : ''}</span>}
             {mine && <RatingLine mode="compete" />}
           </div>
@@ -163,7 +167,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
           </div>
         )}
         <OnlineRecord mode="compete" title="COMPETE RECORD" />
-        <div className="cp-pos ag-pop" style={{ '--d': '120ms' }} role="tablist" aria-label="Position">
+        <div className="cp-pos ag-pop" style={{ '--d': '120ms' }} role="tablist" aria-label={isBaseball ? 'Position and pool' : isSoccer ? 'Pool' : 'Position'}>
           {(showAuction ? auPositions : positions).filter(o => !o.disabled).map(o => {
             const n = searching(waiting, qKey(o.pos))
             return (
@@ -183,9 +187,9 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
   }
 
   return (
-    <div className={`ag-screen cp cp--${isBucket ? 'bucket' : 'nfl'}`}>
+    <div className={`ag-screen cp cp--${isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl'}`}>
       <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}{showAuction ? ' · TRAIT AUCTION' : ''}</span><h1 className="ag-h1">Compete</h1></div>
+        <div><span className="ag-eyebrow">{sportName} · {poolName}{showAuction ? ' · TRAIT AUCTION' : ''}</span><h1 className="ag-h1">Compete</h1></div>
         <button className="ag-round-btn" onClick={() => guardLeave(() => { if (cp.phase === 'queue') cp.leave(); if (au?.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>
       </div>
       {body}

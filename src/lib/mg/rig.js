@@ -10,7 +10,7 @@
 // Sprites are painted once per look at the size they're drawn (a sharp edge at any devicePixelRatio) and stamped.
 // They're a few flat shapes each, so painting one is cheap, and a frame never paints more than a few.
 import { clamp, lerp, text, DISPLAY, warmSkin } from './kit.js'
-import { tilt, inkOn, padsPose, rigArm } from './art.js'
+import { tilt, inkOn, padsPose, rigArm, nameTag } from './art.js'
 
 export const INK = '#0b1014'
 const RIG = 0.42                        // rig units (a man is about 110) to the sprite's
@@ -248,20 +248,30 @@ export function put(x, y, team, o) {
   c.color = team.color; c.trim = team.trim; c.pants = team.pants ?? team.trim; c.skin = o.skin ?? '#8d5a3b'
   c.number = o.number ?? null; c.dir = o.dir ?? 'up'; c.step = o.step ?? null; c.pose = o.pose ?? null
   c.carry = !!o.carry; c.size = o.size ?? 0.9; c.fall = o.fall ?? 0; c.fallX = o.fallX ?? 0; c.kit = o.kit ?? 'pads'; c.squat = o.squat ?? 0; c.lean = o.lean ?? 0
+  c.tag = o.name ?? null; c.quiet = !!o.quiet
 }
+// his last name under him, the same as read.js's queue: a quiet man's (a blocker off the play) once the play's over
+let TAG_ALL = false
+export const tagsAll = on => { TAG_ALL = !!on }
 const byZ = (a, b) => a.z - b.z
 export function action(ctx, view) {
   frame++; painted = 0
   const list = CAST.slice(0, castN).sort(byZ)
   castN = 0
   for (const c of list) {
+    let p
     if (c.lean) {
       const q = tilt(view, c.x, c.y)
       ctx.save(); ctx.translate(q.x, q.y); ctx.transform(1, 0, -c.lean, 1, 0, 0); ctx.translate(-q.x, -q.y)
-      figure(ctx, view, c.x, c.y, c)
+      p = figure(ctx, view, c.x, c.y, c)
       ctx.restore()
-    } else figure(ctx, view, c.x, c.y, c)
+    } else p = figure(ctx, view, c.x, c.y, c)
+    if (c.tag && !c.fall && (TAG_ALL || !c.quiet) && p?.s > 0) {
+      const k = Math.min(1.15, Math.max(0.8, p.s * c.size)), w = (c.tag.length * 5.6 + 6) * k
+      nameTag(ctx, view, clamp(p.x, w / 2 + 1, view.w - w / 2 - 1), p.y, c.tag, k)
+    }
   }
+  TAG_ALL = false
 }
 // a frame that draws figures without the queue (a tile, a stamp) still counts its paints from here
 export function rigFrame() { frame++; painted = 0 }

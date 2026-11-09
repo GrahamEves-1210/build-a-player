@@ -28,6 +28,7 @@ const CareerIntro    = lazy(() => import('./components/app/AppCareer').then(m =>
 import CompeteHud from './components/app/CompeteHud'
 const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
+const CFBMode        = lazy(() => import('./components/cfb/CFBMode'))   // College Football (a football mode): its rosters and sim load with it
 import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
@@ -43,6 +44,7 @@ import { LB_LEGENDS } from './data/lb-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
 import { OL_LEGENDS } from './data/ol-legends'
 import { OL_LIVE } from './lib/olLive'
+import { CFB_LIVE } from './lib/cfbLive'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
 import { COMPETE_POS } from './lib/competeCore'
@@ -184,6 +186,15 @@ export default function App() {
   const [gameKey, setGameKey]           = useState(0)
   const [mobileView, setMobileView]     = useState('spin')
   const [user, setUser]                 = useState(null)
+  // Signing out while on the profile page: go Home, never fall through to whatever page sits under it
+  const hadUserRef = useRef(false)
+  useLayoutEffect(() => {
+    if (user) { hadUserRef.current = true; return }
+    if (hadUserRef.current && page === 'profile') {
+      if (window.location.pathname.endsWith('/profile')) window.history.replaceState({}, '', window.location.pathname.slice(0, -8) || '/')
+      setPage('splash')
+    }
+  }, [user, page])
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
   // App: today's Daily Challenge run ({ key, pos, mode, seed }) — same seeded spins for everyone
@@ -362,7 +373,7 @@ export default function App() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build' || page === 'cfb') return
         const last = lastPlayRef.current
         if (last === 'squad' && squadRef.current) setPage('squad')
         else if (last === 'squad-build' && gameMode) setPage('squad-build')
@@ -728,8 +739,8 @@ export default function App() {
   // plain modes doesn't carry in unless Squad Builder's Sandbox is unlocked: the switch goes off)
   // the slot on the build page right now (Home and back resumes it; after a reload the saved build is it)
   const squadBuilding = useRef(_saved?.tk === 'squad' ? 'saved' : null)
-  const startSquadBuild = useCallback(slot => {
-    handleStart('classic', slot.pos)
+  const startSquadBuild = useCallback((slot, sq = squadRef.current) => {
+    handleStart(sq?.pool === 'alltime' ? 'all-time' : 'classic', slot.pos)   // (an ALL-TIME squad spins from the legends)
     squadBuilding.current = slot.id
     if (sandboxLocked('squad-build')) sandboxTainted.current = false
     setPage('squad-build')
@@ -737,8 +748,8 @@ export default function App() {
   const buildSquad = useCallback(sq => {
     const next = nextToBuild(sq)
     if (!next) { setPage('squad'); return }
-    if ((squadBuilding.current === next.id || squadBuilding.current === 'saved') && gameMode === 'classic' && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
-    startSquadBuild(next)
+    if ((squadBuilding.current === next.id || squadBuilding.current === 'saved') && gameMode === (sq.pool === 'alltime' ? 'all-time' : 'classic') && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
+    startSquadBuild(next, sq)
   }, [startSquadBuild, gameMode, position])
   // ── CAREER (app): one saved career per account; a fresh build starts one ──
   const [career, setCareer] = useState(null)
@@ -769,7 +780,7 @@ export default function App() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('./lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games }), sandbox: !!isCustomMode }
+    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: careerNew.current.start === 'college' ? 'college' : 'draft' }), sandbox: !!isCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -1013,7 +1024,9 @@ export default function App() {
   }, [])
 
   // Books a finished season: award, save, lifetime counters, XP
-  const commitSeason = useCallback((result) => {
+  // `leaving`: booked as you leave the season page mid-season (SimPage's unmount): stay where
+  // you were going (setting the page back to 'sim' dropped you on the final report)
+  const commitSeason = useCallback((result, { leaving = false } = {}) => {
     // Decide the season's award (MVP / OPOY / DPOY / All-Pro) now and save it
     // on the season's own row. Players can't edit a saved season afterwards —
     // the database ignores client updates to `simulations` — so tagging the row
@@ -1105,6 +1118,7 @@ export default function App() {
       })
     }
     setSimReplaying(false)
+    if (leaving) return
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isOL, isDB, isDL, isLB, isTE, isWR, isRB, activePool])
@@ -1514,7 +1528,7 @@ export default function App() {
           <ReportCard
             build={build}
             onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? (careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
@@ -1713,6 +1727,7 @@ export default function App() {
   const withGame = el => (IS_APP && gameMode && KEEP_GAME_ON.has(page) ? shell(el) : el)
 
   const openWiki = () => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }
+  const openCFB = () => { setPage('cfb'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'cfb' }) }
   const startVersus = (pos) => {
     const p = pos || 'qb'
     try { localStorage.setItem('lastPosition', p) } catch {}
@@ -1731,11 +1746,11 @@ export default function App() {
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
       {IS_APP ? (
-        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
-          onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
+          onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onWiki={openWiki} /></>} />
       ) : (
@@ -1763,7 +1778,7 @@ export default function App() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games) => { careerNew.current = { slot, name, games }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start) => { careerNew.current = { slot, name, games, start }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
@@ -1771,6 +1786,15 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={openCareer} onExit={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+
+  if (page === 'cfb' && CFB_LIVE) {
+    return (
+      <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
+        <CFBMode user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onCareer={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </Suspense>
     )
   }

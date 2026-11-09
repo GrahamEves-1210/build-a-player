@@ -54,8 +54,8 @@ const _DBS = [
     attrs: { speed: 8, size: 6, fluidity: 8, press: 8, hands: 7, zoneIQ: 9, manCoverage: 8, playRecognition: 7, runSupport: 6} },
   { name: 'Xavier Watts',        short: 'Watts',          team: 'ATL', teamName: 'Atlanta Falcons',   skin: '#5e3c22', height: 72, weight: 203, starter: true,  number: 31, subpos: 's',
     attrs: { speed: 5, size: 6, fluidity: 6, press: 5, hands: 9, zoneIQ: 7, manCoverage: 5, playRecognition: 7, runSupport: 7} },
-  { name: 'Jessie Bates III',    short: 'Bates',          team: 'ATL', teamName: 'Atlanta Falcons',   skin: '#b07848', height: 73, weight: 210, starter: true,  captain: true,  number: 3, subpos: 's',
-    attrs: { speed: 7, size: 7, fluidity: 7, press: 4, hands: 10, zoneIQ: 11, manCoverage: 6, playRecognition: 10, runSupport: 6} },
+  { name: 'DeMarcco Hellams',    short: 'Hellams',        team: 'ATL', teamName: 'Atlanta Falcons',   skin: '#5e3c22', height: 73, weight: 203, starter: true,  number: 23, subpos: 's',
+    attrs: { speed: 5, size: 5, fluidity: 4, press: 4, hands: 4, zoneIQ: 5, manCoverage: 4, playRecognition: 5, runSupport: 6} },   // (11-09: starts for Bates, traded to JAX; estimated ratings)
   // BAL
   { name: 'Marlon Humphrey',     short: 'Humphrey',       team: 'BAL', teamName: 'Baltimore Ravens',  skin: '#5e3c22', height: 72, weight: 200, starter: true,  captain: true,  number: 44, subpos: 'cb',
     attrs: { speed: 7, size: 5, fluidity: 7, press: 9, hands: 7, zoneIQ: 7, manCoverage: 8, playRecognition: 8, runSupport: 10} },
@@ -72,8 +72,8 @@ const _DBS = [
     attrs: { speed: 9, size: 4, fluidity: 7, press: 4, hands: 6, zoneIQ: 5, manCoverage: 5, playRecognition: 4, runSupport: 3} },
   { name: 'Cole Bishop',         short: 'Bishop',         team: 'BUF', teamName: 'Buffalo Bills',     skin: '#f0c4a0', height: 74, weight: 206, starter: true,  number: 24, subpos: 's',
     attrs: { speed: 7, size: 8, fluidity: 6, press: 5, hands: 7, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 7} },
-  { name: 'C.J. Gardner-Johnson', short: 'CJ GJ',         team: 'BUF', teamName: 'Buffalo Bills',     skin: '#5e3c22', height: 71, weight: 208, starter: true,  captain: true,  number: 22, subpos: 's',
-    attrs: { speed: 6, size: 5, fluidity: 5, press: 4, hands: 7, zoneIQ: 5, manCoverage: 5, playRecognition: 6, runSupport: 5} },
+  { name: 'Damar Hamlin',        short: 'Hamlin',         team: 'BUF', teamName: 'Buffalo Bills',     skin: '#5e3c22', height: 72, weight: 200, starter: true,  number: 3, subpos: 's',
+    attrs: { speed: 5, size: 5, fluidity: 5, press: 4, hands: 4, zoneIQ: 5, manCoverage: 4, playRecognition: 5, runSupport: 6} },
   // CAR
   { name: 'Mike Jackson',        short: 'M. Jackson',     team: 'CAR', teamName: 'Carolina Panthers', skin: '#5e3c22', height: 73, weight: 210, starter: true,  captain: true,  number: 2, subpos: 'cb',
     attrs: { speed: 6, size: 7, fluidity: 6, press: 7, hands: 5, zoneIQ: 6, manCoverage: 8, playRecognition: 6, runSupport: 5} },
@@ -169,10 +169,12 @@ const _DBS = [
     attrs: { speed: 9, size: 5, fluidity: 10, press: 6, hands: 11, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 5} },
   { name: 'Jourdan Lewis',       short: 'J. Lewis',       team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#3a2010', height: 70, weight: 190, starter: true,  number: 2, subpos: 'cb',
     attrs: { speed: 5, size: 2, fluidity: 7, press: 6, hands: 7, zoneIQ: 8, manCoverage: 7, playRecognition: 8, runSupport: 7} },
-  { name: 'Eric Murray',         short: 'Murray',         team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#5e3c22', height: 71, weight: 199, starter: true,  captain: true,  number: 29, subpos: 's',
+  { name: 'Eric Murray',         short: 'Murray',         team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#5e3c22', height: 71, weight: 199, starter: false,  captain: true,  number: 29, subpos: 's',
     attrs: { speed: 5, size: 4, fluidity: 5, press: 4, hands: 4, zoneIQ: 5, manCoverage: 4, playRecognition: 6, runSupport: 5} },
   { name: 'Antonio Johnson',     short: 'A. Johnson',     team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#5e3c22', height: 74, weight: 198, starter: true,  number: 6, subpos: 's',
     attrs: { speed: 6, size: 7, fluidity: 6, press: 4, hands: 7, zoneIQ: 7, manCoverage: 5, playRecognition: 8, runSupport: 8} },
+  { name: 'Jessie Bates III',    short: 'Bates',          team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#b07848', height: 73, weight: 210, starter: true,  number: 30, subpos: 's',
+    attrs: { speed: 7, size: 7, fluidity: 7, press: 4, hands: 10, zoneIQ: 11, manCoverage: 6, playRecognition: 10, runSupport: 6} },
   // KC
   { name: 'Nohl Williams',       short: 'N. Williams',    team: 'KC',  teamName: 'Kansas City Chiefs', skin: '#5e3c22', height: 73, weight: 200, starter: true,  captain: true,  number: 20, subpos: 'cb',
     attrs: { speed: 6, size: 6, fluidity: 6, press: 6, hands: 7, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 6} },

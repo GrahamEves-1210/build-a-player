@@ -47,7 +47,8 @@ function setFill(html, id, fill, opacity = '') {
 }
 
 // Exported for share card canvas rendering
-export function getBucketSVGMarkup(build) {
+// (soccer draws on this figure too: `nickOf` names the shirt's club or nation, see lib/soccerUi.js)
+export function getBucketSVGMarkup(build, nickOf = null) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
   const sk  = (s) => build?.[s]?.skinColor  || DEFAULT_SKIN
@@ -119,7 +120,7 @@ export function getBucketSVGMarkup(build) {
 
   // Jersey number + team name (embedded directly — no blend mode needed on dark canvas bg)
   const hlChip   = build?.['clutch']
-  const teamNick = hlChip ? (TEAM_NICKNAME[hlChip.team] ?? hlChip.team) : null
+  const teamNick = hlChip ? (nickOf?.(hlChip) ?? TEAM_NICKNAME[hlChip.team] ?? hlChip.team) : null
   const jerseyNum = hlChip?.number ?? null
   if (hlChip && (teamNick || jerseyNum != null)) {
     const fs  = teamNick ? Math.round(Math.min(44, Math.max(15, 220 / Math.max(teamNick.length, 1)))) : 27
@@ -134,7 +135,7 @@ export function getBucketSVGMarkup(build) {
   return svg
 }
 
-export default function BucketFigureOverlay({ build }) {
+export default function BucketFigureOverlay({ build, logoDir = null, nickOf = null }) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
   const sk  = (s) => build?.[s]?.skinColor  || DEFAULT_SKIN
@@ -245,7 +246,7 @@ export default function BucketFigureOverlay({ build }) {
   }
 
   const hlChip   = build?.['clutch']
-  const teamNick = hlChip ? (TEAM_NICKNAME[hlChip.team] ?? hlChip.team) : null
+  const teamNick = hlChip ? (nickOf?.(hlChip) ?? TEAM_NICKNAME[hlChip.team] ?? hlChip.team) : null
   const jerseyNum = hlChip?.number ?? null
 
   // Scale font size so short names are large and long names still fit
@@ -307,7 +308,7 @@ export default function BucketFigureOverlay({ build }) {
           <path d={beltPathD} fill="rgba(0,0,0,0.03)" />
           {has('speed') && (
             <image
-              href={`/logos/nba/${build['speed'].team}.png`}
+              href={`${logoDir ?? '/logos/nba/'}${build['speed'].team}.png`}
               x="455.6" y="262.6"
               width="28.8" height="28.8"
               preserveAspectRatio="xMidYMid meet"

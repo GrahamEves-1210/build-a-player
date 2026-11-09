@@ -20,6 +20,11 @@ import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { BUCKET_ATTR } from '../data/nba-attrs'
+import { SOCCER_ATTR, SOCCER_TYPES } from '../data/soccer-attrs'
+import { SOCCER_LIVE } from '../lib/soccerLive'
+import { MLB_ATTR, BAT_TYPES, PIT_TYPES } from '../data/mlb-attrs'   // (the traits only: the rosters load on demand below)
+import { BASEBALL_LIVE } from '../lib/baseballLive'
+const MLB_ROSTERS = import.meta.glob(['../data/mlb-batters.js', '../data/mlb-pitchers.js', '../data/mlb-legend-batters.js', '../data/mlb-legend-pitchers.js'])
 import { valToGrade } from '../utils/simulation'
 
 // Every rating in the game, straight from the roster files the spins draw
@@ -44,7 +49,37 @@ export const POOLS = [
   ...(OL_LIVE ? [{ id: 'ol',    sport: 'nfl', label: 'OL',     plural: 'offensive linemen', players: OLS, legends: OL_LEGENDS, types: OL_TYPES, legendTypes: OL_LEGEND_TYPES, attr: OL_ATTR }] : []),
   { id: 'guard', sport: 'nba', label: 'Guards', plural: 'guards',          players: NBA_GUARD_PLAYERS, legends: NBA_ALLTIME_GUARD_PLAYERS, types: GUARD_TYPES, legendTypes: GUARD_TYPES, attr: BUCKET_ATTR },
   { id: 'big',   sport: 'nba', label: 'Bigs',   plural: 'bigs',            players: NBA_BIG_PLAYERS,   legends: NBA_ALLTIME_BIG_PLAYERS,   types: BIG_TYPES,   legendTypes: BIG_TYPES,   attr: BUCKET_ATTR },
+  // soccer's players (every forward and midfielder on the wheel; the build is a striker): the Top Divisions
+  // and the World Cup pools sit where Current and All-Time do
+  // (their rosters load only when a page needs them, useLazyPools: football and basketball visitors never download them)
+  ...(SOCCER_LIVE ? [{ id: 'st', sport: 'soccer', label: 'Soccer', plural: 'players', players: [], legends: [], types: SOCCER_TYPES, legendTypes: SOCCER_TYPES, attr: SOCCER_ATTR, eras: ['Top Divisions', 'World Cup'], lazy: () => import('../data/soccer-strikers').then(m => [m.SOCCER_STRIKERS, m.WC_STRIKERS]) }] : []),
+  // baseball's hitters and pitchers: the 2026 rosters as Current, the franchise legends as All-Time (lazy, like soccer's)
+  ...(BASEBALL_LIVE ? [
+    { id: 'bat', sport: 'baseball', label: 'Batters', plural: 'batters', players: [], legends: [], types: BAT_TYPES, legendTypes: BAT_TYPES, attr: MLB_ATTR, lazy: () => mlbPool('batters', 'MLB_BATTERS', 'MLB_LEGEND_BATTERS') },
+    { id: 'pit', sport: 'baseball', label: 'Pitchers', plural: 'pitchers', players: [], legends: [], types: PIT_TYPES, legendTypes: PIT_TYPES, attr: MLB_ATTR, lazy: () => mlbPool('pitchers', 'MLB_PITCHERS', 'MLB_LEGEND_PITCHERS') },
+  ] : []),
 ]
+// (a glob, so a roster file not written yet is an empty pool, not a broken page)
+function mlbPool(kind, cur, leg) {
+  const load = f => (MLB_ROSTERS[`../data/mlb-${f}.js`]?.() ?? Promise.resolve({}))
+  const arr = (m, k) => m[k] ?? Object.values(m).find(Array.isArray) ?? []
+  return Promise.all([load(kind), load(`legend-${kind}`)]).then(([a, b]) => [arr(a, cur), arr(b, leg)])
+}
+// Loads the pools kept out of the first download (soccer's) and re-renders once they're in (`on`: load now)
+const lazyLoads = new Map()
+export function useLazyPools(on = true) {
+  const [n, bump] = useState(0)
+  useEffect(() => {
+    if (!on) return
+    let live = true
+    for (const p of POOLS.filter(x => x.lazy && !x.players.length)) {
+      if (!lazyLoads.has(p.id)) lazyLoads.set(p.id, p.lazy().then(([players, legends]) => { p.players = players; p.legends = legends }))
+      lazyLoads.get(p.id).then(() => { if (live) bump(n => n + 1) }, () => {})
+    }
+    return () => { live = false }
+  }, [on])
+  return n
+}
 export const poolCounts = () => POOLS.map(p => ({ id: p.id, sport: p.sport, label: p.label, plural: p.plural, current: p.players.length, legends: p.legends.length, updated: DATES[p.id] ?? null }))
 
 export const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
@@ -52,6 +87,7 @@ const short = (attr, t) => attr[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()
 const long = (attr, t) => attr[t]?.label ?? t
 
 export default function RatingsTable({ initialQuery = '', initialPool = 'qb' }) {
+  useLazyPools()
   const [poolId, setPoolId] = useState(POOLS.some(p => p.id === initialPool) ? initialPool : 'qb')
   const [era, setEra] = useState('current')          // current | legends
   const [q, setQ] = useState(initialQuery)
@@ -88,9 +124,13 @@ export default function RatingsTable({ initialQuery = '', initialPool = 'qb' }) 
           {POOLS.filter(p => p.sport === 'nfl').map(p => <button key={p.id} role="tab" aria-selected={poolId === p.id} className={`wk-pill${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick(p.id)}>{p.label}</button>)}
           <span className="wk-pill-sep" aria-hidden="true" />
           {POOLS.filter(p => p.sport === 'nba').map(p => <button key={p.id} role="tab" aria-selected={poolId === p.id} className={`wk-pill wk-pill--nba${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick(p.id)}>{p.label}</button>)}
+          {POOLS.some(p => p.sport === 'soccer') && <span className="wk-pill-sep" aria-hidden="true" />}
+          {POOLS.filter(p => p.sport === 'soccer').map(p => <button key={p.id} role="tab" aria-selected={poolId === p.id} className={`wk-pill wk-pill--soccer${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick(p.id)}>{p.label}</button>)}
+          {POOLS.some(p => p.sport === 'baseball') && <span className="wk-pill-sep" aria-hidden="true" />}
+          {POOLS.filter(p => p.sport === 'baseball').map(p => <button key={p.id} role="tab" aria-selected={poolId === p.id} className={`wk-pill wk-pill--baseball${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick(p.id)}>{p.label}</button>)}
           <span className="wk-pill-sep" aria-hidden="true" />
-          <button className={`wk-pill${era === 'current' ? ' is-on' : ''}`} onClick={() => { setEra('current'); setTeam('all') }}>Current</button>
-          <button className={`wk-pill wk-pill--gold${era === 'legends' ? ' is-on' : ''}`} onClick={() => { setEra('legends'); setTeam('all') }}>All-Time</button>
+          <button className={`wk-pill${era === 'current' ? ' is-on' : ''}`} onClick={() => { setEra('current'); setTeam('all') }}>{pool.eras?.[0] ?? 'Current'}</button>
+          <button className={`wk-pill wk-pill--gold${era === 'legends' ? ' is-on' : ''}`} onClick={() => { setEra('legends'); setTeam('all') }}>{pool.eras?.[1] ?? 'All-Time'}</button>
         </div>
         <div className="wk-rt-filters">
           <input className="wk-input" value={q} onChange={e => setQ(e.target.value)} placeholder="Filter by player or team" aria-label="Filter players" />
@@ -101,7 +141,7 @@ export default function RatingsTable({ initialQuery = '', initialPool = 'qb' }) 
         </div>
       </div>
       <p className="wk-rt-meta">
-        <span><b>{shown.length}</b> {era === 'legends' ? 'all-time' : 'current'} {pool.plural} · ratings updated <b>{fmtDate(DATES[pool.id])}</b></span>
+        <span><b>{shown.length}</b> {pool.eras ? `${pool.eras[era === 'legends' ? 1 : 0]}` : era === 'legends' ? 'all-time' : 'current'} {pool.plural} · ratings updated <b>{fmtDate(DATES[pool.id])}</b></span>
         <span className="wk-rt-legend">{[['S', 11], ['A', 9], ['B', 6], ['C', 3], ['D', 1], ['F', 0]].map(([g, v]) => <i key={g} style={{ '--g': gradeColor(v) }}>{g}</i>)} scale 0–11, F to S</span>
       </p>
       <div className="wk-rt-scroll">
@@ -118,7 +158,7 @@ export default function RatingsTable({ initialQuery = '', initialPool = 'qb' }) 
               <tr key={`${p.name}-${p.team}`}>
                 <th scope="row" className="wk-rt-player">
                   <span className="wk-rt-name">{p.name}</span>
-                  <span className="wk-rt-team">{p.team}{p.number != null ? ` · #${p.number}` : ''}{p.position ? ` · ${p.position}` : pool.id === 'dl' ? ` · ${p.pos}` : ''}{p.years ? ` · ${p.years}` : ''}</span>
+                  <span className="wk-rt-team">{p.team}{p.number != null ? ` · #${p.number}` : ''}{p.role ? ` · ${p.role}` : p.position ? ` · ${p.position}` : pool.id === 'dl' ? ` · ${p.pos}` : ''}{p.years ? ` · ${p.years}` : ''}</span>
                 </th>
                 {types.map(t => { const v = p.attrs[t]; return <td key={t} className="wk-rt-cell"><span className="wk-grade" style={{ '--g': gradeColor(v ?? 0) }} title={`${long(pool.attr, t)}: ${v ?? 'not rated'}${v == null ? '' : ' of 11'}`}>{v == null ? '-' : valToGrade(v)}</span></td> })}
                 <td className="wk-rt-cell wk-rt-avg">{avgOf(p).toFixed(1)}</td>

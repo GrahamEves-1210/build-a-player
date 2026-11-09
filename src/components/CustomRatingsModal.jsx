@@ -38,16 +38,22 @@ const RB_ATTR = {
 // starts on the mode you're playing; `pool` alone (no legends) hides the toggle.
 // Edits made under All-Time save under that mode's key (qb_legends, rb_legends),
 // so each mode's spins pick up its own overrides.
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false }) {
-  const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
+// Soccer: `isSoccer` with its own `attrMap` (the striker's traits) and `eraLabels` for the toggle
+// (Top Divisions / World Cup); each pool's edits save under their own key
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isBucket = false, isSoccer = false, attrMap: attrMapProp = null, eraLabels = null, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false, storageKey: storageKeyProp = null, ratingsKeyFor = null }) {
+  // (storageKey: a mode's own ratings, College Football's: bap_cfb_custom_ratings)
+  const storageKey = storageKeyProp ?? (isSoccer ? 'bas_soccer_custom_ratings' : isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings')
   const hasToggle = !!(poolLegends && poolLegends.length)
   const [era, setEra] = useState(() => (hasToggle && gameMode === 'all-time' ? 'all-time' : 'classic'))
-  const keyFor = e => isBucket
+  // (ratingsKeyFor(era): a sport's own keys, baseball's 'baseball_bat' / 'baseball_pit_legends': BaseballApp)
+  const keyFor = e => ratingsKeyFor ? ratingsKeyFor(e) : isSoccer
+    ? `soccer_st${e === 'all-time' ? '_wc' : ''}`
+    : isBucket
     ? `bucket_${bucketPosition}`
     : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${e === 'all-time' ? '_legends' : ''}`
   const modeKey = keyFor(hasToggle ? era : (gameMode === 'all-time' ? 'all-time' : 'classic'))
   const list = hasToggle ? (era === 'all-time' ? poolLegends : (poolCurrent || pool)) : (poolCurrent || pool)
-  const attrMeta = isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const attrMeta = attrMapProp ? attrMapProp : isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
@@ -122,8 +128,8 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
         <div className="cr-search-wrap">
           {hasToggle && (
             <div className="cr-era" role="tablist" aria-label="Player pool">
-              <button role="tab" aria-selected={era === 'classic'} className={`cr-era-btn${era === 'classic' ? ' is-on' : ''}`} onClick={() => { setEra('classic'); setExpandedKey(null); setSlotPickerPlayer(null) }}>Current</button>
-              <button role="tab" aria-selected={era === 'all-time'} className={`cr-era-btn${era === 'all-time' ? ' is-on' : ''}`} onClick={() => { setEra('all-time'); setExpandedKey(null); setSlotPickerPlayer(null) }}>All-Time</button>
+              <button role="tab" aria-selected={era === 'classic'} className={`cr-era-btn${era === 'classic' ? ' is-on' : ''}`} onClick={() => { setEra('classic'); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[0] ?? 'Current'}</button>
+              <button role="tab" aria-selected={era === 'all-time'} className={`cr-era-btn${era === 'all-time' ? ' is-on' : ''}`} onClick={() => { setEra('all-time'); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[1] ?? 'All-Time'}</button>
             </div>
           )}
           <input

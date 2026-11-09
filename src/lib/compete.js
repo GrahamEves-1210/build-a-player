@@ -18,7 +18,8 @@ import { BUILD_SECS, FILL_AFTER_SECS, rankResults } from './competeCore'
 
 export * from './competeCore'
 
-export function useCompete({ enabled, user, sport, pos }) {
+// mode: soccer's pool ('current' TOP DIVISIONS / 'alltime' WORLD CUP), a queue of its own; the other sports leave it out
+export function useCompete({ enabled, user, sport, pos, mode = null }) {
   const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   // a pool this device left mid-game (reload, the app killed): book it as the forfeit it was
   useEffect(() => {
@@ -29,7 +30,7 @@ export function useCompete({ enabled, user, sport, pos }) {
   const [queue, setQueue] = useState([])
   const [startsAt, setStartsAt] = useState(null)
   const [link, setLink] = useState('connecting')
-  const [match, setMatch] = useState(null)          // { code, seed, created, sport, pos, players }
+  const [match, setMatch] = useState(null)          // { code, seed, created, sport, pos, players } (+ mode: soccer's pool)
   const [results, setResults] = useState({})        // vid → { ovr, at, build, forfeit }
   const [now, setNow] = useState(Date.now())
   const qRef = useRef(null), roomRef = useRef(null)
@@ -57,10 +58,10 @@ export function useCompete({ enabled, user, sport, pos }) {
   const enterRoom = useCallback((code, players) => {
     qRef.current?.close(); qRef.current = null
     // the seed is the pool's code: the build can start at once, before the room's first word
-    setMatch({ code, seed: `cp-${code}`, created: Date.now(), sport, pos, players }); setResults({}); setPhase('build'); booked.current = null
-    markEntered({ kind: 'compete', code, sport, pos, of: players.length, humans: players.length })
+    setMatch({ code, seed: `cp-${code}`, created: Date.now(), sport, pos, ...(mode ? { mode } : {}), players }); setResults({}); setPhase('build'); booked.current = null
+    markEntered({ kind: 'compete', code, sport, pos, ...(mode ? { mode } : {}), of: players.length, humans: players.length })
     roomRef.current = liveSocket(`/compete/room/${code}`, () => ({ t: 'hello', vid: me.vid }), onRoom, setLink)
-  }, [sport, pos, me.vid, onRoom])
+  }, [sport, pos, mode, me.vid, onRoom])
 
   const join = useCallback(() => {
     if (!enabled) return
@@ -68,11 +69,11 @@ export function useCompete({ enabled, user, sport, pos }) {
     if (!claimLive('compete')) { setPhase('busy'); return }
     closeAll()
     setPhase('queue'); setMatch(null); setResults({}); setQueue([]); setStartsAt(null)
-    qRef.current = liveSocket(`/compete/q?sport=${sport}&pos=${pos}`, () => ({ t: 'hello', ...me }), msg => {
+    qRef.current = liveSocket(`/compete/q?sport=${sport}&pos=${pos}${mode ? `&mode=${mode}` : ''}`, () => ({ t: 'hello', ...me }), msg => {
       if (msg.t === 'queue') { setQueue(msg.list ?? []); setStartsAt(msg.startsIn == null ? null : Date.now() + msg.startsIn) }
       else if (msg.t === 'match' && msg.players?.some(p => p.vid === me.vid)) enterRoom(msg.code, msg.players)
     }, setLink)
-  }, [enabled, sport, pos, me, enterRoom])
+  }, [enabled, sport, pos, mode, me, enterRoom])
   // start with who's here (2+): anyone can ask
   const fillNow = useCallback(() => qRef.current?.send({ t: 'fill' }), [])
   const retry = useCallback(() => { closeAll(); join() }, [join])

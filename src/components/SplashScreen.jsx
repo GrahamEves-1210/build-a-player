@@ -12,6 +12,8 @@ export function hsUrl(id) {
 import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { LB_LIVE } from '../lib/lbLive'
 import { OL_LIVE } from '../lib/olLive'
+import { SOCCER_LIVE } from '../lib/soccerLive'
+import { BASEBALL_LIVE } from '../lib/baseballLive'
 
 export const POS_OPTIONS = [
   {
@@ -140,7 +142,7 @@ function PositionPicker({ position, onChange }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {(opt.pos === 'db' || opt.pos === 'dl' || (opt.pos === 'lb' && LB_LIVE) || (opt.pos === 'ol' && OL_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
+              {(opt.pos === 'db' || (opt.pos === 'lb' && LB_LIVE) || (opt.pos === 'ol' && OL_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
@@ -251,29 +253,31 @@ const DB_ATTRS = [
   { label: 'Run Support',      col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
+// (the DL figure stands with its legs apart: the long words go on the head and body, the short ones down the right
+//  leg a size smaller, the calf's word upright. x: % of the figure's width right of centre. Same nine colors.)
 const DL_ATTRS = [
-  { label: 'Get Off',          col: '#f87171' },
-  { label: 'Speed',            col: '#60a5fa' },
-  { label: 'Size',             col: '#38bdf8' },
-  { label: 'Power', col: '#fb923c' },
-  { label: 'Finesse', col: '#34d399' },
-  { label: 'Strength',         col: '#fbbf24' },
+  { label: 'Power',    col: '#fb923c' },
+  { label: 'Get Off',  col: '#f87171' },
+  { label: 'Strength', col: '#fbbf24' },
+  { label: 'Finesse',  col: '#34d399', x: 6 },
   { label: 'Play Rec', col: '#e879f9' },
-  { label: 'Bend',             col: '#a78bfa' },
-  { label: 'Shed', col: '#2dd4bf' },
+  { label: 'Speed',    col: '#60a5fa', x: 12.9, sm: true },
+  { label: 'Bend',     col: '#a78bfa', x: 16.7, sm: true },
+  { label: 'Size',     col: '#38bdf8', x: 18.3, xs: true, v: true },
+  { label: 'Shed',     col: '#2dd4bf', x: 22.4, xs: true },
 ]
 
-// (in LB_ATTR's colors, data/lbs.js)
+// (in LB_ATTR's colors, data/lbs.js; on the DL figure for now, laid out the same way)
 const LB_ATTRS = [
-  { label: 'Range',      col: '#60a5fa' },
-  { label: 'Size',       col: '#38bdf8' },
   { label: 'Power',      col: '#fb923c' },
-  { label: 'Tackling',   col: '#f87171' },
-  { label: 'Shed',       col: '#2dd4bf' },
-  { label: 'Zone',       col: '#34d399' },
-  { label: 'Pass Rush',  col: '#fbbf24' },
-  { label: 'Play Rec',   col: '#e879f9' },
   { label: 'Leadership', col: '#a78bfa' },
+  { label: 'Tackling',   col: '#f87171' },
+  { label: 'Pass Rush',  col: '#fbbf24', x: 8.6 },
+  { label: 'Play Rec',   col: '#e879f9' },
+  { label: 'Range',      col: '#60a5fa', x: 12.9, sm: true },
+  { label: 'Zone',       col: '#34d399', x: 16.7, sm: true },
+  { label: 'Size',       col: '#38bdf8', x: 18.3, xs: true, v: true },
+  { label: 'Shed',       col: '#2dd4bf', x: 22.4, xs: true },
 ]
 
 const OL_ATTRS = [
@@ -351,7 +355,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
             transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
           }}
         >
-          <span className="splash-stack-band-label">{a.label}</span>
+          <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x ? { position: 'relative', left: `${a.x}%` } : undefined}>{a.label}</span>
         </div>
       ))}
     </div>
@@ -460,7 +464,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
             >
               <div className="smode-title smode-title--alltime">
                 All-Time
-                {(position === 'wr' || position === 'db' || position === 'te' || position === 'dl' || position === 'lb') && <span className="splash-alltime-new-tag">NEW</span>}
+                {(position === 'wr' || position === 'db' || position === 'te' || position === 'lb') && <span className="splash-alltime-new-tag">NEW</span>}
               </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">
@@ -484,6 +488,24 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
           </div>
           <div className="splash-mg-sub">BASKETBALL BUILDER</div>
         </button>
+
+        {SOCCER_LIVE && (
+          <button className="splash-minigame-btn splash-minigame-btn--soccer" onClick={() => { window.location.href = '/soccer' + (import.meta.env.DEV && /[?&]soccer=1\b/.test(window.location.search) ? '?soccer=1' : '') }}>
+            <div className="splash-xlink-logo">
+              BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--soccer">-<span className="splash-xlink-a">A</span>-</em>PLAYER
+            </div>
+            <div className="splash-mg-sub">SOCCER BUILDER</div>
+          </button>
+        )}
+
+        {BASEBALL_LIVE && (
+          <button className="splash-minigame-btn splash-minigame-btn--baseball" onClick={() => { window.location.href = '/baseball' + (import.meta.env.DEV && /[?&]baseball=1\b/.test(window.location.search) ? '?baseball=1' : '') }}>
+            <div className="splash-xlink-logo">
+              BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--baseball">-<span className="splash-xlink-a">A</span>-</em>PLAYER
+            </div>
+            <div className="splash-mg-sub">BASEBALL BUILDER</div>
+          </button>
+        )}
 
         {/* the classic look's way back (Settings → Classic look brought them here) */}
         {!IS_APP && !APP_LOOK && <button className="splash-newlook" onClick={() => setClassicLook(false)}>Switch to the new look</button>}

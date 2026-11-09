@@ -135,7 +135,8 @@ function SlotReel({ items, spinning, idle, onStop }) {
 }
 
 // anyTeam: every team is on offer (Squad Builder), not only the build's
-export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, anyTeam = false, eyebrow = 'Simulate Season' }) {
+// teams / teamOf (College Football): the schools on offer, and which of them a build's trait came from
+export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, anyTeam = false, eyebrow = 'Simulate Season', teams = NFL_TEAMS, teamOf = c => c.team }) {
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase, setPhase]       = useState('idle')
   const [result, setResult]     = useState(null)
@@ -143,7 +144,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
   const [mode, setMode]         = useState('spin')
   const [search, setSearch]     = useState('')
 
-  const items = useMemo(() => [...NFL_TEAMS].sort(() => Math.random() - 0.5), [spinCount])
+  const items = useMemo(() => [...teams].sort(() => Math.random() - 0.5), [spinCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSpin = () => {
     if (phase === 'spinning' || phase === 'done') return
@@ -166,10 +167,10 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
   // Sandbox: any of the 32 teams. Normal mode: only the teams actually
   // represented in the player's build (the 9-10 drafted attribute sources).
   const draftedTeamsPool = useMemo(() => {
-    const shorts = [...new Set(Object.values(build).filter(Boolean).map(c => c.team))]
-    return shorts.map(s => NFL_TEAMS.find(t => t.short === s)).filter(Boolean)
-  }, [build])
-  const pickPool = isPlus || anyTeam ? NFL_TEAMS : draftedTeamsPool
+    const shorts = [...new Set(Object.values(build).filter(Boolean).map(teamOf))]
+    return shorts.map(s => teams.find(t => t.short === s)).filter(Boolean)
+  }, [build]) // eslint-disable-line react-hooks/exhaustive-deps
+  const pickPool = isPlus || anyTeam ? teams : draftedTeamsPool
 
   const filteredTeams = useMemo(() => {
     if (!search) return pickPool

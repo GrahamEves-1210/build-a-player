@@ -27,6 +27,8 @@ const RATINGS_DATES = {
   big:   lastChanged([d + 'nba-bigs.js', d + 'nba-big-legends.js']),
 }
 RATINGS_DATES.all = Object.values(RATINGS_DATES).sort().slice(-1)[0]
+// soccer's strikers (the wiki's table shows them once soccer is on); not in `all` while it's off
+RATINGS_DATES.st = lastChanged([d + 'soccer-strikers.js'])
 
 export default defineConfig(({ mode }) => ({
   define: {

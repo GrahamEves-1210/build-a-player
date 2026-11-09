@@ -1,0 +1,25 @@
+/* Illustrated avatars (avatarArt.jsx): the art fills the badge, clipped to its shape */
+.avb-art { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.avb .avb-art svg { display: block; filter: none; }
+
+/* The moving Rare ones: one short moment, played when the badge comes into view or is
+   tapped (lib/fxPause.js turns it off after), never looped, nothing with Reduce Motion */
+.aa-goat .aa-w, .aa-cooler .aa-d circle { transform-box: fill-box; transform-origin: center; }
+.aa-pie .aa-p { transform-box: fill-box; transform-origin: 50% 0; }
+.aa-bobble .aa-b { transform-box: view-box; transform-origin: 24px 31px; }
+@media (prefers-reduced-motion: no-preference) {
+  .aa-goat .aa-w { animation: aa-wink .42s ease-in-out .7s both; }
+  .aa-cooler .aa-d circle { animation: aa-drop 1.1s ease-in .4s both; }
+  .aa-cooler .aa-d circle:nth-child(2n) { animation-delay: .6s; }
+  .aa-pie .aa-p { animation: aa-drip 1.3s cubic-bezier(.3, .7, .4, 1) .3s both; }
+  .aa-buzzer .aa-l, .aa-buzzer .aa-g { animation: aa-blink 1.1s steps(1, end) .3s both; }
+  .aa-bobble .aa-b { animation: aa-bob 1.4s ease-out .3s both; }
+}
+@keyframes aa-wink { 50% { transform: scaleY(.12); } }
+@keyframes aa-drop { 0% { transform: translateY(-3px); opacity: 0; } 15% { opacity: 1; } 75% { transform: translateY(5px); opacity: 0; } 76% { transform: none; } 100% { transform: none; opacity: 1; } }
+@keyframes aa-drip { 0% { transform: scaleY(.25); } 100% { transform: none; } }
+@keyframes aa-blink { 0%, 36%, 72% { opacity: 1; } 18%, 54% { opacity: .2; } }
+@keyframes aa-bob { 0%, 100% { transform: none; } 15% { transform: rotate(-9deg); } 35% { transform: rotate(7deg); } 55% { transform: rotate(-4deg); } 75% { transform: rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .avb-art * { animation: none !important; }
+}

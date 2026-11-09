@@ -16,6 +16,7 @@ export default function TermsPage({ onBack }) {
 
       <Sec id="t-affiliation" title="1. Not affiliated">
         <P>Build-A-Player is an independent fan project. It is not affiliated with, endorsed by, or sponsored by the National Football League, NFL Properties LLC, the National Basketball Association, any of their teams, the players' associations, or any player. Player and team names are used to identify them, for information and entertainment. All league and team trademarks belong to their owners.</P>
+        <P>College Football: Build-A-Player is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university. School names and logos belong to their owners.</P>
       </Sec>
 
       <Sec id="t-game" title="2. The game">

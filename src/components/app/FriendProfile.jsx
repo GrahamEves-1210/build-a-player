@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconClose, IconStar, IconRing, IconMedal, IconVersus, IconTrophy } from './icons'
 import { loadPublicProfile, removeFriend, modeLabel } from '../../lib/friends'
 import { tierFor } from '../../lib/progress'
 import { TrophyShelf } from './TrophyArt'
+import { seasonRecord } from '../../lib/trophies'
+import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import './friends.css'
+
+// their baseball, once it's live: its own small chunk (app/BaseballCareer.jsx), read only when the sheet opens
+const BaseballFriendCard = lazy(() => import('./BaseballCareer').then(m => ({ default: m.BaseballFriendCard })))
 
 // A player's profile, as a sheet: their look (avatar + name decal), what's already
 // public about them (seasons, rings, awards, 1v1 record, best saved builds), a way to
@@ -106,6 +111,8 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
 
               <TrophyShelf uid={friend.id} />
 
+              {BASEBALL_LIVE && <Suspense fallback={null}><BaseballFriendCard uid={friend.id} /></Suspense>}
+
               <div className="fr-sub-head"><span className="ag-eyebrow">BEST BUILDS</span></div>
               {data.best.length === 0 && <p className="fr-note">No saved seasons yet.</p>}
               <div className="fr-builds">
@@ -120,7 +127,7 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
                         {names.length > 0 && <span className="fr-build-names">{names.join(' · ')}</span>}
                       </span>
                       <span className="fr-build-rec">
-                        {b.wins != null && <b>{b.wins}-{b.losses ?? 0}</b>}
+                        {b.wins != null && <b>{seasonRecord(b)}</b>}
                         {b.champion && <i className="fr-ring" role="img" title="Champions" aria-label="Won the title"><IconTrophy size={13} /></i>}
                       </span>
                     </div>

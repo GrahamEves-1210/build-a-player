@@ -6,3 +6,6 @@
 // (its own tiny file so Home can read it without loading the OL rosters)
 const OL_DEV = typeof location !== 'undefined' && !!import.meta.env?.DEV && /[?&]ol=1\b/.test(location.search)
 export const OL_LIVE = false || OL_DEV
+// While it's off, OL keeps a locked tab with a SOON tag at the end of football's offense on Home (components/app/AppHome.jsx,
+// and the classic Home's SOON tile); it can't be picked there or anywhere else. (The owner, 11-09)
+export const OL_SOON = !OL_LIVE

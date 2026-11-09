@@ -24,6 +24,7 @@ import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStor
 import { rampAdd, useRailOn } from '../lib/ads'
 import { IconBall } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
+import { useOnLeave } from './simFlow'
 
 function gradeColor(val0) {
   const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
@@ -593,7 +594,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTea
               </div>
             ) : (
               <>
-                <div className="tpm-subheading">Available for your build</div>
+                <div className="tpm-subheading">From the build</div>
                 <input
                   className="tpm-pick-search"
                   placeholder="Search teams…"
@@ -1286,7 +1287,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
       {phase === 'revealed' && (
         <>
           <div className="goat-reveal-banner">
-            <div className="goat-reveal-you">Your player is ranked</div>
+            <div className="goat-reveal-you">{userName} is ranked</div>
             <div className="goat-reveal-rank">#{playerRank}</div>
           </div>
 
@@ -1460,11 +1461,13 @@ function generateConfBracket(standings, myShort, playoffRounds) {
       const r = playoffRounds.find(r => r.type === 'series' && r.roundIndex === roundIndex)
       if (r) return r.won ? (a.short === myShort ? { ...a } : { ...b }) : (a.short === myShort ? { ...b } : { ...a })
     }
-    // If the player's next-round opponent came from this matchup, force the correct winner
-    const nextRound = playoffRounds?.find(r => r.type === 'series' && r.roundIndex === roundIndex + 1)
-    if (nextRound?.opponent) {
-      if (a.short === nextRound.opponent.short) return { ...a }
-      if (b.short === nextRound.opponent.short) return { ...b }
+    // A team the player meets in any later round wins every matchup on its way there (only the next
+    // round's was forced: the Conference Finals opponent could lose its first round in the bracket,
+    // which then showed a different team in the Conference Finals than the one the series was played against)
+    const later = playoffRounds?.filter(r => r.type === 'series' && r.roundIndex > roundIndex && r.opponent)
+    for (const r of later ?? []) {
+      if (a.short === r.opponent.short) return { ...a }
+      if (b.short === r.opponent.short) return { ...b }
     }
     return simMatchup(a, b)
   }
@@ -1540,7 +1543,9 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
     0: showAllRounds || activeRoundIdx > 0,
     1: showAllRounds || activeRoundIdx > 1,
     2: showAllRounds || activeRoundIdx > 2,
-    3: showAllRounds || !!allPlayoffRounds.find(r => r.type === 'series' && r.roundIndex === 3),
+    // the Finals are the last round: done once the playoffs are (champion or out). It used to be done as soon
+    // as the season had a Finals at all, so from Game 1 the bracket showed the series' final score and winner
+    3: showAllRounds,
   }
 
   function TeamRow({ team, winner, seriesDone, isMyTeam, isActive, visible, parallelWins, isFinalsRow }) {
@@ -2734,7 +2739,10 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
     ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
-  useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
+  // leaving mid-season still books it; `leaving` keeps that from sending you back here, onto the final report
+  // (useOnLeave: only a real leave, not React's development double mount, which finalized the director on its first
+  // render and froze the booked season before the moments changed it: the 53–29 ticker over a 56–26 final report)
+  useOnLeave(() => { if (director && !director.finalized) onFinal?.(director.finalize(), { leaving: true }) })
 
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {

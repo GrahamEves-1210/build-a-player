@@ -8,8 +8,8 @@
 // it. Slip: sometimes the thumb just goes to the wrong man. When he has to tap a man rather than a side
 // of the screen he also has to reach, and the tap lands with some error.
 const gauss = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
-const SCAN = { 'hot-read': 250, gap: 250, 'jump-route': 260, pnr: 300, 'rim-protect': 40 }  // ms: looking across the play. The same for everyone
-const MISREAD = { 'hot-read': 3.5, gap: 5, 'jump-route': 3.5, pnr: 4.5, 'rim-protect': 5 }     // times his slip
+const SCAN = { 'hot-read': 250, gap: 250, 'jump-route': 260, 'zone-drop': 260, pnr: 300, 'rim-protect': 40 }  // ms: looking across the play. The same for everyone
+const MISREAD = { 'hot-read': 3.5, gap: 5, 'jump-route': 3.5, 'zone-drop': 3.5, pnr: 4.5, 'rim-protect': 5 }     // times his slip
 const CHOOSE = 0.45    // of his reaction: settling on one man
 const CHOOSE_ONE = 0.15 // the 3-on-1: he's already watching the man with the ball
 const BITE = 2.5       // the 3-on-1: times his slip, how often a catch gets him going too soon

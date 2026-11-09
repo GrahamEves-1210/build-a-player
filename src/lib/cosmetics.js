@@ -81,6 +81,37 @@ const AV = [
   it('avatar', 'av-perfect',   'Perfect Season', 3, 0, { glyph: 'shield', pal: 'gold', anim: 'shine', ach: 'perfect' }),
   it('avatar', 'av-streak',    'Lit',            2, 0, { glyph: 'flame', pal: 'gold', anim: 'flicker', streak: 7 }),
   it('avatar', 'av-cup',       'Cup Contender',  3, 0, { glyph: 'trophy', pal: 'holo', anim: 'holo', cup: true }),
+
+  // The illustrated ones: a character or a scene on a colorway (art: a drawing in
+  // components/app/avatarArt.jsx, its own chunk). The Rare ones at the top of the
+  // price list each have one short moment (avatarArt.css), played once, never looped.
+  // Four are sold; the vault ones are held for the next Builder Pass (not sold, not
+  // worn by lobby bots: put them on a track in lib/pass.js)
+  it('avatar', 'av-foam',      'No. 1 Fan', 0, 350, { art: 'foam', pal: 'violet' }),
+  // av-topdog: redraw before using (the face reads creepy)
+  it('avatar', 'av-topdog',    'Top Dog', 0, 350, { art: 'topdog', pal: 'royal', vault: true }),
+  it('avatar', 'av-bench',     'Bench Mob', 0, 400, { art: 'bench', pal: 'violet', vault: true }),
+  it('avatar', 'av-nachos',    'Extra Cheese', 0, 400, { art: 'nachos', pal: 'crimson', vault: true }),
+  it('avatar', 'av-icebath',   'Ice Bath', 0, 450, { art: 'icebath', pal: 'ice', vault: true }),
+  it('avatar', 'av-rallycap',  'Rally Cap', 0, 450, { art: 'rallycap', pal: 'crimson', vault: true }),
+  it('avatar', 'av-topbins',   'Top Bins', 0, 450, { art: 'topbins', pal: 'turf', vault: true }),
+  it('avatar', 'av-seeds',     'Dugout Seeds', 0, 500, { art: 'seeds', pal: 'turf', vault: true }),
+  it('avatar', 'av-keeper',    'Safe Hands', 0, 500, { art: 'keeper', pal: 'violet', vault: true }),
+  it('avatar', 'av-mascot',    'Mascot', 0, 500, { art: 'mascot', pal: 'gold', vault: true }),
+  it('avatar', 'av-coach',     'Play Caller', 0, 550, { art: 'coach', pal: 'mint' }),
+  it('avatar', 'av-hattrick',  'Hat Trick', 0, 550, { art: 'hattrick', pal: 'mint', vault: true }),
+  it('avatar', 'av-zebra',     'Flag on the Play', 0, 600, { art: 'zebra', pal: 'crimson', vault: true }),
+  it('avatar', 'av-camera',    'Highlight Reel', 0, 600, { art: 'camera', pal: 'onyx', vault: true }),
+  it('avatar', 'av-ankles',    'Ankle Breaker', 0, 600, { art: 'ankles', pal: 'royal' }),
+  it('avatar', 'av-trenchdog', 'Underdog', 0, 650, { art: 'trenchdog', pal: 'sky' }),   // (id from its first look, Trench Dog)
+  it('avatar', 'av-batflip',   'Bat Flip', 1, 1400, { art: 'batflip', pal: 'ice', vault: true }),
+  it('avatar', 'av-dino',      'Dino Dunk', 1, 1500, { art: 'dino', pal: 'sunset', vault: true }),
+  it('avatar', 'av-buzzer',    'Buzzer Beater', 1, 1700, { art: 'buzzer', pal: 'ice', vault: true }),
+  it('avatar', 'av-cooler',    'Cooler Dump', 1, 1700, { art: 'cooler', pal: 'turf', vault: true }),
+  it('avatar', 'av-pie',       'Walk-Off Pie', 1, 1800, { art: 'pie', pal: 'lava', vault: true }),
+  it('avatar', 'av-goatmode',  'Goat Mode', 1, 1800, { art: 'goatmode', pal: 'royal', vault: true }),
+  it('avatar', 'av-robo',      'Arm Cannon', 1, 1600, { art: 'robo', pal: 'onyx', vault: true }),
+  it('avatar', 'av-bobble',    'Bobblehead', 1, 1600, { art: 'bobble', pal: 'sunset', vault: true }),
 ]
 
 // ── Name colors ──────────────────────────────────────────────────────────────

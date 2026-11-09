@@ -391,11 +391,13 @@ function paintRoof(x, view, horizon, beams, alpha, stops) {
   }
 }
 const BOARD_H = 22
+const SEAT_TONES = ['#161c23', '#1a2129', '#1e252e', '#20282f']
 // cheer: 0 sitting; 1 and 2 are the two frames of a building on its feet, the same people in the same seats
 export function paintBowl(x, view, { horizon, us, trim, dim = 0, seed = 7, board = 'BUILD-A-PLAYER', cheer = 0 }) {
   const { w } = view
-  const U = view.h / 640
-  const beams = paintRoof(x, view, horizon, [62, 180, 298], 0.07, ['#05080c', '#0b1219', '#141c26'])
+  const U = view.h / 640, E = !!view.empty
+  // (an empty house, the combine or camp: nobody in the seats and half the lights on)
+  const beams = paintRoof(x, view, horizon, E ? [180] : [62, 180, 298], 0.07, ['#05080c', '#0b1219', '#141c26'])
   const R = dice(seed), C = dice(seed + 91)
   const pal = ['#2b323b', '#37404a', '#232931', '#434d57', '#4d4a45', us, '#5b3029', '#26394a', '#6a6860']
   const foot = horizon - BOARD_H * U, roof = lerp(46, foot, 0.1), rib = lerp(roof, foot, 0.42)
@@ -411,6 +413,8 @@ export function paintBowl(x, view, { horizon, us, trim, dim = 0, seed = 7, board
         const skin = R() < 0.5 ? '#6e5340' : '#463326'
         const c0 = C(), c1 = C(), c2 = C()
         if (jit < 0.09 || Math.abs(((px - stairs + 480) % 120) - 60) < hs * 1.05) continue
+        // (empty: the seat back where he'd sit, the home sections in the home colour)
+        if (E) { const home = body === us; x.globalAlpha = home ? alpha * 0.45 : Math.min(1, alpha * 1.3); x.fillStyle = home ? us : SEAT_TONES[row % SEAT_TONES.length]; x.fillRect(px - hs * 0.85, y + hs * 0.7, hs * 1.7, hs * 1.2); continue }
         // on their feet: half of them up at a time, the other half on the next frame
         const up = cheer ? hs * ((c0 < 0.5) === (cheer === 1) ? 1.25 : 0.4) : 0
         x.globalAlpha = cheer ? Math.min(1, alpha + 0.14) : alpha
@@ -432,8 +436,7 @@ export function paintBowl(x, view, { horizon, us, trim, dim = 0, seed = 7, board
   x.globalAlpha = 1
   // the lights over it all, and the banners in the rafters
   beams()
-  x.fillStyle = '#e8eef4'
-  for (const c of [62, 180, 298]) x.fillRect(c - 9, 45, 18, 2)
+  for (const c of [62, 180, 298]) { x.fillStyle = E && c !== 180 ? '#2a323b' : '#e8eef4'; x.fillRect(c - 9, 45, 18, 2) }
   for (let i = 0; i < 3; i++) {
     const bx = 22 + i * 25, bw = 19, bt = 45, bb = bt + (i === 1 ? 42 : 34) * U
     x.fillStyle = us; x.beginPath(); x.moveTo(bx, bt); x.lineTo(bx + bw, bt); x.lineTo(bx + bw, bb); x.lineTo(bx + bw / 2, bb + 5 * U); x.lineTo(bx, bb); x.closePath(); x.fill()
@@ -452,7 +455,7 @@ export function paintBowl(x, view, { horizon, us, trim, dim = 0, seed = 7, board
 // blit in place of the seated crowd. G: anything with wallY. (A pan like Spot-up's can't use it: that's a drill anyway.)
 const crowds = new Map()
 function crowdBand(view, G, c, game, n) {
-  const id = `${c.us}|${c.trim}|${G.wallY}|${view.h}|${view.px}|${game}|${n}`
+  const id = `${c.us}|${c.trim}|${G.wallY}|${view.h}|${view.px}|${game}|${n}|${view.empty ? 'E' : ''}`
   let cv = crowds.get(id)
   if (!cv && typeof document !== 'undefined') {
     if (crowds.size > 8) crowds.clear()
@@ -468,23 +471,23 @@ function crowdBand(view, G, c, game, n) {
 }
 // Reduce Motion or a slow machine: the light version, the building stays in its seats and nothing flashes
 export const lightFx = () => reduceMotion() || (typeof document !== 'undefined' && document.documentElement.classList.contains('low-power'))
-export function warmCrowd(view, G, c, game) { if (lightFx()) return; crowdBand(view, G, c, game, 1); crowdBand(view, G, c, game, 2) }
+export function warmCrowd(view, G, c, game) { if (lightFx() || view.empty) return; crowdBand(view, G, c, game, 1); crowdBand(view, G, c, game, 2) }
 // rate: ms a frame. Slow while they're getting up for it, quick when it's gone in
 export function crowdUp(ctx, view, G, c, game, t, rate = 110) {
-  if (lightFx()) return
+  if (lightFx() || view.empty) return   // (an empty house: nobody to get up)
   const cv = crowdBand(view, G, c, game, 1 + (Math.floor(t / rate) % 2))
   if (cv) ctx.drawImage(cv, 0, 0, view.w, cv.bandH)
 }
 // the courtside board lighting up with the team's colour
 export function boardFlash(ctx, view, G, color, a) {
-  if (lightFx()) return
+  if (lightFx() || view.empty) return
   const U = view.h / 640
   ctx.globalAlpha = a; ctx.fillStyle = color; ctx.fillRect(0, G.wallY - (BOARD_H - 2) * U, view.w, (BOARD_H - 4) * U); ctx.globalAlpha = 1
 }
 const hash01 = n => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s) }
 // phones going off in the seats: where and when come from the clock, so there's nothing to keep
 export function camFlashes(ctx, view, G, t, n = 12) {
-  if (lightFx()) return
+  if (lightFx() || view.empty) return
   const U = view.h / 640, tick = Math.floor(t / 80)
   ctx.fillStyle = '#fff'
   for (let i = 0; i < n; i++) {
@@ -1624,7 +1627,7 @@ function drawCourtScene(ctx, g, view) {
   const flew = m.res && m.res.why !== 'clock'
   const madeAll = g.done?.hit && m.landed
   const roar = clutch ? (madeAll ? 110 : !m.landed && g.clock < 1500 ? 250 : 0) : ft && madeAll ? 130 : 0
-  if (roar && !lightFx()) {
+  if (roar && !lightFx() && !view.empty) {
     crowdUp(ctx, view, G, c, game, g.t, roar)
     if (ft) paintRef(ctx, cam)
     paintHoop(ctx, cam, c.us)

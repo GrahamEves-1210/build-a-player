@@ -282,7 +282,7 @@ export function draw(ctx, g, view) {
   const slam = b.res === 'slam', lay = b.res === 'lay'
   const inAt = b.doneAt + throwOf(b)       // (a slam: the ball through the iron)
   // the building on its feet for a slam, the board at the foot of the stands in our colour
-  if (slam && t >= inAt && t - inAt < 1900 && !lightFx()) {
+  if (slam && t >= inAt && t - inAt < 1900 && !lightFx() && !view.empty) {
     crowdUp(ctx, view, G, c, 'board', t, 110)
     paintHoop(ctx, cam, c.us)
     if (t - inAt < 1300) camFlashes(ctx, view, G, t, 12)

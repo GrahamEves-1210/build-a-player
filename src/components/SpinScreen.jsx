@@ -362,6 +362,8 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
     height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
     attrs: selectedQB.attrs ?? null,
     subpos: selectedQB.subpos ?? null,
+    ...(selectedQB.role ? { role: selectedQB.role } : {}),   // (soccer: the player's real position)
+    ...(selectedQB.bats ? { bats: selectedQB.bats } : {}), ...(selectedQB.throws ? { throws: selectedQB.throws } : {}),   // (baseball: his hands, for the report card's B/T)
     ...(spin ? { spin } : {}),
     ...(sandbox ? { sandbox: true } : {}),   // saveGuard's hasSandboxChip: the mark survives a reload with the build
   }
@@ -410,7 +412,11 @@ export function setGradesHidden(v) {
   window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isAllTime = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', getPlayerSub = null, teamLabel = 'TEAM', getTeamSub = null, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false, group = null }) {
+  // group (College Football): the first wheel deals a group of teams, not a team ({ key: the player's
+  // field it matches, display: a row's look, logo: its logo, respin: the respin button's word }).
+  // Without it the first wheel is teams, as always
+  const teamOf = q => (group ? q[group.key] : q.team)
   // Sandbox's Starters Only: one wheel of the pool's starters, no team spin, no respins. Never on a
   // seeded plan (the Daily, a Compete pool, Blacktop) or a live game, whatever the page hands in
   const oneWheel = startersOnly && !seedPlanProp && !isVersusMode
@@ -564,11 +570,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setPhase(oneWheelRef.current ? 'qb' : 'team')
     triggerMobileAd()
     track('spin', {
-      app: isBucket ? 'bucket' : 'nfl',
-      position: isBucket ? 'bucket' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
+      app: isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl',
+      position: isBaseball ? baseballPos : isSoccer ? 'st' : isBucket ? 'bucket' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
       gameMode: isLite ? 'lite' : null,
     })
-  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isDL, isLB, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onSaveResult, triggerMobileAd, isBaseball, baseballPos, isSoccer, isBucket, isOL, isDB, isDL, isLB, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQBRespin = useCallback(() => {
     if (oneWheelRef.current) return
@@ -616,7 +622,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // Teams that have someone to draft in this pool, as a string so the reel
   // memo below only re-runs when that set actually changes (sandbox mode
   // hands in a freshly mapped pool array on every render).
-  const draftableTeams = [...new Set(qbPool.map(q => q.team))].sort().join(',')
+  const draftableTeams = [...new Set(qbPool.map(teamOf))].sort().join(',')
 
   const teamReelItems = useMemo(() => {
     // Only teams with someone to draft — landing on a team with no players
@@ -650,7 +656,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const qbReelItems = useMemo(() => {
     if (oneWheel) return starterDraw
     if (!selectedTeam) return qbPool.slice(0, 3)
-    const base = qbPool.filter(q => q.team === selectedTeam.short)
+    const base = qbPool.filter(q => teamOf(q) === selectedTeam.short)
     // (a respin on a team of two keeps both in: taking one out would just hand over the other)
     const arr = excludedQB && base.length > 2 ? base.filter(q => q !== excludedQB) : [...base]
     for (let i = arr.length - 1; i > 0; i--) {
@@ -674,7 +680,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     // a respun team or a player respin is the player's own draw (seeded by the seat in Compete)
     const own = ownSpins && (freeTeam || playerDraw > 0)
     if (!seedPlan || !selectedTeam || (own && !seedPlan.respinSeed)) return null
-    const roster = qbPool.filter(q => q.team === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
+    const roster = qbPool.filter(q => teamOf(q) === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
     if (!roster.length) return null
     if (own) {
       const mine = seededShuffle(roster, `${seedPlan.respinSeed}:${teamIndex}:${selectedTeam.short}`)
@@ -704,7 +710,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   useEffect(() => {
     if (!selectedTeam) return
     const logo = new Image()
-    logo.src = `${logoDir}${selectedTeam.short}.png`
+    logo.src = group?.logo ? group.logo(selectedTeam) : `${logoDir}${selectedTeam.short}.png`
     qbReelItems.forEach(qb => {
       const file = qb.headshot ?? headshotsMap[qb.name]
       if (file) {
@@ -741,14 +747,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="reel-tri reel-tri-l" />
             <div className="reels-row">
               {!oneWheel && <SlotReel
-                label="TEAM"
+                label={teamLabel}
                 items={teamReelItems}
                 spinning={isSpinningTeam}
                 idle={!paused && !isSpinning && !selectedTeam}
                 locked={!!selectedTeam}
                 blurred={hideTeamResult && !!selectedTeam}
-                getDisplay={t => t.short}
-                getSub={t => t.name.split(' ').slice(-1)[0]}
+                getDisplay={group?.display ?? (t => t.short)}
+                getSub={getTeamSub ?? (t => t.name.split(' ').slice(-1)[0])}
                 onStop={handleTeamStop}
                 durationMs={800}
                 jitterMs={1000}
@@ -761,7 +767,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 idle={!paused && !isSpinning && !selectedQB}
                 locked={!!selectedQB && phase === 'done'}
                 getDisplay={q => q.name.split(' ')[0]}
-                getSub={q => q.name.split(' ').slice(1).join(' ')}
+                getSub={getPlayerSub ?? (q => q.name.split(' ').slice(1).join(' '))}
                 onStop={handleQBStop}
                 durationMs={oneWheel ? 1700 : 1100}
                 jitterMs={400}
@@ -788,7 +794,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                     setTimeout(() => { el.style.transform = '' }, 160)
                   }}
                 >
-                  RESPIN TEAM <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
+                  RESPIN {group?.respin ?? (isSoccer ? teamLabel : 'TEAM')} <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
                 </button>
                 <div className="spin-respin-divider" />
                 {qbRespinUsed >= maxPlayerRespin && canEarn ? (
@@ -846,7 +852,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-meta">
                   {selectedQB.teamName ?? selectedQB.team}
                   {(isOL || isDL) && selectedQB.pos ? ` · ${selectedQB.pos}` : ''}
-                  {!isBucket && !isWR && (selectedQB.starter ? '' : ' · Bench')}
+                  {!isBucket && !isWR && !isBaseball && (selectedQB.starter ? '' : ' · Bench')}
                 </div>
                 {selectedQB.years && (
                   <div className="qb-reveal-year">{selectedQB.years}</div>

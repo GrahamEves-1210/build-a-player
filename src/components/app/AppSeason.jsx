@@ -63,16 +63,17 @@ export function Bracket({ rounds, gameIdx, status, hasBye }) {
   )
 }
 
-export function RingCeremony({ team, title, score, trophy = '/trophy.webp', onClose }) {
+// (art: a drawn trophy in place of the picture, baseball's Commissioner's Trophy from TrophyArt)
+export function RingCeremony({ team, title, score, trophy = '/trophy.webp', art = null, onClose }) {
   const rings = useMemo(() => careerRings(), [])
   useEffect(() => { titleConfetti([team?.color, team?.color2, '#ffffff']) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return createPortal(
     <div className="ag-ring" style={{ '--tc': team?.color || 'var(--ag-a1)', '--tc2': team?.color2 || '#000' }} onClick={onClose}>
       <div className="ag-ring-rays" />
       <div className="ag-ring-inner" onClick={e => e.stopPropagation()}>
-        <span className="ag-eyebrow">{team?.name ?? 'Your team'}</span>
+        <span className="ag-eyebrow">{team?.name ?? 'Champions'}</span>
         <h2 className="ag-ring-title is-rise"><RiseText text={title} delay={150} step={40} /></h2>
-        <img src={trophy} alt="" className="ag-ring-trophy" draggable={false} />
+        {art ?? <img src={trophy} alt="" className="ag-ring-trophy" draggable={false} />}
         {score && <span className="ag-ring-score">{score}</span>}
         <span className="ag-ring-count"><IconRing size={20} /> RING #{Math.max(1, rings)}</span>
         <button className="ag-btn ag-btn--gold ag-ring-btn" onClick={onClose}>CONTINUE</button>

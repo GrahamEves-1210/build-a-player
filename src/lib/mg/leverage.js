@@ -3,7 +3,7 @@
 //           shoulder and pushes that way: press the side he's on to stay in front of him. In the green the back flies;
 //           out of it he slows, and the rusher gets a step. A rip is a hard shove: press twice, fast. One comes last.
 //   sneak   fourth and inches at the goal line: wait out the cadence, then drive the pile.
-import { byV, clamp, lerp, outcome, rngOf, prog, easeOut, easeIn, layer, football, themOf, text, DISPLAY, LABEL, GOOD, BAD, GOLD, manOf, paceOf, particles, nudge } from './kit.js'
+import { byV, clamp, lerp, outcome, rngOf, prog, easeOut, easeIn, layer, football, themOf, text, DISPLAY, LABEL, GOOD, BAD, GOLD, manOf, xiOf, paceOf, particles, nudge } from './kit.js'
 import { nameTag, tilt, untilt, ground, stands, floodlight, vignette, athlete, skinOf, crowdPop } from './art.js'
 import { fxSeed, hitFx, plantFx, landFx, pushIn, afterStop } from './contact.js'
 import { placeStamp } from './read.js'
@@ -12,7 +12,7 @@ import { curve } from './dash.js'
 
 export const how = {
   seal: 'He dips a shoulder and pushes that way: press the side he is on and keep the bar in the green until the back is by. RIP: press twice, fast.',
-  sneak: 'Wait for the snap. Then tap hard behind your centre and drive it over the line.',
+  sneak: 'Wait for the snap. Then tap hard behind the centre and drive it over the line.',
 }
 const gaussOf = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
 
@@ -287,6 +287,17 @@ function man(ctx, view, x, y, side, c, them, n, size, dir, pose, opts) {
 const realMan = (cast, group, i) => (cast?.us?.[group]?.length > i ? manOf(cast, 'us', group, i) : null)
 // their front, when the roster has it: a number and a face, no name in the pile
 const frontMan = (cast, i) => (cast?.them?.dl?.length > i ? { number: cast.them.dl[i].number, skin: cast.them.dl[i].skin } : null)
+// The full eleven a side (career's xi): every man real and named. Ours keep their names in the fight; theirs show
+// a name before the snap and once it's decided, and none in the pile.
+const hasXi = cast => !!(cast?.us?.xi && cast?.them?.xi)
+const xiUs = (cast, spot, i) => xiOf(cast, 'us', spot, i)
+// Seal: the end on our man, then the men across from our line; Sneak: seven across (their four down in the middle), three backers behind
+function xiFront(cast, game) {
+  const x = (spot, i) => xiOf(cast, 'them', spot, i)
+  if (game === 'seal') return [x('edge', 0), x('dt', 0), x('dt', 1), x('lb', 0), x('edge', 1), x('lb', 1)]
+  const extra = [x('edge', 2), x('dt', 2), x('lb', 3), x('s', 1), x('cb', 0)].filter(Boolean)
+  return { front: [extra[0] ?? null, x('edge', 0), x('dt', 0), extra[1] ?? null, x('dt', 1), x('edge', 1), extra[2] ?? null], backers: [x('lb', 0), x('lb', 1), x('lb', 2)] }
+}
 // a small slab for the clock, up against the corner: the stands stay in view (the host's title bar
 // is drawn over the top 44, so it sits just under that)
 function barClock(ctx, w, y, secs, col, tag, tagCol) {
@@ -316,6 +327,7 @@ function drawSeal(ctx, g, view0) {
   const cx0 = 268, m = g.done ? null : g.cur
   // our man: the tight end, or (a lineman's game) the tackle himself, with the four inside him
   const OL = g.lineman
+  if (!g.men && hasXi(view.cast)) g.men = { te: realMan(view.cast, OL ? 'ol' : 'te', 0), rb: xiUs(view.cast, 'rb', 0), pace: paceOf(view.cast, 'us', 'rb', 0), ol: OL ? [null, 4, 3, 2, 1].map(i => (i == null ? null : xiUs(view.cast, 'ol', i))) : [0, 1, 2, 3, 4].map(i => xiUs(view.cast, 'ol', i)), front: xiFront(view.cast, 'seal') }
   const men = g.men ?? (g.men = { te: realMan(view.cast, OL ? 'ol' : 'te', 0), rb: realMan(view.cast, 'rb', 0), pace: paceOf(view.cast, 'us', 'rb', 0), ol: OL ? [null, 4, 3, 2, 1].map(i => (i == null ? null : realMan(view.cast, 'ol', i))) : [0, 1, 2, 3, 4].map(i => realMan(view.cast, 'ol', i)) })
   const myNum = OL ? 76 : 88, lineN = OL ? 4 : 5
   const age = g.doneAt != null ? g.t - g.doneAt : 0
@@ -361,8 +373,8 @@ function drawSeal(ctx, g, view0) {
 
   // their front and our line, inside the fight: the rest of the play
   const wig = Math.sin(g.t / 210) * 1.2
-  for (let i = 1; i <= 5; i++) man(ctx, view, cx0 - 12 - i * SP + wig, los - 26, 1, c, them, 10 + i, S, 'down', 'block', { look: frontMan(view.cast, i) })
-  const rushLook = frontMan(view.cast, 0)
+  for (let i = 1; i <= 5; i++) man(ctx, view, cx0 - 12 - i * SP + wig, los - 26, 1, c, them, 10 + i, S, 'down', 'block', { look: men.front?.[i] ?? frontMan(view.cast, i), ol: 1, lo: i % 2, quiet: !(g.done && age > 600) })
+  const rushLook = men.front?.[0] ?? frontMan(view.cast, 0)
   const rusher = () => {
     if (shed) { man(ctx, view, rx + up * 10, ry - up * 14, 1, c, them, 3, BIG, 'down', up >= 1 ? 'flex' : shedF >= 1 ? 'wrap' : null, shedF < 1 ? { step: stepB, look: rushLook } : { fall: bfall * (1 - up), fallX: 1, look: rushLook }); return }
     if (heldOut) { man(ctx, view, rx, ry, 1, c, them, 3, BIG, 'down', 'wrap', { fall: pancake, fallX: -1, look: rushLook, quiet: true }); return }
@@ -445,6 +457,7 @@ function drawSneak(ctx, g, view0) {
   const pile = tilt(view0, 180, goalY + 10)
   const view = pushIn(ctx, g, view0, leanIn, 180, pile.y, SNEAK_ZOOM, 180, h * 0.56)
   // seven across: the tight ends on the ends of the line, the five in between
+  if (!g.men && hasXi(view.cast)) g.men = { qb: realMan(view.cast, 'qb', 0), line: [xiUs(view.cast, 'te', 0), ...[0, 1, 2, 3, 4].map(i => xiUs(view.cast, 'ol', i)), xiUs(view.cast, 'te', 1)], b0: xiUs(view.cast, 'rb', 0), b1: xiUs(view.cast, 'rb', 1) ?? xiUs(view.cast, 'wr', 2), ...xiFront(view.cast, 'sneak') }
   const men = g.men ?? (g.men = { qb: realMan(view.cast, 'qb', 0), line: [realMan(view.cast, 'te', 0), ...[0, 1, 2, 3, 4].map(i => realMan(view.cast, 'ol', i)), realMan(view.cast, 'te', 1)], b0: realMan(view.cast, 'rb', 0), b1: realMan(view.cast, 'rb', 1) })
   bake(ctx, view, `sneak|${c.us}|${them.color}|${goalY}`, goalY, true)
   crowdPop(ctx, view, [c.us, c.trim], g.t - (g.popAt ?? -1e9))
@@ -490,11 +503,11 @@ function drawSneak(ctx, g, view0) {
     const x0 = 180 + (i - 1) * SP * 1.6
     const y0 = olY0 - gap * 2 - moved * (i === 1 ? 1 : 0.7) - 22
     const rise = lost && i === 1 ? clamp((hitAge - 1180) / 170, 0, 1) : 0   // (the man who made the stop, back on his feet)
-    man(ctx, view, lerp(x0, qx + (i - 1) * 16, crash), lerp(y0, qy - 6, crash) - rise * 18, 1, c, them, 20 + i, SZ, 'down', rise >= 1 ? 'flex' : crash > 0.9 ? 'wrap' : fire ? 'block' : 'ready', crash > 0.9 ? { fall: downQ * (1 - rise), number: 50 + i } : { number: 50 + i })
+    man(ctx, view, lerp(x0, qx + (i - 1) * 16, crash), lerp(y0, qy - 6, crash) - rise * 18, 1, c, them, 20 + i, SZ, 'down', rise >= 1 ? 'flex' : crash > 0.9 ? 'wrap' : fire ? 'block' : 'ready', crash > 0.9 ? { fall: downQ * (1 - rise), number: 50 + i, look: men.backers?.[i] } : { number: 50 + i, look: men.backers?.[i], quiet: fire > 0 && !(g.done && rise >= 1 && i === 1) })
   }
   for (let i = 0; i < 7; i++) {
     const m = moved * WEDGE[i], lean = heave * WEDGE[i]
-    man(ctx, view, 180 + (i - 3) * SP, olY0 - m - lean - gap * 2, 1, c, them, 30 + i, SZ, 'down', fire ? 'block' : 'stance', downD && WEDGE[i] > 0.8 ? { fall: downD, look: frontMan(view.cast, i) } : { number: 90 + i, look: frontMan(view.cast, i) })
+    man(ctx, view, 180 + (i - 3) * SP, olY0 - m - lean - gap * 2, 1, c, them, 30 + i, SZ, 'down', fire ? 'block' : 'stance', downD && WEDGE[i] > 0.8 ? { fall: downD, look: men.front?.[i] ?? frontMan(view.cast, i) } : { number: 90 + i, look: men.front?.[i] ?? frontMan(view.cast, i), ol: 1, lo: (i + 1) % 2, quiet: fire > 0 })
   }
   for (let i = 0; i < 7; i++) {
     const m = moved * WEDGE[i], lean = heave * WEDGE[i]

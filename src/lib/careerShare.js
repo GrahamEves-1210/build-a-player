@@ -6,7 +6,12 @@
 // screen, the offseason recap).
 
 import { IS_APP, shareNative } from './platform'
-import { sportOf, careerTotals, legacyOf, LEGACY_TIERS, HEADLINE_STATS, STAT_LABEL, AWARD_NAME, POS_NAME, POS_LABEL, comebackYear } from './career'
+import { sportOf, careerTotals, legacyOf, legacyTiers, HEADLINE_STATS, STAT_LABEL, AWARD_NAME, POS_NAME, POS_LABEL, comebackYear } from './career'
+// each sport's look on a card: football teal, basketball orange, soccer black and white
+// (a sport that loads on its own brings its own: baseball's ball leather and red stitching, S.card)
+const accentOf = S => S.card?.accent ?? (S.isSoccer ? '#f4f4f5' : S.isBucket ? '#fdba74' : '#5EDBD8')
+const glowOf = S => S.card?.glow ?? (S.isSoccer ? '#a1a1aa' : S.isBucket ? '#fb923c' : '#1fc98a')
+const siteOf = S => S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com')
 
 const W = 1080, H = 1920, PAD = 84
 const ANTON = "'BAP Anton', Anton, Impact, sans-serif"
@@ -14,6 +19,8 @@ const BEBAS = "'BAP Bebas', 'Bebas Neue', Impact, sans-serif"
 const BODY = 'Outfit, system-ui, sans-serif'
 const GOLD = '#f2d675', GOLD2 = '#d4af37'
 const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString('en-US'))
+// (a stat as its sport prints it: baseball's .312 and 2.45, S.fmtStat)
+const fmtOf = (c, k, v) => { const S = sportOf(c); return S.fmtStat ? S.fmtStat(k, v) : fmt(v) }
 const lum = hex => { const n = parseInt((hex || '#000').slice(1), 16); return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255 }
 // a team's color that reads on black (a near-black primary hands over to the second color)
 const teamColor = (S, short) => { const t = S.teamOf(short); return lum(t.color) < 0.12 ? t.color2 : t.color }
@@ -147,9 +154,9 @@ export async function careerShareCanvas(c, { username } = {}) {
   const t = careerTotals(c), L = legacyOf(c)
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H
   const ctx = canvas.getContext('2d')
-  const accent = S.isBucket ? '#fdba74' : '#5EDBD8'
+  const accent = accentOf(S)
   const team = c.seasons[c.seasons.length - 1]?.team ?? c.team
-  backdrop(ctx, team ? teamColor(S, team) : accent, S.isBucket ? '#fb923c' : '#1fc98a')
+  backdrop(ctx, team ? teamColor(S, team) : accent, glowOf(S))
   const cb = comebackYear(c)
   topLine(ctx, 'CAREER', [cb ? 'COMEBACK' : null, c.sandbox ? 'SANDBOX' : null].filter(Boolean), accent)
   const years = c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : ''
@@ -162,7 +169,7 @@ export async function careerShareCanvas(c, { username } = {}) {
   ctx.strokeStyle = 'rgba(242,214,117,.6)'; ctx.lineWidth = 3; ctx.stroke()
   const IX = PAD + 46, IR = W - PAD - 46
   // the tier and, beside it, where the career ranks among the all-time greats
-  const goat = L.ranked ? `NO. ${L.rank} ${S.isBucket ? '' : `${POS_LABEL[c.pos]} `}OF ALL TIME` : `OUTSIDE THE ALL-TIME TOP ${L.of}`
+  const goat = L.ranked ? `NO. ${L.rank} ${S.isBucket || S.isSoccer ? '' : `${POS_LABEL[c.pos]} `}OF ALL TIME` : `OUTSIDE THE ALL-TIME TOP ${L.of}`
   text(ctx, 'LEGACY TIER', IX, PY + 62, { font: `32px ${BEBAS}`, color: 'rgba(255,255,255,.6)', spacing: 5 })
   ctx.font = `32px ${BEBAS}`
   const goatX = IX + ctx.measureText('LEGACY TIER').width + 11 * 5 + 28
@@ -175,9 +182,10 @@ export async function careerShareCanvas(c, { username } = {}) {
   const ts = fit(ctx, tier, ANTON, 108, IR - IX - scoreW - 40)
   ctx.font = `${ts}px ${ANTON}`; ctx.textAlign = 'left'; ctx.fillStyle = goldGrad(ctx, IX, IX + ctx.measureText(tier).width); ctx.fillText(tier, IX, PY + 172)
   // the ladder: every tier, lit up to this one
-  const reached = LEGACY_TIERS.filter(([min]) => L.score >= min).length
+  const TIERS = legacyTiers(c)
+  const reached = TIERS.filter(([min]) => L.score >= min).length
   const gap = 12, segW = (IR - IX - gap * 3) / 4
-  LEGACY_TIERS.forEach(([, name], i) => {
+  TIERS.forEach(([, name], i) => {
     const x = IX + i * (segW + gap)
     box(ctx, x, PY + 204, segW, 14, 7)
     ctx.fillStyle = i < reached ? goldGrad(ctx, x, x + segW) : 'rgba(255,255,255,.12)'; ctx.fill()
@@ -189,7 +197,7 @@ export async function careerShareCanvas(c, { username } = {}) {
   const RY = PY + PH + 28
   if (c.hof?.in) {
     box(ctx, PAD, RY, W - PAD * 2, 96, 48); ctx.fillStyle = goldGrad(ctx, PAD, W - PAD); ctx.fill()
-    const s = `HALL OF FAME · ${c.hof.ballot.toUpperCase()}`
+    const s = S.isSoccer ? c.hof.ballot.toUpperCase() : `HALL OF FAME · ${c.hof.ballot.toUpperCase()}`
     const fs = fit(ctx, s, BEBAS, 52, W - PAD * 2 - 160, 4)
     ctx.font = `${fs}px ${BEBAS}`; const sw = ctx.measureText(s).width + s.length * 4
     icon(ctx, 'crown', W / 2 - sw / 2 - 30, RY + 27, 42, '#1d1503')
@@ -202,13 +210,13 @@ export async function careerShareCanvas(c, { username } = {}) {
 
   // the career's big numbers
   const NY = RY + 96 + 150
-  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmt(t.stats[k]), STAT_LABEL[k]]), NY)
+  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, t.stats[k]), STAT_LABEL[k]]), NY)
   // the hardware: seasons, rings, the award, the honors
   const award = AWARD_NAME[c.pos]
   const TY = NY + 100
   tiles(ctx, [
     { v: String(t.seasons), k: t.seasons === 1 ? 'SEASON' : 'SEASONS' },
-    { v: String(t.rings), k: t.rings === 1 ? 'RING' : 'RINGS', icon: 'ring', gold: t.rings > 0 },
+    S.isSoccer ? { v: String(t.trophies ?? 0), k: t.trophies === 1 ? 'TROPHY' : 'TROPHIES', icon: 'trophy', gold: (t.trophies ?? 0) > 0 } : { v: String(t.rings), k: t.rings === 1 ? 'RING' : 'RINGS', icon: 'ring', gold: t.rings > 0 },
     // (a lineman has no award: his All-Pros are his trophies)
     ...[c.pos === 'ol' ? t.allPros : t.awards].map(n => ({ v: String(n), k: n === 1 ? award : `${award}S`, icon: 'trophy', gold: n > 0 })),
     { v: String(t.proBowls), k: t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, icon: 'star' },
@@ -217,7 +225,7 @@ export async function careerShareCanvas(c, { username } = {}) {
   // the teams he played for, and how long with each
   const LY = TY + TILE_H + 64
   const teams = t.teams.map(s => ({ s, n: c.seasons.filter(x => x.team === s).length })).slice(0, 7)
-  text(ctx, teams.length === 1 ? 'ONE TEAM, START TO FINISH' : 'PLAYED FOR', W / 2, LY, { font: `30px ${BEBAS}`, color: 'rgba(255,255,255,.6)', align: 'center', spacing: 6 })
+  text(ctx, teams.length === 1 ? (S.isSoccer ? 'ONE CLUB, START TO FINISH' : 'ONE TEAM, START TO FINISH') : 'PLAYED FOR', W / 2, LY, { font: `30px ${BEBAS}`, color: 'rgba(255,255,255,.6)', align: 'center', spacing: 6 })
   const sz = teams.length <= 4 ? 96 : teams.length <= 5 ? 88 : 74
   const tg = teams.length <= 4 ? 60 : 34
   const rowW = teams.length * sz + (teams.length - 1) * tg
@@ -230,7 +238,7 @@ export async function careerShareCanvas(c, { username } = {}) {
     text(ctx, `${x.n} ${x.n === 1 ? 'YR' : 'YRS'}`, lx + sz / 2, ly + sz + 34, { font: `26px ${BEBAS}`, color: 'rgba(255,255,255,.62)', align: 'center', spacing: 3 })
   })
 
-  await footer(ctx, username, S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com')
+  await footer(ctx, username, siteOf(S))
   return canvas
 }
 
@@ -243,8 +251,8 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
   const S = sportOf(c)
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H
   const ctx = canvas.getContext('2d')
-  const accent = S.isBucket ? '#fdba74' : '#5EDBD8'
-  backdrop(ctx, teamColor(S, s.team), S.isBucket ? '#fb923c' : '#1fc98a')
+  const accent = accentOf(S)
+  backdrop(ctx, teamColor(S, s.team), glowOf(S))
   const back = c.unretired && s.year >= c.unretired.year
   topLine(ctx, `SEASON ${s.season}`, [back ? 'COMEBACK' : null, c.sandbox ? 'SANDBOX' : null].filter(Boolean), accent)
   // the team's logo, top right, beside the name
@@ -259,21 +267,21 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
   ctx.strokeStyle = s.champion ? 'rgba(242,214,117,.75)' : 'rgba(255,255,255,.16)'; ctx.lineWidth = 3; ctx.stroke()
   const tn = (s.teamName ?? S.teamOf(s.team).name).toUpperCase()
   text(ctx, tn, W / 2, PY + 70, { font: `${fit(ctx, tn, BEBAS, 38, W - PAD * 2 - 80, 5)}px ${BEBAS}`, color: 'rgba(255,255,255,.62)', align: 'center', spacing: 5 })
-  const rec = `${s.wins}–${s.losses}`
+  const rec = S.isSoccer ? `${s.wins}–${s.draws ?? 0}–${s.losses}` : `${s.wins}–${s.losses}`
   text(ctx, rec, W / 2, PY + 272, { font: `${fit(ctx, rec, ANTON, 200, W - PAD * 2 - 80)}px ${ANTON}`, color: '#fff', align: 'center' })
   const lost = (s.rounds ?? []).find(r => !r.won)
-  const end = s.champion ? `${S.final.toUpperCase()} CHAMPIONS` : lost ? lostIn(lost.round) : s.playoffs ? 'PLAYOFFS' : 'NO PLAYOFFS'
+  const end = S.isSoccer ? (s.trophies?.length ? s.trophies.join(' · ').toUpperCase() : `${ordinal(s.pos ?? 0)} IN ${(/^(Premier League|Bundesliga)$/.test(s.league ?? '') ? `the ${s.league}` : s.league ?? 'the league').toUpperCase()}`) : s.champion ? `${S.final.toUpperCase()} CHAMPIONS` : lost ? lostIn(lost.round) : s.playoffs ? 'PLAYOFFS' : 'NO PLAYOFFS'
   const ef = fit(ctx, end, BEBAS, 48, W - PAD * 2 - 140, 4)
   if (s.champion) { ctx.font = `${ef}px ${BEBAS}`; const ew = ctx.measureText(end).width + end.length * 4; icon(ctx, 'ring', W / 2 - ew / 2 - 36, PY + 334, 42, GOLD) }
   text(ctx, end, W / 2 + (s.champion ? 24 : 0), PY + 370, { font: `${ef}px ${BEBAS}`, color: s.champion ? GOLD : 'rgba(255,255,255,.72)', align: 'center', spacing: 4 })
 
   // the season's numbers
   const NY = PY + PH + 240
-  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmt(s.stats[k]), STAT_LABEL[k]]), NY)
+  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, s.stats[k]), STAT_LABEL[k]]), NY)
   // the honors (only the ones won), then the overall, the goals, the role
   const honors = [
     s.award && { v: s.awardName, k: 'WINNER', icon: 'trophy', gold: true },
-    s.allPro && { v: S.first.toUpperCase(), k: 'FIRST TEAM', icon: 'medal', gold: true },
+    s.allPro && { v: S.first.toUpperCase(), k: S.isSoccer ? 'WINNER' : 'FIRST TEAM', icon: 'medal', gold: true },
     s.proBowl && !s.allPro && { v: S.honor.toUpperCase(), k: 'SELECTED', icon: 'star' },
     (s.records?.length ?? 0) > 0 && { v: String(s.records.length), k: s.records.length === 1 ? 'RECORD SET' : 'RECORDS SET', icon: 'star', gold: true },
   ].filter(Boolean)
@@ -281,9 +289,10 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
   const fill = [{ v: String(s.ovr), k: 'OVERALL' }, goals != null && { v: `${goals}/${s.goals.length}`, k: 'GOALS MET' }, { v: (s.role ?? 'Starter').toUpperCase(), k: 'ROLE' }].filter(Boolean)
   tiles(ctx, [...honors, ...fill].slice(0, Math.max(3, Math.min(4, honors.length + 2))), NY + 110)
 
-  await footer(ctx, username, S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com')
+  await footer(ctx, username, siteOf(S))
   return canvas
 }
+const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] ?? 'TH'}`
 
 // The phone's share sheet in the app, the browser's where it takes files, else a download
 export async function shareCanvas(canvas, { title, filename }) {

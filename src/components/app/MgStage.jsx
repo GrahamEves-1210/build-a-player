@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { STEP, hud, pads, stamp, keyCap, THREE_KEYS, fieldFor } from '../../lib/mg/kit'
 import { engineFor } from '../../lib/mg'
-import { spriteFrame, bakeSome, spritePx } from '../../lib/mg/art'
+import { spriteFrame, bakeSome, spritePx, tagLayerBegin, tagLayerFlush } from '../../lib/mg/art'
 import { sfx, haptic } from '../../lib/juice'
+import { COMBINE_GAMES } from '../../lib/minigames'
 
 // PIXEL LOOK (a trial): every game drawn into a low-resolution picture, PIXEL_PT screen points to a game pixel, and
 // shown blown up with no smoothing: crisp chunky pixels, a 32-bit handheld's resolution. The HUD (title, prompt, pads,
@@ -125,8 +126,8 @@ const far = (a, b) => { const x = rgb(a), y = rgb(b); return Math.hypot(x[0] - y
 // first as trim, or white if that's close too. No team (practice): the stock look.
 const AWAY = '#e8edf2'
 export function colorsFor(sport, team, opp) {
-  const us = team?.color ?? (sport === 'bucket' ? '#c2571c' : '#14745a')
-  const trim = team?.color2 ?? '#f4efe6'
+  const us = team?.color ?? (sport === 'bucket' ? '#c2571c' : sport === 'soccer' ? '#1f4fa8' : sport === 'baseball' ? '#c8102e' : '#14745a')
+  const trim = team?.color2 ?? (sport === 'baseball' && !team ? '#14213d' : '#f4efe6')
   if (!opp) {
     const them = far(us, '#c9423a') < 110 ? AWAY : '#c9423a'
     return { us, trim, them, themTrim: them === AWAY ? '#20262c' : '#f4efe6' }
@@ -137,7 +138,12 @@ export function colorsFor(sport, team, opp) {
 }
 // the combine's drills aren't on anyone's home field
 export const NO_HOME_FIELD = new Set(['forty', 'cone', 'bench', 'velo', 'acc', 'gauntlet'])
-export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, pos: playerPos = null, cast = null, situation = null, weather = null, onDone, children = null }) {
+// An empty house: every combine drill, every sport (football, soccer and baseball from COMBINE_GAMES, basketball's
+// from SPORT.bucket.combine in lib/career.js), and anything played with the empty prop (training camp).
+// The seats are there, nobody's in them: no crowd getting up, no flashes, no crowd sound
+export const EMPTY_GAMES = new Set([...Object.values(COMBINE_GAMES).flat(), 'sprint', 'lane', 'spot', 'vert', 'nbench'])
+const CROWD_SFX = new Set(['snd-roar'])
+export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, pos: playerPos = null, cast = null, situation = null, weather = null, empty = false, onDone, children = null }) {
   const canvas = useRef(null)
   const box = useRef(null)
   const hudCanvas = useRef(null)
@@ -189,11 +195,11 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
     g.sit ??= situation
     if (import.meta.env.DEV) window.__bapGame = g   // (for scripts/mg's browser tests)
     const c = colorsFor(sport, team, opp)
-    const accent = sport === 'bucket' ? '#ff8a3c' : '#3ddcb0'
+    const accent = sport === 'bucket' ? '#ff8a3c' : sport === 'soccer' ? '#f2f4f5' : sport === 'baseball' ? '#f1e9d8' : '#3ddcb0'
     // (keys: a computer with a mouse and a keyboard, where the buttons show their keys)
     const keys = !document.documentElement.classList.contains('is-app') && !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
     const field = sport === 'nfl' && !NO_HOME_FIELD.has(game) ? fieldFor(home === 'opp' ? opp : team, superBowl) : null
-    const view = { w: 360, h: 640, px: 2, scale: 1, sport, accent, colors: c, cast, keys, field }
+    const view = { w: 360, h: 640, px: 2, scale: 1, sport, accent, colors: c, cast, keys, field, empty: !!empty || EMPTY_GAMES.has(game) || (import.meta.env.DEV && /[?&]empty=1/.test(location.search)) }   // (?empty=1 on the dev server: any game as camp plays it)
     let dirty = true   // (something other than the rules changed the picture)
     const fit = () => {
       if (!box.current) return   // (a last resize can land as the stage closes)
@@ -259,7 +265,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
     const heldKeys = new Map()
     const flush = () => {
       if (!g.fx.length) return
-      for (const f of g.fx) { if (f.startsWith('h:')) haptic(f.slice(2)); else sfx(f) }
+      for (const f of g.fx) { if (f.startsWith('h:')) haptic(f.slice(2)); else if (!(view.empty && CROWD_SFX.has(f))) sfx(f) }
       g.fx.length = 0
     }
     // run the rules up to a moment in time (a press's timestamp, or this frame)
@@ -289,6 +295,8 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
       stepped = 0; dirty = false
       spriteFrame(startAt === Infinity ? Infinity : 4, ctx)
       ctx.setTransform(view.px, 0, 0, view.px, 0, 0)
+      // (the pixel look: the players' names go on the sharp HUD layer, so they stay readable)
+      if (hudCtx() !== ctx) tagLayerBegin(ctx.canvas)
       try {
         // (a game can carry a nudge, kit.js: the picture takes the hit, the HUD holds still)
         if (g.nudge) { g.nudge.apply(ctx, g.t, view); engine.draw(ctx, g, view); ctx.setTransform(view.px, 0, 0, view.px, 0, 0) }
@@ -302,7 +310,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
           keyed = keyOrder.map(i => keyed[i])
         }
         const hctx = hudCtx()
-        if (hctx !== ctx) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, ov.width, ov.height); hctx.setTransform(ovPx, 0, 0, ovPx, 0, 0) }
+        if (hctx !== ctx) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, ov.width, ov.height); hctx.setTransform(ovPx, 0, 0, ovPx, 0, 0); tagLayerFlush(hctx) }
         if (keyed && view.keys) keyed.forEach((p, i) => keyCap(hctx, p.x, Math.max(14, p.y - 42), p.label ?? keyLabel(i, keyed.length)))
         hud(hctx, view, g, def.title)
         pads(hctx, view, g)
@@ -401,7 +409,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
           <canvas ref={canvas} className="mg-canvas" aria-label={def.title} style={tex.has('riso') || ERA_FILTER[era] ? { filter: [tex.has('riso') && RISO_FILTER, ERA_FILTER[era]].filter(Boolean).join(' ') } : undefined} />
           {tex.size > 0 && texLayers(tex, pixPt).map(l => <div key={l.key} aria-hidden="true" style={l.style} />)}
           {eraLayers(era).map(l => <div key={l.key} aria-hidden="true" style={l.style} />)}
-          {(() => { const k = wx !== 'off' ? wx : sport === 'nfl' && (weather === 'snow' || weather === 'rain') ? weather : null; return k ? <Weather key={k} kind={k} /> : null })()}
+          {(() => { const k = wx !== 'off' ? wx : (sport === 'nfl' || sport === 'soccer') && (weather === 'snow' || weather === 'rain') ? weather : null; return k ? <Weather key={k} kind={k} /> : null })()}
           <canvas ref={hudCanvas} className="mg-canvas mg-canvas--hud" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }} />
         </div>
         {bars && <div ref={barBot} aria-hidden="true" style={{ background: '#000', flex: 'none' }} />}

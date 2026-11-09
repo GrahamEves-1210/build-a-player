@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/compress-images.mjs && vite build && node scripts/strip-dist-headshots.mjs && node scripts/prerender-bucket.mjs",
+    "build": "node scripts/compress-images.mjs && vite build && node scripts/strip-dist-headshots.mjs && node scripts/prerender-bucket.mjs && node scripts/prerender-soccer.mjs && node scripts/prerender-baseball.mjs",
     "build:app": "node scripts/compress-images.mjs && vite build --mode app && node scripts/strip-dist-headshots.mjs && cap sync",
     "assets:app": "capacitor-assets generate --ios --android --iconBackgroundColor \"#090a0d\" --iconBackgroundColorDark \"#090a0d\" --splashBackgroundColor \"#090a0d\" --splashBackgroundColorDark \"#090a0d\"",
     "preview": "vite preview",

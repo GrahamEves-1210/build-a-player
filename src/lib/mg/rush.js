@@ -11,17 +11,17 @@
 //
 // The rules are all here with no screen, in field units: x across, d up the field from the line of
 // scrimmage (the QB is at a big d). Nothing is painted on the field: the read is in the men's feet.
-import { byV, clamp, lerp, outcome, rngOf, layer, manOf, paceOf, easeOut, particles, nudge } from './kit.js'
+import { byV, clamp, lerp, outcome, rngOf, layer, manOf, xiOf, paceOf, easeOut, particles, nudge } from './kit.js'
 import { tilt, untilt, ground, stands, floodlight, vignette, skinOf, airBall, warmAthlete, crowdPop } from './art.js'
 import { afterStop, fxSeed, hitFx, plantFx, landFx, pushIn } from './contact.js'
 import { paintFieldFlat, qbPose } from './throw.js'
-import { put, action, teamOf, walk, ballInAir } from './read.js'
+import { put, action, tagsAll, teamOf, walk, ballInAir } from './read.js'
 
 export const how = {
-  'pass-rush': 'GET OFF when the ball moves. Then read him. He oversets wide: go INSIDE. He leans on you: take the EDGE. He sits back high: BULL him.',
+  'pass-rush': 'GET OFF when the ball moves. Then read him. He oversets wide: go INSIDE. He leans in: take the EDGE. He sits back high: BULL him.',
   // (a tackle goes outside the guard: there's no edge in there, and the pad says so)
   'pass-rush:dt': 'GET OFF when the ball moves. Then read him. He kicks wide: INSIDE. He steps up and leans: OUTSIDE. He backs off tall: BULL.',
-  'run-stuff': 'Read the line and the back. Tap the side the run is going, then SHED as the back gets to you. Too soon and he cuts away.',
+  'run-stuff': 'Read the line and the back. Tap the side the run is going, then SHED as the back gets there. Too soon and he cuts away.',
 }
 
 const YD = 20            // field units a yard: a close camera, the width of the field off the screen
@@ -32,6 +32,8 @@ const OL_NUM = [71, 64, 55, 66, 77]
 const MATE_NUM = [97, 91, 99]
 const STAMP_Y = 0.27
 const bare = m => m && { number: m.number, skin: m.skin }
+// (a man off the play, from the full eleven: named, his name shows once the snap's over)
+const quiet = m => (m?.last ? { ...m, quiet: true } : bare(m))
 const seek = (m, x, d, v, dt) => {
   const dx = x - m.x, dd = d - m.d, e = Math.hypot(dx, dd)
   if (e < 0.01) return true
@@ -43,6 +45,17 @@ const far = (a, b) => Math.hypot(a.x - b.x, a.d - b.d)
 const pick = (r, list) => list[Math.floor(r() * list.length)]
 // the real men: the player, the five in front of him, the QB and the back, and who's beside him
 function castOf(cast) {
+  // the full eleven a side (career's xi): the line beside him is his own team's real front, every man named
+  if (cast?.us?.xi && cast?.them?.xi) {
+    const x = (side, spot, i) => xiOf(cast, side, spot, i)
+    return {
+      me: cast.me ?? null,
+      ol: [0, 1, 2, 3, 4].map(i => x('them', 'ol', i)),
+      qb: x('them', 'qb', 0), rb: x('them', 'rb', 0), rbPace: paceOf(cast, 'them', 'rb', 0),
+      pace: 1 + (cast.me?.speed ?? 0) * 0.06,
+      mates: (cast.us.xi.dl ?? []).filter(p => p && !p.me).concat(x('us', 'lb', 0)).filter(Boolean).slice(0, 3).map(quiet),
+    }
+  }
   const mates = (cast?.us?.dl ?? []).filter(p => !p.me).slice(0, 3).map(bare)
   return {
     me: cast?.me ?? null,
@@ -539,7 +552,7 @@ function drawRush(ctx, g, view0) {
   for (let i = -2; i <= 2; i++) {
     if (i === rep.b) continue
     const b = snapped ? bump(g, i + 3) : 0
-    put(rep.cx + i * SP + wide(g, rep, i, snapped, age) + b * 0.7, fy(OT_D + pc * 16 + Math.abs(b) * 0.4), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 11), number: OL_NUM[2 - i], size: SIZE, ...bare(who.ol[2 - i]) })
+    put(rep.cx + i * SP + wide(g, rep, i, snapped, age) + b * 0.7, fy(OT_D + pc * 16 + Math.abs(b) * 0.4), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 11), number: OL_NUM[2 - i], size: SIZE, ...quiet(who.ol[2 - i]) })
   }
   matesOf(rep, g.spot).forEach((x, i) => {
     const b = snapped ? bump(g, i + 7) : 0
@@ -552,7 +565,7 @@ function drawRush(ctx, g, view0) {
   const wo = walk(g, `ot${g.i}`, ot.x, ot.d, 6)
   const olI = 2 - rep.b, olLook = who.ol[olI]
   const shown = rep.shown
-  const O = { dir: 'down', skin: skinOf(rep.b + 11), number: OL_NUM[olI], size: SIZE, name: null, ...olLook, step: null, pose: 'stance', squat: 0 }
+  const O = { dir: 'down', skin: skinOf(rep.b + 11), number: OL_NUM[olI], size: SIZE, name: null, ...olLook, step: null, pose: 'stance', squat: 0, lead: true }
   if (snapped) {
     const locked = g.t < rep.lockUntil
     if (rep.won) {
@@ -605,6 +618,7 @@ function drawRush(ctx, g, view0) {
   }
   const close = clamp(since / 55, 0, 1)
   put(sack ? lerp(me.x, qb.x - fallX * 14, close) + party * fallX * -16 : me.x, sack ? lerp(fy(me.d), fy(qb.d) + 6, close) + party * 10 : fy(me.d), us, M)
+  tagsAll(res && since > 700)   // (the snap's over: every man's name)
   action(ctx, view)
   // the ball: on the ground under the center, back to the QB on the snap, away when he throws
   const bx = rep.cx
@@ -657,12 +671,12 @@ function drawRun(ctx, g, view0) {
     if (i === rep.b) continue
     if (rep.fake && i === pullI && age >= rep.flipAt) continue
     const b = snapped ? bump(g, i + 3) : 0
-    put(rep.cx + i * SP + wide(g, rep, i, snapped, age) + flowX + b * 0.6, fy(RUN_BLOCK - (snapped ? 4 : 0) + b * 0.3), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 11), number: OL_NUM[2 - i], size: SIZE, ...bare(who.ol[2 - i]) })
+    put(rep.cx + i * SP + wide(g, rep, i, snapped, age) + flowX + b * 0.6, fy(RUN_BLOCK - (snapped ? 4 : 0) + b * 0.3), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 11), number: OL_NUM[2 - i], size: SIZE, ...quiet(who.ol[2 - i]) })
   }
   if (rep.fake && age >= rep.flipAt) {
     if (rep.pullFrom !== g.i) { rep.pullFrom = g.i; rep.pull.x = rep.cx + pullI * SP + flowX; rep.pull.d = RUN_BLOCK }
     const w = walk(g, `pull${g.i}`, rep.pull.x, rep.pull.d, 8)
-    put(rep.pull.x, fy(rep.pull.d), them, { dir: dirFrom(w, 'down'), step: w.step, pose: w.step == null ? 'block' : null, skin: skinOf(pullI + 11), number: OL_NUM[2 - pullI], size: SIZE, ...bare(who.ol[2 - pullI]) })
+    put(rep.pull.x, fy(rep.pull.d), them, { dir: dirFrom(w, 'down'), step: w.step, pose: w.step == null ? 'block' : null, skin: skinOf(pullI + 11), number: OL_NUM[2 - pullI], size: SIZE, ...quiet(who.ol[2 - pullI]) })
   }
   matesOf(rep, g.spot).forEach((x, i) => {
     const b = snapped ? bump(g, i + 7) : 0
@@ -670,7 +684,7 @@ function drawRun(ctx, g, view0) {
   })
   // the man on him
   const olI = 2 - rep.b, thrown = rep.free && g.t >= rep.free
-  const OLS = { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(rep.b + 11), number: OL_NUM[olI], size: SIZE, ...who.ol[olI] }
+  const OLS = { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(rep.b + 11), number: OL_NUM[olI], size: SIZE, ...who.ol[olI], lead: true }
   if (thrown) { OLS.fall = clamp((g.t - rep.free) / 300, 0, 0.8); OLS.fallX = -s }
   put(ol.x, fy(ol.d), them, OLS)
   // the back
@@ -698,6 +712,7 @@ function drawRun(ctx, g, view0) {
   else if (off) { M.step = wm.step; M.pose = wm.step == null ? 'wrap' : null; M.dir = dirFrom(wm, 'up') }
   else if (snapped) { M.pose = 'block'; M.step = null }
   put(me.x, fy(me.d) - drive, us, M)
+  tagsAll(res && since > 700)   // (the snap's over: every man's name)
   action(ctx, view)
   // the ball: on the ground under the center, then back to the QB
   const bx = rep.cx

@@ -14,10 +14,12 @@ import { OL_LIVE } from './olLive'
 export const CAPS = {
   nfl: { qb: 1, rb: 2, wr: 3, te: 2, db: 4, dl: 4, lb: 3, ol: 5 },
   bucket: { guard: 3, big: 2 },
+  soccer: { st: 3 },
+  baseball: { bat: 9, pit: 6 },
 }
-export const POSITIONS = { nfl: ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : [])], bucket: ['guard', 'big'] }
-export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', guard: 'GUARD', big: 'BIG' }
-export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line', guard: 'Guard', big: 'Big' }
+export const POSITIONS = { nfl: ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : [])], bucket: ['guard', 'big'], soccer: ['st'], baseball: ['bat', 'pit'] }
+export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', guard: 'GUARD', big: 'BIG', st: 'ST', bat: 'BAT', pit: 'P' }
+export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line', guard: 'Guard', big: 'Big', st: 'Striker', bat: 'Batter', pit: 'Pitcher' }
 // (OL counts only once it's live: OL_LIVE, lib/olLive.js)
 export const fullSize = sport => Object.entries(CAPS[sport] ?? {}).filter(([pos]) => pos !== 'ol' || POSITIONS[sport]?.includes('ol')).reduce((a, [, n]) => a + n, 0)
 const V = 1
@@ -28,24 +30,47 @@ export const SPOTS = [
   { pos: 'guard', label: 'PG', name: 'Point Guard' }, { pos: 'guard', label: 'SG', name: 'Shooting Guard' }, { pos: 'guard', label: 'SF', name: 'Small Forward' },
   { pos: 'big', label: 'PF', name: 'Power Forward' }, { pos: 'big', label: 'C', name: 'Center' },
 ]
+// Soccer's front line: up to three striker builds, picked by spot like basketball's (squad.shape).
+// A front three (4-3-3: the wide forwards and the No. 9) or a front two with a No. 10 behind them
+// (4-3-1-2). The rest of the XI is the team's own. squad.pool: 'current' a club (TOP DIVISIONS),
+// 'alltime' a nation (WORLD CUP).
+export const SOCCER_SHAPES = {
+  '433': { label: '4-3-3', name: 'FRONT THREE', spots: [{ pos: 'st', label: 'LW', name: 'Left Wing' }, { pos: 'st', label: 'ST', name: 'Striker' }, { pos: 'st', label: 'RW', name: 'Right Wing' }] },
+  '4312': { label: '4-3-1-2', name: 'FRONT TWO', spots: [{ pos: 'st', label: 'LS', name: 'Left Striker' }, { pos: 'st', label: 'RS', name: 'Right Striker' }, { pos: 'st', label: 'CAM', name: 'No. 10' }] },
+}
+// Baseball's club: the nine in the lineup (C to DH) and the staff (five starters and the closer), each spot
+// once, picked like basketball's (squad.lineup: slot id → spot). The club's real players fill every spot not
+// built (lib/squadBaseball.js). squad.pool: 'current' a 2026 club, 'alltime' a franchise's legends.
+// Football and basketball take the same squad.pool: 'current' the team's roster now, 'alltime' the franchise's
+// legends (lib/squadSeason.js loadSquadLegends). A squad saved before it has none: it's 'current'.
+export const BASEBALL_SPOTS = [
+  { pos: 'bat', label: 'C', name: 'Catcher' }, { pos: 'bat', label: '1B', name: 'First Base' }, { pos: 'bat', label: '2B', name: 'Second Base' },
+  { pos: 'bat', label: '3B', name: 'Third Base' }, { pos: 'bat', label: 'SS', name: 'Shortstop' }, { pos: 'bat', label: 'LF', name: 'Left Field' },
+  { pos: 'bat', label: 'CF', name: 'Center Field' }, { pos: 'bat', label: 'RF', name: 'Right Field' }, { pos: 'bat', label: 'DH', name: 'Designated Hitter' },
+  { pos: 'pit', label: 'SP1', name: 'Ace', role: 'SP' }, { pos: 'pit', label: 'SP2', name: 'No. 2 Starter', role: 'SP' }, { pos: 'pit', label: 'SP3', name: 'No. 3 Starter', role: 'SP' },
+  { pos: 'pit', label: 'SP4', name: 'No. 4 Starter', role: 'SP' }, { pos: 'pit', label: 'SP5', name: 'No. 5 Starter', role: 'SP' }, { pos: 'pit', label: 'CL', name: 'Closer', role: 'CL' },
+]
+// the spots a squad picks from (basketball's five, soccer's shape, baseball's club)
+export const spotsFor = sq => (sq?.sport === 'soccer' ? (SOCCER_SHAPES[sq.shape] ?? SOCCER_SHAPES['433']).spots : sq?.sport === 'baseball' ? BASEBALL_SPOTS : SPOTS)
+export const bySpot = sport => sport === 'bucket' || sport === 'soccer' || sport === 'baseball'
 
 export const countOf = (slots, pos) => slots.filter(s => s.pos === pos).length
 export const canAdd = (sport, slots, pos) => countOf(slots, pos) < (CAPS[sport]?.[pos] ?? 0)
 // Where each basketball slot plays (slot id → spot): its spot on the board, or the
 // first open one at its position (squads picked before there were spots)
 export function spotsOf(sq) {
-  const at = {}, used = new Set(), later = []
+  const at = {}, used = new Set(), later = [], list = spotsFor(sq)
   for (const s of sq.slots) {
     const i = sq.lineup?.[s.id]
-    if (SPOTS[i]?.pos === s.pos && !used.has(i)) { at[s.id] = i; used.add(i) } else later.push(s)
+    if (list[i]?.pos === s.pos && !used.has(i)) { at[s.id] = i; used.add(i) } else later.push(s)
   }
   for (const s of later) {
-    const i = SPOTS.findIndex((sp, j) => sp.pos === s.pos && !used.has(j))
+    const i = list.findIndex((sp, j) => sp.pos === s.pos && !used.has(j))
     if (i >= 0) { at[s.id] = i; used.add(i) }
   }
   return at
 }
-export const spotOpen = (sq, i) => !!SPOTS[i] && !Object.values(spotsOf(sq)).includes(i)
+export const spotOpen = (sq, i) => !!spotsFor(sq)[i] && !Object.values(spotsOf(sq)).includes(i)
 export const nextToBuild = squad => squad?.slots.find(s => !s.build) ?? null
 // Full House: every position at its cap, built. The DL, LB and OL came later and don't count against
 // it, so a squad that was full before stays full.
@@ -53,17 +78,17 @@ export const isFull = squad => !!squad && squad.slots.every(s => s.build) && POS
 // a slot id that's never been used in this squad
 const newId = squad => `p${squad.nextId ?? squad.slots.length}`
 
-// A fresh squad from the positions picked (basketball: the spots), each one built next, in order
-export function newSquad({ sport, uid, picks }) {
-  const sq = { v: V, sport, uid: uid ?? null, seed: Math.random().toString(36).slice(2, 10), slots: [], nextId: 0, team: null, lineup: {}, seasons: [], last: null, phase: 'build', sandbox: false, started: Date.now() }
+// A fresh squad from the positions picked (basketball, soccer and baseball: the spots), each one built next, in order
+export function newSquad({ sport, uid, picks, pool, shape }) {
+  const sq = { v: V, sport, uid: uid ?? null, seed: Math.random().toString(36).slice(2, 10), slots: [], nextId: 0, team: null, lineup: {}, seasons: [], last: null, phase: 'build', sandbox: false, started: Date.now(), ...(sport === 'soccer' && { pool: pool === 'alltime' ? 'alltime' : 'current', shape: SOCCER_SHAPES[shape] ? shape : '433' }), ...((sport === 'baseball' || sport === 'nfl' || sport === 'bucket') && { pool: pool === 'alltime' ? 'alltime' : 'current' }) }
   return addSlots(sq, picks)
 }
 export function addSlots(sq, picks) {
   let out = { ...sq, slots: [...sq.slots] }
   for (const pick of picks) {
     if ((pick === 'dl' || pick === 'lb' || pick === 'ol') && out.sport === 'bucket') continue   // the lines and the linebackers are football's
-    const spot = out.sport === 'bucket' ? pick : null
-    const pos = spot != null ? SPOTS[spot]?.pos : pick
+    const spot = bySpot(out.sport) ? pick : null
+    const pos = spot != null ? spotsFor(out)[spot]?.pos : pick
     if (spot != null ? !spotOpen(out, spot) : !canAdd(out.sport, out.slots, pos)) continue
     const id = newId(out)
     out.slots.push({ id, pos, build: null, types: null })

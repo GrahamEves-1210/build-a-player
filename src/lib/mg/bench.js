@@ -9,8 +9,8 @@ import { INK, tone } from './rig.js'
 import { benchCeil } from './combineNorms.js'
 
 export const how = {
-  bench: 'Tap fast. Drive the bar to lockout, as many reps as you can.',
-  nbench: 'Tap fast. Drive the bar to lockout, as many reps as you can.',
+  bench: 'Tap fast. Drive the bar to lockout, as many reps as possible.',
+  nbench: 'Tap fast. Drive the bar to lockout, as many reps as possible.',
 }
 
 const SECS = 10

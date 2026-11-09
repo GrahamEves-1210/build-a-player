@@ -17,7 +17,15 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 const NOT_A_MODE = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'about', 'wiki'])
 const HOLD_MS = 380
 
-const fanFor = sport => [
+// soccer: its two pools by name, and football as the other sport
+const fanFor = sport => sport === 'soccer' ? [
+  { id: 'current', label: 'TOP DIVS', Icon: IconBolt, go: () => nav('mode:classic') },
+  { id: 'alltime', label: 'WORLD CUP', Icon: IconCrown, go: () => nav('mode:all-time') },
+  { id: 'career', label: 'CAREER', Icon: IconTrophy, go: () => nav('career') },
+  { id: 'squad', label: 'SQUAD', Icon: IconProfile, go: () => nav('squad') },
+  { id: 'daily', label: 'DAILY', Icon: IconCalendar, go: () => nav('daily') },
+  { id: 'sport', label: 'FOOTBALL', Icon: IconFootball, sport: true, go: () => switchSport('nfl') },
+] : [
   { id: 'current', label: 'CURRENT', Icon: IconBolt, go: () => nav('mode:classic') },
   { id: 'alltime', label: 'ALL-TIME', Icon: IconCrown, go: () => nav('mode:all-time') },
   { id: 'career', label: 'CAREER', Icon: IconTrophy, go: () => nav('career') },
@@ -25,7 +33,7 @@ const fanFor = sport => [
     ? { id: 'blacktop', label: 'BLACKTOP', Icon: IconHoop, go: () => nav('blacktop') }
     : { id: 'squad', label: 'SQUAD', Icon: IconProfile, go: () => nav('squad') },
   { id: 'daily', label: 'DAILY', Icon: IconCalendar, go: () => nav('daily') },
-  sport === 'bucket'
+  sport === 'bucket' || sport === 'baseball'   // (baseball: football as the other sport, like soccer)
     ? { id: 'sport', label: 'FOOTBALL', Icon: IconFootball, sport: true, go: () => switchSport('nfl') }
     : { id: 'sport', label: 'BASKETBALL', Icon: IconBasketball, sport: true, go: () => switchSport('bucket') },
 ]

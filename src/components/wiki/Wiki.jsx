@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import './wiki.css'
-import { PAGES, SEARCH_INDEX, POOLS } from './WikiPages'
+import { PAGES, SEARCH_INDEX, POOLS, useLazyPools } from './WikiPages'
 import { RATINGS_AS_OF, fmtDate } from '../RatingsTable'
 
 // The Build-A-Player Wiki: its own page, with its own header, search, page
@@ -47,6 +47,7 @@ export default function Wiki({ onExit }) {
   // a hash in the URL on arrival (shared section link)
   useEffect(() => { const h = window.location.hash.slice(1); if (h) setTimeout(() => document.getElementById(h)?.scrollIntoView({ block: 'start' }), 120) }, []) // eslint-disable-line
 
+  const lazyIn = useLazyPools(search.trim().length >= 2)   // (soccer's players join the search once they load)
   const results = useMemo(() => {
     const s = search.trim().toLowerCase()
     if (s.length < 2) return null
@@ -60,7 +61,7 @@ export default function Wiki({ onExit }) {
       if (x.name.toLowerCase().includes(s) && !seen.has(x.name + p.id)) { seen.add(x.name + p.id); players.push({ name: x.name, team: x.team, pool: p }) }
     }
     return { sections, players }
-  }, [search])
+  }, [search, lazyIn])
 
   const title = page.slug === 'main' ? 'Build-A-Player Wiki' : `${page.title} - Build-A-Player Wiki`
   return (
@@ -126,7 +127,7 @@ export default function Wiki({ onExit }) {
             <page.Component go={go} query={loc.query} pool={loc.pool} />
             <footer className="wk-foot">
               <p>This page was last updated on {fmtDate(BUILD_DATE)}. Ratings as of {fmtDate(RATINGS_AS_OF)}; they refresh with every update to the game's data.</p>
-              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners.</p>
+              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners. It is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university; school names and logos belong to their owners.</p>
               <p><a href="/" onClick={e => { e.preventDefault(); onExit() }}>Game</a> · <a href="/?about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="mailto:buildaplayer@outlook.com">Corrections</a></p>
             </footer>
           </article>

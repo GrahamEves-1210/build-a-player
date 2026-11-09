@@ -37,6 +37,7 @@ export default function AboutPage({ onBack }) {
       <Sec id="a-disclaimer" title="Disclaimer">
         <p className="about-disclaimer">Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, NFL Properties LLC, the National Basketball Association, or any of their teams, players' associations or players.</p>
         <p className="about-disclaimer">League and team names, logos, player names and images belong to their respective owners. No commercial relationship with the NFL, the NBA or their teams is implied.</p>
+        <p className="about-disclaimer">Build-A-Player is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university. School names and logos belong to their owners.</p>
       </Sec>
 
       <div className="about-footer-links lg-links">

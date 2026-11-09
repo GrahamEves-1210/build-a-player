@@ -16,7 +16,8 @@ const classicLook = () => { try { return localStorage.getItem(CLASSIC_LOOK) === 
 export const APP_LOOK = IS_APP || !classicLook()
 export function setClassicLook(on) {
   try { if (on) localStorage.setItem(CLASSIC_LOOK, '1'); else localStorage.removeItem(CLASSIC_LOOK) } catch {}
-  window.location.href = window.location.pathname.startsWith('/bucket') ? '/bucket' : '/'
+  const p = window.location.pathname
+  window.location.href = p.startsWith('/bucket') ? '/bucket' : p.startsWith('/soccer') ? '/soccer' : p.startsWith('/baseball') ? '/baseball' : '/'
 }
 
 // Plus is sold through Stripe on the website. The App Store and Google Play

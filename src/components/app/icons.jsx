@@ -54,6 +54,27 @@ export const IconBasketball = p => (
   </S>
 )
 
+// a classic black-and-white ball: the centre pentagon, the seams out, and the five panels at the rim
+export const IconSoccer = p => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="9.5" fill="currentColor"/>
+    <path fill="rgba(0,0,0,.55)" d="M12 8.3l3.52 2.56-1.35 4.13H9.83L8.48 10.86zM12 5.3L7.99 3.39 10.02 2.71 12 2.5l1.98.21 2.03.68zM18.37 9.93l.58-4.41 1.28 1.73.81 1.81.41 1.95-.02 2.15zM15.94 17.42l4.37-.81-1.25 1.75-1.48 1.33-1.72.99-2.05.65zM8.06 17.42l2.13 3.91-2.05-.65-1.72-.99-1.48-1.33-1.25-1.75zM5.63 9.93l-3.06 3.23-.02-2.15.41-1.95.81-1.81 1.28-1.73z"/>
+    <path stroke="rgba(0,0,0,.45)" strokeWidth="1.2" fill="none" d="M12 8.3v-3M15.52 10.86l2.85-.93M14.17 14.99l1.77 2.43M9.83 14.99l-1.77 2.43M8.48 10.86l-2.85-.93"/>
+  </S>
+)
+
+// a baseball: the two seams curving in from the top and the bottom, four stitches across each.
+// The seams take --ag-stitch where the theme sets it (baseball's red, on the cream ball), else the
+// dark of the other sports' icons
+const STITCH = { stroke: 'var(--ag-stitch, rgba(0,0,0,.45))' }
+export const IconBaseball = p => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="9.5" fill="currentColor"/>
+    <path style={STITCH} strokeWidth="1.2" strokeLinecap="round" fill="none" d="M6.1 5.5c2 1.9 3 4.1 3 6.5s-1 4.6-3 6.5M17.9 5.5c-2 1.9-3 4.1-3 6.5s1 4.6 3 6.5"/>
+    <path style={STITCH} strokeWidth=".95" strokeLinecap="round" fill="none" d="M7.3 8.3l1.4-.9M8.2 10.7l1.6-.2M8.2 13.3l1.6.2M7.3 15.7l1.4.9M16.7 8.3l-1.4-.9M15.8 10.7l-1.6-.2M15.8 13.3l-1.6.2M16.7 15.7l-1.4.9"/>
+  </S>
+)
+
 export const IconCrown = p => (
   <S {...p}>
     <path fill="currentColor" d="M3.2 7.6c-.1-.7.7-1.1 1.2-.7l3.9 3.2 2.9-5.6c.3-.6 1.3-.6 1.6 0l2.9 5.6 3.9-3.2c.5-.4 1.3 0 1.2.7l-1.6 10.1c-.1.6-.6 1-1.2 1H6c-.6 0-1.1-.4-1.2-1z"/>

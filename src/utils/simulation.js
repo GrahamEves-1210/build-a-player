@@ -49,7 +49,7 @@ export const AT_DIFFICULTY = {
 }
 
 // Snap to nearest score expressible as 7a + 3b (no safeties)
-function snapNFL(n) {
+export function snapNFL(n) {
   if (n <= 0) return 0
   for (let d = 0; d <= 5; d++) {
     for (const v of [n - d, n + d]) {
@@ -62,7 +62,22 @@ function snapNFL(n) {
   return n
 }
 
-const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
+// His touchdowns are on the board: no final shows his team with fewer points than the six each of his own
+// touchdowns put up (seven with the extra point). The result stands: a loss stays a loss by a real margin,
+// and an overtime game still ends on a field goal. (No dice, so the rest of the season plays out the same.)
+function boardTDs(...lists) {
+  for (const list of lists) for (const g of list ?? []) {
+    const tds = (g.tds ?? 0) + (g.rushTDs ?? 0) + (g.recTDs ?? 0) + (g.pickSixes ?? 0)
+    if (!tds || g.mySc >= 6 * tds) continue
+    const m = g.overtime ? 3 : 1 + ((g.oppSc + tds) % 7)
+    g.mySc = 7 * tds
+    if (g.won && g.mySc <= g.oppSc) g.mySc = snapNFL(g.oppSc + m)
+    if (!g.won && g.oppSc <= g.mySc) g.oppSc = snapNFL(g.mySc + m)
+    if (g.mySc === g.oppSc) { if (g.won) g.mySc += 3; else g.oppSc += 3 }
+  }
+}
+
+const GRADES =['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 
 export function readableTextColor(hex) {
   if (!hex) return '#ffffff'
@@ -774,7 +789,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       const opp    = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * weatherMult))
       // Overtime: playoff games are close — ~20% OT rate for even matchups
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT        = Math.random() < pgCloseness * 0.22
+      let pgOT        = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -786,6 +801,8 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin)  : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       playoffRounds.push({ round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT, passYds: pgYds, tds: pgTDs, ints: pgINTs, rating: pgRtg })
@@ -793,23 +810,15 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     }
 
     if (pwins === winsNeeded) {
-      const sbAtts = Math.round(38 + randN() * 4)
-      const sbComp = Math.round(sbAtts * (compBase + randN() * 0.04))
-      const sbYds  = Math.max(150, Math.round(passYdBase * 1.08 + randN() * 60))
-      const sbTDs  = Math.max(1,   Math.round(sbAtts * tdRateBase * 1.15 + randN() * 0.6))
-      const sbINTs = Math.max(0,   Math.round(sbAtts * intRateBase * 0.8 + randN() * 0.4))
-      sbResult = {
-        won: true,
-        passYds: sbYds,
-        tds: sbTDs,
-        ints: sbINTs,
-        rating: Math.round(passerRating(sbComp, sbAtts, sbYds, sbTDs, sbINTs)),
-      }
+      // (the Super Bowl box is his line from the game the bracket shows, the way every other position's is)
+      const sbGame = playoffRounds[playoffRounds.length - 1]
+      sbResult = { won: true, passYds: sbGame.passYds, tds: sbGame.tds, ints: sbGame.ints, rating: sbGame.rating }
     } else {
       sbResult = { won: false, round: eliminated, pwins }
     }
   }
 
+  if (!script) boardTDs(games, playoffRounds)
   return {
     team, ovr, wins, losses,
     games,
@@ -1418,7 +1427,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       const opp      = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * wMult))
       // Overtime: playoff games are close — ~20% OT rate for even matchups
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT        = Math.random() < pgCloseness * 0.22
+      let pgOT        = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgRushTDs + pgRecTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -1430,6 +1439,8 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       playoffRounds.push({
@@ -1449,6 +1460,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     }
   }
 
+  if (!script) boardTDs(games, playoffRounds)
   return {
     team, ovr, wins, losses,
     games,
@@ -2010,7 +2022,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       const oppPFGs  = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp      = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * wMult))
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT        = Math.random() < pgCloseness * 0.22
+      let pgOT        = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -2022,6 +2034,8 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       playoffRounds.push({
@@ -2040,6 +2054,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     }
   }
 
+  if (!script) boardTDs(games, playoffRounds)
   return {
     team, ovr, wins, losses,
     games,
@@ -2558,7 +2573,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       const oppPFGs  = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp      = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * wMult))
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT        = Math.random() < pgCloseness * 0.22
+      let pgOT        = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -2570,6 +2585,8 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       playoffRounds.push({
@@ -2588,6 +2605,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     }
   }
 
+  if (!script) boardTDs(games, playoffRounds)
   return {
     team, ovr, wins, losses,
     games,
@@ -2971,7 +2989,19 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
   // avg starter ≈ 2 INT / 8–9 PBU · CB 50 tkl / S 65 tkl · elite ≈ 4–5 INT /
   // 14–18 PBU · elite S 95–110 tkl · max build ≈ 8 INT / 25 PBU / ~150 tkl
   // (true safety build, ceiling near Budda Baker's 2024 record of 164)
-  const intLambdaBase = 0.447 * Math.pow(intSkill, 2.2)
+  //
+  // Interceptions swing far more year to year than skill alone says: which QBs you see,
+  // tipped balls, dropped picks, where the defense puts you. The league leader went
+  // 8 (Reggie Nelson '15), 7 (Casey Hayward '16), 8 (Byard/Slay '17), 7 (Fuller/Howard/
+  // Kazee '18), 6 (Gilmore/White/Harris '19), 10 (Xavien Howard '20), 11 (Trevon Diggs '21),
+  // 6 (four tied '22), 9 (DaRon Bland '23), 9 (Kerby Joseph '24), 7 (Kevin Byard '25):
+  // a new name nearly every year, and the leader often falls to 3-5 the next season
+  // (Diggs 11 then 3, Howard 10 then 5, Byard 8 then 4). So each season gets one
+  // "ball luck" factor on top of the per-game swings: lognormal with mean 1 (σ 0.32,
+  // held to 0.45-1.5), which keeps a ball hawk's career average where his ratings put
+  // it but widens a single year (an elite build: sd 2.3 -> ~2.7 over 500 seasons).
+  const intForm = Math.max(0.45, Math.min(1.5, Math.exp(randN() * 2 * 0.32 - 0.32 * 0.32 / 2)))
+  const intLambdaBase = 0.447 * Math.pow(intSkill, 2.2) * intForm
   // PBUs and tackles split by real position — corners see far more single-
   // coverage volume (Sauce Gardner's 20-PBU rookie year) so keep the higher
   // PBU ceiling and ONLY they get it; safeties get meaningfully fewer PBUs
@@ -3154,7 +3184,7 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
       const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT = Math.random() < pgCloseness * 0.22
+      let pgOT = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -3166,6 +3196,8 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       seasonINTs    += pgInt
@@ -3191,6 +3223,7 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
 
   const minAttrVal = Math.min(spd, sz, flu, prs, hnd, ziq, man, prk, rus)
 
+  if (!script) boardTDs(games, playoffRounds)
   return {
     team, ovr, wins, losses,
     games,
@@ -3631,7 +3664,7 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
       const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT = Math.random() < pgCloseness * 0.22
+      let pgOT = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -3643,6 +3676,8 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       playoffRounds.push({
@@ -3820,7 +3855,7 @@ export function runLBSimulation(build, team = null, isAllTime = false, script = 
   //   everything (he's there first). Leadership: a small lift to the whole defense.
   const recMult = 0.94 + recN * 0.12
   const tklSkill = rngN * 0.30 + tklN * 0.30 + recN * 0.14 + shdN * 0.12 + pwrN * 0.05 + szN * 0.05 + zonN * 0.04
-  const rushSkill = rshN * 0.55 + rngN * 0.12 + pwrN * 0.12 + recN * 0.11 + shdN * 0.10
+  const rushSkill = rshN * 0.70 + pwrN * 0.10 + recN * 0.10 + rngN * 0.05 + shdN * 0.05   // (Pass Rush carries it: a coverage LB with a B rush gets 2-3, not 5)
   const tflSkill = shdN * 0.30 + pwrN * 0.22 + recN * 0.18 + rngN * 0.12 + tklN * 0.10 + szN * 0.08
   const covSkill = zonN * 0.48 + rngN * 0.26 + recN * 0.20 + szN * 0.03 + ldrN * 0.03
   const intSkill = zonN * 0.52 + recN * 0.26 + rngN * 0.16 + ldrN * 0.06
@@ -3828,13 +3863,13 @@ export function runLBSimulation(build, team = null, isAllTime = false, script = 
   const frSkill  = recN * 0.45 + rngN * 0.30 + tklN * 0.10 + ldrN * 0.15
 
   // Per-game Poisson means, calibrated to the benchmarks at the top of this section.
-  const tklLambdaBase  = (2.1 + 6.0 * Math.pow(tklSkill, 1.2)) * recMult
+  const tklLambdaBase  = (2.1 + 5.6 * Math.pow(tklSkill, 1.2)) * recMult
   const missLambdaBase = 0.08 + 1.6 * Math.pow(1 - tklN, 1.3) * (1.06 - recN * 0.12)
-  const sackLambdaBase = (0.01 + 0.42 * Math.pow(rushSkill, 2)) * recMult
+  const sackLambdaBase = (0.01 + 0.42 * Math.pow(rushSkill, 2.4)) * recMult
   const hitLambdaBase  = 0.45 * Math.pow(rushSkill, 1.6) * recMult
   const tflLambdaBase  = 0.55 * Math.pow(tflSkill, 1.4) * recMult
-  const pdLambdaBase   = 0.45 * Math.pow(covSkill, 1.6) * recMult
-  const intLambdaBase  = 0.27 * Math.pow(intSkill, 3.2) * recMult
+  const pdLambdaBase   = 0.38 * Math.pow(covSkill, 1.6) * recMult
+  const intLambdaBase  = 0.21 * Math.pow(intSkill, 3.2) * recMult
   const ffLambdaBase   = (0.015 + 0.10 * Math.pow(ffSkill, 1.5)) * recMult
   const frLambdaBase   = 0.015 + 0.04 * Math.pow(frSkill, 1.2)
   const stripChance    = 0.08 + ffSkill * 0.08
@@ -4015,7 +4050,7 @@ export function runLBSimulation(build, team = null, isAllTime = false, script = 
       const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT = Math.random() < pgCloseness * 0.22
+      let pgOT = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -4027,6 +4062,8 @@ export function runLBSimulation(build, team = null, isAllTime = false, script = 
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       playoffRounds.push({
@@ -4048,6 +4085,7 @@ export function runLBSimulation(build, team = null, isAllTime = false, script = 
   const minAttrVal = Math.min(rng, sz, pwr, tkl, shd, zon, rsh, rec, ldr)
   const buildNames = [...new Set(LB_TYPES.map(t => build[t]?.qbFull).filter(Boolean))]
 
+  if (!script) boardTDs(games, playoffRounds)
   return {
     team, ovr, wins, losses,
     games,
@@ -4481,7 +4519,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
       const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
       const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
-      const pgOT = Math.random() < pgCloseness * 0.22
+      let pgOT = Math.random() < pgCloseness * 0.22
       let finalMy, finalOpp
       if (pgOT) {
         const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
@@ -4493,6 +4531,8 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
         const margin = Math.ceil(Math.random() * 7)
         finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+        // (rounding to real football scores can land both sides on the same number: level after four quarters, it goes to overtime)
+        if (finalMy === finalOpp) { pgOT = true; if (won) finalMy += 3; else finalOpp += 3 }
       }
 
       seasonPressures    += pgPrs

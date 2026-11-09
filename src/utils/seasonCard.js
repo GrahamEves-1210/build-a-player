@@ -30,6 +30,8 @@ const F = {
 const SPORT = {
   nfl:    { base: [5, 7, 5], brand: [73, 213, 189], em: [149, 213, 178], word: 'PLAYER' },
   bucket: { base: [7, 5, 4], brand: [251, 146, 60], em: [249, 115, 22], word: 'BUCKET' },
+  soccer: { base: [7, 8, 10], brand: [242, 242, 238], em: [154, 156, 161], word: 'PLAYER' },   // ink, chalk and the grey of the -A- (ART.md)
+  baseball: { base: [9, 13, 22], brand: [243, 238, 227], em: [200, 16, 46], word: 'PLAYER' },   // the navy ink, the ball's cream, the stitch red (baseball ART.md)
 }
 const WHITE = [255, 255, 255]
 const GOLD = ['#f8e7a6', '#f2d675', '#d4af37']

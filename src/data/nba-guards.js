@@ -280,7 +280,7 @@ export const NBA_GUARD_PLAYERS = [
   // ─── MEM ───────────────────────────────────────────────────────
   { name: 'Kentavious Caldwell-Pope', short: 'Caldwell-Pope', team: 'PHI', starter: false, captain: false, number: 3, height: 77, weight: 207, wingspan: 80, skin: '#985d3c', position: 'SG', faceCenter: [50, 43],
     attrs: { jumpShot: 6, finishing: 2, passing: 3, handles: 3, perimeterDefense: 5, speed: 4, bounce: 5, size: 5, basketballIQ: 6, clutch: 5 } },
-  { name: 'Walter Clayton Jr.', short: 'Clayton Jr.', team: 'MEM', starter: false, captain: false, number: 4, height: 74, weight: 185, wingspan: 76, skin: '#d0a995', position: 'PG', faceCenter: [50, 48],
+  { name: 'Walter Clayton Jr.', short: 'Clayton Jr.', team: 'DAL', starter: false, captain: false, number: 4, height: 74, weight: 185, wingspan: 76, skin: '#d0a995', position: 'PG', faceCenter: [50, 48],
     attrs: { jumpShot: 8, finishing: 4, passing: 4, handles: 5, perimeterDefense: 3, speed: 6, bounce: 4, size: 2, basketballIQ: 4, clutch: 3 } },
   { name: 'Cedric Coward', short: 'Coward', team: 'MEM', starter: false, captain: false, number: 23, height: 79, weight: 215, wingspan: 86, skin: '#7a604d', position: 'SF', faceCenter: [50, 41],
     attrs: { jumpShot: 7, finishing: 5, passing: 4, handles: 4, perimeterDefense: 5, speed: 5, bounce: 5, size: 7, basketballIQ: 3, clutch: 3 } },
@@ -443,7 +443,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── PHI ───────────────────────────────────────────────────────
   { name: 'LeBron James', short: 'LeBron', team: 'PHI', starter: true, captain: true, number: 23, height: 81, weight: 250, wingspan: 84,
-    attrs: { jumpShot: 6, finishing: 10, passing: 10, handles: 8, perimeterDefense: 5, speed: 7, bounce: 7, size: 9, basketballIQ: 11, clutch: 9 } },
+    attrs: { jumpShot: 6, finishing: 10, passing: 10, handles: 8, perimeterDefense: 5, speed: 7, bounce: 7, size: 10, basketballIQ: 11, clutch: 9 } },
   { name: 'Jaylen Brown', short: 'J. Brown', team: 'PHI', starter: true, captain: false, number: 7, height: 78, weight: 223, wingspan: 84, skin: '#8b5b48', position: 'SG', faceCenter: [50, 35], faceAdjust: { dx: 0, dy: 2, scale: 1 },
     attrs: { jumpShot: 6, finishing: 9, passing: 5, handles: 7, perimeterDefense: 8, speed: 8, bounce: 9, size: 8, basketballIQ: 8, clutch: 6 } },
   { name: 'VJ Edgecombe', short: 'Edgecombe', team: 'PHI', starter: true, captain: false, number: 77, height: 76, weight: 190, wingspan: 79, skin: '#784f3e', position: 'SG', faceCenter: [50, 43],
@@ -506,7 +506,7 @@ export const NBA_GUARD_PLAYERS = [
   // ─── SAC ───────────────────────────────────────────────────────
   { name: 'Darius Acuff Jr.', short: 'Acuff Jr.', team: 'SAC', starter: true, captain: false, number: 5, height: 73, weight: 175, wingspan: 79, skin: '#bf8660', position: 'PG', faceCenter: [52, 40],
     attrs: { jumpShot: 6, finishing: 7, passing: 7, handles: 8, perimeterDefense: 1, speed: 9, bounce: 6, size: 2, basketballIQ: 5, clutch: 5 } },
-  { name: 'Nique Clifford', short: 'Clifford', team: 'SAC', starter: false, captain: false, number: 5, height: 77, weight: 200, wingspan: 80, skin: '#b47a60', position: 'SG', faceCenter: [50, 44],
+  { name: 'Nique Clifford', short: 'Clifford', team: 'OKC', starter: false, captain: false, number: 5, height: 77, weight: 200, wingspan: 80, skin: '#b47a60', position: 'SG', faceCenter: [50, 44],
     attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'De\'Andre Hunter', short: 'Hunter', team: 'SAC', starter: true, captain: false, number: 15, height: 79, weight: 224, wingspan: 86, skin: '#9a6455', position: 'SF', faceCenter: [49, 43],
     attrs: { jumpShot: 4, finishing: 6, passing: 3, handles: 3, perimeterDefense: 6, speed: 6, bounce: 7, size: 9, basketballIQ: 4, clutch: 4 } },

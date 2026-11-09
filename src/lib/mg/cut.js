@@ -10,12 +10,12 @@
 //   iso                      close up at the top of the key: cross him over when his hand comes for the ball
 //   post-up                  on the low block, back to the basket, a spin for each touch
 import { lanesMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, layer, manOf, paceOf, stage, particles, nudge, text, DISPLAY } from './kit.js'
+import { clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, layer, manOf, xiOf, paceOf, stage, particles, nudge, text, DISPLAY } from './kit.js'
 import { HIT_STOP, afterStop, fxSeed, hitFx, plantFx, landFx, pushIn, warmSome } from './contact.js'
 import { tilt, untilt, ground, stands, floodlight, vignette, paintGrass, skinOf, athlete , cleanEdges } from './art.js'
 import { paintFieldFlat, SL, SR, qbPose } from './throw.js'
-import { put as rigPut, action as rigAction } from './rig.js'
-import { walk, put, put as putArt, action, fieldStage, paintNumbers, ballInAir, teamOf, castMen } from './read.js'
+import { put as rigPut, action as rigAction, tagsAll as rigTagsAll } from './rig.js'
+import { walk, put, put as putArt, action, tagsAll, fieldStage, paintNumbers, ballInAir, teamOf, castMen } from './read.js'
 import { arenaCam, CRASH_CAM, dolly, arenaStage, manAt, POSE, RUN as RUN_F, tagAt, tagsDown, flyTo, dropThrough, hoopWith, AB } from './arena.js'
 import { ballIn, easedState, easedPose, newPose, copyPose, mixPose, pose, project, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_R, RIM_Y as RIM_FT } from './meter.js'
 
@@ -25,7 +25,7 @@ export const how = {
   'juke-wr': "He'll sell it with a jab. Wait till he really commits, then cut the other way.",
   'juke-te': "He'll sell it with a jab. Wait till he really commits, then cut the other way.",
   'tackle-angle': 'Stay square through his jab. When he really cuts, go with him.',
-  iso: "Cross when his hand comes for the ball. Too soon and he slides with you. Stay and he strips you.",
+  iso: "Cross when his hand comes for the ball. Too soon and he slides with it. Stay and he strips the ball.",
   'post-up': 'On the block, back to the basket. Feel which shoulder he plays, spin off the other.',
 }
 
@@ -56,6 +56,7 @@ const CARRIER = { juke: ['rb', 0], 'juke-wr': ['wr', 0], 'juke-te': ['te', 0] }
 const RUNNERS = [['rb', 0], ['wr', 0], ['wr', 1], ['te', 0]]
 function fieldWho(game, S, cast, men, pos) {
   const bare = m => m && { number: m.number, skin: m.skin }
+  if (cast?.us?.xi && cast?.them?.xi) return xiWho(game, S, cast, men, pos)
   if (S.skin === 'pocket') return { me: manOf(cast, 'us', 'qb', 0), ol: [0, 1, 2, 3, 4].map(i => bare(manOf(cast, 'us', 'ol', i))), dl: [0, 1, 2, 3].map(i => (cast?.them?.dl?.length > i ? bare(manOf(cast, 'them', 'dl', i)) : null)) }
   if (S.skin !== 'run') return null
   // (a borrowed game: the man playing it, at his own position)
@@ -71,6 +72,30 @@ function fieldWho(game, S, cast, men, pos) {
     us: [['ol', 0], ['wr', 1], ['te', 0], ['ol', 1]].map(([gr, at]) => bareMan(manOf(cast, S.rev ? 'them' : 'us', gr, at))),
     them: [['db', 1], ['db', 2], ['dl', 0], ['db', 3]].map(([gr, at]) => bareMan(manOf(cast, S.rev ? 'us' : 'them', gr, at))),
   } : null
+  return { me: manOf(cast, 'us', mine[0], mine[1]), fights }
+}
+// The full eleven a side (career's xi), every man real. Speeds as before, from the same men's groups.
+// The pocket: their front four and our five (named, shown once the play's over; the man who comes free always).
+// The open field: their secondary comes at you, the backers and an end are the blocks going on out wide.
+// As the tackler: their back, receivers and tight end with the ball, their line blocking out wide.
+const quiet = m => (m && !m.me ? { ...m, quiet: true } : null)
+function xiWho(game, S, cast, men, pos) {
+  const x = (side, spot, i) => xiOf(cast, side, spot, i)
+  if (S.skin === 'pocket') return { me: x('us', 'qb', 0) ?? manOf(cast, 'us', 'qb', 0), ol: [0, 1, 2, 3, 4].map(i => quiet(x('us', 'ol', i))), dl: [0, 1, 2, 3].map(i => quiet(x('them', 'dl', i))) }
+  if (S.skin !== 'run') return null
+  const mine = pos && cast?.us?.[pos]?.length && (S.rev ? pos === 'dl' || pos === 'lb' : ['rb', 'wr', 'te'].includes(pos)) ? [pos, 0] : S.rev ? ['db', 0] : CARRIER[game] ?? CARRIER.juke
+  men.forEach((d, i) => {
+    const [gr, at] = S.rev ? RUNNERS[i % RUNNERS.length] : ['db', i]
+    d.man = x('them', gr, S.rev ? at : i % 4) ?? manOf(cast, 'them', gr, at)
+    d.pace = paceOf(cast, 'them', gr, at)
+    d.run = S.rev ? d.pace : paceOf(cast, 'us', mine[0], mine[1])
+  })
+  // (each block is a man in each team's colours: as the tackler, ours are the defenders and theirs the blockers)
+  const blockers = [['ol', 0], ['wr', S.rev ? 2 : 1], ['ol', 4], [S.rev ? 'ol' : 'wr', 2]], backers = [['lb', 0], ['lb', 1], ['edge', 0], [S.rev ? 'cb' : 'lb', S.rev ? 1 : 2]]
+  const fights = {
+    us: (S.rev ? backers : blockers).map(([gr, at]) => quiet(x('us', gr, at))),
+    them: (S.rev ? blockers : backers).map(([gr, at]) => quiet(x('them', gr, at))),
+  }
   return { me: manOf(cast, 'us', mine[0], mine[1]), fights }
 }
 const windowMs = (S, v, k, all) => { const w = (all ? WINDOWS_ALL : WINDOWS)[k] ?? WINDOWS[3]; return S.floor + w.add + (lanesMs(v) - lanesMs(1)) * w.per }
@@ -375,8 +400,8 @@ function fights(view, g, us, them, scroll, put) {
     if (y < h * 0.12) return
     const b = Math.sin(g.t / 170 + i * 2) * 2
     // (a step apart and off line from each other, so it's two men fighting and not one tall one)
-    put(180 + dx + b + Math.sign(dx) * 7, y, them, { dir: 'down', pose: 'block', skin: skinOf(i + 2), number: M?.them[i]?.number ?? 21 + i * 6, size: RUN_SIZE, ...(M?.them[i] ?? null), name: null })
-    put(180 + dx - b - Math.sign(dx) * 7, y + 22, us, { dir: 'up', pose: 'block', skin: skinOf(i + 7), number: M?.us[i]?.number ?? 70 + i * 3, size: RUN_SIZE, ...(M?.us[i] ?? null), name: null })
+    put(180 + dx + b + Math.sign(dx) * 7, y, them, { dir: 'down', pose: 'block', skin: skinOf(i + 2), number: M?.them[i]?.number ?? 21 + i * 6, size: RUN_SIZE, ...(M?.them[i] ?? null), ...(M?.them[i]?.quiet ? null : { name: null }) })
+    put(180 + dx - b - Math.sign(dx) * 7, y + 22, us, { dir: 'up', pose: 'block', skin: skinOf(i + 7), number: M?.us[i]?.number ?? 70 + i * 3, size: RUN_SIZE, ...(M?.us[i] ?? null), ...(M?.us[i]?.quiet ? null : { name: null }) })
   })
 }
 function drawRun(ctx, g, view) {
@@ -475,6 +500,8 @@ function drawRun(ctx, g, view) {
       put(x, py, us, { dir: 'up', step: moving ? Math.floor(g.t / 80) % 4 : null, pose: planted ? plantOf(g.cutSide) : moving ? null : 'ready', lean, skin: skinOf(6), number: 26, size, ...me })
     }
   }
+  // (it's over: every man's name, the blocks out wide too)
+  ;(bap ? rigTagsAll : tagsAll)(!!g.done && since > 450)
   if (bap) rigAction(ctx, view); else action(ctx, view)
   g.dirt.draw(ctx, g.t, bap)
   if (!bap) warmSome(g, () => runLooks(g, us, them, num, me))
@@ -547,7 +574,7 @@ function drawPocket(ctx, g, view0) {
   }
   const moving = Math.abs(g.side - g.px) > 0.04
   const thrown = g.done?.hit && since > 300
-  const rLook = { skin: skinOf(free + 2), number: DL_NUM[free], size: LS, ...g.who.dl[free] }
+  const rLook = { skin: skinOf(free + 2), number: DL_NUM[free], size: LS, ...g.who.dl[free], quiet: false }
   if (res && !res.ok) {
     // the hit: he stops the picture, then rides him back and down
     const s2 = afterStop(since), fx = Math.sign(x - rx) || d.lunge, close = clamp(since / 55, 0, 1), drive = easeOut(clamp(s2 / 280, 0, 1))
@@ -579,6 +606,7 @@ function drawPocket(ctx, g, view0) {
       : { dir: 'up', step: moving || planted ? null : null, pose: planted && g.cutSide ? plantOf(g.cutSide) : 'ready', carry: true }
     put(x + (g.side || 1) * roll * 22, py, us, { ...qOpts, skin: skinOf(9), number: 7, size: LS, ...me })
   }
+  tagsAll(!!g.done && since > 450)   // (it's over: every man's name, the line's too)
   action(ctx, view)
   // the end: he throws it on the run
   if (thrown) {

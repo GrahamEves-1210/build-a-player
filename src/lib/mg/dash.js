@@ -1,5 +1,5 @@
 // Dash: the 40 and the 3/4-court sprint, from a camera low behind him on the track. Three-point stance,
-// SET, the gun at a moment nobody can time, then LEFT RIGHT LEFT RIGHT as fast as you can go. The faster
+// SET, the gun at a moment nobody can time, then LEFT RIGHT LEFT RIGHT as fast as possible go. The faster
 // you alternate, the faster he runs, up to the top speed his trait gives him. The same foot twice does
 // nothing. His legs run at his speed, not at your presses. The stopwatch is the real result.
 import { clamp, lerp, outcome, rngOf, prog, easeOut, circle, text, DISPLAY, LABEL, GOOD, BAD, GOLD, particles, nudge, reduceMotion } from './kit.js'
@@ -9,8 +9,8 @@ import { placeStamp } from './read.js'
 import { paintFigure } from './rig.js'
 
 export const how = {
-  forty: 'Wait for the gun. Then alternate LEFT and RIGHT as fast as you can.',
-  sprint: 'Wait for the whistle. Then alternate LEFT and RIGHT as fast as you can.',
+  forty: 'Wait for the gun. Then alternate LEFT and RIGHT as fast as possible.',
+  sprint: 'Wait for the whistle. Then alternate LEFT and RIGHT as fast as possible.',
 }
 
 // piecewise-linear through [x, y] points
@@ -23,10 +23,14 @@ export const curve = (x, pts) => {
 // capOf: the top speed, in yards a second, that runs a given time on a solid go (measured: scripts/mg/calib-dash.mjs).
 // slack: how far off that time still passes
 const CAPOF_FORTY = [[3.69, 14], [3.79, 13.5], [3.91, 13], [4.03, 12.5], [4.16, 12], [4.31, 11.5], [4.47, 11], [4.64, 10.5], [4.83, 10], [5.04, 9.5], [5.28, 9], [5.54, 8.5], [5.83, 8]]
+// (measured the same way, for 30 metres: scripts/mg/calib-dash.mjs with the game set to sprint30)
+const CAPOF_30 = [[3.17, 14], [3.26, 13.5], [3.35, 13], [3.45, 12.5], [3.56, 12], [3.68, 11.5], [3.81, 11], [3.95, 10.5], [4.11, 10], [4.28, 9.5], [4.48, 9], [4.69, 8.5], [4.93, 8]]
 const CAPOF_SPRINT = [[2.6, 14], [2.67, 13.5], [2.74, 13], [2.82, 12.5], [2.91, 12], [3, 11.5], [3.1, 11], [3.21, 10.5], [3.33, 10], [3.46, 9.5], [3.61, 9], [3.77, 8.5], [3.96, 8]]
 const SETUP = {
   forty: { dist: 40, range: 0.9, gun: 'gun', splitAt: 10, slack: 0.34, capOf: CAPOF_FORTY },
   sprint: { dist: 25, range: 0.6, gun: 'whistle', splitAt: 10, slack: 0.28, capOf: CAPOF_SPRINT },
+  // soccer's academy trial: 30 metres (in yards: the rules run in yards), the split at 10 metres. Drawn by sprint30.js
+  sprint30: { dist: 32.81, range: 0.62, gun: 'whistle', splitAt: 10.94, slack: 0.36, capOf: CAPOF_30 },
 }
 // How fast he runs, as a share of his top speed, by the time between your presses (ms)
 const BY_GAP = [[110, 1], [140, 0.94], [180, 0.84], [250, 0.66], [400, 0.4], [700, 0.12], [1100, 0]]

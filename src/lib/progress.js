@@ -20,6 +20,9 @@ import { competeDelta, blacktopDelta, FORFEIT_RATING } from './rating'
 import { track } from './track'
 import { ACHIEVEMENTS, achById } from './achievements'
 import { IS_APP } from './platform'
+import { SOCCER_LIVE } from './soccerLive'
+import { BASEBALL_LIVE } from './baseballLive'
+import { BASEBALL_MODES } from './baseballUi'
 
 // ── Days (America/New_York, same as the Salary Cap daily) ────────────────────
 const NY = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
@@ -85,12 +88,17 @@ export function levelUnlocks(level, from = level - 1) {
 // Same weights the rebuild from saved seasons uses (see sync), so a season is
 // worth the same either way.
 export const XP = { season: 20, winning: 15, playoffs: 25, ring: 100, award: 60 }
+// (soccer: a club season wins half its 38 games; a World Cup's run is out of the group, its title the trophy)
+// (baseball: 82 of its 162, lib/baseballAwards.js BASEBALL_WINNING)
+// a baseball season's wins in the cross-sport win total: 82 of its 162 games, a basketball season's worth
+export const BASEBALL_WIN_WEIGHT = 82 / 162
+const winningSeason = d => (d.sport === 'bucket' ? d.wins >= 50 : d.sport === 'cfb' ? d.wins >= 9 : d.sport === 'soccer' ? (d.mode === 'all-time' ? d.wins >= 3 : d.wins >= 19) : d.sport === 'baseball' ? d.wins >= 82 : d.wins >= 10)
 export function seasonLines(d) {
-  const winning = d.sport === 'bucket' ? d.wins >= 50 : d.wins >= 10
+  const winning = winningSeason(d)
   const lines = [{ label: 'Season played', xp: XP.season }]
   if (winning) lines.push({ label: 'Winning season', xp: XP.winning })
-  if (d.playoffs && d.sport !== 'bucket') lines.push({ label: 'Made the playoffs', xp: XP.playoffs })
-  if (d.champion) lines.push({ label: d.sport === 'bucket' ? 'NBA Champions' : 'Super Bowl Champions', xp: XP.ring })
+  if (d.playoffs && d.sport !== 'bucket') lines.push({ label: d.sport === 'cfb' ? 'Made the College Football Playoff' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'Out of the group' : 'Champions League football') : d.sport === 'baseball' ? 'Made the postseason' : 'Made the playoffs', xp: XP.playoffs })
+  if (d.champion) lines.push({ label: d.sport === 'cfb' ? 'National Champions' : d.sport === 'bucket' ? 'NBA Champions' : d.sport === 'baseball' ? 'World Series Champions' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'World Cup winners' : 'League champions') : 'Super Bowl Champions', xp: XP.ring })
   if (d.award) lines.push({ label: d.awardName ? `${d.awardName} award` : 'Season award', xp: XP.award })
   return lines
 }
@@ -108,7 +116,7 @@ const MISSIONS = {
   seasons4:  { tier: 1, goal: 4,  xp: 100, text: 'Simulate 4 seasons',           on: { season: () => 1 } },
   playoffs1: { tier: 1, goal: 1,  xp: 80,  text: 'Make the playoffs',            on: { season: d => d.playoffs ? 1 : 0 } },
   ovr85:     { tier: 1, goal: 1,  xp: 90,  text: 'Build an 85+ OVR player',      on: { season: d => d.ovr >= 85 ? 1 : 0 } },
-  winning2:  { tier: 1, goal: 2,  xp: 90,  text: 'Post 2 winning seasons',       on: { season: d => (d.sport === 'bucket' ? d.wins >= 50 : d.wins >= 10) ? 1 : 0 } },
+  winning2:  { tier: 1, goal: 2,  xp: 90,  text: 'Post 2 winning seasons',       on: { season: d => (winningSeason(d) ? 1 : 0) } },
   epic1:     { tier: 1, goal: 1,  xp: 80,  text: 'Pull an Epic or Legend card',  on: { card: d => d.rank >= 2 ? 1 : 0 } },
   top3:      { tier: 1, goal: 1,  xp: 100, text: 'Finish top 3 in a Compete pool', on: { compete: d => d.place <= 3 ? 1 : 0 } },
   bt1:       { tier: 1, goal: 1,  xp: 90,  text: 'Play a Blacktop game',         on: { bt: () => 1 } },
@@ -486,11 +494,16 @@ export function careerSeasons() {
   return (S.sync?.seasons ?? 0) + S.pending.filter(p => p.at > since).length
 }
 
-// Championships so far (saved seasons + this device's newer ones)
+// Titles from the modes no database keeps (Career, Squad Builder, Salary Cap, College): their own count in the
+// wallet's stats. Before it existed, Squad Builder's titles were the only ones counted (sqTitles), so that's the floor
+// (it holds every squad title, so it's never more than the real count; a merge with another device can't drop below it).
+const localRingsOf = st => Math.max(st.localRings ?? 0, st.sqTitles ?? 0)
+// Championships so far (saved seasons + this device's newer ones + the local-only modes' titles)
+// (a signed-in player's count used to be the saved seasons alone: a title in Career or Squad Builder never moved it)
 export function careerRings() {
   if (!uid) return S.stats.rings
   const since = S.sync?.at ?? 0
-  return (S.sync?.rings ?? 0) + S.pending.filter(p => p.at > since && p.ring).length
+  return (S.sync?.rings ?? 0) + S.pending.filter(p => p.at > since && p.ring).length + localRingsOf(S.stats)
 }
 
 // ── Daily Challenge state ────────────────────────────────────────────────────
@@ -712,17 +725,44 @@ function onSeason(e) {
   }
   S.stats.seasons++
   if (d.champion) S.stats.rings++
+  // (no saved row will bring this one in: careerRings counts it from here; before Squad Builder's sqTitles++ below)
+  if (d.champion && d.localOnly) S.stats.localRings = localRingsOf(S.stats) + 1
   if (d.ovr > S.stats.best) S.stats.best = d.ovr
   const st = S.stats
-  st.wins += d.wins ?? 0
-  if (d.sport === 'bucket' ? d.wins >= 50 : d.wins >= 10) st.winning++
+  // (a baseball season's 162 games: its wins count 82/162 here, so a season is worth a basketball one in the
+  // cross-sport total the win achievements read; baseball's own numbers stay real everywhere else)
+  st.wins += d.sport === 'baseball' ? Math.round((d.wins ?? 0) * BASEBALL_WIN_WEIGHT) : d.wins ?? 0
+  if (winningSeason(d)) st.winning++
   if (d.playoffs) st.playoffs++
   if (d.award) st.awards++
-  if (d.losses === 0 && d.wins > 0) st.perfect++
+  if (d.losses === 0 && d.wins > 0 && !(d.sport === 'soccer' && d.mode === 'all-time')) st.perfect++
   if (d.ovr >= 90) st.ovr90++
   if (d.ovr >= 95) st.ovr95++
   if (d.mode === 'all-time') st.allTime++
-  if (d.sport === 'bucket') st.bucketSeasons++; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
+  // College Football: its own count, never an NFL season (nflSeasons and positions are football's)
+  if (d.sport === 'cfb') st.cfbSeasons = (st.cfbSeasons ?? 0) + 1; else if (d.sport === 'bucket') st.bucketSeasons++; else if (d.sport === 'soccer') st.soccerSeasons = (st.soccerSeasons ?? 0) + 1; else if (d.sport === 'baseball') st.baseballSeasons = (st.baseballSeasons ?? 0) + 1; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
+  // soccer's awards (SoccerApp sends them as tags, lib/soccerAwards.js): the achievements count these
+  if (d.sport === 'soccer' && !d.sandbox) {
+    const tags = Array.isArray(d.awards) ? d.awards : []
+    if (tags.includes('boot')) st.soccerBoots = (st.soccerBoots ?? 0) + 1
+    if (tags.includes('bdor') || tags.includes('gball')) st.soccerBallons = (st.soccerBallons ?? 0) + 1
+    if (d.champion && d.mode === 'all-time') st.worldCups = (st.worldCups ?? 0) + 1
+  }
+  // baseball's (BaseballApp sends its awards as tags, lib/baseballAwards.js; ref: the season itself): the achievements count these
+  if (d.sport === 'baseball' && !d.sandbox) {
+    const tags = Array.isArray(d.awards) ? d.awards : []
+    const add = k => { st[k] = (st[k] ?? 0) + 1 }
+    if (d.champion) add('worldSeries')
+    if (tags.includes('bmvp')) add('baseballMvps')
+    if (tags.includes('cy')) add('cyYoungs')
+    if (tags.includes('ss')) add('silverSluggers')
+    if (tags.includes('gg')) add('goldGloves')
+    if (tags.includes('tc')) add('tripleCrowns')
+    if (d.pos === 'bat' || d.pos === 'pit') st.bbPos = { ...(st.bbPos || {}), [d.pos]: 1 }
+    const r = d.ref || {}
+    if (d.pos === 'bat' && Number.isFinite(r.hr) && r.hr > (st.bestHr ?? 0)) st.bestHr = r.hr
+    if (d.pos === 'pit' && Number.isFinite(r.k) && r.k > (st.bestK ?? 0)) st.bestK = r.k
+  }
   if (d.daily) st.daily++
   // Squad Builder: its seasons, its titles, and a squad with every spot built
   if (d.mode === 'squad') { st.sqSeasons++; if (d.champion) st.sqTitles++; if (d.full) st.sqFull = 1 }
@@ -929,18 +969,23 @@ async function sync(force = false) {
   try {
     const count = q => q.then(r => (r.error ? null : r.count ?? 0))
     const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', id)
-    const [seasons, playoffs, rings, winning, bucketAwards, allPros, dlDpoys, acct] = await Promise.all([
+    // (soccer's rows: a winning season is 19 league wins, or all three group games; its awards are
+    // season_award tags, one award's XP a season like everywhere else. Its modes: lib/soccerAwards.js)
+    const [seasons, playoffs, rings, winning, bucketAwards, allPros, dlDpoys, acct, soccerAwards, baseballAwards] = await Promise.all([
       count(base()),
       count(base().eq('playoffs', true)),
       count(base().eq('champion', true)),
-      count(base().or('and(game_mode.like.bucket*,wins.gte.50),and(game_mode.not.like.bucket*,wins.gte.10)')),
+      count(base().or('and(game_mode.like.bucket*,wins.gte.50),and(game_mode.eq.soccer-classic,wins.gte.19),and(game_mode.eq.soccer-all-time,wins.gte.3),and(game_mode.like.baseball*,wins.gte.82),and(game_mode.not.like.bucket*,game_mode.not.like.soccer*,game_mode.not.like.baseball*,wins.gte.10)')),
       count(base().or('mvp.is.true,dpoy.is.true')),
       count(base().eq('season_award', 'allpro')),
       count(base().eq('season_award', 'dpoy').or('game_mode.like.dl-*,game_mode.like.lb-*')),   // DL's and LB's: no counter on accounts, like All-Pros
       supabase.from('accounts').select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys,classic_dpoys,alltime_dpoys').eq('id', id).maybeSingle().then(r => r.data ?? {}, () => ({})),
+      SOCCER_LIVE ? count(base().like('game_mode', 'soccer-%').not('season_award', 'is', null)) : Promise.resolve(0),
+      // (baseball's: a season with an award beyond an All-Star nod, lib/baseballAwards.js baseballMajorAward)
+      BASEBALL_LIVE ? count(base().like('game_mode', 'baseball-%').not('season_award', 'is', null).neq('season_award', 'asg')) : Promise.resolve(0),
     ])
     if (uid !== id || seasons == null) return
-    const awards = Object.values(acct).reduce((a, v) => a + (Number.isFinite(v) ? v : 0), 0) + (bucketAwards ?? 0) + (allPros ?? 0) + (dlDpoys ?? 0)
+    const awards = Object.values(acct).reduce((a, v) => a + (Number.isFinite(v) ? v : 0), 0) + (bucketAwards ?? 0) + (allPros ?? 0) + (dlDpoys ?? 0) + (soccerAwards ?? 0) + (baseballAwards ?? 0)
     const xp = seasons * XP.season + (winning ?? 0) * XP.winning + (playoffs ?? 0) * XP.playoffs + (rings ?? 0) * XP.ring + awards * XP.award
     const beforeTotal = totalXp()
     S.sync = { xp, at: startedAt, seasons, playoffs, rings, awards }
@@ -964,6 +1009,9 @@ async function syncCards(id) {
     const gm = row.game_mode || 'classic'
     let sport = 'nfl', pos = 'qb', mode = gm.includes('all-time') ? 'all-time' : 'classic'
     if (gm.startsWith('bucket')) { sport = 'bucket'; pos = row.position === 'big' ? 'big' : 'guard' }
+    else if (gm.startsWith('soccer-')) { if (!SOCCER_LIVE) continue; sport = 'soccer'; pos = 'st' }
+    // (baseball's cards: only once its binder has them, BASEBALL_LIVE and BASEBALL_MODES.cards; never read as a football card)
+    else if (gm.startsWith('baseball-')) { if (!BASEBALL_LIVE || !BASEBALL_MODES.cards) continue; sport = 'baseball'; pos = row.position === 'pit' ? 'pit' : 'bat' }
     else if (/^(rb|wr|te|db|dl|lb)-/.test(gm)) pos = gm.slice(0, 2)
     else if (gm.startsWith('ol-')) continue
     for (const v of Object.values(row.build || {})) {
@@ -1070,10 +1118,11 @@ export function initProgress() {
 // (lib/cosmetics.js) climb gently and overlap across rarities: commons in a day
 // or two, rares within a week, epics in one to two weeks, legendaries (~5,500–
 // 13,000) in two to four.
-export const COINS = { season: 10, winNfl: 1, winNba: 0.25, playoffs: 10, ring: 40, award: 25, daily: 20, free: 25, freePro: 50 }
+// (baseball's 162 games: 0.1 a win, so a 100-win season pays about what a 17-0 football one does)
+export const COINS = { season: 10, winNfl: 1, winNba: 0.25, winSoccer: 0.45, winBaseball: 0.1, playoffs: 10, ring: 40, award: 25, daily: 20, free: 25, freePro: 50 }
 export function seasonCoins(d) {
   if (d.sandbox) return 0
-  let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : COINS.winNfl))
+  let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : d.sport === 'soccer' ? COINS.winSoccer : d.sport === 'baseball' ? COINS.winBaseball : COINS.winNfl))
   if (d.playoffs) c += COINS.playoffs
   if (d.champion) c += COINS.ring
   if (d.award) c += COINS.award
@@ -1404,6 +1453,13 @@ export function achStats() {
     seasons: Math.max(st.seasons, careerSeasons()), rings: Math.max(st.rings, careerRings()),
     positions: ['qb', 'rb', 'wr', 'te', 'db', 'dl'].filter(p => pos[p]).length,
     twoSport: st.nflSeasons > 0 && st.bucketSeasons > 0 ? 1 : 0,
+    threeSport: st.nflSeasons > 0 && st.bucketSeasons > 0 && (st.soccerSeasons ?? 0) > 0 ? 1 : 0,
+    soccerBoots: st.soccerBoots ?? 0, soccerBallons: st.soccerBallons ?? 0, worldCups: st.worldCups ?? 0, soccerSeasons: st.soccerSeasons ?? 0,
+    // baseball's (recordSeason above)
+    baseballSeasons: st.baseballSeasons ?? 0, worldSeries: st.worldSeries ?? 0, baseballMvps: st.baseballMvps ?? 0, cyYoungs: st.cyYoungs ?? 0,
+    silverSluggers: st.silverSluggers ?? 0, goldGloves: st.goldGloves ?? 0, tripleCrowns: st.tripleCrowns ?? 0, bestHr: st.bestHr ?? 0, bestK: st.bestK ?? 0,
+    twoWay: st.bbPos?.bat && st.bbPos?.pit ? 1 : 0,
+    fourSport: st.nflSeasons > 0 && st.bucketSeasons > 0 && (st.soccerSeasons ?? 0) > 0 && (st.baseballSeasons ?? 0) > 0 ? 1 : 0,
     cards: Object.keys(S.cards).length, streak: S.streak.best ?? 0, level: L,
     cpPlayed: st.compete?.played ?? 0, cpWins: st.compete?.wins ?? 0, cpPodiums: st.compete?.podiums ?? 0, cpStreak: st.compete?.bestStreak ?? 0, cpBeaten: st.compete?.beaten ?? 0,
     btStreak: st.bt?.bestStreak ?? 0, btPts: st.bt?.pts ?? 0, h2hWins: st.h2h?.wins ?? 0, h2hStreak: st.h2h?.bestStreak ?? 0,

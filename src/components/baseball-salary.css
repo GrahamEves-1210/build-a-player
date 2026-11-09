@@ -1,0 +1,85 @@
+/* ═══ BASEBALL SALARY CAP (components/BaseballSalaryCap.jsx) ═══════════════════
+   Loaded with the baseball Salary Cap's chunk only. The shared board (.sc-* in index.css, the app look in
+   app-game.css) in baseball's colours (baseball.css): the navy ink, cream words, the stitch red (#c8102e) as the
+   one accent; red marks things, cream says them (red words only in the lit red, #e63950). Flat fills and hairlines,
+   no glows, no gradients. Every rule is under .sc-screen--baseball, so the other sports' boards never change. */
+.sc-screen.sc-screen--baseball { --sc-a: #c8102e; background: #090d16; color: #f3eee3; }
+html:is(.is-app, .app-look) .sc-screen.sc-screen--baseball { --sc-a: #c8102e; background: #090d16 !important; }
+
+
+/* the header's buttons: the panel navy, a hairline; open or hovered, a red wash */
+.sc-screen--baseball .sc-lb-btn,
+.sc-screen--baseball .sc-date-btn { background: #111724; border-color: rgba(243,238,227,.16); color: #f3eee3; box-shadow: none; }
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-lb-btn,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-date-btn,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-power-wrap > button { background: #111724 !important; border-color: rgba(243,238,227,.16) !important; }
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-date-btn { border-color: rgba(200,16,46,.75) !important; }
+.sc-screen--baseball .sc-date-btn { border-color: rgba(200,16,46,.75); }
+.sc-screen--baseball .sc-lb-btn--open { background: rgba(200,16,46,.18) !important; border-color: rgba(200,16,46,.6) !important; }
+@media (hover: hover) {
+  .sc-screen--baseball .sc-lb-btn:hover,
+  .sc-screen--baseball .sc-date-btn:hover { background: rgba(200,16,46,.16); border-color: rgba(200,16,46,.6); }
+}
+.sc-screen--baseball .sc-lb-btn--pulse { animation: none; border-color: rgba(200,16,46,.9) !important; background: rgba(200,16,46,.16) !important; }
+.sc-screen--baseball .sc-date-day,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-date-day { color: #f3eee3; }
+.sc-screen--baseball .sc-date-month,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-date-month { color: #e63950; }
+
+/* the menus: the panel navy */
+.sc-screen--baseball .sc-date-dropdown,
+.sc-screen--baseball .sc-power-menu { background: #111724; border-color: rgba(243,238,227,.14); }
+.sc-screen--baseball .sc-date-item--active { background: rgba(200,16,46,.2); }
+.sc-screen--baseball .sc-date-item--inf .sc-date-item-label { color: #e63950; }
+@media (hover: hover) { .sc-screen--baseball .sc-date-item--inf:hover { background: rgba(200,16,46,.12); } }
+.sc-screen--baseball .sc-date-item-reset { color: rgba(243,238,227,.6); }
+.sc-screen--baseball .sc-lb-dropdown { background: rgba(13,18,28,.97); backdrop-filter: none; -webkit-backdrop-filter: none; border-color: rgba(243,238,227,.16); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.sc-screen--baseball .sc-lb-row--top .sc-lb-name { color: #f3eee3; }
+.sc-screen--baseball .sc-lb-row--top .sc-lb-ovr { color: #e63950; }
+.sc-screen--baseball .sc-lb-spare { color: #ddd5c4; }
+.sc-screen--baseball .sc-lb-prompt { background: #111724; border-color: rgba(200,16,46,.5); color: rgba(243,238,227,.8); }
+
+/* the power-ups: shuffle and scout */
+.sc-screen--baseball .sc-power-circle { border-color: rgba(200,16,46,.5); background: rgba(200,16,46,.1); box-shadow: none; color: #f3eee3; }
+@media (hover: hover) { .sc-screen--baseball .sc-power-circle:hover:not(:disabled) { border-color: rgba(200,16,46,.85); background: rgba(200,16,46,.2); box-shadow: none; } }
+.sc-screen--baseball .sc-power-circle--active { border-color: #c8102e !important; background: rgba(200,16,46,.28) !important; box-shadow: none !important; color: #fbf7ee !important; }
+.sc-screen--baseball .sc-power-label { color: #f3eee3; }
+.sc-screen--baseball .sc-power-badge,
+.sc-screen--baseball .sc-shuffle-badge { background: #c8102e; color: #fbf7ee; }
+
+/* the played banner */
+.sc-screen--baseball .sc-played-banner { background: rgba(200,16,46,.1); border-color: rgba(200,16,46,.35); color: rgba(243,238,227,.82); }
+.sc-screen--baseball .sc-played-banner svg { color: #e63950; }
+
+/* the board: cream headings on a hairline, the prices in cream */
+.sc-screen--baseball .sc-col-label { color: #f3eee3; }
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-col-header { border-bottom-color: rgba(243,238,227,.2); }
+.sc-screen--baseball .sc-price-label,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-price-label { color: #f3eee3; }
+/* the cards: the name strip in the ink; his real position in the corner, a legend marked in cream */
+.sc-screen--baseball .sc-card { background: #0d121c; }
+.sc-screen--baseball .sc-card--sel { box-shadow: 0 0 0 1px var(--sel, var(--tc)); }
+.sc-screen--baseball .sc-card-name-wrap,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-card-name-wrap { background: #0b0f18; }
+.sc-screen--baseball .sc-card-last { color: #f3eee3; }
+.sc-screen--baseball .bbs-role,
+.sc-screen--baseball .bbs-legend {
+  position: absolute; top: 3px; z-index: 2; pointer-events: none;
+  font-family: var(--ag-font, 'Bebas Neue'), 'Bebas Neue', sans-serif; font-size: clamp(9px, 1.9vw, 12px); line-height: 1;
+  letter-spacing: .5px; padding: 2px 4px 1px; border-radius: 3px;
+}
+.sc-screen--baseball .bbs-role { left: 3px; background: rgba(9,13,22,.82); color: #f3eee3; }
+.sc-screen--baseball .bbs-legend { right: 3px; background: #f3eee3; color: #090d16; }
+@media (max-width: 420px) { .sc-screen--baseball .bbs-legend { font-size: 8px; padding: 2px 3px 1px; letter-spacing: .3px; } }
+
+/* the bottom bar: Back in the panel navy, Lock In in the stitch red (the website's pinned bar in the ink) */
+html.app-look:not(.is-app) .sc-screen--baseball .sc-footer { background: #090d16; }
+.sc-screen--baseball .sc-back-btn,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-back-btn { background: #111724; border-color: rgba(243,238,227,.16); color: #f3eee3; }
+.sc-screen--baseball .sc-confirm-btn,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-confirm-btn { background: #c8102e; color: #fbf7ee; box-shadow: none !important; }
+.sc-screen--baseball .sc-confirm-btn--view,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-confirm-btn--view { background: #9c0c24; }
+.sc-screen--baseball .sc-confirm-btn--disabled,
+html:is(.is-app, .app-look) .sc-screen--baseball .sc-confirm-btn--disabled { background: rgba(243,238,227,.08); color: rgba(243,238,227,.4); }
+.sc-screen--baseball .sc-budget-track { background: rgba(243,238,227,.1); }

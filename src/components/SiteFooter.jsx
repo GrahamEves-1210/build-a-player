@@ -31,7 +31,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
             BUILD-A-PLAYER
           </div>
           <div className="splash-site-footer-blurb">
-            {isBucket ? 'Fan-made NBA player builder. Not affiliated with the NBA, the NBPA, or any of their members.' : 'Fan-made NFL player builder. Not affiliated with the NFL, the NFLPA, or any of their members.'}
+            {sport === 'baseball' ? 'Fan-made baseball player builder. Not affiliated with Major League Baseball, the MLBPA, or any of their teams or players.' : sport === 'soccer' ? 'Fan-made soccer player builder. Not affiliated with FIFA, UEFA, any league or club, or FIFPRO.' : isBucket ? 'Fan-made NBA player builder. Not affiliated with the NBA, the NBPA, or any of their members.' : 'Fan-made NFL and college football player builder. Not affiliated with the NFL, the NFLPA, the NCAA, any college conference or university, or any of their members.'}
           </div>
         </div>
         <div className="splash-site-footer-col">
@@ -72,7 +72,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
       </div>
       <div className="splash-site-footer-bottom">
         <img className="splash-site-footer-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="168" height="56" loading="lazy" draggable={false} />
-        <span className="splash-site-footer-legal">© {new Date().getFullYear()} Playmaker Games LLC. An independent fan project. Not affiliated with or endorsed by any professional sports league, team or players' association.</span>
+        <span className="splash-site-footer-legal">© {new Date().getFullYear()} Playmaker Games LLC. An independent fan project. Not affiliated with or endorsed by any professional sports league, team or players' association, or by the NCAA, any college conference or any university.</span>
         <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="splash-site-footer-playwire">
           <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="140" height="39" loading="lazy" />
         </a>

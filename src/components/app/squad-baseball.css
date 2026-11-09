@@ -1,0 +1,105 @@
+/* Squad Builder: baseball (AppSquad.jsx's baseball branches, SquadBaseball.jsx). The shared Squad Builder look is
+   app-game.css (.sq-*); these are the pieces baseball adds (the spot tiles by group, the diamond, the batting order
+   and the staff, the division table, the home run race, the 162-game strip, the box score's tables) and the
+   baseball look on the shared ones: the ball's cream and its stitch red, flat fills and hairlines, no glows and no
+   gradients (components/baseball.css sets the tokens: --ag-a1 the lit red for words, --ag-a2 the stitch red). */
+
+/* the spots: three a row, the lineup and then the staff under their heads */
+.sq-tiles--baseball { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sq-tiles--baseball .sq-tile, .sq-tiles--baseball .sq-tile:nth-child(n+4) { grid-column: span 1; }
+.sq-tiles--baseball .sq-tile-add { padding: 9px 8px; }
+.sq-tiles--baseball .sq-tile-pos { font-size: 22px; }
+.sq-tiles--baseball .sq-tile-name { font-size: 11.5px; }
+.sq-tiles--baseball .sq-tile-n { min-width: 26px; height: 26px; font-size: 16px; }
+.sq-tiles-head { grid-column: 1 / -1; padding: 6px 2px 0; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.8px; color: var(--ag-muted); }
+.sq-tiles-head:first-child { padding-top: 0; }
+
+/* the baseball look on the shared pieces: flat, the red marks what is the player's */
+.ag-screen--baseball .sq-tile.is-on .sq-tile-add { border-color: var(--ag-a2); background: color-mix(in srgb, var(--ag-a2) 14%, var(--ag-panel)); }
+.ag-screen--baseball .sq-tile.is-on .sq-tile-n { background: var(--ag-a2); color: #fbf7ee; }
+.ag-screen--baseball .sq-hero { border: 1px solid var(--ag-line); border-left: 6px solid var(--tc); background: var(--ag-panel); border-radius: 6px; }
+.ag-screen--baseball .sq-hero.is-champ { border-color: rgba(242,214,117,.6); border-left-color: var(--tc); box-shadow: none; }
+.ag-screen--baseball .sq-hero-logo { filter: none; }
+.ag-screen--baseball .sq-face.is-mine { box-shadow: 0 0 0 2px var(--ag-a1); }
+.ag-screen--baseball .sq-line.is-award { background: rgba(242,214,117,.06); }
+.ag-screen--baseball .sq-award { background: #f2d675; }
+.ag-screen--baseball .sq-board { background: rgba(243,238,227,.025); }
+.ag-screen--baseball .sq-spot .tk-hs { box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.ag-screen--baseball .sq-spot.is-picked .tk-hs { box-shadow: 0 0 0 3px #f3eee3; }
+.ag-screen--baseball .sq-log i.is-w { background: var(--ag-a2); }
+
+/* the diamond: the nine on the field (the DH by the plate), each with his place in the order */
+.sqb-field { aspect-ratio: 1 / 1.16; max-height: 480px; touch-action: manipulation; }
+.sqb-diamond * { stroke: rgba(243,238,227,.2); }
+.sqb-spot { width: 84px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sqb-spot .sq-spot-lbl { top: 0; left: 2px; font-size: 11px; }
+.sqb-spot.is-open .tk-hs { opacity: .5; }
+.sqb-spot.is-open .sq-spot-name { color: var(--ag-muted); }
+.sqb-spot.is-mine .sq-spot-name { color: var(--ag-a1); }
+.sqb-order { position: absolute; top: 0; right: 4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center; font-family: var(--ag-font); font-size: 12px; line-height: 1; color: #090d16; background: #f3eee3; }
+.sqb-spot.is-mine .sqb-order { background: var(--ag-a2); color: #fbf7ee; }
+
+/* the batting order and the staff: one row a man */
+.sqb-card { gap: 3px; }
+.sqb-row { display: grid; grid-template-columns: 34px 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 4px 8px; border: 1px solid transparent; border-radius: 6px; background: rgba(243,238,227,.03); color: inherit; text-align: left; font: inherit; }
+.sqb-row--btn { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sqb-row .tk-hs { border-radius: 50%; font-size: 12px; }
+.sqb-row-n { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; color: var(--ag-muted); text-align: center; }
+.sqb-row-who { display: flex; flex-direction: column; min-width: 0; }
+.sqb-row-who b { font-family: var(--ag-font); font-weight: 400; font-size: 16px; letter-spacing: .7px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sqb-row-who small { font-family: var(--ag-body); font-size: 11px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sqb-row-o { font-family: var(--ag-display); font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+.sqb-row.is-mine { border-left: 3px solid var(--ag-a2); background: color-mix(in srgb, var(--ag-a2) 10%, transparent); }
+.sqb-row.is-mine .sqb-row-who b { color: var(--ag-a1); }
+.sqb-row.is-open .sqb-row-who b, .sqb-row.is-open .tk-hs { opacity: .55; }
+.sqb-row.is-picked { border-color: #f3eee3; }
+.sqb-row.is-target { border: 1px dashed color-mix(in srgb, var(--ag-a1) 70%, transparent); }
+.sqb-row.is-bad { animation: sq-shake .42s ease-in-out both; }
+@media (prefers-reduced-motion: reduce) { .sqb-row.is-bad { animation: none; } }
+
+/* a club's cap logo */
+.sqb-crest { object-fit: contain; flex: 0 0 auto; }
+
+/* the home run race */
+.sqb-race { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.sqb-race-row { display: grid; grid-template-columns: 18px 20px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; }
+.sqb-race-row.is-ours { background: rgba(243,238,227,.04); }
+.sqb-race-row.is-mine { background: color-mix(in srgb, var(--ag-a2) 12%, transparent); }
+.sqb-race-row.is-mine .sqb-race-who b { color: var(--ag-a1); }
+.sqb-race-n { font-family: var(--ag-font); font-size: 13px; color: var(--ag-muted); text-align: center; }
+.sqb-race-who { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sqb-race-who b { font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: .6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sqb-race-who small { font-family: var(--ag-body); font-size: 11px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; }
+.sqb-race-v { font-family: var(--ag-display); font-weight: 400; font-size: 18px; font-variant-numeric: tabular-nums; }
+
+/* the division and the wild card race */
+.sqb-st { display: flex; flex-direction: column; gap: 1px; }
+.sqb-st-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) 30px 30px 44px; align-items: center; gap: 4px; min-height: 30px; padding: 3px 6px; border-radius: 5px; font-family: var(--ag-font); font-size: 14px; letter-spacing: .5px; font-variant-numeric: tabular-nums; color: var(--ag-text-2); }
+.sqb-st-row > span:not(.sqb-st-team), .sqb-st-row > b { text-align: center; }
+.sqb-st-row > b { font-weight: 400; color: var(--ag-text); }
+.sqb-st-head { min-height: 22px; font-size: 11px; letter-spacing: 1.2px; color: var(--ag-muted); }
+.sqb-st-team { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sqb-st-team b { font-weight: 400; color: var(--ag-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sqb-st-row.is-mine { background: color-mix(in srgb, var(--ag-a2) 14%, transparent); box-shadow: inset 3px 0 0 var(--ag-a2); }
+.sqb-st-row.is-mine .sqb-st-team b { color: var(--ag-a1); }
+.sqb-st-row.is-cut { border-bottom: 1px dashed var(--ag-line-hi); border-radius: 5px 5px 0 0; }
+.sqb-st-sub { margin-top: 10px; }
+
+/* the club's lines: the player's builds in red */
+.sq-mate.is-mine .sq-mate-who b { color: var(--ag-a1); }
+
+/* 162 games: 27 a row, six rows */
+.sqb-log { grid-template-columns: repeat(27, 1fr); }
+.sqb-log i { height: 8px; background: rgba(243,238,227,.06); }
+.sqb-months { grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 6px 0 4px; }
+.sqb-months button { height: 34px; font-size: 14px; letter-spacing: 1px; }
+
+/* the box score */
+.sqb-bt--bat .sq-bt-row { grid-template-columns: minmax(0, 1fr) repeat(7, 24px); gap: 3px; padding: 5px 6px; }
+.sqb-bt--pit .sq-bt-row { grid-template-columns: minmax(0, 1fr) 32px repeat(5, 23px) 22px; gap: 3px; padding: 5px 6px; }
+.sqb-bt .sq-bt-name small { margin-left: 2px; }
+
+/* the World Series ceremony's Commissioner's Trophy (TrophyArt 'ws'), at the ceremony's trophy size */
+.sqb-ring-art { display: block; width: 190px; height: 238px; }
+.sqb-ring-art .tc-art { display: block; width: 100%; height: 100%; }
+.sqb-box-note { margin: 2px 2px 0; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }

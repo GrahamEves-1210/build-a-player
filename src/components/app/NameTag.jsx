@@ -4,7 +4,7 @@ import { itemById } from '../../lib/cosmetics'
 import { useCosOf } from '../../lib/peopleCos'
 import {
   IconFootball, IconBasketball, IconCrown, IconFlame, IconBolt, IconStar, IconTrophy, IconMedal, IconRing,
-  IconTarget, IconShield, IconCoin, IconPodium, IconClipboard, IconVersus, IconWhistle, IconHelmet, IconHoop,
+  IconTarget, IconShield, IconCoin, IconPodium, IconClipboard, IconVersus, IconWhistle, IconHelmet, IconHoop, IconSoccer, IconBaseball,
 } from './icons'
 import '../../app-shop.css'
 import { RUNNER, DUNKER } from './mascotPaths'
@@ -37,6 +37,7 @@ export const GLYPHS = {
   football: IconFootball, basketball: IconBasketball, crown: IconCrown, flame: IconFlame, bolt: IconBolt, star: IconStar,
   trophy: IconTrophy, medal: IconMedal, ring: IconRing, target: IconTarget, shield: IconShield, coin: IconCoin,
   podium: IconPodium, clipboard: IconClipboard, versus: IconVersus, whistle: IconWhistle, helmet: IconHelmet, hoop: IconHoop,
+  soccer: IconSoccer, baseball: IconBaseball,
 }
 
 export function useMyCos() {
@@ -81,15 +82,31 @@ export function NameTag({ name, cos, uid = null, self = false, plate = true, cla
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') open(e) }}>{tag}</span>
   )
 }
+// The illustrated avatars (avatarArt.jsx, items with `art`) are their own chunk: it
+// loads the first time one is drawn, so pages without one never fetch it
+let ART = null, artLoad = null
+const loadArt = () => artLoad || (artLoad = import('./avatarArt').then(m => (ART = m.AVATAR_ART), () => { artLoad = null; return null }))
+function useArt(key) {
+  const [, redraw] = useState(0)
+  useEffect(() => {
+    if (!key || ART) return
+    let on = true
+    loadArt().then(a => { if (on && a) redraw(n => n + 1) })
+    return () => { on = false }
+  }, [key])
+  return key && ART ? ART[key] ?? null : null
+}
+
 export function AvatarBadge({ cos, uid = null, self = false, name, size = 44, level = null, className = '' }) {
   const c = useCosFor({ self, cos, uid })
   const av = itemById(known(c.avatar, 'avatar'))
   const initial = (name || '?').trim().slice(0, 1).toUpperCase()
-  const Glyph = av && av.glyph !== 'mono' ? GLYPHS[av.glyph] : null
+  const Art = useArt(av?.art)
+  const Glyph = av && !av.art && av.glyph !== 'mono' ? GLYPHS[av.glyph] : null
   return (
     <span className={`avb${av ? ` avp-${av.pal}${av.anim ? ` ava-${av.anim}` : ''}` : ' avp-none'}${className ? ` ${className}` : ''}`} style={{ width: size, height: size, '--avs': `${size}px` }}>
       <span className="avb-ring" aria-hidden="true" />
-      {Glyph ? <Glyph size={Math.round(size * 0.56)} /> : <span className="avb-init">{initial}</span>}
+      {av?.art ? (Art && <span className="avb-art" aria-hidden="true"><Art /></span>) : Glyph ? <Glyph size={Math.round(size * 0.56)} /> : <span className="avb-init">{initial}</span>}
       {level != null && <span className="avb-lvl">{level}</span>}
     </span>
   )

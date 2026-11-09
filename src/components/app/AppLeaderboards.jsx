@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import { useProgress, tierFor, nextTier, dayKey, dayIndex, weekEnds } from '../../lib/progress'
-import { onlineBoards, todayBoards, recordBoards, blacktopModes, positionsFor, loadBoard, peekBoard, lastWeekChampion } from '../../lib/boards'
+import { onlineBoards, todayBoards, recordBoards, blacktopModes, positionsFor, positionLabel, boardSports, hasGrid, loadBoard, peekBoard, lastWeekChampion } from '../../lib/boards'
 import { loadFriends, useFriendsOnly } from '../../lib/friends'
 import { getUsername } from '../../lib/discord'
 import { rampAdd } from '../../lib/ads'
@@ -22,8 +22,11 @@ const TIER_COLOR = { Rookie: '#9aa7a0', Starter: '#5EDBD8', Pro: '#60a5fa', 'All
 // the Cup's days left, today counted: it ends with Sunday
 const cupLeft = () => { const n = dayIndex(weekEnds()) - dayIndex(dayKey()) + 1; return n <= 1 ? 'LAST DAY' : `${n} DAYS LEFT` }
 const PLAY = { rating: ['PLAY ONLINE', 'online'], played: ['PLAY ONLINE', 'online'], bt: ['PLAY ONLINE', 'online'], bt1: ['PLAY ONLINE', 'online'], bt2: ['PLAY ONLINE', 'online'], bt3: ['PLAY ONLINE', 'online'], daily: ['PLAY DAILY PUZZLE', 'daily'], cup: ['PLAY DAILY PUZZLE', 'daily'], grid: ['PLAY DAILY GRID', 'salarycap'] }
-const SPORTS = [{ id: 'nfl', label: 'Football' }, { id: 'bucket', label: 'Basketball' }]
-const gapText = x => x.toLocaleString(undefined, { maximumFractionDigits: 1 })
+// Football and Basketball, and Soccer once it's live (SOCCER_LIVE): the records' sports. The Daily Grid's are the ones with one
+const SPORTS = boardSports()
+const GRID_SPORTS = SPORTS.filter(s => hasGrid(s.id))
+// (a small gap keeps its decimals: an ERA or an OPS apart by .02; a board where low is best, ERA, counts it the other way)
+const gapText = x => { const a = Math.abs(x); return a.toLocaleString(undefined, { maximumFractionDigits: a > 0 && a < 0.1 ? 3 : a > 0 && a < 1 ? 2 : 1 }) }
 const AD_AFTER = 10
 const AD_ID = 'ramp-cntr1-lbd-mob-1'
 
@@ -55,7 +58,8 @@ function SubTabs({ items, value, onPick, label }) {
 
 // Go play it. The Daily Grid belongs to a sport: the other sport's is a page load away
 function goPlay(to, sport, boardSport) {
-  if (to === 'salarycap' && (boardSport === 'bucket') !== (sport === 'bucket')) window.location.href = boardSport === 'bucket' ? '/bucket/salary' : '/salary'
+  const here = sport === 'bucket' || sport === 'soccer' || sport === 'baseball' ? sport : 'nfl'
+  if (to === 'salarycap' && boardSport !== here) window.location.href = boardSport === 'bucket' ? '/bucket/salary' : boardSport === 'soccer' ? '/soccer/salary' : '/salary'
   else nav(to)
 }
 
@@ -175,7 +179,7 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
   }, [friendsOn, uid])
 
   // Records and the Daily Grid belong to a sport: starts on the one being played, either can be read
-  const [boardSport, setBoardSport] = useState(sport === 'bucket' ? 'bucket' : 'nfl')
+  const [boardSport, setBoardSport] = useState(SPORTS.some(s => s.id === sport) ? sport : 'nfl')
   const positions = useMemo(() => positionsFor(boardSport), [boardSport])
   const [footballPos, setPosition] = useState(() => {
     const all = positionsFor('nfl')
@@ -183,16 +187,22 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
     try { last = (localStorage.getItem('lastPosition') || '').toUpperCase() } catch {}
     return all.includes(last) ? last : all[0]
   })
-  const position = boardSport === 'bucket' ? null : footballPos
+  // (baseball: batter or pitcher, its own pick; it starts on the one being played)
+  const [baseballPos, setBaseballPos] = useState(() => { try { return localStorage.getItem('baseballPosition') === 'pit' ? 'pit' : 'bat' } catch { return 'bat' } })
+  const position = boardSport === 'bucket' ? null : boardSport === 'baseball' ? baseballPos : footballPos
   const [pick, setPick] = useState({ online: 'rating', today: 'daily' })
   const [btMode, setBtMode] = useState('bt')
   const [open, setOpen] = useState(null)   // a record's full board
 
-  const opts = { sport: boardSport, position, uid, friendIds: friendsOn ? friendIds ?? [] : undefined }
   const boards = tab === 'online' ? onlineBoards(sport) : tab === 'today' ? todayBoards(sport) : null
   // (the Cup is a cached top 50 that a friend is rarely on: it can't be narrowed to friends)
-  const shown = friendsOn && boards ? boards.filter(b => b.id !== 'cup') : boards
+  // (baseball with no Grid of its own has no Grid tab: it never shows another sport's)
+  const shown = boards ? boards.filter(b => !(friendsOn && b.id === 'cup') && !(b.id === 'grid' && boardSport === 'baseball' && !hasGrid('baseball'))) : boards
   const picked = tab === 'records' ? open : shown.find(b => b.id === pick[tab]) ?? shown[0]
+  // (soccer has no Daily Grid: on the grid it reads football's)
+  const onGrid = picked?.id === 'grid'
+  const dataSport = onGrid && !hasGrid(boardSport) ? 'nfl' : boardSport
+  const opts = { sport: dataSport, position, uid, friendIds: friendsOn ? friendIds ?? [] : undefined }
   const isBlacktop = picked?.id === 'bt'
   const current = isBlacktop ? { ...picked, id: btMode } : picked
   const board = useBoard(current?.id, opts)
@@ -236,17 +246,17 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
 
         {boards && <SubTabs items={shown} value={picked.id} onPick={id => setPick(s => ({ ...s, [tab]: id }))} label="Boards" />}
         {isBlacktop && <SubTabs items={blacktopModes()} value={btMode} onPick={setBtMode} label="Game size" />}
-        {(overview || current?.id === 'grid') && <SubTabs items={SPORTS} value={boardSport} onPick={id => { setBoardSport(id); setOpen(null) }} label="Sport" />}
-        {overview && positions.length > 0 && (
-          <SubTabs items={positions.map(x => ({ id: x, label: x }))} value={position} onPick={setPosition} label="Position" />
+        {(overview || current?.id === 'grid') && <SubTabs items={onGrid ? GRID_SPORTS : SPORTS} value={dataSport} onPick={id => { setBoardSport(id); setOpen(null) }} label="Sport" />}
+        {overview && positions.length > 0 && (/* (baseball's Grid is batters only: no picker there) */
+          <SubTabs items={positions.map(x => ({ id: x, label: positionLabel(boardSport, x) }))} value={position} onPick={boardSport === 'baseball' ? setBaseballPos : setPosition} label="Position" />
         )}
         {open && (
           <button className="lbd-back" onClick={() => { setOpen(null); sfx('tap') }}><IconArrow size={16} style={{ transform: 'rotate(180deg)' }} /> RECORDS</button>
         )}
-        {open && <h2 className="lbd-title">{open.label}<i>{[open.group === 'MODES' ? null : position ?? 'BASKETBALL', open.group === 'ALL-TIME' ? 'ALL-TIME' : null].filter(Boolean).join(' · ')}</i>{open.note && <em>{open.note}</em>}</h2>}
+        {open && <h2 className="lbd-title">{open.label}<i>{(boardSport === 'soccer' ? ['SOCCER', open.group] : boardSport === 'baseball' ? [positionLabel('baseball', position), open.group] : [open.group === 'MODES' ? null : position ?? 'BASKETBALL', open.group === 'ALL-TIME' ? 'ALL-TIME' : null]).filter(Boolean).join(' · ')}</i>{open.note && <em>{open.note}</em>}</h2>}
 
         {tab === 'today' && current?.id === 'cup' && <div className="lbd-left">{cupLeft()}</div>}
-        {current && <Standing boardId={current.id} board={board} unit={current.unit} p={p} sport={sport} boardSport={boardSport} />}
+        {current && <Standing boardId={current.id} board={board} unit={current.unit} p={p} sport={sport} boardSport={dataSport} />}
         {tab === 'today' && current?.id === 'cup' && champ && (
           <div className="lbd-champ"><span>LAST WEEK'S CHAMPION</span><b><NameTag name={champ.name} uid={champ.uid} /></b><em>{champ.display}</em></div>
         )}

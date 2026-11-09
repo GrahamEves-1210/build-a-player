@@ -30,6 +30,12 @@ import './app-game.css'
 // Football and basketball are two games: a visit loads only the one it's on
 const App = lazy(() => import('./App.jsx'))
 const BucketApp = lazy(() => import('./components/BucketApp.jsx'))
+// Soccer, the third game (/soccer): only while it's switched on (lib/soccerLive.js)
+const SoccerApp = lazy(() => import('./components/SoccerApp.jsx'))
+import { SOCCER_LIVE, SOCCER_SOON } from './lib/soccerLive'
+// Baseball, the fourth game (/baseball): only while it's switched on (lib/baseballLive.js)
+const BaseballApp = lazy(() => import('./components/BaseballApp.jsx'))
+import { BASEBALL_LIVE } from './lib/baseballLive'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
 import { IS_APP, APP_LOOK, APP_PLATFORM } from './lib/platform'
@@ -78,6 +84,14 @@ window.addEventListener('vite:preloadError', e => {
 
 const isBucket = window.location.pathname.startsWith('/bucket')
 if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
+// /soccer while soccer is off: its Home under the COMING SOON board (SOCCER_SOON), or football's Home without it
+const isSoccer = window.location.pathname.startsWith('/soccer') && (SOCCER_LIVE || SOCCER_SOON)
+if (!isSoccer && window.location.pathname.startsWith('/soccer')) window.history.replaceState({}, '', '/')
+if ((IS_APP || APP_LOOK) && isSoccer) document.documentElement.classList.add('is-soccer')   // app theme: black and white
+// /baseball while baseball is off is football's Home (nothing about baseball shows until BASEBALL_LIVE)
+const isBaseball = window.location.pathname.startsWith('/baseball') && BASEBALL_LIVE
+if (!BASEBALL_LIVE && window.location.pathname.startsWith('/baseball')) window.history.replaceState({}, '', '/')
+if ((IS_APP || APP_LOOK) && isBaseball) document.documentElement.classList.add('is-baseball')   // app theme: cream, red and navy
 
 // the boot guard in index.html: the app's code is running
 window.__bapStarted = true
@@ -126,7 +140,7 @@ createRoot(document.getElementById('root')).render(
         <AppMotion>
           {/* (one boundary: the game mounts before the dock, as it did when it wasn't lazy) */}
           <Suspense fallback={null}>
-            {isBucket ? <BucketApp /> : <App />}
+            {isBaseball ? <BaseballApp /> : isSoccer ? <SoccerApp /> : isBucket ? <BucketApp /> : <App />}
             <UsernamePrompt />
             <PasswordReset />
             {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}

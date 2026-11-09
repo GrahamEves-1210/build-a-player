@@ -3,10 +3,14 @@
 // which scores it itself from the real ratings (src/lib/competeCore.js scoreBuild:
 // only WHICH player filled each slot is taken from the phone), runs the clock and
 // ranks the pool.
-//   CompeteQueue (one per sport + position)   up to five, two start on the countdown
+//   CompeteQueue (one per sport + position, and per pool where a sport has two: soccer, baseball)   up to five, two start on the countdown
 //   CompeteRoom  (one per pool)               the clock, the builds, the result
 
-import { POOL_SIZE, MIN_POOL, FILL_AFTER_SECS, BUILD_SECS, COMPETE_POS, scoreBuild, rankResults } from '../../src/lib/competeCore.js'
+import { POOL_SIZE, MIN_POOL, FILL_AFTER_SECS, BUILD_SECS, COMPETE_POS, COMPETE_MODES, scoreBuild, rankResults } from '../../src/lib/competeCore.js'
+// soccer's kits (its rosters, teams and OVR) go into competeCore's scoring from here
+import '../../src/lib/soccerKits.js'
+// baseball's too: a batter's or a pitcher's pool, CURRENT or ALL-TIME (competeCore COMPETE_POS / COMPETE_MODES)
+import '../../src/lib/baseballKits.js'
 import { competeDelta } from '../../src/lib/rating.js'
 import { bookRatings } from './rating.js'
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
@@ -14,7 +18,8 @@ import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue
 const GRACE_MS = 3000           // a build sent just as the clock hits zero still counts
 const EMPTY_MS = 90000          // everyone gone this long: the pool is closed
 
-export const validCompete = (sport, pos) => !!COMPETE_POS[sport]?.includes(pos)
+// (a sport with pools of its own needs a known one, or none: competeMode then takes its first; the others ignore it)
+export const validCompete = (sport, pos, mode = null) => !!COMPETE_POS[sport]?.includes(pos) && (mode == null || !COMPETE_MODES[sport] || COMPETE_MODES[sport].includes(mode))
 
 export class CompeteQueue extends BaseQueue {
   constructor(state, env) { super(state, env, { size: POOL_SIZE, min: MIN_POOL, fillSecs: FILL_AFTER_SECS, room: 'COMPETE_ROOM', kind: 'cp' }) }
@@ -24,7 +29,7 @@ export class CompeteRoom {
   constructor(state, env) {
     this.env = env
     this.conns = new Map()      // ws → vid
-    this.m = null               // { code, seed, created, sport, pos, players }
+    this.m = null               // { code, seed, created, sport, pos, players } (+ mode: soccer's pool)
     this.results = {}           // vid → { ovr, at, build, forfeit }
     this.phase = 'build'        // build | result
     this.timer = null
@@ -34,8 +39,8 @@ export class CompeteRoom {
     const url = new URL(req.url)
     if (url.pathname === '/init' && req.method === 'POST') {
       const b = await req.json()
-      if (!validCompete(b.sport, b.pos)) return new Response('bad', { status: 400 })
-      this.m = { code: b.code, seed: `cp-${b.code}`, created: Date.now(), sport: b.sport, pos: b.pos, players: b.players.map(p => ({ ...p, bot: false })) }
+      if (!validCompete(b.sport, b.pos, b.mode ?? null)) return new Response('bad', { status: 400 })
+      this.m = { code: b.code, seed: `cp-${b.code}`, created: Date.now(), sport: b.sport, pos: b.pos, ...(b.mode ? { mode: b.mode } : {}), players: b.players.map(p => ({ ...p, bot: false })) }
       this.keys = b.keys || {}
       this.results = {}; this.phase = 'build'
       this.timer = setTimeout(() => this.finish(), BUILD_SECS * 1000 + GRACE_MS)
@@ -84,7 +89,7 @@ export class CompeteRoom {
       // the first build in stands; one after the clock (and its grace) doesn't count
       if (this.results[vid] || Date.now() > this.m.created + BUILD_SECS * 1000 + GRACE_MS) return
       // only the players this pool's spins could have dealt count (the seed is the pool's)
-      const { ovr, build } = scoreBuild(this.m.sport, this.m.pos, msg.build, this.m.seed, vid)
+      const { ovr, build } = scoreBuild(this.m.sport, this.m.pos, msg.build, this.m.seed, vid, this.m.mode ?? null)
       this.results[vid] = { ovr, at: Date.now(), build }
       this.broadcast()
       return this.maybeDone()

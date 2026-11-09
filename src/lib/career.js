@@ -8,16 +8,17 @@
 
 import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNorms.js'
 import { seeded } from './rng'
+import { traitValue, pickMomentGame } from './minigames'
 import { momentSituation, finalScore } from './situations'
 import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation,
   calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, dlBuildSpot, olBuildSpot,
-  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE,
+  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE, snapNFL,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
-import { TYPES, ATTR, QBS } from '../data/qbs'
+import { TYPES, ATTR, QBS, QB_PHYSICALS } from '../data/qbs'
 import { RB_TYPES, RB_ATTR, RBS } from '../data/rbs'
 import { WR_TYPES, WR_ATTR, WRS } from '../data/wrs'
 import { TE_TYPES, TE_ATTR, TES } from '../data/tes'
@@ -26,6 +27,7 @@ import { DL_TYPES, DL_ATTR, DLS, dlSizeGrade } from '../data/dls'
 import { OLS, OL_ATTR_WEIGHT, olOVR, OL_TYPES, OL_ATTR, OL_POS_BY_NAME } from '../data/ols'
 import { OL_LEGENDS } from '../data/ol-legends'
 import { OL_LIVE } from './olLive'
+import { ladderWindow, closedLine, lateLine, mindTraits, lowLabel, andList, LADDER } from './ageLadder'
 import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { NFL_TEAMS } from '../data/nfl-teams'
@@ -34,9 +36,9 @@ import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { BIRTH } from '../data/player-ages'
-import { LEGENDS } from '../data/qb-legends'
-import { RB_LEGENDS } from '../data/rb-legends'
-import { WR_LEGENDS } from '../data/wr-legends'
+import { LEGENDS, QB_LEGEND_PHYSICALS } from '../data/qb-legends'
+import { RB_LEGENDS, RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+import { WR_LEGENDS, WR_LEGEND_PHYSICALS } from '../data/wr-legends'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { DL_LEGENDS } from '../data/dl-legends'
@@ -374,7 +376,7 @@ export const SPORT = {
     // (a career's range: S.moneyOf. An elite edge is paid past a top receiver, a tackle tops out about $32M)
     // (a lineman by his spot: a top left tackle about $28M a year in 2026, a guard $20M, a center $15M)
     moneyOf: c => (c.pos === 'dl' && dlSpot(c) === 'dt' ? [2, 32] : c.pos === 'ol' ? ({ tackle: [2, 28], guard: [2, 20], center: [2, 15] })[olGroup(olSpot(c))] : SPORT.nfl.money[c.pos]),
-    primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos)} and start to fade at ${S.declineAt(pos)}; skills and reads can be trained any time. Big injuries and a fragile body can cost you a grade.` },
+    primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos) + 1} (the last year at double the cost) and start to fade at ${S.declineAt(pos)}; technique until ${LADDER.nfl[pos]?.techAt[1] ?? 32}, the reads for good. Big injuries and a fragile body can cost him a grade.` },
   },
   bucket: {
     id: 'bucket', league: 'NBA', isBucket: true, screen: 'ag-screen--bucket',
@@ -483,13 +485,15 @@ export const SPORT = {
     made: f => (f.playoffRounds?.length ?? 0) > 0 && (f.wins ?? 0) >= 40,
     rounds: ['First Round', 'Conference Semifinals', 'Conference Finals', 'NBA Finals'], final: 'NBA Finals', series: true,
     lineKeys: ['pts', 'reb', 'ast'],
-    step: 10, gameWord: 'GAME', snaps: 'minutes', injScale: 17 / 82, moneyWord: 'points',
+    // (injScale 2026-11-08: 26/82, was 17/82: an NBA season costs a rotation player about six games, not four;
+    // injSerious: one injury in twenty ends the season, not one in twelve as in football)
+    step: 10, gameWord: 'GAME', snaps: 'minutes', injScale: 26 / 82, injSerious: 0.05, moneyWord: 'points',
     // [what, games out (low, high), how often]. Only the season-enders list ends a season
     injuries: [['ankle sprain', 2, 10, 6], ['knee soreness', 2, 6, 4], ['hamstring strain', 5, 15, 3], ['concussion', 1, 5, 2], ['back spasms', 2, 6, 3], ['wrist sprain', 3, 10, 2], ['calf strain', 6, 16, 2], ['plantar fasciitis', 4, 14, 1.5], ['MCL sprain', 8, 20, 1], ['fractured hand', 12, 25, 0.8]],
     seasonEnders: ['torn ACL', 'ruptured Achilles', 'torn meniscus'],
     money: { guard: [2, 55], big: [2, 52] },
     moneyOf: c => SPORT.bucket.money[c.pos],
-    primeNote: () => { const S = SPORT.bucket; return `Speed and bounce can be trained until ${S.trainUntil()} and start to fade at ${S.declineAt()}; skills can be trained any time. The shot, passing, IQ and clutch never fade. Big injuries and a fragile body can cost you a grade.` },
+    primeNote: () => { const S = SPORT.bucket; return `Speed, bounce and size can be trained until ${S.trainUntil() + 1} (the last year at double the cost) and speed and bounce start to fade at ${S.declineAt()}; finishing, handles, rebounding and defense until ${LADDER.bucket.guard.techAt[1]}, the shot and the head for good. The shot, passing, IQ and clutch never fade. Big injuries and a fragile body can cost him a grade.` },
   },
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
@@ -503,14 +507,17 @@ export const POS_ATTR = { ...SPORT.nfl.attr, ...SPORT.bucket.attr }
 export const AWARD_NAME = { ...SPORT.nfl.awardName, ...SPORT.bucket.awardName }
 export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
-// a build dressed in its team's colours (the model on Career and on home's Career card)
-export const inTeamColors = (build, fit) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short } : ch])) : build)
-export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', sacks: 'SCK', tfl: 'TFL', qbHits: 'QB HITS', ff: 'FF', fr: 'FR', safeties: 'SFTY', pds: 'PD', rtgA: 'RTG ALLOWED', ydsA: 'YDS ALLOWED', sacksA: 'SACKS ALLOWED', prs: 'PRESSURES', pancakes: 'PANCAKES', pen: 'PENALTIES', grade: 'GRADE', hitsA: 'QB HITS ALLOWED', starts: 'STARTS', passGrade: 'PASS GRADE', runGrade: 'RUN GRADE', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
+// a build dressed in its team's colours (the model on Career and on home's Career card), and in his own number
+// (num: jerseyOf; every chip carries it, since each figure reads the number off a different trait)
+export const inTeamColors = (build, fit, num = null) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short, ...(num != null ? { number: num } : null) } : ch])) : build)
+export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', sacks: 'SCK', tfl: 'TFL', qbHits: 'QB HITS', ff: 'FF', fr: 'FR', safeties: 'SFTY', pds: 'PD', rtgA: 'RTG ALLOWED', ydsA: 'YDS ALLOWED', sacksA: 'SACKS ALLOWED', prs: 'PRESSURES', pancakes: 'PANCAKES', pen: 'PENALTIES', grade: 'GRADE', hitsA: 'QB HITS ALLOWED', starts: 'STARTS', passGrade: 'PASS GRADE', runGrade: 'RUN GRADE', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST',
+  // soccer
+  apps: 'APPS', goals: 'G', assists: 'A', xg: 'xG', avgRating: 'RATING', lgGoals: 'LEAGUE G', mins: 'MINS', shots: 'SHOTS', sot: 'ON TARGET', hatTricks: 'HAT-TRICKS', motm: 'MOTM', cupGoals: 'CUP G', euroGoals: 'EUROPE G' }
 export const HEADLINE_STATS = { ...SPORT.nfl.headline, ...SPORT.bucket.headline }
 // more numbers where there's room (the season wrap, the career totals): a QB's legs
 export const EXTRA_STATS = { qb: ['rushYds', 'rushTDs'], db: ['rtgA', 'ydsA'], dl: ['qbHits', 'ff'], lb: ['tfl', 'pds'], ol: ['prs', 'pen'] }
-export const ovrOf = (pos, build, sport = null) => (sport ? SPORT[sport] : SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl).ovr(pos, build) ?? 0
-const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl)
+export const ovrOf = (pos, build, sport = null) => (sport ? SPORT[sport] : sportForPos(pos)).ovr(pos, build) ?? 0
+const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.soccer?.positions.includes(pos) ? SPORT.soccer : SPORT.baseball?.positions.includes(pos) ? SPORT.baseball : SPORT.nfl)
 const fmtStat = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
 // ── Save ──────────────────────────────────────────────────────────────────────
@@ -603,10 +610,10 @@ function withGroups(c, ro, short) {
   return { ...ro, ...Object.fromEntries(missing.map(g => [g, made[g]])) }
 }
 // Real ages: the birth year against the season (yrs = seasons past the first)
-const born = (sport, name) => BIRTH[sport === 'bucket' ? 'bucket' : 'nfl'][name]
+const born = (sport, name) => (SPORT[sport]?.x?.born ? SPORT[sport].x.born(name) : BIRTH[sport === 'bucket' ? 'bucket' : 'nfl'][name])
 const ageOf = (sport, name, yrs = 0) => (born(sport, name) ? FIRST_SEASON - born(sport, name) : 23 + (hashN(name) % 6)) + yrs
 // how long a position lasts: gone at the cap, maybe gone in the two years before it
-const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, db: 35, dl: 35, lb: 35, guard: 38, big: 38 }
+const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, db: 35, dl: 35, lb: 35, guard: 38, big: 38, st: 36 }
 // a real player too old to be on a team this many seasons on (room: years short of the cap that already count). Year one is today's league as it is.
 const pastCap = (sport, g, name, yrs, room = 0) => yrs > 0 && ageOf(sport, name, yrs) >= RETIRE_AT[g] - room
 // how many seasons past the first a roster is for (in the offseason, the one coming up)
@@ -617,6 +624,8 @@ const avgOvr = list => (list.length ? list.reduce((s, p) => s + p.ovr, 0) / list
 // A team's real roster (the depth the lineup needs, the five starting linemen in football)
 // A career saved before real ages: the real players on the roster get theirs
 function realAges(c0) {
+  // (a sport still loading, soccer: as saved; its module asks for it, and the screens wait for it)
+  if (c0?.sport && !sportReady(c0.sport)) { ensureSport(c0.sport); return c0 }
   if (!c0?.roster) return c0
   // a deal run past its end in an older save (it showed -1 years): never below 0, and a season under way is on a one-year deal
   const left = c0.contract?.left
@@ -658,7 +667,7 @@ const ageStep = (age, x) => (age <= 24 ? 1 + Math.floor(x * 4) : age <= 27 ? Mat
 // a made-up pick climbs normally to about 82, slowly after that, and tops out at 90 (they were all turning into 95s)
 const grownOvr = (p, step) => (p.rookie && step > 0 && p.ovr >= 82 ? Math.max(p.ovr, Math.min(90, p.ovr + Math.ceil(step / 3))) : p.ovr + step)
 // a pick who'll grow into the job: about 73 at 21-22, a starter by 25, now and then a star
-const genPick = (r, g, slot, taken) => withBody({ name: freshName(r, taken), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
+const genPick = (r, g, slot, taken) => withBody({ name: freshName(r, taken, g), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
 // a made-up lineman's body, fixed by his name (no dice, so nobody else's rolls move): a real edge's or a
 // real tackle's height and weight, and the size grade those give (the same one the real players carry)
 const withBody = p => {
@@ -672,9 +681,10 @@ const withBody = p => {
   return { ...p, height, weight, size: dlSizeGrade(height, weight, dt ? 'dt' : 'edge') }
 }
 // a made-up name no one on the roster already has (two picks could share one)
-function freshName(r, taken = null) {
-  let n = rookieName(r)
-  for (let i = 0; taken && taken.has(n) && i < 25; i++) n = rookieName(r)
+function freshName(r, taken = null, g = null) {
+  const nameOf = NAMERS[g] ?? rookieName   // (a made-up footballer sounds like one: soccer's registers its own)
+  let n = nameOf(r)
+  for (let i = 0; taken && taken.has(n) && i < 25; i++) n = nameOf(r)
   taken?.add(n)
   return n
 }
@@ -700,6 +710,10 @@ function placeGroup(S, g, list, r) {
     while (list.length < S.keep[g]) { const low = Math.min(...list.map(p => p.ovr)), p = genPick(r, g, shortLine(list), taken); list.push({ ...p, ovr: Math.max(55, Math.min(p.ovr, low - 1)) }) }
     return keepLine(list, S.keep[g])
   }
+  // (soccer: the academy kids fill the forwards' room behind the real ones, never ahead of them)
+  if (g === 'st') { while (list.length < S.keep[g]) { const low = list.length ? Math.min(...list.map(p => p.ovr)) : 80, p = genPick(r, g, null, taken); list.push({ ...p, age: 18 + (p.age - 21) * 2, ovr: Math.max(60, Math.min(p.ovr, low - 2)) }) } }
+  // (a registered sport fills its own rooms: baseball's bench and bullpen, lib/careerBaseball.js)
+  if (S.fill?.[g]) return S.fill[g](list, slot => genPick(r, g, slot, taken), S.keep[g])
   while (list.length < S.keep[g]) list.push(genPick(r, g, g === 'db' ? shortSpot(list) : null, taken))
   return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
 }
@@ -740,28 +754,36 @@ const rosterOf = (c, short) => keptRoster(c, short) ?? makeRoster(short, c.sport
 const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : rosterOf(c, short))
 // The real men in a Key Moment: both teams' starters by group, each with his number, skin, last name and
 // speed (-1 to 1 around a B). Whoever isn't in the data (a drafted name years on) gets a steady made-up look.
-const CAST_NUM = { qb: [3, 19], rb: [20, 39], wr: [10, 19], te: [80, 89], ol: [60, 79], db: [20, 39], dl: [50, 99], lb: [40, 59], guard: [0, 30], big: [10, 55] }
+const CAST_NUM = { qb: [3, 19], rb: [20, 39], wr: [10, 19], te: [80, 89], ol: [60, 79], db: [20, 39], dl: [50, 99], lb: [40, 59], guard: [0, 30], big: [10, 55], st: [7, 29] }
 const CAST_SKIN = ['#8d5a3b', '#5e3c22', '#7a5030', '#c09060', '#f0c4a0', '#9a6840']
 const castData = {}
-const castIndex = S => (castData[S.id] ??= new Map(S.groups.flatMap(g => S.pool[g].map(p => [p.name, p]))))
+// (every room in the data, the hidden modes' too: a linebacker stands in the games before LB is a build)
+const castIndex = S => (castData[S.id] ??= new Map(Object.keys(S.pool).flatMap(g => (S.pool[g] ?? []).map(p => [p.name, p]))))
+// the data's men first, then the career's own draftees: a game never shows a made-up name while a real one is left
+const realFirst = (S, list) => { const ix = S.x?.castIndex ?? castIndex(S); return [...list].sort((a, b) => (ix.has(b.name) - ix.has(a.name)) || byOvr(a, b)) }
 const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return Math.abs(h) }
 function castMan(S, g, p) {
-  const raw = castIndex(S).get(p.name), h = hashOf(p.name), [lo, hi] = CAST_NUM[g] ?? [10, 99]
+  const raw = (S.x?.castIndex ?? castIndex(S)).get(p.name), h = hashOf(p.name), [lo, hi] = CAST_NUM[g] ?? [10, 99]
   // his last name: the data's short name if it is one (St. Brown), never a nickname (LUKA)
   const short = (raw?.short ?? '').replace(/^[A-Z]\.\s*/, '')
   const words = p.name.replace(/\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i, '').split(' ')
   const last = short && p.name.replace(/\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i, '').endsWith(short) ? short : words[words.length - 1]
   return {
     name: last.toUpperCase(), number: raw?.number ?? lo + h % (hi - lo + 1), skin: raw?.skin ?? CAST_SKIN[h % CAST_SKIN.length],
-    speed: Math.max(-1, Math.min(1, ((raw?.attrs?.speed ?? 6) - 6) / 5)),
+    speed: Math.max(-1, Math.min(1, ((raw?.attrs?.speed ?? raw?.attrs?.pace ?? 6) - 6) / 5)),
+    // (a ballplayer: his side of the plate, his arm, his grades and his spot, so the at-bat faces his real arsenal and
+    // the pitcher works a real hitter's zones: lib/mg/atbat.js, pitch.js)
+    ...(raw?.throws ? { bats: raw.bats, throws: raw.throws, attrs: raw.attrs, role: raw.role } : null),
   }
 }
 function castTeam(c, S, short) {
   const ro = rosterFor(c, short), out = {}
-  for (const g of S.groups) out[g] = [...(ro?.[g] ?? [])].filter(p => p.name !== c.name).sort(byOvr).slice(0, (S.starters[g] ?? 1) + 2).map(p => castMan(S, g, p))
+  for (const g of S.groups) out[g] = realFirst(S, (ro?.[g] ?? []).filter(p => p.name !== c.name)).slice(0, (S.starters[g] ?? 1) + 2).map(p => castMan(S, g, p))
+  // (soccer: the men around the No. 9 too, the club's wingers and midfielders: real ones, from the data)
+  if (S.x?.castMates) out.mates = S.x.castMates(short).map(p => ({ ...castMan(S, 'st', p), role: p.role ?? null }))
   // the line stands in its real order, left tackle to right tackle: the games read it by spot
   if (S.slots?.ol && ro?.ol) {
-    const left = [...ro.ol].filter(p => p.name !== c.name).sort(byOvr)
+    const left = realFirst(S, ro.ol.filter(p => p.name !== c.name))
     const raw = n => castIndex(S).get(n)
     const line = S.slots.ol.map(slot => {
       const i = left.findIndex(p => (p.slot ?? raw(p.name)?.pos ?? raw(p.name)?.subpos) === slot)
@@ -769,19 +791,137 @@ function castTeam(c, S, short) {
     })
     out.ol = line.map(p => p ?? left.shift()).filter(Boolean).map(p => castMan(S, 'ol', p))
   }
+  // (football, any league with a line: the eleven a side)
+  if (S.slots?.ol) out.xi = castXI(c, S, short, ro, out)
   return out
+}
+// The football games' full eleven a side (xi), every man real: the QB, the back, the receivers, the tight ends and
+// the line left to right; the ends, the tackles, the backers, the corners and the safeties, a man or two deep at each
+// so a game can show its nickel or a third safety. LB and OL are hidden modes, but their men stand on the field.
+// A room run short takes the next man up from the room beside it (a safety plays the corner), only once every
+// room's own starters are placed; a spot with nobody left stays empty, never a made-up name.
+// Each man: { name (his last name, the tag), last, short (J. ALLEN), number, skin, look: { number, skin } }.
+const XI_START = { qb: 1, rb: 1, wr: 3, te: 1, edge: 2, dt: 2, lb: 3, cb: 2, s: 2 }
+const XI_DEEP = { qb: 2, rb: 2, wr: 5, te: 2, edge: 3, dt: 3, lb: 4, cb: 3, s: 3 }
+const XI_NEXT = { qb: [], rb: ['wr'], wr: ['te', 'rb'], te: ['wr'], edge: ['dt', 'lb'], dt: ['edge'], lb: ['edge', 's'], cb: ['s'], s: ['cb', 'lb'] }
+const XI_GROUP = { edge: 'dl', dt: 'dl', cb: 'db', s: 'db' }
+const xiMan = (S, g, p) => {
+  const m = castMan(S, g, p), first = String(p.name ?? '').trim()[0]
+  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin } }
+}
+function castXI(c, S, short, ro, out) {
+  const room = list => realFirst(S, (list ?? []).filter(p => p.name !== c.name))
+  const dbs = room(ro?.db), dls = room(ro?.dl)
+  const gone = ro?.lb ? [] : outOf(c, short)
+  const all = {
+    qb: room(ro?.qb), rb: room(ro?.rb), wr: room(ro?.wr), te: room(ro?.te),
+    edge: dls.filter(p => dlSpotOf(p) === 'edge'), dt: dls.filter(p => dlSpotOf(p) === 'dt'),
+    // (LB still hidden: the team's room straight from the data, in the owner's order)
+    lb: ro?.lb ? room(ro.lb) : (S.pool.lb ?? []).filter(p => p.team === short && p.name !== c.name && !gone.includes(p.name)),
+    cb: dbs.filter(p => spotOf(p) === 'cb'), s: dbs.filter(p => spotOf(p) === 's'),
+  }
+  // the real men (the data's) first, everywhere; a man the career drafted only for a starting spot no real man can fill
+  const ix = castIndex(S), real = Object.fromEntries(Object.entries(all).map(([k, l]) => [k, l.filter(p => ix.has(p.name))]))
+  // (once on each side of the ball: a two-way man, Travis Hunter, can line up at receiver and at corner)
+  const seen = { o: new Set(), d: new Set() }, unit = k => (['qb', 'rb', 'wr', 'te'].includes(k) ? 'o' : 'd')
+  const xi = Object.fromEntries(Object.keys(all).map(k => [k, []]))
+  const fill = (rooms, k, n, from) => { const sn = seen[unit(k)]; for (const p of rooms[from]) { if (xi[k].length >= n) return; if (!sn.has(p.name)) { sn.add(p.name); xi[k].push({ p, g: XI_GROUP[from] ?? from }) } } }
+  for (const k in all) fill(real, k, XI_START[k], k)
+  for (const k in all) for (const n of XI_NEXT[k]) fill(real, k, XI_START[k], n)
+  for (const k in all) fill(real, k, XI_DEEP[k], k)
+  for (const k in all) for (const n of XI_NEXT[k]) fill(real, k, XI_DEEP[k], n)
+  for (const k in all) fill(all, k, XI_START[k], k)
+  for (const k in xi) xi[k] = xi[k].map(({ p, g }) => xiMan(S, g, p))
+  xi.ol = (out.ol ?? []).map(m => ({ ...m, last: m.name, short: m.name, look: { number: m.number, skin: m.skin } }))
+  return xi
+}
+// the shapes the games read: the front four left end to right end; the corners, the safeties, then a nickel and a
+// third safety; and the eleven on the field, offense or defense
+function xiShape(xi) {
+  const at = (k, i) => xi[k]?.[i] ?? null
+  xi.dl = [at('edge', 0), at('dt', 0), at('dt', 1), at('edge', 1)]
+  // (few teams carry a third safety: the bomb's comes off the bench, a backer or a spare lineman)
+  xi.db = [at('cb', 0), at('cb', 1), at('s', 0), at('s', 1), ...[at('cb', 2), at('s', 2), at('lb', 3), at('edge', 2), at('dt', 2)].filter(Boolean).concat(null, null).slice(0, 2)]
+  xi.off = [at('qb', 0), at('rb', 0), at('wr', 0), at('wr', 1), at('wr', 2), at('te', 0), ...[0, 1, 2, 3, 4].map(i => at('ol', i))]
+  xi.def = [...xi.dl, at('lb', 0), at('lb', 1), at('lb', 2), ...xi.db.slice(0, 4)]
+  return xi
+}
+// the build at his own spot in the eleven: a corner or a safety, an end or a tackle, the line at his slot.
+// (two men in one uniform can't wear one number: his is already clear of the real men's (jerseyOf), so a
+// made-up teammate on it takes the next free one)
+function xiWithMe(c, xi, me) {
+  const spot = c.pos === 'db' ? dbSpot(c) : c.pos === 'dl' ? dlSpot(c) : c.pos
+  if (!xi[spot]) return xi
+  const n = me.number, used = new Set([...Object.values(xi).flat().filter(Boolean).map(m => String(m.number)), String(n)])
+  for (const k in xi) xi[k] = yieldNumber(xi[k], n, used)
+  const m = { ...me, number: n, last: me.name, short: me.name, look: { number: n, skin: me.skin } }
+  if (spot === 'ol') { const at = Math.max(0, OL_SPOTS.indexOf(olSpot(c))), line = [...xi.ol]; line[at] = m; xi.ol = line }
+  else xi[spot] = [m, ...xi[spot]]
+  return xi
 }
 // (opp: the other team's short name; a camp plays against its own)
 // which rating gives a position its face (the same as its figure)
-export const FACE_RATING = { qb: 'processing', rb: 'vision', wr: 'awareness', te: 'awareness', db: 'zoneIQ', dl: 'playRecognition', lb: 'playRecognition', ol: 'blitzPickup', guard: 'basketballIQ', big: 'basketballIQ' }
+export const FACE_RATING = { qb: 'processing', rb: 'vision', wr: 'awareness', te: 'awareness', db: 'zoneIQ', dl: 'playRecognition', lb: 'playRecognition', ol: 'blitzPickup', guard: 'basketballIQ', big: 'basketballIQ', st: 'heading' }
 export function gameCast(c, opp = null) {
   const S = sportOf(c)
   const us = castTeam(c, S, c.team), them = castTeam(c, S, opp ?? c.team)
   const last = String(c.name ?? 'Guest').trim().split(/\s+/).slice(-1)[0].toUpperCase()
-  const me = { name: last, number: c.number ?? castMan(S, c.pos, { name: c.name ?? 'Guest' }).number, skin: c.skin ?? c.build?.[FACE_RATING[c.pos]]?.skinColor ?? c.build?.skin ?? CAST_SKIN[0], speed: Math.max(-1, Math.min(1, ((c.build?.speed?.val ?? c.build?.legs?.val ?? 6) - 6) / 5)), me: true }
+  const me = { name: last, number: jerseyOf(c), skin: c.skin ?? c.build?.[FACE_RATING[c.pos]]?.skinColor ?? c.build?.skin ?? CAST_SKIN[0], speed: Math.max(-1, Math.min(1, ((c.build?.speed?.val ?? c.build?.legs?.val ?? c.build?.pace?.val ?? 6) - 6) / 5)), me: true }
+  const used = new Set([...Object.values(us).filter(Array.isArray).flat().filter(Boolean).map(m => String(m.number)), String(me.number)])
+  for (const g in us) if (Array.isArray(us[g])) us[g] = yieldNumber(us[g], me.number, used)
   us[c.pos] = [me, ...(us[c.pos] ?? [])]
+  if (us.xi) { us.xi = xiShape(xiWithMe(c, us.xi, me)); them.xi = xiShape(them.xi) }
   return { us, them, me }
 }
+// a teammate wearing his number (a made-up one: the real men's are taken in the picker) moves to the next free one
+const yieldNumber = (men, n, used) => men.map(o => {
+  if (!o || o.me || String(o.number) !== String(n)) return o
+  let x = (Number(o.number) || 0) + 1
+  while (used.has(String(x % 100))) x++
+  x %= 100; used.add(String(x))
+  return { ...o, number: x, ...(o.look ? { look: { ...o.look, number: x } } : null) }
+})
+
+// ── The jersey number (c.number): picked after the draft or the signing, and changed in any offseason (the PLAYER
+// tab). The league's rules by spot; a number a real teammate wears is his. A career saved before the pick (no
+// c.number) wears the one the cast always gave him, moved onto a legal one. After a move his pick goes with him
+// while it's free there; if a man on the new team has it he wears the next free one until he picks again
+const NFL_NUMS = { qb: [[0, 49], [80, 89]], rb: [[0, 49], [80, 89]], wr: [[0, 49], [80, 89]], te: [[0, 49], [80, 89]], db: [[0, 49]], lb: [[0, 59], [90, 99]], ol: [[50, 79]], dl: [[50, 79], [90, 99]], edge: [[0, 79], [90, 99]] }
+const numSpan = ([a, b]) => Array.from({ length: b - a + 1 }, (_, i) => a + i)
+export function numberRule(c) {
+  const S = sportOf(c)
+  if (S.isBucket) return { nums: [0, '00', ...numSpan([1, 99])], text: '0 to 99, and 00' }
+  if (S.isSoccer) return { nums: numSpan([1, 99]), text: '1 to 99' }
+  if (S.isBaseball || !NFL_NUMS[c.pos]) return { nums: numSpan([0, 99]), text: '0 to 99' }
+  const r = NFL_NUMS[c.pos === 'dl' && dlSpot(c) === 'edge' ? 'edge' : c.pos]
+  return { nums: r.flatMap(numSpan), text: r.map(([a, b]) => `${a} to ${b}`).join(' or ') }
+}
+// the numbers the real men on a team wear (the data's own): number → his name
+export function takenNumbers(c, short = c.team) {
+  const out = new Map()
+  if (!short) return out
+  const S = sportOf(c), ix = S.x?.castIndex ?? castIndex(S), ro = rosterFor(c, short) ?? {}
+  const add = p => { const n = ix.get(p?.name)?.number; if (p?.name && p.name !== c.name && n != null && !out.has(String(n))) out.set(String(n), p.name) }
+  for (const g of S.groups) (ro[g] ?? []).forEach(add)
+  // (LB still hidden: the team's backers straight from the data; soccer: the wingers and midfielders around the No. 9)
+  if (S.slots?.ol && !ro.lb) { const gone = outOf(c, short); (S.pool.lb ?? []).filter(p => p.team === short && !gone.includes(p.name)).forEach(add) }
+  if (S.x?.castMates) S.x.castMates(short).forEach(add)
+  return out
+}
+// the number he wears: his pick while it's legal and free, else the next free legal one
+export function jerseyOf(c, taken = takenNumbers(c)) {
+  const { nums } = numberRule(c)
+  const want = c.number ?? castMan(sportOf(c), c.pos, { name: c.name ?? 'Guest' }).number
+  let i = nums.findIndex(n => String(n) === String(want))
+  if (i < 0) i = Math.max(0, nums.findIndex(n => Number(n) >= Number(want)))
+  for (let k = 0; k < nums.length; k++) { const n = nums[(i + k) % nums.length]; if (!taken.has(String(n))) return n }
+  return nums[i]
+}
+// his pick, taken on the team he's joined: the teammate who wears it (a quiet line asks him to pick again)
+export const numberClash = c => (c.number != null && c.team ? takenNumbers(c).get(String(c.number)) ?? null : null)
+// after the draft or the signing, and in the offseason: never mid-season
+export const canChangeNumber = c => !!c?.team && (c.phase === 'preseason' || c.phase === 'offseason')
+export const setNumber = (c, n) => ({ ...c, number: n })
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
 // A DB's spot: a corner or a safety (his build says which); the depth chart is that spot's
@@ -809,7 +949,9 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
   const S = sportOf(c)
   // DBs: only the players at his spot (corners with corners, safeties with safeties), two start; a line the same (edges, tackles)
   const db = c.pos === 'db', dl = c.pos === 'dl', ol = c.pos === 'ol'
-  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (db ? spotOf(p) === dbSpot(c) : ol ? olSlotOf(p) === olSpot(c) : !dl || dlSpotOf(p) === dlSpot(c)))
+  // (a registered sport's own room: baseball's pitchers, a starter with the rotation and a reliever with the bullpen)
+  const own = S.x?.depth?.(c) ?? null
+  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (own ? own.same(p) : db ? spotOf(p) === dbSpot(c) : ol ? olSlotOf(p) === olSpot(c) : !dl || dlSpotOf(p) === dlSpot(c)))
   const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
   // last year's starter keeps it in a tie; the coaches trust a good name (+1) and doubt a bad one (−1)
   const trust = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
@@ -827,8 +969,8 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
     all.splice(him && w?.kind !== 'traded' ? at : Math.min(at, all.length), 0, me)
   }
   const idx = all.findIndex(p => p.you)
-  const starters = db || dl ? 2 : ol ? 1 : S.starters[c.pos]
-  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: ol ? `${olSpot(c)}${idx + 1}` : dl ? `${dlSpotLabel(dlSpot(c))}${idx + 1}` : db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
+  const starters = own ? own.starters : db || dl ? 2 : ol ? 1 : S.starters[c.pos]
+  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: own ? own.label(idx + 1) : ol ? `${olSpot(c)}${idx + 1}` : dl ? `${dlSpotLabel(dlSpot(c))}${idx + 1}` : db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
 }
 // The starters, you in your spot if you've won it
 export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
@@ -885,7 +1027,7 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
   const S = SPORT[sport] ?? SPORT.nfl
   const t = S.teamOf(short)
   const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs, gone)
-  const f = S.fit(ro, pos, p => p.name !== name, spot)
+  const f = S.fit(ro, pos, p => p.name !== name, spot, short, yrs)
   const drift = league?.[short] ?? { off: 0, def: 0 }
   const off = clamp(r10(t.off + drift.off), 1, 10), def = clamp(r10(t.def + drift.def), 1, 10)
   return {
@@ -961,8 +1103,23 @@ function signDeal(c, tr) {
   const text = `The ${nickOf(S, c.team)} trade for ${p.name} from the ${nickOf(S, p.team)}${left.length ? `. ${left.join(' and ')} ${left.length > 1 ? 'go' : 'goes'} the other way` : ''}.`
   return { ...next, fit: fitFor(next), events: [...c.events, { year: c.year + 1, text }] }
 }
-// Every offseason the league moves: good teams slip, bad ones climb, some lurch
-function driftLeague(c, r) {
+// Every offseason the league moves. Each side of the ball keeps PARITY_KEEP of where it stands against the
+// league's middle and takes a fresh swing sized so the league stays as spread out as it is today: a bottom
+// team can be a contender in a few years, and a top one doesn't stay there for good. Year one is the real league.
+// (2026-11-08: before, the drift was tied to today's grades and a team's own level never moved: in 200 runs of
+// 30 seasons a bottom-five team never once reached the top five, and strength carried over 0.9 year to year)
+// Soccer keeps the old drift (oldDrift below): the big clubs' money keeps them on top, and with parity a
+// career at a top club went from about 4.4 trophies to 0.9
+const PARITY_KEEP = { nfl: 0.55, bucket: 0.7, baseball: 0.65 }
+const leagueShape = {}
+function shapeOf(S) {
+  if (leagueShape[S.id ?? 'nfl']) return leagueShape[S.id ?? 'nfl']
+  const ts = S.teams.map(x => S.teamOf(x.short))
+  const side = k => { const v = ts.map(t => t[k]), m = v.reduce((a, b) => a + b, 0) / v.length; return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length) || 1 } }
+  return (leagueShape[S.id ?? 'nfl'] = { off: side('off'), def: side('def') })
+}
+// good teams slip, bad ones climb a little, some lurch, around today's grades (soccer)
+function oldDrift(c, r) {
   const S = sportOf(c)
   const league = {}
   for (const x of S.teams) {
@@ -973,10 +1130,27 @@ function driftLeague(c, r) {
   }
   return league
 }
+function driftLeague(c, r) {
+  const S = sportOf(c)
+  if (PARITY_KEEP[S.id ?? 'nfl'] == null) return oldDrift(c, r)
+  const shape = shapeOf(S)
+  const keep = PARITY_KEEP[S.id ?? 'nfl'], swing = Math.sqrt(1 - keep * keep)
+  const gauss = () => (r() + r() + r() + r() - 2) * Math.sqrt(3)   // (about a bell curve, spread 1)
+  const league = {}
+  for (const x of S.teams) {
+    const t = S.teamOf(x.short)
+    const d = c.league?.[t.short] ?? { off: 0, def: 0 }
+    // (most of a team's swing is the whole team, a new coach or a new quarterback: both sides together)
+    const g0 = gauss()
+    const move = k => { const { m, sd } = shape[k], now = t[k] + (d[k] ?? 0), g = 0.75 * g0 + 0.66 * gauss(); return r10(clamp(m + (now - m) * keep + g * sd * swing, 1.5, 9.8) - t[k]) }
+    league[t.short] = { off: move('off'), def: move('def') }
+  }
+  return league
+}
 const FIRSTS = ['Jaylen', 'Marcus', 'Tre', 'Deon', 'Cole', 'Isaiah', 'Brock', 'Malik', 'Owen', 'Darius', 'Kade', 'Xavier', 'Jordan', 'Bryce', 'Quentin', 'Tyson', 'Elijah', 'Grant', 'Rashad', 'Mason']
 const LASTS = ['Whitfield', 'Okafor', 'Banks', 'Delaney', 'Price', 'Henley', 'Mayfield', 'Corbin', 'Osei', 'Tatum', 'Rhodes', 'Vickers', 'Lyle', 'Stroud', 'Barlow', 'Kemp', 'Navarro', 'Sutton', 'Fofana', 'Hale']
 const rookieName = r => `${FIRSTS[Math.floor(r() * FIRSTS.length)]} ${LASTS[Math.floor(r() * LASTS.length)]}`
-const nickOf = (S, short) => nick(S.teamOf(short).name)
+const nickOf = (S, short) => S.teamOf(short).nick ?? nick(S.teamOf(short).name)   // (a team's own nickname when it has one: the Red Sox, the Blue Jays)
 // The offseason on your team: everyone a year older, some better, some done;
 // players leave, retire, get signed and drafted. Returns the new roster and
 // the moves, in the order they'd hit the news.
@@ -992,17 +1166,17 @@ function rosterMoves(c, r) {
   const takenLB = new Set((old.lb ?? []).map(p => p.name))
   const rLB = seeded(`${c.seed}-off-lb-${c.year}`)
   const r0 = r
-  const gl = (g, p = null) => (S.isBucket ? (g === 'guard' ? 'G' : 'F/C') : g === 'dl' && p ? dlSpotLabel(dlSpotOf(p)) : g.toUpperCase())
+  const gl = (g, p = null) => (S.groupLabel ? S.groupLabel(g, p) : S.isBucket ? (g === 'guard' ? 'G' : 'F/C') : g === 'dl' && p ? dlSpotLabel(dlSpotOf(p)) : g.toUpperCase())
   for (const g of S.groups) {
     const r = g === 'dl' ? rDL : g === 'lb' ? rLB : r0, taken = g === 'dl' ? takenDL : g === 'lb' ? takenLB : taken0
     const grow = age => ageStep(age, r())   // the same curve as the rest of the league (makeRoster)
     const kept = []
     for (const p0 of old[g] ?? []) {
       const p = { ...p0, age: p0.age + 1, ovr: clamp(grownOvr(p0, grow(p0.age + 1)), 55, 99) }
-      if (p.age >= RETIRE_AT[g] || (p.age >= RETIRE_AT[g] - 2 && r() < 0.35)) { moves.push({ kind: 'retire', pos: g, label: gl(g, p), text: `${p.name} retires after ${p.age - 22} seasons.`, p }); continue }
+      if (p.age >= RETIRE_AT[g] || (p.age >= RETIRE_AT[g] - 2 && r() < 0.35)) { moves.push({ kind: 'retire', pos: g, label: gl(g, p), text: S.isSoccer ? `${p.name} hangs up his boots at ${p.age}.` : `${p.name} retires after ${p.age - 22} seasons.`, p }); continue }
       if (p.age > 25 && r() < 0.11) {   // the young ones are still on rookie deals
         const to = S.teams[Math.floor(r() * S.teams.length)].short
-        if (to !== ro.team) { moves.push({ kind: 'leave', pos: g, label: gl(g, p), text: `${p.name} leaves in free agency for the ${nickOf(S, to)}.`, p }); continue }
+        if (to !== ro.team) { moves.push({ kind: 'leave', pos: g, label: gl(g, p), text: S.isSoccer ? `${p.name} is sold to ${S.teamOf(to).name}.` : `${p.name} leaves in free agency for the ${nickOf(S, to)}.`, p }); continue }
       }
       kept.push(p)
     }
@@ -1020,17 +1194,17 @@ function rosterMoves(c, r) {
           const p = { ...man(S, g, pick, rosterYrs(c)), slot: need ?? pick.pos ?? null }
           if (p.age >= RETIRE_AT[g] - 1) continue
           taken.add(p.name); kept.push(p)
-          moves.push({ kind: 'sign', pos: g, label: gl(g, p), text: `Signed ${gl(g, p)} ${p.name} from the ${nickOf(S, pick.team)}.`, p })
+          moves.push({ kind: 'sign', pos: g, label: gl(g, p), text: S.isSoccer ? `Signed ${p.name} from ${S.teamOf(pick.team).name}.` : `Signed ${gl(g, p)} ${p.name} from the ${nickOf(S, pick.team)}.`, p })
           continue
         }
       }
       const rd = 1 + Math.floor(r() * S.draft.rounds)
       // (at a one-starter position, your pick comes in behind you: a backup, not a new star)
       const pickOvr = clamp(Math.round(79 - rd * (S.isBucket ? 3 : 1.5) + (r() + r() - 1) * 8), 60, 88)
-      const p0 = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)])), pos: g, ovr: g === c.pos && S.starters[g] === 1 ? Math.max(60, Math.min(pickOvr, c.ovr - 8)) : pickOvr, age: 22, photo: null, slot: need ?? lineNeed ?? (g === 'db' ? shortSpot(kept) : null), rookie: true }
+      const p0 = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)]), g), pos: g, ovr: g === c.pos && S.starters[g] === 1 ? Math.max(60, Math.min(pickOvr, c.ovr - 8)) : pickOvr, age: S.isSoccer ? 19 : 22, photo: null, slot: need ?? lineNeed ?? (g === 'db' ? shortSpot(kept) : null), rookie: true }
       const p = withBody(p0)
       kept.push(p)
-      moves.push({ kind: 'draft', pos: g, label: gl(g, p), text: `Drafted ${gl(g, p)} ${p.name} in round ${rd}.`, p })
+      moves.push({ kind: 'draft', pos: g, label: gl(g, p), text: S.isSoccer ? `${p.name} comes up from the academy.` : `Drafted ${gl(g, p)} ${p.name} in round ${rd}.`, p })
     }
     ro[g] = g === 'dl' ? keepLine(kept, Math.max(S.keep[g], kept.length)) : slots ? slots.map(s => kept.find(p => p.slot === s)).filter(Boolean).concat(kept.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g]) : kept.sort(byOvr)
   }
@@ -1042,9 +1216,9 @@ function rosterMoves(c, r) {
   if (r() < rivalOdds && !(oneJob && (ro[c.pos] ?? []).some(p => p.rookie && p.age <= 24 && (c.pos !== 'ol' || olSlotOf(p) === olSpot(c))))) {
     const rd = 1 + Math.floor(r() * 2)
     // (at your own spot: a safety's rival is a safety)
-    const p = withBody({ name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name))), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 84), age: 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : c.pos === 'dl' ? { slot: dlSpot(c) } : c.pos === 'ol' ? { slot: olSpot(c) } : {}) })
-    ro[c.pos] = c.pos === 'dl' ? keepLine([...ro.dl, p], S.keep.dl) : c.pos === 'ol' ? [...ro.ol, p] : [...ro[c.pos], p].sort(byOvr).slice(0, S.keep[c.pos])
-    moves.push({ kind: 'rival', pos: c.pos, label: c.pos === 'ol' ? p.slot : gl(c.pos, p), text: `The ${nickOf(S, ro.team)} draft ${c.pos === 'dl' ? gl('dl', p) : c.pos === 'ol' ? p.slot : S.label[c.pos]} ${p.name} in round ${rd}. Competition for your ${S.snaps}.`, p })
+    const p = withBody({ name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name)), c.pos), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 84), age: S.isSoccer ? 20 : 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : c.pos === 'dl' ? { slot: dlSpot(c) } : c.pos === 'ol' ? { slot: olSpot(c) } : {}) })
+    ro[c.pos] = c.pos === 'dl' ? keepLine([...ro.dl, p], S.keep.dl) : c.pos === 'ol' ? [...ro.ol, p] : [...(ro[c.pos] ?? []), p].sort(byOvr).slice(0, S.keep[c.pos])
+    moves.push({ kind: 'rival', pos: c.pos, label: c.pos === 'ol' ? p.slot : gl(c.pos, p), text: S.isSoccer ? `${S.teamOf(ro.team).name} sign a young striker, ${p.name}. Competition for the shirt.` : `The ${nickOf(S, ro.team)} draft ${c.pos === 'dl' ? gl('dl', p) : c.pos === 'ol' ? p.slot : S.groupLabel ? gl(c.pos, p) : S.label[c.pos]} ${p.name} in round ${rd}. Competition for ${c.name}'s ${S.snaps}.`, p })
   }
   return { roster: ro, moves }
 }
@@ -1055,11 +1229,11 @@ function rosterMoves(c, r) {
 // stock with everyone, and that team's interest most of all.
 export const INTERVIEWS = {
   nfl: [
-    { who: 'General manager', q: 'We have a veteran at your spot. Could you sit and learn for a year?', a: [
+    { who: 'General manager', q: 'We have a veteran at the position. A year of sitting and learning: is that a problem?', a: [
       { t: 'Whatever helps the team. I\'ll be ready when you need me.', stock: 1, persona: 'grinder' },
       { t: 'I\'ll compete for the job from the first practice.', stock: 2, persona: 'confident' },
       { t: 'I didn\'t come here to hold a clipboard.', stock: -1, persona: 'cocky' } ] },
-    { who: 'Head coach', q: 'We won four games last year. Why would you want to come here?', a: [
+    { who: 'Head coach', q: 'We won four games last year. Why come here?', a: [
       { t: 'Somebody has to turn it around. I want to be the reason.', stock: 2, persona: 'grinder' },
       { t: 'You\'re a couple of players away. I\'m one of them.', stock: 1, persona: 'confident' },
       { t: 'Honestly, I\'d rather go to a winner.', stock: -2, persona: 'cocky' } ] },
@@ -1067,7 +1241,7 @@ export const INTERVIEWS = {
       { t: 'He vacated the deep middle. Post, over the top.', stock: 2, persona: 'confident' },
       { t: 'Check it to the run. Seven in the box isn\'t eight.', stock: 1, persona: 'grinder' },
       { t: 'Wherever I see it. I just make plays.', stock: -1, persona: 'cocky' } ] },
-    { who: 'Owner', q: 'What would you do with your first real contract?', a: [
+    { who: 'Owner', q: 'The first real contract. Where does that money go?', a: [
       { t: 'Take care of my family. Then get back to work.', stock: 1, persona: 'grinder' },
       { t: 'Nothing changes. The next one\'s bigger.', stock: 1, persona: 'confident' },
       { t: 'Cars. I\'m not going to lie to you.', stock: -1, persona: 'cocky' } ] },
@@ -1075,7 +1249,7 @@ export const INTERVIEWS = {
       { t: 'Fully healed. Here are my rehab notes, read them.', stock: 2, persona: 'grinder' },
       { t: 'Never missed a game because of it.', stock: 1, persona: 'confident' },
       { t: 'Doctors worry too much.', stock: -2, persona: 'cocky' } ] },
-    { who: 'Head coach', q: 'Tell me about the last time you got benched.', a: [
+    { who: 'Head coach', q: 'The last benching. Tell me about it.', a: [
       { t: 'Junior year, I fumbled twice. I fixed it, and I earned it back.', stock: 2, persona: 'grinder' },
       { t: 'I haven\'t been benched since high school.', stock: 0, persona: 'confident' },
       { t: 'It was the coach\'s fault, honestly.', stock: -2, persona: 'cocky' } ] },
@@ -1083,7 +1257,7 @@ export const INTERVIEWS = {
       { t: 'Not much, but I\'ve been studying your tape all spring.', stock: 2, persona: 'grinder' },
       { t: 'I\'ll learn any system in a week.', stock: 1, persona: 'confident' },
       { t: 'Systems don\'t matter. Talent does.', stock: -1, persona: 'cocky' } ] },
-    { who: 'General manager', q: 'A teammate trashes you in the press. What do you do?', a: [
+    { who: 'General manager', q: 'A teammate trashes the new guy in the press. What happens next?', a: [
       { t: 'Talk to him face to face. Keep it in the building.', stock: 2, persona: 'grinder' },
       { t: 'Let my play answer it on Sunday.', stock: 1, persona: 'confident' },
       { t: 'Fire back online. People should know.', stock: -2, persona: 'cocky' } ] },
@@ -1093,11 +1267,11 @@ export const INTERVIEWS = {
       { t: 'Not even close. Me, then everyone else.', stock: -1, persona: 'cocky' } ] },
   ],
   bucket: [
-    { who: 'General manager', q: 'We have an All-Star at your spot. Could you come off the bench for a year?', a: [
+    { who: 'General manager', q: 'We have an All-Star at the position. A year off the bench: is that a problem?', a: [
       { t: 'Whatever the team needs. I\'ll earn the minutes.', stock: 1, persona: 'grinder' },
       { t: 'I\'ll compete for the job from the first practice.', stock: 2, persona: 'confident' },
       { t: 'I didn\'t come here to sit.', stock: -1, persona: 'cocky' } ] },
-    { who: 'Head coach', q: 'We won twenty games last year. Why would you want to come here?', a: [
+    { who: 'Head coach', q: 'We won twenty games last year. Why come here?', a: [
       { t: 'Somebody has to turn it around. I want to be the reason.', stock: 2, persona: 'grinder' },
       { t: 'You\'re a piece or two away. I\'m one of them.', stock: 1, persona: 'confident' },
       { t: 'Honestly, I\'d rather go to a winner.', stock: -2, persona: 'cocky' } ] },
@@ -1105,7 +1279,7 @@ export const INTERVIEWS = {
       { t: 'The corner is open. Kick it out before the rotation gets there.', stock: 2, persona: 'confident' },
       { t: 'Hit the roll man. He\'s got the lane.', stock: 1, persona: 'grinder' },
       { t: 'Finish through it. I don\'t pass out of that.', stock: -1, persona: 'cocky' } ] },
-    { who: 'Owner', q: 'What would you do with your first real contract?', a: [
+    { who: 'Owner', q: 'The first real contract. Where does that money go?', a: [
       { t: 'Take care of my family. Then get back in the gym.', stock: 1, persona: 'grinder' },
       { t: 'Nothing changes. The next one\'s bigger.', stock: 1, persona: 'confident' },
       { t: 'Cars. I\'m not going to lie to you.', stock: -1, persona: 'cocky' } ] },
@@ -1113,15 +1287,15 @@ export const INTERVIEWS = {
       { t: 'Fully healed. Here are my rehab notes, read them.', stock: 2, persona: 'grinder' },
       { t: 'Never missed a game because of it.', stock: 1, persona: 'confident' },
       { t: 'Doctors worry too much.', stock: -2, persona: 'cocky' } ] },
-    { who: 'Head coach', q: 'Tell me about the last time you got pulled from a game.', a: [
+    { who: 'Head coach', q: 'The last time a coach pulled the plug mid-game. Tell me about it.', a: [
       { t: 'Sophomore year, four turnovers in a half. I fixed it, and I earned it back.', stock: 2, persona: 'grinder' },
       { t: 'I haven\'t been pulled since high school.', stock: 0, persona: 'confident' },
       { t: 'It was the coach\'s fault, honestly.', stock: -2, persona: 'cocky' } ] },
-    { who: 'Player development coach', q: 'We switch everything on defense. Can you guard one through five?', a: [
+    { who: 'Player development coach', q: 'We switch everything on defense. One through five, every night. Ready for that?', a: [
       { t: 'I\'ll guard whoever you put in front of me. Show me the film.', stock: 2, persona: 'grinder' },
       { t: 'I\'ll lock up anyone.', stock: 1, persona: 'confident' },
       { t: 'Defense is for the guys who can\'t score.', stock: -2, persona: 'cocky' } ] },
-    { who: 'General manager', q: 'A teammate calls you out on a podcast. What do you do?', a: [
+    { who: 'General manager', q: 'A teammate calls out the new guy on a podcast. What happens next?', a: [
       { t: 'Talk to him face to face. Keep it in the building.', stock: 2, persona: 'grinder' },
       { t: 'Let my game answer it on the floor.', stock: 1, persona: 'confident' },
       { t: 'Fire back online. People should know.', stock: -2, persona: 'cocky' } ] },
@@ -1133,53 +1307,53 @@ export const INTERVIEWS = {
 }
 // A lineman's room: nobody asks him where the ball goes. The offensive questions swap for these
 const DL_INTERVIEWS = [
-  { who: 'Defensive line coach', q: 'The tackle sets vertical on you and jumps out fast. What\'s the counter?', a: [
+  { who: 'Defensive line coach', q: 'The tackle sets vertical and jumps out fast. What\'s the counter?', a: [
     { t: 'Long arm right into his chest. If he\'s jumping out, he\'s already off balance.', stock: 2, persona: 'confident' },
     { t: 'Inside move off the first step. Make him pay for overplaying the edge.', stock: 1, persona: 'grinder' },
     { t: 'Doesn\'t matter. I just run past him.', stock: -1, persona: 'cocky' } ] },
-  { who: 'Defensive coordinator', q: 'Third and two, they\'re in shotgun, and the guard\'s weight is back. What are you thinking?', a: [
+  { who: 'Defensive coordinator', q: 'Third and two, they\'re in shotgun, and the guard\'s weight is back. What\'s the read?', a: [
     { t: 'Pass. Get off on the ball and win the gap, but finish the rush lane.', stock: 2, persona: 'grinder' },
     { t: 'He\'s tipping it. I\'ll be in the backfield before he sets.', stock: 1, persona: 'confident' },
     { t: 'I don\'t read guards. I rush the passer.', stock: -1, persona: 'cocky' } ] },
-  { who: 'Defensive coordinator', q: 'We\'d ask you to two-gap on early downs. Fewer sacks, more dirty work. Problem?', a: [
+  { who: 'Defensive coordinator', q: 'We two-gap on early downs. Fewer sacks, more dirty work. Problem?', a: [
     { t: 'No. If the run stops, I get the third downs I want.', stock: 2, persona: 'grinder' },
     { t: 'I\'ll do it, and I\'ll still get mine on third down.', stock: 1, persona: 'confident' },
     { t: 'You\'re not paying me to take on doubles.', stock: -2, persona: 'cocky' } ] },
-  { who: 'Head coach', q: 'Tell me about the last time you got benched.', a: [
+  { who: 'Head coach', q: 'The last benching. Tell me about it.', a: [
     { t: 'Junior year, three offsides in a half. I fixed it, and I earned it back.', stock: 2, persona: 'grinder' },
     { t: 'I haven\'t been benched since high school.', stock: 0, persona: 'confident' },
     { t: 'It was the coach\'s fault, honestly.', stock: -2, persona: 'cocky' } ] },
 ]
 // A linebacker's room: the same swap, and his own questions
 const LB_INTERVIEWS = [
-  { who: 'Linebackers coach', q: 'They motion the tight end across and the back flips to your side. Who has the run fit?', a: [
+  { who: 'Linebackers coach', q: 'They motion the tight end across and the back flips to the strong side. Who has the run fit?', a: [
     { t: 'I do. I check the front, I fit the new strength side, and I trust the safety over the top.', stock: 2, persona: 'grinder' },
     { t: 'I see it before the ball\'s snapped. I\'m there before the back is.', stock: 1, persona: 'confident' },
     { t: 'I just find the ball. Somebody else can sort out the gaps.', stock: -1, persona: 'cocky' } ] },
-  { who: 'Defensive coordinator', q: 'Third and seven, you have the hook and the slot runs the shallow cross. What do you do?', a: [
+  { who: 'Defensive coordinator', q: 'Third and seven, the hook zone in a cover 3, and the slot runs the shallow cross. What\'s the play?', a: [
     { t: 'Wall him off, carry him to the next man, and keep my eyes on the quarterback.', stock: 2, persona: 'grinder' },
     { t: 'Sit on it. If he throws it, it\'s mine.', stock: 1, persona: 'confident' },
     { t: 'I\'d rather be blitzing, honestly.', stock: -1, persona: 'cocky' } ] },
-  { who: 'Head coach', q: 'You\'d wear the green dot: every call goes through your helmet. Ready for that?', a: [
+  { who: 'Head coach', q: 'The green dot: every call goes through the middle linebacker\'s helmet. Ready for that?', a: [
     { t: 'Yes. I\'ll know the call sheet better than anyone in the room by August.', stock: 2, persona: 'grinder' },
     { t: 'I\'ve run defenses since high school. Give it to me.', stock: 1, persona: 'confident' },
     { t: 'Sure, as long as the calls are my calls.', stock: -2, persona: 'cocky' } ] },
 ]
 // An offensive lineman's room: the same swap (nobody asks him where the ball goes), and the line's own questions
 const OL_INTERVIEWS = [
-  { who: 'Offensive line coach', q: 'The end widens out and the linebacker creeps up into your gap. How do you set?', a: [
+  { who: 'Offensive line coach', q: 'The end widens out and the linebacker creeps up into the gap. What\'s the set?', a: [
     { t: 'Short set, eyes inside. If the linebacker comes, he is mine first, and the end has a long way to go.', stock: 2, persona: 'grinder' },
     { t: 'Jump the end at the line. I win before the linebacker gets there.', stock: 1, persona: 'confident' },
     { t: 'I just block whoever is in front of me.', stock: -1, persona: 'cocky' } ] },
-  { who: 'Offensive coordinator', q: 'We run wide zone. Your man slants inside at the snap. What now?', a: [
+  { who: 'Offensive coordinator', q: 'We run wide zone. The man across slants inside at the snap. What now?', a: [
     { t: 'Stay on my track, get my head across, and let the back cut it back.', stock: 2, persona: 'grinder' },
     { t: 'Ride him down inside. The back will find the crease behind me.', stock: 1, persona: 'confident' },
     { t: 'I would rather run power. I like moving people.', stock: -1, persona: 'cocky' } ] },
-  { who: 'Head coach', q: 'Tell me about the last time you got benched.', a: [
+  { who: 'Head coach', q: 'The last benching. Tell me about it.', a: [
     { t: 'Junior year, three false starts in one half. I fixed my get-off, and I earned it back.', stock: 2, persona: 'grinder' },
     { t: 'I haven\'t been benched since high school.', stock: 0, persona: 'confident' },
     { t: 'It was the coach\'s fault, honestly.', stock: -2, persona: 'cocky' } ] },
-  { who: 'General manager', q: 'The quarterback gets sacked and the fans blame the line. How do you handle that?', a: [
+  { who: 'General manager', q: 'The quarterback gets sacked and the fans blame the line. How does that get handled?', a: [
     { t: 'I watch the tape. If it was mine, I say so in the room and I fix it.', stock: 2, persona: 'grinder' },
     { t: 'Then I make sure it is never mine.', stock: 1, persona: 'confident' },
     { t: 'Half of those are the quarterback holding the ball.', stock: -2, persona: 'cocky' } ] },
@@ -1213,9 +1387,19 @@ const drillValue = (id, v, score, raw, pos) => {
     case 'gauntlet': { const of = raw?.of ?? 7, m = cnt(of, 2); return { text: `${m} of ${of} caught`, pct: pc((m / of - 0.7) * 3.3) } }
     case 'bench': { const typ = benchTypical(id, pos), n = raw?.reps ?? Math.round(typ * (0.45 + score * 1.1)); return { text: `${n} reps`, pct: pc((n - typ) / 8) } }
     case 'nbench': { const typ = benchTypical(id, pos), n = raw?.reps ?? Math.round(typ * (0.45 + score * 1.1)); return { text: `${n} reps`, pct: pc((n - typ) / 6) } }
-    default: return { text: '—', pct: 0 }
+    // soccer's academy trial: 30 metres from a standing start, the slalom's clean touches, five shots at the corners
+    case 'sprint30': { const s = raw?.secs ?? dashTarget(id, pos, v) + 0.06 - run * 0.12; return { text: `${s.toFixed(2)}s`, pct: pc((dashTypical(id, pos) - s) / 0.14) } }
+    // (a clean run at a B is about 5.8 seconds; every heavy touch or clipped pole costs time)
+    case 'slalom': { const of = raw?.of ?? 6, m = cnt(of, 2), s = raw?.secs ?? 7.2 - t * 2.4 + (of - m) * 0.35 - run * 0.25; return { text: `${s.toFixed(2)}s · ${m}/${of} clean`, pct: pc((6.1 - s) / 0.6) } }
+    case 'finishing': { const of = raw?.of ?? 5, m = cnt(of); return { text: `${m} of ${of} on target`, pct: pc((m / of - 0.55) * 2.4) } }
+    // (keep-ups, then the coach's driven balls killed dead: a point a keep-up, three a ball, 15 a pass, 21 the most)
+    case 'first-touch': { const of = raw?.of ?? 3, m = cnt(of), u = raw?.ups ?? Math.round(clamp(2 + t * 8 + run * 8, 0, 12)); return { text: `${u} keep-ups · ${m}/${of} controlled`, pct: pc((u + m * 3 - 14) / 6) } }
+    // (a registered sport's own drills: baseball's showcase, lib/careerBaseball.js)
+    default: return DRILLS_X[id] ? DRILLS_X[id](v, score, raw, pos) : { text: '—', pct: 0 }
   }
 }
+const DRILLS_X = {}
+export const registerDrills = fns => { Object.assign(DRILLS_X, fns) }
 // who the combine's norms read: a lineman runs by his spot (a tackle isn't timed like an edge)
 export const combinePos = c => (c.pos === 'dl' ? dlSpot(c) : c.pos)
 // Skipping the rest of the workout: scouts write down a poor one, whatever the trait
@@ -1240,7 +1424,8 @@ export function stockOf(c) {
   const played = d.combine.filter(x => x.pct != null)
   const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
   const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
-  const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2))     // a good answer: about two picks earlier
+  // (a college résumé, START IN COLLEGE: c.college.stock picks earlier, or later, a nudge of at most seven)
+  const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2) - (c.college?.stock ?? 0))     // a good answer: about two picks earlier
   // football: the top two picks are a quarterback's. Anyone else goes 3rd at
   // best (2nd for a 95+ who forces it), never 1st
   const top = S.isBucket || c.pos === 'qb' ? 1 : c.ovr >= 95 ? 2 : 3
@@ -1251,6 +1436,7 @@ export function stockOf(c) {
 const ordinal = n => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`)
 const band = (o, sport) => { const n = (SPORT[sport] ?? SPORT.nfl).teams.length, { round, slot } = pickLabel(o, sport); return { round, part: slot <= Math.ceil(n / 3) ? 'Early' : slot <= Math.ceil(n * 2 / 3) ? 'Mid' : 'Late' } }
 export function stockText(c) {
+  if (sportOf(c).x?.academyText) return sportOf(c).x.academyText(c)
   const { lo, hi } = stockOf(c)
   const a = band(lo, c.sport), b = band(hi, c.sport)
   if (a.round === b.round) return a.part === b.part ? `${a.part} ${ordinal(a.round)} round` : `${a.part}–${b.part.toLowerCase()} ${ordinal(a.round)} round`
@@ -1291,6 +1477,7 @@ function divRival(c) {
   return { ...t, nick: nick(t.name), div: me.div }
 }
 export function setupInterviews(c) {
+  if (sportOf(c).x?.interviews) return sportOf(c).x.interviews(c)
   const S = sportOf(c)
   const r = seeded(`int-${c.seed}`)
   const order = draftOrder(c), N = order.length
@@ -1309,25 +1496,104 @@ export function setupInterviews(c) {
 export const GAMES_MODES = [['advanced', 'ADVANCED'], ['simple', 'SIMPLE'], ['off', 'NONE']]
 export const gamesMode = c => (['simple', 'advanced', 'off'].includes(c?.games) ? c.games : c?.simGames ? 'off' : 'advanced')
 export const setGamesMode = (c, mode) => ({ ...c, games: mode, simGames: mode === 'off' })
-export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null, games = 'advanced' }) {
+// ── The body: the real man behind the build's Size chip, his height and weight ──
+// (the chip carries them when the builder put them there: DL, LB, OL, basketball, College Football;
+// otherwise from his position's pools by name, today's and all-time. Quarterbacks, and the all-time
+// backs and receivers, keep theirs in a list of their own.) Soccer and baseball: the durability trait's chip.
+const BIO_LISTS = { qb: [QB_PHYSICALS, QB_LEGEND_PHYSICALS], rb: [RB_LEGEND_PHYSICALS], wr: [WR_LEGEND_PHYSICALS] }
+const okBio = p => p?.height > 0 && p?.weight > 0
+const bodyTrait = (S, pos) => S.durTraitOf?.[pos] ?? S.durTrait ?? 'size'
+const dlSub = p => (p.subpos === 'dt' ? 'dt' : 'edge')
+export function bodyOf(build, pos, sport = 'nfl') {
+  const S = SPORT[sport] ?? SPORT.nfl
+  const ch = build?.[bodyTrait(S, pos)]
+  if (!ch) return null
+  const sub = p => (pos === 'dl' ? dlSub(p) : pos === 'db' ? p.subpos ?? null : null)
+  const name = ch.qbFull
+  let hit = null
+  if (name) for (const list of [S.pool?.[pos] ?? [], ALL_TIME_POOL[pos] ?? []]) {
+    for (const p of list) if (p.name === name && (okBio(p) || okBio(ch))) { if (!ch.team || p.team === ch.team) { hit = p; break } hit ??= p }
+    if (hit) break
+  }
+  const spot = ch.subpos ? sub(ch) : hit ? sub(hit) : null
+  if (okBio(ch)) return { height: ch.height, weight: ch.weight, sub: spot }
+  if (okBio(hit)) return { height: hit.height, weight: hit.weight, sub: spot }
+  for (const m of name ? BIO_LISTS[pos] ?? [] : []) if (okBio(m[name])) return { height: m[name].height, weight: m[name].weight, sub: null }
+  return null
+}
+// the build's body, as a broadcast reads it: 6'2" · 215 (null: no bio)
+export const careerBody = c => c?.body ?? bodyOf(c?.build, c?.pos, c?.sport)
+export const bodyText = (b, sep = ' · ') => (b ? `${Math.floor(b.height / 12)}'${b.height % 12}"${sep}${b.weight}` : null)
+// Weight on height at his position: a straight line through the position's real players (today's and
+// all-time, an edge against edges and a tackle against tackles, a corner against corners and a safety
+// against safeties), and how far off it a man usually sits (sd)
+const FRAME_FIT = {}
+function frameFit(sport, pos, sub) {
+  const k = `${sport}|${pos}|${sub ?? ''}`
+  if (FRAME_FIT[k]) return FRAME_FIT[k]
+  const S = SPORT[sport] ?? SPORT.nfl
+  const seen = new Set(), xs = []
+  const add = (name, p, psub) => { if (!okBio(p) || seen.has(name) || (sub && psub !== sub)) return; seen.add(name); xs.push([p.height, p.weight]) }
+  for (const p of [...(S.pool?.[pos] ?? []), ...(ALL_TIME_POOL[pos] ?? [])]) add(p.name, p, pos === 'dl' ? dlSub(p) : p.subpos)
+  for (const m of BIO_LISTS[pos] ?? []) for (const [name, p] of Object.entries(m)) add(name, p, null)
+  if (xs.length < 20) return sub ? frameFit(sport, pos, null) : null
+  const n = xs.length, mx = xs.reduce((a, x) => a + x[0], 0) / n, my = xs.reduce((a, x) => a + x[1], 0) / n
+  const b = xs.reduce((a, x) => a + (x[0] - mx) * (x[1] - my), 0) / Math.max(1, xs.reduce((a, x) => a + (x[0] - mx) ** 2, 0))
+  const sd = Math.max(8, Math.sqrt(xs.reduce((a, x) => a + (x[1] - (my + b * (x[0] - mx))) ** 2, 0) / (n - 2)))
+  return (FRAME_FIT[k] = { at: h => my + b * (h - mx), sd })
+}
+// The frame, football and basketball: his weight against what his position carries at his height, in sds (z).
+// Heavy for his height holds up better, light for it ("a thin frame") breaks down more. Far past the
+// position's norm stops helping and costs a little (heavy backs and linemen wear their knees and ankles out).
+// grade: what it adds to the starting grade, about one either way for a clearly thick or thin frame:
+//   z −1.6 and under −1.3 · z 0 → 0 · z +1.25 → +1 (the best of it) · z +2.5 → about 0 · z +3 and up −0.4
+// (2026-11-08) WR 6'0" 210: z +1.4, +0.9 · WR 6'4" 210: z −0.5, −0.4 · big 6'10" 240: z +0.1, +0.1 · RB 5'9" 215: z +0.75, +0.6
+export function frameOf(c) {
+  const S = sportOf(c)
+  if (S.isSoccer || S.isBaseball || S.durTrait || S.durTraitOf) return null
+  const b = bodyOf(c.build, c.pos, c.sport)
+  const fit = b && frameFit(c.sport, c.pos, c.pos === 'dl' || c.pos === 'db' ? b.sub : null)
+  if (!fit) return null
+  const exp = fit.at(b.height), z = clamp((b.weight - exp) / fit.sd, -4, 5)
+  const grade = z <= 1.25 ? Math.max(-1.3, 0.8 * z) : Math.max(-0.4, 1 - 0.7 * (z - 1.25))
+  return { z: r10(z), exp: Math.round(exp), grade: r10(grade), height: b.height, weight: b.weight }
+}
+// college: where a College Football build came from ({ school, schoolName, line }), when he entered the draft from there
+// start 'college' (football QB, WR, RB): the career opens in college (phase 'college', components/cfb/CareerCollege.jsx),
+// a year younger, and goes to the combine from there
+export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null, games = 'advanced', nation = null, college = null, start = 'draft' }) {
   const S = SPORT[sport] ?? SPORT.nfl
   const seed = Math.random().toString(36).slice(2, 10)
   const r = seeded(`career-${seed}`)
   const types = S.types[pos]
   const ovr = S.ovr(pos, build)
   const drills = S.combine[pos].map(([id, label, trait]) => ({ id, label, trait, score: null, text: null, pct: null }))
-  const dur = build.size?.val ?? 5   // durability is the build's size
+  // Starting durability. Football and basketball (2026-11-08): from the real body behind the Size chip, his
+  // frame (frameOf: heavy or light for his height at his position). A normal frame starts around C+/B-, a
+  // clearly thick one about a grade higher, a thin one about a grade lower, then give or take a grade of luck:
+  // correlated, not decided, and never above B+ (no rookie starts at S). A Size chip with no bio, soccer
+  // (a striker's strength) and baseball (a hitter's speed, a pitcher's stamina) keep the size formula from
+  // before: F size starts around C-, A+ around B+, give or take a grade. Body work and how the career goes
+  // move it from there
+  const body = bodyOf(build, pos, sport)
+  const frame = frameOf({ sport, pos, build })
+  const luck = seeded(`dur-${seed}`)() * 2 - 1
+  const sizeV = build[bodyTrait(S, pos)]?.val ?? 5
+  const dur = (frame ? clamp(4.5 + frame.grade + luck, 1.5, 7.4) : 2 + 0.5 * clamp(sizeV, 0, 11) + luck) / 1.1
   return {
-    v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr,
-    age: (S.isBucket ? 19 : 21) + Math.floor(r() * 2), year: 0, season: FIRST_SEASON,
-    phase: 'draft', step: 'combine',
+    v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr, ...(body ? { body: { height: body.height, weight: body.weight } } : {}),
+    age: (S.isSoccer ? 17 : S.isBucket ? 19 : 21) + Math.floor(r() * 2), year: 0, season: FIRST_SEASON,
+    ...(S.x?.newCareer?.(nation) ?? {}),
+    phase: start === 'college' ? 'college' : 'draft', step: 'combine',
     draft: { combine: drills, interviews: [], picks: null, pick: null, persona: null },
     team: null, fit: null, contract: null, role: 'Starter', lastRole: null, roster: null, league: null, off: null,
-    dev: { points: 0, spent: 0 }, durability: r10(clamp(dur, 1, 10)), rep: 5,
+    dev: { points: 0, spent: 0 }, durability: r10(clamp(dur, 1, 10)), durBase: r10(clamp(dur, 1, 10)), rep: 5,
     injuries: [], seasons: [], events: [], decisions: [], nextMods: null, goals: [],
     active: null, offers: null, tradeAsked: false, hof: null, retired: false, logged: false,
     earnings: 0,
     games: ['simple', 'advanced', 'off'].includes(games) ? games : 'advanced', simGames: games === 'off',
+    ...(college ? { college } : start === 'college' ? { college: { stage: 'recruit', seasons: [] } } : {}),
+    ...(start === 'college' ? { age: (S.isSoccer ? 17 : S.isBucket ? 19 : 21) + Math.floor(r() * 2) - 1 } : {}),
   }
 }
 export function answerInterview(c, i, choice) {
@@ -1339,6 +1605,7 @@ export function answerInterview(c, i, choice) {
 // Draft day: your pick inside the window, at the team that needs you most and
 // liked you most in the room
 export function runDraft(c) {
+  if (sportOf(c).x?.offers) return sportOf(c).x.offers(c)
   const S = sportOf(c)
   const r = seeded(`draft2-${c.seed}`)
   const order = draftOrder(c), N = order.length
@@ -1378,7 +1645,7 @@ export function runDraft(c) {
   const contract = S.draft.rookie(mine.o)
   const met = (c.draft.interviews ?? []).some(x => x.team === mine.team)
   const lbl = pickLabel(mine.o, c.sport)
-  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: picks[picks.length - 1] }, team: mine.team, roster, fit, contract, decisions: [...c.decisions, { year: 1, text: `${mine.trade ? 'Traded up and drafted' : 'Drafted'} in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed you)' : ''}` }] }
+  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: picks[picks.length - 1] }, team: mine.team, roster, fit, contract, decisions: [...c.decisions, { year: 1, text: `${mine.trade ? 'Traded up and drafted' : 'Drafted'} in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed him)' : ''}` }] }
 }
 
 // ── Goals for a season ───────────────────────────────────────────────────────
@@ -1394,12 +1661,15 @@ export const goalsFor = c => {
   const full = raw.map(([k, verb, n, unit, low]) => ({ k, label: `${verb} ${n.toLocaleString()} ${unit}`, n, ...(low ? { low: true } : {}) }))
   const dc = c.team ? depthChart(c) : null
   if (!dc || dc.starter) return full
+  if (S.x?.goals) return S.x.goals(c, raw, full, dc)   // (a registered sport sizes its own: baseball's bench bat or long man)
+  // (soccer, out of the starting eleven: the same goals, sized for the minutes a rotation player or a sub gets)
+  if (S.isSoccer) { const m = S.x.role(c) === 'Rotation' ? 0.6 : 0.3; return raw.map(([k, verb, n, unit]) => (k === 'avgRating' ? full.find(g => g.k === k) : { k, label: `${verb} ${Math.max(1, Math.round(n * m))} ${unit}`, n: Math.max(1, Math.round(n * m)) })) }
   // football backup in the rotation (not a QB): the season's goals at his share of the work
   const u = !S.isBucket ? backupShare(c.pos, dc.idx - dc.starters) : 0
   if (u > 0) return raw.map(([k, verb, n, unit, low]) => { if (k === 'wins' || low) return full.find(g => g.k === k); const m = Math.max(1, Math.round(n * u / (n >= 100 ? 25 : 1)) * (n >= 100 ? 25 : 1)); return { k, label: `${verb} ${m.toLocaleString()} ${m === 1 ? unit.replace(/(e)?s$/, '') : unit}`, n: m } })
   if (S.isBucket) return raw.map(([k, verb, n, unit]) => k === 'wins' ? full.find(g => g.k === k) : { k, label: `${verb} ${r1(n * 0.6)} ${unit} off the bench`, n: r1(n * 0.6) })
   const per = raw.filter(([k, , n, , low]) => k !== 'wins' && !low && k !== 'grade' && n / 17 >= 1).slice(0, 2).map(([k, verb, n, unit]) => { const m = n / 17 >= 10 ? Math.round(n / 17) : r1(n / 17); return { k, per: 'start', label: `${verb} ${m.toLocaleString()} ${unit} a start`, n: m } })
-  return [...per, { k: 'startWins', label: 'Win half the games you start', n: 0.5 }]
+  return [...per, { k: 'startWins', label: 'Win half the games he starts', n: 0.5 }]
 }
 // s: { stats, wins, starts, startWins }
 const goalMet = (g, s) => g.k === 'startWins' ? s.starts > 0 && s.startWins / s.starts >= g.n
@@ -1428,10 +1698,12 @@ function shareGame(g, u, key) {
 // the sim, with my games at a share until I'm the starter (week `weeks` on)
 const shareSim = (sim, u, weeks) => (b, t, seed) => { const r = sim(b, t, seed); return { ...r, games: r.games.map((g, i) => (i < weeks ? shareGame(g, u, `${seed}-${i}`) : g)) } }
 const simFor = c => (c.active?.share ? shareSim(sportOf(c).sim(c.pos), c.active.share.u, c.active.share.weeks) : sportOf(c).sim(c.pos))
+// a career injury's odds a game (×S.injScale), and how much durability moves them: advanceWeek
+const INJ_RATE = 0.019, INJ_PULL = 0.15
 // the injury cards a season can deal (sit or play hurt): one at most, more likely on a fragile body.
 // ~35% a season at durability 2, ~21% at 6, ~7% at 10; the playoffs, half that
 const injuryOdds = c => { const d = clamp(c.durability ?? 5, 1, 10), season = clamp(0.42 - 0.035 * d, 0.07, 0.4) * (c.age >= 31 ? 1.2 : 1); return { season, playoffs: season / 2 } }
-const director = (c, team, base, seed, simFn = simFor(c)) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), made: sportOf(c).made })
+const director = (c, team, base, seed, simFn = simFor(c)) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -1443,7 +1715,7 @@ export function startSeason(c) {
   // Football, not the starter: how many weeks until the job comes your way
   const plain = S.sim(c.pos)
   let weeks = 0, share = null
-  if (!dc.starter && !S.isBucket) {
+  if (!dc.starter && !S.isBucket && !S.isSoccer && !S.x?.start) {
     const rr = seeded(`${c.seed}-bench-${c.year}`)
     const ahead = dc.ahead[dc.ahead.length - 1]
     const gap = ahead.ovr - c.ovr
@@ -1459,11 +1731,13 @@ export function startSeason(c) {
   const base = simFn(c.build, team)
   const D = director(cc, team, base, seed, simFn)
   seasonSwing(cc, D)
+  // (a registered sport opens its own season: baseball's minors stint and the call-up, the lineup or the rotation)
+  const own = S.x?.start ? S.x.start(cc, D, dc, team) : null
   // not the starter. Basketball: off the bench all year, a smaller role.
   // Football: the season opens on the bench, until the job comes your way.
-  let benched = null
-  if (!dc.starter && S.isBucket) {
-    benched = { weeks: D.total, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, bench: true }
+  let benched = own ? own.benched ?? null : null
+  if (own) { /* (its own) */ } else if (!dc.starter && (S.isBucket || S.isSoccer)) {
+    benched = { weeks: D.total, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, bench: true, ...(S.isSoccer ? { role: S.x.role(cc) } : {}) }
   } else if (!dc.starter) {
     // a backup quarterback sits; everyone else is in the rotation
     if (!share) D.sidelined(0, weeks)
@@ -1482,8 +1756,8 @@ export function startSeason(c) {
       else benched.why = { kind: 'traded', to: S.teams.filter(t => t.short !== c.team)[Math.floor(rw() * (S.teams.length - 1))].short }
     }
   }
-  const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation' : ''}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
-  const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share } }
+  const feed = own ? own.feed ?? [] : benched ? [{ k: 0, note: S.isSoccer ? `${benched.behind} leads the line. ${c.name} starts the season ${benched.role === 'Rotation' ? 'in the rotation: some starts, minutes off the bench' : 'on the bench: a sub’s minutes, the odd start in the cup'}.` : benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation' : ''}.`, noteKind: S.isSoccer ? 'SQUAD ROLE' : benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
+  const next = { ...cc, phase: 'season', fit, role: own ? own.role : S.isSoccer ? S.x.role(cc) : dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share, ...(own?.active ?? {}) } }
   return [next, D]
 }
 // The unpredictable part of a year. Never shown, only felt:
@@ -1526,7 +1800,11 @@ export function advanceWeek(c, D) {
   const feed = [...a.feed]
   const chunk = { k0: a.k + 1, games: [], hits: [], headline: [] }
   let k = a.k, injury = null, moment = null, last = null
-  for (let n = 0; n < S.step && k < D.total && !injury && !moment; n++) {
+  // (a registered sport's own story beats: baseball's call-up, the All-Star break, a milestone; `stop` ends the run there)
+  const beats = {}, told = []
+  let halt = false
+  const inj = S.x?.injuries?.(c) ?? null, INJ = inj?.list ?? S.injuries, ENDERS = inj?.enders ?? S.seasonEnders
+  for (let n = 0; n < S.step && k < D.total && !injury && !moment && !halt; n++) {
     k++
     const hits = D.observe(k)
     const g = D.games[k - 1]
@@ -1539,23 +1817,30 @@ export function advanceWeek(c, D) {
         : `${b.behind} is benched after a rough stretch. ${c.name} is the starter.`
       feed.push({ k, note, noteKind: w?.kind === 'hurt' ? 'INJURY · DEPTH CHART' : 'DEPTH CHART' })
     }
+    const bt = S.x?.beat ? S.x.beat({ ...c, active: { ...a, ...beats } }, D, k) : null
+    if (bt) { for (const x of bt.notes ?? []) told.push({ k, ...x }); Object.assign(beats, bt.set ?? {}); if (bt.stop) halt = true }
     if (S.step === 1) feed.push({ k, g, hits, headline })
     else { chunk.games.push(g); chunk.hits.push(...hits); chunk.headline.push(...headline) }
     last = { g, hits }
     // an injury: the body, the age and a little luck
     const r = seeded(`${c.seed}-inj-${c.year}-${k}`)
-    // mostly luck: about one season in five has an injury, and the body (durability: from size,
-    // raised with body work) moves it: ~11% a season at 10, ~20% at a C+, ~29% at 1 (before 31)
-    const risk = (0.013 * (1 + clamp(5.5 - c.durability, -5.5, 5.5) * 0.1)) * (c.age >= 31 ? 1.25 : 1) * (g?.sat ? 0 : 1) * S.injScale
+    // mostly luck, and the body (durability: from his frame, raised with body work) moves it.
+    // (2026-11-08: 0.019 a game, the body's pull 0.15 a step, was 0.013 and 0.1: a thin frame gets hurt
+    // a little more often than a thick one now, and a football season loses about a game and a half,
+    // not under one.) Football: about one season in three has an injury at a C+, one in four at a B+,
+    // one in eight at 10; one in about twelve of them ends the season (S.injSerious)
+    // (soccer and baseball keep the odds from before: S.oldInjuries)
+    const perGame = S.oldInjuries ? 0.013 * (1 + clamp(5.5 - c.durability, -5.5, 5.5) * 0.1) : INJ_RATE * clamp(1 + (5.5 - c.durability) * INJ_PULL, 0.3, 1.8)
+    const risk = perGame * (c.age >= 31 ? 1.25 : 1) * (g?.sat ? 0 : 1) * S.injScale
     if (k < D.total && r() < risk && !c.injuries.some(i => i.year === c.year + 1 && i.at > k - 4 / S.injScale)) {
       // what it is (the common ones more often), and how long; one in about twenty is a season-ender (an ACL, an Achilles)
-      const tot = S.injuries.reduce((a, x) => a + (x[3] ?? 1), 0)
-      let roll = r() * tot, pick = S.injuries[0]
-      for (const x of S.injuries) { roll -= x[3] ?? 1; if (roll <= 0) { pick = x; break } }
+      const tot = INJ.reduce((a, x) => a + (x[3] ?? 1), 0)
+      let roll = r() * tot, pick = INJ[0]
+      for (const x of INJ) { roll -= x[3] ?? 1; if (roll <= 0) { pick = x; break } }
       const [kind0, lo, hi] = pick
       let games = lo + Math.floor(r() * (hi - lo + 1))
-      const serious = r() < 0.05
-      const kind = serious ? S.seasonEnders[Math.floor(r() * S.seasonEnders.length)] : kind0
+      const serious = r() < (S.injSerious ?? (S.oldInjuries ? 0.05 : 0.08))
+      const kind = serious ? ENDERS[Math.floor(r() * ENDERS.length)] : kind0
       if (!serious) games = Math.min(games, D.total - k)   // (a long one late in the year: out the rest of it, but not a season-ender)
       injury = { kind, games: serious ? D.total - k : games, serious, at: k }
       break
@@ -1567,7 +1852,8 @@ export function advanceWeek(c, D) {
     if (stop && !sitting) moment = D.open(stop)
   }
   if (S.step > 1 && chunk.games.length) feed.push({ k, chunk: true, ...chunk, k1: k })
-  let next = withSnap(c, D, { k, feed })
+  feed.push(...told)   // (after the run of games they happened in: the newest is on top)
+  let next = withSnap(c, D, { k, feed, ...beats })
   if (injury) { next = withSnap(next, D, { injury }); return [next, { injury, game: last?.g, hits: last?.hits }] }
   if (moment) next = withSnap(next, D, { moment })
   return [next, { game: last?.g, hits: last?.hits, moment, done: k >= D.total && !moment }]
@@ -1610,14 +1896,17 @@ export function resolveInjury(c, D, play, heal = false) {
   const S = sportOf(c)
   const inj = c.active.injury, at = c.active.k
   const r = seeded(`${c.seed}-injres-${c.year}-${at}`)
-  let text, wear = 0.2
+  // wear: off his durability now (the knocks heal over the offseason: healDurability); lasting: off the body's
+  // own level too (durBase), for good. A season-ender lasts, so does playing on one until it gives out
+  let text, wear = inj.serious ? 0.6 : 0.2, lasting = inj.serious ? 0.4 : inj.games >= S.bigInjury ? 0.15 : 0
   if (play && !inj.serious) {
     const worse = r() < 0.35
     wear += worse ? 0.5 : 0.3   // (playing on it costs the body more, and more again when it gives out)
+    lasting += worse ? 0.15 : 0.05
     const attr = Object.fromEntries(S.physical[c.pos].slice(0, 2).map(t => [t, -1]))
     D.choose({ id: 'injury', stop: { at, kind: 'season' }, title: inj.kind }, { label: 'play through it', effect: { window: inj.games + 2, attr } })
     if (worse) { D.sidelined(at + 1, inj.games); text = `Played through the ${inj.kind}, then it got worse. Out ${inj.games} games.` }
-    else text = `Playing through the ${inj.kind}. Not yourself for ${inj.games + 2} games.`
+    else text = `Playing through the ${inj.kind}. Not himself for ${inj.games + 2} games.`
   } else if (heal && !inj.serious) {
     const games = Math.max(1, Math.ceil(inj.games / 2))
     D.sidelined(at, games)
@@ -1629,12 +1918,13 @@ export function resolveInjury(c, D, play, heal = false) {
   const injuries = [...c.injuries, { year: c.year + 1, at, kind: inj.kind, games: inj.games, played: !!play, serious: !!inj.serious }]
   const feed = [...c.active.feed, { k: at, injuryText: text }]
   // each injury wears the body a little (0.2: at 0.4 a few early ones spiralled into a fragile career); playing through it, more
-  return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - wear)) }, D, { injury: null, feed, ...(inj.serious ? { out: true } : {}) }), text]
+  return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - wear)), ...(lasting ? { durBase: r10(Math.max(1, durBaseOf(c) - lasting)) } : {}) }, D, { injury: null, feed, ...(inj.serious ? { out: true } : {}) }), text]
 }
 // The regular season's over: book it, or go into the playoffs (a bracket of
 // our own, one skill moment a round, played on the hub)
 export function finishRegular(c, D) {
   const f = D.finalize()
+  if (sportOf(c).x?.finishLeague) return sportOf(c).x.finishLeague(c, f)
   if (!sportOf(c).made(f)) return bookSeason({ ...c, active: { ...c.active, final: f, po: null } })
   // out for the season: the team plays the playoffs without you, no moments
   if (c.active.out) return bookSeason({ ...c, active: { ...c.active, final: f, po: watchBracket(c, buildBracket(c, f)) } })
@@ -1643,6 +1933,38 @@ export function finishRegular(c, D) {
 const strength = t => ((t.off ?? 5) + (t.def ?? 5)) / 2
 // How often a playoff game comes down to the end: about half of them, fewer the more lopsided it is
 export const closeChance = p => clamp(0.62 - Math.abs(p - 0.5) * 0.8, 0.35, 0.62)
+// best of seven: the chance to take four games first, at g a game
+export const bestOf7 = g => [0, 1, 2, 3].reduce((s, k) => s + [1, 4, 10, 20][k] * g ** 4 * (1 - g) ** k, 0)
+// Basketball's round: the matchup (the same scale as football's game) as one game of it, about half
+// as far from even (one NBA game swings less than one NFL playoff game), 22-78%; a series, best of seven (4-95%)
+const bucketRoundOdds = (base, series) => { const g = clamp(0.5 + (base - 0.5) * 0.5, 0.22, 0.78); return Math.round((series ? bestOf7(g) : g) * 100) / 100 }
+// Any length of series (baseball plays best of 3, 5 and 7): n games, the first to need = (n + 1) / 2 wins it.
+// A round's length is rd.bestOf (seven when it has none: basketball's, which runs on the best-of-seven lines as they were)
+export const seriesLen = rd => rd?.bestOf ?? 7
+const choose = (n, k) => { let x = 1; for (let i = 1; i <= k; i++) x = x * (n - k + i) / i; return x }
+// best of n: the chance to take need games first, at g a game
+export const bestOf = (n, g) => { if (n === 7) return bestOf7(g); const need = (n + 1) / 2; let s = 0; for (let k = 0; k < need; k++) s += choose(need - 1 + k, k) * g ** need * (1 - g) ** k; return s }
+// the game rate a series' odds come from (bestOf turned around)
+export const gameOf = (p, n = 7) => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (bestOf(n, m) > p) hi = m; else lo = m } return (lo + hi) / 2 }
+// a series from a-b on, at g a game: the chance to get to need (four in a best of seven) first
+export const seriesFrom = (g, a, b, need = 4) => (a >= need ? 1 : b >= need ? 0 : g * seriesFrom(g, a + 1, b, need) + (1 - g) * seriesFrom(g, a, b + 1, need))
+// A last-play moment in a series decides one game of it, the need-th (game 4 of seven, 3 of five, 2 of three):
+// the ones before it played at the series' own game rate (seeded, so the screen and the result agree on the score going in)
+export function seriesState(c, idx, rd) {
+  const n = seriesLen(rd), need = (n + 1) / 2
+  const g = gameOf(rd.p, n), r = seeded(`${c.seed}-${c.year}-${idx}-series`)
+  let a = 0
+  for (let i = 0; i < need - 1; i++) if (r() < g) a++
+  return { a, b: need - 1 - a, g, need }
+}
+// that game by his moment, then the rest of the series at g: { won, my, opp } (the series score)
+export function seriesPlay(c, idx, rd, LAST, hit, h) {
+  const { a, b, g, need } = seriesState(c, idx, rd), r = seeded(`${c.seed}-${c.year}-${idx}-series-rest`)
+  let x = a, y = b
+  if (hit || (LAST === 'hit' && r() < clamp((g - h) / (1 - h), 0.03, 0.97))) x++; else y++
+  while (x < need && y < need) { if (r() < g) x++; else y++ }
+  return { won: x === need, my: x, opp: y }
+}
 function buildBracket(c, f) {
   const S = sportOf(c)
   const r = seeded(`${c.seed}-po-${c.year}`)
@@ -1661,9 +1983,15 @@ function buildBracket(c, f) {
     const home = fin ? null : S.isBucket ? (playIn ? seed <= 8 : ri === 0 ? seed <= 4 : seed <= 2) : f.hasBye ? i === 0 : i === 0 && f.wins >= 11
     // (a true star tilts a series or a playoff game more: up to +0.07 more at 99)
     const base = 0.5 + (myStr - strength(opp)) * 0.08 + (home ? 0.06 : home === false ? -0.03 : 0) + ((c.ovr - 76) / 100) * 0.35 + Math.max(0, c.ovr - 95) * 0.018
-    const p = clamp(Math.round(base * 100) / 100, 0.18, 0.84)
-    // a game only has a key moment if it's close when it counts; the final always is
-    return { name, opp: opp.short, oppName: opp.name, home, p, played: false, series: S.series && !playIn, close: fin || r() < closeChance(p) }
+    // p is the chance to win the round, the one the card shows and playoffRound uses. Football: the game.
+    // Basketball: the series, from the chance to win one game of it (a best of seven turns a 65% team
+    // into an 80% one; the best teams there are, the '96 Bulls or the '17 Warriors, about 95%)
+    const p = S.isBucket ? bucketRoundOdds(base, !playIn) : clamp(Math.round(base * 100) / 100, 0.18, 0.84)
+    // close: the game comes down to the end. Every round has its moment; in football only a close one can
+    // deal a last-play moment (playoffGame). Basketball rolls it too (the draw stays the same) and ignores it
+    const close = r() < closeChance(p)
+    // (pw: the same round with the team playing it without him, for a season he finishes hurt)
+    return { name, opp: opp.short, oppName: opp.name, home, p, played: false, series: S.series && !playIn, close: S.isBucket || close, ...(S.isBucket ? { pw: bucketRoundOdds(base - 0.12, !playIn) } : {}) }
   })
   return { idx: 0, rounds, line: [], used: [], stage: 'round', won: false, out: false }
 }
@@ -1673,7 +2001,7 @@ function watchBracket(c, po) {
   const r = seeded(`${c.seed}-pow-${c.year}`)
   const line = []
   for (const rd of po.rounds) {
-    const won = r() < clamp(rd.p - 0.12, 0.08, 0.9)
+    const won = r() < (rd.pw ?? clamp(rd.p - 0.12, 0.08, 0.9))
     let mySc, oppSc
     if (rd.series) { const o = [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)]; mySc = won ? 4 : o; oppSc = won ? o : 4 }
     else if (S.isBucket) { mySc = 98 + Math.floor(r() * 18); oppSc = won ? mySc - 1 - Math.floor(r() * 12) : mySc + 1 + Math.floor(r() * 12) }
@@ -1685,39 +2013,104 @@ function watchBracket(c, po) {
   const won = !!last?.won && last.name === S.final
   return { ...po, rounds: po.rounds.map((x, i) => line[i] ?? x), line, idx: line.length - 1, stage: 'done', won, out: !won }
 }
-// The game turns on its moment, so the moment decides it: land it and you usually win, miss it and
-// you usually don't. p is the matchup (0.18-0.84): it moves the odds, it doesn't outweigh the play.
-// Each round is harder, the final the hardest, so a ring stays rare: a 60% team landing 70% of
-// its moments wins about 7% of its title runs (17% on the old nudge), landing 90% about 16%.
+// The round turns on its moment, and the chance the card shows is the chance it is: land it and the
+// odds go up, miss it and they go down, by as much either way that across his usual hits and misses the
+// round is still won p of the time. A miss hurts most when it was likely to go in: a 95% team that misses
+// is still about 70% to win its series, a 60% one about 20%; a hit takes a 20% underdog to about 30%.
 // the moments that are the game's last play (lib/situations.js has their clocks): see playoffRound
-const LAST_PLAY = { 'clutch-shot': 'both', 'two-minute': 'both', 'goal-line': 'both', 'free-throws': 'hit', lockdown: 'hit', 'rim-protect': 'hit' }
-export const momentOdds = (p, hit, score = 0.75, round = 0) => (hit
-  ? clamp(0.70 - 0.03 * round + (p - 0.5) * 0.3 + (score - 0.75) * 0.2, 0.55, 0.85)
-  : clamp(0.14 - 0.01 * round + (p - 0.5) * 0.2, 0.05, 0.25))
+// (soccer's: a late chance from the 82nd minute on, level or a goal up: his goal wins it, a miss leaves it to the odds)
+const LAST_PLAY = { 'clutch-shot': 'both', 'two-minute': 'both', 'goal-line': 'both', 'free-throws': 'hit', lockdown: 'hit', 'rim-protect': 'hit', penalty: 'hit', 'one-on-one': 'hit', header: 'hit', volley: 'hit', 'free-kick': 'hit', 'two-on-one': 'hit' }
+const logit = x => Math.log(x / (1 - x)), sigmoid = x => 1 / (1 + Math.exp(-x))
+const MOMENT_SWING = 1.3   // a hit or a miss, in log-odds off the round's own (the shift below keeps the average at p)
+// how often the moment's game goes in: the rate the Career sim lands it at for his grade (MiniGame's sim, 45% at a 1, 92% at an 11)
+export const momentHitRate = (c, game) => clamp(0.45 + 0.47 * (traitValue(game, c?.build) - 1) / 10, 0.45, 0.92)
+// p: the round. h: how often he lands it. score and round are no longer used (a round's difficulty is its opponent, in p)
+export const momentOdds = (p, hit, score = 0.75, round = 0, h = 0.7) => {
+  const q = clamp(p, 0.02, 0.98), L = logit(q)
+  let lo = -8, hi = 8
+  for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (h * sigmoid(L + m + MOMENT_SWING) + (1 - h) * sigmoid(L + m - MOMENT_SWING) > q) hi = m; else lo = m }
+  return sigmoid(L + (lo + hi) / 2 + (hit ? MOMENT_SWING : -MOMENT_SWING))
+}
+// The round as it will be played: all (the chance to win it, the one the card shows), hit and miss (the
+// odds after landing or missing the moment). A last-play moment decides it (see LAST_PLAY), so there the
+// chance is his own: 'both' is how often he lands it; 'hit', that or the odds after a miss, set so the
+// round stays at p when it can (when he lands it more often than p, he's better than p there).
+// game null with off: no moment (Career's mini games set to None), the round on its odds
+// A basketball series: the last play decides game 4 only (seriesState), the rest is played at the series'
+// game rate g. Won game 4, the series is his three of the other six (W1); lost it, four of six (W0).
+// idx (the round's): adds state, the score going into game 4 and the series odds after a hit or a miss
+export function roundOdds(c, rd, game = null, off = false, idx = null) {
+  const p = rd.p
+  if (off) return { all: p, hit: p, miss: p }
+  const h = momentHitRate(c, game), LAST = lastPlayOf(c, rd, game)
+  if (LAST && rd.series) {
+    // (any length: won the deciding-moment game, he needs need - 1 of the other n - 1 (W1); lost it, need of them (W0))
+    const n = seriesLen(rd), need = (n + 1) / 2, m = n - 1
+    const g = gameOf(p, n), q = LAST === 'both' ? 0 : clamp((g - h) / (1 - h), 0.03, 0.97)
+    const tail = from => { let s = 0; for (let k = from; k <= m; k++) s += choose(m, k) * g ** k * (1 - g) ** (m - k); return s }
+    const W1 = n === 7 ? [3, 4, 5, 6].reduce((s, k) => s + [20, 15, 6, 1][k - 3] * g ** k * (1 - g) ** (6 - k), 0) : tail(need - 1)
+    const W0 = n === 7 ? [4, 5, 6].reduce((s, k) => s + [15, 6, 1][k - 4] * g ** k * (1 - g) ** (6 - k), 0) : tail(need)
+    const G = h + (1 - h) * q, out = { all: G * W1 + (1 - G) * W0, hit: W1, miss: q * W1 + (1 - q) * W0, game: q }
+    if (idx == null) return out
+    const { a, b } = seriesState(c, idx, rd), win = seriesFrom(g, a + 1, b, need), lose = seriesFrom(g, a, b + 1, need)
+    return { ...out, state: { a, b, need, win, lose, miss: q * win + (1 - q) * lose } }
+  }
+  if (LAST === 'both') return { all: h, hit: 1, miss: 0 }
+  if (LAST === 'hit') { const miss = clamp((p - h) / (1 - h), 0.03, 0.97); return { all: h + (1 - h) * miss, hit: 1, miss } }
+  return { all: p, hit: momentOdds(p, true, 0.75, 0, h), miss: momentOdds(p, false, 0.75, 0, h) }
+}
+// the round's last-play rule for this game, or null: football only plays one in a game that's close at
+// the end (rd.close, closeChance); basketball always (a series' game 4, or the play-in)
+export const lastPlayOf = (c, rd, game) => (LAST_PLAY[game] && (sportOf(c).isBucket || rd?.close !== false) ? LAST_PLAY[game] : null)
+// The round's moment game (the hub deals it, the result is played on it). A football game that isn't
+// close at the end deals a regular moment, not a last play (every position has one).
+// allow: Simple mode's own filter
+export function playoffGame(c, po, allow = null) {
+  // (a sport can rule a moment out for this game: baseball deals a walk-off only when his club bats last)
+  const own = sportOf(c).x?.allowGame?.(c, po)
+  if (own) { const ask = allow; allow = g => own(g) && (!ask || ask(g)) }
+  const rd = po.rounds[po.idx], seed = `${c.seed}-${c.year}-${po.idx}`, used = po.line.map(x => x.game).filter(Boolean)
+  const open = rd && !sportOf(c).isBucket && !sportOf(c).isSoccer && rd.close === false
+  return (open && pickMomentGame(c.pos, seed, used, g => !LAST_PLAY[g] && (!allow || allow(g)))) || pickMomentGame(c.pos, seed, used, allow)
+}
+// The chance the round card shows. Football: blended by how often a game is close at the end
+// (closeChance): close, the moment it deals (a last play or not); not close, a regular one, at p
+export function cardOdds(c, po, allow = null, off = false) {
+  const rd = po.rounds[po.idx], S = sportOf(c)
+  if (off) return rd.p
+  if (S.isBucket || S.isSoccer || S.isBaseball) return roundOdds(c, rd, playoffGame(c, po, allow), false, po.idx).all
+  const cc = closeChance(rd.p), closeRd = { ...rd, close: true }
+  return cc * roundOdds(c, closeRd, playoffGame(c, { ...po, rounds: po.rounds.map((x, i) => (i === po.idx ? closeRd : x)) }, allow)).all + (1 - cc) * rd.p
+}
 // how deep a round is, counted back from the final (3): the same with a bye or a play-in
 export const momentRound = po => Math.max(0, 3 - (po.rounds.length - 1 - po.idx))
-// A game that wasn't close: no moment, the better team usually took it
-export const blowoutOdds = (p, round = 0) => clamp(p - 0.07 - 0.03 * round, 0.1, 0.8)
+// A round with no moment: the matchup's own odds (round is no longer used)
+export const blowoutOdds = (p, round = 0) => p
 // This round's moment is in: the result, with a stat line sized to the season
 // hit: the drill's own verdict (MiniGame), the same one it showed the player
 export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = null) {
   const S = sportOf(c)
+  if (S.x?.round) return S.x.round(c, score, game, hit, pts)
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
-  // (a round from before games could be one-sided has no `close`: it plays its moment)
-  const auto = rd.close === false
-  let won = r() < (auto ? blowoutOdds(rd.p, momentRound(po)) : momentOdds(rd.p, hit, score, momentRound(po)))
+  // auto (score null): no moment, Career's mini games are set to None; the round on its own odds
+  const auto = score == null
+  const odds = roundOdds(c, rd, game, auto)
+  let won = r() < (auto ? odds.all : hit ? odds.hit : odds.miss)
   // the last play of the game: what he did decides it, nobody gets the ball back after a buzzer-beater or a walk-off.
   // both: land it and win, miss it and lose. hit: a stop or the free throws at the end win it; a miss leaves it to the odds
-  const LAST = LAST_PLAY[game]
-  if (!auto && LAST) { if (hit) won = true; else if (LAST === 'both') won = false }
+  const LAST = lastPlayOf(c, rd, game)
+  // (a basketball series: it decides game 4, and the series plays on from there)
+  const ser = !auto && LAST && rd.series ? seriesPlay(c, po.idx, rd, LAST, hit, momentHitRate(c, game)) : null
+  if (ser) won = ser.won
+  else if (!auto && LAST) { if (hit) won = true; else if (LAST === 'both') won = false }
   if (auto) score = won ? 0.8 : 0.25
   const k = 0.82 + score * 0.5 + (r() - 0.5) * 0.2             // the moment sets the day: 0.6–1.4× a normal game
   let mySc, oppSc, line
   if (S.isBucket) {
-    // a close series goes six or seven; a one-sided one, four or five
-    if (rd.series) { const other = auto ? [0, 0, 1, 1][Math.floor(r() * 4)] : [2, 3, 3][Math.floor(r() * 3)]; mySc = won ? 4 : other; oppSc = won ? other : 4 }
+    // a series the winner was expected to take goes four or five; an even one, six or seven
+    if (rd.series) { const fav = won ? rd.p : 1 - rd.p, len = fav >= 0.8 ? [0, 0, 1, 1] : fav >= 0.55 ? [1, 2, 2, 3] : [2, 3, 3], other = len[Math.floor(r() * len.length)]; mySc = ser ? ser.my : won ? 4 : other; oppSc = ser ? ser.opp : won ? other : 4 }
     else { const gap = auto ? 15 + Math.floor(r() * 16) : 1 + Math.floor(r() * 8); if (won) { mySc = Math.round(100 + score * 12 + r() * 10); oppSc = Math.max(80, mySc - gap) } else { oppSc = Math.round(104 + r() * 16); mySc = Math.max(80, oppSc - gap) } }
     const st = seasonStats(c.pos, f)
     // a series is four to seven games: the average barely moves off the season's (0.85–1.15×), never past a real ceiling
@@ -1753,6 +2146,24 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
       if (line[key] != null) line[key] = Math.max(1, line[key])
     }
   }
+  // (his touchdowns are on the board: a team can't score fewer points than the touchdowns he had in the box score,
+  // and a loss stays a loss)
+  if (!S.isBucket && line) {
+    const tds = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0)
+    if (tds && mySc < 6 * tds) {
+      mySc = 7 * tds
+      if (!won && oppSc <= mySc) oppSc = mySc + 1 + Math.floor(r() * 7)
+      if (won && oppSc >= mySc) mySc = oppSc + 3
+    }
+  }
+  // (a football final is a real football score: the loser's points came off the winner's by a gap, and a
+  // 24-point game minus a 20-point gap was a team that scored 4. Field goals and touchdowns only, the
+  // result kept: 2026-11-08)
+  if (!S.isBucket && !S.isSoccer && !S.isBaseball && !rd.series) {
+    mySc = snapNFL(mySc); oppSc = snapNFL(oppSc)
+    if (won && mySc <= oppSc) mySc = snapNFL(oppSc + 3)
+    if (!won && oppSc <= mySc) oppSc = snapNFL(mySc + 3)
+  }
   const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, swing, game: auto ? null : game, ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === S.final
@@ -1763,19 +2174,21 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
 export function bookSeason(c) {
   const S = sportOf(c)
   const f = c.active.final, po = c.active.po
-  const stats = seasonStats(c.pos, f)
   // the award needs a season that would really win it: the voters' pick and the numbers
   const started = (f.games ?? []).filter(g => !g.sat)     // the games he played (a backup's starts)
   // and he has to have played enough of the season to be in the conversation
   const share = started.length / Math.max(1, (f.games ?? []).length)
   const can = k => share >= S.minGames[k] - 1e-9
+  const benched = c.active.benched?.weeks ?? 0
+  // (soccer books its own season: the league, the cup, Europe, the World Cup and the Ballon d'Or)
+  const s = S.x?.season ? S.x.season(c, f, po) : (() => {
+  const stats = seasonStats(c.pos, f)
   const award = can('award') && S.award(c, f, stats)
   const allPro = can('first') && S.allPro[c.pos](stats, c)
   const missed = (f.story?.sat ?? 0)
-  const benched = c.active.benched?.weeks ?? 0
   const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, series: !!x.series }))
   const fin = rounds.find(x => x.round === S.final)
-  const s = {
+  return {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role, ...(c.pos === 'dl' ? { spot: dlSpot(c) } : c.pos === 'ol' ? { spot: olSpot(c) } : {}),
     wins: f.wins, losses: f.losses, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
     stats, adv: seasonRaw(c.pos, f, started), award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats, c)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats, c)),
@@ -1783,6 +2196,7 @@ export function bookSeason(c) {
     goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
   }
+  })()
   // the career records (a lineman's: Pro Bowls, All-Pros, starts): set the season he passes the mark
   const careerRecs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
   if (careerRecs.length) {
@@ -1795,18 +2209,20 @@ export function bookSeason(c) {
   const contract = { ...c.contract, left: Math.max(0, c.contract.left - 1) }
   const perf = seasonScore(c.pos, s)
   // the smaller honors: best rookie, and the MVP of the final (the quarterback's unless he sat)
-  s.roy = c.seasons.length === 0 && can('honor') && perf >= 0.55
+  if (!S.isSoccer && !S.isBaseball) s.roy = c.seasons.length === 0 && can('honor') && perf >= 0.55   // (baseball votes its own: lib/careerBaseball.js)
   const finLine = po?.line?.find(x => x.name === S.final)
-  s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
+  if (!S.isSoccer && !S.isBaseball) s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
   // a development point a year; one more for an award (MVP, OPOY, DPOY, Rookie of the Year), one more for All-Pro / All-NBA
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (honors still earn theirs, and so does camp)
   const S0 = sportOf(c)
   const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
-  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro ? 1 : 0) }
+  // (soccer: a Golden Boot is the striker's yearly honor, not a rare one, so it earns no point of its own)
+  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
-  const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
-  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false }
+  const lastRole = S.isSoccer ? ((s.stats.starts ?? 0) >= (f.games?.length ?? 38) / 2 ? 'Starter' : 'Backup') : benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
+  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false, ...healDurability(c) }
+  if (S.x?.afterSeason) next = S.x.afterSeason(next, s)
   // the offseason: the league moves, your team's roster turns over, the news
   const b = c.active.benched
   if (b?.why?.kind === 'traded') {
@@ -1842,13 +2258,13 @@ function maybeShoeDeal(c) {
   if (!tier && (c.rep ?? 5) >= 7 && last && (seasonScore(c.pos, last) >= 0.6 || star) && r() < 0.35) next = 'deal'
   else if (tier === 'deal' && (c.rep ?? 5) >= 9 && star && r() < 0.3) next = 'signature'
   if (!next) return c
-  const what = next === 'signature' ? (S.isBucket ? 'his own signature shoe' : 'his own signature cleat') : (S.isBucket ? 'a national shoe deal' : 'a national shoe and apparel deal')
+  const what = S.isSoccer ? (next === 'signature' ? 'his own signature boot' : 'a boot deal with a global brand') : next === 'signature' ? (S.isBucket ? 'his own signature shoe' : 'his own signature cleat') : (S.isBucket ? 'a national shoe deal' : 'a national shoe and apparel deal')
   const bump = SHOE[next].legacy
   return {
     ...c, shoe: { tier: next, year: c.year + 1, perYear: SHOE[next].perYear },
     legacyBonus: (c.legacyBonus ?? 0) + bump,
-    events: [...c.events, { year: c.year + 1, text: `${c.name} signs ${what}. ${next === 'signature' ? 'A face of the league now.' : 'The name travels now.'} +${bump} legacy.` }],
-    decisions: [...c.decisions, { year: c.year + 1, text: `Signed ${what} ($${SHOE[next].perYear}M a year)` }],
+    events: [...c.events, { year: c.year + 1, text: `${c.name} signs ${what}. ${next === 'signature' ? (S.isSoccer ? 'A face of the game now.' : 'A face of the league now.') : 'The name travels now.'} +${bump} legacy.` }],
+    decisions: [...c.decisions, { year: c.year + 1, text: `Signed ${what} (${S.isSoccer ? '€' : '$'}${SHOE[next].perYear}M a year)` }],
   }
 }
 // the biggest movers around the league this offseason
@@ -1856,6 +2272,7 @@ function leagueNews(c, league) {
   const S = sportOf(c)
   const was = s => { const d = c.league?.[s] ?? { off: 0, def: 0 }; return d.off + d.def }
   const now = s => league[s].off + league[s].def
+  if (S.x?.news) return S.x.news(league, was, now)
   return S.teams.map(t => ({ t, d: now(t.short) - was(t.short) })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3)
     .map(({ t, d }) => `The ${nick(t.name)} ${d > 0 ? (d > 2 ? 'reload: one of the big winners of the offseason' : 'get better on paper') : (d < -2 ? 'lose a lot of talent. A long year ahead' : 'take a step back')}.`)
 }
@@ -1863,6 +2280,7 @@ function leagueNews(c, league) {
 // only moves if he asks to, and nobody's dealt off a good year or a ring.
 function maybeTraded(c, r) {
   const S = sportOf(c)
+  if (S.isSoccer) return c   // (a footballer moves in the transfer window: the contract step)
   if (c.contract.left <= 0 || c.contract.noTrade || c.pos === 'qb') return c
   const latest = c.seasons[c.seasons.length - 1]
   if (c.lastRole !== 'Backup' && (latest?.champion || seasonScore(c.pos, latest) >= 0.5)) return c
@@ -1912,15 +2330,40 @@ const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3, getOff: 3, bend: 3 }
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
-// The last step costs more: A+ to S takes 2 points, everything else 1
-export const upgradeCost = v => (Math.round(v ?? 0) >= 10 ? 2 : 1)
-// Physical traits can only be trained while young (the position's window); skill
-// and mental traits any time. { open, left (offseasons incl. this one), until } or null (no window)
+// The last step costs more: A+ to S takes 2 points, everything else 1; past a trait's
+// full years (the age ladder, lib/ageLadder.js) it takes double that
+export const upgradeCost = (v, c = null, type = null) => (Math.round(v ?? 0) >= 10 ? 2 : 1) * (c && type && trainWindow(c, type)?.late ? 2 : 1)
+// The age ladder (lib/ageLadder.js): the physical traits train while young, the technique
+// into the early thirties, the mental side for good. { tier, open, late (double cost),
+// left (offseasons incl. this one), until (the last age), full } or null (no window)
 export function trainWindow(c, type) {
-  const S = sportOf(c)
-  if (!S.physical[c.pos]?.includes(type)) return null
-  const until = S.trainUntil(c.pos)
-  return { open: c.age <= until, left: Math.max(0, until - c.age + 1), until }
+  const S = sportOf(c), sp = S.id ?? 'nfl', phys = S.physical[c.pos] ?? []
+  const w = ladderWindow(sp, c.pos, c.age, type, phys, S.trainUntil(c.pos))
+  // nothing left upstairs (the mental side all maxed): the technique stays open at double the
+  // work, so a veteran's points always have somewhere to go
+  if (w?.tier === 'tech' && !w.open && mindTraits(sp, c.pos, c.types ?? [], phys).every(t => maxedTrait(c.build[t]?.val, c.build[t], t))) return { ...w, open: true, late: true, left: 2, valve: true }
+  return w
+}
+// The line over the traits while there's a point to spend: what's still open, and until when
+export function ladderNote(c) {
+  const S = sportOf(c), sp = S.id ?? 'nfl'
+  const label = t => lowLabel(traitName(c, t))
+  const live = t => !maxedTrait(c.build[t]?.val, c.build[t], t)
+  const ws = c.types.filter(live).map(t => [t, trainWindow(c, t)]).filter(([, w]) => w)
+  const of = tier => ws.filter(([, w]) => w.tier === tier)
+  const list = xs => andList(xs.map(([t]) => label(t)))
+  const phys = of('phys'), tech = of('tech'), mind = andList(mindTraits(sp, c.pos, c.types, S.physical[c.pos] ?? []).filter(live).map(label))
+  const p = phys[0]?.[1], t = tech[0]?.[1]
+  const up = s => s.charAt(0).toUpperCase() + s.slice(1)
+  if (!LADDER[sp]?.[c.pos]) return p ? { last: p.open && p.left <= 1, text: !p.open ? `${up(list(phys))} can't be trained any more (past ${p.until}). Skills and reads still can.` : p.left <= 1 ? `Last offseason to train ${list(phys)}: the window shuts after ${p.until}.` : `${up(list(phys))} can be trained until ${p.until}: ${p.left} offseasons left. Skills and reads, any time. A+ to S costs 2 points.` } : null
+  const anyAge = mind ? ` ${up(mind)} at any age.` : ''
+  const techTo = t ? ` ${up(list(tech))} through ${t.until}.` : ''
+  if (p?.open) return p.late ? { last: true, text: `Last offseason to train ${list(phys)}, at double cost.${techTo}${anyAge}` }
+    : { last: false, text: `${up(list(phys))} can be trained through age ${p.until}, the last year at double cost.${techTo}${anyAge}` }
+  if (t?.valve) return { last: false, text: `With ${andList(mindTraits(sp, c.pos, c.types, S.physical[c.pos] ?? []).map(label))} maxed, ${list(tech)} stay open at double cost.` }
+  if (t?.open) return t.late ? { last: t.left <= 1, text: `${up(list(tech))}: double cost now, closed after age ${t.until}.${anyAge}` }
+    : { last: false, text: `${up(list(tech))} can be trained through age ${t.until}, the last two years at double cost.${anyAge}` }
+  return mind ? { last: false, text: `At ${c.age}, only ${mind} can still be trained.` } : null
 }
 export function canUpgrade(c, type) {
   const ch = c.build[type]
@@ -1929,12 +2372,12 @@ export function canUpgrade(c, type) {
   if (!ch || maxedTrait(ch.val, ch, type)) return false
   const w = trainWindow(c, type)
   if (w && !w.open) return false
-  return c.dev.points >= upgradeCost(ch.val)
+  return c.dev.points >= upgradeCost(ch.val, c, type)
 }
 // Why a trait can't go up right now, in a line (null: it can). type '__body' is body work (durability)
 export function upgradeBlock(c, type) {
   const pts = c.dev?.points ?? 0
-  const lack = cost => `That costs ${cost} points. You have ${pts}.`
+  const lack = cost => `That costs ${cost} points. ${pts} left.`
   if (type === '__body') {
     if ((c.durability ?? 5) >= BODY_MAX) return 'Durability is maxed out.'
     if (c.phase === 'season') return 'Body work happens in the offseason.'
@@ -1950,15 +2393,17 @@ export function upgradeBlock(c, type) {
   if (Math.round(ch.val ?? 0) >= 11) return `${name} is already an S. That\u2019s as high as it goes.`
   if (maxedTrait(ch.val, ch, type)) return `${name} has been raised ${UPGRADE_CAP[type]} times, the most it can be.`
   const w = trainWindow(c, type)
-  if (w && !w.open) return `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
+  const S = sportOf(c)
+  if (w && !w.open) return LADDER[S.id ?? 'nfl']?.[c.pos] ? closedLine(S.id ?? 'nfl', c.age, w.tier, name, andList(mindTraits(S.id ?? 'nfl', c.pos, c.types, S.physical[c.pos] ?? []).filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => lowLabel(traitName(c, t)))), w.until) : `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
   if (c.phase === 'season') return 'Development points are spent in the offseason.'
   if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'
-  const cost = upgradeCost(ch.val)
-  return pts < cost ? `A+ to S costs ${cost} points. You have ${pts}.` : null
+  const cost = upgradeCost(ch.val, c, type)
+  if (pts < cost && w?.late) return lateLine(c.age, name, cost, pts)
+  return pts < cost ? `A+ to S costs ${cost} points. ${pts} left.` : null
 }
 export function spendDev(c, type) {
   if (!canUpgrade(c, type)) return c
-  const cost = upgradeCost(c.build[type].val)
+  const cost = upgradeCost(c.build[type].val, c, type)
   const from = c.build[type].val
   // one grade up, exactly: a 9.6 (A) becomes an A+, not a 10.6 that also reads S
   const build = { ...c.build, [type]: { ...c.build[type], val: Math.min(11, Math.round(from) + 1), upgraded: (c.build[type].upgraded ?? 0) + 1 } }
@@ -1967,21 +2412,36 @@ export function spendDev(c, type) {
 // Body work: a development point into durability (fewer injuries, and a longer career).
 // One step a point, two points from 8 up, to 10
 export const BODY_MAX = 10
+// The body's own level (durBase): where durability settles once the knocks heal. It starts where durability
+// starts, and moves only for good: body work and a new strength staff raise it, a season-ender, a long
+// stretch out, playing on an injury and the years past the position's prime take it down. Everything else
+// (a sat-out injury, a camp tweak, a meaningless game played hurt) comes off durability alone, and heals.
+// (A save from before: its durability then)
+export const durBaseOf = c => c.durBase ?? c.durability ?? 5
+// The season's booked: the knocks heal, most of the way back to the body's own level (less of it once the
+// body is past its prime). Never above it: only body work and a strength staff take him past his frame
+// (2026-11-08: before this every knock lasted, so a career that never did body work lost a grade or two by
+// its prime and body work became a chore every offseason)
+export const fadeAt = c => Math.max(29, sportOf(c).declineAt(c.pos))
+function healDurability(c) {
+  const base = durBaseOf(c), d = c.durability ?? base
+  return d >= base ? { durBase: base } : { durBase: base, durability: r10(d + (base - d) * (c.age >= fadeAt(c) ? 0.4 : 0.65)) }
+}
 export const bodyCost = c => ((c.durability ?? 5) >= 8 ? 2 : 1)
 export const canBodyWork = c => (c.durability ?? 5) < BODY_MAX && (c.dev?.points ?? 0) >= bodyCost(c)
 export function bodyWork(c) {
   if (!canBodyWork(c)) return c
   const cost = bodyCost(c), from = c.durability ?? 5, to = r10(Math.min(BODY_MAX, Math.floor(from) + 1))
-  return { ...c, durability: to, dev: { points: c.dev.points - cost, spent: c.dev.spent + cost }, bodyWork: (c.bodyWork ?? 0) + 1, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: durability ${gradeOf(from * 1.1)} → ${gradeOf(to * 1.1)}` }] }
+  return { ...c, durability: to, durBase: Math.max(durBaseOf(c), to), dev: { points: c.dev.points - cost, spent: c.dev.spent + cost }, bodyWork: (c.bodyWork ?? 0) + 1, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: durability ${gradeOf(from * 1.1)} → ${gradeOf(to * 1.1)}` }] }
 }
 const EVENTS = {
   nfl: [
     { id: 'new-oc', w: 3, text: t => `The ${t} hire a new offensive coordinator. New scheme, new reps to learn.`, apply: () => ({ nextMods: { off: -0.5 } }) },
     { id: 'coach-fired', w: 2, when: c => c.seasons[c.seasons.length - 1]?.wins <= 6, text: t => `The ${t} fire the head coach after a lost season. A reset is coming.`, apply: () => ({ nextMods: { off: -0.5, def: -0.5 } }) },
     { id: 'defense-up', w: 2, text: t => `The ${t} spend big on defense. Fewer shootouts, more wins.`, apply: () => ({ nextMods: { def: 1 } }) },
-    { id: 'trainer', w: 2, text: () => `A new strength staff and a full offseason in the building. The body feels bulletproof.`, apply: c => ({ durability: r10(Math.min(10, c.durability + 0.6)) }) },
+    { id: 'trainer', w: 2, text: () => `A new strength staff and a full offseason in the building. The body feels bulletproof.`, apply: c => ({ durability: r10(Math.min(10, c.durability + 0.6)), durBase: r10(Math.min(10, durBaseOf(c) + 0.3)) }) },
     { id: 'holdout', w: 1, when: c => c.contract.kind === 'rookie' && c.contract.left === 1 && c.rep >= 6, text: () => `The agent wants an extension now. Talks stall into camp.`, apply: c => ({ nextMods: { off: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
-    { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} vote you a team captain. The locker room is yours.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
+    { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} vote him a team captain. The locker room is his.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
     { id: 'scheme-fit', w: 2, text: (t, c) => (c?.pos === 'dl' ? `The ${t} redesign the front around their best players. More one-on-ones are coming.` : c?.pos === 'ol' ? `The ${t} rebuild the run game around their line. More runs are coming his way.` : `The ${t} redesign the playbook around their best players. More touches are coming.`), apply: c => ({ nextMods: c?.pos === 'dl' ? { def: 0.5 } : { off: 0.5 } }) },
     { id: 'mentor', w: 2, good: true, when: c => c.age <= 25, text: (t, c) => `A ten-year veteran on the ${t} takes ${c.name} under his wing. Film every morning, extra reps every night.`, apply: c => ({ dev: { ...c.dev, points: c.dev.points + 1 } }) },
     { id: 'built-around', w: 2, good: true, when: c => c.rep >= 6, text: (t, c) => (c.pos === 'dl' ? `The ${t} coaching staff builds the front around ${c.name}. More stunts, more one-on-ones.` : c.pos === 'ol' ? `The ${t} coaching staff builds the run game around ${c.name}. The big runs go behind him.` : `The ${t} coaching staff builds the game plan around ${c.name}. More touches are coming.`), apply: c => ({ nextMods: c?.pos === 'dl' ? { def: 0.75 } : { off: 0.75 } }) },
@@ -1996,9 +2456,9 @@ const EVENTS = {
     { id: 'star-trade', w: 2, text: t => `The ${t} trade for an All-Star. The floor just opened up.`, apply: () => ({ nextMods: { off: 1 } }) },
     { id: 'coach-fired', w: 2, when: c => c.seasons[c.seasons.length - 1]?.wins <= 30, text: t => `The ${t} fire the head coach after a lost season. A reset is coming.`, apply: () => ({ nextMods: { off: -0.5, def: -0.5 } }) },
     { id: 'defense-up', w: 2, text: t => `The ${t} bring in two defenders and a rim protector. Grind-it-out wins are coming.`, apply: () => ({ nextMods: { def: 1 } }) },
-    { id: 'trainer', w: 2, text: () => `A new performance staff and a full summer in the gym. The body feels bulletproof.`, apply: c => ({ durability: r10(Math.min(10, c.durability + 0.6)) }) },
+    { id: 'trainer', w: 2, text: () => `A new performance staff and a full summer in the gym. The body feels bulletproof.`, apply: c => ({ durability: r10(Math.min(10, c.durability + 0.6)), durBase: r10(Math.min(10, durBaseOf(c) + 0.3)) }) },
     { id: 'extension', w: 1, when: c => c.contract.kind === 'rookie' && c.contract.left === 1 && c.rep >= 6, text: () => `The agent wants the extension done now. Talks stall into training camp.`, apply: c => ({ nextMods: { off: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
-    { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} name you a captain. The locker room is yours.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
+    { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} name him a captain. The locker room is his.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
     { id: 'system', w: 2, text: t => `The ${t} rebuild the offense around their best players. More touches are coming.`, apply: () => ({ nextMods: { off: 0.5 } }) },
     { id: 'mentor', w: 2, good: true, when: c => c.age <= 25, text: (t, c) => `A fifteen-year veteran on the ${t} takes ${c.name} under his wing. Film every morning, extra shots every night.`, apply: c => ({ dev: { ...c.dev, points: c.dev.points + 1 } }) },
     { id: 'built-around', w: 2, good: true, when: c => c.rep >= 6, text: (t, c) => `The ${t} put the ball in ${c.name}'s hands. More sets, more touches.`, apply: () => ({ nextMods: { off: 0.75 } }) },
@@ -2018,7 +2478,7 @@ function offseasonEvents(c) {
   const total = fits.reduce((s, e) => s + wOf(e), 0)
   let roll = r() * total, ev = fits[0]
   for (const e of fits) { roll -= wOf(e); if (roll <= 0) { ev = e; break } }
-  const text = ev.text(nickOf(S, c.team), c)
+  const text = ev.text(S.isSoccer ? S.teamOf(c.team).name : nickOf(S, c.team), c)
   const fx = ev.apply(c)
   return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text }] }
 }
@@ -2037,10 +2497,12 @@ function marketValue(c) {
 // fresh: the day a comeback is announced (every phone rings, and every deal is for one year)
 function contractSituation(c, fresh = false) {
   const S = sportOf(c)
+  if (S.x?.window && c.contract.left > 0) return fresh ? null : S.x.window(c)
   if (c.contract.left > 0) return null
   // the career's over anyway (age, the most seasons, or a comeback that's run its course): no free agency to sign into
   const left = comebackLeft(c)
   if (left != null ? left <= 0 : c.age >= retireAge(c) || c.seasons.length >= MAX_SEASONS) return null
+  if (S.x?.market) return S.x.market(c, fresh, left)   // (a registered sport's own free agency: baseball's years and AAV)
   const r = seeded(`${c.seed}-fa-${c.year}${fresh ? '-back' : ''}`)
   const value = marketValue(c)
   const last = c.seasons[c.seasons.length - 1]
@@ -2062,12 +2524,13 @@ function contractSituation(c, fresh = false) {
   // (never past the position's money range: a payer's premium tops out at the max)
   const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(clamp(perYear, S.moneyOf(c)[0], S.moneyOf(c)[1])), years: yrs, pitch, kind, stand: standAt(fit.short) })
   return [
-    mk(fitAt(c.team), value * (0.92 + r() * .1), cap(years), fresh ? 'Back where he left off. One more run here.' : 'Stay. Finish what you started here.', 'stay'),
-    mk(contender, value * (0.68 + r() * .12), cap(Math.max(1, years - 1)), fresh ? 'A year on a contender. One more shot at a ring.' : 'Less money. A real shot at a ring.', 'contender'),
-    mk(payer, value * (1.12 + r() * .2), cap(years + (c.age < 29 ? 1 : 0)), fresh ? 'Top dollar for the comeback. They want the name.' : 'Top of the market. A rebuild wants a face.', 'payer'),
-  ]
+    mk(fitAt(c.team), value * (0.92 + r() * .1), cap(years), fresh ? 'Back where he left off. One more run here.' : 'Stay, and finish what he started here.', 'stay'),
+    mk(contender, value * (0.68 + r() * .12), cap(Math.max(1, years - 1)), fresh ? (S.isSoccer ? 'A year at a big club. One more shot at a trophy.' : 'A year on a contender. One more shot at a ring.') : S.isSoccer ? 'Lower wages. A real shot at the title.' : 'Less money. A real shot at a ring.', 'contender'),
+    mk(payer, value * (1.12 + r() * .2), cap(years + (c.age < 29 ? 1 : 0)), fresh ? 'Top dollar for the comeback. They want the name.' : S.isSoccer ? 'The top wages on offer. A club that wants a big name up front.' : 'Top of the market. A rebuild wants a face.', 'payer'),
+  ].filter(o => !(S.isSoccer && c.relegated && o.kind === 'stay'))   // (soccer: a relegated club can't keep him in the top flight)
 }
 export function signOffer(c, o) {
+  if (sportOf(c).x?.sign) return sportOf(c).x.sign(c, o)
   const change = o.team !== c.team
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   const roster = change ? rosterOf(c, o.team) : c.roster
@@ -2084,7 +2547,7 @@ export function signOffer(c, o) {
 export const ASKS = {
   money:   { label: 'MORE MONEY', sub: '+8% a year', cost: [1, 2], hi: 0.3 },
   years:   { label: 'ANOTHER YEAR', sub: '+1 year, same money', cost: [1, 2], hi: 0.35 },
-  notrade: { label: 'NO-TRADE CLAUSE', sub: 'They can\'t move you', cost: [2, 3], hi: 0.4 },
+  notrade: { label: 'NO-TRADE CLAUSE', sub: 'They can\'t move him', cost: [2, 3], hi: 0.4 },
   starter: { label: 'STARTER GUARANTEE', sub: 'The job is yours in writing', cost: [1, 2], hi: 0.3 },
 }
 // { lo, hi, p }: the cost range and the chance it's the high end, for this ask now
@@ -2127,6 +2590,7 @@ export const acceptTalks = c => (c.talks && !c.talks.walked ? signOffer(c, c.tal
 export function demandTrade(c) {
   const S = sportOf(c)
   if (c.tradeAsked) return c
+  if (S.x?.transferRequest) return S.x.transferRequest(c)
   const r = seeded(`${c.seed}-trade-${c.year}`)
   const granted = r() < 0.7
   const rep = Math.max(1, c.rep - 2)
@@ -2156,7 +2620,8 @@ export function nextSeason(c) {
     notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(to)}`)
   }
   const grows = c.pos === 'dl' || c.pos === 'lb' ? c.types.filter(t => t !== 'size') : c.pos === 'ol' ? c.types.filter(t => t !== 'size' && t !== 'length') : c.types
-  if (age <= 24 && r() < 0.45) move(grows[Math.floor(r() * grows.length)], 1, 'Still growing')
+  // (a footballer comes in at 17: he grows until 22, not 24)
+  if (age <= (S.isSoccer ? 22 : 24) && r() < 0.45) move(grows[Math.floor(r() * grows.length)], 1, 'Still growing')
   else if (age <= 28 && r() < 0.2) move(grows[Math.floor(r() * grows.length)], 1, 'A step forward')
   const phys = S.physical[c.pos]
   const pickPhys = () => phys[Math.floor(r() * phys.length)]
@@ -2180,9 +2645,17 @@ export function nextSeason(c) {
     if (r() < 0.6) move(pickPhys(), -1, `The ${inj.kind}`)
   }
   // a body that keeps breaking down wears down
-  if (age >= 26 && c.durability <= 4 && r() < (c.durability <= 3 ? 0.4 : 0.25)) move(pickPhys(), -1, 'Wear and tear')
+  // (2026-11-08: from C down, not B-: a normal frame now starts around C+, and that's not a body breaking down)
+  if (age >= 26 && c.durability <= 3 && r() < (c.durability <= 2.2 ? 0.4 : 0.25)) move(pickPhys(), -1, 'Wear and tear')
+  // the years past his prime (from 29, or the position's own fade if later): the body's own level slips,
+  // a little a year, more from three years past it
+  const past = age - fadeAt(c)
+  const aged = past >= 0 ? (past >= 3 ? 0.2 : 0.1) : 0
+  const dura = aged ? { durability: r10(Math.max(1, c.durability - aged)), durBase: r10(Math.max(1, durBaseOf(c) - aged)) } : {}
+  // (a registered sport's own aging: baseball's bat speed and a pitcher's stuff in his mid-thirties)
+  if (S.x?.age) S.x.age(c, age, move, r)
   const ovr = ovrOf(c.pos, build, c.sport)
-  const n = { ...c, age, year: c.year + 1, season: c.season + 1, build, ovr, phase: 'preseason', offers: null, aging: notes, off: null, traded: false }
+  const n = { ...c, ...dura, age, year: c.year + 1, season: c.season + 1, build, ovr, phase: 'preseason', offers: null, aging: notes, off: null, traded: false }
   return { ...n, fit: fitFor(n) }
 }
 export const canRetire = c => c.age >= 29 || c.seasons.length >= 8
@@ -2191,6 +2664,8 @@ export const canRetire = c => c.age >= 29 || c.seasons.length >= 8
 // The age a career ends, by position; elite (90+) and durable (7+) buys two more years
 export const retireAge = c => {
   const S = sportOf(c)
+  if (S.isSoccer) return 34 + ((c.durability ?? 5) >= 6 ? 1 : 0) + ((c.ovr ?? 0) >= 88 ? 1 : 0) + ((c.durability ?? 5) >= 8.5 ? 1 : 0)   // (34-37: the body and the level)
+  if (S.x?.retireAge) return S.x.retireAge(c)
   const base = S.isBucket ? 38 : ({ qb: 42, rb: 33, wr: 36, te: 36, db: 35, dl: 37, lb: 36, ol: 37 })[c.pos] ?? 36
   return base + ((c.ovr ?? 0) >= 90 && (c.durability ?? 5) >= 7 ? 2 : 0)
 }
@@ -2259,6 +2734,8 @@ export function careerTotals(c) {
   if (S.averages) for (const [avg, tot] of Object.entries(S.averages)) stats[avg] = games ? r10((stats[tot] ?? 0) / games) : 0
   // a DB's rating allowed over the career, from the throws at him (the seasons that kept them)
   if (Ss.some(s => s.stats.grade != null)) { const g = Ss.filter(s => s.stats.grade != null), w = g.reduce((a, s) => a + (s.stats.snaps || 1), 0); for (const k of ['grade', 'passGrade', 'runGrade']) stats[k] = r10(g.reduce((a, s) => a + (s.stats[k] ?? 0) * (s.stats.snaps || 1), 0) / w) }
+  // (soccer: the match rating over the career, by appearances; the caps and the goals for his country)
+  if (S.isSoccer) { const apps = Ss.reduce((a, s) => a + (s.stats.apps ?? 0), 0); stats.avgRating = apps ? Math.round(Ss.reduce((a, s) => a + (s.stats.avgRating ?? 0) * (s.stats.apps ?? 0), 0) / apps * 100) / 100 : 0; stats.xg = r10(stats.xg ?? 0) }
   if (stats.tgtA) stats.rtgA = ratingAllowed(Ss.filter(s => s.stats.tgtA).reduce((a, s) => ({ tgtA: a.tgtA + s.stats.tgtA, cmpA: a.cmpA + (s.stats.cmpA ?? 0), ydsA: a.ydsA + (s.stats.ydsA ?? 0), tdA: a.tdA + (s.stats.tdA ?? 0), ints: a.ints + (s.stats.ints ?? 0) }), { tgtA: 0, cmpA: 0, ydsA: 0, tdA: 0, ints: 0 }))
   return {
     seasons: Ss.length, games, wins: Ss.reduce((a, s) => a + s.wins, 0), losses: Ss.reduce((a, s) => a + s.losses, 0),
@@ -2266,6 +2743,7 @@ export function careerTotals(c) {
     // records: the all-time records he holds (one each, however many times he raised his own)
     proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
+    ...(S.x?.totals ? S.x.totals(c) : {}),
   }
 }
 // One formula for every career, played or real. A resume: seasons, honors (Pro
@@ -2282,6 +2760,7 @@ export const LEGACY_W = { seasons: 2, honors: 6, firsts: 10, awards: 18, rings: 
 export const HONOR_KNEE = 8, AWARD_REPEAT = 10
 export const countedHonors = n => Math.min(n, HONOR_KNEE) + Math.max(0, n - HONOR_KNEE) / 2
 export function legacyScore(S, pos, r) {
+  if (S.x?.legacy) return S.x.legacy(r)
   const k = { ...r, honors: countedHonors(r.honors ?? 0) }
   return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (k[key] ?? 0) * w, 0) + Math.max(0, (r.awards ?? 0) - 1) * (S.awardRepeat ?? AWARD_REPEAT) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? (r.firsts ?? 0) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
 }
@@ -2295,14 +2774,16 @@ export const legacyExtras = c => ({ camp: c.legacyCamp ?? 0, shoe: (c.legacyBonu
 // earnings, the legacy points with no real-career counterpart; all kept minor)
 export function resumeOf(c) {
   const t = careerTotals(c)
+  if (sportOf(c).x?.resume) return sportOf(c).x.resume(c, t)
   return { seasons: t.seasons, honors: t.proBowls, firsts: t.allPros, awards: t.awards, rings: t.rings, playoffs: t.playoffs, records: t.records, stats: t.stats, bonus: (c.legacyBonus ?? 0) + earnLegacy(c) }
 }
 export const LEGACY_TIERS = [[0, 'Starter'], [80, 'Star'], [170, 'Superstar'], [280, 'All-Time Great']]
 export function legacyOf(c) {
   const S = sportOf(c)
   const score = legacyScore(S, c.pos, resumeOf(c))
-  const tier = [...LEGACY_TIERS].reverse().find(([min]) => score >= min)[1]
-  const next = LEGACY_TIERS.find(([min]) => score < min)
+  const tiers = legacyTiers(c)
+  const tier = [...tiers].reverse().find(([min]) => score >= min)[1]
+  const next = tiers.find(([min]) => score < min)
   const list = ALL_TIME[c.pos]
   const rank = list.filter(x => x.score > score).length + 1
   return { score, tier, ranked: rank <= list.length, next: next ? { at: next[0], name: next[1] } : null, rank, of: list.length, above: list.filter(x => x.score > score).slice(-1)[0] ?? null, below: list.find(x => x.score <= score) ?? null }
@@ -2310,8 +2791,9 @@ export function legacyOf(c) {
 // The legacy that gets a career voted in (hofVote: 80% of the vote, give or take a few points)
 export const HOF_LEGACY = 209
 // How far along the road to the Hall a career is: Home's HOF banner
-export const hofProgress = c => (c?.hof?.in ? 100 : Math.max(0, Math.min(99, Math.floor((legacyOf(c).score / HOF_LEGACY) * 100))))
+export const hofProgress = c => (c?.sport && !sportReady(c.sport) ? (ensureSport(c.sport), 0) : c?.hof?.in ? 100 : Math.max(0, Math.min(99, Math.floor((legacyOf(c).score / HOF_LEGACY) * 100))))
 function hofVote(c, L) {
+  if (sportOf(c).x?.icon) return sportOf(c).x.icon(c, L)
   const r = seeded(`${c.seed}-hof`)
   const pct = clamp(Math.round(20 + (L.score - 100) * 0.55 + (r() - .5) * 8), 2, 99)
   const inn = pct >= 80
@@ -2334,6 +2816,7 @@ export const ALL_TIME = {
 
 // The player comp: the real players (today's and all-time) whose grades sit
 // closest to this build's, trait by trait. A player listed for several teams counts once.
+// (soccer: both pools, every attacker and midfielder in them: Top Divisions is today's, the World Cup's the same men)
 const ALL_TIME_POOL = { qb: LEGENDS, rb: RB_LEGENDS, wr: WR_LEGENDS, te: TE_LEGENDS, db: DB_LEGENDS, dl: DL_LEGENDS, lb: LB_LEGENDS, ol: OL_LEGENDS, guard: NBA_ALLTIME_GUARD_PLAYERS, big: NBA_ALLTIME_BIG_PLAYERS }
 // prime: as he was before age and injuries took their grades (the career summary: no one's "built like" his 38-year-old legs)
 export function compsFor(c, n = 5, prime = false) {
@@ -2352,8 +2835,8 @@ export function compsFor(c, n = 5, prime = false) {
     const prev = best.get(p.name)
     if (!prev || dist < prev.dist || (dist === prev.dist && era === 'current')) best.set(p.name, { name: p.name, team: p.team, years: p.years ?? null, era, dist, attrs: p.attrs, photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name) })
   }
-  for (const p of S.pool[c.pos] ?? []) consider(p, 'current')
-  for (const p of ALL_TIME_POOL[c.pos] ?? []) consider(p, 'all-time')
+  for (const p of (S.x?.compPool ?? S.pool[c.pos]) ?? []) consider(p, 'current')
+  for (const p of ALL_TIME_POOL[c.pos] ?? []) consider(p, S.x?.compPool ? 'current' : 'all-time')
   return [...best.values()].sort((a, b) => a.dist - b.dist).slice(0, n).map(x => ({ ...x, match: Math.max(0, Math.round(100 - x.dist * 9)) }))
 }
 
@@ -2362,5 +2845,30 @@ export function careerCard(c) {
   const S = sportOf(c)
   const t = careerTotals(c), L = legacyOf(c)
   const head = HEADLINE_STATS[c.pos].map(k => [STAT_LABEL[k], fmtStat(t.stats[k])])
-  return { name: c.name, pos: S.isBucket ? (c.pos === 'guard' ? 'GUARD' : 'BIG') : POS_LABEL[c.pos], years: c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : '', teams: t.teams, head, rings: t.rings, awards: c.pos === 'ol' ? t.allPros : t.awards, awardName: AWARD_NAME[c.pos], proBowls: t.proBowls, honorName: S.honors, allPros: t.allPros, legacy: L, hof: c.hof, draft: c.draft.pick, earnings: t.earnings, site: S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com' }
+  return { name: c.name, pos: S.isSoccer ? 'STRIKER' : S.isBucket ? (c.pos === 'guard' ? 'GUARD' : 'BIG') : POS_LABEL[c.pos], years: c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : '', teams: t.teams, head, rings: t.rings, awards: c.pos === 'ol' ? t.allPros : t.awards, awardName: AWARD_NAME[c.pos], proBowls: t.proBowls, honorName: S.honors, allPros: t.allPros, legacy: L, hof: c.hof, draft: c.draft.pick, earnings: t.earnings, site: S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com') }
 }
+
+// ── Sports that load on their own (soccer: lib/careerSoccer.js) ──────────────
+// A football or basketball career never downloads them: soccer's rules, data and engine arrive with
+// ensureSport('soccer') (the soccer app, the Career screens and Home's career card ask for it), and the
+// module registers itself here: SPORT.soccer, its lookups, its greats, its offseason and interview banks.
+const NAMERS = {}
+const LOADERS = { soccer: () => import('./careerSoccer.js'), baseball: () => import('./careerBaseball.js') }
+const loading = {}
+export const sportReady = id => !!SPORT[id] || !LOADERS[id]
+export const ensureSport = id => (sportReady(id) ? Promise.resolve(SPORT[id] ?? null) : (loading[id] ??= LOADERS[id]().then(() => SPORT[id])))
+export const legacyTiers = c => sportOf(c).tiers ?? LEGACY_TIERS
+export function registerSport(id, S, { resumes = {}, events = null, interviews = null, comps = {}, namers = {} } = {}) {
+  SPORT[id] = S
+  for (const [obj, k] of [[POS_LABEL, 'label'], [POS_NAME, 'posName'], [POS_TYPES, 'types'], [POS_ATTR, 'attr'], [AWARD_NAME, 'awardName'], [STARTERS, 'starters'], [HEADLINE_STATS, 'headline'], [EXTRA_STATS, 'extra']]) Object.assign(obj, S[k] ?? {})
+  Object.assign(RESUMES, resumes)
+  for (const pos of Object.keys(resumes)) ALL_TIME[pos] = greats(scored(id, pos))
+  Object.assign(ALL_TIME_POOL, comps)
+  Object.assign(NAMERS, namers)
+  if (events) EVENTS[id] = events
+  if (interviews) INTERVIEWS[id] = interviews
+  // (a registered sport's own ages at the end, shirt numbers and face rating: baseball's, lib/careerBaseball.js)
+  Object.assign(RETIRE_AT, S.retireAt ?? {}); Object.assign(CAST_NUM, S.castNum ?? {}); Object.assign(FACE_RATING, S.face ?? {}); Object.assign(STAT_LABEL, S.statLabel ?? {})
+}
+// the engine's pieces a registered sport builds on
+export const CAREER_X = { rosterOf, keepRoster, rosterYrs, outOf, marketValue, LAST_PLAY, strength, goalMet, buildOf, avgOvr, byOvr, clamp, r10, FIRST_SEASON, fitFor, nickOf, hashN, rosterFor, ageOf }

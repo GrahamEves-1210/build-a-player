@@ -229,6 +229,8 @@ export function phaseOf(stop) {
 
 function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name, seed, team, lastBig, lastBust, deals = null }) {
   const isBucket = sport === 'bucket'
+  // soccer: a draw is a point, the table is points a game (2+ a title race, about 1 a relegation scrap)
+  const isSoccer = sport === 'soccer'
   const onDef = pos === 'db' || pos === 'dl' || pos === 'lb'
   const k = ctx.games.length, total = stop.total, left = total - k
   const { wins, losses, streak, skid } = ctx
@@ -252,6 +254,8 @@ function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name,
     one: (...cands) => cands.find(t => has.has(t)) ?? null,
   }
   const r = seeded(`scn-${seed}-${stop.at}`)
+  const draws = ctx.draws ?? 0, ppg = k ? (wins * 3 + draws) / k : 0
+  const soccer = isSoccer ? { alive: true, clinched: false, eliminated: false, bubble: false, contender: k >= 5 && ppg >= 2.05, struggling: k >= 5 && ppg <= 1.05, rec: `${wins}–${draws}–${losses}`, g: n => n, unitWord: 'matches', bench: !!team?.bench, draws, ppg } : {}
   return {
     team: team?.short ?? null,
     deals,                       // Career: () => who the front office can trade for (see career.js dealsFor)
@@ -273,14 +277,17 @@ function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name,
       const list = (INJURIES[pos] ?? []).map(i => ({ ...i, hit: Object.fromEntries(Object.entries(i.hit).filter(([t]) => has.has(t))) })).filter(i => Object.keys(i.hit).length)
       return list.length ? list[Math.floor(seeded(`inj-${seed}-${stop.at}`)() * list.length)] : null
     },
+    isSoccer, ...soccer,
+    // (a sport that loads on its own reads the season its own way: baseball's playoff line, his slump or his streak)
+    ...(CTX[sport] ? CTX[sport]({ k, total, left, wins, losses, streak, skid, pace, ctx, team, pos, build }) : {}),
   }
 }
 
 // option builder: label + effect (+ an optional flavor line before the fine print)
-const o = (id, label, effect, flavor) => ({ id, label, effect, flavor })
-const gam = (p, hit, hitLine, miss, missLine) => ({ gamble: { p, hit: { ...hit, line: hitLine }, miss: { ...miss, line: missLine } } })
+export const o = (id, label, effect, flavor) => ({ id, label, effect, flavor })
+export const gam = (p, hit, hitLine, miss, missLine) => ({ gamble: { p, hit: { ...hit, line: hitLine }, miss: { ...miss, line: missLine } } })
 // several trait changes in one: the numbers add up per trait
-const mix = (...parts) => parts.reduce((acc, p) => { for (const [t, d] of Object.entries(p || {})) acc[t] = (acc[t] || 0) + d; return acc }, {})
+export const mix = (...parts) => parts.reduce((acc, p) => { for (const [t, d] of Object.entries(p || {})) acc[t] = (acc[t] || 0) + d; return acc }, {})
 const half = hit => Object.fromEntries(Object.entries(hit).map(([t, d]) => [t, Math.round(d / 2) || -1]))
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -288,7 +295,7 @@ const half = hit => Object.fromEntries(Object.entries(hit).map(([t, d]) => [t, M
 // ═════════════════════════════════════════════════════════════════════════════
 // the cards that stop a season over an injury (the director rations them: lib/seasonDirector.js)
 export const INJURY_CARDS = new Set(['injury', 'concussion', 'po-hurt'])
-const INJURY = [
+export const INJURY = [
   { id: 'injury', at: ['early', 'mid', 'late', 'stretch'], w: 3, when: c => !!c.injury(),
     make: c => {
       const inj = c.injury()
@@ -296,38 +303,38 @@ const INJURY = [
       const out = inj.out, hurt = Math.min(inj.hurt, Math.max(1, c.left))
       return {
         kicker: 'INJURY REPORT', title: inj.name,
-        body: `The trainers say ${c.isBucket ? `${out} games` : out === 1 ? 'a week' : `${out} weeks`} and it heals clean. You can play on it, but it won't be right, and it could get worse.`,
+        body: `The ${c.isSoccer ? 'physios' : 'trainers'} say ${c.isBucket || c.isSoccer ? `${out} ${c.isSoccer ? 'matches' : 'games'}` : out === 1 ? 'a week' : `${out} weeks`} and it heals clean. ${c.name} can play on it, but it won't be right, and it could get worse.`,
         options: [
-          o('sit', 'Sit until it heals', { sit: out, tag }, `The ${c.nick} play without you.`),
-          o('play', 'Play through it', gam(0.65, { attr: inj.hit, window: hurt, tag: `PLAYING HURT`, dur: -0.3 }, `It held. Not right, but you played every ${c.isBucket ? 'minute' : 'snap'}.`,
-            { attr: inj.hit, window: 1, tag: 'PLAYING HURT', dur: -0.6, then: { sit: out + (c.isBucket ? 3 : 1), tag } }, 'It gave out. Now you\'re out longer than if you\'d sat.')),
+          o('sit', 'Sit until it heals', { sit: out, tag }, `The ${c.nick} play without him.`),
+          o('play', 'Play through it', gam(0.65, { attr: inj.hit, window: hurt, tag: `PLAYING HURT`, dur: -0.3 }, `It held. Not right, but he played every ${c.isBucket || c.isSoccer ? 'minute' : 'snap'}.`,
+            { attr: inj.hit, window: 1, tag: 'PLAYING HURT', dur: -0.6, then: { sit: out + (c.isBucket ? 3 : 1), tag } }, 'It gave out. Now he\'s out longer than if he\'d sat.')),
         ],
       }
     } },
   { id: 'concussion', at: ['early', 'mid', 'late'], w: 1, when: c => !c.isBucket,
     make: c => ({ kicker: 'INJURY REPORT', title: 'In the concussion protocol',
-      body: 'A helmet-to-helmet hit on Sunday. You cleared the first tests. The doctors can sign off this week, or hold you one more.',
+      body: `A helmet-to-helmet hit on Sunday. ${c.name} cleared the first tests. The doctors can sign off this week, or hold him one more.`,
       options: [
         o('clear', 'Clear it and play', gam(0.8, { sit: 1, tag: 'PROTOCOL' }, 'One week out, then back to normal.', { sit: 3, tag: 'PROTOCOL' }, 'The symptoms come back in practice. Three weeks out.')),
-        o('wait', 'Take the extra week', { sit: 2, tag: 'PROTOCOL' }, 'Two weeks out. You come back clear.'),
+        o('wait', 'Take the extra week', { sit: 2, tag: 'PROTOCOL' }, 'Two weeks out. He comes back clear.'),
       ] }) },
   { id: 'wear', at: ['late', 'stretch'], w: 2, when: c => c.alive && c.roleHas('legs'),
     make: c => ({ kicker: 'STRETCH RUN', title: 'The body is wearing down',
-      body: `${c.isBucket ? 'Sixty games' : 'Thirteen weeks'} of hits. Nothing's torn, everything hurts. Manage it week to week, or rest now and be right for the playoffs.`,
+      body: `${c.isSoccer ? 'Thirty matches' : c.isBucket ? 'Sixty games' : 'Thirteen weeks'} of hits. Nothing's torn, everything hurts. Manage it week to week, or rest now and be right for the playoffs.`,
       options: [
         o('manage', 'Manage it, keep playing', { attr: c.R('legs', -2), tag: 'WORN DOWN' }, 'Slower the rest of the way, playoffs included.'),
         o('rest', 'Rest now', { sit: c.g(1), tag: 'RESTED', then: { attr: c.R('legs', 1) } }, 'A week off, then the legs come back.'),
       ] }) },
 ]
-const PO_INJURY = [
+export const PO_INJURY = [
   { id: 'po-hurt', at: ['playoffs'], w: 3, when: c => !!c.injury(),
     make: c => {
       const inj = c.injury()
       return { kicker: 'PLAYOFF INJURY REPORT', title: inj.name,
-        body: 'Nobody sits in the playoffs. The question is how you play on it.',
+        body: `Nobody sits in the playoffs. The question is how ${c.name} plays on it.`,
         options: [
           o('straight', 'Play on it, no shortcuts', { attr: half(inj.hit) }, 'Not right, but nothing gets worse.'),
-          o('shot', 'Take the shot and go', gam(0.6, {}, 'You felt nothing until Monday.', { attr: inj.hit }, 'It wore off by halftime.')),
+          o('shot', 'Take the shot and go', gam(0.6, {}, 'He felt nothing until Monday.', { attr: inj.hit }, 'It wore off by halftime.')),
         ] }
     } },
 ]
@@ -341,13 +348,13 @@ const NFL_ALL = [
       body: `${c.nick} are in. ${c.left} games left that don't decide much, and every snap is a chance to get hurt before January.`,
       options: [
         o('rest', 'Sit a week, heal up', { sit: 1, tag: 'RESTED', then: { attr: c.R('legs', 1) } }, 'Fresh legs for January.'),
-        o('play', 'Keep playing', gam(0.82, {}, 'Played it out, healthy.', { attr: c.R('legs', -2), tag: 'BANGED UP' }, 'Took a hit in a game that didn\'t matter, and you carry it into January.')),
+        o('play', 'Keep playing', gam(0.82, {}, 'Played it out, healthy.', { attr: c.R('legs', -2), tag: 'BANGED UP' }, 'Took a hit in a game that didn\'t matter, and he carries it into January.')),
       ] }) },
   { id: 'eliminated', at: ['late', 'stretch'], w: 6, when: c => c.eliminated && c.left >= 2,
     make: c => ({ kicker: 'ELIMINATED', title: 'What the last games are for',
       body: `${c.nick} are out. ${c.left} games left. Play them out for the numbers, or shut it down and get healthy.`,
       options: [
-        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Played out the string without getting hurt. The stats count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a game that meant nothing. Done for the year, and it follows you into next season.')),
+        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Played out the string without getting hurt. The stats count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a game that meant nothing. Done for the year, and it follows him into next season.')),
         o('shut', 'Shut it down', { sit: c.left, dur: 0.5, tag: 'SHUT DOWN' }, 'No more games, no more risk. A full offseason to heal.'),
       ] }) },
   { id: 'deadline-buy', at: ['mid'], w: 4, when: c => c.alive && !c.struggling,
@@ -371,7 +378,7 @@ const NFL_ALL = [
       body: `${c.nick} are moving veterans for picks. The team gets worse now. Ride it out, or ask to be moved too?`,
       options: [
         o('ride', 'Ride it out', { team: { off: -1.5, def: -1.5 } }, 'A thinner roster the rest of the way.'),
-        o('out', 'Ask to be moved too', gam(0.4, { team: { off: -1.5, def: -1.5 }, xp: 40 }, 'They say no, but the front office respects it.', { team: { off: -2, def: -2 }, tag: 'ROOM TURNED' }, 'It leaked. The locker room turns on you.')),
+        o('out', 'Ask to be moved too', gam(0.4, { team: { off: -1.5, def: -1.5 }, xp: 40 }, 'They say no, but the front office respects it.', { team: { off: -2, def: -2 }, tag: 'ROOM TURNED' }, 'It leaked. The locker room turns on him.')),
       ] }) },
   { id: 'oc-fired', at: ['mid', 'late'], w: 3, when: c => c.struggling && !c.isDef,
     make: () => ({ kicker: 'STAFF CHANGE', title: 'The coordinator is gone',
@@ -384,10 +391,10 @@ const NFL_ALL = [
 const QB = [
   { id: 'qb-benched', at: ['mid', 'late'], w: 5, when: c => c.lastBust && c.skid >= 2,
     make: () => ({ kicker: 'BENCHED', title: 'The coach goes to the backup',
-      body: 'Picks and losses. You\'re sitting this week. Take the message, or fight for the job in practice?',
+      body: `Picks and losses. ${c.name} is sitting this week. Take the message, or fight for the job in practice?`,
       options: [
         o('accept', 'Take the week', { sit: 1, tag: 'BENCHED' }, 'One week on the sideline, then the job is yours again.'),
-        o('fight', 'Fight for the job in practice', gam(0.5, {}, 'You win the room back. You start Sunday.', { sit: 3, tag: 'BENCHED' }, 'The coach doesn\'t budge. Three weeks on the bench.')),
+        o('fight', 'Fight for the job in practice', gam(0.5, {}, 'He wins the room back. He starts Sunday.', { sit: 3, tag: 'BENCHED' }, 'The coach doesn\'t budge. Three weeks on the bench.')),
       ] }) },
 ]
 const RB = [], WR = [], TE = [], DB = [], OL = [], LB = []
@@ -395,32 +402,32 @@ const RB = [], WR = [], TE = [], DB = [], OL = [], LB = []
 // an early-down job that costs sacks, your weight in December, a coordinator on the way out.
 const DL = [
   { id: 'dl-slide', at: ['early', 'mid', 'late'], w: 3, when: c => c.k >= 3 && c.roleHas('make'),
-    make: c => ({ kicker: 'GAME PLAN', title: 'The slide is coming to you',
-      body: `The tape got around. Teams are sliding the protection your way and chipping you with a back on every dropback. The line coach has two answers.`,
+    make: c => ({ kicker: 'GAME PLAN', title: 'The slide is coming his way',
+      body: `The tape got around. Teams are sliding the protection toward ${c.name} and chipping him with a back on every dropback. The line coach has two answers.`,
       options: [
         o('fight', 'Stay put and beat it', { attr: mix(c.R('power', 2), c.R1('make', -1)), window: 3, tag: 'SEEING DOUBLES' }, 'Heavy hands through two blockers. Fewer clean shots, but they pay for sending two.'),
         o('move', 'Move all over the front', { attr: c.R1('make', 2), team: { def: -0.5 }, window: 3, tag: 'MOVED AROUND' }, c.spot === 'dt' ? 'Over the center, then a three-technique, then standing up on the edge. The run fits get loose.' : 'Left end, right end, inside on third down. The run fits get loose.'),
       ] }) },
   { id: 'dl-snap-count', at: ['early', 'mid'], w: 2, when: c => c.T.has('getOff'),
     make: c => ({ kicker: 'FILM ROOM', title: 'A tell in the snap count',
-      body: `Late night in the film room: next week's center dips his head before the ball moves. Or you think he does. Anticipate it, or trust your eyes?`,
+      body: `Late night in the film room: next week's center dips his head before the ball moves. Or ${c.name} thinks he does. Anticipate it, or trust his eyes?`,
       options: [
-        o('jump', 'Sit on the tell', gam(0.6, { attr: { getOff: 2 }, window: 3, tag: 'ON THE SNAP' }, 'You\'re in the backfield before the guard stands up.', { attr: { getOff: -2 }, window: 2, tag: 'OFFSIDES' }, 'They saw you coming and drew you offsides twice. Now you\'re a beat late.')),
+        o('jump', 'Sit on the tell', gam(0.6, { attr: { getOff: 2 }, window: 3, tag: 'ON THE SNAP' }, 'He\'s in the backfield before the guard stands up.', { attr: { getOff: -2 }, window: 2, tag: 'OFFSIDES' }, 'They saw him coming and drew him offsides twice. Now he\'s a beat late.')),
         o('eyes', 'Play the ball, not the guess', { attr: c.R1('mind', 1), window: 3, tag: 'DIALED IN' }, 'No free yards. A cleaner read on the run.'),
       ] }) },
   { id: 'dl-two-gap', at: ['mid', 'late'], w: 3, when: c => c.roleHas('make'),
-    make: c => ({ kicker: 'DEFENSIVE STAFF', title: 'They want you two-gapping',
-      body: `The run defense is leaking, and the coordinator wants you reading on early downs instead of getting up the field. Better for the team, and it costs you rushes.`,
+    make: c => ({ kicker: 'DEFENSIVE STAFF', title: 'They want him two-gapping',
+      body: `The run defense is leaking, and the coordinator wants ${c.name} reading on early downs instead of getting up the field. Better for the team, and it costs him rushes.`,
       options: [
-        o('two', 'Do the dirty work', { attr: c.R1('make', -1), team: { def: 1 }, tag: 'TWO-GAPPING' }, 'The run dries up. Your sack numbers pay for it.'),
-        o('one', 'Keep getting up the field', { attr: c.R1('make', 1), team: { def: -0.5 } }, `The sacks keep coming, and backs keep running through where you were.`),
+        o('two', 'Do the dirty work', { attr: c.R1('make', -1), team: { def: 1 }, tag: 'TWO-GAPPING' }, 'The run dries up. His sack numbers pay for it.'),
+        o('one', 'Keep getting up the field', { attr: c.R1('make', 1), team: { def: -0.5 } }, `The sacks keep coming, and backs keep running through where he was.`),
       ] }) },
   { id: 'dl-weight', at: ['late', 'stretch'], w: 2, when: c => c.alive && c.T.has('strength') && c.roleHas('legs'),
     make: c => ({ kicker: 'STRETCH RUN', title: c.spot === 'dt' ? 'Playing at 320 in December' : 'Heavy legs in December',
-      body: c.spot === 'dt' ? 'The strength staff wants ten pounds off for the stretch: quicker off the ball, easier to move. You have held your spot at this weight all year.' : 'Hands and legs are going. The strength staff wants ten pounds off so you can still turn the corner, or you can keep the weight and the anchor.',
+      body: c.spot === 'dt' ? `The strength staff wants ten pounds off ${c.name} for the stretch: quicker off the ball, easier to move. He has held his spot at this weight all year.` : `Hands and legs are going. The strength staff wants ten pounds off ${c.name} so he can still turn the corner, or he can keep the weight and the anchor.`,
       options: [
         o('cut', 'Drop the weight', { attr: mix(c.R1('legs', 2), { strength: -2 }), tag: 'LIGHTER' }, 'A step quicker, a little easier to wash out.'),
-        o('keep', 'Keep it on', { attr: mix({ strength: 1 }, c.R1('legs', -1)), tag: 'HEAVY' }, 'Nobody moves you. Nobody is outrunning anybody either.'),
+        o('keep', 'Keep it on', { attr: mix({ strength: 1 }, c.R1('legs', -1)), tag: 'HEAVY' }, 'Nobody moves him. Nobody is outrunning anybody either.'),
       ] }) },
   { id: 'dc-fired', at: ['mid', 'late'], w: 3, when: c => c.struggling,
     make: () => ({ kicker: 'STAFF CHANGE', title: 'The coordinator is gone',
@@ -461,10 +468,10 @@ function careerDeadline(c, d) {
 // ═════════════════════════════════════════════════════════════════════════════
 const NFL_PLAYOFFS = [
   { id: 'po-plan', at: ['playoffs'], w: 5, when: () => true,
-    make: c => ({ kicker: 'PLAYOFF WEEK', title: 'How do you want to win it?',
-      body: 'One-and-done football. The staff asks whether the postseason runs through you, or through the whole roster.',
+    make: c => ({ kicker: 'PLAYOFF WEEK', title: 'How do they win it?',
+      body: `One-and-done football. The staff asks whether the postseason runs through ${c.name}, or through the whole roster.`,
       options: [
-        o('me', 'Through me', { attr: mix(c.R('make', 2), c.R1('feel', 1)), team: { [c.otherKey]: -1 } }, 'Your best football. The other side of the ball is exposed.'),
+        o('me', 'Through me', { attr: mix(c.R('make', 2), c.R1('feel', 1)), team: { [c.otherKey]: -1 } }, 'His best football. The other side of the ball is exposed.'),
         o('control', 'Ball control, field position', { team: { def: 1.5 }, attr: c.R('make', -2) }, 'Fewer chances, fewer mistakes.'),
         o('all', 'Everyone, all in', { team: { off: 1, def: 1 }, xp: 25 }, 'Balanced. Boring. Dangerous.'),
       ] }) },
@@ -492,28 +499,28 @@ const NBA_ALL = [
     make: c => ({ kicker: 'CLINCHED', title: 'Rest for the playoffs?', body: `${c.nick} have a playoff spot. ${c.left} games left.`,
       options: [
         o('rest', 'Load management', { sit: 4, tag: 'LOAD MANAGEMENT', then: { attr: c.R('legs', 1) } }, 'Four nights off. Fresh for the playoffs.'),
-        o('seed', 'Chase the top seed', gam(0.8, {}, 'Played every night, healthy.', { attr: c.R('legs', -2), tag: 'BANGED UP' }, 'Banged up in a game that didn\'t matter. You carry it into the playoffs.')),
+        o('seed', 'Chase the top seed', gam(0.8, {}, 'Played every night, healthy.', { attr: c.R('legs', -2), tag: 'BANGED UP' }, 'Banged up in a game that didn\'t matter. He carries it into the playoffs.')),
       ] }) },
   { id: 'nba-eliminated', at: ['late', 'stretch'], w: 6, when: c => c.eliminated && c.left >= 4,
     make: c => ({ kicker: 'OUT OF IT', title: 'Season\'s over', body: `${c.nick} won't make the playoffs. ${c.left} games left. Keep playing, or rest up for next year?`,
       options: [
-        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Finished the season healthy. The numbers count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a meaningless game. Done for the year, and it follows you into next season.')),
+        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Finished the season healthy. The numbers count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a meaningless game. Done for the year, and it follows him into next season.')),
         o('shut', 'Shut it down', { sit: c.left, dur: 0.5, tag: 'SHUT DOWN' }, 'Healthy into the summer. A full offseason to heal.'),
       ] }) },
 ]
 const GUARD = [], BIG = []
 const NBA_PLAYOFFS = [
   { id: 'nbapo-takeover', at: ['playoffs'], w: 2, when: () => true,
-    make: c => ({ kicker: 'BEFORE THE PLAYOFFS', title: 'The second season', body: 'The stage gets bigger. How do you want to play the postseason?',
+    make: c => ({ kicker: 'BEFORE THE PLAYOFFS', title: 'The second season', body: `The stage gets bigger. How does ${c.name} want to play the postseason?`,
       options: [
-        o('takeover', 'Take over', { attr: mix(c.R('make', 2), c.R1('feel', 1)), team: { def: -1 } }, 'Your usage through the roof; the defense pays.'),
+        o('takeover', 'Take over', { attr: mix(c.R('make', 2), c.R1('feel', 1)), team: { def: -1 } }, 'His usage through the roof; the defense pays.'),
         o('steady', 'Trust the system', { team: { off: 1, def: 1 } }, 'Five guys, one plan.'),
       ] }) },
   { id: 'nbapo-minutes', at: ['playoffs'], w: 2, when: c => c.roleHas('legs'),
-    make: c => ({ kicker: 'PLAYOFF MINUTES', title: '44 minutes a night?', body: 'The coach asks if you can handle more minutes.',
+    make: c => ({ kicker: 'PLAYOFF MINUTES', title: '44 minutes a night?', body: `The coach asks if ${c.name} can handle more minutes.`,
       options: [
-        o('more', 'Play me 44', { attr: mix(c.R1('make', 2), c.R('legs', -2)) }, 'More of you, on tired legs.'),
-        o('normal', 'Normal minutes', { team: { off: 1 } }, 'The bench keeps you fresh.'),
+        o('more', 'Play me 44', { attr: mix(c.R1('make', 2), c.R('legs', -2)) }, 'More of him, on tired legs.'),
+        o('normal', 'Normal minutes', { team: { off: 1 } }, 'The bench keeps him fresh.'),
       ] }) },
 ]
 
@@ -521,6 +528,9 @@ const BANK = {
   nfl: { all: [...NFL_ALL, ...INJURY], qb: QB, rb: RB, wr: WR, te: TE, db: DB, dl: DL, lb: LB, ol: OL, playoffs: [...NFL_PLAYOFFS, ...PO_INJURY] },
   bucket: { all: [...NBA_ALL, ...INJURY.filter(s => s.id !== 'concussion')], guard: GUARD, big: BIG, playoffs: [...NBA_PLAYOFFS, ...PO_INJURY] },
 }
+// A sport that loads on its own (soccer: lib/soccerSeason.js) brings its bank, its roles and its injuries
+const CTX = {}
+export function registerScenarios(sport, { bank, role = {}, injuries = {}, ctx = null }) { BANK[sport] = bank; Object.assign(ROLE, role); Object.assign(INJURIES, injuries); if (ctx) CTX[sport] = ctx }
 // How many scenarios each position can draw from (for the record)
 export const bankSize = (sport, pos) => (BANK[sport]?.all.length ?? 0) + (BANK[sport]?.[pos]?.length ?? 0) + (BANK[sport]?.playoffs.length ?? 0)
 

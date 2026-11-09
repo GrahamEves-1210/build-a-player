@@ -1,15 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { POSITIONS, POS_LABEL, POS_NAME, SPOTS, countOf, canAdd, spotsOf, nextToBuild, newSquad, addSlots, dropSlot, isFull, fullSize, afterBuilding } from '../../lib/squad'
-import { runSquadSeason, lineupOf, rosterOf, roleOf, projectedMinutes, squadStrength, teamGrade, teamOf, logoOf, ovrOf, nameOf, faceOf, spotOfBuild, SPOT_LABEL, olSpotOfBuild } from '../../lib/squadSeason'
+import { POSITIONS, POS_LABEL, POS_NAME, SPOTS, SOCCER_SHAPES, spotsFor, bySpot, countOf, canAdd, spotsOf, nextToBuild, newSquad, addSlots, dropSlot, isFull, fullSize, afterBuilding } from '../../lib/squad'
+import { soccerOrdinal, runSquadSeason, lineupOf, rosterOf, roleOf, projectedMinutes, squadStrength, teamGrade, teamOf, logoOf, ovrOf, nameOf, faceOf, spotOfBuild, SPOT_LABEL, olSpotOfBuild, loadSquadLegends, legendsReady } from '../../lib/squadSeason'
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './AppSeason'
-import { TeamResult, SafeView, isTeamResult, outcome, Face, lastName, fmt } from './SquadSeason'
+import { TeamResult, SafeView, isTeamResult, outcome, Face, lastName, fmt, TeamCrest, soccerRecord } from './SquadSeason'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { getUsername } from '../../lib/discord'
 import { IconClose, IconArrow, IconTrophy, IconCheck, IconSwap, IconPlay } from './icons'
+import './squad-soccer.css'
+import './squad-baseball.css'
+// baseball's club board and season (its own chunk: it reads lib/squadBaseball.js, loaded with a baseball squad only)
+const BaseballBoard = lazy(() => import('./SquadBaseball').then(m => ({ default: m.BaseballBoard })))
+const BaseballResult = lazy(() => import('./SquadBaseball'))
+const BaseballTrophy = lazy(() => import('./SquadBaseball').then(m => ({ default: m.BaseballTrophy })))
 
-// SQUAD BUILDER (football and basketball): pick the positions (basketball: the
-// spots, PG to C), build each one
+// SQUAD BUILDER (football, basketball and soccer): pick the positions (basketball: the
+// spots, PG to C; soccer: the front line, a front three or a front two and a No. 10, on a
+// club or a nation), build each one
 // (the game's own build pages: the app routes those), pick a real team, set the
 // lineup (basketball) and play one season together. Then run it back: add a
 // player, cut one, change the team. The squad is lib/squad.js, the season
@@ -54,7 +61,7 @@ function PosTiles({ sport, slots, onAdd, onRemove }) {
 // ── Basketball: the five spots, PG to C, each one once. Tap a spot to fill it,
 // tap it again to leave it open; a spot whose player is built shakes (cut them
 // from the squad instead). ──
-function SpotTiles({ taken, built = [], onAdd, onRemove }) {
+function SpotTiles({ taken, built = [], onAdd, onRemove, spots = SPOTS, sport = 'bucket' }) {
   const [held, setHeld] = useState(null)
   const timer = useRef(0)
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -68,22 +75,45 @@ function SpotTiles({ taken, built = [], onAdd, onRemove }) {
     haptic('light')
   }
   return (
-    <div className="sq-tiles sq-tiles--spots">
-      {SPOTS.map((sp, i) => {
+    <div className={`sq-tiles sq-tiles--spots${sport === 'soccer' ? ' sq-tiles--front' : sport === 'baseball' ? ' sq-tiles--baseball' : ''}`}>
+      {spots.map((sp, i) => {
         const on = taken.includes(i), hot = held?.i === i
-        return (
+        // (baseball: the lineup, then the staff, each under its own head)
+        const head = sport === 'baseball' && (i === 0 || spots[i - 1].pos !== sp.pos) ? <span key={`h${i}`} className="sq-tiles-head">{sp.pos === 'bat' ? 'THE LINEUP' : 'THE ROTATION AND THE CLOSER'}</span> : null
+        return [head,
           <div key={`${i}-${hot ? held.k : 0}`} className={`sq-tile${on ? ' is-on' : ''}${hot ? ' is-max' : ''}`}>
             <button className="sq-tile-add" onClick={() => tap(i)} aria-pressed={on} aria-label={`${sp.name}${on ? ', on the squad' : ''}`}>
               <span className="sq-tile-pos">{sp.label}</span>
               <span className="sq-tile-name">{hot ? <em>Built: cut them above</em> : sp.name}</span>
               <span className="sq-tile-n">{on ? <IconCheck size={16} /> : '+'}</span>
             </button>
-          </div>
-        )
+          </div>,
+        ]
       })}
+      {sport === 'soccer' && (
+        <div className="sq-tile is-soon" aria-disabled="true">
+          <span className="sq-tile-add"><span className="sq-tile-pos">GK</span><span className="sq-tile-name">Goalkeeper · COMING SOON</span><span className="sq-tile-n">—</span></span>
+        </div>
+      )}
     </div>
   )
 }
+
+// ── Soccer: where the squad plays (TOP DIVISIONS: a club; WORLD CUP: a nation) and its shape ──
+function Seg({ value, options, onChange, label }) {
+  return (
+    <div className="ag-seg sq-seg" role="tablist" aria-label={label}>
+      {options.map(([id, text]) => (
+        <button key={id} role="tab" aria-selected={value === id} className={value === id ? 'is-on' : ''} onClick={() => { if (value !== id) { onChange(id); sfx('tap'); haptic('light') } }}>
+          {value === id && <span className="ag-seg-pill" />}{text}
+        </button>
+      ))}
+    </div>
+  )
+}
+const POOL_OPTS = [['current', 'TOP DIVISIONS'], ['alltime', 'WORLD CUP']]
+const BB_POOL_OPTS = [['current', 'CURRENT'], ['alltime', 'ALL-TIME']]
+const SHAPE_OPTS = Object.entries(SOCCER_SHAPES).map(([id, sh]) => [id, `${sh.name} · ${sh.label}`])
 
 // What a build is called: its position (basketball: its spot, PG to C; the line: EDGE or
 // DT from its Size chip, once it's built)
@@ -100,8 +130,8 @@ function tagOf(sq, s) {
     const spot = spotOfBuild(s.build)
     return { label: SPOT_LABEL[spot], name: DL_SPOT_NAME[spot] }
   }
-  const i = sq?.sport === 'bucket' ? spotsOf(sq)[s.id] : null
-  return i != null ? SPOTS[i] : { label: POS_LABEL[s.pos], name: POS_NAME[s.pos] }
+  const i = bySpot(sq?.sport) ? spotsOf(sq)[s.id] : null
+  return i != null ? spotsFor(sq)[i] : { label: POS_LABEL[s.pos], name: POS_NAME[s.pos] }
 }
 
 // ── A build in the squad: face, position, name, OVR ─────────────────────────
@@ -137,7 +167,7 @@ function Picker({ render, squad, onPick, onClose }) {
   const merged = useMemo(() => Object.fromEntries(squad.slots.filter(s => s.build).flatMap(s => Object.entries(s.build).map(([t, c]) => [`${s.id}:${t}`, c]))), [squad.slots])
   return createPortal(
     <div className="sq-picker">
-      {render(onPick, merged)}
+      {render(onPick, merged, squad)}
       {onClose && <button className="ag-round-btn sq-picker-x" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>}
     </div>,
     document.body,
@@ -145,18 +175,18 @@ function Picker({ render, squad, onPick, onClose }) {
 }
 
 // ── Team strength: the real team, and what the builds did to it ─────────────
-function Strength({ sport, squad }) {
+function Strength({ sport, squad, owner }) {
   const st = useMemo(() => squadStrength(squad), [squad])
   // a grade on the game's F–S scale; a build that moved it shows where it was
   const row = (label, now, was) => {
-    const g = teamGrade(sport, now), was0 = teamGrade(sport, was)
+    const g = teamGrade(sport, now, squad.pool), was0 = teamGrade(sport, was, squad.pool)
     return <span className="sq-str-cell"><small>{label}</small><b>{g}</b>{g !== was0 && <i className={now > was ? 'is-up' : 'is-down'}>from {was0}</i>}</span>
   }
   return (
     <div className="sq-str">
-      {row('OFFENSE', st.off, st.baseOff)}
-      {row('DEFENSE', st.def, st.baseDef)}
-      <span className="sq-str-note">The team with your builds, against the starters they replace</span>
+      {row(sport === 'soccer' ? 'ATTACK' : 'OFFENSE', st.off, st.baseOff)}
+      {row(sport === 'soccer' ? 'DEFENCE' : 'DEFENSE', st.def, st.baseDef)}
+      <span className="sq-str-note">{sport === 'soccer' ? `With ${owner}'s builds up front, against the forwards they replace` : sport === 'baseball' ? `The club with ${owner}'s builds, against the men they replace` : `The team with ${owner}'s builds, against the ${squad.pool === 'alltime' ? 'legends' : 'starters'} they replace`}</span>
     </div>
   )
 }
@@ -258,7 +288,7 @@ function LineupBoard({ squad, setSquad, owner }) {
   const box = boardRef.current?.getBoundingClientRect()
   return (
     <section className="sq-board-wrap ag-pop" style={{ '--d': '80ms' }}>
-      <div className="ag-card-head"><span className="ag-eyebrow">THE LINEUP · DRAG YOUR BUILDS</span></div>
+      <div className="ag-card-head"><span className="ag-eyebrow">THE LINEUP · DRAG {owner.toUpperCase()}'S BUILDS</span></div>
       <div className="sq-board" ref={boardRef}>
         <svg className="sq-court" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <rect x="1" y="1" width="98" height="98" rx="3" />
@@ -281,7 +311,7 @@ function LineupBoard({ squad, setSquad, owner }) {
               ) : <Face src={x?.real?.photo} name={x?.real?.name} size={52} />}
               <span className="sq-spot-lbl">{sp.label}</span>
               <b className="sq-spot-name">{mine ? nameOf(s.pos, s.build) : x?.real ? lastName(x.real.name) : 'Open'}</b>
-              <small className="sq-spot-ovr">{mine ? `${ovrOf(s.pos, s.build)} · ${owner}` : x?.real ? `${x.real.ovr} · ${mins[`r:${x.real.name}`] ?? 0} MIN` : ''}</small>
+              <small className="sq-spot-ovr">{mine ? `${ovrOf(s.pos, s.build)} · ${owner}` : x?.real ? `${x.real.ovr} · ${mins[x.real.key ?? `r:${x.real.name}`] ?? 0} MIN` : ''}</small>
             </div>
           )
         })}
@@ -295,10 +325,103 @@ function LineupBoard({ squad, setSquad, owner }) {
         <div className="sq-depth-grp sq-benchrow">
           <span className="sq-depth-pos">BN</span>
           <div className="sq-depth-list">
-            {bench.map((p, i) => <span key={p.name} className="sq-chip"><Face src={p.photo} name={p.name} size={30} /><b>{lastName(p.name)}</b><small>BN{i + 1} · {p.ovr} · {mins[`r:${p.name}`] ?? 0} MIN</small></span>)}
+            {bench.map((p, i) => <span key={p.key ?? p.name} className="sq-chip"><Face src={p.photo} name={p.name} size={30} /><b>{lastName(p.name)}</b><small>BN{i + 1} · {p.ovr} · {mins[p.key ?? `r:${p.name}`] ?? 0} MIN</small></span>)}
           </div>
         </div>
       )}
+    </section>
+  )
+}
+
+// ── Soccer: the front line on the pitch. Each build plays the spot it was picked for; drag it to
+// another (or tap it, then the spot): any striker can play any spot up front. The side's real
+// forwards fill the rest, and its own midfield and back line are behind them. The shape switches
+// between a front three and a front two with a No. 10. ──
+const MIDS = new Set(['AM', 'CM', 'DM'])
+const FRONT_XY = { '433': [[18, 44], [50, 31], [82, 44]], '4312': [[30, 30], [70, 30], [50, 72]] }
+function FrontLine({ squad, setSquad, owner }) {
+  const L = useMemo(() => lineupOf(squad), [squad])
+  const list = spotsFor(squad)
+  const xy = FRONT_XY[squad.shape] ?? FRONT_XY['433']
+  const [drag, setDrag] = useState(null)
+  const [sel, setSel] = useState(null)
+  const boardRef = useRef(null)
+  const dragged = useRef(0)
+  const move = (id, to) => {
+    const from = L.spots.findIndex(x => x?.you?.id === id)
+    if (from === to || to == null) return
+    const lineup = Object.fromEntries(L.spots.map((x, i) => [x?.you?.id, i]).filter(([k]) => k))
+    const there = L.spots[to]?.you?.id
+    lineup[id] = to
+    if (there) lineup[there] = from
+    setSquad({ ...squad, lineup })
+    sfx('drop'); haptic('light')
+  }
+  const spotAt = (x, y) => { const el = document.elementsFromPoint(x, y).find(e => e.dataset?.spot != null); return el ? +el.dataset.spot : null }
+  const down = (e, s) => {
+    if (e.button > 0) return
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch {}
+    setDrag({ id: s.id, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false })
+  }
+  const over = e => setDrag(d => (d ? { ...d, x: e.clientX, y: e.clientY, moved: d.moved || Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 8 } : d))
+  const up = e => { const d = drag; setDrag(null); if (!d?.moved) return; dragged.current = Date.now(); move(d.id, spotAt(e.clientX, e.clientY)) }
+  const tapSpot = i => {
+    if (Date.now() - dragged.current < 350) return
+    const here = L.spots[i]?.you?.id
+    if (!sel) { if (here) { setSel(here); sfx('tap') } return }
+    if (here === sel) { setSel(null); return }
+    move(sel, i); setSel(null)
+  }
+  const box = boardRef.current?.getBoundingClientRect()
+  const pushed = L.benched?.st ?? []
+  const behind = (L.rotation?.bench ?? []).filter(p => !pushed.some(q => q.name === p.name))
+  return (
+    <section className="sq-board-wrap ag-pop" style={{ '--d': '80ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">THE FRONT LINE · DRAG {owner.toUpperCase()}'S BUILDS</span></div>
+      <Seg value={squad.shape ?? '433'} options={SHAPE_OPTS} label="Shape" onChange={shape => setSquad({ ...squad, shape })} />
+      <div className="sq-board sq-board--pitch" ref={boardRef}>
+        <svg className="sq-court sq-pitch" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="1" y="1" width="98" height="98" rx="2" />
+          <path d="M1 99 H99" />
+          <path d="M22 1 V17 H78 V1" />
+          <path d="M38 1 V7 H62 V1" />
+          <path d="M40 17 A12 9 0 0 0 60 17" />
+          <path d="M30 99 A20 14 0 0 1 70 99" />
+          <circle cx="50" cy="12" r=".9" />
+        </svg>
+        {list.map((sp, i) => {
+          const x = L.spots[i], mine = !!x?.you, s = x?.you
+          const picked = mine && (sel === s.id || drag?.id === s.id)
+          const target = (drag?.moved || sel) && !picked
+          return (
+            <div key={i} data-spot={i} className={`sq-spot${mine ? ' is-mine' : ''}${picked ? ' is-picked' : ''}${target ? ' is-target' : ''}`}
+              style={{ left: `${xy[i][0]}%`, top: `${xy[i][1]}%` }} onClick={() => tapSpot(i)}>
+              {mine ? (
+                <button className="sq-spot-me" onDragStart={e => e.preventDefault()} onPointerDown={e => down(e, s)} onPointerMove={over} onPointerUp={up} onPointerCancel={() => setDrag(null)} aria-label={`Move ${nameOf(s.pos, s.build)}`}>
+                  <Face src={faceOf(s.build)} name={sp.label} mine size={52} />
+                </button>
+              ) : <Face src={x?.real?.photo} name={x?.real?.name ?? sp.label} size={52} />}
+              <span className="sq-spot-lbl">{sp.label}</span>
+              <b className="sq-spot-name">{mine ? nameOf(s.pos, s.build) : x?.real ? lastName(x.real.name) : 'Squad player'}</b>
+              <small className="sq-spot-ovr">{mine ? `${ovrOf(s.pos, s.build)} · ${owner}` : x?.real ? `${x.real.ovr} · ${x.real.role}` : 'Open'}</small>
+            </div>
+          )
+        })}
+        {drag?.moved && box && (() => {
+          const s = squad.slots.find(q => q.id === drag.id)
+          return <span className="sq-ghost" style={{ left: drag.x - box.left, top: drag.y - box.top }}><Face src={faceOf(s?.build)} name="ST" mine size={56} /></span>
+        })()}
+      </div>
+      <p className="sq-board-note">{sel ? 'Now tap the spot to move them to.' : 'Any striker can play any spot up front. The No. 9 gets the most of the chances.'}</p>
+      {pushed.length > 0 && <span className="sq-bench">To the bench: {pushed.map(p => lastName(p.name)).join(', ')}</span>}
+      {[['MF', behind.filter(p => MIDS.has(p.role))], ['BN', behind.filter(p => !MIDS.has(p.role))]].map(([tag, ps]) => ps.length > 0 && (
+        <div key={tag} className="sq-depth-grp sq-benchrow">
+          <span className="sq-depth-pos">{tag}</span>
+          <div className="sq-depth-list">
+            {ps.map(p => <span key={p.name} className="sq-chip"><Face src={p.photo} name={p.name} size={30} /><b>{lastName(p.name)}</b><small>{p.role} · {p.ovr}</small></span>)}
+          </div>
+        </div>
+      ))}
     </section>
   )
 }
@@ -330,6 +453,19 @@ function SeasonLines({ r, squad, owner }) {
 }
 function OldResult({ sport, squad, owner }) {
   const r = squad.last
+  if (sport === 'soccer') {
+    const team = teamOf(sport, r.team, r.pool)
+    return (
+      <div className={`sq-hero ag-pop${r.champion ? ' is-champ' : ''}`} style={{ '--tc': team?.color ?? 'var(--ag-a1)' }}>
+        <TeamCrest sport={sport} short={r.team} pool={r.pool} className="sq-hero-logo" />
+        <span className="sq-hero-txt">
+          <span className="ag-eyebrow">{team?.name ?? r.team}</span>
+          <b className="sq-hero-rec">{soccerRecord(r)}</b>
+          <small className="sq-hero-out">{outcome(r)}</small>
+        </span>
+      </div>
+    )
+  }
   const team = teamOf(sport, r.team)
   return (
     <>
@@ -353,7 +489,7 @@ function OldResult({ sport, squad, owner }) {
             </div>
           ))}
         </section>
-      ) : (
+      ) : sport === 'baseball' ? null : (
         <section className="sq-po ag-pop" style={{ '--d': '60ms' }}>
           {r.games?.length > 0 && <WeekStrip games={r.games} revealed={r.games.length} />}
           {r.playoffs && r.rounds?.length > 0 && <Bracket rounds={r.rounds} gameIdx={r.rounds.length - 1} status={r.champion ? 'champion' : 'eliminated'} hasBye={r.hasBye} />}
@@ -367,6 +503,13 @@ function OldResult({ sport, squad, owner }) {
 function Result({ sport, squad, owner, reveal, onRevealed }) {
   const old = <OldResult sport={sport} squad={squad} owner={owner} />
   if (!isTeamResult(squad.last)) { if (reveal) setTimeout(onRevealed, 0); return old }
+  if (sport === 'baseball') {
+    return (
+      <SafeView fallback={old}>
+        <Suspense fallback={null}><BaseballResult squad={squad} owner={owner} reveal={reveal} onRevealed={onRevealed} rewards={<SeasonRewards result={squad.last} />} /></Suspense>
+      </SafeView>
+    )
+  }
   return (
     <SafeView fallback={old}>
       <TeamResult sport={sport} squad={squad} owner={owner} reveal={reveal} onRevealed={onRevealed} rewards={<SeasonRewards result={squad.last} />} />
@@ -380,9 +523,9 @@ function RunItBack({ sport, squad, owner, renderPicker, onApply, onCancel }) {
   const [picking, setPicking] = useState(false)
   const built = draft.slots.filter(s => s.build).length
   const toBuild = draft.slots.filter(s => !s.build).length
-  const team = teamOf(sport, draft.team)
+  const team = teamOf(sport, draft.team, draft.pool)
   const removePos = pos => { const s = [...draft.slots].reverse().find(x => x.pos === pos && !x.build); if (s) setDraft(dropSlot(draft, s.id)) }
-  const at = sport === 'bucket' ? spotsOf(draft) : {}
+  const at = bySpot(sport) ? spotsOf(draft) : {}
   const removeSpot = i => { const s = draft.slots.find(x => at[x.id] === i && !x.build); if (s) setDraft(dropSlot(draft, s.id)) }
   return (
     <>
@@ -392,18 +535,18 @@ function RunItBack({ sport, squad, owner, renderPicker, onApply, onCancel }) {
       </section>
       <section className="sq-edit ag-pop" style={{ '--d': '60ms' }}>
         <div className="ag-card-head"><span className="ag-eyebrow">ADD A PLAYER</span></div>
-        {sport === 'bucket'
-          ? <SpotTiles taken={Object.values(at)} built={draft.slots.filter(s => s.build).map(s => at[s.id])} onAdd={i => setDraft(addSlots(draft, [i]))} onRemove={removeSpot} />
+        {bySpot(sport)
+          ? <SpotTiles sport={sport} spots={spotsFor(draft)} taken={Object.values(at)} built={draft.slots.filter(s => s.build).map(s => at[s.id])} onAdd={i => setDraft(addSlots(draft, [i]))} onRemove={removeSpot} />
           : <PosTiles sport={sport} slots={draft.slots} onAdd={pos => setDraft(addSlots(draft, [pos]))} onRemove={draft.slots.some(s => !s.build) ? removePos : null} />}
       </section>
       <section className="sq-edit sq-edit-team ag-pop" style={{ '--d': '90ms' }}>
-        <img src={logoOf(sport, draft.team)} alt="" />
+        <TeamCrest sport={sport} short={draft.team} pool={draft.pool} />
         <span className="sq-row-txt"><b>{team?.name ?? draft.team}</b><small>{draft.team === squad.team ? 'Same team' : `New team (was ${squad.team})`}</small></span>
         <button className="ag-btn ag-btn--ghost sq-team-btn" onClick={() => { setPicking(true); sfx('tap') }}><IconSwap size={15} /> CHANGE TEAM</button>
       </section>
       <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '120ms' }} disabled={!draft.slots.length || !built && !toBuild}
         onClick={() => onApply(draft)}>
-        {toBuild ? `BUILD ${toBuild} NEW ${toBuild === 1 ? 'PLAYER' : 'PLAYERS'}` : (sport === 'bucket' ? 'SET THE LINEUP' : 'SEE THE DEPTH CHART')} <IconArrow size={16} />
+        {toBuild ? `BUILD ${toBuild} NEW ${toBuild === 1 ? 'PLAYER' : 'PLAYERS'}` : (sport === 'bucket' || sport === 'baseball' ? 'SET THE LINEUP' : sport === 'soccer' ? 'SET THE FRONT LINE' : 'SEE THE DEPTH CHART')} <IconArrow size={16} />
       </button>
       <button className="ag-btn ag-btn--ghost" onClick={onCancel}>BACK TO THE RESULTS</button>
       {picking && <Picker render={renderPicker} squad={draft} onPick={t => { setDraft({ ...draft, team: t.short }); setPicking(false) }} onClose={() => setPicking(false)} />}
@@ -411,10 +554,19 @@ function RunItBack({ sport, squad, owner, renderPicker, onApply, onCancel }) {
   )
 }
 
+// a soccer run in the squad's list: the trophies, or where the side finished
+function runLine(s) {
+  if (s.trophies?.length) return s.trophies.join(', ')
+  if (s.pool === 'alltime') return s.finish ?? (s.playoffs ? 'Knockouts' : 'Group stage')
+  return s.pos ? `${soccerOrdinal(s.pos)} in the league` : 'League season'
+}
+
 // ── The screen ───────────────────────────────────────────────────────────────
 export default function AppSquad({ sport, squad, setSquad, user, renderPicker, onBuild, onExit }) {
   const owner = user ? (getUsername(user) || 'Player') : 'Guest'
-  const [picks, setPicks] = useState([])            // a new squad's positions (basketball: spots), before it starts
+  const [picks, setPicks] = useState([])            // a new squad's positions (basketball, soccer: spots), before it starts
+  const [pool, setPool] = useState('current')       // soccer: TOP DIVISIONS (a club) or WORLD CUP (a nation)
+  const [shape, setShape] = useState('433')         // soccer: a front three or a front two and a No. 10
   const [editing, setEditing] = useState(false)     // run it back
   const [confirmNew, setConfirmNew] = useState(false)
   const [ring, setRing] = useState(null)
@@ -423,23 +575,32 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
   const phase = !squad ? 'pick' : squad.phase
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.sq')?.scrollTo({ top: 0, behavior: 'instant' }) }, [phase, editing])
   useEffect(() => { if (phase === 'team') setPickOpen(true) }, [phase])
+  // ALL-TIME (football, basketball): the franchises' legends load with the squad; it shows once they're in
+  const needLegends = (sport === 'nfl' || sport === 'bucket') && squad?.pool === 'alltime'
+  const [, setLegendsIn] = useState(0)
+  useEffect(() => {
+    if (!needLegends || legendsReady(sport)) return
+    let live = true
+    loadSquadLegends(sport).then(() => { if (live) setLegendsIn(n => n + 1) }, () => {})
+    return () => { live = false }
+  }, [needLegends, sport])
 
   const start = () => {
-    const sq = newSquad({ sport, uid: user?.id ?? null, picks })
+    const sq = newSquad({ sport, uid: user?.id ?? null, picks, pool, shape })
     setPicks([]); setSquad(sq); sfx('confirm'); onBuild(sq)
   }
   const startOver = () => { setConfirmNew(false); setEditing(false); setSquad(null); sfx('back') }
   const sim = () => {
     const r = runSquadSeason(squad)
-    const seasons = [...(squad.seasons ?? []), { n: r.n, team: r.team, wins: r.wins, losses: r.losses, playoffs: r.playoffs, champion: r.champion, awards: r.lines.filter(l => l.award?.won).map(l => l.award.name), size: r.size, sandbox: r.sandbox, at: r.at }]
+    const seasons = [...(squad.seasons ?? []), { n: r.n, team: r.team, wins: r.wins, losses: r.losses, playoffs: r.playoffs, champion: r.champion, awards: sport === 'soccer' ? r.lines.flatMap(l => l.awards ?? []) : r.lines.filter(l => l.award?.won).map(l => l.award.name), size: r.size, sandbox: r.sandbox, at: r.at, ...(sport === 'soccer' && { draws: r.draws, points: r.points, pool: r.pool, pos: r.seed, finish: r.finish ?? null, trophies: r.trophies }), ...((sport === 'nfl' || sport === 'bucket') && { pool: r.pool ?? 'current' }) }]
     setSquad({ ...squad, last: r, seasons, phase: 'result' })
     // a season like any other: XP, coins, missions (lib/progress.js onSeason); sandbox pays nothing
     const won = r.lines.find(l => l.award?.won)
     window.dispatchEvent(new CustomEvent('bap:season', { detail: {
-      sport: sport === 'bucket' ? 'bucket' : 'nfl', pos: null, mode: 'squad', localOnly: true,
+      sport: sport === 'bucket' || sport === 'soccer' || sport === 'baseball' ? sport : 'nfl', pos: null, mode: 'squad', localOnly: true,
       wins: r.wins, losses: r.losses, playoffs: !!r.playoffs, champion: !!r.champion,
       award: !!won, awardName: won?.award.name, ovr: Math.max(0, ...r.lines.map(l => l.ovr)),
-      sandbox: !!squad.sandbox, full: isFull(squad), ref: r,
+      sandbox: !!squad.sandbox, full: isFull(squad), ref: r, ...(sport === 'baseball' && { awards: r.tags ?? [] }),
     } }))
     setPlaying(r.at)   // the season plays out first; its ring and sound come at the end (revealed)
   }
@@ -447,7 +608,7 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
     setPlaying(null)
     const r = squad?.last
     if (!r) return
-    if (r.champion) { victory({ big: true }); setRing(r) } else sfx(r.playoffs ? 'claim' : 'tap')
+    if (r.champion) { victory({ big: true }); if (sport !== 'soccer') setRing(r) } else sfx(r.playoffs ? 'claim' : 'tap')
   }
   const anotherTeam = () => { setPickOpen(true); setSquad({ ...squad, phase: 'team' }); sfx('tap') }
   const apply = draft => {
@@ -458,11 +619,16 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
   }
 
   const exit = <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>
-  const steps = [
-    sport === 'bucket' ? ['Pick your spots', 'PG to C: fill one spot or all five.'] : ['Pick your positions', 'QB, RBs, WRs, TEs, DBs and DLs: as many as a starting lineup holds.'],
+  const steps = sport === 'baseball' ? [
+    ['Pick the spots', 'C to DH, the five starters and the closer: fill one spot or the whole club.'],
     ['Build each one', 'The normal spins, one player after another.'],
-    ['Pick a team', 'Its real roster fills every spot you didn\'t build. Your builds start.'],
-    ['Play the season', 'One team, one schedule: a box score every game, a season and awards for every build. Then run it back.'],
+    ['Pick a team', `A 2026 club, or a franchise's legends. Its real players fill every spot ${owner} doesn't build.`],
+    ['Play the season', 'One club, 162 games and October: a box score every game, a line and awards for every build. Then run it back.'],
+  ] : [
+    sport === 'bucket' ? ['Pick the spots', 'PG to C: fill one spot or all five.'] : sport === 'soccer' ? ['Pick the front line', 'Up to three strikers: a front three, or a front two and a No. 10.'] : ['Pick the positions', 'QB, RBs, WRs, TEs, DBs and DLs: as many as a starting lineup holds.'],
+    ['Build each one', 'The normal spins, one player after another.'],
+    sport === 'soccer' ? ['Pick a side', 'A club in the top divisions, or a nation at the World Cup. Its real players fill the rest of the XI.'] : ['Pick a team', pool === 'alltime' ? `A franchise's legends fill every spot ${owner} doesn't build. The builds start.` : `Its real roster fills every spot ${owner} doesn't build. The builds start.`],
+    sport === 'soccer' ? ['Play the season', 'The league, the cup and Europe (or the World Cup) as one side: a line and awards for every build. Then run it back.'] : ['Play the season', 'One team, one schedule: a box score every game, a season and awards for every build. Then run it back.'],
   ]
 
   let body
@@ -470,14 +636,18 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
     body = (
       <>
         <section className="sq-edit ag-pop">
-          <div className="ag-card-head"><span className="ag-eyebrow">PICK YOUR SQUAD · {picks.length} {picks.length === 1 ? 'PLAYER' : 'PLAYERS'}</span></div>
-          {sport === 'bucket'
-            ? <SpotTiles taken={picks} onAdd={i => setPicks(p => [...p, i].sort())} onRemove={i => setPicks(p => p.filter(x => x !== i))} />
+          <div className="ag-card-head"><span className="ag-eyebrow">PICK THE SQUAD · {picks.length} {picks.length === 1 ? 'PLAYER' : 'PLAYERS'}</span></div>
+          {sport === 'soccer' && <Seg value={pool} options={POOL_OPTS} label="Where the squad plays" onChange={setPool} />}
+          {sport === 'baseball' && <Seg value={pool} options={BB_POOL_OPTS} label="The players" onChange={setPool} />}
+          {(sport === 'nfl' || sport === 'bucket') && <Seg value={pool} options={BB_POOL_OPTS} label="The players" onChange={p => { setPool(p); if (p === 'alltime') loadSquadLegends(sport).catch(() => {}) }} />}
+          {sport === 'soccer' && <Seg value={shape} options={SHAPE_OPTS} label="Shape" onChange={setShape} />}
+          {bySpot(sport)
+            ? <SpotTiles sport={sport} spots={sport === 'soccer' ? SOCCER_SHAPES[shape].spots : spotsFor({ sport })} taken={picks} onAdd={i => setPicks(p => [...p, i].sort((a, b) => a - b))} onRemove={i => setPicks(p => p.filter(x => x !== i))} />
             : <PosTiles sport={sport} slots={picks.map(pos => ({ pos }))} onAdd={pos => setPicks(p => [...p, pos])}
               onRemove={pos => setPicks(p => { const i = p.lastIndexOf(pos); return i < 0 ? p : [...p.slice(0, i), ...p.slice(i + 1)] })} />}
         </section>
         <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '60ms' }} disabled={!picks.length} onClick={start}>
-          {picks.length ? `BUILD ${picks.length} ${picks.length === 1 ? 'PLAYER' : 'PLAYERS'}` : sport === 'bucket' ? 'PICK A SPOT' : 'PICK A POSITION'} <IconArrow size={16} />
+          {picks.length ? `BUILD ${picks.length} ${picks.length === 1 ? 'PLAYER' : 'PLAYERS'}` : bySpot(sport) ? 'PICK A SPOT' : 'PICK A POSITION'} <IconArrow size={16} />
         </button>
         <ol className="tk-steps ag-pop" style={{ '--d': '90ms' }}>
           {steps.map(([t, d], i) => <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>)}
@@ -494,7 +664,7 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
           {squad.slots.map(s => <BuildRow key={s.id} sq={squad} s={s} owner={owner}>{!s.build && s.id === next?.id && <span className="sq-next">NEXT</span>}</BuildRow>)}
         </section>
         {next
-          ? <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '60ms' }} onClick={() => { sfx('confirm'); onBuild(squad) }}>BUILD YOUR {sport === 'bucket' ? tagOf(squad, next).name.toUpperCase() : POS_LABEL[next.pos]} <IconArrow size={16} /></button>
+          ? <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '60ms' }} onClick={() => { sfx('confirm'); onBuild(squad) }}>BUILD THE {bySpot(sport) ? tagOf(squad, next).name.toUpperCase() : POS_LABEL[next.pos]} <IconArrow size={16} /></button>
           : <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" onClick={() => setSquad({ ...squad, phase: afterBuilding(squad) })}>NEXT <IconArrow size={16} /></button>}
         <button className="ag-btn ag-btn--ghost" onClick={() => setConfirmNew(true)}>NEW SQUAD</button>
       </>
@@ -503,30 +673,30 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
     body = (
       <>
         <section className="sq-edit ag-pop">
-          <div className="ag-card-head"><span className="ag-eyebrow">YOUR BUILDS · {squad.slots.length}</span></div>
+          <div className="ag-card-head"><span className="ag-eyebrow">{owner.toUpperCase()}'S BUILDS · {squad.slots.length}</span></div>
           {squad.slots.map(s => <BuildRow key={s.id} sq={squad} s={s} owner={owner} />)}
         </section>
-        <p className="sq-note">Pick a team: its real roster fills every spot you didn't build, and your builds take the starting jobs.</p>
-        <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '60ms' }} onClick={() => { setPickOpen(true); sfx('tap') }}>PICK A TEAM <IconArrow size={16} /></button>
-        {squad.team && <button className="ag-btn ag-btn--ghost" onClick={() => setSquad({ ...squad, phase: 'ready' })}>KEEP THE {squad.team}</button>}
+        <p className="sq-note">{sport === 'soccer' ? `Pick a ${squad.pool === 'alltime' ? 'nation' : 'club'}: its real players fill the rest of the XI, and ${owner}'s builds lead the line.` : sport === 'baseball' ? `Pick a ${squad.pool === 'alltime' ? 'franchise: its legends' : 'club: its 2026 players'} fill every spot ${owner} didn't build, and the builds take the jobs they were built for.` : squad.pool === 'alltime' ? `Pick a franchise: its legends fill every spot ${owner} didn't build, and the builds take the starting jobs.` : `Pick a team: its real roster fills every spot ${owner} didn't build, and the builds take the starting jobs.`}</p>
+        <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '60ms' }} onClick={() => { setPickOpen(true); sfx('tap') }}>{sport === 'soccer' ? (squad.pool === 'alltime' ? 'PICK A NATION' : 'PICK A CLUB') : 'PICK A TEAM'} <IconArrow size={16} /></button>
+        {squad.team && <button className="ag-btn ag-btn--ghost" onClick={() => setSquad({ ...squad, phase: 'ready' })}>{sport === 'soccer' ? `KEEP ${(teamOf(sport, squad.team, squad.pool)?.name ?? squad.team).toUpperCase()}` : `KEEP THE ${squad.team}${squad.pool === 'alltime' && sport !== 'baseball' ? ' LEGENDS' : ''}`}</button>}
         {pickOpen && <Picker render={renderPicker} squad={squad} onPick={t => { setPickOpen(false); setSquad({ ...squad, team: t.short, phase: 'ready' }) }} onClose={() => setPickOpen(false)} />}
       </>
     )
   } else if (phase === 'ready' || (phase === 'result' && !squad.last)) {
-    const team = teamOf(sport, squad.team)
+    const team = teamOf(sport, squad.team, squad.pool)
     body = (
       <>
         <div className="sq-hero ag-pop" style={{ '--tc': team?.color ?? 'var(--ag-a1)' }}>
-          <img className="sq-hero-logo" src={logoOf(sport, squad.team)} alt="" />
+          <TeamCrest sport={sport} short={squad.team} pool={squad.pool} className="sq-hero-logo" />
           <span className="sq-hero-txt">
-            <span className="ag-eyebrow">{owner.toUpperCase()}'S SQUAD · {squad.slots.length} {squad.slots.length === 1 ? 'BUILD' : 'BUILDS'}</span>
+            <span className="ag-eyebrow">{owner.toUpperCase()}'S SQUAD · {squad.slots.length} {squad.slots.length === 1 ? 'BUILD' : 'BUILDS'}{squad.pool === 'alltime' && (sport === 'nfl' || sport === 'bucket') ? ' · ALL-TIME' : ''}</span>
             <b className="sq-hero-team">{team?.name ?? squad.team}</b>
           </span>
         </div>
-        <Strength sport={sport} squad={squad} />
-        {sport === 'bucket' ? <LineupBoard squad={squad} setSquad={setSquad} owner={owner} /> : <DepthChart squad={squad} owner={owner} />}
+        <Strength sport={sport} squad={squad} owner={owner} />
+        {sport === 'bucket' ? <LineupBoard squad={squad} setSquad={setSquad} owner={owner} /> : sport === 'baseball' ? <Suspense fallback={null}><BaseballBoard squad={squad} setSquad={setSquad} owner={owner} /></Suspense> : sport === 'soccer' ? <FrontLine squad={squad} setSquad={setSquad} owner={owner} /> : <DepthChart squad={squad} owner={owner} />}
         <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '120ms' }} onClick={sim}><IconPlay size={16} /> SIM THE SEASON</button>
-        <button className="ag-btn ag-btn--ghost" onClick={anotherTeam}><IconSwap size={15} /> CHANGE TEAM</button>
+        <button className="ag-btn ag-btn--ghost" onClick={anotherTeam}><IconSwap size={15} /> {sport === 'soccer' ? (squad.pool === 'alltime' ? 'CHANGE NATION' : 'CHANGE CLUB') : 'CHANGE TEAM'}</button>
       </>
     )
   } else {
@@ -537,25 +707,25 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
           <Result sport={sport} squad={squad} owner={owner} reveal={playing != null && playing === squad.last?.at} onRevealed={revealed} />
           {!(playing != null && playing === squad.last?.at) && <>
           <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" onClick={() => { setEditing(true); sfx('tap') }}>RUN IT BACK <IconArrow size={16} /></button>
-          <button className="ag-btn ag-btn--ghost" onClick={anotherTeam}><IconSwap size={15} /> RUN IT BACK WITH ANOTHER TEAM</button>
+          <button className="ag-btn ag-btn--ghost" onClick={anotherTeam}><IconSwap size={15} /> RUN IT BACK WITH ANOTHER {sport === 'soccer' ? (squad.pool === 'alltime' ? 'NATION' : 'CLUB') : 'TEAM'}</button>
           <button className="ag-btn ag-btn--ghost" onClick={() => setConfirmNew(true)}>NEW SQUAD</button>
           {squad.seasons.length > 1 && (
             <section className="tk-runs ag-pop" style={{ '--d': '160ms' }}>
-              <div className="ag-card-head"><span className="ag-eyebrow">THIS SQUAD'S RUNS</span></div>
+              <div className="ag-card-head"><span className="ag-eyebrow">THIS SQUAD'S RUNS{squad.pool === 'alltime' && (sport === 'nfl' || sport === 'bucket') ? ' · ALL-TIME' : ''}</span></div>
               <div className="tk-runs-stats">
                 <span><b>{squad.seasons.length}</b><small>RUNS</small></span>
                 <span><b>{squad.seasons.reduce((a, s) => a + s.wins, 0)}</b><small>WINS</small></span>
-                <span><b>{squad.seasons.filter(s => s.playoffs).length}</b><small>PLAYOFFS</small></span>
-                <span><b>{squad.seasons.filter(s => s.champion).length}</b><small>TITLES</small></span>
+                <span><b>{squad.seasons.filter(s => s.playoffs).length}</b><small>{sport === 'soccer' ? (squad.pool === 'alltime' ? 'KNOCKOUTS' : 'TOP FOUR') : sport === 'baseball' ? 'OCTOBERS' : 'PLAYOFFS'}</small></span>
+                <span><b>{sport === 'soccer' ? squad.seasons.reduce((a, s) => a + (s.trophies?.length ?? (s.champion ? 1 : 0)), 0) : squad.seasons.filter(s => s.champion).length}</b><small>{sport === 'soccer' ? 'TROPHIES' : 'TITLES'}</small></span>
               </div>
               {[...squad.seasons].reverse().map((s, i) => (
                 <div key={s.n ?? i} className={`tk-run${s.champion ? ' is-won' : ''}`}>
-                  <span className="tk-run-pos sq-run-logo"><img src={logoOf(sport, s.team)} alt="" /></span>
+                  <span className="tk-run-pos sq-run-logo">{sport === 'soccer' ? <TeamCrest sport={sport} short={s.team} pool={s.pool} /> : <img src={logoOf(sport, s.team)} alt="" />}</span>
                   <span className="tk-run-txt">
-                    <b>{teamOf(sport, s.team)?.name ?? s.team}</b>
-                    <small>{s.champion ? 'Champions' : s.playoffs ? 'Playoffs' : 'No playoffs'} · {s.size} {s.size === 1 ? 'build' : 'builds'}{s.awards?.length ? ` · ${s.awards.join(', ')}` : ''}{s.sandbox ? ' · SANDBOX' : ''}</small>
+                    <b>{teamOf(sport, s.team, s.pool)?.name ?? s.team}</b>
+                    <small>{sport === 'soccer' ? runLine(s) : sport === 'baseball' ? (s.champion ? 'World Series Champions' : s.playoffs ? 'Postseason' : 'No postseason') : s.champion ? 'Champions' : s.playoffs ? 'Playoffs' : 'No playoffs'} · {s.size} {s.size === 1 ? 'build' : 'builds'}{s.awards?.length ? ` · ${s.awards.join(', ')}` : ''}{s.sandbox ? ' · SANDBOX' : ''}</small>
                   </span>
-                  <span className="tk-run-ovr"><b>{s.wins}-{s.losses}</b><small>RECORD</small></span>
+                  <span className="tk-run-ovr"><b>{sport === 'soccer' ? `${s.wins}-${s.draws ?? 0}-${s.losses}` : `${s.wins}-${s.losses}`}</b><small>RECORD</small></span>
                 </div>
               ))}
             </section>
@@ -565,27 +735,28 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
       )
   }
 
-  const kicker = phase === 'pick' ? 'ONE SEASON · YOUR SQUAD'
+  const kicker = phase === 'pick' ? `ONE SEASON · ${owner.toUpperCase()}'S SQUAD`
     : phase === 'build' ? `BUILDING · ${squad.slots.filter(s => s.build).length} OF ${squad.slots.length}`
-    : phase === 'team' ? 'PICK A TEAM'
-    : phase === 'ready' ? (sport === 'bucket' ? 'SET THE LINEUP' : 'THE DEPTH CHART')
+    : phase === 'team' ? (sport === 'soccer' ? (squad.pool === 'alltime' ? 'PICK A NATION' : 'PICK A CLUB') : 'PICK A TEAM')
+    : phase === 'ready' ? (sport === 'bucket' || sport === 'baseball' ? 'SET THE LINEUP' : sport === 'soccer' ? 'THE FRONT LINE' : 'THE DEPTH CHART')
     : editing ? 'RUN IT BACK' : `${owner.toUpperCase()}'S SQUAD`
   return (
     <div className={`ag-screen ag-screen--${sport} sq`}>
       <Head kicker={kicker} title={editing ? 'Run it back' : 'Squad Builder'} right={exit} />
-      <div className="ag-screen-body">{body}</div>
+      <div className="ag-screen-body">{needLegends && !legendsReady(sport) ? <p className="sq-note">Loading the legends…</p> : body}</div>
       {ring && (() => {
         const last = ring.rounds[ring.rounds.length - 1]
-        const score = sport === 'bucket' ? `${last?.wins ?? 4}–${last?.losses ?? 0} in the NBA Finals` : `${last?.mySc}–${last?.oppSc}${last?.overtime ? ' OT' : ''} vs ${last?.opponent}`
-        return <RingCeremony team={teamOf(sport, ring.team)} title={sport === 'bucket' ? 'NBA Champions' : 'Super Bowl Champions'} score={score}
-          trophy={sport === 'bucket' ? '/trophybasketball.webp' : undefined} onClose={() => setRing(null)} />
+        // (baseball: the World Series, and the Commissioner's Trophy drawn: TrophyArt's, in the baseball chunk)
+        const score = sport === 'bucket' ? `${last?.wins ?? 4}–${last?.losses ?? 0} in the NBA Finals` : sport === 'baseball' ? `${last?.wins ?? 4}–${last?.losses ?? 0} over ${teamOf(sport, last?.opp)?.name ?? last?.opp} in the World Series` : `${last?.mySc}–${last?.oppSc}${last?.overtime ? ' OT' : ''} vs ${last?.opponent}`
+        return <RingCeremony team={teamOf(sport, ring.team)} title={sport === 'bucket' ? 'NBA Champions' : sport === 'baseball' ? 'World Series Champions' : 'Super Bowl Champions'} score={score}
+          trophy={sport === 'bucket' ? '/trophybasketball.webp' : undefined} art={sport === 'baseball' ? <Suspense fallback={<span className="ag-ring-trophy sqb-ring-art" />}><BaseballTrophy /></Suspense> : null} onClose={() => setRing(null)} />
       })()}
       {confirmNew && createPortal(
         <div className="ll-overlay" onClick={e => e.target === e.currentTarget && setConfirmNew(false)}>
           <div className="ll-sheet" role="dialog" aria-modal="true" aria-labelledby="sq-new-title">
             <div className="ll-head"><span className="ag-eyebrow">ONE SQUAD AT A TIME</span><button className="ag-round-btn" onClick={() => setConfirmNew(false)} aria-label="Close"><IconClose size={15} /></button></div>
             <h2 className="ll-title" id="sq-new-title">Start a new squad?</h2>
-            <p className="ll-body">This squad, its builds and its seasons go for good. Your XP, coins and trophies stay.</p>
+            <p className="ll-body">This squad, its builds and its seasons go for good. XP, coins and trophies stay.</p>
             <div className="ll-actions">
               <button className="ag-btn ag-cta" onClick={startOver}><IconCheck size={16} /> NEW SQUAD</button>
               <button className="ag-btn ag-btn--ghost" onClick={() => setConfirmNew(false)}>KEEP THIS ONE</button>

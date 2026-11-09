@@ -1,4 +1,3 @@
-import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/db-figure-color.svg?raw'
 import { warmSkin, warmSkinLight } from '../utils/footballSkin'
 
@@ -14,6 +13,18 @@ const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%
 // Torso/head tilt in this pose — chest leans down-and-right, so jersey text,
 // the helmet logo, and shoulder numbers all share this same rotation.
 const BODY_ANGLE = 7
+
+// The chest number and the team name above it, in the figure's own units (viewBox 479x1028).
+// Plain SVG transforms only, the way the WR, RB and QB numbers are drawn: no CSS perspective,
+// rotateY or transform-box, whose placement isn't the same from one browser to the next. Each
+// one turns and squashes about its own centre, so a one-digit number sits where a two-digit
+// one does. `x`/`y` is the number's centre: mid-chest, between the neckline's V and the
+// waistband (the front panel runs about x 110-300 and y 330-445), a little left of the V so
+// the panel's diagonal right edge never clips it; `tilt` is the chest's lean (was 7 + 8 degrees).
+const CHEST_NUM = { x: 220, y: 386, size: 120, tilt: 13, squash: 0.9 }
+const CHEST_NICK = { size: 22, gap: 50 }   // centred over the number, `gap` up its tilted axis
+// Bebas Neue's figures stand 0.7 em tall: half of that below the centre puts the baseline right
+const capMid = size => size * 0.35
 
 // Same path data as the SVG's own "helmet" shape — used to clip the team
 // logo so it can't bleed past the helmet's actual silhouette.
@@ -105,24 +116,10 @@ const DB_PARTS = {
   rightSleeve: 'runSupport',
 }
 
-// numberNudgePx: screen-pixel offset for the chest jersey number (mobile tweak).
-// The SVG scales to fit its box, so convert px to viewBox units at runtime.
-export default function DBFigureOverlay({ build, numberNudgePx = null, parts = null }) {
-  const numSvgRef = useRef(null)
-  const [unitsPerPx, setUnitsPerPx] = useState(1)
-  useLayoutEffect(() => {
-    if (!numberNudgePx) return
-    const measure = () => {
-      const r = numSvgRef.current?.getBoundingClientRect()
-      if (!r || !r.width || !r.height) return
-      setUnitsPerPx(1 / Math.min(r.width / 479, r.height / 1028))
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [numberNudgePx])
-  const nudgeX = (numberNudgePx?.x ?? 0) * unitsPerPx
-  const nudgeY = (numberNudgePx?.y ?? 0) * unitsPerPx
+// numberNudgePx: no longer used. It pushed the old chest number 7px down-right on the phone's
+// build screen, which drove it into the jersey's edge; the number now sits mid-chest the same
+// way on every screen. (Still accepted, so Silhouette and OLFigureOverlay needn't change.)
+export default function DBFigureOverlay({ build, numberNudgePx = null, parts = null }) { // eslint-disable-line no-unused-vars
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
   const sk  = (s) => build?.[s]?.skinColor  ?? 'transparent'
@@ -213,70 +210,56 @@ export default function DBFigureOverlay({ build, numberNudgePx = null, parts = n
 
   const sizeChip = build?.[P.jersey]
   const teamNickname = TEAM_NICKNAMES[sizeChip?.team] ?? sizeChip?.team ?? ''
+  // the team name's centre: `gap` up the number's tilted axis from the number's centre
+  const tiltRad = CHEST_NUM.tilt * Math.PI / 180
+  const nickX = CHEST_NUM.x + Math.sin(tiltRad) * CHEST_NICK.gap
+  const nickY = CHEST_NUM.y - Math.cos(tiltRad) * CHEST_NICK.gap
   const helmetTeam = build?.[headKey]?.team
 
   return (
     <div className="player-qbfig player-rbfig" style={{ mixBlendMode: 'screen' }}>
       <div style={SVG_STYLE} dangerouslySetInnerHTML={{ __html: svg }} />
 
-      {/* Jersey number + team name + shoulder numbers — angled to match the torso tilt */}
-      <svg ref={numSvgRef} viewBox="0 0 479 1028" preserveAspectRatio="xMidYMid meet"
+      {/* Jersey number + team name + shoulder numbers. Its own layer, as the other figures' number
+          layers are: without it, a number appearing inside the blended figure repaints all of it */}
+      <svg viewBox="0 0 479 1028" preserveAspectRatio="xMidYMid meet"
            style={{ ...SVG_STYLE, willChange: 'transform' }} aria-hidden="true">
-        <g transform={`rotate(${BODY_ANGLE}, 252, 300)`}>
-          <text
-            x="272" y="345"
-            textAnchor="middle"
-            fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
-            fontSize="22"
-            letterSpacing="1"
-            fill="white"
-            stroke="black"
-            strokeWidth="2"
-            paintOrder="stroke"
-            style={{
-              opacity: has(P.jersey) ?0.85 : 0,
-              transition: 'opacity 0.5s ease',
-              userSelect: 'none',
-              pointerEvents: 'none',
-              transform: 'perspective(300px) rotateY(-3deg)',
-              transformBox: 'fill-box',
-              transformOrigin: 'left center',
-            }}
-          >{teamNickname}</text>
-        </g>
-
         <defs>
           <clipPath id="db-jersey-clip">
             <path d={JERSEY_CLIP_D} />
           </clipPath>
         </defs>
-        {/* Jersey number — clip lives outside the rotated group (same fix as the
-            helmet logo) so it stays in the jersey's real, unrotated coordinate
-            space and can't bleed past the jersey's actual silhouette. */}
-        <g clipPath="url(#db-jersey-clip)">
-          <g transform={`translate(${nudgeX}, ${nudgeY})`}>
-          <g transform={`rotate(${BODY_ANGLE}, 252, 300)`}>
+        {/* Team name and chest number. The clip stays in the jersey's real, unrotated coordinate
+            space so neither can bleed past the jersey's own silhouette. */}
+        <g clipPath="url(#db-jersey-clip)"
+           style={{ opacity: has(P.jersey) ? 1 : 0, transition: 'opacity 0.5s ease', userSelect: 'none', pointerEvents: 'none' }}>
+          <g transform={`translate(${nickX} ${nickY}) rotate(${CHEST_NUM.tilt})`}>
             <text
-              x="265" y="454"
+              x="0" y={capMid(CHEST_NICK.size)}
               textAnchor="middle"
               fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
-              fontSize="140"
-              letterSpacing="-6"
+              fontSize={CHEST_NICK.size}
+              letterSpacing="1"
+              fill="white"
+              stroke="black"
+              strokeWidth="2"
+              paintOrder="stroke"
+              opacity="0.85"
+            >{teamNickname}</text>
+          </g>
+          <g transform={`translate(${CHEST_NUM.x} ${CHEST_NUM.y}) rotate(${CHEST_NUM.tilt}) scale(1 ${CHEST_NUM.squash})`}>
+            <text
+              x="0" y={capMid(CHEST_NUM.size)}
+              textAnchor="middle"
+              fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
+              fontSize={CHEST_NUM.size}
+              letterSpacing="-5"
               fill="white"
               stroke="black"
               strokeWidth="5"
               paintOrder="stroke"
-              style={{
-                opacity: has(P.jersey) ?0.92 : 0,
-                transition: 'opacity 0.5s ease',
-                userSelect: 'none',
-                pointerEvents: 'none',
-                transform: `perspective(360px) rotateY(-6deg) scaleY(0.9) rotate(${numberNudgePx ? 7 : 8}deg)`,
-                transformBox: 'fill-box',
-                transformOrigin: 'left top',
-              }}
+              opacity="0.92"
             >{sizeChip?.number ?? ''}</text>
-          </g>
           </g>
         </g>
 
@@ -329,11 +312,11 @@ export default function DBFigureOverlay({ build, numberNudgePx = null, parts = n
                 actually line up with it. The image rotates freely inside it. */}
             <g clipPath="url(#db-helmet-clip)">
               <g transform={`rotate(${BODY_ANGLE}, 297, 91)`}>
+                {/* turned 10deg and squeezed to 70% about its right-centre (274.5, 71): an SVG
+                    transform rather than CSS with transform-box, so every browser places it alike */}
                 <image href={`/logos/${helmetTeam}.png`} x="159.5" y="13.5" width="115" height="115"
-                  style={{
-                    opacity: 0.95, mixBlendMode: 'screen',
-                    transform: 'rotate(10deg) scaleX(0.7)', transformBox: 'fill-box', transformOrigin: 'right center',
-                  }} />
+                  transform="translate(274.5 71) rotate(10) scale(0.7 1) translate(-274.5 -71)"
+                  style={{ opacity: 0.95, mixBlendMode: 'screen' }} />
               </g>
             </g>
           </g>

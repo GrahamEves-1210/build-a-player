@@ -3,7 +3,7 @@ import { engineFor } from '../../lib/mg'
 import { STEP, hud, pads, stamp, fieldFor, text } from '../../lib/mg/kit'
 import { spriteFrame, bakeSome, spritePx } from '../../lib/mg/art'
 import { pilotFor, firstRep, AFTER, CAPTION, CAPTION_GAME } from '../../lib/mg/demo'
-import { colorsFor, NO_HOME_FIELD } from './MgStage'
+import { colorsFor, NO_HOME_FIELD, EMPTY_GAMES } from './MgStage'
 
 // How to play, on the game's card: the real game (its own engine, make and draw) played by a perfect pilot
 // (lib/mg/demo.js), one good rep, then it starts again. A ring shows each press where a thumb would go (a cursor
@@ -24,7 +24,7 @@ const bad = new Map()
 const SEEDS = ['demo-0', 'demo-1', 'demo-2', 'demo-3', 'demo-4']
 const SCAN_STYLE = { position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px)', mixBlendMode: 'multiply', opacity: 0.6 }
 
-export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null }) {
+export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, empty = false }) {
   const box = useRef(null), cv = useRef(null), ov = useRef(null)
   const [still, setStill] = useState(() => quiet())
   const [playing, setPlaying] = useState(false)   // (the still version: one run on a tap)
@@ -41,7 +41,7 @@ export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = nu
     const cap = { ...CAPTION[engine.botName], ...CAPTION_GAME[game], ...CAPTION_GAME[`${game}:${pos}`] }
     const pressLine = () => (Array.isArray(cap.press) ? cap.press[Math.min(marks.length, cap.press.length) - 1] : cap.press)
     const field = sport === 'nfl' && !NO_HOME_FIELD.has(game) ? fieldFor(home === 'opp' ? opp : team, superBowl) : null
-    const view = { w: LW, h: LH, px: 1, scale: 1, sport, accent: sport === 'bucket' ? '#ff8a3c' : '#3ddcb0', colors: colorsFor(sport, team, opp), cast: null, keys: mouse, field }
+    const view = { w: LW, h: LH, px: 1, scale: 1, sport, accent: sport === 'bucket' ? '#ff8a3c' : sport === 'soccer' ? '#f2f4f5' : sport === 'baseball' ? '#f1e9d8' : '#3ddcb0', colors: colorsFor(sport, team, opp), cast: null, keys: mouse, field, empty: !!empty || EMPTY_GAMES.has(game) }
     let ovPx = 1, cssW = 0
     const PT = pixelPt()
     const fit = () => {

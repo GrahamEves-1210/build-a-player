@@ -1,0 +1,40 @@
+/* Baseball's Simple mini games (MiniGameSimpleBaseball.jsx): the strike zone, the count, the bases, the pitch chips.
+   The rest (the bar, the marker, the buttons, the words over the play) is mg-simple.css. */
+.mg--simple .mg-bb-top { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; font-family: var(--ag-font); letter-spacing: 1.4px; color: var(--ag-text-2); font-size: 14px; }
+.mg--simple .mg-bb-top b { font-family: var(--ag-display); font-weight: 400; font-size: 20px; letter-spacing: .5px; color: var(--ag-text); }
+.mg--simple .mg-bb-count { display: flex; gap: 10px; align-items: baseline; }
+.mg--simple .mg-bb-outs { display: flex; gap: 4px; }
+.mg--simple .mg-bb-outs i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.18); }
+.mg--simple .mg-bb-outs i.is-on { background: #f2f2ee; }
+.mg--simple .mg-bb-bases { position: relative; width: 34px; height: 24px; }
+.mg--simple .mg-bb-bases i { position: absolute; width: 9px; height: 9px; transform: rotate(45deg); background: rgba(255,255,255,.16); }
+.mg--simple .mg-bb-bases i.is-on { background: #f5dc8a; }
+.mg--simple .mg-bb-bases i:nth-child(1) { right: 2px; top: 10px; }
+.mg--simple .mg-bb-bases i:nth-child(2) { left: 12px; top: 1px; }
+.mg--simple .mg-bb-bases i:nth-child(3) { left: 2px; top: 10px; }
+/* the zone: nine boxes, and the ring of chase spots round it */
+.mg--simple .mg-bb-zone { position: relative; width: 132px; height: 150px; margin: 0 auto; }
+.mg--simple .mg-bb-grid { position: absolute; left: 22px; top: 22px; right: 22px; bottom: 22px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); border: 2px solid rgba(242,242,238,.8); }
+.mg--simple .mg-bb-grid > span { border: 1px solid rgba(242,242,238,.18); }
+.mg--simple .mg-bb-grid > span.is-hot { background: rgba(200,16,46,.42); }
+.mg--simple .mg-bb-grid > span.is-cold { background: rgba(60,120,210,.36); }
+.mg--simple .mg-bb-cell { position: absolute; border-radius: 6px; border: 1px dashed rgba(242,242,238,.25); background: rgba(0,0,0,.25); cursor: pointer; }
+.mg--simple .mg-bb-cell.is-on { border: 2px solid #f5dc8a; background: rgba(245,220,138,.18); }
+.mg--simple .mg-bb-cell.is-target { border: 2px solid #f5dc8a; background: rgba(245,220,138,.28); }
+.mg--simple .mg-bb-ball { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #f6f4ec; box-shadow: inset 0 0 0 2px #c8102e; pointer-events: none; }
+.mg--simple .mg-bb-ball.is-faint { opacity: .45; }
+.mg--simple .mg-bb-word { min-height: 22px; font-family: var(--ag-display); font-size: 19px; letter-spacing: .6px; color: var(--ag-text); text-align: center; }
+.mg--simple .mg-bb-word small { display: block; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.4px; color: var(--ag-text-2); }
+.mg--simple .mg-bb-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.mg--simple .mg-bb-chip { height: 52px; border-radius: 10px; font-family: var(--ag-display); font-size: 17px; letter-spacing: .5px; line-height: 1.05; color: var(--ag-text); background: rgba(255,255,255,.06); border: 1px solid var(--ag-line-hi); border-left: 4px solid transparent; cursor: pointer; }
+.mg--simple .mg-bb-chip small { display: block; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.2px; opacity: .7; }
+.mg--simple .mg-bb-chip.is-on { background: #f2f2ee; color: #0b0c0e; }
+/* the race to second: the runner and the throw, on one line */
+.mg--simple .mg-bb-race { position: relative; width: 100%; height: 46px; border-radius: 10px; background: rgba(0,0,0,.4); border: 1px solid var(--ag-line-hi); overflow: hidden; }
+.mg--simple .mg-bb-race i { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; }
+.mg--simple .mg-bb-race i.is-me { background: #f5dc8a; }
+.mg--simple .mg-bb-race i.is-ball { background: #f6f4ec; box-shadow: inset 0 0 0 2px #c8102e; }
+.mg--simple .mg-bb-race b { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-text-2); font-weight: 400; }
+.mg--simple .mg-bb-pitcher { font-family: var(--ag-display); font-size: 24px; letter-spacing: .5px; min-height: 30px; text-align: center; color: var(--ag-text); }
+.mg--simple .mg-bb-pitcher.is-go { color: #4ade80; }
+.mg--simple .mg-bb-pitcher.is-back { color: #ff8a7a; }

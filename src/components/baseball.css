@@ -1,0 +1,279 @@
+/* ═══ BASEBALL (/baseball: html.is-baseball, data-sport="baseball") ═════════════
+   Loaded with BaseballApp's chunk only (football, basketball and soccer never download it). The sport
+   switch's fourth button is shared, so it lives in app-game.css (its BASEBALL section).
+   Art direction (scratchpad baseball/ART.md): the ball. Cream leather and red stitching, under the
+   lights. Stitch red (#c8102e) is the one accent, where basketball's is orange and soccer's chalk:
+   the primary button, the picked tab, the locked reel, our row in a table. Cream (#f3eee3) is the
+   text and PLAY. A deep navy ink (#090d16) gives the depth. Flat fills, hairlines, small corners: no
+   glows, no gradients, no stitch patterns on cards. Red is never body text on the ink (it's too dark
+   to read): cream says it, red marks it. Green and the clay only inside the ballpark picture
+   (public/baseballbackground.webp, scripts/render-baseball-background.mjs). Gold stays for trophies.
+   The build figure is basketball's for now (lib/baseballUi.js BASEBALL_SILHOUETTE). */
+html.is-baseball, [data-sport="baseball"] {
+  --bb-ink: #090d16; --bb-panel: #111724; --bb-panel-2: #1a2131; --bb-navy: #15213b;
+  --bb-grey-3: #8b91a1; --bb-grey-2: #c5c8d0;
+  --bb-cream: #f3eee3; --bb-cream-2: #ddd5c4;
+  --bb-red: #c8102e; --bb-red-hi: #d91d3b; --bb-red-dk: #9c0c24; --bb-on-red: #fbf7ee;
+  --bb-line: rgba(243,238,227,.12); --bb-line-hi: rgba(243,238,227,.28);
+  /* the website's scale (football's greens, basketball's oranges): cream down to the navy ink */
+  --g50:#f3eee3;--g100:#e6e0d3;--g200:#c5c8d0;--g300:#a3a8b5;
+  --g400:#8b91a1;--g500:#6a7081;--g600:#4a5062;--g700:#262c3a;--g800:#111724;
+  --bg:#d8d4cb;--surface:#0d121c;--card:#171d2a;
+  --accent: #f3eee3; --accent-hi: #ffffff; --accent-lo: rgba(200,16,46,.1); --accent-dk: #c8102e;
+  --btn-start: #c8102e; --btn-end: #c8102e; --btn-glow: rgba(0,0,0,.25); --btn-txt: #fbf7ee;
+  --text: #f3eee3; --text-2: #d9d4c8; --text-3: #a3a8b5; --text-4: #6a7081;
+  --border: rgba(243,238,227,.1); --border-hi: rgba(243,238,227,.24);
+  --ag-stitch: #c8102e;   /* the ball icon's seams (components/app/icons.jsx IconBaseball) */
+}
+html:is(.is-app, .app-look).is-baseball {
+  --ag-bg: #090d16;
+  --ag-panel: rgba(17,23,36,.86);
+  --ag-panel-2: rgba(26,33,49,.76);
+  --ag-line: rgba(243,238,227,.12);
+  --ag-line-hi: rgba(243,238,227,.28);
+  --ag-text: #f3eee3;
+  --ag-text-2: #c5c8d0;
+  --ag-muted: rgba(243,238,227,.74);
+  --ag-glow: rgba(0,0,0,0);           /* (no glows: the buttons' and the picked tab's) */
+  /* The app reads --ag-a1 as a light accent: words on the ink, and a fill under dark words (the other sports'
+     mint, orange and chalk all are). The stitch red is too deep for both, so a1 is the stitch red lit
+     (#e63950: 4.7:1 on the ink and under dark text); the buttons and big fills keep the stitch red itself */
+  --ag-a1: #e63950;
+  --ag-a2: #c8102e;
+  --ag-grad: linear-gradient(135deg, #c8102e 0%, #c8102e 100%);
+}
+/* the Builder Pass strip: its days chip in the flat red with cream words */
+html.is-baseball .ps-days:not(.is-soon):not(.is-over) { background: #c8102e; color: #fbf7ee; }
+/* the dock: cream icons off, the picked one in red */
+html.is-baseball .ag-tab { color: rgba(243,238,227,.42); }
+html.is-baseball .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: #f3eee3; }
+html.is-baseball .ag-edge, html.is-baseball .ag-seam-chip { background: rgba(10,14,23,.96); }
+[data-sport="baseball"] .tpm-overlay::before { background: rgba(9,13,22,.88); }
+html:is(.is-app, .app-look).is-baseball .navbar { background: #0b1019 !important; }
+html:is(.is-app, .app-look).is-baseball .nav-pos-menu { background: #111724 !important; }
+html.app-look.is-baseball .navbar .logo-text.logo-text--small em, [data-sport="baseball"] .navbar .logo-text.logo-text--small em { color: #c8102e; }
+/* the dock's fan: baseball's other sport (football) in its own colour */
+.ag-dock--baseball .ag-fan-item.is-sport .ag-fan-dot, html.is-baseball .ag-fan-item.is-sport .ag-fan-dot { color: #5edbd8; border-color: rgba(94,219,216,.5); }
+
+/* Home, baseball: cream on navy, the stitch red for what's picked, where basketball is orange on brown.
+   The stage is the night ballpark, drawn half again as tall from the top so the infield's arc and second
+   base sit behind his feet, the wall and the light towers above. The mode cards follow basketball's:
+   Compete in the sport's colour (flat red), Career on the ballpark picture, Salary Cap and Squad Builder
+   in their own purple and gold like every sport. */
+.ag-home--baseball { --hm-on: #fbf7ee; --hm-a: #c8102e; background: #090d16; }
+.ag-home--baseball .ag-bg-lines { background: repeating-linear-gradient(180deg, transparent 0 63px, rgba(243,238,227,.03) 63px 64px); }
+.ag-home--baseball .ag-wordmark em { color: #c8102e; }
+/* (drawn a quarter again as tall, from the top: the towers' lamps under the online row, the wall and its 400 at
+   his waist, the infield's arc and second base behind his feet, clear of the positions bar) */
+.ag-home--baseball .ag-stage-photo { background-image: url('/baseballbackground.webp'); background-size: auto 125%; background-position: center 0%; filter: brightness(1.6); }
+.ag-home--baseball .ag-platform-ring { border-color: rgba(243,238,227,.55); box-shadow: none; }
+/* the stage's light is the ballpark's: cream, not the red (a red spotlight reads as a glow). Only the default
+   spotlight: a cosmetic one (Shop → Spotlights) still shows its own colours */
+html:is(.is-app, .app-look).is-baseball[data-spot="classic"] { --spot1: #f3eee3; --spot2: #9aa0ad; }
+/* (a computer's stage is taller and its BATTER bigger: the picture rides up a little so the lamps sit beside
+   the online count and How To Play, above the word, not behind it) */
+@media (min-width: 1024px) { html.app-look .ag-home--baseball .ag-stage-photo { background-position: center -28px; } }
+.ag-home--baseball .ag-sport { background: #10151f; }
+.ag-home--baseball .ag-stage .ag-positions { background: #141a27; }
+.ag-home--baseball .ag-stage .ag-pos { color: #f3eee3; }
+.ag-home--baseball .ag-mode { background: #121825; }
+.ag-home--baseball .ag-mode.is-on { background: var(--hm-a); color: var(--hm-on); }
+.ag-home--baseball .ag-start { background: #f3eee3; color: #0b1019; }
+@media (hover: hover) { .ag-home--baseball .ag-start:not(.is-gold):hover { background: #c8102e; color: #fbf7ee; } }
+.ag-home--baseball .ag-mc--career { background: linear-gradient(100deg, rgba(9,13,22,.92) 30%, rgba(9,13,22,.38)), url('/baseballbackground.webp') center 40% / cover no-repeat, #0d121c; }
+.ag-home--baseball .ag-mc--career.has-team { background: linear-gradient(120deg, var(--team), color-mix(in srgb, var(--team) 40%, #05090c)); }
+.ag-home--baseball .ag-mc--compete { background: #b30e29; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 8px 18px rgba(0,0,0,.35); }
+.ag-home--baseball .ag-mc--compete .ag-mc-head small { background: rgba(9,13,22,.5); }
+.ag-home--baseball .ag-mc--compete .ag-mc-tag--soon { background: #f3eee3; color: #0b1019; }
+.ag-home--baseball .ag-rafters { left: 46%; right: 6%; gap: 9px; }
+/* Salary Cap's art is a real screenshot of baseball's board (public/modes/baseball-salary.webp), taken once the board
+   is built. Until the picture is there its frame goes too, not an empty tilted outline on the purple */
+.ag-home--baseball .ag-mc-shot:has(> img[style*="none"]) { display: none; }
+.ag-home--baseball .ag-home-site { background: #090d16; }
+.ag-home--baseball .ag-resume--top { border-color: rgba(200,16,46,.85); }
+.ag-home--baseball .ag-resume-icon, .ag-home--baseball .ag-resume .ag-eyebrow { color: #ef5a6c; }
+/* Squad Builder art: the diamond from above, the nine in the field, the spots you build lit (AppHome Diamond) */
+/* (the box is 1.4 : 1; home plate is its bottom centre. ::after is the fair ground: a quarter circle about
+   home, turned to open upward, its two straight edges the foul lines and its arc the wall. ::before is the
+   infield, 90 ft square on its point) */
+.ag-diamond { position: absolute; right: 12px; bottom: 10px; width: 50%; aspect-ratio: 1.4; z-index: 1; pointer-events: none; }
+.ag-diamond::after { content: ''; position: absolute; right: 50%; bottom: 0; width: 70%; aspect-ratio: 1; box-sizing: border-box; border: 1.5px solid rgba(255,255,255,.3); border-radius: 100% 0 0 0; background: rgba(255,255,255,.04); transform: rotate(45deg); transform-origin: 100% 100%; }
+.ag-diamond::before { content: ''; position: absolute; left: 50%; bottom: 0; z-index: 1; width: 20.5%; aspect-ratio: 1; box-sizing: border-box; border: 1.5px solid rgba(255,255,255,.3); background: rgba(255,255,255,.06); transform: rotate(-45deg); transform-origin: 0 100%; }
+.ag-diamond b { position: absolute; z-index: 2; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: rgba(255,255,255,.42); }
+.ag-diamond b.is-on { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.45); }
+
+/* ── The build screen: the ballpark at night behind it, cream lines, red for what's locked ── */
+[data-sport="baseball"] .prf-page,
+[data-sport="baseball"] .game-layout {
+  background-image: linear-gradient(rgba(9,13,22,0.76), rgba(9,13,22,0.76)), url('/baseballbackground.webp');
+  background-size: cover; background-position: center 100%;
+}
+/* (a phone sees only the middle of the picture: there the light towers' haze would land on the ends of the
+   category tabs and read as a glow on them. Drawn taller from the foot, the sky and the lights stay above the
+   screen: the stands, the wall and the diamond are the picture) */
+@media (max-width: 768px) { [data-sport="baseball"] .game-layout { background-size: auto 138%; background-position: center 100%; } }
+[data-sport="baseball"] .prf-page { background-image: linear-gradient(rgba(9,13,22,0.93), rgba(9,13,22,0.93)), url('/baseballbackground.webp'); }
+[data-sport="baseball"] .prf-card { background: rgba(13,18,28,.76); border-color: rgba(243,238,227,.1); }
+[data-sport="baseball"] .cz-qb-name { color: #161b26; }
+[data-sport="baseball"] .cz-tag { background: #f3eee3; color: #0b1019; }
+[data-sport="baseball"] .cz-drop-hint { border-color: rgba(243,238,227,.42); background: rgba(243,238,227,.04); }
+/* (a dot on the figure is the ball: cream, a red ring for its stitches) */
+[data-sport="baseball"] .cz-dot { background: #f3eee3; border-color: #c8102e; box-shadow: 0 0 0 2px rgba(9,13,22,.55); }
+[data-sport="baseball"] .cz-drop-zone { border-color: rgba(243,238,227,.72); background: rgba(243,238,227,.07); box-shadow: none; }
+html:is(.is-app, .app-look) [data-sport="baseball"] .cz-drop-hint, html[data-sport="baseball"]:is(.is-app, .app-look) .cz-drop-hint { border-color: rgba(243,238,227,.3) !important; }
+html:is(.is-app, .app-look)[data-sport="baseball"] .sil-wrap--app-bkt .cz-card { border-color: rgba(243,238,227,.3); }
+html:is(.is-app, .app-look)[data-sport="baseball"] .sil-wrap--app-bkt .cz-qb-name { color: #161b26 !important; }
+/* tabs and chips: cream hairline off, red on */
+[data-sport="baseball"] .tab-pill { border-color: rgba(243,238,227,.18); background: rgba(243,238,227,.04); }
+[data-sport="baseball"] .tab-pill.active { background: rgba(200,16,46,.24); border-color: rgba(200,16,46,.8); box-shadow: none; color: #fbf7ee; }
+[data-sport="baseball"] .tab-pill-salary.active { background: rgba(168,85,247,0.22); border-color: rgba(168,85,247,0.55); box-shadow: inset 0 1px 0 rgba(168,85,247,0.25); color: #e9d5ff; }
+[data-sport="baseball"] .tab-pill.nav-pos-trigger.active { border-color: rgba(243,238,227,.32); background: rgba(243,238,227,.08); }
+[data-sport="baseball"] .nav-pos-menu { border-color: rgba(243,238,227,.16); border-top-color: rgba(243,238,227,.3); }
+[data-sport="baseball"] .mtab.active { border-color: rgba(200,16,46,.8); background: rgba(200,16,46,.2); }
+[data-sport="baseball"] .rc-comp-switch button.is-on { color: #fbf7ee; background: #c8102e; }
+/* the trait tabs (Silhouette .cat-pill): baseball's own colours, by what each tab is, where the shared ones
+   go by place (red, orange, purple, blue, counting the height/weight tracker, so a batter's first tab came out
+   basketball orange and a pitcher's fourth had none). HITTING / STUFF the stitch red lit, ATHLETIC / PHYSICAL
+   the ball's cream, COMMAND the tan of an ash bat, MENTAL a steel blue. Batters: Hitting, Athletic, Mental.
+   Pitchers (four tabs): Stuff, Command, Physical, Mental. No glow on the picked one */
+[data-sport="baseball"] .cat-pill:nth-of-type(1) { --pc: 230, 57, 80; }
+[data-sport="baseball"] .cat-pill:nth-of-type(2) { --pc: 243, 238, 227; }
+[data-sport="baseball"] .cat-pill:nth-of-type(3) { --pc: 126, 166, 224; }
+[data-sport="baseball"] .category-pills:has(> .cat-pill:nth-of-type(4)) .cat-pill:nth-of-type(2) { --pc: 217, 185, 138; }
+[data-sport="baseball"] .category-pills:has(> .cat-pill:nth-of-type(4)) .cat-pill:nth-of-type(3) { --pc: 243, 238, 227; }
+[data-sport="baseball"] .category-pills:has(> .cat-pill:nth-of-type(4)) .cat-pill:nth-of-type(4) { --pc: 126, 166, 224; }
+html:is(.is-app, .app-look)[data-sport="baseball"] .cat-pill.active, html:is(.is-app, .app-look) [data-sport="baseball"] .cat-pill.active { box-shadow: none !important; color: #0b1019 !important; }
+/* the spin wheel: the outfield's crosshatch, faint, behind the reels; the locked reel and the selector in red */
+[data-sport="baseball"] .spin-panel::before { background-image: repeating-linear-gradient(45deg, rgba(243,238,227,.028) 0 14px, transparent 14px 28px), repeating-linear-gradient(-45deg, rgba(243,238,227,.028) 0 14px, transparent 14px 28px); background-size: auto; }
+[data-sport="baseball"] .reel-outer.reel-locked { border-color: rgba(200,16,46,.85); box-shadow: none; }
+/* the app look's reels and team-spin card: a cream hairline on flat navy, no accent glow round them (in red it
+   reads as a glow); the locked reel's frame in red */
+html:is(.is-app, .app-look)[data-sport="baseball"] .reel-outer { border-color: rgba(243,238,227,.2) !important; background: #0d121c !important; box-shadow: 0 10px 26px rgba(0,0,0,.45) !important; }
+html:is(.is-app, .app-look)[data-sport="baseball"] .reel-outer.reel-locked { border-color: rgba(200,16,46,.85) !important; }
+html:is(.is-app, .app-look)[data-sport="baseball"] .tpm-card { background: #0d121c !important; }
+html:is(.is-app, .app-look)[data-sport="baseball"] :is(.reel-label, .tpm-tab-active) { box-shadow: none !important; }
+/* (the picked row's frame: red, without the glow; a reel skin from the Shop keeps its own) */
+html:is(.is-app, .app-look)[data-sport="baseball"] .reel-selector:not(.rs-on *) { box-shadow: none !important; }
+/* the app's screens over the game (Compete, Daily, Cards...): the light from above is the ballpark's cream, not a
+   red wash (kept at the screens' own low weight, so any screen with its own background still wins) */
+:where(html.is-baseball) .ag-screen { background: radial-gradient(ellipse 100% 30% at 50% 0%, rgba(243,238,227,.05) 0%, transparent 70%), var(--ag-bg); }
+[data-sport="baseball"] .reel-label { background: rgba(243,238,227,.07); border-color: rgba(243,238,227,.2); }
+[data-sport="baseball"] .reel-selector { border-top-color: rgba(200,16,46,.7); border-bottom-color: rgba(200,16,46,.7); background: rgba(243,238,227,.05); }
+[data-sport="baseball"] .qb-respin-btn { border-color: rgba(243,238,227,.24); background: rgba(243,238,227,.06); }
+[data-sport="baseball"] .attr-category-line { background: rgba(243,238,227,.16); }
+[data-sport="baseball"] .right-panel-wrap::before { background-image: linear-gradient(rgba(243,238,227,.045) 1px, transparent 1px); }
+html:is(.is-app, .app-look) [data-sport="baseball"] .right-panel-wrap::before, html[data-sport="baseball"]:is(.is-app, .app-look) .right-panel-wrap::before { background-image: linear-gradient(rgba(243,238,227,.045) 1px, transparent 1px); background-size: 100% 22px; }
+html:is(.is-app, .app-look).is-baseball .spin-respin-half { font-size: 15px !important; letter-spacing: 1px !important; }
+/* buttons: red, flat, cream words, no glow */
+[data-sport="baseball"] .share-build-btn { border-color: #c8102e; background: #c8102e; color: #fbf7ee; box-shadow: none; }
+@media (hover: hover) { [data-sport="baseball"] .share-build-btn:hover { background: #d91d3b; border-color: #d91d3b; box-shadow: none; } }
+[data-sport="baseball"] .ovr-number.lit { text-shadow: none; }
+[data-sport="baseball"] .drop-bar-spin:not(.is-pick) { background: #c8102e; color: #fbf7ee; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+[data-sport="baseball"] .nav-ghost-btn { border-color: rgba(243,238,227,.18); }
+@media (hover: hover) { [data-sport="baseball"] .nav-ghost-btn:hover { border-color: rgba(243,238,227,.42); background: rgba(243,238,227,.08); } }
+[data-sport="baseball"] .nav-ghost-btn.nav-ghost-active { background: rgba(243,238,227,.12); border-color: rgba(243,238,227,.42); }
+[data-sport="baseball"] .htp-drop-num { background: rgba(200,16,46,.3); }
+[data-sport="baseball"] .htp-drop-tip { background: rgba(243,238,227,.05); border-color: rgba(243,238,227,.16); }
+/* the website's menu (waffle) */
+[data-sport="baseball"] .waffle-btn { border-color: rgba(243,238,227,.2); }
+@media (hover: hover) { [data-sport="baseball"] .wm-row:hover { background: rgba(243,238,227,.08); } [data-sport="baseball"] .wm-social-btn:hover { background: rgba(243,238,227,.1); } }
+[data-sport="baseball"] .wm-divider { background: rgba(243,238,227,.12); }
+[data-sport="baseball"] :is(.wm-htp-body, .wm-about-body) { background: rgba(243,238,227,.04); border-color: rgba(243,238,227,.12); }
+[data-sport="baseball"] .wm-htp-num { background: rgba(200,16,46,.3); border-color: rgba(200,16,46,.6); }
+[data-sport="baseball"] .wm-about-disclaimer { border-top-color: rgba(243,238,227,.14); }
+/* sign-in keeps the main app's colours, as on basketball and soccer */
+[data-sport="baseball"] .auth-modal { --accent: #95D5B2; --accent-hi: #B7E4C7; --btn-start: #5EDBD8; --btn-end: #1fc98a; --btn-glow: rgba(94,219,216,0.30); --btn-txt: #07120a; --text: #D8F3DC; --text-2: #95D5B2; --text-3: #52B788; --text-4: #2D6A4F; }
+/* the about page and the old sim results */
+[data-sport="baseball"] .about-header { border-bottom-color: rgba(243,238,227,.2); }
+[data-sport="baseball"] .about-coming-card.active { border-color: rgba(200,16,46,.6); background: rgba(200,16,46,.08); }
+@media (hover: hover) { [data-sport="baseball"] .about-logo-item:hover { border-color: rgba(243,238,227,.36); background: rgba(243,238,227,.06); } }
+[data-sport="baseball"] .about-back-btn { box-shadow: none; }
+[data-sport="baseball"] .about-link { color: #f3eee3; text-decoration: underline; text-decoration-color: #c8102e; }
+[data-sport="baseball"] .src-w { border-color: rgba(243,238,227,.32); background: rgba(243,238,227,.06); }
+[data-sport="baseball"] .src-badge-w { background: rgba(200,16,46,.5); }
+[data-sport="baseball"] .sim-final-banner { background: rgba(243,238,227,.05); }
+[data-sport="baseball"] .sfb-champ { border-color: rgba(247,207,85,.45); background: linear-gradient(135deg, rgba(251,226,140,.14), rgba(201,146,15,.05)); }
+.plus-ratings-game--baseball { color: #f3eee3; }
+.plus-ratings-box--baseball { background: rgba(243,238,227,.04); border-color: rgba(243,238,227,.16); margin-bottom: 4px; }
+/* the footers */
+[data-sport="baseball"] .build-footer-section { background: #090d16; }
+[data-sport="baseball"] .splash-site-footer { background: #090d16; border-top-color: rgba(243,238,227,.1); }
+[data-sport="baseball"] .splash-site-footer-bottom { border-top-color: rgba(243,238,227,.08); }
+
+/* the old website's splash and its way across (Settings → Classic look) */
+[data-sport="baseball"] .splash-screen { background: linear-gradient(rgba(9,13,22,.84), rgba(9,13,22,.84)), url('/baseballbackground.webp') center 40% / cover, #090d16; }
+[data-sport="baseball"] .logo-text em, [data-sport="baseball"] .splash-title em { color: #c8102e; -webkit-text-fill-color: #c8102e; }
+[data-sport="baseball"] .splash-glow { background: radial-gradient(circle, rgba(243,238,227,.07) 0%, transparent 68%); }
+[data-sport="baseball"] .splash-figure-glow { background: radial-gradient(ellipse, rgba(243,238,227,.14) 0%, transparent 80%); }
+[data-sport="baseball"] .splash-yard-line { background: rgba(243,238,227,.04); }
+[data-sport="baseball"] .splash-route-field { background-image: repeating-linear-gradient(180deg, transparent 0 58px, rgba(243,238,227,1) 58px 59px); background-size: auto; }
+[data-sport="baseball"] .splash-route-field--visible { opacity: .04; }
+@media (hover: hover) { [data-sport="baseball"] .splash-switch-btn:hover { border-color: rgba(243,238,227,.4); color: rgba(243,238,227,.85); } }
+[data-sport="baseball"] .smode-coming-soon { background: rgba(243,238,227,.92); color: #0b1019; border-top-color: rgba(243,238,227,.5); border-bottom-color: rgba(243,238,227,.5); }
+[data-sport="baseball"] .splash-mode-classic { background: rgba(200,16,46,.16); border-color: rgba(200,16,46,.7); }
+@media (hover: hover) { [data-sport="baseball"] .splash-mode-classic:hover { border-color: #c8102e; box-shadow: none; } }
+[data-sport="baseball"] .splash-mode-salarycap { background: linear-gradient(145deg, rgba(168,85,247,0.28) 0%, rgba(139,92,246,0.20) 100%), rgba(10,8,15,0.70); }
+[data-sport="baseball"] .splash-mode-alltime { background: linear-gradient(145deg, rgba(212,175,55,0.28) 0%, rgba(245,200,66,0.18) 100%), rgba(13,12,5,0.70); }
+[data-sport="baseball"] .smode-badge { color: #d9d4c8; background: rgba(243,238,227,.07); border-color: rgba(243,238,227,.2); }
+[data-sport="baseball"] .smode-cta { color: #f3eee3; }
+[data-sport="baseball"] .splash-mode-salarycap .smode-cta { color: #c084fc; }
+[data-sport="baseball"] .splash-mode-salarycap .smode-badge { color: #a78bfa; background: rgba(168,85,247,0.12); border-color: rgba(168,85,247,0.25); }
+[data-sport="baseball"] .splash-mode-alltime .smode-cta { color: #e8c84a; }
+[data-sport="baseball"] .splash-mode-alltime .smode-badge { color: #d4af37; background: rgba(212,175,55,0.12); border-color: rgba(212,175,55,0.25); }
+.baseball-splash .splash-pos-btn:disabled { opacity: .4; cursor: default; }
+[data-sport="baseball"] .splash-pos-btn--active { border-color: rgba(200,16,46,.8); background: rgba(200,16,46,.18); }
+.splash-minigame-btn--baseball { background: rgba(243,238,227,.07); border-color: rgba(243,238,227,.46); padding: 3px 14px; }
+@media (hover: hover) { .splash-minigame-btn--baseball:hover { background: rgba(243,238,227,.13); border-color: rgba(243,238,227,.8); box-shadow: none; } }
+@media (hover: hover) { html.is-touch .splash-minigame-btn--baseball:hover { transform: none !important; box-shadow: none !important; border-color: rgba(243,238,227,.46) !important; } }
+.splash-xlink-em--baseball { color: #c8102e; }
+.splash-minigame-btn--baseball .splash-mg-sub { font-size: 10px; letter-spacing: 1.2px; color: #c5c8d0; }
+.splash-features--baseball { --sf-a: #f3eee3; --sf-a-rgb: 243, 238, 227; }
+.splash-features--baseball .splash-feature-icon { color: #c8102e; }
+
+/* shared app screens that basketball tints: the trophy case, the tutorial, the challenge hero */
+html.is-baseball .tc-cab { background: #0d121c; }
+html.is-baseball .tc-row::before { background: linear-gradient(180deg, rgba(243,238,227,.14) 0, rgba(243,238,227,.05) 5px, transparent 5.5px), linear-gradient(180deg, #262c3a 0, #1c2230 5px, #151a26 6px, #0c1018 100%); }
+html.is-baseball .tc-card-faces .tc-face { box-shadow: 0 0 0 2px #0e131d; }
+html.is-baseball .tc-sheet { background: rgba(12,16,26,.985); }
+html.is-baseball .tut-bubble { background: rgb(15,20,31); }
+html.is-baseball .tut-bubble-arrow { background: rgb(15,20,31); }
+html.is-baseball .tut-bubble--above .tut-bubble-arrow { background: rgb(15,20,31); }
+.ag-screen--baseball .ag-challenge-hero { background: linear-gradient(180deg, rgba(9,13,22,.2), rgba(9,13,22,.85)), url('/baseballbackground.webp') center 40% / cover; }
+
+/* a baseball mode that's wired but not built yet: its name, COMING SOON, the way home */
+.bb-soon { display: grid; place-items: center; min-height: 100dvh; padding: 24px 16px calc(var(--app-bottom, 0px) + var(--web-rail, 0px) + 24px); background: url('/baseballbackground.webp') center 40% / cover, #090d16; }
+.bb-soon::before { content: ''; position: fixed; inset: 0; background: rgba(9,13,22,.76); pointer-events: none; }
+.bb-soon-inner { position: relative; display: grid; justify-items: center; gap: 10px; text-align: center; }
+.bb-soon-tag { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 3px; color: rgba(243,238,227,.72); }
+.bb-soon-title { margin: 0; font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: clamp(44px, 12vw, 88px); line-height: .95; letter-spacing: 1px; color: #f3eee3; }
+.bb-soon-back { margin-top: 10px; padding: 12px 22px 10px; border: 0; border-radius: 5px; background: #c8102e; color: #fbf7ee; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 19px; letter-spacing: 2px; cursor: pointer; }
+.bb-soon-back:active { transform: scale(.98); }
+
+
+/* the season page's button on the shared sim frame, and the report card's bats / throws beside height and weight */
+html:is(.is-app, .app-look)[data-sport="baseball"] .simp-cta { background: #c8102e; color: #fbf7ee; box-shadow: none; }
+.ohm-stat--hands .ohm-val { letter-spacing: .5px; }
+/* the report card's BATS/THROWS line under the archetype (ReportCard ovr-arch-hands; a phone shows B/T beside HT and WT) */
+.ovr-arch-hands { margin-top: 4px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 13px; letter-spacing: 1.6px; color: var(--text-3, #a3a8b5); text-align: center; }
+@media (max-width: 768px) { .ovr-arch-hands { display: none; } }
+/* pitchers have four trait tabs (Stuff, Command, Physical, Mental): a row of four that fits, a phone's too
+   (football's and basketball's rows are three: untouched) */
+[data-sport="baseball"] .category-pills:has(> .cat-pill:nth-of-type(4)) .cat-pill { width: 92px; letter-spacing: 1.2px !important; }
+@media (max-width: 768px) {
+  [data-sport="baseball"] .category-pills:has(> .cat-pill:nth-of-type(4)) { justify-content: center; overflow-x: visible; }
+  [data-sport="baseball"] .category-pills:has(> .cat-pill:nth-of-type(4)) .cat-pill { width: 80px; flex: 0 0 80px; font-size: 13px !important; letter-spacing: .6px !important; }   /* (4 x 80 + 3 gaps: 338px) */
+}
+
+/* Compete: four queues (BAT and PIT, each CURRENT and ALL-TIME), two by two so none hides off a phone's edge;
+   the players-searching line in cream, where the other sports' is green (green only in the ballpark picture) */
+.cp--baseball .cp-pos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+.cp--baseball .cp-pos .ag-pos { min-width: 0; width: 100%; }
+.cp--baseball .cp-pos .ag-pos-label { font-size: 18px; letter-spacing: 1.4px; white-space: nowrap; }
+.cp--baseball .cp-pos-n { color: #f3eee3; opacity: .8; }
+.cp--baseball .cp-pos .ag-pos--on .cp-pos-n { opacity: 1; }
+
+/* Home's figure (BaseballApp SPLASH_GROUPS): one band per trait group, each word where the body is widest in its
+   band: the chest and the top of the shorts (BaseballApp places them); the longer words a size down */
+.ag-figure .bb-band-label.is-sm, .ag-home.ag-home--classic.ag-home--classic .agc-figure .bb-band-label.is-sm { font-size: 9.5px; }
+.bb-band-label.is-sm { letter-spacing: 0; }
+.ag-figure .bb-band-label.is-xs, .ag-home.ag-home--classic.ag-home--classic .agc-figure .bb-band-label.is-xs { font-size: 8.5px; letter-spacing: 0; }
