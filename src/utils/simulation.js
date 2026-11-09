@@ -232,6 +232,26 @@ export function calcBalance(build, types = TYPES) {
 // Roughly normal distribution via sum of 3 uniforms, centered at 0, SD ~0.47
 function randN() { return Math.random() + Math.random() + Math.random() - 1.5 }
 
+// Drops, for a receiver's game: out of the balls he didn't catch, by his hands. The real league drops
+// about 3.5% of targets: under 1.5% for the surest hands, 6-7% for the worst (Pro Football Reference).
+// Rolled on dice of their own seeded from the game's line, so no other number in a season moved when
+// drops came in (seeded seasons, the daily board's among them, play back the same).
+export function rollDrops(targets, recs, hands, key, wx = 0) {
+  const inc = targets - recs
+  if (!(inc > 0)) return 0
+  const p = Math.min(0.12, Math.max(0.008, 0.074 - hands * 0.062 + wx))
+  let h = 2166136261
+  for (const ch of `drp-${key}-${targets}-${recs}-${Math.round(hands * 11)}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
+  let a = h >>> 0, d = 0
+  for (let i = 0; i < targets; i++) {
+    a = (a + 0x6D2B79F5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    if (((t ^ (t >>> 14)) >>> 0) / 4294967296 < p) d++
+  }
+  return Math.min(d, inc)
+}
+
 // Official NFL passer rating (0–158.3)
 function passerRating(comps, atts, yards, tds, ints) {
   if (!atts) return 0
@@ -1811,7 +1831,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
   const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
 
   let wins = 0, losses = 0
-  let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0
+  let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0, seasonDrops = 0
   let seasonLong = 0, hundredYardGames = 0
 
   const schedule = script ? script.schedule : buildSchedule(team)
@@ -1868,6 +1888,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
     const gameCatchRate = Math.min(0.88, Math.max(0.28, catchBase - wxCatchHit + v() * 0.09))
     const gameRecs      = Math.max(0, Math.min(Math.round(gameTargets * gameCatchRate), 14))
+    const gameDrops     = rollDrops(gameTargets, gameRecs, hndN, `wr${i}-${opponent}`, badWeather ? 0.015 : 0)
 
     const gameYpr    = Math.max(3.5, Math.min((yprBase - defYprPenalty - wxYprHit) * yprMult + v() * 3.0, 26))
     const gameRecYds = isLimited
@@ -1921,13 +1942,14 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     seasonRecYds  += gameRecYds
     seasonRecTDs  += gameRecTDs
     seasonTargets += gameTargets
+    seasonDrops   += gameDrops
     if (gameLong > seasonLong) seasonLong = gameLong
     if (gameRecYds >= 100) hundredYardGames++
 
     const gameYPR = gameRecs > 0 ? Math.round((gameRecYds / gameRecs) * 10) / 10 : 0
     return {
       wk: i + 1, opponent, home, mySc, oppSc, won,
-      rec: gameRecs, recYds: gameRecYds, recTDs: gameRecTDs, targets: gameTargets, ypr: gameYPR,
+      rec: gameRecs, recYds: gameRecYds, recTDs: gameRecTDs, targets: gameTargets, drops: gameDrops, ypr: gameYPR,
       long: gameLong,
     }
   })
@@ -2040,7 +2062,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
       playoffRounds.push({
         round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
-        rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets,
+        rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets, drops: rollDrops(pgTargets, pgRecs, hndN, `po-${round}-${opponent}`),
       })
       if (won) pwins++
       else { eliminated = round; break }
@@ -2061,6 +2083,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     highlights: games.filter(g => g.wk <= 4 || g.wk >= 14),
     seasonRecs, seasonRecYds, seasonRecTDs, seasonTargets, seasonYPR,
     seasonLong, hundredYardGames, catchRate,
+    seasonDrops, dropRate: seasonTargets > 0 ? Math.round((seasonDrops / seasonTargets) * 1000) / 10 : 0,
     bestGame,
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }
@@ -2370,7 +2393,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
   const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
 
   let wins = 0, losses = 0
-  let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0
+  let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0, seasonDrops = 0
   let seasonLong = 0, hundredYardGames = 0
 
   const schedule = script ? script.schedule : buildSchedule(team)
@@ -2421,6 +2444,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 
     const gameCatchRate = Math.min(0.88, Math.max(0.35, catchBase - wxCatchHit + v() * 0.08))
     const gameRecs      = Math.max(0, Math.min(Math.round(gameTargets * gameCatchRate), 12))
+    const gameDrops     = rollDrops(gameTargets, gameRecs, hndN, `te${i}-${opponent}`, badWeather ? 0.015 : 0)
 
     const gameYpr    = Math.max(4.5, Math.min((yprBase - defYprPenalty - wxYprHit) * yprMult + v() * 2.5, 23))
     const gameRecYds = isLimited
@@ -2472,13 +2496,14 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     seasonRecYds  += gameRecYds
     seasonRecTDs  += gameRecTDs
     seasonTargets += gameTargets
+    seasonDrops   += gameDrops
     if (gameLong > seasonLong) seasonLong = gameLong
     if (gameRecYds >= 100) hundredYardGames++
 
     const gameYPR = gameRecs > 0 ? Math.round((gameRecYds / gameRecs) * 10) / 10 : 0
     return {
       wk: i + 1, opponent, home, mySc, oppSc, won,
-      rec: gameRecs, recYds: gameRecYds, recTDs: gameRecTDs, targets: gameTargets, ypr: gameYPR,
+      rec: gameRecs, recYds: gameRecYds, recTDs: gameRecTDs, targets: gameTargets, drops: gameDrops, ypr: gameYPR,
       long: gameLong,
     }
   })
@@ -2591,7 +2616,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 
       playoffRounds.push({
         round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
-        rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets,
+        rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets, drops: rollDrops(pgTargets, pgRecs, hndN, `po-${round}-${opponent}`),
       })
       if (won) pwins++
       else { eliminated = round; break }
@@ -2612,6 +2637,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     highlights: games.filter(g => g.wk <= 4 || g.wk >= 14),
     seasonRecs, seasonRecYds, seasonRecTDs, seasonTargets, seasonYPR,
     seasonLong, hundredYardGames, catchRate,
+    seasonDrops, dropRate: seasonTargets > 0 ? Math.round((seasonDrops / seasonTargets) * 1000) / 10 : 0,
     bestGame,
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }

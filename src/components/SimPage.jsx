@@ -412,6 +412,7 @@ function statCols(kind, r) {
       gp,
       { key: 'tgt',    label: 'TGT', val: r.seasonTargets },
       { key: 'rec',    label: 'REC', val: r.seasonRecs },
+      ...(r.seasonDrops != null ? [{ key: 'drp', label: 'DRP', val: r.seasonDrops }] : []),
       { key: 'recYds', label: 'YDS', val: r.seasonRecYds, fmt: int0 },
       { key: 'ypr',    label: 'AVG', val: r.seasonYPR, fmt: dec1 },
       { key: 'recTD',  label: 'TD',  val: r.seasonRecTDs },

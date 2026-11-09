@@ -7258,3 +7258,26 @@ html.app-look .ag-sport-btn.is-soon:hover { color: inherit; }
 /* (Reduce Motion: the position bar changes sides without the slide) */
 html.bap-reduce-motion .ag-side-track { transition: none; }
 @media (prefers-reduced-motion: reduce) { .ag-side-track { transition: none; } }
+
+/* Phone Home, less zoomed in: the BAP mark inside the screen (scaled from its right edge, it ran off the left),
+   and the sport and position bars a size down */
+@media (max-width: 1023px) {
+  .ag-home .ag-brand { padding: 0 14px; gap: 8px; }
+  .ag-home .ag-brand-mark, .ag-home--bucket .ag-brand-mark { height: 50px; transform: none; }
+  .ag-home .ag-wordmark { font-size: 19px; }
+  .ag-home .ag-sport { height: 46px; }
+  .ag-home .ag-sport-txt b { font-size: 19px; }
+  .ag-home .ag-sport--three .ag-sport-txt b { font-size: 17px; }
+  .ag-home .ag-sport-btn.is-soon .ag-sport-soon { font-size: 10px !important; }
+  .ag-stage .ag-positions { height: 46px; }
+  .ag-stage .ag-pos-label { font-size: 21px; }
+  .ag-stage .ag-pos--soon .ag-pos-label { font-size: 17px; }
+  .ag-side-word { font-size: 13px; }
+  .ag-stage .ag-live-count { font-size: 14px; }
+  .ag-figure { bottom: 56px; }
+  .ag-figure:not(.ag-figure--nba) { bottom: calc(56px + var(--fig-h) * var(--fig-o, 0)); }
+  .ag-platform { bottom: 42px; }
+}
+@media (max-width: 380px) { .ag-home .ag-sport--three .ag-sport-txt b { font-size: 15px; } }
+/* (a 360 phone hides the sport subtitles, but not soccer's COMING SOON) */
+@media (max-width: 360px) { .ag-sport-btn.is-soon small.ag-sport-soon { display: block; font-size: 9px !important; letter-spacing: 1.5px !important; } }

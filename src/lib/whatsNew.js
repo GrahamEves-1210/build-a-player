@@ -49,6 +49,14 @@ const NOV_10 = {
       name: 'Home',
       items: [
         'Football positions are split into offense and defense: tap DEFENSE at the end of the bar',
+        'Home on phones is less zoomed in: the logo fits on screen, and the sport and position bars are smaller',
+      ],
+    },
+    {
+      name: 'Stats',
+      items: [
+        'WRs and TEs now have drops: in the season stat line, Career\'s season-by-season table and Career analytics, with drop rate',
+        'Hands decides it: the surest hands drop one or two balls a year, the worst six or more',
       ],
     },
     {

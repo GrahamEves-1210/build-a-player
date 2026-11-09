@@ -27,6 +27,8 @@ const catcher = (avgTgt, eliteTgt, avgYds, eliteYds, avgCatch, eliteCatch, avgYp
   { key: 'ydsG', label: 'YARDS / GAME', get: s => perGame(s.stats.recYds, s), fmt: f1, avg: avgYds, elite: eliteYds, says: 'What he actually produces every week.' },
   { key: 'ypt', label: 'YARDS / TARGET', get: s => s.stats.recYds / Math.max(1, s.adv.targets), fmt: f1, avg: avgYpt, elite: eliteYpt, says: 'Yards every time the ball comes his way, caught or not. Shows how well he uses his chances.' },
   { key: 'catch', label: 'CATCH RATE', get: s => (s.stats.recs / Math.max(1, s.adv.targets)) * 100, fmt: pct, avg: avgCatch, elite: eliteCatch, says: 'Share of targets he catches. Deep threats run lower because those throws are harder.' },
+  { key: 'drops', label: 'DROPS', get: s => s.adv.drops, fmt: int, says: 'Catchable balls he put on the ground. The surest hands drop one or two a year.' },
+  { key: 'dropRate', label: 'DROP RATE', get: s => (s.adv.drops == null ? null : (s.adv.drops / Math.max(1, s.adv.targets)) * 100), fmt: pct, avg: 3.5, elite: 1.5, low: true, says: 'Share of targets he dropped. Lower is better: the league drops about 1 in 30.' },
   { key: 'fp', label: 'FANTASY PTS / GAME', get: s => fantasy(s, s.stats.recYds, s.stats.tds, s.stats.recs), fmt: f1, says: 'One all-round score: a point per reception, a point per 10 yards, 6 per TD.' },
   { key: 'tdRate', label: 'TD RATE', get: s => (s.stats.tds / Math.max(1, s.adv.targets)) * 100, fmt: pct, says: 'Share of targets that score. It jumps around a lot from year to year.' },
   { key: 'hundred', label: '100-YARD GAMES', get: s => s.adv.hundreds, fmt: int, says: 'Games with 100 or more receiving yards.' },
@@ -153,7 +155,7 @@ export function seasonRaw(pos, f, played) {
     return { gp, att: Math.round((f.seasonAttempts ?? 0) * (gp / total)), sacks: f.seasonSacks ?? 0 }
   }
   if (pos === 'rb') return { gp, carries: f.seasonCarries ?? 0, recs: f.seasonRecs ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.rushYds >= 100) }
-  if (pos === 'wr' || pos === 'te') return { gp, targets: f.seasonTargets ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.recYds >= 100) }
+  if (pos === 'wr' || pos === 'te') return { gp, targets: f.seasonTargets ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.recYds >= 100), ...(f.seasonDrops != null ? { drops: f.seasonDrops } : {}) }
   if (pos === 'dl') return { gp, multi: count(g => g.sacks >= 2) }
   if (pos === 'lb') return { gp, big: count(g => g.tackles >= 10) }
   if (pos === 'ol') return { gp, clean: count(g => (g.sacks ?? 0) === 0 && (g.pressures ?? 0) <= 1) }

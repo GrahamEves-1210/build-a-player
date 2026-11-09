@@ -1238,7 +1238,7 @@ function RankList({ c, L }) {
 const SEASON_COLS = {
   qb: ['compPct', 'passYds', 'tds', 'ints', 'rating', 'rushYds', 'rushTDs'],
   rb: ['rushYds', 'ypc', 'tds', 'recYds', 'fumbles'],
-  wr: ['recs', 'recYds', 'ypr', 'tds'], te: ['recs', 'recYds', 'ypr', 'tds'],
+  wr: ['recs', 'recYds', 'ypr', 'tds', 'drops'], te: ['recs', 'recYds', 'ypr', 'tds', 'drops'],
   db: ['tackles', 'tfl', 'ints', 'pbus', 'ff', 'pickSixes', 'rtgA'],
   dl: ['sacks', 'tfl', 'tackles', 'qbHits', 'ff', 'fr', 'pbus', 'safeties'],
   lb: ['tackles', 'tfl', 'sacks', 'qbHits', 'pds', 'ints', 'ff', 'fr'],
@@ -1294,7 +1294,7 @@ function SeasonTable({ c, t }) {
                 <td className="cr-seasons-team"><img src={S.logo(s.team)} alt="" loading="lazy" />{s.team}</td>
                 <td>{gamesIn(s)}</td>
                 <td>{s.wins}-{s.losses}</td>
-                {cols.map(k => <td key={k}>{k === 'grade' && s.stats[k] == null ? '—' : fmt(s.stats[k])}</td>)}
+                {cols.map(k => <td key={k}>{(k === 'grade' || k === 'drops') && s.stats[k] == null ? '—' : fmt(s.stats[k])}</td>)}
                 <td className="cr-seasons-ico">{s.champion && <IconRing size={13} />}{s.award && <IconTrophy size={13} />}{s.allPro ? <IconMedal size={13} /> : s.proBowl ? <IconStar size={13} /> : null}</td>
               </tr>,
               open === s.year && (
