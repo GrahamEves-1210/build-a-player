@@ -1579,7 +1579,7 @@ function wantFor(c, short, round) {
 // A back, a receiver or a tight end on draft day: a room with a quarterback and a line is a better landing
 // spot, and it comes up more (supportW: the slot still decides who's on the clock, so a top-five pick still
 // mostly goes to a bad team, as it does). Others: 1
-const draftLean = (c, short) => (SKILL[c.pos] && !sportOf(c).isBucket ? supportW(c.pos, teamFit(short, c.pos, { sport: c.sport, spot: lineSpot(c) })) : 1)
+const draftLean = (c, short) => (SKILL[c.pos] && !sportOf(c).isBucket ? supportSoft(c.pos, teamFit(short, c.pos, { sport: c.sport, spot: lineSpot(c) })) : 1)
 // The order: worst teams first, with some noise
 function draftOrder(c) {
   const S = sportOf(c)
@@ -2658,6 +2658,9 @@ const SKILL = { rb: { qb: 0.45, ol: 0.55 }, wr: { qb: 0.75, ol: 0.25 }, te: { qb
 const supportOf = (pos, f) => (SKILL[pos] && f ? SKILL[pos].qb * (f.qb ?? 6) + SKILL[pos].ol * (f.ol ?? 6) : null)
 // the lean: a B quarterback and line about 0.7, an A- pair about 1.5, a C+ pair about 0.2, a C 0.08
 const supportW = (pos, f) => { const s = supportOf(pos, f); return s == null ? 1 : clamp(((s - 2.5) / 4) ** 2, 0.08, 2) }
+// a lighter lean for the draft rooms and free agency: bad-quarterback teams still come calling (a team with
+// cap space chases a receiver all the same), a good quarterback's team just a bit more often
+const supportSoft = (pos, f) => Math.sqrt(supportW(pos, f))
 // one from a list by weight, on one roll (0-1)
 const pickBy = (list, w, x) => { const ws = list.map(w), total = ws.reduce((a, b) => a + b, 0); let roll = x * total; for (let i = 0; i < list.length; i++) { roll -= ws[i]; if (roll <= 0) return list[i] } return list[list.length - 1] }
 const qbNameOf = f => f?.groups?.find(g => g.k === 'QB')?.names?.[0] ?? null
@@ -2701,7 +2704,7 @@ function contractSituation(c, fresh = false) {
   // a skill player's market leans to the teams with a quarterback and a line (supportW); everyone else's
   // is the first that fits, in the shuffled order (its own roll, so the money below comes out the same)
   const rp = seeded(`${c.seed}-fa-pick-${c.year}${fresh ? '-back' : ''}`)
-  const choose = list => (!list.length ? null : SKILL[c.pos] ? pickBy(list, f => supportW(c.pos, f), rp()) : list[0])
+  const choose = list => (!list.length ? null : SKILL[c.pos] ? pickBy(list, f => supportSoft(c.pos, f), rp()) : list[0])
   const contender = choose(others.filter(f => (f.off + f.def) / 2 >= good)) ?? others[0]
   const payer = choose(others.filter(f => f.short !== contender.short && (f.off + f.def) / 2 < bad)) ?? others.find(f => f.short !== contender.short)
   // where you'd stand on each team's depth chart
