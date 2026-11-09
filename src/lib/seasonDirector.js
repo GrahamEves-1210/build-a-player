@@ -42,6 +42,21 @@ const BEST = {
   guard: g => g.pts, big: g => g.pts,
   st: g => (g.goals ?? 0) * 10 + (g.assists ?? 0) * 5 + (g.rating ?? 0) * 1.5 + (g.won ? 2 : 0),
 }
+// How a game reads for a hot or cold stretch (Career's HOT STREAK, COLD STRETCH, HOT HAND): the numbers a
+// coach would point to at each position, higher is better. A DB's coverage counts (the yards and touchdowns he
+// gives up), an OL's sacks and pressures allowed count against him. (Other sports: the best-game score.)
+const wrForm = g => g.recYds * .1 + g.recTDs * 6 + g.rec * .5 - (g.drops ?? 0)
+const bucketForm = g => g.pts + (g.reb ?? 0) * .7 + (g.ast ?? 0) * .9
+const FORM = {
+  qb: g => g.passYds * .04 + g.tds * 4 - g.ints * 4.5 + (g.rushYds ?? 0) * .04 + (g.rushTDs ?? 0) * 4 - (g.sacks ?? 0) * .5,
+  rb: g => g.rushYds * .1 + (g.rushTDs + (g.recTDs ?? 0)) * 6 + (g.recYds ?? 0) * .1 - (g.fumbles ?? 0) * 4,
+  wr: wrForm, te: wrForm,
+  db: g => g.ints * 5 + (g.pickSixes ?? 0) * 6 + (g.pbus ?? 0) * 1.5 + (g.tackles ?? 0) * .3 + (g.tfl ?? 0) + (g.ff ?? 0) * 3 - (g.ydsA ?? 0) * .06 - (g.tdA ?? 0) * 4,
+  dl: g => g.sacks * 5 + (g.safeties ?? 0) * 6 + (g.ff ?? 0) * 3.5 + (g.fr ?? 0) * 2 + (g.tfl ?? 0) * 1.2 + (g.qbHits ?? 0) * .8 + (g.pbus ?? 0) + (g.tackles ?? 0) * .3,
+  lb: g => BEST.lb(g) - (g.missed ?? 0),
+  ol: g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2,
+  guard: bucketForm, big: bucketForm,
+}
 // How the stat line for a game reads in a headline
 export const GAME_LINE = {
   qb: g => `${g.passYds} yds, ${g.tds} TD`, rb: g => `${g.rushYds} rush yds, ${g.rushTDs + (g.recTDs ?? 0)} TD`,
@@ -146,20 +161,62 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     return simFn(b, t, `${seed}-${tag}`)
   }
   // Re-simulate everything from `from` with whatever mods apply in each stretch
+  // a hot or cold stretch (a window with a lean: + hot, - cold): which way the games at `i` lean, all told
+  const leanAt = i => Math.sign(D.windows.reduce((s, w) => s + (w.lean && i >= w.from && i < w.to ? w.lean : 0), 0))
   // the names a game carries from the decisions in force for it (the schedule shows them)
-  const tagsAt = i => [...new Set(D.windows.filter(w => w.tag && i >= w.from && i < w.to).map(w => w.tag))]
+  // (a hot or cold label only where the games lean its way: Hot Hand over a cold stretch reads hot)
+  const tagsAt = i => { const n = leanAt(i); return [...new Set(D.windows.filter(w => w.tag && i >= w.from && i < w.to && !(w.lean && Math.sign(w.lean) !== n)).map(w => w.tag))] }
+  // A hot or cold stretch, games a to z: each game is drawn twice at the same ratings and the better (hot)
+  // or worse (cold) kept, so the stretch reads the way it's labelled. Every draw is a real game from the
+  // engine, so the box score holds together. His normal game is the higher (hot) or lower (cold) of two
+  // marks: the draws' average at these ratings, and the season's other games as they stand. A game that
+  // doesn't clear it is drawn again, then the stretch's weakest, until the stretch sits half a game's
+  // spread past it (or MAX draws): above it on a hot run, below it on a cold one, every game.
+  const MAX_DRAWS = 12
+  const leaned = (run, mods, key, a, z, lean) => {
+    const score = FORM[pos] ?? BEST[pos]
+    const idx = []
+    for (let i = a; i < z; i++) if (!D.sat.includes(i) && !D.locked.includes(i) && run.games[i]) idx.push(i)
+    if (!score || !idx.length) return null
+    const runs = [run]
+    const draw = j => runs[j] ?? (runs[j] = runWith(mods, `${key}-s${j}`))
+    const val = g => lean * score(g)   // (higher reads the way the stretch leans)
+    const fits = g => (lean > 0 ? !BUST_GAME[pos]?.(g) : !BIG_GAME[pos]?.(g))
+    const all = [draw(0), draw(1)].flatMap(x => x.games.map(score)).filter(Number.isFinite)
+    const mean = all.reduce((s, v) => s + v, 0) / Math.max(1, all.length)
+    const sd = Math.sqrt(all.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, all.length))
+    const seen = D.games.filter((g, i) => (i < a || i >= z) && !g.sat && !leanAt(i)).map(score).filter(Number.isFinite)
+    const mark = seen.length ? lean * Math.max(lean * mean, lean * (seen.reduce((s, v) => s + v, 0) / seen.length)) : lean * mean
+    // per game: the best of its first n draws (a game that fits the stretch, then the number)
+    const n = Object.fromEntries(idx.map(i => [i, 2]))
+    const best = i => { let b = null; for (let j = 0; j < n[i]; j++) { const g = draw(j).games[i]; if (g && (!b || fits(g) > fits(b) || (fits(g) === fits(b) && val(g) > val(b)))) b = g } return b }
+    const pick = Object.fromEntries(idx.map(i => [i, best(i)]))
+    for (const i of idx) while (val(pick[i]) < lean * mark && n[i] < MAX_DRAWS) { n[i]++; pick[i] = best(i) }
+    for (;;) {
+      const got = idx.reduce((s, i) => s + val(pick[i]), 0) / idx.length
+      if (got >= lean * mark + 0.5 * sd) break
+      const open = idx.filter(i => n[i] < MAX_DRAWS)
+      if (!open.length) break
+      const w = open.reduce((p, q) => (val(pick[q]) < val(pick[p]) ? q : p))
+      n[w]++; pick[w] = best(w)
+    }
+    return pick
+  }
   const resplice = from => {
     const edges = new Set([from, total, ...D.windows.flatMap(w => [w.from, w.to])].filter(x => x >= from && x <= total))
     const cuts = [...edges].sort((a, b) => a - b)
     for (let c = 0; c < cuts.length - 1; c++) {
       const a = cuts[c], z = cuts[c + 1]
       const mods = fixedRunMods(a)
-      const run = runWith(mods, `${a}-${z}-${r().toString(36).slice(2, 6)}`)
+      const key = `${a}-${z}-${r().toString(36).slice(2, 6)}`
+      const run = runWith(mods, key)
       D.last = run
+      const lean = leanAt(a)
+      const pick = lean ? leaned(run, mods, key, a, z, lean) : null
       for (let i = a; i < z; i++) {
         if (D.sat.includes(i) || D.locked.includes(i)) continue
         const tags = tagsAt(i)
-        D.games[i] = { ...run.games[i], wk: base.games[i].wk, g: base.games[i].g, ...(tags.length ? { tags } : {}) }
+        D.games[i] = { ...(pick?.[i] ?? run.games[i]), wk: base.games[i].wk, g: base.games[i].g, ...(tags.length ? { tags } : {}) }
       }
     }
   }
@@ -296,8 +353,9 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   D.sidelined = (at, n) => { for (let i = at; i < Math.min(total, at + n); i++) sitGame(i); resplice(at) }
   // A stretch played a little above or below the ratings (Career: a hidden form
   // for the year, a hot or cold streak). No tag: nothing on the schedule shows it.
+  // mods.lean (a hot or cold streak, Hot Hand): the stretch's games are picked to read that way (leaned)
   D.nudge = (mods, from = 0, to = total, tag = null, playoffs = false) => {
-    D.windows.push({ from, to: Math.min(total, to), mods: { attr: mods.attr || {}, team: mods.team || {} }, tag })
+    D.windows.push({ from, to: Math.min(total, to), mods: { attr: mods.attr || {}, team: mods.team || {} }, tag, ...(mods.lean ? { lean: mods.lean } : {}) })
     if (playoffs) D.playoffMods = addMods(D.playoffMods, mods)
     resplice(from)
   }

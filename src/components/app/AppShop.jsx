@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, startBoost, boostLeftMs, TIMED, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
 import { openCheckout } from '../../lib/webCheckout'
 import { sellsHere, onStorefront } from '../../lib/storefront'
-import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
+import { showRewarded, rewardedReady, rewardedOn, rewardedTest, openRewarded } from '../../lib/rewardedAd'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { useStorePrices } from '../../lib/iap'
 import FeedbackModal from '../FeedbackModal'
@@ -68,30 +68,50 @@ export function CoinPill({ onClick, className = '' }) {
   )
 }
 
-// Watch a video: 100 coins, 3 times a day
+// Watch a video: 100 coins, 3 times a day. The app plays AdMob's in one go. The website asks Playwire for the
+// video when this card comes on screen and lights the button only once one is ready (lib/rewardedAd.js
+// openRewarded); the coins go in when the player has watched enough. Playwire's review (rewardedTest) can
+// watch without an account: the video plays, nothing is paid.
 function VideoCoins() {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [fill, setFill] = useState(IS_APP ? 'ready' : 'loading')
+  const ad = useRef(null)
+  const test = rewardedTest()
   const left = adsLeft()
+  const can = test || (walletOpen() && left > 0)
+  useEffect(() => {
+    if (IS_APP || !can) return
+    const a = openRewarded(setFill)
+    ad.current = a
+    return () => { a.close(); ad.current = null }
+  }, [can])
   const watch = async () => {
-    if (!walletOpen()) { signIn(); return }
-    if (busy || left <= 0) return
+    if (!walletOpen() && !test) { signIn(); return }
+    if (busy || !can) return
+    if (!IS_APP && fill !== 'ready') return
     setBusy(true); setNote('')
-    const r = await showRewarded()
+    const r = IS_APP ? await showRewarded() : await (ad.current?.watch() ?? Promise.resolve('unavailable'))
     setBusy(false)
-    if (r === 'rewarded') { claimAdCoins(); haptic('success') }
+    if (r === 'rewarded') {
+      const paid = walletOpen() && adsLeft() > 0 ? claimAdCoins() : 0
+      if (paid) haptic('success')
+      else if (test) setNote(`Watched. A signed-in player would get ${AD_COINS} coins here.`)
+    }
     else if (r === 'closed') setNote('Watch to the end to get the coins.')
     else setNote('No video right now. Try again in a bit.')
   }
+  const waiting = !IS_APP && can && fill === 'loading'
+  const none = !IS_APP && can && fill === 'none'
   return (
     <div className="sh-section">
-      <button className={`sh-free sh-video${left <= 0 ? ' is-claimed' : ''}`} onClick={watch} disabled={busy}>
+      <button className={`sh-free sh-video${!can && walletOpen() ? ' is-claimed' : ''}`} onClick={watch} disabled={busy || waiting || none}>
         <span className="sh-chest"><IconPlay size={24} /></span>
         <span>
           <span className="sh-free-title">WATCH A VIDEO</span>
-          <span className="sh-free-sub">{left > 0 ? `A short video ad for ${AD_COINS} coins · ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
+          <span className="sh-free-sub">{none ? 'No video right now. Check back later.' : left > 0 || test ? `A short video ad for ${AD_COINS} coins \u00b7 ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
         </span>
-        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : busy ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : left > 0 ? `+${AD_COINS}` : 'DONE'}</span>
+        <span className="sh-free-go">{!walletOpen() && !test ? 'SIGN IN' : busy || waiting ? <span className="bt-dots bt-dots--btn" aria-label="Loading"><i /><i /><i /></span> : none ? 'NONE' : can ? `+${AD_COINS}` : 'DONE'}</span>
       </button>
       {note && <p className="cpk-note">{note}</p>}
     </div>
@@ -467,8 +487,8 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
         <Boosts p={p} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />
       ) : tab === 'coins' ? (
         <>
-          {/* videos are an app thing (AdMob); the website shows the card only once it has a rewarded ad unit */}
-          {REWARDED_ON && (IS_APP || rewardedReady()) && <VideoCoins />}
+          {/* videos: AdMob in the app, Playwire's rewarded unit on the website (off until it's live, but for Playwire's review) */}
+          {rewardedOn() && (IS_APP || rewardedReady()) && <VideoCoins />}
           {sells && <CoinPacks p={p} />}
         </>
       ) : tab === 'featured' ? (

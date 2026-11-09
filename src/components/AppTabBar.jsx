@@ -13,6 +13,7 @@ import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
 import { AnimatePresence, motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../lib/motion'
+import { takeRewardedOpen } from '../lib/rewardedAd'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppCards = lazy(() => import('./app/AppCards'))
@@ -144,6 +145,8 @@ export default function AppTabBar() {
     window.addEventListener('bap:nav', onNav)
     const onPlayer = e => { if (e.detail?.id) setPlayer(e.detail) }
     if (new URLSearchParams(window.location.search).has('mg')) setScreen('mglab')
+    // (Playwire's review of the rewarded video, lib/rewardedAd.js: straight to the Shop's coins)
+    if (takeRewardedOpen()) { setShopTab('coins'); setScreen('shop') }
     window.addEventListener('bap:player', onPlayer)
     return () => {
       window.removeEventListener('bap:player', onPlayer)

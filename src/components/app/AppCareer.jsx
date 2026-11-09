@@ -527,9 +527,11 @@ function TeamFit({ c }) {
       <div className="ag-card-head"><span className="ag-eyebrow">THE {S.isBucket ? 'TEAM' : S.isBaseball ? 'CLUB' : S.side?.[c.pos] === 'def' ? 'DEFENSE' : 'OFFENSE'} AROUND {c.name.toUpperCase()}</span><span className="cr-fit-status">{f.status}</span></div>
       <div className="cr-fit-grid">
         {groups.map(g => <G key={g.k} k={g.k} v={g.v} sub={g.names?.length === 1 ? nick(g.names[0]) : null} />)}
-        {S.side?.[c.pos] === 'def' && <G k="OFFENSE" v={teamGrade(f.off)} />}<G k="DEFENSE" v={teamGrade(f.def)} />
+        {/* (football: offG / defG, the rating on the units' own scale; a save from before them: the 1-10 rating) */}
+        {S.side?.[c.pos] === 'def' && <G k="OFFENSE" v={f.offG ?? teamGrade(f.off)} />}<G k="DEFENSE" v={f.defG ?? teamGrade(f.def)} />
       </div>
-      <div className="cr-fit-meta"><span>{f.conf}{div && div !== f.conf ? ` · ${div}` : ''}</span></div>
+      {/* (football: the coaching staff's grade, the part of the offense and defense ratings the units don't explain) */}
+      <div className="cr-fit-meta"><span>{f.conf}{div && div !== f.conf ? ` · ${div}` : ''}{f.coach != null ? ` · Coaching ${gradeOf(f.coach)}` : ''}</span></div>
     </div>
   )
 }
@@ -841,6 +843,11 @@ function Chunk({ c, e }) {
   const on = games.filter(g => !g.sat)
   const avg = k => (on.length ? (on.reduce((s, g) => s + (g[k] ?? 0), 0) / on.length).toFixed(1) : '0')
   const best = [...on].sort((a, b) => (b.pts ?? 0) - (a.pts ?? 0))[0]
+  // a hot or cold stretch (or Hot Hand) in this run of games: which games, and his scoring over them
+  const runs = [...new Set(on.flatMap(g => g.tags ?? []))].map(t => {
+    const gs = on.filter(g => g.tags?.includes(t))
+    return { t, from: gs[0].g, to: gs[gs.length - 1].g, ppg: (gs.reduce((s, g) => s + (g.pts ?? 0), 0) / gs.length).toFixed(1) }
+  })
   if (S.isBaseball) return <Suspense fallback={null}><BaseballChunk c={c} e={e} /></Suspense>
   if (S.isSoccer) {
     const played = games.filter(g => !g.sat && g.app)
@@ -864,6 +871,7 @@ function Chunk({ c, e }) {
     <div className="ag-card cr-chunk">
       <div className="cr-chunk-head"><span className="ag-eyebrow">{e.k0 === e.k1 ? `GAME ${e.k0}` : `GAMES ${e.k0}–${e.k1}`}</span><b>{w}–{games.length - w}</b></div>
       <div className="cr-chunk-strip">{games.map(g => <span key={g.g} className={`${g.won ? 'is-w' : 'is-l'}${g.sat ? ' is-sat' : ''}`} title={`${g.won ? 'W' : 'L'} ${g.mySc}–${g.oppSc} vs ${g.opponent}`}>{g.won ? 'W' : 'L'}</span>)}</div>
+      {runs.length > 0 && <div className="cr-chunk-tags">{runs.map(x => <span key={x.t} className="sm-tag">{x.t} · {x.from === x.to ? `GAME ${x.from}` : `GAMES ${x.from}–${x.to}`} · {x.ppg} PPG</span>)}</div>}
       {on.length > 0
         ? <p className="cr-chunk-line"><b>{avg('pts')}</b> pts · <b>{avg('reb')}</b> reb · <b>{avg('ast')}</b> ast{best && <small>Best night: {GAME_LINE[c.pos]?.(best)} vs {best.opponent}</small>}</p>
         : <p className="cr-chunk-line"><small>Didn't play: {S.isBucket ? 'out of the rotation' : 'on the bench'}.</small></p>}

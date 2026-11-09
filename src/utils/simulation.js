@@ -1130,7 +1130,8 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   const ovr = calcOVRRB(build, types)
 
   // Use RB-specific offensive ratings: QB is a separate asset in RB mode
-  const rbOff = team?.short && !isAllTime ? (RB_RATINGS[team.short]?.off ?? team.off) : team?.off
+  // (a career's team carries its own offense, quarterback included: lib/career.js simTeam)
+  const rbOff = team?.short && !isAllTime && !team.career ? (RB_RATINGS[team.short]?.off ?? team.off) : team?.off
   const teamOffN = rbOff != null ? (rbOff - 5) / 5 : 0
   const teamDefN = team ? (team.def - 5) / 5 : 0
 
@@ -1829,6 +1830,8 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
   const ovrN = ovr !== null ? (ovr - 75) / 22 : 0
   const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+  // How steady he is week to week: 0 for a starter, 1 for a 96+ WR1
+  const steady = ovr !== null ? Math.max(0, Math.min(1, (ovr - 82) / 14)) : 0
 
   let wins = 0, losses = 0
   let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0, seasonDrops = 0
@@ -1850,17 +1853,20 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     const wxCatchHit = badWeather ? 0.04 : 0
     const wxYprHit   = badWeather ? (0.5 + Math.random() * 0.8) : 0
 
-    // Limited game: injury, load management, double-team suppression (~8%)
-    const isLimited = Math.random() < 0.08
+    // Limited game: injury, load management, double-team suppression (~8%; ~5% for a WR1,
+    // whose double teams show up as an off week below, not a vanishing act)
+    const isLimited = Math.random() < 0.08 - 0.035 * steady
 
     // Opponent DB quality suppresses targets and yards (classic: 60% weight)
     const statScale     = isAllTime ? 1.0 : 0.60
     const defTgtPenalty = oppDefN * 0.75 * statScale
     const defYprPenalty = oppDefN * 0.90 * statScale
 
-    // Game mood tiers — same four-tier system as RB
+    // Game mood tiers — same four-tier system as RB.
+    // A true WR1 gets his looks every week: his off games come less often and
+    // he still gets fed in them (a star doesn't vanish for 2 catches and 14 yards).
     const gameMood       = Math.random()
-    const dudThreshold   = 0.15 + oppDefN * 0.10
+    const dudThreshold   = (0.15 + oppDefN * 0.10) * (1 - 0.4 * steady)
     const breakThreshold = 0.77 + oppDefN * 0.07
     const isDud          = !isLimited && gameMood < dudThreshold
     const isBreakout     = !isLimited && gameMood > breakThreshold
@@ -1872,18 +1878,19 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       ovr >= 80 ? Math.random() < 0.020 : false
     )
 
-    const tgtMult = isDud       ? (0.38 + Math.random() * 0.22)     // 0.38–0.60×
+    const tgtMult = isDud       ? (0.38 + 0.10 * steady + Math.random() * 0.22)     // 0.38–0.60× (a WR1 0.48–0.70×)
                   : isLegendary ? (1.35 + Math.random() * 0.45)     // 1.35–1.80×
                   : isBreakout  ? (1.10 + Math.random() * 0.28)     // 1.10–1.38×
                   : 1.0
-    const yprMult = isDud       ? (0.48 + Math.random() * 0.22)     // 0.48–0.70×
+    const yprMult = isDud       ? (0.48 + 0.06 * steady + Math.random() * 0.22)     // 0.48–0.70× (a WR1 0.54–0.76×)
                   : isLegendary ? (1.45 + Math.random() * 0.55)     // 1.45–2.00× — record pace
                   : isBreakout  ? (1.12 + Math.random() * 0.30)     // 1.12–1.42×
                   : 1.0
 
     // WR volume ran ~10-15% hot (a 99 averaged record seasons): a touch fewer looks, more off the top
-    const wrTame      = ovr >= 95 ? 0.88 : ovr >= 88 ? 0.91 : 0.94
-    const rawTargets  = Math.max(1, Math.round((targetBase - defTgtPenalty + v() * 2.5) * tgtMult * lowOvrCurve * wrTame))
+    // (and a little more for a steady WR1, whose off weeks no longer drag his season down)
+    const wrTame      = (ovr >= 95 ? 0.88 : ovr >= 88 ? 0.91 : 0.94) * (1 - 0.07 * steady)
+    const rawTargets  = Math.max(1, Math.round((targetBase - defTgtPenalty + v() * 2.5 * (1 - 0.1 * steady)) * tgtMult * lowOvrCurve * wrTame))
     const gameTargets = isLimited ? Math.max(1, Math.round(1 + Math.random() * 3)) : Math.min(rawTargets, 16)
 
     const gameCatchRate = Math.min(0.88, Math.max(0.28, catchBase - wxCatchHit + v() * 0.09))
@@ -2391,6 +2398,8 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 
   const ovrN = ovr !== null ? (ovr - 75) / 22 : 0
   const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+  // How steady he is week to week: 0 for a starter, 1 for a 96+
+  const steady = ovr !== null ? Math.max(0, Math.min(1, (ovr - 82) / 14)) : 0
 
   let wins = 0, losses = 0
   let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0, seasonDrops = 0
@@ -2412,14 +2421,16 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     const wxCatchHit = badWeather ? 0.03 : 0
     const wxYprHit   = badWeather ? (0.4 + Math.random() * 0.7) : 0
 
-    const isLimited = Math.random() < 0.07
+    // (a top TE is hurt or held to a cameo less often: ~4.5%)
+    const isLimited = Math.random() < 0.07 - 0.025 * steady
 
     const statScale     = isAllTime ? 1.0 : 0.60
     const defTgtPenalty = oppDefN * 0.70 * statScale
     const defYprPenalty = oppDefN * 0.85 * statScale
 
+    // A top TE's off weeks come less often and are smaller ones, as with a WR1
     const gameMood       = Math.random()
-    const dudThreshold   = 0.18 + oppDefN * 0.10
+    const dudThreshold   = (0.18 + oppDefN * 0.10) * (1 - 0.45 * steady)
     const breakThreshold = 0.78 + oppDefN * 0.07
     const isDud          = !isLimited && gameMood < dudThreshold
     const isBreakout     = !isLimited && gameMood > breakThreshold
@@ -2430,16 +2441,17 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       ovr >= 80 ? Math.random() < 0.018 : false
     )
 
-    const tgtMult = isDud       ? (0.35 + Math.random() * 0.22)
+    const tgtMult = isDud       ? (0.35 + 0.12 * steady + Math.random() * 0.22)
                   : isLegendary ? (1.30 + Math.random() * 0.40)
                   : isBreakout  ? (1.08 + Math.random() * 0.26)
                   : 1.0
-    const yprMult = isDud       ? (0.50 + Math.random() * 0.22)
+    const yprMult = isDud       ? (0.50 + 0.06 * steady + Math.random() * 0.22)
                   : isLegendary ? (1.40 + Math.random() * 0.50)
                   : isBreakout  ? (1.10 + Math.random() * 0.28)
                   : 1.0
 
-    const rawTargets  = Math.max(0, Math.round((targetBase - defTgtPenalty + v() * 2.0) * tgtMult * lowOvrCurve))
+    // (a little fewer looks for a steady one, so his season totals stay where they were)
+    const rawTargets  = Math.max(0, Math.round((targetBase - defTgtPenalty + v() * 2.0 * (1 - 0.1 * steady)) * tgtMult * lowOvrCurve * (1 - 0.08 * steady)))
     const gameTargets = isLimited ? Math.max(0, Math.round(Math.random() * 2)) : Math.min(rawTargets, 13)
 
     const gameCatchRate = Math.min(0.88, Math.max(0.35, catchBase - wxCatchHit + v() * 0.08))
@@ -2967,6 +2979,16 @@ function poissonSample(lambda) {
   return k - 1
 }
 
+// Sacks: a few real chances a game, each one he wins or doesn't. Steadier than a
+// Poisson draw with the same mean, so a top rusher gets home most weeks.
+function rushSample(lambda, chances = 6) {
+  if (lambda <= 0) return 0
+  const p = Math.min(0.85, lambda / chances)
+  let k = 0
+  for (let i = 0; i < chances; i++) if (Math.random() < p) k++
+  return k
+}
+
 export function runDBSimulation(build, team = null, isAllTime = false, script = null) {
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRDB(build) ?? 60
@@ -3486,7 +3508,8 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
   // end flattens. An EDGE sees chips from backs and tight ends; a DT sees a real
   // second lineman (Donald saw double teams all through his 2018).
   // It costs him sacks more than it costs him hits on the QB.
-  const chip = (isEdge ? 0.16 : 0.26) * Math.max(0, rushSkill - 0.55) / 0.45
+  // (the edge's share is small: the heat on a big year below does most of that job)
+  const chip = (isEdge ? 0.05 : 0.26) * Math.max(0, rushSkill - 0.55) / 0.45
 
   // Per-game Poisson means, calibrated to the benchmarks at the top of this section.
   const sackLambdaBase = 0.02 + (isEdge ? 1.04 * Math.pow(rushSkill, 1.72) : 0.855 * Math.pow(rushSkill, 2.7)) * (1 - chip)
@@ -3520,6 +3543,8 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
   const ovrN = (ovr - 78) / 20
   const teamDefBoost = teamDefN + ovrN * 0.12
   const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+  // How steady he is week to week: 0 for a starter, 1 for a 96+ (an elite rusher gets home most weeks)
+  const steady = Math.max(0, Math.min(1, (ovr - 82) / 14))
 
   let wins = 0, losses = 0
   let seasonSacks = 0, seasonTFL = 0, seasonTackles = 0, seasonQBHits = 0
@@ -3528,11 +3553,11 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
   // One game's line. A better offense means a better line and a QB who gets rid of
   // the ball; bad weather means fewer dropbacks and more runs at him.
   const playLine = (rushMult, runMult, tklMult) => {
-    // An EDGE on a big year gets game planned: past 13 sacks, every one
-    // after it draws more help. It only touches the top end (a 7-sack year never gets
-    // near it), and it's why 20 is so rare. A DT already sees a second lineman every snap.
-    const heat = isEdge ? 1 / (1 + 0.25 * Math.max(0, seasonSacks - 13)) : 1
-    const sacks = poissonSample(Math.max(0, sackLambdaBase * rushRole * rushMult * heat))
+    // An EDGE on a big year gets game planned: past 16 sacks, every one
+    // after it draws more help, and past 20 a lot more. It only touches the top end (a 7-sack
+    // year never gets near it), and it's why the record is so hard. A DT already sees a second lineman every snap.
+    const heat = isEdge ? 1 / (1 + 0.15 * Math.max(0, seasonSacks - 16) + 0.25 * Math.max(0, seasonSacks - 20)) : 1
+    const sacks = rushSample(Math.max(0, sackLambdaBase * rushRole * rushMult * heat))
     const hits  = sacks + poissonSample(Math.max(0, hitLambdaBase * rushRole * rushMult))
     const runTfl = poissonSample(Math.max(0, tflLambdaBase * tklRole * runMult))
     let tfl = runTfl
@@ -3569,10 +3594,11 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
     const homeShort  = home ? (team?.short ?? '') : (oppTeam?.short ?? '')
     const badWeather = !DOME_TEAMS.has(homeShort) && COLD_TEAMS.has(homeShort) && Math.random() < 0.15
 
+    // A great rusher has fewer off days, and his off days are smaller ones
     const gameMood   = Math.random()
-    const isDud      = gameMood < 0.16
+    const isDud      = gameMood < 0.16 * (1 - 0.7 * steady)
     const isBreakout = gameMood > 0.82
-    const boost      = isDud ? (0.5 + Math.random() * 0.25) : isBreakout ? (1.45 + Math.random() * 0.55) : 1.0
+    const boost      = isDud ? (0.5 + 0.25 * steady + Math.random() * 0.25) : isBreakout ? (1.45 + Math.random() * 0.55) : 1.0
     const oppResist  = 1 - oppOffN * 0.16
     const playAhead  = 1 + teamOffN * 0.08 // a lead makes them throw into his rush
 

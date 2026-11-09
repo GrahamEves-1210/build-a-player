@@ -16,6 +16,7 @@
 // public/.well-known files) is described in public/.well-known and the infra notes.
 
 import { IS_APP } from './platform'
+import { setRewardedTest } from './rewardedAd'
 
 const PENDING_KEY = 'bap_pending_nav'
 const SITE_HOST = /(^|\.)build-a-player\.com$/i
@@ -99,6 +100,9 @@ export function initDeepLinks() {
   if (started) return
   started = true
   consumePending()
+  // Playwire's review of the rewarded video (lib/rewardedAd.js): /?rewarded-test turns the offer on for
+  // this tab (the dock, AppTabBar, opens the Shop's coins; the #google_sample_tag hash stays on for Ramp)
+  if (!IS_APP && new URLSearchParams(window.location.search).has('rewarded-test')) setRewardedTest()
   if (!IS_APP) return
   let last = '', lastAt = 0
   import('@capacitor/app').then(({ App }) => {

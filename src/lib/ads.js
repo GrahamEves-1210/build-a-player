@@ -110,6 +110,15 @@ export function rampDestroyType(type) {
   }))
 }
 
+// The rewarded video (lib/rewardedAd.js): asked for only while its offer is on screen (each spaAddAds is a real
+// ad request), and taken down when the offer goes. Not kept in inPage: a mini game closing doesn't bring it back
+const REWARDED_UNIT = 'rewarded_ad_video'
+export function rampRewardedAdd() {
+  if (inGame) return
+  Promise.resolve().then(() => serial(() => window.ramp.spaAddAds([{ type: REWARDED_UNIT }])))
+}
+export const rampRewardedDestroy = () => rampDestroyType(REWARDED_UNIT)
+
 // The bottom rail on its own, between page changes (a tab in the nav, a spin):
 // its slots removed, then requested again, closed or not. At most once every
 // RAIL_GAP_MS; never for ad-free players

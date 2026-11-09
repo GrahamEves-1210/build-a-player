@@ -25,6 +25,12 @@ const NOV_10 = {
       items: [
         'Added Start in College for QB, RB and WR: pick from school offers, play a season or two, then enter the draft',
         'Teams now rise and fall more over the years',
+        'Team ratings now come from the roster, so a team\'s offense and defense match its unit grades, and every team has a coaching grade',
+        'Contender, In the mix and Rebuilding now follow those ratings',
+        'Hot streaks and cold stretches now always show in the stats, and they last 4 games (8 in basketball)',
+        'RBs, WRs and TEs land on teams with a good quarterback and line more often',
+        'New starters entering the league are now rated like today\'s starters, so the league no longer fills up with bad quarterbacks',
+        'Football players can now sign record contracts when their play earns it',
         'Traits now close with age: physical traits first, then skills, and mental traits never',
         'A trait costs double in its last year or two before it closes',
         'Starting durability now comes from the player\'s frame, his weight for his height',
@@ -49,7 +55,7 @@ const NOV_10 = {
       name: 'Home',
       items: [
         'Football positions are split into offense and defense: tap DEFENSE at the end of the bar',
-        'Home on phones is less zoomed in: the logo fits on screen, and the sport and position bars are smaller',
+        'Home on phones is less zoomed in: everything is a size down with more room between sections, and the logo fits on screen',
       ],
     },
     {
@@ -57,6 +63,8 @@ const NOV_10 = {
       items: [
         'WRs and TEs now have drops: in the season stat line, Career\'s season-by-season table and Career analytics, with drop rate',
         'Hands decides it: the surest hands drop one or two balls a year, the worst six or more',
+        'Elite pass rushers are steadier: fewer games without a sack and more multi-sack games',
+        'Elite WRs and TEs have far fewer near-empty games',
       ],
     },
     {
