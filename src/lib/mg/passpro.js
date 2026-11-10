@@ -21,7 +21,7 @@ import { paintFieldFlat, qbPose, lightFx } from './throw.js'
 import { put, action, tagsAll, teamOf, walk, ballInAir } from './read.js'
 
 export const how = {
-  'pass-pro': 'Mirror the rusher, wide or back inside, and PUNCH when he gets there. On a bull rush, HOLD PUNCH and anchor. On a blitz, pick up the free rusher.',
+  'pass-pro': 'Watch his first step: he goes wide, slide OUTSIDE; he comes back under you, INSIDE. PUNCH as the ring closes on him. A bull rush: HOLD PUNCH and anchor. A twist or a blitz: take the man coming free.',
 }
 
 const YD = 20
@@ -37,10 +37,10 @@ const SHOW = 180, SETTLE = 160, FAKE_MS = 300, RESET = 420
 const RAMP = [1, 0.96, 0.92, 0.9]
 const QB_MS = [2500, 2700, 3000, 2800]   // how long the QB needs, each snap
 // what the ratings buy (the game's one value: the average of Pass Pro, Mobility, Anchor, Blitz Pickup, Length)
-const MIRROR = v => byV(v, 455, 590)     // once he's committed: this long to get your feet with him
+const MIRROR = v => byV(v, 480, 590)     // once he's committed: this long to get your feet with him
 const READ_MS = v => byV(v, 620, 770)    // a twist or a blitz: this long to see who's free
 const RECOVER = v => byV(v, 420, 500)    // he's got a step: this long to run him past the QB
-const PUNCH_W = v => byV(v, 150, 215)    // the punch window, round the moment he gets to you
+const PUNCH_W = v => byV(v, 165, 215)    // the punch window, round the moment he gets to you
 const REACH = v => byV(v, 30, 60)        // long arms land it a touch sooner
 const STALL = v => byV(v, 740, 600)      // holding the anchor this long stops his feet
 const GIVE = v => byV(v, 0.62, 0.4)     // how much ground an anchor still gives
@@ -108,6 +108,8 @@ export function make({ v, seed, cast }) {
     clean: 0, pressures: 0, sacks: 0, flags: 0, pancakes: 0, popAt: -1e9,
     // what a player can see: all a bot gets. side: -1 / 1 on the screen
     tell: { snapped: false, hard: false, type: null, side: null, bull: false, commit: false, contactAt: null, free: null, held: false },
+    // (padCue: the pad the line on the screen calls for, outlined. It says only what his body is showing: a bot reads the same in tell)
+    padCue: null,
     hud: { prompt: 'WAIT FOR THE SNAP', dots: plan.map(() => null) },
     zoneFor(side) { return side < 0 ? 0 : 2 },
     tick(dt) {
@@ -171,6 +173,39 @@ export function make({ v, seed, cast }) {
       }
     },
   }
+  // a lost step, in a coach's words: what he did, and what beats it
+  const side = d => (d === s ? 'OUTSIDE' : 'INSIDE')
+  function whyOf(rep, word, dir, ex = rep.ex) {
+    if (word === 'LUNGED') return 'LUNGED: SLIDE FIRST, THEN PUNCH'
+    if (word === 'SWIPED') return 'EARLY PUNCH: HE SWIPED IT AWAY'
+    if (word === 'WALKED BACK') return ex?.holdMs > 0 ? 'WALKED BACK: SIT DOWN SOONER' : 'BULL RUSH: HOLD PUNCH TO ANCHOR'
+    if (ex?.type === 'pickup' || word === 'FREE RUSHER') return rep.blitz === 'stunt' ? 'TWIST: PICK UP THE LOOPER' : 'BLITZ: PICK UP THE BACKER'
+    if (ex?.type === 'recover') return 'HE GOT HOME: RUN HIM PAST'
+    if (word === 'TOO SLOW') return `TOO SLOW: SLIDE ${side(dir)} WITH HIM`
+    if (ex?.fake && dir !== ex.fake) return 'INSIDE MOVE: HE CAME BACK UNDER'
+    return dir === s ? 'BEAT OUTSIDE: SLIDE OUT WITH HIM' : 'BEAT INSIDE: SLIDE IN WITH HIM'
+  }
+  // the coach's line for what he's showing right now, and the pad it calls for (nothing the body isn't already showing)
+  function cue(rep, t) {
+    const ex = rep.ex, pad = d => g.zoneFor(d)
+    if (rep.doom) return ["HE'S FREE", null]
+    if (rep.hurry) return ['RAN HIM PAST', null]
+    if (!ex) return rep.nextAt != null ? ['STAY ON HIM', null] : [null, null]
+    if (ex.type === 'mirror') {
+      if (t < ex.showAt) return ['WATCH HIS FIRST STEP', null]
+      if (ex.fake && t < ex.crossAt) return ["HE'S GOING WIDE", pad(ex.fake)]
+      if (ex.fake) return ['INSIDE MOVE: GO INSIDE', pad(ex.dir)]
+      return t < ex.commitAt ? ["HE'S GOING WIDE", pad(ex.dir)] : ['SPEED RUSH: SLIDE OUTSIDE', pad(ex.dir)]
+    }
+    if (ex.type === 'punch') return ['PUNCH AS THE RING CLOSES', 1]
+    if (ex.type === 'anchor') return t < ex.contactAt ? (ex.name === 'chest' ? ['HOLD PUNCH: ANCHOR', 1] : ['BULL RUSH: HOLD PUNCH', 1]) : ['HOLD IT: SINK THE ANCHOR', 1]
+    if (ex.type === 'pickup') {
+      if (t < ex.commitAt) return ["TWO COMING: WHO'S FREE?", null]
+      return rep.blitz === 'stunt' ? ['TWIST: TAKE THE LOOPER', pad(ex.dir)] : ['BLITZ: TAKE THE BACKER', pad(ex.dir)]
+    }
+    if (ex.type === 'recover') return t < ex.showAt ? ["HE'S GOT A STEP", null] : [`RUN HIM PAST: ${side(ex.dir)}`, pad(ex.dir)]
+    return [null, null]
+  }
   function setUp(rep) {
     rep.me.x = MX; rep.me.d = ME_D
     rep.qb.x = CX; rep.qb.d = QB_GUN
@@ -182,7 +217,7 @@ export function make({ v, seed, cast }) {
     rep.snapAt = g.t + rep.wait
     rep.hardAt = rep.hard != null ? g.t + rep.wait * rep.hard : null
     Object.assign(g.tell, { snapped: false, hard: false, type: null, side: null, bull: false, commit: false, contactAt: null, free: null })
-    g.hud.prompt = 'WAIT FOR THE SNAP'
+    g.hud.prompt = 'WAIT FOR THE SNAP'; g.hud.hot = false; g.padCue = null
     g.phase = 'set'
   }
   function snap(rep) {
@@ -246,9 +281,10 @@ export function make({ v, seed, cast }) {
     if (!rep.fails) more(rep)
     else rep.nextAt = null
   }
-  function fail(rep, word, dir) {
+  function fail(rep, word, dir, why) {
     rep.fails++
-    if (rep.fails >= 2) return doom(rep, 'SACK', dir)
+    rep.why = why ?? whyOf(rep, word, dir)
+    if (rep.fails >= 2) return doom(rep, 'SACK', dir, rep.why)
     g.stamp = { text: word, good: false, at: g.t, ms: 480, size: 32 }
     g.fx.push('tap', 'h:medium')
     rep.nextAt = null
@@ -256,6 +292,7 @@ export function make({ v, seed, cast }) {
   }
   function chest(rep) {
     rep.fails++
+    rep.why = "LATE PUNCH: HE'S INTO YOUR CHEST"
     g.stamp = { text: 'INTO HIS CHEST', good: false, at: g.t, ms: 520, size: 30 }
     g.fx.push('pop', 'h:medium')
     rep.nextAt = null
@@ -267,7 +304,8 @@ export function make({ v, seed, cast }) {
     g.stamp = { text: 'RAN HIM PAST', good: null, at: g.t, ms: 480, size: 30 }
     g.fx.push('swoosh', 'h:light')
   }
-  function doom(rep, word, dir) {
+  function doom(rep, word, dir, why) {
+    rep.why = why ?? ((rep.ex?.type === 'recover' && rep.why) || whyOf(rep, word, dir, rep.ex))   // (lost in the recovery: the step he got in the first place)
     rep.ex = null; rep.nextAt = null
     rep.doom = { at: g.t, dir, word }
     g.stamp = word === 'SACK' ? null : { text: word, good: false, at: g.t, ms: 460, size: 32 }
@@ -275,6 +313,7 @@ export function make({ v, seed, cast }) {
   }
   function falseStart(rep) {
     rep.flag = true
+    rep.why = 'FALSE START: MOVE ON THE BALL'
     g.fx.push('whistle', 'deny')
     settle(rep, 'flag')
   }
@@ -291,7 +330,9 @@ export function make({ v, seed, cast }) {
     if (kind === 'sack') g.sacks++
     if (kind === 'flag') g.flags++
     g.hud.dots[g.i] = kind === 'clean' || kind === 'pressure'
-    g.hud.prompt = null
+    // what happened, in a line: why he got there (a hurried one, the step he got)
+    g.hud.prompt = kind === 'clean' ? (rep.pancake ? 'PANCAKE: HE NEVER GOT UP' : 'BALL OUT: NOBODY GOT HOME') : rep.why ?? null
+    g.hud.hot = false; g.padCue = null
     g.held = false; g.tell.held = false
     g.tell.type = null; g.tell.side = null; g.tell.bull = false; g.tell.contactAt = null; g.tell.free = null
     const words = { clean: 'CLEAN POCKET', pressure: 'HURRIED', sack: 'SACK', flag: 'FALSE START' }
@@ -323,6 +364,7 @@ export function make({ v, seed, cast }) {
   function rules(rep, dt) {
     const t = g.t, age = t - rep.snapAt, tl = g.tell
     if (rep.res) return
+    if (rep.doom || rep.hurry) { ;[g.hud.prompt, g.padCue] = cue(rep, t); g.hud.hot = false }
     if (rep.doom) {
       if (far(rep.ru, rep.qb) < 24 || t - rep.doom.at > 720) settle(rep, 'sack')
       return
@@ -340,7 +382,7 @@ export function make({ v, seed, cast }) {
       if (ex.type === 'pickup' && t >= ex.commitAt) { tl.free = ex.dir; tl.commit = true }
       if (ex.type === 'recover' && t >= ex.showAt) { tl.side = ex.dir; tl.commit = true }
     }
-    g.hud.prompt = ex?.type === 'punch' ? 'PUNCH' : ex?.type === 'anchor' && t >= ex.contactAt ? 'HOLD' : ex?.type === 'recover' ? 'RUN HIM PAST' : null
+    ;[g.hud.prompt, g.padCue] = cue(rep, t)
     g.hud.hot = ex?.type === 'anchor' && t >= ex.contactAt
     if (ex) {
       if ((ex.type === 'mirror' || ex.type === 'pickup') && t > ex.until) { fail(rep, 'TOO SLOW', ex.dir); return }
@@ -549,6 +591,12 @@ export function draw(ctx, g, view0) {
   const R = { dir: 'down', skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...(rep.moves[0] === 'pickup' ? (rep.blitz === 'blitz' ? named(who.lb) : named(who.dl[1])) : named(who.dl[0])), step: null, pose: 'stance', squat: 0, lead: true }
   if (rep.moves[0] === 'pickup') R.number = rep.blitz === 'blitz' ? (who.lb?.number ?? 54) : (who.dl[1]?.number ?? DL_NUM[1])
   const party = sack ? clamp((s2 - 560) / 170, 0, 1) : 0
+  // his stance gives it away: a bull sits low and heavy in it, a speed rusher's up high and leaning to the edge
+  // (a counter sets up the same as a speed rush: it's sold as one)
+  if (!snapped && !rep.flag) {
+    if (rep.moves[0] === 'bull') R.squat = 0.14
+    else if (rep.moves[0] !== 'pickup') R.lean = s * 0.07
+  }
   if (snapped) {
     if (party >= 1) { R.pose = rep.k % 2 ? 'point-up' : 'flex'; R.dir = 'down'; R.z = fy(qb.d) + 1 }
     else if (sack) { R.dir = sideName(fallX); R.pose = 'wrap'; R.fall = qFall; R.fallX = fallX; R.z = fy(qb.d) + 1 }

@@ -69,7 +69,7 @@ const NFL_FIGURE = {
   lb: { src: '/lb-silhouette.webp', scale: 1 },
   ol: { src: '/ol-silhouette.webp', scale: 1 },
 }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line' }
 const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 // the open positions first (DL opened after this Home), then the ones still to come

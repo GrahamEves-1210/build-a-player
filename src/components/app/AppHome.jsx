@@ -52,7 +52,7 @@ const SIDE_OF = { qb: 'off', rb: 'off', wr: 'off', te: 'off', ol: 'off', dl: 'de
 // the kicker: coming soon, a locked tab at the end of the defense's bar (nothing else knows the position yet)
 const KICKER_SOON = { pos: 'k', label: 'K', soon: true, locked: true }
 const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs', st: 'Strikers' }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line' }
 // Who's on the Current and All-Time buttons, for the position picked (football's current
 // faces are POS_OPTIONS.players). Every one of them is in that pool.
 const face = (id, color) => ({ id, color })

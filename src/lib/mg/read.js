@@ -230,6 +230,8 @@ export function make({ v, seed, def, game, cast }) {
       }
       return out
     } : null,
+    // (the screen's height came in with the first picture, or changed: the men put where it says, before a ring is drawn on them)
+    reh(h) { if (g.h === h) return; g.h = h; if (tapped && !g.rep.res) place(g.rep, Math.max(0, g.t - g.rep.at)) },
     aimAt(m) {
       if (onCourt) return chestOf(courtCam(g).cam, xFt(g.men[m].x), zFt(g.men[m].y, g.h), {})
       const q = tilt(g.cam, g.men[m].x, g.men[m].y); return { x: q.x, y: q.y - 24 * q.s }
@@ -536,7 +538,7 @@ export function ballInAir(ctx, view, x, y, z, ang, size = 1) {
 export const teamOf = (c, side) => (side ? { color: c.them, trim: c.themTrim } : { color: c.us, trim: c.trim })
 
 export function draw(ctx, g, view) {
-  if (g.men) { g.h = view.h; g.cam = view }
+  if (g.men) { g.reh(view.h); g.cam = view }
   if (g.stamp && g.stamp.y == null) g.stamp.y = view.h * g.W.stampY
   if (g.later && g.later.y == null) g.later.y = view.h * g.W.stampY
   ;(SCENES[g.game] ?? drawHot)(ctx, g, view)
@@ -1209,7 +1211,9 @@ function drawJump(ctx, g, view) {
   let look = scan > 0.72 ? 'left' : scan < -0.72 ? 'right' : 'down'
   if (runAge >= rep.delay || missed) look = QB_LOOK(qx, bx)
   else if (d?.early && runAge >= d.at && runAge < d.at + (d.flash ?? FLASH)) { const p = J.route(rep, d.k, runAge, h); look = QB_LOOK(qx, p.x) }
-  const rel = jumpRel(rep)
+  // (a scene's air: the ball's time in the air, longer than the race's own. It lands when it always did and comes out that
+  // much sooner, so the race is the same; zone drop's hangs 18% longer, more to watch it into the window)
+  const rel = J.air ? Math.max(rep.delay, land - (land - jumpRel(rep)) * J.air) : jumpRel(rep)
   const fa = prog(age, rel, land)
   // his arm: cocked once he's found his man, then the release
   const arm = qbPose(runAge >= rep.delay && age < rel ? 1 : null, age >= rel ? age - rel : -1)
@@ -1397,7 +1401,7 @@ function paintZone(f, view) {
 // the two defenders' games, side by side: what drawJump, stepJump and the rules (make, settle) ask of each
 const JUMPY = {
   'jump-route': { route: routeJ, los: losJ, V: SAFETY_V, short: SHORT_GAIN, from: (rep, age, h) => ({ x: 180, y: safetyY(h) }), build: buildJump, others: othersJ, idle: idleJ, key: 'jump', paint: paintJump, men: menJ, backs: backsJ, look: who => ({ skin: skinOf(4), number: 38, size: 0.86, ...who.safety }) },
-  'zone-drop': { route: routeZ, los: losZ, V: LB_V, short: Z_SHORT, sticks: 13, from: lbAt, build: buildZone, others: othersZ, idle: idleZ, key: 'zone', paint: paintZone, men: menZ, backs: () => {}, look: who => ({ skin: skinOf(5), number: 54, size: 0.9, ...who.me }), lookOff: true, meetY: 12, tackleFar: true, ret: [-70, 60], facing: (w, res) => (res ? dirFrom(w, 'up') : zFace(w)) },
+  'zone-drop': { route: routeZ, los: losZ, V: LB_V, short: Z_SHORT, sticks: 13, from: lbAt, build: buildZone, others: othersZ, idle: idleZ, key: 'zone', paint: paintZone, men: menZ, backs: () => {}, look: who => ({ skin: skinOf(5), number: 54, size: 0.9, ...who.me }), lookOff: true, air: 1.18, meetY: 12, tackleFar: true, ret: [-70, 60], facing: (w, res) => (res ? dirFrom(w, 'up') : zFace(w)) },
 }
 const sceneOf = rep => (rep.zone ? JUMPY['zone-drop'] : JUMPY['jump-route'])
 

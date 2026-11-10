@@ -462,6 +462,8 @@ export function pads(ctx, view, g) {
     const x = gap + i * (pw + gap), lit = g.padLit === i
     ctx.fillStyle = lit ? view.accent : '#1c262b'
     rr(ctx, x, y, pw, h, 6); ctx.fill()
+    // (padCue: the pad the game's line on the screen calls for, outlined)
+    if (g.padCue === i && !lit) { ctx.strokeStyle = view.accent; ctx.lineWidth = 2.5; rr(ctx, x + 1.25, y + 1.25, pw - 2.5, h - 2.5, 5); ctx.stroke() }
     text(ctx, label, x + pw / 2, y + h / 2 + (view.keys ? -9 : 1), { font: DISPLAY, size: 24, color: lit ? '#06100c' : '#fff' })
     if (view.keys) keyCap(ctx, x + pw / 2, y + h - 17, keyOfPad(g, i), lit)
   })
