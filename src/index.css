@@ -5506,17 +5506,21 @@ a:focus-visible {
 .pp-help a { color: #fff; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(255,255,255,.45); white-space: nowrap; }
 .pp-legal { margin: 8px 0 0; font-family: var(--ag-body, var(--font)); font-size: 10.5px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,.4); text-align: center; text-wrap: balance; }
 @media (max-width: 720px) {
+  /* a phone: one centred column, the way an in-app offer card reads. Logo, the offer on one line, a full-width
+     button, the code under it. No phone picture: there's no room for it beside the words */
   .pp-wrap { margin-bottom: 20px; }
-  .pp-banner { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; height: 200px; padding: 0 0 0 14px; }
-  .pp-offer br { display: inline; }
-  .pp-copy { flex: none; align-items: flex-start; text-align: left; }
-  .pp-logo { width: 140px; margin: -5px 0 -7px -8px; }
-  .pp-new, .pp-sub { font-size: 12px; }
-  .pp-offer { font-size: clamp(27px, 9.2vw, 36px); }
-  .pp-cta { flex-direction: row; align-items: center; gap: 9px; width: auto; margin: 10px 0 0; }
-  .pp-claim { width: 108px; height: 38px; font-size: 14.5px; }
-  .pp-code { width: 116px; font-size: 12.5px; line-height: 1.25; text-align: left; white-space: normal; }
-  .pp-phone { right: -52px; top: 24px; width: 152px; }
+  .pp-banner {
+    flex-direction: column; align-items: stretch; justify-content: center; gap: 0; height: auto; padding: 16px 16px 14px; border-radius: 14px;
+    background: radial-gradient(130% 85% at 50% 0%, rgba(150,70,255,.6) 0%, rgba(128,0,255,0) 62%), linear-gradient(180deg, #2b0556 0%, #1a0033 100%);
+  }
+  .pp-copy { flex: none; }
+  .pp-logo { width: 148px; margin: -5px 0 -6px; }
+  .pp-new, .pp-sub { font-size: 12.5px; }
+  .pp-offer { margin: 4px 0 5px; font-size: clamp(23px, 7.7vw, 31px); }
+  .pp-cta { width: auto; margin: 13px 0 0; gap: 9px; }
+  .pp-claim { height: 46px; border-radius: 12px; font-size: 16px; }
+  .pp-code { font-size: 13px; }
+  .pp-phone { display: none; }
   .pp-legal { font-size: 10px; }
 }
 .splash-site-footer {
