@@ -1297,7 +1297,7 @@ const PROD_PAR = { qb: 95, rb: 75, wr: 70 }   // production() of a solid starter
 // 3-9 Day 2, 10-23 Day 3, 24-40 PFA; WR 1-2 top-10, 3-6 R1, 7-16 Day 2, 17-33 Day 3, 34-55 PFA.
 // (QB: the real class this game simulates is deeper at the top than a real year's, so the Day 2 and Day 3
 // lines sit lower than the 2021-25 average: 18 drafted)
-const BOARD_SLOTS = { qb: [2, 4, 8, 18, 32], rb: [1, 2, 9, 23, 40], wr: [2, 6, 16, 33, 55] }
+const BOARD_SLOTS = { qb: [2, 5, 10, 21, 36], rb: [1, 3, 11, 26, 45], wr: [3, 7, 19, 38, 62] }   // (eased a touch, the owner's call: each tier reaches a few spots further down the board)
 const BOARD_W = { prod: 2.2, team: 0.7 }   // OVR points a standard deviation
 const MARK_PTS = 5                          // OVR points a mark (a Heisman winner +3, a finalist +1.5)
 const COMP_K = 0.09                         // production a game: the share a standard deviation (7.2 pts) of the defenses faced is worth
