@@ -184,37 +184,37 @@ const LB_ZONES = [
   { type: 'leadership',      ax: 548, ay: 262, side: 'left',  cy: 0.14 }, // face + neck
   { type: 'size',            ax: 470, ay: 455, side: 'left',  cy: 0.32 }, // jersey chest
   { type: 'power',           ax: 268, ay: 470, side: 'left',  cy: 0.50 }, // bare arm
-  { type: 'zoneInstincts',   ax: 165, ay: 757, side: 'left',  cy: 0.68 }, // glove
-  { type: 'tackling',        ax: 223, ay: 1009, side: 'left', cy: 0.86 }, // lower leg
+  { type: 'tackling',        ax: 165, ay: 757, side: 'left',  cy: 0.68 }, // glove
+  { type: 'zoneInstincts',   ax: 223, ay: 1009, side: 'left', cy: 0.86 }, // lower leg
   { type: 'playRecognition', ax: 605, ay: 48,  side: 'right', cy: 0.23 }, // helmet
   { type: 'blockShed',       ax: 908, ay: 689, side: 'right', cy: 0.41 }, // wristband
   { type: 'passRush',        ax: 560, ay: 700, side: 'right', cy: 0.59 }, // pants, the middle (clear of the cards)
   { type: 'range',           ax: 833, ay: 1184, side: 'right', cy: 0.77 }, // shoe
 ]
 
-// OL zones — same figure as DB (see OLFigureOverlay). Every dot sits on the
-// body part that OL chip colors, and only on parts that stay visible between
-// the cards (the gloves and left sleeve tuck under the cards on desktop).
-// Where a dot shares DB's exact point it reuses that point and its mobile nudge.
-const OL_ZONES = [
-  { type: 'blitzPickup', ax: 297, ay:  75, side: 'right', cy: 0.12 }, // helmet
-  // Length sits a bit above its dot so its line clears the Size dot on the chest
-  { type: 'length',      ax: 376, ay: 368, side: 'right', cy: 0.29 }, // right upper arm
-  { type: 'passPro',     ax: 400, ay: 490, side: 'right', cy: 0.47 }, // right sleeve
-  { type: 'anchor',      ax: 373, ay: 659, side: 'right', cy: 0.66 }, // right knee
-  { type: 'mobility',    ax: 390, ay: 965, side: 'right', cy: 0.86 }, // right shoe
-  // Discipline / Size use DB's exact card heights for these same two points
-  { type: 'discipline',  ax: 250, ay: 175, side: 'left',  cy: 0.14 }, // face / neck
-  { type: 'size',        ax: 220, ay: 260, side: 'left',  cy: 0.32 }, // jersey chest
-  { type: 'runBlock',    ax: 150, ay: 540, side: 'left',  cy: 0.55 }, // left thigh
-  { type: 'pancake',     ax: 130, ay: 814, side: 'left',  cy: 0.77 }, // left sock / shin
-]
+// OL silhouette coordinate space: public/ol-silhouette.webp, a lineman in a wide two-point pass set (narrower for
+// its height than LB's art, and his hands reach both edges of it). On a phone it's drawn a size down, so both
+// gloves stay clear of the cards and he stands as tall as the linebacker.
+const OL_FIG_W = 888
+const OL_FIG_H = 1289
+const OL_FIGURE_SCALE = 0.9
+const OL_FIGURE_SCALE_MOBILE = 0.78
 
-const OL_MOBILE_DOT_NUDGE_PX = {
-  blitzPickup: DB_MOBILE_DOT_NUDGE_PX.zoneIQ,
-  discipline:  DB_MOBILE_DOT_NUDGE_PX.playRecognition,
-  size:        DB_MOBILE_DOT_NUDGE_PX.size,
-}
+// OL zones: DB's nine card heights, each dot on the part its trait colors (see OLFigureOverlay; the parts of
+// src/assets/ol-figure-color.svg). Left cards top to bottom: neck, chest, pants, knee, long sock; right: helmet,
+// bare arm, forearm sleeve, shoe, so no two lines cross. His arms and legs reach under the desktop cards: the
+// sleeve's and the sock's dots sit level with the gap above their own card, the rest on the body between the columns.
+const OL_ZONES = [
+  { type: 'blitzPickup', ax: 446, ay: 214, side: 'left',  cy: 0.14 }, // face, under the cage
+  { type: 'size',        ax: 300, ay: 440, side: 'left',  cy: 0.32 }, // jersey chest
+  { type: 'runBlock',    ax: 290, ay: 690, side: 'left',  cy: 0.50 }, // pants, the thigh
+  { type: 'pancake',     ax: 206, ay: 440, side: 'left',  cy: 0.68 }, // bare arm, inside the cards on desktop (pancake colors nothing)
+  { type: 'anchor',      ax: 160, ay: 1030, side: 'left', cy: 0.86 }, // long sock
+  { type: 'discipline',  ax: 440, ay: 48,  side: 'right', cy: 0.23 }, // helmet
+  { type: 'length',      ax: 640, ay: 450, side: 'right', cy: 0.41 }, // bare arm
+  { type: 'passPro',     ax: 720, ay: 645, side: 'right', cy: 0.59 }, // forearm sleeve
+  { type: 'mobility',    ax: 780, ay: 1215, side: 'right', cy: 0.77 }, // shoe
+]
 
 function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)
@@ -419,12 +419,10 @@ function BaseballSilhouette(props) {
 }
 
 function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
-  // OL is drawn on the DB figure — everything figure-related follows DB
-  const isDBFig = isDB || isOL
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
-  const figW   = isBucket ? BUCKET_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const figW   = isBucket ? BUCKET_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
   const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
@@ -495,6 +493,9 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const dlTransform = modelOnly ? 'none' : `translateX(-5%) scale(${dlScale})`
   // (the linebacker's body sits right of the art's centre too: the same nudge left)
   const lbTransform = modelOnly ? 'none' : `translateX(-5%) scale(${LB_FIGURE_SCALE})`
+  // (the lineman stands in the middle of his art: scaled about the centre, no nudge)
+  const olScale = isMobile ? OL_FIGURE_SCALE_MOBILE : OL_FIGURE_SCALE
+  const olTransform = modelOnly ? 'none' : `scale(${olScale})`
   const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
@@ -609,10 +610,14 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
       dotY = (dotY - 50) * DL_FIGURE_SCALE + 50
       dotX -= 5
     }
-    if (isDBFig) {
+    if (isOL) {
+      dotX = (dotX - 50) * olScale + 50
+      dotY = (dotY - 50) * olScale + 50
+    }
+    if (isDB) {
       dotX = (dotX - 50) * DB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * DB_FIGURE_SCALE + 50
-      const nudge = isMobile ? (isOL ? OL_MOBILE_DOT_NUDGE_PX : DB_MOBILE_DOT_NUDGE_PX)[zone.type] : null
+      const nudge = isMobile ? DB_MOBILE_DOT_NUDGE_PX[zone.type] : null
       if (nudge) {
         dotX += nudge.x / W * 100
         dotY += nudge.y / H * 100
@@ -622,7 +627,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
       ? (zone.type === 'passing' || zone.type === 'rebounding' ? -15 : zone.type === 'speed' ? 25 : zone.type === 'size' ? -100 : zone.type === 'handles' || zone.type === 'playmaking' ? -10 : 0)
       : 0
     const cardY = isMobile
-      ? ((zone.cy - 0.5) * (isDBFig || isDL ? 0.98 : 0.92) + 0.5) * 100
+      ? ((zone.cy - 0.5) * (isDB || isDL || isOL ? 0.98 : 0.92) + 0.5) * 100
       : zone.cy * 100 + (zoneCardYNudgePx / H) * 100
     const lineInsetPx = (!isMobile && isBucket) ? 10 : 0
     // Per-zone desktop line X nudge (positive = inward for both sides)
@@ -834,7 +839,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
               : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
               : isOL ? OL_SILHOUETTE
-              : isDBFig ? '/db-silhouette.png'
+              : isDB ? '/db-silhouette.png'
               : (isWR || isTE) ? '/wr-silhouette.png'
               : isRB ? '/rb-silhouette.webp'
               : '/qb-silhouette.webp'
@@ -848,7 +853,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
             : isLB     ? { transform: lbTransform, transformOrigin: 'center center' }
             : isDL     ? { transform: dlTransform, transformOrigin: 'center center' }
-            : isDBFig  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
+            : isOL     ? { transform: olTransform, transformOrigin: 'center center' }
+            : isDB  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
           }
         />
@@ -925,7 +931,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           )
         })()}
         </div>
-        {!isRB && !isWR && !isTE && !isDBFig && !isDL && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {!isRB && !isWR && !isTE && !isDB && !isDL && !isOL && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isDB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
             <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
@@ -942,8 +948,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           </div>
         )}
         {isOL && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
-            <OLFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
+          <div style={{ position: 'absolute', inset: 0, transform: olTransform, transformOrigin: 'center center' }}>
+            <OLFigureOverlay build={build} />
           </div>
         )}
         {isRB && (

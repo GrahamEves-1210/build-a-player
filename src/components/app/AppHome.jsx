@@ -44,7 +44,7 @@ const NFL_FIGURE = {
   db: { src: '/db-silhouette.png', scale: 1.05 },
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/lb-silhouette.webp', scale: 1 },
-  ol: { src: '/db-silhouette.png', scale: 1.05 },   // OL placeholder: the DB figure until OL has its own (OL_SILHOUETTE)
+  ol: { src: '/ol-silhouette.webp', scale: 1 },
 }
 const reducedMotion = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 // football's side of the ball (Home's OFFENSE / DEFENSE switch)
@@ -63,7 +63,7 @@ const GREATS = {
   te: [face('espn_13229', '#002244'), face('espn_1231', '#e31837'), face('espn_5362', '#0080c6')], // Gronkowski, Gonzalez, Gates
   db: [face('espn_3552', '#241773'), face('espn_4474', '#a5acaf'), face('espn_10458', '#125740')], // Reed, Polamalu, Revis
   dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
-  lb: [face('espn_964', '#241773')],                                                              // Ray Lewis (the only all-time LB with an ESPN photo)
+  lb: [face('espn_964', '#241773'), face('espn_4433', '#ffb612'), face('espn_14938', '#0085ca')], // Ray Lewis, James Harrison (in the DL all-time pool as an edge), Kuechly
   ol: [face('espn_10448', '#311d00'), face('espn_13241', '#aa0000'), face('espn_16709', '#003594')],  // Joe Thomas, Trent Williams, Zack Martin
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
@@ -664,6 +664,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             const at = (list, k) => Math.max(0, list.findIndex(o => o.pos === sideFirst(k)?.pos))
             const sw = (k, label) => (
               <button key={`to-${k}`} className={`ag-pos ag-pos--side ag-pos--to-${k}`} onClick={() => pickSide(k)} aria-label={`Show the ${label.toLowerCase()}`}>
+                {k === 'def' && LB_LIVE && <span className="ag-pos-new">NEW</span>}
                 <span className="ag-side-word">{label}</span>
                 <svg className="ag-side-arrow" viewBox="0 0 24 10" width="24" height="10" aria-hidden="true"><path d={k === 'def' ? 'M1 5h20M16 1l5 4-5 4' : 'M23 5H3M8 1L3 5l5 4'} /></svg>
               </button>

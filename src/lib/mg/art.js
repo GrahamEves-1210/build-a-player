@@ -633,6 +633,10 @@ export function padsPose(dir, step, pose, carry) {
     if (carry) { o.hlx = -19; o.hly = -55 }
     return o
   }
+  // hands on his hips: on the belt, the elbows out wide
+  if (pose === 'hips') { o.hlx = -13; o.hly = -o.hy - 5; o.hrx = 13; o.hry = -o.hy - 5; o.akimbo = 1; return o }
+  // bent over, hands on his knees: feet wide, knees soft, the arms straight down to them (drawn with a squat, so he's doubled over)
+  if (pose === 'knees') { o.hy = 46; o.lx = -14; o.rx = 14; o.hlx = -15; o.hly = -34; o.hrx = 15; o.hry = -34; return o }
   const drill = DRILL_ARMS[pose]   // (the table's hands are in the old figure's units)
   if (drill) {
     const shift = pose === 'touch' ? 10 : pose === 'slide' ? 5 : pose === 'back' ? 3 : 0
@@ -641,6 +645,12 @@ export function padsPose(dir, step, pose, carry) {
     // hands on his man: up at the shoulders from behind, at the chest from in front
     const y = dir === 'up' ? -o.hy - 4 : -o.hy - 14, w = dir === 'up' ? 18 : 16
     o.hlx = -w; o.hly = y; o.hrx = w; o.hry = y
+    // a step in the trenches (1: his left, 3: his right): that foot chopped up off the turf, that hand punched up
+    // and in, the pads rocking with it
+    if (pose === 'block' && swing) {
+      if (swing > 0) { o.ly = -6; o.hly -= 11; o.hlx += 4 } else { o.ry = -6; o.hry -= 11; o.hrx -= 4 }
+      o.lean = swing * 0.06; o.hy += 1.5
+    }
   } else if (pose === 'ready') { o.hlx = -18; o.hly = -o.hy - 1; o.hrx = 18; o.hry = -o.hy - 1 }
   if (carry && !drill) { o.hlx = -19; o.hly = -62 + (53 - o.hy) * 0.6 }
   return o
@@ -794,9 +804,9 @@ function kitArm(x, sx, sy, a, out, jersey, trim, skin, glove) {
   }
   kitHand(x, a.ex, a.ey, ux, uy, out, glove ?? skin, glove ? 'rgba(0,0,0,.3)' : skin2)
 }
-function padsSleeveArm(x, sx, sy, hx, hy, out, jersey, trim, skin, glove = null) {
+function padsSleeveArm(x, sx, sy, hx, hy, out, jersey, trim, skin, glove = null, akimbo = false) {
   const up = Math.max(0, Math.min(1, (sy - hy) / 30))
-  const a = rigArm(sx, sy, hx, hy, out * (0.22 - 0.12 * up), 0.92)
+  const a = akimbo ? rigArm(sx, sy, hx, hy, out * 0.96, 0.25) : rigArm(sx, sy, hx, hy, out * (0.22 - 0.12 * up), 0.92)
   kitArm(x, sx, sy, a, out, jersey, trim, skin, glove)
   return a
 }
@@ -933,8 +943,8 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
   const armsOver = !back && pose && pose !== 'slide' && pose !== 'ready' && pose !== 'back' && pose !== 'touch' && pose !== 'sprint' && pose !== 'plant-l' && pose !== 'plant-r'
   if (!armsOver) {
     if (back && carry && !DRILL_ARMS[pose]) ballAt()
-    padsSleeveArm(x, lx, ly, o.hlx, o.hly, -1, color, trim, skin, glove)
-    padsSleeveArm(x, rx, ry, o.hrx, o.hry, 1, color, trim, skin, glove)
+    padsSleeveArm(x, lx, ly, o.hlx, o.hly, -1, color, trim, skin, glove, o.akimbo)
+    padsSleeveArm(x, rx, ry, o.hrx, o.hry, 1, color, trim, skin, glove, o.akimbo)
   }
   x.fillStyle = INK; x.beginPath(); rigBone(x, -cl * 5, hipY - sl * 5 - 1, 8.1, cl * 5, hipY + sl * 5 - 1, 8.1); x.fill()
   const legL = padsLeg(x, -cl * 6.2, hipY - sl * 6.2, o.lx, o.ly, -1, color, pants, plain ? skin : null, trim, face)
@@ -987,8 +997,8 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
   x.restore()
   headOf(hx, hy, back ? 'up' : 'down')
   if (armsOver) {
-    padsSleeveArm(x, lx, ly, o.hlx, o.hly, -1, color, trim, skin, glove)
-    padsSleeveArm(x, rx, ry, o.hrx, o.hry, 1, color, trim, skin, glove)
+    padsSleeveArm(x, lx, ly, o.hlx, o.hly, -1, color, trim, skin, glove, o.akimbo)
+    padsSleeveArm(x, rx, ry, o.hrx, o.hry, 1, color, trim, skin, glove, o.akimbo)
   }
   if (!back && carry && !DRILL_ARMS[pose]) ballAt()
   if (pose === 'qb-set') padsBall(x, o.hrx + 2, o.hry - 6, 0.4)
@@ -1115,42 +1125,41 @@ function paintAthlete(x, { color, trim, pants, skin, number, dir, step, kit, car
 }
 // A man's last name under his feet, small. Painted once per name.
 const tags = new Map()
-// Names stay sharp: with the pixel look on, the stage opens a queue for the frame (tagLayerBegin), every name drawn into
-// the game's own picture is collected instead (where it lands on screen, with the camera's move and zoom), and the stage
-// paints them on its full-resolution HUD layer (tagLayerFlush). Anything drawn on another canvas still paints in place
-let TAG_Q = null, TAG_CANVAS = null
-export function tagLayerBegin(canvas) { TAG_Q = []; TAG_CANVAS = canvas }
-export function tagLayerFlush(hctx) {
-  const q = TAG_Q; TAG_Q = null; TAG_CANVAS = null
-  if (!q) return
-  for (const t of q) { hctx.globalAlpha = t.a; hctx.drawImage(t.c, t.x, t.y, t.w, t.h) }
-  hctx.globalAlpha = 1
+// (R: the picture's pixels to one of the game's units. 3 for the smooth look, brought down as it's drawn)
+function tagOf(name, R) {
+  const id = R === 3 ? name : `${name}|${R}`
+  let c = tags.get(id)
+  if (c || typeof document === 'undefined') return c
+  if (tags.size > 260) tags.clear()
+  const H = 13
+  const m = document.createElement('canvas').getContext('2d')
+  m.font = `9.4px ${LABEL}`
+  const W = Math.ceil(m.measureText(name).width + 6)
+  c = document.createElement('canvas'); c.width = Math.ceil(W * R); c.height = Math.ceil(H * R); c.w = W; c.h = H
+  const x = c.getContext('2d')
+  x.scale(R, R); x.font = `9.4px ${LABEL}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'
+  x.strokeStyle = 'rgba(6,10,12,.82)'; x.lineWidth = 2.2; x.strokeText(name, W / 2, H / 2)
+  x.fillStyle = 'rgba(255,255,255,.94)'; x.fillText(name, W / 2, H / 2)
+  tags.set(id, c)
+  return c
 }
 export function nameTag(ctx, view, px, py, name, k = 1) {
   if (!name) return
-  let c = tags.get(name)
-  if (!c && typeof document !== 'undefined') {
-    if (tags.size > 80) tags.clear()
-    const R = 3, H = 13
-    const m = document.createElement('canvas').getContext('2d')
-    m.font = `9.4px ${LABEL}`
-    const W = Math.ceil(m.measureText(name).width + 6)
-    c = document.createElement('canvas'); c.width = W * R; c.height = H * R; c.w = W; c.h = H
-    const x = c.getContext('2d')
-    x.scale(R, R); x.font = `9.4px ${LABEL}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'
-    x.strokeStyle = 'rgba(6,10,12,.82)'; x.lineWidth = 2.2; x.strokeText(name, W / 2, H / 2)
-    x.fillStyle = 'rgba(255,255,255,.94)'; x.fillText(name, W / 2, H / 2)
-    tags.set(name, c)
-  }
-  if (!c) return
-  const x0 = px - (c.w * k) / 2, y0 = py + 1.5 * k
-  if (TAG_Q && ctx.canvas === TAG_CANVAS) {
-    // (to the stage's sharp layer: the game's units, 360 across, through this frame's camera)
-    const m = ctx.getTransform(), base = ctx.canvas.width / 360, sc = m.a / base
-    TAG_Q.push({ c, x: (m.a * x0 + m.c * y0 + m.e) / base, y: (m.b * x0 + m.d * y0 + m.f) / base, w: c.w * k * sc, h: c.h * k * sc, a: ctx.globalAlpha })
+  // The pixel look (the stage turns smoothing off for it): a name is the same pixels as the man it's under. It's
+  // painted at the size it's shown, its letters a whole number of the picture's pixels tall (never under 10, or
+  // they stop being letters), and set down on whole pixels: nothing is resampled, so nothing blurs or breaks up
+  if (ctx.imageSmoothingEnabled === false) {
+    const m = ctx.getTransform(), f = Math.max(10, Math.round(9.4 * k * m.a)), c = tagOf(name, f / 9.4)
+    if (!c) return
+    const ux = px - c.width / m.a / 2, uy = py + 1.5 * k
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.drawImage(c, Math.round(m.a * ux + m.c * uy + m.e), Math.round(m.b * ux + m.d * uy + m.f))
+    ctx.setTransform(m)
     return
   }
-  ctx.drawImage(c, x0, y0, c.w * k, c.h * k)
+  const c = tagOf(name, 3)
+  if (!c) return
+  ctx.drawImage(c, px - (c.w * k) / 2, py + 1.5 * k, c.w * k, c.h * k)
 }
 // (queued, not painted: the host paints what fits between frames, bakeSome below, so a long warm list can't cost a frame)
 export function warmAthlete(opts) { queueBake({ pose: null, ...opts }) }
@@ -1253,7 +1262,14 @@ const remember = (o, c) => { nearLook.set(`${o.color}|${o.dir}|${o.kit}|${o.pose
 function bakeOne(o) { const a = nowMs(), c = spriteOf(o); bakeSpent += nowMs() - a; if (c) remember(o, c); return c }
 export function spritePx(px) { lastPx = px }
 // room: ms this frame's men may spend on sprites they need (Infinity: paint them all, nobody's playing yet)
-export function spriteFrame(room = 4, live = null) { spriteTick++; bakeSpent = 0; bakeRoom = room; liveCtx = live }
+// t: the game's clock, ms (what moves on its own, a lineman's feet and hands, moves by it: a paused game holds still)
+export function spriteFrame(room = 4, live = null, t = 0) { spriteTick++; bakeSpent = 0; bakeRoom = room; liveCtx = live; artT = t }
+// A lineman on his man is never a statue: short choppy feet and a hand punched in, one side then the other, every
+// man on his own clock (by his number and which way he faces). The frames are padsPose's block steps 1 and 3
+let artT = 0
+const BLOCK_SEQ = [0, 1, 0, 0, 3, 0, 0]
+const blockStep = (n, dir) => { const h = ((n ?? 7) * 53 + (dir === 'up' ? 31 : 0)) % 97; return BLOCK_SEQ[Math.floor((artT + h * 23) / (96 + (h % 6) * 8)) % BLOCK_SEQ.length] }
+const blockWarm = new Set()
 // the queue, for up to ms. Returns how many are still waiting.
 export function bakeSome(ms = 2) {
   const end = nowMs() + ms
@@ -1279,8 +1295,11 @@ export const skinOf = i => SKINS[Math.abs(i) % SKINS.length]
 export const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) * 1.2 ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up')
 
 // x, y: the field point under his feet. size: 1 is a player the height the camera gives him at the near end
-export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', pants = null, skin = '#8d5a3b', number = null, dir = 'up', step = null, kit = 'pads', carry = false, size = 1, name = null, pose = null, fall = 0, fallX = 0, squat = 0, lift = 0 } = {}) {
+export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', pants = null, skin = '#8d5a3b', number = null, dir = 'up', step = null, kit = 'pads', carry = false, size = 1, name = null, pose = null, fall = 0, fallX = 0, squat = 0, lift = 0, still = false } = {}) {
   skin = warmSkin(skin)
+  // (still: a man whose hands are the game's own read, the one you play or the one you're reading, moves only as the game moves him)
+  const working = pose === 'block' && step == null && kit === 'pads' && !still && !fall && artT > 0 && (dir === 'up' || dir === 'down')
+  if (working) step = blockStep(number, dir)
   const p = tilt(view, x, y)
   const k = p.s * size * (kit === 'pads' ? 0.92 : 1)
   if (view.px) lastPx = view.px
@@ -1292,6 +1311,11 @@ export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', 
   const flip = dir === 'left'
   const c = lookFor({ color, trim, pants: pants ?? (kit === 'pads' ? '#eceae2' : '#20262c'), skin, number: dir === 'up' || dir === 'down' ? number : null, dir: dir === 'left' || dir === 'right' ? 'side' : dir, step, kit, carry, pose, fallStage }, ctx === liveCtx)
   if (!c) return p
+  if (working && ctx === liveCtx) {
+    // (his other two frames, painted between frames before he needs them)
+    const id = `${color}|${number}|${dir}|${skin}`
+    if (!blockWarm.has(id)) { if (blockWarm.size > 400) blockWarm.clear(); blockWarm.add(id); for (const st of [0, 1, 3]) if (st !== step) queueBake({ color, trim, pants: pants ?? '#eceae2', skin, number, dir, step: st, kit, carry, pose, fallStage: 0 }) }
+  }
   const w = BOX * k, top = p.y - (FEET + lift) * k   // (lift: off the ground, in his own units, his shadow staying down)
   // going down: he pitches over from the feet the way he was going (fallX -1 left, 0 away from the
   // camera, 1 right) and lies flat on the turf. No spin. fall: 0 up, 1 all the way down.
@@ -1327,6 +1351,18 @@ export function breakupPose(age, key) {
   }
   // reach up, pull across, click: once, and he holds it
   return age < 240 ? 'belt-a' : age < 400 ? 'belt-m' : 'belt-b'
+}
+// A defender who's just been scored on. Never a celebration, and never eleven men doing the same thing at the same
+// moment: each takes it his own way, in his own time. key: any whole number that's his (his place in the list, his
+// number). age: ms since the score. Returns undefined until he's pulled up (he carries on as he was), then
+// { pose, turn, squat }: hands on his hips, bent over with his hands on his knees (squat: how far over, for athlete's
+// squat), or null (he just stands there). Never his hands up or on his helmet. turn: he's turned his back on it
+const BEATEN = ['hips', null, 'knees', null, 'hips', null, 'hips']
+export function beatenPose(key, age) {
+  const k = Math.abs(Math.round(key))
+  if (age < 80 + ((k * 197) % 640)) return undefined
+  const pose = BEATEN[k % BEATEN.length]
+  return { pose, turn: k % 5 === 3, squat: pose === 'knees' ? 0.14 : 0 }
 }
 export function airBall(ctx, x, y, { ang = 0, len = 13, spin = 0, axis = null } = {}) {
   const a = unit3(axis ?? [Math.cos(ang), -Math.sin(ang) * CAM_U[1], -Math.sin(ang) * CAM_U[2]])

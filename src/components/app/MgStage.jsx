@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { STEP, hud, pads, stamp, keyCap, THREE_KEYS, fieldFor } from '../../lib/mg/kit'
 import { engineFor } from '../../lib/mg'
-import { spriteFrame, bakeSome, spritePx, tagLayerBegin, tagLayerFlush } from '../../lib/mg/art'
+import { spriteFrame, bakeSome, spritePx } from '../../lib/mg/art'
 import { sfx, haptic } from '../../lib/juice'
 import { COMBINE_GAMES } from '../../lib/minigames'
 
@@ -293,10 +293,8 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
       // (a screen faster than the rules: nothing has moved since the last frame, so there's nothing to draw)
       if (!stepped && !dirty && t >= startAt) { raf = requestAnimationFrame(frame); return }
       stepped = 0; dirty = false
-      spriteFrame(startAt === Infinity ? Infinity : 4, ctx)
+      spriteFrame(startAt === Infinity ? Infinity : 4, ctx, g.t)
       ctx.setTransform(view.px, 0, 0, view.px, 0, 0)
-      // (the pixel look: the players' names go on the sharp HUD layer, so they stay readable)
-      if (hudCtx() !== ctx) tagLayerBegin(ctx.canvas)
       try {
         // (a game can carry a nudge, kit.js: the picture takes the hit, the HUD holds still)
         if (g.nudge) { g.nudge.apply(ctx, g.t, view); engine.draw(ctx, g, view); ctx.setTransform(view.px, 0, 0, view.px, 0, 0) }
@@ -310,7 +308,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
           keyed = keyOrder.map(i => keyed[i])
         }
         const hctx = hudCtx()
-        if (hctx !== ctx) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, ov.width, ov.height); hctx.setTransform(ovPx, 0, 0, ovPx, 0, 0); tagLayerFlush(hctx) }
+        if (hctx !== ctx) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, ov.width, ov.height); hctx.setTransform(ovPx, 0, 0, ovPx, 0, 0) }
         if (keyed && view.keys) keyed.forEach((p, i) => keyCap(hctx, p.x, Math.max(14, p.y - 42), p.label ?? keyLabel(i, keyed.length)))
         hud(hctx, view, g, def.title)
         pads(hctx, view, g)

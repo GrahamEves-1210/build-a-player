@@ -428,9 +428,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
   const forceHide = isVersusMode || gradesHidden
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
-  // one player respin (OL gets a 2nd); the app can earn one more with a video
+  // one player respin, every position; the app can earn one more with a video
   const [qbRespinBonus, setQbRespinBonus] = useState(() => savedResult?.qbRespinBonus ?? 0)
-  const maxPlayerRespin = (isOL ? 2 : 1) + qbRespinBonus
+  const maxPlayerRespin = 1 + qbRespinBonus
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)

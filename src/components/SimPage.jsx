@@ -17,7 +17,7 @@ import { DL_ATTR, DLS, DL_TYPES } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
 import { LB_ATTR, LBS, LB_TYPES, LB_SILHOUETTE } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
-import { OL_ATTR, OLS } from '../data/ols'
+import { OL_ATTR, OLS, OL_SILHOUETTE } from '../data/ols'
 import HEADSHOTS from '../data/headshots.json'
 import { NFL_GOAT } from '../data/nfl-goat'
 import RBFigureOverlay from './RBFigureOverlay'
@@ -336,6 +336,8 @@ function OLDepthChart({ team, build, types, userName = 'Guest' }) {
 const DL_MODEL_STYLE = { aspectRatio: '912 / 1496', width: 230 }
 // (the linebacker's figure is wider and shorter: the same height as DL's)
 const LB_MODEL_STYLE = { aspectRatio: '1005 / 1267', width: 290 }
+// (the lineman's figure, 888x1289: the same height again)
+const OL_MODEL_STYLE = { aspectRatio: '888 / 1289', width: 256 }
 
 // ── Screen 1: Build Overview ──────────────────────────────────────────────────
 
@@ -397,9 +399,9 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
             <WRFigureOverlay build={monoTeamBuild} />
           </div>
         ) : isOL ? (
-          <div className="simp-team-model simp-team-model--db">
+          <div className="simp-team-model" style={OL_MODEL_STYLE}>
             <div className="simp-team-model-glow" />
-            <img src="/db-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.35) drop-shadow(0 0 3px rgba(255,255,255,0.35))' }} />
+            <img src={OL_SILHOUETTE} alt="" className="simp-sil-ghost" draggable={false} />
             <OLFigureOverlay build={monoTeamBuild} />
           </div>
         ) : isLB ? (
@@ -1162,9 +1164,9 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             <WRFigureOverlay build={monoTeamBuild} />
           </div>
         ) : isOL ? (
-          <div className="simp-team-model simp-team-model--db">
+          <div className="simp-team-model" style={OL_MODEL_STYLE}>
             <div className="simp-team-model-glow" />
-            <img src="/db-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.35) drop-shadow(0 0 3px rgba(255,255,255,0.35))' }} />
+            <img src={OL_SILHOUETTE} alt="" className="simp-sil-ghost" draggable={false} />
             <OLFigureOverlay build={monoTeamBuild} />
           </div>
         ) : isLB ? (

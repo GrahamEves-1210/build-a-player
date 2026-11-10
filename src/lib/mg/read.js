@@ -487,6 +487,7 @@ export function put(x, y, team, o) {
   c.color = team.color; c.trim = team.trim; c.pants = team.pants ?? team.trim; c.skin = o.skin ?? '#8d5a3b'
   c.number = o.number ?? null; c.dir = o.dir ?? 'up'; c.step = o.step ?? null; c.pose = o.pose ?? null
   c.carry = !!o.carry; c.size = o.size ?? 0.9; c.fall = o.fall ?? 0; c.fallX = o.fallX ?? 0; c.kit = 'pads'; c.squat = o.squat ?? 0; c.lean = o.lean ?? 0
+  c.still = !!o.still || !!o.lead   // (the man the play's about: his hands are the read, so they only move as the game moves them)
   c.tag = o.name ?? null; c.quiet = !!o.quiet; c.lead = !!o.lead   // (lead: the man the play's about, named even down in his stance)
 }
 // once a play's over every man's name shows, the line's too (a scene sets it for the frame: action() clears it)

@@ -7,7 +7,7 @@
 //   third-long   3rd & 9: past the yellow line; the further past it, the bigger the score
 //   acc          the combine: no defense, four routes, each quicker. 3 of 4 passes
 import { byV, clamp, lerp, outcome, layer, rngOf, prog, easeOut, easeIn, themOf, text, DISPLAY, LABEL, manOf, xiOf, paceOf, paintFieldDress, particles, nudge, reduceMotion } from './kit.js'
-import { goalPosts, breakupPose, tilt, untilt, ground, stands, floodlight, vignette, athlete, warmAthlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, nameTag, crowdPop } from './art.js'
+import { goalPosts, breakupPose, beatenPose, tilt, untilt, ground, stands, floodlight, vignette, athlete, warmAthlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, nameTag, crowdPop } from './art.js'
 
 export const how = {
   acc: 'Press where the ball goes and lead him. Tap for a lob. Hold for a bullet.',
@@ -55,6 +55,7 @@ const BODY_LEN = 2 * YD   // he falls forward: the ball's spotted at his head, t
 const HANDS = 14      // up to here a man can get a hand on it
 const ARM = 1.3       // a ball out in front of him: he can extend for it, further than he can reach back
 const CONTEST = 0.38  // a catch with a defender right there and the ball between them
+const STRONG = 0.32   // and what the best hands in football add to it (the worst take a little off)
 const ROOM = 8        // a defender stays this far off a receiver's body: on his hip, not in him
 
 const CLOSE = 24      // a touchdown: how near his mates get before they're jumping on him
@@ -427,7 +428,9 @@ function makePlay({ v, arm, seed, game, cast }) {
     else if (has) {
       // both of them there: the man nearer the ball has the better of it, and nothing's sure
       const edge = clamp((dd - rr) / RD, -1, 1)
-      why = r() < clamp(CONTEST - (bomb ? 0.1 : 0) + edge * 0.5, 0.1, 0.92) ? 'catch' : 'swat'
+      // (and the man it's for: a receiver who wins at the catch point comes down with more of them)
+      const ball = tp.look?.ball ?? 0
+      why = r() < clamp(CONTEST - (bomb ? 0.1 : 0) + edge * 0.5 + (ball > 0 ? ball * STRONG : ball * 0.06), 0.1, 0.92) ? 'catch' : 'swat'
     } else if (contested) why = dd < 6 && r() < 0.45 ? 'pick' : 'swat'
     else why = b.ly > tp.y + 5 ? 'over' : b.ly < tp.y - 5 ? 'under' : 'wide'
     g.phase = 'over'
@@ -1228,7 +1231,7 @@ function drawBroadcast(ctx, g, view) {
     O.skin = skinFor(p)
     O.number = numFor(p)
     O.size = line ? 0.94 : p.id === 'QB' ? 0.9 : 0.86
-    O.kit = 'pads'; O.pose = null; O.fall = 0; O.fallX = 0; O.carry = false; O.step = null; O.lift = 0
+    O.kit = 'pads'; O.pose = null; O.fall = 0; O.fallX = 0; O.carry = false; O.step = null; O.lift = 0; O.squat = 0
     if (line) {
       // the trenches: heads down, hands on each other. The ends get round the edge and run.
       const free = p.kind === 'dl' && (p.id === 'DL0' || p.id === 'DL3') && rt > 500
@@ -1303,7 +1306,9 @@ function drawBroadcast(ctx, g, view) {
       }
       // his mates, when they get there. The defense stops where it is, and it's seen this before.
       if (mood === 'td' && !isD && res.runner !== p && res.tdAt != null && g.t >= res.tdAt && Math.hypot(p.x - res.runner.x, p.y - res.runner.y) < CLOSE + 8) { O.dir = 'down'; O.step = null; O.pose = 'arms-up'; O.lift = hop(g.t + p.x * 7, 440, 12) }
-      if (mood === 'td' && isD && res.tdAt != null && g.t >= res.tdAt + 80) { O.dir = 'up'; O.step = null; O.pose = 'hips' }   // (scored on: hands on hips, never up)
+      // (scored on: never up, and never all of them alike. Each man pulls up in his own time and takes it his own way)
+      const bp = mood === 'td' && isD && res.tdAt != null ? beatenPose((O.number ?? 0) * 3 + Math.round(p.x0 ?? 0), g.t - res.tdAt) : null
+      if (bp) { O.dir = bp.turn ? 'down' : 'up'; O.step = null; O.pose = bp.pose; O.squat = bp.squat }
       // the man he beat, once the catch is made and he's not the one bringing him down
       if (isD && res?.cover === p && p !== onTop && mood && g.t >= res.at + 520) {
         O.dir = 'down'; O.step = null; O.carry = false

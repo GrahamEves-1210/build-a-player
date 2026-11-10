@@ -807,6 +807,7 @@ const castIndex = S => (castData[S.id] ??= new Map(Object.keys(S.pool).flatMap(g
 // the data's men first, then the career's own draftees: a game never shows a made-up name while a real one is left
 const realFirst = (S, list) => { const ix = S.x?.castIndex ?? castIndex(S); return [...list].sort((a, b) => (ix.has(b.name) - ix.has(a.name)) || byOvr(a, b)) }
 const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return Math.abs(h) }
+const CATCHERS = new Set(['wr', 'te', 'rb'])
 function castMan(S, g, p) {
   const raw = (S.x?.castIndex ?? castIndex(S)).get(p.name), h = hashOf(p.name), [lo, hi] = CAST_NUM[g] ?? [10, 99]
   // his last name: the data's short name if it is one (St. Brown), never a nickname (LUKA)
@@ -816,6 +817,9 @@ function castMan(S, g, p) {
   return {
     name: last.toUpperCase(), number: raw?.number ?? lo + h % (hi - lo + 1), skin: raw?.skin ?? CAST_SKIN[h % CAST_SKIN.length],
     speed: Math.max(-1, Math.min(1, ((raw?.attrs?.speed ?? raw?.attrs?.pace ?? 6) - 6) / 5)),
+    // (a man who catches it: how he does with a defender on him, -1 to 1 around a B. His hands first, then his body
+    // control (a tight end's strength) and his size. The throwing games' contested balls read it: lib/mg/throw.js)
+    ...(CATCHERS.has(g) && raw?.attrs?.hands != null ? { ball: Math.max(-1, Math.min(1, (raw.attrs.hands * 0.5 + (raw.attrs.bodyControl ?? raw.attrs.strength ?? raw.attrs.hands) * 0.3 + (raw.attrs.size ?? raw.attrs.hands) * 0.2 - 6) / 5)) } : null),
     // (a ballplayer: his side of the plate, his arm, his grades and his spot, so the at-bat faces his real arsenal and
     // the pitcher works a real hitter's zones: lib/mg/atbat.js, pitch.js)
     ...(raw?.throws ? { bats: raw.bats, throws: raw.throws, attrs: raw.attrs, role: raw.role } : null),
@@ -852,7 +856,7 @@ const XI_NEXT = { qb: [], rb: ['wr'], wr: ['te', 'rb'], te: ['wr'], edge: ['dt',
 const XI_GROUP = { edge: 'dl', dt: 'dl', cb: 'db', s: 'db' }
 const xiMan = (S, g, p) => {
   const m = castMan(S, g, p), first = String(p.name ?? '').trim()[0]
-  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin } }
+  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin }, ...(m.ball != null ? { ball: m.ball } : null) }
 }
 function castXI(c, S, short, ro, out) {
   const room = list => realFirst(S, (list ?? []).filter(p => p.name !== c.name))

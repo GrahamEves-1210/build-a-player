@@ -303,8 +303,6 @@ export const OL_ALL_PRO_BALLOT = {
 export const OL_PHYSICALS = Object.fromEntries(_OLS.map(ol => [ol.name, { height: ol.height, weight: ol.weight }]))
 export const OL_POS_BY_NAME = Object.fromEntries(_OLS.map(ol => [ol.name, ol.pos]))
 
-// OL PLACEHOLDER FIGURE: there's no lineman art yet, so OL is drawn on the DB figure (OLFigureOverlay maps each
-// OL trait to a DB body part). The one line to swap when OL gets its own silhouette (then give it its own zones
-// in Silhouette.jsx and its own overlay). OL stays hidden from players until then: OL_LIVE in lib/olLive.js.
-export const OL_SILHOUETTE = '/db-silhouette.png'
+// OL's own figure (public/ol-silhouette.webp, colored by components/OLFigureOverlay.jsx, zones in Silhouette.jsx OL_ZONES).
+export const OL_SILHOUETTE = '/ol-silhouette.webp'
 export { OL_LIVE } from '../lib/olLive'

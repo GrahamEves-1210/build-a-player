@@ -282,16 +282,21 @@ const LB_ATTRS = [
   { label: 'Shed',       col: '#2dd4bf', x: 28.7, xs: true },
 ]
 
+// (in OL_ATTR's colors, data/ols.js; on public/ol-silhouette.webp, measured off the art's outline the same way:
+// each word on the widest solid stretch of its band. His legs are set wide apart, so from the thighs down a word
+// sits on one leg, the short words a size down and the knee's word upright (the leg there is narrower than any
+// word is long); x is the % of the figure's box to move the word off centre. "Blitz" is Blitz Pickup: the shoe
+// only holds a short word.)
 const OL_ATTRS = [
-  { label: 'Size',         col: '#fb923c' },
-  { label: 'Length',       col: '#34d399' },
-  { label: 'Anchor',       col: '#38bdf8' },
-  { label: 'Pass Pro',     col: '#2dd4bf' },
-  { label: 'Run Block',    col: '#f87171' },
-  { label: 'Mobility',     col: '#60a5fa' },
-  { label: 'Blitz Pickup', col: '#e879f9' },
-  { label: 'Discipline',   col: '#a78bfa' },
-  { label: 'Pancake',      col: '#fbbf24' },
+  { label: 'Anchor',     col: '#38bdf8', x: -2.7, sm: true },
+  { label: 'Pancake',    col: '#fbbf24', x: -3.2 },
+  { label: 'Discipline', col: '#a78bfa', x: -3.7 },
+  { label: 'Pass Pro',   col: '#2dd4bf', x: -4.3 },
+  { label: 'Run Block',  col: '#f87171', x: -4.1 },
+  { label: 'Mobility',   col: '#60a5fa', x: 10.8 },
+  { label: 'Length',     col: '#34d399', x: -21.8, xs: true, v: true },
+  { label: 'Size',       col: '#fb923c', x: 24.9, xs: true },
+  { label: 'Blitz',      col: '#e879f9', x: 26.7, xs: true },
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
@@ -323,7 +328,7 @@ const STACK_MASK = {
   db: { src: '/db-silhouette.png',  scale: 1.05 },
   dl: { src: '/dl-silhouette.webp',  scale: 1 },
   lb: { src: '/lb-silhouette.webp',  scale: 1 },
-  ol: { src: '/db-silhouette.png',  scale: 1.05 },
+  ol: { src: '/ol-silhouette.webp',  scale: 1 },
 }
 
 // Silhouette body re-rendered as stacked, color-coded bands — one per build
@@ -423,9 +428,9 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
           <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
             style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
           <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
-            style={{ position: 'absolute', inset: 0, opacity: (position === 'db' || position === 'ol') ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
+            style={{ position: 'absolute', inset: 0, opacity: position === 'db' ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
           {/* (a large file: only fetched once DL is picked) */}
-          {(position === 'dl' || position === 'lb') && <img src={position === 'lb' ? '/lb-silhouette.webp' : '/dl-silhouette.webp'} className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
+          {(position === 'dl' || position === 'lb' || position === 'ol') && <img src={position === 'ol' ? '/ol-silhouette.webp' : position === 'lb' ? '/lb-silhouette.webp' : '/dl-silhouette.webp'} className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
           <StackedSilhouette key={position} position={position} attrs={attrs} ready={phase >= 3} />
           <div className="splash-figure-glow" />
         </div>

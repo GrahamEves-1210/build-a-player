@@ -167,7 +167,7 @@ const _LBS = [
     attrs: { range: 4, power: 3, tackling: 4, blockShed: 4, zoneInstincts: 2, passRush: 3, playRecognition: 3, leadership: 2 } },
   // JAX
   { name: "Foyesade Oluokun", short: "Oluokun", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#5e3c22', height: 74, weight: 230, number: 23, starter: true, captain: true, years: "2022-",
-    attrs: { range: 8, power: 6, tackling: 9, blockShed: 8, zoneInstincts: 8, passRush: 6, playRecognition: 8, leadership: 6 } },
+    attrs: { range: 8, power: 6, tackling: 10, blockShed: 8, zoneInstincts: 8, passRush: 6, playRecognition: 8, leadership: 6 } },
   { name: "Jahlani Tavai", short: "Tavai", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#b07848', height: 74, weight: 255, number: 31, starter: true, years: "2026-",
     attrs: { range: 7, power: 7, tackling: 8, blockShed: 6, zoneInstincts: 6, passRush: 5, playRecognition: 6, leadership: 5 } },
   { name: "Ventrell Miller", short: "V. Miller", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'LB', subpos: 'lb', spot: 'WILL', skin: '#5e3c22', height: 72, weight: 232, number: 51, starter: false, years: "2024-",

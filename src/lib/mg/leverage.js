@@ -275,7 +275,7 @@ function man(ctx, view, x, y, side, c, them, n, size, dir, pose, opts) {
   O.color = side ? them.color : c.us; O.trim = side ? them.trim : c.trim; O.pants = O.trim
   const L = opts?.look
   O.skin = L?.skin ?? skinOf(n); O.number = L?.number ?? opts?.number ?? null; O.size = size; O.dir = dir; O.pose = pose
-  O.step = opts?.step ?? null; O.carry = opts?.carry ?? false; O.fall = opts?.fall ?? 0; O.fallX = opts?.fallX ?? 0; O.kit = 'pads'
+  O.step = opts?.step ?? null; O.carry = opts?.carry ?? false; O.fall = opts?.fall ?? 0; O.fallX = opts?.fallX ?? 0; O.kit = 'pads'; O.still = !!opts?.still
   athlete(ctx, view, x, y, O)
   // his name waits for the end of the frame, so the next man's helmet doesn't cover it
   if (L?.name && !O.fall && !opts.quiet) {
@@ -382,7 +382,7 @@ function drawSeal(ctx, g, view0) {
     const q = tilt(view, rx, ry)
     const tip = jab * tell * 0.3 + recoil * -0.1
     ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(tip); ctx.translate(-q.x, -q.y)
-    man(ctx, view, rx, ry, 1, c, them, 3, BIG, 'down', jab ? (jab < 0 ? 'swipe-l' : 'swipe-r') : 'block', { number: 91, look: rushLook, quiet: true })
+    man(ctx, view, rx, ry, 1, c, them, 3, BIG, 'down', jab ? (jab < 0 ? 'swipe-l' : 'swipe-r') : 'block', { number: 91, look: rushLook, quiet: true, still: true })
     ctx.restore()
   }
   const back = () => man(ctx, view, bx, by, 0, c, them, 5, S * 0.92, bdir, null, bfall ? { fall: bfall, carry: true, look: men.rb } : { step: stepB, carry: true, look: men.rb })
@@ -393,7 +393,7 @@ function drawSeal(ctx, g, view0) {
     if (heldOut && age > 780) { man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'down', 'flex', { number: myNum, look: men.te }); return }
     const q = tilt(view, tx, ty)
     ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(-Math.sign(g.shown) * beat * 0.16 + recoil * 0.06); ctx.translate(-q.x, -q.y)
-    man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'up', 'block', { number: myNum, look: men.te })
+    man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'up', 'block', { number: myNum, look: men.te, still: true })
     ctx.restore()
   }
   const backFirst = heldOut && by < ry

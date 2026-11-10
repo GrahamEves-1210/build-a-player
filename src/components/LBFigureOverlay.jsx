@@ -47,9 +47,9 @@ function lipTint(hex) {
   const br = parseInt(hex.slice(1, 3), 16)
   const bg = parseInt(hex.slice(3, 5), 16)
   const bb = parseInt(hex.slice(5, 7), 16)
+  // (the DB figure's tint: a touch of red over the skin, less pink than DL's; the owner's call for LB and OL)
   const extra = Math.max(0, ((br + bg + bb) / 3 - 140) * 0.2)
-  const k = (br + bg + bb) / 3 < 120 ? 0.75 : 1
-  return `rgb(${clamp(br + 40 * k)},${clamp(bg - 22 * k - extra)},${clamp(bb - 4 * k - extra * 0.6)})`
+  return `rgb(${clamp(br + 18)},${clamp(bg - 5 - extra)},${clamp(bb - 3 - extra)})`
 }
 
 // Which trait colors which body part (Silhouette.jsx LB_ZONES puts each dot on it):
@@ -58,9 +58,9 @@ function lipTint(hex) {
 //   size             jersey, sleeve caps, collar, numbers (also sets HT/WT)
 //   power            bare arms
 //   blockShed        wristbands
-//   zoneInstincts    gloves
+//   tackling         gloves
 //   passRush         pants
-//   tackling         lower legs
+//   zoneInstincts    lower legs
 //   range            shoes + socks
 export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge = null }) {
   const numSvgRef = useRef(null)
@@ -123,16 +123,16 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
   svg = setFill(svg, 'l wrist', tc2('blockShed'), 'opacity:0.74;')
   svg = setFill(svg, 'r ankle', tc2('blockShed'), 'opacity:0.74;')
 
-  // ── ZONE INSTINCTS: gloves
-  svg = setFill(svg, 'l glove', tc2('zoneInstincts'), 'opacity:0.74;')
-  svg = setFill(svg, 'r glove', tc2('zoneInstincts'), 'opacity:0.74;')
+  // ── TACKLING: gloves
+  svg = setFill(svg, 'l glove', tc2('tackling'), 'opacity:0.74;')
+  svg = setFill(svg, 'r glove', tc2('tackling'), 'opacity:0.74;')
 
   // ── PASS RUSH: pants
   svg = setFill(svg, 'legs', tc2('passRush'), 'opacity:0.74;')
 
-  // ── TACKLING: lower legs
-  svg = setFill(svg, 'l shin', tc('tackling'), 'opacity:0.74;')
-  svg = setFill(svg, 'r shin', tc('tackling'), 'opacity:0.74;')
+  // ── ZONE INSTINCTS: lower legs
+  svg = setFill(svg, 'l shin', tc2('zoneInstincts'), 'opacity:0.74;')
+  svg = setFill(svg, 'r shin', tc2('zoneInstincts'), 'opacity:0.74;')
 
   // ── RANGE: shoes, white socks above them
   svg = setFill(svg, 'l shoe', tc('range'), 'opacity:0.78;')
@@ -188,15 +188,15 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
           </g>
         </g>
 
-        {/* Sleeve numbers, turned with each shoulder cap */}
-        <g transform="translate(352, 318) rotate(-14) scale(.62, 1)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
-          <text x="0" y="0" textAnchor="middle" fontFamily="'Bebas Neue', Impact, Arial, sans-serif" fontSize="78"
-            fill="white" stroke="black" strokeWidth="3" paintOrder="stroke" style={{ userSelect: 'none', pointerEvents: 'none' }}>{num}</text>
-        </g>
-        <g transform="translate(760, 326) rotate(14) scale(.62, 1)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
-          <text x="0" y="0" textAnchor="middle" fontFamily="'Bebas Neue', Impact, Arial, sans-serif" fontSize="78"
-            fill="white" stroke="black" strokeWidth="3" paintOrder="stroke" style={{ userSelect: 'none', pointerEvents: 'none' }}>{num}</text>
-        </g>
+        {/* Shoulder numbers, turned a quarter each way to run down the shoulder caps */}
+        <g><g transform="translate(340, 304) rotate(-90)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
+          <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontFamily="'Bebas Neue', Impact, Arial, sans-serif" fontSize="84"
+            fill="white" stroke="black" strokeWidth="4" paintOrder="stroke" style={{ userSelect: 'none', pointerEvents: 'none' }}>{num}</text>
+        </g></g>
+        <g><g transform="translate(781, 311) rotate(90)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
+          <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontFamily="'Bebas Neue', Impact, Arial, sans-serif" fontSize="84"
+            fill="white" stroke="black" strokeWidth="4" paintOrder="stroke" style={{ userSelect: 'none', pointerEvents: 'none' }}>{num}</text>
+        </g></g>
 
         {/* The team logo on each side of the shell, seen from the front: squeezed into the curve, clipped to the helmet */}
         {has(H) && helmetTeam && !NO_HELMET_LOGO.has(helmetTeam) && (

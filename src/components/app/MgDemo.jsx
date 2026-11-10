@@ -159,7 +159,7 @@ export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = nu
       x.restore()
     }
     const draw = (first = false) => {
-      spriteFrame(first ? Infinity : 4, ctx)
+      spriteFrame(first ? Infinity : 4, ctx, g.t)
       ctx.setTransform(view.px, 0, 0, view.px, 0, -TOP * view.px)
       try {
         if (g.nudge) g.nudge.apply(ctx, g.t, view)

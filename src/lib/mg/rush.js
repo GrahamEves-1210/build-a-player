@@ -594,7 +594,7 @@ function drawRush(ctx, g, view0) {
   })
   // him
   const wm = walk(g, `me${g.i}`, me.x, me.d, 8)
-  const M = { size: SIZE, number: 94, skin: skinOf(3), ...who.me, dir: 'up', pose: 'touch', step: null }
+  const M = { size: SIZE, number: 94, skin: skinOf(3), ...who.me, dir: 'up', pose: 'touch', step: null, still: true }
   // he's put him down: back on his feet, turned round to the camera, and everyone knows about it. A different one each time.
   const party = sack ? clamp((s2 - 560) / 170, 0, 1) : 0
   if (party >= 1) {
@@ -697,7 +697,7 @@ function drawRun(ctx, g, view0) {
   put(qb.x, fy(qb.d), them, { dir: dirFrom(qw, 'down'), step: qw.step, pose: qw.step == null ? 'ready' : null, carry: snapped && age >= SNAP_MS && !rep.handed, skin: skinOf(9), number: 7, size: SIZE, ...who.qb })
   // him
   const wm = walk(g, `me${g.i}`, me.x, me.d, 8)
-  const M = { size: SIZE, number: 94, skin: skinOf(3), ...who.me, dir: 'up', pose: 'touch', step: null }
+  const M = { size: SIZE, number: 94, skin: skinOf(3), ...who.me, dir: 'up', pose: 'touch', step: null, still: true }
   const off = rep.free && g.t >= rep.free
   // a stop: up off him, facing the camera, and nobody needs telling. A different one each play.
   const party = big ? clamp((s2 - 600) / 170, 0, 1) : 0

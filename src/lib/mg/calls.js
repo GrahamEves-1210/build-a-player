@@ -6,7 +6,7 @@
 //   two-minute   an actual drive: down, distance and clock are real and move with every play.
 //                It runs until the touchdown, the clock, fourth down or a turnover
 import { keyCap, THREE_KEYS, clamp, lerp, outcome, football, rngOf, prog, easeOut, easeInOut, themOf, GOOD, BAD, text, DISPLAY, rr, manOf, xiOf, paceOf, particles, nudge } from './kit.js'
-import { nameTag,  goalPosts, breakupPose, tilt, untilt, athlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, rollingField, turfLine, stands, floodlight, vignette, crowdPop, warmAthlete } from './art.js'
+import { nameTag,  goalPosts, breakupPose, beatenPose, tilt, untilt, athlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, rollingField, turfLine, stands, floodlight, vignette, crowdPop, warmAthlete } from './art.js'
 import { callMs } from '../minigames.js'
 import { momentSituation } from '../situations.js'
 import { SPIKE_MS, snapBall, SNAP_MS, paintFieldFlat, flightAt, looseBall, qbPose, handsFor, SL, SR, startTags, tag, drawTags, flairOf, lightFx, popCrowd, hop, kickUp, puffAt, scorerDance, stopperDance, official, coach, endZonePylons, chainStick, leanIn } from './throw.js'
@@ -660,7 +660,7 @@ export function draw(ctx, g, view) {
 }
 
 // one man on the field, in the broadcast's look
-const M = { color: '', trim: '', pants: null, skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, size: 1, pose: null, fall: 0, fallX: 0, lift: 0 }
+const M = { color: '', trim: '', pants: null, skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, size: 1, pose: null, fall: 0, fallX: 0, lift: 0, squat: 0 }
 // a picture being baked keeps its names here instead (they're drawn live over it), by the picture
 let TAG_SINK = null
 const PRE_TAGS = new Map()
@@ -681,7 +681,9 @@ function drawCast(ctx, view, list, col, them) {
     M.fallX = m.fallX ?? 0
     M.carry = !!m.carry
     M.lift = m.lift ?? 0
+    M.squat = m.squat ?? 0
     athlete(ctx, view, m.x, m.y, M)
+    M.squat = 0   // (the same M draws the sidelines: nobody there is bent over)
     // his name goes down with him: a man nearer the camera stands in front of it
     if (m.look && !m.fall) {
       const q = tilt(view, m.x, m.y)
@@ -1064,7 +1066,7 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
     } else if (PICK_SHOW && d === t1) { o2.dir = 'down'; o2.step = null; o2.pose = 'spike-up'; o2.carry = true; o2.lift = hop(pt - p.tLand - PICK_RUN, 430, 11) }
     else if (k === 'pick' && !o2.dl && pt >= p.tLand + 620) { o2.dir = 'down'; o2.step = null; o2.pose = 'arms-up'; o2.lift = hop(pt + i * 110, 450, 9) }
     else if (sack && d.t === 'd' && pt >= p.Tc + 260 && d !== t1) { o2.dir = 'down'; o2.step = null; o2.pose = 'arms-up'; o2.lift = hop(pt + i * 110, 430, 9) }
-    else if (p.td && !o2.dl && pt >= p.T + 80) { o2.dir = 'up'; o2.step = null; o2.pose = 'hips' }
+    else if (p.td && !o2.dl) { const bp = beatenPose(i, pt - p.T); if (bp) { o2.dir = bp.turn ? 'down' : 'up'; o2.step = null; o2.pose = bp.pose; o2.squat = bp.squat } }
   }
   // Nobody stands in anybody: standing men are tall on the screen, so off a man means beside him. A
   // shove grows as he gets level, and no man's feet move faster than feet do, so it never shows as a jump.

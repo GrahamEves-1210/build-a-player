@@ -67,7 +67,7 @@ const NFL_FIGURE = {
   db: { src: '/db-silhouette.png', scale: 1.05 },
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/lb-silhouette.webp', scale: 1 },
-  ol: { src: '/db-silhouette.png', scale: 1.05 },   // OL placeholder: the DB figure until OL has its own (OL_SILHOUETTE)
+  ol: { src: '/ol-silhouette.webp', scale: 1 },
 }
 const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
 const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
