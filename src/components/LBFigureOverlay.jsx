@@ -189,11 +189,11 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
         </g>
 
         {/* Shoulder numbers, turned a quarter each way to run down the shoulder caps */}
-        <g><g transform="translate(360, 284) rotate(-90)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
+        <g><g transform="translate(380, 264) rotate(-90)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
           <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontFamily="'Bebas Neue', Impact, Arial, sans-serif" fontSize="84"
             fill="white" stroke="black" strokeWidth="4" paintOrder="stroke" style={{ userSelect: 'none', pointerEvents: 'none' }}>{num}</text>
         </g></g>
-        <g><g transform="translate(761, 291) rotate(90)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
+        <g><g transform="translate(741, 271) rotate(90)" style={{ opacity: show * 0.9, transition: 'opacity 0.5s ease' }}>
           <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontFamily="'Bebas Neue', Impact, Arial, sans-serif" fontSize="84"
             fill="white" stroke="black" strokeWidth="4" paintOrder="stroke" style={{ userSelect: 'none', pointerEvents: 'none' }}>{num}</text>
         </g></g>
@@ -201,7 +201,7 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
         {/* The team logo on each side of the shell, seen from the front: squeezed into the curve, clipped to the helmet */}
         {has(H) && helmetTeam && !NO_HELMET_LOGO.has(helmetTeam) && (
           <g clipPath="url(#lb-helmet-clip)" style={{ pointerEvents: 'none' }}>
-            <g transform="translate(494, 58) rotate(-12) scale(.42, .9)">
+            <g transform="translate(489, 58) rotate(4) scale(.42, .9)">
               <image href={`/logos/${helmetTeam}.png`} x="-50" y="-50" width="100" height="100" style={{ opacity: 0.95, mixBlendMode: 'screen' }} />
             </g>
             <g transform="translate(645, 58) rotate(8) scale(-.42, .9)">
