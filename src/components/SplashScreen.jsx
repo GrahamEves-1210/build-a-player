@@ -259,27 +259,27 @@ const DL_ATTRS = [
   { label: 'Power',    col: '#fb923c' },
   { label: 'Get Off',  col: '#f87171' },
   { label: 'Strength', col: '#fbbf24' },
-  { label: 'Finesse',  col: '#34d399', x: 6 },
+  { label: 'Finesse',  col: '#34d399' },
   { label: 'Play Rec', col: '#e879f9' },
-  { label: 'Speed',    col: '#60a5fa', x: 12.9, sm: true },
-  { label: 'Bend',     col: '#a78bfa', x: 16.7, sm: true },
-  { label: 'Size',     col: '#38bdf8', x: 18.3, xs: true, v: true },
-  { label: 'Shed',     col: '#2dd4bf', x: 22.4, xs: true },
+  { label: 'Speed',    col: '#60a5fa' },
+  { label: 'Bend',     col: '#a78bfa' },
+  { label: 'Size',     col: '#38bdf8' },
+  { label: 'Shed',     col: '#2dd4bf' },
 ]
 
 // (in LB_ATTR's colors, data/lbs.js; on the DL figure for now, laid out the same way)
 // (on public/lb-silhouette.webp, measured off the art's outline: each word on the widest solid stretch of its band,
 // from the thighs down on one leg, a size down; x is the % of the figure's box to move the word off centre)
 const LB_ATTRS = [
-  { label: 'Power',      col: '#fb923c', x: 6 },
-  { label: 'Leadership', col: '#a78bfa', x: 3.7 },
-  { label: 'Tackling',   col: '#f87171', x: 3.9 },
-  { label: 'Pass Rush',  col: '#fbbf24', x: 3.7 },
-  { label: 'Play Rec',   col: '#e879f9', x: 4.3 },
-  { label: 'Range',      col: '#60a5fa', x: 17.7, sm: true },
-  { label: 'Zone',       col: '#34d399', x: -18.6, sm: true },
-  { label: 'Size',       col: '#38bdf8', x: -29.5, xs: true },
-  { label: 'Shed',       col: '#2dd4bf', x: 28.7, xs: true },
+  { label: 'Power',      col: '#fb923c' },
+  { label: 'Leadership', col: '#a78bfa' },
+  { label: 'Tackling',   col: '#f87171' },
+  { label: 'Pass Rush',  col: '#fbbf24' },
+  { label: 'Play Rec',   col: '#e879f9' },
+  { label: 'Range',      col: '#60a5fa' },
+  { label: 'Zone',       col: '#34d399' },
+  { label: 'Size',       col: '#38bdf8' },
+  { label: 'Shed',       col: '#2dd4bf' },
 ]
 
 // (in OL_ATTR's colors, data/ols.js; on public/ol-silhouette.webp, measured off the art's outline the same way:
@@ -288,15 +288,15 @@ const LB_ATTRS = [
 // word is long); x is the % of the figure's box to move the word off centre. "Blitz" is Blitz Pickup: the shoe
 // only holds a short word.)
 const OL_ATTRS = [
-  { label: 'Anchor',     col: '#38bdf8', x: -2.7, sm: true },
-  { label: 'Pancake',    col: '#fbbf24', x: -3.2 },
-  { label: 'Discipline', col: '#a78bfa', x: -3.7 },
-  { label: 'Pass Pro',   col: '#2dd4bf', x: -4.3 },
-  { label: 'Run Block',  col: '#f87171', x: -4.1 },
-  { label: 'Mobility',   col: '#60a5fa', x: 10.8 },
-  { label: 'Length',     col: '#34d399', x: -21.8, xs: true },
-  { label: 'Size',       col: '#fb923c', x: 24.9, xs: true },
-  { label: 'Blitz',      col: '#e879f9', x: 26.7, xs: true },
+  { label: 'Anchor',     col: '#38bdf8' },
+  { label: 'Pancake',    col: '#fbbf24' },
+  { label: 'Discipline', col: '#a78bfa' },
+  { label: 'Pass Pro',   col: '#2dd4bf' },
+  { label: 'Run Block',  col: '#f87171' },
+  { label: 'Mobility',   col: '#60a5fa' },
+  { label: 'Length',     col: '#34d399' },
+  { label: 'Size',       col: '#fb923c' },
+  { label: 'Blitz',      col: '#e879f9' },
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
