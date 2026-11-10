@@ -587,7 +587,7 @@ export const manOf = (cast, side, group, i = 0) => {
   const list = cast?.[side]?.[group]
   if (!list?.length) return null
   const p = list[i % list.length]
-  return { number: p.number, skin: p.skin, name: p.name, ...(p.ball != null ? { ball: p.ball } : null) }
+  return { number: p.number, skin: p.skin, name: p.name, ...(p.ball != null ? { ball: p.ball } : null), ...(p.yac != null ? { yac: p.yac } : null) }
 }
 // The football games' full eleven a side (career's gameCast: cast.us.xi / cast.them.xi), every man real and
 // tagged with his last name. Null in the demo clips and the bots' runs: the scene keeps its own look.

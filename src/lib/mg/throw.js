@@ -11,8 +11,8 @@ import { goalPosts, breakupPose, beatenPose, tilt, untilt, ground, stands, flood
 
 export const how = {
   acc: 'Press where the ball goes and lead him. Tap for a lob. Hold for a bullet.',
-  'third-long': 'Find the open man past the yellow line. Press the spot. Tap for a lob. Hold for a bullet.',
-  bomb: 'Find the man running free deep. Press the spot. Tap for a lob. Hold for a bullet.',
+  'third-long': 'Find the open man past the yellow line. Press the spot. Tap for a lob. Hold for a bullet. Double tap to pump fake.',
+  bomb: 'Find the man running free deep. Press the spot. Tap for a lob. Hold for a bullet. Double tap to pump fake.',
 }
 
 // ── The field. x: 0-360 across, the sidelines at 8 and 352 (53 1/3 yards). y: up from the line of
@@ -57,6 +57,18 @@ const ARM = 1.3       // a ball out in front of him: he can extend for it, furth
 const CONTEST = 0.38  // a catch with a defender right there and the ball between them
 const STRONG = 0.32   // and what the best hands in football add to it (the worst take a little off)
 const ROOM = 8        // a defender stays this far off a receiver's body: on his hip, not in him
+// after the catch, one chance to make the first man miss: his after-catch grade (a back's elusiveness), 0-11 from
+// nothing at a D to 40% at an S. A man the data doesn't have (a demo, practice with no roster) gets 10%
+const MISS_MAX = 0.4, MISS_DEF = 0.1
+export const missOf = look => (look?.yac == null ? MISS_DEF : clamp((look.yac - 1) / 10, 0, 1) * MISS_MAX)
+// the juke: he sits down on it this long before the man gets there and this long after, at this share of his speed,
+// going sideways this fast. The man he beat stays down this long
+const JUKE_IN = 150, JUKE_OUT = 70, JUKE_SLOW = 0.3, JUKE_V = 0.15, MISS_DOWN = 1150
+// the pump fake: a tap (a press let go this soon) goes at once, as it always has, but the picture keeps it in his hand
+// this long (or this share of a short flight, and then it flies a touch quicker to land on time). A second tap near the
+// first (this near, field units) inside that takes it back: it was a pump. Then the fake itself, and how long the men
+// who bite on it drive on it, and stop and turn after
+const PUMP_TAP = 110, PUMP_WAIT = 170, PUMP_SHARE = 0.45, PUMP_NEAR = 46, PUMP_MS = 360, BITE_IN = 90, BITE_MS = 480, BITE_TURN = 300
 
 const CLOSE = 24      // a touchdown: how near his mates get before they're jumping on him
 const SACK_UP = 420   // a sack: how long after they're down before he gets up
@@ -311,7 +323,7 @@ function makePlay({ v, arm, seed, game, cast }) {
     t: 0, game, zones: 'none', aim: true, fx: [], done: null, outro: 1500, stamp: null,
     flair, nudge: nudge(), dirt: particles(48, flair + 1), cz: 1,
     phase: 'set', snap: SET_MS, mirror, ...T, GOAL, TOP, line, need, reach, scat, sackAt,
-    ball: null, res: null, rush: 0, hold: null,
+    ball: null, res: null, rush: 0, hold: null, tap: null, pump: null,
     los: los0, k: kOf(los0, TOP),
     tilted: true, cam: { w: 360, h: DEF_H },
     hud: { prompt: 'SET', dots: null },
@@ -338,6 +350,7 @@ function makePlay({ v, arm, seed, game, cast }) {
       step(rt, dt)
       // the ring has closed: a bullet, right now
       if (g.phase === 'run' && g.hold && g.t - g.hold.at >= HOLD_MS) letGo()
+      if (g.tap && g.t >= g.tap.until) { if (g.ball === g.tap.ball) g.fx.push('swoosh'); g.tap = null }
       // the pocket's going: say so while there's still time to do something about it
       if (g.phase === 'run' && !g.heat && rt >= sackAt * 0.72) { g.heat = true; if (!g.hold) g.hud.prompt = 'GET IT OUT'; g.hud.hot = true; g.fx.push('h:light') }
       if (g.phase === 'run' && rt >= sackAt) sacked()
@@ -348,6 +361,13 @@ function makePlay({ v, arm, seed, game, cast }) {
       }
     },
     input(a) {
+      // (a second tap on a tap that's still in his hand, near it: he pumped it, the ball comes back)
+      const tp = g.tap
+      if (a.kind === 'down' && tp && g.phase === 'air' && g.ball === tp.ball && g.t < tp.until) {
+        const f = aimOf(g, a, T.backs)
+        const m = inRange(g.QB, clamp(f.x, 10, 350), clamp(f.y, -30, TOP), arm)
+        if (Math.hypot(m.x - tp.fx, m.y - tp.fy) <= PUMP_NEAR) { pumped(tp); return }
+      }
       if (g.phase !== 'run') return
       if (a.kind === 'down') {
         if (g.hold) return
@@ -359,10 +379,38 @@ function makePlay({ v, arm, seed, game, cast }) {
       } else if (a.kind === 'up' && g.hold) letGo()
     },
   }
+  // the pump fake: the ball stays, and the men reading him drive on it. Once a play: they don't buy it twice
+  function pumped(tp) {
+    // (the throw never happened: the ball's his again and the men who'd broken on it are back on their jobs)
+    g.tap = null; g.ball = null; g.phase = 'run'
+    for (const [q, dv] of tp.drives) q.drive = dv
+    for (const p of T.backs) p.off = null
+    g.pump = { at: g.t, fx: tp.fx, fy: tp.fy }
+    g.hud.prompt = 'PRESS WHERE THE BALL GOES'
+    g.fx.push('h:light')
+    if (g.bit) return
+    g.bit = true
+    // the man on the receiver he looked at, and anyone not in man who's within a few steps of the spot. They come
+    // downhill to jump it, in front of the spot, and the man they're on keeps going
+    let near = null, nd = Infinity
+    for (const p of T.backs) { const e = Math.hypot(p.x - tp.fx, p.y - tp.fy); if (e < nd) { nd = e; near = p } }
+    for (const d of T.back) {
+      const e = Math.hypot(d.x - tp.fx, d.y - tp.fy)
+      if (d.mark ? d.mark === near : e < 130) d.bite = { at: g.t + BITE_IN, until: g.t + BITE_IN + BITE_MS, x: lerp(tp.fx, g.QB.x, 0.12), y: Math.max(12, Math.min(tp.fy, d.y) - 30) }
+    }
+  }
   function letGo() {
-    const pw = g.power(), h = g.hold
+    const pw = g.power(), h = g.hold, tap = g.t - h.at < PUMP_TAP
     g.hold = null
+    const drives = tap ? T.back.map(q => [q, q.drive]) : null
     throwTo(h.fx, h.fy, pw)
+    // a tap: it's gone, but it's still in his hand on the screen for a beat, and a second tap there makes it a pump
+    if (tap) {
+      const b = g.ball, i = g.fx.lastIndexOf('swoosh')
+      if (i >= 0) g.fx.splice(i, 1)   // (its sound when it leaves his hand on the screen)
+      b.inHand = Math.min(PUMP_WAIT, b.flight * PUMP_SHARE)
+      g.tap = { fx: h.fx, fy: h.fy, until: g.t + b.inHand, ball: b, drives }
+    }
   }
   function throwTo(tx, ty, pw) {
     const lx = clamp(tx + gaussOf(r) * scat, 6, 354), ly = ty + gaussOf(r) * scat
@@ -405,6 +453,7 @@ function makePlay({ v, arm, seed, game, cast }) {
   function sacked() {
     g.phase = 'over'
     g.hold = null
+    g.tap = null
     const by = Math.hypot(T.DL[0].x - T.QB.x, T.DL[0].y - T.QB.y) <= Math.hypot(T.DL[3].x - T.QB.x, T.DL[3].y - T.QB.y) ? T.DL[0] : T.DL[3]
     const side = by.x <= T.QB.x ? 1 : -1      // he goes down away from the man who hit him
     g.res = { why: 'sack', at: g.t, by, side, x0: T.QB.x, y0: T.QB.y }
@@ -448,17 +497,39 @@ function makePlay({ v, arm, seed, game, cast }) {
         const tt = qc <= 0 ? 0 : (-qb - Math.sqrt(qb * qb - 4 * qa * qc)) / (2 * qa)
         if (tt < soon) { soon = tt; n1 = q }
       }
-      const contactY = tp.y + tp.v * soon
+      let contactY = tp.y + tp.v * soon
+      // he makes the first man miss: a juke at the spot, and the yards it buys come from where he is on the field
+      let lost = 0
+      if (n1 && contactY < GOAL && r() < missOf(tp.look)) {
+        const miss = { by: n1, at: g.t + soon, y: contactY, side: n1.x <= tp.x ? -1 : 1 }
+        res.miss = miss
+        lost = (Math.min(JUKE_IN, soon) + JUKE_OUT) * (1 - JUKE_SLOW)
+        const head0 = contactY + TACKLE_SLIDE + BODY_LEN
+        // the bomb caught deep, or anyone this near the goal line: nobody left back there. Otherwise the next man,
+        // seven to thirteen yards on, and a catch short of the sticks always gets there
+        const house = bomb ? head0 >= need : GOAL - contactY < 18 * YD
+        let y2 = house ? GOAL : contactY + lerp(7, 13, r()) * YD
+        if (!bomb && head0 < line) y2 = Math.max(y2, line - TACKLE_SLIDE - BODY_LEN + lerp(1, 4, r()) * YD)
+        if (y2 + TACKLE_SLIDE + BODY_LEN >= GOAL) y2 = GOAL
+        contactY = y2
+        soon = (y2 - tp.y) / tp.v + lost
+        // who gets him then: the nearest man to where he'll be, not the one he beat
+        const x2 = clamp(tp.x - miss.side * 30, 24, 336)
+        let n2 = null, d2 = Infinity
+        for (const q of T.back) { if (q === n1) continue; const e = Math.hypot(q.x - x2, q.y - y2); if (e < d2) { d2 = e; n2 = q } }
+        n1 = n2
+      }
       const endY = contactY + TACKLE_SLIDE
       const headY = endY + BODY_LEN, scores = headY >= GOAL, untouched = contactY >= GOAL
       res.scores = scores
       res.runner = tp
       if (!untouched) res.tackle = { y: contactY, end: endY, at: g.t + soon, done: g.t + soon + TACKLE_MS, by: n1, side: n1.x <= tp.x ? -1 : 1, hit: false }
-      const when = untouched ? g.t + Math.max(0, GOAL - tp.y) / tp.v : res.tackle.done
+      const when = untouched ? g.t + Math.max(0, GOAL - tp.y) / tp.v + lost : res.tackle.done
       if (untouched) res.tdAt = when + 180
       const depth = scores ? GOAL : headY
+      const mz = res.miss
       if (depth < need) {
-        g.done = outcome(bomb ? 0.25 : 0.32, false, bomb ? 'A checkdown is no bomb.' : 'Short of the sticks.', { made: 0, of: 1 })
+        g.done = outcome(bomb ? 0.25 : 0.32, false, mz ? 'Made a man miss, but a checkdown is no bomb.' : bomb ? 'A checkdown is no bomb.' : 'Short of the sticks.', { made: 0, of: 1 })
         g.stamp = { text: bomb ? 'TOO SHORT' : 'SHORT OF THE STICKS', good: false, at: when + 40, size: bomb ? 46 : 32 }
         g.outro = clamp(when - g.t + 1400, 1200, 4600)
         res.afterAt = when
@@ -467,8 +538,10 @@ function makePlay({ v, arm, seed, game, cast }) {
       }
       const past = depth - line
       const score = bomb ? clamp(0.6 + (depth / GOAL) * 0.4, 0.6, 1) : clamp(0.72 + (past / (20 * YD)) * 0.28, 0.72, 1)
-      g.done = outcome(scores ? 1 : score, true, scores ? 'Touchdown.' : bomb ? `A ${Math.round(depth / YD)} yard strike.` : `${Math.round(past / YD)} past the sticks.`, { made: 1, of: 1 })
-      g.stamp = { text: scores ? 'TOUCHDOWN' : bomb ? 'BIG GAIN' : 'FIRST DOWN', good: true, at: when + 40 }
+      const word = scores ? 'TOUCHDOWN' : bomb ? 'BIG GAIN' : 'FIRST DOWN'
+      const said = scores ? 'Touchdown.' : bomb ? `A ${Math.round(depth / YD)} yard strike.` : `${Math.round(past / YD)} past the sticks.`
+      g.done = outcome(scores ? 1 : score, true, mz ? (scores ? 'Broke a tackle and took it to the house.' : `Made the first man miss. ${said}`) : said, { made: 1, of: 1 })
+      g.stamp = mz ? { text: `${scores ? 'BROKE A TACKLE' : 'MADE HIM MISS'}: ${word}`, good: true, at: when + 40, size: 24 } : { text: word, good: true, at: when + 40 }
       // (a touchdown is the payoff: time for the spike, his dance and everyone getting to him)
       g.outro = scores ? clamp(when - g.t + 2900, 2600, 6200) : clamp(when - g.t + 1700, 1400, 5000)
       res.afterAt = when
@@ -535,8 +608,12 @@ function makePlay({ v, arm, seed, game, cast }) {
         } else if (res?.tdAt != null && g.t >= res.tdAt) {
           // in, and he stops to spike it
         } else if (p.y < TOP - 16) {
-          p.y += p.v * dt
-          if (!(g.t < p.cutUntil)) {
+          // (the juke: he sits down on it and goes the other way, then he's off again)
+          const mz = res?.miss, jk = mz && g.t >= mz.at - JUKE_IN && g.t < mz.at + JUKE_OUT
+          p.y += p.v * dt * (jk ? JUKE_SLOW : 1)
+          if (jk) { if (mz.x == null) mz.x = p.x; p.cutV = -mz.side * JUKE_V; p.cutUntil = mz.at + JUKE_OUT }
+          else if (mz && g.t >= mz.at + JUKE_OUT && !mz.out) { mz.out = true; p.cutV = -mz.side * 0.03; p.cutUntil = g.t + 260 }
+          else if (!(g.t < p.cutUntil)) {
             let near = null, nd = Infinity
             for (const q of T.back) { const e = Math.hypot(q.x - p.x, q.y - p.y); if (q.y > p.y - 10 && e < nd) { nd = e; near = q } }
             if (near && nd < 80) {
@@ -579,6 +656,21 @@ function makePlay({ v, arm, seed, game, cast }) {
       const b = g.ball
       // (the ball's gone, or the play's over: he's turned and running at it)
       if (d.flip == null && (runner || (b && d.drive && g.t >= d.drive))) d.flip = rt
+      const mz = res?.miss
+      if (mz && mz.by === d) {
+        if (g.t < mz.at) {
+          // his angle to where he'll meet him: he's sold on the spot the man was going to
+          const dx = (mz.x ?? runner.x) - d.x, dy = mz.y - d.y, e = Math.hypot(dx, dy)
+          if (e > 0.5) { const mv = Math.min(e, Math.max(TACKLE_V * dt, (e / Math.max(1, mz.at - g.t)) * dt)); d.x += (dx / e) * mv; d.y += (dy / e) * mv }
+          face(d, px, py, dt)
+        } else {
+          // he's left grabbing air: laid out, his momentum carrying him on a few yards
+          if (!mz.dv) { const sp = Math.hypot(d.vx ?? 0, d.vy ?? 0) || 1; mz.dv = { x: ((d.vx ?? 0) / sp) * 0.1, y: ((d.vy ?? -1) / sp) * 0.1 } }
+          const kk = Math.max(0, 1 - (g.t - mz.at) / 280)
+          d.x += mz.dv.x * dt * kk; d.y += mz.dv.y * dt * kk
+        }
+        continue
+      }
       if (tk && tk.by === d) {
         if (g.t < tk.at) {
           // his angle, at full speed, to where they meet
@@ -591,7 +683,12 @@ function makePlay({ v, arm, seed, game, cast }) {
         face(d, px, py, dt)
         continue
       }
-      if (runner) {
+      // (a pump fake: he drives on it a beat, and loses the step it costs him)
+      const bt = d.bite && !b && !runner && g.t >= d.bite.at && g.t < d.bite.until ? d.bite : null
+      if (!bt && d.bite && !d.bite.over && g.t >= d.bite.until) { d.bite.over = true; d.aimX = d.x; d.aimY = d.y; if (d.mark) d.flip = rt }
+      const caught = d.bite?.over && g.t < d.bite.until + BITE_TURN   // (and he has to stop, turn and get going again)
+      if (bt) { ax = bt.x; ay = bt.y; spd = d.v * 0.95 }
+      else if (runner) {
         // the rest pursue, and pull up at the pile
         ax = runner.x; ay = runner.y - 6; spd = tk && g.t >= tk.at ? 0.05 : 0.08
         if (Math.hypot(ax - d.x, ay - d.y) < 24) { ax = d.x; ay = d.y }
@@ -667,7 +764,7 @@ function makePlay({ v, arm, seed, game, cast }) {
         }
       }
       const dx = ax - d.x, dy = ay - d.y, e = Math.hypot(dx, dy)
-      const go = (over && !runner && res?.dq !== d ? slow : 1) * spd * dt
+      const go = (over && !runner && res?.dq !== d ? slow : 1) * (caught ? 0.35 : 1) * spd * dt
       if (e > 0.5) { const mv = Math.min(e, go); d.x += (dx / e) * mv; d.y += (dy / e) * mv }
       // nobody runs through anybody: he goes round them, a little a frame, so it never shows as a jump
       // (standing men are tall on the screen: off a man means beside him, not just behind him, until the ball's there)
@@ -1177,9 +1274,10 @@ function drawBroadcast(ctx, g, view) {
   if (g.hold) drawHoldRing(ctx, view, g.hold.fx, fl(g.hold.fy), g.power())
   // where the ball's coming down, and its shadow on the way
   let air = null
-  if (b && !res) {
+  const inHand = b ? b.at + (b.inHand ?? 0) : 0
+  if (b && !res && g.t >= inHand) {
     turfRing(ctx, view, b.tx, fl(b.ty), 7); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2; ctx.stroke()
-    air = flightAt(view, b.x0, fl(b.y0), b.lx, fl(b.ly), prog(g.t, b.at, b.land), b.H * k)
+    air = flightAt(view, b.x0, fl(b.y0), b.lx, fl(b.ly), prog(g.t, inHand, b.land), b.H * k)
     ballShadow(ctx, view, air.gx, air.gy, air.lift)
   }
 
@@ -1246,13 +1344,15 @@ function drawBroadcast(ctx, g, view) {
       if (!isD && mood === 'first' && after > 200) O.pose = 'ready'
       if (isD && sack && p !== res.by && g.t >= res.at + 480) { O.dir = 'down'; O.step = null; O.pose = 'arms-up'; O.lift = hop(g.t - res.at + p.x * 3, 430, 9) }
     } else if (p === g.QB) {
-      const arm = sack ? null : qbPose(g.hold ? g.power() : null, b ? g.t - b.at : -1)
+      // (a pump: the arm comes through and back with the ball still in it)
+      const pa = g.pump && !b ? g.t - g.pump.at : -1
+      const arm = sack ? null : pa >= 0 && pa < PUMP_MS ? (pa < 130 ? 'qb-hold' : pa < 250 ? 'qb-cock' : 'qb-hold') : qbPose(g.hold ? g.power() : b && g.t < inHand ? 1 : null, b ? g.t - inHand : -1)
       O.dir = 'up'
       O.carry = !b && rt >= SNAP_MS
       if (arm) {
         // side on to throw, shoulder to his target
         O.pose = arm
-        O.dir = (g.hold ? g.hold.fx : b.lx) < p.x ? 'left' : 'right'
+        O.dir = (g.hold ? g.hold.fx : b ? b.lx : g.pump.fx) < p.x ? 'left' : 'right'
         O.carry = arm === 'qb-hold'
       } else if (!sack && !b && rt >= SNAP_MS) {
         // the drop, then set with the ball at his shoulder (the picture only: T.QB moves him, as it always has)
@@ -1324,6 +1424,15 @@ function drawBroadcast(ctx, g, view) {
         }
       }
     }
+    // the juke: planted, everything going the other way. And the man he left: laid out, then up, beaten
+    const mz = res?.miss
+    if (mz && res.runner === p && g.t >= mz.at - JUKE_IN && g.t < mz.at + JUKE_OUT) { O.dir = 'up'; O.step = null; O.pose = mz.side > 0 ? 'plant-l' : 'plant-r' }
+    if (mz && p === mz.by && g.t >= mz.at - 40) {
+      const a = g.t - mz.at + 40, up = clamp((a - MISS_DOWN) / 260, 0, 1)
+      O.step = null; O.carry = false; O.squat = 0; O.lift = 0
+      if (up < 1) { O.dir = 'down'; O.pose = 'dive'; O.fall = clamp(0.25 + a / 200, 0, 0.94) * (1 - up); O.fallX = -mz.side }
+      else if (!(mood === 'td' && res.tdAt != null)) { O.dir = 'up'; O.pose = 'hips' }
+    }
     // the man with his arms round him: square to him, and down the same way
     if (p === onTop && (tk ? g.t >= tk.at : true)) {
       const dx = under.x - p.x, dy = under.y - p.y
@@ -1343,7 +1452,7 @@ function drawBroadcast(ctx, g, view) {
     athlete(ctx, view, p.x + jolt, fl(p.y), O)
     // his name goes down with him, so a man nearer the camera stands in front of it. The line's are
     // smaller, and step down every other man so five of them side by side still read.
-    if (p.look && !((p === under && (sack ? fall0 : fallMan) > 0) || (p === onTop && fall > 0))) {
+    if (p.look && !((p === under && (sack ? fall0 : fallMan) > 0) || (p === onTop && fall > 0) || (mz && p === mz.by && O.fall > 0))) {
       const q = tilt(view, p.x, fl(p.y)), line = p.id.startsWith('OL') || p.kind === 'dl'
       // (on a small canvas the linemen's names only cover the numbers: skill players keep theirs)
       // (once it's over and they're up, every man's name, the line's too)
@@ -1402,6 +1511,10 @@ function beats(g, view, los, k, res, tk, b, rt, sack) {
     if (going && rn.cutAt != null && rn.cutAt !== g.fxCut) { g.fxCut = rn.cutAt; kickUp(g, view, rn.x, fl(rn.y), 6, 0.9) }
     else if (going && g.t >= (g.fxClod ?? 0)) { g.fxClod = g.t + 190; kickUp(g, view, rn.x, fl(rn.y), 1, 0.5, 0.8) }
   }
+  // the juke: the plant throws the turf up, and the man he left hits the deck
+  const mz = res.miss
+  if (mz && rn && g.t >= mz.at - 60 && !mz.fx) { mz.fx = true; g.fx.push('h:medium'); kickUp(g, view, rn.x, fl(rn.y), 8, 1, 1.3); g.nudge.kick(g.t, 1.8, mz.side * 0.6, 0, 140) }
+  if (mz && g.t >= mz.at + 220 && !mz.fx2) { mz.fx2 = true; kickUp(g, view, mz.by.x, fl(mz.by.y), 7, 0.8, 1.4); puffAt(g, view, mz.by.x, fl(mz.by.y), 3) }
   // the hit: he's stopped dead, and everything in the bowl felt it
   if (tk && g.t >= tk.at && !tk.fx) {
     tk.fx = true; g.fx.push('lock')

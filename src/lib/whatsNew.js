@@ -90,6 +90,7 @@ const NOV_10 = {
         'Throwing Velocity has a new look: a radar board, a real net and target, and a QB who reacts to each throw',
         'Bench Press has a new look: side-on in the combine hall, with a spotter, scouts and the prospects reacting to the set',
         'Throwing games: receivers with strong hands and body control come down with more contested catches',
+        'Bomb It and Third & Long: after the catch, receivers can juke the first tackler (more often with a better After Catch rating, up to 40%) for a first down or a touchdown, and a double tap is a pump fake that makes the defenders bite',
         'Linemen keep their feet and hands moving through the play',
         'After a touchdown, defenders no longer all strike the same pose at the same moment',
         'Player names on the field are drawn in the same retro pixels as the players',

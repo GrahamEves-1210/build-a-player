@@ -841,6 +841,9 @@ function castMan(S, g, p) {
     // (a man who catches it: how he does with a defender on him, -1 to 1 around a B. His hands first, then his body
     // control (a tight end's strength) and his size. The throwing games' contested balls read it: lib/mg/throw.js)
     ...(CATCHERS.has(g) && raw?.attrs?.hands != null ? { ball: Math.max(-1, Math.min(1, (raw.attrs.hands * 0.5 + (raw.attrs.bodyControl ?? raw.attrs.strength ?? raw.attrs.hands) * 0.3 + (raw.attrs.size ?? raw.attrs.hands) * 0.2 - 6) / 5)) } : null),
+    // (and what he does with it after: a receiver's after-catch grade, a back's elusiveness, 0-11. Whether he makes the
+    // first man miss in the throwing games: lib/mg/throw.js)
+    ...(CATCHERS.has(g) && (raw?.attrs?.afterCatch ?? raw?.attrs?.elusiveness) != null ? { yac: raw.attrs.afterCatch ?? raw.attrs.elusiveness } : null),
     // (a ballplayer: his side of the plate, his arm, his grades and his spot, so the at-bat faces his real arsenal and
     // the pitcher works a real hitter's zones: lib/mg/atbat.js, pitch.js)
     ...(raw?.throws ? { bats: raw.bats, throws: raw.throws, attrs: raw.attrs, role: raw.role } : null),
@@ -877,7 +880,7 @@ const XI_NEXT = { qb: [], rb: ['wr'], wr: ['te', 'rb'], te: ['wr'], edge: ['dt',
 const XI_GROUP = { edge: 'dl', dt: 'dl', cb: 'db', s: 'db' }
 const xiMan = (S, g, p) => {
   const m = castMan(S, g, p), first = String(p.name ?? '').trim()[0]
-  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin }, ...(m.ball != null ? { ball: m.ball } : null) }
+  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin }, ...(m.ball != null ? { ball: m.ball } : null), ...(m.yac != null ? { yac: m.yac } : null) }
 }
 function castXI(c, S, short, ro, out) {
   const room = list => realFirst(S, (list ?? []).filter(p => p.name !== c.name))
