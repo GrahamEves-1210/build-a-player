@@ -294,7 +294,7 @@ const OL_ATTRS = [
   { label: 'Pass Pro',   col: '#2dd4bf', x: -4.3 },
   { label: 'Run Block',  col: '#f87171', x: -4.1 },
   { label: 'Mobility',   col: '#60a5fa', x: 10.8 },
-  { label: 'Length',     col: '#34d399', x: -21.8, xs: true, v: true },
+  { label: 'Length',     col: '#34d399', x: -21.8, xs: true },
   { label: 'Size',       col: '#fb923c', x: 24.9, xs: true },
   { label: 'Blitz',      col: '#e879f9', x: 26.7, xs: true },
 ]
