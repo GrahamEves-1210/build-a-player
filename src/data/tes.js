@@ -88,7 +88,7 @@ const _TES = [
     attrs: { speed: 3, blocking: 5, vertical: 5, routeRunning: 5, strength: 4, hands: 5, awareness: 5, size: 8, afterCatch: 5 } },
   // CLE
   { name: 'Harold Fannin Jr.', short: 'Fannin',      team: 'CLE', teamName: 'Cleveland Browns',       skin: '#3a2010', height: 76, weight: 241, starter: true,  captain: true,  number: 44,
-    attrs: { speed: 6, blocking: 2, vertical: 8, routeRunning: 9, strength: 3, hands: 9, awareness: 7, size: 6, afterCatch: 7 } },
+    attrs: { speed: 6, blocking: 2, vertical: 8, routeRunning: 9, strength: 3, hands: 9, awareness: 7, size: 6, afterCatch: 8 } },
   { name: 'Blake Whiteheart',  short: 'Whiteheart',  team: 'CLE', teamName: 'Cleveland Browns',       skin: '#f0c4a0', height: 77, weight: 248, starter: false, number: 86,
     attrs: { speed: 4, blocking: 6, vertical: 4, routeRunning: 3, strength: 5, hands: 4, awareness: 4, size: 8, afterCatch: 3 } },
   { name: 'Joe Royer',         short: 'Royer',       team: 'CLE', teamName: 'Cleveland Browns',       skin: '#f0c4a0', height: 76, weight: 242, starter: false, number: 18,
@@ -109,14 +109,14 @@ const _TES = [
     attrs: { speed: 4, blocking: 7, vertical: 3, routeRunning: 3, strength: 7, hands: 4, awareness: 5, size: 5, afterCatch: 3 } },
   // DET
   { name: 'Sam LaPorta',       short: 'LaPorta',     team: 'DET', teamName: 'Detroit Lions',          skin: '#f0c4a0', height: 75, weight: 245, starter: true,  captain: true,  number: 87,
-    attrs: { speed: 7, blocking: 5, vertical: 7, routeRunning: 8, strength: 5, hands: 9, awareness: 6, size: 4, afterCatch: 7 } },
+    attrs: { speed: 7, blocking: 5, vertical: 7, routeRunning: 8, strength: 5, hands: 10, awareness: 6, size: 4, afterCatch: 7 } },
   { name: 'Brock Wright',      short: 'Wright',      team: 'DET', teamName: 'Detroit Lions',          skin: '#f0c4a0', height: 76, weight: 246, starter: false, number: 89,
     attrs: { speed: 4, blocking: 5, vertical: 3, routeRunning: 3, strength: 6, hands: 4, awareness: 4, size: 6, afterCatch: 3 } },
   { name: 'Tyler Conklin',     short: 'Conklin',     team: 'DET', teamName: 'Detroit Lions',          skin: '#f0c4a0', height: 75, weight: 240, starter: false, number: 83,
     attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 6, strength: 5, hands: 5, awareness: 5, size: 3, afterCatch: 5 } },
   // GB
   { name: 'Tucker Kraft',      short: 'Kraft',       team: 'GB',  teamName: 'Green Bay Packers',      skin: '#f0c4a0', height: 77, weight: 255, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 6, blocking: 6, vertical: 7, routeRunning: 7, strength: 8, hands: 6, awareness: 6, size: 9, afterCatch: 8 } },
+    attrs: { speed: 6, blocking: 6, vertical: 7, routeRunning: 7, strength: 8, hands: 5, awareness: 6, size: 9, afterCatch: 8 } },
   { name: 'Jonnu Smith',           short: 'J. Smith',     team: 'GB',  teamName: 'Green Bay Packers', skin: '#5e3c22', height: 75, weight: 248, starter: false, number: 18,
     attrs: { speed: 6, blocking: 5, vertical: 5, routeRunning: 6, strength: 6, hands: 6, awareness: 6, size: 4, afterCatch: 8 } },
   { name: 'Luke Musgrave',     short: 'Musgrave',    team: 'GB',  teamName: 'Green Bay Packers',      skin: '#f0c4a0', height: 78, weight: 253, starter: false, number: 88,
@@ -165,7 +165,7 @@ const _TES = [
     attrs: { speed: 7, blocking: 3, vertical: 6, routeRunning: 5, strength: 4, hands: 5, awareness: 4, size: 9, afterCatch: 5 } },
   // LV
   { name: 'Brock Bowers',      short: 'Bowers',      team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#f0c4a0', height: 76, weight: 230, starter: true,  captain: true,  number: 89,
-    attrs: { speed: 8, blocking: 4, vertical: 9, routeRunning: 11, strength: 4, hands: 9, awareness: 9, size: 5, afterCatch: 9 } },
+    attrs: { speed: 8, blocking: 4, vertical: 9, routeRunning: 11, strength: 4, hands: 10, awareness: 9, size: 5, afterCatch: 9 } },
   { name: 'Michael Mayer',     short: 'Mayer',       team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#f0c4a0', height: 76, weight: 260, starter: false, number: 87,
     attrs: { speed: 4, blocking: 7, vertical: 5, routeRunning: 5, strength: 8, hands: 6, awareness: 5, size: 7, afterCatch: 4 } },
   { name: 'Ian Thomas',        short: 'Thomas',      team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#5e3c22', height: 76, weight: 259, starter: false, number: 80,
@@ -223,7 +223,7 @@ const _TES = [
   { name: 'Pat Freiermuth',    short: 'Freiermuth',  team: 'PIT', teamName: 'Pittsburgh Steelers',    skin: '#f0c4a0', height: 77, weight: 258, starter: true,  captain: true,  number: 88,
     attrs: { speed: 5, blocking: 8, vertical: 6, routeRunning: 7, strength: 7, hands: 6, awareness: 7, size: 9, afterCatch: 5 } },
   { name: 'Darnell Washington', short: 'Washington',  team: 'PIT', teamName: 'Pittsburgh Steelers',   skin: '#3a2010', height: 79, weight: 264, starter: false, number: 80,
-    attrs: { speed: 5, blocking: 11, vertical: 4, routeRunning: 2, strength: 11, hands: 7, awareness: 5, size: 11, afterCatch: 7 } },
+    attrs: { speed: 5, blocking: 11, vertical: 4, routeRunning: 2, strength: 11, hands: 7, awareness: 5, size: 11, afterCatch: 8 } },
   { name: 'Robert Tonyan',     short: 'Tonyan',      team: 'PIT', teamName: 'Pittsburgh Steelers',    skin: '#f0c4a0', height: 77, weight: 240, starter: false, number: 85,
     attrs: { speed: 5, blocking: 4, vertical: 4, routeRunning: 5, strength: 3, hands: 6, awareness: 5, size: 8, afterCatch: 4 } },
   // SEA
@@ -235,7 +235,7 @@ const _TES = [
     attrs: { speed: 6, blocking: 4, vertical: 6, routeRunning: 6, strength: 3, hands: 5, awareness: 4, size: 9, afterCatch: 6 } },
   // SF
   { name: 'George Kittle',     short: 'Kittle',      team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 76, weight: 250, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 9, blocking: 11, vertical: 6, routeRunning: 10, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 } },
+    attrs: { speed: 9, blocking: 11, vertical: 6, routeRunning: 10, strength: 10, hands: 10, awareness: 9, size: 6, afterCatch: 11 } },
   { name: 'Jake Tonges',       short: 'Tonges',      team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 77, weight: 252, starter: false, number: 88,
     attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 4, strength: 7, hands: 5, awareness: 4, size: 9, afterCatch: 4 } },
   { name: 'Luke Farrell',      short: 'Farrell',     team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 77, weight: 249, starter: false, number: 89,

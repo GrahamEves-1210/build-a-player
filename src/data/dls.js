@@ -115,7 +115,7 @@ const _DLS = [
   { name: "Mason Graham", short: "Graham", team: 'CLE', teamName: "Cleveland Browns", pos: 'DT', subpos: 'dt', skin: '#f0c4a0', height: 76, weight: 315, number: 94, starter: true, years: "2025-",
     attrs: { getOff: 8, speed: 4, powerMoves: 7, finesseMoves: 8, strength: 8, playRecognition: 8, bend: 5, blockShed: 8 } },
   { name: "Quinnen Williams", short: "Q. Williams", team: 'DAL', teamName: "Dallas Cowboys", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 75, weight: 303, number: 92, starter: true, years: "2025-",
-    attrs: { getOff: 8, speed: 4, powerMoves: 9, finesseMoves: 8, strength: 9, playRecognition: 9, bend: 4, blockShed: 9 } },
+    attrs: { getOff: 8, speed: 4, powerMoves: 9, finesseMoves: 8, strength: 9, playRecognition: 9, bend: 4, blockShed: 10 } },
   { name: "Kenny Clark", short: "Clark", team: 'DAL', teamName: "Dallas Cowboys", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 75, weight: 314, number: 97, starter: true, years: "2025-",
     attrs: { getOff: 4, speed: 4, powerMoves: 7, finesseMoves: 4, strength: 9, playRecognition: 6, bend: 4, blockShed: 7 } },
   { name: "Otito Ogbonnia", short: "Ogbonnia", team: 'DAL', teamName: "Dallas Cowboys", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 76, weight: 320, number: 91, starter: true, years: "2026-",
@@ -185,7 +185,7 @@ const _DLS = [
   { name: "Felix Anudike-Uzomah", short: "Anudike-Uzomah", team: 'KC', teamName: "Kansas City Chiefs", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 76, weight: 255, number: 91, starter: true, years: "2023-",
     attrs: { getOff: 6, speed: 7, powerMoves: 5, finesseMoves: 5, strength: 7, playRecognition: 6, bend: 6, blockShed: 6 } },
   { name: "George Karlaftis", short: "Karlaftis", team: 'KC', teamName: "Kansas City Chiefs", pos: 'EDGE', subpos: 'edge', skin: '#f0c4a0', height: 76, weight: 263, number: 56, starter: true, years: "2022-",
-    attrs: { getOff: 8, speed: 6, powerMoves: 8, finesseMoves: 7, strength: 8, playRecognition: 7, bend: 6, blockShed: 7 } },
+    attrs: { getOff: 8, speed: 6, powerMoves: 8, finesseMoves: 8, strength: 8, playRecognition: 7, bend: 6, blockShed: 7 } },
   { name: "Maxx Crosby", short: "Crosby", team: 'LV', teamName: "Las Vegas Raiders", pos: 'EDGE', subpos: 'edge', skin: '#f0c4a0', height: 77, weight: 255, number: 98, starter: true, years: "2019-",
     attrs: { getOff: 11, speed: 9, powerMoves: 9, finesseMoves: 10, strength: 8, playRecognition: 9, bend: 9, blockShed: 9 } },
   { name: "Tonka Hemingway", short: "Hemingway", team: 'LV', teamName: "Las Vegas Raiders", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 74, weight: 284, number: 97, starter: true, years: "2025-",
@@ -247,9 +247,9 @@ const _DLS = [
   { name: "Christen Miller", short: "C. Miller", team: 'NO', teamName: "New Orleans Saints", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 75, weight: 321, number: 52, starter: true, years: "2026-",
     attrs: { getOff: 4, speed: 3, powerMoves: 6, finesseMoves: 4, strength: 8, playRecognition: 4, bend: 3, blockShed: 5 } }, // proposed rating
   { name: "Chase Young", short: "Young", team: 'NO', teamName: "New Orleans Saints", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 77, weight: 265, number: 99, starter: true, years: "2024-",
-    attrs: { getOff: 9, speed: 7, powerMoves: 8, finesseMoves: 9, strength: 9, playRecognition: 5, bend: 7, blockShed: 4 } },
+    attrs: { getOff: 9, speed: 7, powerMoves: 8, finesseMoves: 10, strength: 9, playRecognition: 5, bend: 7, blockShed: 4 } },
   { name: "Carl Granderson", short: "Granderson", team: 'NO', teamName: "New Orleans Saints", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 77, weight: 261, number: 96, starter: true, years: "2019-",
-    attrs: { getOff: 8, speed: 7, powerMoves: 6, finesseMoves: 8, strength: 7, playRecognition: 7, bend: 7, blockShed: 7 } }, // proposed rating
+    attrs: { getOff: 8, speed: 7, powerMoves: 6, finesseMoves: 8, strength: 7, playRecognition: 7, bend: 7, blockShed: 8 } }, // proposed rating
   { name: "Brian Burns", short: "Burns", team: 'NYG', teamName: "New York Giants", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 77, weight: 250, number: 0, starter: true, years: "2024-",
     attrs: { getOff: 8, speed: 9, powerMoves: 6, finesseMoves: 8, strength: 6, playRecognition: 7, bend: 8, blockShed: 7 } },
   { name: "Abdul Carter", short: "A. Carter", team: 'NYG', teamName: "New York Giants", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 75, weight: 252, number: 3, starter: true, years: "2025-",
@@ -269,7 +269,7 @@ const _DLS = [
   { name: "Jowon Briggs", short: "Briggs", team: 'NYJ', teamName: "New York Jets", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 73, weight: 313, number: 91, starter: true, years: "2025-",
     attrs: { getOff: 6, speed: 4, powerMoves: 7, finesseMoves: 4, strength: 8, playRecognition: 8, bend: 4, blockShed: 8 } },
   { name: "David Bailey", short: "Bailey", team: 'NYJ', teamName: "New York Jets", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 75, weight: 251, number: 31, starter: true, years: "2026-",
-    attrs: { getOff: 9, speed: 9, powerMoves: 6, finesseMoves: 8, strength: 7, playRecognition: 7, bend: 8, blockShed: 6 } },
+    attrs: { getOff: 9, speed: 9, powerMoves: 6, finesseMoves: 9, strength: 7, playRecognition: 7, bend: 8, blockShed: 6 } },
   { name: "Kingsley Enagbare", short: "Enagbare", team: 'NYJ', teamName: "New York Jets", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 76, weight: 258, number: 52, starter: true, years: "2026-",
     attrs: { getOff: 5, speed: 6, powerMoves: 6, finesseMoves: 5, strength: 7, playRecognition: 5, bend: 5, blockShed: 6 } }, // proposed rating
   { name: "Jalen Carter", short: "J. Carter", team: 'PHI', teamName: "Philadelphia Eagles", pos: 'DT', subpos: 'dt', skin: '#5e3c22', height: 75, weight: 314, number: 98, starter: true, years: "2023-",

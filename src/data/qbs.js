@@ -6,7 +6,7 @@ export const QBS = [
     attrs: { 'arm': 5, 'legs': 4, 'size': 8, 'processing': 2, 'leadership': 1, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 2 } },
   // ATL
   { name: 'Michael Penix Jr.',  short: 'Penix',       team: 'ATL', teamName: 'Atlanta Falcons',       color: '#A71930', color2: '#000000', skin: '#7a5030', starter: true,  captain: true,  number: 9,
-    attrs: { 'arm': 8, 'legs': 6, 'size': 5, 'processing': 4, 'leadership': 5, 'vision': 5, 'playmaking': 5, 'accuracy': 5, 'pocket-presence': 4 } },
+    attrs: { 'arm': 8, 'legs': 6, 'size': 5, 'processing': 4, 'leadership': 5, 'vision': 5, 'playmaking': 5, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Tua Tagovailoa',     short: 'Tua',         team: 'ATL', teamName: 'Atlanta Falcons',       color: '#A71930', color2: '#000000', skin: '#c09060', starter: false, number: 1,
     attrs: { 'arm': 3, 'legs': 3, 'size': 4, 'processing': 5, 'leadership': 5, 'vision': 6, 'playmaking': 5, 'accuracy': 7, 'pocket-presence': 4 } },
   { name: 'Andy Dalton', short: 'Dalton', team: 'ATL', teamName: 'Atlanta Falcons',       color: '#A71930', color2: '#000000', skin: '#f0c4a0', starter: false, number: 14,
@@ -17,7 +17,7 @@ export const QBS = [
 { name: 'Tyler Huntley',      short: 'Huntley',     team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#7a5030', starter: false, number: 5,
     attrs: { 'arm': 4, 'legs': 6, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 5, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 4 } },
   { name: 'Jacoby Brissett',    short: 'Brissett',    team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#9a6840', starter: false, number: 7,
-    attrs: { 'arm': 5, 'legs': 3, 'size': 9, 'processing': 7, 'leadership': 6, 'vision': 6, 'playmaking': 1, 'accuracy': 6, 'pocket-presence': 6 } },
+    attrs: { 'arm': 5, 'legs': 3, 'size': 9, 'processing': 7, 'leadership': 6, 'vision': 6, 'playmaking': 1, 'accuracy': 7, 'pocket-presence': 6 } },
   // BUF
   { name: 'Josh Allen',         short: 'Allen',       team: 'BUF', teamName: 'Buffalo Bills',         color: '#00338D', color2: '#C60C30', skin: '#f0c4a0', starter: true,  captain: true,  number: 17,
     attrs: { 'arm': 11, 'legs': 10, 'size': 10, 'processing': 8, 'leadership': 9, 'vision': 10, 'playmaking': 10, 'accuracy': 9, 'pocket-presence': 9 } },
@@ -53,7 +53,7 @@ export const QBS = [
     attrs: { 'arm': 6, 'legs': 10, 'size': 8, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 5, 'accuracy': 2, 'pocket-presence': 2 } },
   // DAL
   { name: 'Dak Prescott',       short: 'Prescott',    team: 'DAL', teamName: 'Dallas Cowboys',        color: '#869397', color2: '#003594', skin: '#9a6840', starter: true,  captain: true,  number: 4,
-    attrs: { 'arm': 7, 'legs': 6, 'size': 7, 'processing': 10, 'leadership': 10, 'vision': 8, 'playmaking': 6, 'accuracy': 9, 'pocket-presence': 8 } },
+    attrs: { 'arm': 7, 'legs': 6, 'size': 7, 'processing': 10, 'leadership': 10, 'vision': 9, 'playmaking': 6, 'accuracy': 9, 'pocket-presence': 8 } },
   { name: 'Sam Howell',         short: 'Howell',      team: 'DAL', teamName: 'Dallas Cowboys',        color: '#869397', color2: '#003594', skin: '#eec0a0', starter: false, number: 16,
     attrs: { 'arm': 6, 'legs': 3, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 2, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 1 } },
   // DEN
@@ -70,17 +70,17 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 5, 'size': 5, 'processing': 6, 'leadership': 6, 'vision': 4, 'playmaking': 4, 'accuracy': 4, 'pocket-presence': 3 } },
   // GB
   { name: 'Jordan Love',        short: 'Love',        team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#c09860', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 9, 'legs': 5, 'size': 8, 'processing': 8, 'leadership': 7, 'vision': 6, 'playmaking': 6, 'accuracy': 6, 'pocket-presence': 6 } },
+    attrs: { 'arm': 9, 'legs': 5, 'size': 8, 'processing': 8, 'leadership': 7, 'vision': 7, 'playmaking': 6, 'accuracy': 7, 'pocket-presence': 6 } },
   { name: 'Tyrod Taylor',       short: 'T. Taylor',   team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#9a6840', starter: false, number: 6,
     attrs: { 'arm': 3, 'legs': 4, 'size': 4, 'processing': 5, 'leadership': 6, 'vision': 4, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   // HOU
   { name: 'C.J. Stroud',        short: 'Stroud',      team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#7a5030', starter: true,  captain: true,  number: 7,
-    attrs: { 'arm': 8, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 8, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 6 } },
+    attrs: { 'arm': 8, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 9, 'playmaking': 6, 'accuracy': 9, 'pocket-presence': 6 } },
   { name: 'Davis Mills',        short: 'Mills',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 10,
     attrs: { 'arm': 4, 'legs': 1, 'size': 8, 'processing': 5, 'leadership': 3, 'vision': 3, 'playmaking': 1, 'accuracy': 4, 'pocket-presence': 4 } },
   // IND
   { name: 'Daniel Jones',       short: 'D. Jones',    team: 'IND', teamName: 'Indianapolis Colts',    color: '#002C5F', color2: '#A2AAAD', skin: '#f2c8a4', starter: true,  captain: true,  number: 17,
-    attrs: { 'arm': 6, 'legs': 7, 'size': 7, 'processing': 4, 'leadership': 4, 'vision': 1, 'playmaking': 5, 'accuracy': 3, 'pocket-presence': 1 } },
+    attrs: { 'arm': 6, 'legs': 7, 'size': 7, 'processing': 4, 'leadership': 4, 'vision': 1, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 1 } },
   { name: 'Anthony Richardson', short: 'Richardson',  team: 'IND', teamName: 'Indianapolis Colts',    color: '#002C5F', color2: '#A2AAAD', skin: '#7a5030', starter: false, number: 5,
     attrs: { 'arm': 9, 'legs': 9, 'size': 10, 'processing': 0, 'leadership': 6, 'vision': 2, 'playmaking': 4, 'accuracy': 0, 'pocket-presence': 2 } },
   { name: 'Riley Leonard',      short: 'Leonard',     team: 'IND', teamName: 'Indianapolis Colts',    color: '#002C5F', color2: '#A2AAAD', skin: '#f0c4a0', starter: false, number: 15,
@@ -106,7 +106,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 3, 'size': 6, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 3 } },
   // LAC
   { name: 'Justin Herbert',     short: 'Herbert',     team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#f2c8a4', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 11, 'legs': 7, 'size': 11, 'processing': 7, 'leadership': 6, 'vision': 3, 'playmaking': 8, 'accuracy': 5, 'pocket-presence': 3 } },
+    attrs: { 'arm': 11, 'legs': 7, 'size': 11, 'processing': 7, 'leadership': 6, 'vision': 2, 'playmaking': 8, 'accuracy': 5, 'pocket-presence': 2 } },
   { name: 'D.J. Uiagalelei',    short: 'DJ Uiaga.',   team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#b07848', starter: false, number: 7,
     attrs: { 'arm': 2, 'legs': 5, 'size': 10, 'processing': 0, 'leadership': 2, 'vision': 3, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 1 } },
   // LAR
@@ -130,7 +130,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 5, 'size': 5, 'processing': 1, 'leadership': 3, 'vision': 1, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 2 } },
   // NE
   { name: 'Drake Maye',         short: 'Maye',        team: 'NE',  teamName: 'New England Patriots',  color: '#002244', color2: '#C60C30', skin: '#e8b890', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 8, 'legs': 7, 'size': 8, 'processing': 5, 'leadership': 6, 'vision': 8, 'playmaking': 7, 'accuracy': 9, 'pocket-presence': 6 } },
+    attrs: { 'arm': 8, 'legs': 7, 'size': 8, 'processing': 5, 'leadership': 6, 'vision': 8, 'playmaking': 7, 'accuracy': 4, 'pocket-presence': 6 } },
   { name: 'Tommy DeVito',       short: 'DeVito',      team: 'NE',  teamName: 'New England Patriots',  color: '#002244', color2: '#C60C30', skin: '#f0c0a0', starter: false, number: 16,
     attrs: { 'arm': 4, 'legs': 4, 'size': 4, 'processing': 4, 'leadership': 4, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 4 } },
   { name: 'Behren Morton',      short: 'Morton',      team: 'NE',  teamName: 'New England Patriots',  color: '#002244', color2: '#C60C30', skin: '#f0c4a0', starter: false, number: 15,
@@ -148,7 +148,7 @@ export const QBS = [
   { name: 'J.J. McCarthy', short: 'McCarthy', team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 18,
     attrs: { 'arm': 7, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 1, 'pocket-presence': 3 } },
   { name: 'Jameis Winston',     short: 'Winston',     team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#7a5030', starter: false,  captain: true,  number: 19,
-    attrs: { 'arm': 5, 'legs': 3, 'size': 8, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
+    attrs: { 'arm': 5, 'legs': 3, 'size': 8, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 4, 'pocket-presence': 3 } },
   // NYJ
   { name: 'Geno Smith',         short: 'G. Smith',    team: 'NYJ', teamName: 'New York Jets',         color: '#125740', color2: '#000000', skin: '#9a6840', starter: true,  captain: true,  number: 7,
     attrs: { 'arm': 5, 'legs': 4, 'size': 6, 'processing': 7, 'leadership': 6, 'vision': 5, 'playmaking': 4, 'accuracy': 8, 'pocket-presence': 1 } },
@@ -179,14 +179,14 @@ export const QBS = [
     attrs: { 'arm': 5, 'legs': 2, 'size': 6, 'processing': 5, 'leadership': 3, 'vision': 5, 'playmaking': 2, 'accuracy': 6, 'pocket-presence': 3 } },
   // SEA
   { name: 'Sam Darnold',        short: 'Darnold',     team: 'SEA', teamName: 'Seattle Seahawks',      color: '#002244', color2: '#69BE28', skin: '#f0c4a0', starter: true,  captain: true,  number: 14,
-    attrs: { 'arm': 7, 'legs': 6, 'size': 7, 'processing': 7, 'leadership': 5, 'vision': 2, 'playmaking': 6, 'accuracy': 5, 'pocket-presence': 2 } },
+    attrs: { 'arm': 7, 'legs': 6, 'size': 7, 'processing': 7, 'leadership': 5, 'vision': 2, 'playmaking': 6, 'accuracy': 4, 'pocket-presence': 2 } },
   { name: 'Drew Lock',          short: 'Lock',        team: 'SEA', teamName: 'Seattle Seahawks',      color: '#002244', color2: '#69BE28', skin: '#f0c4a0', starter: false, number: 2,
     attrs: { 'arm': 5, 'legs': 4, 'size': 8, 'processing': 3, 'leadership': 4, 'vision': 3, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'Jalen Milroe',       short: 'Milroe',      team: 'SEA', teamName: 'Seattle Seahawks',      color: '#002244', color2: '#69BE28', skin: '#7a5030', starter: false, number: 6,
     attrs: { 'arm': 6, 'legs': 8, 'size': 5, 'processing': 2, 'leadership': 5, 'vision': 3, 'playmaking': 4, 'accuracy': 1, 'pocket-presence': 1 } },
   // TB
   { name: 'Baker Mayfield',     short: 'Mayfield',    team: 'TB',  teamName: 'Tampa Bay Buccaneers',  color: '#D50A0A', color2: '#34302B', skin: '#eec0a0', starter: true,  captain: true,  number: 6,
-    attrs: { 'arm': 9, 'legs': 6, 'size': 4, 'processing': 7, 'leadership': 9, 'vision': 4, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 4 } },
+    attrs: { 'arm': 9, 'legs': 6, 'size': 4, 'processing': 7, 'leadership': 9, 'vision': 3, 'playmaking': 8, 'accuracy': 5, 'pocket-presence': 4 } },
   { name: 'Jalon Daniels', short: 'Daniels', team: 'TB', teamName: 'Tampa Bay Buccaneers',     color: '#D50A0A', color2: '#34302B', skin: '#7a5030', starter: false, number: 10,
     attrs: { 'arm': 6, 'legs': 7, 'size': 2, 'processing': 4, 'leadership': 4, 'vision': 4, 'playmaking': 6, 'accuracy': 5, 'pocket-presence': 3 } },
   // TEN

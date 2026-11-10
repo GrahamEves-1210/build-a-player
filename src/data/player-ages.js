@@ -512,6 +512,8 @@ export const BIRTH_NFL = {
   "Keisean Nixon": 1997,
   "Kelvin Banks Jr.": 2004,
   "Kendre Miller": 2002,
+  "Audric Estime": 2003,
+  "Andre Cisco": 2000,
   "Kendrick Bourne": 1995,
   "Kenneth Walker III": 2001,
   "Kenny Clark": 1996,

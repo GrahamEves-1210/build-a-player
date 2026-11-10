@@ -103,7 +103,7 @@ const _DBS = [
     attrs: { speed: 5, size: 8, fluidity: 5, press: 3, hands: 7, zoneIQ: 8, manCoverage: 4, playRecognition: 5, runSupport: 6} },
   // CLE
   { name: 'Denzel Ward',         short: 'Ward',           team: 'CLE', teamName: 'Cleveland Browns',  skin: '#5e3c22', height: 71, weight: 190, starter: true,  captain: true,  number: 21, subpos: 'cb',
-    attrs: { speed: 8, size: 3, fluidity: 11, press: 6, hands: 8, zoneIQ: 9, manCoverage: 9, playRecognition: 8, runSupport: 4} },
+    attrs: { speed: 8, size: 3, fluidity: 11, press: 6, hands: 8, zoneIQ: 9, manCoverage: 9, playRecognition: 9, runSupport: 4} },
   { name: 'Tyson Campbell',      short: 'Campbell',       team: 'CLE', teamName: 'Cleveland Browns',  skin: '#5e3c22', height: 73, weight: 195, starter: true,  number: 7, subpos: 'cb',
     attrs: { speed: 7, size: 6, fluidity: 7, press: 7, hands: 6, zoneIQ: 7, manCoverage: 7, playRecognition: 6, runSupport: 7} },
   { name: 'Ronnie Hickman',      short: 'Hickman',        team: 'CLE', teamName: 'Cleveland Browns',  skin: '#5e3c22', height: 73, weight: 209, starter: true,  captain: true,  number: 33, subpos: 's',
@@ -116,7 +116,7 @@ const _DBS = [
   { name: 'Joey Porter Jr.',     short: 'Porter Jr.',     team: 'DAL', teamName: 'Dallas Cowboys',    skin: '#5e3c22', height: 74, weight: 193, starter: true,  number: 25, subpos: 'cb',
     attrs: { speed: 6, size: 7, fluidity: 5, press: 9, hands: 6, zoneIQ: 5, manCoverage: 6, playRecognition: 6, runSupport: 5} },
   { name: 'Caleb Downs', short: 'Downs', team: 'DAL', teamName: 'Dallas Cowboys', skin: '#5e3c22', height: 72, weight: 210, starter: true,  captain: true,  number: 13, subpos: 's',
-    attrs: { speed: 8, size: 6, fluidity: 7, press: 5, hands: 8, zoneIQ: 8, manCoverage: 6, playRecognition: 7, runSupport: 6} },
+    attrs: { speed: 8, size: 6, fluidity: 7, press: 5, hands: 8, zoneIQ: 8, manCoverage: 6, playRecognition: 8, runSupport: 6} },
   { name: 'Jalen Thompson',      short: 'J. Thompson',    team: 'DAL', teamName: 'Dallas Cowboys',    skin: '#5e3c22', height: 71, weight: 190, starter: true,  number: 34, subpos: 's',
     attrs: { speed: 6, size: 3, fluidity: 5, press: 4, hands: 6, zoneIQ: 7, manCoverage: 5, playRecognition: 6, runSupport: 7} },
   // DEN
@@ -137,15 +137,17 @@ const _DBS = [
     attrs: { speed: 7, size: 6, fluidity: 8, press: 6, hands: 8, zoneIQ: 8, manCoverage: 9, playRecognition: 9, runSupport: 7} },
   { name: 'Kerby Joseph',        short: 'K. Joseph',      team: 'DET', teamName: 'Detroit Lions',     skin: '#5e3c22', height: 72, weight: 210, starter: true,  number: 31, subpos: 's',
     attrs: { speed: 7, size: 6, fluidity: 6, press: 4, hands: 10, zoneIQ: 9, manCoverage: 6, playRecognition: 9, runSupport: 4} },
+  { name: 'Andre Cisco',         short: 'Cisco',          team: 'DET', teamName: 'Detroit Lions',     skin: '#5e3c22', height: 72, weight: 210, starter: false, number: 8, subpos: 's',
+    attrs: { speed: 7, size: 6, fluidity: 6, press: 4, hands: 7, zoneIQ: 6, manCoverage: 5, playRecognition: 5, runSupport: 4} },
   // GB
   { name: 'Keisean Nixon',       short: 'Nixon',          team: 'GB',  teamName: 'Green Bay Packers', skin: '#5e3c22', height: 70, weight: 200, starter: true,  captain: true,  number: 25, subpos: 'cb',
     attrs: { speed: 9, size: 3, fluidity: 6, press: 4, hands: 5, zoneIQ: 5, manCoverage: 5, playRecognition: 6, runSupport: 5} },
   { name: 'Brandon Cisse',       short: 'Cisse',          team: 'GB',  teamName: 'Green Bay Packers', skin: '#5e3c22', height: 72, weight: 189, starter: true,  number: 2, subpos: 'cb',
     attrs: { speed: 5, size: 4, fluidity: 5, press: 4, hands: 5, zoneIQ: 4, manCoverage: 4, playRecognition: 4, runSupport: 6} },
   { name: 'Evan Williams',       short: 'Ev. Williams',   team: 'GB',  teamName: 'Green Bay Packers', skin: '#b07848', height: 71, weight: 200, starter: true,  number: 33, subpos: 's',
-    attrs: { speed: 6, size: 4, fluidity: 6, press: 4, hands: 6, zoneIQ: 9, manCoverage: 5, playRecognition: 7, runSupport: 10} },
+    attrs: { speed: 6, size: 4, fluidity: 6, press: 4, hands: 6, zoneIQ: 9, manCoverage: 5, playRecognition: 8, runSupport: 10} },
   { name: 'Xavier McKinney',     short: 'McKinney',       team: 'GB',  teamName: 'Green Bay Packers', skin: '#5e3c22', height: 72, weight: 201, starter: true,  captain: true,  number: 29, subpos: 's',
-    attrs: { speed: 7, size: 6, fluidity: 8, press: 5, hands: 11, zoneIQ: 10, manCoverage: 7, playRecognition: 9, runSupport: 6} },
+    attrs: { speed: 7, size: 6, fluidity: 8, press: 5, hands: 11, zoneIQ: 10, manCoverage: 7, playRecognition: 10, runSupport: 6} },
   // HOU
   { name: 'Derek Stingley Jr.',  short: 'Stingley',       team: 'HOU', teamName: 'Houston Texans',    skin: '#5e3c22', height: 73, weight: 195, starter: true,  captain: true,  number: 24, subpos: 'cb',
     attrs: { speed: 8, size: 6, fluidity: 10, press: 8, hands: 9, zoneIQ: 8, manCoverage: 10, playRecognition: 8, runSupport: 5} },
@@ -249,7 +251,7 @@ const _DBS = [
     attrs: { speed: 6, size: 7, fluidity: 5, press: 5, hands: 6, zoneIQ: 6, manCoverage: 5, playRecognition: 7, runSupport: 7} },
   // NYG
   { name: 'Deonte Banks',        short: 'Banks',          team: 'NYG', teamName: 'New York Giants',   skin: '#5e3c22', height: 74, weight: 200, starter: true,  captain: true,  number: 2,  subpos: 'cb',
-    attrs: { speed: 8, size: 8, fluidity: 4, press: 5, hands: 4, zoneIQ: 4, manCoverage: 4, playRecognition: 5, runSupport: 3} },
+    attrs: { speed: 10, size: 8, fluidity: 4, press: 5, hands: 4, zoneIQ: 4, manCoverage: 4, playRecognition: 5, runSupport: 3} },
   { name: 'Greg Newsome II',     short: 'Newsome',        team: 'NYG', teamName: 'New York Giants',   skin: '#5e3c22', height: 72, weight: 192, starter: true,  number: 20,  subpos: 'cb',
     attrs: { speed: 7, size: 5, fluidity: 7, press: 6, hands: 6, zoneIQ: 5, manCoverage: 6, playRecognition: 6, runSupport: 4} },
   { name: 'Jevón Holland',       short: 'Holland',        team: 'NYG', teamName: 'New York Giants',   skin: '#5e3c22', height: 73, weight: 207, starter: true,  captain: true,  number: 8,  subpos: 's',
@@ -294,7 +296,7 @@ const _DBS = [
     attrs: { speed: 6, size: 4, fluidity: 8, press: 4, hands: 10, zoneIQ: 9, manCoverage: 5, playRecognition: 9, runSupport: 6} },
   // SF
   { name: 'Renardo Green',       short: 'Green',          team: 'SF',  teamName: 'San Francisco 49ers', skin: '#5e3c22', height: 72, weight: 186, starter: true,  captain: true,  number: 0, subpos: 'cb',
-    attrs: { speed: 6, size: 4, fluidity: 5, press: 5, hands: 7, zoneIQ: 5, manCoverage: 4, playRecognition: 5, runSupport: 5} },
+    attrs: { speed: 6, size: 4, fluidity: 5, press: 5, hands: 7, zoneIQ: 5, manCoverage: 4, playRecognition: 7, runSupport: 5} },
   { name: 'Deommodore Lenoir',   short: 'Lenoir',         team: 'SF',  teamName: 'San Francisco 49ers', skin: '#5e3c22', height: 70, weight: 200, starter: true,  number: 2,  subpos: 'cb',
     attrs: { speed: 6, size: 3, fluidity: 6, press: 6, hands: 5, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 6} },
   { name: "Ji'Ayir Brown",       short: "Ji'Ayir",        team: 'SF',  teamName: 'San Francisco 49ers', skin: '#5e3c22', height: 71, weight: 202, starter: true,  captain: true,  number: 27,  subpos: 's',
@@ -305,7 +307,7 @@ const _DBS = [
   { name: 'Zyon McCollum',       short: 'McCollum',       team: 'TB',  teamName: 'Tampa Bay Buccaneers', skin: '#b07848', height: 74, weight: 199, starter: true,  captain: true,  number: 27, subpos: 'cb',
     attrs: { speed: 7, size: 7, fluidity: 8, press: 6, hands: 7, zoneIQ: 7, manCoverage: 6, playRecognition: 8, runSupport: 6} },
   { name: 'Jacob Parrish',       short: 'Parrish',        team: 'TB',  teamName: 'Tampa Bay Buccaneers', skin: '#5e3c22', height: 70, weight: 198, starter: true,  number: 25, subpos: 'cb',
-    attrs: { speed: 9, size: 3, fluidity: 9, press: 5, hands: 6, zoneIQ: 5, manCoverage: 8, playRecognition: 8, runSupport: 6} },
+    attrs: { speed: 9, size: 3, fluidity: 9, press: 5, hands: 6, zoneIQ: 5, manCoverage: 8, playRecognition: 9, runSupport: 6} },
   { name: 'Antoine Winfield Jr.', short: 'Winfield Jr.',  team: 'TB',  teamName: 'Tampa Bay Buccaneers', skin: '#b07848', height: 69, weight: 203, starter: true,  captain: true,  number: 31, subpos: 's',
     attrs: { speed: 7, size: 3, fluidity: 8, press: 5, hands: 9, zoneIQ: 10, manCoverage: 7, playRecognition: 10, runSupport: 9} },
   { name: 'Tykee Smith',         short: 'T. Smith',       team: 'TB',  teamName: 'Tampa Bay Buccaneers', skin: '#5e3c22', height: 70, weight: 202, starter: true,  number: 23, subpos: 's',
@@ -318,7 +320,7 @@ const _DBS = [
   { name: 'Kevin Winston Jr.',   short: 'Winston',        team: 'TEN', teamName: 'Tennessee Titans',  skin: '#5e3c22', height: 74, weight: 213, starter: true,  captain: true,  number: 23, subpos: 's',
     attrs: { speed: 5, size: 9, fluidity: 5, press: 4, hands: 4, zoneIQ: 5, manCoverage: 5, playRecognition: 5, runSupport: 7} },
   { name: 'Amani Hooker',        short: 'Hooker',         team: 'TEN', teamName: 'Tennessee Titans',  skin: '#b07848', height: 71, weight: 210, starter: true,  number: 37, subpos: 's',
-    attrs: { speed: 6, size: 5, fluidity: 5, press: 4, hands: 10, zoneIQ: 8, manCoverage: 4, playRecognition: 6, runSupport: 6} },
+    attrs: { speed: 6, size: 5, fluidity: 5, press: 4, hands: 10, zoneIQ: 8, manCoverage: 4, playRecognition: 7, runSupport: 6} },
   // WAS
   { name: 'Amik Robertson', short: 'Robertson', team: 'WAS', teamName: 'Washington Commanders', skin: '#5e3c22', height: 69, weight: 183, starter: true,  captain: true,  number: 2, subpos: 'cb',
     attrs: { speed: 6, size: 1, fluidity: 5, press: 5, hands: 6, zoneIQ: 6, manCoverage: 5, playRecognition: 6, runSupport: 5} },

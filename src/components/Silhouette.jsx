@@ -184,11 +184,11 @@ const LB_ZONES = [
   { type: 'leadership',      ax: 548, ay: 262, side: 'left',  cy: 0.14 }, // face + neck
   { type: 'size',            ax: 470, ay: 455, side: 'left',  cy: 0.32 }, // jersey chest
   { type: 'power',           ax: 268, ay: 470, side: 'left',  cy: 0.50 }, // bare arm
-  { type: 'tackling',        ax: 165, ay: 757, side: 'left',  cy: 0.68 }, // glove
+  { type: 'tackling',        ax: 168, ay: 728, side: 'left',  cy: 0.68 }, // glove
   { type: 'zoneInstincts',   ax: 223, ay: 1009, side: 'left', cy: 0.86 }, // lower leg
   { type: 'playRecognition', ax: 605, ay: 48,  side: 'right', cy: 0.23 }, // helmet
   { type: 'blockShed',       ax: 908, ay: 689, side: 'right', cy: 0.41 }, // wristband
-  { type: 'passRush',        ax: 560, ay: 700, side: 'right', cy: 0.59 }, // pants, the middle (clear of the cards)
+  { type: 'passRush',        ax: 660, ay: 690, side: 'right', cy: 0.59 }, // pants, on his left thigh
   { type: 'range',           ax: 833, ay: 1184, side: 'right', cy: 0.77 }, // shoe
 ]
 
