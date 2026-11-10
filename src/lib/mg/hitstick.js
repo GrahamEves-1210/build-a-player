@@ -411,7 +411,7 @@ export function draw(ctx, g, view0) {
   ;[-1, 1].forEach((sd, i) => {
     const hx = rep.handed ? clamp(lerp(CX + sd * 128, rb.x + sd * 40, clamp((age - MESH_MS) / 900, 0, 0.7)), 20, 340) : CX + sd * 128
     const hd = rep.handed ? lerp(LB_D + 6, LB_D + 46, clamp((age - MESH_MS) / 900, 0, 1)) : LB_D + 6
-    const w = walk(g, `lb${i}${g.i}`, hx, hd, 8)
+    const w = walk(g, `lb${i}${g.i}`, hx, fy(hd), 8)
     let pose = snapped ? (w.step == null ? 'ready' : null) : 'ready', dir = dirFrom(w, 'up')
     const late = res && !stop ? beatenPose(i * 3 + 1, since - 400) : undefined
     if (late) { pose = late.pose; dir = late.turn ? 'down' : 'up' }
@@ -427,10 +427,10 @@ export function draw(ctx, g, view0) {
     put(hx, fy(hd), us, L)
   })
   // the QB
-  const qw = walk(g, `qb${g.i}`, qb.x, qb.d, 9)
+  const qw = walk(g, `qb${g.i}`, qb.x, fy(qb.d), 9)   // (screen y: the field's d runs the other way, so he faced backwards)
   put(qb.x, fy(qb.d), them, { dir: dirFrom(qw, 'down'), step: qw.step, pose: snapped ? (qw.step == null ? 'ready' : null) : 'stance', carry: snapped && age >= 170 && !rep.handed, skin: skinOf(9), number: 9, size: SIZE, ...who.qb })
   // the back: his shoulders square to the hole he's going to hit
-  const rw = walk(g, `rb${g.i}`, rb.x, rb.d, 9)
+  const rw = walk(g, `rb${g.i}`, rb.x, fy(rb.d), 9)
   const R = { dir: dirFrom(rw, 'down'), step: rw.step, pose: snapped ? null : 'ready', carry: rep.handed && !(fum && since > 120), skin: skinOf(6), number: 28, size: SIZE, ...who.rb, lead: true }
   if (snapped && !res && rep.handed) R.lean = clamp((holeNow - rb.x) / 120, -0.22, 0.22)
   let drive = 0
