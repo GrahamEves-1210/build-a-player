@@ -28,18 +28,17 @@ export const dec1 = n => (typeof n === 'number' ? n.toFixed(1) : n)
 export function statCols(kind, r) {
   const gp = { key: 'gp', label: 'GP', dim: true, val: r.games?.length ?? 0 }
   switch (kind) {
-    // OL columns are what he allowed (sacks, pressures, flags) plus what he
-    // finished (pancakes) and ESPN-style pass/run block win rates — spelled
-    // out, since lineman stat shorthand isn't something most people know
+    // OL columns are what he allowed (sacks, pressures, QB hits, flags) plus what he finished (pancakes) and ESPN's
+    // pass/run block win rates, in short headers like every other position's (spelled out they wrapped four lines)
     case 'ol': return [
       gp,
-      { key: 'sck',  label: 'Sacks Allowed',     val: r.seasonSacksAllowed },
-      { key: 'prs',  label: 'Pressures Allowed', val: r.seasonPressures },
-      ...(r.seasonQBHits != null ? [{ key: 'qbh', label: 'QB Hits Allowed', val: r.seasonQBHits }] : []),
-      { key: 'pen',  label: 'Penalties',         val: r.seasonPenalties },
-      { key: 'pnk',  label: 'Pancakes',          val: r.seasonPancakes },
-      { key: 'pbwr', label: 'Pass Block Win Rate', val: r.seasonPBWR, fmt: n => `${dec1(n)}%` },
-      { key: 'rbwr', label: 'Run Block Win Rate',  val: r.seasonRBWR, fmt: n => `${dec1(n)}%` },
+      { key: 'sck',  label: 'SCK',  val: r.seasonSacksAllowed },
+      { key: 'prs',  label: 'PRS',  val: r.seasonPressures },
+      ...(r.seasonQBHits != null ? [{ key: 'qbh', label: 'HITS', val: r.seasonQBHits }] : []),
+      { key: 'pen',  label: 'PEN',  val: r.seasonPenalties },
+      { key: 'pnk',  label: 'PNK',  val: r.seasonPancakes },
+      { key: 'pbwr', label: 'PBWR', val: r.seasonPBWR, fmt: n => `${dec1(n)}%` },
+      { key: 'rbwr', label: 'RBWR', val: r.seasonRBWR, fmt: n => `${dec1(n)}%` },
       ...(r.seasonGrade != null ? [{ key: 'grd', label: 'Grade', val: r.seasonGrade, fmt: n => dec1(n) }] : []),
     ]
     case 'dl': return [

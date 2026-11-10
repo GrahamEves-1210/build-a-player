@@ -207,8 +207,8 @@ const OL_FIGURE_SCALE_MOBILE = 0.78
 const OL_ZONES = [
   { type: 'blitzPickup', ax: 446, ay: 214, side: 'left',  cy: 0.14 }, // face, under the cage
   { type: 'size',        ax: 300, ay: 440, side: 'left',  cy: 0.32 }, // jersey chest
-  { type: 'runBlock',    ax: 290, ay: 690, side: 'left',  cy: 0.50 }, // pants, the thigh
-  { type: 'pancake',     ax: 206, ay: 440, side: 'left',  cy: 0.68 }, // bare arm, inside the cards on desktop (pancake colors nothing)
+  { type: 'runBlock',    ax: 290, ay: 690, side: 'left',  cy: 0.68 }, // pants, the thigh
+  { type: 'pancake',     ax: 206, ay: 440, side: 'left',  cy: 0.50 }, // bare arm, inside the cards on desktop (pancake colors nothing)
   { type: 'anchor',      ax: 160, ay: 1030, side: 'left', cy: 0.86 }, // long sock
   { type: 'discipline',  ax: 440, ay: 48,  side: 'right', cy: 0.23 }, // helmet
   { type: 'length',      ax: 640, ay: 450, side: 'right', cy: 0.41 }, // bare arm

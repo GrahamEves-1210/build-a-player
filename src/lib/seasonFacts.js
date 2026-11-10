@@ -186,6 +186,15 @@ const REAL_PPG = {
   'Jalen Green': 19, 'Darius Garland': 19, 'Bam Adebayo': 18.5, 'Derrick White': 18.5, 'Chet Holmgren': 18,
   'Josh Giddey': 18, 'Amen Thompson': 18, 'Mikal Bridges': 17.5, 'Domantas Sabonis': 17,
 }
+// (his place is among the whole field, not the top seven: the board shows the top five and, when he isn't in it, his
+// own row under them with his real rank. Before, he was ranked against the top seven only, so he read No. 8 every time)
+function boardOf(def, field, you) {
+  const mine = { name: you.name, team: you.team, value: you.value, me: true }
+  const all = [...field, mine].sort((a, b) => b.value - a.value).map((x, i) => ({ ...x, rank: i + 1 }))
+  const me = all.find(x => x.me)
+  const top = all.slice(0, 5)
+  return { label: def.label, key: def.key, rows: me.rank <= 5 ? top : [...top, me], rank: me.rank, of: all.length }
+}
 export function leaderBoard({ sport, pos, pool, seed, you }) {
   const def = LEADER_STAT[sport]?.[pos]
   if (!def) return null
@@ -195,11 +204,8 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
   const real = sport === 'bucket' ? (pool || []).filter(p => REAL_PPG[p.name] != null) : []
   if (real.length >= 4) {
     const seen = new Set()
-    const top = real.filter(p => !seen.has(p.name) && seen.add(p.name)).map(p => ({ name: p.name, team: p.team, value: +(REAL_PPG[p.name] + (r() - 0.5) * 2).toFixed(1) }))
-      .sort((a, b) => b.value - a.value).slice(0, 7)
-    const mine = { name: you.name, team: you.team, value: you.value, me: true }
-    const all = [...top, mine].sort((a, b) => b.value - a.value)
-    return { label: def.label, key: def.key, rows: all.slice(0, 6), rank: all.indexOf(mine) + 1, of: all.length }
+    const field = real.filter(p => !seen.has(p.name) && seen.add(p.name)).map(p => ({ name: p.name, team: p.team, value: +(REAL_PPG[p.name] + (r() - 0.5) * 2).toFixed(1) }))
+    return boardOf(def, field, you)
   }
   const rate = def.rate ?? avgAttr
   const named = new Set()   // (an all-time pool can list a player twice, once per team)
@@ -209,19 +215,14 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
     const poisson = lam => { const L = Math.exp(-lam); let k = 0, p = 1; do { k++; p *= r() } while (p > L); return k - 1 }
     const rows = (pool || []).filter(p => p.attrs && !named.has(p.name) && named.add(p.name))
       .map(p => ({ name: p.name, team: p.team, value: Math.min(def.max, poisson(def.mu(rate(p)) * Math.min(def.luck, Math.exp(normal() * def.sigma - def.sigma * def.sigma / 2)))) }))
-      .sort((a, b) => b.value - a.value).slice(0, 7)
-    const mine = { name: you.name, team: you.team, value: you.value, me: true }
-    const all = [...rows, mine].sort((a, b) => b.value - a.value)
-    return { label: def.label, key: def.key, rows: all.slice(0, 6), rank: all.indexOf(mine) + 1, of: all.length }
+    return boardOf(def, rows, you)
   }
-  const rows = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name)))).sort((a, b) => rate(b) - rate(a)).slice(0, 7).map(p => {
+  const rows = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name)))).sort((a, b) => rate(b) - rate(a)).map(p => {
     let v = def.base + (rate(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))
     return { name: p.name, team: p.team, value: v }
   })
-  const mine = { name: you.name, team: you.team, value: you.value, me: true }
-  const all = [...rows, mine].sort((a, b) => b.value - a.value)
-  return { label: def.label, key: def.key, rows: all.slice(0, 6), rank: all.indexOf(mine) + 1, of: all.length }
+  return boardOf(def, rows, you)
 }
 export const leaderStatKey = (sport, pos) => LEADER_STAT[sport]?.[pos]?.key ?? null
 
