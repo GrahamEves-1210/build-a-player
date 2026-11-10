@@ -97,7 +97,7 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
   const lip = has(L) ? lipTint(sk(L)) : 'transparent'
   if (has(L)) {
     const key = sk(L).replace('#', '')
-    svg = svg.replace('<g id="Group 1">', `<defs>${shade(`lb-face-${key}`, faceSkin, 0.36, 0.46)}${shade(`lb-lit-${key}`, faceLight, 0.34, 0.44)}${shade(`lb-lip-${key}`, lip, 0.42, 0.52)}</defs><g id="Group 1">`)
+    svg = svg.replace('<g id="Group 1">', `<defs>${shade(`lb-face-${key}`, faceSkin, 0.36, 0.46)}${shade(`lb-lit-${key}`, faceLight, 0.34, 0.44)}${shade(`lb-lip-${key}`, lip, 0.30, 0.40)}</defs><g id="Group 1">`)
     svg = setFill(svg, 'face',  `url(#lb-face-${key})`)
     svg = setFill(svg, 'face1', `url(#lb-lit-${key})`)
     svg = setFill(svg, 'face2', `url(#lb-face-${key})`)
