@@ -145,6 +145,7 @@ const NOV_10 = {
         'Added Ty Robinson to the Eagles\' starting DTs and Christen Miller to the Saints\'',
         'Updated Ja\'Kobi Lane height and weight',
         'Rating updates for Amon-Ra St. Brown, Darren Waller, Tommy Tremble, Chuba Hubbard, Kyle Monangai, Nik Bonitto, Jonathon Cooper, Christian Watson and Foyesade Oluokun',
+        'NBA ratings updated from the Nov 2-9 games: 30 players, including Jalen Brunson, Victor Wembanyama, Giannis Antetokounmpo, Stephen Curry and Shai Gilgeous-Alexander',
         'Moved Andre Cisco to the Lions',
         'Released Kendre Miller from the Saints, and Audric Estime joins their backfield',
         'Rating updates for quarterbacks Jacoby Brissett, Jameis Winston, Michael Penix Jr., C.J. Stroud, Jordan Love, Dak Prescott, Justin Herbert, Baker Mayfield, Drake Maye, Sam Darnold and Daniel Jones',
