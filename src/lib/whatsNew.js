@@ -162,6 +162,7 @@ const NOV_10 = {
         'Fixed Blacktop 1v1 games not counting toward the Blacktop 1v1 missions',
         'Fixed league leaders always showing you at No. 8',
         'Fixed an offensive lineman reading "undefined sacks allowed" in a Career playoff game',
+        'Fixed the All-Time Offensive Line season page listing the team’s current line: it now lines up the franchise’s legends',
         'Fixed playoff games ending in a tie with no overtime',
         'Fixed the QB Super Bowl Performance box not matching the Super Bowl line in the game log',
         'The Super Bowl now reads "vs" in the game log, not "@"',
