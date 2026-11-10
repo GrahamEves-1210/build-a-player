@@ -198,6 +198,9 @@ export default function AppTabBar() {
             : null}
         </Suspense>
       )}
+      {/* the floor under the dock: the strip between it and the screen's bottom edge is the page's dark, not whatever
+          scrolls behind it (the College Football card's blue showed there, and iPhone's Safari tints its bar from it) */}
+      {!hidden && <div className="ag-dock-floor" aria-hidden="true" />}
       {!hidden && (
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
           <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} />
