@@ -15,6 +15,7 @@ const NOV_10 = {
         'A new season moves the rosters on: juniors and seniors are gone, and the best sophomores and freshmen take over a class older',
         'Player classes checked against real rosters',
         'The Playoff bracket fills in below the live games as you play',
+        'College Football Sandbox is a 5,000-coin unlock',
         'Draft stock reads your rating and your season against the other players at your position, weighed by the defenses you faced',
         'Stats reflect the schedule: an SEC slate is tougher to throw on than a MAC one',
         'The Heisman race goes to the best players on the best teams, receivers included',
@@ -148,6 +149,8 @@ const NOV_10 = {
     {
       name: 'Fixes',
       items: [
+        'Fixed Blacktop 1v1 games not counting toward the Blacktop 1v1 missions',
+        'Fixed league leaders always showing you at No. 8',
         'Fixed playoff games ending in a tie with no overtime',
         'Fixed the QB Super Bowl Performance box not matching the Super Bowl line in the game log',
         'The Super Bowl now reads "vs" in the game log, not "@"',
