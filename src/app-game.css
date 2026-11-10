@@ -7268,7 +7268,7 @@ html.bap-reduce-motion .ag-side-track { transition: none; }
 @media (max-width: 1023px) {
   .ag-home .ag-brand { padding: 0 14px; gap: 8px; }
   .ag-home .ag-brand-mark, .ag-home--bucket .ag-brand-mark { height: 50px; transform: none; }
-  .ag-home .ag-wordmark { font-size: 19px; }
+  .ag-home .ag-wordmark { font-size: 23px; }
   .ag-home .ag-sport { height: 56px; }   /* (46 was hard to hit: the owner asked for a bit taller) */
   .ag-home .ag-sport-txt b { font-size: 19px; }
   .ag-home .ag-sport--three .ag-sport-txt b { font-size: 17px; }
