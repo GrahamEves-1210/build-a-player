@@ -16,6 +16,7 @@ import { IconGear, IconClose, IconPlay } from '../app/icons'
 import SoundToggle from '../app/SoundToggle'
 import { IS_APP } from '../../lib/platform'
 import { sfx } from '../../lib/juice'
+import { owns } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
 import { loadCFB } from '../../lib/cfbLoad'
 import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, confLogo, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup, seasonData } from './cfbShared'
@@ -210,7 +211,8 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const [drafting, setDrafting] = useState(false)
   const [seasons, setSeasons] = useState(seasonsLocal)
   // Sandbox: on for this mode, the ratings it edits, Starters Only for this build
-  const [sandboxOn, setSandboxOn] = useState(() => readJSON(SANDBOX_KEY, false) === true)
+  // (Sandbox here is a 5,000-coin unlock, sandbox-cfb: AppSandbox asks to buy it; on only once it's owned)
+  const [sandboxOn, setSandboxOn] = useState(() => readJSON(SANDBOX_KEY, false) === true && owns('sandbox-cfb'))
   const [customRatings, setCustomRatings] = useState(() => readJSON(RATINGS_KEY, {}))
   const [showCustom, setShowCustom] = useState(false)
   const [startersPick, setStartersPick] = useState(!!saved?.starters)

@@ -112,7 +112,7 @@ const MISSIONS = {
   bucket1:   { tier: 0, goal: 1,  xp: 50,  text: 'Play a Build-A-Bucket season', on: { season: d => d.sport === 'bucket' ? 1 : 0 } },
   daily1:    { tier: 0, goal: 1,  xp: 60,  text: 'Play the Daily Challenge',     on: { season: d => d.daily ? 1 : 0 } },
   compete1:  { tier: 0, goal: 1,  xp: 70,  text: 'Play a Compete pool',          on: { compete: () => 1 } },
-  online1:   { tier: 0, goal: 1,  xp: 60,  text: 'Play any online game',         on: { compete: () => 1, bt: () => 1, h2h: () => 1 } },
+  online1:   { tier: 0, goal: 1,  xp: 60,  text: 'Play any online game',         on: { compete: () => 1, bt: () => 1, h2hAny: () => 1 } },
   seasons4:  { tier: 1, goal: 4,  xp: 100, text: 'Simulate 4 seasons',           on: { season: () => 1 } },
   playoffs1: { tier: 1, goal: 1,  xp: 80,  text: 'Make the playoffs',            on: { season: d => d.playoffs ? 1 : 0 } },
   ovr85:     { tier: 1, goal: 1,  xp: 90,  text: 'Build an 85+ OVR player',      on: { season: d => d.ovr >= 85 ? 1 : 0 } },
@@ -904,7 +904,8 @@ function onBlacktop(e) {
   // practice against CPUs: no rating either way (CPU builds are random, so it was a rating farm);
   // walked out of the run's build: a forfeit's hit, no mission credit
   rateOnline(blacktopDelta({ won: !!d.won, mvp: !!d.mvp, forfeit: !!d.forfeit, bots: !!d.bots }), 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak, forfeit: !!d.forfeit })
-  if (!d.forfeit) { bumpMissions('bt', { won: !!d.won }); tally(0, 1) }
+  // (a Blacktop 1v1, size 1, is the "Play / Win a Blacktop 1v1" missions' game too: it comes in here, never as bap:h2h)
+  if (!d.forfeit) { bumpMissions('bt', { won: !!d.won }); if (d.size === 1) bumpMissions('h2h', { won: !!d.won }); tally(0, 1) }
   emit(); if (!d.bots) syncRatingSoon()
 }
 
@@ -933,7 +934,8 @@ function onH2H(e) {
   // record but doesn't move the online rating, which only the server books)
   const h = S.stats.h2h
   if (result !== 'walkover') toast({ kind: 'online', title: `${sport === 'bucket' ? 'BLACKTOP' : 'FOOTBALL'} 1V1 · ${won ? 'W' : 'L'}`, sub: h.streak >= 2 ? `${h.streak} straight` : won ? 'On the 1v1 record' : 'Run it back' })
-  bumpMissions('h2h', { won }); if (result !== 'forfeit') tally(0, 1)
+  // (the missions are Blacktop 1v1s: a football 1v1 is on the record but doesn't count toward them)
+  bumpMissions('h2hAny', { won }); if (sport === 'bucket') bumpMissions('h2h', { won }); if (result !== 'forfeit') tally(0, 1)
   emit()
 }
 
