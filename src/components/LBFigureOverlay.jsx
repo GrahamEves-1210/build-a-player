@@ -94,7 +94,8 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
   const faceSkin  = has(L) ? warmSkin(sk(L)) : 'transparent'
   const lip = has(L) ? lipTint(sk(L)) : 'transparent'
   for (const id of ['face', 'face1', 'face2']) svg = setFill(svg, id, faceSkin, `opacity:${SKIN_OPACITY};`)
-  svg = setFill(svg, 'lips', lip, `opacity:${SKIN_OPACITY};filter:blur(1.5px);`)
+  // (the lips sit over the face, so on the screen blend their paint adds to it: a light touch, or they glow)
+  svg = setFill(svg, 'lips', lip, 'opacity:0.2;filter:blur(1.5px);')
   svg = setFill(svg, 'neck', faceSkin, `opacity:${SKIN_OPACITY};`)
 
   // ── SIZE: the jersey

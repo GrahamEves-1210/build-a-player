@@ -101,8 +101,8 @@ export default function OLFigureOverlay({ build, numberNudgePx = null, nameNudge
   const lip = has(D) ? lipTint(sk(D)) : 'transparent'
   svg = setFill(svg, 'face',  faceSkin, `opacity:${SKIN_OPACITY};`)
   svg = setFill(svg, 'face2', faceSkin, `opacity:${SKIN_OPACITY};`)
-  svg = setFill(svg, 'lip',   lip, 'opacity:0.62;filter:blur(1.5px);')
-  svg = setFill(svg, 'lip2',  lip, 'opacity:0.62;filter:blur(1.5px);')
+  svg = setFill(svg, 'lip',   lip, 'opacity:0.2;filter:blur(1.5px);')   // (over the face on the screen blend: a light touch, or they glow)
+  svg = setFill(svg, 'lip2',  lip, 'opacity:0.2;filter:blur(1.5px);')
   svg = setFill(svg, 'neck', faceSkin, `opacity:${SKIN_OPACITY};`)
 
   // ── SIZE: the jersey and its V collar
