@@ -14,7 +14,7 @@ import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerClo
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, dlBuildSpot, olBuildSpot,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, dlBuildSpot, olBuildSpot, lbStyle,
   calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE, snapNFL,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
@@ -110,6 +110,27 @@ export function dbCoverage(s, c = null) {
 export const dbDpoyCase = (s, c = null) => dbCoverage(s, c) + (s.rtgA == null ? 0 : 0.4 * clamp((60 - s.rtgA) / 20, 0, 1) + 0.15 * clamp((450 - (s.ydsA ?? 450)) / 100, 0, 1))
 // a season past a real record (passes defended or picks) is an All-Pro, whatever else it did
 const dbRecord = s => (s.pbus ?? 0) > 31 || (s.ints ?? 0) > 14
+// A linebacker's season, judged on everything he does, not tackles alone: the tackles, the plays behind the line,
+// the sacks, the coverage (picks and passes defended) and the ball he takes away. One number, about a tackle a
+// point: a 150-tackle year in the middle is ~235, and so is a 105-tackle, 12-sack, 15-TFL year off the edge.
+// His style tilts it (simulation.js lbStyle, from his build): a blitzer's sacks and TFL count a little more, a
+// cover man's picks and PDs, a thumper's run stops; the way a safety's tackles count more than a corner's.
+const LB_W = { sack: 6.5, tfl: 2.5, int: 9, pd: 2.5, ff: 5, fr: 3, p6: 6 }
+const LB_TILT = 1.15
+export function lbImpact(s, c = null) {
+  const style = c?.build ? lbStyle(c.build) : 'complete'
+  const sacks = s.sacks ?? 0, ints = s.ints ?? 0
+  const run = (s.tackles ?? 0) + LB_W.tfl * Math.max(0, (s.tfl ?? 0) - sacks * 0.85)   // (a sack is a TFL too: counted once)
+  const rush = LB_W.sack * sacks
+  const cover = LB_W.int * ints + LB_W.pd * Math.max(0, (s.pds ?? 0) - ints) + LB_W.p6 * (s.pickSixes ?? 0)
+  const ball = LB_W.ff * (s.ff ?? 0) + LB_W.fr * (s.fr ?? 0)
+  // (a blitzer's work behind the line is his TFL as well as his sacks)
+  const tfl = LB_W.tfl * Math.max(0, (s.tfl ?? 0) - sacks * 0.85)
+  return run + rush + cover + ball + (LB_TILT - 1) * (style === 'blitz' ? rush + tfl : style === 'cover' ? cover : style === 'thumper' ? tfl + (s.tackles ?? 0) * 0.25 : 0)
+}
+// (set so the tacklers win about what they did on tackles alone: a 186 is a Pro Bowl year, 236 an All-Pro one,
+// measured over 400 seasons a build, 2026-11-10; a pass-rushing backer's 98 tackles, 10 sacks and 12 TFL is now a Pro Bowl)
+export const LB_BARS = { proBowl: 186, allPro: 236, near: 214, dpoy: 280 }
 // (set so DBs win about as many honors as they did on picks alone)
 export const DB_BARS = { proBowl: 0.8, allPro: 1.06, near: 0.98, dpoy: 1.76, spread: 0.1 }
 // passer rating allowed, the NFL formula on the throws at him (null: no throws on record)
@@ -362,12 +383,12 @@ export const SPORT = {
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
     // the numbers that get a player there (a lineman by his spot: c is the career)
     // (RB and TE raised: their careers piled up 12-16 Pro Bowls, 9-13 All-Pros and 3-4 OPOYs, about twice the real greats)
-    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1300 || (s.rushYds >= 1100 && s.tds >= 12), wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 1050 || (s.recYds >= 900 && s.tds >= 11), db: (s, c) => dbCoverage(s, c) >= DB_BARS.proBowl || dbRecord(s), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 7 || (s.sacks >= 5 && s.tfl >= 11) : s.sacks >= 11 || (s.sacks >= 9 && s.tfl >= 15)), lb: s => s.tackles >= 125 || (s.tackles >= 105 && (s.ints >= 3 || s.sacks >= 5)), ol: olProBowl },
-    allPro: { db: (s, c) => dbCoverage(s, c) >= DB_BARS.allPro || dbRecord(s), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1650 || (s.rushYds >= 1500 && s.tds >= 16), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1400 || (s.recYds >= 1250 && s.tds >= 16), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 12 || (s.sacks >= 10 && s.tfl >= 15) : s.sacks >= 16 || (s.sacks >= 14 && s.tfl >= 20)), lb: s => s.tackles >= 150 || (s.tackles >= 130 && (s.ints >= 4 || s.sacks >= 6)), ol: olAllPro },
-    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1450, wr: s => s.recYds >= 1300, te: s => s.recYds >= 1200, db: (s, c) => dbCoverage(s, c) >= DB_BARS.near, dl: (s, c) => s.sacks >= (dlSpot(c) === 'dt' ? 9 : 14), lb: s => s.tackles >= 135, ol: s => (s.grade ?? 0) >= OL_BARS.near },
+    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1300 || (s.rushYds >= 1100 && s.tds >= 12), wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 1050 || (s.recYds >= 900 && s.tds >= 11), db: (s, c) => dbCoverage(s, c) >= DB_BARS.proBowl || dbRecord(s), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 7 || (s.sacks >= 5 && s.tfl >= 11) : s.sacks >= 11 || (s.sacks >= 9 && s.tfl >= 15)), lb: (s, c) => lbImpact(s, c) >= LB_BARS.proBowl, ol: olProBowl },
+    allPro: { db: (s, c) => dbCoverage(s, c) >= DB_BARS.allPro || dbRecord(s), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1650 || (s.rushYds >= 1500 && s.tds >= 16), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1400 || (s.recYds >= 1250 && s.tds >= 16), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 12 || (s.sacks >= 10 && s.tfl >= 15) : s.sacks >= 16 || (s.sacks >= 14 && s.tfl >= 20)), lb: (s, c) => lbImpact(s, c) >= LB_BARS.allPro, ol: olAllPro },
+    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1450, wr: s => s.recYds >= 1300, te: s => s.recYds >= 1200, db: (s, c) => dbCoverage(s, c) >= DB_BARS.near, dl: (s, c) => s.sacks >= (dlSpot(c) === 'dt' ? 9 : 14), lb: (s, c) => lbImpact(s, c) >= LB_BARS.near, ol: s => (s.grade ?? 0) >= OL_BARS.near },
     // (and about one year in four somebody else has the season of his life: a star won ~45% of his prime)
     award: (c, f, s) => {
-      const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1900 || (s.rushYds >= 1750 && s.tds >= 18), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1500 && s.tds >= 14, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)), lb: () => s.tackles >= 155 && (s.ints >= 3 || s.sacks >= 6 || (s.ff ?? 0) >= 4) }
+      const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1900 || (s.rushYds >= 1750 && s.tds >= 18), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1500 && s.tds >= 14, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)), lb: () => lbImpact(s, c) >= LB_BARS.dpoy }
       // a tight end past both the yards and TD records on a winner: nobody out-votes that
       if (c.pos === 'ol') return false   // (no award for a lineman: the All-Pro team is the top of it)
       if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
@@ -378,10 +399,10 @@ export const SPORT = {
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
     // (a lineman: the grade, then the pancakes and a clean sheet; an 88 grade on a winner is about 0.9, a 67 on an 8-win team 0.43)
-    seasonScore: (pos, s) => { const st = s.stats; return pos === 'ol' ? clamp(((st.grade ?? 55) - 55) / 35, 0, 1.1) * .5 + Math.min(1.2, (st.pancakes ?? 0) / 50) * .1 + clamp(1 - (st.sacksA ?? 8) / 8, 0, 1) * .1 + s.wins / 15 * .3 : pos === 'lb' ? (st.tackles ?? 0) / 150 * .4 + ((st.ints ?? 0) / 4 + (st.sacks ?? 0) / 8) * .15 + s.wins / 15 * .3 : pos === 'dl' ? (s.spot === 'dt' ? (st.sacks ?? 0) / 10 * .45 + (st.tfl ?? 0) / 14 * .25 : (st.sacks ?? 0) / 16 * .45 + (st.tfl ?? 0) / 20 * .25) + s.wins / 15 * .3 : pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
+    seasonScore: (pos, s) => { const st = s.stats; return pos === 'ol' ? clamp(((st.grade ?? 55) - 55) / 35, 0, 1.1) * .5 + Math.min(1.2, (st.pancakes ?? 0) / 50) * .1 + clamp(1 - (st.sacksA ?? 8) / 8, 0, 1) * .1 + s.wins / 15 * .3 : pos === 'lb' ? Math.min(1.25, lbImpact(st) / LB_BARS.allPro) * .52 + s.wins / 15 * .3 : pos === 'dl' ? (s.spot === 'dt' ? (st.sacks ?? 0) / 10 * .45 + (st.tfl ?? 0) / 14 * .25 : (st.sacks ?? 0) / 16 * .45 + (st.tfl ?? 0) / 20 * .25) + s.wins / 15 * .3 : pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
     // a DB's production: picks and the ones taken back; a lineman's: sacks (the greats are scored the same way)
     // (a lineman's: the games he started; his All-Pros carry OL_FIRST_BONUS more in legacyScore, the greats' the same way)
-    legacyProd: (pos, st) => (pos === 'ol' ? (st.starts ?? 0) * OL_START_LEGACY : pos === 'lb' ? (st.tackles ?? 0) / 40 + (st.ints ?? 0) * 0.8 + (st.sacks ?? 0) * 0.3 : pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
+    legacyProd: (pos, st) => (pos === 'ol' ? (st.starts ?? 0) * OL_START_LEGACY : pos === 'lb' ? (st.tackles ?? 0) / 40 + (st.ints ?? 0) * 0.8 + (st.sacks ?? 0) * 0.5 : pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
     // the sim lets every 10-win team in; here 11 is safe, 10 needs the tiebreakers (the sim's own
     // first playoff game, a coin the booked season keeps) and 9 needs them twice
     made: f => { const po = f.playoffRounds ?? []; return !!f.playoffs && (f.wins >= 11 || (f.wins === 10 && !!po[0]?.won) || (f.wins === 9 && !!po[0]?.won && !!po[1]?.won)) },

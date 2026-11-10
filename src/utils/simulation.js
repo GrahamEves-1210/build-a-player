@@ -3805,6 +3805,19 @@ export function calcOVRLB(build, types = LB_TYPES) {
   return Math.min(99, Math.max(0, Math.round(base + bonus)))
 }
 
+// How a linebacker plays, from his build: 'cover' (drops and covers), 'thumper' (downhill, takes on guards),
+// 'blitz' (gets after the quarterback), 'general' (runs the defense), or 'complete' (close to even across them).
+// His archetype's name reads it, and so do his honors in a Career (lib/career.js lbImpact)
+export function lbStyle(build) {
+  const g = k => build?.[k]?.val ?? 0
+  const styles = [
+    { k: 'cover',   v: (g('zoneInstincts') + g('range')) / 2 },
+    { k: 'thumper', v: (g('power') + g('blockShed') + g('tackling')) / 3 },
+    { k: 'blitz',   v: g('passRush') - 0.5 },
+    { k: 'general', v: (g('playRecognition') + g('leadership')) / 2 - 0.25 },
+  ].sort((a, b) => b.v - a.v)
+  return styles[0].v - styles[3].v <= 0.75 ? 'complete' : styles[0].k
+}
 export function getArchetypeLB(ovr, build, types = LB_TYPES) {
   const filled = types.filter(t => build[t])
   if (!filled.length) return 'Spin to start building'
@@ -3818,13 +3831,7 @@ export function getArchetypeLB(ovr, build, types = LB_TYPES) {
   // How he plays: drops and covers, comes downhill and takes on guards, gets
   // after the quarterback, or runs the defense from the middle. Close to even
   // across all of them is a complete linebacker.
-  const styles = [
-    { k: 'cover',   v: (zon + rng) / 2 },
-    { k: 'thumper', v: (pwr + shd + tkl) / 3 },
-    { k: 'blitz',   v: rsh - 0.5 },
-    { k: 'general', v: (rec + ldr) / 2 - 0.25 },
-  ].sort((a, b) => b.v - a.v)
-  const style = styles[0].v - styles[3].v <= 0.75 ? 'complete' : styles[0].k
+  const style = lbStyle(build)
   const name = (cover, thumper, blitz, general, complete) => ({ cover, thumper, blitz, general, complete })[style]
   if (ovr >= 95) return name('Sideline-to-Sideline Eraser', 'Downhill Enforcer', 'Unblockable Blitzer', 'Defensive Quarterback', 'Generational Linebacker')
   if (ovr >= 84) return name('Coverage Linebacker', 'Thumper', 'Blitzing Linebacker', 'Field General', 'Pro Bowl Linebacker')

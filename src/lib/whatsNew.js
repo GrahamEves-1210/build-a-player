@@ -59,6 +59,8 @@ const NOV_10 = {
       name: 'Career',
       items: [
         'Football seasons now have a bye week, between Weeks 5 and 14 like the NFL\'s: put in extra work on a position drill for a shot at a trait upgrade, or rest for a guaranteed durability boost',
+        'Linebacker honors now read the whole season: tackles, TFL, sacks, picks, passes defended and forced fumbles, tilted to how he plays. A pass-rushing backer with 10 sacks no longer needs 125 tackles for a Pro Bowl',
+        'Linebacker sacks count a little more toward legacy',
         'Added Start in College for QB, RB and WR: pick from school offers, play a season or two, then enter the draft',
         'In college the build plays a full letter grade higher on every trait except Size',
         'Teams now rise and fall more over the years',
@@ -159,6 +161,7 @@ const NOV_10 = {
         'Fixed Blacktop 1v1 games not counting toward the Blacktop 1v1 missions',
         'Fixed league leaders always showing you at No. 8',
         'Fixed playoff games ending in a tie with no overtime',
+        'Fixed an offensive lineman reading "undefined sacks allowed" in a Career playoff game',
         'Fixed the QB Super Bowl Performance box not matching the Super Bowl line in the game log',
         'The Super Bowl now reads "vs" in the game log, not "@"',
         'Fixed the highlight on the Season, Player, Team and Career tabs in Career sliding in from the bottom of the screen',
