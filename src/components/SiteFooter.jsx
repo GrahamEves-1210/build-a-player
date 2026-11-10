@@ -25,7 +25,7 @@ function PartnerBanner({ sport }) {
         </span>
         <span className="pp-cta">
           <span className="pp-claim">Claim Offer</span>
-          <span className="pp-code"><small>Use code</small><b>BUILD</b></span>
+          <span className="pp-code"><span>or use code</span> <span><b>BUILD</b> at sign-up</span></span>
         </span>
         <img className="pp-phone" src="/sponsors/prizepicks-phone.webp" alt="" width="560" height="1159" loading="lazy" decoding="async" draggable={false} />
       </a>

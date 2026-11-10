@@ -5484,12 +5484,12 @@ a:focus-visible {
 .pp-offer { margin: 2px 0 4px; font-family: 'PP Offer', 'Arial Black', 'Inter', sans-serif; font-weight: 800; font-stretch: 125%; font-size: 30px; line-height: .98; letter-spacing: -.02em; }
 .pp-sub { font-size: 12.5px; font-weight: 400; line-height: 1.2; }
 .pp-sub b { font-weight: 800; }
-/* one button, and the code under it at the button's own width */
+/* one button. The link already carries the code, so the code is a plain line for whoever signs up later, not a second button */
 .pp-cta { flex: none; display: flex; flex-direction: column; gap: 7px; width: 196px; }
 .pp-claim { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 8px; background: #fff; color: #1a0033; font-size: 17px; font-weight: 800; letter-spacing: -.01em; line-height: 1; white-space: nowrap; }
-.pp-code { display: flex; align-items: baseline; justify-content: center; gap: 7px; height: 30px; border: 1px dashed rgba(255,255,255,.55); border-radius: 8px; line-height: 28px; white-space: nowrap; }
-.pp-code small { font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
-.pp-code b { font-size: 14px; font-weight: 800; letter-spacing: .07em; }
+.pp-code { font-size: 11.5px; font-weight: 400; line-height: 1.2; text-align: center; white-space: nowrap; opacity: .9; }
+.pp-code span { white-space: nowrap; }
+.pp-code b { font-weight: 800; letter-spacing: .04em; }
 .pp-phone { position: absolute; z-index: 1; right: 3.5%; top: 14px; width: 214px; height: auto; transform: rotate(-12deg); transform-origin: 50% 0; filter: drop-shadow(-10px 14px 20px rgba(26,0,51,.55)); pointer-events: none; user-select: none; }
 @media (hover: hover) {
   .pp-phone { transition: transform .35s cubic-bezier(.2,.7,.2,1); }
@@ -5508,11 +5508,9 @@ a:focus-visible {
   .pp-logo { width: 140px; margin: -5px 0 -7px -8px; }
   .pp-new, .pp-sub { font-size: 12px; }
   .pp-offer { font-size: clamp(23px, 7.2vw, 28px); }
-  .pp-cta { flex-direction: row; gap: 6px; width: auto; margin-top: 10px; }
+  .pp-cta { flex-direction: row; align-items: center; gap: 9px; width: auto; margin-top: 10px; }
   .pp-claim { width: 118px; height: 38px; font-size: 14.5px; }
-  .pp-code { flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 92px; height: 38px; line-height: 1; }
-  .pp-code small { font-size: 7.5px; }
-  .pp-code b { font-size: 13px; }
+  .pp-code { width: 100px; font-size: 11px; line-height: 1.25; text-align: left; white-space: normal; }
   .pp-phone { right: -30px; top: 22px; width: 152px; }
   .pp-legal { font-size: 10px; }
 }
