@@ -13,23 +13,23 @@ const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
 function PartnerBanner({ sport }) {
   return (
     <div className="pp-wrap">
+      <div className="splash-site-footer-head pp-head">Partner Offer</div>
       <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener"
         onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: 'footer' } })}
-        aria-label="PrizePicks. New users: play $5, get $150 in bonus lineups if you win. Use code BUILD.">
+        aria-label="PrizePicks. New users: play $5, get $150 in bonus lineups if you win. Claim the offer with code BUILD.">
         <span className="pp-copy">
           <img className="pp-logo" src="/sponsors/prizepicks-logo.svg" alt="PrizePicks" width="954" height="241" loading="lazy" decoding="async" draggable={false} />
           <span className="pp-new">New Users</span>
           <span className="pp-offer">Play $5<br />Get $150</span>
           <span className="pp-sub">In Bonus Lineups <b>If You Win</b></span>
-          <span className="pp-cta">
-            <span className="pp-badge"><small>Use code</small>BUILD</span>
-            <span className="pp-badge"><small>Download the</small>PrizePicks App</span>
-          </span>
+        </span>
+        <span className="pp-cta">
+          <span className="pp-claim">Claim Offer</span>
+          <span className="pp-code"><small>Use code</small><b>BUILD</b></span>
         </span>
         <img className="pp-phone" src="/sponsors/prizepicks-phone.webp" alt="" width="560" height="1159" loading="lazy" decoding="async" draggable={false} />
       </a>
-      <p className="pp-note">Build-A-Player may earn a commission when you sign up through this link.</p>
-      <p className="pp-legal">First $5+ lineup entered must win to receive $150 in bonus lineups. Bonus lineups expire 7 days after issuance. 18+ in eligible areas. Lineups entered and bonus lineups awarded must include player picks. Restrictions apply. Void where prohibited. Play responsibly. Call 1-800-426-2537 or visit ncpgambling.org. See prizepicks.com/newuseroffer for details.</p>
+      <p className="pp-legal">Build-A-Player may earn a commission when you sign up through this link. First $5+ lineup entered must win to receive $150 in bonus lineups. Bonus lineups expire 7 days after issuance. 18+ in eligible areas. Lineups entered and bonus lineups awarded must include player picks. Restrictions apply. Void where prohibited. Play responsibly. Call 1-800-426-2537 or visit ncpgambling.org. See prizepicks.com/newuseroffer for details.</p>
     </div>
   )
 }

@@ -5468,45 +5468,53 @@ a:focus-visible {
 /* the partner placement at its top (SiteFooter PartnerBanner): PrizePicks' 16x9 offer art, wide. Their purple
    (#8000FF, dark on the left, the light behind the phone), white type only: nothing green on the purple */
 @font-face { font-family: 'PP Offer'; src: url('/fonts/archivo-expanded-800-offer.woff2') format('woff2'); font-weight: 800; font-display: swap; }
-.pp-wrap { max-width: 960px; margin: 0 auto 30px; }
+.pp-wrap { max-width: 960px; margin: 0 auto 26px; }
+.pp-head { margin-bottom: 8px; }
 .pp-banner {
-  position: relative; display: block; overflow: hidden; height: 268px; border-radius: 10px;
+  position: relative; display: flex; align-items: center; overflow: hidden; height: 156px; padding-right: 31%; border-radius: 8px;
   color: #fff; text-decoration: none; isolation: isolate;
   background:
-    radial-gradient(46% 120% at 80% 50%, rgba(226,196,255,.95) 0%, rgba(176,104,255,.75) 34%, rgba(128,0,255,0) 72%),
-    linear-gradient(90deg, #1a0033 0%, #2b0556 34%, #5a00a7 62%, #8000ff 100%);
+    radial-gradient(40% 150% at 84% 50%, rgba(226,196,255,.95) 0%, rgba(176,104,255,.75) 34%, rgba(128,0,255,0) 72%),
+    linear-gradient(90deg, #1a0033 0%, #2b0556 36%, #5a00a7 64%, #8000ff 100%);
 }
-.pp-copy { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 62%; height: 100%; padding: 0 12px; text-align: center; font-family: 'Inter', var(--font); }
-.pp-logo { display: block; width: 236px; height: auto; margin: -8px 0 -12px; }
-.pp-new { font-size: 17px; font-weight: 400; line-height: 1.2; }
-.pp-offer { margin: 3px 0 5px; font-family: 'PP Offer', 'Arial Black', 'Inter', sans-serif; font-weight: 800; font-stretch: 125%; font-size: 47px; line-height: .98; letter-spacing: -.02em; }
-.pp-sub { font-size: 16px; font-weight: 400; line-height: 1.2; }
+.pp-copy, .pp-cta { position: relative; z-index: 2; font-family: 'Inter', var(--font); }
+.pp-copy { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.pp-logo { display: block; width: 158px; height: auto; margin: -5px 0 -8px; }
+.pp-new { font-size: 12.5px; font-weight: 400; line-height: 1.2; }
+.pp-offer { margin: 2px 0 4px; font-family: 'PP Offer', 'Arial Black', 'Inter', sans-serif; font-weight: 800; font-stretch: 125%; font-size: 30px; line-height: .98; letter-spacing: -.02em; }
+.pp-sub { font-size: 12.5px; font-weight: 400; line-height: 1.2; }
 .pp-sub b { font-weight: 800; }
-.pp-cta { display: flex; gap: 8px; margin-top: 12px; }
-.pp-badge { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-width: 118px; height: 38px; padding: 0 12px; border: 1px solid rgba(255,255,255,.62); border-radius: 7px; background: #000; font-size: 15px; font-weight: 700; line-height: 1.05; letter-spacing: -.01em; white-space: nowrap; text-align: left; }
-.pp-badge small { font-size: 8.5px; font-weight: 500; letter-spacing: .02em; opacity: .92; }
-.pp-phone { position: absolute; z-index: 1; right: 4%; top: 22px; width: 296px; height: auto; transform: rotate(-12deg); transform-origin: 50% 0; filter: drop-shadow(-14px 18px 26px rgba(26,0,51,.55)); pointer-events: none; user-select: none; }
+/* one button, and the code under it at the button's own width */
+.pp-cta { flex: none; display: flex; flex-direction: column; gap: 7px; width: 196px; }
+.pp-claim { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 8px; background: #fff; color: #1a0033; font-size: 17px; font-weight: 800; letter-spacing: -.01em; line-height: 1; white-space: nowrap; }
+.pp-code { display: flex; align-items: baseline; justify-content: center; gap: 7px; height: 30px; border: 1px dashed rgba(255,255,255,.55); border-radius: 8px; line-height: 28px; white-space: nowrap; }
+.pp-code small { font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
+.pp-code b { font-size: 14px; font-weight: 800; letter-spacing: .07em; }
+.pp-phone { position: absolute; z-index: 1; right: 3.5%; top: 14px; width: 214px; height: auto; transform: rotate(-12deg); transform-origin: 50% 0; filter: drop-shadow(-10px 14px 20px rgba(26,0,51,.55)); pointer-events: none; user-select: none; }
 @media (hover: hover) {
   .pp-phone { transition: transform .35s cubic-bezier(.2,.7,.2,1); }
-  .pp-banner:hover .pp-phone { transform: rotate(-10deg) translateY(-8px); }
-  .pp-banner:hover .pp-badge { border-color: #fff; }
+  .pp-claim { transition: transform .15s ease-out; }
+  .pp-banner:hover .pp-phone { transform: rotate(-10deg) translateY(-6px); }
+  .pp-banner:hover .pp-claim { transform: translateY(-1px); }
 }
+.pp-banner:active .pp-claim { transform: scale(.98); }
 .pp-banner:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.pp-note, .pp-legal { margin: 8px 0 0; color: rgba(255,255,255,.58); }
-.pp-note { font-family: var(--font); font-size: 11.5px; font-weight: 500; line-height: 1.4; }
-.pp-legal { margin-top: 4px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 9.5px; line-height: 1.5; letter-spacing: .01em; color: rgba(255,255,255,.4); }
+/* the note under it: the footer's own small grey copy, one paragraph */
+.pp-legal { margin: 8px 0 0; font-family: var(--ag-body, var(--font)); font-size: 10.5px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,.4); text-wrap: pretty; }
 @media (max-width: 720px) {
-  .pp-wrap { margin-bottom: 22px; }
-  .pp-banner { height: 232px; }
-  .pp-copy { width: 66%; align-items: flex-start; padding: 0 0 0 16px; text-align: left; }
-  .pp-logo { width: 164px; margin: -6px 0 -8px -9px; }
-  .pp-new { font-size: 13px; }
-  .pp-offer { font-size: clamp(25px, 8vw, 34px); }
-  .pp-sub { font-size: 12.5px; }
-  .pp-cta { gap: 6px; margin-top: 10px; }
-  .pp-badge { min-width: 0; height: 32px; padding: 0 9px; font-size: 12px; }
-  .pp-badge small { font-size: 7.5px; }
-  .pp-phone { right: -34px; top: 30px; width: 176px; }
+  .pp-wrap { margin-bottom: 20px; }
+  .pp-banner { flex-direction: column; align-items: flex-start; justify-content: center; height: 188px; padding: 0 0 0 14px; }
+  .pp-copy { flex: none; align-items: flex-start; text-align: left; }
+  .pp-logo { width: 140px; margin: -5px 0 -7px -8px; }
+  .pp-new, .pp-sub { font-size: 12px; }
+  .pp-offer { font-size: clamp(23px, 7.2vw, 28px); }
+  .pp-cta { flex-direction: row; gap: 6px; width: auto; margin-top: 10px; }
+  .pp-claim { width: 118px; height: 38px; font-size: 14.5px; }
+  .pp-code { flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 92px; height: 38px; line-height: 1; }
+  .pp-code small { font-size: 7.5px; }
+  .pp-code b { font-size: 13px; }
+  .pp-phone { right: -30px; top: 22px; width: 152px; }
+  .pp-legal { font-size: 10px; }
 }
 .splash-site-footer {
   position: relative;
