@@ -1,6 +1,38 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import FeedbackModal from './FeedbackModal'
+import { track } from '../lib/track'
+
+// ── PrizePicks (partner): our own placement at the top of the footer, built after their 16x9 offer art
+// (Product/NFL/iPhone Explainer/Player Picks - 16x9): the logo, New Users, the offer in their wide heavy
+// letters, the phone on the bright side of the purple. Their logo file as it came; the phone is a small web
+// copy of their mockup. The offer and the fine print are theirs word for word (talking points, Oct 28 2026;
+// the $150 offer's legal line from their explainer art): change them only from a new sheet of theirs.
+// Brand rules kept: the wordmark with its P, nothing green on the purple, the legal line in a mono face
+const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
+function PartnerBanner({ sport }) {
+  return (
+    <div className="pp-wrap">
+      <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener"
+        onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: 'footer' } })}
+        aria-label="PrizePicks. New users: play $5, get $150 in bonus lineups if you win. Use code BUILD.">
+        <span className="pp-copy">
+          <img className="pp-logo" src="/sponsors/prizepicks-logo.svg" alt="PrizePicks" width="954" height="241" loading="lazy" decoding="async" draggable={false} />
+          <span className="pp-new">New Users</span>
+          <span className="pp-offer">Play $5<br />Get $150</span>
+          <span className="pp-sub">In Bonus Lineups <b>If You Win</b></span>
+          <span className="pp-cta">
+            <span className="pp-badge"><small>Use code</small>BUILD</span>
+            <span className="pp-badge"><small>Download the</small>PrizePicks App</span>
+          </span>
+        </span>
+        <img className="pp-phone" src="/sponsors/prizepicks-phone.webp" alt="" width="560" height="1159" loading="lazy" decoding="async" draggable={false} />
+      </a>
+      <p className="pp-note">Build-A-Player may earn a commission when you sign up through this link.</p>
+      <p className="pp-legal">First $5+ lineup entered must win to receive $150 in bonus lineups. Bonus lineups expire 7 days after issuance. 18+ in eligible areas. Lineups entered and bonus lineups awarded must include player picks. Restrictions apply. Void where prohibited. Play responsibly. Call 1-800-426-2537 or visit ncpgambling.org. See prizepicks.com/newuseroffer for details.</p>
+    </div>
+  )
+}
 
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
@@ -25,6 +57,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
 
   return (
     <footer className="splash-site-footer">
+      <PartnerBanner sport={sport} />
       <div className="splash-site-footer-cols">
         <div className="splash-site-footer-col splash-site-footer-brand">
           <div className="splash-site-footer-logo">
