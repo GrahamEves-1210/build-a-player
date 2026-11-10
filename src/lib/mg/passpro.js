@@ -1,16 +1,14 @@
 // Pass Pro: the offensive tackle's half of the pass rush (rush.js is the other half), from behind him: the
 // QB at the bottom of the screen, our man in front of him at the edge of the line, and the man rushing him
-// across from him. Four snaps, each one harder, and the QB needs the pocket clean until the ball is out.
-//   MIRROR   he takes off wide (a speed rush) or shows wide and comes back inside (a counter): slide the way
-//            he's really going. Bite on the show and the inside gets tight; slide the wrong way and he's by.
-//   PUNCH    with him, he closes: punch as he gets to you. Too early and he swipes the hands away; too late
-//            and he's into your chest and walking you back.
-//   ANCHOR   he drops his pads and comes straight (a bull): hold PUNCH and sink. Let go, or turn your
-//            shoulders, and he walks you into the QB's lap.
-//   PICK UP  the last snap brings two: a twist (the end crashes inside, the tackle loops round) or a blitz
-//            (the end drops out, a linebacker comes through inside). Take the man coming free.
-// One mistake and he has a step: read where he goes and run him past the QB, and it's only pressure. Two,
-// or no answer, and it's a sack. A clean snap is 2, pressure 1. Five of eight holds the pocket.
+// across from him. Three snaps. On each one the rusher makes one move, and you make one call:
+//   WIDE    he takes his first step to the outside (a speed rush): OUTSIDE
+//   UNDER   he cuts back under you, inside: INSIDE
+//   BULL    he drops his pads and comes straight at you: ANCHOR
+// His first step shows it, plain, and a ring closes on him: tap the pad for his move as it closes.
+// The right pad in time stones him and the ball's out clean. The wrong pad and he's by you: a sack. The right
+// pad too early (before his first step, or before the ring's in) or too late: he gets a hand on the QB, hurried.
+// At A and S grades one snap is a counter: he shows wide, then comes back under. The second step is the real one.
+// Two clean snaps of the three hold the pocket (the score: a clean snap 2, hurried 1, of 6).
 //
 // The rules are all here with no screen, in field units: x across, d up the field from the line of
 // scrimmage (the QB is at a small negative d, behind our man). The camera is pass-rush's (lib/mg/index.js).
@@ -21,7 +19,7 @@ import { paintFieldFlat, qbPose, lightFx } from './throw.js'
 import { put, action, tagsAll, teamOf, walk, ballInAir } from './read.js'
 
 export const how = {
-  'pass-pro': 'Watch his first step: he goes wide, slide OUTSIDE; he comes back under you, INSIDE. PUNCH as the ring closes on him. A bull rush: HOLD PUNCH and anchor. A twist or a blitz: take the man coming free.',
+  'pass-pro': 'Three snaps: he goes wide, tap OUTSIDE; he cuts under, INSIDE; he bull-rushes straight at you, ANCHOR. Tap it as the ring closes on him.',
 }
 
 const YD = 20
@@ -33,20 +31,28 @@ const DL_NUM = [97, 93, 99, 95]
 const STAMP_Y = 0.25
 const ME_D = -16, SET_D = -34, RU_D = 26
 const QB_GUN = -76, QB_SET = -94, SNAP_MS = 170
-const SHOW = 180, SETTLE = 160, FAKE_MS = 300, RESET = 420
-const RAMP = [1, 0.96, 0.92, 0.9]
-const QB_MS = [2500, 2700, 3000, 2800]   // how long the QB needs, each snap
+const GET_OFF = 330          // the snap to his first step (and a beat of his own on top)
+const STEP_MS = 240          // his first step: the move, big and plain
+const CROSS_MS = 320         // a counter: the show wide, this long, then the real step back under
+const BALL_OUT = 650         // he's stopped: the ball's out this long after
+const HURRY_MS = 480         // he's got a hand on him: the ball's out this long after, under pressure
+const PANCAKE_MS = 40        // dead on the ring: he's on his back
+const COUNTER_AT = 10        // A and S: one snap's a counter
 // what the ratings buy (the game's one value: the average of Pass Pro, Mobility, Anchor, Blitz Pickup, Length)
-const MIRROR = v => byV(v, 480, 590)     // once he's committed: this long to get your feet with him
-const READ_MS = v => byV(v, 620, 770)    // a twist or a blitz: this long to see who's free
-const RECOVER = v => byV(v, 420, 500)    // he's got a step: this long to run him past the QB
-const PUNCH_W = v => byV(v, 165, 215)    // the punch window, round the moment he gets to you
-const REACH = v => byV(v, 30, 60)        // long arms land it a touch sooner
-const STALL = v => byV(v, 740, 600)      // holding the anchor this long stops his feet
-const GIVE = v => byV(v, 0.62, 0.4)     // how much ground an anchor still gives
-const SLIDE_V = v => byV(v, 0.2, 0.27)   // his feet, mirroring
-const DRIVE_MS = 600                     // a bull with nothing in front of him: in the QB's lap this fast
-const BULL_IN = 260                      // a bull's first step to contact
+// (the time to read him comes slowly through the middle grades, and quickly at the top)
+const bent = v => 1 + 10 * clamp((v - 1) / 10, 0, 1) ** 1.6
+const LEAD = v => byV(bent(v), 530, 595)   // his first step to the ring closing on him
+const OPEN = v => byV(v, 270, 380)         // the window opens this long before the ring closes
+const LATE = v => byV(bent(v), 110, 160)   // and stays open this long after
+const SLIDE_V = v => byV(v, 0.24, 0.3) // his feet, sliding with him
+
+// where he goes. side: 1 the outside, -1 the inside, 0 straight on (times s on the screen)
+const MOVE = {
+  wide: { side: 1, word: 'WIDE!', first: [62, RU_D - 10], arrive: [26, SET_D + 18] },
+  under: { side: -1, word: 'UNDER!', first: [-14, RU_D - 12], arrive: [-20, SET_D + 24] },
+  bull: { side: 0, word: 'BULL!', first: [14, RU_D - 22], arrive: [3, SET_D + 20] },
+}
+const PAD = { wide: 'OUTSIDE', under: 'INSIDE', bull: 'ANCHOR' }
 
 const bare = m => m && { number: m.number, skin: m.skin }
 // (from the full eleven: the man on him by name, a man off the play named once the snap's over)
@@ -60,7 +66,8 @@ const seek = (m, x, d, v, dt) => {
   return mv >= e
 }
 const far = (a, b) => Math.hypot(a.x - b.x, a.d - b.d)
-const pick = (r, list) => list[Math.floor(r() * list.length)]
+// (on time: the speed that gets him there as the clock runs out)
+const onTime = (m, x, d, left) => Math.min(0.6, Math.hypot(x - m.x, d - m.d) / Math.max(16, left))
 
 function castOf(cast) {
   // the full eleven a side (career's xi): his own line by name, their four down and both backers
@@ -87,240 +94,127 @@ function castOf(cast) {
 }
 
 export function make({ v, seed, cast }) {
-  const r = rngOf(seed), n = 4
+  const r = rngOf(seed), n = 3
   const s = r() < 0.5 ? -1 : 1               // his side: -1 the left tackle, 1 the right. Outside is s on the screen.
   const MX = 180 + s * 30, CX = MX - s * 2 * SP
-  const A = r() < 0.5 ? 'counter' : 'bull', B = A === 'counter' ? 'bull' : 'counter'
-  const moves = [['speed'], [A], [B, r() < 0.5 ? 'speed' : 'counter'], ['pickup', r() < 0.5 ? 'bull' : 'speed']]
-  const plan = moves.map((list, k) => ({
-    k, moves: list, mi: 0, wait: 800 + r() * 600, hard: k > 0 && r() < [0, 0.45, 0.55, 0.6][k] ? 0.4 + r() * 0.3 : null,
-    Q: QB_MS[k] + r() * 160, blitz: r() < 0.5 ? 'stunt' : 'blitz', swipeSame: r() < 0.6,
-    snapAt: 0, ex: null, fails: 0, res: null, doom: null, hurry: null, pancake: false, nextAt: null, thrown: null, flag: false,
-    me: { x: MX, d: ME_D }, ru: { x: MX + s * 28, d: RU_D }, other: null, qb: { x: CX, d: QB_GUN },
-    punchAt: -999, swipeAt: -999, stoneAt: -999,
+  // one of each, in any order (and at A or S, the one coming under sells it wide first)
+  const order = ['wide', 'under', 'bull']
+  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [order[i], order[j]] = [order[j], order[i]] }
+  const plan = order.map((move, k) => ({
+    k, move, counter: move === 'under' && v >= COUNTER_AT, wait: 750 + r() * 550, jit: r() * 120,
+    snapAt: 0, tellAt: 0, crossAt: 0, contactAt: 0, open: 0, close: 0,
+    res: null, pressed: null, won: null, doom: null, hurry: null, pancake: false, thrown: null, throwAt: 0, why: null,
+    me: { x: MX, d: ME_D }, ru: { x: MX + s * 28, d: RU_D }, qb: { x: CX, d: QB_GUN },
+    punchAt: -999, stoneAt: -999,
   }))
-  const sideOf = z => (z === 0 ? -1 : z === 2 ? 1 : 0)
+  const zoneOf = move => (MOVE[move].side === 0 ? 1 : MOVE[move].side * s < 0 ? 0 : 2)
   const g = {
     t: 0, game: 'pass-pro', zones: 'three', anyKey: true, padLit: null, litAt: -999, fx: [], done: null, outro: 1500, stamp: null, later: null,
     dirt: particles(44, fxSeed(seed)), paper: particles(40, fxSeed(`${seed}|paper`)), nudge: nudge(),
-    pads: s < 0 ? ['OUTSIDE', 'PUNCH', 'INSIDE'] : ['INSIDE', 'PUNCH', 'OUTSIDE'],
-    plan, i: 0, rep: plan[0], phase: 'set', nextAt: 0, who: castOf(cast), s, MX, CX, stallMs: STALL(v),
-    clean: 0, pressures: 0, sacks: 0, flags: 0, pancakes: 0, popAt: -1e9,
-    // what a player can see: all a bot gets. side: -1 / 1 on the screen
-    tell: { snapped: false, hard: false, type: null, side: null, bull: false, commit: false, contactAt: null, free: null, held: false },
-    // (padCue: the pad the line on the screen calls for, outlined. It says only what his body is showing: a bot reads the same in tell)
+    pads: s < 0 ? ['OUTSIDE', 'ANCHOR', 'INSIDE'] : ['INSIDE', 'ANCHOR', 'OUTSIDE'],
+    plan, i: 0, rep: plan[0], phase: 'set', nextAt: 0, who: castOf(cast), s, MX, CX,
+    clean: 0, pressures: 0, sacks: 0, pancakes: 0, popAt: -1e9,
+    // what a player can see: all a bot gets. type: the move his body's showing ('wide', 'under', 'bull'), zone: its pad,
+    // contactAt / open / close: the ring (it closes at contactAt; the window is open to close)
+    tell: { snapped: false, type: null, zone: null, contactAt: null, open: null, close: null },
+    // (padCue: the pad for the move he's showing, outlined)
     padCue: null,
     hud: { prompt: 'WAIT FOR THE SNAP', dots: plan.map(() => null) },
     zoneFor(side) { return side < 0 ? 0 : 2 },
+    zoneOf,
     tick(dt) {
       g.t += dt
-      if (g.t - g.litAt > 110 && !g.held) g.padLit = null
+      if (g.t - g.litAt > 110) g.padLit = null
       if (g.later && g.t >= g.later.at) { g.stamp = g.later; g.later = null }
       const rep = g.rep
       if (g.phase === 'set') {
-        g.tell.hard = rep.hardAt != null && g.t >= rep.hardAt && g.t < rep.hardAt + 260
         if (g.t >= rep.snapAt) snap(rep)
         return
       }
-      if (g.phase === 'play') rules(rep, dt)
+      if (g.phase === 'play') rules(rep)
       move(rep, dt)
       if (g.phase === 'beat' && !g.done && g.t >= g.nextAt) next()
     },
     input(a) {
-      const rep = g.rep
-      if (a.kind === 'up') {
-        if (a.zone === 1 || g.held) { g.held = false; g.tell.held = false; if (rep.ex?.type === 'anchor') rep.ex.held = false }
-        return
-      }
       if (a.kind !== 'down' || a.zone == null) return
       g.padLit = a.zone; g.litAt = g.t
-      if (g.done || rep.res || g.phase !== 'play' && g.phase !== 'set') return
-      if (g.phase === 'set') return falseStart(rep)
-      const ex = rep.ex, side = sideOf(a.zone), mid = a.zone === 1, t = g.t
-      if (mid) { g.held = true; g.tell.held = true }
-      if (!ex || rep.doom || rep.hurry) return
-      if (ex.type === 'mirror') {
-        if (t < ex.showAt) return
-        if (mid) return fail(rep, 'LUNGED', ex.dir)
-        const crossed = !ex.fake || t >= ex.crossAt
-        if (side === ex.dir && crossed) return mirrored(rep, ex)
-        if (ex.fake && !crossed && side === ex.fake) {
-          if (!ex.bit) { ex.bit = true; ex.until -= MIRROR(v) * 0.28; g.fx.push('h:light') }
-          return
-        }
-        return fail(rep, 'BEAT', ex.dir)
-      }
-      if (ex.type === 'punch') {
-        if (!mid) return
-        if (t < ex.early) { rep.swipeAt = t; return fail(rep, 'SWIPED', rep.swipeSame ? ex.dir : -ex.dir) }
-        return stoned(rep, ex, Math.abs(t - ex.contactAt) <= PUNCH_W(v) * 0.12)
-      }
-      if (ex.type === 'anchor') {
-        if (mid) { ex.held = true; return }
-        if (t >= ex.showAt) { ex.depth = Math.min(0.98, ex.depth + 0.18); g.fx.push('h:light') }
-        return
-      }
-      if (ex.type === 'pickup') {
-        if (t < ex.commitAt) return
-        if (mid) return fail(rep, 'LUNGED', ex.dir)
-        if (side === ex.dir) return picked(rep, ex)
-        return doom(rep, 'FREE RUSHER', ex.dir)
-      }
-      if (ex.type === 'recover') {
-        if (mid || t < ex.showAt) return
-        if (side === ex.dir) return recovered(rep, ex)
-        return doom(rep, 'SACK', ex.dir)
-      }
+      const rep = g.rep
+      // (before the snap a tap does nothing: you're set, waiting on the ball)
+      if (g.done || g.phase !== 'play' || rep.res || rep.pressed) return
+      call(rep, a.zone)
     },
   }
-  // a lost step, in a coach's words: what he did, and what beats it
-  const side = d => (d === s ? 'OUTSIDE' : 'INSIDE')
-  function whyOf(rep, word, dir, ex = rep.ex) {
-    if (word === 'LUNGED') return 'LUNGED: SLIDE FIRST, THEN PUNCH'
-    if (word === 'SWIPED') return 'EARLY PUNCH: HE SWIPED IT AWAY'
-    if (word === 'WALKED BACK') return ex?.holdMs > 0 ? 'WALKED BACK: SIT DOWN SOONER' : 'BULL RUSH: HOLD PUNCH TO ANCHOR'
-    if (ex?.type === 'pickup' || word === 'FREE RUSHER') return rep.blitz === 'stunt' ? 'TWIST: PICK UP THE LOOPER' : 'BLITZ: PICK UP THE BACKER'
-    if (ex?.type === 'recover') return 'HE GOT HOME: RUN HIM PAST'
-    if (word === 'TOO SLOW') return `TOO SLOW: SLIDE ${side(dir)} WITH HIM`
-    if (ex?.fake && dir !== ex.fake) return 'INSIDE MOVE: HE CAME BACK UNDER'
-    return dir === s ? 'BEAT OUTSIDE: SLIDE OUT WITH HIM' : 'BEAT INSIDE: SLIDE IN WITH HIM'
+  // what his body's showing right now
+  const real = rep => (rep.counter ? 'under' : rep.move)
+  function shown(rep, t) {
+    if (t < rep.tellAt) return null
+    if (rep.counter && t < rep.crossAt) return 'wide'
+    return real(rep)
   }
-  // the coach's line for what he's showing right now, and the pad it calls for (nothing the body isn't already showing)
-  function cue(rep, t) {
-    const ex = rep.ex, pad = d => g.zoneFor(d)
-    if (rep.doom) return ["HE'S FREE", null]
-    if (rep.hurry) return ['RAN HIM PAST', null]
-    if (!ex) return rep.nextAt != null ? ['STAY ON HIM', null] : [null, null]
-    if (ex.type === 'mirror') {
-      if (t < ex.showAt) return ['WATCH HIS FIRST STEP', null]
-      if (ex.fake && t < ex.crossAt) return ["HE'S GOING WIDE", pad(ex.fake)]
-      if (ex.fake) return ['INSIDE MOVE: GO INSIDE', pad(ex.dir)]
-      return t < ex.commitAt ? ["HE'S GOING WIDE", pad(ex.dir)] : ['SPEED RUSH: SLIDE OUTSIDE', pad(ex.dir)]
-    }
-    if (ex.type === 'punch') return ['PUNCH AS THE RING CLOSES', 1]
-    if (ex.type === 'anchor') return t < ex.contactAt ? (ex.name === 'chest' ? ['HOLD PUNCH: ANCHOR', 1] : ['BULL RUSH: HOLD PUNCH', 1]) : ['HOLD IT: SINK THE ANCHOR', 1]
-    if (ex.type === 'pickup') {
-      if (t < ex.commitAt) return ["TWO COMING: WHO'S FREE?", null]
-      return rep.blitz === 'stunt' ? ['TWIST: TAKE THE LOOPER', pad(ex.dir)] : ['BLITZ: TAKE THE BACKER', pad(ex.dir)]
-    }
-    if (ex.type === 'recover') return t < ex.showAt ? ["HE'S GOT A STEP", null] : [`RUN HIM PAST: ${side(ex.dir)}`, pad(ex.dir)]
-    return [null, null]
-  }
+  const dirOf = rep => (MOVE[real(rep)].side || 1) * s   // (the way he goes by you, on the screen: a bull goes round the outside)
   function setUp(rep) {
     rep.me.x = MX; rep.me.d = ME_D
     rep.qb.x = CX; rep.qb.d = QB_GUN
-    if (rep.moves[0] === 'pickup') {
-      // the man coming free, and the one who isn't
-      if (rep.blitz === 'stunt') { rep.ru = { x: MX - s * 30, d: RU_D - 2 }; rep.other = { x: MX + s * 28, d: RU_D } }
-      else { rep.ru = { x: MX - s * 18, d: 78 }; rep.other = { x: MX + s * 28, d: RU_D } }
-    } else { rep.ru = { x: MX + s * 28, d: RU_D }; rep.other = null }
+    rep.ru = { x: MX + s * 28, d: RU_D }
     rep.snapAt = g.t + rep.wait
-    rep.hardAt = rep.hard != null ? g.t + rep.wait * rep.hard : null
-    Object.assign(g.tell, { snapped: false, hard: false, type: null, side: null, bull: false, commit: false, contactAt: null, free: null })
+    Object.assign(g.tell, { snapped: false, type: null, zone: null, contactAt: null, open: null, close: null })
     g.hud.prompt = 'WAIT FOR THE SNAP'; g.hud.hot = false; g.padCue = null
     g.phase = 'set'
   }
   function snap(rep) {
     g.phase = 'play'
-    g.tell.snapped = true; g.tell.hard = false
-    g.hud.prompt = null
+    g.tell.snapped = true
     g.fx.push('tap', 'h:light')
-    startMove(rep, rep.moves[0], g.t + SHOW)
+    const t = g.t
+    rep.tellAt = t + GET_OFF + rep.jit
+    rep.crossAt = rep.counter ? rep.tellAt + CROSS_MS : rep.tellAt
+    rep.contactAt = rep.crossAt + LEAD(v)
+    rep.open = rep.contactAt - OPEN(v)
+    rep.close = rep.contactAt + LATE(v)
+    g.hud.prompt = 'WATCH HIS FIRST STEP'
   }
-  const ramp = rep => RAMP[rep.k]
-  function startMove(rep, name, at) {
-    const k = ramp(rep)
-    if (name === 'speed') rep.ex = { type: 'mirror', name, dir: s, fake: null, showAt: at, crossAt: at, commitAt: at + SETTLE, until: at + SETTLE + MIRROR(v) * k }
-    else if (name === 'counter') rep.ex = { type: 'mirror', name, dir: -s, fake: s, showAt: at, crossAt: at + FAKE_MS, commitAt: at + FAKE_MS + SETTLE, until: at + FAKE_MS + SETTLE + MIRROR(v) * k }
-    else if (name === 'bull') rep.ex = { type: 'anchor', name, showAt: at, contactAt: at + SETTLE + BULL_IN, depth: 0, holdMs: 0, held: g.held, from: { ...rep.ru } }
-    else {
-      const late = rep.k >= 3 ? 200 : 0      // (both of them come at him, then they split)
-      rep.ex = { type: 'pickup', name, dir: rep.blitz === 'stunt' ? s : -s, showAt: at, commitAt: at + SETTLE + late, until: at + SETTLE + late + READ_MS(v) * k }
+  // your call
+  function call(rep, zone) {
+    const t = g.t, mv = real(rep)
+    rep.pressed = { at: t, zone }
+    if (t < rep.tellAt) return hurried(rep, 'TOO EARLY', 'TOO EARLY: WAIT FOR HIS FIRST STEP')
+    if (zone !== zoneOf(mv)) {
+      if (rep.counter && zone === zoneOf('wide')) return beaten(rep, 'BIT ON THE FAKE', 'COUNTER: HE SOLD WIDE, THEN CAME BACK UNDER')
+      const why = { wide: 'HE WENT WIDE: SLIDE OUTSIDE WITH HIM', under: 'HE CUT UNDER: SLIDE INSIDE WITH HIM', bull: 'BULL RUSH: SIT DOWN AND ANCHOR' }[mv]
+      return beaten(rep, mv === 'bull' ? 'RUN OVER' : 'BEAT', why)
     }
-    rep.ex.at = g.t
+    if (t < rep.open) return hurried(rep, 'TOO EARLY', 'TOO EARLY: LET THE RING CLOSE ON HIM')
+    stoned(rep, t)
   }
-  function mirrored(rep, ex) {
-    const t = g.t, k = ramp(rep)
-    const approach = (420 + (rep.ex.name === 'counter' ? -40 : 0)) * k + (rep.k === 3 ? -60 : 0)
-    const contactAt = Math.max(t, ex.commitAt) + approach
-    rep.ex = { type: 'punch', name: ex.name, dir: ex.dir, at: t, contactAt, early: contactAt - PUNCH_W(v) / 2 - REACH(v), late: contactAt + PUNCH_W(v) / 2, from: { ...rep.ru } }
-    g.fx.push('h:light')
-  }
-  function picked(rep, ex) {
-    const t = g.t, k = ramp(rep)
-    const contactAt = Math.max(t, ex.commitAt) + 340 * k
-    rep.ex = { type: 'punch', name: 'pickup', dir: ex.dir, at: t, contactAt, early: contactAt - PUNCH_W(v) / 2 - REACH(v), late: contactAt + PUNCH_W(v) / 2, from: { ...rep.ru } }
-    g.stamp = { text: 'PICKED UP', good: true, at: t, ms: 520, size: 30 }
-    g.fx.push('tap', 'h:light')
-  }
-  function stoned(rep, ex, flat) {
-    rep.punchAt = g.t
-    rep.ex = null
+  function stoned(rep, t) {
+    const hit = Math.max(t, rep.contactAt - 50)   // (the hands land as he gets to you)
+    rep.won = { at: t }
+    rep.punchAt = hit; rep.stoneAt = hit
+    rep.throwAt = Math.max(t, rep.contactAt) + BALL_OUT
     g.fx.push('pop', 'h:medium')
-    if (flat && !rep.fails) {
-      // dead centre: he's on his back
-      rep.pancake = { x: rep.ru.x + (rep.ru.x >= rep.me.x ? 10 : -10), d: rep.me.d + 52, md: rep.me.d + 6, side: rep.ru.x >= rep.me.x ? 1 : -1 }; rep.stoneAt = g.t; g.pancakes++
-      g.stamp = { text: 'PANCAKE', good: true, at: g.t, ms: 760, size: 44 }
+    if (rep.move !== 'bull' && Math.abs(t - rep.contactAt) <= PANCAKE_MS) {
+      // dead on the ring: he's on his back
+      rep.pancake = { at: hit }   // (where he lands: wherever the hands meet him, set as they do)
+      g.pancakes++
+      g.stamp = { text: 'PANCAKE', good: true, at: hit, ms: 760, size: 44 }
       g.fx.push('stamp', 'h:heavy')
       return
     }
-    rep.stoneAt = g.t
-    g.stamp = { text: 'STONED', good: true, at: g.t, ms: 520, size: 32 }
-    more(rep)
+    g.stamp = { text: rep.move === 'bull' ? 'ANCHORED' : 'STONED', good: true, at: hit, ms: 560, size: 34 }
   }
-  // he's stopped: another move if there's time for one before the ball's out
-  function more(rep) {
-    if (rep.mi + 1 < rep.moves.length && g.t + RESET + 1000 < rep.snapAt + rep.Q) { rep.mi++; rep.nextAt = g.t + RESET }
-    else rep.nextAt = null
-  }
-  function anchored(rep) {
-    rep.ex = null
-    rep.stoneAt = g.t
-    g.stamp = { text: 'ANCHORED', good: true, at: g.t, ms: 560, size: 34 }
-    g.fx.push('pop', 'h:medium')
-    if (!rep.fails) more(rep)
-    else rep.nextAt = null
-  }
-  function fail(rep, word, dir, why) {
-    rep.fails++
-    rep.why = why ?? whyOf(rep, word, dir)
-    if (rep.fails >= 2) return doom(rep, 'SACK', dir, rep.why)
+  // the right call, the wrong moment: he gets a hand on the QB
+  function hurried(rep, word, why) {
+    rep.why = why
+    rep.hurry = { at: g.t + HURRY_MS }
     g.stamp = { text: word, good: false, at: g.t, ms: 480, size: 32 }
     g.fx.push('tap', 'h:medium')
-    rep.nextAt = null
-    rep.ex = { type: 'recover', dir, at: g.t, showAt: g.t + 90, until: g.t + 90 + RECOVER(v) * ramp(rep), from: { ...rep.ru } }
   }
-  function chest(rep) {
-    rep.fails++
-    rep.why = "LATE PUNCH: HE'S INTO YOUR CHEST"
-    g.stamp = { text: 'INTO HIS CHEST', good: false, at: g.t, ms: 520, size: 30 }
-    g.fx.push('pop', 'h:medium')
-    rep.nextAt = null
-    rep.ex = { type: 'anchor', name: 'chest', showAt: g.t, contactAt: g.t, depth: 0.1, holdMs: 0, held: g.held, recovery: true, from: { ...rep.ru } }
-  }
-  function recovered(rep, ex) {
-    rep.ex = null
-    rep.hurry = { dir: ex.dir, at: g.t + 300 }
-    g.stamp = { text: 'RAN HIM PAST', good: null, at: g.t, ms: 480, size: 30 }
-    g.fx.push('swoosh', 'h:light')
-  }
-  function doom(rep, word, dir, why) {
-    rep.why = why ?? ((rep.ex?.type === 'recover' && rep.why) || whyOf(rep, word, dir, rep.ex))   // (lost in the recovery: the step he got in the first place)
-    rep.ex = null; rep.nextAt = null
-    rep.doom = { at: g.t, dir, word }
-    g.stamp = word === 'SACK' ? null : { text: word, good: false, at: g.t, ms: 460, size: 32 }
+  // the wrong call: he's by you
+  function beaten(rep, word, why) {
+    rep.why = why
+    rep.doom = { at: g.t, dir: dirOf(rep), zone: rep.pressed?.zone ?? null }
+    g.stamp = { text: word, good: false, at: g.t, ms: 460, size: 32 }
     g.fx.push('swoosh', 'h:medium')
-  }
-  function falseStart(rep) {
-    rep.flag = true
-    rep.why = 'FALSE START: MOVE ON THE BALL'
-    g.fx.push('whistle', 'deny')
-    settle(rep, 'flag')
-  }
-  function throwIt(rep) {
-    rep.thrown = g.t
-    rep.ex = null; rep.nextAt = null
-    settle(rep, rep.fails ? 'pressure' : 'clean')
   }
   function settle(rep, kind) {
     rep.res = { kind, at: g.t }
@@ -328,25 +222,23 @@ export function make({ v, seed, cast }) {
     if (kind === 'clean') g.clean++
     if (kind === 'pressure') g.pressures++
     if (kind === 'sack') g.sacks++
-    if (kind === 'flag') g.flags++
-    g.hud.dots[g.i] = kind === 'clean' || kind === 'pressure'
-    // what happened, in a line: why he got there (a hurried one, the step he got)
+    g.hud.dots[g.i] = kind === 'clean'   // (two clean ones hold it: a hurried one doesn't count)
+    // what happened, in a line: why he got there
     g.hud.prompt = kind === 'clean' ? (rep.pancake ? 'PANCAKE: HE NEVER GOT UP' : 'BALL OUT: NOBODY GOT HOME') : rep.why ?? null
     g.hud.hot = false; g.padCue = null
-    g.held = false; g.tell.held = false
-    g.tell.type = null; g.tell.side = null; g.tell.bull = false; g.tell.contactAt = null; g.tell.free = null
-    const words = { clean: 'CLEAN POCKET', pressure: 'HURRIED', sack: 'SACK', flag: 'FALSE START' }
-    const beat = { clean: 1300, pressure: 1100, sack: 1300, flag: 1050 }[kind]
-    g.stamp = { text: words[kind], good, at: g.t + (kind === 'clean' ? 140 : 0), ms: beat - 140, size: kind === 'clean' || kind === 'flag' ? 40 : 46 }
+    Object.assign(g.tell, { type: null, zone: null, contactAt: null, open: null, close: null })
+    const words = { clean: 'CLEAN POCKET', pressure: 'HURRIED', sack: 'SACK' }
+    const beat = { clean: 1300, pressure: 1250, sack: 1400 }[kind]
+    g.stamp = { text: words[kind], good, at: g.t + (kind === 'clean' ? 140 : 0), ms: beat - 140, size: kind === 'clean' ? 40 : 46 }
     g.fx.push(kind === 'clean' ? 'stamp' : 'tap', kind === 'sack' ? 'h:heavy' : 'h:medium')
     if (kind === 'clean') g.popAt = g.t
     g.phase = 'beat'
     g.nextAt = g.t + beat
     if (plan.every(p => p.res)) {
       const pts = g.clean * 2 + g.pressures
-      const hit = pts >= 5
-      const score = clamp(pts / 8 + g.pancakes * 0.04, 0, 1)
-      const note = [`${g.clean} clean`, g.pressures && `${g.pressures} hurried`, g.sacks && `${g.sacks} sack${g.sacks === 1 ? '' : 's'}`, g.flags && `${g.flags} false start${g.flags === 1 ? '' : 's'}`, g.pancakes && `${g.pancakes} pancake${g.pancakes === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
+      const hit = g.clean >= 2
+      const score = clamp(pts / 6 + g.pancakes * 0.04, 0, 1)
+      const note = [`${g.clean} clean`, g.pressures && `${g.pressures} hurried`, g.sacks && `${g.sacks} sack${g.sacks === 1 ? '' : 's'}`, g.pancakes && `${g.pancakes} pancake${g.pancakes === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
       g.done = outcome(hit ? Math.max(score, 0.5) : Math.min(score, 0.45), hit, note, { made: g.clean, of: n, clean: g.clean, pressures: g.pressures, sacks: g.sacks, pancakes: g.pancakes }, false)
       const word = hit ? (g.clean === n ? 'BRICK WALL' : 'POCKET HELD') : 'POCKET COLLAPSED'
       g.later = { text: word, good: hit, at: g.t + beat - 100, size: word.length > 12 ? 36 : 44 }
@@ -361,117 +253,81 @@ export function make({ v, seed, cast }) {
     setUp(g.rep)
   }
   // ── the rules, each frame of a live snap ──
-  function rules(rep, dt) {
-    const t = g.t, age = t - rep.snapAt, tl = g.tell
+  function rules(rep) {
+    const t = g.t, tl = g.tell
     if (rep.res) return
-    if (rep.doom || rep.hurry) { ;[g.hud.prompt, g.padCue] = cue(rep, t); g.hud.hot = false }
     if (rep.doom) {
-      if (far(rep.ru, rep.qb) < 24 || t - rep.doom.at > 720) settle(rep, 'sack')
+      if (far(rep.ru, rep.qb) < 24 || t - rep.doom.at > 760) settle(rep, 'sack')
       return
     }
     if (rep.hurry) { if (t >= rep.hurry.at) { rep.thrown = t; settle(rep, 'pressure') } return }
-    if (!rep.ex && rep.nextAt != null && t >= rep.nextAt) { rep.nextAt = null; startMove(rep, rep.moves[rep.mi], t + 120) }
-    const ex = rep.ex
+    if (rep.won) { if (t >= rep.throwAt) { rep.thrown = t; settle(rep, 'clean') } return }
     // what's on the screen
-    tl.type = ex?.type ?? null
-    tl.side = null; tl.bull = false; tl.commit = false; tl.contactAt = null; tl.free = null
-    if (ex) {
-      if (ex.type === 'mirror' && t >= ex.showAt) { tl.side = ex.fake && t < ex.crossAt ? ex.fake : ex.dir; tl.commit = t >= ex.commitAt }
-      if (ex.type === 'anchor' && t >= ex.showAt) tl.bull = true
-      if (ex.type === 'punch') tl.contactAt = ex.contactAt
-      if (ex.type === 'pickup' && t >= ex.commitAt) { tl.free = ex.dir; tl.commit = true }
-      if (ex.type === 'recover' && t >= ex.showAt) { tl.side = ex.dir; tl.commit = true }
-    }
-    ;[g.hud.prompt, g.padCue] = cue(rep, t)
-    g.hud.hot = ex?.type === 'anchor' && t >= ex.contactAt
-    if (ex) {
-      if ((ex.type === 'mirror' || ex.type === 'pickup') && t > ex.until) { fail(rep, 'TOO SLOW', ex.dir); return }
-      if (ex.type === 'recover' && t > ex.until) { doom(rep, 'SACK', ex.dir); return }
-      if (ex.type === 'punch' && t > ex.late) { chest(rep); return }
-      if (ex.type === 'anchor' && t >= ex.contactAt) {
-        if (ex.held && g.held) ex.holdMs += dt
-        ex.depth += (dt / DRIVE_MS) * (ex.held && g.held ? GIVE(v) : 1)
-        if (ex.depth >= 1) { doom(rep, 'WALKED BACK', 0); rep.ru.d = rep.me.d + 18; return }
-        if (ex.holdMs >= STALL(v)) { anchored(rep); return }
-      }
-    }
-    if (age >= rep.Q && !rep.doom) throwIt(rep)
+    const mv = shown(rep, t)
+    tl.type = mv; tl.zone = mv ? zoneOf(mv) : null
+    tl.contactAt = mv ? rep.contactAt : null; tl.open = mv ? rep.open : null; tl.close = mv ? rep.close : null
+    g.hud.prompt = !mv ? 'WATCH HIS FIRST STEP' : rep.counter && t >= rep.crossAt ? 'BACK UNDER!' : MOVE[mv].word
+    g.hud.hot = !!mv && t >= rep.open
+    g.padCue = tl.zone
+    if (t > rep.close) hurried(rep, 'LATE', 'LATE: TAP AS THE RING CLOSES')
   }
   // ── where everybody is (the same with no screen: the bot doesn't look at it) ──
   function move(rep, dt) {
-    const t = g.t, me = rep.me, ru = rep.ru, qb = rep.qb, ex = rep.ex, age = t - rep.snapAt, res = rep.res
-    if (g.phase === 'set' || rep.flag) return
+    const t = g.t, me = rep.me, ru = rep.ru, qb = rep.qb, age = t - rep.snapAt, res = rep.res
+    if (g.phase === 'set') return
     if (age > SNAP_MS) seek(qb, qb.x, QB_SET, 0.07, dt)
-    if (rep.other) {
-      const o = rep.other, crash = rep.blitz === 'stunt'
-      const split = ex?.type === 'pickup' ? t >= ex.commitAt - 60 : true
-      if (!split) seek(o, MX + s * 12, RU_D - 10, 0.16, dt)
-      else if (crash) seek(o, MX - s * 40, 6, 0.2, dt)
-      else seek(o, MX + s * 70, 74, 0.16, dt)
-    }
     if (res?.kind === 'sack') return
     if (rep.doom) {
-      const dir = rep.doom.dir || (ru.x < qb.x ? -1 : 1)
+      // he's by: our man went the wrong way (or sat down on a man going round him)
+      const dir = rep.doom.dir || (ru.x < qb.x ? -1 : 1), z = rep.doom.zone
       seek(ru, qb.x + dir * 6, qb.d + 10, 0.3 * g.who.pace, dt)
-      seek(me, me.x + dir * 4, me.d - 4, 0.06, dt)
+      if (z === 0 || z === 2) seek(me, MX + (z === 0 ? -1 : 1) * 30, SET_D, SLIDE_V(v), dt)
+      else seek(me, me.x + dir * 4, me.d - 4, 0.06, dt)
       return
     }
     if (rep.hurry || res?.kind === 'pressure') {
-      const dir = rep.hurry?.dir ?? s
-      seek(ru, qb.x + dir * 52, qb.d + 4, 0.25, dt)
-      seek(me, ru.x - dir * 14, ru.d + 8, 0.25, dt)
+      // he's got a hand on him: a bull walks our man back into the QB's lap; wide, round the edge and behind
+      // the QB; under, up in his face
+      const mv = real(rep)
+      if (mv === 'bull') { seek(me, lerp(MX, qb.x, 0.35), qb.d + 30, 0.16, dt); seek(ru, me.x + s * 3, me.d + 20, 0.3, dt); return }
+      const under = mv === 'under'
+      seek(ru, qb.x + s * (under ? 24 : 52), qb.d + (under ? 20 : 4), 0.25, dt)
+      seek(me, ru.x - s * 14 * (under ? -1 : 1), ru.d + 8, 0.25, dt)
       return
     }
     // a pancake: he goes over on his back, off to the side he was on, and our man steps up over him
-    if (rep.pancake) { seek(ru, rep.pancake.x, rep.pancake.d, 0.16, dt); seek(me, me.x, rep.pancake.md, 0.05, dt); return }
-    if (!ex) {
-      // chest to chest, the pocket giving a little
-      if (res?.kind !== 'clean' || t - res.at < 600) {
+    if (rep.pancake && t >= rep.pancake.at && rep.pancake.x == null) { const side = ru.x >= me.x ? 1 : -1; Object.assign(rep.pancake, { x: ru.x + side * 10, d: me.d + 52, md: me.d + 6, side }) }
+    if (rep.pancake && t >= rep.pancake.at) { seek(ru, rep.pancake.x, rep.pancake.d, 0.16, dt); seek(me, me.x, rep.pancake.md, 0.05, dt); return }
+    const mv = shown(rep, t)
+    if (rep.won) {
+      // with him: our man slides to meet him, he arrives on the beat, chest to chest, and that's where he stays
+      const M = MOVE[real(rep)]
+      seek(me, MX + s * M.arrive[0] * 0.6, SET_D - 2, SLIDE_V(v), dt)
+      const cx = me.x + s * (M.side * 8 || 3), cd = me.d + 20
+      if (t < rep.punchAt) seek(ru, cx, cd, onTime(ru, cx, cd, rep.punchAt - t), dt)
+      else if (res?.kind !== 'clean' || t - res.at < 600) {
         seek(ru, me.x + s * 3, me.d + 20, 0.22, dt)
         if (t - rep.stoneAt < 150) seek(ru, ru.x, me.d + 30, 0.2, dt)
       }
       return
     }
-    if (ex.type === 'mirror') {
-      if (t < ex.showAt) { seek(ru, MX + s * 26, RU_D - 8, 0.2, dt); seek(me, MX, SET_D, 0.12, dt); return }
-      const wide = ex.fake ? t < ex.crossAt : ex.dir === s
-      if (wide) seek(ru, MX + s * 66, SET_D + 6, 0.23, dt)
-      else seek(ru, MX - s * 26, SET_D + 4, 0.25, dt)
-      seek(me, ex.bit ? MX + s * 30 : MX, SET_D, ex.bit ? SLIDE_V(v) : 0.12, dt)
-      return
-    }
-    if (ex.type === 'pickup') {
-      if (t < ex.commitAt - 60) { seek(ru, MX + (rep.blitz === 'stunt' ? -s * 14 : -s * 10), rep.blitz === 'stunt' ? RU_D - 6 : 50, 0.16, dt) }
-      else if (rep.blitz === 'stunt') seek(ru, MX + s * 44, SET_D + 8, 0.25, dt)   // round the outside
-      else seek(ru, MX - s * 24, SET_D + 6, 0.26, dt)                              // through the B gap
-      seek(me, MX, SET_D, 0.12, dt)
-      return
-    }
-    if (ex.type === 'punch') {
-      // with him: our man slides to where he's going, he closes to arrive on the beat
-      const gx = ex.dir === s ? MX + s * 40 : MX - s * 20
-      seek(me, gx, SET_D - 4, SLIDE_V(v), dt)
-      const cx = me.x + ex.dir * 6, cd = me.d + 20
-      const left = ex.contactAt - t
-      const dist = Math.hypot(cx - ru.x, cd - ru.d)
-      seek(ru, cx, cd, left > 16 ? Math.min(0.5, dist / left) : 0.08, dt)
-      return
-    }
-    if (ex.type === 'anchor') {
-      if (t < ex.contactAt) { seek(ru, me.x + s * 3, me.d + 22, Math.max(0.12, far(ru, { x: me.x, d: me.d + 22 }) / Math.max(16, ex.contactAt - t)), dt); return }
-      // he's walking him back toward the QB, as far as the anchor lets him
-      const md = lerp(SET_D, QB_SET + 22, clamp(ex.depth, 0, 1)), mx = lerp(MX, lerp(MX, qb.x, 0.3), clamp(ex.depth, 0, 1))
-      seek(me, mx, md, 0.3, dt)
-      seek(ru, me.x + s * 3, me.d + 20, 0.3, dt)
-      return
-    }
-    if (ex.type === 'recover') {
-      seek(ru, me.x + ex.dir * 36, me.d - 8, 0.24, dt)
-    }
+    // our man sets: kicks back to his spot, and gives a little ground the way he's going (mirroring him: the
+    // feet only, the hands are the call)
+    seek(me, MX + (mv ? s * MOVE[mv].arrive[0] * 0.6 : 0), SET_D, 0.14, dt)
+    if (!mv) { seek(ru, MX + s * 26, RU_D - 4, 0.1, dt); return }
+    // his first step: big and plain. Then he comes on to get to you as the ring closes
+    const from = rep.counter && t >= rep.crossAt ? rep.crossAt : rep.tellAt
+    const M = MOVE[mv]
+    if (t < from + STEP_MS) { const fx = MX + s * M.first[0]; seek(ru, fx, M.first[1], onTime(ru, fx, M.first[1], from + STEP_MS - t) * 1.1, dt); return }
+    if (rep.counter && mv === 'wide') return   // (sold: he sits on the outside step a beat)
+    const ax = MX + s * M.arrive[0]
+    if (t < rep.contactAt) seek(ru, ax, M.arrive[1], onTime(ru, ax, M.arrive[1], rep.contactAt - t), dt)
+    else seek(ru, ax + dirOf(rep) * 14, SET_D, 0.1, dt)   // nobody on him: he's into the pocket
   }
   setUp(plan[0])
   return g
 }
+
 
 // ── The picture ─────────────────────────────────────────────────────────────
 // Behind the pocket: the QB's feet just over the thumbs, our man up and to the side of him, the rush beyond.
@@ -504,7 +360,7 @@ function warmList(g, us, them) {
     list.push({ ...ru, dir: 'side', number: null, step, pose: null })
   }
   for (const pose of ['block', 'stance', 'flex', 'point-up', 'arms-up']) list.push({ ...me, pose })
-  for (const pose of ['block', 'stance', 'swipe-l', 'swipe-r', 'wrap', 'back']) list.push({ ...ru, pose })
+  for (const pose of ['block', 'stance', 'wrap', 'back']) list.push({ ...ru, pose })
   return list
 }
 function warm(g, list) {
@@ -518,8 +374,8 @@ export function draw(ctx, g, view0) {
   const c = view0.colors, us = teamOf(c, 0), them = teamOf(c, 1), rep = g.rep, res = rep.res, who = g.who, s = g.s
   const los = losOf(view0)
   const fy = d => los - d
-  const snapped = g.phase !== 'set' && !rep.flag, age = g.t - rep.snapAt, since = res ? g.t - res.at : -1
-  const sack = res?.kind === 'sack', me = rep.me, ru = rep.ru, qb = rep.qb, ex = rep.ex
+  const snapped = g.phase !== 'set', age = g.t - rep.snapAt, since = res ? g.t - res.at : -1
+  const sack = res?.kind === 'sack', me = rep.me, ru = rep.ru, qb = rep.qb
   // the camera leans in on a sack or a pancake, and eases back for the next snap
   const focus = sack ? qb : ru
   const fAt = tilt(view0, focus.x, fy(focus.d))
@@ -537,14 +393,18 @@ export function draw(ctx, g, view0) {
   const fallX = Math.sign(qb.x - ru.x) || s
   // turf and contact: the snap, a punch landing, a pancake, a sack
   if (snapped && !rep.snapFx) { rep.snapFx = true; plantFx(g, view, me.x, fy(me.d), 0, 3); plantFx(g, view, ru.x, fy(ru.d), 0, 3) }
-  if (rep.punchAt > (rep.punchSeen ?? -1)) {
-    rep.punchSeen = rep.punchAt
-    hitFx(g, view, (me.x + ru.x) / 2, (fy(me.d) + fy(ru.d)) / 2, { power: rep.pancake ? 4.5 : 2.6, n: rep.pancake ? 10 : 6, dust: 1, s: 0.9, up: 40 })
+  const live = snapped && !res && !rep.won && !rep.doom && !rep.hurry
+  const showing = live && g.t >= rep.tellAt ? (rep.counter && g.t < rep.crossAt ? 'wide' : rep.counter ? 'under' : rep.move) : null
+  // his first step hits the turf hard (and again on a counter, coming back under)
+  const stepAt = rep.counter && g.t >= rep.crossAt ? rep.crossAt : rep.tellAt
+  if (showing && rep.stepFx !== stepAt) { rep.stepFx = stepAt; plantFx(g, view, ru.x, fy(ru.d), MOVE[showing].side * s, 5) }
+  if (rep.won && g.t >= rep.punchAt && !rep.punchSeen) {
+    rep.punchSeen = true
+    hitFx(g, view, (me.x + ru.x) / 2, (fy(me.d) + fy(ru.d)) / 2, { power: rep.pancake ? 4.5 : rep.move === 'bull' ? 3 : 2.6, n: rep.pancake ? 10 : 6, dust: 1, s: 0.9, up: 40 })
   }
   if (rep.pancake && g.t - rep.stoneAt > 300 && !rep.flatFx) { rep.flatFx = true; landFx(g, view, ru.x, fy(ru.d), { side: 0, power: 3 }) }
-  if (ex?.type === 'anchor' && g.t >= ex.contactAt && !ex.fx) { ex.fx = true; hitFx(g, view, me.x, fy(me.d + 10), { power: 3, n: 7, dust: 1, s: 0.9, up: 34 }) }
-  if (ex?.type === 'anchor' && g.t >= ex.contactAt && Math.floor(g.t / 120) !== rep.dig) { rep.dig = Math.floor(g.t / 120); plantFx(g, view, me.x, fy(me.d), 0, 2, 0.9) }
-  if (rep.swipeAt > (rep.swipeSeen ?? -1)) { rep.swipeSeen = rep.swipeAt; plantFx(g, view, ru.x, fy(ru.d), s, 5) }
+  // an anchor: he sits down, and his cleats dig in as the bull hits him
+  if (rep.won && rep.move === 'bull' && g.t >= rep.punchAt && g.t - rep.punchAt < 480 && Math.floor(g.t / 120) !== rep.dig) { rep.dig = Math.floor(g.t / 120); plantFx(g, view, me.x, fy(me.d), 0, 2, 0.9) }
   if (sack && !rep.hitFx) { rep.hitFx = true; hitFx(g, view, qb.x, fy(qb.d), { power: 7.5, n: 16, dust: 4, side: fallX, up: 26 }); g.fx.push('stamp') }
   if (sack && s2 > 260 && !rep.landFx) { rep.landFx = true; landFx(g, view, qb.x, fy(qb.d), { side: fallX, power: 3 }) }
   // the rest of the line, on each other
@@ -555,26 +415,18 @@ export function draw(ctx, g, view0) {
     const x = g.CX + i * SP
     put(x + b * 0.6, fy(ME_D - 10 * pc + Math.abs(b) * 0.3), us, { dir: 'up', pose: snapped ? 'block' : 'stance', skin: skinOf(i + 4), number: OL_NUM[i + 2], size: SIZE, ...quiet(who.ol[i + 2]) })
   }
-  // their front: the three not on him (on a twist, the man beside his end is the one looping round)
+  // their front: the three not on him
   const front = [g.CX + s * 0.55 * SP, g.CX - s * 0.55 * SP, g.CX - s * 2.4 * SP]
   front.forEach((x, i) => {
-    if (i === 0 && rep.other && rep.blitz === 'stunt') return
     const b = snapped ? bump(g, i + 7) : 0
     put(x + b, fy(RU_D - 6 - 12 * pc - Math.abs(b) * 0.4), them, { dir: 'down', pose: snapped ? 'block' : 'stance', skin: skinOf(i * 2 + 9), number: DL_NUM[i + 1], size: SIZE, ...quiet(who.dl[i + 1]) })
   })
   // the linebackers, off the ball
-  // (on a blitz the one on his side is the man coming: he's drawn as the rusher)
-  const lbs = rep.other && rep.blitz === 'blitz' ? [[g.CX - s * 0.2 * SP, 57, quiet(who.lb2)]] : [[g.CX - s * 0.2 * SP, 57, quiet(who.lb2)], [g.MX - s * 0.4 * SP, 54, quiet(who.lb)]]
+  const lbs = [[g.CX - s * 0.2 * SP, 57, quiet(who.lb2)], [g.MX - s * 0.4 * SP, 54, quiet(who.lb)]]
   lbs.forEach(([x, number, look], i) => put(x, fy(80 + i * 4), them, { dir: 'down', pose: 'ready', skin: skinOf(i + 2), number, size: SIZE, ...look }))
   // the back stays in, on the far side of the QB, and steps up into a gap
   const rbx = qb.x - s * 34, rbd = snapped ? lerp(QB_GUN + 2, QB_GUN + 26, clamp(age / 600, 0, 1)) : QB_GUN + 2
   put(rbx, fy(rbd), us, { dir: 'up', pose: snapped && age > 500 ? 'block' : 'ready', skin: skinOf(6), number: 28, size: SIZE, ...who.rb })
-  // the man not coming free on a blitz or a twist
-  if (rep.other) {
-    const o = rep.other, w = walk(g, `o${g.i}`, o.x, o.d, 7)
-    const drop = rep.blitz === 'blitz' && snapped && ex?.type !== 'pickup' || (ex?.type === 'pickup' && g.t >= ex.commitAt - 60 && rep.blitz === 'blitz')
-    put(o.x, fy(o.d), them, { dir: drop ? (w.step == null ? 'up' : dirFrom(w, 'up')) : dirFrom(w, 'down'), step: w.step, pose: !snapped ? 'stance' : w.step == null ? 'block' : null, skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...quiet(who.dl[0]) })
-  }
   // the QB: the ball comes back, he sets, it comes out at the end of his clock
   const thrown = rep.thrown != null ? g.t - rep.thrown : -1
   const arm = thrown >= 0 && !qFall ? qbPose(null, thrown) : null
@@ -588,24 +440,24 @@ export function draw(ctx, g, view0) {
   })
   // the man on him
   const wr = walk(g, `ru${g.i}`, ru.x, ru.d, 7)
-  const R = { dir: 'down', skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...(rep.moves[0] === 'pickup' ? (rep.blitz === 'blitz' ? named(who.lb) : named(who.dl[1])) : named(who.dl[0])), step: null, pose: 'stance', squat: 0, lead: true }
-  if (rep.moves[0] === 'pickup') R.number = rep.blitz === 'blitz' ? (who.lb?.number ?? 54) : (who.dl[1]?.number ?? DL_NUM[1])
+  const R = { dir: 'down', skin: skinOf(11), number: DL_NUM[0], size: SIZE, ...named(who.dl[0]), step: null, pose: 'stance', squat: 0, lead: true }
   const party = sack ? clamp((s2 - 560) / 170, 0, 1) : 0
-  // his stance gives it away: a bull sits low and heavy in it, a speed rusher's up high and leaning to the edge
-  // (a counter sets up the same as a speed rush: it's sold as one)
-  if (!snapped && !rep.flag) {
-    if (rep.moves[0] === 'bull') R.squat = 0.14
-    else if (rep.moves[0] !== 'pickup') R.lean = s * 0.07
-  }
   if (snapped) {
     if (party >= 1) { R.pose = rep.k % 2 ? 'point-up' : 'flex'; R.dir = 'down'; R.z = fy(qb.d) + 1 }
     else if (sack) { R.dir = sideName(fallX); R.pose = 'wrap'; R.fall = qFall; R.fallX = fallX; R.z = fy(qb.d) + 1 }
-    else if (rep.pancake) { R.fall = clamp((g.t - rep.stoneAt - 60) / 300, 0, 1); R.fallX = rep.pancake.side; R.pose = R.fall > 0 ? null : 'back'; R.dir = R.fall > 0 ? sideName(rep.pancake.side) : 'down' }
-    else if (g.t - rep.swipeAt < 220) { R.pose = s < 0 ? 'swipe-l' : 'swipe-r' }
-    else if (rep.doom || rep.hurry || ex?.type === 'recover' || res?.kind === 'pressure') { R.step = wr.step; R.pose = wr.step == null ? 'block' : null; R.dir = dirFrom(wr, 'down') }
-    else if (ex?.type === 'anchor') { R.pose = 'block'; R.squat = g.t < ex.contactAt ? 0.16 : 0.1 }
-    else if (!ex || ex.type === 'punch' && g.t >= ex.contactAt) R.pose = g.t - rep.stoneAt < 160 ? 'back' : 'block'
-    else { R.step = wr.step; R.pose = wr.step == null ? 'block' : null; R.dir = dirFrom(wr, 'down') }
+    else if (rep.pancake && g.t >= rep.pancake.at) { R.fall = clamp((g.t - rep.stoneAt - 60) / 300, 0, 1); R.fallX = rep.pancake.side; R.pose = R.fall > 0 ? null : 'back'; R.dir = R.fall > 0 ? sideName(rep.pancake.side) : 'down' }
+    else if (rep.doom || rep.hurry || res?.kind === 'pressure') { R.step = wr.step; R.pose = wr.step == null ? 'block' : null; R.dir = dirFrom(wr, 'down') }
+    else if (rep.won && g.t >= rep.punchAt) { R.pose = g.t - rep.stoneAt < 160 ? 'back' : 'block'; if (rep.move === 'bull') R.squat = 0.1 }
+    else {
+      // the move, in his body: a bull drops his pads and comes straight; wide or under, a long first step and his
+      // whole frame leaning the way he's going
+      const mv = showing ?? (rep.won ? (rep.counter ? 'under' : rep.move) : null)
+      if (mv === 'bull') { R.pose = 'block'; R.squat = 0.2; R.dir = 'down' }
+      else if (mv) {
+        const into = clamp((g.t - stepAt) / 120, 0, 1), side = MOVE[mv].side * s
+        R.step = wr.step ?? 1; R.pose = null; R.dir = sideName(side); R.lean = side * lerp(0.1, 0.32, into)
+      } else { R.step = wr.step; R.pose = wr.step == null ? 'block' : null; R.dir = dirFrom(wr, 'down') }
+    }
   }
   put(ru.x, fy(ru.d), them, R)
   // him: back to the camera, kick-sliding, punching, sitting down in his anchor
@@ -613,11 +465,12 @@ export function draw(ctx, g, view0) {
   const M = { size: SIZE, number: 76, skin: skinOf(4), ...who.me, dir: 'up', pose: 'stance', step: null, squat: 0, lead: true }
   let mdy = 0
   if (snapped) {
-    const punch = clamp(1 - (g.t - rep.punchAt) / 160, 0, 1)
+    const punch = g.t >= rep.punchAt ? clamp(1 - (g.t - rep.punchAt) / 160, 0, 1) : 0
     if (res?.kind === 'clean' && thrown > 700) { M.pose = g.i === g.plan.length - 1 && g.done?.hit ? 'flex' : 'arms-up'; M.dir = g.i === g.plan.length - 1 && g.done?.hit ? 'down' : 'up' }
     else if (rep.pancake && g.t - rep.stoneAt > 520) { M.pose = 'point-up'; M.dir = 'up' }
+    else if (rep.won && rep.move === 'bull') { M.pose = 'block'; M.squat = 0.12; mdy = punch * 3 }   // (sat down in his anchor)
     else if (punch > 0) { M.pose = 'block'; mdy = punch * 6 }
-    else if (ex?.type === 'anchor' && g.t >= ex.contactAt) { M.pose = 'block'; M.squat = ex.held && g.held ? 0.12 : 0.04 }
+    else if (rep.doom?.zone === 1) { M.pose = 'block'; M.squat = 0.1 }
     else if (wm.step != null) { M.step = wm.step; M.pose = Math.abs(wm.dx) > Math.abs(wm.dy) ? 'slide' : 'back' }
     else M.pose = 'block'
   }
@@ -637,18 +490,22 @@ export function draw(ctx, g, view0) {
     const f = thrown / 700, to = fy(QB_SET + 520)
     ballInAir(ctx, view, lerp(qb.x, throwX, f), lerp(fy(qb.d), to, f), 34 + Math.sin(f * Math.PI) * 60, Math.atan2(throwX - qb.x, to - fy(qb.d)), 1.1)
   }
-  // the punch: a ring closes on him, and it lands as it meets him
-  if (ex?.type === 'punch' && g.t < ex.late) {
-    const k = clamp((g.t - ex.at) / Math.max(1, ex.contactAt - ex.at), 0, 1.25)
-    const p = tilt(view, ru.x, fy(ru.d)), y = p.y - 46 * p.s * SIZE * 0.6
-    const R0 = 9 * p.s, rad = lerp(34 * p.s, R0, Math.min(1, k)) - Math.max(0, k - 1) * 10 * p.s
-    ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(245,220,138,.85)'
+  // the ring: from his first step it closes on him; tap as it gets there (it goes white once you're in time)
+  if (showing) {
+    const k = clamp((g.t - stepAt) / Math.max(1, rep.contactAt - stepAt), 0, 1.3)
+    const p = tilt(view, ru.x, fy(ru.d)), y = p.y - 46 * p.s * SIZE * 0.6, on = g.t >= rep.open
+    const R0 = 10 * p.s, rad = lerp(40 * p.s, R0, Math.min(1, k)) - Math.max(0, k - 1) * 12 * p.s
+    ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(245,220,138,.9)'
     ctx.beginPath(); ctx.arc(p.x, y, R0, 0, Math.PI * 2); ctx.stroke()
-    ctx.strokeStyle = k >= 0.9 ? '#fff' : 'rgba(255,255,255,.75)'; ctx.lineWidth = 2.6
+    ctx.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.55)'; ctx.lineWidth = on ? 3.4 : 2.4
     ctx.beginPath(); ctx.arc(p.x, y, Math.max(2, rad), 0, Math.PI * 2); ctx.stroke()
+    // and what he's doing, called over him
+    const word = rep.counter && g.t >= rep.crossAt ? 'BACK UNDER!' : MOVE[showing].word, kk = 1 + 0.25 * (1 - easeOut(clamp((g.t - stepAt) / 110, 0, 1)))
+    ctx.save(); ctx.translate(p.x, p.y - 96 * p.s * SIZE * 0.6); ctx.scale(kk, kk)
+    text(ctx, word, 0, 0, { font: DISPLAY, size: 26, color: on ? GOLD : '#fff' }); ctx.restore()
   }
   // the pop of a punch: three short lines where the pads meet
-  const popK = clamp(1 - (g.t - rep.punchAt) / 170, 0, 1)
+  const popK = g.t >= rep.punchAt ? clamp(1 - (g.t - rep.punchAt) / 170, 0, 1) : 0
   if (popK > 0) {
     const a = tilt(view, (me.x + ru.x) / 2, fy((me.d + ru.d) / 2)), sp = a.s * SIZE * 0.6, o = (1 - popK) * 7
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.4 * sp; ctx.lineCap = 'round'
@@ -658,13 +515,6 @@ export function draw(ctx, g, view0) {
       ctx.moveTo(a.x + dx * (9 + o) * sp, yy + dy * (9 + o) * sp); ctx.lineTo(a.x + dx * (16 + o) * sp, yy + dy * (16 + o) * sp)
     }
     ctx.stroke()
-  }
-  // the anchor: how long he's held, in a ring over his back
-  if (ex?.type === 'anchor' && g.t >= ex.contactAt) {
-    const p = tilt(view, me.x, fy(me.d)), y = p.y - 92 * p.s * SIZE * 0.6, f = clamp(ex.holdMs / g.stallMs, 0, 1)
-    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(6,10,12,.75)'; ctx.beginPath(); ctx.arc(p.x, y, 11, 0, Math.PI * 2); ctx.stroke()
-    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.beginPath(); ctx.arc(p.x, y, 11, 0, Math.PI * 2); ctx.stroke()
-    ctx.strokeStyle = ex.held && g.held ? GOOD : BAD; ctx.beginPath(); ctx.arc(p.x, y, 11, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); ctx.stroke()
   }
   g.dirt.draw(ctx, g.t)
   ctx.restore()
@@ -676,20 +526,16 @@ export function draw(ctx, g, view0) {
   }
   g.paper.draw(ctx, g.t)
   // the cadence, over the QB
-  if (g.phase === 'set' && !rep.flag) {
-    const q = scr(qb.x, qb.d), y = q.y - 80 * q.s
-    const hutAt = g.tell.hard ? rep.hardAt : null
-    if (hutAt != null) {
-      const a = g.t - hutAt, k = 1 + 0.3 * (1 - easeOut(clamp(a / 90, 0, 1)))
-      ctx.save(); ctx.translate(q.x, y); ctx.scale(k, k); text(ctx, 'HUT', 0, 0, { font: DISPLAY, size: 26, color: GOLD }); ctx.restore()
-    } else text(ctx, 'SET', q.x, y, { font: DISPLAY, size: 22, color: 'rgba(255,255,255,.82)' })
+  if (g.phase === 'set') {
+    const q = scr(qb.x, qb.d)
+    text(ctx, 'SET', q.x, q.y - 80 * q.s, { font: DISPLAY, size: 22, color: 'rgba(255,255,255,.82)' })
   } else if (snapped && age < 300) {
     const q = scr(qb.x, qb.d), k = 1 + 0.3 * (1 - easeOut(clamp(age / 90, 0, 1)))
     ctx.save(); ctx.translate(q.x, q.y - 80 * q.s); ctx.scale(k, k); text(ctx, "HUT!", 0, 0, { font: DISPLAY, size: 28, color: '#fff' }); ctx.restore()
   }
   // the pocket clock: how long the QB has had it, in the corner under the title bar
-  if (snapped && !rep.flag) {
-    const held = Math.min(res ? res.at : g.t, rep.snapAt + rep.Q) - rep.snapAt
+  if (snapped) {
+    const held = (res ? res.at : g.t) - rep.snapAt
     const col = sack ? BAD : res?.kind === 'clean' ? GOOD : '#fff'
     ctx.fillStyle = 'rgba(5,8,11,.86)'; ctx.fillRect(view0.w - 132, 48, 132, 28)
     text(ctx, 'POCKET', view0.w - 70, 63, { font: LABEL, size: 15, align: 'right', color: GOLD, track: 0.5 })

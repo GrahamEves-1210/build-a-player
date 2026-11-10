@@ -388,33 +388,16 @@ function throwPilot(g, game) {
   }
 }
 
-// Pass Pro: slide on his real step, punch as the ring closes, sit on a bull, take the free man
+// Pass Pro: read his first step (wide, under, bull) and tap its pad as the ring closes (a counter: the second step)
 function passproPilot(g) {
-  let rep = -1, plan = null, seen = null, punchFor = null, holding = false, upAt = null
-  const down = z => ({ kind: 'down', zone: z, x: 60 + z * 120, y: 500 }), up = z => ({ kind: 'up', zone: z, x: 60 + z * 120, y: 500 })
+  let rep = -1, plan = null, seen = null
+  const down = z => ({ kind: 'down', zone: z, x: 60 + z * 120, y: 500 })
   return () => {
-    const out = []
-    if (upAt != null && g.t >= upAt) { upAt = null; out.push(up(1)) }
-    if (g.i !== rep) { rep = g.i; plan = null; seen = null; punchFor = null; if (holding) { holding = false; out.push(up(1)) } }
+    if (g.i !== rep) { rep = g.i; plan = null; seen = null }
     const tl = g.tell
-    if (g.rep.res || g.phase !== 'play') return out.length ? out : undefined
-    if (holding && tl.type !== 'anchor') { holding = false; out.push(up(1)) }
-    const key = [tl.type, tl.side, tl.free, tl.bull, tl.commit].join('|')
-    if (key !== seen) {
-      seen = key
-      if ((tl.type === 'mirror' || tl.type === 'recover') && tl.side && tl.commit) plan = { at: g.t + REACT * 0.5, side: tl.side }
-      else if (tl.type === 'pickup' && tl.free) plan = { at: g.t + REACT + 140, side: tl.free }
-      else if (tl.type === 'anchor' && tl.bull) plan = { at: g.t + REACT, hold: true }
-    }
-    if (tl.type === 'punch' && tl.contactAt != null && punchFor !== tl.contactAt) { punchFor = tl.contactAt; plan = { at: tl.contactAt, mid: true } }
-    if (plan && g.t >= plan.at) {
-      const p = plan
-      plan = null
-      if (p.hold) { holding = true; out.push(down(1)) }
-      else if (p.mid) { out.push(down(1)); upAt = g.t + 70 }
-      else out.push(down(g.zoneFor(p.side)))
-    }
-    return out.length ? out : undefined
+    if (g.rep.res || g.rep.pressed || g.phase !== 'play') return
+    if (tl.type && tl.type !== seen) { seen = tl.type; plan = { at: Math.max(g.t + REACT, tl.contactAt - 30), zone: tl.zone } }
+    if (plan && g.t >= plan.at) { const z = plan.zone; plan = null; return [down(z)] }
   }
 }
 // ── soccer ──────────────────────────────────────────────────────────────────
@@ -644,7 +627,7 @@ export const CAPTION = {
   read: { wait: 'FIND THE OPEN MAN', press: '{T} HIM' },
   rebound: { wait: 'WATCH THE RIM', press: '{T} THE SIDE IT COMES OFF' },
   rush: { wait: 'WATCH THE BALL', press: '{T} NOW' },
-  passpro: { wait: 'WATCH HIS FIRST STEP', press: '{T} THE WAY HE GOES' },
+  passpro: { wait: 'WATCH HIS FIRST STEP', press: '{T} AS THE RING CLOSES' },
   throw: { wait: 'FIND THE OPEN MAN', press: "PRESS WHERE HE'S GOING", up: 'LET GO TO THROW' },
   halfcourt: { wait: 'SET HIM UP, THEN CROSS OVER' },
   penalty: { wait: 'PICK A CORNER, THEN RUN UP' },
