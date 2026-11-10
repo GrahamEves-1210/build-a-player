@@ -29,10 +29,13 @@ const LINE = { id: 'line', k: 2.1, topFrac: 0.29, zoom: 1.1, men: 1.25, e: 0.3, 
 const READ11 = { ...READ, id: 'read11', men: 1.04 }, NEAR11 = { ...NEAR, id: 'near11', men: 1.1 }
 // Zone Drop: the backer and the short routes in front of him, a step closer than the safety's look down the field
 const ZONE11 = { ...NEAR, id: 'zone11', zoom: 1.5, men: 1.12 }
+// Kick Return: from behind the man deep, the coverage and the wall in front of him, eleven a side
+const KR = { id: 'kr', k: 1.9, topFrac: 0.2, zoom: 1.2, men: 1.15, e: 0.32, res: 4 }
 const CAMS = {
   bomb: READ11, 'third-long': READ11, acc: READ, 'hot-read': READ11, audible: READ11, 'two-minute': READ11,
   gap: NEAR11, 'jump-route': NEAR11, 'zone-drop': ZONE11, sneak: NEAR11, 'goal-line': GOAL, catch: GOAL, release: NEAR, cone: NEAR, gauntlet: OPEN,
   'pass-rush': LINE, 'run-stuff': LINE,
+  'kick-return': KR,
   seal: DOWN, juke: OPENRUN, 'juke-wr': OPENRUN, 'juke-te': OPENRUN, 'tackle-angle': OPENRUN, escape: DOWN,
 }
 let CAM = COURT, far = 1 / (1 + CAM.k)
@@ -633,6 +636,13 @@ export function padsPose(dir, step, pose, carry) {
     if (carry) { o.hlx = -19; o.hly = -55 }
     return o
   }
+  // the stiff arm: running, the arm toward the man locked out at his shoulder, the ball tucked in the other
+  if (pose === 'stiff-l' || pose === 'stiff-r') {
+    const sd = pose === 'stiff-r' ? 1 : -1, b = padsPose(dir, step, 'sprint', false)
+    b.lean = -sd * 0.07
+    if (sd > 0) { b.hrx = 33; b.hry = -50; b.hlx = -17; b.hly = -60 } else { b.hlx = -33; b.hly = -50; b.hrx = 17; b.hry = -60; b.ballR = true }
+    return b
+  }
   // hands on his hips: on the belt, the elbows out wide
   if (pose === 'hips') { o.hlx = -13; o.hly = -o.hy - 5; o.hrx = 13; o.hry = -o.hy - 5; o.akimbo = 1; return o }
   // bent over, hands on his knees: feet wide, knees soft, the arms straight down to them (drawn with a squat, so he's doubled over)
@@ -937,7 +947,7 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
   const sl = Math.sin(o.lean), cl = Math.cos(o.lean), hipY = -o.hy
   const sx = sl * R_TORSO, sy = hipY - cl * R_TORSO
   const turned = pose === 'qb-set', SH = plain ? 13.5 : 15.5, rx = sx + cl * (turned ? SH + 0.6 : SH), ry = sy + sl * SH + (turned ? 3.2 : 2.5), lx = sx - cl * (turned ? SH - 1.8 : SH), ly = sy - sl * SH + (turned ? 1.4 : 2.5)
-  const ballAt = () => padsBall(x, o.hlx - 3, o.hly - 2, 0.25)
+  const ballAt = () => (o.ballR ? padsBall(x, o.hrx + 3, o.hry - 2, -0.25) : padsBall(x, o.hlx - 3, o.hly - 2, 0.25))
   const face = back ? 'back' : 'front'
   // arms hanging or held out go behind the jersey, shoulder under the armhole. Only hands on the chest cross in front.
   const armsOver = !back && pose && pose !== 'slide' && pose !== 'ready' && pose !== 'back' && pose !== 'touch' && pose !== 'sprint' && pose !== 'plant-l' && pose !== 'plant-r'

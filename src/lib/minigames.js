@@ -33,6 +33,8 @@ export const GAMES = {
   // ── RB ──
   'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Four plays. One gap opens green each time: hit it, fast. Red is a linebacker filling it: stay out.', rounds: 4, quick: 0.72 },
   'juke':        { kind: 'lanes', traits: ['elusiveness'], title: 'JUKE', how: 'The tackler commits to a side. Cut the other way, three times.' },
+  // ── RB / WR: deep on a kickoff (a back's Speed, Burst, Elusiveness, Vision and Balance; a receiver's Speed, Body Control, After Catch and Hands: a build counts the ones it has)
+  'kick-return': { kind: 'kickret', traits: ['speed', 'burst', 'elusiveness', 'vision', 'balance', 'bodyControl', 'afterCatch', 'hands'], title: 'KICK RETURN', how: 'Three kickoffs. CATCH it as the ring closes: off it and it’s a muff. Read the wall and get to the crease: hold LEFT or RIGHT to slide, you run upfield on your own. A lane can close on you: find the new one. Then JUKE the man who squares you up and STIFF ARM the man coming from the side, each as his ring closes. Average the 30 or better, or break one to midfield.', rounds: 3 },
   // ── WR / TE ──
   'catch':       { kind: 'taps', traits: ['hands'], title: 'CONTESTED CATCH', how: 'Three balls. Tap each one in the window. Each one comes in hotter.', n: 3 },
   'juke-wr':     { kind: 'lanes', traits: ['bodyControl', 'afterCatch'], title: 'MAKE A MAN MISS', how: 'The defender commits. Cut the other way, three times.' },
@@ -104,8 +106,8 @@ export const GAMES = {
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
   qb: ['hot-read', 'bomb', 'escape', 'sneak', 'two-minute', 'third-long', 'audible', 'goal-line'],
-  rb: ['gap', 'juke', 'goal-line'],
-  wr: ['catch', 'juke-wr', 'release', 'goal-line'],
+  rb: ['gap', 'juke', 'goal-line', 'kick-return'],
+  wr: ['catch', 'juke-wr', 'release', 'goal-line', 'kick-return'],
   te: ['catch', 'seal', 'juke-te', 'goal-line'],
   db: ['jump-route', 'tackle-angle'],
   dl: ['pass-rush', 'run-stuff'],

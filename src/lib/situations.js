@@ -20,6 +20,8 @@ const SPOTS = {
   gap: RUN, juke: RUN, seal: RUN,
   'third-long': { ...PASS, tail: 'Third and long.' },
   bomb: { ...PASS, tail: 'Time for a deep shot.' },
+  // (they've just scored: down a score or level, and they kick it off)
+  'kick-return': { margin: [3, 4, 6, 7, 7, 0, 1], span: [70, 330], tail: 'They kick it off.' },
   'jump-route': STOP, 'zone-drop': STOP, 'tackle-angle': STOP, 'pass-rush': STOP, 'run-stuff': STOP, 'hit-stick': STOP,
   'clutch-shot': { margin: [1, 1, 2], fixed: 2.8, hoops: true, tail: 'One shot left.' },         // (2.8: the shot's own clock in lib/mg/meter.js)
   'free-throws': { margin: [1, 1, 0], tenths: [0.8, 5.5], hoops: true, tail: 'Two shots at the line.' },

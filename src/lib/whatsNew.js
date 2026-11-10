@@ -93,6 +93,7 @@ const NOV_10 = {
         'Player names on the field are drawn in the same retro pixels as the players',
         'Pass Pro is a fight for leverage: hold SLIDE OUTSIDE or SLIDE INSIDE to keep him in front of you through the whole down, against a speed rush, an inside move and a bull rush',
         'New LB key moment, Hit Stick: read the back, slide to his hole and time the tackle. Perfect timing is a hit stick and can force a fumble',
+        'New RB and WR key moment, Kick Return: field the kickoff, find the crease in the wall, then juke and stiff-arm your way past the last men. Average better than a touchback, or take one to the house',
         'Zone Drop: the ball hangs in the air longer',
         'Hot Read and Zone Drop: the circles start on the receivers instead of jumping onto them',
         'Moment cards and mini game text now use the player\'s name',

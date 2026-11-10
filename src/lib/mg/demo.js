@@ -626,10 +626,33 @@ function hitstickPilot(g) {
     }
   }
 }
+// ── kickret: CATCH as it comes down, across to the lane the wall shows, then each move as its ring closes ─
+function kickretPilot(g) {
+  let rep = -1, seen = 0, want = null, goAt = Infinity, held = null, ringFor = null, hitAt = Infinity
+  const at = z => ({ zone: z, x: 60 + z * 120, y: 500 })
+  return () => {
+    if (g.i !== rep) { rep = g.i; seen = 0; want = null; goAt = Infinity; held = null; ringFor = null; hitAt = Infinity }
+    const R = g.rep, tl = g.tell
+    if (R.res || g.phase !== 'play') { if (held != null) { const z = held; held = null; return [{ kind: 'up', ...at(z) }] } return }
+    const key = tl.ring ? `${tl.what}${R.j}` : null
+    if (key && key !== ringFor) { ringFor = key; hitAt = g.t + tl.rem }
+    if (g.t >= hitAt) { hitAt = Infinity; const out = held != null ? [{ kind: 'up', ...at(held) }] : []; held = null; return [...out, { kind: 'down', ...at(1) }] }
+    if (tl.lane != null && tl.laneN !== seen) { seen = tl.laneN; want = g.laneX(tl.lane); goAt = g.t + REACT + 120 + REACT * 0.3 }
+    if (held != null) {
+      if (want == null || (want - R.me.x) * (held ? 1 : -1) <= g.coast() * 0.85) { const z = held; held = null; want = null; return [{ kind: 'up', ...at(z) }] }
+      return
+    }
+    if (want != null && g.t >= goAt && !R.wallDone) {
+      if (Math.abs(want - R.me.x) < 8) { want = null; return }
+      held = want < R.me.x ? 0 : 2
+      return [{ kind: 'down', ...at(held), hold: true }]
+    }
+  }
+}
 const PILOTS = { passpro: passproPilot, catch: catchPilot, cone: conePilot, cut: cutPilot, dash: dashPilot, bench: benchPilot, calls: callsPilot, fastbreak: fastbreakPilot, goalline: goallinePilot, leverage: leveragePilot, lockdown: lockdownPilot, meter: meterPilot, oop: oopPilot, halfcourt: halfcourtPilot, read: readPilot, rebound: reboundPilot, rush: rushPilot, throw: throwPilot,
   penalty: penaltyPilot, oneonone: oneononePilot, header: headerPilot, volley: volleyPilot, slalom: slalomPilot, finishing: finishingPilot,
   freekick: freekickPilot, counter: counterPilot, firsttouch: firsttouchPilot,
-  atbat: atbatPilot, pitch: pitchPilot, steal: stealPilot, ofarm: ofarmPilot, hitstick: hitstickPilot }
+  atbat: atbatPilot, pitch: pitchPilot, steal: stealPilot, ofarm: ofarmPilot, hitstick: hitstickPilot, kickret: kickretPilot }
 export const pilotFor = (botName, g, game) => PILOTS[botName]?.(g, game) ?? (() => undefined)
 
 // How the demo's one rep went. Most games mark it in the first of their dots; the one-play games in done.
@@ -690,6 +713,7 @@ export const CAPTION_GAME = {
   'zone-drop': { wait: 'EYES ON THE QB', press: '{T} THE MAN HE THROWS TO' },
   'pass-rush': { wait: 'WATCH THE BALL', press: ['GET OFF ON THE BALL', '{T} THE MOVE THAT BEATS HIM'] },
   'hit-stick': { wait: 'READ THE BACK', press: ['HOLD TO GET TO HIS HOLE', 'TACKLE AS THE RING CLOSES'] },
+  'kick-return': { wait: 'WATCH THE KICK', press: ['CATCH AS THE RING CLOSES', 'HOLD TO GET TO THE CREASE', 'BEAT HIM AS THE RING CLOSES'] },
   sprint30: { wait: 'WAIT FOR THE WHISTLE', press: 'LEFT, RIGHT, IN RHYTHM' },
   sixty: { wait: 'WAIT FOR THE GUN', press: 'LEFT, RIGHT, IN RHYTHM' },
   'exit-velo': { wait: 'ZONE ON THE TOSS', press: 'DRIVE IT' },
