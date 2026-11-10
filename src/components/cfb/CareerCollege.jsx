@@ -4,11 +4,13 @@ import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../../data/wrs'
 import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
 import { seeded } from '../../lib/rng'
+import { starsFor, rankFor, barAt, offersFor, startsOver } from './cfbRecruit'
+import { Stars, OfferBoard, CommitBar } from './CFBOffers'
 import { loadCFB } from '../../lib/cfbLoad'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import CFBSimPage from './CFBSimPage'
-import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, seasonEvent, collegeGap, photoLookup } from './cfbShared'
+import { CFB_POS, classLabel, seasonEvent, collegeGap, photoLookup } from './cfbShared'
 import './cfb.css'
 
 // ── Career: START IN COLLEGE ─────────────────────────────────────────────────
@@ -36,7 +38,6 @@ const clamp = (a, b, x) => Math.max(a, Math.min(b, x))
 const YEAR_OF = ['FR', 'SO']          // his class, season by season
 const SIM_YEAR = ['JR', 'SR']         // what the engine is told, so his draft stock reads as a draft-eligible player's
 const DEV_STEPS = 3                   // a returning player: one step on his three weakest traits
-const LEAVES = new Set(['SR', 'RS-SR', 'GR', 'RS-GR', '5TH', 'RS-5TH'])   // a starter in his last year is gone next season
 const NO_BOOST = new Set(['size'])   // his frame: the college gap doesn't touch it, and a returning year doesn't develop it (cfbShared collegeGap)
 
 // the college build: the NFL build up by the college gap (cfbShared.js collegeGap, the same one the draft takes back
@@ -49,51 +50,7 @@ export function collegeBuild(build, types, dev = {}, pos = null) {
     return [t, { ...ch, val: clamp(0, 11, (ch.val ?? 0) + collegeGap(p, t) + (dev[t] ?? 0)) }]
   }))
 }
-// (on the college scale, the build plus the college gap. With a full letter on every trait the boosted OVR sits
-// about 12 over his NFL rating until it runs into 99 (an NFL 85 or better is a 99 in college), so the lines are
-// 99 / 95 / 89: the same recruits get the same stars the old gap gave them (scratch check, 2026-11-10: an NFL
-// 70-74 is a 2-star, 75-79 a 3-star, 80-84 mostly a 4-star, 85+ a 5-star, a touch lower for backs and receivers))
-export const starsFor = ovr => (ovr >= 99 ? 5 : ovr >= 95 ? 4 : ovr >= 89 ? 3 : 2)
-// a composite-style national ranking from the boosted OVR, inside his stars' band. (Every 5-star is a 99 in
-// college, so inside that band it's his NFL-builder OVR that orders them: a 97 is the No. 1 recruit, an 85 the
-// last of the five-stars)
-export function rankFor(ovr, pos, seed, nflOvr = null) {
-  const r = seeded(`cfb-rank-${seed}`)
-  const bands = [[99, 99, 1, 32], [95, 98.99, 33, 330], [89, 94.99, 331, 1400], [0, 88.99, 1401, 3200]]
-  const [lo, hi, best, worst] = bands.find(b => ovr >= b[0])
-  const t = lo >= 99 ? (nflOvr == null ? 0.5 : clamp(0, 1, (97 - nflOvr) / 12)) : clamp(0, 1, (hi - ovr) / Math.max(1, hi - lo))
-  const overall = Math.max(1, Math.round(best + t * (worst - best) + (r() - 0.5) * (worst - best) * 0.08))
-  const posRank = Math.max(1, Math.round(overall / ({ qb: 11, wr: 6, rb: 10 })[pos] + r() * 1.2))
-  return { overall, posRank }
-}
-// a program's level: blue bloods and the top 10 · the Power 4 · lower P4 and the best of the G6 · the G6
-const BLUE = new Set(['ALA', 'OSU', 'UGA', 'TEX', 'MICH', 'NDAM', 'USC', 'OKLA', 'LSU', 'ORE', 'PSU', 'CLEM', 'FLA', 'MIA', 'TENN'])
-function tierOf(t, confTier) {
-  if (BLUE.has(t.short) || t.fpiRank <= 10) return 5
-  if ((confTier === 'P4' || t.short === 'NDAM') && t.fpiRank <= 45) return 4
-  if (confTier === 'P4' || t.fpiRank <= 70) return 3
-  return 2
-}
-// who he'd have to beat at a school: the starter (a receiver: the third starter, the last spot in the three)
-function barAt(data, short, pos) {
-  const room = data.pools[pos].filter(p => p.team === short).sort((a, b) => (a.depth ?? 9) - (b.depth ?? 9))
-  return (pos === 'wr' ? room[2] ?? room[room.length - 1] : room[0]) ?? null
-}
-const startsOver = (bar, ovr, year = 0) => !bar || ovr > (bar.ovr ?? 0) || (year > 0 && LEAVES.has(String(bar.year).toUpperCase()))
-
-export function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5 }) {
-  const r = seeded(`cfb-offers-${seed}`)
-  const tierOfConf = Object.fromEntries(data.conferences.map(c => [c.id, c.tier]))
-  const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos) }))
-  let pool = all.filter(x => x.tier === stars)
-  if (pool.length < n + 2) pool = pool.concat(all.filter(x => x.tier === stars - 1 || (stars === 2 && x.tier === 3)))
-  const scored = pool.map(x => ({ ...x, need: ovr - (x.bar?.ovr ?? 70), score: r() * 2 + clamp(-8, 8, ovr - (x.bar?.ovr ?? 70)) * 0.16 + (x.tier === stars ? 0.8 : 0) }))
-    .sort((a, b) => b.score - a.score)
-  const pick = scored.slice(0, n)
-  // at least one school where he'd start, when there is one
-  if (!pick.some(x => x.need > 0)) { const s = scored.find(x => x.need > 0); if (s) pick[pick.length - 1] = s }
-  return pick.map(x => ({ short: x.t.short, tier: x.tier, starts: x.need > 0, bar: x.bar ? { name: x.bar.name, ovr: x.bar.ovr, year: x.bar.year } : null }))
-}
+// (the stars, the ranking, the offers and the offer board: cfbRecruit.js and CFBOffers.jsx, shared with the one-off mode)
 
 // ── A season as the backup: the school plays its real starter, he gets a backup's snaps ──────────
 const LINE_KEYS = {
@@ -229,8 +186,6 @@ function stockNudge(sums) {
   // (no extra for a Heisman: the last season's projection already reads his whole college career)
   return clamp(-7, 7, n)
 }
-
-const Stars = ({ n }) => <span className="cfbr-stars" aria-label={`${n} stars`}>{'★'.repeat(n)}<i>{'★'.repeat(5 - n)}</i></span>
 
 export default function CareerCollege({ c, setCareer, onExit }) {
   const [data, setData] = useState(null)
@@ -429,52 +384,6 @@ export default function CareerCollege({ c, setCareer, onExit }) {
         </section>
         <CommitBar label={sel ? `COMMIT TO ${schoolOf(sel.short)}` : 'PICK A SCHOOL'} on={!!sel} onGo={() => sel && begin(sel.short)} />
       </div>
-    </div>
-  )
-}
-
-// The offers as a recruiting board: one row a school, its numbers in columns, and his role there.
-// The job he'd be fighting for shows on the school he taps, in a line (a receiver's is the No. 3 spot:
-// the third starting receiver)
-const JOB = { qb: 'the starting job', rb: 'the starting job', wr: 'the No. 3 receiver spot' }
-function jobLine(o, pos) {
-  const b = o.bar
-  if (!b) return `${JOB[pos].charAt(0).toUpperCase() + JOB[pos].slice(1)} is open.`
-  const leaves = LEAVES.has(String(b.year ?? '').toUpperCase())
-  if (o.starts) return `Beats out ${b.name} (${b.ovr}) for ${JOB[pos]}.${leaves && o.stay ? ` ${b.name.split(' ').pop()} is a senior.` : ''}`
-  return `Backs up ${b.name} (${b.ovr}) for ${JOB[pos]}${leaves ? `, a senior: the job opens after this year` : ''}.`
-}
-function OfferBoard({ offers, teamsBy, confOf, pos, picked, onPick }) {
-  return (
-    <div className="cfbr-board" role="radiogroup" aria-label="Offers">
-      <div className="cfbr-board-row is-head" aria-hidden="true"><span>SCHOOL</span><span className="is-conf">CONF</span><span>FPI</span><span>AP</span><span className="is-role">ROLE</span></div>
-      {offers.map(o => {
-        const t = teamsBy[o.short]
-        if (!t) return null
-        const on = picked === o.short
-        return (
-          <button key={o.short} type="button" role="radio" aria-checked={on} className={`cfbr-board-row${on ? ' is-on' : ''}${o.stay ? ' is-stay' : ''}`} onClick={() => onPick(o.short)}>
-            <span className="cfbr-board-school">
-              <img src={cfbLogoDark(t.short)} alt="" onError={e => { e.currentTarget.src = cfbLogo(t.short) }} />
-              <b>{t.school}</b>
-              {o.stay && <em>NOW</em>}
-            </span>
-            <span className="is-conf">{confOf[t.conf]?.short ?? ''}</span>
-            <span className="is-num">{t.fpiRank ?? '–'}</span>
-            <span className="is-num">{t.ap ?? '–'}</span>
-            <span className="is-role"><i className={o.starts ? 'is-start' : ''}>{o.starts ? 'STARTER' : 'BACKUP'}</i></span>
-            {on && <span className="cfbr-board-job">{jobLine(o, pos)}</span>}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-// the commit button, pinned above the dock and the website's ad rail
-function CommitBar({ label, on, onGo }) {
-  return (
-    <div className="cfbr-commit-bar">
-      <button className="cfbs-next cfbr-commit" disabled={!on} onClick={onGo}><b>{label}</b></button>
     </div>
   )
 }

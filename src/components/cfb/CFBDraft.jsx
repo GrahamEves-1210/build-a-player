@@ -97,7 +97,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, sa
               ))}
               {full && slot != null && <p className="cfbd-warn">Slot {slot + 1}'s career is deleted for good.</p>}
             </div>
-            {sandbox && <p className="cfbd-note">A Sandbox build: the career is a Sandbox career, as football's are.</p>}
+            {sandbox && <p className="cfbd-note">Built in Sandbox, so this career is a Sandbox career: it's tagged SANDBOX and earns no XP or rewards.</p>}
             <div className="cfbd-actions">
               <button className="cfbs-btn is-main" disabled={slot == null || busy} onClick={go}>{full && slot != null ? `REPLACE SLOT ${slot + 1} · ENTER THE DRAFT` : 'ENTER THE DRAFT'}</button>
               <button className="cfbs-btn" onClick={onCancel}>NOT YET</button>

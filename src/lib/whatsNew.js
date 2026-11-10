@@ -9,6 +9,12 @@ const NOV_10 = {
     {
       name: 'New Mode: College Football',
       items: [
+        'The first school is now a scholarship decision: your stars, national rank and the 10 schools offering you, by talent',
+        'Transfer opens the portal: the schools that want you now, and a big season (record, a title run, the Heisman) can move your stock up a level',
+        'Return to school up to twice; transfer as often as you like',
+        'A new season moves the rosters on: juniors and seniors are gone, and the best sophomores and freshmen take over a class older',
+        'Player classes checked against real rosters',
+        'The Playoff bracket fills in below the live games as you play',
         'Added College Football: spin a conference, then one of its starters',
         'QB, RB and WR, with every FBS team and its real 2026 players',
         'A full season with the AP Top 25, conference title games and the 12-team Playoff',

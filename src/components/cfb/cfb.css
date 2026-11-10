@@ -486,3 +486,10 @@ html.is-cfb .simp-page.cfbp {
 @media (max-width: 767px) {
   html .cfbp.cfbp--dock .simp-cta.simp-cta--pin { bottom: var(--app-bottom, 96px); }
 }
+
+/* ═══ College Football mode: the scholarship offers and the transfer portal (CFBMode.jsx OffersScreen, on Career's board) ═══ */
+.cfbo-stock { margin: 0; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.22); font-family: var(--ag-body); font-size: 15px; line-height: 1.4; color: #fff; }
+.cfbo-any { justify-self: start; }
+.cfbp-return-note { align-self: center; margin: 0; }
+/* (Sandbox's any-school picker opens over the offers screen, a fixed .ag-screen at 1040) */
+.cfbo ~ .tpm-overlay { z-index: 1100; }

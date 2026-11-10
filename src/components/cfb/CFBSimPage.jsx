@@ -1046,7 +1046,7 @@ function DraftPage({ r, v, pos, userName, userYear, attrMap, onNext }) {
 }
 
 // ── FINAL REPORT ────────────────────────────────────────────────────────────
-function FinalPage({ r, v, pos, build, types, attrMap, archetype, userName, story, rewards, endActions, seasonNote, onDraft, onAgain, onReturn, onTransfer }) {
+function FinalPage({ r, v, pos, build, types, attrMap, archetype, userName, story, rewards, endActions, seasonNote, onDraft, onAgain, onReturn, onTransfer, returnNote = null }) {
   const c = v.c
   const full = c.totals?.full ?? r
   const rows = rowsOf(build, types, attrMap)
@@ -1117,6 +1117,7 @@ function FinalPage({ r, v, pos, build, types, attrMap, archetype, userName, stor
           <div className="simp-final-actions">
             <button className="simp-cta" onClick={() => { sfx('tap'); onDraft?.() }}>Enter the NFL Draft</button>
             {onReturn && <button className="simp-ghost" onClick={() => { sfx('tap'); onReturn() }}>Return to {school}</button>}
+            {!onReturn && returnNote && <p className="cfbs-note cfbp-return-note">{returnNote}</p>}
             {onTransfer && <button className="simp-ghost" onClick={() => { sfx('tap'); onTransfer() }}>Transfer</button>}
             <button className="simp-ghost" onClick={() => { sfx('tap'); onAgain?.() }}>New {CFB_POS[pos].label} Build</button>
           </div>
@@ -1147,12 +1148,13 @@ function pageFrom(stage, pages) {
 }
 
 // (photoOf(name, school): a real player's headshot, for the Heisman ceremony. onReturn / onTransfer: College Football
-// mode's other ways on from a season (another year at the school, or at a new one); seasonNote: which season of his
+// mode's other ways on from a season (another year at the school, or at a new one; returnNote in the Return button's
+// place once he's out of returns); seasonNote: which season of his
 // this is, when it isn't the first. A Career's college seasons: endActions in place of the mode's own buttons,
 // roleNote beside his name, userYear his class (the mode's build has none), season the year on the graphic,
 // rewards false when the season isn't booked here, no build: no pre-season page)
 export default function CFBSimPage({ result: r, pos, userName, teams, archetype, build = null, types = null, attrMap = null, nav = null, story: storyIn = null, onStory, photoOf = null,
-  stage: stageIn = 0, onStage, onAgain, onDraft, onReturn = null, onTransfer = null, onHome, endActions = null, roleNote = null, seasonNote = null, userYear = null, season = null, rewards = true }) {
+  stage: stageIn = 0, onStage, onAgain, onDraft, onReturn = null, onTransfer = null, returnNote = null, onHome, endActions = null, roleNote = null, seasonNote = null, userYear = null, season = null, rewards = true }) {
   const v = useMemo(() => ({ ...view(r, teams), userName }), [r, teams, userName])
   const titleWeek = !!(v.ccg || v.c.myStanding?.title)
   const pages = useMemo(() => [build ? 'pre' : null, 'reg', titleWeek ? 'ccg' : null, 'sel', 'post', 'awards', 'draft', 'final'].filter(Boolean), [build, titleWeek])
@@ -1201,7 +1203,7 @@ export default function CFBSimPage({ result: r, pos, userName, teams, archetype,
   else if (page === 'post') el = <PostPage key="post" v={v} live={fresh === 'post'} onNext={() => go('awards')} />
   else if (page === 'awards') el = <AwardsPage key="awards" v={v} pos={pos} userName={userName} userYear={userYear} photoOf={photoOf} live={fresh === 'awards'} onNext={() => go('draft')} />
   else if (page === 'draft') el = <DraftPage r={r} v={v} pos={pos} userName={userName} userYear={userYear} attrMap={attrMap} onNext={() => go('final')} />
-  else el = <FinalPage r={r} v={v} pos={pos} build={build} types={types} attrMap={attrMap} archetype={archetype ?? r.archetype} userName={userName} story={story} rewards={rewards} endActions={endActions} seasonNote={seasonNote} onDraft={onDraft} onAgain={onAgain} onReturn={onReturn} onTransfer={onTransfer} />
+  else el = <FinalPage r={r} v={v} pos={pos} build={build} types={types} attrMap={attrMap} archetype={archetype ?? r.archetype} userName={userName} story={story} rewards={rewards} endActions={endActions} seasonNote={seasonNote} onDraft={onDraft} onAgain={onAgain} onReturn={onReturn} onTransfer={onTransfer} returnNote={returnNote} />
 
   return (
     <>

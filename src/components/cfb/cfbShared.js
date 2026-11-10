@@ -130,3 +130,48 @@ export function photoLookup(pools, base) {
   for (const k of ['qb', 'rb', 'wr']) for (const p of pools?.[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${base}/${p.headshot}.webp`)
   return (name, school) => m.get(`${name}|${school}`) ?? null
 }
+
+// ── A later season's rosters (College Football mode: RETURN TO SCHOOL / TRANSFER) ─────────────────────────
+// The country moves on a year with him: every junior and senior (RS-JR, RS-SR and GR too) is gone, drafted or out
+// of eligibility, and everyone else moves up a class (FR → SO, RS-FR → RS-SO, SO → JR …). Each school's depth chart
+// is rebuilt from who's left, best first, so its starters are the best of the old sophomores and freshmen.
+// Ratings stay as they are (no development bump: a sophomore who starts is the player he was). A room nobody is
+// left in stays empty: the season engine plays a stand-in at the school's level there (cfbSimulation unitFor),
+// and the job reads as open. seasonData(data, k): season k (0 = the first), the shared data untouched
+const NEXT_CLASS = { FR: 'SO', SO: 'JR', JR: 'SR', SR: 'SR', GR: 'GR' }
+const GONE_AFTER = new Set(['JR', 'SR', 'GR', '5TH'])
+function classAfter(y, k) {
+  let cur = String(y ?? 'SO').toUpperCase()
+  for (let i = 0; i < k; i++) {
+    const rs = cur.startsWith('RS-')
+    const base = cur.replace(/^RS-/, '')
+    if (GONE_AFTER.has(base)) return null
+    cur = `${rs ? 'RS-' : ''}${NEXT_CLASS[base] ?? base}`
+  }
+  return cur
+}
+function advancePools(pools, k) {
+  return Object.fromEntries(Object.entries(pools).map(([pos, list]) => {
+    const stay = list.map(p => ({ p, year: classAfter(p.year, k) })).filter(x => x.year)
+    const by = {}
+    for (const x of stay) (by[x.p.team] ??= []).push(x)
+    const out = []
+    for (const room of Object.values(by)) {
+      room.sort((a, b) => (b.p.ovr ?? 0) - (a.p.ovr ?? 0) || (a.p.depth ?? 9) - (b.p.depth ?? 9))
+      room.forEach((x, i) => out.push({ ...x.p, year: x.year, depth: i + 1, starter: i === 0 }))
+    }
+    return [pos, out]
+  }))
+}
+// (the rosters run out of underclassmen after two moves: the freshmen of the first season are the juniors of the third.
+// The data has no incoming classes, so a fourth season on plays the third season's rosters again)
+const MAX_ADVANCE = 2
+const seasonsCache = new WeakMap()
+export function seasonData(data, season) {
+  const k = Math.min(MAX_ADVANCE, season ?? 0)
+  if (!data || !k) return data
+  const memo = seasonsCache.get(data) ?? new Map()
+  seasonsCache.set(data, memo)
+  if (!memo.has(k)) memo.set(k, { ...data, pools: advancePools(data.pools, k), season: k })
+  return memo.get(k)
+}

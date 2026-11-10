@@ -16,6 +16,7 @@
 //             changes (the director re-runs a season many times); year = the build's class ('FR'…'RS-SR'), 'JR' default
 //             noClass: the build has no class (College Football mode: a season is a year, he's always draft-eligible,
 //             cfb.draft.year is null and it always declares); career: his earlier college seasons (the draft board)
+//             pools: { qb, rb, wr } rosters in place of the data's (College Football mode's later seasons: cfbShared seasonData)
 //
 // THE RESULT (football's contract first, so SimPage, the saves and lib/seasonDirector read it unchanged):
 // {
@@ -281,7 +282,16 @@ const isND = t => ['nd', 'ndam'].includes(keyOf(t.short)) || /notre dame/i.test(
 
 // ── The league (built once from the data, then cached) ───────────────────────
 let LEAGUE = null
-export function cfbLeague() { if (!LEAGUE) LEAGUE = buildLeague(); return LEAGUE }
+// pools (College Football mode, a second season on: components/cfb/cfbShared.js seasonData): the same country
+// with the rosters moved on a year. Schools, schedule and strength stay the season's; only who plays changes
+const LEAGUES = new WeakMap()
+export function cfbLeague(pools = null) {
+  if (!LEAGUE) LEAGUE = buildLeague()
+  if (!pools) return LEAGUE
+  let L = LEAGUES.get(pools)
+  if (!L) { L = { ...LEAGUE, ...leaguePlayers(pools, LEAGUE.byShort), baseDepth: LEAGUE.depth }; LEAGUES.set(pools, L) }
+  return L
+}
 
 function stats(arr) {
   const v = arr.filter(x => typeof x === 'number' && isFinite(x))
@@ -346,19 +356,7 @@ function buildLeague() {
   const byShort = Object.fromEntries(teams.map(t => [t.short, t]))
   const scale = { offM: so.m, offSD: so.sd, defM: sd.m, defSD: sd.sd, flip, useFPI, k }
 
-  // players: OVR on the football formulas, the depth chart a team
-  const prep = (list, pos) => (list ?? []).filter(p => p && p.team && p.attrs).map(p => ({ ...p, pos, ovr: OVR_FN[pos](toBuild(p.attrs, CFB_TYPES_BY_POS[pos]), CFB_TYPES_BY_POS[pos]) ?? 70 }))
-  const players = { qb: prep(CFB_QBS, 'qb'), rb: prep(CFB_RBS, 'rb'), wr: prep(CFB_WRS, 'wr') }
-  const depth = {}
-  for (const pos of ['qb', 'rb', 'wr']) {
-    for (const p of players[pos]) (depth[p.team] ??= { qb: [], rb: [], wr: [] })[pos].push(p)
-  }
-  for (const d of Object.values(depth)) for (const pos of ['qb', 'rb', 'wr']) d[pos].sort((a, b) => (a.depth ?? 99) - (b.depth ?? 99) || (b.starter ? 1 : 0) - (a.starter ? 1 : 0) || b.ovr - a.ovr)
-  const L = { confs: Object.values(conf), confList: confs, teams, byShort, scale, players, depth }
-  // the teams of the country's best players by grade (the award fields come from these, the build's conference
-  // and the top 25)
-  const topBy = (pos, n) => players[pos].filter(p => (p.depth ?? 1) <= (pos === 'wr' ? 3 : 1)).sort((a, b) => b.ovr - a.ovr).slice(0, n)
-  L.awardTeams = [...new Set([...topBy('qb', 30), ...topBy('rb', 30), ...topBy('wr', 45)].map(p => byShort[p.team]?.idx).filter(i => i != null))]
+  const L = { confs: Object.values(conf), confList: confs, teams, byShort, scale, ...leaguePlayers({ qb: CFB_QBS, rb: CFB_RBS, wr: CFB_WRS }, byShort) }
   L.schedule = buildSchedule(L)
   // strength of schedule: the average opponent's FPI-style rating (FCS opponents at their own)
   L.sos = teams.map(t => {
@@ -366,6 +364,21 @@ function buildLeague() {
     return o.length ? o.reduce((x, y) => x + y, 0) / o.length : 0
   })
   return L
+}
+
+// the players: OVR on the football formulas, the depth chart a team, and the teams of the country's best players
+// by grade (the award fields come from these, the build's conference and the top 25)
+function leaguePlayers(lists, byShort) {
+  const prep = (list, pos) => (list ?? []).filter(p => p && p.team && p.attrs).map(p => ({ ...p, pos, ovr: OVR_FN[pos](toBuild(p.attrs, CFB_TYPES_BY_POS[pos]), CFB_TYPES_BY_POS[pos]) ?? 70 }))
+  const players = { qb: prep(lists.qb, 'qb'), rb: prep(lists.rb, 'rb'), wr: prep(lists.wr, 'wr') }
+  const depth = {}
+  for (const pos of ['qb', 'rb', 'wr']) {
+    for (const p of players[pos]) (depth[p.team] ??= { qb: [], rb: [], wr: [] })[pos].push(p)
+  }
+  for (const d of Object.values(depth)) for (const pos of ['qb', 'rb', 'wr']) d[pos].sort((a, b) => (a.depth ?? 99) - (b.depth ?? 99) || (b.starter ? 1 : 0) - (a.starter ? 1 : 0) || b.ovr - a.ovr)
+  const topBy = (pos, n) => players[pos].filter(p => (p.depth ?? 1) <= (pos === 'wr' ? 3 : 1)).sort((a, b) => b.ovr - a.ovr).slice(0, n)
+  const awardTeams = [...new Set([...topBy('qb', 30), ...topBy('rb', 30), ...topBy('wr', 45)].map(p => byShort[p.team]?.idx).filter(i => i != null))]
+  return { players, depth, awardTeams }
 }
 
 // ── The 2026 schedule (one fixed schedule for the season, like the real one) ─
@@ -888,7 +901,9 @@ function userFrom(L, build, types, team, position, opts) {
   // traits the lite list leaves out play at the build's average (football's lite rule)
   for (const t of CFB_TYPES_BY_POS[pos]) if (attrs[t] == null) attrs[t] = filledAvg
   const ovr = OVR_FN[pos](build, types) ?? 70
-  const d = L.depth[team.short]?.[pos] ?? []
+  // (the man he replaces sets how much better or worse the team gets with him. A later season (L.baseDepth): the
+  // starter the team's strength was rated with, so a school that lost its starter isn't stronger for it)
+  const d = (L.baseDepth ?? L.depth)[team.short]?.[pos] ?? []
   const replaced = d[0]?.ovr ?? 78
   // (opts.noClass, College Football mode: the build has no class. A season is just a year, he's always
   // draft-eligible and the choice to go or stay is the player's. Career's Start in College passes his class)
@@ -1294,6 +1309,9 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
     return Math.max(now, all.reduce((a, b) => a + b, 0) / all.length)
   }
   if (career) mark(me, (CAREER_MARK[career.heisman] ?? 0) + (CAREER_MARK[career.allAmerica] ?? 0) + CAREER_MARK.season * (career.seasons ?? 0))
+  // the teams he won with before (College Football mode's earlier seasons: career.teams, { w, l, cfp, title, conf }):
+  // a winner's résumé counts a little, a losing one costs a little (this season's team is in the team term below)
+  if (career?.teams?.length) mark(me, clamp(-0.15, 0.3, career.teams.reduce((n, x) => n + (x.title ? 0.15 : x.cfp ? 0.08 : 0) + (x.conf ? 0.05 : 0) + ((x.w ?? 0) >= 11 ? 0.05 : 0) - ((x.l ?? 0) >= 7 ? 0.08 : 0), 0)))
   const z = vals => { const m = vals.reduce((a, b) => a + b, 0) / vals.length; const sd = Math.sqrt(vals.reduce((a, b) => a + (b - m) ** 2, 0) / vals.length) || 1; return v => (v - m) / sd }
   const zo = z(pool.map(c => c.ovr ?? 75)), zp = z(pool.map(prodOf))
   const teamV = c => teamFactor(L, R, c.ti) + (L.sos[c.ti] ?? 0) * 0.5
@@ -1411,7 +1429,7 @@ function fixWon(g) {
 // runCFBSimulation
 // ══════════════════════════════════════════════════════════════════════════════
 export function runCFBSimulation(build, types = null, team = null, position = 'qb', rngSeed = null, gameMode = 'classic', script = null, opts = {}) {
-  const L = cfbLeague()
+  const L = cfbLeague(opts?.pools ?? null)
   const pos = ['qb', 'rb', 'wr'].includes(position) ? position : 'qb'
   types = types?.length ? types : CFB_TYPES_BY_POS[pos]
   const seed = String(rngSeed ?? script?.seed ?? Math.floor(Math.random() * 1e9).toString(36))
