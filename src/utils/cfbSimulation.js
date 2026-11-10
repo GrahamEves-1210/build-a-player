@@ -743,12 +743,12 @@ function teamBox(r, unit, g, oppD) {
   const wsum = unit.wrs.reduce((s, w) => s + w.rates.share, 0) || 1
   const wCatch = unit.wrs.reduce((s, w) => s + w.rates.catch * w.rates.share, 0) / wsum
   const wYpr = unit.wrs.reduce((s, w) => s + w.rates.ypr * w.rates.share, 0) / wsum
-  const cp = clamp(0.3, 0.9, q.comp + (wCatch - 0.62) * 0.25 - dz * 0.02 + gauss(r) * 0.07)
+  const cp = clamp(0.3, 0.9, q.comp + (wCatch - 0.62) * 0.25 - dz * 0.03 + gauss(r) * 0.07)
   const comp = Math.min(att, Math.round(att * cp))
   const yf = clamp(0.6, 1.45, 0.76 + 0.24 * g.pts / BASE_PPG)
-  const ypa = Math.max(2.5, (q.ypa + (wYpr - 12.8) * 0.12) * yf - dz * 0.35 + gauss(r) * 1.3)
+  const ypa = Math.max(2.5, (q.ypa + (wYpr - 12.8) * 0.12) * yf - dz * 0.75 + gauss(r) * 1.3)
   const passYds = Math.max(0, Math.round(att * ypa))
-  const ints = poisson(r, att * q.intRate * (1 + dz * 0.12))
+  const ints = poisson(r, att * q.intRate * (1 + dz * 0.2))
   const passShare = clamp(0.2, 0.85, q.passShare + (att - 31) * 0.008 - (rb.share - 0.46) * 0.6)   // (a workhorse back gets the goal-line carries: Henry, Jeanty)
   const passTD = binom(r, g.offTD, passShare), rushTD = g.offTD - passTD
   const qbRushAtt = Math.max(0, Math.round(q.rushAtt + gauss(r) * 2.2))
@@ -763,7 +763,7 @@ function teamBox(r, unit, g, oppD) {
   // the backs
   const designed = clamp(12, 50, 30 + margin * 0.18 - (att - 31) * 0.35 + gauss(r) * 4)
   const carries = Math.max(0, Math.round(designed * rb.share * pull + gauss(r) * 1.5))
-  const ypcG = Math.max(1.0, rb.ypc - dz * 0.35 + gauss(r) * 1.3)
+  const ypcG = Math.max(1.0, rb.ypc - dz * 0.6 + gauss(r) * 1.3)
   let rushYds = Math.round(carries * ypcG)
   const bigRun = carries > 0 && r() < rb.big * 0.45
   let long = 0
@@ -783,7 +783,7 @@ function teamBox(r, unit, g, oppD) {
   const catchOf = [rb.catch, ...unit.wrs.map(w => w.rates.catch)]
   const yprOf = [rb.ypr, ...unit.wrs.map(w => w.rates.ypr)]
   const recs = tg.map((n, i) => binom(r, n, clamp(0.3, 0.92, catchOf[i] + gauss(r) * 0.07)))
-  let ry = recs.map((n, i) => (n ? Math.max(0, Math.round(n * Math.max(3, yprOf[i] * (0.85 + 0.15 * yf) + gauss(r) * 3.2))) : 0))
+  let ry = recs.map((n, i) => (n ? Math.max(0, Math.round(n * Math.max(3, yprOf[i] * (0.85 + 0.15 * yf) - dz * 1.1 + gauss(r) * 3.2))) : 0))
   const cap = passYds * 0.95, sum = ry.reduce((a, b) => a + b, 0)
   if (sum > cap && sum > 0) ry = ry.map(y => Math.round(y * cap / sum))
   // passing TDs go to whoever catches them, weighted by catches and a red-zone edge
@@ -1186,13 +1186,21 @@ function voteOut(c) { return { name: c.name, team: c.team, teamName: c.teamName,
 
 function runAwards(L, R, cands, rA, user) {
   const all = cands.filter(c => c.t.gp >= 8)
+  for (const c of all) { c.prod = production(c.pos, c.t); c.team_ = teamFactor(L, R, c.ti) }
+  // Heisman voters compare a back's or a receiver's year with the other backs' and receivers', not with a
+  // quarterback's yardage: each position's production is put on the QB scale through the top ten at that
+  // position this season (a receiver's 1,500 yards reads like a QB's 4,000). production() alone left WRs about
+  // 40 points behind, so a 99 Jeremiah Smith was a finalist 3% of the time and the non-QB winner never came.
+  const top10 = pos => { const v = all.filter(c => c.pos === pos).map(c => c.prod).sort((a, b) => b - a).slice(0, 10); const m = v.reduce((a, b) => a + b, 0) / (v.length || 1); return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length || 1)) || 1 } }
+  const ref = { qb: top10('qb'), rb: top10('rb'), wr: top10('wr') }
+  const onQB = c => (c.pos === 'qb' ? c.prod : ref.qb.m + (c.prod - ref[c.pos].m) / ref[c.pos].sd * ref.qb.sd)
   for (const c of all) {
-    c.prod = production(c.pos, c.t)
-    c.team_ = teamFactor(L, R, c.ti)
-    c.hype = gauss(rA) * 12
+    c.hype = gauss(rA) * 7
     // (a Group of Six star is a long shot: none has won since BYU's Ty Detmer in 1990)
-    // (voters love a big back: Ingram won on 1,658 yards in 2009. QBs still win most, about 4 in 5)
-    c.heis = c.prod + c.team_ + c.hype + (c.pos === 'rb' ? 14 : c.pos === 'wr' ? -2 : 0) - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
+    // (QBs win about 4 in 5: a back or receiver needs the bigger year. Henry '15, Smith '20, Hunter '24 did)
+    // (the marquee names: voters come in knowing the country's best players, and a star on a contender is on
+    // every preseason watch list; the build's rating counts the same way)
+    c.heis = onQB(c) + c.team_ + c.hype + clamp(-5, 12, ((c.ovr ?? 80) - 88) * 1.4) + (c.pos === 'rb' ? -10 : c.pos === 'wr' ? -19 : 0) - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
   }
   // the Heisman: ~930 ballots, 3-2-1 (each voter sees the race a little differently)
   const field = [...all].sort((a, b) => b.heis - a.heis).slice(0, 14)
@@ -1272,24 +1280,37 @@ function draftCuts(pos) {
 const PROD_PAR = { qb: 95, rb: 75, wr: 70 }   // production() of a solid starter's season
 // ── The draft board ──
 // The build is ranked against this season's draft-eligible real players at his position (the ones the award
-// races simulated: the country's best, the top 25's and his conference's), each scored the same way:
-//   tools (OVR) 40% · production against the position (yards, TD, efficiency / YPC) 36% · team success and
-//   strength of schedule 16% · awards on top (Heisman, the position award, All-America) · an underclassman with
-//   a big year rises, a senior slips a little.
+// races simulated: the country's best, the top 25's and his conference's). Every one of them gets the same
+// grade, in OVR points, so two players of the same rating with the same kind of year sit together:
+//   his OVR (the tools: the main thing, NFL boards grade the player first)
+//   + production against the position: his line a game, credited or discounted for the defenses he saw
+//     (COMP_K a standard deviation of schedule defense), as a z-score among the players on the board
+//   + team success and strength of schedule, a modest third (capped)
+//   + awards (Heisman, the position award, All-America; MARK_PTS a mark) · an underclassman with a big year
+//     rises, a senior slips a little.
+// (Before Nov 10 it was a mix of z-scores with the team near a fifth of the weight and season totals for
+// production: an 88 QB went 14th at Georgia and 22nd at Vanderbilt off similar lines, and a QB class this deep
+// (nine starters rated 92+) put most 88s past the 13th slot, a free agent.)
 // His rank on that board is his slot in a real class. Volume (NFL Drafts 2021-2025, Pro Football Reference /
 // ESPN draft results): about 10-14 QBs, 20-25 RBs and 30-35 WRs a year; QBs ~3-4 in round 1, RBs ~1-2, WRs ~5-6.
-// Rank → tier: QB 1-2 top-10, 3-4 R1, 5-7 Day 2, 8-13 Day 3, 14-27 PFA; RB 1 top-10 (a clear No. 1), 2 R1,
+// Rank → tier: QB 1-2 top-10, 3-4 R1, 5-8 Day 2, 9-18 Day 3, 19-32 PFA; RB 1 top-10 (a clear No. 1), 2 R1,
 // 3-9 Day 2, 10-23 Day 3, 24-40 PFA; WR 1-2 top-10, 3-6 R1, 7-16 Day 2, 17-33 Day 3, 34-55 PFA.
-const BOARD_SLOTS = { qb: [2, 4, 7, 13, 27], rb: [1, 2, 9, 23, 40], wr: [2, 6, 16, 33, 55] }
-// (tools 55%: with production at 36% a 99 OVR fell behind 91-96 prospects with one bigger year; NFL boards
-// grade the player first and the season second)
-const BOARD_W = { tools: 0.55, prod: 0.27, team: 0.12 }
+// (QB: the real class this game simulates is deeper at the top than a real year's, so the Day 2 and Day 3
+// lines sit lower than the 2021-25 average: 18 drafted)
+const BOARD_SLOTS = { qb: [2, 4, 8, 18, 32], rb: [1, 2, 9, 23, 40], wr: [2, 6, 16, 33, 55] }
+const BOARD_W = { prod: 2.2, team: 0.7 }   // OVR points a standard deviation
+const MARK_PTS = 5                          // OVR points a mark (a Heisman winner +3, a finalist +1.5)
+const COMP_K = 0.09                         // production a game: the share a standard deviation (7.2 pts) of the defenses faced is worth
 // A Career's college player (opts.career, components/cfb/CareerCollege.jsx): the board reads his whole college
 // career, not this season alone. { seasons: earlier seasons, heisman: best finish 'won' | 'finalist',
 // allAmerica: 'first' | 'second', totals: [each earlier season's totals] }. His production is the better of this
 // season and his career average, his earlier honors count, and a past Heisman winner coming off a good year
 // stays a 1st-rounder. Without it (College Football mode) a season is judged on its own.
 const CAREER_MARK = { won: 0.6, finalist: 0.25, first: 0.25, second: 0.1, season: 0.05 }
+const isSenior = c => /SR|GR|5TH/.test(String(c.year ?? '').toUpperCase())
+// production a game (as a 13-game season), with the schedule's defenses counted: a line against SEC defenses
+// is worth more than the same line against the MAC's
+const prodPG = (pos, t, oppD = 0) => production(pos, t) * 13 / Math.max(8, t.gp || 13) * (1 + COMP_K * clamp(-1.5, 1.5, oppD / PTS_PER_Z))
 function draftBoard(L, R, pos, cands, awards, career = null) {
   const eligible = c => c.isUser || ELIGIBLE.has(String(c.year ?? '').toUpperCase())
   const pool = cands.filter(c => c.pos === pos && (c.t.gp >= 8 || c.isUser) && eligible(c))
@@ -1302,10 +1323,11 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   for (const f of awards.allAmerica.first[pos] ?? []) mark(f, 0.25)
   for (const f of awards.allAmerica.second[pos] ?? []) mark(f, 0.1)
   const me = pool.find(c => c.isUser)
+  const oppD = c => R.oppDef?.[c.ti] ?? 0
   const prodOf = c => {
-    const now = production(pos, c.t)
+    const now = prodPG(pos, c.t, oppD(c))
     if (!c.isUser || !career?.totals?.length) return now
-    const all = [now, ...career.totals.map(t => production(pos, { seasonEff: 150, seasonYPC: 5, ...t }))]
+    const all = [now, ...career.totals.map(t => prodPG(pos, { seasonEff: 150, seasonYPC: 5, gp: 13, ...t }, oppD(c)))]
     return Math.max(now, all.reduce((a, b) => a + b, 0) / all.length)
   }
   if (career) mark(me, (CAREER_MARK[career.heisman] ?? 0) + (CAREER_MARK[career.allAmerica] ?? 0) + CAREER_MARK.season * (career.seasons ?? 0))
@@ -1313,28 +1335,37 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   // a winner's résumé counts a little, a losing one costs a little (this season's team is in the team term below)
   if (career?.teams?.length) mark(me, clamp(-0.15, 0.3, career.teams.reduce((n, x) => n + (x.title ? 0.15 : x.cfp ? 0.08 : 0) + (x.conf ? 0.05 : 0) + ((x.w ?? 0) >= 11 ? 0.05 : 0) - ((x.l ?? 0) >= 7 ? 0.08 : 0), 0)))
   const z = vals => { const m = vals.reduce((a, b) => a + b, 0) / vals.length; const sd = Math.sqrt(vals.reduce((a, b) => a + (b - m) ** 2, 0) / vals.length) || 1; return v => (v - m) / sd }
-  const zo = z(pool.map(c => c.ovr ?? 75)), zp = z(pool.map(prodOf))
-  const teamV = c => teamFactor(L, R, c.ti) + (L.sos[c.ti] ?? 0) * 0.5
+  const zp = z(pool.map(prodOf))
+  const teamV = c => teamFactor(L, R, c.ti) + (L.sos[c.ti] ?? 0) * 0.3
   const zt = z(pool.map(teamV))
   const rows = pool.map(c => {
-    const pz = zp(prodOf(c))
-    const yr = String(c.year ?? 'JR').toUpperCase()
-    const cls = /SR|GR|5TH/.test(yr) ? -0.05 : 0.12 * Math.max(0, pz)
+    const pz = clamp(-2.2, 2.5, zp(prodOf(c)))
+    const cls = isSenior(c) ? -0.4 : 0.6 * Math.max(0, pz)
     // (a bad team costs a prospect a little, not his grade: Caleb Williams went 1st off a 7-5 USC, Josh Allen 7th off Wyoming)
-    const score = BOARD_W.tools * zo(c.ovr ?? 75) + BOARD_W.prod * pz + BOARD_W.team * Math.max(-0.75, zt(teamV(c))) + (marks.get(`${c.name}|${c.team}`) ?? 0) + cls
+    const score = (c.ovr ?? 75) + BOARD_W.prod * pz + BOARD_W.team * clamp(-1.5, 1.5, zt(teamV(c))) + MARK_PTS * (marks.get(`${c.name}|${c.team}`) ?? 0) + cls
     return { c, score }
   }).sort((a, b) => b.score - a.score)
   // the CLASS, not everyone eligible: every senior enters; an underclassman only declares when he grades out
-  // near the top (inside twice the Day 2 line on the eligible board). The build is always in it.
-  const sen = c => /SR|GR|5TH/.test(String(c.year ?? '').toUpperCase())
-  const declareLine = BOARD_SLOTS[pos][2] * 2
-  const cls = rows.filter((x, k) => x.c.isUser || sen(x.c) || k < declareLine)
-  const rank = cls.findIndex(x => x.c.isUser) + 1
+  // with a Day 2 grade or close to it (inside the Day 2 line plus two): a Day 3 underclassman goes back to
+  // school, as most do. The build is always in it.
+  const declareLine = BOARD_SLOTS[pos][2] + 2
+  const cls = rows.filter((x, k) => x.c.isUser || isSenior(x.c) || k < declareLine)
   // (each row: the tier its slot on the board carries, BOARD_SLOTS, and the season's headline numbers)
   const sl = BOARD_SLOTS[pos]
   const tierAt = k => (k <= sl[0] ? 'top10' : k <= sl[1] ? 'r1' : k <= sl[2] ? 'day2' : k <= sl[3] ? 'day3' : k <= sl[4] ? 'pfa' : 'udfa')
   const nums = c => (pos === 'qb' ? { yds: c.t.seasonPassYds, td: c.t.seasonTDs + c.t.seasonRushTDs } : pos === 'rb' ? { yds: c.t.seasonRushYds, td: c.t.seasonRushTDs + c.t.seasonRecTDs } : { yds: c.t.seasonRecYds, td: c.t.seasonRecTDs })
-  return { rank, of: cls.length, eligible: rows.length, score: cls[rank - 1].score, top: cls.slice(0, 25).map((x, k) => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, isUser: !!x.c.isUser, tier: tierAt(k + 1), ...nums(x.c) })) }
+  const view = list => {
+    const rank = list.findIndex(x => x.c.isUser) + 1
+    return { rank, of: list.length, eligible: rows.length, score: list[rank - 1].score, tierAt, place,
+      top: list.slice(0, 25).map((x, k) => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, isUser: !!x.c.isUser, tier: tierAt(k + 1), ...nums(x.c) })) }
+  }
+  // (draftStock: a rule that moves his tier moves him to the edge of it, so his number and the round agree)
+  function place(k) {
+    const meRow = cls.find(x => x.c.isUser), rest = cls.filter(x => !x.c.isUser)
+    const at = clamp(1, rest.length + 1, k)
+    return view([...rest.slice(0, at - 1), meRow, ...rest.slice(at - 1)])
+  }
+  return view(cls)
 }
 
 // Where a tier's picks fall in a 7-round, 224-pick draft (32 a round, the draft Career runs), and how wide a
@@ -1366,8 +1397,9 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
   if (board) {
     const sl = BOARD_SLOTS[pos], k = board.rank
     tier = k <= sl[0] ? 'top10' : k <= sl[1] ? 'r1' : k <= sl[2] ? 'day2' : k <= sl[3] ? 'day3' : k <= sl[4] ? 'pfa' : 'udfa'
-    // (a top-10 pick needs a clear grade, not only the top of a thin board)
-    if (tier === 'top10' && board.score < 1.2) tier = 'r1'
+    // (a top-10 pick needs a clear grade, not only the top of a thin board: at least the OVR of the
+    // position's best few starters, draftCuts)
+    if (tier === 'top10' && board.score < c[0]) tier = 'r1'
   }
   // elite tools go early whatever the team did, once he has produced: 96+ is a 1st-rounder, 92+ goes by Day 2
   const ORDER = TIER_ORDER
@@ -1375,6 +1407,12 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
   if (floor && production(pos, t) >= PROD_PAR[pos] * 0.8 && ORDER.indexOf(tier) > ORDER.indexOf(floor)) tier = floor
   // a past Heisman winner coming off a good year isn't a Day 2 pick (a Career's college player)
   if (career?.heisman === 'won' && production(pos, t) >= PROD_PAR[pos] * 0.85 && !['top10', 'r1'].includes(tier)) tier = 'r1'
+  // his number on the board agrees with the round: a rule above that moved him puts him at the edge of his tier
+  if (board && board.tierAt(board.rank) !== tier) {
+    const sl = BOARD_SLOTS[pos], i = ORDER.indexOf(tier)
+    const better = ORDER.indexOf(board.tierAt(board.rank)) > i
+    board = board.place(better ? sl[i] : i ? sl[i - 1] + 1 : 1)
+  }
   const LABEL = { top10: 'Projected top-10 pick', r1: 'Projected 1st round', day2: 'Day 2 (Rounds 2-3)', day3: 'Day 3 (Rounds 4-7)', pfa: 'Priority free agent', udfa: 'Undrafted free agent' }
   const ROUND = { top10: [1, 1], r1: [1, 1], day2: [2, 3], day3: [4, 7], pfa: null, udfa: null }
   // the projection in picks, and his place on the overall board: the middle of that range (the rest of the
@@ -1494,6 +1532,8 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     perTeam[i].push({ key: `ccg|${c.id}`, oi: j, oppD: R.T[j].sd, my: res.a, op: res.b })
     perTeam[j].push({ key: `ccg|${c.id}`, oi: i, oppD: R.T[i].sd, my: res.b, op: res.a })
   }
+  // the defenses each team saw (points a game, + = tougher): the draft board weighs a line by its schedule
+  R.oppDef = perTeam.map(list => (list.length ? list.reduce((a, x) => a + x.oppD, 0) / list.length : 0))
   // (lite: only the build's team, no award races; the director's many re-runs only need the record)
   // the award races are the build's conference (all-conference), the country's best players by grade and the
   // committee's top 25 (team success): only their teams need box scores
@@ -1639,7 +1679,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       awardGames: userAwardCount,
     },
   }
-  if (opts?.debug) Object.defineProperty(out, '_R', { value: R, enumerable: false })
+  if (opts?.debug) { Object.defineProperty(out, '_R', { value: R, enumerable: false }); Object.defineProperty(out, '_cands', { value: candList, enumerable: false }) }
   return out
 }
 const pickLine = (pos, g) => Object.fromEntries([...LINE_KEYS[pos], ...(pos === 'qb' ? ['rating', 'eff'] : pos === 'rb' ? ['ypc', 'long'] : ['long'])].filter(k => g?.[k] != null).map(k => [k, g[k]]))
