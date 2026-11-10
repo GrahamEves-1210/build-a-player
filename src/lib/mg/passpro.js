@@ -404,7 +404,9 @@ function warm(g, list) {
 }
 
 // The bar, fixed over where the two of them meet: where our man stands against him. The light band in the middle is
-// square on him; past it he's working the edge; the ends, he's by. The outside end is on the outside of the screen.
+// square on him; past it he's working the edge; the ends, he's by. The outside end is on the outside of the screen,
+// and the marker moves the way you slide: a speed rush pulls it toward IN (he's getting round you), SLIDE OUTSIDE
+// brings it back.
 // What he's doing is called over it.
 function balanceBar(ctx, view, g, rep, at, res) {
   const s = g.s, W = 156, H = 8, sz = at.s * SIZE * 0.6
@@ -425,8 +427,9 @@ function balanceBar(ctx, view, g, rep, at, res) {
   // which end is which
   text(ctx, 'OUT', X(1), by + 15, { font: LABEL, size: 12, color: 'rgba(255,255,255,.6)', track: 0.5 })
   text(ctx, 'IN', X(-1), by + 15, { font: LABEL, size: 12, color: 'rgba(255,255,255,.6)', track: 0.5 })
-  // our man
-  const mx = X(mk)
+  // our man: where his feet are against the rusher, so the marker goes the way you slide (hold OUTSIDE and it moves
+  // to the OUT end). The rusher winning outside drags him inside, toward IN; m itself is the rusher's edge (+ outside)
+  const mx = X(-mk)
   ctx.fillStyle = lost ? BAD : out ? GOLD : '#fff'
   rr(ctx, mx - 2.5, by - H / 2 - 5, 5, H + 10, 1.5); ctx.fill()
   // the call
