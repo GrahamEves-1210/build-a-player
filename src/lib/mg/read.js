@@ -1219,7 +1219,10 @@ function drawJump(ctx, g, view) {
   const arm = qbPose(runAge >= rep.delay && age < rel ? 1 : null, age >= rel ? age - rel : -1)
   // (he's watched it get taken away)
   const qbSad = (picked || swatted) && age > land + 360
-  put(qx, qy, them, { dir: qbSad ? 'down' : arm ? (bx < qx ? 'left' : 'right') : look, pose: qbSad ? (picked ? 'hands-head' : 'hips') : arm, carry: !arm && fa <= 0 && age >= PRE + SNAP_MS, skin: skinOf(2), number: 9, size: 0.9, ...who.qb })
+  // (he throws downfield, toward the camera: square to it, the ball up at his shoulder, then the arm through. The
+  // side-on throwing poses had him turn sideways to throw forward)
+  const frontArm = !arm ? null : arm === 'qb-hold' || arm === 'qb-cock' ? (bx < qx ? 'shoulder-l' : 'shoulder-r') : (bx < qx ? 'reach-l' : 'reach-r')
+  put(qx, qy, them, { dir: qbSad ? 'down' : arm ? 'down' : look, pose: qbSad ? (picked ? 'hands-head' : 'hips') : frontArm, carry: !arm && fa <= 0 && age >= PRE + SNAP_MS, skin: skinOf(2), number: 9, size: 0.9, ...who.qb })
   // him: the safety (or the backer)
   const b = S.s, sw = walk(g, 'safety', b.x, b.y, 9)
   const hitNow = jarred && hitFall > 0
