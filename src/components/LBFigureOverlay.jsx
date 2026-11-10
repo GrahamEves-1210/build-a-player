@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/lb-figure-color.svg?raw'
-import { warmSkin, warmSkinLight } from '../utils/footballSkin'
+import { warmSkin } from '../utils/footballSkin'
 
 // The linebacker's figure (public/lb-silhouette.webp), squared up in his stance: the team colors laid over
 // the art from src/assets/lb-figure-color.svg (its parts named by side of the picture: "r" is the right of the image)
@@ -89,22 +89,12 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
   const H = 'playRecognition'
   svg = setFill(svg, 'helmet', tc(H), 'opacity:0.76;')
 
-  // ── LEADERSHIP: the face and neck, out of the helmet's shadow (dark under the brim, lit at the chin)
+  // ── LEADERSHIP: the face and neck, flat skin like the neck (no helmet shadow: the owner's call), lips tinted
   const L = 'leadership'
   const faceSkin  = has(L) ? warmSkin(sk(L)) : 'transparent'
-  const faceLight = has(L) ? warmSkinLight(sk(L)) : 'transparent'
-  const shade = (id, color, top, bottom) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity="${top}"/><stop offset="1" stop-color="${color}" stop-opacity="${bottom}"/></linearGradient>`
   const lip = has(L) ? lipTint(sk(L)) : 'transparent'
-  if (has(L)) {
-    const key = sk(L).replace('#', '')
-    svg = svg.replace('<g id="Group 1">', `<defs>${shade(`lb-face-${key}`, faceSkin, 0.36, 0.46)}${shade(`lb-lit-${key}`, faceLight, 0.34, 0.44)}${shade(`lb-lip-${key}`, lip, 0.30, 0.40)}</defs><g id="Group 1">`)
-    svg = setFill(svg, 'face',  `url(#lb-face-${key})`)
-    svg = setFill(svg, 'face1', `url(#lb-lit-${key})`)
-    svg = setFill(svg, 'face2', `url(#lb-face-${key})`)
-    svg = setFill(svg, 'lips',  `url(#lb-lip-${key})`, 'filter:blur(1.5px);')
-  } else {
-    for (const id of ['face', 'face1', 'face2', 'lips']) svg = setFill(svg, id, 'transparent')
-  }
+  for (const id of ['face', 'face1', 'face2']) svg = setFill(svg, id, faceSkin, `opacity:${SKIN_OPACITY};`)
+  svg = setFill(svg, 'lips', lip, `opacity:${SKIN_OPACITY};filter:blur(1.5px);`)
   svg = setFill(svg, 'neck', faceSkin, `opacity:${SKIN_OPACITY};`)
 
   // ── SIZE: the jersey
