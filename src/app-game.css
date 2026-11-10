@@ -1060,6 +1060,7 @@ html:is(.is-app, .app-look) .simp-ovr-lbl {
   letter-spacing: 3px !important;
 }
 html:is(.is-app, .app-look) .simp-eyebrow { font-size: 20px !important; color: var(--ag-text-2) !important; }
+html:is(.is-app, .app-look) .plf-round-lbl { font-family: var(--ag-display, var(--ag-font)) !important; font-size: 26px !important; line-height: 1.05; letter-spacing: 1.5px !important; color: #fff !important; }
 html:is(.is-app, .app-look) .simp-record-sub { font-size: 18px !important; }
 html:is(.is-app, .app-look) .simp-miss-title,
 html:is(.is-app, .app-look) .simp-archetype,

@@ -9408,12 +9408,14 @@ html.is-x-browser .mobile-tab-bar {
   justify-content: space-between;
   width: 100%;
 }
+/* the game's name (Wild Card, Super Bowl, a bowl, the CFP round): the headline of the card */
 .plf-round-lbl {
-  font-size: 9px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: 2.5px;
+  line-height: 1.1;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--text-4);
+  color: var(--text-1, #fff);
 }
 .plf-alltime-badge {
   font-size: 8px;
