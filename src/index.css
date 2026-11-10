@@ -5499,8 +5499,10 @@ a:focus-visible {
 }
 .pp-banner:active .pp-claim { transform: scale(.98); }
 .pp-banner:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-/* the note under it: the footer's own small grey copy, one paragraph */
-.pp-legal { margin: 8px 0 0; font-family: var(--ag-body, var(--font)); font-size: 10.5px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,.4); text-align: center; text-wrap: balance; }
+/* under it: the help line, bold and bright, then the footer's own small grey copy in one paragraph */
+.pp-help { margin: 10px 0 0; font-family: var(--ag-body, var(--font)); font-size: 13px; font-weight: 700; line-height: 1.4; color: rgba(255,255,255,.86); text-align: center; text-wrap: balance; }
+.pp-help a { color: #fff; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(255,255,255,.45); white-space: nowrap; }
+.pp-legal { margin: 4px 0 0; font-family: var(--ag-body, var(--font)); font-size: 10.5px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,.4); text-align: center; text-wrap: balance; }
 @media (max-width: 720px) {
   .pp-wrap { margin-bottom: 20px; }
   .pp-banner { flex-direction: column; align-items: flex-start; justify-content: center; height: 188px; padding: 0 0 0 14px; }

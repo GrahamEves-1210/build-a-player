@@ -30,7 +30,9 @@ function PartnerBanner({ sport }) {
         </span>
         <img className="pp-phone" src="/sponsors/prizepicks-phone.webp" alt="" width="560" height="1159" loading="lazy" decoding="async" draggable={false} />
       </a>
-      <p className="pp-legal">Build-A-Player may earn a commission when you sign up through this link. First $5+ lineup entered must win to receive $150 in bonus lineups. Bonus lineups expire 7 days after issuance. 18+ in eligible areas. Lineups entered and bonus lineups awarded must include player picks. Restrictions apply. Void where prohibited. Play responsibly. Call 1-800-426-2537 or visit ncpgambling.org. See prizepicks.com/newuseroffer for details.</p>
+      {/* the help line stands on its own, larger and brighter than the fine print (their words, pulled out of the legal line) */}
+      <p className="pp-help">Play responsibly. Call <a href="tel:18004262537">1-800-426-2537</a> or visit <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a>.</p>
+      <p className="pp-legal">Build-A-Player may earn a commission when you sign up through this link. First $5+ lineup entered must win to receive $150 in bonus lineups. Bonus lineups expire 7 days after issuance. 18+ in eligible areas. Lineups entered and bonus lineups awarded must include player picks. Restrictions apply. Void where prohibited. See prizepicks.com/newuseroffer for details.</p>
     </div>
   )
 }
