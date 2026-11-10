@@ -197,7 +197,7 @@ export default function OLFigureOverlay({ build, numberNudgePx = null, nameNudge
             squeezed into the curve, clipped to the helmet */}
         {has(H) && helmetTeam && !NO_HELMET_LOGO.has(helmetTeam) && (
           <g clipPath="url(#ol-helmet-clip)" style={{ pointerEvents: 'none' }}>
-            <g transform="translate(341, 71) rotate(-8) scale(.72, 1.06)">
+            <g transform="translate(341, 68) rotate(-8) scale(.8, 1.18)">
               <image href={`/logos/${helmetTeam}.png`} x="-50" y="-50" width="100" height="100" style={{ opacity: 0.95, mixBlendMode: 'screen' }} />
             </g>
           </g>
