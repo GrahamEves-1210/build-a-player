@@ -32,7 +32,7 @@ function rankIn(stars, t, pos, seed) {
 }
 
 // a program's level: blue bloods and the top 10 · the Power 4 · lower P4 and the best of the G6 · the G6
-const BLUE = new Set(['ALA', 'OSU', 'UGA', 'TEX', 'MICH', 'NDAM', 'USC', 'OKLA', 'LSU', 'ORE', 'PSU', 'CLEM', 'FLA', 'MIA', 'TENN'])
+export const BLUE = new Set(['ALA', 'OSU', 'UGA', 'TEX', 'MICH', 'NDAM', 'USC', 'OKLA', 'LSU', 'ORE', 'PSU', 'CLEM', 'FLA', 'MIA', 'TENN'])
 export function tierOf(t, confTier) {
   if (BLUE.has(t.short) || t.fpiRank <= 10) return 5
   if ((confTier === 'P4' || t.short === 'NDAM') && t.fpiRank <= 45) return 4

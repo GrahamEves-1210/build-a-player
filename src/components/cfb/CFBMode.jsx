@@ -20,7 +20,7 @@ import { getUsername } from '../../lib/discord'
 import { loadCFB } from '../../lib/cfbLoad'
 import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, confLogo, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup, seasonData } from './cfbShared'
 import { barAt, offersFor, cardFor, stockOf, collegeStars } from './cfbRecruit'
-import { Stars, OfferBoard, CommitBar } from './CFBOffers'
+import { Stars, OfferBoard } from './CFBOffers'
 import CFBSimPage from './CFBSimPage'
 import CFBDraft from './CFBDraft'
 import './cfb.css'
@@ -168,16 +168,16 @@ function OffersScreen({ eyebrow, title, name, pos, ovr, card, stock, offers, tea
           <div className="cfbr-rank">
             <span><b>No. {card.posRank}</b><small>{CFB_POS[pos].label} NATIONALLY</small></span>
             <span><b>{ovr}</b><small>OVR</small></span>
-            <span><b>{offers.filter(o => !o.stay).length}</b><small>OFFERS</small></span>
           </div>
           {stock && <p className="cfbo-stock">{stock.line}{moved ? ` A ${card.base}-star on talent, a ${card.stars}-star now.` : ''}</p>}
         </section>
+        {/* the one commit button, above the board (not pinned over it): grey until a school is picked */}
+        <div className="cfbo-commit"><button className="cfbs-next cfbr-commit" disabled={!sel} onClick={() => sel && onCommit(sel.short)}><b>{label}</b></button></div>
         <section>
           <h2 className="cfb-label">{current ? (offers.some(o => o.stay) ? 'STAY OR TRANSFER' : 'TRANSFER PORTAL OFFERS') : 'SCHOLARSHIP OFFERS'}</h2>
           <OfferBoard compete pos={pos} teamsBy={teamsBy} confOf={confOf} offers={offers} picked={picked} onPick={short => { setPicked(short); sfx('tap') }} />
         </section>
         {onAny && <button className="cfbs-btn cfbo-any" onClick={() => { sfx('tap'); onAny() }}>ANY SCHOOL<small>Sandbox: pick or spin any school in the country</small></button>}
-        <CommitBar label={label} on={!!sel} onGo={() => sel && onCommit(sel.short)} />
       </div>
     </div>
   )

@@ -20,17 +20,23 @@ function jobLine(o, pos, compete) {
   if (o.starts) return `Beats out ${b.name} (${b.ovr}) for ${JOB[pos]}.${leaves && o.stay ? ` ${b.name.split(' ').pop()} is a senior.` : ''}`
   return `Backs up ${b.name} (${b.ovr}) for ${JOB[pos]}${leaves ? `, a senior: the job opens after this year` : ''}.`
 }
+// The offers are listed and numbered by program prestige, the way a recruit's list reads: the blue bloods in the
+// order the sport ranks them (titles, history, NFL players), then everyone else by this year's AP poll and FPI.
+// The order is all that shows: no prestige number on the board
+const PRESTIGE = ['ALA', 'OSU', 'UGA', 'TEX', 'MICH', 'NDAM', 'USC', 'OKLA', 'LSU', 'PSU', 'FLA', 'CLEM', 'ORE', 'MIA', 'TENN', 'NEB', 'FSU', 'AUB', 'TAMU', 'WASH', 'WIS']
+const standing = (o, t) => { const k = PRESTIGE.indexOf(o.short); return k >= 0 ? k : 100 + Math.min(t?.ap ?? 99, (t?.fpiRank ?? 999) / 2 + 20) * 10 + (t?.fpiRank ?? 999) / 100 }
 export function OfferBoard({ offers, teamsBy, confOf, pos, picked, onPick, compete = false }) {
+  const list = offers.filter(o => teamsBy[o.short]).sort((a, b) => standing(a, teamsBy[a.short]) - standing(b, teamsBy[b.short]))
   return (
     <div className="cfbr-board" role="radiogroup" aria-label="Offers">
       <div className="cfbr-board-row is-head" aria-hidden="true"><span>SCHOOL</span><span className="is-conf">CONF</span><span>FPI</span><span>AP</span><span className="is-role">ROLE</span></div>
-      {offers.map(o => {
+      {list.map((o, i) => {
         const t = teamsBy[o.short]
-        if (!t) return null
         const on = picked === o.short
         return (
           <button key={o.short} type="button" role="radio" aria-checked={on} className={`cfbr-board-row${on ? ' is-on' : ''}${o.stay ? ' is-stay' : ''}`} onClick={() => onPick(o.short)}>
             <span className="cfbr-board-school">
+              <i className="cfbr-board-n">{i + 1}</i>
               <img src={cfbLogoDark(t.short)} alt="" onError={e => { e.currentTarget.src = cfbLogo(t.short) }} />
               <b>{t.school}</b>
               {o.stay && <em>NOW</em>}
