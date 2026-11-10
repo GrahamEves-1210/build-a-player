@@ -19,8 +19,12 @@ export function initFxPause() {
     el.removeAttribute('data-fx-off')
     if (!el.closest(LOOP)) timers.set(el, setTimeout(() => rest(el), REST_MS))
   }
+  // (each one's last answer: a skill game drops the watch while it's up, and picking it up again only acts on a change)
+  const was = new WeakMap()
   const io = new IntersectionObserver(entries => {
     for (const e of entries) {
+      if (was.get(e.target) === e.isIntersecting) continue
+      was.set(e.target, e.isIntersecting)
       if (e.isIntersecting) play(e.target)
       else { clearTimeout(timers.get(e.target)); rest(e.target) }
     }
@@ -30,13 +34,27 @@ export function initFxPause() {
     if (node.matches(SEL)) fn(node)
     node.querySelectorAll(SEL).forEach(fn)
   }
-  each(document.body, el => io.observe(el))
+  // A skill game covers the page (html.mg-live) and nothing under it moves, but the watch is worked out again every
+  // frame the game draws: it's dropped while the game's up, and picked up again as it closes. (Anything on the game's
+  // own stage is still watched: that's on screen.)
+  let paused = false
+  const STAGE = '.mg-stage'
+  const watch = el => { if (!paused || el.closest(STAGE)) io.observe(el) }
+  each(document.body, watch)
   new MutationObserver(list => {
     for (const m of list) {
-      m.removedNodes.forEach(n => each(n, el => { io.unobserve(el); clearTimeout(timers.get(el)) }))
-      m.addedNodes.forEach(n => each(n, el => io.observe(el)))
+      m.removedNodes.forEach(n => each(n, el => { io.unobserve(el); clearTimeout(timers.get(el)); was.delete(el) }))
+      m.addedNodes.forEach(n => each(n, watch))
     }
   }).observe(document.body, { childList: true, subtree: true })
+  const root = document.documentElement
+  new MutationObserver(() => {
+    const live = root.classList.contains('mg-live')
+    if (live === paused) return
+    paused = live
+    if (live) { io.disconnect(); document.querySelectorAll(STAGE).forEach(s => each(s, el => io.observe(el))) }
+    else each(document.body, el => io.observe(el))
+  }).observe(root, { attributes: true, attributeFilter: ['class'] })
   // a tap on a name, an avatar or a preview plays it again (and whatever effects sit inside it)
   document.addEventListener('pointerdown', e => {
     const hit = e.target instanceof Element ? e.target.closest(SEL) : null

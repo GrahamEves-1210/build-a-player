@@ -34,12 +34,14 @@ const noiseTile = (key, n, a, blur = 0) => tile(key, n, n, (x, w, h) => {
 // a 4x4 ordered (Bayer) dither: the classic print / early-console dot order
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 const ditherTile = () => tile('dither', 4, 4, x => { for (let i = 0; i < 16; i++) { const v = BAYER[i] / 15; x.fillStyle = `rgba(${v > 0.5 ? 255 : 0},${v > 0.5 ? 255 : 0},${v > 0.5 ? 255 : 0},${Math.abs(v - 0.5) * 0.9})`; x.fillRect(i % 4, Math.floor(i / 4), 1, 1) } })
+// (the black layers have no blend mode: multiplying by black is the same picture as laying black over it, and a blend
+// mode is a second pass over the whole game every frame for the GPU)
 function texLayers(on, pt) {
   const L = [], base = { position: 'absolute', inset: 0, pointerEvents: 'none' }
   if (on.has('grain')) L.push({ key: 'grain', style: { ...base, backgroundImage: `url(${noiseTile('grain', 160, 255)})`, backgroundSize: '160px 160px', mixBlendMode: 'overlay', opacity: 0.14, animation: 'mgGrain 0.5s steps(4) infinite' } })
   if (on.has('dither')) L.push({ key: 'dither', style: { ...base, backgroundImage: `url(${ditherTile()})`, backgroundSize: `${4 * (pt || 1.25)}px ${4 * (pt || 1.25)}px`, imageRendering: 'pixelated', mixBlendMode: 'soft-light', opacity: 0.55 } })
-  if (on.has('halftone')) L.push({ key: 'halftone', style: { ...base, backgroundImage: 'radial-gradient(circle, rgba(0,0,0,.55) 0.9px, transparent 1.3px)', backgroundSize: '4px 4px', mixBlendMode: 'multiply', opacity: 0.45 } })
-  if (on.has('scan')) L.push({ key: 'scan', style: { ...base, backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px)', mixBlendMode: 'multiply', opacity: 0.6 } })
+  if (on.has('halftone')) L.push({ key: 'halftone', style: { ...base, backgroundImage: 'radial-gradient(circle, rgba(0,0,0,.55) 0.9px, transparent 1.3px)', backgroundSize: '4px 4px', opacity: 0.45 } })
+  if (on.has('scan')) L.push({ key: 'scan', style: { ...base, backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px)', opacity: 0.6 } })
   if (on.has('riso')) L.push({ key: 'riso', style: { ...base, backgroundImage: `url(${noiseTile('riso', 120, 255)})`, backgroundSize: '120px 120px', mixBlendMode: 'soft-light', opacity: 0.22 } })
   if (on.has('paper')) L.push({ key: 'paper', style: { ...base, backgroundImage: `url(${noiseTile('paper', 256, 255, 1.2)})`, backgroundSize: '256px 256px', mixBlendMode: 'overlay', opacity: 0.16 } })
   return L
@@ -54,7 +56,7 @@ function eraLayers(era) {
     { key: 'era-vig', style: { ...base, background: 'radial-gradient(ellipse at center, transparent 52%, rgba(20,10,0,.5) 100%)' } },
   ]
   if (era === '90s') return [
-    { key: 'era-scan', style: { ...base, backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.2) 0 1px, transparent 1px 3px)', mixBlendMode: 'multiply', opacity: 0.55 } },
+    { key: 'era-scan', style: { ...base, backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.2) 0 1px, transparent 1px 3px)', opacity: 0.55 } },
     { key: 'era-noise', style: { ...base, backgroundImage: `url(${noiseTile('riso', 120, 255)})`, backgroundSize: '120px 120px', mixBlendMode: 'overlay', opacity: 0.08 } },
   ]
   return []
@@ -201,6 +203,23 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
     const field = sport === 'nfl' && !NO_HOME_FIELD.has(game) ? fieldFor(home === 'opp' ? opp : team, superBowl) : null
     const view = { w: 360, h: 640, px: 2, scale: 1, sport, accent, colors: c, cast, keys, field, empty: !!empty || EMPTY_GAMES.has(game) || (import.meta.env.DEV && /[?&]empty=1/.test(location.search)) }   // (?empty=1 on the dev server: any game as camp plays it)
     let dirty = true   // (something other than the rules changed the picture)
+    // Everything the HUD layer shows, as one string: the same string, the same picture (kit.js hud, pads and stamp,
+    // and the key caps). The stamp's landing is the only part that moves on its own: its first 110 ms
+    let hudWas = null
+    const SEP = '\u0001'
+    const hudKey = (g, keyed) => {
+      const h = g.hud ?? {}, s = g.sit, st = g.stamp
+      let k = `${h.prompt}${SEP}${!!h.hot}${SEP}`
+      if (h.dots) { k += h.dots.length; for (const d of h.dots) k += d === true ? 'T' : d === false ? 'F' : 'n' }
+      k += s ? `${SEP}${s.us}${SEP}${s.mine}${SEP}${s.them}${SEP}${s.opp}` : `${SEP}-`
+      k += g.pads ? `${SEP}${g.zones}${SEP}${g.pads.length}${SEP}${g.pads.join(SEP)}${SEP}${g.padLit}${SEP}${g.padCue}` : `${SEP}-`
+      if (st) {
+        const age = g.t - st.at
+        if (!(age < 0 || (st.ms && age > st.ms))) k += `${SEP}${st.text}${SEP}${st.good ? 'G' : st.good === false ? 'B' : 'W'}${SEP}${st.size}${SEP}${st.y}${SEP}${age < 110 ? age : 'in'}`
+      }
+      if (keyed && view.keys) for (let i = 0; i < keyed.length; i++) { const p = keyed[i]; k += `${SEP}${p.x},${p.y},${p.label ?? keyLabel(i, keyed.length)}` }
+      return k
+    }
     const fit = () => {
       if (!box.current) return   // (a last resize can land as the stage closes)
       const r0 = box.current.getBoundingClientRect()
@@ -236,7 +255,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
         ov.style.width = `${cssW}px`; ov.style.height = `${cssH}px`
         ov.width = Math.round(cssW * dens); ov.height = Math.round(cssH * dens)
       }
-      dirty = true
+      dirty = true; hudWas = null   // (a new size wipes the HUD layer too)
     }
     fit()
     // A size change remakes every baked picture at the new size: wait until the window stops moving
@@ -246,6 +265,10 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
     // (the dev panel's pixel switch: the picture remade at the new size straight away)
     const repixel = () => { fit(); dirty = true }
     window.addEventListener('mg-pixel', repixel)
+    // (a font that comes in after the first picture: the HUD is painted again in it, as it always was on the next frame)
+    const refont = () => { hudWas = null; dirty = true }
+    document.fonts?.addEventListener?.('loadingdone', refont)
+    document.fonts?.ready?.then(refont)
     // (the room changes without the window changing: an ad rail loading or closing under the stage)
     const boxWatch = window.ResizeObserver ? new ResizeObserver(refit) : null
     boxWatch?.observe(box.current)
@@ -308,11 +331,17 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
           keyed = keyOrder.map(i => keyed[i])
         }
         const hctx = hudCtx()
-        if (hctx !== ctx) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, ov.width, ov.height); hctx.setTransform(ovPx, 0, 0, ovPx, 0, 0) }
-        if (keyed && view.keys) keyed.forEach((p, i) => keyCap(hctx, p.x, Math.max(14, p.y - 42), p.label ?? keyLabel(i, keyed.length)))
-        hud(hctx, view, g, def.title)
-        pads(hctx, view, g)
-        stamp(hctx, view, g)
+        // (the HUD on its own layer is painted again only when something on it has changed: most frames nothing has)
+        const hk = hctx !== ctx ? hudKey(g, keyed) : null
+        if (hk === null || hk !== hudWas) {
+          hudWas = null
+          if (hctx !== ctx) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, ov.width, ov.height); hctx.setTransform(ovPx, 0, 0, ovPx, 0, 0) }
+          if (keyed && view.keys) keyed.forEach((p, i) => keyCap(hctx, p.x, Math.max(14, p.y - 42), p.label ?? keyLabel(i, keyed.length)))
+          hud(hctx, view, g, def.title)
+          pads(hctx, view, g)
+          stamp(hctx, view, g)
+          hudWas = hk
+        }
       } catch (e) {
         if (import.meta.env.DEV) setTimeout(() => { throw e })   // (loud on the dev server)
       }
@@ -391,6 +420,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
       el.removeEventListener('pointermove', move)
       document.documentElement.classList.remove('mg-live')
       window.removeEventListener('resize', refit); window.removeEventListener('mg-pixel', repixel)
+      document.fonts?.removeEventListener?.('loadingdone', refont)
       boxWatch?.disconnect()
       window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku)
       if (import.meta.env.DEV && window.__bapGame === g) delete window.__bapGame
