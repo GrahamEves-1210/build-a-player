@@ -346,11 +346,14 @@ function ConfTable({ v, champ = false }) {
 
 // The 12-team Playoff, every game: first round on campus, the quarterfinal and semifinal bowls, the title game
 const ROUND_SHORT = { 'First Round': 'FIRST ROUND', Quarterfinal: 'QUARTERFINALS', Semifinal: 'SEMIFINALS', 'National Championship': 'TITLE GAME' }
-function CfpBracket({ v }) {
+// While he's still playing, the bracket only shows what's happened: through (a round index in CFP_ROUNDS) is the
+// last round with its matchups set, scoresThrough the last with its results in. Later rounds are TBD.
+const CFP_ROUNDS = ['First Round', 'Quarterfinal', 'Semifinal', 'National Championship']
+function CfpBracket({ v, through = 9, scoresThrough = 9 }) {
   const p = v.c.playoff
   if (!p?.games?.length) return null
   const me = v.team.short
-  const rounds = ['First Round', 'Quarterfinal', 'Semifinal', 'National Championship'].map(round => ({ round, games: p.games.filter(g => g.round === round) })).filter(r => r.games.length)
+  const rounds = CFP_ROUNDS.map((round, ri) => ({ round, ri, games: p.games.filter(g => g.round === round) })).filter(r => r.games.length)
   return (
     <div className="cfbs-bracket-scroll">
       <div className="cfbs-bracket" style={{ '--rounds': rounds.length }}>
@@ -358,13 +361,23 @@ function CfpBracket({ v }) {
           <div key={r.round} className="cfbs-round">
             <h3>{ROUND_SHORT[r.round] ?? r.round.toUpperCase()}</h3>
             <div className="cfbs-round-games">
-              {r.games.map((g, i) => (
-                <div key={i} className={`cfbs-bgame${g.hi === me || g.lo === me ? ' is-me' : ''}`}>
-                  {g.bowl && r.round !== 'National Championship' && <small>{g.bowl}</small>}
-                  <MatchRow short={g.hi} name={v.school(g.hi)} seed={g.hiSeed} sc={g.hiSc} win={g.winner === g.hi} me={g.hi === me} />
-                  <MatchRow short={g.lo} name={v.school(g.lo)} seed={g.loSeed} sc={g.loSc} win={g.winner === g.lo} me={g.lo === me} />
-                </div>
-              ))}
+              {r.games.map((g, i) => {
+                if (r.ri > through) return (
+                  <div key={i} className="cfbs-bgame is-tbd">
+                    {g.bowl && r.round !== 'National Championship' && <small>{g.bowl}</small>}
+                    <div className="cfbs-mrow"><span>TBD</span><b /></div>
+                    <div className="cfbs-mrow"><span>TBD</span><b /></div>
+                  </div>
+                )
+                const res = r.ri <= scoresThrough
+                return (
+                  <div key={i} className={`cfbs-bgame${g.hi === me || g.lo === me ? ' is-me' : ''}`}>
+                    {g.bowl && r.round !== 'National Championship' && <small>{g.bowl}</small>}
+                    <MatchRow short={g.hi} name={v.school(g.hi)} seed={g.hiSeed} sc={res ? g.hiSc : null} win={res && g.winner === g.hi} me={g.hi === me} />
+                    <MatchRow short={g.lo} name={v.school(g.lo)} seed={g.loSeed} sc={res ? g.loSc : null} win={res && g.winner === g.lo} me={g.lo === me} />
+                  </div>
+                )
+              })}
             </div>
           </div>
         ))}
@@ -751,6 +764,16 @@ function PostPage({ v, live, onNext }) {
         </section>
       )}
       {ended && playoff}
+      {cfp && !ended && started && (() => {
+        // the bracket as it stands: his round's matchups, its results once his game is over, nothing past it
+        const ri = Math.max(0, CFP_ROUNDS.indexOf(cur.round))
+        return (
+          <section className="cfbp-sec">
+            <Hd sub="12 TEAMS">THE PLAYOFF</Hd>
+            <CfpBracket v={v} through={ri} scoresThrough={status === 'between' ? ri : ri - 1} />
+          </section>
+        )
+      })()}
     </div>
   )
 }
