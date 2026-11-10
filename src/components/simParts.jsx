@@ -205,7 +205,7 @@ export function poLine(r) {
   if (r.carries != null) return `${r.carries} car · ${r.rushYds ?? 0} rush yds · ${r.recs ?? 0} rec · ${r.recYds ?? 0} rec yds · ${(r.rushTDs ?? 0) + (r.recTDs ?? 0)} TD`
   if (r.targets != null) return `${r.rec ?? 0} rec · ${r.recYds ?? 0} yds · ${r.recTDs ?? 0} TD · ${r.targets} tgt`
   // (a lineman first: his round carries the hits he allowed too, which read as a pass rusher's line below)
-  if (r.pancakes != null) return `${r.sacks ?? 0} ${r.sacks === 1 ? 'sack' : 'sacks'} allowed · ${r.pressures ?? 0} pressures · ${r.pancakes} pancakes`
+  if (r.pancakes != null) { const sk = r.sacks ?? r.sacksA ?? 0; return `${sk} ${sk === 1 ? 'sack' : 'sacks'} allowed · ${r.pressures ?? r.prs ?? 0} pressures · ${r.pancakes} pancakes` }
   if (r.pds != null) return `${r.tackles ?? 0} tkl · ${r.sacks ?? 0} sck · ${r.ints ?? 0} INT${r.ff ? ` · ${r.ff} FF` : ''}`
   if (r.qbHits != null) return `${r.sacks ?? 0} sck · ${r.tfl ?? 0} TFL · ${r.tackles ?? 0} tkl${r.ff ? ` · ${r.ff} FF` : ''}`
   if (r.tackles != null) return `${r.tackles} tkl · ${r.ints ?? 0} INT · ${r.pbus ?? 0} PD${r.ff ? ` · ${r.ff} FF` : ''}`
