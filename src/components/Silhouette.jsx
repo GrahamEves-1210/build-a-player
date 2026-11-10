@@ -181,7 +181,7 @@ const LB_FIGURE_SCALE = 0.9
 // of the parts in src/assets/lb-figure-color.svg). Left cards top to bottom: neck, chest, arm, glove, lower leg;
 // right: helmet, wristband, pants, shoe, so no two lines cross.
 const LB_ZONES = [
-  { type: 'leadership',      ax: 538, ay: 252, side: 'left',  cy: 0.14 }, // face + neck
+  { type: 'leadership',      ax: 523, ay: 237, side: 'left',  cy: 0.14 }, // face + neck
   { type: 'size',            ax: 470, ay: 455, side: 'left',  cy: 0.32 }, // jersey chest
   { type: 'power',           ax: 268, ay: 470, side: 'left',  cy: 0.50 }, // bare arm
   { type: 'tackling',        ax: 171, ay: 699, side: 'left',  cy: 0.68 }, // glove
