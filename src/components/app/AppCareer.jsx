@@ -11,7 +11,8 @@ import {
   retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
-  GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText } from '../../lib/career'
+  GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
+  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import { momentSituation } from '../../lib/situations'
@@ -773,12 +774,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'season' && a && (
           <section className="cr-sec">
             <div className="cr-season-bar ag-pop">
-              <span className="cr-rec"><b>{recText}</b><small>{S.isSoccer ? `${wins * 3 + draws} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
+              <span className="cr-rec"><b>{recText}</b><small>{S.isSoccer ? `${wins * 3 + draws} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : a.bye ? (byeNow(c) ? `BYE · WEEK ${a.bye.wk} OF ${seasonWeeks(c)}` : `WEEK ${weekOfGame(c, Math.min(a.k + 1, total))} OF ${seasonWeeks(c)}`) : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
               <div className="cr-goals cr-goals--inline">{c.goals.map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             </div>
+            {a.bye && <Schedule c={c} />}
             {a.injury && (
               <div className="sm-moment cr-injury ag-pop">
-                <span className="ag-eyebrow">INJURY · {S.gameWord} {a.k}</span>
+                <span className="ag-eyebrow">INJURY · {S.gameWord} {weekOfGame(c, a.k)}</span>
                 <h3 className="sm-moment-title">{a.injury.kind}</h3>
                 <p className="sm-moment-body">{a.injury.serious ? `The trainers don't need a second look. ${c.name}'s season is over.` : `The doctors say ${a.injury.games} ${a.injury.games === 1 ? unitOne : unitMany}. ${c.name} could play through it: not at his best for longer, and it can get worse.`}</p>
                 <div className="sm-options">
@@ -789,11 +791,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               </div>
             )}
             {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={a.moment} onPick={pick} />}
-            {hotHandOn(c) && <div className="cr-hot ag-pop"><IconFlame size={15} /> HOT HAND · two grades up through {S.isSoccer ? 'match' : S.gameWord.toLowerCase()} {a.hot.to}</div>}
-            {!hotHandOn(c) && boosts.hot > 0 && canHotHand(c, D.current) && (
+            {byeNow(c) && <ByeWeek key={`bye-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} />}
+            {a.bye?.done && a.k === a.bye.wk - 1 && !a.moment && !a.injury && <ByeResult c={c} done={a.bye.done} />}
+            {hotHandOn(c) &&<div className="cr-hot ag-pop"><IconFlame size={15} /> HOT HAND · two grades up through {S.isSoccer ? 'match' : S.gameWord.toLowerCase()} {a.hot.to}</div>}
+            {!hotHandOn(c) && boosts.hot > 0 && !byeNow(c) && canHotHand(c, D.current) && (
               <button className="cr-hot cr-hot--go ag-pop" onClick={goHot}><IconFlame size={15} /> USE HOT HAND <small>+2 every trait, next {Math.min(hotGames(c), total - a.k)} {S.isSoccer ? 'matches' : `${S.gameWord.toLowerCase()}s`} · {boosts.hot} left</small></button>
             )}
-            {!a.moment && !a.injury && !seasonOver && !a.po && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${a.k + 1}`} <IconArrow size={16} /></button>}
+            {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
             {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
             {seasonOver && (
               <div className="ag-card cr-over ag-pop">
@@ -817,12 +821,14 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                     <div className="cr-feed-lines">{e.hits?.filter(h => h.big).map(h => <span key={h.id} className="cr-ms"><IconStar size={12} /> {h.label}</span>)}{e.headline?.slice(0, 1).map((t, k) => <span key={k} className="cr-hl">{t}</span>)}</div>
                   )}
                 </div>
+              ) : e.bye ? (
+                <div key={`b${e.k}-${i}`} className="cr-feed-moment is-note"><span className="ag-eyebrow">WEEK {e.bye.wk} · BYE</span><b>{byeLine(c, e.bye)}</b></div>
               ) : e.note ? (
-                <div key={`n${e.k}-${i}`} className="cr-feed-moment is-note"><span className="ag-eyebrow">{e.k ? `${S.gameWord} ${e.k} · ` : ''}{e.noteKind}</span><b>{e.note}</b></div>
+                <div key={`n${e.k}-${i}`} className="cr-feed-moment is-note"><span className="ag-eyebrow">{e.k ? `${S.gameWord} ${weekOfGame(c, e.k)} · ` : ''}{e.noteKind}</span><b>{e.note}</b></div>
               ) : e.moment ? (
-                <div key={`m${e.k}-${i}`} className="cr-feed-moment"><span className="ag-eyebrow">{S.isSoccer ? `MATCH ${e.k + 1}` : S.isBaseball ? `GAME ${e.k + 1}` : `${S.gameWord} ${e.k}`} · {e.moment.title}</span><b>{e.option.label}</b>{e.outcome?.line && <small>{e.outcome.line}</small>}</div>
+                <div key={`m${e.k}-${i}`} className="cr-feed-moment"><span className="ag-eyebrow">{S.isSoccer ? `MATCH ${e.k + 1}` : S.isBaseball ? `GAME ${e.k + 1}` : `${S.gameWord} ${weekOfGame(c, e.k + (e.moment.inGame && a.bye ? 1 : 0))}`} · {e.moment.title}</span><b>{e.option.label}</b>{e.outcome?.line && <small>{e.outcome.line}</small>}</div>
               ) : (
-                <div key={`i${e.k}-${i}`} className="cr-feed-moment is-injury"><span className="ag-eyebrow">{S.gameWord} {e.k} · INJURY</span><b>{e.injuryText}</b></div>
+                <div key={`i${e.k}-${i}`} className="cr-feed-moment is-injury"><span className="ag-eyebrow">{S.gameWord} {weekOfGame(c, e.k)} · INJURY</span><b>{e.injuryText}</b></div>
               ))}
             </div>
           </section>
@@ -833,6 +839,94 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'team' && <><Lineup c={c} /><TeamFit c={c} /></>}
         {tab === 'career' && <CareerTab c={c} L={L} onDelete={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onExit() }} />}
       </div>
+    </div>
+  )
+}
+
+// ── The bye week (football, seasons from 2026-11-10 on): the schedule strip, the week off, how it went ──
+const BYE_COACH = { qb: 'quarterbacks coach', rb: 'running backs coach', wr: 'receivers coach', te: 'tight ends coach', db: 'secondary coach', dl: 'defensive line coach', lb: 'linebackers coach', ol: 'offensive line coach' }
+const listOf = a => (a.length > 1 ? `${a.slice(0, -1).join(', ')} or ${a[a.length - 1]}` : a[0] ?? '')
+const durGrade = d => gradeOf((d ?? 5) * 1.1)
+function byeLine(c, b) {
+  if (b.pick === 'rest') {
+    const g0 = durGrade(b.from), g1 = durGrade(b.to)
+    const dur = b.to > b.from ? (g0 === g1 ? `durability +${Math.round((b.to - b.from) * 10) / 10} (${g1})` : `durability ${g0} → ${g1}`) : 'durability already maxed'
+    return `Rested: ${dur}${b.healed ? `, and back from the ${b.healed.kind} for Week ${b.healed.back}` : ''}.`
+  }
+  const what = gameTitle(c, b.game) ?? 'the drill'
+  return `Extra work, ${what.toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}: ${b.gain ? `${b.gain.label} ${b.gain.from} → ${b.gain.to}.` : 'no gain this week.'}`
+}
+// the eighteen weeks: the results so far, the bye where it falls
+function Schedule({ c }) {
+  const a = c.active, games = a.snap?.games ?? a.base?.games ?? [], n = seasonWeeks(c)
+  const weeks = Array.from({ length: n }, (_, i) => i + 1)
+  return (
+    <div className="ag-weeks cr-sched" style={{ gridTemplateColumns: `repeat(${Math.ceil(n / 2)}, 1fr)` }} aria-label="Schedule">
+      {weeks.map(w => {
+        if (w === a.bye.wk) return <span key={w} className={`ag-week is-bye${byeNow(c) ? ' is-on' : ''}`}><span className="ag-week-n">{w}</span><span className="ag-week-r">BYE</span></span>
+        const i = w < a.bye.wk ? w - 1 : w - 2, g = games[i], done = i < a.k && !!g
+        return <span key={w} className={`ag-week${done ? (g.won ? ' is-w' : ' is-l') : ''}`} title={g ? `Week ${w} ${g.home ? 'vs' : 'at'} ${g.opponent}${done ? ` · ${g.won ? 'W' : 'L'} ${g.mySc}–${g.oppSc}` : ''}` : undefined}><span className="ag-week-n">{w}</span><span className="ag-week-r">{done ? (g.won ? 'W' : 'L') : ''}</span></span>
+      })}
+    </div>
+  )
+}
+// the week off: extra work with his position coach (a drill, a shot at a grade) or rest (durability, guaranteed)
+function ByeWeek({ c, setCareer, getD }) {
+  const a = c.active, wk = a.bye.wk, mode = gamesMode(c)
+  const D = getD()
+  const hurt = byeHurt(c, D)
+  const game = useMemo(() => byeDrill(c, mode === 'simple' ? g => !!SIMPLE_GAMES[g] : null), [c.seed, c.year, c.pos, mode]) // eslint-disable-line
+  const playing = a.bye.training && !hurt ? a.bye.training : null
+  const traits = game ? byeTraits(c, game).map(t => POS_ATTR[c.pos]?.[t]?.label ?? t) : []
+  const nick = c.fit?.name?.split(' ').pop() ?? 'team'
+  const coach = BYE_COACH[c.pos] ?? 'position coach'
+  const maxed = (c.durability ?? 5) >= BODY_MAX
+  const train = () => { if (!game || hurt) return; setCareer({ ...c, active: { ...a, bye: { ...a.bye, training: game } } }); sfx('tap') }
+  const rest = () => { setCareer(byeRest(c, getD())); sfx('claim'); haptic('success') }
+  const done = (g, res) => {
+    const n = byeTrain(c, getD(), g, res.score, res.hit, mode === 'off')
+    setCareer(n); if (n.active.bye?.done?.gain) { sfx('claim'); haptic('success') } else sfx('tap')
+  }
+  if (playing) return (
+    <div className="ag-card cr-camp cr-bye ag-pop">
+      <span className="ag-eyebrow">WEEK {wk} · BYE · {gameTitle(c, playing)}</span>
+      <p className="cr-note">Extra work with the {coach}. A good rep can raise {listOf(byeTraits(c, playing).map(t => POS_ATTR[c.pos]?.[t]?.label ?? t))} a grade.</p>
+      <CareerGame c={c} setCareer={setCareer} empty team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={playing} game={playing} build={c.build} seed={`${c.seed}-bye-${c.year}`} lock={`${c.seed}-bye-${c.year}`} onDone={res => done(playing, res)} />
+    </div>
+  )
+  return (
+    <div className="sm-moment cr-bye ag-pop">
+      <span className="ag-eyebrow">WEEK {wk} · BYE WEEK</span>
+      <h3 className="sm-moment-title">No game this week</h3>
+      <p className="sm-moment-body">The {nick} are off in Week {wk}. {c.name} can stay after it with the {coach}, or get his body right for the {wk >= 10 ? 'stretch run' : 'rest of the season'}.</p>
+      <div className="sm-options">
+        <button className="sm-option" disabled={hurt || !game} onClick={train}>
+          <b>Extra work{game ? `: ${(gameTitle(c, game) ?? '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}` : ''}</b>
+          <small>{hurt ? 'Not this week: he is in the training room.' : !game ? `Nothing left to train at ${c.age}.` : `One drill with the ${coach}. A good rep can raise ${listOf(traits)} a grade: the cleaner the rep, the better the chance.${mode === 'off' ? ' Simulated from his ratings.' : ''}`}</small>
+        </button>
+        <button className="sm-option" onClick={rest}>
+          <b>Rest and recover</b>
+          <small>{maxed ? 'Durability is already maxed out.' : `Durability +${BYE_REST}, guaranteed.`}{hurt && !a.out ? ' He is back from the injury a week sooner.' : ''}</small>
+        </button>
+      </div>
+    </div>
+  )
+}
+// how the week off went, until the next game
+function ByeResult({ c, done }) {
+  const wk = c.active.bye.wk
+  const gain = done.gain
+  const head = done.pick === 'rest'
+    ? (done.to > done.from ? (durGrade(done.from) === durGrade(done.to) ? `Durability +${Math.round((done.to - done.from) * 10) / 10}` : `Durability ${durGrade(done.from)} → ${durGrade(done.to)}`) : 'Rested')
+    : gain ? `${gain.label} ${gain.from} → ${gain.to}` : 'No gain this week'
+  const sub = done.pick === 'rest'
+    ? (done.healed ? `A week off his feet. The ${done.healed.kind} heals up over the bye: back for Week ${done.healed.back}.` : `A week off his feet. Durability ${durGrade(done.to)}${done.to < BODY_MAX ? '' : ', maxed out'}.`)
+    : `${(gameTitle(c, done.game) ?? 'The drill').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}: ${done.hit ? 'passed' : 'missed'}${done.sim ? ' (simulated)' : ''}. ${gain ? `He plays the rest of the season at ${gain.to}.` : done.hit ? 'Good work, no new grade.' : 'Back to it next week.'}`
+  return (
+    <div className="ag-card cr-bye-done ag-pop">
+      <span className="ag-eyebrow">WEEK {wk} · BYE · {done.pick === 'rest' ? 'REST' : 'EXTRA WORK'}</span>
+      <b className={`cr-bye-head${gain || (done.pick === 'rest' && done.to > done.from) ? ' is-up' : ''}`}>{head}</b>
+      <p className="cr-note">{sub}</p>
     </div>
   )
 }
@@ -1428,6 +1522,7 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
         {(s.goals ?? []).length > 0 && <p><b>Goals</b> {met} of {s.goals.length} met</p>}
         {s.records?.length > 0 && <p><b>Records</b> {s.records.join(' · ')}</p>}
         {hurt.length > 0 && <p><b>Injuries</b> {hurt.map(i => `${i.kind}, ${i.games} ${i.games === 1 ? 'game' : 'games'}${i.played ? ' (played through)' : ''}`).join(' · ')}</p>}
+        {s.bye?.pick && <p><b>Bye</b> Week {s.bye.wk}: {s.bye.pick === 'rest' ? 'rested' : s.bye.gain ? `extra work, ${s.bye.gain.label} ${s.bye.gain.from} → ${s.bye.gain.to}` : 'extra work, no gain'}</p>}
         {s.missed > 0 && !hurt.length && <p><b>Missed</b> {s.missed} {S.isSoccer ? (s.missed === 1 ? 'match' : 'matches') : s.missed === 1 ? 'game' : 'games'}</p>}
       </div>
     </section>

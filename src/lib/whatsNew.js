@@ -58,6 +58,7 @@ const NOV_10 = {
     {
       name: 'Career',
       items: [
+        'Football seasons now have a bye week, between Weeks 5 and 14 like the NFL\'s: put in extra work on a position drill for a shot at a trait upgrade, or rest for a guaranteed durability boost',
         'Added Start in College for QB, RB and WR: pick from school offers, play a season or two, then enter the draft',
         'In college the build plays a full letter grade higher on every trait except Size',
         'Teams now rise and fall more over the years',
@@ -85,6 +86,7 @@ const NOV_10 = {
         'Every football mini game now shows all 22 real players with their names and numbers',
         'Combine and training camp drills now play in an empty stadium',
         'Throwing Velocity has a new look: a radar board, a real net and target, and a QB who reacts to each throw',
+        'Bench Press has a new look: side-on in the combine hall, with a spotter, scouts and the prospects reacting to the set',
         'Throwing games: receivers with strong hands and body control come down with more contested catches',
         'Linemen keep their feet and hands moving through the play',
         'After a touchdown, defenders no longer all strike the same pose at the same moment',

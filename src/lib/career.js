@@ -8,7 +8,7 @@
 
 import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNorms.js'
 import { seeded } from './rng'
-import { traitValue, pickMomentGame } from './minigames'
+import { traitValue, pickMomentGame, pickPlayoffGame, GAMES } from './minigames'
 import { momentSituation, finalScore } from './situations'
 import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
@@ -1839,7 +1839,8 @@ const INJ_RATE = 0.019, INJ_PULL = 0.15
 // the injury cards a season can deal (sit or play hurt): one at most, more likely on a fragile body.
 // ~35% a season at durability 2, ~21% at 6, ~7% at 10; the playoffs, half that
 const injuryOdds = c => { const d = clamp(c.durability ?? 5, 1, 10), season = clamp(0.42 - 0.035 * d, 0.07, 0.4) * (c.age >= 31 ? 1.2 : 1); return { season, playoffs: season / 2 } }
-const director = (c, team, base, seed, simFn = simFor(c)) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+// (build: the one the season was simulated on; a bye-week gain is a nudge on top of it, active.dirBuild keeps the old one)
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -1864,8 +1865,11 @@ export function startSeason(c) {
     if (u > 0) share = { u, weeks }
   }
   const simFn = share ? shareSim(plain, share.u, share.weeks) : plain
-  const base = simFn(c.build, team)
-  const D = director(cc, team, base, seed, simFn)
+  // the bye week (football): the games keep their order and their numbers 1-17, the weeks after the bye move one on
+  const bye = !S.x && !S.isBucket && !S.isSoccer ? byeWeekOf(c.season, c.team) : null
+  const base0 = simFn(c.build, team)
+  const base = bye ? { ...base0, games: base0.games.map((g, i) => ({ ...g, wk: i + 1 >= bye ? i + 2 : i + 1 })) } : base0
+  const D = director(cc, team, base, seed, simFn, c.build)
   seasonSwing(cc, D)
   // (a registered sport opens its own season: baseball's minors stint and the call-up, the lineup or the rotation)
   const own = S.x?.start ? S.x.start(cc, D, dc, team) : null
@@ -1893,7 +1897,7 @@ export function startSeason(c) {
     }
   }
   const feed = own ? own.feed ?? [] : benched ? [{ k: 0, note: S.isSoccer ? `${benched.behind} leads the line. ${c.name} starts the season ${benched.role === 'Rotation' ? 'in the rotation: some starts, minutes off the bench' : 'on the bench: a sub’s minutes, the odd start in the cup'}.` : benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation' : ''}.`, noteKind: S.isSoccer ? 'SQUAD ROLE' : benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
-  const next = { ...cc, phase: 'season', fit, role: own ? own.role : S.isSoccer ? S.x.role(cc) : dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share, ...(own?.active ?? {}) } }
+  const next = { ...cc, phase: 'season', fit, role: own ? own.role : S.isSoccer ? S.x.role(cc) : dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share, ...(bye ? { bye: { wk: bye } } : {}), ...(own?.active ?? {}) } }
   return [next, D]
 }
 // The unpredictable part of a year. Never shown, only felt:
@@ -1936,6 +1940,7 @@ export function advanceWeek(c, D) {
   const a = c.active
   if (a.moment || a.injury) return [c, null]
   if (a.k >= D.total) return [c, null]
+  if (a.bye && !a.bye.done && a.k >= a.bye.wk - 1) return [c, null]   // (the bye week first: byeRest / byeTrain)
   const feed = [...a.feed]
   const chunk = { k0: a.k + 1, games: [], hits: [], headline: [] }
   let k = a.k, injury = null, moment = null, last = null
@@ -2028,6 +2033,96 @@ export function hotHand(c, D) {
   const S = sportOf(c)
   const feed = [...a.feed, { k: a.k, note: `${c.name} is feeling it: two grades up in every trait for the next ${n} ${n === 1 ? S.gameWord.toLowerCase() : `${S.gameWord.toLowerCase()}s`}.`, noteKind: 'HOT HAND' }]
   return withSnap(c, D, { hot: { from, to }, feed })
+}
+
+// ── The bye week (2026-11-10, football) ──
+// An 18-week season, 17 games: one week off for every team, weeks 5 to 14 the way the league places them
+// (most from 6 to 12, an even two to six teams off a week so the rest still pair up). One table for the whole
+// league each season, seeded by the season, so every career sees the same byes that year. His week off is a
+// beat of its own: train (a drill off his position for a shot at one grade) or rest (durability, guaranteed,
+// and a week of healing). Seasons started before this have no bye (active.bye unset): nothing changes for them.
+export const BYE_FIRST = 5, BYE_LAST = 14, BYE_REST = 0.4
+const BYE_TABLES = {}
+export function byeTable(season) {
+  if (BYE_TABLES[season]) return BYE_TABLES[season]
+  const r = seeded(`nfl-byes-${season}`)
+  const weeks = Array.from({ length: BYE_LAST - BYE_FIRST + 1 }, (_, i) => BYE_FIRST + i)
+  const teams = SPORT.nfl.teams.map(t => t.short)
+  // two a week to start, then pairs to the middle weeks (6-12 five times as likely), six at most (four at the ends)
+  const n = Object.fromEntries(weeks.map(w => [w, 2]))
+  for (let left = teams.length - 2 * weeks.length; left > 0; left -= 2) {
+    const mid = w => w >= 6 && w <= 12, open = weeks.filter(w => n[w] < (mid(w) ? 6 : 4)), wt = w => (mid(w) ? 5 : 1)
+    let roll = r() * open.reduce((s, w) => s + wt(w), 0), w = open[open.length - 1]
+    for (const x of open) { roll -= wt(x); if (roll <= 0) { w = x; break } }
+    n[w] += 2
+  }
+  for (let i = teams.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [teams[i], teams[j]] = [teams[j], teams[i]] }
+  const out = {}
+  let i = 0
+  for (const w of weeks) for (let k = 0; k < n[w]; k++) out[teams[i++]] = w
+  return (BYE_TABLES[season] = out)
+}
+export const byeWeekOf = (season, team) => byeTable(season)[team] ?? 9
+// the week a game (1-17) is played in, and how many weeks the season runs (a season from before the bye: its games)
+export const weekOfGame = (c, n) => { const b = c?.active?.bye; return b && n >= b.wk ? n + 1 : n }
+export const seasonWeeks = c => (c?.active?.base?.games?.length ?? 17) + (c?.active?.bye ? 1 : 0)
+// the bye is up: the last game before it played, nothing else open
+export const byeNow = c => { const a = c?.active; return !!a?.bye && !a.bye.done && a.k === a.bye.wk - 1 && !a.moment && !a.injury && !a.po }
+// out hurt this week: the minor injury he is sitting (null when healthy, or a backup sitting on the depth chart)
+function hurtRun(c, D) {
+  const a = c.active, yr = c.year + 1
+  const inj = [...(c.injuries ?? [])].reverse().find(i => i.year === yr && !i.played && !i.serious)
+  if (!inj || !D.sat.includes(a.k)) return null
+  const end = inj.at + inj.games - 1
+  if (a.k > end) return null
+  let j = a.k
+  while (j + 1 <= end && D.sat.includes(j + 1)) j++
+  return { inj, last: j }
+}
+export const byeHurt = (c, D) => !!c?.active?.out || !!(D && hurtRun(c, D))
+// the traits a drill works that he can still move (the same rules as offseason work: the frame, the caps, the age ladder)
+export const byeTraits = (c, game) => (GAMES[game]?.traits ?? []).filter(t => c.types.includes(t) && trainable(c, t))
+// the drill: one of his position's own, with something in it left to train (allow: the Simple games, in Simple)
+export const byeDrill = (c, allow = null) => pickPlayoffGame(c.pos, `${c.seed}-bye-${c.year}`, [], g => byeTraits(c, g).length > 0 && (!allow || allow(g))) ?? null
+// the shot at a grade from the rep: a miss almost never (a near miss one in ten), a bare pass about a third,
+// a clean one two in three, a great rep nearly always
+export const byeChance = (score, hit) => (hit ? clamp(0.35 + (score - 0.5) * 1.2, 0.35, 0.95) : score >= 0.4 ? 0.1 : 0)
+const byeDone = (c, D, done, more = {}) => {
+  const a = c.active
+  const feed = [...a.feed, { k: a.k, bye: { wk: a.bye.wk, ...done } }]
+  return withSnap(c, D, { bye: { ...a.bye, done }, feed, ...more })
+}
+// Rest: durability up a fixed amount (to the body-work cap), and a week of healing: a minor injury he is
+// sitting comes off a game sooner (the bye is one of the weeks out)
+export function byeRest(c, D) {
+  if (!byeNow(c)) return c
+  const from = c.durability ?? 5, to = r10(Math.min(BODY_MAX, from + BYE_REST))
+  const run = c.active.out ? null : hurtRun(c, D)
+  let healed = null
+  if (run) {
+    D.sat = D.sat.filter(i => i !== run.last)
+    D.nudge({}, run.last, run.last + 1)   // (that game re-simulated, with him in it)
+    healed = { kind: run.inj.kind, back: weekOfGame(c, run.last + 1) }
+  }
+  return byeDone({ ...c, durability: to }, D, { pick: 'rest', from, to, healed })
+}
+// Train: the drill's result (score 0-1, hit: the drill's own verdict), a seeded roll at byeChance. A gain is
+// one grade in the drill's trait with the most room, the way offseason work does it (one grade, counted against
+// UPGRADE_CAP), free of points; the rest of the season is played at it (a nudge on the build the season was simulated on)
+export function byeTrain(c, D, game, score, hit = score >= 0.75, sim = false) {
+  if (!byeNow(c) || byeHurt(c, D)) return c
+  const traits = byeTraits(c, game)
+  const chance = traits.length ? byeChance(score, hit) : 0
+  const won = traits.length > 0 && seeded(`${c.seed}-byegain-${c.year}`)() < chance
+  const base = { pick: 'train', game, score, hit: !!hit, chance, sim: !!sim }
+  if (!won) return byeDone(c, D, { ...base, gain: null })
+  const t = [...traits].sort((x, y) => (c.build[x].val ?? 0) - (c.build[y].val ?? 0))[0]
+  const from = c.build[t].val, to = Math.min(11, Math.round(from) + 1)
+  const build = { ...c.build, [t]: { ...c.build[t], val: to, upgraded: (c.build[t].upgraded ?? 0) + 1 } }
+  D.nudge({ attr: { [t]: to - from } }, c.active.k, D.total, null, true)
+  const gain = { type: t, label: traitName(c, t), from: valToGrade(from), to: valToGrade(to) }
+  const next = { ...c, build, ovr: ovrOf(c.pos, build, c.sport), decisions: [...c.decisions, { year: c.year + 1, text: `Bye week work: ${gain.label} ${gain.from} → ${gain.to}` }] }
+  return byeDone(next, D, { ...base, gain }, { dirBuild: c.active.dirBuild ?? c.build })
 }
 
 // Injury: sit it out, or play through (traits down for longer, and it can get worse).
@@ -2338,6 +2433,9 @@ export function bookSeason(c) {
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
   }
   })()
+  // the bye week, as he spent it (seasons from before the bye have none)
+  const bw = c.active.bye
+  if (bw) s.bye = { wk: bw.wk, pick: bw.done?.pick ?? null, ...(bw.done?.gain ? { gain: bw.done.gain } : {}), ...(bw.done?.pick === 'rest' ? { dur: r10((bw.done.to ?? 0) - (bw.done.from ?? 0)) } : {}) }
   // the career records (a lineman's: Pro Bowls, All-Pros, starts): set the season he passes the mark
   const careerRecs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
   if (careerRecs.length) {
@@ -2520,15 +2618,16 @@ export function ladderNote(c) {
     : { last: false, text: `${up(list(tech))} can be trained through age ${t.until}, the last two years at double cost.${anyAge}` }
   return mind ? { last: false, text: `At ${c.age}, only ${mind} can still be trained.` } : null
 }
-export function canUpgrade(c, type) {
+// a trait that can still be trained at all, points aside: not his frame, not capped, its window open
+export function trainable(c, type) {
   const ch = c.build[type]
   if ((c.pos === 'dl' || c.pos === 'lb') && type === 'size') return false   // a lineman's (or a linebacker's) size is his body, not something to train
   if (c.pos === 'ol' && (type === 'size' || type === 'length')) return false   // (an offensive lineman's arms too: length is arm length)
   if (!ch || maxedTrait(ch.val, ch, type)) return false
   const w = trainWindow(c, type)
-  if (w && !w.open) return false
-  return c.dev.points >= upgradeCost(ch.val, c, type)
+  return !(w && !w.open)
 }
+export const canUpgrade = (c, type) => trainable(c, type) && c.dev.points >= upgradeCost(c.build[type].val, c, type)
 // Why a trait can't go up right now, in a line (null: it can). type '__body' is body work (durability)
 export function upgradeBlock(c, type) {
   const pts = c.dev?.points ?? 0
