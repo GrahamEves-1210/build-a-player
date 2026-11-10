@@ -8,13 +8,14 @@ import { track } from '../lib/track'
 // letters, the phone on the bright side of the purple. Their logo file as it came; the phone is a small web
 // copy of their mockup. The offer and the fine print are theirs word for word (talking points, Oct 28 2026;
 // the $150 offer's legal line from their explainer art): change them only from a new sheet of theirs.
-// Brand rules kept: the wordmark with its P, nothing green on the purple, the legal line in a mono face
+// (noreferrer: the click reaches them the way a typed address does, with no page behind it. Their link carries the
+// code, so nothing is lost.) Brand rules kept: the wordmark with its P, nothing green on the purple, the legal line in a mono face
 const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
 function PartnerBanner({ sport }) {
   return (
     <div className="pp-wrap">
       <div className="splash-site-footer-head pp-head">Partner Offer</div>
-      <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener"
+      <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener noreferrer"
         onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: 'footer' } })}
         aria-label="PrizePicks. New users: play $5, get $150 in bonus lineups if you win. Claim the offer with code BUILD.">
         <span className="pp-copy">
@@ -25,7 +26,7 @@ function PartnerBanner({ sport }) {
         </span>
         <span className="pp-cta">
           <span className="pp-claim">Claim Offer</span>
-          <span className="pp-code"><span>or use code</span> <span><b>BUILD</b> at sign-up</span></span>
+          <span className="pp-code"><span>or use code <b>BUILD</b></span> <span>when you sign up</span></span>
         </span>
         <img className="pp-phone" src="/sponsors/prizepicks-phone.webp" alt="" width="560" height="1159" loading="lazy" decoding="async" draggable={false} />
       </a>

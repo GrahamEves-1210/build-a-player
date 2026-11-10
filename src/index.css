@@ -5485,7 +5485,7 @@ a:focus-visible {
 .pp-sub { font-size: 13.5px; font-weight: 400; line-height: 1.2; }
 .pp-sub b { font-weight: 800; }
 /* one button. The link already carries the code, so the code is a plain line for whoever signs up later, not a second button */
-.pp-cta { flex: none; display: flex; flex-direction: column; gap: 9px; width: 224px; margin-right: 2%; }
+.pp-cta { flex: none; display: flex; flex-direction: column; gap: 9px; width: 256px; margin-right: 2%; }
 .pp-claim { display: flex; align-items: center; justify-content: center; height: 50px; border-radius: 8px; background: #fff; color: #1a0033; font-size: 18px; font-weight: 800; letter-spacing: -.01em; line-height: 1; white-space: nowrap; }
 .pp-code { font-size: 14.5px; font-weight: 400; line-height: 1.2; text-align: center; white-space: nowrap; opacity: .9; }
 .pp-code span { white-space: nowrap; }
@@ -5509,8 +5509,8 @@ a:focus-visible {
   .pp-new, .pp-sub { font-size: 12px; }
   .pp-offer { font-size: clamp(23px, 7.2vw, 28px); }
   .pp-cta { flex-direction: row; align-items: center; gap: 9px; width: auto; margin: 10px 0 0; }
-  .pp-claim { width: 112px; height: 38px; font-size: 14.5px; }
-  .pp-code { width: 108px; font-size: 12.5px; line-height: 1.25; text-align: left; white-space: normal; }
+  .pp-claim { width: 108px; height: 38px; font-size: 14.5px; }
+  .pp-code { width: 116px; font-size: 12.5px; line-height: 1.25; text-align: left; white-space: normal; }
   .pp-phone { right: -40px; top: 22px; width: 152px; }
   .pp-legal { font-size: 10px; }
 }
