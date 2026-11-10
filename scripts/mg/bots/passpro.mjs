@@ -1,47 +1,55 @@
-// A human in pass pro. Every read is a body read: he sees the rusher's first step (wide, under or a bull) through
-// his reaction time plus a beat to sort out which pad that is, then taps it, aiming at the moment the ring closes
-// (a moment he can see coming). Sometimes he taps the wrong pad outright, sometimes he's jumpy and taps the moment
-// he's decided, and now and then he guesses before the man has moved at all. A counter: he sees the show wide, then
-// the step back under, and has to change his mind in time; sometimes he's already gone with the show.
-const READ_MS = 140   // ms: looking at his body. The same for everyone
-const READ = 0.3      // of his reaction: which pad that is
-const BITE = 5        // times his slip, on top of a base: goes with a counter's show
-const MISREAD = 3     // times his slip: the wrong pad outright
-const GUESS = 1.5     // times his slip: taps before the man has moved
-const AIM_ERR = 1.6   // times his timing: the tap, at a moment he can see coming
+// A human in pass pro: he balances the bar with his thumbs. He sees the marker late (his eyes and his thumb are a
+// beat behind the screen), judges where it's going from how it's moving, and holds the pad that pushes it back,
+// letting go as it comes back to the middle. He leads it a little to beat his own lag (a better player leads it
+// more, so he overshoots less); he re-decides a few times a second, not every frame; now and then he holds the
+// wrong pad. When the call changes (INSIDE MOVE, SPIN MOVE, RIP) he reacts to the word too: lets go of the slide
+// he's on, unless he's already gone with the show.
+const TRACK = 0.55   // of his reaction: watching a thing he's already watching, the lag is shorter
 const gauss = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
 
 export default function makeBot(g, human, r) {
-  const after = () => Math.max(120, human.react + gauss(r) * human.reactSd * 1.25)
-  const bite = 0.06 + human.slip * BITE
-  let rep = -1, plan = null, seen = null, done = false
-  const down = zone => ({ kind: 'down', zone, x: 60 + zone * 120, y: 560 })
-  const wrong = z => [0, 1, 2].filter(k => k !== z)[Math.floor(r() * 2)]
+  const hist = []                      // what the screen showed: [t, m]
+  const lead = Math.min(0.95, Math.max(0.3, 1 - human.timing / 120))   // how much of his lag he makes up
+  const every = 1000 / human.rate
+  const bite = 0.08 + human.slip * 5
+  let rep = -1, holding = null, nextAt = 0, wrongUntil = 0, call = null, callSeen = null, lag = 0, out = []
+  const press = z => {
+    if (holding === z) return
+    if (holding) out.push({ kind: 'up', zone: holding, id: 1, x: holding === 'L' ? 90 : 270, y: 560 })
+    if (z) out.push({ kind: 'down', zone: z, id: 1, x: z === 'L' ? 90 : 270, y: 560 })
+    holding = z
+  }
+  const seen = at => {
+    // the marker as it was at time at (the history is short: a snap is 3 s)
+    for (let i = hist.length - 1; i >= 0; i--) if (hist[i][0] <= at) return hist[i][1]
+    return hist.length ? hist[0][1] : 0
+  }
   return () => {
-    if (g.i !== rep) {
-      rep = g.i; seen = null; done = false
-      plan = r() < human.slip * GUESS ? { guess: true, delay: 80 + r() * 220, zone: Math.floor(r() * 3) } : null
-    }
+    out = []
+    if (g.i !== rep) { rep = g.i; hist.length = 0; call = null; callSeen = null; press(null); lag = human.react * TRACK }
     const R = g.rep, tl = g.tell
-    if (R.res || g.done || done || g.phase !== 'play') return
-    if (plan?.guess && plan.at == null) plan.at = g.t + plan.delay
-    if (tl.type && tl.type !== seen) {
-      const first = seen == null
-      seen = tl.type
-      if (!plan?.guess && !(!first && plan && r() < bite)) {
-        // which pad that is, then the tap: on the ring, or as soon as he's sure if that's later
-        let zone = tl.zone
-        if (r() < human.slip * MISREAD) zone = wrong(zone)
-        const sure = g.t + after() + READ_MS + human.react * READ
-        let aim = tl.contactAt + gauss(r) * human.timing * AIM_ERR
-        if (r() < human.slip) aim = sure   // a jumpy one: as soon as he's decided
-        plan = { at: Math.max(sure, aim), zone }
-      }
-    }
-    if (plan && plan.at != null && g.t >= plan.at) {
-      const z = plan.zone
-      plan = null; done = true
-      return [down(z)]
-    }
+    if (g.done || R.res || R.beat || R.hurry || g.phase !== 'play') { press(null); return out.length ? out : undefined }
+    hist.push([g.t, tl.m])
+    if (hist.length > 600) hist.shift()
+    // a new call: he reads the word
+    if (tl.call !== call) { call = tl.call; if (call && call !== 'SPEED RUSH' && call !== 'BULL RUSH') callSeen = { at: g.t + Math.max(120, human.react + gauss(r) * human.reactSd), bit: r() < bite } }
+    if (callSeen && g.t >= callSeen.at) { if (!callSeen.bit) { press(null); nextAt = g.t + every * 0.8 } callSeen = null }
+    if (g.t < nextAt) return out.length ? out : undefined
+    nextAt = g.t + every * (0.75 + r() * 0.5)
+    const l = lag + gauss(r) * human.reactSd * 0.4
+    const m0 = seen(g.t - l), m1 = seen(g.t - l - 70)
+    const vel = (m0 - m1) / 0.07
+    // where he thinks it's going, and where he thinks it'd be safe to let go
+    const ahead = m0 + vel * ((l * lead) / 1000 + 0.06) + gauss(r) * human.timing / 400
+    const th = tl.zone * 0.45, rel = tl.zone * 0.15
+    let want = holding
+    const outPad = g.OUT, inPad = g.IN
+    if (ahead > th) want = outPad
+    else if (ahead < -th) want = inPad
+    else if (Math.abs(ahead) < rel || (holding === outPad && ahead < 0) || (holding === inPad && ahead > 0)) want = null
+    if (g.t < wrongUntil) return out.length ? out : undefined
+    if (want && r() < human.slip * 0.6) { want = want === outPad ? inPad : outPad; wrongUntil = g.t + every }
+    press(want)
+    return out.length ? out : undefined
   }
 }

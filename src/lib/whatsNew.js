@@ -89,7 +89,7 @@ const NOV_10 = {
         'Linemen keep their feet and hands moving through the play',
         'After a touchdown, defenders no longer all strike the same pose at the same moment',
         'Player names on the field are drawn in the same retro pixels as the players',
-        'Pass Pro is simpler: three snaps, he goes wide, cuts under or bull-rushes, and you answer OUTSIDE, INSIDE or ANCHOR as the ring closes',
+        'Pass Pro is a fight for leverage: hold SLIDE OUTSIDE or SLIDE INSIDE to keep him in front of you through the whole down, against a speed rush, an inside move and a bull rush',
         'Zone Drop: the ball hangs in the air longer',
         'Hot Read and Zone Drop: the circles start on the receivers instead of jumping onto them',
         'Moment cards and mini game text now use the player\'s name',

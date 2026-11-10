@@ -348,7 +348,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
     el.addEventListener('pointercancel', up)
     // keys: left/right and A/D/F/J; 1 2 3; space and enter hold or tap
     const keyZone = k => {
-      if (g.zones === 'lr') return { ArrowLeft: 'L', a: 'L', f: 'L', A: 'L', F: 'L', ArrowRight: 'R', d: 'R', j: 'R', D: 'R', J: 'R' }[k]
+      if (g.zones === 'lr') return { 1: 'L', 3: 'R', ArrowLeft: 'L', a: 'L', f: 'L', A: 'L', F: 'L', ArrowRight: 'R', d: 'R', j: 'R', D: 'R', J: 'R' }[k]
       if (g.zones === 'three') return { 1: 0, 2: 1, 3: 2, ArrowLeft: 0, ArrowUp: 1, ArrowDown: 1, ArrowRight: 2, ...(g.anyKey ? { ' ': 1, Enter: 1 } : null) }[k]
       return k === ' ' || k === 'Enter' ? null : undefined
     }

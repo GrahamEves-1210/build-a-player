@@ -388,16 +388,30 @@ function throwPilot(g, game) {
   }
 }
 
-// Pass Pro: read his first step (wide, under, bull) and tap its pad as the ring closes (a counter: the second step)
+// Pass Pro: balance the bar. Hold the pad that pushes the marker back to the middle, leading it a little, and let
+// go as it comes back (on an inside move or a spin, let go as soon as it's called)
 function passproPilot(g) {
-  let rep = -1, plan = null, seen = null
-  const down = z => ({ kind: 'down', zone: z, x: 60 + z * 120, y: 500 })
+  let held = null, rep = -1
+  const out = []
+  const press = z => {
+    if (held === z) return
+    if (held) out.push({ kind: 'up', zone: held, id: 1 })
+    if (z) out.push({ kind: 'down', zone: z, id: 1, hold: true })
+    held = z
+  }
   return () => {
-    if (g.i !== rep) { rep = g.i; plan = null; seen = null }
-    const tl = g.tell
-    if (g.rep.res || g.rep.pressed || g.phase !== 'play') return
-    if (tl.type && tl.type !== seen) { seen = tl.type; plan = { at: Math.max(g.t + REACT, tl.contactAt - 30), zone: tl.zone } }
-    if (plan && g.t >= plan.at) { const z = plan.zone; plan = null; return [down(z)] }
+    out.length = 0
+    if (g.i !== rep) { rep = g.i; press(null) }
+    const R = g.rep, tl = g.tell
+    if (g.phase !== 'play' || R.res || R.beat || R.hurry) press(null)
+    else if (tl.call && tl.call !== 'SPEED RUSH' && tl.call !== 'BULL RUSH' && g.t - tl.callAt > REACT * 0.6 && g.t - tl.callAt < REACT * 0.6 + 140) press(null)
+    else {
+      const ahead = tl.m + R.dm * 0.16
+      if (ahead > tl.zone * 0.35) press(g.OUT)
+      else if (ahead < -tl.zone * 0.35) press(g.IN)
+      else if (Math.abs(ahead) < tl.zone * 0.12 || (held === g.OUT && ahead < 0) || (held === g.IN && ahead > 0)) press(null)
+    }
+    return out.length ? out.slice() : undefined
   }
 }
 // ── soccer ──────────────────────────────────────────────────────────────────
@@ -627,7 +641,7 @@ export const CAPTION = {
   read: { wait: 'FIND THE OPEN MAN', press: '{T} HIM' },
   rebound: { wait: 'WATCH THE RIM', press: '{T} THE SIDE IT COMES OFF' },
   rush: { wait: 'WATCH THE BALL', press: '{T} NOW' },
-  passpro: { wait: 'WATCH HIS FIRST STEP', press: '{T} AS THE RING CLOSES' },
+  passpro: { wait: 'KEEP THE MARKER IN THE MIDDLE', press: 'HOLD TO SLIDE WITH HIM' },
   throw: { wait: 'FIND THE OPEN MAN', press: "PRESS WHERE HE'S GOING", up: 'LET GO TO THROW' },
   halfcourt: { wait: 'SET HIM UP, THEN CROSS OVER' },
   penalty: { wait: 'PICK A CORNER, THEN RUN UP' },
