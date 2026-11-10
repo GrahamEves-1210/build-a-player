@@ -93,7 +93,8 @@ export function CareerGame({ c, setCareer, skipAll = true, ...p }) {
   const onSkipAll = skipAll ? () => setCareer(setGamesMode(c, 'off')) : null
   // (a game that isn't in yet, either kind: played from the grade, so the career never stalls on it)
   if (!GAMES[p.game] && !SIMPLE_GAMES[p.game]) return <MiniGame {...p} sim onSkipAll={onSkipAll} />
-  if (mode === 'simple') return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} redo={p.redo} onDone={p.onDone} onSkipAll={onSkipAll} />
+  // (an Advanced-only game, Hit Stick, plays as itself in Simple: Simple careers aren't dealt it, but a game picked before the switch can still come up)
+  if (mode === 'simple' && SIMPLE_GAMES[p.game]) return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} redo={p.redo} onDone={p.onDone} onSkipAll={onSkipAll} />
   return <MiniGame {...p} sim={mode === 'off'} onSkipAll={onSkipAll} />
 }
 const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title

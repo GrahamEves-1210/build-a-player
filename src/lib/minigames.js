@@ -44,6 +44,7 @@ export const GAMES = {
   'tackle-angle':{ kind: 'lanes', traits: ['speed', 'runSupport', 'range', 'tackling'], title: 'TACKLE ANGLE', how: 'The back cuts. Take the right angle, three times.' },
   // ── LB ── (the linebacker's Jump the Route: a hook dropper, short and intermediate routes)
   'zone-drop':   { kind: 'reaction', traits: ['playRecognition', 'zoneInstincts', 'range'], title: 'ZONE DROP', how: 'Four snaps from the hook zone. Drop, read the QB and break on the man he opens to. He looks one off first sometimes: stay home on that one.', rounds: 4 },
+  'hit-stick':   { kind: 'hitstick', traits: ['playRecognition', 'range', 'tackling', 'power'], title: 'HIT STICK', how: 'Four handoffs. Read the back and get to the hole he picks: hold LEFT or RIGHT to slide. You come downhill on the handoff. TACKLE as the ring closes on him. Dead on is a HIT STICK, and sometimes a fumble. Early, late or in the wrong gap and he runs through it.', rounds: 4 },
   // ── DL ──
   'pass-rush':   { kind: 'rush', traits: ['getOff', 'finesseMoves', 'powerMoves', 'passRush'], title: 'PASS RUSH', how: 'GET OFF when the ball moves. Then read him. He oversets wide: go INSIDE. He leans in: take the EDGE. He sits back high: BULL him.' },
   'run-stuff':   { kind: 'rush', traits: ['playRecognition', 'blockShed', 'strength', 'size', 'power'], title: 'STUFF THE RUN', how: 'Read the line and the back. Tap the side the run is going, then SHED as the back gets there. Too soon and he cuts away.', rounds: 4 },
@@ -108,7 +109,7 @@ export const PLAYOFF_GAMES = {
   te: ['catch', 'seal', 'juke-te', 'goal-line'],
   db: ['jump-route', 'tackle-angle'],
   dl: ['pass-rush', 'run-stuff'],
-  lb: ['tackle-angle', 'run-stuff', 'zone-drop'],
+  lb: ['tackle-angle', 'run-stuff', 'zone-drop', 'hit-stick'],
   ol: ['pass-pro', 'seal'],
   guard: ['iso', 'pnr', 'clutch-shot', 'free-throws', 'lockdown', 'fast-break', 'half-court'],
   big: ['post-up', 'board', 'rim-protect', 'free-throws', 'clutch-shot', 'alley-oop'],

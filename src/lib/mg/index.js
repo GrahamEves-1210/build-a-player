@@ -17,6 +17,7 @@ import * as fastbreak from './fastbreak.js'
 import * as oop from './oop.js'
 import * as halfcourt from './halfcourt.js'
 import * as passpro from './passpro.js'
+import * as hitstick from './hitstick.js'
 import * as penalty from './penalty.js'
 import * as oneonone from './oneonone.js'
 import * as header from './header.js'
@@ -59,6 +60,8 @@ export const ENGINES = {
   ...map(oop, 'oop', ['alley-oop']),
   ...map(halfcourt, 'halfcourt', ['half-court']),
   ...map(passpro, 'passpro', ['pass-pro'], 'pass-rush'),
+  // (the backer against the run: Stuff the Run's camera, from five yards further back)
+  ...map(hitstick, 'hitstick', ['hit-stick'], 'run-stuff'),
   // soccer (lib/mg/soccer.js draws them all: a camera in metres, on a real pitch)
   ...map(penalty, 'penalty', ['penalty']),
   ...map(oneonone, 'oneonone', ['one-on-one']),
