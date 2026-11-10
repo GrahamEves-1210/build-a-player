@@ -18,7 +18,7 @@ import { IS_APP } from '../../lib/platform'
 import { sfx } from '../../lib/juice'
 import { getUsername } from '../../lib/discord'
 import { loadCFB } from '../../lib/cfbLoad'
-import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, confLogo, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent } from './cfbShared'
+import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, confLogo, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup } from './cfbShared'
 import CFBSimPage from './CFBSimPage'
 import CFBDraft from './CFBDraft'
 import './cfb.css'
@@ -26,8 +26,10 @@ import './cfb.css'
 // ── College Football: a mode inside football (MORE WAYS TO PLAY). Its own screens: the position
 // pick, the build (football's spin, figure, chips, report card, OVR, footer and Sandbox, on college
 // rosters: a CONFERENCE wheel, then a starter from it), and the season (CFBSimPage), from which a
-// build can ENTER THE NFL DRAFT as a new Career (CFBDraft). Everything here, the rosters and the
-// sim included, loads only when the mode opens (App.jsx: lazy)
+// build can ENTER THE NFL DRAFT as a new Career (CFBDraft), RETURN TO SCHOOL for another season or
+// TRANSFER and play one somewhere else. The build has no class (no freshman or senior year): a season
+// is a year, he's always draft-eligible, and going or staying is the player's call. Everything here,
+// the rosters and the sim included, loads only when the mode opens (App.jsx: lazy)
 const POS = {
   qb: { types: TYPES, attr: ATTR, cats: CATEGORIES, flags: {}, ovr: calcOVR, arch: getArchetype },
   wr: { types: WR_TYPES, attr: WR_ATTR, cats: WR_CATEGORIES, flags: { isWR: true }, ovr: calcOVRWR, arch: getArchetypeWR },
@@ -152,6 +154,10 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const [result, setResult] = useState(saved?.result ?? null)
   const [stage, setStage] = useState(saved?.stage ?? 'pre')   // the season page it's on ('pre' … 'final'; an older save's number, CFBSimPage reads both)
   const [story, setStory] = useState(saved?.story ?? null)   // the regular season as it played out (the final report's season story)
+  // the seasons this build has already played (RETURN TO SCHOOL, TRANSFER): each one's school, record, honors
+  // and totals. The draft board reads his whole college career from them (cfbSimulation opts.career)
+  const [history, setHistory] = useState(Array.isArray(saved?.history) ? saved.history : [])
+  const [moving, setMoving] = useState(false)   // the transfer's team picker
   const [activeDrag, setActiveDrag] = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
   const [spinResetKey, setSpinResetKey] = useState(0)
@@ -221,12 +227,8 @@ export default function CFBMode({ user, onHome, onCareer }) {
     },
   }), [])
   const schools = useMemo(() => (data?.teams ?? []).map(t => ({ ...t, logo: cfbLogo(t.short) })), [data])
-  // a real player's headshot by name and school (the season page's draft board and Heisman card)
-  const photoOf = useMemo(() => {
-    const m = new Map()
-    for (const k of ['qb', 'rb', 'wr']) for (const p of data?.pools[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${HEADSHOT_BASE}/${p.headshot}.webp`)
-    return (name, school) => m.get(`${name}|${school}`) ?? null
-  }, [data])
+  // a real player's headshot by name and school (the season page's Heisman ceremony)
+  const photoOf = useMemo(() => photoLookup(data?.pools, HEADSHOT_BASE), [data])
 
   // a chip carries the college player's school, conference, class and size with it
   const withCollege = useCallback(chip => {
@@ -237,9 +239,9 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // kept on the device: a reload, or Home and back, picks the build (or the season) back up
   useEffect(() => {
     if (phase === 'pick') return
-    const p = { pos, build, spin, result, stage, story, sandbox: tainted.current, starters: startersPick, at: Date.now() }
+    const p = { pos, build, spin, result, stage, story, history, sandbox: tainted.current, starters: startersPick, at: Date.now() }
     saveProgress(p); setProgress(p)
-  }, [phase, pos, build, spin, result, stage, story, startersPick])
+  }, [phase, pos, build, spin, result, stage, story, history, startersPick])
 
   const activeDragRef = useRef(activeDrag)
   activeDragRef.current = activeDrag
@@ -258,7 +260,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
   }, [withCollege])
 
   const freshBuild = useCallback(p => {
-    setPos(p); setBuild(emptyBuild(p)); setSpin(null); setResult(null); setStage('pre'); setStory(null); setActiveDrag(null)
+    setPos(p); setBuild(emptyBuild(p)); setSpin(null); setResult(null); setStage('pre'); setStory(null); setHistory([]); setActiveDrag(null)
     setActiveCategory('physical'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1); setStartersPick(false)
     tainted.current = sandboxOn
   }, [sandboxOn])
@@ -282,13 +284,13 @@ export default function CFBMode({ user, onHome, onCareer }) {
 
   const complete = P.types.every(t => build[t])
   const onSimulate = () => { if (result) { setPhase('season'); window.scrollTo(0, 0); return } setPicker(true) }
-  const teamPicked = useCallback(team => {
-    setPicker(false)
+  // A season at a school, simulated and booked. No class (noClass): just a year, always draft-eligible.
+  // prior: the seasons he's already played (the board reads his whole college career)
+  const playSeason = useCallback((team, prior = []) => {
     const seed = newSeed()
-    // his class: the one most of his traits' players are in (each chip carries its player's), else a junior
-    const yrs = {}; P.types.forEach(t => { const y = build[t]?.year; if (y) yrs[y] = (yrs[y] ?? 0) + 1 })
-    const year = Object.entries(yrs).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'JR'
-    const r = data.sim.runCFBSimulation(build, P.types, team, pos, seed, 'classic', null, { name: userName, year })
+    const best = (k, order) => order.find(x => prior.some(s => s[k] === x)) ?? null
+    const career = prior.length ? { seasons: prior.length, heisman: best('heisman', ['won', 'finalist']), allAmerica: best('allAmerica', ['first', 'second']), totals: prior.map(s => s.totals ?? {}) } : null
+    const r = data.sim.runCFBSimulation(build, P.types, team, pos, seed, 'classic', null, { name: userName, noClass: true, ...(career ? { career } : {}) })
     r.seed = r.seed ?? seed
     const sb = tainted.current || P.types.some(t => build[t]?.sandbox)
     r.sandbox = sb
@@ -300,7 +302,21 @@ export default function CFBMode({ user, onHome, onCareer }) {
     setSeasons(seasonsLocal())
     setPhase('season')
     window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [data, build, P, pos, userName, user])
+  const teamPicked = useCallback(team => { setPicker(false); setHistory([]); playSeason(team, []) }, [playSeason])
+  // RETURN TO SCHOOL / TRANSFER: the season just played goes on his résumé, then another year (same build),
+  // from the pre-season page, booked like any season
+  const another = useCallback(team => {
+    if (!result || !team) return
+    const a = result.cfb?.awards ?? {}
+    const prior = [...history, {
+      school: result.team?.short, schoolName: result.team?.school ?? result.team?.name, record: result.cfb?.record?.final ?? `${result.wins}-${result.losses}`,
+      heisman: a.heisman?.userWon ? 'won' : a.heisman?.userFinalist ? 'finalist' : null, allAmerica: a.allAmerica?.user ?? null,
+      totals: Object.fromEntries(Object.entries(result.cfb?.totals?.full ?? {}).filter(([, x]) => typeof x === 'number')),
+    }]
+    setMoving(false); setHistory(prior); playSeason(team, prior)
+  }, [result, history, playSeason])
 
   // phones: the player is the screen and the spin drops down over it (football's build)
   const drop = useDropMode(phase === 'build')
@@ -328,9 +344,14 @@ export default function CFBMode({ user, onHome, onCareer }) {
           nav={<CFBNav pos={pos} onHome={close} grades={false} />}
           stage={stage} onStage={setStage}
           story={story} onStory={setStory} photoOf={photoOf}
+          key={result.seed}
+          seasonNote={history.length ? `Season ${history.length + 1} · ${history[history.length - 1].school === result.team?.short ? `back at ${result.team?.school ?? result.team?.name}` : `transferred from ${history[history.length - 1].schoolName}`}` : null}
           onAgain={() => start(pos)}
           onDraft={() => setDrafting(true)}
+          onReturn={() => another(schools.find(t => t.short === result.team?.short) ?? result.team)}
+          onTransfer={() => setMoving(true)}
           onHome={close} />
+        {moving && <TeamPickerModal onSelect={another} onCancel={() => setMoving(false)} build={build} anyTeam teams={schools.filter(t => t.short !== result.team?.short)} teamOf={c => c.school} eyebrow="College Football · Transfer" />}
         {drafting && (
           <CFBDraft build={build} types={P.types} pos={pos} result={result} user={user} userName={userName} sandbox={!!result.sandbox}
             onCancel={() => setDrafting(false)}

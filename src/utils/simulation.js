@@ -3828,7 +3828,8 @@ export function getArchetypeLB(ovr, build, types = LB_TYPES) {
   const name = (cover, thumper, blitz, general, complete) => ({ cover, thumper, blitz, general, complete })[style]
   if (ovr >= 95) return name('Sideline-to-Sideline Eraser', 'Downhill Enforcer', 'Unblockable Blitzer', 'Defensive Quarterback', 'Generational Linebacker')
   if (ovr >= 84) return name('Coverage Linebacker', 'Thumper', 'Blitzing Linebacker', 'Field General', 'Pro Bowl Linebacker')
-  if (ovr >= 76) return name('Starting WILL', 'Starting MIKE', 'Starting SAM', 'Starting MIKE', 'Starting Linebacker')
+  // (named for how he plays, not for a spot: the depth chart gives him MIKE, WILL or SAM by where he ranks in the room)
+  if (ovr >= 76) return name('Starting Cover Linebacker', 'Starting Run Stopper', 'Starting Blitzer', 'Starting Signal Caller', 'Starting Linebacker')
   if (ovr >= 68) return name('Sub-Package Linebacker', 'Two-Down Linebacker', 'Situational Blitzer', 'Two-Down Linebacker', 'Rotational Linebacker')
   if (ovr >= 60) return 'Backup Linebacker'
   return 'Practice Squad Linebacker'

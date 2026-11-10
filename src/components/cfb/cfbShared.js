@@ -101,8 +101,32 @@ export function seasonEvent(r, pos, sandbox = false) {
 }
 
 // The one gap between a college grade and an NFL grade, both ways: going to college adds it (Start in College),
-// the jump to the pros takes it off (Enter the NFL Draft). A physical trait (the ones that train, lib/career.js
-// SPORT.nfl.physical) is half a letter, one step; skill and mental a full letter, three steps; Size is his height
-// and weight, the same at both levels
-export const COLLEGE_PHYSICAL = { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'] }
-export const collegeGap = (pos, t) => (t === 'size' ? 0 : (COLLEGE_PHYSICAL[pos] ?? []).includes(t) ? 1 : 3)
+// the jump to the pros takes it off (Enter the NFL Draft). A full letter grade, three steps, on every trait,
+// physical, skill and mental alike (the owner's rule, 2026-11-10; physical traits were half a letter before);
+// Size is his height and weight, the same at both levels
+export const collegeGap = (pos, t) => (t === 'size' ? 0 : 3)
+
+// The college season's draft projection, as the picks a Career's draft starts from (lib/career.js stockOf reads
+// c.college.proj): the projection's own pick range; an undrafted grade is the last picks of the seventh round
+// (Career drafts everyone: its draft has no free-agent pool)
+// (a season saved before the projection carried picks: the whole of its tier's range)
+const TIER_SPAN = { top10: [1, 10], r1: [11, 32], day2: [33, 96], day3: [97, 224] }
+export const pickOf = draft => (Array.isArray(draft?.pick) ? draft.pick : draft?.pick === undefined ? TIER_SPAN[draft?.tier] ?? null : null)
+export function draftProj(draft) {
+  if (!draft) return null
+  return pickOf(draft) ?? (draft.tier === 'pfa' ? [193, 224] : [212, 224])
+}
+// the projection in words: "Round 1 · Picks 1-5", "Rounds 2-3 · Picks 55-79", "Undrafted"
+export function projText(draft) {
+  const p = pickOf(draft)
+  if (!Array.isArray(p)) return 'Undrafted'
+  const a = Math.ceil(p[0] / 32), b = Math.ceil(p[1] / 32)
+  return `${a === b ? `Round ${a}` : `Rounds ${a}-${b}`} · ${p[0] === p[1] ? `Pick ${p[0]}` : `Picks ${p[0]}-${p[1]}`}`
+}
+
+// a real player's headshot by name and school (the Heisman ceremony, the draft board): pools from lib/cfbLoad.js
+export function photoLookup(pools, base) {
+  const m = new Map()
+  for (const k of ['qb', 'rb', 'wr']) for (const p of pools?.[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${base}/${p.headshot}.webp`)
+  return (name, school) => m.get(`${name}|${school}`) ?? null
+}

@@ -741,7 +741,7 @@ function thighStripe(x, { hx, hy, jx, jy, out }, col) {
   x.moveTo(hx + out * 3.6, hy - 6.4); x.quadraticCurveTo(hx + nx * 4.8, hy + ny * 4.8, jx + nx * 3.5 - tx * 2.4, jy + ny * 3.5 - ty * 2.4)
 }
 // A bare head: a real hairline, the nape and the ears showing, not a black ball
-function bareHead(x, hx, hy, view, skin) {
+export function bareHead(x, hx, hy, view, skin) {
   const R = 9.2, hair = '#17120e', dark = shade(skin, 0.76)
   x.fillStyle = dark
   if (view !== 'side') { circle(x, hx - R + 0.2, hy + 1, 2); x.fill(); circle(x, hx + R - 0.2, hy + 1, 2); x.fill() }

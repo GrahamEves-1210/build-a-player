@@ -3831,7 +3831,10 @@ html:is(.is-app, .app-look) .vl1-modes { margin-top: 4px; }
 .cr-legacy-foot { display: flex; justify-content: space-between; font-family: var(--ag-body); font-size: 11.5px; font-weight: 600; color: var(--ag-muted); }
 .cr-why { grid-column: 1 / -1; margin: 0; padding: 8px 12px; border-radius: 10px; font-family: var(--ag-body); font-size: 13px; line-height: 1.35; color: #e6ecea; background: rgba(255,255,255,.06); border: 1px solid var(--ag-line-hi); }
 .cr-devnote { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px; font-family: var(--ag-body); font-size: 13px; color: #f5dc8a; background: rgba(245,220,138,.08); border: 1px solid rgba(245,220,138,.3); }
-.cr-tabs { grid-template-columns: repeat(4, 1fr); }
+.cr-tabs { grid-template-columns: repeat(4, 1fr); position: relative; isolation: isolate; }
+.cr-tabs-pill { inset: 3px auto 3px 3px; width: calc((100% - 6px) / 4); border-radius: 9px; transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .22s cubic-bezier(.3, .8, .3, 1); }
+html.bap-reduce-motion .cr-tabs-pill { transition: none; }
+@media (prefers-reduced-motion: reduce) { .cr-tabs-pill { transition: none; } }
 .cr-tabs button { font-size: 14px; letter-spacing: 1.5px; }
 .cr-sec { display: flex; flex-direction: column; gap: 10px; }
 .cr-note { margin: 0; font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-text-2); }

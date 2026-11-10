@@ -74,7 +74,7 @@ const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 // the open positions first (DL opened after this Home), then the ones still to come
 // (LB and OL are hidden, not shown as SOON, until their flags: lib/lbLive.js, lib/olLive.js)
-const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && (o.pos !== 'ol' || OL_SOON) && (o.pos !== 'lb' || LB_SOON))]   // (LB and OL while they're coming soon: locked SOON tiles)
+const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && (o.pos !== 'ol' || OL_SOON) && (o.pos !== 'lb' || LB_SOON)), { pos: 'k', label: 'K', disabled: true }]   // (LB and OL while they're coming soon: locked SOON tiles)
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 // the figure's bands fall one by one once a page load, then just arrive

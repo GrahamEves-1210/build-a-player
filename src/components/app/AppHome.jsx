@@ -48,7 +48,9 @@ const NFL_FIGURE = {
 }
 const reducedMotion = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 // football's side of the ball (Home's OFFENSE / DEFENSE switch)
-const SIDE_OF = { qb: 'off', rb: 'off', wr: 'off', te: 'off', ol: 'off', dl: 'def', db: 'def', lb: 'def' }
+const SIDE_OF = { qb: 'off', rb: 'off', wr: 'off', te: 'off', ol: 'off', dl: 'def', db: 'def', lb: 'def', k: 'def' }
+// the kicker: coming soon, a locked tab at the end of the defense's bar (nothing else knows the position yet)
+const KICKER_SOON = { pos: 'k', label: 'K', soon: true, locked: true }
 const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs', st: 'Strikers' }
 const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
 // Who's on the Current and All-Time buttons, for the position picked (football's current
@@ -446,7 +448,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     ? [{ pos: 'st', label: 'ST', sub: 'STRIKER' }, { pos: 'gk', label: 'GK', sub: 'COMING SOON', locked: true }]
     : isBucket
     ? [{ pos: 'guard', label: 'GUARD', sub: 'PG · SG · SF' }, { pos: 'big', label: 'BIG', sub: 'PF · C' }]
-    : [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => (o.pos === 'lb' && LB_SOON) || (o.pos === 'ol' && OL_SOON)).map(o => ({ ...o, soon: true, locked: true }))]   // (LB and OL while they're coming soon: locked, at the end of their side)
+    : [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => (o.pos === 'lb' && LB_SOON) || (o.pos === 'ol' && OL_SOON)).map(o => ({ ...o, soon: true, locked: true })), KICKER_SOON]   // (LB and OL while they're coming soon: locked, at the end of their side)
   // football: the positions split by side of the ball, one side's bar at a time (the defense front to back, a
   // position still coming at the end); the side switch sits on top of the bar
   const isNfl = !isBucket && !isSoccer && !isBaseball

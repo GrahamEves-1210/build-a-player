@@ -1532,14 +1532,21 @@ const maxPick = S => S.teams.length * S.draft.rounds
 export const pickLabel = (overall, sport = 'nfl') => { const n = (SPORT[sport] ?? SPORT.nfl).teams.length; const round = Math.ceil(overall / n); return { round, slot: overall - (round - 1) * n } }
 export function stockOf(c) {
   const S = sportOf(c), d = c.draft
-  const [lo0, hi0] = S.draft.stock(c.ovr, c.pos, c)
+  // (out of College Football, ENTER THE NFL DRAFT: the college season's projection is the window he starts from,
+  // c.college.proj = [lo, hi] overall picks, components/cfb/cfbShared.js draftProj, in place of the OVR's: a
+  // projected top-10 pick goes about there, a Day 3 grade on Day 3. The combine and the rooms move it as below)
+  const proj = c.college?.proj
+  const [lo0, hi0] = Array.isArray(proj) && proj.length === 2 ? [clamp(proj[0], 1, maxPick(S)), clamp(proj[1], 1, maxPick(S))] : S.draft.stock(c.ovr, c.pos, c)
   // the combine moves the window, the interviews too (less, in a two-round draft).
   // A combine barely moves a top pick (the tape already decided it) and can be
   // worth a round or more to a mid-rounder
   const mid = (lo0 + hi0) / 2
   const span = S.isBucket ? 0.5 + mid * 0.08 : 4 + mid * 0.4   // (the NBA combine barely matters)
   const played = d.combine.filter(x => x.pct != null)
-  const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
+  // (a college projection already has his tools in it: the tape showed how fast he is and how hard he throws. So
+  // his workout is read against a decent one for his own traits, and only how he tested on the day moves him)
+  const par = Array.isArray(proj) && played.length ? played.reduce((s, x) => s + drillValue(x.id, c.build[x.trait]?.val ?? 5, 0.6, null, combinePos(c)).pct, 0) / played.length : 0
+  const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length - par : 0
   const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
   // (a college résumé, START IN COLLEGE: c.college.stock picks earlier, or later, a nudge of at most seven)
   const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2) - (c.college?.stock ?? 0))     // a good answer: about two picks earlier
@@ -1682,7 +1689,8 @@ export function frameOf(c) {
   const grade = z <= 1.25 ? Math.max(-1.3, 0.8 * z) : Math.max(-0.4, 1 - 0.7 * (z - 1.25))
   return { z: r10(z), exp: Math.round(exp), grade: r10(grade), height: b.height, weight: b.weight }
 }
-// college: where a College Football build came from ({ school, schoolName, line }), when he entered the draft from there
+// college: where a College Football build came from ({ school, schoolName, line, proj: [lo, hi] his college draft projection in
+// picks, which stockOf starts from }), when he entered the draft from there
 // start 'college' (football QB, WR, RB): the career opens in college (phase 'college', components/cfb/CareerCollege.jsx),
 // a year younger, and goes to the combine from there
 export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null, games = 'advanced', nation = null, college = null, start = 'draft' }) {

@@ -9,8 +9,8 @@
 //   vert          peak: three jumps at a Vertec, the vanes say how high
 // Also here, for rebound.js: the court in real feet through one camera, and the athletes.
 import { clamp, lerp, prog, easeOut, easeIn, easeInOut, rngOf, outcome, layer, text, rr, basketball, themOf, particles, nudge, reduceMotion, GOOD, BAD, GOLD, DISPLAY, LABEL, warmSkin } from './kit.js'
-import { HEAD_R, GEAR, clockSlab, sideHead, paintRoom as combineRoom, standAt, SCOUT, FOLK_SKIN } from './dash.js'
-import { vignette, nameTag, inkOn, boardInk, limb, limbShade } from './art.js'
+import { HEAD_R, GEAR, clockSlab, sideHead, standAt, clipboard, SCOUT, FOLK_SKIN } from './dash.js'
+import { vignette, nameTag, inkOn, boardInk, limb, limbShade, airBall, bareHead } from './art.js'
 import { castMen } from './read.js'
 
 export const how = {
@@ -1844,33 +1844,164 @@ const Q_COIL = pose({ hx: -6, hy: 47, lean: -0.13, fFx: 20, fFy: 3, fBx: -15, hF
 const Q_OVER = pose({ hx: 4, hy: 46, lean: 0.12, fFx: 32, fBx: -19, hFx: 10, hFy: 112, hBx: 12, hBy: 72 })
 const Q_THROW = pose({ hx: 12, hy: 44, lean: 0.3, fFx: 38, fBx: -20, fBy: 1, hFx: 55, hFy: 98, hBx: 2, hBy: 62, toeB: 0.7 })
 const Q_FOLLOW = pose({ hx: 16, hy: 44, lean: 0.5, fFx: 38, fBx: -16, fBy: 1, hFx: 46, hFy: 46, hBx: 2, hBy: 54, toeB: 1 })   // (the back foot stays down behind him, up on its toes: it doesn't kick up)
+// After it's gone he comes up out of it, the back foot through under him, and shows what he thought of it: a fist
+// for one he got all of, hands on his hips for one he didn't. The drill over, a finger at the roof for a cannon.
+const Q_UP = pose({ hx: 17, hy: 47.5, lean: 0.05, fFx: 38, fBx: -3, hFx: 27, hFy: 49, hBx: 11, hBy: 48 })
+const Q_PUMP = pose({ hx: 16, hy: 46.5, lean: 0, fFx: 38, fBx: -3, hFx: 36, hFy: 98, hBx: 9, hBy: 54 })
+const Q_YES = pose({ hx: 17, hy: 45, lean: 0.1, fFx: 38, fBx: -3, hFx: 30, hFy: 73, hBx: 11, hBy: 51 })
+const Q_HIPS = pose({ hx: 17, hy: 47.5, lean: 0.1, fFx: 38, fBx: -3, hFx: 25, hFy: 52, hBx: 12, hBy: 52 })
+const Q_SKY = pose({ hx: 17, hy: 48, lean: -0.03, fFx: 38, fBx: -3, hFx: 47, hFy: 116, hBx: 9, hBy: 49 })   // (up at the board: that number's his)
+const Q_SLOW = pose({ hy: 48, lean: 0.1, fFx: 13, fBx: -13, hFx: 15, hFy: 58, hBx: 19, hBy: 56 })   // (the clock ran out on him: the ball comes down)
+const V_REL = 84          // ms after he lets go that the ball is out of his hand: the arm has to come through first
+const NET_PITCH = 9
 let veloG = null
 function veloOf(view) {
   if (veloG && veloG.h === view.h) return veloG
-  const h = view.h, U = h / 640, floor = h * 0.8
-  veloG = { h, U, s: 1.5 * U, floor, horizon: floor - 46 * U, vy: floor - 200 * U, qx: 106, netX: 276, netW: 72, netT: floor - 214 * U, netB: floor - 28 * U, meterX: 13, meterW: 19, meterB: floor - 6 * U, meterL: 262 * U }
+  const h = view.h, U = h / 640, floor = h * 0.8, horizon = floor - 46 * U, padH = Math.round(56 * U)
+  const truss = Math.round(96 + (horizon - padH - 96) * 0.24), netT = floor - 214 * U, netB = floor - 28 * U
+  veloG = {
+    h, U, s: 1.5 * U, floor, horizon, padH, truss, vy: floor - 200 * U, qx: 106, netX: 276, netW: 72, netT, netB,
+    // the bullseye hung in the net: gold for the peak, the white ring round it for anything in the green
+    tx: 276 + 36, ty: (netT + netB) / 2,
+    // the radar board, hung off the truss between him and the net
+    bx: 146, bw: 118, by: truss + 24 + 13 * U, bh: 64 * U,
+    meterX: 13, meterW: 19, meterB: floor - 6 * U, meterL: 262 * U,
+  }
   return veloG
 }
-// the same room as the 40 and the bench, with a net in it
-function paintFieldhouse(x, view, G) {
-  const U = G.U, { netX: nx, netW: nw, netT: nt, netB: nb, floor } = G
-  combineRoom(x, view, Math.round(G.horizon), floor, false)
-  standAt(x, 206, G.horizon + 7, { ...SCOUT, skin: FOLK_SKIN[1], size: 1.62 })
-  // the target net: a frame on legs, a grid, a square to hit
-  x.strokeStyle = 'rgba(255,255,255,.34)'; x.lineWidth = 1
-  x.beginPath()
-  for (let px = nx; px <= nx + nw; px += 9) { x.moveTo(px, nt); x.lineTo(px, nb) }
-  for (let py = nt; py <= nb; py += 9) { x.moveTo(nx, py); x.lineTo(nx + nw, py) }
-  x.stroke()
-  x.lineCap = 'round'
-  for (const [col, wd] of [[INK, 5.4 * U], ['#d7dde2', 3.4 * U]]) {
-    x.strokeStyle = col; x.lineWidth = wd
-    x.strokeRect(nx, nt, nw, nb - nt)
-    x.beginPath(); x.moveTo(nx + 6, nb); x.lineTo(nx - 8, floor + 8 * U); x.moveTo(nx + nw - 6, nb); x.lineTo(nx + nw + 6, floor + 8 * U); x.stroke()
-  }
-  x.strokeStyle = '#ffd24a'; x.lineWidth = 3 * U; const my = (nt + nb) / 2
-  x.strokeRect(nx + nw / 2 - 18, my - 22 * U, 36, 44 * U)
+const STEEL = '#d7dde2', STEEL_D = '#8c949b', BEAM = '#080c11'
+// a cone on the turf: k its size
+function drillCone(x, cx, cy, k) {
+  x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(cx - 5 * k, cy + 2 * k, 11 * k, 2.5 * k)
+  x.fillStyle = '#ff8a2a'; x.strokeStyle = INK; x.lineWidth = 0.9; x.lineJoin = 'round'
+  x.beginPath(); x.moveTo(cx, cy - 10 * k); x.lineTo(cx + 5 * k, cy + 3 * k); x.lineTo(cx - 5 * k, cy + 3 * k); x.closePath(); x.fill(); x.stroke()
+  x.fillStyle = '#f4efe6'; x.fillRect(cx - 2.6 * k, cy - 3.6 * k, 5.2 * k, 2 * k)
 }
+// The combine's building, the way the accuracy drill and the cones have it: dark steel, lamps off a truss, the padded
+// wall with the one word on it, turf. Nobody in it but the staff. And what this drill needs: a line to throw from,
+// a bag of balls, and the board the gun reads out on.
+function paintVeloHall(x, view, G) {
+  const { U, floor, qx, padH, truss } = G, w = view.w, h = view.h, H = Math.round(G.horizon), wallB = H - padH
+  const wall = x.createLinearGradient(0, 40, 0, wallB)
+  wall.addColorStop(0, '#0b1016'); wall.addColorStop(0.6, '#151d26'); wall.addColorStop(1, '#1d2832')
+  x.fillStyle = wall; x.fillRect(0, 0, w, wallB)
+  // the steel siding, sheet by sheet
+  for (let i = 12; i < w; i += 44) { x.fillStyle = 'rgba(0,0,0,.26)'; x.fillRect(i, 0, 1.5, wallB); x.fillStyle = 'rgba(255,255,255,.022)'; x.fillRect(i + 1.5, 0, 1, wallB) }
+  // the lamps' light down the wall, then the truss they hang from
+  for (const lx of [98, 318]) {
+    x.fillStyle = 'rgba(214,228,238,.04)'
+    x.beginPath(); x.moveTo(lx - 14, truss + 37); x.lineTo(lx + 14, truss + 37); x.lineTo(lx + 66, wallB); x.lineTo(lx - 66, wallB); x.closePath(); x.fill()
+  }
+  x.fillStyle = BEAM; x.fillRect(0, truss, w, 5); x.fillRect(0, truss + 21, w, 3)
+  x.strokeStyle = BEAM; x.lineWidth = 1.6; x.beginPath()
+  for (let i = -6; i < w; i += 24) { x.moveTo(i, truss + 4); x.lineTo(i + 12, truss + 22); x.lineTo(i + 24, truss + 4) }
+  x.stroke()
+  for (const lx of [98, 318]) { x.fillStyle = BEAM; x.fillRect(lx - 1, truss + 24, 2, 7); x.fillRect(lx - 15, truss + 31, 30, 4); x.fillStyle = '#c9d3da'; x.fillRect(lx - 13, truss + 35, 26, 1.6) }
+  // the board: two rods off the truss, a dark face, the mint line under it
+  const { bx, bw, by, bh } = G
+  x.fillStyle = BEAM; x.fillRect(bx + 18, truss + 24, 2.4, by - truss - 24); x.fillRect(bx + bw - 20.4, truss + 24, 2.4, by - truss - 24)
+  x.fillStyle = '#04070a'; x.fillRect(bx - 3, by - 3, bw + 6, bh + 6)
+  x.fillStyle = '#0a1015'; x.fillRect(bx, by, bw, bh)
+  x.fillStyle = view.accent; x.fillRect(bx, by + bh - 3 * U, bw, 3 * U)
+  text(x, 'RADAR', bx + 9, by + 11 * U, { font: LABEL, size: 12 * U, color: 'rgba(255,255,255,.62)', align: 'left', track: 1.2 })
+  text(x, 'MPH', bx + bw - 9, by + bh - 15 * U, { font: LABEL, size: 14 * U, color: 'rgba(255,255,255,.62)', align: 'right', track: 1 })
+  // the padded wall along the far side of the turf
+  x.fillStyle = '#102a44'; x.fillRect(0, wallB, w, padH)
+  x.fillStyle = 'rgba(0,0,0,.2)'; for (let i = 30; i < w; i += 60) x.fillRect(i, wallB, 1.5, padH)
+  x.fillStyle = '#2f7fb8'; x.fillRect(0, wallB, w, 4 * U); x.fillRect(0, H - 6 * U, w, 3 * U)
+  for (const f of [0.25, 0.75]) text(x, 'COMBINE', w * f, wallB + padH / 2, { font: DISPLAY, size: 21 * U, color: 'rgba(255,255,255,.2)', track: 4 })
+  // the turf: its grain tight at the far edge, the mowing in bands away from the camera, the far sideline
+  const turf = x.createLinearGradient(0, H, 0, h)
+  turf.addColorStop(0, '#1d6a3b'); turf.addColorStop(0.35, '#23793f'); turf.addColorStop(1, '#2a8a4a')
+  x.fillStyle = turf; x.fillRect(0, H, w, h - H)
+  const vx = 180, vy = H - 150 * U, at = (fx, y) => vx + (fx - vx) * (y - vy) / (floor - vy)
+  x.fillStyle = 'rgba(0,0,0,.055)'
+  for (let fx = -300; fx < w + 300; fx += 120) { x.beginPath(); x.moveTo(at(fx, H), H); x.lineTo(at(fx + 60, H), H); x.lineTo(at(fx + 60, h), h); x.lineTo(at(fx, h), h); x.closePath(); x.fill() }
+  let y = H, gap = 1.4
+  while (y < h) { x.fillStyle = 'rgba(0,0,0,.055)'; x.fillRect(0, y, w, 1); y += gap; gap *= 1.11 }
+  x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(0, H, w, 2 * U)
+  x.fillStyle = 'rgba(255,255,255,.5)'; x.fillRect(0, H + 5 * U, w, 1.6 * U)
+  // the line he throws from, a cone at each end of it
+  const lx = qx + 64 * U
+  x.fillStyle = 'rgba(255,255,255,.82)'
+  x.beginPath(); x.moveTo(at(lx - 1, H + 5 * U), H + 5 * U); x.lineTo(at(lx + 1, H + 5 * U), H + 5 * U); x.lineTo(at(lx + 2.4, h), h); x.lineTo(at(lx - 2.4, h), h); x.closePath(); x.fill()
+  drillCone(x, at(lx, H + 13 * U), H + 13 * U, 0.8 * U)
+  drillCone(x, at(lx, floor + 62 * U), floor + 62 * U, 1.5 * U)
+  // the bag of balls by his back foot: open, three in it
+  const gx = qx - 34 * U, gy = floor + 34 * U
+  x.fillStyle = 'rgba(0,18,6,.3)'; x.beginPath(); x.ellipse(gx + 2 * U, gy + 9 * U, 22 * U, 4.5 * U, 0, 0, Math.PI * 2); x.fill()
+  x.fillStyle = '#0d1216'; x.strokeStyle = INK; x.lineWidth = 1.3; x.beginPath(); x.ellipse(gx, gy - 2 * U, 17 * U, 5 * U, 0, 0, Math.PI * 2); x.fill(); x.stroke()
+  for (const [dx, dy, ang] of [[-8, -5, 0.5], [7, -6, -0.35], [-1, -9, 0.1]]) {
+    x.save(); x.translate(gx + dx * U, gy + dy * U); x.rotate(ang)
+    x.fillStyle = '#8f4f22'; x.strokeStyle = INK; x.lineWidth = 1.2; x.beginPath(); x.ellipse(0, 0, 8.6 * U, 5.2 * U, 0, 0, Math.PI * 2); x.fill(); x.stroke()
+    x.fillStyle = '#f4efe6'; x.fillRect(-3.2 * U, -1.2 * U, 6.4 * U, 1.2 * U)
+    x.restore()
+  }
+  x.fillStyle = '#27303a'; x.strokeStyle = INK; x.lineWidth = 1.3
+  x.beginPath(); x.moveTo(gx - 17 * U, gy - 2 * U); x.quadraticCurveTo(gx - 18 * U, gy + 8 * U, gx - 13 * U, gy + 10 * U); x.lineTo(gx + 13 * U, gy + 10 * U); x.quadraticCurveTo(gx + 18 * U, gy + 8 * U, gx + 17 * U, gy - 2 * U); x.quadraticCurveTo(gx, gy + 5 * U, gx - 17 * U, gy - 2 * U); x.closePath(); x.fill(); x.stroke()
+  x.fillStyle = view.accent; x.globalAlpha = 0.7; x.fillRect(gx - 12.5 * U, gy + 5.6 * U, 25 * U, 1.6 * U); x.globalAlpha = 1
+  // where the net stands
+  x.fillStyle = 'rgba(0,18,6,.3)'; x.beginPath(); x.ellipse(G.netX + G.netW / 2 + 4, floor + 3 * U, G.netW * 0.62, 6 * U, 0, 0, Math.PI * 2); x.fill()
+  // the corners fall away
+  const dim = x.createRadialGradient(w / 2, h * 0.56, h * 0.3, w / 2, h * 0.56, h * 0.74)
+  dim.addColorStop(0, 'rgba(0,0,0,0)'); dim.addColorStop(1, 'rgba(0,0,0,.3)')
+  x.fillStyle = dim; x.fillRect(0, 0, w, h)
+}
+// The net: a steel frame with some depth to it on two weighted feet, the mesh, and the bullseye hung in it. It's
+// drawn each frame because it moves: a ball rocks it back on its feet. ring: the bullseye lit, 0 to 1
+function drawVeloNet(ctx, G, rock, ring) {
+  const { U, floor, netX: nx, netW: nw, netT: nt, netB: nb, tx, ty } = G
+  ctx.save()
+  if (rock) { ctx.translate(nx + nw / 2, floor); ctx.rotate(rock); ctx.translate(-(nx + nw / 2), -floor) }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+  const dx = 8, dy = -7 * U, fy = floor + 3 * U
+  // the back of the frame, and the feet it stands on
+  for (const [col, wd] of [[INK, 4.6 * U], [STEEL_D, 2.6 * U]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = wd
+    ctx.strokeRect(nx + dx, nt + dy, nw, nb - nt)
+    ctx.beginPath()
+    for (const px of [nx, nx + nw]) { ctx.moveTo(px, nt); ctx.lineTo(px + dx, nt + dy); ctx.moveTo(px - 7, fy + 6 * U); ctx.lineTo(px + dx + 5, fy + dy - 4 * U); ctx.moveTo(px + dx, nb + dy); ctx.lineTo(px + dx, fy + dy) }
+    ctx.stroke()
+  }
+  // the mesh
+  ctx.fillStyle = 'rgba(4,8,12,.24)'; ctx.fillRect(nx, nt, nw, nb - nt)
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let px = nx; px <= nx + nw; px += NET_PITCH) { ctx.moveTo(px, nt); ctx.lineTo(px, nb) }
+  for (let py = nt; py <= nb; py += NET_PITCH) { ctx.moveTo(nx, py); ctx.lineTo(nx + nw, py) }
+  ctx.stroke()
+  // the bullseye: a white ring, a gold one inside it
+  ctx.fillStyle = 'rgba(6,12,18,.42)'; ctx.beginPath(); ctx.ellipse(tx, ty, 30, 38 * U, 0, 0, Math.PI * 2); ctx.fill()
+  for (const [rx, ry, col, wd] of [[30, 38 * U, '#f4f6f8', 2.4 * U], [11.5, 14.5 * U, GOLD, 3.2 * U]]) {
+    ctx.strokeStyle = INK; ctx.lineWidth = wd + 2; ctx.beginPath(); ctx.ellipse(tx, ty, rx, ry, 0, 0, Math.PI * 2); ctx.stroke()
+    ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.ellipse(tx, ty, rx, ry, 0, 0, Math.PI * 2); ctx.stroke()
+  }
+  if (ring > 0) { ctx.strokeStyle = `rgba(255,255,255,${(0.9 * ring).toFixed(2)})`; ctx.lineWidth = 3.2 * U; ctx.beginPath(); ctx.ellipse(tx, ty, 11.5, 14.5 * U, 0, 0, Math.PI * 2); ctx.stroke() }
+  // the front of the frame, down to its feet, a sandbag on each
+  for (const [col, wd] of [[INK, 5.6 * U], [STEEL, 3.4 * U]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = wd
+    ctx.strokeRect(nx, nt, nw, nb - nt)
+    ctx.beginPath(); ctx.moveTo(nx, nb); ctx.lineTo(nx, fy); ctx.moveTo(nx + nw, nb); ctx.lineTo(nx + nw, fy); ctx.stroke()
+  }
+  for (const px of [nx, nx + nw]) {
+    ctx.fillStyle = '#1b2228'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2
+    ctx.beginPath(); ctx.ellipse(px - 2, fy + 2 * U, 10, 4.6 * U, -0.25, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.ellipse(px - 4, fy + 0.8 * U, 5, 1.4 * U, -0.25, 0, Math.PI * 2); ctx.fill()
+  }
+  ctx.restore()
+}
+// The scout's radar gun, in his hand. aim: up and on the quarterback; otherwise down at his side
+function radarGun(ctx, x, y, aim) {
+  ctx.save(); ctx.translate(x, y); if (!aim) ctx.rotate(-1.25)
+  ctx.fillStyle = '#2b333b'; ctx.strokeStyle = INK; ctx.lineWidth = 1
+  ctx.beginPath(); ctx.roundRect(-11, -3.6, 12, 6.2, 1.6); ctx.fill(); ctx.stroke()
+  ctx.beginPath(); ctx.roundRect(-3.4, 1.4, 3.6, 5.6, 1); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = '#10151a'; ctx.fillRect(-13, -3, 2.6, 5)
+  ctx.fillStyle = aim ? '#ff5a48' : '#7a2a22'; ctx.fillRect(-1.6, -2.2, 1.6, 1.6)
+  ctx.restore()
+}
+// where his gun hand is for each thing the scout does, off his feet, in the figure's own units
+const GUN_AT = { 'jab-l': [-14, -30], 'reach-r': [-8, -17], hips: [-15, -21] }, GUN_DOWN = [-7, -19.5]
 // The QB in his shirt and shorts: the same long limbs and two flat tones as every other man, about seven heads tall.
 const T_TORSO = 34
 function throwerLeg(ctx, hx, hy, fx, fy, far, c, toe) {
@@ -1915,6 +2046,7 @@ function throwerArm(ctx, sx, sy, tx, ty, far, c) {
   ctx.fillStyle = far ? 'rgba(0,0,0,.1)' : c.topD; ctx.beginPath(); limbShade(ctx, sx, sy, 6.2, mx, my, 5.3, 0.6, 0.6); ctx.fill()
   ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(mx - nx * 5.5, my - ny * 5.5); ctx.lineTo(mx + nx * 5.5, my + ny * 5.5); ctx.stroke(); ctx.lineCap = 'round'
 }
+const QH = { x: 0, y: 0 }   // his throwing hand on the screen: the ball leaves from there
 function plainThrower(ctx, x, floorY, P, s, holding) {
   const c = GEAR
   ctx.fillStyle = 'rgba(0,18,6,.34)'
@@ -1944,37 +2076,85 @@ function plainThrower(ctx, x, floorY, P, s, holding) {
   ctx.strokeStyle = c.trim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-4.6, T - 2.2); ctx.quadraticCurveTo(0.6, T + 0.8, 5.4, T - 1.6); ctx.stroke()
   ctx.restore()
   ctx.fillStyle = INK; ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(P.lean); ctx.fillRect(-9.2, -0.2, 18.4, 1.1); ctx.restore()
-  sideHead(ctx, hx, hy, HEAD_R, c.skin, c.hair, P.lean * 0.3)
+  // the same bare head as the men with the stopwatches: a jaw, an ear, a hairline
+  ctx.save(); ctx.translate(hx, hy); ctx.rotate(P.lean * 0.3); bareHead(ctx, 0, 0, 'side', c.skin); ctx.restore()
   // the ball sits in the throwing hand, which is the near one, over the far hand when both are on it
   armIK(sx - 1, ay, P.hFx, -P.hFy, UARM, FARM, -0.62, 0.78)
   const ex = IK.ex, ey = IK.ey, jl = Math.hypot(ex - IK.jx, ey - IK.jy) || 1, ux = (ex - IK.jx) / jl, uy = (ey - IK.jy) / jl
-  if (holding) footballSide(ctx, ex + ux * 6.5, ey + uy * 6.5, Math.atan2(uy, ux) + 1.2, 0.86)
+  QH.x = x + (ex + ux * 6.5) * s; QH.y = floorY + (ey + uy * 6.5) * s
+  if (holding) airBall(ctx, ex + ux * 6.5, ey + uy * 6.5, { ang: Math.atan2(uy, ux) + 1.2, len: 18, spin: 0.08 })
   throwerArm(ctx, sx - 1, ay, P.hFx, -P.hFy, false, c)
   ctx.restore()
 }
 const Q_MID = pose({ hx: -3, hy: 48, lean: -0.05, fFx: 15, fBx: -14, hFx: -8, hFy: 80, hBx: 22, hBy: 80 })
-const QP = newPose(), poseQB = easedState()
-function footballSide(ctx, x, y, ang, k) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(k, k)
-  ctx.fillStyle = '#7d4522'; ctx.beginPath(); ctx.ellipse(0, 0, 9.4, 5.6, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 0.7; ctx.stroke()
-  ctx.fillStyle = '#f4efe6'; ctx.fillRect(-3.8, -1.2, 7.6, 1); ctx.fillRect(-2.2, -2, 0.8, 2.6); ctx.fillRect(1.4, -2, 0.8, 2.6)
-  ctx.fillRect(-7.6, -2.4, 0.9, 4.8); ctx.fillRect(6.7, -2.4, 0.9, 4.8)
-  ctx.restore()
+const QP = newPose(), poseQB = easedState(), QB_WAS = newPose()
+const LIE = [0.5, -0.45, 0.16]   // how each dead ball lies under the net
+// What his body does once he's let go: a: ms since. The arm comes through, he watches it into the net out of his
+// follow-through, then comes up out of it and reacts. (None of this is the rules: they were done when he let go.)
+function veloAfter(g, m, a, P) {
+  if (a < 40) return mixPose(Q_COIL, Q_OVER, easeIn(a / 40), P)
+  if (a < 78) return mixPose(Q_OVER, Q_THROW, (a - 40) / 38, P)
+  const seen = m.flyMs + 130
+  if (a < seen) return mixPose(Q_THROW, Q_FOLLOW, easeOut(prog(a, 78, 290)), P)
+  const b = a - seen, great = m.res.in && m.res.q > 0.86, up = easeInOut(prog(b, 0, 240))
+  mixPose(Q_FOLLOW, great ? Q_PUMP : m.res.in ? Q_UP : Q_HIPS, up, P)
+  P.fBy += Math.sin(up * Math.PI) * 6      // (the back foot steps through: it doesn't slide)
+  if (great && b > 240) mixPose(Q_PUMP, Q_YES, easeOut(prog(b, 240, 380)), P)
+  // the drill's over and the word's up
+  if (g.done && g.stamp && g.t >= g.stamp.at) mixPose(P, !g.done.hit ? Q_HIPS : g.stamp.text === 'CANNON' ? Q_SKY : Q_PUMP, easeInOut(prog(g.t, g.stamp.at, g.stamp.at + 220)), P)
+  return P
 }
 // the last rep with a reading on the board
 function latestOf(g, key) {
   for (let i = g.k; i >= 0; i--) { const q = g.reps[i]; if (q.landed && q[key] != null) return q }
   return null
 }
-const SCOUT_GUN = { ...SCOUT, skin: FOLK_SKIN[2], size: 1.62 }, SCOUT_UP = { ...SCOUT_GUN, pose: 'reach-r' }, SCOUT_NO = { ...SCOUT_GUN, pose: 'hips' }
+// The staff: the man on the gun, and a coach with the clipboard. Each look is one object, so its sprite is painted once
+const STAFF_K = 1.62
+const GUN_MAN = Object.fromEntries([null, 'jab-l', 'reach-r', 'hips'].map(p => [p, { ...SCOUT, skin: FOLK_SKIN[2], size: STAFF_K, ...(p ? { pose: p } : null) }]))
+const COACH = { ...SCOUT, color: '#2a3540', skin: FOLK_SKIN[1], size: STAFF_K }, COACH_UP = { ...COACH, pose: 'reach-r' }
 function drawVelo(ctx, g, view) {
-  const G = veloOf(view), { U, s, floor, qx, netX, netW, netT, netB } = G
+  const G = veloOf(view), { U, s, floor, qx, tx, ty } = G
   const m = g.rep
-  layer(ctx, view, 'mg-velo', x => paintFieldhouse(x, view, G))
-  // the scout with the radar gun: a real number, his hand goes up. He's seen enough of the other kind
-  const seen = latestOf(g, 'mph'), lately = seen && g.t - seen.landAt < 1150 ? seen : null
-  standAt(ctx, 246, G.horizon + 7, lately?.res.q > 0.86 ? SCOUT_UP : lately && !lately.res.in ? SCOUT_NO : SCOUT_GUN)
+  layer(ctx, view, 'mg-velo', x => paintVeloHall(x, view, G))
+  const lastM = latestOf(g, 'mph'), lately = lastM && g.t - lastM.landAt < 1150 ? lastM : null
+  const live = m.phase === 'hold' || (m.phase === 'fly' && !m.landed)
+  const verdict = g.done && g.stamp && g.t >= g.stamp.at ? g.stamp.text : null
+  const quiet = lightFx()
+  // the gun takes a moment: it runs up to the reading, and the reading lands
+  const read = lastM ? g.t - lastM.landAt : Infinity
+  const shown = lastM ? Math.round(lerp(lastM.mph - 16, lastM.mph, easeOut(clamp(read / 230, 0, 1)))) : null
+  const punch = read >= 230 && read < 400 ? 1 + 0.12 * (1 - (read - 230) / 170) : 1
+  const numCol = g.done ? (g.done.hit ? GOOD : BAD) : live ? 'rgba(255,255,255,.5)' : lastM && read >= 230 && lastM.mph === g.best && g.k > 0 ? GOLD : '#fff'
+  // the board on the wall has it too: it's what the room reads. A new best in the green and its frame goes gold
+  ctx.save(); ctx.translate(G.bx + G.bw / 2, G.by + 37.5 * U); ctx.scale(punch, punch)
+  text(ctx, shown != null ? String(shown) : '--', 0, 0, { font: DISPLAY, size: 38 * U, color: numCol })
+  ctx.restore()
+  if (lastM && lastM.res.in && lastM.mph === g.best && read >= 230 && read < 760) {
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.globalAlpha = 1 - (read - 230) / 530
+    ctx.strokeRect(G.bx - 2, G.by - 2, G.bw + 4, G.bh + 4); ctx.globalAlpha = 1
+  }
+  // the staff. The coach has seen a few of these: his fist only goes up for a cannon with all three in the green. The man on the gun brings it
+  // up as the arm comes back, and it's on the quarterback until the ball's in the net
+  const sy = G.horizon + 7
+  const allIn = verdict === 'CANNON' && g.reps.every(q => q.res?.in)
+  standAt(ctx, 190, sy, allIn ? COACH_UP : COACH)
+  clipboard(ctx, 190 + (allIn ? -8 : -7) * STAFF_K, sy + (allIn ? -17 : -19.5) * STAFF_K + 4, 1.25)
+  const gp = live ? 'jab-l' : verdict ? (verdict === 'CANNON' ? 'reach-r' : verdict === 'MISTIMED' ? 'hips' : null) : lately ? (lately.res.q > 0.86 ? 'reach-r' : !lately.res.in ? 'hips' : null) : null
+  standAt(ctx, 250, sy, GUN_MAN[gp])
+  const ga = GUN_AT[gp] ?? GUN_DOWN
+  radarGun(ctx, 250 + ga[0] * STAFF_K - (gp === 'jab-l' ? 2 : 0), sy + ga[1] * STAFF_K + (gp === 'jab-l' ? -1 : 4), gp === 'jab-l')
+  // the net: the last ball into it rocks it back on its feet, and one in the gold lights the ring
+  let rock = 0, ring = 0
+  for (let i = g.k; i >= 0; i--) {
+    const q = g.reps[i]
+    if (!q.landed || !q.kind) continue
+    const b = g.t - q.landAt, hard = (q.mph ?? 50) - 44
+    if (b < 620 && !quiet) rock = (0.01 + hard * 0.0013) * Math.exp(-b / 150) * Math.cos(b / 46)
+    if (q.res.in && q.res.q > 0.86 && b < 280) ring = 1 - b / 280
+    break
+  }
+  drawVeloNet(ctx, G, rock, ring)
   const P = QP, needle = needleOf(g, m, smoothT(g))
   // (his front foot comes down in the turf as it goes)
   if (m.phase === 'fly' && m.res?.why !== 'clock' && g.t - m.relAt >= 90 && !m.fxPlant) {
@@ -1982,6 +2162,7 @@ function drawVelo(ctx, g, view) {
     g.vDirt ??= particles(22, 11)
     g.vDirt.burst('turf', qx + 34 * s, floor, g.t, { n: 7, s: 1.1, speed: 0.9, spread: 1.1, ang: -2.1 })
   }
+  let holding = true, tau = 16
   if (m.phase === 'hold') {
     // the ball comes back at the shoulder, under the chin, then up behind his ear: never across his face
     const f = easeOut(prog(needle, 0, 0.85))
@@ -1990,68 +2171,74 @@ function drawVelo(ctx, g, view) {
   else if (m.phase === 'fly') {
     const a = g.t - m.relAt
     // (the hand has to come over the top, so through a point up above him on the way)
-    if (a < 50) mixPose(Q_COIL, Q_OVER, easeIn(a / 50), P)
-    else if (a < 95) mixPose(Q_OVER, Q_THROW, (a - 50) / 45, P)
-    else mixPose(Q_THROW, Q_FOLLOW, prog(a, 95, 300), P)
-    if (m.res.why === 'clock') copyPose(Q_SET, P)
-  } else if (g.k > 0 && m.waitAt != null) mixPose(Q_FOLLOW, Q_SET, easeInOut(prog(g.t, m.waitAt, m.waitAt + 280)), P)
+    if (m.res.why === 'clock') mixPose(Q_SET, Q_SLOW, easeOut(prog(a, 0, 220)), P)
+    else { veloAfter(g, m, a, P); holding = a < V_REL; tau = a < 150 ? 9 : 24 }
+    copyPose(P, QB_WAS)
+  } else if (g.k > 0 && m.waitAt != null) {
+    // back to his spot for the next ball: a step with each foot, not a slide
+    const f = prog(g.t, m.waitAt, m.waitAt + 280)
+    mixPose(QB_WAS, Q_SET, easeInOut(f), P)
+    P.fFy += Math.sin(prog(f, 0, 0.6) * Math.PI) * 5; P.fBy += Math.sin(prog(f, 0.4, 1) * Math.PI) * 5
+    holding = f > 0.55 || g.reps[g.k - 1].res?.why === 'clock'
+    if (f >= 1) P.hy += Math.sin(g.t / 320) * 0.5
+  }
   else { copyPose(Q_SET, P); P.hy += Math.sin(g.t / 320) * 0.5 }
-  const holding = m.phase !== 'fly'
-  plainThrower(ctx, qx, floor, easedPose(poseQB, P, g, CLK.dt, 16), s * 0.88, holding)
-  // the balls
-  const mid = (netT + netB) / 2
-  for (let i = Math.max(0, g.k - 1); i <= g.k; i++) {
+  plainThrower(ctx, qx, floor, easedPose(poseQB, P, g, CLK.dt, tau), s * 0.88, holding)
+  // the balls: the one in the air, the one in the net, and the ones lying under it
+  for (let i = 0; i <= g.k; i++) {
     const q = g.reps[i]
     if (!q.res || !q.kind) continue
-    const a = g.t - q.relAt - 40
-    if (a < 0) { continue }
-    if (q.sx == null) { q.sx = qx + 50 * s; q.sy = floor - 92 * s }
-    const f = clamp(a / (q.flyMs - 40), 0, 1)
-    const low = (1 - q.res.q) * 90 * U * (q.k % 2 ? -0.5 : 1)   // a bad one sails off the square
-    const tx = netX + netW * 0.62, ty = mid + low
+    const a = g.t - q.relAt - V_REL
+    if (a < 0) continue
+    if (q.sx == null) { q.sx = QH.x; q.sy = QH.y }
+    const f = clamp(a / (q.flyMs - V_REL), 0, 1)
+    const low = (1 - q.res.q) * 90 * U * (q.k % 2 ? -0.5 : 1)   // a bad one sails off the bullseye
+    const ex = tx, ey = ty + low
     const hard = (q.mph ?? 50) - 44    // 0 a soft toss, 20 a cannon
     if (f < 1) {
-      const bx = lerp(q.sx, tx, f), by = lerp(q.sy, ty, f) - Math.sin(f * Math.PI) * 10 * U
-      // the air it's coming through: the harder it's thrown the longer the lines, and it's a spiral, not a brick
-      const tail = (14 + hard * 2.6) * U * Math.min(1, f * 5)
-      ctx.fillStyle = 'rgba(255,255,255,.42)'
-      ctx.fillRect(bx - tail - 9, by - 0.8, tail, 1.6); ctx.fillRect(bx - tail * 0.7 - 11, by - 5, tail * 0.7, 1.2); ctx.fillRect(bx - tail * 0.55 - 11, by + 4, tail * 0.55, 1.2)
-      footballSide(ctx, bx, by, 0.08 + Math.sin(a / 16) * 0.05, s * 1.15)
-    } else {
-      const b = g.t - q.landAt
-      // the frame it gets there: the picture takes it, the harder the more
-      if (!q.fxHit) {
-        q.fxHit = true
-        g.nudge ??= nudge()
-        g.nudge.kick(g.t, clamp(hard * 0.24, 0.8, 4.2), 1, 0, 170)
+      // a rope has next to no arc on it; a soft one has to be lifted there. A bad one wobbles: it's no spiral
+      const arc = (3 + (20 - hard) * 0.5) * U
+      const bx = lerp(q.sx, ex, f), by = lerp(q.sy, ey, f) - Math.sin(f * Math.PI) * arc
+      const ang = Math.atan2(ey - q.sy - Math.cos(f * Math.PI) * Math.PI * arc, ex - q.sx), cs = Math.cos(ang), sn = Math.sin(ang)
+      // the air it's coming through: the harder it's thrown the longer the line
+      const tail = (14 + hard * 2.6) * U * Math.min(1, f * 5), from = 11 * U
+      ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2 * U
+      ctx.beginPath(); ctx.moveTo(bx - cs * from, by - sn * from); ctx.lineTo(bx - cs * (from + tail), by - sn * (from + tail))
+      if (hard >= 8) for (const o of [-4.6 * U, 4.6 * U]) { ctx.moveTo(bx - cs * (from + 3) + sn * o, by - sn * (from + 3) - cs * o); ctx.lineTo(bx - cs * (from + 3 + tail * 0.55) + sn * o, by - sn * (from + 3 + tail * 0.55) - cs * o) }
+      ctx.stroke(); ctx.lineCap = 'butt'
+      airBall(ctx, bx, by, { ang: ang + Math.sin(a / 21) * (1 - q.res.q) * 0.5, len: 24 * U, spin: (a / 1000) * 9 })
+      continue
+    }
+    const b = g.t - q.landAt
+    // the frame it gets there: the picture takes it, the harder the more
+    if (!q.fxHit) {
+      q.fxHit = true
+      g.nudge ??= nudge()
+      g.nudge.kick(g.t, clamp(hard * 0.24, 0.8, 4.2), 1, 0, 170)
+    }
+    // into the net, then down it, and it's dead on the turf: each one lies a little along from the last
+    const fall = easeIn(clamp((b - 170) / 420, 0, 1)), restX = ex - 14 + q.k * 15, restY = floor - 6 * U
+    if (b >= 590 && !q.fxDead) { q.fxDead = true; g.vDirt?.burst('dust', restX, restY, g.t, { n: 3, s: 1.2, spread: 1.4 }) }
+    const bx = lerp(ex + Math.min(9, b * 0.1), restX, fall), by = lerp(ey, restY, fall)
+    if (fall > 0.6) { ctx.fillStyle = 'rgba(0,18,6,.3)'; ctx.beginPath(); ctx.ellipse(bx, floor + 0.5 * U, 11 * U, 2.6 * U, 0, 0, Math.PI * 2); ctx.fill() }
+    airBall(ctx, bx, by, { ang: 0.08 + fall * LIE[q.k % 3], len: 24 * U, spin: 0.1 + q.k * 0.27 })
+    // the net kicks back where it hit
+    if (b < 300) {
+      const k = Math.exp(-b / 90) * (7 + hard * 0.9)
+      const gx = G.netX + Math.round((ex - G.netX) / NET_PITCH) * NET_PITCH, gy = G.netT + Math.round((ey - G.netT) / NET_PITCH) * NET_PITCH
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.4; ctx.beginPath()
+      for (let j = -2; j <= 2; j++) {
+        const yy = gy + j * NET_PITCH; ctx.moveTo(gx - 22, yy); ctx.quadraticCurveTo(gx + k, yy + j * 1.5, gx + 22, yy)
+        const xx = gx + j * NET_PITCH; ctx.moveTo(xx, gy - 22); ctx.quadraticCurveTo(xx + k * (1 - Math.abs(j) / 3), gy, xx, gy + 22)
       }
-      // into the net, then down it, and it's dead on the turf
-      const drop = easeIn(clamp((b - 170) / 420, 0, 1)) * (floor - ty - 8 * U)
-      if (b >= 590 && !q.fxDead) { q.fxDead = true; g.vDirt?.burst('dust', tx + 8, floor - 6 * U, g.t, { n: 3, s: 1.2, spread: 1.4 }) }
-      if (i === g.k || b < 650) footballSide(ctx, tx + Math.min(14, b * 0.1) - Math.max(0, b - 170) * 0.01, ty + drop, 0.08 + Math.max(0, b - 170) / 180, s * 1.15)
-      // the net kicks back where it hit
-      if (b < 300) {
-        const k = Math.exp(-b / 90) * (9 + hard * 1.1)
-        ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5; ctx.beginPath()
-        for (let j = -2; j <= 2; j++) {
-          const yy = ty + j * 9; ctx.moveTo(tx - 22, yy); ctx.quadraticCurveTo(tx + k, yy + j * 1.5, tx + 22, yy)
-          const xx = tx + j * 9; ctx.moveTo(xx, ty - 22); ctx.quadraticCurveTo(xx + k * (1 - Math.abs(j) / 3), ty, xx, ty + 22)
-        }
-        ctx.stroke()
-      }
+      ctx.stroke()
     }
   }
-  // the radar on the slab every timed drill has, the three throws beside it
-  const lastM = latestOf(g, 'mph')
-  const live = m.phase === 'hold' || (m.phase === 'fly' && !m.landed)
   if (!reduceMotion() && !document.documentElement.classList.contains('low-power')) g.vDirt?.draw(ctx, g.t)
+  // the radar on the slab every timed drill has, the three throws beside it
   clockSlab(ctx, view, '', '#fff')
-  // the gun takes a moment: it runs up to the reading, and the reading lands
-  const read = lastM ? g.t - lastM.landAt : Infinity
-  const shown = lastM ? Math.round(lerp(lastM.mph - 16, lastM.mph, easeOut(clamp(read / 230, 0, 1)))) : null
-  const punch = read >= 230 && read < 400 ? 1 + 0.12 * (1 - (read - 230) / 170) : 1
   ctx.save(); ctx.translate(180, 69); ctx.scale(punch, punch)
-  text(ctx, shown != null ? String(shown) : '--', 0, 0, { font: DISPLAY, size: 46, color: g.done ? (g.done.hit ? GOOD : BAD) : live ? 'rgba(255,255,255,.5)' : lastM && read >= 230 && lastM.mph === g.best && g.k > 0 ? GOLD : '#fff' })
+  text(ctx, shown != null ? String(shown) : '--', 0, 0, { font: DISPLAY, size: 46, color: numCol })
   ctx.restore()
   text(ctx, 'MPH', 348, 69, { font: LABEL, size: 17, align: 'right', color: 'rgba(255,255,255,.72)' })
   for (let i = 0; i < g.reps.length; i++) {

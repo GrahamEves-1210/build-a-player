@@ -36,8 +36,6 @@ const COLLEGE_POS = ['qb', 'wr', 'rb']   // the positions College Football has r
 const CLASS_WORD = { FR: 'Freshman', SO: 'Sophomore' }
 import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
-import { motion } from 'motion/react'
-import { SPRING_LAYOUT } from '../../lib/motion'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -751,9 +749,12 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {c.phase !== 'season' && c.dev.points > 0 && <div className="cr-devnote ag-pop"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait to raise it.</div>}
         <GamesSwitch c={c} setCareer={setCareer} />
         {canChangeNumber(c) && numberClash(c) && <NumberClash c={c} setCareer={setCareer} />}
+        {/* the lit pill is one element that only ever moves sideways (cr-tabs-pill): a shared-layout pill measured
+            its old spot before the page below changed height and scrolled, and flew in from the bottom of the screen */}
         <div className="ag-seg cr-tabs" role="tablist">
+          <span className="ag-seg-pill cr-tabs-pill" style={{ '--i': Math.max(0, ['season', 'player', 'team', 'career'].indexOf(tab)) }} aria-hidden="true" />
           {[['season', c.phase === 'offseason' ? 'OFFSEASON' : 'SEASON'], ['player', 'PLAYER'], ['team', 'TEAM'], ['career', 'CAREER']].map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => { setTab(id); sfx('tap') }}>{tab === id && <motion.span layoutId="seg-career" className="ag-seg-pill" transition={SPRING_LAYOUT} />}{label}</button>
+            <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => { setTab(id); sfx('tap') }}>{label}</button>
           ))}
         </div>
 

@@ -14,6 +14,8 @@
 //             or { games, keepLines: true } (finalizeCFBSeason: the director's games as played)
 //   opts      { leagueSeed, year }: leagueSeed keeps the rest of the country's season fixed while rngSeed
 //             changes (the director re-runs a season many times); year = the build's class ('FR'…'RS-SR'), 'JR' default
+//             noClass: the build has no class (College Football mode: a season is a year, he's always draft-eligible,
+//             cfb.draft.year is null and it always declares); career: his earlier college seasons (the draft board)
 //
 // THE RESULT (football's contract first, so SimPage, the saves and lib/seasonDirector read it unchanged):
 // {
@@ -58,7 +60,9 @@
 //       allConference: { conf, first, second, user }, confPOY: { award, winner, userWon },
 //     },
 //     leaders: null | { key, label, rows: [{ name, team, year, isUser, value }] (top 10), rank, of }   (regular season, every FBS starter at his position)
-//     draft: { year, eligible, declares, tier, label, round, note, draftYear, boardRank, boardOf, board (the top 25 at his position: { name, team, year, ovr, isUser }) }
+//     draft: { year (null: no class), eligible, declares, tier ('top10' | 'r1' | 'day2' | 'day3' | 'pfa' | 'udfa'), label, round, pick ([lo, hi] overall
+//              picks of 224, null undrafted), overall (his place on the big board), note, draftYear, boardRank, boardOf,
+//              board (the top 25 at his position: { name, team, year, ovr, isUser, tier, yds, td }) }
 //   }
 // }
 // Players in award lists: { name, team (short), teamName, pos ('QB'|'RB'|'WR'), conf, year, isUser, line: 'season line text', stats }
@@ -886,8 +890,10 @@ function userFrom(L, build, types, team, position, opts) {
   const ovr = OVR_FN[pos](build, types) ?? 70
   const d = L.depth[team.short]?.[pos] ?? []
   const replaced = d[0]?.ovr ?? 78
-  let year = opts?.year ?? null
-  if (!year) {
+  // (opts.noClass, College Football mode: the build has no class. A season is just a year, he's always
+  // draft-eligible and the choice to go or stay is the player's. Career's Start in College passes his class)
+  let year = opts?.noClass ? null : opts?.year ?? null
+  if (!year && !opts?.noClass) {
     // the class the build's players mostly come from, else a junior
     const names = new Set(Object.values(build ?? {}).map(b => b?.qbFull).filter(Boolean))
     const yrs = L.players[pos].filter(p => names.has(p.name) && p.year).map(p => String(p.year).toUpperCase())
@@ -895,7 +901,7 @@ function userFrom(L, build, types, team, position, opts) {
     for (const y of yrs) counts[y] = (counts[y] ?? 0) + 1
     year = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'JR'
   }
-  return { pos, team: team.short, name: opts?.name ?? 'Guest', ovr, rates: RATES[pos](nfrom(attrs), ovr), shift: clamp(-8, 8, (ovr - replaced) * TEAM_SHIFT[pos]), year, replaced }
+  return { pos, team: team.short, name: opts?.name ?? 'Guest', ovr, rates: RATES[pos](nfrom(attrs), ovr), shift: clamp(-8, 8, (ovr - replaced) * TEAM_SHIFT[pos]), year, replaced, noClass: !!opts?.noClass }
 }
 
 // ── The season ───────────────────────────────────────────────────────────────
@@ -1306,10 +1312,32 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   const declareLine = BOARD_SLOTS[pos][2] * 2
   const cls = rows.filter((x, k) => x.c.isUser || sen(x.c) || k < declareLine)
   const rank = cls.findIndex(x => x.c.isUser) + 1
-  return { rank, of: cls.length, eligible: rows.length, score: cls[rank - 1].score, top: cls.slice(0, 25).map(x => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, isUser: !!x.c.isUser })) }
+  // (each row: the tier its slot on the board carries, BOARD_SLOTS, and the season's headline numbers)
+  const sl = BOARD_SLOTS[pos]
+  const tierAt = k => (k <= sl[0] ? 'top10' : k <= sl[1] ? 'r1' : k <= sl[2] ? 'day2' : k <= sl[3] ? 'day3' : k <= sl[4] ? 'pfa' : 'udfa')
+  const nums = c => (pos === 'qb' ? { yds: c.t.seasonPassYds, td: c.t.seasonTDs + c.t.seasonRushTDs } : pos === 'rb' ? { yds: c.t.seasonRushYds, td: c.t.seasonRushTDs + c.t.seasonRecTDs } : { yds: c.t.seasonRecYds, td: c.t.seasonRecTDs })
+  return { rank, of: cls.length, eligible: rows.length, score: cls[rank - 1].score, top: cls.slice(0, 25).map((x, k) => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, isUser: !!x.c.isUser, tier: tierAt(k + 1), ...nums(x.c) })) }
 }
 
-function draftStock(pos, ovr, t, awards, year, board = null, career = null) {
+// Where a tier's picks fall in a 7-round, 224-pick draft (32 a round, the draft Career runs), and how wide a
+// projection is there: a top-10 grade is a few picks either way, a Day 3 grade most of a round
+const TIER_PICKS = { top10: [1, 10], r1: [11, 32], day2: [33, 96], day3: [97, 224] }
+const TIER_HALF = { top10: 2, r1: 5, day2: 12, day3: 22 }
+const TIER_ORDER = ['top10', 'r1', 'day2', 'day3', 'pfa', 'udfa']
+// his pick range: inside his tier's picks, by where his rank sits among the board slots that tier holds
+// (the first of the tier's ranks goes at the front of it). Undrafted tiers have none
+function pickWindow(pos, tier, board) {
+  const span = TIER_PICKS[tier]
+  if (!span) return null
+  const sl = BOARD_SLOTS[pos], i = TIER_ORDER.indexOf(tier)
+  const a = i ? sl[i - 1] + 1 : 1, b = sl[i], k = board?.rank ?? null
+  const f = k == null ? 0.5 : k < a ? 0.12 : k > b ? 0.88 : (k - a + 0.5) / (b - a + 1)
+  const top = pos === 'qb' ? 1 : 3   // (the first two picks are a quarterback's: Career's draft, lib/career.js stockOf)
+  const mid = span[0] + f * (span[1] - span[0]), h = TIER_HALF[tier]
+  const lo = Math.max(top, span[0], Math.round(mid - h))
+  return [lo, Math.max(lo, Math.min(span[1], Math.round(mid + h)))]
+}
+function draftStock(pos, ovr, t, awards, year, board = null, career = null, noClass = false) {
   const yr = String(year ?? 'JR').toUpperCase()
   const prodAdj = clamp(-3, 3.5, (production(pos, t) - PROD_PAR[pos]) / 15)
   const v = ovr + prodAdj + (awards?.heisman?.userWon ? 1.5 : awards?.heisman?.userFinalist ? 0.7 : 0) + (awards?.allAmerica?.user === 'first' ? 1 : 0)
@@ -1324,26 +1352,32 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null) {
     if (tier === 'top10' && board.score < 1.2) tier = 'r1'
   }
   // elite tools go early whatever the team did, once he has produced: 96+ is a 1st-rounder, 92+ goes by Day 2
-  const ORDER = ['top10', 'r1', 'day2', 'day3', 'pfa', 'udfa']
+  const ORDER = TIER_ORDER
   const floor = ovr >= 96 ? 'r1' : ovr >= 92 ? 'day2' : null
   if (floor && production(pos, t) >= PROD_PAR[pos] * 0.8 && ORDER.indexOf(tier) > ORDER.indexOf(floor)) tier = floor
   // a past Heisman winner coming off a good year isn't a Day 2 pick (a Career's college player)
   if (career?.heisman === 'won' && production(pos, t) >= PROD_PAR[pos] * 0.85 && !['top10', 'r1'].includes(tier)) tier = 'r1'
   const LABEL = { top10: 'Projected top-10 pick', r1: 'Projected 1st round', day2: 'Day 2 (Rounds 2-3)', day3: 'Day 3 (Rounds 4-7)', pfa: 'Priority free agent', udfa: 'Undrafted free agent' }
   const ROUND = { top10: [1, 1], r1: [1, 1], day2: [2, 3], day3: [4, 7], pfa: null, udfa: null }
+  // the projection in picks, and his place on the overall board: the middle of that range (the rest of the
+  // class, the other positions, isn't simulated: a prospect's big-board number sits about where he's picked)
+  const pick = pickWindow(pos, tier, board)
+  const overall = pick ? Math.round((pick[0] + pick[1]) / 2) : null
+  const shared = { tier, label: LABEL[tier], round: ROUND[tier], pick, overall, boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null }
+  // (no class, College Football mode: always eligible, always a projection; going or staying is the player's call)
+  if (noClass) return { year: null, eligible: true, declares: true, ...shared, draftYear: 2027, note: null }
   const eligible = ELIGIBLE.has(yr)
   if (!eligible) {
     const ci = CLASS_ORDER.indexOf(yr)
     const yearsOut = yr === 'FR' ? 2 : yr === 'RS-FR' || yr === 'SO' ? 1 : 1
     const draftYear = 2027 + Math.max(1, yearsOut)
-    return { year: yr, eligible: false, declares: false, tier, label: `Not draft-eligible yet (${yr})`, round: ROUND[tier], draftYear, boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null,
+    return { year: yr, eligible: false, declares: false, ...shared, label: `Not draft-eligible yet (${yr})`, draftYear,
       note: `Eligible for the ${draftYear} NFL Draft. Early board: ${LABEL[tier].replace('Projected ', '')}`, classIndex: ci }
   }
   const senior = /SR|GR|5TH/.test(yr)
   const declares = senior || tier === 'top10' || tier === 'r1' || tier === 'day2'
   return {
-    year: yr, eligible: true, declares, tier, label: LABEL[tier], round: ROUND[tier], draftYear: 2027,
-    boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null,   // his place among the eligible players at the position
+    year: yr, eligible: true, declares, ...shared, draftYear: 2027,   // (boardRank: his place among the eligible players at the position)
     note: senior ? 'Out of eligibility: in the 2027 NFL Draft' : declares ? 'Declares for the 2027 NFL Draft' : 'Returns to school for another season',
   }
 }
@@ -1529,7 +1563,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     const at = rows.findIndex(x => x.isUser)
     leaders = { key: lk, label, rows: rows.slice(0, 10), rank: at >= 0 ? at + 1 : null, of: rows.length }
   }
-  const draft = draftStock(pos, ovr, throughCCG, awards, user.year, lite ? null : draftBoard(L, R, pos, candList, awards, opts?.career ?? null), opts?.career ?? null)
+  const draft = draftStock(pos, ovr, throughCCG, awards, user.year, lite ? null : draftBoard(L, R, pos, candList, awards, opts?.career ?? null), opts?.career ?? null, user.noClass)
 
   const madeCFP = R.field.has(me)
   const mySeed = madeCFP ? R.seedOf.get(me) : null
@@ -1582,7 +1616,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       awards,
       leaders,
       draft,
-      user: { name: user.name, year: user.year, replaced: L.depth[base.short]?.[pos]?.[0]?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
+      user: { name: user.name, year: user.year, noClass: user.noClass, replaced: L.depth[base.short]?.[pos]?.[0]?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
         attrs: Object.fromEntries(types.map(t => [t, build?.[t]?.val ?? null])), types },
       awardGames: userAwardCount,
     },
@@ -1629,7 +1663,7 @@ export function finalizeCFBSeason(result, games = result?.games, build = null, t
   const tl = types ?? u?.types ?? CFB_TYPES_BY_POS[result.position]
   const b = build ?? Object.fromEntries(tl.filter(t => u?.attrs?.[t] != null).map(t => [t, { type: t, val: u.attrs[t] }]))
   const script = { games, keepLines: true }
-  const next = runCFBSimulation(b, tl, result.team, result.position, result.seed, result.gameMode, script, { leagueSeed: result.leagueSeed, year: u?.year ?? result.cfb?.draft?.year, name: u?.name })
+  const next = runCFBSimulation(b, tl, result.team, result.position, result.seed, result.gameMode, script, { leagueSeed: result.leagueSeed, year: u?.year ?? result.cfb?.draft?.year, name: u?.name, noClass: !!u?.noClass })
   // the build's OVR and archetype come from the build the director started with
   return { ...result, ...next, ovr: result.ovr ?? next.ovr, archetype: result.archetype ?? next.archetype, games: next.games.map((g, k) => ({ ...games[k], ...g, ...pickLine(result.position, games[k]) })), story: result.story }
 }

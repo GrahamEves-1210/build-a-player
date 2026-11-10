@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { TYPES, ATTR } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../../data/wrs'
-import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade } from '../../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
 import { seeded } from '../../lib/rng'
 import { loadCFB } from '../../lib/cfbLoad'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import CFBSimPage from './CFBSimPage'
-import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, seasonEvent, collegeGap } from './cfbShared'
+import { CFB_POS, classLabel, cfbLogo, cfbLogoDark, seasonEvent, collegeGap, photoLookup } from './cfbShared'
 import './cfb.css'
 
 // ── Career: START IN COLLEGE ─────────────────────────────────────────────────
@@ -37,9 +37,10 @@ const YEAR_OF = ['FR', 'SO']          // his class, season by season
 const SIM_YEAR = ['JR', 'SR']         // what the engine is told, so his draft stock reads as a draft-eligible player's
 const DEV_STEPS = 3                   // a returning player: one step on his three weakest traits
 const LEAVES = new Set(['SR', 'RS-SR', 'GR', 'RS-GR', '5TH', 'RS-5TH'])   // a starter in his last year is gone next season
+const NO_BOOST = new Set(['size'])   // his frame: the college gap doesn't touch it, and a returning year doesn't develop it (cfbShared collegeGap)
 
 // the college build: the NFL build up by the college gap (cfbShared.js collegeGap, the same one the draft takes back
-// off: a full letter on skill and mental, half on physical, none on Size), plus a returning year's development, capped at S
+// off: a full letter grade on every trait, none on Size), plus a returning year's development, capped at S
 export function collegeBuild(build, types, dev = {}, pos = null) {
   const p = pos ?? (types.includes('arm') ? 'qb' : types.includes('carrying') ? 'rb' : 'wr')
   return Object.fromEntries(types.map(t => {
@@ -48,14 +49,19 @@ export function collegeBuild(build, types, dev = {}, pos = null) {
     return [t, { ...ch, val: clamp(0, 11, (ch.val ?? 0) + collegeGap(p, t) + (dev[t] ?? 0)) }]
   }))
 }
-// (on the college scale, the build plus the college gap: about six OVR over his NFL rating, so the lines sit six up)
-const starsFor = ovr => (ovr >= 97 ? 5 : ovr >= 92 ? 4 : ovr >= 86 ? 3 : 2)
-// a composite-style national ranking from the boosted OVR, inside his stars' band
-function rankFor(ovr, pos, seed) {
+// (on the college scale, the build plus the college gap. With a full letter on every trait the boosted OVR sits
+// about 12 over his NFL rating until it runs into 99 (an NFL 85 or better is a 99 in college), so the lines are
+// 99 / 95 / 89: the same recruits get the same stars the old gap gave them (scratch check, 2026-11-10: an NFL
+// 70-74 is a 2-star, 75-79 a 3-star, 80-84 mostly a 4-star, 85+ a 5-star, a touch lower for backs and receivers))
+export const starsFor = ovr => (ovr >= 99 ? 5 : ovr >= 95 ? 4 : ovr >= 89 ? 3 : 2)
+// a composite-style national ranking from the boosted OVR, inside his stars' band. (Every 5-star is a 99 in
+// college, so inside that band it's his NFL-builder OVR that orders them: a 97 is the No. 1 recruit, an 85 the
+// last of the five-stars)
+export function rankFor(ovr, pos, seed, nflOvr = null) {
   const r = seeded(`cfb-rank-${seed}`)
-  const bands = [[97, 99, 1, 32], [92, 96.99, 33, 330], [86, 91.99, 331, 1400], [0, 85.99, 1401, 3200]]
+  const bands = [[99, 99, 1, 32], [95, 98.99, 33, 330], [89, 94.99, 331, 1400], [0, 88.99, 1401, 3200]]
   const [lo, hi, best, worst] = bands.find(b => ovr >= b[0])
-  const t = clamp(0, 1, (hi - ovr) / Math.max(1, hi - lo))
+  const t = lo >= 99 ? (nflOvr == null ? 0.5 : clamp(0, 1, (97 - nflOvr) / 12)) : clamp(0, 1, (hi - ovr) / Math.max(1, hi - lo))
   const overall = Math.max(1, Math.round(best + t * (worst - best) + (r() - 0.5) * (worst - best) * 0.08))
   const posRank = Math.max(1, Math.round(overall / ({ qb: 11, wr: 6, rb: 10 })[pos] + r() * 1.2))
   return { overall, posRank }
@@ -75,7 +81,7 @@ function barAt(data, short, pos) {
 }
 const startsOver = (bar, ovr, year = 0) => !bar || ovr > (bar.ovr ?? 0) || (year > 0 && LEAVES.has(String(bar.year).toUpperCase()))
 
-function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5 }) {
+export function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5 }) {
   const r = seeded(`cfb-offers-${seed}`)
   const tierOfConf = Object.fromEntries(data.conferences.map(c => [c.id, c.tier]))
   const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos) }))
@@ -140,7 +146,8 @@ function asBackup(r, pos, seed, starter, ovr) {
       ...c, postseason: post,
       totals: { regular: totalsOf(games, pos), throughCCG: totalsOf([...games, ...ccg], pos), full: totalsOf([...games, ...post], pos) },
       awards: notUser(c.awards ?? {}),
-      draft: { ...(c.draft ?? {}), declares: false, tier: 'udfa', label: 'Undrafted free agent', round: null, note: `A backup year behind ${starter?.name ?? 'the starter'}: the scouts have seen little of him` },
+      // (the board the engine made is the starter's: he isn't on it, and the projection isn't his)
+      draft: { ...(c.draft ?? {}), declares: false, tier: 'udfa', label: 'Undrafted free agent', round: null, pick: null, overall: null, boardRank: null, board: (c.draft?.board ?? []).map(x => ({ ...x, isUser: false })), note: `A backup year behind ${starter?.name ?? 'the starter'}: the scouts have seen little of him` },
     },
   }
 }
@@ -240,12 +247,13 @@ export default function CareerCollege({ c, setCareer, onExit }) {
   useEffect(() => { let live = true; loadCFB().then(d => { if (live) setData(d) }); return () => { live = false } }, [])
   const teamsBy = useMemo(() => Object.fromEntries((data?.teams ?? []).map(t => [t.short, t])), [data])
   const confOf = useMemo(() => Object.fromEntries((data?.conferences ?? []).map(x => [x.id, x])), [data])
+  const photoOf = useMemo(() => photoLookup(data?.pools, HEADSHOT_BASE), [data])
   const schoolOf = short => String(teamsBy[short]?.school ?? short).toUpperCase()
 
   const cb = useMemo(() => collegeBuild(c.build, P.types), [c.build, P.types])
   const cOvr = P.ovr(cb, P.types)
   const stars = starsFor(cOvr)
-  const rank = useMemo(() => rankFor(cOvr, c.pos, c.seed), [cOvr, c.pos, c.seed])
+  const rank = useMemo(() => rankFor(cOvr, c.pos, c.seed, c.ovr), [cOvr, c.pos, c.seed, c.ovr])
   // the offers, made once and kept on the save
   useEffect(() => {
     if (!data || col.offers) return
@@ -301,7 +309,7 @@ export default function CareerCollege({ c, setCareer, onExit }) {
     const keepSummary = () => col.seasons.map((s, i) => (i === si && !s.summary ? { ...s, summary: summaryOf(result, s, c.pos, teamsBy) } : s))
     return (
       <>
-        <CFBSimPage result={result} pos={c.pos} userName={c.name} teams={teamsBy}
+        <CFBSimPage result={result} pos={c.pos} userName={c.name} teams={teamsBy} attrMap={P.attr} photoOf={photoOf}
           archetype={P.arch(P.ovr(collegeBuild(c.build, P.types, cur.dev), P.types), collegeBuild(c.build, P.types, cur.dev), P.types)}
           roleNote={cur.role === 'backup' ? `${classLabel(cur.cls)} · backup to ${result.starterName}` : `${classLabel(cur.cls)} · ${sch}'s starter`}
           userYear={cur.cls} season={2026 + si} rewards={false}
@@ -406,11 +414,11 @@ export default function CareerCollege({ c, setCareer, onExit }) {
         </section>
         <section>
           <h2 className="cfb-label">THE COLLEGE BOOST</h2>
-          <p className="cfbs-note">A pro talent against college competition: <b>a full letter on skill and mental traits, half a letter on physical ones</b>, none on Size. The same comes off when he enters the NFL Draft.</p>
+          <p className="cfbs-note">A pro talent against college competition: <b>a full letter grade on every trait</b>, none on Size. The same comes off when he enters the NFL Draft.</p>
           <table className="cfbd-table">
             <thead><tr><th>TRAIT</th><th>NFL</th><th /><th>COLLEGE</th></tr></thead>
             <tbody>{P.types.filter(t => c.build[t]).map(t => (
-              <tr key={t}><td>{P.attr[t]?.label ?? t}<small>{NO_BOOST.has(t) ? 'His frame: no boost' : cb[t].val === c.build[t].val ? 'Already S' : '+1 step'}</small></td><td className="is-g">{valToGrade(c.build[t].val)}</td><td className="is-arrow">→</td><td className={`is-g${cb[t].val > c.build[t].val ? ' is-up' : ''}`}>{valToGrade(cb[t].val)}</td></tr>
+              <tr key={t}><td>{P.attr[t]?.label ?? t}<small>{NO_BOOST.has(t) ? 'His frame: no boost' : cb[t].val === c.build[t].val ? 'Already S' : cb[t].val - c.build[t].val >= 3 ? 'Full letter grade' : 'Up to S'}</small></td><td className="is-g">{valToGrade(c.build[t].val)}</td><td className="is-arrow">→</td><td className={`is-g${cb[t].val > c.build[t].val ? ' is-up' : ''}`}>{valToGrade(cb[t].val)}</td></tr>
             ))}</tbody>
           </table>
           <p className="cfbd-note">{c.ovr} OVR → {cOvr} college OVR · {stars}-star recruit</p>

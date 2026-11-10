@@ -136,7 +136,8 @@ function SlotReel({ items, spinning, idle, onStop }) {
 
 // anyTeam: every team is on offer (Squad Builder), not only the build's
 // teams / teamOf (College Football): the schools on offer, and which of them a build's trait came from
-export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, anyTeam = false, eyebrow = 'Simulate Season', teams = NFL_TEAMS, teamOf = c => c.team }) {
+// onCancel (College Football's transfer): a way back out before a team is chosen; without it the modal is as it was
+export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, anyTeam = false, eyebrow = 'Simulate Season', teams = NFL_TEAMS, teamOf = c => c.team, onCancel = null }) {
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase, setPhase]       = useState('idle')
   const [result, setResult]     = useState(null)
@@ -268,6 +269,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
             )}
           </div>
         )}
+        {onCancel && !result && phase === 'idle' && <button type="button" className="tpm-cancel" onClick={onCancel}>Cancel</button>}
       </div>
     </div>
   )

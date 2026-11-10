@@ -101,28 +101,11 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 @media (max-width: 768px) { html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: none; } }
 
 /* ═══ The season (CFBSimPage) ══════════════════════════════════════════════ */
-.cfbs { padding-top: calc(var(--safe-top, 0px) + 4px); }
-.cfbs-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 14px 10px; }
 .cfbs-top-brand { font-family: var(--ag-font); font-size: 16px; letter-spacing: 2.6px; color: var(--cfb-white); }
 .cfbs-top-brand i { font-style: normal; color: var(--cfb-blue-hi); }
 .cfbs-logo { display: block; flex: none; object-fit: contain; }
 
-/* the scorebug */
-.cfbs-hero { margin: 0 14px; border-radius: 4px; overflow: hidden; background: var(--cfb-navy-2); border-left: 6px solid var(--school); }
-.cfbs-hero-team { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 14px 14px 12px 12px; }
-.cfbs-hero-logo { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 6px; background: #fff; }
-.cfbs-hero-team small { display: block; font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; color: var(--cfb-muted); }
-.cfbs-hero-team h1 { margin: 2px 0 0; font-family: var(--ag-display); font-weight: 400; font-size: 32px; line-height: .95; letter-spacing: .4px; text-transform: uppercase; overflow-wrap: anywhere; }
-.cfbs-hero-rec { font-family: var(--ag-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: .5px; }
-.cfbs-hero-plate { padding: 7px 14px 6px; background: #fff; color: var(--cfb-navy); font-family: var(--ag-font); font-size: 19px; letter-spacing: 2px; line-height: 1.1; }
-.cfbs.is-champ .cfbs-hero-plate { background: var(--cfb-gold); }
-.cfbs-hero-who { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; padding: 9px 14px 11px; background: var(--cfb-blue); }
-.cfbs-hero-who b { font-family: var(--ag-display); font-weight: 400; font-size: 20px; letter-spacing: .4px; }
-.cfbs-hero-who span { font-family: var(--ag-body); font-size: 14px; color: rgba(255,255,255,.82); }
-.cfbs-hero-who em { margin-left: auto; font-family: var(--ag-font); font-style: normal; font-size: 18px; letter-spacing: 1.6px; }
 
-.cfbs-body { display: grid; gap: 22px; padding: 18px 14px 0; }
-.cfbs-sec { min-width: 0; }
 .cfbs-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .cfbs-hd h2 { margin: 0; padding: 6px 18px 4px 10px; background: var(--cfb-blue); clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); font-family: var(--ag-font); font-weight: 400; font-size: 18px; letter-spacing: 2.2px; line-height: 1; color: #fff; white-space: nowrap; }
 .cfbs-hd small { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.6px; color: var(--cfb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -203,26 +186,6 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbs-match.is-won .cfbs-match-foot { background: #fff; color: var(--cfb-navy); }
 .cfbs-title.is-won .cfbs-match-foot { background: var(--cfb-gold); color: #1d1503; }
 
-/* the Heisman */
-.cfbs-heis { border-radius: 4px; overflow: hidden; background: var(--cfb-navy-2); }
-.cfbs-heis-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 9px 12px 7px; background: #fff; color: var(--cfb-navy); }
-.cfbs-heis-hd b { font-family: var(--ag-display); font-weight: 400; font-size: 21px; letter-spacing: .5px; }
-.cfbs-heis-hd small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.8px; color: var(--cfb-blue); }
-.cfbs-heis-call { margin: 0; padding: 10px 12px 8px; font-family: var(--ag-body); font-size: 15px; color: var(--cfb-muted); }
-.cfbs-heis-call b { color: #fff; }
-.cfbs-heis-list { list-style: none; margin: 0; padding: 0; }
-.cfbs-heis-list li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: 'logo who pts' 'logo line pts'; align-items: center; column-gap: 10px; padding: 8px 12px; border-top: 1px solid var(--cfb-line); transition: background-color .45s ease-out, color .45s ease-out; }
-.cfbs-heis-list .cfbs-logo { grid-area: logo; }
-.cfbs-heis-who { grid-area: who; min-width: 0; }
-.cfbs-heis-who b { font-family: var(--ag-display); font-weight: 400; font-size: 18px; letter-spacing: .3px; }
-.cfbs-heis-who small { margin-left: 7px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: var(--cfb-muted); }
-.cfbs-heis-line { grid-area: line; font-family: var(--ag-body); font-size: 13px; color: var(--cfb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cfbs-heis-pts { grid-area: pts; display: grid; justify-items: end; min-width: 44px; }
-.cfbs-heis-pts b { font-family: var(--ag-display); font-weight: 400; font-size: 18px; }
-.cfbs-heis-pts small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.2px; color: var(--cfb-muted); }
-.cfbs-heis-list li.is-me .cfbs-heis-who b { color: #fff; }
-.cfbs-heis-list li.is-win { background: var(--cfb-gold); color: #1d1503; }
-.cfbs-heis-list li.is-win :is(.cfbs-heis-who small, .cfbs-heis-line, .cfbs-heis-pts small) { color: rgba(29,21,3,.72); }
 
 .cfbs-awards { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--cfb-line); }
 .cfbs-awards li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--cfb-line); font-family: var(--ag-body); font-size: 15px; font-weight: 600; }
@@ -247,13 +210,6 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbs-btn.is-main { border-color: var(--cfb-blue-hi); background: var(--cfb-blue-hi); font-size: 21px; }
 
 @media (min-width: 769px) {
-  .cfbs-top, .cfbs-hero, .cfbs-body { max-width: 980px; margin-left: auto; margin-right: auto; }
-  .cfbs-top { padding: 14px 14px 12px; }
-  .cfbs-hero { margin-top: 0; }
-  .cfbs-hero-team h1 { font-size: 46px; }
-  .cfbs-hero-rec { font-size: 62px; }
-  .cfbs-body { grid-template-columns: 1fr 1fr; column-gap: 28px; row-gap: 26px; padding-top: 22px; }
-  .cfbs-stage > .cfbs-sec { grid-column: 1 / -1; }
   .cfbs-bracket { grid-template-columns: repeat(var(--rounds), minmax(190px, 1fr)); }
   .cfbs-bracket-scroll { margin: 8px 0 0; padding: 0 0 6px; }
   .cfbs-actions { grid-column: 1 / -1; grid-template-columns: 2fr 1fr 1fr 1fr; }
@@ -269,24 +225,14 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbs-table td.is-team span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cfbs-champ { margin-left: auto; padding: 2px 5px 1px; border-radius: 3px; background: #fff; color: var(--cfb-navy); font-family: var(--ag-font); font-style: normal; font-size: 11px; letter-spacing: 1px; }
 .cfbs-awards li span small { display: block; margin-top: 2px; font-weight: 400; font-size: 12.5px; color: var(--cfb-muted); }
-.cfbs-heis-me { margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--cfb-line); }
 
 /* ═══ Round 2: the entry's extras, the staged season, the draft confirm ═════════════════════ */
 .cfb-conf-chip small { margin-left: auto; padding-right: 6px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--cfb-faint); }
 .cfb-past-tags i.is-sb { background: transparent; box-shadow: inset 0 0 0 1px var(--cfb-line-hi); color: var(--cfb-muted); }
 .cfb-disclaimer { margin: 18px 0 0; font-family: var(--ag-body); font-size: 12px; line-height: 1.45; color: var(--cfb-faint); }
 .cfbs-top-brand em { font-style: normal; color: var(--cfb-muted); }
-.cfbs-sub { margin: 16px 0 8px; font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: 1.8px; color: var(--cfb-muted); }
-.cfbs-live { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.4px; }
 
-/* each stage drops in under the last, once */
-@media (prefers-reduced-motion: no-preference) {
-  html:not(.bap-reduce-motion) .cfbs-stage.is-new { animation: cfbs-drop .45s cubic-bezier(.2, .8, .2, 1) both; }
-  html:not(.bap-reduce-motion) .cfbs-sched .cfbs-game:last-child { animation: cfbs-drop .3s ease-out both; }
-}
-@keyframes cfbs-drop { from { opacity: 0; transform: translate3d(0, -10px, 0); } }
-.cfbs-stage { display: grid; grid-column: 1 / -1; min-width: 0; scroll-margin-top: 12px; }
-.cfbs-stage > .cfbs-sec { scroll-margin-top: 12px; }
+
 
 /* the next part of the season */
 .cfbs-next-wrap { grid-column: 1 / -1; padding: 4px 0; }
@@ -377,11 +323,9 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbd-actions .cfbs-btn:disabled { opacity: .45; cursor: default; }
 
 @media (min-width: 769px) {
-  .cfbs-sec--wide { grid-column: 1 / -1; }
   .cfbs-top25 { grid-template-columns: repeat(3, 1fr); }
   .cfbd-actions { grid-template-columns: 2fr 1fr; }
 }
-.cfbs-heis-who small { white-space: nowrap; }
 /* (the poll grid: hairlines on each cell, so a short last row leaves no filled gap) */
 .cfbs-moves { gap: 0; background: none; border: 0; border-top: 1px solid var(--cfb-line); border-left: 1px solid var(--cfb-line); }
 .cfbs-moves li { border-right: 1px solid var(--cfb-line); border-bottom: 1px solid var(--cfb-line); }
@@ -433,17 +377,9 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
   .cfbr-decide { grid-template-columns: 2fr 1fr !important; }
 }
 
-/* the live regular season (football's pulse, wire, milestones and week strip) in the college blue */
-.cfbs-live-season { display: grid; gap: 10px; margin: 4px 0 14px; }
-.cfbs-live-season .sm-wire-tag { background: var(--cfb-blue-hi); color: #fff; }
-.cfbs .ag-week.is-w { background: rgba(26, 95, 209, .28); border-color: rgba(64, 132, 245, .7); }
-.cfbs .ag-week.is-w .ag-week-r { color: #8fbaff; }
-.cfbs-live-season .sm-pulse { display: block; width: 100%; height: 56px; }
-/* room under the last thing on the screen (a live game, the next button) to scroll it clear of the dock and the ad rail */
-.cfbs .cfbs-body { padding-bottom: calc(var(--app-bottom, 16px) + var(--web-rail, 0px) + 28px); }
 
-/* ═══ The season (CFBSimPage): football's season page (SimPage's simp-* markup), page for page, in the college
-   blue. Only the colours change: the navy base, NCAA blue where football has its mint, flat surfaces ═══ */
+/* ═══ The season (CFBSimPage): football's season flow (SimPage's page shell, team card, live record, pinned button,
+   round strip) in the college blue, with college football's own content under the blue section labels above ═══ */
 html.is-cfb .simp-page.cfbp {
   background: var(--cfb-navy);
   --grey-900: var(--cfb-navy-2); --grey-800: var(--cfb-navy-3); --surface: rgba(255,255,255,.035);
@@ -451,32 +387,101 @@ html.is-cfb .simp-page.cfbp {
 .cfbp .simp-team-strip { background: color-mix(in srgb, var(--team-color) 14%, var(--cfb-navy-2)); }
 .cfbp .simp-attr-table { background: var(--cfb-navy-2); border-color: var(--cfb-line); }
 .cfbp .simp-attr-row:not(:last-child) { border-bottom-color: var(--cfb-line); }
-.cfbp .simp-game-row.sgr-w { background: rgba(26,95,209,.16); }
-.cfbp .sgr-badge-w { background: rgba(26,95,209,.34); color: #fff; }
-.cfbp .sgr-w .sgr-score { color: #9fc1ff; }
 .cfbp .ag-week.is-w { background: rgba(26,95,209,.28); border-color: rgba(64,132,245,.7); }
 .cfbp .ag-week.is-w .ag-week-r { color: #8fbaff; }
 .cfbp .sm-wire-tag { background: var(--cfb-blue-hi); color: #fff; }
-.cfbp .goat-miss-card { background: var(--cfb-navy-2); border-color: var(--cfb-line); }
-.cfbp .goat-card { background: rgba(255,255,255,.035); }
 .cfbp .po-glog-row { border-left-color: var(--cfb-blue-hi); }
 .cfbp .po-glog-res b { color: #9fc1ff; }
-.cfbp .simp-best-game, .cfbp .dbt { border-color: var(--cfb-line); }
+.cfbp .simp-best-game { border-color: var(--cfb-line); }
 
-/* the AP poll under the schedule */
-.cfbp-poll .cfbs-rank { padding: 2px 4px 0; }
 /* selection day: where the committee put him, as big as football's record */
 .cfbp-sel-big { font-family: var(--ag-display, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 46px; line-height: .95; letter-spacing: .5px; text-transform: uppercase; color: #fff; }
-.cfbp-sel-sub { margin-top: -4px; text-align: left; }
 .cfbp .cfbs-field { margin-top: 0; }
-/* draft stock: the tier in football's GOAT card, in the display face */
-.cfbp-draft .goat-miss-ovr.cfbp-draft-tier { font-family: var(--ag-display, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 46px; line-height: .95; letter-spacing: .5px; text-transform: uppercase; }
-.cfbp-draft-note { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--cfb-muted); }
-.cfbp-draft-gap { padding: 4px 0; text-align: center; letter-spacing: 4px; color: var(--cfb-faint); }
-/* the Heisman card: the other finalists under his (or the winner's) line */
-.cfbp-heis-fin { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.1); }
-.cfbp-heis-fin .mvp-stat-row.is-me .mvp-stat-label { color: #fff; }
 /* a Career's college season: the season's name and the way home over the pager, his role on the team card */
 .cfbp-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(var(--safe-top, 0px) + 2px) 0 8px; }
-.cfbp-role { display: block; margin-top: 3px; font-family: var(--ag-body); font-size: 12px; color: var(--cfb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cfbp-role { display: block; margin-top: 3px; font-family: var(--ag-body); font-size: 12px; line-height: 1.25; color: var(--cfb-muted); }
 .cfbp .cfbs-actions { width: 100%; }
+
+/* a section of a season page: the blue label, then its content, full width */
+.cfbp-sec { width: 100%; min-width: 0; }
+.cfbp .simp-screen { gap: 18px; }
+
+/* the schedule, live: a window that follows the newest result (the games to come wait under it); the season
+   done: all of it, open */
+.cfbp-sched { position: relative; max-height: 238px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--cfb-line); }
+.cfbp-sched.is-open { max-height: none; overflow: visible; border-bottom: 0; }
+.cfbs-game.is-up { color: var(--cfb-faint); }
+.cfbs-game.is-up .cfbs-logo { opacity: .5; }
+.cfbs-game.is-up .cfbs-game-opp b { font-weight: 600; }
+.cfbp-sel-note { margin: -8px 0 0; font-size: 15px; }
+
+/* ── The Heisman ceremony: the finalists, the count, the vote (CFBSimPage Heisman) ── */
+.cfbh { width: 100%; border-radius: 4px; overflow: hidden; background: var(--cfb-navy-2); }
+.cfbh-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 11px 12px 8px; background: #fff; color: var(--cfb-navy); }
+.cfbh-hd b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; letter-spacing: .5px; }
+.cfbh-hd small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.8px; color: var(--cfb-blue); white-space: nowrap; }
+.cfbh-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 7px 12px 5px; background: var(--cfb-blue); font-family: var(--ag-font); font-size: 16px; letter-spacing: 2.2px; line-height: 1; }
+.cfbh-bar small { font-size: 12px; letter-spacing: 1.4px; color: rgba(255,255,255,.78); white-space: nowrap; }
+.cfbh-call { margin: 0; padding: 10px 12px 9px; font-family: var(--ag-body); font-size: 15px; line-height: 1.35; color: var(--cfb-muted); }
+.cfbh-call b { color: #fff; }
+.cfbh-list { list-style: none; margin: 0; padding: 0; }
+.cfbh-list li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; grid-template-areas: 'face who pts' 'face line pts' 'face meter meter' 'face votes votes'; align-items: center; column-gap: 10px; padding: 10px 12px; border-top: 1px solid var(--cfb-line); }
+.cfbh.is-done .cfbh-list li { grid-template-columns: 16px 56px minmax(0, 1fr) auto; grid-template-areas: 'place face who pts' 'place face line pts' 'place face meter meter' 'place face votes votes'; }
+.cfbh-place { grid-area: place; font-family: var(--ag-display); font-size: 20px; line-height: 1; text-align: center; color: var(--cfb-faint); }
+/* the face: the school's logo on a light plate, the headshot over it once it's in (never an empty frame) */
+.cfbh-face { grid-area: face; position: relative; align-self: start; width: 56px; height: 56px; border-radius: 3px; overflow: hidden; background: #f3f6fc; }
+.cfbh-face::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--school); }
+.cfbh-face-logo { position: absolute; left: 8px; top: 6px; width: 40px; height: 40px; object-fit: contain; }
+.cfbh-face-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; background: #e4eaf6; visibility: hidden; }
+.cfbh-face-photo.is-on { visibility: visible; }
+.cfbh-who { grid-area: who; min-width: 0; }
+.cfbh-who b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--ag-display); font-weight: 400; font-size: 21px; line-height: 1.05; letter-spacing: .3px; }
+.cfbh-who small { display: flex; align-items: center; gap: 5px; margin-top: 2px; overflow: hidden; white-space: nowrap; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: var(--cfb-muted); }
+.cfbh-line { grid-area: line; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--ag-body); font-size: 13px; color: var(--cfb-muted); }
+.cfbh-pts { grid-area: pts; display: grid; justify-items: end; min-width: 54px; font-variant-numeric: tabular-nums; }
+.cfbh-pts b { font-family: var(--ag-display); font-weight: 400; font-size: 25px; line-height: 1; }
+.cfbh-pts small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.2px; color: var(--cfb-muted); }
+.cfbh-meter { grid-area: meter; height: 4px; margin-top: 5px; background: rgba(255,255,255,.1); }
+.cfbh-meter i { display: block; height: 100%; background: #fff; }
+.cfbh-votes { grid-area: votes; margin-top: 3px; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.2px; color: var(--cfb-faint); }
+.cfbh-list li.is-me:not(.is-win) { box-shadow: inset 3px 0 0 var(--cfb-blue-hi); }
+.cfbh-list li.is-win { background: var(--cfb-gold); color: #1d1503; }
+.cfbh-list li.is-win :is(.cfbh-who small, .cfbh-line, .cfbh-pts small, .cfbh-votes, .cfbh-place) { color: rgba(29,21,3,.74); }
+.cfbh-list li.is-win .cfbh-meter { background: rgba(29,21,3,.18); }
+.cfbh-list li.is-win .cfbh-meter i { background: #1d1503; }
+.cfbh-me { margin: 0; padding: 9px 12px 10px; border-top: 1px solid var(--cfb-line); font-family: var(--ag-body); font-size: 14px; color: var(--cfb-muted); }
+.cfbh-me b { color: #fff; }
+
+/* ── Draft stock: the scouting report (CFBSimPage DraftPage) ── */
+.cfbp-draft .cfbs-draft-top b { font-size: 38px; }
+.cfbp-draft-nums b { font-size: 24px; }
+.cfbp-notes { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--cfb-line); }
+.cfbp-notes li { display: grid; gap: 2px; padding: 8px 0 8px 12px; border-bottom: 1px solid var(--cfb-line); box-shadow: inset 3px 0 0 #7fd99a; }
+.cfbp-notes.is-ask li { box-shadow: inset 3px 0 0 #f2a0a0; }
+.cfbp-notes b { font-family: var(--ag-font); font-weight: 400; font-size: 13px; letter-spacing: 1.6px; color: var(--cfb-muted); }
+.cfbp-notes span { font-family: var(--ag-body); font-weight: 600; font-size: 15px; line-height: 1.3; color: #fff; }
+.cfbp-board { width: 100%; border-collapse: collapse; font-family: var(--ag-body); font-size: 13px; font-variant-numeric: tabular-nums; }
+.cfbp-board th { padding: 0 6px 6px; font-family: var(--ag-font); font-weight: 400; font-size: 12px; letter-spacing: 1.4px; color: var(--cfb-muted); text-align: right; white-space: nowrap; }
+.cfbp-board td { padding: 6px; border-top: 1px solid var(--cfb-line); text-align: right; white-space: nowrap; }
+.cfbp-board .is-who { text-align: left; }
+.cfbp-board td.is-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cfbp-board td.is-who span { min-width: 0; }
+.cfbp-board td.is-who b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 700; font-size: 14px; }
+.cfbp-board td.is-who small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11.5px; color: var(--cfb-faint); }
+.cfbp-board th:first-child, .cfbp-board td.is-n { width: 22px; padding-left: 2px; text-align: left; }
+.cfbp-board td.is-n { font-family: var(--ag-font); color: var(--cfb-faint); }
+.cfbp-board td.is-proj { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.2px; color: var(--cfb-muted); }
+.cfbp-board tr.is-me td { background: var(--cfb-blue); color: #fff; }
+.cfbp-board tr.is-me :is(td.is-proj, td.is-n, small) { color: rgba(255,255,255,.86); }
+.cfbp-board tr.is-gap td { padding: 2px; text-align: center; letter-spacing: 4px; color: var(--cfb-faint); }
+
+/* the final report: which season this is, and what's next */
+.cfbp-banner-note { margin-top: 4px; opacity: .8; }
+.cfbp-next .simp-final-actions { margin-top: 0; }
+/* the transfer's team picker: the way back out */
+.tpm-cancel { display: block; margin: 12px auto 0; padding: 8px 16px; border: 0; background: none; color: var(--cfb-muted); font-family: var(--ag-font); font-size: 15px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
+/* inside a Career (CareerCollege: no navbar over the page, the dock is up): the pinned button sits above the
+   dock, which already stands clear of the ad rail (--app-bottom) */
+@media (max-width: 767px) {
+  html .cfbp.cfbp--dock .simp-cta.simp-cta--pin { bottom: var(--app-bottom, 96px); }
+}
