@@ -101,10 +101,10 @@ export function seasonEvent(r, pos, sandbox = false) {
 }
 
 // The one gap between a college grade and an NFL grade, both ways: going to college adds it (Start in College),
-// the jump to the pros takes it off (Enter the NFL Draft). A full letter grade, three steps, on every trait,
-// physical, skill and mental alike (the owner's rule, 2026-11-10; physical traits were half a letter before);
+// the jump to the pros takes it off (Enter the NFL Draft). Two steps on every trait (A+ to A-, B to C+),
+// physical, skill and mental alike (the owner's rule, 2026-11-10; it was a full letter, three steps, for a day);
 // Size is his height and weight, the same at both levels
-export const collegeGap = (pos, t) => (t === 'size' ? 0 : 3)
+export const collegeGap = (pos, t) => (t === 'size' ? 0 : 2)
 
 // The college season's draft projection, as the picks a Career's draft starts from (lib/career.js stockOf reads
 // c.college.proj): the projection's own pick range; an undrafted grade is the last picks of the seventh round

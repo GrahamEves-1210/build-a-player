@@ -41,7 +41,7 @@ const DEV_STEPS = 3                   // a returning player: one step on his thr
 const NO_BOOST = new Set(['size'])   // his frame: the college gap doesn't touch it, and a returning year doesn't develop it (cfbShared collegeGap)
 
 // the college build: the NFL build up by the college gap (cfbShared.js collegeGap, the same one the draft takes back
-// off: a full letter grade on every trait, none on Size), plus a returning year's development, capped at S
+// off: two steps on every trait, none on Size), plus a returning year's development, capped at S
 export function collegeBuild(build, types, dev = {}, pos = null) {
   const p = pos ?? (types.includes('arm') ? 'qb' : types.includes('carrying') ? 'rb' : 'wr')
   return Object.fromEntries(types.map(t => {
@@ -369,11 +369,11 @@ export default function CareerCollege({ c, setCareer, onExit }) {
         </section>
         <section>
           <h2 className="cfb-label">THE COLLEGE BOOST</h2>
-          <p className="cfbs-note">A pro talent against college competition: <b>a full letter grade on every trait</b>, none on Size. The same comes off when he enters the NFL Draft.</p>
+          <p className="cfbs-note">A pro talent against college competition: <b>two grades up on every trait</b> (a B plays like an A-), none on Size. The same comes off when he enters the NFL Draft.</p>
           <table className="cfbd-table">
             <thead><tr><th>TRAIT</th><th>NFL</th><th /><th>COLLEGE</th></tr></thead>
             <tbody>{P.types.filter(t => c.build[t]).map(t => (
-              <tr key={t}><td>{P.attr[t]?.label ?? t}<small>{NO_BOOST.has(t) ? 'His frame: no boost' : cb[t].val === c.build[t].val ? 'Already S' : cb[t].val - c.build[t].val >= 3 ? 'Full letter grade' : 'Up to S'}</small></td><td className="is-g">{valToGrade(c.build[t].val)}</td><td className="is-arrow">→</td><td className={`is-g${cb[t].val > c.build[t].val ? ' is-up' : ''}`}>{valToGrade(cb[t].val)}</td></tr>
+              <tr key={t}><td>{P.attr[t]?.label ?? t}<small>{NO_BOOST.has(t) ? 'His frame: no boost' : cb[t].val === c.build[t].val ? 'Already S' : cb[t].val - c.build[t].val >= 2 ? 'Up two grades' : 'Up to S'}</small></td><td className="is-g">{valToGrade(c.build[t].val)}</td><td className="is-arrow">→</td><td className={`is-g${cb[t].val > c.build[t].val ? ' is-up' : ''}`}>{valToGrade(cb[t].val)}</td></tr>
             ))}</tbody>
           </table>
           <p className="cfbd-note">{c.ovr} OVR → {cOvr} college OVR · {stars}-star recruit</p>
