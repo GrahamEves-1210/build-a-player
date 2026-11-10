@@ -107,7 +107,9 @@ export function ground(ctx, view, paint, key, scroll = 0, strips = STRIPS(), wal
 // The goalposts on the back line of the end zone, through the camera. For a baked picture, so they cost nothing per frame.
 export function goalPosts(ctx, view, y, big = 1) {
   if (y == null || y < 0) return
-  const q = tilt(view, 180, y), ft = big * (view.w - 16) * q.g / 160, base = q.y - 1, bar = base - 10 * ft * 1.25, half = 9.25 * ft, top = bar - 20 * ft * 1.25
+  // (POSTS: the goalposts a size up on the owner's call, pylons as they were)
+  const POSTS = 1.35
+  const q = tilt(view, 180, y), ft = big * POSTS * (view.w - 16) * q.g / 160, base = q.y - 1, bar = base - 10 * ft * 1.25, half = 9.25 * ft, top = bar - 20 * ft * 1.25
   const neck = base - (bar - base) * -0.45, lean = 3.5 * ft
   ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   // the pylons, on the four corners of the end zone
