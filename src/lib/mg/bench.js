@@ -1,11 +1,12 @@
-// Bench: the combine's 225 (the NBA's 185). In first person, flat on your back: the bar across your view with
-// its plates, your fists round it, the spotter leaning in over your head, the count on a board on the ceiling. Each tap drives the bar, gravity takes it back, at lockout the rep
+// Bench: the combine's 225 (the NBA's 185). The broadcast's shot of it: the lifter on his back on the bench, from
+// his side, the spotter over his head, the count on a board hung from the roof. Each tap drives the bar, gravity takes it back, at lockout the rep
 // counts and it comes down on its own. Every rep is heavier: strength sets a real ceiling. As the
 // reps climb the taps a rep needs climb too, until the taps can't beat gravity any more: the bar
 // grinds, and that's the set. Faster thumbs get closer to the ceiling, never past it.
 import { clamp, lerp, outcome, rngOf, prog, easeOut, easeInOut, layer, circle, text, keyCap, particles, nudge, DISPLAY, LABEL, GOOD, BAD, GOLD } from './kit.js'
-import { curve, GEAR, GEAR_NBA, clockSlab, taper, officialStrip, officialPunch, OFFICIAL_MS, calm } from './dash.js'
-import { INK, tone } from './rig.js'
+import { curve, GEAR, GEAR_NBA, clockSlab, officialStrip, officialPunch, OFFICIAL_MS, calm, standAt, clipboard, SCOUT, FOLK_SKIN } from './dash.js'
+import { INK } from './rig.js'
+import { limb, limbShade, bareHead } from './art.js'
 import { benchCeil } from './combineNorms.js'
 
 export const how = {
@@ -98,66 +99,309 @@ export function make({ v, seed, def, game, pos }) {
 }
 
 // ── The picture ─────────────────────────────────────────────────────────
-// You, on your back, looking up: the dark ceiling and its lamps, the board with the count hung from it, the
-// spotter leaning over your head with his hands ready under the bar, and the bar itself across your view, coming
-// at you as it comes down and going away from you, smaller, as you lock it out. Your fists are round it, your arms
-// up from the bottom corners. Clean shapes in two tones, one ink line, the plates' 45s in Anton.
-const STEEL = '#c6ccd1', STEEL_D = '#8c949b', RUBBER = '#1b2228'
-const SPOT = { top: '#2a3540', skin: '#6d4229', hair: '#17120e' }
-const CEIL = '#070a0d', CEIL_T = '#0b1015', MINT = '#3ddcb0'
-let jx = 0, jy = 0
-// two-bone reach: the elbow, on the given side of the line from a to b
-function reach(ax, ay, bx, by, l1, l2, side) {
-  const dx = bx - ax, dy = by - ay, full = Math.hypot(dx, dy) || 1
-  const d = clamp(full, Math.abs(l1 - l2) + 0.01, l1 + l2 - 0.01)
-  const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d)
-  const h = Math.sqrt(Math.max(0, l1 * l1 - a * a))
-  jx = ax + (dx / full) * a + side * h * (dy / full)
-  jy = ay + (dy / full) * a - side * h * (dx / full)
-}
-// a limb in two tones under one ink line
-function limb(ctx, x1, y1, r1, x2, y2, r2, col, inkW = 2.4) {
-  ctx.fillStyle = INK; taper(ctx, x1, y1, r1 + inkW, x2, y2, r2 + inkW)
-  ctx.fillStyle = tone(col, 0.74); taper(ctx, x1, y1, r1, x2, y2, r2)
-  ctx.fillStyle = col; taper(ctx, x1 - r1 * 0.2, y1 - r1 * 0.12, r1 * 0.68, x2 - r2 * 0.2, y2 - r2 * 0.12, r2 * 0.68)
-}
-// A plate seen from the middle of the bar: a tall disc, its inner face toward you with the 45 on it
-function plate(ctx, x, y, s, side) {
-  const rx = 19 * s, ry = 70 * s
-  ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(x, y, rx + 2.2, ry + 2.2, 0, 0, 6.2832); ctx.fill()
-  ctx.fillStyle = RUBBER; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 6.2832); ctx.fill()
-  ctx.fillStyle = '#242c33'; ctx.beginPath(); ctx.ellipse(x - side * rx * 0.18, y, rx * 0.72, ry * 0.86, 0, 0, 6.2832); ctx.fill()
-  if (ry > 14) { ctx.save(); ctx.translate(x - side * rx * 0.18, y - ry * 0.48); ctx.scale(0.42, 1); text(ctx, '45', 0, 0, { font: DISPLAY, size: ry * 0.34, color: 'rgba(238,242,246,.86)' }); ctx.restore() }
-}
-// a fist round the bar: the knuckles over it, a crease between each finger
-function fist(ctx, x, y, s, skin) {
-  const W = 34 * s, H = 30 * s
-  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(x - W / 2 - 2.4, y - H * 0.62 - 2.4, W + 4.8, H + 4.8, 10 * s + 2.4); ctx.fill()
-  ctx.fillStyle = tone(skin, 0.74); ctx.beginPath(); ctx.roundRect(x - W / 2, y - H * 0.62, W, H, 10 * s); ctx.fill()
-  ctx.fillStyle = skin; ctx.beginPath(); ctx.roundRect(x - W / 2 + 3 * s, y - H * 0.62 + 2 * s, W - 9 * s, H * 0.62, 8 * s); ctx.fill()
-  ctx.strokeStyle = tone(skin, 0.6); ctx.lineWidth = Math.max(1, 1.6 * s); ctx.lineCap = 'round'
-  for (let k = 1; k < 4; k++) { const fx = x - W / 2 + (W * k) / 4; ctx.beginPath(); ctx.moveTo(fx, y - H * 0.5); ctx.lineTo(fx, y - H * 0.2); ctx.stroke() }
-}
+// The broadcast's shot of it: from his side and a little above, his head to the left under the rack, so the bar
+// comes at the camera a little and you see down it from plate to plate. The spotter stands over his head with his
+// hands ready under the bar; the staff and the other prospects are along the padded wall; the count is on the board
+// hung from the roof. The same hall, the same plain kit and the same one ink line as the 40 and the throwing drills.
+// (Everything here is drawn from what the rules say: the bar's height, the reps, the strain. None of it feeds back.)
+const STEEL = '#c6ccd1', STEEL_D = '#8c949b', STEEL_DD = '#5d656c', RUBBER = '#1b2228', RUBBER_L = '#2b343c', BEAM = '#080c11'
+const PAD = '#151a1f', PAD_L = '#262e36', MINT = '#3ddcb0'
+const SPOT = { top: '#2a3540', topD: '#1f2830', trim: '#3ddcb0', pants: '#a89a80', pantsD: '#857a64', skin: '#6d4229', skinD: '#55331f', shoe: '#20262c', sole: '#e8ebe6' }
+// The bar's half-length, out to the inside of the collar, as the camera sees it, in his units: the near end comes
+// down and to the right, at the camera; the far end goes up and to the left, away from it
+const AX = 14, AY = 9, ANG = Math.atan2(AY, AX)
+const THIGH = 24, SHIN = 25, UARM = 19, FARM = 20
+// where the middle of the bar is: on his chest, locked out over his shoulders, back on the hooks over his eyes
+const BOT = [-13, -43], TOP = [-21, -71], HOOK = [-45, -73]
+const GRIP = 0.5, POST = 0.86
+// the plates on each end: where along the bar (in half-lengths), how big, what's on them
+const PLATES = { 1: [[1.04, 10.6, '45'], [1.13, 10.6, '45']], 0: [[1.04, 10.6, '45'], [1.12, 8.2, '25']] }
 const CHALK = ['#ffffff', '#e6eaee', '#d7dde2']
-// the ceiling: dark tiles, two long lamps down it. Baked; nothing on it moves
-function paintCeiling(x, view) {
-  const { w, h } = view
-  x.fillStyle = CEIL; x.fillRect(0, 0, w, h)
-  x.fillStyle = CEIL_T
-  for (let gx = -10; gx < w; gx += 60) for (let gy = 96; gy < h; gy += 60) x.fillRect(gx + 2, gy + 2, 56, 56)
-  // the lamps: short flat panels in two rows, set into the tiles
-  for (let gy = 96 + 60 * 2; gy < h; gy += 60 * 3) for (const gx of [w / 2 - 150, w / 2 + 90]) {
-    x.fillStyle = '#05080b'; x.fillRect(gx - 2, gy + 14, 64, 32)
-    x.fillStyle = '#6f7b84'; x.fillRect(gx + 2, gy + 18, 56, 24)
+
+let BG = null
+function benchOf(view) {
+  if (BG && BG.h === view.h) return BG
+  const h = view.h, U = h / 640, floor = Math.round(h * 0.8), horizon = Math.round(floor - 62 * U), padH = Math.round(44 * U)
+  const bb = Math.round(Math.min(186, h * 0.24))
+  const truss = Math.round(bb + 26 + (horizon - padH - bb - 26) * 0.2)
+  BG = { h, U, floor, horizon, padH, truss, s: 1.86 * U, ox: 204 }
+  return BG
+}
+
+// two bones from a to where the end has to be; side (+1 or -1) is which way the joint goes
+const J = { jx: 0, jy: 0, ex: 0, ey: 0 }
+function bend(ax, ay, tx, ty, l1, l2, side) {
+  let dx = tx - ax, dy = ty - ay, d = Math.hypot(dx, dy) || 0.001
+  const mx = l1 + l2 - 0.05, mn = Math.abs(l1 - l2) + 0.5
+  if (d > mx) { dx *= mx / d; dy *= mx / d; d = mx }
+  if (d < mn) { dx *= mn / d; dy *= mn / d; d = mn }
+  const a = Math.atan2(dy, dx), c = clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1), b = a + side * Math.acos(c)
+  J.jx = ax + Math.cos(b) * l1; J.jy = ay + Math.sin(b) * l1; J.ex = ax + dx; J.ey = ay + dy
+}
+
+// ── The hall ────────────────────────────────────────────────────────────
+// The throwing drill's building: dark steel siding, lamps off a truss, the padded wall with the one word on it.
+// The floor is turf at the football combine and a gym floor at the NBA's. On it, the platform, the bench and its rack:
+// none of that moves, so it's painted once.
+function paintBenchHall(x, view, G, court) {
+  const { U, floor, padH, truss, s, ox } = G, w = view.w, h = view.h, H = G.horizon, wallB = H - padH
+  const wall = x.createLinearGradient(0, 40, 0, wallB)
+  wall.addColorStop(0, '#0b1016'); wall.addColorStop(0.6, court ? '#14181f' : '#151d26'); wall.addColorStop(1, court ? '#1b2029' : '#1d2832')
+  x.fillStyle = wall; x.fillRect(0, 0, w, wallB)
+  for (let i = 12; i < w; i += 44) { x.fillStyle = 'rgba(0,0,0,.26)'; x.fillRect(i, 0, 1.5, wallB); x.fillStyle = 'rgba(255,255,255,.022)'; x.fillRect(i + 1.5, 0, 1, wallB) }
+  for (const lx of [74, 290]) {
+    x.fillStyle = 'rgba(214,228,238,.04)'
+    x.beginPath(); x.moveTo(lx - 14, truss + 37); x.lineTo(lx + 14, truss + 37); x.lineTo(lx + 66, wallB); x.lineTo(lx - 66, wallB); x.closePath(); x.fill()
+  }
+  x.fillStyle = BEAM; x.fillRect(0, truss, w, 5); x.fillRect(0, truss + 21, w, 3)
+  x.strokeStyle = BEAM; x.lineWidth = 1.6; x.beginPath()
+  for (let i = -6; i < w; i += 24) { x.moveTo(i, truss + 4); x.lineTo(i + 12, truss + 22); x.lineTo(i + 24, truss + 4) }
+  x.stroke()
+  for (const lx of [74, 290]) { x.fillStyle = BEAM; x.fillRect(lx - 1, truss + 24, 2, 7); x.fillRect(lx - 15, truss + 31, 30, 4); x.fillStyle = '#c9d3da'; x.fillRect(lx - 13, truss + 35, 26, 1.6) }
+  // the padded wall
+  x.fillStyle = court ? '#3a1a0c' : '#102a44'; x.fillRect(0, wallB, w, padH)
+  x.fillStyle = 'rgba(0,0,0,.2)'; for (let i = 30; i < w; i += 60) x.fillRect(i, wallB, 1.5, padH)
+  x.fillStyle = court ? '#ee7a2c' : '#2f7fb8'; x.fillRect(0, wallB, w, 4 * U); x.fillRect(0, H - 6 * U, w, 3 * U)
+  for (const f of [0.25, 0.75]) text(x, 'COMBINE', w * f, wallB + padH / 2, { font: DISPLAY, size: 21 * U, color: 'rgba(255,255,255,.2)', track: 4 })
+  // the floor
+  if (court) {
+    const wood = x.createLinearGradient(0, H, 0, h)
+    wood.addColorStop(0, '#8a5a30'); wood.addColorStop(0.4, '#a26c3c'); wood.addColorStop(1, '#b67c47')
+    x.fillStyle = wood; x.fillRect(0, H, w, h - H)
+    // the boards, end to end, the rows wider apart toward the camera
+    let y = H, gap = 2.2, row = 0
+    while (y < h) {
+      x.fillStyle = 'rgba(40,20,6,.22)'; x.fillRect(0, y, w, 0.8)
+      const len = 70 + gap * 8
+      for (let bx = ((row * 37) % len) - len; bx < w; bx += len) x.fillRect(bx, y, 0.8, gap)
+      if (row % 3 === 1) { x.fillStyle = 'rgba(255,230,190,.05)'; x.fillRect(0, y + 1, w, gap - 1) }
+      y += gap; gap *= 1.1; row++
+    }
+    x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(0, H, w, 2 * U)
+    x.fillStyle = 'rgba(255,255,255,.62)'; x.fillRect(0, H + 9 * U, w, 1.8 * U)
+  } else {
+    const turf = x.createLinearGradient(0, H, 0, h)
+    turf.addColorStop(0, '#1d6a3b'); turf.addColorStop(0.35, '#23793f'); turf.addColorStop(1, '#2a8a4a')
+    x.fillStyle = turf; x.fillRect(0, H, w, h - H)
+    const vx = 180, vy = H - 150 * U, at = (fx, y) => vx + (fx - vx) * (y - vy) / (floor - vy)
+    x.fillStyle = 'rgba(0,0,0,.055)'
+    for (let fx = -300; fx < w + 300; fx += 120) { x.beginPath(); x.moveTo(at(fx, H), H); x.lineTo(at(fx + 60, H), H); x.lineTo(at(fx + 60, h), h); x.lineTo(at(fx, h), h); x.closePath(); x.fill() }
+    let y = H, gap = 1.4
+    while (y < h) { x.fillStyle = 'rgba(0,0,0,.055)'; x.fillRect(0, y, w, 1); y += gap; gap *= 1.11 }
+    x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(0, H, w, 2 * U)
+    x.fillStyle = 'rgba(255,255,255,.5)'; x.fillRect(0, H + 5 * U, w, 1.6 * U)
+  }
+  // the platform, the bench and the rack's far side, in his units
+  x.save(); x.translate(ox, floor); x.scale(s, s)
+  x.lineCap = 'round'; x.lineJoin = 'round'
+  const P = (ux, f) => [ux + AX * f, AY * f]
+  // the platform: a slab of black rubber on the floor, its front edge toward the camera
+  const [ax0, ay0] = P(-98, -1.25), [ax1, ay1] = P(64, -1.25), [ax2, ay2] = P(64, 1.25), [ax3, ay3] = P(-98, 1.25)
+  x.fillStyle = 'rgba(0,0,0,.3)'; x.beginPath(); x.moveTo(ax0 - 3, ay0 + 2); x.lineTo(ax1 + 5, ay1 + 2); x.lineTo(ax2 + 5, ay2 + 6); x.lineTo(ax3 - 3, ay3 + 6); x.closePath(); x.fill()
+  x.fillStyle = '#12171c'; x.beginPath(); x.moveTo(ax3, ay3 - 2.6); x.lineTo(ax2, ay2 - 2.6); x.lineTo(ax2, ay2); x.lineTo(ax3, ay3); x.closePath(); x.fill()
+  x.fillStyle = '#1e252c'; x.strokeStyle = INK; x.lineWidth = 0.9
+  x.beginPath(); x.moveTo(ax0, ay0 - 2.6); x.lineTo(ax1, ay1 - 2.6); x.lineTo(ax2, ay2 - 2.6); x.lineTo(ax3, ay3 - 2.6); x.closePath(); x.fill(); x.stroke()
+  x.strokeStyle = 'rgba(255,255,255,.05)'; x.lineWidth = 0.6; x.beginPath()
+  for (let k = 1; k < 6; k++) { const f = -1.25 + k * (2.5 / 6), [p0, q0] = P(-98, f), [p1, q1] = P(64, f); x.moveTo(p0, q0 - 2.6); x.lineTo(p1, q1 - 2.6) }
+  x.stroke()
+  x.fillStyle = view.accent; x.globalAlpha = 0.75; x.beginPath(); x.moveTo(ax3, ay3 - 2.6); x.lineTo(ax2, ay2 - 2.6); x.lineTo(ax2, ay2 - 1.8); x.lineTo(ax3, ay3 - 1.8); x.closePath(); x.fill(); x.globalAlpha = 1
+  // the rack's base: a steel foot across under his head, from the far upright to the near one
+  const [fb0, fb1] = P(HOOK[0], -POST), [nb0, nb1] = P(HOOK[0], POST)
+  for (const [col, wd] of [[INK, 5.2], [STEEL_DD, 3.6]]) { x.strokeStyle = col; x.lineWidth = wd; x.beginPath(); x.moveTo(fb0 - 3, fb1 - 3.4); x.lineTo(nb0 - 3, nb1 - 3.4); x.stroke() }
+  // the bench: the far legs, the frame, the pad, the near legs
+  const legs = [-42, 14]
+  for (const lx of legs) { const [p, q] = P(lx, -0.24); x.fillStyle = INK; x.fillRect(p - 2.2, q - 17, 4.4, 15); x.fillStyle = STEEL_DD; x.fillRect(p - 1.3, q - 16.5, 2.6, 14) }
+  x.fillStyle = INK; x.fillRect(-48, -17.4, 70, 4.6); x.fillStyle = STEEL_D; x.fillRect(-47, -16.6, 68, 3)
+  x.fillStyle = INK; x.beginPath(); x.roundRect(-52, -23.4, 77, 7.8, 3); x.fill()
+  x.fillStyle = PAD; x.beginPath(); x.roundRect(-51.2, -22.6, 75.4, 6.2, 2.4); x.fill()
+  x.fillStyle = PAD_L; x.fillRect(-49, -22.2, 71, 1.2)
+  for (const lx of legs) {
+    const [p, q] = P(lx, 0.24)
+    x.fillStyle = INK; x.fillRect(p - 2.4, q - 17.6, 4.8, 16.2); x.fillStyle = STEEL_D; x.fillRect(p - 1.4, q - 17, 2.8, 15)
+    // its foot on the platform
+    x.fillStyle = INK; x.beginPath(); x.roundRect(p - 5, q - 3.6, 10, 3.6, 1.4); x.fill(); x.fillStyle = '#2b333b'; x.fillRect(p - 4.2, q - 3, 8.4, 2)
+  }
+  x.restore()
+  // the corners fall away
+  const dim = x.createRadialGradient(w / 2, h * 0.56, h * 0.3, w / 2, h * 0.56, h * 0.74)
+  dim.addColorStop(0, 'rgba(0,0,0,0)'); dim.addColorStop(1, 'rgba(0,0,0,.3)')
+  x.fillStyle = dim; x.fillRect(0, 0, w, h)
+}
+// An upright of the rack and its hook: f, which side (-POST far, POST near)
+function upright(ctx, f) {
+  const px = HOOK[0] + AX * f - 3, py = AY * f, cup = HOOK[1] + AY * f + 2.2
+  ctx.fillStyle = INK; ctx.fillRect(px - 2.6, py - 88, 5.2, 85.6)
+  ctx.fillStyle = f < 0 ? STEEL_DD : STEEL_D; ctx.fillRect(px - 1.6, py - 87, 3.2, 83.8)
+  if (f > 0) { ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(px - 1.4, py - 86, 0.9, 82) }
+  // the holes up it, and the hook: a cup the bar sits down into, its lip toward his feet
+  ctx.fillStyle = 'rgba(8,12,16,.6)'; for (let k = 0; k < 7; k++) ctx.fillRect(px - 0.5, py - 84 + k * 6.4, 1, 1.6)
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(px, cup - 1); ctx.lineTo(px + 7.4, cup - 1); ctx.lineTo(px + 7.4, cup - 5.4); ctx.lineTo(px + 9.8, cup - 5.4); ctx.lineTo(px + 9.8, cup + 2.6); ctx.lineTo(px, cup + 2.6); ctx.closePath(); ctx.fill()
+  ctx.fillStyle = f < 0 ? STEEL_D : STEEL; ctx.fillRect(px + 0.6, cup - 0.2, 8.4, 2); ctx.fillRect(px + 7.9, cup - 4.6, 1.2, 4.4)
+}
+// A plate, seen nearly face on: its face, its rim, the hub, the number on it. f: where along the bar it is
+function plateAt(ctx, cx, cy, R, label, f) {
+  const near = f > 0, rx = R * 0.58, th = 2.2 * (near ? -1 : 1)
+  // (the rim: the plate's thickness, toward the bar's middle for the near ones, the far ones' outside face behind)
+  const bx = cx + Math.cos(ANG) * th, by = cy + Math.sin(ANG) * th, mx = -Math.sin(ANG) * R, my = Math.cos(ANG) * R
+  ctx.fillStyle = INK
+  ctx.beginPath(); ctx.ellipse(bx, by, rx + 0.9, R + 0.9, ANG, 0, 6.2832); ctx.fill()
+  ctx.beginPath(); ctx.moveTo(cx + mx * 1.08, cy + my * 1.08); ctx.lineTo(bx + mx * 1.08, by + my * 1.08); ctx.lineTo(bx - mx * 1.08, by - my * 1.08); ctx.lineTo(cx - mx * 1.08, cy - my * 1.08); ctx.closePath(); ctx.fill()
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx + 0.9, R + 0.9, ANG, 0, 6.2832); ctx.fill()
+  ctx.fillStyle = '#11161b'; ctx.beginPath(); ctx.ellipse(bx, by, rx, R, ANG, 0, 6.2832); ctx.fill()
+  ctx.beginPath(); ctx.moveTo(cx + mx, cy + my); ctx.lineTo(bx + mx, by + my); ctx.lineTo(bx - mx, by - my); ctx.lineTo(cx - mx, cy - my); ctx.closePath(); ctx.fill()
+  ctx.fillStyle = RUBBER; ctx.beginPath(); ctx.ellipse(cx, cy, rx, R, ANG, 0, 6.2832); ctx.fill()
+  ctx.fillStyle = RUBBER_L; ctx.beginPath(); ctx.ellipse(cx - mx * 0.06, cy - my * 0.06, rx * 0.74, R * 0.74, ANG, 0, 6.2832); ctx.fill()
+  ctx.fillStyle = RUBBER; ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.6, R * 0.6, ANG, 0, 6.2832); ctx.fill()
+  ctx.fillStyle = STEEL_D; ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.2, R * 0.2, ANG, 0, 6.2832); ctx.fill()
+  if (near) {
+    ctx.save(); ctx.translate(cx - mx * 0.67, cy - my * 0.67); ctx.rotate(ANG); ctx.scale(0.58, 1)
+    text(ctx, label, 0, 0, { font: DISPLAY, size: R * 0.38, color: 'rgba(238,242,246,.88)' })
+    ctx.restore()
   }
 }
+
+// ── The lifter, on his back ───────────────────────────────────────────────
+// The QB's long limbs and two flat tones, lying down: shirt, shorts, a low sock, flat shoes on the floor
+function benchLeg(ctx, hx, hy, ax, ay, far, c) {
+  bend(hx, hy, ax, ay, THIGH, SHIN, -1)
+  const jx = J.jx, jy = J.jy, ex = J.ex, ey = J.ey
+  const skin = far ? c.skinD : c.skin, dark = far ? '#5a3723' : c.skinD
+  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, hx, hy, 8.4, jx, jy, 6.1, 1, 1); limb(ctx, jx, jy, 6.1, ex, ey, 4.1, 0.2, 1.9); ctx.fill()
+  ctx.fillStyle = skin; ctx.beginPath(); limb(ctx, hx, hy, 7.4, jx, jy, 5.1, 1, 1); limb(ctx, jx, jy, 5.1, ex, ey, 3.1, 0.2, 1.9); ctx.fill()
+  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, jx, jy, 5.1, ex, ey, 3.1, 0.2, 1.9); ctx.fill()
+  const sl = Math.hypot(ex - jx, ey - jy) || 1, nx = -(ey - jy) / sl, ny = (ex - jx) / sl, sa = lerp(jx, ex, 0.68), sb = lerp(jy, ey, 0.68)
+  ctx.fillStyle = far ? c.sockD : c.sock; ctx.beginPath(); ctx.moveTo(sa + nx * 3.7, sb + ny * 3.7); ctx.lineTo(ex + nx * 3.1, ey + ny * 3.1); ctx.lineTo(ex - nx * 3.1, ey - ny * 3.1); ctx.lineTo(sa - nx * 3.7, sb - ny * 3.7); ctx.closePath(); ctx.fill()
+  // the shoe, flat on the platform, toes toward the camera's right
+  ctx.save(); ctx.translate(ex, ey)
+  ctx.fillStyle = far ? c.shoeD : c.shoe; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.beginPath()
+  ctx.moveTo(-4.4, 3.8); ctx.lineTo(-4.6, -1); ctx.quadraticCurveTo(-1, -3, 3, -1.2); ctx.quadraticCurveTo(8.6, 0, 11, 2.2); ctx.quadraticCurveTo(11.8, 3.6, 10.6, 3.8); ctx.closePath(); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = c.sole; ctx.fillRect(-4.4, 3.4, 15.2, 1.3)
+  ctx.restore()
+  // the shorts, to the middle of the thigh
+  const mx = lerp(hx, jx, 0.6), my = lerp(hy, jy, 0.6)
+  ctx.fillStyle = far ? c.shortsD : c.shorts; ctx.beginPath(); limb(ctx, hx, hy, 8.4, mx, my, 7.4, 0.6, 0.6, true); ctx.fill()
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.stroke()
+  if (!far) { ctx.strokeStyle = c.topD; ctx.lineWidth = 1.5; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(hx, hy - 6); ctx.lineTo(mx, my - 6.6); ctx.stroke(); ctx.lineCap = 'round' }
+}
+// an arm from the shoulder to a fist; the elbow goes down beside the bench, toward his feet
+function benchArm(ctx, sx, sy, hx, hy, far, c) {
+  bend(sx, sy, hx, hy, UARM, FARM, 1)
+  const jx = J.jx, jy = J.jy, ex = J.ex, ey = J.ey, fl = Math.hypot(ex - jx, ey - jy) || 1, ux = (ex - jx) / fl, uy = (ey - jy) / fl
+  const skin = far ? c.skinD : c.skin, dark = far ? '#5a3723' : c.skinD
+  const wx = ex - ux * 2.6, wy = ey - uy * 2.6
+  ctx.fillStyle = INK; ctx.beginPath()
+  limb(ctx, sx, sy, 6.9, jx, jy, 5.2, 0.8, 0.8); limb(ctx, jx, jy, 5.2, wx, wy, 3.5, 1.6, 1.6); ctx.fill()
+  circle(ctx, ex, ey, 5); ctx.fill()
+  ctx.fillStyle = skin; ctx.beginPath(); limb(ctx, jx, jy, 4.2, wx, wy, 2.5, 1.6, 1.6); ctx.fill()
+  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, jx, jy, 4.2, wx, wy, 2.5, 1.6, 1.6); ctx.fill()
+  // the fist round the bar: the knuckles over it
+  ctx.fillStyle = skin; circle(ctx, ex, ey, 3.9); ctx.fill()
+  ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(ex, ey, 3.9, ANG, ANG + Math.PI); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(ex - ux * 1.6 - uy * 2.6, ey - uy * 1.6 + ux * 2.6); ctx.lineTo(ex - ux * 1.6 + uy * 2.6, ey - uy * 1.6 - ux * 2.6); ctx.stroke()
+  // the upper arm: skin below a short sleeve
+  const mx = lerp(sx, jx, 0.55), my = lerp(sy, jy, 0.55), tl = Math.hypot(jx - sx, jy - sy) || 1, nx = -(jy - sy) / tl, ny = (jx - sx) / tl
+  ctx.fillStyle = skin; ctx.beginPath(); limb(ctx, sx, sy, 5.8, jx, jy, 4.2, 0.8, 0.8); ctx.fill()
+  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, sx, sy, 5.8, jx, jy, 4.2, 0.8, 0.8); ctx.fill()
+  ctx.fillStyle = far ? c.topD : c.top; ctx.beginPath(); limb(ctx, sx, sy, 6.5, mx, my, 5.6, 0.6, 0.6, true); ctx.fill()
+  ctx.fillStyle = far ? 'rgba(0,0,0,.12)' : c.topD; ctx.beginPath(); limbShade(ctx, sx, sy, 6.5, mx, my, 5.6, 0.6, 0.6); ctx.fill()
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(mx - nx * 5.8, my - ny * 5.8); ctx.lineTo(mx + nx * 5.8, my + ny * 5.8); ctx.stroke(); ctx.lineCap = 'round'
+}
+// the torso on the pad: a flat back, the chest up off it, the belly down to the waist. arch: the chest comes up as he drives
+function benchTorso(ctx, c, arch) {
+  const a = arch * 1.6
+  ctx.fillStyle = c.top; ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath()
+  ctx.moveTo(15, -22.4); ctx.lineTo(-27, -22.4)
+  ctx.quadraticCurveTo(-33.5, -24, -32, -31); ctx.quadraticCurveTo(-30.5, -37.5, -24, -39 - a)
+  ctx.quadraticCurveTo(-14, -43.6 - a, -6, -41.6 - a); ctx.quadraticCurveTo(2, -39.4 - a * 0.6, 7, -35.6 - a * 0.3)
+  ctx.quadraticCurveTo(13, -33, 16, -31); ctx.closePath(); ctx.fill(); ctx.stroke()
+  // the side away from the lamps, along his back; a fold where the shirt gathers at the belly
+  ctx.fillStyle = c.topD; ctx.beginPath()
+  ctx.moveTo(15, -22.4); ctx.lineTo(-27, -22.4); ctx.quadraticCurveTo(-31, -23.6, -31.6, -27.6); ctx.quadraticCurveTo(-8, -26.2, 15.6, -27.4); ctx.closePath()
+  ctx.moveTo(10, -33.6); ctx.quadraticCurveTo(5, -32, 1.4, -34.4); ctx.quadraticCurveTo(5, -33.4, 9.6, -32.4); ctx.closePath()
+  ctx.fill()
+  ctx.strokeStyle = c.trim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-31.2, -27); ctx.quadraticCurveTo(-29.6, -31, -30.6, -35); ctx.stroke()
+  // the waistband
+  ctx.fillStyle = c.shorts; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.roundRect(11.4, -33.2, 7.6, 11.2, 3); ctx.fill(); ctx.stroke()
+}
+
+// ── The spotter ─────────────────────────────────────────────────────────
+// Staff: a dark polo, khakis. He stands over the lifter's head facing his feet and leans in over the bar
+function spotLeg(ctx, hx, hy, ax, ay, far) {
+  bend(hx, hy, ax, ay, THIGH, SHIN, -1)
+  const jx = J.jx, jy = J.jy, ex = J.ex, ey = J.ey, col = far ? SPOT.pantsD : SPOT.pants
+  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, hx, hy, 8, jx, jy, 6.4, 0.8, 0.8); limb(ctx, jx, jy, 6.4, ex, ey, 5, 0.6, 0.6); ctx.fill()
+  ctx.fillStyle = col; ctx.beginPath(); limb(ctx, hx, hy, 7, jx, jy, 5.4, 0.8, 0.8); limb(ctx, jx, jy, 5.4, ex, ey, 4, 0.6, 0.6); ctx.fill()
+  ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.beginPath(); limbShade(ctx, jx, jy, 5.4, ex, ey, 4, 0.6, 0.6); ctx.fill()
+  ctx.save(); ctx.translate(ex, ey + 1)
+  ctx.fillStyle = far ? '#14181c' : SPOT.shoe; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.beginPath()
+  ctx.moveTo(-4.4, 3.8); ctx.lineTo(-4.6, -1); ctx.quadraticCurveTo(-1, -3, 3, -1.2); ctx.quadraticCurveTo(8.6, 0, 11, 2.2); ctx.quadraticCurveTo(11.8, 3.6, 10.6, 3.8); ctx.closePath(); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = SPOT.sole; ctx.fillRect(-4.4, 3.4, 15.2, 1.3)
+  ctx.restore()
+}
+function spotArm(ctx, sx, sy, tx, ty, far) {
+  bend(sx, sy, tx, ty, UARM, FARM, 1)
+  const jx = J.jx, jy = J.jy, ex = J.ex, ey = J.ey
+  const skin = far ? SPOT.skinD : SPOT.skin
+  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, sx, sy, 6.3, jx, jy, 4.8, 0.8, 0.8); limb(ctx, jx, jy, 4.8, ex, ey, 3.3, 1.2, 1.2); ctx.fill()
+  circle(ctx, ex, ey, 4.4); ctx.fill()
+  ctx.fillStyle = skin; ctx.beginPath(); limb(ctx, jx, jy, 3.8, ex, ey, 2.3, 1.2, 1.2); ctx.fill()
+  circle(ctx, ex, ey, 3.4); ctx.fill()
+  ctx.fillStyle = SPOT.skinD; ctx.beginPath(); limbShade(ctx, jx, jy, 3.8, ex, ey, 2.3, 1.2, 1.2); ctx.fill()
+  const mx = lerp(sx, jx, 0.6), my = lerp(sy, jy, 0.6)
+  ctx.fillStyle = skin; ctx.beginPath(); limb(ctx, sx, sy, 5.2, jx, jy, 3.8, 0.8, 0.8); ctx.fill()
+  ctx.fillStyle = far ? SPOT.topD : SPOT.top; ctx.beginPath(); limb(ctx, sx, sy, 6, mx, my, 5.1, 0.6, 0.6, true); ctx.fill()
+  ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.beginPath(); limbShade(ctx, sx, sy, 6, mx, my, 5.1, 0.6, 0.6); ctx.fill()
+}
+const SP = { sx: 0, sy: 0 }
+function spotterBody(ctx, hipX, lean, look) {
+  const hipY = -50, sl = Math.sin(lean), cl = Math.cos(lean), T = 34
+  const sx = hipX + sl * T, sy = hipY - cl * T
+  SP.sx = sx; SP.sy = sy + 3
+  spotLeg(ctx, hipX - 1, hipY, hipX - 4 - AX * 0.16, -4.6 - AY * 0.16, true)
+  spotLeg(ctx, hipX + 1, hipY, hipX + 1 + AX * 0.16, -4.6 + AY * 0.16, false)
+  ctx.fillStyle = SPOT.pants; ctx.beginPath(); limb(ctx, hipX - 0.6, hipY - 2, 8.6, hipX, hipY + 3, 8); ctx.fill()
+  const hx = sx + Math.sin(lean + 0.25) * 13, hy = sy - Math.cos(lean + 0.25) * 13
+  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, sx, sy + 1, 5.6, hx - 0.6, hy, 5); ctx.fill()
+  ctx.fillStyle = SPOT.skinD; ctx.beginPath(); limb(ctx, sx, sy + 1, 4.6, hx - 0.6, hy, 4.1); ctx.fill()
+  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(lean)
+  const t = -T
+  ctx.fillStyle = SPOT.top; ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath()
+  ctx.moveTo(-9, 2); ctx.quadraticCurveTo(-12, t * 0.5, -10.4, t + 6); ctx.quadraticCurveTo(-9.6, t - 2.6, -1, t - 2.6); ctx.quadraticCurveTo(9, t - 2.2, 10.4, t + 7); ctx.quadraticCurveTo(11.4, t * 0.42, 9, 2); ctx.closePath(); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = SPOT.topD; ctx.beginPath()
+  ctx.moveTo(-9, 2); ctx.quadraticCurveTo(-12, t * 0.5, -10.4, t + 6); ctx.quadraticCurveTo(-10, t - 1.4, -7, t - 2.2); ctx.quadraticCurveTo(-3.8, t * 0.5, -4, 2); ctx.closePath(); ctx.fill()
+  // the polo's collar, and the staff's mint on the chest
+  ctx.strokeStyle = '#3a4754'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-4.6, t - 2.2); ctx.quadraticCurveTo(0.6, t + 1.2, 5.4, t - 1.6); ctx.stroke()
+  ctx.fillStyle = SPOT.trim; ctx.fillRect(3.4, t + 8, 3, 1.4)
+  ctx.restore()
+  ctx.fillStyle = INK; ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(lean); ctx.fillRect(-9.4, -0.2, 18.8, 1.1); ctx.restore()
+  ctx.save(); ctx.translate(hx, hy); ctx.rotate(look); bareHead(ctx, 0, 0, 'side', SPOT.skin); ctx.restore()
+  return { hx, hy }
+}
+
+// The staff and the other prospects, the art layer's plain figures. Each look is one object, so its sprite is painted once
+const LOOKS = new Map()
+function lookOf(key, base, pose) {
+  const id = `${key}|${pose}`
+  let o = LOOKS.get(id)
+  if (!o) { o = { ...base, ...(pose ? { pose } : null) }; LOOKS.set(id, o) }
+  return o
+}
+// (made on first use: dash.js and this file load each other's neighbours, so its SCOUT isn't there yet at load)
+const COACH_K = 1.76
+const coachOf = pose => lookOf('coach', { ...SCOUT, color: '#2a3540', skin: FOLK_SKIN[1], size: COACH_K }, pose)
+const counterOf = () => lookOf('counter', { ...SCOUT, skin: FOLK_SKIN[2], size: 1.3 }, null)
+const MATES = [276, 300, 324, 348], MATE_SKIN = [0, 3, 2, 4]
+
 export function draw(ctx, g, view) {
   const { w, h } = view
   const court = g.load < 1
   const c = court ? GEAR_NBA : GEAR
-  layer(ctx, view, `bench-fp-${h}`, x => paintCeiling(x, view))
+  const G = benchOf(view), { s, ox, floor: F, U } = G
+  layer(ctx, view, `bench-tp-${court ? 1 : 0}`, x => paintBenchHall(x, view, G, court))
+  const quiet = calm()
 
-  // the bar's travel: down at your chest, near and big; locked out over your shoulders, further and smaller
+  // the bar's travel: on his chest, locked out over his shoulders; once the clock's gone, the spotter's hands on it
+  // and back onto the hooks
   let hh = g.h
   if (g.done) hh = lerp(g.overH ?? g.h, 1.03, easeOut(prog(g.t, g.overAt, g.overAt + 480)))
   const strain = g.done ? 0 : g.strain
@@ -165,33 +409,36 @@ export function draw(ctx, g, view) {
   const RACK = 700                               // ms after the clock: the bar's on the hooks, with the spotter's hands on it
   const rack = g.done ? easeInOut(prog(over, 440, RACK)) : 0, off = g.done ? easeOut(prog(over, RACK + 60, RACK + 320)) : 0
   const tick = g.t / 16
-  const shake = strain * strain * 2.6
-  const chestY = h * 0.72, lockY = h * 0.45, rackY = h * 0.39
-  const sb = lerp(lerp(1.02, 0.66, hh), 0.56, rack)
-  const barY = lerp(lerp(chestY, lockY, hh), rackY, rack) + Math.sin(tick * 1.9) * shake + Math.sin(tick * 3.1) * shake * 0.5
+  const shake = quiet ? 0 : strain * strain * 1.3
+  let bx = lerp(BOT[0], TOP[0], easeOut(clamp(hh, 0, 1))), by = lerp(BOT[1], TOP[1], hh)
+  bx = lerp(bx, HOOK[0], rack); by = lerp(by, HOOK[1], rack)
+  by += Math.sin(tick * 1.9) * shake + Math.sin(tick * 3.1) * shake * 0.5
   // the bar's a spring with weight on its ends: they hang, they whip at the top of a rep, they jump at a tap
   const ageRep = g.t - g.repAt, ageTap = g.t - g.tapAt, ageRack = over - RACK
   let flex = (court ? 1.1 : 1.8) + strain * 1.1
-  if (ageRep < 560) flex += 3.3 * (1 + strain * 0.5) * Math.exp(-ageRep / 170) * Math.cos(ageRep / 26)
-  if (ageTap < 170 && !g.done) flex += 1 * Math.exp(-ageTap / 70)
-  if (ageRack > 0 && ageRack < 520) flex += 3 * Math.exp(-ageRack / 150) * Math.cos(ageRack / 24)
-  const onBar = dx => [w / 2 + dx * sb, barY + (flex * dx * dx * sb) / 5200]
+  if (!quiet) {
+    if (ageRep < 560) flex += 3.3 * (1 + strain * 0.5) * Math.exp(-ageRep / 170) * Math.cos(ageRep / 26)
+    if (ageTap < 170 && !g.done) flex += 1 * Math.exp(-ageTap / 70)
+    if (ageRack > 0 && ageRack < 520) flex += 3 * Math.exp(-ageRack / 150) * Math.cos(ageRack / 24)
+  }
+  const OB = [0, 0]
+  const onBar = f => { OB[0] = bx + AX * f; OB[1] = by + AY * f + flex * 0.34 * f * f; return OB }
+  const scr = (ux, uy) => [ox + ux * s, F + uy * s]
   // what happens once. Particles and the camera are the picture's: the rules never see them
   g.dirt ??= particles(24, g.need + 3)
   g.nudge ??= nudge()
-  const GRIP = 98
   if (g.tapAt > 0 && !g.chalked) {
     g.chalked = true
-    const [hx, hy] = onBar(GRIP)
-    g.dirt.burst('dust', hx, hy, g.t, { n: 6, s: sb * 2, colors: CHALK, spread: 1.5 })
+    const [ux, uy] = onBar(GRIP), [hx, hy] = scr(ux, uy)
+    g.dirt.burst('dust', hx, hy, g.t, { n: 6, s: s * 1.1, colors: CHALK, spread: 1.5 })
   }
   if (g.reps !== g.seenRep) {
     g.seenRep = g.reps
     if (g.reps) {
       const hard = g.strain > 0.45
       if (hard) g.nudge.kick(g.t, 1.1, 0, -1, 130)
-      const [hx, hy] = onBar(g.reps % 2 ? GRIP : -GRIP)
-      if (g.reps % 4 === 0) g.dirt.burst('dust', hx, hy, g.t, { n: 3, s: sb * 1.6, colors: CHALK, spread: 1.4 })
+      const [ux, uy] = onBar(g.reps % 2 ? GRIP : -GRIP), [hx, hy] = scr(ux, uy)
+      if (g.reps % 4 === 0) g.dirt.burst('dust', hx, hy, g.t, { n: 3, s: s * 0.9, colors: CHALK, spread: 1.4 })
     }
   }
   if (g.done && !g.racked && over >= RACK) {
@@ -200,76 +447,118 @@ export function draw(ctx, g, view) {
   }
   if (g.done && !g.official && over >= OFFICIAL_MS) { g.official = true; g.fx.push('stamp') }
 
-  // the board on the ceiling, with the count on it (the slab's over it, as in every timed drill)
-  const boardTop = 104, boardBot = Math.round(Math.min(186, h * 0.24))
-  drawBoard(ctx, g, view, boardTop, boardBot)
-
-  // the hooks the bar goes back to, on the uprights either side of your head
-  for (const sd of [-1, 1]) {
-    const hx = w / 2 + sd * 172 * 0.56, hy = rackY + 4
-    ctx.fillStyle = INK; ctx.fillRect(hx - 9, hy - 2, 18, 16)
-    ctx.fillStyle = STEEL_D; ctx.fillRect(hx - 7, hy, 14, 12)
-  }
-  // the spotter, leaning in over your head: his shoulders, his head between them, his hands under the bar
-  const lean = strain * 8 + rack * 10, shY = boardBot + 22 + lean, hdY = shY + 38 + lean * 0.4
-  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(w / 2 - 82, shY - 26, 164, 58, 26); ctx.fill()
-  ctx.fillStyle = tone(SPOT.top, 0.74); ctx.beginPath(); ctx.roundRect(w / 2 - 79.6, shY - 23.6, 159.2, 53.2, 24); ctx.fill()
-  ctx.fillStyle = SPOT.top; ctx.beginPath(); ctx.roundRect(w / 2 - 74, shY - 21, 140, 40, 20); ctx.fill()
-  for (const sd of [-1, 1]) {
-    const sx = w / 2 + sd * 60, sy = shY + 6
-    // his hands: on the bar near the top, ready under it below (he can only reach so far)
-    const [bx, by] = onBar(sd * 30)
-    const dx = bx - sx, dy = by + 6 - sy, dl = Math.hypot(dx, dy) || 1, far = Math.min(1, 176 / dl)
-    const hx = sx + dx * far, hy = sy + dy * far
-    reach(sx, sy, hx, hy, 92, 92, sd)
-    const ex = jx, ey = jy
-    limb(ctx, sx, sy, 15, ex, ey, 12, SPOT.top)
-    limb(ctx, ex, ey, 12, hx, hy, 9, SPOT.skin)
-    ctx.fillStyle = INK; circle(ctx, hx, hy, 11.4); ctx.fill(); ctx.fillStyle = tone(SPOT.skin, 0.74); circle(ctx, hx, hy, 9.2); ctx.fill()
-  }
-  ctx.fillStyle = INK; circle(ctx, w / 2, hdY, 31.4); ctx.fill()
-  ctx.fillStyle = tone(SPOT.skin, 0.74); circle(ctx, w / 2, hdY, 29); ctx.fill()
-  ctx.fillStyle = SPOT.skin; circle(ctx, w / 2 - 5, hdY + 3, 21); ctx.fill()
-  // (looking down at you: the crown of his head toward the top, the hair on it)
-  ctx.fillStyle = SPOT.hair; ctx.beginPath(); ctx.arc(w / 2, hdY, 29, Math.PI * 1.08, Math.PI * 1.92); ctx.quadraticCurveTo(w / 2, hdY - 14, w / 2 - 28, hdY - 9); ctx.fill()
-  if (!g.done && g.reps > 0 && strain > 0.55 && Math.floor(g.t / 460) % 2 === 0) {
-    text(ctx, 'UP!', w / 2 + 78, hdY + 6, { font: DISPLAY, size: 26, color: '#fff' })
+  // how the room takes it. Past what he needs, the prospects along the wall get loud with each rep; once the number's
+  // official, a good set gets a hand and a big one has them all up. A short set gets nothing
+  const verdict = !!(g.done && g.stamp && g.t >= g.stamp.at)
+  const hit = !!g.done?.hit
+  const big = hit && g.reps >= g.need + Math.max(2, Math.round((g.ceil - g.need) * 0.6))
+  const loud = !g.done && g.reps >= g.need && ageRep < 520
+  const sy = G.horizon + 6
+  standAt(ctx, 24, sy, counterOf())
+  clipboard(ctx, 24 - 7 * 1.3, sy - 19.5 * 1.3 + 4, 1.05)
+  for (let i = 0; i < MATES.length; i++) {
+    const pose = verdict ? (big ? 'arms-up' : hit ? (i % 2 ? 'catch-l' : null) : (i === 2 ? 'hips' : null)) : loud && (i + g.reps) % 2 === 0 ? 'catch-r' : null
+    standAt(ctx, MATES[i], sy - (i % 2) * 3 * U, lookOf(`mate${court ? 'n' : 'f'}${i}`, { color: c.top, trim: c.trim, pants: c.shorts, skin: FOLK_SKIN[MATE_SKIN[i]], kit: 'plain', dir: 'down', size: 1.3 }, pose))
   }
 
-  // the bar, plate to plate, and the plates
-  const [lx, ly] = onBar(-200), [rx, ry] = onBar(200), [mx, my] = onBar(0)
-  const by0 = 2 * my - (ly + ry) / 2
-  for (const [bw, col] of [[9 * sb + 4.4, INK], [9 * sb, STEEL_D], [4 * sb, STEEL]]) {
-    ctx.strokeStyle = col; ctx.lineWidth = bw; ctx.lineCap = 'butt'
-    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(mx, by0, rx, ry); ctx.stroke()
-  }
-  // the knurl where you hold it
-  ctx.fillStyle = 'rgba(8,12,16,.35)'
-  for (const sd of [-1, 1]) { const [kx, ky] = onBar(sd * GRIP); ctx.fillRect(kx - 26 * sb, ky - 4.5 * sb, 52 * sb, 9 * sb) }
-  const rattle = ageRep < 200 && !g.done ? 3 * (1 - ageRep / 200) : 0
-  for (const sd of [-1, 1]) {
-    const [cx2, cy2] = onBar(sd * 150)
-    ctx.fillStyle = INK; ctx.fillRect(cx2 - 6 * sb, cy2 - 15 * sb, 12 * sb, 30 * sb); ctx.fillStyle = STEEL; ctx.fillRect(cx2 - 4.5 * sb, cy2 - 13.5 * sb, 9 * sb, 27 * sb)
-    for (const off2 of [176, 160]) { const [px, py] = onBar(sd * off2); plate(ctx, px + sd * rattle, py, sb, sd) }
-  }
+  // the board hung from the roof, with the count on it
+  drawBoard(ctx, g, view, 104, Math.round(Math.min(186, h * 0.24)))
 
-  // your arms, up from the bottom corners, and your fists round the bar
-  for (const sd of [-1, 1]) {
-    let [hx, hy] = onBar(sd * GRIP)
-    // (off the bar once it's racked: the arms drop away)
-    if (off) { hx = lerp(hx, w / 2 + sd * 150, off); hy = lerp(hy, h + 120, off) }
-    const sx = w / 2 + sd * 182, sy = h + 16
-    reach(sx, sy, hx, hy + 14, 205, 205, -sd)
-    const ex = jx + (strain * strain * Math.sin(tick * 2.7 + sd)) * 3, ey = jy
-    const s = lerp(1.15, 0.8, (h - hy) / h)
-    limb(ctx, sx, sy, 44, ex, ey, 34, c.top, 2.8)
-    ctx.strokeStyle = c.trim ?? '#1b2127'; ctx.lineWidth = 5; ctx.lineCap = 'butt'
-    const ux = ex - sx, uy = ey - sy, ul = Math.hypot(ux, uy) || 1, bx = lerp(sx, ex, 0.82), byy = lerp(sy, ey, 0.82), br = lerp(44, 34, 0.82)
-    ctx.beginPath(); ctx.moveTo(bx - (uy / ul) * br, byy + (ux / ul) * br); ctx.lineTo(bx + (uy / ul) * br, byy - (ux / ul) * br); ctx.stroke()
-    limb(ctx, ex, ey, 31, hx, hy + 10, 21, c.skin, 2.8)
-    fist(ctx, hx, hy, s * (0.86 + sb * 0.3), c.skin)
+  ctx.save(); ctx.translate(ox, F); ctx.scale(s, s)
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+  const plates = PLATES[court ? 0 : 1]
+  // the far end of the bar: its plates, the collar, the sleeve, then the far upright in front of them
+  {
+    const [x0, y0] = onBar(-1.5), ex = x0, ey = y0, [x1, y1] = onBar(-1.2)
+    for (const [col, wd] of [[INK, 4.6], [STEEL_DD, 3]]) { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke() }
+    for (let k = plates.length - 1; k >= 0; k--) { const [f, R, label] = plates[k], [px, py] = onBar(-f); plateAt(ctx, px, py, R, label, -f) }
+    const [cx, cy] = onBar(-1.0)
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(cx, cy, 2.4, 3.6, ANG, 0, 6.2832); ctx.fill()
+    ctx.fillStyle = STEEL_D; ctx.beginPath(); ctx.ellipse(cx, cy, 1.6, 2.7, ANG, 0, 6.2832); ctx.fill()
   }
-  if (!calm()) g.dirt.draw(ctx, g.t, true)
+  upright(ctx, -POST)
+
+  // the lifter. His hands: on the bar, until it's racked and he lets go
+  const arch = strain * (g.reps > 0 ? 1 : 0.4)
+  const shN = [-15 + AX * 0.28, -28.5 + AY * 0.28], shF = [-15 - AX * 0.28, -28.5 - AY * 0.28]
+  let [nhx, nhy] = onBar(GRIP); nhx -= 0.4; nhy += 0.2
+  let [fhx, fhy] = onBar(-GRIP)
+  if (off > 0) {
+    // (off the bar: his hands come down onto his chest; once it's official, a fist at the roof for a big one, a
+    // hand over his eyes for a short one)
+    const rest = [-5 + AX * 0.22, -45 + AY * 0.22], restF = [-8 - AX * 0.22, -44 - AY * 0.22]
+    let tN = rest
+    const after = verdict ? easeInOut(prog(g.t, g.stamp.at, g.stamp.at + 260)) : 0
+    if (after > 0 && big) tN = [lerp(rest[0], shN[0] + 3, after), lerp(rest[1], shN[1] - 37, after)]
+    else if (after > 0 && !hit) tN = [lerp(rest[0], -36 + AX * 0.3, after), lerp(rest[1], -40 + AY * 0.3, after)]
+    nhx = lerp(nhx, tN[0], off); nhy = lerp(nhy, tN[1], off)
+    fhx = lerp(fhx, restF[0], off); fhy = lerp(fhy, restF[1], off)
+  }
+  benchArm(ctx, shF[0], shF[1], fhx, fhy, true, c)
+  // (he drives through the floor as it gets hard: the heels dig in)
+  const dig = arch * 1.4
+  benchLeg(ctx, 13 - AX * 0.2, -27 - AY * 0.2, 33 - AX * 0.32 - dig, -4.6 - AY * 0.32, true, c)
+
+  // the spotter: his hands ready under the bar, close under it as it slows, on it once the clock's gone
+  const assist = g.done ? 1 - off : 0
+  const lean = lerp(0.58 + strain * 0.12, 0.62, assist) * (1 - off * 0.8) + off * 0.1
+  const hipX = -82
+  const sp = spotterBody(ctx, hipX, lean, lerp(0.34 + strain * 0.12, 0.4, assist) * (1 - off) + off * 0.12)
+  const under = lerp(5 - strain * 2.4, 0.8, assist)
+  const [s1x, s1y] = onBar(-0.13), sTf = [s1x, s1y + under]
+  const [s2x, s2y] = onBar(0.13), sTn = [s2x, s2y + under]
+  if (off > 0) { const dx = SP.sx + 5, dy = SP.sy + 33; sTf[0] = lerp(sTf[0], dx - 3, off); sTf[1] = lerp(sTf[1], dy, off); sTn[0] = lerp(sTn[0], dx + 2, off); sTn[1] = lerp(sTn[1], dy + 1, off) }
+  spotArm(ctx, SP.sx + 1.5, SP.sy, sTf[0], sTf[1], true)
+  // (the near upright goes behind him: in front, it would cut his face in two)
+  upright(ctx, POST)
+
+  // his body on the pad, his head on the end of it
+  benchTorso(ctx, c, arch)
+  const hdx = -40.4, hdy = -31.6
+  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, -29, -30, 5.4, hdx + 5, hdy, 5); ctx.fill()
+  ctx.fillStyle = c.skinD; ctx.beginPath(); limb(ctx, -29, -30, 4.4, hdx + 5, hdy, 4.1); ctx.fill()
+  ctx.save(); ctx.translate(hdx, hdy); ctx.rotate(-Math.PI / 2 - strain * 0.14); bareHead(ctx, 0, 0, 'side', c.skin); ctx.restore()
+  benchLeg(ctx, 13 + AX * 0.2, -27 + AY * 0.2, 33 + AX * 0.32 - dig, -4.6 + AY * 0.32, false, c)
+
+  // the bar, sleeve to sleeve, over him
+  {
+    const [lx, ly] = onBar(-1.0), lX = lx, lY = ly, [mx, my] = onBar(0), mX = mx, mY = my, [rx, ry] = onBar(1.0)
+    const cx = 2 * mX - (lX + rx) / 2, cy = 2 * mY - (lY + ry) / 2
+    for (const [col, wd] of [[INK, 3.8], [STEEL_D, 2.4], [STEEL, 1]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.lineCap = 'butt'
+      ctx.beginPath(); ctx.moveTo(lX, lY - (col === STEEL ? 0.5 : 0)); ctx.quadraticCurveTo(cx, cy - (col === STEEL ? 0.5 : 0), rx, ry - (col === STEEL ? 0.5 : 0)); ctx.stroke()
+    }
+    ctx.lineCap = 'round'
+  }
+  spotArm(ctx, SP.sx - 1, SP.sy, sTn[0], sTn[1], false)
+  benchArm(ctx, shN[0], shN[1], nhx, nhy, false, c)
+
+  // the near plates, the collar and the sleeve: the closest things to the camera
+  {
+    const [cx, cy] = onBar(1.0)
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(cx, cy, 2.4, 3.6, ANG, 0, 6.2832); ctx.fill()
+    ctx.fillStyle = STEEL; ctx.beginPath(); ctx.ellipse(cx, cy, 1.6, 2.7, ANG, 0, 6.2832); ctx.fill()
+    for (let k = 0; k < plates.length; k++) { const [f, R, label] = plates[k], [px, py] = onBar(f); plateAt(ctx, px, py, R, label, f) }
+    const [x1, y1] = onBar(1.2), sx1 = x1, sy1 = y1, [x2, y2] = onBar(1.55)
+    for (const [col, wd] of [[INK, 4.8], [STEEL_D, 3.2], [STEEL, 1.2]]) { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(x2, y2); ctx.stroke() }
+    ctx.lineCap = 'round'
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(sx1, sy1, 2.6, 4.4, ANG, 0, 6.2832); ctx.fill()
+    ctx.fillStyle = STEEL_D; ctx.beginPath(); ctx.ellipse(sx1, sy1, 1.8, 3.4, ANG, 0, 6.2832); ctx.fill()
+  }
+  ctx.restore()
+
+  // the man with the count, at the foot of the bench: his fist goes up for a big number and nothing else
+  const cy0 = F + 34 * U, ck = COACH_K
+  const cPose = verdict && big ? 'reach-r' : null
+  standAt(ctx, 324, cy0, coachOf(cPose))
+  clipboard(ctx, 324 + (cPose ? -8 : -7) * ck, cy0 + (cPose ? -17 : -19.5) * ck + 4, 1.3)
+
+  if (!quiet) g.dirt.draw(ctx, g.t, true)
+  // the spotter, at him, as it slows
+  if (!g.done && g.reps > 0 && strain > 0.55) {
+    const [tx, ty] = scr(sp.hx - 4, sp.hy - 16)
+    text(ctx, 'UP!', tx, ty, { font: DISPLAY, size: 24, color: '#fff' })
+  }
   if (view.keys && !g.done && g.reps === 0) keyCap(ctx, w / 2, h - 58, 'SPACE')
 }
 // the slab on top, the same as the 40's; the rep count big on the board hung from the ceiling
@@ -279,6 +568,8 @@ function drawBoard(ctx, g, view, top0, bottom) {
   const over = g.done ? g.t - g.overAt : -1, official = over >= OFFICIAL_MS, result = g.done?.hit ? GOOD : BAD
   // the board itself (it drops a little clear of the official strip once that's up)
   const bt = top0 + (over >= 0 ? 22 : 0), bb = bottom + (over >= 0 ? 14 : 0)
+  // (hung on two rods from the roof, behind the slab)
+  ctx.fillStyle = BEAM; ctx.fillRect(58, y + ph, 2.4, bt - y - ph); ctx.fillRect(w - 60.4, y + ph, 2.4, bt - y - ph)
   ctx.fillStyle = INK; ctx.fillRect(20, bt, w - 40, bb - bt)
   ctx.fillStyle = '#080d11'; ctx.fillRect(23, bt + 3, w - 46, bb - bt - 6)
   ctx.fillStyle = MINT; ctx.fillRect(23, bb - 6, w - 46, 3)
