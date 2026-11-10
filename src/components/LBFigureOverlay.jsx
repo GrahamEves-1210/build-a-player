@@ -201,7 +201,7 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
         {/* The team logo on each side of the shell, seen from the front: squeezed into the curve, clipped to the helmet */}
         {has(H) && helmetTeam && !NO_HELMET_LOGO.has(helmetTeam) && (
           <g clipPath="url(#lb-helmet-clip)" style={{ pointerEvents: 'none' }}>
-            <g transform="translate(484, 58) rotate(12) scale(.42, .9)">
+            <g transform="translate(479, 58) rotate(12) scale(.42, .9)">
               <image href={`/logos/${helmetTeam}.png`} x="-50" y="-50" width="100" height="100" style={{ opacity: 0.95, mixBlendMode: 'screen' }} />
             </g>
             <g transform="translate(645, 58) rotate(8) scale(-.42, .9)">
