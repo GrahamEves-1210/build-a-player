@@ -30,7 +30,8 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <ModeStats mode="bt" full />
         <ModeStats mode="bt1" full />
         <ModeStats mode="h2hB" full />
-        <ModeStats mode="h2hN" full />
+        {/* football 1v1 has no way in from the new Home: its record shows only for someone who has games on it */}
+        {(p.stats?.h2hN?.played ?? 0) > 0 && <ModeStats mode="h2hN" full />}
         <div className="ol-how">
           <span className="ag-eyebrow">WHAT MOVES YOUR RATING</span>
           <ul>
