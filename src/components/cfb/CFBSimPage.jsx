@@ -444,7 +444,7 @@ function LiveGame({ v, g, onDone }) {
 // ── the figure in school colours, the build as rows (the pre-season page and the final report) ──
 function Figure({ pos, build, team }) {
   if (!build || !team) return null
-  const mono = Object.fromEntries(Object.entries(build).map(([k, x]) => [k, x ? { ...x, teamColor: team.color, teamColor2: team.color2, team: `cfb/${team.short}` } : x]))
+  const mono = Object.fromEntries(Object.entries(build).map(([k, x]) => [k, x ? { ...x, teamColor: team.color, teamColor2: team.color2, team: `cfb/${team.short}`, jerseyWord: String(team.school ?? team.short).toUpperCase() } : x]))
   if (pos === 'wr') return (
     <div className="simp-team-model simp-team-model--rb">
       <div className="simp-team-model-glow" />

@@ -8,18 +8,18 @@ const clamp = (a, b, x) => Math.max(a, Math.min(b, x))
 export const LEAVES = new Set(['SR', 'RS-SR', 'GR', 'RS-GR', '5TH', 'RS-5TH'])   // a starter in his last year is gone next season
 
 // ── Career's scale: the NFL build plus the college boost (CareerCollege collegeBuild) ──
-// (on the college scale, the build plus the college gap. With a full letter on every trait the boosted OVR sits
-// about 12 over his NFL rating until it runs into 99 (an NFL 85 or better is a 99 in college), so the lines are
-// 99 / 95 / 89: the same recruits get the same stars the old gap gave them (scratch check, 2026-11-10: an NFL
-// 70-74 is a 2-star, 75-79 a 3-star, 80-84 mostly a 4-star, 85+ a 5-star, a touch lower for backs and receivers))
-export const starsFor = ovr => (ovr >= 99 ? 5 : ovr >= 95 ? 4 : ovr >= 89 ? 3 : 2)
-// a composite-style national ranking from the boosted OVR, inside his stars' band. (Every 5-star is a 99 in
-// college, so inside that band it's his NFL-builder OVR that orders them: a 97 is the No. 1 recruit, an 85 the
-// last of the five-stars)
-const BANDS = [[99, 99, 1, 32], [95, 98.99, 33, 330], [89, 94.99, 331, 1400], [0, 88.99, 1401, 3200]]
+// (on the college scale, the build plus the college gap. With two steps on every trait the boosted OVR sits
+// about 9 over his NFL rating until it runs into 99 (an NFL 91 or better is a 99 in college), so the lines are
+// 94 / 90 / 84: the same recruits get the same stars the three-step gap gave them (fit over 18,000 builds,
+// 2026-11-10, 95% the same stars: an NFL 70-76 is a 2-star, 77-81 a 3-star, 82-85 a 4-star, 86+ a 5-star))
+export const starsFor = ovr => (ovr >= 94 ? 5 : ovr >= 90 ? 4 : ovr >= 84 ? 3 : 2)
+// a composite-style national ranking from the boosted OVR, inside his stars' band. (The best 5-stars all run
+// into 99 in college, so inside that band it's his NFL-builder OVR that orders them: a 97 is the No. 1 recruit,
+// an 85 the last of the five-stars)
+const BANDS = [[94, 99, 1, 32], [90, 93.99, 33, 330], [84, 89.99, 331, 1400], [0, 83.99, 1401, 3200]]
 export function rankFor(ovr, pos, seed, nflOvr = null) {
   const [lo, hi] = BANDS.find(b => ovr >= b[0])
-  const t = lo >= 99 ? (nflOvr == null ? 0.5 : clamp(0, 1, (97 - nflOvr) / 12)) : clamp(0, 1, (hi - ovr) / Math.max(1, hi - lo))
+  const t = lo >= BANDS[0][0] && nflOvr != null ? clamp(0, 1, (97 - nflOvr) / 12) : clamp(0, 1, (hi - ovr) / Math.max(1, hi - lo))
   return rankIn(starsFor(ovr), t, pos, seed)
 }
 // the ranking inside a stars band: t 0 = the top of the band, 1 = its last name

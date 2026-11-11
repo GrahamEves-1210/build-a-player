@@ -6,7 +6,7 @@ import { CFB_POS, collegeGap, draftProj, projText } from './cfbShared'
 
 // ── ENTER THE NFL DRAFT: a finished college season becomes a new football Career ──
 // Same position, same build, with the jump to the pros taken off his ratings first: every trait,
-// physical, skill and mental, drops a full letter grade, three steps (B+ → C+); his Size doesn't move.
+// physical, skill and mental, drops two steps (A+ → A-, B → C+); his Size doesn't move.
 // The screen shows each trait before and after, and why, before anything is made. The career then
 // starts at the combine like any other (lib/career.js newCareer, the Career save slots), with where he
 // came from kept on it (c.college), his draft projection included: the college season's stock is where
@@ -23,7 +23,7 @@ export function dropRatings(build, types, physical, pos = null) {
   }))
 }
 
-export default function CFBDraft({ build, types, pos, result, user, userName, sandbox, onCancel, onDone }) {
+export default function CFBDraft({ build, types, pos, result, user, userName, playerName = null, sandbox, onCancel, onDone }) {
   const [M, setM] = useState(null)        // lib/career.js, loaded when this opens
   const [slots, setSlots] = useState(null)
   const [slot, setSlot] = useState(null)
@@ -57,7 +57,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, sa
     setBusy(true)
     if (slots[slot]) M.clearCareer('nfl', uid, slot)
     const career = {
-      ...M.newCareer({ sport: 'nfl', uid, pos, build: after, name: userName, slot, owner: userName, college: { school: result.team?.short, schoolName: school, line, ...(proj ? { proj } : {}) } }),
+      ...M.newCareer({ sport: 'nfl', uid, pos, build: after, name: playerName || userName, slot, owner: userName, college: { school: result.team?.short, schoolName: school, line, ...(proj ? { proj } : {}) } }),
       sandbox: !!sandbox,
     }
     M.saveCareer(career)
@@ -71,7 +71,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, sa
           <div><small>{CFB_POS[pos].label} · {school}</small><h2>Enter the NFL Draft</h2></div>
           <button className="ag-round-btn" onClick={onCancel} aria-label="Close"><IconClose size={16} /></button>
         </div>
-        <p className="cfbd-why"><b>The jump to the pros.</b> NFL defenders are bigger, faster and smarter than anyone he saw on Saturdays, so his ratings come down before the combine: <b>every trait drops a full letter grade</b>; his size is his size. He earns it back in the league the way every Career player does.{c.draft ? <> <b>His draft stock goes with him:</b> {String(c.draft.label).replace(/^Projected /, '').replace(/^./, x => x.toUpperCase())} ({projText(c.draft)}). The combine and the interviews can still move it a little.</> : null}</p>
+        <p className="cfbd-why"><b>The jump to the pros.</b> NFL defenders are bigger, faster and smarter than anyone he saw on Saturdays, so his ratings come down before the combine: <b>every trait drops two grades</b> (an A+ becomes an A-); his size is his size. He earns it back in the league the way every Career player does.{c.draft ? <> <b>His draft stock goes with him:</b> {String(c.draft.label).replace(/^Projected /, '').replace(/^./, x => x.toUpperCase())} ({projText(c.draft)}). The combine and the interviews can still move it a little.</> : null}</p>
         {!M ? <p className="cfbd-wait">Loading Career…</p> : (
           <>
             <table className="cfbd-table">
@@ -79,7 +79,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, sa
               <tbody>
                 {types.filter(t => build[t]).map(t => (
                   <tr key={t}>
-                    <td>{label(t)}<small>{t === 'size' ? 'His frame · no change' : 'Full letter grade'}</small></td>
+                    <td>{label(t)}<small>{t === 'size' ? 'His frame · no change' : 'Down two grades'}</small></td>
                     <td className="is-g">{valToGrade(build[t].val)}</td>
                     <td className="is-arrow" aria-hidden="true">→</td>
                     <td className="is-g is-new">{valToGrade(after[t].val)}</td>

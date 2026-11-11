@@ -29,10 +29,13 @@ const LINE = { id: 'line', k: 2.1, topFrac: 0.29, zoom: 1.1, men: 1.25, e: 0.3, 
 const READ11 = { ...READ, id: 'read11', men: 1.04 }, NEAR11 = { ...NEAR, id: 'near11', men: 1.1 }
 // Zone Drop: the backer and the short routes in front of him, a step closer than the safety's look down the field
 const ZONE11 = { ...NEAR, id: 'zone11', zoom: 1.5, men: 1.12 }
+// Kick Return: from behind the man deep, the coverage and the wall in front of him, eleven a side
+const KR = { id: 'kr', k: 1.9, topFrac: 0.2, zoom: 1.2, men: 1.15, e: 0.32, res: 4 }
 const CAMS = {
   bomb: READ11, 'third-long': READ11, acc: READ, 'hot-read': READ11, audible: READ11, 'two-minute': READ11,
   gap: NEAR11, 'jump-route': NEAR11, 'zone-drop': ZONE11, sneak: NEAR11, 'goal-line': GOAL, catch: GOAL, release: NEAR, cone: NEAR, gauntlet: OPEN,
   'pass-rush': LINE, 'run-stuff': LINE,
+  'kick-return': KR,
   seal: DOWN, juke: OPENRUN, 'juke-wr': OPENRUN, 'juke-te': OPENRUN, 'tackle-angle': OPENRUN, escape: DOWN,
 }
 let CAM = COURT, far = 1 / (1 + CAM.k)
@@ -86,25 +89,44 @@ export function ground(ctx, view, paint, key, scroll = 0, strips = STRIPS(), wal
   const c = flatOf(view, key, paint)
   if (!c) return
   if (view.field) view.field.backY = c.backY
-  const hy = horizon(view), H = view.h, pxW = c.width / 1.5 / view.w, srcH = c.height
+  const H = view.h, srcH = c.height
   ctx.imageSmoothingQuality = strips < 100 ? 'low' : 'high'   // (a field going by at speed: nobody sees the difference, and slow machines do)
-  for (let i = 0; i < strips; i++) {
+  // (where each strip sits and how wide, worked out once for this camera and size: only the scroll changes per frame)
+  const R = groundRows(view, strips, wall)
+  for (let i = 0, j = 0; i < strips; i++, j += 6) {
     // equal bands on screen; each pulls the band of the flat field the camera sees there
+    const a = R[j], bma = R[j + 1], fay = R[j + 2], fh = R[j + 3], dw = R[j + 4], dx = R[j + 5]
+    let sy = ((fay - scroll) % H + H) % H, sh = fh
+    if (sy + sh > H) sh = H - sy
+    ctx.drawImage(c, 0, (sy / H) * srcH, c.width, (sh / H) * srcH, dx, a, dw, bma)
+  }
+}
+// per strip: its top on screen, its height there, the flat y it starts at, the flat height it covers, its width, its left
+const rowsOf = new Map()
+function groundRows(view, strips, wall) {
+  const id = `${CAM.id}|${view.h}|${view.w}|${strips}|${wall ? 1 : 0}`
+  let R = rowsOf.get(id)
+  if (R) return R
+  if (rowsOf.size > 24) rowsOf.clear()
+  R = new Float64Array(strips * 6)
+  const hy = horizon(view), H = view.h
+  for (let i = 0, j = 0; i < strips; i++, j += 6) {
     const a = hy + ((H - hy) * i) / strips, b = hy + ((H - hy) * (i + 1)) / strips + 0.6
     const fa = untilt(view, view.w / 2, a), fb = untilt(view, view.w / 2, b)
     const s = (tilt(view, view.w / 2, fa.y).g + tilt(view, view.w / 2, fb.y).g) / 2
     const dw = wall ? Math.max(view.w * 1.5 * s, view.w + 2) : view.w * 1.5 * s, dx = view.w / 2 - dw / 2
-    let sy = ((fa.y - scroll) % H + H) % H, sh = Math.max(0.5, fb.y - fa.y)
-    if (sy + sh > H) sh = H - sy
-    ctx.drawImage(c, 0, (sy / H) * srcH, c.width, (sh / H) * srcH, dx, a, dw, b - a)
+    R[j] = a; R[j + 1] = b - a; R[j + 2] = fa.y; R[j + 3] = Math.max(0.5, fb.y - fa.y); R[j + 4] = dw; R[j + 5] = dx
   }
-  void pxW
+  rowsOf.set(id, R)
+  return R
 }
 
 // The goalposts on the back line of the end zone, through the camera. For a baked picture, so they cost nothing per frame.
 export function goalPosts(ctx, view, y, big = 1) {
   if (y == null || y < 0) return
-  const q = tilt(view, 180, y), ft = big * (view.w - 16) * q.g / 160, base = q.y - 1, bar = base - 10 * ft * 1.25, half = 9.25 * ft, top = bar - 20 * ft * 1.25
+  // (POSTS: the goalposts a size up on the owner's call, pylons as they were)
+  const POSTS = 1.35
+  const q = tilt(view, 180, y), ft = big * POSTS * (view.w - 16) * q.g / 160, base = q.y - 1, bar = base - 10 * ft * 1.25, half = 9.25 * ft, top = bar - 20 * ft * 1.25
   const neck = base - (bar - base) * -0.45, lean = 3.5 * ft
   ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   // the pylons, on the four corners of the end zone
@@ -633,6 +655,13 @@ export function padsPose(dir, step, pose, carry) {
     if (carry) { o.hlx = -19; o.hly = -55 }
     return o
   }
+  // the stiff arm: running, the arm toward the man locked out at his shoulder, the ball tucked in the other
+  if (pose === 'stiff-l' || pose === 'stiff-r') {
+    const sd = pose === 'stiff-r' ? 1 : -1, b = padsPose(dir, step, 'sprint', false)
+    b.lean = -sd * 0.07
+    if (sd > 0) { b.hrx = 33; b.hry = -50; b.hlx = -17; b.hly = -60 } else { b.hlx = -33; b.hly = -50; b.hrx = 17; b.hry = -60; b.ballR = true }
+    return b
+  }
   // hands on his hips: on the belt, the elbows out wide
   if (pose === 'hips') { o.hlx = -13; o.hly = -o.hy - 5; o.hrx = 13; o.hry = -o.hy - 5; o.akimbo = 1; return o }
   // bent over, hands on his knees: feet wide, knees soft, the arms straight down to them (drawn with a squat, so he's doubled over)
@@ -937,7 +966,7 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
   const sl = Math.sin(o.lean), cl = Math.cos(o.lean), hipY = -o.hy
   const sx = sl * R_TORSO, sy = hipY - cl * R_TORSO
   const turned = pose === 'qb-set', SH = plain ? 13.5 : 15.5, rx = sx + cl * (turned ? SH + 0.6 : SH), ry = sy + sl * SH + (turned ? 3.2 : 2.5), lx = sx - cl * (turned ? SH - 1.8 : SH), ly = sy - sl * SH + (turned ? 1.4 : 2.5)
-  const ballAt = () => padsBall(x, o.hlx - 3, o.hly - 2, 0.25)
+  const ballAt = () => (o.ballR ? padsBall(x, o.hrx + 3, o.hry - 2, -0.25) : padsBall(x, o.hlx - 3, o.hly - 2, 0.25))
   const face = back ? 'back' : 'front'
   // arms hanging or held out go behind the jersey, shoulder under the armhole. Only hands on the chest cross in front.
   const armsOver = !back && pose && pose !== 'slide' && pose !== 'ready' && pose !== 'back' && pose !== 'touch' && pose !== 'sprint' && pose !== 'plant-l' && pose !== 'plant-r'
@@ -1143,18 +1172,34 @@ function tagOf(name, R) {
   tags.set(id, c)
   return c
 }
+// (the pixel look's tags by their letters' size in whole pixels, then by name: the same pictures tagOf paints, found
+// without making a key string for each name every frame)
+const tagsPx = new Map()
+let tagsPxN = 0
+function tagAtPx(name, f) {
+  let byName = tagsPx.get(f)
+  let c = byName?.get(name)
+  if (c) return c
+  c = tagOf(name, f / 9.4)
+  if (!c) return c
+  if (tagsPxN > 260) { tagsPx.clear(); tagsPxN = 0; byName = null }
+  if (!byName) tagsPx.set(f, (byName = new Map()))
+  if (!byName.has(name)) tagsPxN++
+  byName.set(name, c)
+  return c
+}
 export function nameTag(ctx, view, px, py, name, k = 1) {
   if (!name) return
   // The pixel look (the stage turns smoothing off for it): a name is the same pixels as the man it's under. It's
   // painted at the size it's shown, its letters a whole number of the picture's pixels tall (never under 10, or
   // they stop being letters), and set down on whole pixels: nothing is resampled, so nothing blurs or breaks up
   if (ctx.imageSmoothingEnabled === false) {
-    const m = ctx.getTransform(), f = Math.max(10, Math.round(9.4 * k * m.a)), c = tagOf(name, f / 9.4)
+    const m = ctx.getTransform(), f = Math.max(10, Math.round(9.4 * k * m.a)), c = tagAtPx(name, f)
     if (!c) return
     const ux = px - c.width / m.a / 2, uy = py + 1.5 * k
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.drawImage(c, Math.round(m.a * ux + m.c * uy + m.e), Math.round(m.b * ux + m.d * uy + m.f))
-    ctx.setTransform(m)
+    ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f)
     return
   }
   const c = tagOf(name, 3)
@@ -1286,7 +1331,7 @@ function lookFor(o, live) {
   if (!live || bakeSpent < bakeRoom) return bakeOne(o)   // (going into a baked picture: it stays there, so it has to be his own)
   const near = nearLook.get(`${o.color}|${o.dir}|${o.kit}|${o.pose}|${o.step}`) ?? nearLook.get(`${o.color}|${o.dir}|${o.kit}`)
   if (!near) return bakeOne(o)
-  queueBake(o)
+  queueBake({ ...o })   // (o can be athlete's scratch look: the queue keeps its own)
   return near
 }
 const SKINS = ['#8d5a3b', '#5e3c22', '#7a5030', '#c09060', '#f0c4a0', '#9a6840', '#5e3c22', '#a87548']
@@ -1294,6 +1339,7 @@ export const skinOf = i => SKINS[Math.abs(i) % SKINS.length]
 // which way someone's facing, from how they're moving on the field (dx, dy in field units)
 export const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) * 1.2 ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up')
 
+const LOOK_NOW = { color: '', trim: '', pants: '', skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, pose: null, fallStage: 0 }
 // x, y: the field point under his feet. size: 1 is a player the height the camera gives him at the near end
 export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', pants = null, skin = '#8d5a3b', number = null, dir = 'up', step = null, kit = 'pads', carry = false, size = 1, name = null, pose = null, fall = 0, fallX = 0, squat = 0, lift = 0, still = false } = {}) {
   skin = warmSkin(skin)
@@ -1309,7 +1355,12 @@ export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', 
   ctx.fillStyle = 'rgba(0,0,0,.3)'
   ctx.beginPath(); ctx.ellipse(p.x + (5 + fallX * fall * 26) * k, p.y + 0.5 * k - fall * 6 * k, (13 + fall * 3) * k, (4 + fall * 5) * k, 0.12, 0, Math.PI * 2); ctx.fill()
   const flip = dir === 'left'
-  const c = lookFor({ color, trim, pants: pants ?? (kit === 'pads' ? '#eceae2' : '#20262c'), skin, number: dir === 'up' || dir === 'down' ? number : null, dir: dir === 'left' || dir === 'right' ? 'side' : dir, step, kit, carry, pose, fallStage }, ctx === liveCtx)
+  // (one look object for every man, every frame, filled in place: lookFor only reads it, or copies it to queue it)
+  const L = LOOK_NOW
+  L.color = color; L.trim = trim; L.pants = pants ?? (kit === 'pads' ? '#eceae2' : '#20262c'); L.skin = skin
+  L.number = dir === 'up' || dir === 'down' ? number : null; L.dir = dir === 'left' || dir === 'right' ? 'side' : dir
+  L.step = step; L.kit = kit; L.carry = carry; L.pose = pose; L.fallStage = fallStage
+  const c = lookFor(L, ctx === liveCtx)
   if (!c) return p
   if (working && ctx === liveCtx) {
     // (his other two frames, painted between frames before he needs them)

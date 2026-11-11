@@ -158,7 +158,9 @@ export default function AppTabBar() {
   }, [])
 
   // The game's fixed SPIN/BUILD switch would float over an open Daily/Cards screen
-  useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen) }, [screen])
+  // (the sign-in sheet and a player's profile sheet count too: they are the game's own, over whatever mode is open,
+  // and College Football's blue stays off them: cfb.css)
+  useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen || authOpen || !!player) }, [screen, authOpen, player])
   // Website: the bottom ad rail is there on every page. Measure it into
   // --web-rail so the dock, screens and sheets sit above it (0 when it's gone,
   // e.g. ad-free players)
@@ -198,6 +200,9 @@ export default function AppTabBar() {
             : null}
         </Suspense>
       )}
+      {/* the floor under the dock: the strip between it and the screen's bottom edge is the page's dark, not whatever
+          scrolls behind it (the College Football card's blue showed there, and iPhone's Safari tints its bar from it) */}
+      {!hidden && <div className="ag-dock-floor" aria-hidden="true" />}
       {!hidden && (
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
           <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} />

@@ -23,16 +23,18 @@ import { seeded } from './rng.js'
 export const GAMES = {
   // ── QB ──
   'hot-read':    { kind: 'reaction', traits: ['processing', 'vision'], title: 'HOT READ', how: 'Four snaps, three receivers. One comes open in green: tap him before the window shuts. Red is covered: never throw it there.', rounds: 4 },
-  'bomb':        { kind: 'power', traits: ['arm'], title: 'BOMB IT', how: 'Hold to load the deep shot. Let go near the top: a stronger arm gets a bigger window.' },
+  'bomb':        { kind: 'power', traits: ['arm'], title: 'BOMB IT', how: 'Hold to load the deep shot. Let go near the top: a stronger arm gets a bigger window. Double tap to pump fake.' },
   'escape':      { kind: 'lanes', traits: ['legs'], title: 'ESCAPE', how: 'The pocket collapses from one side. Escape the other way, three times.' },
   'sneak':       { kind: 'timing', traits: ['size'], title: 'SNEAK', how: 'Fourth and inches. Hit the snap window and punch it in.' },
   'two-minute':  { kind: 'sequence', traits: ['leadership', 'processing'], title: 'TWO-MINUTE DRILL', how: 'Four play calls, each against the play clock. More Composure, more time to call it.' },
   'goal-line':   { kind: 'route', anyPos: true, traits: ['accuracy', 'routeRunning', 'hands'], title: 'FOURTH & GOAL', how: 'Fourth and goal at the five. Tap CUT as the ring closes on the spot, then press the side the ball is thrown to. At quarterback: press where the ball goes.' },
-  'third-long':  { kind: 'route', traits: ['accuracy', 'arm'], title: 'THIRD & LONG', how: 'Pick the route, then hit the throw window. The deeper the route, the tighter the window, the bigger the play.' },
+  'third-long':  { kind: 'route', traits: ['accuracy', 'arm'], title: 'THIRD & LONG', how: 'Pick the route, then hit the throw window. The deeper the route, the tighter the window, the bigger the play. Double tap to pump fake.' },
   'audible':     { kind: 'audible', traits: ['processing', 'vision'], title: 'AUDIBLE', how: 'Read the look. Pick the counter before the play clock runs out.' },
   // ── RB ──
   'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Four plays. One gap opens green each time: hit it, fast. Red is a linebacker filling it: stay out.', rounds: 4, quick: 0.72 },
   'juke':        { kind: 'lanes', traits: ['elusiveness'], title: 'JUKE', how: 'The tackler commits to a side. Cut the other way, three times.' },
+  // ── RB / WR: deep on a kickoff, one return (a back's Speed, Burst, Elusiveness, Vision, Balance and Strength; a receiver's Speed, Body Control, After Catch and Hands: a build counts the ones it has)
+  'kick-return': { kind: 'kickret', traits: ['speed', 'burst', 'elusiveness', 'vision', 'balance', 'strength', 'bodyControl', 'afterCatch', 'hands'], title: 'KICK RETURN', how: 'Catch the kick in the ring, then take it back. Arrows or the stick to run, JUKE to make a man miss. Get it past the 30.' },
   // ── WR / TE ──
   'catch':       { kind: 'taps', traits: ['hands'], title: 'CONTESTED CATCH', how: 'Three balls. Tap each one in the window. Each one comes in hotter.', n: 3 },
   'juke-wr':     { kind: 'lanes', traits: ['bodyControl', 'afterCatch'], title: 'MAKE A MAN MISS', how: 'The defender commits. Cut the other way, three times.' },
@@ -108,8 +110,8 @@ export const GAMES = {
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
   qb: ['hot-read', 'bomb', 'escape', 'sneak', 'two-minute', 'third-long', 'audible', 'goal-line'],
-  rb: ['gap', 'juke', 'goal-line'],
-  wr: ['catch', 'juke-wr', 'release', 'goal-line'],
+  rb: ['gap', 'juke', 'goal-line', 'kick-return'],
+  wr: ['catch', 'juke-wr', 'release', 'goal-line', 'kick-return'],
   te: ['catch', 'seal', 'juke-te', 'goal-line'],
   db: ['jump-route', 'tackle-angle'],
   dl: ['pass-rush', 'run-stuff'],

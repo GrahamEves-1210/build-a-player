@@ -21,19 +21,27 @@ export { LIVE_URL }
 // A socket that reconnects (and says hello again) until it's closed on purpose
 export function liveSocket(path, hello, onMsg, onStatus) {
   let ws = null, closed = false, tries = 0, timer = null
+  // what was sent before the line was up: held, and sent right after the hello. (Practice asks for its CPU game
+  // 600ms after it starts connecting; on a phone the socket often isn't open yet, the request was dropped, and
+  // he sat in an empty lobby: "nothing happened". Held for 8 seconds at most, so nothing stale goes out late)
+  let held = []
   const open = () => {
     if (closed) return
     onStatus?.('connecting')
     ws = new WebSocket(`${LIVE_URL}${path}`)
     // every hello carries this tab's seat key (live/src/queue.js): nobody else can take the seat
-    ws.onopen = () => { tries = 0; onStatus?.('live'); ws.send(JSON.stringify({ ...hello(), key: myVidKey(), token: currentToken() })) }
+    ws.onopen = () => {
+      tries = 0; onStatus?.('live'); ws.send(JSON.stringify({ ...hello(), key: myVidKey(), token: currentToken() }))
+      const now = Date.now(), out = held.filter(h => now - h.at < 8000); held = []
+      for (const h of out) ws.send(JSON.stringify(h.m))
+    }
     ws.onmessage = e => { try { onMsg(JSON.parse(e.data)) } catch {} }
     ws.onclose = () => { if (closed) return; onStatus?.('connecting'); timer = setTimeout(open, Math.min(8000, 500 * 2 ** tries++)) }
     ws.onerror = () => { try { ws.close() } catch {} }
   }
   open()
   return {
-    send: m => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)) },
+    send: m => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); else if (!closed) held.push({ m, at: Date.now() }) },
     close: () => { closed = true; clearTimeout(timer); try { ws?.close(1000, 'bye') } catch {} },
   }
 }

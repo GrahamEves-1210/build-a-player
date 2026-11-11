@@ -15,6 +15,16 @@ export const CFB_POS = {
   rb: { label: 'RB', name: 'Running Back', fig: '/rb-silhouette.webp' },
 }
 
+// The pool a build's wheels deal from: this season's rosters, or each school's legends (data/cfb-legends.js).
+// Only the wheels change: the offers, the season against today's schools and the draft are the same either way.
+// Kept with the build ('pool' on the saved progress) and on every finished season, so an All-Time season is
+// never read as a current one (the list on the first screen, bap_cfb_seasons, cfb_seasons.pool)
+export const CFB_POOLS = {
+  current: { label: 'Current', tag: null, sub: '2026 ROSTERS' },
+  alltime: { label: 'All-Time', tag: 'ALL-TIME', sub: 'SCHOOL LEGENDS' },
+}
+export const poolOf = v => (v === 'alltime' ? 'alltime' : 'current')
+
 const CLASS = { FR: 'Freshman', SO: 'Sophomore', JR: 'Junior', SR: 'Senior', GR: 'Graduate' }
 // 'RS-JR' → 'Redshirt Junior', 'SO' → 'Sophomore'
 export function classLabel(y) {
@@ -48,12 +58,12 @@ const KEEP = 60
 export function seasonsLocal() { try { const a = JSON.parse(localStorage.getItem(SEASONS)); return Array.isArray(a) ? a : [] } catch { return [] } }
 
 // a season, as the list keeps it (and as cfb_seasons would take it). r: runCFBSimulation's result
-export function summaryOf(r, { pos, build, types, ovr, name, userName }) {
+export function summaryOf(r, { pos, build, types, ovr, name, userName, pool = 'current' }) {
   const c = r.cfb ?? {}
   const H = c.awards?.heisman
   const ap = c.apPath ?? []
   return {
-    at: Date.now(), pos, ovr: r.ovr ?? ovr, archetype: name, player: userName,
+    at: Date.now(), pos, pool: poolOf(pool), ovr: r.ovr ?? ovr, archetype: name, player: userName,
     team: r.team?.short, teamName: r.team?.school ?? r.team?.name, conf: r.team?.conf ?? null,
     wins: c.record?.final ? +c.record.final.split('-')[0] : r.wins, losses: c.record?.final ? +c.record.final.split('-')[1] : r.losses,
     record: c.record?.final ?? `${r.wins}-${r.losses}`,
@@ -82,6 +92,9 @@ export async function saveSeasonCloud(row, user) {
     user_id: user.id, position: row.pos, ovr: row.ovr, wins: row.wins, losses: row.losses, team: row.team, conf: row.conf,
     final_rank: row.finalRank, conf_champ: row.confChamp, cfp_seed: row.cfpSeed, national_champ: row.title,
     heisman: row.heisman, all_american: row.allAmerican, draft: row.draft, build: row.build,
+    // (All-Time seasons carry their pool: the column is supabase/cfb_alltime.sql, NOT run. A current season sends
+    // nothing and takes the column's default, so current saves work whether or not that file has been run)
+    ...(row.pool === 'alltime' ? { pool: 'alltime' } : {}),
   })
 }
 
@@ -89,11 +102,11 @@ export async function saveSeasonCloud(row, user) {
 // achievements by football's rules. sport 'cfb' keeps it out of the NFL counts (progress.js: cfbSeasons,
 // never nflSeasons or positions), and localOnly because no database keeps it (Salary Cap's way).
 // The ref is the result, so the season page's rewards panel (AppSeason SeasonRewards) finds it.
-export function seasonEvent(r, pos, sandbox = false) {
+export function seasonEvent(r, pos, sandbox = false, pool = 'current') {
   const c = r.cfb ?? {}
   const [w, l] = String(c.record?.final ?? `${r.wins}-${r.losses}`).split('-').map(Number)
   return {
-    sport: 'cfb', pos, mode: 'cfb', localOnly: true, sandbox: !!sandbox,
+    sport: 'cfb', pos, mode: 'cfb', pool: poolOf(pool), localOnly: true, sandbox: !!sandbox,
     wins: w, losses: l, playoffs: !!c.cfpSeed, champion: !!r.champion,
     award: !!c.awards?.heisman?.userWon, awardName: 'Heisman',
     ovr: r.ovr, ref: r,
@@ -101,10 +114,10 @@ export function seasonEvent(r, pos, sandbox = false) {
 }
 
 // The one gap between a college grade and an NFL grade, both ways: going to college adds it (Start in College),
-// the jump to the pros takes it off (Enter the NFL Draft). A full letter grade, three steps, on every trait,
-// physical, skill and mental alike (the owner's rule, 2026-11-10; physical traits were half a letter before);
+// the jump to the pros takes it off (Enter the NFL Draft). Two steps on every trait (A+ to A-, B to C+),
+// physical, skill and mental alike (the owner's rule, 2026-11-10; it was a full letter, three steps, for a day);
 // Size is his height and weight, the same at both levels
-export const collegeGap = (pos, t) => (t === 'size' ? 0 : 3)
+export const collegeGap = (pos, t) => (t === 'size' ? 0 : 2)
 
 // The college season's draft projection, as the picks a Career's draft starts from (lib/career.js stockOf reads
 // c.college.proj): the projection's own pick range; an undrafted grade is the last picks of the seventh round

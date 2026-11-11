@@ -7,6 +7,7 @@
 //                                    (a press that's held till an 'up' says hold: true, for the picture only)
 //   firstRep(game, g) → true | false | null   how the demo's one rep went (null: not decided yet)
 //   CAPTION[engine]                    a short line over the demo, only where the game's own prompt needs help
+import { steer } from './kickret.js'
 const REACT = 250          // ms: a sharp player seeing it and moving
 const RATE = 12            // taps a second, flat out
 
@@ -655,10 +656,21 @@ function kickPilot(g, game) {
     }
   }
 }
+// ── kickret: under the kick by its flight, then the stick toward the room (kickret.js steer), a juke on a man closing ─
+function kickretPilot(g) {
+  let next = 0, jukeAt = Infinity
+  return () => {
+    if (g.done || g.phase !== 'live' || g.t < next) { if (g.t >= jukeAt) { jukeAt = Infinity; return [{ kind: 'juke' }] } return }
+    next = g.t + 100
+    const s = steer(g, { delay: REACT / 2000 })
+    if (s.juke && jukeAt === Infinity && g.t - g.me.juke > 900) jukeAt = g.t + REACT * 0.5
+    return [{ kind: 'stick', x: s.x, y: s.y }]
+  }
+}
 const PILOTS = { kick: kickPilot, passpro: passproPilot, catch: catchPilot, cone: conePilot, cut: cutPilot, dash: dashPilot, bench: benchPilot, calls: callsPilot, fastbreak: fastbreakPilot, goalline: goallinePilot, leverage: leveragePilot, lockdown: lockdownPilot, meter: meterPilot, oop: oopPilot, halfcourt: halfcourtPilot, read: readPilot, rebound: reboundPilot, rush: rushPilot, throw: throwPilot,
   penalty: penaltyPilot, oneonone: oneononePilot, header: headerPilot, volley: volleyPilot, slalom: slalomPilot, finishing: finishingPilot,
   freekick: freekickPilot, counter: counterPilot, firsttouch: firsttouchPilot,
-  atbat: atbatPilot, pitch: pitchPilot, steal: stealPilot, ofarm: ofarmPilot, hitstick: hitstickPilot }
+  atbat: atbatPilot, pitch: pitchPilot, steal: stealPilot, ofarm: ofarmPilot, hitstick: hitstickPilot, kickret: kickretPilot }
 export const pilotFor = (botName, g, game) => PILOTS[botName]?.(g, game) ?? (() => undefined)
 
 // How the demo's one rep went. Most games mark it in the first of their dots; the one-play games in done.
@@ -722,6 +734,7 @@ export const CAPTION_GAME = {
   'deep-kick': { wait: 'WATCH THE NEEDLE', press: ['{T} WITH THE NEEDLE IN THE GREEN', '{T} WITH THE POWER PAST THE MARK'] },
   'game-winner': { wait: 'WATCH THE NEEDLE', press: ['{T} WITH THE NEEDLE IN THE GREEN', '{T} WITH THE POWER PAST THE MARK'] },
   onside: { wait: 'IT HAS TO GO 10 YARDS', press: ['{T} TO SET THE DISTANCE', '{T} AS THE RING CLOSES', '{T} TO GO UP FOR IT'] },
+  'kick-return': { wait: 'CATCH IT IN THE RING', press: 'RUN IT BACK: FIND THE CREASE' },
   sprint30: { wait: 'WAIT FOR THE WHISTLE', press: 'LEFT, RIGHT, IN RHYTHM' },
   sixty: { wait: 'WAIT FOR THE GUN', press: 'LEFT, RIGHT, IN RHYTHM' },
   'exit-velo': { wait: 'ZONE ON THE TOSS', press: 'DRIVE IT' },

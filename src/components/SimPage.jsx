@@ -17,7 +17,8 @@ import { DL_ATTR, DLS, DL_TYPES } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
 import { LB_ATTR, LBS, LB_TYPES, LB_SILHOUETTE } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
-import { OL_ATTR, OLS, OL_SILHOUETTE } from '../data/ols'
+import { OL_ATTR, OLS, OL_SILHOUETTE, olOVR } from '../data/ols'
+import { OL_LEGENDS } from '../data/ol-legends'
 import { K_ATTR, KS, K_TYPES } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
 import { kAsQB } from '../lib/kFigure'
@@ -320,20 +321,41 @@ function KDepthChart({ team, build, types, isAllTime = false, userName = 'Guest'
 // HT/WT), and the team's other four real starters fill out the rest.
 const OL_SPOTS = ['LT', 'LG', 'C', 'RG', 'RT']
 
-function OLDepthChart({ team, build, types, userName = 'Guest' }) {
+// All-Time: the franchise's legends line up around the build. Each takes his own spot, best first; a spot
+// nobody played goes to the best legend left over from the same side of the line (a tackle at either
+// tackle, a guard or center anywhere inside), and stays empty when there is none
+const OL_FAMILY = { LT: 'T', RT: 'T', LG: 'I', C: 'I', RG: 'I' }
+function olLegendLine(teamShort, userSpot) {
+  const men = OL_LEGENDS.filter(p => p.team === teamShort).map(p => ({ ...p, ovr: Math.round(olOVR(p.attrs) ?? 0) })).sort((a, b) => b.ovr - a.ovr)
+  const line = {}, used = new Set()
+  for (const spot of OL_SPOTS) {
+    if (spot === userSpot) continue
+    const m = men.find(p => p.pos === spot && !used.has(p.name))
+    if (m) { line[spot] = m; used.add(m.name) }
+  }
+  for (const spot of OL_SPOTS) {
+    if (spot === userSpot || line[spot]) continue
+    const m = men.find(p => !used.has(p.name) && OL_FAMILY[p.pos] === OL_FAMILY[spot])
+    if (m) { line[spot] = m; used.add(m.name) }
+  }
+  return line
+}
+
+function OLDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR  = calcOVROL(build, types)
   const buildSpot = olBuildSpot(build)
   const userSpot = OL_SPOTS.includes(buildSpot) ? buildSpot : 'LT'
   const userPhoto = types.map(t => build[t]?.photo).find(p => p) ?? null
+  const legends = isAllTime ? olLegendLine(team.short, userSpot) : null
 
   const rows = OL_SPOTS.map(spot => {
     if (spot === userSpot) {
       return { label: spot, name: userName, ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
     }
-    const o = OLS.find(p => p.team === team.short && p.pos === spot)
+    const o = isAllTime ? legends[spot] : OLS.find(p => p.team === team.short && p.pos === spot)
     return o ? {
       label: spot, name: o.name, ovr: o.ovr, isUser: false,
-      photo: nflHeadshot(HEADSHOTS[o.name]),
+      photo: nflHeadshot(o.headshot ?? HEADSHOTS[o.name]),
       teamColor: o.color ?? team.color,
       teamShort: o.team,
     } : null
@@ -341,7 +363,7 @@ function OLDepthChart({ team, build, types, userName = 'Guest' }) {
 
   return (
     <div className="wr-depth-chart">
-      <div className="wr-dc-header">Offensive Line · {team.short}</div>
+      <div className="wr-dc-header">{isAllTime ? '★ All-Time ' : ''}Offensive Line · {team.short}</div>
       {rows.map((row, i) => (
         <div key={i} className={`wr-dc-row${row.isUser ? ' wr-dc-row--you' : ''}`}>
           <span className="wr-dc-pos">{row.label}</span>
@@ -1626,7 +1648,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
           <KDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isOL && team && build && (
-          <OLDepthChart team={team} build={build} types={types} userName={userName} />
+          <OLDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
 
         {screens[screen]}

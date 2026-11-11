@@ -583,7 +583,7 @@ const _raw = [
   {
     name: 'Earl Campbell',   short: 'Campbell',    team: 'TEN', teamName: 'Tennessee Titans',
     skin: '#5e3c22', number: 34, starter: true, captain: true, years: '1978–84',
-    attrs: { speed: 8, burst: 8, strength: 11, size: 8, balance: 9, elusiveness: 4, vision: 7, hands: 4, carrying: 9 }
+    attrs: { speed: 9, burst: 9, strength: 11, size: 9, balance: 11, elusiveness: 5, vision: 9, hands: 4, carrying: 9 }
   },
   {
     name: 'Eddie George',    short: 'E. George',   team: 'TEN', teamName: 'Tennessee Titans',

@@ -328,7 +328,11 @@ function fieldBap(ctx, view, scroll) {
     const str = NUMS[((((k - 1) / 2) % NUMS.length) + NUMS.length) % NUMS.length]
     for (const x of [64, 296]) {
       const q = tilt(view, x, y)
-      ctx.save(); ctx.translate(q.x, q.y + 1 * q.g); ctx.scale(q.g, q.g * NUM_SQUASH)
+      // (the size in 1/128 steps, under a third of a pixel at the nearest: every new size of a letter is painted fresh for
+      // the GPU, and a size that's come up before is already there. A number coming down the field that way is a third of
+      // the frame on a slow machine)
+      const gq = Math.round(q.g * 128) / 128
+      ctx.save(); ctx.translate(q.x, q.y + 1 * q.g); ctx.scale(gq, gq * NUM_SQUASH)
       text(ctx, str, 0, 0, { font: DISPLAY, size: band * 0.62, color: 'rgba(244,247,242,.86)', track: band * 0.05 })
       ctx.restore()
     }

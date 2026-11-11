@@ -14,7 +14,7 @@ import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerClo
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, lbStyle,
   calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE, snapNFL,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
@@ -117,6 +117,27 @@ export function dbCoverage(s, c = null) {
 export const dbDpoyCase = (s, c = null) => dbCoverage(s, c) + (s.rtgA == null ? 0 : 0.4 * clamp((60 - s.rtgA) / 20, 0, 1) + 0.15 * clamp((450 - (s.ydsA ?? 450)) / 100, 0, 1))
 // a season past a real record (passes defended or picks) is an All-Pro, whatever else it did
 const dbRecord = s => (s.pbus ?? 0) > 31 || (s.ints ?? 0) > 14
+// A linebacker's season, judged on everything he does, not tackles alone: the tackles, the plays behind the line,
+// the sacks, the coverage (picks and passes defended) and the ball he takes away. One number, about a tackle a
+// point: a 150-tackle year in the middle is ~235, and so is a 105-tackle, 12-sack, 15-TFL year off the edge.
+// His style tilts it (simulation.js lbStyle, from his build): a blitzer's sacks and TFL count a little more, a
+// cover man's picks and PDs, a thumper's run stops; the way a safety's tackles count more than a corner's.
+const LB_W = { sack: 6.5, tfl: 2.5, int: 9, pd: 2.5, ff: 5, fr: 3, p6: 6 }
+const LB_TILT = 1.15
+export function lbImpact(s, c = null) {
+  const style = c?.build ? lbStyle(c.build) : 'complete'
+  const sacks = s.sacks ?? 0, ints = s.ints ?? 0
+  const run = (s.tackles ?? 0) + LB_W.tfl * Math.max(0, (s.tfl ?? 0) - sacks * 0.85)   // (a sack is a TFL too: counted once)
+  const rush = LB_W.sack * sacks
+  const cover = LB_W.int * ints + LB_W.pd * Math.max(0, (s.pds ?? 0) - ints) + LB_W.p6 * (s.pickSixes ?? 0)
+  const ball = LB_W.ff * (s.ff ?? 0) + LB_W.fr * (s.fr ?? 0)
+  // (a blitzer's work behind the line is his TFL as well as his sacks)
+  const tfl = LB_W.tfl * Math.max(0, (s.tfl ?? 0) - sacks * 0.85)
+  return run + rush + cover + ball + (LB_TILT - 1) * (style === 'blitz' ? rush + tfl : style === 'cover' ? cover : style === 'thumper' ? tfl + (s.tackles ?? 0) * 0.25 : 0)
+}
+// (set so the tacklers win about what they did on tackles alone: a 186 is a Pro Bowl year, 236 an All-Pro one,
+// measured over 400 seasons a build, 2026-11-10; a pass-rushing backer's 98 tackles, 10 sacks and 12 TFL is now a Pro Bowl)
+export const LB_BARS = { proBowl: 186, allPro: 236, near: 214, dpoy: 280 }
 // (set so DBs win about as many honors as they did on picks alone)
 export const DB_BARS = { proBowl: 0.8, allPro: 1.06, near: 0.98, dpoy: 1.76, spread: 0.1 }
 // passer rating allowed, the NFL formula on the throws at him (null: no throws on record)
@@ -270,9 +291,9 @@ export const SPORT = {
         const frontAdj = front.reduce((s, g) => s + (g.v - 6) * 0.15, 0)
         return { groups: [{ k: 'SECONDARY', v: secG, names: mates.map(p => p.name) }, ...front], adj: (secG - 6) * 0.25 + frontAdj, need: 11 - secG, secondary: secG }
       }
-      const ol = ro.ol.slice(0, 5)
-      const weapons = [...ro.wr, ...ro.te, ...ro.rb].filter(p => p.pos !== pos).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
-      const qb = pos === 'qb' ? null : ro.qb.filter(notMe)[0] ?? null
+      const ol = (ro.ol ?? []).slice(0, 5)
+      const weapons = [...(ro.wr ?? []), ...(ro.te ?? []), ...(ro.rb ?? [])].filter(p => p.pos !== pos).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
+      const qb = pos === 'qb' ? null : (ro.qb ?? []).filter(notMe)[0] ?? null
       const olG = r10(ovrGradeVal(avgOvr(ol))), wpG = r10(ovrGradeVal(avgOvr(weapons))), qbG = qb ? r10(ovrGradeVal(qb.ovr)) : 5
       const groups = [...(pos !== 'qb' ? [{ k: 'QB', v: qbG, names: qb ? [qb.name] : [] }] : []), { k: 'O-LINE', v: olG, names: ol.map(p => p.name) }, { k: 'WEAPONS', v: wpG, names: weapons.map(p => p.name) }]
       const adj = pos === 'qb' ? (olG - 6) * 0.25 + (wpG - 6) * 0.25 : (qbG - 6) * 0.3 + (olG - 6) * 0.15
@@ -383,12 +404,12 @@ export const SPORT = {
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
     // the numbers that get a player there (a lineman by his spot: c is the career)
     // (RB and TE raised: their careers piled up 12-16 Pro Bowls, 9-13 All-Pros and 3-4 OPOYs, about twice the real greats)
-    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1300 || (s.rushYds >= 1100 && s.tds >= 12), wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 1050 || (s.recYds >= 900 && s.tds >= 11), db: (s, c) => dbCoverage(s, c) >= DB_BARS.proBowl || dbRecord(s), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 7 || (s.sacks >= 5 && s.tfl >= 11) : s.sacks >= 11 || (s.sacks >= 9 && s.tfl >= 15)), lb: s => s.tackles >= 125 || (s.tackles >= 105 && (s.ints >= 3 || s.sacks >= 5)), ol: olProBowl, k: (s, c) => K_BARS.proBowl(s, c) },
-    allPro: { db: (s, c) => dbCoverage(s, c) >= DB_BARS.allPro || dbRecord(s), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1650 || (s.rushYds >= 1500 && s.tds >= 16), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1400 || (s.recYds >= 1250 && s.tds >= 16), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 12 || (s.sacks >= 10 && s.tfl >= 15) : s.sacks >= 16 || (s.sacks >= 14 && s.tfl >= 20)), lb: s => s.tackles >= 150 || (s.tackles >= 130 && (s.ints >= 4 || s.sacks >= 6)), ol: olAllPro, k: (s, c) => K_BARS.allPro(s, c) },
-    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1450, wr: s => s.recYds >= 1300, te: s => s.recYds >= 1200, db: (s, c) => dbCoverage(s, c) >= DB_BARS.near, dl: (s, c) => s.sacks >= (dlSpot(c) === 'dt' ? 9 : 14), lb: s => s.tackles >= 135, ol: s => (s.grade ?? 0) >= OL_BARS.near, k: s => K_BARS.near(s) },
+    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1300 || (s.rushYds >= 1100 && s.tds >= 12), wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 1050 || (s.recYds >= 900 && s.tds >= 11), db: (s, c) => dbCoverage(s, c) >= DB_BARS.proBowl || dbRecord(s), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 7 || (s.sacks >= 5 && s.tfl >= 11) : s.sacks >= 11 || (s.sacks >= 9 && s.tfl >= 15)), lb: (s, c) => lbImpact(s, c) >= LB_BARS.proBowl, ol: olProBowl, k: (s, c) => K_BARS.proBowl(s, c) },
+    allPro: { db: (s, c) => dbCoverage(s, c) >= DB_BARS.allPro || dbRecord(s), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1650 || (s.rushYds >= 1500 && s.tds >= 16), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1400 || (s.recYds >= 1250 && s.tds >= 16), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 12 || (s.sacks >= 10 && s.tfl >= 15) : s.sacks >= 16 || (s.sacks >= 14 && s.tfl >= 20)), lb: (s, c) => lbImpact(s, c) >= LB_BARS.allPro, ol: olAllPro, k: (s, c) => K_BARS.allPro(s, c) },
+    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1450, wr: s => s.recYds >= 1300, te: s => s.recYds >= 1200, db: (s, c) => dbCoverage(s, c) >= DB_BARS.near, dl: (s, c) => s.sacks >= (dlSpot(c) === 'dt' ? 9 : 14), lb: (s, c) => lbImpact(s, c) >= LB_BARS.near, ol: s => (s.grade ?? 0) >= OL_BARS.near, k: s => K_BARS.near(s) },
     // (and about one year in four somebody else has the season of his life: a star won ~45% of his prime)
     award: (c, f, s) => {
-      const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1900 || (s.rushYds >= 1750 && s.tds >= 18), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1500 && s.tds >= 14, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)), lb: () => s.tackles >= 155 && (s.ints >= 3 || s.sacks >= 6 || (s.ff ?? 0) >= 4) }
+      const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1900 || (s.rushYds >= 1750 && s.tds >= 18), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1500 && s.tds >= 14, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)), lb: () => lbImpact(s, c) >= LB_BARS.dpoy }
       // a tight end past both the yards and TD records on a winner: nobody out-votes that
       if (c.pos === 'ol' || c.pos === 'k') return false   // (no award for a lineman or a kicker: the All-Pro team is the top of it)
       if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
@@ -399,15 +420,15 @@ export const SPORT = {
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
     // (a lineman: the grade, then the pancakes and a clean sheet; an 88 grade on a winner is about 0.9, a 67 on an 8-win team 0.43)
-    seasonScore: (pos, s) => { const st = s.stats; return pos === 'k' ? kSeasonScore(s) : pos === 'ol' ? clamp(((st.grade ?? 55) - 55) / 35, 0, 1.1) * .5 + Math.min(1.2, (st.pancakes ?? 0) / 50) * .1 + clamp(1 - (st.sacksA ?? 8) / 8, 0, 1) * .1 + s.wins / 15 * .3 : pos === 'lb' ? (st.tackles ?? 0) / 150 * .4 + ((st.ints ?? 0) / 4 + (st.sacks ?? 0) / 8) * .15 + s.wins / 15 * .3 : pos === 'dl' ? (s.spot === 'dt' ? (st.sacks ?? 0) / 10 * .45 + (st.tfl ?? 0) / 14 * .25 : (st.sacks ?? 0) / 16 * .45 + (st.tfl ?? 0) / 20 * .25) + s.wins / 15 * .3 : pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
+    seasonScore: (pos, s) => { const st = s.stats; return pos === 'k' ? kSeasonScore(s) : pos === 'ol' ? clamp(((st.grade ?? 55) - 55) / 35, 0, 1.1) * .5 + Math.min(1.2, (st.pancakes ?? 0) / 50) * .1 + clamp(1 - (st.sacksA ?? 8) / 8, 0, 1) * .1 + s.wins / 15 * .3 : pos === 'lb' ? Math.min(1.25, lbImpact(st) / LB_BARS.allPro) * .52 + s.wins / 15 * .3 : pos === 'dl' ? (s.spot === 'dt' ? (st.sacks ?? 0) / 10 * .45 + (st.tfl ?? 0) / 14 * .25 : (st.sacks ?? 0) / 16 * .45 + (st.tfl ?? 0) / 20 * .25) + s.wins / 15 * .3 : pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
     // a DB's production: picks and the ones taken back; a lineman's: sacks (the greats are scored the same way)
     // (a lineman's: the games he started; his All-Pros carry OL_FIRST_BONUS more in legacyScore, the greats' the same way)
-    legacyProd: (pos, st) => (pos === 'k' ? (st.points ?? 0) / 120 + (st.gw ?? 0) * 0.3 : pos === 'ol' ? (st.starts ?? 0) * OL_START_LEGACY : pos === 'lb' ? (st.tackles ?? 0) / 40 + (st.ints ?? 0) * 0.8 + (st.sacks ?? 0) * 0.3 : pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
+    legacyProd: (pos, st) => (pos === 'k' ? (st.points ?? 0) / 120 + (st.gw ?? 0) * 0.3 : pos === 'ol' ? (st.starts ?? 0) * OL_START_LEGACY : pos === 'lb' ? (st.tackles ?? 0) / 40 + (st.ints ?? 0) * 0.8 + (st.sacks ?? 0) * 0.5 : pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
     // the sim lets every 10-win team in; here 11 is safe, 10 needs the tiebreakers (the sim's own
     // first playoff game, a coin the booked season keeps) and 9 needs them twice
     made: f => { const po = f.playoffRounds ?? []; return !!f.playoffs && (f.wins >= 11 || (f.wins === 10 && !!po[0]?.won) || (f.wins === 9 && !!po[0]?.won && !!po[1]?.won)) },
     rounds: ['Wild Card', 'Divisional', 'Conference Championship', 'Super Bowl'], final: 'Super Bowl', series: false,
-    lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs', 'tackles', 'pbus', 'sacks', 'tfl', 'qbHits', 'ff', 'pds', 'sacksA', 'prs', 'pancakes', 'pen', 'fgm', 'fga', 'xpm', 'xpa', 'points', 'gw'],
+    lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs', 'retTDs', 'tackles', 'pbus', 'sacks', 'tfl', 'qbHits', 'ff', 'pds', 'sacksA', 'prs', 'pancakes', 'pen', 'fgm', 'fga', 'xpm', 'xpa', 'points', 'gw'],
     step: 1, gameWord: 'WEEK', snaps: 'snaps', injScale: 1, moneyWord: 'yards',
     // [what, weeks out (low, high), how often]. Only the season-enders list ends a season
     injuries: [['hamstring strain', 1, 3, 5], ['high ankle sprain', 2, 6, 4], ['rib cartilage', 1, 3, 2], ['concussion', 1, 2, 4], ['MCL sprain', 2, 6, 3], ['shoulder (AC joint)', 1, 4, 3], ['turf toe', 1, 4, 2], ['knee bone bruise', 1, 3, 2], ['fractured hand', 2, 4, 1.5], ['broken collarbone', 6, 8, 0.8], ['fractured fibula', 6, 9, 0.6]],
@@ -552,7 +573,7 @@ export const PO_ROUNDS = SPORT.nfl.rounds
 // a build dressed in its team's colours (the model on Career and on home's Career card), and in his own number
 // (num: jerseyOf; every chip carries it, since each figure reads the number off a different trait)
 export const inTeamColors = (build, fit, num = null) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short, ...(num != null ? { number: num } : null) } : ch])) : build)
-export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', drops: 'DROPS', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', sacks: 'SCK', tfl: 'TFL', qbHits: 'QB HITS', ff: 'FF', fr: 'FR', safeties: 'SFTY', pds: 'PD', rtgA: 'RTG ALLOWED', ydsA: 'YDS ALLOWED', sacksA: 'SACKS ALLOWED', prs: 'PRESSURES', pancakes: 'PANCAKES', pen: 'PENALTIES', grade: 'GRADE', hitsA: 'QB HITS ALLOWED', starts: 'STARTS', fgm: 'FG', fga: 'FGA', fgPct: 'FG%', long: 'LONG', m50: '50+', a50: '50+ ATT', xpm: 'XP', xpa: 'XPA', points: 'PTS', gw: 'GAME-WINNERS', cost: 'COSTLY MISSES', passGrade: 'PASS GRADE', runGrade: 'RUN GRADE', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST',
+export const STAT_LABEL = { retTDs: 'KR TD', passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', drops: 'DROPS', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', sacks: 'SCK', tfl: 'TFL', qbHits: 'QB HITS', ff: 'FF', fr: 'FR', safeties: 'SFTY', pds: 'PD', rtgA: 'RTG ALLOWED', ydsA: 'YDS ALLOWED', sacksA: 'SACKS ALLOWED', prs: 'PRESSURES', pancakes: 'PANCAKES', pen: 'PENALTIES', grade: 'GRADE', hitsA: 'QB HITS ALLOWED', starts: 'STARTS', fgm: 'FG', fga: 'FGA', fgPct: 'FG%', long: 'LONG', m50: '50+', a50: '50+ ATT', xpm: 'XP', xpa: 'XPA', points: 'PTS', gw: 'GAME-WINNERS', cost: 'COSTLY MISSES', passGrade: 'PASS GRADE', runGrade: 'RUN GRADE', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST',
   // soccer
   apps: 'APPS', goals: 'G', assists: 'A', xg: 'xG', avgRating: 'RATING', lgGoals: 'LEAGUE G', mins: 'MINS', shots: 'SHOTS', sot: 'ON TARGET', hatTricks: 'HAT-TRICKS', motm: 'MOTM', cupGoals: 'CUP G', euroGoals: 'EUROPE G' }
 export const HEADLINE_STATS = { ...SPORT.nfl.headline, ...SPORT.bucket.headline }
@@ -572,7 +593,58 @@ export const cloudSport = (sport, slot = 0) => (slot ? `${sport}#${slot}` : spor
 const histKey = sport => `bap_career_hist_${sport}`
 const validCareer = c => !!(c && c.v === CAREER_V && c.pos)
 export function loadCareer(sport, uid, slot = 0) {
-  try { const c = JSON.parse(localStorage.getItem(key(sport, uid, slot))); return validCareer(c) ? realAges({ ...c, slot }) : null } catch { return null }
+  try { const c = JSON.parse(localStorage.getItem(key(sport, uid, slot))); return validCareer(c) ? opened({ ...c, slot }) : null } catch { return null }
+}
+// ── A save from another version of the game (2026-11-10) ─────────────────────
+// Football's league is kept as { coach, off, def } a team. Since 9 Nov the ratings come from the roster and
+// the staff (coach); a client from before that (a tab left open, an app build) reads off and def, and a save
+// that carried only coach gave it NaN for both sides of the ball: every game of the season it started had
+// no score and was a loss (the stat lines and the schedule were fine). Three things put it right:
+//   driftLeague writes off and def again beside coach, so an older client finds its numbers;
+//   healLeague gives them to a save that lacks them (0: the team's own rating);
+//   healSeason replays a season that was started on those ratings.
+const isNum = Number.isFinite
+function healLeague(c) {
+  const lg = c?.league
+  if (c?.sport !== 'nfl' || !lg || typeof lg !== 'object') return c
+  let fixed = null
+  for (const [k, v] of Object.entries(lg)) {
+    const e = v && typeof v === 'object' ? v : {}
+    if (isNum(e.off) && isNum(e.def)) continue
+    (fixed ??= { ...lg })[k] = { ...e, off: isNum(e.off) ? e.off : 0, def: isNum(e.def) ? e.def : 0 }
+  }
+  return fixed ? { ...c, league: fixed } : c
+}
+// a football season under way whose team has no ratings, or whose games have no scores (never the playoffs:
+// a season like that can't reach them)
+function brokenSeason(c) {
+  const a = c?.active
+  if (c?.sport !== 'nfl' || c.phase !== 'season' || !a || a.po || a.final) return false
+  const games = a.snap?.games ?? a.base?.games
+  if (!Array.isArray(games) || !games.length) return false
+  return (!!c.simTeam && (!isNum(c.simTeam.off) || !isNum(c.simTeam.def))) || games.some(g => !isNum(g?.mySc) || !isNum(g?.oppSc))
+}
+// The season starts over from its first game on the team as it really rates, with a line in the feed that
+// says so. Everything before it stays: the seasons played, the contract, the roster, the build (a bye-week
+// gain included). The injuries of the lost games go with them.
+function healSeason(c) {
+  if (!brokenSeason(c)) return c
+  try {
+    const yr = c.year + 1
+    const [n] = startSeason({ ...c, phase: 'preseason', active: null, simTeam: null, goals: [], injuries: (c.injuries ?? []).filter(i => i.year !== yr) })
+    if (brokenSeason(n)) return c
+    return { ...n, active: { ...n.active, feed: [...n.active.feed, { k: 0, note: 'This season’s games were saved without scores. It starts over from Week 1.', noteKind: 'SEASON RESTARTED' }] } }
+  } catch { return c }
+}
+// What a save is when it's opened: real ages (realAges), then put right. A replayed season is kept at once
+// (here and in the cloud), so every screen that opens the career sees the same one.
+function opened(c0) {
+  const c = healLeague(realAges(c0))
+  const n = healSeason(c)
+  if (n === c) return c
+  const s = { ...n, updatedAt: Date.now() }
+  try { localStorage.setItem(key(s.sport, s.uid, s.slot ?? 0), JSON.stringify(s)); queueCloudSave(s) } catch {}
+  return s
 }
 // Every save stamps `updatedAt` (local and cloud copies are merged by it) and,
 // for a signed-in player, queues the cloud copy (lib/careerCloud.js). A save
@@ -602,7 +674,7 @@ export async function syncCareerFromCloud(sport, uid, slot = 0) {
   const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid, slot } : null
   if (good && (!local || (good.updatedAt || 0) > (local.updatedAt || 0))) {
     try { localStorage.setItem(key(sport, uid, slot), JSON.stringify(good)) } catch {}
-    return realAges(good)
+    return opened(good)
   }
   if (local) {
     if (!good || (local.updatedAt || 0) > (good.updatedAt || 0)) queueCloudSave(local.updatedAt ? local : { ...local, updatedAt: Date.now() })
@@ -662,7 +734,8 @@ const pastCap = (sport, g, name, yrs, room = 0) => yrs > 0 && ageOf(sport, name,
 const rosterYrs = c => Math.max(0, (c.season ?? FIRST_SEASON) + (c.phase === 'offseason' ? 1 : 0) - FIRST_SEASON)
 const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name), slot: p.pos ?? p.subpos ?? null, from: p.team, ...(pos === 'dl' || pos === 'lb' ? { height: p.height, weight: p.weight, size: p.attrs?.size } : {}) })
 const byOvr = (a, b) => b.ovr - a.ovr
-const avgOvr = list => (list.length ? list.reduce((s, p) => s + p.ovr, 0) / list.length : 72)
+// (an empty room, or one whose men have no overall on record, grades as an average one: never NaN)
+const avgOvr = list => { const v = list.map(p => p?.ovr).filter(Number.isFinite); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 72 }
 // A team's real roster (the depth the lineup needs, the five starting linemen in football)
 // A career saved before real ages: the real players on the roster get theirs
 function realAges(c0) {
@@ -841,6 +914,9 @@ function castMan(S, g, p) {
     // (a man who catches it: how he does with a defender on him, -1 to 1 around a B. His hands first, then his body
     // control (a tight end's strength) and his size. The throwing games' contested balls read it: lib/mg/throw.js)
     ...(CATCHERS.has(g) && raw?.attrs?.hands != null ? { ball: Math.max(-1, Math.min(1, (raw.attrs.hands * 0.5 + (raw.attrs.bodyControl ?? raw.attrs.strength ?? raw.attrs.hands) * 0.3 + (raw.attrs.size ?? raw.attrs.hands) * 0.2 - 6) / 5)) } : null),
+    // (and what he does with it after: a receiver's after-catch grade, a back's elusiveness, 0-11. Whether he makes the
+    // first man miss in the throwing games: lib/mg/throw.js)
+    ...(CATCHERS.has(g) && (raw?.attrs?.afterCatch ?? raw?.attrs?.elusiveness) != null ? { yac: raw.attrs.afterCatch ?? raw.attrs.elusiveness } : null),
     // (a ballplayer: his side of the plate, his arm, his grades and his spot, so the at-bat faces his real arsenal and
     // the pitcher works a real hitter's zones: lib/mg/atbat.js, pitch.js)
     ...(raw?.throws ? { bats: raw.bats, throws: raw.throws, attrs: raw.attrs, role: raw.role } : null),
@@ -877,7 +953,7 @@ const XI_NEXT = { qb: [], rb: ['wr'], wr: ['te', 'rb'], te: ['wr'], edge: ['dt',
 const XI_GROUP = { edge: 'dl', dt: 'dl', cb: 'db', s: 'db' }
 const xiMan = (S, g, p) => {
   const m = castMan(S, g, p), first = String(p.name ?? '').trim()[0]
-  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin }, ...(m.ball != null ? { ball: m.ball } : null) }
+  return { name: m.name, last: m.name, short: first ? `${first.toUpperCase()}. ${m.name}` : m.name, number: m.number, skin: m.skin, look: { number: m.number, skin: m.skin }, ...(m.ball != null ? { ball: m.ball } : null), ...(m.yac != null ? { yac: m.yac } : null) }
 }
 function castXI(c, S, short, ro, out) {
   const room = list => realFirst(S, (list ?? []).filter(p => p.name !== c.name))
@@ -1099,9 +1175,9 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
   const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs, gone)
   const f = S.fit(ro, pos, p => p.name !== name, spot, short, yrs)
   // (football: from the men on the roster and the coaching staff, teamRating; the others: the team's rating and the league's moves)
-  const drift = league?.[short] ?? { off: 0, def: 0 }
+  const drift = league?.[short] ?? { off: 0, def: 0 }, moved = k => (Number.isFinite(drift[k]) ? drift[k] : 0)
   const rt = S.talent ? teamRating(S, short, ro, pos, p => p.name !== name, league, yrs) : null
-  const off = rt ? rt.off : clamp(r10(t.off + drift.off), 1, 10), def = rt ? rt.def : clamp(r10(t.def + drift.def), 1, 10)
+  const off = rt ? rt.off : clamp(r10(t.off + moved('off')), 1, 10), def = rt ? rt.def : clamp(r10(t.def + moved('def')), 1, 10)
   return {
     short, name: t.name, color: t.color, color2: t.color2, off, def, conf: t.conf, div: t.div, status: S.status((off + def) / 2),
     ...(rt ? { coach: rt.coachG, offG: rt.offG, defG: rt.defG } : {}),
@@ -1149,7 +1225,7 @@ function talentMid(S, yrs = 0) {
 }
 // the staff's grade on the 0-11 scale (an average staff is a B)
 const coachGrade = v => r10(clamp(6 + v * 2.5, 0, 11))
-const coachOf = (S, short, league) => (typeof league?.[short]?.coach === 'number' ? league[short].coach : rateBase(S).coach0[short] ?? 0)
+const coachOf = (S, short, league) => (Number.isFinite(league?.[short]?.coach) ? league[short].coach : rateBase(S).coach0[short] ?? 0)
 function teamRating(S, short, ro, pos, notMe, league, yrs = 0) {
   const B = rateBase(S), mid = talentMid(S, yrs), T = S.talent(ro, pos, notMe), coach = coachOf(S, short, league)
   const offMid = pos === 'qb' ? mid.qbOff : mid.off
@@ -1163,7 +1239,15 @@ function teamRating(S, short, ro, pos, notMe, league, yrs = 0) {
 const ratingOf = (c, short) => { const S = sportOf(c); return S.talent ? teamRating(S, short, rosterFor(c, short), null, () => true, c.league, rosterYrs(c)) : null }
 const lineSpot = c => (c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : null)
 const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short), spot: lineSpot(c) })
-function simTeam(c, fit) { const S = sportOf(c); return S.simTeam(S.teamOf(c.team), fit, c.nextMods ?? {}, c) }
+// (never handed to a sim with a rating that isn't a number: soundTeam)
+function simTeam(c, fit) { const S = sportOf(c), t = S.teamOf(c.team); return soundTeam(S.simTeam(t, fit, c.nextMods ?? {}, c), t) }
+// A side of the ball that isn't a number (see healLeague) falls back to the team's own rating; a sound team
+// comes back as it is, the same object
+function soundTeam(team, base) {
+  if (!team || (Number.isFinite(team.off) && Number.isFinite(team.def))) return team
+  const or = k => (Number.isFinite(team[k]) ? team[k] : Number.isFinite(base?.[k]) ? base[k] : 5.5)
+  return { ...team, off: or('off'), def: or('def') }
+}
 // ── The front office deals for a player (the trade deadline) ─────────────────
 // He joins the roster for real: in his own spot (a lineman) or by his overall,
 // and whoever falls off the end goes the other way. The team is graded again
@@ -1268,14 +1352,16 @@ function driftLeague(c, r) {
     const d = c.league?.[t.short] ?? { off: 0, def: 0 }
     // (most of a team's swing is the whole team, a new coach or a new quarterback: both sides together)
     const g0 = gauss()
-    const move = k => { const { m, sd } = shape[k], now = t[k] + (d[k] ?? 0), g = 0.75 * g0 + 0.66 * gauss(); return r10(clamp(m + (now - m) * keep + g * sd * swing, 1.5, 9.8) - t[k]) }
+    const move = k => { const { m, sd } = shape[k], now = t[k] + (Number.isFinite(d[k]) ? d[k] : 0), g = 0.75 * g0 + 0.66 * gauss(); return r10(clamp(m + (now - m) * keep + g * sd * swing, 1.5, 9.8) - t[k]) }
     const off = move('off'), def = move('def')
     // football: the roster moves the team itself (teamRating), so the league's swing is the coaching staff's,
     // a new head coach or new coordinators: it keeps 45% of where it stood and takes the year's swing
     // (never past 3 either way; set so teams rise and fall as much as they did on the old ratings: a
     // bottom-five team reaches the top five within five years about 27% of the time). The same dice
     // as before, so the roster moves that follow come out as they did.
-    league[t.short] = S.talent ? { coach: clamp(r10(coachOf(S, t.short, c.league) * 0.45 + g0 * 1.3), -3, 3) } : { off, def }
+    // (off and def stay on the entry: nothing here reads them for football, a client from before the roster
+    // ratings reads nothing else, and without them it played a season of games with no scores: healLeague)
+    league[t.short] = S.talent ? { coach: clamp(r10(coachOf(S, t.short, c.league) * 0.45 + g0 * 1.3), -3, 3), off, def } : { off, def }
   }
   return league
 }
@@ -1953,7 +2039,7 @@ function seasonSwing(c, D) {
 }
 // Picks a saved season back up: the director rebuilt from its own data
 export function resumeSeason(c) {
-  const D = director(c, c.simTeam, c.active.base, c.active.seed)
+  const D = director(c, soundTeam(c.simTeam, sportOf(c).teamOf(c.team)), c.active.base, c.active.seed)
   D.restore(c.active.snap)
   return D
 }
@@ -2413,11 +2499,13 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
       const key = c.pos === 'qb' ? 'tds' : c.pos === 'rb' ? 'rushTDs' : 'recTDs'
       if (line[key] != null) line[key] = Math.max(1, line[key])
     }
+    // (a kick return taken back: his 7 are on the board, a return touchdown in his box score and the game's line)
+    if (game === 'kick-return' && hit && pts === 7) { line.retTDs = 1; swing = swing ? `Kick return TD. ${swing}` : 'Kick return TD.' }
   }
   // (his touchdowns are on the board: a team can't score fewer points than the touchdowns he had in the box score,
   // and a loss stays a loss)
   if (!S.isBucket && line) {
-    const tds = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0)
+    const tds = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0) + (line.retTDs ?? 0)
     if (tds && mySc < 6 * tds) {
       mySc = 7 * tds
       if (!won && oppSc <= mySc) oppSc = mySc + 1 + Math.floor(r() * 7)

@@ -14,14 +14,17 @@ html.is-cfb {
   --cfb-line: rgba(255,255,255,.13);
   --cfb-line-hi: rgba(255,255,255,.3);
   --cfb-gold: #e8c766;
-
-  /* football's tokens, in college colours (the buttons go flat: both ends of their gradient are one blue) */
+}
+/* football's tokens, in college colours (the buttons go flat: both ends of their gradient are one blue).
+   Not while one of the dock's screens is open over the mode (html.ag-screen-open: the Shop, Cards, the Pass…):
+   those are the game's own screens and keep the game's colours (the Shop opened from here was blue) */
+html.is-cfb:not(.ag-screen-open) {
   --accent: #9fc1ff; --accent-hi: #ffffff; --accent-lo: rgba(26,95,209,.14); --accent-dk: #1a5fd1;
   --btn-start: #1a5fd1; --btn-end: #1a5fd1; --btn-glow: rgba(26,95,209,0); --btn-txt: #ffffff;
   --text: #ffffff; --text-2: #c9dafc; --text-3: #8fb0ee; --text-4: #3d68b8;
   --border: rgba(255,255,255,.1); --border-hi: rgba(255,255,255,.26);
 }
-html:is(.is-app, .app-look).is-cfb {
+html:is(.is-app, .app-look).is-cfb:not(.ag-screen-open) {
   --ag-bg: #061634;
   --ag-panel: rgba(11,35,80,.9);
   --ag-panel-2: rgba(16,44,99,.86);
@@ -32,10 +35,10 @@ html:is(.is-app, .app-look).is-cfb {
   --ag-muted: rgba(214,226,255,.72);
   --ag-glow: rgba(26,95,209,0);
 }
-html.is-cfb .ag-tab { color: rgba(214,226,255,.5); }
-html.is-cfb .ag-edge, html.is-cfb .ag-seam-chip { background: rgba(6,22,52,.96); }
+html.is-cfb:not(.ag-screen-open) .ag-tab { color: rgba(214,226,255,.5); }
+html.is-cfb:not(.ag-screen-open) .ag-edge, html.is-cfb:not(.ag-screen-open) .ag-seam-chip { background: rgba(6,22,52,.96); }
 html.is-cfb .tpm-overlay::before { background: rgba(6,22,52,.9); }
-html.is-cfb body { background: var(--cfb-navy); }
+html.is-cfb:not(.ag-screen-open) body { background: var(--cfb-navy); }
 
 /* ── the mode's own screens ──────────────────────────────────────────────── */
 .cfb-screen { background: var(--cfb-navy); color: var(--cfb-white); }
@@ -51,6 +54,17 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 .cfb-resume-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--cfb-blue-hi); color: #fff; flex: none; }
 .cfb-resume small { display: block; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--cfb-muted); }
 .cfb-resume b { display: block; margin-top: 2px; font-family: var(--ag-display); font-weight: 400; font-size: 21px; letter-spacing: .4px; }
+
+/* entry: the pool the wheels deal from (Current / All-Time): two flat halves, the one in play filled in the mode's blue */
+.cfb-pool { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--cfb-line); border-radius: 6px; overflow: hidden; background: var(--cfb-navy-2); }
+.cfb-pool-opt { display: grid; gap: 3px; justify-items: start; padding: 11px 12px 9px; border: 0; background: transparent; color: var(--cfb-muted); text-align: left; cursor: pointer; transition: background .12s; }
+.cfb-pool-opt + .cfb-pool-opt { border-left: 1.5px solid var(--cfb-line); }
+.cfb-pool-opt b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: .95; letter-spacing: .5px; }
+.cfb-pool-opt small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; color: var(--cfb-faint); }
+.cfb-pool-opt.is-on { background: var(--cfb-blue); color: #fff; box-shadow: inset 0 -3px 0 var(--cfb-blue-hi); }
+.cfb-pool-opt.is-on small { color: var(--cfb-muted); }
+.cfb-pool-opt:not(.is-on):hover { color: #fff; }
+.cfb-pool-opt:active { transform: scale(.99); }
 
 /* entry: the three positions, standing there */
 .cfb-pos-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -79,6 +93,7 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 .cfb-past-tags { display: flex; gap: 5px; }
 .cfb-past-tags i { padding: 3px 6px 2px; border-radius: 3px; background: var(--cfb-blue-hi); font-family: var(--ag-font); font-style: normal; font-size: 12px; letter-spacing: 1.2px; }
 .cfb-past-tags i.is-gold { background: var(--cfb-gold); color: #1d1503; }
+.cfb-past-tags i.is-at { background: transparent; box-shadow: inset 0 0 0 1px var(--cfb-line-hi); }   /* an All-Time build's season */
 
 @media (min-width: 769px) {
   .cfb-entry .ag-screen-head, .cfb-entry .ag-screen-body { max-width: 860px; margin-left: auto; margin-right: auto; width: 100%; }
@@ -336,6 +351,16 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbr-card { display: grid; gap: 10px; padding: 14px; border-radius: 6px; background: var(--cfb-blue); }
 .cfbr-who small { display: block; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.8px; color: rgba(255,255,255,.78); }
 .cfbr-who b { display: block; margin-top: 2px; font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: .4px; text-transform: uppercase; }
+/* the first school's offers: the name on the card is a field (CFBMode OffersScreen onName). A labelled box with
+   a gold edge until a name's typed, so it can't be missed; a white edge once it has one */
+.cfbr-name { position: relative; display: block; margin-top: 8px; }
+.cfbr-name > span { display: block; margin-bottom: 5px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; line-height: 1; color: var(--cfb-gold); }
+.cfbr-name-in { display: block; width: 100%; min-width: 0; height: 56px; padding: 0 46px 0 12px; border: 2px solid rgba(255,255,255,.55); border-radius: 6px; background: rgba(0,0,0,.3); color: #fff; font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .4px; text-transform: uppercase; }
+.cfbr-name-in:placeholder-shown { border-color: var(--cfb-gold); }
+.cfbr-name-in::placeholder { color: rgba(255,255,255,.55); }
+.cfbr-name-in:focus { outline: none; border-color: #fff; background: rgba(0,0,0,.42); }
+.cfbr-name-pen { position: absolute; right: 14px; bottom: 18px; color: var(--cfb-gold); pointer-events: none; }
+.cfbr-name-in:not(:placeholder-shown) ~ .cfbr-name-pen { color: rgba(255,255,255,.7); }
 .cfbr-stars { font-size: 30px; line-height: 1; letter-spacing: 4px; color: var(--cfb-gold); }
 .cfbr-stars i { font-style: normal; color: rgba(255,255,255,.22); }
 .cfbr-rank { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgba(255,255,255,.22); }

@@ -456,7 +456,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   // position still coming at the end); the side switch sits on top of the bar
   const isNfl = !isBucket && !isSoccer && !isBaseball
   const side = SIDE_OF[position] ?? 'off'
-  const SIDE_ORDER = { dl: 0, db: 1, lb: 2, k: 3 }
+  const SIDE_ORDER = { dl: 0, lb: 1, db: 2, k: 3 }
   const shown = isNfl ? positions.filter(o => (SIDE_OF[o.pos] ?? 'off') === side).sort((a, b) => (a.locked ? 1 : 0) - (b.locked ? 1 : 0) || (side === 'def' ? (SIDE_ORDER[a.pos] ?? 9) - (SIDE_ORDER[b.pos] ?? 9) : 0)) : positions
   const posIdx = Math.max(0, shown.findIndex(o => o.pos === position))
   // each side's position: the one picked, or the one it was left on (else its first)

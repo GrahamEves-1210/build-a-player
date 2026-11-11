@@ -19,6 +19,7 @@ import * as halfcourt from './halfcourt.js'
 import * as passpro from './passpro.js'
 import * as hitstick from './hitstick.js'
 import * as kick from './kick.js'
+import * as kickret from './kickret.js'
 import * as penalty from './penalty.js'
 import * as oneonone from './oneonone.js'
 import * as header from './header.js'
@@ -66,6 +67,8 @@ export const ENGINES = {
   // the kicker: the field goals from behind the holder (the passing games' camera, to the end zone), the onside kick in close
   ...map(kick, 'kick', ['deep-kick', 'game-winner'], 'acc'),
   ...map(kick, 'kick', ['onside'], 'release'),
+  // (the back or the receiver deep on a kickoff: his own camera, the whole field rolling under it)
+  ...map(kickret, 'kickret', ['kick-return']),
   // soccer (lib/mg/soccer.js draws them all: a camera in metres, on a real pitch)
   ...map(penalty, 'penalty', ['penalty']),
   ...map(oneonone, 'oneonone', ['one-on-one']),

@@ -64,11 +64,12 @@ const FORM = {
 }
 // How the stat line for a game reads in a headline
 export const GAME_LINE = {
-  qb: g => `${g.passYds} yds, ${g.tds} TD`, rb: g => `${g.rushYds} rush yds, ${g.rushTDs + (g.recTDs ?? 0)} TD`,
-  wr: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`, te: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`,
+  qb: g => `${g.passYds} yds, ${g.tds} TD`, rb: g => `${g.rushYds} rush yds, ${g.rushTDs + (g.recTDs ?? 0)} TD${g.retTDs ? ', kick return TD' : ''}`,
+  wr: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}${g.retTDs ? ', kick return TD' : ''}`, te: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`,
   db: g => `${g.tackles} TKL${g.ints ? `, ${g.ints} INT` : ''}${g.pbus ? `, ${g.pbus} PD` : ''}`, dl: g => `${g.sacks} sack${g.sacks === 1 ? '' : 's'}, ${g.tackles} TKL${g.ff ? `, ${g.ff} FF` : ''}`,
   lb: g => `${g.tackles} TKL${g.sacks ? `, ${g.sacks} sack${g.sacks === 1 ? '' : 's'}` : ''}${g.ints ? `, ${g.ints} INT` : ''}${g.ff ? `, ${g.ff} FF` : ''}`,
-  ol: g => `${g.pancakes} pancake${g.pancakes === 1 ? '' : 's'}, ${g.sacks} sack${g.sacks === 1 ? '' : 's'} allowed`,
+  // (a Career playoff game keeps a lineman's sacks as sacksA: read either, never "undefined sacks allowed")
+  ol: g => { const sk = g.sacks ?? g.sacksA ?? 0, pk = g.pancakes ?? 0; return `${pk} pancake${pk === 1 ? '' : 's'}, ${sk} sack${sk === 1 ? '' : 's'} allowed` },
   k: g => `${g.fgm}-for-${g.fga}${g.long ? `, long ${g.long}` : ''}${g.gw ? ', the game-winner' : ''}`,
   guard: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`, big: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`,
   st: g => (g.goals ? `${g.goals === 3 ? 'a hat-trick' : `${g.goals} goal${g.goals === 1 ? '' : 's'}`}${g.assists ? `, ${g.assists} assist${g.assists === 1 ? '' : 's'}` : ''}` : g.assists ? `${g.assists} assist${g.assists === 1 ? '' : 's'}` : `${g.shots ?? 0} shot${g.shots === 1 ? '' : 's'}`),

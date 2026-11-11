@@ -121,7 +121,8 @@ export default function WRFigureOverlay({ build, isTE = false }) {
     svg = setFill(svg, 'right shoe', 'transparent')
   }
 
-  const teamNickname = TEAM_NICKNAMES[build?.['size']?.team] ?? build?.['size']?.team ?? ''
+  // (a college chip carries its own word, the school's name; one saved before that had only 'cfb/IND': the code alone)
+  const teamNickname = TEAM_NICKNAMES[build?.['size']?.team] ?? build?.['size']?.jerseyWord ?? String(build?.['size']?.team ?? '').replace(/^cfb\//, '')
 
   return (
     <div className="player-qbfig player-rbfig" style={{ mixBlendMode: 'screen' }}>
@@ -138,7 +139,7 @@ export default function WRFigureOverlay({ build, isTE = false }) {
             textAnchor="middle"
             transform="rotate(3, 224, 422)"
             fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
-            fontSize="21"
+            fontSize={teamNickname.length > 10 ? Math.max(11, Math.round(210 / teamNickname.length)) : 21}
             letterSpacing="1"
             fill="white"
             stroke="black"

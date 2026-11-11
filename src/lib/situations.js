@@ -25,6 +25,8 @@ const SPOTS = {
   'game-winner': { margin: [2, 1, 0, 2, 1], span: [2, 4], tail: 'Field goal for the win.' },
   'deep-kick': { margin: [0, -1, 1, 2, -3], span: [130, 420], tail: 'A long field goal try.' },
   onside: { margin: [3, 5, 6, 7, 8, 8], span: [62, 108], tail: 'No timeouts. They need the ball back.' },
+  // (they've just scored: down a score or level, and they kick it off)
+  'kick-return': { margin: [3, 4, 6, 7, 7, 0, 1], span: [70, 330], tail: 'They kick it off.' },
   'jump-route': STOP, 'zone-drop': STOP, 'tackle-angle': STOP, 'pass-rush': STOP, 'run-stuff': STOP, 'hit-stick': STOP,
   'clutch-shot': { margin: [1, 1, 2], fixed: 2.8, hoops: true, tail: 'One shot left.' },         // (2.8: the shot's own clock in lib/mg/meter.js)
   'free-throws': { margin: [1, 1, 0], tenths: [0.8, 5.5], hoops: true, tail: 'Two shots at the line.' },

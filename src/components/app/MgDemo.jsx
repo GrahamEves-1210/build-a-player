@@ -22,7 +22,7 @@ const quiet = () => { const c = document.documentElement.classList; return c.con
 // a seed that's been seen to miss (a real roster, a rare layout) is skipped for the rest of the visit
 const bad = new Map()
 const SEEDS = ['demo-0', 'demo-1', 'demo-2', 'demo-3', 'demo-4']
-const SCAN_STYLE = { position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px)', mixBlendMode: 'multiply', opacity: 0.6 }
+const SCAN_STYLE = { position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px)', opacity: 0.6 }   // (black: no blend mode needed, the same picture)
 
 export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, empty = false }) {
   const box = useRef(null), cv = useRef(null), ov = useRef(null)

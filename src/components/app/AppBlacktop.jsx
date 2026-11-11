@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
 import { useLiveCounts, searching } from '../../lib/liveCounts'
 import { LiveLeaveButton } from './LiveLeave'
@@ -22,6 +22,11 @@ import { useProgress } from '../../lib/progress'
 import { makeMimics, isTester } from '../../lib/mimic'
 import { useLiveGames, useBlacktopWatch } from '../../lib/blacktopWatch'
 import { RollingNumber } from './MotionText'
+import { motion } from 'motion/react'
+import { SPRING_LAYOUT } from '../../lib/motion'
+import BlacktopSheet from './BlacktopSheet'
+import './blacktop-theme.css'
+import './blacktop-lobby.css'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -75,122 +80,142 @@ const firstName = n => (n || '').trim().split(/\s+/)[0]
 // a grade's color, rounded like its letter (valToGrade): S purple, A blue, B green, C yellow, D orange, F red
 const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
 
-// ── Hub: 1v1 (pickup or a friend), then the 2v2 and 3v3 lobbies, with stats ──
+// ── Hub: the court you walk up to. Pick the game (3v3, 2v2, 1v1), then one way in ──
+// 1v1's other ways in: pickup (where there's no live lobby), a friend's game, a friend's code
 export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) {
   const [code, setCode] = useState('')
   return (
-    <div className="v1-opts">
-      {onPickup && <button className="bt-opt" onClick={() => { sfx('tap'); onPickup() }}>
-        <span className="bt-opt-ico"><IconBasketball size={20} /></span>
-        <span className="bt-opt-txt"><b>PICKUP</b><small>Search for a game</small></span>
-        <IconArrow size={14} />
-      </button>}
-      <button className="bt-opt" onClick={() => { sfx('tap'); onFriend() }}>
-        <span className="bt-opt-ico"><IconVersus size={20} /></span>
-        <span className="bt-opt-txt"><b>PLAY A FRIEND</b><small>Get a code and send it to them</small></span>
-        <IconArrow size={14} />
-      </button>
-      <form className="v1-join" onSubmit={e => { e.preventDefault(); if (code.length >= 4) onJoinCode(code) }}>
+    <div className="btl-opts">
+      {onPickup && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); onPickup() }}>PICKUP <IconArrow size={18} /></button>}
+      <button className="ag-btn btl-btn btl-btn--line" onClick={() => { sfx('tap'); onFriend() }}>PLAY A FRIEND</button>
+      <form className="btl-code" onSubmit={e => { e.preventDefault(); if (code.length >= 4) onJoinCode(code) }}>
         <input value={code} maxLength={8} placeholder="GOT A FRIEND'S CODE?" aria-label="Friend's code" autoComplete="off"
           onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} />
-        <button className="ag-btn" type="submit" disabled={code.length < 4}>JOIN</button>
+        <button className="ag-btn btl-btn btl-btn--line" type="submit" disabled={code.length < 4}>JOIN</button>
       </form>
-      {error && <div className="v1-error">{error}</div>}
+      {error && <div className="btl-error">{error}</div>}
     </div>
   )
 }
 
-export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null, onWatch = null }) {
+// DEV only: the lobby half's screens on made-up data (/bucket?btlobby=…: app/BlacktopLobbyLook.jsx).
+// Nothing in it reaches the live server, and none of it ships.
+const BT_LOBBY_LOOK = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('btlobby') : null
+const LobbyLook = import.meta.env.DEV ? lazy(() => import('./BlacktopLobbyLook')) : null
+if (import.meta.env.DEV && BT_LOBBY_LOOK) {
+  // (the look page lives where the hub does: walk there once the app is up)
+  let n = 0
+  const id = setInterval(() => { if (document.querySelector('.btl-look') || ++n > 40) { clearInterval(id); return } window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'blacktop' })) }, 400)
+}
+
+export function BlacktopHub(props) {
+  if (import.meta.env.DEV && BT_LOBBY_LOOK) return <Suspense fallback={null}><LobbyLook look={BT_LOBBY_LOOK} /></Suspense>
+  return <HubLive {...props} />
+}
+// the hub's live numbers: my rating, the games on right now, who's on the Blacktop, who's searching
+function HubLive(props) {
   const o = useProgress().stats?.online ?? { rating: 800 }
-  // the games being played right now, under each mode (only with the live server)
-  const live = useLiveGames(!!onWatch)
+  // the games being played right now (only with the live server)
+  const live = useLiveGames(!!props.onWatch)
   const onCourt = usePresence()?.areas?.blacktop ?? 0   // players on the Blacktop right now
   // the spots taken in each lobby right now (lib/liveCounts.js): nothing until the server says
   const waiting = useLiveCounts(true)
-  const searchingTag = size => { const n = searching(waiting, `bt:${size}`); return n ? <span className="bt-mode-n">{n} SEARCHING</span> : null }
+  return <BlacktopHubView {...props} rating={o.rating} live={live} onCourt={onCourt} waiting={waiting} />
+}
+// the games, biggest first: who's on a side, and who a practice game is played with
+const HUB_MODES = [
+  { size: 3, line: '2 GUARDS · 1 BIG', cpus: 'WITH 5 CPUS' },
+  { size: 2, line: '1 GUARD · 1 BIG', cpus: 'WITH 3 CPUS' },
+  { size: 1, line: 'GUARD OR BIG', cpus: 'VS 1 CPU' },
+]
+const HUB_MODE_KEY = 'bap_bt_mode'   // the game picked last time (this browser only)
+export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null, onWatch = null, rating = 800, live = {}, onCourt = 0, waiting = null }) {
+  const court = useCourt()
+  const join = { 3: onJoin3v3, 2: onJoin2v2, 1: onJoin1v1 }
+  const modes = HUB_MODES.filter(m => m.size !== 2 || onJoin2v2)
+  const [size, setSize] = useState(() => { let s = 3; try { s = Number(localStorage.getItem(HUB_MODE_KEY)) || 3 } catch {} return modes.some(m => m.size === s) ? s : 3 })
+  const pick = s => { if (s === size) return; setSize(s); sfx('tap'); try { localStorage.setItem(HUB_MODE_KEY, String(s)) } catch {} }
+  const mode = modes.find(m => m.size === size) ?? modes[0]
+  const go = join[mode.size]
   return (
-    <div className="ag-screen ag-screen--bucket bt-hub">
-      <div className="ag-screen-head">
-        <div>
-          <span className="ag-eyebrow">ONLINE · LIVE GAMES · FIRST TO 11{onCourt > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(onCourt)}<small>PLAYING</small></span>}</span>
-          <h1 className="ag-h1">Blacktop</h1>
+    <div className="ag-screen ag-screen--bucket bt-hub btl btl-hub">
+      <header className="btl-stage">
+        <div className="btl-stage-floor" aria-hidden="true"><img src={court.src} alt="" draggable={false} /></div>
+        <div className="btl-stage-in">
+          <div className="btl-stage-top">
+            <span className="btl-eyebrow">ONLINE · FIRST TO 11</span>
+            <button className="ag-round-btn btl-x" onClick={onBack} aria-label="Home"><IconClose size={16} /></button>
+          </div>
+          <h1 className="btl-title">Blacktop</h1>
+          <div className="btl-stage-foot">
+            {onCourt > 0 && <span className="btl-onair"><i className="btl-dot ip-fx" aria-hidden="true" /><b>{fmtCount(onCourt)}</b>PLAYING</span>}
+            <button className="btl-rating" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'online' }))}>
+              <small>ONLINE RATING</small><TierChip rating={rating} /><b>{rating}</b><IconArrow size={13} />
+            </button>
+          </div>
         </div>
-        <button className="ag-round-btn" onClick={onBack} aria-label="Home"><IconClose size={16} /></button>
-      </div>
-      <div className="ag-screen-body">
-        <button className="bt-hub-rating ag-pop" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'online' }))}>
-          <span className="ag-eyebrow">ONLINE RATING</span><TierChip rating={o.rating} /><b>{o.rating}</b><IconArrow size={13} />
-        </button>
-        {notice && <button className="bt-notice ag-pop" onClick={onNotice}>{notice}<small>TAP TO DISMISS</small></button>}
-        <section className="bt-mode ag-pop" style={{ '--d': '60ms' }}>
-          <div className="bt-mode-head">
-            <span className="bt-mode-tag">1V1</span>
-            <span className="bt-mode-txt"><b>1v1</b><small>One on one. Take a spot as a guard or a big, build, run it.</small></span>
-            {onJoin1v1 && searchingTag(1)}
+      </header>
+      <div className="btl-body btl-hub-body">
+        {notice && <button className="btl-notice" onClick={onNotice}><span>{notice}</span><small>TAP TO DISMISS</small><IconClose size={14} /></button>}
+        <div className="btl-hub-main">
+          <div className="btl-modes" role="radiogroup" aria-label="Game">
+            {modes.map(m => {
+              const on = m.size === mode.size
+              // the spots taken in that lobby right now (1v1's lobby is only on the live server)
+              const n = m.size === 1 && !onJoin1v1 ? null : searching(waiting, `bt:${m.size}`)
+              return (
+                <button key={m.size} role="radio" aria-checked={on} className={`btl-mode${on ? ' is-on' : ''}`} onClick={() => pick(m.size)}>
+                  {on && <motion.span layoutId="btl-mode-lit" className="btl-mode-lit" transition={SPRING_LAYOUT} aria-hidden="true" />}
+                  <b className="btl-mode-tag">{m.size}V{m.size}</b>
+                  <span className="btl-mode-txt">
+                    <span className="btl-mode-line">{m.line}</span>
+                    {n ? <span className="btl-mode-n"><i className="btl-dot" aria-hidden="true" />{n} SEARCHING</span> : null}
+                  </span>
+                </button>
+              )
+            })}
           </div>
-          {onJoin1v1 ? <>
-            <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin1v1() }}>JOIN LOBBY <IconArrow size={16} /></button>
-            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(1) }}>PRACTICE · VS 1 CPU</button>}
-            <OneOnOneOptions onFriend={onFriend} onJoinCode={onJoinCode} />
-            <LiveGames list={live[1]} size={1} onWatch={onWatch} />
-            <ModeStats mode="bt1" />
-          </> : <>
-            <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
-            <ModeStats mode="h2hB" />
-          </>}
-        </section>
-        {onJoin2v2 && (
-          <section className="bt-mode ag-pop" style={{ '--d': '100ms' }}>
-            <div className="bt-mode-head">
-              <span className="bt-mode-tag">2V2</span>
-              <span className="bt-mode-txt"><b>2v2</b><small>A guard and a big a side. Take a spot, build your role, run it.</small></span>
-              {searchingTag(2)}
-            </div>
-            <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
-            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · WITH 3 CPUS</button>}
-            <LiveGames list={live[2]} size={2} onWatch={onWatch} />
-            <ModeStats mode="bt2" />
-          </section>
-        )}
-        <section className="bt-mode ag-pop" style={{ '--d': '140ms' }}>
-          <div className="bt-mode-head">
-            <span className="bt-mode-tag">3V3</span>
-            <span className="bt-mode-txt"><b>Squads</b><small>Two guards and a big a side. Take a spot, build your role, run it.</small></span>
-            {searchingTag(3)}
+          <div className="btl-acts">
+            {go && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); go() }}>JOIN {mode.size}V{mode.size} LOBBY <IconArrow size={18} /></button>}
+            {go && onPractice && <button className="ag-btn btl-btn btl-btn--line" onClick={() => { sfx('tap'); onPractice(mode.size) }}>PRACTICE · {mode.cpus}</button>}
+            {mode.size === 1 && <OneOnOneOptions onPickup={go ? undefined : onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />}
           </div>
-          <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
-          {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(3) }}>PRACTICE · WITH 5 CPUS</button>}
-          <LiveGames list={live[3]} size={3} onWatch={onWatch} />
-          <ModeStats mode="bt" />
-        </section>
-        <CourtPicker />
-        <details className="bt-rules ag-pop" style={{ '--d': '180ms' }}>
-          <summary className="ag-eyebrow">HOUSE RULES</summary>
-          <ul>
-            <li>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, a 3v3 when all six are. Practice puts you against CPUs right away.</li>
-            <li>In a 1v1 you take your spot as a guard or a big. A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</li>
-            <li>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</li>
-            <li>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</li>
-            <li>Chat is filtered, and anyone can be reported.</li>
-          </ul>
-        </details>
+          <div className="btl-record"><ModeStats mode={mode.size === 3 ? 'bt' : mode.size === 2 ? 'bt2' : onJoin1v1 ? 'bt1' : 'h2hB'} /></div>
+        </div>
+        <div className="btl-hub-side">
+          <LiveGames live={live} onWatch={onWatch} />
+          <CourtPicker />
+          <details className="btl-rules">
+            <summary>HOUSE RULES</summary>
+            <ol>
+              <li><span>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, a 3v3 when all six are. Practice puts you against CPUs right away.</span></li>
+              <li><span>In a 1v1 you take your spot as a guard or a big. A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</span></li>
+              <li><span>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</span></li>
+              <li><span>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</span></li>
+              <li><span>Chat is filtered, and anyone can be reported.</span></li>
+            </ol>
+          </details>
+        </div>
       </div>
     </div>
   )
 }
 
-// The court your games are played on: the ones you own, the rest in the shop
+// The court your games are played on: the ones you own (each one's own picture), the rest in the shop
 function CourtPicker() {
   const court = useCourt()
   const mine = COURTS.filter(c => owns(c.id))
   return (
-    <section className="bt-courts ag-pop" style={{ '--d': '150ms' }}>
-      <div className="bt-courts-head"><span className="ag-eyebrow">COURT</span><button className="ag-chip" onClick={() => { sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop:court' })) }}>{COURTS.length - mine.length} MORE IN THE SHOP</button></div>
-      <div className="bt-courts-row" role="radiogroup" aria-label="Court">
+    <section className="btl-courts">
+      <div className="btl-sec">
+        <span className="btl-sec-title">COURT</span>
+        <button className="btl-link" onClick={() => { sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop:court' })) }}>{COURTS.length - mine.length} MORE IN THE SHOP <IconArrow size={12} /></button>
+      </div>
+      <div className="btl-courts-row" role="radiogroup" aria-label="Court">
         {mine.map(c => (
-          <button key={c.id} role="radio" aria-checked={court.id === c.id} className={`bt-court-opt${court.id === c.id ? ' is-on' : ''}`} onClick={() => { setCourtId(c.id); sfx('tap') }}>
+          <button key={c.id} role="radio" aria-checked={court.id === c.id} className={`btl-court${court.id === c.id ? ' is-on' : ''}`} onClick={() => { setCourtId(c.id); sfx('tap') }}>
             <img src={c.thumb} alt="" loading="lazy" draggable={false} />
-            <span>{c.name.toUpperCase()}</span>
+            <span className="btl-court-name">{c.name.toUpperCase()}{court.id === c.id && <i>ON</i>}</span>
           </button>
         ))}
       </div>
@@ -198,47 +223,48 @@ function CourtPicker() {
   )
 }
 
-// ── Live games under a mode: tap WATCH for a seat in the stands ──────────────
+// ── Live now: every game on the Blacktop, most watched first; WATCH is a seat in the stands ──
 const SHOW_LIVE = 3
-function LiveGames({ list, size, onWatch }) {
+function LiveGames({ live, onWatch }) {
   const [all, setAll] = useState(false)
   const [now, setNow] = useState(Date.now())
-  const on = !!onWatch && list?.length > 0
+  const list = useMemo(() => [3, 2, 1].flatMap(s => live?.[s] ?? []).sort((a, b) => (b.watchers ?? 0) - (a.watchers ?? 0) || b.started - a.started), [live])
+  const on = !!onWatch && list.length > 0
   useEffect(() => { if (!on) return; const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [on])
   if (!on) return null
   const shown = all ? list : list.slice(0, SHOW_LIVE)
   return (
-    <div className="bt-watch-list" role="list" aria-label={`Live ${size}v${size} games`}>
-      <span className="bt-watch-head"><i className="bt-live-dot" aria-hidden="true" />LIVE NOW <b>{list.length}</b></span>
+    <section className="btl-liveboard" role="list" aria-label="Live games">
+      <div className="btl-sec"><span className="btl-sec-title"><i className="btl-dot btl-dot--live ip-fx" aria-hidden="true" />LIVE NOW</span><b>{list.length}</b></div>
       {shown.map(g => <LiveRow key={g.code} g={g} now={now} onWatch={onWatch} />)}
-      {list.length > SHOW_LIVE && <button className="ag-chip bt-watch-more" onClick={() => { sfx('tap'); setAll(v => !v) }}>{all ? 'SHOW FEWER' : `${list.length - SHOW_LIVE} MORE LIVE`}</button>}
-    </div>
+      {list.length > SHOW_LIVE && <button className="btl-more" onClick={() => { sfx('tap'); setAll(v => !v) }}>{all ? 'SHOW FEWER' : `${list.length - SHOW_LIVE} MORE LIVE`}</button>}
+    </section>
   )
 }
-// One game: each side's players, the score as of the last check-up, how long it's been on
+// One game, like a score in a ticker: a side a line (its players, its score as of the last
+// check-up), then the game it is, how long it's been on, who's watching, and WATCH
 function LiveRow({ g, now, onWatch }) {
   const score = g.score ?? [0, 0]
   const on = t => g.players.filter(p => p.team === t)
   const said = t => on(t).map(p => (p.cpu ? 'CPU' : p.name)).join(', ')
   const side = t => (
-    <span className={`bt-watch-side bt-t${t}`}>
-      {on(t).map((p, i) => <span key={i} className="bt-watch-name">{p.cpu ? 'CPU' : <NameTag name={p.name} cos={p.cos} uid={p.uid} plate={false} />}</span>)}
+    <span className={`btl-game-side bt-t${t}${score[t] > score[1 - t] ? ' is-lead' : ''}`}>
+      <span className="btl-game-names">{on(t).map((p, i) => <span key={i} className="btl-game-name">{p.cpu ? 'CPU' : <NameTag name={p.name} cos={p.cos} uid={p.uid} plate={false} />}</span>)}</span>
+      <b>{score[t]}</b>
     </span>
   )
   return (
-    <div className="bt-watch-row" role="listitem">
-      {side(0)}
-      <span className="bt-watch-mid">
-        <span className="bt-watch-score"><b className={`bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}>{score[0]}</b><i>–</i><b className={`bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}>{score[1]}</b></span>
-        <span className="bt-watch-time">{fmt(Math.max(0, Math.floor((now - g.started) / 1000)))}{g.watchers > 0 && <><IconEye size={11} />{g.watchers}</>}</span>
+    <div className="btl-game" role="listitem">
+      <span className="btl-game-sides">{side(0)}{side(1)}</span>
+      <span className="btl-game-meta">
+        <span className="btl-game-info"><b>{g.size}V{g.size}</b>{fmt(Math.max(0, Math.floor((now - g.started) / 1000)))}{g.watchers > 0 && <span className="btl-game-eyes"><IconEye size={11} />{g.watchers}</span>}</span>
+        <button className="btl-watch" onClick={() => { sfx('tap'); onWatch(g) }} aria-label={`Watch ${said(0)} against ${said(1)}`}>WATCH</button>
       </span>
-      {side(1)}
-      <button className="bt-watch-go" onClick={() => { sfx('tap'); onWatch(g) }} aria-label={`Watch ${said(0)} against ${said(1)}`}><IconEye size={16} />WATCH</button>
     </div>
   )
 }
 
-// ── Lobby: two squads, tap an open spot ──────────────────────────────────────
+// ── Lobby: a matchup board filling up. Two squads facing each other, tap an open spot ──
 export function BlacktopQueue({ bt, user, onBack }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [seenChat, setSeenChat] = useState(0)
@@ -277,72 +303,87 @@ export function BlacktopQueue({ bt, user, onBack }) {
     if (bt.mySlot === sl.id && !pos) { bt.seat(null); sfx('tap'); return }
     bt.seat(sl.id, pos); sfx('slot'); haptic('medium')
   }
-  const posLine = pos => (pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF')
   const waiting = bt.queue.filter(p => !p.slot || bt.held[p.slot]?.vid !== p.vid).length
   const unread = Math.max(0, bt.chat.length - seenChat)
+  const taken = Math.min(ROOM_SIZE, bt.seated + Object.keys(fill).length)
+  const full = bt.seated === ROOM_SIZE
+  const last = bt.chat[bt.chat.length - 1]
   return (
-    <div className="ag-screen ag-screen--bucket bt-lobby">
-      <div className="ag-screen-head">
-        <div>
-          <span className="ag-eyebrow">BLACKTOP · LIVE · FIRST TO 11</span>
-          <h1 className="ag-h1">{size}v{size} lobby</h1>
+    <div className="ag-screen ag-screen--bucket bt-lobby btl btl-lobby">
+      <header className="btl-top">
+        <div className="btl-top-txt">
+          <span className="btl-eyebrow">BLACKTOP · FIRST TO 11</span>
+          <h1 className="btl-h1">{size}v{size} lobby</h1>
         </div>
-        <button className="ag-round-btn" onClick={() => { (bt.leaveLobby ?? bt.leave)(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
-      </div>
-      <div className="ag-screen-body">
-        <div className="bt-run ag-pop">
-          <div className="bt-run-head">
-            <span className="bt-run-count"><b>{Math.min(ROOM_SIZE, bt.seated + Object.keys(fill).length)}</b>/{ROOM_SIZE} <small>SPOTS TAKEN</small></span>
-            <span className="bt-run-timer">{fmt(bt.waited)}</span>
+        <button className="ag-round-btn btl-x" onClick={() => { (bt.leaveLobby ?? bt.leave)(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
+      </header>
+      <div className="btl-body">
+        <section className={`btl-board${full ? ' is-full' : ''}`}>
+          <div className="btl-board-lines" aria-hidden="true" />
+          <div className="btl-board-head">
+            <span className="btl-count"><b>{taken}</b><i>/{ROOM_SIZE}</i><small>SPOTS<br />TAKEN</small></span>
+            {/* a pip a spot: the left side's, then the right side's */}
+            <span className="btl-pips" aria-hidden="true">
+              {[0, 1].flatMap(t => [
+                ...(t === 1 ? [<i key="gap" className="is-gap" />] : []),
+                ...SLOTS.filter(sl => sl.team === t).map(sl => <i key={sl.id} className={`bt-t${t}${heldAt(sl.id) ? ' is-on' : ''}`} />),
+              ])}
+            </span>
+            <span className="btl-board-meta"><span className="btl-timer">{fmt(bt.waited)}</span>{bt.link === 'live' && <LinkPill link={bt.link} onRetry={bt.retry} />}</span>
           </div>
-          <div className="bt-run-link"><LinkPill link={bt.link} onRetry={bt.retry} /></div>
-          <div className="bt-court-lines" aria-hidden="true" />
-          <div className="bt-squads">
+          {/* off the live server (or still connecting): said on its own line, with the way to retry */}
+          {bt.link !== 'live' && <div className="btl-linkrow"><LinkPill link={bt.link} onRetry={bt.retry} /></div>}
+          <div className="btl-teams">
             {[0, 1].map(t => (
-              <div key={t} className={`bt-squad-col bt-t${t}${SLOTS.some(sl => sl.team === t && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
-                <span className="bt-squad-title">{squadName(t)}</span>
-                {SLOTS.filter(sl => sl.team === t).map((sl, i) => {
+              <div key={t} className={`btl-team bt-t${t}${SLOTS.some(sl => sl.team === t && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
+                <span className="btl-team-name">{squadName(t)}</span>
+                {SLOTS.filter(sl => sl.team === t).map(sl => {
                   const h = heldAt(sl.id)
                   const me = h?.vid === bt.me.vid
                   // a 1v1 spot: open, you take it as a guard or a big
                   if (sl.pos === 'any' && !h) return (
-                    <div key={sl.id} className="bt-spot is-open bt-spot--pick" style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }}>
-                      <button className="bt-spot-half" onClick={() => tap(sl, 'guard')}><span className="bt-spot-plus">+</span><span className="bt-spot-txt"><span className="bt-spot-name">GUARD</span><span className="bt-spot-role">PG · SG · SF</span></span></button>
-                      <button className="bt-spot-half is-big" onClick={() => tap(sl, 'big')}><span className="bt-spot-plus">+</span><span className="bt-spot-txt"><span className="bt-spot-name">BIG</span><span className="bt-spot-role">PF · C</span></span></button>
+                    <div key={sl.id} className="btl-seat is-open btl-seat--pick">
+                      <button className="btl-seat-half" onClick={() => tap(sl, 'guard')}><span className="btl-seat-plus">+</span><span className="btl-seat-txt"><span className="btl-seat-name">GUARD</span><span className="btl-seat-role">PG · SG · SF</span></span></button>
+                      <button className="btl-seat-half is-big" onClick={() => tap(sl, 'big')}><span className="btl-seat-plus">+</span><span className="btl-seat-txt"><span className="btl-seat-name">BIG</span><span className="btl-seat-role">PF · C</span></span></button>
                     </div>
                   )
                   const pos = sl.pos === 'any' ? h?.pos : sl.pos
+                  const role = pos === 'big' ? 'BIG' : 'GUARD'
+                  // (keyed by who's on it: a new player's plate drops in, and their entrance plays)
                   return (
-                    <button key={sl.id} className={`bt-spot ent-host${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }} onClick={() => tap(sl)}>
+                    <button key={`${sl.id}:${h?.vid ?? ''}`} className={`btl-seat ent-host${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${pos === 'big' ? ' is-big' : ''}`} onClick={() => tap(sl)}>
                       {h && <Entrance key={h.vid} cos={h.cos} />}
-                      {h ? <Av name={h.name} team={t} size={34} cos={h.cos} self={me} /> : <span className="bt-spot-plus">+</span>}
-                      <span className="bt-spot-txt">
-                        <span className="bt-spot-name">{h ? <NameTag name={h.name} cos={h.cos} uid={h.uid ?? null} self={me} /> : `JOIN AS ${pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
-                        <span className="bt-spot-role">{posLine(pos)}{me ? ' · TAP TO LEAVE' : ''}</span>
+                      {h ? <Av name={h.name} team={t} size={40} cos={h.cos} self={me} /> : <span className="btl-seat-plus">+</span>}
+                      {h && <i className="btl-seat-in" aria-hidden="true" />}
+                      <span className="btl-seat-txt">
+                        <span className="btl-seat-name">{h ? <NameTag name={h.name} cos={h.cos} uid={h.uid ?? null} self={me} /> : `JOIN AS ${role}`}</span>
+                        <span className="btl-seat-role">{h ? role : pos === 'big' ? 'PF · C' : 'PG · SG · SF'}{me && <em>TAP TO LEAVE</em>}</span>
                       </span>
                     </button>
                   )
                 })}
               </div>
             ))}
-            <span className="bt-squads-vs">VS</span>
+            <span className="btl-vs" aria-hidden="true">VS</span>
           </div>
-          {bt.bumped && <div className="bt-bumped ag-pop">Someone grabbed that spot first. Pick another.</div>}
-          {tester && <button className="ag-btn ag-btn--ghost bt-test-fill" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
-          <div className="bt-run-foot">
+          {bt.bumped && <div className="btl-bumped">Someone grabbed that spot first. Pick another.</div>}
+          {tester && <button className="ag-btn btl-btn btl-test" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
+          <div className="btl-board-foot" role="status">
             {!bt.mySlot
-              ? <span className="bt-run-hint">Tap an open spot to join that squad.{waiting > 0 ? ` ${waiting} watching.` : ''}</span>
-              : <span className="bt-run-hint">{bt.seated === ROOM_SIZE ? 'Full run. Lacing up…' : `Starts when ${size === 1 ? 'both' : `all ${size === 2 ? 'four' : 'six'}`} spots are taken · ${ROOM_SIZE - bt.seated} to go. Real players only.`}</span>}
+              ? <span className="btl-hint"><b>TAKE AN OPEN SPOT</b>{waiting > 0 && <small>{waiting} WATCHING</small>}</span>
+              : full
+                ? <span className="btl-tip"><b>TIP-OFF</b><small>LACING UP…</small></span>
+                : <span className="btl-hint"><b>{ROOM_SIZE - bt.seated} TO GO</b><small>STARTS AT {ROOM_SIZE}/{ROOM_SIZE} · REAL PLAYERS ONLY</small></span>}
           </div>
-        </div>
+        </section>
 
-        <button className="bt-lobby-chat ag-pop" style={{ '--d': '160ms' }} onClick={() => { setChatOpen(true); setSeenChat(bt.chat.length) }}>
+        <button className="btl-chatbar" onClick={() => { setChatOpen(true); setSeenChat(bt.chat.length) }}>
           <IconChat size={18} />
-          <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b><NameTag name={bt.chat[bt.chat.length - 1].name} self={bt.chat[bt.chat.length - 1].from === bt.me.vid} cos={bt.chat[bt.chat.length - 1].cos || null} />:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
-          {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
+          <span className="btl-chatbar-txt">{last ? <><b><NameTag name={last.name} self={last.from === bt.me.vid} cos={last.cos || null} plate={false} />:</b> {last.text}</> : 'LOBBY CHAT'}</span>
+          {unread > 0 ? <span className="ag-tab-badge">{unread}</span> : <span className="btl-chatbar-open">OPEN</span>}
         </button>
 
-        <OnlineRecord modes={[size === 1 ? 'bt1' : size === 2 ? 'bt2' : 'bt']} title={`YOUR ${size}V${size}`} />
+        <OnlineRecord modes={[size === 1 ? 'bt1' : size === 2 ? 'bt2' : 'bt']} title={`${size}V${size} RECORD`} />
 
       </div>
       {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}
@@ -351,8 +392,8 @@ export function BlacktopQueue({ bt, user, onBack }) {
 }
 
 // ── HUD over the build: one slim bar, tap to open the squads ────────────────
-export function BlacktopHud({ bt, onOpenChat, unread }) {
-  const [open, setOpen] = useState(false)
+export function BlacktopHud({ bt, onOpenChat, unread, devOpen = false }) {
+  const [open, setOpen] = useState(import.meta.env.DEV && devOpen)
   const squads = [0, 1].map(t => bt.match.players.filter(p => p.team === t))
   const ready = t => squads[t].filter(p => p.bot || bt.builds[p.vid]?.done).length
   const urgent = bt.clock <= 20
@@ -361,9 +402,9 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
       <button className="bt-hud-bar" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="bt-hud-clock">{fmt(bt.clock)}</span>
         <span className="bt-hud-mini">
-          <span className="bt-t0"><b>{teamName(bt.match, 0)}</b> {ready(0)}/{bt.size ?? 3}</span>
+          <span className="bt-t0"><b>{teamName(bt.match, 0).replace(/^TEAM /, '')}</b> {ready(0)}/{bt.size ?? 3}</span>
           <i>vs</i>
-          <span className="bt-t1"><b>{teamName(bt.match, 1)}</b> {ready(1)}/{bt.size ?? 3}</span>
+          <span className="bt-t1"><b>{teamName(bt.match, 1).replace(/^TEAM /, '')}</b> {ready(1)}/{bt.size ?? 3}</span>
         </span>
         <span className={`bt-hud-caret${open ? ' is-open' : ''}`}>▾</span>
       </button>
@@ -378,13 +419,13 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
                 {sq.map(p => {
                   const b = bt.builds[p.vid] ?? (p.mimic ? fakeBuild(p, bt.match?.created) : undefined)
                   const here = p.bot || bt.present.some(q => q.vid === p.vid)
-                  const ovr = t === bt.myTeam ? liveOvr(b) : null
+                  // (both teams read the same way while they build: traits placed out of 8, a tick when he's done. No overalls here)
                   return (
                     <span key={p.vid} className={`bt-hud-p${!here ? ' is-gone' : ''}${b?.done ? ' is-done' : ''}`} title={p.name}>
                       <Av name={p.name} bot={asBot(p)} team={t} size={24} cos={p.cos} self={p.vid === bt.me.vid} />
                       <span className="bt-hud-p-name"><Who p={p} meVid={bt.me.vid} /> <small>{p.pos === 'big' ? 'BIG' : 'G'}</small></span>
                       <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / 8) * 100)}%` }} /></span>
-                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? <IconCheck size={13} /> : `${b?.filled ?? 0}/8`}</span>
+                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : b?.done ? <IconCheck size={13} /> : `${b?.filled ?? 0}/8`}</span>
                     </span>
                   )
                 })}
@@ -401,12 +442,11 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
   )
 }
 
-// ── Chat: a sheet that slides up; bubbles, typing, your squad's overalls ─────
+// ── Chat: a sheet off the bottom edge (BlacktopSheet); messages, typing, your squad's overalls ──
 export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TEAM CHAT' }) {
   const [text, setText] = useState('')
   const [menu, setMenu] = useState(null)      // message with the report/block menu open
   const [note, setNote] = useState('')
-  const [closing, setClosing] = useState(false)
   const listRef = useRef(null)
   const inputRef = useRef(null)
   const first = useRef(true)
@@ -415,7 +455,6 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
     el.scrollTo({ top: el.scrollHeight, behavior: first.current ? 'auto' : 'smooth' })
     first.current = false
   }, [bt.chat.length])
-  const close = () => { setClosing(true); setTimeout(onClose, 180) }
   // the chat rules, agreed to once before the first message
   const [rulesOk, setRulesOk] = useState(() => { try { return localStorage.getItem('bap_chat_rules') === '1' } catch { return false } })
   const agree = () => { try { localStorage.setItem('bap_chat_rules', '1') } catch {} setRulesOk(true); setTimeout(() => inputRef.current?.focus(), 50) }
@@ -432,117 +471,114 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
   }
   const squad = bt.match && bt.builds ? bt.match.players.filter(p => p.team === bt.myTeam) : null
   const typers = bt.typers ?? []
-  return createPortal(
-    <div className={`bt-sheet-overlay${closing ? ' is-closing' : ''}`} onClick={e => e.target === e.currentTarget && close()}>
-      <div className="bt-sheet" role="dialog" aria-label={title}>
-        <div className="bt-sheet-grab" onClick={close} />
-        <div className="bt-sheet-head">
-          <h2 className="bt-sheet-title">{title}</h2>
-          <button className="ag-round-btn" onClick={close} aria-label="Close"><IconClose size={16} /></button>
-        </div>
-        {squad && (
-          <div className="bt-squad-strip">
-            {squad.map(p => {
-              const ovr = liveOvr(bt.builds[p.vid])
-              return (
-                <span key={p.vid} className={`bt-sq${p.vid === bt.me.vid ? ' is-me' : ''}`}>
-                  <Av name={p.name} bot={asBot(p)} team={bt.myTeam} size={30} cos={p.cos} self={p.vid === bt.me.vid} />
-                  <span className="bt-sq-txt"><b><Who p={p} meVid={bt.me.vid} short /></b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
-                  <span className="bt-sq-ovr">{asBot(p) ? 'CPU' : ovr ?? '—'}<small>{asBot(p) || ovr == null ? '' : 'OVR'}</small></span>
-                </span>
-              )
-            })}
-          </div>
-        )}
-        <div className="bt-chat-list" ref={listRef}>
-          {bt.chat.length === 0 && <div className="bt-chat-empty"><IconBasketball size={26} /><span>{mode === 'blacktop-lobby' ? 'Say what\'s up to the lobby.' : 'Say what\'s up to your squad.'}</span></div>}
-          {bt.chat.map((m, i) => {
-            const mine = m.from === bt.me.vid
-            const prev = bt.chat[i - 1]
-            const grouped = prev && prev.from === m.from && m.ts - prev.ts < 60000
+  return (
+    <BlacktopSheet label={title} title={title} onClose={onClose} corner className="btl-sheet--chat">
+      {squad && (
+        <div className={`btl-squadstrip bt-t${bt.myTeam ?? 0}`}>
+          {squad.map(p => {
+            const ovr = liveOvr(bt.builds[p.vid])
             return (
-              <div key={m.id} className={`bt-msg${mine ? ' is-me' : ''}${grouped ? ' is-grouped' : ''}`} onContextMenu={e => { e.preventDefault(); if (!mine) setMenu(m) }}>
-                {!grouped && !mine && <span className="bt-msg-name" onClick={() => setMenu(m)}><NameTag name={m.name} cos={m.cos} />{m.all && mode !== 'blacktop-lobby' && <i> · ALL</i>}</span>}
-                <span className="bt-msg-text">{m.text}</span>
-              </div>
+              <span key={p.vid} className={`btl-sq${p.vid === bt.me.vid ? ' is-me' : ''}`}>
+                <Av name={p.name} bot={asBot(p)} team={bt.myTeam} size={28} cos={p.cos} self={p.vid === bt.me.vid} />
+                <span className="btl-sq-txt"><b><Who p={p} meVid={bt.me.vid} short /></b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'}<i className="btl-sq-ovr">{asBot(p) ? 'CPU' : ovr != null ? `${ovr} OVR` : '–'}</i></small></span>
+              </span>
             )
           })}
-          {typers.length > 0 && <div className="bt-typing"><span className="bt-dots"><i /><i /><i /></span>{typers.slice(0, 2).join(', ')} {typers.length > 1 ? 'are' : 'is'} typing</div>}
         </div>
-        {note && <div className="bt-chat-note">{note}</div>}
-        {menu && (
-          <div className="bt-msg-menu">
-            <span><NameTag name={menu.name} cos={menu.cos || null} uid={menu.uid || null} /></span>
-            <button onClick={() => act('report')}>REPORT</button>
-            <button onClick={() => act('block')}>BLOCK</button>
-            <button onClick={() => setMenu(null)}>CANCEL</button>
-          </div>
-        )}
-        {/* guests chat too (as "Guest"); the filter, report and block cover everyone */}
-        {!rulesOk ? (
-          <div className="bt-rules" role="region" aria-label="Chat rules">
-            <b>BEFORE YOU CHAT</b>
-            <ul>
-              <li>Keep it about the game. No hate, bullying or threats.</li>
-              <li>Never share your real name, school, address, phone or socials.</li>
-              <li>No links. Messages are filtered.</li>
-              <li>Press and hold (or right-click) a message to report or block someone.</li>
-            </ul>
-            <p>Breaking the rules gets you muted or banned. <a href="/terms" target="_blank" rel="noreferrer">Terms</a> · <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('bap:menu'))}>Contact us</button></p>
-            <button className="ag-btn ag-cta" onClick={agree}>I AGREE · LET ME CHAT</button>
-          </div>
-        ) : <>
-        <div className="bt-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
-        <form className="bt-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
-          <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
-          <button className="bt-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
-        </form>
-        </>}
+      )}
+      <div className="btl-chat-list" ref={listRef}>
+        {bt.chat.length === 0 && <div className="btl-chat-empty"><IconChat size={24} /><span>{mode === 'blacktop-lobby' ? 'SAY WHAT\'S UP TO THE LOBBY' : 'SAY WHAT\'S UP TO YOUR SQUAD'}</span></div>}
+        {bt.chat.map((m, i) => {
+          const mine = m.from === bt.me.vid
+          const prev = bt.chat[i - 1]
+          const grouped = prev && prev.from === m.from && m.ts - prev.ts < 60000
+          return (
+            <div key={m.id} className={`btl-msg${mine ? ' is-me' : ''}${grouped ? ' is-grouped' : ''}`} onContextMenu={e => { e.preventDefault(); if (!mine) setMenu(m) }}>
+              {!grouped && !mine && <span className="btl-msg-name" onClick={() => setMenu(m)}><NameTag name={m.name} cos={m.cos} />{m.all && mode !== 'blacktop-lobby' && <i> · ALL</i>}</span>}
+              <span className="btl-msg-text">{m.text}</span>
+            </div>
+          )
+        })}
+        {typers.length > 0 && <div className="btl-typing"><span className="btl-dots"><i /><i /><i /></span>{typers.slice(0, 2).join(', ')} {typers.length > 1 ? 'are' : 'is'} typing</div>}
       </div>
-    </div>,
-    document.body,
+      {note && <div className="btl-chat-note">{note}</div>}
+      {menu && (
+        <div className="btl-msg-menu">
+          <span><NameTag name={menu.name} cos={menu.cos || null} uid={menu.uid || null} /></span>
+          <button className="is-warn" onClick={() => act('report')}>REPORT</button>
+          <button className="is-warn" onClick={() => act('block')}>BLOCK</button>
+          <button onClick={() => setMenu(null)}>CANCEL</button>
+        </div>
+      )}
+      {/* guests chat too (as "Guest"); the filter, report and block cover everyone */}
+      {!rulesOk ? (
+        <div className="btl-chatrules" role="region" aria-label="Chat rules">
+          <b>BEFORE YOU CHAT</b>
+          <ul>
+            <li>Keep it about the game. No hate, bullying or threats.</li>
+            <li>Never share your real name, school, address, phone or socials.</li>
+            <li>No links. Messages are filtered.</li>
+            <li>Press and hold (or right-click) a message to report or block someone.</li>
+          </ul>
+          <p>Breaking the rules gets you muted or banned. <a href="/terms" target="_blank" rel="noreferrer">Terms</a> · <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('bap:menu'))}>Contact us</button></p>
+          <button className="ag-btn ag-cta btl-btn" onClick={agree}>I AGREE · LET ME CHAT</button>
+        </div>
+      ) : <>
+        <div className="btl-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
+        <form className="btl-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
+          <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
+          <button className="btl-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
+        </form>
+      </>}
+    </BlacktopSheet>
   )
 }
 
-// Every player's build in the game, grade by grade (a sheet over the court)
-function SquadBuilds({ game, names, meVid, onClose }) {
+// Every player's build in the game, grade by grade, with the points they have so far: on the game screen
+// itself, under the play-by-play (line: { [id]: { pts, run } }, as of what's been shown)
+// (memoized, and each row on its own: the game screen re-renders on every beat of a play, a call or a reaction,
+// and the panel only changes when a play's points go up; then only that player's row redraws)
+const SquadBuilds = memo(function SquadBuilds({ game, names, meVid, line = null }) {
   return (
-    <div className="lc-builds ag-pop" role="dialog" aria-label="Builds">
-      <div className="lc-builds-head"><span className="ag-eyebrow">THE BUILDS</span><button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={14} /></button></div>
+    <div className="btg-builds" role="region" aria-label="Builds">
+      <div className="btg-builds-head">THE BUILDS</div>
       {[0, 1].map(t => (
-        <div key={t} className={`lc-builds-team bt-t${t}`}>
-          <span className="lc-builds-name">{names[t]}</span>
-          {game.teams[t].map(p => {
-            const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
-            const ovr = liveOvr(p)
-            return (
-              <div key={p.id} className={`lc-builds-p${p.id === meVid ? ' is-me' : ''}`}>
-                <span className="lc-builds-who">
-                  <span className="lc-builds-id"><b>{asBot(p) ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
-                  <span className="lc-builds-ovr"><b>{ovr ?? '–'}</b><small>OVR</small></span>
-                </span>
-                {/* each trait's grade in its color, so a build reads at a glance */}
-                <span className="lc-builds-grades">
-                  {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label} className={val != null ? 'is-g' : ''} style={val != null ? { '--g': gradeColor(val) } : undefined}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
-                </span>
-              </div>
-            )
-          })}
+        <div key={t} className={`bt-t${t}`}>
+          <div className="btg-builds-team">{names[t]}</div>
+          {game.teams[t].map(p => <BuildsRow key={p.id} p={p} me={p.id === meVid} hasLine={!!line} pts={line?.[p.id]?.pts ?? 0} run={line?.[p.id]?.run ?? 0} />)}
         </div>
       ))}
     </div>
   )
-}
+})
+const BuildsRow = memo(function BuildsRow({ p, me, hasLine, pts, run }) {
+  const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+  const ovr = liveOvr(p)
+  const arch = archOf(p)
+  return (
+    <div className={`btg-builds-p${me ? ' is-me' : ''}`}>
+      <span className="btg-builds-who">
+        <span className="btg-builds-id"><b>{asBot(p) ? p.name : <NameTag name={p.name} cos={p.cos} self={me} />}</b><small>{arch && <><em>{arch}</em> · </>}{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
+        {hasLine && <span className={`btg-builds-n${run >= 2 ? ' is-hot' : ''}`}>{pts}<small>PTS</small></span>}
+        <span className="btg-builds-n is-ovr">{ovr ?? '–'}<small>OVR</small></span>
+      </span>
+      {/* each trait's grade in its color, so a build reads at a glance */}
+      <span className="btg-builds-grades">
+        {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label} className={val != null ? 'is-g' : ''} style={val != null ? { '--g': gradeColor(val) } : undefined}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
+      </span>
+    </div>
+  )
+})
 
 // ── Watching from the menu: the stands' bar, and the game itself ────────────
 // (a spectator plays from the same component as the players, with no seat: bt.watch)
 const WATCH_STATE = { joining: 'FINDING A SEAT…', full: 'STANDS FULL', gone: 'NOT LIVE', ended: 'FEED ENDED' }
 function WatchBar({ bt }) {
   return (
-    <div className="bt-watchbar">
-      <span className="bt-watchbar-tag"><i className="bt-live-dot" aria-hidden="true" />SPECTATING</span>
-      <span className="bt-watchbar-n">{bt.state !== 'live' ? WATCH_STATE[bt.state] ?? '' : bt.link === 'live' ? <><IconEye size={14} />{Math.max(1, bt.watchers ?? 1)} WATCHING</> : 'RECONNECTING…'}</span>
-      <button className="ag-round-btn" onClick={() => { sfx('tap'); bt.exit() }} aria-label="Stop watching"><IconClose size={16} /></button>
+    <div className="btg-watchbar">
+      <span className="btg-watchbar-tag"><i aria-hidden="true" />SPECTATING</span>
+      <span className="btg-watchbar-n">{bt.state !== 'live' ? WATCH_STATE[bt.state] ?? '' : bt.link === 'live' ? <><IconEye size={14} />{Math.max(1, bt.watchers ?? 1)} WATCHING</> : 'RECONNECTING…'}</span>
+      <button className="ag-round-btn btg-x" onClick={() => { sfx('tap'); bt.exit() }} aria-label="Stop watching"><IconClose size={16} /></button>
     </div>
   )
 }
@@ -552,23 +588,39 @@ export function BlacktopWatch({ code, pools, types, onClose }) {
   if (w.game) return <BlacktopGame bt={bt} onOpenChat={null} unread={0} />
   const why = w.state === 'joining' ? null : w.state === 'full' ? 'The stands are full for this one. Try another game.' : 'This game is over, or it can\'t be watched right now.'
   return (
-    <div className="ag-screen ag-screen--bucket bt-game">
-      <div className="ag-screen-body">
-        <WatchBar bt={bt} />
-        {why && <div className="bt-watch-none ag-pop">{why}<button className="ag-btn ag-btn--ghost" onClick={onClose}>BACK TO BLACKTOP</button></div>}
-      </div>
+    <div className="ag-screen ag-screen--bucket bt-game btg btg-wait">
+      <WatchBar bt={bt} />
+      {why && <div className="btg-watch-none">{why}<button className="ag-btn btl-btn btl-btn--line" onClick={onClose}>BACK TO BLACKTOP</button></div>}
     </div>
   )
 }
 
+// A side of the score bug (memoized: it only redraws when its score, the ball or the lead changes)
+const BugTeam = memo(function BugTeam({ t, name, pts, lead, ball, mine, from }) {
+  return (
+    <div className={`btg-bug-team bt-t${t}${lead ? ' is-lead' : ''}${ball ? ' has-ball' : ''}`}>
+      <i className="btg-bug-slab" aria-hidden="true" />
+      <div className="btg-bug-id">
+        <span className="btg-bug-name"><span>{name.startsWith('TEAM ') ? <><span className="btg-bug-pre">TEAM </span>{name.slice(5)}</> : name}</span>{mine ? <IconStar size={11} className="btg-bug-me" /> : null}</span>
+        <span className="btg-bug-pips" aria-hidden="true">{Array.from({ length: 11 }, (_, i) => <i key={i} className={i < pts ? `is-on${i >= from ? ' is-new' : ''}` : ''} />)}</span>
+      </div>
+      <b className="btg-bug-score"><RollingNumber value={pts} /></b>
+    </div>
+  )
+})
+
 // ── Game: reveal → live → result ────────────────────────────────────────────
+// what the lower third calls a play (the play-by-play line says the rest)
+const playTag = p => (p.type === 'score' ? `+${p.pts}` : p.type === 'miss' ? 'MISS' : p.type === 'block' ? 'BLOCK' : p.type === 'steal' ? 'STEAL'
+  : p.type === 'oreb' || p.type === 'dreb' ? 'REBOUND' : p.type === 'milestone' ? `${p.score[0]}-${p.score[1]}` : '')
 export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const { game, match } = bt
   // watching (the menu's live games): no seat, so no calls, no reactions, no record;
   // joined after the tip-off, it picks up on the last possession called (bt.startAt)
   const watch = !!bt.watch
-  const joined = watch ? bt.startAt : null
-  const [stage, setStage] = useState(joined != null ? 'live' : 'reveal')
+  // (DEV: the look page starts on a play or on the final: app/BlacktopLook.jsx)
+  const joined = watch ? bt.startAt : import.meta.env.DEV ? bt.devStart ?? null : null
+  const [stage, setStage] = useState((import.meta.env.DEV && bt.devStage) || (joined != null ? 'live' : 'reveal'))
   const [idx, setIdx] = useState(joined ?? 0)
   const speed = 0.85                         // online: everyone sees it at the same pace (a touch slower than real time, so the moves are easy to follow)
   const fired = useRef(false)
@@ -621,16 +673,27 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     else if (play.type === 'block' || play.type === 'steal') setTimeout(() => sfx('pop'), 700)
   }, [idx]) // eslint-disable-line
   const bubbles = useBubbles(bt.emotes ?? [])
-  const [showBuilds, setShowBuilds] = useState(false)
+  const pipFrom = useRef(null)               // the score when the board first showed (ticks lit after that light up)
+  // everyone's points so far, and who's made two in a row (the builds panel shows them); worked out once per play shown
+  const line = useMemo(() => {
+    const line = {}
+    for (let i = 0; i <= outTo; i++) {
+      const q = plays[i], at = id => (line[id] ??= { pts: 0, run: 0 })
+      if (!q) break
+      if (q.type === 'score') { const s = at(q.pid); s.pts += q.pts; s.run++ }
+      else if (q.type === 'miss') at(q.pid).run = 0
+      else if (q.type === 'block') at(q.pid2 ?? q.pid).run = 0
+    }
+    return line
+  }, [plays, outTo])
   if (!game) return null
 
   // this possession's calls: the open check-up, and what was called on the one being played
   const calling = stage === 'live' && play?.type === 'check' && !bt.locks?.[play.pn] ? play : null
   const lastCheck = [...plays.slice(0, idx + 1)].reverse().find(p => p.type === 'check')
   const locked = lastCheck ? bt.locks?.[lastCheck.pn] : null
-  const humansOn = t => match.players.some(p => p.team === t && !p.bot)
   const score = plays[outTo]?.score ?? [0, 0]
-  const feed = plays.slice(0, outTo + 1).filter(p => p.type !== 'check').slice(-4).reverse()
+  const feed = plays.slice(0, outTo + 1).filter(p => p.type !== 'check').slice(-8).reverse()
   const squads = [0, 1].map(t => game.teams[t])
   // only the calls that fit this game: a 1v1 has no pass and no help (a CPU's call included)
   const size = game.teams[watch ? 0 : myTeam]?.length ?? 1
@@ -639,24 +702,28 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
 
   if (stage === 'reveal') {
     return (
-      <div className="ag-screen ag-screen--bucket bt-game">
+      <div className="ag-screen ag-screen--bucket bt-game btg btg-reveal">
         {watch && <WatchBar bt={bt} />}
-        <div className="bt-reveal">
-          <span className="ag-eyebrow">BLACKTOP · FIRST TO 11</span>
-          <div className="bt-reveal-grid">
+        <div className="btg-rv">
+          <div className="btg-rv-top"><b>BLACKTOP · FIRST TO 11</b><span>{size}V{size}</span></div>
+          <div className="btg-rv-grid">
             {squads.map((sq, t) => (
-              <div key={t} className={`bt-squad bt-t${t} ag-pop`} style={{ '--d': `${t * 160}ms` }}>
-                <span className="bt-squad-name">{names[t]}</span>
-                {sq.map(p => (
-                  <div key={p.id} className="bt-squad-p">
-                    <Av name={p.name} bot={asBot(p)} team={t} size={34} cos={p.cos} self={p.id === bt.me.vid} />
-                    <span className="bt-squad-p-txt"><b><Who p={p} meVid={bt.me.vid} plate />{captainOf(match, t)?.vid === p.id ? ' · C' : ''}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
+              <div key={t} className={`btg-rv-team bt-t${t}`}>
+                <div className="btg-rv-head"><span className="btg-rv-name">{names[t]}</span></div>
+                {sq.map((p, i) => (
+                  <div key={p.id} className="btg-rv-p" style={{ '--i': i }}>
+                    <Av name={p.name} bot={asBot(p)} team={t} size={40} cos={p.cos} self={p.id === bt.me.vid} />
+                    <span className="btg-rv-txt">
+                      <b><Who p={p} meVid={bt.me.vid} plate />{captainOf(match, t)?.vid === p.id && <i>C</i>}</b>
+                      <small>{archOf(p) && <><em>{archOf(p)}</em> · </>}{p.pos === 'big' ? 'BIG' : 'GUARD'}</small>
+                    </span>
+                    <span className="btg-rv-ovr">{liveOvr(p) ?? '–'}<small>OVR</small></span>
                   </div>
                 ))}
               </div>
             ))}
+            <div className="btg-rv-vs">VS</div>
           </div>
-          <div className="bt-vs">VS</div>
         </div>
       </div>
     )
@@ -669,82 +736,143 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     const pool = bt.server ? match.players.filter(p => !p.bot && p.team === myTeam) : match.players.filter(p => !p.bot)
     const votes = pool.filter(p => bt.rematchVotes.has(p.vid)).length
     const humans = pool.length
-    return (
-      <div className="ag-screen ag-screen--bucket bt-game">
-        <div className="ag-screen-body">
-          {watch && <WatchBar bt={bt} />}
-          {/* watching: the final, the winners named; nothing of it is anyone's but theirs */}
-          <div className={`bt-result-hero ${won || watch ? 'is-win' : 'is-loss'} ag-pop`}>
-            <span className="ag-eyebrow">{watch ? 'BLACKTOP · FINAL' : won ? 'BLACKTOP · W' : 'BLACKTOP · L'}</span>
-            <h1 className="ag-h1">{watch ? `${names[game.winner]} took it` : won ? 'Your squad took it' : 'They took it'}</h1>
-            <div className="bt-final"><b className="bt-t0">{game.score[0]}</b><span>–</span><b className="bt-t1">{game.score[1]}</b></div>
-            <div className="bt-final-teams"><span className="bt-t0">{names[0]}</span><span className="bt-t1">{names[1]}</span></div>
-            {mvp && <div className="bt-mvp"><IconStar size={14} /> MVP · <Who p={mvp} meVid={bt.me.vid} plate link={watch} /></div>}
-            {!watch && <RatingLine mode="bt" noMvp={!!mvp} />}
+    // a player's night: the portrait, the name in its look, the line
+    const star = (p, label, isMvp) => {
+      const s = game.stats[p.vid] ?? {}
+      return (
+        <div className={`btg-star bt-t${p.team}${isMvp ? ' is-mvp' : ''}`}>
+          <Av name={p.name} bot={asBot(p)} team={p.team} size={52} cos={p.cos} self={p.vid === bt.me.vid} />
+          <div className="btg-star-id">
+            <span className="btg-star-lbl">{label}</span>
+            <span className="btg-star-name"><Who p={p} meVid={bt.me.vid} plate link={watch} /></span>
+            <span className="btg-star-sub">{names[p.team]} · {p.pos === 'big' ? 'BIG' : 'GUARD'}</span>
           </div>
-          {[game.winner, 1 - game.winner].map(t => (
-            <div key={t} className={`ag-card bt-box bt-t${t} ag-pop`} style={{ '--d': `${120 + t * 80}ms` }}>
-              <div className="bt-box-head"><span>{names[t]}</span><span>PTS</span><span>FG</span><span>AST</span><span>REB</span><span>STL</span><span>BLK</span></div>
-              {game.teams[t].map(p => { const s = game.stats[p.id]; return (
-                <div key={p.id} className={`bt-box-row${p.id === bt.me.vid ? ' is-me' : ''}${p.id === game.mvp ? ' is-mvp' : ''}`}>
-                  <span className="bt-box-name"><Who p={p} meVid={bt.me.vid} link={watch} /></span>
-                  <span><b>{s.pts}</b></span><span>{s.fgm}/{s.fga}</span><span>{s.ast}</span><span>{s.reb}</span><span>{s.stl}</span><span>{s.blk}</span>
+          <div className="btg-stats">
+            {[['PTS', s.pts], ['FG', `${s.fgm ?? 0}/${s.fga ?? 0}`], ['AST', s.ast], ['REB', s.reb], ['STL', s.stl], ['BLK', s.blk]].map(([k, v]) => <span key={k} className={v === 0 ? 'is-zero' : ''}>{v ?? 0}<small>{k}</small></span>)}
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div className="ag-screen ag-screen--bucket bt-game btg btg-final">
+        {watch && <WatchBar bt={bt} />}
+        <div className="btg-fin-cols">
+          <div className="btg-fin-main">
+            {/* watching: the final, the winners named; nothing of it is anyone's but theirs */}
+            <div className={`btg-fin ${won || watch ? 'is-win' : 'is-loss'}`}>
+              <div className="btg-fin-top">
+                <span className="btg-fin-tag">FINAL</span>
+                <span className="btg-fin-sub">BLACKTOP · FIRST TO 11</span>
+                {!watch && <span className="btg-fin-wl" aria-label={won ? 'Win' : 'Loss'}>{won ? 'W' : 'L'}</span>}
+              </div>
+              {[0, 1].map(t => (
+                <div key={t} className={`btg-fin-row bt-t${t}${game.winner === t ? ' is-win' : ''}`}>
+                  <i aria-hidden="true" />
+                  <span className="btg-fin-name">{names[t]}{game.winner === t && <small>TOOK IT</small>}</span>
+                  <b className="btg-fin-score"><RollingNumber value={game.score[t]} from={0} /></b>
                 </div>
-              ) })}
+              ))}
             </div>
-          ))}
-          <div className="bt-result-actions ag-pop" style={{ '--d': '300ms' }}>
-            {watch && <button className="ag-btn" onClick={() => { sfx('tap'); bt.exit() }}>BACK TO BLACKTOP</button>}
-            {!watch && (bt.server || humans > 1) && (
-              <button className="ag-btn" onClick={() => { bt.voteRematch(); sfx('tap') }} disabled={bt.rematchVotes.has(bt.me.vid)}>
-                {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR ${bt.server ? 'THE SQUAD' : 'SQUADS'} · ${votes}/${humans}` : `RUN IT BACK${humans > 1 && votes ? ` · ${votes}/${humans}` : ''}`}
-              </button>
-            )}
-            {!watch && <button className="ag-btn ag-btn--ghost" onClick={bt.exit}>LEAVE THE BLACKTOP</button>}
+            {mvp && star(mvp, 'MVP', true)}
+            {!watch && mine && mine.vid !== game.mvp && star(mine, 'FINAL LINE', false)}
+            {!watch && <RatingLine mode="bt" noMvp={!!mvp} />}
+            <div className="btg-fin-actions">
+              {watch && <button className="ag-btn btl-btn" onClick={() => { sfx('tap'); bt.exit() }}>BACK TO BLACKTOP</button>}
+              {!watch && (bt.server || humans > 1) && (
+                <button className="ag-btn btl-btn" onClick={() => { bt.voteRematch(); sfx('tap') }} disabled={bt.rematchVotes.has(bt.me.vid)}>
+                  {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR ${bt.server ? 'THE SQUAD' : 'SQUADS'} · ${votes}/${humans}` : `RUN IT BACK${humans > 1 && votes ? ` · ${votes}/${humans}` : ''}`}
+                </button>
+              )}
+              {!watch && <button className="ag-btn btl-btn btl-btn--line" onClick={bt.exit}>LEAVE THE BLACKTOP</button>}
+            </div>
+          </div>
+          <div className="btg-fin-side">
+            {[game.winner, 1 - game.winner].map(t => (
+              <div key={t} className={`btg-box bt-t${t}`}>
+                <div className="btg-box-head"><span>{names[t]}</span><span>PTS</span><span>FG</span><span>AST</span><span>REB</span><span>STL</span><span>BLK</span></div>
+                {game.teams[t].map(p => { const s = game.stats[p.id]; return (
+                  <div key={p.id} className={`btg-box-row${p.id === bt.me.vid ? ' is-me' : ''}${p.id === game.mvp ? ' is-mvp' : ''}`}>
+                    <span className="btg-box-name"><span><Who p={p} meVid={bt.me.vid} link={watch} /></span>{p.id === game.mvp && <em>MVP</em>}</span>
+                    <span><b>{s.pts}</b></span><span>{s.fgm}/{s.fga}</span><span>{s.ast}</span><span>{s.reb}</span><span>{s.stl}</span><span>{s.blk}</span>
+                  </div>
+                ) })}
+              </div>
+            ))}
           </div>
         </div>
       </div>
     )
   }
 
+  // the board, as of what's been shown: who has it, a run, game point
+  pipFrom.current ??= [...score]
+  const over = outTo >= plays.length - 1
+  const gamePoint = [0, 1].find(t => score[t] >= 10 && score[t] > score[1 - t])
+  const run = (() => {
+    let team = null, n = 0
+    for (let i = outTo; i >= 0; i--) { const q = plays[i]; if (q.type !== 'score') continue; if (team == null) team = q.team; if (q.team !== team) break; n += q.pts }
+    return n >= 5 ? { team, n } : null
+  })()
+  const state = over ? { cls: ' is-gp', text: 'FINAL' } : gamePoint != null ? { cls: ' is-gp', text: 'GAME POINT' } : run ? { cls: ` is-run bt-t${run.team}`, text: `${run.n}-0 RUN` } : { cls: '', text: 'FIRST TO 11' }
+  const now = feed[0]
+  // the calls: the ball decides who calls. The handler calls the play, the man on him the defense;
+  // everyone else (and the stands) is told who has it and who's on him
+  let callBar = null, onBall = null
+  if (calling) {
+    const all = game.teams.flat(), nm = id => all.find(p => p.id === id)?.name ?? ''
+    const h = calling.handler, dfd = calling.defender
+    const pick = v => bt.call(calling.pn, v)
+    if (h === bt.me.vid) {
+      const mates = game.teams[myTeam].filter(p => p.id !== h)
+      // a pass says what the teammate does with it (the engine plays exactly that): a shooter catches and shoots
+      const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: 'PASS →', sub: firstName(p.name) }))]   // what he does with it, the play decides
+      callBar = <CallBar glide key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+    } else if (dfd === bt.me.vid) callBar = <CallBar glide key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+    else onBall = `${firstName(nm(h))} HAS THE BALL · ${firstName(nm(dfd))} IS ON HIM`
+  }
+  const side = t => <BugTeam t={t} name={names[t]} pts={score[t]} lead={score[t] > score[1 - t]} ball={!over && play?.poss === t} mine={myTeam === t} from={pipFrom.current[t]} />
+
   return (
-    <div className={`ag-screen ag-screen--bucket bt-game bt-live${watch ? ' is-watch' : ''}`}>
+    <div className={`ag-screen ag-screen--bucket bt-game btg btg-live${watch ? ' is-watch' : ''}`}>
       {watch && <WatchBar bt={bt} />}
-      <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b><RollingNumber value={score[0]} /></b></div>
-        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
-        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b><RollingNumber value={score[1]} /></b></div>
-      </div>
-      {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
-      {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}
-      <div className="lc-court">
-        <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed} onReveal={onReveal}
-          ovrFor={p => liveOvr(p)} bubbles={bubbles}
-          avatarFor={p => <Av name={p.name} bot={asBot(p)} team={p.team} size={28} cos={p.cos} self={p.id === bt.me.vid} />} />
-        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={watch ? null : lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
-        {/* the calls: under the court on phones, over its lower edge on desktop (court and buttons in one view) */}
-        <div className="lc-calls">
-          {calling && (() => {
-            // the ball decides who calls: the handler calls the play, the man on him the defense
-            const all = game.teams.flat(), nm = id => all.find(p => p.id === id)?.name ?? ''
-            const h = calling.handler, dfd = calling.defender
-            const pick = v => bt.call(calling.pn, v)
-            if (h === bt.me.vid) {
-              const mates = game.teams[myTeam].filter(p => p.id !== h)
-              // a pass says what the teammate does with it (the engine plays exactly that): a shooter catches and shoots
-              const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: 'PASS →', sub: firstName(p.name) }))]   // what he does with it, the play decides
-              return <CallBar key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
-            }
-            if (dfd === bt.me.vid) return <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
-            return <div className="lc-wait">{firstName(nm(h))} HAS THE BALL · {firstName(nm(dfd))} IS ON HIM</div>
-          })()}
+      <div className="btg-cols">
+        <div className="btg-main">
+          <div className="btg-bug">
+            {side(0)}{side(1)}
+            <div className="btg-bug-strip">
+              <span key={state.text} className={`btg-bug-state${state.cls}`}>{state.text}</span>
+              <span className="btg-bug-rule">WIN BY 2</span>
+            </div>
+          </div>
+          <div className="btg-courtbox">
+            <div className="btg-frame lc-court">
+              {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
+              <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed} onReveal={onReveal}
+                ovrFor={p => liveOvr(p)} bubbles={bubbles}
+                avatarFor={p => <Av name={p.name} bot={asBot(p)} team={p.team} size={36} cos={p.cos} self={p.id === bt.me.vid} />} />
+              {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={watch ? null : lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
+              {onBall && <div className="btg-onball">{onBall}</div>}
+            </div>
+            {/* the calls: over the plays before on phones, over the court's lower edge on wide screens (court and buttons in one view) */}
+            <div className="lc-calls">{callBar}</div>
+          </div>
+          {/* the lower third: the play that just happened */}
+          {now
+            ? <div className={`btg-l3 bt-t${now.team}${now.big ? ' is-big' : ''}${now.type === 'milestone' ? ' is-ms' : ''}`} aria-live="polite"><div key={now.id} className="btg-l3-in" style={{ display: 'contents' }}><span className="btg-l3-tag">{playTag(now)}</span><span className="btg-l3-text">{now.text}</span></div></div>
+            : <div className="btg-l3 is-idle"><span /><span className="btg-l3-text">1s AND 2s · MAKE IT, TAKE IT</span></div>}
+        </div>
+        <div className="btg-side">
+          {!watch && <EmoteBar emotes={EMOTES} onEmote={bt.emote} />}
+          <div className="btg-log">
+            <span className="btg-log-head">PLAY-BY-PLAY</span>
+            {feed.slice(1).map(p => <div key={p.id} className={`btg-log-line bt-t${p.team}${p.type === 'milestone' ? ' is-ms' : ''}`}><i aria-hidden="true" /><span>{p.text}</span></div>)}
+          </div>
+          {/* every build, on the screen itself: under the play-by-play (beside the court on wide screens) */}
+          <SquadBuilds game={game} names={names} meVid={bt.me.vid} line={line} />
         </div>
       </div>
-      {!watch && <EmoteBar emotes={EMOTES} onEmote={bt.emote} />}
-      <div className="bt-feed">
-        {feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{p.text}</div>)}
-      </div>
-      {onOpenChat && <button className="bt-live-chat" onClick={onOpenChat}><IconChat size={18} />{unread > 0 && <span className="ag-tab-badge">{unread}</span>}</button>}
+      {/* team chat: rides the bottom of the screen as the page scrolls (above the dock and the ad rail) */}
+      {onOpenChat && <div className="btg-chat-dock"><button className="btg-chat" onClick={onOpenChat} aria-label="Team chat"><IconChat size={18} />{unread > 0 && <span className="ag-tab-badge">{unread}</span>}</button></div>}
     </div>
   )
 }
