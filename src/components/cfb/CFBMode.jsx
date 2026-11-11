@@ -11,6 +11,7 @@ import { TYPES, ATTR, CATEGORIES } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR, WR_CATEGORIES } from '../../data/wrs'
 import { HEADSHOT_BASE, calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR } from '../../utils/simulation'
+import { collegeOVR } from '../../utils/cfbOvr'
 import { useDropMode, useDropSheet, DropBar, DropSheet, BuildComplete } from '../app/AppBuildTray'
 import { IconGear, IconClose, IconPlay } from '../app/icons'
 import SoundToggle from '../app/SoundToggle'
@@ -37,9 +38,9 @@ import './cfb.css'
 // (data/cfb-legends.js) in place of this season's rosters. Only the wheels change: the offers, the season against
 // today's schools, the portal and the draft are the same, and the seasons it plays are tagged All-Time
 const POS = {
-  qb: { types: TYPES, attr: ATTR, cats: CATEGORIES, flags: {}, ovr: calcOVR, arch: getArchetype },
-  wr: { types: WR_TYPES, attr: WR_ATTR, cats: WR_CATEGORIES, flags: { isWR: true }, ovr: calcOVRWR, arch: getArchetypeWR },
-  rb: { types: RB_TYPES, attr: RB_ATTR, cats: undefined, flags: { isRB: true }, ovr: calcOVRRB, arch: getArchetypeRB },
+  qb: { types: TYPES, attr: ATTR, cats: CATEGORIES, flags: {}, ovr: (b, t) => collegeOVR(calcOVR(b, t)), arch: getArchetype },
+  wr: { types: WR_TYPES, attr: WR_ATTR, cats: WR_CATEGORIES, flags: { isWR: true }, ovr: (b, t) => collegeOVR(calcOVRWR(b, t)), arch: getArchetypeWR },
+  rb: { types: RB_TYPES, attr: RB_ATTR, cats: undefined, flags: { isRB: true }, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
 }
 const emptyBuild = pos => Object.fromEntries(POS[pos].types.map(t => [t, null]))
 const newSeed = () => ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1

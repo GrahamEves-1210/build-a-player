@@ -121,6 +121,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR } from './simulation'
+import { collegeOVR } from './cfbOvr'
 import { TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
 import { WR_TYPES } from '../data/wrs'
@@ -309,7 +310,7 @@ const corr = (xs, ys) => {
 const PTS_PER_Z = 7.2   // one SD of offense (or defense) is worth ~7 points a game (SP+'s unit spreads)
 const toBuild = (attrs, types) => Object.fromEntries(types.map(t => [t, { type: t, val: attrs?.[t] ?? 5 }]))
 const OVR_FN = { qb: calcOVR, rb: calcOVRRB, wr: calcOVRWR }
-export function calcCFBOVR(build, types, position) { const p = position ?? 'qb'; return OVR_FN[p](build, types ?? CFB_TYPES_BY_POS[p]) }
+export function calcCFBOVR(build, types, position) { const p = position ?? 'qb'; return collegeOVR(OVR_FN[p](build, types ?? CFB_TYPES_BY_POS[p])) }
 
 function buildLeague() {
   const confs = (CFB_CONFERENCES ?? []).map(c => ({ ...c, kind: kindOf(c) }))

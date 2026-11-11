@@ -3,6 +3,7 @@ import { TYPES, ATTR } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../../data/wrs'
 import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
+import { collegeOVR } from '../../utils/cfbOvr'
 import { seeded } from '../../lib/rng'
 import { starsFor, rankFor, barAt, offersFor, startsOver } from './cfbRecruit'
 import { Stars, OfferBoard, CommitBar } from './CFBOffers'
@@ -30,9 +31,9 @@ import './cfb.css'
 // deterministic, so it's played again on the way back in (a save stays small, cloud copy included).
 // This file and the CFB data load only for a career in college (AppCareer.jsx: lazy).
 const POS = {
-  qb: { types: TYPES, attr: ATTR, ovr: calcOVR, arch: getArchetype },
-  wr: { types: WR_TYPES, attr: WR_ATTR, ovr: calcOVRWR, arch: getArchetypeWR },
-  rb: { types: RB_TYPES, attr: RB_ATTR, ovr: calcOVRRB, arch: getArchetypeRB },
+  qb: { types: TYPES, attr: ATTR, ovr: (b, t) => collegeOVR(calcOVR(b, t)), arch: getArchetype },
+  wr: { types: WR_TYPES, attr: WR_ATTR, ovr: (b, t) => collegeOVR(calcOVRWR(b, t)), arch: getArchetypeWR },
+  rb: { types: RB_TYPES, attr: RB_ATTR, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
 }
 const clamp = (a, b, x) => Math.max(a, Math.min(b, x))
 const YEAR_OF = ['FR', 'SO']          // his class, season by season
