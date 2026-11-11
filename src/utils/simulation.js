@@ -4302,7 +4302,7 @@ export function calcOLProtectorResult(result, isAllTime = false, teamShort = nul
   const strength = olProtectorCase({ passGrade: seasonPassGrade, runGrade: seasonRunGrade, sacks: seasonSacksAllowed, penalties: seasonPenalties, wins })
   // Two gates, like the other awards: an elite build, and a season that backs it up (about a 90 grade with a
   // clean sheet). Past both he is a real contender; a season well clear of the bar is the favorite.
-  const BUILD_OVR_GATE = 94, SEASON_GATE = 88.5, SEASON_TOP = 94
+  const BUILD_OVR_GATE = 94, SEASON_GATE = 87.5, SEASON_TOP = 94
   const full = !games.length || games.length >= 15
   let winP = 0
   if (ovr >= BUILD_OVR_GATE && strength >= SEASON_GATE && full) winP = 0.40 + Math.min(1, (strength - SEASON_GATE) / (SEASON_TOP - SEASON_GATE)) * 0.55

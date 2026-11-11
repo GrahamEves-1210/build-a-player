@@ -14,7 +14,7 @@ import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer 
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, olGradeOf, lbStyle,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, olGradeOf, olProtectorCase, lbStyle,
   calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE, snapNFL,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
@@ -189,13 +189,25 @@ function olSeason(f) {
   const st = { sacksA: sum('sacks', f.seasonSacksAllowed), prs: sum('pressures', f.seasonPressures), pancakes: sum('pancakes', f.seasonPancakes), pen: sum('penalties', f.seasonPenalties), hitsA: sum('qbHits', f.seasonQBHits), holding: sum('holding', f.seasonHolding), falseStarts: sum('falseStarts', f.seasonFalseStarts), snaps: sum('snaps', f.seasonSnaps), starts: f.games ? played.length : 17 }
   return { ...st, ...(st.starts ? olGrades({ ...st, rbwr: f.seasonRBWR ?? 70 }) : {}) }
 }
-// The honors (a First-Team All-Pro is the top of it: there's no lineman of the year), judged on the
-// grade with the sacks and the flags as a check. An elite year (85-92, 0-2 sacks) is an All-Pro, a good one (80-84) a Pro Bowl.
-// (set so an elite career lands about 13 Pro Bowls and 6 All-Pros, a good one 8 and 2: like a DL's, where the awards also count)
-export const OL_BARS = { proBowl: 80.5, allPro: 85, near: 83 }
+// The honors, judged on the grade with the sacks and the flags as a check. A good year (80.5 and up, five sacks
+// at most) is a Pro Bowl. First-Team All-Pro is one man a spot, so it goes against the year's best rival there, a
+// seeded field: most years about OL_BARS.allPro, now and then a down year or somebody's monster (the way a DB's DPOY
+// is voted). An 89 with a clean sheet is a coin flip, a 92 gets him there most years, an 85 only in a down year.
+// (set on the 2026-11-11 grade scale, where a 99 overall lineman's median year is about 91 and a 94's about 84: a
+// 97-99 lineman makes All-Pro about seven years in ten, like a quarterback, a pass rusher or a linebacker of that
+// overall; measured over 80 careers, scratch car/olprobe.mjs)
+export const OL_BARS = { proBowl: 80.5, allPro: 89, allProSpread: 1.6, near: 86, protector: 90.9, spread: 1.1 }
 const olProBowl = s => (s.grade ?? 0) >= OL_BARS.proBowl && (s.sacksA ?? 99) <= 5
-const olAllPro = s => (s.grade ?? 0) >= OL_BARS.allPro && (s.sacksA ?? 99) <= 3 && (s.pen ?? 99) <= 7
-// (no MVP, OPOY or DPOY for a lineman: All-Pro is his trophy, so it counts as such on the screens, never twice in the legacy)
+const olField = (c, tag) => { const u = clamp(seeded(`${c?.seed ?? 'ol'}-${tag}-${c?.year ?? 0}`)(), 0.001, 0.999); return Math.log(u / (1 - u)) }
+const olAllPro = (s, c) => (s.grade ?? 0) >= OL_BARS.allPro + OL_BARS.allProSpread * olField(c, 'olap') && (s.sacksA ?? 99) <= 3 && (s.pen ?? 99) <= 7
+// Protector of the Year, the league's award for its best lineman (first given for 2025; utils/simulation.js has
+// the real one's facts): his case is the grade with pass protection weighing most, the sacks, the flags and the
+// team, and he has to have started nearly every game. It goes against the year's best rival, a seeded field
+// (most years about OL_BARS.protector, now and then a down year or a monster), the way a DB's DPOY does.
+const olProtector = (c, f, s) => (s.starts ?? 0) >= 15
+  && olProtectorCase({ passGrade: s.passGrade ?? 0, runGrade: s.runGrade ?? 0, sacks: s.sacksA ?? 9, penalties: s.pen ?? 9, wins: f.wins ?? 8 }) > OL_BARS.protector + OL_BARS.spread * olField(c, 'prot')
+// (a great of the past never had the award to win: his First-Team All-Pros carry OL_FIRST_BONUS in its place, and a
+// career's All-Pro years that did win it count the award instead, never both: legacyScore)
 export const OL_FIRST_BONUS = 10, OL_START_LEGACY = 0.2
 
 export const SPORT = {
@@ -393,8 +405,8 @@ export const SPORT = {
     rateKeys: ['rating', 'compPct', 'ypc', 'ypr', 'rtgA', 'grade', 'passGrade', 'runGrade', 'fgPct', 'long'],     // per-game rates: never summed into career totals
     averages: null,
     headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'], dl: ['sacks', 'tfl', 'tackles'], lb: ['tackles', 'sacks', 'ints'], ol: ['sacksA', 'pancakes', 'grade'], k: ['fgPct', 'points', 'long'] },
-    // (a lineman has no season award: his slot is the All-Pro team, shown as his trophy; s.award stays false)
-    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'ALL-PRO', k: 'ALL-PRO' },
+    // (a lineman's award is Protector of the Year; a kicker has none: his slot is the All-Pro team, shown as his trophy; s.award stays false)
+    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'PROTECTOR', k: 'ALL-PRO' },
     honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
     // games played to be considered (of 17): the award and All-Pro 12, the Pro Bowl 9
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
@@ -407,12 +419,13 @@ export const SPORT = {
     award: (c, f, s) => {
       const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1900 || (s.rushYds >= 1750 && s.tds >= 18), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1500 && s.tds >= 14, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)), lb: () => lbImpact(s, c) >= LB_BARS.dpoy }
       // a tight end past both the yards and TD records on a winner: nobody out-votes that
-      if (c.pos === 'ol' || c.pos === 'k') return false   // (no award for a lineman or a kicker: the All-Pro team is the top of it)
+      if (c.pos === 'k') return false   // (no award for a kicker: the All-Pro team is the top of it)
       if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
       if (seeded(`${c.seed}-poy-${c.year}`)() < 0.28) return false
       // a DB's DPOY: his case (coverage, plus the shutdown premium) against the year's best rival,
       // a seeded field (most years about DB_BARS.dpoy, now and then a down year or a monster)
       if (c.pos === 'db') { const u = clamp(seeded(`${c.seed}-dpoy-${c.year}`)(), 0.001, 0.999); return dbDpoyCase(s, c) > DB_BARS.dpoy + DB_BARS.spread * Math.log(u / (1 - u)) }
+      if (c.pos === 'ol') return olProtector(c, f, s)
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
     // (a lineman: the grade, then the pancakes and a clean sheet; an 88 grade on a winner is about 0.9, a 67 on an 8-win team 0.43)
