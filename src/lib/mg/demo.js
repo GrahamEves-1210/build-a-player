@@ -626,7 +626,36 @@ function hitstickPilot(g) {
     }
   }
 }
-const PILOTS = { passpro: passproPilot, catch: catchPilot, cone: conePilot, cut: cutPilot, dash: dashPilot, bench: benchPilot, calls: callsPilot, fastbreak: fastbreakPilot, goalline: goallinePilot, leverage: leveragePilot, lockdown: lockdownPilot, meter: meterPilot, oop: oopPilot, halfcourt: halfcourtPilot, read: readPilot, rebound: reboundPilot, rush: rushPilot, throw: throwPilot,
+// ── kick: the needle as it crosses the middle of the green, the power just past the mark. The onside kick: 11 or 12 yards,
+// the ring as it closes, the leap as the ball comes down ─────────────────────────
+function kickPilot(g, game) {
+  const press = () => [{ kind: 'down', zone: null, x: 180, y: 0 }]
+  let phase = null, since = 0, last = null, from = 0
+  return () => {
+    if (g.done) return
+    if (g.phase !== phase) { phase = g.phase; since = g.t; last = null; from = 0 }
+    if (g.t - since < REACT) return
+    if (game === 'onside') {
+      if (g.phase === 'dist') { const y = g.yards(), up = last != null && y > last; last = y; if (up && y >= 11.2 && y <= 12.6) return press(); return }
+      if (g.phase === 'strike') { if (g.ring() <= 0.01) return press(); return }
+      if (g.phase === 'hop' && g.leap == null && g.t >= g.hopAt()) return press()
+      return
+    }
+    if (g.phase === 'aim') {
+      const n = g.needle(), c = g.centre(), was = last; last = n
+      if (was == null) return
+      if (!from) { if (Math.abs(n - c) > g.half() * 1.1 || Math.abs(n) > 0.9) from = Math.sign(n - c) || 1; return }
+      if ((c - n) * from >= 0 && Math.sign(n - was) === -from) return press()
+      return
+    }
+    if (g.phase === 'power') {
+      const p = g.power(), up = last != null && p > last; last = p
+      const need = g.need(), want = need >= 1 ? Math.min(1.1, need + 0.01) : need + (1 - need) * 0.5
+      if (up && p >= want) return press()
+    }
+  }
+}
+const PILOTS = { kick: kickPilot, passpro: passproPilot, catch: catchPilot, cone: conePilot, cut: cutPilot, dash: dashPilot, bench: benchPilot, calls: callsPilot, fastbreak: fastbreakPilot, goalline: goallinePilot, leverage: leveragePilot, lockdown: lockdownPilot, meter: meterPilot, oop: oopPilot, halfcourt: halfcourtPilot, read: readPilot, rebound: reboundPilot, rush: rushPilot, throw: throwPilot,
   penalty: penaltyPilot, oneonone: oneononePilot, header: headerPilot, volley: volleyPilot, slalom: slalomPilot, finishing: finishingPilot,
   freekick: freekickPilot, counter: counterPilot, firsttouch: firsttouchPilot,
   atbat: atbatPilot, pitch: pitchPilot, steal: stealPilot, ofarm: ofarmPilot, hitstick: hitstickPilot }
@@ -690,6 +719,9 @@ export const CAPTION_GAME = {
   'zone-drop': { wait: 'EYES ON THE QB', press: '{T} THE MAN HE THROWS TO' },
   'pass-rush': { wait: 'WATCH THE BALL', press: ['GET OFF ON THE BALL', '{T} THE MOVE THAT BEATS HIM'] },
   'hit-stick': { wait: 'READ THE BACK', press: ['HOLD TO GET TO HIS HOLE', 'TACKLE AS THE RING CLOSES'] },
+  'deep-kick': { wait: 'WATCH THE NEEDLE', press: ['{T} WITH THE NEEDLE IN THE GREEN', '{T} WITH THE POWER PAST THE MARK'] },
+  'game-winner': { wait: 'WATCH THE NEEDLE', press: ['{T} WITH THE NEEDLE IN THE GREEN', '{T} WITH THE POWER PAST THE MARK'] },
+  onside: { wait: 'IT HAS TO GO 10 YARDS', press: ['{T} TO SET THE DISTANCE', '{T} AS THE RING CLOSES', '{T} TO GO UP FOR IT'] },
   sprint30: { wait: 'WAIT FOR THE WHISTLE', press: 'LEFT, RIGHT, IN RHYTHM' },
   sixty: { wait: 'WAIT FOR THE GUN', press: 'LEFT, RIGHT, IN RHYTHM' },
   'exit-velo': { wait: 'ZONE ON THE TOSS', press: 'DRIVE IT' },

@@ -20,6 +20,11 @@ const SPOTS = {
   gap: RUN, juke: RUN, seal: RUN,
   'third-long': { ...PASS, tail: 'Third and long.' },
   bomb: { ...PASS, tail: 'Time for a deep shot.' },
+  // the kicker's: the last snap, down two or less or level (a field goal wins it); a long one late in a close game; and the
+  // onside kick, behind by a score with a minute and change left and no way to stop the clock
+  'game-winner': { margin: [2, 1, 0, 2, 1], span: [2, 4], tail: 'Field goal for the win.' },
+  'deep-kick': { margin: [0, -1, 1, 2, -3], span: [130, 420], tail: 'A long field goal try.' },
+  onside: { margin: [3, 5, 6, 7, 8, 8], span: [62, 108], tail: 'No timeouts. They need the ball back.' },
   'jump-route': STOP, 'zone-drop': STOP, 'tackle-angle': STOP, 'pass-rush': STOP, 'run-stuff': STOP, 'hit-stick': STOP,
   'clutch-shot': { margin: [1, 1, 2], fixed: 2.8, hoops: true, tail: 'One shot left.' },         // (2.8: the shot's own clock in lib/mg/meter.js)
   'free-throws': { margin: [1, 1, 0], tenths: [0.8, 5.5], hoops: true, tail: 'Two shots at the line.' },

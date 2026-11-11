@@ -50,6 +50,10 @@ export const SIMPLE_GAMES = {
   'run-stuff':   { kind: 'stuff', traits: ['playRecognition', 'blockShed', 'strength', 'size', 'power'], title: 'STUFF THE RUN', how: 'Four handoffs, three gaps. The back often presses one gap and cuts back: fill the one he commits to. Jump it early and he cuts away. Three stops win it.' },
   // ── OL ──
   'pass-pro':    { kind: 'pro', traits: ['passPro', 'mobility', 'anchor', 'blitzPickup', 'length'], title: 'PASS PRO', how: 'Four snaps. On each, read the rusher: a speed rush wide, a counter back inside, a bull straight on, or a blitz. Mirror where he’s really going, then PUNCH as the ring closes. Against a bull, HOLD PUNCH until he stops. On a blitz, take the man coming free. Moving before the snap is a false start. Three good snaps hold the pocket.' },
+  // ── K ── (Simple: one bar a kick. The onside kick's press only decides how well it was kicked: lib/kicks.js rolls the rest)
+  'deep-kick':   { kind: 'kick', traits: ['power', 'accuracy'], title: 'DEEP KICK', how: 'Four field goals from 50 and out. Tap each one in the window. Each one is longer, and the window is smaller.', n: 4 },
+  'game-winner': { kind: 'kick', traits: ['clutch', 'accuracy', 'power'], title: 'GAME WINNER', how: 'One kick for the game. Tap it in the window.' },
+  'onside':      { kind: 'kick', traits: ['accuracy', 'clutch'], title: 'ONSIDE KICK', how: 'They need the ball back. Tap it in the window to drive the top of the ball into the turf. Even a perfect onside kick is rarely recovered.' },
   // ── Combine ──
   'forty':       { kind: 'dash', drill: 'forty', traits: ['legs', 'speed', 'getOff', 'range', 'mobility'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Speed makes every step longer.' },
   'velo':        { kind: 'velo', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Three throws into the net. Hold: the meter climbs to the PEAK and falls back. Let go at the peak: the closer, the faster. The radar reads every throw and the best one counts. Two in the green pass.' },

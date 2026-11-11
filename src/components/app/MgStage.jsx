@@ -143,7 +143,7 @@ export const NO_HOME_FIELD = new Set(['forty', 'cone', 'bench', 'velo', 'acc', '
 // The seats are there, nobody's in them: no crowd getting up, no flashes, no crowd sound
 export const EMPTY_GAMES = new Set([...Object.values(COMBINE_GAMES).flat(), 'sprint', 'lane', 'spot', 'vert', 'nbench'])
 const CROWD_SFX = new Set(['snd-roar'])
-export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, pos: playerPos = null, cast = null, situation = null, weather = null, empty = false, onDone, children = null }) {
+export default function MgStage({ game, def, v, arm, kick = null, seed, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, pos: playerPos = null, cast = null, situation = null, weather = null, empty = false, onDone, children = null }) {
   const canvas = useRef(null)
   const box = useRef(null)
   const hudCanvas = useRef(null)
@@ -191,7 +191,7 @@ export default function MgStage({ game, def, v, arm, seed, sport = 'nfl', team =
     // prompts, the pads and the stamps are never under a bar or a texture)
     const split = () => !!octx
     const hudCtx = () => (split() ? octx : ctx)
-    const g = engine.make({ v, arm, seed, def, game, sport, pos: playerPos, cast, situation })
+    const g = engine.make({ v, arm, kick, seed, def, game, sport, pos: playerPos, cast, situation })   // (kick: a kicker's three ratings, each its own: lib/mg/kick.js)
     g.sit ??= situation
     if (import.meta.env.DEV) window.__bapGame = g   // (for scripts/mg's browser tests)
     const c = colorsFor(sport, team, opp)

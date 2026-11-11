@@ -50,6 +50,10 @@ export const GAMES = {
   'run-stuff':   { kind: 'rush', traits: ['playRecognition', 'blockShed', 'strength', 'size', 'power'], title: 'STUFF THE RUN', how: 'Read the line and the back. Tap the side the run is going, then SHED as the back gets there. Too soon and he cuts away.', rounds: 4 },
   // ── OL ── (a lineman plays Seal the Edge too, off his own ratings: Run Block and Anchor)
   'pass-pro':    { kind: 'pro', traits: ['passPro', 'mobility', 'anchor', 'blitzPickup', 'length'], title: 'PASS PRO', how: 'Three snaps. HOLD SLIDE OUTSIDE or SLIDE INSIDE to keep the marker in the middle of the bar. A speed rush drives you wide; an inside move comes back under if you overset; a bull rush shoves you around, so keep it small and steady. Reach the end of the bar and he is past you.' },
+  // ── K ── (lib/mg/kick.js; the numbers are lib/kicks.js)
+  'deep-kick':   { kind: 'kick', traits: ['power', 'accuracy'], title: 'DEEP KICK', how: 'Four field goals from 50 to 65 yards, each one longer. Press to stop the needle in the green, then press to stop the power past the mark. Power is how far he reaches; Accuracy is how wide the green is.', rounds: 4 },
+  'game-winner': { kind: 'kick', traits: ['clutch', 'accuracy', 'power'], title: 'GAME WINNER', how: 'One kick with the game on it, from anywhere inside his range. Press to stop the needle in the green, then press to stop the power past the mark. Clutch keeps the needle steady.' },
+  'onside':      { kind: 'kick', traits: ['accuracy', 'clutch'], title: 'ONSIDE KICK', how: 'Behind late, they need the ball back. Set the distance (it has to go 10 yards), drive the top of the ball into the turf as the ring closes, then go up for it as it comes down. It rarely works.' },
   // ── Combine ── (a lineman's: the 40 off Mobility, the bench off Anchor, the cone off Mobility)
   'forty':       { kind: 'dash', traits: ['legs', 'speed', 'getOff', 'range', 'mobility'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Speed makes every step longer.' },
   'velo':        { kind: 'velo', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Three throws. Hold to wind up and let go inside the small green window. It moves every throw and the wind-up gets faster. A stronger arm gets a bigger window.' },
@@ -111,6 +115,8 @@ export const PLAYOFF_GAMES = {
   dl: ['pass-rush', 'run-stuff'],
   lb: ['tackle-angle', 'run-stuff', 'zone-drop', 'hit-stick'],
   ol: ['pass-pro', 'seal'],
+  // the kicker: the kick for the game, the long one, and (only when his team is behind late: career.js deals it) the onside kick
+  k: ['game-winner', 'deep-kick', 'onside'],
   guard: ['iso', 'pnr', 'clutch-shot', 'free-throws', 'lockdown', 'fast-break', 'half-court'],
   big: ['post-up', 'board', 'rim-protect', 'free-throws', 'clutch-shot', 'alley-oop'],
   // soccer: the striker's big moments, every one a late chance to win it (lib/situations.js has their minutes)
@@ -129,6 +135,8 @@ export const momentsOf = pos => [...(PLAYOFF_GAMES[pos] ?? PLAYOFF_GAMES.qb), ..
 const BORROWED_TRAITS = { release: ['routeRunning', 'strength'] }
 // the combine: three games a position runs (the test is its own step)
 export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'], dl: ['forty', 'bench', 'cone'], lb: ['forty', 'bench', 'gauntlet'], ol: ['forty', 'bench', 'cone'],
+  // a kicker's workout: no 40, no bench. The scouts chart field goals from distance
+  k: ['deep-kick'],
   // soccer's academy trial: the career's first step (raw: sprint30 { secs }, slalom { secs, made, of }, finishing { made, of },
   // first-touch { ups, made, dead, of, pts })
   st: ['sprint30', 'slalom', 'finishing', 'first-touch'],
@@ -172,7 +180,7 @@ export const LOOKS = [
 // one playoff moment per round, seeded, never the same twice in a run
 // A playoff moment's game fits the moment: the game's situation comes first, then a game for it.
 // Trailing late: the two-minute drive, the last shot. At the goal line: fourth and goal. Otherwise any of the rest.
-const SITUATION = { 'two-minute': 'trailing', 'clutch-shot': 'trailing', 'goal-line': 'goal' }
+const SITUATION = { 'two-minute': 'trailing', 'clutch-shot': 'trailing', 'goal-line': 'goal', 'game-winner': 'trailing' }
 export function pickMomentGame(pos, seed, used = [], allow = null) {
   const all = momentsOf(pos).filter(g => !allow || allow(g))
   const r = seeded(`mg-${seed}`)

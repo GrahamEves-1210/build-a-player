@@ -44,7 +44,7 @@ function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
 }
 
 // K: the AP's two kickers, First Team and Second Team. The build is one of four names on the ballot.
-const kLine = s => `${s.fgm}/${s.fga} FG (${s.pct}%) · long ${s.long} · ${s.m50} from 50+`
+const kLine = s => `${s.fgm}/${s.fga} FG · ${s.pct}% · long ${s.long}`
 function KAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
   const { userWins, unanimous, secondTeam, line, ballot, userStats } = mvpResult
   return (

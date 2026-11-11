@@ -19,7 +19,7 @@ import MgDemo from './MgDemo'
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 // practice and camp have no playoff game behind them: these games still need a score, so they get one that fits
 // (baseball's moments too: the inning, the outs, the men on and the count are the moment)
-const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line', 'at-bat', 'walk-off', 'steal-second', 'strike-out', 'escape-jam'])
+const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line', 'game-winner', 'onside', 'at-bat', 'walk-off', 'steal-second', 'strike-out', 'escape-jam'])
 
 // retry (Career, app): a miss can be played again for a video, once
 // labV (the test lab): plays at this grade instead of the build's
@@ -101,7 +101,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
           {onSkipAll && <button className="ag-btn ag-btn--ghost mg-skipall" onClick={() => { sfx('tap'); onSkipAll() }}>TURN OFF KEY MOMENTS</button>}
         </div>
       )}
-      {stage === 'play' && <MgStage key={tries} home={home} superBowl={superBowl} game={game} def={def} v={v} arm={labV ?? traitValue('bomb', build)} seed={tries ? `${seed}-again` : seed} sport={sport} team={team} opp={opp} pos={pos} cast={cast} situation={shown} weather={weather} empty={empty} onDone={done}>{children}</MgStage>}
+      {stage === 'play' && <MgStage key={tries} home={home} superBowl={superBowl} game={game} def={def} v={v} arm={labV ?? traitValue('bomb', build)} kick={labV != null || !build?.power ? null : { power: build.power.val ?? 5, accuracy: build.accuracy?.val ?? 5, clutch: build.clutch?.val ?? 5 }} seed={tries ? `${seed}-again` : seed} sport={sport} team={team} opp={opp} pos={pos} cast={cast} situation={shown} weather={weather} empty={empty} onDone={done}>{children}</MgStage>}
       {stage === 'done' && result && (
         <div className="mg-result">
           <b>{result.hit ? (result.score >= 0.85 ? 'ELITE' : 'GOOD') : result.out ? 'OUT OF TIME' : 'NO GOOD'}</b>

@@ -4,6 +4,7 @@ import { SIMPLE_GAMES as GAMES, simpleTraitValue as traitValue } from '../../lib
 import { valToGrade, dlBuildSpot } from '../../utils/simulation'
 import { dashTarget, coneShift } from '../../lib/mg/combineNorms'
 import { seeded } from '../../lib/rng'
+import { onsideP } from '../../lib/kicks'
 import { sfx, haptic } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
@@ -299,9 +300,17 @@ export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoSt
   )
 }
 
+// The Simple onside kick: the press is how well he kicked it, and then it's a football off the turf. Kicked well, an
+// average kicker gets it back about one time in ten (lib/kicks.js, the same numbers as the full game); kicked badly, hardly ever.
+function onsideResult(r, v, seed) {
+  const got = seeded(`onside-${seed}`)() < onsideP({ accuracy: v, clutch: v }) * (r.hit ? 1.35 : 0.4)
+  return { score: got ? 1 : Math.min(0.3, (r.score ?? 0) * 0.3), hit: got, note: got ? 'Recovered the onside kick' : 'The hands team fell on it' }
+}
 function Game({ def, v, seed, build, pos, onDone }) {
   const at = pos ?? posOf(build)
   switch (def.kind) {
+    // the kicker's: four in a row (Deep Kick), one (Game Winner), one and then the bounce (Onside Kick)
+    case 'kick': return def.n ? <Taps v={v} seed={seed} n={def.n} onDone={onDone} /> : def.title === 'ONSIDE KICK' ? <Timing v={v} seed={seed} onDone={r => onDone(onsideResult(r, v, seed))} /> : <Timing v={v} seed={seed} onDone={onDone} />
     case 'timing': return <Timing v={v} seed={seed} onDone={onDone} />
     case 'sneak': return <Sneak v={v} seed={seed} onDone={onDone} />
     case 'drive': return <Drive v={v} seed={seed} onDone={onDone} />
