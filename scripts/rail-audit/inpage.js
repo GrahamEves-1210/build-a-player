@@ -261,6 +261,62 @@
     }
     return out.join(' + ') || 'base'
   }
+  // ── the crawler's view of the page (scenarios.mjs crawl) ─────────────────────
+  // the large fixed layers of ours that are showing, in document order (pages, screens, sheets, modals)
+  const first = e => (typeof e.className === 'string' && e.className.trim() ? e.className.trim().split(/\s+/)[0] : e.tagName.toLowerCase())
+  const bigFixed = () => {
+    const vw = window.innerWidth, vh = window.innerHeight, out = []
+    for (const e of document.body.querySelectorAll('*')) {
+      if (inRail(e)) continue
+      const cs = getComputedStyle(e)
+      if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.02 || cs.pointerEvents === 'none') continue
+      const r = e.getBoundingClientRect()
+      if (r.width * r.height >= vw * vh * 0.15) out.push(e)
+    }
+    return out
+  }
+  // the layer a tap in the middle of the screen would land in (the open sheet, else the page)
+  RA.topLayer = () => {
+    const layers = bigFixed()
+    for (const [fx, fy] of [[.5, .5], [.5, .3], [.5, .72], [.2, .5]]) {
+      const t = document.elementsFromPoint(window.innerWidth * fx, window.innerHeight * fy).find(e => !inRail(e))
+      const l = t && layers.filter(x => x.contains(t)).pop()
+      if (l) return l
+    }
+    return null
+  }
+  RA.state = () => `${location.pathname}|${[...document.querySelectorAll('#root > *')].filter(visible).map(first).join(',')}|${bigFixed().map(first).join(',')}`
+  const keyOf = e => `${first(e)}|${(e.getAttribute('aria-label') || e.innerText || e.value || e.getAttribute('placeholder') || '').replace(/[\d,.:%$+−-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 42)}`
+  const scopeItems = () => {
+    const scope = RA.topLayer() ?? document.body
+    return [...scope.querySelectorAll('*')].filter(e => interactive(e) && visible(e) && !inRail(e) && !e.disabled && !e.matches('input, textarea, select, label, [contenteditable]'))
+      // (a row and the button inside it: the inner one)
+      .filter((e, _, all) => !all.some(o => o !== e && e.contains(o)))
+  }
+  // what can be pressed in the top layer: [{ key, text, cls, tab, ext }]
+  RA.items = () => scopeItems().map(e => ({ key: keyOf(e), cls: first(e), text: keyOf(e).split('|')[1],
+    tab: e.matches('[role=tab], [aria-selected], [aria-pressed]') || /tab|pill|seg|chip|toggle|switch|filter|mode\b|pos\b|sort/i.test(typeof e.className === 'string' ? e.className : ''),
+    ext: e.matches('a[href]') && (e.target === '_blank' || !isLocal(e.href) || /^(mailto|tel):/.test(e.getAttribute('href'))) }))
+  RA.clickKey = key => { const el = scopeItems().find(e => keyOf(e) === key); if (!el) return false; el.scrollIntoView({ block: 'center', behavior: 'instant' }); el.click(); return true }
+  RA.content = () => { const s = RA.topLayer() ?? document.body; return `${(s.innerText || '').replace(/[\d\s]+/g, '').length}:${s.querySelectorAll('*').length}` }
+  // close the top layer the way a player would: its close/back button, else Escape
+  RA.closeTop = () => {
+    const l = RA.topLayer()
+    const b = l && [...l.querySelectorAll('button, [role=button], a')].find(e => visible(e) && /close|back|dismiss|done|cancel|got it|not now|skip/i.test(`${e.getAttribute('aria-label') || ''} ${typeof e.className === 'string' ? e.className : ''} ${(e.innerText || '').trim().slice(0, 14)}`))
+    if (b) { b.click(); return 'button' }
+    for (const t of [document.activeElement, document.body, document, window]) t?.dispatchEvent?.(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }))
+    return 'esc'
+  }
+
+  // a small pop-up that is not a full layer (a drop-down menu): something absolutely/fixed positioned, on top, with
+  // menu items in it. Closed by a press outside it
+  RA.popupOpen = () => !!document.querySelector('[role=menu], [role=listbox], [class*="dropdown"]:not([hidden]), [class*="-menu"][class*="open"], .pos-menu, .tab-menu')
+  RA.tapOutside = () => {
+    const x = 3, y = Math.round(window.innerHeight * 0.5), t = document.elementFromPoint(x, y) ?? document.body
+    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) t.dispatchEvent(new (type.startsWith('pointer') ? PointerEvent : MouseEvent)(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }))
+    return label(t)
+  }
+
   // the screen in a few lines, for writing scenarios: its signature and the clickable things in view
   RA.brief = (max = 30) => {
     const vh = window.innerHeight

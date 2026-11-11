@@ -60,7 +60,7 @@ for (const [si, size] of SIZES.entries()) {
   for (const sc of todo) {
     if (sc.sizes && !sc.sizes(size)) continue
     const ctx = {
-      size, sleep,
+      size, sleep, path: sc.path ?? '/', storage: sc.storage ?? {},
       get page() { return page },
       // a clean browser profile on a path, with localStorage seeded (each scenario starts from one)
       fresh: boot,

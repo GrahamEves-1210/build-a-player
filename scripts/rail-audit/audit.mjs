@@ -35,9 +35,12 @@ function decodePng(buf) {
 async function adShowing(page, band) {
   const { x, y, width, height } = band.ad
   if (width < 4 || height < 4) return { frac: 1 }
-  const x0 = Math.round(x) + 1, y0 = Math.round(y) + 1
-  // (a screenshot's clip is in page coordinates: the window's own scroll is added)
-  const png = decodePng(await page.screenshot({ x: x0 + (band.sx || 0), y: y0 + (band.sy || 0), width: Math.floor(width) - 2, height: Math.floor(height) - 2 }))
+  // (the whole window is shot and the ad's box read out of it: a clipped shot is taken in page coordinates, and on a
+  // scrolled page that is not where a fixed element is)
+  const shot = decodePng(await page.screenshot())
+  const x0 = Math.round(x) + 1, y0 = Math.round(y) + 1, w = Math.min(Math.floor(width) - 2, shot.w - x0), h = Math.min(Math.floor(height) - 2, shot.h - y0)
+  const png = { w, h, bpp: shot.bpp, data: Buffer.alloc(w * h * shot.bpp) }
+  for (let r = 0; r < h; r++) shot.data.copy(png.data, r * w * shot.bpp, ((y0 + r) * shot.w + x0) * shot.bpp, ((y0 + r) * shot.w + x0 + w) * shot.bpp)
   // three kinds of pixel: the ad's own colour; a faint tint over it (a shadow falling on the ad: reported, not a
   // failure); anything else (something of ours is drawn over the ad)
   let ok = 0, tint = 0, r0 = 1e9, r1 = -1, c0 = 1e9, c1 = -1, rgb = null, tintRgb = null
