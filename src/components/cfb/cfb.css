@@ -14,14 +14,17 @@ html.is-cfb {
   --cfb-line: rgba(255,255,255,.13);
   --cfb-line-hi: rgba(255,255,255,.3);
   --cfb-gold: #e8c766;
-
-  /* football's tokens, in college colours (the buttons go flat: both ends of their gradient are one blue) */
+}
+/* football's tokens, in college colours (the buttons go flat: both ends of their gradient are one blue).
+   Not while one of the dock's screens is open over the mode (html.ag-screen-open: the Shop, Cards, the Pass…):
+   those are the game's own screens and keep the game's colours (the Shop opened from here was blue) */
+html.is-cfb:not(.ag-screen-open) {
   --accent: #9fc1ff; --accent-hi: #ffffff; --accent-lo: rgba(26,95,209,.14); --accent-dk: #1a5fd1;
   --btn-start: #1a5fd1; --btn-end: #1a5fd1; --btn-glow: rgba(26,95,209,0); --btn-txt: #ffffff;
   --text: #ffffff; --text-2: #c9dafc; --text-3: #8fb0ee; --text-4: #3d68b8;
   --border: rgba(255,255,255,.1); --border-hi: rgba(255,255,255,.26);
 }
-html:is(.is-app, .app-look).is-cfb {
+html:is(.is-app, .app-look).is-cfb:not(.ag-screen-open) {
   --ag-bg: #061634;
   --ag-panel: rgba(11,35,80,.9);
   --ag-panel-2: rgba(16,44,99,.86);
@@ -32,10 +35,10 @@ html:is(.is-app, .app-look).is-cfb {
   --ag-muted: rgba(214,226,255,.72);
   --ag-glow: rgba(26,95,209,0);
 }
-html.is-cfb .ag-tab { color: rgba(214,226,255,.5); }
-html.is-cfb .ag-edge, html.is-cfb .ag-seam-chip { background: rgba(6,22,52,.96); }
+html.is-cfb:not(.ag-screen-open) .ag-tab { color: rgba(214,226,255,.5); }
+html.is-cfb:not(.ag-screen-open) .ag-edge, html.is-cfb:not(.ag-screen-open) .ag-seam-chip { background: rgba(6,22,52,.96); }
 html.is-cfb .tpm-overlay::before { background: rgba(6,22,52,.9); }
-html.is-cfb body { background: var(--cfb-navy); }
+html.is-cfb:not(.ag-screen-open) body { background: var(--cfb-navy); }
 
 /* ── the mode's own screens ──────────────────────────────────────────────── */
 .cfb-screen { background: var(--cfb-navy); color: var(--cfb-white); }

@@ -7034,4 +7034,4 @@ html.bap-reduce-motion .ag-side-track { transition: none; }
 /* the floor under the dock (AppTabBar): from the dock's middle down to the ad rail (or the bottom edge), the page's
    own dark. It stops at the rail: never over an ad */
 .ag-dock-floor { position: fixed; left: 0; right: 0; bottom: var(--web-rail, 0px); height: calc(var(--ag-dock-gap) - var(--web-rail, 0px) + var(--ag-dock-h) / 2); z-index: 1049; background: rgb(10, 14, 12); pointer-events: none; }
-html.is-cfb .ag-dock-floor { background: var(--cfb-navy); }
+html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }

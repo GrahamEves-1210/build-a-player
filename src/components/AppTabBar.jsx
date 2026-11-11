@@ -158,7 +158,9 @@ export default function AppTabBar() {
   }, [])
 
   // The game's fixed SPIN/BUILD switch would float over an open Daily/Cards screen
-  useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen) }, [screen])
+  // (the sign-in sheet and a player's profile sheet count too: they are the game's own, over whatever mode is open,
+  // and College Football's blue stays off them: cfb.css)
+  useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen || authOpen || !!player) }, [screen, authOpen, player])
   // Website: the bottom ad rail is there on every page. Measure it into
   // --web-rail so the dock, screens and sheets sit above it (0 when it's gone,
   // e.g. ad-free players)
