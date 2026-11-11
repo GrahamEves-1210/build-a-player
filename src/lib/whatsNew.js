@@ -54,7 +54,9 @@ const NOV_10 = {
         'Added OL to Squad Builder and Career',
         'OL has its own lineman figure on Home, the build screen and the season page',
         'New key moments: Pass Pro and Seal the Edge',
-        'A season tracks sacks, pressures and QB hits allowed, penalties and pancakes, with an All-Pro team in place of an award',
+        'A season tracks sacks, pressures and QB hits allowed, penalties and pancakes, with the All-Pro team and Protector of the Year, the NFL\'s award for its best lineman',
+        'The season grade follows the season he had: an elite year grades in the 90s, a good starter in the high 70s to mid 80s, an average one in the 60s',
+        'An offensive lineman is never the Super Bowl MVP',
       ],
     },
     {
