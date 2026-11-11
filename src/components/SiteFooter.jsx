@@ -13,7 +13,7 @@ import { track } from '../lib/track'
 const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
 // Off until PrizePicks gives the green light on this placement (the owner, 2026-11-10; their agreement wants written
 // approval for anything we build ourselves). Flip to true to show it: nothing else to change
-const PP_LIVE = false
+const PP_LIVE = true
 function PartnerBanner({ sport }) {
   return (
     <div className="pp-wrap">
