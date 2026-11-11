@@ -111,7 +111,6 @@ const NOV_10 = {
         'The builds are on the game screen, under the play-by-play',
         'The rim only rattles on a miss or a dunk; a clean make moves the net',
         'New final screen with the MVP and every line',
-        'Fixed a Career season playing with no scores after the save was opened on an older version of the game: the season starts over from Week 1 and the career is kept',
       ],
     },
     {
@@ -173,6 +172,7 @@ const NOV_10 = {
       name: 'Fixes',
       items: [
         'Fixed Blacktop 1v1 games not counting toward the Blacktop 1v1 missions',
+        'Fixed a Career season playing with no scores after the save was opened on an older version of the game: the season starts over from Week 1 and the career is kept',
         'Fixed league leaders always showing you at No. 8',
         'Fixed an offensive lineman reading "undefined sacks allowed" in a Career playoff game',
         'Fixed the All-Time Offensive Line season page listing the team’s current line: it now lines up the franchise’s legends',
