@@ -16,3 +16,11 @@ export function seededShuffle(arr, seed) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }
   return a
 }
+// A wheel's team order. Teams that carry a spin weight (w, soccer's clubs: data/soccer-clubs.js) come up early more often:
+// each gets the key u^(1/w) and the highest key goes first (weighted sampling without replacement). A list with no
+// weights is the plain seededShuffle, so every other sport's order, and the server's check of it, is exactly as it was.
+export function seededTeamOrder(arr, seed) {
+  if (!arr.some(t => t?.w > 0 && t.w !== 1)) return seededShuffle(arr, seed)
+  const r = seeded(seed)
+  return arr.map(t => ({ t, k: Math.pow(r(), 1 / (t.w > 0 ? t.w : 1)) })).sort((a, b) => b.k - a.k).map(x => x.t)
+}

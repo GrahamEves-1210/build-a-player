@@ -13,7 +13,7 @@
 //         att = ovr + 3 x (zAttack - zDefence) / 2, def = ovr - the same. A balanced club has att = def = ovr.
 //   2025-26 finishes and the 2026-27 table so far (ESPN standings) are inside both Opta and the xG rates.
 
-export const SOCCER_LEAGUES = [
+const ALL_LEAGUES = [
   { id: 'eng.1', name: 'Premier League', short: 'EPL', country: 'England' },
   { id: 'esp.1', name: 'La Liga', short: 'LIGA', country: 'Spain' },
   { id: 'ita.1', name: 'Serie A', short: 'SA', country: 'Italy' },
@@ -21,7 +21,7 @@ export const SOCCER_LEAGUES = [
   { id: 'fra.1', name: 'Ligue 1', short: 'L1', country: 'France' },
 ]
 
-export const SOCCER_CLUBS = [
+const ALL_CLUBS = [
   // Premier League
   { short: 'BOU', name: "Bournemouth", league: 'eng.1', color: '#DA291C', color2: '#000000', espn: 349, att: 95, def: 92, ovr: 94 },
   { short: 'ARS', name: "Arsenal", league: 'eng.1', color: '#EF0107', color2: '#FFFFFF', espn: 359, att: 98, def: 100, ovr: 100 },
@@ -124,3 +124,15 @@ export const SOCCER_CLUBS = [
   { short: 'TOU', name: "Toulouse", league: 'fra.1', color: '#5B2B8C', color2: '#FFFFFF', espn: 179, att: 84, def: 86, ovr: 85 },
   { short: 'TRO', name: "Troyes", league: 'fra.1', color: '#1B3F8E', color2: '#FFFFFF', espn: 170, att: 80, def: 81, ovr: 80 },
 ]
+
+// What the game deals from (the owner, 2026-11-11): the Premier League, La Liga and the Bundesliga. Serie A and Ligue 1
+// stay in the lists above, switched off: add their ids here to bring them back (their players come back with them,
+// data/soccer-strikers.js).
+export const SOCCER_LIVE_LEAGUES = ['eng.1', 'esp.1', 'ger.1']
+// Spin weight (w): the wheel favours the Premier League and La Liga's good sides (87 and up: Barcelona, Real Madrid,
+// Atletico, Betis, Villarreal, Real Sociedad). Three times a Bundesliga club's or a lesser La Liga club's chance:
+// about 55% Premier League, 16% La Liga's best, 13% the rest of La Liga, 16% Bundesliga (lib/rng.js seededTeamOrder).
+export const SOCCER_GOOD_LIGA = 87
+const spinWeight = c => (c.league === 'eng.1' || (c.league === 'esp.1' && c.ovr >= SOCCER_GOOD_LIGA) ? 3 : 1)
+export const SOCCER_LEAGUES = ALL_LEAGUES.filter(l => SOCCER_LIVE_LEAGUES.includes(l.id))
+export const SOCCER_CLUBS = ALL_CLUBS.filter(c => SOCCER_LIVE_LEAGUES.includes(c.league)).map(c => ({ ...c, w: spinWeight(c) }))

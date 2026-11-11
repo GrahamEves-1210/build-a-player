@@ -223,7 +223,7 @@ win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
           <p>The striker takes the place of his club's or his nation's first-choice No. 9. The team's real attack and defence ratings already include that player, so the side scores more or less in every match by how much better or worse the build is than the man he replaced.</p>
           <h3 id="soccer-club">Top Divisions</h3>
           <ul>
-            <li>Every match in all five leagues is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores. The Premier League, La Liga, Serie A and Ligue 1 play 38 games; the Bundesliga 34.</li>
+            <li>Every match in all three leagues is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores. The Premier League, La Liga, Serie A and Ligue 1 play 38 games; the Bundesliga 34.</li>
             <li>The league table decides the title, Europe and relegation. Alongside it run the domestic cup and the Champions League or Europa League, from the league phase to the final.</li>
             <li>His goals are a share of his team's goals, drawn from his expected goals; shots, xG, assists and a match rating come from the same match, so the line always adds up.</li>
           </ul>
