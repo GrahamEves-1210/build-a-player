@@ -81,7 +81,10 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
 
-  const { userWins, winner, unanimous, winnerStats, winnerStatLine } = mvpResult
+  // A lineman's award is Protector of the Year, revealed the way an MVP is; his All-Pro line follows on its own
+  // step. (A season booked before the award existed carries no vote: it goes straight to the line.)
+  const prot = isOL ? mvpResult.protector ?? null : null
+  const { userWins, winner, unanimous, winnerStats } = prot ?? mvpResult
   const { wins, losses, seasonPassYds, seasonRushYds, seasonTDs, seasonRushTDs, seasonINTs, seasonCompPct, seasonRating } = result
 
   // DB totals
@@ -129,10 +132,11 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
 
   const isOPOY = isRB || isWR || isTE
   const isDPOY = isDB || isDL || isLB
-  const awardLabel    = (isOL || isK) ? 'All-Pro Team' : isDPOY ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
+  const showLine      = isOL && (!prot || phase === 'allpro' || (!prot.userWins && !prot.winner))
+  const awardLabel    = isOL ? (showLine ? 'All-Pro Team' : 'Protector of the Year') : isK ? 'All-Pro Team' : isDPOY ? 'DPOY Award' : isOPOY ? 'OPOY Award' : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
-  const unanimousLbl  = isDPOY ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
-  const regularLbl    = isDPOY ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
+  const unanimousLbl  = isOL ? 'Unanimous Protector of the Year' : isDPOY ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
+  const regularLbl    = isOL ? 'NFL Protector of the Year' : isDPOY ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
 
   useEffect(() => {
     const t0 = setTimeout(() => setVisible(true), 30)
@@ -264,19 +268,46 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
           </div>
         )}
 
-        {phase === 'reveal' && (
-          <div className="mvp-reveal">
+        {(phase === 'reveal' || phase === 'allpro') && (
+          <div className="mvp-reveal" key={phase}>
             {isK ? (
               <KAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} userName={userName} />
-            ) : isOL ? (
+            ) : showLine ? (
               <OLAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} userName={userName} />
             ) : userWins ? (
               <>
-                <div className="mvp-winner-tag mvp-winner-tag--you"><NameTag name={userName} self /> Wins {isDPOY ? 'DPOY' : isOPOY ? 'OPOY' : 'MVP'}</div>
+                <div className="mvp-winner-tag mvp-winner-tag--you"><NameTag name={userName} self /> Wins {isOL ? 'Protector of the Year' : isDPOY ? 'DPOY' : isOPOY ? 'OPOY' : 'MVP'}</div>
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">
-                  {isLB ? (
+                  {isOL ? (
+                    <>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Record</span>
+                        <span className="mvp-stat-val">{wins}–{losses}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Season Grade</span>
+                        <span className="mvp-stat-val">{result.seasonGrade ?? '-'}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Sacks Allowed</span>
+                        <span className="mvp-stat-val">{olSacks}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Pressures Allowed</span>
+                        <span className="mvp-stat-val">{olPressures}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Penalties</span>
+                        <span className="mvp-stat-val">{result.seasonPenalties ?? 0}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Pancakes</span>
+                        <span className="mvp-stat-val">{olPancakes}</span>
+                      </div>
+                    </>
+                  ) : isLB ? (
                     <>
                       <div className="mvp-stat-row">
                         <span className="mvp-stat-label">Record</span>
@@ -451,10 +482,29 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <div className="mvp-winner-name">{winner.name}</div>
                 <div className="mvp-winner-sub">
                   {winner.team}
-                  {(isOPOY || isDPOY) && <span className="mvp-winner-pos">{winner.pos}</span>}
+                  {(isOPOY || isDPOY || isOL) && <span className="mvp-winner-pos">{winner.pos}</span>}
                 </div>
                 <div className="mvp-season-stats">
-                  {isDPOY ? (
+                  {isOL ? (
+                    <>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Sacks Allowed</span>
+                        <span className="mvp-stat-val">{winnerStats.sacks}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Pressures Allowed</span>
+                        <span className="mvp-stat-val">{winnerStats.pressures}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Penalties</span>
+                        <span className="mvp-stat-val">{winnerStats.penalties}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Pancakes</span>
+                        <span className="mvp-stat-val">{winnerStats.pancakes}</span>
+                      </div>
+                    </>
+                  ) : isDPOY ? (
                     winner.pos === 'EDGE' ? (
                       <>
                         <div className="mvp-stat-row">
@@ -634,8 +684,9 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 </div>
               </>
             )}
-            <button className="mvp-continue" onClick={onDismiss}>
-              {toSuperBowl ? 'Continue to Super Bowl' : nextLabel}
+            {/* a lineman's second step: the All-Pro line */}
+            <button className="mvp-continue" onClick={isOL && !showLine ? () => setPhase('allpro') : onDismiss}>
+              {isOL && !showLine ? 'The All-Pro Team' : toSuperBowl ? 'Continue to Super Bowl' : nextLabel}
             </button>
           </div>
         )}

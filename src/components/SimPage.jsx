@@ -977,7 +977,7 @@ function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userN
   )
 }
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, userName = 'Guest', isSalaryMode = false }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, protWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, userName = 'Guest', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -1007,10 +1007,10 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
     try { arch = archFn(ovr, build, types) } catch {}
     return nflSeasonCard({
       result, pos: kind, name: userName, arch, salary: isSalaryMode,
-      award: mvpWon || !!result.award?.userWins,
+      award: mvpWon || !!result.award?.userWins, protector: protWon,
       rows: buildRows(build, types, meta, isSalaryMode && kind === 'qb'),
     })
-  }, [result, build, types, kind, ovr, userName, isSalaryMode, mvpWon])
+  }, [result, build, types, kind, ovr, userName, isSalaryMode, mvpWon, protWon])
 
   const team = result.team
   const monoTeamBuild = team
@@ -1291,6 +1291,15 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
           }
         />
 
+        {isOL && protWon && (
+          <div className="sfb-mvp-row">
+            <img src="/mvp.png" alt="Trophy" className="sfb-mvp-row-img" />
+            <div className="sfb-mvp-row-text">
+              <div className="sfb-mvp-row-title">Protector of the Year</div>
+              <div className="sfb-mvp-row-sub">NFL Award Winner</div>
+            </div>
+          </div>
+        )}
         {mvpWon && (
           <div className="sfb-mvp-row">
             <img src="/mvp.png" alt="MVP Trophy" className="sfb-mvp-row-img" />
@@ -1483,6 +1492,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const tapGuard = useTapGuard()
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
+  const [protWon, setProtWon] = useState(false)   // a lineman's Protector of the Year (his All-Pro is mvpWon)
   const [mvpContinuation, setMvpContinuation] = useState(null)
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
@@ -1529,6 +1539,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
             ? calcOPOYResult(result, isAllTime, result.team?.short)
             : calcMVPResult(result, isAllTime, result.team?.short))
     setMvpResult(r)
+    if (r.protector?.userWins) setProtWon(true)
     if (r.userWins) {
       setMvpWon(true)
       onMVPWon?.(isAllTime, (isOL || isK) ? 'allpro' : (isDB || isDL || isLB) ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp')
@@ -1567,8 +1578,8 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
     <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel="GOAT Status" />,
     // where the season ranks among the all-time top 25 at the position (no OL list)
-    ...([<ScreenGOAT key="goat" kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} userName={userName} isSalaryMode={isSalaryMode} />,
+    ...([<ScreenGOAT key="goat" kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={isOL ? protWon : mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} protWon={protWon || !!result.award?.protector?.userWins} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
   const team = result.team

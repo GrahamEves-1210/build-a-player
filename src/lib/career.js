@@ -577,6 +577,9 @@ export const POS_NAME = { ...SPORT.nfl.posName, ...SPORT.bucket.posName }
 export const POS_TYPES = { ...SPORT.nfl.types, ...SPORT.bucket.types }
 export const POS_ATTR = { ...SPORT.nfl.attr, ...SPORT.bucket.attr }
 export const AWARD_NAME = { ...SPORT.nfl.awardName, ...SPORT.bucket.awardName }
+// the award by its full name, and as a counted line ("3 MVPS", "2 PROTECTOR OF THE YEAR": that one takes no plural)
+export const AWARD_FULL = { MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year', PROTECTOR: 'Protector of the Year' }
+export const awardWord = (pos, n = 1) => (AWARD_NAME[pos] === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : n === 1 ? AWARD_NAME[pos] : `${AWARD_NAME[pos]}S`)
 export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
 // a build dressed in its team's colours (the model on Career and on home's Career card), and in his own number
@@ -648,8 +651,10 @@ function healSeason(c) {
 }
 // What a save is when it's opened: real ages (realAges), then put right. A replayed season is kept at once
 // (here and in the cloud), so every screen that opens the career sees the same one.
+// (an offensive lineman is never the Super Bowl MVP: a season booked before 2026-11-11 that named him one loses it)
+const noLineFmvp = c => (c?.pos === 'ol' && Array.isArray(c.seasons) && c.seasons.some(s => s.fmvp) ? { ...c, seasons: c.seasons.map(s => (s.fmvp ? { ...s, fmvp: false } : s)) } : c)
 function opened(c0) {
-  const c = healLeague(realAges(c0))
+  const c = noLineFmvp(healLeague(realAges(c0)))
   const n = healSeason(c)
   if (n === c) return c
   const s = { ...n, updatedAt: Date.now() }
@@ -711,7 +716,7 @@ export function logCareer(c) {
   if (!c || c.logged) return c
   const L = legacyOf(c), t = careerTotals(c)
   const at = Date.now()
-  const entry = { at, pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: c.pos === 'ol' ? t.allPros : t.awards, team: c.team, sandbox: !!c.sandbox, comeback: !!c.unretired }
+  const entry = { at, pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: t.awards, team: c.team, sandbox: !!c.sandbox, comeback: !!c.unretired }
   // a comeback retiring for good: the line from the first retirement is replaced, not doubled
   const was = c.unretired?.logAt
   const rest = pastCareers(c.sport).filter(x => !(was && x.at === was))
@@ -2620,10 +2625,10 @@ export function bookSeason(c) {
   for (const x of f.story?.records ?? []) if (x.id && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
   const contract = { ...c.contract, left: Math.max(0, c.contract.left - 1) }
   const perf = seasonScore(c.pos, s)
-  // the smaller honors: best rookie, and the MVP of the final (the quarterback's unless he sat)
+  // the smaller honors: best rookie, and the MVP of the final (the quarterback's unless he sat; never a kicker's or an offensive lineman's)
   if (!S.isSoccer && !S.isBaseball) s.roy = c.pos !== 'k' && c.seasons.length === 0 && can('honor') && perf >= 0.55   // (baseball votes its own: lib/careerBaseball.js)
   const finLine = po?.line?.find(x => x.name === S.final)
-  if (!S.isSoccer && !S.isBaseball) s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'k' ? 0 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
+  if (!S.isSoccer && !S.isBaseball) s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'k' || c.pos === 'ol' ? 0 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
   // a development point a year; one more for an award (MVP, OPOY, DPOY, Rookie of the Year), one more for All-Pro / All-NBA
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (honors still earn theirs, and so does camp)
@@ -3225,7 +3230,7 @@ export function careerTotals(c) {
   if (c.pos === 'k' && stats.fga) { stats.fgPct = r10((stats.fgm ?? 0) / stats.fga * 100); stats.long = Math.max(0, ...Ss.map(s => s.stats.long ?? 0)) }
   return {
     seasons: Ss.length, games, wins: Ss.reduce((a, s) => a + s.wins, 0), losses: Ss.reduce((a, s) => a + s.losses, 0),
-    playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy),
+    playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: c.pos === 'ol' ? 0 : Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy),
     // records: the all-time records he holds (one each, however many times he raised his own)
     proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
@@ -3332,7 +3337,7 @@ export function careerCard(c) {
   const S = sportOf(c)
   const t = careerTotals(c), L = legacyOf(c)
   const head = HEADLINE_STATS[c.pos].map(k => [STAT_LABEL[k], fmtStat(t.stats[k])])
-  return { name: c.name, pos: S.isSoccer ? 'STRIKER' : S.isBucket ? (c.pos === 'guard' ? 'GUARD' : 'BIG') : POS_LABEL[c.pos], years: c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : '', teams: t.teams, head, rings: t.rings, awards: c.pos === 'ol' ? t.allPros : t.awards, awardName: AWARD_NAME[c.pos], proBowls: t.proBowls, honorName: S.honors, allPros: t.allPros, legacy: L, hof: c.hof, draft: c.draft.pick, earnings: t.earnings, site: S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com') }
+  return { name: c.name, pos: S.isSoccer ? 'STRIKER' : S.isBucket ? (c.pos === 'guard' ? 'GUARD' : 'BIG') : POS_LABEL[c.pos], years: c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : '', teams: t.teams, head, rings: t.rings, awards: t.awards, awardName: AWARD_NAME[c.pos], proBowls: t.proBowls, honorName: S.honors, allPros: t.allPros, legacy: L, hof: c.hof, draft: c.draft.pick, earnings: t.earnings, site: S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com') }
 }
 
 // ── Sports that load on their own (soccer: lib/careerSoccer.js) ──────────────

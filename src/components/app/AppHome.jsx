@@ -236,8 +236,8 @@ function Rafters({ career, sport = null }) {
   }, [career])
   const flags = [
     { Icon: soccer ? IconTrophy : IconRing, n: count('champion'), word: soccer ? 'TITLES' : 'RINGS' },
-    // (a lineman has no award: his All-Pros hang there)
-    { Icon: soccer ? IconMedal : IconTrophy, n: count(career?.pos === 'ol' ? 'allPro' : 'award'), word: `${s.find(x => x.awardName)?.awardName ?? (soccer ? "BALLON D'OR" : 'MVP')}S` },
+    // (a lineman's award is Protector of the Year: the word takes no plural)
+    { Icon: soccer ? IconMedal : IconTrophy, n: count('award'), word: career?.pos === 'ol' ? 'PROTECTOR' : `${s.find(x => x.awardName)?.awardName ?? (soccer ? "BALLON D'OR" : 'MVP')}S` },
     { Icon: IconMedal, n: hof ?? 0, word: soccer ? 'LEGEND' : 'HOF', stat: hof == null ? null : `${hof}%`, meter: hof },
   ]
   return (
