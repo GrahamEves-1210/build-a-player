@@ -49,11 +49,11 @@ export const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'lb', label: 'LB', classic: LB_LIVE, alltime: LB_LIVE, disabled: !LB_LIVE,   // LB_LIVE: data/lbs.js
+    pos: 'db', label: 'DB', classic: true, alltime: true, disabled: false,
     players: [
-      { id: 'espn_3138826', color: '#aa0000' },  // Fred Warner - SF
-      { id: 'espn_3915189', color: '#241773' },  // Roquan Smith - BAL
-      { id: 'espn_4569465', color: '#0076b6' },  // Jack Campbell - DET
+      { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
+      { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
+      { id: 'espn_4575517', color: '#241773' },  // Kyle Hamilton - BAL
     ],
   },
   {
@@ -65,11 +65,11 @@ export const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'db', label: 'DB', classic: true, alltime: true, disabled: false,
+    pos: 'lb', label: 'LB', classic: LB_LIVE, alltime: LB_LIVE, disabled: !LB_LIVE,   // LB_LIVE: data/lbs.js
     players: [
-      { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
-      { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
-      { id: 'espn_4575517', color: '#241773' },  // Kyle Hamilton - BAL
+      { id: 'espn_3138826', color: '#aa0000' },  // Fred Warner - SF
+      { id: 'espn_3915189', color: '#241773' },  // Roquan Smith - BAL
+      { id: 'espn_4569465', color: '#0076b6' },  // Jack Campbell - DET
     ],
   },
   {
