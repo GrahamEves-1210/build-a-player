@@ -62,6 +62,18 @@ export function statCols(kind, r) {
       { key: 'ff',  label: 'FF',  val: r.seasonFF },
       { key: 'fr',  label: 'FR',  val: r.seasonFR },
     ]
+    case 'k': return [
+      gp,
+      { key: 'fg',   label: 'FG',   val: r.seasonFGA != null ? `${r.seasonFGM ?? 0}/${r.seasonFGA}` : null },
+      { key: 'pct',  label: 'FG%',  val: r.seasonFGPct, fmt: n => `${n}%` },
+      { key: 'lng',  label: 'LNG',  val: r.seasonLong },
+      { key: 'r50',  label: '50+',  val: r.seasonRanges ? `${r.seasonRanges.r50[0]}/${r.seasonRanges.r50[1]}` : null },
+      { key: 'xp',   label: 'XP',   val: r.seasonXPA != null ? `${r.seasonXPM ?? 0}/${r.seasonXPA}` : null },
+      { key: 'pts',  label: 'PTS',  val: r.seasonPoints },
+      { key: 'gw',   label: 'GW',   val: r.seasonGW },
+      { key: 'u40',  label: '1-39', val: r.seasonRanges ? `${r.seasonRanges.u30[0] + r.seasonRanges.r30[0]}/${r.seasonRanges.u30[1] + r.seasonRanges.r30[1]}` : null },
+      { key: 'r40',  label: '40-49', val: r.seasonRanges ? `${r.seasonRanges.r40[0]}/${r.seasonRanges.r40[1]}` : null },
+    ]
     case 'db': return [
       gp,
       { key: 'tkl', label: 'TKL', val: r.seasonTackles },
@@ -112,7 +124,7 @@ export function StatLineTable({ result, build, kind, values = {}, ready = true, 
   const pos = kind === 'db' ? (build?.['size']?.subpos === 's' ? 'S' : 'CB') : kind === 'dl' ? (result.spot ?? (dlBuildSpot(build) === 'dt' ? 'DT' : 'EDGE')) : kind === 'ol' ? (result.spot ?? 'OL') : kind.toUpperCase()
   const cols = statCols(kind, result)
   return (
-    <div className={`dbt${kind === 'ol' ? ' dbt--wrap' : ''}`} style={{ '--dbt-accent': team?.color ?? 'var(--border)' }}>
+    <div className={`dbt${kind === 'ol' || kind === 'k' ? ' dbt--wrap' : ''}`} style={{ '--dbt-accent': team?.color ?? 'var(--border)' }}>
       <div className="dbt-scroll">
         <table className="dbt-table">
           <thead>
@@ -154,7 +166,7 @@ export function gradeColor(val0) {
 // result, weeks still to come wait as numbered rows, and the window keeps the
 // newest result in view while the season plays out (scroll back any time).
 // (weekOf: an upcoming row's week, when weeks aren't 1, 2, 3…: college's calendar runs Week 0 to Week 14 with byes)
-export function GameLog({ games, total, isOL, isDB, isDL, isLB = false, isTE, isWR, isRB, weekOf = i => i + 1 }) {
+export function GameLog({ games, total, isOL, isK = false, isDB, isDL, isLB = false, isTE, isWR, isRB, weekOf = i => i + 1 }) {
   const boxRef = useRef(null)
   const follow = useRef(true)
   useEffect(() => {
@@ -165,7 +177,7 @@ export function GameLog({ games, total, isOL, isDB, isDL, isLB = false, isTE, is
   }, [games.length])
   // the player scrolls it: stop following; scroll back to the bottom to follow again
   const userMoved = () => { follow.current = false }
-  const statFor = g => g.sat ? 'DNP' : (isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isLB ? `${g.tackles} tkl · ${g.sacks} sck` : isDL ? `${g.sacks} sck · ${g.tackles} tkl` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)
+  const statFor = g => g.sat ? 'DNP' : (isK ? `${g.fgm}/${g.fga} FG · ${g.xpm}/${g.xpa} XP` : isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isLB ? `${g.tackles} tkl · ${g.sacks} sck` : isDL ? `${g.sacks} sck · ${g.tackles} tkl` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)
   return (
     <div className="sm-log-wrap">
       <div className="sm-log-head"><span>SCHEDULE</span><span>{games.length}/{total}</span></div>
@@ -201,6 +213,7 @@ export function GameLog({ games, total, isOL, isDB, isDL, isLB = false, isTE, is
 
 // Your line in a playoff game, whatever the position (the round carries its own stats)
 export function poLine(r) {
+  if (r.fga != null && r.xpa != null) return `${r.fgm ?? 0}/${r.fga} FG${r.long ? ` (long ${r.long})` : ''} · ${r.xpm ?? 0}/${r.xpa} XP · ${r.pts ?? 0} pts${r.gw ? ' · game-winner' : ''}`
   if (r.passYds != null) return `${r.passYds} pass yds · ${r.tds ?? 0} TD · ${r.ints ?? 0} INT${r.rating != null ? ` · ${Math.round(r.rating)} rtg` : ''}`
   if (r.carries != null) return `${r.carries} car · ${r.rushYds ?? 0} rush yds · ${r.recs ?? 0} rec · ${r.recYds ?? 0} rec yds · ${(r.rushTDs ?? 0) + (r.recTDs ?? 0)} TD`
   if (r.targets != null) return `${r.rec ?? 0} rec · ${r.recYds ?? 0} yds · ${r.recTDs ?? 0} TD · ${r.targets} tgt`

@@ -74,5 +74,31 @@ export const homeYards = short => (K_DOMES.has(short) ? 1 : short === 'DEN' ? 2.
 export const onsideP = k => clampK(0.045 + (k?.accuracy ?? 5) * 0.004 + (k?.clutch ?? 5) * 0.0015, 0.04, 0.11)
 // with the ball back and under two minutes: the offense still has to score (a field goal down 1-3, a touchdown down 4-8)
 export const afterOnsideP = d => (d <= 3 ? 0.62 : d <= 8 ? 0.38 : 0.12)
-// kicking deep instead: a three-and-out with no timeouts, then a score with seconds left
-export const kickDeepP = d => (d <= 3 ? 0.035 : d <= 8 ? 0.015 : 0.004)
+// kicking deep instead: with no timeouts the other team kneels three times and it's over. It takes a fumble on the return.
+export const kickDeepP = d => (d <= 8 ? 0.004 : 0.001)
+
+// ── A kicker's line ───────────────────────────────────────────────────────────
+// how a field goal reads in the log: '3/4 FG (long 52)'
+export const kLine = g => `${g.fgm}/${g.fga} FG${g.long ? ` (long ${g.long})` : ''}, ${g.xpm}/${g.xpa} XP`
+// range tables from a list of games: under 30, 30-39, 40-49, 50+ as [made, tried]
+export function kRanges(games) {
+  const out = { u30: [0, 0], r30: [0, 0], r40: [0, 0], r50: [0, 0] }
+  for (const g of games ?? []) for (const k of g.kicks ?? []) {
+    const b = k.d < 30 ? 'u30' : k.d < 40 ? 'r30' : k.d < 50 ? 'r40' : 'r50'
+    out[b][1]++; if (k.good) out[b][0]++
+  }
+  return out
+}
+// the season line the games add up to (the director re-adds it after a moment rewrites a game)
+export function kTotals(games) {
+  const sum = k => games.reduce((s, g) => s + (g[k] ?? 0), 0)
+  const fgm = sum('fgm'), fga = sum('fga')
+  const ranges = kRanges(games)
+  return {
+    seasonFGM: fgm, seasonFGA: fga, seasonFGPct: fga ? +(fgm / fga * 100).toFixed(1) : 0,
+    seasonLong: Math.max(0, ...games.map(g => g.long ?? 0)),
+    seasonXPM: sum('xpm'), seasonXPA: sum('xpa'), seasonPoints: sum('pts'),
+    seasonGW: sum('gw'), seasonCostly: sum('cost'), seasonClutchM: sum('cm'), seasonClutchA: sum('ca'),
+    season50M: ranges.r50[0], season50A: ranges.r50[1], seasonRanges: ranges,
+  }
+}

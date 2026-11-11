@@ -65,6 +65,15 @@ export const RECORDS = {
       { id: 'olap', label: 'First-team All-Pros by an offensive lineman', career: t => t.allPros, value: 10, holder: 'Jim Otto, 1960-69', end: true },
       { id: 'olgs', label: 'Starts by an offensive lineman', career: t => t.stats?.starts, value: 293, holder: 'Bruce Matthews, 1983-2001', end: true },
     ],
+    // A kicker's single-season marks (the percentage can be matched at 100, never beaten, so it isn't one), and the
+    // two a single game can break. The 2025 holders are from ESPN's season tables.
+    k: [
+      { id: 'kfg',  label: 'Field goals', stat: 'seasonFGM', value: 44, holder: "David Akers, 2011 & Ka'imi Fairbairn, 2025" },
+      { id: 'kpts', label: 'Points by a kicker', stat: 'seasonPoints', value: 166, holder: 'David Akers, 2011' },
+      { id: 'k50',  label: 'Field goals from 50 or longer', stat: 'season50M', value: 14, holder: 'Brandon Aubrey, 2024', end: true },
+      { id: 'g-kfg',  label: 'Field goals in a game', game: 'fgm', value: 8, holder: 'Rob Bironas, 2007' },
+      { id: 'g-klong', label: 'Longest field goal', game: 'long', value: 68, holder: 'Cam Little, 2025' },
+    ],
     team: [{ id: 'wins', label: 'Perfect regular season', statFn: r => r.losses === 0 && r.wins >= 17, holder: '2007 Patriots (16-0)' }],
   },
   bucket: {
@@ -112,6 +121,10 @@ export const MILESTONES = {
     lb: [...steps('tkl', '{n} tackles', 'tackles', [50, 100, 150]), ...steps('lbsck', '{n} sacks', 'sacks', [3, 6]), ...steps('lbint', '{n} interceptions', 'ints', [2, 4]),
       { id: 'g-12tkl', label: 'Twelve-tackle game', test: c => c.last?.tackles >= 12 }, { id: 'g-int', label: 'Interception', test: c => c.last?.ints >= 1 },
       { id: 'pick6', label: 'Pick-six', test: c => c.last?.pickSixes >= 1, big: true }],
+    k: [...steps('kpts', '{n} points', 'pts', [50, 100, 150]), ...steps('kfg', '{n} field goals', 'fgm', [10, 20, 30, 40]),
+      { id: 'g-55', label: 'A 55-yarder', test: c => c.last?.long >= 55 && c.last?.long < 60, quiet: true }, { id: 'g-60', label: 'A 60-yard field goal', test: c => c.last?.long >= 60, big: true, quiet: true },
+      { id: 'gw', label: 'Game-winning kick', test: c => c.last?.gw >= 1, big: true, quiet: true },   // (quiet: the game's own headline says it)
+      { id: 'perfect-8', label: 'Perfect through eight games', test: c => c.games.length === 8 && sumOf(c.games, 'fga') >= 10 && sumOf(c.games, 'fga') === sumOf(c.games, 'fgm'), big: true }],
     ol: [...steps('pnk', '{n} pancakes', 'pancakes', [20, 40, 60]),
       { id: 'clean-3', label: 'Three straight clean sheets', test: c => c.games.length >= 3 && c.games.slice(-3).every(g => g.sacks === 0) }],
   },
@@ -164,6 +177,8 @@ const LEADER_STAT = {
     // the tackle race: the leader has about 150-170; rated on the range, the tackling and the read
     lb: { key: 'seasonTackles', label: 'TACKLES', base: 105, per: 13, noise: 9, int: true, unique: true, rate: p => { const a = p.attrs; return ((a.range ?? 5) + (a.tackling ?? 5) + (a.playRecognition ?? 5) * 0.6) / 2.6 } },
     ol: { key: 'seasonPancakes', label: 'PANCAKES', base: 34, per: 7, noise: 6, int: true },
+    // the scoring race among kickers: the leader has about 150-165 points, a middling starter about 115
+    k: { key: 'seasonPoints', label: 'POINTS', base: 116, per: 8.5, noise: 11, int: true, unique: true },
   },
   bucket: {
     guard: { key: 'ppg', label: 'PPG', base: 21.5, per: 2.6, noise: 1.8, dec: 1 },
@@ -235,8 +250,10 @@ export function headlineFor(ev, r = Math.random) {
       return pick(r, [`${team} make it ${n} straight`, `${n} in a row — ${team} are rolling`, `${name} has ${team} on a ${n}-game heater`])
     case 'skid': if (ev.soccer) return pick(r, [`${team} without a win in ${n}`, `Pressure on the manager: ${n} without a win for ${team}`, `${team} searching for answers after ${n} winless`])
       return pick(r, [`${team} drop ${n} straight`, `Pressure mounts: ${n}-game skid in ${team.split(' ').slice(-1)[0]} land`, `${team} searching for answers after ${n} losses`])
-    case 'big': return pick(r, [`${name} torches ${opp}: ${label}`, `${label} — ${name} takes over vs ${opp}`, `${opp} had no answer for ${name} (${label})`])
-    case 'bust': return pick(r, [`Rough night for ${name} in ${opp} loss`, `${opp} bottle up ${name}`, `${name}, ${team} stumble at ${opp}`])
+    case 'big': if (ev.pos === 'k') return ev.gw ? pick(r, [`${name} beats ${opp} at the gun: ${label}`, `Walk-off: ${name} wins it for ${team}`, `${team} survive ${opp} on ${name}'s leg (${label})`]) : pick(r, [`${name} perfect against ${opp}: ${label}`, `${label} for ${name} as ${team} handle ${opp}`])
+      return pick(r, [`${name} torches ${opp}: ${label}`, `${label} — ${name} takes over vs ${opp}`, `${opp} had no answer for ${name} (${label})`])
+    case 'bust': if (ev.pos === 'k') return pick(r, [`A missed kick costs ${team} at ${opp}`, `${name} misses late, ${team} fall to ${opp}`, `Rough day for ${name} in ${opp} loss`])
+      return pick(r, [`Rough night for ${name} in ${opp} loss`, `${opp} bottle up ${name}`, `${name}, ${team} stumble at ${opp}`])
     case 'milestone': return pick(r, [`${name} reaches ${label}`, `Milestone: ${label} for ${name}`, `${name} hits ${label} as ${team} keep pace`])
     case 'record': return `RECORD: ${name} sets the all-time mark — ${label}`
     case 'clinch': return pick(r, [`${team} clinch a playoff berth`, `Playoffs: ${team} are in`, `${name} leads ${team} to the postseason`])

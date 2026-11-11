@@ -11,6 +11,7 @@
 import { seeded } from './rng'
 import { MILESTONES, RECORDS, headlineFor } from './seasonFacts'
 import { pickScenario, INJURY_CARDS } from './scenarios'
+import { kTotals } from './kicks'
 
 // Per position: which season fields are sums of which game fields, and how a
 // "best game" is scored (same formulas as the engines).
@@ -24,6 +25,8 @@ const COUNTS = {
     dl: { seasonSacks: 'sacks', seasonTFL: 'tfl', seasonTackles: 'tackles', seasonQBHits: 'qbHits', seasonFF: 'ff', seasonFR: 'fr', seasonPBUs: 'pbus', seasonSafeties: 'safeties' },
     lb: { seasonTackles: 'tackles', seasonTFL: 'tfl', seasonSacks: 'sacks', seasonQBHits: 'qbHits', seasonPDs: 'pds', seasonINTs: 'ints', seasonPickSixes: 'pickSixes', seasonFF: 'ff', seasonFR: 'fr', seasonMissed: 'missed' },
     ol: { seasonPressures: 'pressures', seasonSacksAllowed: 'sacks', seasonPenalties: 'penalties', seasonPancakes: 'pancakes' },
+    // (a kicker's percentage, longest and ranges are read off the games' kicks in D.totals)
+    k: { seasonFGM: 'fgm', seasonFGA: 'fga', seasonXPM: 'xpm', seasonXPA: 'xpa', seasonPoints: 'pts', seasonGW: 'gw', seasonCostly: 'cost', seasonClutchM: 'cm', seasonClutchA: 'ca' },
   },
   // soccer: a striker's league matches (app and gs are 0/1: an appearance, a start)
   soccer: {
@@ -39,6 +42,7 @@ const BEST = {
   dl: g => g.sacks * 5 + g.safeties * 6 + g.ff * 3.5 + g.fr * 2.5 + g.tfl * 1.2 + g.qbHits * .8 + g.pbus + g.tackles * .3,
   lb: g => g.pickSixes * 7 + g.ints * 4.5 + g.sacks * 3.5 + g.ff * 3 + g.fr * 2.5 + g.tfl * 1.4 + g.pds + g.qbHits * .6 + g.tackles * .45,
   ol: g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2 + (g.won ? 1.5 : 0),
+  k: g => (g.pts ?? 0) + (g.gw ?? 0) * 6 + (g.long >= 55 ? 3 : g.long >= 50 ? 1.5 : 0) - ((g.fga ?? 0) - (g.fgm ?? 0)) * 5 - ((g.xpa ?? 0) - (g.xpm ?? 0)) * 4 - (g.cost ?? 0) * 6,
   guard: g => g.pts, big: g => g.pts,
   st: g => (g.goals ?? 0) * 10 + (g.assists ?? 0) * 5 + (g.rating ?? 0) * 1.5 + (g.won ? 2 : 0),
 }
@@ -55,6 +59,7 @@ const FORM = {
   dl: g => g.sacks * 5 + (g.safeties ?? 0) * 6 + (g.ff ?? 0) * 3.5 + (g.fr ?? 0) * 2 + (g.tfl ?? 0) * 1.2 + (g.qbHits ?? 0) * .8 + (g.pbus ?? 0) + (g.tackles ?? 0) * .3,
   lb: g => BEST.lb(g) - (g.missed ?? 0),
   ol: g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2,
+  k: g => BEST.k(g),
   guard: bucketForm, big: bucketForm,
 }
 // How the stat line for a game reads in a headline
@@ -64,11 +69,12 @@ export const GAME_LINE = {
   db: g => `${g.tackles} TKL${g.ints ? `, ${g.ints} INT` : ''}${g.pbus ? `, ${g.pbus} PD` : ''}`, dl: g => `${g.sacks} sack${g.sacks === 1 ? '' : 's'}, ${g.tackles} TKL${g.ff ? `, ${g.ff} FF` : ''}`,
   lb: g => `${g.tackles} TKL${g.sacks ? `, ${g.sacks} sack${g.sacks === 1 ? '' : 's'}` : ''}${g.ints ? `, ${g.ints} INT` : ''}${g.ff ? `, ${g.ff} FF` : ''}`,
   ol: g => `${g.pancakes} pancake${g.pancakes === 1 ? '' : 's'}, ${g.sacks} sack${g.sacks === 1 ? '' : 's'} allowed`,
+  k: g => `${g.fgm}-for-${g.fga}${g.long ? `, long ${g.long}` : ''}${g.gw ? ', the game-winner' : ''}`,
   guard: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`, big: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`,
   st: g => (g.goals ? `${g.goals === 3 ? 'a hat-trick' : `${g.goals} goal${g.goals === 1 ? '' : 's'}`}${g.assists ? `, ${g.assists} assist${g.assists === 1 ? '' : 's'}` : ''}` : g.assists ? `${g.assists} assist${g.assists === 1 ? '' : 's'}` : `${g.shots ?? 0} shot${g.shots === 1 ? '' : 's'}`),
 }
-const BIG_GAME = { qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, lb: g => g.tackles >= 13 || g.ints >= 1 || g.sacks >= 2 || g.ff >= 2, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18, st: g => g.goals >= 3 || (g.goals >= 2 && g.assists >= 1) }
-const BUST_GAME = { qb: g => g.ints >= 3 || g.passYds < 150, rb: g => g.rushYds < 40, wr: g => g.recYds < 30, te: g => g.recYds < 20, db: g => false, dl: g => g.sacks === 0 && g.tfl === 0 && g.qbHits === 0 && g.tackles <= 1, lb: g => g.tackles <= 2 && g.missed >= 2, ol: g => g.sacks >= 3, guard: g => g.pts < 10, big: g => g.pts < 8, st: g => !!g.gs && !g.goals && !g.assists && (g.rating ?? 7) < 6.2 }
+const BIG_GAME = { k: g => g.gw >= 1 || (g.fgm >= 4 && g.fga === g.fgm) || (g.long >= 58 && g.fga === g.fgm), qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, lb: g => g.tackles >= 13 || g.ints >= 1 || g.sacks >= 2 || g.ff >= 2, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18, st: g => g.goals >= 3 || (g.goals >= 2 && g.assists >= 1) }
+const BUST_GAME = { k: g => g.cost >= 1 || g.fga - g.fgm >= 2, qb: g => g.ints >= 3 || g.passYds < 150, rb: g => g.rushYds < 40, wr: g => g.recYds < 30, te: g => g.recYds < 20, db: g => false, dl: g => g.sacks === 0 && g.tfl === 0 && g.qbHits === 0 && g.tackles <= 1, lb: g => g.tackles <= 2 && g.missed >= 2, ol: g => g.sacks >= 3, guard: g => g.pts < 10, big: g => g.pts < 8, st: g => !!g.gs && !g.goals && !g.assists && (g.rating ?? 7) < 6.2 }
 
 // A sport that loads on its own brings its season's shape (baseball's: lib/careerBaseball.js): its stat lines, the
 // game a team plays without him, its own totals and its playoff line
@@ -302,6 +308,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       if (g && o.game) {
         const ng = { ...g }
         for (const [k2, v] of Object.entries(o.game.add || {})) if (v) ng[k2] = Math.max(0, (ng[k2] ?? 0) + v)
+        // (a kicker's moment is a kick: it goes on the game's list, so the ranges and his longest follow it)
+        if (o.game.kicks) { ng.kicks = [...(g.kicks ?? []), ...o.game.kicks]; ng.long = Math.max(ng.long ?? 0, ...o.game.kicks.filter(x => x.good).map(x => x.d)) }
         if (o.game.my != null) ng.mySc = o.game.my
         if (o.game.opp != null) ng.oppSc = o.game.opp
         if (o.game.won != null) ng.won = o.game.won
@@ -381,7 +389,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const fresh = []
     for (const m of mdefs) {
       if (D.fired.has(m.id)) continue
-      try { if (m.test(ctx)) { D.fired.add(m.id); const hit = { id: m.id, label: m.label, big: !!m.big, at: k }; D.milestones.push(hit); fresh.push(hit) } } catch {}
+      try { if (m.test(ctx)) { D.fired.add(m.id); const hit = { id: m.id, label: m.label, big: !!m.big, at: k, ...(m.quiet ? { quiet: true } : {}) }; D.milestones.push(hit); fresh.push(hit) } } catch {}
     }
     const g = ctx.last
     const fmtN = v => (typeof v === 'number' ? v.toLocaleString('en-US') : v)
@@ -411,10 +419,10 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     if (g && !g.sat) {
       if (ctx.streak >= 3 && ctx.streak % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'streak', name, team: teamNick, n: ctx.streak, soccer: isSoccer }, r) })
       else if (ctx.skid >= 3 && ctx.skid % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'skid', name, team: teamNick, n: ctx.skid, soccer: isSoccer }, r) })
-      else if (BIG_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'big', name, team: teamNick, opp, label: GAME_LINE[pos]?.(g) ?? '' }, r) })
-      else if (!g.won && BUST_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'bust', name, team: teamNick, opp }, r) })
+      else if (BIG_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'big', name, team: teamNick, opp, label: GAME_LINE[pos]?.(g) ?? '', pos, gw: !!g.gw }, r) })
+      else if (!g.won && BUST_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'bust', name, team: teamNick, opp, pos }, r) })
     }
-    for (const f of fresh) D.headlines.push({ at: k, text: headlineFor({ type: f.record ? 'record' : 'milestone', name, team: teamNick, label: f.label }, r) })
+    for (const f of fresh) if (!f.quiet) D.headlines.push({ at: k, text: headlineFor({ type: f.record ? 'record' : 'milestone', name, team: teamNick, label: f.label }, r) })
     const need = X?.lines ? X.lines.clinch : isBucket ? 50 : 10, left = total - k
     if (isSoccer) return fresh   // (no playoff line to clinch: the table says it)
     if (!D.seen.has('clinch') && ctx.wins >= need) { D.seen.add('clinch'); D.headlines.push({ at: k, text: headlineFor({ type: 'clinch', name, team: teamNick }, r) }) }
@@ -438,6 +446,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       out.avgRating = rated.length ? Math.round((rated.reduce((s2, g) => s2 + g.rating, 0) / rated.length) * 100) / 100 : 0
       out.gameLog = games.map(g => (g.won ? 'W' : g.drawn ? 'D' : 'L'))
     } else if (!isBucket) {
+      if (pos === 'k') Object.assign(out, kTotals(games))
       if (pos === 'rb') { out.seasonYPC = out.seasonCarries > 0 ? Math.round((out.seasonRushYds / out.seasonCarries) * 10) / 10 : 0; out.seasonLong = Math.max(0, ...games.map(g => g.long ?? 0)); out.hundredYardGames = games.filter(g => g.rushYds >= 100).length }
       if (pos === 'wr' || pos === 'te') { out.seasonYPR = out.seasonRecs > 0 ? Math.round((out.seasonRecYds / out.seasonRecs) * 10) / 10 : 0; out.seasonLong = Math.max(0, ...games.map(g => g.long ?? 0)); out.hundredYardGames = games.filter(g => g.recYds >= 100).length; out.catchRate = out.seasonTargets > 0 ? Math.round((out.seasonRecs / out.seasonTargets) * 1000) / 10 : 0; out.dropRate = out.seasonTargets > 0 ? Math.round(((out.seasonDrops ?? 0) / out.seasonTargets) * 1000) / 10 : 0 }
       // a QB who threw: at least 3 INTs; one who never got in throws none, and has no rating or

@@ -47,6 +47,7 @@ import { DBS } from '../data/dbs'
 import { GUARD_TYPES } from '../data/nba-guards'
 import { BIG_TYPES } from '../data/nba-bigs'
 import { calcBucketOVR } from '../utils/bucketSimulation'
+import { K_COLD, K_DOMES } from './kicks'
 
 // The trade deadline: a real player from another team. A scorer (the best
 // offensive players around the league) or a stopper (the best defenders).
@@ -108,6 +109,7 @@ const ROLE = {
   dl:    { legs: ['getOff', 'speed', 'bend'], feel: ['finesseMoves', 'powerMoves'], mind: ['playRecognition'], nerve: ['playRecognition'], power: ['strength', 'blockShed'], make: ['bend', 'finesseMoves', 'powerMoves'] },
   lb:    { legs: ['range'], feel: ['zoneInstincts', 'tackling'], mind: ['playRecognition'], nerve: ['leadership'], power: ['power', 'blockShed'], make: ['passRush', 'zoneInstincts'] },
   ol:    { legs: ['mobility'], feel: ['passPro'], mind: ['blitzPickup', 'discipline'], nerve: ['discipline'], power: ['anchor', 'runBlock'], make: ['pancake'] },
+  k:     { legs: ['power'], feel: ['accuracy'], mind: [], nerve: ['clutch'], power: ['power'], make: ['accuracy'] },
   guard: { legs: ['speed', 'bounce'], feel: ['jumpShot'], mind: ['basketballIQ'], nerve: ['clutch'], power: ['finishing'], make: ['handles', 'passing'] },
   big:   { legs: ['bounce', 'speed'], feel: ['finishing'], mind: ['basketballIQ'], nerve: ['clutch'], power: ['rebounding', 'interiorDefense'], make: ['playmaking'] },
 }
@@ -524,8 +526,53 @@ const NBA_PLAYOFFS = [
       ] }) },
 ]
 
+// ── The kicker: his own bank ────────────────────────────────────────────────
+// A kicker is never hurt, isn't asked about trades and doesn't have a scheme, so none of the cards above are his.
+// Most of his decisions are kicks inside a game (lib/gameMoments.js NFL.k); these are the ones that span weeks.
+const kOdds = (c, t, base) => Math.max(0.25, Math.min(0.9, base + c.val(t) * 0.045))
+const K = [
+  { id: 'k-holder', at: ['early', 'mid'], w: 3, when: c => c.k >= 2,
+    make: c => ({ kicker: 'SPECIAL TEAMS', title: 'A new holder',
+      body: `The punter who holds for ${c.name} is out for a month. The backup quarterback takes the snaps on field goals starting Sunday.`,
+      options: [
+        o('reps', 'Stay after practice with him all week', gam(0.7, { attr: { accuracy: 1 }, window: 4, tag: 'NEW HOLDER' }, 'The operation is clean by Sunday: snap, spot, laces out.', { attr: { accuracy: -1 }, window: 2, tag: 'NEW HOLDER' }, 'Still a beat slow on Sunday. A couple of kicks come off the laces.')),
+        o('trust', 'Keep the routine, trust the hold', { attr: { accuracy: -1 }, window: 3, tag: 'NEW HOLDER' }, 'A few weeks of holds that aren\u2019t quite where he wants them.'),
+      ] }) },
+  { id: 'k-workout', at: ['mid', 'late', 'stretch'], w: 5, when: c => c.lastBust,
+    make: c => ({ kicker: 'ON NOTICE', title: 'Kickers in for a workout',
+      body: `After Sunday, the ${c.nick} brought three kickers in on Tuesday. The job is still ${c.name}\u2019s, and everyone in the building knows why they were there.`,
+      options: [
+        o('kick', 'Say nothing, go kick', gam(kOdds(c, 'clutch', 0.35), { attr: { clutch: 1, accuracy: 1 }, window: 4, tag: 'ANSWERED' }, 'Perfect on Sunday. The workout list goes in a drawer.', { attr: { accuracy: -2 }, window: 2, tag: 'PRESSING' }, 'He\u2019s aiming the ball instead of kicking it.')),
+        o('film', 'Break the swing down with the coach', { attr: { accuracy: 1, power: -1 }, window: 3, tag: 'SHORTER SWING' }, 'A shorter, safer swing for a few weeks: straighter, not as long.'),
+      ] }) },
+  { id: 'k-range', at: ['early', 'mid'], w: 2, when: c => c.k >= 1,
+    make: c => ({ kicker: 'PREGAME', title: 'The coach wants his number',
+      body: `Every week the special teams coach asks ${c.name} for a line: the yard line where a field goal is in range. The coach calls the game off that number.`,
+      options: [
+        o('honest', 'Give him the honest number', { attr: { accuracy: 1 }, window: 4, tag: 'INSIDE HIS RANGE' }, 'Fewer long tries, better looks.'),
+        o('long', 'Add five yards to it', gam(kOdds(c, 'power', 0.28), { attr: { power: 1 }, window: 4, tag: 'GREEN LIGHT' }, 'He backed it up. The coach starts sending him out from anywhere.', { attr: { accuracy: -1, clutch: -1 }, window: 3, tag: 'OUT OF RANGE' }, 'Two misses from too far out, and now the coach doesn\u2019t believe the number.')),
+      ] }) },
+  { id: 'k-cold', at: ['late', 'stretch'], w: 3, when: c => K_COLD.has(c.team) && !K_DOMES.has(c.team),
+    make: c => ({ kicker: 'DECEMBER', title: 'The ball is a rock',
+      body: `The rest of the home schedule is outdoors in the cold. A cold ball doesn\u2019t compress and it doesn\u2019t carry, and the wind at this end of the stadium moves it a full upright.`,
+      options: [
+        o('drive', 'Drive it lower and hold the line', { attr: { accuracy: 1, power: -1 } }, 'A flatter ball that holds its line in the wind and comes up shorter.'),
+        o('swing', 'Same swing, read the flags', gam(0.5, { attr: { power: 1 }, window: 3, tag: 'DIALED IN' }, 'He found the wind in warmups every week.', { attr: { accuracy: -1 }, window: 3, tag: 'FIGHTING THE WIND' }, 'The wind won more than he did.')),
+      ] }) },
+]
+const K_PLAYOFFS = [
+  { id: 'k-po-week', at: ['playoffs'], w: 5, when: () => true,
+    make: c => ({ kicker: 'PLAYOFF WEEK', title: 'January kicking',
+      body: `One-score games, bad weather and no next week. The special teams coach asks ${c.name} how he wants to spend the practice week.`,
+      options: [
+        o('live', 'Live reps with the rush coming', { attr: { clutch: 1 } }, 'Every kick this week has a hand in his face.'),
+        o('range', 'Stretch the range', { attr: { power: 1, accuracy: -1 } }, 'Long ones all week. The short ones get less work.'),
+        o('rest', 'A light week, save the leg', { attr: { accuracy: 1 } }, 'A fresh leg and the same swing.'),
+      ] }) },
+]
+
 const BANK = {
-  nfl: { all: [...NFL_ALL, ...INJURY], qb: QB, rb: RB, wr: WR, te: TE, db: DB, dl: DL, lb: LB, ol: OL, playoffs: [...NFL_PLAYOFFS, ...PO_INJURY] },
+  nfl: { own: { k: { season: K, playoffs: K_PLAYOFFS } }, all: [...NFL_ALL, ...INJURY], qb: QB, rb: RB, wr: WR, te: TE, db: DB, dl: DL, lb: LB, ol: OL, playoffs: [...NFL_PLAYOFFS, ...PO_INJURY] },
   bucket: { all: [...NBA_ALL, ...INJURY.filter(s => s.id !== 'concussion')], guard: GUARD, big: BIG, playoffs: [...NBA_PLAYOFFS, ...PO_INJURY] },
 }
 // A sport that loads on its own (soccer: lib/soccerSeason.js) brings its bank, its roles and its injuries
@@ -558,7 +605,9 @@ export function pickScenario(args) {
     const gm = gameMoment(c, next)
     if (gm && c.r() < 0.8) return { id: gm.id, inGame: true, kicker: gm.kicker, title: gm.title, body: gm.body, options: gm.options }
   }
-  const pool = ph === 'playoffs' ? bank.playoffs : [...bank.all, ...(bank[pos] ?? [])]
+  // (own: a position that brings its whole bank, the kicker's)
+  const own = bank.own?.[pos]
+  const pool = own ? (ph === 'playoffs' ? own.playoffs : own.season) : ph === 'playoffs' ? bank.playoffs : [...bank.all, ...(bank[pos] ?? [])]
   const seen = recent()
   const fits = pool.filter(s => s.at.includes(ph) && !used.has(s.id) && !(noInjury && INJURY_CARDS.has(s.id)) && (() => { try { return s.when(c) } catch { return false } })())
   if (!fits.length) return null

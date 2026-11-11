@@ -589,6 +589,155 @@ function nbaBlowout(c, g, ahead) {
 // ═════════════════════════════════════════════════════════════════════════════
 // The card for the next game (or null when the game doesn't turn on a moment)
 // ═════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
+// THE KICKER
+// ═════════════════════════════════════════════════════════════════════════════
+// His moments are kicks (lib/kicks.js has the make rate by distance, what the stadium and the weather do to it and what
+// the pressure does). A game the sim already ended on his kick (a kick with a `why`) or in overtime is left as it was
+// played: only a game that ended without him gets a moment.
+//   down 1-3 at the end   the kick to win it (or, down 3, to send it to overtime), now or after one more play
+//   down 1-6 after a late score   the onside kick: declared, a few percent to get it back, and the game if they do
+//   up 1-6 late           a long field goal to put it away, or punt and trust the defense
+//   up big                a try from past his range before the half, for the long one
+import { kickP, kickTry, K_ENV, onsideP, kickDeepP } from './kicks'
+const kOf = c => ({ power: c.val('power'), accuracy: c.val('accuracy'), clutch: c.val('clutch') })
+const kOpen = g => !g.overtime && !(g.kicks ?? []).some(x => x.why)
+const kEnv = g => ({ yards: K_ENV[g.cond] ?? 0 })
+const kWhy = (c, ...ts) => ts.map(t => `${c.L(t)} ${valToGrade(c.val(t))}`).join(', ')
+const kCond = g => ({ dome: 'Indoors, no wind.', altitude: 'A mile high: the ball carries.', wind: 'A swirling wind.', rain: 'Rain, a wet ball.', snow: 'Snow on the field.', cold: 'Bitter cold: the ball is a rock.' })[g.cond] ?? ''
+// a kick on the game's last line: the stat line it adds, and the kick itself for the range table
+const kKick = (d, good, extra = {}) => ({ add: { fga: 1, ca: 1, ...(good ? { fgm: 1, pts: 3, cm: 1 } : {}), ...extra }, kicks: [{ d, good, why: 'moment' }] })
+const kWin = (my, opp, k, line, tag) => ({ good: true, line, tag, game: { won: true, my, opp, ...k } })
+const kLoss = (my, opp, k, line, tag) => ({ good: false, line, tag, game: { won: false, my, opp, ...(k ?? { add: {} }) } })
+
+NFL.k = {
+  comeback: (c, g, d) => {
+    if (!kOpen(g)) return null
+    const k = kOf(c), env = kEnv(g), opp = nick(g.opponent)
+    if (d <= 3 && c.r() < 0.72) {
+      // the last snap: three points win it (down 1 or 2) or tie it (down 3)
+      const far = Math.max(40, Math.min(60, kickTry(k.power) + 3))
+      const dist = rr(c, 34, far), near = Math.max(24, dist - rr(c, 5, 8))
+      const pNow = kickP(dist, k, { ...env, pressure: 1 }), pNear = kickP(near, k, { ...env, pressure: 1 })
+      const ot = d === 3, my = g.mySc + 3, otWin = 0.5
+      // the kick from dd, reached `share` of the time: every way the game can end from there
+      const from = (share, p, dd) => (ot
+        ? [{ p: share * p * otWin, ...kWin(my + 3, g.oppSc, { add: { fga: 2, fgm: 2, pts: 6, ca: 2, cm: 2, gw: 1 }, kicks: [{ d: dd, good: true, why: 'moment' }, { d: rr(c, 27, 44), good: true, why: 'ot' }] }, `Good from ${dd} to tie it, and good again in overtime. ${c.nick} win ${score(my + 3, g.oppSc)}.`, 'OVERTIME WINNER') },
+          { p: share * p * (1 - otWin), ...kLoss(my, g.oppSc + 3, kKick(dd, true), `Good from ${dd} to force overtime. The ${opp} got the ball first and kicked the winner. ${score(my, g.oppSc + 3)}.`, 'OVERTIME LOSS') },
+          { p: share * (1 - p), ...kLoss(g.mySc, g.oppSc, kKick(dd, false, { cost: 1 }), `${dd} yards, and it ${dd >= 50 ? 'dies short' : 'slides wide'}. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'MISSED AT THE GUN') }]
+        : [{ p: share * p, ...kWin(my, g.oppSc, kKick(dd, true, { gw: 1 }), `${dd} yards, right down the middle as the clock hits zero. ${c.nick} win ${score(my, g.oppSc)}.`, 'GAME-WINNER') },
+          { p: share * (1 - p), ...kLoss(g.mySc, g.oppSc, kKick(dd, false, { cost: 1 }), `${dd} yards, and it ${dd >= 50 ? 'dies short' : 'slides wide'}. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'MISSED AT THE GUN') }])
+      const whole = p => (ot ? p * otWin : p)
+      const pCloser = 0.66 * whole(pNear) + 0.22 * whole(pNow)
+      return {
+        title: ot ? `Down 3, ${dist} yards to tie it` : `Down ${d}, ${dist} yards to win it`,
+        body: `${score(g.mySc, g.oppSc)}, ${g.home ? 'at home against' : 'on the road against'} the ${opp}. Eight seconds left, ball at the ${dist - 17}, one timeout. ${kCond(g)} The coach looks down the sideline at ${c.name}.`.replace(/\s+/g, ' '),
+        options: [
+          { id: 'now', label: `Kick it from ${dist}`, o: { p: whole(pNow) },
+            outcomes: outs(from(1, pNow, dist)),
+            sub: `${pc(whole(pNow))} to win. He makes it from ${dist} ${pc(pNow)} of the time with the game on it (his ${kWhy(c, 'power', 'accuracy', 'clutch')})${ot ? ', then overtime is a coin flip' : ''}.` },
+          { id: 'closer', label: 'One more play, then kick', o: { p: pCloser },
+            outcomes: outs([
+              ...from(0.66, pNear, near),
+              ...from(0.22, pNow, dist),
+              { p: 0.12, ...kLoss(g.mySc, g.oppSc, null, `A sack on the extra play, and the clock ran out before the field goal team could set. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'NEVER GOT THE KICK OFF') },
+            ]),
+            sub: `${pc(pCloser)} to win. Two times in three it's a ${near}-yarder (${pc(pNear)}); one in eight the clock runs out with him on the sideline.` },
+        ],
+      }
+    }
+    // the onside kick: they just scored, and without the ball back it's over
+    const pRec = onsideP(k), deep = kickDeepP(d)
+    const fgDist = rr(c, 38, Math.min(52, kickTry(k.power)))
+    // with the ball back: down 1 or 2 his field goal wins it; down 3 it ties it, and overtime is a coin flip; down 4-6 they need the end zone
+    const pFG = 0.72 * kickP(fgDist, k, { ...env, pressure: 1 })
+    const after = d <= 2 ? pFG : d === 3 ? pFG * 0.5 : 0.38
+    const my = d <= 2 ? g.mySc + 3 : d === 3 ? g.mySc + 6 : g.mySc + 7
+    const hop = `The ball took one high hop over the front line and the ${c.nick} fell on it at the 46.`
+    const oneFG = { add: { fga: 1, fgm: 1, pts: 3, ca: 1, cm: 1, gw: 1 }, kicks: [{ d: fgDist, good: true, why: 'moment' }] }
+    const winIt = d <= 2
+      ? kWin(my, g.oppSc, oneFG, `${hop} Six plays later ${c.name} was good from ${fgDist}. ${score(my, g.oppSc)}.`, 'ONSIDE KICK, THEN THE WINNER')
+      : d === 3
+      ? kWin(my, g.oppSc, { add: { fga: 2, fgm: 2, pts: 6, ca: 2, cm: 2, gw: 1 }, kicks: [{ d: fgDist, good: true, why: 'moment' }, { d: rr(c, 27, 44), good: true, why: 'ot' }] }, `${hop} ${c.name} tied it from ${fgDist} at the gun and won it in overtime. ${score(my, g.oppSc)}.`, 'ONSIDE KICK, THEN THE WINNER')
+      : kWin(my, g.oppSc, { add: { xpa: 1, xpm: 1, pts: 1 } }, `${hop} Touchdown with 0:11 left. ${score(my, g.oppSc)}.`, 'ONSIDE KICK RECOVERED')
+    // (down 3, the tying kick and a lost overtime)
+    const otLoss = d === 3 ? [{ p: pRec * pFG * 0.5, ...kLoss(g.mySc + 3, g.oppSc + 3, { add: { fga: 1, fgm: 1, pts: 3, ca: 1, cm: 1 }, kicks: [{ d: fgDist, good: true, why: 'moment' }] }, `${hop} ${c.name} tied it from ${fgDist} at the gun, and the ${opp} won the toss and the game in overtime. ${score(g.mySc + 3, g.oppSc + 3)}.`, 'OVERTIME LOSS') }] : []
+    const deepMy = d <= 2 ? g.mySc + 3 : g.mySc + 7
+    return {
+      title: `Down ${d}, they need the ball back`,
+      body: `The ${c.nick} just scored to make it ${score(g.mySc, g.oppSc)} against the ${opp}. 1:${String(rr(c, 5, 38)).padStart(2, '0')} left and no timeouts: if the ${opp} recover the kickoff, they kneel on it. The onside kick has been declared, so their hands team is on the field.`,
+      options: [
+        { id: 'onside', label: 'Onside kick: the high hop', o: { p: pRec * after },
+          outcomes: outs([
+            { p: pRec * after, ...winIt },
+            ...otLoss,
+            { p: pRec * (1 - after) - (otLoss[0]?.p ?? 0), ...kLoss(g.mySc, g.oppSc, null, `Recovered at the 46, the first one the ${opp} have given up all year. The drive died at the 30. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'ONSIDE KICK RECOVERED') },
+            { p: 1 - pRec, ...kLoss(g.mySc, g.oppSc, null, `A good hop, but their hands team was waiting. The ${opp} fall on it and kneel three times. ${score(g.mySc, g.oppSc)}.`, 'ONSIDE KICK FAILS') },
+          ]),
+          sub: `${pc(pRec * after)} to win. ${pc(pRec)} to get it back (his ${kWhy(c, 'accuracy')}; the league recovers about one in fifteen). With the ball they win it ${pc(after)} of the time.` },
+        { id: 'deep', label: 'Kick it deep, hope for a fumble', o: { p: deep },
+          outcomes: outs([
+            { p: deep, ...kWin(deepMy, g.oppSc, d <= 2 ? oneFG : { add: { xpa: 1, xpm: 1, pts: 1 } }, `The return man put it on the ground at the 24 and the ${c.nick} fell on it. ${d <= 2 ? `${c.name} was good from ${fgDist} with 0:02 left` : 'Touchdown two plays later'}. ${score(deepMy, g.oppSc)}.`, 'STOLE IT') },
+            { p: 1 - deep, ...kLoss(g.mySc, g.oppSc, null, `Touchback. Three kneel-downs and the clock ran out. ${score(g.mySc, g.oppSc)}.`, 'RAN OUT OF TIME') },
+          ]),
+          sub: `Under 1% to win: with no timeouts left, the ${opp} take a knee three times. It takes a fumble.` },
+      ],
+    }
+  },
+  protect: (c, g, m) => {
+    if (!kOpen(g)) return null
+    const k = kOf(c), env = kEnv(g), opp = nick(g.opponent)
+    const dist = rr(c, 46, Math.max(48, Math.min(58, kickTry(k.power) + 3)))
+    const p = kickP(dist, k, { ...env, pressure: 0.7 })
+    const hold = teamHold(c), holdShort = clamp(hold - 0.12, 0.15, 0.7), holdPin = clamp(hold + 0.12, 0.25, 0.85), holdUp = m >= 4 ? 1 : clamp(hold + 0.24, 0.45, 0.93)
+    const my = g.mySc + 3, ls = [g.mySc, g.oppSc + 7], ls3 = [my, g.oppSc + 7]
+    const los = dist - 17
+    const pKick = p * holdUp + (1 - p) * holdShort
+    return {
+      title: `Up ${m}, 4th down at their ${los}`,
+      body: `${score(g.mySc, g.oppSc)} over the ${opp}, 2:10 left, 4th-and-6. A ${dist}-yard field goal makes it ${m + 3 >= 9 ? 'a two-score game' : `a ${m + 3}-point game`}; a miss hands them the ball at the ${los + 7}. ${kCond(g)} The coach asks ${c.name} for a yes or a no.`.replace(/\s+/g, ' '),
+      options: [
+        { id: 'kick', label: `Yes: good from ${dist}`, o: { p: pKick },
+          outcomes: outs([
+            { p: p * holdUp, ...kWin(my, g.oppSc, kKick(dist, true), `${dist} yards, good. ${m + 3 >= 9 ? 'Two scores' : `${m + 3} points`} clear, and that's the game. ${c.nick} win ${score(my, g.oppSc)}.`, 'PUT IT AWAY') },
+            { p: p * (1 - holdUp), ...kLoss(...ls3, kKick(dist, true), `Good from ${dist}, but the ${opp} went 75 yards in 1:50 anyway. ${score(...ls3)}.`, 'BLEW THE LEAD') },
+            { p: (1 - p) * holdShort, ...kWin(g.mySc, g.oppSc, kKick(dist, false), `Wide from ${dist}. The defense bailed him out with a stop at midfield. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'SURVIVED THE MISS') },
+            { p: (1 - p) * (1 - holdShort), ...kLoss(...ls, kKick(dist, false, { cost: 1 }), `Wide from ${dist}, a short field, and the ${opp} punched it in. ${c.nick} lose ${score(...ls)}.`, 'THE MISS COST THEM') },
+          ]),
+          sub: `${pc(pKick)} to win. He's ${pc(p)} from ${dist} here (his ${kWhy(c, 'power', 'accuracy', 'clutch')}). A miss is a short field for them.` },
+        { id: 'punt', label: 'No: punt it and pin them', o: { p: holdPin },
+          outcomes: outs([
+            { p: holdPin, ...kWin(g.mySc, g.oppSc, { add: {} }, `Downed at the 6. Ninety-four yards was too far to go. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'PINNED THEM DEEP') },
+            { p: 1 - holdPin, ...kLoss(...ls, null, `Pinned at the 6, and the ${opp} went the length of the field. ${c.nick} lose ${score(...ls)}.`, 'BLEW THE LEAD') },
+          ]),
+          sub: `${pc(holdPin)} to win: the defense has to hold with a long field behind them.` },
+      ],
+    }
+  },
+}
+function kBlowout(c, g, ahead) {
+  if (!ahead || !kOpen(g)) return null
+  const k = kOf(c), env = kEnv(g), opp = nick(g.opponent)
+  const dist = Math.min(66, kickTry(k.power) + rr(c, 2, 5))
+  const p = kickP(dist, k, { ...env, pressure: 0.2 })
+  const my = g.mySc + 3
+  return {
+    title: `Two seconds before the half, ${dist} yards out`,
+    body: `The ${c.nick} have the ${opp} well in hand. Ball at the ${dist - 17}, :02 on the clock. ${kCond(g)} The coach will take a knee unless ${c.name} wants a try from ${dist}.`.replace(/\s+/g, ' '),
+    options: [
+      { id: 'try', label: `Take the try from ${dist}`, o: { p },
+        outcomes: outs([
+          { p, good: true, line: `Good from ${dist}, with room to spare. ${c.nick} win ${score(my, g.oppSc)}.`, tag: `${dist}-YARDER`, game: { my, ...kKick(dist, true, { ca: 0, cm: 0 }) } },
+          { p: 1 - p, good: false, line: `Short from ${dist}. Nothing lost but the percentage.`, tag: 'LONG TRY', game: kKick(dist, false, { ca: 0 }) },
+        ]),
+        sub: `${pc(p)} from ${dist} (his ${kWhy(c, 'power', 'accuracy')}). A miss counts against his percentage and changes nothing else.` },
+      { id: 'knee', label: 'Take the knee',
+        effect: { outcomes: [{ p: 1, good: true, line: 'A knee, and into the locker room with the lead.', game: { add: {} } }] },
+        sub: 'No kick, no miss on his line.' },
+    ],
+  }
+}
+
 const FLAVOR_NFL = [['SUNDAY NIGHT', 0.18], ['DIVISION GAME', 0.22], ['THURSDAY NIGHT', 0.1]]
 const MOMENTS = {}
 export const registerMoments = (sport, fn) => { MOMENTS[sport] = fn }
@@ -605,7 +754,7 @@ export function gameMoment(c, g) {
   const state = isB ? nbaState(g) : nflState(g)
   if (!state) return null
   let card
-  if (state === 'garbage' || state === 'chase') card = isB ? nbaBlowout(c, g, state === 'garbage') : blowout(c, g, state === 'garbage')
+  if (state === 'garbage' || state === 'chase') card = isB ? nbaBlowout(c, g, state === 'garbage') : c.pos === 'k' ? kBlowout(c, g, state === 'garbage') : blowout(c, g, state === 'garbage')
   else if (isB) card = NBA[state](c, g)
   else {
     const set = NFL[c.pos]

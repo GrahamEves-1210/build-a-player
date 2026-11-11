@@ -11,6 +11,7 @@ import { LBS, LB_SILHOUETTE } from '../data/lbs'
 import { OL_SILHOUETTE } from '../data/ols'
 import { KS } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
+import { kAsQB } from '../lib/kFigure'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_PHYSICALS } from '../data/ols'
@@ -227,12 +228,7 @@ const K_ZONES = [
   { type: 'accuracy', ax: 350, ay: 240, side: 'right', cy: 0.45 }, // chest
   { type: 'power',    ax: 207, ay: 525, side: 'left',  cy: 0.74 }, // legs
 ]
-// the QB overlay colors a part when its QB rating has a chip: a kicker's three chips stand in for the parts they cover
-const kAsQB = b => ({
-  processing: b?.clutch, vision: b?.clutch, leadership: b?.clutch,
-  arm: b?.accuracy, accuracy: b?.accuracy, playmaking: b?.accuracy, size: b?.accuracy,
-  legs: b?.power, 'pocket-presence': b?.power,
-})
+// (lib/kFigure.js kAsQB: a kicker's three chips color the QB figure's parts)
 
 function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)

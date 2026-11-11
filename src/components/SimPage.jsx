@@ -8,7 +8,7 @@ import { WR_ATTR, WRS } from '../data/wrs'
 import { WR_LEGENDS } from '../data/wr-legends'
 import { RBS, RB_TYPES, RB_ATTR } from '../data/rbs'
 import { RB_LEGENDS } from '../data/rb-legends'
-import { valToGrade, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, readableTextColor, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult, calcOVRWR, calcOVRTE, calcOVRRB, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, getArchetypeOL, olBuildSpot, dlBuildSpot, nflHeadshot } from '../utils/simulation'
+import { valToGrade, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, getArchetypeK, calcOVRK, calcKAllProResult, readableTextColor, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult, calcOVRWR, calcOVRTE, calcOVRRB, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, getArchetypeOL, olBuildSpot, dlBuildSpot, nflHeadshot } from '../utils/simulation'
 import { TE_ATTR, TES } from '../data/tes'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DB_ATTR, DBS, DB_TYPES } from '../data/dbs'
@@ -18,6 +18,9 @@ import { DL_LEGENDS } from '../data/dl-legends'
 import { LB_ATTR, LBS, LB_TYPES, LB_SILHOUETTE } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { OL_ATTR, OLS, OL_SILHOUETTE } from '../data/ols'
+import { K_ATTR, KS, K_TYPES } from '../data/ks'
+import { K_LEGENDS } from '../data/k-legends'
+import { kAsQB } from '../lib/kFigure'
 import HEADSHOTS from '../data/headshots.json'
 import { NFL_GOAT } from '../data/nfl-goat'
 import RBFigureOverlay from './RBFigureOverlay'
@@ -291,6 +294,27 @@ function LBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest
   )
 }
 
+// The kicker room: the build has the job, the team's real kicker behind him
+function KDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
+  const userPhoto = types.map(t => build[t]?.photo).find(p => p) ?? null
+  const real = (isAllTime ? K_LEGENDS : KS).filter(d => d.team === team.short).sort((x, y) => y.ovr - x.ovr).slice(0, 1)
+    .map(d => ({ name: d.name, ovr: d.ovr, isUser: false, photo: nflHeadshot(d.headshot ?? HEADSHOTS[d.name]), teamColor: team.color, teamShort: d.team }))
+  const rows = [{ name: userName, ovr: calcOVRK(build, types), isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }, ...real].map((row, i) => ({ ...row, label: `K${i + 1}` }))
+  return (
+    <div className="wr-depth-chart">
+      <div className="wr-dc-header">{isAllTime ? '★ All-Time ' : ''}Depth Chart · {team.short}</div>
+      {rows.map((row, i) => (
+        <div key={i} className={`wr-dc-row${row.isUser ? ' wr-dc-row--you' : ''}`}>
+          <span className="wr-dc-pos">{row.label}</span>
+          <QBAvatar photo={row.photo} team={row.teamShort} color={row.teamColor} size={28} />
+          <span className="wr-dc-name">{row.name}</span>
+          <span className="wr-dc-ovr">{row.ovr}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // Your build takes over the real starter's spot on the picked team's line — the
 // spot comes from the Size chip (the same chip that sets the jersey and
 // HT/WT), and the team's other four real starters fill out the rest.
@@ -353,12 +377,12 @@ function buildRows(build, types, meta, salaryQB) {
   return types.filter(t => build[t]).map(t => ({ key: t, label: meta[t]?.label ?? t, data: build[t], val: build[t].val }))
 }
 
-function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isDL, isLB = false, isOL, isSalaryMode = false }) {
+function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isDL, isLB = false, isOL, isK = false, isSalaryMode = false }) {
   const { ovr } = result
-  const archetype = isOL ? getArchetypeOL(ovr, build, types) : isDL ? getArchetypeDL(ovr, build, types) : isLB ? getArchetypeLB(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+  const archetype = isK ? getArchetypeK(ovr, build, types) : isOL ? getArchetypeOL(ovr, build, types) : isDL ? getArchetypeDL(ovr, build, types) : isLB ? getArchetypeLB(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const ovrDisplay = useCountUp(ovr, 900)
   const [rowsVisible, setRowsVisible] = useState(0)
-  const filled = buildRows(build, types, isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
+  const filled = buildRows(build, types, isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
 
   const team = result.team
   const monoTeamBuild = team
@@ -433,7 +457,8 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
             ) : (
               <>
                 <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
-                <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+                {/* (a kicker stands on the QB figure for now: lib/kFigure.js) */}
+                <QBFigureOverlay build={isK ? kAsQB(monoTeamBuild) : monoTeamBuild} className="player-qbfig" />
               </>
             )}
           </div>
@@ -465,7 +490,7 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
 
 
 // ── Screen 2 (app): the season you steer ─────────────────────────────────────
-function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isDL, isLB = false, isTE, isWR, isRB, adsDisabled = true }) {
+function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isK = false, isDB, isDL, isLB = false, isTE, isWR, isRB, adsDisabled = true }) {
   const games = dr.games
   const wins = games.filter(g => g.won).length, losses = games.length - wins
   const final = dr.done ? result : null
@@ -484,14 +509,14 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
       {dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} onTurnOff={dr.turnOff} />}
       <Milestones items={dr.fresh} />
       <WeekStrip games={director.games} revealed={dr.k} />
-      <GameLog games={games} total={dr.total} isOL={isOL} isDB={isDB} isDL={isDL} isLB={isLB} isTE={isTE} isWR={isWR} isRB={isRB} />
+      <GameLog games={games} total={dr.total} isOL={isOL} isK={isK} isDB={isDB} isDL={isDL} isLB={isLB} isTE={isTE} isWR={isWR} isRB={isRB} />
       {!adsDisabled && <div id="ramp-cntr1-season" className="plf-banner-ad" style={{ minHeight: 0 }} />}
       {dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
       {final && (
         <div className="simp-stat-section simp-totals-in">
           {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
           <div className="simp-eyebrow">Production</div>
-          <StatLineTable result={final} build={build} userName={userName} kind={isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+          <StatLineTable result={final} build={build} userName={userName} kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
           {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
         </div>
       )}
@@ -500,13 +525,13 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
     </>
   )
 }
-const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? r.seasonRushYds : pos === 'dl' ? r.seasonSacks : pos === 'lb' ? r.seasonTackles : pos === 'db' ? r.seasonINTs : pos === 'ol' ? r.seasonPancakes : r.seasonRecYds
+const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? r.seasonRushYds : pos === 'dl' ? r.seasonSacks : pos === 'lb' ? r.seasonTackles : pos === 'db' ? r.seasonINTs : pos === 'ol' ? r.seasonPancakes : pos === 'k' ? r.seasonPoints : r.seasonRecYds
 
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'Guest' }) {
+function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const { games, playoffs, hasBye } = result
-  const pos = isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const pos = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   // App: the director reveals the season and pauses on its moments
   const dr = useDirectedReveal({ director, pace: 240, onFinal })
   const { seasonPassYds, seasonTDs, seasonINTs: qbSeasonINTs, seasonRating, seasonCompPct, seasonRushYds: qbRushYds, seasonRushTDs: qbRushTDs, seasonSacks } = result
@@ -564,7 +589,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
       )}
 
       {phase !== 'loading' && director && (
-        <DirectedSeason dr={dr} result={result} pos={pos} pool={pool} userName={userName} director={director} onNext={onNext} build={build} types={types} isOL={isOL} isDB={isDB} isDL={isDL} isLB={isLB} isTE={isTE} isWR={isWR} isRB={isRB} adsDisabled={adsDisabled} />
+        <DirectedSeason dr={dr} result={result} pos={pos} pool={pool} userName={userName} director={director} onNext={onNext} build={build} types={types} isOL={isOL} isK={isK} isDB={isDB} isDL={isDL} isLB={isLB} isTE={isTE} isWR={isWR} isRB={isRB} adsDisabled={adsDisabled} />
       )}
       {phase !== 'loading' && !director && (
         <>
@@ -591,7 +616,9 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
                 <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
                 <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
                 <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
-                {isOL ? (
+                {isK ? (
+                  <span className="sgr-stat">{g.fgm}/{g.fga}<span className="sgr-unit">FG</span> {g.xpm}/{g.xpa}<span className="sgr-unit">XP</span></span>
+                ) : isOL ? (
                   <span className="sgr-stat sgr-stat--ol">
                     {g.sacks}<span className="sgr-unit"> sack{g.sacks !== 1 ? 's' : ''} allowed</span>
                     {' · '}{g.pancakes}<span className="sgr-unit"> pancake{g.pancakes !== 1 ? 's' : ''}</span>
@@ -626,7 +653,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <div className="simp-stat-section simp-totals-in">
               {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
               <div className="simp-eyebrow">Production</div>
-              <StatLineTable result={result} build={build} userName={userName} kind={isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+              <StatLineTable result={result} build={build} userName={userName} kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
             </div>
           )}
 
@@ -811,6 +838,7 @@ function nflGoatRank(kind, result, wonAward) {
     : kind === 'wr' ? pts(r.seasonRecYds, [1500, 1800]) + pts(r.seasonRecTDs, [13, 17])
     : kind === 'te' ? pts(r.seasonRecYds, [1200, 1500]) + pts(r.seasonRecTDs, [11, 15])
     : kind === 'lb' ? pts(r.seasonTackles, [150, 170]) + pts(r.seasonINTs, [4, 6]) + pts(r.seasonSacks, [6]) + pts(r.seasonFF, [4])
+    : kind === 'k' ? pts(r.seasonFGPct, [92, 96]) + pts(r.season50M, [8, 12]) + pts(r.seasonGW, [3])
     : kind === 'ol' ? pts(4 - (r.seasonSacksAllowed ?? 9), [2, 4]) + pts(r.seasonGrade, [88, 92]) + pts(r.seasonPancakes, [55])
     : kind === 'dl' ? pts(r.seasonSacks, r.spot === 'DT' ? [12, 16] : [16, 20]) + pts(r.seasonTFL, [22, 28]) + pts(r.seasonFF, [5])
     : pts(r.seasonINTs, [7, 10]) + pts(r.seasonPickSixes, [2]) + pts(r.seasonPBUs, [18])
@@ -927,7 +955,7 @@ function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userN
   )
 }
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, userName = 'Guest', isSalaryMode = false }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, userName = 'Guest', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -948,11 +976,11 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   const [show, setShow] = useState(false)
 
   // the season as a share card (Share Season)
-  const kind = isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const kind = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const shareCard = useMemo(() => {
     if (!build || !types) return null
-    const meta = isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-    const archFn = { ol: getArchetypeOL, db: getArchetypeDB, dl: getArchetypeDL, lb: getArchetypeLB, te: getArchetypeTE, wr: getArchetypeWR, rb: getArchetypeRB, qb: getArchetype }[kind]
+    const meta = isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+    const archFn = { k: getArchetypeK, ol: getArchetypeOL, db: getArchetypeDB, dl: getArchetypeDL, lb: getArchetypeLB, te: getArchetypeTE, wr: getArchetypeWR, rb: getArchetypeRB, qb: getArchetype }[kind]
     let arch = null
     try { arch = archFn(ovr, build, types) } catch {}
     return nflSeasonCard({
@@ -980,13 +1008,16 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   }, [])
 
   // QB count-ups
-  const yds     = useCountUp(seasonPassYds, 1200, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
+  const yds     = useCountUp(seasonPassYds, 1200, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL && !isK)
   const tds     = useCountUp(seasonTDs, 900, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
   const ints    = useCountUp(qbSeasonINTs, 900, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
   const rushYds = useCountUp(qbRushYds, 1000, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
   const sacks   = useCountUp(seasonSacks, 900, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL)
 
   // OL count-ups
+  // K count-ups
+  const kPointsAnim = useCountUp(result.seasonPoints, 1000, show && isK)
+
   const olPancakesAnim  = useCountUp(seasonPancakes, 1000, show && isOL)
   const olPressuresAnim = useCountUp(seasonPressures, 900, show && isOL)
 
@@ -1015,7 +1046,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   return (
     <div className="simp-screen">
       {APP_SIM && <SeasonRewards result={result} />}
-      {APP_SIM && result.story && <SeasonStory story={result.story} pos={isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
+      {APP_SIM && result.story && <SeasonStory story={result.story} pos={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
@@ -1030,7 +1061,22 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-sb-box">
           <div className="simp-section-lbl">Super Bowl Performance</div>
           <div className="simp-totals">
-            {isOL ? (
+            {isK ? (
+              <>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.fgm ?? 0}/{sbResult.fga ?? 0}</div>
+                  <div className="simp-total-lbl">Field Goals</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.long || '–'}</div>
+                  <div className="simp-total-lbl">Longest</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.pts ?? 0}</div>
+                  <div className="simp-total-lbl">{sbResult.gw ? 'Points · Kicked the Winner' : 'Points'}</div>
+                </div>
+              </>
+            ) : isOL ? (
               <>
                 <div className="simp-total-cell">
                   <div className="simp-total-val">{sbResult.sacks ?? 0}</div>
@@ -1198,7 +1244,8 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             ) : (
               <>
                 <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
-                <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+                {/* (a kicker stands on the QB figure for now: lib/kFigure.js) */}
+                <QBFigureOverlay build={isK ? kAsQB(monoTeamBuild) : monoTeamBuild} className="player-qbfig" />
               </>
             )}
           </div>
@@ -1209,9 +1256,10 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-eyebrow">Production</div>
 
         <StatLineTable
-          result={result} build={build} ready={show} userName={userName} kind={isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
+          result={result} build={build} ready={show} userName={userName} kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
           values={
-            isOL ? { pnk: olPancakesAnim, prs: olPressuresAnim }
+            isK ? { pts: kPointsAnim }
+            : isOL ? { pnk: olPancakesAnim, prs: olPressuresAnim }
             : isLB ? { tkl: lbTacklesAnim, sck: lbSacksAnim, int: lbINTsAnim }
             : isDL ? { sck: dlSacksAnim, tfl: dlTFLAnim, tkl: dlTacklesAnim }
             : isDB ? { tkl: dbTacklesAnim, pd: dbPBUsAnim, int: dbINTsAnim }
@@ -1225,8 +1273,8 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
           <div className="sfb-mvp-row">
             <img src="/mvp.png" alt="MVP Trophy" className="sfb-mvp-row-img" />
             <div className="sfb-mvp-row-text">
-              <div className="sfb-mvp-row-title">{isOL ? 'First-Team All-Pro' : (isDB || isDL || isLB) ? 'Defensive Player of the Year' : (isWR || isTE || isRB) ? 'Offensive Player of the Year' : 'Regular Season MVP'}</div>
-              <div className="sfb-mvp-row-sub">{isOL ? 'AP All-Pro Selection' : 'NFL Award Winner'}</div>
+              <div className="sfb-mvp-row-title">{(isOL || isK) ? 'First-Team All-Pro' : (isDB || isDL || isLB) ? 'Defensive Player of the Year' : (isWR || isTE || isRB) ? 'Offensive Player of the Year' : 'Regular Season MVP'}</div>
+              <div className="sfb-mvp-row-sub">{(isOL || isK) ? 'AP All-Pro Selection' : 'NFL Award Winner'}</div>
             </div>
           </div>
         )}
@@ -1236,7 +1284,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-stat-section">
           <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
-            {buildRows(build, types, isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL).map(({ key, label, data, val }) => {
+            {buildRows(build, types, isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL).map(({ key, label, data, val }) => {
               return (
                 <div key={key} className="simp-attr-row simp-row-visible">
                   <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={36} />
@@ -1254,7 +1302,20 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         </div>
       )}
 
-      {bestGame && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL && (
+      {bestGame && isK && (
+        <div className="simp-best-game">
+          <div className="simp-section-lbl">Best Game</div>
+          <div className="simp-best-body">
+            <span className="sbg-week">Wk {bestGame.wk}</span>
+            <span className="sbg-opp">vs {bestGame.opponent}</span>
+            <span className="sbg-line">
+              {bestGame.fgm}/{bestGame.fga} FG{bestGame.long ? ` · long ${bestGame.long}` : ''} · {bestGame.pts} pts{bestGame.gw ? ' · kicked the game-winner' : ''}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {bestGame && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL && !isK && (
         <div className="simp-best-game">
           <div className="simp-section-lbl">Best Game</div>
           <div className="simp-best-body">
@@ -1392,7 +1453,7 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
+export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
   // a replay opens on the final report (after the GOAT screen; OL has none), and so does coming back
   // to a season that was already played and booked (it has its story): never a second run at it
   const [screen, setScreen] = useState(replay || baseResult.story ? 4 : 0)
@@ -1404,10 +1465,10 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
   const result = live
-  const position = isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
-  const attrMap = isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const position = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const attrMap = isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const director = useMemo(() => (APP_SIM && (simFn || isSalaryMode) && !replay && !baseResult.story && baseResult.games?.length)
-    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap, types })
+    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap, types, ...(isK ? { injuryOdds: { season: 0, playoffs: 0 } } : {}) })   // (a kicker is never hurt)
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
   // leaving mid-season still books the season (`leaving`: booked on the way out, so it
@@ -1428,7 +1489,9 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
     tapGuard.mark()
     // App decides the award when the season is simulated (so it saves with the
     // season and counts toward lifetime awards there); this only reveals it.
-    const r = result.award ?? (isOL
+    const r = result.award ?? (isK
+      ? calcKAllProResult(result, isAllTime, result.team?.short)
+      : isOL
       ? calcOLAllProResult(result, isAllTime, result.team?.short)
       : isDL
       ? calcDLDpoyResult(result, isAllTime, result.team?.short)
@@ -1446,7 +1509,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
     setMvpResult(r)
     if (r.userWins) {
       setMvpWon(true)
-      onMVPWon?.(isAllTime, isOL ? 'allpro' : (isDB || isDL || isLB) ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp')
+      onMVPWon?.(isAllTime, (isOL || isK) ? 'allpro' : (isDB || isDL || isLB) ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp')
     }
     if (continuation) setMvpContinuation(() => continuation)
   }
@@ -1478,12 +1541,12 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const handleBack  = () => { setScreen(0); onBack()  }
 
   const screens = [
-    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} isSalaryMode={isSalaryMode} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel="GOAT Status" />,
     // where the season ranks among the all-time top 25 at the position (no OL list)
-    ...([<ScreenGOAT key="goat" kind={isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} userName={userName} isSalaryMode={isSalaryMode} />,
+    ...([<ScreenGOAT key="goat" kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
   const team = result.team
@@ -1559,6 +1622,9 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
         {isDL && team && build && (
           <DLDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
+        {isK && team && build && (
+          <KDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
+        )}
         {isOL && team && build && (
           <OLDepthChart team={team} build={build} types={types} userName={userName} />
         )}
@@ -1578,8 +1644,8 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
           isWR={isWR}
           isTE={isTE}
           isDB={isDB} isDL={isDL} isLB={isLB}
-          isOL={isOL}
-          userPhoto={isOL ? (build?.size?.photo ?? null) : null}
+          isOL={isOL} isK={isK}
+          userPhoto={isOL ? (build?.size?.photo ?? null) : isK ? (build?.power?.photo ?? null) : null}
           userName={userName}
         />
       )}

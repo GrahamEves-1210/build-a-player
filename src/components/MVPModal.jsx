@@ -43,7 +43,40 @@ function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
   )
 }
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, nextLabel = 'Continue to Final Report', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, userPhoto = null, userName = 'Guest' }) {
+// K: the AP's two kickers, First Team and Second Team. The build is one of four names on the ballot.
+const kLine = s => `${s.fgm}/${s.fga} FG (${s.pct}%) · long ${s.long} · ${s.m50} from 50+`
+function KAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
+  const { userWins, unanimous, secondTeam, line, ballot, userStats } = mvpResult
+  return (
+    <>
+      <div className={`mvp-winner-tag${userWins || secondTeam ? ' mvp-winner-tag--you' : ''}`}>
+        {userWins
+          ? (unanimous ? `Unanimous: ${userName} is the First-Team kicker` : `${userName} is the First-Team kicker`)
+          : secondTeam ? `${userName} makes the Second Team` : `${userName} missed the All-Pro team`}
+      </div>
+      <div className="mvp-allpro-line">
+        {line.map(p => (
+          <div key={p.spot} className={`mvp-allpro-row${p.isUser ? ' mvp-allpro-row--you' : ''}`}>
+            <span className="mvp-allpro-spot">{p.spot}</span>
+            <QBAvatar photo={p.isUser ? userPhoto : nflHeadshot(HEADSHOTS[p.name])} team={p.team} color={p.color} size={34} />
+            <div className="mvp-allpro-info">
+              <span className="mvp-allpro-name">{p.isUser ? <NameTag name={userName} self /> : p.name}</span>
+              <span className="mvp-allpro-stats">{p.team} · {kLine(p.stats)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {!userWins && !secondTeam && (
+        <div className="mvp-allpro-note">
+          <div>The ballot: {ballot.join(', ')} and {userName}</div>
+          <div>{userName}: {kLine(userStats)}</div>
+        </div>
+      )}
+    </>
+  )
+}
+
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, nextLabel = 'Continue to Final Report', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, userPhoto = null, userName = 'Guest' }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -96,7 +129,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
 
   const isOPOY = isRB || isWR || isTE
   const isDPOY = isDB || isDL || isLB
-  const awardLabel    = isOL ? 'All-Pro Team' : isDPOY ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
+  const awardLabel    = (isOL || isK) ? 'All-Pro Team' : isDPOY ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
   const unanimousLbl  = isDPOY ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
   const regularLbl    = isDPOY ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
@@ -130,7 +163,19 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               <div className="mvp-stat-pill">
                 <span>{wins}–{losses}</span><span>W–L</span>
               </div>
-              {isOL ? (
+              {isK ? (
+                <>
+                  <div className="mvp-stat-pill">
+                    <span>{result.seasonFGM ?? 0}/{result.seasonFGA ?? 0}</span><span>Field Goals</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{result.seasonFGPct ?? 0}%</span><span>FG%</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{result.seasonLong ?? 0}</span><span>Longest</span>
+                  </div>
+                </>
+              ) : isOL ? (
                 <>
                   <div className="mvp-stat-pill">
                     <span>{olSacks}</span><span>Sacks Allowed</span>
@@ -221,7 +266,9 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
 
         {phase === 'reveal' && (
           <div className="mvp-reveal">
-            {isOL ? (
+            {isK ? (
+              <KAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} userName={userName} />
+            ) : isOL ? (
               <OLAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} userName={userName} />
             ) : userWins ? (
               <>

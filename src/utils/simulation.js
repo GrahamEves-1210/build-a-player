@@ -4634,7 +4634,8 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
 // There are no injuries for a kicker, here or in Career.
 import { KS, K_TYPES, K_ATTR_WEIGHT, K_ALL_PRO_BALLOT, kOVR } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
-import { kickP, xpP, kickTry, kickDistance, kickEnv } from '../lib/kicks'
+import { kickP, xpP, kickTry, kickDistance, kickEnv, kLine, kRanges, kTotals } from '../lib/kicks'
+export { kLine, kRanges, kTotals }
 
 AT_DIFFICULTY.k = { reg: 0.17, po: -0.015 }   // the same win formula as OL and the defense, so the same offset
 
@@ -4678,31 +4679,6 @@ const K_TEAM_BY_SHORT = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
 const kLogit = p => Math.log(p / (1 - p))
 // a late kick: from 27 out to a little past what his coach would normally ask (the clock makes the call, not the distance)
 const kLateDistance = pw => { const far = Math.min(62, kickTry(pw) + 2); return 27 + Math.floor(Math.random() * (far - 26)) }
-// how a field goal reads in the log: '3/4 FG (long 52)'
-export const kLine = g => `${g.fgm}/${g.fga} FG${g.long ? ` (long ${g.long})` : ''}, ${g.xpm}/${g.xpa} XP`
-// range tables from a list of games: under 30, 30-39, 40-49, 50+ as [made, tried]
-export function kRanges(games) {
-  const out = { u30: [0, 0], r30: [0, 0], r40: [0, 0], r50: [0, 0] }
-  for (const g of games ?? []) for (const k of g.kicks ?? []) {
-    const b = k.d < 30 ? 'u30' : k.d < 40 ? 'r30' : k.d < 50 ? 'r40' : 'r50'
-    out[b][1]++; if (k.good) out[b][0]++
-  }
-  return out
-}
-// the season line the games add up to (the director re-adds it after a moment rewrites a game)
-export function kTotals(games) {
-  const sum = k => games.reduce((s, g) => s + (g[k] ?? 0), 0)
-  const fgm = sum('fgm'), fga = sum('fga')
-  const ranges = kRanges(games)
-  return {
-    seasonFGM: fgm, seasonFGA: fga, seasonFGPct: fga ? +(fgm / fga * 100).toFixed(1) : 0,
-    seasonLong: Math.max(0, ...games.map(g => g.long ?? 0)),
-    seasonXPM: sum('xpm'), seasonXPA: sum('xpa'), seasonPoints: sum('pts'),
-    seasonGW: sum('gw'), seasonCostly: sum('cost'), seasonClutchM: sum('cm'), seasonClutchA: sum('ca'),
-    season50M: ranges.r50[0], season50A: ranges.r50[1], seasonRanges: ranges,
-  }
-}
-
 // One game. winP: the team's chance before a ball is kicked. fixed (Squad Builder): { won, mySc, oppSc }, the game
 // as the squad played it; his line is read off that score.
 function kGame(k, { winP = 0.5, offN = 0, homeShort = '', wk = 1, env = null, fixed = null, late = 1 }) {
@@ -4743,7 +4719,7 @@ function kGame(k, { winP = 0.5, offN = 0, homeShort = '', wk = 1, env = null, fi
     if (won && margin <= 3 && made > 0 && Math.random() < 0.45) { const last = [...kicks].reverse().find(x => x.good); if (last) { last.why = 'win'; gw = 1; ca = 1; cm = 1; tag = 'GAME-WINNER' } }
     const fgm = kicks.filter(x => x.good).length, fga = kicks.length
     if (!won && margin >= -3 && fga > fgm) cost = 1
-    return { fgm, fga, long: Math.max(0, ...kicks.filter(x => x.good).map(x => x.d)), xpm, xpa, pts: fgm * 3 + xpm, kicks, gw, cost, ca, cm, cond: cond.tag, mySc: fixed.mySc, oppSc: fixed.oppSc, won, overtime: !!fixed.overtime, ...(tag ? { tag } : {}) }
+    return { fgm, fga, long: Math.max(0, ...kicks.filter(x => x.good).map(x => x.d)), xpm, xpa, pts: fgm * 3 + xpm, kicks, gw, cost, ca, cm, cond: cond.tag, mySc: fixed.mySc, oppSc: fixed.oppSc, won, overtime: !!fixed.overtime, ...(tag ? { tags: [tag] } : {}) }
   }
 
   // touchdowns and the drives that stall in range
@@ -4797,7 +4773,7 @@ function kGame(k, { winP = 0.5, offN = 0, homeShort = '', wk = 1, env = null, fi
   const fgm = kicks.filter(x => x.good).length, fga = kicks.length
   // a miss that cost the game: the kick at the gun, or a missed kick in a game lost by a field goal or less
   if (!won && !cost && ((mySc - oppSc >= -3 && fga > fgm) || (oppSc - mySc === 1 && xpa > xpm))) cost = 1
-  return { fgm, fga, long: Math.max(0, ...kicks.filter(x => x.good).map(x => x.d)), xpm, xpa, pts: fgm * 3 + xpm, kicks, gw, cost, ca, cm, cond: cond.tag, mySc, oppSc, won, overtime, ...(tag ? { tag } : {}) }
+  return { fgm, fga, long: Math.max(0, ...kicks.filter(x => x.good).map(x => x.d)), xpm, xpa, pts: fgm * 3 + xpm, kicks, gw, cost, ca, cm, cond: cond.tag, mySc, oppSc, won, overtime, ...(tag ? { tags: [tag] } : {}) }
 }
 function clampNum(x, a, b) { return Math.max(a, Math.min(b, x)) }
 const K_BEST = g => g.pts + g.gw * 6 + (g.long >= 55 ? 3 : g.long >= 50 ? 1.5 : 0) - (g.fga - g.fgm) * 5 - (g.xpa - g.xpm) * 4 - g.cost * 6
