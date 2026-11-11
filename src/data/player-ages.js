@@ -125,6 +125,8 @@ export const BIRTH_NFL = {
   "Calvin Austin III": 1999,
   "Calvin Ridley": 1995,
   "Cam Jurgens": 1999,
+  "Drew Kendall": 2001,
+  "Markel Bell": 2004,
   "Cam Skattebo": 2002,
   "Cam Ward": 2002,
   "Cameron Heyward": 1989,

@@ -159,6 +159,7 @@ const NOV_10 = {
         'Rating updates for Amon-Ra St. Brown, Darren Waller, Tommy Tremble, Chuba Hubbard, Kyle Monangai, Nik Bonitto, Jonathon Cooper, Christian Watson and Foyesade Oluokun',
         'NBA ratings updated from the Nov 2-9 games: 30 players, including Jalen Brunson, Victor Wembanyama, Giannis Antetokounmpo, Stephen Curry and Shai Gilgeous-Alexander',
         'Moved Andre Cisco to the Lions',
+        'Moved Cam Jurgens to the Ravens. Lane Johnson retired: Drew Kendall and Markel Bell start on the Eagles line',
         'Released Kendre Miller from the Saints, and Audric Estime joins their backfield',
         'Rating updates for quarterbacks Jacoby Brissett, Jameis Winston, Michael Penix Jr., C.J. Stroud, Jordan Love, Dak Prescott, Justin Herbert, Baker Mayfield, Drake Maye, Sam Darnold and Daniel Jones',
         'Rating updates for running backs Jaylen Warren, Jonathan Taylor, Omarion Hampton, Braelon Allen, Kenneth Walker III, Bucky Irving and Jonah Coleman',

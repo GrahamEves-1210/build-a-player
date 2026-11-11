@@ -60,7 +60,7 @@ const _OLS = [
   // BAL
   { name: "Ronnie Stanley",            team: 'BAL', teamName: 'Baltimore Ravens',       pos: 'LT', skin: '#5e3c22', height: 78, weight: 310, arm: 35.625, number: 79, attrs: { size:  5, length: 10, anchor: 6, passPro: 6, runBlock: 5, mobility: 5, blitzPickup: 7, discipline: 6, pancake: 4 } },
   { name: "John Simpson",              team: 'BAL', teamName: 'Baltimore Ravens',       pos: 'LG', skin: '#5e3c22', height: 76, weight: 330, arm: 34.125, number: 74, attrs: { size:  7, length:  7, anchor: 7, passPro: 4, runBlock: 5, mobility: 5, blitzPickup: 4, discipline: 1, pancake: 6 } },
-  { name: "Jovaughn Gwyn",             team: 'BAL', teamName: 'Baltimore Ravens',       pos: 'C',  skin: '#b07848', height: 74, weight: 301, arm: 31.75, number: 54, attrs: { size:  1, length:  2, anchor: 3, passPro: 4, runBlock: 4, mobility: 5, blitzPickup: 4, discipline: 6, pancake: 3 } },
+  { name: "Cam Jurgens",               team: 'BAL', teamName: 'Baltimore Ravens',       pos: 'C',  skin: '#f0c4a0', height: 75, weight: 303, arm: 33.375, number: 64, attrs: { size:  2, length:  6, anchor: 5, passPro: 5, runBlock: 6, mobility: 9, blitzPickup: 7, discipline: 8, pancake: 5 } },
   { name: "Olaivavega Ioane",          team: 'BAL', teamName: 'Baltimore Ravens',       pos: 'RG', skin: '#b07848', height: 76, weight: 320, arm: 32.75, number: 71, attrs: { size:  6, length:  4, anchor: 8, passPro: 5, runBlock: 7, mobility: 4, blitzPickup: 4, discipline: 5, pancake: 7 } },
   { name: "Roger Rosengarten",         team: 'BAL', teamName: 'Baltimore Ravens',       pos: 'RT', skin: '#f0c4a0', height: 77, weight: 316, arm: 33.5, number: 70, attrs: { size:  6, length:  6, anchor: 5, passPro: 6, runBlock: 6, mobility: 7, blitzPickup: 5, discipline: 7, pancake: 5 } },
   // CIN
@@ -145,9 +145,9 @@ const _OLS = [
   // PHI
   { name: "Jordan Mailata",            team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'LT', skin: '#b07848', height: 80, weight: 365, arm: 35.5, number: 68, attrs: { size: 11, length: 10, anchor: 11, passPro: 9, runBlock: 10, mobility: 7, blitzPickup: 7, discipline: 5, pancake: 10 } },
   { name: "Landon Dickerson",          team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'LG', skin: '#f0c4a0', height: 78, weight: 332, arm: 33.25, number: 69, attrs: { size:  9, length:  5, anchor: 8, passPro: 5, runBlock: 6, mobility: 5, blitzPickup: 6, discipline: 4, pancake: 8 } },
-  { name: "Cam Jurgens",               team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'C',  skin: '#f0c4a0', height: 75, weight: 303, arm: 33.375, number: 51, attrs: { size:  2, length:  6, anchor: 5, passPro: 5, runBlock: 6, mobility: 9, blitzPickup: 7, discipline: 8, pancake: 5 } },
+  { name: "Drew Kendall",              team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'C',  skin: '#f0c4a0', height: 76, weight: 308, arm: 31.75, number: 66, attrs: { size:  4, length:  3, anchor: 4, passPro: 4, runBlock: 4, mobility: 6, blitzPickup: 4, discipline: 5, pancake: 3 } },
   { name: "Tyler Steen",               team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'RG', skin: '#b07848', height: 78, weight: 321, arm: 32.75, number: 56, attrs: { size:  7, length:  4, anchor: 6, passPro: 7, runBlock: 6, mobility: 6, blitzPickup: 5, discipline: 4, pancake: 6 } },
-  { name: "Lane Johnson",              team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'RT', skin: '#f0c4a0', height: 78, weight: 325, arm: 35.25, number: 65, attrs: { size:  8, length:  9, anchor: 10, passPro: 10, runBlock: 8, mobility: 8, blitzPickup: 10, discipline: 7, pancake: 7 } },
+  { name: "Markel Bell",               team: 'PHI', teamName: 'Philadelphia Eagles',    pos: 'RT', skin: '#5e3c22', height: 81, weight: 346, arm: 36.5, number: 72, attrs: { size: 11, length: 11, anchor: 5, passPro: 4, runBlock: 5, mobility: 3, blitzPickup: 3, discipline: 3, pancake: 5 } },
   // WAS
   { name: "Laremy Tunsil",             team: 'WAS', teamName: 'Washington Commanders',  pos: 'LT', skin: '#5e3c22', height: 77, weight: 313, arm: 34.25, number: 78, attrs: { size:  5, length:  7, anchor: 8, passPro: 10, runBlock: 6, mobility: 7, blitzPickup: 9, discipline: 3, pancake: 5 } },
   { name: "Brandon Coleman",           team: 'WAS', teamName: 'Washington Commanders',  pos: 'LG', skin: '#b07848', height: 78, weight: 320, arm: 34.625, number: 74, attrs: { size:  7, length:  8, anchor: 4, passPro: 3, runBlock: 4, mobility: 6, blitzPickup: 4, discipline: 3, pancake: 4 } },
@@ -297,7 +297,7 @@ export const OL_ALL_PRO_BALLOT = {
   LG: ['Quenton Nelson', 'Joe Thuney',      'Tyler Smith',      'Damien Lewis'],
   C:  ['Creed Humphrey', 'Aaron Brewer',    'Tyler Linderbaum', 'Zach Frazier'],
   RG: ['Quinn Meinerz',  'Chris Lindstrom', 'Mike Onwenu',      'Trey Smith'],
-  RT: ['Lane Johnson',   'Joe Alt',         "Brian O'Neill",    'Taylor Moton'],
+  RT: ['Joe Alt',        "Brian O'Neill",   'Taylor Moton',     'Darnell Wright'],
 }
 
 export const OL_PHYSICALS = Object.fromEntries(_OLS.map(ol => [ol.name, { height: ol.height, weight: ol.weight }]))
