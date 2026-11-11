@@ -2657,7 +2657,7 @@ export function bookSeason(c) {
   const news = leagueNews(c, league)
   next = offseasonEvents(next)
   next = maybeShoeDeal(next)
-  next = maybeTraded(next, r)
+  { const from = next.team; next = maybeTraded(next, r); if (next.team !== from) next = redealEvent(next, from) }
   const offers = contractSituation(next)
   next = { ...next, fit: fitFor(next), offers, off: { step: 'recap', moves: next.traded ? [] : moves, news, camp: null, contract: Array.isArray(offers) } }
   return next
@@ -2903,19 +2903,49 @@ const EVENTS = {
     { id: 'quiet', w: 3, text: () => `A quiet summer at the facility. Camp opens, and the grind begins.`, apply: () => ({}) },
   ],
 }
-function offseasonEvents(c) {
+// (STAY_EVENTS: an event about the team he was already on: a captain's vote, last year's locker room, the coach
+// fired after his lost season, the camp competition his misses brought. Never dealt to a player who has just
+// arrived: redealEvent.)
+const STAY_EVENTS = new Set(['coach-fired', 'captain', 'rift', 'k-camp-leg'])
+function offseasonEvents(c, moved = false) {
   const S = sportOf(c)
-  const r = seeded(`${c.seed}-ev-${c.year}`)
+  const r = seeded(`${c.seed}-ev-${c.year}${moved ? '-moved' : ''}`)
   // reputation tilts the summer: a good name draws the good breaks, a bad one the bad
   const rep = c.rep ?? 5
   const wOf = e => e.w * (e.good ? (rep >= 7 ? 1.6 : rep <= 3 ? 0.5 : 1) : e.bad ? (rep <= 3 ? 1.8 : rep >= 7 ? 0.6 : 1) : 1)
-  const fits = (c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl).filter(e => !e.when || e.when(c))   // (a kicker's summers are his own: lib/careerKicker.js)
+  const fits = (c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl).filter(e => (!e.when || e.when(c)) && !(moved && STAY_EVENTS.has(e.id)))   // (a kicker's summers are his own: lib/careerKicker.js)
   const total = fits.reduce((s, e) => s + wOf(e), 0)
   let roll = r() * total, ev = fits[0]
   for (const e of fits) { roll -= wOf(e); if (roll <= 0) { ev = e; break } }
   const text = ev.text(S.isSoccer ? S.teamOf(c.team).name : nickOf(S, c.team), c)
   const fx = ev.apply(c)
-  return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text, id: ev.id }] }
+  // what the event changed, so a move to another team can take it back (redealEvent)
+  const undo = { rep: (fx.rep ?? c.rep) - c.rep, durability: fx.durability != null ? r10(fx.durability - c.durability) : 0, durBase: fx.durBase != null ? r10(fx.durBase - durBaseOf(c)) : 0, dev: fx.dev ? fx.dev.points - c.dev.points : 0, mods: fx.nextMods ?? null }
+  return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text, id: ev.id }], offEvent: { year: c.year + 1, id: ev.id, team: c.team, undo } }
+}
+// He changed teams this offseason (free agency, a trade he asked for, a trade the team made). The summer's event was
+// dealt at the end of the season, for the team he was on: its new coordinator, its captain's vote, its locker room.
+// It is taken back, what it changed with it, and the summer is dealt again for the team he joined.
+// (2026-11-11, a player's report: "After I joined a new team it told me about the last team I played with". The
+// event named the old team on the offseason screens and in the season's story, and its team changes, a new
+// scheme's -0.5 or a rebuilt defense's +1, went with him to the new team's season.)
+function redealEvent(c, from) {
+  if (sportOf(c).isSoccer || sportOf(c).isBaseball) return c
+  const e = c.offEvent, yr = c.year + 1
+  const bank = c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl
+  // (a save from before this: no record of the event. Its line is found by the bank's id and taken out; what it
+  // changed can't be told apart from the rest, so it stays)
+  const stale = e && e.year === yr ? x => x.year === yr && x.id === e.id : x => x.year === yr && !!x.id && bank.some(b => b.id === x.id)
+  if (!c.events.some(stale)) return c
+  let n = { ...c, events: c.events.filter(x => !stale(x)), offEvent: null }
+  if (e && e.year === yr && e.team === from) {
+    const u = e.undo ?? {}
+    const mods = { ...(n.nextMods ?? {}) }
+    for (const [k, v] of Object.entries(u.mods ?? {})) { if (mods[k] === v) delete mods[k]; else if (typeof mods[k] === 'number') mods[k] = r10(mods[k] - v) }
+    n = { ...n, nextMods: Object.keys(mods).length ? mods : null, rep: clamp(n.rep - (u.rep ?? 0), 1, 10), dev: { ...n.dev, points: Math.max(0, n.dev.points - (u.dev ?? 0)) },
+      ...(u.durability ? { durability: r10(clamp(n.durability - u.durability, 1, 10)) } : {}), ...(u.durBase ? { durBase: r10(clamp(durBaseOf(n) - u.durBase, 1, 10)) } : {}) }
+  }
+  return offseasonEvents(n, true)
 }
 function marketValue(c) {
   const S = sportOf(c)
@@ -3018,6 +3048,8 @@ export function signOffer(c, o) {
   const change = o.team !== c.team
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   const roster = change ? rosterOf(c, o.team) : c.roster
+  // (a new team: the summer's event was the old team's. It's dealt again for this one: redealEvent)
+  if (change) c = redealEvent({ ...c, team: o.team }, c.team)
   return {
     ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c) } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), spot: lineSpot(c) }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
@@ -3088,7 +3120,9 @@ export function demandTrade(c) {
   const dest = SKILL[c.pos] ? pickBy(half, x => supportW(c.pos, x.fit), r()) : half[Math.floor(r() * half.length)]
   const { roster, fit } = dest
   // a starter guarantee was the old team's promise: it stays with them
-  return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  // (the summer's event was the old team's: dealt again for the new one, after the trade is on the record)
+  const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  return redealEvent(moved, c.team)
 }
 // Into the next season: a year older, the body moves with it
 export function nextSeason(c) {
