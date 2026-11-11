@@ -20,6 +20,18 @@ export function nflHeadshot(id) {
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
 
+// A season is only played on ratings that are numbers. A team whose offense or defense isn't one (a Career
+// save opened by another version of the game, 2026-11-10: every score came out NaN, every game a loss with
+// no score on the card) plays on its own rating, a league-average 5.5 if it has none. A sound team comes
+// back as it is, the same object, so nothing else moves.
+const TEAM_BY_SHORT = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
+const ratingOr = (v, base) => (Number.isFinite(v) ? v : Number.isFinite(base) ? base : 5.5)
+export function ratedTeam(team) {
+  if (!team || (Number.isFinite(team.off) && Number.isFinite(team.def))) return team
+  const base = TEAM_BY_SHORT[team.short]
+  return { ...team, off: ratingOr(team.off, base?.off), def: ratingOr(team.def, base?.def) }
+}
+
 // A better record counts a little in the playoffs: a point of win chance a game per win over 11
 const recordEdge = wins => Math.min(0.05, Math.max(-0.03, (wins - 11) * 0.01))
 
@@ -361,6 +373,7 @@ const ALLTIME_SB_POOLS = {
 // Each build's sim then plays this same season (its `script` argument) and only
 // makes its own stat line, so the squad shares one record.
 export function scriptNFLSeason(team, isAllTime = false) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v))
   const scoreOf = (off, def) => Math.max(0, Math.round(20 + (off - def) * 2.4 + randN() * 14))
@@ -533,6 +546,7 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
 // ── Core simulation ───────────────────────────────────────────────────────────
 
 export function runSimulation(build, types = TYPES, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVR(build, types)
 
@@ -1126,6 +1140,7 @@ export function calcOPOYResult(result, isAllTime = false, teamShort = null) {
 }
 
 export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRRB(build, types)
 
@@ -1745,6 +1760,7 @@ export function calcWROPOYResult(result, isAllTime = false, teamShort = null) {
 }
 
 export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRWR(build, types)
 
@@ -2323,6 +2339,7 @@ export function calcTEOPOYResult(result, isAllTime = false, teamShort = null) {
 }
 
 export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRTE(build, types)
 
@@ -2990,6 +3007,7 @@ function rushSample(lambda, chances = 6) {
 }
 
 export function runDBSimulation(build, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRDB(build) ?? 60
 
@@ -3458,6 +3476,7 @@ export function calcDLDpoyResult(result, isAllTime = false, teamShort = null) {
 }
 
 export function runDLSimulation(build, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRDL(build) ?? 60
 
@@ -3898,6 +3917,7 @@ export function calcLBDpoyResult(result, isAllTime = false, teamShort = null) {
 }
 
 export function runLBSimulation(build, team = null, isAllTime = false, script = null) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRLB(build) ?? 60
 
@@ -4356,6 +4376,7 @@ export function olSeasonGrades({ pressures = 0, sacks = 0, penalties = 0, pancak
 }
 
 export function runOLSimulation(build, team = null, isAllTime = false) {
+  team = ratedTeam(team)   // (ratings that are numbers: see ratedTeam)
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVROL(build) ?? 60
 

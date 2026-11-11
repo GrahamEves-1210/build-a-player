@@ -276,9 +276,9 @@ export const SPORT = {
         const frontAdj = front.reduce((s, g) => s + (g.v - 6) * 0.15, 0)
         return { groups: [{ k: 'SECONDARY', v: secG, names: mates.map(p => p.name) }, ...front], adj: (secG - 6) * 0.25 + frontAdj, need: 11 - secG, secondary: secG }
       }
-      const ol = ro.ol.slice(0, 5)
-      const weapons = [...ro.wr, ...ro.te, ...ro.rb].filter(p => p.pos !== pos).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
-      const qb = pos === 'qb' ? null : ro.qb.filter(notMe)[0] ?? null
+      const ol = (ro.ol ?? []).slice(0, 5)
+      const weapons = [...(ro.wr ?? []), ...(ro.te ?? []), ...(ro.rb ?? [])].filter(p => p.pos !== pos).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
+      const qb = pos === 'qb' ? null : (ro.qb ?? []).filter(notMe)[0] ?? null
       const olG = r10(ovrGradeVal(avgOvr(ol))), wpG = r10(ovrGradeVal(avgOvr(weapons))), qbG = qb ? r10(ovrGradeVal(qb.ovr)) : 5
       const groups = [...(pos !== 'qb' ? [{ k: 'QB', v: qbG, names: qb ? [qb.name] : [] }] : []), { k: 'O-LINE', v: olG, names: ol.map(p => p.name) }, { k: 'WEAPONS', v: wpG, names: weapons.map(p => p.name) }]
       const adj = pos === 'qb' ? (olG - 6) * 0.25 + (wpG - 6) * 0.25 : (qbG - 6) * 0.3 + (olG - 6) * 0.15
@@ -572,7 +572,58 @@ export const cloudSport = (sport, slot = 0) => (slot ? `${sport}#${slot}` : spor
 const histKey = sport => `bap_career_hist_${sport}`
 const validCareer = c => !!(c && c.v === CAREER_V && c.pos)
 export function loadCareer(sport, uid, slot = 0) {
-  try { const c = JSON.parse(localStorage.getItem(key(sport, uid, slot))); return validCareer(c) ? realAges({ ...c, slot }) : null } catch { return null }
+  try { const c = JSON.parse(localStorage.getItem(key(sport, uid, slot))); return validCareer(c) ? opened({ ...c, slot }) : null } catch { return null }
+}
+// ── A save from another version of the game (2026-11-10) ─────────────────────
+// Football's league is kept as { coach, off, def } a team. Since 9 Nov the ratings come from the roster and
+// the staff (coach); a client from before that (a tab left open, an app build) reads off and def, and a save
+// that carried only coach gave it NaN for both sides of the ball: every game of the season it started had
+// no score and was a loss (the stat lines and the schedule were fine). Three things put it right:
+//   driftLeague writes off and def again beside coach, so an older client finds its numbers;
+//   healLeague gives them to a save that lacks them (0: the team's own rating);
+//   healSeason replays a season that was started on those ratings.
+const isNum = Number.isFinite
+function healLeague(c) {
+  const lg = c?.league
+  if (c?.sport !== 'nfl' || !lg || typeof lg !== 'object') return c
+  let fixed = null
+  for (const [k, v] of Object.entries(lg)) {
+    const e = v && typeof v === 'object' ? v : {}
+    if (isNum(e.off) && isNum(e.def)) continue
+    (fixed ??= { ...lg })[k] = { ...e, off: isNum(e.off) ? e.off : 0, def: isNum(e.def) ? e.def : 0 }
+  }
+  return fixed ? { ...c, league: fixed } : c
+}
+// a football season under way whose team has no ratings, or whose games have no scores (never the playoffs:
+// a season like that can't reach them)
+function brokenSeason(c) {
+  const a = c?.active
+  if (c?.sport !== 'nfl' || c.phase !== 'season' || !a || a.po || a.final) return false
+  const games = a.snap?.games ?? a.base?.games
+  if (!Array.isArray(games) || !games.length) return false
+  return (!!c.simTeam && (!isNum(c.simTeam.off) || !isNum(c.simTeam.def))) || games.some(g => !isNum(g?.mySc) || !isNum(g?.oppSc))
+}
+// The season starts over from its first game on the team as it really rates, with a line in the feed that
+// says so. Everything before it stays: the seasons played, the contract, the roster, the build (a bye-week
+// gain included). The injuries of the lost games go with them.
+function healSeason(c) {
+  if (!brokenSeason(c)) return c
+  try {
+    const yr = c.year + 1
+    const [n] = startSeason({ ...c, phase: 'preseason', active: null, simTeam: null, goals: [], injuries: (c.injuries ?? []).filter(i => i.year !== yr) })
+    if (brokenSeason(n)) return c
+    return { ...n, active: { ...n.active, feed: [...n.active.feed, { k: 0, note: 'This season’s games were saved without scores. It starts over from Week 1.', noteKind: 'SEASON RESTARTED' }] } }
+  } catch { return c }
+}
+// What a save is when it's opened: real ages (realAges), then put right. A replayed season is kept at once
+// (here and in the cloud), so every screen that opens the career sees the same one.
+function opened(c0) {
+  const c = healLeague(realAges(c0))
+  const n = healSeason(c)
+  if (n === c) return c
+  const s = { ...n, updatedAt: Date.now() }
+  try { localStorage.setItem(key(s.sport, s.uid, s.slot ?? 0), JSON.stringify(s)); queueCloudSave(s) } catch {}
+  return s
 }
 // Every save stamps `updatedAt` (local and cloud copies are merged by it) and,
 // for a signed-in player, queues the cloud copy (lib/careerCloud.js). A save
@@ -602,7 +653,7 @@ export async function syncCareerFromCloud(sport, uid, slot = 0) {
   const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid, slot } : null
   if (good && (!local || (good.updatedAt || 0) > (local.updatedAt || 0))) {
     try { localStorage.setItem(key(sport, uid, slot), JSON.stringify(good)) } catch {}
-    return realAges(good)
+    return opened(good)
   }
   if (local) {
     if (!good || (local.updatedAt || 0) > (good.updatedAt || 0)) queueCloudSave(local.updatedAt ? local : { ...local, updatedAt: Date.now() })
@@ -662,7 +713,8 @@ const pastCap = (sport, g, name, yrs, room = 0) => yrs > 0 && ageOf(sport, name,
 const rosterYrs = c => Math.max(0, (c.season ?? FIRST_SEASON) + (c.phase === 'offseason' ? 1 : 0) - FIRST_SEASON)
 const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name), slot: p.pos ?? p.subpos ?? null, from: p.team, ...(pos === 'dl' || pos === 'lb' ? { height: p.height, weight: p.weight, size: p.attrs?.size } : {}) })
 const byOvr = (a, b) => b.ovr - a.ovr
-const avgOvr = list => (list.length ? list.reduce((s, p) => s + p.ovr, 0) / list.length : 72)
+// (an empty room, or one whose men have no overall on record, grades as an average one: never NaN)
+const avgOvr = list => { const v = list.map(p => p?.ovr).filter(Number.isFinite); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 72 }
 // A team's real roster (the depth the lineup needs, the five starting linemen in football)
 // A career saved before real ages: the real players on the roster get theirs
 function realAges(c0) {
@@ -1102,9 +1154,9 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
   const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs, gone)
   const f = S.fit(ro, pos, p => p.name !== name, spot, short, yrs)
   // (football: from the men on the roster and the coaching staff, teamRating; the others: the team's rating and the league's moves)
-  const drift = league?.[short] ?? { off: 0, def: 0 }
+  const drift = league?.[short] ?? { off: 0, def: 0 }, moved = k => (Number.isFinite(drift[k]) ? drift[k] : 0)
   const rt = S.talent ? teamRating(S, short, ro, pos, p => p.name !== name, league, yrs) : null
-  const off = rt ? rt.off : clamp(r10(t.off + drift.off), 1, 10), def = rt ? rt.def : clamp(r10(t.def + drift.def), 1, 10)
+  const off = rt ? rt.off : clamp(r10(t.off + moved('off')), 1, 10), def = rt ? rt.def : clamp(r10(t.def + moved('def')), 1, 10)
   return {
     short, name: t.name, color: t.color, color2: t.color2, off, def, conf: t.conf, div: t.div, status: S.status((off + def) / 2),
     ...(rt ? { coach: rt.coachG, offG: rt.offG, defG: rt.defG } : {}),
@@ -1152,7 +1204,7 @@ function talentMid(S, yrs = 0) {
 }
 // the staff's grade on the 0-11 scale (an average staff is a B)
 const coachGrade = v => r10(clamp(6 + v * 2.5, 0, 11))
-const coachOf = (S, short, league) => (typeof league?.[short]?.coach === 'number' ? league[short].coach : rateBase(S).coach0[short] ?? 0)
+const coachOf = (S, short, league) => (Number.isFinite(league?.[short]?.coach) ? league[short].coach : rateBase(S).coach0[short] ?? 0)
 function teamRating(S, short, ro, pos, notMe, league, yrs = 0) {
   const B = rateBase(S), mid = talentMid(S, yrs), T = S.talent(ro, pos, notMe), coach = coachOf(S, short, league)
   const offMid = pos === 'qb' ? mid.qbOff : mid.off
@@ -1166,7 +1218,15 @@ function teamRating(S, short, ro, pos, notMe, league, yrs = 0) {
 const ratingOf = (c, short) => { const S = sportOf(c); return S.talent ? teamRating(S, short, rosterFor(c, short), null, () => true, c.league, rosterYrs(c)) : null }
 const lineSpot = c => (c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : null)
 const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short), spot: lineSpot(c) })
-function simTeam(c, fit) { const S = sportOf(c); return S.simTeam(S.teamOf(c.team), fit, c.nextMods ?? {}, c) }
+// (never handed to a sim with a rating that isn't a number: soundTeam)
+function simTeam(c, fit) { const S = sportOf(c), t = S.teamOf(c.team); return soundTeam(S.simTeam(t, fit, c.nextMods ?? {}, c), t) }
+// A side of the ball that isn't a number (see healLeague) falls back to the team's own rating; a sound team
+// comes back as it is, the same object
+function soundTeam(team, base) {
+  if (!team || (Number.isFinite(team.off) && Number.isFinite(team.def))) return team
+  const or = k => (Number.isFinite(team[k]) ? team[k] : Number.isFinite(base?.[k]) ? base[k] : 5.5)
+  return { ...team, off: or('off'), def: or('def') }
+}
 // ── The front office deals for a player (the trade deadline) ─────────────────
 // He joins the roster for real: in his own spot (a lineman) or by his overall,
 // and whoever falls off the end goes the other way. The team is graded again
@@ -1271,14 +1331,16 @@ function driftLeague(c, r) {
     const d = c.league?.[t.short] ?? { off: 0, def: 0 }
     // (most of a team's swing is the whole team, a new coach or a new quarterback: both sides together)
     const g0 = gauss()
-    const move = k => { const { m, sd } = shape[k], now = t[k] + (d[k] ?? 0), g = 0.75 * g0 + 0.66 * gauss(); return r10(clamp(m + (now - m) * keep + g * sd * swing, 1.5, 9.8) - t[k]) }
+    const move = k => { const { m, sd } = shape[k], now = t[k] + (Number.isFinite(d[k]) ? d[k] : 0), g = 0.75 * g0 + 0.66 * gauss(); return r10(clamp(m + (now - m) * keep + g * sd * swing, 1.5, 9.8) - t[k]) }
     const off = move('off'), def = move('def')
     // football: the roster moves the team itself (teamRating), so the league's swing is the coaching staff's,
     // a new head coach or new coordinators: it keeps 45% of where it stood and takes the year's swing
     // (never past 3 either way; set so teams rise and fall as much as they did on the old ratings: a
     // bottom-five team reaches the top five within five years about 27% of the time). The same dice
     // as before, so the roster moves that follow come out as they did.
-    league[t.short] = S.talent ? { coach: clamp(r10(coachOf(S, t.short, c.league) * 0.45 + g0 * 1.3), -3, 3) } : { off, def }
+    // (off and def stay on the entry: nothing here reads them for football, a client from before the roster
+    // ratings reads nothing else, and without them it played a season of games with no scores: healLeague)
+    league[t.short] = S.talent ? { coach: clamp(r10(coachOf(S, t.short, c.league) * 0.45 + g0 * 1.3), -3, 3), off, def } : { off, def }
   }
   return league
 }
@@ -1951,7 +2013,7 @@ function seasonSwing(c, D) {
 }
 // Picks a saved season back up: the director rebuilt from its own data
 export function resumeSeason(c) {
-  const D = director(c, c.simTeam, c.active.base, c.active.seed)
+  const D = director(c, soundTeam(c.simTeam, sportOf(c).teamOf(c.team)), c.active.base, c.active.seed)
   D.restore(c.active.snap)
   return D
 }
