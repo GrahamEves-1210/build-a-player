@@ -623,9 +623,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // memo below only re-runs when that set actually changes (sandbox mode
   // hands in a freshly mapped pool array on every render).
   const draftableTeams = [...new Set(qbPool.map(teamOf))].sort().join(',')
-  // A team with one player at the position (a kicker: one a team): the player wheel has one name on it, so it lands
+  // A kicker's team has one kicker (only the kicker's pools: nothing changes for any other position): the player wheel has one name on it, so it lands
   // at once, and there is no player to respin to. The respin row is the team respin alone.
-  const soloTeam = !!selectedTeam && !oneWheel && qbPool.filter(q => teamOf(q) === selectedTeam.short).length <= 1
+  const soloTeam = isK && !!selectedTeam && !oneWheel && qbPool.filter(q => teamOf(q) === selectedTeam.short).length <= 1
 
   const teamReelItems = useMemo(() => {
     // Only teams with someone to draft — landing on a team with no players
