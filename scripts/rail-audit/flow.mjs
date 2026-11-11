@@ -100,8 +100,9 @@ export async function playBuild(ctx, { max = 14, onFirst = null } = {}) {
   for (let i = 0; i < max; i++) {
     if (await ctx.has('.sim-btn:not(.sim-btn-locked)')) return true
     if (!await ctx.has('.spin-btn') && await ctx.has('.drop-bar:not(.is-open)')) await ctx.click('.drop-bar', 700)
+    if (!await ctx.has('.spin-btn')) await ctx.click('.mobile-tab-bar .mtab:first-child', 600)   // (the classic look: SPIN is a tab)
     if (!await ctx.click('.spin-btn', 400)) { await sleep(600); continue }
-    if (!await ctx.waitFor(CHIP, 12000)) continue
+    if (!await ctx.waitFor(CHIP, 6000)) { await ctx.click('.mobile-tab-bar .mtab:last-child', 600); if (!await ctx.waitFor(CHIP, 6000)) continue }
     if (i === 0 && onFirst) await onFirst()
     await ctx.click(CHIP, 700)
   }

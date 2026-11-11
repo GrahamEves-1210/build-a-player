@@ -2,6 +2,7 @@
 // its path (with its saves seeded), walks its screens and calls ctx.audit(name) on each one.
 // A new screen, sheet or mode gets a line here; `node scripts/rail-audit.mjs --list` prints what there is.
 import { sheet, walk, crawl, screen, seed, playBuild, sleep } from './flow.mjs'
+import { MODES } from './scenarios-modes.mjs'
 
 // Home: what the crawler leaves alone (the modes and the dock have scenarios of their own; rows of the same kind)
 const HOME_SKIP = /^(ag-way|ag-start|ag-sport-btn|ag-resume|ps-tile|ntag-link|ag-tab|ag-play|ag-howto|ag-player-chip|coin-pill)\|/
@@ -62,7 +63,7 @@ export const SCENARIOS = [
     if (await ctx.click('.drop-bar:not(.is-open)', 900)) await ctx.audit('Build > Spin sheet open')
     if (await ctx.click('.spin-btn', 400) && await ctx.waitFor('.attr-chip', 12000)) { await sleep(600); await ctx.audit('Build > Spin result (pick a slot)') } else ctx.miss('Build > Spin result', 'the spin did not finish')
     if (await ctx.click('.attr-chip', 900)) await ctx.audit('Build > One trait placed')
-    await sheet(ctx, 'Build > Position menu', '.tab-pill', { back: 'esc' })
+    await sheet(ctx, 'Build > Position menu', '.tab-pill', { back: '.tab-pill' })
     await sheet(ctx, 'Build > More', '.nav-more-btn', { back: '.ag-menu-overlay .ag-round-btn' })
     await sheet(ctx, 'Build > Sandbox', '.ag-sandbox-main', { back: ['.cr-close', /^(cancel|close|back)$/i, 'esc'] })
     if (await playBuild(ctx)) {
@@ -104,4 +105,5 @@ export const SCENARIOS = [
     await crawl(ctx, 'Season (QB): final report', { enter: async () => {}, depth: 2, skip: /^(splash-site-footer|pp-banner|simp-back)/ })
     if (end !== 'until') ctx.miss('Season (QB): the whole season', `the walk ended early (${end})`)
   } },
+  ...MODES,
 ]

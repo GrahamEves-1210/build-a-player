@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs'
 import { inflateSync } from 'node:zlib'
 import { launch, sleep } from './cdp.mjs'
 
-export const INPAGE = readFileSync(new URL('./inpage.js', import.meta.url), 'utf8')
+// the page side, in order: no writes and the clock; the simulated rail and the check; the scenarios' helpers
+export const INPAGE = ['inpage.js', 'rail-sim.js', 'helpers.js'].map(f => readFileSync(new URL('./' + f, import.meta.url), 'utf8')).join('\n;')
 
 // decode a PNG (8-bit RGB/RGBA, not interlaced: what Chromium's screenshots are) to raw pixels
 function decodePng(buf) {
