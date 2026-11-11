@@ -255,7 +255,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // RB1s or WR1s, never a backup, respins included. (The season still plays each team's real depth)
   const teamsBy = useMemo(() => Object.fromEntries((data?.teams ?? []).map(t => [t.short, t])), [data])
   // (a later season's rosters, classes moved on: cfbShared seasonData. A new build starts at season one)
-  const pool = useMemo(() => (seasonData(data, history.length)?.pools[pos] ?? []).filter(p => p.starter === true).map(p => {
+  const pool = useMemo(() => (seasonData(data, history.length)?.pools[pos] ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3)).map(p => {
     const t = teamsBy[p.team]
     return {
       ...p,
