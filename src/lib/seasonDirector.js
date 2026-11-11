@@ -10,7 +10,7 @@
 
 import { seeded } from './rng'
 import { MILESTONES, RECORDS, headlineFor } from './seasonFacts'
-import { pickScenario, INJURY_CARDS } from './scenarios'
+import { pickScenario, INJURY_CARDS, hasLife } from './scenarios'
 import { kTotals } from './kicks'
 
 // Per position: which season fields are sums of which game fields, and how a
@@ -110,7 +110,7 @@ export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY
 // stats went on the day's board when it was locked in, and View Results replays that same season)
 // onFinal (soccer's Career): the booked season again from the games as played (the table, the awards)
 // oppName: how an opponent reads in a headline (the one-off baseball page: a club's nickname, not its code)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null, career = null }) {
   const isBucket = sport === 'bucket'
   // soccer: a match can be drawn, a season is 34-38 matchweeks, and the table counts points
   const isSoccer = sport === 'soccer'
@@ -130,7 +130,21 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const w = lo + Math.floor(rs() * (hi - lo + 1))
     if (weeks.every(x => Math.abs(x - w) >= gap)) weeks.push(w)
   }
-  const stops = weeks.sort((a, b) => a - b).map((at, i) => ({ i, at, kind: 'season', total }))
+  let stops = weeks.sort((a, b) => a - b).map((at, i) => ({ i, at, kind: 'season', total }))
+  // Career (football, basketball): two more stops a season for the cards about the career
+  // and the team (scenarios.js, the LIFE bank). Their own seeded weeks, drawn after the ones above and never on
+  // one of them (nor the week beside it, while there is room), so every decision above falls where it always did.
+  // `life` on the stop: no in-game moment there, and only those cards.
+  if (career && hasLife(sport)) {
+    const rl = seeded(`life-${seed}`)
+    const n = 2, lo2 = isBucket ? 5 : 1, hi2 = total - (isBucket ? 5 : 1), own = isBucket ? 16 : 4, near = isBucket ? 3 : 2
+    const life = []
+    for (let tries = 0; life.length < n && tries < 300 && hi2 > lo2; tries++) {
+      const w = lo2 + Math.floor(rl() * (hi2 - lo2 + 1)), room = tries < 200 ? near : 1
+      if (life.every(x => Math.abs(x - w) >= own) && stops.every(x => Math.abs(x.at - w) >= room)) life.push(w)
+    }
+    stops = [...stops, ...life.map(at => ({ at, kind: 'season', total, life: true }))].sort((a, b) => a.at - b.at).map((x, i) => ({ ...x, i }))
+  }
   stops.push({ i: stops.length, at: total, kind: 'playoffs', total })
   const teamNick = (X?.nick ? X.nick(team) : isSoccer ? team?.name : team?.name?.split(' ').slice(-1)[0]) ?? 'Your team'
   const r = seeded(`director-${seed}`)
@@ -155,6 +169,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     finalized: false, final: null,
     xp: 0, sat: [],
     deals,                        // Career: who the front office can trade for, and what he does to the team
+    career,                       // Career: (k, next game) => where the career stands, for the LIFE cards (lib/career.js lifeView)
   }
 
   const fixedRunMods = at => {
@@ -289,6 +304,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const noInjury = (rated || !always) && ([...D.used].some(id => INJURY_CARDS.has(id)) || !(stop.kind === 'playoffs' ? playoffInjury : seasonInjury))
     const m = pickScenario({
       noInjury, sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team: applyMods(build, team, D.cum).team, deals: D.deals,
+      career: D.career && hasLife(sport) ? D.career(k, k < total ? D.games[k] : null) : null,
       next: stop.kind !== 'playoffs' && k < total ? D.games[k] : null,
       used: D.used, lastBig: !!(last && !last.sat && BIG_GAME[pos]?.(last)), lastBust: !!(last && !last.sat && BUST_GAME[pos]?.(last)),
     })

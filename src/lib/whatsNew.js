@@ -58,9 +58,20 @@ const NOV_10 = {
       ],
     },
     {
+      name: 'New Position: Kicker',
+      items: [
+        'Added K in Current and All-Time pools',
+        'Three ratings: Power, Accuracy and Clutch',
+        'Added K to Career: kickers are never injured and can play up to 24 seasons',
+        'New key moments: Deep Kick, Game Winner and Onside Kick',
+        'A season tracks field goals, extra points, points, the longest make and game-winners, with an All-Pro team in place of an award',
+      ],
+    },
+    {
       name: 'Career',
       items: [
         'Football seasons now have a bye week, between Weeks 5 and 14 like the NFL\'s: put in extra work on a position drill for a shot at a trait upgrade, or rest for a guaranteed durability boost',
+        'More decisions in a Career season, about two more a year: the career and the team (the rookie wall, a contract year, a trade rumor, a backup pushing for the job) and the position (a QB given the keys at the line, a corner traveling with their best receiver, a big asked to switch onto guards)',
         'Linebacker honors now read the whole season: tackles, TFL, sacks, picks, passes defended and forced fumbles, tilted to how he plays. A pass-rushing backer with 10 sacks no longer needs 125 tackles for a Pro Bowl',
         'Linebacker sacks count a little more toward legacy',
         'Added Start in College for QB, RB and WR: pick from school offers, play a season or two, then enter the draft',
