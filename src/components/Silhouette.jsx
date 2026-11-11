@@ -9,6 +9,8 @@ import { DLS } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
 import { LBS, LB_SILHOUETTE } from '../data/lbs'
 import { OL_SILHOUETTE } from '../data/ols'
+import { KS } from '../data/ks'
+import { K_LEGENDS } from '../data/k-legends'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_PHYSICALS } from '../data/ols'
@@ -45,6 +47,7 @@ import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const DL_PHYS = Object.fromEntries([...DLS, ...DL_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const LB_PHYS = Object.fromEntries([...LBS, ...LB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
+const K_PHYS = Object.fromEntries([...KS, ...K_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
 
 // Figure coordinate space (matches QB silhouette dimensions)
@@ -216,6 +219,21 @@ const OL_ZONES = [
   { type: 'mobility',    ax: 780, ay: 1215, side: 'right', cy: 0.77 }, // shoe
 ]
 
+// KICKER PLACEHOLDER: no kicker art yet, so a kicker is drawn on the QB figure (K_SILHOUETTE in data/ks.js) with three
+// zones in its coordinate space. With real art: its own figure size, an overlay like OLFigureOverlay, and these three
+// re-anchored (clutch: the helmet, accuracy: the plant foot or the chest, power: the kicking leg).
+const K_ZONES = [
+  { type: 'clutch',   ax: 275, ay:  42, side: 'left',  cy: 0.16 }, // helmet
+  { type: 'accuracy', ax: 350, ay: 240, side: 'right', cy: 0.45 }, // chest
+  { type: 'power',    ax: 207, ay: 525, side: 'left',  cy: 0.74 }, // legs
+]
+// the QB overlay colors a part when its QB rating has a chip: a kicker's three chips stand in for the parts they cover
+const kAsQB = b => ({
+  processing: b?.clutch, vision: b?.clutch, leadership: b?.clutch,
+  arm: b?.accuracy, accuracy: b?.accuracy, playmaking: b?.accuracy, size: b?.accuracy,
+  legs: b?.power, 'pocket-presence': b?.power,
+})
+
 function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)
   useLayoutEffect(() => {
@@ -276,13 +294,18 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false, isDL = false, isLB = false }) {
+function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false, isDL = false, isLB = false, isK = false }) {
   let ht, wt
   // College Football: off the chip itself (a college player isn't in the NFL lookups, and a name can be in both)
   const cfbChip = build['size']?.cfb ? build['size'] : null
   if (cfbChip) {
     ht = cfbChip.height ? fmtHeight(cfbChip.height) : null
     wt = cfbChip.weight ?? null
+  } else if (isK) {
+    // a kicker has no Size rating: the frame is the leg's (the Power chip)
+    const kPhys = build['power'] ? (build['power'].height ? build['power'] : K_PHYS[build['power'].qbFull]) : null
+    ht = kPhys?.height ? fmtHeight(kPhys.height) : null
+    wt = kPhys?.weight ?? null
   } else if (isLB) {
     const lbPhys = build['size'] ? (build['size'].height ? build['size'] : LB_PHYS[build['size'].qbFull]) : null
     ht = lbPhys?.height ? fmtHeight(lbPhys.height) : null
@@ -418,12 +441,12 @@ function BaseballSilhouette(props) {
   return <SilhouetteFigure {...props} {...mapped} isBucket activeDrag={activeDrag ? { ...activeDrag, type: to(activeDrag.type) } : activeDrag} />
 }
 
-function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
+function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
   const figW   = isBucket ? BUCKET_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
   const figH   = isBucket ? BUCKET_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
-  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+  const zones  = isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -689,12 +712,12 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
         </div>
       )}
       {!modelOnly && <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isDL={isDLPos} isLB={isLB} isBucket={isBucket} />
+        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isK={isK} isDL={isDLPos} isLB={isLB} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
             className={`cat-pill ${(complete || activeCategory === cat.id) ? 'active' : ''}`}
-            style={isLite ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+            style={(isLite || isK) ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
             onClick={() => !complete && activeCategory !== cat.id && onCategoryChange(cat.id)}
           >
             {cat.label}
@@ -931,7 +954,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           )
         })()}
         </div>
-        {!isRB && !isWR && !isTE && !isDB && !isDL && !isOL && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {!isRB && !isWR && !isTE && !isDB && !isDL && !isOL && !isBucket && <QBFigureOverlay build={isK ? kAsQB(build) : build} className="player-qbfig" />}
         {isDB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
             <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
@@ -971,7 +994,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           aria-hidden="true"
         >
           {zones.filter(z => types.includes(z.type) && !z.noDot).map(zone => {
-            const hidden = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
+            const hidden = !(isLite || isK) && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = zonePosMap[zone.type]
             if (!p) return null
             const cardTopY = p.cardY - p.cardHalfH
@@ -998,7 +1021,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
         {/* Dots + cards */}
         {!modelOnly && <div className="cz-layer" style={{ zIndex: 10 }}>
           {zones.filter(z => types.includes(z.type)).map(zone => {
-            const hiddenFromTab = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
+            const hiddenFromTab = !(isLite || isK) && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = zonePosMap[zone.type]
             return (
               <div key={zone.type}>

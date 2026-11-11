@@ -17,7 +17,7 @@ const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { h
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, getArchetypeK, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import { shareOrDownloadCard } from '../utils/generateShareCard'
@@ -120,13 +120,13 @@ function BuildSlot({ type, data, attrMap = ATTR, logoDir = '/logos/' }) {
 // ── Share Modal ───────────────────────────────────────────────────────────────
 
 // (soccer: `isSoccer`, and the build's own link `shareLink`: the soccer app makes it)
-export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', shareLink = null, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, captureFigure }) {
+export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', shareLink = null, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, captureFigure }) {
   const [copied, setCopied]       = useState(false)
   const [cardDataUrl, setCardDataUrl] = useState(null)
   const [cardBlob, setCardBlob]       = useState(null)
   const who = getUsername(useProgress().user) || 'Guest'
 
-  const posWord    = isOL ? 'offensive lineman' : isDL ? 'defensive lineman' : isLB ? 'linebacker' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
+  const posWord    = isK ? 'kicker' : isOL ? 'offensive lineman' : isDL ? 'defensive lineman' : isLB ? 'linebacker' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
   const shareText  = isBucket || isSoccer || isBaseball ? bucketText : `I made a ${ovr} overall ${arch} ${posWord}, think you can do better?`
   const shareUrl   = shareLink ?? buildShareUrl(build, types)
@@ -137,7 +137,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   useEffect(() => {
     let live = true
     ;(async () => {
-      const posLabel = isSoccer ? 'ST' : isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : isOL ? 'OL' : isDL ? 'DL' : isLB ? 'LB' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
+      const posLabel = isSoccer ? 'ST' : isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : isK ? 'K' : isOL ? 'OL' : isDL ? 'DL' : isLB ? 'LB' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
       const canvas = await drawSeasonCard({
         sport: isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl', name: who, tag: isBaseball ? (baseballPos === 'pit' ? 'PITCHER' : 'BATTER') : isBucket || isSoccer ? (isSoccer ? 'STRIKER' : posLabel) : posWord.toUpperCase(),
         hero: { value: ovr, label: 'OVR' }, sub: arch && !/remaining$/.test(arch) ? arch : null,
@@ -306,20 +306,20 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // Soccer: `isSoccer` with its own `calcOvr` / `calcArch` (the soccer app hands them in, so this file
 // never loads the soccer sim), `sizeSlot` (whose height and weight) and `shareLink`
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', hands = null, calcOvr = null, calcArch = null, sizeSlot = 'strength', shareLink = null, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null, simLabel = null }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', hands = null, calcOvr = null, calcArch = null, sizeSlot = 'strength', shareLink = null, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null, simLabel = null }) {
   const filled = types.filter(t => build[t])
   // (baseball like soccer: BaseballApp hands in calcOvr / calcArch, so this file never loads the baseball sim)
-  const ovr = isSoccer || isBaseball ? (calcOvr?.(build, types) ?? 0) : isBucket ? calcBucketOVR(build, types, bucketPosition) : isOL ? calcOVROL(build, types) : isDL ? calcOVRDL(build, types) : isLB ? calcOVRLB(build, types) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const ovr = isSoccer || isBaseball ? (calcOvr?.(build, types) ?? 0) : isBucket ? calcBucketOVR(build, types, bucketPosition) : isK ? calcOVRK(build, types) : isOL ? calcOVROL(build, types) : isDL ? calcOVRDL(build, types) : isLB ? calcOVRLB(build, types) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isSoccer || isBaseball ? (calcArch?.(ovr, build, types) ?? '') : isBucket
     ? (bucketPosition === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types))
-    : isOL ? getArchetypeOL(ovr, build, types) : isDL ? getArchetypeDL(ovr, build, types) : isLB ? getArchetypeLB(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+    : isK ? getArchetypeK(ovr, build, types) : isOL ? getArchetypeOL(ovr, build, types) : isDL ? getArchetypeDL(ovr, build, types) : isLB ? getArchetypeLB(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   // The player comp: once the build is complete, who it plays like. A phone shows it under
   // the OVR; on a desktop the report card gets a switch that flips its list over to it.
   const prog = useProgress()
   const who = getUsername(prog.user) || 'Guest'
-  const compPos = isBaseball ? baseballPos : isSoccer ? 'st' : isBucket ? (bucketPosition === 'big' ? 'big' : 'guard') : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const compPos = isBaseball ? baseballPos : isSoccer ? 'st' : isBucket ? (bucketPosition === 'big' ? 'big' : 'guard') : isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const comp = useMemo(() => {
     if (!complete) return null
     const c = { sport: isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl', pos: compPos, types, build }
@@ -374,6 +374,11 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     const slot = build['size'] || build['heightLength']
     heightStr = slot?.height ? fmtHeight(slot.height) : null
     weightLbs = slot?.weight ?? null
+  } else if (isK) {
+    // a kicker has no Size rating: the frame is the leg's (the Power chip)
+    const kChip = build['power']
+    heightStr = kChip?.height ? fmtHeight(kChip.height) : null
+    weightLbs = kChip?.weight ?? null
   } else if (isDL || isLB) {
     // off the chip itself: the same name can be on two teams at two sizes
     const dlChip = build['size']
@@ -547,7 +552,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}
-          isBucket={isBucket} isSoccer={isSoccer} isBaseball={isBaseball} baseballPos={baseballPos} shareLink={shareLink} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} captureFigure={captureFigure} />,
+          isBucket={isBucket} isSoccer={isSoccer} isBaseball={isBaseball} baseballPos={baseballPos} shareLink={shareLink} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} captureFigure={captureFigure} />,
         document.body
       )}
     </aside>

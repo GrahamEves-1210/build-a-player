@@ -20,6 +20,7 @@ import EmptyState from './EmptyState'
 import { RollingNumber } from './MotionText'
 import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
 import { OL_LIVE, OL_SOON } from '../../lib/olLive'
+import { K_LIVE, K_SOON } from '../../lib/kLive'
 import { SOCCER_LIVE, SOCCER_SOON } from '../../lib/soccerLive'
 import { SOCCER_POOL } from '../../lib/soccerUi'
 import { BASEBALL_LIVE } from '../../lib/baseballLive'
@@ -45,14 +46,15 @@ const NFL_FIGURE = {
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/lb-silhouette.webp', scale: 1 },
   ol: { src: '/ol-silhouette.webp', scale: 1 },
+  k: { src: '/qb-silhouette.webp', scale: 1 },   // PLACEHOLDER: no kicker art yet, the QB figure stands in (K_SILHOUETTE in data/ks.js)
 }
 const reducedMotion = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 // football's side of the ball (Home's OFFENSE / DEFENSE switch)
 const SIDE_OF = { qb: 'off', rb: 'off', wr: 'off', te: 'off', ol: 'off', dl: 'def', db: 'def', lb: 'def', k: 'def' }
-// the kicker: coming soon, a locked tab at the end of the defense's bar (nothing else knows the position yet)
+// the kicker while he's coming soon (K_SOON in lib/kLive.js): a locked tab at the end of the defense's bar. Live, he's a real tab there
 const KICKER_SOON = { pos: 'k', label: 'K', soon: true, locked: true }
-const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs', st: 'Strikers' }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line' }
+const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', k: 'Kickers', guard: 'Guards', big: 'Bigs', st: 'Strikers' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line', k: 'Kicker' }
 // Who's on the Current and All-Time buttons, for the position picked (football's current
 // faces are POS_OPTIONS.players). Every one of them is in that pool.
 const face = (id, color) => ({ id, color })
@@ -65,6 +67,7 @@ const GREATS = {
   dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
   lb: [face('espn_964', '#241773'), face('espn_4433', '#ffb612'), face('espn_14938', '#0085ca')], // Ray Lewis, James Harrison (in the DL all-time pool as an edge), Kuechly
   ol: [face('espn_10448', '#311d00'), face('espn_13241', '#aa0000'), face('espn_16709', '#003594')],  // Joe Thomas, Trent Williams, Zack Martin
+  k: [face('espn_15683', '#241773'), face('espn_1097', '#002c5f'), face('espn_10636', '#203731')],   // Tucker, Vinatieri (his ESPN photo is in Colts blue), Crosby
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
 }
@@ -448,12 +451,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     ? [{ pos: 'st', label: 'ST', sub: 'STRIKER' }, { pos: 'gk', label: 'GK', sub: 'COMING SOON', locked: true }]
     : isBucket
     ? [{ pos: 'guard', label: 'GUARD', sub: 'PG · SG · SF' }, { pos: 'big', label: 'BIG', sub: 'PF · C' }]
-    : [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => (o.pos === 'lb' && LB_SOON) || (o.pos === 'ol' && OL_SOON)).map(o => ({ ...o, soon: true, locked: true })), KICKER_SOON]   // (LB and OL while they're coming soon: locked, at the end of their side)
+    : [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => (o.pos === 'lb' && LB_SOON) || (o.pos === 'ol' && OL_SOON)).map(o => ({ ...o, soon: true, locked: true })), ...(K_SOON ? [KICKER_SOON] : [])]   // (LB and OL while they're coming soon: locked, at the end of their side)
   // football: the positions split by side of the ball, one side's bar at a time (the defense front to back, a
   // position still coming at the end); the side switch sits on top of the bar
   const isNfl = !isBucket && !isSoccer && !isBaseball
   const side = SIDE_OF[position] ?? 'off'
-  const SIDE_ORDER = { dl: 0, db: 1, lb: 2 }
+  const SIDE_ORDER = { dl: 0, db: 1, lb: 2, k: 3 }
   const shown = isNfl ? positions.filter(o => (SIDE_OF[o.pos] ?? 'off') === side).sort((a, b) => (a.locked ? 1 : 0) - (b.locked ? 1 : 0) || (side === 'def' ? (SIDE_ORDER[a.pos] ?? 9) - (SIDE_ORDER[b.pos] ?? 9) : 0)) : positions
   const posIdx = Math.max(0, shown.findIndex(o => o.pos === position))
   // each side's position: the one picked, or the one it was left on (else its first)
@@ -648,7 +651,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               </div>
             ) : (
               <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => { dir.current = i < at ? -1 : 1; pick(o.pos) }}>
-                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE)) && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
+                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE) || (o.pos === 'k' && K_LIVE)) && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
             )
@@ -664,7 +667,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             const at = (list, k) => Math.max(0, list.findIndex(o => o.pos === sideFirst(k)?.pos))
             const sw = (k, label) => (
               <button key={`to-${k}`} className={`ag-pos ag-pos--side ag-pos--to-${k}`} onClick={() => pickSide(k)} aria-label={`Show the ${label.toLowerCase()}`}>
-                {k === 'def' && LB_LIVE && <span className="ag-pos-new">NEW</span>}
+                {k === 'def' && (LB_LIVE || K_LIVE) && <span className="ag-pos-new">NEW</span>}
                 <span className="ag-side-word">{label}</span>
                 <svg className="ag-side-arrow" viewBox="0 0 24 10" width="24" height="10" aria-hidden="true"><path d={k === 'def' ? 'M1 5h20M16 1l5 4-5 4' : 'M23 5H3M8 1L3 5l5 4'} /></svg>
               </button>

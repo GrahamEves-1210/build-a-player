@@ -12,6 +12,7 @@ export function hsUrl(id) {
 import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { LB_LIVE } from '../lib/lbLive'
 import { OL_LIVE } from '../lib/olLive'
+import { K_LIVE } from '../lib/kLive'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
@@ -80,6 +81,14 @@ export const POS_OPTIONS = [
       { id: 'espn_4685724',  color: '#002244' },  // Will Anderson Jr - HOU
     ],
   },
+  {
+    pos: 'k', label: 'K', classic: K_LIVE, alltime: K_LIVE, disabled: !K_LIVE,   // K_LIVE: lib/kLive.js
+    players: [
+      { id: 'espn_3953687', color: '#003594' },  // Brandon Aubrey - DAL
+      { id: 'espn_2971573', color: '#03202f' },  // Ka'imi Fairbairn - HOU
+      { id: 'espn_3150744', color: '#d50a0a' },  // Chase McLaughlin - TB
+    ],
+  },
 ]
 
 function MiniAv({ id, color, size = 28 }) {
@@ -142,7 +151,7 @@ function PositionPicker({ position, onChange }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {(opt.pos === 'db' || (opt.pos === 'lb' && LB_LIVE) || (opt.pos === 'ol' && OL_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
+              {(opt.pos === 'db' || (opt.pos === 'lb' && LB_LIVE) || (opt.pos === 'ol' && OL_LIVE) || (opt.pos === 'k' && K_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
@@ -256,7 +265,7 @@ const DB_ATTRS = [
 // (the DL figure stands with its legs apart: the long words go on the head and body, the short ones down the right
 //  leg a size smaller, the calf's word upright. x: % of the figure's width right of centre. Same nine colors.)
 const DL_ATTRS = [
-  { label: 'Power',    col: '#fb923c' },
+  { label: 'Power',    col: '#fb923c', x: -13 },   // (on the near leg: the middle of the band is the gap between them)
   { label: 'Get Off',  col: '#f87171' },
   { label: 'Strength', col: '#fbbf24' },
   { label: 'Finesse',  col: '#34d399' },
@@ -297,6 +306,13 @@ const OL_ATTRS = [
   { label: 'Length',     col: '#34d399' },
   { label: 'Size',       col: '#fb923c' },
   { label: 'Blitz',      col: '#e879f9' },
+]
+
+// The kicker's three, head to toe on the placeholder figure: the nerve, the aim, the leg
+const K_ATTRS = [
+  { label: 'Clutch',   col: '#a78bfa' },
+  { label: 'Accuracy', col: '#34d399' },
+  { label: 'Power',    col: '#fb923c', x: -13 },   // (on the near leg: the middle of the band is the gap between them)
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
@@ -370,7 +386,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
 }
 
 // Attribute bands per position — shared with the app home screen (components/app/AppHome)
-export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, dl: DL_ATTRS, lb: LB_ATTRS, ol: OL_ATTRS }
+export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, dl: DL_ATTRS, lb: LB_ATTRS, ol: OL_ATTRS, k: K_ATTRS }
 
 export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
   const [phase, setPhase] = useState(0)
@@ -400,7 +416,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
-  const attrs = position === 'ol' ? OL_ATTRS : position === 'dl' ? DL_ATTRS : position === 'lb' ? LB_ATTRS : position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
+  const attrs = position === 'k' ? K_ATTRS : position === 'ol' ? OL_ATTRS : position === 'dl' ? DL_ATTRS : position === 'lb' ? LB_ATTRS : position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>

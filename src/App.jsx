@@ -44,6 +44,9 @@ import { LB_LEGENDS } from './data/lb-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
 import { OL_LEGENDS } from './data/ol-legends'
 import { OL_LIVE } from './lib/olLive'
+import { KS, K_TYPES, K_LITE_TYPES, K_CATEGORIES, K_ATTR } from './data/ks'
+import { K_LEGENDS } from './data/k-legends'
+import { K_LIVE } from './lib/kLive'
 import { CFB_LIVE } from './lib/cfbLive'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
@@ -54,10 +57,10 @@ import { FORFEIT_RATING } from './lib/progress'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runDLSimulation, calcOVRDL, getArchetypeDL, runLBSimulation, calcOVRLB, getArchetypeLB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult } from './utils/simulation'
+import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runDLSimulation, calcOVRDL, getArchetypeDL, runLBSimulation, calcOVRLB, getArchetypeLB, runOLSimulation, calcOVROL, getArchetypeOL, runKSimulation, calcOVRK, getArchetypeK, calcKAllProResult, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
-const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
+const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -98,6 +101,7 @@ const CUSTOM_POOLS = {
   dl: { current: _dd(DLS).sort(_bt), legends: _dd(DL_LEGENDS).sort(_bt) },
   lb: { current: _dd(LBS).sort(_bt), legends: _dd(LB_LEGENDS).sort(_bt) },
   ol: { current: _dd(OLS).sort(_bt), legends: _dd(OL_LEGENDS).sort(_bt) },
+  k: { current: _dd(KS).sort(_bt), legends: _dd(K_LEGENDS).sort(_bt) },
 }
 
 // Detect shared build at module load time — before any React rendering
@@ -548,8 +552,9 @@ export default function App() {
   const isDL        = position === 'dl'
   const isLB        = position === 'lb'
   const isOL        = position === 'ol'
-  const activeTypes = isOL ? (gameMode === 'lite' ? OL_LITE_TYPES : OL_TYPES) : isDL ? (gameMode === 'lite' ? DL_LITE_TYPES : DL_TYPES) : isLB ? (gameMode === 'lite' ? LB_LITE_TYPES : LB_TYPES) : isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = isOL ? (gameMode === 'all-time' ? OL_LEGENDS : OLS) : isDL ? (gameMode === 'all-time' ? DL_LEGENDS : DLS) : isLB ? (gameMode === 'all-time' ? LB_LEGENDS : LBS) : isDB ? (gameMode === 'all-time' ? DB_LEGENDS : DBS) : isTE ? (gameMode === 'all-time' ? TE_LEGENDS : TES) : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const isK         = position === 'k'
+  const activeTypes = isK ? (gameMode === 'lite' ? K_LITE_TYPES : K_TYPES) : isOL ? (gameMode === 'lite' ? OL_LITE_TYPES : OL_TYPES) : isDL ? (gameMode === 'lite' ? DL_LITE_TYPES : DL_TYPES) : isLB ? (gameMode === 'lite' ? LB_LITE_TYPES : LB_TYPES) : isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
+  const activePool  = isK ? (gameMode === 'all-time' ? K_LEGENDS : KS) : isOL ? (gameMode === 'all-time' ? OL_LEGENDS : OLS) : isDL ? (gameMode === 'all-time' ? DL_LEGENDS : DLS) : isLB ? (gameMode === 'all-time' ? LB_LEGENDS : LBS) : isDB ? (gameMode === 'all-time' ? DB_LEGENDS : DBS) : isTE ? (gameMode === 'all-time' ? TE_LEGENDS : TES) : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
 
   // Tracks once per completed build (resets when the build becomes incomplete
@@ -578,8 +583,8 @@ export default function App() {
   // App: the shop reads Pro from storage; tell it when that changes
   useEffect(() => { if (IS_APP || APP_LOOK) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isPlus])
 
-  const customModeKey = isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
-  const customPoolKey = isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const customModeKey = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const customPoolKey = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const displayPool = (isCustomMode && customRatings[customModeKey])
     ? activePool.map(p => {
         const override = customRatings[customModeKey][`${p.name}|${p.team}`]
@@ -646,7 +651,8 @@ export default function App() {
     const isDLMode = pos === 'dl'
     const isLBMode = pos === 'lb'
     const isOLMode = pos === 'ol'
-    const types = isOLMode ? (mode === 'lite' ? OL_LITE_TYPES : OL_TYPES) : isDLMode ? (mode === 'lite' ? DL_LITE_TYPES : DL_TYPES) : isLBMode ? (mode === 'lite' ? LB_LITE_TYPES : LB_TYPES) : isDBMode ? (mode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTEMode ? (mode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
+    const isKMode = pos === 'k'
+    const types = isKMode ? (mode === 'lite' ? K_LITE_TYPES : K_TYPES) : isOLMode ? (mode === 'lite' ? OL_LITE_TYPES : OL_TYPES) : isDLMode ? (mode === 'lite' ? DL_LITE_TYPES : DL_TYPES) : isLBMode ? (mode === 'lite' ? LB_LITE_TYPES : LB_TYPES) : isDBMode ? (mode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTEMode ? (mode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
@@ -824,13 +830,13 @@ export default function App() {
   }, [cp.phase, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
   // LOCK IN: the build's OVR goes to the pool; the game is done with
   const lockInCompete = useCallback(() => {
-    const ovr = Math.round((isOL ? calcOVROL(build) : isDL ? calcOVRDL(build) : isLB ? calcOVRLB(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build)) ?? 0)
+    const ovr = Math.round((isK ? calcOVRK(build) : isOL ? calcOVROL(build) : isDL ? calcOVRDL(build) : isLB ? calcOVRLB(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build)) ?? 0)
     cp.submit(ovr, build)
     try { localStorage.removeItem('bap_progress') } catch {}
     setGameMode(null); setBuild({}); setSavedSpinResult(null)
     setPage('compete')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, cp, isOL, isDB, isDL, isLB, isTE, isWR, isRB])
+  }, [build, cp, isK, isOL, isDB, isDL, isLB, isTE, isWR, isRB])
 
   const startDaily = useCallback(() => {
     const dc = dailyState()
@@ -918,7 +924,9 @@ export default function App() {
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
       : team
-    const result = isOL
+    const result = isK
+      ? runKSimulation(build, effectiveTeam, gameMode === 'all-time')
+      : isOL
       ? runOLSimulation(build, effectiveTeam, gameMode === 'all-time')
       : isDL
       ? runDLSimulation(build, effectiveTeam, gameMode === 'all-time')
@@ -944,7 +952,7 @@ export default function App() {
       return
     }
     commitRef.current?.(result)
-  }, [build, activeTypes, gameMode, isOL, isDB, isDL, isLB, isTE, isWR, isRB]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [build, activeTypes, gameMode, isK, isOL, isDB, isDL, isLB, isTE, isWR, isRB]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── SALARY CAP (QB): picks from the day's grid → a season on a date-seeded team ──
   const [salaryReturnDate, setSalaryReturnDate] = useState(null)
@@ -1032,8 +1040,8 @@ export default function App() {
     // the database ignores client updates to `simulations` — so tagging the row
     // after the reveal never landed. SimPage reveals this same result.
     const isAllTimeSeason = !!result.team?.isAllTime
-    const awardType = isOL ? 'allpro' : (isDB || isDL || isLB) ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp'
-    const calcAward = isOL ? calcOLAllProResult : isDL ? calcDLDpoyResult : isLB ? calcLBDpoyResult : isDB ? calcDBDpoyResult : isTE ? calcTEOPOYResult
+    const awardType = (isOL || isK) ? 'allpro' : (isDB || isDL || isLB) ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp'
+    const calcAward = isK ? calcKAllProResult : isOL ? calcOLAllProResult : isDL ? calcDLDpoyResult : isLB ? calcLBDpoyResult : isDB ? calcDBDpoyResult : isTE ? calcTEOPOYResult
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
     result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
@@ -1063,7 +1071,9 @@ export default function App() {
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
     } else {
-      const arch = isOL
+      const arch = isK
+        ? getArchetypeK(result.ovr, build, activeTypes)
+        : isOL
         ? getArchetypeOL(result.ovr, build, activeTypes)
         : isDL
         ? getArchetypeDL(result.ovr, build, activeTypes)
@@ -1080,25 +1090,25 @@ export default function App() {
               : getArchetype(result.ovr, build, activeTypes)
       markPlayed(buildSig(gameMode, build, activeTypes))
       // checked by the live server on its way to the boards (lib/submit.js)
-      saveSeason('nfl', isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb', gameMode || 'classic', {
+      saveSeason('nfl', isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb', gameMode || 'classic', {
         user_id: user.id,
         username: getUsername(user) || 'Player',
         ovr: result.ovr,
         archetype: arch,
         // OL reuses the generic stat columns: pancakes / sacks allowed /
         // pressures allowed / pass-block win rate / penalties
-        game_mode: isOL ? `ol-${gameMode || 'classic'}` : isDL ? `dl-${gameMode || 'classic'}` : isLB ? `lb-${gameMode || 'classic'}` : isDB ? `db-${gameMode || 'classic'}` : isTE ? `te-${gameMode || 'classic'}` : isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
+        game_mode: isK ? `k-${gameMode || 'classic'}` : isOL ? `ol-${gameMode || 'classic'}` : isDL ? `dl-${gameMode || 'classic'}` : isLB ? `lb-${gameMode || 'classic'}` : isDB ? `db-${gameMode || 'classic'}` : isTE ? `te-${gameMode || 'classic'}` : isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
         wins: result.wins ?? null,
         losses: result.losses ?? null,
-        season_pass_yds: isOL ? result.seasonPancakes : (isDL || isLB) ? result.seasonTackles : isDB ? result.seasonTackles : (isWR || isTE) ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
-        season_tds: isOL ? result.seasonSacksAllowed : isDL ? result.seasonSacks : isLB ? result.seasonSacks : isDB ? result.seasonINTs : (isWR || isTE) ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
-        season_ints: isOL ? result.seasonPressures : isDL ? result.seasonTFL : isLB ? result.seasonINTs : isDB ? result.seasonPBUs : (isWR || isTE) ? result.seasonRecs : isRB ? null : result.seasonINTs,
-        season_comp_pct: isOL ? result.seasonPBWR : isDL ? result.seasonQBHits : isLB ? result.seasonTFL : isDB ? null : (isWR || isTE) ? result.seasonTargets : isRB ? null : result.seasonCompPct,
-        season_rating: isOL ? result.seasonPenalties : (isDB || isDL || isLB || isRB || isWR || isTE) ? null : result.seasonRating,
+        season_pass_yds: isK ? result.seasonPoints : isOL ? result.seasonPancakes : (isDL || isLB) ? result.seasonTackles : isDB ? result.seasonTackles : (isWR || isTE) ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
+        season_tds: isK ? result.seasonFGM : isOL ? result.seasonSacksAllowed : isDL ? result.seasonSacks : isLB ? result.seasonSacks : isDB ? result.seasonINTs : (isWR || isTE) ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
+        season_ints: isK ? result.seasonFGA : isOL ? result.seasonPressures : isDL ? result.seasonTFL : isLB ? result.seasonINTs : isDB ? result.seasonPBUs : (isWR || isTE) ? result.seasonRecs : isRB ? null : result.seasonINTs,
+        season_comp_pct: isK ? result.seasonFGPct : isOL ? result.seasonPBWR : isDL ? result.seasonQBHits : isLB ? result.seasonTFL : isDB ? null : (isWR || isTE) ? result.seasonTargets : isRB ? null : result.seasonCompPct,
+        season_rating: isK ? result.seasonLong : isOL ? result.seasonPenalties : (isDB || isDL || isLB || isRB || isWR || isTE) ? null : result.seasonRating,
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
         // Daily's per-day award counts and OL All-Pros read this (current-mode seasons only)
-        season_award: (!isAllTimeSeason || isDL || isLB || isOL) && result.award.userWins ? awardType : null,
+        season_award: (!isAllTimeSeason || isDL || isLB || isOL || isK) && result.award.userWins ? awardType : null,
         build: Object.fromEntries(
           activeTypes.filter(t => build[t]).map(t => [t, {
             qb: build[t].qbFull || build[t].name, team: build[t].team, val: build[t].val,
@@ -1121,16 +1131,16 @@ export default function App() {
     if (leaving) return
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isOL, isDB, isDL, isLB, isTE, isWR, isRB, activePool])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isK, isOL, isDB, isDL, isLB, isTE, isWR, isRB, activePool])
 
   commitRef.current = commitSeason
 
   // The director re-simulates the rest of a season with tweaked inputs
   const simFor = useCallback((b, t) => {
     const at = gameMode === 'all-time'
-    return isOL ? runOLSimulation(b, t, at) : isDL ? runDLSimulation(b, t, at) : isLB ? runLBSimulation(b, t, at) : isDB ? runDBSimulation(b, t, at) : isTE ? runTESimulation(b, activeTypes, t, at)
+    return isK ? runKSimulation(b, t, at) : isOL ? runOLSimulation(b, t, at) : isDL ? runDLSimulation(b, t, at) : isLB ? runLBSimulation(b, t, at) : isDB ? runDBSimulation(b, t, at) : isTE ? runTESimulation(b, activeTypes, t, at)
       : isWR ? runWRSimulation(b, activeTypes, t, at) : isRB ? runRBSimulation(b, activeTypes, t, at) : runSimulation(b, activeTypes, t, at)
-  }, [gameMode, isOL, isDB, isDL, isLB, isTE, isWR, isRB, activeTypes])
+  }, [gameMode, isK, isOL, isDB, isDL, isLB, isTE, isWR, isRB, activeTypes])
 
   const handleHome = useCallback(() => {
     setVersusRoom(prev => {
@@ -1162,7 +1172,7 @@ export default function App() {
       : { wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 })
     if (!supabase || !user) return
     const { build: b, position: pos } = vsResultRef.current
-    const ovr = isOL ? calcOVROL(b) : isDL ? calcOVRDL(b) : isLB ? calcOVRLB(b) : isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
+    const ovr = isK ? calcOVRK(b) : isOL ? calcOVROL(b) : isDL ? calcOVRDL(b) : isLB ? calcOVRLB(b) : isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
     try {
       await supabase.from('vs_results').insert({
         user_id: user.id,
@@ -1178,7 +1188,7 @@ export default function App() {
     setVsRecord(prev => ({ wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 }))
     if (!supabase || !user) return
     const { build: b, position: pos } = vsResultRef.current
-    const ovr = isOL ? calcOVROL(b) : isDL ? calcOVRDL(b) : isLB ? calcOVRLB(b) : isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
+    const ovr = isK ? calcOVRK(b) : isOL ? calcOVROL(b) : isDL ? calcOVRDL(b) : isLB ? calcOVRLB(b) : isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
     try {
       await supabase.from('vs_results').insert({
         user_id: user.id,
@@ -1195,7 +1205,7 @@ export default function App() {
     setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
     if (supabase && user) {
       const { build: b, position: pos } = vsResultRef.current
-      const ovr = isOL ? calcOVROL(b) : isDL ? calcOVRDL(b) : isLB ? calcOVRLB(b) : isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
+      const ovr = isK ? calcOVRK(b) : isOL ? calcOVROL(b) : isDL ? calcOVRDL(b) : isLB ? calcOVRLB(b) : isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
       if (ovr > 0) {
         supabase.from('vs_results').insert({
           user_id: user.id,
@@ -1371,13 +1381,13 @@ export default function App() {
   const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'about', 'privacy', 'terms', 'depth-chart', 'compete'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
-  const currentAttrMap = isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const currentAttrMap = isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')
-    ? (isOL ? calcOVROL(build) : isDL ? calcOVRDL(build) : isLB ? calcOVRLB(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
+    ? (isK ? calcOVRK(build) : isOL ? calcOVROL(build) : isDL ? calcOVRDL(build) : isLB ? calcOVRLB(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
     : 0
   // the build's name (the one the season screen shows), not a tier
   const completeName = completeOvr
-    ? (isOL ? getArchetypeOL(completeOvr, build, activeTypes) : isDL ? getArchetypeDL(completeOvr, build, activeTypes) : isLB ? getArchetypeLB(completeOvr, build, activeTypes) : isDB ? getArchetypeDB(completeOvr, build, DB_TYPES) : isTE ? getArchetypeTE(completeOvr, build, activeTypes) : isWR ? getArchetypeWR(completeOvr, build, activeTypes) : isRB ? getArchetypeRB(completeOvr, build, activeTypes) : getArchetype(completeOvr, build, activeTypes))
+    ? (isK ? getArchetypeK(completeOvr, build, activeTypes) : isOL ? getArchetypeOL(completeOvr, build, activeTypes) : isDL ? getArchetypeDL(completeOvr, build, activeTypes) : isLB ? getArchetypeLB(completeOvr, build, activeTypes) : isDB ? getArchetypeDB(completeOvr, build, DB_TYPES) : isTE ? getArchetypeTE(completeOvr, build, activeTypes) : isWR ? getArchetypeWR(completeOvr, build, activeTypes) : isRB ? getArchetypeRB(completeOvr, build, activeTypes) : getArchetype(completeOvr, build, activeTypes))
     : null
   const dailyPlan = dailyRun && dailyLocked && gameIsPlay
     ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
@@ -1443,6 +1453,7 @@ export default function App() {
     isDL,
     isLB,
     isOL,
+    isK,
     isPlus,
   }
 
@@ -1492,11 +1503,11 @@ export default function App() {
           isDB={isDB}
           isDL={isDL}
           isLB={isLB}
-          isOL={isOL}
+          isOL={isOL} isK={isK}
           isAllTime={gameMode === 'all-time'}
-          playerLabel={isOL ? 'OL' : isDL ? 'DL' : isLB ? 'LB' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
-          attrMap={isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-          categoriesData={isOL ? OL_CATEGORIES : isDL ? DL_CATEGORIES : isLB ? LB_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          playerLabel={isK ? 'K' : isOL ? 'OL' : isDL ? 'DL' : isLB ? 'LB' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
+          attrMap={isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+          categoriesData={isK ? K_CATEGORIES : isOL ? OL_CATEGORIES : isDL ? DL_CATEGORIES : isLB ? LB_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
         />)}
         {IS_APP && !drop && <StackSeam build={build} types={activeTypes} onFlip={flip} />}
         <Silhouette
@@ -1514,9 +1525,9 @@ export default function App() {
           isDB={isDB}
           isDL={isDL}
           isLB={isLB}
-          isOL={isOL}
-          categoriesData={isOL ? OL_CATEGORIES : isDL ? DL_CATEGORIES : isLB ? LB_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          attrMap={isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+          isOL={isOL} isK={isK}
+          categoriesData={isK ? K_CATEGORIES : isOL ? OL_CATEGORIES : isDL ? DL_CATEGORIES : isLB ? LB_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          attrMap={isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -1538,8 +1549,8 @@ export default function App() {
             isDB={isDB}
             isDL={isDL}
             isLB={isLB}
-            isOL={isOL}
-            attrMap={isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+            isOL={isOL} isK={isK}
+            attrMap={isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -1650,7 +1661,7 @@ export default function App() {
           isDB={isDB}
           isDL={isDL}
           isLB={isLB}
-          isOL={isOL}
+          isOL={isOL} isK={isK}
           gameMode={gameMode}
           pool={CUSTOM_POOLS[customPoolKey].current}
           poolCurrent={CUSTOM_POOLS[customPoolKey].current}
@@ -1677,7 +1688,7 @@ export default function App() {
               team: p.team,
               captain: p.captain ?? false,
               sandbox: true,
-              ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+              ...((isDL || isLB || isOL || isK) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
               photo,
             }
             setBuild(prev => ({ ...prev, [attrType]: chipData }))
@@ -1703,7 +1714,7 @@ export default function App() {
                     team: p.team,
                     captain: p.captain ?? false,
                     sandbox: true,
-                    ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+                    ...((isDL || isLB || isOL || isK) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
                     photo,
                   }
                 }
@@ -1878,7 +1889,7 @@ export default function App() {
     return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <LeaderboardPage key={position} onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} onPositionChange={setPosition} />
+        <LeaderboardPage key={position} onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} onPositionChange={setPosition} />
       </Suspense>
     )
   }
@@ -1949,7 +1960,7 @@ export default function App() {
           isDB={isDB}
           isDL={isDL}
           isLB={isLB}
-          isOL={isOL}
+          isOL={isOL} isK={isK}
           isPlus={isPlus}
           currentPool={activePool}
           isCustomMode={isCustomMode}
@@ -1980,7 +1991,7 @@ export default function App() {
             isDB={isDB}
             isDL={isDL}
             isLB={isLB}
-            isOL={isOL}
+            isOL={isOL} isK={isK}
             gameMode={gameMode}
             pool={CUSTOM_POOLS[customPoolKey].current}
             poolCurrent={CUSTOM_POOLS[customPoolKey].current}
@@ -2007,7 +2018,7 @@ export default function App() {
                 team: p.team,
                 captain: p.captain ?? false,
                 sandbox: true,
-                ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+                ...((isDL || isLB || isOL || isK) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
                 photo,
               }
               setBuild(prev => ({ ...prev, [attrType]: chipData }))
@@ -2032,7 +2043,7 @@ export default function App() {
                       team: p.team,
                       captain: p.captain ?? false,
                       sandbox: true,
-                      ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+                      ...((isDL || isLB || isOL || isK) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
                       photo,
                     }
                   }
@@ -2073,7 +2084,7 @@ export default function App() {
           isDB={isDB}
           isDL={isDL}
           isLB={isLB}
-          isOL={isOL}
+          isOL={isOL} isK={isK}
           onBack={() => { /* straight there: stepping back through history could land on Home */ setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { if (gameMode === 'salarycap') { setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? simFor : null}

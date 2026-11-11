@@ -24,6 +24,7 @@ import { BASEBALL_POS } from '../../lib/baseballUi'
 import './home-classic.css'
 import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
 import { OL_LIVE, OL_SOON } from '../../lib/olLive'
+import { K_LIVE } from '../../lib/kLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
@@ -68,13 +69,14 @@ const NFL_FIGURE = {
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/lb-silhouette.webp', scale: 1 },
   ol: { src: '/ol-silhouette.webp', scale: 1 },
+  k: { src: '/qb-silhouette.webp', scale: 1 },   // PLACEHOLDER (K_SILHOUETTE in data/ks.js)
 }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line' }
-const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line', k: 'Kicker' }
+const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', k: 'Kickers', guard: 'Guards', big: 'Bigs' }
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 // the open positions first (DL opened after this Home), then the ones still to come
 // (LB and OL are hidden, not shown as SOON, until their flags: lib/lbLive.js, lib/olLive.js)
-const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && (o.pos !== 'ol' || OL_SOON) && (o.pos !== 'lb' || LB_SOON)), { pos: 'k', label: 'K', disabled: true }]   // (LB and OL while they're coming soon: locked SOON tiles)
+const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && (o.pos !== 'ol' || OL_SOON) && (o.pos !== 'lb' || LB_SOON))]   // (LB and OL while they're coming soon: locked SOON tiles)
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 // the figure's bands fall one by one once a page load, then just arrive
@@ -420,7 +422,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             }
             return (
               <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE)) && <span className="ag-pos-new">NEW</span>}
+                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE) || (o.pos === 'k' && K_LIVE)) && <span className="ag-pos-new">NEW</span>}
                 {o.players && <span className="agc-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
                 <span className="agc-pos-label">{o.label}</span>
                 {o.sub && <span className="agc-pos-sub">{o.sub}</span>}

@@ -4623,3 +4623,359 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── K SIMULATION ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// A kicker's season: field goals by range, the longest, extra points, points, game-winners and the misses that
+// cost a game. The team's results come from the team (the same win formula the line and the defense use), and
+// a game that's within a field goal at the end can come down to his kick: make it and they win, miss it and
+// they don't (lib/kicks.js has the numbers: the make rate by distance, the conditions, the pressure).
+// There are no injuries for a kicker, here or in Career.
+import { KS, K_TYPES, K_ATTR_WEIGHT, K_ALL_PRO_BALLOT, kOVR } from '../data/ks'
+import { K_LEGENDS } from '../data/k-legends'
+import { kickP, xpP, kickTry, kickDistance, kickEnv } from '../lib/kicks'
+
+AT_DIFFICULTY.k = { reg: 0.17, po: -0.015 }   // the same win formula as OL and the defense, so the same offset
+
+export function calcOVRK(build, types = K_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return null
+  const totalW = filled.reduce((s, t) => s + (K_ATTR_WEIGHT[t] ?? 0.3), 0)
+  const avg    = filled.reduce((s, t) => s + build[t].val * (K_ATTR_WEIGHT[t] ?? 0.3) / totalW, 0)
+  const base   = 60 + 2.1 * avg + 0.21 * avg * avg
+  let bonus = 0
+  if (filled.length === types.length) {
+    const minVal = Math.min(...filled.map(t => build[t].val))
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
+    if (minVal >= 9) bonus += 2.0
+    else if (minVal >= 8) bonus += 0.5
+  }
+  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+}
+
+export function getArchetypeK(ovr, build, types = K_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return 'Spin to start building'
+  const rem = types.length - filled.length
+  if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
+  const g = k => build[k]?.val ?? 0
+  const pw = g('power'), acc = g('accuracy'), clu = g('clutch')
+  // a few real labels: which of the three clearly leads
+  const style = pw >= 9 && pw - Math.max(acc, clu) >= 2 ? 'Big Leg'
+    : acc >= 9 && acc - Math.max(pw, clu) >= 2 ? 'Automatic Kicker'
+    : clu >= 9 && clu - Math.max(pw, acc) >= 2 ? 'Clutch Kicker'
+    : null
+  if (ovr >= 95) return style ? `Elite ${style}` : 'All-Pro Kicker'
+  if (ovr >= 86) return style ?? 'Pro Bowl Kicker'
+  if (ovr >= 76) return 'Starting Kicker'
+  if (ovr >= 68) return 'Camp Leg'
+  return 'Street Free Agent'
+}
+
+export const kVals = build => ({ power: build?.power?.val ?? 5, accuracy: build?.accuracy?.val ?? 5, clutch: build?.clutch?.val ?? 5 })
+const K_TEAM_BY_SHORT = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
+const kLogit = p => Math.log(p / (1 - p))
+// a late kick: from 27 out to a little past what his coach would normally ask (the clock makes the call, not the distance)
+const kLateDistance = pw => { const far = Math.min(62, kickTry(pw) + 2); return 27 + Math.floor(Math.random() * (far - 26)) }
+// how a field goal reads in the log: '3/4 FG (long 52)'
+export const kLine = g => `${g.fgm}/${g.fga} FG${g.long ? ` (long ${g.long})` : ''}, ${g.xpm}/${g.xpa} XP`
+// range tables from a list of games: under 30, 30-39, 40-49, 50+ as [made, tried]
+export function kRanges(games) {
+  const out = { u30: [0, 0], r30: [0, 0], r40: [0, 0], r50: [0, 0] }
+  for (const g of games ?? []) for (const k of g.kicks ?? []) {
+    const b = k.d < 30 ? 'u30' : k.d < 40 ? 'r30' : k.d < 50 ? 'r40' : 'r50'
+    out[b][1]++; if (k.good) out[b][0]++
+  }
+  return out
+}
+// the season line the games add up to (the director re-adds it after a moment rewrites a game)
+export function kTotals(games) {
+  const sum = k => games.reduce((s, g) => s + (g[k] ?? 0), 0)
+  const fgm = sum('fgm'), fga = sum('fga')
+  const ranges = kRanges(games)
+  return {
+    seasonFGM: fgm, seasonFGA: fga, seasonFGPct: fga ? +(fgm / fga * 100).toFixed(1) : 0,
+    seasonLong: Math.max(0, ...games.map(g => g.long ?? 0)),
+    seasonXPM: sum('xpm'), seasonXPA: sum('xpa'), seasonPoints: sum('pts'),
+    seasonGW: sum('gw'), seasonCostly: sum('cost'), seasonClutchM: sum('cm'), seasonClutchA: sum('ca'),
+    season50M: ranges.r50[0], season50A: ranges.r50[1], seasonRanges: ranges,
+  }
+}
+
+// One game. winP: the team's chance before a ball is kicked. fixed (Squad Builder): { won, mySc, oppSc }, the game
+// as the squad played it; his line is read off that score.
+function kGame(k, { winP = 0.5, offN = 0, homeShort = '', wk = 1, env = null, fixed = null, late = 1 }) {
+  const cond = env ?? kickEnv(homeShort, wk)
+  const kicks = []
+  const tryKick = (d, pressure = 0.15, why = null) => {
+    const good = Math.random() < kickP(d, k, { yards: cond.yards, pressure })
+    kicks.push({ d, good, ...(why ? { why } : {}) })
+    return good
+  }
+  let tds, two = 0, xpa = 0, xpm = 0
+  let won, margin, overtime = false, gw = 0, cost = 0, ca = 0, cm = 0, tag = null
+
+  if (fixed) {
+    // the score is set: the field goals and touchdowns that add up to it (a leftover point or two is a two-point try)
+    let best = null
+    const want = Math.max(0, Math.min(5, poissonSample(1.7)))
+    for (let fg = 0; fg <= 6; fg++) {
+      const rem = fixed.mySc - 3 * fg
+      if (rem < 0) break
+      const left = rem % 7, miss = Math.abs(fg - want) + (left === 0 ? 0 : left === 6 || left === 1 ? 1.5 : 6)
+      if (!best || miss < best.miss) best = { fg, td: Math.floor(rem / 7) + (left === 6 ? 1 : 0), left, miss }
+    }
+    tds = best?.td ?? 0
+    const made = best?.fg ?? 0
+    for (let i = 0; i < made; i++) {
+      // a made kick: drawn from where he makes them
+      let d = kickDistance()
+      for (let t = 0; t < 6 && (d > kickTry(k.power) || Math.random() > kickP(d, k, { yards: cond.yards })); t++) d = kickDistance()
+      kicks.push({ d: Math.min(d, kickTry(k.power) + 2), good: true })
+    }
+    const misses = poissonSample(Math.max(0, 1.9 * (1 - kickP(44, k, { yards: cond.yards })) * 0.9))
+    for (let i = 0; i < misses; i++) { const d = Math.min(kickTry(k.power) + 2, 38 + Math.floor(Math.random() * 22)); kicks.push({ d, good: false }) }
+    xpa = tds; xpm = best?.left === 6 ? Math.max(0, tds - 1) : tds
+    if (best?.left === 1) { xpa = Math.max(0, tds - 1); xpm = xpa; two = 1 }
+    won = fixed.won; margin = fixed.mySc - fixed.oppSc
+    // a one-score win he kicked in: sometimes the last of them was the winner
+    if (won && margin <= 3 && made > 0 && Math.random() < 0.45) { const last = [...kicks].reverse().find(x => x.good); if (last) { last.why = 'win'; gw = 1; ca = 1; cm = 1; tag = 'GAME-WINNER' } }
+    const fgm = kicks.filter(x => x.good).length, fga = kicks.length
+    if (!won && margin >= -3 && fga > fgm) cost = 1
+    return { fgm, fga, long: Math.max(0, ...kicks.filter(x => x.good).map(x => x.d)), xpm, xpa, pts: fgm * 3 + xpm, kicks, gw, cost, ca, cm, cond: cond.tag, mySc: fixed.mySc, oppSc: fixed.oppSc, won, overtime: !!fixed.overtime, ...(tag ? { tag } : {}) }
+  }
+
+  // touchdowns and the drives that stall in range
+  tds = Math.max(0, Math.round(2.35 + offN * 1.1 + randN() * 1.8))
+  const tries = Math.min(6, poissonSample(clampNum(2.08 - (tds - 2.4) * 0.12 + offN * 0.15, 1.2, 2.9)))
+  const reach = kickTry(k.power) + Math.round(cond.yards)
+  for (let i = 0; i < tries; i++) { const d = kickDistance(); if (d <= reach) tryKick(d) }
+  for (let i = 0; i < tds; i++) {
+    if (Math.random() < 0.05) { if (Math.random() < 0.47) two++; continue }
+    xpa++; if (Math.random() < xpP(k, { yards: cond.yards })) xpm++
+  }
+  const missedFG = kicks.filter(x => !x.good).length, made50 = kicks.filter(x => x.good && x.d >= 50).length
+  let P = 6 * tds + xpm + 2 * two + 3 * (kicks.length - missedFG)
+
+  // the game without its last kick: a margin whose sign is the team's chance (a logistic spread about 11.5 points wide)
+  const p = clampNum(winP - missedFG * 0.045 - (xpa - xpm) * 0.02 + Math.min(2, made50) * 0.012, 0.06, 0.94)
+  const u = Math.min(0.999, Math.max(0.001, Math.random()))
+  let m = Math.round(6.3 * (kLogit(p) + kLogit(u)))
+  const coin = () => Math.random() < 0.47 + (p - 0.5) * 0.3
+  const lastKick = why => { ca++; const good = tryKick(kLateDistance(k.power), 1, why); if (good) cm++; return good }
+  const otGame = () => {
+    overtime = true
+    const w = coin()
+    // most overtime wins end on a field goal: his, from a normal distance with the game on it
+    if (w && Math.random() < 0.6) { ca++; kicks.push({ d: Math.min(kickTry(k.power), 24 + Math.floor(Math.random() * 26)), good: true, why: 'ot' }); cm++; P += 3; gw = 1; tag = 'OVERTIME WINNER'; return 3 }
+    if (w) { tds++; P += 6; return 6 }
+    return Math.random() < 0.6 ? -3 : -6
+  }
+  const lateRoll = Math.random() < late
+  if (m >= 1 && m <= 3 && lateRoll && Math.random() < 0.5) {
+    // they led by this much because his kick put them there: trailing by 3 - m (level at m = 3) until the last snap
+    if (lastKick(m === 3 ? 'win' : 'ahead')) { P += 3; gw = 1; tag = 'GAME-WINNER' }
+    else if (m === 3) { m = otGame() }
+    else { m = -(3 - m); cost = 1; tag = 'MISSED AT THE GUN' }
+  } else if ((m === -1 || m === -2) && lateRoll && Math.random() < 0.42) {
+    if (lastKick('win')) { P += 3; m = 3 + m; gw = 1; tag = 'GAME-WINNER' }
+    else { cost = 1; tag = 'MISSED AT THE GUN' }
+  } else if (m === -3 && lateRoll && Math.random() < 0.42) {
+    if (lastKick('tie')) { P += 3; tag = 'SENT IT TO OVERTIME'; m = otGame() }
+    else { cost = 1; tag = 'MISSED AT THE GUN' }
+  } else if (m === 0) {
+    if (lateRoll && Math.random() < 0.6) { if (lastKick('win')) { P += 3; m = 3; gw = 1; tag = 'GAME-WINNER' } else { m = otGame() } }
+    else m = otGame()
+  }
+  won = m > 0
+  let mySc = P, oppSc = Math.max(0, P - m)
+  if (won && mySc <= oppSc) mySc = oppSc + Math.max(1, m)
+  // a real opponent's score: 1 isn't one, and 2, 4 and 5 almost never are (a touchdown each keeps the margin)
+  if ([1, 2, 4, 5].includes(oppSc)) { oppSc += 7; mySc += 7; tds++; xpa++; xpm++ }
+  if (mySc === 1) { mySc = 3 }   // (can't happen with the lines above; kept so a score is always a real one)
+  const fgm = kicks.filter(x => x.good).length, fga = kicks.length
+  // a miss that cost the game: the kick at the gun, or a missed kick in a game lost by a field goal or less
+  if (!won && !cost && ((mySc - oppSc >= -3 && fga > fgm) || (oppSc - mySc === 1 && xpa > xpm))) cost = 1
+  return { fgm, fga, long: Math.max(0, ...kicks.filter(x => x.good).map(x => x.d)), xpm, xpa, pts: fgm * 3 + xpm, kicks, gw, cost, ca, cm, cond: cond.tag, mySc, oppSc, won, overtime, ...(tag ? { tag } : {}) }
+}
+function clampNum(x, a, b) { return Math.max(a, Math.min(b, x)) }
+const K_BEST = g => g.pts + g.gw * 6 + (g.long >= 55 ? 3 : g.long >= 50 ? 1.5 : 0) - (g.fga - g.fgm) * 5 - (g.xpa - g.xpm) * 4 - g.cost * 6
+
+export function runKSimulation(build, team = null, isAllTime = false, script = null) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
+  const ovr = calcOVRK(build) ?? 60
+  const k = kVals(build)
+
+  const teamOffN = team ? (team.off - 5) / 5 : 0
+  const teamDefN = team ? (team.def - 5) / 5 : 0
+  const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+  // (a kicker doesn't lift the offense; his kicks decide the close ones in kGame. The offset keeps an average
+  // kicker's team where the same team finishes for a lineman: the late kicks he makes are worth about that much.)
+  const K_NEUTRAL = 0
+
+  let wins = 0, losses = 0
+  const schedule = script ? script.schedule : buildSchedule(team)
+  const games = schedule.map(({ opponent, home }, i) => {
+    const oppTeam = oppLookup[opponent]
+    const oppOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+    const oppDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+    const homeShort = home ? (team?.short ?? '') : (oppTeam?.short ?? TEAM_BY_NAME[opponent]?.short ?? '')
+    const winP = Math.min(0.88, Math.max(0.14,
+      0.50 + teamOffN * 0.24 + teamDefN * 0.20 + (home ? 0.045 : -0.02) + randN() * 0.09 - oppDefN * 0.10 - oppOffN * 0.04 - K_NEUTRAL - (isAllTime ? AT_DIFFICULTY.k.reg : 0)
+    ))
+    const g = kGame(k, { winP, offN: teamOffN - oppDefN * 0.35, homeShort, wk: i + 1, fixed: script ? script.games[i] : null })
+    g.won ? wins++ : losses++
+    return { wk: i + 1, opponent, home, ...g }
+  })
+  const totals = kTotals(games)
+  const bestGame = [...games].sort((a, b) => K_BEST(b) - K_BEST(a))[0]
+
+  // ── Playoffs ──────────────────────────────────────────────────────────────
+  const playoffs = script ? script.playoffs : wins >= 10
+    || (wins === 9 && Math.random() < 0.50)
+    || (wins === 8 && Math.random() < 0.06)
+  const playoffRounds = []
+  let sbResult = null
+  let hasBye = false
+
+  if (playoffs) {
+    const conf = team?.conf ?? 'AFC'
+    const activePlayoffPools = isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS
+    const activeSbPools      = isAllTime ? ALLTIME_SB_POOLS      : SB_POOLS
+    const confPool = activePlayoffPools[conf].filter(n => n !== team?.name)
+    const sbPool   = activeSbPools[conf].filter(n => n !== team?.name)
+    const usedOpponents = new Set()
+    const pick = pool => {
+      const avail = pool.filter(n => !usedOpponents.has(n))
+      const chosen = (avail.length > 0 ? avail : pool)[Math.floor(Math.random() * (avail.length || pool.length))]
+      usedOpponents.add(chosen)
+      return chosen
+    }
+
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    const bracket = hasBye
+      ? [
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+      : [
+          { round: 'Wild Card',               pool: confPool },
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+    const winsNeeded = hasBye ? 3 : 4
+    const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
+    const pgHomeProb = round => {
+      if (round === 'Super Bowl') return 0
+      if (seed === 1) return 1.0
+      if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
+      if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
+      if (round === 'Conference Championship') return seed === 2 ? 0.60 : seed === 3 ? 0.20 : 0.10
+      return 0
+    }
+
+    let pwins = 0, eliminated = null
+    for (const { round, pool } of bracket) {
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent  = sr ? sr.opponent : pick(pool)
+      const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
+      const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+      const oppTeam    = oppLookup[opponent]
+      const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
+      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
+      const pgWinP = Math.min(0.78, Math.max(0.15,
+        0.455 + teamN * 0.46 + recordEdge(wins) + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.k.po : 0)
+      ))
+      // January: the conditions are the playoff game's (a Super Bowl is indoors or somewhere warm)
+      const env = round === 'Super Bowl' ? { tag: 'dome', yards: 1 }
+        : weather === 'snow' ? { tag: 'snow', yards: -4 } : weather === 'rain' ? { tag: 'rain', yards: -2 }
+        : kickEnv(homeShort, 19)
+      const oppDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+      const g = kGame(k, { winP: pgWinP, offN: teamOffN - oppDefN * 0.35 - 0.1, homeShort, wk: 19, env, fixed: sr ? { won: sr.won, mySc: sr.mySc, oppSc: sr.oppSc, overtime: sr.overtime } : null, late: 1 })
+      playoffRounds.push({ round, opponent, home: pgHome, weather, ...g })
+      if (g.won) pwins++
+      else { eliminated = round; break }
+    }
+    if (pwins === winsNeeded) {
+      const sbGame = playoffRounds[playoffRounds.length - 1]
+      sbResult = { won: true, fgm: sbGame.fgm, fga: sbGame.fga, long: sbGame.long, pts: sbGame.pts, gw: sbGame.gw }
+    } else {
+      sbResult = { won: false, round: eliminated, pwins }
+    }
+  }
+  const po = kTotals(playoffRounds)
+
+  return {
+    team, ovr, wins, losses,
+    games,
+    ...totals,
+    poFGM: po.seasonFGM, poFGA: po.seasonFGA, poLong: po.seasonLong, poPoints: po.seasonPoints, poGW: po.seasonGW,
+    bestGame, minAttrVal: Math.min(k.power, k.accuracy, k.clutch),
+    playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
+  }
+}
+
+// ── All-Pro ───────────────────────────────────────────────────────────────────
+// A kicker doesn't win MVP. The honors he can really win: the Pro Bowl, and the AP's First and Second Team
+// (one kicker each). The ballot is three hand-picked names (K_ALL_PRO_BALLOT in data/ks.js) and the build.
+const K_ALLTIME_BALLOT = [...K_LEGENDS].sort((a, b) => (kOVR(b.attrs) ?? 0) - (kOVR(a.attrs) ?? 0))
+  .filter((p, i, a) => a.findIndex(x => x.name === p.name) === i).slice(0, 5)
+function kBallot(excludeTeam = null, isAllTime = false) {
+  const list = isAllTime ? K_ALLTIME_BALLOT : K_ALL_PRO_BALLOT.map(name => KS.find(o => o.name === name)).filter(Boolean)
+  return list.filter(o => o.team !== excludeTeam).slice(0, 3)
+}
+// an All-Pro-caliber year for whoever wins the vote
+function kAllProSeason() {
+  const ri = (lo, hi) => Math.round(lo + Math.random() * (hi - lo))
+  const fga = ri(34, 42), fgm = Math.min(fga, fga - ri(1, 4))
+  return { fgm, fga, pct: +(fgm / fga * 100).toFixed(1), long: ri(57, 64), m50: ri(8, 13), points: fgm * 3 + ri(36, 52) }
+}
+export const kStatLine = s => `${s.fgm}/${s.fga} FG (${s.pct}%) · long ${s.long} · ${s.m50} from 50+`
+
+export function calcKAllProResult(result, isAllTime = false, teamShort = null) {
+  const { ovr = 60, seasonFGM = 0, seasonFGA = 0, seasonFGPct = 0, seasonLong = 0, season50M = 0, seasonPoints = 0, seasonGW = 0, seasonCostly = 0, minAttrVal = 0 } = result
+  // the case, 0-1, against real All-Pro kicking years (Aubrey 2024: 40/47, 14 from 50+, long 65; Tucker 2016: 38/39;
+  // Dicker 2025: 38/41): the percentage first, then the long ball, the volume and the kicks that won games
+  const pctCase  = clampNum((seasonFGPct - 80) / 14, 0, 1)
+  const longCase = clampNum(season50M / 10, 0, 1) * 0.7 + clampNum((seasonLong - 52) / 12, 0, 1) * 0.3
+  const volCase  = clampNum((seasonPoints - 95) / 55, 0, 1)
+  const gwCase   = clampNum(seasonGW / 4, 0, 1) - Math.min(0.5, seasonCostly * 0.25)
+  const ovrCase  = clampNum((ovr - 85) / 12, 0, 1)
+  const caseStrength = clampNum(pctCase * 0.38 + longCase * 0.20 + volCase * 0.12 + gwCase * 0.10 + ovrCase * 0.20, 0, 1)
+  const enough = seasonFGA >= 20
+  const unanimous = enough && seasonFGPct >= 95 && season50M >= 8
+  const BUILD_OVR_GATE = 90, SEASON_GATE = 0.70
+  let winP = 0
+  if (enough && ovr >= BUILD_OVR_GATE && caseStrength >= SEASON_GATE) winP = 0.45 + (caseStrength - SEASON_GATE) / (1 - SEASON_GATE) * 0.50
+  if (isAllTime) winP *= 0.75
+  // every rating A+ or S: a lock, as long as he kicked like it
+  const userWins = (minAttrVal >= 10 && enough && seasonFGPct >= 86) || Math.random() < winP
+  // Second Team: the next name on the ballot (a strong year short of the vote)
+  const second = !userWins && enough && ovr >= 86 && caseStrength >= 0.55 && Math.random() < 0.30 + (caseStrength - 0.55) * 1.6
+
+  const userStats = { fgm: seasonFGM, fga: seasonFGA, pct: seasonFGPct, long: seasonLong, m50: season50M, points: seasonPoints }
+  const ballot = kBallot(teamShort, isAllTime)
+  const order = ballot.map((o, i) => ({ o, w: [45, 33, 22][i] * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.w - a.w).map(x => x.o)
+  const row = (o, team) => ({ spot: team === 1 ? '1ST' : '2ND', isUser: false, name: o.name, team: o.team, color: K_TEAM_BY_SHORT[o.team]?.color, stats: kAllProSeason() })
+  const me = team => ({ spot: team === 1 ? '1ST' : '2ND', isUser: true, name: 'Guest', team: teamShort, color: K_TEAM_BY_SHORT[teamShort]?.color, stats: userStats })
+  const line = userWins ? [me(1), row(order[0], 2)] : second ? [row(order[0], 1), me(2)] : [row(order[0], 1), row(order[1], 2)]
+  const first = line[0]
+  return {
+    userWins,
+    unanimous: userWins && unanimous,
+    secondTeam: second,
+    line,
+    userSpot: 'K',
+    userStats,
+    ballot: ballot.map(o => o.name),
+    // Pro Bowl: one kicker a conference. The All-Pros go, and so does a clearly good year short of the vote
+    proBowl: userWins || second || (enough && ovr >= 84 && caseStrength >= 0.5 && Math.random() < 0.35 + (caseStrength - 0.5) * 2.2),
+    winner: userWins ? null : { name: first.name, team: first.team, pos: 'K', color: first.color },
+    winnerStats: userWins ? null : first.stats,
+    winnerStatLine: userWins ? null : kStatLine(first.stats),
+  }
+}
