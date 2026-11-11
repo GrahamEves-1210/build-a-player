@@ -5527,6 +5527,9 @@ a:focus-visible {
   .pp-code { font-size: 12px; }
   /* the help line on one line: sized to the screen's width */
   .pp-help { font-size: min(13px, calc((100vw - 32px) / 29.8)); white-space: nowrap; }
+  /* (a phone only: the help line sits over the fine print) */
+  .pp-wrap { display: flex; flex-direction: column; }
+  .pp-head { order: 1; } .pp-banner { order: 2; } .pp-help { order: 3; margin-top: 9px; } .pp-legal { order: 4; margin-top: 5px; }
   .pp-phone { display: none; }
   .pp-legal { font-size: 10px; }
 }
