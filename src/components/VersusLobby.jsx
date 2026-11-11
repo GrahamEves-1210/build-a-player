@@ -10,7 +10,7 @@ import { OneOnOneOptions } from './app/AppBlacktop'
 import { IconClose, IconCheck } from './app/icons'
 import { myCosmetics } from '../lib/progress'
 import { seedCos } from '../lib/peopleCos'
-import { VersusSpot, OpenSpot, uidFromVsId } from './app/Blacktop1v1'
+import { VersusSpot, OpenSpot, VersusBoard, uidFromVsId } from './app/Blacktop1v1'
 
 const rt = rtSupabase || supabase
 
@@ -616,54 +616,32 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     const cancel = () => { clearInterval(searchTimerRef.current); abandon(); setError(''); if (autoStart) back(); else setScreen('menu') }
     const title = screen === 'host' ? 'Play a friend' : screen === 'searching' ? 'Pickup' : screen === 'joining' ? 'Joining' : '1v1'
     return (
-      <div className="ag-screen ag-screen--bucket v1">
-        <div className="ag-screen-head">
-          <div><span className="ag-eyebrow">BLACKTOP · 1V1 · FIRST TO 11</span><h1 className="ag-h1">{title}</h1></div>
-          <button className="ag-round-btn" onClick={back} aria-label="Back to Blacktop"><IconClose size={16} /></button>
-        </div>
-        <div className="ag-screen-body">
+      <div className="ag-screen ag-screen--bucket v1 btl btl-lobby">
+        <header className="btl-top">
+          <div className="btl-top-txt"><span className="btl-eyebrow">BLACKTOP · 1V1 · FIRST TO 11</span><h1 className="btl-h1">{title}</h1></div>
+          <button className="ag-round-btn btl-x" onClick={back} aria-label="Back to Blacktop"><IconClose size={16} /></button>
+        </header>
+        <div className="btl-body">
           {screen === 'menu' ? (
-            <section className="bt-mode ag-pop">
-              <OneOnOneOptions onPickup={findRandom} onFriend={hostFriend} onJoinCode={c => { setInputCode(c); joinFriend(c) }} error={error} />
-            </section>
+            <OneOnOneOptions onPickup={findRandom} onFriend={hostFriend} onJoinCode={c => { setInputCode(c); joinFriend(c) }} error={error} />
           ) : (
             <>
-              {/* the 3v3 lobby's run card, two spots: me, and the opponent (open until found) */}
-              <section className="bt-run v1g-run ag-pop">
-                <div className="bt-run-head">
-                  <span className="bt-run-count"><b>{found ? 2 : 1}</b>/2 <small>{found ? 'GAME ON' : 'SPOTS TAKEN'}</small></span>
-                  {screen === 'searching' && <span className="bt-run-timer">{Math.floor(searchSecs / 60)}:{String(searchSecs % 60).padStart(2, '0')}</span>}
-                </div>
-                <div className="bt-court-lines" aria-hidden="true" />
-                {screen === 'host' && !found && (
-                  <div className="v1-code">
-                    <span className="ag-eyebrow">SEND THIS CODE TO A FRIEND</span>
-                    <b>{myCode}</b>
-                    <button className="ag-btn ag-btn--ghost" onClick={() => navigator.clipboard?.writeText(myCode)}>COPY CODE</button>
-                  </div>
-                )}
-                <div className="bt-squads">
-                  <div className="bt-squad-col bt-t0 is-mine">
-                    <VersusSpot who={{ name: myName || 'Guest', self: true }} team={0} d={80}
-                      sub={user ? `${vsRecord?.wins ?? 0}W – ${vsRecord?.losses ?? 0}L · 1V1` : 'GUEST · 1V1'} />
-                  </div>
-                  <div className={`bt-squad-col bt-t1${found ? ' v1g-found' : ''}`}>
-                    {found
-                      ? <VersusSpot who={{ name: found.name || 'Guest', cos: found.cos, uid: found.uid }} team={1} sub="READY · 1V1" />
-                      : <OpenSpot title={screen === 'searching' ? 'SEARCHING…' : screen === 'host' ? 'WAITING ON A FRIEND' : 'CONNECTING…'}
-                          sub={screen === 'searching' ? 'PICKUP · 1V1' : screen === 'host' ? 'FRIEND · 1V1' : 'FRIEND · 1V1'} />}
-                  </div>
-                  <span className="bt-squads-vs">VS</span>
-                </div>
-                <div className="bt-run-foot">
-                  <span className="bt-run-hint"><span className="bt-dots"><i /><i /><i /></span>{screen === 'searching' && !found ? etaLabel(searchSecs, queueSize, activityRate) : status}</span>
-                </div>
-              </section>
-              {error && <div className="v1-error">{error}</div>}
-              {!found && <button className="ag-btn ag-btn--ghost v1-cancel" onClick={cancel}>CANCEL</button>}
+              {/* the lobby's board, two spots: me, and the opponent (open until found) */}
+              <VersusBoard found={!!found}
+                timer={screen === 'searching' ? `${Math.floor(searchSecs / 60)}:${String(searchSecs % 60).padStart(2, '0')}` : null}
+                code={screen === 'host' && !found ? myCode : null} onCopy={() => navigator.clipboard?.writeText(myCode)}
+                left={<VersusSpot who={{ name: myName || 'Guest', self: true }} team={0}
+                  sub={user ? `${vsRecord?.wins ?? 0}W – ${vsRecord?.losses ?? 0}L · 1V1` : 'GUEST · 1V1'} />}
+                right={found
+                  ? <VersusSpot who={{ name: found.name || 'Guest', cos: found.cos, uid: found.uid }} team={1} sub="READY · 1V1" />
+                  : <OpenSpot title={screen === 'searching' ? 'SEARCHING…' : screen === 'host' ? 'WAITING ON A FRIEND' : 'CONNECTING…'}
+                      sub={screen === 'searching' ? 'PICKUP · 1V1' : screen === 'host' ? 'FRIEND · 1V1' : 'FRIEND · 1V1'} />}
+                hint={screen === 'searching' && !found ? etaLabel(searchSecs, queueSize, activityRate) : status} />
+              {error && <div className="btl-error">{error}</div>}
+              {!found && <button className="ag-btn btl-btn btl-btn--line" onClick={cancel}>CANCEL</button>}
             </>
           )}
-          <OnlineRecord modes={[channelPrefix === 'bab' ? 'h2hB' : 'h2hN']} title="YOUR 1V1" />
+          <OnlineRecord modes={[channelPrefix === 'bab' ? 'h2hB' : 'h2hN']} title="1V1 RECORD" />
         </div>
       </div>
     )

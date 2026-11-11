@@ -2092,10 +2092,6 @@ html:is(.is-app, .app-look) .about-section-title { font-family: var(--ag-font) !
 .bt-queue-timer { margin-top: 10px; font-family: var(--ag-font); font-size: 18px; letter-spacing: 3px; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
 .bt-fill { height: 54px; font-size: 20px; }
 .bt-fill-note { text-align: center; font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-muted); }
-.bt-rules { padding: 14px; border-radius: 14px; border: 1px solid var(--ag-line); background: var(--ag-panel); }
-.bt-rules ul { margin: 8px 0 0; padding-left: 18px; font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-muted); }
-.bt-rules li + li { margin-top: 6px; }
-.bt-rules b { color: var(--ag-text); }
 
 /* HUD above the build: the slim bar itself is with the court styles further down */
 .bt-hud-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
@@ -2115,32 +2111,12 @@ html:is(.is-app, .app-look) .about-section-title { font-family: var(--ag-font) !
 .bt-roles .ag-chip { flex: 0 0 auto; height: 28px; font-size: 13px; padding: 0 9px; }
 
 /* chat sheet */
-.bt-chat { display: flex; flex-direction: column; max-height: calc(100dvh - var(--safe-top) - 40px); }
-.bt-chat-list { flex: 1; min-height: 160px; max-height: 44dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 8px; }
-.bt-msg { display: flex; flex-direction: column; gap: 1px; max-width: 86%; padding: 7px 10px; border-radius: 12px 12px 12px 4px; background: rgba(255,255,255,.06); align-self: flex-start; }
-.bt-msg.is-me { align-self: flex-end; border-radius: 12px 12px 4px 12px; background: color-mix(in srgb, var(--ag-a1) 18%, transparent); }
-.bt-msg-name { font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1.5px; color: var(--ag-a1); }
-.bt-msg-name i { font-style: normal; color: var(--ag-muted); }
-.bt-msg-text { font-family: var(--ag-body); font-size: 14px; font-weight: 500; line-height: 1.3; word-break: break-word; }
-.bt-chat-note { padding: 6px 10px; border-radius: 8px; font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-text); background: rgba(255,255,255,.06); }
-.bt-msg-menu { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-family: var(--ag-body); font-size: 13px; font-weight: 700; }
-.bt-msg-menu span { flex: 1; }
-.bt-msg-menu button { height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--ag-line-hi); background: none; color: var(--ag-text); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; }
-.bt-quick { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 4px; scrollbar-width: none; }
-.bt-quick::-webkit-scrollbar { display: none; }
-.bt-quick .ag-chip { flex: 0 0 auto; height: 30px; font-size: 13px; }
-.bt-chat-form { display: flex; gap: 8px; margin-top: 6px; }
-.bt-chat-form input { flex: 1; min-width: 0; height: 46px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--ag-line-hi); background: rgba(0,0,0,.35); color: var(--ag-text); font-family: var(--ag-body); font-size: 15px; }
-.bt-chat-form .ag-btn { height: 46px; padding: 0 16px; font-size: 16px; }
-.bt-chat-signin { padding: 10px 0 4px; font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
-.bt-chat-signin button { padding: 0; border: 0; background: none; color: var(--ag-a1); font: inherit; font-weight: 700; text-decoration: underline; }
 
 /* game */
 .bt-game .ag-screen-body { gap: 10px; }
 .bt-reveal { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 30px 14px 0; position: relative; }
 .bt-reveal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
 .bt-squad { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; border: 1.5px solid color-mix(in srgb, var(--tc) 55%, transparent); background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 14%, transparent), transparent 70%), var(--ag-panel); }
-.bt-squad-name { font-family: var(--ag-display); font-size: 24px; color: var(--tc); line-height: 1; }
 .bt-squad-p { display: flex; align-items: center; gap: 8px; }
 .bt-squad-p-txt { display: flex; flex-direction: column; min-width: 0; }
 .bt-squad-p-txt b { font-family: var(--ag-body); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2160,8 +2136,6 @@ html:is(.is-app, .app-look) .about-section-title { font-family: var(--ag-font) !
 .bt-feed-line.is-now { color: #fff; background: rgba(255,255,255,.08); animation: ag-rise .3s ease; }
 .bt-feed-line.is-big { font-weight: 700; }
 .bt-feed-line.is-ms { font-family: var(--ag-font); letter-spacing: 1.5px; color: var(--ag-gold-hi); }
-.bt-live-chat { position: fixed; right: 14px; bottom: calc(var(--app-bottom) + 10px); z-index: 1045; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; border: 1px solid var(--ag-line-hi); background: rgba(8,12,10,.95); color: var(--ag-text); box-shadow: 0 10px 24px rgba(0,0,0,.5); }
-.bt-live-chat .ag-tab-badge { top: -6px; left: auto; right: -6px; }
 
 .bt-result-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 14px 18px; border-radius: 16px; text-align: center; border: 1.5px solid var(--ag-line-hi); background: radial-gradient(100% 70% at 50% 0%, color-mix(in srgb, var(--ag-a1) 18%, transparent), transparent 70%), var(--ag-panel); }
 .bt-result-hero.is-loss { border-color: rgba(255,77,77,.35); background: radial-gradient(100% 70% at 50% 0%, rgba(255,77,77,.14), transparent 70%), var(--ag-panel); }
@@ -2170,7 +2144,6 @@ html:is(.is-app, .app-look) .about-section-title { font-family: var(--ag-font) !
 .bt-final span { font-size: 30px; color: var(--ag-muted); }
 .bt-final-teams { display: flex; gap: 46px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2.5px; }
 .bt-final-teams span { color: var(--tc); }
-.bt-mvp { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 5px 12px 4px; border-radius: 8px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); }
 .bt-box { padding: 10px 12px; }
 .bt-box-head, .bt-box-row { display: grid; grid-template-columns: 1fr 36px 44px 36px 36px 36px 36px; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; text-align: center; }
 .bt-box-head { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: var(--ag-muted); padding-bottom: 6px; border-bottom: 1px solid var(--ag-line); }
@@ -2654,108 +2627,13 @@ html.ag-sport-leaving .ag-sport-btn.is-on { color: var(--ag-muted); }
 .ag-toast--ach { border-color: rgba(242,201,76,.6) !important; }
 .ag-toast--ach .ag-toast-icon { color: #f2c94c; }
 
-/* ═══ Blacktop lobby: two squads on a half court, tap a spot ═══════════════ */
-.bt-run {
-  position: relative; overflow: hidden; isolation: isolate; padding: 14px 12px 12px; border-radius: 18px;
-  border: 1.5px solid var(--ag-line-hi);
-  background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(249,115,22,.18), transparent 70%), linear-gradient(180deg, #1a120c, #0d0907);
-}
-.bt-court-lines {
-  position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
-  background:
-    radial-gradient(circle at 50% 100%, transparent 0 34%, rgba(255,255,255,.09) 34% calc(34% + 2px), transparent calc(34% + 2px)),
-    linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,255,255,.09) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
-    radial-gradient(circle, rgba(255,255,255,.035) 1px, transparent 1.4px) 0 0 / 4px 4px;
-}
-.bt-run-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.bt-run-count { font-family: var(--ag-display); font-size: 30px; line-height: 1; color: #fff; }
-.bt-run-count b { color: #ff8a3d; }
-.bt-run-count small { margin-left: 6px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--ag-muted); }
-.bt-run-timer { font-family: var(--ag-font); font-size: 18px; letter-spacing: 2.5px; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
-.bt-squads { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.bt-squads-vs { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--ag-display); font-size: 14px; color: #1c0a02; background: linear-gradient(135deg, #fdba74, #ea580c); box-shadow: 0 0 0 3px #0d0907, 0 6px 16px rgba(234,88,12,.45); }
-.bt-squad-col { display: flex; flex-direction: column; gap: 7px; padding: 8px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--tc) 22%, transparent); background: color-mix(in srgb, var(--tc) 5%, transparent); transition: border-color .2s; }
-.bt-squad-col.is-mine { border-color: color-mix(in srgb, var(--tc) 65%, transparent); box-shadow: 0 0 22px color-mix(in srgb, var(--tc) 18%, transparent); }
-.bt-squad-title { font-family: var(--ag-font); font-size: 15px; letter-spacing: 2px; color: var(--tc); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bt-spot {
-  display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; min-height: 52px; padding: 7px 8px; border-radius: 12px;
-  text-align: left; cursor: pointer; color: var(--ag-text); border: 1.5px dashed color-mix(in srgb, var(--tc) 40%, transparent);
-  background: rgba(0,0,0,.35); transition: transform var(--press), border-color .15s, background .15s;
-  animation: ag-zoom .35s cubic-bezier(.2,1.2,.3,1) both; animation-delay: var(--d);
-}
-.bt-spot:not(:disabled):active { transform: scale(.96); }
-@media (hover: hover) { .bt-spot.is-open:hover { border-color: var(--tc); } }
-.bt-spot.is-taken { border-style: solid; border-color: color-mix(in srgb, var(--tc) 35%, transparent); background: rgba(255,255,255,.05); }
-.bt-spot.is-me { border-color: var(--tc); background: color-mix(in srgb, var(--tc) 16%, rgba(0,0,0,.4)); box-shadow: 0 0 16px color-mix(in srgb, var(--tc) 35%, transparent); }
-.bt-spot-plus { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-family: var(--ag-display); font-size: 22px; color: var(--tc); background: color-mix(in srgb, var(--tc) 12%, transparent); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); }
-.bt-spot.is-open .bt-spot-plus { animation: bt-plus 1.8s ease-in-out infinite; }
-@keyframes bt-plus { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--tc) 15%, transparent); } }
-.bt-spot-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.bt-spot-name { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.2px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bt-spot.is-open .bt-spot-name { font-size: 13.5px; color: var(--tc); }
-.bt-spot-name .ntag { font-size: 14px; max-width: 100%; }
-.bt-spot-role { font-family: var(--ag-body); font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bt-spot.is-big { --big: 1; }
-.bt-bumped { margin-top: 10px; padding: 8px 10px; border-radius: 10px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: #fecaca; background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.4); }
-.bt-run-foot { margin-top: 12px; display: flex; justify-content: center; }
-.bt-run-hint { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); text-align: center; line-height: 1.4; }
-.bt-run-foot .bt-fill { width: 100%; }
-.bt-lobby-chat {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; margin-top: 10px; padding: 12px 14px;
-  border-radius: 14px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); color: var(--ag-text); text-align: left; cursor: pointer;
-}
-.bt-lobby-chat-txt { font-family: var(--ag-body); font-size: 13px; font-weight: 500; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bt-lobby-chat-txt b { color: var(--ag-text); }
-.bt-lobby-chat .ag-tab-badge { position: static; }
-details.bt-rules { margin-top: 10px; }
-details.bt-rules summary { cursor: pointer; list-style: none; }
-details.bt-rules summary::-webkit-details-marker { display: none; }
-details.bt-rules summary::after { content: ' +'; }
-details.bt-rules[open] summary::after { content: ' −'; }
-
-/* ═══ Chat sheet: slides up, bubbles, typing ════════════════════════════════ */
-.bt-sheet-overlay { position: fixed; inset: 0; z-index: 1250; display: flex; align-items: flex-end; background: rgba(0,0,0,.5); animation: ag-fade .18s ease both; }
-.bt-sheet-overlay.is-closing { animation: ag-fade .18s ease reverse both; }
-.bt-sheet {
-  width: 100%; height: min(78dvh, 640px); display: flex; flex-direction: column;
-  padding: 6px 14px calc(max(10px, var(--safe-bottom)) + 4px); border-radius: 22px 22px 0 0;
-  border-top: 1.5px solid var(--ag-line-hi); background: linear-gradient(180deg, #0f0b08, #070504);
-  box-shadow: 0 -20px 60px rgba(0,0,0,.6); animation: ag-sheet-up .28s cubic-bezier(.2,1,.3,1) both;
-}
-.bt-sheet-overlay.is-closing .bt-sheet { animation: bt-sheet-down .18s ease both; }
-@keyframes bt-sheet-down { to { transform: translateY(40px); opacity: 0; } }
-.bt-sheet-grab { width: 44px; height: 5px; margin: 4px auto 8px; border-radius: 3px; background: rgba(255,255,255,.22); flex: 0 0 auto; }
-.bt-sheet-head { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; margin-bottom: 8px; }
-.bt-sheet-title { margin: 0; font-family: var(--ag-font); font-size: 22px; letter-spacing: 2.5px; font-weight: 400; }
-.bt-squad-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; flex: 0 0 auto; margin-bottom: 8px; }
-.bt-sq { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 6px; padding: 6px; border-radius: 11px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.04); min-width: 0; }
-.bt-sq.is-me { border-color: var(--ag-line-hi); }
-.bt-sq-txt { display: flex; flex-direction: column; min-width: 0; }
-.bt-sq-txt b { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bt-sq-txt small { font-family: var(--ag-body); font-size: 10.5px; font-weight: 800; color: var(--ag-muted); }
-.bt-sq-ovr { display: flex; flex-direction: column; align-items: center; font-family: var(--ag-display); font-size: 18px; line-height: 1; color: #ff8a3d; }
-.bt-sq-ovr small { font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1px; color: var(--ag-muted); }
-.bt-sheet .bt-chat-list { flex: 1; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; padding: 4px 2px 8px; display: flex; flex-direction: column; gap: 3px; }
-.bt-chat-empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--ag-muted); font-family: var(--ag-body); font-size: 13px; font-weight: 600; opacity: .8; }
-.bt-sheet .bt-msg { margin-top: 5px; animation: bt-msg-in .22s cubic-bezier(.2,1.2,.3,1) both; }
-.bt-sheet .bt-msg.is-grouped { margin-top: 0; }
-.bt-sheet .bt-msg.is-me { background: linear-gradient(135deg, #fb923c, #c2410c); color: #1c0a02; }
-.bt-sheet .bt-msg.is-me .bt-msg-text { color: #1c0a02; font-weight: 600; }
-@keyframes bt-msg-in { from { opacity: 0; transform: translateY(8px) scale(.96); } }
-.bt-msg-name .ntag { font-size: 12px; }
-.bt-typing { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
+/* Waiting dots (the shop's buttons, Career). Blacktop's lobby, hub and chat are in components/app/blacktop-lobby.css */
 .bt-dots { display: inline-flex; gap: 3px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.06); }
 .bt-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--ag-muted); animation: bt-dot 1.1s ease-in-out infinite; }
 .bt-dots i:nth-child(2) { animation-delay: .15s; } .bt-dots i:nth-child(3) { animation-delay: .3s; }
 .bt-dots--btn { padding: 0; background: none; vertical-align: middle; }
 .bt-dots--btn i { background: currentColor; }
 @keyframes bt-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-3px); opacity: 1; } }
-.bt-sheet .bt-quick { flex: 0 0 auto; }
-.bt-sheet .bt-chat-form { flex: 0 0 auto; align-items: center; }
-.bt-sheet .bt-chat-form input { height: 46px; border-radius: 23px; padding: 0 16px; font-size: 16px; }
-.bt-send { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; color: #1c0a02; background: linear-gradient(135deg, #fdba74, #ea580c); box-shadow: 0 4px 14px rgba(234,88,12,.4); transition: transform var(--press), filter .15s; }
-.bt-send:disabled { filter: grayscale(.8) brightness(.55); box-shadow: none; }
-.bt-send:not(:disabled):active { transform: scale(.96); }
 .bt-hud-p-name small { margin-left: 3px; font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1px; color: var(--ag-muted); font-weight: 400; }
 .bt-hud-p-n b { font-family: var(--ag-display); font-size: 13px; color: var(--tc); font-weight: 400; }
 
@@ -2893,7 +2771,6 @@ html.app-look .ag-levelup,
 html.app-look .ag-ring,
 html.app-look .ag-bc { padding-bottom: var(--web-rail, 0px); }
 html.app-look .ag-menu { max-height: calc(100dvh - var(--web-rail, 0px) - 24px); }
-html.app-look .bt-sheet { height: min(78dvh - var(--web-rail, 0px), 640px); }
 html.app-look .sh-sheet { max-height: calc(88dvh - var(--web-rail, 0px)); }
 /* a season moment scrolls itself into view; keep it clear of the dock and the ad rail */
 .sm-moment { scroll-margin-bottom: calc(var(--web-rail, 0px) + 24px); scroll-margin-top: 70px; }
@@ -3333,7 +3210,6 @@ html.app-look .ag-tiles { grid-auto-flow: row; }
 .ol-link.is-local { color: #ff9b9b; border-color: rgba(239,68,68,.5); flex-wrap: wrap; justify-content: center; }
 .ol-link.is-local button { margin-left: 4px; padding: 2px 9px; border-radius: 999px; border: 0; background: #ef4444; color: #fff; font: inherit; letter-spacing: 1.6px; cursor: pointer; }
 .cp-sub--room { font-size: 11.5px; opacity: .8; }
-.bt-run-link { display: flex; justify-content: center; margin: 2px 0 8px; }
 
 /* Website top bar: the app's settings-and-more button in place of the old grid */
 html.app-look .navbar .nav-more-btn { width: 40px; height: 40px; border-radius: 12px; color: var(--ag-text); cursor: pointer; transition: transform .12s ease, border-color .15s, background .15s; }
@@ -3626,35 +3502,6 @@ button.sq-po-row:focus-visible { outline: 2px solid var(--ag-a1); outline-offset
 .sq-reveal .sq-games .sq-game:first-child { background: rgba(255,255,255,.07); }
 .sq-reveal-skip { height: 46px; font-size: 16px; }
 
-/* ═══ Chat on desktop: a compact panel in the corner, not a full-width sheet ═ */
-@media (min-width: 900px) and (hover: hover) {
-  html:is(.is-app, .app-look) .bt-sheet-overlay {
-    align-items: flex-end; justify-content: flex-end;
-    padding: 0 20px calc(var(--web-rail, 0px) + 20px);
-    background: rgba(0,0,0,.28);
-  }
-  html:is(.is-app, .app-look) .bt-sheet {
-    width: 380px; height: min(520px, calc(100dvh - var(--web-rail, 0px) - 100px));
-    padding: 8px 12px 12px; border-radius: 18px;
-    border: 1.5px solid var(--ag-line-hi);
-    box-shadow: 0 18px 50px rgba(0,0,0,.55);
-  }
-  html:is(.is-app, .app-look) .bt-sheet-grab { display: none; }
-  html:is(.is-app, .app-look) .bt-sheet-head { margin-bottom: 6px; }
-  html:is(.is-app, .app-look) .bt-sheet-head .ag-round-btn { width: 32px; height: 32px; }
-  html:is(.is-app, .app-look) .bt-sheet-title { font-size: 17px; letter-spacing: 2px; }
-  html:is(.is-app, .app-look) .bt-squad-strip { gap: 4px; margin-bottom: 6px; }
-  html:is(.is-app, .app-look) .bt-sq { grid-template-columns: 24px 1fr auto; padding: 4px 5px; border-radius: 9px; }
-  html:is(.is-app, .app-look) .bt-sq .bt-av { width: 24px !important; height: 24px !important; font-size: 11px !important; }
-  html:is(.is-app, .app-look) .bt-sq-ovr { font-size: 15px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-msg { max-width: 82%; padding: 5px 9px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-msg-text { font-size: 13px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-quick { gap: 5px; padding: 6px 0 2px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-quick .ag-chip { height: 26px; padding: 0 9px; font-size: 12px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-chat-form input { height: 38px; border-radius: 19px; padding: 0 14px; font-size: 14px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-send { width: 38px; height: 38px; }
-  html:is(.is-app, .app-look) .bt-sheet .bt-send svg { width: 17px; height: 17px; }
-}
 /* a lobby's record card: one block per mode (3v3, then 1v1), a little apart */
 .ol-stack { display: flex; flex-direction: column; gap: 14px; }
 .ol-stack > .ol-mode + .ol-mode { padding-top: 12px; border-top: 1px solid var(--ag-line); }
@@ -3666,74 +3513,13 @@ html:is(.is-app, .app-look) .vl1-title { font-family: var(--ag-display) !importa
 html:is(.is-app, .app-look) .vl1-modes { margin-top: 4px; }
 
 /* ═══ Blacktop hub (3v3 · 1v1) and the 1v1 screen ═══════════════════════════ */
-.bt-hub-rating { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--ag-line); background: var(--ag-panel); color: var(--ag-text); cursor: pointer; text-align: left; }
-.bt-hub-rating .ag-eyebrow { flex: 1; }
-.bt-hub-rating b { font-family: var(--ag-display); font-size: 22px; font-weight: 400; line-height: 1; }
-.bt-hub-rating svg { color: var(--ag-muted); }
-.bt-mode { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 18px; border: 1.5px solid var(--ag-line); background: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--ag-a1) 12%, transparent), transparent 60%), var(--ag-panel); }
-.bt-mode-head { display: flex; align-items: center; gap: 12px; }
 .bt-mode-tag { flex: none; width: 58px; height: 58px; border-radius: 15px; display: grid; place-items: center; font-family: var(--ag-display); font-size: 24px; line-height: 1; color: #1c0a02; background: linear-gradient(135deg, #fdba74, #ea580c); box-shadow: 0 6px 18px rgba(234,88,12,.35); }
-.bt-mode-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.bt-mode-txt b { font-family: var(--ag-font); font-size: 22px; font-weight: 400; letter-spacing: 1.5px; line-height: 1.05; }
-.bt-mode-txt small { font-family: var(--ag-body); font-size: 13px; font-weight: 500; line-height: 1.35; color: var(--ag-text-2); }
-.bt-mode-go { width: 100%; height: 54px; font-size: 20px; }
-.bt-mode .ol-mode { padding-top: 12px; border-top: 1px solid var(--ag-line); }
-.v1-opts { display: flex; flex-direction: column; gap: 8px; }
-.bt-opt { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 14px 10px 10px; border-radius: 14px; border: 1.5px solid var(--ag-line-hi); background: rgba(255,255,255,.04); color: var(--ag-text); cursor: pointer; text-align: left; transition: transform var(--press), background .15s, border-color .15s; }
-.bt-opt:not(:disabled):active { transform: scale(.96); }
-@media (hover: hover) { .bt-opt:hover { background: color-mix(in srgb, var(--ag-a1) 10%, transparent); border-color: color-mix(in srgb, var(--ag-a1) 55%, transparent); } }
-.bt-opt-ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--ag-a1); background: color-mix(in srgb, var(--ag-a1) 14%, transparent); border: 1px solid var(--ag-line-hi); }
-.bt-opt-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.bt-opt-txt b { font-family: var(--ag-font); font-size: 19px; font-weight: 400; letter-spacing: 2px; line-height: 1; }
-.bt-opt-txt small { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); }
-.bt-opt > svg { color: var(--ag-muted); }
-.v1-join { display: flex; gap: 8px; }
-.v1-join input { flex: 1; min-width: 0; height: 48px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--ag-line-hi); background: rgba(0,0,0,.35); color: var(--ag-text); font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; }
-.v1-join input::placeholder { color: var(--ag-muted); letter-spacing: 1.5px; font-size: 15px; }
-.v1-join .ag-btn { min-height: 48px; height: 48px; padding: 0 20px; font-size: 18px; }
-.v1-error { font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: #fca5a5; text-align: center; }
-.v1-wait { align-items: center; text-align: center; padding: 22px 16px; }
-.v1-code { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
-.v1-code b { font-family: var(--ag-display); font-size: 54px; font-weight: 400; letter-spacing: 6px; line-height: 1; color: #fdba74; text-shadow: 0 0 24px rgba(234,88,12,.35); }
-.v1-code .ag-btn { min-height: 42px; height: 42px; font-size: 16px; }
-.v1-search { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.v1-search b { font-family: var(--ag-display); font-size: 44px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
-.v1-search small { font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-text-2); }
-.v1-status { display: flex; align-items: center; gap: 8px; font-family: var(--ag-body); font-size: 14px; font-weight: 600; color: var(--ag-text-2); }
-.v1-cancel { width: 100%; height: 48px; }
-@media (min-width: 1024px) { .bt-hub .ag-screen-body, .v1 .ag-screen-body { max-width: 720px; margin-inline: auto; } }
 
 /* Blacktop menu: the games being played in a mode, under its buttons (AppBlacktop LiveGames) */
 .bt-live-dot { flex: none; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; }
 @media (prefers-reduced-motion: no-preference) { html:not(.bap-reduce-motion) .bt-live-dot { animation: ag-livepulse 1.6s ease-out infinite; } }
-.bt-watch-list { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--ag-line); }
-.bt-watch-head { display: flex; align-items: center; gap: 7px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--ag-text-2); }
-.bt-watch-head b { font-weight: 400; color: var(--ag-muted); }
-.bt-watch-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 7px 7px 10px; border-radius: 12px; border: 1.5px solid var(--ag-line); background: rgba(255,255,255,.035); }
-.bt-watch-side { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-family: var(--ag-body); font-size: 12.5px; font-weight: 700; line-height: 1.3; color: var(--tc); }
-.bt-watch-side.bt-t1 { align-items: flex-end; text-align: right; }
-.bt-watch-name { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bt-watch-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.bt-watch-score { display: flex; align-items: baseline; gap: 4px; font-family: var(--ag-display); font-size: 21px; line-height: 1; font-variant-numeric: tabular-nums; }
-.bt-watch-score b { font-weight: 400; color: rgba(255,255,255,.55); }
-.bt-watch-score b.is-lead { color: var(--tc); }
-.bt-watch-score i { font-style: normal; font-size: 14px; color: var(--ag-muted); }
-.bt-watch-time { display: inline-flex; align-items: center; gap: 4px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.2px; line-height: 1; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
-.bt-watch-time svg { margin-left: 3px; }
-.bt-watch-go { display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 11px; border-radius: 10px; border: 1.5px solid rgba(249,115,22,.6); background: rgba(249,115,22,.12); color: #fdba74; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; cursor: pointer; transition: transform var(--press), background .15s, border-color .15s; }
-.bt-watch-go:not(:disabled):active { transform: scale(.96); }
-@media (hover: hover) { .bt-watch-go:hover { background: rgba(249,115,22,.22); border-color: #f97316; } }
-.bt-watch-more { align-self: center; }
 
 /* Blacktop, watching: the stands' bar over the game (AppBlacktop WatchBar) */
-.bt-watchbar { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 14px; border: 1.5px solid rgba(249,115,22,.45); background: linear-gradient(100deg, rgba(249,115,22,.14), transparent 70%), var(--ag-panel); }
-.bt-game:not(.bt-live) > .bt-watchbar { margin: 10px 14px 0; }
-.bt-watchbar-tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--ag-font); font-size: 16px; letter-spacing: 2.5px; line-height: 1; color: #fdba74; }
-.bt-watchbar-n { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 5px; font-family: var(--ag-font); font-size: 12.5px; letter-spacing: 1.5px; line-height: 1; color: var(--ag-text-2); white-space: nowrap; }
-.bt-watchbar .ag-round-btn { flex: none; }
-.bt-watch-none { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 26px 16px; border-radius: 14px; border: 1.5px solid var(--ag-line); background: var(--ag-panel); text-align: center; font-family: var(--ag-body); font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--ag-text-2); }
-.bt-watch-none .ag-btn { width: 100%; max-width: 320px; }
-@media (min-width: 769px) { .bt-live.is-watch .lc-court { max-width: max(420px, calc((100dvh - 266px) * 4 / 3)); } }
 
 /* Players' looks where names show up: Blacktop, Compete, boards */
 .bt-avb, .cp-avb { flex: none; }
@@ -4033,12 +3819,6 @@ html.bap-reduce-motion *, html.bap-reduce-motion *::before, html.bap-reduce-moti
 /* glass gone, the cards get a solid enough backing to stay readable */
 html.bap-reduce-motion :is(.ag-card, .ag-sheet, .ag-menu, .ag-dock, .ag-tabbar, .ag-toast, .ag-screen-head) { background-color: rgba(10, 14, 12, .94); }
 /* Blacktop chat: the rules, agreed to once */
-.bt-rules { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--ag-line-hi); background: rgba(0,0,0,.35); }
-.bt-rules > b { font-family: var(--ag-font); font-weight: 400; font-size: 18px; letter-spacing: 2px; }
-.bt-rules ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-family: var(--ag-body); font-size: 13px; line-height: 1.4; color: var(--ag-text-2); }
-.bt-rules p { margin: 0; font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); }
-.bt-rules p a, .bt-rules p button { color: var(--ag-a1); background: none; border: 0; padding: 0; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
-.bt-rules .ag-btn { height: 46px; font-size: 17px; }
 
 /* ═══ Career: the team's colors, the lineup, the offseason ═════════════════ */
 .ag-screen.cr--team {
@@ -4605,12 +4385,6 @@ html.is-app .game-layout.ag-stack .spin-panel-body { padding-bottom: 6px !import
 .dc-hud { justify-content: space-between; }
 
 /* Blacktop menu: the court picker */
-.bt-courts { display: grid; gap: 8px; padding: 12px; border-radius: 16px; border: 1.5px solid var(--ag-line); background: var(--ag-panel); }
-.bt-courts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.bt-court-opt { display: grid; gap: 5px; padding: 5px; border-radius: 12px; border: 1.5px solid var(--ag-line); background: rgba(255,255,255,.03); color: var(--ag-muted); cursor: pointer; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; }
-.bt-court-opt img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; display: block; }
-.bt-court-opt.is-on { border-color: #ea580c; color: var(--ag-text); box-shadow: 0 0 0 1px #ea580c, 0 4px 14px rgba(234,88,12,.25); }
-.bt-court-opt:not(:disabled):active { transform: scale(.96); }
 
 /* Career: the traits in one group under the model (beside it on wide screens) */
 @media (min-width: 900px) {
@@ -4801,7 +4575,6 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 /* Career, basketball: the model keeps the build screen's sizing (so the jersey and
    the face stay on the figure); on narrow screens the whole stack shrinks together */
 @media (max-width: 899px) { .cr-model--bucket { height: 340px; } .cr-model--bucket .sil-wrap { transform: scale(.76); transform-origin: 50% 36%; } }
-.bt-courts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 
 /* Combine: QB accuracy, throwing to receivers on routes (positions in cqw of the field) */
 
@@ -5005,7 +4778,6 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 @media (min-width: 769px) {
   .lc-calls { position: absolute; left: 50%; bottom: 14px; z-index: 6; width: min(560px, 92%); margin: 0; transform: translateX(-50%); }
   .lc-calls .lc-bar { background: rgba(10,14,13,.88); backdrop-filter: blur(6px); box-shadow: 0 10px 28px rgba(0,0,0,.5); }
-  .lc-calls .lc-wait { background: rgba(10,14,13,.78); border-style: solid; }
   /* the whole court fits on screen (scoreboard above it), so the calls over it are in view too */
   .bt-live .lc-court { width: 100%; max-width: max(420px, calc((100dvh - 210px) * 4 / 3)); margin: 0 auto; }
 }
@@ -5033,23 +4805,8 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .btc-ovr { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); min-width: 24px; padding: 1px 4px 0; border-radius: 6px; font-family: var(--ag-display); font-size: 13px; line-height: 1.15; color: #06100b; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.6); z-index: 2; }
 .btc-bubble { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-size: 22px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); animation: lc-bubble 2.2s ease both; pointer-events: none; z-index: 7; }
 @keyframes lc-bubble { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.6); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 22%, 80% { transform: translate(-50%, 0) scale(1); opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -10px); } }
-.bt-board-btns { display: inline-flex; gap: 5px; }
-.lc-builds { position: fixed; left: 10px; right: 10px; top: calc(var(--safe-top) + 64px); bottom: calc(var(--app-bottom, 0px) + 12px); max-width: 560px; margin: 0 auto; z-index: 80; overflow-y: auto; padding: 12px; border-radius: 16px; border: 1.5px solid var(--ag-line); background: rgba(10,13,12,.97); box-shadow: 0 18px 50px rgba(0,0,0,.6); }
-.lc-builds-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.lc-builds-team { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.lc-builds-name { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; }
-.lc-builds-p { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--ag-line); }
-.lc-builds-p.is-me { border-color: rgba(245,220,138,.55); }
-.lc-builds-who { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.lc-builds-who b { font-family: var(--ag-body); font-size: 15px; }
-.lc-builds-who small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; color: var(--ag-muted); }
-.lc-builds-grades { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
-.lc-builds-grades i { display: flex; flex-direction: column; align-items: center; padding: 3px 0 2px; border-radius: 7px; background: rgba(255,255,255,.05); font-style: normal; font-family: var(--ag-display); font-size: 16px; line-height: 1.1; color: #fff; }
-.lc-builds-grades i small { font-family: var(--ag-font); font-size: 10px; letter-spacing: .5px; color: var(--ag-muted); }
 
 /* Blacktop: removed from a game (the build clock ran out) */
-.bt-notice { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid rgba(248,113,113,.55); background: rgba(248,113,113,.1); color: var(--ag-text); font-family: var(--ag-body); font-size: 14px; font-weight: 600; line-height: 1.4; text-align: left; cursor: pointer; }
-.bt-notice small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: var(--ag-muted); }
 /* the squads panel on a phone: the teams one above the other, and it scrolls if it's long */
 .bt-hud-panel { max-height: calc(100dvh - var(--safe-top) - var(--app-bottom, 0px) - 80px); overflow-y: auto; overscroll-behavior: contain; }
 @media (max-width: 520px) { .bt-hud-teams { grid-template-columns: 1fr !important; } }
@@ -5062,10 +4819,8 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 /* yours wears your team's color like everyone else, with a thin yellow ring around it; no glow on the ball */
 .btc-p.is-me .btc-ring { position: relative; }
 .btc-p.is-me .btc-ring::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 1.5px solid rgba(245,220,138,.75); pointer-events: none; }
-.bt-practice { width: 100%; margin-top: 8px; }
 .btc-ring .avb-ring { display: none; }   /* no circle behind the icons on court */
 /* the 3v3 check-up when it's not your call: who has it, who's on him */
-.lc-wait { padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--ag-line); text-align: center; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-text-2); }
 .crl-out { font-style: normal; color: #fca5a5; letter-spacing: 1px; }
 
 /* Sandbox unlock (Career / Squad Builder) */
@@ -5128,14 +4883,8 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .cr-comp-grid.is-list { grid-template-columns: 1fr; }
 
 /* Blacktop: a build's own name, where the role used to be (the reveal, the builds sheet) */
-.bt-arch { display: block; margin: 1px 0; font-style: normal; font-family: var(--ag-display); font-weight: 400; font-size: 15px; line-height: 1.05; letter-spacing: .3px; color: var(--ag-gold-hi, #f5dc8a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Blacktop 1v1 lobby: an open spot is two halves, guard or big */
-.bt-spot--pick { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 6px; }
-.bt-spot-half { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px; border-radius: 10px; border: 1px dashed var(--ag-line-hi); background: rgba(255,255,255,.03); color: inherit; cursor: pointer; text-align: left; }
-.bt-spot-half:not(:disabled):active { transform: scale(.96); }
-.bt-spot-half:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 2px; }
-.bt-spot-half .bt-spot-name { font-size: 13px; }
 
 /* minigames: the read's red decoy (covered: never tap it; an X so it isn't colour alone) and the miss callout */
 
@@ -5163,13 +4912,6 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .btc-p.is-me .btc-ring::after { inset: -5px; }
 
 /* Blacktop BUILDS sheet: each player's overall on the right, every grade a chip in its color */
-.lc-builds-who { align-items: center; }
-.lc-builds-id { display: flex; flex-direction: column; min-width: 0; }
-.lc-builds-ovr { flex: none; display: flex; flex-direction: column; align-items: center; min-width: 46px; padding: 4px 8px 3px; border-radius: 10px; background: rgba(255,255,255,.07); line-height: 1; }
-.lc-builds-who .lc-builds-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 22px; color: #fff; }
-.lc-builds-who .lc-builds-ovr small { font-size: 10px; }
-.lc-builds-grades i.is-g { color: var(--g); background: color-mix(in srgb, var(--g) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 50%, transparent); }
-.lc-builds-grades i.is-g small { color: color-mix(in srgb, var(--g) 40%, #d5dde4); }
 
 /* Home on the website: a small How to play button under the wordmark (the
    tutorial doesn't open by itself there) */
@@ -5279,7 +5021,6 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
   html:is(.is-app, .app-look) .game-layout.mobile-build .right-panel-wrap { background: var(--ag-bg) !important; }
 }
 /* the Blacktop lobby's TEST fill (testers only) */
-.bt-test-fill { width: 100%; height: 40px; margin-top: 10px; font-size: 14px; letter-spacing: 1.6px; border-style: dashed !important; opacity: .85; }
 /* Career comp: the columns are headed by last name, the whole name showing (it may run a little past its 30px column; long ones a size smaller) */
 .cr-comp-row--head em { justify-self: center; width: max-content; overflow: visible; text-overflow: clip; }
 .cr-comp-row--head em.is-long { font-size: 9.5px; letter-spacing: .2px; }
@@ -5478,13 +5219,11 @@ html:is(.is-app, .app-look) .dc-submit-btn { transition: filter .15s, transform 
 .ll-leave { transition: transform var(--press); }
 .ll-btn { transition: transform var(--press); }
 .ag-set-back { transition: transform var(--press); }
-.bt-court-opt { transition: transform var(--press); }
 .cr-slot-main { transition: transform var(--press); }
 .drop-bar-spin { transition: transform var(--press); }
 .lg-back { transition: transform var(--press); }
 .ag-getapp a { transition: transform var(--press); }
 .lc-opt { transition: transform var(--press); }
-.bt-spot-half { transition: transform var(--press); }
 .ag-howto { transition: background .15s, color .15s, transform var(--press); }
 /* cards whose only transition lived in the mouse-only hover block (touch snapped) */
 :is(.ag-mini, .ag-squad, .ag-blacktop, .ag-compete, .ag-resume, .ag-daily-banner, .ag-player-chip, .ag-online-btn) { transition: transform var(--press); }
@@ -5790,7 +5529,6 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 /* icon sweep: the set's shapes where text glyphs and an emoji were */
 .btc-ball { display: grid; place-items: center; width: max(18px, 4cqw); height: max(18px, 4cqw); }
 .btc-ball svg { width: 100%; height: 100%; }
-.bt-board-me { margin-left: 4px; vertical-align: -1px; color: #f2c94c; }
 .ag-ct-star { margin-right: 3px; vertical-align: -1px; }
 .cr-flash-arrow { display: inline-grid; place-items: center; }
 
@@ -6635,7 +6373,6 @@ html:is(.is-app, .app-look) .qb-reveal-year { color: rgba(255,255,255,.8) !impor
 /* Compete and Blacktop: how many are waiting in each queue right now (lib/liveCounts.js), only when someone is */
 .cp-pos .ag-pos:has(.cp-pos-n) { gap: 1px; padding-top: 4px; padding-bottom: 4px; }
 .cp-pos-n { font-family: var(--ag-body); font-size: 10px; font-weight: 700; letter-spacing: .6px; line-height: 1; color: #a3e635; white-space: nowrap; }
-.bt-mode-n { flex: none; margin-left: auto; align-self: flex-start; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1.2; color: #a3e635; white-space: nowrap; }
 
 /* Career: the mini games mode (SIMPLE | ADVANCED | OFF), on the New Career form and the career screen */
 .cr-games-label { margin-top: 2px; }

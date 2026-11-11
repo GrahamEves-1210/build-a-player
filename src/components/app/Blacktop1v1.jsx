@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { LiveLeaveButton } from './LiveLeave'
 import { NameTag, AvatarBadge } from './NameTag'
 import { liveOvr } from './AppBlacktop'
+import BlacktopSheet from './BlacktopSheet'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose, IconCheck } from './icons'
+import { IconCheck } from './icons'
+import './blacktop-theme.css'
+import './blacktop-lobby.css'
 import './blacktop-1v1.css'
 
 // BLACKTOP 1V1, drawn like the 3v3: each player is their profile picture and
 // username (with their equipped look), never "you" or a player headshot. Me on
-// the left in the 3v3's first-team white, the opponent on the right in orange.
+// the left in the first team's blue, the opponent on the right in red.
 
 // A signed-in player's 1v1 id is "<account id>-<session id>"; a guest's is just the session id
 export const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(id) ? id.slice(0, 36) : null)
@@ -25,35 +28,69 @@ export function WhoName({ who, plate = true, short = false }) {
   return <NameTag name={short ? firstName(who.name) : who.name} self={!!who.self} cos={who.self ? null : who.cos || null} uid={who.self ? null : who.uid || null} plate={plate} />
 }
 
-// One player's spot, the 3v3 lobby's spot card
-export function VersusSpot({ who, team = 0, sub = '', d = 0 }) {
+// One player's spot: the lobby's plate (picture, name, a line under it)
+export function VersusSpot({ who, team = 0, sub = '' }) {
   return (
-    <div className={`bt-spot is-taken${who.self ? ' is-me' : ''}`} style={{ '--d': `${d}ms` }}>
-      <WhoAv who={who} team={team} size={34} />
-      <span className="bt-spot-txt">
-        <span className="bt-spot-name"><WhoName who={who} /></span>
-        {sub && <span className="bt-spot-role">{sub}</span>}
+    <div className={`btl-seat is-taken${who.self ? ' is-me' : ''}`}>
+      <WhoAv who={who} team={team} size={40} />
+      <span className="btl-seat-txt">
+        <span className="btl-seat-name"><WhoName who={who} /></span>
+        {sub && <span className="btl-seat-role">{sub}</span>}
       </span>
     </div>
   )
 }
-// The empty side while we wait for the opponent
+// The empty side while we wait for the opponent: a light runs the slot while we look
 export function OpenSpot({ title, sub = '' }) {
   return (
-    <div className="bt-spot is-open v1g-open">
-      <span className="bt-spot-plus">+</span>
-      <span className="bt-spot-txt">
-        <span className="bt-spot-name">{title}</span>
-        {sub && <span className="bt-spot-role">{sub}</span>}
+    <div className="btl-seat is-open is-search">
+      <span className="btl-scan ip-fx" aria-hidden="true" />
+      <span className="btl-seat-plus">?</span>
+      <span className="btl-seat-txt">
+        <span className="btl-seat-name">{title}</span>
+        {sub && <span className="btl-seat-role">{sub}</span>}
       </span>
     </div>
   )
 }
 
+// ── The 1v1 lobby's board (VersusLobby): me, and the opponent's side (open until found) ──
+// left / right: a VersusSpot or an OpenSpot; code: a friend game's code to send; timer: the search clock
+export function VersusBoard({ found = false, timer = null, code = null, onCopy = null, left, right, hint = null }) {
+  return (
+    <section className={`btl-board btl-board--v1${found ? ' is-full' : ''}`}>
+      <div className="btl-board-lines" aria-hidden="true" />
+      <div className="btl-board-head">
+        <span className="btl-count"><b>{found ? 2 : 1}</b><i>/2</i><small>{found ? <>GAME<br />ON</> : <>SPOTS<br />TAKEN</>}</small></span>
+        <span className="btl-pips" aria-hidden="true"><i className="bt-t0 is-on" /><i className="is-gap" /><i className={`bt-t1${found ? ' is-on' : ''}`} /></span>
+        <span className="btl-board-meta">{timer && <span className="btl-timer">{timer}</span>}</span>
+      </div>
+      {code && (
+        <div className="btl-codecard">
+          <small>SEND THIS CODE TO A FRIEND</small>
+          <b>{code}</b>
+          <button className="ag-btn btl-btn btl-btn--line" onClick={onCopy}>COPY CODE</button>
+        </div>
+      )}
+      <div className="btl-teams">
+        <div className="btl-team bt-t0 is-mine">{left}</div>
+        <div className="btl-team bt-t1">{right}</div>
+        <span className="btl-vs" aria-hidden="true">VS</span>
+      </div>
+      <div className="btl-board-foot" role="status">
+        {found
+          ? <span className="btl-tip"><b>GAME ON</b>{hint && <small>{hint}</small>}</span>
+          : <span className="btl-wait"><span className="btl-dots"><i /><i /><i /></span>{hint}</span>}
+      </div>
+    </section>
+  )
+}
+
 // ── Build HUD: the 3v3's slim bar over the build, tap for both players ──────
 // me / opp: { name, self?, cos?, uid?, build, types, pos }
-export function VersusHud({ me, opp, clock = null }) {
-  const [open, setOpen] = useState(false)
+// (devOpen: the DEV look page opens the panel; it does nothing in a build that ships)
+export function VersusHud({ me, opp, clock = null, devOpen = false }) {
+  const [open, setOpen] = useState(import.meta.env.DEV && devOpen)
   const filled = s => s.types.filter(t => s.build?.[t]).length
   const sides = [me, opp]
   const urgent = clock != null && clock <= 20
@@ -65,9 +102,7 @@ export function VersusHud({ me, opp, clock = null }) {
         <span className="bt-hud-mini">
           {sides.map((s, t) => (
             <span key={t} className={`bt-t${t} v1g-hud-who`}>
-              <WhoAv who={s} team={t} size={20} />
-              <b><WhoName who={s} short /></b> {filled(s)}/{s.types.length}
-              {t === 0 && <i>vs</i>}
+              <b><WhoName who={s} short plate={false} /></b> {filled(s)}/{s.types.length}
             </span>
           ))}
         </span>
@@ -101,59 +136,49 @@ export function VersusHud({ me, opp, clock = null }) {
   )
 }
 
-// ── Matchup: who you drew, then take a spot (guard or big) ──────────────────
+// ── Matchup: who you drew, face to face, then take a spot (guard or big) ────
 // me / opp: { name, self?, cos?, uid?, record }
 export function VersusMatchup({ me, opp, oppPos = null, onPick }) {
-  return (
-    <div className="bt-sheet-overlay v1g-sheet-overlay">
-      <div className="bt-sheet v1g-sheet" role="dialog" aria-label="1v1 matchup">
-        <div className="bt-sheet-grab" />
-        <div className="bt-sheet-head">
-          <h2 className="bt-sheet-title">1V1 · FIRST TO 11</h2>
-        </div>
-        <div className="bt-squads v1g-squads">
-          <div className="bt-squad-col bt-t0 is-mine"><VersusSpot who={me} team={0} sub={recordLabel(me.record) ?? ''} d={60} /></div>
-          <div className="bt-squad-col bt-t1"><VersusSpot who={opp} team={1} sub={[recordLabel(opp.record), oppPos ? posLabel(oppPos) : ''].filter(Boolean).join(' · ') || '1V1'} d={120} /></div>
-          <span className="bt-squads-vs">VS</span>
-        </div>
-        <span className="ag-eyebrow v1g-pick-lbl">TAKE A SPOT</span>
-        <div className="v1g-pick bt-t0">
-          {['guard', 'big'].map((pos, i) => (
-            <button key={pos} className={`bt-spot is-open${pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${180 + i * 60}ms` }}
-              onClick={() => { sfx('slot'); haptic('medium'); onPick(pos) }}>
-              <span className="bt-spot-plus">+</span>
-              <span className="bt-spot-txt">
-                <span className="bt-spot-name">JOIN AS {pos === 'big' ? 'BIG' : 'GUARD'}</span>
-                <span className="bt-spot-role">{pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF'}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
+  const side = (who, t, pos) => (
+    <div className={`btl-face bt-t${t}`}>
+      <WhoAv who={who} team={t} size={64} />
+      <span className="btl-face-name"><WhoName who={who} /></span>
+      <span className="btl-face-sub">{recordLabel(who.record) ?? '1V1'}{pos && <small>{posLabel(pos)}</small>}</span>
     </div>
+  )
+  return (
+    <BlacktopSheet label="1v1 matchup" title="1V1 · FIRST TO 11">
+      <div className="btl-faceoff">
+        {side(me, 0, null)}
+        {side(opp, 1, oppPos)}
+        <span className="btl-faceoff-vs" aria-hidden="true">VS</span>
+      </div>
+      <div className="btl-sec"><span className="btl-sec-title">TAKE A SPOT</span></div>
+      <div className="btl-picks">
+        {['guard', 'big'].map(pos => (
+          <button key={pos} className="btl-pick" onClick={() => { sfx('slot'); haptic('medium'); onPick(pos) }} aria-label={`Join as ${pos === 'big' ? 'big' : 'guard'}`}>
+            <b>{pos === 'big' ? 'BIG' : 'GUARD'}</b>
+            <small>{pos === 'big' ? 'PF · C' : 'PG · SG · SF'}</small>
+          </button>
+        ))}
+      </div>
+    </BlacktopSheet>
   )
 }
 
-// ── Leave mid-game? The 3v3's sheet, with who you'd be walking out on ────────
+// ── Leave mid-game? With who you'd be walking out on ────────────────────────
 // opp: { name, cos?, uid? } (null if we never learned who)
 export function VersusLeaveSheet({ opp, onStay, onLeave }) {
   const who = opp ?? { name: 'Guest' }
   return (
-    <div className="bt-sheet-overlay v1g-sheet-overlay" onClick={e => e.target === e.currentTarget && onStay()}>
-      <div className="bt-sheet v1g-sheet" role="dialog" aria-label="Leave the 1v1?">
-        <div className="bt-sheet-grab" onClick={onStay} />
-        <div className="bt-sheet-head">
-          <h2 className="bt-sheet-title">LEAVE THE 1V1?</h2>
-          <button className="ag-round-btn" onClick={onStay} aria-label="Stay in the game"><IconClose size={16} /></button>
-        </div>
-        <div className="bt-t1 v1g-solo"><VersusSpot who={who} team={1} sub="STILL ON THE COURT" /></div>
-        <p className="v1g-sheet-note">Leaving mid-game counts as a loss on your record, and <WhoName who={who} /> takes the W.</p>
-        <div className="bt-result-actions v1g-sheet-actions">
-          <button className="ag-btn" onClick={() => { sfx('tap'); onStay() }}>STAY IN THE GAME</button>
-          <button className="ag-btn ag-btn--ghost v1g-leave" onClick={() => { sfx('tap'); onLeave() }}>LEAVE &amp; TAKE THE L</button>
-        </div>
+    <BlacktopSheet label="Leave the 1v1?" title="LEAVE THE 1V1?" onClose={onStay} closeLabel="Stay in the game">
+      <div className="bt-t1"><VersusSpot who={who} team={1} sub="STILL ON THE COURT" /></div>
+      <p className="btl-sheet-note">Leaving mid-game counts as a loss on your record, and <WhoName who={who} plate={false} /> takes the W.</p>
+      <div className="btl-sheet-acts">
+        <button className="ag-btn btl-btn" onClick={() => { sfx('tap'); onStay() }}>STAY IN THE GAME</button>
+        <button className="ag-btn btl-btn btl-btn--line btl-btn--warn" onClick={() => { sfx('tap'); onLeave() }}>LEAVE &amp; TAKE THE L</button>
       </div>
-    </div>
+    </BlacktopSheet>
   )
 }
 
@@ -162,25 +187,21 @@ export function VersusLeaveSheet({ opp, onStay, onLeave }) {
 export function VersusOppLeftSheet({ opp, me, onDone }) {
   const who = opp ?? { name: 'Guest' }
   return (
-    <div className="bt-sheet-overlay v1g-sheet-overlay">
-      <div className="bt-sheet v1g-sheet" role="dialog" aria-label="Match over">
-        <div className="bt-sheet-grab" />
-        <div className="bt-sheet-head">
-          <h2 className="bt-sheet-title">MATCH OVER</h2>
+    <BlacktopSheet label="Match over" title="MATCH OVER">
+      <div className="btl-over">
+        <div className="btl-over-row is-gone bt-t1">
+          <WhoAv who={who} team={1} size={44} />
+          <span className="btl-over-who"><WhoName who={who} /><small>LEFT THE BLACKTOP</small></span>
         </div>
-        <div className="v1g-gone bt-t1">
-          <WhoAv who={who} team={1} size={56} />
-          <span className="v1g-gone-name"><WhoName who={who} /></span>
-          <span className="v1g-took">LEFT THE BLACKTOP</span>
-        </div>
-        <div className="v1g-w bt-t0">
-          <span className="ag-eyebrow">BLACKTOP · 1V1 · W</span>
-          <span className="v1g-w-who"><WhoAv who={me} team={0} size={28} /><WhoName who={me} /><span className="v1g-w-txt">TAKES THE WIN</span></span>
-        </div>
-        <div className="bt-result-actions v1g-sheet-actions">
-          <button className="ag-btn" onClick={() => { sfx('tap'); onDone() }}>DONE</button>
+        <div className="btl-over-row is-w bt-t0">
+          <WhoAv who={me} team={0} size={44} />
+          <span className="btl-over-who"><WhoName who={me} /><small>TAKES THE WIN</small></span>
+          <span className="btl-over-w" aria-label="Win">W</span>
         </div>
       </div>
-    </div>
+      <div className="btl-sheet-acts">
+        <button className="ag-btn btl-btn" onClick={() => { sfx('tap'); onDone() }}>DONE</button>
+      </div>
+    </BlacktopSheet>
   )
 }

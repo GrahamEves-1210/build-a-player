@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NameTag } from './NameTag'
 import QBAvatar from '../QBAvatar'
 import { sfx } from '../../lib/juice'
 import { useProgress, equip } from '../../lib/progress'
 import { itemsFor, itemById, DEFAULTS } from '../../lib/cosmetics'
-import { IconBall } from './icons'
+import './blacktop-theme.css'
+import './blacktop-game.css'
 
 // The Blacktop court: six players and a ball, choreographed from the play the
 // engine wrote — who checked it up, each pass, the drive or the pull-up, the
@@ -49,10 +50,16 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const byId = Object.fromEntries(players.map(p => [p.id, p]))
   const guards = game.guards || {}
   const [pos, setPos] = useState(() => formation(game, play?.poss ?? 0, play?.handler ?? null))
-  const [ball, setBall] = useState(null)                 // { x, y, dur } override, else rides `holder`
+  const [ball, setBall] = useState(null)                 // { x, y, dur, kind, key } override, else rides `holder`
   const [holder, setHolder] = useState(play?.handler ?? null)
   const [hand, setHand] = useState(null)                 // which side of him the ball is on (-1 left, 1 right); null: his team's side
-  const [pop, setPop] = useState(null)
+  const [pop, setPop] = useState(null)                   // the callout: { label, sub, kind, team, flood, key }
+  const [rim, setRim] = useState(null)                   // the rim taking it: { kind: 'make' | 'miss' | 'dunk', key }
+  const [land, setLand] = useState(null)                 // the ball at the rim: { kind: 'in' | 'out', of (the flight it ends), ox }
+  const [flash, setFlash] = useState(0)                  // the floodlight on a make that matters
+  const [drib, setDrib] = useState(null)                 // the handler on the move: { key, dur, n }
+  const camRef = useRef(null)
+  const flyKey = useRef(0), dribKey = useRef(0)
   const [tag, setTag] = useState(null)                   // 'CHECK BALL' etc.
   const timers = useRef([])
   const popKey = useRef(0)
@@ -65,15 +72,22 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const caught = () => sfx('catchball')
   const holderRef = useRef(null), movingUntil = useRef(0), flyingUntil = useRef(0)
   const bounce = () => {}            // (dribbles come from the dribble clock below)
-  const moving = (id, dur) => { if (id === holderRef.current) movingUntil.current = Math.max(movingUntil.current, performance.now() + dur * 1000) }
+  const moving = (id, dur) => {
+    if (id !== holderRef.current) return
+    movingUntil.current = Math.max(movingUntil.current, performance.now() + dur * 1000)
+    // the ball bounces as he goes (as many dribbles as the move is long)
+    const beat = .34 / speed
+    setDrib({ key: ++dribKey.current, dur: beat, n: Math.max(1, Math.round(dur / beat)) })
+  }
   const move = (id, x, y, dur) => { const d = (dur ?? sdur(byId[id]?.R.speed)) / speed; moving(id, d); const s = { x: cl(x), y: clamp(y, 6, 92), dur: d }; live.current = { ...live.current, [id]: s }; setPos(p => ({ ...p, [id]: s })) }
   const moveMany = updates => {
     const n = { ...live.current }
     for (const [id, x, y, dur] of updates) { const d = (dur ?? sdur(byId[id]?.R.speed)) / speed; moving(id, d); n[id] = { x: cl(x), y: clamp(y, 6, 92), dur: d } }
     live.current = n; setPos(p => ({ ...p, ...Object.fromEntries(updates.map(([id]) => [id, n[id]])) }))
   }
-  const flyBall = (x, y, dur = .42) => { flyingUntil.current = performance.now() + (dur / speed) * 1000 + 60; setBall({ x, y, dur: dur / speed }) }
-  useEffect(() => { holderRef.current = holder; movingUntil.current = 0 }, [holder])
+  // kind: how it flies ('shot': the high arc at the rim; 'pass': flat; 'swat': knocked away)
+  const flyBall = (x, y, dur = .42, kind = null) => { flyingUntil.current = performance.now() + (dur / speed) * 1000 + 60; setBall({ x, y, dur: dur / speed, kind: kind ?? (x === RIM.x && y === RIM.y ? 'shot' : 'pass'), key: ++flyKey.current }) }
+  useEffect(() => { holderRef.current = holder; movingUntil.current = 0; setDrib(null) }, [holder])
   useEffect(() => {
     const id = setInterval(() => { const now = performance.now(); if (holderRef.current && now < movingUntil.current && now > flyingUntil.current) sfx('dribble') }, 340 / speed)
     return () => clearInterval(id)
@@ -82,7 +96,39 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const revealTo = useRef(onReveal); revealTo.current = onReveal
   const playId = useRef(null)
   const reveal = () => revealTo.current?.(playId.current)
-  const popRim = label => { reveal(); popKey.current++; setPop({ label, key: popKey.current }); after(900, () => setPop(null)) }
+  // the court's camera takes the hit (not with Reduce Motion)
+  const kick = (amt = 1) => {
+    const el = camRef.current
+    if (!el?.animate || document.documentElement.classList.contains('bap-reduce-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    el.animate([{ transform: 'none' }, { transform: `scale(${1 + .022 * amt}) translateY(${1.5 * amt}px)`, offset: .2 }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' })
+  }
+  // The play lands: the callout, the rim and the net, the ball through or off it, the camera.
+  // The rim rattles off a miss (it hit iron) and under a dunk (the hard one). Any other make is a swish:
+  // the net moves and nothing else does. A block or a steal never gets to the rim.
+  // info: { team, made, shot, pts, score } (what the callout says and how big it is)
+  const popRim = (label, info = {}) => {
+    reveal(); popKey.current++
+    const key = popKey.current
+    const atRim = label !== 'BLOCK' && label !== 'STEAL'
+    const made = atRim && label !== 'MISS'
+    const dunk = info.shot === 'dunk'
+    // game point and the winner: the floodlight's
+    const flood = made && Math.max(...(info.score ?? [0])) >= 10
+    const look = label === 'BLOCK' ? { label: 'BLOCKED', kind: 'slab' }
+      : label === 'STEAL' ? { label: 'STEAL', kind: 'slab' }
+      : !made ? { label: 'MISS', kind: 'miss' }
+      : dunk ? { label: 'DUNK', sub: label, kind: 'slab' }
+      : { label, kind: info.pts === 2 ? 'slab' : 'make' }
+    setPop({ ...look, team: info.team ?? null, flood, key })
+    if (atRim) {
+      setRim({ kind: !made ? 'miss' : dunk ? 'dunk' : 'make', key })
+      setLand({ kind: made ? 'in' : 'out', of: flyKey.current, ox: Math.random() < .5 ? -.55 : .55 })
+    }
+    if (flood) setFlash(key)
+    // the camera only takes the hit on a dunk, a block or a steal (never on a swish: nothing shakes on those)
+    if (!atRim) kick(1); else if (dunk && made) kick(1.5)
+    after(900, () => { setPop(null); setRim(null) })
+  }
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = [] }
   // where each player is headed now (kept as moves happen, so a pass or a shot later
   // in the play goes from where he actually is, not where he stood when it began)
@@ -135,7 +181,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       const spot = { x: cl(hp.x + side * r.rnd(8, 14)), y: hp.y - r.rnd(6, 12) }
       move(h, spot.x, spot.y, sp(h) * .9)
       move(s, spot.x + side * 6, spot.y + 4, sp(s) * .8)
-      after(520, () => { reveal(); setHolder(s); move(s, spot.x + side * 10, spot.y + 10, sp(s) * .5); move(h, spot.x - side * 6, spot.y + 6, sp(h) * .7) })
+      after(520, () => { popRim('STEAL', { team: play.team }); setHolder(s); move(s, spot.x + side * 10, spot.y + 10, sp(s) * .5); move(h, spot.x - side * 6, spot.y + 6, sp(h) * .7) })
       after(900, () => { move(s, 50, 80, sp(s)); moveMany(shadowAll(offIds, TOP, s)); bounce(3, 230) })
       return
     }
@@ -197,10 +243,11 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     const start = t + 120
     const made = play.type === 'score'
     const label = play.type === 'block' ? 'BLOCK' : !made ? 'MISS' : play.pts === 2 ? '+2' : '+1'
+    const info = { team: play.team, made, shot, pts: play.pts, score: play.score }
     // the ball leaves his hands once he's set (when a move of `dur` seconds lands)
     const setThen = (dur, fn) => after(dur * 1000 + 40, fn)
     // a swat: the ball knocked away to one side, the shot-blocker following it
-    const swat = (from, dx = 24) => { const side = from.x < 50 ? -1 : 1; flyBall(cl(from.x + side * dx * r.rnd(.7, 1.1)), from.y + r.rnd(4, 12), .45); popRim('BLOCK') }
+    const swat = (from, dx = 24) => { const side = from.x < 50 ? -1 : 1; flyBall(cl(from.x + side * dx * r.rnd(.7, 1.1)), from.y + r.rnd(4, 12), .45, 'swat'); popRim('BLOCK', info) }
 
     // a blocked jumper: he rises from the spot, his man closes out from the rim side and gets a hand on it
     if (play.type === 'block' && shot === 'mid') {
@@ -225,11 +272,11 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         move(shooter, lane.x, lane.y, od * .7); move(d, lane.x + (cur.x < 50 ? 8 : -8), lane.y - 10, dd * .8)
       })
       after(start + 500, () => { move(shooter, 50 + r.rnd(-6, 6), 17, od * .45); move(d, 50 + r.rnd(-4, 4), 20, dd * .4) })
-      after(start + 880, () => { const side = Math.random() < .5 ? -1 : 1; flyBall(50 + side * 28, 40, .5); popRim('BLOCK'); move(d, 50 + side * 14, 26, dd * .5) })
+      after(start + 880, () => { const side = Math.random() < .5 ? -1 : 1; flyBall(50 + side * 28, 40, .5, 'swat'); popRim('BLOCK', info); move(d, 50 + side * 14, 26, dd * .5) })
       return
     }
 
-    const finish = () => { flyBall(RIM.x, RIM.y, .42); after(120, () => popRim(label)); after(400, () => sfx(made ? 'make' : 'rimmiss')) }
+    const finish = () => { flyBall(RIM.x, RIM.y, .42); after(400, () => { popRim(label, info); sfx(made ? 'make' : 'rimmiss') }) }
     if (shot === 'arc') {
       const spot = csSpot ?? near(at(shooter), ARC3)
       // off a pass it's a catch-and-shoot (the engine's cs); never without one
@@ -302,7 +349,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       if (shot === 'dunk') {
         move(shooter, RIM.x + (cur.x < 50 ? -1 : 1) * r.rnd(2, 5), RIM.y + r.rnd(3, 6), od * .26)
         // the rim takes the hit, then the net (a miss is just the rim)
-        flyBall(RIM.x, RIM.y, .25); after(220, () => { popRim(label); sfx('rimmiss'); if (made) after(110, () => sfx('make')) })
+        flyBall(RIM.x, RIM.y, .25, 'pass'); after(220, () => { popRim(label, info); sfx('rimmiss'); if (made) after(110, () => sfx('make')) })
       } else { move(shooter, rimSpot.x, rimSpot.y, od * .3); finish() }
     })
     return () => clearAll()
@@ -330,38 +377,88 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const holderSide = holder && byId[holder] ? (byId[holder].team === 0 ? 1 : -1) : 1
   const ballPos = ball ?? { x: hp.x + (hand ?? holderSide) * 6, y: hp.y - 6 }
   const ballTr = ball ? `left ${ball.dur}s cubic-bezier(0.4,0,0.6,1), top ${ball.dur}s cubic-bezier(0.55,0,0.45,1)` : `left ${hp.dur ?? .5}s ${EASE}, top ${hp.dur ?? .5}s ${EASE}`
+  // what the ball itself is doing: through the net or off the rim, in the air, or being dribbled
+  const landed = ball && land && land.of === ball.key ? land : null
+  const air = landed ? { cls: `is-${landed.kind}`, key: `l${ball.key}`, style: { '--ox': landed.ox } }
+    : ball ? { cls: `is-${ball.kind}`, key: `f${ball.key}`, style: { '--fd': `${ball.dur}s` } }
+    : drib ? { cls: 'is-drib', key: `d${drib.key}`, style: { '--fd': `${drib.dur}s`, '--fn': drib.n } }
+    : { cls: '', key: 'held', style: undefined }
+  // two makes in a row and the floodlight finds him (plays before this one: this one isn't in yet)
+  const hot = useMemo(() => {
+    const run = {}
+    for (const q of game.plays ?? []) {
+      if (!play || q.id >= play.id) break
+      if (q.type === 'score') run[q.pid] = (run[q.pid] ?? 0) + 1
+      else if (q.type === 'miss') run[q.pid] = 0
+      else if (q.type === 'block') run[q.pid2 ?? q.pid] = 0
+    }
+    return run
+  }, [game, play?.id]) // eslint-disable-line
 
   return (
-    <div className="btc-wrap">
-      <div className="btc-court">
-        <img src={court.src} alt="" draggable={false} className="btc-img" />
-        {court.tint && <div className="btc-tint" />}<div className="btc-light" />
-        <div className="btc-overlay">
-          <div className="btc-ball" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}><IconBall /></div>
+    <div className="btg-stage">
+      <div className="btg-court" ref={camRef}>
+        <img src={court.src} alt="" draggable={false} className="btg-court-img" />
+        {court.tint && <div className="btc-tint" />}<div className="btg-court-light" />
+        {flash > 0 && <div key={flash} className="btg-court-flash" />}
+        <div className="btg-overlay">
+          <div key={`r${rim?.key ?? 0}`} className={`btg-rim${rim ? ` is-${rim.kind}` : ''}`} aria-hidden="true">
+            <svg viewBox="0 0 45 68">
+              <g className="btg-rim-net" fill="none" stroke="#f4f6f8" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M6 26 L14 52 M14.5 30 L18.5 53 M22.5 31 L22.5 54 M30.5 30 L26.5 53 M39 26 L31 52" />
+                <path d="M9 36 Q22.5 42 36 36 M12 45 Q22.5 50 33 45 M14 52 Q22.5 56 31 52" />
+              </g>
+              <g className="btg-rim-ring">
+                <circle cx="22.5" cy="22.5" r="18.5" fill="none" stroke="#3a1606" strokeWidth="6.5" />
+                <circle cx="22.5" cy="22.5" r="18.5" fill="none" stroke="#f26a1b" strokeWidth="4.5" />
+              </g>
+            </svg>
+          </div>
+          <div className="btg-ball-sh" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}><i key={air.key} className={air.cls} style={air.style} /></div>
+          <div className="btg-ball" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}>
+            <span key={air.key} className={`btg-ball-in${air.cls ? ` ${air.cls}` : ''}`} style={air.style}><Ball /></span>
+          </div>
           {players.map(p => {
             const s = pos[p.id] ?? TOP
             const has = holder === p.id
             const col = colorFor(p.team)
+            const me = p.id === meId
             return (
-              <div key={p.id} className={`btc-p${has ? ' has-ball' : ''}${p.id === meId ? ' is-me' : ''}`} style={{ left: 0, top: 0, translate: `${s.x}cqw ${s.y}cqh`, transition: `translate ${s.dur}s ${EASE}`, zIndex: has ? 5 : p.team === play?.poss ? 4 : 3, '--pc': col }}>
-                {/* the overall over the head, and a reaction when they send one */}
-                {ovrFor && <span className="btc-ovr" style={{ background: col }}>{ovrFor(p)}</span>}
-                {bubbles?.[p.id] && <span key={bubbles[p.id]} className="btc-bubble">{bubbles[p.id]}</span>}
-                <div className="btc-ring">
+              <div key={p.id} className={`btg-p${has ? ' has-ball' : ''}${me ? ' is-me' : ''}${(hot[p.id] ?? 0) >= 2 ? ' is-hot' : ''}${s.x > 84 ? ' is-r' : s.x < 16 ? ' is-l' : ''}`} style={{ translate: `${s.x}cqw ${s.y}cqh`, transition: `translate ${s.dur}s ${EASE}`, zIndex: has ? 5 : p.team === play?.poss ? 4 : 3, '--pc': col }}>
+                <span className="btg-p-shadow" />
+                {/* a reaction when they send one */}
+                {bubbles?.[p.id] && <span key={bubbles[p.id]} className="btg-p-bubble">{bubbles[p.id]}</span>}
+                {me && <span className="btg-p-mark" aria-hidden="true"><svg viewBox="0 0 12 9"><path d="M1 1h10L6 8z" fill="#fff" stroke="#05070a" strokeWidth="1.4" strokeLinejoin="round" /></svg></span>}
+                <div className="btg-p-face">
                   {avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={34} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />}
                 </div>
-                {/* the name in its owner's look (color, effect, plate), same as everywhere else; bots plain */}
-                <span className="btc-name" style={{ color: col }}>{p.id === meId && meLabel ? meLabel : p.bot && !p.mimic && p.id !== meId ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((p.id === meId && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={p.id === meId} cos={p.id === meId ? null : p.cos || null} />}</span>
+                {/* the name bar: the overall on the team's colour, then the name in its owner's look
+                    (color, effect, plate), same as everywhere else; bots plain */}
+                <span className="btg-p-plate">
+                  {ovrFor && <span className="btg-p-ovr">{ovrFor(p)}</span>}
+                  <span className="btg-p-name">{me && meLabel ? meLabel : p.bot && !p.mimic && !me ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((me && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={me} cos={me ? null : p.cos || null} />}</span>
+                </span>
               </div>
             )
           })}
-          {pop && <div key={pop.key} className={`btc-pop${pop.label === 'MISS' ? ' is-miss' : pop.label === 'BLOCK' ? ' is-block' : ''}`}>{pop.label}</div>}
-          {tag && <div className="btc-tag">{tag}</div>}
+          {pop && <div key={`c${pop.key}`} className={`btg-call is-${pop.kind}${pop.flood ? ' is-flood' : ''}${pop.team != null ? ` bt-t${pop.team}` : ''}`}><b>{pop.label}</b>{pop.sub && <small>{pop.sub}</small>}</div>}
+          {tag && <div className="btg-tag">{tag}</div>}
         </div>
       </div>
     </div>
   )
 }
+
+// The ball: lit from the top left, like the court
+const Ball = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="10.4" fill="#e9772c" />
+    <path d="M12 1.6a10.4 10.4 0 0 1 0 20.8a12.5 12.5 0 0 0 0 -20.8z" fill="#c9581a" />
+    <path fill="none" stroke="#4a1e08" strokeWidth="1.3" d="M1.6 12h20.8M12 1.6v20.8M4.8 4.6c3.6 3.2 3.6 11.6 0 14.8M19.2 4.6c-3.6 3.2-3.6 11.6 0 14.8" />
+    <ellipse cx="8.2" cy="7.4" rx="3.1" ry="2" fill="#ffc08a" opacity=".7" transform="rotate(-35 8.2 7.4)" />
+    <circle cx="12" cy="12" r="10.4" fill="none" stroke="#2a1004" strokeWidth="1.5" />
+  </svg>
+)
 
 // Where everyone stands when the ball is checked: handler at the top, guards
 // on the wings, a big on the weak-side block; defenders between their man and

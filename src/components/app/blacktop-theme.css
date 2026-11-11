@@ -1,0 +1,47 @@
+/* Blacktop's look (2026-11 redesign): the shared tokens. The live game (blacktop-game.css) and the lobby
+   (blacktop-lobby.css) both build from these, so the two halves read as one game. Add tokens here; don't
+   rename them. The direction: a playground at night under floodlights, shot like a broadcast. Dark asphalt,
+   one accent light (the side's own accent: orange on basketball), the two teams' colours, and the floodlight's
+   warm white kept for the big moments. */
+html:is(.is-app, .app-look) {
+  /* surfaces: asphalt, from the deepest to the nearest */
+  --bt-ink: #05070a;
+  --bt-asphalt: #0c1016;
+  --bt-panel: #141a22;
+  --bt-panel-hi: #1c242e;
+  --bt-line: rgba(255, 255, 255, .09);
+  --bt-line-hi: rgba(255, 255, 255, .18);
+
+  /* light */
+  --bt-cool: var(--ag-a1, #f08a3c);          /* the accent light: the side's own accent (orange on basketball, where Blacktop lives). The HUD's light */
+  --bt-flood: #fff0cf;                        /* the floodlight: a warm white, clearly apart from the orange accent. Makes, runs, the final, MVP. Never the default */
+  --bt-text: #f3f6f8;
+  --bt-muted: rgba(243, 246, 248, .62);
+  --bt-faint: rgba(243, 246, 248, .38);
+
+  /* teams (AppBlacktop TEAM_COLORS) */
+  --bt-t0: #4da3ff;
+  --bt-t1: #ff4d5e;
+
+  /* depth: panels have weight (a lit top edge, a contact shadow), not blur and not glow */
+  --bt-edge: inset 0 1px 0 rgba(255, 255, 255, .10), inset 0 -1px 0 rgba(0, 0, 0, .45);
+  --bt-drop: 0 1px 0 rgba(0, 0, 0, .6), 0 10px 24px -8px rgba(0, 0, 0, .7);
+  --bt-drop-lg: 0 2px 0 rgba(0, 0, 0, .6), 0 22px 44px -14px rgba(0, 0, 0, .8);
+
+  /* shape: the broadcast cut (one angled corner) is the motif; everything else is square-ish */
+  --bt-r: 6px;
+  --bt-r-lg: 10px;
+  --bt-cut: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+
+  /* type */
+  --bt-num: var(--ag-display);                /* scores, clocks, big numbers (tabular) */
+  --bt-cap: var(--ag-font);                   /* labels, names, callouts */
+  --bt-body: var(--ag-body);
+
+  /* motion: short and physical */
+  --bt-fast: 140ms;
+  --bt-med: 260ms;
+  --bt-slow: 420ms;
+  --bt-out: cubic-bezier(.2, .8, .2, 1);
+  --bt-snap: cubic-bezier(.3, 1.4, .5, 1);
+}

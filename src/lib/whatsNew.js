@@ -104,6 +104,17 @@ const NOV_10 = {
       ],
     },
     {
+      name: 'Blacktop',
+      items: [
+        'New look for Blacktop: a broadcast score bug, a play-by-play lower third, and a night court under the lights',
+        'The lobby is a matchup board: both teams face to face, a seat for every player, and a tip-off when it fills',
+        'The builds are on the game screen, under the play-by-play',
+        'The rim only rattles on a miss or a dunk; a clean make moves the net',
+        'New final screen with the MVP and every line',
+        'Fixed a Career season playing with no scores after the save was opened on an older version of the game: the season starts over from Week 1 and the career is kept',
+      ],
+    },
+    {
       name: 'Home',
       items: [
         'Football positions are split into offense and defense: tap DEFENSE at the end of the bar',
