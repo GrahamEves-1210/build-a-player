@@ -5510,26 +5510,29 @@ a:focus-visible {
   .splash-site-footer:has(.pp-wrap), html.app-look .splash-site-footer:has(.pp-wrap) { border-top: 0; padding-top: 0; }
 }
 @media (max-width: 720px) {
-  /* a phone: one centred column, the way an in-app offer card reads. Logo, the offer on one line, a full-width
-     button, the code under it. No phone picture: there's no room for it beside the words */
+  /* a phone: one short strip, the way an app's own offer row reads (2026-11-11: as small as it goes). Left: the logo with
+     New Users beside it, the offer on one line, In Bonus Lineups. Right: the button with the code under it. No phone picture */
   /* (half the footer's own top padding back: the label sits closer to what's above it) */
-  .pp-wrap { margin-top: -11px; margin-bottom: 20px; }
+  .pp-wrap { margin-top: -11px; margin-bottom: 16px; }
+  .pp-head { margin-bottom: 6px; }
   .pp-banner {
-    flex-direction: column; align-items: stretch; justify-content: center; gap: 0; height: auto; padding: 7px 14px 9px; border-radius: 12px;
-    background: radial-gradient(130% 85% at 50% 0%, rgba(150,70,255,.6) 0%, rgba(128,0,255,0) 62%), linear-gradient(180deg, #2b0556 0%, #1a0033 100%);
+    flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; height: auto; padding: 8px 12px; border-radius: 10px;
+    background: radial-gradient(90% 160% at 100% 50%, rgba(150,70,255,.55) 0%, rgba(128,0,255,0) 70%), linear-gradient(90deg, #1a0033 0%, #2b0556 100%);
   }
-  .pp-copy { flex: none; }
-  .pp-logo { width: 102px; margin: -4px 0 -5px; }
-  .pp-new, .pp-sub { font-size: 11px; }
-  .pp-offer { margin: 2px 0 3px; font-size: clamp(18px, 5.9vw, 23px); }
-  .pp-cta { width: auto; margin: 7px 0 0; gap: 5px; }
-  .pp-claim { height: 34px; border-radius: 9px; font-size: 14px; }
-  .pp-code { font-size: 11.5px; }
+  .pp-copy { flex: 0 1 auto; display: grid; grid-template-columns: auto 1fr; align-items: center; justify-items: start; column-gap: 7px; text-align: left; }
+  .pp-logo { grid-column: 1; grid-row: 1; width: 78px; margin: -3px 0 -3px -4px; }
+  .pp-new { grid-column: 2; grid-row: 1; font-size: 10.5px; opacity: .85; white-space: nowrap; }
+  .pp-offer { grid-column: 1 / -1; grid-row: 2; margin: 1px 0 1px; font-size: clamp(14px, 5.1vw, 21px); }
+  .pp-sub { grid-column: 1 / -1; grid-row: 3; font-size: 10.5px; }
+  .pp-cta { flex: none; width: auto; margin: 0; gap: 4px; align-items: stretch; }
+  .pp-claim { height: 34px; padding: 0 12px; border-radius: 8px; font-size: 13px; }
+  .pp-code { font-size: 10.5px; }
+  .pp-code span + span { display: none; }   /* (or use code BUILD: the rest of the sentence is the desktop's) */
   /* the help line on one line: sized to the screen's width */
   .pp-help { font-size: min(13px, calc((100vw - 32px) / 29.8)); white-space: nowrap; }
   /* (a phone only: the help line sits over the fine print) */
   .pp-wrap { display: flex; flex-direction: column; }
-  .pp-head { order: 1; } .pp-banner { order: 2; } .pp-help { order: 3; margin-top: 9px; } .pp-legal { order: 4; margin-top: 5px; text-align: left; text-wrap: pretty; }
+  .pp-head { order: 1; } .pp-banner { order: 2; } .pp-help { order: 3; margin-top: 7px; } .pp-legal { order: 4; margin-top: 3px; text-align: left; text-wrap: pretty; }
   .pp-phone { display: none; }
   .pp-legal { font-size: 10px; }
 }

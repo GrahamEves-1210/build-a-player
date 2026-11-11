@@ -6,8 +6,8 @@ import { track } from '../lib/track'
 // ── PrizePicks (partner): our own placement at the top of the footer, built after their 16x9 offer art
 // (Product/NFL/iPhone Explainer/Player Picks - 16x9): the logo, New Users, the offer in their wide heavy
 // letters, the phone on the bright side of the purple. Their logo file as it came; the phone is a small web
-// copy of their mockup. The offer and the fine print are theirs word for word (talking points, Oct 28 2026;
-// the $150 offer's legal line from their explainer art): change them only from a new sheet of theirs.
+// copy of their mockup. The offer and the fine print are theirs word for word (talking points, Nov 9 2026: play $5,
+// get $50; the legal line from their "New User Offer_ PLAY $5, GET $50" art): change them only from a new sheet of theirs.
 // (noreferrer: the click reaches them the way a typed address does, with no page behind it. Their link carries the
 // code, so nothing is lost.) Brand rules kept: the wordmark with its P, nothing green on the purple, the legal line in a mono face
 const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
@@ -20,12 +20,12 @@ function PartnerBanner({ sport }) {
       <div className="splash-site-footer-head pp-head">Partner Offer</div>
       <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener noreferrer"
         onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: 'footer' } })}
-        aria-label="PrizePicks. New users: play $5, get $150 in bonus lineups if you win. Claim the offer with code BUILD.">
+        aria-label="PrizePicks. New users: play $5, get $50 in bonus lineups. Claim the offer with code BUILD.">
         <span className="pp-copy">
           <img className="pp-logo" src="/sponsors/prizepicks-logo.svg" alt="PrizePicks" width="954" height="241" loading="lazy" decoding="async" draggable={false} />
           <span className="pp-new">New Users</span>
-          <span className="pp-offer">Play $5 <br />Get $150</span>
-          <span className="pp-sub">In Bonus Lineups <b>If You Win</b></span>
+          <span className="pp-offer">Play $5 <br />Get $50</span>
+          <span className="pp-sub">In <b>Bonus Lineups</b></span>
         </span>
         <span className="pp-cta">
           <span className="pp-claim">Claim Offer</span>
@@ -33,7 +33,7 @@ function PartnerBanner({ sport }) {
         </span>
         <img className="pp-phone" src="/sponsors/prizepicks-phone.webp" alt="" width="560" height="1159" loading="lazy" decoding="async" draggable={false} />
       </a>
-      <p className="pp-legal">Build-A-Player may earn a commission when you sign up through this link. First $5+ lineup entered must win to receive $150 in bonus lineups. Bonus lineups expire 7 days after issuance. 18+ in eligible areas. Lineups entered and bonus lineups awarded must include player picks. Restrictions apply. Void where prohibited. See prizepicks.com/newuseroffer for details.</p>
+      <p className="pp-legal">$50 provided as Lineups only for PlayerPicks. 18+ in eligible areas; restrictions apply. Void where prohibited. See prizepicks.com/newuseroffer for details. Build-A-Player may earn a commission.</p>
       {/* the help line stands on its own, under the fine print, larger and brighter than it (their words, pulled out of the legal line) */}
       <p className="pp-help">Play responsibly. Call <a href="tel:18004262537">1-800-426-2537</a> or visit <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a>.</p>
     </div>
