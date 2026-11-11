@@ -295,8 +295,10 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // a chip carries the college player's school, conference, class and size with it
   const withCollege = useCallback(chip => {
     const p = byKey.get(`${chip.qbFull}|${chip.team}`)
-    return { ...chip, cfb: true, school: p?.school ?? String(chip.team).replace(/^cfb\//, ''), conf: p?.conf ?? null, year: p?.year ?? null, height: chip.height ?? p?.height ?? null, weight: chip.weight ?? p?.weight ?? null }
-  }, [byKey])
+    const short = p?.school ?? String(chip.team).replace(/^cfb\//, '')
+    // (jerseyWord: the word across the chest. A college chip's team is 'cfb/IND', which the figure printed as it was)
+    return { ...chip, cfb: true, school: short, jerseyWord: String(teamsBy[short]?.school ?? short).toUpperCase(), conf: p?.conf ?? null, year: p?.year ?? null, height: chip.height ?? p?.height ?? null, weight: chip.weight ?? p?.weight ?? null }
+  }, [byKey, teamsBy])
 
   // kept on the device: a reload, or Home and back, picks the build (or the season) back up
   useEffect(() => {
