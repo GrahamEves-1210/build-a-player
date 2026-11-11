@@ -23,7 +23,7 @@ export function dropRatings(build, types, physical, pos = null) {
   }))
 }
 
-export default function CFBDraft({ build, types, pos, result, user, userName, sandbox, onCancel, onDone }) {
+export default function CFBDraft({ build, types, pos, result, user, userName, playerName = null, sandbox, onCancel, onDone }) {
   const [M, setM] = useState(null)        // lib/career.js, loaded when this opens
   const [slots, setSlots] = useState(null)
   const [slot, setSlot] = useState(null)
@@ -57,7 +57,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, sa
     setBusy(true)
     if (slots[slot]) M.clearCareer('nfl', uid, slot)
     const career = {
-      ...M.newCareer({ sport: 'nfl', uid, pos, build: after, name: userName, slot, owner: userName, college: { school: result.team?.short, schoolName: school, line, ...(proj ? { proj } : {}) } }),
+      ...M.newCareer({ sport: 'nfl', uid, pos, build: after, name: playerName || userName, slot, owner: userName, college: { school: result.team?.short, schoolName: school, line, ...(proj ? { proj } : {}) } }),
       sandbox: !!sandbox,
     }
     M.saveCareer(career)

@@ -10,6 +10,7 @@ const NOV_10 = {
       name: 'New Mode: College Football',
       items: [
         'The first school is now a scholarship decision: your stars, national rank and the 10 schools offering you, by talent',
+        'Name your player on the offers screen: the name follows him through college and into his NFL Career',
         'Transfer opens the portal: the schools that want you now, and a big season (record, a title run, the Heisman) can move your stock up a level',
         'Return to school up to twice; transfer as often as you like',
         'A new season moves the rosters on: juniors and seniors are gone, and the best sophomores and freshmen take over a class older',

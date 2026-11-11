@@ -336,6 +336,10 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbr-card { display: grid; gap: 10px; padding: 14px; border-radius: 6px; background: var(--cfb-blue); }
 .cfbr-who small { display: block; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.8px; color: rgba(255,255,255,.78); }
 .cfbr-who b { display: block; margin-top: 2px; font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: .4px; text-transform: uppercase; }
+/* the first school's offers: the name on the card is a field (CFBMode OffersScreen onName) */
+.cfbr-name-in { display: block; width: 100%; min-width: 0; margin-top: 2px; padding: 3px 0 5px; border: 0; border-bottom: 2px solid rgba(255,255,255,.4); border-radius: 0; background: transparent; color: #fff; font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: .4px; text-transform: uppercase; }
+.cfbr-name-in::placeholder { color: rgba(255,255,255,.42); }
+.cfbr-name-in:focus { outline: none; border-bottom-color: #fff; }
 .cfbr-stars { font-size: 30px; line-height: 1; letter-spacing: 4px; color: var(--cfb-gold); }
 .cfbr-stars i { font-style: normal; color: rgba(255,255,255,.22); }
 .cfbr-rank { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgba(255,255,255,.22); }
