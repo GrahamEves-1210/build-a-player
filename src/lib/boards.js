@@ -11,6 +11,7 @@ import { seedCos } from './peopleCos'
 import { tierFor, dayKey, weekOf, fetchWeeklyCup, POTD_COINS, CUP_COINS } from './progress'
 import { LB_LIVE } from './lbLive'
 import { OL_LIVE } from './olLive'
+import { K_LIVE } from './kLive'
 import { SOCCER_LIVE } from './soccerLive'
 import { SOCCER_MODES_DB } from './soccerAwards'
 import { BASEBALL_LIVE } from './baseballLive'
@@ -232,6 +233,7 @@ const MODES = {
   QB: ['classic', 'all-time'], RB: ['rb-classic', 'rb-all-time'], WR: ['wr-classic', 'wr-all-time'],
   TE: ['te-classic', 'te-all-time'], DB: ['db-classic', 'db-all-time'], DL: ['dl-classic', 'dl-all-time'], ...(LB_LIVE ? { LB: ['lb-classic', 'lb-all-time'] } : {}),
   ...(OL_LIVE ? { OL: ['ol-classic', 'ol-all-time'] } : {}),   // OL_LIVE: lib/olLive.js
+  ...(K_LIVE ? { K: ['k-classic', 'k-all-time'] } : {}),      // K_LIVE: lib/kLive.js
 }
 const BUCKET_MODES = ['bucket-classic', 'bucket-all-time']
 // soccer: TOP DIVISIONS, then WORLD CUP (lib/soccerAwards.js)
@@ -245,7 +247,7 @@ const modesFor = (sport, position) => (sport === 'bucket' ? BUCKET_MODES : sport
 // one counter on accounts (OPOY), so it can't be a record for any one of them. DL's (and LB's) DPOYs stay
 // off classic_dpoys (that's DB's record): each one is a season tagged 'dpoy', counted from the seasons.
 // OL's All-Pros have no counter at all: each one is a season tagged 'allpro'.
-const AWARD = { QB: ['classic_mvps', 'MVP'], DB: ['classic_dpoys', 'DPOY'], DL: ['dl-classic', 'DPOY'], LB: ['lb-classic', 'DPOY'], OL: ['ol-classic', 'ALL-PRO'] }
+const AWARD = { QB: ['classic_mvps', 'MVP'], DB: ['classic_dpoys', 'DPOY'], DL: ['dl-classic', 'DPOY'], LB: ['lb-classic', 'DPOY'], OL: ['ol-classic', 'ALL-PRO'], K: ['k-classic', 'ALL-PRO'] }
 const awardFor = (sport, position) => (sport === 'bucket' || sport === 'soccer' || sport === 'baseball' ? null : AWARD[position ?? 'QB'] ?? null)
 // (salary_infinite_plays needs its overall_score index for this sort; it has had it since 11-03)
 const BUCKET_INFINITE_INDEXED = true
@@ -422,7 +424,7 @@ const BOARDS = {
   winPct: { scope: modeScope, load: ctx => rateBoard(ctx, RATE.winPct) },
   avgOvr: { scope: modeScope, load: ctx => rateBoard(ctx, RATE.avgOvr) },
   perSeason: { scope: modeScope, load: ctx => perSeasonBoard(ctx) },
-  awards: { ok: ctx => !!awardFor(ctx.sport, ctx.position), scope: ctx => awardFor(ctx.sport, ctx.position)?.[0], load: ctx => (ctx.position === 'DL' ? dlAwardBoard(ctx) : ctx.position === 'LB' ? dlAwardBoard(ctx, 'lb-classic') : ctx.position === 'OL' ? dlAwardBoard(ctx, 'ol-classic', 'allpro') : awardBoard(ctx)) },
+  awards: { ok: ctx => !!awardFor(ctx.sport, ctx.position), scope: ctx => awardFor(ctx.sport, ctx.position)?.[0], load: ctx => (ctx.position === 'DL' ? dlAwardBoard(ctx) : ctx.position === 'LB' ? dlAwardBoard(ctx, 'lb-classic') : ctx.position === 'OL' ? dlAwardBoard(ctx, 'ol-classic', 'allpro') : ctx.position === 'K' ? dlAwardBoard(ctx, 'k-classic', 'allpro') : awardBoard(ctx)) },
   gridBest: { ok: ctx => ctx.sport === 'nfl' || ctx.sport === 'soccer' || (ctx.sport === 'bucket' && BUCKET_INFINITE_INDEXED) || (ctx.sport === 'baseball' && !!GRID.baseball), scope: sportScope, load: gridBestBoard },
   depth: { ok: ctx => ctx.sport === 'nfl', scope: sportScope, load: depthBoard },
   // soccer's own (recordBoards lists them only for soccer)
@@ -634,7 +636,7 @@ const RATE = {
 const PER_SEASON = {
   QB: ['Passing Yards a Season', 'YDS', 'total_pass_yds', 0], RB: ['Rushing Yards a Season', 'YDS', 'total_pass_yds', 0],
   WR: ['Receiving Yards a Season', 'YDS', 'total_pass_yds', 0], TE: ['Receiving Yards a Season', 'YDS', 'total_pass_yds', 0],
-  DB: ['Interceptions a Season', 'INT', 'total_tds', 1], DL: ['Sacks a Season', 'SCK', 'total_tds', 1], LB: ['Tackles a Season', 'TKL', 'total_pass_yds', 0], OL: ['Pancakes a Season', 'PNK', 'total_pass_yds', 0], bucket:['Points a Game', 'PPG', 'total_ppg', 1],
+  DB: ['Interceptions a Season', 'INT', 'total_tds', 1], DL: ['Sacks a Season', 'SCK', 'total_tds', 1], LB: ['Tackles a Season', 'TKL', 'total_pass_yds', 0], OL: ['Pancakes a Season', 'PNK', 'total_pass_yds', 0], K: ['Points a Season', 'PTS', 'total_pass_yds', 0], bucket:['Points a Game', 'PPG', 'total_ppg', 1],
   // soccer: goals in total_tds, assists in total_ints, the average match rating in total_ppg (lib/soccerAwards.js)
   soccer: ['Goals a Season', 'GLS', 'total_tds', 1],
 }

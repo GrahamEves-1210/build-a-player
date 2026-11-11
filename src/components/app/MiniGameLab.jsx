@@ -52,7 +52,8 @@ export default function MiniGameLab({ onClose }) {
   }, [])
   const q = new URLSearchParams(window.location.search)
   // (a soccer game only opens once soccer's live)
-  const start = GAME_IDS.includes(q.get('mg')) && (SOCCER_LIVE || gameSport(q.get('mg')) !== 'soccer') && (BASEBALL_LIVE || gameSport(q.get('mg')) !== 'baseball') ? q.get('mg') : null
+  // (a kicker's games only open once K is live: K_LIVE, or ?k=1 on the dev server)
+  const start = GAME_IDS.includes(q.get('mg')) && (K_LIVE || !['deep-kick', 'game-winner', 'onside'].includes(q.get('mg'))) && (SOCCER_LIVE || gameSport(q.get('mg')) !== 'soccer') && (BASEBALL_LIVE || gameSport(q.get('mg')) !== 'baseball') ? q.get('mg') : null
   const [sport, setSport] = useState(() => (start ? gameSport(start) : window.__bapPage?.sport === 'bucket' ? 'bucket' : window.__bapPage?.sport === 'soccer' && SOCCER_LIVE ? 'soccer' : window.__bapPage?.sport === 'baseball' && BASEBALL_LIVE ? 'baseball' : 'nfl'))
   const [v, setV] = useState(() => (q.has('v') ? Number(q.get('v')) : 6))
   const [game, setGame] = useState(start)

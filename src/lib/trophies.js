@@ -27,6 +27,7 @@
 import { supabase } from './supabase'
 import { LB_LIVE } from './lbLive'
 import { OL_LIVE } from './olLive'
+import { K_LIVE } from './kLive'
 import { SOCCER_LIVE } from './soccerLive'
 import { BASEBALL_LIVE } from './baseballLive'
 import { isSoccerMode, rowSoccerTags, SOCCER_AWARD_SHORT } from './soccerAwards'
@@ -121,7 +122,7 @@ export async function loadHardware(uid) {
 // Positions a saved season can be. Football rows have no position column: the mode says
 // it ('rb-classic' …). A QB season's mode is the bare mode ('classic', 'all-time', 'lite',
 // 'legends' …), so QB is every row without a position prefix (or with no mode at all).
-const NOT_QB = ['bucket', 'soccer', 'baseball', 'rb', 'wr', 'te', 'db', 'dl', 'lb', 'ol'].map(p => `game_mode.not.like.${p}-*`).join(',')
+const NOT_QB = ['bucket', 'soccer', 'baseball', 'rb', 'wr', 'te', 'db', 'dl', 'lb', 'ol', 'k'].map(p => `game_mode.not.like.${p}-*`).join(',')
 // (OL's row: a filter only once OL is live, but a season saved in the old OL mode still reads as OL)
 const OL_ROW = { key: 'ol', label: 'OL', sport: 'nfl', where: q => q.like('game_mode', 'ol-%') }
 // (soccer's striker: a row only once SOCCER_LIVE is on, but a soccer season always reads as one)
@@ -138,6 +139,7 @@ export const POSITIONS = [
   { key: 'dl',    label: 'DL',    sport: 'nfl',    where: q => q.like('game_mode', 'dl-%') },
   ...(LB_LIVE ? [{ key: 'lb',    label: 'LB',    sport: 'nfl',    where: q => q.like('game_mode', 'lb-%') }] : []),
   ...(OL_LIVE ? [OL_ROW] : []),   // OL_LIVE: lib/olLive.js
+  ...(K_LIVE ? [{ key: 'k', label: 'K', sport: 'nfl', where: q => q.like('game_mode', 'k-%') }] : []),   // K_LIVE: lib/kLive.js
   { key: 'guard', label: 'GUARD', sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'guard') },
   { key: 'big',   label: 'BIG',   sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'big') },
   ...(SOCCER_LIVE ? [ST_ROW] : []),   // SOCCER_LIVE: lib/soccerLive.js

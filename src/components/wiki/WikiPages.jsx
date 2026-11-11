@@ -3,6 +3,7 @@ import RatingsTable, { POOLS, RATINGS_AS_OF, RATINGS_DATES, fmtDate, poolCounts,
 import { CREATORS, CREATORS_AS_OF } from '../../data/creators'
 import { LB_LIVE } from '../../lib/lbLive'
 import { OL_LIVE } from '../../lib/olLive'
+import { K_LIVE } from '../../lib/kLive'
 import { SOCCER_LIVE } from '../../lib/soccerLive'
 import { BASEBALL_LIVE } from '../../lib/baseballLive'
 
@@ -45,7 +46,7 @@ function MainPage({ go }) {
           <tr><td colSpan={2}><img src="/bap-mark.webp" alt="Build-A-Player logo" /></td></tr>
           <tr><th>Type</th><td>Free browser game</td></tr>
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA){SOCCER_LIVE && <><br />Soccer (Top Divisions, World Cup)</>}{BASEBALL_LIVE && <><br />Baseball (MLB)</>}</td></tr>
-          <tr><th>Positions</th><td>QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}<br />Guard, Big{SOCCER_LIVE && <><br />Striker</>}{BASEBALL_LIVE && <><br />Batter, Pitcher</>}</td></tr>
+          <tr><th>Positions</th><td>QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}{K_LIVE ? ', K' : ''}<br />Guard, Big{SOCCER_LIVE && <><br />Striker</>}{BASEBALL_LIVE && <><br />Batter, Pitcher</>}</td></tr>
           <tr><th>Modes</th><td>Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
           <tr><th>Developer</th><td>Playmaker Games (independent)</td></tr>
           <tr><th>Platform</th><td>Web browser, iOS, Android</td></tr>
@@ -116,6 +117,7 @@ function GameplayPage({ go }) {
             <tr><td>Defensive back</td><td>Speed, Size, Fluidity, Press, Hands, Zone IQ, Man Coverage, Play Recognition, Run Support</td></tr>
             <tr><td>Defensive line (EDGE · DT)</td><td>Get Off, Speed, Size, Power Moves, Finesse Moves, Strength, Play Recognition, Bend, Block Shed</td></tr>
             {OL_LIVE && <tr><td>Offensive line</td><td>Size, Length, Anchor, Pass Pro, Run Block, Mobility, Blitz Pickup, Discipline, Pancake</td></tr>}
+            {K_LIVE && <tr><td>Kicker</td><td>Power, Accuracy, Clutch</td></tr>}
             {LB_LIVE && <tr><td>Linebacker</td><td>Range, Size, Power, Tackling, Block Shed, Zone Instincts, Pass Rush, Play Recognition, Leadership</td></tr>}
             <tr><td>Guard (PG · SG · SF)</td><td>Jump Shot, Finishing, Passing, Handles, Perimeter Defense, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
             <tr><td>Big (PF · C)</td><td>Jump Shot, Finishing, Playmaking, Interior Defense, Rebounding, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
@@ -239,7 +241,7 @@ win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
 function CareerPage({ go }) {
   return (
     <>
-      <p className="wk-lead"><b>Career</b> follows one player you build from the combine to retirement, in football (QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}) or basketball (guard, big). You name him, and every season, contract and decision is his. There are three save slots per sport, and a career runs at most 20 seasons, starting in 2026.</p>
+      <p className="wk-lead"><b>Career</b> follows one player you build from the combine to retirement, in football (QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}{K_LIVE ? ', K' : ''}) or basketball (guard, big). You name him, and every season, contract and decision is his. There are three save slots per sport, and a career runs at most 20 seasons, starting in 2026.</p>
 
       <h2 id="draft">The combine and the draft</h2>
       <ul>

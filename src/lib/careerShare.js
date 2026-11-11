@@ -218,7 +218,7 @@ export async function careerShareCanvas(c, { username } = {}) {
     { v: String(t.seasons), k: t.seasons === 1 ? 'SEASON' : 'SEASONS' },
     S.isSoccer ? { v: String(t.trophies ?? 0), k: t.trophies === 1 ? 'TROPHY' : 'TROPHIES', icon: 'trophy', gold: (t.trophies ?? 0) > 0 } : { v: String(t.rings), k: t.rings === 1 ? 'RING' : 'RINGS', icon: 'ring', gold: t.rings > 0 },
     // (a lineman has no award: his All-Pros are his trophies)
-    ...[c.pos === 'ol' ? t.allPros : t.awards].map(n => ({ v: String(n), k: n === 1 ? award : `${award}S`, icon: 'trophy', gold: n > 0 })),
+    ...[c.pos === 'ol' || c.pos === 'k' ? t.allPros : t.awards].map(n => ({ v: String(n), k: n === 1 ? award : `${award}S`, icon: 'trophy', gold: n > 0 })),
     { v: String(t.proBowls), k: t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, icon: 'star' },
   ], TY)
 

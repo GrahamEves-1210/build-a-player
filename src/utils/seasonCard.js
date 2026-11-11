@@ -537,7 +537,7 @@ const NFL_OUT = {
   'Conference Championship': 'LOST THE CONFERENCE TITLE GAME',
   'Super Bowl': 'LOST THE SUPER BOWL',
 }
-const NFL_AWARD = { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'ALL-PRO' }
+const NFL_AWARD = { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'ALL-PRO', k: 'ALL-PRO' }
 const NFL_STATS = {
   qb: r => [[fmt(r.seasonPassYds), 'YDS'], [fmt(r.seasonTDs), 'TD'], [one(r.seasonRating), 'RTG']],
   rb: r => [[fmt(r.seasonRushYds), 'RUSH YDS'], [fmt((n(r.seasonRushTDs) ?? 0) + (n(r.seasonRecTDs) ?? 0)), 'TD'], [one(r.seasonYPC), 'YPC']],
@@ -547,6 +547,7 @@ const NFL_STATS = {
   dl: r => [[fmt(r.seasonSacks), 'SCK'], [fmt(r.seasonTFL), 'TFL'], [fmt(r.seasonTackles), 'TKL']],
   lb: r => [[fmt(r.seasonTackles), 'TKL'], [fmt(r.seasonSacks), 'SCK'], [fmt(r.seasonINTs), 'INT']],
   ol: r => [[fmt(r.seasonPancakes), 'PANCAKES'], [fmt(r.seasonSacksAllowed), 'SACKS ALLOWED']],
+  k: r => [[r.seasonFGA != null ? `${r.seasonFGM ?? 0}/${r.seasonFGA}` : null, 'FG'], [fmt(r.seasonLong), 'LONG'], [fmt(r.seasonPoints), 'PTS']],
 }
 const statsOf = list => list.filter(([v]) => v != null).map(([v, k]) => ({ v, k }))
 const modeOf = (allTime, salary) => (salary ? 'SALARY CAP' : allTime ? 'ALL-TIME' : 'CURRENT')

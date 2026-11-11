@@ -4,7 +4,7 @@
 // the same way the game works it out (the run*Simulation functions).
 
 import { seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, runSimulation } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, runSimulation } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES, LITE_TYPES } from '../data/qbs'
 import { LEGENDS, LEGEND_TYPES } from '../data/qb-legends'
@@ -22,6 +22,8 @@ import { LBS, LB_TYPES, LB_LITE_TYPES } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
 import { OL_LEGENDS } from '../data/ol-legends'
+import { KS, K_TYPES } from '../data/ks'
+import { K_LEGENDS } from '../data/k-legends'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
@@ -75,6 +77,8 @@ export function seasonKit(sport, pos, mode) {
     dl: { pool: allTime ? DL_LEGENDS : DLS, types: lite ? DL_LITE_TYPES : DL_TYPES, ovr: b => calcOVRDL(b) },
     lb: { pool: allTime ? LB_LEGENDS : LBS, types: lite ? LB_LITE_TYPES : LB_TYPES, ovr: b => calcOVRLB(b) },
     ol: { pool: allTime ? OL_LEGENDS : OLS, types: lite ? OL_LITE_TYPES : OL_TYPES, ovr: b => calcOVROL(b) },
+    // (a kicker: three ratings, lite or not)
+    k: { pool: allTime ? K_LEGENDS : KS, types: K_TYPES, ovr: b => calcOVRK(b) },
   }[pos]
   return k ? { ...k, teams: TEAMS, ovr: b => k.ovr(b, k.types) } : null
 }

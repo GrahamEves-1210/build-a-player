@@ -410,7 +410,7 @@ function Draft({ c, setCareer }) {
             </>
           ) : (
             <>
-              <p className="cr-note">Three {soccer ? 'trials' : 'drills'}, one go each. The trait sets the range; how the {soccer ? 'trial' : 'drill'} goes sets the number.</p>
+              <p className="cr-note">{c.draft.combine.length === 2 ? 'Two' : 'Three'} {soccer ? 'trials' : 'drills'}, one go each. The trait sets the range; how the {soccer ? 'trial' : 'drill'} goes sets the number.</p>
               <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(skipCombine(c)); sfx('tap') }}>{S.ui?.combineSkip ?? (soccer ? 'SKIP THE TRIALS' : 'SKIP COMBINE')}</button>
             </>
           )}

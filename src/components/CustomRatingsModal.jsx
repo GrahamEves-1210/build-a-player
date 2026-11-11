@@ -7,6 +7,7 @@ import { DB_ATTR, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
 import { DL_ATTR, DL_TYPES, DL_LITE_TYPES } from '../data/dls'
 import { LB_ATTR, LB_TYPES, LB_LITE_TYPES } from '../data/lbs'
 import { OL_ATTR, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
+import { K_ATTR, K_TYPES } from '../data/ks'
 import { LEGEND_TYPES } from '../data/qb-legends'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { GUARD_TYPES } from '../data/nba-guards'
@@ -40,7 +41,7 @@ const RB_ATTR = {
 // so each mode's spins pick up its own overrides.
 // Soccer: `isSoccer` with its own `attrMap` (the striker's traits) and `eraLabels` for the toggle
 // (Top Divisions / World Cup); each pool's edits save under their own key
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isBucket = false, isSoccer = false, attrMap: attrMapProp = null, eraLabels = null, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false, storageKey: storageKeyProp = null, ratingsKeyFor = null }) {
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isBucket = false, isSoccer = false, attrMap: attrMapProp = null, eraLabels = null, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false, storageKey: storageKeyProp = null, ratingsKeyFor = null }) {
   // (storageKey: a mode's own ratings, College Football's: bap_cfb_custom_ratings)
   const storageKey = storageKeyProp ?? (isSoccer ? 'bas_soccer_custom_ratings' : isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings')
   const hasToggle = !!(poolLegends && poolLegends.length)
@@ -50,13 +51,14 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
     ? `soccer_st${e === 'all-time' ? '_wc' : ''}`
     : isBucket
     ? `bucket_${bucketPosition}`
-    : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${e === 'all-time' ? '_legends' : ''}`
+    : isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${e === 'all-time' ? '_legends' : ''}`
   const modeKey = keyFor(hasToggle ? era : (gameMode === 'all-time' ? 'all-time' : 'classic'))
   const list = hasToggle ? (era === 'all-time' ? poolLegends : (poolCurrent || pool)) : (poolCurrent || pool)
-  const attrMeta = attrMapProp ? attrMapProp : isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const attrMeta = attrMapProp ? attrMapProp : isBucket ? BUCKET_ATTR : isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
+    : isK ? K_TYPES
     : isOL ? (gameMode === 'lite' ? OL_LITE_TYPES : OL_TYPES)
     : isDL ? (gameMode === 'lite' ? DL_LITE_TYPES : DL_TYPES)
     : isLB ? (gameMode === 'lite' ? LB_LITE_TYPES : LB_TYPES)

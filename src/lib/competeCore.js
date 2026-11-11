@@ -5,7 +5,7 @@
 // so a phone can't claim a number it never drew.
 
 import { seeded, seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
 import { RBS, RB_TYPES } from '../data/rbs'
@@ -15,6 +15,7 @@ import { DBS, DB_TYPES } from '../data/dbs'
 import { DLS, DL_TYPES } from '../data/dls'
 import { LBS, LB_TYPES } from '../data/lbs'
 import { OLS, OL_TYPES } from '../data/ols'
+import { KS, K_TYPES } from '../data/ks'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { TEAMS } from '../data/nfl-teams'
@@ -49,6 +50,8 @@ const NFL = {
   lb: { pool: LBS, types: LB_TYPES, ovr: b => calcOVRLB(b) },
   // (OL: scored like the others, so a build the server re-reads keeps its Size chip's spot: scoreBuild copies subpos)
   ol: { pool: OLS, types: OL_TYPES, ovr: b => calcOVROL(b) },
+  // (K: a kit like the others; no Compete pool for it, COMPETE_POS: one kicker a team makes a five-player pool the same build)
+  k: { pool: KS, types: K_TYPES, ovr: b => calcOVRK(b) },
 }
 const BUCKET = {
   guard: { pool: NBA_GUARD_PLAYERS, types: GUARD_TYPES, ovr: b => calcBucketOVR(b, GUARD_TYPES, 'guard') },

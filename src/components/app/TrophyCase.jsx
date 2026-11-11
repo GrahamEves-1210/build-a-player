@@ -16,6 +16,7 @@ import { DB_ATTR } from '../../data/dbs'
 import { DL_ATTR } from '../../data/dls'
 import { LB_ATTR, LB_LIVE } from '../../data/lbs'
 import { OL_ATTR, OL_LIVE } from '../../data/ols'
+import { K_ATTR, K_LIVE } from '../../data/ks'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
 import { SOCCER_ATTR } from '../../data/soccer-attrs'
 import { SOCCER_LIVE } from '../../lib/soccerLive'
@@ -32,7 +33,7 @@ import './trophy-case.css'
 
 const TIER_GEM = { Rookie: '#9aa7a0', Starter: '#5EDBD8', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
 const ACCENT = 'var(--ag-a1, #4fd6b7)'
-const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, lb: LB_ATTR, ol: OL_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR, st: SOCCER_ATTR, bat: MLB_ATTR, pit: MLB_ATTR }
+const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, lb: LB_ATTR, ol: OL_ATTR, k: K_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR, st: SOCCER_ATTR, bat: MLB_ATTR, pit: MLB_ATTR }
 const SPORT_TINT = { nfl: '#4fd6b7', bucket: '#fb923c', soccer: '#e6e6e6', baseball: '#ef5a6c' }   // (baseball: its stitch red, lightened to read as words)
 
 const n0 = v => (Number.isFinite(v) ? v : 0)
@@ -76,7 +77,7 @@ function shelves(h, st, ach) {
         line: LB_LIVE ? 'Top defender. DB, DL or LB in football, any build in basketball.' : 'Top defender. DB or DL in football, any build in basketball.', facts: bySport(h.dpoy) },
       // (OL is hidden until OL_LIVE: the shelf shows only to someone who made All-Pro in the old OL mode)
       ...(OL_LIVE || h.allpro > 0 ? [{ id: 'allpro', art: 'allpro', label: 'ALL-PRO', title: 'All-Pro', n: h.allpro, rows: true,
-        line: 'Make First-Team All-Pro at OL.' }] : []),
+        line: K_LIVE ? 'Make First-Team All-Pro at OL or K.' : 'Make First-Team All-Pro at OL.' }] : []),
       // soccer's (SOCCER_LIVE: lib/soccerLive.js)
       ...(SOCCER_LIVE || boot.total > 0 ? [{ id: 'boot', art: 'boot', label: 'GOLDEN BOOT', title: 'Golden Boot', n: boot.total, rows: true,
         line: 'Finish as top scorer in your league, or at the World Cup.',

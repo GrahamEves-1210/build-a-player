@@ -5,6 +5,7 @@ import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow, IconFootball, IconBasketball, IconSoccer, IconBaseball } from './icons'
 import { SOCCER_LIVE } from '../../lib/soccerLive'
+import { K_LIVE } from '../../lib/kLive'
 import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import { BASEBALL_MODES } from '../../lib/baseballUi'
 import EmptyState, { PassLoader } from './EmptyState'
@@ -16,16 +17,17 @@ import EmptyState, { PassLoader } from './EmptyState'
 // carry the sport, so claimed sets stay claimed) and each set kind lists the
 // football sets, then the basketball sets. Both rosters load in parallel.
 
-const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL' }
+const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', k: 'K' }
 const NBA_POS = { guard: 'GUARD', big: 'BIG' }
 
 async function loadNfl() {
-  const [qbs, rbs, wrs, tes, dbs, ql, rl, wl, tl, dl, teams, hs, dls, dll, lbs, lbl, ols, oll] = await Promise.all([
+  const [qbs, rbs, wrs, tes, dbs, ql, rl, wl, tl, dl, teams, hs, dls, dll, lbs, lbl, ols, oll, ks, kl] = await Promise.all([
     import('../../data/qbs'), import('../../data/rbs'), import('../../data/wrs'), import('../../data/tes'), import('../../data/dbs'),
     import('../../data/qb-legends'), import('../../data/rb-legends'), import('../../data/wr-legends'), import('../../data/te-legends'), import('../../data/db-legends'),
     import('../../data/nfl-teams'), import('../../data/headshots.json'), import('../../data/dls'), import('../../data/dl-legends'),
     import('../../data/lbs'), import('../../data/lb-legends'),
     import('../../data/ols'), import('../../data/ol-legends'),
+    K_LIVE ? import('../../data/ks') : null, K_LIVE ? import('../../data/k-legends') : null,   // (the kickers load only once K is live)
   ])
   return {
     pools: {
@@ -37,6 +39,7 @@ async function loadNfl() {
       dl: { classic: dls.DLS, 'all-time': dll.DL_LEGENDS },
       ...(lbs.LB_LIVE ? { lb: { classic: lbs.LBS, 'all-time': lbl.LB_LEGENDS } } : {}),
       ...(ols.OL_LIVE ? { ol: { classic: ols.OLS, 'all-time': oll.OL_LEGENDS } } : {}),   // OL_LIVE: lib/olLive.js
+      ...(K_LIVE && ks && kl ? { k: { classic: ks.KS, 'all-time': kl.K_LEGENDS } } : {}),   // K_LIVE: lib/kLive.js
     },
     posLabel: NFL_POS,
     teams: teams.TEAMS,

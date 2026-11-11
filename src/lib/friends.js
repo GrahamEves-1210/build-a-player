@@ -157,7 +157,7 @@ export async function loadPublicProfile(id) {
 }
 
 // "QB · Classic", "Guard · All-Time" …
-const POS = { rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL' }
+const POS = { rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', k: 'K' }
 export function modeLabel(gameMode, position) {
   const m = String(gameMode || 'classic')
   if (m.startsWith('bucket-')) {
