@@ -63,6 +63,28 @@ export async function fetchCloudCareer(sport, uid, slot = 0) {
   } catch { return undefined }
 }
 
+// Every slot in one request (the career screen): [career | null, …] by slot, or undefined when the
+// cloud couldn't be reached (then the local copies stand).
+const slotOfKey = k => Number(String(k).replace(/^dl:/, '').split('#')[1] ?? 0)
+export async function fetchCloudCareers(sport, uid, n) {
+  if (!supabase || !uid) return undefined
+  try {
+    const keys = Array.from({ length: n }, (_, i) => [sportKey(sport, i), lineKey(sport, i)]).flat()
+    const q = supabase.from('careers').select('sport,data').eq('user_id', uid).in('sport', keys)
+      .then(({ data, error }) => {
+        if (error) return undefined
+        const out = Array(n).fill(null)
+        for (const r of data ?? []) {
+          const i = slotOfKey(r.sport)
+          if (i >= 0 && i < n && (!out[i] || (r.data?.updatedAt ?? 0) > (out[i].updatedAt ?? 0))) out[i] = r.data
+        }
+        return out
+      })
+    const timeout = new Promise(res => setTimeout(() => res(undefined), FETCH_TIMEOUT_MS))
+    return await Promise.race([q, timeout])
+  } catch { return undefined }
+}
+
 // A finished career cleared for a new one: drop the cloud copy too, so it
 // can't be pulled back down on the next open
 export function deleteCloudCareer(sport, uid, slot = 0) {

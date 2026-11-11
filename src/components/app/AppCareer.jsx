@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -77,7 +77,7 @@ function CareerFace({ c, size = 34 }) {
 // per-game averages keep one decimal; counts get commas
 export const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
-// ── Career home: what Career is, your three save slots, past careers ────────
+// ── Career home: what Career is, your save slots, past careers ────────
 // a player's name: letters, spaces, apostrophes, hyphens, periods
 const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+/g, ' ').slice(0, 14)
 // Random names for a new player: athlete-sounding, every combination plausible
@@ -200,6 +200,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
   const [naming, setNaming] = useState(null)       // the empty slot being named
   useEffect(() => { let off = false; loadSlots(sport, uid).then(l => { if (!off) setSlots(l) }); return () => { off = true } }, [sport, uid])
   if (!ready) return null
+  const free = slots ? slots.findIndex(c => !c) : -1   // the next open save
   const steps = S.ui?.introSteps ?? [
     ['Build', 'Name your player and build them from traits, the same spins as a normal game. That build is who you take into the league.'],
     ['The draft', 'Combine drills, then interviews with the teams picking near his slot. His stock moves, draft day decides where he lands, and the team around him matters.'],
@@ -214,12 +215,14 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
       </div>
       <div className="ag-screen-body">
         <section className="cr-slots ag-pop">
-          <div className="ag-card-head"><span className="ag-eyebrow">SAVES · {CAREER_SLOTS} SLOTS</span></div>
-          {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : slots.map((c, i) => (
-            c ? <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />
-              : naming === i ? <NewSlot key={`n${i}`} S={S} onStart={(name, pos, games, nation, start) => onNew(i, name, pos, games, start)} onCancel={() => setNaming(null)} />
-              : <button key={`e${i}`} className="cr-slot cr-slot--empty" onClick={() => { setNaming(i); sfx('tap') }}><span>+</span> NEW CAREER <small>SLOT {i + 1}</small></button>
-          ))}
+          {/* five slots: the saves he has, then one way to start the next (not a column of empty slots) */}
+          <div className="ag-card-head"><span className="ag-eyebrow">SAVES{slots ? ` · ${slots.filter(Boolean).length} OF ${slots.length}` : ''}</span></div>
+          {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : <>
+            {slots.map((c, i) => c && <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setNaming(null); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />)}
+            {free < 0 ? <div className="tk-runs-empty">Every save is in use. Delete one to start a new career.</div>
+              : naming === free ? <NewSlot key={`n${free}`} S={S} onStart={(name, pos, games, nation, start) => onNew(free, name, pos, games, start)} onCancel={() => setNaming(null)} />
+              : <button className="cr-slot cr-slot--empty" onClick={() => { setNaming(free); sfx('tap') }}><span>+</span> NEW CAREER</button>}
+          </>}
         </section>
         <div className="cr-intro-hero ag-pop" style={{ '--d': '60ms' }}>
           <span className="cr-intro-kicker">ONE PLAYER. A WHOLE CAREER.</span>

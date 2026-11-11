@@ -10,7 +10,7 @@ import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNo
 import { seeded } from './rng'
 import { traitValue, pickMomentGame, pickPlayoffGame, GAMES } from './minigames'
 import { momentSituation, finalScore } from './situations'
-import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
+import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
@@ -584,10 +584,11 @@ const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket 
 const fmtStat = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
 // ── Save ──────────────────────────────────────────────────────────────────────
-// Three career slots per sport. Slot 0 keeps the original key (careers saved
-// before slots land there); slots 1 and 2 add a suffix. In the cloud a slot is
-// its own row: sport 'nfl', 'nfl#1', 'nfl#2' (same table, no schema change).
-export const CAREER_SLOTS = 3
+// Five career slots per sport (three until 2026-11-11). Slot 0 keeps the original key (careers saved
+// before slots land there); the others add a suffix. In the cloud a slot is its own row: sport 'nfl',
+// 'nfl#1', 'nfl#2', … (same table, no schema change). A client from before this shows the first three
+// only; it never touches the other two.
+export const CAREER_SLOTS = 5
 const key = (sport, uid, slot = 0) => `bap_career_${sport}_${uid || 'guest'}${slot ? `_s${slot}` : ''}`
 export const cloudSport = (sport, slot = 0) => (slot ? `${sport}#${slot}` : sport)
 const histKey = sport => `bap_career_hist_${sport}`
@@ -666,9 +667,9 @@ export function clearCareer(sport, uid, slot = 0) { try { localStorage.removeIte
 // Signed in: pull the account's cloud copy and keep whichever is newer (by
 // `updatedAt`). A guest career moves onto the account on first sign-in when
 // the account has none in that slot. Offline / any failure: the local copy stands.
-export async function syncCareerFromCloud(sport, uid, slot = 0) {
+export async function syncCareerFromCloud(sport, uid, slot = 0, had = null) {
   if (!uid) return loadCareer(sport, uid, slot)
-  const cloud = await fetchCloudCareer(sport, uid, slot)
+  const cloud = had ? had.cloud : await fetchCloudCareer(sport, uid, slot)   // had: the cloud copy already in hand (loadSlots asks for every slot at once)
   const local = loadCareer(sport, uid, slot)   // read after the fetch: it may have moved on meanwhile
   if (cloud === undefined) return local
   const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid, slot } : null
@@ -691,8 +692,11 @@ export async function syncCareerFromCloud(sport, uid, slot = 0) {
   }
   return null
 }
-// Every slot for the career screen: [career | null, …]
-export const loadSlots = (sport, uid) => Promise.all(Array.from({ length: CAREER_SLOTS }, (_, i) => syncCareerFromCloud(sport, uid, i)))
+// Every slot for the career screen: [career | null, …]. One request for the account's cloud copies, not one a slot.
+export async function loadSlots(sport, uid) {
+  const cloud = uid ? await fetchCloudCareers(sport, uid, CAREER_SLOTS) : undefined
+  return Promise.all(Array.from({ length: CAREER_SLOTS }, (_, i) => syncCareerFromCloud(sport, uid, i, uid ? { cloud: cloud?.[i] } : null)))
+}
 export function pastCareers(sport) { try { const l = JSON.parse(localStorage.getItem(histKey(sport)) || '[]'); return Array.isArray(l) ? l : [] } catch { return [] } }
 export function logCareer(c) {
   if (!c || c.logged) return c

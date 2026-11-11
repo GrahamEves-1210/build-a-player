@@ -12,7 +12,7 @@ import { CFB_POS, collegeGap, draftProj, projText } from './cfbShared'
 // came from kept on it (c.college), his draft projection included: the college season's stock is where
 // Career's draft starts him (c.college.proj, lib/career.js stockOf), so a projected top-10 pick goes
 // about there and a Day 3 grade goes on Day 3; the combine and the interviews still move him a little.
-// All three slots full: he picks the one to replace, as Career does.
+// Every slot full: he picks the one to replace, as Career does.
 // (the gap is cfbShared.js collegeGap, the same one Start in College adds)
 export function dropRatings(build, types, physical, pos = null) {
   return Object.fromEntries(types.map(t => {
@@ -88,7 +88,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, pl
               </tbody>
             </table>
             <div className="cfbd-slots">
-              <span className="cfbd-slots-hd">{full ? 'ALL THREE CAREER SLOTS ARE FULL · PICK ONE TO REPLACE' : `CAREER SLOT ${(slot ?? 0) + 1}`}</span>
+              <span className="cfbd-slots-hd">{full ? 'EVERY CAREER SLOT IS FULL · PICK ONE TO REPLACE' : `CAREER SLOT ${(slot ?? 0) + 1}`}</span>
               {full && slots.map((s, i) => (
                 <button key={i} className={`cfbd-slot${slot === i ? ' is-on' : ''}`} onClick={() => setSlot(i)} aria-pressed={slot === i}>
                   <b>SLOT {i + 1}</b><span>{s.name} · {M.POS_LABEL?.[s.pos] ?? s.pos.toUpperCase()} · {s.phase === 'retired' ? 'Retired' : s.phase === 'draft' ? 'Draft day' : `Year ${(s.year ?? 0) + 1}`}</span>
