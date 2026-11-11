@@ -170,7 +170,13 @@ function OffersScreen({ eyebrow, title, name, pos, ovr, card, stock, offers, tea
       <div className="ag-screen-body">
         <section className="cfbr-card">
           <div className="cfbr-who"><small>{CFB_POS[pos].name.toUpperCase()}{current ? ` · ${String(teamsBy[current]?.school ?? current).toUpperCase()}` : ''}</small>{onName
-            ? <input className="cfbr-name-in" value={nameValue} onChange={e => onName(cleanName(e.target.value))} placeholder="NAME YOUR PLAYER" autoComplete="off" autoCapitalize="words" spellCheck={false} enterKeyHint="done" aria-label="Player name" onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+            ? (
+              <label className="cfbr-name">
+                <span>NAME YOUR PLAYER</span>
+                <input className="cfbr-name-in" value={nameValue} onChange={e => onName(cleanName(e.target.value))} placeholder="TYPE A NAME" autoComplete="off" autoCapitalize="words" spellCheck={false} enterKeyHint="done" aria-label="Player name" onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+                <svg className="cfbr-name-pen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              </label>
+            )
             : <b>{name}</b>}</div>
           <Stars n={card.stars} />
           <div className="cfbr-rank">
