@@ -4645,14 +4645,12 @@ export function calcOVRK(build, types = K_TYPES) {
   const totalW = filled.reduce((s, t) => s + (K_ATTR_WEIGHT[t] ?? 0.3), 0)
   const avg    = filled.reduce((s, t) => s + build[t].val * (K_ATTR_WEIGHT[t] ?? 0.3) / totalW, 0)
   const base   = 60 + 2.1 * avg + 0.21 * avg * avg
-  let bonus = 0
-  if (filled.length === types.length) {
-    const minVal = Math.min(...filled.map(t => build[t].val))
-    // (no bonus for a balanced build: raising a rating must never lower the OVR)
-    if (minVal >= 9) bonus += 2.0
-    else if (minVal >= 8) bonus += 0.5
-  }
-  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+  // Three ratings max out far more easily than nine (a build takes the best leg, the best accuracy and the best
+  // nerve in the league from three spins), so the top of the curve runs at about half above 88 and there is no
+  // all-A bonus: S / S / A+ is a 98, three A+ a 96, three A a 92; only S across the board is a 99. Below 88 it
+  // reads on the same scale as every other position (the owner, 2026-11-10: kicker overalls ran high)
+  const top = base > 88 ? 88 + (base - 88) * 0.54 : base
+  return Math.min(99, Math.max(0, Math.round(top)))
 }
 
 export function getArchetypeK(ovr, build, types = K_TYPES) {
