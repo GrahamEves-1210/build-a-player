@@ -72,7 +72,7 @@ html:is(.is-app, .app-look) .btg:is(.btg-final, .btg-reveal, .btg-wait) { paddin
 /* the rim: drawn over the court's own, only while it takes a hit or the net snaps */
 .btg-rim { position: absolute; left: 50%; top: 10.9%; width: 4.5cqw; height: 6.8cqw; margin: -2.25cqw 0 0 -2.25cqw; pointer-events: none; z-index: 2; opacity: 0; }
 .btg-rim svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.btg-rim-net { transform-origin: 50% 30%; transform-box: fill-box; }
+.btg-rim-net { transform-origin: 22.5px 22.5px; transform-box: view-box; }
 /* a swish: the net and nothing else (the rim itself is only drawn when it rattles: a miss off the iron, a dunk) */
 .btg-rim.is-make .btg-rim-ring { display: none; }
 
@@ -445,7 +445,8 @@ html:is(.is-app, .app-look) .btg.btg-wait { padding-left: 10px; padding-right: 1
 @keyframes btg-tag { 0% { opacity: 0; transform: translateY(6px); } 16%, 78% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @keyframes btg-flash { 0% { opacity: 0; } 14% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes btg-rim-show { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes btg-net { 0% { transform: none; } 30% { transform: scaleY(1.55) scaleX(.86); } 58% { transform: scaleY(.92); } 100% { transform: none; } }
+/* (top down: the net's mouth tightens as the ball goes through it, flares, and settles) */
+@keyframes btg-net { 0% { transform: none; } 34% { transform: scale(.7); } 62% { transform: scale(1.2); } 100% { transform: none; } }
 @keyframes btg-rattle { 0% { transform: none; } 16% { transform: translate(1.5px, 1px) rotate(4deg); } 34% { transform: translate(-1.5px, 0) rotate(-3.5deg); } 52% { transform: translate(1px, .5px) rotate(2.5deg); } 72% { transform: translate(-.5px, 0) rotate(-1deg); } 100% { transform: none; } }
 @keyframes btg-rattle-hard { 0% { transform: none; } 10% { transform: translate(0, 3px) scale(1.07); } 24% { transform: translate(2px, -1.5px) rotate(6deg); } 40% { transform: translate(-2px, 1px) rotate(-5deg); } 56% { transform: translate(1.5px, 0) rotate(3.5deg); } 72% { transform: translate(-1px, 0) rotate(-2deg); } 88% { transform: translate(.5px, 0) rotate(1deg); } 100% { transform: none; } }
 @keyframes btg-arc { 0% { transform: none; animation-timing-function: cubic-bezier(.2, .7, .5, 1); } 50% { transform: scale(1.62); animation-timing-function: cubic-bezier(.5, 0, .8, .3); } 100% { transform: none; } }
@@ -453,7 +454,8 @@ html:is(.is-app, .app-look) .btg.btg-wait { padding-left: 10px; padding-right: 1
 @keyframes btg-sh { 0% { transform: none; opacity: 1; animation-timing-function: cubic-bezier(.2, .7, .5, 1); } 50% { transform: translate(calc(var(--bs) * .7), calc(var(--bs) * 1.05)) scale(1.5); opacity: .42; animation-timing-function: cubic-bezier(.5, 0, .8, .3); } 100% { transform: none; opacity: 1; } }
 @keyframes btg-sh-low { 0% { transform: none; opacity: 1; } 50% { transform: translate(calc(var(--bs) * .28), calc(var(--bs) * .42)) scale(1.18); opacity: .6; } 100% { transform: none; opacity: 1; } }
 @keyframes btg-drib { 0%, 100% { transform: none; } 50% { transform: scale(.8); } }
-@keyframes btg-drop { 0% { transform: none; } 55% { transform: translateY(calc(var(--bs) * .5)) scale(.78); } 100% { transform: translateY(calc(var(--bs) * .95)) scale(.74); } }
+/* (top down: a make drops straight through, so the ball gets smaller where it is, with no slide down the screen) */
+@keyframes btg-drop { 0% { transform: none; } 45% { transform: scale(.6); } 100% { transform: scale(.66); } }
 @keyframes btg-rimout { 0% { transform: none; } 40% { transform: translate(calc(var(--bs) * var(--ox, .5)), calc(var(--bs) * -.5)) scale(1.3); } 100% { transform: translate(calc(var(--bs) * var(--ox, .5) * 1.7), calc(var(--bs) * .5)) scale(1.05); } }
 @keyframes btg-l3-tag { from { opacity: .55; transform: translateX(-14px); } }
 @keyframes btg-l3-text { from { opacity: .35; transform: translateY(7px); } }

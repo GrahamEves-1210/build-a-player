@@ -404,9 +404,12 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         <div className="btg-overlay">
           <div key={`r${rim?.key ?? 0}`} className={`btg-rim${rim ? ` is-${rim.kind}` : ''}`} aria-hidden="true">
             <svg viewBox="0 0 45 68">
+              {/* the net, seen from straight above like the court: the cords run in from the rim to the ring of its
+                  mouth. On a make the ball drops through the middle and the mouth tightens, then flares */}
               <g className="btg-rim-net" fill="none" stroke="#f4f6f8" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M6 26 L14 52 M14.5 30 L18.5 53 M22.5 31 L22.5 54 M30.5 30 L26.5 53 M39 26 L31 52" />
-                <path d="M9 36 Q22.5 42 36 36 M12 45 Q22.5 50 33 45 M14 52 Q22.5 56 31 52" />
+                <path d="M22.5 5.5 L22.5 13 M34.5 10.5 L29.2 15.8 M39.5 22.5 L32 22.5 M34.5 34.5 L29.2 29.2 M22.5 39.5 L22.5 32 M10.5 34.5 L15.8 29.2 M5.5 22.5 L13 22.5 M10.5 10.5 L15.8 15.8" />
+                <circle cx="22.5" cy="22.5" r="9.5" />
+                <circle cx="22.5" cy="22.5" r="14" strokeWidth="1" opacity=".7" />
               </g>
               <g className="btg-rim-ring">
                 <circle cx="22.5" cy="22.5" r="18.5" fill="none" stroke="#3a1606" strokeWidth="6.5" />
