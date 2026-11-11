@@ -410,9 +410,9 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
               {/* the net, seen from straight above like the court: the cords run in from the rim to the ring of its
                   mouth. On a make the ball drops through the middle and the mouth tightens, then flares */}
               <g className="btg-rim-net" fill="none" stroke="#f4f6f8" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M22.5 5.5 L22.5 13 M34.5 10.5 L29.2 15.8 M39.5 22.5 L32 22.5 M34.5 34.5 L29.2 29.2 M22.5 39.5 L22.5 32 M10.5 34.5 L15.8 29.2 M5.5 22.5 L13 22.5 M10.5 10.5 L15.8 15.8" />
-                <circle cx="22.5" cy="22.5" r="9.5" />
-                <circle cx="22.5" cy="22.5" r="14" strokeWidth="1" opacity=".7" />
+                <path d="M22.5 3.5 L22.5 10.5 M35.9 9.1 L31 14 M41.5 22.5 L34.5 22.5 M35.9 35.9 L31 31 M22.5 41.5 L22.5 34.5 M9.1 35.9 L14 31 M3.5 22.5 L10.5 22.5 M9.1 9.1 L14 14" />
+                <circle cx="22.5" cy="22.5" r="12" />
+                <circle cx="22.5" cy="22.5" r="16.5" strokeWidth="1" opacity=".7" />
               </g>
             </svg>
           </div>
