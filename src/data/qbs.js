@@ -29,7 +29,7 @@ export const QBS = [
   { name: 'Kenny Pickett',      short: 'Pickett',     team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#f0c4a0', starter: false, number: 12,
     attrs: { 'arm': 3, 'legs': 4, 'size': 7, 'processing': 4, 'leadership': 4, 'vision': 4, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'Haynes King', short: 'King', team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#7a5030', starter: false, number: 16,
-    attrs: { 'arm': 4, 'legs': 7, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 4, 'playmaking': 5, 'accuracy': 4, 'pocket-presence': 4 } },
+    attrs: { 'arm': 4, 'legs': 9, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 4, 'playmaking': 5, 'accuracy': 4, 'pocket-presence': 4 } },
   // CHI
   { name: 'Caleb Williams',     short: 'Williams',    team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#8a5c30', starter: true,  captain: true,  number: 18,
     attrs: { 'arm': 10, 'legs': 9, 'size': 4, 'processing': 6, 'leadership': 6, 'vision': 9, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 8 } },
@@ -70,7 +70,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 5, 'size': 5, 'processing': 6, 'leadership': 6, 'vision': 4, 'playmaking': 4, 'accuracy': 4, 'pocket-presence': 3 } },
   // GB
   { name: 'Jordan Love',        short: 'Love',        team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#c09860', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 9, 'legs': 5, 'size': 8, 'processing': 8, 'leadership': 7, 'vision': 7, 'playmaking': 6, 'accuracy': 7, 'pocket-presence': 6 } },
+    attrs: { 'arm': 9, 'legs': 6, 'size': 8, 'processing': 8, 'leadership': 7, 'vision': 8, 'playmaking': 7, 'accuracy': 8, 'pocket-presence': 7 } },
   { name: 'Tyrod Taylor',       short: 'T. Taylor',   team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#9a6840', starter: false, number: 6,
     attrs: { 'arm': 3, 'legs': 4, 'size': 4, 'processing': 5, 'leadership': 6, 'vision': 4, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   // HOU
