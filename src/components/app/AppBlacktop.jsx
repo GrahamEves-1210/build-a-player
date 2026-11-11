@@ -419,13 +419,13 @@ export function BlacktopHud({ bt, onOpenChat, unread, devOpen = false }) {
                 {sq.map(p => {
                   const b = bt.builds[p.vid] ?? (p.mimic ? fakeBuild(p, bt.match?.created) : undefined)
                   const here = p.bot || bt.present.some(q => q.vid === p.vid)
-                  const ovr = t === bt.myTeam ? liveOvr(b) : null
+                  // (both teams read the same way while they build: traits placed out of 8, a tick when he's done. No overalls here)
                   return (
                     <span key={p.vid} className={`bt-hud-p${!here ? ' is-gone' : ''}${b?.done ? ' is-done' : ''}`} title={p.name}>
                       <Av name={p.name} bot={asBot(p)} team={t} size={24} cos={p.cos} self={p.vid === bt.me.vid} />
                       <span className="bt-hud-p-name"><Who p={p} meVid={bt.me.vid} /> <small>{p.pos === 'big' ? 'BIG' : 'G'}</small></span>
                       <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / 8) * 100)}%` }} /></span>
-                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? <IconCheck size={13} /> : `${b?.filled ?? 0}/8`}</span>
+                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : b?.done ? <IconCheck size={13} /> : `${b?.filled ?? 0}/8`}</span>
                     </span>
                   )
                 })}
