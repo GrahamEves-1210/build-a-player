@@ -4,8 +4,19 @@
 //   2. a simulated bottom rail: the same id, position and z-index Playwire's has, at any height, with its close tab
 //   3. the audit itself: scroll every scroller to its end and list what is still under the rail
 (() => {
-  if (window.__RA) return
+  if (window.__RA || window.top !== window) return   // (never inside a frame: the simulated ad is one)
   const RA = (window.__RA = {})
+  // the site's clock can run fast (window.__RA_SPEED, set by the runner), so a season's live games and timed reveals
+  // don't take the audit minutes each. The audit's own waits use the real timers
+  const realTimeout = window.setTimeout.bind(window), realRaf = window.requestAnimationFrame.bind(window)
+  const SPEED = +window.__RA_SPEED || 1
+  if (SPEED > 1) {
+    const realInterval = window.setInterval.bind(window), now = performance.now.bind(performance), t0 = now()
+    window.setTimeout = (f, d, ...a) => realTimeout(f, d > 30 ? d / SPEED : d, ...a)
+    window.setInterval = (f, d, ...a) => realInterval(f, d > 30 ? d / SPEED : d, ...a)
+    performance.now = () => t0 + (now() - t0) * SPEED
+    window.requestAnimationFrame = cb => realRaf(t => cb(t0 + (t - t0) * SPEED))
+  }
   const isLocal = u => { try { const h = new URL(String(u?.url ?? u), location.href).hostname; return h === location.hostname || h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1' } catch { return true } }
 
   // ── 1. no writes, no sockets ────────────────────────────────────────────────
@@ -21,7 +32,7 @@
   class DeadSocket extends EventTarget {
     constructor(url) {
       super(); this.url = String(url); this.readyState = 0; this.bufferedAmount = 0; this.binaryType = 'blob'; this.protocol = ''; this.extensions = ''
-      setTimeout(() => { this.readyState = 3; for (const e of [new Event('error'), new CloseEvent('close', { code: 1006 })]) { try { this['on' + e.type]?.(e) } catch {} this.dispatchEvent(e) } }, 60)
+      realTimeout(() => { this.readyState = 3; for (const e of [new Event('error'), new CloseEvent('close', { code: 1006 })]) { try { this['on' + e.type]?.(e) } catch {} this.dispatchEvent(e) } }, 60)
     }
     send() {} close() { this.readyState = 3 }
   }
@@ -73,7 +84,7 @@
     const ad = el.querySelector('[data-ra-ad]').getBoundingClientRect(), close = el.querySelector('[data-ra-close]').getBoundingClientRect()
     const top = Math.min(el.getBoundingClientRect().top, ad.top, close.top)
     const R = r => ({ x: r.left, y: r.top, width: r.width, height: r.height })
-    return { top, bottom: window.innerHeight, height: window.innerHeight - top, ad: R(ad), close: R(close), z: cs.zIndex,
+    return { top, bottom: window.innerHeight, height: window.innerHeight - top, ad: R(ad), close: R(close), z: cs.zIndex, sx: window.scrollX, sy: window.scrollY,
       measured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--web-rail')) || 0,
       adH: getComputedStyle(document.documentElement).getPropertyValue('--ad-h').trim() }
   }
@@ -91,7 +102,17 @@
     }
     return true
   }
-  const pinned = el => { for (let e = el; e && e.nodeType === 1; e = e.parentElement) { const p = getComputedStyle(e).position; if (p === 'fixed' || p === 'sticky') return p } return '' }
+  // pinned: fixed or sticky itself, or inside something that is, before the nearest box that scrolls (what sits inside
+  // a fixed scroller moves with its scroll, so it is judged with the scroller at its end instead)
+  const scrolls = e => { if (e.scrollHeight - e.clientHeight <= 1) return false; const oy = getComputedStyle(e).overflowY; return oy === 'auto' || oy === 'scroll' }
+  const pinned = el => {
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+      const p = getComputedStyle(e).position
+      if (e !== el && scrolls(e)) return ''
+      if (p === 'fixed' || p === 'sticky') return p
+    }
+    return ''
+  }
   const label = el => {
     const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean).slice(0, 3).join('.') : ''
     const txt = (el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('placeholder') || el.getAttribute('title') || '').replace(/\s+/g, ' ').trim().slice(0, 36)
@@ -138,8 +159,21 @@
     }
     return [...set]
   }
-  const frames = n => new Promise(r => { const step = () => (n-- > 0 ? requestAnimationFrame(step) : r()); step() })
+  const frames = n => new Promise(r => { const step = () => (n-- > 0 ? realRaf(step) : r()); step() })
   const strip = list => list.map(({ el, ...f }) => f)   // (el is kept on the page side only)
+
+  // entrance animations are over (a sheet still sliding up would be judged where it is not): wait for every finite
+  // animation, a couple of seconds at most
+  RA.settled = async (ms = 2500) => {
+    const t0 = Date.now()
+    while (Date.now() - t0 < ms) {
+      const busy = document.getAnimations().some(a => { if (a.playState !== 'running') return false; const t = a.effect?.getComputedTiming?.(); return t && Number.isFinite(t.endTime) && t.endTime < 20000 && !inRail(a.effect?.target) })
+      if (!busy) break
+      await new Promise(r => realTimeout(r, 100))
+    }
+    await frames(2)
+    return Date.now() - t0
+  }
 
   let saved = null, seen = null
   // step 1: what is pinned under the rail as the screen stands; then every scroller goes to its end
@@ -156,7 +190,7 @@
       }
       await frames(2)
     }
-    await new Promise(r => setTimeout(r, 80))
+    await new Promise(r => realTimeout(r, 80))
     return { band, pinned: strip(pinnedNow), scrollers: saved.length }
   }
   // step 2: what is still under the rail with everything scrolled to its end; the scroll positions go back
@@ -171,21 +205,18 @@
   }
   // which of our elements are stacked over the ad (asked when the screenshot shows the ad is not fully visible):
   // pointer-events are forced on for the look, so layers that let taps through are found too
-  RA.whoCovers = () => {
+  RA.whoCovers = (px, py) => {
     const band = RA.band()
     if (!band || band.hidden) return []
     const st = document.createElement('style'); st.textContent = '*{pointer-events:auto !important}'; document.head.appendChild(st)
-    const names = new Set()
-    const { x, y, width, height } = band.ad
-    for (const [px, py] of [[x + width / 2, y + height / 2], [x + 4, y + 4], [x + width - 4, y + height - 4], [x + width / 2, y + 3], [x + width / 2, y + height - 3]]) {
-      for (const e of document.elementsFromPoint(px, py)) {
-        if (inRail(e)) break
-        const cs = getComputedStyle(e)
-        names.add(`${label(e).slice(0, 60)} [z ${cs.zIndex}, ${cs.position}]`)
-      }
+    const names = []
+    for (const e of document.elementsFromPoint(px, py)) {
+      if (inRail(e)) break
+      const cs = getComputedStyle(e)
+      names.push(`${label(e).slice(0, 60)} [z ${cs.zIndex}, ${cs.position}]`)
     }
     st.remove()
-    return [...names].slice(0, 6)
+    return names.slice(0, 5)
   }
 
   // ── helpers for the scenarios ───────────────────────────────────────────────
@@ -210,6 +241,32 @@
     const names = tops.map(e => (typeof e.className === 'string' && e.className.trim().split(/\s+/).slice(0, 2).join('.')) || e.tagName.toLowerCase())
     const h = [...document.querySelectorAll('h1, h2, .ag-screen-title, [class*="title"]')].filter(visible).map(e => (e.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 2).join(' / ')
     return names.join(' + ') + (h ? ' :: ' + h.slice(0, 70) : '')
+  }
+  // a short, stable name for the screen as it stands: the scenario's own markers that are present ([selector, label]),
+  // and any large fixed layer of ours on top (a sheet, a modal) by its class
+  const BASE = /^(ag-home|ag-screen|ag-bg|ag-dock|ag-dock-floor|navbar|game-page-scroll|simp-page|bsim-page|mobile-tab-bar|ag-hud|drop-clip|splash-screen|versus-lobby|mg-stage)$/
+  RA.name = (markers = []) => {
+    const out = []
+    for (const [sel, lab] of markers) { const el = [...document.querySelectorAll(sel)].find(visible); if (el) out.push(typeof lab === 'string' ? lab : sel) }
+    const vw = window.innerWidth, vh = window.innerHeight
+    for (const e of document.body.querySelectorAll('*')) {
+      if (inRail(e)) continue
+      const cs = getComputedStyle(e)
+      if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.02) continue
+      const r = e.getBoundingClientRect()
+      if (r.width * r.height < vw * vh * 0.15) continue
+      const c = typeof e.className === 'string' ? e.className.trim().split(/\s+/)[0] : ''
+      if (!c || BASE.test(c) || out.includes('[' + c + ']')) continue
+      out.push('[' + c + ']')
+    }
+    return out.join(' + ') || 'base'
+  }
+  // the screen in a few lines, for writing scenarios: its signature and the clickable things in view
+  RA.brief = (max = 30) => {
+    const vh = window.innerHeight
+    const list = [...document.body.querySelectorAll('*')].filter(e => { if (inRail(e) || !interactive(e)) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && !e.matches('.ps-tile, .splash-site-footer-link, .ntag-link') && shown(e) })
+    const hit = list.filter(e => { const r = e.getBoundingClientRect(); const t = document.elementFromPoint(Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2)), Math.min(vh - 1, Math.max(0, r.top + r.height / 2))); return t && (e === t || e.contains(t) || inRail(t)) })
+    return [RA.sig(), ...hit.slice(0, max).map(e => '  ' + label(e).slice(0, 78)), ...(hit.length > max ? [`  (+${hit.length - max} more)`] : [])].join('\n')
   }
   RA.buttons = () => [...document.querySelectorAll('button, a[href], [role=button], [role=tab]')].filter(e => !inRail(e) && visible(e)).map(e => label(e).slice(0, 70))
   RA.clickables = () => [...document.body.querySelectorAll('*')].filter(e => !inRail(e) && interactive(e) && visible(e)).map(e => label(e).slice(0, 80))

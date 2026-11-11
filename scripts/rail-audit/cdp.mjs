@@ -8,8 +8,9 @@ import { tmpdir } from 'node:os'
 
 export const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-// Never requested from the audit: ad scripts and ad calls, and the analytics table
-export const BLOCKED = ['*intergient*', '*googletagmanager*', '*google-analytics*', '*doubleclick*', '*taboola*', '*adform*', '*playwire*',
+// Never requested from the audit: ad scripts and ad calls, the analytics table, and the ways out of the site that a
+// stray click could take (the sign-in redirect, Discord, Stripe)
+export const BLOCKED = ['*intergient*', '*/auth/v1/authorize*', '*discord.com*', '*stripe.com*', '*googletagmanager*', '*google-analytics*', '*doubleclick*', '*taboola*', '*adform*', '*playwire*',
   '*googlesyndication*', '*pubmatic*', '*amazon-adsystem*', '*adnxs*', '*rubiconproject*', '*analytics_events*']
 
 function findChrome() {
@@ -36,7 +37,14 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
   const port = 9400 + Math.floor(Math.random() * 500)
   const chrome = spawn(findChrome(), ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`, '--no-first-run', '--hide-scrollbars',
     '--mute-audio', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
+    '--disable-extensions', '--disable-gpu', '--renderer-process-limit=2',
     `--window-size=${width},${height}`, `--crash-dumps-dir=${tmp}`, 'about:blank'], { stdio: 'ignore', env: { ...process.env, TEMP: tmp, TMP: tmp } })
+  // the browser never outlives the script, however the script ends
+  const reap = () => { try { chrome.kill() } catch {} try { rmSync(prof, { recursive: true, force: true }) } catch {} }
+  process.on('exit', reap)
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { reap(); process.exit(130) })
+  process.on('uncaughtException', e => { console.error(e); reap(); process.exit(1) })
+  process.on('unhandledRejection', e => { console.error(e); reap(); process.exit(1) })
   let target
   for (let i = 0; i < 100 && !target; i++) { await sleep(200); try { target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find(t => t.type === 'page') } catch {} }
   if (!target) { try { chrome.kill() } catch {} ; throw new Error('Chromium did not start') }
@@ -49,7 +57,13 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
     if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id) }
     else if (m.method) for (const f of listeners.get(m.method) ?? []) f(m.params)
   })
-  const send = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
+  // (a page whose main thread is stuck never answers: give up after a while rather than hang the whole run)
+  const send = (method, params = {}, ms = 45000) => new Promise((r, j) => {
+    const i = ++id
+    const t = setTimeout(() => { pending.delete(i); j(new Error(`${method} got no answer in ${ms / 1000}s`)) }, ms)
+    pending.set(i, m => { clearTimeout(t); r(m) })
+    ws.send(JSON.stringify({ id: i, method, params }))
+  })
   const on = (method, f) => { if (!listeners.has(method)) listeners.set(method, []); listeners.get(method).push(f) }
 
   const metrics = async (w, h, mob = mobile) => {
@@ -76,7 +90,7 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
   }
   const goto = async url => {
     for (let k = 0; k < 3; k++) { const nav = await send('Page.navigate', { url }); if (!nav.result?.errorText) break; await sleep(1500) }
-    for (let i = 0; i < 60; i++) { const v = await evaluate('location.href', { soft: true }); if (String(v).startsWith('http')) break; await sleep(250) }
+    for (let i = 0; i < 60; i++) { const v = await evaluate('location.href', { soft: true }); if (String(v).startsWith(url.slice(0, 5))) break; await sleep(250) }
   }
   const screenshot = async (clip, format = 'png') => {
     const r = await send('Page.captureScreenshot', { format, ...(format === 'jpeg' ? { quality: 72 } : {}), ...(clip ? { clip: { ...clip, scale: 1 } } : {}) })
