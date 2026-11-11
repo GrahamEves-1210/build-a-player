@@ -8243,6 +8243,8 @@ html.is-x-browser .mobile-tab-bar {
   line-height: 1;
   text-shadow: 0 0 30px rgba(245,200,66,0.35);
 }
+/* a long award name (Protector of the Year) stays on one line on a phone */
+.mvp-title--long { font-size: 27px; text-align: center; }
 
 /* Loading phase */
 .mvp-loading {

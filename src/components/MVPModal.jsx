@@ -152,7 +152,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
       <div className="mvp-card">
 
         <div className="mvp-eyebrow">{awardEyebrow}</div>
-        <div className="mvp-title">{awardLabel}</div>
+        <div className={`mvp-title${awardLabel.length > 14 ? ' mvp-title--long' : ''}`}>{awardLabel}</div>
 
         {phase === 'loading' && (
           <div className="mvp-loading">

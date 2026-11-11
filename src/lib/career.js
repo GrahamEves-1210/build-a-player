@@ -3287,7 +3287,7 @@ export const countedHonors = n => Math.min(n, HONOR_KNEE) + Math.max(0, n - HONO
 export function legacyScore(S, pos, r) {
   if (S.x?.legacy) return S.x.legacy(r)
   const k = { ...r, honors: countedHonors(r.honors ?? 0) }
-  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (k[key] ?? 0) * w, 0) + Math.max(0, (r.awards ?? 0) - 1) * (S.awardRepeat ?? AWARD_REPEAT) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? (r.firsts ?? 0) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
+  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (k[key] ?? 0) * w, 0) + Math.max(0, (r.awards ?? 0) - 1) * (S.awardRepeat ?? AWARD_REPEAT) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? Math.max(0, (r.firsts ?? 0) - (r.awards ?? 0)) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
 }
 // Money earned is worth a little legacy too: a point every $25M of career
 // earnings (contracts and shoe money), never more than 5
