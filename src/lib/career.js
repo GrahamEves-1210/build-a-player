@@ -14,7 +14,7 @@ import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer 
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, lbStyle,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, olGradeOf, lbStyle,
   calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE, snapNFL,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
@@ -177,14 +177,10 @@ function careerLine(r, b, t) {
   const sum = k => games.reduce((s, g) => s + (g[k] ?? 0), 0)
   return { ...r, games, seasonPressures: sum('pressures'), seasonSacksAllowed: sum('sacks'), seasonQBHits: sum('qbHits'), seasonPenalties: sum('penalties'), seasonPancakes: sum('pancakes'), seasonHolding: sum('holding'), seasonFalseStarts: sum('falseStarts'), seasonSnaps: sum('snaps') }
 }
-// PFF-style 0-100 grades from what he allowed and finished (the sim's formula, utils/simulation.js
-// olSeasonGrades, without its noise: a booked season always grades the same)
+// PFF-style 0-100 grades from what he allowed and finished: the sim's own formula (utils/simulation.js olGradeOf),
+// without the one-off season's charting noise, so a booked season always grades the same
 export function olGrades({ prs = 0, sacksA = 0, pen = 0, pancakes = 0, snaps = 0, rbwr = 70 }) {
-  const g = v => Math.round(clamp(v, 30, 95) * 10) / 10
-  const sets = Math.max(1, (snaps || 1100) * 0.58)
-  const passGrade = g(100 - 5.4 * (prs / sets) * 100 - 1.2 * sacksA)
-  const runGrade = g(40 + (rbwr - 60) * 1.75 + Math.min(10, pancakes / 6))
-  return { passGrade, runGrade, grade: g(passGrade * 0.6 + runGrade * 0.4 - Math.max(0, pen - 5) * 0.8) }
+  return olGradeOf({ pressures: prs, sacks: sacksA, penalties: pen, pancakes, sets: Math.max(1, (snaps || 1100) * 0.58), rbwr })
 }
 // A lineman's season, from the games he played (a backup's bench weeks count for nothing)
 function olSeason(f) {
