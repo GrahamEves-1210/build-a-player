@@ -106,12 +106,12 @@ html:is(.is-app, .app-look) .btg:is(.btg-final, .btg-reveal, .btg-wait) { paddin
 @keyframes btg-bubble { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 10% { opacity: 1; transform: none; } 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 
 /* the ball: its shadow stays on the asphalt, the ball comes up off it */
-.btg-ball, .btg-ball-sh { position: absolute; width: 0; height: 0; pointer-events: none; }
+.btg-ball, .btg-ball-sh, .btg-ball-y { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; will-change: translate; }
 .btg-ball { z-index: 6; }
 .btg-ball-sh { z-index: 1; }
 .btg-ball-in { position: absolute; left: calc(var(--bs) / -2); top: calc(var(--bs) / -2); width: var(--bs); height: var(--bs); }
 .btg-ball-in svg { display: block; width: 100%; height: 100%; }
-.btg-ball-sh > i { position: absolute; left: calc(var(--bs) * -.42); top: calc(var(--bs) * -.2); width: calc(var(--bs) * 1.1); height: calc(var(--bs) * .86); border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .7), rgba(0, 0, 0, 0)); }
+.btg-ball-sh .btg-ball-y > i { position: absolute; left: calc(var(--bs) * -.42); top: calc(var(--bs) * -.2); width: calc(var(--bs) * 1.1); height: calc(var(--bs) * .86); border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .7), rgba(0, 0, 0, 0)); }
 
 /* callouts: a number off the rim for a bucket; a slab in the display face for the plays that land */
 .btg-call { position: absolute; left: 50%; z-index: 9; display: flex; flex-direction: column; align-items: center; pointer-events: none; white-space: nowrap; translate: -50% -50%; }
@@ -422,8 +422,8 @@ html:is(.is-app, .app-look) .btg.btg-wait { padding-left: 10px; padding-right: 1
   html:not(.bap-reduce-motion) .btg-ball-in.is-pass { animation: btg-arc-low var(--fd, .3s) linear both; }
   html:not(.bap-reduce-motion) .btg-ball-in.is-swat { animation: btg-arc-low var(--fd, .4s) linear both; }
   html:not(.bap-reduce-motion) .btg-ball-in.is-drib { animation: btg-drib var(--fd, .34s) ease-in-out var(--fn, 2) both; }
-  html:not(.bap-reduce-motion) .btg-ball-sh > i.is-shot { animation: btg-sh var(--fd, .4s) linear both; }
-  html:not(.bap-reduce-motion) .btg-ball-sh > i.is-pass, html:not(.bap-reduce-motion) .btg-ball-sh > i.is-swat { animation: btg-sh-low var(--fd, .3s) linear both; }
+  html:not(.bap-reduce-motion) .btg-ball-sh .btg-ball-y > i.is-shot { animation: btg-sh var(--fd, .4s) linear both; }
+  html:not(.bap-reduce-motion) .btg-ball-sh .btg-ball-y > i.is-pass, html:not(.bap-reduce-motion) .btg-ball-sh .btg-ball-y > i.is-swat { animation: btg-sh-low var(--fd, .3s) linear both; }
   html:not(.bap-reduce-motion) .btg-ball-in.is-in { animation: btg-drop .42s var(--bt-out) both; }
   html:not(.bap-reduce-motion) .btg-ball-in.is-out { animation: btg-rimout .42s var(--bt-out) both; }
   html:not(.bap-reduce-motion) .btg-l3-in > .btg-l3-tag { animation: btg-l3-tag var(--bt-med) var(--bt-out) both; }

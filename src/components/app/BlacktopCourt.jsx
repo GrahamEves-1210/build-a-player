@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { NameTag } from './NameTag'
 import QBAvatar from '../QBAvatar'
 import { sfx } from '../../lib/juice'
@@ -17,6 +17,7 @@ import './blacktop-game.css'
 // straight up the sides at x ≈ 12.5 to y ≈ 37, then curves to its top at (50, 73).
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+const EASE = 'cubic-bezier(0.25,0.82,0.42,1)'
 
 // The court Blacktop is played on: the one equipped from the shop's Courts
 // (lib/cosmetics.js; every design shares the same lines, so the spots line up)
@@ -92,7 +93,19 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     const id = setInterval(() => { const now = performance.now(); if (holderRef.current && now < movingUntil.current && now > flyingUntil.current) sfx('dribble') }, 340 / speed)
     return () => clearInterval(id)
   }, [speed])
-  const checkPass = useRef(null)     // the pass a check-up already showed (not played twice)
+  // while the court is up, the cosmetic effects' on-screen watch is worked out by hand (lib/fxPause.js: html.fx-manual):
+  // any IntersectionObserver target in the page made Chrome run a full main-thread frame for every frame the players glide
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.fxManual = String((Number(root.dataset.fxManual) || 0) + 1)
+    root.classList.add('fx-manual')
+    return () => {
+      const n = (Number(root.dataset.fxManual) || 1) - 1
+      if (n > 0) root.dataset.fxManual = String(n)
+      else { delete root.dataset.fxManual; root.classList.remove('fx-manual') }
+    }
+  }, [])
+  const checkPass = useRef(null)    // the pass a check-up already showed (not played twice)
   const revealTo = useRef(onReveal); revealTo.current = onReveal
   const playId = useRef(null)
   const reveal = () => revealTo.current?.(playId.current)
@@ -371,12 +384,14 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     return () => clearAll()
   }, [play?.id]) // eslint-disable-line
 
-  const EASE = 'cubic-bezier(0.25,0.82,0.42,1)'
   // overlaps: the ball handler on top, then the team with the ball, then the defense
   const hp = holder ? at(holder) : TOP
   const holderSide = holder && byId[holder] ? (byId[holder].team === 0 ? 1 : -1) : 1
   const ballPos = ball ?? { x: hp.x + (hand ?? holderSide) * 6, y: hp.y - 6 }
-  const ballTr = ball ? `left ${ball.dur}s cubic-bezier(0.4,0,0.6,1), top ${ball.dur}s cubic-bezier(0.55,0,0.45,1)` : `left ${hp.dur ?? .5}s ${EASE}, top ${hp.dur ?? .5}s ${EASE}`
+  // (the ball glides on `translate`, on its own layer, like the players: across on the outer box, up and down on the
+  // inner one, so each axis keeps its own easing (the arc) without a layout and a repaint of the whole court every frame)
+  const ballX = { translate: `${ballPos.x}cqw 0`, transition: `translate ${ball ? ball.dur : hp.dur ?? .5}s ${ball ? 'cubic-bezier(0.4,0,0.6,1)' : EASE}` }
+  const ballY = { translate: `0 ${ballPos.y}cqh`, transition: `translate ${ball ? ball.dur : hp.dur ?? .5}s ${ball ? 'cubic-bezier(0.55,0,0.45,1)' : EASE}` }
   // what the ball itself is doing: through the net or off the rim, in the air, or being dribbled
   const landed = ball && land && land.of === ball.key ? land : null
   const air = landed ? { cls: `is-${landed.kind}`, key: `l${ball.key}`, style: { '--ox': landed.ox } }
@@ -394,6 +409,9 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     }
     return run
   }, [game, play?.id]) // eslint-disable-line
+
+  // each face is made once a game (the players re-render as they move; their portraits never change)
+  const faces = useMemo(() => Object.fromEntries(players.map(p => [p.id, avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={34} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />])), [game]) // eslint-disable-line
 
   return (
     <div className="btg-stage">
@@ -416,32 +434,15 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
               </g>
             </svg>
           </div>
-          <div className="btg-ball-sh" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}><i key={air.key} className={air.cls} style={air.style} /></div>
-          <div className="btg-ball" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}>
+          <div className="btg-ball-sh" style={ballX}><div className="btg-ball-y" style={ballY}><i key={air.key} className={air.cls} style={air.style} /></div></div>
+          <div className="btg-ball" style={ballX}><div className="btg-ball-y" style={ballY}>
             <span key={air.key} className={`btg-ball-in${air.cls ? ` ${air.cls}` : ''}`} style={air.style}><Ball /></span>
-          </div>
+          </div></div>
           {players.map(p => {
-            const s = pos[p.id] ?? TOP
-            const has = holder === p.id
-            const col = colorFor(p.team)
             const me = p.id === meId
-            return (
-              <div key={p.id} className={`btg-p${has ? ' has-ball' : ''}${me ? ' is-me' : ''}${(hot[p.id] ?? 0) >= 2 ? ' is-hot' : ''}${s.x > 84 ? ' is-r' : s.x < 16 ? ' is-l' : ''}`} style={{ translate: `${s.x}cqw ${s.y}cqh`, transition: `translate ${s.dur}s ${EASE}`, zIndex: has ? 5 : p.team === play?.poss ? 4 : 3, '--pc': col }}>
-                <span className="btg-p-shadow" />
-                {/* a reaction when they send one */}
-                {bubbles?.[p.id] && <span key={bubbles[p.id]} className="btg-p-bubble">{bubbles[p.id]}</span>}
-                {me && <span className="btg-p-mark" aria-hidden="true"><svg viewBox="0 0 12 9"><path d="M1 1h10L6 8z" fill="#fff" stroke="#05070a" strokeWidth="1.4" strokeLinejoin="round" /></svg></span>}
-                <div className="btg-p-face">
-                  {avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={34} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />}
-                </div>
-                {/* the name bar: the overall on the team's colour, then the name in its owner's look
-                    (color, effect, plate), same as everywhere else; bots plain */}
-                <span className="btg-p-plate">
-                  {ovrFor && <span className="btg-p-ovr">{ovrFor(p)}</span>}
-                  <span className="btg-p-name">{me && meLabel ? meLabel : p.bot && !p.mimic && !me ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((me && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={me} cos={me ? null : p.cos || null} />}</span>
-                </span>
-              </div>
-            )
+            const has = holder === p.id
+            return <CourtPlayer key={p.id} p={p} s={pos[p.id] ?? TOP} has={has} me={me} hot={(hot[p.id] ?? 0) >= 2} z={has ? 5 : p.team === play?.poss ? 4 : 3}
+              col={colorFor(p.team)} bubble={bubbles?.[p.id] ?? null} face={faces[p.id]} hasOvr={!!ovrFor} ovr={ovrFor ? ovrFor(p) : null} meLabel={meLabel} meName={meName} />
           })}
           {pop && <div key={`c${pop.key}`} className={`btg-call is-${pop.kind}${pop.flood ? ' is-flood' : ''}${pop.team != null ? ` bt-t${pop.team}` : ''}`}><b>{pop.label}</b>{pop.sub && <small>{pop.sub}</small>}</div>}
           {tag && <div className="btg-tag">{tag}</div>}
@@ -450,6 +451,26 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     </div>
   )
 }
+
+// A player on court: a portrait on a team-colour base, a contact shadow, a name bar. Memoized: the court re-renders on
+// every beat of a play (the ball, a callout, the dribble), and only the players whose spot, ball or look changed redraw
+const CourtPlayer = memo(function CourtPlayer({ p, s, has, me, hot, z, col, bubble, face, hasOvr, ovr, meLabel, meName }) {
+  return (
+    <div className={`btg-p${has ? ' has-ball' : ''}${me ? ' is-me' : ''}${hot ? ' is-hot' : ''}${s.x > 84 ? ' is-r' : s.x < 16 ? ' is-l' : ''}`} style={{ translate: `${s.x}cqw ${s.y}cqh`, transition: `translate ${s.dur}s ${EASE}`, zIndex: z, '--pc': col }}>
+      <span className="btg-p-shadow" />
+      {/* a reaction when they send one */}
+      {bubble && <span key={bubble} className="btg-p-bubble">{bubble}</span>}
+      {me && <span className="btg-p-mark" aria-hidden="true"><svg viewBox="0 0 12 9"><path d="M1 1h10L6 8z" fill="#fff" stroke="#05070a" strokeWidth="1.4" strokeLinejoin="round" /></svg></span>}
+      <div className="btg-p-face">{face}</div>
+      {/* the name bar: the overall on the team's colour, then the name in its owner's look
+          (color, effect, plate), same as everywhere else; bots plain */}
+      <span className="btg-p-plate">
+        {hasOvr && <span className="btg-p-ovr">{ovr}</span>}
+        <span className="btg-p-name">{me && meLabel ? meLabel : p.bot && !p.mimic && !me ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((me && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={me} cos={me ? null : p.cos || null} />}</span>
+      </span>
+    </div>
+  )
+})
 
 // The ball: lit from the top left, like the court
 const Ball = () => (

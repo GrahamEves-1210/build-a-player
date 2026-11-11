@@ -39,16 +39,67 @@ export function initFxPause() {
   // own stage is still watched: that's on screen.)
   let paused = false
   const STAGE = '.mg-stage'
-  const watch = el => { if (!paused || el.closest(STAGE)) io.observe(el) }
+  // While a Blacktop court is live (html.fx-manual) there is no IntersectionObserver watch at all: with any watched
+  // target in the document, Chrome ran a whole main-thread frame (style, paint, the watch) on every frame of the
+  // court's compositor transitions (the six players and the ball glide all game), about twice the work. So the same
+  // watch is worked out by hand, from where each one is on the screen, once a frame only while something scrolls or
+  // the window resizes (and as each one appears). Same margin as the watch.
+  let manual = false
+  const tracked = new Set()
+  // (on screen: it has a box, inside the window (the watch's 60px above and below), and inside every box that clips it)
+  const clips = new WeakMap()
+  const clipsOf = el => {
+    let c = clips.get(el)
+    if (!c) {
+      c = []
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) { const st = getComputedStyle(a); if (st.overflowX !== 'visible' || st.overflowY !== 'visible') c.push(a) }
+      clips.set(el, c)
+    }
+    return c
+  }
+  const inView = el => {
+    if (!el.getClientRects().length) return false
+    const r = el.getBoundingClientRect()
+    if (r.bottom < -60 || r.top > innerHeight + 60 || r.right < 0 || r.left > innerWidth) return false
+    for (const a of clipsOf(el)) { const q = a.getBoundingClientRect(); if (r.bottom < q.top || r.top > q.bottom || r.right < q.left || r.left > q.right) return false }
+    return true
+  }
+  const check = el => {
+    const v = inView(el)
+    if (was.get(el) === v) return
+    was.set(el, v)
+    if (v) play(el)
+    else { clearTimeout(timers.get(el)); rest(el) }
+  }
+  let raf = 0
+  const sweep = () => { raf = 0; if (manual) tracked.forEach(check) }
+  const soon = () => { if (manual && !raf) raf = requestAnimationFrame(sweep) }
+  // (something new may still be sliding in, a sheet or a panel: looked at again once it has settled)
+  let late = []
+  const added = () => { soon(); late.forEach(clearTimeout); late = [setTimeout(soon, 450), setTimeout(soon, 1100)] }
+  addEventListener('scroll', soon, { passive: true, capture: true })
+  addEventListener('resize', soon, { passive: true })
+  const watch = el => {
+    if (manual) { tracked.add(el); added() }
+    else if (!paused || el.closest(STAGE)) io.observe(el)
+  }
   each(document.body, watch)
   new MutationObserver(list => {
     for (const m of list) {
-      m.removedNodes.forEach(n => each(n, el => { io.unobserve(el); clearTimeout(timers.get(el)); was.delete(el) }))
+      m.removedNodes.forEach(n => each(n, el => { io.unobserve(el); tracked.delete(el); clips.delete(el); clearTimeout(timers.get(el)); was.delete(el) }))
       m.addedNodes.forEach(n => each(n, watch))
     }
   }).observe(document.body, { childList: true, subtree: true })
   const root = document.documentElement
   new MutationObserver(() => {
+    const m = root.classList.contains('fx-manual')
+    if (m !== manual) {
+      manual = m
+      if (m) { io.disconnect(); each(document.body, el => tracked.add(el)); added() }
+      else { tracked.clear(); paused = root.classList.contains('mg-live'); if (paused) document.querySelectorAll(STAGE).forEach(s => each(s, el => io.observe(el))); else each(document.body, el => io.observe(el)) }
+      return
+    }
+    if (manual) return
     const live = root.classList.contains('mg-live')
     if (live === paused) return
     paused = live

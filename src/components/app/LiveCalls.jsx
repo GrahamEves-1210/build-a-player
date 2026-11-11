@@ -13,25 +13,37 @@ export const CALL_MS = 3200
 
 // The call buttons, with a bar running down the time
 // options: call ids ('drive'), or { v, label, sub } (a pass to a named teammate)
-export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS, helpLabel = null, head = null }) {
+// glide (Blacktop): the same bar, run down by one animation off the main thread instead of a re-render every frame
+// (a frame of script, style and paint 60 times a second for the three seconds the players are setting up)
+export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS, helpLabel = null, head = null, glide = false }) {
   const [left, setLeft] = useState(1)
+  const [out, setOut] = useState(false)
+  const bar = useRef(null)
+  const smooth = glide && !!globalThis.Element?.prototype?.animate
   const t0 = useRef(performance.now())
   useEffect(() => {
     t0.current = performance.now()
+    if (smooth && bar.current) {
+      const a = bar.current.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: ms, easing: 'linear', fill: 'forwards' })
+      // (on the real clock from the moment it is up: left to start itself, an animation waits for its first frame, which a busy moment holds back)
+      try { a.startTime = t0.current } catch {}
+      const t = setTimeout(() => setOut(true), ms)
+      return () => { clearTimeout(t); a.cancel() }
+    }
     let raf
     const tick = () => { const p = 1 - (performance.now() - t0.current) / ms; setLeft(Math.max(0, p)); if (p > 0) raf = requestAnimationFrame(tick) }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [ms])
+  }, [ms]) // eslint-disable-line
   return (
     <div className={`lc-bar ${offense ? 'is-off' : 'is-def'}`} role="group" aria-label={offense ? 'Call the play' : 'Call the defense'}>
-      <span className="lc-head">{head ?? (offense ? 'ON O · CALL IT' : 'ON D · CALL IT')}<i className="lc-time" style={{ transform: `scaleX(${left})` }} /></span>
+      <span className="lc-head">{head ?? (offense ? 'ON O · CALL IT' : 'ON D · CALL IT')}<i ref={bar} className="lc-time" style={smooth ? undefined : { transform: `scaleX(${left})` }} /></span>
       <div className="lc-opts" style={{ gridTemplateColumns: `repeat(${options.length > 4 ? 3 : options.length}, minmax(0, 1fr))` }}>
         {options.map(opt => {
           const o = typeof opt === 'string' ? opt : opt.v
           const [label, sub] = typeof opt === 'string' ? CALL_LABEL[o] : [opt.label, opt.sub]
           return (
-            <button key={o} className={`lc-opt${picked === o ? ' is-on' : ''}${picked && picked !== o ? ' is-dim' : ''}`} disabled={!!picked || left <= 0}
+            <button key={o} className={`lc-opt${picked === o ? ' is-on' : ''}${picked && picked !== o ? ' is-dim' : ''}`} disabled={!!picked || (smooth ? out : left <= 0)}
               onClick={() => { onPick(o); sfx('tap'); haptic('light') }}>
               <b>{label}</b><small>{o === 'help' && helpLabel ? helpLabel : sub}</small>
             </button>

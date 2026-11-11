@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
 import { useLiveCounts, searching } from '../../lib/liveCounts'
 import { LiveLeaveButton } from './LiveLeave'
@@ -536,37 +536,39 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
 
 // Every player's build in the game, grade by grade, with the points they have so far: on the game screen
 // itself, under the play-by-play (line: { [id]: { pts, run } }, as of what's been shown)
-function SquadBuilds({ game, names, meVid, line = null }) {
+// (memoized, and each row on its own: the game screen re-renders on every beat of a play, a call or a reaction,
+// and the panel only changes when a play's points go up; then only that player's row redraws)
+const SquadBuilds = memo(function SquadBuilds({ game, names, meVid, line = null }) {
   return (
     <div className="btg-builds" role="region" aria-label="Builds">
       <div className="btg-builds-head">THE BUILDS</div>
       {[0, 1].map(t => (
         <div key={t} className={`bt-t${t}`}>
           <div className="btg-builds-team">{names[t]}</div>
-          {game.teams[t].map(p => {
-            const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
-            const ovr = liveOvr(p)
-            const arch = archOf(p)
-            const s = line?.[p.id]
-            return (
-              <div key={p.id} className={`btg-builds-p${p.id === meVid ? ' is-me' : ''}`}>
-                <span className="btg-builds-who">
-                  <span className="btg-builds-id"><b>{asBot(p) ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b><small>{arch && <><em>{arch}</em> · </>}{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
-                  {line && <span className={`btg-builds-n${(s?.run ?? 0) >= 2 ? ' is-hot' : ''}`}>{s?.pts ?? 0}<small>PTS</small></span>}
-                  <span className="btg-builds-n is-ovr">{ovr ?? '–'}<small>OVR</small></span>
-                </span>
-                {/* each trait's grade in its color, so a build reads at a glance */}
-                <span className="btg-builds-grades">
-                  {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label} className={val != null ? 'is-g' : ''} style={val != null ? { '--g': gradeColor(val) } : undefined}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
-                </span>
-              </div>
-            )
-          })}
+          {game.teams[t].map(p => <BuildsRow key={p.id} p={p} me={p.id === meVid} hasLine={!!line} pts={line?.[p.id]?.pts ?? 0} run={line?.[p.id]?.run ?? 0} />)}
         </div>
       ))}
     </div>
   )
-}
+})
+const BuildsRow = memo(function BuildsRow({ p, me, hasLine, pts, run }) {
+  const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+  const ovr = liveOvr(p)
+  const arch = archOf(p)
+  return (
+    <div className={`btg-builds-p${me ? ' is-me' : ''}`}>
+      <span className="btg-builds-who">
+        <span className="btg-builds-id"><b>{asBot(p) ? p.name : <NameTag name={p.name} cos={p.cos} self={me} />}</b><small>{arch && <><em>{arch}</em> · </>}{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
+        {hasLine && <span className={`btg-builds-n${run >= 2 ? ' is-hot' : ''}`}>{pts}<small>PTS</small></span>}
+        <span className="btg-builds-n is-ovr">{ovr ?? '–'}<small>OVR</small></span>
+      </span>
+      {/* each trait's grade in its color, so a build reads at a glance */}
+      <span className="btg-builds-grades">
+        {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label} className={val != null ? 'is-g' : ''} style={val != null ? { '--g': gradeColor(val) } : undefined}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
+      </span>
+    </div>
+  )
+})
 
 // ── Watching from the menu: the stands' bar, and the game itself ────────────
 // (a spectator plays from the same component as the players, with no seat: bt.watch)
@@ -592,6 +594,20 @@ export function BlacktopWatch({ code, pools, types, onClose }) {
     </div>
   )
 }
+
+// A side of the score bug (memoized: it only redraws when its score, the ball or the lead changes)
+const BugTeam = memo(function BugTeam({ t, name, pts, lead, ball, mine, from }) {
+  return (
+    <div className={`btg-bug-team bt-t${t}${lead ? ' is-lead' : ''}${ball ? ' has-ball' : ''}`}>
+      <i className="btg-bug-slab" aria-hidden="true" />
+      <div className="btg-bug-id">
+        <span className="btg-bug-name"><span>{name.startsWith('TEAM ') ? <><span className="btg-bug-pre">TEAM </span>{name.slice(5)}</> : name}</span>{mine ? <IconStar size={11} className="btg-bug-me" /> : null}</span>
+        <span className="btg-bug-pips" aria-hidden="true">{Array.from({ length: 11 }, (_, i) => <i key={i} className={i < pts ? `is-on${i >= from ? ' is-new' : ''}` : ''} />)}</span>
+      </div>
+      <b className="btg-bug-score"><RollingNumber value={pts} /></b>
+    </div>
+  )
+})
 
 // ── Game: reveal → live → result ────────────────────────────────────────────
 // what the lower third calls a play (the play-by-play line says the rest)
@@ -658,6 +674,18 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   }, [idx]) // eslint-disable-line
   const bubbles = useBubbles(bt.emotes ?? [])
   const pipFrom = useRef(null)               // the score when the board first showed (ticks lit after that light up)
+  // everyone's points so far, and who's made two in a row (the builds panel shows them); worked out once per play shown
+  const line = useMemo(() => {
+    const line = {}
+    for (let i = 0; i <= outTo; i++) {
+      const q = plays[i], at = id => (line[id] ??= { pts: 0, run: 0 })
+      if (!q) break
+      if (q.type === 'score') { const s = at(q.pid); s.pts += q.pts; s.run++ }
+      else if (q.type === 'miss') at(q.pid).run = 0
+      else if (q.type === 'block') at(q.pid2 ?? q.pid).run = 0
+    }
+    return line
+  }, [plays, outTo])
   if (!game) return null
 
   // this possession's calls: the open check-up, and what was called on the one being played
@@ -786,14 +814,6 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     return n >= 5 ? { team, n } : null
   })()
   const state = over ? { cls: ' is-gp', text: 'FINAL' } : gamePoint != null ? { cls: ' is-gp', text: 'GAME POINT' } : run ? { cls: ` is-run bt-t${run.team}`, text: `${run.n}-0 RUN` } : { cls: '', text: 'FIRST TO 11' }
-  // everyone's points so far, and who's made two in a row (the builds panel shows them)
-  const line = {}
-  for (let i = 0; i <= outTo; i++) {
-    const q = plays[i], at = id => (line[id] ??= { pts: 0, run: 0 })
-    if (q.type === 'score') { const s = at(q.pid); s.pts += q.pts; s.run++ }
-    else if (q.type === 'miss') at(q.pid).run = 0
-    else if (q.type === 'block') at(q.pid2 ?? q.pid).run = 0
-  }
   const now = feed[0]
   // the calls: the ball decides who calls. The handler calls the play, the man on him the defense;
   // everyone else (and the stands) is told who has it and who's on him
@@ -806,20 +826,11 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       const mates = game.teams[myTeam].filter(p => p.id !== h)
       // a pass says what the teammate does with it (the engine plays exactly that): a shooter catches and shoots
       const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: 'PASS →', sub: firstName(p.name) }))]   // what he does with it, the play decides
-      callBar = <CallBar key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
-    } else if (dfd === bt.me.vid) callBar = <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+      callBar = <CallBar glide key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+    } else if (dfd === bt.me.vid) callBar = <CallBar glide key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
     else onBall = `${firstName(nm(h))} HAS THE BALL · ${firstName(nm(dfd))} IS ON HIM`
   }
-  const side = t => (
-    <div className={`btg-bug-team bt-t${t}${score[t] > score[1 - t] ? ' is-lead' : ''}${!over && play?.poss === t ? ' has-ball' : ''}`}>
-      <i className="btg-bug-slab" aria-hidden="true" />
-      <div className="btg-bug-id">
-        <span className="btg-bug-name"><span>{names[t].startsWith('TEAM ') ? <><span className="btg-bug-pre">TEAM </span>{names[t].slice(5)}</> : names[t]}</span>{myTeam === t ? <IconStar size={11} className="btg-bug-me" /> : null}</span>
-        <span className="btg-bug-pips" aria-hidden="true">{Array.from({ length: 11 }, (_, i) => <i key={i} className={i < score[t] ? `is-on${i >= pipFrom.current[t] ? ' is-new' : ''}` : ''} />)}</span>
-      </div>
-      <b className="btg-bug-score"><RollingNumber value={score[t]} /></b>
-    </div>
-  )
+  const side = t => <BugTeam t={t} name={names[t]} pts={score[t]} lead={score[t] > score[1 - t]} ball={!over && play?.poss === t} mine={myTeam === t} from={pipFrom.current[t]} />
 
   return (
     <div className={`ag-screen ag-screen--bucket bt-game btg btg-live${watch ? ' is-watch' : ''}`}>
