@@ -1925,8 +1925,43 @@ const INJ_RATE = 0.019, INJ_PULL = 0.15
 // the injury cards a season can deal (sit or play hurt): one at most, more likely on a fragile body.
 // ~35% a season at durability 2, ~21% at 6, ~7% at 10; the playoffs, half that
 const injuryOdds = c => { const d = clamp(c.durability ?? 5, 1, 10), season = clamp(0.42 - 0.035 * d, 0.07, 0.4) * (c.age >= 31 ? 1.2 : 1); return { season, playoffs: season / 2 } }
+// What the season's event cards (scenarios.js, the LIFE bank) know about the career, so a card only comes up
+// where it is true: where he is in it (rookie, contract year, his age), his place on the depth chart, the
+// men on his roster and on the next opponent's, the summer's news. k: games played (the next game is game k).
+// Football and basketball. Read fresh at every stop (advanceWeek), so a deadline deal is already on the roster.
+function lifeView(c, k, game = null) {
+  const S = sportOf(c), a = c.active ?? {}, b = a.benched ?? null
+  const ro = c.roster ?? rosterOf(c, c.team)
+  // (kid: one of the career's own draftees in his first year; the data's men are never rookies)
+  const lite = p => ({ name: p.name, ovr: p.ovr, age: p.age, slot: p.slot ? String(p.slot) : null, kid: !!p.rookie && p.age <= 22, ...(p.out ? { out: true } : {}) })
+  const dc = depthChart({ ...c, active: { ...a, k } }, ro)
+  // the job is his once the feed has said so (the week after the man ahead of him went down)
+  const took = !!b && !b.bench && b.weeks < 99 && k > b.weeks
+  const role = !b || took ? 'starter' : b.bench ? 'bench' : b.rotation ? 'rotation' : 'waiting'
+  const starter = role !== 'starter' ? dc.all[Math.min(dc.starters, dc.idx) - 1] ?? null : null
+  const push = role === 'starter' ? dc.all.slice(dc.starters).find(p => !p.you && !p.out) ?? null : null
+  const last = c.seasons[c.seasons.length - 1] ?? null
+  const news = (c.events ?? []).filter(e => e.year === c.year && e.id).map(e => e.id)
+  const short = game ? S.teams.find(t => t.short === game.opponent || t.name === game.opponent)?.short ?? null : null
+  let theirs = null
+  const men = (roster, g) => (roster[g] ?? []).filter(p => p.name !== c.name).map(lite)
+  return {
+    year: c.year + 1, rookie: c.seasons.length === 0 && !c.unretired, age: c.age, vet: c.age >= S.declineAt(c.pos), ovr: c.ovr, rep: c.rep ?? 5,
+    contractYear: c.contract?.left === 1, news, captain: news.includes('captain'),
+    newTeam: !!last && last.team !== c.team, last: last ? { wins: last.wins, losses: last.losses, playoffs: !!last.playoffs, champion: !!last.champion } : null,
+    role, depth: Math.max(0, dc.idx - dc.starters), share: a.share?.u ?? null,
+    took: took ? { from: b.behind, why: b.why?.kind ?? 'benched', wks: b.why?.wks ?? 0, since: k - b.weeks } : null,
+    ahead: starter ? lite(starter) : null, push: push ? lite(push) : null,
+    room: dc.all.filter(p => !p.you && !p.out).map(lite),
+    spot: c.pos === 'db' ? dbSpot(c) : c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : null,
+    men: g => men(ro, g),
+    raw: (g, name) => (S.pool[g] ?? []).find(p => p.name === name)?.attrs ?? null,
+    wk: S.isBucket ? k + 1 : weekOfGame(c, k + 1), afterBye: !!a.bye && weekOfGame(c, k + 1) === a.bye.wk + 1,
+    opp: short && short !== c.team ? { short, name: S.teamOf(short).name, nick: nickOf(S, short), home: !!game.home, div: !S.isBucket && !!S.teamOf(short).div && S.teamOf(short).div === S.teamOf(c.team).div, men: g => men((theirs ??= rosterFor(c, short)), g) } : null,
+  }
+}
 // (build: the one the season was simulated on; a bye-week gain is a nudge on top of it, active.dirBuild keeps the old one)
-const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -2079,7 +2114,10 @@ export function advanceWeek(c, D) {
     // next game goes on without you, and a season-ending injury ends them all
     const stop = D.stops.find(s => s.at === k || (s.kind === 'playoffs' && k === D.total && s.at === D.total))
     const sitting = a.out || (k < D.total ? D.sat.includes(k) : D.sat.includes(D.total - 1))
-    if (stop && !sitting) moment = D.open(stop)
+    // (the cards about the career and the team, stop.life: a backup who doesn't rotate in, a quarterback or a
+    // lineman waiting on the man ahead of him, still gets his; anyone out hurt gets none)
+    const waiting = !a.out && !!a.benched && !a.benched.bench && !a.benched.rotation && k < a.benched.weeks
+    if (stop && (!sitting || (stop.life && waiting))) { D.career = (kk, g) => lifeView(c, kk, g); moment = D.open(stop) }
   }
   if (S.step > 1 && chunk.games.length) feed.push({ k, chunk: true, ...chunk, k1: k })
   feed.push(...told)   // (after the run of games they happened in: the newest is on top)
@@ -2822,7 +2860,7 @@ function offseasonEvents(c) {
   for (const e of fits) { roll -= wOf(e); if (roll <= 0) { ev = e; break } }
   const text = ev.text(S.isSoccer ? S.teamOf(c.team).name : nickOf(S, c.team), c)
   const fx = ev.apply(c)
-  return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text }] }
+  return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text, id: ev.id }] }
 }
 function marketValue(c) {
   const S = sportOf(c)
