@@ -27,7 +27,7 @@ import { paintFieldFlat, SL, SR } from './throw.js'
 import { put, action, tagsAll, teamOf, walk } from './read.js'
 
 export const how = {
-  'kick-return': 'Get under the kick: its shadow shows where it comes down. Then run it back: the arrows or WASD (a thumbstick on a phone) and he goes where you point. Follow your blockers, find the crease, and JUKE (space) a man closing in front of you. Past the 30 is a good return.',
+  'kick-return': 'Catch the kick in the ring, then take it back. Arrows or the stick to run, JUKE (space) to make a man miss. Get it past the 30.',
 }
 
 const W_YD = 160 / 3                  // the field's width, in yards
@@ -41,16 +41,19 @@ const KICK_D = 65, COVER_D = 40, SETUP_D = [35, 31]
 const KICK_AT = 900                   // ms: the set, the kicker's run-up
 const REST = 0.42                     // a bounce gives back this much of the drop
 // him
-const TOP = v => byV(v, 9.3, 10.4)            // yards a second, flat out (Speed)
-const ACC = v => byV(v, 8.8, 12.4)            // how quickly he gets up to it, and turns (Burst)
-const REACH = v => byV(v, 0.75, 1.05)         // how far from his hands a ball is still his (Hands)
+// (2026-11-10, the owner: he was slow, didn't answer the stick, and the kick couldn't be fielded. He gets to
+// speed in under half a second now, where it took a full one; a ball within two yards is his, where it was under
+// one; and he starts near where it comes down, with a ring on the turf there)
+const TOP = v => byV(v, 9.7, 10.8)            // yards a second, flat out (Speed)
+const ACC = v => byV(v, 24, 32)               // how quickly he gets up to it, and turns (Burst)
+const REACH = v => byV(v, 1.7, 2.2)           // how far from his hands a ball is still his (Hands)
 const BRK = v => byV(v, 0.31, 0.5)           // breaking a tackle (Balance, Elusiveness, After Catch)
 const JUKE_P = v => byV(v, 0.3, 0.42)          // a juke on a man closing in front of him
 const JUKE_V = 5.5, JUKE_MS = 300, JUKE_CD = 900
 const TACKLE_R = 0.95                 // yards: a cover man this close gets his hands on him
 const BODY_R = 0.8                    // and one of ours this close is in his way
 // them and us
-const COVER_V = 9.55, KICKER_V = 8.6, BLOCK_V = 8.3, DEF_ACC = 8
+const COVER_V = 10.0, KICKER_V = 8.9, BLOCK_V = 8.3, DEF_ACC = 8
 const SHED = [0.75, 2.6]               // seconds a block holds
 const PASS_AT = 30                    // down past this and it's a good return
 
@@ -79,7 +82,7 @@ export function make({ v, seed, cast, pos }) {
   const who = castOf(cast, pos)
   W.top *= who.pace
   // the kick: where it comes down, how long it hangs, the wind on it
-  const land = { x: MID + (r() - 0.5) * 26, d: 2 + r() * 15 }
+  const land = { x: MID + (r() - 0.5) * 26, d: 4 + r() * 10 }
   const hang = 3.7 + r() * 0.5, wind = (r() - 0.5) * 1.6
   const x0 = MID + (r() - 0.5) * 4
   const ball = {
@@ -95,7 +98,9 @@ export function make({ v, seed, cast, pos }) {
     const mate = i === 9
     return { i, mate, x: mate ? clamp(land.x + (land.x > MID ? -11 : 11), 4, W_YD - 4) : 4 + (i % 9) * ((W_YD - 8) / 8) + (i % 2 ? 1.5 : -1.5), d: mate ? Math.max(3, land.d - 1) : SETUP_D[i % 2], vx: 0, vd: 0, tgt: null, eng: null, re: 0, beaten: 0, shedAt: 0 }
   })
-  const me = { x: clamp(land.x + (r() - 0.5) * 12, 6, W_YD - 6), d: clamp(land.d + 4 + r() * 5, 6, 20), vx: 0, vd: 0, carry: false, juke: -1e9, jukeSide: 0, slow: 0, bump: -1e9, caughtAt: null, catchD: null }
+  // (he sets up a step or three deeper than where it's coming down and comes up to it: the ring is in front of
+  // him, in the open field, never under his feet or under the thumbstick)
+  const me = { x: clamp(land.x + (r() - 0.5) * 6, 6, W_YD - 6), d: clamp(land.d - 1 - r() * 2, 1.5, 20), vx: 0, vd: 0, carry: false, juke: -1e9, jukeSide: 0, slow: 0, bump: -1e9, caughtAt: null, catchD: null }
   const g = {
     t: 0, game: 'kick-return', zones: 'none', stick: true, fx: [], done: null, outro: 1700, stamp: null, later: null,
     dirt: particles(64, fxSeed(seed)), nudge: nudge(), W, who, v,
@@ -159,11 +164,17 @@ export function make({ v, seed, cast, pos }) {
   const nearestFree = () => { let best = null, bd = 1e9; for (const c of cover) { if (c.eng != null || g.t < c.down) continue; const dd = hyp(c.x - me.x, c.d - me.d); if (dd < bd) { bd = dd; best = c } } return best }
   function moveMe(s) {
     const o = g.stick
-    let top = W.top * (me.carry ? 1 : 0.92)
+    let top = W.top
     if (g.t < me.slow) top *= 0.5
     // (a long way at full tilt: by the other team's side of the field the legs are going)
     if (me.carry) top *= 1 - clamp((me.d - (me.catchD ?? 0) - 35) / 120, 0, 0.09)
     const want = { x: o.x * top, d: o.y * top }
+    // settling under it: inside four yards of where it's coming down he drifts onto the spot, the way a returner
+    // does with his eyes on the ball (the stick still moves him; let go and he's under it)
+    if (!me.carry && ball.state === 'air' && !ball.touched) {
+      const lx = land.x - me.x, ld = land.d - me.d, far = hyp(lx, ld), pull = clamp(1 - far / 4, 0, 1)
+      if (pull > 0) { want.x += lx * 3.2 * pull; want.d += ld * 3.2 * pull; const m = hyp(want.x, want.d); if (m > top) { want.x *= top / m; want.d *= top / m } }
+    }
     const ax = want.x - me.vx, ad = want.d - me.vd, am = hyp(ax, ad)
     // (slowing down comes quicker than speeding up, and a cut is the two at once)
     const cap = (hyp(want.x, want.d) < hyp(me.vx, me.vd) ? W.acc * 1.5 : W.acc) * s
@@ -227,7 +238,7 @@ export function make({ v, seed, cast, pos }) {
   }
   function catchIt(dd) {
     const b = ball, sp = hyp(me.vx, me.vd)
-    const muff = 0.02 + 0.32 * Math.pow(dd / W.reach, 3) + 0.14 * Math.max(0, sp / W.top - 0.45) + (b.landed ? 0.06 : 0) - W.hands
+    const muff = 0.01 + 0.2 * Math.pow(dd / W.reach, 3) + 0.06 * Math.max(0, sp / W.top - 0.6) + (b.landed ? 0.06 : 0) - W.hands
     release()
     if (r() < clamp(muff, 0.01, 0.6)) {
       // off his hands: a live ball, bouncing loose
@@ -584,8 +595,17 @@ export function draw(ctx, g, view) {
   tagsAll(!!res && since > 800)
   action(ctx, view)
   // ── the ball: on the tee; in the air end over end, its shadow on the turf under it; bouncing loose
+  // where it's coming down: a ring on the turf while the kick's in the air, closing as the ball drops
+  if (b.state === 'air' && !b.touched && !b.landed) {
+    const q = tilt(view, X(g.land.x), fy(g.land.d)), open = 1 + Math.min(1.4, b.z / 16)
+    ctx.lineWidth = Math.max(1, 1.6 * q.s)
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'
+    ctx.beginPath(); ctx.ellipse(q.x, q.y, 11 * open * q.s, 4.4 * open * q.s, 0, 0, Math.PI * 2); ctx.stroke()
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'
+    ctx.beginPath(); ctx.ellipse(q.x, q.y, 11 * q.s, 4.4 * q.s, 0, 0, Math.PI * 2); ctx.stroke()
+  }
   if (b.state !== 'held') {
-    // (its shadow: a dark spot right under it on the turf, the thing a returner runs to)
+    // (its shadow: a dark spot right under it on the turf)
     const q = tilt(view, X(b.x), fy(b.d)), sh = 1 + Math.min(1.6, b.z / 14)
     ctx.fillStyle = `rgba(0,0,0,${(0.5 - Math.min(0.22, b.z / 90)).toFixed(2)})`
     ctx.beginPath(); ctx.ellipse(q.x, q.y, 6 * sh * q.s, 2.4 * sh * q.s, 0, 0, Math.PI * 2); ctx.fill()

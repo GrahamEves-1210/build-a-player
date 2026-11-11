@@ -702,7 +702,7 @@ export const CAPTION_GAME = {
   'zone-drop': { wait: 'EYES ON THE QB', press: '{T} THE MAN HE THROWS TO' },
   'pass-rush': { wait: 'WATCH THE BALL', press: ['GET OFF ON THE BALL', '{T} THE MOVE THAT BEATS HIM'] },
   'hit-stick': { wait: 'READ THE BACK', press: ['HOLD TO GET TO HIS HOLE', 'TACKLE AS THE RING CLOSES'] },
-  'kick-return': { wait: 'GET UNDER IT: FOLLOW ITS SHADOW', press: 'RUN IT BACK: FIND THE CREASE' },
+  'kick-return': { wait: 'CATCH IT IN THE RING', press: 'RUN IT BACK: FIND THE CREASE' },
   sprint30: { wait: 'WAIT FOR THE WHISTLE', press: 'LEFT, RIGHT, IN RHYTHM' },
   sixty: { wait: 'WAIT FOR THE GUN', press: 'LEFT, RIGHT, IN RHYTHM' },
   'exit-velo': { wait: 'ZONE ON THE TOSS', press: 'DRIVE IT' },
