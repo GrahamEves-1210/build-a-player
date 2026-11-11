@@ -55,6 +55,17 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 .cfb-resume small { display: block; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--cfb-muted); }
 .cfb-resume b { display: block; margin-top: 2px; font-family: var(--ag-display); font-weight: 400; font-size: 21px; letter-spacing: .4px; }
 
+/* entry: the pool the wheels deal from (Current / All-Time): two flat halves, the one in play filled in the mode's blue */
+.cfb-pool { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--cfb-line); border-radius: 6px; overflow: hidden; background: var(--cfb-navy-2); }
+.cfb-pool-opt { display: grid; gap: 3px; justify-items: start; padding: 11px 12px 9px; border: 0; background: transparent; color: var(--cfb-muted); text-align: left; cursor: pointer; transition: background .12s; }
+.cfb-pool-opt + .cfb-pool-opt { border-left: 1.5px solid var(--cfb-line); }
+.cfb-pool-opt b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: .95; letter-spacing: .5px; }
+.cfb-pool-opt small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; color: var(--cfb-faint); }
+.cfb-pool-opt.is-on { background: var(--cfb-blue); color: #fff; box-shadow: inset 0 -3px 0 var(--cfb-blue-hi); }
+.cfb-pool-opt.is-on small { color: var(--cfb-muted); }
+.cfb-pool-opt:not(.is-on):hover { color: #fff; }
+.cfb-pool-opt:active { transform: scale(.99); }
+
 /* entry: the three positions, standing there */
 .cfb-pos-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .cfb-pos { position: relative; display: block; height: 228px; padding: 0; overflow: hidden; border: 1.5px solid var(--cfb-line); border-radius: 6px; background: var(--cfb-blue); color: #fff; cursor: pointer; text-align: left; transition: border-color .15s ease-out, transform .12s ease-out; }
@@ -82,6 +93,7 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 .cfb-past-tags { display: flex; gap: 5px; }
 .cfb-past-tags i { padding: 3px 6px 2px; border-radius: 3px; background: var(--cfb-blue-hi); font-family: var(--ag-font); font-style: normal; font-size: 12px; letter-spacing: 1.2px; }
 .cfb-past-tags i.is-gold { background: var(--cfb-gold); color: #1d1503; }
+.cfb-past-tags i.is-at { background: transparent; box-shadow: inset 0 0 0 1px var(--cfb-line-hi); }   /* an All-Time build's season */
 
 @media (min-width: 769px) {
   .cfb-entry .ag-screen-head, .cfb-entry .ag-screen-body { max-width: 860px; margin-left: auto; margin-right: auto; width: 100%; }

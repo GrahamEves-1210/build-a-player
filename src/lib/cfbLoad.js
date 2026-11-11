@@ -16,3 +16,14 @@ export function loadCFB() {
   })).catch(e => { loading = null; throw e })
   return loading
 }
+
+// All-Time: each school's legends at QB, RB and WR (data/cfb-legends.js), in the same row shape as the
+// current rosters. Loaded only when an All-Time build asks for them: a current build never pays for the file
+let legends = null
+export function loadCFBLegends() {
+  if (legends) return legends
+  legends = import('../data/cfb-legends.js')
+    .then(m => ({ qb: m.CFB_LEGEND_QBS, wr: m.CFB_LEGEND_WRS, rb: m.CFB_LEGEND_RBS }))
+    .catch(e => { legends = null; throw e })
+  return legends
+}

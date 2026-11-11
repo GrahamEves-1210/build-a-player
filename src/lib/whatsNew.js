@@ -9,6 +9,7 @@ const NOV_10 = {
     {
       name: 'New Mode: College Football',
       items: [
+        'All-Time pool: flip the switch on the first screen and the wheels deal each school\'s legends, one to three at QB, RB and WR (Stanford: Luck, Plunkett and Elway)',
         'The first school is now a scholarship decision: your stars, national rank and the 10 schools offering you, by talent',
         'Name your player on the offers screen: the name follows him through college and into his NFL Career',
         'Transfer opens the portal: the schools that want you now, and a big season (record, a title run, the Heisman) can move your stock up a level',
