@@ -11,6 +11,9 @@ import { track } from '../lib/track'
 // (noreferrer: the click reaches them the way a typed address does, with no page behind it. Their link carries the
 // code, so nothing is lost.) Brand rules kept: the wordmark with its P, nothing green on the purple, the legal line in a mono face
 const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
+// Off until PrizePicks gives the green light on this placement (the owner, 2026-11-10; their agreement wants written
+// approval for anything we build ourselves). Flip to true to show it: nothing else to change
+const PP_LIVE = false
 function PartnerBanner({ sport }) {
   return (
     <div className="pp-wrap">
@@ -60,7 +63,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
 
   return (
     <footer className="splash-site-footer">
-      <PartnerBanner sport={sport} />
+      {PP_LIVE && <PartnerBanner sport={sport} />}
       <div className="splash-site-footer-cols">
         <div className="splash-site-footer-col splash-site-footer-brand">
           <div className="splash-site-footer-logo">
