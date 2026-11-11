@@ -92,6 +92,16 @@ const DEFS = {
   // An offensive lineman, graded the way the charting services do it (PFF-style grades; pressure rate
   // over his pass sets, about 58% of his snaps). A starting tackle allows about 5 sacks and 35 pressures
   // with 6-9 flags; an elite one 0-2 sacks, 10-20 pressures, 1-4 flags (estimates from PFF and PFR, 2024).
+  // A kicker, against the league's last few years (NFL.com season tables): about 85% of field goals and two in three
+  // from 50 and out for a starter, 93% and ten long ones for the best.
+  k: [
+    { key: 'fgPct', label: 'FIELD GOAL %', get: s => (s.stats.fga ? s.stats.fgPct : null), fmt: pct, avg: 85, elite: 93, says: 'Field goals made out of field goals tried. The league makes about 85 in 100.' },
+    { key: 'm50', label: 'MADE FROM 50+', get: s => s.stats.m50, fmt: int, avg: 5, elite: 10, says: 'Field goals from 50 yards and out. The leg decides how often the coach sends him.' },
+    { key: 'long', label: 'LONGEST', get: s => s.stats.long || null, fmt: int, avg: 56, elite: 62, says: 'His longest make of the year. The record is 68.' },
+    { key: 'xpPct', label: 'EXTRA POINT %', get: s => (s.stats.xpa ? (s.stats.xpm / s.stats.xpa) * 100 : null), fmt: pct, avg: 95.5, elite: 99, says: 'A 33-yard kick after every touchdown. Missing one is how a game gets lost by a point.' },
+    { key: 'points', label: 'POINTS', get: s => s.stats.points, fmt: int, avg: 120, elite: 150, says: 'Three for a field goal, one for an extra point. A kicker leads his team in scoring most years.' },
+    { key: 'gw', label: 'GAME-WINNERS', get: s => s.stats.gw, fmt: int, avg: 1, elite: 4, says: 'Kicks at the end of regulation or in overtime that won the game.' },
+  ],
   ol: [
     { key: 'grade', label: 'OVERALL GRADE', get: s => s.stats.grade, fmt: f1, avg: 65, elite: 86, says: 'One grade for every snap, PFF style: pass blocking about 60%, run blocking 40%, less for the flags.' },
     { key: 'sacksA', label: 'SACKS ALLOWED', get: s => s.stats.sacksA, fmt: int, avg: 5, elite: 1, low: true, says: 'The one everyone sees. Lower is better, and some of them belong to the quarterback.' },

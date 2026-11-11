@@ -287,7 +287,7 @@ function Model({ c, devPick }) {
   return (
     <div className="cr-model-wrap ag-pop">
       <div className={`cr-model${c.sport === 'bucket' || c.sport === 'soccer' || c.sport === 'baseball' ? ' cr-model--bucket' : ''}`}>
-        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isSoccer={c.sport === 'soccer'} {...(c.sport === 'baseball' ? { isBaseball: true, baseballPos: c.pos, logoDir: '/logos/mlb/' } : {})} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} isOL={c.pos === 'ol'} modelOnly />
+        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isSoccer={c.sport === 'soccer'} {...(c.sport === 'baseball' ? { isBaseball: true, baseballPos: c.pos, logoDir: '/logos/mlb/' } : {})} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} isOL={c.pos === 'ol'} isK={c.pos === 'k'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>
       <div className={`cr-traits${c.types.length % 2 ? ' is-list' : ''}`}>
@@ -298,7 +298,7 @@ function Model({ c, devPick }) {
         {c.types.map(t => <Card key={t} t={t} />)}
       </div>
       {/* body work: a point into durability, fewer games missed. Always shown: tapped when it can't go up, it says why */}
-      {(() => {
+      {c.pos !== 'k' && (() => {   // (a kicker is never hurt: no durability to work on)
         const maxed = (c.durability ?? 5) >= BODY_MAX, can = !!devPick && canBodyWork(c), cost = bodyCost(c)
         return (
           <div className="cr-traits is-list cr-body">
@@ -331,7 +331,7 @@ function LegacyMeter({ c }) {
       <div className="cr-legacy-top"><span className="ag-eyebrow">LEGACY TIER · {L.tier.toUpperCase()}</span><b><LegacyIco sm={false} /> {L.score}<small> LEGACY PTS</small></b></div>
       <div className="cr-legacy-bar"><span style={{ width: `${Math.max(3, pct)}%` }} /></div>
       <div className="cr-legacy-foot"><span>{L.next ? `${L.next.at - L.score} more points to reach the ${L.next.name} tier` : 'The top tier'}</span><span>{c.sport === 'soccer' ? (L.ranked ? `No. ${L.rank} attacker\u2019s career ever` : `Outside the top ${L.of} attackers ever`) : L.ranked ? `No. ${L.rank} ${POS_LABEL[c.pos]} career ever` : `Outside the top ${L.of} ${POS_LABEL[c.pos]} careers`}</span></div>
-      {sportOf(c).ui?.legacyHow ? <p className="cr-legacy-how">{sportOf(c).ui.legacyHow}</p> : <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {c.pos === 'ol' ? '' : `${AWARD_NAME[c.pos]}s, `}rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>}
+      {sportOf(c).ui?.legacyHow ? <p className="cr-legacy-how">{sportOf(c).ui.legacyHow}</p> : <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {c.pos === 'ol' || c.pos === 'k' ? '' : `${AWARD_NAME[c.pos]}s, `}rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>}
       <Extras c={c} />
     </div>
   )
@@ -462,12 +462,12 @@ function Draft({ c, setCareer }) {
   const landed = shown >= picks.length
   return (
     <div className={`ag-screen ${S.screen} cr cr--team`} style={landed ? teamVars(c.fit) : undefined}>
-      <div className="ag-screen-head"><div><span className="ag-eyebrow">DRAFT DAY</span><h1 className="ag-h1">{landed ? 'Drafted' : 'On the clock'}</h1></div></div>
+      <div className="ag-screen-head"><div><span className="ag-eyebrow">DRAFT DAY</span><h1 className="ag-h1">{landed ? (mine?.udfa ? 'Signed' : 'Drafted') : 'On the clock'}</h1></div></div>
       <div className="ag-screen-body">
         <div className="cr-ticker ag-pop">
           {picks.slice(0, shown).map(p => (
             <div key={p.o} className={`cr-pick${p.you ? ' is-you' : ''}`}>
-              <span className="cr-pick-n"><small>RD {p.round}</small>{p.slot}</span>
+              <span className="cr-pick-n">{p.udfa ? <small>UNDRAFTED</small> : <><small>RD {p.round}</small>{p.slot}</>}</span>
               <img src={logoFor(p.team)} alt="" />
               <span className="cr-pick-txt">{p.you ? <b><Scramble text={`${c.name} · ${POS_LABEL[c.pos]}`} ms={900} /></b> : <><b><Scramble text={p.player} ms={500} /></b><small>{p.pos}</small></>}{p.trade && <small className="cr-pick-trade">TRADED UP</small>}</span>
             </div>
@@ -479,7 +479,7 @@ function Draft({ c, setCareer }) {
             <div className="cr-land ag-pop" style={{ '--tc': c.fit.color }}>
               <img src={logoFor(c.team)} alt="" className="cr-land-logo" />
               <div className="cr-land-txt">
-                <span className="ag-eyebrow">{pickText(mine.o, c.sport).toUpperCase()} · NO. {mine.o} OVERALL</span>
+                <span className="ag-eyebrow">{mine.udfa ? 'UNDRAFTED FREE AGENT' : `${pickText(mine.o, c.sport).toUpperCase()} · NO. ${mine.o} OVERALL`}</span>
                 <b>{c.fit.name}</b>
                 <small>{S.x?.landText ? S.x.landText(c) : <>Rookie deal: {c.contract.years} yrs · {money(c.contract.perYear)} a year{c.contract.option ? (S.isBucket ? ' · team options' : ' · 5th-year option') : ''}</>}</small>
               </div>
@@ -627,6 +627,8 @@ function Lineup({ c }) {
           <At p={L.wr[2]} slot="SLOT" col="1 / 3" row={2} />
           <At p={L.qb[0]} slot="QB" col={4} row={2} />
           <At p={L.rb[0]} slot="RB" col={4} row={3} />
+          {/* (a kicker's career: he's on the card too, behind the offense) */}
+          {c.pos === 'k' && L.k?.[0] && <At p={L.k[0]} slot="K" col={6} row={3} />}
         </div>
       )}
       {S.isBucket ? (
@@ -844,11 +846,12 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
 }
 
 // ── The bye week (football, seasons from 2026-11-10 on): the schedule strip, the week off, how it went ──
-const BYE_COACH = { qb: 'quarterbacks coach', rb: 'running backs coach', wr: 'receivers coach', te: 'tight ends coach', db: 'secondary coach', dl: 'defensive line coach', lb: 'linebackers coach', ol: 'offensive line coach' }
+const BYE_COACH = { qb: 'quarterbacks coach', rb: 'running backs coach', wr: 'receivers coach', te: 'tight ends coach', db: 'secondary coach', dl: 'defensive line coach', lb: 'linebackers coach', ol: 'offensive line coach', k: 'special teams coordinator' }
 const listOf = a => (a.length > 1 ? `${a.slice(0, -1).join(', ')} or ${a[a.length - 1]}` : a[0] ?? '')
 const durGrade = d => gradeOf((d ?? 5) * 1.1)
 function byeLine(c, b) {
   if (b.pick === 'rest') {
+    if (c.pos === 'k') return 'Rested the leg.'
     const g0 = durGrade(b.from), g1 = durGrade(b.to)
     const dur = b.to > b.from ? (g0 === g1 ? `durability +${Math.round((b.to - b.from) * 10) / 10} (${g1})` : `durability ${g0} → ${g1}`) : 'durability already maxed'
     return `Rested: ${dur}${b.healed ? `, and back from the ${b.healed.kind} for Week ${b.healed.back}` : ''}.`
@@ -906,7 +909,7 @@ function ByeWeek({ c, setCareer, getD }) {
         </button>
         <button className="sm-option" onClick={rest}>
           <b>Rest and recover</b>
-          <small>{maxed ? 'Durability is already maxed out.' : `Durability +${BYE_REST}, guaranteed.`}{hurt && !a.out ? ' He is back from the injury a week sooner.' : ''}</small>
+          <small>{c.pos === 'k' ? 'A week off the leg. Nothing gained, nothing risked.' : maxed ? 'Durability is already maxed out.' : `Durability +${BYE_REST}, guaranteed.`}{hurt && !a.out ? ' He is back from the injury a week sooner.' : ''}</small>
         </button>
       </div>
     </div>
@@ -916,10 +919,10 @@ function ByeWeek({ c, setCareer, getD }) {
 function ByeResult({ c, done }) {
   const wk = c.active.bye.wk
   const gain = done.gain
-  const head = done.pick === 'rest'
+  const head = done.pick === 'rest' && c.pos === 'k' ? 'Rested the leg' : done.pick === 'rest'
     ? (done.to > done.from ? (durGrade(done.from) === durGrade(done.to) ? `Durability +${Math.round((done.to - done.from) * 10) / 10}` : `Durability ${durGrade(done.from)} → ${durGrade(done.to)}`) : 'Rested')
     : gain ? `${gain.label} ${gain.from} → ${gain.to}` : 'No gain this week'
-  const sub = done.pick === 'rest'
+  const sub = done.pick === 'rest' && c.pos === 'k' ? 'A week away from the tee. Back at it Wednesday.' : done.pick === 'rest'
     ? (done.healed ? `A week off his feet. The ${done.healed.kind} heals up over the bye: back for Week ${done.healed.back}.` : `A week off his feet. Durability ${durGrade(done.to)}${done.to < BODY_MAX ? '' : ', maxed out'}.`)
     : `${(gameTitle(c, done.game) ?? 'The drill').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}: ${done.hit ? 'passed' : 'missed'}${done.sim ? ' (simulated)' : ''}. ${gain ? `He plays the rest of the season at ${gain.to}.` : done.hit ? 'Good work, no new grade.' : 'Back to it next week.'}`
   return (
@@ -1310,7 +1313,7 @@ function Player({ c, setCareer }) {
     <section className="cr-sec">
       <div className="ag-card cr-player ag-pop">
         {careerBody(c) && <span className="ag-eyebrow cr-body">{(POS_NAME[c.pos] ?? '').toUpperCase()} · {bodyText(careerBody(c))} LBS</span>}
-        <div className="cr-kv"><span><b>{c.age}</b><small>AGE</small></span><span><b>{gradeOf(c.durability * 1.1)}</b><small>DURABILITY</small></span><span><b>{gradeOf(c.rep * 1.1)}</b><small>REPUTATION</small></span><span><b>{c.dev.spent}</b><small>UPGRADES</small></span>{c.sport === 'soccer' && <><span><b>{t.caps ?? 0}</b><small>CAPS</small></span><span><b>{t.intlGoals ?? 0}</b><small>{(nationName(c.nation) ?? '').toUpperCase()} GOALS</small></span></>}</div>
+        <div className="cr-kv"><span><b>{c.age}</b><small>AGE</small></span>{c.pos !== 'k' && <span><b>{gradeOf(c.durability * 1.1)}</b><small>DURABILITY</small></span>}<span><b>{gradeOf(c.rep * 1.1)}</b><small>REPUTATION</small></span><span><b>{c.dev.spent}</b><small>UPGRADES</small></span>{c.sport === 'soccer' && <><span><b>{t.caps ?? 0}</b><small>CAPS</small></span><span><b>{t.intlGoals ?? 0}</b><small>{(nationName(c.nation) ?? '').toUpperCase()} GOALS</small></span></>}</div>
         <div className="cr-contract">
           <span className="ag-eyebrow">CONTRACT</span>
           <b>{pay(c, c.contract.perYear)} · {c.contract.left} of {c.contract.years} {c.contract.years === 1 ? 'year' : 'years'} left</b>
@@ -1347,6 +1350,7 @@ const SEASON_COLS = {
   dl: ['sacks', 'tfl', 'tackles', 'qbHits', 'ff', 'fr', 'pbus', 'safeties'],
   lb: ['tackles', 'tfl', 'sacks', 'qbHits', 'pds', 'ints', 'ff', 'fr'],
   ol: ['grade', 'sacksA', 'prs', 'pancakes', 'pen', 'starts'],
+  k: ['fgm', 'fga', 'fgPct', 'long', 'm50', 'xpm', 'points', 'gw'],
   guard: ['ppg', 'rpg', 'apg', 'spg', 'bpg'], big: ['ppg', 'rpg', 'apg', 'spg', 'bpg'],
 }
 const COL_LABEL = { tfl: 'TFL', ff: 'FF' }

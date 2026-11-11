@@ -14,7 +14,7 @@ export default function CareerFigure({ c }) {
   if (!ready) return <span className="ag-career-fig" aria-hidden="true" />
   return (
     <span className="ag-career-fig" aria-hidden="true">
-      <Silhouette build={shown} types={c.types} attrMap={POS_ATTR[c.pos]} isSoccer={c.sport === 'soccer'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} isOL={c.pos === 'ol'} modelOnly />
+      <Silhouette build={shown} types={c.types} attrMap={POS_ATTR[c.pos]} isSoccer={c.sport === 'soccer'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} isOL={c.pos === 'ol'} isK={c.pos === 'k'} modelOnly />
     </span>
   )
 }

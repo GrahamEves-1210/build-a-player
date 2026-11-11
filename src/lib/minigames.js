@@ -136,7 +136,7 @@ const BORROWED_TRAITS = { release: ['routeRunning', 'strength'] }
 // the combine: three games a position runs (the test is its own step)
 export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'], dl: ['forty', 'bench', 'cone'], lb: ['forty', 'bench', 'gauntlet'], ol: ['forty', 'bench', 'cone'],
   // a kicker's workout: no 40, no bench. The scouts chart field goals from distance
-  k: ['deep-kick'],
+  k: ['deep-kick', 'game-winner'],
   // soccer's academy trial: the career's first step (raw: sprint30 { secs }, slalom { secs, made, of }, finishing { made, of },
   // first-touch { ups, made, dead, of, pts })
   st: ['sprint30', 'slalom', 'finishing', 'first-touch'],
@@ -180,9 +180,11 @@ export const LOOKS = [
 // one playoff moment per round, seeded, never the same twice in a run
 // A playoff moment's game fits the moment: the game's situation comes first, then a game for it.
 // Trailing late: the two-minute drive, the last shot. At the goal line: fourth and goal. Otherwise any of the rest.
+// (never picked from a list: the onside kick is dealt by the game it belongs to, behind late: lib/careerKicker.js kPlayoffGame)
+const DEALT_ONLY = new Set(['onside'])
 const SITUATION = { 'two-minute': 'trailing', 'clutch-shot': 'trailing', 'goal-line': 'goal', 'game-winner': 'trailing' }
 export function pickMomentGame(pos, seed, used = [], allow = null) {
-  const all = momentsOf(pos).filter(g => !allow || allow(g))
+  const all = momentsOf(pos).filter(g => !DEALT_ONLY.has(g) && (!allow || allow(g)))
   const r = seeded(`mg-${seed}`)
   const roll = r(), want = roll < 0.3 ? 'trailing' : roll < 0.5 ? 'goal' : null
   const of = sit => all.filter(g => (SITUATION[g] ?? null) === sit)
@@ -193,7 +195,7 @@ export function pickMomentGame(pos, seed, used = [], allow = null) {
   return pool[Math.floor(r() * pool.length)]
 }
 export function pickPlayoffGame(pos, seed, used = [], allow = null) {
-  const all = momentsOf(pos).filter(g => !allow || allow(g))
+  const all = momentsOf(pos).filter(g => !DEALT_ONLY.has(g) && (!allow || allow(g)))
   const list = all.filter(g => !used.includes(g))
   const pool = list.length ? list : all
   const r = seeded(`mg-${seed}`)

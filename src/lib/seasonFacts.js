@@ -121,7 +121,8 @@ export const MILESTONES = {
     lb: [...steps('tkl', '{n} tackles', 'tackles', [50, 100, 150]), ...steps('lbsck', '{n} sacks', 'sacks', [3, 6]), ...steps('lbint', '{n} interceptions', 'ints', [2, 4]),
       { id: 'g-12tkl', label: 'Twelve-tackle game', test: c => c.last?.tackles >= 12 }, { id: 'g-int', label: 'Interception', test: c => c.last?.ints >= 1 },
       { id: 'pick6', label: 'Pick-six', test: c => c.last?.pickSixes >= 1, big: true }],
-    k: [...steps('kpts', '{n} points', 'pts', [50, 100, 150]), ...steps('kfg', '{n} field goals', 'fgm', [10, 20, 30, 40]),
+    // (only the top of each ladder is a big one: 150 points, 40 field goals)
+    k: [...steps('kpts', '{n} points', 'pts', [50, 100, 150]).map(m => ({ ...m, big: m.id === 'kpts-150' })), ...steps('kfg', '{n} field goals', 'fgm', [10, 20, 30, 40]).map(m => ({ ...m, big: m.id === 'kfg-40' })),
       { id: 'g-55', label: 'A 55-yarder', test: c => c.last?.long >= 55 && c.last?.long < 60, quiet: true }, { id: 'g-60', label: 'A 60-yard field goal', test: c => c.last?.long >= 60, big: true, quiet: true },
       { id: 'gw', label: 'Game-winning kick', test: c => c.last?.gw >= 1, big: true, quiet: true },   // (quiet: the game's own headline says it)
       { id: 'perfect-8', label: 'Perfect through eight games', test: c => c.games.length === 8 && sumOf(c.games, 'fga') >= 10 && sumOf(c.games, 'fga') === sumOf(c.games, 'fgm'), big: true }],

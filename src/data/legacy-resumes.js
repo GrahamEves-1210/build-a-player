@@ -296,4 +296,30 @@ export const RESUMES = {
     R('Joel Embiid', 10, 7, 5, 1, 0, 8, { pts: 13544, reb: 5280, ast: 1808 }),
     R('Yao Ming', 8, 8, 5, 0, 0, 5, { pts: 9247, reb: 4494, ast: 769 }),
   ],
+  // K: seasons, Pro Bowls (AFL All-Star games count), First-Team All-Pros, awards (Mark Moseley's 1982 MVP is the only
+  // one a kicker has ever won), rings, playoff years, and his points and field goals. Totals are the record's; the
+  // playoff years are counted from memory and may be a year off (re-check before leaning on them). Groza's line is
+  // his NFL and AAFC kicking together, his rings his four NFL titles.
+  k: [
+    R('Adam Vinatieri', 24, 3, 3, 0, 4, 17, { points: 2673, fgm: 599 }),
+    R('Justin Tucker', 13, 7, 5, 0, 1, 8, { points: 1775, fgm: 417 }),
+    R('Morten Andersen', 25, 7, 3, 0, 0, 8, { points: 2544, fgm: 565 }),
+    R('Jan Stenerud', 19, 6, 4, 0, 1, 6, { points: 1699, fgm: 373 }),
+    R('Gary Anderson', 23, 4, 1, 0, 0, 11, { points: 2434, fgm: 538 }),
+    R('Stephen Gostkowski', 15, 4, 2, 0, 3, 12, { points: 1875, fgm: 392 }),
+    R('Lou Groza', 21, 9, 4, 0, 4, 13, { points: 1608, fgm: 264 }),
+    R('Jason Hanson', 21, 2, 0, 0, 0, 6, { points: 2150, fgm: 495 }),
+    R('Jason Elam', 17, 3, 0, 0, 2, 8, { points: 1983, fgm: 436 }),
+    R('Matt Stover', 19, 1, 1, 0, 1, 7, { points: 2004, fgm: 471 }),
+    R('Harrison Butker', 9, 1, 0, 0, 3, 8, { points: 1180, fgm: 263 }),
+    R('Nick Lowery', 18, 3, 2, 0, 0, 7, { points: 1711, fgm: 383 }),
+    R('David Akers', 16, 6, 2, 0, 0, 9, { points: 1721, fgm: 386 }),
+    R('Mark Moseley', 16, 2, 1, 1, 1, 5, { points: 1382, fgm: 300 }),
+    R('John Carney', 23, 2, 1, 0, 0, 6, { points: 2062, fgm: 478 }),
+    R('Robbie Gould', 18, 1, 1, 0, 0, 6, { points: 1961, fgm: 447 }),
+    R('Sebastian Janikowski', 19, 1, 0, 0, 0, 4, { points: 1913, fgm: 436 }),
+    R('Mason Crosby', 17, 0, 0, 0, 1, 12, { points: 1918, fgm: 395 }),
+    R('Phil Dawson', 20, 1, 0, 0, 0, 3, { points: 1847, fgm: 441 }),
+    R('John Kasay', 20, 1, 0, 0, 0, 5, { points: 1970, fgm: 461 }),
+  ],
 }

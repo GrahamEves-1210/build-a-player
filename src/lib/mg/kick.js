@@ -149,10 +149,10 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     g.i++; g.k = kicks[g.i]; g.aim = null; g.pow = null; g.res = null; g.ball = null; g.stamp = null; g.phase = 'set'; g.at = g.t; g.hud.prompt = null
   }
   function finish() {
-    if (winner) { g.done = outcome(g.made ? 1 : g.near ? 0.3 : 0, g.made === 1, g.made ? `Good from ${kicks[0].d}` : `No good from ${kicks[0].d}`, kicks[0].d); return }
+    if (winner) { g.done = outcome(g.made ? 1 : g.near ? 0.3 : 0, g.made === 1, g.made ? `Good from ${kicks[0].d}` : `No good from ${kicks[0].d}`, { made: g.made, of: 1, dist: kicks[0].d }); return }
     // two of four from 50 and out is a kicker's day; the near misses count a little toward the score, never the result
     const score = clamp((g.made + g.near * 0.25) / 4 + (g.made >= 2 ? 0.25 : 0), 0, 1)
-    g.done = outcome(score, g.made >= 2, `${g.made} of 4 from 50+`, g.made)
+    g.done = outcome(score, g.made >= 2, `${g.made} of 4 from 50+`, { made: g.made, of: 4 })
   }
   g.at = 0
   return g
