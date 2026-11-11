@@ -73,8 +73,8 @@ html:is(.is-app, .app-look) .btg:is(.btg-final, .btg-reveal, .btg-wait) { paddin
 .btg-rim { position: absolute; left: 50%; top: 10.9%; width: 4.5cqw; height: 6.8cqw; margin: -2.25cqw 0 0 -2.25cqw; pointer-events: none; z-index: 2; opacity: 0; }
 .btg-rim svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .btg-rim-net { transform-origin: 22.5px 22.5px; transform-box: view-box; }
-/* a swish: the net and nothing else (the rim itself is only drawn when it rattles: a miss off the iron, a dunk) */
-.btg-rim.is-make .btg-rim-ring { display: none; }
+/* (this overlay is the net alone, on a make or a dunk. The rim's shake is .btg-rimshake: the court's own rim) */
+.btg-rimshake { position: absolute; left: 47%; top: calc(10.9% - 4%); width: 6%; aspect-ratio: 1; border-radius: 50%; background-repeat: no-repeat; background-size: 1666.67% 1250%; background-position: 50% 7.5%; opacity: 0; pointer-events: none; }
 
 /* a player: a portrait on a team-colour base, a contact shadow on the asphalt, a name bar */
 .btg-p { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: translate; }
@@ -414,8 +414,9 @@ html:is(.is-app, .app-look) .btg.btg-wait { padding-left: 10px; padding-right: 1
   html:not(.bap-reduce-motion) .btg-court-flash { animation: btg-flash .9s ease-out both; }
   html:not(.bap-reduce-motion) .btg-rim.is-make { animation: btg-rim-show .5s linear both; }
   html:not(.bap-reduce-motion) .btg-rim.is-make .btg-rim-net { animation: btg-net .5s var(--bt-out) both; }
-  html:not(.bap-reduce-motion) .btg-rim.is-miss { animation: btg-rim-show .45s linear both, btg-rattle .45s linear both; }
-  html:not(.bap-reduce-motion) .btg-rim.is-dunk { animation: btg-rim-show .7s linear both, btg-rattle-hard .7s linear both; }
+  html:not(.bap-reduce-motion) .btg-rimshake.is-miss { animation: btg-rim-show .34s linear both, btg-shake .34s linear both; }
+  html:not(.bap-reduce-motion) .btg-rimshake.is-dunk { animation: btg-rim-show .5s linear both, btg-shake-hard .5s linear both; }
+  html:not(.bap-reduce-motion) .btg-rim.is-dunk { animation: btg-rim-show .7s linear both; }
   html:not(.bap-reduce-motion) .btg-rim.is-dunk .btg-rim-net { animation: btg-net .6s var(--bt-out) both; }
   html:not(.bap-reduce-motion) .btg-ball-in.is-shot { animation: btg-arc var(--fd, .4s) linear both; }
   html:not(.bap-reduce-motion) .btg-ball-in.is-pass { animation: btg-arc-low var(--fd, .3s) linear both; }
@@ -446,7 +447,10 @@ html:is(.is-app, .app-look) .btg.btg-wait { padding-left: 10px; padding-right: 1
 @keyframes btg-flash { 0% { opacity: 0; } 14% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes btg-rim-show { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 /* (top down: the net's mouth tightens as the ball goes through it, flares, and settles) */
-@keyframes btg-net { 0% { transform: none; } 34% { transform: scale(.7); } 62% { transform: scale(1.2); } 100% { transform: none; } }
+@keyframes btg-net { 0% { transform: none; } 36% { transform: scale(.9); } 66% { transform: scale(1.05); } 100% { transform: none; } }
+/* the rim off a miss: barely there. Under a dunk: a little more */
+@keyframes btg-shake { 0% { transform: none; } 20% { transform: translate(.6px, .4px); } 45% { transform: translate(-.5px, 0); } 70% { transform: translate(.3px, .2px); } 100% { transform: none; } }
+@keyframes btg-shake-hard { 0% { transform: none; } 14% { transform: translate(0, 1.4px); } 34% { transform: translate(1px, -.6px); } 54% { transform: translate(-.8px, .4px); } 76% { transform: translate(.4px, 0); } 100% { transform: none; } }
 @keyframes btg-rattle { 0% { transform: none; } 16% { transform: translate(1.5px, 1px) rotate(4deg); } 34% { transform: translate(-1.5px, 0) rotate(-3.5deg); } 52% { transform: translate(1px, .5px) rotate(2.5deg); } 72% { transform: translate(-.5px, 0) rotate(-1deg); } 100% { transform: none; } }
 @keyframes btg-rattle-hard { 0% { transform: none; } 10% { transform: translate(0, 3px) scale(1.07); } 24% { transform: translate(2px, -1.5px) rotate(6deg); } 40% { transform: translate(-2px, 1px) rotate(-5deg); } 56% { transform: translate(1.5px, 0) rotate(3.5deg); } 72% { transform: translate(-1px, 0) rotate(-2deg); } 88% { transform: translate(.5px, 0) rotate(1deg); } 100% { transform: none; } }
 @keyframes btg-arc { 0% { transform: none; animation-timing-function: cubic-bezier(.2, .7, .5, 1); } 50% { transform: scale(1.62); animation-timing-function: cubic-bezier(.5, 0, .8, .3); } 100% { transform: none; } }

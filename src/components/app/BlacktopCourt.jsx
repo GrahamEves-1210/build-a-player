@@ -399,6 +399,9 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     <div className="btg-stage">
       <div className="btg-court" ref={camRef}>
         <img src={court.src} alt="" draggable={false} className="btg-court-img" />
+        {/* the rim that shakes is the court's own: a round patch of the same picture over the rim, under the tint and
+            the light, so its colour is the court's exactly on every court. It only moves off a miss or under a dunk */}
+        <div key={`rs${rim?.key ?? 0}`} className={`btg-rimshake${rim && rim.kind !== 'make' ? ` is-${rim.kind}` : ''}`} style={{ backgroundImage: `url(${court.src})` }} aria-hidden="true" />
         {court.tint && <div className="btc-tint" />}<div className="btg-court-light" />
         {flash > 0 && <div key={flash} className="btg-court-flash" />}
         <div className="btg-overlay">
@@ -410,10 +413,6 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
                 <path d="M22.5 5.5 L22.5 13 M34.5 10.5 L29.2 15.8 M39.5 22.5 L32 22.5 M34.5 34.5 L29.2 29.2 M22.5 39.5 L22.5 32 M10.5 34.5 L15.8 29.2 M5.5 22.5 L13 22.5 M10.5 10.5 L15.8 15.8" />
                 <circle cx="22.5" cy="22.5" r="9.5" />
                 <circle cx="22.5" cy="22.5" r="14" strokeWidth="1" opacity=".7" />
-              </g>
-              <g className="btg-rim-ring">
-                <circle cx="22.5" cy="22.5" r="18.5" fill="none" stroke="#3a1606" strokeWidth="6.5" />
-                <circle cx="22.5" cy="22.5" r="18.5" fill="none" stroke="#f26a1b" strokeWidth="4.5" />
               </g>
             </svg>
           </div>
