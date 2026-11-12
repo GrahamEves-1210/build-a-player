@@ -60,16 +60,6 @@ const NOV_10 = {
       ],
     },
     {
-      name: 'New Position: Kicker',
-      items: [
-        'Added K in Current and All-Time pools',
-        'Three ratings: Power, Accuracy and Clutch',
-        'Added K to Career: kickers are never injured and can play up to 24 seasons',
-        'New key moments: Deep Kick, Game Winner and Onside Kick',
-        'A season tracks field goals, extra points, points, the longest make and game-winners, with an All-Pro team in place of an award',
-      ],
-    },
-    {
       name: 'Career',
       items: [
         'Five Career save slots in each sport (it was three)',

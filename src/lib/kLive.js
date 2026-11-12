@@ -5,7 +5,7 @@
 // Flip to true to ship it. On the dev server only, ?k=1 in the address turns it on for testing.
 // (its own tiny file so Home can read it without loading the kicker rosters)
 const K_DEV = typeof location !== 'undefined' && !!import.meta.env?.DEV && /[?&]k=1\b/.test(location.search)
-export const K_LIVE = true || K_DEV   // built Nov 10; live Nov 11
+export const K_LIVE = false || K_DEV   // locked again 2026-11-12 (the owner: the kicking mini games aren't good enough to ship); flip to true to ship it
 // While it's off, K keeps a locked tab with a SOON tag at the end of football's defense on Home (components/app/AppHome.jsx,
 // and the classic Home's SOON tile); it can't be picked there or anywhere else.
 export const K_SOON = !K_LIVE
