@@ -67,12 +67,13 @@ export function statCols(kind, r) {
       { key: 'fg',   label: 'FG',   val: r.seasonFGA != null ? `${r.seasonFGM ?? 0}/${r.seasonFGA}` : null },
       { key: 'pct',  label: 'FG%',  val: r.seasonFGPct, fmt: n => `${n}%` },
       { key: 'lng',  label: 'LNG',  val: r.seasonLong },
+      // (the ranges read short to long: 1-39, 40-49, then 50+)
+      { key: 'u40',  label: '1-39', val: r.seasonRanges ? `${r.seasonRanges.u30[0] + r.seasonRanges.r30[0]}/${r.seasonRanges.u30[1] + r.seasonRanges.r30[1]}` : null },
+      { key: 'r40',  label: '40-49', val: r.seasonRanges ? `${r.seasonRanges.r40[0]}/${r.seasonRanges.r40[1]}` : null },
       { key: 'r50',  label: '50+',  val: r.seasonRanges ? `${r.seasonRanges.r50[0]}/${r.seasonRanges.r50[1]}` : null },
       { key: 'xp',   label: 'XP',   val: r.seasonXPA != null ? `${r.seasonXPM ?? 0}/${r.seasonXPA}` : null },
       { key: 'pts',  label: 'PTS',  val: r.seasonPoints },
       { key: 'gw',   label: 'GW',   val: r.seasonGW },
-      { key: 'u40',  label: '1-39', val: r.seasonRanges ? `${r.seasonRanges.u30[0] + r.seasonRanges.r30[0]}/${r.seasonRanges.u30[1] + r.seasonRanges.r30[1]}` : null },
-      { key: 'r40',  label: '40-49', val: r.seasonRanges ? `${r.seasonRanges.r40[0]}/${r.seasonRanges.r40[1]}` : null },
     ]
     case 'db': return [
       gp,
