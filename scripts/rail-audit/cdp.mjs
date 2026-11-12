@@ -1,7 +1,7 @@
 // A small Chrome DevTools Protocol driver (no dependencies; Node 22+ for the built-in WebSocket).
 // Launches a headless Chromium with its own throwaway profile, blocks the ad hosts (a headless browser must never
 // make a real ad request) and hands back send / evaluate / screenshot helpers.
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -39,7 +39,12 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
     '--disable-extensions', '--disable-gpu', '--renderer-process-limit=2',
     `--window-size=${width},${height}`, `--crash-dumps-dir=${tmp}`, 'about:blank'], { stdio: 'ignore', env: { ...process.env, TEMP: tmp, TMP: tmp } })
   // the browser never outlives the script, however the script ends
-  const reap = () => { try { chrome.kill() } catch {} try { rmSync(prof, { recursive: true, force: true }) } catch {} }
+  // (a browser that has stopped answering does not always go on kill(): on Windows its whole tree is taken down)
+  let reaped = false
+  const reap = () => {
+    if (!reaped) { reaped = true; try { if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(chrome.pid), '/T', '/F'], { stdio: 'ignore' }); else chrome.kill('SIGKILL') } catch {} }
+    try { rmSync(prof, { recursive: true, force: true }) } catch {}
+  }
   process.on('exit', reap)
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { reap(); process.exit(130) })
   process.on('uncaughtException', e => { console.error(e); reap(); process.exit(1) })
@@ -132,7 +137,7 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
   }
   const close = async () => {
     try { ws.close() } catch {}
-    try { chrome.kill() } catch {}
+    reap()
     await sleep(500)
     try { rmSync(prof, { recursive: true, force: true }) } catch {}
   }
