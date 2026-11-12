@@ -509,7 +509,10 @@ function draftBoard(cands, awards, user, career) {
   const mark = c => (c.isUser ? (awards.wooden.userWon ? 2 : awards.wooden.userFinalist ? 1 : 0) + (awards.allAmerica.user === 'first' ? 1 : 0) + (career?.wooden === 'won' ? 1 : 0) : 0)
   const bs = c => c.ovr + (CLS_PTS[c.year] ?? 0) + clamp(-2, 3, (c.prod - 20) * 0.2) + (c.pos === 'guard' ? ((c.attrs.size ?? 5) >= 7 ? 1 : (c.attrs.size ?? 5) <= 2 ? -1.5 : 0) : (c.attrs.size ?? 5) >= 9 ? 1 : 0) + mark(c) - (c.starter ? 0 : 6)
   const board = cands.map(c => ({ c, s: bs(c) })).sort((a, b) => b.s - a.s)
-  const pickAt = k => Math.max(1, Math.round((k + 1) * 0.9))
+  // (eased 2026-11-12, as football's was: his place on the national board to a pick on a curve, not one for one. The 10th man
+  // on the board is about the 6th pick, the 60th about the 19th, the 350th, an average starter, about the 58th. Straight off
+  // his rank, an average wheel build went undrafted four times in five)
+  const pickAt = k => Math.max(1, Math.round(1.38 * Math.pow(k + 1, 0.638)))
   const row = (x, k) => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, pos: x.c.natPos, isUser: !!x.c.isUser, tier: tierOf(pickAt(k))[0], ppg: x.c.t.ppg, rpg: x.c.t.rpg, apg: x.c.t.apg })
   const k = board.findIndex(x => x.c.isUser)
   const pick = pickAt(k), [tier, , label, half] = tierOf(pick)
