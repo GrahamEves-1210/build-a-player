@@ -24,22 +24,35 @@ export const kSeasonStats = f => ({
   m50: f.season50M ?? 0, a50: f.season50A ?? 0, xpm: f.seasonXPM ?? 0, xpa: f.seasonXPA ?? 0,
   points: f.seasonPoints ?? 0, gw: f.seasonGW ?? 0, cost: f.seasonCostly ?? 0,
 })
-// What gets a kicker there. One Pro Bowl kicker a conference, one First-Team All-Pro: about 90% with a real leg,
-// or the long-ball year (Aubrey 2024: 85%, 14 from 50+). Enough tries to count: 20.
-// And then the field: there is one spot, and most years somebody else kicked like that too. A season at the bar gets
-// him there about half the time (the Pro Bowl) or a third (All-Pro); a season clear of it, nearly always. Seeded by
-// the career and the year, so a season's honors are the same every time it's read.
+// What gets a kicker there. One Pro Bowl kicker a conference, one First-Team All-Pro in the league: Vinatieri made
+// three of each in 24 seasons, Andersen seven Pro Bowls in 25, Tucker seven and five. In this game's seasons a
+// starter's median year is 96% on 40 tries with eight from 50 and out (measured over 700 Career seasons, 2026-11-12),
+// so a year like that is the league's ordinary year, not an honors year. The bars sit at the top of that scale: a
+// Pro Bowl is 97.5% with eight long ones (or 95% with twelve), All-Pro 98.5% with ten (or 96% with fourteen), on at
+// least 28 tries. And then the field: there is one spot, and most years somebody else kicked like that too. A year
+// at the bar gets a 99 overall kicker there about half the time (the Pro Bowl) or a third (All-Pro), a year clear
+// of it more often than not, and a lesser leg less often (legTilt). Seeded by the career and the year, so a season's honors are the same every time it's read.
+// (Until 2026-11-12 the bars were real-life numbers, 91% and 94%, which nearly every season here clears: an ordinary
+// kicker finished with about 15 Pro Bowls and 6 to 7 All-Pros and stood first on the all-time list.)
 const enough = s => (s.fga ?? 0) >= 20
 const field = (c, tag) => seeded(`${c?.seed ?? 'k'}-${tag}-${c?.year ?? 0}`)()
-const pbBar = s => enough(s) && ((s.fgPct >= 91 && (s.m50 ?? 0) >= 5) || (s.fgPct >= 87 && (s.m50 ?? 0) >= 10) || (s.fgPct >= 95 && (s.fga ?? 0) >= 25))
-const pbClear = s => s.fgPct >= 94 && (s.m50 ?? 0) >= 8
-const apBar = s => enough(s) && (s.fga ?? 0) >= 28 && ((s.fgPct >= 94 && (s.m50 ?? 0) >= 7) || (s.fgPct >= 90 && (s.m50 ?? 0) >= 12) || (s.fgPct >= 97 && (s.m50 ?? 0) >= 5))
-const apClear = s => (s.fgPct >= 96 && (s.m50 ?? 0) >= 9) || (s.fgPct >= 92 && (s.m50 ?? 0) >= 13)
+// (the voters know the leg: the same line from a 99 overall kicker gets the nod over a 93's. 99: in full, 97: about half, 95: a sixth, 93 and under: one in twenty)
+const legTilt = c => Math.max(0.05, Math.min(1, ((c?.ovr ?? 99) - 90) / 9) ** 3)
+const pbBar = s => (s.fga ?? 0) >= 28 && ((s.fgPct >= 97.5 && (s.m50 ?? 0) >= 8) || (s.fgPct >= 95 && (s.m50 ?? 0) >= 12))
+const pbClear = s => (s.fgPct >= 99 && (s.m50 ?? 0) >= 10) || (s.fgPct >= 97 && (s.m50 ?? 0) >= 14)
+const apBar = s => (s.fga ?? 0) >= 28 && ((s.fgPct >= 98.5 && (s.m50 ?? 0) >= 10) || (s.fgPct >= 96 && (s.m50 ?? 0) >= 14))
+const apClear = s => (s.fgPct >= 100 && (s.m50 ?? 0) >= 11) || (s.fgPct >= 98 && (s.m50 ?? 0) >= 15)
 export const K_BARS = {
-  proBowl: (s, c) => pbBar(s) && field(c, 'kpb') < (pbClear(s) ? 0.85 : 0.5),
-  allPro: (s, c) => apBar(s) && field(c, 'kap') < (apClear(s) ? 0.7 : 0.3),
-  near: s => enough(s) && s.fgPct >= 92 && (s.m50 ?? 0) >= 6,
+  proBowl: (s, c) => pbBar(s) && field(c, 'kpb') < (pbClear(s) ? 0.85 : 0.5) * legTilt(c),
+  allPro: (s, c) => apBar(s) && field(c, 'kap') < (apClear(s) ? 0.7 : 0.35) * legTilt(c),
+  near: s => enough(s) && s.fgPct >= 97 && (s.m50 ?? 0) >= 9,
 }
+// A kicker's legacy, weighed for a kicker (lib/career.js legacyScore reads these for him and for the real kickers on
+// the list alike). He plays 24 seasons and is never hurt, and his team's playoff trips and rings say less about him
+// than a quarterback's do: a season counts 0.5 (not 2), a playoff year 1 (not 3), a ring 8 (not 20). One record
+// counts at most (the season and career marks all fall to anyone who kicks long enough here), and the points are
+// worth one legacy point per 300 with 0.15 a game-winner. Honors count in full: they are what sets a kicker apart.
+export const K_LEGACY = { seasons: 0.5, playoffs: 1, rings: 8, recordsMax: 1, perPoints: 300, gw: 0.15 }
 // how good a year it was, 0 to about 1.1: the percentage first, then the long ball, the kicks that won games, the team
 export const kSeasonScore = s => {
   const st = s.stats ?? {}

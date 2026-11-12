@@ -14,6 +14,8 @@ import { LBS, LB_ATTR, LB_TYPES } from 'F:/build-a-player/src/data/lbs.js'
 import { LB_LEGENDS, LB_LEGEND_TYPES } from 'F:/build-a-player/src/data/lb-legends.js'
 import { OLS, OL_ATTR, OL_TYPES } from 'F:/build-a-player/src/data/ols.js'
 import { OL_LEGENDS, OL_LEGEND_TYPES } from 'F:/build-a-player/src/data/ol-legends.js'
+import { KS, K_ATTR, K_TYPES } from 'F:/build-a-player/src/data/ks.js'
+import { K_LEGENDS, K_LEGEND_TYPES } from 'F:/build-a-player/src/data/k-legends.js'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from 'F:/build-a-player/src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from 'F:/build-a-player/src/data/nba-bigs.js'
 import { NBA_ALLTIME_GUARD_PLAYERS } from 'F:/build-a-player/src/data/nba-guard-legends.js'
@@ -26,6 +28,7 @@ const P = [
   ['WR', 'nfl', WRS, WR_LEGENDS, WR_TYPES, WR_LEGEND_TYPES, WR_ATTR], ['TE', 'nfl', TES, TE_LEGENDS, TE_TYPES, TE_LEGEND_TYPES, TE_ATTR],
   ['OL', 'nfl', OLS, OL_LEGENDS, OL_TYPES, OL_LEGEND_TYPES, OL_ATTR], ['DL', 'nfl', DLS, DL_LEGENDS, DL_TYPES, DL_LEGEND_TYPES, DL_ATTR],
   ['LB', 'nfl', LBS, LB_LEGENDS, LB_TYPES, LB_LEGEND_TYPES, LB_ATTR], ['DB', 'nfl', DBS, DB_LEGENDS, DB_TYPES, DB_LEGEND_TYPES, DB_ATTR],
+  ['K', 'nfl', KS, K_LEGENDS, K_TYPES, K_LEGEND_TYPES, K_ATTR],
   ['Guards', 'nba', NBA_GUARD_PLAYERS, NBA_ALLTIME_GUARD_PLAYERS, GUARD_TYPES, GUARD_TYPES, BUCKET_ATTR], ['Bigs', 'nba', NBA_BIG_PLAYERS, NBA_ALLTIME_BIG_PLAYERS, BIG_TYPES, BIG_TYPES, BUCKET_ATTR],
 ]
 const out = P.map(([label, sport, cur, leg, types, ltypes, attr]) => ({ label, sport, types, ltypes, labels: Object.fromEntries([...new Set([...types, ...ltypes])].map(t => [t, attr[t]?.label ?? t])),
