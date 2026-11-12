@@ -19,7 +19,8 @@ function PartnerBanner({ sport, low = false }) {
     <div className={`pp-wrap${low ? ' pp-wrap--low' : ''}`}>
       <div className="splash-site-footer-head pp-head">Partner Offer</div>
       <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener noreferrer"
-        onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: 'footer' } })}
+        onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: low ? 'footer-low' : 'footer-home' } })}
+        onAuxClick={e => { if (e.button === 1) track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: low ? 'footer-low' : 'footer-home', aux: true } }) }}
         aria-label="PrizePicks. New users: play $5, get $50 in bonus lineups. Claim the offer with code BUILD.">
         <span className="pp-copy">
           <img className="pp-logo" src="/sponsors/prizepicks-logo.svg" alt="PrizePicks" width="954" height="241" loading="lazy" decoding="async" draggable={false} />
