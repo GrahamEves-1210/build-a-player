@@ -5470,6 +5470,10 @@ a:focus-visible {
    (#8000FF, dark on the left, the light behind the phone), white type only: nothing green on the purple */
 @font-face { font-family: 'PP Offer'; src: url('/fonts/archivo-expanded-800-offer.woff2') format('woff2'); font-weight: 800; font-display: swap; }
 .pp-wrap { max-width: 960px; margin: 0 auto 26px; }
+/* (not on the home page: under the link columns, over the Playmaker Games line) */
+.pp-wrap.pp-wrap--low { margin: 26px auto 0; }
+/* the slogan strip (Build a player, Play the season ...) is the home page's only: off on the build screens */
+.build-site-features { display: none !important; }
 .pp-head { margin-bottom: 8px; text-align: center; }
 .pp-banner {
   position: relative; display: flex; align-items: center; overflow: hidden; height: 156px; padding: 0 0 0 28px; gap: 26px; border-radius: 8px;
@@ -5507,10 +5511,10 @@ a:focus-visible {
 .pp-legal { margin: 8px 0 0; font-family: var(--ag-body, var(--font)); font-size: 10.5px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,.4); text-align: center; text-wrap: balance; }
 /* desktop: no rule and no gap over the label (the footer's own top edge and padding) */
 @media (min-width: 721px) {
-  .splash-site-footer:has(.pp-wrap), html.app-look .splash-site-footer:has(.pp-wrap) { border-top: 0; padding-top: 0; }
+  .splash-site-footer:has(> .pp-wrap:first-child), html.app-look .splash-site-footer:has(> .pp-wrap:first-child) { border-top: 0; padding-top: 0; }
 }
-@media (max-width: 720px) {
-  /* a phone: one short strip, the way an app's own offer row reads (2026-11-11: as small as it goes). Left: the logo with
+@container ppfoot (max-width: 720px) {
+  /* a phone, or any footer narrower than 720px (the season page's column on desktop): one short strip, the way an app's own offer row reads (2026-11-11: as small as it goes). Left: the logo with
      New Users beside it, the offer on one line, In Bonus Lineups. Right: the button with the code under it. No phone picture */
   /* (half the footer's own top padding back: the label sits closer to what's above it) */
   .pp-wrap { margin-top: -11px; margin-bottom: 16px; }
@@ -5529,7 +5533,7 @@ a:focus-visible {
   .pp-code { font-size: 10.5px; }
   .pp-code span + span { display: none; }   /* (or use code BUILD: the rest of the sentence is the desktop's) */
   /* the help line on one line: sized to the screen's width */
-  .pp-help { font-size: min(13px, calc((100vw - 32px) / 29.8)); white-space: nowrap; }
+  .pp-help { font-size: min(13px, calc(100cqw / 29.8)); white-space: nowrap; }
   /* (a phone only: the help line sits over the fine print) */
   .pp-wrap { display: flex; flex-direction: column; }
   .pp-head { order: 1; } .pp-banner { order: 2; } .pp-help { order: 3; margin-top: 7px; } .pp-legal { order: 4; margin-top: 3px; text-align: left; text-wrap: pretty; }
@@ -5537,6 +5541,7 @@ a:focus-visible {
   .pp-legal { font-size: 10px; }
 }
 .splash-site-footer {
+  container: ppfoot / inline-size;
   position: relative;
   z-index: 2;
   border-top: 1px solid rgba(149,213,178,0.09);

@@ -1061,7 +1061,7 @@ export default function BaseballApp() {
             soon={{ career: !BASEBALL_MODES.career, compete: !BASEBALL_MODES.compete, salary: !BASEBALL_MODES.salary, squad: !BASEBALL_MODES.squad }}
             faces={HOME_FACES}
             resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${posMeta.label} · ${BASEBALL_POOL[pool].label}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
-            footer={IS_APP ? null : <><SiteFeatures sport="baseball" /><SiteFooter sport="baseball" /></>}
+            footer={IS_APP ? null : <><SiteFeatures sport="baseball" /><SiteFooter sport="baseball" home /></>}
             renderBucketFigure={renderBaseballFigure}
           />
         ) : (

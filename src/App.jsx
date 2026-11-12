@@ -1763,7 +1763,7 @@ export default function App() {
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
           onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
-          footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onWiki={openWiki} /></>} />
+          footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" home onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
         onStart={handleStart}

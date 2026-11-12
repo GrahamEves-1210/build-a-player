@@ -1644,9 +1644,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
         {isDL && team && build && (
           <DLDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
-        {isK && team && build && (
-          <KDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
-        )}
+        {/* (no depth chart for a kicker: a team carries one, and he is always the starter) */}
         {isOL && team && build && (
           <OLDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}

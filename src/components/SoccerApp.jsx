@@ -1010,7 +1010,7 @@ export default function SoccerApp() {
             soon={{ career: !SOCCER_MODES.career, compete: !SOCCER_MODES.compete, salary: !SOCCER_MODES.salary, squad: !SOCCER_MODES.squad }}
             faces={HOME_FACES}
             resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `ST · ${SOCCER_POOL[pool].label}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
-            footer={IS_APP ? null : <><SiteFeatures sport="soccer" /><SiteFooter sport="soccer" /></>}
+            footer={IS_APP ? null : <><SiteFeatures sport="soccer" /><SiteFooter sport="soccer" home /></>}
             renderBucketFigure={renderSoccerFigure}
           />
         ) : (
