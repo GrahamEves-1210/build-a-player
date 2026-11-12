@@ -15,7 +15,7 @@ import { useTapGuard } from '../../lib/tapGuard'
 import { userScrolling } from '../../lib/userScroll'
 import { useRailOn } from '../../lib/ads'
 import { sfx } from '../../lib/juice'
-import { cbbLogo, cbbLogoDark, CBB_POS, pickOf, projText, finishOf } from './cbbShared'
+import { cbbLogo, cbbLogoDark, logoKey, CBB_POS, pickOf, projText, finishOf } from './cbbShared'
 
 // ── College Basketball: the season ──────────────────────────────────────────
 // A college basketball season, a page a stage: College Football's season page (components/cfb/CFBSimPage.jsx: the
@@ -429,7 +429,7 @@ const Center = ({ children }) => <div className="simp-screen-center cfbp-end" st
 // ── the figure in school colours, the build as rows ──
 function Figure({ build, team }) {
   if (!build || !team) return null
-  return <BucketModelFigure build={build} team={{ color: team.color, color2: team.color2, short: `cbb/${team.short}` }} className="cbbp-figure" />
+  return <BucketModelFigure build={build} team={{ color: team.color, color2: team.color2, short: logoKey(team.short) }} className="cbbp-figure" />
 }
 const rowsOf = (build, types, attrMap) => (build && types ? types.filter(t => build[t]).map(t => ({ key: t, label: attrMap?.[t]?.label ?? t, data: build[t], val: build[t].val })) : [])
 function BuildRows({ rows, small = false, visible = rows.length }) {

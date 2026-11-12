@@ -21,7 +21,7 @@ import { sfx } from '../../lib/juice'
 import { owns } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
 import { loadCBB, loadCBBLegends } from '../../lib/cbbLoad'
-import { CBB_POS, CBB_POOLS, poolOf, classLabel, cbbLogo, cbbLogoDark, confLogo, registerLogos, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup, seasonData } from './cbbShared'
+import { CBB_POS, CBB_POOLS, poolOf, classLabel, cbbLogo, cbbLogoDark, confLogo, registerLogos, logoKey, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup, seasonData } from './cbbShared'
 import { barAt, offersFor, cardFor, stockOf, collegeStars } from './cbbRecruit'
 import { Stars, OfferBoard } from './CBBOffers'
 import CBBSimPage from './CBBSimPage'
@@ -324,7 +324,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
     const t = teamsBy[p.team]
     return {
       ...p,
-      team: `cbb/${p.team}`, school: p.team, conf: p.conf ?? t?.conf,
+      team: logoKey(p.team), school: p.team, conf: p.conf ?? t?.conf,
       teamName: t?.name ?? p.teamName ?? p.team,
       color: p.color ?? t?.color, color2: p.color2 ?? t?.color2,
       years: p.years ?? ([classLabel(p.year), p.position].filter(Boolean).join(' · ') || undefined),
@@ -360,8 +360,8 @@ export default function CBBMode({ user, onHome, onCareer }) {
   // a chip carries the college player's school, conference, class and size with it
   const withCollege = useCallback(chip => {
     const p = byKey.get(`${chip.qbFull}|${chip.team}`)
-    const short = p?.school ?? String(chip.team).replace(/^cbb\//, '')
-    // (jerseyWord: the word across the chest. A college chip's team is 'cfb/IND', which the figure printed as it was)
+    const short = p?.school ?? String(chip.team).replace(/^c[bf]b\//, '')
+    // (jerseyWord: the word across the chest. A college chip's team is its logo's place, 'cfb/DUKE' or 'cbb/GONZ': cbbShared logoKey)
     return { ...chip, cfb: true, cbb: true, school: short, jerseyWord: String(teamsBy[short]?.school ?? short).toUpperCase(), conf: p?.conf ?? null, year: p?.year ?? null, height: chip.height ?? p?.height ?? null, weight: chip.weight ?? p?.weight ?? null }
   }, [byKey, teamsBy])
 

@@ -30,8 +30,10 @@ export const classLabel = y => (y ? CLASS[String(y).toUpperCase()] ?? String(y).
 // The data's rows carry the path; the screens ask by the school's code once the data has loaded (registerLogos)
 const LOGOS = {}
 export function registerLogos(...lists) { for (const list of lists) for (const t of list ?? []) LOGOS[t.short] = t }
-export const cbbLogo = short => { const k = String(short ?? '').replace(/^cbb\//, ''); return k ? LOGOS[k]?.logo ?? `/logos/cbb/${k}.png` : '' }
-export const cbbLogoDark = short => { const k = String(short ?? '').replace(/^cbb\//, ''); return k ? LOGOS[k]?.logoDark ?? LOGOS[k]?.logo ?? `/logos/cbb/${k}.png` : '' }
+// (a chip's team is its logo's place under /logos/: 'cfb/DUKE' or 'cbb/GONZ', logoKey; the school's code alone works too)
+export const logoKey = short => { const p = LOGOS[short]?.logo; return p ? p.replace('/logos/', '').replace('.png', '') : `cbb/${short}` }
+export const cbbLogo = short => { const k = String(short ?? '').replace(/^c[bf]b\//, ''); return k ? LOGOS[k]?.logo ?? `/logos/cbb/${k}.png` : '' }
+export const cbbLogoDark = short => { const k = String(short ?? '').replace(/^c[bf]b\//, ''); return k ? LOGOS[k]?.logoDark ?? LOGOS[k]?.logo ?? `/logos/cbb/${k}.png` : '' }
 export const confLogo = c => c?.logo ?? `/logos/cbb/conf-${c?.id ?? c?.short}.png`
 
 // ── the build or season in progress ─────────────────────────────────────────
