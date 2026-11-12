@@ -53,6 +53,7 @@ import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { RESUMES } from '../data/legacy-resumes'
 import { RECORDS } from './seasonFacts'
+import { NFL_GOAT } from '../data/nfl-goat'
 import { seasonRaw } from './careerStats'
 
 export const CAREER_V = 1
@@ -209,6 +210,12 @@ const olProtector = (c, f, s) => (s.starts ?? 0) >= 15
 // (a great of the past never had the award to win: his First-Team All-Pros carry OL_FIRST_BONUS in its place, and a
 // career's All-Pro years that did win it count the award instead, never both: legacyScore)
 export const OL_FIRST_BONUS = 10, OL_START_LEGACY = 0.2
+// The position's award, counted once a season, is worth more each time he wins it again: one MVP or DPOY is a
+// great year, a second says it was no accident, a third and a fourth are the short list. MVP and DPOY: 18, 26,
+// 32, then 36 each. OPOY and Protector of the Year a little less: 18, 24, 28, then 30. The greats' real awards
+// are counted the same way. (Until 2026-11-11 every award after the first was a flat 28: two were worth 46,
+// now 44 or 42; five were 130, now 148 or 130. A career with one award, or none, scores exactly what it did.)
+export const AWARD_STEPS = { top: [18, 26, 32, 36], skill: [18, 24, 28, 30] }
 
 export const SPORT = {
   nfl: {
@@ -407,6 +414,7 @@ export const SPORT = {
     headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'], dl: ['sacks', 'tfl', 'tackles'], lb: ['tackles', 'sacks', 'ints'], ol: ['sacksA', 'pancakes', 'grade'], k: ['fgPct', 'points', 'long'] },
     // (a lineman's award is Protector of the Year; a kicker has none: his slot is the All-Pro team, shown as his trophy; s.award stays false)
     awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'PROTECTOR', k: 'ALL-PRO' },
+    awardSteps: { qb: AWARD_STEPS.top, db: AWARD_STEPS.top, dl: AWARD_STEPS.top, lb: AWARD_STEPS.top, rb: AWARD_STEPS.skill, wr: AWARD_STEPS.skill, te: AWARD_STEPS.skill, ol: AWARD_STEPS.skill },
     honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
     // games played to be considered (of 17): the award and All-Pro 12, the Pro Bowl 9
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
@@ -2003,7 +2011,15 @@ function lifeView(c, k, game = null) {
   }
 }
 // (build: the one the season was simulated on; a bye-week gain is a nudge on top of it, active.dirBuild keeps the old one)
-const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+// The career records he hasn't passed yet (seasonFacts.js RECORDS, the `career` ones with a `live` reading), each
+// with his total coming into this season: the season director calls one the week he goes by it.
+function careerMarksFor(c) {
+  const recs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career && x.live)
+  if (!recs.length) return null
+  const t = careerTotals(c), held = new Set((c.seasons ?? []).flatMap(s => s.records ?? []))
+  return recs.filter(x => !held.has(x.label)).map(x => ({ id: x.id, label: x.label, value: x.value, holder: x.holder, live: x.live, before: x.career(t) ?? 0 }))
+}
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -2618,11 +2634,11 @@ export function bookSeason(c) {
   const careerRecs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
   if (careerRecs.length) {
     const tt = careerTotals({ ...c, seasons: [...c.seasons, s] })
-    for (const x of careerRecs) if ((x.career(tt) ?? 0) > x.value && !c.seasons.some(p => (p.records ?? []).includes(x.label))) s.records = [...s.records, x.label]
+    for (const x of careerRecs) if ((x.career(tt) ?? 0) > x.value && !s.records.includes(x.label) && !c.seasons.some(p => (p.records ?? []).includes(x.label))) s.records = [...s.records, x.label]
   }
   // records this career set: next season's bar is its own number, not the league's
   const recordBook = { ...(c.recordBook ?? {}) }
-  for (const x of f.story?.records ?? []) if (x.id && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
+  for (const x of f.story?.records ?? []) if (x.id && !x.career && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
   const contract = { ...c.contract, left: Math.max(0, c.contract.left - 1) }
   const perf = seasonScore(c.pos, s)
   // the smaller honors: best rookie, and the MVP of the final (the quarterback's unless he sat; never a kicker's or an offensive lineman's)
@@ -3280,14 +3296,22 @@ export function careerTotals(c) {
 export const LEGACY_W = { seasons: 2, honors: 6, firsts: 10, awards: 18, rings: 20, playoffs: 3, records: 8 }
 // The big awards outweigh piling up: Pro Bowls / All-Stars past the 8th count
 // half (twenty Pro Bowls is not Aaron Donald's ten with eight All-Pros and three
-// DPOYs), and every award after the first is worth AWARD_REPEAT more (three
-// DPOYs say more than three times one)
+// DPOYs), and an award is worth more each time it's won again (three DPOYs say
+// more than three times one): football by AWARD_STEPS, the others AWARD_REPEAT
+// (or their own awardRepeat) more for every award after the first
 export const HONOR_KNEE = 8, AWARD_REPEAT = 10
 export const countedHonors = n => Math.min(n, HONOR_KNEE) + Math.max(0, n - HONOR_KNEE) / 2
+export function awardPoints(S, pos, n = 0) {
+  const steps = S.awardSteps?.[pos]
+  if (!steps) return n * LEGACY_W.awards + Math.max(0, n - 1) * (S.awardRepeat ?? AWARD_REPEAT)
+  let t = 0
+  for (let i = 0; i < n; i++) t += steps[Math.min(i, steps.length - 1)]
+  return t
+}
 export function legacyScore(S, pos, r) {
   if (S.x?.legacy) return S.x.legacy(r)
   const k = { ...r, honors: countedHonors(r.honors ?? 0) }
-  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (k[key] ?? 0) * w, 0) + Math.max(0, (r.awards ?? 0) - 1) * (S.awardRepeat ?? AWARD_REPEAT) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? Math.max(0, (r.firsts ?? 0) - (r.awards ?? 0)) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
+  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (key === 'awards' ? 0 : (k[key] ?? 0) * w), 0) + awardPoints(S, pos, r.awards ?? 0) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? Math.max(0, (r.firsts ?? 0) - (r.awards ?? 0)) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
 }
 // Money earned is worth a little legacy too: a point every $25M of career
 // earnings (contracts and shoe money), never more than 5
@@ -3330,7 +3354,14 @@ function hofVote(c, L) {
 // ones in the game's own record book (seasonFacts.js) that name him as holder.
 const words = s => s.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
 const heldBy = (sport, pos, name) => (RECORDS[sport]?.[pos] ?? []).filter(x => { const h = new Set(words(x.holder)); return words(name).every(w => h.has(w)) }).length
-const scored = (sport, pos) => RESUMES[pos].map(r => ({ name: r.name, score: legacyScore(SPORT[sport], pos, { ...r, records: heldBy(sport, pos, r.name) }) }))
+// Who is on a football position's list: the men on the season sim's GOAT list (data/nfl-goat.js, the 25 every
+// GOAT Status screen shows), wherever each of them has a resume here, so both screens name the same players. Today
+// that is linebacker and offensive line (the line's list was 35 names long, ten of them not on the GOAT list; no
+// other position's ran past 28). The other positions keep the resumes' own list until the GOAT names still missing
+// a resume are counted (QB 4, RB 7, WR 7, TE 11, DB 7, DL 3, K 5). The order here is the score's, there the
+// consensus ranking's: a career has to be placed by a number.
+const onGoatList = (sport, pos, rows) => { const g = sport === 'nfl' ? NFL_GOAT[pos]?.map(x => x.name) : null; return g && g.every(n => rows.some(r => r.name === n)) ? rows.filter(r => g.includes(r.name)) : rows }
+const scored = (sport, pos) => onGoatList(sport, pos, RESUMES[pos]).map(r => ({ name: r.name, score: legacyScore(SPORT[sport], pos, { ...r, records: heldBy(sport, pos, r.name) }) }))
 const greats = list => list.sort((a, b) => b.score - a.score).map((x, i) => ({ ...x, rank: i + 1 }))
 // basketball: one list, the 25 greatest careers at any position
 const NBA_GREATS = greats([...scored('bucket', 'guard'), ...scored('bucket', 'big')]).slice(0, 25)
