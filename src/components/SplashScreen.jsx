@@ -85,8 +85,8 @@ export const POS_OPTIONS = [
     pos: 'k', label: 'K', classic: K_LIVE, alltime: K_LIVE, disabled: !K_LIVE,   // K_LIVE: lib/kLive.js
     players: [
       { id: 'espn_3953687', color: '#003594' },  // Brandon Aubrey - DAL
-      { id: 'espn_2971573', color: '#03202f' },  // Ka'imi Fairbairn - HOU
-      { id: 'espn_3150744', color: '#d50a0a' },  // Chase McLaughlin - TB
+      { id: 'espn_4686361', color: '#006778' },  // Cam Little - JAX
+      { id: 'espn_4567104', color: '#4f2683' },  // Will Reichard - MIN
     ],
   },
 ]
