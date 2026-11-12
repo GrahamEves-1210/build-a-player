@@ -285,8 +285,8 @@ function CareerPage({ go }) {
        + rings × 20 + playoff years × 3 + production + records × 8
        + small camp, shoe-deal and earnings bonuses
 
-awards, football: MVP and DPOY 18, 26, 32, then 36 each
-                  OPOY and Protector of the Year 18, 24, 28, then 30 each
+awards, football: MVP and DPOY 18, 26, 30, then 32 each
+                  OPOY and Protector of the Year 18, 24, 27, then 28 each
 awards, basketball: MVP 18, then 22 each`}</pre>
       <p>An award is worth more each time it is won again: a second MVP says more than the first, a third more than the second. Football's records now include the career marks at each position (passing yards and touchdowns, rushing yards, receiving yards, receptions, interceptions, sacks, tackles): the week a career passes one, the game calls it, and the totals card lists each mark with the career's number beside it. An offensive lineman's First-Team All-Pros carry 10 more each, the way the greats' do, since Protector of the Year did not exist before 2025; a year he wins the award counts the award instead.</p>
       <p>The same formula scores the real greats from their real careers (seasons, Pro Bowls or All-Star picks, AP First-Team All-Pro or All-NBA teams, the position's award counted once a season, rings, playoff years, career stats and the all-time records they hold), so a finished career slots into the all-time list for its position (one top 25 for basketball). Records count once each, however many times a career raises its own. Camp and shoe-deal bonuses are the only points the greats don't get. Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>

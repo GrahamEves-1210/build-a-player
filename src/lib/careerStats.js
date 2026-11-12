@@ -103,7 +103,7 @@ const DEFS = {
     { key: 'gw', label: 'GAME-WINNERS', get: s => s.stats.gw, fmt: int, avg: 1, elite: 4, says: 'Kicks at the end of regulation or in overtime that won the game.' },
   ],
   ol: [
-    { key: 'grade', label: 'OVERALL GRADE', get: s => s.stats.grade, fmt: f1, avg: 65, elite: 86, says: 'One grade for every snap, PFF style: pass blocking about 60%, run blocking 40%, less for the flags.' },
+    { key: 'grade', label: 'OVERALL GRADE', get: s => s.stats.grade, fmt: f1, avg: 65, elite: 89, says: 'One grade for every snap, PFF style: pass blocking about 60%, run blocking 40%, less for the flags.' },
     { key: 'sacksA', label: 'SACKS ALLOWED', get: s => s.stats.sacksA, fmt: int, avg: 5, elite: 1, low: true, says: 'The one everyone sees. Lower is better, and some of them belong to the quarterback.' },
     { key: 'prsRate', label: 'PRESSURE RATE', get: s => (s.stats.snaps ? (s.stats.prs / (s.stats.snaps * 0.58)) * 100 : null), fmt: pct, avg: 5.5, elite: 2.5, low: true, says: 'How often his man got to the quarterback on a pass play: sacks, hits and hurries. The best read on pass blocking.' },
     { key: 'pen', label: 'PENALTIES', get: s => s.stats.pen, fmt: int, avg: 7, elite: 3, low: true, says: 'Holding, false starts and the rest. Every one costs a drive yards.' },

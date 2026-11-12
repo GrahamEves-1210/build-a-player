@@ -212,10 +212,11 @@ const olProtector = (c, f, s) => (s.starts ?? 0) >= 15
 export const OL_FIRST_BONUS = 10, OL_START_LEGACY = 0.2
 // The position's award, counted once a season, is worth more each time he wins it again: one MVP or DPOY is a
 // great year, a second says it was no accident, a third and a fourth are the short list. MVP and DPOY: 18, 26,
-// 32, then 36 each. OPOY and Protector of the Year a little less: 18, 24, 28, then 30. The greats' real awards
-// are counted the same way. (Until 2026-11-11 every award after the first was a flat 28: two were worth 46,
-// now 44 or 42; five were 130, now 148 or 130. A career with one award, or none, scores exactly what it did.)
-export const AWARD_STEPS = { top: [18, 26, 32, 36], skill: [18, 24, 28, 30] }
+// 30, then 32 each. OPOY and Protector of the Year a little less: 18, 24, 27, then 28. The greats' real awards
+// are counted the same way. (Until 2026-11-11 every award after the first was a flat 28: two were worth 46, now
+// 44 or 42; five were 130, now 138 or 125; seven 186, now 202 or 181. A career with one award, or none, scores
+// exactly what it did: set so the multi-time factor is real and legacy is not much easier to come by.)
+export const AWARD_STEPS = { top: [18, 26, 30, 32], skill: [18, 24, 27, 28] }
 
 export const SPORT = {
   nfl: {
