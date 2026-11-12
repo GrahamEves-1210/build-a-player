@@ -85,7 +85,7 @@ function playSeason(data, c, s) {
   const k = Math.max(0, (c.college?.seasons ?? []).findIndex(x => x.seed === s.seed))
   const sd = s.adv ? seasonData(data, k) : data
   const b = collegeBuild(c.build, P.types, s.dev)
-  if (s.role !== 'backup') return data.sim.runCFBSimulation(b, P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, ...(career ? { career } : {}), ...(s.adv ? { choice: true, season: 2026 + k, ...(k ? { pools: sd.pools } : {}) } : {}) })
+  if (s.role !== 'backup') return { ...data.sim.runCFBSimulation(b, P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, ...(career ? { career } : {}), ...(s.adv ? { choice: true, season: 2026 + k, ...(k ? { pools: sd.pools } : {}) } : {}) }), ovr: P.ovr(b, P.types) }   // (the college overall the recruiting card and the offseason show)
   // (the school plays its real starter and the build sits behind the man he couldn't beat: cfbClass backupSeason)
   return backupSeason(data.sim, sd.pools, P.types, team, c.pos, s.seed, { ovr: P.ovr(b, P.types), ...(s.adv ? { cls: s.simYear, build: b, name: c.name, season: 2026 + k, usePools: k > 0 } : {}) })
 }

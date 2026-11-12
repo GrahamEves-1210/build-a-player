@@ -100,6 +100,7 @@ export function asBackup(r, pos, seed, starter, ovr) {
   const c = r.cfb ?? {}
   return {
     ...r, games, role: 'backup', starterName: starter?.name ?? null, ovr: ovr ?? r.ovr,   // (his OVR, not the starter's the engine played)
+    bestGame: null,   // (the engine's best game was the starter's)
     cfb: {
       ...c, postseason: post,
       totals: { regular: totalsOf(games, pos), throughCCG: totalsOf([...games, ...ccg], pos), full: totalsOf([...games, ...post], pos) },
