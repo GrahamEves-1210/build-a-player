@@ -68,7 +68,7 @@ export async function auditPage(page, { settle = 2600 } = {}) {
   while (Math.abs(band.measured - want) > 1 && Date.now() - t0 < settle) { await sleep(120); band = await page.evaluate('window.__RA.band()'); if (!band || band.hidden) return { skip: 'the rail went away' } }
   const lag = Date.now() - t0
   const measure = Math.abs(band.measured - want) > 1 ? { want, got: band.measured } : null
-  await page.evaluate('window.__RA.settled()')   // (layout that follows the variable, and anything still animating in)
+  await page.evaluate('window.__RA.settled(1500)')   // (layout that follows the variable, and anything still animating in)
   const who = async s => (s.at ? page.evaluate(`window.__RA.whoCovers(${s.at[0]}, ${s.at[1]})`) : [])
   const showTop = await adShowing(page, band)
   const whoTop = await who(showTop)

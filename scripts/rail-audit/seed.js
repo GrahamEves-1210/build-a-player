@@ -77,6 +77,18 @@ window.__RASeed = (() => {
       }
       return out
     },
+    // a made-up signed-in player, for the screens only an account sees. Used with the page offline (__ra_offline: the
+    // audit answers every request itself), so this is not a sign-in: no server ever hears of it
+    account: async (username = 'RailAudit') => {
+      const { supabase } = await import('/src/lib/supabase.js')
+      if (!supabase) return 'no supabase client in this build'
+      const b64 = o => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
+      const now = Math.floor(Date.now() / 1000), id = '00000000-0000-4000-8000-00000000a0d1'
+      const user = { id, aud: 'authenticated', role: 'authenticated', email: 'rail-audit@example.invalid', app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: { username, display_name: username }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      const session = { access_token: `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ sub: id, role: 'authenticated', aud: 'authenticated', exp: now + 86400, iat: now })}.audit`, token_type: 'bearer', expires_in: 86400, expires_at: now + 86400, refresh_token: 'rail-audit', user }
+      localStorage.setItem(supabase.auth.storageKey, JSON.stringify(session))
+      return supabase.auth.storageKey
+    },
     // a finished football build in the build screen's own save (Home's CONTINUE resumes it)
     build: async (pos = 'qb', mode = 'classic') => {
       const { C, seeded } = await mods()

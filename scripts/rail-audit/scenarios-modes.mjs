@@ -15,7 +15,7 @@ const openCareer = async (ctx, i) => {
   return ctx.eval(`(async () => { const b = [...document.querySelectorAll('.cr-slot-main')].find(x => x.innerText.includes(${JSON.stringify(NAMES[i])})); if (!b) return false; b.click(); await new Promise(r => setTimeout(r, 2200)); return true })()`)
 }
 // each seeded save: open it, audit it (the first one's tabs and sheets too), then play on from it for a while
-const careers = (sport, pos, wants, steps = 8) => async ctx => {
+const careers = (sport, pos, wants, steps = 5) => async ctx => {
   let made = await seed(ctx, `careers(${JSON.stringify(sport)}, ${JSON.stringify(pos)}, ${JSON.stringify(wants)})`)
   if (!Array.isArray(made)) { await ctx.open(ctx.path); made = await seed(ctx, `careers(${JSON.stringify(sport)}, ${JSON.stringify(pos)}, ${JSON.stringify(wants)})`) ?? [] }
   for (const [i, want] of wants.entries()) {
@@ -156,6 +156,22 @@ export const MODES = [
       if (await ctx.click('.ag-btn--gold', 2500)) await ctx.audit(`Mini game (${name}): playing`)
     }
   } },
+
+  // ── signed in (a made-up account, the page offline: see seed.js account) ────
+  ...[['/', 'football'], ['/bucket', 'basketball']].map(([path, sport]) => ({ group: 'account', name: `${sport}, signed in: Home, Profile and what it opens, Cards, Achievements, Locker, account settings`, path, storage: { __ra_offline: '1' }, run: async ctx => {
+    const key = await seed(ctx, 'account()')
+    await ctx.open(path); await sleep(1500)
+    if (!await ctx.eval(`!document.querySelector('.coin-pill--signin')`)) { ctx.miss(`Signed in (${sport})`, `the made-up session was not taken (${key})`); return }
+    await ctx.audit(`Signed in (${sport}): Home`)
+    if (await ctx.has('.username-prompt, [class*="username-prompt"], [class*="uname"]')) await ctx.audit(`Signed in (${sport}): username prompt`)
+    for (const [to, name] of [['profile', 'Profile'], ['cards', 'Cards'], ['achievements', 'Achievements'], ['locker', 'Locker'], ['shop', 'Shop'], ['daily', 'Daily'], ['pass', 'Builder Pass']]) {
+      await ctx.open(path); await sleep(1200)
+      await screen(ctx, `Signed in (${sport}): ${name}`, async () => { await ctx.nav(to, 1800) }, { skip: SKIP, depth: 2, perClass: 4, max: 20, enter: async () => { await ctx.open(path); await sleep(1200); await ctx.nav(to, 1800) } })
+    }
+    await ctx.open(path); await sleep(1200)
+    await ctx.eval(`window.dispatchEvent(new CustomEvent('bap:menu'))`); await sleep(900)
+    if (await ctx.click(/^SETTINGS/, 900)) { await ctx.audit(`Signed in (${sport}): Settings`); await crawl(ctx, `Signed in (${sport}): Settings`, { enter: async () => { await ctx.open(path); await sleep(1200); await ctx.eval(`window.dispatchEvent(new CustomEvent('bap:menu'))`); await sleep(900); await ctx.click(/^SETTINGS/, 900) }, depth: 2, perClass: 5, max: 24 }) }
+  } })),
 
   // ── the classic look (Settings > Classic look): the old pages on --ad-h ─────
   { group: 'classic', name: 'classic look: Home, the build, a season start (football and basketball)', path: '/', storage: { bap_classic_look: '1' }, run: async ctx => {

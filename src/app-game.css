@@ -2763,13 +2763,45 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
 html.app-look:not(.is-app) {
   --ag-dock-gap: calc(var(--web-rail, 0px) + 8px);
 }
+/* (these overlays end at the top of the rail now, see "Nothing under the rail" below: no room for it inside them too) */
 html.app-look .ag-menu-overlay,
 html.app-look .bt-sheet-overlay,
 html.app-look .sh-sheet-overlay,
 html.app-look .auth-overlay,
 html.app-look .ag-levelup,
 html.app-look .ag-ring,
-html.app-look .ag-bc { padding-bottom: var(--web-rail, 0px); }
+html.app-look .ag-bc { padding-bottom: 0; }
+/* ═══ Website: nothing under the bottom ad rail, nothing over it ═══════════════
+   The shared rules. `node scripts/rail-audit.mjs` checks every screen against them (scripts/rail-audit/README.md);
+   a new overlay, pinned bar or page joins the list it belongs to. Every value is 0 with no rail (--web-rail), so
+   a screen with no ad is exactly as it was.
+   1. A sheet, a modal, a scrim: any full-screen layer over a page ends at the top of the rail. What is in it can
+      never be under the ad, and the ad is never under it. (The layer's own colour runs down to the ad's box,
+      --web-rail-box; its contents stop at the rail's close tab above that, --web-rail: the border between.) */
+html:not(.is-app) :is(.ag-menu-overlay, .bt-sheet-overlay, .sh-sheet-overlay, .auth-overlay, .ag-levelup, .ag-ring, .ag-bc, .ag-complete, .ll-overlay, .ag-fan-back, .cfbd-overlay,
+  .modal-overlay, .share-overlay, .htp-overlay, .htp-backdrop, .mvp-overlay, .tpm-overlay, .cr-overlay, .nba-tpk-backdrop, .bsim-team-modal, .dc-lb-backdrop, .dc-prompt-backdrop,
+  .sc-shuffle-backdrop, .sc-power-backdrop, .sc-date-backdrop, .sc-lb-backdrop, .leave-confirm-overlay, .vs-prompt-overlay, .opp-disconnect-overlay, .vlf-backdrop, .vlf-panel,
+  .tut-tour, .tut-catch, .tut-dim, .tut-coach) { bottom: var(--web-rail-box, 0px); border-bottom: calc(var(--web-rail, 0px) - var(--web-rail-box, 0px)) solid transparent; }
+/* 2. A card centred in an overlay, too tall for the room above the rail (a phone 568 tall): the overlay scrolls and
+      the card starts at its top. Auto margins centre it whenever it fits, as before. Only with a rail on the page
+      (html.has-rail, set by lib/railWatch.js) */
+html.has-rail:not(.is-app) :is(.auth-overlay, .tpm-overlay, .mvp-overlay, .modal-overlay, .htp-overlay, .share-overlay) { overflow-y: auto; align-items: flex-start; }
+html.has-rail:not(.is-app) :is(.auth-overlay, .tpm-overlay, .mvp-overlay, .modal-overlay, .htp-overlay, .share-overlay) > * { margin-top: auto; margin-bottom: auto; }
+/* 3. A page that ends with the site footer (the season pages, the build screen) and is not an app-look screen, which
+      pads for the rail itself: the footer brings the rail's room. The wiki scrolls itself: the same at its end */
+html:not(.is-app) .splash-site-footer:not(.ag-home *, .ag-screen *) { border-bottom: var(--web-rail, 0px) solid transparent; }
+html:not(.is-app) .wk-foot { padding-bottom: var(--web-rail, 0px); }
+/* 4. The tutorial: its dim never falls on the ad (the spotlight's shadow is drawn from the cut-out, across the whole
+      window), and its first card is centred in the room above the rail */
+html:not(.is-app) :is(.tut-tour, .tut-coach) { clip-path: inset(0 0 var(--web-rail, 0px) 0); }
+html:not(.is-app) .tut-bubble--center { top: calc(50% - var(--web-rail, 0px) / 2); max-height: calc(100dvh - var(--web-rail, 0px) - 16px); overflow-y: auto; }
+/* 5. The classic look (Settings): its SPIN / BUILD bar stands clear of the rail's close tab too, and its pages'
+      older allowance (--ad-h, measured from Playwire's own rail) covers a rail that is not Playwire's by name */
+html.has-rail:not(.app-look):not(.is-app) { --ad-h: max(52px, calc(var(--web-rail, 0px) - 50px)); }
+html.has-rail:not(.app-look):not(.is-app) .mobile-tab-bar { bottom: max(calc(64px + env(safe-area-inset-bottom, 0px) + var(--ad-h)), calc(var(--web-rail, 0px) + 8px)); }
+html.has-rail.is-x-browser:not(.app-look):not(.is-app) .mobile-tab-bar { bottom: max(calc(84px + env(safe-area-inset-bottom, 0px) + var(--ad-h)), calc(var(--web-rail, 0px) + 8px)); }
+/* the dock's drop shadow stops at the rail (it fell across the top of the ad) */
+html.app-look:not(.is-app) .ag-dock { clip-path: inset(-90px -90px calc(min(var(--web-rail, 0px), 40px) * 2 - 88px) -90px); }
 html.app-look .ag-menu { max-height: calc(100dvh - var(--web-rail, 0px) - 24px); }
 html.app-look .sh-sheet { max-height: calc(88dvh - var(--web-rail, 0px)); }
 /* a season moment scrolls itself into view; keep it clear of the dock and the ad rail */
@@ -7036,5 +7068,5 @@ html.bap-reduce-motion .ag-side-track { transition: none; }
 /* (phones only: on a desktop it read as a bar across the bottom of every page) */
 .ag-dock-floor { display: none; }
 @media (max-width: 720px) { .ag-dock-floor { display: block; } }
-.ag-dock-floor { position: fixed; left: 0; right: 0; bottom: var(--web-rail, 0px); height: calc(var(--ag-dock-gap) - var(--web-rail, 0px) + var(--ag-dock-h) / 2); z-index: 1049; background: rgb(10, 14, 12); pointer-events: none; }
+.ag-dock-floor { position: fixed; left: 0; right: 0; bottom: var(--web-rail-box, 0px); height: calc(var(--ag-dock-gap) - var(--web-rail-box, 0px) + var(--ag-dock-h) / 2); z-index: 1049; background: rgb(10, 14, 12); pointer-events: none; }
 html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }

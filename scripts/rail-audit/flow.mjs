@@ -50,7 +50,7 @@ export const RISKY = /sign in|sign up|log ?in|create account|continue with|apple
 // crawl a screen: press each thing on it once (a couple of each kind), audit whatever it opens (a sheet, a modal, a
 // tab's content, another page's first screen), close it again, and go one level into what opened.
 //   enter: gets back to this screen from anywhere (default: reload the path)
-export async function crawl(ctx, root, { enter, skip = null, depth = 2, perClass = 8, max = 36, inside = false } = {}) {
+export async function crawl(ctx, root, { enter, soft = null, skip = null, depth = 2, perClass = 8, max = 36, inside = false } = {}) {
   const state = () => ctx.eval('window.__RA.state()')
   const back = enter ?? (async () => { await ctx.fresh(ctx.path, ctx.storage) })
   const all = await ctx.eval('window.__RA.items()')
@@ -81,6 +81,8 @@ export async function crawl(ctx, root, { enter, skip = null, depth = 2, perClass
     const overlay = after.split('|').slice(0, 2).join('|') === before.split('|').slice(0, 2).join('|')
     if (overlay && depth > 1) await crawl(ctx, `${root} > ${label}`, { enter: async () => { await back(); await ctx.eval(`window.__RA.clickKey(${JSON.stringify(it.key)})`); await sleep(900) }, skip, depth: depth - 1, perClass, max: 24, inside: true })
     for (let k = 0; k < 3 && await state() !== before; k++) { await ctx.eval('window.__RA.closeTop()'); await sleep(650) }
+    // (a cheap way back first, when the scenario has one: a reload is the slow, sure one)
+    if (soft && await state() !== before) await soft()
     if (await state() !== before) await back()
   }
 }

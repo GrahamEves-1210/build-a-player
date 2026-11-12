@@ -2,7 +2,7 @@
 // Launches a headless Chromium with its own throwaway profile, blocks the ad hosts (a headless browser must never
 // make a real ad request) and hands back send / evaluate / screenshot helpers.
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -34,8 +34,7 @@ const scratch = () => {
 export async function launch({ width = 390, height = 844, mobile = true, dpr = 1, preload = '' } = {}) {
   const tmp = scratch()
   const prof = mkdtempSync(join(tmp, 'rail-cdp-'))
-  const port = 9400 + Math.floor(Math.random() * 500)
-  const chrome = spawn(findChrome(), ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`, '--no-first-run', '--hide-scrollbars',
+  const chrome = spawn(findChrome(), ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--hide-scrollbars',
     '--mute-audio', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
     '--disable-extensions', '--disable-gpu', '--renderer-process-limit=2',
     `--window-size=${width},${height}`, `--crash-dumps-dir=${tmp}`, 'about:blank'], { stdio: 'ignore', env: { ...process.env, TEMP: tmp, TMP: tmp } })
@@ -45,8 +44,16 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { reap(); process.exit(130) })
   process.on('uncaughtException', e => { console.error(e); reap(); process.exit(1) })
   process.on('unhandledRejection', e => { console.error(e); reap(); process.exit(1) })
-  let target
-  for (let i = 0; i < 100 && !target; i++) { await sleep(200); try { target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find(t => t.type === 'page') } catch {} }
+  // the browser picks a free port itself and writes it in its own profile folder (DevToolsActivePort). A port guessed
+  // here could be one another script's browser already listens on, and this driver would then be driving that one
+  let target, port = 0
+  for (let i = 0; i < 150 && !target; i++) {
+    await sleep(200)
+    try {
+      port ||= parseInt(readFileSync(join(prof, 'DevToolsActivePort'), 'utf8'), 10) || 0
+      if (port) target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find(t => t.type === 'page')
+    } catch {}
+  }
   if (!target) { try { chrome.kill() } catch {} ; throw new Error('Chromium did not start') }
   const ws = new WebSocket(target.webSocketDebuggerUrl)
   await new Promise((r, j) => { ws.addEventListener('open', r); ws.addEventListener('error', j) })
@@ -75,6 +82,8 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable')
   await send('Network.setBlockedURLs', { urls: BLOCKED })
   if (preload) await send('Page.addScriptToEvaluateOnNewDocument', { source: preload })
+  // an alert or a confirm stops the page until it is answered: answered at once (a confirm with No)
+  on('Page.javascriptDialogOpening', () => { send('Page.handleJavaScriptDialog', { accept: false }).catch(() => {}) })
   const errors = []
   on('Runtime.exceptionThrown', p => errors.push(String(p.exceptionDetails?.exception?.description ?? p.exceptionDetails?.text ?? '').slice(0, 300)))
 
@@ -88,13 +97,30 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
     }
     return r.result?.result?.value
   }
+  // load a page, and be sure it is a new document: the one before is marked, and the wait is for a page without the
+  // mark (a navigation that is aborted, which a busy browser does now and then, used to leave the old page up with
+  // the scenario carrying on as if it had moved)
   const goto = async url => {
-    for (let k = 0; k < 3; k++) { const nav = await send('Page.navigate', { url }); if (!nav.result?.errorText) break; await sleep(1500) }
-    for (let i = 0; i < 60; i++) { const v = await evaluate('location.href', { soft: true }); if (String(v).startsWith(url.slice(0, 5))) break; await sleep(250) }
+    for (let k = 0; k < 5; k++) {
+      await evaluate('window.__raOld = true', { soft: true })
+      const nav = await send('Page.navigate', { url })
+      if (nav.result?.errorText) { await sleep(1200); continue }
+      for (let i = 0; i < 80; i++) {
+        const v = await evaluate('window.__raOld !== true && location.href', { soft: true })
+        if (typeof v === 'string' && v.startsWith(url.slice(0, 5))) return true
+        await sleep(250)
+      }
+    }
+    throw new Error(`could not load ${url}`)
   }
   const screenshot = async (clip, format = 'png') => {
-    const r = await send('Page.captureScreenshot', { format, ...(format === 'jpeg' ? { quality: 72 } : {}), ...(clip ? { clip: { ...clip, scale: 1 } } : {}) })
-    return Buffer.from(r.result.data, 'base64')
+    // (a shot asked for in the middle of a page change comes back empty: asked again)
+    for (let k = 0; ; k++) {
+      const r = await send('Page.captureScreenshot', { format, ...(format === 'jpeg' ? { quality: 72 } : {}), ...(clip ? { clip: { ...clip, scale: 1 } } : {}) })
+      if (r.result?.data) return Buffer.from(r.result.data, 'base64')
+      if (k >= 3) throw new Error('no screenshot: ' + JSON.stringify(r.error ?? {}).slice(0, 120))
+      await sleep(400)
+    }
   }
   // a real pointer tap/click at a point (for things that listen to pointer events rather than click)
   const tap = async (x, y) => {

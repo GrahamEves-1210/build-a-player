@@ -12,8 +12,8 @@
   // ── 1. the simulated rail ───────────────────────────────────────────────────
   // kind 'rail': Playwire's own element (#pw-oop-bottom_rail, data-pw-status=loaded, fixed to the bottom, z-index 199
   // forced inline), the creative in an iframe, the close tab standing above the box.
-  // kind 'sticky': the taller unit that is sometimes stacked at the bottom instead: no pw-oop id at all (the site only
-  // knows it as a third-party element fixed to the bottom edge).
+  // kind 'sticky': the taller unit that is sometimes stacked at the bottom instead, on the very top layer: no id and no
+  // class at all (the site can only know it as a third-party box, fixed to the bottom edge, with an ad's iframe in it).
   const AD = '#ff00ff', TAB = 16
   RA.rail = null
   RA.setRail = (h, kind = 'rail') => {
@@ -24,7 +24,8 @@
     let el = document.querySelector('[data-rail-audit]')
     if (!el) {
       el = document.createElement('div')
-      if (kind === 'rail') { el.id = 'pw-oop-bottom_rail'; el.setAttribute('data-pw-status', 'loaded') } else el.className = 'st-adunit-ad'
+      // (the unnamed unit has no id and no class the site could know it by: only what it is)
+      if (kind === 'rail') { el.id = 'pw-oop-bottom_rail'; el.setAttribute('data-pw-status', 'loaded') }
       el.setAttribute('data-rail-audit', kind)
       el.innerHTML = '<div data-ra-wrap><button type="button" class="pw-rail-close" aria-label="Close ad" data-ra-close></button><iframe data-ra-ad title="ad" scrolling="no" frameborder="0"></iframe></div>'
       document.body.appendChild(el)
@@ -32,7 +33,7 @@
     const w = Math.min(window.innerWidth, window.innerWidth >= 768 ? 728 : 320)
     // (a rail that is already there keeps the layer the site has given it: only a new one arrives with Playwire's own
     // z-index, forced inline, for the site to correct)
-    if (!el.style.position) el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;margin:0;padding:6px 0 0;box-sizing:border-box;text-align:center;line-height:0;z-index:199 !important;'
+    if (!el.style.position) el.style.cssText = `position:fixed;left:0;right:0;bottom:0;margin:0;padding:6px 0 0;box-sizing:border-box;text-align:center;line-height:0;z-index:${kind === 'rail' ? 199 : 2147483000} !important;`
     el.style.height = `${h}px`
     el.firstChild.style.cssText = 'position:relative;display:inline-block;line-height:0;'
     el.querySelector('[data-ra-ad]').style.cssText = `display:block;width:${w}px;height:${h - 6}px;border:0;margin:0;background:${AD};`
@@ -49,9 +50,11 @@
     const el = railEl()
     if (!el) return null
     const cs = getComputedStyle(el)
-    if (cs.display === 'none' || cs.visibility === 'hidden') return { hidden: true }
+    // (while the site has its ads off, a mini game or an ad-free player, it takes the real units down: no rail)
+    if (cs.display === 'none' || cs.visibility === 'hidden' || document.documentElement.classList.contains('ads-hidden')) return { hidden: true }
     const ad = el.querySelector('[data-ra-ad]').getBoundingClientRect(), close = el.querySelector('[data-ra-close]').getBoundingClientRect()
-    const top = Math.min(el.getBoundingClientRect().top, ad.top, close.top)
+    if (ad.height < 1) return { hidden: true }
+    const top = Math.min(el.getBoundingClientRect().top, ad.top, close.height ? close.top : ad.top)
     const R = r => ({ x: r.left, y: r.top, width: r.width, height: r.height })
     return { top, bottom: window.innerHeight, height: window.innerHeight - top, ad: R(ad), close: R(close), z: cs.zIndex, sx: window.scrollX, sy: window.scrollY,
       measured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--web-rail')) || 0,
@@ -166,6 +169,16 @@
   RA.auditEnd = async () => {
     const band = RA.band()
     if (!band || band.hidden) return { band }
+    // (a screen that grew or scrolled itself back since: every scroller is put at its end again before the look)
+    for (let k = 0; k < 3; k++) {
+      let moved = false
+      for (const s of scrollers()) {
+        const room = s === document.scrollingElement ? window.innerHeight : s.clientHeight
+        if (s.scrollTop + room < s.scrollHeight - 1) { if (!(saved ??= []).some(x => x[0] === s)) saved.push([s, s.scrollTop]); s.scrollTo({ top: s.scrollHeight, behavior: 'instant' }); moved = true }
+      }
+      if (!moved) break
+      await frames(2)
+    }
     const atEnd = under(band, false).filter(f => !seen?.has(f.el))
     for (const [s, top] of saved ?? []) s.scrollTo({ top, behavior: 'instant' })
     saved = null

@@ -18,11 +18,20 @@
   }
   const isLocal = u => { try { const h = new URL(String(u?.url ?? u), location.href).hostname; return h === location.hostname || h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1' } catch { return true } }
 
+  const offline = () => { try { return localStorage.getItem('__ra_offline') === '1' } catch { return false } }
   // ── 1. no writes, no sockets ────────────────────────────────────────────────
   const realFetch = window.fetch
   window.fetch = (u, o) => {
     const url = String(u?.url ?? u), method = String(o?.method ?? u?.method ?? 'GET').toUpperCase()
     if (url.includes('analytics_events')) return Promise.resolve(new Response('[]', { status: 201 }))
+    // offline (the signed-in scenarios, whose account is made up): nothing at all goes to another host, and every
+    // request is answered as "no rows" (a single-row request as "not found")
+    if (!isLocal(url) && offline()) {
+      const accept = String(o?.headers?.Accept ?? o?.headers?.accept ?? (o?.headers?.get?.('accept')) ?? u?.headers?.get?.('accept') ?? '')
+      return Promise.resolve(accept.includes('vnd.pgrst.object')
+        ? new Response('{"code":"PGRST116","message":"no rows"}', { status: 406, headers: { 'content-type': 'application/json' } })
+        : new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }))
+    }
     if (!isLocal(url) && method !== 'GET' && method !== 'HEAD') return Promise.resolve(new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }))
     return realFetch(u, o)
   }
@@ -39,6 +48,9 @@
   for (const k of ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED']) AuditWebSocket[k] = RealWS[k]
   AuditWebSocket.prototype = RealWS.prototype
   window.WebSocket = AuditWebSocket
+  // no dialogs: an alert or a confirm would stop the page until someone answered it (a confirm is answered No)
+  window.alert = () => {}; window.confirm = () => false; window.prompt = () => null
+  try { window.open = () => null } catch {}
   RA.errors = []
   window.addEventListener('error', e => RA.errors.push(String(e.message).slice(0, 200)))
   RA.realTimeout = realTimeout; RA.realRaf = realRaf; RA.isLocal = isLocal

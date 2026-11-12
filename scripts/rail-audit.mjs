@@ -52,7 +52,7 @@ for (const [si, size] of SIZES.entries()) {
   let page = null, point = 0
   const dir = SHOTS ? join(SHOTS, size.name) : null
   if (dir) mkdirSync(dir, { recursive: true })
-  const shot = async name => { if (dir) writeFileSync(join(dir, safe(name) + '.jpg'), await page.screenshot(null, 'jpeg')) }
+  const shot = async name => { if (dir) try { writeFileSync(join(dir, safe(name) + '.jpg'), await page.screenshot(null, 'jpeg')) } catch {} }
   const boot = async (path = '/', storage = {}) => {
     page ??= await openPage({ base: BASE, width: size.w, height: size.h, mobile: size.mobile, speed: SPEED })
     await page.fresh(path, { bap_tutorial_done: '1', ...storage }, NO_RAIL ? null : HEIGHTS[si % HEIGHTS.length])
@@ -88,7 +88,8 @@ for (const [si, size] of SIZES.entries()) {
           const timing = k === 0 && first && first.h === rail.h ? 'before' : 'after'
           await page.setRail(rail)
           let r
-          try { r = await auditPage(page) } catch (e) { r = { skip: 'audit failed: ' + String(e.message).slice(0, 120) } }
+          // (how long the site may take to measure a rail that changed: its once-a-second backstop, on the fast clock)
+          try { r = await auditPage(page, { settle: Math.max(2500, 1800 / SPEED + 600) }) } catch (e) { r = { skip: 'audit failed: ' + String(e.message).slice(0, 120) } }
           const row = { screen: full, size: size.name, rail: railName(rail), timing, ...r }
           rows.push(row)
           const bad = !r.skip && (r.covered.length || r.ad || r.measure)
@@ -111,6 +112,8 @@ for (const [si, size] of SIZES.entries()) {
     } catch (e) {
       console.log(`!! ${size.name} ${sc.group} / ${sc.name}: ${String(e.message).slice(0, 300)}`)
       missed.push({ name: `${sc.group} / ${sc.name} (the scenario stopped)`, size: size.name, why: String(e.message).slice(0, 200) })
+      // (a page that stopped answering: the next scenario gets a new browser)
+      if (/no answer|no screenshot|WebSocket/i.test(String(e.message))) { try { await page.close() } catch {} page = null }
     }
   }
   if (page) await page.close()

@@ -7,7 +7,7 @@ import { MODES } from './scenarios-modes.mjs'
 // Home: what the crawler leaves alone (the modes and the dock have scenarios of their own; rows of the same kind)
 const HOME_SKIP = /^(ag-way|ag-start|ag-sport-btn|ag-resume|ps-tile|ntag-link|ag-tab|ag-play|ag-howto|ag-player-chip|coin-pill)\|/
 // lists: one or two rows stand for the rest
-const ROWS = /^(ntag-link|ps-tile|ps-col|lb-row|sc-card|splash-site-footer-link|pp-banner)\|/
+const ROWS = /^(ntag-link|ps-tile|ps-col|lb-row|sc-card|splash-site-footer-link|pp-banner|ag-tab|ag-play|ag-round-btn)\|/
 const menu = async ctx => { await ctx.eval(`window.dispatchEvent(new CustomEvent('bap:menu'))`); await sleep(900) }
 const auth = async ctx => { await ctx.eval(`window.dispatchEvent(new CustomEvent('bap:auth'))`); await sleep(900) }
 
@@ -18,7 +18,7 @@ const SIM_PRI = ['.sm-option', '.mvp-overlay button', '.simp-cta', '.simp-next-b
 
 const homeOf = () => async ctx => {
   await ctx.audit('Home')
-  await crawl(ctx, 'Home', { skip: HOME_SKIP })
+  await crawl(ctx, 'Home', { skip: HOME_SKIP, soft: async () => { await ctx.nav('home', 900) } })
   await ctx.fresh(ctx.path, ctx.storage)
   await sheet(ctx, 'Home > Sign in', () => auth(ctx), { back: '.auth-close', also: async () => {
     if (await ctx.click(/^Create Account$/, 600)) await ctx.audit('Home > Sign in > Create account')

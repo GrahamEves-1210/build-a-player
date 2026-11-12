@@ -5,6 +5,7 @@
 // Nothing moves. Re-applied every couple of seconds and whenever the page's
 // elements change, since Playwire redraws the rail.
 import { rampRail } from './ads'
+import { findRails } from './railWatch'
 
 const RAIL = '[id^="pw-oop-bottom_rail"], [id^="pw-oop"][style*="bottom"]'
 // a second, taller ad Playwire stacks at the bottom (116px, the very top layer): under the nav too
@@ -27,8 +28,28 @@ function apply() {
     force(el, z)
     for (const c of el.querySelectorAll(CLOSE)) force(c, 2147483647)
   }
+  // any other bottom rail on the page (lib/railWatch.js knows one by what it is, not by its name)
+  for (const el of findRails()) { if (!isClose(el)) force(el, z); watch(el) }
   // a close button Playwire put next to the rail rather than inside it
   for (const c of document.querySelectorAll('[id^="pw-"][id*="close" i], [class*="pw-"][class*="close" i]')) force(c, 2147483647)
+}
+
+// Playwire puts its own layer back when it redraws the rail: the moment it does, ours goes back on (it used to wait
+// for the next check, a second and a half with the ad under the screen)
+// (if an ad script ever answers every correction with its own, the watch lets go and the regular check carries on:
+// two observers undoing each other would never stop)
+const watching = new WeakSet()
+function watch(el) {
+  if (watching.has(el) || typeof MutationObserver === 'undefined') return
+  watching.add(el)
+  let burst = 0, since = 0
+  const mo = new MutationObserver(() => {
+    const now = Date.now()
+    if (now - since > 2000) { since = now; burst = 0 }
+    if (++burst > 8) { mo.disconnect(); return }
+    apply()
+  })
+  mo.observe(el, { attributes: true, attributeFilter: ['style'] })
 }
 
 let started = false
