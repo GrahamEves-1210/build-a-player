@@ -33,6 +33,7 @@ import { K_LIVE } from './kLive'
 import { onsideP, afterOnsideP } from './kicks'
 import { kValsOf, kSeasonStats, kSeasonScore, K_BARS, kHome, kFitNote, kAfterSeason, kMarket, kSigned, kPlayoffGame, kPlayoffLine, K_INTERVIEWS, K_EVENTS, K_DRILLS } from './careerKicker'
 import { ladderWindow, closedLine, lateLine, mindTraits, lowLabel, andList, LADDER } from './ageLadder'
+import { FADE, hasFade, fadeOf, fadeYear, keepCap, gradeUp } from './careerAging'
 import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { NFL_TEAMS } from '../data/nfl-teams'
@@ -439,7 +440,7 @@ export const SPORT = {
     // (a career's range: S.moneyOf. An elite edge is paid past a top receiver, a tackle tops out about $32M)
     // (a lineman by his spot: a top left tackle about $28M a year in 2026, a guard $20M, a center $15M)
     moneyOf: c => (c.pos === 'dl' && dlSpot(c) === 'dt' ? [2, 32] : c.pos === 'ol' ? ({ tackle: [2, 28], guard: [2, 20], center: [2, 15] })[olGroup(olSpot(c))] : SPORT.nfl.money[c.pos]),
-    primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos) + 1} (the last year at double the cost) and start to fade at ${S.declineAt(pos)}; technique until ${LADDER.nfl[pos]?.techAt[1] ?? 32}, the reads for good. Big injuries and a fragile body can cost him a grade.` },
+    primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos) + 1} (the last year at double the cost), technique until ${LADDER.nfl[pos]?.techAt[1] ?? 32}, the reads for good. ${fadeNote('nfl', pos)} Big injuries and a fragile body can cost him a grade.` },
   },
   bucket: {
     id: 'bucket', league: 'NBA', isBucket: true, screen: 'ag-screen--bucket',
@@ -556,7 +557,7 @@ export const SPORT = {
     seasonEnders: ['torn ACL', 'ruptured Achilles', 'torn meniscus'],
     money: { guard: [2, 55], big: [2, 52] },
     moneyOf: c => SPORT.bucket.money[c.pos],
-    primeNote: () => { const S = SPORT.bucket; return `Speed, bounce and size can be trained until ${S.trainUntil() + 1} (the last year at double the cost) and speed and bounce start to fade at ${S.declineAt()}; finishing, handles, rebounding and defense until ${LADDER.bucket.guard.techAt[1]}, the shot and the head for good. The shot, passing, IQ and clutch never fade. Big injuries and a fragile body can cost him a grade.` },
+    primeNote: pos => { const S = SPORT.bucket; return `Speed, bounce and size can be trained until ${S.trainUntil() + 1} (the last year at double the cost); finishing, handles, rebounding and defense until ${LADDER.bucket.guard.techAt[1]}, the shot and the head for good. ${fadeNote('bucket', pos ?? 'guard')} Big injuries and a fragile body can cost him a grade.` },
   },
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
@@ -2273,7 +2274,7 @@ export function byeTrain(c, D, game, score, hit = score >= 0.75, sim = false) {
   if (!won) return byeDone(c, D, { ...base, gain: null })
   const t = [...traits].sort((x, y) => (c.build[x].val ?? 0) - (c.build[y].val ?? 0))[0]
   const from = c.build[t].val, to = Math.min(11, Math.round(from) + 1)
-  const build = { ...c.build, [t]: { ...c.build[t], val: to, upgraded: (c.build[t].upgraded ?? 0) + 1 } }
+  const build = { ...c.build, [t]: gradeUp(c.build[t], to) }   // (a slipped grade won back is not a new upgrade: lib/careerAging.js)
   D.nudge({ attr: { [t]: to - from } }, c.active.k, D.total, null, true)
   const gain = { type: t, label: traitName(c, t), from: valToGrade(from), to: valToGrade(to) }
   const next = { ...c, build, ovr: ovrOf(c.pos, build, c.sport), decisions: [...c.decisions, { year: c.year + 1, text: `Bye week work: ${gain.label} ${gain.from} → ${gain.to}` }] }
@@ -2619,7 +2620,8 @@ export function bookSeason(c) {
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (honors still earn theirs, and so does camp)
   const S0 = sportOf(c)
-  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
+  // (2026-11-11: past his prime a point every second offseason, VET_POINT: a veteran's work is holding what he has, lib/careerAging.js)
+  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : vetPoint(c) ? 1 : 0)
   // (soccer: a Golden Boot is the striker's yearly honor, not a rare one, so it earns no point of its own)
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
@@ -2752,7 +2754,7 @@ export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3, getO
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
 // The last step costs more: A+ to S takes 2 points, everything else 1; past a trait's
 // full years (the age ladder, lib/ageLadder.js) it takes double that
-export const upgradeCost = (v, c = null, type = null) => (Math.round(v ?? 0) >= 10 ? 2 : 1) * (c && type && trainWindow(c, type)?.late ? 2 : 1)
+export const upgradeCost = (v, c = null, type = null) => (c && type && vetWork(c, type)?.cost) || (Math.round(v ?? 0) >= 10 ? 2 : 1) * (c && type && trainWindow(c, type)?.late ? 2 : 1)
 // The age ladder (lib/ageLadder.js): the physical traits train while young, the technique
 // into the early thirties, the mental side for good. { tier, open, late (double cost),
 // left (offseasons incl. this one), until (the last age), full } or null (no window)
@@ -2764,8 +2766,46 @@ export function trainWindow(c, type) {
   if (w?.tier === 'tech' && !w.open && mindTraits(sp, c.pos, c.types ?? [], phys).every(t => maxedTrait(c.build[t]?.val, c.build[t], t))) return { ...w, open: true, late: true, left: 2, valve: true }
   return w
 }
-// The line over the traits while there's a point to spend: what's still open, and until when
+// When a position's traits start to go and what he can do about it, in a line or two (the player page)
+function fadeNote(sp, pos) {
+  const F = Object.entries(FADE[sp]?.[pos] ?? {})
+  if (!F.length) return ''
+  const of = cls => F.filter(([, f]) => f[0] === cls), first = l => Math.min(...l.map(([, f]) => f[1]))
+  const names = l => andList(l.map(([t]) => lowLabel(POS_ATTR[pos]?.[t]?.label ?? t)))
+  const up = s => s.charAt(0).toUpperCase() + s.slice(1), q = of('quick'), pw = of('power'), sk = of('skill')
+  const parts = [q.length ? `${names(q)} from ${first(q)}` : null, pw.length ? `${names(pw)} from ${first(pw)}` : null, sk.length ? `${sk.length > 2 ? 'technique' : names(sk)} from ${first(sk)}` : null].filter(Boolean)
+  return `${up(andList(parts))} can slip a grade in an offseason; ${pos === 'k' ? 'clutch never fades' : 'the reads never fade'}. A point of offseason work holds a trait that is about to slip or wins a grade back, as far as his age allows${pos === 'k' ? '' : ', and a durable body ages slower'}.`
+}
+// ── A veteran's offseason work (lib/careerAging.js) ──
+// the season number an offseason leads into: a point spent before camp or after it is the same offseason's work
+const workKey = c => (c.phase === 'offseason' ? c.year + 1 : c.year)
+// a development point every second offseason once the body has turned
+export const VET_POINT = 2
+const vetPoint = c => { const S = sportOf(c), from = S.declineAt(c.pos); return hasFade(S.id ?? 'nfl', c.pos) && c.age >= from && (c.age - from) % VET_POINT === 0 }
+// the coming offseason's aging, as nextSeason will run it (it is seeded: the same every time it's read)
+const fadeNext = c => { const S = sportOf(c); return fadeYear({ sport: S.id ?? 'nfl', pos: c.pos, types: c.types, build: c.build, seed: c.seed, year: c.year + 1, age: c.age + 1, durability: c.pos === 'k' ? null : c.durability ?? 5, declineAt: S.declineAt(c.pos) }) }
+// the traits about to slip this offseason if nothing is done
+export const fadePreview = c => (c?.phase === 'offseason' && c.build ? fadeNext(c).slipped : [])
+// What a point of work does for a trait that ages: { kind: 'back' (a slipped grade won back) | 'hold' (it doesn't
+// slip this offseason), cost }, or null. One piece of work a trait an offseason; how far back is capped by his age
+export function vetWork(c, type) {
+  const ch = c?.build?.[type], f = ch && fadeOf(sportOf(c).id ?? 'nfl', c.pos, type)
+  if (!f || c.phase === 'retired' || ch.workY === workKey(c)) return null
+  const v = Math.round(ch.val ?? 0)
+  if ((ch.faded ?? 0) > 0 && v < keepCap(f, ch, c.age)) return { kind: 'back', cost: v >= 10 ? 2 : 1 }
+  if (c.phase === 'offseason' && v <= keepCap(f, ch, c.age + 1) && fadePreview(c).includes(type)) return { kind: 'hold', cost: 1 }
+  return null
+}
+// The line over the traits while there's a point to spend: what's about to slip or can be won back, then what's still open, and until when
 export function ladderNote(c) {
+  const n = trainNote(c), ws = c.types.map(t => [t, vetWork(c, t)]).filter(([, w]) => w)
+  if (!ws.length) return n
+  const list = k => { const xs = ws.filter(([, w]) => w.kind === k).map(([t]) => lowLabel(traitName(c, t))); return xs.length ? andList(xs) : null }
+  const up = s => s.charAt(0).toUpperCase() + s.slice(1), hold = list('hold'), back = list('back'), many = ws.filter(([, w]) => w.kind === 'hold').length > 1
+  const text = [hold ? `${up(hold)} ${many ? 'are' : 'is'} about to slip: a point holds ${many ? 'each' : 'it'} this year.` : null, back ? `A point wins back a grade of ${back}.` : null].filter(Boolean).join(' ')
+  return { last: true, text: n?.last ? `${text} ${n.text}` : text }
+}
+function trainNote(c) {
   const S = sportOf(c), sp = S.id ?? 'nfl'
   const label = t => lowLabel(traitName(c, t))
   const live = t => !maxedTrait(c.build[t]?.val, c.build[t], t)
@@ -2790,7 +2830,9 @@ export function trainable(c, type) {
   const ch = c.build[type]
   if ((c.pos === 'dl' || c.pos === 'lb') && type === 'size') return false   // a lineman's (or a linebacker's) size is his body, not something to train
   if (c.pos === 'ol' && (type === 'size' || type === 'length')) return false   // (an offensive lineman's arms too: length is arm length)
-  if (!ch || maxedTrait(ch.val, ch, type)) return false
+  if (!ch) return false
+  if (vetWork(c, type)) return true   // (a slipped grade to win back, or one to hold: at any age, lib/careerAging.js)
+  if (maxedTrait(ch.val, ch, type)) return false
   const w = trainWindow(c, type)
   return !(w && !w.open)
 }
@@ -2815,7 +2857,12 @@ export function upgradeBlock(c, type) {
   if (maxedTrait(ch.val, ch, type)) return `${name} has been raised ${UPGRADE_CAP[type]} times, the most it can be.`
   const w = trainWindow(c, type)
   const S = sportOf(c)
-  if (w && !w.open) return LADDER[S.id ?? 'nfl']?.[c.pos] ? closedLine(S.id ?? 'nfl', c.age, w.tier, name, andList(mindTraits(S.id ?? 'nfl', c.pos, c.types, S.physical[c.pos] ?? []).filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => lowLabel(traitName(c, t)))), w.until) : `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
+  // (a trait that ages, its window shut: worked already this offseason, or as far back as his age lets it come)
+  const f = w && !w.open && !vetWork(c, type) && c.phase !== 'season' ? fadeOf(S.id ?? 'nfl', c.pos, type) : null
+  if (f && ch.workY === workKey(c)) return `${name} has had its work for this offseason.`
+  if (f && (ch.faded ?? 0) > 0) return `At ${c.age}, ${valToGrade(ch.val)} is as far back as his ${lowLabel(name)} comes.`
+  if (f && c.age + 1 >= f.from) return `${name} can\u2019t be trained after age ${w.until}. A point can hold it the year it is about to slip.`
+  if (w && !w.open && !vetWork(c, type)) return LADDER[S.id ?? 'nfl']?.[c.pos] ? closedLine(S.id ?? 'nfl', c.age, w.tier, name, andList(mindTraits(S.id ?? 'nfl', c.pos, c.types, S.physical[c.pos] ?? []).filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => lowLabel(traitName(c, t)))), w.until) : `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
   if (c.phase === 'season') return 'Development points are spent in the offseason.'
   if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'
   const cost = upgradeCost(ch.val, c, type)
@@ -2827,8 +2874,11 @@ export function spendDev(c, type) {
   const cost = upgradeCost(c.build[type].val, c, type)
   const from = c.build[type].val
   // one grade up, exactly: a 9.6 (A) becomes an A+, not a 10.6 that also reads S
-  const build = { ...c.build, [type]: { ...c.build[type], val: Math.min(11, Math.round(from) + 1), upgraded: (c.build[type].upgraded ?? 0) + 1 } }
-  return { ...c, build, ovr: ovrOf(c.pos, build, c.sport), dev: { points: c.dev.points - cost, spent: c.dev.spent + cost }, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: ${traitName(c, type)} ${valToGrade(from)} → ${valToGrade(from + 1)}` }] }
+  // (a veteran's work: a held grade stays where it is, and holds through this offseason; a grade won back is not a new upgrade)
+  const work = vetWork(c, type), held = work?.kind === 'hold'
+  const up = held ? c.build[type] : gradeUp(c.build[type], Math.min(11, Math.round(from) + 1))
+  const build = { ...c.build, [type]: work ? { ...up, wear: 0, workY: workKey(c) } : up }
+  return { ...c, build, ovr: ovrOf(c.pos, build, c.sport), dev: { points: c.dev.points - cost, spent: c.dev.spent + cost }, decisions: [...c.decisions, { year: c.year + 1, text: held ? `Offseason work: ${traitName(c, type)} held at ${valToGrade(from)}` : `Offseason work: ${traitName(c, type)} ${valToGrade(from)} → ${valToGrade(from + 1)}` }] }
 }
 // Body work: a development point into durability (fewer injuries, and a longer career).
 // One step a point, two points from 8 up, to 10
@@ -3076,6 +3126,8 @@ export function demandTrade(c) {
   // a starter guarantee was the old team's promise: it stays with them
   return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
+// (the chance a veteran, 29 to 35, picks up a grade in a trait that never fades: football and basketball)
+const EXPERIENCE = 0.15
 // Into the next season: a year older, the body moves with it
 export function nextSeason(c) {
   const S = sportOf(c)
@@ -3089,18 +3141,34 @@ export function nextSeason(c) {
     const ch = build[t]; if (!ch) return
     const to = Math.round(ch.val) + d
     if (to > 11 || to < 1) return
-    build[t] = { ...ch, val: to, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1 }) }
+    build[t] = { ...ch, val: to, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1, ...(fade ? { slipY: c.year + 1 } : {}) }) }
     notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(to)}`)
+    if (d < 0) fell.push(t)
   }
+  // (football and basketball age by lib/careerAging.js; soccer and baseball by the rule from before)
+  const fade = hasFade(S.id ?? 'nfl', c.pos), fell = []
   const grows = c.pos === 'dl' || c.pos === 'lb' ? c.types.filter(t => t !== 'size') : c.pos === 'ol' ? c.types.filter(t => t !== 'size' && t !== 'length') : c.types
   // (a footballer comes in at 17: he grows until 22, not 24)
   if (age <= (S.isSoccer ? 22 : 24) && r() < 0.45) move(grows[Math.floor(r() * grows.length)], 1, 'Still growing')
   else if (age <= 28 && r() < 0.2) move(grows[Math.floor(r() * grows.length)], 1, 'A step forward')
+  // the head keeps getting better: into his mid-thirties a veteran can still pick up a grade in what never fades
+  else if (fade && age >= 29 && age <= 35 && r() < EXPERIENCE) { const mind = grows.filter(t => !fadeOf(S.id ?? 'nfl', c.pos, t) && t !== 'size' && t !== 'heightLength' && Math.round(build[t]?.val ?? 11) < 11); if (mind.length) move(mind[Math.floor(r() * mind.length)], 1, 'Experience') }
   const phys = S.physical[c.pos]
-  const pickPhys = () => phys[Math.floor(r() * phys.length)]
+  // (an injury takes its grade from a trait that hasn't already fallen this offseason, when there is one)
+  const pickPhys = () => { const left = phys.filter(t => !fell.includes(t)), l = left.length ? left : phys; return l[Math.floor(r() * l.length)] }
   // the body fades from the position's age (an RB first, a QB last)
   const from = S.declineAt(c.pos)
-  if (age >= from) {
+  if (fade) {
+    // the traits that age wear a little each year and slip a grade at a time: spread over them, rarely the same
+    // one two years running, and nothing at all some years. Work done this offseason holds its trait
+    const was = build, F = fadeYear({ sport: S.id ?? 'nfl', pos: c.pos, types: c.types, build, seed: c.seed, year: c.year + 1, age, durability: c.pos === 'k' ? null : c.durability ?? 5, declineAt: from })
+    build = F.build
+    for (const t of F.slipped) { fell.push(t); notes.push(`Father Time: ${traitName(c, t)} ${valToGrade(was[t].val)} → ${valToGrade(build[t].val)}`) }
+    for (const t of F.worked) notes.push(`Offseason work: ${traitName(c, t)} held at ${valToGrade(build[t].val)}`)
+    const spared = (c.bodyWork ?? 0) > 0 ? F.spared : []
+    for (const t of spared) notes.push(`Body work: ${traitName(c, t)} held at ${valToGrade(build[t].val)}`)
+    if (F.due && !F.slipped.length && !F.worked.length && !spared.length) notes.push(c.pos === 'k' ? 'The leg is still there: every grade held' : 'Hasn\u2019t lost a step: every grade held')
+  } else if (age >= from) {
     // the physical traits: a grade a year at first (sometimes two), then two a year,
     // then two or three
     const yrs = age - from
