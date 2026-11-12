@@ -25,27 +25,27 @@ export const kSeasonStats = f => ({
   points: f.seasonPoints ?? 0, gw: f.seasonGW ?? 0, cost: f.seasonCostly ?? 0,
 })
 // What gets a kicker there. One Pro Bowl kicker a conference, one First-Team All-Pro in the league: Vinatieri made
-// three of each in 24 seasons, Andersen seven Pro Bowls in 25, Tucker seven and five. In this game's seasons a
-// starter's median year is 96% on 40 tries with eight from 50 and out (measured over 700 Career seasons, 2026-11-12),
-// so a year like that is the league's ordinary year, not an honors year. The bars sit at the top of that scale: a
-// Pro Bowl is 97.5% with eight long ones (or 95% with twelve), All-Pro 98.5% with ten (or 96% with fourteen), on at
-// least 28 tries. And then the field: there is one spot, and most years somebody else kicked like that too. A year
-// at the bar gets a 99 overall kicker there about half the time (the Pro Bowl) or a third (All-Pro), a year clear
-// of it more often than not, and a lesser leg less often (legTilt). Seeded by the career and the year, so a season's honors are the same every time it's read.
-// (Until 2026-11-12 the bars were real-life numbers, 91% and 94%, which nearly every season here clears: an ordinary
-// kicker finished with about 15 Pro Bowls and 6 to 7 All-Pros and stood first on the all-time list.)
+// three of each in 24 seasons, Andersen seven Pro Bowls in 25, Tucker seven and five. The season sim kicks on the
+// league's real scale (lib/kicks.js: a median starter is 86% on 33 tries, a tenth of starters are over 93%), so the
+// bars are real ones: a Pro Bowl year is 93% with six from 50 and out (or 90% with ten, or 96% on 28 tries),
+// All-Pro 95% with seven (or 91% with twelve, or 97.5% with five), on at least 28 tries. And then the field: there
+// is one spot, and most years somebody else kicked like that too. A year at the bar gets a 99 overall kicker there
+// about one time in three (the Pro Bowl) or six (All-Pro), a year clear of it about twice as often, and a lesser leg
+// less often (legTilt). Seeded by the career and the year, so a season's honors are the same every time it's read.
+// (2026-11-12: for a day the bars sat at 97.5% and 98.5%, set against a sim that ran at 96% on 40 tries; before
+// that at 91% and 94% against the same sim, which nearly every season cleared.)
 const enough = s => (s.fga ?? 0) >= 20
 const field = (c, tag) => seeded(`${c?.seed ?? 'k'}-${tag}-${c?.year ?? 0}`)()
 // (the voters know the leg: the same line from a 99 overall kicker gets the nod over a 93's. 99: in full, 97: about half, 95: a sixth, 93 and under: one in twenty)
 const legTilt = c => Math.max(0.05, Math.min(1, ((c?.ovr ?? 99) - 90) / 9) ** 3)
-const pbBar = s => (s.fga ?? 0) >= 28 && ((s.fgPct >= 97.5 && (s.m50 ?? 0) >= 8) || (s.fgPct >= 95 && (s.m50 ?? 0) >= 12))
-const pbClear = s => (s.fgPct >= 99 && (s.m50 ?? 0) >= 10) || (s.fgPct >= 97 && (s.m50 ?? 0) >= 14)
-const apBar = s => (s.fga ?? 0) >= 28 && ((s.fgPct >= 98.5 && (s.m50 ?? 0) >= 10) || (s.fgPct >= 96 && (s.m50 ?? 0) >= 14))
-const apClear = s => (s.fgPct >= 100 && (s.m50 ?? 0) >= 11) || (s.fgPct >= 98 && (s.m50 ?? 0) >= 15)
+const pbBar = s => enough(s) && ((s.fgPct >= 93 && (s.m50 ?? 0) >= 6) || (s.fgPct >= 90 && (s.m50 ?? 0) >= 10) || (s.fgPct >= 96 && (s.fga ?? 0) >= 28))
+const pbClear = s => (s.fgPct >= 96 && (s.m50 ?? 0) >= 8) || (s.fgPct >= 93 && (s.m50 ?? 0) >= 12)
+const apBar = s => (s.fga ?? 0) >= 28 && ((s.fgPct >= 95 && (s.m50 ?? 0) >= 7) || (s.fgPct >= 91 && (s.m50 ?? 0) >= 12) || (s.fgPct >= 97.5 && (s.m50 ?? 0) >= 5))
+const apClear = s => (s.fgPct >= 97 && (s.m50 ?? 0) >= 9) || (s.fgPct >= 93 && (s.m50 ?? 0) >= 13)
 export const K_BARS = {
-  proBowl: (s, c) => pbBar(s) && field(c, 'kpb') < (pbClear(s) ? 0.85 : 0.5) * legTilt(c),
-  allPro: (s, c) => apBar(s) && field(c, 'kap') < (apClear(s) ? 0.7 : 0.35) * legTilt(c),
-  near: s => enough(s) && s.fgPct >= 97 && (s.m50 ?? 0) >= 9,
+  proBowl: (s, c) => pbBar(s) && field(c, 'kpb') < (pbClear(s) ? 0.55 : 0.32) * legTilt(c),
+  allPro: (s, c) => apBar(s) && field(c, 'kap') < (apClear(s) ? 0.33 : 0.16) * legTilt(c),
+  near: s => enough(s) && s.fgPct >= 94 && (s.m50 ?? 0) >= 7,
 }
 // A kicker's legacy, weighed for a kicker (lib/career.js legacyScore reads these for him and for the real kickers on
 // the list alike). He plays 24 seasons and is never hurt, and his team's playoff trips and rings say less about him

@@ -604,7 +604,7 @@ const kOf = c => ({ power: c.val('power'), accuracy: c.val('accuracy'), clutch: 
 const kOpen = g => !g.overtime && !(g.kicks ?? []).some(x => x.why)
 const kEnv = g => ({ yards: K_ENV[g.cond] ?? 0 })
 const kWhy = (c, ...ts) => ts.map(t => `${c.L(t)} ${valToGrade(c.val(t))}`).join(', ')
-const kCond = g => ({ dome: 'Indoors, no wind.', altitude: 'A mile high: the ball carries.', wind: 'A swirling wind.', rain: 'Rain, a wet ball.', snow: 'Snow on the field.', cold: 'Bitter cold: the ball is a rock.' })[g.cond] ?? ''
+const kCond = g => ({ dome: 'Indoors, no wind.', altitude: 'A mile high: the ball carries.', wind: 'A swirling wind.', rain: 'Rain, a wet ball.', snow: 'Snow on the field.', cold: 'Bitter cold: the ball travels shorter.' })[g.cond] ?? ''
 // a kick on the game's last line: the stat line it adds, and the kick itself for the range table
 const kKick = (d, good, extra = {}) => ({ add: { fga: 1, ca: 1, ...(good ? { fgm: 1, pts: 3, cm: 1 } : {}), ...extra }, kicks: [{ d, good, why: 'moment' }] })
 const kWin = (my, opp, k, line, tag) => ({ good: true, line, tag, game: { won: true, my, opp, ...k } })
@@ -631,7 +631,7 @@ NFL.k = {
       const pCloser = 0.66 * whole(pNear) + 0.22 * whole(pNow)
       return {
         title: ot ? `Down 3, ${dist} yards to tie it` : `Down ${d}, ${dist} yards to win it`,
-        body: `${score(g.mySc, g.oppSc)}, ${g.home ? 'at home against' : 'on the road against'} the ${opp}. Eight seconds left, ball at the ${dist - 17}, one timeout. ${kCond(g)} The coach looks down the sideline at ${c.name}.`.replace(/\s+/g, ' '),
+        body: `${score(g.mySc, g.oppSc)}, ${g.home ? 'at home against' : 'on the road against'} the ${opp}. Eight seconds left, ball at the ${dist - 17}, one timeout. ${kCond(g)} The field goal team is ready.`.replace(/\s+/g, ' '),
         options: [
           { id: 'now', label: `Kick it from ${dist}`, o: { p: whole(pNow) },
             outcomes: outs(from(1, pNow, dist)),

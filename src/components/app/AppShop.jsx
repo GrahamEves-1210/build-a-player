@@ -444,7 +444,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
     <div className="ag-screen sh">
       <div className="ag-screen-head">
         <div>
-          <span className="ag-eyebrow">SPEND YOUR COINS</span>
+          <span className="ag-eyebrow" style={{ whiteSpace: 'nowrap' }}>SPEND YOUR COINS</span>
           <h1 className="ag-h1">Shop</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
