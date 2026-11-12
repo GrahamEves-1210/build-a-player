@@ -5540,6 +5540,16 @@ a:focus-visible {
   .pp-phone { display: none; }
   .pp-legal { font-size: 10px; }
 }
+/* a mid-width footer (the season page's column on desktop, a tablet): the same row, a size up from the phone's */
+@container ppfoot (min-width: 480px) and (max-width: 720px) {
+  .pp-banner { padding: 13px 20px; gap: 16px; }
+  .pp-logo { width: 108px; margin: -4px 0 -3px -5px; }
+  .pp-new, .pp-sub { font-size: 13px; }
+  .pp-offer { font-size: 29px; margin: 2px 0; }
+  .pp-cta { gap: 6px; }
+  .pp-claim { height: 44px; padding: 0 20px; font-size: 16px; }
+  .pp-code { font-size: 12.5px; }
+}
 .splash-site-footer {
   container: ppfoot / inline-size;
   position: relative;
