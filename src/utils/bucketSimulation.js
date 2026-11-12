@@ -222,16 +222,32 @@ function matchupProb(myWP, oppShort, ratings = TEAM_RATINGS) {
 function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratings = TEAM_RATINGS, confElite = CONF_ELITE) {
   const rounds = []
   let currentSeed = mySeed
+  const myShort = standings.find(t => t.isUs)?.short
+  const row = s => standings[s - 1] ?? { short: 'OPP', wins: 40 }
+  // the 7 and 8 seeds as the play-in left them (not the standings' 7th and 8th): through the play-in the
+  // bracket was drawing the team he'd just knocked out (a 9th seed beats the 7v8 loser, the 7th, so the 8th
+  // is the 7 seed) and its series were played against the wrong team. The play-in round carries them
+  // (seeds: [7 seed, 8 seed]) so the bracket (BucketSimPage generateConfBracket) draws the same field.
+  let seven = row(7), eight = row(8)
 
   if (currentSeed >= 7 && currentSeed <= 10) {
     const pi = simPlayIn(currentSeed, standings, winProb, rand)
     rounds.push(pi)
     if (!pi.advanced) return { rounds, champion: false }
+    const me = row(currentSeed)
+    if (currentSeed <= 8) {
+      const other = row(currentSeed === 7 ? 8 : 7)   // the other team in the 7-vs-8 game
+      if (pi.newSeed === 7) { seven = me; eight = other } else { seven = other; eight = me }
+    } else {
+      // a 9 beats the 10 and then the 7v8 loser (the 7th: the 8th took the 7 seed); a 10, the 8th
+      seven = currentSeed === 9 ? row(8) : row(7)
+      eight = me
+    }
+    pi.seeds = [{ short: seven.short, wins: seven.wins }, { short: eight.short, wins: eight.wins }]
     currentSeed = pi.newSeed
   }
 
-  const myShort = standings.find(t => t.isUs)?.short
-  const get = seed => standings[seed - 1] ?? { short: 'OPP', wins: 40 }
+  const get = seed => (seed === 7 ? seven : seed === 8 ? eight : row(seed))
   const roundNames = ['First Round', 'Conference Semifinals', 'Conference Finals', 'NBA Finals']
 
   // R1: standard bracket seeding

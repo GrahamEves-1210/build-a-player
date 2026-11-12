@@ -1429,7 +1429,14 @@ function generateConfBracket(standings, myShort, playoffRounds) {
   let playin8 = { ...get(8), seed: 8 }
 
   const myPlayin = playoffRounds?.find(r => r.type === 'playin')
-  if (myPlayin) {
+  // the 7 and 8 seeds the play-in left, as the series were played (bucketSimulation simPlayoffs)
+  const [s7, s8] = myPlayin?.seeds ?? []
+  if (s7?.short && s8?.short) {
+    const at = t => ({ ...(standings.find(x => x.short === t.short) ?? t) })
+    playin7 = { ...at(s7), seed: 7 }
+    playin8 = { ...at(s8), seed: 8 }
+  } else if (myPlayin) {
+    // (a season played before the play-in carried its seeds)
     const myTeamObj = [get(7), get(8), get(9), get(10)].find(t => t.short === myShort)
     if (myTeamObj) {
       // the other team in the 7-vs-8 game (when we were in it): it takes the seed we didn't.
