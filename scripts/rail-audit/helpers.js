@@ -62,7 +62,7 @@
   const first = e => (typeof e.className === 'string' && e.className.trim() ? e.className.trim().split(/\s+/)[0] : e.tagName.toLowerCase())
   const bigFixed = () => {
     const vw = window.innerWidth, vh = window.innerHeight, out = []
-    for (const e of document.body.querySelectorAll('*')) {
+    for (const e of document.body?.querySelectorAll('*') ?? []) {
       if (inRail(e)) continue
       const cs = getComputedStyle(e)
       if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.02 || cs.pointerEvents === 'none') continue

@@ -121,8 +121,22 @@ export const MODES = [
     await screen(ctx, 'College Football', go, { skip: /^(ag-tab|ag-play|ag-round-btn|cfb-pos)\|/, depth: 2, perClass: 3, max: 12 })
     await ctx.fresh('/', ctx.storage); await go()
     await ctx.click('.cfb-pos', 1800)
-    const PRI = ['.sm-option', '.cfbd-overlay button:not(:disabled)', '.cfbr-commit-bar button:not(:disabled)', '.cfb-screen .ag-btn--gold:not(:disabled)', '.cfb-screen .ag-btn:not(.ag-btn--ghost):not(:disabled)', '.simp-cta', '.spin-btn:not(:disabled)', '.attr-chip', '.sim-btn:not(.sim-btn-locked)', '.tpm-team-btn', '.cfb-conf-chip', '.cfb-school', '[class*="cfb-"][class*="-go"]:not(:disabled)', /^(spin|next|continue|start|play|sim|advance|enter|declare|commit|sign)/i]
-    await walk(ctx, 'College Football', { pri: PRI, markers: [['.sm-moment', 'decision card'], ['.cfbd-overlay', 'draft overlay'], ['.cfbr-commit-bar', 'commit bar'], ['.simp-dot-active', 'season'], ['@struct', '.ag-screen-body'], ['@struct', '.cfb-screen']], max: 60, patience: 30000, wait: 800 })
+    await ctx.audit('College Football: build (empty)')
+    if (!await playBuild(ctx, { onFirst: async () => { await sleep(500); await ctx.audit('College Football: spin result') } })) { ctx.miss('College Football: the season', 'the build could not be finished by spinning'); return }
+    await ctx.audit('College Football: build (complete)')
+    await ctx.click('.sim-btn', 2000)
+    await ctx.audit('College Football: scholarship offers')
+    if (await ctx.click('button.cfbr-board-row', 800)) await ctx.audit('College Football: offers, a school picked (commit bar)')
+    await ctx.click('button.cfbr-commit:not(:disabled), button.cfbs-next:not(:disabled)', 2500)
+    const dots = n => [`.simp-dot:nth-child(${n}).simp-dot-active`, `season screen ${n}`]
+    const end = await walk(ctx, 'College Football', { pri: ['.sm-option', '.mvp-overlay button', '.simp-cta'], markers: [1, 2, 3, 4, 5, 6, 7, 8].map(dots).concat([['.sm-moment', 'key moment'], ['.simp-cta--pin', 'pinned advance'], ['.mvp-overlay', 'award']]), max: 40, patience: 60000, until: '.simp-dot:last-child.simp-dot-active' })
+    await sleep(1200)
+    await ctx.audit('College Football: final report')
+    if (end !== 'until') ctx.miss('College Football: the whole season', `the walk ended early (${end})`)
+    // the draft, and the ways on from the final report
+    if (await ctx.click(/^ENTER THE NFL DRAFT/, 1500)) { await ctx.audit('College Football: the NFL draft'); await crawl(ctx, 'College Football: the NFL draft', { enter: async () => {}, depth: 1, perClass: 3, max: 8, skip: /^(splash-site-footer-link|pp-banner|ag-icon-btn|simp-)/ }); await ctx.eval('window.__RA.closeTop()'); await sleep(600) }
+    else ctx.miss('College Football: the NFL draft', 'no ENTER THE NFL DRAFT on the final report')
+    if (await ctx.click(/^Transfer$/, 1500)) await ctx.audit('College Football: transfer')
   } },
 
   // ── the other seasons ───────────────────────────────────────────────────────

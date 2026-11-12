@@ -2775,13 +2775,18 @@ html.app-look .ag-bc { padding-bottom: 0; }
    The shared rules. `node scripts/rail-audit.mjs` checks every screen against them (scripts/rail-audit/README.md);
    a new overlay, pinned bar or page joins the list it belongs to. Every value is 0 with no rail (--web-rail), so
    a screen with no ad is exactly as it was.
-   1. A sheet, a modal, a scrim: any full-screen layer over a page ends at the top of the rail. What is in it can
-      never be under the ad, and the ad is never under it. (The layer's own colour runs down to the ad's box,
-      --web-rail-box; its contents stop at the rail's close tab above that, --web-rail: the border between.) */
-html:not(.is-app) :is(.ag-menu-overlay, .bt-sheet-overlay, .sh-sheet-overlay, .auth-overlay, .ag-levelup, .ag-ring, .ag-bc, .ag-complete, .ll-overlay, .ag-fan-back, .cfbd-overlay,
+   1. A sheet, a modal, a scrim: any full-screen layer over a page. What is in it stops at the top of the rail (a
+      transparent border the rail's height: the layer's own dim still runs to the bottom of the window, beside the
+      ad), and the ad's own box is cut out of the layer (--web-rail-box, -l, -r: lib/railWatch.js), so the ad is never
+      under it and still takes its own taps. */
+html.has-rail:not(.is-app) :is(.ag-menu-overlay, .bt-sheet-overlay, .sh-sheet-overlay, .auth-overlay, .ag-levelup, .ag-ring, .ag-bc, .ag-complete, .ll-overlay, .ag-fan-back, .cfbd-overlay,
   .modal-overlay, .share-overlay, .htp-overlay, .htp-backdrop, .mvp-overlay, .tpm-overlay, .cr-overlay, .nba-tpk-backdrop, .bsim-team-modal, .dc-lb-backdrop, .dc-prompt-backdrop,
   .sc-shuffle-backdrop, .sc-power-backdrop, .sc-date-backdrop, .sc-lb-backdrop, .leave-confirm-overlay, .vs-prompt-overlay, .opp-disconnect-overlay, .vlf-backdrop, .vlf-panel,
-  .tut-tour, .tut-catch, .tut-dim, .tut-coach) { bottom: var(--web-rail-box, 0px); border-bottom: calc(var(--web-rail, 0px) - var(--web-rail-box, 0px)) solid transparent; }
+  .tut-tour, .tut-coach) {
+  border-bottom: var(--web-rail, 0px) solid transparent;
+  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+    var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) 100%, var(--web-rail-l, 0px) 100%, var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)));
+}
 /* 2. A card centred in an overlay, too tall for the room above the rail (a phone 568 tall): the overlay scrolls and
       the card starts at its top. Auto margins centre it whenever it fits, as before. Only with a rail on the page
       (html.has-rail, set by lib/railWatch.js) */
@@ -2791,9 +2796,8 @@ html.has-rail:not(.is-app) :is(.auth-overlay, .tpm-overlay, .mvp-overlay, .modal
       pads for the rail itself: the footer brings the rail's room. The wiki scrolls itself: the same at its end */
 html:not(.is-app) .splash-site-footer:not(.ag-home *, .ag-screen *) { border-bottom: var(--web-rail, 0px) solid transparent; }
 html:not(.is-app) .wk-foot { padding-bottom: var(--web-rail, 0px); }
-/* 4. The tutorial: its dim never falls on the ad (the spotlight's shadow is drawn from the cut-out, across the whole
-      window), and its first card is centred in the room above the rail */
-html:not(.is-app) :is(.tut-tour, .tut-coach) { clip-path: inset(0 0 var(--web-rail, 0px) 0); }
+/* 4. The tutorial (its layers are in the list above: the spotlight's dim is a shadow drawn across the whole window,
+      and the cut-out keeps it off the ad): its first card is centred in the room above the rail */
 html:not(.is-app) .tut-bubble--center { top: calc(50% - var(--web-rail, 0px) / 2); max-height: calc(100dvh - var(--web-rail, 0px) - 16px); overflow-y: auto; }
 /* 5. The classic look (Settings): its SPIN / BUILD bar stands clear of the rail's close tab too, and its pages'
       older allowance (--ad-h, measured from Playwire's own rail) covers a rail that is not Playwire's by name */

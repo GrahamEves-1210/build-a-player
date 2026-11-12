@@ -106,14 +106,20 @@ for (const [si, size] of SIZES.entries()) {
         }
       },
     }
-    try {
-      await boot(sc.path ?? '/', sc.storage ?? {})
-      await sc.run(ctx)
-    } catch (e) {
-      console.log(`!! ${size.name} ${sc.group} / ${sc.name}: ${String(e.message).slice(0, 300)}`)
-      missed.push({ name: `${sc.group} / ${sc.name} (the scenario stopped)`, size: size.name, why: String(e.message).slice(0, 200) })
-      // (a page that stopped answering: the next scenario gets a new browser)
-      if (/no answer|no screenshot|WebSocket/i.test(String(e.message))) { try { await page.close() } catch {} page = null }
+    // (a page that stops answering, or will not load: a new browser, and the scenario once more from its start)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await boot(sc.path ?? '/', sc.storage ?? {})
+        await sc.run(ctx)
+        break
+      } catch (e) {
+        const stuck = /no answer|no screenshot|WebSocket|could not load/i.test(String(e.message))
+        if (stuck) { try { await page?.close() } catch {} page = null }
+        if (stuck && attempt === 0) continue
+        console.log(`!! ${size.name} ${sc.group} / ${sc.name}: ${String(e.message).slice(0, 300)}`)
+        missed.push({ name: `${sc.group} / ${sc.name} (the scenario stopped)`, size: size.name, why: String(e.message).slice(0, 200) })
+        break
+      }
     }
   }
   if (page) await page.close()

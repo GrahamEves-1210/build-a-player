@@ -105,6 +105,7 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
       await evaluate('window.__raOld = true', { soft: true })
       const nav = await send('Page.navigate', { url })
       if (nav.result?.errorText) { await sleep(1200); continue }
+      if (url === 'about:blank') { await sleep(300); return true }   // (a blank page onto a blank page is not a new document)
       for (let i = 0; i < 80; i++) {
         const v = await evaluate('window.__raOld !== true && location.href', { soft: true })
         if (typeof v === 'string' && v.startsWith(url.slice(0, 5))) return true
