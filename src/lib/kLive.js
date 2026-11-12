@@ -14,7 +14,7 @@ const K_DEV = (() => {
     return localStorage.getItem('bap_k_dev') === '1'
   } catch { return /[?&]k=1\b/.test(location.search) }
 })()
-export const K_LIVE = false || K_DEV   // locked again 2026-11-12 (the owner: the kicking mini games aren't good enough to ship); flip to true to ship it
+export const K_LIVE = true || K_DEV   // on again 2026-11-12 (the owner); set to false to lock it behind the SOON tab
 // While it's off, K keeps a locked tab with a SOON tag at the end of football's defense on Home (components/app/AppHome.jsx,
 // and the classic Home's SOON tile); it can't be picked there or anywhere else.
 export const K_SOON = !K_LIVE
