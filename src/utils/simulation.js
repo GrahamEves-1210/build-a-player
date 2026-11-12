@@ -4817,7 +4817,9 @@ function kGame(k, { winP = 0.5, offN = 0, homeShort = '', wk = 1, env = null, fi
   // touchdowns and the drives that stall in range
   // (the league's volume, 2021-2025: 33 field goals tried and 38 extra points a team in a median season: lib/kicks.js)
   tds = Math.max(0, Math.round(2.22 + offN * 1.1 + randN() * 1.8))
-  const tries = Math.min(6, poissonSample(clampNum(1.93 - (tds - 2.4) * 0.12 + offN * 0.15, 1.1, 2.7)))
+  // (a drive that ends in a touchdown is one that didn't stall: the teams that lead the league in field goal tries are
+  // the middling offenses, not the best ones)
+  const tries = Math.min(5, poissonSample(clampNum(1.96 - (tds - 2.4) * 0.16 - offN * 0.2, 1.1, 2.6)))
   const reach = kickTry(k.power) + Math.round(cond.yards)
   for (let i = 0; i < tries; i++) { const d = kickDistance(); if (d <= reach) tryKick(d) }
   for (let i = 0; i < tds; i++) {
