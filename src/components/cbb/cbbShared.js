@@ -12,10 +12,10 @@ export const CBB_CLOUD = false
 
 export const CBB_POS = {
 // (faces: the position card's three, by the player pool picked above it: the country's best at it this season, or the
-// legends' pool shows the schools known for the spot instead (schools): ESPN has no college photos of the legends, only NBA ones. Paths under public/headshots/, no extension.
+// same three on the All-Time pool (the owner, 2026-11-12: ESPN has no college photos of the legends, only NBA ones). Paths under public/headshots/, no extension.
 // The two cards used to share one basketball silhouette: the owner, 2026-11-12. sub: what the position covers)
-  guard: { label: 'GUARD', name: 'Guard', sub: 'PG · SG · SF', faces: { current: ['cbb_5187600', 'cbb_4711255', 'cbb_5080489'], alltime: null }, schools: ['DUKE', 'UNC', 'VILL'], group: 'GUARDS AND WINGS' },
-  big: { label: 'BIG', name: 'Big', sub: 'PF · C', faces: { current: ['cbb_5174657', 'cbb_5174954', 'cbb_5044426'], alltime: null }, schools: ['UCLA', 'UKY', 'GTWN'], group: 'BIGS' },
+  guard: { label: 'GUARD', name: 'Guard', sub: 'PG · SG · SF', faces: { current: ['cbb_5187600', 'cbb_4711255', 'cbb_5080489'] }, group: 'GUARDS AND WINGS' },
+  big: { label: 'BIG', name: 'Big', sub: 'PF · C', faces: { current: ['cbb_5174657', 'cbb_5174954', 'cbb_5044426'] }, group: 'BIGS' },
 }
 
 // The pool a build's wheels deal from: this season's rosters, or each school's legends (data/cbb-legends.js).
