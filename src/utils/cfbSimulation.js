@@ -17,6 +17,8 @@
 //             noClass: the build has no class (College Football mode: a season is a year, he's always draft-eligible,
 //             cfb.draft.year is null and it always declares); career: his earlier college seasons (the draft board)
 //             pools: { qb, rb, wr } rosters in place of the data's (College Football mode's later seasons: cfbShared seasonData)
+//             season: the year it's played (2026 default; the draft line's year follows it); choice: the class is the build's own
+//             and going or staying is the player's call (College Football mode's class years: components/cfb/cfbClass.js)
 //
 // THE RESULT (football's contract first, so SimPage, the saves and lib/seasonDirector read it unchanged):
 // {
@@ -1387,7 +1389,10 @@ function pickWindow(pos, tier, board) {
   const lo = Math.max(top, span[0], Math.round(mid - h))
   return [lo, Math.max(lo, Math.min(span[1], Math.round(mid + h)))]
 }
-function draftStock(pos, ovr, t, awards, year, board = null, career = null, noClass = false) {
+// o (College Football mode's class years): season, the year this season is played (2026: the 2027 draft is his first chance);
+// choice: going or staying is the player's own call, so a junior's line never says what he does
+function draftStock(pos, ovr, t, awards, year, board = null, career = null, noClass = false, o = null) {
+  const dy = (o?.season ?? 2026) + 1
   const yr = String(year ?? 'JR').toUpperCase()
   const prodAdj = clamp(-3, 3.5, (production(pos, t) - PROD_PAR[pos]) / 15)
   const v = ovr + prodAdj + (awards?.heisman?.userWon ? 1.5 : awards?.heisman?.userFinalist ? 0.7 : 0) + (awards?.allAmerica?.user === 'first' ? 1 : 0)
@@ -1422,20 +1427,20 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
   const overall = pick ? Math.round((pick[0] + pick[1]) / 2) : null
   const shared = { tier, label: LABEL[tier], round: ROUND[tier], pick, overall, boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null }
   // (no class, College Football mode: always eligible, always a projection; going or staying is the player's call)
-  if (noClass) return { year: null, eligible: true, declares: true, ...shared, draftYear: 2027, note: null }
+  if (noClass) return { year: null, eligible: true, declares: true, ...shared, draftYear: dy, note: null }
   const eligible = ELIGIBLE.has(yr)
   if (!eligible) {
     const ci = CLASS_ORDER.indexOf(yr)
     const yearsOut = yr === 'FR' ? 2 : yr === 'RS-FR' || yr === 'SO' ? 1 : 1
-    const draftYear = 2027 + Math.max(1, yearsOut)
+    const draftYear = dy + Math.max(1, yearsOut)
     return { year: yr, eligible: false, declares: false, ...shared, label: `Not draft-eligible yet (${yr})`, draftYear,
       note: `Eligible for the ${draftYear} NFL Draft. Early board: ${LABEL[tier].replace('Projected ', '')}`, classIndex: ci }
   }
   const senior = /SR|GR|5TH/.test(yr)
   const declares = senior || tier === 'top10' || tier === 'r1' || tier === 'day2'
   return {
-    year: yr, eligible: true, declares, ...shared, draftYear: 2027,   // (boardRank: his place among the eligible players at the position)
-    note: senior ? 'Out of eligibility: in the 2027 NFL Draft' : declares ? 'Declares for the 2027 NFL Draft' : 'Returns to school for another season',
+    year: yr, eligible: true, declares: o?.choice ? true : declares, ...shared, draftYear: dy,   // (boardRank: his place among the eligible players at the position)
+    note: senior ? `Out of eligibility: in the ${dy} NFL Draft` : o?.choice ? `Eligible for the ${dy} NFL Draft` : declares ? `Declares for the ${dy} NFL Draft` : 'Returns to school for another season',
   }
 }
 
@@ -1622,7 +1627,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     const at = rows.findIndex(x => x.isUser)
     leaders = { key: lk, label, rows: rows.slice(0, 10), rank: at >= 0 ? at + 1 : null, of: rows.length }
   }
-  const draft = draftStock(pos, ovr, throughCCG, awards, user.year, lite ? null : draftBoard(L, R, pos, candList, awards, opts?.career ?? null), opts?.career ?? null, user.noClass)
+  const draft = draftStock(pos, ovr, throughCCG, awards, user.year, lite ? null : draftBoard(L, R, pos, candList, awards, opts?.career ?? null), opts?.career ?? null, user.noClass, opts?.season || opts?.choice ? { season: opts.season, choice: !!opts.choice } : null)
 
   const madeCFP = R.field.has(me)
   const mySeed = madeCFP ? R.seedOf.get(me) : null
@@ -1675,7 +1680,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       awards,
       leaders,
       draft,
-      user: { name: user.name, year: user.year, noClass: user.noClass, replaced: L.depth[base.short]?.[pos]?.[0]?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
+      user: { name: user.name, year: user.year, noClass: user.noClass, ...(opts?.season ? { season: opts.season } : {}), ...(opts?.choice ? { choice: true } : {}), replaced: L.depth[base.short]?.[pos]?.[0]?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
         attrs: Object.fromEntries(types.map(t => [t, build?.[t]?.val ?? null])), types },
       awardGames: userAwardCount,
     },
@@ -1722,7 +1727,7 @@ export function finalizeCFBSeason(result, games = result?.games, build = null, t
   const tl = types ?? u?.types ?? CFB_TYPES_BY_POS[result.position]
   const b = build ?? Object.fromEntries(tl.filter(t => u?.attrs?.[t] != null).map(t => [t, { type: t, val: u.attrs[t] }]))
   const script = { games, keepLines: true }
-  const next = runCFBSimulation(b, tl, result.team, result.position, result.seed, result.gameMode, script, { leagueSeed: result.leagueSeed, year: u?.year ?? result.cfb?.draft?.year, name: u?.name, noClass: !!u?.noClass })
+  const next = runCFBSimulation(b, tl, result.team, result.position, result.seed, result.gameMode, script, { leagueSeed: result.leagueSeed, year: u?.year ?? result.cfb?.draft?.year, name: u?.name, noClass: !!u?.noClass, ...(u?.season ? { season: u.season } : {}), ...(u?.choice ? { choice: true } : {}) })
   // the build's OVR and archetype come from the build the director started with
   return { ...result, ...next, ovr: result.ovr ?? next.ovr, archetype: result.archetype ?? next.archetype, games: next.games.map((g, k) => ({ ...games[k], ...g, ...pickLine(result.position, games[k]) })), story: result.story }
 }
