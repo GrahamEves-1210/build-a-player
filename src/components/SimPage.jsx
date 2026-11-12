@@ -19,9 +19,8 @@ import { LB_ATTR, LBS, LB_TYPES, LB_SILHOUETTE } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { OL_ATTR, OLS, OL_SILHOUETTE, olOVR } from '../data/ols'
 import { OL_LEGENDS } from '../data/ol-legends'
-import { K_ATTR, KS, K_TYPES } from '../data/ks'
+import { K_ATTR, KS, K_TYPES, K_SILHOUETTE } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
-import { kAsQB } from '../lib/kFigure'
 import HEADSHOTS from '../data/headshots.json'
 import { NFL_GOAT } from '../data/nfl-goat'
 import RBFigureOverlay from './RBFigureOverlay'
@@ -30,6 +29,7 @@ import DBFigureOverlay from './DBFigureOverlay'
 import DLFigureOverlay from './DLFigureOverlay'
 import LBFigureOverlay from './LBFigureOverlay'
 import OLFigureOverlay from './OLFigureOverlay'
+import KFigureOverlay from './KFigureOverlay'
 import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
@@ -384,6 +384,8 @@ const DL_MODEL_STYLE = { aspectRatio: '912 / 1496', width: 230 }
 const LB_MODEL_STYLE = { aspectRatio: '1005 / 1267', width: 290 }
 // (the lineman's figure, 888x1289: the same height again)
 const OL_MODEL_STYLE = { aspectRatio: '888 / 1289', width: 256 }
+// (the kicker's figure, 1199x1312, his arms out wide: the same height again, never wider than the screen)
+const K_MODEL_STYLE = { aspectRatio: '1199 / 1312', width: 340, maxWidth: '100%' }
 
 // ── Screen 1: Build Overview ──────────────────────────────────────────────────
 
@@ -444,6 +446,12 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
             <img src="/wr-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.55)' }} />
             <WRFigureOverlay build={monoTeamBuild} />
           </div>
+        ) : isK ? (
+          <div className="simp-team-model" style={K_MODEL_STYLE}>
+            <div className="simp-team-model-glow" />
+            <img src={K_SILHOUETTE} alt="" className="simp-sil-ghost" draggable={false} />
+            <KFigureOverlay build={monoTeamBuild} />
+          </div>
         ) : isOL ? (
           <div className="simp-team-model" style={OL_MODEL_STYLE}>
             <div className="simp-team-model-glow" />
@@ -479,8 +487,7 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
             ) : (
               <>
                 <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
-                {/* (a kicker stands on the QB figure for now: lib/kFigure.js) */}
-                <QBFigureOverlay build={isK ? kAsQB(monoTeamBuild) : monoTeamBuild} className="player-qbfig" />
+                <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
               </>
             )}
           </div>
@@ -1231,6 +1238,12 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             <img src="/wr-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.55)' }} />
             <WRFigureOverlay build={monoTeamBuild} />
           </div>
+        ) : isK ? (
+          <div className="simp-team-model" style={K_MODEL_STYLE}>
+            <div className="simp-team-model-glow" />
+            <img src={K_SILHOUETTE} alt="" className="simp-sil-ghost" draggable={false} />
+            <KFigureOverlay build={monoTeamBuild} />
+          </div>
         ) : isOL ? (
           <div className="simp-team-model" style={OL_MODEL_STYLE}>
             <div className="simp-team-model-glow" />
@@ -1266,8 +1279,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             ) : (
               <>
                 <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
-                {/* (a kicker stands on the QB figure for now: lib/kFigure.js) */}
-                <QBFigureOverlay build={isK ? kAsQB(monoTeamBuild) : monoTeamBuild} className="player-qbfig" />
+                <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
               </>
             )}
           </div>
