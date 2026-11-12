@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -1344,6 +1344,25 @@ function RankList({ c, L }) {
     </div>
   )
 }
+// The career records at his position: his total against the mark and the man who set it. One he has passed is his.
+function RecordChase({ c }) {
+  const recs = careerRecordsFor(c)
+  if (!recs.length) return null
+  return (
+    <div className="cr-rank cr-recs">
+      <div className="cr-rank-head"><span className="ag-eyebrow">CAREER RECORDS</span><small>{c.name.toUpperCase()} · THE RECORD</small></div>
+      <div className="cr-rank-list">
+        {recs.map(x => (
+          <span key={x.id} className={`cr-rank-row cr-rec-row${x.broke ? ' is-you' : ''}`}>
+            <b>{x.label.replace(/^Career /, '').replace(/^./, ch => ch.toUpperCase())}<small>{x.broke ? `Was ${x.holder.split(',')[0]}'s` : x.holder}</small></b>
+            <em>{fmt(x.mine)}</em>
+            <em className="cr-rec-mark">{fmt(x.value)}</em>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
 // Every season, one row each and the career under them, like a player page on ESPN
 const SEASON_COLS = {
   qb: ['compPct', 'passYds', 'tds', 'ints', 'rating', 'rushYds', 'rushTDs'],
@@ -1439,12 +1458,13 @@ function CareerTab({ c, L, onDelete }) {
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
         {S.isBaseball ? <Suspense fallback={null}><BaseballTotals c={c} t={t} /></Suspense> : S.isSoccer ? <div className="cr-kv">{[[t.stats.goals, 'GOALS'], [t.stats.assists, 'ASSISTS'], [t.stats.apps, 'APPS'], [t.trophies, 'TROPHIES'], [t.leagueTitles, 'LEAGUE TITLES'], [t.ucl, 'CHAMPIONS LEAGUES'], [t.awards, `${S.awardName.st}S`], [t.allPros, 'GOLDEN BOOTS'], [t.proBowls, 'TEAM OF THE SEASON'], [t.caps, 'CAPS'], [t.intlGoals, 'INTERNATIONAL GOALS']].map(([v, k]) => <span key={k}><b>{fmt(v ?? 0)}</b><small>{k}</small></span>)}</div>
-        : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'ol' && <span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>}
+        : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'k' && <span><b>{t.awards}</b><small>{awardWord(c.pos, t.awards)}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>}
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">{S.isSoccer ? `GREATEST ATTACKERS · TOP ${L.of}` : `GREATEST ${S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP ${L.of}`}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />
           {!L.ranked && <small className="cr-rank-note">{L.above.score - L.score + 1} more legacy points to crack the top {L.of}.</small>}
         </div>
+        <RecordChase c={c} />
       </div>
       <AnalyticsByYear c={c} />
       {(c.decisions.length > 0 || c.events.length > 0) && (

@@ -2011,6 +2011,14 @@ function lifeView(c, k, game = null) {
   }
 }
 // (build: the one the season was simulated on; a bye-week gain is a nudge on top of it, active.dirBuild keeps the old one)
+// The career records at his position and where he stands against each: his total, the mark and who set it (the
+// Career's totals card lists them under the all-time list)
+export function careerRecordsFor(c) {
+  const recs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
+  if (!recs.length) return []
+  const t = careerTotals(c)
+  return recs.map(x => { const mine = x.career(t) ?? 0; return { id: x.id, label: x.label, value: x.value, holder: x.holder, mine, broke: mine > x.value } })
+}
 // The career records he hasn't passed yet (seasonFacts.js RECORDS, the `career` ones with a `live` reading), each
 // with his total coming into this season: the season director calls one the week he goes by it.
 function careerMarksFor(c) {

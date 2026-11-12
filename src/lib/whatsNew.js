@@ -73,6 +73,10 @@ const NOV_10 = {
       name: 'Career',
       items: [
         'Five Career save slots in each sport (it was three)',
+        'Career records in football: passing yards and touchdowns, rushing yards, receiving yards and receptions, interceptions, sacks and tackles. The week a career passes one it is called, and the totals card shows each record beside the career\'s number',
+        'A second MVP or DPOY is worth more legacy than the first, a third more than the second (OPOY and Protector of the Year a little less)',
+        'The linebacker and offensive line all-time lists are the same 25 players as GOAT Status',
+        'Fixed: after joining a new team, the offseason news was still about the team he left',
         'Football seasons now have a bye week, between Weeks 5 and 14 like the NFL\'s: put in extra work on a position drill for a shot at a trait upgrade, or rest for a guaranteed durability boost',
         'More decisions in a Career season, about two more a year: the career and the team (the rookie wall, a contract year, a trade rumor, a backup pushing for the job) and the position (a QB given the keys at the line, a corner traveling with their best receiver, a big asked to switch onto guards)',
         'Linebacker honors now read the whole season: tackles, TFL, sacks, picks, passes defended and forced fumbles, tilted to how he plays. A pass-rushing backer with 10 sacks no longer needs 125 tackles for a Pro Bowl',
