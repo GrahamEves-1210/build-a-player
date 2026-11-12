@@ -2658,8 +2658,7 @@ export function bookSeason(c) {
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (honors still earn theirs, and so does camp)
   const S0 = sportOf(c)
-  // (VET_POINT: a veteran's own point, off for now)
-  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : vetPoint(c) ? 1 : 0)
+  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
   // (soccer: a Golden Boot is the striker's yearly honor, not a rare one, so it earns no point of its own)
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
@@ -2817,14 +2816,11 @@ function fadeNote(sp, pos) {
 // ── A veteran's offseason work (lib/careerAging.js) ──
 // the season number an offseason leads into: a point spent before camp or after it is the same offseason's work
 const workKey = c => (c.phase === 'offseason' ? c.year + 1 : c.year)
-// a veteran's own development point every VET_POINT offseasons once the body has turned
-export const VET_POINT = 0   // (0: none. Tried at one every second offseason: with the gentler aging it was worth too much legacy)
-const vetPoint = c => { const S = sportOf(c), from = S.declineAt(c.pos); return VET_POINT > 0 && hasFade(S.id ?? 'nfl', c.pos) && c.age >= from && (c.age - from) % VET_POINT === 0 }
 // the coming offseason's aging, as nextSeason will run it (it is seeded: the same every time it's read)
 const fadeNext = c => { const S = sportOf(c); return fadeYear({ sport: S.id ?? 'nfl', pos: c.pos, types: c.types, build: c.build, seed: c.seed, year: c.year + 1, age: c.age + 1, durability: c.pos === 'k' ? null : c.durability ?? 5, declineAt: S.declineAt(c.pos) }) }
 // the traits about to slip this offseason if nothing is done
 export const fadePreview = c => (c?.phase === 'offseason' && c.build ? fadeNext(c).slipped : [])
-// What a point of work does for a trait that ages: { kind: 'back' (a slipped grade won back) | 'hold' (it doesn't
+// What offseason work does for a trait that ages: { kind: 'back' (a slipped grade won back) | 'hold' (it doesn't
 // slip this offseason), cost }, or null. One piece of work a trait an offseason; how far back is capped by his age.
 // Two points either way: at his age the work costs double, like a trait in the last year of its window (at one
 // point a star's honors paid for holding everything, and his legacy ran a quarter past the old game's)
