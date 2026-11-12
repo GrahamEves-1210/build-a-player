@@ -110,7 +110,7 @@ export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY
 // stats went on the day's board when it was locked in, and View Results replays that same season)
 // onFinal (soccer's Career): the booked season again from the games as played (the table, the awards)
 // oppName: how an opponent reads in a headline (the one-off baseball page: a club's nickname, not its code)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null, career = null }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, careerMarks = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null, career = null }) {
   const isBucket = sport === 'bucket'
   // soccer: a match can be drawn, a season is 34-38 matchweeks, and the table counts points
   const isSoccer = sport === 'soccer'
@@ -429,6 +429,16 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       for (const rec of live) {
         const v = rec.get ? rec.get(t) : t[rec.stat]
         if (v != null && v > rec.value) fire(rec, v)
+      }
+    }
+    // career marks (a Career only: careerMarks, from lib/career.js): his total coming into the season plus this
+    // season's so far, called the week it goes past the record
+    if (careerMarks?.length) {
+      const t = D.totals(ctx.games)
+      for (const rec of careerMarks) {
+        if (D.fired.has(`rec-${rec.id}`)) continue
+        const v = (rec.before ?? 0) + (rec.live(t) ?? 0)
+        if (v > rec.value) fire({ id: rec.id, label: rec.label, value: rec.value, holder: rec.holder, career: true }, v)
       }
     }
     // headlines for the game just revealed

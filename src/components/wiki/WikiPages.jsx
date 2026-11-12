@@ -195,6 +195,7 @@ clamped between 15% and 84%        (attributes count as rating ÷ 11)`}</pre>
       </ul>
       <h3 id="nfl-awards">Awards</h3>
       <p>MVP voting is about production. Combined touchdowns are the biggest factor (50 or more adds 52%; 30 is the floor to be considered at all), total yards next (5,500 adds 32%), then overall, wins and a playoff berth. Like the real vote, it's settled on the regular season: nothing that happens in the playoffs counts. Fewer than ten wins and you are out of the race; All-Time seasons are judged 20% harder, and nobody is ever more than a 90% lock. Lose the vote and a real MVP-calibre player takes it with a stat line built to top yours. Running backs, receivers and tight ends chase Offensive Player of the Year on the same principle; defensive backs and defensive linemen chase Defensive Player of the Year.</p>
+      {OL_LIVE && <p>An offensive lineman's award is <b>Protector of the Year</b>, the NFL's award for its best lineman (first given for the 2025 season, to Bears guard Joe Thuney, and voted by a panel of former linemen). The case is the season's grade with pass protection weighing most, then the sacks, the flags, a full season of starts and the team's record; the rivals are the award's real finalists. Whoever wins it is on the First-Team All-Pro line, which is voted spot by spot. A lineman's <b>season grade</b> (0–100) is read off the season he had: his pressure rate and sacks allowed for the pass half (60%), his run block win rate and pancakes for the run half (40%), less the flags past the fifth. An elite year grades in the 90s, a good starter in the high 70s to mid 80s, an average one in the 60s. An offensive lineman is never the Super Bowl MVP.</p>}
 
       <h2 id="nba">Simulating an NBA season</h2>
       <p>Build-A-Bucket plays 82 games, the play-in, and four best-of-seven rounds. Here your team's strength sets the baseline and your build moves it; in All-Time mode you are one star among legends, so the team counts for more.</p>
@@ -223,7 +224,7 @@ win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
           <p>The striker takes the place of his club's or his nation's first-choice No. 9. The team's real attack and defence ratings already include that player, so the side scores more or less in every match by how much better or worse the build is than the man he replaced.</p>
           <h3 id="soccer-club">Top Divisions</h3>
           <ul>
-            <li>Every match in all five leagues is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores. The Premier League, La Liga, Serie A and Ligue 1 play 38 games; the Bundesliga 34.</li>
+            <li>Every match in all three leagues is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores. The Premier League, La Liga, Serie A and Ligue 1 play 38 games; the Bundesliga 34.</li>
             <li>The league table decides the title, Europe and relegation. Alongside it run the domestic cup and the Champions League or Europa League, from the league phase to the final.</li>
             <li>His goals are a share of his team's goals, drawn from his expected goals; shots, xG, assists and a match rating come from the same match, so the line always adds up.</li>
           </ul>
@@ -280,9 +281,14 @@ function CareerPage({ go }) {
 
       <h2 id="legacy">Legacy and the Hall of Fame</h2>
       <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 (half after the 8th)
-       + All-Pro/All-NBA × 10 + awards × 18 (+10 for each after the first)
+       + All-Pro/All-NBA × 10 + awards (below)
        + rings × 20 + playoff years × 3 + production + records × 8
-       + small camp, shoe-deal and earnings bonuses`}</pre>
+       + small camp, shoe-deal and earnings bonuses
+
+awards, football: MVP and DPOY 18, 26, 30, then 32 each
+                  OPOY and Protector of the Year 18, 24, 27, then 28 each
+awards, basketball: MVP 18, then 22 each`}</pre>
+      <p>An award is worth more each time it is won again: a second MVP says more than the first, a third more than the second. Football's records now include the career marks at each position (passing yards and touchdowns, rushing yards, receiving yards, receptions, interceptions, sacks, tackles): the week a career passes one, the game calls it, and the totals card lists each mark with the career's number beside it. An offensive lineman's First-Team All-Pros carry 10 more each, the way the greats' do, since Protector of the Year did not exist before 2025; a year he wins the award counts the award instead.</p>
       <p>The same formula scores the real greats from their real careers (seasons, Pro Bowls or All-Star picks, AP First-Team All-Pro or All-NBA teams, the position's award counted once a season, rings, playoff years, career stats and the all-time records they hold), so a finished career slots into the all-time list for its position (one top 25 for basketball). Records count once each, however many times a career raises its own. Camp and shoe-deal bonuses are the only points the greats don't get. Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>
     </>
   )

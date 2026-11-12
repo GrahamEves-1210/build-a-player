@@ -19,9 +19,8 @@ import { LB_ATTR, LBS, LB_TYPES, LB_SILHOUETTE } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { OL_ATTR, OLS, OL_SILHOUETTE, olOVR } from '../data/ols'
 import { OL_LEGENDS } from '../data/ol-legends'
-import { K_ATTR, KS, K_TYPES } from '../data/ks'
+import { K_ATTR, KS, K_TYPES, K_SILHOUETTE } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
-import { kAsQB } from '../lib/kFigure'
 import HEADSHOTS from '../data/headshots.json'
 import { NFL_GOAT } from '../data/nfl-goat'
 import RBFigureOverlay from './RBFigureOverlay'
@@ -30,6 +29,7 @@ import DBFigureOverlay from './DBFigureOverlay'
 import DLFigureOverlay from './DLFigureOverlay'
 import LBFigureOverlay from './LBFigureOverlay'
 import OLFigureOverlay from './OLFigureOverlay'
+import KFigureOverlay from './KFigureOverlay'
 import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
@@ -384,6 +384,8 @@ const DL_MODEL_STYLE = { aspectRatio: '912 / 1496', width: 230 }
 const LB_MODEL_STYLE = { aspectRatio: '1005 / 1267', width: 290 }
 // (the lineman's figure, 888x1289: the same height again)
 const OL_MODEL_STYLE = { aspectRatio: '888 / 1289', width: 256 }
+// (the kicker's figure, 1199x1312, his arms out wide: the same height again, never wider than the screen)
+const K_MODEL_STYLE = { aspectRatio: '1199 / 1312', width: 340, maxWidth: '100%' }
 
 // ── Screen 1: Build Overview ──────────────────────────────────────────────────
 
@@ -444,6 +446,12 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
             <img src="/wr-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.55)' }} />
             <WRFigureOverlay build={monoTeamBuild} />
           </div>
+        ) : isK ? (
+          <div className="simp-team-model" style={K_MODEL_STYLE}>
+            <div className="simp-team-model-glow" />
+            <img src={K_SILHOUETTE} alt="" className="simp-sil-ghost" draggable={false} />
+            <KFigureOverlay build={monoTeamBuild} />
+          </div>
         ) : isOL ? (
           <div className="simp-team-model" style={OL_MODEL_STYLE}>
             <div className="simp-team-model-glow" />
@@ -479,8 +487,7 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isD
             ) : (
               <>
                 <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
-                {/* (a kicker stands on the QB figure for now: lib/kFigure.js) */}
-                <QBFigureOverlay build={isK ? kAsQB(monoTeamBuild) : monoTeamBuild} className="player-qbfig" />
+                <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
               </>
             )}
           </div>
@@ -977,7 +984,7 @@ function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userN
   )
 }
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, userName = 'Guest', isSalaryMode = false }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, protWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, userName = 'Guest', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -1007,10 +1014,10 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
     try { arch = archFn(ovr, build, types) } catch {}
     return nflSeasonCard({
       result, pos: kind, name: userName, arch, salary: isSalaryMode,
-      award: mvpWon || !!result.award?.userWins,
+      award: mvpWon || !!result.award?.userWins, protector: protWon,
       rows: buildRows(build, types, meta, isSalaryMode && kind === 'qb'),
     })
-  }, [result, build, types, kind, ovr, userName, isSalaryMode, mvpWon])
+  }, [result, build, types, kind, ovr, userName, isSalaryMode, mvpWon, protWon])
 
   const team = result.team
   const monoTeamBuild = team
@@ -1231,6 +1238,12 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             <img src="/wr-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.55)' }} />
             <WRFigureOverlay build={monoTeamBuild} />
           </div>
+        ) : isK ? (
+          <div className="simp-team-model" style={K_MODEL_STYLE}>
+            <div className="simp-team-model-glow" />
+            <img src={K_SILHOUETTE} alt="" className="simp-sil-ghost" draggable={false} />
+            <KFigureOverlay build={monoTeamBuild} />
+          </div>
         ) : isOL ? (
           <div className="simp-team-model" style={OL_MODEL_STYLE}>
             <div className="simp-team-model-glow" />
@@ -1266,8 +1279,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             ) : (
               <>
                 <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
-                {/* (a kicker stands on the QB figure for now: lib/kFigure.js) */}
-                <QBFigureOverlay build={isK ? kAsQB(monoTeamBuild) : monoTeamBuild} className="player-qbfig" />
+                <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
               </>
             )}
           </div>
@@ -1291,6 +1303,15 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
           }
         />
 
+        {isOL && protWon && (
+          <div className="sfb-mvp-row">
+            <img src="/mvp.png" alt="Trophy" className="sfb-mvp-row-img" />
+            <div className="sfb-mvp-row-text">
+              <div className="sfb-mvp-row-title">Protector of the Year</div>
+              <div className="sfb-mvp-row-sub">NFL Award Winner</div>
+            </div>
+          </div>
+        )}
         {mvpWon && (
           <div className="sfb-mvp-row">
             <img src="/mvp.png" alt="MVP Trophy" className="sfb-mvp-row-img" />
@@ -1483,6 +1504,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const tapGuard = useTapGuard()
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
+  const [protWon, setProtWon] = useState(false)   // a lineman's Protector of the Year (his All-Pro is mvpWon)
   const [mvpContinuation, setMvpContinuation] = useState(null)
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
@@ -1529,6 +1551,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
             ? calcOPOYResult(result, isAllTime, result.team?.short)
             : calcMVPResult(result, isAllTime, result.team?.short))
     setMvpResult(r)
+    if (r.protector?.userWins) setProtWon(true)
     if (r.userWins) {
       setMvpWon(true)
       onMVPWon?.(isAllTime, (isOL || isK) ? 'allpro' : (isDB || isDL || isLB) ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp')
@@ -1567,8 +1590,8 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
     <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel="GOAT Status" />,
     // where the season ranks among the all-time top 25 at the position (no OL list)
-    ...([<ScreenGOAT key="goat" kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} userName={userName} isSalaryMode={isSalaryMode} />,
+    ...([<ScreenGOAT key="goat" kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={isOL ? protWon : mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} protWon={protWon || !!result.award?.protector?.userWins} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
   const team = result.team
@@ -1644,9 +1667,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
         {isDL && team && build && (
           <DLDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
-        {isK && team && build && (
-          <KDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
-        )}
+        {/* (no depth chart for a kicker: a team carries one, and he is always the starter) */}
         {isOL && team && build && (
           <OLDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}

@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -338,7 +338,7 @@ function LegacyMeter({ c }) {
       <div className="cr-legacy-top"><span className="ag-eyebrow">LEGACY TIER · {L.tier.toUpperCase()}</span><b><LegacyIco sm={false} /> {L.score}<small> LEGACY PTS</small></b></div>
       <div className="cr-legacy-bar"><span style={{ width: `${Math.max(3, pct)}%` }} /></div>
       <div className="cr-legacy-foot"><span>{L.next ? `${L.next.at - L.score} more points to reach the ${L.next.name} tier` : 'The top tier'}</span><span>{c.sport === 'soccer' ? (L.ranked ? `No. ${L.rank} attacker\u2019s career ever` : `Outside the top ${L.of} attackers ever`) : L.ranked ? `No. ${L.rank} ${POS_LABEL[c.pos]} career ever` : `Outside the top ${L.of} ${POS_LABEL[c.pos]} careers`}</span></div>
-      {sportOf(c).ui?.legacyHow ? <p className="cr-legacy-how">{sportOf(c).ui.legacyHow}</p> : <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {c.pos === 'ol' || c.pos === 'k' ? '' : `${AWARD_NAME[c.pos]}s, `}rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>}
+      {sportOf(c).ui?.legacyHow ? <p className="cr-legacy-how">{sportOf(c).ui.legacyHow}</p> : <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {c.pos === 'k' ? '' : c.pos === 'ol' ? 'Protector of the Year awards, ' : `${AWARD_NAME[c.pos]}s, `}rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>}
       <Extras c={c} />
     </div>
   )
@@ -720,7 +720,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
       colors: s.champion ? [c.fit?.color, c.fit?.color2, '#ffffff'] : null,
       season: s.season, team: (s.teamName ?? '').toUpperCase(),
       title: s.award && s.champion ? `${s.awardName} + ${S.ui?.champ ?? (S.isBucket ? 'CHAMPION' : 'SUPER BOWL')}` : s.award ? s.awardName : S.ui?.champs ? S.ui.champs : S.isBucket ? 'NBA CHAMPIONS' : 'SUPER BOWL CHAMPIONS',
-      sub: s.award ? `${{ MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year', 'CY YOUNG': 'The Cy Young Award', 'MVP + CY YOUNG': 'The MVP and the Cy Young' }[s.awardName] ?? s.awardName}${s.champion ? ', and a ring' : ''}` : `${s.wins}–${s.losses}, then all the way`,
+      sub: s.award ? `${{ MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year', PROTECTOR: 'Protector of the Year', 'CY YOUNG': 'The Cy Young Award', 'MVP + CY YOUNG': 'The MVP and the Cy Young' }[s.awardName] ?? s.awardName}${s.champion ? ', and a ring' : ''}` : `${s.wins}–${s.losses}, then all the way`,
       line: HEADLINE_STATS[c.pos].map(k => `${fmtK(S, k, s.stats[k])} ${STAT_LABEL[k]}`).join(' · '),
     })
     else sfx('complete')
@@ -1085,7 +1085,7 @@ function Recap({ c, last, user }) {
       <div className="ag-card-head"><span className="ag-eyebrow">{last.season} · {last.wins}–{last.losses}{last.playoffs ? ' · PLAYOFFS' : ''}</span>{last.champion && <span className="cr-ring"><IconRing size={13} /> CHAMPIONS</span>}</div>
       <div className="cr-wrap-stats" style={EXTRA_STATS[c.pos] ? { gridTemplateColumns: 'repeat(3, 1fr)' } : undefined}>{[...HEADLINE_STATS[c.pos], ...(EXTRA_STATS[c.pos] ?? []).filter(k => last.stats[k] != null)].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
       <div className="cr-badges">
-        {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName}</span>}
+        {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : last.awardName}</span>}
         {last.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
         {last.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
@@ -1348,6 +1348,25 @@ function RankList({ c, L }) {
     </div>
   )
 }
+// The career records at his position: his total against the mark and the man who set it. One he has passed is his.
+function RecordChase({ c }) {
+  const recs = careerRecordsFor(c)
+  if (!recs.length) return null
+  return (
+    <div className="cr-rank cr-recs">
+      <div className="cr-rank-head"><span className="ag-eyebrow">CAREER RECORDS</span><small>{c.name.toUpperCase()} · THE RECORD</small></div>
+      <div className="cr-rank-list">
+        {recs.map(x => (
+          <span key={x.id} className={`cr-rank-row cr-rec-row${x.broke ? ' is-you' : ''}`}>
+            <b>{x.label.replace(/^Career /, '').replace(/^./, ch => ch.toUpperCase())}<small>{x.broke ? `Was ${x.holder.split(',')[0]}'s` : x.holder}</small></b>
+            <em>{fmt(x.mine)}</em>
+            <em className="cr-rec-mark">{fmt(x.value)}</em>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
 // Every season, one row each and the career under them, like a player page on ESPN
 const SEASON_COLS = {
   qb: ['compPct', 'passYds', 'tds', 'ints', 'rating', 'rushYds', 'rushTDs'],
@@ -1376,7 +1395,7 @@ export const honorsOf = (s, S, pos) => (S.honorsOf ? S.honorsOf(s, pos) : S.isSo
   s.fmvp && 'Man of the match in the final',
 ].filter(Boolean) : [
   s.champion && `${S.final} champion`,
-  s.award && (AWARD_NAME[pos] ?? 'Season award'),
+  s.award && (AWARD_NAME[pos] === 'PROTECTOR' ? 'Protector of the Year' : AWARD_NAME[pos] ?? 'Season award'),
   s.fmvp && `${S.final} MVP`,
   s.roy && 'Rookie of the Year',
   s.allPro ? (S.isBucket ? 'All-NBA' : 'All-Pro') : s.proBowl ? (S.isBucket ? 'All-Star' : 'Pro Bowl') : null,
@@ -1443,12 +1462,13 @@ function CareerTab({ c, L, onDelete }) {
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
         {S.isBaseball ? <Suspense fallback={null}><BaseballTotals c={c} t={t} /></Suspense> : S.isSoccer ? <div className="cr-kv">{[[t.stats.goals, 'GOALS'], [t.stats.assists, 'ASSISTS'], [t.stats.apps, 'APPS'], [t.trophies, 'TROPHIES'], [t.leagueTitles, 'LEAGUE TITLES'], [t.ucl, 'CHAMPIONS LEAGUES'], [t.awards, `${S.awardName.st}S`], [t.allPros, 'GOLDEN BOOTS'], [t.proBowls, 'TEAM OF THE SEASON'], [t.caps, 'CAPS'], [t.intlGoals, 'INTERNATIONAL GOALS']].map(([v, k]) => <span key={k}><b>{fmt(v ?? 0)}</b><small>{k}</small></span>)}</div>
-        : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'ol' && <span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>}
+        : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'k' && <span><b>{t.awards}</b><small>{awardWord(c.pos, t.awards)}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>}
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">{S.isSoccer ? `GREATEST ATTACKERS · TOP ${L.of}` : `GREATEST ${S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP ${L.of}`}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />
           {!L.ranked && <small className="cr-rank-note">{L.above.score - L.score + 1} more legacy points to crack the top {L.of}.</small>}
         </div>
+        <RecordChase c={c} />
       </div>
       <AnalyticsByYear c={c} />
       {(c.decisions.length > 0 || c.events.length > 0) && (
@@ -1519,7 +1539,7 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
       {!S.isSoccer && !S.isBaseball && (s.award || s.allPro || s.proBowl || s.champion) && (
         <div className="cr-badges">
           {s.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
-          {s.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {s.awardName}</span>}
+          {s.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {s.awardName === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : s.awardName}</span>}
           {s.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
           {s.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
           {s.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
@@ -1586,7 +1606,7 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
     [t.records, t.records === 1 ? 'RECORD' : 'RECORDS', IconFlame, false],
   ].filter(([n]) => n > 0) : [
     [t.rings, t.rings === 1 ? 'RING' : 'RINGS', IconRing, true],
-    [t.awards, t.awards === 1 ? AWARD_NAME[c.pos] : `${AWARD_NAME[c.pos]}S`, IconTrophy, true],
+    [t.awards, awardWord(c.pos, t.awards), IconTrophy, true],
     [t.fmvps, S.finalsAward, IconTrophy, false],
     [t.roy ? 1 : 0, 'ROOKIE OF THE YEAR', IconStar, false],
     [t.allPros, S.first.toUpperCase(), IconMedal, false],

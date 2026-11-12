@@ -29,7 +29,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── BOS ───────────────────────────────────────────────────────
   { name: 'Mike Conley', short: 'Conley', team: 'BOS', starter: false, captain: false, number: 10, height: 73, weight: 175, wingspan: 78, skin: '#8d563c', position: 'PG', faceCenter: [50, 37], faceAdjust: { dx: 1, dy: 0, scale: 1 },
-    attrs: { jumpShot: 7, finishing: 3, passing: 8, handles: 6, perimeterDefense: 3, speed: 4, bounce: 2, size: 2, basketballIQ: 9, clutch: 7 } },
+    attrs: { jumpShot: 7, finishing: 3, passing: 8, handles: 6, perimeterDefense: 3, speed: 4, bounce: 2, size: 2, basketballIQ: 10, clutch: 7 } },
   { name: 'Paul George', short: 'PG', team: 'BOS', starter: true, captain: false, number: 8, height: 80, weight: 220, wingspan: 83, skin: '#b37757', position: 'SF', faceCenter: [49, 41], faceAdjust: { dx: 2, dy: -1, scale: 1 },
     attrs: { jumpShot: 8, finishing: 5, passing: 6, handles: 7, perimeterDefense: 7, speed: 6, bounce: 6, size: 8, basketballIQ: 7, clutch: 7 } },
   { name: 'Hugo Gonzalez', short: 'Gonzalez', team: 'BOS', starter: false, captain: false, number: 28, height: 77, weight: 195, wingspan: 83, skin: '#ae8071', position: 'SG', faceCenter: [50, 46], faceAdjust: { dx: 0, dy: -2, scale: 1.05 },

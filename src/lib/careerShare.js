@@ -6,7 +6,7 @@
 // screen, the offseason recap).
 
 import { IS_APP, shareNative } from './platform'
-import { sportOf, careerTotals, legacyOf, legacyTiers, HEADLINE_STATS, STAT_LABEL, AWARD_NAME, POS_NAME, POS_LABEL, comebackYear } from './career'
+import { sportOf, careerTotals, legacyOf, legacyTiers, HEADLINE_STATS, STAT_LABEL, AWARD_NAME, awardWord, POS_NAME, POS_LABEL, comebackYear } from './career'
 // each sport's look on a card: football teal, basketball orange, soccer black and white
 // (a sport that loads on its own brings its own: baseball's ball leather and red stitching, S.card)
 const accentOf = S => S.card?.accent ?? (S.isSoccer ? '#f4f4f5' : S.isBucket ? '#fdba74' : '#5EDBD8')
@@ -217,8 +217,8 @@ export async function careerShareCanvas(c, { username } = {}) {
   tiles(ctx, [
     { v: String(t.seasons), k: t.seasons === 1 ? 'SEASON' : 'SEASONS' },
     S.isSoccer ? { v: String(t.trophies ?? 0), k: t.trophies === 1 ? 'TROPHY' : 'TROPHIES', icon: 'trophy', gold: (t.trophies ?? 0) > 0 } : { v: String(t.rings), k: t.rings === 1 ? 'RING' : 'RINGS', icon: 'ring', gold: t.rings > 0 },
-    // (a lineman has no award: his All-Pros are his trophies)
-    ...[c.pos === 'ol' || c.pos === 'k' ? t.allPros : t.awards].map(n => ({ v: String(n), k: n === 1 ? award : `${award}S`, icon: 'trophy', gold: n > 0 })),
+    // (a kicker has no award: his All-Pros are his trophies; a lineman's is Protector of the Year)
+    ...[c.pos === 'k' ? t.allPros : t.awards].map(n => ({ v: String(n), k: c.pos === 'ol' ? 'PROTECTOR' : n === 1 ? award : `${award}S`, icon: 'trophy', gold: n > 0 })),
     { v: String(t.proBowls), k: t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, icon: 'star' },
   ], TY)
 

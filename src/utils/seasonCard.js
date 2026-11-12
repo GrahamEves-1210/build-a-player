@@ -553,7 +553,7 @@ const statsOf = list => list.filter(([v]) => v != null).map(([v, k]) => ({ v, k 
 const modeOf = (allTime, salary) => (salary ? 'SALARY CAP' : allTime ? 'ALL-TIME' : 'CURRENT')
 
 // Football. rows: the build as the final report lists it ([{ label, data, val }])
-export function nflSeasonCard({ result, rows = [], pos = 'qb', name, award = false, arch = null, salary = false }) {
+export function nflSeasonCard({ result, rows = [], pos = 'qb', name, award = false, protector = false, arch = null, salary = false }) {
   const { wins, losses, playoffs, sbResult, team } = result ?? {}
   const champ = !!sbResult?.won
   const tier = champ ? 'champ' : playoffs ? 'playoffs' : 'miss'
@@ -566,7 +566,8 @@ export function nflSeasonCard({ result, rows = [], pos = 'qb', name, award = fal
     record: wins != null && losses != null ? `${wins}-${losses}` : null,
     headline: champ ? 'SUPER BOWL CHAMPIONS' : playoffs ? (NFL_OUT[sbResult?.round] ?? 'MADE THE PLAYOFFS') : 'MISSED THE PLAYOFFS',
     tier,
-    ribbons: [champ && 'SUPER BOWL CHAMPS', award && NFL_AWARD[pos]].filter(Boolean),
+    // (a lineman's Protector of the Year sits ahead of his All-Pro)
+    ribbons: [champ && 'SUPER BOWL CHAMPS', protector && 'PROTECTOR OF THE YEAR', award && NFL_AWARD[pos]].filter(Boolean),
     team: team ? { name: team.name, short: team.short, color: team.color, color2: team.color2, logo: team.logo ?? `/logos/${team.short}.png` } : null,
     stats: statsOf((NFL_STATS[pos] ?? NFL_STATS.qb)(result ?? {})),
     chips: rows.map(r => ({ label: r.label, name: r.data?.qbFull || r.data?.qb || r.data?.name, photo: r.data?.photo, faceCenter: r.data?.faceCenter, val: r.val ?? r.data?.val })),

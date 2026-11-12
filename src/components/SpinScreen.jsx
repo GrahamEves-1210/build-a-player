@@ -7,6 +7,7 @@ import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
 import { seededShuffle, useProgress } from '../lib/progress'
+import { seededTeamOrder } from '../lib/rng'
 import { itemById } from '../lib/cosmetics'
 import { rampRail } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
@@ -675,8 +676,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     if (!seedPlan || spinCount < 1) return null
     const sorted = [...teamReelItems].sort((a, b) => a.short.localeCompare(b.short))
     // Compete: a respin is this seat's own draw, seeded too (respinSeed) so the server can check it
-    if (freeTeam) return seedPlan.respinSeed ? seededShuffle(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)[0] ?? null : null
-    const order = seededShuffle(sorted, `${seedPlan.seed}:teams`)
+    if (freeTeam) return seedPlan.respinSeed ? seededTeamOrder(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)[0] ?? null : null
+    const order = seededTeamOrder(sorted, `${seedPlan.seed}:teams`)
     return order[teamIndex % order.length]
   }, [seedPlan, spinCount, teamReelItems, teamIndex, freeTeam])
   const playerTarget = useMemo(() => {

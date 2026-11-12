@@ -48,12 +48,9 @@ export function kOVR(vals) {
   return Math.min(99, Math.max(0, Math.round(top)))
 }
 
-// PLACEHOLDER FIGURE: there is no kicker art yet, so a kicker is drawn on the QB figure (the default football figure:
-// public/qb-silhouette.webp + components/QBFigureOverlay.jsx), with three zones in Silhouette.jsx K_ZONES:
-//   power → the kicking leg, accuracy → the plant foot, clutch → the helmet.
-// When the owner supplies kicker art: set K_SILHOUETTE to it, add a KFigureOverlay like OLFigureOverlay.jsx, and map
-// those three zones (kicking leg, plant leg/foot, helmet) in K_ZONES.
-export const K_SILHOUETTE = '/qb-silhouette.webp'
+// K's own figure (public/k-silhouette.webp, colored by components/KFigureOverlay.jsx, zones in Silhouette.jsx K_ZONES):
+//   clutch → the helmet and face, accuracy → the jersey, sleeves and hands, power → both legs and the shoes.
+export const K_SILHOUETTE = '/k-silhouette.webp'
 
 const _KS = [
   // ARI
