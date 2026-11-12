@@ -8,7 +8,11 @@ html.is-cbb:not(.ag-screen-open) .cfb-screen .ag-screen-head { background: var(-
 
 /* the position pick: two, not three */
 .cfb-pos-row:has(.cbb-pos) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.cbb-pos .cfb-pos-fig { height: calc(100% - 96px); bottom: 74px; }
+/* the card's three faces, standing on the floor band, the middle one in front */
+.cbb-pos-faces { position: absolute; left: 0; right: 0; bottom: 64px; display: flex; justify-content: center; align-items: flex-end; height: calc(100% - 72px); pointer-events: none; }
+.cbb-pos-faces img { flex: 0 1 auto; width: auto; height: 78%; min-width: 0; margin: 0 -22px; object-fit: contain; object-position: bottom; }
+.cbb-pos-faces img:nth-child(2) { height: 100%; z-index: 1; }
+
 
 /* region tabs (Selection Sunday's field, the bracket): his region carries a dot */
 .cbbs-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 8px 0 10px; border: 1.5px solid var(--cfb-line); border-radius: 6px; overflow: hidden; background: var(--cfb-navy-2); }

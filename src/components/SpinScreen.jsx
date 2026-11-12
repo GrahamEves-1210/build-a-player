@@ -828,7 +828,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                     setTimeout(() => { el.style.transform = '' }, 160)
                   }}
                 >
-                  RESPIN {pLabel} <span className="spin-btn-badge">{Math.max(0, maxPlayerRespin - qbRespinUsed)}</span>
+                  RESPIN PLAYER <span className="spin-btn-badge">{Math.max(0, maxPlayerRespin - qbRespinUsed)}</span>
                 </button>}
               </div>
             ) : (

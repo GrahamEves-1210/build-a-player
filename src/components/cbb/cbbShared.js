@@ -11,8 +11,10 @@ import { FIRST_NAMES, LAST_NAMES, pickName } from '../../lib/playerNames'
 export const CBB_CLOUD = false
 
 export const CBB_POS = {
-  guard: { label: 'G', name: 'Guard', fig: '/basketballsilhouette.png', group: 'GUARDS AND WINGS' },
-  big: { label: 'BIG', name: 'Big', fig: '/basketballsilhouette.png', group: 'BIGS' },
+// (faces: the position card's three, the country's best at it this season with an ESPN photo: public/headshots/cbb_<espn>.webp.
+// The two cards used to share one basketball silhouette: the owner, 2026-11-12. sub: what the position covers)
+  guard: { label: 'GUARD', name: 'Guard', sub: 'PG · SG · SF', faces: ['5187600', '4711255', '5080489'], group: 'GUARDS AND WINGS' },
+  big: { label: 'BIG', name: 'Big', sub: 'PF · C', faces: ['5174657', '5174954', '5044426'], group: 'BIGS' },
 }
 
 // The pool a build's wheels deal from: this season's rosters, or each school's legends (data/cbb-legends.js).
