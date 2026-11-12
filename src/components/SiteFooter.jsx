@@ -14,9 +14,9 @@ const PP_LINK = 'https://link.prizepicks.com/LME0/BUILD'
 // Off until PrizePicks gives the green light on this placement (the owner, 2026-11-10; their agreement wants written
 // approval for anything we build ourselves). Flip to true to show it: nothing else to change
 const PP_LIVE = true
-function PartnerBanner({ sport }) {
+function PartnerBanner({ sport, low = false }) {
   return (
-    <div className="pp-wrap">
+    <div className={`pp-wrap${low ? ' pp-wrap--low' : ''}`}>
       <div className="splash-site-footer-head pp-head">Partner Offer</div>
       <a className="pp-banner" href={PP_LINK} target="_blank" rel="sponsored noopener noreferrer"
         onClick={() => track('partner_click', { app: sport, meta: { partner: 'prizepicks', spot: 'footer' } })}
@@ -52,7 +52,9 @@ const HoopU = () => (
   </svg>
 )
 
-export default function SiteFooter({ sport = 'nfl', onWiki }) {
+// home: the home page's footer, where the partner offer leads. Everywhere else it sits under the link columns, over the
+// Playmaker Games line (the owner, 2026-11-11)
+export default function SiteFooter({ sport = 'nfl', onWiki, home = false }) {
   const isBucket = sport === 'bucket'
   // null = closed; otherwise holds the signed-in user (or false when signed out)
   const [feedbackUser, setFeedbackUser] = useState(null)
@@ -63,7 +65,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
 
   return (
     <footer className="splash-site-footer">
-      {PP_LIVE && <PartnerBanner sport={sport} />}
+      {PP_LIVE && home && <PartnerBanner sport={sport} />}
       <div className="splash-site-footer-cols">
         <div className="splash-site-footer-col splash-site-footer-brand">
           <div className="splash-site-footer-logo">
@@ -109,6 +111,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
           </div>
         </div>
       </div>
+      {PP_LIVE && !home && <PartnerBanner sport={sport} low />}
       <div className="splash-site-footer-bottom">
         <img className="splash-site-footer-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="168" height="56" loading="lazy" draggable={false} />
         <span className="splash-site-footer-legal">© {new Date().getFullYear()} Playmaker Games LLC. An independent fan project. Not affiliated with or endorsed by any professional sports league, team or players' association, or by the NCAA, any college conference or any university.</span>

@@ -122,7 +122,7 @@ const _LBS = [
     attrs: { range: 5, power: 5, tackling: 4, blockShed: 4, zoneInstincts: 3, passRush: 5, playRecognition: 3, leadership: 3 } },
   // DEN
   { name: "Alex Singleton", short: "Singleton", team: 'DEN', teamName: "Denver Broncos", pos: 'LB', subpos: 'lb', spot: 'LILB', skin: '#f0c4a0', height: 74, weight: 240, number: 49, starter: true, captain: true, years: "2022-",
-    attrs: { range: 8, power: 7, tackling: 9, blockShed: 8, zoneInstincts: 6, passRush: 7, playRecognition: 7, leadership: 7 } },
+    attrs: { range: 8, power: 7, tackling: 10, blockShed: 8, zoneInstincts: 6, passRush: 7, playRecognition: 7, leadership: 7 } },
   { name: "Justin Strnad", short: "Strnad", team: 'DEN', teamName: "Denver Broncos", pos: 'LB', subpos: 'lb', spot: 'RILB', skin: '#f0c4a0', height: 75, weight: 235, number: 40, starter: true, years: "2021-",
     attrs: { range: 7, power: 6, tackling: 7, blockShed: 6, zoneInstincts: 5, passRush: 6, playRecognition: 6, leadership: 6 } },
   { name: "Jordan Turner", short: "Turner", team: 'DEN', teamName: "Denver Broncos", pos: 'LB', subpos: 'lb', spot: 'LILB', skin: '#3a2010', height: 73, weight: 231, number: 55, starter: false, years: "2025-",

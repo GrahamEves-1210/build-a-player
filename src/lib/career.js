@@ -53,7 +53,6 @@ import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { RESUMES } from '../data/legacy-resumes'
 import { RECORDS } from './seasonFacts'
-import { NFL_GOAT } from '../data/nfl-goat'
 import { seasonRaw } from './careerStats'
 
 export const CAREER_V = 1
@@ -3363,14 +3362,9 @@ function hofVote(c, L) {
 // ones in the game's own record book (seasonFacts.js) that name him as holder.
 const words = s => s.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
 const heldBy = (sport, pos, name) => (RECORDS[sport]?.[pos] ?? []).filter(x => { const h = new Set(words(x.holder)); return words(name).every(w => h.has(w)) }).length
-// Who is on a football position's list: the men on the season sim's GOAT list (data/nfl-goat.js, the 25 every
-// GOAT Status screen shows), wherever each of them has a resume here, so both screens name the same players. Today
-// that is linebacker and offensive line (the line's list was 35 names long, ten of them not on the GOAT list; no
-// other position's ran past 28). The other positions keep the resumes' own list until the GOAT names still missing
-// a resume are counted (QB 4, RB 7, WR 7, TE 11, DB 7, DL 3, K 5). The order here is the score's, there the
-// consensus ranking's: a career has to be placed by a number.
-const onGoatList = (sport, pos, rows) => { const g = sport === 'nfl' ? NFL_GOAT[pos]?.map(x => x.name) : null; return g && g.every(n => rows.some(r => r.name === n)) ? rows.filter(r => g.includes(r.name)) : rows }
-const scored = (sport, pos) => onGoatList(sport, pos, RESUMES[pos]).map(r => ({ name: r.name, score: legacyScore(SPORT[sport], pos, { ...r, records: heldBy(sport, pos, r.name) }) }))
+// (Career keeps its own all-time lists, the resumes in data/legacy-resumes.js: the owner, 2026-11-12. The season sim's
+// GOAT list is a separate thing and is not read here)
+const scored = (sport, pos) => RESUMES[pos].map(r => ({ name: r.name, score: legacyScore(SPORT[sport], pos, { ...r, records: heldBy(sport, pos, r.name) }) }))
 const greats = list => list.sort((a, b) => b.score - a.score).map((x, i) => ({ ...x, rank: i + 1 }))
 // basketball: one list, the 25 greatest careers at any position
 const NBA_GREATS = greats([...scored('bucket', 'guard'), ...scored('bucket', 'big')]).slice(0, 25)

@@ -46,7 +46,7 @@ const NFL_FIGURE = {
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/lb-silhouette.webp', scale: 1 },
   ol: { src: '/ol-silhouette.webp', scale: 1 },
-  k: { src: '/qb-silhouette.webp', scale: 1 },   // PLACEHOLDER: no kicker art yet, the QB figure stands in (K_SILHOUETTE in data/ks.js)
+  k: { src: '/k-silhouette.webp', scale: 1 },
 }
 const reducedMotion = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 // football's side of the ball (Home's OFFENSE / DEFENSE switch)

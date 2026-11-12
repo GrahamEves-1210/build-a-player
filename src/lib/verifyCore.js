@@ -3,7 +3,7 @@
 // trait; every rating is looked up in the real data and every OVR is worked out here,
 // the same way the game works it out (the run*Simulation functions).
 
-import { seededShuffle } from './rng'
+import { seededShuffle, seededTeamOrder } from './rng'
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, runSimulation } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES, LITE_TYPES } from '../data/qbs'
@@ -125,7 +125,7 @@ export function checkDaily(day, sent) {
   const draftable = new Set(kit.pool.map(p => p.team))
   const reel = (kit.teams.some(t => draftable.has(t.short)) ? kit.teams.filter(t => draftable.has(t.short)) : kit.teams)
     .slice().sort((a, b) => a.short.localeCompare(b.short))
-  const order = seededShuffle(reel, `${dc.seed}:teams`)
+  const order = seededTeamOrder(reel, `${dc.seed}:teams`)
   // every (spin, draw) and who it deals
   const deals = []
   for (let i = 0; i < kit.types.length + DAILY_SLACK; i++) {

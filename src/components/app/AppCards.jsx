@@ -74,7 +74,7 @@ async function loadSoccer() {
     pools: { st: { classic: pl.SOCCER_STRIKERS, 'all-time': pl.WC_STRIKERS } },
     posLabel: { st: 'ST' },
     tagOf: p => p.role || 'ST',
-    poolSet: { classic: ['TOP DIVISIONS', 'Every player in Europe\'s top five leagues'], 'all-time': ['WORLD CUP', 'Every player at the 2026 World Cup'] },
+    poolSet: { classic: ['TOP DIVISIONS', 'Every player in the Premier League, La Liga and the Bundesliga'], 'all-time': ['WORLD CUP', 'Every player at the 2026 World Cup'] },
     teams: [...clubs.SOCCER_CLUBS, ...nations.WC_NATIONS],
     logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
     photo: (name, p) => { const f = p?.espn != null ? hs.default[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null },

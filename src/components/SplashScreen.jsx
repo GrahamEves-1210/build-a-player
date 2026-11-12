@@ -265,7 +265,7 @@ const DB_ATTRS = [
 // (the DL figure stands with its legs apart: the long words go on the head and body, the short ones down the right
 //  leg a size smaller, the calf's word upright. x: % of the figure's width right of centre. Same nine colors.)
 const DL_ATTRS = [
-  { label: 'Power',    col: '#fb923c', x: -13 },   // (on the near leg: the middle of the band is the gap between them)
+  { label: 'Power',    col: '#fb923c' },
   { label: 'Get Off',  col: '#f87171' },
   { label: 'Strength', col: '#fbbf24' },
   { label: 'Finesse',  col: '#34d399' },
@@ -308,11 +308,11 @@ const OL_ATTRS = [
   { label: 'Blitz',      col: '#e879f9' },
 ]
 
-// The kicker's three, head to toe on the placeholder figure: the nerve, the aim, the leg
+// The kicker's three, head to toe (on public/k-silhouette.webp): the nerve, the aim, the leg
 const K_ATTRS = [
   { label: 'Clutch',   col: '#a78bfa' },
-  { label: 'Accuracy', col: '#34d399' },
-  { label: 'Power',    col: '#fb923c', x: -13 },   // (on the near leg: the middle of the band is the gap between them)
+  { label: 'Accuracy', col: '#34d399', x: 2 },
+  { label: 'Power',    col: '#fb923c', x: 10, y: -25, fs: 6.6 },   // (written normally, never upright: the owner, twice. Small, on the top of his plant leg: the kicking leg is drawn over the band, and lower down the leg is narrower than the word)
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
@@ -345,6 +345,7 @@ const STACK_MASK = {
   dl: { src: '/dl-silhouette.webp',  scale: 1 },
   lb: { src: '/lb-silhouette.webp',  scale: 1 },
   ol: { src: '/ol-silhouette.webp',  scale: 1 },
+  k:  { src: '/k-silhouette.webp',   scale: 1 },
 }
 
 // Silhouette body re-rendered as stacked, color-coded bands — one per build
@@ -378,7 +379,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
             transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
           }}
         >
-          <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x ? { position: 'relative', left: `${a.x}%` } : undefined}>{a.label}</span>
+          <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x || a.y ? { position: 'relative', ...(a.x ? { left: `${a.x}%` } : null), ...(a.y ? { top: a.y } : null), ...(a.fs ? { fontSize: a.fs } : null) } : undefined}>{a.label}</span>
         </div>
       ))}
     </div>
@@ -446,7 +447,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
           <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
             style={{ position: 'absolute', inset: 0, opacity: position === 'db' ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
           {/* (a large file: only fetched once DL is picked) */}
-          {(position === 'dl' || position === 'lb' || position === 'ol') && <img src={position === 'ol' ? '/ol-silhouette.webp' : position === 'lb' ? '/lb-silhouette.webp' : '/dl-silhouette.webp'} className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
+          {(position === 'dl' || position === 'lb' || position === 'ol' || position === 'k') && <img src={position === 'k' ? '/k-silhouette.webp' : position === 'ol' ? '/ol-silhouette.webp' : position === 'lb' ? '/lb-silhouette.webp' : '/dl-silhouette.webp'} className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
           <StackedSilhouette key={position} position={position} attrs={attrs} ready={phase >= 3} />
           <div className="splash-figure-glow" />
         </div>

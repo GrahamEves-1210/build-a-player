@@ -4,7 +4,7 @@
 // server looks every rating up in the real data and works the OVR out itself,
 // so a phone can't claim a number it never drew.
 
-import { seeded, seededShuffle } from './rng'
+import { seeded, seededShuffle, seededTeamOrder } from './rng'
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
@@ -148,10 +148,10 @@ const reelTeams = (teams, pool) => {
 const rosterOf = (team, pool) => pool.filter(q => q.team === team.short).sort((a, b) => a.name.localeCompare(b.name))
 // The pool's spin order — the same lookup SpinScreen makes for seeded spins
 export function seededTeams(seed, teams, pool) {
-  return seededShuffle(reelTeams(teams, pool), `${seed}:teams`)
+  return seededTeamOrder(reelTeams(teams, pool), `${seed}:teams`)
 }
 // A seat's respins (SpinScreen with seedPlan.respinSeed = `${seed}:${vid}`) on its spin #i
-export const respinTeam = (rs, i, teams, pool) => seededShuffle(reelTeams(teams, pool), `${rs}:teams:${i}`)[0] ?? null
+export const respinTeam = (rs, i, teams, pool) => seededTeamOrder(reelTeams(teams, pool), `${rs}:teams:${i}`)[0] ?? null
 export const respinPlayers = (rs, i, team, pool) => seededShuffle(rosterOf(team, pool), `${rs}:${i}:${team.short}`)
 export function seededPlayer(seed, i, team, pool) {
   const roster = pool.filter(q => q.team === team.short).sort((a, b) => a.name.localeCompare(b.name))
