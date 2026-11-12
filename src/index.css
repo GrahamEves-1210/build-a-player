@@ -1767,6 +1767,13 @@ a:focus-visible {
   display: flex;
   gap: 6px;
 }
+/* (the team wheel's wrapper takes no box of its own: the two wheels sit in the row as before) */
+.reel-pass { display: contents; }
+/* One wheel (a kicker, or a starters-only build): the same size as either of the two, in the middle */
+.reels-row--one { justify-content: center; position: relative; }
+.reels-row.reels-row--one > .reel-outer { flex: 0 0 calc(50% - 3px) !important; width: calc(50% - 3px); max-width: calc(50% - 3px); }
+/* (a kicker's team is still drawn, at once and out of sight) */
+.reel-ghost { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 
 .reel-outer {
   flex: 1;
