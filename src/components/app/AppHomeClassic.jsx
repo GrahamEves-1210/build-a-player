@@ -26,6 +26,7 @@ import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
 import { OL_LIVE, OL_SOON } from '../../lib/olLive'
 import { K_LIVE } from '../../lib/kLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
+import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
 // Oct 29), put back beside today's for comparison. lib/homeLook.js picks which one shows.
@@ -293,7 +294,7 @@ function PlayersOfDay() {
   )
 }
 
-export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onCompete: onCompeteIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null }) {
+export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onCompete: onCompeteIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null, onCBB = null }) {
   // (soccer: a mode still on its way isn't on the classic Home at all)
   const onSquad = soon?.squad ? null : onSquadIn, onCompete = soon?.compete ? null : onCompeteIn, onCareer = soon?.career ? null : onCareerIn
   const prog = useProgress()
@@ -457,6 +458,15 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
               <span className="ag-mc-head"><b>COLLEGE FOOTBALL<i className="ag-mc-tag">NEW</i></b><small>Conference spin · Heisman race</small></span>
               <span className="ag-cfb-band" aria-hidden="true">
                 {CFB_CARD_SCHOOLS.map(sc => <img key={sc} src={`/logos/cfb/${sc}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
+              </span>
+            </button>
+          )}
+          {/* College Basketball: the same card on basketball's Home (logos only: lib/cbbLive.js) */}
+          {isBucket && onCBB && (
+            <button className="ag-way ag-mc ag-mc--cfb ag-mc--cbb ag-cfb--classic ag-pop" style={{ '--d': '240ms', gridColumn: '1 / -1' }} onClick={onCBB}>
+              <span className="ag-mc-head"><b>COLLEGE BASKETBALL<i className="ag-mc-tag">NEW</i></b><small>Conference spin · March Madness</small></span>
+              <span className="ag-cfb-band" aria-hidden="true">
+                {CBB_CARD_LOGOS.map(sc => <img key={sc} src={sc} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
               </span>
             </button>
           )}

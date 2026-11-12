@@ -55,6 +55,8 @@ import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fill
 const AppSquad = lazy(() => import('./app/AppSquad'))
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
+const CBBMode = lazy(() => import('./cbb/CBBMode'))   // College Basketball (a basketball mode): its rosters and sim load with it
+import { CBB_LIVE } from '../lib/cbbLive'
 import CompeteHud from './app/CompeteHud'
 const AppCompete = lazy(() => import('./app/AppCompete'))
 // DEV only: Blacktop's game screens on a made-up game (?btlook=live|final|watch|hud: app/BlacktopLook.jsx)
@@ -654,7 +656,7 @@ export default function BucketApp() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build' || page === 'cbb') return
         const live = btPhaseRef.current, last = lastPlayRef.current
         if (live !== 'idle') setPage(btPageFor(live))                                   // a live run always comes first
         else if (last === 'squad' && squadRef.current) setPage('squad')
@@ -1050,7 +1052,7 @@ export default function BucketApp() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('../lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games }), sandbox: !!isBucketCustomMode }
+    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: CBB_LIVE && careerNew.current.start === 'college' ? 'college' : 'draft' }), sandbox: !!isBucketCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build, isBucketCustomMode])
@@ -1848,7 +1850,7 @@ export default function BucketApp() {
           <ReportCard
             build={build}
             onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? (CBB_LIVE && careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={false}
@@ -2098,6 +2100,7 @@ export default function BucketApp() {
               squad={squad}
               onCareer={openCareer}
               career={career}
+              onCBB={CBB_LIVE ? () => { setPage('cbb'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'cbb' }) } : undefined}
               onCompete={() => setPage('compete')}
               resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" home /></>}
@@ -2154,7 +2157,7 @@ export default function BucketApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games) => { careerNew.current = { slot, name, games }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start) => { careerNew.current = { slot, name, games, start }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
@@ -2162,6 +2165,14 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={openCareer} onExit={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+  if (page === 'cbb' && CBB_LIVE) {
+    return (
+      <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
+        <CBBMode user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onCareer={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </Suspense>
     )
   }

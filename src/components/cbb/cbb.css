@@ -1,0 +1,47 @@
+/* ═══ College Basketball (components/cbb): the college broadcast package College Football set up (cfb/cfb.css,
+   html.is-cfb: navy base, NCAA blue as the one accent, flat colours, hairlines), plus what only basketball draws:
+   the two-position pick, the region tabs, a bracket of 16, the All-America teams, the draft track.
+   html.is-cbb is on with html.is-cfb while the mode is open (CBBMode.jsx) and off the moment it closes. */
+
+/* the position pick: two, not three */
+.cfb-pos-row:has(.cbb-pos) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cbb-pos .cfb-pos-fig { height: calc(100% - 96px); bottom: 74px; }
+
+/* region tabs (Selection Sunday's field, the bracket): his region carries a dot */
+.cbbs-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 8px 0 10px; border: 1.5px solid var(--cfb-line); border-radius: 6px; overflow: hidden; background: var(--cfb-navy-2); }
+.cbbs-tabs button { position: relative; padding: 10px 2px 8px; border: 0; border-left: 1px solid var(--cfb-line); background: transparent; color: var(--cfb-muted); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.4px; white-space: nowrap; cursor: pointer; }
+.cbbs-tabs button:first-child { border-left: 0; }
+.cbbs-tabs button.is-on { background: var(--cfb-blue-hi); color: #fff; }
+.cbbs-tabs button i { position: absolute; top: 5px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--cfb-gold); }
+@media (max-width: 420px) { .cbbs-tabs button { font-size: 11.5px; letter-spacing: .8px; } }
+
+/* a region is four rounds of 8, 4, 2 and 1: narrower columns than the Playoff's so two show on a phone */
+.cbbs-bracket { grid-template-columns: repeat(var(--rounds), 158px); }
+.cbbs-bracket .cfbs-round-games { gap: 6px; }
+.cbbs-ff { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 10px; }
+.cbbs-ff > small { grid-column: 1 / -1; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.6px; color: var(--cfb-muted); }
+
+/* the season line's second row: smaller numbers */
+.cbbs-stats2 { border-top: 0; }
+.cbbs-stats2 b { font-size: 19px; }
+
+/* the round strip: six rounds across */
+.cbbs-strip .ag-bk-lbl { font-size: 10px; letter-spacing: .6px; }
+
+/* All-America: three teams of five */
+.cbbs-aa { margin-top: 10px; }
+.cbbs-aa > small { display: block; margin-bottom: 4px; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.8px; color: var(--cfb-muted); }
+.cbbs-aa ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--cfb-line); }
+.cbbs-aa li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; padding: 7px 2px; border-bottom: 1px solid var(--cfb-line); }
+.cbbs-aa li b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbbs-aa li span { grid-column: 2; font-family: var(--ag-body); font-size: 12.5px; color: var(--cfb-muted); }
+.cbbs-aa li i { grid-column: 3; grid-row: 1 / span 2; font-style: normal; font-family: var(--ag-body); font-size: 12.5px; color: var(--cfb-muted); text-align: right; }
+.cbbs-aa li.is-me b { color: var(--cfb-gold); }
+@media (max-width: 420px) { .cbbs-aa li i { grid-column: 2; grid-row: auto; text-align: left; } }
+
+/* the draft track: five stops, not football's eight rounds */
+.cbbs-draft-track { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+/* the figure on the season page stands on the navy */
+.cbbp .cbbp-figure { margin: 6px auto 2px; }
+.cbbp-arena { opacity: .75; }
