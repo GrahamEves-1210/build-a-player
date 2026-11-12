@@ -5,7 +5,7 @@
 // Flip to true to ship it. On the dev server only, ?cbb=1 in the address turns it on for testing.
 // (its own tiny file so Home can read it without loading the college rosters)
 const CBB_DEV = typeof location !== 'undefined' && !!import.meta.env?.DEV && /[?&]cbb=1\b/.test(location.search)
-export const CBB_LIVE = false || CBB_DEV   // built Nov 12; the owner flips it
+export const CBB_LIVE = true || CBB_DEV   // on 2026-11-12 (the owner); live site needs supabase/cbb_mode.sql run
 
 // the schools on Home's card: their logos only, never the rosters (a school College Football has keeps its file there)
 export const CBB_CARD_LOGOS = ['/logos/cfb/DUKE.png', '/logos/cfb/KAN.png', '/logos/cfb/UKY.png', '/logos/cfb/CONN.png', '/logos/cbb/GONZ.png']
