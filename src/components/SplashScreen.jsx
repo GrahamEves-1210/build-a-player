@@ -265,7 +265,7 @@ const DB_ATTRS = [
 // (the DL figure stands with its legs apart: the long words go on the head and body, the short ones down the right
 //  leg a size smaller, the calf's word upright. x: % of the figure's width right of centre. Same nine colors.)
 const DL_ATTRS = [
-  { label: 'Power',    col: '#fb923c', x: -13 },   // (on the near leg: the middle of the band is the gap between them)
+  { label: 'Power',    col: '#fb923c' },
   { label: 'Get Off',  col: '#f87171' },
   { label: 'Strength', col: '#fbbf24' },
   { label: 'Finesse',  col: '#34d399' },
@@ -312,7 +312,7 @@ const OL_ATTRS = [
 const K_ATTRS = [
   { label: 'Clutch',   col: '#a78bfa' },
   { label: 'Accuracy', col: '#34d399', x: 2 },
-  { label: 'Power',    col: '#fb923c', x: 3.5, v: true },   // (upright on the plant leg: the middle of the band is the gap between his legs, and a leg is narrower than the word is long)
+  { label: 'Power',    col: '#fb923c', x: 10, y: -25, fs: 6.6 },   // (written normally, never upright: the owner, twice. Small, on the top of his plant leg: the kicking leg is drawn over the band, and lower down the leg is narrower than the word)
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
@@ -379,7 +379,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
             transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
           }}
         >
-          <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x ? { position: 'relative', left: `${a.x}%` } : undefined}>{a.label}</span>
+          <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x || a.y ? { position: 'relative', ...(a.x ? { left: `${a.x}%` } : null), ...(a.y ? { top: a.y } : null), ...(a.fs ? { fontSize: a.fs } : null) } : undefined}>{a.label}</span>
         </div>
       ))}
     </div>

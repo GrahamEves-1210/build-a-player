@@ -5536,7 +5536,7 @@ a:focus-visible {
   .pp-help { font-size: min(13px, calc(100cqw / 29.8)); white-space: nowrap; }
   /* (a phone only: the help line sits over the fine print) */
   .pp-wrap { display: flex; flex-direction: column; }
-  .pp-head { order: 1; } .pp-banner { order: 2; } .pp-help { order: 3; margin-top: 7px; } .pp-legal { order: 4; margin-top: 3px; text-align: left; text-wrap: pretty; }
+  .pp-head { order: 1; } .pp-banner { order: 2; } .pp-help { order: 3; margin-top: 7px; } .pp-legal { order: 4; margin-top: 3px; text-align: center; text-wrap: balance; }
   .pp-phone { display: none; }
   .pp-legal { font-size: 10px; }
 }
