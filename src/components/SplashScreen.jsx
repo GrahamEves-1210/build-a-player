@@ -311,9 +311,9 @@ const OL_ATTRS = [
 // The kicker's three, head to toe (on public/k-silhouette.webp): the nerve, the aim, the leg
 const K_ATTRS = [
   // (the owner, 2026-11-12: head and face Clutch; torso, arms and legs Power; shins and shoes Accuracy. flex: each band's share of his height)
-  { label: 'Clutch',   col: '#a78bfa', flex: 1.2 },
-  { label: 'Power',    col: '#fb923c', flex: 1.2 },
-  { label: 'Accuracy', col: '#34d399', flex: 1.6, y: -34, sm: true },   // (centred like every other word, at the top of the band where his thighs meet: lower down the middle is the gap between his legs)
+  { label: 'Clutch',   col: '#a78bfa', flex: 1.1 },
+  { label: 'Power',    col: '#fb923c', flex: 1.75 },
+  { label: 'Accuracy', col: '#34d399', flex: 1.15 },   // (his shins and shoes; the word like every other band's: centred, same size, nothing special)
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
