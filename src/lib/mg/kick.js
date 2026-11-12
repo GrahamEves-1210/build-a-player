@@ -49,7 +49,8 @@ const XYD = (SR - SL) / 53.33          // flat units a yard, across the field
 const POST_HALF = 3.083                // half the width of the uprights, yards (18 feet 6 inches)
 const AIM_SPAN = 0.30                  // the aim bar from end to end, as an angle: at 50 yards the ends are 15 yards wide
 const OVER = 1.15                      // the power bar runs to 115%: the last of it is the overswing
-const SET_MS = 950, RUN_MS = 430, RES_MS = 1500, ICE_MS = 1500
+const LINE_GAP = 17                    // the line, man to man (flat units): the close camera draws them bigger
+const SET_MS = 950, RUN_MS = 430, RES_MS = 1500, ICE_MS = 1500, SWAY_MS = 200
 const gaussOf = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
 // a needle that sweeps end to end and back: -1..1
 const sweep = (t, per) => { const f = ((t / per) % 2 + 2) % 2; return f < 1 ? -1 + 2 * f : 3 - 2 * f }
@@ -78,7 +79,9 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   const g = {
     t: 0, game, zones: 'none', pads: ['KICK'], padLit: null, fx: [], done: null, outro: 1700, stamp: null, nudge: nudge(),
     kicks, i: 0, made: 0, near: 0, phase: 'set', at: 0, reach, accF, winner, iced, icedDone: false,
-    aim: null, pow: null, res: null, ball: null, k: kicks[0], noise: 0, noiseAt: 0,
+    // (aimAt, not aim: MgStage reads g.aim as "this game is played by pointing at the field" and stops sending keys, which
+    // is why the space bar set the aim and then did nothing for the power)
+    aimAt: null, pow: null, res: null, ball: null, k: kicks[0], noise: 0, noiseAt: 0, noiseFrom: 0, noiseTo: 0,
     hud: { prompt: null, dots: winner ? [] : kicks.map(() => null) },
     // what's on the bars right now (the bot reads these, as a player does)
     needle() { return clamp(sweep(g.t - g.at, aimPer / g.k.hard) + g.noise, -1, 1) },
@@ -89,8 +92,13 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     tick(dt) {
       g.t += dt
       if (g.padLit != null && g.t - g.litAt > 120) g.padLit = null
-      // (the shake: a new lean every 90 ms, seeded, so the same game shakes the same way)
-      if (shake && g.phase === 'aim' && g.t - g.noiseAt >= 90) { g.noiseAt = g.t; g.noise = gaussOf(r) * shake * 0.5 }
+      // (the shake: a sway, not a jump. A new lean every SWAY_MS, seeded, so the same game shakes the same way, and the needle
+      // eases from the last lean to the next: it used to snap to a new spot every 90 ms, which read as a needle that stuttered)
+      if (shake && g.phase === 'aim') {
+        if (g.t - g.noiseAt >= SWAY_MS) { g.noiseAt = g.t; g.noiseFrom = g.noiseTo; g.noiseTo = gaussOf(r) * shake * 0.5 }
+        const f = clamp((g.t - g.noiseAt) / SWAY_MS, 0, 1)
+        g.noise = g.noiseFrom + (g.noiseTo - g.noiseFrom) * (f * f * (3 - 2 * f))
+      }
       if (g.done && g.phase === 'over') return
       if (g.phase === 'set') { if (g.t - g.at >= SET_MS) { g.phase = 'aim'; g.at = g.t; g.hud.prompt = 'PRESS TO SET THE AIM' } return }
       if (g.phase === 'iced') { if (g.t - g.at >= ICE_MS) { g.phase = 'aim'; g.at = g.t; g.stamp = null; g.hud.prompt = 'PRESS TO SET THE AIM' } return }
@@ -109,7 +117,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
           g.k = { ...g.k, hard: g.k.hard * byV(clu, 1.22, 1) }
           g.fx.push('whistle'); return
         }
-        g.aim = g.needle(); g.phase = 'power'; g.at = g.t; g.hud.prompt = 'PRESS TO SET THE POWER'; g.fx.push('tap'); return
+        g.aimAt = g.needle(); g.phase = 'power'; g.at = g.t; g.hud.prompt = 'PRESS TO SET THE POWER'; g.fx.push('tap'); return
       }
       if (g.phase === 'power') {
         g.padLit = 0; g.litAt = g.t
@@ -120,7 +128,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   function strike() {
     const k = g.k, over = Math.max(0, g.pow - 1)
     // where it goes: off the middle of the green by his aim, plus the hook of an overswing (always the same way: a pull)
-    const off = (g.aim - g.centre()) * accF + over * 3.2 * (r() < 0.5 ? -1 : 1)
+    const off = (g.aimAt - g.centre()) * accF + over * 3.2 * (r() < 0.5 ? -1 : 1)
     const yards = off * k.d * AIM_SPAN / (k.tight ?? 1)                   // wide of the middle of the uprights, at the uprights
     const carry = Math.min(g.pow, 1.06) * reach + (Math.abs(off) < windowOf(k.d) * 0.2 ? 1.5 : 0)   // (a pure strike carries a little more)
     const long = carry >= k.d
@@ -146,7 +154,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   }
   function next() {
     if (g.done) { g.phase = 'over'; return }
-    g.i++; g.k = kicks[g.i]; g.aim = null; g.pow = null; g.res = null; g.ball = null; g.stamp = null; g.phase = 'set'; g.at = g.t; g.hud.prompt = null
+    g.i++; g.k = kicks[g.i]; g.aimAt = null; g.pow = null; g.res = null; g.ball = null; g.stamp = null; g.phase = 'set'; g.at = g.t; g.hud.prompt = null
   }
   function finish() {
     if (winner) { g.done = outcome(g.made ? 1 : g.near ? 0.3 : 0, g.made === 1, g.made ? `Good from ${kicks[0].d}` : `No good from ${kicks[0].d}`, { made: g.made, of: 1, dist: kicks[0].d }); return }
@@ -160,7 +168,8 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
 
 // the flat field for a kick: where the ball is spotted, where the uprights stand, how long a yard is
 function fgLay(view, d) {
-  const spot = Math.round(untilt(view, 180, view.h - 266).y), back = 26
+  // (the spot sits high enough that the kicker, three steps behind it and big in this camera, stands clear of the two bars)
+  const spot = Math.round(untilt(view, 180, view.h - 300).y), back = 26
   const pyd = Math.min(14, (spot - back) / d)
   return { spot, pyd, back: spot - d * pyd, goal: spot - (d - 10) * pyd }
 }
@@ -192,11 +201,11 @@ function drawFG(ctx, g, view) {
   // their rush and our line, on the ball
   const los = L.spot - 7.5 * L.pyd, rushIn = struck ? Math.min(1, (g.t - g.ball.at) / 700) : 0
   for (let i = 0; i < 7; i++) {
-    const x = 180 + (i - 3) * 15
+    const x = 180 + (i - 3) * LINE_GAP
     man(ctx, view, x + (i - 3) * rushIn * 2, los - 1.3 * L.pyd + rushIn * 1.6 * L.pyd, { color: them.color, trim: them.trim, skin: skinOf(i * 5 + 2), dir: 'down', size: 0.8, pose: shown ? (shown.good ? 'hips' : 'ready') : snapped ? 'block' : 'stance' })
   }
-  for (let i = 0; i < 7; i++) man(ctx, view, 180 + (i - 3) * 15, los + 0.5 * L.pyd, { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), size: 0.8, pose: shown ? (shown.good ? 'ready' : 'hips') : 'block' })
-  for (const s of [-1, 1]) man(ctx, view, 180 + s * 62, los + 1.4 * L.pyd, { color: c.us, trim: c.trim, skin: skinOf(8 + s), size: 0.8, pose: shown && !shown.good ? 'hips' : 'block' })
+  for (let i = 0; i < 7; i++) man(ctx, view, 180 + (i - 3) * LINE_GAP, los + 0.5 * L.pyd, { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), size: 0.8, pose: shown ? (shown.good ? 'ready' : 'hips') : 'block' })
+  for (const s of [-1, 1]) man(ctx, view, 180 + s * (LINE_GAP * 3 + 18), los + 1.4 * L.pyd, { color: c.us, trim: c.trim, skin: skinOf(8 + s), size: 0.8, pose: shown && !shown.good ? 'hips' : 'block' })
   // the ball in the air, behind the line and over it
   let air = null
   if (struck) {
@@ -219,7 +228,9 @@ function drawFG(ctx, g, view) {
     step: g.phase === 'run' ? Math.floor(run * 4) % 4 : null,
     pose: shown ? (shown.good ? 'arms-up' : 'hips') : after >= 0 && after < 420 ? 'plant-l' : g.phase === 'run' ? 'sprint' : 'ready',
   })
-  if (air) airBall(ctx, air.x, air.y, { axis: air.axis, len: air.len, spin: ((g.t - g.ball.at) / 1000) * 5.5 })
+  // (a place kick tumbles end over end: the ball turns over in the line of its flight, about three and a half times a second.
+  // It used to turn about its own point like a pass, which no kicked ball does)
+  if (air) { const th = ((g.t - g.ball.at) / 1000) * Math.PI * 2 * 3.6, lat = clamp(g.ball.yards / k.d, -0.3, 0.3); airBall(ctx, air.x, air.y, { axis: [lat * Math.cos(th), Math.cos(th), Math.sin(th)], len: air.len }) }
   ctx.restore()
   // ── what he's looking at: the distance, the wind, the two bars ──
   const top = 58
@@ -239,7 +250,7 @@ function drawFG(ctx, g, view) {
   ctx.fillStyle = GOOD; ctx.fillRect(Math.max(bx, cx - hw), ay, Math.min(bx + bw, cx + hw) - Math.max(bx, cx - hw), 14)
   // the uprights, standing on the green
   ctx.strokeStyle = '#f2d21f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - hw, ay - 9); ctx.lineTo(cx - hw, ay - 1); ctx.lineTo(cx + hw, ay - 1); ctx.lineTo(cx + hw, ay - 9); ctx.stroke()
-  const nx = mid + (g.aim ?? g.needle()) * bw / 2
+  const nx = mid + (g.aimAt ?? g.needle()) * bw / 2
   ctx.fillStyle = '#fff'; ctx.fillRect(nx - 2, ay - 5, 4, 24)
   // the power bar
   const py = ay + 38

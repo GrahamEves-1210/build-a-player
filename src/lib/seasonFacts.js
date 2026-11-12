@@ -20,6 +20,10 @@ export const RECORDS = {
       { id: 'rating',  label: 'Passer rating',         stat: 'seasonRating',  value: 122.5, holder: 'Aaron Rodgers, 2011', end: true },
       { id: 'g-passyds', label: 'Passing yards in a game', game: 'passYds', value: 554, holder: 'Norm Van Brocklin, 1951' },
       { id: 'g-passtd',  label: 'TD passes in a game',     game: 'tds',     value: 7,   holder: 'eight players' },
+      // (career marks: `career` reads the career's totals when a season is booked, `live` the season's running totals, so the
+      // season director can call it the week he passes it: lib/career.js careerMarksFor)
+      { id: 'c-passyds', label: 'Career passing yards', career: t => t.stats?.passYds, live: t => t.seasonPassYds, value: 89214, holder: 'Tom Brady, 2000-2022', end: true },
+      { id: 'c-passtd',  label: 'Career passing TDs',   career: t => t.stats?.tds,     live: t => t.seasonTDs,     value: 649,   holder: 'Tom Brady, 2000-2022', end: true },
     ],
     rb: [
       { id: 'rushyds', label: 'Rushing yards', stat: 'seasonRushYds', value: 2105, holder: 'Eric Dickerson, 1984' },
@@ -28,17 +32,25 @@ export const RECORDS = {
       { id: 'tottd',   label: 'Total touchdowns',     get: t => (t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0), value: 31, holder: 'LaDainian Tomlinson, 2006' },
       { id: 'rbrec',   label: 'Receptions by a RB',   stat: 'seasonRecs', value: 116, holder: 'Christian McCaffrey, 2019' },
       { id: 'g-rush',  label: 'Rushing yards in a game', game: 'rushYds', value: 296, holder: 'Adrian Peterson, 2007' },
+      { id: 'c-rushyds', label: 'Career rushing yards', career: t => t.stats?.rushYds, live: t => t.seasonRushYds, value: 18355, holder: 'Emmitt Smith, 1990-2004', end: true },
+      { id: 'c-rbtd',    label: 'Career touchdowns by a running back', career: t => t.stats?.tds, live: t => (t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0), value: 175, holder: 'Emmitt Smith, 1990-2004', end: true },
     ],
     wr: [
       { id: 'recyds', label: 'Receiving yards', stat: 'seasonRecYds', value: 1964, holder: 'Calvin Johnson, 2012' },
       { id: 'rectd',  label: 'Receiving TDs',   stat: 'seasonRecTDs', value: 23,   holder: 'Randy Moss, 2007' },
       { id: 'recs',   label: 'Receptions',      stat: 'seasonRecs',   value: 149,  holder: 'Michael Thomas, 2019' },
       { id: 'g-rec',  label: 'Receiving yards in a game', game: 'recYds', value: 336, holder: 'Flipper Anderson, 1989' },
+      { id: 'c-recyds', label: 'Career receiving yards', career: t => t.stats?.recYds, live: t => t.seasonRecYds, value: 22895, holder: 'Jerry Rice, 1985-2004', end: true },
+      { id: 'c-rectd',  label: 'Career receiving TDs',   career: t => t.stats?.tds,    live: t => t.seasonRecTDs, value: 197,   holder: 'Jerry Rice, 1985-2004', end: true },
+      { id: 'c-recs',   label: 'Career receptions',      career: t => t.stats?.recs,   live: t => t.seasonRecs,   value: 1549,  holder: 'Jerry Rice, 1985-2004', end: true },
     ],
     te: [
       { id: 'recyds', label: 'Receiving yards by a TE', stat: 'seasonRecYds', value: 1416, holder: 'Travis Kelce, 2020' },
       { id: 'rectd',  label: 'Receiving TDs by a TE',   stat: 'seasonRecTDs', value: 18,   holder: 'Rob Gronkowski, 2011' },
       { id: 'terec',  label: 'Receptions by a TE',      stat: 'seasonRecs',   value: 116,  holder: 'Zach Ertz, 2018' },
+      { id: 'c-teyds', label: 'Career receiving yards by a TE', career: t => t.stats?.recYds, live: t => t.seasonRecYds, value: 15127, holder: 'Tony Gonzalez, 1997-2013', end: true },
+      { id: 'c-tetd',  label: 'Career receiving TDs by a TE',   career: t => t.stats?.tds,    live: t => t.seasonRecTDs, value: 116,   holder: 'Antonio Gates, 2003-2018', end: true },
+      { id: 'c-terec', label: 'Career receptions by a TE',      career: t => t.stats?.recs,   live: t => t.seasonRecs,   value: 1325,  holder: 'Tony Gonzalez, 1997-2013', end: true },
     ],
     db: [
       { id: 'ints', label: 'Interceptions', stat: 'seasonINTs', value: 14, holder: 'Dick "Night Train" Lane, 1952' },
@@ -46,6 +58,8 @@ export const RECORDS = {
       // (the game's PD is the breakups, picks apart: Revis's 31 is the mark it chases)
       { id: 'pd', label: 'Passes defended', stat: 'seasonPBUs', value: 31, holder: 'Darrelle Revis, 2009' },
       { id: 'g-ints', label: 'INTs in a game', game: 'ints', value: 4, holder: 'many' },
+      { id: 'c-ints',  label: 'Career interceptions', career: t => t.stats?.ints,      live: t => t.seasonINTs,      value: 81, holder: 'Paul Krause, 1964-1979', end: true },
+      { id: 'c-pick6', label: 'Career pick-sixes',    career: t => t.stats?.pickSixes, live: t => t.seasonPickSixes, value: 12, holder: 'Rod Woodson, 1987-2003', end: true },
     ],
     // Sacks official since 1982 (Al Baker's 23 in 1978 is unofficial). TFL since 1999,
     // forced fumbles unofficial but tracked since 1978.
@@ -55,8 +69,15 @@ export const RECORDS = {
       { id: 'ff',    label: 'Forced fumbles',   stat: 'seasonFF',  value: 10, holder: 'Osi Umenyiora, 2010 & Charles Tillman, 2012' },
       { id: 'dtsacks', label: 'Sacks by a DT', get: t => (t.spot === 'DT' ? t.seasonSacks : null), value: 20.5, holder: 'Aaron Donald, 2018', end: true },
       { id: 'g-sacks', label: 'Sacks in a game', game: 'sacks', value: 7, holder: 'Derrick Thomas, 1990' },
+      { id: 'c-sacks', label: 'Career sacks', career: t => t.stats?.sacks, live: t => t.seasonSacks, value: 200, holder: 'Bruce Smith, 1985-2003', end: true },
     ],
-    lb: [],
+    // (tackles aren't an official NFL statistic: the season mark is the most on record since teams began keeping
+    // combined tackles in 1987, the career mark Pro Football Reference's count)
+    lb: [
+      { id: 'lbtkl', label: 'Tackles', stat: 'seasonTackles', value: 214, holder: 'Hardy Nickerson, 1993' },
+      { id: 'c-lbtkl', label: 'Career tackles', career: t => t.stats?.tackles, live: t => t.seasonTackles, value: 2059, holder: 'Ray Lewis, 1996-2012', end: true },
+      { id: 'c-lbint', label: 'Career interceptions by a linebacker', career: t => t.stats?.ints, live: t => t.seasonINTs, value: 37, holder: 'Don Shinnick, 1957-1969', end: true },
+    ],
     // A lineman's marks are a career's: nobody keeps an official count of a season's sacks allowed or
     // pancakes (and a sackless year can be matched, never beaten). `career` reads the career totals
     // (lib/career.js bookSeason: the season he passes it); the season director skips these.
@@ -176,7 +197,10 @@ const LEADER_STAT = {
     // alone, and from inside it comes harder (a DT in the top ten is rare)
     dl: { key: 'seasonSacks', label: 'SACKS', base: 5.5, per: 2, noise: 3.5, int: true, unique: true, rate: p => { const a = p.attrs; const r = ((a.getOff ?? 5) * 1.2 + (a.bend ?? 5) + (a.finesseMoves ?? 5) + (a.powerMoves ?? 5) * 0.8 + (a.speed ?? 5) * 0.8) / 4.8; return p.subpos === 'dt' ? r - 1.5 : r } },
     // the tackle race: the leader has about 150-170; rated on the range, the tackling and the read
-    lb: { key: 'seasonTackles', label: 'TACKLES', base: 105, per: 13, noise: 9, int: true, unique: true, rate: p => { const a = p.attrs; return ((a.range ?? 5) + (a.tackling ?? 5) + (a.playRecognition ?? 5) * 0.6) / 2.6 } },
+    // (2026-11-12: by place in the race, not straight off the rating. The ratings run high, so base + rating put 105 of the
+    // 125 backers over 100 tackles; the league has about 40 a year. curve: the leader about 165, the tenth about 145, the
+    // fortieth 100, backups well under)
+    lb: { key: 'seasonTackles', label: 'TACKLES', curve: i => 165 * Math.exp(-i / 80), shuffle: 1.2, noise: 5, int: true, unique: true, rate: p => { const a = p.attrs; return ((a.range ?? 5) + (a.tackling ?? 5) + (a.playRecognition ?? 5) * 0.6) / 2.6 } },
     ol: { key: 'seasonPancakes', label: 'PANCAKES', base: 34, per: 7, noise: 6, int: true },
     // the scoring race among kickers: the leader has about 150-165 points, a middling starter about 115
     k: { key: 'seasonPoints', label: 'POINTS', base: 116, per: 8.5, noise: 11, int: true, unique: true },
@@ -233,8 +257,11 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
       .map(p => ({ name: p.name, team: p.team, value: Math.min(def.max, poisson(def.mu(rate(p)) * Math.min(def.luck, Math.exp(normal() * def.sigma - def.sigma * def.sigma / 2)))) }))
     return boardOf(def, rows, you)
   }
-  const rows = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name)))).sort((a, b) => rate(b) - rate(a)).map(p => {
-    let v = def.base + (rate(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
+  // (def.curve: the value comes from his place in the field, best rated first, with a little luck in the order)
+  const order = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name))))
+  const key = new Map(order.map(p => [p, rate(p) + (def.curve ? (r() - 0.5) * 2 * (def.shuffle ?? 0) : 0)]))
+  const rows = order.sort((a, b) => key.get(b) - key.get(a)).map((p, i) => {
+    let v = (def.curve ? def.curve(i) : def.base + (rate(p) - 5.2) * def.per) + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))
     return { name: p.name, team: p.team, value: v }
   })

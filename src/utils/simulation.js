@@ -4286,6 +4286,46 @@ function olAllProSeason() {
   return { sacks: ri(0, 2), pressures: ri(9, 19), pancakes: ri(38, 62), penalties: ri(1, 4) }
 }
 
+// ── Protector of the Year ─────────────────────────────────────────────────────
+// The NFL's award for its best offensive lineman, first given for the 2025 season (Joe Thuney, Bears left guard:
+// 17 starts, 1,149 snaps, no sacks allowed, two flags; presented at NFL Honors, February 5, 2026). A panel of
+// former linemen votes (Bentley, Kelce, O'Hara, Pace, Shields, Whitworth) on the skill numbers (pass and run block
+// win rates, sacks allowed, penalties), what he meant to the offense, durability and the men he lined up against.
+// Here: the season's grade with pass protection weighing most, the sacks, the flags, a full season and the team.
+// The rivals are the award's real finalists (All-Time: the best legends on the board).
+const OL_PROTECTOR_POOL = [['Joe Thuney', 30], ['Penei Sewell', 26], ['Creed Humphrey', 16], ['Quinn Meinerz', 12], ['Garett Bolles', 10], ['Aaron Brewer', 6]]
+export const olProtectorCase = ({ passGrade = 0, runGrade = 0, sacks = 0, penalties = 0, wins = 8 }) =>
+  passGrade * 0.65 + runGrade * 0.35 - sacks * 0.6 - Math.max(0, penalties - 4) * 0.5 + Math.max(-2, Math.min(2, (wins - 9) * 0.35))
+export function calcOLProtectorResult(result, isAllTime = false, teamShort = null, avoidSpot = null) {
+  const { ovr = 60, seasonSacksAllowed = 0, seasonPressures = 0, seasonPancakes = 0, seasonPenalties = 0, seasonPassGrade = 0, seasonRunGrade = 0, wins = 8, minAttrVal = 0, spot = null, games = [] } = result
+  const userSpot = OL_SPOTS.includes(spot) ? spot : 'LT'
+  const strength = olProtectorCase({ passGrade: seasonPassGrade, runGrade: seasonRunGrade, sacks: seasonSacksAllowed, penalties: seasonPenalties, wins })
+  // Two gates, like the other awards: an elite build, and a season that backs it up (about a 90 grade with a
+  // clean sheet). Past both he is a real contender; a season well clear of the bar is the favorite.
+  const BUILD_OVR_GATE = 94, SEASON_GATE = 87.5, SEASON_TOP = 94
+  const full = !games.length || games.length >= 15
+  let winP = 0
+  if (ovr >= BUILD_OVR_GATE && strength >= SEASON_GATE && full) winP = 0.40 + Math.min(1, (strength - SEASON_GATE) / (SEASON_TOP - SEASON_GATE)) * 0.55
+  if (isAllTime) winP *= 0.75
+  // (every attribute A+ or S and a season to match: his, as with a DPOY)
+  const userWins = (minAttrVal >= 10 && strength >= SEASON_GATE + 1 && full) || Math.random() < winP
+  const unanimous = userWins && seasonSacksAllowed === 0 && seasonPressures <= 12
+  const userStats = { sacks: seasonSacksAllowed, pressures: seasonPressures, pancakes: seasonPancakes, penalties: seasonPenalties }
+  if (userWins) return { userWins: true, unanimous, winner: null, winnerStats: null, winnerStatLine: null, userSpot, userStats }
+  const pool = (isAllTime
+    ? OL_SPOTS.flatMap(s => (OL_ALLTIME_BALLOT[s] ?? []).slice(0, 2)).map((o, i) => ({ ...o, weight: 20 - i }))
+    : OL_PROTECTOR_POOL.map(([name, weight]) => ({ ...(OLS.find(o => o.name === name) ?? {}), weight })).filter(o => o.name)
+  ).filter(o => o.team !== teamShort && o.pos !== avoidSpot)
+  const pick = pool.length ? pickWeighted(pool) : null
+  const stats = { sacks: Math.random() < 0.6 ? 0 : 1, pressures: 9 + Math.floor(Math.random() * 9), pancakes: 40 + Math.floor(Math.random() * 22), penalties: 1 + Math.floor(Math.random() * 3) }
+  return {
+    userWins: false, unanimous: false, userSpot, userStats,
+    winner: pick ? { name: pick.name, team: pick.team, pos: pick.pos, color: OL_TEAM_BY_SHORT[pick.team]?.color } : null,
+    winnerStats: pick ? stats : null,
+    winnerStatLine: pick ? olAllProStatLine(stats) : null,
+  }
+}
+
 export function calcOLAllProResult(result, isAllTime = false, teamShort = null) {
   const {
     ovr = 60, seasonSacksAllowed = 0, seasonPressures = 0, seasonPancakes = 0, seasonPenalties = 0,
@@ -4316,9 +4356,12 @@ export function calcOLAllProResult(result, isAllTime = false, teamShort = null) 
   }
   if (isAllTime) winP *= 0.75
   // Every attribute A+ or S — a lock, no vote needed.
-  const userWins = minAttrVal >= 10 || Math.random() < winP
-
   const userSpot = OL_SPOTS.includes(spot) ? spot : 'LT'
+  const madeLine = minAttrVal >= 10 || Math.random() < winP
+  // The Protector of the Year is the best lineman in the league, so he is on the All-Pro team: the build if it
+  // won the award, and a rival who won it never at a spot the build took.
+  const protector = calcOLProtectorResult(result, isAllTime, teamShort, madeLine ? userSpot : null)
+  const userWins = madeLine || protector.userWins
   const userStats = { sacks: seasonSacksAllowed, pressures: seasonPressures, pancakes: seasonPancakes, penalties: seasonPenalties }
 
   // Each spot's vote goes to one of its three names — favoring the best of
@@ -4327,6 +4370,9 @@ export function calcOLAllProResult(result, isAllTime = false, teamShort = null) 
     if (s === userSpot && userWins) {
       return { spot: s, isUser: true, name: 'Guest', team: teamShort, color: OL_TEAM_BY_SHORT[teamShort]?.color, stats: userStats }
     }
+    // (the man who won Protector of the Year is the All-Pro at his spot)
+    const pw = protector.winner
+    if (pw && pw.pos === s) return { spot: s, isUser: false, name: pw.name, team: pw.team, color: pw.color, stats: protector.winnerStats }
     const ballot = olAllProBallot(s, s === userSpot ? teamShort : null, isAllTime)
     const pick = pickWeighted(ballot.map((o, i) => ({ ...o, weight: [45, 33, 22][i] })))
     return { spot: s, isUser: false, name: pick.name, team: pick.team, color: OL_TEAM_BY_SHORT[pick.team]?.color, stats: olAllProSeason() }
@@ -4339,6 +4385,8 @@ export function calcOLAllProResult(result, isAllTime = false, teamShort = null) 
     line,
     userSpot,
     userStats,
+    // the league's award for its best lineman (calcOLProtectorResult, above)
+    protector,
     // the three real names the build was up against at its spot
     ballot: olAllProBallot(userSpot, teamShort, isAllTime).map(o => o.name),
     // Pro Bowl: the All-Pros go, and so does a clearly good season short of the vote
@@ -4362,17 +4410,35 @@ function olGameExtras(prs, sacks, pen, passVol = 1, mobN = 0.5) {
   return { snaps, qbHits, holding, falseStarts }
 }
 
-// PFF-style 0-100 season grades from the line itself: the pass grade from his pressure rate
-// (~2% → ~89, ~4% → ~78, ~5.5% → ~70, ~8% → ~56) less the sacks, the run grade from his run
-// block win rate and finishes, and the overall leaning 60/40 to the pass with the flags off it.
-export function olSeasonGrades({ pressures = 0, sacks = 0, penalties = 0, pancakes = 0, snaps = 1100, passShare = 0.58, rbwr = 70 }) {
-  const clamp = v => Math.max(30, Math.min(95, v))
-  const sets = Math.max(1, snaps * Math.max(0.45, Math.min(0.7, passShare)))
-  const rate = pressures / sets * 100
-  const passGrade = clamp(100 - 5.4 * rate - 1.2 * sacks + randN() * 1.2)
-  const runGrade = clamp(40 + (rbwr - 60) * 1.75 + Math.min(10, pancakes / 6) + randN() * 1.5)
-  const grade = clamp(passGrade * 0.6 + runGrade * 0.4 - Math.max(0, penalties - 5) * 0.8)
+// PFF-style 0-100 season grades, read off the season he had, so the grade and the stat line tell one story.
+// One formula for the one-off season and for Career (lib/career.js olGrades), with no dice in it.
+//   Pass blocking: his pressure rate (pressures / pass set), then 1.2 off for every sack. The curve runs through
+//     the real marks: ~1.5% → 94, 2% → 92 (Wirfs 2024: 1.9%, no sacks), 3.3% → 87.5, 4% → 83.5, 5.5% → 72
+//     (a league-average starter), 7% → 59, 8.5% → 46.
+//   Run blocking: his run block win rate (ESPN: ~78%+ elite, ~72% average, ~67% a liability) and the blocks he
+//     finished: 80% and 60 pancakes is a 94, 76% and 37 a 79, 72% and 20 a 65.
+//   Overall: 60% pass, 40% run, less 0.8 for every flag past the fifth.
+// (Before 2026-11-11 the run grade stopped at 85 and the pass grade at about 89 for a perfect season, so a 99
+// overall lineman with no sacks, 13 pressures and 60 pancakes graded 86-87 and one a notch below him never saw 85.)
+const OL_PASS_CURVE = [[0, 97], [1.5, 94], [2, 92], [3.3, 87.5], [4, 83.5], [5.5, 72], [7, 59], [8.5, 46], [11, 30]]
+export function olGradeOf({ pressures = 0, sacks = 0, penalties = 0, pancakes = 0, sets = 640, rbwr = 70, passNoise = 0, runNoise = 0 }) {
+  const cl = v => Math.max(30, Math.min(97, v))
+  const rate = Math.max(0, pressures) / Math.max(1, sets) * 100
+  // (straight lines between the marks; past the last one it's the floor)
+  let byRate = OL_PASS_CURVE[OL_PASS_CURVE.length - 1][1]
+  for (let i = 1; i < OL_PASS_CURVE.length; i++) {
+    const [x0, y0] = OL_PASS_CURVE[i - 1], [x1, y1] = OL_PASS_CURVE[i]
+    if (rate <= x1) { byRate = y0 + (y1 - y0) * (rate - x0) / (x1 - x0); break }
+  }
+  const passGrade = cl(byRate - 1.2 * sacks + passNoise)
+  const runGrade = cl(30 + (rbwr - 60) * 2.6 + Math.min(12, pancakes / 5) + runNoise)
+  const grade = cl(passGrade * 0.6 + runGrade * 0.4 - Math.max(0, penalties - 5) * 0.8)
   return { passGrade: +passGrade.toFixed(1), runGrade: +runGrade.toFixed(1), grade: +grade.toFixed(1) }
+}
+// (the one-off season: a little charting noise on each half)
+export function olSeasonGrades({ pressures = 0, sacks = 0, penalties = 0, pancakes = 0, snaps = 1100, passShare = 0.58, rbwr = 70 }) {
+  const sets = Math.max(1, snaps * Math.max(0.45, Math.min(0.7, passShare)))
+  return olGradeOf({ pressures, sacks, penalties, pancakes, sets, rbwr, passNoise: randN() * 1.2, runNoise: randN() * 1.5 })
 }
 
 export function runOLSimulation(build, team = null, isAllTime = false) {

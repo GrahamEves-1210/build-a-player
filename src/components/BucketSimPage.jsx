@@ -2266,10 +2266,11 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
             }
             <div className="plf-champ-label">NBA Champions!</div>
             <div className="plf-champ-sub">{endScore.myW}–{endScore.oppW} vs {otherBracket?.confChamp?.short ?? currentRound.opponent?.short} · {currentRound.name}</div>
-            {champPopped
-              ? <button className="simp-cta simp-cta-in plf-report-reveal" onClick={onNext}>GOAT Status →</button>
-              : <div className="plf-champ-tap-hint">tap the bottle</div>
-            }
+            {/* The way on is always there. It used to appear only once the bottle was tapped, and a champion who didn't
+                know the bottle was a button was left on this screen with no GOAT Status and no Final Report (a loss
+                showed the button at once). The bottle is still there to pop: the trophy and the ring come with it. */}
+            {!champPopped && <div className="plf-champ-tap-hint">tap the bottle</div>}
+            <button key={champPopped ? 'popped' : 'ready'} className={`simp-cta${champPopped ? ' simp-cta-in plf-report-reveal' : ''}`} onClick={onNext}>GOAT Status →</button>
           </div>
           <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
           {ringOpen && (

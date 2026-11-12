@@ -33,7 +33,7 @@ export default function SoccerComingSoon() {
         <div className="ss-handle" aria-hidden="true" />
       </div>
       <h2 className="ss-title">SOCCER IS WARMING UP</h2>
-      <p className="ss-line">Strikers, the top five leagues and the World Cup. Coming on in a future update.</p>
+      <p className="ss-line">Strikers, the Premier League, La Liga, the Bundesliga and the World Cup. Coming on in a future update.</p>
     </div>
   )
 }

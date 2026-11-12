@@ -1,3 +1,4 @@
+import { SOCCER_CLUBS } from './soccer-clubs.js'
 // Strikers for soccer, Build-A-Player's third sport. Same shape as data/nba-guards.js (one row per player, attrs on
 // the 0-11 grade scale: F=0, D=1, C-=2, C=3, C+=4, B-=5, B=6, B+=7, A-=8, A=9, A+=10, S=11).
 //
@@ -78,7 +79,7 @@ export const ST_TYPES = ["finishing","shotPower","heading","dribbling","firstTou
 export const ST_CATEGORIES = [{"id":"skills","label":"Skills","types":["finishing","shotPower","heading","dribbling","firstTouch","linkUp"]},{"id":"physical","label":"Physical","types":["pace","strength"]},{"id":"mental","label":"Mental","types":["offBall","composure"]}]
 
 // ─── TOP DIVISIONS (team = club short from soccer-clubs.js) ─────────────────
-export const SOCCER_STRIKERS = [
+const ALL_STRIKERS = [
 
   // ─── ARS ────────────────────────────────────────────────────────────
   { name: "Kai Havertz", short: "Havertz", team: 'ARS', nation: 'GER', number: 29, height: 76, weight: 183, age: 27, foot: 'left', skin: '#a67f6b', espn: 231182, starter: true, position: 'ST', role: 'ST',
@@ -1232,6 +1233,10 @@ export const SOCCER_STRIKERS = [
   { name: "Antoine Mille", short: "Mille", team: 'TRO', nation: 'FRA', number: 17, height: 71, weight: 157, age: 29, foot: 'left', skin: '#b0856f', espn: 270173, starter: false, position: 'ST', role: 'AM',
     attrs: { finishing: 1, shotPower: 1, heading: 4, dribbling: 3, firstTouch: 3, linkUp: 4, pace: 4, strength: 3, offBall: 0, composure: 4 } },
 ]
+
+// (only the clubs the game deals from: data/soccer-clubs.js SOCCER_LIVE_LEAGUES. The others' players stay in the list above)
+const LIVE_CLUBS = new Set(SOCCER_CLUBS.map(c => c.short))
+export const SOCCER_STRIKERS = ALL_STRIKERS.filter(p => LIVE_CLUBS.has(p.team))
 
 // ─── WORLD CUP 2026 (team = nation FIFA code from soccer-nations.js) ─────────
 export const WC_STRIKERS = [

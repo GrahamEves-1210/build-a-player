@@ -386,7 +386,7 @@ function BucketSplash({ onStart, onVersus }) {
 
     <SiteFeatures sport="bucket" />
 
-    <SiteFooter sport="bucket" />
+    <SiteFooter sport="bucket" home />
     </div>
   )
 }
@@ -2100,7 +2100,7 @@ export default function BucketApp() {
               career={career}
               onCompete={() => setPage('compete')}
               resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
-              footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" /></>}
+              footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" home /></>}
               renderBucketFigure={(pos, ready, fast) => (
                 <>
                   <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />

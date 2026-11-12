@@ -9,9 +9,8 @@ import { DLS } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
 import { LBS, LB_SILHOUETTE } from '../data/lbs'
 import { OL_SILHOUETTE } from '../data/ols'
-import { KS } from '../data/ks'
+import { KS, K_SILHOUETTE } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
-import { kAsQB } from '../lib/kFigure'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_PHYSICALS } from '../data/ols'
@@ -41,6 +40,7 @@ import DBFigureOverlay from './DBFigureOverlay'
 import OLFigureOverlay from './OLFigureOverlay'
 import DLFigureOverlay from './DLFigureOverlay'
 import LBFigureOverlay from './LBFigureOverlay'
+import KFigureOverlay from './KFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
 import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
@@ -220,15 +220,24 @@ const OL_ZONES = [
   { type: 'mobility',    ax: 780, ay: 1215, side: 'right', cy: 0.77 }, // shoe
 ]
 
-// KICKER PLACEHOLDER: no kicker art yet, so a kicker is drawn on the QB figure (K_SILHOUETTE in data/ks.js) with three
-// zones in its coordinate space. With real art: its own figure size, an overlay like OLFigureOverlay, and these three
-// re-anchored (clutch: the helmet, accuracy: the plant foot or the chest, power: the kicking leg).
+// K silhouette coordinate space: public/k-silhouette.webp, a kicker through the ball on a field goal. His arms are
+// thrown out for balance, so the art is nearly as wide as it is tall and his hands reach both edges of it. The
+// three cards are placed where his limbs aren't (K_ZONES), so on a phone he is drawn nearly the full width: his
+// hands pass above and below the cards, not into them.
+const K_FIG_W = 1199
+const K_FIG_H = 1312
+const K_FIGURE_SCALE = 0.92
+const K_FIGURE_SCALE_MOBILE = 0.98
+
+// K zones: three ratings, each dot on the part its trait colors (see KFigureOverlay; the parts of
+// src/assets/k-figure-color.svg). Left card: the helmet; right cards: the chest, then the legs. His kicking leg
+// swings across the whole lower left and his arm across the upper right, so the left side only has room for a
+// card above his arm, and Power's dot sits on the plant leg's thigh (Power colors both legs).
 const K_ZONES = [
-  { type: 'clutch',   ax: 275, ay:  42, side: 'left',  cy: 0.16 }, // helmet
-  { type: 'accuracy', ax: 350, ay: 240, side: 'right', cy: 0.45 }, // chest
-  { type: 'power',    ax: 207, ay: 525, side: 'left',  cy: 0.74 }, // legs
+  { type: 'clutch',   ax: 590, ay:  62, side: 'left',  cy: 0.16 }, // helmet
+  { type: 'power',    ax: 668, ay: 470, side: 'right', cy: 0.45 }, // jersey chest (Power: torso, arms and pants)
+  { type: 'accuracy', ax: 738, ay: 1040, side: 'right', cy: 0.80 }, // the plant leg's shin (Accuracy: shins and shoes)
 ]
-// (lib/kFigure.js kAsQB: a kicker's three chips color the QB figure's parts)
 
 function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)
@@ -440,8 +449,8 @@ function BaseballSilhouette(props) {
 function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
-  const figW   = isBucket ? BUCKET_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const figW   = isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
   const zones  = isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
@@ -515,6 +524,9 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   // (the lineman stands in the middle of his art: scaled about the centre, no nudge)
   const olScale = isMobile ? OL_FIGURE_SCALE_MOBILE : OL_FIGURE_SCALE
   const olTransform = modelOnly ? 'none' : `scale(${olScale})`
+  // (the kicker's arms reach both edges of his art: scaled about the centre, no nudge)
+  const kScale = isMobile ? K_FIGURE_SCALE_MOBILE : K_FIGURE_SCALE
+  const kTransform = modelOnly ? 'none' : `scale(${kScale})`
   const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
@@ -632,6 +644,10 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
     if (isOL) {
       dotX = (dotX - 50) * olScale + 50
       dotY = (dotY - 50) * olScale + 50
+    }
+    if (isK) {
+      dotX = (dotX - 50) * kScale + 50
+      dotY = (dotY - 50) * kScale + 50
     }
     if (isDB) {
       dotX = (dotX - 50) * DB_FIGURE_SCALE + 50
@@ -855,6 +871,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           src={
             isBucket
               ? (isBaseball ? (bucketPhoto ? BASEBALL_SILHOUETTE.headless : BASEBALL_SILHOUETTE.src) : isSoccer ? (bucketPhoto ? SOCCER_SILHOUETTE.headless : SOCCER_SILHOUETTE.src) : bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              : isK ? K_SILHOUETTE
               : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
               : isOL ? OL_SILHOUETTE
@@ -873,6 +890,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             : isLB     ? { transform: lbTransform, transformOrigin: 'center center' }
             : isDL     ? { transform: dlTransform, transformOrigin: 'center center' }
             : isOL     ? { transform: olTransform, transformOrigin: 'center center' }
+            : isK      ? { transform: kTransform, transformOrigin: 'center center' }
             : isDB  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
           }
@@ -950,7 +968,12 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           )
         })()}
         </div>
-        {!isRB && !isWR && !isTE && !isDB && !isDL && !isOL && !isBucket && <QBFigureOverlay build={isK ? kAsQB(build) : build} className="player-qbfig" />}
+        {!isRB && !isWR && !isTE && !isDB && !isDL && !isOL && !isK && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {isK && (
+          <div style={{ position: 'absolute', inset: 0, transform: kTransform, transformOrigin: 'center center' }}>
+            <KFigureOverlay build={build} />
+          </div>
+        )}
         {isDB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
             <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />

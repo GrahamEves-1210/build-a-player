@@ -14,7 +14,7 @@ import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer 
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, lbStyle,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, olGradeOf, olProtectorCase, lbStyle,
   calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE, snapNFL,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
@@ -177,14 +177,10 @@ function careerLine(r, b, t) {
   const sum = k => games.reduce((s, g) => s + (g[k] ?? 0), 0)
   return { ...r, games, seasonPressures: sum('pressures'), seasonSacksAllowed: sum('sacks'), seasonQBHits: sum('qbHits'), seasonPenalties: sum('penalties'), seasonPancakes: sum('pancakes'), seasonHolding: sum('holding'), seasonFalseStarts: sum('falseStarts'), seasonSnaps: sum('snaps') }
 }
-// PFF-style 0-100 grades from what he allowed and finished (the sim's formula, utils/simulation.js
-// olSeasonGrades, without its noise: a booked season always grades the same)
+// PFF-style 0-100 grades from what he allowed and finished: the sim's own formula (utils/simulation.js olGradeOf),
+// without the one-off season's charting noise, so a booked season always grades the same
 export function olGrades({ prs = 0, sacksA = 0, pen = 0, pancakes = 0, snaps = 0, rbwr = 70 }) {
-  const g = v => Math.round(clamp(v, 30, 95) * 10) / 10
-  const sets = Math.max(1, (snaps || 1100) * 0.58)
-  const passGrade = g(100 - 5.4 * (prs / sets) * 100 - 1.2 * sacksA)
-  const runGrade = g(40 + (rbwr - 60) * 1.75 + Math.min(10, pancakes / 6))
-  return { passGrade, runGrade, grade: g(passGrade * 0.6 + runGrade * 0.4 - Math.max(0, pen - 5) * 0.8) }
+  return olGradeOf({ pressures: prs, sacks: sacksA, penalties: pen, pancakes, sets: Math.max(1, (snaps || 1100) * 0.58), rbwr })
 }
 // A lineman's season, from the games he played (a backup's bench weeks count for nothing)
 function olSeason(f) {
@@ -193,14 +189,33 @@ function olSeason(f) {
   const st = { sacksA: sum('sacks', f.seasonSacksAllowed), prs: sum('pressures', f.seasonPressures), pancakes: sum('pancakes', f.seasonPancakes), pen: sum('penalties', f.seasonPenalties), hitsA: sum('qbHits', f.seasonQBHits), holding: sum('holding', f.seasonHolding), falseStarts: sum('falseStarts', f.seasonFalseStarts), snaps: sum('snaps', f.seasonSnaps), starts: f.games ? played.length : 17 }
   return { ...st, ...(st.starts ? olGrades({ ...st, rbwr: f.seasonRBWR ?? 70 }) : {}) }
 }
-// The honors (a First-Team All-Pro is the top of it: there's no lineman of the year), judged on the
-// grade with the sacks and the flags as a check. An elite year (85-92, 0-2 sacks) is an All-Pro, a good one (80-84) a Pro Bowl.
-// (set so an elite career lands about 13 Pro Bowls and 6 All-Pros, a good one 8 and 2: like a DL's, where the awards also count)
-export const OL_BARS = { proBowl: 80.5, allPro: 85, near: 83 }
+// The honors, judged on the grade with the sacks and the flags as a check. A good year (80.5 and up, five sacks
+// at most) is a Pro Bowl. First-Team All-Pro is one man a spot, so it goes against the year's best rival there, a
+// seeded field: most years about OL_BARS.allPro, now and then a down year or somebody's monster (the way a DB's DPOY
+// is voted). An 89 with a clean sheet is a coin flip, a 92 gets him there most years, an 85 only in a down year.
+// (set on the 2026-11-11 grade scale, where a 99 overall lineman's median year is about 91 and a 94's about 84: a
+// 97-99 lineman makes All-Pro about seven years in ten, like a quarterback, a pass rusher or a linebacker of that
+// overall; measured over 80 careers, scratch car/olprobe.mjs)
+export const OL_BARS = { proBowl: 80.5, allPro: 89, allProSpread: 1.6, near: 86, protector: 90.9, spread: 1.1 }
 const olProBowl = s => (s.grade ?? 0) >= OL_BARS.proBowl && (s.sacksA ?? 99) <= 5
-const olAllPro = s => (s.grade ?? 0) >= OL_BARS.allPro && (s.sacksA ?? 99) <= 3 && (s.pen ?? 99) <= 7
-// (no MVP, OPOY or DPOY for a lineman: All-Pro is his trophy, so it counts as such on the screens, never twice in the legacy)
+const olField = (c, tag) => { const u = clamp(seeded(`${c?.seed ?? 'ol'}-${tag}-${c?.year ?? 0}`)(), 0.001, 0.999); return Math.log(u / (1 - u)) }
+const olAllPro = (s, c) => (s.grade ?? 0) >= OL_BARS.allPro + OL_BARS.allProSpread * olField(c, 'olap') && (s.sacksA ?? 99) <= 3 && (s.pen ?? 99) <= 7
+// Protector of the Year, the league's award for its best lineman (first given for 2025; utils/simulation.js has
+// the real one's facts): his case is the grade with pass protection weighing most, the sacks, the flags and the
+// team, and he has to have started nearly every game. It goes against the year's best rival, a seeded field
+// (most years about OL_BARS.protector, now and then a down year or a monster), the way a DB's DPOY does.
+const olProtector = (c, f, s) => (s.starts ?? 0) >= 15
+  && olProtectorCase({ passGrade: s.passGrade ?? 0, runGrade: s.runGrade ?? 0, sacks: s.sacksA ?? 9, penalties: s.pen ?? 9, wins: f.wins ?? 8 }) > OL_BARS.protector + OL_BARS.spread * olField(c, 'prot')
+// (a great of the past never had the award to win: his First-Team All-Pros carry OL_FIRST_BONUS in its place, and a
+// career's All-Pro years that did win it count the award instead, never both: legacyScore)
 export const OL_FIRST_BONUS = 10, OL_START_LEGACY = 0.2
+// The position's award, counted once a season, is worth more each time he wins it again: one MVP or DPOY is a
+// great year, a second says it was no accident, a third and a fourth are the short list. MVP and DPOY: 18, 26,
+// 30, then 32 each. OPOY and Protector of the Year a little less: 18, 24, 27, then 28. The greats' real awards
+// are counted the same way. (Until 2026-11-11 every award after the first was a flat 28: two were worth 46, now
+// 44 or 42; five were 130, now 138 or 125; seven 186, now 202 or 181. A career with one award, or none, scores
+// exactly what it did: set so the multi-time factor is real and legacy is not much easier to come by.)
+export const AWARD_STEPS = { top: [18, 26, 30, 32], skill: [18, 24, 27, 28] }
 
 export const SPORT = {
   nfl: {
@@ -397,8 +412,9 @@ export const SPORT = {
     rateKeys: ['rating', 'compPct', 'ypc', 'ypr', 'rtgA', 'grade', 'passGrade', 'runGrade', 'fgPct', 'long'],     // per-game rates: never summed into career totals
     averages: null,
     headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'], dl: ['sacks', 'tfl', 'tackles'], lb: ['tackles', 'sacks', 'ints'], ol: ['sacksA', 'pancakes', 'grade'], k: ['fgPct', 'points', 'long'] },
-    // (a lineman has no season award: his slot is the All-Pro team, shown as his trophy; s.award stays false)
-    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'ALL-PRO', k: 'ALL-PRO' },
+    // (a lineman's award is Protector of the Year; a kicker has none: his slot is the All-Pro team, shown as his trophy; s.award stays false)
+    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', lb: 'DPOY', ol: 'PROTECTOR', k: 'ALL-PRO' },
+    awardSteps: { qb: AWARD_STEPS.top, db: AWARD_STEPS.top, dl: AWARD_STEPS.top, lb: AWARD_STEPS.top, rb: AWARD_STEPS.skill, wr: AWARD_STEPS.skill, te: AWARD_STEPS.skill, ol: AWARD_STEPS.skill },
     honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
     // games played to be considered (of 17): the award and All-Pro 12, the Pro Bowl 9
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
@@ -411,12 +427,13 @@ export const SPORT = {
     award: (c, f, s) => {
       const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1900 || (s.rushYds >= 1750 && s.tds >= 18), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1500 && s.tds >= 14, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)), lb: () => lbImpact(s, c) >= LB_BARS.dpoy }
       // a tight end past both the yards and TD records on a winner: nobody out-votes that
-      if (c.pos === 'ol' || c.pos === 'k') return false   // (no award for a lineman or a kicker: the All-Pro team is the top of it)
+      if (c.pos === 'k') return false   // (no award for a kicker: the All-Pro team is the top of it)
       if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
       if (seeded(`${c.seed}-poy-${c.year}`)() < 0.28) return false
       // a DB's DPOY: his case (coverage, plus the shutdown premium) against the year's best rival,
       // a seeded field (most years about DB_BARS.dpoy, now and then a down year or a monster)
       if (c.pos === 'db') { const u = clamp(seeded(`${c.seed}-dpoy-${c.year}`)(), 0.001, 0.999); return dbDpoyCase(s, c) > DB_BARS.dpoy + DB_BARS.spread * Math.log(u / (1 - u)) }
+      if (c.pos === 'ol') return olProtector(c, f, s)
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
     // (a lineman: the grade, then the pancakes and a clean sheet; an 88 grade on a winner is about 0.9, a 67 on an 8-win team 0.43)
@@ -568,6 +585,9 @@ export const POS_NAME = { ...SPORT.nfl.posName, ...SPORT.bucket.posName }
 export const POS_TYPES = { ...SPORT.nfl.types, ...SPORT.bucket.types }
 export const POS_ATTR = { ...SPORT.nfl.attr, ...SPORT.bucket.attr }
 export const AWARD_NAME = { ...SPORT.nfl.awardName, ...SPORT.bucket.awardName }
+// the award by its full name, and as a counted line ("3 MVPS", "2 PROTECTOR OF THE YEAR": that one takes no plural)
+export const AWARD_FULL = { MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year', PROTECTOR: 'Protector of the Year' }
+export const awardWord = (pos, n = 1) => (AWARD_NAME[pos] === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : n === 1 ? AWARD_NAME[pos] : `${AWARD_NAME[pos]}S`)
 export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
 // a build dressed in its team's colours (the model on Career and on home's Career card), and in his own number
@@ -639,8 +659,10 @@ function healSeason(c) {
 }
 // What a save is when it's opened: real ages (realAges), then put right. A replayed season is kept at once
 // (here and in the cloud), so every screen that opens the career sees the same one.
+// (an offensive lineman is never the Super Bowl MVP: a season booked before 2026-11-11 that named him one loses it)
+const noLineFmvp = c => (c?.pos === 'ol' && Array.isArray(c.seasons) && c.seasons.some(s => s.fmvp) ? { ...c, seasons: c.seasons.map(s => (s.fmvp ? { ...s, fmvp: false } : s)) } : c)
 function opened(c0) {
-  const c = healLeague(realAges(c0))
+  const c = noLineFmvp(healLeague(realAges(c0)))
   const n = healSeason(c)
   if (n === c) return c
   const s = { ...n, updatedAt: Date.now() }
@@ -702,7 +724,7 @@ export function logCareer(c) {
   if (!c || c.logged) return c
   const L = legacyOf(c), t = careerTotals(c)
   const at = Date.now()
-  const entry = { at, pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: c.pos === 'ol' ? t.allPros : t.awards, team: c.team, sandbox: !!c.sandbox, comeback: !!c.unretired }
+  const entry = { at, pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: t.awards, team: c.team, sandbox: !!c.sandbox, comeback: !!c.unretired }
   // a comeback retiring for good: the line from the first retirement is replaced, not doubled
   const was = c.unretired?.logAt
   const rest = pastCareers(c.sport).filter(x => !(was && x.at === was))
@@ -1989,7 +2011,23 @@ function lifeView(c, k, game = null) {
   }
 }
 // (build: the one the season was simulated on; a bye-week gain is a nudge on top of it, active.dirBuild keeps the old one)
-const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+// The career records at his position and where he stands against each: his total, the mark and who set it (the
+// Career's totals card lists them under the all-time list)
+export function careerRecordsFor(c) {
+  const recs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
+  if (!recs.length) return []
+  const t = careerTotals(c)
+  return recs.map(x => { const mine = x.career(t) ?? 0; return { id: x.id, label: x.label, value: x.value, holder: x.holder, mine, broke: mine > x.value } })
+}
+// The career records he hasn't passed yet (seasonFacts.js RECORDS, the `career` ones with a `live` reading), each
+// with his total coming into this season: the season director calls one the week he goes by it.
+function careerMarksFor(c) {
+  const recs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career && x.live)
+  if (!recs.length) return null
+  const t = careerTotals(c), held = new Set((c.seasons ?? []).flatMap(s => s.records ?? []))
+  return recs.filter(x => !held.has(x.label)).map(x => ({ id: x.id, label: x.label, value: x.value, holder: x.holder, live: x.live, before: x.career(t) ?? 0 }))
+}
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -2604,17 +2642,17 @@ export function bookSeason(c) {
   const careerRecs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
   if (careerRecs.length) {
     const tt = careerTotals({ ...c, seasons: [...c.seasons, s] })
-    for (const x of careerRecs) if ((x.career(tt) ?? 0) > x.value && !c.seasons.some(p => (p.records ?? []).includes(x.label))) s.records = [...s.records, x.label]
+    for (const x of careerRecs) if ((x.career(tt) ?? 0) > x.value && !s.records.includes(x.label) && !c.seasons.some(p => (p.records ?? []).includes(x.label))) s.records = [...s.records, x.label]
   }
   // records this career set: next season's bar is its own number, not the league's
   const recordBook = { ...(c.recordBook ?? {}) }
-  for (const x of f.story?.records ?? []) if (x.id && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
+  for (const x of f.story?.records ?? []) if (x.id && !x.career && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
   const contract = { ...c.contract, left: Math.max(0, c.contract.left - 1) }
   const perf = seasonScore(c.pos, s)
-  // the smaller honors: best rookie, and the MVP of the final (the quarterback's unless he sat)
+  // the smaller honors: best rookie, and the MVP of the final (the quarterback's unless he sat; never a kicker's or an offensive lineman's)
   if (!S.isSoccer && !S.isBaseball) s.roy = c.pos !== 'k' && c.seasons.length === 0 && can('honor') && perf >= 0.55   // (baseball votes its own: lib/careerBaseball.js)
   const finLine = po?.line?.find(x => x.name === S.final)
-  if (!S.isSoccer && !S.isBaseball) s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'k' ? 0 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
+  if (!S.isSoccer && !S.isBaseball) s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'k' || c.pos === 'ol' ? 0 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
   // a development point a year; one more for an award (MVP, OPOY, DPOY, Rookie of the Year), one more for All-Pro / All-NBA
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (honors still earn theirs, and so does camp)
@@ -2643,7 +2681,7 @@ export function bookSeason(c) {
   const news = leagueNews(c, league)
   next = offseasonEvents(next)
   next = maybeShoeDeal(next)
-  next = maybeTraded(next, r)
+  { const from = next.team; next = maybeTraded(next, r); if (next.team !== from) next = redealEvent(next, from) }
   const offers = contractSituation(next)
   next = { ...next, fit: fitFor(next), offers, off: { step: 'recap', moves: next.traded ? [] : moves, news, camp: null, contract: Array.isArray(offers) } }
   return next
@@ -2889,19 +2927,49 @@ const EVENTS = {
     { id: 'quiet', w: 3, text: () => `A quiet summer at the facility. Camp opens, and the grind begins.`, apply: () => ({}) },
   ],
 }
-function offseasonEvents(c) {
+// (STAY_EVENTS: an event about the team he was already on: a captain's vote, last year's locker room, the coach
+// fired after his lost season, the camp competition his misses brought. Never dealt to a player who has just
+// arrived: redealEvent.)
+const STAY_EVENTS = new Set(['coach-fired', 'captain', 'rift', 'k-camp-leg'])
+function offseasonEvents(c, moved = false) {
   const S = sportOf(c)
-  const r = seeded(`${c.seed}-ev-${c.year}`)
+  const r = seeded(`${c.seed}-ev-${c.year}${moved ? '-moved' : ''}`)
   // reputation tilts the summer: a good name draws the good breaks, a bad one the bad
   const rep = c.rep ?? 5
   const wOf = e => e.w * (e.good ? (rep >= 7 ? 1.6 : rep <= 3 ? 0.5 : 1) : e.bad ? (rep <= 3 ? 1.8 : rep >= 7 ? 0.6 : 1) : 1)
-  const fits = (c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl).filter(e => !e.when || e.when(c))   // (a kicker's summers are his own: lib/careerKicker.js)
+  const fits = (c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl).filter(e => (!e.when || e.when(c)) && !(moved && STAY_EVENTS.has(e.id)))   // (a kicker's summers are his own: lib/careerKicker.js)
   const total = fits.reduce((s, e) => s + wOf(e), 0)
   let roll = r() * total, ev = fits[0]
   for (const e of fits) { roll -= wOf(e); if (roll <= 0) { ev = e; break } }
   const text = ev.text(S.isSoccer ? S.teamOf(c.team).name : nickOf(S, c.team), c)
   const fx = ev.apply(c)
-  return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text, id: ev.id }] }
+  // what the event changed, so a move to another team can take it back (redealEvent)
+  const undo = { rep: (fx.rep ?? c.rep) - c.rep, durability: fx.durability != null ? r10(fx.durability - c.durability) : 0, durBase: fx.durBase != null ? r10(fx.durBase - durBaseOf(c)) : 0, dev: fx.dev ? fx.dev.points - c.dev.points : 0, mods: fx.nextMods ?? null }
+  return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text, id: ev.id }], offEvent: { year: c.year + 1, id: ev.id, team: c.team, undo } }
+}
+// He changed teams this offseason (free agency, a trade he asked for, a trade the team made). The summer's event was
+// dealt at the end of the season, for the team he was on: its new coordinator, its captain's vote, its locker room.
+// It is taken back, what it changed with it, and the summer is dealt again for the team he joined.
+// (2026-11-11, a player's report: "After I joined a new team it told me about the last team I played with". The
+// event named the old team on the offseason screens and in the season's story, and its team changes, a new
+// scheme's -0.5 or a rebuilt defense's +1, went with him to the new team's season.)
+function redealEvent(c, from) {
+  if (sportOf(c).isSoccer || sportOf(c).isBaseball) return c
+  const e = c.offEvent, yr = c.year + 1
+  const bank = c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl
+  // (a save from before this: no record of the event. Its line is found by the bank's id and taken out; what it
+  // changed can't be told apart from the rest, so it stays)
+  const stale = e && e.year === yr ? x => x.year === yr && x.id === e.id : x => x.year === yr && !!x.id && bank.some(b => b.id === x.id)
+  if (!c.events.some(stale)) return c
+  let n = { ...c, events: c.events.filter(x => !stale(x)), offEvent: null }
+  if (e && e.year === yr && e.team === from) {
+    const u = e.undo ?? {}
+    const mods = { ...(n.nextMods ?? {}) }
+    for (const [k, v] of Object.entries(u.mods ?? {})) { if (mods[k] === v) delete mods[k]; else if (typeof mods[k] === 'number') mods[k] = r10(mods[k] - v) }
+    n = { ...n, nextMods: Object.keys(mods).length ? mods : null, rep: clamp(n.rep - (u.rep ?? 0), 1, 10), dev: { ...n.dev, points: Math.max(0, n.dev.points - (u.dev ?? 0)) },
+      ...(u.durability ? { durability: r10(clamp(n.durability - u.durability, 1, 10)) } : {}), ...(u.durBase ? { durBase: r10(clamp(durBaseOf(n) - u.durBase, 1, 10)) } : {}) }
+  }
+  return offseasonEvents(n, true)
 }
 function marketValue(c) {
   const S = sportOf(c)
@@ -3004,6 +3072,8 @@ export function signOffer(c, o) {
   const change = o.team !== c.team
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   const roster = change ? rosterOf(c, o.team) : c.roster
+  // (a new team: the summer's event was the old team's. It's dealt again for this one: redealEvent)
+  if (change) c = redealEvent({ ...c, team: o.team }, c.team)
   return {
     ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c) } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), spot: lineSpot(c) }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
@@ -3074,7 +3144,9 @@ export function demandTrade(c) {
   const dest = SKILL[c.pos] ? pickBy(half, x => supportW(c.pos, x.fit), r()) : half[Math.floor(r() * half.length)]
   const { roster, fit } = dest
   // a starter guarantee was the old team's promise: it stays with them
-  return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  // (the summer's event was the old team's: dealt again for the new one, after the trade is on the record)
+  const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  return redealEvent(moved, c.team)
 }
 // Into the next season: a year older, the body moves with it
 export function nextSeason(c) {
@@ -3216,7 +3288,7 @@ export function careerTotals(c) {
   if (c.pos === 'k' && stats.fga) { stats.fgPct = r10((stats.fgm ?? 0) / stats.fga * 100); stats.long = Math.max(0, ...Ss.map(s => s.stats.long ?? 0)) }
   return {
     seasons: Ss.length, games, wins: Ss.reduce((a, s) => a + s.wins, 0), losses: Ss.reduce((a, s) => a + s.losses, 0),
-    playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy),
+    playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: c.pos === 'ol' ? 0 : Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy),
     // records: the all-time records he holds (one each, however many times he raised his own)
     proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
@@ -3232,14 +3304,22 @@ export function careerTotals(c) {
 export const LEGACY_W = { seasons: 2, honors: 6, firsts: 10, awards: 18, rings: 20, playoffs: 3, records: 8 }
 // The big awards outweigh piling up: Pro Bowls / All-Stars past the 8th count
 // half (twenty Pro Bowls is not Aaron Donald's ten with eight All-Pros and three
-// DPOYs), and every award after the first is worth AWARD_REPEAT more (three
-// DPOYs say more than three times one)
+// DPOYs), and an award is worth more each time it's won again (three DPOYs say
+// more than three times one): football by AWARD_STEPS, the others AWARD_REPEAT
+// (or their own awardRepeat) more for every award after the first
 export const HONOR_KNEE = 8, AWARD_REPEAT = 10
 export const countedHonors = n => Math.min(n, HONOR_KNEE) + Math.max(0, n - HONOR_KNEE) / 2
+export function awardPoints(S, pos, n = 0) {
+  const steps = S.awardSteps?.[pos]
+  if (!steps) return n * LEGACY_W.awards + Math.max(0, n - 1) * (S.awardRepeat ?? AWARD_REPEAT)
+  let t = 0
+  for (let i = 0; i < n; i++) t += steps[Math.min(i, steps.length - 1)]
+  return t
+}
 export function legacyScore(S, pos, r) {
   if (S.x?.legacy) return S.x.legacy(r)
   const k = { ...r, honors: countedHonors(r.honors ?? 0) }
-  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (k[key] ?? 0) * w, 0) + Math.max(0, (r.awards ?? 0) - 1) * (S.awardRepeat ?? AWARD_REPEAT) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? (r.firsts ?? 0) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
+  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (key === 'awards' ? 0 : (k[key] ?? 0) * w), 0) + awardPoints(S, pos, r.awards ?? 0) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? Math.max(0, (r.firsts ?? 0) - (r.awards ?? 0)) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
 }
 // Money earned is worth a little legacy too: a point every $25M of career
 // earnings (contracts and shoe money), never more than 5
@@ -3282,6 +3362,8 @@ function hofVote(c, L) {
 // ones in the game's own record book (seasonFacts.js) that name him as holder.
 const words = s => s.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
 const heldBy = (sport, pos, name) => (RECORDS[sport]?.[pos] ?? []).filter(x => { const h = new Set(words(x.holder)); return words(name).every(w => h.has(w)) }).length
+// (Career keeps its own all-time lists, the resumes in data/legacy-resumes.js: the owner, 2026-11-12. The season sim's
+// GOAT list is a separate thing and is not read here)
 const scored = (sport, pos) => RESUMES[pos].map(r => ({ name: r.name, score: legacyScore(SPORT[sport], pos, { ...r, records: heldBy(sport, pos, r.name) }) }))
 const greats = list => list.sort((a, b) => b.score - a.score).map((x, i) => ({ ...x, rank: i + 1 }))
 // basketball: one list, the 25 greatest careers at any position
@@ -3323,7 +3405,7 @@ export function careerCard(c) {
   const S = sportOf(c)
   const t = careerTotals(c), L = legacyOf(c)
   const head = HEADLINE_STATS[c.pos].map(k => [STAT_LABEL[k], fmtStat(t.stats[k])])
-  return { name: c.name, pos: S.isSoccer ? 'STRIKER' : S.isBucket ? (c.pos === 'guard' ? 'GUARD' : 'BIG') : POS_LABEL[c.pos], years: c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : '', teams: t.teams, head, rings: t.rings, awards: c.pos === 'ol' ? t.allPros : t.awards, awardName: AWARD_NAME[c.pos], proBowls: t.proBowls, honorName: S.honors, allPros: t.allPros, legacy: L, hof: c.hof, draft: c.draft.pick, earnings: t.earnings, site: S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com') }
+  return { name: c.name, pos: S.isSoccer ? 'STRIKER' : S.isBucket ? (c.pos === 'guard' ? 'GUARD' : 'BIG') : POS_LABEL[c.pos], years: c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : '', teams: t.teams, head, rings: t.rings, awards: t.awards, awardName: AWARD_NAME[c.pos], proBowls: t.proBowls, honorName: S.honors, allPros: t.allPros, legacy: L, hof: c.hof, draft: c.draft.pick, earnings: t.earnings, site: S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com') }
 }
 
 // ── Sports that load on their own (soccer: lib/careerSoccer.js) ──────────────

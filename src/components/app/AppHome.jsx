@@ -46,7 +46,7 @@ const NFL_FIGURE = {
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/lb-silhouette.webp', scale: 1 },
   ol: { src: '/ol-silhouette.webp', scale: 1 },
-  k: { src: '/qb-silhouette.webp', scale: 1 },   // PLACEHOLDER: no kicker art yet, the QB figure stands in (K_SILHOUETTE in data/ks.js)
+  k: { src: '/k-silhouette.webp', scale: 1 },
 }
 const reducedMotion = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 // football's side of the ball (Home's OFFENSE / DEFENSE switch)
@@ -67,7 +67,7 @@ const GREATS = {
   dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
   lb: [face('espn_964', '#241773'), face('espn_4433', '#ffb612'), face('espn_14938', '#0085ca')], // Ray Lewis, James Harrison (in the DL all-time pool as an edge), Kuechly
   ol: [face('espn_10448', '#311d00'), face('espn_13241', '#aa0000'), face('espn_16709', '#003594')],  // Joe Thomas, Trent Williams, Zack Martin
-  k: [face('espn_15683', '#241773'), face('espn_1097', '#002c5f'), face('espn_10636', '#203731')],   // Tucker, Vinatieri (his ESPN photo is in Colts blue), Crosby
+  k: [face('espn_9704', '#002244'), face('espn_1097', '#002c5f'), face('espn_10636', '#203731')],   // Gostkowski (not Tucker: the owner, 2026-11-12), Vinatieri (his ESPN photo is in Colts blue), Crosby
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
 }
@@ -236,8 +236,8 @@ function Rafters({ career, sport = null }) {
   }, [career])
   const flags = [
     { Icon: soccer ? IconTrophy : IconRing, n: count('champion'), word: soccer ? 'TITLES' : 'RINGS' },
-    // (a lineman has no award: his All-Pros hang there)
-    { Icon: soccer ? IconMedal : IconTrophy, n: count(career?.pos === 'ol' ? 'allPro' : 'award'), word: `${s.find(x => x.awardName)?.awardName ?? (soccer ? "BALLON D'OR" : 'MVP')}S` },
+    // (a lineman's award is Protector of the Year: the word takes no plural)
+    { Icon: soccer ? IconMedal : IconTrophy, n: count('award'), word: career?.pos === 'ol' ? 'PROTECTOR' : `${s.find(x => x.awardName)?.awardName ?? (soccer ? "BALLON D'OR" : 'MVP')}S` },
     { Icon: IconMedal, n: hof ?? 0, word: soccer ? 'LEGEND' : 'HOF', stat: hof == null ? null : `${hof}%`, meter: hof },
   ]
   return (

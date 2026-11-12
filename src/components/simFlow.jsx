@@ -190,7 +190,8 @@ export function LiveBoard({ label, away, home, phase, badge, badgeWin, status, p
   )
 }
 
-// The title, or the end of the road. Champions: tap the bottle, the trophy comes up, then the button
+// The title, or the end of the road. Champions: the bottle is there to pop (the trophy comes up), and the button to
+// go on is there from the start: nobody is left on the title screen for not knowing the bottle was a button
 export function ChampCard({ title, sub, trophy, popped, onPop, cta, onNext }) {
   return (
     <div className="plf-end-card plf-end-card--champ">
@@ -198,7 +199,8 @@ export function ChampCard({ title, sub, trophy, popped, onPop, cta, onNext }) {
         : <button className="plf-champ-bottle" onClick={onPop} aria-label="Pop champagne">🍾</button>}
       <div className="plf-champ-label">{title}</div>
       <div className="plf-champ-sub">{sub}</div>
-      {popped ? <button className="simp-cta simp-cta-in plf-report-reveal" onClick={onNext}>{cta}</button> : <div className="plf-champ-tap-hint">tap the bottle</div>}
+      {!popped && <div className="plf-champ-tap-hint">tap the bottle</div>}
+      <button key={popped ? 'popped' : 'ready'} className={`simp-cta${popped ? ' simp-cta-in plf-report-reveal' : ''}`} onClick={onNext}>{cta}</button>
     </div>
   )
 }
