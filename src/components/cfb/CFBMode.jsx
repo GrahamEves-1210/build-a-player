@@ -437,6 +437,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
       ? data.sim.runCFBSimulation(build, P.types, team, pos, seed, 'classic', null, { name: who, year, choice: true, season: 2026 + k, ...(career ? { career } : {}), ...(pools ? { pools } : {}) })
       : backupSeason(data.sim, seasonData(data, k).pools, P.types, team, pos, seed, { ovr: P.ovr(build, P.types), cls: year, build, name: who, season: 2026 + k, usePools: !!k })
     r.seed = r.seed ?? seed
+    r.ovr = P.ovr(build, P.types)   // (the college overall the build page and the offseason show: utils/cfbOvr.js; the engine's own is football's raw number)
     const sb = tainted.current || P.types.some(t => build[t]?.sandbox)
     r.sandbox = sb
     r.pool = era   // (Current or All-Time: which pool the build was spun from)
