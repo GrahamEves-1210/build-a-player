@@ -329,4 +329,19 @@ const _K_LEGENDS = [
     fg: '163/194', long: 56, points: 668,
     attrs: { power: 6, accuracy: 7, clutch: 5 } },
 ]
-export const K_LEGENDS = _K_LEGENDS.map(p => ({ ...p, ...TEAM_COLOR[p.team], attrs: { ...p.attrs }, ovr: kOVR(p.attrs) }))
+// The pool the game deals from (the owner, 2026-11-12: "just the top 50 or so kickers of all time"): every kicker above
+// whose three ratings add up to 20 or more, once each (a kicker listed with two teams keeps the one he is known for, or
+// his better-rated stint). The rest stay in the list above, out of the pool. A kicker has one wheel and no team wheel,
+// so a name must not come up twice.
+const K_HOME = { 'Morten Andersen': 'NO', 'Adam Vinatieri': 'NE', 'Robbie Gould': 'CHI', 'Graham Gano': 'CAR' }
+const kSum = p => (p.attrs?.power ?? 0) + (p.attrs?.accuracy ?? 0) + (p.attrs?.clutch ?? 0)
+export const K_LEGEND_MIN = 20
+const K_POOL = (() => {
+  const best = new Map()
+  for (const p of _K_LEGENDS) {
+    const cur = best.get(p.name)
+    if (!cur || K_HOME[p.name] === p.team || (K_HOME[p.name] !== cur.team && kSum(p) > kSum(cur))) best.set(p.name, p)
+  }
+  return _K_LEGENDS.filter(p => best.get(p.name) === p && kSum(p) >= K_LEGEND_MIN)
+})()
+export const K_LEGENDS = K_POOL.map(p => ({ ...p, ...TEAM_COLOR[p.team], attrs: { ...p.attrs }, ovr: kOVR(p.attrs) }))
