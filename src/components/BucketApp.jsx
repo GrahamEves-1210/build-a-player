@@ -542,7 +542,7 @@ export default function BucketApp() {
     let elObs = null
 
     function measure() {
-      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
+      const el = document.querySelector('[id^="pw-oop-bottom_rail"][data-pw-status="loaded"]')
       if (!el) { root.style.removeProperty('--ad-h'); return }
       const cs = window.getComputedStyle(el)
       if (cs.display === 'none' || cs.visibility === 'hidden') {
@@ -569,7 +569,7 @@ export default function BucketApp() {
 
     function attachElObs() {
       if (elObs) { elObs.disconnect(); elObs = null }
-      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
+      const el = document.querySelector('[id^="pw-oop-bottom_rail"][data-pw-status="loaded"]')
       if (el) {
         elObs = new MutationObserver(measure)
         elObs.observe(el, { attributes: true, attributeFilter: ['style', 'class'] })

@@ -277,7 +277,7 @@ function CareerPage({ go }) {
       <p>Reputation runs from 1 to 10. Goals met and titles raise it; bad seasons and trade demands lower it. A good name earns more money and longer contracts, wins depth-chart ties, draws the good offseason breaks, and can land a <b>shoe deal</b> (and later a signature shoe), which pays every year and adds to the legacy. A bad name does the opposite.</p>
 
       <h2 id="aging">Aging and retirement</h2>
-      <p>Young players can grow a trait on their own; from 31 (33 for quarterbacks) the physical traits start to fade. A player can retire from 29 or after eight seasons. The career ends on its own at 40 (42 for quarterbacks), after 20 seasons, or when free agency brings no offers.</p>
+      <p>Young players can grow a trait on their own. Age takes a grade at a time, spread over the traits that really age: speed, burst and bounce go first (a running back’s from 26, most positions around 29), strength and power a few years later, technique after that, and the reads, leadership and the jump shot never fade. A trait rarely drops two years running, and some offseasons cost nothing. Offensive linemen and kickers hold what they have the longest. Two development points of offseason work hold a trait that is due to drop, or win back a lost grade as far as the player’s age allows, and a durable body ages slower. A player can retire from 29 or after eight seasons. The career ends on its own at 40 (42 for quarterbacks), after 20 seasons, or when free agency brings no offers.</p>
 
       <h2 id="legacy">Legacy and the Hall of Fame</h2>
       <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 (half after the 8th)

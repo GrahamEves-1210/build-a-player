@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -276,11 +276,15 @@ function Model({ c, devPick }) {
     // about it. A technique trait shows its window only as it nears the end
     const w0 = !maxed && (c.dev?.points ?? 0) > 0 ? trainWindow(c, t) : null
     const w = w0 && (w0.tier !== 'tech' || w0.left <= 4) ? w0 : null
-    const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST YEAR</em> : w.late ? <em className="cr-trait-win">2× COST</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
+    // a trait that ages (lib/careerAging.js): about to slip this offseason (a point holds it), a slipped grade
+    // he can win back, or held already by this offseason's work
+    const work = devPick ? vetWork(c, t) : null
+    const heldNow = c.phase === 'offseason' && ch?.workY === c.year + 1
+    const winTag = work ? <em className={`cr-trait-win${work.kind === 'hold' ? ' is-last' : ''}`}>{work.kind === 'hold' ? 'DROPS THIS YEAR' : 'WIN BACK'}</em> : heldNow ? <em className="cr-trait-win">HELD THIS YEAR</em> : !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST YEAR</em> : w.late ? <em className="cr-trait-win">2× COST</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : () => tellWhy(t)} role="button">
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
-        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
+        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed && !work && !heldNow ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{valToGrade(ch?.val ?? 0)}{canUp && cost > 1 ? ` · ${cost} PTS` : ''}</span>
       </div>
     )
@@ -766,7 +770,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'preseason' && (
           <section className="ag-card cr-sec ag-pop">
             <div className="ag-card-head"><span className="ag-eyebrow">SEASON {S.isSoccer ? seasonOf(c.season) : c.season} · {c.fit.status.toUpperCase()}</span></div>
-            {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}>{/^(Still growing|A step forward)/.test(t) ? <IconFlame size={13} /> : <IconArrow size={13} className="cr-down" />} {t.replace(/^A step slower/, 'Father Time')}</li>)}</ul>}
+            {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}>{/^(Still growing|A step forward|Experience)/.test(t) ? <IconFlame size={13} /> : /^(Offseason work|Body work|Hasn.t lost a step|The leg is still there)/.test(t) ? <IconShield size={13} /> : <IconArrow size={13} className="cr-down" />} {t.replace(/^A step slower/, 'Father Time')}</li>)}</ul>}
             <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             {(() => { const dc = depthChart(c); if (S.x?.depthLine) return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{S.x.depthLine(c, dc)}</p>; if (S.isSoccer) { const role = soccerRole(c); return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{role === 'Starter' ? 'FIRST CHOICE · leads the line' : `${role.toUpperCase()} · behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> } return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{dc.starter ? `${dc.label} · the starter` : `${dc.label} · backup behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> })()}
             <p className="cr-note">{c.loan ? `On loan from ${S.teamOf(c.loan.from).name} for the season. ` : ''}{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({pay(c, c.contract.perYear)}). {c.contract.left === 1 && !c.loan ? 'Contract year: play for the next one.' : ''}</p>

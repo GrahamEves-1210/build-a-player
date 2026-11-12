@@ -117,7 +117,7 @@
 }
 .fr-sheet {
   position: relative;
-  width: 100%; max-width: 520px; max-height: min(88dvh, 760px);
+  width: 100%; max-width: 520px; max-height: min(88dvh, 760px, calc(100dvh - var(--web-rail, 0px) - 16px));   /* (and inside the room above the website's ad rail) */
   display: flex; flex-direction: column;
   padding: 6px 16px calc(max(12px, var(--safe-bottom, env(safe-area-inset-bottom, 0px))) + 4px);
   border-radius: 22px 22px 0 0;
