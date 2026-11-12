@@ -9,6 +9,7 @@ G = d['grades']
 DERIVED_SIZE = {'OL', 'DL', 'LB', 'DB'}          # Size comes from height and weight there: not a rating to edit
 POS_ORDER = {'OL': ['LT', 'LG', 'C', 'RG', 'RT'], 'DL': ['EDGE', 'DT'], 'DB': ['CB', 'S'], 'Guards': ['PG', 'SG', 'SF', 'PF', 'C'], 'Bigs': ['PG', 'SG', 'SF', 'PF', 'C']}
 HAS_POS = {('OL', 'cur'), ('OL', 'leg'), ('DL', 'cur'), ('DL', 'leg'), ('DB', 'cur'), ('DB', 'leg'), ('Guards', 'cur'), ('Bigs', 'cur')}
+BY_NAME = {'K'}                                  # kickers: by name inside a team (the others keep the roster file's order)
 wb = Workbook(); wb.remove(wb.active)
 head_fill = PatternFill('solid', start_color='1F2937'); band = PatternFill('solid', start_color='F3F4F6')
 thin = Side(style='thin', color='9CA3AF')
@@ -22,7 +23,7 @@ def tab(pool, kind):
     rows = []
     for i, p in enumerate(pool[kind]):
         pos = (p['pos'] or '').upper()
-        rows.append((p['team'], order.index(pos) if pos in order else 99, i, pos, p))
+        rows.append((p['team'], order.index(pos) if pos in order else 99, p['name'] if label in BY_NAME else i, pos, p))
     rows.sort(key=lambda r: (r[0], r[1], r[2]))
     ws = wb.create_sheet(name)
     heads = ['Team'] + (['Pos'] if has_pos else []) + ['Player'] + [pool['labels'][t] for t in types]
