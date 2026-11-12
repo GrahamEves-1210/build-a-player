@@ -31,7 +31,7 @@ import { KS, K_TYPES, K_ATTR } from '../data/ks'
 import { K_LEGENDS } from '../data/k-legends'
 import { K_LIVE } from './kLive'
 import { onsideP, afterOnsideP } from './kicks'
-import { kValsOf, kSeasonStats, kSeasonScore, K_BARS, kHome, kFitNote, kAfterSeason, kMarket, kSigned, kPlayoffGame, kPlayoffLine, K_INTERVIEWS, K_EVENTS, K_DRILLS } from './careerKicker'
+import { kValsOf, kSeasonStats, kSeasonScore, K_BARS, K_LEGACY, kHome, kFitNote, kAfterSeason, kMarket, kSigned, kPlayoffGame, kPlayoffLine, K_INTERVIEWS, K_EVENTS, K_DRILLS } from './careerKicker'
 import { ladderWindow, closedLine, lateLine, mindTraits, lowLabel, andList, LADDER } from './ageLadder'
 import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
@@ -440,7 +440,7 @@ export const SPORT = {
     seasonScore: (pos, s) => { const st = s.stats; return pos === 'k' ? kSeasonScore(s) : pos === 'ol' ? clamp(((st.grade ?? 55) - 55) / 35, 0, 1.1) * .5 + Math.min(1.2, (st.pancakes ?? 0) / 50) * .1 + clamp(1 - (st.sacksA ?? 8) / 8, 0, 1) * .1 + s.wins / 15 * .3 : pos === 'lb' ? Math.min(1.25, lbImpact(st) / LB_BARS.allPro) * .52 + s.wins / 15 * .3 : pos === 'dl' ? (s.spot === 'dt' ? (st.sacks ?? 0) / 10 * .45 + (st.tfl ?? 0) / 14 * .25 : (st.sacks ?? 0) / 16 * .45 + (st.tfl ?? 0) / 20 * .25) + s.wins / 15 * .3 : pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
     // a DB's production: picks and the ones taken back; a lineman's: sacks (the greats are scored the same way)
     // (a lineman's: the games he started; his All-Pros carry OL_FIRST_BONUS more in legacyScore, the greats' the same way)
-    legacyProd: (pos, st) => (pos === 'k' ? (st.points ?? 0) / 120 + (st.gw ?? 0) * 0.3 : pos === 'ol' ? (st.starts ?? 0) * OL_START_LEGACY : pos === 'lb' ? (st.tackles ?? 0) / 40 + (st.ints ?? 0) * 0.8 + (st.sacks ?? 0) * 0.5 : pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
+    legacyProd: (pos, st) => (pos === 'k' ? (st.points ?? 0) / K_LEGACY.perPoints + (st.gw ?? 0) * K_LEGACY.gw : pos === 'ol' ? (st.starts ?? 0) * OL_START_LEGACY : pos === 'lb' ? (st.tackles ?? 0) / 40 + (st.ints ?? 0) * 0.8 + (st.sacks ?? 0) * 0.5 : pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
     // the sim lets every 10-win team in; here 11 is safe, 10 needs the tiebreakers (the sim's own
     // first playoff game, a coin the booked season keeps) and 9 needs them twice
     made: f => { const po = f.playoffRounds ?? []; return !!f.playoffs && (f.wins >= 11 || (f.wins === 10 && !!po[0]?.won) || (f.wins === 9 && !!po[0]?.won && !!po[1]?.won)) },
@@ -2786,6 +2786,11 @@ const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // How far offseason work can take a trait: you can't train much height. Size
 // moves twice in a career, the explosive traits (speed, bounce, a get-off, bend) three times.
 export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3, getOff: 3, bend: 3 }
+// A kicker has three ratings, and unlimited work on three ratings made every kicker a 95 within a few seasons: an 80 and
+// an all-S build had the same career, and season records fell in most of them. Each of his ratings can be raised twice
+// (the owner, 2026-11-12), so the build he starts with is the kicker he is: all B tops out at all A-.
+export const K_UPGRADE_CAP = 2
+const kCapped = (c, ch) => c?.pos === 'k' && (ch?.upgraded ?? 0) >= K_UPGRADE_CAP
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
 // The last step costs more: A+ to S takes 2 points, everything else 1; past a trait's
@@ -2828,7 +2833,7 @@ export function trainable(c, type) {
   const ch = c.build[type]
   if ((c.pos === 'dl' || c.pos === 'lb') && type === 'size') return false   // a lineman's (or a linebacker's) size is his body, not something to train
   if (c.pos === 'ol' && (type === 'size' || type === 'length')) return false   // (an offensive lineman's arms too: length is arm length)
-  if (!ch || maxedTrait(ch.val, ch, type)) return false
+  if (!ch || maxedTrait(ch.val, ch, type) || kCapped(c, ch)) return false
   const w = trainWindow(c, type)
   return !(w && !w.open)
 }
@@ -2850,6 +2855,7 @@ export function upgradeBlock(c, type) {
   if (c.pos === 'ol' && type === 'size') return 'Size is his frame. It can\u2019t be trained.'
   if (c.pos === 'ol' && type === 'length') return 'Arm length can\u2019t be trained.'
   if (Math.round(ch.val ?? 0) >= 11) return `${name} is already an S. That\u2019s as high as it goes.`
+  if (kCapped(c, ch)) return `${name} has been raised ${K_UPGRADE_CAP} times, the most a kicker’s rating can be.`
   if (maxedTrait(ch.val, ch, type)) return `${name} has been raised ${UPGRADE_CAP[type]} times, the most it can be.`
   const w = trainWindow(c, type)
   const S = sportOf(c)
@@ -3318,8 +3324,10 @@ export function awardPoints(S, pos, n = 0) {
 }
 export function legacyScore(S, pos, r) {
   if (S.x?.legacy) return S.x.legacy(r)
-  const k = { ...r, honors: countedHonors(r.honors ?? 0) }
-  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (key === 'awards' ? 0 : (k[key] ?? 0) * w), 0) + awardPoints(S, pos, r.awards ?? 0) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? Math.max(0, (r.firsts ?? 0) - (r.awards ?? 0)) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
+  // (a kicker's seasons, playoff years, rings and records are weighed for a kicker: careerKicker.js K_LEGACY)
+  const k = { ...r, honors: countedHonors(r.honors ?? 0), ...(pos === 'k' ? { records: Math.min(r.records ?? 0, K_LEGACY.recordsMax) } : {}) }
+  const wOf = (key, w) => (pos === 'k' ? K_LEGACY[key] ?? w : w)
+  return Math.round(Object.entries(LEGACY_W).reduce((sum, [key, w]) => sum + (key === 'awards' ? 0 : (k[key] ?? 0) * wOf(key, w)), 0) + awardPoints(S, pos, r.awards ?? 0) + S.legacyProd(pos, r.stats ?? {}) + (pos === 'ol' ? Math.max(0, (r.firsts ?? 0) - (r.awards ?? 0)) * OL_FIRST_BONUS : 0) + (r.bonus ?? 0))
 }
 // Money earned is worth a little legacy too: a point every $25M of career
 // earnings (contracts and shoe money), never more than 5

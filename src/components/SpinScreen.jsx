@@ -626,7 +626,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const draftableTeams = [...new Set(qbPool.map(teamOf))].sort().join(',')
   // A kicker's team has one kicker (only the kicker's pools: nothing changes for any other position): the player wheel has one name on it, so it lands
   // at once, and there is no player to respin to. The respin row is the team respin alone.
-  const soloTeam = isK && !!selectedTeam && !oneWheel && qbPool.filter(q => teamOf(q) === selectedTeam.short).length <= 1
+  // (2026-11-12, the owner: a kicker is one wheel of kickers, centred, no team wheel. The team is still drawn first, unseen and at once,
+  // so the seeded order and the server's check of it are what they were; the one wheel then lands on that team's kicker)
+  const kOne = isK && !oneWheel
+  const soloTeam = kOne
 
   const teamReelItems = useMemo(() => {
     // Only teams with someone to draft — landing on a team with no players
@@ -659,6 +662,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
     if (oneWheel) return starterDraw
+    if (kOne) { const all = [...qbPool]; for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]] } return all }
     if (!selectedTeam) return qbPool.slice(0, 3)
     const base = qbPool.filter(q => teamOf(q) === selectedTeam.short)
     // (a respin on a team of two keeps both in: taking one out would just hand over the other)
@@ -668,7 +672,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
     }
     return arr
-  }, [selectedTeam, excludedQB, spinCount, oneWheel, starterDraw])
+  }, [selectedTeam, excludedQB, spinCount, oneWheel, starterDraw, kOne])
 
   // Daily Challenge outcomes
   const teamIndex = spinBase.current + (ownSpins ? seedSpins : spinCount) - 1
@@ -749,8 +753,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </div>
           <div className={`reels-wrap${reelSkin ? ` rs-on ${reelSkin}` : ''}`}>
             <div className="reel-tri reel-tri-l" />
-            <div className="reels-row">
-              {!oneWheel && <SlotReel
+            <div className={`reels-row${oneWheel || kOne ? ' reels-row--one' : ''}`}>
+              {!oneWheel && <div className={kOne ? 'reel-ghost' : 'reel-pass'}><SlotReel
                 label={teamLabel}
                 items={teamReelItems}
                 spinning={isSpinningTeam}
@@ -760,10 +764,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 getDisplay={group?.display ?? (t => t.short)}
                 getSub={getTeamSub ?? (t => t.name.split(' ').slice(-1)[0])}
                 onStop={handleTeamStop}
-                durationMs={800}
-                jitterMs={1000}
+                durationMs={kOne ? 40 : 800}
+                jitterMs={kOne ? 0 : 1000}
                 target={teamTarget}
-              />}
+              /></div>}
               <SlotReel
                 label={pLabel}
                 items={qbReelItems}
@@ -773,10 +777,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 getDisplay={q => q.name.split(' ')[0]}
                 getSub={getPlayerSub ?? (q => q.name.split(' ').slice(1).join(' '))}
                 onStop={handleQBStop}
-                durationMs={oneWheel ? 1700 : 1100}
+                durationMs={oneWheel || kOne ? 1700 : 1100}
                 jitterMs={400}
-                blurred={phase === 'team' || phase === 'team-done'}
-                fast={qbRespinUsed > 0 || soloTeam}
+                blurred={!kOne && (phase === 'team' || phase === 'team-done')}
+                fast={!kOne && qbRespinUsed > 0}
                 target={oneWheel ? starterDraw[0] ?? null : playerTarget}
               />
             </div>
@@ -798,7 +802,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                     setTimeout(() => { el.style.transform = '' }, 160)
                   }}
                 >
-                  RESPIN {group?.respin ?? (isSoccer ? teamLabel : 'TEAM')} <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
+                  RESPIN {kOne ? 'KICKER' : group?.respin ?? (isSoccer ? teamLabel : 'TEAM')} <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
                 </button>
                 {!soloTeam && <div className="spin-respin-divider" />}
                 {soloTeam ? null : qbRespinUsed >= maxPlayerRespin && canEarn ? (

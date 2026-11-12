@@ -1,10 +1,26 @@
 // The kick model: one set of numbers for the kicker's season sim, his Career and the three kicker mini games,
 // so a 55-yarder is the same kick wherever it's tried.
 //
-// Calibrated to the league's 2023-25 field goal rates by distance (NFL.com / Pro-Football-Reference season tables):
-//   20-29 about 98%, 30-39 about 93%, 40-49 about 82%, 50-59 about 68%, 60+ about a third; extra points about 95.5%.
-// An average kicker (B- / B across the board) lands on those; an S leg with S accuracy is a 93-94% kicker who is
-// better than a coin flip from 60, and a D / D kicker is a 75% kicker who shouldn't be out there past 50.
+// Calibrated to the league's real kicking, regular seasons 2021-2025 (NFL.com: nfl.com/stats/team-stats/special-teams/
+// field-goals/<year>/reg/all and .../scoring/<year>/reg/all, and the player table nfl.com/stats/player-stats/category/
+// field-goals/<year>/reg/all/kickingfgmade/desc; 160 team-seasons, read 2026-11-11):
+//   Field goals a team tries in a season: median 33, a tenth of teams 27 or fewer, a tenth 42 or more, the most 52
+//     (2025). By year the median is 32, 32, 33, 34, 34. A team makes 28 in a median year; the most is 48.
+//   Made: 85.1% overall (4,556 of 5,352; by year 85.1, 85.0, 85.9, 84.0, 85.6).
+//     1-39 yards 95.4% (16.7 tries a team), 40-49 79.8% (9.4), 50 and out 68.6% (7.4 tries, about 5 made; a tenth
+//     of teams made 9 or more from 50+, the most 14 in 2024).
+//   A starter (20 or more tries): median 86%, a tenth under 75%, a tenth over 93%, the best season 96.7% (2023).
+//   Extra points: 38 tried a team, 95.1% made (by year 93.4, 94.6, 95.9, 95.8, 95.9).
+//   Points from kicking: median 123 a team, a tenth under 99, a tenth over 144, the most 174 (2025).
+//   The most field goals by one kicker in each year: 40, 37, 36, 41, 44.
+//   (Game-winning kicks are not in those tables: the sim's 1.5 to 2 a season is left as it was.)
+// An average kicker (C+ power and accuracy, B- nerve: the middle of the game's own pool) lands on those: about 85%
+// on 33 tries, 5 from 50 and out, 37 of 38 extra points, about 122 points. S across the board is a 94% kicker
+// on 35 tries with 7 or 8 from 50+ and about 140 points (his best years 97% and 160), and a C / C kicker is an 80%
+// kicker who shouldn't be out there past 50.
+// (Until 2026-11-11 the model was a logistic curve: right for an average kicker overall but 5 points high from
+// 40-49, and far too kind at the top: S across the board was 96.6% with 98% from 40-49 and 89% from 50+, on 38
+// tries, and broke the season scoring record one year in six.)
 //
 // A kick is { power, accuracy, clutch } on the 0-11 grade scale and a distance in yards (the kick's, not the line of scrimmage).
 // env: { yards, pressure } - yards is the conditions in yards of range (a dome +1, Denver's altitude +3, wind -2.5,
@@ -12,8 +28,9 @@
 
 export const clampK = (x, a, b) => Math.max(a, Math.min(b, x))
 
-// where field goals are tried from: [from, to, share of attempts] (about a quarter of today's attempts are from 50+)
-export const KICK_BUCKETS = [[19, 29, 0.20], [30, 39, 0.27], [40, 49, 0.29], [50, 59, 0.21], [60, 66, 0.03]]
+// where field goals are tried from: [from, to, share of attempts] (half from inside 40, 28% from 40-49, 22% from 50
+// and out: the league's 16.7 / 9.4 / 7.4 a team, before the coach keeps the longest ones in his pocket)
+export const KICK_BUCKETS = [[19, 29, 0.21], [30, 39, 0.28], [40, 49, 0.28], [50, 59, 0.19], [60, 66, 0.04]]
 export function kickDistance(rand = Math.random) {
   let u = rand(), b = KICK_BUCKETS[KICK_BUCKETS.length - 1]
   for (const x of KICK_BUCKETS) { if (u < x[2]) { b = x; break } u -= x[2] }
@@ -25,20 +42,30 @@ export const kickTry = pw => Math.round(50 + pw * 1.4)
 // how far the ball carries with a clean strike, no wind (the mini games' reach: F 54, B 61, S 68)
 export const kickReach = pw => 54 + pw * 1.25
 
-// the chance a field goal from d yards is good
+// the chance a field goal from d yards is good.
+// K_BASE is the league's make rate by distance for an average kicker on a clear day ([yards, rate], straight lines
+// between). Power and the conditions move the kick along it (a grade of power is 0.9 yards of range; a dome +1,
+// wind -2.5); accuracy scales the misses (an S misses 43% as often as a C+ from inside 40, less of an edge the
+// longer the kick: from 55 the leg decides more than the aim); nerve moves both when the game hangs on it.
+export const K_BASE = [[18, 0.992], [25, 0.985], [30, 0.965], [35, 0.93], [40, 0.855], [45, 0.775], [50, 0.725], [55, 0.665], [60, 0.5], [65, 0.29], [70, 0.11], [76, 0.02]]
+const baseP = d => {
+  if (d <= K_BASE[0][0]) return K_BASE[0][1]
+  for (let i = 1; i < K_BASE.length; i++) { const [x0, y0] = K_BASE[i - 1], [x1, y1] = K_BASE[i]; if (d <= x1) return y0 + (y1 - y0) * (d - x0) / (x1 - x0) }
+  return K_BASE[K_BASE.length - 1][1]
+}
 export function kickP(d, k, env = {}) {
   const pw = k?.power ?? 5, acc = k?.accuracy ?? 5, clu = k?.clutch ?? 5
   const pr = clampK(env.pressure ?? 0, 0, 1)
   const nerve = pr * (5.5 - clu)                       // a B- is himself under pressure; an S gets better, an F worse
-  const R = 53 + pw * 0.9 + acc * 0.4 + (env.yards ?? 0) - nerve * 0.9
-  const w = 8.5 - acc * 0.25
-  const cap = clampK(0.915 + 0.0075 * acc - nerve * 0.006, 0.6, 0.999)
-  return cap / (1 + Math.exp(-(R - d) / w))
+  const range = (pw - 5) * 0.9 + (env.yards ?? 0) - nerve * 0.9
+  const aim = clampK(1 - (acc - 5) * 0.095, 0.4, 1.6), far = clampK(1 - (d - 40) / 30, 0.5, 1)
+  const miss = (1 - baseP(d - range)) * (1 - (1 - aim) * far) * clampK(1 + nerve * 0.05, 0.7, 1.3)
+  return clampK(1 - miss, 0.01, 0.999)
 }
-// an extra point (a 33-yard kick)
+// an extra point (a 33-yard kick): 95.1% across the league
 export function xpP(k, env = {}) {
   const acc = k?.accuracy ?? 5
-  return clampK(0.925 + 0.0065 * acc + Math.min(0, env.yards ?? 0) * 0.004, 0.8, 0.999)
+  return clampK(0.918 + 0.0065 * acc + Math.min(0, env.yards ?? 0) * 0.004, 0.8, 0.999)
 }
 
 // ── Where the game is played ────────────────────────────────────────────────
