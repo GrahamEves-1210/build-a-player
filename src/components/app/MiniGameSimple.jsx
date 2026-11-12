@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState }
 import { zoneWidth, powerZone, reactMs, lanesMs, callMs, routes, DRILL_CALLS, LOOKS } from '../../lib/minigames'
 import { SIMPLE_GAMES as GAMES, simpleTraitValue as traitValue } from '../../lib/minigamesSimple'
 import { valToGrade, dlBuildSpot } from '../../utils/simulation'
-import { dashTarget, coneShift } from '../../lib/mg/combineNorms'
+import { dashTarget, coneShift, benchCeil } from '../../lib/mg/combineNorms'
 import { seeded } from '../../lib/rng'
 import { onsideP } from '../../lib/kicks'
 import { sfx, haptic } from '../../lib/juice'
@@ -351,7 +351,7 @@ function Game({ def, v, seed, build, pos, onDone }) {
     case 'routes': return <Routes v={v} seed={seed} onDone={onDone} />
     case 'cone': return <Cone v={v} seed={seed} onDone={onDone} lane={def.drill === 'lane'} pos={at} />
     case 'gauntlet': return <Gauntlet v={v} seed={seed} onDone={onDone} />
-    case 'bench': return <Bench v={v} load={def.load ?? 1} onDone={onDone} />
+    case 'bench': return <Bench v={v} load={def.load ?? 1} onDone={onDone} pos={def.load < 1 ? null : at} />
     default: return null
   }
 }
@@ -2568,7 +2568,7 @@ function Gauntlet({ v, seed, onDone }) {
   )
 }
 // ── Bench press: drive the bar up against gravity, as many reps as you can ──
-function Bench({ v, load = 1, onDone }) {
+function Bench({ v, load = 1, onDone, pos = null }) {
   const S = useRef({ h: 0, reps: 0, end: 0, done: false })
   const bar = useRef(null), count = useRef(null), secs = useRef(null), lock = useRef(null), fx = useRef(null)
   const [end] = useOnce(onDone)
@@ -2576,9 +2576,12 @@ function Bench({ v, load = 1, onDone }) {
   // combine bar, about 18 for the weakest to 35 for the strongest; basketball (load < 1): the
   // 185 lb bar, about 3 to 22), and the bar fails the way a real set does: every rep near that
   // ceiling lifts less and sinks faster, so fast tapping gets you close to it, never past it
-  const ceil = load < 1 ? 1 + v * 1.9 : 16 + v * 1.7   // basketball: the weakest can put up 1-3 (Kevin Durant did 0), the best about 22
+  // (football, at a known spot: his position's ceiling, lib/mg/combineNorms.js, the combine's real counts: a B defensive tackle's
+  // normal set is about 28, a B linebacker's 22; each tap moves the bar in step with it, so the set is as hard at every spot)
+  const any = 16 + v * 1.7
+  const ceil = load < 1 ? 1 + v * 1.9 : pos ? benchCeil('bench', pos, v) : any   // basketball: the weakest can put up 1-3 (Kevin Durant did 0), the best about 22
   const fail = () => Math.min(0.97, (S.current.reps / ceil) ** 2.2)
-  const push = 34 * (1 + v * 0.06) * load * 0.92
+  const push = 34 * (1 + v * 0.06) * load * 0.92 * (load < 1 ? 1 : ceil / any)
   const SECS = 12
   useEffect(() => { S.current.end = now() + SECS * 1000 }, [])
   useLoop(t => {

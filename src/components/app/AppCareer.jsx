@@ -403,7 +403,7 @@ function Draft({ c, setCareer }) {
             {c.draft.combine.map((d, i) => (
               <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
                 <span className="cr-drill-txt"><b>{d.label}</b><small>{POS_ATTR[c.pos][d.trait]?.label ?? d.trait}</small></span>
-                <span className="cr-drill-bar"><span style={{ width: `${d.pct == null ? 0 : Math.round(Math.max(6, Math.min(100, 50 + d.pct * 50)))}%`, background: (d.pct ?? 0) >= .35 ? '#22c55e' : (d.pct ?? 0) >= 0 ? '#eab308' : '#f97316' }} /></span>
+                <span className="cr-drill-bar"><span style={{ width: `${d.pct == null ? 0 : Math.round(Math.max(6, Math.min(100, 50 + d.pct * 50)))}%`, background: (d.pct ?? 0) >= .35 ? '#22c55e' : (d.pct ?? 0) >= -.35 ? '#eab308' : '#f97316' }} /></span>
                 <b className="cr-drill-n">{d.text ?? '—'}</b>
               </div>
             ))}

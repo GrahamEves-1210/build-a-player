@@ -18,6 +18,7 @@ const SECS = 10
 const G = 10            // gravity, in full lifts a second squared
 const D = 2             // what the bar's speed bleeds a second
 const LOWER = 110       // ms: the bar back to the chest
+const BIG_AT = 21       // the ceiling past which a tap's push grows with it
 // the push a tap gives, by grade: how much of the ceiling the set can get to
 const PUSH = {
   bench: [[1, 1.556], [3, 1.698], [5, 1.825], [8, 2.125], [11, 2.623]],
@@ -36,7 +37,11 @@ export function make({ v, seed, def, game, pos }) {
   const need = Math.max(1, Math.round(ceil * (load < 1 ? 0.52 : 0.6)))
   // strength on the day: some days the bar's lighter
   const form = 1 + clamp(gaussOf(r), -2.2, 2.2) * 0.045
-  const J = curve(v, PUSH[game] ?? PUSH.bench) * form
+  // a big man's set (a ceiling past about 21: the combine's real counts, lib/mg/combineNorms.js, a defensive tackle's 28 on a
+  // normal day) moves the bar further a tap, so his set comes as quick as a running back's: ten seconds of tapping
+  // reaches the same share of either ceiling
+  const big = Math.max(1, ceil / BIG_AT)
+  const J = curve(v, PUSH[game] ?? PUSH.bench) * form * big
   const failAt = k => Math.min(0.995, Math.pow(k / ceil, P_FAIL))
   const end = SECS * 1000
   const g = {
