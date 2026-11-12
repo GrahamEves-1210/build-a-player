@@ -12,12 +12,16 @@
 //   - A trait wears a little each offseason (its class's rate, slow at first), a little more or less by the man
 //     (some age well), by the trait, by the year, and by his body: durability slows all of it, so body work does.
 //     When the wear adds up to a grade, the trait slips one grade. So the losses are spread over the traits that
-//     age, a trait almost never slips two years running, and some offseasons cost nothing.
-//   - At most two traits slip in an offseason (three late), and age alone never takes a trait further below his
+//     age, a trait does not slip two years running until he is six years past his position's age, and some
+//     offseasons cost nothing.
+//   - At most two traits slip in an offseason (three from three years past his position's age), and age alone never takes a trait further below his
 //     best than its class's floor.
-//   - The player has a say (career.js vetWork): a development point of offseason work holds a trait that is about
-//     to slip, or wins back a grade that has. How far back is capped by his age (keepCap: his best, less a grade
-//     for every few years past the trait's turn), and each trait takes one piece of work an offseason.
+//   - The player has a say (career.js vetWork): two development points of offseason work hold a trait that is
+//     about to slip (it takes no wear that year), or win back a grade that has. How far back is capped by his age
+//     (keepCap: his best, less a grade for every few years past the trait's turn), and each trait takes one piece
+//     of work an offseason. The week off's drill can win a slipped grade back too.
+//   - The numbers were set against 1,300 headless careers a pass (2026-11-11): the old rule's legacy, awards and
+//     all-time rank are the bar, so the late years still cost production; they just stop costing one trait all of it.
 //
 // On the trait chip (all optional: a save from before has none, and reads as a fresh start):
 //   wear   0-1.6, how far along the next slip is (unset: a seeded head start, so traits don't all slip together)
@@ -32,29 +36,32 @@ const r100 = v => Math.round(v * 100) / 100
 // rate: grades a year, by how long it has been going (a step every `step` years); keep: the years past its turn
 // that cost a grade of what work can still hold; floor: the most age alone takes off his best
 const CLASS = {
-  quick: { rate: [0.4, 0.55, 0.7, 0.85], step: 3, keep: 3, floor: 5 },
-  power: { rate: [0.3, 0.4, 0.55, 0.7], step: 3, keep: 4, floor: 4 },
-  skill: { rate: [0.2, 0.3, 0.4, 0.5], step: 3, keep: 5, floor: 3 },
+  quick: { rate: [0.6, 0.9, 1.1, 1.2], step: 2, keep: 2, floor: 5 },
+  power: { rate: [0.45, 0.75, 1.0, 1.1], step: 2, keep: 3, floor: 4 },
+  skill: { rate: [0.3, 0.6, 0.9, 1.0], step: 2, keep: 3, floor: 4 },
 }
 // trait: [class, the age it starts to go]. Backs first, then corners and linebackers, receivers and rushers,
-// linemen and quarterbacks, a kicker last.
+// quarterbacks and linemen, a kicker last.
 export const FADE = {
   nfl: {
-    qb: { legs: ['quick', 31], playmaking: ['skill', 35], arm: ['power', 36], accuracy: ['skill', 38] },
-    rb: { speed: ['quick', 26], burst: ['quick', 26], elusiveness: ['quick', 27], strength: ['power', 29], balance: ['skill', 29], hands: ['skill', 31], carrying: ['skill', 31] },
-    wr: { speed: ['quick', 29], vertical: ['quick', 29], afterCatch: ['quick', 30], release: ['skill', 32], bodyControl: ['skill', 33], routeRunning: ['skill', 34], hands: ['skill', 34] },
-    te: { speed: ['quick', 29], vertical: ['quick', 29], afterCatch: ['power', 31], strength: ['power', 32], blocking: ['skill', 33], routeRunning: ['skill', 34], hands: ['skill', 34] },
-    db: { speed: ['quick', 27], fluidity: ['quick', 28], manCoverage: ['skill', 30], press: ['skill', 31], runSupport: ['skill', 32], hands: ['skill', 32] },
-    dl: { getOff: ['quick', 29], bend: ['quick', 29], speed: ['quick', 30], strength: ['power', 33], finesseMoves: ['skill', 33], powerMoves: ['skill', 34], blockShed: ['skill', 34] },
-    lb: { range: ['quick', 28], power: ['power', 31], passRush: ['skill', 31], blockShed: ['skill', 32], tackling: ['skill', 33] },
-    ol: { mobility: ['quick', 30], pancake: ['power', 33], anchor: ['power', 34], runBlock: ['skill', 34], passPro: ['skill', 35] },
-    k: { power: ['power', 37], accuracy: ['skill', 40] },
+    qb: { legs: ['quick', 31], playmaking: ['skill', 33], arm: ['power', 33], accuracy: ['skill', 35] },
+    rb: { speed: ['quick', 26], burst: ['quick', 26], elusiveness: ['quick', 26], strength: ['power', 28], balance: ['skill', 28], hands: ['skill', 30], carrying: ['skill', 30] },
+    wr: { speed: ['quick', 29], vertical: ['quick', 29], afterCatch: ['quick', 29], release: ['skill', 31], bodyControl: ['skill', 32], routeRunning: ['skill', 33], hands: ['skill', 33] },
+    te: { speed: ['quick', 29], vertical: ['quick', 29], afterCatch: ['power', 30], strength: ['power', 31], blocking: ['skill', 32], routeRunning: ['skill', 33], hands: ['skill', 33] },
+    db: { speed: ['quick', 27], fluidity: ['quick', 27], manCoverage: ['skill', 29], press: ['skill', 30], runSupport: ['skill', 31], hands: ['skill', 31] },
+    dl: { getOff: ['quick', 29], bend: ['quick', 29], speed: ['quick', 29], strength: ['power', 32], finesseMoves: ['skill', 32], powerMoves: ['skill', 33], blockShed: ['skill', 33] },
+    lb: { range: ['quick', 27], power: ['power', 30], passRush: ['skill', 30], blockShed: ['skill', 30], tackling: ['skill', 31] },
+    ol: { mobility: ['quick', 31], pancake: ['power', 33], anchor: ['power', 34], runBlock: ['skill', 34], passPro: ['skill', 35] },
+    k: { power: ['power', 37], accuracy: ['skill', 39] },
   },
   bucket: {
-    guard: { bounce: ['quick', 29], speed: ['quick', 30], perimeterDefense: ['skill', 32], finishing: ['skill', 33], handles: ['skill', 35] },
-    big: { bounce: ['quick', 29], speed: ['quick', 30], interiorDefense: ['skill', 33], finishing: ['skill', 33], rebounding: ['skill', 34] },
+    guard: { bounce: ['quick', 29], speed: ['quick', 30], perimeterDefense: ['skill', 31], finishing: ['skill', 32], handles: ['skill', 34] },
+    big: { bounce: ['quick', 29], speed: ['quick', 30], interiorDefense: ['skill', 31], finishing: ['skill', 32], rebounding: ['skill', 33] },
   },
 }
+// a position's own pace on top of its ages: linemen hold what they have longer than anyone but a kicker (their
+// game is strength and technique), and a kicker has only his leg to lose
+const PACE = { ol: 0.8, k: 1.4, qb: 1.6 }
 // this position ages by these rules (soccer and baseball keep their own)
 export const hasFade = (sport, pos) => !!FADE[sport]?.[pos]
 export const fadeOf = (sport, pos, t) => { const f = FADE[sport]?.[pos]?.[t]; return f ? { cls: f[0], from: f[1], ...CLASS[f[0]] } : null }
@@ -77,7 +84,7 @@ const wearOf = (seed, t, ch) => ch.wear ?? r100(seeded(`${seed}-wear-${t}`)() * 
 export function fadeYear({ sport, pos, types, build, seed, year, age, durability = null, declineAt }) {
   const out = { build: { ...build }, slipped: [], worked: [], spared: [], due: 0 }
   if (!hasFade(sport, pos)) return out
-  const gene = geneOf(seed), body = bodyFade(durability), late = age >= declineAt + 7
+  const gene = geneOf(seed) * (PACE[pos] ?? 1), body = bodyFade(durability), late = age >= declineAt + 6
   const cand = []
   for (const t of types) {
     const f = fadeOf(sport, pos, t), ch = build[t]
@@ -92,7 +99,7 @@ export function fadeYear({ sport, pos, types, build, seed, year, age, durability
     else if (body < 1 && had + step >= 1 && wear < 1 && room && rested) out.spared.push(t)
   }
   cand.sort((a, b) => b[1] - a[1])
-  for (const [t] of cand.slice(0, age >= declineAt + 6 ? 3 : 2)) {
+  for (const [t] of cand.slice(0, age >= declineAt + 3 ? 3 : 2)) {
     const ch = out.build[t]
     out.build[t] = { ...ch, val: Math.round(ch.val) - 1, faded: (ch.faded ?? 0) + 1, wear: r100(ch.wear - 1), slipY: year }
     out.slipped.push(t)
