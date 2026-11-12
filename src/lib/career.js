@@ -2787,6 +2787,11 @@ const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // How far offseason work can take a trait: you can't train much height. Size
 // moves twice in a career, the explosive traits (speed, bounce, a get-off, bend) three times.
 export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3, getOff: 3, bend: 3 }
+// A kicker has three ratings, and unlimited work on three ratings made every kicker a 95 within a few seasons: an 80 and
+// an all-S build had the same career, and season records fell in most of them. Each of his ratings can be raised twice
+// (the owner, 2026-11-12), so the build he starts with is the kicker he is: all B tops out at all A-.
+export const K_UPGRADE_CAP = 2
+const kCapped = (c, ch) => c?.pos === 'k' && (ch?.upgraded ?? 0) >= K_UPGRADE_CAP
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
 // The last step costs more: A+ to S takes 2 points, everything else 1; past a trait's
@@ -2868,7 +2873,7 @@ export function trainable(c, type) {
   if (c.pos === 'ol' && (type === 'size' || type === 'length')) return false   // (an offensive lineman's arms too: length is arm length)
   if (!ch) return false
   if (vetWork(c, type)) return true   // (a slipped grade to win back, or one to hold: at any age, lib/careerAging.js)
-  if (maxedTrait(ch.val, ch, type)) return false
+  if (maxedTrait(ch.val, ch, type) || kCapped(c, ch)) return false
   const w = trainWindow(c, type)
   return !(w && !w.open)
 }
@@ -2890,6 +2895,7 @@ export function upgradeBlock(c, type) {
   if (c.pos === 'ol' && type === 'size') return 'Size is his frame. It can\u2019t be trained.'
   if (c.pos === 'ol' && type === 'length') return 'Arm length can\u2019t be trained.'
   if (Math.round(ch.val ?? 0) >= 11) return `${name} is already an S. That\u2019s as high as it goes.`
+  if (kCapped(c, ch)) return `${name} has been raised ${K_UPGRADE_CAP} times, the most a kicker’s rating can be.`
   if (maxedTrait(ch.val, ch, type)) return `${name} has been raised ${UPGRADE_CAP[type]} times, the most it can be.`
   const w = trainWindow(c, type)
   const S = sportOf(c)
