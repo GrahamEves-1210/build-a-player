@@ -2,6 +2,8 @@
 // carry real ages (from ESPN dates of birth: the year that gives the exact age when the season starts). A handful of rookies and prospects are best estimates.
 export const BIRTH_NFL = {
   "Adetomiwa Adebawore": 2001,
+  "Bryan Hudson": 2001,
+  "Ed Ingram": 1999,
   "Solomon Thomas": 1995,
   "George Holani": 1999,
   "Jalen Farmer": 2004,
@@ -457,6 +459,8 @@ export const BIRTH_NFL = {
   "Jordan Addison": 2002,
   "Jordan Battle": 2001,
   "Jordan Davis": 2000,
+  "Trent Brown": 1993,
+  "Trey Zuhn III": 2002,
   "Ty Robinson": 2001,
   "Christen Miller": 2004,
   "Jordan James": 2004,
