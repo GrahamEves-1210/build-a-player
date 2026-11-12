@@ -3,6 +3,7 @@ import { valToGrade } from '../../utils/simulation'
 import { IconClose } from '../app/icons'
 import { sfx } from '../../lib/juice'
 import { CFB_POS, collegeGap, draftProj, projText } from './cfbShared'
+import { CLASS_NAME } from './cfbClass'
 
 // ── ENTER THE NFL DRAFT: a finished college season becomes a new football Career ──
 // Same position, same build, with the jump to the pros taken off his ratings first: every trait,
@@ -23,7 +24,9 @@ export function dropRatings(build, types, physical, pos = null) {
   }))
 }
 
-export default function CFBDraft({ build, types, pos, result, user, userName, playerName = null, sandbox, onCancel, onDone }) {
+// cls: the class he leaves as (a junior or a senior); age: how old he is on draft day (a senior is a year older);
+// history: the college seasons before this one (the career's line counts them)
+export default function CFBDraft({ build, types, pos, result, user, userName, playerName = null, sandbox, cls = null, age = null, history = [], onCancel, onDone }) {
   const [M, setM] = useState(null)        // lib/career.js, loaded when this opens
   const [slots, setSlots] = useState(null)
   const [slot, setSlot] = useState(null)
@@ -50,7 +53,8 @@ export default function CFBDraft({ build, types, pos, result, user, userName, pl
   const full = slots && slots.every(Boolean)
   const c = result.cfb ?? {}
   const school = result.team?.school ?? result.team?.name
-  const line = [c.record?.final ?? `${result.wins}-${result.losses}`, (c.apPath?.length && c.apPath[c.apPath.length - 1].rank) ? `Final No. ${c.apPath[c.apPath.length - 1].rank}` : null, c.awards?.heisman?.userWon ? 'Heisman Trophy' : c.awards?.heisman?.userFinalist ? 'Heisman finalist' : null, c.draft?.label ?? null].filter(Boolean).join(' · ')
+  const years = history.length + 1
+  const line = [years > 1 ? `${years} college seasons` : null, c.record?.final ?? `${result.wins}-${result.losses}`, (c.apPath?.length && c.apPath[c.apPath.length - 1].rank) ? `Final No. ${c.apPath[c.apPath.length - 1].rank}` : null, c.awards?.heisman?.userWon ? 'Heisman Trophy' : c.awards?.heisman?.userFinalist ? 'Heisman finalist' : null, c.draft?.label ?? null].filter(Boolean).join(' · ')
   const proj = draftProj(c.draft)
   const go = () => {
     if (!M || slot == null || busy) return
@@ -59,6 +63,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, pl
     const career = {
       ...M.newCareer({ sport: 'nfl', uid, pos, build: after, name: playerName || userName, slot, owner: userName, college: { school: result.team?.short, schoolName: school, line, ...(proj ? { proj } : {}) } }),
       sandbox: !!sandbox,
+      ...(age ? { age } : {}),
     }
     M.saveCareer(career)
     sfx('purchase')
@@ -68,7 +73,7 @@ export default function CFBDraft({ build, types, pos, result, user, userName, pl
     <div className="cfbd-overlay" role="dialog" aria-modal="true" aria-label="Enter the NFL Draft">
       <div className="cfbd">
         <div className="cfbd-head">
-          <div><small>{CFB_POS[pos].label} · {school}</small><h2>Enter the NFL Draft</h2></div>
+          <div><small>{CFB_POS[pos].label} · {school}{cls ? ` · ${CLASS_NAME[cls]}` : ''}</small><h2>Enter the NFL Draft</h2></div>
           <button className="ag-round-btn" onClick={onCancel} aria-label="Close"><IconClose size={16} /></button>
         </div>
         <p className="cfbd-why"><b>The jump to the pros.</b> NFL defenders are bigger, faster and smarter than anyone he saw on Saturdays, so his ratings come down before the combine: <b>every trait drops two grades</b> (an A+ becomes an A-); his size is his size. He earns it back in the league the way every Career player does.{c.draft ? <> <b>His draft stock goes with him:</b> {String(c.draft.label).replace(/^Projected /, '').replace(/^./, x => x.toUpperCase())} ({projText(c.draft)}). The combine and the interviews can still move it a little.</> : null}</p>
