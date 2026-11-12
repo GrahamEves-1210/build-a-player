@@ -503,7 +503,7 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
   if (playoffs) p += 0.02
 
   // Hard limits
-  if (totalTDs < 35) p = Math.min(p, 0.02)
+  if (totalTDs < 38) p = Math.min(p, 0.02)   // (was 35: MVP is hard to get, the owner 2026-11-12)
   if (ints >= 14) p = Math.min(p, 0.03)
   if (wins < 11) p = 0
   // a season nowhere near the award's level never wins it (it used to keep a 2% chance)

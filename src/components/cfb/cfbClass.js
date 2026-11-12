@@ -122,8 +122,8 @@ export function backupSeason(sim, pools, types, team, pos, seed, { ovr, cls = nu
   const r = asBackup(sim.runCFBSimulation(sb, types, team, pos, seed, 'career', null, { name: one?.name ?? 'Starter', year: one?.year ?? 'JR', ...(usePools ? { pools } : {}), ...(season ? { season } : {}) }), pos, seed, bar, ovr)
   if (!cls) return r
   // (the page is about him: his name, his class, his own ratings on the scouting report, and where he stands with the draft)
-  const d = r.cfb.draft, eligible = canDeclare(cls), base = (season ?? 2026) + 1
-  const out = eligible ? base : base + (cls === 'FR' ? 2 : 1)
+  const d = r.cfb.draft, eligible = canDeclare(cls)
+  const out = 2026   // (always the 2026 draft: the NFL rosters are 2026's. Was base, or base plus the years to go)
   return {
     ...r,
     cfb: {

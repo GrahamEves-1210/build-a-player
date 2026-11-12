@@ -1198,18 +1198,21 @@ function runAwards(L, R, cands, rA, user) {
   const ref = { qb: top10('qb'), rb: top10('rb'), wr: top10('wr') }
   const onQB = c => (c.pos === 'qb' ? c.prod : ref.qb.m + (c.prod - ref[c.pos].m) / ref[c.pos].sd * ref.qb.sd)
   for (const c of all) {
-    c.hype = gauss(rA) * 7
+    // (2026-11-12, the owner: a back with more yards on the No. 6 team lost to another back and wasn't on the ballot.
+    // The vote is the season first: the buzz and the name now move a race, they don't decide it. Was hype 7 a sigma and
+    // a rating worth -5 to +12)
+    c.hype = gauss(rA) * 3.5
     // (a Group of Six star is a long shot: none has won since BYU's Ty Detmer in 1990)
     // (QBs win about 4 in 5: a back or receiver needs the bigger year. Henry '15, Smith '20, Hunter '24 did)
     // (the marquee names: voters come in knowing the country's best players, and a star on a contender is on
     // every preseason watch list; the build's rating counts the same way)
-    c.heis = onQB(c) + c.team_ + c.hype + clamp(-5, 12, ((c.ovr ?? 80) - 88) * 1.4) + (c.pos === 'rb' ? -10 : c.pos === 'wr' ? -19 : 0) - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
+    c.heis = onQB(c) + c.team_ + c.hype + clamp(-3, 5, ((c.ovr ?? 80) - 88) * 0.6) + (c.pos === 'rb' ? -10 : c.pos === 'wr' ? -19 : 0) - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
   }
   // the Heisman: ~930 ballots, 3-2-1 (each voter sees the race a little differently)
   const field = [...all].sort((a, b) => b.heis - a.heis).slice(0, 14)
   for (const c of field) { c.pts = 0; c.v1 = 0; c.v2 = 0; c.v3 = 0 }
   for (let v = 0; v < 930; v++) {
-    const b = field.map(c => [c.heis + bell(rA) * 12, c]).sort((x, y) => y[0] - x[0])
+    const b = field.map(c => [c.heis + bell(rA) * 9, c]).sort((x, y) => y[0] - x[0])
     b[0][1].pts += 3; b[0][1].v1++; b[1][1].pts += 2; b[1][1].v2++; b[2][1].pts += 1; b[2][1].v3++
   }
   field.sort((a, b) => b.pts - a.pts)
@@ -1392,7 +1395,8 @@ function pickWindow(pos, tier, board) {
 // o (College Football mode's class years): season, the year this season is played (2026: the 2027 draft is his first chance);
 // choice: going or staying is the player's own call, so a junior's line never says what he does
 function draftStock(pos, ovr, t, awards, year, board = null, career = null, noClass = false, o = null) {
-  const dy = (o?.season ?? 2026) + 1
+  // (the draft is always the 2026 NFL Draft, however many college seasons he plays: the NFL rosters are 2026's. The owner, 2026-11-12)
+  const dy = 2026
   const yr = String(year ?? 'JR').toUpperCase()
   const prodAdj = clamp(-3, 3.5, (production(pos, t) - PROD_PAR[pos]) / 15)
   const v = ovr + prodAdj + (awards?.heisman?.userWon ? 1.5 : awards?.heisman?.userFinalist ? 0.7 : 0) + (awards?.allAmerica?.user === 'first' ? 1 : 0)
@@ -1432,7 +1436,7 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
   if (!eligible) {
     const ci = CLASS_ORDER.indexOf(yr)
     const yearsOut = yr === 'FR' ? 2 : yr === 'RS-FR' || yr === 'SO' ? 1 : 1
-    const draftYear = dy + Math.max(1, yearsOut)
+    const draftYear = dy
     return { year: yr, eligible: false, declares: false, ...shared, label: `Not draft-eligible yet (${yr})`, draftYear,
       note: `Eligible for the ${draftYear} NFL Draft. Early board: ${LABEL[tier].replace('Projected ', '')}`, classIndex: ci }
   }

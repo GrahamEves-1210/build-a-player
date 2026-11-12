@@ -256,7 +256,7 @@ export default function CareerCollege({ c, setCareer, onExit }) {
         <CFBSimPage result={result} pos={c.pos} userName={c.name} teams={teamsBy} attrMap={P.attr} photoOf={photoOf}
           archetype={P.arch(P.ovr(collegeBuild(c.build, P.types, cur.dev), P.types), collegeBuild(c.build, P.types, cur.dev), P.types)}
           roleNote={cur.role === 'backup' ? `${classLabel(cur.cls)} · backup to ${result.starterName}` : `${classLabel(cur.cls)} · ${sch}'s starter`}
-          userYear={cur.cls} season={2026 + si} rewards={false}
+          userYear={cur.cls} season={2026} rewards={false}
           stage={cur.view ?? 0}
           onStage={k => put({ seasons: col.seasons.map((s, i) => (i === si ? { ...s, view: k } : s)) })}
           onHome={onExit}

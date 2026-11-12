@@ -1396,7 +1396,9 @@ export const honorsOf = (s, S, pos) => (S.honorsOf ? S.honorsOf(s, pos) : S.isSo
   s.award && (AWARD_NAME[pos] === 'PROTECTOR' ? 'Protector of the Year' : AWARD_NAME[pos] ?? 'Season award'),
   s.fmvp && `${S.final} MVP`,
   s.roy && 'Rookie of the Year',
-  s.allPro ? (S.isBucket ? 'All-NBA' : 'All-Pro') : s.proBowl ? (S.isBucket ? 'All-Star' : 'Pro Bowl') : null,
+  // (both, when he made both: an MVP season showed only "All-Pro" and read as no Pro Bowl. The owner, 2026-11-12)
+  (s.proBowl || s.award || s.allPro) && (S.isBucket ? 'All-Star' : 'Pro Bowl'),
+  s.allPro && (S.isBucket ? 'All-NBA' : 'All-Pro'),
 ].filter(Boolean))
 function SeasonTable({ c, t }) {
   const S = sportOf(c)

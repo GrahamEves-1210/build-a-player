@@ -570,7 +570,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
           stage={stage} onStage={setStage}
           story={story} onStory={setStory} photoOf={photoOf}
           key={result.seed}
-          userYear={cls} season={2026 + history.length}
+          userYear={cls} season={2026}
           roleNote={result.role === 'backup' ? `${CLASS_NAME[cls]} · backup to ${result.starterName ?? 'the starter'}` : `${CLASS_NAME[cls]} · ${P.arch(P.ovr(build, P.types), build, P.types)}`}
           seasonNote={[era === 'alltime' ? 'All-Time build' : null, `${CLASS_NAME[cls]} season`, history.length ? (history[history.length - 1].school === result.team?.short ? `back at ${result.team?.school ?? result.team?.name}` : `transferred from ${history[history.length - 1].schoolName}`) : null].filter(Boolean).join(' · ')}
           onAgain={() => start(pos)}
