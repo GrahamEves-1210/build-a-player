@@ -680,9 +680,17 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     if (!seedPlan || spinCount < 1) return null
     const sorted = [...teamReelItems].sort((a, b) => a.short.localeCompare(b.short))
     // Compete: a respin is this seat's own draw, seeded too (respinSeed) so the server can check it
-    if (freeTeam) return seedPlan.respinSeed ? seededTeamOrder(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)[0] ?? null : null
     const order = seededTeamOrder(sorted, `${seedPlan.seed}:teams`)
-    return order[teamIndex % order.length]
+    const dealt = order[teamIndex % order.length]
+    // a team respin never lands on the team it respins (that wasted the respin: same team, and on a
+    // one-player team the same player too): the first of the seat's own order that isn't it,
+    // the same pick as competeCore respinTeam, so the server's check agrees
+    if (freeTeam) {
+      if (!seedPlan.respinSeed) return null
+      const mine = seededTeamOrder(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)
+      return mine.find(t => t.short !== dealt?.short) ?? mine[0] ?? null
+    }
+    return dealt
   }, [seedPlan, spinCount, teamReelItems, teamIndex, freeTeam])
   const playerTarget = useMemo(() => {
     // a respun team or a player respin is the player's own draw (seeded by the seat in Compete)

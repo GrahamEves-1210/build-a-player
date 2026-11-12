@@ -115,8 +115,11 @@ export function legalSlots({ seed, rs = null, types, pool, teams, sent }) {
         if (p?.name === name) pr++
       }
       else if (s.how === 'tr' && tr < 1 && (d === 0 || pr < 1)) {
-        const rt = respinTeam(rs, i, teams, pool)
+        // the team respin skips the team spin #i dealt; an app from before that rule could
+        // land on it again (its first draw), so that one still counts while old apps are around
+        const rt = respinTeam(rs, i, teams, pool, team), old = respinTeam(rs, i, teams, pool)
         p = rt ? drawOf(respinPlayers(rs, i, rt, pool), d) : null
+        if (p?.name !== name && old && old.short !== rt?.short) p = drawOf(respinPlayers(rs, i, old, pool), d)
         if (p?.name === name) { tr++; if (d === 1) pr++ }
       }
       if (p?.name === name) { ok.add(t); usedSpin.add(i) }
@@ -151,7 +154,12 @@ export function seededTeams(seed, teams, pool) {
   return seededTeamOrder(reelTeams(teams, pool), `${seed}:teams`)
 }
 // A seat's respins (SpinScreen with seedPlan.respinSeed = `${seed}:${vid}`) on its spin #i
-export const respinTeam = (rs, i, teams, pool) => seededTeamOrder(reelTeams(teams, pool), `${rs}:teams:${i}`)[0] ?? null
+// A team respin never lands on the team it respins (except: spin #i's own team): the first of
+// the seat's order that isn't it. SpinScreen teamTarget makes the same pick.
+export const respinTeam = (rs, i, teams, pool, except = null) => {
+  const order = seededTeamOrder(reelTeams(teams, pool), `${rs}:teams:${i}`)
+  return (except ? order.find(t => t.short !== except.short) : null) ?? order[0] ?? null
+}
 export const respinPlayers = (rs, i, team, pool) => seededShuffle(rosterOf(team, pool), `${rs}:${i}:${team.short}`)
 export function seededPlayer(seed, i, team, pool) {
   const roster = pool.filter(q => q.team === team.short).sort((a, b) => a.name.localeCompare(b.name))
