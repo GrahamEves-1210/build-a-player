@@ -73,33 +73,6 @@ function useDailyBadge() {
   return missions + streak
 }
 
-function watchRail() {
-  const root = document.documentElement
-  let last = -1, ro = null, seen = null
-  const measure = () => {
-    const el = document.querySelector('[id^="pw-oop-bottom_rail"], [id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]')
-    if (el !== seen) { ro?.disconnect(); ro = null; seen = el; if (el && window.ResizeObserver) { ro = new ResizeObserver(measure); ro.observe(el) } }
-    let h = 0
-    if (el && !root.classList.contains('ads-hidden')) {
-      const cs = getComputedStyle(el)
-      if (cs.display !== 'none' && cs.visibility !== 'hidden') {
-        // from the bottom of the window up to the highest part showing (the rail's close
-        // tab sits above the rail itself)
-        let top = el.getBoundingClientRect().top
-        for (const c of el.querySelectorAll('iframe, div, button, span')) { const r = c.getBoundingClientRect(); if (r.height > 0 && r.width > 0) top = Math.min(top, r.top) }
-        h = Math.min(320, Math.max(0, window.innerHeight - top))
-      }
-    }
-    h = Math.ceil(h)
-    if (h !== last) { last = h; root.style.setProperty('--web-rail', `${h}px`) }
-  }
-  measure()
-  const mo = new MutationObserver(measure)
-  mo.observe(document.body, { childList: true })
-  const t = setInterval(measure, 1500)   // the rail's iframe resizes without DOM changes on the body
-  return () => { mo.disconnect(); ro?.disconnect(); clearInterval(t) }
-}
-
 startPresence()   // players online (lib/presence.js): once, for the app and the new website
 
 export default function AppTabBar() {
@@ -161,10 +134,8 @@ export default function AppTabBar() {
   // (the sign-in sheet and a player's profile sheet count too: they are the game's own, over whatever mode is open,
   // and College Football's blue stays off them: cfb.css)
   useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen || authOpen || !!player) }, [screen, authOpen, player])
-  // Website: the bottom ad rail is there on every page. Measure it into
-  // --web-rail so the dock, screens and sheets sit above it (0 when it's gone,
-  // e.g. ad-free players)
-  useEffect(() => { if (!IS_APP) return watchRail() }, [])
+  // (Website: the bottom ad rail is measured into --web-rail by lib/railWatch.js, started in main.jsx: the dock,
+  // screens and sheets sit above it)
   // Website: the app-look pages (home, profile) take the app's page styling
   useEffect(() => { if (!IS_APP) document.documentElement.classList.toggle('ag-page', WEB_DOCK_ON.has(state.page)) }, [state.page])
 

@@ -132,6 +132,10 @@ function dropLoader() {
 
 // the website's bottom rail: under the nav, its close button on top (lib/railLayer.js)
 if (!IS_APP) import('./lib/railLayer').then(m => m.startRailLayer()).catch(() => {})
+// and measured into --web-rail, which every layout keeps clear of (lib/railWatch.js)
+if (!IS_APP) import('./lib/railWatch').then(m => m.startRailWatch()).catch(() => {})
+// dev server only: ?rail puts a simulated rail on the page and outlines anything left under it (lib/railGuard.js)
+if (import.meta.env.DEV && !IS_APP) import('./lib/railGuard').then(m => m.startRailGuard()).catch(() => {})
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
