@@ -193,7 +193,7 @@ const _LBS = [
   { name: "Cody Lindenberg", short: "Lindenberg", team: 'LV', teamName: "Las Vegas Raiders", pos: 'LB', subpos: 'lb', spot: 'WILL', skin: '#f0c4a0', height: 74, weight: 236, number: 55, starter: false, years: "2025-",
     attrs: { range: 3, power: 3, tackling: 4, blockShed: 4, zoneInstincts: 2, passRush: 3, playRecognition: 3, leadership: 2 } },
   // LAC
-  { name: "Daiyan Henley", short: "Henley", team: 'LAC', teamName: "Los Angeles Chargers", pos: 'LB', subpos: 'lb', spot: 'RILB', skin: '#5e3c22', height: 72, weight: 225, number: 0, starter: true, years: "2023-",
+  { name: "Daiyan Henley", short: "Henley", team: 'DEN', teamName: "Denver Broncos",       pos: 'LB', subpos: 'lb', spot: 'RILB', skin: '#5e3c22', height: 72, weight: 225, number: 0, starter: true, years: "2023-",
     attrs: { range: 9, power: 7, tackling: 9, blockShed: 7, zoneInstincts: 7, passRush: 7, playRecognition: 8, leadership: 7 } },
   { name: "Del'Shawn Phillips", short: "Phillips", team: 'LAC', teamName: "Los Angeles Chargers", pos: 'LB', subpos: 'lb', spot: 'LILB', skin: '#5e3c22', height: 74, weight: 230, number: 53, starter: true, years: "2025-",
     attrs: { range: 7, power: 8, tackling: 6, blockShed: 6, zoneInstincts: 6, passRush: 7, playRecognition: 7, leadership: 6 } },

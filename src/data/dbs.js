@@ -319,7 +319,7 @@ const _DBS = [
     attrs: { speed: 6, size: 5, fluidity: 7, press: 5, hands: 6, zoneIQ: 6, manCoverage: 7, playRecognition: 6, runSupport: 4} },
   { name: 'Kevin Winston Jr.',   short: 'Winston',        team: 'TEN', teamName: 'Tennessee Titans',  skin: '#5e3c22', height: 74, weight: 213, starter: true,  captain: true,  number: 23, subpos: 's',
     attrs: { speed: 5, size: 9, fluidity: 5, press: 4, hands: 4, zoneIQ: 5, manCoverage: 5, playRecognition: 5, runSupport: 7} },
-  { name: 'Amani Hooker',        short: 'Hooker',         team: 'TEN', teamName: 'Tennessee Titans',  skin: '#b07848', height: 71, weight: 210, starter: true,  number: 37, subpos: 's',
+  { name: 'Amani Hooker',        short: 'Hooker',         team: 'BUF', teamName: 'Buffalo Bills',     skin: '#b07848', height: 71, weight: 210, starter: true,  number: 37, subpos: 's',
     attrs: { speed: 6, size: 5, fluidity: 5, press: 4, hands: 10, zoneIQ: 8, manCoverage: 4, playRecognition: 7, runSupport: 6} },
   // WAS
   { name: 'Amik Robertson', short: 'Robertson', team: 'WAS', teamName: 'Washington Commanders', skin: '#5e3c22', height: 69, weight: 183, starter: true,  captain: true,  number: 2, subpos: 'cb',

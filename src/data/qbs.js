@@ -98,9 +98,9 @@ export const QBS = [
   { name: 'Garrett Nussmeier',  short: 'Nussmeier',   team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#f0c4a0', starter: false, number: 14,
     attrs: { 'arm': 4, 'legs': 3, 'size': 6, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 3 } },
   // LV
-  { name: 'Kirk Cousins',       short: 'Cousins',     team: 'LV',  teamName: 'Las Vegas Raiders',     color: '#000000', color2: '#A5ACAF', skin: '#f0c4a0', starter: true,  captain: true,  number: 8,
+  { name: 'Kirk Cousins',       short: 'Cousins',     team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#f0c4a0', starter: false, captain: false, number: 8,
     attrs: { 'arm': 3, 'legs': 1, 'size': 5, 'processing': 9, 'leadership': 10, 'vision': 8, 'playmaking': 1, 'accuracy': 9, 'pocket-presence': 8 } },
-  { name: 'Fernando Mendoza',   short: 'Mendoza',     team: 'LV',  teamName: 'Las Vegas Raiders',     color: '#000000', color2: '#A5ACAF', skin: '#d4a070', starter: false, number: 15,
+  { name: 'Fernando Mendoza',   short: 'Mendoza',     team: 'LV',  teamName: 'Las Vegas Raiders',     color: '#000000', color2: '#A5ACAF', skin: '#d4a070', starter: true,  number: 15,
     attrs: { 'arm': 6, 'legs': 6, 'size': 9, 'processing': 5, 'leadership': 8, 'vision': 6, 'playmaking': 4, 'accuracy': 6, 'pocket-presence': 4 } },
   { name: "Aidan O'Connell",    short: "O'Connell",   team: 'LV',  teamName: 'Las Vegas Raiders',     color: '#000000', color2: '#A5ACAF', skin: '#f0c4a0', starter: false, number: 12,
     attrs: { 'arm': 4, 'legs': 3, 'size': 6, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 3 } },
