@@ -33,9 +33,11 @@ const ZONE11 = { ...NEAR, id: 'zone11', zoom: 1.5, men: 1.12 }
 const KR = { id: 'kr', k: 1.9, topFrac: 0.2, zoom: 1.2, men: 1.15, e: 0.32, res: 4 }
 // A field goal, from behind the kicker (2026-11-11: the passing camera had him a speck in the middle of the field): low and
 // close, so he and the holder fill the bottom of the picture, the line is right in front of him and the uprights are far away
-const FG = { id: 'fg', k: 2.8, topFrac: 0.2, zoom: 2.1, men: 1.75, e: 0.24, res: 5 }
+// (2026-11-12: kick.js draws both kicks through its own real camera, from behind the kicker, every man to the scale of the
+// field he stands on. All it takes from these two is the horizon, which the stands are painted down to)
+const FG = { id: 'fg', k: 2.8, topFrac: 0.43, zoom: 2.1, men: 1.75, e: 0.24, res: 5 }
 // The onside kick, the same way: in behind the kicker, his own men either side of him, the hands team ten yards off
-const ONSIDE = { id: 'onside', k: 2.5, topFrac: 0.22, zoom: 1.7, men: 1.75, e: 0.26, res: 5 }
+const ONSIDE = { id: 'onside', k: 2.5, topFrac: 0.2, zoom: 1.7, men: 1.75, e: 0.26, res: 5 }
 const CAMS = {
   bomb: READ11, 'third-long': READ11, acc: READ, 'hot-read': READ11, audible: READ11, 'two-minute': READ11,
   gap: NEAR11, 'jump-route': NEAR11, 'zone-drop': ZONE11, sneak: NEAR11, 'goal-line': GOAL, catch: GOAL, release: NEAR, cone: NEAR, gauntlet: OPEN,
@@ -54,6 +56,7 @@ export function useCamera(game) {
   sprites.clear(); spriteBytes = 0; nearLook.clear(); bakeQ.length = 0; bakeIds.clear()
 }
 const horizon = view => view.h * CAM.topFrac
+export const horizonOf = horizon
 export function tilt(view, x, y) {
   const t = y / view.h
   const s0 = 1 / (1 + CAM.k * (1 - t)), g = s0 * CAM.zoom
@@ -667,6 +670,10 @@ export function padsPose(dir, step, pose, carry) {
     if (sd > 0) { b.hrx = 33; b.hry = -50; b.hlx = -17; b.hly = -60 } else { b.hlx = -33; b.hly = -50; b.hrx = 17; b.hry = -60; b.ballR = true }
     return b
   }
+  // a place kick, from behind: the last step (the kicking leg drawn back, heel up) and the swing through (the leg up in
+  // front of him, short to the eye, the plant foot down, the arms out for balance)
+  if (pose === 'kick-load') { o.hy = 50; o.lean = -0.07; o.lx = -8; o.ly = 0; o.rx = 9; o.ry = -22; o.hlx = -30; o.hly = -64; o.hrx = 22; o.hry = -50; return o }
+  if (pose === 'kick-thru') { o.hy = 54; o.lean = -0.13; o.lx = -7; o.ly = 0; o.rx = 3; o.ry = -33; o.hlx = -34; o.hly = -72; o.hrx = 21; o.hry = -44; return o }
   // hands on his hips: on the belt, the elbows out wide
   if (pose === 'hips') { o.hlx = -13; o.hly = -o.hy - 5; o.hrx = 13; o.hry = -o.hy - 5; o.akimbo = 1; return o }
   // bent over, hands on his knees: feet wide, knees soft, the arms straight down to them (drawn with a squat, so he's doubled over)
@@ -937,9 +944,20 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
       const a = rigArm(sx, sy, hx, hy, -0.4, 0.8)
       kitArm(x, sx, sy, a, 1, shade(color, f), shade(trim, f), shade(skin, f), plain ? null : shade(trim, f))
     }
+    // the holder: down on his back knee, the front foot flat and that knee up, bent over the spot with a finger on the top
+    // of the ball (hold) or the hand come away (held: the ball is gone). His legs are drawn where they are; the rest of him
+    // is the standing man, sat down to his hips and tipped over them
+    const kneel = pose === 'hold' || pose === 'held'
+    if (kneel) {
+      kitLeg(x, 0, -28, 26, -31, 25, -4.6, 1, shade(color, 0.8), shade(pants, 0.8), shade(trim, 0.8), null, 'side', 6.4)
+      kitLeg(x, 0, -28, 7, -6.4, -19, -5, -1, color, pants, trim, null, 'side', 5)
+      x.save(); x.translate(0, -28); x.rotate(0.5); x.translate(0, -hipY)
+      armSide(21, -68, 0.84)
+    } else {
     if (thr) armSide(thr[0] / RIG, thr[1] / RIG, 0.84); else armSide(sx + (swing ? swing * 16 : 4), -50 - swing * 2, 0.84)
     legSide(far, swing > 0 ? -8 : 0, 0.8)
     legSide(near, swing < 0 ? -8 : 0, 1)
+    }
     // the hips side on: a seat behind, flat in front, the belt on top
     x.fillStyle = pants; x.strokeStyle = INK; x.lineWidth = 1.2; x.beginPath()
     x.moveTo(-8.4, hipY - 4); x.lineTo(8.2, hipY - 4); x.quadraticCurveTo(9.6, hipY + 2, 7.4, hipY + 8); x.lineTo(-6, hipY + 9); x.quadraticCurveTo(-11.4, hipY + 3, -8.4, hipY - 4); x.closePath(); x.fill(); x.stroke()
@@ -963,7 +981,10 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
       if (pose === 'qb-cock') padsBall(x, thr[2] / RIG - 2, thr[3] / RIG - 5, 1.1)
       if (pose === 'qb-hold') padsBall(x, thr[2] / RIG + 3, thr[3] / RIG - 5, 1.1)
     } else if (pose === 'wrap') armSide(24, -68)
+    else if (pose === 'hold') armSide(38, -67)
+    else if (pose === 'held') armSide(27, -60)
     else armSide(sx + (swing ? -swing * 16 : 2), -50 + swing * 2)
+    if (kneel) x.restore()
     x.restore()
     return
   }
@@ -1388,6 +1409,26 @@ export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', 
   else ctx.drawImage(c, p.x - w / 2, top, w, w)
   if (name) nameTag(ctx, view, p.x, p.y, name, Math.max(0.8, k))
   return p
+}
+
+// A man at a point on the screen, at a scale the caller worked out (k: screen pixels to one of his own units; standing he
+// is MAN_UNITS of them tall): for a game that has its own camera (kick.js). His sprite is painted at the size he is drawn,
+// so a man a long way off is as sharp as the one in front of the camera.
+export const MAN_UNITS = 43.5
+const LOOK_AT = { color: '', trim: '', pants: '', skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, pose: null, fallStage: 0 }
+export function athleteAt(ctx, view, sx, sy, k, { color = '#1b6fd1', trim = '#f4efe6', pants = null, skin = '#8d5a3b', number = null, dir = 'up', step = null, pose = null, carry = false, lift = 0, shadow = true } = {}) {
+  if (!(k > 0)) return
+  if (view.px) lastPx = view.px
+  if (shadow) { ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(sx + 3 * k, sy + 0.4 * k, 12 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill() }
+  const L = LOOK_AT
+  L.color = color; L.trim = trim; L.pants = pants ?? '#eceae2'; L.skin = warmSkin(skin)
+  L.number = dir === 'up' || dir === 'down' ? number : null; L.dir = dir === 'left' || dir === 'right' ? 'side' : dir
+  L.step = step; L.carry = carry; L.pose = pose
+  const kk = k * 0.92, c = spriteOf(L, RES_TIERS.find(t => t >= kk * lastPx) ?? RES_TIERS[RES_TIERS.length - 1])
+  if (!c) return
+  const w = BOX * kk, top = sy - (FEET + lift) * kk
+  if (dir === 'left') { ctx.save(); ctx.translate(sx, 0); ctx.scale(-1, 1); ctx.drawImage(c, -w / 2, top, w, w); ctx.restore() }
+  else ctx.drawImage(c, sx - w / 2, top, w, w)
 }
 
 // ── A football in the air ──────────────────────────────────────────────
