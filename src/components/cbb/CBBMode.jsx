@@ -316,6 +316,8 @@ export default function CBBMode({ user, onHome, onCareer }) {
   // Starters only (the owner's rule): one per school, so a conference deals its schools' QB1s,
   // RB1s or WR1s, never a backup, respins included. (The season still plays each team's real depth)
   const teamsBy = useMemo(() => Object.fromEntries((data?.teams ?? []).map(t => [t.short, t])), [data])
+  // (every Division I team, for the season page: the schedule and the bracket name schools the mode doesn't spin)
+  const teamsAll = useMemo(() => Object.fromEntries([...(data?.others ?? []), ...(data?.teams ?? [])].map(t => [t.short, t])), [data])
   // (the wheel always deals the first season's real rosters; the seasons after it play cbbShared seasonData's)
   // All-Time: the same rows from data/cfb-legends.js, a school's one to three greats at the spot (every one of them
   // is on the wheel: they're all 'starters'), with the years he played there where a current player has his class.
@@ -566,7 +568,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
     return (
       <>
         {/* the season page (the navbar over it, as the game's season has it) */}
-        <CBBSimPage result={result} build={build} types={P.types} attrMap={P.attr} pos={pos} userName={who} teams={teamsBy}
+        <CBBSimPage result={result} build={build} types={P.types} attrMap={P.attr} pos={pos} userName={who} teams={teamsAll}
           archetype={P.arch(P.ovr(build, P.types), build, P.types)}
           nav={<CBBNav pos={pos} onHome={close} grades={false} era={era} />}
           stage={stage} onStage={setStage}

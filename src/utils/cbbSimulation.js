@@ -500,7 +500,8 @@ function runAwards(L, R, cands, seed, user) {
 // ── NBA draft stock ──────────────────────────────────────────────────────────
 // One board for every college player: his overall, his age (a freshman's season is worth five points of it, a
 // senior's costs three), his production, his frame, the hardware. College players take about three of every four
-// picks (the rest are international and G League), so a place on the college board is a pick about a third later.
+// picks (the rest are international and G League), but most underclassmen on the board go back to school, so a
+// player who does come out is picked a little ahead of his place on it.
 const CLS_PTS = { FR: 5, SO: 2.5, JR: 0, SR: -3 }
 const TIERS = [['top5', 5, 'Projected top-five pick', 1], ['lottery', 14, 'Projected lottery pick', 3], ['r1', 30, 'Projected first-round pick', 5], ['r2', 60, 'Projected second-round pick', 8]]
 const tierOf = pick => TIERS.find(t => pick <= t[1]) ?? ['udfa', 999, 'Undrafted free agent', 0]
@@ -508,7 +509,7 @@ function draftBoard(cands, awards, user, career) {
   const mark = c => (c.isUser ? (awards.wooden.userWon ? 2 : awards.wooden.userFinalist ? 1 : 0) + (awards.allAmerica.user === 'first' ? 1 : 0) + (career?.wooden === 'won' ? 1 : 0) : 0)
   const bs = c => c.ovr + (CLS_PTS[c.year] ?? 0) + clamp(-2, 3, (c.prod - 20) * 0.2) + (c.pos === 'guard' ? ((c.attrs.size ?? 5) >= 7 ? 1 : (c.attrs.size ?? 5) <= 2 ? -1.5 : 0) : (c.attrs.size ?? 5) >= 9 ? 1 : 0) + mark(c) - (c.starter ? 0 : 6)
   const board = cands.map(c => ({ c, s: bs(c) })).sort((a, b) => b.s - a.s)
-  const pickAt = k => Math.round((k + 1) * 1.33)
+  const pickAt = k => Math.max(1, Math.round((k + 1) * 0.9))
   const row = (x, k) => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, pos: x.c.natPos, isUser: !!x.c.isUser, tier: tierOf(pickAt(k))[0], ppg: x.c.t.ppg, rpg: x.c.t.rpg, apg: x.c.t.apg })
   const k = board.findIndex(x => x.c.isUser)
   const pick = pickAt(k), [tier, , label, half] = tierOf(pick)

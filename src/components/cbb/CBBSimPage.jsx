@@ -429,7 +429,9 @@ const Center = ({ children }) => <div className="simp-screen-center cfbp-end" st
 // ── the figure in school colours, the build as rows ──
 function Figure({ build, team }) {
   if (!build || !team) return null
-  return <BucketModelFigure build={build} team={{ color: team.color, color2: team.color2, short: logoKey(team.short) }} className="cbbp-figure" />
+  // (the word across the chest is the school he plays for, whoever the chips came from)
+  const worn = Object.fromEntries(Object.entries(build).map(([k, x]) => [k, x ? { ...x, jerseyWord: String(team.school ?? team.short).toUpperCase() } : x]))
+  return <BucketModelFigure build={worn} team={{ color: team.color, color2: team.color2, short: logoKey(team.short) }} className="cbbp-figure" />
 }
 const rowsOf = (build, types, attrMap) => (build && types ? types.filter(t => build[t]).map(t => ({ key: t, label: attrMap?.[t]?.label ?? t, data: build[t], val: build[t].val })) : [])
 function BuildRows({ rows, small = false, visible = rows.length }) {

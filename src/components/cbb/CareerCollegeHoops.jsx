@@ -155,6 +155,7 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
   }, [])
   useEffect(() => { let live = true; loadCBB().then(d => { registerLogos(d.teams, d.others); if (live) setData(d) }); return () => { live = false } }, [])
   const teamsBy = useMemo(() => Object.fromEntries((data?.teams ?? []).map(t => [t.short, t])), [data])
+  const teamsAll = useMemo(() => Object.fromEntries([...(data?.others ?? []), ...(data?.teams ?? [])].map(t => [t.short, t])), [data])
   const confOf = useMemo(() => Object.fromEntries((data?.conferences ?? []).map(x => [x.id, x])), [data])
   const photoOf = useMemo(() => photoLookup(data?.pools, HEADSHOT_BASE), [data])
   const schoolOf = short => String(teamsBy[short]?.school ?? short).toUpperCase()
@@ -248,7 +249,7 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
     const keepSummary = () => col.seasons.map((s, i) => (i === si && !s.summary ? { ...s, summary: summaryOf(result, s, c.pos, teamsBy) } : s))
     return (
       <>
-        <CBBSimPage result={result} pos={c.pos} userName={c.name} teams={teamsBy} attrMap={P.attr} photoOf={photoOf}
+        <CBBSimPage result={result} pos={c.pos} userName={c.name} teams={teamsAll} attrMap={P.attr} photoOf={photoOf}
           archetype={P.arch(P.ovr(collegeBuild(c.build, P.types, cur.dev), P.types), collegeBuild(c.build, P.types, cur.dev), P.types)}
           roleNote={cur.role === 'bench' ? `${classLabel(cur.cls)} · off the bench behind ${result.starterName}` : `${classLabel(cur.cls)} · ${sch}'s starter`}
           userYear={cur.cls} season={2026 + si} rewards={false}

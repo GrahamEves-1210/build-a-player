@@ -3,6 +3,9 @@
    the two-position pick, the region tabs, a bracket of 16, the All-America teams, the draft track.
    html.is-cbb is on with html.is-cfb while the mode is open (CBBMode.jsx) and off the moment it closes. */
 
+/* a screen's header sits on the navy, not on basketball's dark bar */
+html.is-cbb:not(.ag-screen-open) .cfb-screen .ag-screen-head { background: var(--cfb-navy); }
+
 /* the position pick: two, not three */
 .cfb-pos-row:has(.cbb-pos) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cbb-pos .cfb-pos-fig { height: calc(100% - 96px); bottom: 74px; }
@@ -45,3 +48,9 @@
 /* the figure on the season page stands on the navy */
 .cbbp .cbbp-figure { margin: 6px auto 2px; }
 .cbbp-arena { opacity: .75; }
+
+/* six rounds on one row (the game's strip is laid out for four) */
+.ag-bracket.cbbs-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.cbbs-strip .ag-bk-val { font-size: 15px; }
+/* a wide page shows a region's four rounds at once */
+@media (min-width: 700px) { .cbbs-bracket { grid-template-columns: repeat(var(--rounds), minmax(132px, 1fr)); } }
