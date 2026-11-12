@@ -1477,7 +1477,6 @@ function drawBroadcast(ctx, g, view) {
   const refSig = mood === 'td' && after > 40 ? 'arms-up' : mood === 'first' && after > 120 ? 'point-l' : (mood === 'over' || mood === 'under' || mood === 'wide' || mood === 'swat' || mood === 'bat') && after > 520 ? (Math.floor(after / 150) % 2 ? 'wave-a' : 'wave-b') : null
   official(ctx, view, SR + 3, fl(ry), refSig, !refSig && refGo > 0 && refGo < 0.98 ? Math.floor(g.t / 95) % 4 : null)
   const coachUp = mood === 'td' ? 'arms-up' : mood === 'first' ? 'reach-r' : mood === 'pick' || sack ? 'hands-head' : mood ? 'hips' : null
-  coach(ctx, view, SL - 7, fl(3.5 * YD), c.us, c.trim, after > 160 ? coachUp : null, mood === 'td' && after > 160 ? hop(after, 470, 11) : 0)
   // the sidelines: whoever this is good for
   if (!lite && (mood === 'td' || mood === 'first') && after > 100) benchUp(ctx, view, h, -1, { color: c.us, trim: c.trim }, after)
   if (!lite && (mood === 'pick' || sack) && after > 240) benchUp(ctx, view, h, 1, them, after)

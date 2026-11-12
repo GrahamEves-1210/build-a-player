@@ -746,7 +746,6 @@ function drawSet(ctx, view, c, los, pyd, col, them, dy) {
   drawCast(ctx, view, list, col, them)
   // the man in stripes and the head coach, in their places
   official(ctx, view, SR + 3, los - 9 * pyd + dy, null, null)
-  coach(ctx, view, SL - 7, los - 3.5 * pyd + dy, col.us, col.trim, null)
   snapBall(ctx, view, 180, los + 6 + dy, fx(QB.x, m), yOf(QB.yd, los, pyd) + dy, -1)
   // he's coming: a chevron at his feet
   for (const d of c.form) {
@@ -1115,7 +1114,6 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
   const badEnd = k === 'pick' || sack || (c.final && !p.td)
   const up = p.td ? 'arms-up' : firstDown ? 'reach-r' : badEnd ? 'hands-head' : k === 'swat' || k === 'stuff' ? 'hips' : null
   const said = pt >= p.T + 80 || (k === 'pick' && pt >= p.tLand + 200)
-  coach(ctx, view, SL - 7, Y(3.5), col.us, col.trim, said ? up : null, said && p.td ? hop(pt - p.T, 470, 11) : 0)
   // the sidelines: whoever this is good for
   const goalY = los - c.G0 * pyd + dy
   const lite = lightFx()

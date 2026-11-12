@@ -98,7 +98,7 @@ export const homeYards = short => (K_DOMES.has(short) ? 1 : short === 'DEN' ? 2.
 // Recovery rates (see the rules and sources in lib/mg/onside.js): about 6-7% of declared onside kicks are recovered by
 // the kicking team since surprise onside kicks were banned (2024), down from about 20% for surprise tries before 2018.
 // His accuracy (placing the high hop inside the 10-to-15-yard window) moves it a little; nothing moves it much.
-export const onsideP = k => clampK(0.045 + (k?.accuracy ?? 5) * 0.004 + (k?.clutch ?? 5) * 0.0015, 0.04, 0.11)
+export const onsideP = k => clampK(0.06 + (k?.accuracy ?? 5) * 0.0045 + (k?.clutch ?? 5) * 0.002, 0.055, 0.14)   // (a little up, 2026-11-12, the owner)
 // with the ball back and under two minutes: the offense still has to score (a field goal down 1-3, a touchdown down 4-8)
 export const afterOnsideP = d => (d <= 3 ? 0.62 : d <= 8 ? 0.38 : 0.12)
 // kicking deep instead: with no timeouts the other team kneels three times and it's over. It takes a fumble on the return.

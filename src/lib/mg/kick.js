@@ -41,13 +41,15 @@ import { hop } from './throw.js'
 import { kickReach, onsideP } from '../kicks.js'
 
 export const how = {
-  'deep-kick': 'Four kicks, each one longer. Press once to stop the needle in the green: that is the uprights, and the wind moves it. Press again to stop the power past the mark. Over the top of the bar is an overswing, and it hooks.',
-  'game-winner': 'One kick for the game. Press to stop the needle in the green, then press to stop the power past the mark. If they call timeout to ice him, do it again.',
-  onside: 'They need the ball back. Press to set the distance: it has to go 10 yards. Press as the ring closes to drive the top of the ball into the turf. Press again as it comes down to go up for it. It rarely works.',
+  'deep-kick': 'Four kicks, each one longer. Press once to stop the aim line between the uprights: the wind pushes it to one side. Press again to stop the power past the mark. Over the top of the bar is an overswing, and it hooks.',
+  'game-winner': 'One kick for the game. Press to stop the aim line between the uprights, then press to stop the power past the mark. If they call timeout to ice him, do it again.',
+  onside: 'They need the ball back. Press to set the distance: it has to go 10 yards. Press as the ring closes to drive the top of the ball into the turf. Press again as the second ring closes and your man goes up for it. It rarely works.',
 }
 
 const POST_HALF = 3.083                // half the width of the uprights, yards (18 feet 6 inches)
 const AIM_SPAN = 0.30                  // the aim bar from end to end, as an angle: at 50 yards the ends are 15 yards wide
+// (2026-11-12, the owner: a bit easier. A miss lands a fifth nearer the middle, and both bars move an eighth slower)
+const EASE = 0.8, SLOW = 1.14
 const OVER = 1.15                      // the power bar runs to 115%: the last of it is the overswing
 const LINE_GAP = 1.12                  // the line, man to man, in yards: foot to foot, as a field goal team lines up
 const SET_MS = 950, RUN_MS = 430, RES_MS = 1500, ICE_MS = 1500, SWAY_MS = 200
@@ -71,11 +73,11 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     ? [{ d: situation?.dist ?? 25 + Math.floor(r() * (Math.min(65, Math.round(reach) + 1) - 24)), wind: Math.round((r() - 0.5) * 2 * 9), hard: 1 }]
     : [[50, 53], [54, 57], [58, 61], [62, 65]].map(([lo, hi], i) => ({ d: lo + Math.floor(r() * (hi - lo + 1)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 4 + r() * 4)), hard: 1.12 + i * 0.17, tight: 1 - i * 0.1 }))
   const pressure = winner ? 1 : 0.25
-  const accF = byV(acc, 1.25, 0.72)                    // what his accuracy does to a miss: an S pulls it 28% back to the middle
+  const accF = byV(acc, 1.25, 0.72) * EASE                  // what his accuracy does to a miss: an S pulls it 28% back to the middle
   const shake = byV(clu, 0.34, 0.03) * pressure            // the needle's shake with the game on it
   const hurry = lerp(1, byV(clu, 1.4, 0.95), pressure) // and the power bar's hurry
   const iced = winner && r() < 0.4                      // they call timeout as he lines it up
-  const aimPer = byV(acc, 520, 900), powMs = byV((pw + acc) / 2, 640, 880)
+  const aimPer = byV(acc, 520, 900) * SLOW, powMs = byV((pw + acc) / 2, 640, 880) * SLOW
   const g = {
     t: 0, game, zones: 'none', pads: ['KICK'], padLit: null, fx: [], done: null, outro: 1700, stamp: null, nudge: nudge(),
     kicks, i: 0, made: 0, near: 0, phase: 'set', at: 0, reach, accF, winner, iced, icedDone: false,
@@ -344,14 +346,11 @@ function drawFG(ctx, g, view) {
   }
   for (let i = 0; i < 7; i++) manAt(ctx, view, C, (i - 3) * LINE_GAP, LOS - 0.55, { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), pose: shown ? (shown.good ? 'arms-up' : 'hips') : 'block' })
   for (const s of [-1, 1]) manAt(ctx, view, C, s * (LINE_GAP * 3 + 1.25), LOS - 1.5, { color: c.us, trim: c.trim, skin: skinOf(8 + s), pose: shown ? (shown.good ? 'arms-up' : 'hips') : 'block' })
-  // ── where he's aiming: a line on the grass from the ball, and a sight standing where it ends. The green between the
-  // marks is where to put it: the uprights, moved over by what the wind will take back ──
+  // ── where it's going: a line on the grass from the ball, and a sight standing where it ends, the wind already in it
+  // (the wind pushes the whole swing of it to one side). Stop it between the uprights. No green window (the owner) ──
   if (!struck && (g.phase === 'aim' || g.phase === 'power' || g.phase === 'run')) {
     const K = d * AIM_SPAN * g.accF / (k.tight ?? 1)          // yards at the uprights for the whole of the needle's swing one way
-    const n = g.aimAt ?? g.needle(), ax = n * K, wx = g.centre() * K, inside = Math.abs(n - g.centre()) <= g.half()
-    const wl = P(C, wx - POST_HALF, d, BAR_Z), wr = P(C, wx + POST_HALF, d, BAR_Z), wt = P(C, wx, d, POST_TOP)
-    ctx.fillStyle = 'rgba(53,224,122,.24)'; ctx.fillRect(wl.x, wt.y, wr.x - wl.x, wl.y - wt.y)
-    ctx.fillStyle = 'rgba(53,224,122,.55)'; ctx.fillRect(wl.x, wl.y - 1, wr.x - wl.x, 2)
+    const n = g.aimAt ?? g.needle(), ax = (n - g.centre()) * K, inside = Math.abs(ax) < POST_HALF - 0.22
     const a = P(C, 0, 0), b = P(C, ax, d), bt = P(C, ax, d, POST_TOP + 1.5), col = inside ? GOOD : '#fff'
     ctx.strokeStyle = 'rgba(8,12,16,.5)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
     ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([])
@@ -416,7 +415,7 @@ function makeOnside({ v, seed, kick = null, situation = null }) {
   const acc = kick?.accuracy ?? v, clu = kick?.clutch ?? v
   const base = onsideP({ accuracy: acc, clutch: clu })
   const side = r() < 0.5 ? -1 : 1                       // which side the kick goes to
-  const distMs = byV(acc, 760, 980)                     // the distance bar: once up and back
+  const distMs = byV(acc, 760, 980) * SLOW                     // the distance bar: once up and back
   const g = {
     t: 0, game: 'onside', zones: 'none', pads: ['KICK'], padLit: null, fx: [], done: null, outro: 1900, stamp: null, nudge: nudge(),
     phase: 'set', at: 0, side, base, dist: null, strike: null, leap: null, q: 0, res: null, sit: situation ?? null,
@@ -433,7 +432,7 @@ function makeOnside({ v, seed, kick = null, situation = null }) {
       if (g.phase === 'set') { if (g.t - g.at >= ON_SET) { g.phase = 'dist'; g.at = g.t; g.hud.prompt = 'PRESS TO SET THE DISTANCE' } return }
       // (a ring nobody pressed closes on its own: a late strike, a man who never went up)
       if (g.phase === 'strike' && g.ring() <= -0.4) setStrike(-0.4)
-      if (g.phase === 'roll' && g.t - g.at >= ON_ROLL) { if (g.legal) { g.phase = 'hop'; g.at = g.t; g.hud.prompt = 'PRESS TO GO UP FOR IT' } else settle() }
+      if (g.phase === 'roll' && g.t - g.at >= ON_ROLL) { if (g.legal) { g.phase = 'hop'; g.at = g.t; g.hud.prompt = 'PRESS AS THE RING CLOSES TO GO UP FOR IT' } else settle() }
       if (g.phase === 'hop' && g.t - g.at >= ON_HOP) settle()
       if (g.phase === 'res' && g.t - g.at >= ON_RES) g.phase = 'over'
     },
