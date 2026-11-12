@@ -1,3 +1,5 @@
+import { seeded } from '../../lib/rng'
+import { FIRST_NAMES, LAST_NAMES, pickName } from '../../lib/playerNames'
 // College Football: the small shared pieces of the mode's screens (positions, labels, logos) and its saves.
 //
 // SAVING: a college season is kept on this device only (localStorage). Football's boards can't take it:
@@ -144,47 +146,63 @@ export function photoLookup(pools, base) {
   return (name, school) => m.get(`${name}|${school}`) ?? null
 }
 
-// ── A later season's rosters (College Football mode: RETURN TO SCHOOL / TRANSFER) ─────────────────────────
-// The country moves on a year with him: every junior and senior (RS-JR, RS-SR and GR too) is gone, drafted or out
-// of eligibility, and everyone else moves up a class (FR → SO, RS-FR → RS-SO, SO → JR …). Each school's depth chart
-// is rebuilt from who's left, best first, so its starters are the best of the old sophomores and freshmen.
-// Ratings stay as they are (no development bump: a sophomore who starts is the player he was). A room nobody is
-// left in stays empty: the season engine plays a stand-in at the school's level there (cfbSimulation unitFor),
-// and the job reads as open. seasonData(data, k): season k (0 = the first), the shared data untouched
-const NEXT_CLASS = { FR: 'SO', SO: 'JR', JR: 'SR', SR: 'SR', GR: 'GR' }
-const GONE_AFTER = new Set(['JR', 'SR', 'GR', '5TH'])
-function classAfter(y, k) {
-  let cur = String(y ?? 'SO').toUpperCase()
-  for (let i = 0; i < k; i++) {
-    const rs = cur.startsWith('RS-')
-    const base = cur.replace(/^RS-/, '')
-    if (GONE_AFTER.has(base)) return null
-    cur = `${rs ? 'RS-' : ''}${NEXT_CLASS[base] ?? base}`
-  }
-  return cur
-}
-function advancePools(pools, k) {
+// ── A later season's rosters (College Football mode and Career's Start in College: the second season on) ──────
+// The country moves on a year with him, the way a roster really turns over:
+//  · every senior (SR, RS-SR, GR) is gone, out of eligibility; a junior with a Day 2 grade or better (EARLY_OUT)
+//    declares for the draft; everyone else moves up a class (FR → SO, RS-SO → RS-JR …) and is a year better: one
+//    step on his two weakest traits (not his size), his overall moved by what that is worth.
+//  · each school then fills the spots it lost. The data has no incoming classes, so the next man up is a made-up
+//    player (gen: true, a name off lib/playerNames.js, no photo): modeled on the man he replaces, a step down on
+//    about two traits in three, so a program stays the program it is and a new starter is a little greener than the
+//    one who left. He's a freshman, a redshirt freshman, a sophomore or a junior out of the portal.
+//  · each school's depth chart is rebuilt from who's there, best first.
+// Every season is made from the one before it, with the same seeds for everybody: season three's rosters are the
+// same country whoever plays it. seasonData(data, k): season k (0 = the first), the shared data untouched
+const NEXT_CLASS = { FR: 'SO', SO: 'JR', JR: 'SR' }
+const OUT_AFTER = new Set(['SR', 'GR', '5TH'])
+const EARLY_OUT = { qb: 91, rb: 89, wr: 91 }   // a junior this good goes pro (about the draft board's Day 2 line)
+const NEW_CLASS = ['FR', 'FR', 'RS-FR', 'RS-FR', 'SO', 'RS-SO', 'JR']
+const toChips = attrs => Object.fromEntries(Object.entries(attrs ?? {}).map(([t, v]) => [t, { type: t, val: v }]))
+function nextYear(pools, k, sim) {
+  const ovrOf = (pos, attrs) => sim?.calcCFBOVR?.(toChips(attrs), Object.keys(attrs ?? {}), pos) ?? null
+  // (a player's listed overall moves by what the change in his traits is worth on the build's own formula)
+  const reOvr = (pos, p, attrs) => { const a = ovrOf(pos, p.attrs), b = ovrOf(pos, attrs); return a == null || b == null ? p.ovr : Math.max(40, Math.min(99, (p.ovr ?? b) + (b - a))) }
   return Object.fromEntries(Object.entries(pools).map(([pos, list]) => {
-    const stay = list.map(p => ({ p, year: classAfter(p.year, k) })).filter(x => x.year)
+    const names = new Set(list.map(p => p.name))
     const by = {}
-    for (const x of stay) (by[x.p.team] ??= []).push(x)
+    for (const p of list) (by[p.team] ??= []).push(p)
     const out = []
-    for (const room of Object.values(by)) {
-      room.sort((a, b) => (b.p.ovr ?? 0) - (a.p.ovr ?? 0) || (a.p.depth ?? 9) - (b.p.depth ?? 9))
-      room.forEach((x, i) => out.push({ ...x.p, year: x.year, depth: i + 1, starter: i === 0 }))
+    for (const [team, was] of Object.entries(by)) {
+      const r = seeded(`cfb-roster-${k}-${pos}-${team}`)
+      const room = []
+      const gone = []
+      for (const p of was) {
+        const cur = String(p.year ?? 'SO').toUpperCase(), rs = cur.startsWith('RS-'), base = cur.replace(/^RS-/, '')
+        if (OUT_AFTER.has(base) || !NEXT_CLASS[base] || (base === 'JR' && (p.ovr ?? 0) >= EARLY_OUT[pos])) { gone.push(p); continue }
+        const weak = Object.keys(p.attrs ?? {}).filter(t => t !== 'size' && p.attrs[t] < 11).sort((a, b) => p.attrs[a] - p.attrs[b]).slice(0, 2)
+        const attrs = { ...p.attrs, ...Object.fromEntries(weak.map(t => [t, p.attrs[t] + 1])) }
+        room.push({ ...p, year: `${rs ? 'RS-' : ''}${NEXT_CLASS[base]}`, attrs, ovr: reOvr(pos, p, attrs) })
+      }
+      for (const old of gone) {
+        const attrs = Object.fromEntries(Object.entries(old.attrs ?? {}).map(([t, v]) => { const x = r(); return [t, t === 'size' ? v : Math.max(1, v - (x < 0.4 ? 0 : x < 0.9 ? 1 : 2))] }))
+        let name
+        for (let i = 0; i < 12 && (!name || names.has(name)); i++) name = `${pickName(FIRST_NAMES, r)} ${pickName(LAST_NAMES, r)}`
+        names.add(name)
+        const { espn, headshot, s26, s25, captain, ...rest } = old   // (the man who left: his school, colors, number and frame stay with the spot)
+        room.push({ ...rest, name, short: name.split(' ').pop(), year: NEW_CLASS[Math.floor(r() * NEW_CLASS.length)], attrs, ovr: reOvr(pos, old, attrs), gen: true })
+      }
+      room.sort((a, b) => (b.ovr ?? 0) - (a.ovr ?? 0) || (a.depth ?? 9) - (b.depth ?? 9))
+      room.forEach((p, i) => out.push({ ...p, depth: i + 1, starter: i === 0 }))
     }
     return [pos, out]
   }))
 }
-// (the rosters run out of underclassmen after two moves: the freshmen of the first season are the juniors of the third.
-// The data has no incoming classes, so a fourth season on plays the third season's rosters again)
-const MAX_ADVANCE = 2
 const seasonsCache = new WeakMap()
 export function seasonData(data, season) {
-  const k = Math.min(MAX_ADVANCE, season ?? 0)
+  const k = Math.max(0, Math.min(8, Math.floor(season ?? 0)))
   if (!data || !k) return data
   const memo = seasonsCache.get(data) ?? new Map()
   seasonsCache.set(data, memo)
-  if (!memo.has(k)) memo.set(k, { ...data, pools: advancePools(data.pools, k), season: k })
+  if (!memo.has(k)) memo.set(k, { ...data, pools: nextYear(seasonData(data, k - 1).pools, k, data.sim), season: k })
   return memo.get(k)
 }

@@ -531,3 +531,30 @@ html.is-cfb .simp-page.cfbp {
 .cfbo .cfbr-board-row:not(.is-head):hover { background: var(--cfb-navy-3); border-color: rgba(255,255,255,.35); }
 .cfbo .cfbr-board-row:not(.is-head):active { transform: scale(.99); }
 .cfbo .cfbr-board-row.is-on { background: var(--cfb-navy-3); border-color: #fff; box-shadow: inset 0 0 0 1px #fff; }
+
+/* ── Class years (cfbClass.js): the name step's random-name button and class switch, the offseason's upgrades ── */
+.cfbr-name-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; }
+.cfbr-name-row .cfbr-name-pen { right: 78px; }
+.cfbr-name-rand { display: grid; place-items: center; height: 56px; border: 2px solid rgba(255,255,255,.55); border-radius: 6px; background: rgba(0,0,0,.3); color: var(--cfb-gold); cursor: pointer; transition: transform .12s ease-out; }
+.cfbr-name-rand:hover { border-color: #fff; }
+.cfbr-name-rand:active { transform: scale(.94); }
+.cfbr-name > .cfbr-cls-l { display: flex; align-items: baseline; justify-content: space-between; margin: 12px 0 5px; }
+.cfbr-cls-l i { font-style: normal; font-size: 13px; letter-spacing: 1.4px; color: rgba(255,255,255,.78); }
+.cfbr-cls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 2px solid rgba(255,255,255,.55); border-radius: 6px; overflow: hidden; background: rgba(0,0,0,.3); }
+.cfbr-cls button { min-width: 0; height: 46px; padding: 0 2px; border: 0; border-left: 1px solid rgba(255,255,255,.3); background: transparent; color: rgba(255,255,255,.85); font-family: var(--ag-font); font-size: 16px; letter-spacing: 1px; line-height: 1; cursor: pointer; }
+.cfbr-cls button:first-child { border-left: 0; }
+.cfbr-cls button.is-on { background: #fff; color: var(--cfb-navy); }
+@media (max-width: 380px) { .cfbr-cls button { font-size: 14px; letter-spacing: .5px; } }
+.cfbu-card .cfbr-who b { font-size: 30px; }
+.cfbu-up { font-style: normal; font-family: var(--ag-font); font-size: 15px; letter-spacing: .5px; color: #7fd99a; }
+.cfbu .cfbu-traits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cfbu .cr-trait { width: 100%; min-height: 48px; border-radius: 6px; border-color: var(--cfb-line); background: var(--cfb-navy-2); color: #fff; text-align: left; font: inherit; }
+.cfbu .cr-trait.can-up { border-color: var(--cfb-gold); box-shadow: none; animation: none; }
+.cfbu .cr-trait-txt small { color: var(--cfb-muted); }
+.cfbu .cr-why { border-radius: 6px; }
+.cfbu-reset { justify-self: start; min-height: 44px; padding: 0 14px; font-size: 15px; }
+.cfbu-rule td { text-align: left; font-weight: 400; color: var(--cfb-muted); }
+.cfbu-rule td.is-g { width: 34px; text-align: center; color: var(--cfb-faint); }
+.cfbu-rule tr.is-on td { color: #fff; font-weight: 700; }
+.cfbu-rule tr.is-on td.is-g { color: var(--cfb-gold); }
+@media (max-width: 520px) { .cfbu .cfbu-traits { grid-template-columns: 1fr; } }

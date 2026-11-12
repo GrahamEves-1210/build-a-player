@@ -13,7 +13,7 @@ import { WR_TYPES, WR_ATTR, WR_CATEGORIES } from '../../data/wrs'
 import { HEADSHOT_BASE, calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
 import { useDropMode, useDropSheet, DropBar, DropSheet, BuildComplete } from '../app/AppBuildTray'
-import { IconGear, IconClose, IconPlay } from '../app/icons'
+import { IconGear, IconClose, IconPlay, IconSpin } from '../app/icons'
 import SoundToggle from '../app/SoundToggle'
 import { IS_APP } from '../../lib/platform'
 import { sfx } from '../../lib/juice'
@@ -25,14 +25,21 @@ import { barAt, offersFor, cardFor, stockOf, collegeStars } from './cfbRecruit'
 import { Stars, OfferBoard } from './CFBOffers'
 import CFBSimPage from './CFBSimPage'
 import CFBDraft from './CFBDraft'
+import CFBOffseason from './CFBOffseason'
+import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isUnder, classAge, draftAge, upgradePoints, backupSeason } from './cfbClass'
+import { randomName } from '../../lib/playerNames'
 import './cfb.css'
 
 // ── College Football: a mode inside football (MORE WAYS TO PLAY). Its own screens: the position
 // pick, the build (football's spin, figure, chips, report card, OVR, footer and Sandbox, on college
 // rosters: a CONFERENCE wheel, then a starter from it), and the season (CFBSimPage), from which a
 // build can ENTER THE NFL DRAFT as a new Career (CFBDraft), RETURN TO SCHOOL for another season or
-// TRANSFER and play one somewhere else. The build has no class (no freshman or senior year): a season
-// is a year, he's always draft-eligible, and going or staying is the player's call. Everything here,
+// TRANSFER and play one somewhere else.
+// CLASS YEARS (the owner, 2026-11-11; cfbClass.js): he starts as a freshman, sophomore, junior or senior (the
+// switch under his name on the offers) and plays from that class to the draft, a freshman up to four seasons, a
+// senior one. Every season earns one to three upgrade points, spent on his traits in the offseason (CFBOffseason)
+// on the way to the next one. The draft opens after his junior season; a senior can't come back. An underclassman
+// who signs where the starter grades out better sits behind him that year. Everything here,
 // the rosters and the sim included, loads only when the mode opens (App.jsx: lazy).
 // Current / All-Time (the switch on the first screen, cfbShared CFB_POOLS): All-Time deals each school's legends
 // (data/cfb-legends.js) in place of this season's rosters. Only the wheels change: the offers, the season against
@@ -97,8 +104,9 @@ function CFBNav({ pos, onHome, grades, era = 'current' }) {
 // The way in: which position, plus where things stand (a build or a season to pick back up, the last few seasons)
 function CFBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClose }) {
   const poolTag = progress && poolOf(progress.pool) === 'alltime' ? ' · All-Time' : ''
+  const clsTag = progress?.cls0 != null ? ` · ${CLASS_NAME[classAt(progress.cls0, progress.history?.length ?? 0)]}` : ''
   const resumeLine = progress && (progress.result
-    ? `${CFB_POS[progress.pos].label}${poolTag} · ${progress.result.team?.school ?? progress.result.team?.name ?? ''} ${progress.result.cfb?.record?.final ?? `${progress.result.wins}-${progress.result.losses}`}`
+    ? `${CFB_POS[progress.pos].label}${poolTag}${clsTag} · ${progress.result.team?.school ?? progress.result.team?.name ?? ''} ${progress.result.cfb?.record?.final ?? `${progress.result.wins}-${progress.result.losses}`}`
     : `${CFB_POS[progress.pos].label}${poolTag} · ${Object.values(progress.build ?? {}).filter(Boolean).length} of ${POS[progress.pos].types.length} traits`)
   return (
     <div className="ag-screen cfb-screen cfb-entry">
@@ -110,7 +118,7 @@ function CFBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClo
         {progress && (
           <button className="cfb-resume" onClick={onResume}>
             <span className="cfb-resume-ico"><IconPlay size={16} /></span>
-            <span><small>{progress.result ? 'SEASON' : 'BUILD IN PROGRESS'}</small><b>{resumeLine}</b></span>
+            <span><small>{progress.result ? (progress.off?.open ? 'OFFSEASON' : 'SEASON') : 'BUILD IN PROGRESS'}</small><b>{resumeLine}</b></span>
           </button>
         )}
         {/* the pool the wheels deal from: this season's rosters, or each school's legends. Only the wheels change */}
@@ -164,13 +172,14 @@ function CFBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClo
 // where he ranks among the country's players at his spot, his OVR), the offers, and the button that signs him.
 // The first school (SIMULATE SEASON) and the transfer portal (TRANSFER: his school is the row at the top while he
 // can still go back, and the card says how the season just played moved his stock). Sandbox: any school at all
-const MAX_RETURNS = 2   // the owner's rule: a build goes back to his school twice at most
 // (the player's own name: letters, spaces, apostrophes, periods and hyphens, like Career's)
 const cleanName = v => v.replace(/[^A-Za-zÀ-ſ' .-]/g, '').replace(/\s+/g, ' ').replace(/^ /, '').slice(0, 22)
 
 // onName (the first school only): the name on the card is a field. Whatever he's called here is his name for the
 // college seasons and, through Enter the NFL Draft, his Career's; left empty, he goes by the username
-function OffersScreen({ eyebrow, title, name, pos, ovr, card, stock, offers, teamsBy, confOf, current = null, onCommit, onClose, onAny, nameValue = '', onName = null }) {
+// cls / onCls (the first school only): his class, the four-way switch under the name. compete: an upperclassman plays
+// wherever he signs (a job to win in camp); an underclassman behind a better starter is that school's backup
+function OffersScreen({ eyebrow, title, name, pos, ovr, card, stock, offers, teamsBy, confOf, current = null, onCommit, onClose, onAny, nameValue = '', onName = null, cls = null, onCls = null, compete = true }) {
   const [picked, setPicked] = useState(null)
   const sel = picked ? offers.find(o => o.short === picked) : null
   const schoolOf = short => String(teamsBy[short]?.school ?? short).toUpperCase()
@@ -186,11 +195,23 @@ function OffersScreen({ eyebrow, title, name, pos, ovr, card, stock, offers, tea
         <section className="cfbr-card">
           <div className="cfbr-who"><small>{CFB_POS[pos].name.toUpperCase()}{current ? ` · ${String(teamsBy[current]?.school ?? current).toUpperCase()}` : ''}</small>{onName
             ? (
-              <label className="cfbr-name">
-                <span>NAME YOUR PLAYER</span>
-                <input className="cfbr-name-in" value={nameValue} onChange={e => onName(cleanName(e.target.value))} placeholder="TYPE A NAME" autoComplete="off" autoCapitalize="words" spellCheck={false} enterKeyHint="done" aria-label="Player name" onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+              <div className="cfbr-name">
+                <span id="cfbr-name-l">NAME YOUR PLAYER</span>
+                <div className="cfbr-name-row">
+                <input className="cfbr-name-in" aria-labelledby="cfbr-name-l" value={nameValue} onChange={e => onName(cleanName(e.target.value))} placeholder="TYPE A NAME" autoComplete="off" autoCapitalize="words" spellCheck={false} enterKeyHint="done" aria-label="Player name" onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
                 <svg className="cfbr-name-pen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-              </label>
+                {/* Career's random-name button, the same names (lib/playerNames.js): a new one every tap */}
+                <button type="button" className="cfbr-name-rand" onClick={() => { onName(randomName(nameValue)); sfx('tap') }} aria-label="Random name" title="Random name"><IconSpin size={20} /></button>
+                </div>
+                {onCls && (
+                  <>
+                    <span className="cfbr-cls-l" id="cfbr-cls-l">CLASS<i>{seasonsFrom(CLASSES.indexOf(cls)) === 1 ? '1 SEASON' : `UP TO ${seasonsFrom(CLASSES.indexOf(cls))} SEASONS`}</i></span>
+                    <div className="cfbr-cls" role="radiogroup" aria-labelledby="cfbr-cls-l">
+                      {CLASSES.map((k, i) => <button key={k} type="button" role="radio" aria-checked={cls === k} className={cls === k ? 'is-on' : ''} onClick={() => { if (cls !== k) { onCls(i); sfx('tap') } }}>{CLASS_NAME[k].toUpperCase()}</button>)}
+                    </div>
+                  </>
+                )}
+              </div>
             )
             : <b>{name}</b>}</div>
           <Stars n={card.stars} />
@@ -204,7 +225,7 @@ function OffersScreen({ eyebrow, title, name, pos, ovr, card, stock, offers, tea
         <div className="cfbo-commit"><button className="cfbs-next cfbr-commit" disabled={!sel} onClick={() => sel && onCommit(sel.short)}><b>{label}</b></button></div>
         <section>
           <h2 className="cfb-label">{current ? (offers.some(o => o.stay) ? 'STAY OR TRANSFER' : 'TRANSFER PORTAL OFFERS') : 'SCHOLARSHIP OFFERS'}</h2>
-          <OfferBoard compete pos={pos} teamsBy={teamsBy} confOf={confOf} offers={offers} picked={picked} onPick={short => { setPicked(short); sfx('tap') }} />
+          <OfferBoard compete={compete} pos={pos} teamsBy={teamsBy} confOf={confOf} offers={offers} picked={picked} onPick={short => { setPicked(short); sfx('tap') }} />
         </section>
         {onAny && <button className="cfbs-btn cfbo-any" onClick={() => { sfx('tap'); onAny() }}>ANY SCHOOL<small>Sandbox: pick or spin any school in the country</small></button>}
       </div>
@@ -232,6 +253,16 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // the seasons this build has already played (RETURN TO SCHOOL, TRANSFER): each one's school, record, honors
   // and totals. The draft board reads his whole college career from them (cfbSimulation opts.career)
   const [history, setHistory] = useState(Array.isArray(saved?.history) ? saved.history : [])
+  // CLASS YEARS (cfbClass.js). cls0: the class he started as (0 freshman … 3 senior), so his class this season is
+  // cls0 plus the seasons behind him. (A run saved before classes had none and was always draft-eligible: it reads as
+  // a junior's season, a senior's once he has come back twice, so the draft is still there for it.)
+  // bank: upgrade points he hasn't spent. off: the offseason in progress ({ to: 'return' | 'transfer', build: the
+  // build with this offseason's upgrades, left: points still to spend, open }); the build itself only changes when
+  // the next season starts
+  const [cls0, setCls0] = useState(() => (Number.isInteger(saved?.cls0) ? Math.max(0, Math.min(3, saved.cls0)) : saved?.result ? Math.max(0, 2 - (Array.isArray(saved.history) ? saved.history.length : 0)) : 0))
+  const [bank, setBank] = useState(() => (Number.isFinite(saved?.bank) ? saved.bank : 0))
+  const [off, setOff] = useState(() => (saved?.off?.build && saved?.result ? saved.off : null))
+  const cls = classAt(cls0, history.length)
   const [moving, setMoving] = useState(false)   // the transfer portal (its offers screen)
   const [anyMove, setAnyMove] = useState(false)   // Sandbox: the transfer's any-school picker
   const [offering, setOffering] = useState(false)   // the first school: the scholarship offers
@@ -283,11 +314,11 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // Starters only (the owner's rule): one per school, so a conference deals its schools' QB1s,
   // RB1s or WR1s, never a backup, respins included. (The season still plays each team's real depth)
   const teamsBy = useMemo(() => Object.fromEntries((data?.teams ?? []).map(t => [t.short, t])), [data])
-  // (a later season's rosters, classes moved on: cfbShared seasonData. A new build starts at season one)
+  // (the wheel always deals the first season's real rosters; the seasons after it play cfbShared seasonData's)
   // All-Time: the same rows from data/cfb-legends.js, a school's one to three greats at the spot (every one of them
   // is on the wheel: they're all 'starters'), with the years he played there where a current player has his class.
   // The legends don't age with the build's seasons: only the country he plays against does
-  const pool = useMemo(() => (era === 'alltime' ? legends?.[pos] ?? [] : seasonData(data, history.length)?.pools[pos] ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3)).map(p => {
+  const pool = useMemo(() => (era === 'alltime' ? legends?.[pos] ?? [] : data?.pools[pos] ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3)).map(p => {
     const t = teamsBy[p.team]
     return {
       ...p,
@@ -297,7 +328,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
       years: p.years ?? classLabel(p.year),
       headshot: p.headshot ?? undefined,
     }
-  }), [data, legends, era, pos, teamsBy, history.length])
+  }), [data, legends, era, pos, teamsBy])
   // Sandbox's custom ratings, laid over the pool (its own store: RATINGS_KEY)
   const displayPool = useMemo(() => {
     const o = sandboxOn ? customRatings[pos] : null
@@ -335,9 +366,9 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // kept on the device: a reload, or Home and back, picks the build (or the season) back up
   useEffect(() => {
     if (phase === 'pick') return
-    const p = { pos, pool: era, build, spin, result, stage, story, history, playerName, sandbox: tainted.current, starters: startersPick, at: Date.now() }
+    const p = { pos, pool: era, build, spin, result, stage, story, history, playerName, cls0, bank, off, sandbox: tainted.current, starters: startersPick, at: Date.now() }
     saveProgress(p); setProgress(p)
-  }, [phase, pos, era, build, spin, result, stage, story, history, startersPick, playerName])
+  }, [phase, pos, era, build, spin, result, stage, story, history, startersPick, playerName, cls0, bank, off])
 
   const activeDragRef = useRef(activeDrag)
   activeDragRef.current = activeDrag
@@ -356,7 +387,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
   }, [withCollege])
 
   const freshBuild = useCallback(p => {
-    setPos(p); setBuild(emptyBuild(p)); setSpin(null); setResult(null); setStage('pre'); setStory(null); setHistory([]); setPlayerName(''); setActiveDrag(null)
+    setPos(p); setBuild(emptyBuild(p)); setSpin(null); setResult(null); setStage('pre'); setStory(null); setHistory([]); setPlayerName(''); setBank(0); setOff(null); setActiveDrag(null)
     setActiveCategory('physical'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1); setStartersPick(false)
     tainted.current = sandboxOn
   }, [sandboxOn])
@@ -381,16 +412,32 @@ export default function CFBMode({ user, onHome, onCareer }) {
 
   const complete = P.types.every(t => build[t])
   const onSimulate = () => { if (result) { setPhase('season'); window.scrollTo(0, 0); return } setOffering(true); window.scrollTo(0, 0) }
-  // A season at a school, simulated and booked. No class (noClass): just a year, always draft-eligible.
-  // prior: the seasons he's already played (the board reads his whole college career)
-  const playSeason = useCallback((team, prior = []) => {
+  // A season at a school, simulated and booked, in his class that year (cfbClass.js: the engine is told it, and that
+  // going or staying is his call). prior: the seasons he's already played (the board reads his whole college career);
+  // b: the build it's played with (the offseason's upgrades on it); start: the class he started as
+  // An underclassman who isn't better than the school's starter is the backup that year (the school plays its real
+  // starter: cfbClass backupSeason), unless the job was already his there; a junior or senior plays wherever he signs
+  const startsAt = useCallback((short, prior, ovr, start = cls0) => {
+    const k = prior.length, last = prior[k - 1]
+    if (!isUnder(classAt(start, k)) || (last && last.school === short && last.role !== 'backup')) return true
+    const bar = barAt(seasonData(data, k), short, pos)
+    return !bar || ovr > (bar.ovr ?? 0)
+  }, [data, pos, cls0])
+  const playSeason = useCallback((team, prior = [], b = build, start = cls0) => {
+    const build = b   // (everything below reads the build this season is played with)
     const seed = newSeed()
+    const k = prior.length, year = classAt(start, k)
     const best = (k, order) => order.find(x => prior.some(s => s[k] === x)) ?? null
-    const career = prior.length ? { seasons: prior.length, heisman: best('heisman', ['won', 'finalist']), allAmerica: best('allAmerica', ['first', 'second']), totals: prior.map(s => s.totals ?? {}), teams: prior.map(s => ({ w: s.w, l: s.l, cfp: !!s.cfp, title: !!s.title, conf: !!s.confChamp })) } : null
-    // (season two on: the rosters a year later, the juniors and seniors gone: cfbShared seasonData)
-    const pools = prior.length ? seasonData(data, prior.length).pools : null
-    const r = data.sim.runCFBSimulation(build, P.types, team, pos, seed, 'classic', null, { name: who, noClass: true, ...(career ? { career } : {}), ...(pools ? { pools } : {}) })
+    // (a year as the backup is a year on campus, not a season on tape: the board counts the ones he started)
+    const played = prior.filter(s => s.role !== 'backup')
+    const career = prior.length ? { seasons: prior.length, heisman: best('heisman', ['won', 'finalist']), allAmerica: best('allAmerica', ['first', 'second']), totals: played.map(s => s.totals ?? {}), teams: played.map(s => ({ w: s.w, l: s.l, cfp: !!s.cfp, title: !!s.title, conf: !!s.confChamp })) } : null
+    // (season two on: the rosters a year later, the seniors gone and their spots filled: cfbShared seasonData)
+    const pools = k ? seasonData(data, k).pools : null
+    const r = startsAt(team.short, prior, P.ovr(build, P.types), start)
+      ? data.sim.runCFBSimulation(build, P.types, team, pos, seed, 'classic', null, { name: who, year, choice: true, season: 2026 + k, ...(career ? { career } : {}), ...(pools ? { pools } : {}) })
+      : backupSeason(data.sim, seasonData(data, k).pools, P.types, team, pos, seed, { ovr: P.ovr(build, P.types), cls: year, build, name: who, season: 2026 + k, usePools: !!k })
     r.seed = r.seed ?? seed
+    r.ovr = P.ovr(build, P.types)   // (the college overall the build page and the offseason show: utils/cfbOvr.js; the engine's own is football's raw number)
     const sb = tainted.current || P.types.some(t => build[t]?.sandbox)
     r.sandbox = sb
     r.pool = era   // (Current or All-Time: which pool the build was spun from)
@@ -403,22 +450,33 @@ export default function CFBMode({ user, onHome, onCareer }) {
     setPhase('season')
     window.scrollTo({ top: 0, behavior: 'instant' })
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
-  }, [data, build, P, pos, userName, who, user, era])
-  const teamPicked = useCallback(team => { setPicker(false); setOffering(false); setHistory([]); playSeason(team, []) }, [playSeason])
-  // RETURN TO SCHOOL / TRANSFER: the season just played goes on his résumé, then another year (same build),
-  // from the pre-season page, booked like any season
+  }, [data, build, P, pos, userName, who, user, era, cls0, startsAt])
+  const teamPicked = useCallback(team => { setPicker(false); setOffering(false); setHistory([]); setBank(0); setOff(null); playSeason(team, []) }, [playSeason])
+  // RETURN TO SCHOOL / TRANSFER: the season just played goes on his résumé, then the next year, a class older and
+  // with the offseason's upgrades on the build, from the pre-season page, booked like any season
   const another = useCallback(team => {
     if (!result || !team) return
     const a = result.cfb?.awards ?? {}
     const rec = result.cfb?.record?.final ?? `${result.wins}-${result.losses}`
+    const earned = upgradePoints(result, pos)
     const prior = [...history, {
+      cls, role: result.role === 'backup' ? 'backup' : 'starter', pts: earned.pts,
       w: +String(rec).split('-')[0], l: +String(rec).split('-')[1], cfp: !!result.cfb?.cfpSeed, title: !!result.champion, confChamp: !!result.cfb?.confChamp,
       school: result.team?.short, schoolName: result.team?.school ?? result.team?.name, record: result.cfb?.record?.final ?? `${result.wins}-${result.losses}`,
       heisman: a.heisman?.userWon ? 'won' : a.heisman?.userFinalist ? 'finalist' : null, allAmerica: a.allAmerica?.user ?? null,
       totals: Object.fromEntries(Object.entries(result.cfb?.totals?.full ?? {}).filter(([, x]) => typeof x === 'number')),
     }]
-    setMoving(false); setAnyMove(false); setHistory(prior); playSeason(team, prior)
-  }, [result, history, playSeason])
+    // (the offseason's upgrades go on the build now; the points he didn't spend stay in the bank)
+    const next = off?.build ?? build
+    setBuild(next); setBank(off ? off.left : bank + earned.pts); setOff(null)
+    setMoving(false); setAnyMove(false); setHistory(prior); playSeason(team, prior, next)
+  }, [result, history, playSeason, cls, pos, off, build, bank])
+  // THE OFFSEASON, on the way to the next season (Return to School) or the portal (Transfer): this season's points
+  // go in with the ones he kept, to spend on his traits. Left and come back to, it's as he left it
+  const openOff = to => {
+    setOff(o => (o ? { ...o, to, open: true } : { to, build, left: bank + upgradePoints(result, pos).pts, open: true }))
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
 
   // phones: the player is the screen and the spin drops down over it (football's build)
   const drop = useDropMode(phase === 'build')
@@ -429,10 +487,9 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // the offers: the same build gets the same schools (seeded from the build), a season later his stock moves them
   const confOf = useMemo(() => Object.fromEntries((data?.conferences ?? []).map(x => [x.id, x])), [data])
   const buildKey = useMemo(() => P.types.map(t => `${t}:${build[t]?.qbFull ?? ''}:${build[t]?.val ?? ''}`).join('|'), [build, P.types])
-  // returns used: a season that came after one at the same school (a transfer isn't one)
-  const run = [...history.map(s => s.school), result?.team?.short]
-  const returns = run.filter((x, i) => i > 0 && x && x === run[i - 1]).length
-  const canReturn = returns < MAX_RETURNS
+  // (his eligibility is his class: a senior is done; everyone else can come back, or transfer)
+  const canReturn = canComeBack(cls)
+  const nextBuild = off?.build ?? build   // (the build he takes into next season: this offseason's upgrades on it)
   const recruit = useMemo(() => {
     if (!offering || !data || !complete) return null
     const card = cardFor(data, data, pos, ovrNow)
@@ -440,16 +497,16 @@ export default function CFBMode({ user, onHome, onCareer }) {
   }, [offering, data, complete, pos, ovrNow, buildKey])
   const portal = useMemo(() => {
     if (!moving || !data || !result) return null
-    const ovr = P.ovr(build, P.types)
+    const ovr = P.ovr(nextBuild, P.types)
     const next = seasonData(data, history.length + 1)   // (next season's rosters: who he'd be up against there)
     const cur = result.team?.short
     const stock = stockOf(result, result.team?.confShort ?? confOf[result.team?.conf]?.short, collegeStars(data, pos, ovr).stars)
     const card = cardFor(data, next, pos, ovr, stock)
     const away = offersFor(next, { stars: card.stars, ovr, pos, seed: `oneoff-portal-${pos}-${buildKey}-${history.length}-${result.seed}`, skip: [cur], n: 10, lift: stock.lift })
     const bar = barAt(next, cur, pos)
-    const stay = { short: cur, stay: true, starts: !bar || ovr > (bar.ovr ?? 0), bar: bar ? { name: bar.name, ovr: bar.ovr, year: bar.year } : null }
+    const stay = { short: cur, stay: true, starts: !isUnder(classAt(cls0, history.length + 1)) || result.role !== 'backup' || !bar || ovr > (bar.ovr ?? 0), bar: bar ? { name: bar.name, ovr: bar.ovr, year: bar.year } : null }
     return { ovr, card, stock, offers: canReturn ? [stay, ...away] : away }
-  }, [moving, data, result, build, P, history.length, pos, buildKey, confOf, canReturn])
+  }, [moving, data, result, nextBuild, P, history.length, pos, buildKey, confOf, canReturn, cls0])
 
   if (phase === 'pick') {
     return <CFBEntry data={data} progress={progress} seasons={seasons} era={pickEra} onEra={setPickEra} onPick={p => start(p, pickEra)} onResume={resume} onClose={close} />
@@ -466,12 +523,28 @@ export default function CFBMode({ user, onHome, onCareer }) {
     return (
       <>
         <OffersScreen eyebrow={`${who.toUpperCase()} · TRANSFER PORTAL`} title="Transfer" name={who} pos={pos} ovr={portal.ovr}
-          card={portal.card} stock={portal.stock} offers={portal.offers} teamsBy={teamsBy} confOf={confOf} current={result.team?.short}
+          card={portal.card} stock={portal.stock} offers={portal.offers} teamsBy={teamsBy} confOf={confOf} current={result.team?.short} compete={!isUnder(classAt(cls0, history.length + 1))}
           onCommit={short => { sfx('whistle'); another(schools.find(t => t.short === short) ?? teamsBy[short]) }}
           onClose={() => setMoving(false)}
           onAny={sandboxOn ? () => setAnyMove(true) : null} />
-        {anyMove && <TeamPickerModal onSelect={another} onCancel={() => setAnyMove(false)} build={build} anyTeam teams={schools.filter(t => t.short !== result.team?.short)} teamOf={c => c.school} eyebrow="College Football · Transfer" />}
+        {anyMove && <TeamPickerModal onSelect={another} onCancel={() => setAnyMove(false)} build={nextBuild} anyTeam teams={schools.filter(t => t.short !== result.team?.short)} teamOf={c => c.school} eyebrow="College Football · Transfer" />}
       </>
+    )
+  }
+  if (phase === 'season' && result && off?.open) {
+    const earned = upgradePoints(result, pos)
+    const nextCls = classAt(cls0, history.length + 1)
+    const school = result.team?.school ?? result.team?.name
+    const spent = off.left !== bank + earned.pts
+    return (
+      <CFBOffseason who={who} pos={pos} school={school} cls={cls} nextCls={nextCls} earned={earned} attr={P.attr}
+        career={{ sport: 'nfl', pos, types: P.types, build: off.build, age: classAge(nextCls), year: 0, phase: 'offseason', name: who, dev: { points: off.left, spent: 0 }, decisions: [] }}
+        onCareer={n => setOff({ ...off, build: n.build, left: n.dev.points })}
+        ovr={P.ovr(off.build, P.types)} ovrWas={P.ovr(build, P.types)}
+        cta={off.to === 'transfer' ? 'TRANSFER PORTAL' : `START ${CLASS_NAME[nextCls].toUpperCase()} SEASON`}
+        onGo={() => { if (off.to === 'transfer') { sfx('tap'); setMoving(true); window.scrollTo({ top: 0, behavior: 'instant' }) } else { sfx('whistle'); another(schools.find(t => t.short === result.team?.short) ?? result.team) } }}
+        onReset={spent ? () => setOff({ ...off, build, left: bank + earned.pts }) : null}
+        onClose={() => setOff({ ...off, open: false })} />
     )
   }
   if (phase === 'build' && offering && recruit) {
@@ -479,6 +552,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
       <>
         <OffersScreen eyebrow={`${who.toUpperCase()} · RECRUITING`} title="Offers" name={who} nameValue={playerName} onName={setPlayerName} pos={pos} ovr={ovrNow}
           card={recruit.card} offers={recruit.offers} teamsBy={teamsBy} confOf={confOf}
+          cls={classAt(cls0, 0)} onCls={setCls0} compete={!isUnder(classAt(cls0, 0))}
           onCommit={short => { sfx('whistle'); teamPicked(schools.find(t => t.short === short) ?? teamsBy[short]) }}
           onClose={() => setOffering(false)}
           onAny={sandboxOn ? () => setPicker(true) : null} />
@@ -496,15 +570,18 @@ export default function CFBMode({ user, onHome, onCareer }) {
           stage={stage} onStage={setStage}
           story={story} onStory={setStory} photoOf={photoOf}
           key={result.seed}
-          seasonNote={[era === 'alltime' ? 'All-Time build' : null, history.length ? `Season ${history.length + 1} · ${history[history.length - 1].school === result.team?.short ? `back at ${result.team?.school ?? result.team?.name}` : `transferred from ${history[history.length - 1].schoolName}`}` : null].filter(Boolean).join(' · ') || null}
+          userYear={cls} season={2026 + history.length}
+          roleNote={result.role === 'backup' ? `${CLASS_NAME[cls]} · backup to ${result.starterName ?? 'the starter'}` : `${CLASS_NAME[cls]} · ${P.arch(P.ovr(build, P.types), build, P.types)}`}
+          seasonNote={[era === 'alltime' ? 'All-Time build' : null, `${CLASS_NAME[cls]} season`, history.length ? (history[history.length - 1].school === result.team?.short ? `back at ${result.team?.school ?? result.team?.name}` : `transferred from ${history[history.length - 1].schoolName}`) : null].filter(Boolean).join(' · ')}
           onAgain={() => start(pos)}
-          onDraft={() => setDrafting(true)}
-          onReturn={canReturn ? () => another(schools.find(t => t.short === result.team?.short) ?? result.team) : null}
-          returnNote={canReturn ? null : 'Out of eligibility to return: enter the draft or transfer.'}
-          onTransfer={() => { setMoving(true); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onDraft={canDeclare(cls) ? () => setDrafting(true) : null}
+          onReturn={canReturn ? () => openOff('return') : null}
+          nextNote={canReturn ? (canDeclare(cls) ? null : `${CLASS_NAME[classAt(cls0, history.length + 1)]} year is next. He can enter the NFL Draft after his junior season.`) : 'Out of eligibility: the NFL Draft is next.'}
+          onTransfer={canReturn ? () => openOff('transfer') : null}
           onHome={close} />
         {drafting && (
           <CFBDraft build={build} types={P.types} pos={pos} result={result} user={user} userName={userName} playerName={who} sandbox={!!result.sandbox}
+            cls={cls} age={draftAge(cls)} history={history}
             onCancel={() => setDrafting(false)}
             onDone={c => { setDrafting(false); onCareer?.(c) }} />
         )}

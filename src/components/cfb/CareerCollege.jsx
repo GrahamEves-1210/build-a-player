@@ -4,14 +4,16 @@ import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../../data/wrs'
 import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
-import { seeded } from '../../lib/rng'
 import { starsFor, rankFor, barAt, offersFor, startsOver } from './cfbRecruit'
 import { Stars, OfferBoard, CommitBar } from './CFBOffers'
 import { loadCFB } from '../../lib/cfbLoad'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import CFBSimPage from './CFBSimPage'
-import { CFB_POS, classLabel, seasonEvent, collegeGap, photoLookup } from './cfbShared'
+import { CFB_POS, classLabel, seasonEvent, collegeGap, photoLookup, seasonData } from './cfbShared'
+import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isUnder, classAge, draftAge, upgradePoints, backupSeason } from './cfbClass'
+import CFBOffseason from './CFBOffseason'
+import { SPORT } from '../../lib/career'
 import './cfb.css'
 
 // ── Career: START IN COLLEGE ─────────────────────────────────────────────────
@@ -21,10 +23,17 @@ import './cfb.css'
 // The boosted OVR makes his recruiting stars and national ranking, the stars bring the offers (real schools,
 // matched to the stars, and a better shot where the starter at his spot is weaker), he commits, and the
 // season plays out on College Football's own season screen (CFBSimPage) with the CFB engine: as the
-// starter if he's better than the man there, else as his backup. Then ENTER THE NFL DRAFT, or RETURN FOR
-// ANOTHER SEASON once (a small development bump; stay, or transfer). Entering the draft takes the boost
-// off (his NFL-builder ratings again, shown before it happens) and the career goes on at the combine with
-// his college résumé (c.college) nudging his draft stock a little (lib/career.js stockOf).
+// starter if he's better than the man there, else as his backup.
+// CLASS YEARS (2026-11-11, the same rules as the one-off mode: cfbClass.js): he starts as a freshman, sophomore,
+// junior or senior (the switch on the recruiting card, col.cls0) and plays from that class to the draft. After a
+// freshman or sophomore season the way on is the next season; after his junior season ENTER THE NFL DRAFT or
+// come back; a senior is out of eligibility. Every season earns one to three upgrade points, spent on his traits
+// in the offseason (CFBOffseason: each one a step of college development, a season's `dev`), then stay or transfer.
+// Entering the draft takes the boost off (his NFL-builder ratings again, plus what he trained in college, shown
+// before it happens) and the career goes on at the combine with his college résumé (c.college) nudging his draft
+// stock a little (lib/career.js stockOf).
+// (A career that was already in college before class years keeps its own run: a freshman then a sophomore season,
+// the draft open after either: `legacy` below.)
 //
 // The college phase lives on the career save (c.phase 'college', c.college), so leaving and coming back
 // picks it up at the same screen. A season is kept as its seed and inputs, not its result: the engine is
@@ -36,9 +45,9 @@ const POS = {
   rb: { types: RB_TYPES, attr: RB_ATTR, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
 }
 const clamp = (a, b, x) => Math.max(a, Math.min(b, x))
-const YEAR_OF = ['FR', 'SO']          // his class, season by season
-const SIM_YEAR = ['JR', 'SR']         // what the engine is told, so his draft stock reads as a draft-eligible player's
-const DEV_STEPS = 3                   // a returning player: one step on his three weakest traits
+// (a career in college before class years, `legacy`: its two seasons' labels, and what the engine was told)
+const YEAR_OF = ['FR', 'SO']
+const SIM_YEAR = ['JR', 'SR']
 const NO_BOOST = new Set(['size'])   // his frame: the college gap doesn't touch it, and a returning year doesn't develop it (cfbShared collegeGap)
 
 // the college build: the NFL build up by the college gap (cfbShared.js collegeGap, the same one the draft takes back
@@ -52,63 +61,6 @@ export function collegeBuild(build, types, dev = {}, pos = null) {
   }))
 }
 // (the stars, the ranking, the offers and the offer board: cfbRecruit.js and CFBOffers.jsx, shared with the one-off mode)
-
-// ── A season as the backup: the school plays its real starter, he gets a backup's snaps ──────────
-const LINE_KEYS = {
-  qb: ['comp', 'att', 'passYds', 'tds', 'ints', 'sacks', 'rushAtt', 'rushYds', 'rushTDs', 'rating', 'eff'],
-  rb: ['carries', 'rushYds', 'rushTDs', 'ypc', 'recs', 'recYds', 'recTDs', 'fumbles', 'long'],
-  wr: ['targets', 'rec', 'recYds', 'recTDs', 'long'],
-}
-function backupLine(g, pos, rnd) {
-  const blow = Math.abs((g.mySc ?? 0) - (g.oppSc ?? 0)) >= 21   // the starters sit in a blowout
-  const td = (g.mySc ?? 0) >= 6   // (his touchdown is on the board: none in a game his team never reached the end zone)
-  if (pos === 'qb') {
-    const att = blow ? 4 + Math.floor(rnd() * 7) : rnd() < 0.12 ? 1 + Math.floor(rnd() * 3) : 0
-    const comp = Math.round(att * (0.5 + rnd() * 0.2))
-    return { att, comp, passYds: Math.round(comp * (8 + rnd() * 5)), tds: att >= 5 && rnd() < 0.3 && td ? 1 : 0, ints: att && rnd() < 0.07 ? 1 : 0, sacks: 0, rushAtt: att ? Math.floor(rnd() * 3) : 0, rushYds: att ? Math.floor(rnd() * 14) : 0, rushTDs: 0 }
-  }
-  if (pos === 'rb') {
-    const base = g.carries ?? 14
-    const carries = Math.max(1, Math.round(base * (0.28 + rnd() * 0.17) + (blow ? 3 : 0)))
-    const ypc = (g.carries ? g.rushYds / Math.max(1, g.carries) : 4.5) * (0.82 + rnd() * 0.2)
-    const recs = Math.floor(rnd() * 2.4)
-    const rushYds = Math.round(carries * ypc)
-    return { carries, rushYds, rushTDs: rnd() < 0.2 + (blow ? 0.15 : 0) && td ? 1 : 0, ypc: +(rushYds / carries).toFixed(1), recs, recYds: recs * Math.round(5 + rnd() * 5), recTDs: 0, fumbles: 0, long: Math.max(3, Math.round(Math.max(1, ypc) * (1.6 + rnd() * 2))) }
-  }
-  const targets = Math.floor(rnd() * 4) + (blow ? 1 : 0)
-  const rec = Math.round(targets * (0.5 + rnd() * 0.3))
-  return { targets, rec, recYds: rec * Math.round(8 + rnd() * 7), recTDs: rec && rnd() < 0.1 && td ? 1 : 0, long: rec ? Math.round(10 + rnd() * 20) : 0 }
-}
-function totalsOf(gs, pos) {
-  const sum = k => gs.reduce((a, g) => a + (g[k] ?? 0), 0)
-  const max = k => gs.reduce((a, g) => Math.max(a, g[k] ?? 0), 0)
-  if (pos === 'qb') { const att = sum('att'), comp = sum('comp'); return { seasonPassYds: sum('passYds'), seasonTDs: sum('tds'), seasonINTs: sum('ints'), seasonCompletions: comp, seasonAttempts: att, seasonCompPct: att ? Math.round(comp / att * 1000) / 10 : 0, seasonRushYds: sum('rushYds'), seasonRushTDs: sum('rushTDs'), gp: gs.filter(g => g.att || g.rushAtt).length } }
-  if (pos === 'rb') { const car = sum('carries'); return { seasonCarries: car, seasonRushYds: sum('rushYds'), seasonRushTDs: sum('rushTDs'), seasonYPC: car ? Math.round(sum('rushYds') / car * 10) / 10 : 0, seasonRecs: sum('recs'), seasonRecYds: sum('recYds'), seasonRecTDs: sum('recTDs'), seasonLong: max('long'), gp: gs.filter(g => g.carries).length } }
-  const rec = sum('rec'); return { seasonTargets: sum('targets'), seasonRecs: rec, seasonRecYds: sum('recYds'), seasonRecTDs: sum('recTDs'), seasonYPR: rec ? Math.round(sum('recYds') / rec * 10) / 10 : 0, seasonLong: max('long'), gp: gs.filter(g => g.targets).length }
-}
-// the awards were the starter's, under his own name: none of them is the build's
-const notUser = x => (Array.isArray(x) ? x.map(notUser) : x && typeof x === 'object'
-  ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === 'isUser' || k === 'userWon' || k === 'userFinalist' ? false : k === 'userPlace' || (k === 'user' && typeof v === 'string') ? null : notUser(v)]))
-  : x)
-function asBackup(r, pos, seed, starter, ovr) {
-  const rnd = seeded(`cfb-backup-${seed}`)
-  const blank = Object.fromEntries(LINE_KEYS[pos].map(k => [k, null]))
-  const swap = g => ({ ...g, ...blank, ...backupLine(g, pos, rnd) })
-  const games = (r.games ?? []).map(swap)
-  const post = (r.cfb?.postseason ?? []).map(swap)
-  const ccg = post.filter(g => g.round === 'Conference Championship')
-  const c = r.cfb ?? {}
-  return {
-    ...r, games, role: 'backup', starterName: starter?.name ?? null, ovr: ovr ?? r.ovr,   // (his OVR, not the starter's the engine played)
-    cfb: {
-      ...c, postseason: post,
-      totals: { regular: totalsOf(games, pos), throughCCG: totalsOf([...games, ...ccg], pos), full: totalsOf([...games, ...post], pos) },
-      awards: notUser(c.awards ?? {}),
-      // (the board the engine made is the starter's: he isn't on it, and the projection isn't his)
-      draft: { ...(c.draft ?? {}), declares: false, tier: 'udfa', label: 'Undrafted free agent', round: null, pick: null, overall: null, boardRank: null, board: (c.draft?.board ?? []).map(x => ({ ...x, isUser: false })), note: `A backup year behind ${starter?.name ?? 'the starter'}: the scouts have seen little of him` },
-    },
-  }
-}
 
 // one college season, played (again) from what the save keeps
 // what the draft board knows of his earlier college seasons (cfbSimulation opts.career): the best Heisman and
@@ -128,12 +80,14 @@ function playSeason(data, c, s) {
   const P = POS[c.pos]
   const team = data.teams.find(t => t.short === s.school)
   const career = s.role !== 'backup' ? careerBefore(data, c, s) : null
-  if (s.role !== 'backup') return data.sim.runCFBSimulation(collegeBuild(c.build, P.types, s.dev), P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, ...(career ? { career } : {}) })
-  // the engine always plays its build first on the depth chart: hand it the real No. 1 (himself, so the
-  // school is the school it really is), and the build sits behind the starter he couldn't beat
-  const one = data.pools[c.pos].filter(p => p.team === s.school).sort((a, b) => (a.depth ?? 9) - (b.depth ?? 9))[0]
-  const sb = Object.fromEntries(P.types.map(t => [t, { type: t, val: one?.attrs?.[t] ?? 5, qbFull: one?.name, team: one?.team }]))
-  return asBackup(data.sim.runCFBSimulation(sb, P.types, team, c.pos, s.seed, 'career', null, { name: one?.name ?? 'Starter', year: one?.year ?? 'JR' }), c.pos, s.seed, barAt(data, s.school, c.pos), P.ovr(collegeBuild(c.build, P.types, s.dev), P.types))
+  // (s.adv, a season with class years: the rosters of its own year, cfbShared seasonData, the year on the draft
+  // line, and going or staying his own call. A season from before them plays the first season's rosters, as it did)
+  const k = Math.max(0, (c.college?.seasons ?? []).findIndex(x => x.seed === s.seed))
+  const sd = s.adv ? seasonData(data, k) : data
+  const b = collegeBuild(c.build, P.types, s.dev)
+  if (s.role !== 'backup') return { ...data.sim.runCFBSimulation(b, P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, ...(career ? { career } : {}), ...(s.adv ? { choice: true, season: 2026 + k, ...(k ? { pools: sd.pools } : {}) } : {}) }), ovr: P.ovr(b, P.types) }   // (the college overall the recruiting card and the offseason show)
+  // (the school plays its real starter and the build sits behind the man he couldn't beat: cfbClass backupSeason)
+  return backupSeason(data.sim, sd.pools, P.types, team, c.pos, s.seed, { ovr: P.ovr(b, P.types), ...(s.adv ? { cls: s.simYear, build: b, name: c.name, season: 2026 + k, usePools: k > 0 } : {}) })
 }
 
 // what a season leaves on his résumé
@@ -194,8 +148,12 @@ export default function CareerCollege({ c, setCareer, onExit }) {
   const [moving, setMoving] = useState(null)   // the transfer screen's pick: stay, or a portal school
   const [exit, setExit] = useState(false)
   const [returning, setReturning] = useState(false)
+  const [offOpen, setOffOpen] = useState(false)   // the offseason's upgrade screen (its state is on the save: col.off)
   const P = POS[c.pos]
   const col = c.college ?? { stage: 'recruit', seasons: [] }
+  // (in college before class years: no starting class on the save, and a season already played)
+  const legacy = col.cls0 == null && col.seasons.length > 0
+  const cls0 = Math.max(0, Math.min(3, col.cls0 ?? 0))
   useEffect(() => {
     document.documentElement.classList.add('is-cfb')
     return () => document.documentElement.classList.remove('is-cfb')
@@ -225,15 +183,20 @@ export default function CareerCollege({ c, setCareer, onExit }) {
   const begin = (short, dev = {}) => {
     const k = col.seasons.length
     const ovr = P.ovr(collegeBuild(c.build, P.types, dev), P.types)
-    const bar = barAt(data, short, c.pos)
-    const s = { school: short, schoolName: teamsBy[short]?.school ?? short, seed: `${c.seed}-cfb-${k}-${short}`, cls: YEAR_OF[k], simYear: SIM_YEAR[k], role: startsOver(bar, ovr, k) ? 'starter' : 'backup', dev, view: 0 }
+    const cls = legacy ? YEAR_OF[k] : classAt(cls0, k)
+    const bar = barAt(legacy ? data : seasonData(data, k), short, c.pos)
+    const last = col.seasons[k - 1]
+    // (an underclassman has to beat the starter, unless the job was already his there; a junior or senior plays)
+    const starts = legacy ? startsOver(bar, ovr, k) : !isUnder(cls) || (last && last.school === short && last.role !== 'backup') || !bar || ovr > (bar.ovr ?? 0)
+    const s = { school: short, schoolName: teamsBy[short]?.school ?? short, seed: `${c.seed}-cfb-${k}-${short}`, cls, simYear: legacy ? SIM_YEAR[k] : cls, role: starts ? 'starter' : 'backup', dev, view: 0, ...(legacy ? {} : { adv: true }) }
     const seasons = [...col.seasons, s]
-    put({ stage: 'season', seasons })
+    // (the points he didn't spend this offseason stay in the bank)
+    put({ stage: 'season', seasons, ...(legacy ? {} : { cls0 }), bank: col.off ? col.off.left : col.bank ?? 0, off: null })
     try {
       const r = playSeason(data, { ...c, college: { ...col, seasons } }, s)
       window.dispatchEvent(new CustomEvent('bap:season', { detail: seasonEvent(r, c.pos, !!c.sandbox) }))
     } catch {}
-    setPicked(null); setReturning(false)
+    setPicked(null); setReturning(false); setOffOpen(false); setMoving(null)
     sfx('whistle'); window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
@@ -243,25 +206,50 @@ export default function CareerCollege({ c, setCareer, onExit }) {
     const sums = col.seasons.map((s, i) => summaryOf(i === si && result ? result : playSeason(data, c, s), s, c.pos, teamsBy))
     const last = sums[sums.length - 1]
     const line = resumeOf(sums, c.pos)
+    // what he trained in college goes to the pros with him (the college boost is what comes off), and the points
+    // he never spent are his to spend in the league
+    const build = trained(cur?.dev)
     setCareer({
-      ...c, phase: 'draft', step: 'combine', age: (c.age ?? 21) + sums.length,
+      ...c, build, ovr: SPORT.nfl.ovr(c.pos, build), dev: { ...c.dev, points: (c.dev?.points ?? 0) + (col.bank ?? 0) },
+      phase: 'draft', step: 'combine', age: legacy || !cur ? (c.age ?? 21) + sums.length : draftAge(cur.cls),
       college: { done: true, school: last?.school, schoolName: last?.schoolName, line, seasons: sums, stock: stockNudge(sums), stars, rank },
     })
     sfx('purchase')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
+  // his NFL build with his college development on it (each step a grade, counted on the trait like Career's own upgrades)
+  const trained = dev => Object.fromEntries(P.types.map(t => { const ch = c.build[t], n = dev?.[t] ?? 0; return [t, ch && n ? { ...ch, val: Math.min(11, (ch.val ?? 0) + n), upgraded: (ch.upgraded ?? 0) + n } : ch] }))
+
   if (!data) return <div className="ag-screen cfb-screen"><p className="cfb-wait">Loading College Football…</p></div>
+
+  // ── the offseason: this season's upgrade points, spent on his traits (the one-off mode's screen) ──
+  if (col.stage === 'season' && cur && result && offOpen && col.off) {
+    const earned = upgradePoints(result, c.pos)
+    const nextCls = legacy ? YEAR_OF[1] : classAt(cls0, col.seasons.length)
+    const o = col.off
+    const ob = Object.fromEntries(Object.entries(collegeBuild(c.build, P.types, o.dev)).map(([t, ch]) => [t, ch ? { ...ch, upgraded: (ch.upgraded ?? 0) + (o.dev?.[t] ?? 0) } : ch]))
+    const fresh = { dev: cur.dev ?? {}, left: (col.bank ?? 0) + earned.pts }
+    return (
+      <CFBOffseason who={c.name} pos={c.pos} school={teamsBy[cur.school]?.school ?? cur.school} cls={legacy ? YEAR_OF[si] ?? 'SO' : cur.cls} nextCls={nextCls} earned={earned} attr={P.attr}
+        career={{ sport: 'nfl', pos: c.pos, types: P.types, build: ob, age: classAge(nextCls), year: 0, phase: 'offseason', name: c.name, dev: { points: o.left, spent: 0 }, decisions: [] }}
+        onCareer={n => { const t = P.types.find(x => n.build[x] && n.build[x].val !== ob[x].val); if (t) put({ off: { dev: { ...o.dev, [t]: (o.dev?.[t] ?? 0) + 1 }, left: n.dev.points } }) }}
+        ovr={P.ovr(ob, P.types)} ovrWas={P.ovr(collegeBuild(c.build, P.types, cur.dev), P.types)}
+        cta="STAY OR TRANSFER"
+        onGo={() => { sfx('tap'); setOffOpen(false); setReturning(o.dev ?? {}); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+        onReset={o.left !== fresh.left ? () => put({ off: fresh }) : null}
+        onClose={() => setOffOpen(false)} />
+    )
+  }
 
   // ── the season ──────────────────────────────────────────────────────────
   if (col.stage === 'season' && cur && result && !returning) {
     const sch = teamsBy[cur.school]?.school ?? cur.school
-    const canReturn = col.seasons.length < 2
-    const devFor = () => {
-      // his three weakest traits (not his size), one step each
-      const cbNow = collegeBuild(c.build, P.types, cur.dev)
-      return Object.fromEntries(P.types.filter(t => !NO_BOOST.has(t) && cbNow[t]).sort((a, b) => cbNow[a].val - cbNow[b].val).slice(0, DEV_STEPS).filter(t => cbNow[t].val < 11).map(t => [t, (cur.dev?.[t] ?? 0) + 1]))
-    }
+    // (his class decides: the draft after a junior or senior season, another year for anyone but a senior)
+    const canReturn = legacy ? col.seasons.length < 2 : canComeBack(cur.cls)
+    const eligible = legacy || canDeclare(cur.cls)
+    const nextName = legacy ? null : CLASS_NAME[classAt(cls0, col.seasons.length)]
+    const nfl = trained(cur.dev)
     const keepSummary = () => col.seasons.map((s, i) => (i === si && !s.summary ? { ...s, summary: summaryOf(result, s, c.pos, teamsBy) } : s))
     return (
       <>
@@ -274,10 +262,10 @@ export default function CareerCollege({ c, setCareer, onExit }) {
           onHome={onExit}
           endActions={(
             <div className="cfbs-actions cfbr-decide">
-              <button className="cfbs-btn is-main is-draft" onClick={() => { put({ seasons: keepSummary() }); setExit(true); sfx('tap') }}>ENTER THE NFL DRAFT<small>The college boost comes off · then the combine</small></button>
+              {eligible && <button className="cfbs-btn is-main is-draft" onClick={() => { put({ seasons: keepSummary() }); setExit(true); sfx('tap') }}>ENTER THE NFL DRAFT<small>The college boost comes off · then the combine</small></button>}
               {canReturn
-                ? <button className="cfbs-btn" onClick={() => { put({ seasons: keepSummary() }); setReturning(devFor()); sfx('tap') }}>RETURN FOR ANOTHER SEASON<small>One more year in college, then the draft</small></button>
-                : <p className="cfbs-note">Two seasons in: the draft is next.</p>}
+                ? <button className={`cfbs-btn${eligible ? '' : ' is-main is-draft'}`} onClick={() => { put({ seasons: keepSummary(), off: col.off ?? { dev: cur.dev ?? {}, left: (col.bank ?? 0) + upgradePoints(result, c.pos).pts } }); setOffOpen(true); sfx('tap'); window.scrollTo({ top: 0, behavior: 'instant' }) }}>{eligible ? 'RETURN FOR ANOTHER SEASON' : `ON TO ${nextName.toUpperCase()} YEAR`}<small>{eligible ? 'Upgrade points, then stay or transfer' : 'Upgrade points, then stay or transfer · the draft opens after his junior season'}</small></button>
+                : <p className="cfbs-note">{legacy ? 'Two seasons in: the draft is next.' : 'Out of eligibility: the draft is next.'}</p>}
             </div>
           )} />
         {exit && (
@@ -287,7 +275,7 @@ export default function CareerCollege({ c, setCareer, onExit }) {
                 <div><small>{CFB_POS[c.pos].label} · {sch} · {classLabel(cur.cls)}</small><h2>Enter the NFL Draft</h2></div>
                 <button className="ag-round-btn" onClick={() => setExit(false)} aria-label="Close"><IconClose size={16} /></button>
               </div>
-              <p className="cfbd-why"><b>The college boost comes off.</b> He was a pro talent against college competition. Against NFL players his ratings are his own again: <b>back to the ratings he was built with</b>. His college résumé goes with him to the combine and gives his draft stock a nudge.</p>
+              <p className="cfbd-why"><b>The college boost comes off.</b> He was a pro talent against college competition. Against NFL players his ratings are his own again: <b>the ratings he was built with{Object.values(cur.dev ?? {}).some(Boolean) ? ', plus what he trained in college' : ''}</b>. His college résumé goes with him to the combine and gives his draft stock a nudge.</p>
               <table className="cfbd-table">
                 <thead><tr><th>TRAIT</th><th>COLLEGE</th><th /><th>NFL</th></tr></thead>
                 <tbody>
@@ -295,14 +283,14 @@ export default function CareerCollege({ c, setCareer, onExit }) {
                     const from = collegeBuild(c.build, P.types, cur.dev)[t].val
                     return (
                       <tr key={t}>
-                        <td>{P.attr[t]?.label ?? t}<small>{from === c.build[t].val ? 'No boost' : 'College boost off'}</small></td>
-                        <td className="is-g">{valToGrade(from)}</td><td className="is-arrow" aria-hidden="true">→</td><td className="is-g is-new">{valToGrade(c.build[t].val)}</td>
+                        <td>{P.attr[t]?.label ?? t}<small>{from === nfl[t].val ? 'No boost' : 'College boost off'}</small></td>
+                        <td className="is-g">{valToGrade(from)}</td><td className="is-arrow" aria-hidden="true">→</td><td className="is-g is-new">{valToGrade(nfl[t].val)}</td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
-              <p className="cfbd-note">OVR {P.ovr(collegeBuild(c.build, P.types, cur.dev), P.types)} in college → {c.ovr} OVR in the NFL</p>
+              <p className="cfbd-note">OVR {P.ovr(collegeBuild(c.build, P.types, cur.dev), P.types)} in college → {SPORT.nfl.ovr(c.pos, nfl)} OVR in the NFL</p>
               <div className="cfbd-actions">
                 <button className="cfbs-btn is-main" onClick={finish}>ENTER THE DRAFT</button>
                 <button className="cfbs-btn" onClick={() => setExit(false)}>NOT YET</button>
@@ -314,32 +302,25 @@ export default function CareerCollege({ c, setCareer, onExit }) {
     )
   }
 
-  // ── a second season: the development, then stay or transfer ──────────────
+  // ── the next season: stay or transfer (the offseason's upgrades are on him) ──────────────
   if (col.stage === 'season' && cur && returning) {
     const dev = returning
     const ovr2 = P.ovr(collegeBuild(c.build, P.types, dev), P.types)
-    const stay = barAt(data, cur.school, c.pos)
-    const stayStarts = startsOver(stay, ovr2, 1)
-    const away = offersFor(data, { stars: starsFor(ovr2), ovr: ovr2, pos: c.pos, seed: `${c.seed}-portal`, skip: [cur.school], n: 3 })
+    const nextCls = legacy ? YEAR_OF[1] : classAt(cls0, col.seasons.length)
+    const nextData = legacy ? data : seasonData(data, col.seasons.length)   // (next season's rosters: who he'd be up against)
+    const stay = barAt(nextData, cur.school, c.pos)
+    const stayStarts = legacy ? startsOver(stay, ovr2, 1) : !isUnder(nextCls) || cur.role !== 'backup' || !stay || ovr2 > (stay.ovr ?? 0)
+    const away = offersFor(nextData, { stars: starsFor(ovr2), ovr: ovr2, pos: c.pos, seed: `${c.seed}-portal-${col.seasons.length}`, skip: [cur.school], n: 3 })
     return (
       <div className="ag-screen cfb-screen cfbr">
         <div className="ag-screen-head">
           <div><span className="ag-eyebrow">{c.name.toUpperCase()} · {CFB_POS[c.pos].label}</span><h1 className="ag-h1">Another Season</h1></div>
-          <button className="ag-round-btn" onClick={() => setReturning(false)} aria-label="Back"><IconClose size={16} /></button>
+          <button className="ag-round-btn" onClick={() => { setReturning(false); setOffOpen(true) }} aria-label="Back"><IconClose size={16} /></button>
         </div>
         <div className="ag-screen-body">
           <section>
-            <h2 className="cfb-label">THE OFFSEASON · {classLabel(YEAR_OF[1]).toUpperCase()} YEAR</h2>
-            <table className="cfbd-table">
-              <thead><tr><th>TRAIT</th><th>NOW</th><th /><th>NEXT YEAR</th></tr></thead>
-              <tbody>{Object.keys(dev).map(t => (
-                <tr key={t}><td>{P.attr[t]?.label ?? t}<small>A year of development</small></td><td className="is-g">{valToGrade(collegeBuild(c.build, P.types, cur.dev)[t].val)}</td><td className="is-arrow">→</td><td className="is-g is-up">{valToGrade(collegeBuild(c.build, P.types, dev)[t].val)}</td></tr>
-              ))}</tbody>
-            </table>
-          </section>
-          <section>
-            <h2 className="cfb-label">STAY OR TRANSFER</h2>
-            <OfferBoard pos={c.pos} teamsBy={teamsBy} confOf={confOf} picked={moving}
+            <h2 className="cfb-label">{classLabel(nextCls).toUpperCase()} YEAR · STAY OR TRANSFER</h2>
+            <OfferBoard compete={!legacy && !isUnder(nextCls)} pos={c.pos} teamsBy={teamsBy} confOf={confOf} picked={moving}
               offers={[{ short: cur.school, starts: stayStarts, bar: stay ? { name: stay.name, ovr: stay.ovr, year: stay.year } : null, stay: true }, ...away]}
               onPick={short => { setMoving(short); sfx('tap') }} />
           </section>
@@ -360,7 +341,14 @@ export default function CareerCollege({ c, setCareer, onExit }) {
       </div>
       <div className="ag-screen-body">
         <section className="cfbr-card">
-          <div className="cfbr-who"><small>{CFB_POS[c.pos].name.toUpperCase()} · CLASS OF 2026</small><b>{c.name}</b></div>
+          <div className="cfbr-who"><small>{CFB_POS[c.pos].name.toUpperCase()} · {CLASS_NAME[classAt(cls0, 0)].toUpperCase()}</small><b>{c.name}</b></div>
+          {/* his class: the one-off mode's switch (a freshman plays up to four seasons, a senior one) */}
+          <div className="cfbr-name">
+            <span className="cfbr-cls-l" id="cfbr-cls-l">CLASS<i>{seasonsFrom(cls0) === 1 ? '1 SEASON' : `UP TO ${seasonsFrom(cls0)} SEASONS`}</i></span>
+            <div className="cfbr-cls" role="radiogroup" aria-labelledby="cfbr-cls-l">
+              {CLASSES.map((k, i) => <button key={k} type="button" role="radio" aria-checked={cls0 === i} className={cls0 === i ? 'is-on' : ''} onClick={() => { if (cls0 !== i) { put({ cls0: i }); sfx('tap') } }}>{CLASS_NAME[k].toUpperCase()}</button>)}
+            </div>
+          </div>
           <Stars n={stars} />
           <div className="cfbr-rank">
             <span><b>No. {rank.overall.toLocaleString()}</b><small>OVERALL</small></span>
@@ -381,7 +369,7 @@ export default function CareerCollege({ c, setCareer, onExit }) {
         </section>
         <section>
           <h2 className="cfb-label">OFFERS</h2>
-          <OfferBoard pos={c.pos} teamsBy={teamsBy} confOf={confOf} offers={offers} picked={picked} onPick={short => { setPicked(short); sfx('tap') }} />
+          <OfferBoard compete={!isUnder(classAt(cls0, 0))} pos={c.pos} teamsBy={teamsBy} confOf={confOf} offers={offers} picked={picked} onPick={short => { setPicked(short); sfx('tap') }} />
         </section>
         <CommitBar label={sel ? `COMMIT TO ${schoolOf(sel.short)}` : 'PICK A SCHOOL'} on={!!sel} onGo={() => sel && begin(sel.short)} />
       </div>
