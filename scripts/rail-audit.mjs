@@ -45,6 +45,8 @@ if (!todo.length) { console.error('no scenario matches --only'); process.exit(2)
 const rows = []          // one per screen x size x rail height
 const missed = []        // screens a scenario could not reach
 const screens = new Map()   // screen name -> sizes it was audited at
+// (written after every scenario, so a run that is cut short still leaves what it found)
+const saveJson = () => { if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ sizes: SIZES.map(s => s.name), heights: HEIGHTS.map(railName), screens: [...screens.keys()], rows, missed }, null, 1)) }
 const safe = s => s.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 90)
 const t00 = Date.now()
 
@@ -121,6 +123,7 @@ for (const [si, size] of SIZES.entries()) {
         break
       }
     }
+    saveJson()
   }
   if (page) await page.close()
 }
@@ -152,5 +155,5 @@ if (missed.length) {
   for (const m of missed) { if (!by.has(m.name)) by.set(m.name, { why: m.why, sizes: [] }); by.get(m.name).sizes.push(m.size) }
   for (const [name, m] of by) console.log(`  ${name}: ${m.why} (${m.sizes.length === SIZES.length ? 'every size' : m.sizes.join(', ')})`)
 }
-if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ sizes: SIZES.map(s => s.name), heights: HEIGHTS.map(railName), screens: [...screens.keys()], rows, missed }, null, 1))
+saveJson()
 process.exit(failing.length ? 1 : 0)

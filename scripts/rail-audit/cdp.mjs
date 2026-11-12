@@ -83,7 +83,7 @@ export async function launch({ width = 390, height = 844, mobile = true, dpr = 1
   await send('Network.setBlockedURLs', { urls: BLOCKED })
   if (preload) await send('Page.addScriptToEvaluateOnNewDocument', { source: preload })
   // an alert or a confirm stops the page until it is answered: answered at once (a confirm with No)
-  on('Page.javascriptDialogOpening', () => { send('Page.handleJavaScriptDialog', { accept: false }).catch(() => {}) })
+  on('Page.javascriptDialogOpening', p => { send('Page.handleJavaScriptDialog', { accept: p?.type === 'beforeunload' }).catch(() => {}) })   // ("leave this page?" is Yes: the audit is the one leaving)
   const errors = []
   on('Runtime.exceptionThrown', p => errors.push(String(p.exceptionDetails?.exception?.description ?? p.exceptionDetails?.text ?? '').slice(0, 300)))
 
