@@ -4,17 +4,22 @@
 //   free     every other tier, for every signed-in player
 //   premium  every tier, for players who bought this season's pass ($8.99, Stripe;
 //            the webhook writes supabase pass_owners, see supabase/builder_pass.sql)
+//            or with PASS_COINS coins (supabase/pass_coins.sql does the whole purchase)
 //
 // A tier opens every TIER_XP of XP earned since the season started (missions, seasons,
 // live games, the login: the same XP as levels). Rewards: coins, streak freezes, boosts
 // (2x XP and Coin Rush for the next N seasons; Hot Hand and Quick Heal for Career;
 // lib/progress.js BOOSTS) and cosmetics. The
 // cosmetics in a pass are pass-only (cosmetics.js marks them; never sold for coins).
-// Keep the season ids and prices in step with server/server.js and functions/api.
+// Keep the season ids and prices in step with server/server.js and functions/api, and
+// the season dates and the coin price with supabase/pass_coins.sql.
 
 export const TIER_XP = 1000
 export const TIERS = 30
 export const PASS_PRICE = '$8.99'
+// The same pass for coins. supabase/pass_coins.sql holds the same number and refuses a
+// purchase sent with any other (node scripts/pass-coins-check.mjs checks they match).
+export const PASS_COINS = 16000
 
 const c = n => ({ coins: n })
 const fz = () => ({ freeze: 1 })

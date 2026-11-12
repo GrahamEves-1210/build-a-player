@@ -11,11 +11,11 @@
 // rebuild are held as "pending" until the database counts include them.
 
 import { useSyncExternalStore } from 'react'
-import { baseFor, mergedCoins, pendingOf } from './coinSync.js'
+import { afterServerSpend, baseFor, mergedCoins, pendingOf } from './coinSync.js'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS, OWNED_AS } from './cosmetics'
-import { passSeason, seasonById, seasonOver, tierAt, xpForTier, TIER_XP, TIERS } from './pass'
+import { passSeason, seasonById, seasonOver, tierAt, xpForTier, TIER_XP, TIERS, PASS_COINS } from './pass'
 import { competeDelta, blacktopDelta, FORFEIT_RATING } from './rating'
 import { track } from './track'
 import { ACHIEVEMENTS, achById } from './achievements'
@@ -1293,7 +1293,8 @@ export function claimFreeCoins() {
 // total when it first saw the season is kept (pass[id].base; the lowest any device saw),
 // set only once the account's wallet and its season rebuild are in, so XP earned before
 // the season never counts. Once the season ends its XP is frozen (final).
-// Who bought the premium track comes from pass_owners (the Stripe webhook writes it).
+// Who bought the premium track comes from pass_owners (the Stripe webhook writes it, or
+// supabase/pass_coins.sql for a pass bought with coins: buyPassCoins below).
 let passOwn = new Set()
 const passOwnKey = id => `bap_pass_${id}`
 const cachedPassOwn = id => { try { return id ? JSON.parse(localStorage.getItem(passOwnKey(id)) || '[]') : [] } catch { return [] } }
@@ -1426,6 +1427,58 @@ async function loadPassOwners(id = uid) {
   } catch { return false }
 }
 export const refreshPass = () => loadPassOwners(uid)
+// The premium track for PASS_COINS coins. The server does the whole purchase in one step
+// (supabase/pass_coins.sql: checks the account's coins, takes them, writes pass_owners), so
+// nothing here changes until it says yes. Resolves { ok: true } or { ok: false, reason }:
+// 'signin' | 'short' (coins: what the account holds) | 'closed' | 'price' | 'offline' | 'unavailable'
+const waitPush = async () => { for (let i = 0; pushing && i < 100; i++) await new Promise(r => setTimeout(r, 100)) }
+export async function buyPassCoins() {
+  const id = uid, day = dayKey(), s = passSeason(day)
+  if (!id) return { ok: false, reason: 'signin' }
+  if (!supabase || !s || seasonOver(s, day)) return { ok: false, reason: 'closed' }
+  if (passOwn.has(s.id)) return { ok: true }
+  if (S.coins < PASS_COINS) return { ok: false, reason: 'short', coins: S.coins }
+  // what this device earned since its last save goes up first: the server counts the account's coins
+  await waitPush()
+  clearTimeout(pushTimer); pushTimer = null; lastPush = Date.now()
+  await runPush(id)
+  await waitPush()
+  if (pushing || uid !== id) return { ok: false, reason: 'offline' }
+  // no wallet save runs while this is out: one answering after it would record coins from before the purchase
+  pushing = true
+  try {
+    let data = null, error = null
+    try { ({ data, error } = await supabase.rpc('buy_pass_with_coins', { p_season: s.id, p_price: PASS_COINS })) } catch (e) { error = e }
+    if (uid !== id) return { ok: false, reason: 'offline' }
+    if (data?.ok === true && typeof data.coins === 'number') {
+      S.coins = afterServerSpend(S.coins, S.coinsSynced, S.coinPush, { rev: data.prev ?? null, coins: data.coins + PASS_COINS }, data.coins)
+      S.coinPush = null
+      S.coinsSynced = data.coins
+      passOwn = new Set([...passOwn, s.id])
+      try { localStorage.setItem(passOwnKey(id), JSON.stringify([...passOwn])) } catch {}
+      ev('purchase', { kind: 'pass', season: s.id, with: 'coins', price: PASS_COINS })
+      emit()
+      return { ok: true }
+    }
+    if (data?.reason === 'owned') { await loadPassOwners(id); return { ok: true } }
+    if (data?.reason === 'short') { await pullWallet(id); return { ok: false, reason: 'short', coins: typeof data.coins === 'number' ? data.coins : S.coins } }
+    if (data?.reason === 'closed' || data?.reason === 'price' || data?.reason === 'signin') return { ok: false, reason: data.reason }
+    // the function isn't in the database yet (PostgREST: no such function)
+    if (error?.code === 'PGRST202' || error?.code === '42883') return { ok: false, reason: 'unavailable' }
+    // no answer: it may still have gone through. If the pass is there now, the wallet is read again
+    // (the purchase gave it a new rev, so the merge takes the charge once)
+    await loadPassOwners(id)
+    if (uid === id && passOwn.has(s.id)) {
+      await pullWallet(id)
+      ev('purchase', { kind: 'pass', season: s.id, with: 'coins', price: PASS_COINS })
+      return { ok: true }
+    }
+    return { ok: false, reason: error?.code ? 'unavailable' : 'offline' }
+  } finally {
+    pushing = false
+    if (pushAgain) { pushAgain = false; schedulePush() }
+  }
+}
 // Back from Stripe (?pass=1): the webhook can land a moment after us, so ask a few times
 export function watchPassReturn() {
   try {

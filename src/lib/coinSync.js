@@ -21,3 +21,12 @@ export function baseFor(synced, pending, w) {
 
 // This device's coins after merging the account's wallet
 export const mergedCoins = (mine, base, w) => Math.max(0, w.coins + (mine - base))
+
+// A purchase the server made itself (the Builder Pass for coins, supabase/pass_coins.sql): it took
+// the coins off the account and answered with the wallet it found (was: { rev, coins }) and the
+// coins it left (now). This device's coins after it: the account's, plus what changed here that
+// the account hadn't seen. The caller then records `now` as synced, with nothing pending.
+export function afterServerSpend(mine, synced, pending, was, now) {
+  if (synced == null) return Math.max(0, now)
+  return mergedCoins(mine, baseFor(synced, pending, was), { coins: now })
+}
