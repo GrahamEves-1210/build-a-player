@@ -31,11 +31,16 @@ const READ11 = { ...READ, id: 'read11', men: 1.04 }, NEAR11 = { ...NEAR, id: 'ne
 const ZONE11 = { ...NEAR, id: 'zone11', zoom: 1.5, men: 1.12 }
 // Kick Return: from behind the man deep, the coverage and the wall in front of him, eleven a side
 const KR = { id: 'kr', k: 1.9, topFrac: 0.2, zoom: 1.2, men: 1.15, e: 0.32, res: 4 }
+// A field goal, from behind the kicker (2026-11-11: the passing camera had him a speck in the middle of the field): low and
+// close, so he and the holder fill the bottom of the picture, the line is right in front of him and the uprights are far away
+const FG = { id: 'fg', k: 2.8, topFrac: 0.2, zoom: 2.1, men: 1.75, e: 0.24, res: 5 }
+// The onside kick, the same way: in behind the kicker, his own men either side of him, the hands team ten yards off
+const ONSIDE = { id: 'onside', k: 2.5, topFrac: 0.22, zoom: 1.7, men: 1.75, e: 0.26, res: 5 }
 const CAMS = {
   bomb: READ11, 'third-long': READ11, acc: READ, 'hot-read': READ11, audible: READ11, 'two-minute': READ11,
   gap: NEAR11, 'jump-route': NEAR11, 'zone-drop': ZONE11, sneak: NEAR11, 'goal-line': GOAL, catch: GOAL, release: NEAR, cone: NEAR, gauntlet: OPEN,
   'pass-rush': LINE, 'run-stuff': LINE,
-  'kick-return': KR,
+  'kick-return': KR, fg: FG, 'onside-kick': ONSIDE,
   seal: DOWN, juke: OPENRUN, 'juke-wr': OPENRUN, 'juke-te': OPENRUN, 'tackle-angle': OPENRUN, escape: DOWN,
 }
 let CAM = COURT, far = 1 / (1 + CAM.k)

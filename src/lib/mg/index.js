@@ -65,8 +65,8 @@ export const ENGINES = {
   // (the backer against the run: Stuff the Run's camera, from five yards further back)
   ...map(hitstick, 'hitstick', ['hit-stick'], 'run-stuff'),
   // the kicker: the field goals from behind the holder (the passing games' camera, to the end zone), the onside kick in close
-  ...map(kick, 'kick', ['deep-kick', 'game-winner'], 'acc'),
-  ...map(kick, 'kick', ['onside'], 'release'),
+  ...map(kick, 'kick', ['deep-kick', 'game-winner'], 'fg'),
+  ...map(kick, 'kick', ['onside'], 'onside-kick'),
   // (the back or the receiver deep on a kickoff: his own camera, the whole field rolling under it)
   ...map(kickret, 'kickret', ['kick-return']),
   // soccer (lib/mg/soccer.js draws them all: a camera in metres, on a real pitch)
