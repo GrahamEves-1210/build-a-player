@@ -44,8 +44,9 @@ const SKIN_OPACITY = 0.58
 // A kicker has three ratings, so each one colors a third of him (Silhouette.jsx K_ZONES puts each dot on it;
 // the same split the placeholder used on the QB figure):
 //   clutch    helmet + logo, the face behind the cage (three pieces, between the bars), the neck
-//   accuracy  jersey, V collar (second color), long sleeves (second color), hands, nickname + number
-//   power     pants (second color), socks (team color), shoes (second color); also sets HT/WT
+//   power     jersey, V collar (second color), long sleeves (second color), hands, nickname + number, pants (second
+//             color); also sets HT/WT. (The owner, 2026-11-12: legs, torso and arms are Power)
+//   accuracy  shins (socks, team color) and shoes (second color): where the ball is struck
 export default function KFigureOverlay({ build }) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
@@ -63,8 +64,8 @@ export default function KFigureOverlay({ build }) {
   svg = setFill(svg, 'face3', faceSkin, `opacity:${SKIN_OPACITY};`)
   svg = setFill(svg, 'neck',  faceSkin, `opacity:${SKIN_OPACITY};`)
 
-  // ── ACCURACY: the jersey and its V collar, the long sleeves under it, the hands
-  const J = 'accuracy'
+  // ── POWER: the jersey and its V collar, the long sleeves under it, the hands, and the pants
+  const J = 'power'
   svg = setFill(svg, 'jersey', tc(J), 'opacity:0.76;')
   svg = setFill(svg, 'collar', tc2(J), 'opacity:0.82;')
   svg = setFill(svg, 'left sleeve',  tc2(J), 'opacity:0.74;')
@@ -73,14 +74,14 @@ export default function KFigureOverlay({ build }) {
   svg = setFill(svg, 'left hand',  handSkin, `opacity:${SKIN_OPACITY};`)
   svg = setFill(svg, 'right hand', handSkin, `opacity:${SKIN_OPACITY};`)
 
-  // ── POWER: both legs. Pants in the second color, socks in the team color, shoes in the second color
-  const P = 'power'
+  // (the pants are Power's too; the shins and the shoes are Accuracy's)
+  const P = 'power', A = 'accuracy'
   svg = setFill(svg, 'left leg',  tc2(P), 'opacity:0.74;')
   svg = setFill(svg, 'right leg', tc2(P), 'opacity:0.74;')
-  svg = setFill(svg, 'left lower leg',  tc(P), 'opacity:0.76;')
-  svg = setFill(svg, 'right lower leg', tc(P), 'opacity:0.76;')
-  svg = setFill(svg, 'left shoe',  tc2(P), 'opacity:0.78;')
-  svg = setFill(svg, 'right shoe', tc2(P), 'opacity:0.78;')
+  svg = setFill(svg, 'left lower leg', tc(A), 'opacity:0.76;')
+  svg = setFill(svg, 'right lower leg', tc(A), 'opacity:0.76;')
+  svg = setFill(svg, 'left shoe',  tc2(A), 'opacity:0.78;')
+  svg = setFill(svg, 'right shoe', tc2(A), 'opacity:0.78;')
 
   // (the cage and the ball are never colored: their outlines go, so nothing is drawn for them)
   svg = setFill(svg, 'facemask', 'transparent')

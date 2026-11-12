@@ -67,7 +67,7 @@ const GREATS = {
   dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
   lb: [face('espn_964', '#241773'), face('espn_4433', '#ffb612'), face('espn_14938', '#0085ca')], // Ray Lewis, James Harrison (in the DL all-time pool as an edge), Kuechly
   ol: [face('espn_10448', '#311d00'), face('espn_13241', '#aa0000'), face('espn_16709', '#003594')],  // Joe Thomas, Trent Williams, Zack Martin
-  k: [face('espn_15683', '#241773'), face('espn_1097', '#002c5f'), face('espn_10636', '#203731')],   // Tucker, Vinatieri (his ESPN photo is in Colts blue), Crosby
+  k: [face('espn_9704', '#002244'), face('espn_1097', '#002c5f'), face('espn_10636', '#203731')],   // Gostkowski (not Tucker: the owner, 2026-11-12), Vinatieri (his ESPN photo is in Colts blue), Crosby
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
 }

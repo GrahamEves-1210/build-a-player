@@ -310,9 +310,10 @@ const OL_ATTRS = [
 
 // The kicker's three, head to toe (on public/k-silhouette.webp): the nerve, the aim, the leg
 const K_ATTRS = [
-  { label: 'Clutch',   col: '#a78bfa' },
-  { label: 'Accuracy', col: '#34d399', x: 2 },
-  { label: 'Power',    col: '#fb923c', x: 10, y: -25, fs: 6.6 },   // (written normally, never upright: the owner, twice. Small, on the top of his plant leg: the kicking leg is drawn over the band, and lower down the leg is narrower than the word)
+  // (the owner, 2026-11-12: head and face Clutch; torso, arms and legs Power; shins and shoes Accuracy. flex: each band's share of his height)
+  { label: 'Clutch',   col: '#a78bfa', flex: 0.9 },
+  { label: 'Power',    col: '#fb923c', flex: 2.5 },
+  { label: 'Acc', col: '#34d399', flex: 1.1, x: 4.2, y: -9, xs: true },   // (the game's own short label, ACC: his shin is the only part of this band that shows a word, and Accuracy is wider than a shin. Written across, never upright)
 ]
 
 // Football route-tree playbook sketch scattered faintly across the background
@@ -370,6 +371,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
           className="splash-stack-band"
           style={{
             background: a.col,
+            ...(a.flex ? { flex: a.flex } : null),
             opacity: visible ? 1 : 0,
             // Starts stacked at the very top (i band-heights up) and falls
             // down to its own row — lower bands fall further.

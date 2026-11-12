@@ -235,8 +235,8 @@ const K_FIGURE_SCALE_MOBILE = 0.98
 // card above his arm, and Power's dot sits on the plant leg's thigh (Power colors both legs).
 const K_ZONES = [
   { type: 'clutch',   ax: 590, ay:  62, side: 'left',  cy: 0.16 }, // helmet
-  { type: 'accuracy', ax: 668, ay: 470, side: 'right', cy: 0.45 }, // jersey chest
-  { type: 'power',    ax: 712, ay: 790, side: 'right', cy: 0.80 }, // pants, on the plant leg's thigh
+  { type: 'power',    ax: 668, ay: 470, side: 'right', cy: 0.45 }, // jersey chest (Power: torso, arms and pants)
+  { type: 'accuracy', ax: 738, ay: 1040, side: 'right', cy: 0.80 }, // the plant leg's shin (Accuracy: shins and shoes)
 ]
 
 function useFigureBounds(ref, figW, figH) {
