@@ -4,7 +4,16 @@
 // wiki rows, board tabs or Practice row.
 // Flip to true to ship it. On the dev server only, ?k=1 in the address turns it on for testing.
 // (its own tiny file so Home can read it without loading the kicker rosters)
-const K_DEV = typeof location !== 'undefined' && !!import.meta.env?.DEV && /[?&]k=1\b/.test(location.search)
+// (the switch sticks on this browser: ?k=1 once turns it on until ?k=0, so it survives refreshes and moving between
+// pages. Dev server only: it is always off in the production build)
+const K_DEV = (() => {
+  if (typeof location === 'undefined' || !import.meta.env?.DEV) return false
+  try {
+    if (/[?&]k=1\b/.test(location.search)) localStorage.setItem('bap_k_dev', '1')
+    if (/[?&]k=0\b/.test(location.search)) localStorage.removeItem('bap_k_dev')
+    return localStorage.getItem('bap_k_dev') === '1'
+  } catch { return /[?&]k=1\b/.test(location.search) }
+})()
 export const K_LIVE = false || K_DEV   // locked again 2026-11-12 (the owner: the kicking mini games aren't good enough to ship); flip to true to ship it
 // While it's off, K keeps a locked tab with a SOON tag at the end of football's defense on Home (components/app/AppHome.jsx,
 // and the classic Home's SOON tile); it can't be picked there or anywhere else.
