@@ -176,7 +176,10 @@ const LEADER_STAT = {
     // alone, and from inside it comes harder (a DT in the top ten is rare)
     dl: { key: 'seasonSacks', label: 'SACKS', base: 5.5, per: 2, noise: 3.5, int: true, unique: true, rate: p => { const a = p.attrs; const r = ((a.getOff ?? 5) * 1.2 + (a.bend ?? 5) + (a.finesseMoves ?? 5) + (a.powerMoves ?? 5) * 0.8 + (a.speed ?? 5) * 0.8) / 4.8; return p.subpos === 'dt' ? r - 1.5 : r } },
     // the tackle race: the leader has about 150-170; rated on the range, the tackling and the read
-    lb: { key: 'seasonTackles', label: 'TACKLES', base: 105, per: 13, noise: 9, int: true, unique: true, rate: p => { const a = p.attrs; return ((a.range ?? 5) + (a.tackling ?? 5) + (a.playRecognition ?? 5) * 0.6) / 2.6 } },
+    // (2026-11-12: by place in the race, not straight off the rating. The ratings run high, so base + rating put 105 of the
+    // 125 backers over 100 tackles; the league has about 40 a year. curve: the leader about 165, the tenth about 145, the
+    // fortieth 100, backups well under)
+    lb: { key: 'seasonTackles', label: 'TACKLES', curve: i => 165 * Math.exp(-i / 80), shuffle: 1.2, noise: 5, int: true, unique: true, rate: p => { const a = p.attrs; return ((a.range ?? 5) + (a.tackling ?? 5) + (a.playRecognition ?? 5) * 0.6) / 2.6 } },
     ol: { key: 'seasonPancakes', label: 'PANCAKES', base: 34, per: 7, noise: 6, int: true },
     // the scoring race among kickers: the leader has about 150-165 points, a middling starter about 115
     k: { key: 'seasonPoints', label: 'POINTS', base: 116, per: 8.5, noise: 11, int: true, unique: true },
@@ -233,8 +236,11 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
       .map(p => ({ name: p.name, team: p.team, value: Math.min(def.max, poisson(def.mu(rate(p)) * Math.min(def.luck, Math.exp(normal() * def.sigma - def.sigma * def.sigma / 2)))) }))
     return boardOf(def, rows, you)
   }
-  const rows = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name)))).sort((a, b) => rate(b) - rate(a)).map(p => {
-    let v = def.base + (rate(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
+  // (def.curve: the value comes from his place in the field, best rated first, with a little luck in the order)
+  const order = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name))))
+  const key = new Map(order.map(p => [p, rate(p) + (def.curve ? (r() - 0.5) * 2 * (def.shuffle ?? 0) : 0)]))
+  const rows = order.sort((a, b) => key.get(b) - key.get(a)).map((p, i) => {
+    let v = (def.curve ? def.curve(i) : def.base + (rate(p) - 5.2) * def.per) + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))
     return { name: p.name, team: p.team, value: v }
   })
