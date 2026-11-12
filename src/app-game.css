@@ -843,6 +843,8 @@ html:is(.is-app, .app-look) .spin-respin-half {
 }
 html:is(.is-app, .app-look) .spin-respin-half:first-child { border-radius: 14px 0 0 14px !important; }
 html:is(.is-app, .app-look) .spin-respin-half:last-child { border-radius: 0 14px 14px 0 !important; }
+/* (a respin on its own, a kicker's: round on both sides. It is the first and the last child, so it took the right half's corners and sat flat on the left) */
+html:is(.is-app, .app-look) .spin-respin-split--one .spin-respin-half { border-radius: 14px !important; }
 html:is(.is-app, .app-look) .spin-respin-divider { width: 3px !important; background: rgba(0,0,0,.4) !important; }
 html:is(.is-app, .app-look) .spin-btn-badge { font-family: var(--ag-display) !important; font-size: 13px !important; width: 22px !important; height: 22px !important; }
 html:is(.is-app, .app-look) .spin-reset-circle {
