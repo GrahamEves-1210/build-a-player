@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useProgress, claimPass, dayKey, walletOpen, startRush, rushLeftMs, startBoost, boostLeftMs } from '../../lib/progress'
-import { TIERS, TIER_XP, PASS_PRICE, passValue, nextSeason, daysLeft as daysLeftOf, daysLeftText } from '../../lib/pass'
+import { useProgress, claimPass, buyPassCoins, dayKey, walletOpen, startRush, rushLeftMs, startBoost, boostLeftMs } from '../../lib/progress'
+import { TIERS, TIER_XP, PASS_PRICE, PASS_COINS, passValue, nextSeason, daysLeft as daysLeftOf, daysLeftText } from '../../lib/pass'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { openCheckout } from '../../lib/webCheckout'
 import { track } from '../../lib/track'
@@ -96,6 +96,8 @@ export default function AppPass({ onClose }) {
   const name = getUsername(p.user) || 'Guest'
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [coinBusy, setCoinBusy] = useState(false)
+  const [coinErr, setCoinErr] = useState('')
   const store = useStorePrices()   // Android: Google Play's price, in the player's currency
   const [flash, setFlash] = useState(null)
   const [got, setGot] = useState(null)
@@ -156,6 +158,26 @@ export default function AppPass({ onClose }) {
     setBusy(false)
     if (r === 'error') setErr('Checkout didn\'t open. Try again.')
   }
+  // The same pass for coins: the server takes them and unlocks it in one step (lib/progress.js buyPassCoins)
+  const short = Math.max(0, PASS_COINS - p.coins)
+  const COIN_ERR = {
+    closed: 'The pass is no longer on sale.',
+    price: 'The price has changed. Update the game and try again.',
+    offline: 'Couldn\'t reach the server. Try again.',
+    unavailable: 'Paying with coins isn\'t open yet. Try again later.',
+  }
+  const buyCoins = async () => {
+    if (!signedIn) { signIn(); return }
+    setCoinErr(''); setCoinBusy(true)
+    const r = await buyPassCoins()
+    setCoinBusy(false)
+    if (r.ok) { sfx('purchase'); haptic('success'); return }
+    if (r.reason === 'signin') { signIn(); return }
+    sfx('deny')
+    setCoinErr(r.reason === 'short' ? `The account has ${r.coins.toLocaleString()} coins saved: ${(PASS_COINS - r.coins).toLocaleString()} short.` : COIN_ERR[r.reason] ?? COIN_ERR.offline)
+  }
+  // (once the wallet on screen shows he's short, the line under the button already says so)
+  const coinNote = coinErr && !(short > 0 && coinErr.startsWith('The account has')) ? coinErr : ''
 
   return (
     <div className="ag-screen bp" ref={bodyRef}>
@@ -200,9 +222,14 @@ export default function AppPass({ onClose }) {
               <b>{value.items} pass-only items · {value.coins.toLocaleString()} coins</b>
               <small>Plus coins, Coin Rushes and boosts. Everything you've already reached unlocks at once.</small>
             </span>
-            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy}>{busy ? 'OPENING…' : `UNLOCK · ${store[passProductId(s.id)] ?? PASS_PRICE}`}</button>
+            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy || coinBusy}>{busy ? 'OPENING…' : `UNLOCK · ${store[passProductId(s.id)] ?? PASS_PRICE}`}</button>
             <span className="bp-fine">{PLAY_BILLING ? 'Paid through Google Play. ' : IS_APP ? 'Secure Stripe checkout on build-a-player.com. ' : ''}One payment for {s.name}, no subscription.</span>
             {err && <span className="bp-fine bp-fine--err">{err}</span>}
+            <button className="ag-btn ag-btn--ghost bp-buy-btn bp-buy-coins" onClick={buyCoins} disabled={busy || coinBusy || (signedIn && short > 0)}>
+              <span className="coin-ico coin-ico--sm" />{coinBusy ? 'UNLOCKING…' : `UNLOCK · ${PASS_COINS.toLocaleString()} COINS`}
+            </button>
+            <span className="bp-fine">{!signedIn ? 'Sign in to pay with coins.' : short > 0 ? `${p.coins.toLocaleString()} coins in the wallet: ${short.toLocaleString()} short.` : `${p.coins.toLocaleString()} coins in the wallet, ${(p.coins - PASS_COINS).toLocaleString()} left after.`}</span>
+            {coinNote && <span className="bp-fine bp-fine--err">{coinNote}</span>}
           </div>
         )}
 
