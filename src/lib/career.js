@@ -2816,7 +2816,7 @@ function fadeNote(sp, pos) {
   const names = l => andList(l.map(([t]) => lowLabel(POS_ATTR[pos]?.[t]?.label ?? t)))
   const up = s => s.charAt(0).toUpperCase() + s.slice(1), q = of('quick'), pw = of('power'), sk = of('skill')
   const parts = [q.length ? `${names(q)} from ${first(q)}` : null, pw.length ? `${names(pw)} from ${first(pw)}` : null, sk.length ? `${sk.length > 2 ? 'technique' : names(sk)} from ${first(sk)}` : null].filter(Boolean)
-  return `${up(andList(parts))} can slip a grade in an offseason; ${pos === 'k' ? 'clutch never fades' : 'the reads never fade'}. Offseason work (2 points) holds a trait that is about to slip or wins a grade back, as far as his age allows${pos === 'k' ? '' : ', and a durable body ages slower'}.`
+  return `${up(andList(parts))} can drop a grade in an offseason; ${pos === 'k' ? 'clutch never fades' : 'the reads never fade'}. Offseason work (2 points) holds a trait that is due to drop or wins a grade back, as far as his age allows${pos === 'k' ? '' : ', and a durable body ages slower'}.`
 }
 // ── A veteran's offseason work (lib/careerAging.js) ──
 // the season number an offseason leads into: a point spent before camp or after it is the same offseason's work
@@ -2843,7 +2843,7 @@ export function ladderNote(c) {
   if (!ws.length) return n
   const list = k => { const xs = ws.filter(([, w]) => w.kind === k).map(([t]) => lowLabel(traitName(c, t))); return xs.length ? andList(xs) : null }
   const up = s => s.charAt(0).toUpperCase() + s.slice(1), hold = list('hold'), back = list('back'), many = ws.filter(([, w]) => w.kind === 'hold').length > 1
-  const text = [hold ? `${up(hold)} ${many ? 'are' : 'is'} about to slip: 2 points hold ${many ? 'each' : 'it'} this year.` : null, back ? `2 points win back a grade of ${back}.` : null].filter(Boolean).join(' ')
+  const text = [hold ? `${up(hold)} ${many ? 'drop' : 'drops'} a grade this year. 2 points hold ${many ? 'each' : 'it'}.` : null, back ? `2 points win back a grade of ${back}.` : null].filter(Boolean).join(' ')
   return { last: true, text: n?.last ? `${text} ${n.text}` : text }
 }
 function trainNote(c) {
@@ -2903,7 +2903,7 @@ export function upgradeBlock(c, type) {
   const f = w && !w.open && !vetWork(c, type) && c.phase !== 'season' ? fadeOf(S.id ?? 'nfl', c.pos, type) : null
   if (f && ch.workY === workKey(c)) return `${name} has had its work for this offseason.`
   if (f && (ch.faded ?? 0) > 0) return `At ${c.age}, ${valToGrade(ch.val)} is as far back as his ${lowLabel(name)} comes.`
-  if (f && c.age + 1 >= f.from) return `${name} can\u2019t be trained after age ${w.until}. 2 points can hold it the year it is about to slip.`
+  if (f && c.age + 1 >= f.from) return `${name} can\u2019t be trained after age ${w.until}. 2 points can hold it in a year it would drop.`
   if (w && !w.open && !vetWork(c, type)) return LADDER[S.id ?? 'nfl']?.[c.pos] ? closedLine(S.id ?? 'nfl', c.age, w.tier, name, andList(mindTraits(S.id ?? 'nfl', c.pos, c.types, S.physical[c.pos] ?? []).filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => lowLabel(traitName(c, t)))), w.until) : `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
   if (c.phase === 'season') return 'Development points are spent in the offseason.'
   if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'

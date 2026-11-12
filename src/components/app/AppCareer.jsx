@@ -282,7 +282,7 @@ function Model({ c, devPick }) {
     // he can win back, or held already by this offseason's work
     const work = devPick ? vetWork(c, t) : null
     const heldNow = c.phase === 'offseason' && ch?.workY === c.year + 1
-    const winTag = work ? <em className={`cr-trait-win${work.kind === 'hold' ? ' is-last' : ''}`}>{work.kind === 'hold' ? 'ABOUT TO SLIP' : 'WIN BACK'}</em> : heldNow ? <em className="cr-trait-win">HELD THIS YEAR</em> : !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST YEAR</em> : w.late ? <em className="cr-trait-win">2× COST</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
+    const winTag = work ? <em className={`cr-trait-win${work.kind === 'hold' ? ' is-last' : ''}`}>{work.kind === 'hold' ? 'DROPS THIS YEAR' : 'WIN BACK'}</em> : heldNow ? <em className="cr-trait-win">HELD THIS YEAR</em> : !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST YEAR</em> : w.late ? <em className="cr-trait-win">2× COST</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : () => tellWhy(t)} role="button">
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
