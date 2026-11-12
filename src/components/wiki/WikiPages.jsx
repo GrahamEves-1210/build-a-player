@@ -6,6 +6,7 @@ import { OL_LIVE } from '../../lib/olLive'
 import { K_LIVE } from '../../lib/kLive'
 import { SOCCER_LIVE } from '../../lib/soccerLive'
 import { BASEBALL_LIVE } from '../../lib/baseballLive'
+import { CBB_LIVE } from '../../lib/cbbLive'
 
 // The wiki's pages. Each exports its content as a component plus a table of
 // contents the shell uses for the sidebar and search. Everything here is
@@ -336,6 +337,23 @@ function ModesPage({ go }) {
         <li><b>The daily challenge</b> rotates position and era, with the same spins for everyone. Daily logins build a streak with XP rewards at 3, 7 and 21 days.</li>
         <li><b>Cards.</b> Every player you spin is collected into binder sets: franchises, positions, legends, decades.</li>
       </ul>
+      {CBB_LIVE && (
+        <>
+          <h2 id="college-basketball">College Basketball <span className="wk-tag">NEW</span></h2>
+          <p>College Basketball is a mode inside Build-A-Bucket. You build a guard or a big from real college players, pick a school from the offers your build earns, and play a full college season, then enter the NBA Draft and carry the player into Career.</p>
+          <ul>
+            <li><b>The pools.</b> Current deals the 2026-27 rotations of 146 schools in eleven conferences: the SEC, Big Ten, Big 12, ACC, Big East, Pac-12, Mountain West, American, Atlantic 10, West Coast and Missouri Valley. All-Time deals each school's legends, one to three guards and wings and one to three bigs a school. The first wheel is a conference, the second one of its starters.</li>
+            <li><b>College ratings.</b> College players are graded against college players, two grades above the same player on the NBA scale. Size is height and weight and is the same at both levels.</li>
+            <li><b>Class years.</b> Start as a freshman, sophomore, junior or senior. Each season earns one to three upgrade points to spend on traits in the offseason. An underclassman who signs where the starter at his spot grades out better comes off the bench that year.</li>
+            <li><b>The season.</b> About 31 regular-season games against real opponents, with the AP Top 25 every week, then the conference tournament, Selection Sunday and the 68-team NCAA Tournament: 32 automatic bids, 36 at-large, the First Four, four regions, the Final Four. A team left out can play the NIT.</li>
+            <li><b>Awards.</b> The Wooden Award ceremony with five finalists and the vote, the Naismith, the position award (Cousy, West, Erving, Malone or Abdul-Jabbar), national Defensive Player of the Year, three All-America teams, all-conference teams and conference Player of the Year.</li>
+            <li><b>Draft stock.</b> After every season a scouting report projects the pick: top five, lottery, first round, second round or undrafted. Age counts, the way it does in the real draft: a freshman and a senior with the same season are not the same prospect. A player may enter the draft after any season.</li>
+            <li><b>Enter the NBA Draft.</b> The build becomes a new Career. Every trait drops two grades except Size, and the college draft projection sets where the Career draft starts him. Or return to school, or transfer through the portal, where a big season brings bigger programs.</li>
+            <li><b>Start in College.</b> A new basketball Career can start in college instead of at the combine: the build plays two grades up in college, and the boost comes off at the draft.</li>
+            <li><b>Saving.</b> College seasons are kept on the device and earn XP and coins like any season. They are not on the leaderboards.</li>
+          </ul>
+        </>
+      )}
       <h2 id="pro">BAP Pro <span className="wk-tag">SUBSCRIPTION</span></h2>
       <p>BAP Pro is an optional subscription. It adds 50% to the coins from every game, includes the Pro Vault's four looks while you're a member, removes ads on the website, doubles the free daily coins, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
       <h2 id="leaderboards">Leaderboards and profiles</h2>

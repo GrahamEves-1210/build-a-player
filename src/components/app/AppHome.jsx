@@ -26,6 +26,7 @@ import { SOCCER_POOL } from '../../lib/soccerUi'
 import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
+import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -219,6 +220,26 @@ function CFBCard({ onClick }) {
     </button>
   )
 }
+// College Basketball, a basketball mode: College Football's card, on basketball's Home (lib/cbbLive.js: logos only).
+// The line is where the last season ended, read off this device (components/cbb/cbbShared.js keeps it)
+const cbbLine = () => {
+  try {
+    const s = JSON.parse(localStorage.getItem('bap_cbb_seasons'))?.[0]
+    if (s?.teamName) return `${s.teamName} ${s.record}${s.title ? ', national champs' : s.finish && s.finish !== 'No postseason' ? ` · ${s.finish}` : ''}`
+  } catch {}
+  return 'Conference spin · March Madness'
+}
+function CBBCard({ onClick }) {
+  const [line] = useState(cbbLine)
+  return (
+    <button className="ag-way ag-mc ag-mc--cfb ag-mc--cbb" onClick={onClick}>
+      <span className="ag-mc-head"><b>COLLEGE BASKETBALL<i className="ag-mc-tag">NEW</i></b><small>{line}</small></span>
+      <span className="ag-cfb-band" aria-hidden="true">
+        {CBB_CARD_LOGOS.map(s => <img key={s} src={s} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
+      </span>
+    </button>
+  )
+}
 const CareerFigure = lazy(() => import('./CareerFigure'))
 // Career: what ends up in the rafters. A career's real count lights each banner; before one starts they all hang
 function Rafters({ career, sport = null }) {
@@ -379,7 +400,7 @@ let homeScroll = 0
 
 // `soon`: modes this sport shows locked as COMING SOON ({ career, compete, salary, squad }: soccer's
 // SOCCER_MODES). `faces`: soccer's strikers on its two pool cards ({ current, alltime }, headshot ids)
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null }) {
   const prog = useProgress()
   // Back from a mode, home opens where it was left. The lists on it fill in as they load, so the
   // spot is put back as the page grows, for a moment, until the player moves it themselves.
@@ -444,6 +465,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const startRef = useRef(start); startRef.current = start
   const cfbRef = useRef(onCFB); cfbRef.current = onCFB   // (App hands in a new function each render: the cards only need to know it's there)
   const hasCFB = !!onCFB
+  const cbbRef = useRef(onCBB); cbbRef.current = onCBB
+  const hasCBB = !!onCBB
 
   const positions = isBaseball
     ? ['bat', 'pit'].map(p => ({ pos: p, label: BASEBALL_POS[p].label, sub: BASEBALL_POS[p].sub }))
@@ -559,6 +582,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
       {!isBucket && hasCFB && <CFBCard onClick={() => cfbRef.current?.()} />}
+      {isBucket && hasCBB && <CBBCard onClick={() => cbbRef.current?.()} />}
       <div className="ag-cards">
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" tag="POPULAR" line={crLine} color={career?.fit?.color} onClick={onCareer}>
@@ -604,7 +628,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
       </div>
     </section>
-  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB])
+  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>

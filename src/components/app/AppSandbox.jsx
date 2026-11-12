@@ -33,7 +33,7 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
         <span className="ag-sandbox-txt">
           <span className="ag-sandbox-title">SANDBOX{on && <i>ON</i>}{locked && <i className="sb-lock">{priceOf(gate).toLocaleString()} COINS</i>}</span>
           <span className="ag-sandbox-sub">{mode
-            ? (on ? `Your ratings, your rules. This ${mode === 'College Football' ? 'season' : mode.toLowerCase()} is marked SANDBOX: no XP or coins.` : locked ? `Unlock it for ${mode} and build whoever you want.` : `Edit any player's ratings. Sandbox ${runsOf(mode)} earn no XP or coins.`)
+            ? (on ? `Your ratings, your rules. This ${mode === 'College Football' || mode === 'College Basketball' ? 'season' : mode.toLowerCase()} is marked SANDBOX: no XP or coins.` : locked ? `Unlock it for ${mode} and build whoever you want.` : `Edit any player's ratings. Sandbox ${runsOf(mode)} earn no XP or coins.`)
             : (on ? 'Your ratings, your rules. This season won\'t save.' : 'Edit any player\'s ratings. Sandbox seasons don\'t save.')}</span>
         </span>
         <span className={`ag-switch${on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
@@ -55,7 +55,7 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
 
 // Sandbox in Career and Squad Builder is bought, one mode at a time: turning the
 // switch on there opens this. Bought: the switch goes on (onUnlocked).
-export const sandboxItemFor = page => (page === 'career-build' ? 'sandbox-career' : page === 'squad-build' ? 'sandbox-squad' : page === 'cfb' ? 'sandbox-cfb' : null)
+export const sandboxItemFor = page => (page === 'career-build' ? 'sandbox-career' : page === 'squad-build' ? 'sandbox-squad' : page === 'cfb' ? 'sandbox-cfb' : page === 'cbb' ? 'sandbox-cbb' : null)
 // what a Sandbox build is called in each mode that sells it
 const runsOf = mode => (mode === 'Career' ? 'careers' : mode === 'Squad Builder' ? 'squads' : 'seasons')
 export const sandboxLocked = page => { const id = sandboxItemFor(page); return !!id && !owns(id) }

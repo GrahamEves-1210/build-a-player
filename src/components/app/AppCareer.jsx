@@ -31,8 +31,10 @@ import { sellsHere, onStorefront } from '../../lib/storefront'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin, IconCaret } from './icons'
 import './career-legacy.css'
 import { CFB_LIVE } from '../../lib/cfbLive'
+import { CBB_LIVE } from '../../lib/cbbLive'
 // START IN COLLEGE: the college phase and College Football's data load only for a career that's in it
 const CareerCollege = lazy(() => import('../cfb/CareerCollege'))
+const CareerCollegeHoops = lazy(() => import('../cbb/CareerCollegeHoops'))   // (basketball's: College Basketball's data, guard and big)
 const COLLEGE_POS = ['qb', 'wr', 'rb']   // the positions College Football has rosters for
 const CLASS_WORD = { FR: 'Freshman', SO: 'Sophomore' }
 import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
@@ -113,7 +115,7 @@ function NewSlot({ S, onStart, onCancel }) {
   }
   const [games, setGames] = useState('advanced')
   const [start, setStart] = useState('draft')   // football QB, WR, RB: straight to the draft, or college first
-  const college = CFB_LIVE && S.id === 'nfl' && COLLEGE_POS.includes(pos)
+  const college = (CFB_LIVE && S.id === 'nfl' && COLLEGE_POS.includes(pos)) || (CBB_LIVE && S.id === 'bucket')
   const [nation, setNation] = useState(() => (S.isSoccer ? lastNation() ?? 'ENG' : null))
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
@@ -397,7 +399,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head(`${S.ui?.combine ?? (soccer ? 'ACADEMY TRIALS' : 'THE COMBINE')} · ${POS_LABEL[c.pos]}`, allDone ? (soccer ? `${nick(c.name)}'s trials` : `${nick(c.name)}'s numbers`) : next.label)}
         <div className="ag-screen-body">
-          {c.college && <p className="cr-note cr-college">Out of College Football: {c.college.seasons?.length ? c.college.line : <>{c.college.schoolName ?? c.college.school}{c.college.line ? ` · ${c.college.line}` : ''}</>}</p>}
+          {c.college && <p className="cr-note cr-college">Out of {c.sport === 'bucket' ? 'College Basketball' : 'College Football'}: {c.college.seasons?.length ? c.college.line : <>{c.college.schoolName ?? c.college.school}{c.college.line ? ` · ${c.college.line}` : ''}</>}</p>}
           {!allDone && <CareerGame c={c} setCareer={setCareer} skipAll={false} retry redo key={next.id} game={next.id} build={c.build} pos={combinePos(c)} seed={`${c.seed}-cb-${next.id}`} lock={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (
@@ -669,7 +671,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   useEffect(() => { if (ready && c?.phase === 'season' && c.active && !D.current) D.current = resumeSeason(c) }, [c?.phase, ready]) // eslint-disable-line
   if (!c || !ready) return null
   const S = sportOf(c), logoFor = S.logo
-  if (c.phase === 'college') return <Suspense fallback={<div className="ag-screen ag-screen--wait" />}><CareerCollege c={c} setCareer={setCareer} onExit={onExit} /></Suspense>
+  if (c.phase === 'college') return <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>{c.sport === 'bucket' ? <CareerCollegeHoops c={c} setCareer={setCareer} onExit={onExit} /> : <CareerCollege c={c} setCareer={setCareer} onExit={onExit} />}</Suspense>
   if (c.phase === 'draft') return <Draft c={c} setCareer={setCareer} />
   // the comeback (BAP Pro): back into the offseason he retired in, on the season tab
   if (c.phase === 'retired') return <Legacy c={c} setCareer={setCareer} user={user} onUnretire={() => { setCareer(unretire(c)); setTab('season'); sfx('whistle'); haptic('success') }} onNewBuild={onNewBuild} onExit={onExit} />

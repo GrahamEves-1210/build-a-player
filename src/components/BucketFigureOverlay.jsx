@@ -120,7 +120,7 @@ export function getBucketSVGMarkup(build, nickOf = null) {
 
   // Jersey number + team name (embedded directly — no blend mode needed on dark canvas bg)
   const hlChip   = build?.['clutch']
-  const teamNick = hlChip ? (nickOf?.(hlChip) ?? TEAM_NICKNAME[hlChip.team] ?? hlChip.team) : null
+  const teamNick = hlChip ? (nickOf?.(hlChip) ?? TEAM_NICKNAME[hlChip.team] ?? hlChip.jerseyWord ?? hlChip.team) : null
   const jerseyNum = hlChip?.number ?? null
   if (hlChip && (teamNick || jerseyNum != null)) {
     const fs  = teamNick ? Math.round(Math.min(44, Math.max(15, 220 / Math.max(teamNick.length, 1)))) : 27
@@ -246,7 +246,7 @@ export default function BucketFigureOverlay({ build, logoDir = null, nickOf = nu
   }
 
   const hlChip   = build?.['clutch']
-  const teamNick = hlChip ? (nickOf?.(hlChip) ?? TEAM_NICKNAME[hlChip.team] ?? hlChip.team) : null
+  const teamNick = hlChip ? (nickOf?.(hlChip) ?? TEAM_NICKNAME[hlChip.team] ?? hlChip.jerseyWord ?? hlChip.team) : null
   const jerseyNum = hlChip?.number ?? null
 
   // Scale font size so short names are large and long names still fit

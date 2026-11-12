@@ -92,13 +92,13 @@ export const XP = { season: 20, winning: 15, playoffs: 25, ring: 100, award: 60 
 // (baseball: 82 of its 162, lib/baseballAwards.js BASEBALL_WINNING)
 // a baseball season's wins in the cross-sport win total: 82 of its 162 games, a basketball season's worth
 export const BASEBALL_WIN_WEIGHT = 82 / 162
-const winningSeason = d => (d.sport === 'bucket' ? d.wins >= 50 : d.sport === 'cfb' ? d.wins >= 9 : d.sport === 'soccer' ? (d.mode === 'all-time' ? d.wins >= 3 : d.wins >= 19) : d.sport === 'baseball' ? d.wins >= 82 : d.wins >= 10)
+const winningSeason = d => (d.sport === 'bucket' ? d.wins >= 50 : d.sport === 'cfb' ? d.wins >= 9 : d.sport === 'cbb' ? d.wins >= 22 : d.sport === 'soccer' ? (d.mode === 'all-time' ? d.wins >= 3 : d.wins >= 19) : d.sport === 'baseball' ? d.wins >= 82 : d.wins >= 10)
 export function seasonLines(d) {
   const winning = winningSeason(d)
   const lines = [{ label: 'Season played', xp: XP.season }]
   if (winning) lines.push({ label: 'Winning season', xp: XP.winning })
-  if (d.playoffs && d.sport !== 'bucket') lines.push({ label: d.sport === 'cfb' ? 'Made the College Football Playoff' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'Out of the group' : 'Champions League football') : d.sport === 'baseball' ? 'Made the postseason' : 'Made the playoffs', xp: XP.playoffs })
-  if (d.champion) lines.push({ label: d.sport === 'cfb' ? 'National Champions' : d.sport === 'bucket' ? 'NBA Champions' : d.sport === 'baseball' ? 'World Series Champions' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'World Cup winners' : 'League champions') : 'Super Bowl Champions', xp: XP.ring })
+  if (d.playoffs && d.sport !== 'bucket') lines.push({ label: d.sport === 'cfb' ? 'Made the College Football Playoff' : d.sport === 'cbb' ? 'Made the NCAA Tournament' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'Out of the group' : 'Champions League football') : d.sport === 'baseball' ? 'Made the postseason' : 'Made the playoffs', xp: XP.playoffs })
+  if (d.champion) lines.push({ label: d.sport === 'cfb' || d.sport === 'cbb' ? 'National Champions' : d.sport === 'bucket' ? 'NBA Champions' : d.sport === 'baseball' ? 'World Series Champions' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'World Cup winners' : 'League champions') : 'Super Bowl Champions', xp: XP.ring })
   if (d.award) lines.push({ label: d.awardName ? `${d.awardName} award` : 'Season award', xp: XP.award })
   return lines
 }
@@ -740,7 +740,7 @@ function onSeason(e) {
   if (d.ovr >= 95) st.ovr95++
   if (d.mode === 'all-time') st.allTime++
   // College Football: its own count, never an NFL season (nflSeasons and positions are football's)
-  if (d.sport === 'cfb') st.cfbSeasons = (st.cfbSeasons ?? 0) + 1; else if (d.sport === 'bucket') st.bucketSeasons++; else if (d.sport === 'soccer') st.soccerSeasons = (st.soccerSeasons ?? 0) + 1; else if (d.sport === 'baseball') st.baseballSeasons = (st.baseballSeasons ?? 0) + 1; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
+  if (d.sport === 'cfb') st.cfbSeasons = (st.cfbSeasons ?? 0) + 1; else if (d.sport === 'cbb') st.cbbSeasons = (st.cbbSeasons ?? 0) + 1; else if (d.sport === 'bucket') st.bucketSeasons++; else if (d.sport === 'soccer') st.soccerSeasons = (st.soccerSeasons ?? 0) + 1; else if (d.sport === 'baseball') st.baseballSeasons = (st.baseballSeasons ?? 0) + 1; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
   // soccer's awards (SoccerApp sends them as tags, lib/soccerAwards.js): the achievements count these
   if (d.sport === 'soccer' && !d.sandbox) {
     const tags = Array.isArray(d.awards) ? d.awards : []
