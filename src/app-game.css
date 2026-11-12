@@ -2784,7 +2784,7 @@ html.app-look .ag-bc { padding-bottom: 0; }
 html.has-rail:not(.is-app) :is(.ag-menu-overlay, .bt-sheet-overlay, .sh-sheet-overlay, .auth-overlay, .ag-levelup, .ag-ring, .ag-bc, .ag-complete, .ll-overlay, .ag-fan-back, .cfbd-overlay,
   .modal-overlay, .share-overlay, .htp-overlay, .htp-backdrop, .mvp-overlay, .tpm-overlay, .cr-overlay, .nba-tpk-backdrop, .bsim-team-modal, .dc-lb-backdrop, .dc-prompt-backdrop,
   .sc-shuffle-backdrop, .sc-power-backdrop, .sc-date-backdrop, .sc-lb-backdrop, .leave-confirm-overlay, .vs-prompt-overlay, .opp-disconnect-overlay, .vlf-backdrop, .vlf-panel,
-  .tut-tour, .tut-coach, .inf-crash) {
+  .tut-tour, .tut-coach, .inf-crash, html:not(.app-look) .splash-screen) {   /* (the classic look's Home is a full-screen layer over the rail too) */
   border-bottom: var(--web-rail, 0px) solid transparent;
   clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0,
     var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) 100%, var(--web-rail-l, 0px) 100%, var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)));
