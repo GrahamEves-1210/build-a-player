@@ -44,7 +44,7 @@ const CLASS = {
 // quarterbacks and linemen, a kicker last.
 export const FADE = {
   nfl: {
-    qb: { legs: ['quick', 31], playmaking: ['skill', 33], arm: ['power', 33], accuracy: ['skill', 35] },
+    qb: { legs: ['quick', 30], playmaking: ['skill', 32], arm: ['power', 33], accuracy: ['skill', 34] },
     rb: { speed: ['quick', 26], burst: ['quick', 26], elusiveness: ['quick', 26], strength: ['power', 28], balance: ['skill', 28], hands: ['skill', 30], carrying: ['skill', 30] },
     wr: { speed: ['quick', 29], vertical: ['quick', 29], afterCatch: ['quick', 29], release: ['skill', 31], bodyControl: ['skill', 32], routeRunning: ['skill', 33], hands: ['skill', 33] },
     te: { speed: ['quick', 29], vertical: ['quick', 29], afterCatch: ['power', 30], strength: ['power', 31], blocking: ['skill', 32], routeRunning: ['skill', 33], hands: ['skill', 33] },
@@ -61,7 +61,7 @@ export const FADE = {
 }
 // a position's own pace on top of its ages: linemen hold what they have longer than anyone but a kicker (their
 // game is strength and technique), and a kicker has only his leg to lose
-const PACE = { ol: 0.8, k: 1.4, qb: 1.6 }
+const PACE = { ol: 0.8, k: 1.4, qb: 1.8 }
 // this position ages by these rules (soccer and baseball keep their own)
 export const hasFade = (sport, pos) => !!FADE[sport]?.[pos]
 export const fadeOf = (sport, pos, t) => { const f = FADE[sport]?.[pos]?.[t]; return f ? { cls: f[0], from: f[1], ...CLASS[f[0]] } : null }

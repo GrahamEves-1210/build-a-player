@@ -340,7 +340,7 @@ export const SPORT = {
     // the physical traits train until this age (then the window shuts); the body fades from declineAt
     trainUntil: pos => ({ qb: 28, rb: 24, wr: 26, te: 26, db: 25, dl: 26, lb: 26, ol: 27, k: 31 })[pos] ?? 26,
     // offseason work: 2 points a year through this age, then 1 until the body turns
-    devYoung: () => 23, devPrime: pos => (pos === 'k' ? 27 : SPORT.nfl.declineAt(pos)),   // (a kicker: three traits, so his yearly point stops at 27; fifteen of them made every kicker all S)
+    devYoung: () => 23, devPrime: pos => SPORT.nfl.declineAt(pos),
     // (linemen last: the body turns about 31-32)
     declineAt: pos => ({ qb: 33, rb: 27, wr: 30, te: 30, db: 28, dl: 30, lb: 29, ol: 32, k: 37 })[pos] ?? 31,
     bigInjury: 6,
