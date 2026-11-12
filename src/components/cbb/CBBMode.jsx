@@ -651,6 +651,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
             onOpenCustomModal={() => setShowCustom(true)}
             onSandboxToggle={sandboxToggle}
             sandboxStarters={startersProp}
+            logoDir="/logos/"
           />
           <div className="right-panel-wrap">
             <ReportCard
