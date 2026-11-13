@@ -24,7 +24,6 @@ export default function NewSeason({ onDone }) {
   const sched = [
     { k: 'week', label: 'WK', w: 40, cls: 'fro-t-rk', render: g => g.week },
     { k: 'opp', label: 'OPPONENT', render: g => (g.bye || !g.opp ? <span className="fr-t-dim">BYE</span> : <span className="fr-t-team"><i className="fro-at">{g.home ? 'VS' : 'AT'}</i><Logo team={g.opp.short} size={20} />{wide ? g.opp.name : g.opp.nick}</span>) },
-    { k: 'where', label: '', w: 64, align: 'r', cls: 'fr-t-lab fr-t-dim', render: g => (g.bye || !g.opp ? '' : g.home ? 'HOME' : 'AWAY') },
   ]
   const rk = [
     { k: 'rank', label: 'RK', w: 40, cls: 'fro-t-rk', val: r => r.rank, desc: false },

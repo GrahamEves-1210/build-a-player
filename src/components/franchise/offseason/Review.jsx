@@ -67,24 +67,24 @@ export default function Review() {
           {won && <button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => { tap(); setFilm(true) }}>THE TROPHY</button>}
         </section>
       )}
+      {v.owner.fired && (
+        <Panel title="Relieved of his duties" meta={up(us.nick)}>
+          <Said who="OWNERSHIP">{v.owner.verdict}</Said>
+          {jobs.length ? <>
+            <Sub meta={plural(jobs.length, 'OFFER')}>WHERE {up(F.gm?.name ?? 'THE GM')} GOES NEXT</Sub>
+            {jobs.map(j => (
+              <div key={j.team.short} className="fro-job">
+                <Logo team={j.team.short} size={36} />
+                <span className="fr-row-main">{j.team.name}<small>{[j.record, `ROSTER NO. ${j.roster.rank}`, `${FR.moneyText(j.capSpace)} ROOM`].filter(Boolean).join(' · ')}</small></span>
+                <button className="fr-btn fr-btn--sm" onClick={() => act(f => FR.takeJob(f, j.team.short), { say: true })}>TAKE IT</button>
+                {j.pitch && <p>{j.pitch}</p>}
+              </div>
+            ))}
+          </> : <p className="fr-note">No club has called yet. The job stays his for now.</p>}
+        </Panel>
+      )}
       <div className="fr-cols fro-swap">
         <div className="fr-col">
-          {v.owner.fired && (
-            <Panel title="Relieved of his duties" meta={up(us.nick)}>
-              <Said who="OWNERSHIP">{v.owner.verdict}</Said>
-              {jobs.length ? <>
-                <Sub meta={plural(jobs.length, 'OFFER')}>WHERE {up(F.gm?.name ?? 'THE GM')} GOES NEXT</Sub>
-                {jobs.map(j => (
-                  <div key={j.team.short} className="fro-job">
-                    <Logo team={j.team.short} size={36} />
-                    <span className="fr-row-main">{j.team.name}<small>{[j.record, `ROSTER NO. ${j.roster.rank}`, `${FR.moneyText(j.capSpace)} ROOM`].filter(Boolean).join(' · ')}</small></span>
-                    <button className="fr-btn fr-btn--sm" onClick={() => act(f => FR.takeJob(f, j.team.short), { say: true })}>TAKE IT</button>
-                    {j.pitch && <p>{j.pitch}</p>}
-                  </div>
-                ))}
-              </> : <p className="fr-note">No club has called yet. The job stays his for now.</p>}
-            </Panel>
-          )}
           <Panel title="The awards" meta={String(v.year)}>
             {AWARDS.filter(([k]) => v.awards[k]).map(([k, label], n) => (
               <Award key={k} FR={FR} a={v.awards[k]} label={label} lead={k === 'MVP'} mine={v.awards[k].team?.short === F.team} n={n} onOpen={setPid} />
@@ -92,7 +92,7 @@ export default function Review() {
           </Panel>
         </div>
         <div className="fr-col">
-          <Panel title={`${us.nick} ${v.year}`} meta={v.user.seed ? `NO. ${v.user.seed} SEED` : 'MISSED THE PLAYOFFS'}>
+          <Panel title={`${us.nick} ${v.year}`} meta={v.user.seed ? `NO. ${v.user.seed} SEED` : null}>
             <div className="fro-year"><b>{v.user.record}</b><span>{up(v.user.finish || (v.user.seed ? 'In the playoffs' : 'Out of the playoffs'))}</span></div>
             {!v.owner.fired && v.owner.verdict && <Said who="OWNERSHIP">{v.owner.verdict}</Said>}
             <div className="fr-kv"><span>JOB SECURITY</span><b className="is-text">{owner?.word ?? ''} <Steps value={v.owner.security} low={owner?.floor ?? 20} label={`Job security ${v.owner.security} of 100`} />{v.owner.delta !== 0 && <em className={`fro-delta${v.owner.delta < 0 ? ' is-down' : ''}`}>{signed(v.owner.delta)}</em>}</b></div>

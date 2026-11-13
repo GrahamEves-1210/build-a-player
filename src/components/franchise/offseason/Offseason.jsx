@@ -46,7 +46,7 @@ export default function Offseason({ franchise: F, onFranchise, onDone }) {
   useEffect(() => { dressFor(F.team) }, [F.team])
 
   // every engine action goes through here. A refusal is the red line under the scorebug; say: show a plain answer too
-  const act = useCallback((fn, { say = false } = {}) => {
+  const run = useCallback((fn, { say = false } = {}) => {
     const next = fn(live.current)
     if (!next) return null
     live.current = next
@@ -56,19 +56,21 @@ export default function Offseason({ franchise: F, onFranchise, onDone }) {
     else if (say && fl?.msg) setToast({ text: fl.msg, bad: false })
     return next
   }, [onFranchise])
+  // (the staff's report from the stage before is put away once the GM does something here)
+  const act = useCallback((fn, opts) => { const next = run(fn, opts); if (next && next.flash?.ok !== false) setReport(null); return next }, [run])
   const say = useCallback((text, bad = false) => { if (text) setToast({ text: String(text), bad }) }, [])
   // a step that moves the offseason on: with `title`, the stage was handed to the staff, and what the club's
   // transactions show they did is kept for the next screen
   const move = useCallback((fn, title = null, none = 'The staff left everything as it was.', linesOf = null) => {
     const e = FR, team = live.current.team
     const seen = title && !linesOf ? new Set(safe(() => e.transactions(live.current, 400, team), []).map(t => t.id)) : null
-    const next = act(fn)
+    const next = run(fn)
     if (title && next && next.flash?.ok !== false) {
       const lines = linesOf ? safe(() => linesOf(next), []) : safe(() => e.transactions(next, 400, next.team), []).filter(t => !seen.has(t.id)).reverse().map(t => t.text)
       setReport({ title, lines, none })
     } else setReport(null)
     return next
-  }, [FR, act])
+  }, [FR, run])
 
   const o = useMemo(() => (FR && F.phase === 'offseason' ? safe(() => FR.offseason(F)) : null), [FR, F])
   if (!FR) return <div className="fr" />

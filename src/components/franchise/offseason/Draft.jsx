@@ -154,7 +154,7 @@ function Combine({ FR, board, onOpen }) {
 }
 
 export default function Draft() {
-  const { FR, F, o, act, move } = useOff()
+  const { FR, F, o, act, move, dropReport } = useOff()
   const v = o.view, board = v.board, us = teamOf(F.team)
   const wide = useWide()
   const made = v.done ? v.order.length : v.overall - 1
@@ -200,7 +200,7 @@ export default function Draft() {
   const pick = id => { const n = act(f => FR.draftPick(f, id)); if (n?.flash?.ok !== false) { setSel(null); setOpen(null) } }
   const hand = () => move(f => FR.advanceStage(f), 'THE STAFF RAN THE DRAFT', 'The club had no picks to make.')
   let main
-  if (!room) main = { label: 'TO THE WAR ROOM', onClick: () => setRoom(true) }
+  if (!room) main = { label: 'TO THE WAR ROOM', onClick: () => { dropReport(); setRoom(true) } }
   else if (live) main = { label: 'SHOW EVERY PICK', onClick: catchUp }
   else if (v.done) main = { label: 'TO THE UNDRAFTED', onClick: () => move(f => FR.advanceStage(f)) }
   else if (v.mine) main = { label: target ? (target.name.length <= 14 ? `DRAFT ${up(target.name)}` : 'MAKE THE PICK') : 'MAKE THE PICK', disabled: !target, onClick: () => pick(target.id) }
@@ -210,20 +210,15 @@ export default function Draft() {
   const cols = [
     { k: 'rank', label: 'RK', w: 38, cls: 'fro-t-rk', val: x => x.rank, desc: false },
     { k: 'slot', label: 'POS', w: 42, cls: 'fr-t-pos', val: x => x.slot },
-    { k: 'name', label: 'PROSPECT', val: x => x.name, render: x => <Who name={x.name} tag={x.id === v.staffPick ? 'STAFF' : null} sub={`${up(x.college)}${wide ? '' : ` · ${PROJ_SHORT[x.proj] ?? up(x.proj)}`}`} /> },
+    { k: 'name', label: 'PROSPECT', val: x => x.name, render: x => <Who name={x.name} tag={x.id === v.staffPick ? 'STAFF' : null} sub={`${up(x.college)} · ${PROJ_SHORT[x.proj] ?? up(x.proj)}`} /> },
     ...(wide ? [
-      { k: 'age', label: 'AGE', w: 46, align: 'r', cls: 'fr-t-lab', val: x => x.age },
-      { k: 'ht', label: 'HT', w: 52, align: 'r', cls: 'fr-t-lab', val: x => x.ht ?? 0, render: x => height(x.ht) ?? '—' },
-      { k: 'wt', label: 'WT', w: 50, align: 'r', cls: 'fr-t-lab', val: x => x.wt ?? 0, render: x => x.wt ?? '—' },
+      { k: 'age', label: 'AGE', w: 40, align: 'r', cls: 'fr-t-lab', val: x => x.age },
+      { k: 'ht', label: 'HT', w: 48, align: 'r', cls: 'fr-t-lab', val: x => x.ht ?? 0, render: x => height(x.ht) ?? '—' },
+      { k: 'wt', label: 'WT', w: 44, align: 'r', cls: 'fr-t-lab', val: x => x.wt ?? 0, render: x => x.wt ?? '—' },
     ] : []),
     { k: 'forty', label: '40', w: 46, align: 'r', cls: 'fr-t-num', desc: false, val: x => x.combine?.forty ?? 9, render: x => f2(x.combine?.forty) },
-    ...(wide ? [
-      { k: 'bench', label: 'BENCH', w: 60, align: 'r', cls: 'fr-t-num', val: x => x.combine?.bench ?? 0 },
-      { k: 'vert', label: 'VERT', w: 54, align: 'r', cls: 'fr-t-num', val: x => x.combine?.vert ?? 0 },
-      { k: 'sc', label: 'SCOUTED', w: 76, align: 'c', val: x => x.scouted, render: x => <Pips n={x.scouted} /> },
-      { k: 'proj', label: 'PROJECTION', w: 104, cls: 'fr-t-lab', val: x => x.rank, desc: false, render: x => up(x.proj) },
-    ] : []),
-    { k: 'grade', label: 'GRADE', w: wide ? 96 : 76, align: 'r', cls: 'fr-t-lab', val: x => (x.range.lo + x.range.hi) / 2, render: x => x.range.text },
+    ...(wide ? [{ k: 'sc', label: 'SCOUTED', w: 66, align: 'r', val: x => x.scouted, render: x => <Pips n={x.scouted} /> }] : []),
+    { k: 'grade', label: 'GRADE', w: wide ? 92 : 76, align: 'r', cls: 'fr-t-lab', val: x => (x.range.lo + x.range.hi) / 2, render: x => x.range.text },
   ]
   const classCols = [
     { k: 'round', label: 'RD', w: 36, cls: 'fro-t-rk', val: x => x.overall, desc: false, render: x => x.round },

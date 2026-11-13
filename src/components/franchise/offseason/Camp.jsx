@@ -37,7 +37,7 @@ function Drills() {
             {v.drills.map(d => (
               <div key={d.id} className={`fro-drill${d.done ? ' is-done' : ''}`}>
                 <Face name={d.player?.name} photo={d.player ? FR.photoUrl(d.player.photo) : null} size={44} />
-                <span className="fr-row-main">{d.title}<small>{d.gameTitle} · {up(d.player?.name ?? '')}{d.player?.traits?.[0] ? ` · ${up(d.player.traits[0].label)} ${d.player.traits[0].grade}` : ''}</small></span>
+                <span className="fr-row-main">{d.title}<small>{d.gameTitle} · {up(d.player?.name ?? '')}</small></span>
                 {d.done ? <em>{d.done.medal ? MEDAL[d.done.medal] : 'NO MEDAL'}<small>{d.done.xp} XP</small></em> : (
                   <span className="fro-btns">
                     {d.mg && GAMES[d.mg.game] && <button className="fr-btn fr-btn--sm" onClick={() => { tap(); setPlaying(d) }}>PLAY</button>}
@@ -119,8 +119,8 @@ function Cuts() {
         <span><small>MARKED</small><b>{on.length}</b></span>
         <span><small>AFTER THE CUT</small><b className={still ? 'fr-t-red' : undefined}>{after}</b></span>
       </div>
-      {v.problems.length > 0 && <Panel title="The roster is not legal">{v.problems.map((x, i) => <p key={i} className="fro-line fr-t-red">{x}</p>)}</Panel>}
-      <Panel title={`The cut to ${v.limit}`} meta={v.over ? `${v.over} OVER` : 'AT THE LIMIT'}
+      {v.problems.length > 0 && <Panel title="The roster is short" meta="THE STAFF COVERS IT">{v.problems.map((x, i) => <p key={i} className="fro-line fr-t-red">{x}</p>)}<p className="fro-line is-dim">Whatever is still missing when the season starts, the staff signs from the free-agent list.</p></Panel>}
+      <Panel title={`The cut to ${v.limit}`} meta={v.over ? `${v.over} OVER` : v.count < v.limit ? `${plural(v.limit - v.count, 'OPEN SPOT')}` : 'AT THE LIMIT'}
         action={on.length ? <button className="fr-btn fr-btn--sm" onClick={() => { tap(); setAsk(true) }}>RELEASE {on.length}</button>
           : v.suggested.length ? <button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => { tap(); setMarked(v.suggested) }}>MARK THE STAFF'S LIST</button> : null}>
         <FrTable className="fro-fixed" cols={cols} rows={v.roster} sort={{ k: 'ovr', desc: false }} onRow={x => setPid(x.id)} rowClass={x => (on.includes(x.id) ? 'is-cutting' : staff.has(x.id) ? 'is-mine' : null)} label="Roster" />
