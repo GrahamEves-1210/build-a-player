@@ -120,9 +120,9 @@ check(!!F.off.auto === autoBefore && !F.off.auto, 'once: the staff stayed on aft
   const info = FR.teamInfo(F, F.team)
   const now = info.picks.filter(p => p.year === v.year)
   check(now.every(p => p.overall >= 1), 'a pick in the draft that is on has no overall number')
-  check(now.every(p => /No\. \d+ overall/.test(p.text)), `pick text does not carry the number: ${now[0]?.text}`)
   const later = info.picks.filter(p => p.year === v.year + 2)
-  check(later.every(p => p.when === 'the draft after next'), `a pick two drafts on reads "${later[0]?.when}"`)
+  check(later.every(p => p.when === 'the draft in two years'), `a pick two drafts on reads "${later[0]?.when}"`)
+  check(now.every(p => p.when === 'the next draft'), 'the picks of the draft that is on changed their `when` (Draft.jsx keys on it)')
   check(info.picks.every(p => !future(F, p.text)), 'a pick names a later year')
   // trade my first pick for a later team's first and more: the order follows at once
   const mine1 = now[0]

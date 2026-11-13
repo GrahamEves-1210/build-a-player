@@ -114,10 +114,11 @@ const ord = n => ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 's
 const COUNT = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven']
 const GROUP_WORD = { QB: ['quarterback', 'quarterbacks'], RB: ['running back', 'running backs'], WR: ['receiver', 'receivers'], TE: ['tight end', 'tight ends'], OL: ['offensive lineman', 'offensive linemen'], EDGE: ['edge rusher', 'edge rushers'], DT: ['defensive tackle', 'defensive tackles'], LB: ['linebacker', 'linebackers'], CB: ['cornerback', 'cornerbacks'], S: ['safety', 'safeties'], K: ['kicker', 'kickers'] }
 // which draft a pick is in, without naming a year that has not been played
-// (once a draft has started it is "this draft", and the one a year on is the next)
+// ("the next draft" is the one coming, and stays the word for it while it is on: the screens key on it. Once it
+// is over the one a year on is the next.)
 export const pickWhen = (F, pk) => {
-  const D = F.draft, on = !!D?.started, n = pk.y - (D?.year ?? F.year + 1) - (on ? 1 : 0)
-  return n < 0 ? 'this draft' : n === 0 ? 'the next draft' : n === 1 ? 'the draft after next' : 'the draft in three years'
+  const D = F.draft, n = pk.y - (D?.year ?? F.year + 1) - (D?.done ? 1 : 0)
+  return n <= 0 ? 'the next draft' : n === 1 ? 'the draft after next' : 'the draft in two years'
 }
 // where a pick falls in the draft that is on (its overall number), or null when that is not known yet
 export function pickOverall(F, pk) {
@@ -127,8 +128,8 @@ export function pickOverall(F, pk) {
   return i >= 0 ? i + 1 : null
 }
 export const pickWords = (F, pk) => { const n = pickOverall(F, pk); return n ? `pick No. ${n} (Round ${pk.r}) in this draft` : `a ${ord(pk.r)}-round pick in ${pickWhen(F, pk)}` }
-// a pick as a row reads it: "Round 2, the next draft (via DEN)", and its number once the draft is on
-export const pickText = (F, pk, owner) => { const n = pickOverall(F, pk); return `Round ${pk.r}, ${n ? `No. ${n} overall` : pickWhen(F, pk)}${pk.o !== owner ? ` (via ${pk.o})` : ''}` }
+// a pick as a row reads it: "Round 2, the next draft (via DEN)" (its number in a draft that is on is the row's `overall`)
+export const pickText = (F, pk, owner) => `Round ${pk.r}, ${pickWhen(F, pk)}${pk.o !== owner ? ` (via ${pk.o})` : ''}`
 
 export function execute(F, offer) {
   const A = F.teams[offer.from], B = F.teams[offer.to]
