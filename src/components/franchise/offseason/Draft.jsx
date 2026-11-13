@@ -95,6 +95,13 @@ function Phones({ FR, F, v, open, onClose, act }) {
           {FR_TEAMS.filter(x => x.short !== F.team).map(x => <button key={x.short} className={x.short === to ? 'is-on' : undefined} onClick={() => { tap(); setTo(x.short); setGet([]) }}>{x.short}</button>)}
         </div>
       </Panel>
+      {verdict && (
+        <Panel title="Their answer" meta={verdict.ok ? 'THEY WOULD DO IT' : 'NOT AS IT STANDS'}>
+          <p className="fro-line">{verdict.answer}</p>
+          <div className="fr-kv"><span>WHAT THEY GET, BY THEIR CHART</span><b>{verdict.give}</b></div>
+          <div className="fr-kv"><span>WHAT THEY GIVE</span><b>{verdict.get}</b></div>
+        </Panel>
+      )}
       <Panel title={`${t.nick} send`} meta="CHART VALUE">
         {list(theirs, to, get, setGet)}
         {!theirs.length && <div className="fr-empty">NO PICKS TO GIVE</div>}
@@ -103,13 +110,6 @@ function Phones({ FR, F, v, open, onClose, act }) {
         {list(mine, F.team, give, setGive)}
         {!mine.length && <div className="fr-empty">NO PICKS TO GIVE</div>}
       </Panel>
-      {verdict && (
-        <Panel title="Their answer" meta={verdict.ok ? 'THEY WOULD DO IT' : 'NOT AS IT STANDS'}>
-          <p className="fro-line">{verdict.answer}</p>
-          <div className="fr-kv"><span>WHAT THEY GET, BY THEIR CHART</span><b>{verdict.give}</b></div>
-          <div className="fr-kv"><span>WHAT THEY GIVE</span><b>{verdict.get}</b></div>
-        </Panel>
-      )}
     </FrSheet>
   )
 }
