@@ -6955,10 +6955,10 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 22px); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body { padding-top: 0 !important; gap: 5px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-static { padding-top: 0 !important; gap: 4px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 145px !important; }   /* 10% taller, twice (owner, 11-13) */
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -37.5px; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 50.5px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 73.6px !important; }   /* (the labels float now; the wheel 145px) */   /* on the window's middle (was 4px low, owner 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 160px !important; }   /* 10% taller, three times (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -30px; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 58px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 81.1px !important; }   /* (the labels float now; the wheel 160px) */   /* on the window's middle (was 4px low, owner 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 3px 10px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
@@ -7115,7 +7115,7 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
    no outline, white text, the trait's name small and the grade big, centred; every card 50px */
 @media (max-width: 768px) {
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: auto !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; height: 50px !important; padding: 4px 6px !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 74%, #0b0f0d) !important; text-align: center; }   /* the tint 20% to 74% (owner, 11-13: stronger, twice; then less washed out) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; height: 45px !important; padding: 3px 6px !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 74%, #0b0f0d) !important; text-align: center; }   /* the tint 20% to 74% (owner, 11-13: stronger, twice; then less washed out) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-text { flex: none !important; width: 100%; text-align: center; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { font-size: 9.5px !important; color: #fff !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { color: #fff !important; font-size: 20px !important; }
@@ -7177,3 +7177,6 @@ html.app-look:not(.is-app) .spin-panel .reel-outer > .reel-label { position: abs
 /* iPhone Safari takes its bottom bar's colour from what touches the screen's bottom edge: a black line there keeps it black
    (the blue College Basketball card under it was turning the bar blue). Under the ad rail and every sheet */
 html.app-look:not(.is-app) body::after { display: block !important; content: ''; position: fixed; inset: auto 0 0 0; height: 2px; background: #000; mix-blend-mode: normal; transform: none; will-change: auto; z-index: 1; pointer-events: none; }
+
+/* The player's card like the trait cards (owner, 11-13): the top-right corner cut and a dark ring just inside its edge. Website */
+html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card { border: 0 !important; box-shadow: inset 0 0 0 2px rgba(0,0,0,.5) !important; clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
