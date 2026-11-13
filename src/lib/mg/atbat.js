@@ -218,7 +218,7 @@ export function make({ v, seed, cast = null, situation = null, game = 'at-bat', 
     const note = (walkoffWin ? String(R.call).replace(/: (a run scores|\d runs score)$/, ': the winning run scores') : R.call) + (R.ev ? ` · ${R.ev} mph off the bat${R.dist && !['GO', 'DP', 'FC'].includes(R.kind) ? `, ${R.dist} ft` : ''}` : '')
     // the run's in: on the board now
     if (g.sit && R.runs) g.sit.mine += R.runs
-    g.done = outcome(score, hit, note, { result: R.kind, runs: R.runs, pts: R.runs, ev: R.ev, la: R.la, dist: R.dist, pitches: g.n + (R.kind === 'BB' || R.kind === 'K' ? 0 : 1), count: `${g.count.b}-${g.count.s}`, walkoff: walkoffWin, final: g.sit ? { mine: g.sit.mine, opp: g.sit.opp } : null })
+    g.done = outcome(score, hit, note, { result: R.kind, runs: R.runs, pts: R.runs, ev: R.ev, la: R.la, dist: R.dist, pitches: g.n + (R.kind === 'BB' || R.kind === 'K' ? 0 : 1), count: `${g.count.b}-${g.count.s}`, walkoff: walkoffWin, outs: R.out ? (R.kind === 'DP' ? 2 : 1) : 0, final: g.sit ? { mine: g.sit.mine, opp: g.sit.opp } : null })
     g.doneAt = g.t
     const big = R.kind === 'HR' || walkoffWin
     g.celeb = big && !lightMode() ? { at: g.t, walkoff: walkoffWin, hr: R.kind === 'HR' } : null

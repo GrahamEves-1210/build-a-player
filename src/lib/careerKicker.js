@@ -180,17 +180,20 @@ export function kPlayoffGame(c, po, allow = null) {
 }
 // His line in a playoff game, read off the final score: field goals and extra points that add up to what his team
 // scored. hit / game: the round's moment (a made game-winner is on the board).
-export function kPlayoffLine(mySc, { hit = false, game = null, acc = 5, u = 0.5 } = {}) {
-  const want = Math.min(4, Math.round(1 + u * 2.4))
+// made / tries: the kicks the moment itself showed (the game-winner's one, the long ones' four): he has at least that
+// many field goals, and the ones he missed are in his attempts
+export function kPlayoffLine(mySc, { hit = false, game = null, acc = 5, u = 0.5, made = null, tries = null } = {}) {
+  const least = made ?? (hit && game === 'game-winner' ? 1 : 0)
+  const want = Math.max(least, Math.min(4, Math.round(1 + u * 2.4)))
   let best = null
-  for (let fg = 0; fg <= 5; fg++) {
+  for (let fg = 0; fg <= Math.max(5, least); fg++) {
     const rem = mySc - 3 * fg
     if (rem < 0) break
-    const left = rem % 7, miss = Math.abs(fg - want) + (left === 0 ? 0 : left === 6 ? 1.5 : 6) + (hit && game === 'game-winner' && fg === 0 ? 9 : 0)
+    const left = rem % 7, miss = Math.abs(fg - want) + (left === 0 ? 0 : left === 6 ? 1.5 : 6) + (fg < least ? 9 * (least - fg) : 0)
     if (!best || miss < best.miss) best = { fg, td: Math.floor(rem / 7) + (left === 6 ? 1 : 0), left, miss }
   }
   const fgm = best?.fg ?? 0, tds = best?.td ?? 0
-  const missedLast = !hit && (game === 'game-winner' || game === 'deep-kick') ? 1 : 0
+  const missedLast = made != null && tries != null ? Math.max(0, tries - made) : !hit && (game === 'game-winner' || game === 'deep-kick') ? 1 : 0
   const other = u < (11 - acc) * 0.035 ? 1 : 0
   const xpm = best?.left === 6 ? Math.max(0, tds - 1) : tds
   return { fgm, fga: fgm + missedLast + other, xpm, xpa: tds, points: fgm * 3 + xpm, ...(hit && game === 'game-winner' ? { gw: 1 } : {}) }

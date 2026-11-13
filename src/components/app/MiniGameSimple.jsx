@@ -442,7 +442,7 @@ function Taps({ v, seed, n, onDone }) {
     j.hit ? good(j.q >= 0.85) : bad()
     const next = [...scores, j.hit ? j.q : 0]
     setScores(next)
-    if (i + 1 >= n) { const made = next.filter(Boolean).length; end({ score: next.reduce((a, b) => a + b, 0) / n, hit: made >= Math.ceil(n * 0.67), note: `${made} of ${n}` }) }
+    if (i + 1 >= n) { const made = next.filter(Boolean).length; end({ score: next.reduce((a, b) => a + b, 0) / n, hit: made >= Math.ceil(n * 0.67), note: `${made} of ${n}`, raw: { made, of: n } }) }
     else { busy.current = true; later(() => { busy.current = false; setI(i + 1) }, 420) }   // a beat to see it, then the next
   }
   useKeys({ ' ': tap, Enter: tap })
@@ -1124,7 +1124,7 @@ function Rush({ v, seed, onDone }) {
     if (i + 1 >= plan.length) {
       const made = next.filter(Boolean).length, avg = next.reduce((a, b) => a + b, 0) / plan.length
       const hit = made >= 2
-      end({ score: hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, note: [sacks.current && `${sacks.current} sack${sacks.current === 1 ? '' : 's'}`, made - sacks.current && `${made - sacks.current} pressure${made - sacks.current === 1 ? '' : 's'}`, plan.length - made && `stopped ${plan.length - made === 1 ? 'once' : `${plan.length - made} times`}`].filter(Boolean).join(' · '), out: outs.current > 0 && outs.current >= plan.length - made, raw: { made, of: plan.length } })
+      end({ score: hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, note: [sacks.current && `${sacks.current} sack${sacks.current === 1 ? '' : 's'}`, made - sacks.current && `${made - sacks.current} pressure${made - sacks.current === 1 ? '' : 's'}`, plan.length - made && `stopped ${plan.length - made === 1 ? 'once' : `${plan.length - made} times`}`].filter(Boolean).join(' · '), out: outs.current > 0 && outs.current >= plan.length - made, raw: { made, of: plan.length, sacks: sacks.current } })
     } else later(() => setI(i + 1), 520)
   }
   const move = (k, e) => {
@@ -1527,7 +1527,7 @@ function Pro({ v, seed, onDone }) {
     setScores(next)
     if (i + 1 >= plan.snaps.length) {
       const P = pts.current, total = P.clean * 2 + P.hurried, hit = total >= 5, avg = next.reduce((a, b) => a + b, 0) / plan.snaps.length
-      later(() => end({ score: hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, note: [`${P.clean} clean`, P.hurried && `${P.hurried} hurried`, P.sacks && `${P.sacks} sack${P.sacks === 1 ? '' : 's'}`, P.flags && `${P.flags} false start${P.flags === 1 ? '' : 's'}`].filter(Boolean).join(' · '), out: P.sacks > 0 && !hit, raw: { made: P.clean, of: plan.snaps.length } }), 300)
+      later(() => end({ score: hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, note: [`${P.clean} clean`, P.hurried && `${P.hurried} hurried`, P.sacks && `${P.sacks} sack${P.sacks === 1 ? '' : 's'}`, P.flags && `${P.flags} false start${P.flags === 1 ? '' : 's'}`].filter(Boolean).join(' · '), out: P.sacks > 0 && !hit, raw: { made: P.clean, of: plan.snaps.length, sacks: P.sacks } }), 300)
     } else later(() => setI(i + 1), 850)
   }
   // with him: he closes, and the ring closes on him
@@ -1934,9 +1934,9 @@ function Sneak({ v, seed, onDone }) {
     const secs = made ? (at - s.snapAt) / 1000 : SNEAK_MS / 1000
     const jump = s.first ? (s.first - s.snapAt) / 1000 : 1
     const score = made ? clamp(1 - (secs - 1.2) / 2.2, 0.55, 1) : clamp(s.peak * 0.45, 0, 0.45)
-    if (made) { say(fx.current, score >= 0.85 ? 'PUNCHED IT IN' : 'FIRST DOWN', 'hit'); flash(btn.current, 'hit'); good(score >= 0.85) }
+    if (made) { say(fx.current, score >= 0.85 ? 'PUNCHED IT IN' : 'TOUCHDOWN', 'hit'); flash(btn.current, 'hit'); good(score >= 0.85) }
     else { say(fx.current, 'STOPPED', 'miss'); bad() }
-    end({ score, hit: made, note: made ? `Over in ${secs.toFixed(1)}s · ${jump < 0.25 ? 'great get-off' : jump < 0.45 ? 'good get-off' : 'slow get-off'}` : s.offside > 1 ? 'Offside twice.' : `Stopped short · ${Math.round(s.peak * 100)}% of the way` })
+    end({ score, hit: made, note: made ? `Over in ${secs.toFixed(1)}s · ${jump < 0.25 ? 'great get-off' : jump < 0.45 ? 'good get-off' : 'slow get-off'}` : s.offside > 1 ? 'Offside twice.' : `Stopped short · ${Math.round(s.peak * 100)}% of the way`, raw: made ? { pts: 7 } : null })   // (punched in: 7 on the board)
   }
   // the pile: momentum leaks away every frame; the meter is how far he's got
   useLoop(ts => {
@@ -2001,10 +2001,10 @@ function Drive({ v, seed, onDone }) {
   const fx = useRef(null), btns = useRef([]), busy = useRef(false)
   const play = st.play && DRIVE_PLAYS.find(p => p.id === st.play)
   const toGoal = 100 - st.ball
-  const finish = (won, s, note) => {
+  const finish = (won, s, note, over = null) => {
     const left = Math.max(0, s.clock)
     const score = won ? clamp(0.6 + left / 60, 0.6, 1) : clamp(((s.ball - 25) / DRIVE_YARDS) * 0.45, 0, 0.45)
-    later(() => end({ score, hit: won, note }), 650)
+    later(() => end({ score, hit: won, note, raw: over === 'pick' ? { ints: 1 } : null }), 650)
   }
   // a snap's result: yards, clock, downs, and whether the drive goes on
   const resolve = (s, p, j) => {
@@ -2032,7 +2032,7 @@ function Drive({ v, seed, onDone }) {
     if (res.over) {
       setPhase('over')
       const why = { td: `Touchdown with ${clockText(Math.max(0, res.next.clock))} left`, pick: 'Picked off on the deep shot.', clock: `Time ran out on the ${100 - res.next.ball <= 50 ? `${100 - res.next.ball}` : `own ${res.next.ball}`}.`, downs: 'Turned it over on downs.' }[res.over]
-      finish(res.over === 'td', res.next, why)
+      finish(res.over === 'td', res.next, why, res.over)
       return
     }
     busy.current = true
@@ -3223,7 +3223,7 @@ function TwoOneS({ v, seed, onDone }) {
     }, plan.commit)
     later(() => { if (!S.current.done && S.current.shootAt == null) settle(false, plan.goes === 'ball' ? 'He got a foot in: took too long' : 'Took too long: he got back across to block it', plan.goes === 'ball' ? 'TACKLED' : 'BLOCKED') }, plan.commit + T)
   }, []) // eslint-disable-line
-  const settle = (goal, why, word2, q = 0.5, k = null, to = null) => {
+  const settle = (goal, why, word2, q = 0.5, k = null, to = null, assist = false) => {
     const s = S.current
     if (s.done) return
     s.done = true
@@ -3231,7 +3231,7 @@ function TwoOneS({ v, seed, onDone }) {
     if (k) flash(btns.current[k], goal ? 'hit' : 'miss')
     if (to) moveTo(ballEl.current, to[0], to[1], 380, 'ease-in')
     say(fx.current, word2, goal ? 'hit' : 'miss'); if (goal) { sfx('stamp'); haptic('heavy') } else bad()
-    later(() => end({ score: goal ? clamp(0.62 + 0.38 * q, 0, 1) : 0.14, hit: goal, note: why }), 650)
+    later(() => end({ score: goal ? clamp(0.62 + 0.38 * q, 0, 1) : 0.14, hit: goal, note: why, raw: goal && assist ? { assist: true } : null }), 650)
   }
   const press = (k, e) => {
     const s = S.current
@@ -3241,7 +3241,7 @@ function TwoOneS({ v, seed, onDone }) {
       if (early || plan.goes !== 'ball') return settle(false, early ? 'Went too early: he read the pass and cut it out' : 'He was sitting on the pass: cut out', 'CUT OUT', 0, k, [50 + sd * 8, 36])
       const m = spot(mate.current)
       moveTo(ballEl.current, m.x, m.y, 260)
-      later(() => settle(true, 'Squared it for the tap-in', 'GOAL', clamp(1 - (ts - s.at) / T, 0.3, 1), k, [50 + sd * 4, 7]), 280)
+      later(() => settle(true, 'Squared it for the tap-in', 'GOAL', clamp(1 - (ts - s.at) / T, 0.3, 1), k, [50 + sd * 4, 7], true), 280)
       return
     }
     if (early || plan.goes !== 'runner') return settle(false, early ? 'Went too early: he was there to block it' : 'He stepped up and blocked it', 'BLOCKED', 0, k, [50 + sd * 6, 50])

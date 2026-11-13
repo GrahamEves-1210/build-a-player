@@ -341,10 +341,20 @@ export function make({ v, seed, def, game, cast }) {
       const baited = misses.some(p => p.res.kind === 'bait')
       g.done = outcome(hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit,
         hit ? `${made} of ${rounds} reads` : baited ? `${made} of ${rounds} · took the bait` : `${made} of ${rounds}${NOTES[misses[misses.length - 1].res.kind] ? ` · ${NOTES[misses[misses.length - 1].res.kind]}` : ''}`,
-        { made, of: rounds }, !hit && outs > 0 && outs >= misses.length)
+        { made, of: rounds, ...shown(plan) }, !hit && outs > 0 && outs >= misses.length)
       const tw = hit ? W.win : W.lose
       g.later = { text: tw, good: hit, at: g.t + rep.res.beat - 120, size: tw.length > 11 ? 32 : 46 }
     }
+  }
+  // what the plays put on the board and in the book (a playoff game's final and his box score grow out of it:
+  // lib/situations.js momentFacts). The pick and roll: the points of each make. The rim: two for each one that went in.
+  // The safety and the backer: the picks and the balls knocked out. The quarterback: the throws that were picked off
+  function shown(all) {
+    if (game === 'pnr') return { pts: all.reduce((s, p) => s + (p.res.kind === 'good' ? (p.res.k === 2 ? 3 : 2) : 0), 0) }
+    if (game === 'rim-protect') return { allowed: all.filter(p => p.res.kind !== 'good').length * 2 }
+    if (jumpy) return { picks: all.filter(p => p.res.kind === 'good' && p.how === 'pick').length, pbus: all.filter(p => p.res.kind === 'good' && p.how === 'swat').length }
+    if (game === 'hot-read') return { ints: all.filter(p => p.res.kind !== 'good' && p.res.kind !== 'late').length }
+    return {}
   }
   function next() {
     g.i++

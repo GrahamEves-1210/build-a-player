@@ -157,29 +157,98 @@ function baseballFinal(sit, won, hit, r, pts) {
 // what it takes to go from n behind to in front
 const over = (n, hoops) => (hoops ? (n <= 1 ? 2 : n + 1) : n < 3 ? 3 : n <= 6 ? 7 : n === 7 ? 8 : n + 3)
 
+// What the moment itself showed, read off the game's own report (lib/mg: outcome's raw; the Simple games' too):
+// the points it put on the board (pts) and the ones it gave up (allowed), a takeaway (to), and what goes in his box
+// score. null: the game didn't say (a simulated moment has no report at all), and the final's own defaults stand.
+//   pts      a touchdown is 7 each (the catch can score twice); a bucket is what it was worth (the pick and roll adds
+//            its makes up, the post / the break / the lob are 2 a make, a free throw is 1); a field goal is 3 a make
+//   allowed  the lockdown beaten and each shot over the rim protector is 2; a returner tackled in his end zone is 2
+// A number in raw's place is the old call (the points a landed moment was worth): kept.
+const SCORED_BY_MAKES = new Set(['post-up', 'alley-oop', 'fast-break'])
+const num = x => (typeof x === 'number' && Number.isFinite(x) ? x : null)
+export function momentFacts(game, raw = null, hit = false) {
+  if (game === 'onside') return { pts: 0 }   // (its raw is the kick's own chance, a number: nothing on the board either way)
+  if (raw == null || typeof raw !== 'object') return { pts: num(raw) != null && hit ? raw : null }
+  const made = num(raw.made), of = num(raw.of), F = { pts: null }
+  if (game === 'clutch-shot' || game === 'half-court' || game === 'iso') { if (num(raw.pts) != null) F.pts = hit ? raw.pts : 0; else if (game !== 'clutch-shot') F.pts = hit ? 2 : 0 }
+  else if (game === 'free-throws') { if (made != null && of === 2) F.pts = made }
+  else if (game === 'pnr') F.pts = num(raw.pts)
+  else if (SCORED_BY_MAKES.has(game)) { if (made != null) F.pts = made * 2 }
+  else if (game === 'lockdown' || game === 'rim-protect') { if (num(raw.allowed) != null) F.allowed = raw.allowed }
+  else if (game === 'board') { if (made != null) F.reb = made }
+  else if (game === 'game-winner') { if (made != null) { F.pts = made ? 3 : 0; F.fgm = made ? 1 : 0; F.fga = 1 } }
+  else if (game === 'deep-kick') { if (made != null && of) { F.pts = made * 3; F.fgm = made; F.fga = of } }
+  else {
+    // football: the touchdowns (his own, on the board), and the plays that go in the book
+    // (raw.fg: the two-minute drill's field goal, three on the board and still behind)
+    if (num(raw.pts) != null && raw.pts > 0) { F.pts = raw.pts; if (!raw.fg) F.tds = Math.max(1, num(raw.tds) ?? Math.round(raw.pts / 7)) }
+    else if (!hit) F.pts = 0
+    if (game === 'kick-return' && raw.kind === 'tackle' && num(raw.spot) != null && raw.spot <= 0) F.allowed = 2   // (a safety)
+    for (const k of ['picks', 'pbus', 'ints', 'sacks', 'pressures', 'tfl', 'tackles', 'fumbles', 'broken', 'pancakes']) if (num(raw[k]) != null) F[k] = raw[k]
+    if ((game === 'tackle-angle' || game === 'run-stuff') && made != null) F.tackles = made
+    if (F.picks > 0 || F.fumbles > 0) F.to = true
+  }
+  return F
+}
+// a hit here is a bucket, whatever the score was (basketball's one-game path: the Play-In)
+const BUCKET_GAMES = new Set(['iso', 'pnr', 'post-up', 'half-court', 'alley-oop', 'fast-break'])
+// the game ends on these: after a miss nobody scores again
+const ENDS_IT = new Set(['game-winner', 'clutch-shot', 'two-minute', 'goal-line', 'onside'])
+
 // The final, from that score. won and hit are already decided; they can disagree (he lands it and
 // they still lose, he misses and they still win), so note says how: { mine, opp, note }.
+// What the moment showed is on the board first, whoever won: his points (facts.pts) and the ones scored on him
+// (facts.allowed), landed or not: a touchdown catch in a drill he lost is still seven, one bucket of three is still
+// two. Then the rest of the game gets the winner in front, and the note says how. pts: momentFacts' object, or the
+// old number (the points a landed moment was worth), or null (a simulated moment: the defaults below).
 export function finalScore(sit, game, won, hit, seed = 'x', pts = null) {
   const r = seeded(`sitf-${seed}-${game}`)
-  if (sit.soccer) return soccerFinal(sit, won, hit, r, pts)
-  if (sit.baseball) return baseballFinal(sit, won, hit, r, pts)
-  if (sit.kind && KINDS[sit.kind]) return KINDS[sit.kind].final(sit, game, won, hit, r, pts)
+  // (soccer and baseball have their own finals: pts there is the goals or the runs the moment put up, as it was given)
+  const own = pts != null && typeof pts === 'object' ? pts.pts ?? null : pts
+  if (sit.soccer) return soccerFinal(sit, won, hit, r, own)
+  if (sit.baseball) return baseballFinal(sit, won, hit, r, own)
+  if (sit.kind && KINDS[sit.kind]) return KINDS[sit.kind].final(sit, game, won, hit, r, own)
+  const F = pts != null && typeof pts === 'object' ? pts : momentFacts(game, pts, hit)
   const { hoops, them } = sit
-  const need = sit.opp - sit.mine
+  const need = sit.opp - sit.mine, def = !!SPOTS[game]?.stop
   let mine = sit.mine, opp = sit.opp, note = null
-  // what landing it put on the board
-  // (what the moment itself put on the board when it says so: the clutch shot's 2 or 3, a fast break's makes. A touchdown
-  // is a touchdown, the same as the drive's own scoreboard: 7, or enough to go ahead with the two-point try)
-  const play = pts != null ? pts : game === 'clutch-shot' ? 3 : game === 'free-throws' ? 2 : TD_GAMES.has(game) ? Math.max(7, need + 1) : need < 0 ? 0 : over(need, hoops)
+  // what landing it put on the board when the game didn't say (a simulated moment): the clutch shot's 3, the free
+  // throws' 2, a field goal's 3; a touchdown is a touchdown, the same as the drive's own scoreboard: 7, or enough to
+  // go ahead with the two-point try; a bucket is a bucket (2, or the 3 he needed); a stop or the onside kick scores
+  // nothing. Anything else is a play in a drive (a first down, a rebound): the drive scores what it needed
+  const drive = need < 0 ? 0 : over(need, hoops)
+  const got = F.pts != null ? F.pts : !hit ? 0
+    : game === 'clutch-shot' ? 3 : game === 'free-throws' ? 2 : game === 'game-winner' || game === 'deep-kick' ? 3
+    : TD_GAMES.has(game) ? Math.max(7, need + 1) : def || game === 'onside' ? 0
+    : hoops && BUCKET_GAMES.has(game) ? over(Math.max(0, need), true) : drive
+  const gave = F.allowed ?? 0
+  mine += got; opp += gave
+  // the last play (the kick with two seconds left, the shot at the horn): level after it is overtime
+  const horn = hoops ? sit.clock <= 6 : sit.clock <= 5
+  const overtime = w => {
+    const add = hoops ? 8 + Math.floor(r() * 7) : 0, by = hoops ? 1 + Math.floor(r() * 6) : r() < 0.6 ? 3 : 6
+    if (w) { opp += add; mine = opp + by } else { mine += add; opp = mine + by }
+    note = w ? 'Won it in overtime.' : 'Lost it in overtime.'
+  }
   if (won) {
-    if (hit) { mine += play; if (mine <= opp) mine = opp + (hoops ? 2 : 3) }   // (short of it on the play: they closed it out after)
-    else if (need < 0) { if (hoops ? -need >= 2 : -need > 3) opp += hoops ? 1 : 3; note = `${them} couldn't finish it.` }
-    else { mine += over(need, hoops); note = hoops ? 'Got one more chance and made it count.' : 'Got the ball back and won it late.' }
-  } else if (hit) {
-    mine += play
-    if (mine >= opp) opp += over(mine - opp, hoops)
-    note = `${them} answered and took it back.`
-  } else if (need <= 0) opp += over(-need, hoops)
-  else if (hoops ? r() < 0.5 : need <= 5 && r() < 0.3) opp += hoops ? 2 : 3
-  return { mine, opp, note }
+    if (mine > opp) {
+      // (ahead, he missed and nothing was scored on him: they moved it and came up empty, or with a field goal that wasn't enough)
+      if (!hit && !got && !gave && need < 0) { if (hoops ? -need >= 2 : -need > 3) opp += hoops ? 1 : 3; note = `${them} couldn't finish it.` }
+    } else if (mine === opp && horn) overtime(true)
+    else {
+      mine += over(opp - mine, hoops)
+      note = hit && def ? (hoops ? 'Got the stop and won it at the other end.' : F.to ? 'The takeaway set up the winning score.' : 'Got the stop, and the offense won it late.')
+        : hoops ? (game === 'free-throws' && horn ? 'A teammate tipped in the miss at the horn.' : 'Got one more chance and made it count.') : 'Got the ball back and won it late.'
+    }
+  } else if (opp > mine) {
+    // behind, and it stays that way. The onside kick recovered: they had the ball and didn't score
+    if (game === 'onside' && hit) note = 'Got it back, but the drive came up short.'
+    else if (!hit && !got && !gave && !ENDS_IT.has(game) && !horn && (hoops ? r() < 0.5 : need <= 5 && r() < 0.3)) opp += hoops ? 2 : 3
+  } else if (mine === opp && horn) overtime(false)
+  else {
+    opp += over(mine - opp, hoops)
+    // (he scored and they scored after it; he got the stop or moved the chains and they still got it back)
+    note = got > 0 ? `${them} answered and took it back.` : hit ? (hoops ? `${them} got the last shot and made it.` : `${them} got the ball back and won it late.`) : null
+  }
+  return { mine, opp, note, got, gave }
 }

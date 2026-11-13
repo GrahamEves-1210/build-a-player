@@ -301,7 +301,7 @@ export function make({ v, seed, game, situation = null }) {
     const note = { td: 'Touchdown drive.', downs: 'Turnover on downs.', time: 'Out of time.', pick: 'Intercepted.', kick: `A field goal does nothing down ${WORD[st?.trail] ?? st?.trail}.`, delay: 'Too many delays.' }[g.end] ?? 'Out of time.'
     // a touchdown with time to spare is better; short of it, how far you got
     const score = hit ? clamp(0.62 + 0.38 * (st.clock / 60), 0.62, 1) : clamp((START_G - st.G) / START_G, 0, 1) * 0.46
-    g.done = outcome(score, hit, note, { made: g.made, of: g.i + 1 }, g.end === 'delay' || (g.end === 'time' && g.outs > 0))
+    g.done = outcome(score, hit, note, { made: g.made, of: g.i + 1, ...(g.end === 'pick' ? { ints: 1 } : g.end === 'kick' ? { pts: 3, fg: 1 } : {}) }, g.end === 'delay' || (g.end === 'time' && g.outs > 0))
     g.stamp = { text: word, good: hit, at: g.t + 60, size: word.length > 12 ? 34 : 44 }
     // (a touchdown drive gets its moment; a pick, the man showing off the ball)
     if (hit) g.outro = 3500

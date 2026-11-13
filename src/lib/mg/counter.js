@@ -177,7 +177,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (g.res) return
     g.res = kind; g.endAt = g.t; g.doneAt = g.t; g.why = why; g.assist = assist
     const goal = kind === 'goal'
-    g.done = outcome(score ?? (kind === 'saved' || kind === 'wood' ? 0.3 : 0.12), goal, why)
+    g.done = outcome(score ?? (kind === 'saved' || kind === 'wood' ? 0.3 : 0.12), goal, why, goal && assist ? { assist: true } : null)   // (squared for the tap-in: the goal is a teammate's, the assist is his)
     g.stamp = { text: goal ? 'GOAL' : kind === 'saved' ? 'SAVED' : kind === 'blocked' ? 'BLOCKED' : kind === 'late' ? (g.goes === 'ball' ? 'TACKLED' : 'BLOCKED') : kind === 'cut' ? 'CUT OUT' : kind === 'wood' ? 'OFF THE WOODWORK' : 'MISSED', good: goal, at: g.t, size: 50 }
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)

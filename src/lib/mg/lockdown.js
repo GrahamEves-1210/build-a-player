@@ -115,7 +115,7 @@ export function make({ v, seed, def }) {
     if (won || lost) {
       const played = moves.filter(m => m.res)
       const avg = played.reduce((s, m) => s + m.res.score, 0) / N
-      g.done = outcome(won ? Math.max(avg, 0.5) : Math.min(avg, 0.45), won, `${g.stops} of ${played.length} stops`, { stops: g.stops, of: played.length })
+      g.done = outcome(won ? Math.max(avg, 0.5) : Math.min(avg, 0.45), won, `${g.stops} of ${played.length} stops`, { stops: g.stops, of: played.length, allowed: won ? 0 : 2 })   // (beaten: he lays it in, two on the board)
       g.clean = won && g.beats === 0
       if (won) {
         const at0 = res.tc

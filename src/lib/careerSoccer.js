@@ -378,7 +378,10 @@ function autoLegs(r, two, won) {
   return won ? legs : legs.map(([a, b]) => [b, a])
 }
 // The round's moment is in. The deciding match is the one played (a final, or the second leg with the first one level)
+// pts: the game's own report (MiniGame's raw) or the old number of goals. raw.assist: the 2-on-1 squared for the
+// tap-in, the goal is on the board and it's a teammate's: his line gets the assist, not the goal
 export function soccerRound(c, score, game = null, hit = score >= 0.5, pts = null) {
+  const setUp = !!(pts && typeof pts === 'object' && pts.assist)
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
@@ -405,9 +408,9 @@ export function soccerRound(c, score, game = null, hit = score >= 0.5, pts = nul
   legs.forEach((l, i) => {
     const moment = !auto && i === legs.length - 1
     let g = Math.min(l[0], Math.floor(rate * (0.8 + score * 0.4) + r()))
-    if (moment) g = Math.min(l[0], Math.max(hit ? 1 : 0, hit ? g : Math.min(g, Math.max(0, l[0] - 1))))
+    if (moment) g = setUp && hit ? Math.min(g, Math.max(0, l[0] - 1)) : Math.min(l[0], Math.max(hit ? 1 : 0, hit ? g : Math.min(g, Math.max(0, l[0] - 1))))
     goals += g
-    assists += Math.min(l[0] - g, Math.floor(arate + r() * 0.8))
+    assists += Math.min(l[0] - g, Math.max(moment && setUp && hit ? 1 : 0, Math.floor(arate + r() * 0.8)))
   })
   const entry = { ...rd, played: true, won, legs, mySc, oppSc, pens, score, hit, auto, swing: note, game: auto ? null : game, goals, assists, apps: legs.length, xg: r10(goals * 0.75 + legs.length * 0.25) }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : !won && i > po.idx && x.track === rd.track ? { ...x, skip: true } : x))

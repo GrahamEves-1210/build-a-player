@@ -9,7 +9,7 @@
 import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNorms.js'
 import { seeded } from './rng'
 import { traitValue, pickMomentGame, pickPlayoffGame, GAMES } from './minigames'
-import { momentSituation, finalScore } from './situations'
+import { momentSituation, finalScore, momentFacts } from './situations'
 import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
@@ -2524,6 +2524,8 @@ export const momentRound = po => Math.max(0, 3 - (po.rounds.length - 1 - po.idx)
 export const blowoutOdds = (p, round = 0) => p
 // This round's moment is in: the result, with a stat line sized to the season
 // hit: the drill's own verdict (MiniGame), the same one it showed the player
+// pts: the game's own report of what it showed (MiniGame's raw: lib/situations.js momentFacts reads the points, the
+// takeaways, the sacks out of it), or the old number (the points a landed moment was worth). null: a simulated moment
 export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = null) {
   const S = sportOf(c)
   if (S.x?.round) return S.x.round(c, score, game, hit, pts)
@@ -2571,18 +2573,40 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
       : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
   }
   // a one-game moment: the final grows out of the score it was played at (the odds above decided who won)
-  let swing = null
+  let swing = null, F = {}
   if (!auto && !rd.series && game) {
     const seed = `${c.seed}-${c.year}-${po.idx}`
-    const end = finalScore(momentSituation(game, seed, { us: c.team, them: rd.opp }), game, won, hit, seed, pts)
+    F = momentFacts(game, pts, hit)
+    const end = finalScore(momentSituation(game, seed, { us: c.team, them: rd.opp }), game, won, hit, seed, F)
     mySc = end.mine; oppSc = end.opp; swing = end.note
-    // (he can't score the touchdown that won it and have none in the box score)
-    if (hit && (game === 'two-minute' || game === 'goal-line' || game === 'sneak' || (pts === 7 && game !== 'kick-return'))) {
+    // what he did in the moment is in his line (it used to be drawn from his season alone: a pick, a sack or a forced
+    // fumble on the screen and none in the box score). up: at least that many
+    const up = (k, n) => { if (n > 0 && line[k] != null) line[k] = Math.max(line[k], n) }
+    if (S.isBucket) {
+      // (the Play-In is one game: he scored at least what the moment showed, and took the boards it showed)
+      up('pts', end.got); up('reb', F.reb)
+    } else {
+      // (he can't score the touchdown that won it and have none in the box score. A touchdown the game showed counts
+      // whether or not the drill was landed: a catch in the end zone in a drill he lost is still his)
+      const tds = F.tds ?? (hit && (game === 'two-minute' || game === 'goal-line' || game === 'sneak') ? 1 : 0)
       const key = c.pos === 'qb' ? 'tds' : c.pos === 'rb' ? 'rushTDs' : 'recTDs'
-      if (line[key] != null) line[key] = Math.max(1, line[key])
+      // (a kick return taken back: his 7 are on the board, a return touchdown in his box score and the game's line)
+      if (game === 'kick-return') { if (tds) { line.retTDs = tds; swing = swing ? `Kick return TD. ${swing}` : 'Kick return TD.' } }
+      else up(key, tds)
+      // (and the board holds his touchdowns: the rest of his day comes down to what the final has room for, never
+      // below the ones the moment showed. The score that grew out of the moment's situation stands)
+      let extra = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0) + (line.retTDs ?? 0) - Math.floor(mySc / 6)
+      for (const k of ['recTDs', 'rushTDs', 'tds']) while (extra > 0 && (line[k] ?? 0) > (k === key && game !== 'kick-return' ? tds : 0)) { line[k]--; extra-- }
+      if (c.pos === 'qb') up('ints', F.ints)
+      else if (c.pos === 'ol') { up('sacksA', F.sacks); up('prs', F.pressures); up('pancakes', F.pancakes) }
+      else {
+        up('ints', F.picks); up('pbus', F.pbus); up('sacks', F.sacks); up('ff', F.fumbles)
+        if (line.pds != null) line.pds = Math.max(line.pds, (line.ints ?? 0) + (F.pbus ?? 0))
+        if (line.tfl != null) line.tfl = Math.max(line.tfl, line.sacks ?? 0, (F.sacks ?? 0) + (F.tfl ?? 0))
+        if (line.qbHits != null) line.qbHits = Math.max(line.qbHits, line.sacks ?? 0)
+        up('tackles', Math.max(F.tackles ?? 0, (F.sacks ?? 0) + (F.tfl ?? 0), line.sacks ?? 0))
+      }
     }
-    // (a kick return taken back: his 7 are on the board, a return touchdown in his box score and the game's line)
-    if (game === 'kick-return' && hit && pts === 7) { line.retTDs = 1; swing = swing ? `Kick return TD. ${swing}` : 'Kick return TD.' }
   }
   // (his touchdowns are on the board: a team can't score fewer points than the touchdowns he had in the box score,
   // and a loss stays a loss)
@@ -2603,7 +2627,8 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
     if (!won && oppSc <= mySc) oppSc = snapNFL(mySc + 3)
   }
   // (a kicker's line is read off the final: the field goals and extra points that add up to what his team scored)
-  if (c.pos === 'k') line = kPlayoffLine(mySc, { hit: !auto && !!hit && won, game: auto ? null : game, acc: c.build.accuracy?.val ?? 5, u: r() })
+  // (the kicks the moment showed are in it: every make, every miss)
+  if (c.pos === 'k') line = kPlayoffLine(mySc, { hit: !auto && !!hit && won, game: auto ? null : game, acc: c.build.accuracy?.val ?? 5, u: r(), made: F.fgm ?? (!auto && hit && (game === 'game-winner' || game === 'deep-kick') ? 1 : null), tries: F.fga ?? null })
   const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, swing, game: auto ? null : game, ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === S.final

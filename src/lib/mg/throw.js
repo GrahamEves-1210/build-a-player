@@ -550,7 +550,7 @@ function makePlay({ v, arm, seed, game, cast }) {
     }
     const words = { pick: 'PICKED OFF', swat: 'BROKEN UP', over: 'OVERTHROWN', under: 'UNDERTHROWN', wide: 'INCOMPLETE' }
     const near = clamp(1 - rr / (reach * 4 + 40), 0, 1)
-    g.done = outcome(why === 'pick' ? 0 : 0.1 + near * 0.2, false, words[why].toLowerCase(), { made: 0, of: 1 })
+    g.done = outcome(why === 'pick' ? 0 : 0.1 + near * 0.2, false, words[why].toLowerCase(), { made: 0, of: 1, ...(why === 'pick' ? { ints: 1 } : {}) })   // (picked off: an interception in his box score)
     g.stamp = { text: words[why], good: false, at: g.t + 120 }
     g.outro = why === 'pick' ? 2900 : 1900
     g.fx.push('pop', 'h:medium')
