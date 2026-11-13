@@ -6955,10 +6955,10 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 22px); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body { padding-top: 0 !important; gap: 5px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-static { padding-top: 0 !important; gap: 4px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 132px !important; }   /* 10% taller (owner, 11-13) */
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -44px; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 44px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 67.1px !important; }   /* (the labels float now; the wheel 132px) */   /* on the window's middle (was 4px low, owner 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 145px !important; }   /* 10% taller, twice (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -37.5px; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 50.5px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 73.6px !important; }   /* (the labels float now; the wheel 145px) */   /* on the window's middle (was 4px low, owner 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 3px 10px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
@@ -7124,10 +7124,10 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
 /* Desktop (website): the spin wheels shorter, 220px to 182px (owner, 11-13: 25% shorter, then 10% back). The middle row, its box and the
    arrows all move up by the same 19px so they stay on the window's middle */
 @media (min-width: 769px) {
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-window { height: 200px !important; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-track { margin-top: -10px; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-selector { top: 78px !important; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-tri { top: 101px !important; }   /* (the labels float now; the wheel 200px) */
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-window { height: 220px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-track { margin-top: 0; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-selector { top: 88px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-tri { top: 111px !important; }   /* (the labels float now; the wheel 220px) */
   /* the player's card shorter, 74px to 60px (owner, 11-13: 10% shorter, twice): less padding, the photo 54px */
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card { padding-top: 2px !important; padding-bottom: 2px !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel :is(.qb-reveal-hero, .qb-reveal-hero > *) { width: 54px !important; height: 54px !important; }
@@ -7165,3 +7165,15 @@ html.app-look:not(.is-app) .game-layout .spin-panel .attr-chip.attr-chip.attr-ch
 /* The wheels' TEAM / PLAYER labels float over the top of the wheel, no strip of their own (owner, 11-13). Website */
 html.app-look:not(.is-app) .spin-panel .reel-outer { position: relative; }
 html.app-look:not(.is-app) .spin-panel .reel-outer > .reel-label { position: absolute !important; top: 5px; left: 50%; transform: translateX(-50%); z-index: 4; margin: 0 !important; pointer-events: none; }
+
+/* A logo on every team on the team wheel and a headshot on every player on the player wheel (owner, 11-13): the picture
+   right beside the name, the two centred together in the row */
+.reel-row.has-img { display: grid !important; grid-template-columns: auto auto; grid-template-rows: auto auto; justify-content: center; align-content: center; column-gap: 6px; }
+.reel-row.has-img > .reel-logo { grid-row: 1 / 3; align-self: center; width: 22px; height: 22px; object-fit: contain; pointer-events: none; }
+.reel-row.has-img > .reel-primary { grid-column: 2; grid-row: 1; text-align: center; }
+.reel-row.has-img > .reel-secondary { grid-column: 2; grid-row: 2; text-align: center; }
+/* a headshot: round, cropped to the face */
+.reel-row.has-img > .reel-logo[src$='.webp'], .reel-row.has-img > .reel-logo[src^='data:'] { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; object-position: 50% 18%; background: rgba(255,255,255,.06); }
+/* iPhone Safari takes its bottom bar's colour from what touches the screen's bottom edge: a black line there keeps it black
+   (the blue College Basketball card under it was turning the bar blue). Under the ad rail and every sheet */
+html.app-look:not(.is-app) body::after { display: block !important; content: ''; position: fixed; inset: auto 0 0 0; height: 2px; background: #000; mix-blend-mode: normal; transform: none; will-change: auto; z-index: 1; pointer-events: none; }

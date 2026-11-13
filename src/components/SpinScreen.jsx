@@ -44,7 +44,7 @@ const DRUM_ON = !LOW_POWER && (IS_APP || !(typeof window !== 'undefined' && wind
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
 const reelKey = x => `${x?.name}|${x?.team ?? x?.short}`
 
-function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
+function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, getImg = null, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -58,7 +58,8 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   // screen re-renders while a reel turns, and remaking them each time was most of its cost.
   // getDisplay/getSub only read the item, so the list alone decides them
   const rows = useMemo(() => allItems.map((item, i) => (
-    <div key={i} className="reel-row" style={{ height: ITEM_H }}>
+    <div key={i} className={`reel-row${getImg ? ' has-img' : ''}`} style={{ height: ITEM_H }}>
+      {getImg && getImg(item) && <img className="reel-logo" src={getImg(item)} alt="" width="22" height="22" decoding="async" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} />}
       <div className="reel-primary">{getDisplay(item)}</div>
       {getSub && <div className="reel-secondary">{getSub(item)}</div>}
     </div>
@@ -822,6 +823,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 blurred={hideTeamResult && !!selectedTeam}
                 getDisplay={group?.display ?? (t => t.short)}
                 getSub={getTeamSub ?? (t => t.name.split(' ').slice(-1)[0])}
+                getImg={kOne ? null : (group?.logo ?? (t => `${logoDir}${t.short}.png`))}
                 onStop={handleTeamStop}
                 durationMs={kOne ? 40 : 800}
                 jitterMs={kOne ? 0 : 1000}
@@ -835,6 +837,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 locked={!!selectedQB && phase === 'done'}
                 getDisplay={q => q.name.split(' ')[0]}
                 getSub={getPlayerSub ?? (q => q.name.split(' ').slice(1).join(' '))}
+                getImg={q => ((q.headshot ?? headshotsMap[q.name]) ? `${headshotsDir}${q.headshot ?? headshotsMap[q.name]}.webp` : headshotFallback(q.skin))}
                 onStop={handleQBStop}
                 durationMs={oneWheel || kOne ? 1700 : 1100}
                 jitterMs={400}
