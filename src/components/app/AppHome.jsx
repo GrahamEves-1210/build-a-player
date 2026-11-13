@@ -27,6 +27,7 @@ import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
+import FranchiseCard from '../franchise/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -400,7 +401,7 @@ let homeScroll = 0
 
 // `soon`: modes this sport shows locked as COMING SOON ({ career, compete, salary, squad }: soccer's
 // SOCCER_MODES). `faces`: soccer's strikers on its two pool cards ({ current, alltime }, headshot ids)
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null, onFranchise = null }) {
   const prog = useProgress()
   // Back from a mode, home opens where it was left. The lists on it fill in as they load, so the
   // spot is put back as the page grows, for a moment, until the player moves it themselves.
@@ -467,6 +468,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const hasCFB = !!onCFB
   const cbbRef = useRef(onCBB); cbbRef.current = onCBB
   const hasCBB = !!onCBB
+  // Franchise (football, lib/franchiseLive.js): while its switch is on, its card takes SQUAD BUILDER's place
+  const frRef = useRef(onFranchise); frRef.current = onFranchise
+  const hasFranchise = !!onFranchise && !isBucket && !isSoccer && !isBaseball
 
   const positions = isBaseball
     ? ['bat', 'pit'].map(p => ({ pos: p, label: BASEBALL_POS[p].label, sub: BASEBALL_POS[p].sub }))
@@ -616,8 +620,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <Podium />
           </ModeArt>
         )}
-        {onSquad && (
-          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" tag={sqLine} line={null} onClick={onSquad}>
+        {hasFranchise ? <FranchiseCard onClick={() => frRef.current?.()} /> : onSquad && (
+          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
             {isBucket
               ? <Lineup />
               : <TeamRow />}
@@ -628,7 +632,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
       </div>
     </section>
-  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB])
+  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>

@@ -1,0 +1,41 @@
+/* ═══ FRANCHISE: its card on football's Home ═══════════════════════════════════════════════════════════
+   The only Franchise file Home loads (AppHome.jsx, AppHomeClassic.jsx, through FranchiseCard.jsx): the mode's
+   own look is franchise.css, which comes with the mode. The card is the mode's look in small: near-black,
+   flat, hairlines, three ruled rows off the front office's sheet under a bar in the team's colour.
+   --fr-team: the saved franchise's team colour (white before there is one). */
+.ag-mc.ag-mc--fr { --fr-team: #f2f4f5; background: #0a0c0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 8px 18px rgba(0,0,0,.35); }
+.ag-mc--fr::before { content: ''; position: absolute; left: 0; right: 0; top: 0; z-index: 3; height: 3px; background: var(--fr-team); }
+.ag-mc--fr .ag-mc-head { top: 14px; gap: 0; }
+.ag-mc--fr .ag-mc-head b { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; text-shadow: none; color: #f2f4f5; }
+.ag-mc--fr .ag-mc-head b .ag-mc-tag { margin-top: 0; }
+/* the sheet: label left, figure right, ruled */
+.ag-fr-sheet { position: absolute; left: 13px; right: 13px; bottom: 9px; z-index: 2; display: grid; font-variant-numeric: tabular-nums; }
+.ag-fr-sheet > span { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 31px; border-top: 1px solid rgba(255,255,255,.1); white-space: nowrap; }
+.ag-fr-sheet i { font-family: var(--ag-font); font-style: normal; font-size: 14px; letter-spacing: 1.6px; line-height: 1; color: #8b949e; padding-top: 1px; }
+.ag-fr-sheet b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; letter-spacing: .4px; line-height: 1; color: #f2f4f5; }
+/* the mode's own picture, when there is one: behind the sheet, on the right */
+.ag-fr-art { position: absolute; right: 0; top: 3px; bottom: 0; z-index: 1; display: block; width: 62%; pointer-events: none; opacity: .5; }
+.ag-fr-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+@media (min-width: 1024px) {
+  /* the wide second row: the sheet beside the words */
+  html.app-look .ag-mc--fr .ag-fr-sheet { left: auto; right: 16px; top: 16px; bottom: auto; width: 46%; }
+  html.app-look .ag-mc--fr .ag-fr-sheet > span { height: 32px; }
+  html.app-look .ag-mc--fr .ag-fr-sheet > span:first-child { border-top: 0; }
+  html.app-look .ag-mc--fr .ag-fr-sheet i { font-size: 15px; }
+  html.app-look .ag-mc--fr .ag-fr-sheet b { font-size: 20px; }
+  html.app-look .ag-mc--fr .ag-fr-art { right: auto; left: 0; width: 50%; opacity: .38; }
+}
+
+/* the classic Home (Settings → Classic Home): Squad Builder's row, in the mode's own colours */
+.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr { --fr-team: #f2f4f5; border: 0; border-radius: 4px; background: #0a0c0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 3px 0 var(--fr-team); }
+.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr::after { content: none; }
+.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr .ag-eyebrow { color: #8b949e; }
+.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr .ag-card-title { color: #f2f4f5; }
+.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr > .ag-fr-art { position: absolute; z-index: 0; left: auto; right: 0; top: 3px; bottom: 0; width: 40%; opacity: .4; }
+
+/* the build page while a new franchise's player is on it (App.jsx 'franchise-build'): Squad Builder's bar, with
+   the way back to the setup */
+.fr-hud .cp-hud-dots i.is-in { background: #f2f4f5; box-shadow: none; }
+.fr-hud-back { flex: none; height: 30px; padding: 1px 10px 0; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; background: transparent; color: #f2f4f5; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.6px; line-height: 1; cursor: pointer; }
+.fr-hud-back:active { transform: scale(.97); }
+.fr-hud-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }

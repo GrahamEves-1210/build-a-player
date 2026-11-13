@@ -29,6 +29,7 @@ import CompeteHud from './components/app/CompeteHud'
 const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
 const CFBMode        = lazy(() => import('./components/cfb/CFBMode'))   // College Football (a football mode): its rosters and sim load with it
+const FranchiseMode  = lazy(() => import('./components/franchise/FranchiseMode'))   // Franchise (a football mode): the mode, its engine and its art load with it
 import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
@@ -48,6 +49,7 @@ import { KS, K_TYPES, K_LITE_TYPES, K_CATEGORIES, K_ATTR } from './data/ks'
 import { K_LEGENDS } from './data/k-legends'
 import { K_LIVE } from './lib/kLive'
 import { CFB_LIVE } from './lib/cfbLive'
+import { FRANCHISE_LIVE } from './lib/franchiseLive'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
 import { COMPETE_POS } from './lib/competeCore'
@@ -359,7 +361,7 @@ export default function App() {
     if (!IS_APP && !APP_LOOK) return
     window.__bapPage = { page, sport: 'nfl' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
-    if (['game', 'sim', 'squad', 'squad-build', 'career', 'career-build'].includes(page)) lastPlayRef.current = page
+    if (['game', 'sim', 'squad', 'squad-build', 'career', 'career-build', 'franchise', 'franchise-build'].includes(page)) lastPlayRef.current = page
   }, [page])
   const startDailyRef = useRef(null)
   const openSquadRef = useRef(null)
@@ -377,12 +379,13 @@ export default function App() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build' || page === 'cfb') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build' || page === 'cfb' || page === 'franchise' || page === 'franchise-build') return
         const last = lastPlayRef.current
         if (last === 'squad' && squadRef.current) setPage('squad')
         else if (last === 'squad-build' && gameMode) setPage('squad-build')
         else if (last === 'career' && careerRef.current) setPage('career')
         else if (last === 'career-build' && gameMode) setPage('career-build')
+        else if (FRANCHISE_LIVE && (last === 'franchise' || last === 'franchise-build' || tkRef.current === 'franchise')) setPage(last === 'franchise-build' && gameMode ? 'franchise-build' : 'franchise')   // (a Franchise build left half done: back to the front office, which picks it up)
         else if (gameMode === 'salarycap') setPage('salarycap')   // back to the board, as basketball's does
         else if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
@@ -428,6 +431,7 @@ export default function App() {
   const competeRef = useRef(false)   // set once Compete is set up below
   if (page === 'squad-build') tkRef.current = 'squad'
   else if (page === 'career-build') tkRef.current = 'career'
+  else if (page === 'franchise-build') tkRef.current = 'franchise'
   else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
   useEffect(() => {
     if (!gameMode || gameMode === 'salarycap') return
@@ -721,13 +725,13 @@ export default function App() {
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
   // Phones (app and website): the player is the screen and the spin drops down over it
-  const drop = useDropMode((IS_APP || APP_LOOK) && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build'))
+  const drop = useDropMode((IS_APP || APP_LOOK) && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build'))
   const [dropOpen, setDropOpen] = useDropSheet(drop, build, activeTypes, spinResetKey)
-  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
   // Website: the build-complete hit (the app's BuildComplete screen plays its own)
-  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── SQUAD BUILDER (app): one squad per account; its players are built on the build page ──
   // (the account's squad from the cloud comes in a moment later: lib/squadCloud.js)
@@ -815,6 +819,31 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [putSquad])
   const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
+
+  // ── FRANCHISE (lib/franchiseLive.js): the players a new franchise builds are built here, on the normal build
+  // page, one roster spot at a time, like Squad Builder's. The mode asks for a spot (onBuild); the finished build
+  // goes back to it (frBuilt) and the mode keeps it: nothing of a franchise is held here.
+  //   job: { id, pos, n, of }   the spot's id in the mode's setup, its position, and "player n of of" for the bar
+  const frJob = useRef(null)
+  const [frBuilt, setFrBuilt] = useState(null)
+  const openFranchise = useCallback(() => { setPage('franchise'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'franchise' }) }, [])
+  const startFranchiseBuild = useCallback(job => {
+    // (the same spot, left half built for Home or the setup: its build is still on the page)
+    const same = frJob.current?.id === job.id && gameMode === 'classic' && position === job.pos && tkRef.current === 'franchise'
+    if (!same) handleStart('classic', job.pos)
+    frJob.current = job
+    sandboxTainted.current = false
+    setPage('franchise-build')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [handleStart, gameMode, position])
+  const franchiseBuilt = useCallback(() => {
+    setFrBuilt({ ...(frJob.current ?? {}), pos: position, build, types: activeTypes })
+    frJob.current = null; setGameMode(null); setBuild({}); setSavedSpinResult(null); setPage('franchise')
+    try { localStorage.removeItem('bap_progress') } catch {}   // the build is the franchise's now
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [position, build, activeTypes])
+  // back to the setup without finishing: the build stays on the page for the same spot
+  const franchiseBack = useCallback(() => { setPage('franchise'); window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
 
   useEffect(() => {
     if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
@@ -909,7 +938,7 @@ export default function App() {
     setIsCustomMode(on)
   }, [])
   // a Career or Squad Builder build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
-  useEffect(() => { if (isCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isCustomMode && (sandboxLocked(page) || page === 'franchise-build')) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSaveToast = useCallback((type, msg) => {
     setSaveToast({ type, msg })
@@ -1382,7 +1411,7 @@ export default function App() {
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
   const currentAttrMap = isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')
+  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build')
     ? (isK ? calcOVRK(build) : isOL ? calcOVROL(build) : isDL ? calcOVRDL(build) : isLB ? calcOVRLB(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
     : 0
   // the build's name (the one the season screen shows), not a tier
@@ -1398,7 +1427,7 @@ export default function App() {
   const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
   // Sandbox is only for the plain Current and All-Time modes
   // (Career and Squad Builder builds too, once that mode's Sandbox is unlocked: the switch asks)
-  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game'
+  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game' && page !== 'franchise-build'   // (a Franchise build is always a real one)
   setSandboxGate(sandboxItemFor(page))
   // Starters Only needs Sandbox on, on a plain build: so it also means the save guard is blocking this build
   const startersOk = sandboxOk && page !== 'career-build' && page !== 'squad-build'
@@ -1466,6 +1495,8 @@ export default function App() {
       {competeOn && <CompeteHud cp={cp} />}
       {/* Squad Builder: which of the squad's players this is */}
       {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
+      {/* Franchise: which of the new franchise's players this is, and the way back to its setup */}
+      {page === 'franchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{frJob.current?.of ? ` · PLAYER ${frJob.current.n} OF ${frJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: frJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (frJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={franchiseBack}>SETUP</button></div>}
       {dailyLive && page === 'game' && <div className="cp-hud dc-hud" role="status"><span><small>DAILY CHALLENGE · {String(dailyRun.pos).toUpperCase()} · ONE RUN</small></span><LiveLeaveButton /></div>}
       {IS_APP && !drop && (
         <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
@@ -1538,8 +1569,8 @@ export default function App() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? (careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
+            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'franchise-build' ? franchiseBuilt : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'franchise-build' ? 'ADD TO THE ROSTER' : page === 'career-build' ? (careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
@@ -1631,7 +1662,7 @@ export default function App() {
         />
       )}
 
-      {!parked && IS_APP && (page === 'game' || page === 'squad-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} name={completeName} build={build} types={activeTypes} attrMap={currentAttrMap} />}
+      {!parked && IS_APP && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} name={completeName} build={build} types={activeTypes} attrMap={currentAttrMap} />}
 
       {!parked && showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
@@ -1757,11 +1788,11 @@ export default function App() {
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
       {IS_APP ? (
-        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined}
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined} onFranchise={FRANCHISE_LIVE ? openFranchise : undefined}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
-          onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined}
+          onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined} onFranchise={FRANCHISE_LIVE ? openFranchise : undefined}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" home onWiki={openWiki} /></>} />
       ) : (
@@ -1806,6 +1837,16 @@ export default function App() {
       <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
         <CFBMode user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onCareer={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
+      </Suspense>
+    )
+  }
+
+  // Franchise: the mode's own screens (its builds go through the build page: onBuild out, built back)
+  if (page === 'franchise' && FRANCHISE_LIVE) {
+    return (
+      <Suspense fallback={<div className="ag-screen ag-screen--wait" style={{ background: '#0a0c0f' }} />}>
+        <FranchiseMode user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBuild={startFranchiseBuild} built={frBuilt} onBuiltTaken={() => setFrBuilt(null)} />
       </Suspense>
     )
   }

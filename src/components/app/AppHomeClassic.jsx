@@ -27,6 +27,7 @@ import { OL_LIVE, OL_SOON } from '../../lib/olLive'
 import { K_LIVE } from '../../lib/kLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
+import { FranchiseCardClassic } from '../franchise/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
 // Oct 29), put back beside today's for comparison. lib/homeLook.js picks which one shows.
@@ -294,7 +295,7 @@ function PlayersOfDay() {
   )
 }
 
-export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onCompete: onCompeteIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null, onCBB = null }) {
+export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onCompete: onCompeteIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null, onCBB = null, onFranchise = null }) {
   // (soccer: a mode still on its way isn't on the classic Home at all)
   const onSquad = soon?.squad ? null : onSquadIn, onCompete = soon?.compete ? null : onCompeteIn, onCareer = soon?.career ? null : onCareerIn
   const prog = useProgress()
@@ -508,7 +509,8 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
               </span>
             </button>
           )}
-          {onSquad && (
+          {/* Franchise (football, lib/franchiseLive.js): while its switch is on, its row takes SQUAD BUILDER's place */}
+          {onFranchise && !isBucket && !isSoccer && !isBaseball ? <FranchiseCardClassic onClick={onFranchise} /> : onSquad && (
           <button className={`ag-squad ag-pop${squad ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onSquad}>
             <SquadArt />
             <span className="ag-card-txt">
