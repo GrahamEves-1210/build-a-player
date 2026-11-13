@@ -907,7 +907,8 @@ export function runCBBSimulation(build, types = null, team = null, position = 'g
 
   const conf = L.confOf[T.conf]
   const st = R.standings[T.conf], tr = R.tourneys[T.conf]
-  const finalPoll = R.polls[R.polls.length - 1]
+  // the regular-season table carries the poll before the conference tournaments (the Final one knows their results)
+  const finalPoll = R.polls.filter(p => !/^final/i.test(p.label)).pop() ?? R.polls[R.polls.length - 1]
   const apOf = Object.fromEntries(finalPoll.top25.map(x => [x.short, x.rank]))
   const myStanding = {
     id: conf.id, short: conf.short, name: conf.name,

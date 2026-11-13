@@ -327,6 +327,8 @@ function ConfTable({ v, champ = false }) {
   const s = v.c.myStanding
   if (!s) return null
   const me = v.team.short
+  // before his title game is played: the ranking going into championship weekend, not Selection Day's (that one knows the result)
+  const rk = x => (champ ? x.cfp : x.cfpPre ?? x.cfp)
   return (
     <table className="cfbs-table">
       <thead><tr><th /><th className="is-team">TEAM</th><th>CONF</th><th>ALL</th></tr></thead>
@@ -334,7 +336,7 @@ function ConfTable({ v, champ = false }) {
         {s.teams.map((x, i) => (
           <tr key={x.short} className={x.short === me ? 'is-me' : undefined}>
             <td className="is-n">{i + 1}</td>
-            <td className="is-team"><div className="cfbs-tc"><Logo short={x.short} size={20} /><span>{x.cfp && x.cfp <= 25 ? <em>{x.cfp}</em> : null}{v.school(x.short)}</span>{champ && x.short === s.champion && <i className="cfbs-champ">CHAMP</i>}</div></td>
+            <td className="is-team"><div className="cfbs-tc"><Logo short={x.short} size={20} /><span>{rk(x) && rk(x) <= 25 ? <em>{rk(x)}</em> : null}{v.school(x.short)}</span>{champ && x.short === s.champion && <i className="cfbs-champ">CHAMP</i>}</div></td>
             <td>{x.confW}-{x.confL}</td>
             <td>{champ ? (x.selection ?? `${x.w}-${x.l}`) : `${x.w}-${x.l}`}</td>
           </tr>

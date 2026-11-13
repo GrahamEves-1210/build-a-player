@@ -1652,7 +1652,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       w: R.recReg.w[i], l: R.recReg.l[i],                                    // regular season (12 games)
       selection: `${R.recCCG.w[i]}-${R.recCCG.l[i]}`,                        // with the title game: the record on Selection Day
       final: `${R.recFinal.w[i]}-${R.recFinal.l[i]}`, finalW: R.recFinal.w[i], finalL: R.recFinal.l[i],   // with the bowl / CFP
-      ap: R.polls[R.polls.length - 1].rank.get(i) ?? null, cfp: R.final.rank.get(i) ?? null,
+      ap: R.polls[R.polls.length - 1].rank.get(i) ?? null, cfp: R.final.rank.get(i) ?? null, cfpPre: R.preCCG?.rank?.get(i) ?? null,   // cfpPre: the ranking before championship weekend
     })),
   }))
   const myStanding = standings.find(s => s.id === base.confId)
