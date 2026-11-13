@@ -779,8 +779,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const fbSpot = !selectedQB || selectedQB.position ? null
     : (isOL || isDL) ? selectedQB.pos ?? null
     : isDB ? ({ cb: 'CB', s: 'S' })[selectedQB.subpos] ?? null : null
-  const revealPos = selectedQB?.position ?? fbSpot
-  const revealPosColor = selectedQB?.position ? POS_COLORS[selectedQB.position] ?? selectedQB.color : POS_COLORS[isOL ? 'OL' : isDL ? 'DL' : 'DB']
+  // (every card has one, the owner 11-13: football's group where a group has one spot, QB RB WR TE LB K)
+  const fbGroup = isBucket || isSoccer || isBaseball ? null : isK ? 'K' : isOL ? 'OL' : isDL ? 'DL' : isDB ? 'DB' : isLB ? 'LB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
+  const revealPos = selectedQB?.position ?? fbSpot ?? (selectedQB ? fbGroup : null)
+  const revealPosColor = selectedQB?.position ? POS_COLORS[selectedQB.position] ?? selectedQB.color : POS_COLORS[fbGroup] ?? selectedQB?.color
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
     cat.types.some(type => types.includes(type) && !build[type])
   )
