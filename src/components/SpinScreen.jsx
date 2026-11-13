@@ -771,6 +771,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const chipSpin = seedPlan?.respinSeed ? { i: teamIndex, how: freeTeam ? 'tr' : playerDraw > 0 ? 'pr' : 'spin', d: playerDraw } : null
 
   const visibleCategories = isRB ? RB_CATEGORIES : categoriesData
+  // The position circle on the player's card: basketball's PG..C, and football's spot where a group has more than one
+  // (the line's LT/LG/C/RG/RT, EDGE/DT, the secondary's CB/S), in its group's colour (the owner, 11-13)
+  const fbSpot = !selectedQB || selectedQB.position ? null
+    : (isOL || isDL) ? selectedQB.pos ?? null
+    : isDB ? ({ cb: 'CB', s: 'S' })[selectedQB.subpos] ?? null : null
+  const revealPos = selectedQB?.position ?? fbSpot
+  const revealPosColor = selectedQB?.position ? POS_COLORS[selectedQB.position] ?? selectedQB.color : POS_COLORS[isOL ? 'OL' : isDL ? 'DL' : 'DB']
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
     cat.types.some(type => types.includes(type) && !build[type])
   )
@@ -923,16 +930,15 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-name">{selectedQB.name}</div>
                 <div className="qb-reveal-meta">
                   {selectedQB.teamName ?? selectedQB.team}
-                  {(isOL || isDL) && selectedQB.pos ? ` · ${selectedQB.pos}` : ''}
                   {!isBucket && !isWR && !isBaseball && (selectedQB.starter ? '' : isK ? ' · Kickoffs' : ' · Bench')}
                 </div>
                 {selectedQB.years && (
                   <div className="qb-reveal-year">{selectedQB.years}</div>
                 )}
               </div>
-              {selectedQB.position && (
-                <div className="qb-reveal-pos" style={{ '--pos': POS_COLORS[selectedQB.position] ?? selectedQB.color }}>
-                  {selectedQB.position}
+              {revealPos && (
+                <div className={`qb-reveal-pos${revealPos.length > 2 ? ' is-long' : ''}`} style={{ '--pos': revealPosColor }}>
+                  {revealPos}
                 </div>
               )}
             </div>
