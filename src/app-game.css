@@ -7177,7 +7177,7 @@ html.app-look:not(.is-app) .spin-panel .reel-outer > .reel-label { position: abs
 .reel-row.has-img > .reel-secondary { grid-column: 2; grid-row: 2; text-align: center; }
 /* (no circle: logos and headshots as they are, the owner 11-13) */
 /* a headshot (not a logo): a little bigger, cropped to the head and shoulders, square corners */
-.reel-row.has-img > .reel-logo:not([src*='/logos/']) { width: 30px; height: 26px; object-fit: cover; object-position: 50% 15%; }
+.reel-row.has-img > .reel-logo:not([src*='/logos/']) { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; object-position: 50% 15%; background: rgba(255,255,255,.06); }   /* headshots in a circle again, logos not (owner, 11-13) */
 /* iPhone Safari takes its bottom bar's colour from what touches the screen's bottom edge: a black line there keeps it black
    (the blue College Basketball card under it was turning the bar blue). Under the ad rail and every sheet */
 html.app-look:not(.is-app) body::after { display: block !important; content: ''; position: fixed; inset: auto 0 0 0; height: 2px; background: #000; mix-blend-mode: normal; transform: none; will-change: auto; z-index: 1; pointer-events: none; }
