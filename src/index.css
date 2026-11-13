@@ -9631,10 +9631,13 @@ html.is-x-browser .mobile-tab-bar {
   animation: plf-num-pop 0.28s cubic-bezier(0.22,1,0.36,1) both;
 }
 
+/* the vs / @ between the two teams: much larger now the LIVE tag under it is gone (the owner, 2026-11-13) */
 .plf-at-sym {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text-4);
+  font-family: var(--ag-display, 'Anton', Impact, sans-serif);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.55);
   letter-spacing: 0.5px;
   margin-bottom: 6px;
 }
