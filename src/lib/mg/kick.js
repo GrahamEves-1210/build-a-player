@@ -36,7 +36,7 @@
 //   Here: three presses (how far, the strike on the top of the ball, the leap under the hop), and then the bounce of a
 //   football. Played perfectly an average kicker gets it back about one time in ten; played badly, one in thirty.
 import { byV, clamp, lerp, outcome, rngOf, prog, easeOut, layer, text, rr, DISPLAY, LABEL, GOOD, BAD, GOLD, themOf, nudge } from './kit.js'
-import { stands, floodlight, vignette, athleteAt, MAN_UNITS, horizonOf, skinOf, airBall, crowdPop } from './art.js'
+import { stands, floodlight, vignette, athleteAt, MAN_UNITS, horizonOf, skinOf, airBall, crowdPop, boardInk } from './art.js'
 import { hop } from './throw.js'
 import { kickReach, onsideP } from '../kicks.js'
 
@@ -232,6 +232,55 @@ function paintGround(x, view, C, goalY) {
     }
   }
 }
+// The house through this camera (2026-11-12, the owner: the stands' wall had broken perspective. The bowl painter's walls
+// and side boards are laid out for the passing games' camera, not this one). Over the bowl: the crowd from just above
+// its far wall down to ours, a wall three yards past the end line, a wall three yards outside each sideline, and the
+// crowd rising behind the side walls. Painted once into the scene's baked picture
+const WALL_OUT = 3, WALL_Z = 1.3
+function house(x, view, C, goalY, team) {
+  const { w } = view, us = team[0], end = goalY + 10 + WALL_OUT, side = FIELD_HALF + WALL_OUT, near = 1.3 - C.B, U = view.h / 640
+  let seed = 41
+  const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const pal = ['#2b323b', '#37404a', '#232931', '#434d57', '#4d4a45', us, '#5b3029', '#26394a', '#6a6860']
+  // people in a shape, rows getting bigger toward the bottom of it
+  const crowd = (shape, y0, y1, s0, s1) => {
+    x.save(); shape(); x.clip()
+    x.fillStyle = '#0b1219'; x.fillRect(0, y0, w, y1 - y0)
+    for (let y = y0, row = 0; y < y1; row++) {
+      const hs = (s0 + (s1 - s0) * ((y - y0) / Math.max(1, y1 - y0))) * U, gap = hs * 2.3
+      for (let px = -gap + (row % 2) * gap * 0.5; px < w + gap; px += gap) {
+        if (R() < 0.1) continue
+        x.fillStyle = Math.sin(px * 0.045 + row * 0.25) > 0.45 && R() < 0.72 ? us : pal[Math.floor(R() * pal.length)]
+        x.globalAlpha = 0.62; x.fillRect(px - hs * 0.85, y, hs * 1.7, hs * 2.1)
+      }
+      x.globalAlpha = 1; y += hs * 2.5
+    }
+    x.restore()
+  }
+  const wt = P(C, 0, end, WALL_Z).y, top = horizonOf(view) - 24 * U
+  // behind the far wall, all the way across
+  crowd(() => { x.beginPath(); x.rect(0, top, w, wt - top) }, top, wt, 1.6, 2.2)
+  // each side: the crowd rising behind the wall, then the wall itself, running from the far corner to the near edge
+  for (const sd of [-1, 1]) {
+    const fb = P(C, sd * side, end), ft = P(C, sd * side, end, WALL_Z), nb = P(C, sd * side, near), nt = P(C, sd * side, near, WALL_Z)
+    const edgeX = sd < 0 ? -2 : w + 2
+    crowd(() => { x.beginPath(); x.moveTo(ft.x, ft.y); x.lineTo(nt.x, nt.y); x.lineTo(edgeX, nt.y); x.lineTo(edgeX, top); x.lineTo(ft.x, top); x.closePath() }, top, Math.max(nt.y, ft.y), 1.8, 7)
+    x.beginPath(); x.moveTo(fb.x, fb.y); x.lineTo(nb.x, nb.y); x.lineTo(nt.x, nt.y); x.lineTo(ft.x, ft.y); x.closePath()
+    x.fillStyle = us; x.fill(); x.fillStyle = 'rgba(0,0,0,.34)'; x.fill(); x.strokeStyle = '#0a0e12'; x.lineWidth = 1.4; x.stroke()
+  }
+  // the far wall, corner to corner, the name along it
+  const l = P(C, -side, end), r = P(C, side, end), lt = P(C, -side, end, WALL_Z)
+  x.fillStyle = '#0a0e12'; x.fillRect(l.x, lt.y - 1, r.x - l.x, l.y - lt.y + 2)
+  x.fillStyle = us; x.fillRect(l.x, lt.y, r.x - l.x, l.y - lt.y)
+  x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(l.x, lt.y, r.x - l.x, l.y - lt.y)
+  const hgt = l.y - lt.y
+  if (hgt > 5) {
+    x.save(); x.font = `${hgt * 0.78}px ${DISPLAY}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = boardInk(us, team[1])
+    const tw = x.measureText('BUILD-A-PLAYER').width, n = Math.max(1, Math.floor((r.x - l.x) / (tw * 1.5)))
+    for (let i = 0; i < n; i++) x.fillText('BUILD-A-PLAYER', l.x + ((i + 0.5) / n) * (r.x - l.x), lt.y + hgt / 2 + 0.5)
+    x.restore()
+  }
+}
 // The goalposts on the end line: the post behind it, curving forward to the middle of the bar, the bar ten feet up, the
 // uprights 18 feet 6 apart and 35 feet above it
 function posts(x, C, Y) {
@@ -345,6 +394,7 @@ function drawFG(ctx, g, view) {
   layer(ctx, view, `kick|fg|${d}|${c.us}|${them.color}`, x => {
     stands(x, view, 'field', [c.us, c.trim])
     paintGround(x, view, C, d - 10)
+    house(x, view, C, d - 10, [c.us, c.trim])
     x.fillStyle = '#3f86ff'; across(x, C, -FIELD_HALF, FIELD_HALF, LOS, 0.16)   // the line of scrimmage
     floodlight(x, view)
     posts(x, C, d)
@@ -512,6 +562,7 @@ function drawOnside(ctx, g, view) {
   layer(ctx, view, `kick|onside|${c.us}|${them.color}`, x => {
     stands(x, view, 'field', [c.us, c.trim])
     paintGround(x, view, C, 66)
+    house(x, view, C, 66, [c.us, c.trim])
     // ten yards from the tee: the line the ball has to cross before the kicking team can touch it
     x.fillStyle = '#f7d64a'; across(x, C, -FIELD_HALF, FIELD_HALF, 10, 0.2)
     floodlight(x, view)
