@@ -49,10 +49,11 @@ export const how = {
 const POST_HALF = 3.083                // half the width of the uprights, yards (18 feet 6 inches)
 const AIM_SPAN = 0.30                  // the aim bar from end to end, as an angle: at 50 yards the ends are 15 yards wide
 // (2026-11-12, the owner: a bit easier. A miss lands a fifth nearer the middle, and both bars move an eighth slower)
-const EASE = 0.8, SLOW = 1.14
+// (2026-11-12, again: a tad easier still. Misses three tenths nearer the middle, bars a fifth slower, a little less wind)
+const EASE = 0.72, SLOW = 1.2, WIND = 0.03
 const OVER = 1.15                      // the power bar runs to 115%: the last of it is the overswing
 const LINE_GAP = 1.12                  // the line, man to man, in yards: foot to foot, as a field goal team lines up
-const SET_MS = 950, RUN_MS = 430, RES_MS = 1500, ICE_MS = 1500, SWAY_MS = 200
+const SET_MS = 950, RUN_MS = 430, RES_MS = 1500, ICE_MS = 1500, SWAY_MS = 380
 const gaussOf = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
 // a needle that sweeps end to end and back: -1..1
 const sweep = (t, per) => { const f = ((t / per) % 2 + 2) % 2; return f < 1 ? -1 + 2 * f : 3 - 2 * f }
@@ -74,7 +75,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     : [[50, 53], [54, 57], [58, 61], [62, 65]].map(([lo, hi], i) => ({ d: lo + Math.floor(r() * (hi - lo + 1)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 4 + r() * 4)), hard: 1.12 + i * 0.17, tight: 1 - i * 0.1 }))
   const pressure = winner ? 1 : 0.25
   const accF = byV(acc, 1.25, 0.72) * EASE                  // what his accuracy does to a miss: an S pulls it 28% back to the middle
-  const shake = byV(clu, 0.34, 0.03) * pressure            // the needle's shake with the game on it
+  const shake = byV(clu, 0.2, 0.02) * pressure            // the needle's shake with the game on it
   const hurry = lerp(1, byV(clu, 1.4, 0.95), pressure) // and the power bar's hurry
   const iced = winner && r() < 0.4                      // they call timeout as he lines it up
   const aimPer = byV(acc, 520, 900) * SLOW, powMs = byV((pw + acc) / 2, 640, 880) * SLOW
@@ -87,7 +88,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     hud: { prompt: null, dots: winner ? [] : kicks.map(() => null) },
     // what's on the bars right now (the bot reads these, as a player does)
     needle() { return clamp(sweep(g.t - g.at, aimPer / g.k.hard) + g.noise, -1, 1) },
-    centre() { return clamp(g.k.wind * 0.035, -0.55, 0.55) },
+    centre() { return clamp(g.k.wind * WIND, -0.55, 0.55) },
     half() { return windowOf(g.k.d) / accF * (g.k.tight ?? 1) },   // (Deep Kick: each kick's green a tenth narrower than the last)
     power() { const f = (((g.t - g.at) / (powMs / hurry / g.k.hard)) % 2 + 2) % 2; return (f < 1 ? f : 2 - f) * OVER },
     need() { return g.k.d / reach },
@@ -350,7 +351,9 @@ function drawFG(ctx, g, view) {
   // (the wind pushes the whole swing of it to one side). Stop it between the uprights. No green window (the owner) ──
   if (!struck && (g.phase === 'aim' || g.phase === 'power' || g.phase === 'run')) {
     const K = d * AIM_SPAN * g.accF / (k.tight ?? 1)          // yards at the uprights for the whole of the needle's swing one way
-    const n = g.aimAt ?? g.needle(), ax = (n - g.centre()) * K, inside = Math.abs(ax) < POST_HALF - 0.22
+    // (the owner: the swing stays centred on the uprights, whatever the wind. The wind bends the ball in the air, and the
+    // sight goes green where the bent ball goes through)
+    const n = g.aimAt ?? g.needle(), ax = n * K, inside = Math.abs((n - g.centre()) * K) < POST_HALF - 0.22
     const a = P(C, 0, 0), b = P(C, ax, d), bt = P(C, ax, d, POST_TOP + 1.5), col = inside ? GOOD : '#fff'
     ctx.strokeStyle = 'rgba(8,12,16,.5)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
     ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([])
@@ -372,17 +375,18 @@ function drawFG(ctx, g, view) {
   // the ball in the air: end over end, up over the line and on to the uprights (or short of them)
   if (struck) {
     const b = g.ball, T = b.T, u = (g.t - b.at) / T, sgn = Math.sign(b.yards) || 1
+    const aimX = (g.aimAt ?? 0) * d * AIM_SPAN * g.accF / (k.tight ?? 1), bend = (y, to) => aimX * (y / d) + (to - aimX) * (y / d) * (y / d)   // (along his aim, then the wind's push, growing as it carries)
     const xd = res?.doink ? sgn * POST_HALF : b.yards             // where it is as it reaches the uprights
     let X, Y, Z
     if (b.long) {
       const h = Math.max(12, d * 0.24), z = v => 4 * h * v * (1 - v), w = Math.max(0, u - 1)
-      if (u <= 1 || !res?.doink) { Y = d * Math.min(u, 1.14); X = xd * Math.pow(Y / d, 1.3); Z = Math.max(0, z(Math.min(u, 1.14) / 1.14)) }
+      if (u <= 1 || !res?.doink) { Y = d * Math.min(u, 1.14); X = bend(Y, xd); Z = Math.max(0, z(Math.min(u, 1.14) / 1.14)) }
       // off the upright: half of them fall through, half come back out
       else if (res.good) { Y = d + 5 * w; X = xd - sgn * 3.4 * w; Z = Math.max(0, z(1 / 1.14) - 9 * w * w) }
       else { Y = d - 6 * w; X = xd + sgn * 2.4 * w; Z = Math.max(0, z(1 / 1.14) + 3 * w - 14 * w * w) }
     } else {
       const land = (b.land - b.at) / T, v = Math.min(1, u / land), w = clamp((u - land) * T / 700, 0, 1), h = Math.max(3.5, b.carry * 0.17)
-      Y = b.carry * v + 2.6 * w; X = b.yards * Math.pow(Y / d, 1.3); Z = v < 1 ? 4 * h * v * (1 - v) : hop(w * 700, 290, 0.9) * (1 - w)
+      Y = b.carry * v + 2.6 * w; X = bend(Y, b.yards); Z = v < 1 ? 4 * h * v * (1 - v) : hop(w * 700, 290, 0.9) * (1 - w)
     }
     const th = ((g.t - b.at) / 1000) * Math.PI * 2 * 3.6, lat = clamp(b.yards / d, -0.3, 0.3)
     ballAt(ctx, C, X, Y, Z, { axis: [lat * Math.cos(th), Math.cos(th), Math.sin(th)] })
