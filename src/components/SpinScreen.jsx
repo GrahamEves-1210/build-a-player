@@ -122,6 +122,21 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   })
   // a resized window: measure again on the next frame drawn
   useEffect(() => { const r = () => { metricsRef.current = null }; window.addEventListener('resize', r); return () => window.removeEventListener('resize', r) }, [])
+  // The idle drift only turns while the reel can be seen: tucked up in the build's closed panel (or scrolled away) it
+  // ran a frame of script and style every frame for nothing, the whole time the player sat on the build screen.
+  // It picks up again from where it stopped the moment the reel is back on screen.
+  const seenRef = useRef(true)
+  const resumeRef = useRef(null)
+  useEffect(() => {
+    const el = windowRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => {
+      seenRef.current = e.isIntersecting
+      if (e.isIntersecting) resumeRef.current?.()
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current)
@@ -315,6 +330,11 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       if (trackRef.current) trackRef.current.style.transition = 'none'
 
       const frame = (now) => {
+        if (!seenRef.current) {
+          rafRef.current = 0
+          resumeRef.current = () => { resumeRef.current = null; lastFrame = performance.now(); rafRef.current = requestAnimationFrame(frame) }
+          return
+        }
         const dt  = Math.min(now - lastFrame, 50)
         lastFrame = now
         posRef.current += VEL * dt
@@ -331,6 +351,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
     return () => {
       cancelAnimationFrame(rafRef.current)
+      resumeRef.current = null
       clearTimeout(stopRef.current)
       driftRef.current?.(); driftRef.current = null   // a desktop drift ends where it got to
     }
@@ -884,6 +905,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </div>
 
 
+          {/* the 320x50 (phones on the website: lib/ads.js rampSpinAd, asked for on a spin), above the player's card. Its space
+              is kept from the start for anyone who sees ads, so nothing moves when it fills. The dev server outlines it (is-dev) */}
+          {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><small>ADVERTISEMENT</small><div id={SPIN_AD_ID} /></div>}
           {isDone && selectedQB && (
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
@@ -915,9 +939,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           )}
         </div>
 
-        {/* the 320x50 under the wheels (phones on the website: lib/ads.js rampSpinAd, asked for on a spin). The dev server
-            outlines the spot (is-dev) since no ad loads there */}
-        {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><small>ADVERTISEMENT</small><div id={SPIN_AD_ID} /></div>}
         <div className="spin-panel-scroll">
           {isDone && selectedQB && (
             hasAvailableChips ? (
