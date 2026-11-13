@@ -7187,6 +7187,5 @@ html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card { border: 
 
 /* Home: PICK YOUR SPORT over the sport switch (owner, 11-13), the section labels' face, a size down */
 .ag-sport-label { margin: 4px 0 8px; font-family: var(--ag-font); font-weight: 400; font-size: 17px; line-height: 1; letter-spacing: 2.2px; color: rgba(255,255,255,.82); text-align: center; }
-/* The player's photo on black inside its circle on the spin's card (no team logo behind it, owner 11-13). Website */
+/* The player's photo on black inside its circle on the spin's card, the team logo still behind him (owner, 11-13). Website */
 html.app-look:not(.is-app) .spin-panel .qb-reveal-hero .qb-avatar { background: #000 !important; }
-html.app-look:not(.is-app) .spin-panel .qb-reveal-hero .qb-avatar-logo { display: none !important; }
