@@ -6979,8 +6979,8 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-respin-player .spin-btn-badge { position: relative; left: -2px; }
   /* the trait chips (owner, 11-13): three across as before, in the old font, every one the same size (each row as tall as
      the tallest chip), white text on the grade's colour, no bar on the left */
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: 1fr; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { height: 100% !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 82%, #000) !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: minmax(56px, 1fr); }   /* 30% taller: 43px to 56px (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { height: 100% !important; border: 1.5px solid var(--chip-col) !important; background: transparent !important; }   /* the grade's colour as the outline (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long, .chip-val) { color: #fff !important; }
   /* the name on the left and the grade on the right, both centred top to bottom (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: row !important; align-items: center !important; justify-content: space-between !important; gap: 4px !important; padding: 4px 8px 4px 9px !important; }
@@ -7102,3 +7102,33 @@ html.bap-reduce-motion .ag-side-track { transition: none; }
 @media (max-width: 720px) { .ag-dock-floor { display: block; } }
 .ag-dock-floor { position: fixed; left: 0; right: 0; bottom: var(--web-rail-box, 0px); height: calc(var(--ag-dock-gap) - var(--web-rail-box, 0px) + var(--ag-dock-h) / 2); z-index: 1049; background: rgb(10, 14, 12); pointer-events: none; }
 html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
+
+/* Desktop (website): the trait cards in the spin panel look like the phone's (owner, 11-13): the grade's colour as the
+   outline, a clear card, white text, no bar on the left, the grade as plain text on the right */
+@media (min-width: 769px) {
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip { border: 1.5px solid var(--chip-col) !important; background: transparent !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { color: #fff !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip .chip-val { background: none !important; box-shadow: none !important; color: #fff !important; font-size: 18px !important; }
+}
+
+/* Phones (website): the trait cards (owner, 11-13, picked from a test of nine looks): a soft wash of the grade's colour,
+   no outline, white text, the trait's name small and the grade big, centred; every card 50px */
+@media (max-width: 768px) {
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: auto !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; height: 50px !important; padding: 4px 6px !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 52%, #0b0f0d) !important; text-align: center; }   /* the tint 20% to 52% (owner, 11-13: stronger, twice) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-text { flex: none !important; width: 100%; text-align: center; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { font-size: 9.5px !important; color: #fff !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { color: #fff !important; font-size: 20px !important; }
+}
+
+/* Desktop (website): the spin wheels shorter, 220px to 182px (owner, 11-13: 25% shorter, then 10% back). The middle row, its box and the
+   arrows all move up by the same 19px so they stay on the window's middle */
+@media (min-width: 769px) {
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-window { height: 182px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-track { margin-top: -19px; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-selector { top: 69px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-tri { top: 122px !important; }
+  /* the player's card shorter, 74px to 60px (owner, 11-13: 10% shorter, twice): less padding, the photo 54px */
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card { padding-top: 2px !important; padding-bottom: 2px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel :is(.qb-reveal-hero, .qb-reveal-hero > *) { width: 54px !important; height: 54px !important; }
+}
