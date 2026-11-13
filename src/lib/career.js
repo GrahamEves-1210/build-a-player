@@ -1825,7 +1825,9 @@ export function frameOf(c) {
   const fit = b && frameFit(c.sport, c.pos, c.pos === 'dl' || c.pos === 'db' ? b.sub : null)
   if (!fit) return null
   const exp = fit.at(b.height), z = clamp((b.weight - exp) / fit.sd, -4, 5)
-  const grade = z <= 1.25 ? Math.max(-1.3, 0.8 * z) : Math.max(-0.4, 1 - 0.7 * (z - 1.25))
+  // (2026-11-13, the owner: big builds all started with a poor body) a heavy frame never costs: past +1.25 it eases from
+  // +1 to +0.6 and stays there
+  const grade = z <= 1.25 ? Math.max(-1.3, 0.8 * z) : Math.max(0.6, 1 - 0.2 * (z - 1.25))
   return { z: r10(z), exp: Math.round(exp), grade: r10(grade), height: b.height, weight: b.weight }
 }
 // college: where a College Football build came from ({ school, schoolName, line, proj: [lo, hi] his college draft projection in
@@ -1840,17 +1842,18 @@ export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest
   const ovr = S.ovr(pos, build)
   const drills = S.combine[pos].map(([id, label, trait]) => ({ id, label, trait, score: null, text: null, pct: null }))
   // Starting durability. Football and basketball (2026-11-08): from the real body behind the Size chip, his
-  // frame (frameOf: heavy or light for his height at his position). A normal frame starts around C+/B-, a
+  // frame (frameOf: heavy or light for his height at his position). A normal frame starts around B (C+/B- until 2026-11-13), a
   // clearly thick one about a grade higher, a thin one about a grade lower, then give or take a grade of luck:
-  // correlated, not decided, and never above B+ (no rookie starts at S). A Size chip with no bio, soccer
+  // correlated, not decided, and never above A- (no rookie starts at S). A Size chip with no bio, soccer
   // (a striker's strength) and baseball (a hitter's speed, a pitcher's stamina) keep the size formula from
   // before: F size starts around C-, A+ around B+, give or take a grade. Body work and how the career goes
   // move it from there
   const body = bodyOf(build, pos, sport)
   const frame = frameOf({ sport, pos, build })
-  const luck = seeded(`dur-${seed}`)() * 2 - 1
+  // (2026-11-13: starts were nearly all C+/B-. Up a grade and a half everywhere, a wider spread of luck, A- at most)
+  const luck = (seeded(`dur-${seed}`)() * 2 - 1) * 1.5
   const sizeV = build[bodyTrait(S, pos)]?.val ?? 5
-  const dur = (frame ? clamp(4.5 + frame.grade + luck, 1.5, 7.4) : 2 + 0.5 * clamp(sizeV, 0, 11) + luck) / 1.1
+  const dur = (frame ? clamp(6 + frame.grade + luck, 3, 8.4) : clamp(3.5 + 0.5 * clamp(sizeV, 0, 11) + luck, 2, 8.4)) / 1.1
   return {
     v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr, ...(body ? { body: { height: body.height, weight: body.weight } } : {}),
     age: (S.isSoccer ? 17 : S.isBucket ? 19 : 21) + Math.floor(r() * 2), year: 0, season: FIRST_SEASON,
