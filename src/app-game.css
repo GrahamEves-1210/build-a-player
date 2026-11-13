@@ -7103,10 +7103,10 @@ html.bap-reduce-motion .ag-side-track { transition: none; }
 .ag-dock-floor { position: fixed; left: 0; right: 0; bottom: var(--web-rail-box, 0px); height: calc(var(--ag-dock-gap) - var(--web-rail-box, 0px) + var(--ag-dock-h) / 2); z-index: 1049; background: rgb(10, 14, 12); pointer-events: none; }
 html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
 
-/* Desktop (website): the trait cards in the spin panel look like the phone's (owner, 11-13): the grade's colour as the
-   outline, a clear card, white text, no bar on the left, the grade as plain text on the right */
+/* Desktop (website): the trait cards in the spin panel look like the phone's (owner, 11-13): a strong wash of the grade's
+   colour, white text, no bar on the left, the grade as plain text on the right */
 @media (min-width: 769px) {
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip { border: 1.5px solid var(--chip-col) !important; background: transparent !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip { border: 0 !important; background: color-mix(in srgb, var(--chip-col) 52%, #0b0f0d) !important; }   /* the phone's tint (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { color: #fff !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip .chip-val { background: none !important; box-shadow: none !important; color: #fff !important; font-size: 18px !important; }
 }
@@ -7132,3 +7132,6 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card { padding-top: 2px !important; padding-bottom: 2px !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel :is(.qb-reveal-hero, .qb-reveal-hero > *) { width: 54px !important; height: 54px !important; }
 }
+
+/* The trait cards appear at once on the website (owner, 11-13: they took about half a second, a rise-in staggered 40 ms a card) */
+html.app-look:not(.is-app) .spin-panel .attr-chip { animation: none !important; }
