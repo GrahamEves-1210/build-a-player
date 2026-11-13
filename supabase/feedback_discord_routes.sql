@@ -1,11 +1,16 @@
--- Ratings feedback → Discord #ratings-discussion (the rest stays in #suggestions-discussion: feedback_discord.sql)
+-- Feedback → Discord by kind: Ratings to #ratings-discussion, Bugs to #bug-reports, the rest stays in
+-- #suggestions-discussion (feedback_discord.sql set that one up).
 -- Setup:
---   1. Discord: #ratings-discussion → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL
---   2. Paste it below in place of PASTE_RATINGS_WEBHOOK_URL_HERE (keep the quotes)
---   3. Run all of this in the Supabase SQL editor. Safe to run again. Don't commit the URL.
+--   1. Discord, in each of the two channels: Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL
+--   2. Paste them below in place of PASTE_RATINGS_WEBHOOK_URL_HERE and PASTE_BUGS_WEBHOOK_URL_HERE (keep the quotes).
+--      To set up only one, delete the other's two lines.
+--   3. Run all of this in the Supabase SQL editor. Safe to run again. Don't commit the URLs.
 
 delete from vault.secrets where name = 'feedback_discord_webhook_ratings';
 select vault.create_secret('PASTE_RATINGS_WEBHOOK_URL_HERE', 'feedback_discord_webhook_ratings');
+
+delete from vault.secrets where name = 'feedback_discord_webhook_bugs';
+select vault.create_secret('PASTE_BUGS_WEBHOOK_URL_HERE', 'feedback_discord_webhook_bugs');
 
 create or replace function public.feedback_to_discord()
 returns trigger
@@ -14,9 +19,11 @@ declare
   hook text;
 begin
   if new.message like 'REPORT [%' then return new; end if;
-  -- (a Ratings message goes to #ratings-discussion when that webhook is set; everything else, and Ratings without it, to #suggestions-discussion)
-  if new.kind = 'ratings' then
-    select decrypted_secret into hook from vault.decrypted_secrets where name = 'feedback_discord_webhook_ratings' limit 1;
+  -- (a Ratings message goes to #ratings-discussion and a Bug to #bug-reports when that channel's webhook is set;
+  -- everything else, and those two without their own webhook, to #suggestions-discussion)
+  if new.kind in ('ratings', 'bug') then
+    select decrypted_secret into hook from vault.decrypted_secrets
+      where name = case new.kind when 'ratings' then 'feedback_discord_webhook_ratings' else 'feedback_discord_webhook_bugs' end limit 1;
   end if;
   if hook is null or hook not like 'https://discord.com/api/webhooks/%' then
     select decrypted_secret into hook from vault.decrypted_secrets where name = 'feedback_discord_webhook' limit 1;
