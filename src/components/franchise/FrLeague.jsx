@@ -112,7 +112,7 @@ function Power({ FR, F, wide, onClub }) {
     { k: 'mv', label: '', w: 34, cls: 'fr-t-move', render: r => (r.move > 0 ? <span className="fr-t-move is-up">UP {r.move}</span> : r.move < 0 ? `DN ${-r.move}` : '–') },
     { k: 'team', label: 'TEAM', cls: wide ? '' : 'fr-t-wrap', render: r => (wide ? <TeamCell t={r.team} name /> : <><TeamCell t={r.team} /><span className="fr-t-sub">{r.blurb}</span></>) },
     { k: 'rec', label: 'W-L', align: 'r', w: 50, cls: 'fr-t-num', render: r => r.record },
-    { k: 'st', label: 'STATE', align: wide ? undefined : 'r', w: wide ? 120 : 74, cls: 'fr-t-lab fr-t-dim', render: r => (wide ? r.stateLabel : STATE_SHORT[r.state] ?? '') },
+    { k: 'st', label: 'OUTLOOK', align: wide ? undefined : 'r', w: wide ? 120 : 74, cls: 'fr-t-lab fr-t-dim', render: r => (wide ? r.stateLabel : STATE_SHORT[r.state] ?? '') },
     ...(wide ? [{ k: 'blurb', label: '', cls: 'fr-t-dim', render: r => r.blurb }] : []),
   ]
   return <Panel title="Power rankings" meta={F.phase === 'offseason' ? `${F.year}` : `WEEK ${Math.min(F.week, 18)}`}><FrTable className={wide ? '' : 'fr-table--tight fr-table--tall'} label="Power rankings" cols={cols} rows={rows} rowKey={r => r.team.short} rowClass={r => (r.team.short === F.team ? 'is-mine' : null)} onRow={r => onClub(r.team.short)} empty="NO RANKINGS YET" /></Panel>

@@ -50,13 +50,12 @@
 
 /* ── pick a team: the job ────────────────────────────────────────────────── */
 .fr-plate-state { display: inline-block; margin-top: 3px; padding: 4px 7px 2px; border-radius: 2px; background: var(--plate-ink); color: var(--plate); font-family: var(--fr-label); font-size: 15px; letter-spacing: 1.8px; line-height: 1; justify-self: start; }
-.fr-teamgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.fr-teamgrid > button { height: 38px; padding: 2px 0 0; border: 0; border-right: 1px solid var(--fr-line); border-bottom: 1px solid var(--fr-line); background: transparent; font-family: var(--fr-label); font-size: 16px; letter-spacing: 1px; line-height: 1; color: var(--fr-text); cursor: pointer; }
+/* (2026-11-13, the owner: the lines were ragged on a short row) only full-width lines between rows, drawn on the grid itself, no lines between teams */
+.fr-teamgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 38px; background: repeating-linear-gradient(to bottom, transparent 0 37px, var(--fr-line) 37px 38px); }
+.fr-teamgrid > button { height: 38px; padding: 2px 0 0; border: 0; border-bottom: 1px solid transparent; background: transparent; font-family: var(--fr-label); font-size: 16px; letter-spacing: 1px; line-height: 1; color: var(--fr-text); cursor: pointer; }
 .fr .fr-teamgrid > button { font-family: var(--fr-label); }
-.fr-teamgrid > button:nth-child(6n) { border-right: 0; }
 .fr-teamgrid > button.is-on { background: var(--fr-team); color: var(--fr-ink); }
 .fr-teamgrid > button:active:not(.is-on) { background: var(--fr-panel-2); }
-.fr-teamgrid:last-child > button:nth-last-child(-n + 6):nth-child(6n + 1), .fr-teamgrid:last-child > button:nth-last-child(-n + 6):nth-child(6n + 1) ~ button { border-bottom: 0; }
 .fr-div > button { position: relative; }
 
 /* ── the hub: where the team is, where the GM is taking it ───────────────── */
@@ -178,8 +177,6 @@
 @media (min-width: 1024px) {
   .fr-fact { grid-template-columns: 150px minmax(0, 1fr); }
   .fr-teamgrid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-  .fr-teamgrid > button:nth-child(6n) { border-right: 1px solid var(--fr-line); }
-  .fr-teamgrid > button:nth-child(8n) { border-right: 0; }
   .fr-statebar { grid-template-columns: auto minmax(0, 1fr) auto; }
   .fr-statebar > span { padding-inline: 16px; }
   .fr-statebar > span.fr-statebar-why { display: grid; border-left: 1px solid var(--fr-line); padding-right: 16px; }

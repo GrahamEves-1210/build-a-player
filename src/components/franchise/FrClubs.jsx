@@ -34,7 +34,7 @@ export function ClubSheet({ FR, F, short, onClose, onPlayer, go = null }) {
       {t && <>
         {st && (
           <Panel title="Where they are">
-            <Fact label="STATE" strong>{st.label}<small>{st.stateText}</small></Fact>
+            <Fact label="OUTLOOK" strong>{st.label}<small>{st.stateText}</small></Fact>
             <Fact label="WINDOW">{st.window?.text}</Fact>
             <Fact label="QUARTERBACK">{cap(st.qb?.text)}</Fact>
             <Fact label="HARDEST PART">{st.hardest}</Fact>
@@ -85,7 +85,7 @@ export default function FrClubs({ FR, F, wide, onClub }) {
   const cols = [
     { k: 'team', label: 'TEAM', val: r => r.name, render: r => <TeamCell t={r} name={wide} /> },
     { k: 'rec', label: 'W-L', align: 'r', w: wide ? 70 : 46, cls: 'fr-t-num', render: r => r.record },
-    { k: 'st', label: 'STATE', w: wide ? 130 : 86, cls: 'fr-t-lab fr-t-gap', val: r => ['contend', 'retool', 'rebuild'].indexOf(r.state), desc: false, render: r => r.label },
+    { k: 'st', label: 'OUTLOOK', w: wide ? 130 : 86, cls: 'fr-t-lab fr-t-gap', val: r => ['contend', 'retool', 'rebuild'].indexOf(r.state), desc: false, render: r => r.label },
     { k: 'rk', label: wide ? 'ROSTER' : 'RK', title: 'Roster rank', align: 'r', w: wide ? 80 : 34, val: r => r.ratings?.rank ?? 99, desc: false, render: r => (wide ? up(ord(r.ratings?.rank ?? 0)) : r.ratings?.rank) },
     ...(wide ? [{ k: 'qb', label: 'QUARTERBACK', cls: 'fr-t-dim', render: r => (r.qb?.name ? `${r.qb.name}, ${r.qb.grade}` : '–') }] : []),
     { k: 'cap', label: wide ? 'CAP ROOM' : 'ROOM', align: 'r', w: wide ? 96 : 60, val: r => r.capSpace, render: r => FR.moneyText(r.capSpace) },
@@ -93,7 +93,7 @@ export default function FrClubs({ FR, F, wide, onClub }) {
   ]
   return (
     <Panel title="The 32" meta={which === 'all' ? null : plural(rows.length, 'CLUB')}>
-      <Seg className="fr-seg--fit" label="State" options={[['all', 'ALL'], ['contend', `${STATE_NOUN.contend} ${n('contend')}`], ['retool', `${STATE_NOUN.retool} ${n('retool')}`], ['rebuild', `${STATE_NOUN.rebuild} ${n('rebuild')}`]]} value={which} onChange={setWhich} />
+      <Seg className="fr-seg--fit" label="Outlook" options={[['all', 'ALL'], ['contend', `${STATE_NOUN.contend} ${n('contend')}`], ['retool', `${STATE_NOUN.retool} ${n('retool')}`], ['rebuild', `${STATE_NOUN.rebuild} ${n('rebuild')}`]]} value={which} onChange={setWhich} />
       <FrTable key={which} className="fr-table--tight" label="Clubs" cols={cols} rows={rows} rowKey={r => r.short} sort={{ k: which === 'all' ? 'st' : 'rk', desc: false }} rowClass={r => (r.user ? 'is-mine' : null)} onRow={r => onClub(r.short)} empty="NO CLUBS IN THAT STATE" />
     </Panel>
   )

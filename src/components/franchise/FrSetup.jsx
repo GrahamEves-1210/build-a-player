@@ -143,7 +143,7 @@ function TeamPick({ FR, setup, onSetup, onNext, onBack }) {
             </section>
             {job && (
               <Panel title="The job" meta={d ? `DIFFICULTY: ${d.word}` : null}>
-                <Fact label="STATE" strong>{job.label}<small>{job.stateText}</small></Fact>
+                <Fact label="OUTLOOK" strong>{job.label}<small>{job.stateText}</small></Fact>
                 <Fact label="THE WINDOW">{job.window?.text}</Fact>
                 <Fact label="QUARTERBACK">{cap(job.qb?.text)}</Fact>
                 <Fact label="CAP ROOM">{FR.moneyText(job.capSpace)}<small>{job.capText}</small></Fact>
@@ -162,7 +162,7 @@ function TeamPick({ FR, setup, onSetup, onNext, onBack }) {
               {staff ? <><CoachBlock c={staff.hc} /><CoachBlock c={staff.oc} /><CoachBlock c={staff.dc} /></> : <div className="fr-empty">READING THE LEAGUE</div>}
             </Panel>
             <Panel title="All 32" action={<button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => random()}>RANDOM TEAM</button>}>
-              {rows && <Seg label="Browse" options={[['div', 'BY DIVISION'], ['state', 'BY STATE']]} value={by} onChange={setBy} />}
+              {rows && <Seg label="Browse" options={[['div', 'BY DIVISION'], ['state', 'BY OUTLOOK']]} value={by} onChange={setBy} />}
               {by === 'div' || !rows ? DIVISIONS.map(dv => (
                 <div key={dv.div} className="fr-div">
                   <span>{dv.div.toUpperCase()}</span>

@@ -22,7 +22,7 @@ export const shortName = name => String(name ?? '').replace(/^(\S)\S*\s+(?=\S)/,
 export const safe = (fn, fallback = null) => { try { return fn() ?? fallback } catch { return fallback } }
 
 // what a state is called when it is a noun: the three lists, the owner's yardstick
-export const STATE_NOUN = { contend: 'CONTENDERS', retool: 'RETOOLING', rebuild: 'REBUILDS' }
+export const STATE_NOUN = { contend: 'CONTENDERS', retool: 'RETOOLING', rebuild: 'REBUILDING' }
 export const STATE_AS = { contend: 'A CONTENDER', retool: 'A RETOOL', rebuild: 'A REBUILD' }
 export const DIR_VERB = { contend: 'CONTEND', retool: 'RETOOL', rebuild: 'REBUILD' }
 

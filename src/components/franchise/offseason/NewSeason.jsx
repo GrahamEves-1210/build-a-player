@@ -28,7 +28,7 @@ export default function NewSeason({ onDone }) {
   const rk = [
     { k: 'rank', label: 'RK', w: 40, cls: 'fro-t-rk', val: r => r.rank, desc: false },
     { k: 'team', label: 'TEAM', val: r => r.team.name, render: r => <span className="fr-t-team"><Logo team={r.team.short} size={20} /><span className="fr-t-name">{wide ? r.team.name : r.team.nick}{r.blurb && <small className="fro-t-sub">{r.blurb}</small>}</span></span> },
-    { k: 'state', label: 'STATE', w: 96, align: 'r', cls: 'fr-t-lab fr-t-dim', val: r => r.state, render: r => r.stateLabel },
+    { k: 'state', label: 'OUTLOOK', w: 96, align: 'r', cls: 'fr-t-lab fr-t-dim', val: r => r.state, render: r => r.stateLabel },
   ]
   const change = c => (
     <button key={c.player.id} className="fr-row fro-man" onClick={() => { tap(); setPid(c.player.id) }}>

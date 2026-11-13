@@ -111,7 +111,7 @@ function DirectionSheet({ FR, F, act, onClose }) {
       foot={st.canChange ? <button className="fr-btn" disabled={pick === st.direction} onClick={set}>SET THE DIRECTION</button> : null}>
       <p className="fr-said"><small>OWNERSHIP</small>{said ?? st.ownerSays}</p>
       <Panel title="The read" meta={st.record}>
-        <Fact label="STATE" strong>{st.label}<small>{st.stateText}</small></Fact>
+        <Fact label="OUTLOOK" strong>{st.label}<small>{st.stateText}</small></Fact>
         <Fact label="WINDOW">{st.window?.text}</Fact>
         <Fact label="QUARTERBACK">{cap(st.qb?.text)}</Fact>
         <Fact label="HARDEST PART">{st.hardest}</Fact>

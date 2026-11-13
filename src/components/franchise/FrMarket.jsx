@@ -201,7 +201,7 @@ export default function FrMarket({ FR, F, act, say, wide, onPlayer, onClub, jump
     { k: 'pos', label: 'POS', w: wide ? 56 : 42, cls: 'fr-t-pos', render: r => r.slot },
     { k: 'name', label: 'PLAYER', cls: 'fr-t-name fr-t-wrap', val: r => r.short, render: r => <>{wide ? r.name : shortName(r.name)}{!wide && r.asking && <span className="fr-t-sub">{r.asking}</span>}</> },
     { k: 'tm', label: 'TEAM', w: wide ? 150 : 62, val: r => r.team, render: r => (wide ? <><TeamCell t={FR.teamRef(r.team)} /></> : <TeamCell t={FR.teamRef(r.team)} />) },
-    ...(wide ? [{ k: 'ts', label: 'STATE', w: 120, cls: 'fr-t-lab fr-t-dim', render: r => STATE_SHORT[r.teamState] ?? '' }] : []),
+    ...(wide ? [{ k: 'ts', label: 'OUTLOOK', w: 120, cls: 'fr-t-lab fr-t-dim', render: r => STATE_SHORT[r.teamState] ?? '' }] : []),
     { k: 'age', label: 'AGE', align: 'r', w: wide ? 50 : 32, val: r => r.age },
     { k: 'ovr', label: 'OVR', align: 'r', w: wide ? 54 : 36, cls: 'fr-t-num', val: r => r.ovr },
     { k: 'sal', label: 'PAY', align: 'r', w: wide ? 84 : 54, val: r => r.salary, render: r => FR.moneyText(r.salary) },
