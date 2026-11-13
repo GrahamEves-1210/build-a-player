@@ -53,7 +53,7 @@ export function BoxScore({ FR, box, mine = null }) {
       </Panel>
       <Panel title="Box score">
         <Seg label="Team" options={[['away', box.away.team.name.toUpperCase()], ['home', box.home.team.name.toUpperCase()]]} value={side} onChange={setSide} />
-        {TABLES.map(([k, label, cols]) => (t[k]?.length ? <FrTable key={k} label={label} cols={[{ ...nameCol, label: label.toUpperCase() }, ...cols]} rows={t[k]} rowKey={r => r.id ?? r.name} rowClass={r => (r.built ? 'is-mine' : null)} /> : null))}
+        {TABLES.map(([k, label, cols]) => (t[k]?.length ? <FrTable key={k} label={label} cols={[{ ...nameCol, label: label.toUpperCase() }, ...cols]} rows={k === 'receiving' ? t[k].filter(r => r.rec > 0) : t[k]} rowKey={r => r.id ?? r.name} rowClass={r => (r.built ? 'is-mine' : null)} /> : null))}
       </Panel>
     </>
   )

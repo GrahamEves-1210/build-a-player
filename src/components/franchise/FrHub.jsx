@@ -202,7 +202,7 @@ export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
               {!tasks.length && <div className="fr-empty">NOTHING WAITING ON THE GM</div>}
               {tasks.map(t => (
                 <button key={t.id} className="fr-row" onClick={() => { tap(); onTask(t) }}>
-                  <span className="fr-row-main">{up(t.title)}{t.detail && <small>{up(noYear(F, t.detail))}</small>}</span>
+                  <span className="fr-row-main">{up(t.title)}{t.detail && <small className="fr-task-detail">{up(noYear(F, t.detail))}</small>}</span>
                   <span className={`fr-row-state${t.done ? ' is-done' : ' is-due'}`}>{t.done ? 'DONE' : t.count > 1 ? `${t.count} OPEN` : 'OPEN'}</span>
                   <span className="fr-chev" />
                 </button>
@@ -231,7 +231,7 @@ export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
         <div className="fr-col">
           <Panel title={us.nick} meta={`GM ${up(hub.gm.name)}`}>
             {last && <div className="fr-kv"><span>LAST GAME</span><b>{last.tied ? 'T' : last.won ? 'W' : 'L'} {last.us}-{last.them}{last.ot ? ' OT' : ''} {last.home ? 'vs' : '@'} {last.opp.short}</b></div>}
-            {hub.seed ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{up(ord(hub.seed))}</b></div> : null}
+            {hub.seed && (hub.record.w + hub.record.l + (hub.record.t ?? 0) > 0) ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{up(ord(hub.seed))}</b></div> : null}
             <div className="fr-kv"><span>CAP ROOM</span><b>{FR.moneyText(room)}</b></div>
           </Panel>
           {mine && <Panel title={mine.name} meta={hub.standing ? up(hub.standing) : null}><DivisionTable division={mine} compact /></Panel>}

@@ -33,6 +33,7 @@ const Play = memo(function Play({ p, home, away, fresh }) {
         {p.mark?.moment && <><span className="frgd-play-tag">{p.mark.played === false ? 'KEY MOMENT · SIMMED' : 'KEY MOMENT'}</span><br /></>}
         {p.mark?.call && <><span className="frgd-play-tag">COACH&rsquo;S CALL</span><br /></>}
         {p.text}
+        {p.downs && <><br /><span className="frgd-play-tag frgd-play-tag--after">TURNOVER ON DOWNS</span></>}
         {scored && <ScoreLine home={home} away={away} score={p.score} />}
       </p>
     </div>
@@ -110,7 +111,7 @@ function Result({ g, shown, call }) {
     <div className="frgd-stop">
       <div className="frgd-stop-in">
         <span className="frgd-eye">{call ? 'THE CALL' : 'THE PLAY'}</span>
-        {shown.map(p => <p key={p.id} className="frgd-res-play">{p.text}</p>)}
+        {shown.map(p => <p key={p.id} className="frgd-res-play">{p.text}{p.downs && <><br /><span className="frgd-play-tag frgd-play-tag--after">TURNOVER ON DOWNS</span></>}</p>)}
         {scored && <div className="frgd-res-score">{g.away} {g.score[g.away]} <i>·</i> {g.home} {g.score[g.home]}</div>}
       </div>
     </div>
@@ -185,9 +186,11 @@ export default function Live({ F, put, g, driver, title }) {
   const skip = () => { sfx('tap'); setPlaying(null); setShown(null); put(driver.skip(now.current.F), true) }
 
   const m = stop?.type === 'moment' ? stop : null
+  // between downs the strip under the scorebug says what is next: the try after a touchdown, the kickoff after a score
+  const between = g.done || g.down ? null : (stop?.type === 'call' && stop.kind === 'two-point') || newest?.pts >= 6 ? 'THE TRY' : !newest || newest.pts || newest.kind === 'xpmiss' ? 'KICKOFF' : null
   return (
     <div className="frgd-live">
-      <Scorebug g={g} title={!!title} />
+      <Scorebug g={g} title={!!title} note={between} />
       <div className="frgd-live-cols">
         <Scoring g={g} />
         {shown ? <Result g={g} shown={shown} call={wasCall.current} />

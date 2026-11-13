@@ -305,3 +305,5 @@ html.bap-reduce-motion .fr-ticker-line > span { animation: none; }
   .fr-sheet-grab { height: 14px; cursor: default; }
   .fr-sheet-grab::before { content: none; }
 }
+/* a navy or dark green logo is lost on the near-black panels: a hairline round it, no blur */
+.fr-logo.is-keyed { filter: drop-shadow(1px 0 0 rgba(242, 244, 245, .6)) drop-shadow(-1px 0 0 rgba(242, 244, 245, .6)) drop-shadow(0 1px 0 rgba(242, 244, 245, .6)) drop-shadow(0 -1px 0 rgba(242, 244, 245, .6)); }

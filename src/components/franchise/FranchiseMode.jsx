@@ -194,7 +194,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   const cells = hub.phase === 'offseason'
     ? [{ label: String(hub.year), value: 'OFFSEASON' }, { label: 'LAST SEASON', value: hub.record.text }]
     : [{ label: `${hub.year} ${hub.week <= 18 ? 'WEEK' : 'PLAYOFFS'}`, value: hub.week <= 18 ? String(hub.week) : hub.weekLabel }, { label: 'RECORD', value: hub.record.text },
-      { label: 'NEXT', value: hub.bye || !next ? 'BYE' : `${next.home ? 'vs' : '@'} ${next.opp.short}`, logo: hub.bye || !next ? null : next.opp.short }]
+      // (no opponent: a bye, a first-round bye with the other game still to play, or a team that is out of the playoffs)
+      { label: 'NEXT', value: !hub.bye && next?.opp ? `${next.home ? 'vs' : '@'} ${next.opp.short}` : next?.eliminated || hub.eliminated ? 'OUT' : 'BYE', logo: !hub.bye && next?.opp ? next.opp.short : null }]
   const open_ = hub.tasks?.filter(t => !t.done).length ?? 0
   const go = (t, to = null) => { setJump(to ? { ...to, tab: t } : null); setTab(t) }
   const say = text => { if (text) setToast({ text: String(text), bad: false }) }

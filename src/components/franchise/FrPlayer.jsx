@@ -82,7 +82,7 @@ export function PlayerSheet({ FR, F, pid, onClose, act = null, say = null, go = 
               {con?.extension && <div className="fr-kv"><span>EXTENSION SIGNED</span><b className="is-text">{plural(con.extension.years, 'year')} · {money(con.extension.perYear)} a year</b></div>}
               {con?.cut && (con.cut.dead > 0 || con.cut.saves > 0) && <div className="fr-kv"><span>IF RELEASED</span><b className="is-text">{money(con.cut.dead)} dead · {money(con.cut.saves)} saved</b></div>}
             </> : null}
-            {term && <div className="fr-kv"><span>{c.team ? 'HIS ASK' : 'ASKING'}</span><b className="is-text">{plural(term.years, 'year')} · {money(term.perYear)} a year</b></div>}
+            {term && !con?.extension && <div className="fr-kv"><span>{c.team ? 'HIS ASK' : 'ASKING'}</span><b className="is-text">{plural(term.years, 'year')} · {money(term.perYear)} a year</b></div>}
           </Panel>
           <Panel title={`${F.year} season`} meta={has(c.stats?.season) ? null : 'NO GAMES YET'}>
             {has(c.stats?.season) && <StatTable stat={c.stats.season} />}

@@ -27,9 +27,11 @@ export const useWide = () => useSyncExternalStore(subWide, () => window.matchMed
 const tap = () => { sfx('tap'); haptic('light') }
 
 // ── small things ────────────────────────────────────────────────────────────
+// (the clubs whose logo is one dark colour with no outline of its own: franchise.css draws a hairline round it)
+const KEYED = new Set(['NYG', 'NYJ'])
 export const Logo = ({ team, size = 24 }) => {
   const t = teamOf(team)
-  return t.logo ? <img className="fr-logo" src={t.logo} width={size} height={size} alt="" draggable={false} loading="lazy" decoding="async" /> : null
+  return t.logo ? <img className={`fr-logo${KEYED.has(t.short) ? ' is-keyed' : ''}`} src={t.logo} width={size} height={size} alt="" draggable={false} loading="lazy" decoding="async" /> : null
 }
 // a headshot id (ESPN's, public/headshots) → its file; a full URL passes through
 export const faceUrl = photo => (!photo ? null : /^(https?:|\/)/.test(photo) ? photo : String(photo).includes('.') ? `${HEADSHOT_BASE}/${photo}` : `${HEADSHOT_BASE}/${photo}.webp`)

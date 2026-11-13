@@ -15,7 +15,8 @@ const ROLES = ['HC', 'OC', 'DC']
 const JOB = { HC: 'HEAD COACH', OC: 'OFFENSIVE COORDINATOR', DC: 'DEFENSIVE COORDINATOR' }
 const job = r => JOB[r].toLowerCase()
 const ASK_AS = { HC: 'asHC', OC: 'asOC', DC: 'asDC' }
-const callsText = c => (c.role === 'HC' ? (c.calls === 'off' ? 'CALLS THE OFFENSE' : c.calls === 'def' ? 'CALLS THE DEFENSE' : null) : c.calls ? 'CALLS THE PLAYS' : null)
+// (a head coach who calls a side himself: that side's coordinator does not)
+const callsText = (c, hc = null) => (c.role === 'HC' ? (c.calls === 'off' ? 'CALLS THE OFFENSE' : c.calls === 'def' ? 'CALLS THE DEFENSE' : null) : c.calls && hc?.calls !== (c.role === 'OC' ? 'off' : 'def') ? 'CALLS THE PLAYS' : null)
 
 export default function Staff() {
   const { FR, F, o, act, move } = useOff()
@@ -64,7 +65,7 @@ export default function Staff() {
                     <small>{JOB[r]}</small>
                     {m ? <>
                       <b>{m.name}</b>
-                      <em>{[`AGE ${m.age}`, m.record, m.built ? 'BUILT' : null, m.interim ? 'INTERIM' : null, callsText(m), up4 ? 'DEAL IS UP' : `${money(m.salary)} · ${plural(m.yrs, 'YEAR')}`].filter(Boolean).join(' · ')}</em>
+                      <em>{[`AGE ${m.age}`, m.record, m.built ? 'BUILT' : null, m.interim ? 'INTERIM' : null, callsText(m, st.hc), up4 ? 'DEAL IS UP' : `${money(m.salary)} · ${plural(m.yrs, 'YEAR')}`].filter(Boolean).join(' · ')}</em>
                       <span className="fro-coach-ovr"><b>{m.ovr}</b><small>{m.grade}</small></span>
                     </> : <b className="is-open">OPEN</b>}
                   </div>

@@ -65,6 +65,9 @@ export const flash = F => F?.flash ?? null
 // the plays already turned into rows, kept by game so a row that hasn't changed is the same object (the log
 // re-draws only the new one)
 let kept = { id: null, rows: [] }
+// (a try and a kickoff are not a down: their row shows the quarter and the clock)
+const NODOWN = new Set(['end', 'kickoff', 'xp', 'xpmiss', 'two'])
+const DOWNS = new Set(['run', 'pass', 'incomplete', 'sack', 'scramble'])
 const BIG = new Set(['td', 'int', 'fumble', 'safety', 'downs', 'fgmiss', 'two'])
 function plays(v, home, away) {
   if (kept.id !== v.id) kept = { id: v.id, rows: [] }
@@ -72,13 +75,15 @@ function plays(v, home, away) {
   rows.length = Math.min(rows.length, log.length)
   for (let i = 0; i < log.length; i++) {
     const p = log[i], was = rows[i]
-    if (was && was.text === p.text && was.pts === (p.pts ?? 0)) continue
+    if (was && was.text === p.text && was.pts === (p.pts ?? 0) && !!was.mark === !!(p.moment || p.call)) continue
     rows[i] = {
-      id: p.i ?? i, q: p.q, clock: p.clock, team: p.team ?? null, down: p.kind === 'end' || p.kind === 'kickoff' ? 0 : p.down ?? 0, dist: p.dist, spot: p.spot,
+      id: p.i ?? i, q: p.q, clock: p.clock, team: p.team ?? null, down: NODOWN.has(p.kind) ? 0 : p.down ?? 0, dist: p.dist, spot: p.spot,
       kind: p.kind === 'end' ? 'break' : p.kind, text: p.text, yards: p.yds ?? 0, pts: p.pts ?? 0, scorer: p.by ?? null, drive: p.drive ?? null,
       score: { [home]: p.score?.[0] ?? 0, [away]: p.score?.[1] ?? 0 },
       big: !!p.pts || !!p.moment || BIG.has(p.kind) || (p.yds ?? 0) >= 20,
-      mark: p.moment ? { moment: true, played: true } : null,
+      // (a fourth down that came up short hands the ball over: the log says so under the play)
+      downs: p.down === 4 && DOWNS.has(p.kind) && !p.pts && (p.yds ?? 0) < (p.dist ?? 0),
+      mark: p.moment || p.call ? { moment: !!p.moment, played: p.moment !== 'sim', call: !!p.call && !p.moment } : null,
     }
   }
   return rows.slice()

@@ -16,7 +16,7 @@ export const up = s => String(s ?? '').toUpperCase()
 // (the engine's sentences sometimes start on a number word: "five starters …")
 export const cap = s => { const t = String(s ?? ''); return t ? t[0].toUpperCase() + t.slice(1) : t }
 export const ord = n => { const v = n % 100; return `${n}${v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}` }
-export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+export const plural = (n, one, many = one === one.toUpperCase() ? `${one}S` : `${one}s`) => `${n} ${n === 1 ? one : many}`
 // a first name down to its letter, for a phone's tables
 export const shortName = name => String(name ?? '').replace(/^(\S)\S*\s+(?=\S)/, '$1. ')
 export const safe = (fn, fallback = null) => { try { return fn() ?? fallback } catch { return fallback } }

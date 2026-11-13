@@ -168,7 +168,8 @@ function Develop({ FR, F, rows, wide, act, say, onPlayer }) {
 function Staff({ FR, F }) {
   const staff = useMemo(() => safe(() => FR.staff(F)), [FR, F])
   if (!staff) return <Panel><div className="fr-empty">NO STAFF ON FILE</div></Panel>
-  const calls = c => (c?.calls === 'off' ? 'CALLS THE OFFENSE' : c?.calls === 'def' ? 'CALLS THE DEFENSE' : c?.calls === true ? 'CALLS THE PLAYS' : null)
+  // (a head coach who calls a side himself: that side's coordinator does not)
+  const calls = c => (c?.calls === 'off' ? 'CALLS THE OFFENSE' : c?.calls === 'def' ? 'CALLS THE DEFENSE' : c?.calls === true && staff.hc?.calls !== (c.role === 'OC' ? 'off' : 'def') ? 'CALLS THE PLAYS' : null)
   const g = v => FR.gradeOf(v)
   return (
     <div className="fr-cols is-even">

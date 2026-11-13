@@ -207,3 +207,5 @@ button.fr-news:active { background: var(--fr-panel-2); }
 .fr-statgrid small { font-family: var(--fr-label); font-size: 12px; letter-spacing: 1.1px; line-height: 1; color: var(--fr-muted); white-space: nowrap; }
 .fr-statgrid b { font-family: var(--fr-display); font-weight: 400; font-size: 16px; line-height: 1; }
 .fr-table--nohead thead { display: none; }
+/* THIS WEEK: a task's line under its title is two lines at most (a front office item's whole sentence is on its sheet) */
+.fr-row-main small.fr-task-detail { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }

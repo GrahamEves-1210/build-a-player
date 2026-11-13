@@ -93,7 +93,7 @@ function Picture({ FR, F, onClub, onBox }) {
           <Panel key={c} title={`${c} playoff picture`} meta={pic.bracket ? 'THE FIELD' : 'IF THE SEASON ENDED TODAY'}>
             <FrTable label={`${c} seeds`} cols={cols} rows={pic[c]?.seeds ?? []} rowKey={r => r.team.short} rowClass={r => (r.user ? 'is-mine' : null)} onRow={r => onClub(r.team.short)} />
             {pic[c]?.hunt?.length > 0 && <>
-              <Sub>IN THE HUNT</Sub>
+              <Sub>{pic.bracket ? 'MISSED THE PLAYOFFS' : 'IN THE HUNT'}</Sub>
               <FrTable className="fr-table--nohead" label={`${c} in the hunt`} cols={cols.map(x => (x.k === 'seed' ? { ...x, label: '' } : x))} rows={pic[c].hunt.map(r => ({ ...r, seed: null }))} rowKey={r => r.team.short} rowClass={r => (r.user ? 'is-mine' : null)} onRow={r => onClub(r.team.short)} />
             </>}
           </Panel>
@@ -206,7 +206,19 @@ function Awards({ FR, F, onPlayer }) {
 const TX = { sign: 'SIGNED', release: 'RELEASED', trade: 'TRADE', draft: 'DRAFT', ir: 'TO IR', activate: 'ACTIVATED', extend: 'EXTENDED', tag: 'TAGGED', retire: 'RETIRED', hire: 'HIRED', fire: 'FIRED' }
 function News({ FR, F, sub, wide, onPlayer, onClub }) {
   const news = useMemo(() => (sub === 'news' ? safe(() => FR.news(F, 60), []) : []), [FR, F, sub])
-  const tx = useMemo(() => (sub === 'moves' ? safe(() => FR.transactions(F, 80), []) : []), [FR, F, sub])
+  // (the engine files a trade under both clubs: one line here, marked when the GM's club is in it)
+  const tx = useMemo(() => {
+    if (sub !== 'moves') return []
+    const out = [], seen = new Map()
+    for (const r of safe(() => FR.transactions(F, 120), [])) {
+      const k = r.type === 'trade' ? `${r.year}|${r.week}|${r.text}` : null, was = k ? seen.get(k) : null
+      if (was) { if (r.team?.short === F.team) was.mine = true; continue }
+      const row = { ...r, mine: r.team?.short === F.team }
+      if (k) seen.set(k, row)
+      out.push(row)
+    }
+    return out.slice(0, 80)
+  }, [FR, F, sub])
   const hurt = useMemo(() => (sub === 'injuries' ? FR.teams(F).flatMap(t => safe(() => FR.injuryReport(F, t.short), [])).sort((a, b) => b.ovr - a.ovr).slice(0, 60) : []), [FR, F, sub])
   const when = n => (n.year !== F.year ? `${n.year}` : n.week > 18 ? 'PLAYOFFS' : n.week > 0 ? `WEEK ${n.week}` : 'PRESEASON')
   if (sub === 'news') return (
@@ -217,7 +229,7 @@ function News({ FR, F, sub, wide, onPlayer, onClub }) {
   )
   if (sub === 'moves') return (
     <Panel title="Transactions" meta={`${F.year}`}>
-      {tx.map(r => <NewsRow key={r.id} n={{ head: r.text }} tag={TX[r.type] ?? up(r.type)} mine={r.team?.short === F.team} onClick={r.pid != null ? () => onPlayer(r.pid) : null} />)}
+      {tx.map(r => <NewsRow key={r.id} n={{ head: r.text }} tag={TX[r.type] ?? up(r.type)} mine={r.mine} onClick={r.pid != null ? () => onPlayer(r.pid) : null} />)}
       {!tx.length && <div className="fr-empty">NO MOVES YET</div>}
     </Panel>
   )

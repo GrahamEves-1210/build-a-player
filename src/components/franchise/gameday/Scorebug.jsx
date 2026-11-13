@@ -19,7 +19,7 @@ function Side({ short, g, right, final, rec }) {
   )
 }
 
-export default function Scorebug({ g, final = false, title = false, records = null }) {
+export default function Scorebug({ g, final = false, title = false, records = null, note = null }) {
   const off = g.poss, def = off === g.home ? g.away : g.home
   // across the field from the away goal line (0) to the home one (100)
   const x = off == null || g.spot == null ? null : off === g.away ? g.spot : 100 - g.spot
@@ -36,7 +36,7 @@ export default function Scorebug({ g, final = false, title = false, records = nu
       </div>
       {!final && <>
         <div className="frgd-sit">
-          <b>{off && g.down ? downText(g.down, g.dist, g.spot) : null}</b>
+          <b>{off && g.down ? downText(g.down, g.dist, g.spot) : note}</b>
           <span>{g.down && off ? `BALL ON ${spotText(g.spot, off, def)}` : null}</span>
         </div>
         <div className="frgd-field" aria-hidden="true">

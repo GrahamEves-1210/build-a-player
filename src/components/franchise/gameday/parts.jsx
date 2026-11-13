@@ -15,10 +15,12 @@ export function barOf(short) {
   return { color, ink: lum(color) > 0.36 ? '#0a0c0f' : '#ffffff' }
 }
 
+// (the clubs whose logo is one dark colour with no outline of its own: gameday.css draws a hairline round it)
+const KEYED = new Set(['NYG', 'NYJ'])
 export function Logo({ short, size = 40 }) {
   const t = teamOf(short)
   return (
-    <span className="frgd-logo" style={{ width: size, height: size }}>
+    <span className={`frgd-logo${KEYED.has(short) ? ' is-keyed' : ''}`} style={{ width: size, height: size }}>
       {t.logo && <img src={t.logo} alt="" width={size} height={size} draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} />}
     </span>
   )
