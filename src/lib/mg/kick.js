@@ -70,9 +70,11 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   const winner = game === 'game-winner'
   const reach = kickReach(pw)
   // the kicks: four, longer each time (Deep Kick), or the one (Game Winner: never from past what a coach would ask)
+  // (Deep Kick never asks for a kick past his range: each one is capped a yard under the next, up to the longest he can
+  // make (kickReach), so a short leg gets four kicks from 50 to 54 and a big one the full 50 to 65. The owner, 2026-11-13)
   const kicks = winner
     ? [{ d: situation?.dist ?? 25 + Math.floor(r() * (Math.min(65, Math.round(reach) + 1) - 24)), wind: Math.round((r() - 0.5) * 2 * 9), hard: 1 }]
-    : [[50, 53], [54, 57], [58, 61], [62, 65]].map(([lo, hi], i) => ({ d: lo + Math.floor(r() * (hi - lo + 1)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 4 + r() * 4)), hard: 1.12 + i * 0.17, tight: 1 - i * 0.1 }))
+    : [[50, 53], [54, 57], [58, 61], [62, 65]].map(([lo, hi], i) => ({ d: Math.min(lo + Math.floor(r() * (hi - lo + 1)), Math.max(50, Math.floor(reach)) - (3 - i)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 4 + r() * 4)), hard: 1.12 + i * 0.17, tight: 1 - i * 0.1 }))
   const pressure = winner ? 1 : 0.25
   const accF = byV(acc, 1.25, 0.72) * EASE                  // what his accuracy does to a miss: an S pulls it 28% back to the middle
   const shake = byV(clu, 0.2, 0.02) * pressure            // the needle's shake with the game on it
