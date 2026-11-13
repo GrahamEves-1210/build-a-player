@@ -1724,7 +1724,6 @@ export default function App() {
             }
             setBuild(prev => ({ ...prev, [attrType]: chipData }))
             setMobileView('build')
-            setShowCustomModal(false)
           }}
           onAddAllToBuild={(p, playerOverrides) => {
             sandboxTainted.current = true
@@ -2063,7 +2062,6 @@ export default function App() {
                 photo,
               }
               setBuild(prev => ({ ...prev, [attrType]: chipData }))
-              setShowCustomModal(false)
             }}
             onAddAllToBuild={(p, playerOverrides) => {
               sandboxTainted.current = true

@@ -13784,6 +13784,13 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .cr-attr-val {
   font-size: 13px; font-weight: 800; width: 28px; text-align: right; flex-shrink: 0;
 }
+/* ADD on a rating's row: that rating into the build in one tap; ADDED once it's his, FULL when the slot is taken */
+.cr-attr-add { flex: none; width: 52px; height: 26px; padding: 0; border: 1px solid rgba(255,255,255,.28); border-radius: 5px; background: transparent; color: #fff; font-family: var(--font); font-size: 10.5px; font-weight: 800; letter-spacing: .6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+@media (hover: hover) { button.cr-attr-add:hover { background: rgba(255,255,255,.1); } }
+button.cr-attr-add:active { transform: scale(.96); }
+.cr-attr-add.is-in { border-color: transparent; color: rgba(255,255,255,.32); cursor: default; }
+.cr-attr-add.is-his { color: #35e07a; }
+.cr-build-count { margin-left: 8px; font-size: 11px; font-weight: 800; letter-spacing: .8px; color: rgba(255,255,255,.6); white-space: nowrap; }
 .cr-quick-btns {
   display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap;
 }

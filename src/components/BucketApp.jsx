@@ -2003,7 +2003,6 @@ export default function BucketApp() {
               height: p.height ?? parseHtToIn(p.ht) ?? null,
               weight: p.weight ?? p.wt ?? null,
             }}))
-            setShowBucketCustomModal(false)
           }}
           onAddAllToBuild={(p, playerOverrides) => {
             sandboxTainted.current = true
@@ -2404,7 +2403,6 @@ export default function BucketApp() {
                 height: p.height ?? parseHtToIn(p.ht) ?? null,
                 weight: p.weight ?? p.wt ?? null,
               }}))
-              setShowBucketCustomModal(false)
             }}
             onAddAllToBuild={(p, playerOverrides) => {
               sandboxTainted.current = true

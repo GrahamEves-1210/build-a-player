@@ -45,7 +45,14 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
   // (storageKey: a mode's own ratings, College Football's: bap_cfb_custom_ratings)
   const storageKey = storageKeyProp ?? (isSoccer ? 'bas_soccer_custom_ratings' : isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings')
   const hasToggle = !!(poolLegends && poolLegends.length)
-  const [era, setEra] = useState(() => (hasToggle && gameMode === 'all-time' ? 'all-time' : 'classic'))
+  // (the pool he was last looking at comes back: Current or All-Time, kept per sandbox on this device. The owner, 2026-11-13)
+  const eraKey = `bap_cr_era:${storageKey}`
+  const [era, setEraState] = useState(() => {
+    if (!hasToggle) return 'classic'
+    try { const v = localStorage.getItem(eraKey); if (v === 'all-time' || v === 'classic') return v } catch { /* private mode */ }
+    return gameMode === 'all-time' ? 'all-time' : 'classic'
+  })
+  const setEra = v => { setEraState(v); try { localStorage.setItem(eraKey, v) } catch { /* private mode */ } }
   // (ratingsKeyFor(era): a sport's own keys, baseball's 'baseball_bat' / 'baseball_pit_legends': BaseballApp)
   const keyFor = e => ratingsKeyFor ? ratingsKeyFor(e) : isSoccer
     ? `soccer_st${e === 'all-time' ? '_wc' : ''}`
@@ -124,6 +131,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
         <div className="cr-header">
           <span className="cr-title">Custom Ratings</span>
           {modifiedCount > 0 && <span className="cr-mod-count">{modifiedCount} modified</span>}
+          {!noPicks && <span className="cr-build-count">{buildTypes.filter(a => build[a]).length}/{buildTypes.length} IN BUILD</span>}
           <button className="cr-close" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>
 
@@ -180,6 +188,9 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                           >
                             {getGrade(key, attr, baseVal)}
                           </span>
+                          {!noPicks && (build[attr]
+                            ? <span className={`cr-attr-add is-in${build[attr].qbFull === p.name ? ' is-his' : ''}`}>{build[attr].qbFull === p.name ? 'ADDED' : 'FULL'}</span>
+                            : <button className="cr-attr-add" onClick={() => onAddToBuild?.(p, overrides[key], attr)} aria-label={`Add ${attrMeta[attr]?.label ?? attr} to the build`}>ADD</button>)}
                         </div>
                       )
                     })}
@@ -202,8 +213,8 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                         </button>
                       )}
                       {/* Starters Only: the wheel fills the build, nobody is hand-picked */}
-                      {!noPicks && <button className="cr-add-build-btn" onClick={() => setSlotPickerPlayer(slotPickerPlayer?.name === p.name && slotPickerPlayer?.team === p.team ? null : p)}>
-                        Add to build
+                      {!noPicks && buildTypes.some(a => !build[a]) && <button className="cr-add-build-btn" onClick={() => onAddAllToBuild?.(p, overrides[key])}>
+                        Add all open slots
                       </button>}
                     </div>
                   </div>

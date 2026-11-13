@@ -710,7 +710,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
           build={build} buildTypes={P.types}
           onClose={() => setShowCustom(false)}
           onSave={r => setCustomRatings(r)}
-          onAddToBuild={(p, o, type) => { tainted.current = true; setBuild(prev => ({ ...prev, [type]: addChip(p, o, type) })); setShowCustom(false) }}
+          onAddToBuild={(p, o, type) => { tainted.current = true; setBuild(prev => ({ ...prev, [type]: addChip(p, o, type) })) }}
           onAddAllToBuild={(p, o) => { tainted.current = true; setBuild(prev => Object.fromEntries(P.types.map(t => [t, prev[t] ?? addChip(p, o, t)]))); setShowCustom(false) }} />
       )}
     </>

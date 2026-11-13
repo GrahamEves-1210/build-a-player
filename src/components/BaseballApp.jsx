@@ -858,7 +858,7 @@ export default function BaseballApp() {
       build={build} buildTypes={activeTypes}
       onClose={() => setShowCustomModal(false)}
       onSave={r => { setCustomRatings(r); try { localStorage.setItem('bbb_baseball_custom_ratings', JSON.stringify(r)) } catch {} }}
-      onAddToBuild={(p, o, slot) => { sandboxTainted.current = true; setBuild(prev => ({ ...prev, [slot]: chipOf(p, slot, o?.[slot] ?? p.attrs?.[slot] ?? 5, { sandbox: true }) })); setShowCustomModal(false) }}
+      onAddToBuild={(p, o, slot) => { sandboxTainted.current = true; setBuild(prev => ({ ...prev, [slot]: chipOf(p, slot, o?.[slot] ?? p.attrs?.[slot] ?? 5, { sandbox: true }) })) }}
       onAddAllToBuild={(p, o) => {
         sandboxTainted.current = true
         setBuild(prev => { const next = { ...prev }; activeTypes.forEach(slot => { if (!prev[slot]) next[slot] = chipOf(p, slot, o?.[slot] ?? p.attrs?.[slot] ?? 5, { sandbox: true }) }); return next })
