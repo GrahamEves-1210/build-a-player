@@ -11,9 +11,9 @@ export const GRADE_SPECTRUM = [
   '#5ec443', // B-  green, a touch toward yellow
   '#22c55e', // B   green
   '#16bc8a', // B+  green, a touch toward blue
-  '#249cef', // A-  blue, a touch lighter
-  '#3b82f6', // A   blue
-  '#566df2', // A+  blue, a touch deeper
+  '#2399ee', // A-  blue, a touch lighter
+  '#3584f2', // A   blue
+  '#2f72e2', // A+  blue, a touch deeper (no purple in it)
   '#a855f7', // S   purple
 ]
 export const spectrumColor = v0 => GRADE_SPECTRUM[Math.max(0, Math.min(11, Math.round(v0 ?? 0)))]
