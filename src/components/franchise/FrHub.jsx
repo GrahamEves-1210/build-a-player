@@ -32,7 +32,7 @@ function GameplanSheet({ FR, F, act, onClose }) {
   return (
     <FrSheet open onClose={onClose} label="Gameplan"
       head={<span className="fr-sheet-who"><b>GAMEPLAN</b><small>{opp ? `${opp.name.toUpperCase()} · ${report.record ?? ''}` : 'THIS WEEK'}</small></span>}
-      foot={<><button className="fr-btn fr-btn--line" onClick={() => { tap(); onClose() }}>LEAVE IT TO THE STAFF</button><button className="fr-btn" onClick={() => { sfx('send'); act(f => FR.setGameplan(f, { off, def })); onClose() }}>SET THE PLAN</button></>}>
+      foot={<><button className="fr-btn fr-btn--line" onClick={() => { tap(); onClose() }}>STAFF DECIDES</button><button className="fr-btn" onClick={() => { sfx('send'); act(f => FR.setGameplan(f, { off, def })); onClose() }}>SET THE PLAN</button></>}>
       {(report?.strengths?.length > 0 || report?.weaknesses?.length > 0) && (
         <Panel title="Scouting report">
           {report.strengths.map((t, i) => <div key={`s${i}`} className="fr-kv"><span>THEY DO WELL</span><b className="is-text">{t}</b></div>)}
