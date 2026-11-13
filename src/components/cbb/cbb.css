@@ -51,7 +51,7 @@ html.is-cbb:not(.ag-screen-open) .cfb-screen .ag-screen-head { background: var(-
 
 /* the figure on the season page stands on the navy */
 /* (the NBA page's spacing: a 6px top margin put the figure's head up into the Simulate Season button. The owner, 2026-11-13) */
-.cbbp .cbbp-figure { margin: 25px auto 20px; }
+/* .cbbp-figure: no margin of its own, the NBA rule's (and its desktop scale) apply */
 .cbbp-arena { opacity: .75; }
 
 /* six rounds on one row (the game's strip is laid out for four) */
