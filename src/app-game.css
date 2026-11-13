@@ -6960,7 +6960,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 58px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 81.1px !important; }   /* (the labels float now; the wheel 160px) */   /* on the window's middle (was 4px low, owner 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 3px 10px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 4.5px 10px !important; }   /* +3px (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn { min-height: 45px !important; height: 45px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop :is(.spin-respin-half, .spin-reset-circle) { min-height: 45px !important; height: 45px !important; }   /* as tall as SPIN (owner, 11-13) */
@@ -7129,7 +7129,7 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-selector { top: 88px !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-tri { top: 111px !important; }   /* (the labels float now; the wheel 220px) */
   /* the player's card shorter, 74px to 60px (owner, 11-13: 10% shorter, twice): less padding, the photo 54px */
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card { padding-top: 2px !important; padding-bottom: 2px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card { padding-top: 5px !important; padding-bottom: 5px !important; }   /* +6px (owner, 11-13: 3, then 3 more) */
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel :is(.qb-reveal-hero, .qb-reveal-hero > *) { width: 54px !important; height: 54px !important; }
 }
 
