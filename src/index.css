@@ -2233,6 +2233,8 @@ a:focus-visible {
   justify-content: center;
   text-transform: uppercase;
 }
+/* (on a phone the same face sits low instead: 1.7px under the ring's centre with the desktop padding. Measured on a 390 phone) */
+@media (max-width: 768px) { .qb-reveal-pos { padding: 0 0 1px !important; } }
 
 .qb-respin-btn {
   width: 28px;
