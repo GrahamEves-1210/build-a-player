@@ -150,7 +150,8 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     if (res.good) g.made++
     else if (res.close) g.near++
     if (!winner) g.hud.dots[g.i] = res.good
-    g.stamp = { text: res.good ? (res.doink ? 'OFF THE UPRIGHT AND IN' : g.k.d >= 60 ? `GOOD FROM ${g.k.d}` : 'IT’S GOOD') : res.why === 'short' ? 'SHORT' : res.why === 'doink' ? 'OFF THE UPRIGHT' : res.why === 'left' ? 'WIDE LEFT' : 'WIDE RIGHT', good: res.good, at: g.t, size: res.doink ? 30 : 42 }
+    if (winner && res.good) g.outro = 3600   // (time for the pile: they get to him and get him up)
+    g.stamp = { text: res.good ? (res.doink ? 'OFF THE UPRIGHT AND IN' : g.k.d >= 60 ? `GOOD FROM ${g.k.d}` : 'IT’S GOOD') : res.why === 'short' ? 'SHORT' : res.why === 'doink' ? 'OFF THE UPRIGHT' : res.why === 'left' ? 'WIDE LEFT' : 'WIDE RIGHT', good: res.good, at: g.t, size: res.doink ? 30 : 42, ...(winner && res.good ? { ms: 1150 } : {}) }   // (a game winner's word clears for the pile)
     g.fx.push(res.good ? 'claim' : 'deny', res.good ? 'h:success' : 'h:medium')
     g.phase = 'res'; g.at = g.t
     if (g.i === kicks.length - 1) finish()
@@ -277,7 +278,7 @@ function refAt(ctx, view, C, X, Y, pose) {
 }
 // the ball somewhere over the field: its shadow on the turf under it, then the ball
 function ballAt(ctx, C, X, Y, Z, opt) {
-  const g0 = P(C, X, Y), p = P(C, X, Y, Z), len = Math.max(8, BALL_YD * 1.6 * p.s)
+  const g0 = P(C, X, Y), p = P(C, X, Y, Z), len = Math.max(2.4, BALL_YD * 1.7 * p.s)   // (as small as it really is far off: it had an 8 px floor and never got smaller)
   ctx.fillStyle = `rgba(0,0,0,${(0.36 - Math.min(0.2, Z / 60)).toFixed(2)})`
   ctx.beginPath(); ctx.ellipse(g0.x, g0.y, Math.max(1.6, 0.26 * g0.s), Math.max(0.7, 0.07 * g0.s), 0, 0, Math.PI * 2); ctx.fill()
   airBall(ctx, p.x, p.y, { ...opt, len })
@@ -314,6 +315,29 @@ function topStrip(ctx, view) {
 }
 
 const METER_UP = 172   // (the bar sits over the prompt, which sits over the pads)
+// The game winner is good: the field-goal team turns and runs back to him, jumping, arms up, and the holder gets
+// under him and hoists him up. t: ms since it was called good
+function celebrate(ctx, view, C, g, c, t, LOS) {
+  const KX = -0.42, KY = -0.3, men = []
+  // where each one starts (the seven on the line, the two wings) and where he ends up round the kicker
+  for (let i = 0; i < 9; i++) {
+    const x0 = i < 7 ? (i - 3) * LINE_GAP : (i === 7 ? -1 : 1) * (LINE_GAP * 3 + 1.25), y0 = i < 7 ? LOS - 0.55 : LOS - 1.5
+    const a = (i / 9) * Math.PI * 2 + 0.4, x1 = KX + Math.cos(a) * 1.35, y1 = KY + 0.6 + Math.sin(a) * 0.9
+    const f = easeOut(clamp((t - 120 - i * 45) / 950, 0, 1))
+    men.push({ x: lerp(x0, x1, f), y: lerp(y0, y1, f), look: { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), dir: f < 1 ? 'down' : 'up',
+      step: f < 1 ? Math.floor(t / 90 + i) % 4 : null, pose: f < 1 ? 'sprint' : 'arms-up', lift: f < 1 ? 0 : hop(t + i * 137, 430, 0.32) } })
+  }
+  // the holder, up off his knee, goes straight to him and gets under him
+  const hf = easeOut(clamp((t - 80) / 520, 0, 1)), up = easeOut(clamp((t - 650) / 450, 0, 1))
+  men.push({ x: lerp(0.95, KX + 0.05, hf), y: lerp(0.1, KY + 0.03, hf), look: { color: c.us, trim: c.trim, skin: skinOf(4), dir: 'up', pose: 'arms-up' } })
+  // the kicker, arms up, then up on the holder's shoulders
+  men.push({ x: KX, y: KY, me: true, look: { color: c.us, trim: c.trim, skin: view.cast?.me?.skin ?? skinOf(1), number: view.cast?.me?.number ?? 4, dir: 'up', pose: 'arms-up',
+    lift: up * 1.4 + (up >= 1 ? hop(t, 520, 0.08) : 0), shadow: up < 0.3 } })
+  // far to near, so the nearer man covers the one behind him (the kicker over the man holding him up)
+  men.sort((p, q) => (q.y - p.y) || (p.me ? 1 : q.me ? -1 : 0))
+  for (const m of men) manAt(ctx, view, C, m.x, m.y, m.look)
+}
+
 function drawFG(ctx, g, view) {
   const c = view.colors, them = themOf(view), k = g.k, d = k.d
   const C = camFG(view, d), LOS = 7.5
@@ -345,8 +369,10 @@ function drawFG(ctx, g, view) {
       pose: shown ? (shown.good ? 'hips' : 'ready') : jump ? 'arms-up' : snapped ? 'block' : 'stance',
     })
   }
-  for (let i = 0; i < 7; i++) manAt(ctx, view, C, (i - 3) * LINE_GAP, LOS - 0.55, { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), pose: shown ? (shown.good ? 'arms-up' : 'hips') : 'block' })
-  for (const s of [-1, 1]) manAt(ctx, view, C, s * (LINE_GAP * 3 + 1.25), LOS - 1.5, { color: c.us, trim: c.trim, skin: skinOf(8 + s), pose: shown ? (shown.good ? 'arms-up' : 'hips') : 'block' })
+  // (a game winner that's good: they all come for him, below, instead)
+  const party = g.winner && shown?.good
+  if (!party) for (let i = 0; i < 7; i++) manAt(ctx, view, C, (i - 3) * LINE_GAP, LOS - 0.55, { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), pose: shown ? (shown.good ? 'arms-up' : 'hips') : 'block' })
+  if (!party) for (const s of [-1, 1]) manAt(ctx, view, C, s * (LINE_GAP * 3 + 1.25), LOS - 1.5, { color: c.us, trim: c.trim, skin: skinOf(8 + s), pose: shown ? (shown.good ? 'arms-up' : 'hips') : 'block' })
   // ── where it's going: a line on the grass from the ball, and a sight standing where it ends, the wind already in it
   // (the wind pushes the whole swing of it to one side). Stop it between the uprights. No green window (the owner) ──
   if (!struck && (g.phase === 'aim' || g.phase === 'power' || g.phase === 'run')) {
@@ -362,12 +388,13 @@ function drawFG(ctx, g, view) {
     ctx.beginPath(); ctx.moveTo(b.x - 5, bt.y - 7); ctx.lineTo(b.x + 5, bt.y - 7); ctx.lineTo(b.x, bt.y); ctx.closePath(); ctx.fill()
   }
   // the holder, on a knee beside the spot with a finger on the ball, and the ball stood up under it
-  if (shown) manAt(ctx, view, C, 0.95, 0.1, { color: c.us, trim: c.trim, skin: skinOf(4), pose: shown.good ? 'arms-up' : 'hips' })
+  if (party) { /* drawn with the pile */ } else if (shown) manAt(ctx, view, C, 0.95, 0.1, { color: c.us, trim: c.trim, skin: skinOf(4), pose: shown.good ? 'arms-up' : 'hips' })
   else manAt(ctx, view, C, 0.78, 0.05, { color: c.us, trim: c.trim, skin: skinOf(4), dir: 'left', pose: struck ? 'held' : 'hold' })
   if (!struck) ballAt(ctx, C, 0, 0, 0.19, { ang: Math.PI / 2 })
   // the kicker: three steps back and two over, the run, the leg through the ball
   const run = g.phase === 'run' ? prog(g.t, g.at, g.at + RUN_MS) : struck ? 1 : 0, e = easeOut(run)
-  manAt(ctx, view, C, lerp(-1.9, -0.42, e), lerp(-3.1, -0.3, e), {
+  if (party) celebrate(ctx, view, C, g, c, g.t - shown.at, LOS)
+  else manAt(ctx, view, C, lerp(-1.9, -0.42, e), lerp(-3.1, -0.3, e), {
     color: c.us, trim: c.trim, skin: view.cast?.me?.skin ?? skinOf(1), number: view.cast?.me?.number ?? 4,
     step: g.phase === 'run' && run < 0.72 ? Math.floor(run * 5) % 4 : null,
     pose: shown ? (shown.good ? 'arms-up' : 'hips') : after >= 0 && after < 380 ? 'kick-thru' : g.phase === 'run' ? (run < 0.72 ? 'sprint' : 'kick-load') : null,
@@ -390,6 +417,8 @@ function drawFG(ctx, g, view) {
     }
     const th = ((g.t - b.at) / 1000) * Math.PI * 2 * 3.6, lat = clamp(b.yards / d, -0.3, 0.3)
     ballAt(ctx, C, X, Y, Z, { axis: [lat * Math.cos(th), Math.cos(th), Math.sin(th)] })
+    // (past the goal line the ball is behind the uprights: they're drawn again over it)
+    if (Y > d) posts(ctx, C, d)
   }
   ctx.restore()
   // ── what he's looking at: the distance, the wind ──
