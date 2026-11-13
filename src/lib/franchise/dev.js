@@ -10,7 +10,7 @@ import { TYPES_OF, ovrOf, reOvr, traitLabel } from './players'
 import { addNews, nick } from './core'
 
 // what a grade costs in upgrade points, from where the trait stands
-export const upgradeCost = val => (val >= 11 ? null : val >= 10 ? 4 : val >= 9 ? 3 : val >= 7 ? 2 : 1)
+export const upgradeCost = val => (val >= 11 ? null : val >= 10 ? 3 : val >= 9 ? 2 : 1)
 export function canUpgrade(p, trait) {
   const v = p.a[trait]
   if (v == null) return false
@@ -71,7 +71,7 @@ export function tryBreakout(F, p, score, devCoach) {
   const bar = [0.62, 0.74, 0.86][p.dev]
   if (score < bar) return false
   const R = rngOf(`${F.seed}-${F.year}-${F.week}-brk-${p.id}`)
-  if (!R.chance(clamp(0.3 + (score - bar) * 1.4 + (devCoach - 5.5) * 0.035, 0.08, 0.8))) return false
+  if (!R.chance(clamp(0.2 + (score - bar) * 1.2 + (devCoach - 5.5) * 0.03, 0.05, 0.7))) return false
   p.dev++; p.brk = F.year
   addNews(F, 'milestone', `${p.name} is breaking out for the ${nick(p.team)}`, { team: p.team, pid: p.id, body: `The ${p.age}-year-old ${slotOf(p)} has played his way up a tier: ${DEV[p.dev]} development.` })
   return true

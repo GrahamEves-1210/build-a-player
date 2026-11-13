@@ -5,7 +5,7 @@ import { startOwner } from './owner'
 import { powerRankings as rankPower } from './season'
 import { setExpectations } from './awards'
 import { teamRating } from './core'
-import { setStrategies } from './trades'
+import { computeStates } from './state'
 import { newDraftClass } from './draft'
 import { makeOffice } from './office'
 import { rngOf } from './rng'
@@ -17,13 +17,14 @@ export function createFranchise(opts = {}) {
   prepWeek(F)
   rankPower(F)
   setExpectations(F, s => teamRating(F, F.teams[s]).ovr)
-  setStrategies(F)
+  computeStates(F, { quiet: true })
   startOwner(F)
   newDraftClass(F)
   makeOffice(F, rngOf(`${F.seed}-office-0`))
   return F
 }
 export { saveFranchise, loadFranchise, listSlots, deleteSlot, packFranchise, unpackFranchise } from './save'
+export { teamPreviews, teamState, leagueStates, setDirection, STATES, STATE_LABEL, STATE_TEXT } from './state'
 export { settingsOf, setSetting, LIMITS } from './select'
 export { renamePlayer, setNumber } from './actions'
 
@@ -43,7 +44,7 @@ export {
 
 // ── The game ─────────────────────────────────────────────────────────────────
 export { startGame, stepGame, nextStop, resolveStop, skipGame, finishGame, gameView, advanceWeek, simTo } from './live'
-export const gameCast = () => null
+export { gameCast, campCast } from './cast'
 
 // ── Offseason ────────────────────────────────────────────────────────────────
 export {
@@ -58,7 +59,7 @@ export { autopilot } from './auto'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 export { BUILD_CAPS, DEFAULT_SETTINGS, SAVE_VERSION, TRADE_DEADLINE, DEV, DRIVES, DRIVE_TEXT, SLOTS, STAGES, PLAYOFF_ROUNDS, gradeOf, ovrGrade } from './consts'
-export { COACH_TYPES, COACH_LABEL, ROLE_NAME, coachDataIsReal, useCoachData } from './coachData'
+export { COACH_TYPES, COACH_LABEL, COACH_ATTR, ROLE_NAME, coachDataIsReal, useCoachData, coachOvr } from './coachData'
 export { moneyText } from './money'
 export { teamRef, photoUrl } from './rows'
 export { MOMENT_FITS } from './moments'

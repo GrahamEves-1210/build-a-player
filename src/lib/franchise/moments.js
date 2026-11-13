@@ -11,7 +11,7 @@
 import { GAMES, traitValue } from '../minigames'
 import { xpP, onsideP } from '../kicks'
 import { clamp, slotOf, ovrGrade, gradeOf } from './consts'
-import { nick } from './core'
+import { nick, TEAM_INFO } from './core'
 import { asBuild, lastName, initials, traitLabel } from './players'
 import {
   TUNE, LG0, secsLeft, spotText, clockText, ordinalDown, useRng, after, passOdds, pickTarget, applyPass, applyRun, applyFieldGoal, applyKickoff, applyOnside, applyTry,
@@ -66,7 +66,7 @@ function takeIt(G, L) {
   const n = G.stops.length, target = G.momTarget ?? 5, t = Math.min(1, elapsed(G))
   if (n >= 6) return false
   const finish = (G.q === 4 && G.clock <= 300) || G.q >= 5
-  if (!finish && n >= Math.max(4, target - 1)) return false
+  if (!finish && n >= 4) return false
   if (finish && n >= target && L < 0.85) return false
   if (n < Math.floor(4.6 * Math.pow(t, 0.9))) return true        // behind the pace: the next play that fits
   if (G.sinceStop < 4 && L < 0.85) return false
@@ -136,14 +136,14 @@ function snapFits(G, T, u, LG, ctx) {
     }
     if (dn === 4 && toGoal <= 8 && dist === toGoal && dist > 2) out.push(['goal-line', 1.2, clamp(0.5 - (toGoal - 1) * 0.045 + E.pass * 0.6, 0.12, 0.7), 1.15])
     if (toGoal <= 20 && dn >= 2 && dist >= 3 && !(dn === 4)) out.push(['catch', 0.8, clamp(0.4 + E.pass, 0.1, 0.75), 0.9])
-    if (dn <= 2 && G.yl >= 30 && G.yl <= 62) out.push(['bomb', 0.55, clamp(TUNE.comp[2] + E.pass + (T[o].qb.s.deep - LG.qbDeep) * 0.15 - 0.03, 0.12, 0.62), 0.62])
-    if (dn <= 2 && dist >= 5 && G.yl <= 80) out.push(['juke', 0.4, 0.22, 0.5], ['juke-wr', 0.4, 0.26, 0.5], ['juke-te', 0.35, 0.24, 0.5], ['audible', 0.4, 0.42, 0.5])
+    if (dn <= 2 && G.yl >= 30 && G.yl <= 62) out.push(['bomb', 0.8, clamp(TUNE.comp[2] + E.pass + (T[o].qb.s.deep - LG.qbDeep) * 0.15 - 0.03, 0.12, 0.62), 0.9])
+    if (dn <= 2 && dist >= 5 && G.yl <= 80) out.push(['juke', 0.55, 0.22, 0.8], ['juke-wr', 0.55, 0.26, 0.8], ['juke-te', 0.5, 0.24, 0.8], ['audible', 0.45, 0.42, 0.75])
   } else {
     const stop = clamp(1 - conv(dist) + (E.pass < 0 ? -E.pass : -E.pass), 0.12, 0.92), stopRun = clamp(1 - conv(dist) - E.run, 0.1, 0.9)
     if (money && dist >= 5) out.push(['pass-rush', 1, stop, 1], ['jump-route', 0.9, stop, 1], ['zone-drop', dist <= 9 ? 0.85 : 0.55, stop, 1])
     else if (money && dist >= 3) out.push(['zone-drop', 0.9, stop, 1], ['jump-route', 0.8, stop, 1], ['pass-rush', 0.7, stop, 1])
     else if (money || (toGoal <= 3 && dn >= 2)) out.push(['run-stuff', 1, stopRun, toGoal <= 3 ? 1.1 : 1], ['hit-stick', 1, stopRun, toGoal <= 3 ? 1.1 : 1])
-    if (dn <= 2 && dist >= 5 && G.yl >= 20 && G.yl <= 75) out.push(['tackle-angle', 0.45, 0.74, 0.55])
+    if (dn <= 2 && dist >= 5 && G.yl >= 20 && G.yl <= 75) out.push(['tackle-angle', 0.6, 0.74, 0.8])
     if (toGoal <= 20 && dn >= 2 && dist >= 3 && !money) out.push(['jump-route', 0.6, clamp(0.6 - E.pass, 0.2, 0.9), 0.85])
   }
   return out
@@ -216,19 +216,21 @@ function raise(F, G, T, u, game, m, odds, L, extra = {}) {
     kind: 'moment', id: `${G.id}-m${n}`, n, game, title: GAMES[game]?.title ?? game.toUpperCase(), side, player: pl,
     situation: { ...sit, text: `${sit.text} ${setup}` }, stakes, win: extra.win ?? win, loss: extra.loss ?? loss,
     odds: Math.round(clamp(odds, 0.03, 0.97) * 100) / 100, leverage: Math.round(L * 100) / 100,
-    mg: { game, v: pl.v, arm: pl.arm, kick: pl.kick, seed: `${F.seed}-${F.year}-${G.id}-m${n}`, sport: 'nfl', pos: pl.pos, team: us, opp: them, home: G.neutral ? 'team' : u === 0 ? 'team' : 'opp', superBowl: G.playoff === 'sb' ? F.year : null,
-      situation: mgSituation(G, u, sit, stakes, extra.kickDist ? { dist: extra.kickDist } : {}), weather: G.env?.tag ?? null, cast: null },
+    mg: { game, v: pl.v, arm: pl.arm, kick: pl.kick, seed: `${F.seed}-${F.year}-${G.id}-m${n}`, sport: 'nfl', pos: pl.pos, team: kit(us), opp: kit(them), home: G.neutral ? 'team' : u === 0 ? 'team' : 'opp', superBowl: G.playoff === 'sb' ? F.year : null,
+      situation: mgSituation(G, u, sit, stakes, extra.kickDist ? { dist: extra.kickDist } : {}), weather: G.env?.tag === 'snow' || G.env?.tag === 'rain' ? G.env.tag : null, cast: null },
     ...(extra.data && { data: extra.data }),
   }
   G.sinceStop = 0
   return true
 }
+const kit = short => ({ short, color: TEAM_INFO[short]?.color ?? '#333333', color2: TEAM_INFO[short]?.color2 ?? '#ffffff' })
 // one of the games that fit, never one already used today, the least recently used across the season first
 function choose(F, G, T, u, fits, R) {
   const U = T[u], week = F.year * 100 + F.week
   const ok = fits.filter(([game]) => !G.used.includes(game) && GAMES[game]).map(f => ({ f, m: whoFor(f[0], U, R) })).filter(x => x.m && x.m.p && (PLAYS[x.m.p.pos] ?? []).includes(x.f[0]))
   if (!ok.length) return null
-  const w = ok.map(({ f, m }) => f[1] * (1 + Math.min(6, week - (F.mom?.[f[0]] ?? 0)) * 0.35) * (m.p.built ? 1.8 : 1))
+  const FRESH = [0.12, 0.4, 0.85, 1.3, 1.8, 2.3, 2.8]
+  const w = ok.map(({ f, m }) => f[1] * FRESH[clamp(week - (F.mom?.[f[0]] ?? 0) - 1, 0, 6)] * (m.p.built ? 1.8 : 1))
   return ok[Math.max(0, R.wpick(w))]
 }
 
@@ -244,7 +246,7 @@ export function makeHooks(F, { moments = true, calls = true } = {}) {
       if (!fits.length) return false
       const best = Math.max(...fits.map(f => f[3] ?? 1))
       const late = G.q >= 4 && Math.abs(G.sc[0] - G.sc[1]) <= 8 && (G.clock <= 240 || G.q >= 5)
-      const L = leverage(G, u, (G.down >= 3 ? 1 : 0.6) * best * (late ? 1.25 : 1))
+      const L = leverage(G, u, (G.down >= 3 ? 1 : 0.8) * best * (late ? 1.25 : 1))
       if (!takeIt(G, L)) return false
       const pick = choose(F, G, T, u, L >= 0.88 || G.down >= 3 ? fits.filter(f => (f[3] ?? 1) >= 0.85).length ? fits.filter(f => (f[3] ?? 1) >= 0.85) : fits : fits, R)
       if (!pick) return false
@@ -344,11 +346,13 @@ export function settleCall(G) {
   const c = G.calls[G.calls.length - 1]
   if (!c || c.worked != null || G.dec) return
   const u = G.user, last = G.keep ? G.log.slice(c.mark) : []
+  if (last[0] && c.choice !== 'go') last[0].call = true
   if (c.choice === 'two' || c.choice === 'one') { c.worked = G.sc[u] > c.sc; c.text = last[0]?.text ?? null; return }
   if (c.choice === 'fg') { c.worked = G.sc[u] >= c.sc + 3; c.text = last[0]?.text ?? null; return }
   if (c.choice === 'punt') { c.worked = true; c.text = last[0]?.text ?? null; return }
   c.worked = G.sc[u] > c.sc || (G.poss === u && !G.kick && G.down === 1)
   c.text = last[last.length - 1]?.text ?? null
+  if (last[0]) last[0].call = true
 }
 
 // A moment: win or lose it, with the mini game's score (0-1) for how well
@@ -460,7 +464,7 @@ export function resolveMoment(F, G, T, result) {
     case 'onside': applyOnside(G, T, win); break
     default: break
   }
-  if (G.keep) for (let i = mark; i < G.log.length; i++) G.log[i].moment = true
+  if (G.keep) for (let i = mark; i < G.log.length; i++) G.log[i].moment = simmed ? 'sim' : 'played'
   const text = G.keep && G.log.length > mark ? G.log[G.log.length - 1].text : (win ? p.win : p.loss)
   G.stops.push({ n: p.n, game, title: p.title, player: { id: p.player.id, name: p.player.name }, win, sim: simmed, score: Math.round(score * 100) / 100, text, q: p.situation.q, clockText: p.situation.clockText })
   G.pend = null

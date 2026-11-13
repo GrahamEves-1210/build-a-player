@@ -54,7 +54,9 @@ export function capFix(F, t) {
 // the best street free agent at a group (never a man asking real money: those sign in free agency)
 function bestStreet(F, group, R) {
   let best = null
-  for (const id of F.fa) { const p = F.players[id]; if (!p || groupOf(p) !== group || (p.inj && p.inj.wk > 0)) continue; if (!best || p.ovr > best.ovr) best = p }
+  // (a younger man a point behind is the better signing)
+  const v = p => p.ovr - Math.max(0, p.age - 26) * 0.8
+  for (const id of F.fa) { const p = F.players[id]; if (!p || groupOf(p) !== group || (p.inj && p.inj.wk > 0)) continue; if (!best || v(p) > v(best)) best = p }
   if (!best) { topUpFreeAgents(F, R, F.fa.length + 16); for (const id of F.fa) { const p = F.players[id]; if (p && groupOf(p) === group && (!best || p.ovr > best.ovr)) best = p } }
   return best
 }
@@ -70,7 +72,7 @@ function cutCandidate(F, t, keep = null) {
     if (!p || p.built || p.inj?.ir || p === keep) continue
     const g = groupOf(p), spare = c[g] - MIN_AT[g]
     if (spare <= 0) continue
-    const score = (c[g] - TARGET_AT[g]) * 6 - p.ovr - (start.has(id) ? 40 : 0) - (p.dev ?? 0) * 3 - (p.age <= 23 ? 3 : 0) + (p.con?.sal > 3 ? -6 : 0)
+    const score = (c[g] - TARGET_AT[g]) * 6 - p.ovr - (start.has(id) ? 40 : 0) - (p.dev ?? 0) * 3 - (p.age <= 23 ? 5 : p.age <= 25 ? 2.5 : p.age >= 31 ? -5 : p.age >= 29 ? -2 : 0) - (p.rk && p.draft ? 8 : 0) + (p.con?.sal > 3 ? -6 : 0)
     if (score > bestScore) { bestScore = score; best = p }
   }
   return best

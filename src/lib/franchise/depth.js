@@ -19,7 +19,8 @@ const score = (F, p) => p.ovr + (p.built && p.exp === 0 ? 100 : 0) + (p.first &&
 
 export function autoDepth(F, t) {
   const P = t.roster.map(id => F.players[id]).filter(Boolean)
-  const by = slot => P.filter(p => slotOf(p) === slot).sort((a, b) => score(F, b) - score(F, a) || a.id - b.id)
+  const kid = t.kids ? p => (p.age <= 23 && p.exp <= 1 && p.pos !== 'qb' ? 5 : 0) : () => 0
+  const by = slot => P.filter(p => slotOf(p) === slot).sort((a, b) => score(F, b) + kid(b) - score(F, a) - kid(a) || a.id - b.id)
   const d = {}
   for (const s of SLOTS) if (s.pos && s.pos !== 'ol') d[s.slot] = by(s.slot).map(p => p.id)
   // the line: each spot takes the best man left for it (his own spot counts for more), starters first

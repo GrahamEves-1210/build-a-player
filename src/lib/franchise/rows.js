@@ -3,7 +3,7 @@ import { readableTextColor, nflHeadshot } from '../../utils/simulation'
 import { DEV, SLOTS, OL_SPOTS, slotOf, ovrGrade, gradeOf, clamp, r2 } from './consts'
 import { TEAM_INFO, city, nick } from './core'
 import { archOf, lastName, initials } from './players'
-import { COACH_TYPES, COACH_LABEL, COACH_SHORT, ROLE_NAME } from './coachData'
+import { COACH_TYPES, COACH_LABEL, COACH_SHORT, ROLE_NAME, coachOvr as coachOvrOf } from './coachData'
 import { statLine } from './stats'
 
 const REFS = {}
@@ -65,14 +65,8 @@ export function teamRows(F, short) {
 }
 
 // ── Coaches ──────────────────────────────────────────────────────────────────
-// a coach's one number, for his job: what he is hired to do counts most
-export function coachOvr(c, role = c.role) {
-  const a = c.a
-  const v = role === 'HC' ? a.culture * 0.25 + a.situational * 0.25 + a.talentDev * 0.2 + Math.max(a.offPlaycalling, a.defPlaycalling) * 0.3
-    : role === 'OC' ? a.offPlaycalling * 0.7 + a.talentDev * 0.2 + a.situational * 0.1
-    : a.defPlaycalling * 0.7 + a.talentDev * 0.2 + a.situational * 0.1
-  return Math.round(60 + 2.1 * v + 0.21 * v * v)
-}
+// a coach's overall for a job (the data file's formula: coachData.js)
+export const coachOvr = (c, role = c.role) => coachOvrOf(c.a, role)
 export function coachRow(F, c, role = null) {
   if (!c) return null
   const r = role ?? c.role
@@ -81,11 +75,18 @@ export function coachRow(F, c, role = null) {
     ratings: COACH_TYPES.map(k => ({ key: k, label: COACH_LABEL[k], short: COACH_SHORT[k], val: c.a[k], grade: gradeOf(c.a[k]) })),
     ovr: coachOvr(c, r), grade: ovrGrade(coachOvr(c, r)), salary: c.con?.sal ?? 0, yrs: c.con?.yrs ?? 0,
     record: c.w + c.l > 0 ? `${c.w}-${c.l}` : null, from: c.from ?? null,
+    calls: c.calls ?? null, side: c.side ?? null, interim: !!c.interim, title: c.title ?? null, since: c.since ?? null,
   }
 }
-// The play-caller's rating on a side of the ball: the coordinator's, lifted by a head coach who is strong there
+// The play-caller's rating on a side of the ball. Who calls it is real (the data's `calls`): the head coach when
+// he calls that side himself, otherwise the coordinator. The other man's rating lifts it when it is the better one.
 export function playcall(F, t) {
   const hc = F.coaches[t.staff.hc], oc = F.coaches[t.staff.oc], dc = F.coaches[t.staff.dc]
-  const side = (co, k) => { const base = co?.a[k] ?? hc?.a[k] ?? 4, h = hc?.a[k] ?? base; return clamp(base + Math.max(0, h - base) * 0.5 + (h >= 8 ? 0.3 : 0), 0, 11) }
-  return { off: r2(side(oc, 'offPlaycalling')), def: r2(side(dc, 'defPlaycalling')), sit: hc?.a.situational ?? 5, dev: hc?.a.talentDev ?? 5, culture: hc?.a.culture ?? 5 }
+  const side = (co, k, tag) => {
+    const h = hc?.a[k] ?? 4, c = co?.a[k] ?? h
+    const caller = hc && hc.calls === tag ? h : c, other = hc && hc.calls === tag ? c : h
+    return clamp(caller + Math.max(0, other - caller) * 0.5 + (hc && hc.calls !== tag && h >= 8 ? 0.3 : 0), 0, 11)
+  }
+  return { off: r2(side(oc, 'offPlaycalling', 'off')), def: r2(side(dc, 'defPlaycalling', 'def')), sit: (hc?.a.situational ?? 5) + ((F.gm.tree?.gameday ?? 0) && t.short === F.team ? F.gm.tree.gameday * 0.5 : 0), dev: hc?.a.talentDev ?? 5, culture: hc?.a.culture ?? 5,
+    offCaller: hc && hc.calls === 'off' ? hc.id : oc?.id ?? null, defCaller: hc && hc.calls === 'def' ? hc.id : dc?.id ?? null }
 }

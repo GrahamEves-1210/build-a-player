@@ -49,16 +49,12 @@ export function playerValue(F, p) {
 }
 
 // ── How a team looks at a deal ───────────────────────────────────────────────
-export function setStrategies(F) {
-  const val = {}
-  for (const s of TEAM_SHORTS) val[s] = (F.power ?? []).find(x => x.s === s)?.v ?? 0
-  const rk = ranks(val)
-  for (const s of TEAM_SHORTS) F.teams[s].strat = rk[s] <= 10 ? 'contend' : rk[s] >= 24 ? 'rebuild' : 'middle'
-}
+// what a team is doing: its state (state.js), or for the user's team the direction its GM has declared
+const stance = (F, t) => (t.short === F.team ? F.gm.dir ?? t.state : t.state) ?? 'retool'
 // how much this team wants a given player (1 = the chart)
 function wantOf(F, t, p) {
   let k = 1
-  const strat = t.strat ?? 'middle'
+  const strat = stance(F, t)
   if (strat === 'contend') k *= p.age >= 28 ? 1.12 : 1
   if (strat === 'rebuild') k *= p.age >= 29 ? 0.72 : p.age <= 24 ? 1.12 : 1
   // a need: he would start here
@@ -68,7 +64,7 @@ function wantOf(F, t, p) {
   else if (p.ovr < cur.ovr - 6) k *= 0.85
   return k
 }
-const pickWant = t => (t.strat === 'rebuild' ? 1.15 : t.strat === 'contend' ? 0.92 : 1)
+const pickWant = (F, t) => (stance(F, t) === 'rebuild' ? 1.15 : stance(F, t) === 'contend' ? 0.9 : 1)
 const MARGIN = { easy: 0.94, fair: 1.05, hard: 1.2 }
 const findPick = (F, short, key) => F.teams[short].picks.find(pk => pickKey(pk) === key)
 
@@ -81,9 +77,9 @@ export function judge(F, offer, { margin = null } = {}) {
   const rp = (get.players ?? []).map(id => F.players[id]).filter(p => p && p.team === offer.to), rk = (get.picks ?? []).map(k => findPick(F, offer.to, k)).filter(Boolean)
   if (!gp.length && !gk.length && !rp.length && !rk.length) return { ok: false, give: 0, get: 0, gap: 0, answer: 'Put something on the table.', capOk: true, rosterOk: true, counter: null }
   // what B thinks it is getting and giving
-  const bGets = gp.reduce((s, p) => s + playerValue(F, p) * wantOf(F, B, p), 0) + gk.reduce((s, pk) => s + pickValue(F, pk) * pickWant(B), 0)
+  const bGets = gp.reduce((s, p) => s + playerValue(F, p) * wantOf(F, B, p), 0) + gk.reduce((s, pk) => s + pickValue(F, pk) * pickWant(F, B), 0)
   const bGives = rp.reduce((s, p) => s + playerValue(F, p) * (p.block ? 0.9 : p.built ? 1.4 : 1.05), 0) + rk.reduce((s, pk) => s + pickValue(F, pk), 0)
-  const m = margin ?? MARGIN[F.settings.tradeAI] ?? 1.05
+  const m = margin ?? (MARGIN[F.settings.tradeAI] ?? 1.05) * (offer.from === F.team ? 1 - (F.gm.tree?.trading ?? 0) * 0.02 : 1)
   // money and bodies, both sides
   const dPayA = rp.reduce((s, p) => s + (p.con?.sal ?? 0), 0) - gp.reduce((s, p) => s + (p.con?.sal ?? 0), 0)
   const capOk = !F.settings.cap || (payroll(F, A) + dPayA <= F.cap + 0.001 && payroll(F, B) - dPayA <= F.cap + 0.001)
@@ -103,13 +99,16 @@ export function judge(F, offer, { margin = null } = {}) {
   else if (fair) answer = bGets > bGives * 1.5 ? `The ${them} say yes before the call is over.` : `That works for the ${them}.`
   else {
     // a counter: the smallest pick of the asker's that covers the gap
-    const spare = A.picks.filter(pk => !gk.includes(pk)).map(pk => ({ pk, v: pickValue(F, pk) * pickWant(B) })).filter(x => x.v >= gap).sort((a, b) => a.v - b.v)[0]
+    const spare = A.picks.filter(pk => !gk.includes(pk)).map(pk => ({ pk, v: pickValue(F, pk) * pickWant(F, B) })).filter(x => x.v >= gap).sort((a, b) => a.v - b.v)[0]
     if (spare && gap < bGives * 0.6) counter = { from: offer.from, to: offer.to, give: { players: gp.map(p => p.id), picks: [...gk.map(pickKey), pickKey(spare.pk)] }, get: { players: rp.map(p => p.id), picks: rk.map(pickKey) } }
-    answer = gap > bGives * 0.6 ? `The ${them} are not close to doing that.` : counter ? `The ${them} want more: add a ${spare.pk.y} ${ord(spare.pk.r)}-round pick and it is done.` : `The ${them} want more than that.`
+    answer = gap > bGives * 0.6 ? `The ${them} are not close to doing that.` : counter ? `The ${them} want more: add ${pickWords(F, spare.pk)} and it is done.` : `The ${them} want more than that.`
   }
   return { ok: fair && capOk && rosterOk && !rp.some(p => p.con?.tag), give: Math.round(bGets), get: Math.round(bGives), gap, answer, capOk, rosterOk, counter }
 }
 const ord = n => ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh'][n] ?? `${n}th`
+// which draft a pick is in, without naming a year that has not been played
+export const pickWhen = (F, pk) => { const n = pk.y - (F.draft?.year ?? F.year + 1); return n <= 0 ? 'the next draft' : n === 1 ? 'the draft after next' : 'the draft in three years' }
+export const pickWords = (F, pk) => `a ${ord(pk.r)}-round pick in ${pickWhen(F, pk)}`
 
 export function execute(F, offer) {
   const A = F.teams[offer.from], B = F.teams[offer.to]
@@ -119,7 +118,7 @@ export function execute(F, offer) {
   for (const p of rp) { joinTeam(F, p, offer.from); p.block = undefined; p.want = undefined; p.yrsHere = 0; p.mood = clamp(p.mood + 4, 5, 95) }
   for (const pk of gk) { A.picks = A.picks.filter(x => x !== pk); B.picks.push(pk) }
   for (const pk of rk) { B.picks = B.picks.filter(x => x !== pk); A.picks.push(pk) }
-  const say = (ps, ks) => [...ps.map(p => `${slotOf(p)} ${p.name}`), ...ks.map(pk => `a ${pk.y} ${ord(pk.r)}-round pick`)].join(', ') || 'nothing'
+  const say = (ps, ks) => [...ps.map(p => `${slotOf(p)} ${p.name}`), ...ks.map(pk => pickWords(F, pk))].join(', ') || 'nothing'
   const text = `${teamName(offer.from)} send ${say(gp, gk)} to ${teamName(offer.to)} for ${say(rp, rk)}.`
   addTx(F, 'trade', offer.from, text); addTx(F, 'trade', offer.to, text)
   const big = [...gp, ...rp].sort((a, b) => b.ovr - a.ovr)[0]
@@ -135,50 +134,58 @@ export const tradesOpen = F => F.phase === 'offseason' || (F.phase === 'regular'
 function pickNear(F, from, v, want = 1) {
   return from.picks.map(pk => ({ pk, v: pickValue(F, pk) * want })).filter(x => x.v <= v * 1.25 && x.v >= v * 0.55).sort((a, b) => Math.abs(a.v - v) - Math.abs(b.v - v))[0]?.pk ?? null
 }
-// A week before the deadline: now and then a contender buys a veteran from a team going nowhere; and a team
-// makes the user an offer for a man he doesn't start (or has put on the block).
+// A week before the deadline. Teams act their state: a contender buys a veteran from a team that is selling;
+// and the phone rings for the user according to the direction his GM has declared (a rebuilding GM is offered
+// picks for his veterans, a contending one is offered veterans for his picks).
 export function cpuTradeWeek(F, R) {
   if (F.week < 3) return
-  setStrategies(F)
-  const user = F.team
-  if (R.chance(0.3)) {
-    const sellers = TEAM_SHORTS.filter(s => s !== user && F.teams[s].strat === 'rebuild'), buyers = TEAM_SHORTS.filter(s => s !== user && F.teams[s].strat === 'contend')
+  const user = F.team, late = F.week >= TRADE_DEADLINE - 2
+  const sellers = TEAM_SHORTS.filter(s => s !== user && F.teams[s].state === 'rebuild'), buyers = TEAM_SHORTS.filter(s => s !== user && F.teams[s].state === 'contend')
+  for (let k = 0; k < (late ? 2 : 1); k++) {
+    if (!R.chance(late ? 0.55 : 0.25)) continue
     const s = R.pick(sellers), b = R.pick(buyers)
-    if (s && b) {
-      const S = F.teams[s], B = F.teams[b]
-      const vets = S.roster.map(id => F.players[id]).filter(p => p && p.age >= 27 && p.ovr >= 80 && p.con && p.con.yrs <= 2 && !p.inj && wantOf(F, B, p) > 1.05).sort((a, b2) => b2.ovr - a.ovr)
-      const p = vets[0]
-      if (p) {
-        const pk = pickNear(F, B, playerValue(F, p) * 0.9)
-        const offer = pk && { from: b, to: s, give: { players: [], picks: [pickKey(pk)] }, get: { players: [p.id], picks: [] } }
-        if (offer && judge(F, offer, { margin: 0.8 }).ok) execute(F, offer)
-      }
-    }
+    if (!s || !b) continue
+    const B = F.teams[b]
+    const p = F.teams[s].roster.map(id => F.players[id]).filter(x => x && x.age >= 27 && x.ovr >= 79 && x.con && x.con.yrs <= 2 && !x.inj && x.pos !== 'qb' && wantOf(F, B, x) > 1.05).sort((a, b2) => b2.ovr - a.ovr)[0]
+    if (!p) continue
+    const pk = pickNear(F, B, playerValue(F, p) * 0.9)
+    const offer = pk && { from: b, to: s, give: { players: [], picks: [pickKey(pk)] }, get: { players: [p.id], picks: [] } }
+    if (offer && judge(F, offer, { margin: 0.8 }).ok) execute(F, offer)
   }
-  // an offer for one of the user's players
-  if ((F.offers ?? []).length < 2 && R.chance(0.34)) {
-    const U = F.teams[user], L = lineupOf(F, U), starts = new Set()
-    for (const k in L) if (Array.isArray(L[k])) L[k].slice(0, 1).forEach(p => p?.id && starts.add(p.id))
-    const pool = U.roster.map(id => F.players[id]).filter(p => p && !p.built && !p.inj && (p.block || (!starts.has(p.id) && p.ovr >= 74)) && p.pos !== 'k')
-    const p = pool.sort((a, b) => (b.block ? 1000 : 0) + b.ovr - (a.block ? 1000 : 0) - a.ovr)[0]
-    if (p) {
-      const suitors = TEAM_SHORTS.filter(s => s !== user).map(s => ({ s, k: wantOf(F, F.teams[s], p) })).filter(x => x.k > 1.05).sort((a, b) => b.k - a.k)
-      const s = suitors[R.int(0, Math.min(2, suitors.length - 1))]?.s
-      if (s) {
-        const pk = pickNear(F, F.teams[s], playerValue(F, p) * (p.block ? 0.85 : 1.05), 1)
-        if (pk) {
-          const offer = { id: (F.offerId = (F.offerId ?? 0) + 1), from: s, to: user, give: { players: [], picks: [pickKey(pk)] }, get: { players: [p.id], picks: [] }, week: F.week }
-          const j = judgeForUser(F, offer)
-          if (j.capOk && j.rosterOk) { (F.offers ??= []).push(offer) }
-        }
-      }
-    }
+  if ((F.offers ?? []).filter(o => !o.draft).length >= 2) return
+  const U = F.teams[user], dir = stance(F, U)
+  const push = offer => { const j = judgeForUser(F, offer); if (j.capOk && j.rosterOk) (F.offers ??= []).push(offer) }
+  const id = () => (F.offerId = (F.offerId ?? 0) + 1)
+  if (dir === 'contend') {
+    // a seller offers a veteran who would start here, for a pick
+    if (!R.chance(late ? 0.5 : 0.25)) return
+    const pool = []
+    for (const s of sellers) for (const pid of F.teams[s].roster) { const p = F.players[pid]; if (p && p.age >= 27 && p.ovr >= 80 && p.con && p.con.yrs <= 2 && !p.inj && p.pos !== 'qb' && p.pos !== 'k' && wantOf(F, U, p) > 1.1) pool.push(p) }
+    const p = pool.sort((a, b) => b.ovr - a.ovr)[R.int(0, Math.min(3, pool.length - 1))]
+    if (!p) return
+    const pk = pickNear(F, U, playerValue(F, p) * 0.95)
+    if (pk) push({ id: id(), from: p.team, to: user, give: { players: [p.id], picks: [] }, get: { players: [], picks: [pickKey(pk)] }, week: F.week })
+    return
   }
+  // otherwise an offer for one of the user's players: a rebuilding GM hears about his veterans, anyone hears
+  // about the men on his block
+  if (!R.chance(dir === 'rebuild' ? (late ? 0.7 : 0.45) : 0.3)) return
+  const L = lineupOf(F, U), starts = new Set()
+  for (const k in L) if (Array.isArray(L[k])) L[k].slice(0, 1).forEach(p => p?.id && starts.add(p.id))
+  const pool = U.roster.map(pid => F.players[pid]).filter(p => p && !p.built && !p.inj && p.pos !== 'k' && !(F.offers ?? []).some(o => o.get?.players?.includes(p.id))
+    && (p.block || (dir === 'rebuild' ? p.age >= 28 && p.ovr >= 78 && p.con && p.con.yrs <= 2 : !starts.has(p.id) && p.ovr >= 74)))
+  const p = pool.sort((a, b) => (b.block ? 1000 : 0) + b.ovr - (a.block ? 1000 : 0) - a.ovr)[0]
+  if (!p) return
+  const suitors = TEAM_SHORTS.filter(s => s !== user && (dir !== 'rebuild' || F.teams[s].state !== 'rebuild')).map(s => ({ s, k: wantOf(F, F.teams[s], p) * (F.teams[s].state === 'contend' ? 1.1 : 1) })).filter(x => x.k > 1.05).sort((a, b) => b.k - a.k)
+  const s = suitors[R.int(0, Math.min(2, suitors.length - 1))]?.s
+  if (!s) return
+  const pk = pickNear(F, F.teams[s], playerValue(F, p) * (p.block ? 0.85 : 1.05), 1)
+  if (pk) push({ id: id(), from: s, to: user, give: { players: [], picks: [pickKey(pk)] }, get: { players: [p.id], picks: [] }, week: F.week })
 }
 // an offer made TO the user is always the CPU's to honour; only money and bodies can stop it
 export function judgeForUser(F, offer) { return judge(F, { from: offer.from, to: offer.to, give: offer.give, get: offer.get }, { margin: 0 }) }
 export const offerText = (F, o) => {
-  const say = (ps, ks, from) => [...ps.map(id => F.players[id]).filter(Boolean).map(p => `${slotOf(p)} ${p.name}`), ...ks.map(k => findPick(F, from, k)).filter(Boolean).map(pk => `a ${pk.y} ${ord(pk.r)}-round pick`)].join(', ')
+  const say = (ps, ks, from) => [...ps.map(id => F.players[id]).filter(Boolean).map(p => `${slotOf(p)} ${p.name}`), ...ks.map(k => findPick(F, from, k)).filter(Boolean).map(pk => pickWords(F, pk))].join(', ')
   return `${teamName(o.from)} offer ${say(o.give.players ?? [], o.give.picks ?? [], o.from)} for ${say(o.get.players ?? [], o.get.picks ?? [], o.to)}.`
 }
 export { REG_WEEKS, pct, r2 }

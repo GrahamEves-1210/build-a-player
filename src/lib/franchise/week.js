@@ -89,12 +89,14 @@ export function lineText(pos, s) {
 // ── Injuries ─────────────────────────────────────────────────────────────────
 const INJ_RATE = { qb: 0.019, rb: 0.03, wr: 0.022, te: 0.021, ol: 0.017, dl: 0.02, lb: 0.022, db: 0.02, k: 0.0015 }
 const INJ_KINDS = [
-  [1, ['a bruised shoulder', 'a sprained ankle', 'a tight hamstring', 'a stinger', 'a hip pointer', 'a jammed thumb']],
-  [2, ['a sprained ankle', 'a hamstring strain', 'a concussion', 'a calf strain', 'a groin strain', 'bruised ribs']],
-  [4, ['a high-ankle sprain', 'an MCL sprain', 'a hamstring tear', 'a broken hand', 'a shoulder sprain', 'a sprained foot']],
-  [8, ['a broken collarbone', 'a torn meniscus', 'a fractured forearm', 'a severe high-ankle sprain', 'a torn pectoral']],
-  [99, ['a torn ACL', 'a torn Achilles', 'a broken leg', 'a dislocated knee', 'a ruptured patellar tendon']],
+  [1, ['Bruised shoulder', 'Sprained ankle', 'Tight hamstring', 'Stinger', 'Hip pointer', 'Jammed thumb']],
+  [2, ['Sprained ankle', 'Hamstring strain', 'Concussion', 'Calf strain', 'Groin strain', 'Bruised ribs']],
+  [4, ['High-ankle sprain', 'MCL sprain', 'Hamstring tear', 'Broken hand', 'Shoulder sprain', 'Sprained foot']],
+  [8, ['Broken collarbone', 'Torn meniscus', 'Fractured forearm', 'Severe high-ankle sprain', 'Torn pectoral']],
+  [99, ['Torn ACL', 'Torn Achilles', 'Broken leg', 'Dislocated knee', 'Ruptured patellar tendon']],
 ]
+// an injury inside a sentence: lower case, unless it starts with initials (MCL sprain)
+export const injWords = what => (/^[A-Z]{2}/.test(what) ? what : what[0].toLowerCase() + what.slice(1))
 const DUR = new WeakMap()
 export function durability(p) { let d = DUR.get(p); if (d === undefined) { d = 0.7 + roll(`dur-${p.name}-${p.id}`) * 0.7; DUR.set(p, d) } return d }
 export function rollInjury(F, R, p, share, mult = 1) {
@@ -108,15 +110,18 @@ export function rollInjury(F, R, p, share, mult = 1) {
 
 // ── XP ───────────────────────────────────────────────────────────────────────
 // how fast a man of this age still learns
-const XP_AGE = { qb: 3, ol: 1, k: 6 }
+const XP_AGE = { qb: 1, k: 2 }
+// how much of the XP a position turns into growth (set so the league's talent at each position holds over 20 years:
+// scripts/franchise/drift.mjs). Quarterbacks, linemen and kickers last longest, so they have to grow slowest.
+const XP_POS = { qb: 0.62, k: 0.22, ol: 0.8, rb: 1.14, lb: 1.14, dl: 1.06, te: 1.04 }
 export function xpAge(p) {
   const a = p.age - (XP_AGE[p.pos] ?? 0)
-  return a <= 22 ? 1.3 : a <= 23 ? 1.2 : a <= 25 ? 1.0 : a <= 27 ? 0.72 : a <= 29 ? 0.46 : a <= 31 ? 0.28 : 0.15
+  return a <= 22 ? 1.2 : a === 23 ? 1.05 : a === 24 ? 0.85 : a === 25 ? 0.62 : a === 26 ? 0.42 : a === 27 ? 0.28 : a <= 29 ? 0.16 : 0.07
 }
-export const XP_PER_POINT = 800
+export const XP_PER_POINT = 640
 export function giveXp(F, p, raw, devCoach = 5.5) {
   const tree = p.team === F.team ? 1 + (F.gm.tree?.practice ?? 0) * 0.04 : 1
-  const xp = raw * DEV_RATE[p.dev ?? 0] * xpAge(p) * (1 + (devCoach - 5.5) * 0.04) * tree
+  const xp = raw * DEV_RATE[p.dev ?? 0] * xpAge(p) * (XP_POS[p.pos] ?? 1) * (1 + (devCoach - 5.5) * 0.04) * tree
   p.xp = (p.xp ?? 0) + xp
   let got = 0
   while (p.xp >= XP_PER_POINT) { p.xp -= XP_PER_POINT; p.pts = (p.pts ?? 0) + 1; got++ }
@@ -151,8 +156,9 @@ export function bookGame(F, G, week, i) {
       // workload
       p.wear = clamp((p.wear ?? 0) + share * (p.pos === 'rb' ? 5.4 : p.pos === 'qb' ? 2 : p.pos === 'k' ? 0.5 : 3.6) + ((line.ra ?? 0) > 18 ? 2.5 : 0), 0, 100)
       // XP: playing time, production, winning
-      const got = giveXp(F, p, 26 * share + Math.max(0, sc) * 1.9 + (won ? 7 : 0) + (reg ? 0 : 10), dev)
-      if (user) out.xp.push({ id: p.id, name: p.name, xp: got.xp, pts: got.pts })
+      // (production counts the same for every position: a quarterback's big numbers are not worth more XP than a guard's good day)
+      const got = giveXp(F, p, 26 * share + Math.min(13, Math.max(0, sc * (p.pos === 'qb' ? 0.5 : 1))) * 1.9 + (won ? 7 : 0) + (reg ? 0 : 10), dev)
+      if (user) out.xp.push({ id: p.id, name: p.name, slot: slotOf(p), built: !!p.built, xp: got.xp, pts: got.pts })
       if (sc > 6) top.push({ p, side, sc: sc * (won ? 1.15 : 1), line })
       if (p.inj?.nag) { const what = p.inj.what; p.inj = null; if (R.chance(0.25)) out.injuries.push({ p, wk: 3, what }) }
       else if (F.settings.injuries) {
@@ -185,8 +191,8 @@ export function applyInjuries(F, list, week) {
     const t = F.teams[p.team]
     const star = p.ovr >= 86
     out.push({ id: p.id, name: p.name, team: p.team, slot: slotOf(p), what, wk, user: p.team === F.team, ovr: p.ovr })
-    if (star) addNews(F, 'injury', p.inj.season ? `${p.name} is out for the season with ${what}` : `${nick(p.team)} lose ${p.name} for ${wk === 1 ? 'a week' : `${wk} weeks`} (${what.replace(/^an? /, '')})`, { team: p.team, pid: p.id })
-    if (wk >= 4 && (p.team !== F.team || F.settings.autoRoster)) { p.inj.ir = true; addTx(F, 'ir', p.team, `${teamName(p.team)} placed ${slotOf(p)} ${p.name} on injured reserve (${what.replace(/^an? /, '')}).`, p.id) }
+    if (star) addNews(F, 'injury', p.inj.season ? `${p.name} is out for the season (${injWords(what)})` : `${nick(p.team)} lose ${p.name} for ${wk === 1 ? 'a week' : `${wk} weeks`} (${injWords(what)})`, { team: p.team, pid: p.id })
+    if (wk >= 4 && (p.team !== F.team || F.settings.autoRoster)) { p.inj.ir = true; addTx(F, 'ir', p.team, `${teamName(p.team)} placed ${slotOf(p)} ${p.name} on injured reserve (${injWords(what)}).`, p.id) }
     void t
   }
   return out

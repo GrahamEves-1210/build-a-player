@@ -55,6 +55,7 @@ function invariants(run, F) {
     if (F.settings.cap && payroll(F, t) > F.cap + 0.011) fail(run, F, `${s} is over the cap: ${payroll(F, t)} of ${F.cap}`)
     for (const id of t.roster) { const p = F.players[id]; if (!p) fail(run, F, `${s} roster has a missing player ${id}`); else if (p.team !== s) fail(run, F, `${p.name} is on ${s}'s roster but says ${p.team}`) }
     for (const k of ['hc', 'oc', 'dc']) if (inSeason && !F.coaches[t.staff[k]]) fail(run, F, `${s} has no ${k}`)
+    if (!FR.STATES.includes(t.state)) fail(run, F, `${s} has no state (${t.state})`)
     if (t.st) finite(run, F, `${s}.st`, t.st)
     if (new Set(t.roster).size !== t.roster.length) fail(run, F, `${s} has a player twice`)
   }
@@ -84,6 +85,7 @@ function invariants(run, F) {
 const A = { seasons: 0, teamGames: 0, pf: 0, py: 0, ry: 0, pa: 0, pc: 0, sk: 0, int: 0, fgm: 0, fga: 0, p4000: 0, r1000: 0, c1000: 0, s10: 0, mvp: [], champRank: [], champs: {}, wins: [], bestWon: 0, ties: 0, injOut: 0, playoffRepeat: 0 }
 const T = { week: [], off: [], save: [], pack: [] }
 const drift = {}
+const STATE = { flips: 0, seasons: 0, sizes: [], first: null, bad: 0 }
 function seasonStats(F, preRank) {
   // (called in the review stage: season stat lines are still on the players)
   const P = Object.values(F.players)
@@ -109,6 +111,8 @@ for (let run = 0; run < CONFIGS.length; run++) {
     const probs = scheduleProblems(F.sched.weeks.slice(0, 18), F.sched.bye)
     if (probs.length) problems.push(`[${run}] ${F.year} schedule: ${probs.slice(0, 3).join('; ')}`)
     const ratings = Object.fromEntries(Object.keys(F.teams).map(s => [s, teamRating(F, F.teams[s]).ovr]))
+    { const LS = FR.leagueStates(F); const sizes = FR.STATES.map(st => LS[st].length); STATE.sizes.push(sizes); if (sizes.some(n => n < 5 || n > 16)) problems.push(`[${run}] ${F.year}: a lopsided league: ${sizes.join('/')} contending/retooling/rebuilding`); if (!STATE.first) STATE.first = Object.fromEntries(FR.STATES.map(st => [st, LS[st].map(r => r.short)])); if (!FR.STATES.includes(FR.teamState(F).direction)) problems.push('the GM has no direction') }
+    let before = Object.fromEntries(Object.keys(F.teams).map(s => [s, F.teams[s].state]))
     const order = Object.keys(ratings).sort((a, b) => ratings[b] - ratings[a]), preRank = Object.fromEntries(order.map((s, i) => [s, i + 1]))
     if (run === 0 && [0, 4, 9, 14, 19].includes(y)) {
       const P = Object.values(F.players).filter(p => p.team)
@@ -121,6 +125,7 @@ for (let run = 0; run < CONFIGS.length; run++) {
       F = FR.autopilot(F, { until: 'week' })
       T.week.push(performance.now() - t0)
       invariants(run, F)
+      for (const s in F.teams) if (F.teams[s].state !== before[s]) { STATE.flips++; before[s] = F.teams[s].state }
       if (twin) twin = FR.autopilot(twin, { until: 'week' })
       // a save in the middle of the season: it must come back the same, and play on the same
       if (run === 0 && y === 0 && F.week === 9 && F.phase === 'regular') {
@@ -133,6 +138,7 @@ for (let run = 0; run < CONFIGS.length; run++) {
     }
     if (twin) { if (canon(strip(twin)) !== canon(strip(F))) problems.push('the same seed and choices played two different seasons'); }
     seasonStats(F, preRank)
+    STATE.seasons++
     const t0 = performance.now()
     guard = 0
     while (F.phase === 'offseason' && guard++ < 20) { F = FR.advanceStage(F, { auto: true }); invariants(run, F); if (twin) twin = FR.advanceStage(twin, { auto: true }) }
@@ -173,6 +179,10 @@ row('different champions', `${Object.keys(A.champs).length}`, `of ${N} titles`)
 console.log('titles:', Object.entries(A.champs).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s} ${n}`).join(' '))
 console.log('\nMVP lines:'); for (const l of A.mvp.slice(0, 24)) console.log('  ' + l)
 console.log('\nLEAGUE OVER TIME (run 0)'); for (const y in drift) console.log(`  ${y}: ${drift[y]}`)
+console.log('\nTEAM STATES')
+console.log('  a new league (run 0): ' + FR.STATES.map(st => `${FR.STATE_LABEL[st]} (${STATE.first[st].length}): ${STATE.first[st].join(' ')}`).join('  |  '))
+console.log(`  sizes by year (contend/retool/rebuild): ${STATE.sizes.slice(0, 12).map(x => x.join('/')).join('  ')}`)
+console.log(`  changes of state in season: ${(STATE.flips / Math.max(1, STATE.seasons)).toFixed(1)} a season`)
 console.log('\nPERFORMANCE')
 console.log(`  advance a week: avg ${avg(T.week).toFixed(1)} ms, median ${sorted[Math.floor(sorted.length / 2)].toFixed(1)} ms, 95th ${sorted[Math.floor(sorted.length * 0.95)].toFixed(1)} ms, worst ${max(T.week).toFixed(0)} ms`)
 console.log(`  an offseason (8 stages): avg ${avg(T.off).toFixed(0)} ms, worst ${max(T.off).toFixed(0)} ms`)

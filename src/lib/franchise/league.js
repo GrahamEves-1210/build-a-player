@@ -12,7 +12,7 @@ import { capFor, marketValue, marketYears, newContract, rookieDeal, payroll } fr
 import { makeSchedule, DIVISIONS } from './schedule'
 import { autoDepth } from './depth'
 import { addPlayer, teamRating, TEAM_SHORTS } from './core'
-import { coachRows, COACH_TYPES } from './coachData'
+import { coachRows, COACH_TYPES, coachOvr } from './coachData'
 
 // ── Players ──────────────────────────────────────────────────────────────────
 const SUB_OF_GROUP = { EDGE: ['dl', 'edge'], DT: ['dl', 'dt'], CB: ['db', 'cb'], S: ['db', 's'] }
@@ -135,14 +135,15 @@ export const topUpFreeAgents = (F, R, min = 60) => { if (F.fa.length < min) stoc
 // ── Coaches ──────────────────────────────────────────────────────────────────
 // what a coach asks for a year ($M): head coaches 5 to 20, coordinators 1.5 to 6
 export function coachAsk(c, role = c.role) {
-  const a = c.a, top = role === 'HC' ? (a.culture + a.situational + a.talentDev + Math.max(a.offPlaycalling, a.defPlaycalling) * 2) / 5 : role === 'OC' ? a.offPlaycalling * 0.8 + a.talentDev * 0.2 : a.defPlaycalling * 0.8 + a.talentDev * 0.2
-  return r2(role === 'HC' ? clamp(3.5 + (top - 3) * 2.1, 4, 20) : clamp(1 + (top - 3) * 0.7, 1.2, 6.5))
+  const o = coachOvr(c.a, role)
+  return r2(role === 'HC' ? clamp(4 + (o - 62) * 0.5, 4, 20) : clamp(1.2 + (o - 60) * 0.16, 1.2, 6.5))
 }
 export function addCoach(F, row, R) {
   const c = {
     id: F.nextCoachId++, name: row.name, role: row.role, team: row.team ?? null, a: { ...row.attrs },
     real: !row.placeholder && !row.gen && !row.built, placeholder: !!row.placeholder, gen: !!row.gen, built: !!row.built,
     age: row.age ?? R.int(row.role === 'HC' ? 42 : 36, row.role === 'HC' ? 66 : 58), con: null, w: 0, l: 0, hist: [],
+    ...(row.calls != null && { calls: row.calls }), ...(row.side && { side: row.side }), ...(row.interim && { interim: true }), ...(row.title && { title: row.title }), ...(row.since && { since: row.since }),
     ...(row.from && { from: row.from }),
   }
   F.coaches[c.id] = c
@@ -173,7 +174,7 @@ function buildCoaches(F, R, userTeam, coach) {
     const t = F.teams[userTeam], old = F.coaches[t.staff.hc]
     if (old) { old.team = null; old.con = null }
     const c = addCoach(F, builtCoachRow(coach), R)
-    c.team = userTeam; c.age = 45; c.con = { yrs: 4, sal: coachAsk(c) }
+    c.team = userTeam; c.age = 45; c.calls = c.a.offPlaycalling >= c.a.defPlaycalling ? (c.a.offPlaycalling >= 7 ? 'off' : null) : (c.a.defPlaycalling >= 7 ? 'def' : null); c.con = { yrs: 4, sal: coachAsk(c) }
     t.staff.hc = c.id
   }
 }
@@ -189,12 +190,12 @@ export function checkBuilds(builds) {
   return out
 }
 
-export function buildLeague({ team, builds = [], gmName, coach = null, settings = {}, seed }) {
+export function buildLeague({ team, builds = [], gmName, coach = null, settings = {}, seed, direction = null }) {
   const user = TEAM_SHORTS.includes(team) ? team : 'KC'
   const F = {
     v: SAVE_VERSION, seed: String(seed ?? 'franchise'), rev: 0, flash: null,
     team: user,
-    gm: { name: (gmName && String(gmName).trim()) || 'GM', team: user, since: FIRST_YEAR, security: 62, w: 0, l: 0, t: 0, pw: 0, pl: 0, rings: 0, fired: 0, seasons: [], pts: 0, tree: {}, legacy: 0 },
+    gm: { name: (gmName && String(gmName).trim()) || 'GM', team: user, since: FIRST_YEAR, security: 62, w: 0, l: 0, t: 0, pw: 0, pl: 0, rings: 0, fired: 0, seasons: [], pts: 0, tree: {}, legacy: 0, dir: ['contend', 'retool', 'rebuild'].includes(direction) ? direction : null },
     settings: { ...DEFAULT_SETTINGS, ...settings },
     year: FIRST_YEAR, week: 1, phase: 'regular', stage: null,
     cap: capFor(FIRST_YEAR),
@@ -205,17 +206,18 @@ export function buildLeague({ team, builds = [], gmName, coach = null, settings 
     draft: null, owner: null, off: null, power: [], mom: {},
     hist: { seasons: [], records: {}, hall: [] },
   }
-  const R = rngOf(`${F.seed}-league`)
   for (const s of TEAM_SHORTS) {
-    F.teams[s] = { short: s, roster: [], depth: null, dead: 0, deadNext: 0, picks: [], staff: { hc: null, oc: null, dc: null, scout: null }, plan: { off: 'balanced', def: 'balanced' }, strat: 'middle', rec: null, st: null, hist: [] }
+    F.teams[s] = { short: s, roster: [], depth: null, dead: 0, deadNext: 0, picks: [], staff: { hc: null, oc: null, dc: null, scout: null }, plan: { off: 'balanced', def: 'balanced' }, state: null, rec: null, st: null, hist: [] }
     for (let y = 1; y <= 3; y++) for (let r = 1; r <= 7; r++) F.teams[s].picks.push({ y: FIRST_YEAR + y, r, o: s })
   }
   const taken = new Set()
   const mine = checkBuilds(builds)
-  for (const s of TEAM_SHORTS) buildRoster(F, R, s, taken, s === user ? mine : [])
+  // (every team from its own roll of the dice: the league is the same whichever team the user takes, so team
+  // select can show the real numbers before a franchise exists)
+  for (const s of TEAM_SHORTS) buildRoster(F, rngOf(`${F.seed}-roster-${s}`), s, taken, s === user ? mine : [])
   fitCap(F)
-  stockFreeAgents(F, R, taken)
-  buildCoaches(F, R, user, coach)
+  stockFreeAgents(F, rngOf(`${F.seed}-street`), taken)
+  buildCoaches(F, rngOf(`${F.seed}-coaches`), user, coach)
   for (const s of TEAM_SHORTS) autoDepth(F, F.teams[s])
   // last season's "finish" for year one's schedule: each division by the strength of the roster it starts with
   const order = {}

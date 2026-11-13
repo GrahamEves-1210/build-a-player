@@ -112,9 +112,13 @@ export function loadFranchise(slot = 0) {
 export function listSlots() {
   const ls = store(), out = []
   for (let slot = 0; slot < SLOTS_N; slot++) {
-    let meta = null
-    try { if (ls && ls.getItem(key(slot))) meta = JSON.parse(ls.getItem(metaKey(slot)) || 'null') ?? {} } catch { meta = {} }
-    out.push(meta ? { slot, empty: false, ...meta } : { slot, empty: true })
+    let meta = null, text = null
+    try { text = ls ? ls.getItem(key(slot)) : null; if (text) meta = JSON.parse(ls.getItem(metaKey(slot)) || 'null') ?? {} } catch { meta = {} }
+    if (!text) { out.push({ slot, empty: true }); continue }
+    // (the header is enough to know whether this engine can open it; the whole save is only read on load)
+    const v = text.startsWith('FZ') ? parseInt(text.slice(2, text.indexOf(':')), 10) : text[0] === '{' ? 1 : NaN
+    const reason = !(v >= 1) ? 'This save is damaged and could not be opened.' : v > SAVE_VERSION ? 'This save was made by a newer version of the game. Update to open it.' : !meta.team ? 'This save is damaged and could not be opened.' : null
+    out.push(reason ? { slot, empty: false, broken: true, reason, ...meta } : { slot, empty: false, broken: false, ...meta })
   }
   return out
 }

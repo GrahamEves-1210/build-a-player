@@ -6,7 +6,8 @@ import { payroll, newContract, moneyText, marketValue } from './money'
 import { TYPES_OF } from './players'
 import { canUpgrade, applyUpgrade, spendPoints, upgradeCost } from './dev'
 import { settle, extensionAsk } from './office'
-import { judge, execute, tradesOpen, judgeForUser, playerValue, pickValue, pickKey, setStrategies } from './trades'
+import { judge, execute, tradesOpen, judgeForUser, playerValue, pickValue, pickKey } from './trades'
+import { computeStates } from './state'
 import { release, sign, streetAsk, upkeep, rosterLimit, fitUnderCap } from './roster'
 import { rngOf } from './rng'
 import { TEAM_SHORTS } from './core'
@@ -89,7 +90,7 @@ export function shopPlayer(F, pid) {
   const p = mineOnly(F, pid)
   if (!p) return fail(F, 'player', 'He is not on this team.')
   if (!tradesOpen(F)) return fail(F, 'deadline', 'The trade deadline has passed.')
-  setStrategies(F)
+  if (!F.teams[F.team].state) computeStates(F, { quiet: true })
   const R = rngOf(`${F.seed}-${F.year}-${F.week}-shop-${pid}`), v = playerValue(F, p), made = []
   const teams = R.shuffle(TEAM_SHORTS.filter(s => s !== F.team))
   for (const s of teams) {

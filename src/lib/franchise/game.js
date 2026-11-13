@@ -17,14 +17,14 @@ import { lastName } from './players'
 import { nick } from './core'
 
 export const TUNE = {
-  sack: 0.066, sackRush: 2.6, sackQb: 1.3,
-  comp: [0.744, 0.574, 0.376],            // short, intermediate, deep
-  compQb: 0.15, compRec: 0.1, compCov: 0.46, compCall: 0.014, pressureComp: 0.13,
-  int: [0.0115, 0.025, 0.047], intK: 1.5,
-  runBase: 3.8, runLine: 4.5, runBack: 2.9, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
+  sack: 0.066, sackRush: 3.1, sackQb: 1.5,
+  comp: [0.748, 0.578, 0.38],            // short, intermediate, deep
+  compQb: 0.19, compRec: 0.13, compCov: 0.56, compCall: 0.014, pressureComp: 0.13,
+  int: [0.0115, 0.025, 0.047], intK: 1.8,
+  runBase: 3.8, runLine: 5.5, runBack: 3.5, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
   fumRun: 0.013, fumRec: 0.0105, fumSack: 0.1, fumLost: 0.55,
   pen: 0.05, home: 0.014,
-  passRate: 0.546,
+  passRate: 0.552,
 }
 
 // ── A game ───────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ const ordinalDown = ['', '1st', '2nd', '3rd', '4th']
 
 function say(G, kind, text, extra = {}) {
   if (!G.keep) return
-  G.log.push({ i: G.log.length, q: G.q, clock: G.clock, team: G.poss === 0 ? G.h : G.a, down: G.down, dist: G.dist, spot: G.yl, kind, text, yds: 0, pts: 0, by: null, drive: G.drive, driveStart: G.dPlays === 0, moment: false, score: [G.sc[0], G.sc[1]], ...extra })
+  G.log.push({ i: G.log.length, q: G.q, clock: G.clock, team: G.poss === 0 ? G.h : G.a, down: G.down, dist: G.dist, spot: G.yl, kind, text, yds: 0, pts: 0, by: null, drive: G.drive, driveStart: G.dPlays === 0, moment: null, call: false, score: [G.sc[0], G.sc[1]], ...extra })
 }
 function points(G, side, pts, text) {
   G.sc[side] += pts
@@ -508,7 +508,7 @@ export function fourthCall(G, T, o) {
   const O = T[o], d = 1 - o, lead = G.sc[o] - G.sc[d], toGoal = 100 - G.yl, togo = G.dist, R = G.R
   const must = (G.q === 4 || G.q >= 5) && G.sc[o] - G.sc[1 - o] <= 0 && secsLeft(G) <= 150
   const reach = kickTry(O.k.v.power) + (G.env.yards > 0 ? 1 : 0), fd = fgDist(G.yl)
-  const range = must ? fd <= reach : fd <= reach - 5 || (fd <= reach && R.chance(0.36))
+  const range = must ? fd <= reach : fd <= reach - 4 || (fd <= reach && R.chance(0.45))
   const left = secsLeft(G), q4 = G.q === 4, ot = G.q >= 5
   // the game is on the line
   if (q4 || ot) {

@@ -24,7 +24,7 @@ export function startGame(F, { mode = 'moments' } = {}) {
   const G = makeGame(F, F.week, ug.i, true, P)
   G.mode = ['moments', 'watch', 'sim'].includes(mode) ? mode : 'moments'
   // how many moments this game is paced for (4 to 6)
-  G.momTarget = [4, 5, 5, 6][rngOf(`${F.seed}-${F.year}-${G.id}-target`).int(0, 3)]
+  G.momTarget = [4, 5, 5, 5][rngOf(`${F.seed}-${F.year}-${G.id}-target`).int(0, 3)]
   F.game = G
   if (G.mode === 'sim') run(F, G, true)
   return touch(F)

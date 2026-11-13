@@ -19,6 +19,7 @@ import { cpuTradeWeek } from './trades'
 import { ownerWeek } from './owner'
 import { startOffseason } from './offseason'
 import { scoutingWeek } from './draft'
+import { stateWeek, stanceOf } from './state'
 
 export const PRACTICE_XP = { full: 1.5, half: 1, walk: 0.45 }
 export const PRACTICE_WEAR = { full: 2.4, half: 0.4, walk: -5 }
@@ -50,6 +51,9 @@ export function moodOf(F, p, ctx = null) {
   const cul = ctx?.culture ?? playcall(F, t).culture
   put((cul - 5.5) * 2.1, cul >= 5.5 ? 'A locker room he likes' : 'A locker room that is not right')
   if (D.has('LOYAL') && (p.yrsHere ?? 0) >= 2) put(5, 'This is home')
+  const stance = ctx?.stance ?? stanceOf(F, p.team)
+  if (stance === 'rebuild') { if (p.age >= 28 && (D.has('RING') || D.has('COMPETITOR'))) put(D.has('RING') ? -11 : -6, 'Did not come here for a rebuild'); else if (p.age <= 24) put(4, 'Getting the snaps in a rebuild') }
+  else if (stance === 'contend' && D.has('RING')) put(4, 'A team built to win now')
   if (D.has('MENTOR') && p.age >= 29) put(3, 'Likes bringing the young players along')
   if (p.promise && p.promise >= F.year * 100 + F.week) put(6, 'Was promised a bigger role')
   if (p.hold) put(-12, 'Holding out')
@@ -125,7 +129,10 @@ export function endWeek(F, recap) {
   for (const g of F.sched.weeks[week - 1] ?? []) { playing.add(g.h); playing.add(g.a) }
   for (const s of TEAM_SHORTS) {
     const t = F.teams[s], mine = s === F.team, intensity = mine ? prac : 'half', pc = playcall(F, t), bye = reg && !playing.has(s)
-    const starters = startersOf(F, t), ctx = { starters, culture: pc.culture }
+    const starters = startersOf(F, t), ctx = { starters, culture: pc.culture, stance: stanceOf(F, s) }
+    // a lost year: a rebuilding team plays its young players
+    const r0 = t.rec ?? { w: 0, l: 0 }
+    t.kids = reg && week >= 11 && stanceOf(F, s) === 'rebuild' && r0.w < r0.l ? 1 : undefined
     for (const id of t.roster) {
       const p = F.players[id]
       if (!p) continue
@@ -148,7 +155,7 @@ export function endWeek(F, recap) {
     if (mine && intensity === 'full' && F.settings.injuries && R.chance(0.1)) {
       const pool = t.roster.map(id => F.players[id]).filter(p => p && !p.inj)
       const p = pool[R.int(0, pool.length - 1)]
-      if (p) { p.inj = { wk: R.int(1, 3), what: R.pick(['a hamstring strain in practice', 'a rolled ankle in practice', 'a tweaked groin in practice']), ir: false, fresh: true }; recap.injuries.push({ id: p.id, name: p.name, team: s, slot: slotOf(p), what: p.inj.what, wk: p.inj.wk, user: true, practice: true }) }
+      if (p) { p.inj = { wk: R.int(1, 3), what: R.pick(['Hamstring strain (practice)', 'Rolled ankle (practice)', 'Groin strain (practice)']), ir: false, fresh: true }; recap.injuries.push({ id: p.id, name: p.name, team: s, slot: slotOf(p), what: p.inj.what, wk: p.inj.wk, user: true, practice: true }) }
     }
   }
   // mark this week's game injuries so next week's healing counts them from now
@@ -160,6 +167,7 @@ export function endWeek(F, recap) {
     const t = F.teams[s]
     if (s !== F.team || F.settings.autoRoster) { const did = upkeep(F, t, R); if (s === F.team) recap.moves.push(...did) } else depthAfterMove(F, t)
   }
+  if (reg) stateWeek(F)
   if (reg && week <= TRADE_DEADLINE) cpuTradeWeek(F, R)
   if (reg && week === TRADE_DEADLINE) { addNews(F, 'league', 'The trade deadline has passed'); F.offers = [] }
   if (reg) scoutingWeek(F)

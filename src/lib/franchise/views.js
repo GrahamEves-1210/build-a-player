@@ -16,16 +16,19 @@ import { races, AWARD_NAME } from './awards'
 import { goalState, securityWord, SECURITY_FLOOR, startOwner } from './owner'
 import { playerValue, pickValue, pickKey, judge, tradesOpen, offerText } from './trades'
 import { lineText } from './week'
+import { buildProfile } from './profile'
 import { streetAsk } from './roster'
 import { coachAsk } from './league'
 import { COACH_LABEL } from './coachData'
+import { STATE_LABEL, directionOf, directionRead, advice } from './state'
+import { pickWhen } from './trades'
 
 // ── Box scores ───────────────────────────────────────────────────────────────
 const topTime = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
 function teamBox(F, raw, side) {
   const short = side === 0 ? raw.h : raw.a, box = raw.box[side] ?? {}, tot = raw.tot[side]
   const rows = Object.entries(box).map(([id, s]) => ({ p: F.players[id], s })).filter(x => x.p)
-  const who = x => ({ id: x.p.id, name: x.p.name, built: !!x.p.built })
+  const who = x => ({ id: x.p.id, name: x.p.name, slot: slotOf(x.p), built: !!x.p.built })
   const n = (s, k) => s[k] ?? 0
   return {
     team: teamRef(short), score: raw.sc[side], quarters: raw.qs[side],
@@ -45,14 +48,33 @@ export const boxScore = (F, gameId) => boxView(F, F.boxes?.[gameId] ?? null)
 
 // ── Units and ranks ──────────────────────────────────────────────────────────
 export function unitRanks(F) {
-  const per = (s, k) => { const st = F.teams[s].st; return st && st.g ? st[k] / st.g : null }
   const have = TEAM_SHORTS.some(s => F.teams[s].st?.g)
-  // before a game is played the units are read off the rosters
-  const rate = have ? null : Object.fromEntries(TEAM_SHORTS.map(s => [s, teamRating(F, F.teams[s])]))
-  const col = (k, low, alt) => { const v = Object.fromEntries(TEAM_SHORTS.map(s => [s, have ? per(s, k) ?? 0 : alt(rate[s])])); return [v, ranks(v, have ? low : false)] }
-  const cols = { passOff: col('py', false, r => r.off), rushOff: col('ry', false, r => r.off), passDef: col('pyA', true, r => r.def), rushDef: col('ryA', true, r => r.def), ptsFor: col('pf', false, r => r.off), ptsAgainst: col('pa', true, r => r.def) }
+  const vals = {}
+  if (have) {
+    const per = (s, k) => { const st = F.teams[s].st; return st && st.g ? st[k] / st.g : 0 }
+    for (const [k, src] of [['passOff', 'py'], ['rushOff', 'ry'], ['passDef', 'pyA'], ['rushDef', 'ryA'], ['ptsFor', 'pf'], ['ptsAgainst', 'pa']]) vals[k] = Object.fromEntries(TEAM_SHORTS.map(s => [s, per(s, src)]))
+  } else {
+    // before a game is played: what each unit projects to, read off the men who would line up (projected: true)
+    const P = Object.fromEntries(TEAM_SHORTS.map(s => [s, buildProfile(F, s, false)]))
+    const idx = {
+      passOff: T => (T.qb?.s.comp ?? 0.4) * 0.45 + (T.qb?.s.deep ?? 0.4) * 0.15 + (T.recv.slice(0, 4).reduce((a, r) => a + (r.s.catch ?? 0.5) + (r.s.ypr ?? 0.5), 0) / 8) * 0.25 + T.olPass * 0.15,
+      rushOff: T => (T.rbs[0]?.s.run ?? 0.4) * 0.5 + T.olRun * 0.4 + (T.qb?.s.legs ?? 0.3) * 0.1,
+      passDef: T => T.cover * 0.6 + T.passRush * 0.4, rushDef: T => T.runD,
+    }
+    const raw = Object.fromEntries(Object.entries(idx).map(([k, f]) => [k, Object.fromEntries(TEAM_SHORTS.map(s => [s, f(P[s])]))]))
+    const mean = k => TEAM_SHORTS.reduce((a, s) => a + raw[k][s], 0) / 32
+    const m = Object.fromEntries(Object.keys(idx).map(k => [k, mean(k)]))
+    vals.passOff = Object.fromEntries(TEAM_SHORTS.map(s => [s, 219 + (raw.passOff[s] - m.passOff) * 330]))
+    vals.rushOff = Object.fromEntries(TEAM_SHORTS.map(s => [s, 117 + (raw.rushOff[s] - m.rushOff) * 240]))
+    vals.passDef = Object.fromEntries(TEAM_SHORTS.map(s => [s, 219 - (raw.passDef[s] - m.passDef) * 330]))
+    vals.rushDef = Object.fromEntries(TEAM_SHORTS.map(s => [s, 117 - (raw.rushDef[s] - m.rushDef) * 260]))
+    vals.ptsFor = Object.fromEntries(TEAM_SHORTS.map(s => [s, 22.5 + (raw.passOff[s] - m.passOff) * 42 + (raw.rushOff[s] - m.rushOff) * 18]))
+    vals.ptsAgainst = Object.fromEntries(TEAM_SHORTS.map(s => [s, 22.5 - (raw.passDef[s] - m.passDef) * 42 - (raw.rushDef[s] - m.rushDef) * 18]))
+  }
+  const low = { passDef: true, rushDef: true, ptsAgainst: true }
+  const rk = Object.fromEntries(Object.keys(vals).map(k => [k, ranks(vals[k], !!low[k])]))
   const out = {}
-  for (const s of TEAM_SHORTS) out[s] = Object.fromEntries(Object.entries(cols).map(([k, [v, rk]]) => [k, { rank: rk[s], val: have ? r1(v[s]) : null }]))
+  for (const s of TEAM_SHORTS) out[s] = Object.fromEntries(Object.keys(vals).map(k => [k, { rank: rk[k][s], val: r1(vals[k][s]), projected: !have }]))
   return out
 }
 export function teamStats(F) {
@@ -117,7 +139,7 @@ export function awardRaces(F) {
 // ── News, transactions, power rankings ──────────────────────────────────────
 export const news = (F, n = 30) => F.news.slice(0, n).map(x => ({ id: x.id, year: x.y, week: x.w, kind: x.kind, head: x.head, ...(x.body && { body: x.body }), ...(x.team && { team: teamRef(x.team) }), ...(x.pid != null && { pid: x.pid }) }))
 export const transactions = (F, n = 60, team = null) => F.tx.filter(x => !team || x.team === team).slice(0, n).map(x => ({ id: x.id, year: x.y, week: x.w, type: x.type, team: teamRef(x.team), text: x.text, ...(x.pid != null && { pid: x.pid }) }))
-export const powerRankings = F => (F.power ?? []).map(x => ({ rank: x.r, prev: x.p, move: x.p - x.r, team: teamRef(x.s), record: recordOf(F, x.s).text, blurb: powerBlurb(F, x), rating: x.v }))
+export const powerRankings = F => (F.power ?? []).map(x => ({ rank: x.r, prev: x.p, move: x.p - x.r, team: teamRef(x.s), record: recordOf(F, x.s).text, blurb: powerBlurb(F, x), rating: x.v, state: F.teams[x.s].state ?? 'retool', stateLabel: STATE_LABEL[F.teams[x.s].state ?? 'retool'] }))
 
 // ── The owner ────────────────────────────────────────────────────────────────
 export function ownerView(F) {
@@ -128,7 +150,7 @@ export function ownerView(F) {
 
 // ── A player ─────────────────────────────────────────────────────────────────
 const bodyText = p => (p.ht ? `${Math.floor(p.ht / 12)}'${p.ht % 12}" · ${p.wt}` : '')
-const DEV_TEXT = ['Normal development: he earns XP at the standard rate.', 'Star development: he earns XP about a third faster.', 'Superstar development: he earns XP about two thirds faster.', 'Elite development: he earns XP at twice the standard rate.']
+const DEV_TEXT = ['Normal development: he earns XP at the standard rate.', 'Star development: he earns XP 40% faster.', 'Superstar development: he earns XP at nearly twice the standard rate.', 'Elite development: he earns XP at more than two and a half times the standard rate.']
 export function askOf(F, p) {
   const mv = marketValue(p, F.cap)
   const k = p.drives?.includes('MONEY') ? 1.06 : p.drives?.includes('LOYAL') && p.team === F.team ? 0.93 : 1
@@ -182,7 +204,8 @@ export function teamNeeds(F, team = F.team) {
 const avgOvr = (list, n) => { let s = 0; for (let i = 0; i < n; i++) s += list[i]?.ovr ?? 60; return s / n }
 
 // ── A team ───────────────────────────────────────────────────────────────────
-const pickRow = (F, pk, owner) => ({ key: pickKey(pk), year: pk.y, round: pk.r, orig: teamRef(pk.o), own: pk.o === owner, value: pickValue(F, pk), text: `${pk.y} Round ${pk.r}${pk.o !== owner ? ` (${pk.o})` : ''}` })
+// (text never names a year that has not been played: "Round 2, the next draft")
+const pickRow = (F, pk, owner) => ({ key: pickKey(pk), year: pk.y, round: pk.r, orig: teamRef(pk.o), own: pk.o === owner, value: pickValue(F, pk), when: pickWhen(F, pk), text: `Round ${pk.r}, ${pickWhen(F, pk)}${pk.o !== owner ? ` (via ${pk.o})` : ''}` })
 export function teamInfo(F, short) {
   const t = F.teams[short]
   if (!t) return null
@@ -190,7 +213,7 @@ export function teamInfo(F, short) {
   const offR = ranks(Object.fromEntries(TEAM_SHORTS.map(s => [s, all[s].off]))), defR = ranks(Object.fromEntries(TEAM_SHORTS.map(s => [s, all[s].def])))
   const S = standing(F), conf = CONF_OF[short], seed = S.seeds[conf].indexOf(short), place = S.divisions[DIV_OF[short]].indexOf(short) + 1
   return { ...teamRef(short), record: recordOf(F, short).text, standing: `${ordinal(place)} in the ${DIV_OF[short]}`, seed: seed >= 0 ? seed + 1 : null,
-    ratings: { ...all[short], offRank: offR[short], defRank: defR[short] }, units: unitRanks(F)[short], staff: staff(F, short), strategy: t.strat ?? 'middle', capSpace: r2(F.cap - payroll(F, t)),
+    ratings: { ...all[short], offRank: offR[short], defRank: defR[short] }, units: unitRanks(F)[short], staff: staff(F, short), state: t.state ?? 'retool', stateLabel: STATE_LABEL[t.state ?? 'retool'], window: t.win ?? 1, strategy: t.state ?? 'retool', capSpace: r2(F.cap - payroll(F, t)),
     picks: [...t.picks].sort((a, b) => a.y - b.y || a.r - b.r).map(pk => pickRow(F, pk, short)), user: short === F.team }
 }
 export function coachCard(F, id) {
@@ -232,6 +255,9 @@ export function weekTasks(F) {
   const hurt = P.filter(p => p.inj && p.inj.wk > 0 && p.ovr >= 76).sort((a, b) => b.ovr - a.ovr)
   if (hurt.length) out.push({ id: 'injury', kind: 'injury', title: 'INJURIES', detail: `${hurt.slice(0, 2).map(p => `${p.name} (${p.inj.wk === 1 ? '1 week' : p.inj.season ? 'season' : `${p.inj.wk} weeks`})`).join(', ')}${hurt.length > 2 ? ` and ${hurt.length - 2} more` : ''}`, done: !!F.done?.injury, count: hurt.length })
   if ((F.draft?.pts ?? 0) > 0) out.push({ id: 'scout', kind: 'scout', title: 'SCOUTING', detail: `${F.draft.pts} scouting point${F.draft.pts === 1 ? '' : 's'} to spend on the ${F.draft.year} class`, done: false, count: F.draft.pts })
+  const adv = advice(F), dir = directionOf(F)
+  if (F.phase === 'regular' && F.week <= TRADE_DEADLINE && F.gm.dirAt !== F.year) out.push({ id: 'direction', kind: 'direction', title: `DIRECTION: ${STATE_LABEL[dir]}`, detail: `${directionRead(F, dir).text} It can be changed once before the deadline (Week ${TRADE_DEADLINE}).`, done: true })
+  if (adv.length) out.push({ id: 'advice', kind: 'advice', title: 'FROM THE STAFF', detail: adv[0], done: true, count: adv.length })
   const prob = rosterIssues(F)
   if (prob.length) out.push({ id: 'roster', kind: 'roster', title: 'ROSTER', detail: prob[0], done: false, count: prob.length })
   void starters
@@ -267,6 +293,7 @@ export function hub(F) {
     lastGame: lastRow ? { week: lastRow.week, opp: lastRow.opp, home: lastRow.home, ...lastRow.result } : null,
     headlines: news(F, 5), cap: { space: r2(F.cap - payroll(F, t)), payroll: payroll(F, t), cap: F.cap }, owner: ownerView(F), stage: stage ? { id: stage, name: stage } : null,
     eliminated: out ? finishText(F, F.team) : null, champion: F.playoffs?.champion === F.team,
+    state: t.state ?? 'retool', stateLabel: STATE_LABEL[t.state ?? 'retool'], direction: directionOf(F), directionLabel: STATE_LABEL[directionOf(F)], advice: advice(F),
   }
 }
 export function pregame(F) {
@@ -332,11 +359,11 @@ export function tradeBlock(F) {
   for (const s of TEAM_SHORTS) {
     if (s === F.team) continue
     const t = F.teams[s]
-    if (t.strat !== 'rebuild' && t.strat !== 'middle') continue
-    for (const id of t.roster) { const p = F.players[id]; if (p && ((t.strat === 'rebuild' && p.age >= 29 && p.ovr >= 79) || p.want || p.block) && !p.inj) league.push(p) }
+    // a rebuilding team sells its veterans; a contender that has turned seller listens on the ones on short deals
+    for (const id of t.roster) { const p = F.players[id]; if (p && !p.inj && p.pos !== 'k' && ((t.state === 'rebuild' && p.age >= 28 && p.ovr >= 78) || (t.state === 'retool' && p.age >= 30 && p.ovr >= 80 && p.con && p.con.yrs <= 1) || p.want || p.block)) league.push(p) }
   }
   league.sort((a, b) => b.ovr - a.ovr)
-  return { mine: mineP.map(p => playerRow(F, p)), league: league.slice(0, 24).map(p => ({ ...playerRow(F, p), asking: playerValue(F, p) >= 1300 ? 'A first-round pick' : playerValue(F, p) >= 500 ? 'A second-round pick' : playerValue(F, p) >= 200 ? 'A third-round pick' : 'A late-round pick', value: playerValue(F, p) })),
+  return { mine: mineP.map(p => playerRow(F, p)), league: league.slice(0, 30).map(p => ({ ...playerRow(F, p), teamState: F.teams[p.team].state ?? 'retool', asking: playerValue(F, p) >= 1300 ? 'A first-round pick' : playerValue(F, p) >= 500 ? 'A second-round pick' : playerValue(F, p) >= 200 ? 'A third-round pick' : 'A late-round pick', value: playerValue(F, p) })),
     offers: (F.offers ?? []).map(o => offerRow(F, o)), open: tradesOpen(F), deadlineWeek: TRADE_DEADLINE }
 }
 export function freeAgents(F, { slot = null, n = 60 } = {}) {

@@ -8,9 +8,10 @@ import { REG_WEEKS, TRADE_DEADLINE, clamp, r2, slotOf } from './consts'
 import { addNews, addTx, nick, teamName } from './core'
 import { marketValue, marketYears, marketGuar, newContract, payroll } from './money'
 import { startersOf } from './depth'
-import { giveXp } from './week'
+import { giveXp, injWords } from './week'
 import { execute, judgeForUser, offerText, playerValue } from './trades'
 import { playcall } from './rows'
+import { applyDirection, directionOf, directionRead, STATE_LABEL } from './state'
 
 const mine = F => F.teams[F.team].roster.map(id => F.players[id]).filter(Boolean)
 const push = (F, item) => { item.id = `o${(F.officeId = (F.officeId ?? 0) + 1)}`; item.week = F.week; F.office.push(item) }
@@ -35,7 +36,7 @@ export function makeOffice(F, R) {
   }
   // a starter who is questionable: a one-week injury he could play through
   for (const p of P) if (p.inj && p.inj.wk === 1 && !p.inj.ir && !p.inj.q && p.ovr >= 76 && !have('questionable')) {
-    cands.push([4, () => { p.inj.q = true; push(F, { kind: 'questionable', pid: p.id, title: 'QUESTIONABLE', body: `${p.name} (${p.inj.what.replace(/^an? /, '')}) wants to play this week. The trainers say he can go, at less than full speed, with a real chance of making it worse.`,
+    cands.push([4, () => { p.inj.q = true; push(F, { kind: 'questionable', pid: p.id, title: 'QUESTIONABLE', body: `${p.name} (${injWords(p.inj.what)}) wants to play this week. The trainers say he can go, at less than full speed, with a real chance of making it worse.`,
       options: [{ id: 'play', label: 'PLAY HIM', text: 'He starts. About one time in four he aggravates it and misses three more weeks.' }, { id: 'rest', label: 'REST HIM', text: 'He sits this week and is healthy for the next one.' }], delegate: 'rest' }) }])
     break
   }
@@ -51,6 +52,10 @@ export function makeOffice(F, R) {
       cands.push([3, () => { mark(walk, 'contract'); push(F, { kind: 'contract', pid: walk.id, title: 'CONTRACT YEAR', body: `${walk.name}'s agent called. His deal is up after the season and he would sign now: ${ask.years} year${ask.years > 1 ? 's' : ''} at $${ask.perYear.toFixed(1)}M a year.`, data: { ask },
         options: [{ id: 'extend', label: 'SIGN THE EXTENSION', text: `${ask.years} year${ask.years > 1 ? 's' : ''}, $${ask.perYear.toFixed(1)}M a year, starting next season. He is locked up.` }, { id: 'wait', label: 'TALK AFTER THE SEASON', text: 'He plays it out. The price is the market\'s in March.' }, { id: 'business', label: 'TELL HIM IT IS A BUSINESS', text: 'No talks. He will remember it.' }], delegate: walk.ovr >= 86 && walk.age <= 30 ? 'extend' : 'wait' }) }])
     }
+    // a veteran who came to win, on a team that is rebuilding, asks out
+    const out = directionOf(F) === 'rebuild' ? P.filter(p => p.age >= 28 && p.ovr >= 80 && p.mood < 36 && (p.drives?.includes('RING') || p.drives?.includes('COMPETITOR')) && !p.want && !asked(p, 'out') && !p.built).sort((a, b) => b.ovr - a.ovr)[0] : null
+    if (out) cands.push([4, () => { mark(out, 'out'); push(F, { kind: 'wants-out', pid: out.id, title: 'WANTS OUT', body: `${out.name} did not sign up for a rebuild. His agent has asked ${F.gm.name} to find him a contender.`,
+      options: [{ id: 'shop', label: 'FIND HIM A HOME', text: `He goes on the block${F.week <= TRADE_DEADLINE ? ' and contenders will call' : '; the deadline has passed, so it waits for the offseason'}. He plays hard until then.` }, { id: 'stay', label: 'ASK HIM TO STAY', text: 'He is told he is part of the plan. A loyal man hears it; most do not.' }], delegate: 'shop' }) }])
     // a veteran offers to work with a young player at his spot
     const vet = P.filter(p => p.age >= 29 && p.drives?.includes('MENTOR') && !asked(p, 'mentor')).sort((a, b) => b.ovr - a.ovr)[0]
     const kid = vet && P.filter(p => p.pos === vet.pos && p.age <= 24 && p.id !== vet.id).sort((a, b) => b.dev - a.dev || b.ovr - a.ovr)[0]
@@ -110,6 +115,14 @@ export function settle(F, item, optionId) {
       if (opt.id === 'yes' && p && kid) { giveXp(F, kid, 260, playcall(F, t).dev); p.mood = clamp(p.mood + 7, 3, 97); p.wear = clamp((p.wear ?? 0) + 4, 0, 100); msg = `${p.name} is working with ${kid.name}.` } else msg = 'The veteran saves his legs.'
       break
     }
+    case 'wants-out':
+      if (!p) break
+      if (opt.id === 'shop') { p.block = true; p.want = true; p.mood = clamp(p.mood + 6, 3, 97); msg = `${p.name} is on the block.` }
+      else { p.mood = clamp(p.mood + (p.drives?.includes('LOYAL') ? 8 : -5), 3, 97); msg = p.drives?.includes('LOYAL') ? `${p.name} will see it through.` : `${p.name} is not happy about it.` }
+      break
+    case 'direction':
+      if (opt.id !== 'keep') { applyDirection(F, opt.id, { season: opt.id !== directionOf(F) }); F.owner = null; msg = `${STATE_LABEL[opt.id]}. ${directionRead(F, opt.id).text}` } else msg = 'The direction stands.'
+      break
     case 'press':
       if (opt.id === 'back') { all(3); F.gm.security = clamp(F.gm.security - 1, 0, 100); msg = 'The locker room heard it.' }
       else if (opt.id === 'notice') { for (const x of mine(F)) x.mood = clamp(x.mood + (x.drives?.includes('COMPETITOR') ? 5 : -4), 3, 97); F.gm.security = clamp(F.gm.security + 1, 0, 100); msg = 'Everyone is on notice.' }
@@ -135,6 +148,6 @@ export function delegateOffice(F) {
 }
 // items that no longer mean anything (the player left, the offer is gone)
 export function expireOffice(F) {
-  F.office = F.office.filter(o => (o.pid == null || F.players[o.pid]?.team === F.team) && (o.kind !== 'trade-offer' || (F.offers ?? []).some(x => x.id === o.data.offerId)))
+  F.office = F.office.filter(o => (o.pid == null || F.players[o.pid]?.team === F.team) && (o.kind !== 'trade-offer' || (F.offers ?? []).some(x => x.id === o.data.offerId)) && (o.kind !== 'direction' || o.week >= F.week - 1))
 }
 export { payroll }

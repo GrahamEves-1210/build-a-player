@@ -32,7 +32,8 @@ import { autoDepth, lineupOf, startersOf } from './depth'
 import { newDraftClass, startDraft, autoDraft, needsOf, udfaList, signUdfaTo, cpuUdfa, draftView, draftBoard, applyScoutSpec, prospectRow, draftOrder } from './draft'
 import { rookieDeal } from './money'
 import { powerRankings, moodOf } from './season'
-import { setStrategies, playerValue } from './trades'
+import { playerValue } from './trades'
+import { computeStates, stanceOf, teamState } from './state'
 import { makeOffice } from './office'
 import { staff as staffView, schedule as scheduleView } from './select'
 import { askOf, ownerView, coachInterest } from './views'
@@ -157,7 +158,7 @@ export function offseason(F) {
   if (F.phase !== 'offseason' || !F.off) return null
   const i = stageIdx(F.off.stage), st = STAGES[i]
   const view = { review: seasonReview, staff: staffStage, resign: expiring, fa: freeAgency, draft: draftView, udfa: udfaPool, camp: campView, cuts: cutsView }[st.id]
-  return { year: F.off.year, stage: { id: st.id, name: st.name, n: i + 1, of: STAGES.length }, stages: STAGES.map((s, k) => ({ ...s, done: k < i, current: k === i })), fired: !!F.off.fired, view: view(F) }
+  return { year: F.off.year, stage: { id: st.id, name: st.name, n: i + 1, of: STAGES.length }, stages: STAGES.map((s, k) => ({ ...s, done: k < i, current: k === i })), fired: !!F.off.fired, direction: teamState(F), view: view(F) }
 }
 const staffStage = F => ({ staff: staffView(F), market: coachMarket(F), scouts: scoutPool(F), tree: gmTree(F) })
 
@@ -170,7 +171,7 @@ export function takeJob(F, short) {
   if (!F.off?.fired) return fail(F, 'job', 'There is no offer to take.')
   if (!jobOffersFor(F).some(o => o.short === short)) return fail(F, 'job', 'That team has not made an offer.')
   F.gm.fired = (F.gm.fired ?? 0) + 1
-  F.team = short; F.gm.team = short; F.gm.security = 58; F.off.fired = false
+  F.team = short; F.gm.team = short; F.gm.security = 58; F.off.fired = false; F.gm.dir = null; F.gm.dirAt = null
   F.settings.autoDepth = true
   F.owner = null; startOwner(F)
   addNews(F, 'owner', `${teamName(short)} hire ${F.gm.name} as general manager`, { team: short })
@@ -209,6 +210,8 @@ function hire(F, t, key, c, years = null) {
   if (old && old.id !== c.id) { old.team = null; old.con = null }
   if (c.team && c.team !== t.short) { const from = F.teams[c.team]; for (const k of STAFF_KEYS) if (from.staff[k] === c.id) from.staff[k] = null }
   c.team = t.short; c.role = roleOf(key)
+  if (key === 'hc') { if (c.calls !== 'off' && c.calls !== 'def') c.calls = c.a.offPlaycalling >= 8 && c.a.offPlaycalling >= c.a.defPlaycalling ? 'off' : c.a.defPlaycalling >= 8 ? 'def' : null } else c.calls = true
+  delete c.interim
   c.con = { yrs: years ?? (c.age >= 62 ? 2 : key === 'hc' ? 4 : 3), sal: coachAsk(c, roleOf(key)) }
   t.staff[key] = c.id
 }
@@ -310,7 +313,7 @@ export function hireBuiltCoach(F, coach) {
   const t = F.teams[F.team], R = rngOf(`${F.seed}-built-coach-${F.nextCoachId}`)
   const cur = F.coaches[t.staff.hc]
   const c = addCoach(F, builtCoachRow(coach), R)
-  c.age = 44
+  c.age = 44; c.calls = c.a.offPlaycalling >= c.a.defPlaycalling ? (c.a.offPlaycalling >= 7 ? 'off' : null) : (c.a.defPlaycalling >= 7 ? 'def' : null)
   if (cur) { cur.team = null; cur.con = null; delete cur.expired; addTx(F, 'fire', F.team, `${teamName(F.team)} let head coach ${cur.name} go.`) }
   c.team = F.team; c.con = { yrs: 4, sal: coachAsk(c, 'HC') }
   t.staff.hc = c.id
@@ -542,8 +545,11 @@ function startFA(F) {
 function teamFit(F, short, p) {
   const t = F.teams[short], D = new Set(p.drives ?? []), last = t.last ?? { w: 8, l: 9, seed: 0 }
   let f = 1 + ((F.coaches[t.staff.hc]?.a.culture ?? 5.5) - 5.5) * 0.012
-  if (D.has('RING')) f += (pct(last.w, last.l, 0) - 0.5) * 0.3 + (last.seed ? 0.04 : 0)
-  if (D.has('COMPETITOR')) f += (pct(last.w, last.l, 0) - 0.5) * 0.14
+  const stance = stanceOf(F, short)
+  if (D.has('RING')) f += (pct(last.w, last.l, 0) - 0.5) * 0.3 + (last.seed ? 0.04 : 0) + (stance === 'contend' ? 0.1 : stance === 'rebuild' ? -0.14 : 0)
+  if (D.has('COMPETITOR')) f += (pct(last.w, last.l, 0) - 0.5) * 0.14 + (stance === 'rebuild' ? -0.05 : 0)
+  if (stance === 'rebuild' && (D.has('ROLE') || D.has('MONEY')) && p.age <= 28) f += 0.05
+  if (stance === 'rebuild' && p.age >= 30) f -= 0.06
   if (D.has('LOYAL') && p.from === short) f += 0.14
   if (D.has('ROLE')) { const L = lineupOf(F, t), slot = slotOf(p), cur = p.pos === 'ol' ? L.OL.find(o => o.spot === p.sub)?.p : (L[slot] ?? [])[slot === 'WR' ? 2 : slot === 'LB' ? 2 : ['EDGE', 'DT', 'CB', 'S'].includes(slot) ? 1 : 0]; f += !cur || p.ovr >= cur.ovr ? 0.12 : -0.1 }
   if (D.has('MENTOR') && t.roster.some(id => F.players[id]?.pos === p.pos && F.players[id].age <= 23)) f += 0.04
@@ -560,8 +566,8 @@ function setSuitors(F) {
   const needs = Object.fromEntries(TEAM_SHORTS.map(s => [s, Object.fromEntries(needsOf(F, s).map(n => [n.group, n]))]))
   for (const p of pool) {
     const ask = faAsk(F, p, fa.round), g = groupOf(p)
-    const want = TEAM_SHORTS.filter(s => s !== F.team && space[s] >= ask.perYear * 1.05 + 3 && (needs[s][g].need >= 0.25 || p.ovr >= needs[s][g].starter + 2))
-      .map(s => ({ s, k: needs[s][g].need + (p.ovr - needs[s][g].starter) * 0.03 + R.u() * 0.4 })).sort((a, b) => b.k - a.k).slice(0, p.ovr >= 85 ? 4 : p.ovr >= 78 ? 3 : 2)
+    const want = TEAM_SHORTS.filter(s => s !== F.team && space[s] >= ask.perYear * 1.05 + 3 && (needs[s][g].need >= 0.25 || p.ovr >= needs[s][g].starter + 2) && !(F.teams[s].state === 'rebuild' && p.age >= 29))
+      .map(s => ({ s, k: needs[s][g].need + (p.ovr - needs[s][g].starter) * 0.03 + R.u() * 0.4 + (F.teams[s].state === 'contend' ? 0.15 : F.teams[s].state === 'rebuild' && p.age <= 26 ? 0.1 : 0) })).sort((a, b) => b.k - a.k).slice(0, p.ovr >= 85 ? 4 : p.ovr >= 78 ? 3 : 2)
     if (!want.length) continue
     fa.suitors[p.id] = want.map(x => x.s)
     fa.cpu[p.id] = want.map(x => ({ s: x.s, o: { years: ask.years, perYear: r2(ask.perYear * (0.97 + R.u() * (p.ovr >= 85 ? 0.2 : 0.12))), guaranteed: ask.guaranteed } }))
@@ -701,7 +707,7 @@ export function campView(F) {
   const dm = depthMap(F, F.teams[F.team])
   return {
     drills: c.drills.map(d => { const pl = drillPlayer(F, d); return { id: d.id, group: d.group, title: d.title, game: d.game, gameTitle: GAMES[d.game]?.title ?? d.game, player: pl, done: d.done,
-      mg: pl ? { game: d.game, v: pl.v, arm: pl.arm, kick: pl.kick, seed: `${F.seed}-${F.off.year}-camp-${d.id}`, sport: 'nfl', pos: pl.pos, team: F.team, opp: null, home: 'team', superBowl: null, situation: null, weather: null, cast: null } : null,
+      mg: pl ? { game: d.game, v: pl.v, arm: pl.arm, kick: pl.kick, seed: `${F.seed}-${F.off.year}-camp-${d.id}`, sport: 'nfl', pos: pl.pos, team: { short: F.team, color: teamRef(F.team).color, color2: teamRef(F.team).color2 }, opp: null, home: 'team', superBowl: null, situation: null, weather: null, cast: null } : null,
       medals: { gold: 'Every player in the group earns 600 XP.', silver: '380 XP for the group.', bronze: '200 XP for the group.' } } }),
     holdouts: c.holdouts.map(id => F.players[id]).filter(p => p && p.hold).map(p => { const ask = askOf(F, p); return { ...playerRow(F, p, dm), wants: { perYear: ask.perYear, years: ask.years }, options: [
       { id: 'pay', label: 'PAY HIM', text: `A new deal: ${ask.years} year${ask.years > 1 ? 's' : ''} at ${moneyText(ask.perYear)} a year. He reports today.` },
@@ -739,7 +745,7 @@ export function resolveHoldout(F, pid, optionId = 'delegate') {
   if (opt === 'trade') { p.hold = undefined; p.block = true; p.want = true; p.mood = clamp(p.mood - 4, 3, 97); return ok(F, `${p.name} reports. He is on the block.`) }
   // hold firm: most come in; some sit
   if (R.chance(0.62 + ((F.coaches[t.staff.hc]?.a.culture ?? 5.5) - 5.5) * 0.04)) { p.hold = undefined; p.mood = clamp(p.mood - 6, 3, 97); return ok(F, `${p.name} reports to camp, unhappy.`) }
-  p.hold = undefined; p.inj = { wk: R.int(1, 3), what: 'a contract holdout', ir: false, fresh: false }; p.mood = clamp(p.mood - 12, 3, 97)
+  p.hold = undefined; p.inj = { wk: R.int(1, 3), what: 'Contract holdout', ir: false, fresh: false }; p.mood = clamp(p.mood - 12, 3, 97)
   return ok(F, `${p.name} is staying away. He will miss the start of the season.`)
 }
 
@@ -751,7 +757,8 @@ export function cutList(F, short) {
   if (over <= 0) return []
   const keep = new Set(), by = {}
   for (const p of P) (by[groupOf(p)] ??= []).push(p)
-  const worth = p => p.ovr + (p.dev ?? 0) * 2.5 + (p.age <= 23 ? 2.5 : p.age >= 31 ? -2 : 0) + (p.built ? 100 : 0) + ((p.con?.guar ?? 0) > 3 ? 4 : 0) + (p.rk && p.draft && p.draft[1] <= 3 ? 6 : 0)
+  // (teams keep their young players and their picks: a rookie a point or two behind a 30-year-old stays)
+  const worth = p => p.ovr + (p.dev ?? 0) * 2.5 + (p.age <= 23 ? 5 : p.age <= 25 ? 2.5 : p.age >= 32 ? -8 : p.age >= 30 ? -4 : p.age >= 28 ? -1.5 : 0) + (p.built ? 100 : 0) + ((p.con?.guar ?? 0) > 3 ? 4 : 0) + (p.rk && p.draft ? (p.draft[1] <= 2 ? 12 : p.draft[1] <= 4 ? 7 : 3) : 0)
   for (const g of GROUPS) { const list = (by[g] ?? []).sort((a, b) => worth(b) - worth(a)); list.slice(0, MIN_AT[g]).forEach(p => keep.add(p.id)) }
   const rest = P.filter(p => !keep.has(p.id)).sort((a, b) => (worth(a) + Math.max(0, TARGET_AT[groupOf(a)] - by[groupOf(a)].length) * 3) - (worth(b) + Math.max(0, TARGET_AT[groupOf(b)] - by[groupOf(b)].length) * 3))
   // drop the worst, one at a time, never taking a group under its target while another is over
@@ -836,18 +843,20 @@ function rollOver(F) {
     if (p.team) p.yrsHere = (p.yrsHere ?? 0) + 1
     if (p.con?.opt === 2 && p.opt5 && p.con.yrs === 1) { p.con.sal = p.opt5; p.con.guar = p.opt5; p.con.rookie = 0; delete p.opt5 }
     // the offseason program: young men grow, the staff spends what they earned
-    if (p.team) { giveXp(F, p, 520, F.coaches[F.teams[p.team].staff.hc]?.a.talentDev ?? 5.5); if (p.team !== F.team || F.settings.autoUpgrade) spendPoints(p) }
+    if (p.team) { giveXp(F, p, 320, F.coaches[F.teams[p.team].staff.hc]?.a.talentDev ?? 5.5); if (p.team !== F.team || F.settings.autoUpgrade) spendPoints(p) }
     // and age takes its share
     const slipped = ageOne(F, p)
     if (p.team === F.team && slipped.length) changes.push({ id: p.id, d: 0, text: `Lost a step: ${slipText(p, slipped)}` })
     p.wear = 0
-    p.inj = p.inj && p.inj.what === 'a contract holdout' ? p.inj : null
+    p.inj = p.inj && p.inj.what === 'Contract holdout' ? p.inj : null
     p.hold = undefined
     p.mood = clamp(Math.round(p.mood + (60 - p.mood) * 0.35), 3, 97)
     if (!p.devKnown && p.exp >= 1) p.devKnown = true
   }
   // free agents nobody signed drift out of the league; the street is restocked
-  for (const id of [...F.fa]) { const p = F.players[id]; if (!p || p.age >= 31 || (p.exp >= 3 && p.ovr < 66) || R.chance(0.25)) { F.fa = F.fa.filter(x => x !== id); delete F.players[id] } else p.con = null }
+  const keepFa = new Set([...F.fa].map(id => F.players[id]).filter(Boolean).sort((a, b) => (b.ovr - b.age * 0.6) - (a.ovr - a.age * 0.6)).slice(0, 90).map(p => p.id))
+  for (const id of [...F.fa]) { const p = F.players[id]; if (!p || !keepFa.has(id) || p.age >= 31 || (p.exp >= 3 && p.ovr < 66) || R.chance(0.2)) { delete F.players[id] } else p.con = null }
+  F.fa = F.fa.filter(id => F.players[id])
   topUpFreeAgents(F, R, 70)
   for (const p of mine(F)) { const d = p.ovr - (before[p.id] ?? p.ovr); const had = changes.find(c => c.id === p.id); if (had) had.d = d; else if (d) changes.push({ id: p.id, d, text: d > 0 ? 'Developed over the offseason' : 'Slipped' }) }
   // the new season
@@ -873,7 +882,11 @@ function rollOver(F) {
   prepWeek(F)
   powerRankings(F)
   setExpectations(F, s => teamRating(F, F.teams[s]).ovr)
-  setStrategies(F)
+  // every team's state is read again; the GM's direction stands unless he changed it (the staff follows the roster)
+  const auto = !!F.off.auto
+  computeStates(F)
+  if (auto || !F.gm.dir) F.gm.dir = F.teams[F.team].state
+  F.gm.dirAt = null
   F.owner = null; startOwner(F)
   F.off = null
   makeOffice(F, R)

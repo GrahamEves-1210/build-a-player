@@ -35,10 +35,10 @@ export const unpack = (pos, s) => Object.fromEntries(TYPES_OF[pos].map((t, i) =>
 const CLASS = [['qb', null, 16], ['rb', null, 26], ['wr', null, 38], ['te', null, 16], ['ol', 'LT', 10], ['ol', 'RT', 9], ['ol', 'LG', 9], ['ol', 'RG', 8], ['ol', 'C', 9], ['dl', 'edge', 27], ['dl', 'dt', 24], ['lb', null, 26], ['db', 'cb', 30], ['db', 's', 22], ['k', null, 4]]
 // the rookie OVR a prospect of a given talent rank comes in at (rank 0 is the best in the class)
 function ovrForRank(R, i) {
-  const base = i < 5 ? 81.5 - i * 0.5 : i < 32 ? 79 - (i - 5) * 0.13 : i < 64 ? 75.4 - (i - 32) * 0.08 : i < 100 ? 72.8 - (i - 64) * 0.06 : i < 160 ? 70.6 - (i - 100) * 0.045 : i < 224 ? 67.9 - (i - 160) * 0.04 : 65.2 - (i - 224) * 0.06
+  const base = i < 5 ? 84 - i * 0.6 : i < 32 ? 81 - (i - 5) * 0.16 : i < 64 ? 76.6 - (i - 32) * 0.09 : i < 100 ? 73.6 - (i - 64) * 0.065 : i < 160 ? 71.2 - (i - 100) * 0.05 : i < 224 ? 68.2 - (i - 160) * 0.04 : 65.6 - (i - 224) * 0.06
   return clamp(Math.round(base + R.n() * 1.5), 60, 87)
 }
-const devRoll = (R, ovr) => { const u = R.u(), k = ovr >= 78 ? 2.2 : ovr >= 74 ? 1.3 : ovr >= 70 ? 0.8 : 0.45; return u < 0.012 * k ? 3 : u < 0.05 * k ? 2 : u < 0.2 * k ? 1 : 0 }
+const devRoll = (R, ovr) => { const u = R.u(), k = ovr >= 78 ? 2.2 : ovr >= 74 ? 1.3 : ovr >= 70 ? 0.8 : 0.45; return u < 0.008 * k ? 3 : u < 0.038 * k ? 2 : u < 0.15 * k ? 1 : 0 }
 // combine numbers that follow the ratings (a little noise: workouts lie)
 function combine(R, pos, a) {
   const spd = a.speed ?? a.legs ?? a.range ?? a.mobility ?? a.getOff ?? 5, str = a.strength ?? a.power ?? a.anchor ?? a.size ?? 5, agi = a.elusiveness ?? a.routeRunning ?? a.fluidity ?? a.bend ?? a.mobility ?? 5, vrt = a.vertical ?? a.bodyControl ?? a.burst ?? spd
@@ -138,7 +138,7 @@ function consensus(F) {
 export function draftBoard(F, { all = false } = {}) {
   if (!F.draft) return { year: F.year + 1, label: 'THE DRAFT CLASS', pts: 0, prospects: [], needs: [] }
   const order = consensus(F), rankOf = new Map(order.map((p, i) => [p.id, i + 1]))
-  return { year: F.draft.year, label: F.hist.seasons.length ? `${F.draft.year} DRAFT CLASS` : 'THE DRAFT CLASS', pts: F.draft.pts ?? 0, combine: !!F.draft.combine,
+  return { year: F.draft.year, label: 'THE DRAFT CLASS', pts: F.draft.pts ?? 0, combine: !!F.draft.combine,
     prospects: order.filter(p => all || !p.gone).map(p => prospectRow(F, p, rankOf.get(p.id))), needs: needsOf(F, F.team).slice(0, 6) }
 }
 export function scoutProspect(F, id, points = 1) {
@@ -186,7 +186,7 @@ export function startDraft(F) {
     if (pk) pk.slot = i + 1
   })
   D.at = 0; D.started = true; D.picks = []
-  addNews(F, 'draft', `The ${D.year} draft is here: ${nick(D.order[0].t)} are on the clock`)
+  addNews(F, 'draft', `The draft is here: ${nick(D.order[0].t)} are on the clock`)
 }
 // a CPU team's board: the real grade through its own scouts' eyes, need, and what the position is worth
 function cpuChoice(F, short, R) {
@@ -228,7 +228,29 @@ function make(F, pr, short, n) {
   return p
 }
 const onClock = F => (F.draft?.started && !F.draft.done ? F.draft.order[F.draft.at] : null)
+// a rebuilding team near the top trades down now and then: a team behind it that is ready to win pays to move up
+function cpuTradeDown(F) {
+  const D = F.draft, spot = onClock(F)
+  if (!spot || spot.r > 2 || F.teams[spot.t].state !== 'rebuild') return
+  if (mix(hashStr(`${F.seed}-${D.year}-down`), D.at) > 0.16) return
+  const mine = F.teams[spot.t].picks.find(x => x.y === D.year && x.r === spot.r && x.o === spot.o)
+  if (!mine) return
+  for (let n = D.at + 3; n < Math.min(D.order.length, D.at + 14); n++) {
+    const s = D.order[n]
+    if (s.t === F.team || s.t === spot.t || F.teams[s.t].state === 'rebuild') continue
+    const T = F.teams[s.t], theirs = T.picks.find(x => x.y === D.year && x.r === s.r && x.o === s.o)
+    if (!theirs) continue
+    const need = pickValue(F, mine) * 1.04 - pickValue(F, theirs)
+    const extra = T.picks.filter(x => x !== theirs).map(x => ({ x, v: pickValue(F, x) })).filter(x => x.v >= need * 0.9 && x.v <= need * 1.45).sort((a, b) => a.v - b.v)[0]
+    if (!extra) continue
+    execute(F, { from: s.t, to: spot.t, give: { players: [], picks: [pickKey(theirs), pickKey(extra.x)] }, get: { players: [], picks: [pickKey(mine)] } })
+    addNews(F, 'draft', `${nick(s.t)} trade up to No. ${D.at + 1}; ${nick(spot.t)} move down and add a pick`, { team: s.t })
+    reorder(F)
+    return
+  }
+}
 function cpuPick(F) {
+  cpuTradeDown(F)
   const spot = onClock(F)
   const pr = cpuChoice(F, spot.t, null)
   if (pr) make(F, pr, spot.t, F.draft.at); else { F.draft.done = true }

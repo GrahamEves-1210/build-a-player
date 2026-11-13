@@ -50,7 +50,7 @@ export function capSheet(F, team = F.team) {
     .sort((a, b) => b.capHit - a.capHit || b.ovr - a.ovr)
   const next = [1, 2, 3].map(k => {
     const on = t.roster.map(id => F.players[id]).filter(p => (p.con?.yrs ?? 0) > k)
-    return { year: F.year + k, committed: r2(on.reduce((s, p) => s + p.con.sal, 0) + (k === 1 ? t.deadNext ?? 0 : 0)), players: on.length }
+    return { year: F.year + k, label: ['', 'NEXT SEASON', 'IN TWO SEASONS', 'IN THREE SEASONS'][k], committed: r2(on.reduce((s, p) => s + p.con.sal, 0) + (k === 1 ? t.deadNext ?? 0 : 0)), players: on.length }
   })
   return { cap: F.cap, payroll: pay, dead: r2(t.dead ?? 0), space: r2(F.cap - pay), rows, next, on: !!F.settings.cap }
 }
@@ -103,7 +103,7 @@ export function recordOf(F, short) {
   const r = F.teams[short].rec
   return r ? { w: r.w, l: r.l, t: r.t, text: recText(r) } : { w: 0, l: 0, t: 0, text: '0-0' }
 }
-export const teams = F => TEAM_SHORTS.map(s => ({ ...teamRef(s), record: recordOf(F, s).text, user: s === F.team }))
+export const teams = F => TEAM_SHORTS.map(s => ({ ...teamRef(s), record: recordOf(F, s).text, user: s === F.team, state: F.teams[s].state ?? 'retool' }))
 export function leagueRatings(F) {
   const by = {}
   for (const s of TEAM_SHORTS) by[s] = teamRating(F, F.teams[s])
