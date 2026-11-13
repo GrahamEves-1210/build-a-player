@@ -2063,6 +2063,7 @@ export function startSeason(c) {
   const base = bye ? { ...base0, games: base0.games.map((g, i) => ({ ...g, wk: i + 1 >= bye ? i + 2 : i + 1 })) } : base0
   const D = director(cc, team, base, seed, simFn, c.build)
   seasonSwing(cc, D)
+  D.calm()
   // (a registered sport opens its own season: baseball's minors stint and the call-up, the lineup or the rotation)
   const own = S.x?.start ? S.x.start(cc, D, dc, team) : null
   // not the starter. Basketball: off the bench all year, a smaller role.

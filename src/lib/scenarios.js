@@ -270,7 +270,7 @@ function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name,
     deals,                       // Career: () => who the front office can trade for (see career.js dealsFor)
     // Career: where the career stands (career.js lifeView), the game coming up, and his last few games
     cr: career, next, played, sumLast: (key, n) => played.slice(-n).reduce((s, g) => s + (g[key] ?? 0), 0),
-    hotRun: tagRun('HOT STREAK'), coldRun: tagRun('COLD STRETCH'), hotNext: (next?.tags ?? []).includes('HOT STREAK'),
+    hotRun: tagRun('HOT STREAK'), coldRun: tagRun('COLD STRETCH'), hotNext: (next?.tags ?? []).includes('HOT STREAK'), coldNext: (next?.tags ?? []).includes('COLD STRETCH'),
     sport, pos, isBucket, isDef: onDef, isOL: pos === 'ol', spot: pos === 'dl' ? (build?.size?.subpos === 'dt' ? 'dt' : 'edge') : null, stop, k, total, left, wins, losses, streak, skid, pace,
     rec: `${wins}–${losses}`, nick: teamNick, name, T, R, R1, roleHas: role => traitsOf(role).length > 0, L, val, r,
     alive: wins + left >= needIn, clinched: wins >= lock, eliminated: wins + left < needIn,
@@ -677,7 +677,9 @@ const LIFE_ANY = [
         o('more', 'Ask for more', { attr: mix(c.R1('make', 1), c.R1('legs', -1)), window: G(c, 3, 6), tag: 'FEATURED' }, `More of the ${c.side} runs through him. His legs pay for it.`),
         o('same', 'Change nothing', { attr: c.R1('nerve', 1), window: G(c, 2, 5) }, 'Same routine, same seat on the bus.'),
       ] }) },
-  { id: 'cold-run', at: ANY, w: 4, when: c => c.coldRun >= 2 && starts(c) && c.roleHas('feel') && c.roleHas('legs') && c.roleHas('nerve'),
+  // (the slump card, like the hot one, only while the stretch is still on: it could also come the week after it
+  // ended, three chances to the hot card's two, and a cold run got its card more often than a hot one)
+  { id: 'cold-run', at: ANY, w: 4, when: c => c.coldRun >= 2 && c.coldNext && starts(c) && c.roleHas('feel') && c.roleHas('legs') && c.roleHas('nerve'),
     make: c => ({ kicker: 'SLUMP', title: 'Nothing is falling his way',
       body: `${Num(c.coldRun)} quiet games in a row. ${COLD[c.pos]} Nobody on the staff is worried yet. ${c.name} is.`,
       options: [

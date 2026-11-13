@@ -241,6 +241,48 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
         D.games[i] = { ...(pick?.[i] ?? run.games[i]), wk: base.games[i].wk, g: base.games[i].g, ...(tags.length ? { tags } : {}) }
       }
     }
+    if (D.calmed) calm(from)
+  }
+  // Quiet runs nobody labelled (Career). A defender's line, and a receiver's, is lopsided: most games are quiet and
+  // the season's numbers come in a few big ones, so three quiet games in a row turned up three to five times as
+  // often as three big ones, on top of the COLD STRETCH, and a hot season still felt cold. Outside any stretch with
+  // a name, when a third quiet game in a row (under half a spread below his normal one) would come, it is often drawn
+  // again: the more lopsided his line at these ratings, the more often, so quiet runs come about as often as big
+  // ones (a line that is even, or close to it, a quarterback's, keeps its runs as they were). Every draw is a real game.
+  const calm = from => {
+    const score = BEST[pos]   // (the line he reads in the log: a corner's targets and yards allowed aren't on it)
+    if (!score || from >= total || sport !== 'nfl') return   // (football: basketball's runs already come about even)
+    const key = `calm-${from}-${r().toString(36).slice(2, 6)}`
+    // (a decision's own stretch counts, its grades stay in the draw; a hot or cold stretch, and a game a moment decided, stay as they are)
+    const free = i => !D.sat.includes(i) && !leanAt(i)
+    // (his normal game: his season's own games outside the stretches, the way the log reads it)
+    const all = D.games.filter((g, i) => g && !g.sat && free(i)).map(score).filter(Number.isFinite)
+    if (all.length < 8) return
+    const mean = all.reduce((s, v) => s + v, 0) / all.length
+    const sd = Math.sqrt(all.reduce((s, v) => s + (v - mean) ** 2, 0) / all.length)
+    if (!sd) return
+    const lo = mean - 0.5 * sd
+    // (how lopsided the line is at these ratings: two full seasons of draws, so 17 games of luck don't decide it)
+    const mods = fixedRunMods(from)
+    const dr = [runWith(mods, `${key}-a`), runWith(mods, `${key}-b`)].flatMap(x => x.games.map(score)).filter(Number.isFinite)
+    const dm = dr.reduce((s, v) => s + v, 0) / Math.max(1, dr.length), ds = Math.sqrt(dr.reduce((s, v) => s + (v - dm) ** 2, 0) / Math.max(1, dr.length))
+    if (!ds) return
+    const pLo = dr.filter(v => v < dm - 0.5 * ds).length / dr.length, pHi = dr.filter(v => v > dm + 0.5 * ds).length / dr.length
+    if (pLo <= pHi * 1.12) return   // (an even line, or close to it: its runs come as they come)
+    const q = 1 - (pHi / pLo) ** 10
+    let run = 0
+    for (let i = 0; i < total; i++) {
+      const g = D.games[i]
+      if (!g || g.sat || !free(i)) { run = 0; continue }
+      if (!(score(g) < lo)) { run = 0; continue }
+      if (run < 2 || i < from || D.locked.includes(i) || r() >= q) { run++; continue }
+      const m = fixedRunMods(i)
+      // (an ordinary game, not a big one: of the first draws that aren't quiet, the plainest, so his season's totals stay his)
+      const ok = []
+      for (let j = 0; j < 6 && ok.length < 3; j++) { const x = runWith(m, `${key}-${i}-${j}`).games[i]; if (x && score(x) >= lo) ok.push(x) }
+      const got = ok.length ? ok.reduce((a, b) => (score(b) < score(a) ? b : a)) : null
+      if (got) { const tags = tagsAt(i); D.games[i] = { ...got, wk: base.games[i].wk, g: base.games[i].g, ...(tags.length ? { tags } : {}) }; run = 0 } else run++
+    }
   }
   const sitGame = (i, tag = null) => {
     // the team plays without you: a coin weighted by team strength, no stats
@@ -384,14 +426,16 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     if (playoffs) D.playoffMods = addMods(D.playoffMods, mods)
     resplice(from)
   }
+  // (Career, once the season's form and streak are set: the quiet runs evened out from here on, every re-splice too)
+  D.calm = () => { D.calmed = true; calm(0) }
   // The director's own data, to save mid-season and pick the season back up
-  D.snapshot = () => ({
+  D.snapshot = () => ({ calmed: !!D.calmed,
     games: D.games, locked: D.locked, cum: D.cum, windows: D.windows, playoffMods: D.playoffMods, last: D.last, moments: D.moments,
     milestones: D.milestones, records: D.records, headlines: D.headlines, sat: D.sat, xp: D.xp, po: D.po, poRun: D.poRun ?? null,
     seen: [...D.seen], fired: [...D.fired], used: [...D.used], finalized: D.finalized, final: D.final,
   })
   D.restore = snap => {
-    Object.assign(D, { games: snap.games, locked: snap.locked ?? [], cum: snap.cum, windows: snap.windows, playoffMods: snap.playoffMods, last: snap.last, moments: snap.moments, milestones: snap.milestones, records: snap.records, headlines: snap.headlines, sat: snap.sat, xp: snap.xp, po: snap.po, poRun: snap.poRun ?? null, finalized: snap.finalized, final: snap.final })
+    Object.assign(D, { games: snap.games, locked: snap.locked ?? [], cum: snap.cum, windows: snap.windows, playoffMods: snap.playoffMods, last: snap.last, moments: snap.moments, milestones: snap.milestones, records: snap.records, headlines: snap.headlines, sat: snap.sat, xp: snap.xp, po: snap.po, poRun: snap.poRun ?? null, finalized: snap.finalized, final: snap.final, calmed: !!snap.calmed })
     D.seen = new Set(snap.seen); D.fired = new Set(snap.fired); D.used = new Set(snap.used)
     return D
   }
