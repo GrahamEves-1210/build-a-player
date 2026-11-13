@@ -402,7 +402,7 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
   const postMsg  = won ? '✓ Won' : '✗ Lost'
 
   return (
-    <div className={`plf-game${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
+    <div className={`plf-game${seriesName === 'NBA Finals' ? ' plf-game--title' : ''}${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
       <div className="plf-round-row">
         <div className="plf-round-lbl">{seriesName} · Game {gameNum}</div>
       </div>

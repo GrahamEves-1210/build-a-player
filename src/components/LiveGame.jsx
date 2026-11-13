@@ -102,7 +102,7 @@ const TEAM_BY_NAME = Object.fromEntries(TEAMS.map(t => [t.name, t]))
 
 const WEATHER_EMOJI = { clear: '☀️', rain: '🌧️', snow: '❄️', dome: '🏟️' }
 
-export function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, overtime, teamColor, teamAbbr, teamLogo, isFinal, isAllTime, onDone, oppLogo: oppLogoIn = null, oppAbbr: oppAbbrIn = null, finalWord = 'Super Bowl', champWord = '✓ Champions!', winWord = '✓ Advancing', lossWord = '✗ Eliminated', textColor = null }) {
+export function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, overtime, teamColor, teamAbbr, teamLogo, isFinal, isAllTime, onDone, oppLogo: oppLogoIn = null, oppAbbr: oppAbbrIn = null, finalWord = 'Super Bowl', champWord = '✓ Champions!', winWord = '✓ Advancing', lossWord = '✗ Eliminated', textColor = null, titleGame = null }) {
   const myText = textColor ?? readableTextColor(teamColor)
   const [phase,    setPhase]    = useState('pre')
   const [gameSec,  setGameSec]  = useState(0)
@@ -186,9 +186,10 @@ export function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, 
   const postMsg  = won ? (isFinal ? champWord : winWord) : lossWord
 
   return (
-    <div className={`plf-game${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
+    <div className={`plf-game${titleGame ? ' plf-game--title' : ''}${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
       <div className="plf-round-row">
-        <div className="plf-round-lbl">{round}</div>
+        {/* titleGame: { name, venue } — the title game's card (index.css .plf-game--title) */}
+        <div className="plf-round-lbl">{titleGame?.name ?? round}{titleGame?.venue && <small className="plf-title-venue">{titleGame.venue}</small>}</div>
         {weather && (
           <div className="plf-weather-block">
             <span className="plf-weather-icon">{WEATHER_EMOJI[weather]}</span>

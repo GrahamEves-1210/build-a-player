@@ -34,6 +34,8 @@ import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
 import { PlayoffGame } from './LiveGame'
+// the 2026 season's Super Bowl, on its title-game card (Feb. 14, 2027, SoFi Stadium)
+const SUPER_BOWL = { name: 'Super Bowl LXI', venue: 'SoFi Stadium · Inglewood, Calif.' }
 import MVPModal from './MVPModal'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 // The app's season screen (moments, week strip, bracket, rewards, story) runs
@@ -821,6 +823,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
             teamLogo={teamLogo}
             isFinal={gameIdx === playoffRounds.length - 1}
             isAllTime={!!team?.isAllTime}
+            titleGame={current.round === 'Super Bowl' ? SUPER_BOWL : null}
             onDone={handleGameDone}
           />
         )}

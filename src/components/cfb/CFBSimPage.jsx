@@ -437,6 +437,7 @@ function LiveGame({ v, g, onDone }) {
       oppLogo={cfbLogo(g.oppShort)} oppAbbr={g.oppShort}
       finalWord={g.neutral || ccg || g.round === 'National Championship' ? round : null}
       isFinal={fin} champWord={champ} lossWord={lost} isAllTime={false} onDone={onDone}
+      titleGame={g.round === 'National Championship' ? { name: round, venue: [g.site ?? 'Allegiant Stadium, Las Vegas', g.date ?? 'Jan 25, 2027'].join(' · ') } : null}
     />
   )
 }

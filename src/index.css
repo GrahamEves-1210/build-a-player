@@ -9501,6 +9501,51 @@ html.is-x-browser .mobile-tab-bar {
     0 0 40px rgba(248,113,113,0.1),
     0 1px 0 rgba(248,113,113,0.18) inset;
 }
+/* the title game (the Super Bowl, the NBA Finals, a national championship), as the broadcast dresses it: a gold rule
+   along the card's top that draws in once, the game's name in gold with the venue under it, a deeper, warmer glass
+   and a gold edge. No glow; the score, the clock and the sizes are any game's, so nothing moves */
+.plf-game.plf-game--title {
+  position: relative;
+  border-color: rgba(232,199,102,0.34);
+  border-top-color: rgba(232,199,102,0.5);
+  background: rgba(24,18,4,0.42);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(232,199,102,0.14) inset;
+}
+.plf-game--title::before {
+  content: '';
+  position: absolute;
+  left: 28px; right: 28px; top: -1px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: #e8c766;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .plf-game--title::before { animation: plf-title-rule .7s cubic-bezier(.22, 1, .36, 1) .15s both; }
+}
+@keyframes plf-title-rule { from { transform: scaleX(0); } }
+.plf-game--title .plf-round-lbl { color: #e8c766; }
+.plf-title-venue {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 1.6px;
+  color: rgba(255,255,255,0.55);
+}
+.plf-game.plf-game--title.plf-game-won {
+  border-color: rgba(232,199,102,0.6);
+  border-top-color: rgba(232,199,102,0.75);
+  background: rgba(232,199,102,0.09);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(232,199,102,0.24) inset;
+}
+.plf-game.plf-game--title.plf-game-lost {
+  border-color: rgba(248,113,113,0.3);
+  border-top-color: rgba(248,113,113,0.45);
+  background: rgba(248,113,113,0.07);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(248,113,113,0.18) inset;
+}
 
 .plf-round-row {
   display: flex;
