@@ -1,0 +1,91 @@
+/* Franchise: the trophy scene (TrophyScene.jsx). A full-screen layer on the mode's black; the film is a square in
+   the middle whose own background is the same black, the title over it, the team under it. Nothing loops. */
+.frt {
+  --frt-bg: #0a0c0f; --frt-gold: #e8c15a; --frt-text: #f2f4f5; --frt-muted: #8b949e;
+  --frt-rail: var(--web-rail, 0px);
+  /* the film's side: the width, what the height leaves once the words and the button have theirs, never past the
+     render's own 720 */
+  --frt-side: min(128vw, 720px, calc(100vh - var(--frt-rail) - 268px));
+  position: fixed; inset: 0; z-index: 1300; display: flex; align-items: center; justify-content: center;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 0 calc(var(--frt-rail) + max(14px, env(safe-area-inset-bottom, 0px)));
+  background: var(--frt-bg); color: var(--frt-text); overflow: hidden; cursor: pointer; outline: none;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+@supports (height: 100dvh) { .frt { --frt-side: min(128vw, 720px, calc(100dvh - var(--frt-rail) - 268px)); } }
+html.is-app .frt { --frt-rail: 0px; }
+.frt *, .frt *::before, .frt *::after { box-sizing: border-box; }
+.frt-col { display: flex; flex-direction: column; align-items: center; width: 100%; min-width: 0; }
+
+/* the gold line over the cup */
+.frt-title {
+  position: relative; z-index: 2; margin: 0 0 calc(var(--frt-side) * -.035); padding: 0 16px;
+  font-family: var(--ag-font, 'BAP Bebas', 'Bebas Neue', Impact, sans-serif); font-weight: 400; font-size: clamp(21px, 5.9vw, 30px); letter-spacing: .2em; text-indent: .2em; line-height: 1;
+  color: var(--frt-gold); text-align: center; text-transform: uppercase;
+  opacity: 0; transform: translateY(8px); transition: opacity .5s ease-out, transform .5s cubic-bezier(.2, .7, .2, 1);
+}
+.frt.has-title .frt-title { opacity: 1; transform: none; }
+
+/* the film: a square; its edges are let go so the render's black and the page's are one */
+.frt-film {
+  position: relative; flex: none; width: var(--frt-side); height: var(--frt-side);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 5%, #000 88%, transparent 100%), linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 5%, #000 88%, transparent 100%), linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.frt-video, .frt-poster { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.frt-video { background: var(--frt-bg); }
+
+/* the team: its two colours as one rule, its name, a line, the button */
+.frt-foot { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 720px; margin-top: calc(var(--frt-side) * -.05); padding: 0 16px; }
+.frt-rule { display: block; width: 132px; height: 4px; background: linear-gradient(to right, var(--frt-c1) 0 50%, var(--frt-c2) 50% 100%); transform: scaleX(0); transition: transform .45s cubic-bezier(.2, .7, .2, 1); }
+.frt-name {
+  margin: 12px 0 0; font-family: var(--ag-display, 'BAP Anton', 'Anton', Impact, sans-serif); font-weight: 400; font-size: clamp(38px, 11.5vw, 68px); line-height: .96; letter-spacing: .01em;
+  color: var(--frt-text); text-align: center; text-transform: uppercase; text-wrap: balance;
+  opacity: 0; transform: translateY(10px); transition: opacity .5s ease-out .08s, transform .55s cubic-bezier(.2, .7, .2, 1) .08s;
+}
+.frt-line { margin: 9px 0 0; font-family: var(--ag-font, 'BAP Bebas', 'Bebas Neue', Impact, sans-serif); font-size: 17px; letter-spacing: .14em; line-height: 1.15; color: var(--frt-muted); text-align: center; text-transform: uppercase; opacity: 0; transition: opacity .5s ease-out .22s; }
+.frt.has-name .frt-rule { transform: none; }
+.frt.has-name .frt-name { opacity: 1; transform: none; }
+.frt.has-name .frt-line { opacity: 1; }
+.frt-btn {
+  margin-top: 18px; display: inline-flex; align-items: center; justify-content: center; min-width: 208px; height: 48px; padding: 3px 26px 0; border: 0; border-radius: 4px;
+  background: var(--frt-text); color: #0a0c0f; font-family: var(--ag-font, 'BAP Bebas', 'Bebas Neue', Impact, sans-serif); font-size: 20px; letter-spacing: .1em; line-height: 1; cursor: pointer;
+  opacity: 0; transition: opacity .35s ease-out .15s, transform .1s ease-out; -webkit-tap-highlight-color: transparent;
+}
+.frt.is-rest .frt-btn { opacity: 1; }
+.frt-btn:active { transform: scale(.985); }
+.frt-btn:focus-visible { outline: 2px solid var(--frt-text); outline-offset: 3px; }
+@media (min-width: 900px) {
+  .frt-title { font-size: 32px; }
+  .frt-name { font-size: clamp(54px, 6vw, 76px); }
+  .frt-line { font-size: 19px; }
+}
+/* a short screen: the words close up */
+@media (max-height: 640px) {
+  .frt { --frt-side: min(128vw, 720px, calc(100vh - var(--frt-rail) - 216px)); }
+  .frt-name { font-size: clamp(30px, 9vw, 44px); margin-top: 8px; }
+  .frt-btn { margin-top: 12px; height: 44px; }
+}
+
+/* the confetti: CutTheNet's (cbb.css), once, in the team's two colours and white */
+.frt-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+.frt-confetti i { position: absolute; top: -14px; border-radius: 1px; transform: rotate(var(--rot)); animation: frt-confetti linear both; }
+@keyframes frt-confetti {
+  0% { transform: translateY(-10px) rotate(var(--rot)); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(calc(var(--rot) + 720deg)); opacity: 0; }
+}
+
+/* reduced motion: the last frame and the words, as they end */
+.frt.is-still :is(.frt-title, .frt-rule, .frt-name, .frt-line, .frt-btn) { transition: none; }
+html.bap-reduce-motion .frt :is(.frt-title, .frt-rule, .frt-name, .frt-line, .frt-btn) { transition: none; }
+html.bap-reduce-motion .frt-confetti { display: none; }
+@media (prefers-reduced-motion: reduce) { .frt :is(.frt-title, .frt-rule, .frt-name, .frt-line, .frt-btn) { transition: none; } .frt-confetti { display: none; } }
+
+/* the website's bottom ad rail: the layer's content stops at its top (the padding above) and the ad's own box is
+   cut out of the layer, so the ad is never under it and takes its own taps (app-game.css, "nothing under the
+   bottom ad rail", rule 1) */
+html.has-rail:not(.is-app) .frt {
+  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+    var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) 100%, var(--web-rail-l, 0px) 100%, var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)));
+}
