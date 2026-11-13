@@ -28,9 +28,11 @@ export function derive(build, pos = 'guard') {
     js: n(js), fin: n(fin), pas: n(passing), hnd: n(handles), per: n(perD), int: n(intD), reb: n(rebounding),
     spd: n(spd), bnc: n(bnc), size: n(size), iq: n(iq), clutch: n(clutch),
   }
-  const top = T.speedMin * (1 + T.speedBand * R.spd) * (1 - T.sizeSlow * R.size)
+  // top speed runs on the plain grade (not squeezed by spread): the band itself is narrow on purpose
+  const spdRaw = clamp((spd - 1) / 10, 0, 1)
+  const top = T.speedMin * (1 + T.speedBand * spdRaw) * (1 - T.sizeSlow * R.size)
   R.top = top                                               // ft/s without the ball
-  R.topBall = T.speedMin * (1 + T.speedBand * T.speedBall * R.spd) * (1 - T.sizeSlow * R.size) * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
+  R.topBall = T.speedMin * (1 + T.speedBand * T.speedBall * spdRaw) * (1 - T.sizeSlow * R.size) * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
   R.topDef = top * (T.defSpeed + T.defSpeedPer * R.per)     // guarding
   R.mass = 1 + T.massSize * R.size
   R.passSpeed = T.passSpeed + T.passSpeedPas * R.pas

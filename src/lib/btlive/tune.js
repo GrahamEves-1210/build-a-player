@@ -36,16 +36,16 @@ export const T = {
   // Every "at a 1" below is really at "1 - spread" of the way down from an 11: the top of each rating is where
   // the brief puts it (a great shooter, a great finisher) and this one number sets how much worse a low grade is,
   // so how often a 95 beats an 80. 1 = the full range below; lower = builds closer together.
-  spread: 0.6,
+  spread: 0.47,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
   speedMin: 9.6,                     // top speed at Speed 1, ft/s
-  speedBand: 0.20,                   // the fastest (Speed 11) is this much quicker than the slowest
+  speedBand: 0.15,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
   speedBall: 0.5,                    // ...with the ball, half of that (a dribble evens people out)
   sizeSlow: 0.04,                    // Size 11 gives this much of it back
   ballSpeed: 0.80,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.07,                // ...plus this at Handles 11
-  defSpeed: 0.955,                   // guarding, at Perimeter D 1 (x top speed)...
+  defSpeed: 1.0,                     // guarding, at Perimeter D 1 (x top speed)...
   defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11
   accel: 34,                         // ft/s² (about a third of a second to top speed)
   defAccelPer: 0.20,                 // a defender's acceleration: x (0.85 + this * Perimeter D)
@@ -60,10 +60,10 @@ export const T = {
   // ── The shot meter (judged on the shooter's own device: only the quality 0-1 is sent) ──────────
   jTotalMs: 900,                     // a jumper's meter runs this long; held past it, the shot goes up late
   jIdealMs: 500,                     // the middle of the green window
-  jWinMs: 20, jWinJs: 46,            // green half-width: 20 ms at Jump Shot 1, 66 ms at 11
+  jWinMs: 12, jWinJs: 58,            // green half-width: 12 + 58 x (Jump Shot n)²: 70 ms at 11, about 30 at a 1 (the square: a great shooter's green is much bigger)
   jFallMs: 170,                      // past the green, quality runs down to 0 over this long
   lTotalMs: 620, lIdealMs: 300,      // layups and dunks: a quicker meter
-  lWinMs: 38, lWinFin: 46,           // green half-width from Finishing: 38 to 84 ms
+  lWinMs: 30, lWinFin: 54,           // green half-width from Finishing: 30 + 54 x n²: 84 ms at 11
   lFallMs: 190,
   dunkWin: 1.35,                     // a dunk's window is this much wider
   clutchShrink: 0.32,                // at game point the window shrinks by this much at Clutch 1, not at all at Clutch 11
@@ -83,7 +83,7 @@ export const T = {
   closeBase: 0.45, closeJs: 0.21,    // a jumper from 8 ft: 45% at Jump Shot 1, 66% at 11
   arcBase: 0.185, arcJs: 0.385,      // a jumper from the arc (25 ft): 18.5% at Jump Shot 1, 57% at 11
   arcRef: 25, curve: 1.6,            // the distance those are measured at, and how the chance bends between 8 ft and there
-  deepAt: 26.8,                      // past this it's deep...
+  deepAt: 27.5,                      // past this it's deep...
   deepFall: 0.075, deepJs: 0.04,     // ...and loses 7.5% a foot at Jump Shot 1, 3.5% at 11 (range)
   setFeet: 0.14,                     // a jumper taken at a full run loses this much; still: nothing
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
@@ -94,16 +94,24 @@ export const T = {
   // ── Contest: the nearest hand takes a share of the chance ───────────────────────────────────────
   contestRange: 6.6,                 // a defender farther than this doesn't bother the shot
   contestNear: 2.1,                  // ...and at this distance he's all the way in it
+  contestNearL: 3.0,                 // ...at a layup or a dunk (a man at the rim is in it from a step farther)
   contestCurve: 1.5,                 // in between it bends: a step of space is worth a lot (1 = a straight line)
   contestStand: 0.62,                // feet on the floor (JUMP is a hand up: 1.0)
+  contestSet: 1.0,                   // ...set in front of a layup, not moving: walls up
+  lateShare: 0.6,                    // a man who closes out after the shot went up gets this much less of his contest at most
   contestBeat: 0.22,                 // frozen or on the floor
   contestSide: 0.6,                  // from the side or behind (not between the shooter and the rim)
   contestRate: 0.55, contestRateDef: 0.45,   // x (0.55 + 0.45 * his defense: Perimeter D on jumpers, Interior D in the paint and on layups)
   contestSize: 0.45,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
-  contestMaxJ: 0.52,                 // a perfect contest takes this share off a jumper
-  contestMaxL: 0.50,                 // ...off a layup
-  contestMaxD: 0.24,                 // ...off a dunk
+  contestMaxJ: 0.46,                 // a perfect contest takes this share off a jumper
+  contestMaxL: 0.72,                 // ...off a layup
+  contestMaxD: 0.36,                 // ...off a dunk
   finThrough: 0.35,                  // Finishing 11 shrugs off this share of a layup's contest
+
+  // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
+  cpuRespect: 5,                     // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
+  twoValue: 1.6,                     // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
+  cpuDriveV: 0.45,                   // a jumper has to be worth this (a make = 1, a two 1.5) while there's time to go to the rim
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
   jumpTime: 0.50,                    // off the floor this long...
@@ -142,7 +150,7 @@ export const T = {
   moveHnd: 0.25,                     // ...plus this * (Handles n - his Perimeter D n)
   moveIq: 0.16,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
   moveFreeze: 0.45,                  // frozen this long
-  ankleBase: 0.07,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
+  ankleBase: 0.02,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
   ankleDown: 1.25,                   // on the floor this long
 
   // ── Passing ──────────────────────────────────────────────────────────────────────────────────────
@@ -168,8 +176,13 @@ export const T = {
   looseFriction: 0.9,                // a ball on the floor slows by this a tick
   swatSpeed: 20,                     // a blocked shot leaves at this speed
 
+  // ── Online (a player on his own device: lib/btlive/net.js, live/src/btlive.js) ───────────────────
+  remoteWaitMs: 650,                 // a shot waits this long past the end of the meter for his device's release
+  remoteSlack: 1.6,                  // a position from a device may be this much farther than his top speed allows...
+  remoteStep: 0.35,                  // ...plus this many feet a tick (jitter: two updates landing at once)
+
   // ── Rare moments (what the screen makes something of) ───────────────────────────────────────────
-  posterContest: 0.5,                // a dunk made through this much contest is a poster
+  posterContest: 0.62,               // a dunk made through this much contest is a poster
   deepWord: 29.5,                    // a made three from here is a deep three
   chaseAngle: 0.2,                   // a block from behind the shooter (his back to the blocker) is a chase-down
 }

@@ -10,7 +10,11 @@
 //             shoot, pass, move,    held buttons with the ball (pass without it: call for the ball)
 //             steal, jump,          held buttons without it
 //             q,                    the release quality 0-1 from the shooter's own meter, on the tick shoot is let go
-//             t }                   the tick the input was made on (online: for ordering; the step doesn't read it)
+//             t,                    the tick the input was made on (online: for ordering; the step doesn't read it)
+//             pos }                 online: { x, y, vx, vy } where his own device has him. His device is the authority
+//                                   for his position (no lag on his own moves): the step puts him there (no farther
+//                                   than he could have run since the last one) instead of moving him, bodies don't push
+//                                   him, and his shot waits for the release quality his device timed (q)
 //   s.events                        what happened this tick (emptied at the start of the next): the screen and the
 //                                   balance script read it. { e: 'release' | 'make' | 'miss' | 'block' | 'steal' | ... }
 import { HZ, DT, COURT, RULES, T } from './tune.js'
@@ -94,7 +98,7 @@ function setSpots(s, team, carrier) {
     if (p.team === team) continue
     const m = s.players[p.man]
     const d = Math.hypot(RIM.x - m.sx, RIM.y - m.sy) || 1
-    const off = p.man === carrier ? 5.2 / d : 0.3
+    const off = p.man === carrier ? 4.2 / d : 0.3                   // the man checking it is right up on him
     p.sx = m.sx + (RIM.x - m.sx) * off; p.sy = m.sy + (RIM.y - m.sy) * off
   }
 }
@@ -125,18 +129,26 @@ function endPossession(s, pts, nextTeam, carrier, why) {
   if (s.ball.st === 'held' && s.ball.holder !== c) { s.ball.st = 'dead'; s.ball.vx = s.ball.vy = s.ball.vz = 0 }
 }
 
+// a layup or a dunk: one roll a player a possession, from the seed, so a device can show the right meter before the
+// referee's word arrives (a dunk's green window is wider)
+export const dunkRoll = (s, i) => rollAt(s.seed ^ 0x0d0c, s.possN * 8 + i)
+export const shotKindAt = (s, i) => ref.shotKind(s.players[i].R, ref.rimDist(s.players[i]), dunkRoll(s, i))
+
 function startGather(s, p) {
   const d = ref.rimDist(p)
-  const kind = ref.shotKind(p.R, d, rnd(s))
+  const kind = shotKindAt(s, p.i)
   const spec = meterSpec(kind, p.R, s.gamePoint)
   const defs = s.players.filter(o => o.team !== p.team).map(fact)
   const c0 = ref.contestOf(fact(p), defs, kind).c
+  // how well he could be contested as he rises (every man in reach with a hand up): a man who only gets there late
+  // takes less off the shot (referee.judgeShot)
+  const cUp = ref.contestOf(fact(p), defs.map(ref.handUp), kind).c
   // the read on the meter: how open he is. A high IQ reads it true; a low one is a step off about half the time
   let read = c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2
   const r = rnd(s)
   if (r > 0.45 + 0.55 * p.R.iq) read = clamp(read + (r > 0.8 ? 1 : -1), 0, 2)
   const top = p.R.topBall
-  p.shot = { kind, spec, d, three: kind === 'jumper' && ref.isThree(p.x, p.y), run: clamp(Math.hypot(p.vx, p.vy) / top, 0, 1), read }
+  p.shot = { kind, spec, d, three: kind === 'jumper' && ref.isThree(p.x, p.y), run: clamp(Math.hypot(p.vx, p.vy) / top, 0, 1), read, cUp }
   p.act = 'gather'; p.actT = 0; p.burst = 0
   s.events.push({ e: 'gather', pid: p.i, kind })
 }
@@ -146,7 +158,7 @@ function release(s, p, q) {
   const cs = sh.kind === 'jumper' && p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
   const rushed = s.clock <= T.rushAt * HZ
   const defs = s.players.filter(o => o.team !== p.team)
-  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, three: sh.three, q, run: sh.run, cs, rushed },
+  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp },
     { block: defs.map(() => rnd(s)), make: rnd(s) })
   const st = s.stats[p.i]
   p.act = 'follow'; p.actT = 0; p.actN = ticks(T.follow); p.shot = null
@@ -260,6 +272,9 @@ function act(s, p, inp) {
   const has = b.st === 'held' && b.holder === p.i
   if (p.act === 'gather') {
     const held = p.actT * 1000 / HZ
+    // a player on his own device: the shot goes when his device's quality arrives (it timed the meter); if it never
+    // does, it goes late
+    if (inp.pos) { if (inp.q != null || held >= p.shot.spec.total + T.remoteWaitMs) release(s, p, inp.q != null ? clamp(inp.q, 0, 1) : meterQuality(p.shot.spec, held)); return }
     if (inp.q != null || !(now & B_SHOOT) || held >= p.shot.spec.total) release(s, p, inp.q != null ? clamp(inp.q, 0, 1) : meterQuality(p.shot.spec, held))
     return
   }
@@ -293,7 +308,24 @@ function timers(p) {
   else if (p.act !== 'gather' && p.actT >= p.actN) { p.act = 'free'; p.actT = 0 }
 }
 
+// where his own device says he is: taken as it comes, but never farther from the last spot than he could have run
+function placeAt(s, p, pos) {
+  const x = +pos.x, y = +pos.y
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return
+  const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy)
+  const max = p.R.top * T.moveSpeed * DT * T.remoteSlack + T.remoteStep
+  const k = d > max ? max / d : 1
+  p.x = clamp(p.x + dx * k, COURT.minX - 2, COURT.maxX + 2); p.y = clamp(p.y + dy * k, COURT.minY - 2, COURT.maxY + 2)
+  const vx = clamp(+pos.vx || 0, -30, 30), vy = clamp(+pos.vy || 0, -30, 30)
+  p.vx = vx; p.vy = vy
+  const sp = Math.hypot(vx, vy)
+  if (sp > 1) { p.fx = vx / sp; p.fy = vy / sp }
+  else if (s.ball.st === 'held' && s.ball.holder === p.i) { const r = ref.rimDist(p) || 1; p.fx = (RIM.x - p.x) / r; p.fy = (RIM.y - p.y) / r }
+}
+
 function move(s, p, inp) {
+  if (inp.pos) { p.remote = true; placeAt(s, p, inp.pos); return }
+  p.remote = false
   const has = s.ball.st === 'held' && s.ball.holder === p.i
   const def = p.team !== s.poss
   let top = has ? p.R.topBall : def ? p.R.topDef : p.R.top
@@ -329,7 +361,10 @@ function collide(s) {
     const nx = dx / d, ny = dy / d, over = R2 - d
     const set = (p, o) => (p.act === 'free' || p.act === 'jump' || p.act === 'land') && ((o.i === holder && p.team !== o.team) || Math.hypot(p.vx, p.vy) < 1.2)
     const ma = a.R.mass * (set(a, b) ? T.ground : 1), mb = b.R.mass * (set(b, a) ? T.ground : 1)
-    const fa = mb / (ma + mb), fb = ma / (ma + mb)
+    // a man placed by his own device isn't pushed here (his device does its own bumping); the other one gives way
+    let fa = mb / (ma + mb), fb = ma / (ma + mb)
+    if (a.remote && b.remote) continue
+    if (a.remote) { fa = 0; fb = 1 } else if (b.remote) { fa = 1; fb = 0 }
     a.x -= nx * over * fa; a.y -= ny * over * fa
     b.x += nx * over * fb; b.y += ny * over * fb
     // the speed into each other is lost (he has to go around)
@@ -498,6 +533,28 @@ export function step(s, inputs) {
     }
   }
   return s
+}
+
+// Online, on a player's own device: his own body moves now, with the same rules as the step (speed, the ball, a
+// MOVE's burst, rising for a shot), against everyone else where the screen has them (they don't give way here; the
+// referee settles real contact). Nothing else in the state changes.
+export function moveLocal(s, i, inp) {
+  const p = s.players[i]
+  if (p.burst > 0) p.burst--
+  const wasRemote = p.remote
+  move(s, p, { mx: inp.mx, my: inp.my })
+  p.remote = wasRemote
+  const R2 = T.radius * 2
+  for (const o of s.players) {
+    if (o === p) continue
+    let dx = p.x - o.x, dy = p.y - o.y, d = Math.hypot(dx, dy)
+    if (d >= R2) continue
+    if (d < 0.001) { dx = 1; dy = 0; d = 1 }
+    const nx = dx / d, ny = dy / d
+    p.x += nx * (R2 - d); p.y += ny * (R2 - d)
+    const v = p.vx * nx + p.vy * ny
+    if (v < 0 && p.burst <= 0) { p.vx -= nx * v; p.vy -= ny * v }
+  }
 }
 
 // a copy of the state (it is plain data)

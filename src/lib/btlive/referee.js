@@ -28,6 +28,11 @@ export function shotKind(R, d, roll) {
 }
 
 const beaten = p => p.act === 'frozen' || p.act === 'down'
+// a defender as he'd be with a hand up (a beaten one stays beaten)
+export const handUp = d => (beaten(d) ? d : { ...d, act: 'jump' })
+// A late closeout: the contest at the release, but a man who wasn't in the shot as it went up (cUp: the contest at the
+// gather, every hand up) only gets part of it
+export const lateContest = (c, cUp) => (cUp == null ? c : c * (1 - T.lateShare) + Math.min(c, cUp) * T.lateShare)
 
 // How much the defense is in the shot, 0..1, and whose hand it is. Players: { id, x, y, act, R }
 export function contestOf(shooter, defenders, kind) {
@@ -37,14 +42,17 @@ export function contestOf(shooter, defenders, kind) {
   for (const d of defenders) {
     const dd = dist(d, shooter)
     if (dd > T.contestRange) continue
-    const prox = Math.pow(clamp(1 - (dd - T.contestNear) / (T.contestRange - T.contestNear), 0, 1), T.contestCurve)
-    const stance = beaten(d) ? T.contestBeat : d.act === 'jump' ? 1 : T.contestStand
+    const near = kind === 'jumper' ? T.contestNear : T.contestNearL
+    const prox = Math.pow(clamp(1 - (dd - near) / (T.contestRange - near), 0, 1), T.contestCurve)
     // between the shooter and the rim, or beside/behind him
     let front = 1
     if (sd > 2 && dd > 0.01) {
       const dot = ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd)
       if (dot < 0.2) front = T.contestSide
     }
+    // a hand up, or feet on the floor; a man set in front of a layup (straight up, not moving) is almost as good as a jump
+    const set = kind !== 'jumper' && front === 1 && Math.hypot(d.vx || 0, d.vy || 0) < 3
+    const stance = beaten(d) ? T.contestBeat : d.act === 'jump' ? 1 : set ? T.contestSet : T.contestStand
     const rate = T.contestRate + T.contestRateDef * (paint ? d.R.int : d.R.per)
     const size = 1 + T.contestSize * (d.R.size - shooter.R.size)
     const c = clamp(prox * stance * front * rate * size, 0, 1)
@@ -99,12 +107,14 @@ export function judgeShot(shooter, defenders, shot, rolls) {
       return { blocked: d.id, chase: dot < -T.chaseAngle && Math.hypot(shooter.vx, shooter.vy) > 3, made: false, pts: 0, c: 1, p: 0 }
     }
   }
-  const { c, by } = contestOf(shooter, defenders, shot.kind)
+  const cr = contestOf(shooter, defenders, shot.kind), by = cr.by
+  const c = lateContest(cr.c, shot.cUp)
   const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, q: shot.q, c, run: shot.run, cs: shot.cs, rushed: shot.rushed })
   const made = rolls.make < p
   return {
     blocked: null, made, pts: made ? (shot.three ? 2 : 1) : 0, c, by, p,
-    poster: made && shot.kind === 'dunk' && c >= T.posterContest,
+    // a poster: a dunk made on a man who went up to stop it, square in it
+    poster: made && shot.kind === 'dunk' && c >= T.posterContest && defenders.some(d => d.id === by && d.act === 'jump'),
     deep: made && shot.three && shot.d >= T.deepWord,
   }
 }
