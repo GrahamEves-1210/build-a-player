@@ -277,9 +277,17 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // Sandbox: on for this mode, the ratings it edits, Starters Only for this build
   // (Sandbox here is a 5,000-coin unlock, sandbox-cfb: AppSandbox asks to buy it; on only once it's owned)
   const [sandboxOn, setSandboxOn] = useState(() => readJSON(SANDBOX_KEY, false) === true && owns('sandbox-cfb'))
-  const ratingsKey = era === 'alltime' ? RATINGS_KEY_AT : RATINGS_KEY
-  const [customRatings, setCustomRatings] = useState(() => readJSON(ratingsKey, {}))
-  useEffect(() => { setCustomRatings(readJSON(ratingsKey, {})) }, [ratingsKey])
+  // (one store for both pools, Current and All-Time, as the NBA and NFL sandboxes keep theirs: the owner, 2026-11-12. The
+  // All-Time store this mode used to keep apart is folded into it the first time)
+  const ratingsKey = RATINGS_KEY
+  const [customRatings, setCustomRatings] = useState(() => {
+    const main = readJSON(RATINGS_KEY, {}), old = readJSON(RATINGS_KEY_AT, null)
+    if (old && typeof old === 'object') {
+      for (const [k, v] of Object.entries(old)) main[k] = { ...(v ?? {}), ...(main[k] ?? {}) }
+      try { localStorage.setItem(RATINGS_KEY, JSON.stringify(main)); localStorage.removeItem(RATINGS_KEY_AT) } catch { /* private mode */ }
+    }
+    return main
+  })
   const [showCustom, setShowCustom] = useState(false)
   const [startersPick, setStartersPick] = useState(!!saved?.starters)
   // a build that had Sandbox on at any point stays a Sandbox build until it's reset (football's rule)
@@ -303,11 +311,11 @@ export default function CFBMode({ user, onHome, onCareer }) {
   }, [])
   // (the legends: only once a build is All-Time)
   useEffect(() => {
-    if (era !== 'alltime' || legends) return
+    if ((era !== 'alltime' && !sandboxOn) || legends) return
     let live = true
     loadCFBLegends().then(l => { if (live) setLegends(l) }, () => { if (live) setFailed(true) })
     return () => { live = false }
-  }, [era, legends])
+  }, [era, legends, sandboxOn])
 
   // the college pool, as the spin reads it: the school's logo through the team field
   // (public/logos/cfb/{short}.png), the school and its conference kept beside it.
@@ -318,7 +326,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // All-Time: the same rows from data/cfb-legends.js, a school's one to three greats at the spot (every one of them
   // is on the wheel: they're all 'starters'), with the years he played there where a current player has his class.
   // The legends don't age with the build's seasons: only the country he plays against does
-  const pool = useMemo(() => (era === 'alltime' ? legends?.[pos] ?? [] : data?.pools[pos] ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3)).map(p => {
+  const rowsOf = useCallback(list => (list ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3)).map(p => {
     const t = teamsBy[p.team]
     return {
       ...p,
@@ -328,13 +336,16 @@ export default function CFBMode({ user, onHome, onCareer }) {
       years: p.years ?? classLabel(p.year),
       headshot: p.headshot ?? undefined,
     }
-  }), [data, legends, era, pos, teamsBy])
+  }), [teamsBy, pos])
+  const poolCur = useMemo(() => rowsOf(data?.pools[pos]), [rowsOf, data, pos])
+  const poolAT = useMemo(() => rowsOf(legends?.[pos]), [rowsOf, legends, pos])
+  const pool = era === 'alltime' ? poolAT : poolCur
   // Sandbox's custom ratings, laid over the pool (its own store: RATINGS_KEY)
   const displayPool = useMemo(() => {
     const o = sandboxOn ? customRatings[pos] : null
     return o ? pool.map(p => (o[`${p.name}|${p.team}`] ? { ...p, attrs: { ...p.attrs, ...o[`${p.name}|${p.team}`] } } : p)) : pool
   }, [pool, sandboxOn, customRatings, pos])
-  const byKey = useMemo(() => new Map(pool.map(p => [`${p.name}|${p.team}`, p])), [pool])
+  const byKey = useMemo(() => new Map([...poolCur, ...poolAT].map(p => [`${p.name}|${p.team}`, p])), [poolCur, poolAT])   // (a sandbox chip can come from either pool)
   // The conference wheel, weighted by size: each conference is on it once per two schools, so the
   // Big Ten (18) comes up nine times as often as the Independents (2), a school's own share of the
   // country. The wheel shows what it deals: the big ones fill more of it
@@ -673,6 +684,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
       {showCustom && sandboxOn && (
         <CustomRatingsModal {...P.flags} storageKey={ratingsKey} gameMode="classic" attrMap={P.attr} noPicks={startersOn}
           pool={[...pool].sort((a, b) => a.school.localeCompare(b.school) || a.name.localeCompare(b.name))}
+          poolCurrent={[...poolCur].sort((a, b) => a.school.localeCompare(b.school) || a.name.localeCompare(b.name))} poolLegends={[...poolAT].sort((a, b) => a.school.localeCompare(b.school) || a.name.localeCompare(b.name))}
           build={build} buildTypes={P.types}
           onClose={() => setShowCustom(false)}
           onSave={r => setCustomRatings(r)}
