@@ -125,7 +125,8 @@ function TeamPick({ FR, setup, onSetup, onNext, onBack }) {
   const random = (pool = ORDER) => { const from = pool.filter(x => x.short !== short); if (!from.length) return; sfx('swap'); haptic('medium'); setShort(from[Math.floor(Math.random() * from.length)].short) }
   const take = () => { sfx('send'); haptic('medium'); onSetup({ ...setup, team: short, step: 'builds' }); onNext() }
   const ink = inkOn(t.raw)
-  const groups = job ? job.groups.map(g => ({ key: g.slot, label: GROUP_NAME[g.slot] ?? g.slot, grade: g.grade, ovr: g.ovr })) : old?.groups ?? BUILD_POS.map(p => ({ key: p.label, label: p.name.toUpperCase(), grade: '', ovr: null }))
+  // (no kicker row: the owner, 2026-11-13)
+  const groups = (job ? job.groups.filter(g => g.slot !== 'K').map(g => ({ key: g.slot, label: GROUP_NAME[g.slot] ?? g.slot, grade: g.grade, ovr: g.ovr })) : old?.groups ?? BUILD_POS.map(p => ({ key: p.label, label: p.name.toUpperCase(), grade: '', ovr: null }))).filter(g => g.key !== 'K' && g.label !== 'KICKER')
   const ratings = job?.ratings ?? old?.ratings
   const staff = job?.staff ?? old?.staff
   const d = job?.difficulty

@@ -43,7 +43,7 @@ export default function Direction() {
             <Fact label="THE UPSIDE">{cap1(d.upside)}</Fact>
             <Fact label="THE HARD PART">{cap1(d.hardest)}</Fact>
             <div className="fro-groups" role="group" aria-label="Position groups">
-              {(d.groups ?? []).map(g => <span key={g.slot} title={g.starter}><small>{GROUP[g.slot] ?? g.slot}</small><b>{g.grade}</b></span>)}
+              {(d.groups ?? []).filter(g => g.slot !== 'K').map(g => <span key={g.slot} title={g.starter}><small>{GROUP[g.slot] ?? g.slot}</small><b>{g.grade}</b></span>)}
             </div>
           </Panel>
           {league && (
