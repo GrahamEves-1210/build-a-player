@@ -198,3 +198,56 @@ export function seasonData(data, season) {
   if (!memo.has(k)) memo.set(k, { ...data, pools: nextYear(seasonData(data, k - 1).pools, k, data.sim), season: k })
   return memo.get(k)
 }
+
+// ── A game's scoring, possession by possession, for the live scoreboard (CBBSimPage's LiveGame) ──
+// my / opp: the simulated final; ot: its overtimes; key: anything that tells the game apart (the same game plays
+// back the same way). Returns { len (game seconds: 2400, plus 300 an overtime), events: [{ at, team ('me' | 'opp'),
+// pts }] } in order. Every event is one made basket or free throw: a free throw 1, a two 2, a three 3 (an and-one is a
+// two, then its free throw; a trip to the line is its free throws one at a time). The teams' possessions alternate
+// (about 68 each in 40 minutes, as the college game's pace runs) and a trip is a possession that scored, so a run is
+// the other side's empty trips, not a team scoring twice on one. With overtime, regulation ends level, and so does
+// every overtime before the last. The sums are the final, exactly.
+export function cbbTimeline(my, opp, ot = 0, key = '') {
+  const r = seeded(`cbb-live|${key}|${my}|${opp}|${ot}`)
+  const REG = 2400, OTL = 300
+  const meHi = my >= opp, hi = Math.max(my, opp), lo = Math.min(my, opp)
+  const otLo = Array.from({ length: ot }, () => 4 + Math.floor(r() * 7))   // the loser's points in each overtime (4-10)
+  while (otLo.length && lo - otLo.reduce((s, x) => s + x, 0) < 30) { const k = otLo.indexOf(Math.max(...otLo)); if (otLo[k] === 0) break; otLo[k]-- }
+  const tie = lo - otLo.reduce((s, x) => s + x, 0)
+  const periods = ot ? [{ start: 0, len: REG, hi: tie, lo: tie }] : [{ start: 0, len: REG, hi, lo }]
+  otLo.forEach((x, k) => periods.push({ start: REG + k * OTL, len: OTL, lo: x, hi: x + (k === ot - 1 ? hi - lo : 0) }))
+  // a team's points in a period as its scoring trips: about 30% of the points from three, 12-22% at the line
+  const tripsOf = pts => {
+    let n3 = Math.round(pts * (0.26 + r() * 0.1) / 3), ft = Math.round(pts * (0.12 + r() * 0.1))
+    while (n3 * 3 + ft > pts) { if (n3 > 0 && (ft === 0 || r() < 0.5)) n3--; else ft-- }
+    let rest = pts - n3 * 3 - ft
+    if (rest % 2) { if (ft > 0 && r() < 0.5) { ft--; rest++ } else { ft++; rest-- } }
+    const out = []
+    for (let i = 0; i < n3; i++) out.push([3])
+    for (let i = 0; i < rest / 2; i++) { if (ft > 0 && r() < 0.12) { out.push([2, 1]); ft-- } else out.push([2]) }
+    while (ft > 0) { if (ft >= 2 && r() < 0.8) { out.push([1, 1]); ft -= 2 } else { out.push([1]); ft-- } }
+    for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [out[i], out[j]] = [out[j], out[i]] }
+    return out
+  }
+  const events = []
+  periods.forEach((p, pi) => {
+    const tr = { hi: tripsOf(p.hi), lo: tripsOf(p.lo) }
+    const P = Math.max(Math.round((p.len / REG) * 68), tr.hi.length + 1, tr.lo.length + 1)   // possessions a side
+    const firstHi = r() < 0.5
+    const step = p.len / (2 * P)
+    const last = pi === periods.length - 1
+    for (const side of ['hi', 'lo']) {
+      const team = (side === 'hi') === meHi ? 'me' : 'opp'
+      const own = Array.from({ length: P }, (_, i) => 2 * i + ((side === 'hi') === firstHi ? 0 : 1))   // its possessions' slots
+      // which of its possessions score: a random set; in the last period the winner's last trip is its last possession
+      const pick = own.map(s => ({ s, k: r() })).sort((a, b) => a.k - b.k).slice(0, tr[side].length).map(x => x.s).sort((a, b) => a - b)
+      if (last && side === 'hi' && pick.length && pick[pick.length - 1] !== own[P - 1]) pick[pick.length - 1] = own[P - 1]
+      pick.forEach((s, i) => {
+        const at = Math.min(p.start + p.len - 1, Math.round(p.start + (s + 0.25 + r() * 0.5) * step))
+        tr[side][i].forEach((pts, j) => events.push({ at, team, pts, seq: j }))
+      })
+    }
+  })
+  events.sort((a, b) => a.at - b.at || a.seq - b.seq)
+  return { len: REG + ot * OTL, events: events.map(({ at, team, pts }) => ({ at, team, pts })) }
+}

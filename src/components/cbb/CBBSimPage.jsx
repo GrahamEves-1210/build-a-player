@@ -15,7 +15,7 @@ import { useTapGuard } from '../../lib/tapGuard'
 import { userScrolling } from '../../lib/userScroll'
 import { useRailOn } from '../../lib/ads'
 import { sfx } from '../../lib/juice'
-import { cbbLogo, cbbLogoDark, logoKey, CBB_POS, pickOf, projText, finishOf } from './cbbShared'
+import { cbbLogo, cbbLogoDark, logoKey, CBB_POS, pickOf, projText, finishOf, cbbTimeline } from './cbbShared'
 
 // ── College Basketball: the season ──────────────────────────────────────────
 // A college basketball season, a page a stage: College Football's season page (components/cfb/CFBSimPage.jsx: the
@@ -74,7 +74,7 @@ const Logo = ({ short, size = 28, light = false }) => (
 )
 const gameLine = g => (g.min == null ? '' : `${g.pts} pts, ${g.reb} reb, ${g.ast} ast${g.stl >= 3 ? `, ${g.stl} stl` : ''}${g.blk >= 3 ? `, ${g.blk} blk` : ''}`)
 const roundName = g => (isNcaa(g) ? (g.round === 'National Championship' ? 'National Championship' : `NCAA ${g.round}`) : isNit(g) ? g.round : `${g.event} · ${g.round}`)
-const postTag = g => (isNcaa(g) ? ({ 'First Four': 'FIRST 4', 'First Round': 'NCAA R64', 'Second Round': 'NCAA R32', 'Sweet 16': 'SWEET 16', 'Elite Eight': 'ELITE 8', 'Final Four': 'FINAL 4', 'National Championship': 'TITLE' })[g.round] : isNit(g) ? 'NIT' : 'CONF T')
+const postTag = g => (isNcaa(g) ? ({ 'First Four': 'FIRST 4', 'First Round': '1ST RD', 'Second Round': '2ND RD', 'Sweet 16': 'SWEET 16', 'Elite Eight': 'ELITE 8', 'Final Four': 'FINAL 4', 'National Championship': 'TITLE' })[g.round] : isNit(g) ? 'NIT' : 'CONF T')
 
 // ── the AP poll: one line through the season, then where he stood week by week ──
 function RankPath({ ranks }) {
@@ -226,11 +226,13 @@ function BoxLog({ games, totals, userName, sub = null }) {
   )
 }
 
+// a school's name where a bracket row is tight (a phone's 158 px column): the long ones as the agate page prints them
+const tight = name => (String(name ?? '').length <= 12 ? name : String(name).replace(/^North /, 'N. ').replace(/^South /, 'S. ').replace(/^(East|West)ern /, (m, w) => `${w[0]}. `).replace(/^Saint /, 'St. ').replace(/ State$/, ' St.'))
 const MatchRow = ({ short, name, seed, sc, win, me }) => (
   <div className={`cfbs-mrow${win ? ' is-win' : ''}${me ? ' is-me' : ''}`}>
     {seed != null && <em>{seed}</em>}
     <Logo short={short} size={22} />
-    <span>{name}</span>
+    <span title={name}>{tight(name)}</span>
     <b>{sc ?? ''}</b>
   </div>
 )
@@ -286,7 +288,8 @@ function Bracket({ v, rounds, through = 99, scoresThrough = 99 }) {
 // The NCAA Tournament, region by region (tabs: his region first), then the Final Four. roundAt: the last round
 // with its matchups set (an index in NCAA_ROUNDS); scoresAt: the last with its results in
 const REGION_ROUNDS = ['First Round', 'Second Round', 'Sweet 16', 'Elite Eight']
-function NcaaBracket({ v, roundAt = 99, scoresAt = 99 }) {
+// title: the title game's card, under a region (the Final Four tab has the game in its bracket already)
+function NcaaBracket({ v, roundAt = 99, scoresAt = 99, title = null }) {
   const p = v.c.ncaa
   const mine = p?.region ?? p?.regions?.[0]
   const [tab, setTab] = useState(mine)
@@ -315,6 +318,7 @@ function NcaaBracket({ v, roundAt = 99, scoresAt = 99 }) {
           ))}
         </div>
       )}
+      {tab !== 'Final Four' && title}
     </>
   )
 }
@@ -322,34 +326,50 @@ function NcaaBracket({ v, roundAt = 99, scoresAt = 99 }) {
 // ── a game live on the scoreboard: two halves, each basket as it lands (basketball's playoff scoreboard, college's clock) ──
 const lum = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? ''); if (!m) return 0.5; const x = parseInt(m[1], 16); return (0.2126 * (x >> 16) + 0.7152 * ((x >> 8) & 255) + 0.0722 * (x & 255)) / 255 }
 const onDark = t => { const a = t.color ?? '#0a3d91', b = t.color2; return lum(a) < 0.22 && b && lum(b) > lum(a) && lum(b) < 0.95 ? b : lum(a) < 0.22 ? '#4f8fe8' : a }
-function timeline(my, opp) {
-  const plays = (total, team) => { const out = []; let rem = total; while (rem > 0) { const p = rem >= 3 && Math.random() < 0.3 ? 3 : rem >= 2 ? 2 : 1; out.push({ team, pts: p }); rem -= p } return out }
-  const all = [...plays(my, 'me'), ...plays(opp, 'opp')]
-  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]] }
-  const step = 2400 / Math.max(1, all.length)
-  return all.map((e, i) => ({ ...e, at: Math.round(step * i + Math.random() * step * 0.7 + 8) })).sort((a, b) => a.at - b.at)
-}
+// The pace: one game, not a series game (basketball's NBA series runs 2.5 s a game; football's one playoff game 10 s).
+// College basketball's postseason is single elimination, so each game gets its time: 40 minutes in about 30 seconds
+// (5 game seconds a 55 ms tick), a beat at halftime, the clock held while free throws are shot, then the final held.
+// The score moves only by what one make adds (1, 2, 3), one at a time (cbbTimeline: cbbShared.js)
+const LIVE_TICK = 55, LIVE_SECS = 5, LIVE_HALF = 16, LIVE_FT = 5
 function LiveGame({ v, g, onDone }) {
-  const TICKS = 50
   const [phase, setPhase] = useState('pre')
   const [sec, setSec] = useState(0)
   const [sc, setSc] = useState([0, 0])
-  const [events] = useState(() => timeline(g.mySc, g.oppSc))
+  const [brk, setBrk] = useState(false)   // the clock at 0:00 between halves / before an overtime
+  const [tl] = useState(() => cbbTimeline(g.mySc, g.oppSc, g.ot ?? 0, `${g.event}|${g.round}|${g.oppShort}|${g.meta?.day ?? ''}`))
   useEffect(() => {
-    let t = 0, k = 0, my = 0, opp = 0, iv = null, end = null
+    const { events, len } = tl
+    // the breaks: halftime, and the end of regulation (and of each overtime) before another
+    const breaks = [1200, ...Array.from({ length: g.ot ?? 0 }, (_, i) => 2400 + i * 300)]
+    let s = 0, k = 0, my = 0, opp = 0, hold = 0, b = 0, iv = null, end = null
     const pre = setTimeout(() => {
       setPhase('live')
       iv = setInterval(() => {
-        t++
-        const s = Math.min(2399, Math.round((t / TICKS) * 2400))
-        while (k < events.length && events[k].at <= s) { if (events[k].team === 'me') my += events[k].pts; else opp += events[k].pts; k++ }
-        setSec(s); setSc([my, opp])
-        if (t >= TICKS) { clearInterval(iv); setSc([g.mySc, g.oppSc]); setPhase('post'); end = setTimeout(onDone, 1260) }
-      }, 50)
+        if (hold > 0) { hold--; return }
+        const e = events[k]
+        if (e && e.at <= s) {   // one make a tick; the clock waits while the line is busy
+          if (e.team === 'me') my += e.pts; else opp += e.pts
+          k++
+          setSc([my, opp])
+          const nx = events[k]
+          if (nx && nx.at <= e.at) hold = LIVE_FT
+          return
+        }
+        if (b < breaks.length && s >= breaks[b]) { b++; hold = LIVE_HALF; setBrk(true); return }
+        if (s >= len - 1 && k >= events.length) {
+          clearInterval(iv); setSc([g.mySc, g.oppSc]); setSec(len - 1); setPhase('post'); end = setTimeout(onDone, 1600)
+          return
+        }
+        s = Math.min(len - 1, s + LIVE_SECS, b < breaks.length ? breaks[b] : len - 1)
+        setSec(s); setBrk(false)
+      }, LIVE_TICK)
     }, 600)
     return () => { clearTimeout(pre); clearInterval(iv); clearTimeout(end) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const half = sec < 1200 ? 0 : 1, left = 1200 - (sec % 1200)
+  // the period on the clock; at a break the one just ended, at 0:00 (s sits on the break's second)
+  const at = brk ? sec - 1 : sec
+  const otN = at >= 2400 ? Math.floor((at - 2400) / 300) + 1 : 0
+  const half = otN ? 2 : at < 1200 ? 0 : 1, left = brk ? 0 : otN ? 300 - ((sec - 2400) % 300) : 1200 - (sec % 1200)
   const me = { short: v.team.short, color: onDark(v.team), seed: g.mySeed, sc: sc[0] }
   const op = { short: g.oppShort, color: onDark(v.T(g.oppShort)), seed: g.oppSeed, sc: sc[1] }
   const [L, R] = g.home && !g.neutral ? [op, me] : [me, op]
@@ -375,9 +395,9 @@ function LiveGame({ v, g, onDone }) {
       <div className="plf-live-area" style={{ visibility: phase === 'live' ? 'visible' : 'hidden' }}>
         <div className="plf-status-row">
           <div className="plf-qtr-dots">{[0, 1].map(i => <div key={i} className={`plf-qtr-dot${i < half ? ' plf-qd-done' : i === half ? ' plf-qd-active' : ''}`} />)}</div>
-          <div className="plf-clock-box"><span className="plf-qtr-lbl">{half ? '2ND HALF' : '1ST HALF'}</span><span className="plf-clk-sep">·</span><span className="plf-clock-time">{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span></div>
+          <div className="plf-clock-box"><span className="plf-qtr-lbl">{otN ? (otN > 1 ? `${otN}OT` : 'OT') : half ? '2ND HALF' : '1ST HALF'}</span><span className="plf-clk-sep">·</span><span className="plf-clock-time">{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span></div>
         </div>
-        <div className="plf-progress"><div className="plf-progress-fill" style={{ width: `${(sec / 2399) * 100}%` }} /></div>
+        <div className="plf-progress"><div className="plf-progress-fill" style={{ width: `${(sec / (tl.len - 1)) * 100}%` }} /></div>
       </div>
       <div className={`plf-post-line ${g.won ? 'plf-pl-won' : 'plf-pl-lost'}`} style={{ visibility: phase === 'post' ? 'visible' : 'hidden' }}>
         <span>{g.won ? '✓ Won' : '✗ Lost'}{g.ot ? ` in ${g.ot > 1 ? `${g.ot} overtimes` : 'overtime'}` : ''}</span>
@@ -530,11 +550,11 @@ function ConfPage({ v, live, onNext }) {
   const place = (v.c.myStanding?.teams?.findIndex(x => x.short === me) ?? -1) + 1
   let inner
   if (!games.length) {
-    inner = <Center><div className="simp-eyebrow">{title}</div><div className="plf-elim-title">{v.school(t?.champion)} wins the {v.conf?.short}</div><div className="plf-elim-round">{v.school(me)} finished {ordinal(place || 1)} and did not make the bracket</div><button className="simp-cta" onClick={onNext}>Selection Sunday</button></Center>
+    inner = <Center><div className="simp-eyebrow">{title}</div><div className="plf-elim-title">{v.school(t?.champion)} wins the {v.conf?.short}</div><div className="plf-elim-round">{v.school(me)} finished {ordinal(place || 1)} and did not make the bracket</div></Center>
   } else if (run.status === 'won') {
-    inner = <Center><div className="simp-eyebrow">{title}</div><div className="plf-champ-label">{v.conf?.short} Tournament Champions</div><div className="plf-champ-sub">{run.cur.mySc} – {run.cur.oppSc}{run.cur.ot ? ' OT' : ''} · vs {run.cur.opponent} · an automatic bid</div><button className="simp-cta simp-cta-in" onClick={onNext}>Selection Sunday</button></Center>
+    inner = <Center><div className="simp-eyebrow">{title}</div><div className="plf-champ-label">{v.conf?.short} Tournament Champions</div><div className="plf-champ-sub">{run.cur.mySc} – {run.cur.oppSc}{run.cur.ot ? ' OT' : ''} · vs {run.cur.opponent} · an automatic bid</div></Center>
   } else if (run.status === 'out') {
-    inner = <Center><div className="simp-eyebrow">{title}</div><div className="plf-elim-title">Out in the {run.cur.round === 'Championship' ? 'title game' : String(run.cur.round).toLowerCase()}</div><div className="plf-elim-score">{run.cur.mySc} – {run.cur.oppSc}{run.cur.ot ? ' OT' : ''} · vs {run.cur.opponent}</div><button className="simp-cta" onClick={onNext}>Selection Sunday</button></Center>
+    inner = <Center><div className="simp-eyebrow">{title}</div><div className="plf-elim-title">Out in the {run.cur.round === 'Championship' ? 'title game' : String(run.cur.round).toLowerCase()}</div><div className="plf-elim-score">{run.cur.mySc} – {run.cur.oppSc}{run.cur.ot ? ' OT' : ''} · vs {run.cur.opponent}</div></Center>
   } else if (run.status === 'between') inner = <Between cur={run.cur} next={games[run.gameIdx + 1]} />
   else inner = <><div className="simp-eyebrow">{title}{t?.seed ? ` · No. ${t.seed} seed` : ''}</div>{!run.started ? <SimLoading label="Championship week…" /> : <LiveGame key={run.gameIdx} v={v} g={run.cur} onDone={run.done} />}</>
   return (
@@ -553,6 +573,8 @@ function ConfPage({ v, live, onNext }) {
           <ConfTable v={v} />
         </section>
       )}
+      {/* on to Selection Sunday under the bracket (on a phone, pinned over the foot of the page as the other stages' buttons are) */}
+      {run.ended && <button className={`simp-cta${run.status === 'won' ? ' simp-cta-in' : ''} simp-cta--pin`} onClick={onNext}>Selection Sunday</button>}
     </div>
   )
 }
@@ -573,7 +595,7 @@ function SelPage({ v, onNext }) {
       <div className="cfbp-sel-big">{big}</div>
       <p className="cfbs-note cfbp-sel-note">{inField
         ? <><b>{v.school(me)} is in: the No. {p.seed} seed in the {p.region}</b>, {p.bid === 'auto' ? `with the ${v.conf?.short} automatic bid` : 'an at-large bid'}.{first ? ` ${first.round === 'First Four' ? 'The First Four in Dayton is first' : 'The first round is next'}, against ${first.oppSeed ? `No. ${first.oppSeed} ` : ''}${first.opponent}.` : ''}</>
-        : <><b>{v.school(me)} is out of the NCAA Tournament</b> at {c.record?.selection}{bubble ? ', one of the first four left out' : ''}.{c.nit ? ` The NIT called: a No. ${c.nit.seed} seed.` : ' No postseason.'}</>}</p>
+        : <><b>{v.school(me)} is out of the NCAA Tournament</b> at {c.record?.selection}{bubble ? ', one of the first four left out' : ''}.{c.nit ? ` The NIT (National Invitation Tournament) called: the No. ${c.nit.seed} seed${c.nit.region ? ` in the ${c.nit.region}` : ''}${c.nit.bid === 'exempt' ? `, the ${v.conf?.short}'s exempt bid` : c.nit.bid === 'auto' ? ', an automatic bid as regular-season champions' : ''}.` : ' No postseason.'}</>}</p>
       <section className="cfbp-sec">
         <Hd sub="68 TEAMS">THE FIELD</Hd>
         <div className="cbbs-tabs" role="tablist" aria-label="Regions">
@@ -608,7 +630,7 @@ function SelPage({ v, onNext }) {
 }
 
 // ── THE NCAA TOURNAMENT (or the NIT) ────────────────────────────────────────
-const STRIP = [['First Round', 'ROUND OF 64'], ['Second Round', 'ROUND OF 32'], ['Sweet 16', 'SWEET 16'], ['Elite Eight', 'ELITE 8'], ['Final Four', 'FINAL FOUR'], ['National Championship', 'TITLE GAME']]
+const STRIP = [['First Round', 'FIRST ROUND'], ['Second Round', 'SECOND ROUND'], ['Sweet 16', 'SWEET 16'], ['Elite Eight', 'ELITE 8'], ['Final Four', 'FINAL FOUR'], ['National Championship', 'TITLE GAME']]
 function RoundStrip({ games, gameIdx, status }) {
   const ended = status === 'out' || status === 'won'
   return (
@@ -646,7 +668,7 @@ function PostPage({ v, live, onNext }) {
       <div className="cfbs-match-foot">{String(v.school(fin.winner)).toUpperCase()} · NATIONAL CHAMPIONS</div>
     </div>
   )
-  const whole = <section className="cfbp-sec"><Hd sub="68 TEAMS">THE BRACKET</Hd><NcaaBracket v={v} />{title}</section>
+  const whole = <section className="cfbp-sec"><Hd sub="68 TEAMS">THE BRACKET</Hd><NcaaBracket v={v} title={title} /></section>
   if (!games.length) {
     return (
       <div className="simp-screen">
@@ -660,7 +682,7 @@ function PostPage({ v, live, onNext }) {
   if (run.status === 'won') inner = <Center><div className="simp-eyebrow">{inField ? 'National Championship' : 'NIT'}</div><div className="plf-champ-label">{inField ? 'National Champions' : 'NIT Champions'}</div><div className="plf-champ-sub">{cur.mySc}–{cur.oppSc}{cur.ot ? ' OT' : ''} vs {cur.opponent}</div><button className="simp-cta simp-cta-in" onClick={onNext}>The Wooden Award</button></Center>
   else if (run.status === 'out') inner = <Center><div className="simp-eyebrow">Season Over</div><div className="plf-elim-title">{inField ? (cur.round === 'National Championship' ? 'Lost the Title Game' : `Out in the ${cur.round}`) : 'Out of the NIT'}</div><div className="plf-elim-score">{cur.mySc} – {cur.oppSc}{cur.ot ? ' OT' : ''} · vs {cur.oppSeed ? `No. ${cur.oppSeed} ` : ''}{cur.opponent}</div><button className="simp-cta" onClick={onNext}>The Wooden Award</button></Center>
   else if (run.status === 'between') inner = <Between cur={cur} next={games[run.gameIdx + 1]} />
-  else inner = <><div className="simp-eyebrow">{inField ? `NCAA Tournament · No. ${p.seed} seed · ${p.region}` : 'NIT'}</div>{!run.started ? <SimLoading label={inField ? 'The Tournament tips off…' : 'The NIT…'} /> : <LiveGame key={run.gameIdx} v={v} g={cur} onDone={run.done} />}</>
+  else inner = <><div className="simp-eyebrow">{inField ? `NCAA Tournament · No. ${p.seed} seed · ${p.region}` : `NIT · No. ${v.c.nit?.seed} seed${v.c.nit?.region ? ` · ${v.c.nit.region}` : ''}`}</div>{!run.started ? <SimLoading label={inField ? 'The Tournament tips off…' : 'The NIT…'} /> : <LiveGame key={run.gameIdx} v={v} g={cur} onDone={run.done} />}</>
   const ri = NCAA_ROUNDS.indexOf(cur?.round)
   return (
     <div className="simp-screen">
@@ -938,7 +960,7 @@ function FinalPage({ r, v, pos, build, types, attrMap, archetype, userName, rewa
       {honors.length > 0 && <section className="cfbp-sec"><Hd sub={userName}>HONORS</Hd><AwardList rows={honors} /></section>}
       <Poll ranks={v.ranks} final />
       <BoxLog games={[...v.reg, ...v.post]} totals={full} userName={userName} sub={`${userName} · EVERY GAME`} />
-      {rows.length > 0 && <div className="simp-stat-section"><div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div><BuildRows rows={rows} small /></div>}
+      {rows.length > 0 && <div className="simp-stat-section"><div className="simp-stat-group-lbl"><NameTag name={userName} self /><span style={{ textTransform: 'none' }}>’s</span> Build</div><BuildRows rows={rows} small /></div>}
       {best && (
         <div className="simp-best-game">
           <div className="simp-section-lbl">Best Game</div>
@@ -1045,7 +1067,7 @@ export default function CBBSimPage({ result: r, pos, userName, teams, archetype,
             </div>
           </div>
           {el}
-          <SiteFooter sport="bucket" />
+          <SiteFooter sport="cbb" />
         </div>
       </div>
     </>
