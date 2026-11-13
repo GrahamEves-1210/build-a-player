@@ -33,7 +33,7 @@ export function FranchiseCardClassic({ onClick }) {
     <button className="ag-squad ag-squad--fr ag-pop" style={{ '--d': '350ms', ...(c?.color ? { '--fr-team': c.color } : null) }} onClick={onClick}>
       <Art />
       <span className="ag-card-txt">
-        <span className="ag-eyebrow">{c?.line ? c.line.toUpperCase() : 'GENERAL MANAGER · EVERY SEASON'}</span>
+        <span className="ag-eyebrow">{c?.line ? c.line.toUpperCase() : 'BE THE GM · EVERY SEASON'}</span>
         <span className="ag-card-title">FRANCHISE</span>
         <span className="ag-card-sub">{c ? 'The front office is as it was left.' : 'Take over a team as its GM. Build the players you want; its real roster fills every other spot.'}</span>
       </span>

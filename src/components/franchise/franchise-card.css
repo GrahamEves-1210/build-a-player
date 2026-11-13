@@ -23,7 +23,7 @@
 .ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr::after { content: none; }
 .ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr .ag-eyebrow { color: #8b949e; }
 .ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr .ag-card-title { color: #f2f4f5; }
-.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr > .ag-fr-art { position: absolute; z-index: 0; left: auto; right: 0; top: 3px; bottom: 0; width: 30%; height: auto; }
+.ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr > .ag-fr-art { position: absolute; z-index: 0; left: auto; right: 1px; top: 3px; bottom: 1px; width: 30%; height: auto; }
 .ag-home.ag-home--classic.ag-home--classic .ag-squad.ag-squad--fr > .ag-card-txt { max-width: 74%; }
 
 /* the build page while a new franchise's player is on it (App.jsx 'franchise-build'): Squad Builder's bar, with
