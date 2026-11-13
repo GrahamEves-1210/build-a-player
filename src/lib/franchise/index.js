@@ -39,7 +39,7 @@ export {
 export { setDepth, autoDepthChart } from './select'
 export {
   setGameplan, setPractice, officeItems, resolveOffice, upgradeTrait, autoUpgrade, proposeTrade, answerOffer, setBlock, shopPlayer,
-  releasePlayer, signFreeAgent, moveToIR, activate, extendPlayer, delegateWeek,
+  releasePlayer, signFreeAgent, moveToIR, activate, extendPlayer, delegateWeek, restructureCap,
 } from './actions'
 
 // ── The game ─────────────────────────────────────────────────────────────────

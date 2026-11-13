@@ -246,8 +246,14 @@ export function makeHooks(F, { moments = true, calls = true } = {}) {
       if (!fits.length) return false
       const best = Math.max(...fits.map(f => f[3] ?? 1))
       const late = G.q >= 4 && Math.abs(G.sc[0] - G.sc[1]) <= 8 && (G.clock <= 240 || G.q >= 5)
-      const L = leverage(G, u, (G.down >= 3 ? 1 : 0.8) * best * (late ? 1.25 : 1))
+      // the two-minute drill is the game: it is always offered when it comes up
+      const drill = fits.find(f => f[0] === 'two-minute' && !G.used.includes('two-minute'))
+      const L = drill ? Math.max(0.92, leverage(G, u, 1.5)) : leverage(G, u, (G.down >= 3 ? 1 : 0.8) * best * (late ? 1.25 : 1))
+      // (there are more ways to play offense than defense: an ordinary defensive snap is passed over now and then so the
+      // same three third-down games do not come up every week)
+      if (!drill && G.poss !== u && L < 0.85 && R.chance(0.42)) return false
       if (!takeIt(G, L)) return false
+      if (drill) return raise(F, G, T, u, 'two-minute', whoFor('two-minute', T[u], R), drill[2], L)
       const pick = choose(F, G, T, u, L >= 0.88 || G.down >= 3 ? fits.filter(f => (f[3] ?? 1) >= 0.85).length ? fits.filter(f => (f[3] ?? 1) >= 0.85) : fits : fits, R)
       if (!pick) return false
       return raise(F, G, T, u, pick.f[0], pick.m, pick.f[2], L)

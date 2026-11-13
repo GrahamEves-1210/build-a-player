@@ -2,13 +2,14 @@
 // top-level league; a refused one leaves the league alone and says why in flash.
 import { ROSTER_MAX, CAMP_MAX, TRADE_DEADLINE, clamp, r2, slotOf, MIN_SALARY, VET_MIN } from './consts'
 import { touch, fail, ok, addNews, addTx, teamName, nick, activeCount, depthAfterMove } from './core'
-import { payroll, newContract, moneyText, marketValue } from './money'
+import { payroll, newContract, moneyText, marketValue, nextYearBooks } from './money'
 import { TYPES_OF } from './players'
 import { canUpgrade, applyUpgrade, spendPoints, upgradeCost } from './dev'
 import { settle, extensionAsk } from './office'
 import { judge, execute, tradesOpen, judgeForUser, playerValue, pickValue, pickKey } from './trades'
 import { computeStates } from './state'
-import { release, sign, streetAsk, upkeep, rosterLimit, fitUnderCap } from './roster'
+import { autoScout } from './draft'
+import { release, sign, streetAsk, upkeep, rosterLimit, fitUnderCap, restructure, reliefRoom } from './roster'
 import { rngOf } from './rng'
 import { TEAM_SHORTS } from './core'
 import { lineupOf } from './depth'
@@ -158,11 +159,22 @@ export function extendPlayer(F, pid, terms = null) {
   const years = clamp(Math.round(terms?.years ?? ask.years), 1, 5), perYear = r2(terms?.perYear ?? ask.perYear), g = terms?.guaranteed ?? ask.guaranteed
   const worth = perYear * (0.8 + 0.2 * Math.min(1.3, g / Math.max(0.05, ask.guaranteed)))
   if (worth < ask.perYear * 0.97) return fail(F, 'ask', `${p.name} wants about ${moneyText(ask.perYear)} a year for ${ask.years} year${ask.years > 1 ? 's' : ''}.`)
+  if (F.settings.cap && nextYearBooks(F, F.teams[F.team]) + perYear > F.cap * 1.04) return fail(F, 'cap', `That deal does not fit on next season's books.`)
   p.ext = newContract(p, { yrs: years, sal: perYear, guarShare: g })
   p.mood = clamp(p.mood + 10, 3, 97)
   addTx(F, 'extend', F.team, `${teamName(F.team)} signed ${slotOf(p)} ${p.name} to a ${years}-year extension (${moneyText(perYear)} a year).`, p.id)
   F.office = F.office.filter(o => !(o.kind === 'contract' && o.pid === pid))
   return ok(F, `${p.name} signed his extension.`)
+}
+// Move part of this season's cap charges into next year (a loan against next year's cap: it is dead money then).
+// amount: $M; left out, as much as the limit allows up to what the team is over the cap by (or $10M).
+export function restructureCap(F, amount = null) {
+  const t = F.teams[F.team], room = reliefRoom(F, t)
+  if (room <= 0) return fail(F, 'restructure', 'There is nothing left to push into next year: the limit is 12% of the cap.')
+  const over = r2(payroll(F, t) - F.cap)
+  const x = restructure(F, t, amount ?? (over > 0 ? over : 10))
+  addTx(F, 'extend', F.team, `${teamName(F.team)} restructured contracts, moving ${moneyText(x)} of cap charges into next season.`)
+  return ok(F, `${moneyText(x)} moved into next season. It counts as dead money then.`)
 }
 export function renamePlayer(F, pid, name) {
   const p = mineOnly(F, pid), n = String(name ?? '').trim().slice(0, 28)
@@ -186,6 +198,7 @@ export function delegateWeek(F) {
   const t = F.teams[F.team]
   for (const id of t.roster) { const p = F.players[id]; if (p && (p.pts ?? 0) > 0) spendPoints(p) }
   upkeep(F, t, rngOf(`${F.seed}-${F.year}-${F.week}-delegate`))
+  autoScout(F)
   fitUnderCap(F, t)
   F.done = { ...F.done, gameplan: true, practice: true, injury: true }
   return ok(F, 'The staff has it handled.')

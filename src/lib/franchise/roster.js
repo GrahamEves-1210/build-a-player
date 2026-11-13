@@ -24,33 +24,37 @@ export function sign(F, p, short, con, { quiet = false, word = 'signed' } = {}) 
   p.block = undefined; p.want = undefined; p.hold = undefined
   if (!quiet) addTx(F, 'sign', short, `${teamName(short)} ${word} ${slotOf(p)} ${p.name}${con.sal > 2 ? ` (${con.yrs} year${con.yrs > 1 ? 's' : ''}, $${con.sal.toFixed(1)}M a year)` : ''}.`, p.id)
 }
-// over the cap with the cap on: push money into next year (the way teams restructure) until it fits
-export function fitUnderCap(F, t) {
-  if (!F.settings.cap) return
-  let over = r2(payroll(F, t) - F.cap)
-  if (over <= 0) return
-  const big = t.roster.map(id => F.players[id]).filter(p => p?.con && p.con.sal > 4).sort((a, b) => b.con.sal - a.con.sal)
-  for (const p of big) {
-    if (over <= 0) break
-    const x = r2(Math.min(over, p.con.sal - 2))
-    if (x <= 0) continue
-    p.con.sal = r2(p.con.sal - x); t.deadNext = r2((t.deadNext ?? 0) + x)
-    over = r2(over - x)
-  }
+// A restructure: part of this season's cap hit is moved to next year. It is a loan against next year's cap
+// (t.relief comes off this year's payroll, the same amount is dead money next year), so it has a limit: a team
+// can carry at most 12% of the cap into next year this way.
+export const reliefRoom = (F, t) => r2(Math.max(0, F.cap * 0.12 - (t.deadNext ?? 0)))
+export function restructure(F, t, amount) {
+  const x = r2(Math.min(amount, reliefRoom(F, t)))
+  if (x <= 0) return 0
+  t.relief = r2((t.relief ?? 0) + x); t.deadNext = r2((t.deadNext ?? 0) + x)
+  return x
 }
-// A team over the cap gets under it: the most overpaid men whose release saves money go first, then what is
-// left is pushed into next year
+// A team over the cap gets under it, the way a front office does: first the men paid well over what they are
+// worth go, then money is pushed into next year (to the limit), then the worst deals left are cut until it fits.
+// A build is never cut for the cap; if only builds are left the limit on restructures gives way.
+// Returns what was done, for the user's own team's log.
 export function capFix(F, t) {
-  if (!F.settings.cap) return
-  for (let guard = 0; guard < 10 && payroll(F, t) > F.cap + 0.001; guard++) {
+  const did = []
+  if (!F.settings.cap) return did
+  const over = () => r2(payroll(F, t) - F.cap)
+  const cut = (minOver) => {
     const c = groupCounts(F, t)
-    const out = t.roster.map(id => F.players[id]).filter(p => p && p.con && !p.built && !p.con.tag && c[groupOf(p)] > MIN_AT[groupOf(p)] && cutCost(p).saves > 0.8 && p.con.sal - marketValue(p, F.cap) > 1.2)
-      .sort((a, b) => (b.con.sal - marketValue(b, F.cap)) - (a.con.sal - marketValue(a, F.cap)))[0]
-    if (!out) break
-    release(F, out)
+    return t.roster.map(id => F.players[id]).filter(p => p && p.con && !p.built && !p.con.tag && p.con.sal > 2.5 && c[groupOf(p)] > MIN_AT[groupOf(p)] && cutCost(p).saves > 0.5 && p.con.sal - marketValue(p, F.cap) > minOver)
+      .sort((a, b) => (b.con.sal - marketValue(b, F.cap)) - (a.con.sal - marketValue(a, F.cap)) || a.id - b.id)[0]
   }
-  fitUnderCap(F, t)
+  for (let guard = 0; guard < 10 && over() > 0.001; guard++) { const p = cut(1.2); if (!p) break; release(F, p); did.push(`Released ${slotOf(p)} ${p.name} for cap room`) }
+  if (over() > 0.001) { const x = restructure(F, t, over()); if (x > 0) { did.push(`Restructured contracts to move $${x.toFixed(1)}M into next year`); if (t.short === F.team) addTx(F, 'extend', t.short, `${teamName(t.short)} restructured contracts, moving $${x.toFixed(1)}M of cap charges into next season.`) } }
+  for (let guard = 0; guard < 30 && over() > 0.001; guard++) { const p = cut(-1e9); if (!p) break; release(F, p); did.push(`Released ${slotOf(p)} ${p.name} for cap room`) }
+  // (nothing left to cut but the GM's own builds: the rest is carried, whatever the limit says)
+  if (over() > 0.001) { const x = over(); t.relief = r2((t.relief ?? 0) + x); t.deadNext = r2((t.deadNext ?? 0) + x) }
+  return did
 }
+export const fitUnderCap = capFix
 // the best street free agent at a group (never a man asking real money: those sign in free agency)
 function bestStreet(F, group, R) {
   let best = null
@@ -113,7 +117,7 @@ export function upkeep(F, t, R) {
     release(F, out)
     did.push(`Released ${slotOf(out)} ${out.name}`)
   }
-  fitUnderCap(F, t)
+  did.push(...capFix(F, t))
   depthAfterMove(F, t)
   return did
 }

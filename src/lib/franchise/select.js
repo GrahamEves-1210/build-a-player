@@ -52,7 +52,7 @@ export function capSheet(F, team = F.team) {
     const on = t.roster.map(id => F.players[id]).filter(p => (p.con?.yrs ?? 0) > k)
     return { year: F.year + k, label: ['', 'NEXT SEASON', 'IN TWO SEASONS', 'IN THREE SEASONS'][k], committed: r2(on.reduce((s, p) => s + p.con.sal, 0) + (k === 1 ? t.deadNext ?? 0 : 0)), players: on.length }
   })
-  return { cap: F.cap, payroll: pay, dead: r2(t.dead ?? 0), space: r2(F.cap - pay), rows, next, on: !!F.settings.cap }
+  return { cap: F.cap, payroll: pay, dead: r2(t.dead ?? 0), relief: r2(t.relief ?? 0), deadNext: r2(t.deadNext ?? 0), restructureRoom: r2(Math.max(0, F.cap * 0.12 - (t.deadNext ?? 0))), space: r2(F.cap - pay), rows, next, on: !!F.settings.cap }
 }
 
 // ── Coaches ──────────────────────────────────────────────────────────────────

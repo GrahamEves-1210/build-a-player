@@ -152,6 +152,18 @@ export function scoutProspect(F, id, points = 1) {
   return touch(F)
 }
 
+// the staff's scouting: the points go to the best prospects the league has at what the team needs, then the best left
+export function autoScout(F) {
+  const D = F.draft
+  if (!D || D.done || !(D.pts > 0)) return 0
+  const needs = new Set(needsOf(F, F.team).slice(0, 4).map(n => n.group))
+  const order = consensus(F).filter(p => !p.gone && p.sc < 3).slice(0, 120)
+  const list = [...order.filter(p => needs.has(p.pos === 'ol' ? 'OL' : slotOf(p))).slice(0, 12), ...order]
+  let n = 0
+  for (const p of list) { if (D.pts <= 0) break; if (p.sc < 3) { p.sc++; D.pts--; n++ } }
+  return n
+}
+
 // ── Needs ────────────────────────────────────────────────────────────────────
 // how much a team needs each roster group, 0-1 (the starter's quality and how deep it is behind him)
 export function needsOf(F, short) {

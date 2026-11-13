@@ -184,7 +184,7 @@ export function takeJob(F, short) {
 function newLeagueYear(F) {
   const R = rngOf(`${F.seed}-${F.off.year}-leagueyear`)
   F.cap = capFor(F.off.year + 1, F.cap, R.u())
-  for (const s of TEAM_SHORTS) { const t = F.teams[s]; t.dead = r2(t.deadNext ?? 0); t.deadNext = 0; t.staffDead = 0 }
+  for (const s of TEAM_SHORTS) { const t = F.teams[s]; t.dead = r2(t.deadNext ?? 0); t.deadNext = 0; t.relief = 0; t.staffDead = 0 }
   for (const id in F.players) {
     const p = F.players[id]
     if (!p.con) continue
@@ -759,9 +759,9 @@ export function resolveHoldout(F, pid, optionId = 'delegate') {
 
 // ══ Final cuts ════════════════════════════════════════════════════════════════
 // who the staff would let go to reach the limit: the worst at each group beyond what it carries
-export function cutList(F, short) {
+export function cutList(F, short, limit = ROSTER_MAX) {
   const t = F.teams[short], P = t.roster.map(id => F.players[id]).filter(p => p && !p.inj?.ir)
-  const over = P.length - ROSTER_MAX
+  const over = P.length - limit
   if (over <= 0) return []
   const keep = new Set(), by = {}
   for (const p of P) (by[groupOf(p)] ??= []).push(p)
@@ -801,8 +801,9 @@ function enter(F, id) {
   if (id === 'udfa') { /* the board is what is left */ }
   if (id === 'camp') { cpuUdfa(F); startCamp(F) }
   if (id === 'cuts') { /* the user's to do */ }
-  // every CPU team ends a stage under the cap (the user's own is his to manage; the staff does it on the autopilot)
-  for (const s of TEAM_SHORTS) if (s !== F.team || F.off.auto) capFix(F, F.teams[s])
+  // every CPU team ends a stage under the cap and inside the camp limit (the user's own is his to manage; the
+  // staff does it on the autopilot)
+  for (const s of TEAM_SHORTS) if (s !== F.team || F.off.auto) { for (const p of cutList(F, s, CAMP_MAX)) release(F, p, { quiet: true }); capFix(F, F.teams[s]) }
 }
 function leave(F, id) {
   if (id === 'review' && F.off.fired) { const o = jobOffersFor(F)[0]; if (o) takeJob(F, o.short); else F.off.fired = false }
@@ -880,7 +881,8 @@ function rollOver(F) {
     for (let r = 1; r <= 7; r++) t.picks.push({ y: F.year + 3, r, o: s })
     for (const pk of t.picks) delete pk.slot
     upkeep(F, t, R)
-    capFix(F, t)
+    const did = capFix(F, t)
+    if (s === F.team && did.length) addNews(F, 'owner', `${nick(s)} get under the cap before the season`, { team: s, body: did.join('. ') + '.' })
     autoDepth(F, t)
   }
   const rookies = mine(F).filter(p => p.exp === 0 || (p.draft && p.draft[0] === F.year)).map(p => p.id)

@@ -124,9 +124,9 @@ export function buildProfile(F, short, isUser) {
   T.carry = [1, 0.62, 0.16].slice(0, T.rbs.length).map((w, i) => w * (0.6 + T.rbs[i].s.run * 0.7))
   const wrs = L.WR.slice(0, 5).map(p => man(p, 'WR')), tes = L.TE.slice(0, 2).map(p => man(p, 'TE'))
   // who the ball goes to: role first (WR1 to RB2), then how good he is at getting open
-  const roleW = { WR: [0.86, 0.8, 0.62, 0.26, 0.1], TE: [0.66, 0.2], RB: [0.5, 0.22, 0.05] }
+  const roleW = { WR: [0.92, 0.8, 0.6, 0.24, 0.1], TE: [0.66, 0.2], RB: [0.5, 0.22, 0.05] }
   T.recv = []
-  wrs.forEach((m, i) => T.recv.push({ ...m, kind: 'wr', w: roleW.WR[i] * Math.pow(0.35 + m.s.tgt, 1.2) }))
+  wrs.forEach((m, i) => T.recv.push({ ...m, kind: 'wr', w: roleW.WR[i] * Math.pow(0.35 + m.s.tgt, 1.35) }))
   tes.forEach((m, i) => T.recv.push({ ...m, kind: 'te', w: roleW.TE[i] * Math.pow(0.35 + m.s.tgt, 1.2) }))
   T.rbs.forEach((m, i) => T.recv.push({ ...m, kind: 'rb', w: roleW.RB[i] * Math.pow(0.35 + m.s.tgt, 1.1) }))
   T.wr = wrs; T.te = tes

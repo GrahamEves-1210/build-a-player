@@ -65,9 +65,16 @@ export const optionSalary = (p, cap) => r2(Math.max(marketValue(p, cap) * 0.8, (
 export function payroll(F, t) {
   let sum = 0
   for (const id of t.roster) sum += F.players[id]?.con?.sal ?? 0
-  return r2(sum + (t.dead ?? 0))
+  // (dead money counts; a restructure's relief comes off this year and is next year's dead money)
+  return r2(sum + (t.dead ?? 0) - (t.relief ?? 0))
 }
 export const capSpace = (F, t) => r2(F.cap - payroll(F, t))
+// what is already committed to next season: deals that run past this one, extensions signed, money pushed forward
+export function nextYearBooks(F, t) {
+  let sum = t.deadNext ?? 0
+  for (const id of t.roster) { const p = F.players[id]; if (!p?.con) continue; sum += p.ext ? p.ext.sal : p.con.yrs > 1 ? p.con.sal : 0 }
+  return r2(sum)
+}
 // what cutting him does this season: the guarantee left stays on the books, the rest of the salary comes off
 export function cutCost(p) {
   const sal = p.con?.sal ?? 0, dead = Math.min(p.con?.guar ?? 0, sal * (p.con?.yrs ?? 1))

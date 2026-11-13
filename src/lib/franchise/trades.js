@@ -125,6 +125,13 @@ export function execute(F, offer) {
   if (big && (big.ovr >= 82 || offer.from === F.team || offer.to === F.team)) addNews(F, 'trade', `${nick(big.team)} trade for ${big.name}`, { team: big.team, pid: big.id, body: text })
   else if (!big && (gk.length || rk.length) && (offer.from === F.team || offer.to === F.team)) addNews(F, 'trade', `${nick(offer.from)} and ${nick(offer.to)} swap picks`, { body: text })
   depthAfterMove(F, A); depthAfterMove(F, B)
+  // on draft day the order follows the picks at once (whoever holds a pick is on the clock for it)
+  const D = F.draft
+  if (D?.started && !D.done && (gk.length || rk.length)) {
+    const owner = {}
+    for (const s of TEAM_SHORTS) for (const pk of F.teams[s].picks) if (pk.y === D.year) owner[`${pk.r}-${pk.o}`] = s
+    for (let i = D.at; i < D.order.length; i++) { const t = owner[`${D.order[i].r}-${D.order[i].o}`]; if (t) D.order[i].t = t }
+  }
   F.offers = (F.offers ?? []).filter(o => ![...(o.give?.players ?? []), ...(o.get?.players ?? [])].some(id => gp.some(p => p.id === id) || rp.some(p => p.id === id)) && ![...(o.give?.picks ?? []), ...(o.get?.picks ?? [])].some(k => gk.some(pk => pickKey(pk) === k) || rk.some(pk => pickKey(pk) === k)))
 }
 export const tradesOpen = F => F.phase === 'offseason' || (F.phase === 'regular' && F.week <= TRADE_DEADLINE)

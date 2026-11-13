@@ -6,7 +6,7 @@
 // An item (F.office[]): { id, kind, week, pid?, title, body, options: [{ id, label, text }], delegate, data? }
 import { REG_WEEKS, TRADE_DEADLINE, clamp, r2, slotOf } from './consts'
 import { addNews, addTx, nick, teamName } from './core'
-import { marketValue, marketYears, marketGuar, newContract, payroll } from './money'
+import { marketValue, marketYears, marketGuar, newContract, payroll, nextYearBooks } from './money'
 import { startersOf } from './depth'
 import { giveXp, injWords } from './week'
 import { execute, judgeForUser, offerText, playerValue } from './trades'
@@ -50,7 +50,7 @@ export function makeOffice(F, R) {
     if (walk && F.week >= 4 && F.week <= 14) {
       const ask = extensionAsk(F, walk)
       cands.push([3, () => { mark(walk, 'contract'); push(F, { kind: 'contract', pid: walk.id, title: 'CONTRACT YEAR', body: `${walk.name}'s agent called. His deal is up after the season and he would sign now: ${ask.years} year${ask.years > 1 ? 's' : ''} at $${ask.perYear.toFixed(1)}M a year.`, data: { ask },
-        options: [{ id: 'extend', label: 'SIGN THE EXTENSION', text: `${ask.years} year${ask.years > 1 ? 's' : ''}, $${ask.perYear.toFixed(1)}M a year, starting next season. He is locked up.` }, { id: 'wait', label: 'TALK AFTER THE SEASON', text: 'He plays it out. The price is the market\'s in March.' }, { id: 'business', label: 'TELL HIM IT IS A BUSINESS', text: 'No talks. He will remember it.' }], delegate: walk.ovr >= 86 && walk.age <= 30 ? 'extend' : 'wait' }) }])
+        options: [{ id: 'extend', label: 'SIGN THE EXTENSION', text: `${ask.years} year${ask.years > 1 ? 's' : ''}, $${ask.perYear.toFixed(1)}M a year, starting next season. He is locked up.` }, { id: 'wait', label: 'TALK AFTER THE SEASON', text: 'He plays it out. The price is the market\'s in March.' }, { id: 'business', label: 'TELL HIM IT IS A BUSINESS', text: 'No talks. He will remember it.' }], delegate: walk.ovr >= 86 && walk.age <= 30 && nextYearBooks(F, t) + ask.perYear <= F.cap * 0.82 ? 'extend' : 'wait' }) }])
     }
     // a veteran who came to win, on a team that is rebuilding, asks out
     const out = directionOf(F) === 'rebuild' ? P.filter(p => p.age >= 28 && p.ovr >= 80 && p.mood < 36 && (p.drives?.includes('RING') || p.drives?.includes('COMPETITOR')) && !p.want && !asked(p, 'out') && !p.built).sort((a, b) => b.ovr - a.ovr)[0] : null

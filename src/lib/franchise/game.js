@@ -17,14 +17,14 @@ import { lastName } from './players'
 import { nick } from './core'
 
 export const TUNE = {
-  sack: 0.066, sackRush: 3.1, sackQb: 1.5,
-  comp: [0.742, 0.572, 0.376],            // short, intermediate, deep
-  compQb: 0.165, compRec: 0.12, compCov: 0.56, compCall: 0.014, pressureComp: 0.13,
-  int: [0.0115, 0.025, 0.047], intK: 1.8,
-  runBase: 3.8, runLine: 5.5, runBack: 3.5, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
+  sack: 0.064, sackRush: 3.25, sackQb: 1.55,
+  comp: [0.748, 0.578, 0.38],            // short, intermediate, deep
+  compQb: 0.185, compRec: 0.125, compCov: 0.63, compCall: 0.014, pressureComp: 0.13,
+  int: [0.0115, 0.025, 0.047], intK: 1.9,
+  runBase: 3.8, runLine: 6.3, runBack: 3.75, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
   fumRun: 0.013, fumRec: 0.0105, fumSack: 0.1, fumLost: 0.55,
   pen: 0.05, home: 0.014,
-  passRate: 0.552,
+  passRate: 0.548,
 }
 
 // ── A game ───────────────────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ export function rollPass(G, O, D, LG, ctx) {
   // air yards and what he adds after the catch
   const ypr = r.s.ypr ?? 0.5
   const air = r.kind === 'rb' ? R.int(-3, 3) : depth === 0 ? 1 + Math.round(7.5 * Math.pow(R.u(), 1.25)) : depth === 1 ? R.int(10, 19) : 20 + Math.round(30 * Math.pow(R.u(), 1.7))
-  let yac = Math.exp((r.kind === 'rb' ? 1.32 : depth === 0 ? 0.7 : depth === 1 ? 0.43 : 0.3) + R.n() * 0.8) * (0.72 + ypr * 0.5)
+  let yac = Math.exp((r.kind === 'rb' ? 1.32 : depth === 0 ? 0.72 : depth === 1 ? 0.46 : 0.33) + R.n() * 0.8) * (0.72 + ypr * 0.5)
   if (R.chance(0.012 + ypr * 0.016)) yac += 12 + -Math.log(1 - R.u() * 0.999) * 16
   const yds = Math.min(100 - G.yl, Math.max(-4, Math.round(air + yac)))
   return { type: 'comp', r, depth, yds, fum: R.chance(TUNE.fumRec) && yds < 100 - G.yl }
