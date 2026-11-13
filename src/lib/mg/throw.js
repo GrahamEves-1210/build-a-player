@@ -540,7 +540,7 @@ function makePlay({ v, arm, seed, game, cast }) {
       const score = bomb ? clamp(0.6 + (depth / GOAL) * 0.4, 0.6, 1) : clamp(0.72 + (past / (20 * YD)) * 0.28, 0.72, 1)
       const word = scores ? 'TOUCHDOWN' : bomb ? 'BIG GAIN' : 'FIRST DOWN'
       const said = scores ? 'Touchdown.' : bomb ? `A ${Math.round(depth / YD)} yard strike.` : `${Math.round(past / YD)} past the sticks.`
-      g.done = outcome(scores ? 1 : score, true, mz ? (scores ? 'Broke a tackle and took it to the house.' : `Made the first man miss. ${said}`) : said, { made: 1, of: 1 })
+      g.done = outcome(scores ? 1 : score, true, mz ? (scores ? 'Broke a tackle and took it to the house.' : `Made the first man miss. ${said}`) : said, { made: 1, of: 1, ...(scores ? { pts: 7 } : {}) })   // (a throw that scores is 7 on the board)
       g.stamp = mz ? { text: `${scores ? 'BROKE A TACKLE' : 'MADE HIM MISS'}: ${word}`, good: true, at: when + 40, size: 24 } : { text: word, good: true, at: when + 40 }
       // (a touchdown is the payoff: time for the spike, his dance and everyone getting to him)
       g.outro = scores ? clamp(when - g.t + 2900, 2600, 6200) : clamp(when - g.t + 1700, 1400, 5000)

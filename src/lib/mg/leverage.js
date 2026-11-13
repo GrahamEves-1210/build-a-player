@@ -209,7 +209,7 @@ function makeSneak({ v, seed }) {
     const spare = (DRIVE_MS - (g.t - g.snapAt)) / 1000
     const score = clamp(0.5 + (spare / 1.6) * 0.5, 0, 1)
     g.won = true; g.doneAt = g.t
-    g.done = outcome(score, true, `Punched it in · ${spare.toFixed(1)} s to spare${g.falses ? ' · false start' : ''}`, { margin: spare })
+    g.done = outcome(score, true, `Punched it in · ${spare.toFixed(1)} s to spare${g.falses ? ' · false start' : ''}`, { margin: spare, pts: 7 })   // (a touchdown: 7 on the board, whatever the score was)
     g.hud.prompt = null; g.hud.hot = false
     g.stamp = { text: 'TOUCHDOWN', good: true, at: g.t + 100, size: 56, y: 420 }
     g.popAt = g.t; g.fx.push('stamp', 'h:heavy')

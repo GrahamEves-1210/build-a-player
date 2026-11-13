@@ -191,7 +191,7 @@ export function make({ v, seed, game, cast = null, pos = null }) {
       const made = balls.filter(x => x.res).length
       const score = balls.reduce((s, x) => s + x.res, 0) / balls.length
       const hit = made >= S.need
-      g.done = outcome(score, hit, `${made} of ${balls.length} ${S.verb.toLowerCase()}`, { made, of: balls.length })
+      g.done = outcome(score, hit, `${made} of ${balls.length} ${S.verb.toLowerCase()}`, { made, of: balls.length, ...(game === 'catch' && balls.some(x => x.td && x.res) ? { pts: 7 } : {}) })   // (a catch in the end zone is 7 on the board)
       g.made = made; g.doneAt = g.t
       g.hud.prompt = null; g.hud.hot = false
       const word = game === 'catch' ? (b.td ? 'TOUCHDOWN' : ok ? 'CAUGHT' : b.lead ? 'INCOMPLETE' : 'BROKEN UP')

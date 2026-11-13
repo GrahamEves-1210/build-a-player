@@ -2577,7 +2577,7 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
     const end = finalScore(momentSituation(game, seed, { us: c.team, them: rd.opp }), game, won, hit, seed, pts)
     mySc = end.mine; oppSc = end.opp; swing = end.note
     // (he can't score the touchdown that won it and have none in the box score)
-    if (hit && (game === 'two-minute' || game === 'goal-line')) {
+    if (hit && (game === 'two-minute' || game === 'goal-line' || game === 'sneak' || (pts === 7 && game !== 'kick-return'))) {
       const key = c.pos === 'qb' ? 'tds' : c.pos === 'rb' ? 'rushTDs' : 'recTDs'
       if (line[key] != null) line[key] = Math.max(1, line[key])
     }

@@ -57,7 +57,9 @@ const SPOTS = {
 const KINDS = {}
 export function registerSituations(kind, { spots = {}, situation, final }) { KINDS[kind] = { situation, final }; for (const [g, sp] of Object.entries(spots)) SPOTS[g] = { ...sp, kind } }
 // these end in the end zone, whatever else he's short of
-const TD_GAMES = new Set(['two-minute', 'goal-line'])
+// (the sneak: punched in is a touchdown. It used to add nothing when his team was already ahead, and only a field
+// goal's worth when behind by one or two: a player scored in the Super Bowl and the board didn't move)
+const TD_GAMES = new Set(['two-minute', 'goal-line', 'sneak'])
 const clockOf = (s, hoops) => (hoops && s < 10 ? s.toFixed(1) : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`)
 
 export function momentSituation(game, seed = 'x', { us = 'HOME', them = 'AWAY' } = {}) {
