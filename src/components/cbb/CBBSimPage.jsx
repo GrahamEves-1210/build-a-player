@@ -328,9 +328,9 @@ const lum = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? ''); if (!m) ret
 const onDark = t => { const a = t.color ?? '#0a3d91', b = t.color2; return lum(a) < 0.22 && b && lum(b) > lum(a) && lum(b) < 0.95 ? b : lum(a) < 0.22 ? '#4f8fe8' : a }
 // The pace: one game, not a series game (basketball's NBA series runs 2.5 s a game; football's one playoff game 10 s).
 // College basketball's postseason is single elimination, so each game gets its time: 40 minutes in about 30 seconds
-// (5 game seconds a 48 ms tick, 15% quicker than the first 55 (the owner, 2026-11-13)), a beat at halftime, the clock held while free throws are shot, then the final held.
+// (5 game seconds a 44 ms tick: 15% then 10% quicker than the first 55, the owner, 2026-11-13), a beat at halftime, the clock held while free throws are shot, then the final held.
 // The score moves only by what one make adds (1, 2, 3), one at a time (cbbTimeline: cbbShared.js)
-const LIVE_TICK = 48, LIVE_SECS = 5, LIVE_HALF = 16, LIVE_FT = 5
+const LIVE_TICK = 44, LIVE_SECS = 5, LIVE_HALF = 16, LIVE_FT = 5
 // one side of the scoreboard. (Its own component, outside LiveGame: declared inside, it was a new component every
 // 55 ms tick, so React remounted both sides each tick, the logos reloading and both numbers re-running their pop: the
 // scoreboard twitched. Now only the number that changed pops, once)
