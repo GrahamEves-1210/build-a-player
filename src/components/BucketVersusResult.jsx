@@ -19,6 +19,7 @@ import { cosFor } from '../lib/peopleCos'
 import { victory, sfx, haptic } from '../lib/juice'
 import { WhoAv, WhoName, firstName } from './app/Blacktop1v1'
 import { IconBall } from './app/icons'
+import { spectrumColor } from '../lib/gradeColors'
 const LOOK = IS_APP || APP_LOOK
 // App + app-look website: Blacktop's 1v1, drawn with the 3v3's screens (bt-*):
 // both players are their profile picture + username, me in the first side's
@@ -33,15 +34,7 @@ const ADJ = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
-function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
-  if (val >= 11) return '#a855f7'
-  if (val >= 8)  return '#3b82f6'
-  if (val >= 5)  return '#22c55e'
-  if (val >= 2)  return '#eab308'
-  if (val >= 1)  return '#f97316'
-  return '#ef4444'
-}
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 function bestSlot(build) {
   return Object.values(build || {}).filter(Boolean).sort((a, b) => b.val - a.val)[0] ?? null

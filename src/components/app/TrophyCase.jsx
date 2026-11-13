@@ -25,6 +25,7 @@ import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import { MLB_ATTR } from '../../data/mlb-attrs'
 import { loadBaseballFaces, baseballFace } from '../../lib/baseballFaces'
 import './trophy-case.css'
+import { spectrumColor } from '../../lib/gradeColors'
 
 // Profile → Trophy Case: the player's real hardware on lit shelves (seasons: rings,
 // perfect seasons, the 90+ club; awards: MVP, OPOY, DPOY, All-Pro; live: online tier,
@@ -170,7 +171,7 @@ function Face({ name, team, sport, size = 26 }) {
 }
 
 // a trait's grade colour, like every build screen (rounded like the letter, valToGrade)
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // The traits of a saved build, best first
 const traitsOf = row => Object.entries(row?.build || {})

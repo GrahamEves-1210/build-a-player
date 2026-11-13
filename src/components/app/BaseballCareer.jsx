@@ -5,6 +5,7 @@ import { MLB_ATTR } from '../../data/mlb-attrs'
 import { valToGrade } from '../../utils/simulation'
 import { IconBaseball, IconTrophy, IconRing, IconMedal, IconStar } from './icons'
 import './baseball-career.css'
+import { spectrumColor } from '../../lib/gradeColors'
 
 // Profile → BASEBALL: the player's baseball career, the way the BASKETBALL section shows basketball's
 // (ProfilePage's prf- cards). Batter and pitcher, Current and All-Time, each on its own tab like football's
@@ -13,7 +14,7 @@ import './baseball-career.css'
 // BaseballFriendCard: the same seasons, short, on another player's profile sheet (FriendProfile).
 
 const COLS = 'game_mode,position,wins,losses,season_tds,season_ints,ppg,season_rating,season_pass_yds,champion,playoffs,finals_opp,season_award,ovr,archetype,build,team_short,created_at'
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0)
 const sum = (rows, k) => rows.reduce((s, r) => s + num(r[k]), 0)
 const fmt = v => Math.round(v).toLocaleString()

@@ -13,6 +13,7 @@ import { rampRail, rampSpinAd, SPIN_AD_ID } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
 import { LOW_POWER, sampleFrames } from '../lib/lowPower'
 import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
+import { spectrumColor } from '../lib/gradeColors'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -24,15 +25,7 @@ function parseHtToIn(ht) {
   return m ? +m[1] * 12 + +m[2] : null
 }
 
-function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
-  if (val >= 11) return '#a855f7'
-  if (val >= 8)  return '#3b82f6'
-  if (val >= 5)  return '#22c55e'
-  if (val >= 2)  return '#eab308'
-  if (val >= 1)  return '#f97316'
-  return '#ef4444'
-}
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 const ITEM_H  = 44
 const CENTER  = 2

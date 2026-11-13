@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { userScrolling } from '../lib/userScroll'
 import { dlBuildSpot } from '../utils/simulation'
+import { spectrumColor } from '../lib/gradeColors'
 
 // Pieces of football's season page (SimPage.jsx) that College Football's season page (cfb/CFBSimPage.jsx)
 // draws too: kept here, light, so the college screens don't load SimPage and its NFL rosters to get them.
@@ -153,15 +154,7 @@ export function StatLineTable({ result, build, kind, values = {}, ready = true, 
   )
 }
 
-export function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
-  if (val >= 11) return '#a855f7'
-  if (val >= 8)  return '#3b82f6'
-  if (val >= 5)  return '#22c55e'
-  if (val >= 2)  return '#eab308'
-  if (val >= 1)  return '#f97316'
-  return '#ef4444'
-}
+export const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // App: every week of the season in one scrolling window. Played weeks show the
 // result, weeks still to come wait as numbered rows, and the window keeps the

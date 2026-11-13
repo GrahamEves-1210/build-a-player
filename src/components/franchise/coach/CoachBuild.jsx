@@ -8,6 +8,7 @@ import { randomName } from '../../../lib/playerNames'
 import { sfx, haptic } from '../../../lib/juice'
 import { IconSpin } from '../../app/icons'
 import './coach.css'
+import { spectrumColor } from '../../../lib/gradeColors'
 
 // FRANCHISE: BUILD THE COACH (DESIGN.md section 8). The game's own build mechanic for a head coach, on its own
 // screen: no figure. SPIN lands on a team's staff, then on one man from it (the head coach or a coordinator); take
@@ -38,10 +39,7 @@ const DATA = import.meta.glob('../../../data/nfl-coaches.js')
 const loadCoaches = Object.values(DATA)[0] ?? null
 
 // the letter's colour, as the build screen has it (SpinScreen.jsx gradeColor)
-function gradeColor(v0) {
-  const v = Math.round(v0 ?? 0)
-  return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444'
-}
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 // A head coach's one number: the data file's own formula (nfl-coaches.js header), so a built coach reads on the
 // same scale as the real ones on the wheel. A line still open counts as the average of the lines that are in
 // (lib/franchise builtCoachRow fills it the same way).

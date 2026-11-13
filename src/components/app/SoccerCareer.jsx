@@ -4,6 +4,7 @@ import { SOCCER_MODES_DB, rowSoccerTags } from '../../lib/soccerAwards'
 import { SOCCER_ATTR } from '../../data/soccer-attrs'
 import { valToGrade } from '../../utils/simulation'
 import { IconSoccer, IconTrophy } from './icons'
+import { spectrumColor } from '../../lib/gradeColors'
 
 // Profile → SOCCER: the player's soccer career, the way the BASKETBALL section shows basketball's
 // (ProfilePage's prf- cards). TOP DIVISIONS and WORLD CUP side by side, like Current and All-Time.
@@ -11,7 +12,7 @@ import { IconSoccer, IconTrophy } from './icons'
 // the Ballon d'Or (the World Cup's Golden Ball). A row's columns: lib/soccerAwards.js.
 
 const COLS = 'game_mode,wins,losses,season_comp_pct,season_tds,season_ints,ppg,champion,playoffs,season_award,ovr,archetype,build,team_short,finals_opp,finals_series,created_at'
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 const sum = (rows, k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0)
 
 function careerOf(rows) {

@@ -25,16 +25,9 @@ import { rampAdd, useRailOn } from '../lib/ads'
 import { IconBall } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
 import { useOnLeave } from './simFlow'
+import { spectrumColor } from '../lib/gradeColors'
 
-function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
-  if (val >= 11) return '#a855f7'
-  if (val >= 8)  return '#3b82f6'
-  if (val >= 5)  return '#22c55e'
-  if (val >= 2)  return '#eab308'
-  if (val >= 1)  return '#f97316'
-  return '#ef4444'
-}
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const TEAM_MAP = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t]))

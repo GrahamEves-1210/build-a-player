@@ -118,6 +118,7 @@ import SoccerCareer from './app/SoccerCareer'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 import BaseballCareer from './app/BaseballCareer'
 import { useCountUp as countUp } from '../lib/useCountUp'
+import { spectrumColor } from '../lib/gradeColors'
 import { openBillingPortal, BILLING_DUE } from '../lib/webCheckout'
 
 // a trait's player by name: an older save kept only the short name (a last name, or for a few
@@ -150,7 +151,7 @@ function dlCareerOf(data) {
 }
 
 // a grade's colour, like every build screen (rounded like the letter, valToGrade)
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // the shared count-up (lib/useCountUp.js); runs once there's a number to count to
 const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })

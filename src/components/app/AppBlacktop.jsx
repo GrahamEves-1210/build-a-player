@@ -27,6 +27,7 @@ import { SPRING_LAYOUT } from '../../lib/motion'
 import BlacktopSheet from './BlacktopSheet'
 import './blacktop-theme.css'
 import './blacktop-lobby.css'
+import { spectrumColor } from '../../lib/gradeColors'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -78,7 +79,7 @@ export const archOf = b => {
 // a CPU's first name, or a username whole: never cut short or capitalized (usernames show as typed)
 const firstName = n => (n || '').trim().split(/\s+/)[0]
 // a grade's color, rounded like its letter (valToGrade): S purple, A blue, B green, C yellow, D orange, F red
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // ── Hub: the court you walk up to. Pick the game (3v3, 2v2, 1v1), then one way in ──
 // 1v1's other ways in: pickup (where there's no live lobby), a friend's game, a friend's code

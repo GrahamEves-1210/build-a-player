@@ -1,4 +1,5 @@
 import { IS_APP, shareNative } from '../lib/platform'
+import { spectrumColor } from '../lib/gradeColors'
 
 // The season share card: a finished season as one poster, both sports.
 //
@@ -38,10 +39,7 @@ const GOLD = ['#f8e7a6', '#f2d675', '#d4af37']
 const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 const gradeOf = v => GRADES[Math.max(0, Math.min(11, Math.round(v ?? 0)))]
 // the game's grade colors (ReportCard), a B- always green
-function gradeColor(v0) {
-  const v = Math.round(v0 ?? 0)
-  return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444'
-}
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // ── Color ────────────────────────────────────────────────────────────────────
 const hex = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255] }

@@ -28,6 +28,7 @@ import { MLB_ATTR, BAT_TYPES, PIT_TYPES } from '../data/mlb-attrs'   // (the tra
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 const MLB_ROSTERS = import.meta.glob(['../data/mlb-batters.js', '../data/mlb-pitchers.js', '../data/mlb-legend-batters.js', '../data/mlb-legend-pitchers.js'])
 import { valToGrade } from '../utils/simulation'
+import { spectrumColor } from '../lib/gradeColors'
 
 // Every rating in the game, straight from the roster files the spins draw
 // from, so the table changes whenever the data does. The "as of" dates come
@@ -85,7 +86,7 @@ export function useLazyPools(on = true) {
 }
 export const poolCounts = () => POOLS.map(p => ({ id: p.id, sport: p.sport, label: p.label, plural: p.plural, current: p.players.length, legends: p.legends.length, updated: DATES[p.id] ?? null }))
 
-export const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
+export const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)   // rounded like the letter (valToGrade)
 const short = (attr, t) => attr[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()
 const long = (attr, t) => attr[t]?.label ?? t
 

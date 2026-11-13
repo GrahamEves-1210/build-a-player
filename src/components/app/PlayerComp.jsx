@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { compsFor, POS_ATTR } from '../../lib/career'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
+import { spectrumColor } from '../../lib/gradeColors'
 
 // The player comp: who a build plays like, the closest real players at the position
 // (today's and the all-time greats), trait by trait. Career shows it for your player;
@@ -8,7 +9,7 @@ import { valToGrade, nflHeadshot } from '../../utils/simulation'
 //   c    { sport: 'nfl' | 'bucket', pos, types, build }
 //   who  whose build it is (the heading)   col  the left column's label (default: who's last name)
 
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)   // rounded like the letter (valToGrade)
 const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null)
 const initials = n => (n || '?').split(' ').map(w => w[0]).slice(0, 2).join('')
 // a last name (Jr., III and the like skipped)

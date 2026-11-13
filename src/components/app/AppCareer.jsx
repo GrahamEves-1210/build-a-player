@@ -46,7 +46,7 @@ import { Scramble } from './MotionText'
 // the record so far) and the legacy screen. The engine is lib/career.js; what
 // differs by sport comes from its SPORT table.
 
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)   // rounded like the letter (valToGrade)
 // the last name (a suffix rides along: Harrison Jr.)
 const nick = name => { const w = (name || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
 const money = n => `$${n}M`
@@ -85,6 +85,7 @@ export const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFix
 const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+/g, ' ').slice(0, 14)
 // Random names for a new player: athlete-sounding, every combination plausible
 import { FIRST_NAMES, LAST_NAMES, pickName } from '../../lib/playerNames'   // (the random-name button's names: College Football's name step uses them too)
+import { spectrumColor } from '../../lib/gradeColors'
 // the career's mini games mode, in a few words under the choice
 const GAMES_WHAT = { advanced: 'Full-screen games', simple: 'Quick tap games', off: 'Simulated games' }
 // A career mini game (combine drill, camp drill, playoff moment) in the career's own mode:

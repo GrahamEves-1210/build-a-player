@@ -18,6 +18,7 @@ import { MLB_TEAMS } from '../data/mlb-teams'
 import { BASEBALL_POS, BASEBALL_POOL, BASEBALL_SLOTS, fmtBaseballHeight, baseballHands } from '../lib/baseballUi'
 import { BASEBALL_AWARD, baseballAwardTags } from '../lib/baseballAwards'
 import './baseball-season.css'
+import { spectrumColor } from '../lib/gradeColors'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // The baseball season page (BaseballApp's 'sim'): basketball's season page (BucketSimPage) in baseball's colours,
@@ -52,7 +53,7 @@ const ipWords = outs => `${Math.floor(outs / 3)}${outs % 3 ? ` ${outs % 3}/3` : 
 const outsOf = ip => { const n = +ip; if (!Number.isFinite(n)) return 0; const w = Math.floor(n); return w * 3 + Math.round((n - w) * 10) }
 const teamName = short => TEAM_MAP[short]?.name ?? short ?? ''
 const nickName = short => { const t = TEAM_MAP[short]; if (!t) return short ?? ''; const m = /\s(Red Sox|White Sox|Blue Jays)$/.exec(t.name); return t.nick ?? m?.[1] ?? String(t.name).split(' ').slice(-1)[0] }
-const GRADE_COL = val0 => { const v = Math.round(val0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const GRADE_COL = spectrumColor   // one shade a step (lib/gradeColors.js)
 
 // ── The calendar: 2026's season (Opening Day March 26, the All-Star Game July 14 in Philadelphia, the last
 // day September 27). The sim dates every game ('Apr 3'); a game without a date is placed the way the schedule

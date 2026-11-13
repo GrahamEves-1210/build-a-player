@@ -9,11 +9,12 @@ import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconC
 import { Analytics, CareerGame, honorsOf, fmt } from './AppCareer'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { gamesMode } from '../../lib/career'
+import { spectrumColor } from '../../lib/gradeColors'
 
 const bx = () => sportOf({ sport: 'baseball' }).x
 const initials = n => (n || '?').split(' ').map(w => w[0]).slice(0, 2).join('')
 const shortName = n => { const p = (n || '').split(' '); return p.length > 1 ? `${p[0][0]}. ${p.slice(1).join(' ')}` : n }
-const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 const ord = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 const r3 = v => bx().rate3(v)
 const ip = outs => bx().ipText(outs)
