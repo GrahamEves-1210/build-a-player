@@ -375,8 +375,10 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
 
       <div className="agc-home-inner">
         <Hud user={user} />
-        <h2 className="ag-sport-label">PICK YOUR SPORT</h2>
-        <SportSwitch sport={sport} />
+        <div className="ag-sport-wrap">
+          <h2 className="ag-sport-label">PICK YOUR SPORT</h2>
+          <SportSwitch sport={sport} />
+        </div>
 
         <div className="agc-brand ag-pop" style={{ '--d': '60ms' }}>
           <OnlineNow />

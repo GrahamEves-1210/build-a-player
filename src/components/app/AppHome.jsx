@@ -645,8 +645,10 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </div>
         </div>
 
-        <h2 className="ag-sport-label">PICK YOUR SPORT</h2>
-        <SportOnce sport={sport} />
+        <div className="ag-sport-wrap">
+          <h2 className="ag-sport-label">PICK YOUR SPORT</h2>
+          <SportOnce sport={sport} />
+        </div>
 
         {/* Character-select stage under stadium lights: swipe it, or tap a position */}
         <div className="ag-stage"
