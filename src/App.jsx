@@ -50,6 +50,7 @@ import { K_LEGENDS } from './data/k-legends'
 import { K_LIVE } from './lib/kLive'
 import { CFB_LIVE } from './lib/cfbLive'
 import { FRANCHISE_LIVE } from './lib/franchiseLive'
+import { FranchiseWait } from './components/franchise/FranchiseCard'   // (the skeleton while the mode's file loads: FranchiseCard is on Home already)
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
 import { COMPETE_POS } from './lib/competeCore'
@@ -832,16 +833,17 @@ export default function App() {
     const same = frJob.current?.id === job.id && gameMode === 'classic' && position === job.pos && tkRef.current === 'franchise'
     if (!same) handleStart('classic', job.pos)
     frJob.current = job
-    sandboxTainted.current = false
+    if (!same || sandboxLocked('franchise-build')) sandboxTainted.current = isCustomMode && !sandboxLocked('franchise-build')
     setPage('franchise-build')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [handleStart, gameMode, position])
+  }, [handleStart, gameMode, position, isCustomMode])
   const franchiseBuilt = useCallback(() => {
-    setFrBuilt({ ...(frJob.current ?? {}), pos: position, build, types: activeTypes })
+    // (a Sandbox build makes the franchise a Sandbox one: FranchiseMode.jsx)
+    setFrBuilt({ ...(frJob.current ?? {}), pos: position, build, types: activeTypes, sandbox: !!(isCustomMode || sandboxTainted.current || activeTypes.some(t => build?.[t]?.sandbox)) })
     frJob.current = null; setGameMode(null); setBuild({}); setSavedSpinResult(null); setPage('franchise')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the franchise's now
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [position, build, activeTypes])
+  }, [position, build, activeTypes, isCustomMode])
   // back to the setup without finishing: the build stays on the page for the same spot
   const franchiseBack = useCallback(() => { setPage('franchise'); window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
 
@@ -938,7 +940,7 @@ export default function App() {
     setIsCustomMode(on)
   }, [])
   // a Career or Squad Builder build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
-  useEffect(() => { if (isCustomMode && (sandboxLocked(page) || page === 'franchise-build')) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSaveToast = useCallback((type, msg) => {
     setSaveToast({ type, msg })
@@ -1427,10 +1429,10 @@ export default function App() {
   const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
   // Sandbox is only for the plain Current and All-Time modes
   // (Career and Squad Builder builds too, once that mode's Sandbox is unlocked: the switch asks)
-  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game' && page !== 'franchise-build'   // (a Franchise build is always a real one)
+  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game'   // (a Franchise build too, once its Sandbox is unlocked: sandbox-franchise)
   setSandboxGate(sandboxItemFor(page))
   // Starters Only needs Sandbox on, on a plain build: so it also means the save guard is blocking this build
-  const startersOk = sandboxOk && page !== 'career-build' && page !== 'squad-build'
+  const startersOk = sandboxOk && page !== 'career-build' && page !== 'squad-build' && page !== 'franchise-build'
   const startersOn = startersPick && isCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
   // switching it needs a build that hasn't started: flipping it can't throw away a spin
@@ -1496,7 +1498,7 @@ export default function App() {
       {/* Squad Builder: which of the squad's players this is */}
       {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
       {/* Franchise: which of the new franchise's players this is, and the way back to its setup */}
-      {page === 'franchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{frJob.current?.of ? ` · PLAYER ${frJob.current.n} OF ${frJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: frJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (frJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={franchiseBack}>SETUP</button></div>}
+      {page === 'franchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{frJob.current?.of ? ` · PLAYER ${frJob.current.n} OF ${frJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: frJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (frJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={franchiseBack}>BACK</button></div>}
       {dailyLive && page === 'game' && <div className="cp-hud dc-hud" role="status"><span><small>DAILY CHALLENGE · {String(dailyRun.pos).toUpperCase()} · ONE RUN</small></span><LiveLeaveButton /></div>}
       {IS_APP && !drop && (
         <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
@@ -1843,7 +1845,7 @@ export default function App() {
   // Franchise: the mode's own screens (its builds go through the build page: onBuild out, built back)
   if (page === 'franchise' && FRANCHISE_LIVE) {
     return (
-      <Suspense fallback={<div className="ag-screen ag-screen--wait" style={{ background: '#0a0c0f' }} />}>
+      <Suspense fallback={<FranchiseWait />}>
         <FranchiseMode user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onBuild={startFranchiseBuild} built={frBuilt} onBuiltTaken={() => setFrBuilt(null)} />
       </Suspense>

@@ -237,7 +237,7 @@ export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
           )}
         </div>
         <div className="fr-col">
-          <Panel title={us.nick} meta={`GM ${up(hub.gm.name)}`}>
+          <Panel title={us.nick} meta={`GM ${up(hub.gm.name)}${F.sandbox ? ' · SANDBOX' : ''}`}>
             {last && <div className="fr-kv"><span>LAST GAME</span><b>{last.tied ? 'T' : last.won ? 'W' : 'L'} {last.us}-{last.them}{last.ot ? ' OT' : ''} {last.home ? 'vs' : '@'} {last.opp.short}</b></div>}
             {hub.seed && (hub.record.w + hub.record.l + (hub.record.t ?? 0) > 0) ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{up(ord(hub.seed))}</b></div> : null}
             <div className="fr-kv"><span>CAP ROOM</span><b>{FR.moneyText(room)}</b></div>

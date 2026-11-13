@@ -87,6 +87,9 @@ html.is-fr:not(.ag-screen-open) :is(.ag-dock, .ag-dock-floor) { display: none; }
 .fr-bug-next b { display: flex; align-items: center; gap: 6px; }
 .fr-bug-next img { display: block; width: 22px; height: 22px; object-fit: contain; }
 .fr-bug-fill { flex: 1 1 0; min-width: 0; }
+/* a Sandbox franchise: the word, in a box, after the cells (the other modes' SANDBOX mark). Desktop only: a phone's
+   bug has no room, and the hub's team panel says it there (FrHub) */
+.fr-bug-tag { display: none; flex: none; align-self: center; margin-left: 10px; padding: 3px 6px 1px; border: 1px solid var(--fr-line-2); border-radius: var(--fr-r); font-family: var(--fr-label); font-size: 13px; letter-spacing: 1.5px; line-height: 1.1; color: var(--fr-muted); }
 .fr-bug-exit { flex: none; align-self: stretch; padding: 2px 14px 0; border: 0; border-left: 1px solid var(--fr-line); background: transparent; font-family: var(--fr-label); font-size: 15px; letter-spacing: 1.6px; color: var(--fr-muted); cursor: pointer; }
 .fr-bug-exit:active { background: var(--fr-panel-2); }
 /* a setup screen's bug: the mode's name where the team will be */
@@ -279,6 +282,7 @@ html.bap-reduce-motion .fr-ticker-line > span { animation: none; }
   .fr { grid-template-columns: 208px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding-bottom: 0; }
   .fr-bug { grid-column: 1 / -1; }
   .fr-bug-name { display: grid; }
+  .fr-bug-tag { display: block; }
   .fr-bug-cell { padding: 0 20px; }
   .fr-bug-exit { padding-inline: 22px; }
   .fr-tabs { display: none; }
@@ -307,3 +311,17 @@ html.bap-reduce-motion .fr-ticker-line > span { animation: none; }
 }
 /* a navy or dark green logo is lost on the near-black panels: a hairline round it, no blur */
 .fr-logo.is-keyed { filter: drop-shadow(1px 0 0 rgba(242, 244, 245, .6)) drop-shadow(-1px 0 0 rgba(242, 244, 245, .6)) drop-shadow(0 1px 0 rgba(242, 244, 245, .6)) drop-shadow(0 -1px 0 rgba(242, 244, 245, .6)); }
+
+/* ── waiting (frUi FrWait, SkPanel): the site's skeletons (app/skeleton.css) inside the mode's frame ──────── */
+.fr-sk-rows { padding: 8px; gap: 6px; }
+.fr-sk-rows .sk-row { height: 38px; border-radius: var(--fr-r); }
+.fr-sk-h { width: 34%; max-width: 160px; height: 12px; }
+.fr-sk .fr-h { border-left-color: var(--fr-line-2); }
+.fr-sk-plate { height: 132px; border-radius: var(--fr-r); animation: sk-fade 1.5s ease-in-out infinite; }
+.fr-bug.fr-sk { animation: sk-fade 1.5s ease-in-out infinite; }
+.fr-bug.fr-sk .fr-bug-plate { background: var(--fr-panel-2); }
+.fr-sk-logo { width: 34px; height: 34px; border-radius: 50%; }
+.fr-sk-cell { width: 44px; height: 9px; }
+.fr-sk-cell.is-big { width: 58px; height: 16px; }
+@media (prefers-reduced-motion: reduce) { .fr-sk-plate, .fr-bug.fr-sk { animation: none; } }
+html.bap-reduce-motion :is(.fr-sk-plate, .fr-bug.fr-sk) { animation: none; }

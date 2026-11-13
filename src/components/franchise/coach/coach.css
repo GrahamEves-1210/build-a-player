@@ -72,6 +72,9 @@
 .cb-id-main { flex: 1 1 0; min-width: 0; display: grid; gap: 8px; }
 .cb-name { width: 100%; min-width: 0; height: 38px; padding: 2px 0 0; border: 0; border-bottom: 1px solid var(--fr-line-2); border-radius: 0; background: transparent; color: var(--fr-text); font-family: var(--fr-display); font-size: 27px; font-weight: 400; letter-spacing: .3px; line-height: 1; -webkit-user-select: text; user-select: text; }
 .cb-name:focus { outline: 0; border-bottom-color: var(--fr-team); box-shadow: 0 1px 0 var(--fr-team); }
+.cb-name-row { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
+.cb-name-row .cb-name { flex: 1 1 0; }
+.cb-name-row .fr-name-rand { flex: none; }
 .cb-identity { font-family: var(--fr-label); font-size: 15px; letter-spacing: 1.4px; line-height: 1.15; color: var(--fr-muted); }
 .cb-ovr { flex: none; display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 76px; height: 76px; padding-top: 4px; border-radius: 2px; background: var(--fr-panel-2); }
 .cb-ovr b { font-family: var(--fr-display); font-weight: 400; font-size: 42px; line-height: .95; }

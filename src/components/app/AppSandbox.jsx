@@ -61,9 +61,9 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
 
 // Sandbox in Career and Squad Builder is bought, one mode at a time: turning the
 // switch on there opens this. Bought: the switch goes on (onUnlocked).
-export const sandboxItemFor = page => (page === 'career-build' ? 'sandbox-career' : page === 'squad-build' ? 'sandbox-squad' : page === 'cfb' ? 'sandbox-cfb' : page === 'cbb' ? 'sandbox-cbb' : null)
+export const sandboxItemFor = page => (page === 'career-build' ? 'sandbox-career' : page === 'squad-build' ? 'sandbox-squad' : page === 'franchise-build' ? 'sandbox-franchise' : page === 'cfb' ? 'sandbox-cfb' : page === 'cbb' ? 'sandbox-cbb' : null)
 // what a Sandbox build is called in each mode that sells it
-const runsOf = mode => (mode === 'Career' ? 'careers' : mode === 'Squad Builder' ? 'squads' : 'seasons')
+const runsOf = mode => (mode === 'Career' ? 'careers' : mode === 'Squad Builder' ? 'squads' : mode === 'Franchise' ? 'franchises' : 'seasons')
 export const sandboxLocked = page => { const id = sandboxItemFor(page); return !!id && !owns(id) }
 export function SandboxBuy({ item, onClose, onUnlocked }) {
   const p = useProgress()

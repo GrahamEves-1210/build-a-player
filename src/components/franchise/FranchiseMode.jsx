@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Bug, FrShell } from './frUi'
+import { Bug, FrShell, FrWait } from './frUi'
 import { dressFor } from './frTeams'
-import { loadEngine, loadSetup, saveSetup, newSetup, isMidSetup, setMidSetup, patchPick, ratingOf, leaveCardNote, dropCardNote } from './frStore'
+import { loadEngine, loadSetup, saveSetup, newSetup, isMidSetup, setMidSetup, patchPick, ratingOf, leaveCardNote, dropCardNote, slotsLite, previewsFor, nextSeed, createOff, openOff } from './frStore'
 import FrSetup, { Slots } from './FrSetup'
 import FrHub from './FrHub'
 import FrTeam from './FrTeam'
@@ -50,6 +50,9 @@ const OFF = import.meta.glob('./offseason/Offseason.jsx')
 const loadOff = OFF['./offseason/Offseason.jsx']
 const Offseason = loadOff ? lazy(() => loadOff().then(m => ({ default: m.Offseason ?? m.default }))) : null
 
+// (the engine starts loading the moment this file does; the saves list doesn't wait for it: frStore slotsLite)
+loadEngine().catch(() => {})
+
 const TABS = [{ id: 'hub', label: 'HUB' }, { id: 'team', label: 'TEAM' }, { id: 'league', label: 'LEAGUE' }, { id: 'office', label: 'OFFICE' }]
 
 export default function FranchiseMode({ user, onHome, onBuild, built = null, onBuiltTaken }) {
@@ -57,7 +60,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   const [failed, setFailed] = useState(false)
   const [F, setF] = useState(null)
   const [slot, setSlot] = useState(null)
-  const [slots, setSlots] = useState(null)
+  const [slots, setSlots] = useState(slotsLite)
+  const [wait, setWait] = useState(null)   // a tap that needs the engine (or the worker) before it can land: what's coming
   const [setup, setSetupState] = useState(loadSetup)
   const [view, setView] = useState(() => ((built || isMidSetup()) && loadSetup() ? 'setup' : 'slots'))
   const [tab, setTab] = useState('hub')
@@ -70,7 +74,14 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
     document.documentElement.classList.add('is-fr')
     return () => { document.documentElement.classList.remove('is-fr'); dressFor(null) }
   }, [])
-  useEffect(() => { let live = true; loadEngine().then(m => { if (live) { setFR(m); setSlots(m.listSlots()) } }, () => { if (live) setFailed(true) }); return () => { live = false } }, [])
+  const pend = useRef(null)
+  useEffect(() => {
+    let on = true
+    loadEngine().then(m => { if (!on) return; live.current.FR = m; setFR(m); setSlots(m.listSlots()); const f = pend.current; pend.current = null; f?.(m) }, () => { if (on) { setFailed(true); setWait(null) } })
+    return () => { on = false }
+  }, [])
+  // a tap before the engine is in: held, with the skeleton of the screen it opens, and run when it lands
+  const need = (what, fn) => { const m = live.current.FR; if (m) fn(m); else { setWait(what); pend.current = e => { setWait(null); fn(e) } } }
 
   const putSetup = useCallback(d => { setSetupState(d); saveSetup(d) }, [])
   // a build coming back from the build screen: into its spot
@@ -78,7 +89,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
     if (!built) return
     const d = loadSetup()
     if (d && built.id && d.picks.some(p => p.id === built.id)) {
-      putSetup({ ...patchPick(d, built.id, { build: built.build, types: built.types, ...ratingOf(built.pos, built.build, built.types) }), step: 'builds' })
+      putSetup({ ...patchPick(d, built.id, { build: built.build, types: built.types, sandbox: !!built.sandbox, ...ratingOf(built.pos, built.build, built.types) }), step: 'builds' })
       setView('setup')
     }
     onBuiltTaken?.()
@@ -119,31 +130,41 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   // the accent: the open franchise's team; none on the saves screen (the setup dresses itself, and so does the kit)
   useEffect(() => { if (FrKit || view === 'setup') return; dressFor(view === 'slots' ? null : team) }, [team, view])
 
+  // a save, opened off the page's thread (frStore openOff); the hub's skeleton holds the screen meanwhile
   const open = s => {
-    const f = FR.loadFranchise(s)
-    if (!f || f.broken) { setToast({ text: f?.reason ?? 'That save could not be opened.', bad: true }); sfx('deny'); return }
-    setF(f); setSlot(s); setTab('hub'); setView('hub'); leaveCardNote(FR, f, s)
+    setWait('hub')
+    Promise.all([loadEngine(), openOff(s)]).then(([m, f]) => {
+      setWait(null)
+      if (!f || f.broken) { setToast({ text: f?.reason ?? 'That save could not be opened.', bad: true }); sfx('deny'); return }
+      setF(f); setSlot(s); setTab('hub'); setView('hub'); leaveCardNote(m, f, s)
+    }, () => { setWait(null); setToast({ text: 'That save could not be opened.', bad: true }); sfx('deny') })
   }
   const toSlots = () => { saveNow(); setSlots(FR.listSlots()); setF(null); setSlot(null); setView('slots') }
   // (one setup at a time: with one already under way, another empty slot takes that setup rather than dropping it)
   const startNew = s => { putSetup(setup && (setup.team || setup.picks.length) ? { ...setup, slot: s } : { ...newSetup(s), gmName: owner.slice(0, 18) }); setView('setup') }
+  // the saves are up: the next team select's 32 previews are read in the background (a worker: the page stays free)
+  useEffect(() => {
+    if (view !== 'slots' || typeof Worker === 'undefined') return
+    const id = setTimeout(() => { const seed = setup?.seed ?? nextSeed(); if (seed) previewsFor(seed).catch(() => {}) }, 300)
+    return () => clearTimeout(id)
+  }, [view, setup?.seed])
   const create = () => {
     if (busy || !setup?.team) return
-    setBusy(true); sfx('send'); haptic('medium')
-    // (the league takes a moment to build: the button says so first)
-    setTimeout(() => {
-      try {
-        const f = FR.createFranchise({
-          team: setup.team, seed: setup.seed, gmName: (setup.gmName || owner).trim() || owner, coach: setup.coach ?? undefined, settings: setup.settings,
-          builds: setup.picks.filter(p => p.build).map(p => ({ pos: p.pos, build: p.build, types: p.types, name: p.name.trim() || undefined })),
-        })
-        const r = FR.saveFranchise(f, setup.slot)
-        if (r?.ok === false && r.error) setToast({ text: r.error, bad: true })
-        leaveCardNote(FR, f, setup.slot)
-        setF(f); setSlot(setup.slot); putSetup(null); setTab('hub'); setView('hub')
-      } catch (e) { console.error('[franchise] create failed', e); setToast({ text: 'The league could not be set up. Try again.', bad: true }) }
-      setBusy(false)
-    }, 60)
+    setBusy(true); setWait('hub'); sfx('send'); haptic('medium')
+    // (the league is built off the page's thread: the hub's skeleton holds the screen meanwhile)
+    const d = setup
+    createOff({
+      team: d.team, seed: d.seed, gmName: (d.gmName || owner).trim() || owner, coach: d.coach ?? undefined, settings: d.settings,
+      builds: d.picks.filter(p => p.build).map(p => ({ pos: p.pos, build: p.build, types: p.types, name: p.name.trim() || undefined })),
+    }).then(f => {
+      // a Sandbox build makes it a Sandbox franchise (marked on the saves and the scorebug; Franchise pays no XP or coins either way)
+      if (d.picks.some(p => p.build && p.sandbox)) f.sandbox = true
+      const r = FR.saveFranchise(f, d.slot)
+      if (r?.ok === false && r.error) setToast({ text: r.error, bad: true })
+      leaveCardNote(FR, f, d.slot)
+      setF(f); setSlot(d.slot); putSetup(null); setTab('hub'); setView('hub')
+    }).catch(e => { console.error('[franchise] create failed', e); setToast({ text: 'The league could not be set up. Try again.', bad: true }) })
+      .finally(() => { setBusy(false); setWait(null) })
   }
 
   // ── PLAY WEEK ─────────────────────────────────────────────────────────────
@@ -161,14 +182,17 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
 
   if (FrKit) return <Suspense fallback={<div className="fr" />}><FrKit team={KIT || 'KC'} onHome={onHome} /></Suspense>
   const toastEl = toast && <div className={`fr-toast${toast.bad ? '' : ' is-ok'}`} role="status" onClick={() => setToast(null)}>{toast.text}</div>
-  if (!FR || !slots) {
+  if (failed && !FR) {
     return (
       <FrShell bug={<Bug title="FRANCHISE" eyebrow="FOOTBALL" onExit={onHome} exit="HOME" />}>
-        <div className="fr-page"><p className="fr-empty">{failed ? 'THE FRONT OFFICE DID NOT LOAD. CHECK THE CONNECTION AND OPEN IT AGAIN.' : 'OPENING THE FRONT OFFICE'}</p></div>
+        <div className="fr-page"><p className="fr-empty">THE FRONT OFFICE DID NOT LOAD. CHECK THE CONNECTION AND OPEN IT AGAIN.</p></div>
       </FrShell>
     )
   }
+  // waiting on the engine or the worker: the skeleton of the screen that's coming
+  if (wait) return <>{<FrWait kind={wait} onExit={onHome} />}{toastEl}</>
   if (view === 'setup' && setup) {
+    if (!FR) return <FrWait kind="team" onExit={onHome} />
     return <>
       <FrSetup FR={FR} setup={setup} onSetup={putSetup} busy={busy} onCreate={create} onLeave={() => { setSlots(FR.listSlots()); setView('slots') }}
         onBuild={job => { setMidSetup(true); onBuild?.(job) }} />
@@ -178,15 +202,15 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   if (view === 'slots' || !F || !hub) {
     return <>
       <Slots slots={slots} setup={setup} onHome={onHome} onOpen={open} onNew={startNew} onResume={() => setView('setup')}
-        onDropSetup={() => putSetup(null)} onDelete={s => { FR.deleteSlot(s); dropCardNote(s); setSlots(FR.listSlots()) }} />
+        onDropSetup={() => putSetup(null)} onDelete={s => need('slots', m => { m.deleteSlot(s); dropCardNote(s); setSlots(m.listSlots()) })} />
       {toastEl}
     </>
   }
   if (view === 'gameday' && GameDay) {
-    return <Suspense fallback={<div className="fr" />}><GameDay franchise={F} onFranchise={put} onDone={() => { saveNow(); setTab('hub'); setView('hub') }} /></Suspense>
+    return <Suspense fallback={<FrWait kind="game" />}><GameDay franchise={F} onFranchise={put} onDone={() => { saveNow(); setTab('hub'); setView('hub') }} /></Suspense>
   }
   if (view === 'offseason' && Offseason) {
-    return <Suspense fallback={<div className="fr" />}><Offseason franchise={F} onFranchise={put} onDone={() => { saveNow(); setTab('hub'); setView('hub') }} /></Suspense>
+    return <Suspense fallback={<FrWait kind="hub" />}><Offseason franchise={F} onFranchise={put} onDone={() => { saveNow(); setTab('hub'); setView('hub') }} /></Suspense>
   }
   if (view === 'week') return <><FrWeek FR={FR} F={F} hub={hub} onDone={() => { setTab('hub'); setView('hub') }} />{toastEl}</>
 
@@ -203,7 +227,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   return (
     <>
       <FrShell tab={tab} onTab={t => go(t)} tabs={TABS.map(t => (t.id === 'hub' ? { ...t, n: open_ } : t))}
-        bug={<Bug team={hub.team.short} cells={cells} onExit={toSlots} />}
+        bug={<Bug team={hub.team.short} tag={F.sandbox ? 'SANDBOX' : null} cells={cells} onExit={toSlots} />}
         cta={tab === 'hub' && hub.primary ? <button className="fr-btn" onClick={playWeek}>{hub.primary.label}</button> : null}>
         {tab === 'hub' ? <FrHub {...props} offseasonSeam={!!Offseason} />
           : tab === 'team' ? <FrTeam {...props} />

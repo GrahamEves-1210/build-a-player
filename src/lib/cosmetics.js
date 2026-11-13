@@ -1,5 +1,6 @@
 import { PASS_ITEMS } from './pass'
 import { CBB_LIVE } from './cbbLive'
+import { FRANCHISE_LIVE } from './franchiseLive'
 
 // The shop's catalog (app): everything you can buy with coins, earn from
 // achievements, or unlock with BAP Pro or the Builder Pass. Pure data — prices, rarity, what each
@@ -285,10 +286,12 @@ const UL = [
   it('unlock', 'sandbox-cfb', 'College Football Sandbox', 3, 4000, { unlock: true, mode: 'College Football' }),
   // (College Basketball's is in the Shop only once the mode is: lib/cbbLive.js)
   ...(CBB_LIVE ? [it('unlock', 'sandbox-cbb', 'College Basketball Sandbox', 3, 4000, { unlock: true, mode: 'College Basketball' })] : []),
+  // (Franchise took Squad Builder's place on football's Home: a Squad Builder Sandbox owns this one too, OWNED_AS)
+  ...(FRANCHISE_LIVE ? [it('unlock', 'sandbox-franchise', 'Franchise Sandbox', 3, 10000, { unlock: true, mode: 'Franchise' })] : []),
 ]
-// An unlock that was renamed: owning the old id is owning the new one (Squad Builder
-// replaced the road mode, whose Sandbox players had already bought)
-export const OWNED_AS = { 'sandbox-squad': 'sandbox-takeover' }
+// Owning any of these ids is owning the unlock: a rename (Squad Builder replaced the road mode, whose Sandbox
+// players had already bought), and Franchise's, which comes with Squad Builder's (bought before or after)
+export const OWNED_AS = { 'sandbox-squad': ['sandbox-takeover'], 'sandbox-franchise': ['sandbox-squad', 'sandbox-takeover'] }
 
 // Prices: the numbers above are each item's weight (the showier, the higher).
 // What it costs bends that down (a gentler climb: a top item is ~13x a cheap

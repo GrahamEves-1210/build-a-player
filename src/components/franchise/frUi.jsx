@@ -6,6 +6,7 @@ import { EASE_DRAWER } from '../../lib/motion'
 import { sfx, haptic } from '../../lib/juice'
 import { HEADSHOT_BASE } from '../../utils/simulation'
 import { teamOf } from './frTeams'
+import { SkRows } from '../app/Skeleton'
 
 // FRANCHISE: the shared pieces every screen of the mode is made of (styles: franchise.css).
 //   FrShell      the frame: scorebug, page, pinned button, tab bar (phone) / left rail (desktop)
@@ -17,6 +18,7 @@ import { teamOf } from './frTeams'
 //   FrMeters     two meters side by side (a negotiation's PATIENCE and INTEREST)
 //   FrTicker     the news ticker: one headline at a time, by steps; rests through lib/fxPause.js
 //   Logo, Face, Steps, Switch, Seg, Stepper
+//   FrWait, SkPanel  the site's skeletons (app/Skeleton.jsx) in the mode's frame, while something loads
 // Nothing here knows the engine: screens hand in plain values.
 
 // ── which layout: a desktop is 1024 and up (franchise.css's one breakpoint) ─────────────────
@@ -91,7 +93,7 @@ export function Panel({ title, meta, action, children, className = '', ...rest }
 // ── the scorebug ────────────────────────────────────────────────────────────
 // team: a club's short (its plate, and its name on a desktop) · title: a setup screen's words in the team's place
 // cells: [{ k, label, value, logo }] ruled off left to right · onExit + exit: the way out, at the right end
-export function Bug({ team = null, title = null, eyebrow = null, cells = [], onExit, exit = 'EXIT' }) {
+export function Bug({ team = null, title = null, eyebrow = null, cells = [], onExit, exit = 'EXIT', tag = null }) {
   const t = team ? teamOf(team) : null
   return (
     <header className="fr-bug">
@@ -104,6 +106,7 @@ export function Bug({ team = null, title = null, eyebrow = null, cells = [], onE
           <b>{c.logo && <Logo team={c.logo} size={22} />}{c.value}</b>
         </span>
       ))}
+      {tag && <span className="fr-bug-tag">{tag}</span>}
       <span className="fr-bug-fill" />
       {onExit && <button className="fr-bug-exit" onClick={() => { sfx('back'); onExit() }}>{exit}</button>}
     </header>
@@ -132,6 +135,47 @@ export function FrShell({ bug, tabs = null, tab, onTab, cta = null, children, ma
       {cta && <div className="fr-cta">{cta}</div>}
       {nav('fr-tabs')}
     </div>
+  )
+}
+
+// ── waiting: the site's skeletons, in the shape of what's coming ────────────
+// SkPanel: a panel whose rows are still being read (a grey title bar, then SkRows)
+export function SkPanel({ n = 5, label = 'Loading', title = null, avatar = false }) {
+  return (
+    <section className="fr-panel fr-sk">
+      <header className="fr-h">{title ? <h2>{title}</h2> : <i className="sk-b fr-sk-h" />}</header>
+      <SkRows n={n} avatar={avatar} rank={false} label={label} className="fr-sk-rows" />
+    </section>
+  )
+}
+// FrWait: a whole screen that's on its way. kind: 'hub' (the franchise: scorebug, tabs, panels) · 'team' (team
+// select) · 'slots' (the saves) · 'game' (game day)
+const WAIT = {
+  hub: { label: 'Opening the franchise', tabs: true, cols: [[6, 4], [5, 5]] },
+  team: { label: 'Reading the league', title: 'PICK A TEAM', eyebrow: 'NEW FRANCHISE', plate: true, cols: [[8, 9], [3, 8]] },
+  slots: { label: 'Loading the saves', title: 'FRANCHISE', eyebrow: 'FOOTBALL', cols: [[3]] },
+  game: { label: 'Loading the game', title: 'GAME DAY', eyebrow: 'FOOTBALL', cols: [[4, 6], [8]] },
+  coach: { label: 'Loading the coach build', title: 'BUILD THE COACH', eyebrow: 'NEW FRANCHISE', plate: true, cols: [[5], [6]] },
+}
+const SK_TABS = [{ id: 'hub', label: 'HUB' }, { id: 'team', label: 'TEAM' }, { id: 'league', label: 'LEAGUE' }, { id: 'office', label: 'OFFICE' }]
+export function FrWait({ kind = 'hub', onExit = null }) {
+  const w = WAIT[kind] ?? WAIT.hub
+  const bug = w.title
+    ? <Bug title={w.title} eyebrow={w.eyebrow} onExit={onExit} exit={kind === 'team' ? 'BACK' : 'HOME'} />
+    : <header className="fr-bug fr-sk" role="status" aria-label={w.label}><span className="fr-bug-plate"><i className="sk-b fr-sk-logo" /></span>{[0, 1, 2].map(i => <span key={i} className="fr-bug-cell"><i className="sk-b fr-sk-cell" /><i className="sk-b fr-sk-cell is-big" /></span>)}<span className="fr-bug-fill" /></header>
+  return (
+    <FrShell bug={bug} tabs={w.tabs ? SK_TABS : null} tab="hub" onTab={() => {}}>
+      <div className={`fr-page${kind === 'slots' ? ' fr-page--narrow' : ''}`}>
+        <div className={`fr-cols${w.cols.length > 1 ? ' is-even' : ''}`}>
+          {w.cols.map((col, c) => (
+            <div key={c} className="fr-col">
+              {c === 0 && w.plate && <div className="sk-b fr-sk-plate" aria-hidden="true" />}
+              {col.map((n, i) => <SkPanel key={i} n={n} label={w.label} />)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </FrShell>
   )
 }
 

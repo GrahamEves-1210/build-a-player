@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Bug, FrShell, Panel, GradeRow, Switch, Seg, Logo, Face, Confirm, Steps } from './frUi'
+import { Bug, FrShell, Panel, GradeRow, Switch, Seg, Logo, Face, Confirm, Steps, SkPanel, FrWait } from './frUi'
 import { Fact, Sub, CoachBlock, cap, STATE_NOUN } from './frBits'
 import { FR_TEAMS, DIVISIONS, teamOf, dressFor, inkOn } from './frTeams'
-import { BUILD_POS, POS_LABEL, SETUP_STEPS, countAt, addPick, dropPick, patchPick, cleanName, previewLeague, teamPreview } from './frStore'
+import { BUILD_POS, POS_LABEL, SETUP_STEPS, countAt, addPick, dropPick, patchPick, cleanName, previewLeague, teamPreview, previewsFor, previewsNow } from './frStore'
+import { IconSpin } from '../app/icons'
 import { randomName } from '../../lib/playerNames'
 import { sfx, haptic } from '../../lib/juice'
 import { FRANCHISE_ART } from '../../lib/franchiseLive'
@@ -36,7 +37,7 @@ export function Slots({ slots, setup, onOpen, onNew, onResume, onDelete, onDropS
       <FrShell bug={<Bug title="FRANCHISE" eyebrow="FOOTBALL" onExit={onHome} exit="HOME" />}>
         <div className="fr-page fr-page--narrow">
           {FRANCHISE_ART.hero && <img className="fr-hero" src={FRANCHISE_ART.hero} alt="" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />}
-          <Panel title="Franchises" meta="THREE SAVES">
+          <Panel title="Saves" meta={`${slots.filter(s => !s.empty).length} OF ${slots.length}`}>
             {slots.map(s => {
               const setting = !!setup && setup.slot === s.slot && s.empty
               if (setting) {
@@ -56,8 +57,7 @@ export function Slots({ slots, setup, onOpen, onNew, onResume, onDelete, onDropS
               if (s.empty) return (
                 <button key={s.slot} className="fr-row fr-slot-new" onClick={() => { tap(); onNew(s.slot) }}>
                   <span className="fr-slot-n">{s.slot + 1}</span>
-                  <span className="fr-row-main fr-t-dim">EMPTY</span>
-                  <span className="fr-row-state is-done">NEW FRANCHISE</span>
+                  <span className="fr-row-main">NEW FRANCHISE</span>
                   <span className="fr-chev" />
                 </button>
               )
@@ -67,7 +67,7 @@ export function Slots({ slots, setup, onOpen, onNew, onResume, onDelete, onDropS
                   <button className="fr-slot-open" onClick={() => { tap(); onOpen(s.slot) }}>
                     <span className="fr-slot-n">{s.slot + 1}</span>
                     <Logo team={s.team} size={34} />
-                    <span className="fr-row-main">{t.nick.toUpperCase()}{s.rings > 0 && <i className="fr-rings">{s.rings}X CHAMPIONS</i>}<small>{whenOf(s)} · {s.record ?? '0-0'} · GM {String(s.gm ?? '').toUpperCase()}</small></span>
+                    <span className="fr-row-main">{t.nick.toUpperCase()}{s.rings > 0 && <i className="fr-rings">{s.rings}X CHAMPIONS</i>}<small>{whenOf(s)} · {s.record ?? '0-0'} · GM {String(s.gm ?? '').toUpperCase()}{s.sandbox ? ' · SANDBOX' : ''}</small></span>
                     <span className="fr-chev" />
                   </button>
                   <button className="fr-slot-del" onClick={() => { tap(); setAsk({ slot: s.slot }) }}>DELETE</button>
@@ -98,12 +98,15 @@ function TeamPick({ FR, setup, onSetup, onNext, onBack }) {
   const [by, setBy] = useState('div')
   const t = teamOf(short)
   // the league the numbers come from: built once, a moment after the screen is up
-  const [rows, setRows] = useState(null)
+  // (read off the page's thread, and usually already read while the saves were up: frStore previewsFor)
+  const [rows, setRows] = useState(() => previewsNow(setup.seed))
   const [P, setP] = useState(null)
   useEffect(() => {
-    const id = setTimeout(() => { if (FR.teamPreviews) { try { setRows(FR.teamPreviews(setup.seed)); return } catch {} } setP(previewLeague(FR, setup.seed)) }, 40)
-    return () => clearTimeout(id)
-  }, [FR, setup.seed])
+    if (rows) return
+    let on = true
+    previewsFor(setup.seed).then(r => { if (on) setRows(r) }, () => { if (on) setTimeout(() => { if (on) setP(previewLeague(FR, setup.seed)) }, 40) })
+    return () => { on = false }
+  }, [FR, setup.seed]) // eslint-disable-line react-hooks/exhaustive-deps
   const job = useMemo(() => rows?.find(r => r.short === short) ?? null, [rows, short])
   const old = useMemo(() => (!rows && P ? teamPreview(FR, P, short) : null), [FR, rows, P, short])
   const states = useMemo(() => STATE_ORDER.map(s => ({ id: s, teams: (rows ?? []).filter(r => r.state === s).sort((a, b) => a.ratings.rank - b.ratings.rank).map(r => teamOf(r.short)) })), [rows])
@@ -154,14 +157,15 @@ function TeamPick({ FR, setup, onSetup, onNext, onBack }) {
                 {d && <Fact label="DIFFICULTY">{d.word}<Steps value={d.level * 20} low={-1} label={`Difficulty ${d.level} of 5`} /><small>{d.text}</small></Fact>}
               </Panel>
             )}
-            <Panel title="The roster" meta={ratings?.offRank ? `OFF NO. ${ratings.offRank} · DEF NO. ${ratings.defRank}` : 'STARTERS'}>
+            {!job && !old && <SkPanel title="The job" n={8} label="Reading the league" />}
+            {job || old ? <Panel title="The roster" meta={ratings?.offRank ? `OFF NO. ${ratings.offRank} · DEF NO. ${ratings.defRank}` : 'STARTERS'}>
               {groups.map(g => <GradeRow key={g.key} label={g.label} grade={g.grade || '–'} v={g.ovr == null ? 0 : (g.ovr - 60) / 3.5} />)}
-            </Panel>
+            </Panel> : <SkPanel title="The roster" n={8} label="Reading the league" />}
           </div>
           <div className="fr-col">
-            <Panel title="The staff" meta={job ? null : old?.capSpace != null ? `CAP ROOM ${FR.moneyText(old.capSpace)}` : null}>
-              {staff ? <><CoachBlock c={staff.hc} /><CoachBlock c={staff.oc} /><CoachBlock c={staff.dc} /></> : <div className="fr-empty">READING THE LEAGUE</div>}
-            </Panel>
+            {staff ? <Panel title="The staff" meta={job ? null : old?.capSpace != null ? `CAP ROOM ${FR.moneyText(old.capSpace)}` : null}>
+              <CoachBlock c={staff.hc} /><CoachBlock c={staff.oc} /><CoachBlock c={staff.dc} />
+            </Panel> : <SkPanel title="The staff" n={3} avatar label="Reading the league" />}
             <Panel title="All 32" action={<button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => random()}>RANDOM TEAM</button>}>
               {rows && <Seg label="Browse" options={[['div', 'BY DIVISION'], ['state', 'BY OUTLOOK']]} value={by} onChange={setBy} />}
               {by === 'div' || !rows ? DIVISIONS.map(dv => (
@@ -194,8 +198,9 @@ function Builds({ FR, setup, onSetup, onNext, onBack, onBuild }) {
   const t = teamOf(setup.team)
   return (
     <FrShell mainKey="builds" bug={<Bug title="BUILD YOUR GUYS" eyebrow={stepLine('builds')} onExit={onBack} exit="BACK" />}
-      cta={todo ? <button className="fr-btn" onClick={() => build(todo)}>BUILD THE {POS_LABEL[todo.pos]}</button> : <button className="fr-btn" onClick={() => { sfx('send'); onSetup({ ...setup, step: 'coach' }); onNext() }}>CONTINUE</button>}>
+      cta={todo ? <button className="fr-btn" onClick={() => build(todo)}>BUILD THE {POS_LABEL[todo.pos]}</button> : <button className="fr-btn" onClick={() => { sfx('send'); onSetup({ ...setup, step: 'coach' }); onNext() }}>NEXT</button>}>
       <div className="fr-page">
+        <p className="fr-lede">Up to {total} players you build yourself, {BUILD_POS[0].label} to {BUILD_POS[BUILD_POS.length - 1].label}, join the {t.nick} as rookies. The real roster fills every other spot.</p>
         <div className="fr-cols is-even">
           <Panel title="Roster spots" meta={`${picks.length} OF ${total}`}>
             {BUILD_POS.map(p => {
@@ -213,15 +218,15 @@ function Builds({ FR, setup, onSetup, onNext, onBack, onBuild }) {
               )
             })}
           </Panel>
-          <Panel title="The builds" meta={picks.length ? `${built} OF ${picks.length} BUILT` : null}>
+          <Panel title="The builds" meta={picks.length ? `BUILT · ${built} OF ${picks.length}` : null}>
             {!picks.length && <div className="fr-empty">NONE PICKED: THE {t.nick.toUpperCase()}' REAL ROSTER PLAYS EVERY SPOT</div>}
             {picks.map(p => (
               <div key={p.id} className="fr-row fr-build">
                 <span className="fr-t-pos">{POS_LABEL[p.pos]}</span>
                 <input className="fr-input" value={p.name} maxLength={22} spellCheck={false} autoComplete="off" aria-label={`${POS_LABEL[p.pos]} name`}
                   onChange={e => onSetup(patchPick(setup, p.id, { name: cleanName(e.target.value) }))} onBlur={() => { if (!p.name.trim()) onSetup(patchPick(setup, p.id, { name: randomName() })) }} />
-                <button className="fr-btn fr-btn--quiet fr-btn--sm" onClick={() => { tap(); onSetup(patchPick(setup, p.id, { name: randomName(p.name) })) }}>NEW NAME</button>
-                <span className="fr-build-state">{p.build ? <><b>{p.ovr}</b> OVR{p.arch ? ` · ${String(p.arch).toUpperCase()}` : ''}</> : 'NOT BUILT'}</span>
+                <button className="fr-name-rand" onClick={() => { tap(); onSetup(patchPick(setup, p.id, { name: randomName(p.name) })) }} aria-label="Random name" title="Random name"><IconSpin size={18} /></button>
+                <span className="fr-build-state">{p.build ? <><b>{p.ovr}</b> OVR{p.arch ? ` · ${String(p.arch).toUpperCase()}` : ''}{p.sandbox ? ' · SANDBOX' : ''}</> : 'NOT BUILT'}</span>
                 <button className={`fr-btn fr-btn--sm${p.build ? ' fr-btn--line' : ''}`} onClick={() => build(p)}>{p.build ? 'REBUILD' : 'BUILD'}</button>
               </div>
             ))}
@@ -235,14 +240,15 @@ function Builds({ FR, setup, onSetup, onNext, onBack, onBuild }) {
 // ── 3: the head coach ───────────────────────────────────────────────────────
 function CoachStep({ FR, setup, onSetup, onNext, onBack }) {
   const [building, setBuilding] = useState(false)
-  const [P, setP] = useState(null)
-  useEffect(() => { const id = setTimeout(() => setP(previewLeague(FR, setup.seed)), 40); return () => clearTimeout(id) }, [FR, setup.seed])
-  const staff = useMemo(() => { try { return P ? FR.staff(P, setup.team) : null } catch { return null } }, [FR, P, setup.team])
+  // (the staff as team select read it: frStore previewsFor, the same seed's league, kept)
+  const [rows, setRows] = useState(() => previewsNow(setup.seed))
+  useEffect(() => { if (rows) return; let on = true; previewsFor(setup.seed).then(r => { if (on) setRows(r) }, () => {}); return () => { on = false } }, [setup.seed]) // eslint-disable-line react-hooks/exhaustive-deps
+  const staff = rows?.find(r => r.short === setup.team)?.staff ?? null
   const real = staff?.hc ?? null, mine = setup.coach
   const next = coach => { sfx('send'); onSetup({ ...setup, coach, realCoach: real && !real.placeholder ? real.name : null, step: 'settings' }); onNext() }
   if (building && CoachBuild) {
     return (
-      <Suspense fallback={<div className="fr" />}>
+      <Suspense fallback={<FrWait kind="coach" />}>
         <CoachBuild team={setup.team} onBack={() => setBuilding(false)} onDone={c => { setBuilding(false); onSetup({ ...setup, coach: c && c.build ? { name: c.name, build: c.build } : null }) }} />
       </Suspense>
     )
@@ -250,24 +256,24 @@ function CoachStep({ FR, setup, onSetup, onNext, onBack }) {
   const keep = real && !real.placeholder ? `KEEP ${lastOf(real.name).toUpperCase()}` : 'KEEP THE HEAD COACH'
   // a built coach's five ratings, read off his build (each slot: { type, val })
   const mineRows = mine ? (Array.isArray(mine.build) ? mine.build : Object.values(mine.build ?? {})).filter(Boolean).map(s => ({ key: s.type, label: FR.COACH_LABEL?.[s.type] ?? String(s.type).toUpperCase(), val: s.val, grade: FR.gradeOf(s.val) })) : null
-  const rows = mineRows ?? real?.ratings ?? []
+  const grades = mineRows ?? real?.ratings ?? []
   return (
     <FrShell mainKey="coach" bug={<Bug title="THE HEAD COACH" eyebrow={stepLine('coach')} onExit={onBack} exit="BACK" />}
       cta={mine
-        ? <><button className="fr-btn fr-btn--line" onClick={() => { tap(); onSetup({ ...setup, coach: null }) }}>{keep}</button><button className="fr-btn" onClick={() => next(mine)}>CONTINUE</button></>
+        ? <><button className="fr-btn fr-btn--line" onClick={() => { tap(); onSetup({ ...setup, coach: null }) }}>{keep}</button><button className="fr-btn" onClick={() => next(mine)}>NEXT</button></>
         : <>{CoachBuild && <button className="fr-btn fr-btn--line" onClick={() => { tap(); setBuilding(true) }}>BUILD THE COACH</button>}<button className="fr-btn" onClick={() => next(null)}>{keep}</button></>}>
       <div className="fr-page">
         <div className="fr-cols is-even">
-          <Panel title="Head coach" meta={mine ? 'BUILT' : real?.record ?? null}>
+          {!mine && !staff ? <SkPanel title="Head coach" n={6} label="Reading the league" /> : <Panel title="Head coach" meta={mine ? 'BUILT' : real?.record ?? null}>
             <div className="fr-row">{(mine || (real && !real.placeholder)) && <Face name={mine?.name ?? real.name} />}<span className="fr-row-main">{mine?.name ?? real?.name ?? '…'}<small>{teamOf(setup.team).name.toUpperCase()}</small></span>{!mine && real?.grade && <span className="fr-t-num">{real.grade}</span>}</div>
-            {rows.map(r => <GradeRow key={r.key} label={r.label} grade={r.grade} v={r.val} />)}
-          </Panel>
+            {grades.map(r => <GradeRow key={r.key} label={r.label} grade={r.grade} v={r.val} />)}
+          </Panel>}
           <div className="fr-col">
-            <Panel title="Coordinators">
+            {!staff ? <SkPanel title="Coordinators" n={2} label="Reading the league" /> : <Panel title="Coordinators">
               {[['OFFENSE', staff?.oc], ['DEFENSE', staff?.dc]].map(([k, c]) => (
                 <div key={k} className="fr-kv"><span>{k}</span><b className="is-text">{c?.name ?? '…'}{c && !c.placeholder && c.grade ? <em className="fr-kv-grade">{c.grade}</em> : null}</b></div>
               ))}
-            </Panel>
+            </Panel>}
             {mine && real && <Panel title="On the market"><div className="fr-kv"><span>{real.name.toUpperCase()}</span><b className="is-text fr-t-dim">Replaced</b></div></Panel>}
           </div>
         </div>

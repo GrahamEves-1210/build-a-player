@@ -6,6 +6,7 @@ import { seededShuffle, seededTeamOrder } from '../../../lib/rng'
 import { valToGrade } from '../../../utils/simulation'
 import { randomName } from '../../../lib/playerNames'
 import { sfx, haptic } from '../../../lib/juice'
+import { IconSpin } from '../../app/icons'
 import './coach.css'
 
 // FRANCHISE: BUILD THE COACH (DESIGN.md section 8). The game's own build mechanic for a head coach, on its own
@@ -331,8 +332,11 @@ export default function CoachBuild({ team, onDone, onBack }) {
           <header className="fr-h"><h2>Head coach</h2><small>{done ? 'CALL SHEET COMPLETE' : mine.nick.toUpperCase()}</small></header>
           <div className="cb-id">
             <div className="cb-id-main">
-              <input className="cb-name" value={S.name} maxLength={22} spellCheck={false} autoComplete="off" aria-label="The coach's name"
-                onChange={e => setS(s => ({ ...s, name: cleanName(e.target.value) }))} onBlur={() => { if (!S.name.trim()) setS(s => ({ ...s, name: randomName() })) }} />
+              <span className="cb-name-row">
+                <input className="cb-name" value={S.name} maxLength={22} spellCheck={false} autoComplete="off" aria-label="The coach's name"
+                  onChange={e => setS(s => ({ ...s, name: cleanName(e.target.value) }))} onBlur={() => { if (!S.name.trim()) setS(s => ({ ...s, name: randomName() })) }} />
+                <button className="fr-name-rand" onClick={() => { sfx('tap'); setS(s => ({ ...s, name: randomName(s.name) })) }} aria-label="Random name" title="Random name"><IconSpin size={18} /></button>
+              </span>
               <span className="cb-identity">{identity ? identity.toUpperCase() : 'NO RATINGS YET'}</span>
             </div>
             <div className="cb-ovr"><b>{ovr == null ? '–' : shown}</b><small>OVR</small></div>
@@ -352,12 +356,11 @@ export default function CoachBuild({ team, onDone, onBack }) {
             })}
           </ol>
           <div className="cb-foot">
-            <button className="fr-btn fr-btn--sm fr-btn--line" onClick={() => { sfx('tap'); setS(s => ({ ...s, name: randomName(s.name) })) }}>NEW NAME</button>
-            <button className="fr-btn fr-btn--sm fr-btn--line" disabled={busy || S.n === 0} onClick={() => { sfx('tap'); setAsk(true) }}>START OVER</button>
+            <button className="fr-btn fr-btn--sm fr-btn--line" disabled={busy || S.n === 0} onClick={() => { sfx('tap'); setAsk(true) }}>RESET</button>
           </div>
         </section>
       </div>
-      <Confirm open={ask} title="Start over?" body="The call sheet is cleared and the five spins start again." yes="START OVER" no="CANCEL" onYes={startOver} onNo={() => setAsk(false)} />
+      <Confirm open={ask} title="Reset the coach?" body="The call sheet is cleared and the five spins start again." yes="RESET" no="CANCEL" onYes={startOver} onNo={() => setAsk(false)} />
     </FrShell>
   )
 }

@@ -1148,7 +1148,7 @@ function earn(n, label, quiet = false) {
 
 export const isPro = () => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } }
 // BAP Pro includes the Pro Vault: its looks are yours while Pro is on (bought ones stay yours)
-export const owns = id => { const i = itemById(id); return !!i && (i.free || (i.pro && isPro()) || !!S.owned[id] || !!S.owned[OWNED_AS[id]]) }
+export const owns = id => { const i = itemById(id); return !!i && (i.free || (i.pro && isPro()) || !!S.owned[id] || (OWNED_AS[id] ?? []).some(a => !!S.owned[a])) }
 // What's worn: a look the account doesn't own (a Pro Vault look after Pro ends) shows the default
 const wearing = () => Object.fromEntries(Object.entries(S.equip || {}).map(([slot, id]) => [slot, id && !owns(id) ? (DEFAULTS[slot] ?? null) : id]))
 

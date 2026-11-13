@@ -17,7 +17,63 @@ import { teamOf } from './frTeams'
 // ── the engine ──────────────────────────────────────────────────────────────
 let ENGINE = null
 export const engine = () => ENGINE
-export const loadEngine = () => (ENGINE ? Promise.resolve(ENGINE) : import('../../lib/franchise').then(m => (ENGINE = m)))
+let ENGINE_P = null
+export const loadEngine = () => (ENGINE ? Promise.resolve(ENGINE) : (ENGINE_P ??= import('../../lib/franchise').then(m => (ENGINE = m), e => { ENGINE_P = null; throw e })))
+
+// ── off the page's thread ───────────────────────────────────────────────────
+// The engine's big one-off jobs (team select's 32 previews, building a new league, opening a save) run in a
+// worker (frWorker.js) so the screen paints and answers taps while they work. Anything the worker can't do (no
+// Worker, a failed load, an answer that can't be copied back) is done here on the page, as before.
+let W = null, wid = 0
+const waits = new Map()
+function worker() {
+  if (W !== null) return W
+  try {
+    W = new Worker(new URL('./frWorker.js', import.meta.url), { type: 'module' })
+    W.onmessage = e => { const { id, ok, out, error } = e.data || {}; const w = waits.get(id); if (!w) return; waits.delete(id); if (ok) w.res(out); else w.rej(new Error(error)) }
+    W.onerror = e => { e.preventDefault?.(); for (const w of waits.values()) w.rej(new Error('worker')); waits.clear(); try { W.terminate() } catch {} W = false }
+  } catch { W = false }
+  return W
+}
+function offThread(kind, data, onPage) {
+  const w = worker()
+  const page = () => loadEngine().then(onPage)
+  if (!w) return page()
+  return new Promise((res, rej) => { const id = ++wid; waits.set(id, { res, rej }); try { w.postMessage({ id, kind, ...data }) } catch (e) { waits.delete(id); rej(e) } }).catch(page)
+}
+// team select's read of all 32 clubs for a seed (kept: the same seed is asked for again by the coach step)
+const PREVIEWS = new Map()
+export function previewsFor(seed) {
+  const k = String(seed)
+  if (!PREVIEWS.has(k)) PREVIEWS.set(k, offThread('previews', { seed: k }, FR => FR.teamPreviews(k)).then(rows => { PREVIEWS.set(k, Object.assign(Promise.resolve(rows), { rows })); return rows }, e => { PREVIEWS.delete(k); throw e }))
+  return PREVIEWS.get(k)
+}
+export const previewsNow = seed => PREVIEWS.get(String(seed))?.rows ?? null
+export const createOff = opts => offThread('create', { opts }, FR => FR.createFranchise(opts))
+// a save, opened (the text is read here: the worker has no localStorage)
+export function openOff(slot) {
+  let text = null
+  try { text = localStorage.getItem(SAVE_KEY(slot)) } catch {}
+  if (!text) return Promise.resolve(null)
+  return offThread('unpack', { text }, FR => FR.unpackFranchise(text))
+}
+
+// ── the saves, without the engine ───────────────────────────────────────────
+// (lib/franchise/save.js listSlots, read straight off the device so the list is up before the engine loads)
+const SLOTS_N = 3, SAVE_VERSION = 1
+const SAVE_KEY = slot => `bap_franchise_v1_${slot}`
+export function slotsLite() {
+  const out = []
+  for (let slot = 0; slot < SLOTS_N; slot++) {
+    let meta = null, head = null
+    try { const t = localStorage.getItem(SAVE_KEY(slot)); head = t ? t.slice(0, 12) : null; if (head) meta = JSON.parse(localStorage.getItem(`${SAVE_KEY(slot)}_meta`) || 'null') ?? {} } catch { meta = {} }
+    if (!head) { out.push({ slot, empty: true }); continue }
+    const v = head.startsWith('FZ') ? parseInt(head.slice(2, head.indexOf(':')), 10) : head[0] === '{' ? 1 : NaN
+    const reason = !(v >= 1) ? 'This save is damaged and could not be opened.' : v > SAVE_VERSION ? 'This save was made by a newer version of the game. Update to open it.' : !meta.team ? 'This save is damaged and could not be opened.' : null
+    out.push(reason ? { slot, empty: false, broken: true, reason, ...meta } : { slot, empty: false, broken: false, ...meta })
+  }
+  return out
+}
 
 // ── the setup ───────────────────────────────────────────────────────────────
 // { v, slot, seed, step: 'team' | 'builds' | 'coach' | 'settings', team, picks: [{ id, pos, name, build, types, ovr, arch }],
@@ -27,7 +83,11 @@ export const SETUP_STEPS = ['team', 'builds', 'coach', 'settings']
 export const loadSetup = () => { try { const d = JSON.parse(localStorage.getItem(SETUP_KEY)); return d && d.v === 1 && Array.isArray(d.picks) ? d : null } catch { return null } }
 export const saveSetup = d => { try { if (d) localStorage.setItem(SETUP_KEY, JSON.stringify(d)); else localStorage.removeItem(SETUP_KEY) } catch {} }
 const newSeed = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-export const newSetup = slot => ({ v: 1, slot, seed: newSeed(), step: 'team', team: null, picks: [], nextId: 0, coach: null, gmName: '', settings: {} })
+// the next new franchise's seed, picked when the saves are up so its 32 previews can be read before NEW is tapped
+const NEXT_SEED = 'bap_franchise_next_seed'
+export const nextSeed = () => { try { let s = localStorage.getItem(NEXT_SEED); if (!s) { s = newSeed(); localStorage.setItem(NEXT_SEED, s) } return s } catch { return null } }
+const takeSeed = () => { const s = nextSeed(); try { localStorage.removeItem(NEXT_SEED) } catch {} return s || newSeed() }
+export const newSetup = slot => ({ v: 1, slot, seed: takeSeed(), step: 'team', team: null, picks: [], nextId: 0, coach: null, gmName: '', settings: {} })
 // the mode was left for the build screen: coming back lands on the setup, not on the list of saves
 let midSetup = false
 export const setMidSetup = on => { midSetup = !!on }

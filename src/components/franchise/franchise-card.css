@@ -32,3 +32,14 @@
 .fr-hud-back { flex: none; height: 30px; padding: 1px 10px 0; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; background: transparent; color: #f2f4f5; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.6px; line-height: 1; cursor: pointer; }
 .fr-hud-back:active { transform: scale(.97); }
 .fr-hud-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* desktop: the build page's RESET tab (index.css .spin-panel-reset-tab, fixed at the spin panel's top corner) comes
+   down with the panel, which this bar pushes 60px lower (it sat on the bar). Phones have no tab. */
+@media (min-width: 769px) { html:has(.fr-hud) .spin-panel-reset-tab { top: 144px; } }
+
+/* the mode on its way (FranchiseCard.jsx FranchiseWait): its frame, near-black, the saves as skeletons */
+.fr-wait { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: 56px minmax(0, 1fr); padding: var(--safe-top, 0px) 0 calc(var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px)); background: #0a0c0f; color: #f2f4f5; }
+html.is-app .fr-wait { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.fr-wait-bug { display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid rgba(255,255,255,.08); background: #12161b; }
+.fr-wait-bug b { padding-left: 11px; border-left: 3px solid #f2f4f5; font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-weight: 400; font-size: 22px; letter-spacing: .3px; line-height: 1; }
+.fr-wait-page { width: 100%; max-width: 640px; margin: 0 auto; padding: 12px; }
+.fr-wait .sk-card { border-radius: 4px; }

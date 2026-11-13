@@ -88,7 +88,7 @@ export const SLOTS_N = 3
 const key = slot => `bap_franchise_v1_${slot}`
 const metaKey = slot => `bap_franchise_v1_${slot}_meta`
 const store = () => { try { return typeof localStorage !== 'undefined' ? localStorage : null } catch { return null } }
-const metaOf = (F, bytes, at) => ({ team: F.team, gm: F.gm.name, year: F.year, week: F.week, phase: F.phase, record: F.teams[F.team]?.rec ? `${F.teams[F.team].rec.w}-${F.teams[F.team].rec.l}${F.teams[F.team].rec.t ? `-${F.teams[F.team].rec.t}` : ''}` : '0-0', rings: F.gm.rings ?? 0, updatedAt: at, bytes })
+const metaOf = (F, bytes, at) => ({ team: F.team, gm: F.gm.name, year: F.year, week: F.week, phase: F.phase, record: F.teams[F.team]?.rec ? `${F.teams[F.team].rec.w}-${F.teams[F.team].rec.l}${F.teams[F.team].rec.t ? `-${F.teams[F.team].rec.t}` : ''}` : '0-0', rings: F.gm.rings ?? 0, ...(F.sandbox && { sandbox: true }), updatedAt: at, bytes })
 
 export function saveFranchise(F, slot = 0) {
   const ls = store()
