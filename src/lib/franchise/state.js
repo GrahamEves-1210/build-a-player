@@ -271,7 +271,7 @@ export function advice(F) {
     if (walk.length) out.push(`Decide on ${walk.slice(0, 3).map(p => lastName(p.name)).join(', ')} before the deals run out.`)
     out.push(t.picks.length >= 21 ? 'Keep the picks: the core needs cheap help around it.' : 'The picks are thin: a veteran or two could bring some back.')
   }
-  return out
+  return out.map(s => s[0].toUpperCase() + s.slice(1))
 }
 const numWord = n => ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][n] ?? String(n)
 

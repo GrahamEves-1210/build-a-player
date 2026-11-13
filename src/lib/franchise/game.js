@@ -18,8 +18,8 @@ import { nick } from './core'
 
 export const TUNE = {
   sack: 0.066, sackRush: 3.1, sackQb: 1.5,
-  comp: [0.748, 0.578, 0.38],            // short, intermediate, deep
-  compQb: 0.19, compRec: 0.13, compCov: 0.56, compCall: 0.014, pressureComp: 0.13,
+  comp: [0.742, 0.572, 0.376],            // short, intermediate, deep
+  compQb: 0.165, compRec: 0.12, compCov: 0.56, compCall: 0.014, pressureComp: 0.13,
   int: [0.0115, 0.025, 0.047], intK: 1.8,
   runBase: 3.8, runLine: 5.5, runBack: 3.5, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
   fumRun: 0.013, fumRec: 0.0105, fumSack: 0.1, fumLost: 0.55,
@@ -67,6 +67,7 @@ export function leagueMeans(profiles) {
 // the game's generator for this step (G.R: never saved; its state goes back into G.rs when the step ends)
 export function useRng(G) {
   if (!Object.prototype.hasOwnProperty.call(G, 'R')) Object.defineProperty(G, 'R', { value: null, writable: true, enumerable: false, configurable: true })
+  if (G.R && G.R.s === G.rs) return G.R
   return (G.R = rngAt(G.rs))
 }
 const st = (G, side, id) => (G.box[side][id] ??= {})
@@ -204,10 +205,10 @@ export function rollPass(G, O, D, LG, ctx) {
   if (R.chance(clamp(pInt, 0.002, 0.2))) return { type: 'int', r, depth }
   let pc = TUNE.comp[depth] + P.edge + TUNE.compRec * ((r.s.catch ?? 0.5) - LG.catch) - (pressured ? TUNE.pressureComp : 0) + (depth === 2 ? (O.qb.s.deep - LG.qbDeep) * 0.15 : 0)
   if (r.kind === 'rb') pc += 0.05
-  if (G.yl >= 88) pc -= 0.045
+  if (G.yl >= 88) pc -= 0.07; else if (G.yl >= 80) pc -= 0.03
   if (ctx.down === 3) pc += 0.012
   if (ctx.prevent) pc += depth === 0 ? 0.03 : -0.05
-  if (!R.chance(clamp(pc, 0.08, 0.95))) return { type: 'inc', r, depth, pd: R.chance(0.24) }
+  if (!R.chance(clamp(pc, 0.08, depth === 0 ? 0.9 : 0.84))) return { type: 'inc', r, depth, pd: R.chance(0.24) }
   // air yards and what he adds after the catch
   const ypr = r.s.ypr ?? 0.5
   const air = r.kind === 'rb' ? R.int(-3, 3) : depth === 0 ? 1 + Math.round(7.5 * Math.pow(R.u(), 1.25)) : depth === 1 ? R.int(10, 19) : 20 + Math.round(30 * Math.pow(R.u(), 1.7))
@@ -539,7 +540,7 @@ export function fourthCall(G, T, o) {
   return 'punt'
 }
 // run or pass. Returns the chance of a pass.
-export function passRate(G, O, o) {
+export function passRate(G, O, o, LG = LG0) {
   const d = 1 - o, lead = G.sc[o] - G.sc[d], dn = G.down, dist = G.dist
   let p = dn === 1 ? 0.49 : dn === 2 ? (dist >= 8 ? 0.64 : dist >= 4 ? 0.53 : 0.38) : dn === 3 ? (dist >= 7 ? 0.92 : dist >= 4 ? 0.84 : dist >= 2 ? 0.6 : 0.27) : (dist >= 4 ? 0.9 : dist >= 2 ? 0.58 : 0.25)
   p += TUNE.passRate - 0.565
@@ -554,7 +555,7 @@ export function passRate(G, O, o) {
   } else if (G.q === 3 && Math.abs(lead) >= 17) p += lead < 0 ? 0.14 : -0.14
   if (G.q === 2 && G.clock <= 120) p += 0.24
   // lean on what the team is good at
-  p += ((O.qb.s.comp ?? 0.5) - 0.6) * 0.07 - ((O.rbs[0]?.s.run ?? 0.5) - 0.62) * 0.08
+  p += ((O.qb.s.comp ?? 0.5) - LG.qbComp) * 0.07 - ((O.rbs[0]?.s.run ?? 0.5) - LG.rbRun) * 0.08
   return clamp(p, 0.04, 0.985)
 }
 
@@ -623,7 +624,7 @@ export function step(F, G, hooks = null) {
   }
   if (hooks?.snap?.(G, T, ctx)) { G.n--; G.rs = R.s; return }
   if (R.chance(TUNE.pen) && penalty(G, T)) return after(G, R)
-  if (R.chance(passRate(G, O, o))) applyPass(G, T, rollPass(G, O, D, LG, ctx))
+  if (R.chance(passRate(G, O, o, LG))) applyPass(G, T, rollPass(G, O, D, LG, ctx))
   else applyRun(G, T, rollRun(G, O, D, LG, ctx))
   return after(G, R)
 }

@@ -157,7 +157,7 @@ export function buildProfile(F, short, isUser) {
   T.runD = unit(dts, 'run', 2) * 0.3 + unit(edges, 'run', 2) * 0.2 + unit(lbs, 'run', 3, [1.1, 1, 0.8]) * 0.36 + unit(ss, 'run', 2) * 0.14
   // who makes each kind of play (weights for the box score)
   const W = (k, roleMul, pow = 2) => T.def.map(m => Math.pow(0.2 + g(m, k), pow) * m.snap * (roleMul[m.role] ?? 1))
-  T.wSack = W('rush', { EDGE: 1.15, DT: 0.8, LB: 0.52, CB: 0.07, S: 0.11 }, 0.9)
+  T.wSack = W('rush', { EDGE: 1.08, DT: 0.82, LB: 0.55, CB: 0.08, S: 0.12 }, 0.85)
   T.wInt = W('int', { EDGE: 0.03, DT: 0.02, LB: 0.42, CB: 1.25, S: 1.1 })
   T.wPd = W('cov', { EDGE: 0.12, DT: 0.1, LB: 0.5, CB: 1.6, S: 0.85 })
   T.wTklRun = W('run', { EDGE: 0.6, DT: 0.66, LB: 1.3, CB: 0.5, S: 1.0 }, 1.3)

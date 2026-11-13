@@ -75,7 +75,7 @@ export function coachRow(F, c, role = null) {
     ratings: COACH_TYPES.map(k => ({ key: k, label: COACH_LABEL[k], short: COACH_SHORT[k], val: c.a[k], grade: gradeOf(c.a[k]) })),
     ovr: coachOvr(c, r), grade: ovrGrade(coachOvr(c, r)), salary: c.con?.sal ?? 0, yrs: c.con?.yrs ?? 0,
     record: c.w + c.l > 0 ? `${c.w}-${c.l}` : null, from: c.from ?? null,
-    calls: c.calls ?? null, side: c.side ?? null, interim: !!c.interim, title: c.title ?? null, since: c.since ?? null,
+    calls: c.calls ?? null, side: c.side ?? null, interim: !!c.interim, title: c.title ?? null, since: c.since ?? null, identity: c.identity ?? null,
   }
 }
 // The play-caller's rating on a side of the ball. Who calls it is real (the data's `calls`): the head coach when

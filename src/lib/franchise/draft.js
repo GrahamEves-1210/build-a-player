@@ -35,10 +35,11 @@ export const unpack = (pos, s) => Object.fromEntries(TYPES_OF[pos].map((t, i) =>
 const CLASS = [['qb', null, 16], ['rb', null, 26], ['wr', null, 38], ['te', null, 16], ['ol', 'LT', 10], ['ol', 'RT', 9], ['ol', 'LG', 9], ['ol', 'RG', 8], ['ol', 'C', 9], ['dl', 'edge', 27], ['dl', 'dt', 24], ['lb', null, 26], ['db', 'cb', 30], ['db', 's', 22], ['k', null, 4]]
 // the rookie OVR a prospect of a given talent rank comes in at (rank 0 is the best in the class)
 function ovrForRank(R, i) {
-  const base = i < 5 ? 84 - i * 0.6 : i < 32 ? 81 - (i - 5) * 0.16 : i < 64 ? 76.6 - (i - 32) * 0.09 : i < 100 ? 73.6 - (i - 64) * 0.065 : i < 160 ? 71.2 - (i - 100) * 0.05 : i < 224 ? 68.2 - (i - 160) * 0.04 : 65.6 - (i - 224) * 0.06
+  const base = i < 5 ? 86 - i * 0.7 : i < 32 ? 82.5 - (i - 5) * 0.19 : i < 64 ? 77 - (i - 32) * 0.09 : i < 100 ? 74 - (i - 64) * 0.065 : i < 160 ? 71.6 - (i - 100) * 0.055 : i < 224 ? 68.2 - (i - 160) * 0.04 : 65.6 - (i - 224) * 0.06
   return clamp(Math.round(base + R.n() * 1.5), 60, 87)
 }
-const devRoll = (R, ovr) => { const u = R.u(), k = ovr >= 78 ? 2.2 : ovr >= 74 ? 1.3 : ovr >= 70 ? 0.8 : 0.45; return u < 0.008 * k ? 3 : u < 0.038 * k ? 2 : u < 0.15 * k ? 1 : 0 }
+// (the tiers sit where the talent is: most of a class's future stars are its best prospects, with the odd one hiding late)
+const devRoll = (R, ovr) => { const u = R.u(), k = ovr >= 82 ? 7 : ovr >= 79 ? 4.5 : ovr >= 76 ? 2.6 : ovr >= 73 ? 1.2 : ovr >= 70 ? 0.5 : 0.2; return u < 0.008 * k ? 3 : u < 0.038 * k ? 2 : u < Math.min(0.8, 0.14 * k) ? 1 : 0 }
 // combine numbers that follow the ratings (a little noise: workouts lie)
 function combine(R, pos, a) {
   const spd = a.speed ?? a.legs ?? a.range ?? a.mobility ?? a.getOff ?? 5, str = a.strength ?? a.power ?? a.anchor ?? a.size ?? 5, agi = a.elusiveness ?? a.routeRunning ?? a.fluidity ?? a.bend ?? a.mobility ?? 5, vrt = a.vertical ?? a.bodyControl ?? a.burst ?? spd
@@ -78,7 +79,7 @@ export function newDraftClass(F) {
   // the real players already hold some of the class's talent ranks: generated men take the rest, spread evenly
   order.forEach(([pos, sub], i) => {
     const rank = Math.floor((i + R.u()) * total / order.length)
-    const ovr = pos === 'k' ? clamp(Math.round(72 + R.n() * 4), 64, 82) : ovrForRank(R, rank)
+    const ovr = pos === 'k' ? clamp(Math.round(74 + R.n() * 4), 66, 84) : ovrForRank(R, rank)
     const a = genAttrsToOvr(R, pos, sub, ovr, 1.5)
     put({ name: genName(R, taken), pos, sub, college: genCollege(R), age: R.u() < 0.35 ? 21 : R.u() < 0.8 ? 22 : 23, ht: null, wt: null, a: pack(pos, a), ovr: ovrOf(pos, a, sub), dev: 0, real: 0, photo: null, skin: null, num: null })
   })

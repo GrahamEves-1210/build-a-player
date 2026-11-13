@@ -137,7 +137,9 @@ function careerLine(p) {
   if (aw('AP')) bits.push(`${aw('AP')}x All-Pro`)
   if (aw('PB')) bits.push(`${aw('PB')}x Pro Bowl`)
   if (p.rings) bits.push(`${p.rings} ring${p.rings > 1 ? 's' : ''}`)
-  const line = statLine(p.pos, { ...p.car, g: p.car.g || 1 })
+  // (his whole career is only in the books when it started in this league; a veteran who came in with one is read by his years)
+  const whole = !p.real || p.draft
+  const line = whole ? statLine(p.pos, { ...p.car, g: p.car.g || 1 }) : `${p.exp + 1} seasons in the league`
   return [line, ...bits].filter(Boolean).join(' · ')
 }
 
@@ -365,8 +367,10 @@ export function buyPerk(F, id) {
   F.gm.pts -= treeCost(lvl); (F.gm.tree ??= {})[id] = lvl + 1
   return touch(F)
 }
-function delegateStaff(F) {
-  const t = F.teams[F.team], R = rngOf(`${F.seed}-${F.off.year}-staff-auto`)
+// a coaching job the GM left open is filled by the staff: the best man on the market the budget allows
+// (in season too: a week is never played without a head coach and both coordinators)
+export function fillStaff(F) {
+  const t = F.teams[F.team], R = rngOf(`${F.seed}-${F.year}-${F.week}-staff-auto`)
   for (const k of STAFF_KEYS) {
     const c = F.coaches[t.staff[k]]
     if (c?.expired) { c.con = { yrs: k === 'hc' ? 4 : 3, sal: coachAsk(c, roleOf(k)) }; delete c.expired; continue }
@@ -378,6 +382,10 @@ function delegateStaff(F) {
     hire(F, t, k, pick)
     addTx(F, 'hire', F.team, `${teamName(F.team)} hired ${pick.name} as ${ROLE[k]}.`)
   }
+}
+function delegateStaff(F) {
+  const t = F.teams[F.team]
+  fillStaff(F)
   if (!t.staff.scout) { const s = scoutPool(F)[0]; if (s) t.staff.scout = { id: s.id, name: s.name, spec: s.spec, specialty: s.specialty, text: s.text, pts: s.pts, salary: s.salary } }
   // the tree: the cheapest branch first, in the order above
   for (let guard = 0; guard < 12; guard++) { const b = TREE.map(x => x[0]).filter(id => (F.gm.tree?.[id] ?? 0) < 3).sort((a, b2) => (F.gm.tree?.[a] ?? 0) - (F.gm.tree?.[b2] ?? 0))[0]; if (!b || (F.gm.pts ?? 0) < treeCost(F.gm.tree?.[b] ?? 0)) break; F.gm.pts -= treeCost(F.gm.tree?.[b] ?? 0); (F.gm.tree ??= {})[b] = (F.gm.tree[b] ?? 0) + 1 }

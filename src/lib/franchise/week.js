@@ -113,12 +113,12 @@ export function rollInjury(F, R, p, share, mult = 1) {
 const XP_AGE = { qb: 1, k: 2 }
 // how much of the XP a position turns into growth (set so the league's talent at each position holds over 20 years:
 // scripts/franchise/drift.mjs). Quarterbacks, linemen and kickers last longest, so they have to grow slowest.
-const XP_POS = { qb: 0.62, k: 0.22, ol: 0.8, rb: 1.14, lb: 1.14, dl: 1.06, te: 1.04 }
+const XP_POS = { qb: 0.62, k: 0.22, ol: 0.72, rb: 1.16, lb: 1.26, dl: 1.06, te: 1.02 }
 export function xpAge(p) {
   const a = p.age - (XP_AGE[p.pos] ?? 0)
-  return a <= 22 ? 1.2 : a === 23 ? 1.05 : a === 24 ? 0.85 : a === 25 ? 0.62 : a === 26 ? 0.42 : a === 27 ? 0.28 : a <= 29 ? 0.16 : 0.07
+  return a <= 22 ? 1.2 : a === 23 ? 1.1 : a === 24 ? 1.0 : a === 25 ? 0.85 : a === 26 ? 0.65 : a === 27 ? 0.45 : a === 28 ? 0.3 : a === 29 ? 0.18 : 0.08
 }
-export const XP_PER_POINT = 640
+export const XP_PER_POINT = 600
 export function giveXp(F, p, raw, devCoach = 5.5) {
   const tree = p.team === F.team ? 1 + (F.gm.tree?.practice ?? 0) * 0.04 : 1
   const xp = raw * DEV_RATE[p.dev ?? 0] * xpAge(p) * (XP_POS[p.pos] ?? 1) * (1 + (devCoach - 5.5) * 0.04) * tree

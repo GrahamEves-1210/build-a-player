@@ -139,10 +139,10 @@ for (let run = 0; run < CONFIGS.length; run++) {
     if (twin) { if (canon(strip(twin)) !== canon(strip(F))) problems.push('the same seed and choices played two different seasons'); }
     seasonStats(F, preRank)
     STATE.seasons++
-    const t0 = performance.now()
+    let offMs = 0
     guard = 0
-    while (F.phase === 'offseason' && guard++ < 20) { F = FR.advanceStage(F, { auto: true }); invariants(run, F); if (twin) twin = FR.advanceStage(twin, { auto: true }) }
-    T.off.push(performance.now() - t0)
+    while (F.phase === 'offseason' && guard++ < 20) { const t0 = performance.now(); F = FR.advanceStage(F, { auto: true }); offMs += performance.now() - t0; invariants(run, F); if (twin) twin = FR.advanceStage(twin, { auto: true }) }
+    T.off.push(offMs)
     if (twin) { if (canon(strip(twin)) !== canon(strip(F))) problems.push('the same seed and choices played two different offseasons'); twin = null }
     const p0 = performance.now()
     const text = FR.packFranchise(F)

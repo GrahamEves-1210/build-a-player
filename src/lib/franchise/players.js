@@ -61,7 +61,17 @@ export function reOvr(p) { p.ovr = ovrOf(p.pos, p.a, p.sub); if (!(p.peak >= p.o
 export function archOf(p) { try { return ARCH_FN[p.pos](p.ovr, wrapOf(p.pos, p.a, p.sub), TYPES_OF[p.pos]) ?? null } catch { return null } }
 // a man's ratings in the build format the mini games and the build screen read ({ trait: { val } })
 export const asBuild = p => { const b = Object.fromEntries(TYPES_OF[p.pos].map(t => [t, { type: t, val: p.a[t] ?? 5 }])); if (b.size && p.sub) b.size.subpos = p.sub; return b }
-export const lastName = name => { const parts = String(name || '').replace(/\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i, '').split(' '); return parts[parts.length - 1] || name }
+const PARTICLE = new Set(['Van', 'Von', 'De', 'Del', 'Da', 'Di', 'La', 'Le', 'St.', 'St', 'Mac', 'Vander', 'Ten', 'El'])
+const LAST = new Map()
+export function lastName(name) {
+  const key = String(name || '')
+  let out = LAST.get(key)
+  if (out !== undefined) return out
+  const parts = key.replace(/\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i, '').split(' ')
+  out = (parts.length >= 3 && PARTICLE.has(parts[parts.length - 2]) ? `${parts[parts.length - 2]} ${parts[parts.length - 1]}` : parts[parts.length - 1]) || key
+  if (LAST.size < 6000) LAST.set(key, out)
+  return out
+}
 export const initials = name => String(name || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
 // ── The real pool ────────────────────────────────────────────────────────────

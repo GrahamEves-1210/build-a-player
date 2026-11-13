@@ -80,7 +80,7 @@ export const STAGES = [
 
 // ── Development ──────────────────────────────────────────────────────────────
 export const DEV = ['NORMAL', 'STAR', 'SUPERSTAR', 'ELITE']
-export const DEV_RATE = [1, 1.4, 1.95, 2.6]       // how fast each tier earns XP
+export const DEV_RATE = [0.8, 1.3, 1.95, 2.8]     // how fast each tier earns XP
 export const DRIVES = ['MONEY', 'RING', 'ROLE', 'LOYAL', 'MENTOR', 'COMPETITOR']
 export const DRIVE_TEXT = {
   MONEY: 'Wants to be paid what he is worth',

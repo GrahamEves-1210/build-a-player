@@ -34,13 +34,13 @@ export function autoDepth(F, t) {
     d[spot].push(...rest.map(p => p.id))
   }
   // the returner: the quickest back or receiver who doesn't start
-  const starters = new Set([...(d.RB ?? []).slice(0, 1), ...(d.WR ?? []).slice(0, 2)])
+  const starters = new Set([...(d.RB ?? []).slice(0, 1), ...(d.WR ?? []).slice(0, 3)])
   const ret = P.filter(p => (p.pos === 'rb' || p.pos === 'wr') && available(p)).sort((a, b) => retScore(b, starters) - retScore(a, starters) || a.id - b.id)
   d.KR = ret.slice(0, 2).map(p => p.id)
   t.depth = d
   return d
 }
-const retScore = (p, starters) => (p.a.speed ?? 5) * 2 + (p.pos === 'rb' ? (p.a.elusiveness ?? 5) + (p.a.burst ?? 5) : (p.a.afterCatch ?? 5) + (p.a.bodyControl ?? 5)) - (starters.has(p.id) ? 6 : 0)
+const retScore = (p, starters) => (p.a.speed ?? 5) * 2 + (p.pos === 'rb' ? (p.a.elusiveness ?? 5) + (p.a.burst ?? 5) : (p.a.afterCatch ?? 5) + (p.a.bodyControl ?? 5)) - (starters.has(p.id) ? 30 : 0)
 
 // Keep a hand-set chart legal after roster moves: drop men who left, add new ones at the bottom of their slot
 export function tidyDepth(F, t) {

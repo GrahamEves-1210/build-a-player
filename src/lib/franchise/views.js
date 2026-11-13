@@ -5,7 +5,7 @@ import { teamRef, playerRow, depthMap, coachRow, playcall, moodWord, injView, co
 import { payroll, cutCost, marketValue, marketYears, marketGuar, optionSalary, moneyText } from './money'
 import { lineupOf, startersOf } from './depth'
 import { TYPES_OF, traitLabel, lastName, archOf } from './players'
-import { statView, statLine, histStats, passerRating, LEADER_CATS } from './stats'
+import { statView, statLine, histStats, passerRating, LEADER_CATS, num } from './stats'
 import { standing, clinches, finishText } from './standings'
 import { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 import { gameRow, weekGames, schedule, recordOf, staff, staffEffects } from './select'
@@ -124,8 +124,17 @@ export function leaders(F, top = 10) {
   const dm = {}
   const row = p => playerRow(F, p, (dm[p.team] ??= depthMap(F, F.teams[p.team])))
   for (const [k, c] of Object.entries(LEADER_CATS)) {
-    const list = P.filter(p => (!c.pos || c.pos.includes(p.pos)) && (!c.min || c.min(p.s, g))).map(p => ({ p, v: c.v(p.s) })).filter(x => x.v > 0).sort((a, b) => b.v - a.v || a.p.id - b.p.id).slice(0, top)
-    out[k] = list.map((x, i) => ({ rank: i + 1, player: row(x.p), val: x.v, text: k === 'rating' ? x.v.toFixed(1) : Math.round(x.v).toLocaleString('en-US') }))
+    const list = []
+    for (const p of P) {
+      if (c.pos && !c.pos.includes(p.pos)) continue
+      const v = c.v(p.s)
+      if (!(v > 0) || (list.length >= top && v <= list[list.length - 1].v) || (c.min && !c.min(p.s, g))) continue
+      let i = list.length
+      while (i > 0 && (list[i - 1].v < v || (list[i - 1].v === v && list[i - 1].p.id > p.id))) i--
+      list.splice(i, 0, { p, v })
+      if (list.length > top) list.pop()
+    }
+    out[k] = list.map((x, i) => ({ rank: i + 1, player: row(x.p), val: x.v, text: k === 'rating' ? x.v.toFixed(1) : num(x.v) }))
   }
   return out
 }

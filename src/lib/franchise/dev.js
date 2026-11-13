@@ -23,26 +23,28 @@ export function applyUpgrade(p, trait) {
   p.up = (p.up ?? 0) + 1
   reOvr(p)
 }
-// The staff's choice: the grade that buys the most OVR for the points (cheap weaknesses before expensive strengths)
+// What a grade on each trait is worth to a position's OVR, read once off the OVR formula itself (one trait at an
+// S against all at F), so the staff's choice costs nothing to make
+const WEIGHT = {}
+function weightsOf(pos, sub) {
+  const key = `${pos}|${sub ?? ''}`
+  if (WEIGHT[key]) return WEIGHT[key]
+  const types = TYPES_OF[pos], zero = Object.fromEntries(types.map(t => [t, 3])), base = ovrOf(pos, zero, sub), w = {}
+  for (const t of types) { zero[t] = 11; w[t] = Math.max(0.2, ovrOf(pos, zero, sub) - base); zero[t] = 3 }
+  return (WEIGHT[key] = w)
+}
+// The staff's choice: the grade that buys the most OVR for the points (cheap grades before expensive ones)
 export function bestUpgrade(p) {
-  const types = TYPES_OF[p.pos]
+  const types = TYPES_OF[p.pos], w = weightsOf(p.pos, p.sub)
   let best = null, bestGain = -1
-  const base = ovrExact(p)
-  for (const t of types) {
-    if (!canUpgrade(p, t)) continue
-    const c = upgradeCost(p.a[t])
-    p.a[t]++
-    const gain = (ovrExact(p) - base) / c + roll(`up-${p.id}-${t}-${p.up ?? 0}`) * 0.02
-    p.a[t]--
+  for (let i = 0; i < types.length; i++) {
+    const t = types[i], c = upgradeCost(p.a[t])
+    if (c == null || (p.pts ?? 0) < c) continue
+    // (a small, fixed lean by the man: two players at a position do not grow into the same player)
+    const gain = w[t] / c * (0.85 + ((p.id * 31 + i * 17) % 13) / 40)
     if (gain > bestGain) { bestGain = gain; best = t }
   }
   return best
-}
-// the OVR before rounding, near enough to rank upgrades by: the rounded OVR plus what the next grade is worth
-function ovrExact(p) {
-  let s = 0
-  for (const t of TYPES_OF[p.pos]) s += p.a[t]
-  return ovrOf(p.pos, p.a, p.sub) + s * 0.001
 }
 export function spendPoints(p) {
   let n = 0
@@ -68,7 +70,7 @@ export function revealTiers(F) {
 // production against the league's best at his position (0-1); devCoach: the head coach's talent development.
 export function tryBreakout(F, p, score, devCoach) {
   if (p.age > 25 || p.dev >= 3 || !p.devKnown || p.brk === F.year) return false
-  const bar = [0.62, 0.74, 0.86][p.dev]
+  const bar = [0.7, 0.8, 0.9][p.dev]
   if (score < bar) return false
   const R = rngOf(`${F.seed}-${F.year}-${F.week}-brk-${p.id}`)
   if (!R.chance(clamp(0.2 + (score - bar) * 1.2 + (devCoach - 5.5) * 0.03, 0.05, 0.7))) return false

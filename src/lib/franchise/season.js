@@ -17,7 +17,7 @@ import { lastName } from './players'
 import { makeOffice, expireOffice, delegateOffice } from './office'
 import { cpuTradeWeek } from './trades'
 import { ownerWeek } from './owner'
-import { startOffseason } from './offseason'
+import { startOffseason, fillStaff } from './offseason'
 import { scoutingWeek } from './draft'
 import { stateWeek, stanceOf } from './state'
 
@@ -121,8 +121,9 @@ export function endWeek(F, recap) {
   // records
   const RC = records(F)
   for (const s of TEAM_SHORTS) { const r = RC[s]; F.teams[s].rec = { w: r.w, l: r.l, t: r.t, pf: r.pf, pa: r.pa, strk: r.strk } }
-  // the front office's open items are settled by the staff
+  // the front office's open items are settled by the staff; an open coaching job is filled
   delegateOffice(F)
+  if (['hc', 'oc', 'dc'].some(k => !F.coaches[user.staff[k]])) fillStaff(F)
   // the user's practice week
   const prac = F.practice?.intensity ?? 'half'
   const playing = new Set()
@@ -199,11 +200,19 @@ function breakouts(F) {
   const top = {}
   const rate = p => { const g = Math.max(1, p.s.g ?? 0); return gameScore(p.pos, p.s) / g }
   for (const id in F.players) { const p = F.players[id]; if (!p.team || (p.s.g ?? 0) < 4) continue; const k = slotOf(p), v = rate(p); if (!(top[k] >= v)) top[k] = v }
+  // (the best cases first; a handful a checkpoint across the league, and always a look at the user's own)
+  const cands = []
   for (const id in F.players) {
     const p = F.players[id]
-    if (!p.team || p.age > 25 || (p.s.gs ?? 0) < 4) continue
+    if (!p.team || p.age > 25 || p.pos === 'k' || (p.s.gs ?? 0) < 4 || p.dev >= 3 || !p.devKnown) continue
     const best = top[slotOf(p)]
-    if (best > 0) tryBreakout(F, p, rate(p) / best, playcall(F, F.teams[p.team]).dev)
+    if (best > 0) cands.push({ p, sc: rate(p) / best })
+  }
+  cands.sort((a, b) => b.sc - a.sc || a.p.id - b.p.id)
+  let n = 0
+  for (const { p, sc } of cands) {
+    if (n >= 3 && p.team !== F.team) continue
+    if (tryBreakout(F, p, sc, playcall(F, F.teams[p.team]).dev)) n++
   }
 }
 

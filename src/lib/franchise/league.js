@@ -43,7 +43,8 @@ function startingDeal(R, p, cap) {
   if (p.age <= 25 && p.exp <= 3) {
     const pick = p.ovr >= 90 ? R.int(1, 8) : p.ovr >= 85 ? R.int(5, 24) : p.ovr >= 80 ? R.int(18, 60) : p.ovr >= 75 ? R.int(45, 120) : p.ovr >= 70 ? R.int(100, 220) : R.int(180, 262)
     const d = p.gen && p.ovr < 70 ? { yrs: 2, sal: MIN_SALARY, guar: 0, rookie: 1, rd: null, opt: 0, tag: false } : rookieDeal(pick, cap)
-    d.yrs = clamp(4 - p.exp, 1, 4)
+    // (how far into his rookie deal he is: the younger, the more of it is left)
+    d.yrs = p.built ? 4 : clamp(p.age <= 22 ? R.int(3, 4) : p.age === 23 ? R.int(2, 4) : p.age === 24 ? R.int(2, 3) : R.int(1, 2), 1, 4)
     d.guar = r2(d.guar * d.yrs / 4)
     return d
   }
@@ -52,7 +53,7 @@ function startingDeal(R, p, cap) {
   // signed before this year's cap: a little under today's market, more so for the long deals
   const sal = Math.max(floor, mv * (0.8 + R.u() * 0.22))
   const full = marketYears(p)
-  const yrs = clamp(full - R.int(0, Math.max(0, full - 1)), 1, 5)
+  const yrs = clamp(full - Math.floor(R.u() * R.u() * full), 1, 5)
   const c = newContract(p, { yrs, sal })
   if (slot === 'K' || sal <= floor * 1.3) c.guar = r2(c.guar * 0.3)
   return c
@@ -144,7 +145,7 @@ export function addCoach(F, row, R) {
     real: !row.placeholder && !row.gen && !row.built, placeholder: !!row.placeholder, gen: !!row.gen, built: !!row.built,
     age: row.age ?? R.int(row.role === 'HC' ? 42 : 36, row.role === 'HC' ? 66 : 58), con: null, w: 0, l: 0, hist: [],
     ...(row.calls != null && { calls: row.calls }), ...(row.side && { side: row.side }), ...(row.interim && { interim: true }), ...(row.title && { title: row.title }), ...(row.since && { since: row.since }),
-    ...(row.from && { from: row.from }),
+    ...(row.from && { from: row.from }), ...(row.identity != null && { identity: row.identity }),
   }
   F.coaches[c.id] = c
   return c
@@ -158,7 +159,8 @@ export function builtCoachRow(coach) {
   return {
     name: (coach.name && String(coach.name).trim()) || 'Head Coach', role: 'HC', built: true,
     attrs: Object.fromEntries(COACH_TYPES.map(t => [t, clamp(Math.round(typeof slots[t]?.val === 'number' ? slots[t].val : avg), 0, 11)])),
-    from: Object.fromEntries(COACH_TYPES.filter(t => slots[t]).map(t => [t, { name: slots[t].qbFull ?? slots[t].name ?? null, team: slots[t].team ?? null }])),
+    from: Object.fromEntries(COACH_TYPES.filter(t => slots[t]).map(t => [t, { name: slots[t].qbFull ?? slots[t].name ?? null, team: slots[t].team ?? null, role: slots[t].role ?? null }])),
+    identity: coach.identity ?? null,
   }
 }
 function buildCoaches(F, R, userTeam, coach) {

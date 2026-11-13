@@ -21,7 +21,8 @@ export function addStats(into, g) {
   return into
 }
 const n = v => v ?? 0
-const num = v => Math.round(n(v)).toLocaleString('en-US')
+// 4,312 (by hand: toLocaleString is slow, and every table row calls this)
+export const num = v => { const x = Math.round(n(v)), s = String(Math.abs(x)); return (x < 0 ? '-' : '') + (s.length > 3 ? `${s.slice(0, -3)},${s.slice(-3)}` : s) }
 // the NFL passer rating
 export function passerRating(s) {
   const att = n(s.pa)
@@ -68,20 +69,20 @@ export function histStats(pos, line) { const s = {}; HIST_KEYS[pos].forEach((k, 
 // ── Leaders ──────────────────────────────────────────────────────────────────
 // category → [value of a season line, label, minimum to qualify(s) or null, text]
 export const LEADER_CATS = {
-  passYds: { v: s => n(s.py), label: 'PASSING YARDS' },
-  passTD: { v: s => n(s.ptd), label: 'PASSING TOUCHDOWNS' },
-  rating: { v: s => passerRating(s), label: 'PASSER RATING', min: (s, g) => n(s.pa) >= 14 * Math.max(1, g) },
-  rushYds: { v: s => n(s.ry), label: 'RUSHING YARDS' },
-  rushTD: { v: s => n(s.rtd), label: 'RUSHING TOUCHDOWNS' },
-  rec: { v: s => n(s.rc), label: 'RECEPTIONS' },
-  recYds: { v: s => n(s.cy), label: 'RECEIVING YARDS' },
-  recTD: { v: s => n(s.ctd), label: 'RECEIVING TOUCHDOWNS' },
+  passYds: { v: s => n(s.py), label: 'PASSING YARDS', pos: ['qb'] },
+  passTD: { v: s => n(s.ptd), label: 'PASSING TOUCHDOWNS', pos: ['qb'] },
+  rating: { v: s => passerRating(s), label: 'PASSER RATING', pos: ['qb'], min: (s, g) => n(s.pa) >= 14 * Math.max(1, g) },
+  rushYds: { v: s => n(s.ry), label: 'RUSHING YARDS', pos: ['rb', 'qb', 'wr'] },
+  rushTD: { v: s => n(s.rtd), label: 'RUSHING TOUCHDOWNS', pos: ['rb', 'qb', 'wr'] },
+  rec: { v: s => n(s.rc), label: 'RECEPTIONS', pos: ['wr', 'te', 'rb'] },
+  recYds: { v: s => n(s.cy), label: 'RECEIVING YARDS', pos: ['wr', 'te', 'rb'] },
+  recTD: { v: s => n(s.ctd), label: 'RECEIVING TOUCHDOWNS', pos: ['wr', 'te', 'rb'] },
   scrimmage: { v: s => n(s.ry) + n(s.cy), label: 'YARDS FROM SCRIMMAGE', pos: ['rb', 'wr', 'te'] },
-  sacks: { v: s => n(s.sa), label: 'SACKS' },
-  tackles: { v: s => n(s.tk), label: 'TACKLES' },
-  ints: { v: s => n(s.di), label: 'INTERCEPTIONS' },
-  tfl: { v: s => n(s.tfl), label: 'TACKLES FOR LOSS' },
-  ff: { v: s => n(s.ff), label: 'FORCED FUMBLES' },
-  fgm: { v: s => n(s.fgm), label: 'FIELD GOALS MADE' },
+  sacks: { v: s => n(s.sa), label: 'SACKS', pos: ['dl', 'lb', 'db'] },
+  tackles: { v: s => n(s.tk), label: 'TACKLES', pos: ['dl', 'lb', 'db'] },
+  ints: { v: s => n(s.di), label: 'INTERCEPTIONS', pos: ['dl', 'lb', 'db'] },
+  tfl: { v: s => n(s.tfl), label: 'TACKLES FOR LOSS', pos: ['dl', 'lb', 'db'] },
+  ff: { v: s => n(s.ff), label: 'FORCED FUMBLES', pos: ['dl', 'lb', 'db'] },
+  fgm: { v: s => n(s.fgm), label: 'FIELD GOALS MADE', pos: ['k'] },
   points: { v: s => kPoints(s) + tdsOf(s) * 6, label: 'POINTS' },
 }

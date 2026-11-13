@@ -92,6 +92,7 @@ export function finishGame(F) {
   const G = live(F)
   if (!G) return fail(F, 'nogame', 'No game is being played.')
   if (!G.over) return fail(F, 'live', 'The game is not over.')
+  ready(F, G)          // (a game picked up from a save is booked off the same depth charts it was played on)
   G.booked = true
   runWeek(F, G)
   return touch(F)
