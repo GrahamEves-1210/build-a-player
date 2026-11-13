@@ -138,7 +138,7 @@ export function FrShell({ bug, tabs = null, tab, onTab, cta = null, children, ma
 //          desc (first tap sorts high to low; numbers default to it) }]
 // rows: plain objects · rowKey(row) · onRow(row) (a tap opens something) · rowClass(row)
 // sort: { k, desc } to start on · sub(row, i, sorted): a ruled sub-heading before a row (unsorted lists only)
-export function FrTable({ cols, rows, rowKey = r => r.id, onRow = null, rowClass = null, sort: sort0 = null, empty = 'NOTHING HERE YET', label }) {
+export function FrTable({ cols, rows, rowKey = r => r.id, onRow = null, rowClass = null, sort: sort0 = null, empty = 'NOTHING HERE YET', label, className = '' }) {
   const [sort, setSort] = useState(sort0)
   const sorted = useMemo(() => {
     const col = sort && cols.find(c => c.k === sort.k)
@@ -156,13 +156,13 @@ export function FrTable({ cols, rows, rowKey = r => r.id, onRow = null, rowClass
   const al = c => (c.align === 'r' ? ' is-r' : c.align === 'c' ? ' is-c' : '')
   return (
     <div className="fr-table-wrap">
-      <table className="fr-table" aria-label={label}>
+      <table className={`fr-table${className ? ` ${className}` : ''}`} aria-label={label}>
         <thead>
           <tr>
             {cols.map(c => {
               const on = sort?.k === c.k
               return (
-                <th key={c.k} scope="col" title={c.title} style={c.w ? { width: c.w } : undefined} className={`${c.val ? 'is-sortable' : ''}${on ? ` is-sorted${sort.desc ? ' is-desc' : ''}` : ''}${al(c)}`}
+                <th key={c.k} scope="col" title={c.title} style={c.w ? { width: c.w } : undefined} className={`${c.val ? 'is-sortable' : ''}${on ? ` is-sorted${sort.desc ? ' is-desc' : ''}` : ''}${al(c)}${/fr-t-gap/.test(c.cls ?? '') ? ' fr-t-gap' : ''}`}
                   aria-sort={on ? (sort.desc ? 'descending' : 'ascending') : undefined} onClick={c.val ? () => flip(c) : undefined}>{c.label}</th>
               )
             })}

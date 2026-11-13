@@ -3,8 +3,8 @@ import { NFL_TEAMS } from '../../data/nfl-teams'
 // The 32 clubs as Franchise shows them: the name, the logo, the division, and the ACCENT: the one colour a
 // franchise's screens are dressed in (franchise.css --fr-team, with --fr-ink for type on it).
 //
-// The accent is the club's own colour whenever it can be seen on the mode's near-black field. Eleven clubs wear
-// a navy, a black or a deep green that disappears there, so theirs is lifted: the same hue, lighter, until a bar
+// The accent is the club's own colour whenever it can be seen on the mode's near-black field. About half the clubs wear
+// a navy, a black, a deep green or a dark red that sinks into it, so theirs is lifted: the same hue, lighter, until a bar
 // of it reads against the field (the Raiders' black has no hue to lift: theirs is the silver).
 
 const hexToRgb = hex => { const h = String(hex).replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, c => c + c) : h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255] }
@@ -26,7 +26,7 @@ function fromHsl(h, s, l) {
 }
 
 export const FIELD = '#0a0c0f'
-const READS = 2.6   // a bar of the accent against the field: at least this contrast
+const READS = 3.2   // a bar of the accent against the field (and its own unfilled track): at least this contrast
 // the colour a bar is drawn in on the field, from the club's two colours
 export function accentOf(color, color2) {
   if (contrast(color, FIELD) >= READS) return color

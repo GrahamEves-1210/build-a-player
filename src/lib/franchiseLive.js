@@ -20,10 +20,10 @@ export const FRANCHISE_LIVE = false || FRANCHISE_DEV   // off until the owner fl
 
 // What Home's card says about the franchise on this device, without loading the mode: the mode leaves this
 // small note every time it saves (components/franchise/frStore.js)
-//   { team: 'KC', color: '#E31837', rows: [['KC', '3-1'], ['WEEK', '5'], ['NEXT', '@ BUF']] }
+//   { slot: 0, team: 'KC', color: '#E31837', line: 'Chiefs 3-1 · Week 5' }
 export const FRANCHISE_CARD_KEY = 'bap_franchise_card'
-export const franchiseCard = () => { try { const c = JSON.parse(localStorage.getItem(FRANCHISE_CARD_KEY)); return c && Array.isArray(c.rows) ? c : null } catch { return null } }
+export const franchiseCard = () => { try { const c = JSON.parse(localStorage.getItem(FRANCHISE_CARD_KEY)); return c && typeof c.line === 'string' && c.line ? c : null } catch { return null } }
 
-// The mode's art (public/franchise/art/, made with the trophy scene): the picture on Home's card and the hero on
-// the New Franchise screen. null: the file isn't there yet, and its box isn't drawn
-export const FRANCHISE_ART = { card: null, hero: null }
+// The mode's art (public/franchise/art/, made with the trophy scene: the championship trophy on the mode's own
+// near-black): the picture on Home's card and the hero on the mode's first screen. (null: no picture, no box)
+export const FRANCHISE_ART = { card: '/franchise/art/trophy-card.webp', hero: '/franchise/art/trophy-wide.webp' }
