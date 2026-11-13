@@ -7135,3 +7135,7 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
 
 /* The trait cards appear at once on the website (owner, 11-13: they took about half a second, a rise-in staggered 40 ms a card) */
 html.app-look:not(.is-app) .spin-panel .attr-chip { animation: none !important; }
+
+/* The trait cards sit up off the page (owner, 11-13, picked from a test of three): a light edge along the top and a darker
+   lip along the bottom. Phones and desktop on the website */
+html.app-look:not(.is-app) .spin-panel .attr-chip { box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -3px 0 rgba(0,0,0,.35) !important; }
