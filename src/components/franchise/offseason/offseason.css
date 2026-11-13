@@ -96,7 +96,11 @@ button.fro-man:disabled { cursor: default; }
   .fro-fixed .fr-t-num { font-size: 15px; }
   .fro-fixed .fr-t-name i { margin-left: 4px; padding-inline: 3px; font-size: 10px; letter-spacing: .5px; }
 }
-@media (max-width: 1023px) { .fro-swap > :first-child { order: 2; } }
+@media (max-width: 1023px) {
+  .fro-swap > :first-child { order: 2; }
+  .fro-champ { flex-wrap: wrap; }
+  .fro-champ > .fr-btn { flex: 1 0 100%; }
+}
 /* the position row over a table: ten words across */
 .fro-pos { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-bottom: 1px solid var(--fr-line); }
 .fro-pos button, .fr .fro-pos button, .fr-overlay .fro-pos button { height: 34px; min-width: 0; padding: 2px 0 0; border: 0; background: transparent; font-family: var(--fr-label); font-size: 14px; letter-spacing: 1px; line-height: 1; color: var(--fr-muted); cursor: pointer; }

@@ -37,6 +37,8 @@ export default function Review() {
   const [list, setList] = useState('allpro')
   const [film, setFilm] = useState(false)
   const us = teamOf(F.team)
+  // (a GM who has just taken another job: the season on this page was still the club he left)
+  const then = teamOf(useMemo(() => safe(() => FR.history(F).seasons.slice(-1)[0]?.user?.team), [FR, F]) ?? F.team)
   const owner = useMemo(() => safe(() => FR.ownerView(F)), [FR, F])
   const jobs = useMemo(() => (v.owner.fired ? safe(() => FR.jobOffers(F), []) : []), [FR, F, v.owner.fired])
   const champ = v.champion, won = champ?.short === F.team
@@ -92,11 +94,11 @@ export default function Review() {
           </Panel>
         </div>
         <div className="fr-col">
-          <Panel title={`${us.nick} ${v.year}`} meta={v.user.seed ? `NO. ${v.user.seed} SEED` : null}>
+          <Panel title={`${then.nick} ${v.year}`} meta={v.user.seed ? `NO. ${v.user.seed} SEED` : then.short !== us.short ? `NOW WITH THE ${up(us.nick)}` : null}>
             <div className="fro-year"><b>{v.user.record}</b><span>{up(v.user.finish || (v.user.seed ? 'In the playoffs' : 'Out of the playoffs'))}</span></div>
             {!v.owner.fired && v.owner.verdict && <Said who="OWNERSHIP">{v.owner.verdict}</Said>}
             <div className="fr-kv"><span>JOB SECURITY</span><b className="is-text">{owner?.word ?? ''} <Steps value={v.owner.security} low={owner?.floor ?? 20} label={`Job security ${v.owner.security} of 100`} />{v.owner.delta !== 0 && <em className={`fro-delta${v.owner.delta < 0 ? ' is-down' : ''}`}>{signed(v.owner.delta)}</em>}</b></div>
-            <Sub meta={v.gm.pts ? `+${plural(v.gm.pts, 'STAFF POINT')}` : null}>THE GOALS</Sub>
+            {v.owner.goals.length > 0 && <Sub meta={v.gm.pts ? `+${plural(v.gm.pts, 'STAFF POINT')}` : null}>THE GOALS</Sub>}
             {v.owner.goals.map(g => (
               <div key={g.id} className="fro-goal">
                 <i className={g.done ? 'is-met' : undefined}>{g.done ? 'MET' : 'MISSED'}</i>
