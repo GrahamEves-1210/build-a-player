@@ -7197,6 +7197,3 @@ html.app-look:not(.is-app) .spin-panel .reels-wrap > .reel-tri { z-index: 6; }
 /* The spin's player card a flat team colour, no fade to black (owner, 11-13). Website */
 html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-color, #444) 72%, #000) !important; }
 
-/* The trait cards black with white text and an outline in the grade's colour (owner, 11-13). Phones and desktop, website */
-html.app-look:not(.is-app) .game-layout .spin-panel .attr-chip.attr-chip.attr-chip { background: #000 !important; box-shadow: inset 0 0 0 2.5px var(--chip-col) !important; }
-html.app-look:not(.is-app) .game-layout .spin-panel .attr-chip.attr-chip.attr-chip :is(.chip-name, .chip-name.is-long, .chip-val) { color: #fff !important; }
