@@ -7120,7 +7120,7 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { font-size: 9.5px !important; color: #fff !important; }
   /* one line always (a name that wrapped, PLAYMAKING/CREATIVITY, pushed the card's text 1px out of its top edge): a long one a size smaller */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-name.is-long { font-size: 7.8px !important; letter-spacing: -.1px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-name.is-long { letter-spacing: 0 !important; }   /* (its size: SpinScreen's Chip fits it) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { color: #fff !important; font-size: 20px !important; }
 }
 
@@ -7175,8 +7175,9 @@ html.app-look:not(.is-app) .spin-panel .reel-outer > .reel-label { position: abs
 .reel-row.has-img > .reel-logo { grid-row: 1 / 3; align-self: center; width: 22px; height: 22px; object-fit: contain; pointer-events: none; }
 .reel-row.has-img > .reel-primary { grid-column: 2; grid-row: 1; text-align: center; }
 .reel-row.has-img > .reel-secondary { grid-column: 2; grid-row: 2; text-align: center; }
-/* a headshot: round, cropped to the face */
-.reel-row.has-img > .reel-logo[src$='.webp'], .reel-row.has-img > .reel-logo[src^='data:'] { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; object-position: 50% 18%; background: rgba(255,255,255,.06); }
+/* (no circle: logos and headshots as they are, the owner 11-13) */
+/* a headshot (not a logo): a little bigger, cropped to the head and shoulders, square corners */
+.reel-row.has-img > .reel-logo:not([src*='/logos/']) { width: 30px; height: 26px; object-fit: cover; object-position: 50% 15%; }
 /* iPhone Safari takes its bottom bar's colour from what touches the screen's bottom edge: a black line there keeps it black
    (the blue College Basketball card under it was turning the bar blue). Under the ad rail and every sheet */
 html.app-look:not(.is-app) body::after { display: block !important; content: ''; position: fixed; inset: auto 0 0 0; height: 2px; background: #000; mix-blend-mode: normal; transform: none; will-change: auto; z-index: 1; pointer-events: none; }

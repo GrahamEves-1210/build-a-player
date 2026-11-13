@@ -383,6 +383,17 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
     ...(spin ? { spin } : {}),
     ...(sandbox ? { sandbox: true } : {}),   // saveGuard's hasSandboxChip: the mark survives a reload with the build
   }
+  // The trait's name always on one line, whole: where the card's own size doesn't fit it, it comes down a little at a
+  // time until it does (the owner, 11-13: PLAYMAKING/CREATIVITY showed a "..."). Only on the website's cards, which
+  // keep names to one line
+  const nameRef = useRef(null)
+  useLayoutEffect(() => {
+    const n = nameRef.current
+    if (!n || getComputedStyle(n).whiteSpace !== 'nowrap') return
+    n.style.removeProperty('font-size')
+    let fs = parseFloat(getComputedStyle(n).fontSize), i = 0
+    while (n.scrollWidth > n.clientWidth + 0.5 && fs > 6.5 && i++ < 16) { fs -= 0.3; n.style.setProperty('font-size', `${fs}px`, 'important') }
+  })
   return (
     <div
       className={`attr-chip attr-chip-${type}${draggingType === type ? ' chip-dragging' : ''}`}
@@ -404,7 +415,7 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
     >
       {photo && <img src={photo} alt="" className="chip-photo" />}
       <div className="chip-text">
-        <span className={`chip-name${meta.label.length > 14 ? ' is-long' : ''}`}>{meta.label.replace('/', '/​')}</span>
+        <span ref={nameRef} className={`chip-name${meta.label.length > 14 ? ' is-long' : ''}`}>{meta.label.replace('/', '/​')}</span>
         <span className="chip-qb">{selectedQB.name}</span>
       </div>
       <span className="chip-val" style={hideGrades ? { visibility: 'hidden' } : undefined}>{valToGrade(val)}</span>
