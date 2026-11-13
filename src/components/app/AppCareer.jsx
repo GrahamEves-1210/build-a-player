@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -307,7 +307,7 @@ function Model({ c, devPick }) {
       </div>
       {/* body work: a point into durability, fewer games missed. Always shown: tapped when it can't go up, it says why */}
       {c.pos !== 'k' && (() => {   // (a kicker is never hurt: no durability to work on)
-        const maxed = (c.durability ?? 5) >= BODY_MAX, can = !!devPick && canBodyWork(c), cost = bodyCost(c)
+        const maxed = bodyMaxed(c), can = !!devPick && canBodyWork(c), cost = bodyCost(c)
         return (
           <div className="cr-traits is-list cr-body">
             <div className={`cr-trait${can ? ' can-up' : ''}`} onClick={can ? () => devPick('__body') : () => tellWhy('__body')} role="button">
@@ -891,7 +891,7 @@ function ByeWeek({ c, setCareer, getD }) {
   const traits = game ? byeTraits(c, game).map(t => POS_ATTR[c.pos]?.[t]?.label ?? t) : []
   const nick = c.fit?.name?.split(' ').pop() ?? 'team'
   const coach = BYE_COACH[c.pos] ?? 'position coach'
-  const maxed = (c.durability ?? 5) >= BODY_MAX
+  const maxed = bodyMaxed(c)
   const train = () => { if (!game || hurt) return; setCareer({ ...c, active: { ...a, bye: { ...a.bye, training: game } } }); sfx('tap') }
   const rest = () => { setCareer(byeRest(c, getD())); sfx('claim'); haptic('success') }
   const done = (g, res) => {

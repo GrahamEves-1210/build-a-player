@@ -2909,7 +2909,7 @@ export function upgradeBlock(c, type) {
   const pts = c.dev?.points ?? 0
   const lack = cost => `That costs ${cost} points. ${pts} left.`
   if (type === '__body') {
-    if ((c.durability ?? 5) >= BODY_MAX) return 'Durability is maxed out.'
+    if (bodyMaxed(c)) return 'Durability is maxed out.'
     if (c.phase === 'season') return 'Body work happens in the offseason.'
     if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'
     return pts < bodyCost(c) ? lack(bodyCost(c)) : null
@@ -2967,10 +2967,19 @@ function healDurability(c) {
   return d >= base ? { durBase: base } : { durBase: base, durability: r10(d + (base - d) * (c.age >= fadeAt(c) ? 0.4 : 0.65)) }
 }
 export const bodyCost = c => ((c.durability ?? 5) >= 8 ? 2 : 1)
-export const canBodyWork = c => (c.durability ?? 5) < BODY_MAX && (c.dev?.points ?? 0) >= bodyCost(c)
+// (maxed: it already reads S. Durability carries a decimal (a bye week's rest, knocks healing), and the letter is the
+// rounded value: a 9.6 showed S while body work still took 2 points to make it a 10, also an S. A player paid for an
+// upgrade that changed nothing: 2026-11-13)
+const durShown = d => Math.round(clamp(d * 1.1, 0, 11))
+export const bodyMaxed = c => durShown(c.durability ?? 5) >= 11
+export const canBodyWork = c => !bodyMaxed(c) && (c.dev?.points ?? 0) >= bodyCost(c)
 export function bodyWork(c) {
   if (!canBodyWork(c)) return c
-  const cost = bodyCost(c), from = c.durability ?? 5, to = r10(Math.min(BODY_MAX, Math.floor(from) + 1))
+  // (always a letter up: the next whole step, or as far as it takes for the grade on screen to change. A 6.9 used to
+  // go to 7.0, an A- to an A-)
+  const cost = bodyCost(c), from = c.durability ?? 5
+  const next = Math.ceil(((durShown(from) + 0.5) / 1.1) * 10) / 10
+  const to = r10(Math.min(BODY_MAX, Math.max(Math.floor(from) + 1, next)))
   return { ...c, durability: to, durBase: Math.max(durBaseOf(c), to), dev: { points: c.dev.points - cost, spent: c.dev.spent + cost }, bodyWork: (c.bodyWork ?? 0) + 1, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: durability ${gradeOf(from * 1.1)} → ${gradeOf(to * 1.1)}` }] }
 }
 const EVENTS = {
