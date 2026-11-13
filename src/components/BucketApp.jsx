@@ -62,6 +62,9 @@ const AppCompete = lazy(() => import('./app/AppCompete'))
 // DEV only: Blacktop's game screens on a made-up game (?btlook=live|final|watch|hud: app/BlacktopLook.jsx)
 const BT_LOOK = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('btlook') : null
 const BlacktopLook = import.meta.env.DEV ? lazy(() => import('./app/BlacktopLook')) : null
+// DEV only: Blacktop Live, the real-time prototype (/bucket?btlive=1: lib/btLive.js, components/btlive). Never in a production build
+import { BT_LIVE_OPEN } from '../lib/btLive'
+const BtLive = import.meta.env.DEV ? lazy(() => import('./btlive/BtLive')) : null
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
 // A 1v1 player's match id starts with their account id when signed in (VersusLobby myId)
 const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(id) ? id.slice(0, 36) : null)
@@ -2080,6 +2083,7 @@ export default function BucketApp() {
   )
   const withGame = el => (IS_APP && gameMode && gameMode !== 'salarycap' && KEEP_GAME_ON.has(page) ? shell(el) : el)
 
+  if (import.meta.env.DEV && BT_LIVE_OPEN) return <Suspense fallback={null}><BtLive pools={LIVE_POOLS} user={user} /></Suspense>
   if (import.meta.env.DEV && BT_LOOK) return <Suspense fallback={null}><BlacktopLook look={BT_LOOK} pools={LIVE_POOLS} types={LIVE_TYPES} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} /></Suspense>
   if (page === 'splash') {
     return withGame(

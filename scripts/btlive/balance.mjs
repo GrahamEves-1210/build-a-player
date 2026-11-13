@@ -114,7 +114,7 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
     head('Equal builds (target: score on 45-50% of possessions; steals and blocks a few a game)')
     console.log('game          bots     poss%   pts/poss  len    stl/g blk/g oreb% to/g  green  ankles/100g posters deep  close')
     for (const [name, mkTeam] of [['1v1 guards', o => [G(o)]], ['1v1 bigs', o => [B(o)]], ['2v2 g+b', o => [G(o), B(o)]], ['3v3 g+g+b', o => [G(o), G(o), B(o)]]]) {
-      for (const [bn, bot, ovr] of [['allstar', AS, 80], ['allstar', AS, 92], ['avg human', AVG, 80], ['good human', cpu(HUMANS.good), 88]]) {
+      for (const [bn, bot, ovr] of [['allstar', AS, 80], ['allstar', AS, 92], ['avg human', AVG, 80], ['pro', cpu('pro'), 80]]) {
         const S = series(mkTeam(ovr), mkTeam(ovr), bot, bot, runs, `eq-${name}-${bn}-${ovr}`)
         const pp = (S.scored[0] + S.scored[1]) / (S.poss[0] + S.poss[1]) * 100
         console.log(`${name.padEnd(11)} ${String(ovr).padEnd(3)} ${bn.padEnd(11)} ${both(S).padEnd(4)} ${verdict(pp, 45, 50).padEnd(5)} ${((S.pts[0] + S.pts[1]) / (S.poss[0] + S.poss[1])).toFixed(2).padEnd(7)} ${(S.secs / S.n / 60).toFixed(1)}m  ${f1(S.stl / S.n).padEnd(5)} ${f1(S.blk / S.n).padEnd(5)} ${pct(S.oreb, S.oreb + S.dreb).padEnd(5)} ${f1(S.tov / S.n).padEnd(5)} ${pct(S.green[0] + S.green[1], S.rel[0] + S.rel[1]).padEnd(6)} ${String(Math.round(S.ank / S.n * 100)).padEnd(11)} ${String(Math.round(S.poster / S.n * 100)).padEnd(7)} ${String(Math.round(S.deep / S.n * 100)).padEnd(5)} ${pct(S.close, S.n)}${S.stuck ? '  STUCK ' + S.stuck : ''}`)

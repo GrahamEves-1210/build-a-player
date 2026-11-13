@@ -50,7 +50,7 @@ export const T = {
   accel: 34,                         // ft/s² (about a third of a second to top speed)
   defAccelPer: 0.20,                 // a defender's acceleration: x (0.85 + this * Perimeter D)
   walk: 0.25,                        // stick pushed less than this far: ignored (dead zone)
-  radius: 1.25,                      // a body's radius: nobody walks through anybody
+  radius: 1.55,                      // a body's radius (the dot on the screen is this big): nobody walks through anybody
   ground: 3.0,                       // a set defender in the handler's path (or anyone standing still) is this much harder to move
   massSize: 0.8,                     // weight: 1 at Size 1, 1 + this at Size 11 (a big backs a guard down, not the other way)
   gatherSlowJ: 0.25,                 // speed kept while rising for a jumper
@@ -92,8 +92,8 @@ export const T = {
   rushPen: 0.22,                     // ...and loses this much at IQ 1, nothing at IQ 11
 
   // ── Contest: the nearest hand takes a share of the chance ───────────────────────────────────────
-  contestRange: 6.0,                 // a defender farther than this doesn't bother the shot
-  contestNear: 1.5,                  // ...and at this distance he's all the way in it
+  contestRange: 6.6,                 // a defender farther than this doesn't bother the shot
+  contestNear: 2.1,                  // ...and at this distance he's all the way in it
   contestCurve: 1.5,                 // in between it bends: a step of space is worth a lot (1 = a straight line)
   contestStand: 0.62,                // feet on the floor (JUMP is a hand up: 1.0)
   contestBeat: 0.22,                 // frozen or on the floor
@@ -108,7 +108,7 @@ export const T = {
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
   jumpTime: 0.50,                    // off the floor this long...
   jumpLand: 0.22,                    // ...then this long to land before he can move again
-  blockReach: 3.0,                   // within this of the shooter at the release (plus Bounce and Size)...
+  blockReach: 3.6,                   // within this of the shooter at the release (plus Bounce and Size)...
   blockReachBnc: 0.9, blockReachSize: 0.7,
   blockIn: 0.10, blockOut: 0.80,     // ...and between these fractions of his jump: on time. Else a quarter the chance
   blockBase: 0.17,                   // on-time chance at average everything
@@ -119,7 +119,7 @@ export const T = {
   blockMax: 0.62,
 
   // ── Steals (a swipe with a cooldown; a miss costs a beat) ───────────────────────────────────────
-  stealReach: 3.3,                   // the ball has to be this close
+  stealReach: 3.9,                   // the ball has to be this close
   stealBase: 0.17,                   // chance at average everything, square in front
   stealPer: 0.7,                     // x (0.55 + this * Perimeter D)
   stealHnd: 0.6,                     // x (1.3 - this * the handler's Handles)
@@ -136,7 +136,7 @@ export const T = {
   moveTime: 0.30,                    // the burst lasts this long...
   moveSpeed: 1.6,                    // ...at this much of top speed
   moveCd: 3.4, moveCdHnd: 1.0,       // cooldown: 3.4 s at Handles 1, 2.4 s at 11
-  moveRange: 5.5,                    // his man has to be this close to be beaten by it
+  moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.20,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
   moveHnd: 0.25,                     // ...plus this * (Handles n - his Perimeter D n)
@@ -148,7 +148,7 @@ export const T = {
   // ── Passing ──────────────────────────────────────────────────────────────────────────────────────
   passSpeed: 26, passSpeedPas: 13,   // ft/s: 26 at Passing 1, 39 at 11
   catchReach: 2.4,                   // caught this close to the target (generous: lag)
-  pickReach: 2.5,                    // a defender this close to the ball in flight can pick it...
+  pickReach: 2.9,                    // a defender this close to the ball in flight can pick it...
   pickBase: 0.22,                    // ...this often at average everything
   pickPer: 0.8,                      // x (0.55 + this * Perimeter D)
   pickPas: 0.8,                      // x (1.35 - this * the passer's Passing)

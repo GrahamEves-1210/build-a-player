@@ -70,7 +70,7 @@ function laneOpen(s, a, b, team) {
     if (o.team === team || o.act === 'down' || o.act === 'frozen') continue
     const t = clamp(((o.x - a.x) * dx + (o.y - a.y) * dy) / L2, 0, 1)
     if (t < 0.12) continue
-    if (Math.hypot(a.x + dx * t - o.x, a.y + dy * t - o.y) < 3.0) return false
+    if (Math.hypot(a.x + dx * t - o.x, a.y + dy * t - o.y) < 3.4) return false
   }
   return true
 }
@@ -158,14 +158,14 @@ function withBall(s, p, m, lvl, out) {
   }
   if (p.noAct <= 0 && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) { out.shoot = true; return }
   // near the rim with a step on his man, or stuck under it: go up
-  if (dRim <= (beat ? 5.2 : 4.2) && p.noAct <= 0) { out.shoot = true; return }
+  if (dRim <= (beat ? 5.4 : 4.6) && p.noAct <= 0) { out.shoot = true; return }
   // otherwise move: the plan's target
   let tx = RIM.x, ty = RIM.y + 1.5
   if (m.plan === 'three' || m.plan === 'mid') {
     tx = m.spot.x; ty = m.spot.y
     if (Math.hypot(tx - p.x, ty - p.y) < 1.2) {
       // on his spot and still covered: make space with a move, or go
-      if (dD < 4.5 && p.moveCd <= 0 && m.go < lvl.move) {
+      if (dD < 5.1 && p.moveCd <= 0 && m.go < lvl.move) {
         const ax = p.x - D.x, ay = p.y - D.y, a = Math.hypot(ax, ay) || 1
         out.mx = ax / a * 0.6 + (-ay / a) * m.side * 0.8; out.my = ay / a * 0.6 + (ax / a) * m.side * 0.8
         const l = Math.hypot(out.mx, out.my) || 1
@@ -183,7 +183,7 @@ function withBall(s, p, m, lvl, out) {
   let dirx = tx - p.x, diry = ty - p.y
   const dl = Math.hypot(dirx, diry) || 1
   dirx /= dl; diry /= dl
-  if (D && !beat && dD < 5.8 && m.plan !== 'post') {
+  if (D && !beat && dD < 6.4 && m.plan !== 'post') {
     const inWay = ((D.x - p.x) * dirx + (D.y - p.y) * diry) / (dD || 1)
     if (inWay > 0.35) {
       // which side: away from where he's leaning, kept for a while
@@ -192,10 +192,10 @@ function withBall(s, p, m, lvl, out) {
         m.side = Math.abs(lat) > 1.5 ? (lat > 0 ? -1 : 1) : m.side
         m.sideT = s.tick + HZ
       }
-      const ang = (dD < 3.6 ? 1.05 : 0.6) * m.side
+      const ang = (dD < 4.2 ? 1.05 : 0.6) * m.side
       const cx = dirx * Math.cos(ang) - diry * Math.sin(ang), cy = dirx * Math.sin(ang) + diry * Math.cos(ang)
       dirx = cx; diry = cy
-      if (dD < 4.4 && p.moveCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { out.mx = dirx; out.my = diry; out.move = true; return }
+      if (dD < 5.0 && p.moveCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { out.mx = dirx; out.my = diry; out.move = true; return }
     }
   }
   // keep it in bounds
@@ -247,8 +247,8 @@ function defend(s, p, m, lvl, out) {
   if (onBall) {
     // up on a shooter in his range, off a man who can't shoot, tight near the rim
     const shooter = man.R.js > 0.45 && dRimM > 14 && dRimM < 31
-    let gap = (dRimM < 10 ? 2.6 : shooter ? 2.7 : dRimM > 26 ? 5.2 : 3.9) + lvl.gap
-    if (man.act === 'gather') gap = 1.9
+    let gap = (dRimM < 10 ? 3.2 : shooter ? 3.3 : dRimM > 26 ? 5.8 : 4.5) + lvl.gap
+    if (man.act === 'gather') gap = 2.5
     gap = Math.min(gap, Math.max(0.5, dRimM - 1.2))
     tx = mx + ux * gap; ty = my + uy * gap
     const dd = Math.hypot(man.x - p.x, man.y - p.y)
@@ -260,7 +260,7 @@ function defend(s, p, m, lvl, out) {
         const ideal = Math.round(man.shot.spec.ideal / MS)
         m.cAt = roll(s) < lvl.contest ? Math.max(man.actT, ideal - 6 + Math.floor(roll(s) * 4)) : -1
       }
-      if (m.cKey === key && m.cAt >= 0 && man.actT >= m.cAt && dd <= 5.2 && p.act === 'free') { out.jump = true; m.cAt = -1 }
+      if (m.cKey === key && m.cAt >= 0 && man.actT >= m.cAt && dd <= 5.8 && p.act === 'free') { out.jump = true; m.cAt = -1 }
     } else if (p.stealCd <= 0 && dd <= T.stealReach - 0.3 && man.burst <= 0 && p.act === 'free' && man.noAct <= 0) {
       const front = ((p.x - man.x) * man.fx + (p.y - man.y) * man.fy) / (dd || 1) > 0
       if (front && roll(s) < lvl.steal / HZ) out.steal = true
@@ -269,7 +269,7 @@ function defend(s, p, m, lvl, out) {
     // off the ball: between his man and the rim, a step toward the ball
     tx = mx + ux * dRimM * 0.24; ty = my + uy * dRimM * 0.24
     if (h) { tx += (h.x - tx) * 0.1; ty += (h.y - ty) * 0.1 }
-    if (b.st === 'pass' && b.to === man.i) { tx = mx + ux * 2.8; ty = my + uy * 2.8 }
+    if (b.st === 'pass' && b.to === man.i) { tx = mx + ux * 3.4; ty = my + uy * 3.4 }
     else if (h && h.team !== p.team) {
       // help: the handler has a step on his man and is coming
       const hd = s.players.find(o => o.man === h.i && o.team === p.team)
@@ -283,7 +283,7 @@ function defend(s, p, m, lvl, out) {
           const k = Math.min(3.2, hr * 0.5)
           tx = RIM.x + (h.x - RIM.x) / (hr || 1) * k; ty = RIM.y + (h.y - RIM.y) / (hr || 1) * k
           const dd = Math.hypot(h.x - p.x, h.y - p.y)
-          if (h.act === 'gather' && dd <= 5 && p.act === 'free' && h.actT >= 2 && roll(s) < lvl.contest * 0.4) out.jump = true
+          if (h.act === 'gather' && dd <= 5.6 && p.act === 'free' && h.actT >= 2 && roll(s) < lvl.contest * 0.4) out.jump = true
         }
       }
     }

@@ -1,0 +1,110 @@
+/* BLACKTOP LIVE (dev only): the practice menu and the game screen. Blacktop's look: asphalt at night, the two
+   sides' colours, one accent, flat panels with a lit top edge. No gradients for decoration, no glows, no loops. */
+.btl {
+  --ink: #05070a; --asphalt: #0c1016; --panel: #141a22; --panel-hi: #1c242e;
+  --line: rgba(255, 255, 255, .1); --line-hi: rgba(255, 255, 255, .2);
+  --text: #f3f6f8; --muted: rgba(243, 246, 248, .62); --faint: rgba(243, 246, 248, .38);
+  --acc: var(--ag-a1, #f08a3c); --t0: #4da3ff; --t1: #ff4d5e;
+  --num: var(--ag-display, 'BAP Anton', 'Anton', Impact, sans-serif);
+  --cap: var(--ag-font, 'BAP Bebas', 'Bebas Neue', Impact, sans-serif);
+  --rail: calc(var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px));
+  position: fixed; inset: 0; z-index: 1200;   /* over the app's dock: a game takes the whole screen (the ad rail is cleared by --rail) */
+  display: flex; flex-direction: column;
+  background: var(--ink); color: var(--text); font-family: var(--cap); letter-spacing: .6px;
+  padding-bottom: var(--rail); box-sizing: border-box;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.btl *, .btl *::before, .btl *::after { box-sizing: border-box; }
+.btl button { font: inherit; color: inherit; letter-spacing: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+.btl .btl-t0 { --tc: var(--t0); } .btl .btl-t1 { --tc: var(--t1); }
+.btl-tag { font-size: 12px; letter-spacing: 2.4px; color: var(--muted); }
+html.btl-playing, html.btl-playing body { overflow: hidden; overscroll-behavior: none; }
+
+/* ── the practice menu ─────────────────────────────────────────────────────────────────────────── */
+.btl-menu-head { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; height: 54px; padding: 0 12px; border-bottom: 1px solid var(--line); flex: none; }
+.btl-menu-head h1 { margin: 0; text-align: center; font-family: var(--num); font-weight: 400; font-size: 24px; letter-spacing: 1px; line-height: 1; color: var(--text); }
+.btl-menu-head .btl-tag { text-align: right; font-size: 11px; letter-spacing: 1.6px; }
+.btl-exit { color: var(--muted); text-decoration: none; font-size: 14px; letter-spacing: 1.6px; }
+.btl-menu-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 14px; width: 100%; max-width: 560px; margin: 0 auto; }
+.btl-menu h2 { margin: 16px 0 8px; font-family: var(--cap); font-weight: 400; font-size: 13px; letter-spacing: 2.4px; color: var(--muted); }
+.btl-menu h3 { margin: 10px 0 2px; font-family: var(--cap); font-weight: 400; font-size: 11px; letter-spacing: 2px; color: var(--faint); }
+.btl-seg { display: flex; border: 1px solid var(--line-hi); border-radius: 6px; overflow: hidden; }
+.btl .btl-seg button { flex: 1; height: 44px; font-size: 17px; letter-spacing: 1.4px; color: var(--muted); border-left: 1px solid var(--line); }
+.btl .btl-seg button:first-child { border-left: 0; }
+.btl .btl-seg button.is-on { background: var(--text); color: var(--ink); }
+.btl .btl-build { display: grid; grid-template-columns: 38px 1fr auto; grid-template-rows: auto auto; column-gap: 11px; align-items: center; width: 100%; padding: 7px 10px 7px 6px; text-align: left; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; }
+.btl .btl-build.is-on { background: var(--panel); border-left-color: var(--acc); }
+.btl-face { grid-row: 1 / 3; display: block; border-radius: 30%; overflow: hidden; background: var(--panel-hi); }
+.btl-face img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.btl-build-name { font-size: 18px; letter-spacing: .8px; line-height: 1.05; align-self: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btl-build-best { grid-column: 2; font-size: 12px; letter-spacing: 1.2px; color: var(--muted); align-self: start; white-space: pre; }
+.btl-build-ovr { grid-column: 3; grid-row: 1 / 3; font-family: var(--num); font-weight: 400; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.btl-menu-foot { flex: none; padding: 10px 14px 12px; border-top: 1px solid var(--line); width: 100%; max-width: 560px; margin: 0 auto; }
+.btl-rules { margin: 0 0 9px; text-align: center; font-size: 12px; letter-spacing: 2px; color: var(--faint); }
+.btl .btl-play { display: block; width: 100%; height: 52px; border-radius: 6px; background: var(--acc); color: #140a02; font-family: var(--num); font-size: 22px; letter-spacing: 1.5px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 -2px 0 rgba(0, 0, 0, .25); }
+.btl .btl-play:active { transform: translateY(1px); }
+.btl .btl-ghost { display: block; width: 100%; height: 46px; border-radius: 6px; border: 1px solid var(--line-hi); font-size: 17px; letter-spacing: 1.6px; color: var(--muted); }
+
+/* ── the game: scorebug, court, pad ────────────────────────────────────────────────────────────── */
+.btl-game { --bug: 46px; --pad-min: 250px; touch-action: none; }
+.btl-game.has-keys { --pad-min: 132px; }
+.btl-bug { flex: none; height: var(--bug); display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; background: var(--asphalt); border-bottom: 1px solid var(--line); position: relative; }
+.btl .btl-quit { position: absolute; left: 0; top: 0; height: 100%; padding: 0 10px; font-size: 12px; letter-spacing: 1.6px; color: var(--faint); z-index: 1; }
+.btl-bug-team { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 10px; }
+.btl-bug-team.btl-t0 { justify-content: flex-end; padding-left: 50px; }
+.btl-bug-name { font-size: 15px; letter-spacing: 1px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; min-width: 0; }
+.btl-bug-score { font-family: var(--num); font-weight: 400; font-size: 28px; line-height: 1; min-width: 30px; text-align: center; color: var(--tc); font-variant-numeric: tabular-nums; }
+.btl-bug-poss { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); opacity: 0; }
+.btl-bug-poss.is-on { opacity: 1; }
+.btl-bug-mid { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.btl-bug-clock { font-family: var(--num); font-weight: 400; font-size: 22px; line-height: 1; min-height: 22px; font-variant-numeric: tabular-nums; }
+.btl-bug-clock.is-low { color: var(--t1); }
+.btl-bug-mid small { font-size: 9px; letter-spacing: 1.6px; color: var(--faint); line-height: 1.2; }
+.btl-stage { flex: none; display: grid; place-items: center; background: #000; }
+.btl-court { position: relative; width: min(100vw, calc((100dvh - var(--bug) - var(--pad-min) - var(--rail)) * 4 / 3)); aspect-ratio: 4 / 3; overflow: hidden; }
+.btl-court img, .btl-court canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.btl-court img { object-fit: cover; pointer-events: none; }
+.btl-pad { flex: 1; min-height: 0; position: relative; touch-action: none; overflow: hidden; background: var(--asphalt); border-top: 1px solid var(--line); }
+.btl-stick-base, .btl-stick-knob { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; will-change: transform; }
+.btl-stick-base { width: 104px; height: 104px; margin: -52px 0 0 -52px; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
+.btl-stick-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .5); }
+.btl-stick-base.is-on { border-color: rgba(243, 246, 248, .5); }
+.btl-stick-knob.is-on { background: rgba(243, 246, 248, .78); border-color: #fff; }
+.btl-game.has-keys .btl-stick-base:not(.is-on), .btl-game.has-keys .btl-stick-knob:not(.is-on) { opacity: 0; }
+.btl-btns { position: absolute; right: 0; bottom: 0; width: 210px; height: 196px; pointer-events: none; }
+.btl .btl-btn { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 50%; pointer-events: auto; touch-action: none;
+  background: var(--panel); border: 2px solid var(--line-hi); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); font-size: 17px; letter-spacing: 1.2px; color: var(--text); }
+.btl .btl-btn-a { right: 16px; bottom: 54px; width: 88px; height: 88px; font-size: 20px; border-color: var(--text); }
+.btl .btl-btn-b { right: 116px; bottom: 18px; width: 72px; height: 72px; }
+.btl .btl-btn-c { right: 110px; bottom: 104px; width: 64px; height: 64px; font-size: 15px; }
+.btl .btl-btn.is-down { background: var(--text); color: var(--ink); transform: translateY(1px); }
+.btl .btl-btn.is-off { opacity: 0; pointer-events: none; }
+.btl .btl-btn.is-cd { opacity: .38; }
+.btl-btn kbd { font: inherit; font-size: 11px; line-height: 1; padding: 2px 5px 1px; border-radius: 3px; border: 1px solid var(--line-hi); color: var(--muted); background: none; box-shadow: none; }
+.btl-btn.is-down kbd { color: var(--ink); border-color: rgba(0, 0, 0, .4); }
+.btl-keys { position: absolute; left: 16px; bottom: 14px; margin: 0; font-size: 12px; letter-spacing: 2px; color: var(--faint); }
+/* with a keyboard: the three buttons in a row, small (they show what J K L do right now) */
+.btl-game.has-keys .btl-btns { width: 300px; height: 100%; }
+.btl-game.has-keys .btl-btn { border-radius: 8px; width: 84px; height: 62px; bottom: 50%; margin-bottom: -31px; font-size: 17px; }
+.btl-game.has-keys .btl-btn-a { right: 200px; }
+.btl-game.has-keys .btl-btn-b { right: 108px; }
+.btl-game.has-keys .btl-btn-c { right: 16px; }
+/* a phone on its side: the court takes the height, the stick and the buttons sit over its sides */
+@media (orientation: landscape) and (pointer: coarse) {
+  .btl-game { --pad-min: 0px; }
+  .btl-pad { position: absolute; inset: var(--bug) 0 var(--rail) 0; background: none; border: 0; }
+}
+
+/* ── the final ─────────────────────────────────────────────────────────────────────────────────── */
+.btl-final { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 16px 16px calc(var(--rail) + 16px); background: rgba(5, 7, 10, .8); }
+.btl-final-card { width: 100%; max-width: 400px; padding: 18px 16px 16px; background: var(--panel); border: 1px solid var(--line-hi); border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 22px 44px -14px rgba(0, 0, 0, .8); text-align: center; }
+.btl-final-score { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 2px; font-family: var(--num); font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+.btl-final-score b { font-weight: 400; color: var(--tc); }
+.btl-final-score i { font-style: normal; color: var(--faint); font-size: 40px; }
+.btl-final-who { margin: 0 0 14px; font-size: 20px; letter-spacing: 1.4px; text-transform: uppercase; }
+.btl-final-line { display: flex; align-items: flex-end; justify-content: center; flex-wrap: wrap; gap: 4px 14px; padding: 11px 0 12px; margin-bottom: 14px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.btl-final-line > span { display: flex; flex-direction: column; align-items: center; }
+.btl-final-line b { font-family: var(--num); font-weight: 400; font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.btl-final-line small { font-size: 10px; letter-spacing: 1.6px; color: var(--faint); }
+.btl-final-line .btl-final-name { flex: 0 0 100%; font-size: 14px; letter-spacing: 1.6px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.btl-final-btns { display: grid; gap: 8px; }

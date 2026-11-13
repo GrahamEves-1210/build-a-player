@@ -94,7 +94,7 @@ function setSpots(s, team, carrier) {
     if (p.team === team) continue
     const m = s.players[p.man]
     const d = Math.hypot(RIM.x - m.sx, RIM.y - m.sy) || 1
-    const off = p.man === carrier ? 4.6 / d : 0.3
+    const off = p.man === carrier ? 5.2 / d : 0.3
     p.sx = m.sx + (RIM.x - m.sx) * off; p.sy = m.sy + (RIM.y - m.sy) * off
   }
 }
@@ -190,23 +190,32 @@ function shotLands(s) {
   s.events.push({ e: 'miss', pid: p.i, kind: v.kind, three: v.three })
 }
 
-function doPass(s, p, inp) {
-  const b = s.ball
-  const mates = s.players.filter(o => o.team === p.team && o !== p && o.act !== 'down')
-  if (!mates.length) return
-  const m = Math.hypot(inp.mx || 0, inp.my || 0)
-  let to = null, best = -Infinity
-  for (const o of mates) {
+// Who a pass goes to: the teammate nearest the way the stick points; stick at rest, the most open one.
+// (the screen uses it too, to mark him before the button is pressed). Returns his index, or -1
+export function passTarget(s, i, mx = 0, my = 0) {
+  const p = s.players[i]
+  const m = Math.hypot(mx, my)
+  let to = -1, best = -Infinity
+  for (const o of s.players) {
+    if (o.team !== p.team || o === p || o.act === 'down') continue
     const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy) || 1
     let score
-    if (m >= 0.3) score = (dx * inp.mx + dy * inp.my) / (d * m)        // the teammate nearest the way the stick points
-    else {                                                              // stick at rest: the most open one
+    if (m >= 0.3) score = (dx * mx + dy * my) / (d * m)
+    else {
       let open = 99
       for (const q of s.players) if (q.team !== p.team) open = Math.min(open, Math.hypot(q.x - o.x, q.y - o.y))
       score = open
     }
-    if (score > best) { best = score; to = o }
+    if (score > best) { best = score; to = o.i }
   }
+  return to
+}
+
+function doPass(s, p, inp) {
+  const b = s.ball
+  const ti = passTarget(s, p.i, inp.mx || 0, inp.my || 0)
+  if (ti < 0) return
+  const to = s.players[ti]
   b.st = 'pass'; b.from = p.i; b.to = to.i; b.x = p.x; b.y = p.y; b.z = 4.5; b.t = 0; b.speed = p.R.passSpeed
   b.near = s.players.map(() => null); b.tried = s.players.map(() => false); b.lastTeam = p.team
   p.act = 'follow'; p.actT = 0; p.actN = ticks(0.15); p.burst = 0
