@@ -2,7 +2,8 @@
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
-import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, HZ, COURT, T } from '../../lib/btlive/index.js'
+import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, shotKindAt, referee as ref, HZ, COURT, T } from '../../lib/btlive/index.js'
+import { applySnap, lerpAt, relMsg, SEND_EVERY } from '../../lib/btlive/proto.js'
 import { sfx, haptic } from '../../lib/juice'
 
 const STEP = 1000 / HZ
@@ -16,7 +17,10 @@ const reduced = () => document.documentElement.classList.contains('bap-reduce-mo
 //          { label, photo, faceCenter }), seed }
 // els:   { canvas, court, clock, score: [el, el], poss: [el, el], pad, base, knob, btn: { a, b, c }, lab: { a, b, c } }
 // on:    { final(result) }
-export function createEngine({ setup, els, on }) {
+// net:   online only (net.js openNet): the line to the referee. The engine then runs no game of its own: it moves
+//        this device's player at once, times his meter here, sends both, and draws everyone else a beat behind the
+//        referee's snapshots, eased between them (setup.levels all null)
+export function createEngine({ setup, els, on, net = null }) {
   const ctx = els.canvas.getContext('2d')
   let s = createGame({ teams: setup.teams, seed: setup.seed })
   const me = setup.me
@@ -34,15 +38,41 @@ export function createEngine({ setup, els, on }) {
   // the shot meter, timed on this device
   const meter = { on: false, t0: 0, spec: null, read: 0, q: null, grade: null, gradeAt: 0, gradeGood: false }
   const keys = new Set()
+  // online: what this device has sent and heard, and what it is doing before the referee knows (local)
+  const online = !!net
+  const NB = { k: 0, n: [0, 0, 0], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, burst: 0, lt: 0, wasLive: false }
+  const DELAY = 6                                  // others are drawn this many ticks behind the latest word (200 ms)
+  const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
 
+  // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
+  // on a narrow screen (a phone held upright) it shows about 34 of the 56 feet across and pans with the play.
+  let cam = null, camPx = 0, worldW = 0
   function resize() {
     const r = els.court.getBoundingClientRect()
     dpr = Math.min(3, window.devicePixelRatio || 1)
-    w = r.width; h = r.height; k = w / COURT.W
+    w = r.width; h = r.height; k = h / COURT.H; worldW = COURT.W * k
     els.canvas.width = Math.round(w * dpr); els.canvas.height = Math.round(h * dpr)
+    if (els.world) { els.world.style.width = `${worldW}px`; els.world.style.height = `${h}px` }
+    cam = null
+  }
+  // where the camera looks: mostly the ball, some of the player being controlled; eased, never past the court's edges
+  function camera(dt) {
+    if (worldW <= w + 1) { camPx = (worldW - w) / 2 }
+    else {
+      const b = s.ball, P = s.players
+      const bx = b.st === 'held' ? P[b.holder].x : b.x
+      // in a team game, the whole floor's middle counts too (so a teammate to pass to is more often on the screen)
+      let mid = 0; for (const o of P) mid += o.x; mid /= P.length
+      const tx = (s.phase === 'live' ? (s.size > 1 ? bx * 0.45 + P[me].x * 0.2 + mid * 0.35 : bx * 0.6 + P[me].x * 0.4) : COURT.check.x) * k - w / 2
+      cam = cam == null ? tx : cam + (tx - cam) * (1 - Math.exp(-dt / 260))
+      camPx = clamp(cam, 0, worldW - w)
+    }
+    if (els.world && Math.abs((els.world._x ?? 1e9) - camPx) > 0.2) { els.world._x = camPx; els.world.style.transform = `translate3d(${-camPx}px,0,0)` }
   }
 
   // ── what happened this tick: sound, haptics, the words and the rare animations ──────────────────
+  // a word about a player goes where it won't sit on him or the men around him: well below him near the rim, above him out top
+  const wordY = y => (y < 20 ? y + 8.5 : y - 7)
   const say = (text, x, y, color = '#fff', big = false, dur = 1100) => fx.push({ text, x, y, t0: clockNow, dur, color, big })
   const kick = (amt = 1) => {
     if (reduced() || !els.court.animate) return
@@ -55,17 +85,17 @@ export function createEngine({ setup, els, on }) {
       if (e.e === 'make') {
         sfx('make'); haptic(e.kind === 'dunk' ? 'heavy' : 'medium')
         const word = e.poster ? 'POSTER' : e.kind === 'dunk' ? 'DUNK' : e.deep ? 'FROM DEEP' : e.pts === 2 ? 'TWO' : 'ONE'
-        say(word, COURT.rim.x, COURT.rim.y + 5, e.poster || e.deep ? FLOOD : TEAM[p.team], e.kind === 'dunk' || e.pts === 2, 1300)
+        say(word, COURT.rim.x, COURT.rim.y + 15.5, e.poster || e.deep ? FLOOD : TEAM[p.team], e.kind === 'dunk' || e.pts === 2, 1300)
         fx.push({ rim: e.kind === 'dunk' ? 'dunk' : 'make', t0: clockNow, dur: e.kind === 'dunk' ? 520 : 300 })
         if (e.kind === 'dunk') kick(e.poster ? 1.6 : 1)
       } else if (e.e === 'miss') { sfx('rimmiss'); fx.push({ rim: 'miss', t0: clockNow, dur: 260 }) }
-      else if (e.e === 'block') { sfx('lock'); haptic('heavy'); say(e.chase ? 'CHASE-DOWN' : 'BLOCKED', p.x, p.y - 3, TEAM[p.team], true); kick(1) }
-      else if (e.e === 'steal') { sfx('catchball'); haptic('medium'); say('STEAL', p.x, p.y - 3, TEAM[p.team]) }
-      else if (e.e === 'pick') { sfx('catchball'); haptic('medium'); say('PICKED OFF', p.x, p.y - 3, TEAM[p.team]) }
+      else if (e.e === 'block') { sfx('lock'); haptic('heavy'); say(e.chase ? 'CHASE-DOWN' : 'BLOCKED', p.x, wordY(p.y), TEAM[p.team], true); kick(1) }
+      else if (e.e === 'steal') { sfx('catchball'); haptic('medium'); say('STEAL', p.x, wordY(p.y), TEAM[p.team]) }
+      else if (e.e === 'pick') { sfx('catchball'); haptic('medium'); say('PICKED OFF', p.x, wordY(p.y), TEAM[p.team]) }
       else if (e.e === 'catch') sfx('catchball')
       else if (e.e === 'board') { sfx('catchball'); if (e.pid === me) haptic('light') }
-      else if (e.e === 'move') { if (e.ankles) { haptic('heavy'); say('ANKLES', P[e.def].x, P[e.def].y - 3, FLOOD, true, 1400) } else if (e.pid === me) haptic('light') }
-      else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, p.y - 3, 'rgba(255,255,255,.8)') } }
+      else if (e.e === 'move') { if (e.ankles) { haptic('heavy'); say('ANKLES', P[e.def].x, wordY(P[e.def].y), FLOOD, true, 1400) } else if (e.pid === me) haptic('light') }
+      else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.nc = H.c }
@@ -98,8 +128,17 @@ export function createEngine({ setup, els, on }) {
     for (let i = 0; i < N; i++) inputs[i] = levels[i] ? cpuInput(s, i, levels[i]) : myInput()
     step(s, inputs)
     onEvents()
-    // my meter: it starts when the simulation says the shot has started, on the clock of the press
-    const p = P[me]
+    meterWatch()
+    const b = s.ball
+    if (s.phase === 'live' && b.st === 'held' && clockNow - lastDribble > 330) {
+      const hp = P[b.holder]
+      if (hp.act === 'free' && Math.hypot(hp.vx, hp.vy) > 2.5) { sfx('dribble'); lastDribble = clockNow }
+    }
+    hud()
+  }
+  // my meter: it starts when the shot has started (the simulation's word, or online this device's), on the clock of the press
+  function meterWatch() {
+    const p = s.players[me]
     if (p.act === 'gather' && !meter.on && !levels[me]) {
       meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null
       meter.t0 = clockNow - H.aT0 < 220 ? H.aT0 : clockNow - STEP
@@ -108,17 +147,90 @@ export function createEngine({ setup, els, on }) {
       meter.on = false
       if (!meter.grade) { meter.grade = 'LATE'; meter.gradeGood = false; meter.gradeAt = clockNow }   // held past the end
     }
-    const b = s.ball
-    if (s.phase === 'live' && b.st === 'held' && clockNow - lastDribble > 330) {
-      const hp = P[b.holder]
-      if (hp.act === 'free' && Math.hypot(hp.vx, hp.vy) > 2.5) { sfx('dribble'); lastDribble = clockNow }
-    }
-    hud()
   }
   function letGo(at) {
     if (!meter.on || meter.grade) return
     const held = at - meter.t0
     meter.q = meterQuality(meter.spec, held); meter.grade = meterGrade(meter.spec, held); meter.gradeGood = meter.q >= 1; meter.gradeAt = at
+    if (online && NB.local?.act === 'gather') {
+      // only the quality goes to the referee; he comes down here and now
+      NB.rel = relMsg(NB.local.sn, meter.q); NB.edge = true
+      NB.local = { act: 'follow', until: NB.lt + Math.round(T.follow * HZ) }
+      const p = s.players[me]; p.act = 'follow'; p.actT = 0; p.shot = null; meter.q = null
+    }
+  }
+
+  // ── online: one tick on this device, and a snapshot from the referee ────────────────────────────
+  const r2 = v => Math.round(v * 100) / 100
+  function onlineTick() {
+    const p = s.players[me], b = s.ball
+    NB.lt++
+    prev[me * 2] = p.x; prev[me * 2 + 1] = p.y
+    const A = (H.a && !H.na) || H.ta, C = (H.c && !H.nc) || H.tc
+    H.ta = H.tb = H.tc = false
+    const live = s.phase === 'live'
+    const has = live && b.st === 'held' && b.holder === me
+    // a shot and a move start here, now; the referee's word follows
+    if (has && A && p.act === 'free' && p.noAct <= 0 && !NB.local) {
+      const kind = shotKindAt(s, me), d = ref.rimDist(p)
+      const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team), kind).c
+      p.act = 'gather'; p.actT = 0
+      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2 }
+      NB.local = { act: 'gather', shot: p.shot, sn: NB.n[0] }
+    }
+    if (has && C && p.act === 'free' && p.moveCd <= 0 && NB.burst <= 0) {
+      const m = Math.hypot(H.mx, H.my)
+      NB.burst = Math.round(T.moveTime * HZ); p.bdx = m >= T.walk ? H.mx / m : p.fx; p.bdy = m >= T.walk ? H.my / m : p.fy
+    }
+    if (NB.local?.act === 'gather') p.actT++
+    if (NB.local?.act === 'follow' && NB.lt >= NB.local.until) { NB.local = null; if (p.act === 'follow') p.act = 'free' }
+    if (live && NB.wasLive) { p.burst = NB.burst; moveLocal(s, me, { mx: H.mx, my: H.my }); NB.burst = p.burst }
+    // held past the end of the meter: it goes, late
+    if (meter.on && !meter.grade && clockNow - meter.t0 >= meter.spec.total) letGo(meter.t0 + meter.spec.total)
+    if (++NB.sendT >= SEND_EVERY || NB.edge) {
+      NB.sendT = 0; NB.edge = false
+      net.send({ t: 'in', k: ++NB.k, mx: r2(H.mx), my: r2(H.my), x: r2(p.x), y: r2(p.y), vx: r2(p.vx), vy: r2(p.vy), h: (H.a ? 1 : 0) | (H.b ? 2 : 0) | (H.c ? 4 : 0), n: NB.n, rel: NB.rel })
+    }
+    meterWatch()
+    hud()
+  }
+  function onSnap(m) {
+    if (m.k <= NB.lastK) return
+    NB.lastK = m.k
+    const now = performance.now(), o = now - m.k * STEP
+    NB.off = NB.off == null || o < NB.off ? o : NB.off + (o - NB.off) * 0.02
+    const p = s.players[me]
+    // my own position is mine while the ball is live; between plays (and as one starts) it's the referee's
+    const mine = m.ph === 'live' && NB.wasLive
+    applySnap(s, m, mine ? me : -1)
+    NB.wasLive = m.ph === 'live'
+    const L = NB.local
+    if (L?.act === 'gather') { p.act = 'gather'; p.shot = L.shot }
+    else if (L?.act === 'follow' && p.act !== 'frozen' && p.act !== 'down') p.act = 'follow'
+    if (!mine) { prev[me * 2] = p.x; prev[me * 2 + 1] = p.y; NB.burst = 0; if (L) NB.local = null }
+    if (NB.rel && m.a?.[me] >= NB.rel.sn) NB.rel = null
+    const pos = new Float32Array(N * 2)
+    m.p.forEach((a, i) => { pos[i * 2] = a[0]; pos[i * 2 + 1] = a[1] })
+    NB.buf.push({ k: m.k, p: pos, b: [m.b.x, m.b.y, m.b.z] })
+    if (NB.buf.length > 40) NB.buf.shift()
+    const fresh = (m.e || []).filter(e => e.q > NB.lastQ)
+    if (fresh.length) NB.lastQ = fresh[fresh.length - 1].q
+    s.events = fresh
+    onEvents()
+    hud()
+  }
+  // where everything is drawn this frame (feet): practice eases between the last two ticks; online, everyone else is
+  // a beat behind the referee and this device's own player is where this device has him
+  function places(a) {
+    const P = s.players, b = s.ball
+    if (online && NB.buf.length) {
+      lerpAt(NB.buf, (performance.now() - NB.off) / STEP - DELAY, LP, DB)
+      for (let i = 0; i < N; i++) { DX[i] = LP[i * 2]; DY[i] = LP[i * 2 + 1] }
+      if (s.phase === 'live' && NB.wasLive) { DX[me] = prev[me * 2] + (P[me].x - prev[me * 2]) * a; DY[me] = prev[me * 2 + 1] + (P[me].y - prev[me * 2 + 1]) * a }
+      return
+    }
+    for (let i = 0; i < N; i++) { DX[i] = prev[i * 2] + (P[i].x - prev[i * 2]) * a; DY[i] = prev[i * 2 + 1] + (P[i].y - prev[i * 2 + 1]) * a }
+    DB[0] = prevBall[0] + (b.x - prevBall[0]) * a; DB[1] = prevBall[1] + (b.y - prevBall[1]) * a; DB[2] = prevBall[2] + (b.z - prevBall[2]) * a
   }
 
   // ── the HUD: only what changed, straight to the DOM ─────────────────────────────────────────────
@@ -130,12 +242,13 @@ export function createEngine({ setup, els, on }) {
     if (s.score[1] !== shown.s1) { shown.s1 = s.score[1]; els.score[1].textContent = String(s.score[1]) }
     if (s.poss !== shown.poss) { shown.poss = s.poss; els.poss[0].classList.toggle('is-on', s.poss === 0); els.poss[1].classList.toggle('is-on', s.poss === 1) }
     const has = b.st === 'held' && b.holder === me, up = b.st === 'shot' || b.st === 'loose'
-    const mode = has ? 'ball' : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
+    // (between plays nothing is live: no buttons)
+    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? 'ball' : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
     if (mode !== shown.mode) {
       shown.mode = mode
       const set = (key, text) => { els.lab[key].textContent = text || ''; els.btn[key].classList.toggle('is-off', !text) }
       set('a', mode === 'ball' ? 'SHOOT' : mode === 'def' ? 'STEAL' : '')
-      set('b', mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
+      set('b', mode === 'none' ? '' : mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
       set('c', mode === 'ball' ? 'MOVE' : '')
     }
     // cooldowns dim their button
@@ -186,12 +299,13 @@ export function createEngine({ setup, els, on }) {
     void now
   }
   // the name bars go on after every portrait, so a name is never under another player
-  function drawName(i, x, y, tk) {
+  function drawName(i, x, y, tk, above = false) {
     const p = s.players[i], look = setup.looks[i], col = TEAM[p.team]
     const fs = Math.max(9, Math.round(tk * 0.4))
     ctx.font = `${fs}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     const name = look.label.toUpperCase(), tw = ctx.measureText(name).width
-    const py = y + tk * 0.5 + 4 + fs * 0.62
+    // under the dot; over it when someone is right under him (the bar would sit on that man's face)
+    const py = above ? y - tk * 0.5 - 5 - fs * 0.62 : y + tk * 0.5 + 4 + fs * 0.62
     rr(x - tw / 2 - 4, py - fs * 0.62, tw + 8, fs * 1.24, 2); ctx.fillStyle = 'rgba(5,7,10,.82)'; ctx.fill()
     ctx.fillStyle = col; ctx.fillRect(x - tw / 2 - 4, py - fs * 0.62, 2, fs * 1.24)
     ctx.fillStyle = i === me ? '#fff' : 'rgba(243,246,248,.86)'; ctx.fillText(name, x + 1, py + 0.5)
@@ -214,10 +328,12 @@ export function createEngine({ setup, els, on }) {
     const held = mine && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + acc / STEP) * STEP
     const f = clamp(held / spec.total, 0, 1)
     const bw = mine ? Math.max(12, tk * 0.34) : Math.max(6, tk * 0.2), bh = mine ? Math.max(66, tk * 2.6) : Math.max(34, tk * 1.5)
-    // on the side away from the man guarding him, so it's never under a defender
-    let side = p.x > 44 ? -1 : 1
-    if (p.x > 12 && p.x <= 44) { let nd = 99; for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < nd) { nd = d; side = o.x > p.x ? -1 : 1 } } }
-    const bx = x + side * (tk * 0.5 + 10) - (side < 0 ? bw : 0), by = y - bh * 0.62
+    // on the side away from the nearest defender, so it's never under him; the other side if that's off the screen
+    let side = 1, nd = 99
+    for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < nd) { nd = d; side = o.x > p.x ? -1 : 1 } }
+    const at = sd => x + sd * (tk * 0.5 + 16) - (sd < 0 ? bw : 0)
+    if (at(side) < camPx + 4 || at(side) + bw > camPx + w - 4) side = -side
+    const bx = at(side), by = y - bh * 0.62
     if (mine) { meter.gx = side > 0 ? bx + bw + 6 : bx - 6; meter.gy = by + bh * 0.3; meter.gside = side }
     rr(bx - 2, by - 2, bw + 4, bh + 4, 3); ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fill()
     ctx.fillStyle = '#1c242e'; ctx.fillRect(bx, by, bw, bh)
@@ -244,8 +360,11 @@ export function createEngine({ setup, els, on }) {
     const a = clamp(acc / STEP, 0, 1), P = s.players
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
+    ctx.translate(-camPx, 0)                                         // world coordinates from here (the camera)
+    const L = camPx, Rr = camPx + w                                  // the screen's edges, in them
     const tk = clamp(k * T.radius * 2, 18, 52)                       // a dot is as big as the body the game collides
-    const X = i => (prev[i * 2] + (P[i].x - prev[i * 2]) * a) * k, Y = i => (prev[i * 2 + 1] + (P[i].y - prev[i * 2 + 1]) * a) * k
+    places(a)
+    const X = i => DX[i] * k, Y = i => DY[i] * k
     const b = s.ball
     // the rim taking a make, a miss, a dunk
     for (const f of fx) {
@@ -274,7 +393,20 @@ export function createEngine({ setup, els, on }) {
     // players, the far ones first
     const order = P.map((_, i) => i).sort((i, j) => P[i].y - P[j].y)
     for (const i of order) drawPlayer(i, X(i), Y(i), tk, now)
-    for (const i of order) drawName(i, X(i), Y(i), tk)
+    for (const i of order) drawName(i, X(i), Y(i), tk, order.some(j => j !== i && Math.abs(X(j) - X(i)) < tk * 1.3 && Y(j) - Y(i) > 0 && Y(j) - Y(i) < tk * 1.7))
+    // a player off the side of the screen: a tab at the edge in his side's colour, at his height
+    if (worldW > w + 1) for (const i of order) {
+      const x = X(i), y = Y(i), off = x < L - tk * 0.1 ? -1 : x > Rr + tk * 0.1 ? 1 : 0
+      if (!off) continue
+      const ex = off < 0 ? L : Rr, fs = Math.max(10, Math.round(tk * 0.34))
+      ctx.fillStyle = 'rgba(5,7,10,.88)'; ctx.beginPath(); ctx.moveTo(ex, y - 13); ctx.lineTo(ex - off * 10, y - 13); ctx.lineTo(ex - off * 17, y); ctx.lineTo(ex - off * 10, y + 13); ctx.lineTo(ex, y + 13); ctx.fill()
+      ctx.fillStyle = TEAM[P[i].team]; ctx.fillRect(off < 0 ? ex : ex - 3, y - 13, 3, 26)
+      ctx.font = `${fs}px ${FONT}`; ctx.textAlign = off < 0 ? 'left' : 'right'; ctx.textBaseline = 'middle'
+      const nm = setup.looks[i].label.toUpperCase().slice(0, 3)
+      const nx = ex - off * 20, nw = ctx.measureText(nm).width
+      ctx.fillStyle = 'rgba(5,7,10,.82)'; ctx.fillRect(off < 0 ? nx - 2 : nx - nw - 2, y - fs * 0.6, nw + 4, fs * 1.2)
+      ctx.fillStyle = i === me ? '#fff' : 'rgba(243,246,248,.86)'; ctx.fillText(nm, nx, y + 0.5)
+    }
     // the ball: in a hand it bounces as he goes and rises with the shot; in the air it's where the game says
     if (b.st === 'held') {
       const hp = P[b.holder], hx = X(b.holder), hy = Y(b.holder)
@@ -283,7 +415,7 @@ export function createEngine({ setup, els, on }) {
       else if (s.phase === 'live' && Math.hypot(hp.vx, hp.vy) > 1) z = Math.abs(Math.sin(now / 165)) * 2.6
       else z = 1.2
       drawBall(hx + hp.fx * tk * 0.52, hy + hp.fy * tk * 0.52 + tk * 0.1, z, now)
-    } else drawBall((prevBall[0] + (b.x - prevBall[0]) * a) * k, (prevBall[1] + (b.y - prevBall[1]) * a) * k, prevBall[2] + (b.z - prevBall[2]) * a, now)
+    } else drawBall(DB[0] * k, DB[1] * k, DB[2], now)
     // meters
     for (let i = 0; i < N; i++) if (P[i].act === 'gather' && P[i].shot && s.phase === 'live') drawMeter(i, X(i), Y(i), tk, now)
     // how the release was
@@ -293,7 +425,7 @@ export function createEngine({ setup, els, on }) {
       ctx.globalAlpha = t > 0.7 ? (1 - t) / 0.3 : 1
       // where the meter was (that's where he's looking)
       const tw = ctx.measureText(meter.grade).width
-      const gx = clamp((meter.gx ?? X(me)) + (meter.gside ?? 0) * tw / 2, tw / 2 + 8, w - tw / 2 - 8), gy = clamp(meter.gy ?? Y(me) - tk, fs, h - fs)
+      const gx = clamp((meter.gx ?? X(me)) + (meter.gside ?? 0) * tw / 2, L + tw / 2 + 8, Rr - tw / 2 - 8), gy = clamp(meter.gy ?? Y(me) - tk, fs, h - fs)
       ctx.fillStyle = 'rgba(5,7,10,.86)'; ctx.fillRect(gx - tw / 2 - 5, gy - fs * 0.62, tw + 10, fs * 1.24)
       ctx.fillStyle = meter.gradeGood ? GREEN : '#fff'; ctx.fillText(meter.grade, gx, gy + 0.5)
       ctx.globalAlpha = 1
@@ -304,10 +436,10 @@ export function createEngine({ setup, els, on }) {
       if (now - f.t0 > f.dur) { fx.splice(i, 1); continue }
       if (!f.text) continue
       const t = (now - f.t0) / f.dur
-      const fs = Math.round(clamp(k * (f.big ? 4.6 : 2.9), f.big ? 26 : 15, f.big ? 64 : 40))
+      const fs = Math.round(clamp(k * (f.big ? 3.4 : 2.3), f.big ? 24 : 14, f.big ? 52 : 34))
       ctx.font = `${fs}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       const tw = ctx.measureText(f.text).width
-      const x = clamp(f.x * k, tw / 2 + 8, w - tw / 2 - 8), y = clamp(f.y * k - (reduced() ? 0 : t * 8), fs, h - fs)
+      const x = clamp(f.x * k, L + tw / 2 + 8, Rr - tw / 2 - 8), y = clamp(f.y * k - (reduced() ? 0 : t * 8), fs, h - fs)
       ctx.globalAlpha = t < 0.08 ? t / 0.08 : t > 0.75 ? (1 - t) / 0.25 : 1
       ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, fs * 0.16); ctx.strokeStyle = 'rgba(5,7,10,.92)'; ctx.strokeText(f.text, x, y)
       ctx.fillStyle = f.color; ctx.fillText(f.text, x, y)
@@ -315,17 +447,22 @@ export function createEngine({ setup, els, on }) {
     }
   }
 
+  // DEV: how long each frame's work takes and how far apart frames come (a ring, no garbage)
+  const PERF = new Float32Array(240), GAP = new Float32Array(240); let pn = 0
   function frame(t) {
     if (dead) return
     raf = requestAnimationFrame(frame)
+    const w0 = performance.now(); GAP[pn % 240] = t - last
     const dt = Math.min(120, t - last); last = t
     if (!paused) {
       clockNow += dt; acc += dt
       let n = 0
-      while (acc >= STEP && n++ < 5) { tick(); acc -= STEP }
+      while (acc >= STEP && n++ < 5) { if (online) onlineTick(); else tick(); acc -= STEP }
       if (acc >= STEP) acc = 0
+      camera(dt)
     }
     draw(clockNow)
+    PERF[pn++ % 240] = performance.now() - w0
   }
 
   // ── the stick (it appears where the thumb lands) and the buttons ────────────────────────────────
@@ -336,7 +473,7 @@ export function createEngine({ setup, els, on }) {
     els.base.classList.toggle('is-on', on); els.knob.classList.toggle('is-on', on)
   }
   const padDown = e => {
-    if (stick.id != null || e.target.closest?.('.btl-btn')) return
+    if (stick.id != null || e.target.closest?.('.btlv-btn')) return
     const r = els.pad.getBoundingClientRect()                       // read once a touch, not on every move
     if (e.clientX - r.left > r.width * 0.56) return
     e.preventDefault()
@@ -365,6 +502,7 @@ export function createEngine({ setup, els, on }) {
       if (H[key]) return
       H[key] = true; H['t' + key] = true; H['n' + key] = false
       if (key === 'a') H.aT0 = stamp()
+      if (online) { NB.n['abc'.indexOf(key)]++; NB.edge = true }
     } else {
       if (!H[key]) return
       H[key] = false; H['n' + key] = false
@@ -399,15 +537,15 @@ export function createEngine({ setup, els, on }) {
     if (DIR[kk]) { keys.delete(kk); readKeys() } else if (KEY[kk]) press(KEY[kk], false)
   }
   const blur = () => { keys.clear(); readKeys(); for (const key of ['a', 'b', 'c']) press(key, false) }
-  const vis = () => { paused = document.hidden || pausedBy; last = performance.now() }
+  const vis = () => { paused = !online && (document.hidden || pausedBy); last = performance.now() }
   let pausedBy = false
 
   els.pad.addEventListener('pointerdown', padDown); els.pad.addEventListener('pointermove', padMove)
   els.pad.addEventListener('pointerup', padUp); els.pad.addEventListener('pointercancel', padUp)
   window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp); window.addEventListener('blur', blur)
   document.addEventListener('visibilitychange', vis)
-  const ro = new ResizeObserver(resize); ro.observe(els.court)
-  resize()
+  const ro = new ResizeObserver(() => { resize(); camera(1e6) }); ro.observe(els.court)
+  resize(); camera(1e6)
   { const r = els.pad.getBoundingClientRect(); setKnob(r.width * 0.25, r.height - 150, 0, 0, false) }
   document.fonts?.load?.(`16px ${FONT}`).catch(() => {})
   for (let i = 0; i < N; i++) { prev[i * 2] = s.players[i].x; prev[i * 2 + 1] = s.players[i].y }
@@ -418,16 +556,21 @@ export function createEngine({ setup, els, on }) {
 
   const api = {
     get state() { return s },
-    me,
+    me, online,
+    // online: a message from the referee (BtLive routes them here)
+    onNet(m) { if (m.t === 's') onSnap(m) },
+    get netInfo() { return { k: NB.lastK, buf: NB.buf.length, off: NB.off, rel: NB.rel, local: NB.local?.act ?? null, lt: NB.lt, n: NB.n } },
     pause(on = true) { pausedBy = on; paused = on || document.hidden; last = performance.now() },
     // DEV: the CPU plays the person's player (a level name), or hands him back (null)
     auto(level) { levels[me] = level || null },
     // DEV: run n ticks right now (no waiting), or until fn(state) is true
-    run(n = 1, until = null) { let i = 0; for (; i < n; i++) { clockNow += STEP; tick(); if (until && until(s)) break } acc = 0; draw(clockNow); return i },
+    run(n = 1, until = null) { let i = 0; for (; i < n; i++) { clockNow += STEP; tick(); if (until && until(s)) break } acc = 0; camera(1e6); draw(clockNow); return i },
     press, stick(x, y) { H.mx = x; H.my = y },
     // DEV: let time pass with the game stopped (the meter runs on this device's clock)
     wait(ms) { clockNow += ms; draw(clockNow) },
-    draw() { draw(clockNow) },
+    draw() { camera(1e6); draw(clockNow) },
+    // DEV: frame work (ms) and the gap between frames over the last 240 frames
+    perf() { const n = Math.min(pn, 240), a = [...PERF.slice(0, n)].sort((x, y) => x - y), g = [...GAP.slice(0, n)].sort((x, y) => x - y); const q = (v, f) => +v[Math.min(v.length - 1, Math.floor(v.length * f))].toFixed(2); return { frames: n, workAvg: +(a.reduce((x, y) => x + y, 0) / n).toFixed(2), work95: q(a, 0.95), workMax: q(a, 1), gap50: q(g, 0.5), gap95: q(g, 0.95) } },
     destroy() {
       dead = true; cancelAnimationFrame(raf); ro.disconnect()
       els.pad.removeEventListener('pointerdown', padDown); els.pad.removeEventListener('pointermove', padMove)
