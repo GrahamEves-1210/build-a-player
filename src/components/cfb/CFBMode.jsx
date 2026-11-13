@@ -666,6 +666,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
               onReset={reset}
               types={P.types}
               hasResult={!!result}
+              calcOvr={P.ovr}
               {...P.flags}
               attrMap={P.attr}
               isCustomMode={sandboxOn}

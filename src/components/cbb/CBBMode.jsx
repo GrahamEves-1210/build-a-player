@@ -671,6 +671,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
               onReset={reset}
               types={P.types}
               hasResult={!!result}
+              calcOvr={P.ovr}
               isBucket
               bucketPosition={pos}
               logoDir="/logos/"
@@ -684,7 +685,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
         </main>
         <div className="build-footer-section">
           <SiteFeatures sport="bucket" className="build-site-features" />
-          <SiteFooter sport="bucket" />
+          <SiteFooter sport="cbb" />
         </div>
       </div>
       {IS_APP && <BuildComplete complete={complete} ovr={ovrNow} name={ovrNow ? P.arch(ovrNow, build, P.types) : null} build={build} types={P.types} attrMap={P.attr} />}

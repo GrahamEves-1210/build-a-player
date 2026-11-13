@@ -56,7 +56,7 @@ const HoopU = () => (
 // home: the home page's footer, where the partner offer leads. Everywhere else it sits under the link columns, over the
 // Playmaker Games line (the owner, 2026-11-11)
 export default function SiteFooter({ sport = 'nfl', onWiki, home = false }) {
-  const isBucket = sport === 'bucket'
+  const isBucket = sport === 'bucket' || sport === 'cbb'
   // null = closed; otherwise holds the signed-in user (or false when signed out)
   const [feedbackUser, setFeedbackUser] = useState(null)
   const openFeedback = async () => {
@@ -73,7 +73,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki, home = false }) {
             BUILD-A-PLAYER
           </div>
           <div className="splash-site-footer-blurb">
-            {sport === 'baseball' ? 'Fan-made baseball player builder. Not affiliated with Major League Baseball, the MLBPA, or any of their teams or players.' : sport === 'soccer' ? 'Fan-made soccer player builder. Not affiliated with FIFA, UEFA, any league or club, or FIFPRO.' : isBucket ? 'Fan-made NBA player builder. Not affiliated with the NBA, the NBPA, or any of their members.' : 'Fan-made NFL and college football player builder. Not affiliated with the NFL, the NFLPA, the NCAA, any college conference or university, or any of their members.'}
+            {sport === 'baseball' ? 'Fan-made baseball player builder. Not affiliated with Major League Baseball, the MLBPA, or any of their teams or players.' : sport === 'soccer' ? 'Fan-made soccer player builder. Not affiliated with FIFA, UEFA, any league or club, or FIFPRO.' : sport === 'cbb' ? 'Fan-made college basketball player builder. Not affiliated with the NCAA, any college conference or university, or the NBA.' : isBucket ? 'Fan-made NBA player builder. Not affiliated with the NBA, the NBPA, or any of their members.' : 'Fan-made NFL and college football player builder. Not affiliated with the NFL, the NFLPA, the NCAA, any college conference or university, or any of their members.'}
           </div>
         </div>
         <div className="splash-site-footer-col">
