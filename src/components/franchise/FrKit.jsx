@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Bug, FrShell, Panel, FrTable, FrSheet, FrSheetHead, GradeRow, Confirm, FrMeters, FrTicker, Steps, Switch, Seg, Stepper, Logo } from './frUi'
-import { FR_TEAMS, dressFor } from './frTeams'
+import { FR_TEAMS, dressFor, teamOf } from './frTeams'
+import FrWeek from './FrWeek'
 
 // FRANCHISE: the kit on one page, with made-up figures. Dev server only (/?franchise=1&frkit=KC, any club's
 // short): the place to look at every shared piece in any team's colour before using it on a real screen.
@@ -30,15 +31,39 @@ const COLS = [
 const NEWS = ['Chiefs activate Hollywood Brown from injured reserve ahead of Sunday night', 'Bills hold on in overtime, 27-24, to stay unbeaten', 'Jets fire their offensive coordinator after an 0-4 start', 'Lions edge rusher out four to six weeks with a high ankle sprain']
 const TABS = [{ id: 'hub', label: 'HUB', n: 2 }, { id: 'team', label: 'TEAM' }, { id: 'league', label: 'LEAGUE' }, { id: 'office', label: 'OFFICE' }]
 
+// the plain week (FrWeek.jsx) on made-up numbers: /?franchise=1&frkit=week
+const ref = short => ({ short, name: teamOf(short).name, nick: teamOf(short).nick })
+const pl = (name, rest, built = false) => ({ id: name, name, built, ...rest })
+const side = (short, score, quarters, built) => ({
+  team: ref(short), score, quarters,
+  totals: { yds: 300 + score * 4, passYds: 214 + score * 3, rushYds: 86 + score, firstDowns: 17 + (score >> 3), third: '6-13', to: score > 25 ? 0 : 2, sacks: 2, top: score > 25 ? '31:42' : '28:18' },
+  passing: [pl(built ? 'Tavon Whitaker' : 'Josh Allen', { cmp: 22, att: 33, yds: 268, td: 2, int: score > 25 ? 0 : 1 }, built)],
+  rushing: [pl('Isiah Pacheco', { att: 17, yds: 74, td: 1, long: 19 }), pl(built ? 'Tavon Whitaker' : 'Josh Allen', { att: 5, yds: 31, td: 0, long: 14 }, built)],
+  receiving: [pl('Xavier Worthy', { rec: 7, yds: 104, td: 1, long: 41 }), pl('Travis Kelce', { rec: 6, yds: 62, td: 1, long: 18 }), pl('Rashee Rice', { rec: 5, yds: 58, td: 0, long: 22 })],
+  defense: [pl('Nick Bolton', { tkl: 9, sack: 0, int: 0, ff: 0 }), pl('Chris Jones', { tkl: 4, sack: 1.5, int: 0, ff: 1 }), pl('Trent McDuffie', { tkl: 5, sack: 0, int: 1, ff: 0 })],
+  kicking: [pl('Harrison Butker', { fgm: 2, fga: 2, long: 48, xpm: 3, xpa: 3, pts: 9 })],
+})
+const BOX = { id: 'w5g3', week: 5, ot: false, away: side('KC', 27, [7, 10, 3, 7], true), home: side('BUF', 24, [3, 14, 0, 7], false) }
+const game = (a, as, h, hs, ot = false, user = false) => ({ id: `${a}${h}`, week: 5, away: ref(a), home: ref(h), as, hs, ot, played: true, user })
+const WEEK = {
+  week: 5, label: 'WEEK 5',
+  user: { game: game('KC', 27, 'BUF', 24, false, true), box: BOX, potg: { player: { name: 'Tavon Whitaker' }, line: '22 of 33, 268 yards, 2 TD' } },
+  injuries: [{ id: 1, name: 'George Karlaftis', slot: 'EDGE', what: 'High ankle sprain', wk: 3, user: true }],
+  scores: [game('KC', 27, 'BUF', 24, false, true), game('DAL', 17, 'PHI', 31), game('DET', 34, 'GB', 31, true), game('SF', 20, 'SEA', 23), game('NYJ', 10, 'MIA', 13), game('BAL', 28, 'CIN', 24)],
+  headlines: [{ id: 1, head: 'Chiefs win in Buffalo behind Whitaker, 27-24' }, { id: 2, head: 'Lions outlast the Packers in overtime' }, { id: 3, head: 'Jets fall to 0-5; the head coach is on the hot seat' }],
+}
+const FAKE = { lastWeek: () => WEEK }
+
 export default function FrKit({ team: team0 = 'KC', onHome }) {
-  const [team, setTeam] = useState(team0)
-  useEffect(() => { dressFor(team0) }, [team0])
+  const [team, setTeam] = useState(team0 === 'week' ? 'KC' : team0)
+  useEffect(() => { dressFor(team0 === 'week' ? 'KC' : team0) }, [team0])
   const [tab, setTab] = useState('hub')
   const [sheet, setSheet] = useState(null)
   const [ask, setAsk] = useState(false)
   const [sw, setSw] = useState(true)
   const [seg, setSeg] = useState('AFC')
   const [m, setM] = useState({ p: 70, pw: null, i: 46, iw: null })
+  if (team0 === 'week') return <FrWeek FR={FAKE} F={{}} hub={{ team: ref('KC'), record: { text: '4-1' } }} onDone={onHome} />
   const at = FR_TEAMS.findIndex(t => t.short === team)
   const go = by => { const t = FR_TEAMS[(at + by + FR_TEAMS.length) % FR_TEAMS.length].short; setTeam(t); dressFor(t) }
   return (

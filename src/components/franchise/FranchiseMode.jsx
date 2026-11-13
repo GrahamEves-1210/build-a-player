@@ -112,7 +112,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 3600); return () => clearTimeout(id) }, [toast])
 
   const team = F?.team ?? null
-  useEffect(() => { if (view !== 'setup' && view !== 'slots') dressFor(team) ; if (view === 'slots') dressFor(null) }, [team, view])
+  // the accent: the open franchise's team; none on the saves screen (the setup dresses itself, and so does the kit)
+  useEffect(() => { if (FrKit || view === 'setup') return; dressFor(view === 'slots' ? null : team) }, [team, view])
 
   const open = s => {
     const f = FR.loadFranchise(s)
@@ -120,7 +121,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
     setF(f); setSlot(s); setTab('hub'); setView('hub'); leaveCardNote(FR, f, s)
   }
   const toSlots = () => { saveNow(); setSlots(FR.listSlots()); setF(null); setSlot(null); setView('slots') }
-  const startNew = s => { putSetup({ ...newSetup(s), gmName: owner.slice(0, 18) }); setView('setup') }
+  // (one setup at a time: with one already under way, another empty slot takes that setup rather than dropping it)
+  const startNew = s => { putSetup(setup && (setup.team || setup.picks.length) ? { ...setup, slot: s } : { ...newSetup(s), gmName: owner.slice(0, 18) }); setView('setup') }
   const create = () => {
     if (busy || !setup?.team) return
     setBusy(true); sfx('send'); haptic('medium')

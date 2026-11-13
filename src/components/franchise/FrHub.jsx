@@ -132,9 +132,6 @@ export default function FrHub({ FR, F, hub, act, go, offseasonSeam }) {
               ))}
             </Panel>
           )}
-          {mine && <Panel title={mine.name} meta={hub.standing ? String(hub.standing).toUpperCase() : null}><DivisionTable division={mine} compact /></Panel>}
-        </div>
-        <div className="fr-col">
           {game ? (
             <Panel title="Next game" meta={next.label ?? hub.weekLabel}>
               {game.map((t, i) => (
@@ -148,12 +145,15 @@ export default function FrHub({ FR, F, hub, act, go, offseasonSeam }) {
           ) : !off && (
             <Panel title="Next game" meta={hub.weekLabel}><div className="fr-empty">{next?.eliminated ? 'THE SEASON IS OVER FOR THE ' + us.nick.toUpperCase() : 'BYE WEEK'}</div></Panel>
           )}
+        </div>
+        <div className="fr-col">
           <Panel title={us.nick} meta={`GM ${String(hub.gm.name).toUpperCase()}`}>
             {last && <div className="fr-kv"><span>LAST GAME</span><b>{last.tied ? 'T' : last.won ? 'W' : 'L'} {last.us}-{last.them}{last.ot ? ' OT' : ''} {last.home ? 'vs' : '@'} {last.opp.short}</b></div>}
             {hub.seed ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{ord(hub.seed)}</b></div> : null}
             <div className="fr-kv"><span>CAP ROOM</span><b>{FR.moneyText(room)}</b></div>
             <div className="fr-kv"><span>JOB SECURITY</span><b className="is-text">{hub.gm.securityWord ?? hub.owner?.word ?? ''} <Steps value={hub.gm.security ?? hub.owner?.security ?? 0} low={hub.owner?.floor ?? 20} label={`Job security ${Math.round(hub.gm.security ?? 0)} of 100`} /></b></div>
           </Panel>
+          {mine && <Panel title={mine.name} meta={hub.standing ? String(hub.standing).toUpperCase() : null}><DivisionTable division={mine} compact /></Panel>}
           {hub.owner?.goals?.length > 0 && (
             <Panel title="Owner's goals">
               {hub.owner.goals.map(g => <div key={g.id} className="fr-kv"><span className="is-wrap">{String(g.text).toUpperCase()}</span><b className={`is-text${g.done === false ? ' fr-t-dim' : ''}`}>{g.done === true ? 'MET' : g.done === false ? 'MISSED' : g.progress}</b></div>)}
