@@ -124,12 +124,14 @@ function Call({ c, onPick }) {
         <span className="frgd-eye">COACH&rsquo;S CALL</span>
         <h2>{c.kind === 'two-point' ? 'ONE OR TWO' : 'FOURTH DOWN'}</h2>
         <p className="frgd-stop-set">{c.setup}</p>
-        {c.options.map(o => (
-          <button key={o.id} type="button" className="frgd-opt" onClick={() => onPick(o.id)}>
-            <span><strong>{o.label}</strong>{o.note && <small>{o.note}</small>}</span>
-            {o.odds != null && <b>{pct(o.odds)}</b>}
-          </button>
-        ))}
+        <div className="frgd-opts">
+          {c.options.map(o => (
+            <button key={o.id} type="button" className="frgd-opt" onClick={() => onPick(o.id)}>
+              <span><strong>{o.label}</strong>{o.note && <small>{o.note}</small>}</span>
+              {o.odds != null && <b>{pct(o.odds)}</b>}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -170,7 +172,14 @@ export default function Live({ F, put, g, driver, title }) {
     setShown(made.length ? made.slice(0, 3) : null)
   }
   const resolve = res => { const { F: f, g: was } = now.current; setPlaying(null); after(driver.resolveMoment(f, res), was.plays.length) }
-  const pick = id => { sfx('tap'); const { F: f, g: was } = now.current; after(driver.resolveCall(f, id), was.plays.length) }
+  // (a call is only the decision: the play it makes is the engine's next one, so that one is run and shown as the call's result)
+  const pick = id => {
+    sfx('tap')
+    const { F: f, g: was } = now.current
+    let next = driver.resolveCall(f, id), ng = driver.view(next)
+    if (ng && !ng.pending && !ng.done && ng.plays.length === was.plays.length) next = driver.step(next)
+    after(next, was.plays.length)
+  }
   const skip = () => { sfx('tap'); setPlaying(null); setShown(null); put(driver.skip(now.current.F), true) }
 
   const m = stop?.type === 'moment' ? stop : null

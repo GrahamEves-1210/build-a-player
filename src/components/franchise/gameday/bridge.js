@@ -1,5 +1,6 @@
 import * as FR from '../../../lib/franchise'
 import { GAMES } from '../../../lib/minigames'
+import { romanOf } from '../../../lib/mg/kit'
 
 // GAME DAY ⇄ ENGINE. The only file in this folder that knows the engine (lib/franchise, API.md §2 pregame/lastWeek
 // and §4 the game). It turns the engine's selectors into the small view model the screens draw, and the screens'
@@ -53,7 +54,7 @@ export function pregame(F) {
   }
 }
 export const setMoments = (F, on) => FR.setSetting(F, 'moments', !!on)
-export const live = F => !!FR.gameView(F)
+export const live = F => { const v = FR.gameView(F); return !!v && !v.booked }
 export const start = (F, mode) => FR.startGame(F, { mode })
 export const step = F => FR.stepGame(F)
 export const skip = F => FR.skipGame(F)
@@ -93,7 +94,8 @@ function stopOf(s) {
     type: 'moment', id: s.id, n: s.n, game: s.game, title: s.title ?? GAMES[s.game]?.title, side: s.side,
     player: man(p), ratings: (p.traits ?? []).map(t => ({ key: t.key, label: String(t.label ?? t.key).toUpperCase(), val: t.val })),
     setup: s.situation?.text ?? '', stakes: s.stakes ?? '', odds: s.odds ?? null,
-    mg: s.mg ? { cast: null, ...s.mg } : null,
+    // (the Super Bowl's number for the mini game's field: the engine gives the season, the stage wants LXI)
+    mg: s.mg ? { cast: null, ...s.mg, superBowl: typeof s.mg.superBowl === 'number' ? romanOf(s.mg.superBowl - 1965) : s.mg.superBowl ?? null } : null,
   }
 }
 // the game as the screens draw it:
@@ -117,9 +119,9 @@ export function view(F) {
 const TOTALS = [['yds', 'TOTAL YARDS'], ['passYds', 'PASSING'], ['rushYds', 'RUSHING'], ['firstDowns', 'FIRST DOWNS'], ['third', 'THIRD DOWN'], ['to', 'TURNOVERS'], ['sacks', 'SACKS'], ['top', 'POSSESSION']]
 const boxOf = b => b && ({
   passing: (b.passing ?? []).map(r => ({ man: man(r), cells: [`${r.cmp}/${r.att}`, r.yds, r.td, r.int] })),
-  rushing: (b.rushing ?? []).map(r => ({ man: man(r), cells: [r.att, r.yds, r.td] })),
-  receiving: (b.receiving ?? []).map(r => ({ man: man(r), cells: [r.rec, r.yds, r.td] })),
-  defense: (b.defense ?? []).map(r => ({ man: man(r), cells: [r.tkl, r.sack, r.int, r.ff] })),
+  rushing: (b.rushing ?? []).slice(0, 4).map(r => ({ man: man(r), cells: [r.att, r.yds, r.td] })),
+  receiving: (b.receiving ?? []).filter(r => r.rec > 0).slice(0, 6).map(r => ({ man: man(r), cells: [r.rec, r.yds, r.td] })),
+  defense: (b.defense ?? []).slice(0, 8).map(r => ({ man: man(r), cells: [r.tkl, r.sack, r.int, r.ff] })),
   kicking: (b.kicking ?? []).map(r => ({ man: man(r), cells: [`${r.fgm}/${r.fga}`, r.long || '-', `${r.xpm}/${r.xpa}`] })),
 })
 // Books the game (and the rest of the league's week) and reads the recap back as the postgame's result:
@@ -142,9 +144,9 @@ export function finish(F) {
     box: box ? { [home]: boxOf(box.home), [away]: boxOf(box.away) } : {},
     totals: box?.home?.totals ? TOTALS.filter(([k]) => box.home.totals[k] != null).map(([k, label]) => ({ label, [home]: box.home.totals[k], [away]: box.away.totals[k] })) : [],
     potg: potg?.player ? { man: man(potg.player), line: potg.line } : null,
-    xp: (u?.xp ?? []).map(x => ({ man: { id: x.id, name: x.name, built: !!x.built }, xp: x.xp, pts: x.pts ?? 0 })),
+    xp: (u?.xp ?? []).slice(0, 8).map(x => ({ man: { id: x.id, name: x.name, built: !!x.built }, xp: x.xp, pts: x.pts ?? 0 })),
     xpTeam: u?.xp?.length ? u.xp.reduce((s, x) => s + (x.xp ?? 0), 0) : null,
-    injuries: (w?.injuries ?? []).filter(x => x.user).map(x => ({ man: { id: x.id, name: x.name, pos: x.slot }, what: x.what, weeks: x.wk })),
+    injuries: (w?.injuries ?? []).filter(x => x.user).map(x => ({ man: { id: x.id, name: x.name, pos: x.slot }, what: x.what ? x.what[0].toUpperCase() + x.what.slice(1) : '', weeks: x.wk })),
     league: (w?.scores ?? []).filter(x => !x.user && x.played !== false).map(x => ({ away: short(x.away), home: short(x.home), a: x.as, h: x.hs, ot: !!x.ot })),
     headlines: (w?.headlines ?? []).map(n => n.head).filter(Boolean).slice(0, 4),
   }

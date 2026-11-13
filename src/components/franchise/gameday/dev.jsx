@@ -9,6 +9,10 @@ import '../../../app-game.css'
 import GameDay from './GameDay'
 
 const q = new URLSearchParams(location.search)
+// (for the screenshot scripts: what went wrong on this page, if anything)
+window.__gdErrs = []
+window.addEventListener('error', e => window.__gdErrs.push(String(e.error?.stack ?? e.message).slice(0, 400)))
+window.addEventListener('unhandledrejection', e => window.__gdErrs.push('rej ' + String(e.reason?.stack ?? e.reason).slice(0, 400)))
 async function boot() {
   let driver, franchise
   if (q.get('fx') === '1') {
@@ -18,13 +22,18 @@ async function boot() {
     driver = await import('./bridge')
     const FR = await import('../../../lib/franchise')
     window.FR = FR
-    franchise = FR.createFranchise({ team: q.get('team') ?? 'KC', builds: [], gmName: 'Guest', seed: q.get('seed') ?? 'dev1' })
+    // (kept across a reload in this tab, as the real save is: a reload in the middle of a game comes back to it. ?new=1 starts over)
+    const KEY = 'bap_fr_gd_dev'
+    if (q.get('new') === '1') { sessionStorage.removeItem(KEY); q.delete('new'); history.replaceState(null, '', location.pathname + (q.size ? '?' + q : '')) }
+    try { const s = sessionStorage.getItem(KEY); if (s) franchise = FR.unpackFranchise(s) } catch { franchise = null }
+    if (!franchise || franchise.broken) franchise = FR.createFranchise({ team: q.get('team') ?? 'KC', builds: [], gmName: 'Guest', seed: q.get('seed') ?? 'dev1' })
+    window.__keep = F => { try { sessionStorage.setItem(KEY, FR.packFranchise(F)) } catch (e) { console.error('keep', e) } }
   }
   function Page() {
     const [fr, setFr] = useState(franchise)
     const [n, setN] = useState(0)
     window.__fr = fr
-    return <GameDay key={n} franchise={fr} driver={driver} onFranchise={setFr} onDone={() => setN(x => x + 1)} />
+    return <GameDay key={n} franchise={fr} driver={driver} onFranchise={f => { window.__keep?.(f); setFr(f) }} onDone={() => setN(x => x + 1)} />
   }
   createRoot(document.getElementById('root')).render(<StrictMode><Page /></StrictMode>)
 }

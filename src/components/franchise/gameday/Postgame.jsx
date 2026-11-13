@@ -102,7 +102,7 @@ export default function Postgame({ r, records = null }) {
             {!!r.headlines?.length && (
               <section className="frgd-sec">
                 <div className="frgd-h"><span>HEADLINES</span></div>
-                {r.headlines.map((h, i) => <div className="frgd-row frgd-row--key" key={i}><span /><b>{h}</b></div>)}
+                {r.headlines.map((h, i) => <div className="frgd-line" key={i}>{h}</div>)}
               </section>
             )}
           </div>
