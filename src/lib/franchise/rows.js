@@ -23,7 +23,7 @@ export const slotOrder = slot => SLOT_ORDER[slot] ?? 99
 
 export function injView(p) {
   if (!p.inj) return null
-  const out = p.inj.wk > 0
+  const out = p.inj.wk > 0 && !p.inj.q   // (a one-week injury the GM has been asked about is questionable until he decides)
   return { wk: p.inj.wk, what: p.inj.what, ir: !!p.inj.ir, status: p.inj.ir ? 'IR' : out ? 'OUT' : 'QUESTIONABLE' }
 }
 // depth: { pid: [order at his slot (1-based), starter] } for a team

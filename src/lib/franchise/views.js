@@ -398,8 +398,9 @@ export function history(F) {
   const po = (g.seasons ?? []).filter(s => s.seed).length
   if (po) resume.push(`${po} playoff appearance${po > 1 ? 's' : ''}`)
   if (g.fired) resume.push(`Let go ${g.fired === 1 ? 'once' : `${g.fired} times`}`)
+  if (g.kept) resume.push(`Kept on after a firing ${g.kept === 1 ? 'once' : `${g.kept} times`}`)
   return {
-    seasons: [...(H.seasons ?? [])].reverse().map(s => ({ year: s.year, champion: teamRef(s.champ), runnerUp: teamRef(s.runner), score: s.score, awards: s.awards, allPro: s.allPro, user: { security: null, delta: null, verdict: null, direction: null, directionLabel: null, goals: [], fired: false, ...s.user, ...(s.user?.direction && { directionLabel: STATE_LABEL[s.user.direction] }) } })),
+    seasons: [...(H.seasons ?? [])].reverse().map(s => ({ year: s.year, champion: teamRef(s.champ), runnerUp: teamRef(s.runner), score: s.score, awards: s.awards, allPro: s.allPro, user: { security: null, delta: null, verdict: null, direction: null, directionLabel: null, goals: [], fired: false, kept: false, ...s.user, ...(s.user?.direction && { directionLabel: STATE_LABEL[s.user.direction] }) } })),
     records: { season: recordRows(H.records?.season), game: recordRows(H.records?.game), team: recordRows(H.records?.team) },
     gm: { name: g.name, seasons: g.seasons?.length ?? 0, record: `${g.w}-${g.l}${g.t ? `-${g.t}` : ''}`, playoffs: `${g.pw ?? 0}-${g.pl ?? 0}`, rings: g.rings ?? 0, titles: (g.seasons ?? []).filter(s => s.champ).map(s => s.year), security: Math.round(g.security), legacy, legacyWord: word, résumé: resume, resume, teams: [...new Set((g.seasons ?? []).map(s => s.team))] },
     hall: H.hall ?? [],

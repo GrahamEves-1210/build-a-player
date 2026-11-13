@@ -340,3 +340,6 @@ html.bap-reduce-motion .fro-clock.is-pick > span { animation: none; }
   .fro-clubs > button:nth-child(6n) { border-right: 1px solid var(--fr-line); }
   .fro-clubs > button:nth-child(8n) { border-right: 0; }
 }
+
+/* a plain text link in a note (the Pro line under a firing) */
+.fro-link { background: none; border: 0; padding: 0; margin-left: 6px; font: inherit; font-family: var(--fr-label); letter-spacing: .06em; color: var(--fr-text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

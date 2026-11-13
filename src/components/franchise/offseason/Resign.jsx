@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Panel, FrTable, FrMeters, useWide } from '../frUi'
+import { Panel, FrTable, FrMeters, Confirm, useWide } from '../frUi'
 import { Frame, useOff } from './frame'
 import { CapStrip, OfferPad, Drives, PlayerSheet, Who, meetAsk, safe, up, plural, pct, signed, tap } from './offUi'
 
@@ -20,6 +20,7 @@ export default function Resign() {
   const [draft, setDraft] = useState({})          // pid → the offer on the pad
   const log = useRef({})                          // pid → [{ offer, reaction, text, dI, dP }] (this sitting)
   const [, bump] = useState(0)
+  const [tagging, setTagging] = useState(false)   // (the one tag of the year: asked twice)
   const r = rows.find(x => x.id === pid) ?? null
   const room = safe(() => FR.capSheet(F).space, 0)
   const open = rows.filter(x => !x.decided).length
@@ -92,7 +93,7 @@ export default function Resign() {
         <Panel title="Other ways">
           <div className="fro-opt">
             <span className="fr-row-main">FRANCHISE TAG<small>ONE YEAR · {money(r.tagCost)} · ONE TAG A YEAR</small></span>
-            <button className="fr-btn fr-btn--line fr-btn--sm" disabled={!r.canTag} onClick={() => act(f => FR.tagPlayer(f, r.id), { say: true })}>{r.canTag ? 'TAG HIM' : 'USED'}</button>
+            <button className="fr-btn fr-btn--line fr-btn--sm" disabled={!r.canTag} onClick={() => { tap(); setTagging(true) }}>{r.canTag ? 'TAG HIM' : 'USED'}</button>
           </div>
           <div className="fro-opt">
             <span className="fr-row-main">LET HIM WALK<small>HE REACHES FREE AGENCY</small></span>
@@ -111,6 +112,9 @@ export default function Resign() {
       </Panel>
       <PlayerSheet FR={FR} F={F} pid={pid} onClose={() => setPid(null)} top={top} seasonLabel={`${o.year} season`}
         foot={r && !r.decided && !r.optionOnly ? <button className="fr-btn" disabled={!T} onClick={send}>OFFER {terms(FR, offer)}</button> : null} />
+      <Confirm open={tagging && !!r && !r.decided} title={`Tag ${r?.name}?`} yes="USE THE TAG" no="NOT NOW" onNo={() => setTagging(false)}
+        body={r ? `One year at ${money(r.tagCost)}, all of it guaranteed. The club has one franchise tag a year.` : ''}
+        onYes={() => { setTagging(false); act(f => FR.tagPlayer(f, r.id), { say: true }) }} />
     </Frame>
   )
 }

@@ -369,6 +369,8 @@ export function resolveMoment(F, G, T, result) {
   if (result === 'sim' || result == null) { win = R.chance(p.odds); score = win ? 0.55 : 0.2; }
   else { win = !!(result.win ?? result.hit); score = clamp(Number(result.score ?? (win ? 0.75 : 0.25)), 0, 1) }
   const simmed = result === 'sim' || result == null
+  // what the throwing games showed (lib/mg/throw.js: the yards he got, past the sticks, a touchdown): the play is that
+  const raw = !simmed && result.raw && Number.isFinite(result.raw.gain) ? result.raw : null
   const o = G.poss, d = 1 - o, O = T[o], D = T[d]
   const me = { p: F.players[p.player.id], id: p.player.id }
   const name = p.player.short, dist = G.dist, toGoal = 100 - G.yl
@@ -382,13 +384,14 @@ export function resolveMoment(F, G, T, result) {
       const r = target(G, T, o, me)
       if (win) {
         const td = game === 'catch' && toGoal <= 20
-        const y = td ? toGoal : cap(G, Math.max(dist, 1) + gain(R, 0, 6) + (big ? gain(R, 5, 16) : 0))
+        const y = td || (raw && game === 'third-long' && raw.pts) ? toGoal : raw && game === 'third-long' ? cap(G, Math.max(dist, 1) + (raw.past ?? 0)) : cap(G, Math.max(dist, 1) + gain(R, 0, 6) + (big ? gain(R, 5, 16) : 0))
         applyPass(G, T, { type: 'comp', r, depth: y >= 20 ? 2 : y >= 10 ? 1 : 0, yds: y }, {
           text: game === 'catch' ? `${nm(O.qb)} puts it up for ${nm(r)} and he comes down with it${G.yl + y >= 100 ? ' in the end zone. Touchdown.' : ` for ${y} and the first down.`}`
             : game === 'pass-pro' ? `${name} stones his man. ${nm(O.qb)} has all day and hits ${nm(r)} for ${y}${G.yl + y >= 100 ? '. Touchdown.' : ' and the first down.'}`
             : game === 'release' ? `${nm(r)} wins off the line and ${nm(O.qb)} hits him for ${y}${G.yl + y >= 100 ? '. Touchdown.' : ' and the first down.'}`
             : `${nm(O.qb)} ${game === 'hot-read' ? 'beats the blitz and finds' : 'stands in and fires to'} ${nm(r)} for ${y}${G.yl + y >= 100 ? '. Touchdown.' : ' and the first down.'}` })
       } else if (game === 'pass-pro') applyPass(G, T, { type: 'sack', yds: -gain(R, 5, 9), fum: false }, { text: `${name} is beaten around the edge and ${nm(O.qb)} goes down for a sack.` })
+      else if (raw && game === 'third-long') { const y = cap(G, clamp(raw.gain, 0, Math.max(0, dist - 1))); applyPass(G, T, { type: 'comp', r, depth: y >= 10 ? 1 : 0, yds: y }, { text: `${nm(O.qb)} finds ${nm(r)} for ${y}, short of the sticks.` }) }   // (caught short, as shown)
       else if (game === 'hot-read' && !simmed && score <= 0.25 && R.chance(0.5)) applyPass(G, T, { type: 'int', r, depth: 1 }, { pick6: false })
       else applyPass(G, T, { type: 'inc', r, depth: 1, pd: game === 'catch' || game === 'release' }, { text: game === 'release' ? `${nm(r)} is jammed at the line and the throw from ${nm(O.qb)} sails incomplete.` : undefined })
       break
@@ -399,7 +402,8 @@ export function resolveMoment(F, G, T, result) {
       break
     case 'bomb': {
       const r = O.recv.filter(x => x.kind === 'wr').sort((a, b) => (b.s.deep ?? 0) - (a.s.deep ?? 0))[0] ?? target(G, T, o, null)
-      if (win) { const y = cap(G, gain(R, 34, 52) + (big ? 12 : 0)); applyPass(G, T, { type: 'comp', r, depth: 2, yds: y }, { text: `${name} lets it fly for ${nm(r)}, and it drops right in the bucket${G.yl + y >= 100 ? `. ${y}-yard touchdown.` : ` for ${y}.`}` }) }
+      if (win) { const y = raw?.pts ? toGoal : raw ? cap(G, Math.max(raw.gain, 15)) : cap(G, gain(R, 34, 52) + (big ? 12 : 0)); applyPass(G, T, { type: 'comp', r, depth: 2, yds: y }, { text: `${name} lets it fly for ${nm(r)}, and it drops right in the bucket${G.yl + y >= 100 ? `. ${y}-yard touchdown.` : ` for ${y}.`}` }) }
+      else if (raw) { const c = target(G, T, o, null), y = cap(G, raw.gain); applyPass(G, T, { type: 'comp', r: c, depth: 0, yds: y }, { text: `${name} looks deep, has nothing and checks it down to ${nm(c)} for ${y}.` }) }   // (the checkdown he threw)
       else applyPass(G, T, { type: 'inc', r, depth: 2, pd: false }, { text: `${name} goes deep for ${nm(r)} and it is overthrown. Incomplete.` })
       break
     }

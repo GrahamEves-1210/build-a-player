@@ -110,7 +110,7 @@ export function PlayerSheet({ FR, F, pid, onClose, act = null, say = null, go = 
               <Act label="Shop him" note={open ? 'WHAT THE LEAGUE WOULD GIVE' : 'DEADLINE PASSED'} disabled={!open}
                 onClick={() => { const next = run(f => FR.shopPlayer(f, c.id)); if (next?.flash?.offers?.length) { onClose(); go?.('league', { view: 'market', sub: 'offers' }) } }} />
               {c.inj && c.inj.wk > 0 && c.inj.status !== 'IR' && <Act label="Move to injured reserve" note="OUT AT LEAST FOUR GAMES" onClick={() => run(f => FR.moveToIR(f, c.id))} />}
-              {c.inj?.status === 'IR' && <Act label="Activate from injured reserve" note={c.inj.wk > 0 ? `${plural(c.inj.wk, 'WEEK')} AWAY` : 'READY'} disabled={c.inj.wk > 0} onClick={() => run(f => FR.activate(f, c.id))} />}
+              {c.inj?.status === 'IR' && <Act label="Activate from injured reserve" note={c.inj.wk > 0 ? `RETURNS ON HIS OWN IN ${plural(c.inj.wk, 'WEEK')}` : 'READY'} disabled={c.inj.wk > 0} onClick={() => run(f => FR.activate(f, c.id))} />}
               <Act danger label="Release" note={con?.cut ? `${money(con.cut.dead)} DEAD` : null} onClick={() => setAsk('release')} />
             </Panel>
           )}

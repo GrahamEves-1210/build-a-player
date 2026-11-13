@@ -48,7 +48,7 @@ export { gameCast, campCast } from './cast'
 
 // ── Offseason ────────────────────────────────────────────────────────────────
 export {
-  offseason, advanceStage, seasonReview, jobOffers, takeJob, coachMarket, hireCoach, fireCoach, hireBuiltCoach, scoutPool, hireScout, gmTree, buyPerk,
+  offseason, advanceStage, seasonReview, jobOffers, takeJob, overturnFiring, coachMarket, hireCoach, fireCoach, hireBuiltCoach, scoutPool, hireScout, gmTree, buyPerk,
   expiring, openTalks, makeOffer, tagPlayer, exerciseOption, letWalk, freeAgency, bidFreeAgent, withdrawBid, advanceFA,
   udfaPool, signUdfa, campView, resolveDrill, resolveHoldout, cutsView, autoCut, newSeason,
 } from './offseason'

@@ -66,7 +66,8 @@ function Gm({ hist, hub }) {
     <div className="fr-cols is-even">
       <Panel title="General manager" meta={up(g.name)}>
         <div className="fr-kv"><span>SEASONS COMPLETED</span><b>{g.seasons}</b></div>
-        <div className="fr-kv"><span>REGULAR SEASON</span><b>{hub.gm.record ?? g.record}</b></div>
+        <div className="fr-kv"><span>REGULAR SEASON</span><b>{g.record}</b></div>
+        {hub.phase !== 'offseason' && hub.record?.text && hub.record.text !== '0-0' && <div className="fr-kv"><span>THIS SEASON</span><b>{hub.record.text}</b></div>}
         <div className="fr-kv"><span>PLAYOFFS</span><b>{g.playoffs}</b></div>
         <div className="fr-kv"><span>CHAMPIONSHIPS</span><b className={g.rings > 0 ? 'fr-t-gold' : undefined}>{g.rings}{g.titles?.length ? <small className="fr-t-dim"> · {g.titles.join(', ')}</small> : null}</b></div>
         <div className="fr-kv"><span>LEGACY</span><b className="is-text">{g.legacyWord} <Steps value={g.legacy || 1} low={-1} label={`Legacy ${g.legacy} of 100`} /></b></div>
@@ -86,7 +87,7 @@ function History({ hist }) {
   const seasons = hist?.seasons ?? []
   const s = seasons.find(x => x.year === year)
   const rec = hist?.records ?? {}
-  const recCols = [{ k: 'l', label: 'RECORD', cls: 'fr-t-wrap', render: r => r.label }, { k: 'v', label: '', align: 'r', w: 64, cls: 'fr-t-num', render: r => r.val },
+  const recCols = [{ k: 'l', label: 'RECORD', cls: 'fr-t-wrap', render: r => r.label }, { k: 'v', label: '', align: 'r', w: 64, cls: 'fr-t-num', render: r => (typeof r.val === 'number' ? r.val.toLocaleString('en-US') : r.val) },
     { k: 'n', label: 'HOLDER', cls: 'fr-t-wrap', render: r => <>{r.name}<span className="fr-t-sub">{[r.team, r.year].filter(Boolean).join(' · ')}</span></> }]
   return (
     <>
@@ -96,12 +97,13 @@ function History({ hist }) {
           <FrTable label="Champions" rows={seasons} rowKey={r => r.year} onRow={r => setYear(r.year)} empty="NO SEASON HAS BEEN PLAYED TO THE END YET"
             cols={[{ k: 'y', label: 'YEAR', w: 56, cls: 'fr-t-num', render: r => r.year }, { k: 'c', label: 'CHAMPION', render: r => (r.champion ? <TeamCell t={r.champion} /> : '–') },
               { k: 's', label: 'SCORE', align: 'r', w: 62, cls: 'fr-t-num', render: r => r.score }, { k: 'r', label: 'RUNNER-UP', render: r => (r.runnerUp ? <TeamCell t={r.runnerUp} /> : '–') },
-              { k: 'm', label: 'MVP', cls: 'fr-t-dim fr-t-wrap', render: r => r.awards?.MVP?.name ?? '–' }]} />
+              { k: 'm', label: 'LEAGUE MVP', cls: 'fr-t-dim fr-t-wrap', render: r => r.awards?.MVP?.name ?? '–' }]} />
         </Panel>
       )}
       {sub === 'records' && (
         <div className="fr-grid2 is-three">
-          {[['season', 'Season records'], ['game', 'Game records'], ['team', 'Team records']].map(([k, title]) => (
+          {/* (a book with nothing in it while the others have records is left out: single-game records are not kept yet) */}
+          {[['season', 'Season records'], ['game', 'Game records'], ['team', 'Team records']].filter(([k]) => rec[k]?.length || !['season', 'game', 'team'].some(o => rec[o]?.length)).map(([k, title]) => (
             <Panel key={k} title={title}><FrTable className="fr-table--tall" label={title} rows={rec[k] ?? []} rowKey={r => r.key} cols={recCols} empty="NO RECORDS SET YET" /></Panel>
           ))}
         </div>
@@ -115,7 +117,7 @@ function History({ hist }) {
       <FrSheet open={!!s} onClose={() => setYear(null)} label="Season"
         head={s && <span className="fr-clubhead">{s.champion && <Logo team={s.champion.short} size={52} />}<span className="fr-sheet-who"><b>{s.year} SEASON</b><small>{s.champion ? `${up(s.champion.nick)} ${s.score}${s.runnerUp ? ` OVER THE ${up(s.runnerUp.nick)}` : ''}` : ''}</small></span></span>}>
         {s && <>
-          {s.user && <Panel title="The GM's season"><div className="fr-kv"><span>{up(teamOf(s.user.team).nick)}</span><b className="is-text">{s.user.record} · {s.user.finish || 'Missed the playoffs'}</b></div></Panel>}
+          {s.user && <Panel title="The GM's season"><div className="fr-kv"><span>{up(teamOf(s.user.team).nick)}</span><b className="is-text">{s.user.record} · {s.user.finish || 'Missed the playoffs'}</b></div>{s.user.fired && <div className="fr-kv"><span>OWNERSHIP</span><b className="is-text">{s.user.kept ? 'Let go, then kept on' : 'Let go'}</b></div>}</Panel>}
           <Panel title="Awards">
             {Object.entries(s.awards ?? {}).filter(([, a]) => a).map(([k, a]) => <Fact key={k} label={AWARD_NAME[k] ?? k}>{a.name}{a.team ? `, ${a.team}` : ''}<small>{a.line}</small></Fact>)}
           </Panel>

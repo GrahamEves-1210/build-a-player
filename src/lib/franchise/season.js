@@ -3,7 +3,7 @@
 // players of the week, headlines, power rankings, the front office's items for next week, the playoffs.
 import { REG_WEEKS, PLAYOFF_ROUNDS, TRADE_DEADLINE, weekLabel, clamp, slotOf } from './consts'
 import { rngOf } from './rng'
-import { TEAM_SHORTS, addNews, nick, teamName, teamRating, ranks, pct, city, depthAfterMove } from './core'
+import { TEAM_SHORTS, addNews, addTx, nick, teamName, teamRating, ranks, pct, city, depthAfterMove } from './core'
 import { prepWeek, makeGame, bookGame, keepBox, applyInjuries, giveXp, lineText, gameScore } from './week'
 import { playGame } from './game'
 import { records, standing, startPlayoffs, advancePlayoffs, clinches } from './standings'
@@ -140,7 +140,7 @@ export function endWeek(F, recap) {
       // injuries heal a week (not the ones from this week's games)
       if (p.inj) {
         if (p.inj.fresh) delete p.inj.fresh
-        else if (--p.inj.wk <= 0) { p.inj = null }
+        else if (--p.inj.wk <= 0) { if (p.inj.ir) addTx(F, 'activate', s, `${teamName(s)} activated ${slotOf(p)} ${p.name} from injured reserve.`, p.id); p.inj = null }   // (a man healed on IR comes back on his own: the move is in the log)
       }
       // workload: the week's rest, the bye, how hard they practiced
       p.wear = clamp((p.wear ?? 0) - 2.2 - (bye ? 12 : 0) + PRACTICE_WEAR[intensity], 0, 100)

@@ -47,6 +47,7 @@ export function pregame(F) {
     line: p.line ?? null,
     home, away, user, records: { [home]: p.records?.home ?? '', [away]: p.records?.away ?? '' },
     units: [side(user, opp, U, O), side(opp, user, O, U)].filter(u => u.rows.length),
+    projected: !!(U?.passOff?.projected),   // (before a game is played the ranks are what the lineups project to)
     injuries: [...hurt(home, p.injuries?.home), ...hurt(away, p.injuries?.away)],
     plan: p.gameplan ? { off: p.gameplan.off?.label ?? '', def: p.gameplan.def?.label ?? '' } : null,
     keys: p.keys ?? [],

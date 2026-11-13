@@ -37,10 +37,10 @@ export default function Udfa() {
         <span className="is-lead"><small>CAMP ROSTER</small><b>{camp ? `${camp.count}/${camp.limit}` : ''}</b></span>
         <span><small>SIGNED HERE</small><b>{got.length}</b></span>
         <span><small>THE DEAL</small><b>3 YRS · MIN</b></span>
-        {board?.needs?.[0] && <span><small>THINNEST</small><b>{board.needs.slice(0, 3).map(n => n.group).join(' · ')}</b></span>}
+        {board?.needs?.[0] && <span><small>THINNEST</small><b>{board.needs.slice(0, wide ? 3 : 2).map(n => n.group).join(' · ')}</b></span>}
       </div>
       {got.length > 0 && <Panel title="Signed" meta={plural(got.length, 'PLAYER')}>{got.map((g, i) => <p key={i} className="fro-line">{g}</p>)}</Panel>}
-      <Panel title="Undrafted free agents" meta={`${pool.length} LEFT`}>
+      <Panel title="Undrafted free agents" meta={`THE BEST ${pool.length} LEFT`}>
         <PosFilter value={pos} onChange={setPos} />
         <FrTable key={pos} className="fro-fixed" cols={cols} rows={byPos(pool, pos)} sort={{ k: 'grade', desc: true }} onRow={x => setOpen(x.id)} label="Undrafted free agents" empty="NO ONE LEFT AT THIS POSITION" />
       </Panel>

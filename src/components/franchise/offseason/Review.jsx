@@ -4,10 +4,13 @@ import { teamOf } from '../frTeams'
 import TrophyScene from '../TrophyScene'
 import { Frame, useOff } from './frame'
 import { Said, Sub, Who, Club, PlayerSheet, safe, up, plural, signed, tap } from './offUi'
+import { isPro } from '../../../lib/progress'
 
 // OFFSEASON 1 · SEASON REVIEW (the engine's seasonReview). The champions, the GM's own year and what ownership
 // made of it, the awards, the club's own honours called out, All-Pro and the Pro Bowl, who retired, the Hall.
-// A GM who has been let go picks his next job here (jobOffers / takeJob) before anything else.
+// A GM who has been let go picks his next job here (jobOffers / takeJob) before anything else; a Pro player can
+// overturn it instead (overturnFiring), everyone else is told Pro can.
+const seePro = () => { tap(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pro' })) }
 
 const AWARDS = [
   ['MVP', 'MOST VALUABLE PLAYER'], ['OPOY', 'OFFENSIVE PLAYER OF THE YEAR'], ['DPOY', 'DEFENSIVE PLAYER OF THE YEAR'], ['OROY', 'OFFENSIVE ROOKIE OF THE YEAR'],
@@ -72,6 +75,10 @@ export default function Review() {
       {v.owner.fired && (
         <Panel title="Relieved of his duties" meta={up(us.nick)}>
           <Said who="OWNERSHIP">{v.owner.verdict}</Said>
+          {isPro()
+            ? <div className="fro-opt"><span className="fr-row-main">OVERTURN THE FIRING<small>BAP PRO · OWNERSHIP KEEPS {up(F.gm?.name ?? 'THE GM')} ON</small></span>
+                <button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => { tap(); act(f => FR.overturnFiring(f)) }}>KEEP THE JOB</button></div>
+            : <p className="fr-note">BAP Pro can overturn a firing and keep the job. <button type="button" className="fro-link" onClick={seePro}>SEE PRO</button></p>}
           {jobs.length ? <>
             <Sub meta={plural(jobs.length, 'OFFER')}>WHERE {up(F.gm?.name ?? 'THE GM')} GOES NEXT</Sub>
             {jobs.map(j => (
@@ -83,6 +90,11 @@ export default function Review() {
               </div>
             ))}
           </> : <p className="fr-note">No club has called yet. The job stays his for now.</p>}
+        </Panel>
+      )}
+      {v.owner.kept && (
+        <Panel title="Kept on" meta={up(us.nick)}>
+          <Said who="OWNERSHIP">{`Ownership has reconsidered. ${F.gm?.name ?? 'The GM'} stays on as general manager of the ${us.name ?? us.nick}.`}</Said>
         </Panel>
       )}
       <div className="fr-cols fro-swap">
@@ -102,7 +114,7 @@ export default function Review() {
             {v.owner.goals.map(g => (
               <div key={g.id} className="fro-goal">
                 <i className={g.done ? 'is-met' : undefined}>{g.done ? 'MET' : 'MISSED'}</i>
-                <span>{g.text}<small>{g.progress}</small></span>
+                <span>{g.text}<small>{String(g.progress ?? '').replace(/^(\d+) of \d+ wins$/, '$1 wins')}</small></span>
               </div>
             ))}
           </Panel>

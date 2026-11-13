@@ -91,6 +91,7 @@ export function settle(F, item, optionId) {
     }
     case 'questionable':
       if (!p?.inj) { msg = 'He is healthy.'; break }
+      if (p.inj.ir) { msg = `${p.name} is on injured reserve.`; break }
       if (opt.id === 'play') { p.inj = { wk: 0, what: p.inj.what, ir: false, nag: F.week }; msg = `${p.name} will play.` } else { p.inj.q = false; p.mood = clamp(p.mood - 1, 3, 97); msg = `${p.name} sits this week.` }
       break
     case 'role':

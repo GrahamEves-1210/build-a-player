@@ -148,12 +148,20 @@ function ScoutSheet({ FR, F, act, onClose }) {
 // where a row with no sheet of its own sends the GM
 const GO_FOR = { upgrades: ['team', { view: 'develop' }], injury: ['team', { view: 'health' }], roster: ['team', { view: 'roster' }], trade: ['league', { view: 'market', sub: 'offers' }] }
 
+// The offseason as the stage screens count it (offseason/frame.jsx RAIL): nine stages, the engine's in brackets
+const OFF_RAIL = [
+  { id: 'review', name: 'Season Review', at: ['review'] }, { id: 'direction', name: 'Direction', at: [] }, { id: 'staff', name: 'Coaching Staff', at: ['staff'] },
+  { id: 'resign', name: 'Re-Sign Players', at: ['resign'] }, { id: 'fa', name: 'Free Agency', at: ['fa'] }, { id: 'draft', name: 'The Draft', at: ['draft'] },
+  { id: 'udfa', name: 'Undrafted Free Agents', at: ['udfa'] }, { id: 'camp', name: 'Training Camp and Cuts', at: ['camp', 'cuts'] }, { id: 'season', name: 'New Season', at: [] },
+]
+
 export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
   const [sheet, setSheet] = useState(null)   // { kind, id }
   const items = useMemo(() => safe(() => FR.officeItems(F), []), [FR, F])
   const call = items.find(o => o.kind === 'direction') ?? null   // the owner's call on a mid-season change of state
   // (the direction and the staff's advice have their own places on this page)
-  const tasks = (hub.tasks ?? []).filter(t => t.kind !== 'direction' && t.kind !== 'advice' && t.id !== call?.id)
+  // (a club that is out of the playoffs has no game to plan or practise for)
+  const tasks = (hub.tasks ?? []).filter(t => t.kind !== 'direction' && t.kind !== 'advice' && t.id !== call?.id && !(hub.eliminated && (t.kind === 'practice' || t.kind === 'gameplan')))
   const open = tasks.filter(t => !t.done).length
   const onTask = t => { if (GO_FOR[t.kind]) go(...GO_FOR[t.kind]); else if (t.kind === 'office' && items.find(o => o.id === t.id)?.kind === 'trade-offer' && !items.find(o => o.id === t.id)?.options?.length) go('league', { view: 'market', sub: 'offers' }); else setSheet({ kind: t.kind, id: t.id }) }
   const next = hub.next, last = hub.lastGame, off = hub.phase === 'offseason'
@@ -187,8 +195,8 @@ export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
           )}
           {hub.headlines?.length > 0 && <FrTicker items={hub.headlines.map(n => n.head ?? n.text ?? n)} />}
           {off ? (
-            <Panel title="Offseason" meta={stages?.stage ? `STAGE ${stages.stage.n} OF ${stages.stage.of}` : String(hub.year)}>
-              {(stages?.stages ?? []).map(s => (
+            <Panel title="Offseason" meta={stages?.stage ? `STAGE ${OFF_RAIL.findIndex(s => s.at.includes(stages.stage.id)) + 1} OF ${OFF_RAIL.length}` : String(hub.year)}>
+              {OFF_RAIL.map((s, k) => { const n = OFF_RAIL.findIndex(r => r.at.includes(stages?.stage?.id)); return { ...s, done: n >= 0 && k < n, current: k === n } }).map(s => (
                 <div key={s.id} className={`fr-row${s.current ? ' fr-row--now' : ''}`}>
                   <span className="fr-row-main">{s.name}</span>
                   <span className={`fr-row-state${s.done ? ' is-done' : s.current ? ' is-due' : ''}`}>{s.done ? 'DONE' : s.current ? 'NOW' : ''}</span>
@@ -234,7 +242,7 @@ export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
             {hub.seed && (hub.record.w + hub.record.l + (hub.record.t ?? 0) > 0) ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{up(ord(hub.seed))}</b></div> : null}
             <div className="fr-kv"><span>CAP ROOM</span><b>{FR.moneyText(room)}</b></div>
           </Panel>
-          {mine && <Panel title={mine.name} meta={hub.standing ? up(hub.standing) : null}><DivisionTable division={mine} compact /></Panel>}
+          {mine && <Panel title={mine.name} meta={hub.standing && (off || (hub.record?.w ?? 0) + (hub.record?.l ?? 0) + (hub.record?.t ?? 0) > 0) ? up(hub.standing) : null}><DivisionTable division={mine} compact /></Panel>}
           {owner && (
             <Panel title="The owner" meta={dir ? `JUDGED AS ${STATE_AS[dir]}` : null}>
               <div className="fr-kv"><span>JOB SECURITY</span><Security value={owner.security ?? hub.gm.security ?? 0} word={owner.word ?? hub.gm.securityWord ?? ''} floor={owner.floor} /></div>

@@ -63,16 +63,18 @@ export default function FrWeek({ FR, F, hub, onDone }) {
   const wk = useMemo(() => { try { return FR.lastWeek(F) } catch { return null } }, [FR, F])
   const us = hub.team
   const g = wk?.user?.game, box = wk?.user?.box
+  // (no game in a playoff week: a first-round bye, or a club that is out and watching)
+  const out = !g && wk?.week > 18 && !!(hub.eliminated || hub.phase === 'offseason')
   const won = g ? (g.home.short === us.short ? g.hs > g.as : g.as > g.hs) : null
   const cells = g
     ? [{ label: wk.label ?? `WEEK ${wk.week}`, value: g.hs === g.as ? 'TIE' : won ? 'WIN' : 'LOSS' }, { label: 'FINAL', value: `${g.home.short === us.short ? g.hs : g.as}-${g.home.short === us.short ? g.as : g.hs}${g.ot ? ' OT' : ''}` }, { label: 'RECORD', value: hub.record.text }]
-    : [{ label: wk?.label ?? 'THE WEEK', value: 'BYE' }, { label: 'RECORD', value: hub.record.text }]
+    : [{ label: wk?.label ?? 'THE WEEK', value: out ? 'OUT' : 'BYE' }, { label: 'RECORD', value: hub.record.text }]
   return (
     <FrShell mainKey="week" bug={<Bug team={us.short} cells={cells} />} cta={<button className="fr-btn" onClick={() => { sfx('tap'); onDone() }}>BACK TO THE HUB</button>}>
       <div className="fr-page">
         <div className="fr-cols">
           <div className="fr-col">
-            {box ? <BoxScore FR={FR} box={box} mine={us.short} /> : <Panel title={wk?.label ?? 'The week'}><div className="fr-empty">{g ? 'NO BOX SCORE FOR THIS GAME' : `THE ${us.nick.toUpperCase()} WERE OFF`}</div></Panel>}
+            {box ? <BoxScore FR={FR} box={box} mine={us.short} /> : <Panel title={wk?.label ?? 'The week'}><div className="fr-empty">{g ? 'NO BOX SCORE FOR THIS GAME' : out ? `THE ${us.nick.toUpperCase()} ARE OUT${hub.eliminated ? `: ${String(hub.eliminated).toUpperCase()}` : ''}` : `THE ${us.nick.toUpperCase()} WERE OFF`}</div></Panel>}
           </div>
           <div className="fr-col">
             {wk?.user?.potg?.player && <Panel title="Player of the game"><div className="fr-kv"><span>{String(wk.user.potg.player.name).toUpperCase()}</span><b className="is-text">{wk.user.potg.line}</b></div></Panel>}

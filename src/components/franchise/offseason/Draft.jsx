@@ -14,6 +14,8 @@ import { PlayerSheet, PosFilter, Who, Bar, Pips, Sub, Fact, byPos, safe, up, plu
 const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const f2 = v => (v == null ? '' : Number(v).toFixed(2))
 const DRILLS = [['forty', '40-YARD DASH', f2, 1], ['bench', 'BENCH PRESS', v => `${v}`, -1], ['cone', 'THREE-CONE', f2, 1], ['vert', 'VERTICAL', v => `${v}"`, -1]]
+// a call on the phone, said the way a GM says it: "pick No. 23 (Round 1) in this draft" is No. 23
+const phoneText = t => String(t ?? '').replace(/pick No\. (\d+) \(Round \d+\) in this draft/g, 'No. $1').replace(/, ([^,]+) for /, ' and $1 for ')
 const PROJ_SHORT = { 'Round 1': 'RD 1', 'Round 2': 'RD 2', 'Round 3': 'RD 3', 'Rounds 4-5': 'RD 4-5', 'Rounds 6-7': 'RD 6-7', Undrafted: 'UDFA' }
 
 function Range({ lo, hi, min = 55, max = 99 }) {
@@ -196,7 +198,6 @@ export default function Draft() {
   const roster = useMemo(() => (v.done ? Object.fromEntries(safe(() => FR.roster(F), []).map(r => [r.id, r])) : {}), [FR, F, v.done])
 
   // the pick an offer sends back, when the order makes it certain (that club's one pick left in that round)
-  const backAt = x => { const r = Number(String(x.give?.picks?.[0] ?? '').split('-')[1]); const left = v.order.filter(y => !y.done && y.team.short === x.from && y.round === r); return left.length === 1 ? left[0].overall : null }
   const pick = id => { const n = act(f => FR.draftPick(f, id)); if (n?.flash?.ok !== false) { setSel(null); setOpen(null) } }
   const hand = () => move(f => FR.advanceStage(f), 'THE STAFF RAN THE DRAFT', 'The club had no picks to make.')
   let main
@@ -266,7 +267,7 @@ export default function Draft() {
             {offers.map(x => (
               <div key={x.id} className="fro-offer">
                 <Logo team={x.from} size={28} />
-                <p>{x.text}{backAt(x) && <small>NO. {backAt(x)} OVERALL COMES BACK FOR NO. {v.overall}</small>}</p>
+                <p>{phoneText(x.text)}</p>
                 <div className="fro-btns">
                   <button className="fr-btn fr-btn--sm" onClick={() => act(f => FR.answerOffer(f, x.id, true), { say: true })}>TRADE DOWN</button>
                   <button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => act(f => FR.answerOffer(f, x.id, false))}>NO</button>

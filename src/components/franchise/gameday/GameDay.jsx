@@ -64,7 +64,7 @@ function Pregame({ v, momentsOn, note, onMoments, onStart, onBack }) {
             <div>
               {v.units.map(u => (
                 <section className="frgd-sec" key={u.when}>
-                  <div className="frgd-h"><i>{u.rows[0].off.team} OFFENSE</i><span>WHEN {u.when} HAS THE BALL</span><i>{u.rows[0].def.team} DEFENSE</i></div>
+                  <div className="frgd-h"><i>{u.rows[0].off.team} OFFENSE</i><span>{v.projected ? 'PROJECTED' : `WHEN ${u.when} HAS THE BALL`}</span><i>{u.rows[0].def.team} DEFENSE</i></div>
                   {u.rows.map(r => <Unit key={r.label} row={r} />)}
                 </section>
               ))}

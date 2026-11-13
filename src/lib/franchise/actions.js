@@ -133,8 +133,9 @@ export function moveToIR(F, pid) {
   if (!p) return fail(F, 'player', 'He is not on this team.')
   if (!p.inj || p.inj.wk < 1) return fail(F, 'ir', 'Only an injured player can go on injured reserve.')
   if (p.inj.ir) return fail(F, 'ir', 'He is already on injured reserve.')
-  p.inj.ir = true
+  p.inj.ir = true; p.inj.q = false
   if (p.inj.wk < 4) p.inj.wk = 4   // a man on injured reserve misses at least four games
+  F.office = (F.office ?? []).filter(o => !(o.kind === 'questionable' && o.pid === p.id))   // (no 'play him or rest him?' for a man on IR)
   addTx(F, 'ir', F.team, `${teamName(F.team)} placed ${slotOf(p)} ${p.name} on injured reserve.`, p.id)
   depthAfterMove(F, F.teams[F.team])
   return touch(F)

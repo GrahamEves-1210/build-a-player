@@ -159,7 +159,7 @@ export function seasonReview(F) {
   const v = F.owner?.verdict
   return { year: o.year, champion: rv.champ ? teamRef(rv.champ) : null, user: { record: rv.record, finish: rv.finish, seed: rv.seed }, awards: aw, allPro: ap, proBowl: { AFC: pb('AFC'), NFC: pb('NFC') },
     mine: { allPro: ap.filter(x => x.player.team === F.team), proBowl: [...pb('AFC'), ...pb('NFC')].filter(x => x.player.team === F.team) }, retirements: rv.retirements, hall: rv.hall,
-    owner: { verdict: v?.text ?? '', goals: v?.goals ?? [], security: Math.round(F.gm.security), delta: v?.delta ?? 0, fired: !!o.fired }, gm: { pts: v?.pts ?? 0, total: F.gm.pts ?? 0 } }
+    owner: { verdict: v?.text ?? '', goals: v?.goals ?? [], security: Math.round(F.gm.security), delta: v?.delta ?? 0, fired: !!o.fired, kept: !!o.kept }, gm: { pts: v?.pts ?? 0, total: F.gm.pts ?? 0 } }
 }
 export function offseason(F) {
   if (F.phase !== 'offseason' || !F.off) return null
@@ -183,6 +183,21 @@ export function takeJob(F, short) {
   F.owner = null; startOwner(F)
   addNews(F, 'owner', `${teamName(short)} hire ${F.gm.name} as general manager`, { team: short })
   return ok(F, `${F.gm.name} is the new general manager of the ${teamName(short)}.`)
+}
+// The firing overturned (the app offers it to Pro players; the engine does not check who may): the owner keeps the
+// GM on. Job security goes up to a floor (KEPT_SECURITY) so the next verdict starts from somewhere, and the history
+// says what happened: the season's line keeps fired: true and gets kept: true, the résumé counts it.
+export const KEPT_SECURITY = 35
+export function overturnFiring(F) {
+  if (F.phase !== 'offseason' || !F.off?.fired) return fail(F, 'job', 'He has not been let go.')
+  F.off.fired = false; F.off.kept = true
+  F.gm.kept = (F.gm.kept ?? 0) + 1
+  F.gm.security = Math.max(F.gm.security ?? 0, KEPT_SECURITY)
+  if (F.owner?.verdict) F.owner.verdict.kept = true
+  const h = (F.hist?.seasons ?? []).slice(-1)[0]
+  if (h?.user && h.year === F.off.year) h.user.kept = true
+  addNews(F, 'owner', `${teamName(F.team)} keep general manager ${F.gm.name}`, { team: F.team })
+  return ok(F, `Ownership keeps ${F.gm.name} on as general manager of the ${teamName(F.team)}.`)
 }
 
 // ══ The new league year (when the review ends) ════════════════════════════════
@@ -707,6 +722,8 @@ const CAMP_GROUPS = [
   ['QB', 'QUARTERBACKS', ['qb']], ['RB', 'RUNNING BACKS', ['rb']], ['WR', 'RECEIVERS', ['wr']], ['TE', 'TIGHT ENDS', ['te']], ['OL', 'OFFENSIVE LINE', ['ol']],
   ['DL', 'DEFENSIVE LINE', ['dl']], ['LB', 'LINEBACKERS', ['lb']], ['DB', 'SECONDARY', ['db']], ['K', 'KICKERS', ['k']],
 ]
+// the men in a drill group, as a coach counts them ('7 defensive linemen', not '7 defensive line')
+const groupNoun = (title, n) => ({ 'OFFENSIVE LINE': 'offensive linemen', 'DEFENSIVE LINE': 'defensive linemen', SECONDARY: 'defensive backs' }[title] ?? String(title).toLowerCase()).replace(/s$/, n === 1 ? '' : 's')
 const TALK_CUT = 0.88    // what a good talk gets a holdout to take, against his ask
 const DRILL_GAMES = { ...COMBINE_GAMES, db: ['forty', 'cone', 'gauntlet'] }
 function startCamp(F) {
@@ -768,7 +785,7 @@ export function resolveDrill(F, drillId, result = 'sim') {
   const dev = F.coaches[F.teams[F.team].staff.hc]?.a.talentDev ?? 5.5
   let n = 0
   for (const p of mine(F)) if (p.pos === d.pos) { giveXp(F, p, xp, dev); n++ }
-  d.done = { medal, xp, score: Math.round(score * 100) / 100, text: medal ? `${medal[0].toUpperCase()}${medal.slice(1)}. ${n} ${d.title.toLowerCase()} earn ${xp} XP.` : `No medal. ${n} ${d.title.toLowerCase()} earn ${xp} XP for the work.` }
+  d.done = { medal, xp, score: Math.round(score * 100) / 100, text: medal ? `${medal[0].toUpperCase()}${medal.slice(1)}. ${n} ${groupNoun(d.title, n)} earn ${xp} XP.` : `No medal. ${n} ${groupNoun(d.title, n)} earn ${xp} XP for the work.` }
   return touch(F, { ok: true, msg: d.done.text, medal })
 }
 export function resolveHoldout(F, pid, optionId = 'delegate') {
@@ -896,7 +913,9 @@ function rollOver(F) {
     // the season goes into his history
     if ((p.s.g ?? 0) > 0) { p.hist.push(histLine(p, y, p.team ?? '')); if (p.hist.length > 22) p.hist.shift() }
     p.s = {}
-    p.age++; p.exp++; delete p.rk; delete p.potw; delete p.asked; delete p.promise; delete p.first; delete p.from; delete p.brk; delete p.brkW
+    // (a man drafted or signed out of college this offseason (rk 1) plays his rookie season at exp 0: the rookie awards,
+    // the ROOKIE tag and the rookie goal read it; a year on, he is a second-year man)
+    p.age++; if (p.rk === 1) p.rk = 2; else { p.exp++; delete p.rk } delete p.potw; delete p.asked; delete p.promise; delete p.first; delete p.from; delete p.brk; delete p.brkW
     if (p.team) p.yrsHere = (p.yrsHere ?? 0) + 1
     if (p.con?.opt === 2 && p.opt5 && p.con.yrs === 1) { p.con.sal = p.opt5; p.con.guar = p.opt5; p.con.rookie = 0; delete p.opt5 }
     // the offseason program: young men grow, the staff spends what they earned
