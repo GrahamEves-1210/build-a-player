@@ -384,9 +384,15 @@ export function DropSheet({ open, setOpen, children }) {
   useEffect(() => {
     if (!open) return
     // (the tutorial's tips sit over the sheet: tapping them isn't tapping away)
-    const on = e => { if (!e.target.closest?.('.drop-sheet, .drop-bar, .grade-toggle-btn, .nav-grades, .tut-coach')) setOpen(false) }
-    const id = setTimeout(() => document.addEventListener('pointerdown', on, true), 0)
-    return () => { clearTimeout(id); document.removeEventListener('pointerdown', on, true) }
+    // (a tap, not a scroll: the owner, 11-13: scrolling the page outside it closed it. The finger has to come up where it
+    // went down, near enough; a scroll ends in pointercancel or a long way from where it started)
+    const inside = t => !!t?.closest?.('.drop-sheet, .drop-bar, .grade-toggle-btn, .nav-grades, .tut-coach')
+    let down = null
+    const onDown = e => { down = inside(e.target) ? null : { id: e.pointerId, x: e.clientX, y: e.clientY } }
+    const onUp = e => { const d = down; down = null; if (d && d.id === e.pointerId && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 10 && !inside(e.target)) setOpen(false) }
+    const onCancel = () => { down = null }
+    const id = setTimeout(() => { document.addEventListener('pointerdown', onDown, true); document.addEventListener('pointerup', onUp, true); document.addEventListener('pointercancel', onCancel, true) }, 0)
+    return () => { clearTimeout(id); document.removeEventListener('pointerdown', onDown, true); document.removeEventListener('pointerup', onUp, true); document.removeEventListener('pointercancel', onCancel, true) }
   }, [open, setOpen])
   return (
     <div className="drop-clip">
