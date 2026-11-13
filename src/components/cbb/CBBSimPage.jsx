@@ -226,13 +226,13 @@ function BoxLog({ games, totals, userName, sub = null }) {
   )
 }
 
-// a school's name where a bracket row is tight (a phone's 158 px column): the long ones as the agate page prints them
-const tight = name => (String(name ?? '').length <= 12 ? name : String(name).replace(/^North /, 'N. ').replace(/^South /, 'S. ').replace(/^(East|West)ern /, (m, w) => `${w[0]}. `).replace(/^Saint /, 'St. ').replace(/ State$/, ' St.'))
-const MatchRow = ({ short, name, seed, sc, win, me }) => (
+// abbr: a bracket cell (a phone's 158 px column has no room for a school's name: the owner, 2026-11-13) shows the
+// school's abbreviation, ESPN's as the data has it; the title game's card and everything else keep the name
+const MatchRow = ({ short, name, seed, sc, win, me, abbr = false }) => (
   <div className={`cfbs-mrow${win ? ' is-win' : ''}${me ? ' is-me' : ''}`}>
     {seed != null && <em>{seed}</em>}
     <Logo short={short} size={22} />
-    <span title={name}>{tight(name)}</span>
+    <span title={name}>{abbr ? short : name}</span>
     <b>{sc ?? ''}</b>
   </div>
 )
@@ -273,8 +273,8 @@ function Bracket({ v, rounds, through = 99, scoresThrough = 99 }) {
                 const res = ri <= scoresThrough
                 return (
                   <div key={i} className={`cfbs-bgame${g.a === me || g.b === me ? ' is-me' : ''}`}>
-                    <MatchRow short={g.a} name={v.school(g.a)} seed={g.aSeed} sc={res ? g.aSc : null} win={res && g.winner === g.a} me={g.a === me} />
-                    <MatchRow short={g.b} name={v.school(g.b)} seed={g.bSeed} sc={res ? g.bSc : null} win={res && g.winner === g.b} me={g.b === me} />
+                    <MatchRow abbr short={g.a} name={v.school(g.a)} seed={g.aSeed} sc={res ? g.aSc : null} win={res && g.winner === g.a} me={g.a === me} />
+                    <MatchRow abbr short={g.b} name={v.school(g.b)} seed={g.bSeed} sc={res ? g.bSc : null} win={res && g.winner === g.b} me={g.b === me} />
                   </div>
                 )
               })}
@@ -312,8 +312,8 @@ function NcaaBracket({ v, roundAt = 99, scoresAt = 99, title = null }) {
           <small>FIRST FOUR · DAYTON</small>
           {ff.filter(g => g.region === tab).map((g, i) => (
             <div key={i} className={`cfbs-bgame${g.hi === v.team.short || g.lo === v.team.short ? ' is-me' : ''}`}>
-              <MatchRow short={g.hi} name={v.school(g.hi)} seed={g.hiSeed} sc={scoresAt >= 0 ? g.hiSc : null} win={scoresAt >= 0 && g.winner === g.hi} me={g.hi === v.team.short} />
-              <MatchRow short={g.lo} name={v.school(g.lo)} seed={g.loSeed} sc={scoresAt >= 0 ? g.loSc : null} win={scoresAt >= 0 && g.winner === g.lo} me={g.lo === v.team.short} />
+              <MatchRow abbr short={g.hi} name={v.school(g.hi)} seed={g.hiSeed} sc={scoresAt >= 0 ? g.hiSc : null} win={scoresAt >= 0 && g.winner === g.hi} me={g.hi === v.team.short} />
+              <MatchRow abbr short={g.lo} name={v.school(g.lo)} seed={g.loSeed} sc={scoresAt >= 0 ? g.loSc : null} win={scoresAt >= 0 && g.winner === g.lo} me={g.lo === v.team.short} />
             </div>
           ))}
         </div>
@@ -331,17 +331,37 @@ const onDark = t => { const a = t.color ?? '#0a3d91', b = t.color2; return lum(a
 // (5 game seconds a 55 ms tick), a beat at halftime, the clock held while free throws are shot, then the final held.
 // The score moves only by what one make adds (1, 2, 3), one at a time (cbbTimeline: cbbShared.js)
 const LIVE_TICK = 55, LIVE_SECS = 5, LIVE_HALF = 16, LIVE_FT = 5
+// one side of the scoreboard. (Its own component, outside LiveGame: declared inside, it was a new component every
+// 55 ms tick, so React remounted both sides each tick, the logos reloading and both numbers re-running their pop: the
+// scoreboard twitched. Now only the number that changed pops, once)
+function ScoreSide({ x, right, post }) {
+  return (
+    <div className={`plf-score-side${right ? ' plf-score-opp' : ''}`}>
+      <img src={cbbLogo(x.short)} alt={x.short} className="plf-team-logo-img" onError={e => { e.currentTarget.style.visibility = 'hidden' }} />
+      <div className="plf-team-abbr" style={{ color: x.color }}>{x.short}</div>
+      {x.seed && <div className="plf-team-seed">#{x.seed}</div>}
+      <div className="plf-score-num cbbs-score-num" style={{ color: x.color }}><span key={post ? 'f' : x.sc} className={post || !x.sc ? '' : 'plf-num-pop'}>{x.sc}</span></div>
+    </div>
+  )
+}
+const IconFF = () => <svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 1.5v11L10 7zM11 1.5v11L20 7z" fill="currentColor" /><rect x="20" y="1.5" width="1.8" height="11" fill="currentColor" /></svg>
 function LiveGame({ v, g, onDone }) {
   const [phase, setPhase] = useState('pre')
   const [sec, setSec] = useState(0)
   const [sc, setSc] = useState([0, 0])
   const [brk, setBrk] = useState(false)   // the clock at 0:00 between halves / before an overtime
   const [tl] = useState(() => cbbTimeline(g.mySc, g.oppSc, g.ot ?? 0, `${g.event}|${g.round}|${g.oppShort}|${g.meta?.day ?? ''}`))
+  const finish = useRef(null)   // the bar under the card: straight to the final, the same end as playing it out
   useEffect(() => {
     const { events, len } = tl
     // the breaks: halftime, and the end of regulation (and of each overtime) before another
     const breaks = [1200, ...Array.from({ length: g.ot ?? 0 }, (_, i) => 2400 + i * 300)]
-    let s = 0, k = 0, my = 0, opp = 0, hold = 0, b = 0, iv = null, end = null
+    let s = 0, k = 0, my = 0, opp = 0, hold = 0, b = 0, iv = null, end = null, over = false
+    const done = () => {
+      if (over) return
+      over = true; clearTimeout(pre); clearInterval(iv); setBrk(false); setSc([g.mySc, g.oppSc]); setSec(len - 1); setPhase('post'); end = setTimeout(onDone, 1600)
+    }
+    finish.current = done
     const pre = setTimeout(() => {
       setPhase('live')
       iv = setInterval(() => {
@@ -356,10 +376,7 @@ function LiveGame({ v, g, onDone }) {
           return
         }
         if (b < breaks.length && s >= breaks[b]) { b++; hold = LIVE_HALF; setBrk(true); return }
-        if (s >= len - 1 && k >= events.length) {
-          clearInterval(iv); setSc([g.mySc, g.oppSc]); setSec(len - 1); setPhase('post'); end = setTimeout(onDone, 1600)
-          return
-        }
+        if (s >= len - 1 && k >= events.length) { done(); return }
         s = Math.min(len - 1, s + LIVE_SECS, b < breaks.length ? breaks[b] : len - 1)
         setSec(s); setBrk(false)
       }, LIVE_TICK)
@@ -373,24 +390,17 @@ function LiveGame({ v, g, onDone }) {
   const me = { short: v.team.short, color: onDark(v.team), seed: g.mySeed, sc: sc[0] }
   const op = { short: g.oppShort, color: onDark(v.T(g.oppShort)), seed: g.oppSeed, sc: sc[1] }
   const [L, R] = g.home && !g.neutral ? [op, me] : [me, op]
-  const Side = ({ x, right }) => (
-    <div className={`plf-score-side${right ? ' plf-score-opp' : ''}`}>
-      <img src={cbbLogo(x.short)} alt={x.short} className="plf-team-logo-img" onError={e => { e.currentTarget.style.visibility = 'hidden' }} />
-      <div className="plf-team-abbr" style={{ color: x.color }}>{x.short}</div>
-      {x.seed && <div className="plf-team-seed">#{x.seed}</div>}
-      <div className="plf-score-num" style={{ color: x.color }}><span key={phase === 'post' ? 'f' : x.sc} className={phase === 'post' ? '' : 'plf-num-pop'}>{x.sc}</span></div>
-    </div>
-  )
+  const post = phase === 'post'
   return (
-    <div className={`plf-game${phase === 'post' ? (g.won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
+    <div className={`plf-game cbbs-live${post ? (g.won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
       <div className="plf-round-row"><div className="plf-round-lbl">{roundName(g)}{g.site ? ` · ${g.site}` : ''}</div></div>
       <div className="plf-scoreboard">
-        <Side x={L} />
+        <ScoreSide x={L} post={post} />
         <div className="plf-score-mid">
           <span className="plf-at-sym">{g.neutral ? 'vs' : '@'}</span>
           {phase === 'live' ? <div className="plf-live-pill"><span className="plf-live-dot" />LIVE</div> : phase === 'post' ? <div className={`plf-result-badge ${g.won ? 'plf-rb-win' : 'plf-rb-loss'}`}>{g.won ? 'W' : 'L'}</div> : null}
         </div>
-        <Side x={R} right />
+        <ScoreSide x={R} right post={post} />
       </div>
       <div className="plf-live-area" style={{ visibility: phase === 'live' ? 'visible' : 'hidden' }}>
         <div className="plf-status-row">
@@ -403,6 +413,7 @@ function LiveGame({ v, g, onDone }) {
         <span>{g.won ? '✓ Won' : '✗ Lost'}{g.ot ? ` in ${g.ot > 1 ? `${g.ot} overtimes` : 'overtime'}` : ''}</span>
         <span className="plf-post-score">{g.mySc} – {g.oppSc}</span>
       </div>
+      <button type="button" className="cbbs-skip" aria-label="Final score" disabled={post} style={{ visibility: post ? 'hidden' : 'visible' }} onClick={() => { sfx('tap'); finish.current?.() }}><IconFF /><span>SKIP</span></button>
     </div>
   )
 }

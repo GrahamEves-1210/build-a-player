@@ -58,3 +58,21 @@ html.is-cbb:not(.ag-screen-open) .cfb-screen .ag-screen-head { background: var(-
 .cbbs-strip .ag-bk-val { font-size: 15px; }
 /* a wide page shows a region's four rounds at once */
 @media (min-width: 700px) { .cbbs-bracket { grid-template-columns: repeat(var(--rounds), minmax(132px, 1fr)); } }
+
+/* the live game card: the numbers hold their place (tabular figures, a fixed box for the clock), a make pops only
+   its own number and gently; the red bar along the card's foot goes straight to the final */
+.cbbs-live .cbbs-score-num { font-variant-numeric: tabular-nums; min-width: 1.15em; }
+.cbbs-live .plf-score-opp .cbbs-score-num { text-align: right; }
+.cbbs-live .plf-num-pop { animation: cbbs-num-pop .22s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes cbbs-num-pop { 0% { transform: scale(1.1); opacity: .7; } 100% { transform: none; opacity: 1; } }
+.cbbs-live .plf-clock-time { display: inline-block; min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }
+.cbbs-live .plf-qtr-lbl { display: inline-block; min-width: 5.6em; text-align: right; }
+.cbbs-skip {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0 -20px -18px; height: 42px; border: 0; border-radius: 0 0 23px 23px;
+  background: #c8102e; color: #fff; cursor: pointer;
+  font-family: var(--ag-font); font-size: 15px; letter-spacing: 2.4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.cbbs-skip:active { background: #a50d26; }
+.cbbs-skip:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
