@@ -472,7 +472,8 @@ export default function BucketApp() {
   // Sandbox's Starters Only, for this build (in memory: a reload ends the build too). Only ever read through startersOn
   const [startersPick, setStartersPick] = useState(false)
   // Sandbox's One Team, for this build (in memory too): the first spin's team is the whole build's
-  const [oneTeamPick, setOneTeamPick] = useState(false)
+  const [oneTeamPick, setOneTeamPick] = useState(null)        // the team (an NBA_TEAMS row), or null
+  const [oneTeamAsk, setOneTeamAsk] = useState(false)          // the team picker, open
 
   // Versus mode
   const [versusRoom,     setVersusRoom]     = useState(null)
@@ -858,7 +859,7 @@ export default function BucketApp() {
     setActiveCategory((POS_CATS[pos] ?? GUARD_CATEGORIES)[0].id)
     sandboxTainted.current = isBucketCustomMode
     setStartersPick(false)   // a new build starts without it
-    setOneTeamPick(false)
+    setOneTeamPick(null)
     setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
@@ -1363,16 +1364,16 @@ export default function BucketApp() {
   const startersOk = !isVersusMode && !competeOn && !dailyRun && page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
   const startersOn = startersPick && isBucketCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
-  const oneTeamOn = oneTeamPick && isBucketCustomMode && startersOk
-  useEffect(() => { if (oneTeamPick && !oneTeamOn) setOneTeamPick(false) }, [oneTeamPick, oneTeamOn])
+  const oneTeamOn = !!oneTeamPick && isBucketCustomMode && startersOk
+  useEffect(() => { if (oneTeamPick && !oneTeamOn) setOneTeamPick(null) }, [oneTeamPick, oneTeamOn])
   // switching it needs a build that hasn't started: flipping it can't throw away a spin
-  const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]) || !!savedSpinResult?.lockedTeam, onToggle: v => { setStartersPick(v); if (v) setOneTeamPick(false) }, team: { on: oneTeamOn, onToggle: v => { setOneTeamPick(v); if (v) setStartersPick(false) } } } : null
+  const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]) || !!savedSpinResult?.selectedQB, onToggle: v => { setStartersPick(v); if (v) setOneTeamPick(false) }, team: { on: oneTeamOn, short: oneTeamOn ? oneTeamPick.short : null, onToggle: v => { if (v) setOneTeamAsk(true); else setOneTeamPick(null) } } } : null
   // Sandbox off during a Starters Only build ends it: the build starts over, as a normal one
   const sandboxSwitch = on => {
     if (on || !(startersOn || oneTeamOn)) { handleSandboxToggle(on); return }
     handleSandboxToggle(false)
     setStartersPick(false)
-    setOneTeamPick(false)
+    setOneTeamPick(null)
     handleReset()
     sandboxTainted.current = false
   }
@@ -1819,7 +1820,7 @@ export default function BucketApp() {
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           seedPlan={competePlan ?? blacktopPlan ?? dailyPlan}
           startersOnly={startersOn}
-          oneTeam={oneTeamOn}
+          oneTeam={oneTeamOn ? oneTeamPick : null}
           key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : dailyPlan ? `dc-${dailyRun.key}` : 'spin'}
           paused={parked}
           isRB={false}
@@ -1976,6 +1977,8 @@ export default function BucketApp() {
         />
         </Suspense>
       )}
+      {/* Sandbox's One Team: pick the team the whole build comes from */}
+      {oneTeamAsk && <Suspense fallback={null}><TeamSpinModal isCustomMode onTeamSelected={t => { setOneTeamPick(t); setStartersPick(false); setOneTeamAsk(false) }} build={build} anyTeam eyebrow="One Team" subheading="All 30 teams" onCancel={() => setOneTeamAsk(false)} /></Suspense>}
       {!parked && squadPick && page === 'squad-build' && <Suspense fallback={null}><TeamSpinModal isCustomMode={false} onTeamSelected={squadPicked} build={build} anyTeam eyebrow="Squad Builder" /></Suspense>}
 
       {!parked && showBucketCustomModal && (

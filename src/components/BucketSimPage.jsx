@@ -484,7 +484,7 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
 
 // ─── ScreenTeamSpin ────────────────────────────────────────────────────────────
 // anyTeam: every team is on offer (Squad Builder), not only the build's
-export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTeam = false, eyebrow = 'Simulate Season' }) {
+export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTeam = false, eyebrow = 'Simulate Season', subheading = 'From the build', onCancel = null }) {
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase,      setPhase]      = useState('idle')
   const [result,     setResult]     = useState(null)
@@ -587,7 +587,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTea
               </div>
             ) : (
               <>
-                <div className="tpm-subheading">From the build</div>
+                <div className="tpm-subheading">{subheading}</div>
                 <input
                   className="tpm-pick-search"
                   placeholder="Search teams…"
@@ -612,6 +612,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTea
             )}
           </div>
         )}
+        {onCancel && <button className="ag-btn ag-btn--ghost tpm-cancel" onClick={onCancel}>CANCEL</button>}
       </div>
     </div>
   )

@@ -513,6 +513,9 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
   if (isAllTime) p *= 0.80
 
   p = Math.min(p, 0.90)
+  // 50 total touchdowns on a winning team is the MVP every time it has happened (Brady 2007, Manning 2013, Mahomes 2018):
+  // a near-lock, in All-Time too (the owner, 2026-11-13). Still none with under 11 wins or 14+ picks
+  if (totalTDs >= 50 && wins >= 11 && ints < 14) p = Math.max(p, 0.95)
 
   const userWins = Math.random() < p
   const pool = isAllTime ? ALLTIME_MVP_POOL : CLASSIC_MVP_POOL

@@ -431,6 +431,8 @@ export const SPORT = {
       // a tight end past both the yards and TD records on a winner: nobody out-votes that
       if (c.pos === 'k') return false   // (no award for a kicker: the All-Pro team is the top of it)
       if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
+      // 50 total touchdowns on a winner: the MVP every time it has happened (Brady, Manning, Mahomes); 95% (the owner, 2026-11-13)
+      if (c.pos === 'qb' && (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 50 && f.wins >= 11 && (s.ints ?? 0) < 14) return seeded(`${c.seed}-mvp50-${c.year}`)() < 0.95
       if (seeded(`${c.seed}-poy-${c.year}`)() < 0.28) return false
       // a DB's DPOY: his case (coverage, plus the shutdown premium) against the year's best rival,
       // a seeded field (most years about DB_BARS.dpoy, now and then a down year or a monster)

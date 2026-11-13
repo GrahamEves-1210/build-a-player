@@ -46,7 +46,7 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
       )}
       {on && starters?.team && (
         <button className={`ag-sandbox-starters${starters.team.on ? ' is-on' : ''}`} role="switch" aria-checked={starters.team.on} disabled={starters.locked} aria-label={starters.locked ? 'One Team. Reset the build to change it' : 'One Team'} onClick={() => starters.team.onToggle(!starters.team.on)}>
-          <span className="ag-sandbox-starters-lbl">ONE TEAM{starters.locked && <i>RESET TO CHANGE</i>}</span>
+          <span className="ag-sandbox-starters-lbl">{starters.team.on && starters.team.short ? `ONE TEAM · ${starters.team.short}` : 'ONE TEAM'}{starters.locked && <i>RESET TO CHANGE</i>}</span>
           <span className={`ag-switch${starters.team.on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
         </button>
       )}

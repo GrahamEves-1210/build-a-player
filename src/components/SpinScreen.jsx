@@ -439,13 +439,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   oneWheelRef.current = oneWheel
   // Sandbox's One Team: the first spin deals a team and the whole build comes from it. Every spin after
   // that is the player wheel on that team (nobody twice), no team respin. Same limits as Starters Only
-  const teamLock = oneTeam && !oneWheel && !seedPlanProp && !isVersusMode
+  // (2026-11-13, the owner: the team is picked when the switch goes on; the spin is one wheel of that team's players)
+  const teamLock = !!oneTeam && !oneWheel && !seedPlanProp && !isVersusMode
   const teamLockRef = useRef(teamLock)
   teamLockRef.current = teamLock
-  const [lockedTeam, setLockedTeam] = useState(() => savedResult?.lockedTeam ?? null)
+  const lockedTeam = teamLock ? teamsPool.find(t => t.short === oneTeam.short) ?? oneTeam : null
   const lockedTeamRef = useRef(lockedTeam)
   lockedTeamRef.current = lockedTeam
-  useEffect(() => { if (!teamLock) setLockedTeam(null) }, [teamLock])
   // the players already in the build (One Team never deals one twice)
   const usedNames = teamLock ? Object.values(build ?? {}).filter(Boolean).map(c => c.qbFull).filter(Boolean) : []
   const usedKey = usedNames.join('|')
@@ -554,7 +554,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setQbRespinUsed(0)
     setTeamRespinUsed(0)
     setQbRespinBonus(0)
-    setLockedTeam(null)
     // a new build: a new seed, dealt from its first spin
     if (!seedPlanProp) { setAutoSeed(newSeed()); spinBase.current = 0; seedSpinsRef.current = 0; setSeedSpins(0) }
   }, [gameKey])
@@ -562,7 +561,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // Team reel calls this when it naturally halts
   const handleTeamStop = useCallback((team) => {
     setSelectedTeam(team)
-    if (teamLockRef.current && !lockedTeamRef.current) setLockedTeam(team)
     usedTeamsRef.current = [...usedTeamsRef.current, team]
     setPhase('team-done')
     pauseRef.current = setTimeout(() => setPhase('qb'), 300)
@@ -814,8 +812,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </div>
           <div className={`reels-wrap${reelSkin ? ` rs-on ${reelSkin}` : ''}`}>
             <div className="reel-tri reel-tri-l" />
-            <div className={`reels-row${oneWheel || kOne ? ' reels-row--one' : ''}`}>
-              {!oneWheel && <div className={kOne ? 'reel-ghost' : 'reel-pass'}><SlotReel
+            <div className={`reels-row${oneWheel || kOne || teamLock ? ' reels-row--one' : ''}`}>
+              {!oneWheel && !teamLock && <div className={kOne ? 'reel-ghost' : 'reel-pass'}><SlotReel
                 label={teamLabel}
                 items={teamReelItems}
                 spinning={isSpinningTeam}
@@ -830,7 +828,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 target={teamTarget}
               /></div>}
               <SlotReel
-                label={pLabel}
+                label={teamLock ? `${lockedTeam.short} ${pLabel}` : pLabel}
                 items={qbReelItems}
                 spinning={isSpinningQB}
                 idle={!paused && !isSpinning && !selectedQB}
@@ -840,7 +838,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 onStop={handleQBStop}
                 durationMs={oneWheel || kOne ? 1700 : 1100}
                 jitterMs={400}
-                blurred={!kOne && (phase === 'team' || phase === 'team-done')}
+                blurred={!kOne && !teamLock && (phase === 'team' || phase === 'team-done')}
                 fast={!kOne && qbRespinUsed > 0}
                 target={oneWheel ? starterDraw[0] ?? null : playerTarget}
               />
