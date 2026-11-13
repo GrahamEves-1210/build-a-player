@@ -16,7 +16,7 @@ const FRANCHISE_DEV = (() => {
     return localStorage.getItem('bap_franchise_dev') === '1'
   } catch { return /[?&]franchise=1\b/.test(location.search) }
 })()
-export const FRANCHISE_LIVE = false || FRANCHISE_DEV   // off until the owner flips it
+export const FRANCHISE_LIVE = true || FRANCHISE_DEV   // on: the owner flipped it 2026-11-13
 
 // What Home's card says about the franchise on this device, without loading the mode: the mode leaves this
 // small note every time it saves (components/franchise/frStore.js)
