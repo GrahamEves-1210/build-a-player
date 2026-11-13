@@ -323,12 +323,12 @@ function celebrate(ctx, view, C, g, c, t, LOS) {
   for (let i = 0; i < 9; i++) {
     const x0 = i < 7 ? (i - 3) * LINE_GAP : (i === 7 ? -1 : 1) * (LINE_GAP * 3 + 1.25), y0 = i < 7 ? LOS - 0.55 : LOS - 1.5
     const a = (i / 9) * Math.PI * 2 + 0.4, x1 = KX + Math.cos(a) * 1.35, y1 = KY + 0.6 + Math.sin(a) * 0.9
-    const f = easeOut(clamp((t - 80 - i * 35) / 700, 0, 1))
+    const f = easeOut(clamp((t - 120 - i * 45) / 950, 0, 1))
     men.push({ x: lerp(x0, x1, f), y: lerp(y0, y1, f), look: { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), dir: f < 1 || y1 > KY ? 'down' : 'up',   // (facing him: the ones past him turn back to the camera)
       step: f < 1 ? Math.floor(t / 90 + i) % 4 : null, pose: f < 1 ? 'sprint' : 'arms-up', lift: f < 1 ? 0 : hop(t + i * 137, 430, 0.32) } })
   }
   // the holder, up off his knee, goes straight to him and gets under him
-  const hf = easeOut(clamp((t - 60) / 400, 0, 1)), up = easeOut(clamp((t - 460) / 380, 0, 1))
+  const hf = easeOut(clamp((t - 80) / 520, 0, 1)), up = easeOut(clamp((t - 650) / 450, 0, 1))
   men.push({ x: lerp(0.95, KX + 0.05, hf), y: lerp(0.1, KY + 0.03, hf), look: { color: c.us, trim: c.trim, skin: skinOf(4), dir: 'up', pose: 'arms-up' } })
   // the kicker, arms up, then up on the holder's shoulders
   men.push({ x: KX, y: KY, me: true, look: { color: c.us, trim: c.trim, skin: view.cast?.me?.skin ?? skinOf(1), number: view.cast?.me?.number ?? 4, dir: 'up', pose: 'arms-up',
