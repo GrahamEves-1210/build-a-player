@@ -9,7 +9,7 @@ import { track } from '../lib/track'
 import { seededShuffle, useProgress } from '../lib/progress'
 import { seededTeamOrder } from '../lib/rng'
 import { itemById } from '../lib/cosmetics'
-import { rampRail } from '../lib/ads'
+import { rampRail, rampSpinAd, SPIN_AD_ID } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
 import { LOW_POWER, sampleFrames } from '../lib/lowPower'
 import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
@@ -580,6 +580,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const triggerMobileAd = useCallback(() => {
     if (adsDisabled) return
     rampRail()
+    rampSpinAd()
   }, [adsDisabled])
 
   const handleSpin = useCallback(() => {
@@ -914,8 +915,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           )}
         </div>
 
-        {/* DUMMY (dev server only): where a 320x50 under the wheels would sit on a phone, to judge the spot before a real unit */}
-        {import.meta.env.DEV && <div className="spin-ad-dummy" aria-hidden="true"><small>ADVERTISEMENT</small><span>AD · 320×50</span></div>}
+        {/* the 320x50 under the wheels (phones on the website: lib/ads.js rampSpinAd, asked for on a spin). The dev server
+            outlines the spot (is-dev) since no ad loads there */}
+        {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><small>ADVERTISEMENT</small><div id={SPIN_AD_ID} /></div>}
         <div className="spin-panel-scroll">
           {isDone && selectedQB && (
             hasAvailableChips ? (

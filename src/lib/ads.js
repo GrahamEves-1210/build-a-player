@@ -119,6 +119,31 @@ export function rampRewardedAdd() {
 }
 export const rampRewardedDestroy = () => rampDestroyType(REWARDED_UNIT)
 
+// The 320x50 under the spin wheels (Playwire, 2026-11-13: a container with this id, and a spaAddAds of
+// { type: '320x50', selectorId } when the spin button is pressed). Phones on the website only: the slot is
+// hidden everywhere else (app-game.css .spin-ad-slot), and a hidden slot is never asked for. At most once every
+// RAIL_GAP_MS while one is showing; its old slot is removed first so two never stack
+export const SPIN_AD_ID = 'ramp-cntr1-spin-mob-1'
+const SPIN_AD_TYPE = '320x50'
+let lastSpinAd = 0
+export function rampSpinAd() {
+  if (inGame || IS_APP) return
+  if (document.documentElement.classList.contains('ads-hidden')) return
+  const el = document.getElementById(SPIN_AD_ID)
+  if (!el || !el.offsetParent) return
+  if (Date.now() - lastSpinAd < RAIL_GAP_MS && el.childElementCount) return
+  lastSpinAd = Date.now()
+  Promise.resolve().then(() => serial(() => {
+    const slots = Object.entries(window.ramp?.settings?.slots ?? {}).filter(([, s]) => s?.type === SPIN_AD_TYPE).map(([name]) => name)
+    let gone
+    try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
+    return Promise.resolve(gone).catch(() => {}).then(() => {
+      if (!document.getElementById(SPIN_AD_ID)) return
+      return window.ramp.spaAddAds([{ type: SPIN_AD_TYPE, selectorId: SPIN_AD_ID }])
+    })
+  }))
+}
+
 // The bottom rail on its own, between page changes (a tab in the nav, a spin):
 // its slots removed, then requested again, closed or not. At most once every
 // RAIL_GAP_MS; never for ad-free players

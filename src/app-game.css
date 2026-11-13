@@ -6458,14 +6458,14 @@ html:is(.is-app, .app-look) .sfb-sub { font-family: var(--ag-font); font-weight:
   html:is(.is-app, .app-look) .sc-footer .sc-budget-track { width: 100%; }
 }
 
-/* DUMMY ad slot under the spin wheels (dev server only, phones only on the website): the size and spot a 320x50 would take */
-.spin-ad-dummy { display: none; }
+/* The 320x50 under the spin wheels (phones only on the website; lib/ads.js rampSpinAd). Same size and spot the dummy had */
+.spin-ad-slot { display: none; }
 @media (max-width: 768px) {
   /* the label sits right on top of the slot, no gap; the slot itself is tight to what's around it */
-  html.app-look:not(.is-app) .spin-ad-dummy { position: relative; display: grid; place-items: center; width: 320px; max-width: 100%; height: 50px; margin: 11px auto 2px; flex: none;
-    border: 1.5px dashed rgba(255,255,255,.28); border-radius: 2px; background: rgba(255,255,255,.04); }
-  html.app-look:not(.is-app) .spin-ad-dummy small { position: absolute; left: 0; right: 0; bottom: 100%; text-align: center; font-family: var(--ag-body, sans-serif); font-size: 7.5px; font-weight: 600; letter-spacing: 1.2px; line-height: 9px; color: rgba(255,255,255,.4); }
-  html.app-look:not(.is-app) .spin-ad-dummy span { font-family: var(--ag-font, Bebas Neue, sans-serif); font-size: 13px; letter-spacing: 2px; color: rgba(255,255,255,.5); }
+  html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { position: relative; display: block; width: 320px; max-width: 100%; height: 50px; margin: 11px auto 2px; flex: none; }
+  .spin-ad-slot > div { width: 320px; max-width: 100%; height: 50px; overflow: hidden; }
+  .spin-ad-slot.is-dev > div { border: 1.5px dashed rgba(255,255,255,.28); border-radius: 2px; background: rgba(255,255,255,.04); box-sizing: border-box; }
+  .spin-ad-slot small { position: absolute; left: 0; right: 0; bottom: 100%; text-align: center; font-family: var(--ag-body, sans-serif); font-size: 7.5px; font-weight: 600; letter-spacing: 1.2px; line-height: 9px; color: rgba(255,255,255,.4); }
 }
 
 /* ═══ Mini-games: the how-to-play demo on the card (MgDemo) ═════════════════ */
