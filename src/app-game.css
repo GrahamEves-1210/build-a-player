@@ -6982,6 +6982,12 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: 1fr; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { height: 100% !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 82%, #000) !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long, .chip-val) { color: #fff !important; }
+  /* the name on the left and the grade on the right, both centred top to bottom (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: row !important; align-items: center !important; justify-content: space-between !important; gap: 4px !important; padding: 4px 8px 4px 9px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-text { flex: 1 1 auto; width: auto; min-width: 0; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { flex: none; width: auto !important; min-width: 0 !important; font-size: 16px !important; }
+  /* whole words only (it broke FINISHING into FINISHIN / G) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { overflow-wrap: normal !important; word-break: normal !important; hyphens: none; font-size: 10px !important; letter-spacing: .2px !important; line-height: 1.15 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-badge { width: 18px !important; height: 18px !important; font-size: 11px !important; }
 }
 
