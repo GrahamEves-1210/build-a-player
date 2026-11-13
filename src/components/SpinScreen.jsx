@@ -875,7 +875,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 )}
               </div>
               {selectedQB.position && (
-                <div className="qb-reveal-pos" style={{ background: POS_COLORS[selectedQB.position] ?? selectedQB.color }}>
+                <div className="qb-reveal-pos" style={{ '--pos': POS_COLORS[selectedQB.position] ?? selectedQB.color }}>
                   {selectedQB.position}
                 </div>
               )}

@@ -4703,7 +4703,7 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .game-layout.ag-drop .qb-reveal-hero > * { width: 48px !important; height: 48px !important; }
 .game-layout.ag-drop .qb-reveal-text { min-width: 0; flex: 1; }
 .game-layout.ag-drop .qb-reveal-meta { font-size: 12.5px !important; }
-.game-layout.ag-drop .qb-reveal-pos { flex: none; width: 34px !important; height: 34px !important; font-size: 12px !important; }
+.game-layout.ag-drop .qb-reveal-pos { flex: none; width: 34px !important; height: 34px !important; font-size: 14px !important; }
 .game-layout.ag-drop .qb-reveal-name { font-size: 18px !important; line-height: 1.05 !important; }
 .game-layout.ag-drop .spin-panel-scroll { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px 0 2px !important; overflow: visible !important; max-height: none !important; }
 .game-layout.ag-drop .attr-category-section { display: contents !important; }

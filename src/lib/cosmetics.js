@@ -278,13 +278,13 @@ const EN = [
 
 // ── Unlocks: not looks, features. Sandbox in Career and in Squad Builder, bought one
 // mode at a time (the switch is on the build screen; turning it on asks to buy)
-export const UNLOCK_PRICE = 10000
+export const UNLOCK_PRICE = 8000   // (10,000 until 2026-11-12; no refunds for earlier buyers: the owner)
 const UL = [
   it('unlock', 'sandbox-career', 'Career Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Career' }),
   it('unlock', 'sandbox-squad', 'Squad Builder Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Squad Builder' }),
-  it('unlock', 'sandbox-cfb', 'College Football Sandbox', 3, 5000, { unlock: true, mode: 'College Football' }),
+  it('unlock', 'sandbox-cfb', 'College Football Sandbox', 3, 4000, { unlock: true, mode: 'College Football' }),
   // (College Basketball's is in the Shop only once the mode is: lib/cbbLive.js)
-  ...(CBB_LIVE ? [it('unlock', 'sandbox-cbb', 'College Basketball Sandbox', 3, 5000, { unlock: true, mode: 'College Basketball' })] : []),
+  ...(CBB_LIVE ? [it('unlock', 'sandbox-cbb', 'College Basketball Sandbox', 3, 4000, { unlock: true, mode: 'College Basketball' })] : []),
 ]
 // An unlock that was renamed: owning the old id is owning the new one (Squad Builder
 // replaced the road mode, whose Sandbox players had already bought)

@@ -329,7 +329,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
       team: logoKey(p.team), school: p.team, conf: p.conf ?? t?.conf,
       teamName: t?.name ?? p.teamName ?? p.team,
       color: p.color ?? t?.color, color2: p.color2 ?? t?.color2,
-      years: p.years ?? ([classLabel(p.year), p.position].filter(Boolean).join(' · ') || undefined),
+      years: p.years ?? classLabel(p.year),   // (the position is already in the card's circle)
       headshot: p.headshot ?? undefined,
     }
   }), [data, legends, era, pos, teamsBy])
