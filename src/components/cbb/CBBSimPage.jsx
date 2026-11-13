@@ -139,7 +139,7 @@ function GameRow({ g, v }) {
         <small>{g.neutral ? 'N' : g.home ? 'VS' : '@'}</small>
         <Logo short={g.oppShort} size={24} />
         <b>{(g.post && g.oppSeed ? g.oppSeed : g.meta?.oppRank) ? <em>{g.post && g.oppSeed ? g.oppSeed : g.meta.oppRank}</em> : null}{g.opponent}</b>
-        {!g.post && g.confGame && <i className="cfbs-game-conf" title="Conference game" />}
+        {!g.post && g.confGame && <i className="cfbs-game-conf">CONF</i>}
       </span>
       <span className="cfbs-game-sc"><b>{g.won ? 'W' : 'L'}</b><span>{g.mySc}-{g.oppSc}{g.ot ? <small> {g.ot > 1 ? `${g.ot}OT` : 'OT'}</small> : null}</span></span>
       <span className="cfbs-game-line">{gameLine(g)}</span>

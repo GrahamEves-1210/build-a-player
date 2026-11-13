@@ -157,7 +157,8 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbs-game-opp small { width: 18px; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; color: var(--cfb-faint); flex: none; }
 .cfbs-game-opp b { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--ag-body); font-weight: 700; font-size: 15px; }
 .cfbs-game-opp b em { margin-right: 4px; font-style: normal; font-weight: 600; font-size: 12px; color: var(--cfb-muted); }
-.cfbs-game-conf { width: 5px; height: 5px; border-radius: 50%; background: var(--cfb-blue-hi); flex: none; }
+/* a conference game, said in words (a blue dot was read as a home game: the owner, 2026-11-12) */
+.cfbs-game-conf { flex: none; font-family: var(--ag-font); font-style: normal; font-size: 10px; letter-spacing: 1.2px; line-height: 1; color: var(--cfb-muted); }
 .cfbs-game-sc { grid-area: sc; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 92px; font-family: var(--ag-display); font-weight: 400; font-size: 19px; letter-spacing: .3px; white-space: nowrap; text-align: right; }
 .cfbs-game-sc > span { min-width: 58px; }
 .cfbs-game-sc b { display: inline-block; min-width: 22px; padding: 2px 0 1px; border-radius: 3px; text-align: center; font-weight: 400; font-size: 15px; background: var(--cfb-blue-hi); }
