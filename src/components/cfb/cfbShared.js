@@ -15,6 +15,7 @@ export const CFB_POS = {
   qb: { label: 'QB', name: 'Quarterback', fig: '/qb-silhouette.webp' },
   wr: { label: 'WR', name: 'Wide Receiver', fig: '/wr-silhouette.png' },
   rb: { label: 'RB', name: 'Running Back', fig: '/rb-silhouette.webp' },
+  te: { label: 'TE', name: 'Tight End', fig: '/wr-silhouette.png' },
 }
 
 // The pool a build's wheels deal from: this season's rosters, or each school's legends (data/cfb-legends.js).
@@ -142,7 +143,7 @@ export function projText(draft) {
 // a real player's headshot by name and school (the Heisman ceremony, the draft board): pools from lib/cfbLoad.js
 export function photoLookup(pools, base) {
   const m = new Map()
-  for (const k of ['qb', 'rb', 'wr']) for (const p of pools?.[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${base}/${p.headshot}.webp`)
+  for (const k of ['qb', 'rb', 'wr', 'te']) for (const p of pools?.[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${base}/${p.headshot}.webp`)
   return (name, school) => m.get(`${name}|${school}`) ?? null
 }
 
@@ -160,7 +161,7 @@ export function photoLookup(pools, base) {
 // same country whoever plays it. seasonData(data, k): season k (0 = the first), the shared data untouched
 const NEXT_CLASS = { FR: 'SO', SO: 'JR', JR: 'SR' }
 const OUT_AFTER = new Set(['SR', 'GR', '5TH'])
-const EARLY_OUT = { qb: 91, rb: 89, wr: 91 }   // a junior this good goes pro (about the draft board's Day 2 line)
+const EARLY_OUT = { qb: 91, rb: 89, wr: 91, te: 92 }   // a junior this good goes pro (about the draft board's Day 2 line)
 const NEW_CLASS = ['FR', 'FR', 'RS-FR', 'RS-FR', 'SO', 'RS-SO', 'JR']
 const toChips = attrs => Object.fromEntries(Object.entries(attrs ?? {}).map(([t, v]) => [t, { type: t, val: v }]))
 function nextYear(pools, k, sim) {

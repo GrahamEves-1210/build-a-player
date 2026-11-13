@@ -66,14 +66,14 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 .cfb-pool-opt:not(.is-on):hover { color: #fff; }
 .cfb-pool-opt:active { transform: scale(.99); }
 
-/* entry: the three positions, standing there */
-.cfb-pos-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.cfb-pos { position: relative; display: block; height: 228px; padding: 0; overflow: hidden; border: 1.5px solid var(--cfb-line); border-radius: 6px; background: var(--cfb-blue); color: #fff; cursor: pointer; text-align: left; transition: border-color .15s ease-out, transform .12s ease-out; }
+/* entry: the four positions, standing there (two by two on a phone, one row of four on a wide screen) */
+.cfb-pos-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cfb-pos { position: relative; display: block; height: 200px; padding: 0; overflow: hidden; border: 1.5px solid var(--cfb-line); border-radius: 6px; background: var(--cfb-blue); color: #fff; cursor: pointer; text-align: left; transition: border-color .15s ease-out, transform .12s ease-out; }
 .cfb-pos:hover { border-color: rgba(255,255,255,.7); }
 .cfb-pos:active { transform: scale(.98); }
 .cfb-pos::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: var(--cfb-navy); }   /* the field the figure stands on */
 .cfb-pos-fig { position: absolute; left: 50%; bottom: 50px; height: calc(100% - 62px); width: auto; max-width: none; transform: translateX(-50%); filter: brightness(0) invert(1); opacity: .94; pointer-events: none; }
-.cfb-pos--wr .cfb-pos-fig { height: calc(100% - 54px); bottom: 46px; }
+.cfb-pos--wr .cfb-pos-fig, .cfb-pos--te .cfb-pos-fig { height: calc(100% - 54px); bottom: 46px; }
 .cfb-pos-txt { z-index: 1; position: absolute; left: 10px; right: 8px; bottom: 9px; display: grid; gap: 2px; }
 .cfb-pos-txt b { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: .9; letter-spacing: .5px; }
 .cfb-pos-txt small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; color: var(--cfb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -97,6 +97,7 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 
 @media (min-width: 769px) {
   .cfb-entry .ag-screen-head, .cfb-entry .ag-screen-body { max-width: 860px; margin-left: auto; margin-right: auto; width: 100%; }
+  .cfb-pos-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .cfb-pos { height: 320px; }
   .cfb-pos-txt b { font-size: 46px; }
   .cfb-conf-chip { min-width: 25%; }

@@ -47,8 +47,8 @@ const reduced = () => document.documentElement.classList.contains('bap-reduce-mo
 const n = v => (v == null || Number.isNaN(+v) ? '–' : Math.round(+v).toLocaleString())
 const f1 = v => (v == null || Number.isNaN(+v) ? '–' : (+v).toFixed(1))
 const ordinal = k => `${k}${(k % 100 > 10 && k % 100 < 14) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[k % 10] ?? 'th'}`
-const POS_AWARD = { qb: 'daveyOBrien', wr: 'biletnikoff', rb: 'doakWalker' }
-const POS_GROUP = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS' }
+const POS_AWARD = { qb: 'daveyOBrien', wr: 'biletnikoff', rb: 'doakWalker', te: 'mackey' }
+const POS_GROUP = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS' }
 
 // The regular season plays out on football's season director (lib/seasonDirector.js), the season exactly as
 // simulated (locked: the polls, the Playoff and the awards come from these games). College's own: no NFL record
@@ -57,6 +57,7 @@ const CFB_COUNTS = {
   qb: { seasonPassYds: 'passYds', seasonTDs: 'tds', seasonINTs: 'ints', seasonRushYds: 'rushYds', seasonRushTDs: 'rushTDs', seasonSacks: 'sacks' },
   rb: { seasonRushYds: 'rushYds', seasonRushTDs: 'rushTDs', seasonCarries: 'carries', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonRecs: 'recs', seasonFumbles: 'fumbles' },
   wr: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
+  te: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
 }
 registerDirector('cfb', { counts: CFB_COUNTS, lines: { clinch: 99, out: -99 }, nick: t => t?.mascot ?? t?.school ?? t?.name, totals: () => {} })
 const weekNo = label => (/^pre/i.test(label) ? 0 : /^final/i.test(label) ? 99 : Number(String(label).replace(/\D+/g, '')) || 0)
@@ -101,7 +102,7 @@ const Logo = ({ short, size = 28, light = false }) => (
 
 const gameLine = (g, pos) => {
   if (pos === 'qb' && g.att === 0 && !g.rushAtt) return 'Did not play'
-  if (pos === 'wr' && g.targets === 0) return 'No targets'
+  if ((pos === 'wr' || pos === 'te') && g.targets === 0) return 'No targets'
   if (pos === 'qb') return g.att != null ? `${g.comp}/${g.att}, ${n(g.passYds)} yds, ${g.tds ?? 0} TD${g.ints ? `, ${g.ints} INT` : ''}${g.rushTDs ? ` · ${g.rushTDs} rush TD` : ''}` : ''
   if (pos === 'rb') return g.carries != null ? `${g.carries} car, ${n(g.rushYds)} yds, ${(g.rushTDs ?? 0) + (g.recTDs ?? 0)} TD${g.recYds ? ` · ${n(g.recYds)} rec yds` : ''}` : ''
   return g.rec != null ? `${g.rec} rec, ${n(g.recYds)} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}` : ''
@@ -272,6 +273,7 @@ const LOG = {
   qb: [['C/ATT', g => (g.att != null ? `${g.comp}/${g.att}` : '–')], ['YDS', g => n(g.passYds)], ['TD', g => n(g.tds)], ['INT', g => n(g.ints)], ['RUSH', g => n(g.rushYds)], ['RTD', g => n(g.rushTDs)]],
   rb: [['CAR', g => n(g.carries)], ['YDS', g => n(g.rushYds)], ['TD', g => n(g.rushTDs)], ['REC', g => n(g.recs)], ['RYDS', g => n(g.recYds)], ['LONG', g => n(g.long)]],
   wr: [['TGT', g => n(g.targets)], ['REC', g => n(g.rec)], ['YDS', g => n(g.recYds)], ['TD', g => n(g.recTDs)], ['LONG', g => n(g.long)]],
+  te: [['TGT', g => n(g.targets)], ['REC', g => n(g.rec)], ['YDS', g => n(g.recYds)], ['TD', g => n(g.recTDs)], ['LONG', g => n(g.long)]],
 }
 function BoxLog({ games, v, pos, totals, userName, sub = null }) {
   const cols = LOG[pos]
@@ -448,7 +450,7 @@ function LiveGame({ v, g, onDone }) {
 function Figure({ pos, build, team }) {
   if (!build || !team) return null
   const mono = Object.fromEntries(Object.entries(build).map(([k, x]) => [k, x ? { ...x, teamColor: team.color, teamColor2: team.color2, team: `cfb/${team.short}`, jerseyWord: String(team.school ?? team.short).toUpperCase() } : x]))
-  if (pos === 'wr') return (
+  if (pos === 'wr' || pos === 'te') return (
     <div className="simp-team-model simp-team-model--rb">
       <div className="simp-team-model-glow" />
       <img src="/wr-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.55)' }} />
@@ -936,6 +938,17 @@ const SCOUT = {
     size: ['A big target with a wide catch radius', 'A smaller target who can be outmuscled at the catch point'],
     afterCatch: ['Turns a slant into a big play', 'Goes down where he catches it'],
   },
+  te: {
+    speed: ['Runs away from linebackers up the seam', 'A linebacker can carry him down the field'],
+    blocking: ['Seals the edge in the run game and holds up in pass protection', 'Gets pushed back at the point of attack'],
+    vertical: ['Climbs the ladder for the ball in the red zone', 'Will not win many jump balls'],
+    routeRunning: ['Gets open against man coverage from the slot and in line', 'Telegraphs his routes; safeties sit on them'],
+    strength: ['Moves defensive ends off the ball', 'Gets jolted by bigger edge defenders'],
+    hands: ['Catches it in traffic and holds on through the hit', 'Too many drops over the middle'],
+    awareness: ['Finds the hole in the zone and sits down in it', 'Drifts into coverage instead of settling in the window'],
+    size: ['An in-line frame with a wide catch radius', 'Undersized for an in-line tight end'],
+    afterCatch: ['Breaks the first tackle and turns short catches into first downs', 'Goes down where he catches it'],
+  },
 }
 function scouting(r, v, pos, attrMap) {
   const u = v.c.user ?? {}
@@ -958,6 +971,10 @@ function scouting(r, v, pos, attrMap) {
     if ((t.seasonRushYds ?? 0) >= 1300) like.push({ k: 'PRODUCTION', text: `${n(t.seasonRushYds)} rushing yards at ${f1(t.seasonYPC)} a carry` })
     if ((t.seasonFumbles ?? 0) >= 4) ask.push({ k: 'BALL SECURITY', text: `${n(t.seasonFumbles)} fumbles` })
     if ((t.seasonYPC ?? 9) < 4.3 && (t.seasonCarries ?? 0) >= 100) ask.push({ k: 'EFFICIENCY', text: `${f1(t.seasonYPC)} yards a carry` })
+  } else if (pos === 'te') {
+    if ((t.seasonRecYds ?? 0) >= 700) like.push({ k: 'PRODUCTION', text: `${n(t.seasonRecs)} catches for ${n(t.seasonRecYds)} yards and ${n(t.seasonRecTDs)} touchdowns` })
+    else if ((t.seasonRecs ?? 99) < 20 && (t.gp ?? 0) >= 10) ask.push({ k: 'PRODUCTION', text: `${n(t.seasonRecs)} catches: a blocker first in that offense` })
+    if ((t.catchRate ?? 100) < 60 && (t.seasonTargets ?? 0) >= 40) ask.push({ k: 'EFFICIENCY', text: `Caught ${f1(t.catchRate)}% of his targets` })
   } else {
     if ((t.seasonRecYds ?? 0) >= 1100) like.push({ k: 'PRODUCTION', text: `${n(t.seasonRecs)} catches for ${n(t.seasonRecYds)} yards and ${n(t.seasonRecTDs)} touchdowns` })
     if ((t.catchRate ?? 100) < 56 && (t.seasonTargets ?? 0) >= 60) ask.push({ k: 'EFFICIENCY', text: `Caught ${f1(t.catchRate)}% of his targets` })
