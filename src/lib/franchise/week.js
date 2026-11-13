@@ -87,7 +87,7 @@ export function lineText(pos, s) {
 }
 
 // ── Injuries ─────────────────────────────────────────────────────────────────
-const INJ_RATE = { qb: 0.011, rb: 0.03, wr: 0.022, te: 0.021, ol: 0.017, dl: 0.02, lb: 0.022, db: 0.02, k: 0.0015 }
+const INJ_RATE = { qb: 0.019, rb: 0.03, wr: 0.022, te: 0.021, ol: 0.017, dl: 0.02, lb: 0.022, db: 0.02, k: 0.0015 }
 const INJ_KINDS = [
   [1, ['a bruised shoulder', 'a sprained ankle', 'a tight hamstring', 'a stinger', 'a hip pointer', 'a jammed thumb']],
   [2, ['a sprained ankle', 'a hamstring strain', 'a concussion', 'a calf strain', 'a groin strain', 'bruised ribs']],
@@ -95,7 +95,8 @@ const INJ_KINDS = [
   [8, ['a broken collarbone', 'a torn meniscus', 'a fractured forearm', 'a severe high-ankle sprain', 'a torn pectoral']],
   [99, ['a torn ACL', 'a torn Achilles', 'a broken leg', 'a dislocated knee', 'a ruptured patellar tendon']],
 ]
-export const durability = p => 0.7 + roll(`dur-${p.name}-${p.id}`) * 0.7
+const DUR = new WeakMap()
+export function durability(p) { let d = DUR.get(p); if (d === undefined) { d = 0.7 + roll(`dur-${p.name}-${p.id}`) * 0.7; DUR.set(p, d) } return d }
 export function rollInjury(F, R, p, share, mult = 1) {
   const rate = (INJ_RATE[p.pos] ?? 0.02) * share * (1 + (p.wear ?? 0) / 85) * durability(p) * mult * (p.age >= 31 ? 1.15 : 1)
   if (!R.chance(rate)) return null
@@ -153,7 +154,8 @@ export function bookGame(F, G, week, i) {
       const got = giveXp(F, p, 26 * share + Math.max(0, sc) * 1.9 + (won ? 7 : 0) + (reg ? 0 : 10), dev)
       if (user) out.xp.push({ id: p.id, name: p.name, xp: got.xp, pts: got.pts })
       if (sc > 6) top.push({ p, side, sc: sc * (won ? 1.15 : 1), line })
-      if (F.settings.injuries) {
+      if (p.inj?.nag) { const what = p.inj.what; p.inj = null; if (R.chance(0.25)) out.injuries.push({ p, wk: 3, what }) }
+      else if (F.settings.injuries) {
         const inj = rollInjury(F, R, p, share, user ? 1 - (F.gm.tree?.medical ?? 0) * 0.05 : 1)
         if (inj) out.injuries.push({ p, ...inj })
       }
@@ -178,7 +180,7 @@ export function applyInjuries(F, list, week) {
   for (const { p, wk, what } of list) {
     if (!p.team || (p.inj && p.inj.wk > 0)) continue
     const left = week <= REG_WEEKS ? REG_WEEKS - week : 22 - week
-    p.inj = { wk, what, ir: false }
+    p.inj = { wk, what, ir: false, fresh: true }
     if (wk > left + 4) p.inj.season = true
     const t = F.teams[p.team]
     const star = p.ovr >= 86

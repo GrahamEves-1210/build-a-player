@@ -22,10 +22,10 @@ console.log('depth QB', FR.depthChart(F).slots[0].players.map(p => `${p.name} ${
 console.log('cap', JSON.stringify({ ...FR.capSheet(F), rows: undefined }))
 console.log('schedule', FR.schedule(F).map(g => (g.bye ? 'BYE' : `${g.home ? '' : '@'}${g.opp.short}`)).join(' '))
 let bad = 0
+const ACTIONS = new Set(['createFranchise', 'saveFranchise', 'loadFranchise', 'listSlots', 'deleteSlot', 'unpackFranchise', 'useCoachData', 'teamRef', 'photoUrl', 'moneyText', 'gradeOf', 'ovrGrade', 'packFranchise', 'coachDataIsReal', 'autopilot', 'simTo', 'advanceWeek', 'advanceStage', 'takeJob'])
 for (const [name, fn] of Object.entries(FR)) {
-  if (typeof fn !== 'function') continue
-  if (['createFranchise', 'saveFranchise', 'loadFranchise', 'listSlots', 'deleteSlot', 'unpackFranchise', 'useCoachData', 'teamRef', 'photoUrl', 'moneyText', 'gradeOf', 'ovrGrade', 'packFranchise'].includes(name)) continue
-  try { const out = fn(F, r[0].id); if (out === undefined) { bad++; console.log('  undefined from', name) } } catch (e) { bad++; console.log('  THROWS', name, e.message) }
+  if (typeof fn !== 'function' || ACTIONS.has(name)) continue
+  try { const out = fn(F); if (out === undefined) { bad++; console.log('  undefined from', name) } else if (out && out.teams && out.players) F = out } catch (e) { bad++; console.log('  THROWS', name, e.message, String(e.stack ?? '').split(String.fromCharCode(10))[1]) }
 }
 console.log('exports called, problems:', bad)
 const t0 = performance.now()

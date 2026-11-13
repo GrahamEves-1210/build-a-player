@@ -6,7 +6,7 @@
 import { SAVE_VERSION } from './consts'
 import { TYPES_OF, realByName, reOvr } from './players'
 
-const FIELDS = ['id', 'name', 'pos', 'sub', 'team', 'age', 'exp', 'a', 'dev', 'devKnown', 'xp', 'pts', 'con', 'mood', 'drives', 'wear', 'inj', 's', 'car', 'hist', 'aw', 'peak', 'kind', 'num', 'ht', 'wt', 'skin', 'photo', 'college', 'draft']
+const FIELDS = ['id', 'name', 'pos', 'sub', 'team', 'age', 'exp', 'a', 'dev', 'devKnown', 'xp', 'pts', 'con', 'mood', 'drives', 'wear', 'inj', 's', 'car', 'hist', 'aw', 'peak', 'kind', 'num', 'ht', 'wt', 'skin', 'photo', 'college', 'draft', 'yrsHere']
 const KNOWN = new Set([...FIELDS, 'ovr', 'real', 'built', 'gen'])
 const CON = ['yrs', 'sal', 'guar', 'rookie', 'rd', 'opt', 'tag']
 const D12 = '0123456789ab'
@@ -17,13 +17,13 @@ function slimPlayer(p) {
   const row = FIELDS.map(f => {
     if (f === 'a') return types.map(t => D12[Math.max(0, Math.min(11, Math.round(p.a[t] ?? 0)))]).join('')
     if (f === 'con') return p.con ? CON.map(k => (k === 'tag' ? (p.con.tag ? 1 : 0) : p.con[k] ?? 0)) : 0
-    if (f === 'kind') return p.real ? 1 : p.built ? 2 : 0
+    if (f === 'kind') return p.real ? 1 : p.built ? 2 : p.gen === false ? 3 : 0
     if (f === 'devKnown') return p.devKnown ? 1 : 0
     if (p.real && (f === 'num' || f === 'ht' || f === 'wt' || f === 'skin' || f === 'photo')) { const base = realByName(p.name); return base && base[f] === p[f] ? 0 : p[f] ?? 0 }
     return empty(p[f]) ? 0 : p[f]
   })
   const extra = {}
-  for (const k in p) if (!KNOWN.has(k) && !empty(p[k])) extra[k] = p[k]
+  for (const k in p) if (!KNOWN.has(k) && p[k] !== undefined) extra[k] = p[k]
   if (Object.keys(extra).length) row.push(extra)
   else while (row.length && row[row.length - 1] === 0) row.pop()
   return row
@@ -36,11 +36,10 @@ function fatPlayer(row) {
   const str = String(p.a || '')
   p.a = Object.fromEntries(types.map((t, i) => [t, Math.max(0, D12.indexOf(str[i] ?? '5'))]))
   p.con = Array.isArray(p.con) ? Object.fromEntries(CON.map((k, i) => [k, k === 'tag' ? !!p.con[i] : k === 'rd' ? p.con[i] || null : p.con[i] ?? 0])) : null
-  p.real = p.kind === 1; p.built = p.kind === 2; p.gen = p.kind === 0
-  if (!p.real) delete p.real
-  if (!p.built) delete p.built
-  if (!p.gen) delete p.gen
+  if (p.kind === 1) p.real = true
+  else if (p.kind === 2) { p.gen = false; p.built = true } else p.gen = p.kind === 0
   delete p.kind
+  p.yrsHere = p.yrsHere || 0
   p.devKnown = !!p.devKnown
   p.sub = p.sub || null; p.team = p.team || null; p.inj = p.inj || null; p.college = p.college || null; p.draft = p.draft || null
   p.drives = p.drives || []; p.s = p.s || {}; p.car = p.car || {}; p.hist = p.hist || []; p.aw = p.aw || []

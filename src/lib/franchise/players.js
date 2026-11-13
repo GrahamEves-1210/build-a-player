@@ -170,7 +170,7 @@ export function genPlayer(R, opts) {
     age, exp: opts.exp ?? Math.max(0, age - 22), a, ovr: 0, peak: 0, dev: opts.dev ?? 0, devKnown: opts.devKnown ?? true, xp: 0, pts: 0,
     con: null, mood: 60, drives: [], wear: 0, inj: null, s: {}, car: {}, hist: [], aw: [],
     num: R.int(nums[0], nums[1]), ht: R.int(body[0], body[1]), wt: R.int(body[2], body[3]), skin: R.pick(SKINS), photo: null,
-    college: opts.college ?? genCollege(R), draft: opts.draft ?? null,
+    college: opts.college ?? genCollege(R), draft: opts.draft ?? null, yrsHere: 0,
   }
   reOvr(p)
   return p
@@ -183,7 +183,7 @@ export function realPlayer(row) {
     id: 0, name: row.name, pos: row.pos, sub: row.sub, team: row.team, real: true,
     age, exp: Math.max(0, age - 22), a: { ...row.a }, ovr: row.ovr, peak: row.ovr, dev: 0, devKnown: true, xp: 0, pts: 0,
     con: null, mood: 62, drives: [], wear: 0, inj: null, s: {}, car: {}, hist: [], aw: [],
-    num: row.num, ht: row.ht, wt: row.wt, skin: row.skin, photo: row.photo, college: null, draft: null,
+    num: row.num, ht: row.ht, wt: row.wt, skin: row.skin, photo: row.photo, college: null, draft: null, yrsHere: 0,
   }
   return p
 }

@@ -17,14 +17,14 @@ import { lastName } from './players'
 import { nick } from './core'
 
 export const TUNE = {
-  sack: 0.066, sackRush: 2.4, sackQb: 1.3,
+  sack: 0.066, sackRush: 2.6, sackQb: 1.3,
   comp: [0.744, 0.574, 0.376],            // short, intermediate, deep
-  compQb: 0.14, compRec: 0.1, compCov: 0.42, compCall: 0.014, pressureComp: 0.13,
+  compQb: 0.15, compRec: 0.1, compCov: 0.46, compCall: 0.014, pressureComp: 0.13,
   int: [0.0115, 0.025, 0.047], intK: 1.5,
-  runBase: 3.8, runLine: 4.2, runBack: 2.7, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
+  runBase: 3.8, runLine: 4.5, runBack: 2.9, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
   fumRun: 0.013, fumRec: 0.0105, fumSack: 0.1, fumLost: 0.55,
   pen: 0.05, home: 0.014,
-  passRate: 0.565,
+  passRate: 0.546,
 }
 
 // ── A game ───────────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ export const halfLeft = G => (G.q <= 2 ? (2 - G.q) * 900 + G.clock : G.q <= 4 ? 
 const clockText = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`
 export const spotText = (G, side, yl) => (yl === 50 ? 'the 50' : yl < 50 ? `${side === 0 ? G.h : G.a} ${yl}` : `${side === 0 ? G.a : G.h} ${100 - yl}`)
 const short = side => G => (side === 0 ? G.h : G.a)
-const nm = m => lastName(m?.p?.name ?? 'the back')
+const nm = m => m?.ln ?? lastName(m?.p?.name ?? 'the back')
 const ordinalDown = ['', '1st', '2nd', '3rd', '4th']
 
 function say(G, kind, text, extra = {}) {
@@ -146,7 +146,7 @@ function turnover(G, o, spotForDefense, result) {
 function safety(G, o) {
   const d = 1 - o
   G.tot[d].saf++
-  say(G, 'safety', `Tackled in the end zone. Safety, ${nick(d === 0 ? G.h : G.a)}.`)
+  G.keep && say(G, 'safety', `Tackled in the end zone. Safety, ${nick(d === 0 ? G.h : G.a)}.`)
   points(G, d, 2)
   if (G.q >= 5) G.otDef = true
   endDrive(G, 'SAFETY')
@@ -161,8 +161,8 @@ function tackle(G, d, D, pass, yds) {
   return m
 }
 export function pickTarget(G, O, ctx) {
-  const R = G.R, w = O.recv.map(r => r.w * (ctx.rz && r.kind !== 'rb' ? 0.6 + (r.s.rz ?? 0.5) * 0.8 : 1) * (ctx.long && r.kind === 'rb' ? 0.45 : 1))
-  const r = O.recv[Math.max(0, R.wpick(w))]
+  const R = G.R
+  const r = O.recv[Math.max(0, R.wpick(O.wTgt[(ctx.rz ? 1 : 0) + (ctx.long ? 2 : 0)]))]
   // how far downfield: 0 short, 1 intermediate, 2 deep
   const plan = O.plan?.off
   let ws = r.kind === 'rb' ? [1, 0, 0] : r.kind === 'te' ? [0.62, 0.3, 0.08] : [0.53, 0.32, 0.15 * (0.55 + (r.s.deep ?? 0.5) * 0.9)]
@@ -226,18 +226,18 @@ export function applyPass(G, T, res, opts = {}) {
     const m = res.by ?? pickDef(G, D, D.wSack)
     add(Q, 'sk'); add(Q, 'sky', -res.yds); G.tot[d].sk++
     if (m) { const S = st(G, d, m.id); add(S, 'sa'); add(S, 'tfl'); add(S, 'tk') }
-    const ol = O.ol[Math.max(0, R.wpick(O.ol.map(x => Math.pow(1.25 - x.s.pass, 2))))]
+    const ol = O.ol[Math.max(0, R.wpick(O.wOlSack))]
     if (ol) add(st(G, o, ol.id), 'sal')
     tot.py += res.yds; tot.yds += res.yds
     if (res.fum && R.chance(0.55)) {
       if (m) add(st(G, d, m.id), 'ff')
       const rec = pickDef(G, D, D.wTklRun); if (rec) add(st(G, d, rec.id), 'fr')
       add(Q, 'fum')
-      say(G, 'fumble', `${q} is hit by ${nm(m)} and the ball is out. ${nick(d === 0 ? G.h : G.a)} recover.`, { yds: res.yds })
+      G.keep && say(G, 'fumble', `${q} is hit by ${nm(m)} and the ball is out. ${nick(d === 0 ? G.h : G.a)} recover.`, { yds: res.yds })
       tick(G, 'stop', o); G.dPlays++
       return turnover(G, o, clamp(100 - (G.yl + res.yds), 1, 99), 'FUMBLE')
     }
-    say(G, 'sack', opts.text ?? `${q} is sacked by ${nm(m)} for a loss of ${-res.yds}.`, { yds: res.yds })
+    G.keep && say(G, 'sack', opts.text ?? `${q} is sacked by ${nm(m)} for a loss of ${-res.yds}.`, { yds: res.yds })
     if (G.yl + res.yds <= 0) { if (R.chance(0.5)) { tick(G, 'stop', o); return safety(G, o) } res.yds = 1 - G.yl }
     tick(G, 'run', o)
     return advance(G, o, res.yds)
@@ -247,11 +247,11 @@ export function applyPass(G, T, res, opts = {}) {
     tot.ra++; tot.pa--; tot.ry += res.yds; tot.yds += res.yds
     if (G.yl + res.yds >= 100) {
       add(Q, 'rtd'); G.dPlays++; G.dYds += res.yds
-      say(G, 'td', opts.text ?? `${q} escapes the pocket and runs it in from ${res.yds} yards out. Touchdown.`, { yds: res.yds })
+      G.keep && say(G, 'td', opts.text ?? `${q} escapes the pocket and runs it in from ${res.yds} yards out. Touchdown.`, { yds: res.yds })
       tick(G, 'stop', o); endDrive(G, 'TOUCHDOWN'); return touchdown(G, o)
     }
     tackle(G, d, D, false)
-    say(G, 'scramble', opts.text ?? `${q} scrambles for ${res.yds}${res.yds >= G.dist ? ' and the first down' : ''}.`, { yds: res.yds })
+    G.keep && say(G, 'scramble', opts.text ?? `${q} scrambles for ${res.yds}${res.yds >= G.dist ? ' and the first down' : ''}.`, { yds: res.yds })
     tick(G, R.chance(0.3) ? 'stop' : 'run', o)
     return advance(G, o, res.yds)
   }
@@ -264,7 +264,7 @@ export function applyPass(G, T, res, opts = {}) {
     if (m) { const S = st(G, d, m.id); add(S, 'di'); add(S, 'pd') }
     const at = clamp(G.yl + (res.depth === 0 ? R.int(2, 9) : res.depth === 1 ? R.int(10, 19) : R.int(20, 38)), 2, 99)
     if (opts.pick6 ?? R.chance(0.085)) { td = true } else ret = Math.round(-Math.log(1 - R.u() * 0.999) * 9)
-    say(G, 'int', opts.text ?? `${q} is intercepted by ${nm(m)}${td ? ', and he takes it all the way back. Touchdown.' : ` at ${spotText(G, o, at)}.`}`)
+    G.keep && say(G, 'int', opts.text ?? `${q} is intercepted by ${nm(m)}${td ? ', and he takes it all the way back. Touchdown.' : ` at ${spotText(G, o, at)}.`}`)
     tick(G, 'stop', o); G.dPlays++
     G.tot[o].to++
     endDrive(G, 'INTERCEPTION')
@@ -272,8 +272,8 @@ export function applyPass(G, T, res, opts = {}) {
     return startDrive(G, d, clamp(100 - at + ret, 1, 99))
   }
   if (res.type === 'inc') {
-    if (res.pd) { const m = res.by ?? pickDef(G, D, D.wPd); if (m) add(st(G, d, m.id), 'pd'); say(G, 'incomplete', opts.text ?? `${q} throws for ${who}, broken up by ${nm(m)}.`) }
-    else say(G, 'incomplete', opts.text ?? `${q} throws ${res.depth === 2 ? 'deep ' : ''}for ${who}, incomplete.`)
+    if (res.pd) { const m = res.by ?? pickDef(G, D, D.wPd); if (m) add(st(G, d, m.id), 'pd'); G.keep && say(G, 'incomplete', opts.text ?? `${q} throws for ${who}, broken up by ${nm(m)}.`) }
+    else G.keep && say(G, 'incomplete', opts.text ?? `${q} throws ${res.depth === 2 ? 'deep ' : ''}for ${who}, incomplete.`)
     tick(G, 'stop', o)
     return advance(G, o, 0)
   }
@@ -283,19 +283,19 @@ export function applyPass(G, T, res, opts = {}) {
   tot.py += yds; tot.yds += yds
   if (G.yl + yds >= 100) {
     add(Q, 'ptd'); add(C, 'ctd'); G.dPlays++; G.dYds += yds
-    say(G, 'td', opts.text ?? (yds >= 30 ? `${q} goes deep for ${who}. Caught, and he is gone. ${yds}-yard touchdown.` : `${q} finds ${who} ${yds <= 5 ? 'in the end zone' : `for ${yds} yards and the score`}. Touchdown.`), { yds })
+    G.keep && say(G, 'td', opts.text ?? (yds >= 30 ? `${q} goes deep for ${who}. Caught, and he is gone. ${yds}-yard touchdown.` : `${q} finds ${who} ${yds <= 5 ? 'in the end zone' : `for ${yds} yards and the score`}. Touchdown.`), { yds })
     tick(G, 'stop', o); endDrive(G, 'TOUCHDOWN'); return touchdown(G, o)
   }
   const tk = tackle(G, d, D, true)
   if (res.fum && R.chance(TUNE.fumLost)) {
     add(C, 'fum'); if (tk) add(st(G, d, tk.id), 'ff')
     const rec = pickDef(G, D, D.wTklPass); if (rec) add(st(G, d, rec.id), 'fr')
-    say(G, 'fumble', `${q} to ${who} for ${yds}, and he is stripped. ${nick(d === 0 ? G.h : G.a)} ball.`, { yds })
+    G.keep && say(G, 'fumble', `${q} to ${who} for ${yds}, and he is stripped. ${nick(d === 0 ? G.h : G.a)} ball.`, { yds })
     tick(G, 'stop', o); G.dPlays++; G.dYds += yds
     return turnover(G, o, clamp(100 - (G.yl + yds), 1, 99), 'FUMBLE')
   }
   if (yds <= -1) add(st(G, d, (tk ?? D.def[0]).id), 'tfl')
-  say(G, 'pass', opts.text ?? `${q} to ${who} for ${yds}${yds >= G.dist ? (yds >= 20 ? '. A big gain and a first down' : ' and a first down') : ''}.`, { yds })
+  G.keep && say(G, 'pass', opts.text ?? `${q} to ${who} for ${yds}${yds >= G.dist ? (yds >= 20 ? '. A big gain and a first down' : ' and a first down') : ''}.`, { yds })
   tick(G, R.chance(0.16) ? 'stop' : 'run', o)
   return advance(G, o, yds)
 }
@@ -330,10 +330,10 @@ export function applyRun(G, T, res, opts = {}) {
   if (G.down === 4) tot.d4a++
   add(S, 'ra'); add(S, 'ry', yds); long(S, 'rl', yds)
   tot.ry += yds; tot.yds += yds
-  if (yds >= 8 && O.ol.length) { const ol = O.ol[Math.max(0, R.wpick(O.ol.map(x => x.s.pnk)))]; if (R.chance(0.3 + ol.s.pnk * 0.35)) add(st(G, o, ol.id), 'pk') }
+  if (yds >= 8 && O.ol.length) { const ol = O.ol[Math.max(0, R.wpick(O.wOlPnk))]; if (R.chance(0.3 + ol.s.pnk * 0.35)) add(st(G, o, ol.id), 'pk') }
   if (G.yl + yds >= 100) {
     add(S, 'rtd'); G.dPlays++; G.dYds += yds
-    say(G, 'td', opts.text ?? (yds >= 20 ? `${who} breaks into the open field and nobody is catching him. ${yds}-yard touchdown.` : res.qbRun ? `${who} keeps it and gets in. Touchdown.` : `${who} ${yds <= 2 ? 'punches it in' : `takes it in from ${yds} yards out`}. Touchdown.`), { yds })
+    G.keep && say(G, 'td', opts.text ?? (yds >= 20 ? `${who} breaks into the open field and nobody is catching him. ${yds}-yard touchdown.` : res.qbRun ? `${who} keeps it and gets in. Touchdown.` : `${who} ${yds <= 2 ? 'punches it in' : `takes it in from ${yds} yards out`}. Touchdown.`), { yds })
     tick(G, 'stop', o); endDrive(G, 'TOUCHDOWN'); return touchdown(G, o)
   }
   const tk = res.by ?? tackle(G, d, D, false)
@@ -342,13 +342,13 @@ export function applyRun(G, T, res, opts = {}) {
   if (res.fum && R.chance(TUNE.fumLost)) {
     add(S, 'fum'); if (tk) add(st(G, d, tk.id), 'ff')
     const rec = pickDef(G, D, D.wTklRun); if (rec) add(st(G, d, rec.id), 'fr')
-    say(G, 'fumble', opts.text ?? `${who} is stripped by ${nm(tk)}. ${nick(d === 0 ? G.h : G.a)} recover.`, { yds })
+    G.keep && say(G, 'fumble', opts.text ?? `${who} is stripped by ${nm(tk)}. ${nick(d === 0 ? G.h : G.a)} recover.`, { yds })
     tick(G, 'stop', o); G.dPlays++; G.dYds += yds
     return turnover(G, o, clamp(100 - (G.yl + yds), 1, 99), 'FUMBLE')
   }
-  if (G.yl + yds <= 0 && R.chance(0.45)) { say(G, 'run', `${who} is swallowed up in his own end zone.`, { yds }); tick(G, 'stop', o); return safety(G, o) }
+  if (G.yl + yds <= 0 && R.chance(0.45)) { G.keep && say(G, 'run', `${who} is swallowed up in his own end zone.`, { yds }); tick(G, 'stop', o); return safety(G, o) }
   const gap = ['up the middle', 'off left tackle', 'off right tackle', 'around the left end', 'around the right end'][R.int(0, 4)]
-  say(G, 'run', opts.text ?? (res.qbRun && G.dist <= 1 ? `${who} sneaks it for ${yds}${yds >= G.dist ? ' and the first down' : ''}.`
+  G.keep && say(G, 'run', opts.text ?? (res.qbRun && G.dist <= 1 ? `${who} sneaks it for ${yds}${yds >= G.dist ? ' and the first down' : ''}.`
     : yds <= 0 ? `${who} ${gap}, stopped ${yds === 0 ? 'for no gain' : `for a loss of ${-yds}`} by ${nm(tk)}.`
     : yds >= 15 ? `${who} ${gap}, breaks a tackle and rips off ${yds}.` : `${who} ${gap} for ${yds}${yds >= G.dist ? ' and a first down' : ''}.`), { yds })
   tick(G, 'run', o)
@@ -362,7 +362,7 @@ function penalty(G, T) {
     const fs = R.chance(0.45), y = Math.min(fs ? 5 : 10, Math.floor(G.yl / 2))
     if (y <= 0) return false
     G.tot[o].pen++; G.tot[o].peny += y
-    say(G, 'penalty', fs ? `False start, ${nick(o === 0 ? G.h : G.a)}. Five yards.` : `Holding, ${nick(o === 0 ? G.h : G.a)}. Ten yards, replay the down.`, { yds: -y })
+    G.keep && say(G, 'penalty', fs ? `False start, ${nick(o === 0 ? G.h : G.a)}. Five yards.` : `Holding, ${nick(o === 0 ? G.h : G.a)}. Ten yards, replay the down.`, { yds: -y })
     G.yl -= y; G.dist = Math.min(G.dist + y, 100 - G.yl)
     if (!fs) tick(G, 'stop', o)
   } else {
@@ -370,7 +370,7 @@ function penalty(G, T) {
     const y0 = k < 0.38 ? 5 : k < 0.58 ? 5 : k < 0.82 ? Math.round(9 + -Math.log(1 - R.u() * 0.999) * 10) : 15
     const y = Math.min(y0, Math.floor((100 - G.yl) / 2) || 1)
     G.tot[d].pen++; G.tot[d].peny += y
-    say(G, 'penalty', k < 0.38 ? `Offside, ${nick(d === 0 ? G.h : G.a)}. Five yards.` : k < 0.58 ? `Defensive holding. Five yards and an automatic first down.` : k < 0.82 ? `Pass interference, ${nick(d === 0 ? G.h : G.a)}. ${y} yards and a first down.` : `Roughing the passer. Fifteen yards and a first down.`, { yds: y })
+    G.keep && say(G, 'penalty', k < 0.38 ? `Offside, ${nick(d === 0 ? G.h : G.a)}. Five yards.` : k < 0.58 ? `Defensive holding. Five yards and an automatic first down.` : k < 0.82 ? `Pass interference, ${nick(d === 0 ? G.h : G.a)}. ${y} yards and a first down.` : `Roughing the passer. Fifteen yards and a first down.`, { yds: y })
     G.yl += y
     if (auto || y >= G.dist) { G.tot[o].fd++; firstDown(G) } else G.dist -= y
     if (k >= 0.58) tick(G, 'stop', o)
@@ -388,13 +388,13 @@ export function applyFieldGoal(G, T, good, opts = {}) {
   if (good) {
     add(K, 'fgm'); long(K, 'fgl', dist); if (dist >= 50) add(K, 'f5m')
     G.tot[o].fg++
-    say(G, 'fg', opts.text ?? `${name}'s ${dist}-yard field goal is good.`)
+    G.keep && say(G, 'fg', opts.text ?? `${name}'s ${dist}-yard field goal is good.`)
     tick(G, 'stop', o)
     points(G, o, 3)
     endDrive(G, 'FIELD GOAL')
     G.kick = { type: 'kickoff', team: o }
   } else {
-    say(G, 'fgmiss', opts.text ?? `${name}'s ${dist}-yard field goal is no good${dist >= 50 ? ', short' : ', wide'}.`)
+    G.keep && say(G, 'fgmiss', opts.text ?? `${name}'s ${dist}-yard field goal is no good${dist >= 50 ? ', short' : ', wide'}.`)
     tick(G, 'stop', o)
     endDrive(G, 'MISSED FG')
     startDrive(G, 1 - o, clamp(100 - (G.yl - 7), 20, 99))
@@ -413,7 +413,7 @@ function punt(G, T) {
     const ret = Math.max(0, Math.round(-Math.log(1 - R.u() * 0.999) * 8.5 - 1))
     if (R.chance(0.006)) {
       const kr = T[d].kr
-      say(G, 'td', `The punt is fielded${kr ? ` by ${nm(kr)}` : ''} and he takes it the distance. Touchdown.`)
+      G.keep && say(G, 'td', `The punt is fielded${kr ? ` by ${nm(kr)}` : ''} and he takes it the distance. Touchdown.`)
       if (kr) { add(st(G, d, kr.id), 'krtd') }
       tick(G, 'stop', o); endDrive(G, 'PUNT'); G.poss = d
       return touchdown(G, d)
@@ -421,7 +421,7 @@ function punt(G, T) {
     land -= ret
     text = `A ${gross}-yard punt, returned ${ret} to ${spotText(G, o, clamp(land, 1, 99))}.`
   }
-  say(G, 'punt', text)
+  G.keep && say(G, 'punt', text)
   tick(G, 'stop', o)
   endDrive(G, 'PUNT')
   startDrive(G, d, clamp(100 - land, 1, 99))
@@ -443,7 +443,7 @@ export function applyKickoff(G, T, res, opts = {}) {
   if (res.td) {
     if (kr) { const S = st(G, r, kr.id); add(S, 'kr'); add(S, 'kry', 100); add(S, 'krtd') }
     G.yl = 1; G.down = 1; G.dist = 10; G.drive++; G.dPlays = 0; G.dYds = 0; G.dTime = 0; G.dStart = 1
-    say(G, 'td', opts.text ?? `${kr ? nm(kr) : 'The returner'} takes the kickoff, finds a seam and goes the distance. Touchdown.`)
+    G.keep && say(G, 'td', opts.text ?? `${kr ? nm(kr) : 'The returner'} takes the kickoff, finds a seam and goes the distance. Touchdown.`)
     tick(G, 'stop', r)
     endDrive(G, 'TOUCHDOWN')
     return touchdown(G, r)
@@ -451,7 +451,7 @@ export function applyKickoff(G, T, res, opts = {}) {
   if (kr && res.ret != null) { const S = st(G, r, kr.id); add(S, 'kr'); add(S, 'kry', Math.max(0, res.yl - 5)) }
   startDrive(G, r, res.yl)
   G.dPlays = 0
-  say(G, 'kickoff', opts.text ?? (res.tb ? `The kickoff is a touchback. ${nick(r === 0 ? G.h : G.a)} start at their 35.` : `${kr ? nm(kr) : 'The returner'} brings the kickoff out to ${spotText(G, r, res.yl)}.`))
+  G.keep && say(G, 'kickoff', opts.text ?? (res.tb ? `The kickoff is a touchback. ${nick(r === 0 ? G.h : G.a)} start at their 35.` : `${kr ? nm(kr) : 'The returner'} brings the kickoff out to ${spotText(G, r, res.yl)}.`))
   if (!res.tb) { G.clock = Math.max(0, G.clock - G.R.int(4, 8)) }
 }
 export function applyOnside(G, T, recovered, opts = {}) {
@@ -459,10 +459,10 @@ export function applyOnside(G, T, recovered, opts = {}) {
   G.kick = null
   if (recovered) {
     startDrive(G, k, 46)
-    say(G, 'kickoff', opts.text ?? `Onside kick. It takes a high hop and ${nick(k === 0 ? G.h : G.a)} recover it.`)
+    G.keep && say(G, 'kickoff', opts.text ?? `Onside kick. It takes a high hop and ${nick(k === 0 ? G.h : G.a)} recover it.`)
   } else {
     startDrive(G, r, 100 - 45)
-    say(G, 'kickoff', opts.text ?? `Onside kick. ${nick(r === 0 ? G.h : G.a)} fall on it.`)
+    G.keep && say(G, 'kickoff', opts.text ?? `Onside kick. ${nick(r === 0 ? G.h : G.a)} fall on it.`)
   }
   G.clock = Math.max(0, G.clock - G.R.int(2, 4))
 }
@@ -489,13 +489,13 @@ export function applyTry(G, T, kind, good, opts = {}) {
   G.poss = o
   if (kind === 'two') {
     G.tot[o].two += good ? 1 : 0
-    say(G, 'two', opts.text ?? (good ? `The two-point try is good.` : `The two-point try fails.`))
+    G.keep && say(G, 'two', opts.text ?? (good ? `The two-point try is good.` : `The two-point try fails.`))
     if (good) points(G, o, 2)
   } else {
     const K = k.id != null ? st(G, o, k.id) : {}
     add(K, 'xpa')
     if (good) { add(K, 'xpm'); G.tot[o].xp++ }
-    say(G, good ? 'xp' : 'xpmiss', opts.text ?? (good ? `The extra point is good.` : `The extra point is no good.`))
+    G.keep && say(G, good ? 'xp' : 'xpmiss', opts.text ?? (good ? `The extra point is good.` : `The extra point is no good.`))
     if (good) points(G, o, 1)
   }
   G.poss = save
@@ -508,7 +508,7 @@ export function fourthCall(G, T, o) {
   const O = T[o], d = 1 - o, lead = G.sc[o] - G.sc[d], toGoal = 100 - G.yl, togo = G.dist, R = G.R
   const must = (G.q === 4 || G.q >= 5) && G.sc[o] - G.sc[1 - o] <= 0 && secsLeft(G) <= 150
   const reach = kickTry(O.k.v.power) + (G.env.yards > 0 ? 1 : 0), fd = fgDist(G.yl)
-  const range = must ? fd <= reach : fd <= reach - 5 || (fd <= reach && R.chance(0.4))
+  const range = must ? fd <= reach : fd <= reach - 5 || (fd <= reach && R.chance(0.36))
   const left = secsLeft(G), q4 = G.q === 4, ot = G.q >= 5
   // the game is on the line
   if (q4 || ot) {
@@ -596,7 +596,7 @@ export function step(F, G, hooks = null) {
   if (G.q === 4 && lead > 0 && G.clock <= (4 - G.down) * 40 - G.to[d] * 38) {
     G.tot[o].plays++; G.tot[o].ra++
     const Q = st(G, o, O.qb.id); add(Q, 'ra'); add(Q, 'ry', -1); G.tot[o].ry--; G.tot[o].yds--
-    say(G, 'kneel', `${nm(O.qb)} takes a knee.`, { yds: -1 })
+    G.keep && say(G, 'kneel', `${nm(O.qb)} takes a knee.`, { yds: -1 })
     tick(G, 'run', o)
     G.yl = Math.max(1, G.yl - 1); G.dist++; G.down++; G.dPlays++
     if (G.down > 4) { endDrive(G, 'DOWNS'); startDrive(G, d, 100 - G.yl) }
@@ -605,7 +605,7 @@ export function step(F, G, hooks = null) {
   // out of time before the half or at the end: kick it if they can
   const kickNow = ((G.q === 2 || (G.q >= 4 && lead <= 0 && lead >= -3)) && G.down < 4 && fgDist(G.yl) <= kickTry(O.k.v.power) + 2 && (G.clock <= 9 || (G.clock <= 24 && G.to[o] === 0)))
     || (G.q >= 5 && lead === 0 && G.otp[0] >= 1 && G.otp[1] >= 1 && G.down >= 2 && fgDist(G.yl) <= 41)
-  const botched = kickNow && G.q <= 4 && G.down < 4 && R.chance(clamp(0.14 - O.sit * 0.1, 0.03, 0.26))
+  const botched = kickNow && G.user !== o && G.q <= 4 && G.down < 4 && R.chance(clamp(0.14 - O.sit * 0.1, 0.03, 0.26))
   if (G.down === 4 || (kickNow && !botched)) {
     let call = G.dec?.at === 'fourth' ? G.dec.choice : null
     G.dec = null

@@ -15,7 +15,7 @@ const isT = s => s === 'LT' || s === 'RT', isG = s => s === 'LG' || s === 'RG'
 export const olFit = (from, at) => (from === at ? 1 : (isT(from) && isT(at)) || (isG(from) && isG(at)) ? 0.985 : (isG(from) && at === 'C') || (from === 'C' && isG(at)) ? 0.96 : isT(from) && isG(at) ? 0.94 : 0.9)
 export const available = p => !!p && !(p.inj && p.inj.wk > 0) && !p.hold
 // what a man is worth on the depth chart: his OVR, a first-year build ahead of everyone, a hurt man behind
-const score = (F, p) => p.ovr + (p.built && p.exp === 0 ? 100 : 0) - (available(p) ? 0 : 200)
+const score = (F, p) => p.ovr + (p.built && p.exp === 0 ? 100 : 0) + (p.first && p.first >= F.year * 100 + F.week ? 60 : 0) - (available(p) ? 0 : 200)
 
 export function autoDepth(F, t) {
   const P = t.roster.map(id => F.players[id]).filter(Boolean)

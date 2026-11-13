@@ -4,6 +4,7 @@
 import { clamp } from './consts'
 import { lineupOf, olFit } from './depth'
 import { playcall } from './rows'
+import { lastName } from './players'
 
 // ── What a man is good at (0-1.1) ────────────────────────────────────────────
 export function skillsOf(p) {
@@ -104,14 +105,14 @@ export function skillsOf(p) {
 }
 
 // Workload: a worn man plays a little under himself (nothing until 40, about 4% at 100)
-export const wearFactor = p => 1 - Math.max(0, (p.wear ?? 0) - 40) * 0.0007
+export const wearFactor = p => (1 - Math.max(0, (p.wear ?? 0) - 40) * 0.0007) * (p.inj?.nag ? 0.93 : 1)
 const avg = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0)
 const BACKUP = 0.36   // what an empty spot plays like
 
 export function buildProfile(F, short, isUser) {
   const t = F.teams[short], L = lineupOf(F, t), pc = playcall(F, t)
   const sk = p => { const s = skillsOf(p), w = wearFactor(p); if (w < 1) for (const k in s) s[k] *= w; return s }
-  const man = (p, role) => (p ? { p, id: p.id, s: sk(p), role } : null)
+  const man = (p, role) => (p ? { p, id: p.id, s: sk(p), role, ln: lastName(p.name) } : null)
   const T = { short, L, pc, plan: short === F.team ? F.plan : t.plan, isUser: !!isUser }
 
   // offense
@@ -129,11 +130,15 @@ export function buildProfile(F, short, isUser) {
   tes.forEach((m, i) => T.recv.push({ ...m, kind: 'te', w: roleW.TE[i] * Math.pow(0.35 + m.s.tgt, 1.2) }))
   T.rbs.forEach((m, i) => T.recv.push({ ...m, kind: 'rb', w: roleW.RB[i] * Math.pow(0.35 + m.s.tgt, 1.1) }))
   T.wr = wrs; T.te = tes
+  // the same weights for the red zone (the big targets) and for long yardage (fewer checkdowns), ready to use
+  const tgtW = (rz, long) => T.recv.map(r => r.w * (rz && r.kind !== 'rb' ? 0.6 + (r.s.rz ?? 0.5) * 0.8 : 1) * (long && r.kind === 'rb' ? 0.45 : 1))
+  T.wTgt = [tgtW(false, false), tgtW(true, false), tgtW(false, true), tgtW(true, true)]
   T.ol = L.OL.map(o => (o.p ? { p: o.p, id: o.p.id, spot: o.spot, s: (() => { const s = sk(o.p), f = o.p.pos === 'ol' ? olFit(o.p.sub, o.spot) : 0.6; return { pass: (s.pass ?? 0.3) * f, run: (s.run ?? 0.3) * f, pnk: (s.pnk ?? 0.2) * f, disc: s.disc ?? 0.5 } })() } : null)).filter(Boolean)
   T.olPass = T.ol.length ? (T.ol.reduce((s, o) => s + o.s.pass, 0) + BACKUP * (5 - T.ol.length)) / 5 : BACKUP
   T.olRun = T.ol.length ? (T.ol.reduce((s, o) => s + o.s.run, 0) + BACKUP * (5 - T.ol.length)) / 5 : BACKUP
   T.teBlock = tes[0]?.s.block ?? 0.4
   T.olDisc = avg(T.ol.map(o => o.s.disc)) || 0.5
+  T.wOlSack = T.ol.map(x => Math.pow(1.25 - x.s.pass, 2)); T.wOlPnk = T.ol.map(x => x.s.pnk)
 
   // defense: the front four, three linebackers, two corners, two safeties, the nickel; the rotation behind them
   const edges = L.EDGE.slice(0, 3).map(p => man(p, 'EDGE')), dts = L.DT.slice(0, 3).map(p => man(p, 'DT'))

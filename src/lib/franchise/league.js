@@ -97,6 +97,7 @@ function buildRoster(F, R, short, taken, builds) {
     p.drives = drivesFor(R, p)
     p.con = startingDeal(R, p, F.cap)
     p.mood = clamp(Math.round(58 + R.n() * 8), 35, 85)
+    p.yrsHere = p.built || p.gen ? 0 : Math.min(p.exp, 3)
     t.roster.push(p.id)
   }
 }
