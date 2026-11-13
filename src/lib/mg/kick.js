@@ -150,8 +150,8 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     if (res.good) g.made++
     else if (res.close) g.near++
     if (!winner) g.hud.dots[g.i] = res.good
-    if (winner && res.good) g.outro = 3600   // (time for the pile: they get to him and get him up)
-    g.stamp = { text: res.good ? (res.doink ? 'OFF THE UPRIGHT AND IN' : g.k.d >= 60 ? `GOOD FROM ${g.k.d}` : 'IT’S GOOD') : res.why === 'short' ? 'SHORT' : res.why === 'doink' ? 'OFF THE UPRIGHT' : res.why === 'left' ? 'WIDE LEFT' : 'WIDE RIGHT', good: res.good, at: g.t, size: res.doink ? 30 : 42, ...(winner && res.good ? { ms: 1150 } : {}) }   // (a game winner's word clears for the pile)
+    if (winner && res.good) g.outro = 2500   // (time for the pile: they get to him and get him up)
+    g.stamp = { text: res.good ? (res.doink ? 'OFF THE UPRIGHT AND IN' : g.k.d >= 60 ? `GOOD FROM ${g.k.d}` : 'IT’S GOOD') : res.why === 'short' ? 'SHORT' : res.why === 'doink' ? 'OFF THE UPRIGHT' : res.why === 'left' ? 'WIDE LEFT' : 'WIDE RIGHT', good: res.good, at: g.t, size: res.doink ? 30 : 42, ...(winner && res.good ? { ms: 800 } : {}) }   // (a game winner's word clears for the pile)
     g.fx.push(res.good ? 'claim' : 'deny', res.good ? 'h:success' : 'h:medium')
     g.phase = 'res'; g.at = g.t
     if (g.i === kicks.length - 1) finish()
@@ -323,12 +323,12 @@ function celebrate(ctx, view, C, g, c, t, LOS) {
   for (let i = 0; i < 9; i++) {
     const x0 = i < 7 ? (i - 3) * LINE_GAP : (i === 7 ? -1 : 1) * (LINE_GAP * 3 + 1.25), y0 = i < 7 ? LOS - 0.55 : LOS - 1.5
     const a = (i / 9) * Math.PI * 2 + 0.4, x1 = KX + Math.cos(a) * 1.35, y1 = KY + 0.6 + Math.sin(a) * 0.9
-    const f = easeOut(clamp((t - 120 - i * 45) / 950, 0, 1))
-    men.push({ x: lerp(x0, x1, f), y: lerp(y0, y1, f), look: { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), dir: f < 1 ? 'down' : 'up',
+    const f = easeOut(clamp((t - 80 - i * 35) / 700, 0, 1))
+    men.push({ x: lerp(x0, x1, f), y: lerp(y0, y1, f), look: { color: c.us, trim: c.trim, skin: skinOf(i * 3 + 1), dir: f < 1 || y1 > KY ? 'down' : 'up',   // (facing him: the ones past him turn back to the camera)
       step: f < 1 ? Math.floor(t / 90 + i) % 4 : null, pose: f < 1 ? 'sprint' : 'arms-up', lift: f < 1 ? 0 : hop(t + i * 137, 430, 0.32) } })
   }
   // the holder, up off his knee, goes straight to him and gets under him
-  const hf = easeOut(clamp((t - 80) / 520, 0, 1)), up = easeOut(clamp((t - 650) / 450, 0, 1))
+  const hf = easeOut(clamp((t - 60) / 400, 0, 1)), up = easeOut(clamp((t - 460) / 380, 0, 1))
   men.push({ x: lerp(0.95, KX + 0.05, hf), y: lerp(0.1, KY + 0.03, hf), look: { color: c.us, trim: c.trim, skin: skinOf(4), dir: 'up', pose: 'arms-up' } })
   // the kicker, arms up, then up on the holder's shoulders
   men.push({ x: KX, y: KY, me: true, look: { color: c.us, trim: c.trim, skin: view.cast?.me?.skin ?? skinOf(1), number: view.cast?.me?.number ?? 4, dir: 'up', pose: 'arms-up',
@@ -355,6 +355,27 @@ function drawFG(ctx, g, view) {
   // (the wind: the ball goes where he aimed less what the wind took, so a kick with k.wind above nothing is carried left)
   const blow = -k.wind
   if (shown?.good) crowdPop(ctx, view, [c.us, c.trim], g.t - shown.at, { power: g.winner ? 1.4 : 1 })
+  // the ball in the air: end over end, up over the line and on to the uprights (or short of them)
+  const fly = struck ? (() => {
+    const b = g.ball, T = b.T, u = (g.t - b.at) / T, sgn = Math.sign(b.yards) || 1
+    const aimX = (g.aimAt ?? 0) * d * AIM_SPAN * g.accF / (k.tight ?? 1), bend = (y, to) => aimX * (y / d) + (to - aimX) * (y / d) * (y / d)   // (along his aim, then the wind's push, growing as it carries)
+    const xd = res?.doink ? sgn * POST_HALF : b.yards             // where it is as it reaches the uprights
+    let X, Y, Z
+    if (b.long) {
+      const h = Math.max(12, d * 0.24), z = v => 4 * h * v * (1 - v), w = Math.max(0, u - 1)
+      if (u <= 1 || !res?.doink) { Y = d * Math.min(u, 1.14); X = bend(Y, xd); Z = Math.max(0, z(Math.min(u, 1.14) / 1.14)) }
+      // off the upright: half of them fall through, half come back out
+      else if (res.good) { Y = d + 5 * w; X = xd - sgn * 3.4 * w; Z = Math.max(0, z(1 / 1.14) - 9 * w * w) }
+      else { Y = d - 6 * w; X = xd + sgn * 2.4 * w; Z = Math.max(0, z(1 / 1.14) + 3 * w - 14 * w * w) }
+    } else {
+      const land = (b.land - b.at) / T, v = Math.min(1, u / land), w = clamp((u - land) * T / 700, 0, 1), h = Math.max(3.5, b.carry * 0.17)
+      Y = b.carry * v + 2.6 * w; X = bend(Y, b.yards); Z = v < 1 ? 4 * h * v * (1 - v) : hop(w * 700, 290, 0.9) * (1 - w)
+    }
+    const th = ((g.t - b.at) / 1000) * Math.PI * 2 * 3.6, lat = clamp(b.yards / d, -0.3, 0.3)
+    return { X, Y, Z, o: { axis: [lat * Math.cos(th), Math.cos(th), Math.sin(th)] } }
+  })() : null
+  // past the goal line the ball is behind the uprights: the ball, then the uprights over it, then everybody in front
+  if (fly && fly.Y > d) { ballAt(ctx, C, fly.X, fly.Y, fly.Z, fly.o); posts(ctx, C, d) }
   ribbons(ctx, C, d, blow, g.t)
   // the officials under the uprights: both arms up, or the no-good wave
   const sig = !shown ? null : shown.good ? 'arms-up' : g.t - shown.at < 1100 ? ['wave-a', 'wave-m', 'wave-b', 'wave-m'][Math.floor((g.t - shown.at) / 130) % 4] : null
@@ -399,27 +420,8 @@ function drawFG(ctx, g, view) {
     step: g.phase === 'run' && run < 0.72 ? Math.floor(run * 5) % 4 : null,
     pose: shown ? (shown.good ? 'arms-up' : 'hips') : after >= 0 && after < 380 ? 'kick-thru' : g.phase === 'run' ? (run < 0.72 ? 'sprint' : 'kick-load') : null,
   })
-  // the ball in the air: end over end, up over the line and on to the uprights (or short of them)
-  if (struck) {
-    const b = g.ball, T = b.T, u = (g.t - b.at) / T, sgn = Math.sign(b.yards) || 1
-    const aimX = (g.aimAt ?? 0) * d * AIM_SPAN * g.accF / (k.tight ?? 1), bend = (y, to) => aimX * (y / d) + (to - aimX) * (y / d) * (y / d)   // (along his aim, then the wind's push, growing as it carries)
-    const xd = res?.doink ? sgn * POST_HALF : b.yards             // where it is as it reaches the uprights
-    let X, Y, Z
-    if (b.long) {
-      const h = Math.max(12, d * 0.24), z = v => 4 * h * v * (1 - v), w = Math.max(0, u - 1)
-      if (u <= 1 || !res?.doink) { Y = d * Math.min(u, 1.14); X = bend(Y, xd); Z = Math.max(0, z(Math.min(u, 1.14) / 1.14)) }
-      // off the upright: half of them fall through, half come back out
-      else if (res.good) { Y = d + 5 * w; X = xd - sgn * 3.4 * w; Z = Math.max(0, z(1 / 1.14) - 9 * w * w) }
-      else { Y = d - 6 * w; X = xd + sgn * 2.4 * w; Z = Math.max(0, z(1 / 1.14) + 3 * w - 14 * w * w) }
-    } else {
-      const land = (b.land - b.at) / T, v = Math.min(1, u / land), w = clamp((u - land) * T / 700, 0, 1), h = Math.max(3.5, b.carry * 0.17)
-      Y = b.carry * v + 2.6 * w; X = bend(Y, b.yards); Z = v < 1 ? 4 * h * v * (1 - v) : hop(w * 700, 290, 0.9) * (1 - w)
-    }
-    const th = ((g.t - b.at) / 1000) * Math.PI * 2 * 3.6, lat = clamp(b.yards / d, -0.3, 0.3)
-    ballAt(ctx, C, X, Y, Z, { axis: [lat * Math.cos(th), Math.cos(th), Math.sin(th)] })
-    // (past the goal line the ball is behind the uprights: they're drawn again over it)
-    if (Y > d) posts(ctx, C, d)
-  }
+  // the ball, if it's still in front of the uprights (one past them is drawn behind them, above)
+  if (fly && fly.Y <= d) ballAt(ctx, C, fly.X, fly.Y, fly.Z, fly.o)
   ctx.restore()
   // ── what he's looking at: the distance, the wind ──
   topStrip(ctx, view)
