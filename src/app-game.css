@@ -7118,6 +7118,9 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; height: 45px !important; padding: 3px 6px !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 74%, #0b0f0d) !important; text-align: center; }   /* the tint 20% to 74% (owner, 11-13: stronger, twice; then less washed out) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-text { flex: none !important; width: 100%; text-align: center; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { font-size: 9.5px !important; color: #fff !important; }
+  /* one line always (a name that wrapped, PLAYMAKING/CREATIVITY, pushed the card's text 1px out of its top edge): a long one a size smaller */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-name.is-long { font-size: 7.8px !important; letter-spacing: -.1px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { color: #fff !important; font-size: 20px !important; }
 }
 
