@@ -50,7 +50,7 @@ function Schedule({ FR, F, onBox }) {
   const cols = [
     { k: 'wk', label: 'WK', w: 44, cls: 'fr-t-lab fr-t-dim', render: r => (r.week <= 18 ? r.week : String(r.label).split(' ').map(w => w[0]).join('')) },
     { k: 'opp', label: 'OPPONENT', render: r => (r.bye ? <span className="fr-t-dim fr-t-lab">BYE</span> : <span className="fr-t-team"><small className="fr-t-at">{r.home ? 'vs' : '@'}</small><Logo team={r.opp.short} size={22} />{r.opp.name}</span>) },
-    { k: 'res', label: 'RESULT', align: 'r', w: 96, render: r => (r.result ? <><b className={`fr-t-wl${r.result.won ? ' is-w' : ''}`}>{r.result.tied ? 'T' : r.result.won ? 'W' : 'L'}</b> {r.result.us}-{r.result.them}{r.result.ot ? ' OT' : ''}</> : r.bye ? '' : <span className="fr-t-dim">{r.week === F.week && F.phase !== 'offseason' ? 'THIS WEEK' : ''}</span>) },
+    { k: 'res', label: 'RESULT', align: 'r', w: 96, render: r => (r.result ? <><b className={`fr-t-wl${r.result.won ? ' is-w' : ''}`}>{r.result.tied ? 'T' : r.result.won ? 'W' : 'L'}</b> {r.result.us}-{r.result.them}{r.result.ot ? ' OT' : ''}</> : r.bye ? '' : <span className="fr-t-lab fr-t-dim">{r.week === F.week && F.phase !== 'offseason' ? 'THIS WEEK' : ''}</span>) },
   ]
   return <FrTable label="Schedule" cols={cols} rows={rows} rowKey={r => r.week} rowClass={r => (r.week === F.week && F.phase !== 'offseason' ? 'is-mine' : null)} onRow={r => { if (r.result && r.gameId) onBox(r.gameId) }} />
 }

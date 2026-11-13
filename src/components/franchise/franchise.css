@@ -70,7 +70,7 @@ html.is-fr:not(.ag-screen-open) :is(.ag-dock, .ag-dock-floor) { display: none; }
 .fr :focus-visible, .fr-overlay :focus-visible { outline: 2px solid var(--fr-text); outline-offset: 2px; }
 .fr-main { grid-row: 2; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 12px 12px 20px; }
 .fr-page { display: grid; gap: 12px; align-content: start; max-width: 1200px; margin: 0 auto; min-width: 0; }
-.fr-cols { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.fr-cols { display: grid; gap: 12px; align-content: start; align-items: start; min-width: 0; }
 .fr-cols > * { min-width: 0; }
 .fr-col { display: grid; gap: 12px; align-content: start; min-width: 0; }
 
