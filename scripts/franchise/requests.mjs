@@ -116,6 +116,7 @@ check(!!F.off.auto === autoBefore && !F.off.auto, 'once: the staff stayed on aft
 {
   let v = FR.draftView(F)
   check(v.started, 'the draft did not start')
+  { const cr = FR.combineReport(F); check(cr.done && cr.risers.length > 0 && cr.fallers.length > 0 && cr.risers[0].before && cr.risers[0].after, 'combineReport is empty'); say('combine risers:', cr.risers.slice(0, 3).map(r => `${r.name} ${r.slot} ${r.before.text} -> ${r.after.text}`).join(' | '), '· fallers:', cr.fallers.slice(0, 3).map(r => `${r.name} ${r.slot} ${r.before.text} -> ${r.after.text}`).join(' | ')) }
   const info = FR.teamInfo(F, F.team)
   const now = info.picks.filter(p => p.year === v.year)
   check(now.every(p => p.overall >= 1), 'a pick in the draft that is on has no overall number')

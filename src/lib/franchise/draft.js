@@ -121,17 +121,17 @@ export function scoutingWeek(F) { if (F.draft && !F.draft.done) F.draft.pts = Ma
 // the combine: everyone is a notch better known, and the numbers are in
 export function runCombine(F) {
   if (!F.draft || F.draft.combine) return
-  for (const p of F.draft.prospects) p.sc = Math.min(3, p.sc + 1)
+  for (const p of F.draft.prospects) { p.c0 = p.sc; p.sc = Math.min(3, p.sc + 1) }
   F.draft.combine = true
 }
 
 // ── What the user sees of a prospect ─────────────────────────────────────────
 const HALF = [7, 5, 3, 1]
-function rangeOf(F, p) {
-  const w = HALF[p.sc], off = (roll(`${F.seed}-${F.draft.year}-scout-${p.id}`) * 2 - 1) * w * 0.75
+function rangeOf(F, p, sc = p.sc) {
+  const w = HALF[sc], off = (roll(`${F.seed}-${F.draft.year}-scout-${p.id}`) * 2 - 1) * w * 0.75
   // unscouted, the middle of the range is the league's consensus, not the truth
-  const mid = p.sc === 0 ? p.cons : p.ovr + off
-  const lo = clamp(Math.round(Math.min(mid - w, p.sc === 0 ? mid - w : p.ovr - 0.4)), 55, 99), hi = clamp(Math.round(Math.max(mid + w, p.sc === 0 ? mid + w : p.ovr + 0.4)), 55, 99)
+  const mid = sc === 0 ? p.cons : p.ovr + off
+  const lo = clamp(Math.round(Math.min(mid - w, sc === 0 ? mid - w : p.ovr - 0.4)), 55, 99), hi = clamp(Math.round(Math.max(mid + w, sc === 0 ? mid + w : p.ovr + 0.4)), 55, 99)
   return { lo, hi, loGrade: ovrGrade(lo), hiGrade: ovrGrade(hi), text: ovrGrade(lo) === ovrGrade(hi) ? ovrGrade(lo) : `${ovrGrade(lo)} to ${ovrGrade(hi)}` }
 }
 const projOf = rank => (rank <= 32 ? 'Round 1' : rank <= 64 ? 'Round 2' : rank <= 100 ? 'Round 3' : rank <= 160 ? 'Rounds 4-5' : rank <= 224 ? 'Rounds 6-7' : 'Undrafted')
@@ -156,6 +156,17 @@ export function draftBoard(F, { all = false } = {}) {
   const order = consensus(F), rankOf = new Map(order.map((p, i) => [p.id, i + 1]))
   return { year: F.draft.year, label: 'THE DRAFT CLASS', pts: F.draft.pts ?? 0, combine: !!F.draft.combine,
     prospects: order.filter(p => all || !p.gone).map(p => prospectRow(F, p, rankOf.get(p.id))), needs: needsOf(F, F.team).slice(0, 6) }
+}
+// What the combine changed: each prospect's range before it and now, and who moved most (the middle of his
+// range, up or down). Empty until the combine has been run (when the draft stage opens).
+export function combineReport(F) {
+  const D = F.draft
+  if (!D?.combine) return { done: false, risers: [], fallers: [] }
+  const order = consensus(F), rankOf = new Map(order.map((p, i) => [p.id, i + 1]))
+  const mid = r => (r.lo + r.hi) / 2
+  const rows = order.filter(p => !p.gone).slice(0, 180).map(p => { const before = rangeOf(F, p, p.c0 ?? Math.max(0, p.sc - 1)), after = rangeOf(F, p); return { p, before, after, d: mid(after) - mid(before) } })
+  const row = x => ({ ...prospectRow(F, x.p, rankOf.get(x.p.id)), before: x.before, after: x.after, move: Math.round(x.d * 10) / 10 })
+  return { done: true, risers: rows.filter(x => x.d >= 1.5).sort((a, b) => b.d - a.d || a.p.id - b.p.id).slice(0, 8).map(row), fallers: rows.filter(x => x.d <= -1.5).sort((a, b) => a.d - b.d || a.p.id - b.p.id).slice(0, 8).map(row) }
 }
 export function scoutProspect(F, id, points = 1) {
   const p = F.draft?.prospects.find(x => x.id === id)

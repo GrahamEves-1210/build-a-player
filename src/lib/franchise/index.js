@@ -52,7 +52,7 @@ export {
   expiring, openTalks, makeOffer, tagPlayer, exerciseOption, letWalk, freeAgency, bidFreeAgent, withdrawBid, advanceFA,
   udfaPool, signUdfa, campView, resolveDrill, resolveHoldout, cutsView, autoCut, newSeason,
 } from './offseason'
-export { draftBoard, draftView, draftPick, simToMyPick, autoDraft, scoutProspect } from './draft'
+export { draftBoard, draftView, draftPick, simToMyPick, autoDraft, scoutProspect, combineReport } from './draft'
 
 // ── The autopilot ────────────────────────────────────────────────────────────
 export { autopilot } from './auto'
