@@ -1,42 +1,47 @@
 import { useMemo, useState } from 'react'
-import { Panel, FrTicker, FrSheet, Logo, Steps, Seg, Face } from './frUi'
-import { sfx, haptic } from '../../lib/juice'
+import { Panel, FrTicker, FrSheet, FrTable, Logo, Seg, Face } from './frUi'
+import { Fact, Security, NewsRow, tap, up, cap, ord, plural, safe, STATE_AS, DIR_VERB } from './frBits'
+import { sfx } from '../../lib/juice'
 import { useDivisions, DivisionTable } from './FrLeague'
 
-// FRANCHISE: the HUB. The week on one page: the news, the next game, THIS WEEK (every row a thing the GM can do,
-// every one optional: whatever is open when the week is played is done by the staff) and where the franchise
-// stands. The main button (PLAY WEEK) is pinned by the frame (FranchiseMode.jsx).
-//
-// A row of THIS WEEK opens its own sheet here (the gameplan, practice, a front-office item) or sends the GM to
-// the tab the work is on (upgrade points and the depth chart: TEAM; scouting and trade offers: OFFICE).
+// FRANCHISE: the HUB. The week on one page. PLAY WEEK (pinned by the frame, FranchiseMode.jsx) is the one thing
+// that has to be done; everything else here is optional and the staff does whatever is left open.
+//   the bar at the top   where the team IS (the engine's read: CONTENDING / RETOOLING / REBUILDING) and where the
+//                        GM is TAKING it (his direction). A tap opens the read and the three directions
+//   an owner's call      a mid-season change of state, when the engine raises one: its own panel, first
+//   THIS WEEK            the gameplan, practice, each front-office item (a sheet with its real choices and
+//                        STAFF DECIDES), and the rows that send the GM to the tab the work is on
+//   the staff's advice   the engine's lines for the direction the GM has declared
+//   the news             the ticker, and the latest headlines (the whole list is LEAGUE · NEWS)
+//   the owner            the goals, read against the direction, and the job's security
 
-const ord = n => { const s = ['TH', 'ST', 'ND', 'RD'], v = n % 100; return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}` }
-const tap = () => { sfx('tap'); haptic('light') }
-
-// a list of choices, one picked (the gameplan's two sides, a front-office item's options)
-function Choices({ options, value, onChange }) {
+// (the owner's rule: no year is named before it has been played)
+const noYear = (F, t) => String(t ?? '').replace(new RegExp(`the ${F.year + 1} class`, 'g'), 'the next draft class')
+// a list of choices, one picked (the gameplan's two sides, a front-office item's options, the direction)
+function Choices({ options, value, onChange, disabled = false }) {
   return options.map(o => (
-    <button key={o.id} className={`fr-row fr-pick${value === o.id ? ' is-on' : ''}`} role="radio" aria-checked={value === o.id} onClick={() => { tap(); onChange(o.id) }}>
+    <button key={o.id} className={`fr-row fr-pick${value === o.id ? ' is-on' : ''}`} role="radio" aria-checked={value === o.id} disabled={disabled} onClick={() => { tap(); onChange(o.id) }}>
       <span className="fr-pick-box" aria-hidden="true" />
-      <span className="fr-row-main">{o.label}{(o.good || o.text) && <small>{String(/^against/i.test(o.good ?? '') ? `BEST ${o.good}` : o.text ?? o.good).replace(/\.$/, '').toUpperCase()}</small>}</span>
+      <span className="fr-row-main">{o.label}{(o.good || o.text) && <small>{up(String(/^against/i.test(o.good ?? '') ? `BEST ${o.good}` : o.text ?? o.good).replace(/\.$/, ''))}</small>}</span>
+      {o.state && <span className="fr-row-state">{o.state}</span>}
     </button>
   ))
 }
 
 function GameplanSheet({ FR, F, act, onClose }) {
-  const plan = useMemo(() => { try { return FR.pregame(F)?.gameplan ?? null } catch { return null } }, [FR, F])
-  const report = useMemo(() => { try { return FR.scoutingReport(F) } catch { return null } }, [FR, F])
+  const plan = useMemo(() => safe(() => FR.pregame(F)?.gameplan), [FR, F])
+  const report = useMemo(() => safe(() => FR.scoutingReport(F)), [FR, F])
   const [off, setOff] = useState(plan?.off?.id ?? 'balanced')
   const [def, setDef] = useState(plan?.def?.id ?? 'balanced')
   const opp = report?.opp
   return (
     <FrSheet open onClose={onClose} label="Gameplan"
-      head={<span className="fr-sheet-who"><b>GAMEPLAN</b><small>{opp ? `${opp.name.toUpperCase()} · ${report.record ?? ''}` : 'THIS WEEK'}</small></span>}
+      head={<span className="fr-sheet-who"><b>GAMEPLAN</b><small>{opp ? `${up(opp.name)} · ${report.record ?? ''}` : 'THIS WEEK'}</small></span>}
       foot={<><button className="fr-btn fr-btn--line" onClick={() => { tap(); onClose() }}>STAFF DECIDES</button><button className="fr-btn" onClick={() => { sfx('send'); act(f => FR.setGameplan(f, { off, def })); onClose() }}>SET THE PLAN</button></>}>
       {(report?.strengths?.length > 0 || report?.weaknesses?.length > 0) && (
         <Panel title="Scouting report">
-          {report.strengths.map((t, i) => <div key={`s${i}`} className="fr-kv"><span>THEY DO WELL</span><b className="is-text">{t}</b></div>)}
-          {report.weaknesses.map((t, i) => <div key={`w${i}`} className="fr-kv"><span>THEY DO BADLY</span><b className="is-text">{t}</b></div>)}
+          {report.strengths.map((t, i) => <Fact key={`s${i}`} label="THEY DO WELL">{t}</Fact>)}
+          {report.weaknesses.map((t, i) => <Fact key={`w${i}`} label="THEY DO BADLY">{t}</Fact>)}
         </Panel>
       )}
       <Panel title="Offense" role="radiogroup"><Choices options={FR.GAMEPLANS.off} value={off} onChange={setOff} /></Panel>
@@ -74,40 +79,112 @@ function PracticeSheet({ FR, F, act, onClose }) {
   )
 }
 
-function OfficeSheet({ FR, F, act, id, onClose }) {
-  const item = useMemo(() => { try { return FR.officeItems(F).find(x => x.id === id) ?? null } catch { return null } }, [FR, F, id])
+// a front-office item: what happened, its real choices, and STAFF DECIDES (the engine's `delegate`)
+function OfficeSheet({ FR, F, act, say, id, onClose }) {
+  const item = useMemo(() => safe(() => FR.officeItems(F).find(x => x.id === id)), [FR, F, id])
   const [pick, setPick] = useState(null)
   if (!item) return null
   const who = item.who
+  const settle = opt => { sfx('send'); const next = act(f => FR.resolveOffice(f, item.id, opt)); if (next?.flash?.ok && next.flash.msg) say(next.flash.msg); onClose() }
+  const staffPick = item.options?.find(o => o.id === item.delegate)
   return (
     <FrSheet open onClose={onClose} label={item.title}
-      head={<>{who && <Face name={who.name} photo={FR.photoUrl(who.photo)} />}<span className="fr-sheet-who"><b>{String(item.title).toUpperCase()}</b>{who && <small>{who.name.toUpperCase()}{who.slot ? ` · ${who.slot}` : who.roleName ? ` · ${String(who.roleName).toUpperCase()}` : ''}</small>}</span></>}
-      foot={<><button className="fr-btn fr-btn--line" onClick={() => { act(f => FR.resolveOffice(f, item.id, 'delegate')); onClose() }}>STAFF DECIDES</button><button className="fr-btn" disabled={!pick} onClick={() => { sfx('send'); act(f => FR.resolveOffice(f, item.id, pick)); onClose() }}>DECIDE</button></>}>
+      head={<>{who && <Face name={who.name} photo={FR.photoUrl(who.photo)} />}<span className="fr-sheet-who"><b>{up(item.title)}</b>{who && <small>{up(who.name)}{who.slot ? ` · ${who.slot}` : who.roleName ? ` · ${up(who.roleName)}` : ''}{who.ovr ? ` · ${who.ovr} OVR` : ''}</small>}</span></>}
+      foot={<><button className="fr-btn fr-btn--line" onClick={() => settle('delegate')}>STAFF DECIDES</button><button className="fr-btn" disabled={!pick} onClick={() => settle(pick)}>DECIDE</button></>}>
       {item.body && <p className="fr-read">{item.body}</p>}
-      <Panel title="The call" role="radiogroup"><Choices options={item.options ?? []} value={pick} onChange={setPick} /></Panel>
+      <Panel title="The call" meta={staffPick ? `STAFF: ${staffPick.label}` : null} role="radiogroup"><Choices options={item.options ?? []} value={pick} onChange={setPick} /></Panel>
+    </FrSheet>
+  )
+}
+
+// where the team is, and where the GM is taking it
+function DirectionSheet({ FR, F, act, onClose }) {
+  const st = useMemo(() => safe(() => FR.teamState(F)), [FR, F])
+  const [pick, setPick] = useState(st?.direction ?? 'retool')
+  const [said, setSaid] = useState(null)
+  if (!st) return null
+  const options = (FR.STATES ?? ['contend', 'retool', 'rebuild']).map(id => ({ id, label: DIR_VERB[id], text: FR.STATE_TEXT?.[id] ?? '', state: id === st.direction ? 'NOW' : id === st.state ? 'THE READ' : null }))
+  const set = () => { sfx('send'); const next = act(f => FR.setDirection(f, pick)); if (next?.flash?.ok) setSaid(next.flash.msg ?? null) }
+  return (
+    <FrSheet open onClose={onClose} label="Direction"
+      head={<span className="fr-sheet-who"><b>{up(st.nick)}: {st.label}</b><small>GM {up(F.gm?.name)} · DIRECTION {DIR_VERB[st.direction]}</small></span>}
+      foot={st.canChange ? <button className="fr-btn" disabled={pick === st.direction} onClick={set}>SET THE DIRECTION</button> : null}>
+      <p className="fr-said"><small>OWNERSHIP</small>{said ?? st.ownerSays}</p>
+      <Panel title="The read" meta={st.record}>
+        <Fact label="STATE" strong>{st.label}<small>{st.stateText}</small></Fact>
+        <Fact label="WINDOW">{st.window?.text}</Fact>
+        <Fact label="QUARTERBACK">{cap(st.qb?.text)}</Fact>
+        <Fact label="HARDEST PART">{st.hardest}</Fact>
+        <Fact label="BUILT ON">{st.upside}</Fact>
+      </Panel>
+      <Panel title="The direction" meta={st.canChange ? (F.phase === 'offseason' ? null : 'ONE CHANGE A SEASON') : 'SET FOR THE YEAR'} role="radiogroup">
+        <Choices options={options} value={pick} onChange={setPick} disabled={!st.canChange} />
+      </Panel>
+    </FrSheet>
+  )
+}
+
+// scouting points, spent a prospect at a time (the war room itself is the offseason's)
+function ScoutSheet({ FR, F, act, onClose }) {
+  const board = useMemo(() => safe(() => FR.draftBoard(F)), [FR, F])
+  const rows = useMemo(() => (board?.prospects ?? []).slice(0, 60), [board])
+  const pts = board?.pts ?? 0
+  return (
+    <FrSheet open onClose={onClose} label="Scouting"
+      head={<span className="fr-sheet-who"><b>SCOUTING</b><small>{plural(pts, 'POINT')} TO SPEND · A TAP SPENDS ONE</small></span>}
+      foot={<button className="fr-btn fr-btn--line" onClick={() => { tap(); onClose() }}>STAFF SCOUTS THE REST</button>}>
+      <Panel title="The draft class" meta="TOP 60">
+        <FrTable className="fr-table--tight" label="Prospects" rows={rows} onRow={pts > 0 ? r => act(f => FR.scoutProspect(f, r.id, 1)) : null} empty="NO BOARD YET"
+          cols={[{ k: 'rk', label: 'RK', w: 34, cls: 'fr-t-rk', render: r => r.rank },
+            { k: 'pos', label: 'POS', w: 42, cls: 'fr-t-pos', render: r => r.slot },
+            { k: 'name', label: 'PROSPECT', cls: 'fr-t-name', render: r => <>{r.name}<span className="fr-t-sub">{r.college}</span></> },
+            { k: 'range', label: 'GRADE', align: 'r', w: 70, cls: 'fr-t-lab', render: r => r.range?.text ?? '–' },
+            { k: 'sc', label: 'SEEN', align: 'r', w: 44, cls: 'fr-t-dim', render: r => `${r.scouted ?? 0}/3` }]} />
+      </Panel>
     </FrSheet>
   )
 }
 
 // where a row with no sheet of its own sends the GM
-const TAB_FOR = { upgrades: 'team', injury: 'team', roster: 'team', scout: 'office', trade: 'office' }
+const GO_FOR = { upgrades: ['team', { view: 'develop' }], injury: ['team', { view: 'health' }], roster: ['team', { view: 'roster' }], trade: ['league', { view: 'market', sub: 'offers' }] }
 
-export default function FrHub({ FR, F, hub, act, go, offseasonSeam }) {
+export default function FrHub({ FR, F, hub, act, go, say, offseasonSeam }) {
   const [sheet, setSheet] = useState(null)   // { kind, id }
-  const tasks = hub.tasks ?? []
+  const items = useMemo(() => safe(() => FR.officeItems(F), []), [FR, F])
+  const call = items.find(o => o.kind === 'direction') ?? null   // the owner's call on a mid-season change of state
+  // (the direction and the staff's advice have their own places on this page)
+  const tasks = (hub.tasks ?? []).filter(t => t.kind !== 'direction' && t.kind !== 'advice' && t.id !== call?.id)
   const open = tasks.filter(t => !t.done).length
-  const onTask = t => { if (TAB_FOR[t.kind]) go(TAB_FOR[t.kind]); else setSheet({ kind: t.kind, id: t.id }) }
+  const onTask = t => { if (GO_FOR[t.kind]) go(...GO_FOR[t.kind]); else if (t.kind === 'office' && items.find(o => o.id === t.id)?.kind === 'trade-offer' && !items.find(o => o.id === t.id)?.options?.length) go('league', { view: 'market', sub: 'offers' }); else setSheet({ kind: t.kind, id: t.id }) }
   const next = hub.next, last = hub.lastGame, off = hub.phase === 'offseason'
-  const stages = useMemo(() => { if (!off) return null; try { return FR.offseason(F) } catch { return null } }, [FR, F, off])
+  const stages = useMemo(() => (off ? safe(() => FR.offseason(F)) : null), [FR, F, off])
   const us = hub.team
   const mine = useDivisions(FR, F).find(d => d.teams.some(r => r.user))
-  const room = useMemo(() => { try { return FR.capSheet(F).space } catch { return hub.cap?.space ?? 0 } }, [FR, F, hub])
-  const game = !off && next && !hub.bye ? [next.home ? next.opp : us, next.home ? us : next.opp] : null   // away, then home
+  const room = useMemo(() => safe(() => FR.capSheet(F).space, hub.cap?.space ?? 0), [FR, F, hub])
+  const st = useMemo(() => safe(() => FR.teamState(F)), [FR, F])
+  const news = useMemo(() => safe(() => FR.news(F, 6), hub.headlines ?? []), [FR, F, hub])
+  const game = !off && next && !hub.bye && next.opp ? [next.home ? next.opp : us, next.home ? us : next.opp] : null   // away, then home
   const recOf = t => (t.short === us.short ? hub.record.text : next?.oppRecord ?? '')
+  const state = hub.state ?? st?.state, dir = hub.direction ?? st?.direction
+  const advice = hub.advice ?? st?.advice ?? []
+  const owner = hub.owner
   return (
     <div className="fr-page">
+      {state && (
+        <button className={`fr-statebar${dir && dir !== state ? ' is-split' : ''}`} onClick={() => { tap(); setSheet({ kind: 'direction' }) }} aria-label={`The ${us.nick} are ${hub.stateLabel}. Direction: ${DIR_VERB[dir]}. Open`}>
+          <span><small>THE {up(us.nick)} ARE</small><b>{hub.stateLabel ?? st?.label}</b></span>
+          <span className="fr-statebar-why"><p>{st?.window?.text}</p></span>
+          <span><small>GM'S DIRECTION</small><b>{DIR_VERB[dir] ?? ''}</b></span>
+        </button>
+      )}
       <div className="fr-cols">
         <div className="fr-col">
+          {call && (
+            <Panel title={call.title} className="fr-event">
+              <p className="fr-note" style={{ color: 'var(--fr-text)' }}>{call.body}</p>
+              <div className="fr-pad"><button className="fr-btn fr-btn--wide" onClick={() => { tap(); setSheet({ kind: 'office', id: call.id }) }}>ANSWER THE OWNER</button></div>
+            </Panel>
+          )}
           {hub.headlines?.length > 0 && <FrTicker items={hub.headlines.map(n => n.head ?? n.text ?? n)} />}
           {off ? (
             <Panel title="Offseason" meta={stages?.stage ? `STAGE ${stages.stage.n} OF ${stages.stage.of}` : String(hub.year)}>
@@ -125,7 +202,7 @@ export default function FrHub({ FR, F, hub, act, go, offseasonSeam }) {
               {!tasks.length && <div className="fr-empty">NOTHING WAITING ON THE GM</div>}
               {tasks.map(t => (
                 <button key={t.id} className="fr-row" onClick={() => { tap(); onTask(t) }}>
-                  <span className="fr-row-main">{String(t.title).toUpperCase()}{t.detail && <small>{String(t.detail).toUpperCase()}</small>}</span>
+                  <span className="fr-row-main">{up(t.title)}{t.detail && <small>{up(noYear(F, t.detail))}</small>}</span>
                   <span className={`fr-row-state${t.done ? ' is-done' : ' is-due'}`}>{t.done ? 'DONE' : t.count > 1 ? `${t.count} OPEN` : 'OPEN'}</span>
                   <span className="fr-chev" />
                 </button>
@@ -137,33 +214,45 @@ export default function FrHub({ FR, F, hub, act, go, offseasonSeam }) {
               {game.map((t, i) => (
                 <div key={t.short} className={`fr-row fr-vs${t.short === us.short ? ' is-mine' : ''}`}>
                   <Logo team={t.short} size={30} />
-                  <span className="fr-row-main">{t.name.toUpperCase()}<small>{i ? 'HOME' : 'AWAY'}</small></span>
+                  <span className="fr-row-main">{up(t.name)}<small>{next.neutral ? 'NEUTRAL SITE' : i ? 'HOME' : 'AWAY'}</small></span>
                   <b className="fr-t-num">{recOf(t)}</b>
                 </div>
               ))}
             </Panel>
           ) : !off && (
-            <Panel title="Next game" meta={hub.weekLabel}><div className="fr-empty">{next?.eliminated ? 'THE SEASON IS OVER FOR THE ' + us.nick.toUpperCase() : 'BYE WEEK'}</div></Panel>
+            <Panel title="Next game" meta={hub.weekLabel}><div className="fr-empty">{next?.eliminated ? up(hub.eliminated ?? `The season is over for the ${us.nick}`) : 'BYE WEEK'}</div></Panel>
+          )}
+          {advice.length > 0 && (
+            <Panel title="From the staff" meta={dir ? `DIRECTION: ${DIR_VERB[dir]}` : null}>
+              {advice.map((t, i) => <p key={i} className="fr-read fr-read--row">{cap(t)}</p>)}
+            </Panel>
           )}
         </div>
         <div className="fr-col">
-          <Panel title={us.nick} meta={`GM ${String(hub.gm.name).toUpperCase()}`}>
+          <Panel title={us.nick} meta={`GM ${up(hub.gm.name)}`}>
             {last && <div className="fr-kv"><span>LAST GAME</span><b>{last.tied ? 'T' : last.won ? 'W' : 'L'} {last.us}-{last.them}{last.ot ? ' OT' : ''} {last.home ? 'vs' : '@'} {last.opp.short}</b></div>}
-            {hub.seed ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{ord(hub.seed)}</b></div> : null}
+            {hub.seed ? <div className="fr-kv"><span>PLAYOFF SEED</span><b>{up(ord(hub.seed))}</b></div> : null}
             <div className="fr-kv"><span>CAP ROOM</span><b>{FR.moneyText(room)}</b></div>
-            <div className="fr-kv"><span>JOB SECURITY</span><b className="is-text">{hub.gm.securityWord ?? hub.owner?.word ?? ''} <Steps value={hub.gm.security ?? hub.owner?.security ?? 0} low={hub.owner?.floor ?? 20} label={`Job security ${Math.round(hub.gm.security ?? 0)} of 100`} /></b></div>
           </Panel>
-          {mine && <Panel title={mine.name} meta={hub.standing ? String(hub.standing).toUpperCase() : null}><DivisionTable division={mine} compact /></Panel>}
-          {hub.owner?.goals?.length > 0 && (
-            <Panel title="Owner's goals">
-              {hub.owner.goals.map(g => <div key={g.id} className="fr-kv"><span className="is-wrap">{String(g.text).toUpperCase()}</span><b className={`is-text${g.done === false ? ' fr-t-dim' : ''}`}>{g.done === true ? 'MET' : g.done === false ? 'MISSED' : g.progress}</b></div>)}
+          {mine && <Panel title={mine.name} meta={hub.standing ? up(hub.standing) : null}><DivisionTable division={mine} compact /></Panel>}
+          {owner && (
+            <Panel title="The owner" meta={dir ? `JUDGED AS ${STATE_AS[dir]}` : null}>
+              <div className="fr-kv"><span>JOB SECURITY</span><Security value={owner.security ?? hub.gm.security ?? 0} word={owner.word ?? hub.gm.securityWord ?? ''} floor={owner.floor} /></div>
+              {(owner.goals ?? []).map(g => <div key={g.id} className="fr-kv"><span className="is-wrap">{up(g.text)}</span><b className={`is-text${g.done === false ? ' fr-t-dim' : ''}`}>{g.done === true ? 'MET' : g.done === false ? 'MISSED' : g.progress}</b></div>)}
+            </Panel>
+          )}
+          {news.length > 0 && (
+            <Panel title="News" action={<button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => { tap(); go('league', { view: 'news' }) }}>ALL NEWS</button>}>
+              {news.map(n => <NewsRow key={n.id} n={n} mine={n.team?.short === us.short} />)}
             </Panel>
           )}
         </div>
       </div>
       {sheet?.kind === 'gameplan' && <GameplanSheet FR={FR} F={F} act={act} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'practice' && <PracticeSheet FR={FR} F={F} act={act} onClose={() => setSheet(null)} />}
-      {sheet && sheet.kind !== 'gameplan' && sheet.kind !== 'practice' && <OfficeSheet FR={FR} F={F} act={act} id={sheet.id} onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'direction' && <DirectionSheet FR={FR} F={F} act={act} onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'scout' && <ScoutSheet FR={FR} F={F} act={act} onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'office' && <OfficeSheet FR={FR} F={F} act={act} say={say} id={sheet.id} onClose={() => setSheet(null)} />}
     </div>
   )
 }

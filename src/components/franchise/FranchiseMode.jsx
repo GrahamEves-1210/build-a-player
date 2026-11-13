@@ -12,6 +12,7 @@ import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
 import './franchise.css'
 import './franchise-screens.css'
+import './franchise-wave2.css'
 
 // ── FRANCHISE: a football mode (in SQUAD BUILDER's place on football's Home while lib/franchiseLive.js is on) ──
 // Take over an NFL team as its general manager, build the players you want on the game's own build screen (the
@@ -23,7 +24,9 @@ import './franchise-screens.css'
 // action returns the next one, lib/franchise/API.md) and its save.
 //   'slots'    the saves (FrSetup.jsx Slots)
 //   'setup'    a new franchise, four steps (FrSetup.jsx)
-//   'hub'      the franchise: HUB · TEAM · LEAGUE · OFFICE (FrHub, FrTeam, FrLeague, FrOffice)
+//   'hub'      the franchise: HUB · TEAM · LEAGUE · OFFICE (FrHub, FrTeam, FrLeague, FrOffice). A tab's own
+//              views sit behind a slim row inside it; go(tab, { view, … }) lands on one (the hub's THIS WEEK,
+//              a player's sheet). say(text) puts a plain line under the scorebug (a refusal is a red one)
 //   'gameday'  the GM's game. SEAM: ./gameday/GameDay.jsx (the game day agent's), mounted lazily with
 //              { franchise, onFranchise(next), onDone() }. While that file isn't in the tree, PLAY WEEK sims the
 //              week through the engine and shows the plain recap ('week').
@@ -58,6 +61,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   const [setup, setSetupState] = useState(loadSetup)
   const [view, setView] = useState(() => ((built || isMidSetup()) && loadSetup() ? 'setup' : 'slots'))
   const [tab, setTab] = useState('hub')
+  const [jump, setJump] = useState(null)   // where inside a tab to land: { tab, view, … }
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState(null)
   const owner = getUsername(user) || 'Guest'
@@ -93,14 +97,14 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
     live.current.dirty = false
     const r = e.saveFranchise(f, s)
     if (r?.ok) leaveCardNote(e, f, s)
-    else if (r?.error) setToast(r.error)
+    else if (r?.error) setToast({ text: r.error, bad: true })
   }, [])
   const put = useCallback(next => {
     if (!next) return
     setF(next)
     live.current.F = next; live.current.dirty = true
     clearTimeout(saveT.current); saveT.current = setTimeout(saveNow, 700)
-    if (next.flash && next.flash.ok === false && next.flash.msg) { setToast(next.flash.msg); sfx('deny'); haptic('light') }
+    if (next.flash && next.flash.ok === false && next.flash.msg) { setToast({ text: next.flash.msg, bad: true }); sfx('deny'); haptic('light') }
   }, [saveNow])
   // every engine action goes through here: act(F => FR.setGameplan(F, …))
   const act = useCallback(fn => { const f = live.current.F; if (!f) return null; const next = fn(f); put(next); return next }, [put])
@@ -117,7 +121,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
 
   const open = s => {
     const f = FR.loadFranchise(s)
-    if (!f || f.broken) { setToast(f?.reason ?? 'That save could not be opened.'); sfx('deny'); return }
+    if (!f || f.broken) { setToast({ text: f?.reason ?? 'That save could not be opened.', bad: true }); sfx('deny'); return }
     setF(f); setSlot(s); setTab('hub'); setView('hub'); leaveCardNote(FR, f, s)
   }
   const toSlots = () => { saveNow(); setSlots(FR.listSlots()); setF(null); setSlot(null); setView('slots') }
@@ -134,10 +138,10 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
           builds: setup.picks.filter(p => p.build).map(p => ({ pos: p.pos, build: p.build, types: p.types, name: p.name.trim() || undefined })),
         })
         const r = FR.saveFranchise(f, setup.slot)
-        if (r?.ok === false && r.error) setToast(r.error)
+        if (r?.ok === false && r.error) setToast({ text: r.error, bad: true })
         leaveCardNote(FR, f, setup.slot)
         setF(f); setSlot(setup.slot); putSetup(null); setTab('hub'); setView('hub')
-      } catch (e) { console.error('[franchise] create failed', e); setToast('The league could not be set up. Try again.') }
+      } catch (e) { console.error('[franchise] create failed', e); setToast({ text: 'The league could not be set up. Try again.', bad: true }) }
       setBusy(false)
     }, 60)
   }
@@ -156,7 +160,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
   }
 
   if (FrKit) return <Suspense fallback={<div className="fr" />}><FrKit team={KIT || 'KC'} onHome={onHome} /></Suspense>
-  const toastEl = toast && <div className="fr-toast" role="status" onClick={() => setToast(null)}>{toast}</div>
+  const toastEl = toast && <div className={`fr-toast${toast.bad ? '' : ' is-ok'}`} role="status" onClick={() => setToast(null)}>{toast.text}</div>
   if (!FR || !slots) {
     return (
       <FrShell bug={<Bug title="FRANCHISE" eyebrow="FOOTBALL" onExit={onHome} exit="HOME" />}>
@@ -192,16 +196,18 @@ export default function FranchiseMode({ user, onHome, onBuild, built = null, onB
     : [{ label: `${hub.year} ${hub.week <= 18 ? 'WEEK' : 'PLAYOFFS'}`, value: hub.week <= 18 ? String(hub.week) : hub.weekLabel }, { label: 'RECORD', value: hub.record.text },
       { label: 'NEXT', value: hub.bye || !next ? 'BYE' : `${next.home ? 'vs' : '@'} ${next.opp.short}`, logo: hub.bye || !next ? null : next.opp.short }]
   const open_ = hub.tasks?.filter(t => !t.done).length ?? 0
-  const props = { FR, F, hub, act, go: setTab }
+  const go = (t, to = null) => { setJump(to ? { ...to, tab: t } : null); setTab(t) }
+  const say = text => { if (text) setToast({ text: String(text), bad: false }) }
+  const props = { FR, F, hub, act, go, say, jump: jump?.tab === tab ? jump : null }
   return (
     <>
-      <FrShell tab={tab} onTab={setTab} tabs={TABS.map(t => (t.id === 'hub' ? { ...t, n: open_ } : t))}
+      <FrShell tab={tab} onTab={t => go(t)} tabs={TABS.map(t => (t.id === 'hub' ? { ...t, n: open_ } : t))}
         bug={<Bug team={hub.team.short} cells={cells} onExit={toSlots} />}
         cta={tab === 'hub' && hub.primary ? <button className="fr-btn" onClick={playWeek}>{hub.primary.label}</button> : null}>
         {tab === 'hub' ? <FrHub {...props} offseasonSeam={!!Offseason} />
           : tab === 'team' ? <FrTeam {...props} />
           : tab === 'league' ? <FrLeague {...props} />
-          : <FrOffice {...props} />}
+          : <FrOffice {...props} slot={slot} onSlots={toSlots} />}
       </FrShell>
       {toastEl}
     </>

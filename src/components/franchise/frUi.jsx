@@ -60,9 +60,9 @@ export function Switch({ label, note, on, onChange, disabled = false }) {
   )
 }
 // two or three views of one panel
-export function Seg({ options, value, onChange, label }) {
+export function Seg({ options, value, onChange, label, className = '' }) {
   return (
-    <div className="fr-seg" role="tablist" aria-label={label}>
+    <div className={`fr-seg${className ? ` ${className}` : ''}`} role="tablist" aria-label={label}>
       {options.map(o => { const [k, text] = Array.isArray(o) ? o : [o, o]; return <button key={k} role="tab" aria-selected={value === k} className={value === k ? 'is-on' : undefined} onClick={() => { if (value !== k) { tap(); onChange(k) } }}>{text}</button> })}
     </div>
   )

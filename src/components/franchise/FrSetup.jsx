@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Bug, FrShell, Panel, GradeRow, Switch, Seg, Logo, Face, Confirm } from './frUi'
+import { Bug, FrShell, Panel, GradeRow, Switch, Seg, Logo, Face, Confirm, Steps } from './frUi'
+import { Fact, Sub, CoachBlock, cap, STATE_NOUN } from './frBits'
 import { FR_TEAMS, DIVISIONS, teamOf, dressFor, inkOn } from './frTeams'
 import { BUILD_POS, POS_LABEL, SETUP_STEPS, countAt, addPick, dropPick, patchPick, cleanName, previewLeague, teamPreview } from './frStore'
 import { randomName } from '../../lib/playerNames'
@@ -7,7 +8,7 @@ import { sfx, haptic } from '../../lib/juice'
 import { FRANCHISE_ART } from '../../lib/franchiseLive'
 
 // FRANCHISE: the way in. The saves (three slots: continue, new, delete), then a new franchise in four steps:
-//   1 PICK A TEAM       all 32, one at a time, with the numbers the engine gives the league it will start in
+//   1 PICK A TEAM       all 32 as jobs: each club's state, window, cap, picks, quarterback and staff (the engine's read)
 //   2 BUILD YOUR GUYS   which roster spots to build (Squad Builder's caps), each one built on the game's own
 //                       build screen (App.jsx 'franchise-build': onBuild out, the build back in `built`) and named
 //   3 THE HEAD COACH    keep the team's real one, or build one (SEAM: ./coach/CoachBuild.jsx, another agent's:
@@ -84,55 +85,93 @@ export function Slots({ slots, setup, onOpen, onNew, onResume, onDelete, onDropS
 }
 
 // ── 1: pick a team ──────────────────────────────────────────────────────────
+// Picking a team is picking a job. Every club comes with the engine's read of it (FR.teamPreviews(seed): the
+// same numbers the league created from this seed will show): its STATE, how long the window is, the cap, the
+// picks, the quarterback, the hardest part, a difficulty read, and the real head coach and coordinators with
+// their five grades. The 32 can be walked by division or by state; RANDOM TEAM picks from all of them or from
+// one state. (An engine without teamPreviews: the foundation's own read of a throwaway league, the roster's
+// grades and the staff only.)
+const GROUP_NAME = { QB: 'QUARTERBACK', RB: 'RUNNING BACK', WR: 'RECEIVERS', TE: 'TIGHT END', OL: 'OFFENSIVE LINE', DL: 'DEFENSIVE LINE', LB: 'LINEBACKERS', DB: 'SECONDARY', K: 'KICKER' }
+const STATE_ORDER = ['contend', 'retool', 'rebuild']
 function TeamPick({ FR, setup, onSetup, onNext, onBack }) {
-  const [at, setAt] = useState(() => Math.max(0, ORDER.findIndex(t => t.short === setup.team)))
-  const t = ORDER[at]
+  const [short, setShort] = useState(() => (ORDER.find(t => t.short === setup.team) ?? ORDER[0]).short)
+  const [by, setBy] = useState('div')
+  const t = teamOf(short)
   // the league the numbers come from: built once, a moment after the screen is up
+  const [rows, setRows] = useState(null)
   const [P, setP] = useState(null)
-  useEffect(() => { const id = setTimeout(() => setP(previewLeague(FR, setup.seed)), 40); return () => clearTimeout(id) }, [FR, setup.seed])
-  const pv = useMemo(() => (P ? teamPreview(FR, P, t.short) : null), [FR, P, t.short])
-  useEffect(() => { dressFor(t.short) }, [t.short])
-  const go = i => { tap(); setAt((i + ORDER.length) % ORDER.length) }
+  useEffect(() => {
+    const id = setTimeout(() => { if (FR.teamPreviews) { try { setRows(FR.teamPreviews(setup.seed)); return } catch {} } setP(previewLeague(FR, setup.seed)) }, 40)
+    return () => clearTimeout(id)
+  }, [FR, setup.seed])
+  const job = useMemo(() => rows?.find(r => r.short === short) ?? null, [rows, short])
+  const old = useMemo(() => (!rows && P ? teamPreview(FR, P, short) : null), [FR, rows, P, short])
+  const states = useMemo(() => STATE_ORDER.map(s => ({ id: s, teams: (rows ?? []).filter(r => r.state === s).sort((a, b) => a.ratings.rank - b.ratings.rank).map(r => teamOf(r.short)) })), [rows])
+  // the order the arrows walk: the divisions, or the three states (best roster first)
+  const order = by === 'state' && rows ? states.flatMap(s => s.teams) : ORDER
+  const at = Math.max(0, order.findIndex(x => x.short === short))
+  useEffect(() => { dressFor(short) }, [short])
+  const pick = s => { tap(); setShort(s) }
+  const step = d => pick(order[(at + d + order.length) % order.length].short)
+  const stepRef = useRef(step); stepRef.current = step
   const swipe = useRef(null)
   const onDown = e => { swipe.current = [e.clientX, e.clientY] }
-  const onUp = e => { const s = swipe.current; swipe.current = null; if (!s) return; const dx = e.clientX - s[0], dy = e.clientY - s[1]; if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) go(at + (dx < 0 ? 1 : -1)) }
+  const onUp = e => { const s = swipe.current; swipe.current = null; if (!s) return; const dx = e.clientX - s[0], dy = e.clientY - s[1]; if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) step(dx < 0 ? 1 : -1) }
   useEffect(() => {
-    const onKey = e => { if (e.key === 'ArrowRight') setAt(i => (i + 1) % ORDER.length); else if (e.key === 'ArrowLeft') setAt(i => (i - 1 + ORDER.length) % ORDER.length) }
+    const onKey = e => { if (e.key === 'ArrowRight') stepRef.current(1); else if (e.key === 'ArrowLeft') stepRef.current(-1) }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  const random = () => { let i = at; while (i === at) i = Math.floor(Math.random() * ORDER.length); sfx('swap'); haptic('medium'); setAt(i) }
-  const take = () => { sfx('send'); haptic('medium'); onSetup({ ...setup, team: t.short, step: 'builds' }); onNext() }
-  const coach = c => (c ? <b className="is-text">{c.name}{!c.placeholder && c.grade ? <em className="fr-kv-grade">{c.grade}</em> : null}</b> : <b className="is-text fr-t-dim">…</b>)
+  const random = (pool = ORDER) => { const from = pool.filter(x => x.short !== short); if (!from.length) return; sfx('swap'); haptic('medium'); setShort(from[Math.floor(Math.random() * from.length)].short) }
+  const take = () => { sfx('send'); haptic('medium'); onSetup({ ...setup, team: short, step: 'builds' }); onNext() }
   const ink = inkOn(t.raw)
+  const groups = job ? job.groups.map(g => ({ key: g.slot, label: GROUP_NAME[g.slot] ?? g.slot, grade: g.grade, ovr: g.ovr })) : old?.groups ?? BUILD_POS.map(p => ({ key: p.label, label: p.name.toUpperCase(), grade: '', ovr: null }))
+  const ratings = job?.ratings ?? old?.ratings
+  const staff = job?.staff ?? old?.staff
+  const d = job?.difficulty
   return (
     <FrShell mainKey="team" bug={<Bug title="PICK A TEAM" eyebrow={stepLine('team')} onExit={onBack} exit="BACK" />}
       cta={<button className="fr-btn" onClick={take}>TAKE OVER THE {t.nick.toUpperCase()}</button>}>
       <div className="fr-page">
         <div className="fr-cols">
           <div className="fr-col">
-            <section className="fr-plate" style={{ '--plate': t.raw, '--plate-2': t.color2, '--plate-ink': ink }} onPointerDown={onDown} onPointerUp={onUp} aria-label={`${t.name}, ${t.div}`}>
-              <button className="fr-plate-go is-prev" onClick={() => go(at - 1)} aria-label="Previous team" />
+            <section className="fr-plate" style={{ '--plate': t.raw, '--plate-2': t.color2, '--plate-ink': ink }} onPointerDown={onDown} onPointerUp={onUp} aria-label={`${t.name}, ${t.div}${job ? `, ${job.label}` : ''}`}>
+              <button className="fr-plate-go is-prev" onClick={() => step(-1)} aria-label="Previous team" />
               <Logo team={t.short} size={92} />
-              <div className="fr-plate-txt"><small>{t.city.toUpperCase()}</small><b>{t.nick.toUpperCase()}</b><small>{t.div.toUpperCase()} · {at + 1} OF 32</small></div>
-              <button className="fr-plate-go" onClick={() => go(at + 1)} aria-label="Next team" />
+              <div className="fr-plate-txt"><small>{t.city.toUpperCase()}</small><b>{t.nick.toUpperCase()}</b><small>{t.div.toUpperCase()}</small>{job && <span className="fr-plate-state">{job.label}</span>}</div>
+              <button className="fr-plate-go" onClick={() => step(1)} aria-label="Next team" />
             </section>
-            <Panel title="The roster" meta={pv?.ratings?.offRank ? `OFF NO. ${pv.ratings.offRank} · DEF NO. ${pv.ratings.defRank}` : 'STARTERS'}>
-              {(pv?.groups ?? BUILD_POS.map(p => ({ key: p.label, label: p.name.toUpperCase(), grade: '', ovr: null }))).map(g => <GradeRow key={g.key} label={g.label} grade={g.grade || '–'} v={g.ovr == null ? 0 : (g.ovr - 60) / 3.5} />)}
+            {job && (
+              <Panel title="The job" meta={d ? `DIFFICULTY: ${d.word}` : null}>
+                <Fact label="STATE" strong>{job.label}<small>{job.stateText}</small></Fact>
+                <Fact label="THE WINDOW">{job.window?.text}</Fact>
+                <Fact label="QUARTERBACK">{cap(job.qb?.text)}</Fact>
+                <Fact label="CAP ROOM">{FR.moneyText(job.capSpace)}<small>{job.capText}</small></Fact>
+                <Fact label="DRAFT CAPITAL">{job.draft?.text}</Fact>
+                <Fact label="HARDEST PART">{job.hardest}</Fact>
+                <Fact label="BUILT ON">{job.upside}</Fact>
+                {d && <Fact label="DIFFICULTY">{d.word}<Steps value={d.level * 20} low={-1} label={`Difficulty ${d.level} of 5`} /><small>{d.text}</small></Fact>}
+              </Panel>
+            )}
+            <Panel title="The roster" meta={ratings?.offRank ? `OFF NO. ${ratings.offRank} · DEF NO. ${ratings.defRank}` : 'STARTERS'}>
+              {groups.map(g => <GradeRow key={g.key} label={g.label} grade={g.grade || '–'} v={g.ovr == null ? 0 : (g.ovr - 60) / 3.5} />)}
             </Panel>
           </div>
           <div className="fr-col">
-            <Panel title="The building">
-              <div className="fr-kv"><span>CAP ROOM</span><b>{pv?.capSpace != null ? FR.moneyText(pv.capSpace) : '…'}</b></div>
-              <div className="fr-kv"><span>HEAD COACH</span>{coach(pv?.staff?.hc)}</div>
-              <div className="fr-kv"><span>OFFENSE</span>{coach(pv?.staff?.oc)}</div>
-              <div className="fr-kv"><span>DEFENSE</span>{coach(pv?.staff?.dc)}</div>
+            <Panel title="The staff" meta={job ? null : old?.capSpace != null ? `CAP ROOM ${FR.moneyText(old.capSpace)}` : null}>
+              {staff ? <><CoachBlock c={staff.hc} /><CoachBlock c={staff.oc} /><CoachBlock c={staff.dc} /></> : <div className="fr-empty">READING THE LEAGUE</div>}
             </Panel>
-            <Panel title="All 32" action={<button className="fr-btn fr-btn--line fr-btn--sm" onClick={random}>RANDOM TEAM</button>}>
-              {DIVISIONS.map(d => (
-                <div key={d.div} className="fr-div">
-                  <span>{d.div.toUpperCase()}</span>
-                  {d.teams.map(x => <button key={x.short} className={x.short === t.short ? 'is-on' : undefined} aria-pressed={x.short === t.short} aria-label={x.name} onClick={() => go(ORDER.indexOf(x))}>{x.short}</button>)}
+            <Panel title="All 32" action={<button className="fr-btn fr-btn--line fr-btn--sm" onClick={() => random()}>RANDOM TEAM</button>}>
+              {rows && <Seg label="Browse" options={[['div', 'BY DIVISION'], ['state', 'BY STATE']]} value={by} onChange={setBy} />}
+              {by === 'div' || !rows ? DIVISIONS.map(dv => (
+                <div key={dv.div} className="fr-div">
+                  <span>{dv.div.toUpperCase()}</span>
+                  {dv.teams.map(x => <button key={x.short} className={x.short === short ? 'is-on' : undefined} aria-pressed={x.short === short} aria-label={x.name} onClick={() => pick(x.short)}>{x.short}</button>)}
+                </div>
+              )) : states.map(s => (
+                <div key={s.id}>
+                  <Sub action={<button onClick={() => random(s.teams)}>RANDOM</button>}>{STATE_NOUN[s.id]} · {s.teams.length}</Sub>
+                  <div className="fr-teamgrid">{s.teams.map(x => <button key={x.short} className={x.short === short ? 'is-on' : undefined} aria-pressed={x.short === short} aria-label={x.name} onClick={() => pick(x.short)}>{x.short}</button>)}</div>
                 </div>
               ))}
             </Panel>
