@@ -413,7 +413,7 @@ export function setGradesHidden(v) {
   window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isAllTime = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', getPlayerSub = null, teamLabel = 'TEAM', getTeamSub = null, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false, group = null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isAllTime = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', getPlayerSub = null, teamLabel = 'TEAM', getTeamSub = null, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false, oneTeam = false, group = null }) {
   // group (College Football): the first wheel deals a group of teams, not a team ({ key: the player's
   // field it matches, display: a row's look, logo: its logo, respin: the respin button's word }).
   // Without it the first wheel is teams, as always
@@ -423,6 +423,25 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const oneWheel = startersOnly && !seedPlanProp && !isVersusMode
   const oneWheelRef = useRef(oneWheel)
   oneWheelRef.current = oneWheel
+  // Sandbox's One Team: the first spin deals a team and the whole build comes from it. Every spin after
+  // that is the player wheel on that team (nobody twice), no team respin. Same limits as Starters Only
+  const teamLock = oneTeam && !oneWheel && !seedPlanProp && !isVersusMode
+  const teamLockRef = useRef(teamLock)
+  teamLockRef.current = teamLock
+  const [lockedTeam, setLockedTeam] = useState(() => savedResult?.lockedTeam ?? null)
+  const lockedTeamRef = useRef(lockedTeam)
+  lockedTeamRef.current = lockedTeam
+  useEffect(() => { if (!teamLock) setLockedTeam(null) }, [teamLock])
+  // the players already in the build (One Team never deals one twice)
+  const usedNames = teamLock ? Object.values(build ?? {}).filter(Boolean).map(c => c.qbFull).filter(Boolean) : []
+  const usedKey = usedNames.join('|')
+  // a team's players on the wheel: on One Team, the ones not in the build yet (all of them again if none are left)
+  const oneTeamRoster = team => {
+    const all = qbPool.filter(q => teamOf(q) === team.short)
+    if (!teamLock || !usedNames.length) return all
+    const left = all.filter(q => !usedNames.includes(q.name))
+    return left.length ? left : all
+  }
   // the player's reel skin (the shop's Reel Skins: app-shop.css .rs-*)
   const equippedReel = useProgress().equip?.reel
   const reelSkin = itemById(equippedReel)?.slot === 'reel' ? equippedReel : null
@@ -485,7 +504,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     usedTeamsRef.current = []
     clearAll()
     setPhase('idle')
-    setSelectedTeam(null)
+    setSelectedTeam(teamLockRef.current ? lockedTeamRef.current : null)   // One Team: the team wheel stays on the build's team
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
@@ -501,13 +520,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     // a build's own seed, and the spin to deal next (si): what a reload picks up from
     const at = spinBase.current + seedSpins
     const own = autoPlan ? { seed: autoPlan.seed } : {}
-    const mark = oneWheel ? { starters: true } : {}
+    const mark = oneWheel ? { starters: true } : teamLock && lockedTeam ? { lockedTeam } : {}
     if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, ...mark, ...own, ...(autoPlan ? { si: at } : {}) })
     // between spins the build's re-spins used still count (a reload doesn't hand them back)
     else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus || autoPlan ? { qbRespinUsed, teamRespinUsed, qbRespinBonus, ...mark, ...own, ...(autoPlan ? { si: at } : {}) } : null)
     // mid-spin: this spin is already dealt (a reload deals it again) and a respin is spent
     else onSaveResult({ qbRespinUsed, teamRespinUsed, qbRespinBonus, ...mark, ...own, ...(autoPlan ? { si: Math.max(0, at - 1) } : {}) })
-  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, seedSpins, autoPlan, oneWheel]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, seedSpins, autoPlan, oneWheel, teamLock, lockedTeam]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
@@ -521,6 +540,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setQbRespinUsed(0)
     setTeamRespinUsed(0)
     setQbRespinBonus(0)
+    setLockedTeam(null)
     // a new build: a new seed, dealt from its first spin
     if (!seedPlanProp) { setAutoSeed(newSeed()); spinBase.current = 0; seedSpinsRef.current = 0; setSeedSpins(0) }
   }, [gameKey])
@@ -528,6 +548,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // Team reel calls this when it naturally halts
   const handleTeamStop = useCallback((team) => {
     setSelectedTeam(team)
+    if (teamLockRef.current && !lockedTeamRef.current) setLockedTeam(team)
     usedTeamsRef.current = [...usedTeamsRef.current, team]
     setPhase('team-done')
     pauseRef.current = setTimeout(() => setPhase('qb'), 300)
@@ -568,7 +589,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     countTeamSpin()
-    setPhase(oneWheelRef.current ? 'qb' : 'team')
+    // One Team after its first spin: straight to the player wheel on the build's team
+    const locked = teamLockRef.current ? lockedTeamRef.current : null
+    if (locked) setSelectedTeam(locked)
+    setPhase(oneWheelRef.current || locked ? 'qb' : 'team')
     triggerMobileAd()
     track('spin', {
       app: isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl',
@@ -605,7 +629,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // spins (the Daily, Compete) keep their own order, which the server checks
   const respunFrom = useRef(null)
   const handleTeamRespin = useCallback(() => {
-    if (oneWheelRef.current) return
+    if (oneWheelRef.current || teamLockRef.current) return
     clearAll()
     setSelectedQB(null)
     setSelectedTeam(prev => { respunFrom.current = prev?.short ?? null; return null })
@@ -631,7 +655,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const kOne = isK && !oneWheel
   const soloTeam = kOne
 
+  const lastTeamItems = useRef(null)
   const teamReelItems = useMemo(() => {
+    // One Team, once its team is dealt: the team wheel stays as it stopped (a reshuffle would show another team)
+    if (teamLock && lockedTeam && lastTeamItems.current) return lastTeamItems.current
+    lastTeamItems.current = teamReelItemsFresh()
+    return lastTeamItems.current
+  }, [spinCount, teamsPool, draftableTeams, teamLock, lockedTeam]) // eslint-disable-line react-hooks/exhaustive-deps
+  function teamReelItemsFresh() {
     // Only teams with someone to draft — landing on a team with no players
     // leaves the player reel empty and the spin stuck.
     const draftable = new Set(draftableTeams.split(','))
@@ -646,7 +677,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       ;[finalPool[i], finalPool[j]] = [finalPool[j], finalPool[i]]
     }
     return finalPool
-  }, [spinCount, teamsPool, draftableTeams])
+  }
 
   // The one wheel: seeded like every build's spins, so a reload deals the same player. The winner is
   // the first of the whole pool's shuffle; the reel carries a sample of it (some pools run to 150)
@@ -664,7 +695,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     if (oneWheel) return starterDraw
     if (kOne) { const all = [...qbPool]; for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]] } return all }
     if (!selectedTeam) return qbPool.slice(0, 3)
-    const base = qbPool.filter(q => teamOf(q) === selectedTeam.short)
+    const base = oneTeamRoster(selectedTeam)
     // (a respin on a team of two keeps both in: taking one out would just hand over the other)
     const arr = excludedQB && base.length > 2 ? base.filter(q => q !== excludedQB) : [...base]
     for (let i = arr.length - 1; i > 0; i--) {
@@ -672,7 +703,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
     }
     return arr
-  }, [selectedTeam, excludedQB, spinCount, oneWheel, starterDraw, kOne])
+  }, [selectedTeam, excludedQB, spinCount, oneWheel, starterDraw, kOne, teamLock, usedKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Daily Challenge outcomes
   const teamIndex = spinBase.current + (ownSpins ? seedSpins : spinCount) - 1
@@ -696,7 +727,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     // a respun team or a player respin is the player's own draw (seeded by the seat in Compete)
     const own = ownSpins && (freeTeam || playerDraw > 0)
     if (!seedPlan || !selectedTeam || (own && !seedPlan.respinSeed)) return null
-    const roster = qbPool.filter(q => teamOf(q) === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
+    const roster = oneTeamRoster(selectedTeam).sort((a, b) => a.name.localeCompare(b.name))
     if (!roster.length) return null
     if (own) {
       const mine = seededShuffle(roster, `${seedPlan.respinSeed}:${teamIndex}:${selectedTeam.short}`)
@@ -711,7 +742,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     }
     const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
     return order[playerDraw % order.length]
-  }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam, teamLock, usedKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compete: which seeded draw this player came from, so the server can check it
   // (competeCore dealtBy): spin #i, a regular spin, a player respin or a team respin
@@ -798,8 +829,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <div className="spin-btn-wrap">
             {adNote && <p className="spin-ad-note" role="status">{adNote}</p>}
             {isDone && !complete && !oneWheel ? (
-              <div className={`spin-respin-split${soloTeam ? ' spin-respin-split--one' : ''}`}>
-                <button
+              <div className={`spin-respin-split${soloTeam || teamLock ? ' spin-respin-split--one' : ''}`}>
+                {!teamLock && <button
                   className={`spin-respin-half spin-respin-team${teamRespinUsed >= 1 ? ' spin-respin-used' : ''}`}
                   onClick={teamRespinUsed < 1 ? handleTeamRespin : undefined}
                   disabled={teamRespinUsed >= 1}
@@ -811,8 +842,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   }}
                 >
                   RESPIN {kOne ? 'KICKER' : group?.respin ?? (isSoccer ? teamLabel : 'TEAM')} <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
-                </button>
-                {!soloTeam && <div className="spin-respin-divider" />}
+                </button>}
+                {!soloTeam && !teamLock && <div className="spin-respin-divider" />}
                 {soloTeam ? null : qbRespinUsed >= maxPlayerRespin && canEarn ? (
                   <button className="spin-respin-half spin-respin-player spin-respin-earn" onClick={earnRespin} disabled={adBusy}>
                     {adBusy ? 'LOADING…' : 'WATCH VIDEO'} <span className="spin-btn-badge">AD · +1</span>

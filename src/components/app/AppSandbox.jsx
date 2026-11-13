@@ -44,9 +44,15 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
           <span className={`ag-switch${starters.on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
         </button>
       )}
+      {on && starters?.team && (
+        <button className={`ag-sandbox-starters${starters.team.on ? ' is-on' : ''}`} role="switch" aria-checked={starters.team.on} disabled={starters.locked} aria-label={starters.locked ? 'One Team. Reset the build to change it' : 'One Team'} onClick={() => starters.team.onToggle(!starters.team.on)}>
+          <span className="ag-sandbox-starters-lbl">ONE TEAM{starters.locked && <i>RESET TO CHANGE</i>}</span>
+          <span className={`ag-switch${starters.team.on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
+        </button>
+      )}
       {on && (
-        <button className="ag-sandbox-edit" onClick={onCustomize} aria-label={starters?.on ? 'Edit ratings' : 'Edit ratings and build'}>
-          <IconSliders size={17} /> {starters?.on ? 'EDIT RATINGS' : <>EDIT RATINGS &amp; BUILD</>} <IconArrow size={14} />
+        <button className="ag-sandbox-edit" onClick={onCustomize} aria-label={starters?.on || starters?.team?.on ? 'Edit ratings' : 'Edit ratings and build'}>
+          <IconSliders size={17} /> {starters?.on || starters?.team?.on ? 'EDIT RATINGS' : <>EDIT RATINGS &amp; BUILD</>} <IconArrow size={14} />
         </button>
       )}
     </div>

@@ -460,7 +460,7 @@ export default function BucketApp() {
   const [simInitialScreen, setSimInitialScreen] = useState(0)
   const [salaryReturnDate, setSalaryReturnDate] = useState(null)
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
-    try { const r = JSON.parse(localStorage.getItem('bab_spin_result')); return r?.starters ? null : r } catch { return null }
+    try { const r = JSON.parse(localStorage.getItem('bab_spin_result')); return r?.starters || r?.lockedTeam ? null : r } catch { return null }
   })
   const [isBucketCustomMode, setIsBucketCustomMode] = useState(() => {
     try { return localStorage.getItem('bab_custom_mode') === '1' } catch { return false }
@@ -471,6 +471,8 @@ export default function BucketApp() {
   const [showBucketCustomModal, setShowBucketCustomModal] = useState(false)
   // Sandbox's Starters Only, for this build (in memory: a reload ends the build too). Only ever read through startersOn
   const [startersPick, setStartersPick] = useState(false)
+  // Sandbox's One Team, for this build (in memory too): the first spin's team is the whole build's
+  const [oneTeamPick, setOneTeamPick] = useState(false)
 
   // Versus mode
   const [versusRoom,     setVersusRoom]     = useState(null)
@@ -856,6 +858,7 @@ export default function BucketApp() {
     setActiveCategory((POS_CATS[pos] ?? GUARD_CATEGORIES)[0].id)
     sandboxTainted.current = isBucketCustomMode
     setStartersPick(false)   // a new build starts without it
+    setOneTeamPick(false)
     setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
@@ -1360,13 +1363,16 @@ export default function BucketApp() {
   const startersOk = !isVersusMode && !competeOn && !dailyRun && page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
   const startersOn = startersPick && isBucketCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
+  const oneTeamOn = oneTeamPick && isBucketCustomMode && startersOk
+  useEffect(() => { if (oneTeamPick && !oneTeamOn) setOneTeamPick(false) }, [oneTeamPick, oneTeamOn])
   // switching it needs a build that hasn't started: flipping it can't throw away a spin
-  const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]), onToggle: setStartersPick } : null
+  const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]) || !!savedSpinResult?.lockedTeam, onToggle: v => { setStartersPick(v); if (v) setOneTeamPick(false) }, team: { on: oneTeamOn, onToggle: v => { setOneTeamPick(v); if (v) setStartersPick(false) } } } : null
   // Sandbox off during a Starters Only build ends it: the build starts over, as a normal one
   const sandboxSwitch = on => {
-    if (on || !startersOn) { handleSandboxToggle(on); return }
+    if (on || !(startersOn || oneTeamOn)) { handleSandboxToggle(on); return }
     handleSandboxToggle(false)
     setStartersPick(false)
+    setOneTeamPick(false)
     handleReset()
     sandboxTainted.current = false
   }
@@ -1813,6 +1819,7 @@ export default function BucketApp() {
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           seedPlan={competePlan ?? blacktopPlan ?? dailyPlan}
           startersOnly={startersOn}
+          oneTeam={oneTeamOn}
           key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : dailyPlan ? `dc-${dailyRun.key}` : 'spin'}
           paused={parked}
           isRB={false}
@@ -1973,7 +1980,7 @@ export default function BucketApp() {
 
       {!parked && showBucketCustomModal && (
         <CustomRatingsModal
-          noPicks={startersOn}
+          noPicks={startersOn || oneTeamOn}
           isBucket={true}
           bucketPosition={position}
           gameMode={gameMode}
