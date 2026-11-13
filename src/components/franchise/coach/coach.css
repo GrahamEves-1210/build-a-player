@@ -1,0 +1,132 @@
+/* ═══ FRANCHISE: BUILD THE COACH (coach/CoachBuild.jsx) ═════════════════════════════════════════════════
+   The mode's tokens (franchise.css). Two wheels (the staff, then the man), the coach they landed on with his five
+   ratings to take one from, and the centrepiece: the head coach's card, a call sheet of five lines.
+   Flat: hairlines, 4px corners, the team colour as the one accent; a grade's letter keeps the game's own colour.
+   phone: one column (wheels, the landed coach, the card), SPIN pinned at the bottom. desktop: wheels left, card right. */
+.cb { grid-template-columns: minmax(0, 1fr); }
+.cb-left { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.fr .fr-btn.cb-wide, .fr .cb-wide { display: none; }
+
+/* ── the wheels ───────────────────────────────────────────────────────────────────────────────────────── */
+.cb-reels { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+.cb-reel-col { min-width: 0; }
+.cb-reel-col + .cb-reel-col { border-left: 1px solid var(--fr-line); }
+.cb-reel-h { display: flex; align-items: center; height: 26px; padding: 2px 12px 0; border-bottom: 1px solid var(--fr-line); font-family: var(--fr-label); font-size: 13px; letter-spacing: 1.5px; line-height: 1; color: var(--fr-muted); }
+.cb-reel { position: relative; overflow: hidden; background: var(--fr-bg); }
+.cb-reel-track { will-change: transform; }
+.cb-reel-row { display: flex; align-items: center; gap: 8px; height: var(--cb-h); padding: 0 10px 0 13px; white-space: nowrap; }
+.cb-reel-row img { width: 26px; height: 26px; }
+.cb-reel-row b { flex: 1 1 0; min-width: 0; font-family: var(--fr-display); font-weight: 400; font-size: 17px; letter-spacing: .4px; line-height: 1; padding-top: 1px; }
+.cb-reel-col + .cb-reel-col .cb-reel-row b { font-family: var(--fr-body); font-weight: 600; font-size: 15px; letter-spacing: 0; padding-top: 0; }
+.cb-reel-col + .cb-reel-col .cb-reel-row b.is-long { font-size: 13.5px; }
+.cb-reel-row i { flex: none; font-family: var(--fr-label); font-style: normal; font-size: 14px; letter-spacing: 1.2px; line-height: 1; padding-top: 2px; color: var(--fr-muted); }
+.cb-reel-row span { font-family: var(--fr-label); font-size: 14px; letter-spacing: 1.3px; line-height: 1; padding-top: 2px; color: var(--fr-faint); }
+/* the window: the rows above and below the answer stand back; the answer's row is ruled off, with a bar down its
+   left edge that takes the team colour when the wheel has landed */
+.cb-reel::before, .cb-reel::after { content: ''; position: absolute; left: 0; right: 0; height: 33.4%; z-index: 1; background: rgba(10,12,15,.66); pointer-events: none; }
+.cb-reel::before { top: 0; border-bottom: 1px solid var(--fr-line-2); }
+.cb-reel::after { bottom: 0; border-top: 1px solid var(--fr-line-2); }
+.cb-reel > .cb-reel-track { position: relative; }
+.cb-reel-mark { position: absolute; left: 0; top: 33.3%; z-index: 2; width: 3px; height: 33.4%; background: var(--fr-line-2); }
+.cb-reel.is-lock .cb-reel-mark { background: var(--fr-team); }
+.cb-reel.is-wait .cb-reel-row span { color: var(--fr-muted); }
+/* the respins: one of the staff, one of the coach */
+.cb-respins { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); border-top: 1px solid var(--fr-line); }
+.cb-respins button { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; height: 42px; padding: 2px 6px 0; border: 0; background: transparent; font-family: var(--fr-label); font-size: 15px; letter-spacing: 1.5px; line-height: 1; white-space: nowrap; color: var(--fr-text); cursor: pointer; }
+.fr .cb-respins button { font-family: var(--fr-label); }
+.cb-respins button + button { border-left: 1px solid var(--fr-line); }
+.cb-respins button:active:not(:disabled) { background: var(--fr-panel-2); }
+.cb-respins button:disabled, .fr .cb-respins button:disabled { color: var(--fr-faint); cursor: default; }
+.cb-respins i { min-width: 18px; height: 18px; padding: 2px 4px 0; border-radius: 2px; background: var(--fr-team); color: var(--fr-ink); font-style: normal; font-size: 13px; letter-spacing: 0; line-height: 16px; text-align: center; }
+.cb-respins button:disabled i { background: var(--fr-panel-2); color: var(--fr-faint); }
+@media (hover: hover) { .cb-respins button:hover:not(:disabled) { background: rgba(255,255,255,.03); } }
+
+/* ── the coach the wheels landed on: who he is, then his five ratings; a tap takes one ───────────────── */
+.cb-landed { animation: cb-in .2s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes cb-in { from { opacity: 0; transform: translateY(8px); } }
+.cb-who { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-left: 3px solid var(--fr-team); border-bottom: 1px solid var(--fr-line); background: var(--fr-panel-2); }
+.cb-plate { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 2px; background: var(--fr-bg); }
+.cb-who-main { flex: 1 1 0; min-width: 0; display: grid; gap: 5px; }
+.cb-who-main b { font-family: var(--fr-display); font-weight: 400; font-size: 23px; letter-spacing: .3px; line-height: 1.02; overflow-wrap: anywhere; }
+.cb-who-main small { font-family: var(--fr-label); font-size: 14px; letter-spacing: 1.4px; line-height: 1.05; color: var(--fr-muted); }
+.cb-who-ovr { flex: none; display: grid; justify-items: end; gap: 3px; }
+.cb-who-ovr b { font-family: var(--fr-display); font-weight: 400; font-size: 30px; line-height: .95; }
+.cb-who-ovr small { font-family: var(--fr-label); font-size: 12px; letter-spacing: 1.5px; line-height: 1; color: var(--fr-muted); }
+.cb-take { display: grid; grid-template-columns: minmax(0, 1fr) auto 40px; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 0 12px; border: 0; border-top: 1px solid var(--fr-line); background: transparent; text-align: left; cursor: pointer; }
+.cb-who + .cb-take { border-top: 0; }
+.cb-take > span { font-family: var(--fr-label); font-size: 17px; letter-spacing: 1.3px; line-height: 1; padding-top: 2px; white-space: nowrap; }
+.cb-take > small { font-family: var(--fr-label); font-size: 13px; letter-spacing: 1.5px; line-height: 1; padding-top: 2px; color: var(--fr-faint); }
+.cb-take > small.cb-take-go { padding: 5px 7px 3px; border-radius: 2px; color: var(--fr-text); box-shadow: inset 0 0 0 1px var(--fr-line-2); }
+.cb-take > b { font-family: var(--fr-display); font-weight: 400; font-size: 24px; line-height: 1; text-align: right; }
+.cb-take:active:not(:disabled) { background: var(--fr-panel-2); }
+.cb-take:disabled { cursor: default; }
+.cb-take:disabled > span { color: var(--fr-faint); }
+.cb-take:disabled > b { opacity: .35; }
+@media (hover: hover) {
+  .cb-take:hover:not(:disabled) { background: rgba(255,255,255,.03); }
+  .cb-take:hover:not(:disabled) > small.cb-take-go { background: var(--fr-team); color: var(--fr-ink); box-shadow: none; }
+}
+
+/* ── the head coach's card: his name, who he is, his number, and the call sheet ──────────────────────── */
+.cb-id { display: flex; align-items: center; gap: 14px; padding: 14px 12px 12px; border-bottom: 1px solid var(--fr-line-2); }
+.cb-id-main { flex: 1 1 0; min-width: 0; display: grid; gap: 8px; }
+.cb-name { width: 100%; min-width: 0; height: 38px; padding: 2px 0 0; border: 0; border-bottom: 1px solid var(--fr-line-2); border-radius: 0; background: transparent; color: var(--fr-text); font-family: var(--fr-display); font-size: 27px; font-weight: 400; letter-spacing: .3px; line-height: 1; -webkit-user-select: text; user-select: text; }
+.cb-name:focus { outline: 0; border-bottom-color: var(--fr-team); box-shadow: 0 1px 0 var(--fr-team); }
+.cb-identity { font-family: var(--fr-label); font-size: 15px; letter-spacing: 1.4px; line-height: 1.15; color: var(--fr-muted); }
+.cb-ovr { flex: none; display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 76px; height: 76px; padding-top: 4px; border-radius: 2px; background: var(--fr-panel-2); }
+.cb-ovr b { font-family: var(--fr-display); font-weight: 400; font-size: 42px; line-height: .95; }
+.cb-ovr small { font-family: var(--fr-label); font-size: 13px; letter-spacing: 1.6px; line-height: 1; color: var(--fr-muted); }
+.cb-card.is-done .cb-ovr { background: var(--fr-team); color: var(--fr-ink); }
+.cb-card.is-done .cb-ovr small { color: inherit; }
+.cb-sheet { margin: 0; padding: 0; list-style: none; }
+.cb-sheet li { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: center; gap: 10px; min-height: 56px; padding: 7px 12px 6px; border-top: 1px solid var(--fr-line); }
+.cb-sheet li:first-child { border-top: 0; }
+.cb-sheet-main { display: grid; gap: 5px; min-width: 0; }
+.cb-sheet-main > span { font-family: var(--fr-label); font-size: 18px; letter-spacing: 1.3px; line-height: 1; white-space: nowrap; }
+.cb-sheet-main > small { display: flex; align-items: center; gap: 6px; min-height: 16px; font-family: var(--fr-label); font-size: 13.5px; letter-spacing: 1.3px; line-height: 1; color: var(--fr-muted); white-space: nowrap; }
+.cb-sheet-main > small img { width: 16px; height: 16px; margin-top: -2px; }
+.cb-sheet li > b { font-family: var(--fr-display); font-weight: 400; font-size: 28px; line-height: 1; text-align: right; }
+.cb-sheet li.is-open .cb-sheet-main > span { color: var(--fr-muted); }
+.cb-sheet li.is-open .cb-sheet-main > small { color: var(--fr-faint); }
+.cb-sheet li > b.cb-none { justify-self: end; width: 18px; height: 2px; background: var(--fr-line-2); }
+/* a line as it's filled: the row marks itself once in the team colour */
+.cb-sheet li.is-new { animation: cb-new .7s ease-out both; }
+@keyframes cb-new { from { background: color-mix(in srgb, var(--fr-team) 30%, transparent); } to { background: transparent; } }
+/* the finished build: each grade lands in turn, top to bottom */
+.cb-card.is-beat .cb-sheet li > b { animation: cb-stamp .26s cubic-bezier(.16, 1, .3, 1) both; animation-delay: calc(440ms + var(--cb-k) * 75ms); }
+@keyframes cb-stamp { from { opacity: 0; transform: scale(1.5); } }
+.cb-foot { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--fr-line); }
+html.bap-reduce-motion :is(.cb-landed, .cb-sheet li.is-new, .cb-card.is-beat .cb-sheet li > b) { animation: none; }
+@media (prefers-reduced-motion: reduce) { :is(.cb-landed, .cb-sheet li.is-new, .cb-card.is-beat .cb-sheet li > b) { animation: none; } }
+
+/* ── desktop: the wheels on the left, the card on the right; a finished build stands alone ───────────── */
+@media (min-width: 1024px) {
+  .cb { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .cb.is-done { grid-template-columns: minmax(0, 620px); justify-content: center; }
+  .cb-left { gap: 16px; }
+  .fr .fr-btn.cb-phone { display: none; }
+  .fr .fr-btn.cb-wide { display: inline-flex; }
+  .fr .fr-btn.cb-wide.fr-btn--wide { display: flex; }
+  .fr .fr-btn.cb-spin { height: 56px; font-size: 24px; letter-spacing: 2.4px; }
+  .cb-reel-h { height: 30px; font-size: 14px; }
+  .cb-reel-row { gap: 12px; padding: 0 16px 0 19px; }
+  .cb-reel-row img { width: 32px; height: 32px; }
+  .cb-reel-row b { font-size: 24px; }
+  .cb-reel-col + .cb-reel-col .cb-reel-row b, .cb-reel-col + .cb-reel-col .cb-reel-row b.is-long { font-size: 18px; }
+  .cb-reel-row i, .cb-reel-row span { font-size: 16px; }
+  .cb-respins button { height: 46px; font-size: 16px; }
+  .cb-who { padding: 12px 16px; }
+  .cb-who-main b { font-size: 28px; }
+  .cb-who-ovr b { font-size: 36px; }
+  .cb-take { min-height: 48px; padding: 0 16px; }
+  .cb-id { padding: 18px 16px 16px; }
+  .cb-name { height: 46px; font-size: 36px; }
+  .cb-identity { font-size: 17px; }
+  .cb-ovr { min-width: 92px; height: 92px; }
+  .cb-ovr b { font-size: 52px; }
+  .cb-sheet li { min-height: 64px; padding: 8px 16px 7px; }
+  .cb-sheet-main > span { font-size: 21px; }
+  .cb-sheet-main > small { font-size: 15px; }
+  .cb-sheet li > b { font-size: 34px; }
+  .cb-foot { padding: 12px 16px; }
+}
