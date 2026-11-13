@@ -6955,10 +6955,10 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 22px); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body { padding-top: 0 !important; gap: 5px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-static { padding-top: 0 !important; gap: 4px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 120px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -50px; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 38px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 82.5px !important; }   /* on the window's middle (was 4px low, owner 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 132px !important; }   /* 10% taller (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -44px; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 44px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 67.1px !important; }   /* (the labels float now; the wheel 132px) */   /* on the window's middle (was 4px low, owner 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 3px 10px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
@@ -7124,10 +7124,10 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
 /* Desktop (website): the spin wheels shorter, 220px to 182px (owner, 11-13: 25% shorter, then 10% back). The middle row, its box and the
    arrows all move up by the same 19px so they stay on the window's middle */
 @media (min-width: 769px) {
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-window { height: 182px !important; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-track { margin-top: -19px; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-selector { top: 69px !important; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-tri { top: 122px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-window { height: 200px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-track { margin-top: -10px; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-selector { top: 78px !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .reel-tri { top: 101px !important; }   /* (the labels float now; the wheel 200px) */
   /* the player's card shorter, 74px to 60px (owner, 11-13: 10% shorter, twice): less padding, the photo 54px */
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card { padding-top: 2px !important; padding-bottom: 2px !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel :is(.qb-reveal-hero, .qb-reveal-hero > *) { width: 54px !important; height: 54px !important; }
@@ -7161,3 +7161,7 @@ html.app-look:not(.is-app) .game-layout .spin-panel .attr-chip.attr-chip.attr-ch
 /* Football's position circle (OL/DL/DB spots, owner 11-13): pushed to the card's right like basketball's; EDGE in a smaller face */
 [data-sport="nfl"] .qb-reveal-pos, .qb-reveal-pos { margin-left: auto; }
 .qb-reveal-pos.is-long { font-size: 11.5px !important; letter-spacing: .2px !important; }
+
+/* The wheels' TEAM / PLAYER labels float over the top of the wheel, no strip of their own (owner, 11-13). Website */
+html.app-look:not(.is-app) .spin-panel .reel-outer { position: relative; }
+html.app-look:not(.is-app) .spin-panel .reel-outer > .reel-label { position: absolute !important; top: 5px; left: 50%; transform: translateX(-50%); z-index: 4; margin: 0 !important; pointer-events: none; }
