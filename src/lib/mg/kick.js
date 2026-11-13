@@ -90,7 +90,8 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     needle() { return clamp(sweep(g.t - g.at, aimPer / g.k.hard) + g.noise, -1, 1) },
     centre() { return clamp(g.k.wind * WIND, -0.55, 0.55) },
     half() { return windowOf(g.k.d) / accF * (g.k.tight ?? 1) },   // (Deep Kick: each kick's green a tenth narrower than the last)
-    power() { const f = (((g.t - g.at) / (powMs / hurry / g.k.hard)) % 2 + 2) % 2; return (f < 1 ? f : 2 - f) * OVER },
+    power() { const f = (((g.t - g.at) / (powMs / hurry / (1 + (g.k.hard - 1) * (g.k.d >= 60 ? 0.6 : 1)))) % 2 + 2) % 2;   // (the 60-plus kick's power bar a little slower: the owner, 2026-11-12)
+      return (f < 1 ? f : 2 - f) * OVER },
     need() { return g.k.d / reach },
     tick(dt) {
       g.t += dt
@@ -133,7 +134,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
     // where it goes: off the middle of the green by his aim, plus the hook of an overswing (always the same way: a pull)
     const off = (g.aimAt - g.centre()) * accF + over * 3.2 * (r() < 0.5 ? -1 : 1)
     const yards = off * k.d * AIM_SPAN / (k.tight ?? 1)                   // wide of the middle of the uprights, at the uprights
-    const carry = Math.min(g.pow, 1.06) * reach + (Math.abs(off) < windowOf(k.d) * 0.2 ? 1.5 : 0)   // (a pure strike carries a little more)
+    const carry = Math.min(g.pow, 1.06) * reach + (Math.abs(off) < windowOf(k.d) * 0.2 ? (k.d >= 60 ? 2.5 : 1.5) : 0)   // (a pure strike carries a little more)
     const long = carry >= k.d
     const edge = Math.abs(yards) - POST_HALF
     // off the upright: half of them carom through
