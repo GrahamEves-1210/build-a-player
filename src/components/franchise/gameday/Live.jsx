@@ -15,7 +15,7 @@ import { Face, IconFF, barOf, quarterText, clockText, spotText, downText, pct } 
 //   g                    driver.view(F)
 
 // how long a play stays the newest one on screen (ms): a full game under a minute watched, 2-4 minutes with moments
-const PACE = { moments: { play: 330, big: 950, score: 1450 }, watch: { play: 230, big: 650, score: 1050 } }
+const PACE = { moments: { play: 330, big: 950, score: 1450 }, watch: { play: 190, big: 520, score: 900 } }
 const waitFor = (p, mode) => { const t = PACE[mode] ?? PACE.watch; return !p ? 500 : p.pts ? t.score : p.big || p.kind === 'break' ? t.big : t.play }
 
 const ScoreLine = ({ home, away, score }) => <span className="frgd-play-score">{away} {score[away]} <i>·</i> {home} {score[home]}</span>
@@ -104,12 +104,12 @@ function Moment({ m }) {
   )
 }
 
-function Result({ g, shown }) {
+function Result({ g, shown, call }) {
   const scored = shown.find(p => p.pts)
   return (
     <div className="frgd-stop">
       <div className="frgd-stop-in">
-        <span className="frgd-eye">{shown[0]?.mark?.call ? 'THE CALL' : 'THE PLAY'}</span>
+        <span className="frgd-eye">{call ? 'THE CALL' : 'THE PLAY'}</span>
         {shown.map(p => <p key={p.id} className="frgd-res-play">{p.text}</p>)}
         {scored && <div className="frgd-res-score">{g.away} {g.score[g.away]} <i>·</i> {g.home} {g.score[g.home]}</div>}
       </div>
@@ -141,6 +141,7 @@ export default function Live({ F, put, g, driver, title }) {
   const [playing, setPlaying] = useState(null)      // the moment on the mini game's stage
   const [shown, setShown] = useState(null)          // the plays a stop just made, held on screen until read
   const logRef = useRef(null)
+  const wasCall = useRef(false)
   const now = useRef({ F, g }); now.current = { F, g }
   const stop = g.pending
   const newest = g.plays[g.plays.length - 1]
@@ -171,13 +172,14 @@ export default function Live({ F, put, g, driver, title }) {
     put(next, true)
     setShown(made.length ? made.slice(0, 3) : null)
   }
-  const resolve = res => { const { F: f, g: was } = now.current; setPlaying(null); after(driver.resolveMoment(f, res), was.plays.length) }
+  const resolve = res => { const { F: f, g: was } = now.current; wasCall.current = false; setPlaying(null); after(driver.resolveMoment(f, res), was.plays.length) }
   // (a call is only the decision: the play it makes is the engine's next one, so that one is run and shown as the call's result)
   const pick = id => {
     sfx('tap')
     const { F: f, g: was } = now.current
     let next = driver.resolveCall(f, id), ng = driver.view(next)
     if (ng && !ng.pending && !ng.done && ng.plays.length === was.plays.length) next = driver.step(next)
+    wasCall.current = true
     after(next, was.plays.length)
   }
   const skip = () => { sfx('tap'); setPlaying(null); setShown(null); put(driver.skip(now.current.F), true) }
@@ -188,7 +190,7 @@ export default function Live({ F, put, g, driver, title }) {
       <Scorebug g={g} title={!!title} />
       <div className="frgd-live-cols">
         <Scoring g={g} />
-        {shown ? <Result g={g} shown={shown} />
+        {shown ? <Result g={g} shown={shown} call={wasCall.current} />
           : m ? <Moment m={m} />
           : stop?.type === 'call' ? <Call c={stop} onPick={pick} />
           : <div className="frgd-log" ref={logRef}><DriveLog g={g} /></div>}
