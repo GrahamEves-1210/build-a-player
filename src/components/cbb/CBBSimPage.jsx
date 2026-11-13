@@ -15,6 +15,7 @@ import { useTapGuard } from '../../lib/tapGuard'
 import { userScrolling } from '../../lib/userScroll'
 import { useRailOn } from '../../lib/ads'
 import { sfx } from '../../lib/juice'
+import CutTheNet from './CutTheNet'
 import { cbbLogo, cbbLogoDark, logoKey, CBB_POS, pickOf, projText, finishOf, cbbTimeline } from './cbbShared'
 
 // ── College Basketball: the season ──────────────────────────────────────────
@@ -391,9 +392,13 @@ function LiveGame({ v, g, onDone }) {
   const op = { short: g.oppShort, color: onDark(v.T(g.oppShort)), seed: g.oppSeed, sc: sc[1] }
   const [L, R] = g.home && !g.neutral ? [op, me] : [me, op]
   const post = phase === 'post'
+  const title = isNcaa(g) && g.round === 'National Championship'   // the title game: the gold title-game card
   return (
-    <div className={`plf-game cbbs-live${post ? (g.won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
-      <div className="plf-round-row"><div className="plf-round-lbl">{roundName(g)}{g.site ? ` · ${g.site}` : ''}</div></div>
+    <div className={`plf-game cbbs-live${title ? ' plf-game--title' : ''}${post ? (g.won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
+      <div className="plf-round-row">
+        {title ? <div className="plf-round-lbl">National Championship<small className="plf-title-venue">{[g.site ?? 'Ford Field, Detroit', 'Apr 5'].join(' · ')}</small></div>
+          : <div className="plf-round-lbl">{roundName(g)}{g.site ? ` · ${g.site}` : ''}</div>}
+      </div>
       <div className="plf-scoreboard">
         <ScoreSide x={L} post={post} />
         <div className="plf-score-mid">
@@ -690,7 +695,8 @@ function PostPage({ v, live, onNext }) {
   }
   const cur = run.cur
   let inner
-  if (run.status === 'won') inner = <Center><div className="simp-eyebrow">{inField ? 'National Championship' : 'NIT'}</div><div className="plf-champ-label">{inField ? 'National Champions' : 'NIT Champions'}</div><div className="plf-champ-sub">{cur.mySc}–{cur.oppSc}{cur.ot ? ' OT' : ''} vs {cur.opponent}</div><button className="simp-cta simp-cta-in" onClick={onNext}>The Wooden Award</button></Center>
+  // the title won: the net is his to cut down (CutTheNet: the 32-0 game's moment); the button on is there all along
+  if (run.status === 'won') inner = <Center><div className="simp-eyebrow">{inField ? 'National Championship' : 'NIT'}</div><div className="plf-champ-label">{inField ? 'National Champions' : 'NIT Champions'}</div><div className="plf-champ-sub">{cur.mySc}–{cur.oppSc}{cur.ot ? ' OT' : ''} vs {cur.opponent}</div>{inField && <CutTheNet team={v.team} color={onDark(v.team)} who={v.userName} live={live} />}<button className="simp-cta simp-cta-in" onClick={onNext}>The Wooden Award</button></Center>
   else if (run.status === 'out') inner = <Center><div className="simp-eyebrow">Season Over</div><div className="plf-elim-title">{inField ? (cur.round === 'National Championship' ? 'Lost the Title Game' : `Out in the ${cur.round}`) : 'Out of the NIT'}</div><div className="plf-elim-score">{cur.mySc} – {cur.oppSc}{cur.ot ? ' OT' : ''} · vs {cur.oppSeed ? `No. ${cur.oppSeed} ` : ''}{cur.opponent}</div><button className="simp-cta" onClick={onNext}>The Wooden Award</button></Center>
   else if (run.status === 'between') inner = <Between cur={cur} next={games[run.gameIdx + 1]} />
   else inner = <><div className="simp-eyebrow">{inField ? `NCAA Tournament · No. ${p.seed} seed · ${p.region}` : `NIT · No. ${v.c.nit?.seed} seed${v.c.nit?.region ? ` · ${v.c.nit.region}` : ''}`}</div>{!run.started ? <SimLoading label={inField ? 'The Tournament tips off…' : 'The NIT…'} /> : <LiveGame key={run.gameIdx} v={v} g={cur} onDone={run.done} />}</>

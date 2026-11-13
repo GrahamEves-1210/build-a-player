@@ -77,3 +77,57 @@ html.is-cbb:not(.ag-screen-open) .cfb-screen .ag-screen-head { background: var(-
 }
 .cbbs-skip:active { background: #a50d26; }
 .cbbs-skip:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+
+/* cutting down the net after the national championship (CutTheNet.jsx: 32-0's moment). The net hangs under the
+   backboard's foot on an orange rim; each cut sways it (32-0's net-sway) and works the scissors across the rim; the
+   last one drops it (32-0's fall), the confetti comes down once, and the net comes up in his hand (32-0's trophy-bounce).
+   Nothing loops */
+.cbbn { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 4px 0 2px; }
+.cbbn-stage { width: 220px; height: 196px; display: flex; align-items: center; justify-content: center; }
+.cbbn-svg { display: block; overflow: visible; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.cbbn-board path { fill: rgba(255,255,255,0.04); stroke: rgba(255,255,255,0.78); stroke-width: 3; stroke-linejoin: round; }
+.cbbn-board rect { fill: none; stroke: rgba(255,255,255,0.6); stroke-width: 2.5; }
+.cbbn-bracket { fill: #7d8796; }
+.cbbn-rim-back { fill: none; stroke: #9c3a12; stroke-width: 4.5; }
+.cbbn-rim-front { fill: none; stroke: #e35b1d; stroke-width: 5; stroke-linecap: round; }
+.cbbn-strands { stroke: #f4f6fa; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.cbbn-strands--back { opacity: 0.3; }
+.cbbn-net { transform-origin: 110px 58px; transition: transform 0.6s ease-in, opacity 0.6s ease-in; }
+.cbbn-net.is-down { transform: translateY(60px) scaleY(0.2); opacity: 0; }
+.cbbn-sway { transform-origin: 110px 58px; animation: cbbn-sway 0.8s ease-in-out; }
+@keyframes cbbn-sway { 0% { transform: rotate(0deg); } 25% { transform: rotate(3deg); } 75% { transform: rotate(-3deg); } 100% { transform: rotate(0deg); } }
+.cbbn-scissors { transition: transform 0.24s cubic-bezier(.22, 1, .36, 1), opacity 0.4s ease; }
+.cbbn-scissors.is-gone { opacity: 0; }
+.cbbn-steel { fill: #d9dfe7; stroke: #8b95a3; stroke-width: 0.6; }
+.cbbn-ring { fill: none; stroke-width: 2.6; stroke-linecap: round; }
+.cbbn-pivot { fill: #5b6573; }
+.cbbn-blade-a { transform: rotate(-14deg); }
+.cbbn-blade-b { transform: rotate(14deg); }
+.cbbn-snip .cbbn-blade-a { animation: cbbn-snip-a 0.22s ease-in-out; }
+.cbbn-snip .cbbn-blade-b { animation: cbbn-snip-b 0.22s ease-in-out; }
+@keyframes cbbn-snip-a { 50% { transform: rotate(0deg); } }
+@keyframes cbbn-snip-b { 50% { transform: rotate(0deg); } }
+.cbbn-kept { animation: cbbn-kept 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes cbbn-kept { from { transform: translateY(18px) scale(0.6); opacity: 0; } }
+.cbbn-kept-svg { display: block; overflow: visible; transform: rotate(-6deg) scale(1.2); }
+.cbbn-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-width: 220px; height: 44px; padding: 0 22px; border: 0; border-radius: 4px;
+  background: #e8c766; color: #1d1503; cursor: pointer;
+  font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.cbbn-btn:active { background: #d4b14f; }
+.cbbn-btn:disabled { background: rgba(232,199,102,0.35); cursor: default; }
+.cbbn-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.cbbn-caption { height: 44px; display: flex; align-items: center; font-family: var(--ag-font); font-size: 15px; letter-spacing: 2px; text-transform: uppercase; color: var(--cfb-muted, rgba(255,255,255,0.6)); }
+.cbbn-confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 100; }
+.cbbn-confetti i { position: absolute; top: -12px; border-radius: 1px; transform: rotate(var(--rot)); animation: cbbn-confetti linear both; }
+@keyframes cbbn-confetti {
+  0% { transform: translateY(-10px) rotate(var(--rot)); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(calc(var(--rot) + 720deg)); opacity: 0; }
+}
+html.bap-reduce-motion .cbbn-kept, html.bap-reduce-motion .cbbn-sway { animation: none; }
+html.bap-reduce-motion .cbbn-confetti { display: none; }
+@media (prefers-reduced-motion: reduce) { .cbbn-kept, .cbbn-sway { animation: none; } .cbbn-confetti { display: none; } }
