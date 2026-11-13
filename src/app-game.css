@@ -7155,7 +7155,8 @@ html.app-look:not(.is-app) .spin-panel .attr-chip { box-shadow: none !important;
 .drop-sheet-grip span, .drop-bar-grab { background: #fff !important; }
 
 /* The trait cards outlined in black (owner, 11-13), phones and desktop on the website */
-html.app-look:not(.is-app) .game-layout .spin-panel .attr-chip.attr-chip.attr-chip { border: 1.5px solid #000 !important; }   /* (above the phone's and desktop's own border: 0) */
+/* (a black border alone sits on the near-black page and can't be seen: the ring is drawn inside the card's colour) */
+html.app-look:not(.is-app) .game-layout .spin-panel .attr-chip.attr-chip.attr-chip { border: 0 !important; box-shadow: inset 0 0 0 2px rgba(0,0,0,.7) !important; }
 
 /* Football's position circle (OL/DL/DB spots, owner 11-13): pushed to the card's right like basketball's; EDGE in a smaller face */
 [data-sport="nfl"] .qb-reveal-pos, .qb-reveal-pos { margin-left: auto; }
