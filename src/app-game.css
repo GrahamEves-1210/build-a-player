@@ -6963,7 +6963,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 3px 10px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn { min-height: 45px !important; height: 45px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop :is(.spin-respin-half, .spin-reset-circle) { min-height: 41px !important; height: 41px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop :is(.spin-respin-half, .spin-reset-circle) { min-height: 45px !important; height: 45px !important; }   /* as tall as SPIN (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { gap: 4px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { min-height: 34px !important; padding: 2px 8px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-hint-text { margin: 1px 0 !important; }
@@ -6974,6 +6974,9 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .drop-bar { padding: 5px 10px 7px; }
   html.app-look:not(.is-app) .drop-bar-spin { height: 41px; }
   html.app-look:not(.is-app) .drop-slots .ag-slot { padding: 2px 0 1px; }
+  /* RESPIN PLAYER's words off its left edge (the divider), and the respins-left circles a bit smaller (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-respin-player { padding-left: 8px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-badge { width: 18px !important; height: 18px !important; font-size: 11px !important; }
 }
 
 /* ═══ Home: COLLEGE FOOTBALL, football's featured mode card (AppHome CFBCard) ═══════════════
