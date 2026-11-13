@@ -6970,6 +6970,10 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .drop-sheet-grip { padding: 4px 0 6px !important; }
   /* the wheels and the player's card a hair smaller (owner, 11-13): zoom, so the space they take shrinks with them */
   html.app-look:not(.is-app) .game-layout.ag-drop :is(.reels-wrap, .qb-reveal-card) { zoom: .92; }
+  /* the top bar (the traits across and SPIN) about 10% shorter (owner, 11-13): less padding, a shorter button and cells */
+  html.app-look:not(.is-app) .drop-bar { padding: 5px 10px 7px; }
+  html.app-look:not(.is-app) .drop-bar-spin { height: 41px; }
+  html.app-look:not(.is-app) .drop-slots .ag-slot { padding: 2px 0 1px; }
 }
 
 /* ═══ Home: COLLEGE FOOTBALL, football's featured mode card (AppHome CFBCard) ═══════════════
