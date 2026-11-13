@@ -33,7 +33,7 @@
 //   point when trailing" and "NFL will allow onside kicks any time, any score"; CBS Sports, "Five new NFL rules to know
 //   heading into Week 1" (2025: the 34-yard line); NFL Football Operations, the dynamic kickoff explainer
 //   (operations.nfl.com/updates/football-ops/new-nfl-kickoff-rule) and the NFL Rulebook, Rule 6.
-//   Here: three presses (how far, the strike on the top of the ball, the leap under the hop), and then the bounce of a
+//   Here: two presses (how far, the strike on the top of the ball), and then the bounce of a
 //   football. Played perfectly an average kicker gets it back about one time in ten; played badly, one in thirty.
 import { byV, clamp, lerp, outcome, rngOf, prog, easeOut, layer, text, rr, DISPLAY, LABEL, GOOD, BAD, GOLD, themOf, nudge } from './kit.js'
 import { stands, floodlight, vignette, athleteAt, MAN_UNITS, horizonOf, skinOf, airBall, crowdPop, boardInk } from './art.js'
@@ -43,7 +43,7 @@ import { kickReach, onsideP } from '../kicks.js'
 export const how = {
   'deep-kick': 'Four kicks, each one longer. Press once to stop the aim line between the uprights: the wind pushes it to one side. Press again to stop the power past the mark. Over the top of the bar is an overswing, and it hooks.',
   'game-winner': 'One kick for the game. Press to stop the aim line between the uprights, then press to stop the power past the mark. If they call timeout to ice him, do it again.',
-  onside: 'They need the ball back. Press to set the distance: it has to go 10 yards. Press as the ring closes to drive the top of the ball into the turf. Press again as the second ring closes and your man goes up for it. It rarely works.',
+  onside: 'They need the ball back. Press to set the distance: it has to go 10 yards. Press as the ring closes to drive the top of the ball into the turf. Then it’s up to the bounce. It rarely works.',
 }
 
 const POST_HALF = 3.083                // half the width of the uprights, yards (18 feet 6 inches)
@@ -517,7 +517,8 @@ function makeOnside({ v, seed, kick = null, situation = null }) {
       if (g.phase === 'set') { if (g.t - g.at >= ON_SET) { g.phase = 'dist'; g.at = g.t; g.hud.prompt = 'PRESS TO SET THE DISTANCE' } return }
       // (a ring nobody pressed closes on its own: a late strike, a man who never went up)
       if (g.phase === 'strike' && g.ring() <= -0.4) setStrike(-0.4)
-      if (g.phase === 'roll' && g.t - g.at >= ON_ROLL) { if (g.legal) { g.phase = 'hop'; g.at = g.t; g.hud.prompt = 'PRESS AS THE RING CLOSES TO GO UP FOR IT' } else settle() }
+      // (he's the kicker: the man going up for it times his own jump. The owner, 2026-11-12)
+      if (g.phase === 'roll' && g.t - g.at >= ON_ROLL) { if (g.legal) { g.phase = 'hop'; g.at = g.t; g.leap = 0 } else settle() }
       if (g.phase === 'hop' && g.t - g.at >= ON_HOP) settle()
       if (g.phase === 'res' && g.t - g.at >= ON_RES) g.phase = 'over'
     },
@@ -526,7 +527,6 @@ function makeOnside({ v, seed, kick = null, situation = null }) {
       g.padLit = 0; g.litAt = g.t
       if (g.phase === 'dist') { g.dist = g.yards(); g.phase = 'strike'; g.at = g.t; g.hud.prompt = 'PRESS AS THE RING CLOSES'; g.fx.push('tap'); return }
       if (g.phase === 'strike') { setStrike(g.ring()); return }
-      if (g.phase === 'hop' && g.leap == null) { g.leap = (g.t - g.hopAt()) / 1000; g.hud.prompt = null; g.fx.push('h:light') }
     },
   }
   function setStrike(ring) {
@@ -540,8 +540,7 @@ function makeOnside({ v, seed, kick = null, situation = null }) {
     // second row), the strike (on the top of the ball: the hop is high and hangs), the leap (up as it comes down)
     const dq = !g.legal ? 0 : g.dist <= 13 ? 1 : clamp(1 - (g.dist - 13) / 5, 0, 1)
     const sq = clamp(1 - Math.abs(g.strike ?? -0.4) / 0.3, 0, 1)
-    const lq = g.leap == null ? 0 : clamp(1 - Math.abs(g.leap) / 0.22, 0, 1)
-    const q = g.legal ? dq * (0.45 * sq + 0.3 * lq + 0.25) : 0
+    const q = g.legal ? dq * (0.65 * sq + 0.35) : 0   // (the kick only: how far, and the strike)
     g.q = q
     // and then it's a football bouncing off the turf into ten men
     const p = g.legal ? base * (0.3 + 1.05 * q) : 0
