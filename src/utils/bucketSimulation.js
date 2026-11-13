@@ -456,7 +456,12 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   const bigApgBase = astRaw >= 8
     ? Math.max(0.5, 0.125 * astRaw * astRaw - 0.375 * astRaw)
     : (3.8 * astRaw + 4.6) / 7
-  const apg = +(useSide * Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
+  // (2026-11-13, the owner: an S-playmaking big out of college averaged 8-10 assists as a rookie. In a Career a big's
+  // passing is a share of the offense like his scoring: the whole usage, not half of it. A rookie point-center behind a
+  // better player hands out about 4-5, grows toward 6 as the team becomes his, and only a generational one with the
+  // ball for years gets near 7 (Jokic's rookie year was 2.4). Guards keep the half share: the ball is in their hands.)
+  const astSide = team.career && isBig ? use : useSide
+  const apg = +(astSide * Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
   // SPG: 0.2–2.3+ (A+ build ~2.0, S tier can exceed)
   const spg = +(Math.max(0.2, stlRaw * 0.21 + rn(-0.1, 0.14, rand))).toFixed(1)
   // BPG: guard 0–1.3, big 0.4–3.1

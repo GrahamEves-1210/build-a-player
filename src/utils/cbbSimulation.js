@@ -114,7 +114,9 @@ export function lineOf(a0, pos, mins = 32) {
   // (a 9 scorer +2.1 points), an average starter where he was (a 6 still about 12.4))
   const ppg = Math.max(2, -9 + scoring * 3.55) * mf
   const rpg = (big ? 0.6 + (reb * 0.6 + sz * 0.25 + bnc * 0.15) * 0.95 : 1.2 + (sz * 0.55 + bnc * 0.3 + spd * 0.15) * 0.5) * mf
-  const apg = (big ? 0.3 + (pm * 0.6 + iq * 0.3 + js * 0.1) * 0.3 : Math.max(0.5, -1.9 + (pas * 0.55 + hnd * 0.2 + iq * 0.25) * 0.88)) * mf
+  // (a big: the pools' own lines up to A-, then the best passers pull away: an A about 3.3, an A+ 4, an S point-center
+  // about 5 (2026-11-13, the owner: an S-playmaking big averaging 3 made no sense))
+  const apg = (big ? 0.3 + (pm * 0.6 + iq * 0.3 + js * 0.1) * 0.3 + 0.12 * Math.max(0, pm - 7) ** 2 :Math.max(0.5, -1.9 + (pas * 0.55 + hnd * 0.2 + iq * 0.25) * 0.88)) * mf
   const spg = (big ? 0.1 + (id * 0.3 + spd * 0.4 + iq * 0.3) * 0.11 : 0.2 + (pd * 0.6 + spd * 0.25 + iq * 0.15) * 0.16) * mf
   const bpg = (big ? Math.max(0.2, -0.5 + (id * 0.55 + sz * 0.25 + bnc * 0.2) * 0.27) : Math.max(0, (sz * 0.5 + bnc * 0.3 + pd * 0.2) * 0.07 - 0.1)) * mf
   const p2 = big ? 0.44 + fin * 0.014 + sz * 0.004 : 0.40 + fin * 0.012 + iq * 0.003
