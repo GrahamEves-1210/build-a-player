@@ -9663,6 +9663,8 @@ html.is-x-browser .mobile-tab-bar {
   color: #f87171;
   text-transform: uppercase;
 }
+/* (no LIVE tag with its dot on any live game card: the owner, 2026-11-13. Its space is kept so the score doesn't move) */
+.plf-live-pill { visibility: hidden !important; }
 @keyframes plf-blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.15; }
