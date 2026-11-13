@@ -7106,7 +7106,7 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
 /* Desktop (website): the trait cards in the spin panel look like the phone's (owner, 11-13): a strong wash of the grade's
    colour, white text, no bar on the left, the grade as plain text on the right */
 @media (min-width: 769px) {
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip { border: 0 !important; background: color-mix(in srgb, var(--chip-col) 52%, #0b0f0d) !important; }   /* the phone's tint (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip { border: 0 !important; background: color-mix(in srgb, var(--chip-col) 74%, #0b0f0d) !important; }   /* the phone's tint (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { color: #fff !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-chip .chip-val { background: none !important; box-shadow: none !important; color: #fff !important; font-size: 18px !important; }
 }
@@ -7115,7 +7115,7 @@ html.is-cfb:not(.ag-screen-open) .ag-dock-floor { background: var(--cfb-navy); }
    no outline, white text, the trait's name small and the grade big, centred; every card 50px */
 @media (max-width: 768px) {
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: auto !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; height: 50px !important; padding: 4px 6px !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 52%, #0b0f0d) !important; text-align: center; }   /* the tint 20% to 52% (owner, 11-13: stronger, twice) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; height: 50px !important; padding: 4px 6px !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 74%, #0b0f0d) !important; text-align: center; }   /* the tint 20% to 74% (owner, 11-13: stronger, twice; then less washed out) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-text { flex: none !important; width: 100%; text-align: center; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { font-size: 9.5px !important; color: #fff !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { color: #fff !important; font-size: 20px !important; }
