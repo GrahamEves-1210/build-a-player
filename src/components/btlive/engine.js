@@ -43,6 +43,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const NB = { k: 0, n: [0, 0, 0], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, burst: 0, lt: 0, wasLive: false }
   const DELAY = 6                                  // others are drawn this many ticks behind the latest word (200 ms)
   const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
+  const EVLOG = [], PFN = 14                       // (PFN: where a snapshot row keeps the act: proto.js snapOf)
 
   // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
   // on a narrow screen (a phone held upright) it shows about 34 of the 56 feet across and pans with the play.
@@ -213,8 +214,12 @@ export function createEngine({ setup, els, on, net = null }) {
     m.p.forEach((a, i) => { pos[i * 2] = a[0]; pos[i * 2 + 1] = a[1] })
     NB.buf.push({ k: m.k, p: pos, b: [m.b.x, m.b.y, m.b.z] })
     if (NB.buf.length > 40) NB.buf.shift()
-    const fresh = (m.e || []).filter(e => e.q > NB.lastQ)
-    if (fresh.length) NB.lastQ = fresh[fresh.length - 1].q
+    const fresh = (m.e || []).filter(e => e.sq > NB.lastQ)
+    if (fresh.length) NB.lastQ = fresh[fresh.length - 1].sq
+    if (import.meta.env.DEV) for (const e of fresh) { EVLOG.push(e); if (EVLOG.length > 400) EVLOG.shift() }
+    // a shot this device started that the referee never saw (the ball was already gone when the press got there):
+    // the ball isn't his any more, so the meter goes away
+    if (NB.local?.act === 'gather' && !(m.b.st === 'held' && m.b.holder === me) && m.p[me][PFN] !== 'gather') { NB.local = null; p.act = 'free'; p.shot = null; meter.on = false; meter.grade = null; meter.q = null }
     s.events = fresh
     onEvents()
     hud()
@@ -559,6 +564,11 @@ export function createEngine({ setup, els, on, net = null }) {
     me, online,
     // online: a message from the referee (BtLive routes them here)
     onNet(m) { if (m.t === 's') onSnap(m) },
+    // online: the line came back; take the referee's word for this player's spot (the CPU had him while he was gone)
+    resync() { NB.wasLive = false; NB.local = null; NB.burst = 0 },
+    // DEV: where each player was drawn on the last frame (feet)
+    get evlog() { return EVLOG },
+    get drawn() { return Array.from(DX, (x, i) => [x, DY[i]]) },
     get netInfo() { return { k: NB.lastK, buf: NB.buf.length, off: NB.off, rel: NB.rel, local: NB.local?.act ?? null, lt: NB.lt, n: NB.n } },
     pause(on = true) { pausedBy = on; paused = on || document.hidden; last = performance.now() },
     // DEV: the CPU plays the person's player (a level name), or hands him back (null)

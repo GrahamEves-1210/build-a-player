@@ -151,7 +151,7 @@ function Online({ cfg, q, mine, pools, size, name }) {
     const L = { eng: null, queue: [], net: null, attach(eng) { L.eng = eng; for (const m of L.queue.splice(0)) eng.onNet(m) } }
     L.net = openNet({
       server: cfg.server, room: cfg.room, hello, lag: cfg.lag,
-      onState: st => setLine(st),
+      onState: st => { setLine(st); if (st === 'open') L.eng?.resync() },
       onMsg: m => {
         if (m.t === 'pong') return L.net.pong(m)
         if (m.t === 'seat') { setSeat(old => (old && old.seed === m.seed && old.i === m.i ? old : m)); return }
