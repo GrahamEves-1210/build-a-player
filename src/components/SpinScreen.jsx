@@ -363,6 +363,9 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
     height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
     attrs: selectedQB.attrs ?? null,
     subpos: selectedQB.subpos ?? null,
+    // (where the face sits in his photo, and the photo's own nudge on the basketball figure: the player rows carry them,
+    // and only Sandbox's add used to pass the centre on, so a spun card's face was never placed. The owner, 2026-11-12)
+    ...(selectedQB.faceCenter ? { faceCenter: selectedQB.faceCenter } : {}), ...(selectedQB.faceAdjust ? { faceAdjust: selectedQB.faceAdjust } : {}),
     ...(selectedQB.role ? { role: selectedQB.role } : {}),   // (soccer: the player's real position)
     ...(selectedQB.bats ? { bats: selectedQB.bats } : {}), ...(selectedQB.throws ? { throws: selectedQB.throws } : {}),   // (baseball: his hands, for the report card's B/T)
     ...(spin ? { spin } : {}),

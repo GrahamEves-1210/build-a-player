@@ -10,6 +10,7 @@ import Disclaimer from '../Disclaimer'
 import { GUARD_TYPES, GUARD_CATEGORIES } from '../../data/nba-guards'
 import { BIG_TYPES, BIG_CATEGORIES } from '../../data/nba-bigs'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
+import { withNbaFace } from './nbaFaces'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../../utils/bucketSimulation'
 import { HEADSHOT_BASE } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
@@ -353,7 +354,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
     }
   }), [teamsBy, pos])
   const poolCur = useMemo(() => rowsOf(data?.pools[pos]), [rowsOf, data, pos])
-  const poolAT = useMemo(() => rowsOf(legends?.[pos]), [rowsOf, legends, pos])
+  const poolAT = useMemo(() => rowsOf(legends?.[pos]).map(withNbaFace), [rowsOf, legends, pos])   // (a legend in his NBA photo: that photo's face settings)
   const pool = era === 'alltime' ? poolAT : poolCur
   // Sandbox's custom ratings, laid over the pool (its own store: RATINGS_KEY)
   const displayPool = useMemo(() => {
@@ -434,6 +435,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
     type, val: overrides?.[type] ?? p.attrs?.[type] ?? 5, qb: p.short || p.name, qbFull: p.name,
     teamColor: p.color, teamColor2: p.color2, skinColor: p.skin, number: p.number, team: p.team, captain: !!p.captain, sandbox: true,
     photo: p.headshot ? `${HEADSHOT_BASE}/${p.headshot}.webp` : genericHead(p.skin), height: p.height, weight: p.weight,
+    ...(p.faceCenter ? { faceCenter: p.faceCenter } : {}), ...(p.faceAdjust ? { faceAdjust: p.faceAdjust } : {}),
   })
 
   const complete = P.types.every(t => build[t])
