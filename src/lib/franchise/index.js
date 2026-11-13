@@ -58,7 +58,7 @@ export { draftBoard, draftView, draftPick, simToMyPick, autoDraft, scoutProspect
 export { autopilot } from './auto'
 
 // ── Constants ────────────────────────────────────────────────────────────────
-export { BUILD_CAPS, DEFAULT_SETTINGS, SAVE_VERSION, TRADE_DEADLINE, DEV, DRIVES, DRIVE_TEXT, SLOTS, STAGES, PLAYOFF_ROUNDS, gradeOf, ovrGrade } from './consts'
+export { BUILD_CAPS, DEFAULT_SETTINGS, SAVE_VERSION, STAFF_BUDGET, XP_PER_POINT, TRADE_DEADLINE, DEV, DRIVES, DRIVE_TEXT, SLOTS, STAGES, PLAYOFF_ROUNDS, gradeOf, ovrGrade } from './consts'
 export { COACH_TYPES, COACH_LABEL, COACH_ATTR, ROLE_NAME, coachDataIsReal, useCoachData, coachOvr } from './coachData'
 export { moneyText } from './money'
 export { teamRef, photoUrl } from './rows'

@@ -39,12 +39,12 @@ export const tdsOf = s => n(s.rtd) + n(s.ctd) + n(s.krtd) + n(s.dtd)
 export function statLine(pos, s) {
   if (!s || !n(s.g)) return ''
   if (pos === 'qb') return n(s.pa) ? `${num(s.py)} yds, ${n(s.ptd)} TD, ${n(s.pi)} INT` : ''
-  if (pos === 'rb') return n(s.ra) || n(s.rc) ? `${num(s.ry)} yds, ${n(s.rtd)} TD${n(s.rc) ? `, ${n(s.rc)} rec` : ''}` : ''
+  if (pos === 'rb') return n(s.ra) || n(s.rc) ? `${num(s.ry)} ${n(s.ry) === 1 ? 'yd' : 'yds'}, ${n(s.rtd)} TD${n(s.rc) ? `, ${n(s.rc)} rec` : ''}` : ''
   if (pos === 'wr' || pos === 'te') return n(s.tg) ? `${n(s.rc)} rec, ${num(s.cy)} yds, ${n(s.ctd)} TD` : ''
-  if (pos === 'ol') return `${n(s.gs)} starts, ${n(s.sal)} sacks allowed`
+  if (pos === 'ol') return `${n(s.gs)} start${n(s.gs) === 1 ? '' : 's'}, ${n(s.sal)} sack${n(s.sal) === 1 ? '' : 's'} allowed`
   if (pos === 'k') return n(s.fga) || n(s.xpa) ? `${n(s.fgm)}/${n(s.fga)} FG, long ${n(s.fgl)}` : ''
   const parts = [`${n(s.tk)} tkl`]
-  if (pos === 'db') { parts.push(`${n(s.di)} INT`, `${n(s.pd)} PD`) } else { parts.push(`${n(s.sa)} sacks`); if (n(s.di)) parts.push(`${n(s.di)} INT`); else parts.push(`${n(s.tfl)} TFL`) }
+  if (pos === 'db') { parts.push(`${n(s.di)} INT`, `${n(s.pd)} PD`) } else { parts.push(`${n(s.sa)} sack${n(s.sa) === 1 ? '' : 's'}`); if (n(s.di)) parts.push(`${n(s.di)} INT`); else parts.push(`${n(s.tfl)} TFL`) }
   return parts.join(', ')
 }
 // the stat block on a player card (API.md StatLine): only what his position has

@@ -14,11 +14,14 @@ const curveOf = slot => CURVE[slot] ?? [66.5, 97, 1.22]
 // the years a position is paid for: full value to `from`, then it falls to `floor` of it by `to`
 const AGE = { QB: [34, 40, 0.45], RB: [27, 31, 0.3], K: [36, 42, 0.5], LT: [31, 36, 0.4], LG: [31, 36, 0.4], C: [31, 36, 0.4], RG: [31, 36, 0.4], RT: [31, 36, 0.4] }
 const ageOf = slot => AGE[slot] ?? [29, 34, 0.35]
-export function ageFactor(slot, age) {
+// (a man who is still one of the best at his spot is paid like it whatever his age: the floor rises with his OVR
+// from 84, to 85% of a prime salary at 92. What age costs him is the length of the deal.)
+export function ageFactor(slot, age, ovr = 0) {
   const [from, to, floor] = ageOf(slot)
   if (age <= from) return 1
-  if (age >= to) return floor
-  return 1 - (1 - floor) * (age - from) / (to - from)
+  const lo = ovr > 84 ? floor + (0.85 - floor) * clamp((ovr - 84) / 8, 0, 1) : floor
+  if (age >= to) return lo
+  return Math.max(lo, 1 - (1 - floor) * (age - from) / (to - from))
 }
 // What a player would get a year on the open market at this cap
 export function marketValue(p, cap = CAP_2026) {
@@ -27,14 +30,15 @@ export function marketValue(p, cap = CAP_2026) {
   const top = (TOP_SHARE[slot] ?? 0.06) * cap
   const floor = p.exp >= 3 ? VET_MIN : MIN_SALARY
   const dev = 1 + (p.devKnown ? (p.dev ?? 0) * 0.02 : 0) + (p.age <= 25 ? 0.05 : 0)
-  return r2(Math.max(floor, top * Math.pow(x, pow) * ageFactor(slot, p.age) * dev))
+  return r2(Math.max(floor, top * Math.pow(x, pow) * ageFactor(slot, p.age, p.ovr) * dev))
 }
 // How long a deal a man of this age signs
 export function marketYears(p) {
   const slot = slotOf(p), [from] = ageOf(slot)
   const left = from + 2 - p.age
   if (p.ovr < 74) return left > 3 ? 2 : 1
-  return clamp(left, 1, p.ovr >= 86 ? 5 : 4)
+  // (a good starter still in his prime gets a year more than his age alone says, and a star just past it still gets two)
+  return clamp(Math.max(left + (p.ovr >= 80 && left >= 2 ? 1 : 0), p.ovr >= 84 && p.age <= from + 3 ? 2 : 1), 1, p.ovr >= 86 ? 5 : 4)
 }
 // the share of a new deal that is guaranteed: stars get more
 export const marketGuar = p => clamp(0.25 + (p.ovr - 75) * 0.022, 0.1, 0.72)
@@ -86,4 +90,4 @@ export function burnGuarantee(con) {
   if (!con) return
   con.guar = r2(Math.max(0, con.guar - con.sal * 0.75))
 }
-export const moneyText = m => (m >= 100 ? `$${Math.round(m)}M` : m >= 10 ? `$${(Math.round(m * 10) / 10).toFixed(1)}M` : m >= 1 ? `$${m.toFixed(2)}M` : `$${Math.round(m * 1000)}K`)
+export const moneyText = m => (!(Math.abs(m) >= 0.0005) ? '$0' : m < 0 ? `-${moneyText(-m)}` : m >= 100 ? `$${Math.round(m)}M` : m >= 10 ? `$${(Math.round(m * 10) / 10).toFixed(1)}M` : m >= 1 ? `$${m.toFixed(2)}M` : `$${Math.round(m * 1000)}K`)

@@ -2,6 +2,7 @@
 import { NFL_TEAMS } from '../../data/nfl-teams'
 import { SLOTS, GROUPS, MIN_AT, groupOf, slotOf, clamp, r1 } from './consts'
 import { lineupOf, olFit, tidyDepth, autoDepth } from './depth'
+import { freeNumber } from './players'
 
 export const TEAM_INFO = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
 export const TEAM_SHORTS = NFL_TEAMS.map(t => t.short)
@@ -28,7 +29,37 @@ export function joinTeam(F, p, short) {
   const t = F.teams[short]
   if (!t.roster.includes(p.id)) t.roster.push(p.id)
   F.fa = F.fa.filter(id => id !== p.id)
+  oneNumber(F, t, p)
   depthAfterMove(F, t)
+}
+// Nobody shares a number on a team. When a new man's number is taken, the one who gives way is the generated
+// player (a real player keeps the number he is known by; a build's number is the user's), else the newcomer.
+function oneNumber(F, t, p) {
+  const others = t.roster.map(id => F.players[id]).filter(x => x && x.id !== p.id)
+  const taken = new Set(others.map(x => x.num).filter(n => n != null))
+  if (p.num == null) { if (!p.real) p.num = freeNumber(p, taken); return }
+  if (!taken.has(p.num)) return
+  const keeps = x => (x.built ? 3 : x.real ? 2 : x.draft && !x.gen ? 1 : 0)
+  const holder = others.find(x => x.num === p.num)
+  const out = keeps(holder) < keeps(p) ? holder : p
+  if (out === holder) taken.add(p.num)
+  out.num = freeNumber(out, taken)
+}
+// the same rule over a whole league (a new league, and a save from before the rule)
+export function fixNumbers(F) {
+  let n = 0
+  for (const s in F.teams) {
+    const P = F.teams[s].roster.map(id => F.players[id]).filter(Boolean)
+    const keeps = x => (x.built ? 3 : x.real ? 2 : x.draft && !x.gen ? 1 : 0)
+    const seen = new Map()
+    for (const p of [...P].sort((a, b) => keeps(b) - keeps(a) || a.id - b.id)) {
+      if (p.num == null) { if (p.real) continue; p.num = -1 }
+      if (!seen.has(p.num) && p.num >= 0) { seen.set(p.num, p); continue }
+      p.num = freeNumber(p, new Set(P.filter(x => x !== p).map(x => x.num).filter(v => v != null && v >= 0)))
+      seen.set(p.num, p); n++
+    }
+  }
+  return n
 }
 export function leaveTeam(F, p) {
   if (!p.team) return

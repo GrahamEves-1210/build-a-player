@@ -81,6 +81,9 @@ export const STAGES = [
 // ── Development ──────────────────────────────────────────────────────────────
 export const DEV = ['NORMAL', 'STAR', 'SUPERSTAR', 'ELITE']
 export const DEV_RATE = [0.8, 1.3, 1.95, 2.8]     // how fast each tier earns XP
+export const XP_PER_POINT = 600                   // XP that makes one upgrade point
+// what ownership will spend a year on the head coach and the two coordinators ($M), unless a team has its own figure
+export const STAFF_BUDGET = 32
 export const DRIVES = ['MONEY', 'RING', 'ROLE', 'LOYAL', 'MENTOR', 'COMPETITOR']
 export const DRIVE_TEXT = {
   MONEY: 'Wants to be paid what he is worth',

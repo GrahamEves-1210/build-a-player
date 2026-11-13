@@ -1,6 +1,6 @@
 // FRANCHISE: the row shapes every selector hands the screens (API.md "Shapes used everywhere").
 import { readableTextColor, nflHeadshot } from '../../utils/simulation'
-import { DEV, SLOTS, OL_SPOTS, slotOf, ovrGrade, gradeOf, clamp, r2 } from './consts'
+import { DEV, SLOTS, OL_SPOTS, XP_PER_POINT, slotOf, ovrGrade, gradeOf, clamp, r2 } from './consts'
 import { TEAM_INFO, city, nick } from './core'
 import { archOf, lastName, initials } from './players'
 import { COACH_TYPES, COACH_LABEL, COACH_SHORT, ROLE_NAME, coachOvr as coachOvrOf } from './coachData'
@@ -54,7 +54,8 @@ export function playerRow(F, p, dm = null) {
     inj: injView(p), wear: Math.round(p.wear ?? 0),
     starter: !!d?.[1] && !(p.inj && p.inj.wk > 0), depth: d?.[0] ?? null, at: d?.[2] ?? slotOf(p),
     line: statLine(p.pos, p.s),
-    xp: Math.round(p.xp ?? 0), pts: p.pts ?? 0,
+    xp: Math.round(p.xp ?? 0), xpNext: XP_PER_POINT, pts: p.pts ?? 0,
+    brk: p.brk ?? null, tierUp: p.brk != null && p.brkW != null && F.last?.year === p.brk && F.last?.week === p.brkW,
     flags: { hold: !!p.hold, wantsOut: !!p.want, block: !!p.block, tag: !!p.con?.tag, questionable: !!(p.inj && p.inj.q) },
   }
 }

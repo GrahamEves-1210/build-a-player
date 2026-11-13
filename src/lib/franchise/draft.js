@@ -25,7 +25,7 @@ import { rookieDeal, capSpace } from './money'
 import { drivesFor } from './league'
 import { teamRef } from './rows'
 import { lineupOf } from './depth'
-import { pickKey, pickPoints, pickValue, judge, execute } from './trades'
+import { pickKey, pickPoints, pickValue, judge, execute, offerText, pickOverall, pickWhen, pickText } from './trades'
 
 const D12 = '0123456789ab'
 const pack = (pos, a) => TYPES_OF[pos].map(t => D12[clamp(Math.round(a[t] ?? 0), 0, 11)]).join('')
@@ -33,6 +33,7 @@ export const unpack = (pos, s) => Object.fromEntries(TYPES_OF[pos].map((t, i) =>
 
 // how many of each a class has
 const CLASS = [['qb', null, 16], ['rb', null, 26], ['wr', null, 38], ['te', null, 16], ['ol', 'LT', 10], ['ol', 'RT', 9], ['ol', 'LG', 9], ['ol', 'RG', 8], ['ol', 'C', 9], ['dl', 'edge', 27], ['dl', 'dt', 24], ['lb', null, 26], ['db', 'cb', 30], ['db', 's', 22], ['k', null, 4]]
+const CLASS_SIZE = CLASS.reduce((s, c) => s + c[2], 0)
 // the rookie OVR a prospect of a given talent rank comes in at (rank 0 is the best in the class)
 function ovrForRank(R, i) {
   const base = i < 5 ? 86 - i * 0.7 : i < 32 ? 82.5 - (i - 5) * 0.19 : i < 64 ? 77 - (i - 32) * 0.09 : i < 100 ? 74 - (i - 64) * 0.065 : i < 160 ? 71.6 - (i - 100) * 0.055 : i < 224 ? 68.2 - (i - 160) * 0.04 : 65.6 - (i - 224) * 0.06
@@ -52,6 +53,17 @@ function fromCollege(R, row, pos) {
   for (const t of TYPES_OF[pos]) { const v = row.attrs?.[t] ?? 5; a[t] = clamp(Math.round(t === 'size' ? v * 0.85 : v * 0.7 + 0.2 + R.n() * 0.5), 0, 11) }
   return a
 }
+// the same man at a given OVR: single grades moved until his overall lands on it
+function toOvr(R, pos, a, target) {
+  const types = TYPES_OF[pos].filter(t => t !== 'size')
+  for (let k = 0; k < 80; k++) {
+    const o = ovrOf(pos, a)
+    if (o === target) break
+    const t = R.pick(types)
+    if (o < target && a[t] < 11) a[t]++; else if (o > target && a[t] > 0) a[t]--
+  }
+  return a
+}
 const ELIG = new Set(['SR', 'RS-SR', 'JR', 'RS-JR', 'RS-SO'])
 const SENIOR = new Set(['SR', 'RS-SR'])
 
@@ -63,9 +75,12 @@ export function newDraftClass(F) {
   const first = F.year === FIRST_YEAR
   if (first) {
     // the real ones: seniors, and the underclassmen good enough to come out
+    // (college grades are against college players: the best quarterback in the country is not sixteen first-round
+    // picks. Each position's real players are laid over the class's talent order the way the generated men are,
+    // best first, and each keeps the shape of his game at the grade that order gives him)
     const take = (rows, pos, n) => rows.filter(r => r.attrs && ELIG.has(r.year) && !realPool().has(r.name) && !taken.has(r.name) && (SENIOR.has(r.year) || (r.ovr ?? 0) >= 86))
-      .sort((a, b) => (b.ovr ?? 0) - (a.ovr ?? 0)).slice(0, n).forEach(r => {
-        const a = fromCollege(R, r, pos)
+      .sort((a, b) => (b.ovr ?? 0) - (a.ovr ?? 0)).slice(0, n).forEach((r, k, all) => {
+        const a = toOvr(R, pos, fromCollege(R, r, pos), ovrForRank(R, Math.floor((k + R.u()) * CLASS_SIZE / all.length)))
         taken.add(r.name)
         put({ name: r.name, pos, sub: null, college: CFB_TEAM_BY_SHORT[r.team]?.school ?? r.teamName ?? null, age: SENIOR.has(r.year) ? (r.year === 'RS-SR' ? 23 : 22) : 21, ht: r.height ?? null, wt: r.weight ?? null, a: pack(pos, a), ovr: ovrOf(pos, a), dev: 0, real: 1, photo: r.headshot ?? null, skin: r.skin ?? null, num: r.number ?? null })
       })
@@ -205,13 +220,17 @@ export function startDraft(F) {
 function cpuChoice(F, short, R) {
   const needs = Object.fromEntries(needsOf(F, short).map(n => [n.group, n.need])), at = F.draft.at
   const seedN = hashStr(`${F.seed}-${F.draft.year}`), teamN = TEAM_SHORTS.indexOf(short) + 1
+  // the quarterback room: a team with no answer wants one; a team whose starter is ordinary or old takes one who
+  // grades with him; a team with a good one, or a young one it has just invested in, passes
+  const qbs = F.teams[short].roster.map(id => F.players[id]).filter(p => p && p.pos === 'qb').sort((a, b) => b.ovr - a.ovr)
+  const qb1 = qbs[0] ?? null, kid = qbs.some(p => p.age <= 24 && (p.ovr >= 76 || (p.rk && p.draft && p.draft[1] <= 2)))
   let best = null, bs = -1e9
   for (const p of F.draft.prospects) {
     if (p.gone) continue
     const g = p.pos === 'ol' ? 'OL' : slotOf(p)
     const noise = (mix(seedN, teamN * 7919 + p.id) * 2 - 1) * 3.2
     let s = p.ovr * 0.62 + p.cons * 0.38 + noise + (needs[g] ?? 0) * 4.5 + p.dev * 0.8
-    if (p.pos === 'qb') s += (needs.QB ?? 0) >= 0.5 ? 3 : -3
+    if (p.pos === 'qb') s += kid ? -3 : (needs.QB ?? 0) >= 0.5 ? 3 : !qb1 || p.cons >= qb1.ovr - 1 || (qb1.age >= 35 && p.cons >= 78) ? 0 : -3
     if (p.pos === 'k') s -= at < 150 ? 12 : 2
     if (p.pos === 'rb' && at < 20) s -= 1.5
     if (s > bs) { bs = s; best = p }
@@ -233,13 +252,40 @@ function make(F, pr, short, n) {
   const t = F.teams[short]
   t.picks = t.picks.filter(x => !(x.y === D.year && x.r === spot.r && x.o === spot.o))
   pr.gone = 1
-  D.picks.push({ n: n + 1, r: spot.r, t: short, pid: p.id, name: p.name, pos: slotOf(p), college: p.college })
+  D.picks.push({ n: n + 1, r: spot.r, t: short, pid: p.id, name: p.name, pos: slotOf(p), college: p.college, rk: boardRank(F, pr) })
   addTx(F, 'draft', short, `${teamName(short)} drafted ${slotOf(p)} ${p.name} (${p.college ?? 'college'}) in Round ${spot.r}, pick ${n + 1} overall.`, p.id)
   if (n < 10 || short === F.team) addNews(F, 'draft', n === 0 ? `${p.name} goes first overall to the ${nick(short)}` : `${nick(short)} take ${p.name} at No. ${n + 1}`, { team: short, pid: p.id })
   D.at = n + 1
   if (D.at >= D.order.length) { D.done = true; F.offers = [] }
   return p
 }
+// where the league's consensus had him (1 = the top of the whole class, taken or not)
+function boardRank(F, pr) {
+  const D = F.draft, k = p => p.cons + (p.pos === 'k' ? -12 : 0), v = k(pr)
+  let n = 1
+  for (const p of D.prospects) if (p !== pr && (k(p) > v || (k(p) === v && p.id < pr.id))) n++
+  return n
+}
+// a pick against the board: how far before or after his rank he went, in grades (what a draft-night grade is)
+const GRADE_PTS = { 'A+': 4.3, A: 4, 'A-': 3.7, 'B+': 3.3, B: 3, 'B-': 2.7, 'C+': 2.3, C: 2, 'C-': 1.7, D: 1 }
+const pickSlide = (overall, rank) => (overall - rank) / Math.max(8, overall * 0.3)
+export function pickGrade(overall, rank) {
+  if (!rank) return null
+  const d = pickSlide(overall, rank)
+  return d >= 1.2 ? 'A+' : d >= 0.5 ? 'A' : d >= 0.15 ? 'A-' : d >= -0.15 ? 'B+' : d >= -0.4 ? 'B' : d >= -0.7 ? 'B-' : d >= -1.1 ? 'C+' : d >= -1.6 ? 'C' : d >= -2.4 ? 'C-' : 'D'
+}
+function classGrade(rows) {
+  const g = rows.filter(x => x.grade)
+  if (!g.length) return null
+  // (the early picks count for most of a class)
+  let w = 0, sum = 0
+  for (const x of g) { const k = pickPoints(x.overall) + 40; w += k; sum += GRADE_PTS[x.grade] * k }
+  const avg = sum / w, grade = Object.entries(GRADE_PTS).sort((a, b) => Math.abs(a[1] - avg) - Math.abs(b[1] - avg))[0][0]
+  const steal = [...g].sort((a, b) => pickSlide(b.overall, b.rank) - pickSlide(a.overall, a.rank))[0]
+  const text = avg >= 3.7 ? 'The league thinks this class was a haul.' : avg >= 3.2 ? 'A solid class by the board.' : avg >= 2.6 ? 'About what the board said, with a reach or two.' : 'The league thinks this class reached.'
+  return { grade, text, best: steal && steal.overall - steal.rank >= 6 ? { pid: steal.pid, name: steal.name, text: `${steal.name} was No. ${steal.rank} on the board and went at No. ${steal.overall}.` } : null }
+}
+const pickRows = (F, short, keys) => (keys ?? []).map(k => F.teams[short]?.picks.find(pk => pickKey(pk) === k)).filter(Boolean).map(pk => ({ key: pickKey(pk), year: pk.y, round: pk.r, orig: pk.o, overall: pickOverall(F, pk), when: pickWhen(F, pk), text: pickText(F, pk, short) }))
 const onClock = F => (F.draft?.started && !F.draft.done ? F.draft.order[F.draft.at] : null)
 // a rebuilding team near the top trades down now and then: a team behind it that is ready to win pays to move up
 function cpuTradeDown(F) {
@@ -348,13 +394,16 @@ export function draftView(F) {
   const D = F.draft
   if (!D) return null
   const spot = onClock(F), board = draftBoard(F)
+  const cls = D.picks.filter(x => x.t === F.team).map(x => { const pl = F.players[x.pid]; return { overall: x.n, round: x.r, pick: x.n - (x.r - 1) * 32, name: x.name, pos: x.pos, college: x.college, pid: x.pid, rank: x.rk ?? null, grade: pickGrade(x.n, x.rk), ovr: pl?.ovr ?? null, ovrGrade: pl ? ovrGrade(pl.ovr) : null,
+    text: x.rk ? (x.rk < x.n - 5 ? `No. ${x.rk} on the board, still there at No. ${x.n}` : x.rk > x.n + 5 ? `No. ${x.rk} on the board, taken at No. ${x.n}` : `Taken about where the board had him (No. ${x.rk})`) : '' } })
   const order = (D.order ?? []).map((s, i) => { const done = D.picks[i]; return { overall: i + 1, round: s.r, team: teamRef(s.t), done: done ? { name: done.name, pos: done.pos, college: done.college, pid: done.pid } : null, mine: s.t === F.team } })
   return {
     started: !!D.started, done: !!D.done, year: D.year, round: spot?.r ?? 7, pick: spot ? D.at + 1 - (spot.r - 1) * 32 : 0, overall: D.at + 1, onClock: spot ? teamRef(spot.t) : null, mine: !!spot && spot.t === F.team,
     myPicks: (D.order ?? []).map((s, i) => ({ round: s.r, overall: i + 1, used: i < D.at, t: s.t })).filter(x => x.t === F.team).map(({ t, ...x }) => x),
-    order, ticker: [...D.picks].reverse().slice(0, 40).map(x => ({ overall: x.n, round: x.r, team: teamRef(x.t), name: x.name, pos: x.pos, college: x.college, pid: x.pid, mine: x.t === F.team })),
-    offers: (F.offers ?? []).filter(o => o.draft), board, staffPick: spot && spot.t === F.team ? staffChoice(F)?.id ?? null : null,
-    class: D.picks.filter(x => x.t === F.team).map(x => ({ overall: x.n, round: x.r, name: x.name, pos: x.pos, college: x.college, pid: x.pid })),
+    order, ticker: [...D.picks].reverse().slice(0, 40).map(x => ({ overall: x.n, round: x.r, team: teamRef(x.t), name: x.name, pos: x.pos, college: x.college, pid: x.pid, mine: x.t === F.team, rank: x.rk ?? null, grade: pickGrade(x.n, x.rk) })),
+    offers: (F.offers ?? []).filter(o => o.draft).map(o => ({ ...o, text: offerText(F, o), fromTeam: teamRef(o.from), picks: { give: pickRows(F, o.from, o.give?.picks), get: pickRows(F, o.to, o.get?.picks) } })),
+    board, staffPick: spot && spot.t === F.team ? staffChoice(F)?.id ?? null : null,
+    class: cls, classGrade: classGrade(cls),
   }
 }
 

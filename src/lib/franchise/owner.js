@@ -27,14 +27,14 @@ export function goalsFor(F, short) {
   if (dir === 'rebuild') {
     return [
       { id: 'dev', kind: 'dev', n: 2, text: 'Develop the young core: two players 24 or younger finish the year an 80 overall or better', weight: 3 },
-      { id: 'more', kind: 'more', n: clamp(last, 2, 9), text: `Win more than ${clamp(last, 2, 9)} games: a step forward from last season`, weight: 2 },
+      last > 9 ? { id: 'more', kind: 'more', n: 6, text: 'Stay competitive while the roster turns over: win more than 6 games', weight: 2 } : { id: 'more', kind: 'more', n: clamp(last, 2, 9), text: `Win more than ${clamp(last, 2, 9)} games${last >= 2 ? ': a step forward from last season' : ''}`, weight: 2 },
       { id: 'rook', kind: 'rook', text: 'Hit on the draft: a rookie starts eight games', weight: 2 },
     ]
   }
   return [
     { id: 'wins', kind: 'wins', n: 9, text: 'Finish with a winning record', weight: 3 },
     { id: 'hunt', kind: 'wins', n: 8, text: 'Be in the playoff race into December (8 wins)', weight: 2 },
-    { id: 'more', kind: 'more', n: clamp(last, 4, 10), text: `Take a step forward: win more than ${clamp(last, 4, 10)} games`, weight: 1 },
+    { id: 'more', kind: 'more', n: clamp(last, 4, 10), text: last > 10 ? 'Stay near the top: win more than 10 games' : last < 4 ? 'Win more than 4 games' : `Take a step forward: win more than ${last} games`, weight: 1 },
   ]
 }
 export function startOwner(F) {
@@ -74,7 +74,7 @@ export function ownerVerdict(F) {
   if (!F.owner) startOwner(F)
   const goals = F.owner.goals.map(g => ({ ...g, ...goalState(F, g, true) }))
   let delta = 0, pts = 1
-  for (const g of goals) { delta += g.done ? g.weight * 5 : -g.weight * 5.5; if (g.done) pts += g.weight >= 3 ? 2 : 1 }
+  for (const g of goals) { delta += g.done ? g.weight * 5 : -g.weight * 4.5; if (g.done) pts += g.weight >= 3 ? 2 : 1 }
   const champ = F.playoffs?.champion === F.team
   if (champ) { delta += 30; pts += 3 } else if (F.playoffs?.out?.[F.team] === 'sb') { delta += 12; pts += 1 }
   const r = F.teams[F.team].rec ?? { w: 0, l: 0, t: 0 }
@@ -82,6 +82,8 @@ export function ownerVerdict(F) {
   if (dir === 'rebuild') { if (delta < -8) delta = -8 }                     // losing is forgiven in a rebuild; standing still is not
   else if (pct(r.w, r.l, r.t) < 0.25) delta -= 6
   if (dir === 'contend' && !(F.playoffs?.seeds.AFC.includes(F.team) || F.playoffs?.seeds.NFC.includes(F.team))) delta -= 5
+  // (one bad year is a warning, not the end: no single season costs more than 24)
+  if (delta < -24) delta = -24
   const before = F.gm.security
   F.gm.security = clamp(Math.round(before + delta), 0, 100)
   const met = goals.filter(g => g.done).length
@@ -91,7 +93,9 @@ export function ownerVerdict(F) {
     : dir === 'contend' && delta < 0 ? `This roster was built to win now, and it did not. Ownership's patience is short.`
     : met === 0 ? `None of the season's goals were met. Ownership expects a response.`
     : delta >= 0 ? `A season that moved the franchise forward.` : `Ownership wanted more from this season.`
-  const fired = !!F.settings.firing && F.gm.security < SECURITY_FLOOR && !champ
+  // (an owner gives the man he hired two seasons before he moves on from him)
+  const here = (F.gm.seasons ?? []).filter(s => s.team === F.team && s.year >= (F.gm.since ?? 0)).length
+  const fired = !!F.settings.firing && F.gm.security < SECURITY_FLOOR && !champ && here >= 2
   F.owner.verdict = { text: verdict, goals, security: F.gm.security, delta: Math.round(F.gm.security - before), fired, pts }
   F.gm.pts = (F.gm.pts ?? 0) + pts
   if (fired) addNews(F, 'owner', `${teamName(F.team)} part ways with general manager ${F.gm.name}`, { team: F.team })

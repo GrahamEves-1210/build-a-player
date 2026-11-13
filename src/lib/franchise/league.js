@@ -11,7 +11,7 @@ import { realPool, realPlayer, genPlayer, builtPlayer } from './players'
 import { capFor, marketValue, marketYears, newContract, rookieDeal, payroll } from './money'
 import { makeSchedule, DIVISIONS } from './schedule'
 import { autoDepth } from './depth'
-import { addPlayer, teamRating, TEAM_SHORTS } from './core'
+import { addPlayer, teamRating, TEAM_SHORTS, fixNumbers } from './core'
 import { coachRows, COACH_TYPES, coachOvr } from './coachData'
 
 // ── Players ──────────────────────────────────────────────────────────────────
@@ -220,6 +220,7 @@ export function buildLeague({ team, builds = [], gmName, coach = null, settings 
   fitCap(F)
   stockFreeAgents(F, rngOf(`${F.seed}-street`), taken)
   buildCoaches(F, rngOf(`${F.seed}-coaches`), user, coach)
+  fixNumbers(F); F.numsOk = 1
   for (const s of TEAM_SHORTS) autoDepth(F, F.teams[s])
   // last season's "finish" for year one's schedule: each division by the strength of the roster it starts with
   const order = {}

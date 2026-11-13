@@ -140,6 +140,18 @@ const BODY = {
   edge: [74, 79, 240, 275], dt: [73, 78, 285, 335], lb: [72, 76, 225, 250], cb: [69, 74, 180, 205], s: [70, 75, 195, 215], k: [69, 75, 180, 215],
 }
 const NUMS = { qb: [1, 19], rb: [20, 39], wr: [10, 19], te: [80, 89], ol: [60, 79], edge: [90, 99], dt: [90, 99], lb: [40, 59], cb: [20, 39], s: [20, 39], k: [1, 19] }
+// where else a position may go when its own numbers are taken (the league's numbering rules)
+const NUMS_ALT = { qb: [], rb: [[40, 49], [1, 19]], wr: [[80, 89], [1, 9]], te: [[40, 49]], ol: [[50, 59]], edge: [[50, 59]], dt: [[70, 79], [50, 59]], lb: [[90, 99], [1, 19]], cb: [[40, 49], [1, 19]], s: [[40, 49], [1, 19]], k: [] }
+const numKey = p => (p.pos === 'dl' ? (p.sub === 'dt' ? 'dt' : 'edge') : p.pos === 'db' ? (p.sub === 's' ? 's' : 'cb') : p.pos)
+// A number nobody in `taken` (a Set) wears, legal for his position. Always the same answer for the same man.
+export function freeNumber(p, taken) {
+  const key = numKey(p), ranges = [NUMS[key] ?? [1, 99], ...(NUMS_ALT[key] ?? []), [1, 99]]
+  for (const [lo, hi] of ranges) {
+    const n = hi - lo + 1, start = ((p.id ?? 0) * 7919 + (p.age ?? 0) * 31) % n
+    for (let k = 0; k < n; k++) { const v = lo + (start + k) % n; if (!taken.has(v)) return v }
+  }
+  return p.num ?? 0
+}
 // A set of ratings whose average is about `avg` (0-11): every trait near it, one or two calling cards above,
 // a hole or two below.
 export function genAttrs(R, pos, avg, spread = 1.5) {

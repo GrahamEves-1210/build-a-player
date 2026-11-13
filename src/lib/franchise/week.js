@@ -1,7 +1,7 @@
 // FRANCHISE: a week of games. Every game of the week is played (the CPU's straight through, the user's live or
 // simmed), then booked: stat lines into every player's season and career, the score into the schedule, team
 // totals, workload, injuries, XP, the players of the week.
-import { REG_WEEKS, DEV_RATE, clamp, r1, slotOf } from './consts'
+import { REG_WEEKS, DEV_RATE, XP_PER_POINT, clamp, r1, slotOf } from './consts'
 import { rngOf, roll } from './rng'
 import { TEAM_SHORTS, addNews, addTx, nick, teamName } from './core'
 import { buildProfile } from './profile'
@@ -87,7 +87,7 @@ export function lineText(pos, s) {
 }
 
 // ── Injuries ─────────────────────────────────────────────────────────────────
-const INJ_RATE = { qb: 0.019, rb: 0.03, wr: 0.022, te: 0.021, ol: 0.017, dl: 0.02, lb: 0.022, db: 0.02, k: 0.0015 }
+const INJ_RATE = { qb: 0.037, rb: 0.03, wr: 0.022, te: 0.021, ol: 0.017, dl: 0.02, lb: 0.022, db: 0.02, k: 0.0015 }
 const INJ_KINDS = [
   [1, ['Bruised shoulder', 'Sprained ankle', 'Tight hamstring', 'Stinger', 'Hip pointer', 'Jammed thumb']],
   [2, ['Sprained ankle', 'Hamstring strain', 'Concussion', 'Calf strain', 'Groin strain', 'Bruised ribs']],
@@ -118,7 +118,7 @@ export function xpAge(p) {
   const a = p.age - (XP_AGE[p.pos] ?? 0)
   return a <= 22 ? 1.2 : a === 23 ? 1.1 : a === 24 ? 1.0 : a === 25 ? 0.85 : a === 26 ? 0.65 : a === 27 ? 0.45 : a === 28 ? 0.3 : a === 29 ? 0.18 : 0.08
 }
-export const XP_PER_POINT = 600
+export { XP_PER_POINT }
 export function giveXp(F, p, raw, devCoach = 5.5) {
   const tree = p.team === F.team ? 1 + (F.gm.tree?.practice ?? 0) * 0.04 : 1
   const xp = raw * DEV_RATE[p.dev ?? 0] * xpAge(p) * (XP_POS[p.pos] ?? 1) * (1 + (devCoach - 5.5) * 0.04) * tree

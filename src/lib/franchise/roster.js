@@ -43,6 +43,8 @@ export function capFix(F, t) {
   if (!F.settings.cap) return did
   const over = () => r2(payroll(F, t) - F.cap)
   const cut = (minOver) => {
+    // (in season a team has to dress a roster: the cap does not take it under the minimum; what is left is carried)
+    if (F.phase !== 'offseason' && activeCount(F, t) <= ROSTER_MIN) return null
     const c = groupCounts(F, t)
     return t.roster.map(id => F.players[id]).filter(p => p && p.con && !p.built && !p.con.tag && p.con.sal > 2.5 && c[groupOf(p)] > MIN_AT[groupOf(p)] && cutCost(p).saves > 0.5 && p.con.sal - marketValue(p, F.cap) > minOver)
       .sort((a, b) => (b.con.sal - marketValue(b, F.cap)) - (a.con.sal - marketValue(a, F.cap)) || a.id - b.id)[0]

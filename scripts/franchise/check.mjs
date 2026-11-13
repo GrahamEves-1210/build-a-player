@@ -125,7 +125,8 @@ for (let run = 0; run < CONFIGS.length; run++) {
       F = FR.autopilot(F, { until: 'week' })
       T.week.push(performance.now() - t0)
       invariants(run, F)
-      for (const s in F.teams) if (F.teams[s].state !== before[s]) { STATE.flips++; before[s] = F.teams[s].state }
+      // (a change of state in season; the read every club gets when the season ends is not one)
+      for (const s in F.teams) if (F.teams[s].state !== before[s]) { if (F.phase !== 'offseason') STATE.flips++; before[s] = F.teams[s].state }
       if (twin) twin = FR.autopilot(twin, { until: 'week' })
       // a save in the middle of the season: it must come back the same, and play on the same
       if (run === 0 && y === 0 && F.week === 9 && F.phase === 'regular') {

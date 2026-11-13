@@ -14,6 +14,7 @@ import { playcall } from './rows'
 import { applyDirection, directionOf, directionRead, STATE_LABEL } from './state'
 
 const mine = F => F.teams[F.team].roster.map(id => F.players[id]).filter(Boolean)
+const countWord = n => ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen'][n] ?? String(n)
 const push = (F, item) => { item.id = `o${(F.officeId = (F.officeId ?? 0) + 1)}`; item.week = F.week; F.office.push(item) }
 // what a man in a contract year asks for now (a little under the open market: he gives up his shot at it)
 export function extensionAsk(F, p) {
@@ -65,7 +66,7 @@ export function makeOffice(F, R) {
     const r = t.rec ?? { strk: 0 }
     if ((r.strk <= -3 || r.strk >= 4) && !have('press') && F.pressAt !== `${F.year}-${Math.sign(r.strk)}`) {
       const bad = r.strk < 0
-      cands.push([2, () => { F.pressAt = `${F.year}-${Math.sign(r.strk)}`; push(F, { kind: 'press', title: 'THE PRESS ROOM', body: bad ? `${-r.strk} straight losses. The beat writers want to know what ${F.gm.name} is going to do about it.` : `${r.strk} straight wins. The beat writers want to know how far this team can go.`, data: { bad },
+      cands.push([2, () => { F.pressAt = `${F.year}-${Math.sign(r.strk)}`; push(F, { kind: 'press', title: 'THE PRESS ROOM', body: bad ? `${countWord(-r.strk)} straight losses. The beat writers want to know what ${F.gm.name} is going to do about it.` : `${countWord(r.strk)} straight wins. The beat writers want to know how far this team can go.`, data: { bad },
         options: bad ? [{ id: 'back', label: 'BACK THE LOCKER ROOM', text: 'The players hear it. Morale steadies; ownership hears patience.' }, { id: 'notice', label: 'PUT EVERYONE ON NOTICE', text: 'Jobs are on the line. Competitors respond; the rest of the room does not love it.' }, { id: 'none', label: 'NO COMMENT', text: 'Nothing changes.' }]
           : [{ id: 'credit', label: 'CREDIT THE LOCKER ROOM', text: 'The players hear it. Morale goes up.' }, { id: 'title', label: 'SAY THE WORD: CHAMPIONSHIP', text: 'Ownership loves the ambition, and will remember it if the season falls short.' }, { id: 'none', label: 'ONE WEEK AT A TIME', text: 'Nothing changes.' }], delegate: bad ? 'back' : 'credit' }) }])
     }

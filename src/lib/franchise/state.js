@@ -115,7 +115,7 @@ export function stateWeek(F) {
     const r = F.teams[F.team].rec ?? { w: 0, l: 0 }, open = F.week <= TRADE_DEADLINE && F.gm.dirAt !== F.year
     const sell = mine.to === 'rebuild' || (mine.from === 'contend' && mine.to === 'retool')
     F.office.push({ id: `o${(F.officeId = (F.officeId ?? 0) + 1)}`, week: F.week, kind: 'direction', title: sell ? 'THE OWNER CALLS: SELL OR HOLD?' : 'THE OWNER CALLS: PUSH?',
-      body: sell ? `${r.w}-${r.l}. Ownership sees a season slipping away and wants to know the plan: move veterans for picks, hold what is here, or push anyway.` : `${r.w}-${r.l}. Ownership sees a team that can win now and wants to know if ${F.gm.name} is going for it.`,
+      body: sell ? `At ${r.w}-${r.l}, ownership sees a season slipping away and wants to know the plan: move veterans for picks, hold what is here, or push anyway.` : `At ${r.w}-${r.l}, ownership sees a team that can win now and wants to know if ${F.gm.name} is going for it.`,
       data: { from: mine.from, to: mine.to },
       options: open ? [
         { id: 'rebuild', label: 'SELL', text: 'Declare a rebuild. Veterans go on the block, other teams call with picks, the season is judged on the young players.' },
@@ -156,11 +156,12 @@ export function applyDirection(F, dir, { season = false } = {}) {
 }
 export function setDirection(F, dir) {
   if (!STATES.includes(dir)) return fail(F, 'direction', 'There is no such direction.')
-  if (F.phase === 'offseason') { applyDirection(F, dir); F.owner = null; return ok(F, directionRead(F, dir).text, { agree: directionRead(F, dir).agree }) }
+  if (F.phase === 'offseason') { applyDirection(F, dir); F.gm.dirBy = 'gm'; F.owner = null; return ok(F, directionRead(F, dir).text, { agree: directionRead(F, dir).agree }) }
   if (F.phase !== 'regular' || F.week > TRADE_DEADLINE) return fail(F, 'direction', 'The direction for the year is set once the trade deadline passes.')
   if (F.gm.dirAt === F.year && F.gm.dir !== dir) return fail(F, 'direction', 'The direction can be changed once in a season.')
   const first = F.week === 1 && !(F.teams[F.team].rec?.w + F.teams[F.team].rec?.l > 0)
   applyDirection(F, dir, { season: !first })
+  F.gm.dirBy = 'gm'
   F.owner = null
   F.office = F.office.filter(o => o.kind !== 'direction')
   return ok(F, directionRead(F, dir).text, { agree: directionRead(F, dir).agree })
@@ -258,9 +259,9 @@ export function advice(F) {
   const dl = F.phase === 'regular' && F.week <= TRADE_DEADLINE
   if (dir === 'rebuild') {
     const vets = P.filter(p => p.age >= 28 && p.ovr >= 78 && p.con && p.con.yrs <= 2 && !p.built).sort((a, b) => playerValue(F, b) - playerValue(F, a))
-    if (vets.length && (dl || F.phase === 'offseason')) out.push(`${vets.length === 1 ? `${vets[0].name} would` : `${numWord(Math.min(vets.length, 6))} veterans on short deals would`} fetch picks${dl ? ' before the deadline' : ''}: ${vets.slice(0, 3).map(p => lastName(p.name)).join(', ')}.`)
+    if (vets.length && (dl || F.phase === 'offseason')) out.push(vets.length === 1 ? `${vets[0].name} would fetch picks${dl ? ' before the deadline' : ''}.` : `${numWord(vets.length)} veterans on short deals would fetch picks${dl ? ' before the deadline' : ''}: ${vets.slice(0, 3).map(p => lastName(p.name)).join(', ')}.`)
     const kids = P.filter(p => p.age <= 23 && p.ovr >= 70)
-    if (kids.length) out.push(`${numWord(Math.min(kids.length, 9))} player${kids.length > 1 ? 's' : ''} 23 or younger should be getting snaps.`)
+    if (kids.length) out.push(`${numWord(kids.length)} player${kids.length > 1 ? 's' : ''} 23 or younger should be getting snaps.`)
   } else if (dir === 'contend') {
     const L = lineupOf(F, t), holes = SLOTS.filter(s => s.pos && s.slot !== 'K').map(s => ({ slot: s.slot, p: s.pos === 'ol' ? L.OL.find(o => o.spot === s.slot)?.p : (L[s.slot] ?? [])[s.n - 1] })).filter(x => !x.p || x.p.ovr < 76).sort((a, b) => (a.p?.ovr ?? 0) - (b.p?.ovr ?? 0))
     if (holes.length) out.push(`${holes[0].slot} is the weak spot (${holes[0].p ? `${holes[0].p.name}, ${gradeOf((holes[0].p.ovr - 60) / 3.5)}` : 'nobody'})${dl ? ': rebuilding teams are selling' : ''}.`)
@@ -273,7 +274,7 @@ export function advice(F) {
   }
   return out.map(s => s[0].toUpperCase() + s.slice(1))
 }
-const numWord = n => ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][n] ?? String(n)
+const numWord = n => ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'][n] ?? 'more than twenty'
 
 // ── Team select, before a franchise exists ───────────────────────────────────
 // The same numbers a league created with this seed will show (a league is built without anyone's builds and

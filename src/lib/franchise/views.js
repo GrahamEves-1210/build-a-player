@@ -19,9 +19,10 @@ import { lineText } from './week'
 import { buildProfile } from './profile'
 import { streetAsk } from './roster'
 import { coachAsk } from './league'
+import { extensionAsk } from './office'
 import { COACH_LABEL } from './coachData'
 import { STATE_LABEL, directionOf, directionRead, advice } from './state'
-import { pickWhen } from './trades'
+import { pickWhen, pickOverall, pickText } from './trades'
 
 // ── Box scores ───────────────────────────────────────────────────────────────
 const topTime = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
@@ -170,14 +171,20 @@ export function playerCard(F, pid) {
   if (!p) return null
   const row = playerRow(F, p), mineP = p.team === F.team, fade = FADE.nfl[p.pos] ?? {}
   const con = p.con
-  const draft = p.draft ? `${p.draft[0]} · Round ${p.draft[1]}, Pick ${p.draft[2]} (${p.draft[3]})` : p.gen || p.built ? (p.built ? null : 'Undrafted') : null
+  // (a class is named for the season it first plays in: until that season starts the line carries no year)
+  const draft = p.draft ? `${p.draft[0] > F.year ? '' : `${p.draft[0]} · `}Round ${p.draft[1]}, Pick ${p.draft[2]} (${p.draft[3]})` : p.gen || p.built ? (p.built ? null : 'Undrafted') : null
+  // what extendPlayer will take from him today (null when he cannot be extended now)
+  const canExt = mineP && con && con.yrs <= 1 && !p.ext && p.cold !== F.year
+  const extAsk = canExt ? extensionAsk(F, p) : null
+  // a free agent's ask is the one signFreeAgent checks: the street price in season, the market's in the offseason
+  const faAskNow = F.phase === 'offseason' ? askOf(F, p) : streetAsk(F, p)
   const mood = p.team ? moodOf(F, p) : { why: [] }
   return {
     ...row, ht: p.ht ?? null, wt: p.wt ?? null, bodyText: bodyText(p), college: p.college ?? null, draft,
     traits: TYPES_OF[p.pos].map(t => ({ key: t, ...traitLabel(p.pos, t), val: p.a[t], grade: gradeOf(p.a[t]), cost: mineP ? upgradeCost(p.a[t]) : null, fading: !!fade[t] && p.age >= fade[t][1] })),
     devText: p.devKnown ? DEV_TEXT[p.dev] : 'The staff has not seen enough of him yet to know how fast he will develop.',
-    contract: con ? { salary: con.sal, yrs: con.yrs, guar: con.guar, rookie: !!con.rookie, option: con.opt === 1 ? 'available' : con.opt === 2 ? 'exercised' : null, tag: !!con.tag, capHit: con.sal, cut: cutCost(p), ask: con.yrs <= 1 ? askOf(F, p) : null, extension: p.ext ? { years: p.ext.yrs, perYear: p.ext.sal } : null }
-      : { salary: 0, yrs: 0, guar: 0, rookie: false, option: null, tag: false, capHit: 0, cut: { dead: 0, saves: 0 }, ask: askOf(F, p), extension: null },
+    contract: con ? { salary: con.sal, yrs: con.yrs, guar: con.guar, rookie: !!con.rookie, option: con.opt === 1 ? 'available' : con.opt === 2 ? 'exercised' : null, tag: !!con.tag, capHit: con.sal, cut: cutCost(p), ask: con.yrs <= 1 ? askOf(F, p) : null, extAsk, extension: p.ext ? { years: p.ext.yrs, perYear: p.ext.sal } : null }
+      : { salary: 0, yrs: 0, guar: 0, rookie: false, option: null, tag: false, capHit: 0, cut: { dead: 0, saves: 0 }, ask: p.team ? askOf(F, p) : faAskNow, extAsk: null, extension: null },
     moodFactors: mood.why,
     stats: { season: statView(p.pos, p.s), career: statView(p.pos, p.car), byYear: (p.hist ?? []).map(h => ({ year: h[0], team: h[1], ...statView(p.pos, histStats(p.pos, h)) })) },
     awards: (p.aw ?? []).map(([year, code]) => ({ year, name: AWARD_NAME[code] ?? code })).sort((a, b) => b.year - a.year),
@@ -214,7 +221,7 @@ const avgOvr = (list, n) => { let s = 0; for (let i = 0; i < n; i++) s += list[i
 
 // ── A team ───────────────────────────────────────────────────────────────────
 // (text never names a year that has not been played: "Round 2, the next draft")
-const pickRow = (F, pk, owner) => ({ key: pickKey(pk), year: pk.y, round: pk.r, orig: teamRef(pk.o), own: pk.o === owner, value: pickValue(F, pk), when: pickWhen(F, pk), text: `Round ${pk.r}, ${pickWhen(F, pk)}${pk.o !== owner ? ` (via ${pk.o})` : ''}` })
+const pickRow = (F, pk, owner) => ({ key: pickKey(pk), year: pk.y, round: pk.r, orig: teamRef(pk.o), own: pk.o === owner, value: pickValue(F, pk), when: pickWhen(F, pk), overall: pickOverall(F, pk), text: pickText(F, pk, owner) })
 export function teamInfo(F, short) {
   const t = F.teams[short]
   if (!t) return null
@@ -263,7 +270,7 @@ export function weekTasks(F) {
   const starters = startersOf(F, t)
   const hurt = P.filter(p => p.inj && p.inj.wk > 0 && p.ovr >= 76).sort((a, b) => b.ovr - a.ovr)
   if (hurt.length) out.push({ id: 'injury', kind: 'injury', title: 'INJURIES', detail: `${hurt.slice(0, 2).map(p => `${p.name} (${p.inj.wk === 1 ? '1 week' : p.inj.season ? 'season' : `${p.inj.wk} weeks`})`).join(', ')}${hurt.length > 2 ? ` and ${hurt.length - 2} more` : ''}`, done: !!F.done?.injury, count: hurt.length })
-  if ((F.draft?.pts ?? 0) > 0) out.push({ id: 'scout', kind: 'scout', title: 'SCOUTING', detail: `${F.draft.pts} scouting point${F.draft.pts === 1 ? '' : 's'} to spend on the ${F.draft.year} class`, done: false, count: F.draft.pts })
+  if ((F.draft?.pts ?? 0) > 0) out.push({ id: 'scout', kind: 'scout', title: 'SCOUTING', detail: `${F.draft.pts} scouting point${F.draft.pts === 1 ? '' : 's'} to spend on the next draft class`, done: false, count: F.draft.pts })
   const adv = advice(F), dir = directionOf(F)
   if (F.phase === 'regular' && F.week <= TRADE_DEADLINE && F.gm.dirAt !== F.year) out.push({ id: 'direction', kind: 'direction', title: `DIRECTION: ${STATE_LABEL[dir]}`, detail: `${directionRead(F, dir).text} It can be changed once before the deadline (Week ${TRADE_DEADLINE}).`, done: true })
   if (adv.length) out.push({ id: 'advice', kind: 'advice', title: 'FROM THE STAFF', detail: adv[0], done: true, count: adv.length })
@@ -277,7 +284,7 @@ export function rosterIssues(F) {
   let active = 0
   for (const id of t.roster) { const p = F.players[id]; if (!p) continue; if (!p.inj?.ir) active++; const g = p.pos === 'ol' ? 'OL' : slotOf(p); c[g] = (c[g] ?? 0) + 1 }
   const limit = F.phase === 'offseason' ? 62 : 46
-  if (active > limit) out.push(`${active} on the active roster: ${active - limit} over the limit of ${limit}`)
+  if (active > limit) out.push(`The active roster is at ${active}: ${active - limit} over the limit of ${limit}`)
   const MIN = { QB: 2, RB: 3, WR: 5, TE: 2, OL: 7, EDGE: 3, DT: 3, LB: 4, CB: 3, S: 3, K: 1 }
   for (const g in MIN) if ((c[g] ?? 0) < MIN[g]) out.push(`Short at ${g}: ${c[g] ?? 0} on the roster, ${MIN[g]} needed`)
   if (F.settings.cap && payroll(F, t) > F.cap + 0.001) out.push(`${moneyText(r2(payroll(F, t) - F.cap))} over the cap`)
@@ -392,7 +399,7 @@ export function history(F) {
   if (po) resume.push(`${po} playoff appearance${po > 1 ? 's' : ''}`)
   if (g.fired) resume.push(`Let go ${g.fired === 1 ? 'once' : `${g.fired} times`}`)
   return {
-    seasons: [...(H.seasons ?? [])].reverse().map(s => ({ year: s.year, champion: teamRef(s.champ), runnerUp: teamRef(s.runner), score: s.score, awards: s.awards, allPro: s.allPro, user: s.user })),
+    seasons: [...(H.seasons ?? [])].reverse().map(s => ({ year: s.year, champion: teamRef(s.champ), runnerUp: teamRef(s.runner), score: s.score, awards: s.awards, allPro: s.allPro, user: { security: null, delta: null, verdict: null, direction: null, directionLabel: null, goals: [], fired: false, ...s.user, ...(s.user?.direction && { directionLabel: STATE_LABEL[s.user.direction] }) } })),
     records: { season: recordRows(H.records?.season), game: recordRows(H.records?.game), team: recordRows(H.records?.team) },
     gm: { name: g.name, seasons: g.seasons?.length ?? 0, record: `${g.w}-${g.l}${g.t ? `-${g.t}` : ''}`, playoffs: `${g.pw ?? 0}-${g.pl ?? 0}`, rings: g.rings ?? 0, titles: (g.seasons ?? []).filter(s => s.champ).map(s => s.year), security: Math.round(g.security), legacy, legacyWord: word, résumé: resume, resume, teams: [...new Set((g.seasons ?? []).map(s => s.team))] },
     hall: H.hall ?? [],

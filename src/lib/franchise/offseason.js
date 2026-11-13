@@ -10,11 +10,11 @@
 // The new league year (the cap, dead money, a year off every contract) starts when the review ends.
 import { GAMES, COMBINE_GAMES, traitValue } from '../minigames'
 import {
-  STAGES, ROSTER_MAX, CAMP_MAX, REG_WEEKS, FIRST_YEAR, DEV, clamp, r2, slotOf, groupOf, ovrGrade, gradeOf, MIN_SALARY, VET_MIN, TARGET_AT, MIN_AT, GROUPS, TOP_SHARE,
+  STAGES, ROSTER_MAX, CAMP_MAX, REG_WEEKS, FIRST_YEAR, DEV, clamp, r2, slotOf, groupOf, ovrGrade, gradeOf, MIN_SALARY, VET_MIN, TARGET_AT, MIN_AT, GROUPS, TOP_SHARE, STAFF_BUDGET,
 } from './consts'
 import { rngOf, roll } from './rng'
 import {
-  TEAM_SHORTS, touch, fail, ok, addNews, addTx, teamName, nick, teamRating, ranks, pct, toFreeAgency, joinTeam, activeCount, groupCounts, depthAfterMove, leaveTeam,
+  TEAM_SHORTS, touch, fail, ok, addNews, addTx, teamName, nick, city, teamRating, ranks, pct, toFreeAgency, joinTeam, activeCount, groupCounts, depthAfterMove, leaveTeam,
 } from './core'
 import { capFor, marketValue, marketYears, marketGuar, newContract, optionSalary, payroll, burnGuarantee, moneyText, cutCost } from './money'
 import { standing, finishText } from './standings'
@@ -93,7 +93,8 @@ export function startOffseason(F) {
   // the league's history
   const who = x => (x ? { name: x.name, team: x.team, line: x.line, ...(x.pos && { pos: x.pos }) } : null)
   F.hist.seasons.push({ year: y, champ, runner: po?.runnerUp ?? null, score: po?.score ?? '', awards: Object.fromEntries(Object.entries(honors.awards).map(([k, v]) => [k, who(v)])),
-    allPro: honors.allPro.map(x => ({ slot: x.slot, name: x.p.name, team: x.p.team })), user: { team: user, record: `${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ''}`, finish: finishText(F, user), seed: seedOf(user) || null } })
+    allPro: honors.allPro.map(x => ({ slot: x.slot, name: x.p.name, team: x.p.team })), user: { team: user, record: `${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ''}`, finish: finishText(F, user), seed: seedOf(user) || null,
+      security: verdict.security, delta: verdict.delta, verdict: verdict.text, direction: F.owner?.dir ?? null, fired: !!verdict.fired, goals: (verdict.goals ?? []).map(g => ({ text: g.text, done: !!g.done })) } })
   if (F.hist.seasons.length > 40) F.hist.seasons.shift()
   if (champ) addNews(F, 'league', `${teamName(champ)} are Super Bowl champions`, { team: champ })
   if (honors.awards.MVP) addNews(F, 'award', `${honors.awards.MVP.name} is the league's Most Valuable Player`, { team: honors.awards.MVP.team, pid: honors.awards.MVP.id, body: honors.awards.MVP.line })
@@ -128,7 +129,11 @@ export function startOffseason(F) {
     review: { champ, awards: honors.awards, allPro: honors.allPro.map(x => ({ slot: x.slot, id: x.p.id })), proBowl: { AFC: honors.proBowl.AFC.map(x => ({ slot: x.slot, id: x.p.id })), NFC: honors.proBowl.NFC.map(x => ({ slot: x.slot, id: x.p.id })) }, retirements: out.slice(0, 40), hall, record: `${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ''}`, finish: finishText(F, user), seed: seedOf(user) || null },
     resign: null, fa: null, camp: null, changes: null,
   }
+  // the season's injuries are over by the spring: rosters, needs and each club's read are of healthy men
+  for (const id in F.players) F.players[id].inj = null
   for (const s of TEAM_SHORTS) autoDepth(F, F.teams[s])
+  // where every club stands now the year is in the books (the read the DIRECTION stage shows)
+  computeStates(F, { quiet: true })
 }
 function careerLine(p) {
   const aw = code => (p.aw ?? []).filter(a => a[1] === code).length
@@ -173,7 +178,7 @@ export function takeJob(F, short) {
   if (!F.off?.fired) return fail(F, 'job', 'There is no offer to take.')
   if (!jobOffersFor(F).some(o => o.short === short)) return fail(F, 'job', 'That team has not made an offer.')
   F.gm.fired = (F.gm.fired ?? 0) + 1
-  F.team = short; F.gm.team = short; F.gm.security = 58; F.off.fired = false; F.gm.dir = null; F.gm.dirAt = null
+  F.team = short; F.gm.team = short; F.gm.since = (F.off.year ?? F.year) + 1; F.gm.security = 58; F.off.fired = false; F.gm.dir = null; F.gm.dirAt = null; F.gm.dirBy = null
   F.settings.autoDepth = true
   F.owner = null; startOwner(F)
   addNews(F, 'owner', `${teamName(short)} hire ${F.gm.name} as general manager`, { team: short })
@@ -278,7 +283,7 @@ export function coachMarket(F) {
   const openings = STAFF_KEYS.filter(k => t.staff[k] == null || F.coaches[t.staff[k]]?.expired).map(k => ({ team: teamRef(F.team), role: roleOf(k), expired: t.staff[k] != null }))
   return { coaches: rows, openings, poached: (F.off?.poached ?? []).map(x => ({ coach: F.coaches[x.coach] ? coachRow(F, F.coaches[x.coach], 'HC') : { name: x.name }, from: teamRef(x.from), to: teamRef(x.to), role: x.role, mine: x.from === F.team })) }
 }
-const staffBudget = (F, t) => t.staffBudget ?? 32
+const staffBudget = (F, t) => t.staffBudget ?? STAFF_BUDGET
 function staffSpend(F, t, except = null) { let s = t.staffDead ?? 0; for (const k of STAFF_KEYS) { const c = F.coaches[t.staff[k]]; if (c && k !== except) s += c.con?.sal ?? 0 } return r2(s) }
 export function hireCoach(F, role, coachId, { years = null } = {}) {
   const key = String(role).toLowerCase(), t = F.teams[F.team], c = F.coaches[coachId]
@@ -591,7 +596,11 @@ export function freeAgency(F) {
     const bestCpu = Math.max(0, ...(fa.cpu[p.id] ?? []).map(x => offerWorth(x.o, D) * teamFit(F, x.s, p)))
     return { ...playerRow(F, p), ask, suitors: (fa.suitors[p.id] ?? []).length, fit: clamp(Math.round(50 + (fit - 1) * 160), 1, 99), bid, leader: !!bid && offerWorth(bid, D) * fit >= bestCpu && offerWorth(bid, D) >= offerWorth(ask, D) * 0.95, from: p.from ? teamRef(p.from) : null }
   })
-  return { round: fa.round, roundName: FA_ROUND[fa.round - 1], players, capSpace: r2(F.cap - payroll(F, F.teams[F.team])), signed: fa.signed.slice(-40).reverse(), rosterCount: activeCount(F, F.teams[F.team]), rosterLimit: CAMP_MAX }
+  return { round: fa.round, roundName: FA_ROUND[fa.round - 1], players, capSpace: r2(F.cap - payroll(F, F.teams[F.team])), signed: signedRows(fa), lastRound: fa.resolved ?? 0, rosterCount: activeCount(F, F.teams[F.team]), rosterLimit: CAMP_MAX }
+}
+// the signings, newest round first and the best man first inside a round (a row says which round it was)
+function signedRows(fa) {
+  return fa.signed.map((s, i) => ({ s, i })).sort((a, b) => (b.s.round ?? 0) - (a.s.round ?? 0) || b.s.player.ovr - a.s.player.ovr || a.i - b.i).slice(0, 160).map(x => x.s)
 }
 export function bidFreeAgent(F, pid, terms = null) {
   const fa = F.off?.fa, p = F.players[pid]
@@ -616,12 +625,34 @@ function resolveFA(F) {
     const win = ok2[0]
     // some wait for the next round to see what else comes
     if (!win || (win.s !== F.team && fa.round < 3 && R.chance(p.ovr >= 84 ? 0.1 : 0.3))) continue
+    const why = whySigned(F, p, win, ok2, ask, fa.round)
     sign(F, p, win.s, newContract(p, { yrs: win.o.years, sal: win.o.perYear, guarShare: win.o.guaranteed }), { quiet: p.ovr < 74 && win.s !== F.team })
-    p.yrsHere = 0; p.mood = clamp(62 + Math.round((teamFit(F, win.s, p) - 1) * 40), 30, 90); delete p.from
-    fa.signed.push({ player: { id: p.id, name: p.name, slot: slotOf(p), ovr: p.ovr }, team: teamRef(win.s), deal: { years: win.o.years, perYear: win.o.perYear }, mine: win.s === F.team })
+    p.yrsHere = 0; p.mood = clamp(62 + Math.round((teamFit(F, win.s, p) - 1) * 40), 30, 90)
+    fa.signed.push({ player: { id: p.id, name: p.name, slot: slotOf(p), ovr: p.ovr, age: p.age }, team: teamRef(win.s), deal: { years: win.o.years, perYear: win.o.perYear, guaranteed: win.o.guaranteed }, mine: win.s === F.team,
+      round: fa.round, ask: { years: ask.years, perYear: ask.perYear }, from: p.from ?? null, why, ...(fa.bids[p.id] && win.s !== F.team && { beat: true }) })
+    delete p.from
     if (p.ovr >= 82 || win.s === F.team) addNews(F, 'signing', `${p.name} signs with the ${nick(win.s)}`, { team: win.s, pid: p.id, body: `${win.o.years} year${win.o.years > 1 ? 's' : ''}, ${moneyText(win.o.perYear)} a year.` })
   }
-  fa.bids = {}
+  // the GM's offers to men who have not signed anywhere stand into the next round (he can withdraw or change them)
+  for (const id in fa.bids) { const p = F.players[id]; if (!p || p.team || !F.fa.includes(p.id)) delete fa.bids[id] }
+  fa.resolved = fa.round
+}
+// one short phrase for why he signed where he did (read off his drives, the offers he had and the club)
+function whySigned(F, p, win, offers, ask, round) {
+  const D = new Set(p.drives ?? []), s = win.s, where = city(s), stance = stanceOf(F, s), last = F.teams[s].last ?? { w: 8, l: 9, seed: 0 }
+  const top = offers.reduce((m, x) => Math.max(m, x.o.perYear), 0), less = offers.length > 1 && win.o.perYear < top - 0.05
+  const winner = stance === 'contend' || (last.seed ?? 0) > 0
+  if (p.from === s) return D.has('LOYAL') ? `stayed home in ${where}` : less ? `took less to stay in ${where}` : `re-signed in ${where}`
+  if (less && (D.has('RING') || D.has('COMPETITOR')) && winner) return `took less to chase a ring in ${where}`
+  if (less && D.has('ROLE')) return `took less for a starting job in ${where}`
+  if (less) return `took less to play in ${where}`
+  if (round >= 3) return win.o.perYear < askOf(F, p).perYear * 0.85 ? `waited, and signed in ${where} for less than he first asked` : `signed late in ${where}`
+  if (offers.length > 1 && D.has('MONEY')) return `took the biggest offer on the table`
+  if ((D.has('RING') || D.has('COMPETITOR')) && winner) return `wanted to win, and ${where} paid his price`
+  if (D.has('ROLE')) return `a starting job and his price in ${where}`
+  if (stance === 'rebuild' && p.age <= 27) return `${where} paid for a young piece to build around`
+  if (offers.length > 1) return win.o.perYear > ask.perYear * 1.06 ? `${where} outbid ${offers.length === 2 ? 'one other club' : `${offers.length - 1} other clubs`}` : `the best offer of ${offers.length === 2 ? 'two' : offers.length === 3 ? 'three' : offers.length}`
+  return `the only club that met his price`
 }
 export function advanceFA(F) {
   const fa = F.off?.fa
@@ -642,7 +673,7 @@ function delegateFA(F) {
       .find(p => faAsk(F, p, fa.round).perYear * 1.03 <= room)
     if (!best) continue
     const ask = faAsk(F, best, fa.round)
-    fa.bids[best.id] = { years: ask.years, perYear: r2(ask.perYear * 1.03), guaranteed: ask.guaranteed }
+    fa.bids[best.id] = { years: ask.years, perYear: r2(ask.perYear * 1.03), guaranteed: ask.guaranteed, staff: true }
     room -= ask.perYear * 1.03
   }
 }
@@ -676,6 +707,7 @@ const CAMP_GROUPS = [
   ['QB', 'QUARTERBACKS', ['qb']], ['RB', 'RUNNING BACKS', ['rb']], ['WR', 'RECEIVERS', ['wr']], ['TE', 'TIGHT ENDS', ['te']], ['OL', 'OFFENSIVE LINE', ['ol']],
   ['DL', 'DEFENSIVE LINE', ['dl']], ['LB', 'LINEBACKERS', ['lb']], ['DB', 'SECONDARY', ['db']], ['K', 'KICKERS', ['k']],
 ]
+const TALK_CUT = 0.88    // what a good talk gets a holdout to take, against his ask
 const DRILL_GAMES = { ...COMBINE_GAMES, db: ['forty', 'cone', 'gauntlet'] }
 function startCamp(F) {
   const R = rngOf(`${F.seed}-${F.off.year}-camp`), P = mine(F)
@@ -720,7 +752,8 @@ export function campView(F) {
     holdouts: c.holdouts.map(id => F.players[id]).filter(p => p && p.hold).map(p => { const ask = askOf(F, p); return { ...playerRow(F, p, dm), wants: { perYear: ask.perYear, years: ask.years }, options: [
       { id: 'pay', label: 'PAY HIM', text: `A new deal: ${ask.years} year${ask.years > 1 ? 's' : ''} at ${moneyText(ask.perYear)} a year. He reports today.` },
       { id: 'firm', label: 'HOLD FIRM', text: 'He is under contract. Most report before Week 1, unhappy; some sit out the first weeks of the season.' },
-      { id: 'trade', label: 'SHOP HIM', text: 'He goes on the trade block and reports while the phones ring.' }], delegate: 'firm' } }),
+      { id: 'trade', label: 'SHOP HIM', text: 'He goes on the trade block and reports while the phones ring.' },
+      ...(c.talked?.[p.id] ? [] : [{ id: 'talk', label: 'TALK', text: `Sit down with him and his agent. It can bring him in for less than he is asking (about ${moneyText(r2(ask.perYear * TALK_CUT))} a year); if it goes badly he digs in and is harder to bring back.` }])], delegate: 'firm' } }),
     camp: { count: activeCount(F, F.teams[F.team]), limit: CAMP_MAX },
   }
 }
@@ -749,6 +782,19 @@ export function resolveHoldout(F, pid, optionId = 'delegate') {
     p.con = newContract(p, { yrs: ask.years, sal: ask.perYear, guarShare: ask.guaranteed }); p.hold = undefined; p.mood = clamp(p.mood + 25, 3, 97)
     addTx(F, 'extend', F.team, `${teamName(F.team)} gave ${slotOf(p)} ${p.name} a new deal (${ask.years} year${ask.years > 1 ? 's' : ''}, ${moneyText(ask.perYear)} a year) to end his holdout.`, p.id)
     return ok(F, `${p.name} signs and reports.`)
+  }
+  if (opt === 'talk') {
+    if (c.talked?.[pid]) return fail(F, 'holdout', `${p.name} has said what he has to say.`)
+    const D = new Set(p.drives ?? []), cul = F.coaches[t.staff.hc]?.a.culture ?? 5.5
+    const chance = clamp(0.45 + (p.mood - 35) * 0.01 + (cul - 5.5) * 0.04 + (F.gm.tree?.negotiating ?? 0) * 0.06 + (D.has('LOYAL') ? 0.15 : 0) - (D.has('MONEY') ? 0.12 : 0), 0.15, 0.85)
+    ;(c.talked ??= {})[pid] = true
+    if (!R.chance(chance)) { p.mood = clamp(p.mood - 8, 3, 97); return ok(F, `The talk went nowhere. ${p.name} is still away, and less happy than he was.`, { talked: false }) }
+    const ask = askOf(F, p), sal = r2(Math.max(p.con.sal, ask.perYear * TALK_CUT))
+    // (a number that does not fit: he comes in on the deal he has, on the GM's word that it gets done)
+    if (F.settings.cap && payroll(F, t) - p.con.sal + sal > F.cap + 0.001) { p.hold = undefined; p.mood = clamp(p.mood + 6, 3, 97); return ok(F, `${p.name} reports on his current deal. He expects a new one when the money is there.`, { talked: true }) }
+    p.con = newContract(p, { yrs: ask.years, sal, guarShare: ask.guaranteed }); p.hold = undefined; p.mood = clamp(p.mood + 18, 3, 97)
+    addTx(F, 'extend', F.team, `${teamName(F.team)} gave ${slotOf(p)} ${p.name} a new deal (${ask.years} year${ask.years > 1 ? 's' : ''}, ${moneyText(sal)} a year) to end his holdout.`, p.id)
+    return ok(F, `${p.name} takes ${moneyText(sal)} a year and reports.`, { talked: true })
   }
   if (opt === 'trade') { p.hold = undefined; p.block = true; p.want = true; p.mood = clamp(p.mood - 4, 3, 97); return ok(F, `${p.name} reports. He is on the block.`) }
   // hold firm: most come in; some sit
@@ -809,7 +855,7 @@ function leave(F, id) {
   if (id === 'review' && F.off.fired) { const o = jobOffersFor(F)[0]; if (o) takeJob(F, o.short); else F.off.fired = false }
   if (id === 'staff') delegateStaff(F)
   if (id === 'resign') delegateResign(F)
-  if (id === 'fa') { while (F.off.fa.round <= 3) { if (!Object.keys(F.off.fa.bids).length && F.off.auto) delegateFA(F); resolveFA(F); F.off.fa.round++; if (F.off.fa.round <= 3) setSuitors(F) } cpuFill(F) }
+  if (id === 'fa') { while (F.off.fa.round <= 3) { if (F.off.auto) { for (const k in F.off.fa.bids) if (F.off.fa.bids[k].staff) delete F.off.fa.bids[k]; if (!Object.keys(F.off.fa.bids).length) delegateFA(F) } resolveFA(F); F.off.fa.round++; if (F.off.fa.round <= 3) setSuitors(F) } cpuFill(F) }
   if (id === 'draft' && !F.draft.done) autoDraft(F)
   if (id === 'udfa' && F.off.auto) delegateUdfa(F)
   if (id === 'camp') { for (const d of F.off.camp.drills) if (!d.done) resolveDrill(F, d.id, 'sim'); for (const pid of F.off.camp.holdouts) if (F.players[pid]?.hold) resolveHoldout(F, pid, 'delegate') }
@@ -821,12 +867,14 @@ function cpuFill(F) {
   topUpFreeAgents(F, R, 90)
   for (const s of TEAM_SHORTS) if (s !== F.team) upkeep(F, F.teams[s], R)
 }
-export function advanceStage(F, { auto = false } = {}) {
+// auto: the staff does this stage's work, and every stage after it (the autopilot). once: with auto, the staff
+// does THIS stage only; the next one is the GM's again (F.off.auto is left as it was).
+export function advanceStage(F, { auto = false, once = false } = {}) {
   if (F.phase !== 'offseason' || !F.off) return fail(F, 'offseason', 'The season is on.')
-  const i = stageIdx(F.off.stage)
-  F.off.auto = auto || !!F.off.auto
-  if (F.off.stage === 'review' && F.off.fired && !auto) { /* the staff takes the best offer when the GM does not choose */ }
+  const i = stageIdx(F.off.stage), was = !!F.off.auto
+  F.off.auto = auto || was
   leave(F, F.off.stage)
+  if (once) F.off.auto = was
   if (i >= STAGES.length - 1) { rollOver(F); return touch(F) }
   enter(F, STAGES[i + 1].id)
   return touch(F)
@@ -841,14 +889,14 @@ function rollOver(F) {
     if (s !== F.team) for (const p of cutList(F, s)) release(F, p, { quiet: true })
     capFix(F, t)
   }
-  const before = Object.fromEntries(mine(F).map(p => [p.id, p.ovr]))
+  const before = Object.fromEntries(mine(F).map(p => [p.id, p.ovr])), ptsBefore = Object.fromEntries(mine(F).map(p => [p.id, p.pts ?? 0]))
   const changes = []
   for (const id in F.players) {
     const p = F.players[id]
     // the season goes into his history
     if ((p.s.g ?? 0) > 0) { p.hist.push(histLine(p, y, p.team ?? '')); if (p.hist.length > 22) p.hist.shift() }
     p.s = {}
-    p.age++; p.exp++; delete p.rk; delete p.potw; delete p.asked; delete p.promise; delete p.first; delete p.from; delete p.brk
+    p.age++; p.exp++; delete p.rk; delete p.potw; delete p.asked; delete p.promise; delete p.first; delete p.from; delete p.brk; delete p.brkW
     if (p.team) p.yrsHere = (p.yrsHere ?? 0) + 1
     if (p.con?.opt === 2 && p.opt5 && p.con.yrs === 1) { p.con.sal = p.opt5; p.con.guar = p.opt5; p.con.rookie = 0; delete p.opt5 }
     // the offseason program: young men grow, the staff spends what they earned
@@ -868,6 +916,16 @@ function rollOver(F) {
   F.fa = F.fa.filter(id => F.players[id])
   topUpFreeAgents(F, R, 70)
   for (const p of mine(F)) { const d = p.ovr - (before[p.id] ?? p.ovr); const had = changes.find(c => c.id === p.id); if (had) had.d = d; else if (d) changes.push({ id: p.id, d, text: d > 0 ? 'Developed over the offseason' : 'Slipped' }) }
+  // (points the GM has not spent yet: the row's number is what they are worth once spent, and the row says so)
+  for (const p of mine(F)) {
+    const got = (p.pts ?? 0) - (ptsBefore[p.id] ?? 0)
+    if (!(got > 0) || !(p.id in before)) continue
+    const words = `Earned ${got} upgrade point${got > 1 ? 's' : ''} to spend`, had = changes.find(c => c.id === p.id)
+    if (had) { had.text = `${had.text}. ${words}`; had.pts = got; continue }
+    const trial = { ...p, a: { ...p.a } }
+    spendPoints(trial)
+    if (trial.ovr > p.ovr) changes.push({ id: p.id, d: trial.ovr - p.ovr, pts: got, kind: 'points', text: `${words} (worth about +${trial.ovr - p.ovr} overall)` })
+  }
   // the new season
   const S = standing(F), order = {}
   for (const d of DIVISIONS) order[d.name] = S.divisions[d.name]
@@ -892,10 +950,11 @@ function rollOver(F) {
   prepWeek(F)
   powerRankings(F)
   setExpectations(F, s => teamRating(F, F.teams[s]).ovr)
-  // every team's state is read again; the GM's direction stands unless he changed it (the staff follows the roster)
-  const auto = !!F.off.auto
+  // every team's state is read again. A direction the GM declared stands; where he left it to the staff (the whole
+  // offseason delegated and nothing declared in it), the staff follows the roster
+  const auto = !!F.off.auto && F.gm.dirBy !== 'gm'
   computeStates(F)
-  if (auto || !F.gm.dir) F.gm.dir = F.teams[F.team].state
+  if (auto || !F.gm.dir) { F.gm.dir = F.teams[F.team].state; F.gm.dirBy = null }
   F.gm.dirAt = null
   F.owner = null; startOwner(F)
   F.off = null
@@ -905,6 +964,6 @@ function rollOver(F) {
 export function newSeason(F) {
   const n = F.newSeason
   if (!n) return { year: F.year, goals: ownerView(F).goals, changes: [], schedule: scheduleView(F), rookies: [] }
-  return { year: n.year, goals: ownerView(F).goals, changes: n.changes.map(c => (F.players[c.id] ? { player: playerRow(F, F.players[c.id]), d: c.d, text: c.text } : null)).filter(Boolean), schedule: scheduleView(F), rookies: n.rookies.map(id => F.players[id]).filter(Boolean).map(p => playerRow(F, p)) }
+  return { year: n.year, goals: ownerView(F).goals, changes: n.changes.map(c => (F.players[c.id] ? { player: playerRow(F, F.players[c.id]), d: c.d, text: c.text, pts: c.pts ?? 0, kind: c.kind ?? (c.d > 0 ? 'grew' : 'slipped') } : null)).filter(Boolean), schedule: scheduleView(F), rookies: n.rookies.map(id => F.players[id]).filter(Boolean).map(p => playerRow(F, p)) }
 }
 export { AWARD_NAME, DEV, COACH_TYPES, minDeal, joinTeam, draftBoard, roll, ranks, reOvr, moodOf, drivesFor }

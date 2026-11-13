@@ -7,7 +7,7 @@
 // leaves `from` for `to`, `get` comes back. A pick's key is `${year}-${round}-${original team}`.
 import { REG_WEEKS, TRADE_DEADLINE, ROSTER_MAX, CAMP_MAX, MIN_AT, clamp, r2, slotOf, groupOf } from './consts'
 import { TEAM_SHORTS, addNews, addTx, joinTeam, teamName, nick, groupCounts, activeCount, depthAfterMove, ranks, pct } from './core'
-import { marketValue, payroll } from './money'
+import { marketValue, payroll, moneyText } from './money'
 import { lineupOf } from './depth'
 
 // ── The chart ────────────────────────────────────────────────────────────────
@@ -82,19 +82,24 @@ export function judge(F, offer, { margin = null } = {}) {
   const m = margin ?? (MARGIN[F.settings.tradeAI] ?? 1.05) * (offer.from === F.team ? 1 - (F.gm.tree?.trading ?? 0) * 0.02 : 1)
   // money and bodies, both sides
   const dPayA = rp.reduce((s, p) => s + (p.con?.sal ?? 0), 0) - gp.reduce((s, p) => s + (p.con?.sal ?? 0), 0)
-  const capOk = !F.settings.cap || (payroll(F, A) + dPayA <= F.cap + 0.001 && payroll(F, B) - dPayA <= F.cap + 0.001)
+  const overA = r2(payroll(F, A) + dPayA - F.cap), overB = r2(payroll(F, B) - dPayA - F.cap)
+  const capOk = !F.settings.cap || (overA <= 0.001 && overB <= 0.001)
+  const capWhy = capOk ? null : `The money does not work: the ${nick(overA > 0.001 ? offer.from : offer.to)} would be ${moneyText(overA > 0.001 ? overA : overB)} over the cap.`
   const limit = F.phase === 'offseason' ? CAMP_MAX : ROSTER_MAX
   const cA = groupCounts(F, A), cB = groupCounts(F, B)
   for (const p of gp) { cA[groupOf(p)]--; cB[groupOf(p)]++ }
   for (const p of rp) { cB[groupOf(p)]--; cA[groupOf(p)]++ }
-  const short = c => Object.keys(MIN_AT).some(g => c[g] < MIN_AT[g])
-  const rosterOk = activeCount(F, A) - gp.length + rp.length <= limit && activeCount(F, B) - rp.length + gp.length <= limit && (F.phase === 'offseason' || (!short(cA) && !short(cB)))
+  // the first thing that stops it, said so the GM can fix it: which club, and how many it would carry or be left with
+  const nA = activeCount(F, A) - gp.filter(p => !p.inj?.ir).length + rp.filter(p => !p.inj?.ir).length, nB = activeCount(F, B) - rp.filter(p => !p.inj?.ir).length + gp.filter(p => !p.inj?.ir).length
+  const thin = (c, s) => { if (F.phase === 'offseason') return null; const g = Object.keys(MIN_AT).find(k => c[k] < MIN_AT[k]); return g ? `The ${nick(s)} would be down to ${COUNT[c[g]] ?? c[g]} ${c[g] === 1 ? GROUP_WORD[g][0] : GROUP_WORD[g][1]}: a roster needs ${COUNT[MIN_AT[g]] ?? MIN_AT[g]}.` : null }
+  const rosterWhy = nA > limit ? `The ${nick(offer.from)} would have ${nA} on a ${limit}-man roster.` : nB > limit ? `The ${nick(offer.to)} would have ${nB} on a ${limit}-man roster.` : thin(cA, offer.from) ?? thin(cB, offer.to)
+  const rosterOk = !rosterWhy
   const gap = Math.round(bGives * m - bGets)
   const fair = gap <= 0
   let answer, counter = null
   const them = nick(offer.to)
-  if (!capOk) answer = `The money does not work. One of the two teams would be over the cap.`
-  else if (!rosterOk) answer = `The rosters do not work: one side ends up over the limit or short at a position.`
+  if (!capOk) answer = capWhy
+  else if (!rosterOk) answer = rosterWhy
   else if (rp.some(p => p.con?.tag)) answer = `The ${them} will not move a player they just tagged.`
   else if (fair) answer = bGets > bGives * 1.5 ? `The ${them} say yes before the call is over.` : `That works for the ${them}.`
   else {
@@ -106,9 +111,24 @@ export function judge(F, offer, { margin = null } = {}) {
   return { ok: fair && capOk && rosterOk && !rp.some(p => p.con?.tag), give: Math.round(bGets), get: Math.round(bGives), gap, answer, capOk, rosterOk, counter }
 }
 const ord = n => ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh'][n] ?? `${n}th`
+const COUNT = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven']
+const GROUP_WORD = { QB: ['quarterback', 'quarterbacks'], RB: ['running back', 'running backs'], WR: ['receiver', 'receivers'], TE: ['tight end', 'tight ends'], OL: ['offensive lineman', 'offensive linemen'], EDGE: ['edge rusher', 'edge rushers'], DT: ['defensive tackle', 'defensive tackles'], LB: ['linebacker', 'linebackers'], CB: ['cornerback', 'cornerbacks'], S: ['safety', 'safeties'], K: ['kicker', 'kickers'] }
 // which draft a pick is in, without naming a year that has not been played
-export const pickWhen = (F, pk) => { const n = pk.y - (F.draft?.year ?? F.year + 1); return n <= 0 ? 'the next draft' : n === 1 ? 'the draft after next' : 'the draft in three years' }
-export const pickWords = (F, pk) => `a ${ord(pk.r)}-round pick in ${pickWhen(F, pk)}`
+// (once a draft has started it is "this draft", and the one a year on is the next)
+export const pickWhen = (F, pk) => {
+  const D = F.draft, on = !!D?.started, n = pk.y - (D?.year ?? F.year + 1) - (on ? 1 : 0)
+  return n < 0 ? 'this draft' : n === 0 ? 'the next draft' : n === 1 ? 'the draft after next' : 'the draft in three years'
+}
+// where a pick falls in the draft that is on (its overall number), or null when that is not known yet
+export function pickOverall(F, pk) {
+  const D = F.draft
+  if (!D?.started || !D.order || pk.y !== D.year) return null
+  const i = D.order.findIndex(s => s.r === pk.r && s.o === pk.o)
+  return i >= 0 ? i + 1 : null
+}
+export const pickWords = (F, pk) => { const n = pickOverall(F, pk); return n ? `pick No. ${n} (Round ${pk.r}) in this draft` : `a ${ord(pk.r)}-round pick in ${pickWhen(F, pk)}` }
+// a pick as a row reads it: "Round 2, the next draft (via DEN)", and its number once the draft is on
+export const pickText = (F, pk, owner) => { const n = pickOverall(F, pk); return `Round ${pk.r}, ${n ? `No. ${n} overall` : pickWhen(F, pk)}${pk.o !== owner ? ` (via ${pk.o})` : ''}` }
 
 export function execute(F, offer) {
   const A = F.teams[offer.from], B = F.teams[offer.to]

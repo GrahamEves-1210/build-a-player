@@ -1,5 +1,5 @@
 // FRANCHISE: what the screens read. Pure functions of the league (API.md section 2).
-import { SLOTS, OL_SPOTS, REG_WEEKS, PLAYOFF_ROUNDS, weekLabel, DEFAULT_SETTINGS, ROSTER_MAX, ROSTER_MIN, CAMP_MAX, MIN_AT, r2, slotOf } from './consts'
+import { SLOTS, OL_SPOTS, REG_WEEKS, PLAYOFF_ROUNDS, weekLabel, DEFAULT_SETTINGS, ROSTER_MAX, ROSTER_MIN, CAMP_MAX, MIN_AT, STAFF_BUDGET, r2, slotOf } from './consts'
 import { TEAM_SHORTS, teamRating, ranks, recText, touch, fail } from './core'
 import { teamRef, playerRow, teamRows, depthMap, coachRow, playcall } from './rows'
 import { payroll, cutCost } from './money'
@@ -69,7 +69,7 @@ export function staffEffects(F, t) {
 export function staff(F, team = F.team) {
   const t = F.teams[team], c = id => F.coaches[id]
   const used = r2(['hc', 'oc', 'dc'].reduce((s, k) => s + (c(t.staff[k])?.con?.sal ?? 0), 0) + (t.staffDead ?? 0))
-  const total = t.staffBudget ?? 30
+  const total = t.staffBudget ?? STAFF_BUDGET
   const pc = playcall(F, t)
   return {
     hc: coachRow(F, c(t.staff.hc), 'HC'), oc: coachRow(F, c(t.staff.oc), 'OC'), dc: coachRow(F, c(t.staff.dc), 'DC'),
@@ -103,7 +103,15 @@ export function recordOf(F, short) {
   const r = F.teams[short].rec
   return r ? { w: r.w, l: r.l, t: r.t, text: recText(r) } : { w: 0, l: 0, t: 0, text: '0-0' }
 }
-export const teams = F => TEAM_SHORTS.map(s => ({ ...teamRef(s), record: recordOf(F, s).text, user: s === F.team, state: F.teams[s].state ?? 'retool' }))
+// (the table of clubs: enough for a LEAGUE list without a leagueStates() call; about a millisecond)
+export function teams(F) {
+  const val = Object.fromEntries(TEAM_SHORTS.map(s => [s, teamRating(F, F.teams[s]).ovr])), rk = ranks(val)
+  const rows = TEAM_SHORTS.map(s => {
+    const t = F.teams[s], q = (t.depth?.QB ?? []).map(id => F.players[id]).find(p => p && !(p.inj && p.inj.wk > 0)) ?? null
+    return { ...teamRef(s), record: recordOf(F, s).text, user: s === F.team, state: t.state ?? 'retool', rank: rk[s], ovr: val[s], capSpace: r2(F.cap - payroll(F, t)), qb: q ? { id: q.id, name: q.name, ovr: q.ovr, age: q.age } : null }
+  })
+  return rows
+}
 export function leagueRatings(F) {
   const by = {}
   for (const s of TEAM_SHORTS) by[s] = teamRating(F, F.teams[s])

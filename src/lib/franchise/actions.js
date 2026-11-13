@@ -1,6 +1,6 @@
 // FRANCHISE: what the general manager does during a week (API.md section 3). Every action hands back a new
 // top-level league; a refused one leaves the league alone and says why in flash.
-import { ROSTER_MAX, CAMP_MAX, TRADE_DEADLINE, clamp, r2, slotOf, MIN_SALARY, VET_MIN } from './consts'
+import { ROSTER_MAX, CAMP_MAX, TRADE_DEADLINE, SLOT_BY, clamp, r2, slotOf, MIN_SALARY, VET_MIN } from './consts'
 import { touch, fail, ok, addNews, addTx, teamName, nick, activeCount, depthAfterMove } from './core'
 import { payroll, newContract, moneyText, marketValue, nextYearBooks } from './money'
 import { TYPES_OF } from './players'
@@ -34,7 +34,7 @@ export function setPractice(F, { intensity, focus } = {}) {
 }
 export const officeItems = F => F.office.map(o => {
   const p = o.pid != null ? F.players[o.pid] : null
-  return { id: o.id, kind: o.kind, title: o.title, body: o.body, who: p ? { id: p.id, name: p.name, slot: slotOf(p), ovr: p.ovr, photo: p.photo ?? null, built: !!p.built } : null, options: o.options, delegate: o.delegate }
+  return { id: o.id, kind: o.kind, title: o.title, body: o.body, who: p ? { id: p.id, name: p.name, slot: slotOf(p), ovr: p.ovr, photo: p.photo ?? null, built: !!p.built, team: p.team ?? null, role: slotOf(p), roleName: SLOT_BY[slotOf(p)]?.name ?? slotOf(p), kind: 'player' } : null, options: o.options, delegate: o.delegate }
 })
 export function resolveOffice(F, itemId, optionId = 'delegate') {
   const item = F.office.find(o => o.id === itemId)
@@ -105,7 +105,7 @@ export function shopPlayer(F, pid) {
     if (j.capOk && j.rosterOk) { made.push(offer); (F.offers ??= []).push(offer) }
   }
   p.block = true
-  return touch(F, { ok: true, msg: made.length ? `${made.length} team${made.length > 1 ? 's' : ''} called about ${p.name}.` : `Nobody is offering anything for ${p.name} right now.`, offers: made })
+  return touch(F, { ok: true, msg: made.length ? `${['', 'One team', 'Two teams', 'Three teams'][made.length] ?? `${made.length} teams`} called about ${p.name}.` : `Nobody is offering anything for ${p.name} right now.`, offers: made })
 }
 
 // ── Roster ───────────────────────────────────────────────────────────────────

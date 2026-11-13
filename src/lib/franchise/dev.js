@@ -74,7 +74,7 @@ export function tryBreakout(F, p, score, devCoach) {
   if (score < bar) return false
   const R = rngOf(`${F.seed}-${F.year}-${F.week}-brk-${p.id}`)
   if (!R.chance(clamp(0.2 + (score - bar) * 1.2 + (devCoach - 5.5) * 0.03, 0.05, 0.7))) return false
-  p.dev++; p.brk = F.year
+  p.dev++; p.brk = F.year; p.brkW = F.week
   addNews(F, 'milestone', `${p.name} is breaking out for the ${nick(p.team)}`, { team: p.team, pid: p.id, body: `The ${p.age}-year-old ${slotOf(p)} has played his way up a tier: ${DEV[p.dev]} development.` })
   return true
 }

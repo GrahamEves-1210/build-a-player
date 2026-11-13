@@ -5,6 +5,7 @@
 // trailing object, so an old reader never loses it.
 import { SAVE_VERSION } from './consts'
 import { TYPES_OF, realByName, reOvr } from './players'
+import { fixNumbers } from './core'
 
 const FIELDS = ['id', 'name', 'pos', 'sub', 'team', 'age', 'exp', 'a', 'dev', 'devKnown', 'xp', 'pts', 'con', 'mood', 'drives', 'wear', 'inj', 's', 'car', 'hist', 'aw', 'peak', 'kind', 'num', 'ht', 'wt', 'skin', 'photo', 'college', 'draft', 'yrsHere']
 const KNOWN = new Set([...FIELDS, 'ovr', 'real', 'built', 'gen'])
@@ -65,5 +66,7 @@ export function fatten(body) {
 export function migrate(F, from) {
   if (!F) return F
   F.v = SAVE_VERSION
+  // (saves from before jersey numbers were kept apart: generated players who share one on a team get a free one)
+  if (F.teams && F.players && !F.numsOk) { fixNumbers(F); F.numsOk = 1 }
   return F
 }

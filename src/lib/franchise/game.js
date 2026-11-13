@@ -17,11 +17,11 @@ import { lastName } from './players'
 import { nick } from './core'
 
 export const TUNE = {
-  sack: 0.064, sackRush: 3.25, sackQb: 1.55,
+  sack: 0.063, sackRush: 3.7, sackQb: 1.8,
   comp: [0.748, 0.578, 0.38],            // short, intermediate, deep
-  compQb: 0.185, compRec: 0.125, compCov: 0.63, compCall: 0.014, pressureComp: 0.13,
-  int: [0.0115, 0.025, 0.047], intK: 1.9,
-  runBase: 3.8, runLine: 6.3, runBack: 3.75, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
+  compQb: 0.229, compRec: 0.155, compCov: 0.78, compCall: 0.014, pressureComp: 0.13,
+  int: [0.0115, 0.025, 0.047], intK: 2.35,
+  runBase: 3.8, runLine: 7.8, runBack: 4.65, runCall: 0.22, stuff: 0.185, breakaway: 0.024,
   fumRun: 0.013, fumRec: 0.0105, fumSack: 0.1, fumLost: 0.55,
   pen: 0.05, home: 0.014,
   passRate: 0.548,
