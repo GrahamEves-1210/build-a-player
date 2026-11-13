@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
+import { IS_APP, APP_PLATFORM } from '../lib/platform'
 
 // Feedback goes straight into the `feedback` table (supabase/feedback.sql) —
 // read it in the Supabase dashboard. Players can send but never read rows.
@@ -15,6 +16,16 @@ const MAX = 1500
 // shown under the form too, for anyone who'd rather write (Contact us and Feedback both open this)
 const EMAIL = 'buildaplayer@outlook.com'
 const COOLDOWN_MS = 60_000
+// where it was sent from, in words, for the Discord post (supabase/feedback_discord_routes.sql reads it from the
+// front of user_agent: "[iPhone · Safari · website · 390x844] Mozilla/…", so no new column is needed)
+function platformLine() {
+  const ua = navigator.userAgent || ''
+  const ipad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  const device = ipad ? 'iPad' : /iPhone|iPod/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /CrOS/.test(ua) ? 'Chromebook' : /Windows/.test(ua) ? 'Windows' : /Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Other'
+  const browser = /EdgA?\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /OPR\//.test(ua) ? 'Opera' : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : null
+  const where = IS_APP ? `${APP_PLATFORM === 'ios' ? 'iOS' : APP_PLATFORM === 'android' ? 'Android' : APP_PLATFORM} app` : 'website'
+  return [device, IS_APP ? null : browser, where, `${window.innerWidth}x${window.innerHeight}`].filter(Boolean).join(' · ')
+}
 
 export default function FeedbackModal({ user, isBucket, position, onClose }) {
   const [kind, setKind]       = useState('bug')
@@ -43,7 +54,7 @@ export default function FeedbackModal({ user, isBucket, position, onClose }) {
       app: isBucket ? 'bucket' : 'nfl',
       position: position ?? null,
       page: window.location.pathname,
-      user_agent: navigator.userAgent.slice(0, 300),
+      user_agent: `[${platformLine()}] ${navigator.userAgent}`.slice(0, 300),
     })
     setSending(false)
     if (insertError) {
