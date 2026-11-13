@@ -554,6 +554,36 @@ function makeOnside({ v, seed, kick = null, situation = null }) {
   return g
 }
 
+// The onside kick's ball, as a bouncing football (2026-11-12, the owner: better ball physics). A good strike drives the top of
+// the ball into the turf a yard out, and it comes off the ground in one big hop that's on its way down as the two teams
+// meet, about ten yards out; a poor one skips along low, three or four short bounces losing speed each time. Each bounce is
+// a real arc under gravity (its height sets how long it's in the air), the ball covers less ground on each one, and it
+// tumbles end over end, slowing. The arcs are fitted so the ball reaches the recovery spot (dist) when the play says it does:
+// ON_ROLL + most of ON_HOP for a legal kick, ON_ROLL for one that dies short. After that, a last little bounce and it's dead.
+// t: ms since the kick. Returns { Y (yards up the field), Z (yards up), th (its tumble, radians) }
+const GRAV = 10.7   // yards a second a second
+function onsideFlight(sq, dist, legal, t) {
+  const arcs = [lerp(0.35, 0.08, sq)]                               // straight into the turf (barely off it on a good one)
+  const skips = Math.round(lerp(3, 0, sq))
+  for (let i = 0; i < skips; i++) arcs.push(lerp(0.6, 0.35, i / Math.max(1, skips)) * lerp(1, 0.7, sq))
+  if (legal) arcs.push(lerp(0.9, 4.2, sq))                          // the hop: the higher, the longer it hangs for the cover men
+  const dur = arcs.map(h => 2 * Math.sqrt((2 * h) / GRAV))
+  const T = (legal ? ON_ROLL + ON_HOP * 0.8 : ON_ROLL) / 1000, k = T / dur.reduce((a, b) => a + b, 0)
+  // ground covered on each arc: its time in the air times the speed it still has (a fifth gone at each bounce)
+  const share = dur.map((d, i) => d * Math.pow(0.8, i)), all = share.reduce((a, b) => a + b, 0)
+  let ts = t / 1000, y0 = 0
+  for (let i = 0; i < arcs.length; i++) {
+    const d = dur[i] * k, dy = (share[i] / all) * dist
+    if (ts <= d) { const f = ts / d; return { Y: y0 + dy * f, Z: 0.16 + 4 * arcs[i] * f * (1 - f), th: tumble(t) } }
+    ts -= d; y0 += dy
+  }
+  // past the spot: one last short bounce, then it lies there
+  const last = 0.45, f = Math.min(1, ts / last)
+  return { Y: y0 + 1.1 * (1 - (1 - f) * (1 - f)), Z: 0.16 + 4 * 0.25 * f * (1 - f) * (1 - f), th: tumble(t) }
+}
+// end over end, fast off the foot and slowing (about four turns a second at first)
+const tumble = t => { const s = Math.min(t, 2600) / 1000; return Math.PI * 2 * (4 * s - 0.7 * s * s) }
+
 function drawOnside(ctx, g, view) {
   const c = view.colors, them = themOf(view), C = camOnside(view)
   ctx.save()
@@ -575,10 +605,9 @@ function drawOnside(ctx, g, view) {
   const roll = kicked ? prog(g.t, g.rollAt, g.rollAt + ON_ROLL) : 0
   const inHop = g.phase === 'hop' || (g.phase === 'res' && g.legal)
   const hopF = g.phase === 'hop' ? prog(g.t, g.at, g.at + ON_HOP) : inHop ? 1 : 0
-  const bX = lerp(0, tx, roll) + (inHop ? side * 0.9 * hopF : 0), bY = lerp(0, ty, roll) + (inHop ? 1.2 * hopF : 0)
-  // two skips along the ground, then the hop: higher the nearer the strike was to the top of the ball
   const sq = clamp(1 - Math.abs(g.strike ?? 0) / 0.3, 0, 1)
-  const bZ = !kicked ? 0.2 : g.phase === 'roll' ? 0.16 + hop(roll * ON_ROLL, ON_ROLL / 2.2, 0.5) * (1 - roll * 0.3) : g.phase === 'hop' ? 0.16 + Math.sin(hopF * Math.PI) * lerp(1.7, 3.8, sq) : 0.16
+  const fly = kicked ? onsideFlight(sq, dist, g.legal, g.t - g.rollAt) : null
+  const bX = fly ? tx * Math.min(1, fly.Y / Math.max(1, ty)) : 0, bY = fly ? fly.Y : 0, bZ = fly ? fly.Z : 0.2
   if (res?.got) crowdPop(ctx, view, [c.us, c.trim], g.t - res.at, { power: 1.4 })
   // the way it's going and how far, on the grass, while he sets it
   if (g.phase === 'dist' || g.phase === 'strike') {
@@ -596,7 +625,7 @@ function drawOnside(ctx, g, view) {
   }
   // the ball (their man has it under him once it's theirs)
   let q = null
-  if (!res || res.why === 'short') q = ballAt(ctx, C, bX, bY, bZ, kicked ? { ang: g.t / 70 } : { ang: Math.PI / 2 })
+  if (!res || res.why === 'short') q = ballAt(ctx, C, bX, bY, bZ, kicked ? { axis: [side * 0.25 * Math.cos(fly.th), Math.cos(fly.th), Math.sin(fly.th)] } : { ang: Math.PI / 2 })
   else q = P(C, bX, bY, bZ)
   // the kicking team: five on each side of the ball, on the line, no running start; they go when it's kicked
   const cover = kicked ? easeOut(prog(g.t, g.rollAt, g.rollAt + ON_ROLL + ON_HOP * 0.7)) : 0
