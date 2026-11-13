@@ -12,7 +12,11 @@ const MUTE_KEY = 'bap_sound_off'
 // Sound is on by default on the website too (More → Sound turns it off)
 // unset: the website starts quiet, the app starts with sound
 export const isMuted = () => { try { const v = localStorage.getItem(MUTE_KEY); return v == null ? !IS_APP : v === '1' } catch { return !IS_APP } }
-export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : localStorage.setItem(MUTE_KEY, '0') } catch {} }
+export const setMuted = on => {
+  try { on ? localStorage.setItem(MUTE_KEY, '1') : localStorage.setItem(MUTE_KEY, '0') } catch {}
+  // switched on by a tap: audio starts inside that tap (iOS only lets it start from a gesture)
+  if (!on) audio()
+}
 
 // ── Sound ────────────────────────────────────────────────────────────────────
 // Everything is layered from oscillators, filtered noise and FM "bells", with a
@@ -497,7 +501,7 @@ const STAGED = {
 // Load the victory layers ahead of time (a season starting, the shop opening)
 let warmed = false
 export function warmVictory() {
-  if (warmed) return
+  if (warmed || isMuted()) return
   const ac = audio(); if (!ac) return
   warmed = true
   ;['s-boom', 's-impact', 's-perc', 's-powerup', 's-whoosh', 's-explosion'].forEach(id => labBuffer(ac, id))
@@ -867,7 +871,9 @@ export function initJuice() {
 
   // Sounds and haptics fire on the tap itself (click), not on touch-down, so a
   // scroll that starts on a button doesn't click. Touch-down only unlocks audio.
-  document.addEventListener('pointerdown', () => audio(), { capture: true, passive: true })
+  // (sound off, the website's default: no audio at all. Starting it made an AudioContext and fetched and decoded
+  // some fifty sound files on the first tap, a long freeze on a phone, for sounds that never play)
+  document.addEventListener('pointerdown', () => { if (!isMuted()) audio() }, { capture: true, passive: true })
   // While a finger is scrolling, buttons under it don't show their pressed look
   let scrollT = null, startY = 0, startX = 0
   document.addEventListener('touchstart', e => { const t = e.touches[0]; startX = t.clientX; startY = t.clientY }, { capture: true, passive: true })
@@ -884,8 +890,9 @@ export function initJuice() {
   document.addEventListener('click', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
-    if (el.matches('[aria-label="Settings and more"]')) { audio(); return }   // More opens silently
-    audio()                                   // unlock audio on the first gesture (iOS); loads the samples
+    const on = !isMuted()   // (haptics still play with the sound off)
+    if (el.matches('[aria-label="Settings and more"]')) { if (on) audio(); return }   // More opens silently
+    if (on) audio()                                   // unlock audio on the first gesture (iOS); loads the samples
     if (el.matches('.spin-btn, .spin-respin-half')) {
       sfx('tap'); haptic('medium'); startTicks()
       // the build's reels play the spin sound as each one starts (below); other spinners here

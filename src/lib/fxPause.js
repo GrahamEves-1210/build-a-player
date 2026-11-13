@@ -13,10 +13,14 @@ const REST_MS = 5000
 export function initFxPause() {
   if (typeof IntersectionObserver === 'undefined' || typeof MutationObserver === 'undefined') return
   const timers = new WeakMap()
-  const rest = el => el.setAttribute('data-fx-off', '')
+  // (a name's aura or spotlight glows from a layer just before it, outside the name: NameTag.jsx NameText. It rests and
+  // plays with its name; left out, the Pro aura kept the shop redrawing a frame at a time for as long as it was open)
+  const halo = el => { const h = el.previousElementSibling; return h && h.classList.contains('nt-halo') ? h : null }
+  const rest = el => { el.setAttribute('data-fx-off', ''); halo(el)?.setAttribute('data-fx-off', '') }
   const play = el => {
     clearTimeout(timers.get(el))
     el.removeAttribute('data-fx-off')
+    halo(el)?.removeAttribute('data-fx-off')
     if (!el.closest(LOOP)) timers.set(el, setTimeout(() => rest(el), REST_MS))
   }
   // (each one's last answer: a skill game drops the watch while it's up, and picking it up again only acts on a change)
