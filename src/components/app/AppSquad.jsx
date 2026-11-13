@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { SkRows } from './Skeleton'
 import { createPortal } from 'react-dom'
 import { POSITIONS, POS_LABEL, POS_NAME, SPOTS, SOCCER_SHAPES, spotsFor, bySpot, countOf, canAdd, spotsOf, nextToBuild, newSquad, addSlots, dropSlot, isFull, fullSize, afterBuilding } from '../../lib/squad'
 import { soccerOrdinal, runSquadSeason, lineupOf, rosterOf, roleOf, projectedMinutes, squadStrength, teamGrade, teamOf, logoOf, ovrOf, nameOf, faceOf, spotOfBuild, SPOT_LABEL, olSpotOfBuild, loadSquadLegends, legendsReady } from '../../lib/squadSeason'
@@ -743,7 +744,7 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
   return (
     <div className={`ag-screen ag-screen--${sport} sq`}>
       <Head kicker={kicker} title={editing ? 'Run it back' : 'Squad Builder'} right={exit} />
-      <div className="ag-screen-body">{needLegends && !legendsReady(sport) ? <p className="sq-note">Loading the legends…</p> : body}</div>
+      <div className="ag-screen-body">{needLegends && !legendsReady(sport) ? <SkRows n={6} rank={false} value={false} label="Loading the legends" /> : body}</div>
       {ring && (() => {
         const last = ring.rounds[ring.rounds.length - 1]
         // (baseball: the World Series, and the Commissioner's Trophy drawn: TrophyArt's, in the baseball chunk)

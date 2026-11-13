@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { SkRows } from './app/Skeleton'
 import { NameTag } from './app/NameTag'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
@@ -370,7 +371,7 @@ function InfiniteLeaderboard({ onClose }) {
         <div className="sc-lb-header">
           <span className="sc-lb-title">ALL-TIME TOP BUILDS</span>
         </div>
-        {rows === null && <div className="sc-lb-empty">Loading…</div>}
+        {rows === null && <SkRows n={5} avatar={false} label="Loading the leaderboard" />}
         {rows !== null && rows.length === 0 && <div className="sc-lb-empty">No builds yet — be the first!</div>}
         {rows !== null && rows.map((r, i) => (
           <div key={i} className={`sc-lb-row${i === 0 ? ' sc-lb-row--top' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
@@ -428,7 +429,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
         <div className="sc-lb-header">
           <span className="sc-lb-title">{dateLabel?.toUpperCase() ?? 'TODAY'}'S TOP BUILDS</span>
         </div>
-        {rows === null && <div className="sc-lb-empty">Loading…</div>}
+        {rows === null && <SkRows n={5} avatar={false} label="Loading the leaderboard" />}
         {rows !== null && rows.length === 0 && (
           <div className="sc-lb-empty">No builds yet — be the first!</div>
         )}

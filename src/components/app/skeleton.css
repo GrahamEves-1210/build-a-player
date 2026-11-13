@@ -1,0 +1,20 @@
+/* Skeletons (components/app/Skeleton.jsx): flat grey blocks, one slow fade for the whole group */
+.sk { width: 100%; animation: sk-fade 1.5s ease-in-out infinite; }
+.sk-b { display: block; flex: none; border-radius: 4px; background: rgba(255, 255, 255, .09); }
+.sk-rows { display: grid; gap: 8px; }
+.sk-row { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 10px; background: rgba(255, 255, 255, .04); }
+.sk-rank { width: 16px; height: 14px; }
+.sk-av { width: 28px; height: 28px; border-radius: 50%; }
+.sk-av--lg { width: 44px; height: 44px; }
+.sk-line { flex: 0 1 auto; height: 12px; min-width: 40px; }
+.sk-line--sm { height: 9px; margin-top: 8px; }
+.sk-val { width: 44px; height: 16px; margin-left: auto; }
+.sk-cards { display: grid; gap: 10px; }
+.sk-card { display: flex; align-items: center; gap: 12px; height: 76px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, .04); }
+.sk-card > span { flex: 1; min-width: 0; }
+.sk-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sk-chip { width: 96px; height: 34px; border-radius: 6px; }
+@keyframes sk-fade { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+html.bap-reduce-motion .sk { animation: none; }
+.sk-gap { margin-top: 10px; }

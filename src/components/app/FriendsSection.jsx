@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { SkRows } from './Skeleton'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconCheck, IconClose, IconArrow, IconSend } from './icons'
 import { getUsername } from '../../lib/discord'
@@ -151,7 +152,7 @@ export default function FriendsSection({ user, isBucket = false }) {
 
       {/* My friends */}
       <div className="fr-list">
-        {loading && <div className="fr-loading" aria-label="Loading friends"><span /><span /><span /></div>}
+        {loading && <SkRows n={4} rank={false} value={false} label="Loading friends" />}
         {!loading && loadErr && <p className="fr-note">Couldn't load your friends. <button className="fr-link" onClick={refresh}>Retry</button></p>}
         {!loading && !loadErr && friends.length === 0 && (
           <EmptyState kind="duo" title="No friends yet">Find someone by their username above, or add them from the 1v1 lobby.</EmptyState>

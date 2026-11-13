@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SkRows } from './Skeleton'
 import { XpIco } from './GainIcons'
 import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic, claimFx } from '../../lib/juice'
@@ -8,7 +9,7 @@ import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { getUsername } from '../../lib/discord'
 import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow } from './icons'
-import EmptyState, { PassLoader } from './EmptyState'
+import EmptyState from './EmptyState'
 
 // Daily hub (dock → Daily): login streak + rewards, the Daily Challenge with
 // its leaderboard, and today's three missions.
@@ -115,7 +116,7 @@ function Challenge({ p, sport }) {
       </div>
       <div className="ag-board">
         <div className="ag-board-head"><span>TODAY'S TOP BUILDS</span><span>OVR</span></div>
-        {board == null && <PassLoader />}
+        {board == null && <SkRows n={8} label="Loading the board" />}
         {board?.error && <div className="ag-board-empty">The board opens soon — your score is kept on this device.</div>}
         {board && !board.error && board.rows.length === 0 && <EmptyState kind="podium" title="No scores yet">The first Daily finished today takes #1.</EmptyState>}
         {board?.rows.slice(0, 10).map((r, i) => (
@@ -165,7 +166,7 @@ function WeeklyCup({ p }) {
       {won && <p className="ag-cup-won">Last week: #{won.place}. The Cup Contender avatar is in the Locker.</p>}
       <div className="ag-board">
         <div className="ag-board-head"><span>THIS WEEK</span><span>TOTAL</span></div>
-        {board == null && <PassLoader />}
+        {board == null && <SkRows n={8} label="Loading the board" />}
         {board?.error && <div className="ag-board-empty">The Cup board opens soon.</div>}
         {board && !board.error && board.rows.length === 0 && <EmptyState kind="podium" title="Nobody on the Cup yet">Today's Daily starts the week's count.</EmptyState>}
         {board?.rows.slice(0, 10).map((r, i) => (

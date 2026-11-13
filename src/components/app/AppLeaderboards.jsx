@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { SkRows } from './Skeleton'
 import { motion } from 'motion/react'
 import { useProgress, tierFor, nextTier, dayKey, dayIndex, weekEnds } from '../../lib/progress'
 import { onlineBoards, todayBoards, recordBoards, blacktopModes, positionsFor, positionLabel, boardSports, hasGrid, loadBoard, peekBoard, lastWeekChampion } from '../../lib/boards'
@@ -9,7 +10,7 @@ import { sfx } from '../../lib/juice'
 import { SPRING_LAYOUT } from '../../lib/motion'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconArrow, IconCoin } from './icons'
-import EmptyState, { PassLoader } from './EmptyState'
+import EmptyState from './EmptyState'
 
 // Ranks (the dock's tab). Three questions, one tab each: where do I stand online,
 // who's winning today, and who holds the records. Every board is the same list; the
@@ -129,7 +130,7 @@ function Row({ r, i, me, style, tierSub, prizes }) {
 // A board: a list with one ad slot that never remounts (it stays put in the DOM; rows take
 // their places around it with `order`), so switching boards doesn't throw the ad away
 function BoardList({ boardId, board, unit, me, friends }) {
-  if (board == null) return <PassLoader />
+  if (board == null) return <SkRows n={10} label="Loading the board" />
   if (board.error) return <div className="ag-board-empty">This board isn't available right now.</div>
   if (!board.rows.length) return (
     <EmptyState kind="podium" title={friends ? 'No friends here yet' : 'Nobody here yet'}>{friends ? 'Add friends from any name on a board.' : 'The first score takes #1.'}</EmptyState>

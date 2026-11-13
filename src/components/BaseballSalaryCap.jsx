@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { SkRows } from './app/Skeleton'
 import { NameTag } from './app/NameTag'
 import { MLB_TEAMS } from '../data/mlb-teams'
 import MLB_HEADSHOTS from '../data/mlb-headshots.json'
@@ -232,7 +233,7 @@ function SalaryBoard({ title, rows, budget = null }) {
   return (
     <div className="sc-lb-dropdown">
       <div className="sc-lb-header"><span className="sc-lb-title">{title}</span></div>
-      {rows === null && <div className="sc-lb-empty">Loading…</div>}
+      {rows === null && <SkRows n={5} avatar={false} label="Loading the leaderboard" />}
       {rows !== null && rows.length === 0 && <div className="sc-lb-empty">No builds yet. Be the first!</div>}
       {rows !== null && rows.map((r, i) => (
         <div key={i} className={`sc-lb-row${i === 0 ? ' sc-lb-row--top' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>

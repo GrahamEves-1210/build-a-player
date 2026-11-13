@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { SkRows, SkCards } from './Skeleton'
 import { createPortal } from 'react-dom'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconClose, IconStar, IconRing, IconMedal, IconVersus, IconTrophy } from './icons'
@@ -99,7 +100,7 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
 
         <div className="fr-sheet-body">
           {failed && <p className="fr-note">Couldn't load this profile right now.</p>}
-          {!failed && !data && <div className="fr-loading" aria-label="Loading profile"><span /><span /><span /></div>}
+          {!failed && !data && <><SkCards n={1} label="Loading profile" /><SkRows n={5} rank={false} avatar={false} label="Loading profile" className="sk-gap" /></>}
           {data && (
             <>
               <div className="fr-stats">

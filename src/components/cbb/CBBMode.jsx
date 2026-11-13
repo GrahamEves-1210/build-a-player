@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { SkChips } from '../app/Skeleton'
 import SpinScreen, { setGradesHidden, gradesHiddenNow } from '../SpinScreen'
 import Silhouette from '../Silhouette'
 import ReportCard from '../ReportCard'
@@ -160,7 +161,7 @@ function CBBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClo
                 <img className="cfb-conf-plate" src={confLogo(c)} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none' }} />
                 <b>{c.short}</b><small>{c.teams}</small>
               </span>
-            )) : <span className="cfb-wait">Loading the conferences…</span>}
+            )) : <SkChips n={10} label="Loading the conferences" />}
           </div>
         </section>
         {past.length > 0 && (

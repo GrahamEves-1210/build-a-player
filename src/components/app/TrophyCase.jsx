@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { SkRows } from './Skeleton'
 import { createPortal } from 'react-dom'
 import { useProgress, tierFor, tierIndex } from '../../lib/progress'
 import { loadHardware, loadBestBuilds, loadTrophySeasons, seasonPos, modeName, seasonAwards, seasonDate, seasonRecord } from '../../lib/trophies'
@@ -410,7 +411,7 @@ function TrophySheet({ uid, t, onClose }) {
 
       {t.rows && lit && (
         <>
-          {seasons === undefined && <div className="tc-wait tc-wait--inline" aria-label="Loading seasons"><span /><span /><span /></div>}
+          {seasons === undefined && <SkRows n={4} rank={false} avatar={false} label="Loading seasons" />}
           {seasons === null && <p className="tc-note">Couldn't load seasons.</p>}
           {listed.length > 0 && (
             <div className="tc-sub-head tc-sub-head--sheet">
