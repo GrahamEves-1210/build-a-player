@@ -148,7 +148,7 @@ function CBBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClo
         <div className="cfb-pos-row" role="list">
           {Object.entries(CBB_POS).map(([k, p]) => (
             <button key={k} role="listitem" className={`cfb-pos cfb-pos--${k} cbb-pos`} onClick={() => { sfx('tap'); onPick(k) }}>
-              <span className="cbb-pos-faces" aria-hidden="true">{p.faces.current.map(id => <img key={id} src={`/headshots/${id}.webp`} alt="" width="96" height="70" loading="lazy" decoding="async" draggable={false} />)}</span>
+              <span className="cbb-pos-faces" aria-hidden="true">{p.faces.current.map(id => <img key={id} src={`${HEADSHOT_BASE}/${id}.webp`} alt="" width="96" height="70" loading="lazy" decoding="async" draggable={false} />)}</span>
               <span className="cfb-pos-txt"><b>{p.label}</b><small>{p.sub}</small></span>
             </button>
           ))}
