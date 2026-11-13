@@ -387,13 +387,29 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
   // time until it does (the owner, 11-13: PLAYMAKING/CREATIVITY showed a "..."). Only on the website's cards, which
   // keep names to one line
   const nameRef = useRef(null)
+  // (measured again whenever the name gets its size: on a phone the cards are made while the drop-down is still shut,
+  // with nothing to measure, and the name came out cut)
   useLayoutEffect(() => {
     const n = nameRef.current
-    if (!n || getComputedStyle(n).whiteSpace !== 'nowrap') return
-    n.style.removeProperty('font-size')
-    let fs = parseFloat(getComputedStyle(n).fontSize), i = 0
-    while (n.scrollWidth > n.clientWidth + 0.5 && fs > 6.5 && i++ < 16) { fs -= 0.3; n.style.setProperty('font-size', `${fs}px`, 'important') }
-  })
+    if (!n) return
+    let lastW = -1
+    const fit = () => {
+      if (getComputedStyle(n).whiteSpace !== 'nowrap' || !n.clientWidth || n.clientWidth === lastW) return
+      lastW = n.clientWidth
+      n.style.removeProperty('font-size')
+      let fs = parseFloat(getComputedStyle(n).fontSize), i = 0
+      // (the text's own width, to the fraction of a pixel: the box's widths come whole, and a name a fraction over still showed ...)
+      const r = document.createRange()
+      r.selectNodeContents(n)
+      const textW = () => r.getBoundingClientRect().width
+      while (textW() > n.clientWidth - 0.5 && fs > 6.5 && i++ < 16) { fs -= 0.3; n.style.setProperty('font-size', `${fs}px`, 'important') }
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(fit)
+    ro.observe(n)
+    return () => ro.disconnect()
+  }, [])
   return (
     <div
       className={`attr-chip attr-chip-${type}${draggingType === type ? ' chip-dragging' : ''}`}
