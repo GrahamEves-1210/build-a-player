@@ -795,6 +795,8 @@ function Face({ short, photo, color }) {
     </span>
   )
 }
+// a season saved before 2026-11-12 carries a draft year in its note ("Eligible for the 2029 NFL Draft"): shown without it
+const noYear = t => (t ? String(t).replace(/Eligible for the \d{4} NFL Draft\. ?/, '').replace(/ the \d{4} NFL Draft/, ' the NFL Draft') : t)
 function Heisman({ h, v, userName, userYear, photoOf, live, onDone }) {
   const quick = !live || reduced()
   const [phase, setPhase] = useState(quick ? 2 : 0)   // 0 the finalists · 1 the count · 2 the vote
@@ -1003,7 +1005,7 @@ function DraftPage({ r, v, pos, userName, userYear, attrMap, onNext }) {
           <div className="cfbs-draft-top">
             <small>{userName} · {label} · {v.school(v.team.short)}{userYear ? ` · ${userYear}` : ''}</small>
             <b>{String(headline).toUpperCase()}</b>
-            <em>{d.eligible === false ? d.note : pick ? projText(d) : 'Not projected to be drafted'}{d.eligible !== false && d.note ? ` · ${d.note}` : ''}</em>
+            <em>{d.eligible === false ? noYear(d.note) : pick ? projText(d) : 'Not projected to be drafted'}{d.eligible !== false && d.note ? ` · ${noYear(d.note)}` : ''}</em>
           </div>
           <ol className="cfbs-draft-board" aria-label={`Projected: ${projText(d)}`}>
             {[1, 2, 3, 4, 5, 6, 7, 8].map(k => <li key={k} className={on(k) ? 'is-on' : undefined}><span>{k === 8 ? 'UDFA' : `RD ${k}`}</span></li>)}

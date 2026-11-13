@@ -1438,13 +1438,13 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
     const yearsOut = yr === 'FR' ? 2 : yr === 'RS-FR' || yr === 'SO' ? 1 : 1
     const draftYear = dy
     return { year: yr, eligible: false, declares: false, ...shared, label: `Not draft-eligible yet (${yr})`, draftYear,
-      note: `Eligible for the ${draftYear} NFL Draft. Early board: ${LABEL[tier].replace('Projected ', '')}`, classIndex: ci }
+      note: `Early board: ${LABEL[tier].replace('Projected ', '')}`   /* (no draft year: the owner, 2026-11-12. The NFL side is always 2026's) */, classIndex: ci }
   }
   const senior = /SR|GR|5TH/.test(yr)
   const declares = senior || tier === 'top10' || tier === 'r1' || tier === 'day2'
   return {
     year: yr, eligible: true, declares: o?.choice ? true : declares, ...shared, draftYear: dy,   // (boardRank: his place among the eligible players at the position)
-    note: senior ? `Out of eligibility: in the ${dy} NFL Draft` : o?.choice ? `Eligible for the ${dy} NFL Draft` : declares ? `Declares for the ${dy} NFL Draft` : 'Returns to school for another season',
+    note: senior ? 'Out of eligibility: in the NFL Draft' : o?.choice ? 'Eligible for the NFL Draft' : declares ? 'Declares for the NFL Draft' : 'Returns to school for another season',
   }
 }
 

@@ -129,7 +129,7 @@ export function backupSeason(sim, pools, types, team, pos, seed, { ovr, cls = nu
     cfb: {
       ...r.cfb,
       user: { ...(r.cfb.user ?? {}), name: name ?? r.cfb.user?.name, year: cls, ...(build ? { attrs: Object.fromEntries(types.map(t => [t, build[t]?.val ?? null])), types } : {}) },
-      draft: { ...d, year: cls, eligible, draftYear: out, ...(eligible ? {} : { label: `Not draft-eligible yet (${cls})`, note: `Eligible for the ${out} NFL Draft. A backup year behind ${bar?.name ?? 'the starter'}` }) },
+      draft: { ...d, year: cls, eligible, draftYear: out, ...(eligible ? {} : { label: `Not draft-eligible yet (${cls})`, note: `A backup year behind ${bar?.name ?? 'the starter'}` }) },
     },
   }
 }
