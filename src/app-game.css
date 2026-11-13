@@ -6977,15 +6977,11 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   /* RESPIN PLAYER's words off its left edge (the divider), and the respins-left circles a bit smaller (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-respin-player { padding-left: 8px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-respin-player .spin-btn-badge { position: relative; left: -2px; }
-  /* the trait chips (owner, 11-13: redesigned): two across, one line each, all the same size. The trait's name on the left in
-     the page's text colour, its grade on the right in the grade's colour, the grade's colour as the thin bar on the left */
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 40px; gap: 5px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { flex-direction: row !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important;
-    height: 40px !important; min-height: 0 !important; padding: 0 10px 0 11px !important; border-radius: 8px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip .chip-text { flex: 1 1 auto; width: auto; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long) { color: var(--ag-text, #f1f5f9) !important; font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 15px !important; letter-spacing: .1px !important;
-    line-height: 1 !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; padding-top: 1px; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip .chip-val { flex: none; width: 28px !important; text-align: right; font-size: 18px !important; }
+  /* the trait chips (owner, 11-13): three across as before, in the old font, every one the same size (each row as tall as
+     the tallest chip), white text on the grade's colour, no bar on the left */
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: 1fr; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip { height: 100% !important; border: 0 !important; background: color-mix(in srgb, var(--chip-col) 82%, #000) !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .attr-chip :is(.chip-name, .chip-name.is-long, .chip-val) { color: #fff !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-badge { width: 18px !important; height: 18px !important; font-size: 11px !important; }
 }
 
