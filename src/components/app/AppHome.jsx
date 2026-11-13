@@ -617,7 +617,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </ModeArt>
         )}
         {onSquad && (
-          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" tag="UPDATED" line={sqLine} onClick={onSquad}>
+          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" tag={sqLine} line={null} onClick={onSquad}>
             {isBucket
               ? <Lineup />
               : <TeamRow />}

@@ -2227,7 +2227,7 @@ a:focus-visible {
   background: rgba(8, 12, 16, 0.55);
   border: 2px solid var(--pos, rgba(255, 255, 255, 0.5));
   box-sizing: border-box;
-  padding: 0;
+  padding: 2px 0 0;   /* (the display face sits a pixel high: measured on the ring) */
   display: flex;
   align-items: center;
   justify-content: center;
