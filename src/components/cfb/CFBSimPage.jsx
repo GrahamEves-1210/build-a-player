@@ -334,7 +334,7 @@ function ConfTable({ v, champ = false }) {
         {s.teams.map((x, i) => (
           <tr key={x.short} className={x.short === me ? 'is-me' : undefined}>
             <td className="is-n">{i + 1}</td>
-            <td className="is-team"><Logo short={x.short} size={20} /><span>{x.cfp && x.cfp <= 25 ? <em>{x.cfp}</em> : null}{v.school(x.short)}</span>{champ && x.short === s.champion && <i className="cfbs-champ">CHAMP</i>}</td>
+            <td className="is-team"><div className="cfbs-tc"><Logo short={x.short} size={20} /><span>{x.cfp && x.cfp <= 25 ? <em>{x.cfp}</em> : null}{v.school(x.short)}</span>{champ && x.short === s.champion && <i className="cfbs-champ">CHAMP</i>}</div></td>
             <td>{x.confW}-{x.confL}</td>
             <td>{champ ? (x.selection ?? `${x.w}-${x.l}`) : `${x.w}-${x.l}`}</td>
           </tr>
@@ -548,7 +548,7 @@ function RegPage({ r, v, pos, userName, live, nextLabel, onNext, onWeeks, onStor
         <>
           <SeasonLine totals={v.c.totals?.regular ?? r} pos={pos} sub={`${userName} · REGULAR SEASON`} />
           {L?.rows?.length > 0 && (
-            <LeadersBoard title="FBS LEADERS" label={L.label} rank={L.rank} who={<NameTag name={userName} self />}
+            <LeadersBoard title="FBS LEADERS" label={L.label} rank={L.rank} who={userName}
               rows={L.rows.slice(0, 6).map((x, i) => ({ rank: i + 1, me: x.isUser, name: x.isUser ? <NameTag name={userName} self /> : x.name, team: x.team, value: n(x.value) }))} />
           )}
           <KeyGames games={v.reg} v={v} pos={pos} />

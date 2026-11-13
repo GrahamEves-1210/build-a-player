@@ -2260,11 +2260,11 @@ html:is(.is-app, .app-look) .vmb-title { font-family: var(--ag-font) !important;
 
 .sm-leaders { width: 100%; margin-top: 10px; padding: 12px 12px 6px; border-radius: 14px; border: 1px solid var(--ag-line); background: var(--ag-panel); }
 .sm-leaders-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.sm-leaders-rank { font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; color: var(--ag-a1); }
+.sm-leaders-rank { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; color: #fff; white-space: nowrap; }   /* (the name in plain text: a name plate in the corner was hard to read) */
 .sm-leader { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.05); }
 .sm-leader-n { font-family: var(--ag-display); font-size: 15px; color: var(--ag-muted); }
 .sm-leader-name { font-family: var(--ag-body); font-size: 13.5px; font-weight: 600; }
-.sm-leader-name small { margin-left: 6px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.sm-leader-name small { margin-left: 7px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: rgba(255,255,255,.62); }   /* (the school: was 11px in the muted grey, hard to read) */
 .sm-leader-val { font-family: var(--ag-display); font-size: 18px; font-variant-numeric: tabular-nums; }
 .sm-leader.is-me { margin: 0 -8px; padding: 7px 8px; border-radius: 9px; background: color-mix(in srgb, var(--ag-a1) 12%, transparent); border-top: 0; }
 .sm-leader.is-me .sm-leader-name { color: var(--ag-a1); }

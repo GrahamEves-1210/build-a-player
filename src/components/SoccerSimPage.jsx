@@ -465,7 +465,7 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
                 const meE = gb.race.find(e => e.isPlayer) ?? { isPlayer: true, team: r.team?.short, goals: gb.goals }
                 const rows = [...top.map((e, i) => ({ e, rank: i + 1 })), ...(meIn ? [] : [{ e: meE, rank: gb.rank }])]
                   .map(({ e, rank }) => ({ rank, me: !!e.isPlayer, name: e.isPlayer ? <NameTag name={userName} self /> : e.name, team: teamOf(e.team, 'current')?.name ?? e.team, value: e.goals ?? 0 }))
-                return <LeadersBoard label="GOALS" rows={rows} rank={gb.rank} who={<NameTag name={userName} self />} />
+                return <LeadersBoard label="GOALS" rows={rows} rank={gb.rank} who={userName} />
               })()}
               {!isWc && (gb || poty) && (
                 <>

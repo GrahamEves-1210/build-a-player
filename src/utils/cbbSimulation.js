@@ -109,7 +109,9 @@ export function lineOf(a0, pos, mins = 32) {
   const js = g('jumpShot'), fin = g('finishing'), pas = g('passing'), hnd = g('handles'), pd = g('perimeterDefense'), id = g('interiorDefense'), reb = g('rebounding'), pm = g('playmaking')
   const spd = g('speed'), bnc = g('bounce'), sz = g('size'), iq = g('basketballIQ'), clt = g('clutch')
   const scoring = big ? fin * 0.5 + js * 0.22 + pm * 0.1 + clt * 0.1 + bnc * 0.08 : js * 0.32 + fin * 0.26 + spd * 0.14 + hnd * 0.1 + sz * 0.08 + clt * 0.1
-  const ppg = Math.max(2, -6.5 + scoring * 3.15) * mf
+  // (2026-11-12, the owner: the national leaders topped out near 20. A star takes the shots: the top of the scale stretched
+  // (a 9 scorer +2.1 points), an average starter where he was (a 6 still about 12.4))
+  const ppg = Math.max(2, -9 + scoring * 3.55) * mf
   const rpg = (big ? 0.6 + (reb * 0.6 + sz * 0.25 + bnc * 0.15) * 0.95 : 1.2 + (sz * 0.55 + bnc * 0.3 + spd * 0.15) * 0.5) * mf
   const apg = (big ? 0.3 + (pm * 0.6 + iq * 0.3 + js * 0.1) * 0.3 : Math.max(0.5, -1.9 + (pas * 0.55 + hnd * 0.2 + iq * 0.25) * 0.88)) * mf
   const spg = (big ? 0.1 + (id * 0.3 + spd * 0.4 + iq * 0.3) * 0.11 : 0.2 + (pd * 0.6 + spd * 0.25 + iq * 0.15) * 0.16) * mf

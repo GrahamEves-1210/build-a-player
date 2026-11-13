@@ -170,7 +170,10 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbs-table th { padding: 0 6px 6px; font-family: var(--ag-font); font-weight: 400; font-size: 12px; letter-spacing: 1.4px; color: var(--cfb-muted); text-align: right; }
 .cfbs-table td { padding: 6px; border-top: 1px solid var(--cfb-line); text-align: right; font-variant-numeric: tabular-nums; }
 .cfbs-table .is-team { text-align: left; }
-.cfbs-table td.is-team { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+/* (the team cell stays a table cell, its row line level with the others; the logo, name and tag line up inside it.
+   It was a flex box itself, so its line sat off the row's: the owner saw uneven lines) */
+.cfbs-table td.is-team { font-weight: 600; }
+.cfbs-tc { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cfbs-table td.is-n { width: 22px; color: var(--cfb-faint); text-align: left; }
 .cfbs-table tr.is-me td { background: var(--cfb-blue); }
 .cfbs-match, .cfbs-title { margin-top: 12px; border-radius: 4px; overflow: hidden; background: var(--cfb-navy-2); }
@@ -237,8 +240,8 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfb-conf-plate { box-sizing: border-box; padding: 3px; border-radius: 4px; background: #f3f6fc; }
 .cfbs-game-wk small { display: block; margin-top: 2px; font-size: 11px; letter-spacing: .8px; color: var(--cfb-faint); }
 .cfbs-game-sc small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; color: var(--cfb-muted); }
-.cfbs-table td.is-team em { margin-right: 5px; font-style: normal; font-weight: 600; font-size: 11px; color: var(--cfb-muted); }
-.cfbs-table td.is-team span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cfbs-tc em { margin-right: 5px; font-style: normal; font-weight: 600; font-size: 11px; color: var(--cfb-muted); }
+.cfbs-tc > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cfbs-champ { margin-left: auto; padding: 2px 5px 1px; border-radius: 3px; background: #fff; color: var(--cfb-navy); font-family: var(--ag-font); font-style: normal; font-size: 11px; letter-spacing: 1px; }
 .cfbs-awards li span small { display: block; margin-top: 2px; font-weight: 400; font-size: 12.5px; color: var(--cfb-muted); }
 
