@@ -56,6 +56,13 @@ const newSeed = () => ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>>
 
 // Sandbox, the mode's own (basketball's switch and ratings stay basketball's): its switch and custom ratings
 const SANDBOX_KEY = 'bap_cbb_sandbox'
+// a player with no photo wears the NBA mode's generic head, light or dark by his skin (the figure places those two
+// with their own nudges: Silhouette). It used to get none, a blank black head on the figure
+const genericHead = skin => {
+  if (!skin) return '/genericdark.webp'
+  const n = parseInt(String(skin).slice(1, 7), 16)
+  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 155 ? '/genericlight.webp' : '/genericdark.webp'
+}
 const RATINGS_KEY = 'bap_cbb_custom_ratings'
 const RATINGS_KEY_AT = 'bap_cbb_custom_ratings_alltime'   // (All-Time's own: a legend's edits never sit on a current player)
 const readJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } }
@@ -107,8 +114,12 @@ function CBBNav({ pos, onHome, grades, era = 'current' }) {
 function CBBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClose }) {
   const poolTag = progress && poolOf(progress.pool) === 'alltime' ? ' · All-Time' : ''
   const clsTag = progress?.cls0 != null ? ` · ${CLASS_NAME[classAt(progress.cls0, progress.history?.length ?? 0)]}` : ''
+  // (a season still being played: no record yet, and it isn't in Recent Seasons until it's over. The season is saved as it's
+  // simulated, so the home card used to show the final record before he'd played it: the owner, 2026-11-12)
+  const playing = !!progress?.result && !progress.off?.open && progress.stage !== 'final'
+  const past = playing ? seasons.slice(1) : seasons
   const resumeLine = progress && (progress.result
-    ? `${CBB_POS[progress.pos].label}${poolTag}${clsTag} · ${progress.result.team?.school ?? progress.result.team?.name ?? ''} ${progress.result.cbb?.record?.final ?? `${progress.result.wins}-${progress.result.losses}`}`
+    ? `${CBB_POS[progress.pos].label}${poolTag}${clsTag} · ${progress.result.team?.school ?? progress.result.team?.name ?? ''}${playing ? ' · in season' : ` ${progress.result.cbb?.record?.final ?? `${progress.result.wins}-${progress.result.losses}`}`}`
     : `${CBB_POS[progress.pos].label}${poolTag} · ${Object.values(progress.build ?? {}).filter(Boolean).length} of ${POS[progress.pos].types.length} traits`)
   return (
     <div className="ag-screen cfb-screen cfb-entry">
@@ -152,10 +163,10 @@ function CBBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClo
             )) : <span className="cfb-wait">Loading the conferences…</span>}
           </div>
         </section>
-        {seasons.length > 0 && (
+        {past.length > 0 && (
           <section className="cfb-past" aria-label="Recent seasons">
             <h2 className="cfb-label">RECENT SEASONS</h2>
-            {seasons.slice(0, 5).map(s => (
+            {past.slice(0, 5).map(s => (
               <div key={s.at} className="cfb-past-row">
                 <img src={cbbLogoDark(s.team)} alt="" loading="lazy" onError={e => { e.currentTarget.style.visibility = 'hidden' }} />
                 <span className="cfb-past-main"><b>{s.teamName} {s.record}</b><small>{CBB_POS[s.pos]?.label ?? s.pos} · {s.ovr} OVR{s.finalRank ? ` · Final No. ${s.finalRank}` : ''}</small></span>
@@ -422,7 +433,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
   const addChip = (p, overrides, type) => withCollege({
     type, val: overrides?.[type] ?? p.attrs?.[type] ?? 5, qb: p.short || p.name, qbFull: p.name,
     teamColor: p.color, teamColor2: p.color2, skinColor: p.skin, number: p.number, team: p.team, captain: !!p.captain, sandbox: true,
-    photo: p.headshot ? `${HEADSHOT_BASE}/${p.headshot}.webp` : null, height: p.height, weight: p.weight,
+    photo: p.headshot ? `${HEADSHOT_BASE}/${p.headshot}.webp` : genericHead(p.skin), height: p.height, weight: p.weight,
   })
 
   const complete = P.types.every(t => build[t])
@@ -520,7 +531,8 @@ export default function CBBMode({ user, onHome, onCareer }) {
     const away = offersFor(next, { stars: card.stars, ovr, pos, seed: `oneoff-portal-${pos}-${buildKey}-${history.length}-${result.seed}`, skip: [cur], n: 10, lift: stock.lift })
     const bar = barAt(next, cur, pos)
     const stay = { short: cur, stay: true, starts: !isUnder(classAt(cls0, history.length + 1)) || result.role !== 'bench' || !bar || ovr > (bar.ovr ?? 0), bar: bar ? { name: bar.name, ovr: bar.ovr, year: bar.year } : null }
-    return { ovr, card, stock, offers: canReturn ? [stay, ...away] : away }
+    // (he pressed Transfer: his own school isn't one of the options. The owner, 2026-11-12; staying is the other button)
+    return { ovr, card, stock, offers: away, stay }
   }, [moving, data, result, nextBuild, P, history.length, pos, buildKey, confOf, canReturn, cls0])
 
   if (phase === 'pick') {
@@ -631,6 +643,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
       playerLabel={CBB_POS[pos].label}
       headshotsMap={{}}
       headshotsDir={`${HEADSHOT_BASE}/`}
+      headshotFallback={genericHead}
       attrMap={P.attr}
       categoriesData={P.cats}
       key={`cbb-${era}-${pos}`}

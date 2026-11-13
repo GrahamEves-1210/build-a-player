@@ -105,8 +105,12 @@ function CFBNav({ pos, onHome, grades, era = 'current' }) {
 function CFBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClose }) {
   const poolTag = progress && poolOf(progress.pool) === 'alltime' ? ' · All-Time' : ''
   const clsTag = progress?.cls0 != null ? ` · ${CLASS_NAME[classAt(progress.cls0, progress.history?.length ?? 0)]}` : ''
+  // (a season still being played: no record yet, and it isn't in Recent Seasons until it's over. The season is saved as it's
+  // simulated, so the home card used to show the final record before he'd played it: the owner, 2026-11-12)
+  const playing = !!progress?.result && !progress.off?.open && progress.stage !== 'final'
+  const past = playing ? seasons.slice(1) : seasons
   const resumeLine = progress && (progress.result
-    ? `${CFB_POS[progress.pos].label}${poolTag}${clsTag} · ${progress.result.team?.school ?? progress.result.team?.name ?? ''} ${progress.result.cfb?.record?.final ?? `${progress.result.wins}-${progress.result.losses}`}`
+    ? `${CFB_POS[progress.pos].label}${poolTag}${clsTag} · ${progress.result.team?.school ?? progress.result.team?.name ?? ''}${playing ? ' · in season' : ` ${progress.result.cfb?.record?.final ?? `${progress.result.wins}-${progress.result.losses}`}`}`
     : `${CFB_POS[progress.pos].label}${poolTag} · ${Object.values(progress.build ?? {}).filter(Boolean).length} of ${POS[progress.pos].types.length} traits`)
   return (
     <div className="ag-screen cfb-screen cfb-entry">
@@ -150,10 +154,10 @@ function CFBEntry({ data, progress, seasons, era, onEra, onPick, onResume, onClo
             )) : <span className="cfb-wait">Loading the conferences…</span>}
           </div>
         </section>
-        {seasons.length > 0 && (
+        {past.length > 0 && (
           <section className="cfb-past" aria-label="Recent seasons">
             <h2 className="cfb-label">RECENT SEASONS</h2>
-            {seasons.slice(0, 5).map(s => (
+            {past.slice(0, 5).map(s => (
               <div key={s.at} className="cfb-past-row">
                 <img src={cfbLogoDark(s.team)} alt="" loading="lazy" onError={e => { e.currentTarget.style.visibility = 'hidden' }} />
                 <span className="cfb-past-main"><b>{s.teamName} {s.record}</b><small>{s.pos.toUpperCase()} · {s.ovr} OVR{s.finalRank ? ` · Final No. ${s.finalRank}` : ''}</small></span>
@@ -516,7 +520,8 @@ export default function CFBMode({ user, onHome, onCareer }) {
     const away = offersFor(next, { stars: card.stars, ovr, pos, seed: `oneoff-portal-${pos}-${buildKey}-${history.length}-${result.seed}`, skip: [cur], n: 10, lift: stock.lift })
     const bar = barAt(next, cur, pos)
     const stay = { short: cur, stay: true, starts: !isUnder(classAt(cls0, history.length + 1)) || result.role !== 'backup' || !bar || ovr > (bar.ovr ?? 0), bar: bar ? { name: bar.name, ovr: bar.ovr, year: bar.year } : null }
-    return { ovr, card, stock, offers: canReturn ? [stay, ...away] : away }
+    // (he pressed Transfer: his own school isn't one of the options. The owner, 2026-11-12; staying is the other button)
+    return { ovr, card, stock, offers: away, stay }
   }, [moving, data, result, nextBuild, P, history.length, pos, buildKey, confOf, canReturn, cls0])
 
   if (phase === 'pick') {
