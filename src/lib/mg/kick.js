@@ -237,6 +237,9 @@ function paintGround(x, view, C, goalY) {
 // its far wall down to ours, a wall three yards past the end line, a wall three yards outside each sideline, and the
 // crowd rising behind the side walls. Painted once into the scene's baked picture
 const WALL_OUT = 3, WALL_Z = 1.3
+// the house is the home team's: its colours on the walls and in the seats, as its name is on the video board and in the
+// end zone (view.field). It was the kicking team's colours under the home team's name. A Super Bowl: the kicking team's
+const homeOf = (view, c) => (view.field?.color ? [view.field.color, view.field.trim ?? '#ffffff'] : [c.us, c.trim])
 function house(x, view, C, goalY, team) {
   const { w } = view, us = team[0], end = goalY + 10 + WALL_OUT, side = FIELD_HALF + WALL_OUT, near = 1.3 - C.B, U = view.h / 640
   let seed = 41
@@ -257,9 +260,11 @@ function house(x, view, C, goalY, team) {
     }
     x.restore()
   }
-  const wt = P(C, 0, end, WALL_Z).y, top = horizonOf(view) - 24 * U
+  // (from just under the ribbon board, where the bowl's lower deck starts: only the last rows were filled, so the deck looked half empty)
+  const hy = horizonOf(view), foot = hy - 19 * U, rib = 50 * U + (foot - 50 * U) * 0.46
+  const wt = P(C, 0, end, WALL_Z).y, top = rib + 6 * U
   // behind the far wall, all the way across
-  crowd(() => { x.beginPath(); x.rect(0, top, w, wt - top) }, top, wt, 1.6, 2.2)
+  crowd(() => { x.beginPath(); x.rect(0, top, w, wt - top) }, top, wt, 1.3, 2.2)
   // each side: the crowd rising behind the wall, then the wall itself, running from the far corner to the near edge
   for (const sd of [-1, 1]) {
     const fb = P(C, sd * side, end), ft = P(C, sd * side, end, WALL_Z), nb = P(C, sd * side, near), nt = P(C, sd * side, near, WALL_Z)
@@ -392,9 +397,9 @@ function drawFG(ctx, g, view) {
   const C = camFG(view, d), LOS = 7.5
   ctx.save()
   layer(ctx, view, `kick|fg|${d}|${c.us}|${them.color}`, x => {
-    stands(x, view, 'field', [c.us, c.trim])
+    stands(x, view, 'field', homeOf(view, c))
     paintGround(x, view, C, d - 10)
-    house(x, view, C, d - 10, [c.us, c.trim])
+    house(x, view, C, d - 10, homeOf(view, c))
     x.fillStyle = '#3f86ff'; across(x, C, -FIELD_HALF, FIELD_HALF, LOS, 0.16)   // the line of scrimmage
     floodlight(x, view)
     posts(x, C, d)
@@ -404,7 +409,7 @@ function drawFG(ctx, g, view) {
   const struck = !!g.ball, after = struck ? g.t - g.ball.at : -1
   // (the wind: the ball goes where he aimed less what the wind took, so a kick with k.wind above nothing is carried left)
   const blow = -k.wind
-  if (shown?.good) crowdPop(ctx, view, [c.us, c.trim], g.t - shown.at, { power: g.winner ? 1.4 : 1 })
+  if (shown?.good) crowdPop(ctx, view, homeOf(view, c), g.t - shown.at, { power: g.winner ? 1.4 : 1 })
   // the ball in the air: end over end, up over the line and on to the uprights (or short of them)
   const fly = struck ? (() => {
     const b = g.ball, T = b.T, u = (g.t - b.at) / T, sgn = Math.sign(b.yards) || 1
@@ -589,9 +594,9 @@ function drawOnside(ctx, g, view) {
   ctx.save()
   // the ball on the 34: their goal line is 66 yards up the field
   layer(ctx, view, `kick|onside|${c.us}|${them.color}`, x => {
-    stands(x, view, 'field', [c.us, c.trim])
+    stands(x, view, 'field', homeOf(view, c))
     paintGround(x, view, C, 66)
-    house(x, view, C, 66, [c.us, c.trim])
+    house(x, view, C, 66, homeOf(view, c))
     // ten yards from the tee: the line the ball has to cross before the kicking team can touch it
     x.fillStyle = '#f7d64a'; across(x, C, -FIELD_HALF, FIELD_HALF, 10, 0.2)
     floodlight(x, view)
@@ -608,7 +613,7 @@ function drawOnside(ctx, g, view) {
   const sq = clamp(1 - Math.abs(g.strike ?? 0) / 0.3, 0, 1)
   const fly = kicked ? onsideFlight(sq, dist, g.legal, g.t - g.rollAt) : null
   const bX = fly ? tx * Math.min(1, fly.Y / Math.max(1, ty)) : 0, bY = fly ? fly.Y : 0, bZ = fly ? fly.Z : 0.2
-  if (res?.got) crowdPop(ctx, view, [c.us, c.trim], g.t - res.at, { power: 1.4 })
+  if (res?.got) crowdPop(ctx, view, homeOf(view, c), g.t - res.at, { power: 1.4 })
   // the way it's going and how far, on the grass, while he sets it
   if (g.phase === 'dist' || g.phase === 'strike') {
     const y = g.dist ?? g.yards(), a = P(C, 0, 0), b = P(C, side * (3.5 + y * 0.25), y), ok = y >= 10 && y <= 13
