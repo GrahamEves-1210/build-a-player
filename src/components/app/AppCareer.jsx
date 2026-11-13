@@ -22,6 +22,7 @@ import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import PlayerComp from './PlayerComp'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
+import { SkCards } from './Skeleton'
 import { useProgress, spendBoost } from '../../lib/progress'
 import { MomentCard, NowCard, RecordOverlay, HonorOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
@@ -217,7 +218,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
         <section className="cr-slots ag-pop">
           {/* five slots: the saves he has, then one way to start the next (not a column of empty slots) */}
           <div className="ag-card-head"><span className="ag-eyebrow">SAVES{slots ? ` · ${slots.filter(Boolean).length} OF ${slots.length}` : ''}</span></div>
-          {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : <>
+          {!slots ? <SkCards n={3} label="Loading your saves" /> : <>
             {slots.map((c, i) => c && <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setNaming(null); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />)}
             {free < 0 ? <div className="tk-runs-empty">Every save is in use. Delete one to start a new career.</div>
               : naming === free ? <NewSlot key={`n${free}`} S={S} onStart={(name, pos, games, nation, start) => onNew(free, name, pos, games, start)} onCancel={() => setNaming(null)} />
