@@ -7387,3 +7387,5 @@ html body .ag-dock.ag-dock .ag-play--on .ag-play-glyph { opacity: 1; color: var(
 html body .ag-dock.ag-dock .ag-play--on .ag-play-label { display: block; left: 0 !important; right: 0; bottom: 6px !important; text-align: center; color: var(--ag-on, #0b0f0d) !important; font-size: 13px !important; letter-spacing: 1.4px !important; }
 html body .ag-dock.ag-dock .ag-tab-badge, html body .ag-dock.ag-dock .ag-tab-tag { top: 3px; border-radius: 6px; box-shadow: 0 0 0 2px #0a0e0c; }
 html body .ag-dock.ag-dock .ag-tab-icon.has-art .avb { width: 27px !important; height: 27px !important; }
+/* Squad Builder's line under its title like the other cards' tags (it sat at the foot over the positions and the players), both sports and both looks (owner, 11-13) */
+html .ag-mc.ag-mc--squad .ag-mc-head { justify-content: flex-start !important; gap: 8px; }
