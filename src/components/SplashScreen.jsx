@@ -210,7 +210,7 @@ const QB_ATTRS = [
   { label: 'Pre-Snap',              col: '#e879f9', angle:  210, dist: 1.31, mx: 4,  my: 62 },
   { label: 'Accuracy',              col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
   { label: 'Leadership',            col: '#a78bfa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
-  { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 68, my: 34, dox: -290 },
+  { label: 'Playmaking', col: '#fbbf24', angle:  100, dist: 1.32, mx: 68, my: 34, dox: -290 },
   { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
   { label: 'Post-Snap',             col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]

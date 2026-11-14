@@ -102,6 +102,11 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
     const off = top - (pos - CENTER * ITEM_H)    // where row 0 sits in the window
     const first = Math.max(0, Math.floor(-off / ITEM_H) - 1)
     const last = Math.min(track.children.length - 1, first + Math.ceil(h / ITEM_H) + 2)
+    // rows that have left the window go flat again: kept turned, every row the wheel ever showed stayed a 3D layer with its
+    // picture, and the page got slower the longer it was played (the owner, 11-13)
+    const was = track.__drum
+    if (was) for (let i = was[0]; i <= was[1]; i++) if ((i < first || i > last) && track.children[i]) { track.children[i].style.transform = ''; track.children[i].style.transition = ''; track.children[i].__dt = '' }
+    track.__drum = [first, last]
     for (let i = first; i <= last; i++) {
       const el = track.children[i]
       const d = (off + i * ITEM_H + ITEM_H / 2 - h / 2) / (h / 2)   // -1 top edge · 0 middle · 1 bottom edge
