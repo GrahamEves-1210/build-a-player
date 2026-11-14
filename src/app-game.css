@@ -6965,10 +6965,10 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 22px); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body { padding-top: 0 !important; gap: 5px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-static { padding-top: 0 !important; gap: 4px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 150px !important; }   /* 10% taller, three times (owner, 11-13) */
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -35px; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 53px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 76.1px !important; }   /* (the labels float now; the wheel 160px) */   /* on the window's middle (was 4px low, owner 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 142.5px !important; }   /* 10% taller three times, then 5% shorter (owner, 11-14) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -38.75px; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 49.25px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 72.35px !important; }   /* (the labels float now; the wheel 160px) */   /* on the window's middle (was 4px low, owner 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 4.5px 10px !important; }   /* +3px (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
@@ -7494,14 +7494,5 @@ button.cr-team:active { transform: scale(.96); background: rgba(255,255,255,.12)
 
 /* The trait chips as they were before the 11-13 redesign (owner, 11-14), with two things kept: desktop two across in each
    category, phones every chip the same size (each row as tall as the tallest chip) */
-@media (min-width: 769px) {
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-category-section { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-category-section > .attr-category-hd { grid-column: 1 / -1; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-category-section > .attr-chip { margin: 0 !important; min-width: 0; }
-  /* (half the column: the name over the grade, centred, so a long name isn't cut off) */
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-category-section > .attr-chip { flex-direction: column !important; justify-content: center !important; gap: 5px !important; height: 100% !important; padding: 7px 6px !important; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-category-section > .attr-chip .chip-text { flex: none !important; width: 100%; text-align: center; align-items: center; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .attr-category-section > .attr-chip .chip-name { white-space: normal !important; overflow-wrap: normal !important; word-break: normal !important; hyphens: none; }
-}
-html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: 1fr; }
-html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !important; }
+html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: 44px; }   /* one size for every chip, whoever the player (owner, 11-14) */
+html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !important; min-height: 0 !important; overflow: hidden; }
