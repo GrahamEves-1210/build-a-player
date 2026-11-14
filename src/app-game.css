@@ -7317,11 +7317,6 @@ html .ag-dock .ag-play.is-fan .ag-play-core { transform: scale(.96); }
    round it; a console's bar sits on the edge). HOME rises out of the bar as a tab, a grip on its top edge for the hold that
    opens the modes. The tabs carry what they know: the Shop's free reward (gold FREE), the login streak's day on Daily (a
    reward to claim, red, outranks it), the player's own avatar and level on PROFILE. Desktop and the app keep the floating bar */
-@media (max-width: 768px) {
-  html.app-look:not(.is-app) { --ag-dock-gap: var(--web-rail, 0px); }
-  html.app-look:not(.is-app) .ag-dock { left: 0 !important; right: 0 !important; border-radius: 0 !important; border-width: 1px 0 0 !important; border-color: rgba(255,255,255,.1) !important;
-    box-shadow: 0 -8px 20px rgba(0,0,0,.45) !important; padding-bottom: env(safe-area-inset-bottom, 0px); height: calc(var(--ag-dock-h) + env(safe-area-inset-bottom, 0px)); }
-}
 html .ag-dock .ag-play { overflow: visible; }
 html .ag-dock .ag-play-core { inset: -9px 4px 6px !important; padding: 0 0 15px; }
 html .ag-dock .ag-play-core::before { content: ''; position: absolute; top: 5px; left: 50%; width: 20px; height: 3px; margin-left: -10px; border-radius: 2px; background: rgba(0,0,0,.32); }
@@ -7364,28 +7359,15 @@ html body .ag-dock .ag-tab-badge, html body .ag-dock .ag-tab-tag { top: 4px; }
 html body .ag-dock .ag-tab-icon.has-art .avb { width: 21px !important; height: 21px !important; }
 html body .ag-dock .ag-play.ag-play .ag-play-core { box-shadow: none !important; background: transparent !important; border: 0 !important; filter: none !important; }
 
-/* ═══ The bottom bar, game style (owner, 11-13: the broadcast strip was boring) ═══════════════════
-   Chunky and tactile like a mobile game's: bold filled icons only, dimmed; the open tab widens into a raised plate in the
-   sport's colour with a lip under it (like the trait chips), its icon bigger and lifted and its name under it; switching
-   slides the plate across. HOME is one of the five, in the middle; holding it still opens the modes */
-html body .ag-dock.ag-dock { display: flex !important; gap: 6px !important; padding: 7px 8px !important; background: #0a0e0c !important; border-top: 2px solid rgba(255,255,255,.07) !important; }
-html body .ag-dock.ag-dock .ag-tab, html body .ag-dock.ag-dock .ag-play { flex: 1 1 0; transform: none !important; background: transparent; border-radius: 12px; transition: flex-grow .28s cubic-bezier(.3,1.3,.5,1), background .2s ease; }
-html body .ag-dock.ag-dock .ag-tab > *, html body .ag-dock.ag-dock .ag-play > * { transform: none !important; }
-html body .ag-dock.ag-dock .ag-tab-label { display: none; }
-html body .ag-dock.ag-dock .ag-tab:not(.ag-tab--on) .ag-tab-icon { opacity: .6; }
-html body .ag-dock.ag-dock .ag-tab-icon { height: 30px; transition: transform .28s cubic-bezier(.3,1.5,.5,1); }
-html body .ag-dock.ag-dock .ag-tab-icon svg { width: 26px; height: 26px; }
-html body .ag-dock.ag-dock .ag-tab--on, html body .ag-dock.ag-dock .ag-play--on { flex-grow: 1.9; background: var(--ag-a1); box-shadow: inset 0 -4px 0 rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.3) !important; }
-html body .ag-dock.ag-dock .ag-tab--on .ag-tab-icon { color: var(--ag-on, #0b0f0d); height: 26px; }
-html body .ag-dock.ag-dock .ag-tab--on .ag-tab-label { display: block; position: static; text-align: center; color: var(--ag-on, #0b0f0d); font-size: 13px; letter-spacing: 1.4px; margin-top: 1px; }   /* (icon over name, centred together) */
-html body .ag-dock.ag-dock .ag-play { position: relative; height: 100%; margin: 0 !important; box-shadow: none !important; }
-html body .ag-dock.ag-dock .ag-play-glyph { top: 0 !important; bottom: 0 !important; color: #fff; opacity: .6; transition: transform .28s cubic-bezier(.3,1.5,.5,1); }
-html body .ag-dock.ag-dock .ag-play-glyph svg { width: 26px; height: 26px; }
-html body .ag-dock.ag-dock .ag-play-core { padding: 0 !important; }
-html body .ag-dock.ag-dock .ag-play-label { display: none; transform: none !important; }
-html body .ag-dock.ag-dock .ag-play--on .ag-play-glyph { opacity: 1; color: var(--ag-on, #0b0f0d); transform: translateY(-8px) scale(1.12) !important; }
-html body .ag-dock.ag-dock .ag-play--on .ag-play-label { display: block; left: 0 !important; right: 0; bottom: 6px !important; text-align: center; color: var(--ag-on, #0b0f0d) !important; font-size: 13px !important; letter-spacing: 1.4px !important; }
-html body .ag-dock.ag-dock .ag-tab-badge, html body .ag-dock.ag-dock .ag-tab-tag { top: 3px; border-radius: 6px; box-shadow: 0 0 0 2px #0a0e0c; }
-html body .ag-dock.ag-dock .ag-tab-icon.has-art .avb { width: 27px !important; height: 27px !important; }
 /* Squad Builder's line under its title like the other cards' tags (it sat at the foot over the positions and the players), both sports and both looks (owner, 11-13) */
 html .ag-mc.ag-mc--squad .ag-mc-head { justify-content: flex-start !important; gap: 8px; }
+
+/* The broadcast bar again, floating on phones too, tidied (owner, 11-13). HOME is a plain tab now (the hold for modes is
+   gone): the wider middle panel, outlined in the sport's colour, filled when it's the open one */
+html body .ag-dock { left: 10px; right: 10px; border-radius: 14px; border: 1.5px solid rgba(255,255,255,.07) !important; box-shadow: 0 10px 24px rgba(0,0,0,.6); }
+html body .ag-dock .ag-tab--home { box-shadow: inset 0 0 0 2px var(--ag-a1); }
+html body .ag-dock .ag-tab--home .ag-tab-label { font-size: 15px; letter-spacing: 2px; color: #fff; }
+html body .ag-dock .ag-tab--home:not(.ag-tab--on) .ag-tab-icon { color: var(--ag-a1); opacity: 1; }
+html body .ag-dock .ag-tab--home.ag-tab--on { box-shadow: none; }
+html body .ag-dock .ag-tab--home.ag-tab--on .ag-tab-label { color: var(--ag-on, #0b0f0d); }
+html body .ag-dock .ag-tab-tag, html body .ag-dock .ag-tab-badge { transform: skewX(12deg); }
