@@ -7404,3 +7404,7 @@ html body .ag-dock .ag-tab:not(.ag-tab--on)::before { background: transparent; }
 /* the wordmark's -A- in each sport's own colour (the shared wordmark took the accent, peach on basketball's pages) */
 html body .ag-home--bucket .bap-wm em:not([style]), html.is-bucket body .bap-wm em:not([style]), html body [data-sport="bucket"] .bap-wm em:not([style]) { color: #f97316; -webkit-text-fill-color: #f97316; }
 html body .ag-home--soccer .bap-wm em:not([style]), html.is-soccer body .bap-wm em:not([style]), html body [data-sport="soccer"] .bap-wm em:not([style]) { color: #9a9ca1; -webkit-text-fill-color: #9a9ca1; }
+
+/* (owner, 11-13) each tab marked off by its own slanted shape, the part that lights up, as a thin outline: no fill behind the
+   ones that aren't open */
+html body .ag-dock .ag-tab:not(.ag-tab--on):not(.ag-tab--home)::before { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14); }
