@@ -384,7 +384,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
           <OnlineNow />
           <img src="/bap-mark.webp" alt="" className="agc-brand-mark" draggable={false} />
           <div className="agc-wordmark">
-            BUI<i className="wm-k wm-k2">L</i>D<em><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>{isBucket ? <>B<HoopU />CKET</> : <><i className="wm-k">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-k2">E</i>R</>}
+            BUI<i className="wm-k wm-k2">L</i>D<em><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>{isBucket ? <>B<HoopU />CKET</> : <><i className="wm-k wm-k2">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-k2">E</i>R</>}
           </div>
           {/* the website doesn't open the tutorial by itself (cleared browser data
               would bring it back every visit): it's here when someone wants it */}
