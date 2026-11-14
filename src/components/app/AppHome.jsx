@@ -3,7 +3,7 @@ import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, hsUrl, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday, POTD_COINS } from '../../lib/progress'
-import { IconProfile, IconGear, IconFootball, IconBasketball, IconSoccer, IconBaseball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal, IconLock } from './icons'
+import { IconProfile, IconGear, IconFootball, IconBasketball, IconSoccer, IconBaseball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal, IconLock, IconCaret } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
@@ -719,14 +719,15 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           })()}
         </div>
 
-        {/* (the CONTINUE card above PLAY is gone, the owner 11-13) */}
-        {false && resume && (
-          <button className="ag-resume ag-resume--top" onClick={resume.onClick}>
-            <span className="ag-resume-icon"><IconPlay size={18} /></span>
-            <span className="ag-card-txt">
-              <span className="ag-eyebrow">CONTINUE</span>
+        {/* CONTINUE: the build or season in progress, right above PLAY (back 11-14, a plain bar: the mode, where it stands) */}
+        {resume && (
+          <button className="ag-resume ag-resume--top ag-resume--bar" onClick={resume.onClick}>
+            <span className="ag-resume-txt">
+              <span className="ag-resume-eyebrow">CONTINUE</span>
               <span className="ag-resume-title">{resume.label}</span>
             </span>
+            {resume.sub && <span className="ag-resume-sub">{resume.sub}</span>}
+            <IconCaret dir="right" size={14} />
           </button>
         )}
 

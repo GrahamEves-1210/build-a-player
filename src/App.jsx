@@ -65,6 +65,7 @@ import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
 const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
+import { readLive, startLive, bookLive, clearLive } from './lib/seasonLive'
 import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
@@ -176,7 +177,20 @@ const startersSaved = () => {
   try { return _saved?.starters === true && !_saved.daily && !_saved.tk && (_saved.gameMode === 'classic' || _saved.gameMode === 'all-time') && localStorage.getItem('bap_custom_mode') === '1' } catch { return false }
 }
 const SEASON_PENDING = 'bap_season_pending'
-try { const s = localStorage.getItem(SEASON_PENDING); if (s) { markPlayed(s); localStorage.removeItem(SEASON_PENDING) } } catch {}
+// A season in progress kept on the device (lib/seasonLive.js): the saved build's own season picks back up after a
+// reload, on CONTINUE. One that isn't the saved build's any more was left behind: played, as a reload always made it
+const _live = (() => {
+  const v = readLive()
+  if (!v) return null
+  const mine = !!_saved && !_saved.tk && !v.tk && v.mode === _saved.gameMode && v.pos === (_saved.position ?? 'qb')
+    && Array.isArray(v.types) && buildSig(v.mode, _saved.build, v.types) === v.sig
+  if (mine) return v
+  if (!v.booked) markPlayed(v.sig)
+  clearLive()
+  return null
+})()
+// a season simulated but never booked: played (no second run at a season by reloading), unless it's the one that picks back up
+try { const s = localStorage.getItem(SEASON_PENDING); if (s && !(_live && !_live.booked && _live.sig === s)) { markPlayed(s); localStorage.removeItem(SEASON_PENDING) } } catch {}
 
 export default function App() {
   const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card
@@ -187,7 +201,7 @@ export default function App() {
   const [build, setBuild]               = useState(_saved?.build ?? {})
   const [activeDrag, setActiveDrag]     = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
-  const [simResult, setSimResult]       = useState(null)
+  const [simResult, setSimResult]       = useState(_live ? (_live.booked ? _live.final : _live.base) : null)
   const [simReplaying, setSimReplaying] = useState(false)
   const [spinResetKey, setSpinResetKey] = useState(0)
   const [gameKey, setGameKey]           = useState(0)
@@ -641,6 +655,7 @@ export default function App() {
   }, [auctionLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStart = useCallback((mode, pos = 'qb') => {
+    leaveLive()
     // Salary Cap (QB): its own page picks the build from the day's grid
     if (mode === 'salarycap') {
       setPosition('qb'); setGameMode('salarycap'); setBuild({}); setSimResult(null); setDailyRun(null)
@@ -894,6 +909,7 @@ export default function App() {
 
   const handleReset = useCallback(() => {
     if (dailyLockedRef.current) return
+    leaveLive()
     setDailyRun(null)
     setVersusRoom(prev => {
       if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
@@ -951,6 +967,15 @@ export default function App() {
   const commitRef = useRef(null)
   const handleTeamPicked = useCallback((team) => {
     setShowTeamPicker(false)
+    // this build's season is already under way (a reload, or Simulate again): pick it back up, never a second run
+    if ((IS_APP || APP_LOOK) && !tkRef.current) {
+      const v = readLive()
+      if (v && !v.booked && v.sig === buildSig(gameMode, build, activeTypes)) {
+        setSimResult(v.base); setSimReplaying(false); setPage('sim')
+        window.scrollTo({ top: 0, behavior: 'instant' })
+        return
+      }
+    }
     const atRatings = ALLTIME_RATINGS[team.short]
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
@@ -978,6 +1003,9 @@ export default function App() {
       // until it's booked, the build is a season in progress: a reload or a killed app
       // before the end makes it a played build (no second run at a season by reloading)
       if (!dailyRun) { try { localStorage.setItem(SEASON_PENDING, buildSig(gameMode, build, activeTypes)) } catch {} }
+      // kept on the device as it plays, so a reload picks it back up (lib/seasonLive.js)
+      if (!tkRef.current) startLive({ sig: buildSig(gameMode, build, activeTypes), mode: gameMode, pos: position, types: activeTypes, build, base: result, seed: Math.random().toString(36).slice(2, 8), tk: null })
+      else clearLive()
       setSimResult(result); setSimReplaying(false); setPage('sim')
       window.scrollTo({ top: 0, behavior: 'instant' })
       return
@@ -1076,6 +1104,7 @@ export default function App() {
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
     result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
+    { const v = readLive(); if (v && !v.booked && !tkRef.current && v.sig === buildSig(gameMode, build, activeTypes)) bookLive(v.id, result) }
     // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
     // already saved a season. Either way: no save, and no XP or coins either.
     const saveBlock = blockReason({ mode: gameMode, build, types: activeTypes, pool: activePool, sandboxOn: isCustomMode, tainted: sandboxTainted.current })
@@ -1167,6 +1196,20 @@ export default function App() {
   commitRef.current = commitSeason
 
   // The director re-simulates the rest of a season with tweaked inputs
+  // a season in progress that isn't picked back up (a new build): played, as a reload always made it
+  const leaveLive = () => {
+    const v = readLive()
+    if (!v) return
+    if (!v.booked) { markPlayed(v.sig); try { localStorage.removeItem(SEASON_PENDING) } catch {} }
+    clearLive()
+  }
+  // the kept season, for the sim page, when it's this build's (read as the page opens, not every render)
+  const liveRec = useMemo(() => {
+    if (page !== 'sim' || simReplaying || !(IS_APP || APP_LOOK) || gameMode === 'salarycap' || tkRef.current) return null
+    const v = readLive()
+    return v && v.sig === buildSig(gameMode, build, activeTypes) ? v : null
+  }, [page, simResult]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const simFor = useCallback((b, t) => {
     const at = gameMode === 'all-time'
     return isK ? runKSimulation(b, t, at) : isOL ? runOLSimulation(b, t, at) : isDL ? runDLSimulation(b, t, at) : isLB ? runLBSimulation(b, t, at) : isDB ? runDBSimulation(b, t, at) : isTE ? runTESimulation(b, activeTypes, t, at)
@@ -1790,11 +1833,11 @@ export default function App() {
       </Helmet>
       {IS_APP ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined} onFranchise={FRANCHISE_LIVE ? openFranchise : undefined}
-          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
           onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined} onFranchise={FRANCHISE_LIVE ? openFranchise : undefined}
-          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" home onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
@@ -2130,6 +2173,7 @@ export default function App() {
           onReset={() => { if (gameMode === 'salarycap') { setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? simFor : null}
           onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitSeason : null}
+          live={liveRec}
           pool={displayPool}
           userName={getUsername(user) || 'Guest'}
           isSalaryMode={gameMode === 'salarycap'}

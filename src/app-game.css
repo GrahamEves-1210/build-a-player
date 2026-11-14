@@ -7496,3 +7496,12 @@ button.cr-team:active { transform: scale(.96); background: rgba(255,255,255,.12)
    category, phones every chip the same size (each row as tall as the tallest chip) */
 html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { grid-auto-rows: 44px; }   /* one size for every chip, whoever the player (owner, 11-14) */
 html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !important; min-height: 0 !important; overflow: hidden; }
+
+/* Home's CONTINUE (back 11-14): a plain bar, the mode on the left, BUILD or SEASON and an arrow on the right */
+.ag-home .ag-resume.ag-resume--bar { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 8px 14px; border: 1px solid color-mix(in srgb, var(--hm-a, var(--ag-a1)) 55%, transparent);
+  border-radius: var(--hm-r, 10px); background: rgba(255,255,255,.04); box-shadow: none; color: #fff; text-align: left; }
+.ag-resume--bar .ag-resume-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ag-resume--bar .ag-resume-eyebrow { font-family: var(--ag-font, inherit); font-size: 11px; letter-spacing: 1.6px; line-height: 1; color: var(--hm-a, var(--ag-a1)); }
+.ag-resume--bar .ag-resume-title { font-size: 20px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-resume--bar .ag-resume-sub { flex: none; font-family: var(--ag-font, inherit); font-size: 12px; letter-spacing: 1.4px; color: rgba(255,255,255,.6); }
+.ag-resume--bar > svg { flex: none; color: rgba(255,255,255,.6); }

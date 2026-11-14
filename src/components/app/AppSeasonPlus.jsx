@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { whenStill } from '../../lib/userScroll'
 import { createPortal } from 'react-dom'
 import { GAME_LINE, setMomentsOff } from '../../lib/seasonDirector'
+import { saveStop, savePos } from '../../lib/seasonLive'
 import { leaderBoard } from '../../lib/seasonFacts'
 import { sfx, haptic, victory, titleConfetti } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame, IconTrophy } from './icons'
@@ -210,16 +211,26 @@ export function SeasonStory({ story, pos, sport, name }) {
 
 // Hook: drives a director-based reveal. Returns everything a season screen
 // needs to draw. `pace` ms per game; the reveal pauses at each stop.
-export function useDirectedReveal({ director, pace, onFinal }) {
-  const [k, setK] = useState(0)               // games revealed
-  const [moment, setMoment] = useState(null)
+// `live`: a season kept on the device (lib/seasonLive.js, football): it starts where it was left (the director already
+// holds its state at the last stop; the games since are looked at again for their milestones, silently), the place is
+// saved at each game and the director's state at each stop, and a moment's outcome as it's chosen (a reload can't
+// roll it again)
+export function useDirectedReveal({ director, pace, onFinal, live = null }) {
+  const [k, setK] = useState(() => {
+    if (!live || !director) return 0
+    const k0 = Math.min(Math.max(0, live.k | 0), director.total)
+    for (let i = (live.snapK | 0) + 1; i <= k0; i++) director.observe(i)
+    return k0
+  })               // games revealed
+  const [moment, setMoment] = useState(() => (live && director ? live.moment ?? null : null))
   const [fresh, setFresh] = useState([])
   const [record, setRecord] = useState(null)
   const [tick, setTick] = useState(0)
   const [done, setDone] = useState(false)
-  const stopIdx = useRef(0)
+  const stopIdx = useRef(live && director ? live.stopIdx | 0 : 0)
   const timer = useRef(null)
   const total = director?.total ?? 0
+  const keep = (at, m) => { if (live) saveStop(live.id, { snap: director.snapshot(), snapK: at, stopIdx: stopIdx.current, moment: m }) }
 
   useEffect(() => {
     if (!director || moment || done) return
@@ -229,6 +240,7 @@ export function useDirectedReveal({ director, pace, onFinal }) {
       if (stop) {
         const m = director.open(stop)
         stopIdx.current++
+        keep(k, m || null)
         if (m) { setMoment(m); return }
         setTick(t => t + 1)   // no moment at this stop: run again for the next one
         return
@@ -249,6 +261,7 @@ export function useDirectedReveal({ director, pace, onFinal }) {
         if (rec) setRecord(director.records[director.records.length - 1])
         else if (hits.some(h => h.big)) { sfx('chime'); haptic('light') }
       }
+      if (live) savePos(live.id, { k: next })
       setK(next)
     }, k === 0 ? 700 : pace)
     return () => clearTimeout(timer.current)
@@ -256,6 +269,7 @@ export function useDirectedReveal({ director, pace, onFinal }) {
 
   const choose = option => {
     const out = director.choose(moment, option)
+    keep(k, null)   // (at once: the outcome is the season's from here, a reload included)
     // let a gamble's outcome line read, then roll on
     setTimeout(() => { setMoment(null); setTick(t => t + 1) }, out ? 1900 : 700)
     return out
@@ -264,6 +278,7 @@ export function useDirectedReveal({ director, pace, onFinal }) {
   const turnOff = () => {
     setMomentsOff(true)
     window.dispatchEvent(new Event('bap:moments-off'))
+    keep(k, null)
     setMoment(null); setTick(t => t + 1)
   }
   return { k, games: director ? director.games.slice(0, k) : [], moment, choose, turnOff, fresh, record, clearRecord: () => setRecord(null), done, headlines: director?.headlines ?? [], total }

@@ -45,6 +45,7 @@ import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
+import { savePos } from '../lib/seasonLive'
 import { ShareSeasonButton } from './app/SeasonShare'
 import { nflSeasonCard } from '../utils/seasonCard'
 import { useCountUp as countUp } from '../lib/useCountUp'
@@ -559,11 +560,11 @@ const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? 
 
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'Guest' }) {
+function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'Guest', live = null }) {
   const { games, playoffs, hasBye } = result
   const pos = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   // App: the director reveals the season and pauses on its moments
-  const dr = useDirectedReveal({ director, pace: 240, onFinal })
+  const dr = useDirectedReveal({ director, pace: 240, onFinal, live: live && !live.booked ? live : null })
   const { seasonPassYds, seasonTDs, seasonINTs: qbSeasonINTs, seasonRating, seasonCompPct, seasonRushYds: qbRushYds, seasonRushTDs: qbRushTDs, seasonSacks } = result
   const { seasonRushYds: rbRushYds, seasonRushTDs: rbRushTDs, seasonYPC, seasonFumbles, seasonRecYds, seasonRecTDs, seasonRecs, seasonLong, seasonYPR, seasonTargets } = result
   const { seasonINTs: dbINTs, seasonPBUs, seasonTackles, seasonTFL, seasonPickSixes } = result
@@ -1483,15 +1484,19 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
+export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false, live: kept = null }) {
   // a replay opens on the final report (after the GOAT screen; OL has none), and so does coming back
   // to a season that was already played and booked (it has its story): never a second run at it
-  const [screen, setScreen] = useState(replay || baseResult.story ? 4 : 0)
+  // a season kept on the device (lib/seasonLive.js) opens on the screen it was left on: the booked season from there
+  // on, or the season still playing, picked back up where it was (owner 11-14)
+  const [screen, setScreen] = useState(() => replay ? 4 : (kept && kept.screen > 0) ? Math.min(kept.screen, 4) : baseResult.story ? 4 : 0)
+  useEffect(() => { if (kept && !replay) savePos(kept.id, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   const tapGuard = useTapGuard()
   const [mvpResult, setMvpResult] = useState(null)
-  const [mvpWon, setMvpWon] = useState(false)
-  const [protWon, setProtWon] = useState(false)   // a lineman's Protector of the Year (his All-Pro is mvpWon)
+  const pastAward = !!kept && kept.booked && kept.screen >= 3
+  const [mvpWon, setMvpWon] = useState(() => pastAward && !!baseResult.award?.userWins)
+  const [protWon, setProtWon] = useState(() => pastAward && !!baseResult.award?.protector?.userWins)   // a lineman's Protector of the Year (his All-Pro is mvpWon)
   const [mvpContinuation, setMvpContinuation] = useState(null)
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
@@ -1499,7 +1504,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const position = isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const attrMap = isK ? K_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const director = useMemo(() => (APP_SIM && (simFn || isSalaryMode) && !replay && !baseResult.story && baseResult.games?.length)
-    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap, types, ...(isK ? { injuryOdds: { season: 0, playoffs: 0 } } : {}) })   // (a kicker is never hurt)
+    ? (d => (kept?.snap && !kept.booked ? d.restore(kept.snap) : d))(createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap, types, ...(kept?.seed && !kept.booked ? { seed: kept.seed } : {}), ...(isK ? { injuryOdds: { season: 0, playoffs: 0 } } : {}) }))   // (a kicker is never hurt)
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
   // leaving mid-season still books the season (`leaving`: booked on the way out, so it
@@ -1574,7 +1579,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
 
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isK={isK} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} live={kept} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel="GOAT Status" />,
     // where the season ranks among the all-time top 25 at the position (no OL list)
     ...([<ScreenGOAT key="goat" kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={isOL ? protWon : mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
