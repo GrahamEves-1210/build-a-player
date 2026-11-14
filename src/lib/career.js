@@ -2504,10 +2504,18 @@ function buildBracket(c, f) {
   const myStr = strength(c.simTeam ?? mine)
   const seed = f.seed ?? 4
   const names = S.isBucket ? (seed >= 7 ? ['Play-In', ...S.rounds] : S.rounds) : (f.hasBye ? S.rounds.slice(1) : S.rounds)
+  // nobody twice in one bracket (a player beat Boston in the play-in, then drew Boston in the first round, 11-14): a
+  // pick already played moves to the nearest team in the order that hasn't been (the same draws, so the seed's bracket holds)
+  const met = new Set()
+  const fresh = (list, i) => {
+    for (let d = 0; d < list.length; d++) for (const j of [i + d, i - d]) if (j >= 0 && j < list.length && !met.has(list[j].short)) return list[j]
+    return list[Math.min(list.length - 1, i)]
+  }
   const rounds = names.map((name, i) => {
     const fin = name === S.final, playIn = name === 'Play-In'
     const ri = S.isBucket ? (playIn ? -1 : i - (seed >= 7 ? 1 : 0)) : i   // the round inside the main bracket
-    const opp = fin ? other[Math.floor(r() * 3)] : playIn ? same[Math.min(same.length - 1, 6 + Math.floor(r() * 3))] : same[Math.min(same.length - 1, (S.isBucket ? Math.max(0, 3 - ri) : (f.hasBye ? ri : ri + 1)) * 2 + Math.floor(r() * 2))]
+    const opp = fin ? other[Math.floor(r() * 3)] : playIn ? fresh(same, Math.min(same.length - 1, 6 + Math.floor(r() * 3))) : fresh(same, Math.min(same.length - 1, (S.isBucket ? Math.max(0, 3 - ri) : (f.hasBye ? ri : ri + 1)) * 2 + Math.floor(r() * 2)))
+    met.add(opp.short)
     const home = fin ? null : S.isBucket ? (playIn ? seed <= 8 : ri === 0 ? seed <= 4 : seed <= 2) : f.hasBye ? i === 0 : i === 0 && f.wins >= 11
     // (a true star tilts a series or a playoff game more: up to +0.07 more at 99)
     const base = 0.5 + (myStr - strength(opp)) * 0.08 + (home ? 0.06 : home === false ? -0.03 : 0) + ((c.ovr - 76) / 100) * 0.35 + Math.max(0, c.ovr - 95) * 0.018
