@@ -7417,3 +7417,5 @@ html body .ag-dock.ag-dock .ag-tab--on::before { background: var(--ag-a1); box-s
 html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: inset 0 0 0 2px var(--ag-a1), 0 6px 14px rgba(0,0,0,.55) !important; }
 /* phones: the buttons a little shorter (70px to 62px) */
 @media (max-width: 768px) { html.app-look { --ag-dock-h: 62px; } html body .ag-dock.ag-dock { --ag-dock-h: 62px; height: 62px; } html body .ag-dock .ag-tab { gap: 2px; } }
+/* phones: the bottom buttons a tad shorter again (62px to 58px) */
+@media (max-width: 768px) { html.app-look { --ag-dock-h: 58px; } html body .ag-dock.ag-dock { --ag-dock-h: 58px; height: 58px; } html body .ag-dock .ag-tab { gap: 1px; } }
