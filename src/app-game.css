@@ -7264,20 +7264,9 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
 @media (min-width: 769px) { html.app-look .navbar .logo-text.logo-text--small { font-size: 25px; } }
 /* the top bar's drag pill the same as the drop-down's (48 by 5, white), and it goes down with it: while the drop-down is open only the drop-down's own pill shows, at its foot */
 .drop-bar-grab { width: 48px !important; height: 5px !important; margin-left: -24px !important; border-radius: 3px !important; background: #fff !important; transition: opacity .15s ease; }
-/* one pill, and it travels (owner, 11-13): the drop-down's own pill peeks out under the top bar while it's shut (its foot, 10px, shows), the bar's own pill is gone, and opening carries the pill down with it */
-html.app-look:not(.is-app) .drop-bar-grab { display: none !important; }
-/* (shut, it looks as it did: the pill sits at the bar's foot, the bar the same height, no tab or line under it. The bar gives
-   up its bottom padding and line, the drop-down's foot (7px: the pill and a pixel each side) shows in their place) */
-@media (max-width: 768px) {
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-bar { padding-bottom: 0 !important; border-bottom: 0 !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet-grip { padding: 1px 0 !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) { transform: translate3d(0, calc(-100% + 23px), 0); box-shadow: none !important; border-color: transparent !important; border-radius: 0 !important; background: transparent !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) .drop-sheet-grip { padding: 1px 0 17px !important; background: linear-gradient(180deg, rgba(9,12,11,.94) 7px, transparent 7px) !important; }   /* (the pill on the bar's colour, then 16px you can't see but can tap) */
-}
 
-/* Phones (website): the pill's hit area reaches 16px below it (shut, the drop-down takes no taps but its pill does); and no
-   rubber-band bounce on the build screen, which moved the bar without the drop-down and left the pill floating (owner, 11-13) */
-@media (max-width: 768px) {
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) .drop-sheet-grip { pointer-events: auto; }
-  html.app-look:not(.is-app):has(.game-layout.ag-drop), html.app-look:not(.is-app):has(.game-layout.ag-drop) body, html.app-look:not(.is-app) .game-page-scroll:has(.game-layout.ag-drop) { overscroll-behavior-y: none; }
-}
+/* One pill that travels (owner, 11-13). Shut, the pill is on the bar (it moves with the bar when an iPhone bounces the page);
+   the moment the drop-down opens or is dragged, the bar's pill goes and the drop-down's own slides out from under it.
+   The bar's pill takes taps and drags 16px below it (an invisible reach, the bar's own handlers) */
+.drop-bar.is-open .drop-bar-grab, html:has(.drop-sheet[data-moving]) .drop-bar-grab { opacity: 0; transition: none; }
+@media (max-width: 768px) { html.app-look:not(.is-app) .game-layout.ag-drop .drop-bar::after { content: ''; position: absolute; left: 30%; right: 30%; top: 100%; height: 16px; } }

@@ -253,8 +253,8 @@ const sheetEl = () => document.querySelector('.drop-sheet')
 function useDrag(open, setOpen) {
   const live = useRef({}); live.current = { open, setOpen }
   const st = useRef(null)
-  const place = p => { const el = sheetEl(); if (el) { el.style.transition = 'none'; el.style.transform = `translate3d(0, ${(p - 1) * 101}%, 0)` } }
-  const release = () => { const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' } }
+  const place = p => { const el = sheetEl(); if (el) { el.style.transition = 'none'; el.style.transform = `translate3d(0, ${(p - 1) * 101}%, 0)`; el.dataset.moving = '1' } }   // (moving: the bar's pill hands over to the sheet's)
+  const release = () => { const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = ''; delete el.dataset.moving } }
   const begin = (y, body) => {
     const el = sheetEl(), o = live.current.open
     st.current = { y, ly: y, p0: o ? 1 : 0, p: o ? 1 : 0, h: Math.max(1, el?.offsetHeight ?? 400), moved: false, vy: 0, t: performance.now(), body, off: 0 }
