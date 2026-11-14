@@ -38,7 +38,8 @@ const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 // re-tilting its rows every frame was a big part of the spin screen's stutter there. The slow idle
 // drift stays, as a GPU animation instead of a script each frame. Phones and the app keep the drum,
 // unless they're weak (lib/lowPower.js)
-const DRUM_ON = !LOW_POWER && (IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches))
+// (everywhere, the owner 11-13: a machine marked low-power for its core count lost it, and it costs little; only Reduce Motion turns it off)
+const DRUM_ON = (() => { try { return localStorage.getItem('bap_reduce_motion') !== '1' && !matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return true } })()
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
@@ -101,7 +102,8 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
       const el = track.children[i]
       const d = (off + i * ITEM_H + ITEM_H / 2 - h / 2) / (h / 2)   // -1 top edge · 0 middle · 1 bottom edge
       if (el.__dt !== transition) { el.style.transition = transition; el.__dt = transition }
-      el.style.transform = `rotateX(${(-d * 48).toFixed(2)}deg)`
+      // (the bend mostly toward the edges: the middle rows nearly flat, the outer ones turned hard, the owner 11-13)
+      el.style.transform = `rotateX(${(-Math.sign(d) * Math.pow(Math.abs(d), 2.6) * 52).toFixed(2)}deg)`
     }
   }
 

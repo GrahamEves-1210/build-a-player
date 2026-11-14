@@ -1843,7 +1843,7 @@ a:focus-visible {
   will-change: transform;
 }
 /* the drum (SpinScreen SlotReel drum()): rows tilt away from the middle like a slot reel */
-.reel-window.is-drum { perspective: 380px; }
+.reel-window.is-drum { perspective: 300px; }   /* (380 to 300: the drum reads deeper) */
 .reel-window.is-drum .reel-track { transform-style: preserve-3d; }
 
 .reel-selector {
