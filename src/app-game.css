@@ -7421,4 +7421,4 @@ html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: 
 @media (max-width: 768px) { html.app-look { --ag-dock-h: 58px; } html body .ag-dock.ag-dock { --ag-dock-h: 58px; height: 58px; } html body .ag-dock .ag-tab { gap: 1px; } }
 /* iPhone's Safari colours its bottom bar from what touches the screen's bottom edge: with the rail up that's the rail's own box,
    white: black instead (the ad inside it is untouched) (owner, 11-13) */
-[id^="pw-oop-bottom_rail"], .st-adunit-ad { background-color: #000 !important; }
+@media (max-width: 768px) { [id^="pw-oop-bottom_rail"], .st-adunit-ad { background-color: #000 !important; } }   /* (phones only: on a computer the rail's box runs the full width round a 728 and showed as a black bar) */
