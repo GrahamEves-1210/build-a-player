@@ -841,7 +841,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <span>Reset</span>
         </button>
       )}
-    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color, '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] } : undefined}>
+    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color, '--qb-color2': selectedQB.color2 ?? selectedQB.color, '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] } : undefined}>
       {isSpinning && <div className="spin-blocker" />}
       <div className={`spin-panel-body${isDone && selectedQB ? ' has-card' : ''}`}>
         <div className="spin-panel-static">
@@ -952,7 +952,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               is kept from the start for anyone who sees ads, so nothing moves when it fills. The dev server outlines it (is-dev) */}
           {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><small>ADVERTISEMENT</small><div id={SPIN_AD_ID} /></div>}
           {isDone && selectedQB && (
-            <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color, '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] }}>
+            <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color, '--qb-color2': selectedQB.color2 ?? selectedQB.color, '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
                   photo={(selectedQB.headshot ?? headshotsMap[selectedQB.name]) ? `${headshotsDir}${selectedQB.headshot ?? headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}
