@@ -6965,10 +6965,10 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 22px); }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body { padding-top: 0 !important; gap: 5px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-static { padding-top: 0 !important; gap: 4px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 180px !important; }   /* 10% taller, three times (owner, 11-13) */
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -20px; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 68px !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 91.1px !important; }   /* (the labels float now; the wheel 160px) */   /* on the window's middle (was 4px low, owner 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-window { height: 150px !important; }   /* 10% taller, three times (owner, 11-13) */
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-track { margin-top: -35px; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-selector { top: 53px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-tri { top: 76.1px !important; }   /* (the labels float now; the wheel 160px) */   /* on the window's middle (was 4px low, owner 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .reel-label { margin: 2px auto 0 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .qb-reveal-card { padding: 4.5px 10px !important; }   /* +3px (owner, 11-13) */
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-btn-wrap { gap: 6px !important; }
