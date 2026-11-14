@@ -379,7 +379,7 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
 export function DropSheet({ open, setOpen, children }) {
   const drag = useDrag(open, setOpen)
   const sheetRef = drag(null, true)
-  const gripRef = drag(() => setOpen(false))
+  const gripRef = drag(() => setOpen(!open))   // (shut, its pill peeks under the bar on a phone: a tap opens it)
   // a tap anywhere outside the panel (and its bar) puts it away (the GRADES ON/OFF
   // switch up in the bar doesn't: you flip it to see the open spin with or without)
   useEffect(() => {
