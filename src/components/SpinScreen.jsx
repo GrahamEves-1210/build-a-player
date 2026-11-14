@@ -43,6 +43,7 @@ const DRUM_ON = (() => { try { return localStorage.getItem('bap_reduce_motion') 
 // how soon the bend starts: a phone's short wheel needs it sooner (2.0), desktop's tall one at the edges (2.6) (owner, 11-13)
 const DRUM_PHONE = typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 768px)').matches
 const DRUM_EXP = DRUM_PHONE ? 1.25 : 1.5
+const DRUM_PERSP = 300   // how deep the drum reads (380 to 300, owner)
 const DRUM_MAX = DRUM_PHONE ? 48 : 32   // the tilt at the window's edge (52, then a touch less on a phone and a bit less on a computer, owner 11-13)   // (a steep curve made rows seem to speed up as they left: kept gentle)
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
@@ -105,14 +106,21 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
     // rows that have left the window go flat again: kept turned, every row the wheel ever showed stayed a 3D layer with its
     // picture, and the page got slower the longer it was played (the owner, 11-13)
     const was = track.__drum
-    if (was) for (let i = was[0]; i <= was[1]; i++) if ((i < first || i > last) && track.children[i]) { track.children[i].style.transform = ''; track.children[i].style.transition = ''; track.children[i].__dt = '' }
+    // (and out of sight: index.css hides the drum's rows that aren't in its window. All of the wheel's rows, painted under the
+    // window's clip, were redrawn into the page's layers every frame the wheel turned)
+    if (was) for (let i = was[0]; i <= was[1]; i++) if ((i < first || i > last) && track.children[i]) { const r = track.children[i]; r.style.transform = ''; r.style.transition = ''; r.__dt = ''; r.style.visibility = ''; r.__dv = false }
     track.__drum = [first, last]
     for (let i = first; i <= last; i++) {
       const el = track.children[i]
       const d = (off + i * ITEM_H + ITEM_H / 2 - h / 2) / (h / 2)   // -1 top edge · 0 middle · 1 bottom edge
       if (el.__dt !== transition) { el.style.transition = transition; el.__dt = transition }
+      if (!el.__dv) { el.style.visibility = 'visible'; el.__dv = true }
       // (the bend mostly toward the edges: the middle rows nearly flat, the outer ones turned hard, the owner 11-13)
-      el.style.transform = `rotateX(${(-Math.sign(d) * Math.pow(Math.abs(d), DRUM_EXP) * DRUM_MAX).toFixed(2)}deg)`
+      // (each row carries the window's 300px perspective itself, seen from the window's middle: the same picture as a
+      // perspective on the window over a preserve-3d track, which made every one of the wheel's rows a layer of its own
+      // and re-sorted all of them each frame, most of the spin's cost on a computer)
+      const dy = (-d * h / 2).toFixed(1)
+      el.style.transform = `translateY(${dy}px) perspective(${DRUM_PERSP}px) translateY(${-dy}px) rotateX(${(-Math.sign(d) * Math.pow(Math.abs(d), DRUM_EXP) * DRUM_MAX).toFixed(2)}deg)`
     }
   }
 

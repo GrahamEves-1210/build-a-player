@@ -475,7 +475,7 @@ export default function DepthChart({ onBack, user }) {
 
       <div className="dc-sort-box">
         <span className="dc-sort-by">SORT BY</span>
-        <span key={isReady ? 'empty' : displayStat} className={`dc-sort-val${sortSpinning ? ' dc-sort-val--spin' : ''}`} style={{ color: isReady ? 'transparent' : STAT_COLORS[displayStat] }}>
+        <span key={isReady ? 'empty' : displayStat} className={`dc-sort-val${sortSpinning ? ' dc-sort-val--spin' : ''}${isReady ? ' dc-sort-val--empty' : ''}`} style={{ color: isReady ? 'transparent' : STAT_COLORS[displayStat] }}>
           {STAT_LABELS[displayStat]}
         </span>
       </div>

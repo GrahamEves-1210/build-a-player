@@ -100,4 +100,24 @@ export function startRailWatch() {
   window.addEventListener('orientationchange', soon)
   window.visualViewport?.addEventListener('resize', soon)
   setInterval(measure, 1000)
+  // html.pw-rail: Playwire's own bottom rail is up (an [id^="pw-oop"] box, data-pw-status="loaded", "bottom" in its inline style).
+  // index.css read that with html:has(... [style*="bottom"]): a rule on the style attribute made every inline style the page
+  // writes, each frame of a wheel, a drag or an animation, cost a check of the whole page. The same test here, kept up to
+  // the moment: each Playwire box is watched for its own changes, and the page for new ones (before the next frame is drawn)
+  const PW = '[id^="pw-oop"]', PW_RAIL = '[id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]'
+  const pws = new Set()
+  const pwSync = () => root.classList.toggle('pw-rail', [...pws].some(el => el.isConnected && el.matches(PW_RAIL)))
+  const pwMo = new MutationObserver(pwSync)
+  const pwAdd = el => { if (pws.has(el)) return; pws.add(el); pwMo.observe(el, { attributes: true, attributeFilter: ['style', 'data-pw-status', 'id'] }) }
+  for (const el of document.querySelectorAll(PW)) pwAdd(el)
+  pwSync()
+  new MutationObserver(list => {
+    let seen = false
+    for (const m of list) for (const n of m.addedNodes) {
+      if (n.nodeType !== 1) continue
+      if (n.matches(PW)) { pwAdd(n); seen = true }
+      if (n.firstElementChild) for (const el of n.querySelectorAll(PW)) { pwAdd(el); seen = true }
+    }
+    if (seen || pws.size) { for (const el of pws) if (!el.isConnected) pws.delete(el); pwSync() }
+  }).observe(document.body, { childList: true, subtree: true })
 }

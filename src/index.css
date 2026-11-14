@@ -1843,8 +1843,8 @@ a:focus-visible {
   will-change: transform;
 }
 /* the drum (SpinScreen SlotReel drum()): rows tilt away from the middle like a slot reel */
-.reel-window.is-drum { perspective: 300px; }   /* (380 to 300: the drum reads deeper) */
-.reel-window.is-drum .reel-track { transform-style: preserve-3d; }
+/* (the 300px perspective is on each row, SlotReel drum(): a preserve-3d track made every row its own layer) */
+.reel-window.is-drum .reel-row { visibility: hidden; }   /* (drum() shows the rows in the window: the rest, clipped anyway, were repainted every frame) */
 
 .reel-selector {
   position: absolute;
@@ -6964,7 +6964,7 @@ html.is-mac .spin-panel-scroll {
   padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 32px) + var(--dc-rail));
 }
 .dc-screen > * { flex-shrink: 0; }
-html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) .dc-screen {
+html.pw-rail.pw-rail.pw-rail:not(.ads-hidden) .dc-screen {
   --dc-rail: calc(60px + var(--ad-h));
 }
 
@@ -13325,13 +13325,13 @@ html.is-android #qb-fg [id="left calf"] path   { filter: blur(0.5px) !important;
 }
 
 /* -- Bottom rail ad: push mobile tab bar above the ad when it's loaded -- */
-/* Uses :has() so it reacts to DOM changes instantly without JS timing issues */
+/* html.pw-rail: lib/railWatch.js, kept up to the moment (html:has(... [style*="bottom"]) made every inline style on the page cost a check of the whole page) */
 @media (max-width: 768px) {
-  html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
+  html.pw-rail.pw-rail.pw-rail:not(.ads-hidden) {
     --ad-h: 52px;
   }
 }
-html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
+html.is-tablet.pw-rail.pw-rail.pw-rail:not(.ads-hidden) {
   --ad-h: 52px;
 }
 /* Corner video ad: nudge down/left, Playwire sets margin-bottom:95px / margin-right:10px inline */
@@ -17326,7 +17326,7 @@ button.cr-attr-add:active { transform: scale(.96); }
    The editor now sits up top, shrinks to the room above the rail, and everything
    in it is tighter so the footer stays in view. */
 .cr-overlay { align-items: flex-start; padding: 10px 10px 12px; }
-html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) .cr-overlay { padding-bottom: 112px; }
+html.pw-rail.pw-rail.pw-rail:not(.ads-hidden) .cr-overlay { padding-bottom: 112px; }
 .cr-modal { height: auto; max-height: 100%; }
 @media (min-width: 769px) {
   .cr-overlay { padding-top: 24px; }
