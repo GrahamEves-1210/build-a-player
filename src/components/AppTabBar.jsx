@@ -10,8 +10,6 @@ import { whatsNewSeen, markWhatsNewSeen } from '../lib/whatsNew'
 import { IconBag, IconProfile, IconCalendar, IconPodium, IconBagLine, IconProfileLine, IconCalendarLine, IconPodiumLine, IconHome } from './app/icons'
 import { slideIn } from '../lib/juice'
 import { startPresence } from '../lib/presence'
-import { AvatarBadge } from './app/NameTag'
-import { getUsername } from '../lib/discord'
 import { AnimatePresence, motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../lib/motion'
 import { takeRewardedOpen } from '../lib/rewardedAd'
@@ -185,9 +183,7 @@ export default function AppTabBar() {
           <Tab label="HOME" className="ag-tab--home" Icon={IconHome} Line={IconHome} active={active === 'play'} onClick={() => { if (!atHome) go('home')() }} />
           <Tab label="RANKS" Icon={IconPodium} Line={IconPodiumLine} active={active === 'leaderboard'} onClick={state.page === 'leaderboard' && !screen ? undefined : go('leaderboard')} />
           {/* unclaimed achievements and completed sets show here and on the profile's own buttons */}
-          {/* the player's own avatar and level in the icon's place (a guest keeps the outline) */}
           <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={['profile', 'locker', 'cards', 'achievements'].includes(active)} badge={claimable}
-            art={getUsername(progress.user) ? <AvatarBadge self name={getUsername(progress.user)} size={26} level={progress.lvl?.level} /> : null}
             onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}

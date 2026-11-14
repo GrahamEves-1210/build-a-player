@@ -7380,3 +7380,20 @@ html body .ag-dock .ag-tab-label { padding-left: 1.4px; }
 html body .ag-dock .ag-tab--home .ag-tab-label { padding-left: 2px; }
 html body .ag-dock .ag-tab--home .ag-tab-icon { height: 26px; }
 html body .ag-dock .ag-tab--home .ag-tab-icon svg { width: 25px; height: 25px; }
+
+/* (owner, 11-13) only the panels' backgrounds slant now (a layer under each tab): the icon and the word stand straight on one
+   centre (slanting the whole tab shifted its icon and its word by different amounts, so HOME never lined up). Bigger tabs */
+html body .ag-dock { --ag-dock-h: 70px; height: 70px; }
+html body .ag-dock .ag-tab, html body .ag-dock .ag-tab > * { transform: none !important; }
+html body .ag-dock .ag-tab { background: transparent !important; box-shadow: none !important; isolation: isolate; }
+html body .ag-dock .ag-tab::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 5px; background: #151b19; transform: skewX(-12deg); transition: background .15s ease; }
+html body .ag-dock .ag-tab--on::before { background: var(--ag-a1); }
+html body .ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: inset 0 0 0 2px var(--ag-a1); }
+html body .ag-dock .ag-tab-icon { height: 24px; }
+html body .ag-dock .ag-tab-icon svg { width: 22px; height: 22px; }
+html body .ag-dock .ag-tab-label { font-size: 15px; }
+html body .ag-dock .ag-tab--home .ag-tab-icon { height: 27px; }
+html body .ag-dock .ag-tab--home .ag-tab-icon svg { width: 26px; height: 26px; }
+html body .ag-dock .ag-tab--home .ag-tab-label { font-size: 16px; }
+html body .ag-dock .ag-tab-tag, html body .ag-dock .ag-tab-badge { transform: none !important; }
+html.app-look { --ag-dock-h: 70px; }
