@@ -7438,7 +7438,7 @@ html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { min-height: 60px; }
 /* phones (owner, 11-13): the ratings editor runs from just under the top of the screen to just above the rail, its top area
    (title, Current / All-Time, search) smaller and tighter so the scrolling list gets the room */
 @media (max-width: 768px) {
-  html.app-look:not(.is-app) .cr-overlay.cr-overlay { padding: 4px 4px calc(4px + var(--web-rail, 0px)) !important; }
+  html.app-look:not(.is-app) .cr-overlay.cr-overlay { padding: 4px !important; }   /* (not + the rail: the overlay already stops above it, its transparent border the rail's height; the rail counted twice) */
   html.app-look:not(.is-app) .cr-modal.cr-modal { border-radius: 12px; }
   html.app-look:not(.is-app) .cr-header.cr-header { padding: 6px 10px 4px; min-height: 0; gap: 8px; }
   html.app-look:not(.is-app) .cr-title.cr-title { font-size: 22px; line-height: 1; }
