@@ -7241,6 +7241,6 @@ html.app-look:not(.is-app) .spin-panel .attr-category-lbl { color: #fff !importa
 html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !important; opacity: 1 !important; }
 
 /* phones: a pixel less between the D and the first dash (owner, 11-13) */
-@media (max-width: 768px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - 1px); } }
+@media (max-width: 768px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - .5px); } }
 /* phones: and a pixel less between the second dash and the P */
 @media (max-width: 768px) { .bap-wm em > .wm-g3 { margin-right: calc(-.067em - 1px); } }
