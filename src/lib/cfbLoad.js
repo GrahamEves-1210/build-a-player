@@ -11,23 +11,22 @@ export function loadCFB() {
     import('../data/cfb-teams.js'),
     import('../data/cfb-players.js'),
     import('../utils/cfbSimulation.js'),
-    import('../data/cfb-tes.js'),
-  ]).then(([c, t, p, s, te]) => ({
+  ]).then(([c, t, p, s]) => ({
     conferences: c.CFB_CONFERENCES,
     teams: t.CFB_TEAMS,
-    pools: { qb: up(p.CFB_QBS), wr: up(p.CFB_WRS), rb: up(p.CFB_RBS), te: up(te.CFB_TES) },
+    pools: { qb: up(p.CFB_QBS), wr: up(p.CFB_WRS), rb: up(p.CFB_RBS) },
     sim: s,
   })).catch(e => { loading = null; throw e })
   return loading
 }
 
-// All-Time: each school's legends at QB, RB and WR (data/cfb-legends.js) and the position's tight end greats
-// (data/cfb-te-legends.js), in the same row shape as the current rosters. Loaded only when an All-Time build asks for them: a current build never pays for the file
+// All-Time: each school's legends at QB, RB and WR (data/cfb-legends.js), in the same row shape as the
+// current rosters. Loaded only when an All-Time build asks for them: a current build never pays for the file
 let legends = null
 export function loadCFBLegends() {
   if (legends) return legends
-  legends = Promise.all([import('../data/cfb-legends.js'), import('../data/cfb-te-legends.js')])
-    .then(([m, te]) => ({ qb: up(m.CFB_LEGEND_QBS), wr: up(m.CFB_LEGEND_WRS), rb: up(m.CFB_LEGEND_RBS), te: up(te.CFB_LEGEND_TES) }))
+  legends = import('../data/cfb-legends.js')
+    .then(m => ({ qb: up(m.CFB_LEGEND_QBS), wr: up(m.CFB_LEGEND_WRS), rb: up(m.CFB_LEGEND_RBS) }))
     .catch(e => { legends = null; throw e })
   return legends
 }

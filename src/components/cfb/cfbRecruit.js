@@ -27,7 +27,7 @@ function rankIn(stars, t, pos, seed) {
   const r = seeded(`cfb-rank-${seed}`)
   const [, , best, worst] = BANDS[5 - stars]
   const overall = Math.max(1, Math.round(best + t * (worst - best) + (r() - 0.5) * (worst - best) * 0.08))
-  const posRank = Math.max(1, Math.round(overall / (({ qb: 11, wr: 6, rb: 10, te: 14 })[pos] ?? 10) + r() * 1.2))
+  const posRank = Math.max(1, Math.round(overall / ({ qb: 11, wr: 6, rb: 10 })[pos] + r() * 1.2))
   return { overall, posRank }
 }
 

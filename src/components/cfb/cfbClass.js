@@ -22,15 +22,15 @@ export const draftAge = cls => 19 + classIdx(cls)
 
 // ── Upgrade points: what a season earns (1 to 3) ─────────────────────────────
 // 3: national honors. He won the Heisman or was a finalist, made an All-America team (first or second), or won his
-//    position's national award (Davey O'Brien, Doak Walker, Biletnikoff, Mackey), the Maxwell, the Walter Camp or his
+//    position's national award (Davey O'Brien, Doak Walker, Biletnikoff), the Maxwell, the Walter Camp or his
 //    conference's Player of the Year.
 // 2: a starter's good year. He hit his position's mark (a quarterback 3,500 passing yards or 32 touchdowns passing
 //    and rushing, a running back 1,200 rushing yards or 14 touchdowns, a receiver 1,000 receiving yards or 10
-//    touchdowns, a tight end 650 receiving yards or 7 touchdowns), or his team won ten games, its conference or a Playoff spot.
+//    touchdowns), or his team won ten games, its conference or a Playoff spot.
 // 1: any other season, a year as the backup included.
 // r: a season's result (cfbSimulation runCFBSimulation, or a backup year: asBackup below)
-const HONORS = ['daveyOBrien', 'doakWalker', 'biletnikoff', 'mackey', 'maxwell', 'walterCamp', 'confPOY']
-export const POINT_MARKS = { qb: 'a 3,500-yard or 32-touchdown season', rb: 'a 1,200-yard or 14-touchdown season', wr: 'a 1,000-yard or 10-touchdown season', te: 'a 650-yard or 7-touchdown season' }
+const HONORS = ['daveyOBrien', 'doakWalker', 'biletnikoff', 'maxwell', 'walterCamp', 'confPOY']
+export const POINT_MARKS = { qb: 'a 3,500-yard or 32-touchdown season', rb: 'a 1,200-yard or 14-touchdown season', wr: 'a 1,000-yard or 10-touchdown season' }
 export function upgradePoints(r, pos) {
   const c = r?.cfb ?? {}
   const a = c.awards ?? {}
@@ -46,7 +46,6 @@ export function upgradePoints(r, pos) {
     const n = k => t[k] ?? 0
     const mark = pos === 'qb' ? (n('seasonPassYds') >= 3500 ? `${n('seasonPassYds').toLocaleString()} passing yards` : n('seasonTDs') + n('seasonRushTDs') >= 32 ? `${n('seasonTDs') + n('seasonRushTDs')} touchdowns` : null)
       : pos === 'rb' ? (n('seasonRushYds') >= 1200 ? `${n('seasonRushYds').toLocaleString()} rushing yards` : n('seasonRushTDs') + n('seasonRecTDs') >= 14 ? `${n('seasonRushTDs') + n('seasonRecTDs')} touchdowns` : null)
-      : pos === 'te' ? (n('seasonRecYds') >= 650 ? `${n('seasonRecYds').toLocaleString()} receiving yards` : n('seasonRecTDs') >= 7 ? `${n('seasonRecTDs')} touchdown catches` : null)
       : (n('seasonRecYds') >= 1000 ? `${n('seasonRecYds').toLocaleString()} receiving yards` : n('seasonRecTDs') >= 10 ? `${n('seasonRecTDs')} touchdown catches` : null)
     const team = r?.champion ? 'National champions' : c.cfpSeed ? 'A Playoff team' : c.confChamp ? 'Conference champions' : wins >= 10 ? `${wins} wins` : null
     if (mark || team) return { pts: 2, why: mark ?? team }
@@ -59,7 +58,6 @@ const LINE_KEYS = {
   qb: ['comp', 'att', 'passYds', 'tds', 'ints', 'sacks', 'rushAtt', 'rushYds', 'rushTDs', 'rating', 'eff'],
   rb: ['carries', 'rushYds', 'rushTDs', 'ypc', 'recs', 'recYds', 'recTDs', 'fumbles', 'long'],
   wr: ['targets', 'rec', 'recYds', 'recTDs', 'long'],
-  te: ['targets', 'rec', 'recYds', 'recTDs', 'long'],
 }
 function backupLine(g, pos, rnd) {
   const blow = Math.abs((g.mySc ?? 0) - (g.oppSc ?? 0)) >= 21   // the starters sit in a blowout

@@ -11,8 +11,7 @@ import Disclaimer from '../Disclaimer'
 import { TYPES, ATTR, CATEGORIES } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR, WR_CATEGORIES } from '../../data/wrs'
-import { TE_TYPES, TE_ATTR, TE_CATEGORIES } from '../../data/tes'
-import { HEADSHOT_BASE, calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE } from '../../utils/simulation'
+import { HEADSHOT_BASE, calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
 import { useDropMode, useDropSheet, DropBar, DropSheet, BuildComplete } from '../app/AppBuildTray'
 import { IconGear, IconClose, IconPlay, IconSpin } from '../app/icons'
@@ -51,7 +50,6 @@ const POS = {
   qb: { types: TYPES, attr: ATTR, cats: CATEGORIES, flags: {}, ovr: (b, t) => collegeOVR(calcOVR(b, t)), arch: getArchetype },
   wr: { types: WR_TYPES, attr: WR_ATTR, cats: WR_CATEGORIES, flags: { isWR: true }, ovr: (b, t) => collegeOVR(calcOVRWR(b, t)), arch: getArchetypeWR },
   rb: { types: RB_TYPES, attr: RB_ATTR, cats: undefined, flags: { isRB: true }, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
-  te: { types: TE_TYPES, attr: TE_ATTR, cats: TE_CATEGORIES, flags: { isTE: true }, ovr: (b, t) => collegeOVR(calcOVRTE(b, t)), arch: getArchetypeTE },
 }
 const emptyBuild = pos => Object.fromEntries(POS[pos].types.map(t => [t, null]))
 const newSeed = () => ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1

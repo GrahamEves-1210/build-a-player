@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { TYPES, ATTR } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../../data/wrs'
-import { TE_TYPES, TE_ATTR } from '../../data/tes'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
 import { starsFor, rankFor, barAt, offersFor, startsOver } from './cfbRecruit'
 import { Stars, OfferBoard, CommitBar } from './CFBOffers'
@@ -18,7 +17,7 @@ import { SPORT } from '../../lib/career'
 import './cfb.css'
 
 // ── Career: START IN COLLEGE ─────────────────────────────────────────────────
-// A football Career (QB, WR, RB or TE) that starts with a college season or two before the draft. He's built
+// A football Career (QB, WR or RB) that starts with a college season or two before the draft. He's built
 // with the NFL builder (c.build, the career's own ratings, never touched here). For college he plays with
 // the college boost: the college gap on every trait but his size (a pro talent against college competition).
 // The boosted OVR makes his recruiting stars and national ranking, the stars bring the offers (real schools,
@@ -44,7 +43,6 @@ const POS = {
   qb: { types: TYPES, attr: ATTR, ovr: (b, t) => collegeOVR(calcOVR(b, t)), arch: getArchetype },
   wr: { types: WR_TYPES, attr: WR_ATTR, ovr: (b, t) => collegeOVR(calcOVRWR(b, t)), arch: getArchetypeWR },
   rb: { types: RB_TYPES, attr: RB_ATTR, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
-  te: { types: TE_TYPES, attr: TE_ATTR, ovr: (b, t) => collegeOVR(calcOVRTE(b, t)), arch: getArchetypeTE },
 }
 const clamp = (a, b, x) => Math.max(a, Math.min(b, x))
 // (a career in college before class years, `legacy`: its two seasons' labels, and what the engine was told)
@@ -55,7 +53,7 @@ const NO_BOOST = new Set(['size'])   // his frame: the college gap doesn't touch
 // the college build: the NFL build up by the college gap (cfbShared.js collegeGap, the same one the draft takes back
 // off: two steps on every trait, none on Size), plus a returning year's development, capped at S
 export function collegeBuild(build, types, dev = {}, pos = null) {
-  const p = pos ?? (types.includes('arm') ? 'qb' : types.includes('carrying') ? 'rb' : types.includes('blocking') ? 'te' : 'wr')
+  const p = pos ?? (types.includes('arm') ? 'qb' : types.includes('carrying') ? 'rb' : 'wr')
   return Object.fromEntries(types.map(t => {
     const ch = build[t]
     if (!ch) return [t, ch]
