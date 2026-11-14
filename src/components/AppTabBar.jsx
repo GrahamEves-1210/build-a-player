@@ -7,9 +7,8 @@ import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
 import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
 import { whatsNewSeen, markWhatsNewSeen } from '../lib/whatsNew'
-import { IconBag, IconProfile, IconCalendar, IconPodium, IconBagLine, IconProfileLine, IconCalendarLine, IconPodiumLine } from './app/icons'
+import { IconBag, IconProfile, IconCalendar, IconPodium, IconBagLine, IconProfileLine, IconCalendarLine, IconPodiumLine, IconHome } from './app/icons'
 import { slideIn } from '../lib/juice'
-import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
 import { AvatarBadge } from './app/NameTag'
 import { getUsername } from '../lib/discord'
@@ -57,7 +56,7 @@ const DOCK_TABS = new Set(['shop', 'daily', 'leaderboard'])
 // outline when it's not lit, filled when it is. art: something in the icon's place (the player's own avatar on PROFILE).
 // badge: what's waiting there (red); tag: what the tab knows when nothing is waiting (the streak's day, a free reward)
 function Tab({ label, Icon, Line, active, onClick, badge, tag = null, tagKind = '', art = null }) {
-  const Glyph = active ? Icon : Line
+  const Glyph = Icon   // (bold filled icons on every tab now, lit or not, the owner 11-13)
   return (
     <button className={`ag-tab${active ? ' ag-tab--on' : ''}`} aria-current={active ? 'page' : undefined} onClick={onClick}>
       {active && <motion.span layoutId="dock-lit" className="ag-tab-lit" transition={SPRING_LAYOUT} />}
@@ -182,9 +181,8 @@ export default function AppTabBar() {
           {/* the day's free reward waiting in the Shop; the login streak's day on Daily (a reward to claim outranks it) */}
           <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} tag={progress.freeReady ? 'FREE' : null} tagKind="free" />
           <Tab label="DAILY" Icon={IconCalendar} Line={IconCalendarLine} active={active === 'daily'} onClick={open('daily')} badge={badge} tag={progress.streak?.count > 1 ? progress.streak.count : null} tagKind="streak" />
-          {/* a tap goes Home (PLAY, or HOME inside a game mode); hold for the modes anywhere */}
-          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={atHome}
-            onTap={() => { if (!atHome) go('home')() }} />
+          {/* HOME: a tab like the others (the hold for a fan of modes is gone, the owner 11-13) */}
+          <Tab label="HOME" Icon={IconHome} Line={IconHome} active={active === 'play'} onClick={() => { if (!atHome) go('home')() }} />
           <Tab label="RANKS" Icon={IconPodium} Line={IconPodiumLine} active={active === 'leaderboard'} onClick={state.page === 'leaderboard' && !screen ? undefined : go('leaderboard')} />
           {/* unclaimed achievements and completed sets show here and on the profile's own buttons */}
           {/* the player's own avatar and level in the icon's place (a guest keeps the outline) */}
