@@ -73,7 +73,16 @@ export function rampPage({ ads: wanted = [], path, soft = false } = {}) {
   if (inGame) return ready
   const ads = forScreen(wanted)
   const units = ads.map(a => a.type).join()
-  if (keepRunning(units) || (soft && units && units === lastPageUnits && Object.values(window.ramp?.settings?.slots ?? {}).every(s => !s?.type || units.split(',').includes(s.type)))) return ready
+  if (keepRunning(units)) return ready
+  // soft (Ranks, Profile): the same rail and corner units stay up as they are; only the last page's own in-page units
+  // (Home's, the spin's 320x50) are taken down. Home carried in-page ads, so the old check never held and the rail reloaded
+  if (soft && units && units === lastPageUnits) {
+    const keep = units.split(',')
+    return serial(() => {
+      const extra = Object.entries(window.ramp?.settings?.slots ?? {}).filter(([, sl]) => sl?.type && !keep.includes(sl.type)).map(([name]) => name)
+      try { return extra.length ? window.ramp.destroyUnits(extra) : null } catch { return null }
+    })
+  }
   lastPage = Date.now()
   lastPageUnits = units
   pageGen++
