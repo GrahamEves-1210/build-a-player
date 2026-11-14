@@ -66,12 +66,14 @@ const wide = px => !!window.matchMedia?.(`(min-width: ${px}px)`).matches
 const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(1440) : a.type === 'left_rail' ? wide(1500) : true))
 
 // ads: units to add after the destroy ([] = none)
-export function rampPage({ ads: wanted = [], path } = {}) {
+// soft: the same units already up stay up, however long ago they came (the dock's own pages, Ranks and Profile: the rail
+// reloading there read as the ad refreshing for nothing, the owner 11-13)
+export function rampPage({ ads: wanted = [], path, soft = false } = {}) {
   pageWants = { ads: wanted, path }; inPage = []
   if (inGame) return ready
   const ads = forScreen(wanted)
   const units = ads.map(a => a.type).join()
-  if (keepRunning(units)) return ready
+  if (keepRunning(units) || (soft && units && units === lastPageUnits && Object.values(window.ramp?.settings?.slots ?? {}).every(s => !s?.type || units.split(',').includes(s.type)))) return ready
   lastPage = Date.now()
   lastPageUnits = units
   pageGen++

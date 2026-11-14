@@ -7375,7 +7375,7 @@ html body .ag-dock .ag-tab-tag, html body .ag-dock .ag-tab-badge { transform: sk
 /* (owner, 11-13) it should read as floating: no dark floor filling under it on a phone (the page shows round it) and a
    clearer gap above the rail; HOME's icon larger and on the middle (the letters' trailing spacing pushed the word left) */
 html.app-look:not(.is-app) .ag-dock-floor { display: none !important; }
-html.app-look:not(.is-app) { --ag-dock-gap: calc(var(--web-rail, 0px) + 10px); }
+html.app-look:not(.is-app) { --ag-dock-gap: calc(var(--web-rail, 0px) + 5px); }   /* (half the gap to the rail, owner 11-13) */
 html body .ag-dock .ag-tab-label { padding-left: 1.4px; }
 html body .ag-dock .ag-tab--home .ag-tab-label { padding-left: 2px; }
 html body .ag-dock .ag-tab--home .ag-tab-icon { height: 26px; }
@@ -7419,3 +7419,6 @@ html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: 
 @media (max-width: 768px) { html.app-look { --ag-dock-h: 62px; } html body .ag-dock.ag-dock { --ag-dock-h: 62px; height: 62px; } html body .ag-dock .ag-tab { gap: 2px; } }
 /* phones: the bottom buttons a tad shorter again (62px to 58px) */
 @media (max-width: 768px) { html.app-look { --ag-dock-h: 58px; } html body .ag-dock.ag-dock { --ag-dock-h: 58px; height: 58px; } html body .ag-dock .ag-tab { gap: 1px; } }
+/* iPhone's Safari colours its bottom bar from what touches the screen's bottom edge: with the rail up that's the rail's own box,
+   white: black instead (the ad inside it is untouched) (owner, 11-13) */
+[id^="pw-oop-bottom_rail"], .st-adunit-ad { background-color: #000 !important; }

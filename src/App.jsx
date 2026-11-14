@@ -424,7 +424,7 @@ export default function App() {
       : page === 'leaderboard' ? '/leaderboard'
       : page === 'wiki' ? (here.startsWith('/wiki') ? here : '/wiki')
       : (['/simulate', '/leaderboard', '/depth-chart'].includes(here) || here.startsWith('/wiki')) ? '/' : here
-    rampPage({ ads: onSimulate || page === 'depth-chart' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
+    rampPage({ ads: onSimulate || page === 'depth-chart' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
   }, [page, simResult])
 
   // Which mode the build belongs to (Squad Builder, Career, a Compete pool), saved with it

@@ -703,7 +703,7 @@ export default function BucketApp() {
       : page === 'salarycap' ? '/bucket/salary'
       : page === 'leaderboard' ? '/bucket/leaderboard'
       : ['/bucket/simulate', '/bucket/leaderboard', '/bucket/salary'].includes(here) ? '/bucket' : here
-    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
+    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
   }, [page])
 
   // Fetch my W-L record when entering the lobby or game

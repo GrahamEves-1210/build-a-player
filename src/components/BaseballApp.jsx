@@ -503,7 +503,7 @@ export default function BaseballApp() {
     const here = window.location.pathname
     const path = page === 'sim' ? '/baseball/simulate' : page === 'salarycap' ? '/baseball/salary' : page === 'leaderboard' ? '/baseball/leaderboard'
       : ['/baseball/simulate', '/baseball/leaderboard', '/baseball/salary'].includes(here) ? '/baseball' : here
-    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
+    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
   }, [page])
 
   // the account, and Pro / ad-free from it (as BucketApp)

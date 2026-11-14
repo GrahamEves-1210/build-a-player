@@ -468,7 +468,7 @@ export default function SoccerApp() {
     const here = window.location.pathname
     const path = page === 'sim' ? '/soccer/simulate' : page === 'salarycap' ? '/soccer/salary' : page === 'leaderboard' ? '/soccer/leaderboard'
       : ['/soccer/simulate', '/soccer/leaderboard', '/soccer/salary'].includes(here) ? '/soccer' : here
-    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
+    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
   }, [page])
 
   // the account, and Pro / ad-free from it (as BucketApp)

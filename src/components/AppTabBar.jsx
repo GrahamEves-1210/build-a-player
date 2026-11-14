@@ -177,7 +177,7 @@ export default function AppTabBar() {
       {!hidden && (
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
           {/* the day's free reward waiting in the Shop; the login streak's day on Daily (a reward to claim outranks it) */}
-          <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} tag={progress.freeReady ? 'FREE' : null} tagKind="free" />
+          <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} />
           <Tab label="DAILY" Icon={IconCalendar} Line={IconCalendarLine} active={active === 'daily'} onClick={open('daily')} badge={badge} tag={progress.streak?.count > 1 ? progress.streak.count : null} tagKind="streak" />
           {/* HOME: a tab like the others (the hold for a fan of modes is gone, the owner 11-13) */}
           <Tab label="HOME" className="ag-tab--home" Icon={IconHome} Line={IconHome} active={active === 'play'} onClick={() => { if (!atHome) go('home')() }} />
