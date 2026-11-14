@@ -18,6 +18,16 @@ import { spectrumColor } from '../lib/gradeColors'
 
 const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 
+// a team's code without a sport's folder (a college chip's team can be 'cfb/ALA')
+const teamCode = t => String(t || '?').split('/').pop().toUpperCase()
+// the team's logo: the small copy, then the full one, then nothing (the code under it still names the team)
+function TeamLogo({ dir, code }) {
+  const [step, setStep] = useState(0)
+  if (step > 1) return <span className="cr-team-logo is-none" />
+  return <img className="cr-team-logo" alt="" draggable={false} decoding="async" loading="lazy"
+    src={step === 0 ? `${dir}sm/${code}.webp` : `${dir}${code}.png`} onError={() => setStep(v => v + 1)} />
+}
+
 const RB_ATTR = {
   speed:       { label: 'Speed' },
   burst:       { label: 'Burst' },
@@ -37,7 +47,7 @@ const RB_ATTR = {
 // so each mode's spins pick up its own overrides.
 // Soccer: `isSoccer` with its own `attrMap` (the striker's traits) and `eraLabels` for the toggle
 // (Top Divisions / World Cup); each pool's edits save under their own key
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isBucket = false, isSoccer = false, attrMap: attrMapProp = null, eraLabels = null, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false, storageKey: storageKeyProp = null, ratingsKeyFor = null }) {
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isBucket = false, isSoccer = false, attrMap: attrMapProp = null, eraLabels = null, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false, storageKey: storageKeyProp = null, ratingsKeyFor = null, logoDir: logoDirProp = null }) {
   // (storageKey: a mode's own ratings, College Football's: bap_cfb_custom_ratings)
   const storageKey = storageKeyProp ?? (isSoccer ? 'bas_soccer_custom_ratings' : isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings')
   const hasToggle = !!(poolLegends && poolLegends.length)
@@ -101,12 +111,24 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
   }, [expandedKey])
 
   const q = search.trim().toLowerCase()
-  const filtered = list.filter(p =>
-    (!editedOnly || overrides[`${p.name}|${p.team}`]) && (
-    q === '' ||
-    p.name.toLowerCase().includes(q) ||
-    (p.team || '').toLowerCase().includes(q))
-  )
+  // by team (the owner 11-13: a list of a thousand names was the problem): the teams first, then one team's roster. A search
+  // or the EDITED tag looks through every team at once
+  const [team, setTeam] = useState(null)
+  const browsing = q === '' && !editedOnly
+  const teams = []
+  { const seen = new Map(); for (const pl of list) { const t = pl.team || '?'; if (!seen.has(t)) { seen.set(t, teams.length); teams.push({ t, n: 0, edited: 0 }) } const x = teams[seen.get(t)]; x.n++; if (overrides[`${pl.name}|${pl.team}`]) x.edited++ } }
+  teams.sort((a, b) => teamCode(a.t).localeCompare(teamCode(b.t)))
+  const onTeam = browsing && team && teams.some(x => x.t === team) ? team : null
+  const filtered = browsing
+    ? (onTeam ? list.filter(pl => (pl.team || '?') === onTeam) : [])
+    : list.filter(p =>
+      (!editedOnly || overrides[`${p.name}|${p.team}`]) && (
+      q === '' ||
+      p.name.toLowerCase().includes(q) ||
+      (p.team || '').toLowerCase().includes(q) ||
+      (p.school || '').toLowerCase().includes(q)))
+  const logoDir = logoDirProp ?? (isBucket ? '/logos/nba/' : isSoccer ? '/logos/soccer/' : '/logos/')
+  const openTeam = t => { setTeam(t); setExpandedKey(null); setSlotPickerPlayer(null); if (listRef.current) listRef.current.scrollTop = 0 }
 
   const getVal = (key, attr, baseVal) => overrides[key]?.[attr] ?? baseVal
   const getGrade = (key, attr, baseVal) => valToGrade(getVal(key, attr, baseVal))
@@ -149,8 +171,8 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
         <div className="cr-search-wrap">
           {hasToggle && (
             <div className="cr-era" role="tablist" aria-label="Player pool">
-              <button role="tab" aria-selected={era === 'classic'} className={`cr-era-btn${era === 'classic' ? ' is-on' : ''}`} onClick={() => { setEra('classic'); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[0] ?? 'Current'}</button>
-              <button role="tab" aria-selected={era === 'all-time'} className={`cr-era-btn${era === 'all-time' ? ' is-on' : ''}`} onClick={() => { setEra('all-time'); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[1] ?? 'All-Time'}</button>
+              <button role="tab" aria-selected={era === 'classic'} className={`cr-era-btn${era === 'classic' ? ' is-on' : ''}`} onClick={() => { setEra('classic'); setTeam(null); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[0] ?? 'Current'}</button>
+              <button role="tab" aria-selected={era === 'all-time'} className={`cr-era-btn${era === 'all-time' ? ' is-on' : ''}`} onClick={() => { setEra('all-time'); setTeam(null); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[1] ?? 'All-Time'}</button>
             </div>
           )}
           <div className="cr-search-box">
@@ -167,6 +189,24 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
         </div>
 
         <div className="cr-list" ref={listRef}>
+          {browsing && !onTeam && (
+            <div className="cr-teams">
+              {teams.map(x => (
+                <button key={x.t} className={`cr-team${x.edited ? ' is-mod' : ''}`} onClick={() => openTeam(x.t)}>
+                  <TeamLogo dir={logoDir} code={teamCode(x.t)} />
+                  <span className="cr-team-code">{teamCode(x.t)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {onTeam && (
+            <button className="cr-team-back" onClick={() => openTeam(null)}>
+              <IconCaret dir="left" size={12} />
+              <span>ALL TEAMS</span>
+              <TeamLogo dir={logoDir} code={teamCode(onTeam)} />
+              <b>{teamCode(onTeam)}</b>
+            </button>
+          )}
           {filtered.map(p => {
             const key = `${p.name}|${p.team}`
             const isExpanded = expandedKey === key
@@ -250,7 +290,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
               </div>
             )
           })}
-          {filtered.length === 0 && (
+          {filtered.length === 0 && !browsing && (
             <div className="cr-empty">{editedOnly && !q ? 'No edited players here.' : 'No players found.'}</div>
           )}
         </div>

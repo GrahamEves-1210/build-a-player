@@ -705,7 +705,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
       </div>
       {IS_APP && <BuildComplete complete={complete} ovr={ovrNow} name={ovrNow ? P.arch(ovrNow, build, P.types) : null} build={build} types={P.types} attrMap={P.attr} />}
       {showCustom && sandboxOn && (
-        <CustomRatingsModal isBucket storageKey={ratingsKey} gameMode="classic" attrMap={P.attr} noPicks={startersOn}
+        <CustomRatingsModal isBucket logoDir="/logos/cbb/" storageKey={ratingsKey} gameMode="classic" attrMap={P.attr} noPicks={startersOn}
           pool={[...pool].sort((a, b) => a.school.localeCompare(b.school) || a.name.localeCompare(b.name))}
           poolCurrent={[...poolCur].sort((a, b) => a.school.localeCompare(b.school) || a.name.localeCompare(b.name))} poolLegends={[...poolAT].sort((a, b) => a.school.localeCompare(b.school) || a.name.localeCompare(b.name))}
           build={build} buildTypes={P.types}

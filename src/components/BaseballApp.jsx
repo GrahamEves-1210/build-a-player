@@ -850,7 +850,7 @@ export default function BaseballApp() {
 
   // the Custom Ratings sheet: both pools behind its toggle (Current / All-Time), each position its own
   const customModal = !showCustomModal ? null : (
-    <CustomRatingsModal
+    <CustomRatingsModal logoDir="/logos/mlb/"
       attrMap={ATTR} eraLabels={['Current', 'All-Time']}
       storageKey="bbb_baseball_custom_ratings" ratingsKeyFor={era => ratingsKey(position, era)}
       noPicks={startersOn} gameMode={gameMode}
