@@ -449,7 +449,7 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
 // The player's card colour: the team's second colour (the owner, 11-13), unless it's too light to carry white text
 // (a white or silver second colour): then the first
 const lum = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 1; const n = parseInt(m[1], 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 }
-const cardBg = q => (q?.color2 && lum(q.color2) < 0.62 ? q.color2 : q?.color)
+const cardBg = q => q?.color   // (the first colour again, the owner 11-13; the second was tried)
 
 const POS_COLORS = {
   QB: '#fb923c', RB: '#60a5fa', WR: '#34d399', TE: '#a78bfa',
