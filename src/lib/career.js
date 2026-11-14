@@ -2511,12 +2511,41 @@ function buildBracket(c, f) {
     for (let d = 0; d < list.length; d++) for (const j of [i + d, i - d]) if (j >= 0 && j < list.length && !met.has(list[j].short)) return list[j]
     return list[Math.min(list.length - 1, i)]
   }
+  // Basketball: the NBA's own bracket (owner 11-14: a real simulation). The conference seeded 1 to 15 with him at his
+  // seed and the rest in the order above. Seeds 7 to 10 play in: 7 hosts 8, 9 hosts 10, one game here. Win it from 7 or 8
+  // and he's the 7 seed, from 9 or 10 the 8 seed. Then 1 v 8, 2 v 7, 3 v 6, 4 v 5; the second round inside each quarter
+  // of the bracket (1-8 with 4-5, 2-7 with 3-6); the conference finals across the halves; the Finals against the other
+  // conference. The other series go to the higher seed about two times in three.
+  const hoops = (() => {
+    if (!S.isBucket) return null
+    const order = [...same]
+    order.splice(Math.min(seed - 1, order.length), 0, null)
+    const conf = k => order[Math.min(order.length, k) - 1] ?? same[same.length - 1]
+    const fav = (a, b) => (r() < 0.66 ? Math.min(a, b) : Math.max(a, b))
+    const plan = []
+    if (seed >= 7) { const o = seed === 7 ? 8 : seed === 8 ? 7 : seed === 9 ? 10 : 9; plan.push({ opp: conf(o), home: seed === 7 || seed === 9 }) }
+    const eff = seed <= 6 ? seed : seed <= 8 ? 7 : 8
+    // the bracket's 7 and 8 after the play-in: from 7 or 8 he's the 7, and the 8 is the 9 seed (the one he beat had to
+    // win again to get in, and didn't); from 9 or 10 he's the 8, and the 7 is the winner of 7 v 8
+    const slot = seed === 7 || seed === 8 ? { 8: 9 } : seed >= 9 ? { 7: fav(7, 8) } : {}
+    const at = k => conf(slot[k] ?? k)
+    plan.push({ opp: at(9 - eff), home: eff <= 4 })
+    // the other first-round series in his quarter, then the other quarter of his half
+    const QUARTER = { 1: [4, 5], 8: [4, 5], 4: [1, 8], 5: [1, 8], 2: [3, 6], 7: [3, 6], 3: [2, 7], 6: [2, 7] }
+    const s2 = fav(...QUARTER[eff])
+    plan.push({ opp: at(s2), home: eff < s2 })
+    const otherHalf = [1, 8, 4, 5].includes(eff) ? [[2, 7], [3, 6]] : [[1, 8], [4, 5]]
+    const s3 = fav(fav(...otherHalf[0]), fav(...otherHalf[1]))
+    plan.push({ opp: at(s3), home: eff < s3 })
+    plan.push({ opp: other[Math.floor(r() * 3)], home: null })
+    return plan
+  })()
   const rounds = names.map((name, i) => {
     const fin = name === S.final, playIn = name === 'Play-In'
     const ri = S.isBucket ? (playIn ? -1 : i - (seed >= 7 ? 1 : 0)) : i   // the round inside the main bracket
-    const opp = fin ? other[Math.floor(r() * 3)] : playIn ? fresh(same, Math.min(same.length - 1, 6 + Math.floor(r() * 3))) : fresh(same, Math.min(same.length - 1, (S.isBucket ? Math.max(0, 3 - ri) : (f.hasBye ? ri : ri + 1)) * 2 + Math.floor(r() * 2)))
+    const opp = hoops ? hoops[i].opp : fin ? other[Math.floor(r() * 3)] : fresh(same, Math.min(same.length - 1, (f.hasBye ? ri : ri + 1) * 2 + Math.floor(r() * 2)))
     met.add(opp.short)
-    const home = fin ? null : S.isBucket ? (playIn ? seed <= 8 : ri === 0 ? seed <= 4 : seed <= 2) : f.hasBye ? i === 0 : i === 0 && f.wins >= 11
+    const home = hoops ? hoops[i].home : fin ? null : f.hasBye ? i === 0 : i === 0 && f.wins >= 11
     // (a true star tilts a series or a playoff game more: up to +0.07 more at 99)
     const base = 0.5 + (myStr - strength(opp)) * 0.08 + (home ? 0.06 : home === false ? -0.03 : 0) + ((c.ovr - 76) / 100) * 0.35 + Math.max(0, c.ovr - 95) * 0.018
     // p is the chance to win the round, the one the card shows and playoffRound uses. Football: the game.
