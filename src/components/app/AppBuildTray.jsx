@@ -338,6 +338,8 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
       const hud = hudOf()
       el.style.top = hud ? `${Math.round(hud.getBoundingClientRect().height + (hud.classList.contains('bt-hud-bar') ? 12 : 4))}px` : ''
       html.style.setProperty('--drop-top', `${Math.round(el.getBoundingClientRect().bottom)}px`)
+      // (where the sheet sticks: the bar's own sticky offset plus its height, so the sheet rides the page with the bar)
+      html.style.setProperty('--drop-stick', `${Math.round((parseFloat(getComputedStyle(el).top) || 0) + el.offsetHeight)}px`)
     }
     const on = () => { if (!raf) raf = requestAnimationFrame(put) }
     put()

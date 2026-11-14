@@ -7270,3 +7270,11 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
    The bar's pill takes taps and drags 16px below it (an invisible reach, the bar's own handlers) */
 .drop-bar.is-open .drop-bar-grab, html:has(.drop-sheet[data-moving]) .drop-bar-grab { opacity: 0; transition: none; }
 @media (max-width: 768px) { html.app-look:not(.is-app) .game-layout.ag-drop .drop-bar::after { content: ''; position: absolute; left: 30%; right: 30%; top: 100%; height: 16px; } }
+
+/* Phones (website): the drop-down sticks to the page like the bar does, instead of being fixed to the screen, so when an iPhone
+   bounces the page the bar, the drop-down, its pill and its shadow move as one (fixed, they floated apart). It takes no room:
+   its height is given back with a negative margin (owner, 11-13) */
+@media (max-width: 768px) {
+  html.app-look:not(.is-app) .game-layout.ag-drop .drop-clip { position: sticky !important; top: var(--drop-stick, 60px) !important; left: auto !important; right: auto !important; bottom: auto !important;
+    width: 100%; height: calc(100svh - var(--drop-top, 110px)) !important; margin-bottom: calc(-1 * (100svh - var(--drop-top, 110px))) !important;   /* (the room on screen under the bar) */ flex: none; align-self: stretch; }
+}
