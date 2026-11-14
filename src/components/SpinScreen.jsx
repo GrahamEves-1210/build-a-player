@@ -450,6 +450,11 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
   )
 }
 
+// The player's card colour: the team's second colour (the owner, 11-13), unless it's too light to carry white text
+// (a white or silver second colour): then the first
+const lum = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 1; const n = parseInt(m[1], 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 }
+const cardBg = q => (q?.color2 && lum(q.color2) < 0.62 ? q.color2 : q?.color)
+
 const POS_COLORS = {
   QB: '#fb923c', RB: '#60a5fa', WR: '#34d399', TE: '#a78bfa',
   OL: '#fbbf24', DL: '#f87171', LB: '#2dd4bf', DB: '#e879f9',
@@ -839,7 +844,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <span>Reset</span>
         </button>
       )}
-    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color } : undefined}>
+    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color, '--qb-bg': cardBg(selectedQB) } : undefined}>
       {isSpinning && <div className="spin-blocker" />}
       <div className={`spin-panel-body${isDone && selectedQB ? ' has-card' : ''}`}>
         <div className="spin-panel-static">
@@ -950,7 +955,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               is kept from the start for anyone who sees ads, so nothing moves when it fills. The dev server outlines it (is-dev) */}
           {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><small>ADVERTISEMENT</small><div id={SPIN_AD_ID} /></div>}
           {isDone && selectedQB && (
-            <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
+            <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color, '--qb-bg': cardBg(selectedQB) }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
                   photo={(selectedQB.headshot ?? headshotsMap[selectedQB.name]) ? `${headshotsDir}${selectedQB.headshot ?? headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}

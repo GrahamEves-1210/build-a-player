@@ -7205,7 +7205,7 @@ html.app-look:not(.is-app) .spin-panel .qb-reveal-hero .qb-avatar { background: 
 /* The wheels' arrows above the wheels (they sat under a wheel's edge: the left looked behind, desktop's looked broken) (owner, 11-13) */
 html.app-look:not(.is-app) .spin-panel .reels-wrap > .reel-tri { z-index: 6; }
 /* The spin's player card a flat team colour, no fade to black (owner, 11-13). Website */
-html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-color, #444) 72%, #000) !important; }
+html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 72%, #000) !important; }
 
 
 /* Desktop (website) wheels (owner, 11-13): each 1px thinner and 1px less between them, and the arrows just outside the
@@ -7231,7 +7231,7 @@ html .bap-wm.bap-wm.bap-wm { letter-spacing: -.08em !important; }
 
 /* The player's card runs on down behind the trait chips: one panel in the team's colour (owner, 11-13). Website */
 html.app-look:not(.is-app) .spin-panel-body.has-card .qb-reveal-card.qb-reveal-card { border-radius: 12px 12px 0 0 !important; margin-bottom: 0 !important; box-shadow: inset 2px 0 0 rgba(0,0,0,.5), inset -2px 0 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(0,0,0,.5) !important; }
-html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin: var(--card-join, -1px) 11px 0 !important; padding: 8px 8px 10px !important; border-radius: 0 0 12px 12px; background: color-mix(in srgb, var(--qb-color, #444) 72%, #000); box-shadow: inset 2px 0 0 rgba(0,0,0,.5), inset -2px 0 0 rgba(0,0,0,.5), inset 0 -2px 0 rgba(0,0,0,.5); }
+html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin: var(--card-join, -1px) 11px 0 !important; padding: 8px 8px 10px !important; border-radius: 0 0 12px 12px; background: color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 72%, #000); box-shadow: inset 2px 0 0 rgba(0,0,0,.5), inset -2px 0 0 rgba(0,0,0,.5), inset 0 -2px 0 rgba(0,0,0,.5); }
 @media (max-width: 768px) { html.app-look:not(.is-app) .spin-panel-body.has-card { --card-join: -6px; } }   /* (a phone's panel has a 5px gap between rows) */
 /* (the card and the chips overlap a pixel: edge to edge at half pixels left a dark seam between them) */
 
