@@ -16,7 +16,9 @@ const weakSpecs = () => {
   // most read as weak, and lost the reel drift for nothing)
   try { if (matchMedia('(pointer: coarse)').matches) return false } catch {}
   const mem = navigator.deviceMemory, cores = navigator.hardwareConcurrency
-  return (mem != null && mem <= 4) || (cores != null && cores <= 4)
+  // (2 or less: 4 caught ordinary computers, the owner's among them, and took the wheels' idle spin and 3D away; anything
+  // between is left to the frame check below, which marks a machine that really drops frames)
+  return (mem != null && mem <= 2) || (cores != null && cores <= 2)
 }
 
 // the machine's own verdict, and the player's: Reduce motion (lib/settings.js) asks for the light version too
