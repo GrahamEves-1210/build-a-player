@@ -11,6 +11,8 @@ import { IconBag, IconProfile, IconCalendar, IconPodium, IconBagLine, IconProfil
 import { slideIn } from '../lib/juice'
 import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
+import { AvatarBadge } from './app/NameTag'
+import { getUsername } from '../lib/discord'
 import { AnimatePresence, motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../lib/motion'
 import { takeRewardedOpen } from '../lib/rewardedAd'
@@ -52,15 +54,16 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 const TAB_ORDER = { shop: 0, daily: 1, play: 2, leaderboard: 3, profile: 4, locker: 4, cards: 4, achievements: 4 }
 const DOCK_TABS = new Set(['shop', 'daily', 'leaderboard'])
 
-// outline when it's not lit, filled when it is
-function Tab({ label, Icon, Line, active, onClick, badge }) {
+// outline when it's not lit, filled when it is. art: something in the icon's place (the player's own avatar on PROFILE).
+// badge: what's waiting there (red); tag: what the tab knows when nothing is waiting (the streak's day, a free reward)
+function Tab({ label, Icon, Line, active, onClick, badge, tag = null, tagKind = '', art = null }) {
   const Glyph = active ? Icon : Line
   return (
     <button className={`ag-tab${active ? ' ag-tab--on' : ''}`} aria-current={active ? 'page' : undefined} onClick={onClick}>
       {active && <motion.span layoutId="dock-lit" className="ag-tab-lit" transition={SPRING_LAYOUT} />}
-      <span className="ag-tab-icon"><Glyph size={23} /></span>
+      <span className={`ag-tab-icon${art ? ' has-art' : ''}`}>{art ?? <Glyph size={23} />}</span>
       <span className="ag-tab-label">{label}</span>
-      {badge ? <span className="ag-tab-badge">{badge}</span> : null}
+      {badge ? <span className="ag-tab-badge">{badge}</span> : tag != null ? <span className={`ag-tab-tag${tagKind ? ` is-${tagKind}` : ''}`}>{tag}</span> : null}
     </button>
   )
 }
@@ -176,14 +179,18 @@ export default function AppTabBar() {
       {!hidden && <div className="ag-dock-floor" aria-hidden="true" />}
       {!hidden && (
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
-          <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} />
-          <Tab label="DAILY" Icon={IconCalendar} Line={IconCalendarLine} active={active === 'daily'} onClick={open('daily')} badge={badge} />
+          {/* the day's free reward waiting in the Shop; the login streak's day on Daily (a reward to claim outranks it) */}
+          <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} tag={progress.freeReady ? 'FREE' : null} tagKind="free" />
+          <Tab label="DAILY" Icon={IconCalendar} Line={IconCalendarLine} active={active === 'daily'} onClick={open('daily')} badge={badge} tag={progress.streak?.count > 1 ? progress.streak.count : null} tagKind="streak" />
           {/* a tap goes Home (PLAY, or HOME inside a game mode); hold for the modes anywhere */}
           <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={atHome}
             onTap={() => { if (!atHome) go('home')() }} />
           <Tab label="RANKS" Icon={IconPodium} Line={IconPodiumLine} active={active === 'leaderboard'} onClick={state.page === 'leaderboard' && !screen ? undefined : go('leaderboard')} />
           {/* unclaimed achievements and completed sets show here and on the profile's own buttons */}
-          <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={['profile', 'locker', 'cards', 'achievements'].includes(active)} badge={claimable} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
+          {/* the player's own avatar and level in the icon's place (a guest keeps the outline) */}
+          <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={['profile', 'locker', 'cards', 'achievements'].includes(active)} badge={claimable}
+            art={getUsername(progress.user) ? <AvatarBadge self name={getUsername(progress.user)} size={26} level={progress.lvl?.level} /> : null}
+            onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}
       {/* the More sheet slides back out when it closes */}
