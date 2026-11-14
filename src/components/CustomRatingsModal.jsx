@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, LITE_TYPES } from '../data/qbs'
 import { RB_TYPES, RB_LITE_TYPES } from '../data/rbs'
 import { WR_TYPES, WR_LITE_TYPES, WR_ATTR } from '../data/wrs'
@@ -93,11 +93,21 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
 
   const [expandedKey, setExpandedKey] = useState(null)
   const [slotPickerPlayer, setSlotPickerPlayer] = useState(null)
+  const [editedOnly, setEditedOnly] = useState(false)   // the "N edited" tag in the header: only the players he's changed
+  const listRef = useRef(null)
+  // a player opened low in the list scrolls up so his grades are in view (they used to open under the bottom edge)
+  useEffect(() => {
+    if (!expandedKey) return
+    const row = listRef.current?.querySelector('.cr-row.is-open')
+    if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+  }, [expandedKey])
 
+  const q = search.trim().toLowerCase()
   const filtered = list.filter(p =>
-    search === '' ||
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.team || '').toLowerCase().includes(search.toLowerCase())
+    (!editedOnly || overrides[`${p.name}|${p.team}`]) && (
+    q === '' ||
+    p.name.toLowerCase().includes(q) ||
+    (p.team || '').toLowerCase().includes(q))
   )
 
   const getVal = (key, attr, baseVal) => overrides[key]?.[attr] ?? baseVal
@@ -106,7 +116,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
   const setVal = (playerKey, attr, val) => {
     setOverrides(prev => ({
       ...prev,
-      [playerKey]: { ...(prev[playerKey] || {}), [attr]: Number(val) },
+      [playerKey]: { ...(prev[playerKey] || {}), [attr]: Math.max(0, Math.min(11, Number(val))) },
     }))
   }
 
@@ -122,17 +132,20 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
     onSave(all)
     onClose()
   }
+  // closing keeps the edits (the X and a tap outside used to throw them away: only Save kept them)
+  const close = handleSave
 
   const modifiedCount = Object.keys(overrides).length
+  useEffect(() => { if (!modifiedCount) setEditedOnly(false) }, [modifiedCount])
 
   return (
-    <div className="cr-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="cr-overlay" onClick={e => e.target === e.currentTarget && close()}>
       <div className="cr-modal">
         <div className="cr-header">
           <span className="cr-title">Custom Ratings</span>
-          {modifiedCount > 0 && <span className="cr-mod-count">{modifiedCount} modified</span>}
+          {modifiedCount > 0 && <button className={`cr-mod-count${editedOnly ? ' is-on' : ''}`} aria-pressed={editedOnly} onClick={() => setEditedOnly(v => !v)}>{modifiedCount} EDITED{editedOnly ? ' ✕' : ''}</button>}
           {!noPicks && <span className="cr-build-count">{buildTypes.filter(a => build[a]).length}/{buildTypes.length} IN BUILD</span>}
-          <button className="cr-close" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
+          <button className="cr-close" onClick={close} aria-label="Save and close"><IconClose size={16} /></button>
         </div>
 
         <div className="cr-search-wrap">
@@ -142,21 +155,26 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
               <button role="tab" aria-selected={era === 'all-time'} className={`cr-era-btn${era === 'all-time' ? ' is-on' : ''}`} onClick={() => { setEra('all-time'); setExpandedKey(null); setSlotPickerPlayer(null) }}>{eraLabels?.[1] ?? 'All-Time'}</button>
             </div>
           )}
-          <input
-            className="cr-search"
-            placeholder="Search players…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+          <div className="cr-search-box">
+            <input
+              className="cr-search"
+              type="search"
+              enterKeyHint="search"
+              placeholder="Search player or team"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && <button className="cr-search-clear" onClick={() => setSearch('')} aria-label="Clear search"><IconClose size={12} /></button>}
+          </div>
         </div>
 
-        <div className="cr-list">
+        <div className="cr-list" ref={listRef}>
           {filtered.map(p => {
             const key = `${p.name}|${p.team}`
             const isExpanded = expandedKey === key
             const isModified = !!overrides[key]
             return (
-              <div key={key} className={`cr-row${isModified ? ' cr-row-modified' : ''}`}>
+              <div key={key} className={`cr-row${isModified ? ' cr-row-modified' : ''}${isExpanded ? ' is-open' : ''}`}>
                 <button className="cr-row-header" onClick={() => setExpandedKey(isExpanded ? null : key)}>
                   <span className="cr-row-name">{p.name}</span>
                   <span className="cr-row-team">{p.team}{p.years ? ` · ${p.years}` : ''}</span>
@@ -182,12 +200,16 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                             className="cr-slider"
                             onTouchStart={e => e.stopPropagation()}
                           />
+                          {/* one grade up or down, for the exact grade the slider makes fiddly on a phone */}
+                          <button className="cr-step" onClick={() => setVal(key, attr, currentVal - 1)} disabled={currentVal <= 0} aria-label="One grade down">−</button>
                           <span
                             className="cr-attr-val"
                             style={{ color: GRADE_COLOR[getGrade(key, attr, baseVal)] }}
+                            title={isOverridden ? `Was ${valToGrade(baseVal)}` : undefined}
                           >
                             {getGrade(key, attr, baseVal)}
                           </span>
+                          <button className="cr-step" onClick={() => setVal(key, attr, currentVal + 1)} disabled={currentVal >= 11} aria-label="One grade up">+</button>
                           {!noPicks && (build[attr]
                             ? <span className={`cr-attr-add is-in${build[attr].qbFull === p.name ? ' is-his' : ''}`}>{build[attr].qbFull === p.name ? 'ADDED' : 'FULL'}</span>
                             : <button className="cr-attr-add" onClick={() => onAddToBuild?.(p, overrides[key], attr)} aria-label={`Add ${attrMeta[attr]?.label ?? attr} to the build`}>ADD</button>)}
@@ -223,7 +245,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
             )
           })}
           {filtered.length === 0 && (
-            <div className="cr-empty">No players found.</div>
+            <div className="cr-empty">{editedOnly && !q ? 'No edited players here.' : 'No players found.'}</div>
           )}
         </div>
 
@@ -279,7 +301,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
               {modifiedCount > 0 && (
                 <button className="cr-reset-all" onClick={() => setOverrides({})}>Reset all</button>
               )}
-              <button className="cr-save" onClick={handleSave}>Save</button>
+              <button className="cr-save" onClick={handleSave}>Done</button>
             </>
           )}
         </div>

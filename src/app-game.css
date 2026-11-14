@@ -7450,3 +7450,27 @@ html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { min-height: 60px; }
   html.app-look:not(.is-app) .cr-search.cr-search { flex: 1; min-width: 0; height: 36px; min-height: 0; padding: 0 10px; border-radius: 9px; }
   html.app-look:not(.is-app) .cr-list.cr-list { padding: 4px 6px 6px; }
 }
+
+/* Custom Ratings, easier (owner 11-13): a step button each side of the grade, a clear button in the search, the EDITED tag
+   filters to the players he's changed, the opened player scrolls into view (CustomRatingsModal.jsx) */
+.cr-search-box { position: relative; flex: 1; min-width: 0; display: flex; }
+.cr-search-box .cr-search { flex: 1; width: 100%; padding-right: 36px !important; -webkit-appearance: none; appearance: none; }
+.cr-search::-webkit-search-cancel-button { display: none; }
+.cr-search-clear { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; cursor: pointer; }
+button.cr-mod-count { border: 0; cursor: pointer; }
+html:is(.is-app, .app-look) button.cr-mod-count { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; }
+html:is(.is-app, .app-look) button.cr-mod-count.is-on { background: #fff; color: #0b0f0d; }
+.cr-step { flex: none; width: 30px; height: 30px; display: grid; place-items: center; padding: 0 0 2px; border: 1px solid rgba(255,255,255,.22); border-radius: 7px; background: rgba(255,255,255,.06); color: #fff; font-size: 20px; font-weight: 600; line-height: 1; cursor: pointer; touch-action: manipulation; }
+.cr-step:disabled { opacity: .25; cursor: default; }
+button.cr-step:not(:disabled):active { background: rgba(255,255,255,.18); transform: scale(.94); }
+html:is(.is-app, .app-look) .cr-attr-row { align-items: center; }
+html:is(.is-app, .app-look) .cr-attr-row .cr-attr-val { width: 30px; text-align: center; flex: none; }
+.cr-slider { min-width: 0; flex: 1; }
+.cr-row { scroll-margin: 6px; }
+@media (max-width: 768px) {
+  html:is(.is-app, .app-look) .cr-attr-row { gap: 5px; min-height: 34px; margin-bottom: 2px; }
+  html:is(.is-app, .app-look) .cr-attr-label { width: 74px; flex: none; }
+  html:is(.is-app, .app-look) .cr-attr-row .cr-attr-val { width: 28px; font-size: 18px; }
+  html:is(.is-app, .app-look) .cr-attr-add { width: 44px; }
+  html:is(.is-app, .app-look) button.cr-mod-count { font-size: 11px; padding: 3px 6px 2px; }
+}
