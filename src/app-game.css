@@ -6977,7 +6977,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport:is(.
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-scroll { gap: 4px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { min-height: 34px !important; padding: 2px 8px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-hint-text { margin: 1px 0 !important; }
-  html.app-look:not(.is-app) .drop-sheet-grip { padding: 4px 0 6px !important; }
+  html.app-look:not(.is-app) .drop-sheet-grip { padding: 2px 0 3px !important; }   /* tighter (owner, 11-13) */
   /* the wheels and the player's card a hair smaller (owner, 11-13): zoom, so the space they take shrinks with them */
   html.app-look:not(.is-app) .game-layout.ag-drop :is(.reels-wrap, .qb-reveal-card) { zoom: .92; }
   /* the top bar (the traits across and SPIN) about 10% shorter (owner, 11-13): less padding, a shorter button and cells */
