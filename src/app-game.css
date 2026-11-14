@@ -7397,3 +7397,10 @@ html body .ag-dock .ag-tab--home .ag-tab-icon svg { width: 26px; height: 26px; }
 html body .ag-dock .ag-tab--home .ag-tab-label { font-size: 16px; }
 html body .ag-dock .ag-tab-tag, html body .ag-dock .ag-tab-badge { transform: none !important; }
 html.app-look { --ag-dock-h: 70px; }
+
+/* (owner, 11-13) no panel behind the tabs that aren't open: just the icon and the word on the bar; the open one keeps its
+   slanted panel in the sport's colour, HOME its thin outline */
+html body .ag-dock .ag-tab:not(.ag-tab--on)::before { background: transparent; }
+/* the wordmark's -A- in each sport's own colour (the shared wordmark took the accent, peach on basketball's pages) */
+html body .ag-home--bucket .bap-wm em:not([style]), html.is-bucket body .bap-wm em:not([style]), html body [data-sport="bucket"] .bap-wm em:not([style]) { color: #f97316; -webkit-text-fill-color: #f97316; }
+html body .ag-home--soccer .bap-wm em:not([style]), html.is-soccer body .bap-wm em:not([style]), html body [data-sport="soccer"] .bap-wm em:not([style]) { color: #9a9ca1; -webkit-text-fill-color: #9a9ca1; }
