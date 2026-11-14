@@ -216,7 +216,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                           <div className="cr-gp-grades">
                             {GRADES.map((g, v) => (
                               <button key={g} className={`cr-gp-g${v === Math.round(currentVal) ? ' is-on' : ''}${v === Math.round(baseVal) ? ' is-base' : ''}`} style={{ '--g': spectrumColor(v) }}
-                                onClick={() => { setVal(key, attr, v); setSelAttr(null) }}>{g}</button>
+                                onClick={() => setVal(key, attr, v)}>{g}</button>
                             ))}
                           </div>
                         </div>
