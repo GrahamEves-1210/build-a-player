@@ -417,7 +417,7 @@ export default function App() {
   // runs on /simulate, Salary Cap and /depth-chart. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
     const onSimulate = page === 'sim' && !!simResult
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/' }); return }
+    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/', soft: true }); return }
     const here = window.location.pathname
     const path = onSimulate ? '/simulate'
       : page === 'depth-chart' ? '/depth-chart'

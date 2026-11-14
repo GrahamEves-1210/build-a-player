@@ -66,7 +66,7 @@ const wide = px => !!window.matchMedia?.(`(min-width: ${px}px)`).matches
 const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(1440) : a.type === 'left_rail' ? wide(1500) : true))
 
 // ads: units to add after the destroy ([] = none)
-// soft: the same units already up stay up, however long ago they came (the dock's own pages, Ranks and Profile: the rail
+// soft: the same units already up stay up, however long ago they came (the dock's own pages, Home, Ranks and Profile: the rail
 // reloading there read as the ad refreshing for nothing, the owner 11-13)
 export function rampPage({ ads: wanted = [], path, soft = false } = {}) {
   pageWants = { ads: wanted, path }; inPage = []

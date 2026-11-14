@@ -464,7 +464,7 @@ export default function SoccerApp() {
 
   // ads on every page change (lib/ads.js), the paths under /soccer like basketball's under /bucket
   useLayoutEffect(() => {
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/soccer' }); return }
+    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/soccer', soft: true }); return }
     const here = window.location.pathname
     const path = page === 'sim' ? '/soccer/simulate' : page === 'salarycap' ? '/soccer/salary' : page === 'leaderboard' ? '/soccer/leaderboard'
       : ['/soccer/simulate', '/soccer/leaderboard', '/soccer/salary'].includes(here) ? '/soccer' : here

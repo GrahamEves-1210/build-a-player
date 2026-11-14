@@ -499,7 +499,7 @@ export default function BaseballApp() {
 
   // ads on every page change (lib/ads.js), the paths under /baseball like basketball's under /bucket
   useLayoutEffect(() => {
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/baseball' }); return }
+    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/baseball', soft: true }); return }
     const here = window.location.pathname
     const path = page === 'sim' ? '/baseball/simulate' : page === 'salarycap' ? '/baseball/salary' : page === 'leaderboard' ? '/baseball/leaderboard'
       : ['/baseball/simulate', '/baseball/leaderboard', '/baseball/salary'].includes(here) ? '/baseball' : here

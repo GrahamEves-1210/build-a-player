@@ -697,7 +697,7 @@ export default function BucketApp() {
   // own in-page units. Home runs the bottom rail only; the left rail only runs on
   // the sim page and Salary Cap. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/bucket' }); return }
+    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/bucket', soft: true }); return }
     const here = window.location.pathname
     const path = page === 'sim' ? '/bucket/simulate'
       : page === 'salarycap' ? '/bucket/salary'
