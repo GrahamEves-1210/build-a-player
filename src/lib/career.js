@@ -1263,8 +1263,10 @@ export function spotMove(c) {
   if (!sportOf(c).isBucket || sportOf(c).x?.depth || c.phase !== 'preseason' || !c.team || c.spotAsked === c.year) return null
   const here = depthChart(c)
   if (here.starter) return null
-  const from = hoopSpot(c), at = HOOP_SPOTS.indexOf(from)
-  const asks = [at - 1, at + 1].filter(i => i >= 0 && i < HOOP_SPOTS.length).map(i => {
+  // (only ever one spot from where he started, owner 11-14: a PG can go to SG and back, never on to SF; the start is
+  // homeSpot, set at the first move)
+  const from = hoopSpot(c), home = HOOP_SPOTS.indexOf(c.homeSpot ?? from), at = HOOP_SPOTS.indexOf(from)
+  const asks = [home - 1, home, home + 1].filter(i => i >= 0 && i < HOOP_SPOTS.length && i !== at).map(i => {
     const to = HOOP_SPOTS[i], dc = depthChart({ ...c, spot: to, lastRole: null })
     // (the man he'd start over there: the best of the rest at that spot)
     const over = dc.all.find(p => !p.you) ?? null
@@ -1277,7 +1279,7 @@ export function spotMove(c) {
 export function answerSpotMove(c, yes) {
   const m = spotMove(c)
   if (!m) return c
-  const n = { ...c, spotAsked: c.year, ...(yes ? { spot: m.to } : {}) }
+  const n = { ...c, spotAsked: c.year, ...(yes ? { spot: m.to, homeSpot: c.homeSpot ?? m.from } : {}) }
   const text = yes ? `Moved from ${m.from} to ${m.to} in camp at the coach's request` : `Turned down a move to ${m.to} in camp: stayed at ${m.from}`
   return { ...n, fit: yes ? fitFor(n) : c.fit, decisions: [...(c.decisions ?? []), { year: c.year + 1, text }] }
 }
