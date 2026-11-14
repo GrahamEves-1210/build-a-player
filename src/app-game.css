@@ -7230,8 +7230,8 @@ html .bap-wm.bap-wm.bap-wm { letter-spacing: -.08em !important; }
 @media (max-width: 768px) { html.app-look:not(.is-app) .game-layout.ag-drop .reels-wrap { padding-top: 1px !important; } }
 
 /* The player's card runs on down behind the trait chips: one panel in the team's colour (owner, 11-13). Website */
-html.app-look:not(.is-app) .spin-panel-body.has-card .qb-reveal-card.qb-reveal-card { border-radius: 12px 12px 0 0 !important; margin-bottom: 0 !important; box-shadow: none !important; border: 2px solid rgba(0,0,0,.5) !important; border-bottom: 0 !important; }   /* (a real border: the side shadows didn't follow the corners) */
-html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin: var(--card-join, -1px) 11px 0 !important; padding: 8px 8px 10px !important; border-radius: 0 0 12px 12px; background: color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 72%, #000); box-shadow: none; border: 2px solid rgba(0,0,0,.5); border-top: 0; }
+html.app-look:not(.is-app) .spin-panel-body.has-card .qb-reveal-card.qb-reveal-card { border-radius: 12px 12px 0 0 !important; margin-bottom: 0 !important; box-shadow: none !important; border: 2px solid var(--qb-color, #555) !important; border-bottom: 0 !important; }   /* (a real border: the side shadows didn't follow the corners) */
+html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin: var(--card-join, -1px) 11px 0 !important; padding: 8px 8px 10px !important; border-radius: 0 0 12px 12px; background: color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 72%, #000); box-shadow: none; border: 2px solid var(--qb-color, #555); border-top: 0; }
 @media (max-width: 768px) { html.app-look:not(.is-app) .spin-panel-body.has-card { --card-join: -6px; } }   /* (a phone's panel has a 5px gap between rows) */
 /* (the card and the chips overlap a pixel: edge to edge at half pixels left a dark seam between them) */
 
@@ -7278,3 +7278,5 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
   html.app-look:not(.is-app) .game-layout.ag-drop .drop-clip { position: sticky !important; top: var(--drop-stick, 60px) !important; left: auto !important; right: auto !important; bottom: auto !important;
     width: 100%; height: calc(100svh - var(--drop-top, 110px)) !important; margin-bottom: calc(-1 * (100svh - var(--drop-top, 110px))) !important;   /* (the room on screen under the bar) */ flex: none; align-self: stretch; }
 }
+/* the panel's outline in the team's colour on a charcoal panel (owner, 11-13). Phones: Build-A-Bucket's nav wordmark a size down (its hoop makes it wider) */
+@media (max-width: 768px) { html.app-look.is-bucket .navbar .logo-text.logo-text--small, html.app-look [data-sport="bucket"] .navbar .logo-text.logo-text--small { font-size: 14px; } }
