@@ -43,7 +43,7 @@ function oneOffFinal(f, t, games) {
   return out
 }
 // The director for a one-off club season: the rest of the league re-simulated after each decision
-export function oneOffDirector({ result, build, types, name = 'Guest', attrMap = {} }) {
+export function oneOffDirector({ result, build, types, name = 'Guest', attrMap = {}, seed = null }) {
   const simFn = (b, t, seed) => runSoccerSimulation(b, types, t, 'current', seed)
-  return createDirector({ sport: 'soccer', pos: 'st', build, team: result.team, simFn, base: result, name, attrMap, types, onFinal: oneOffFinal })
+  return createDirector({ sport: 'soccer', pos: 'st', build, team: result.team, simFn, base: result, name, attrMap, types, onFinal: oneOffFinal, ...(seed ? { seed } : {}) })
 }

@@ -39,6 +39,7 @@ import { HEADSHOT_BASE } from '../utils/simulation'
 import { supabase, apiHeaders } from '../lib/supabase'
 import { track } from '../lib/track'
 import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
+import { readLive, startLive, bookLive, leaveLive } from '../lib/seasonLive'
 import { saveSeason, saveSalary } from '../lib/submit'
 import { baseballModeOf, baseballRowStats, baseballAwardTags, baseballAwardName, baseballMajorAward } from '../lib/baseballAwards'
 import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
@@ -329,11 +330,13 @@ function saveBaseballSeason(args) {
 // (only the component is exported, so Fast Refresh keeps the game's state when the data or the sim changes)
 // ─── BaseballApp ──────────────────────────────────────────────────────────────
 export default function BaseballApp() {
+  // a season kept on the device (lib/seasonLive.js): after a reload its build, mode and season wait on CONTINUE
+  const [liveAt] = useState(() => (SHARED ? null : readLive('baseball')))
   const [page, setPage]               = useState(SHARED ? 'shared' : 'splash')
-  const [gameMode, setGameMode]       = useState(null)   // 'classic' (Current) | 'all-time' | 'salarycap'
-  const [position, setPosition]       = useState(() => { try { return baseballPosOf(localStorage.getItem('baseballPosition')) } catch { return 'bat' } })
+  const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)   // 'classic' (Current) | 'all-time' | 'salarycap'
+  const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; try { return baseballPosOf(localStorage.getItem('baseballPosition')) } catch { return 'bat' } })
   const pool = baseballPoolOf(gameMode)
-  const [build, setBuild]             = useState({})
+  const [build, setBuild]             = useState(() => liveAt?.build ?? {})
   const figureRef = useRef(null)
   const [activeDrag, setActiveDrag]   = useState(null)
   const [activeCategory, setActiveCategory] = useState(() => CATS_OF.bat[0].id)
@@ -355,7 +358,7 @@ export default function BaseballApp() {
   const [showAuth, setShowAuth]       = useState(false)
   const [spinPhase, setSpinPhase]     = useState('idle')
   const [showTeamSpin, setShowTeamSpin] = useState(false)
-  const [simResult, setSimResult]     = useState(null)
+  const [simResult, setSimResult]     = useState(() => (liveAt ? (liveAt.booked ? liveAt.final : liveAt.base) : null))
   const [simInitialScreen, setSimInitialScreen] = useState(0)
   const [salaryReturnDate, setSalaryReturnDate] = useState(null)   // Salary Cap reopens on the date just played
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
@@ -478,6 +481,8 @@ export default function BaseballApp() {
         else if (last === 'squad-build' && gameMode) setPage('squad-build')
         else if (last === 'career' && careerRef.current) setPage('career')
         else if (last === 'career-build' && gameMode) setPage('career-build')
+        // (a season played or in progress: straight back to it, as football's CONTINUE does: still playing, where it was)
+        else if (gameMode && gameMode !== 'salarycap' && simResult) { const v = readLive('baseball'); setSimInitialScreen(v ? 0 : 'final'); setPage('sim') }
         else if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else handleStartRef.current?.('classic', positionRef.current)
       } else if (String(to).startsWith('mode:')) handleStartRef.current?.(String(to).slice(5), positionRef.current)
@@ -495,7 +500,7 @@ export default function BaseballApp() {
     }
     window.addEventListener('bap:nav', onNav)
     return () => window.removeEventListener('bap:nav', onNav)
-  }, [page, gameMode, user])
+  }, [page, gameMode, user, simResult])
 
   // ads on every page change (lib/ads.js), the paths under /baseball like basketball's under /bucket
   useLayoutEffect(() => {
@@ -570,6 +575,7 @@ export default function BaseballApp() {
   }, [position, pool, isCustomMode, customRatings, ratingsKey])
 
   const handleStart = useCallback((mode, pos0 = positionRef.current) => {
+    leaveLive('baseball', markPlayed)   // (a season left in progress: played, as a reload made it)
     const pos = baseballPosOf(pos0)
     if (mode === 'salarycap' && !BASEBALL_MODES.salary) { setGameMode(null); setPage('soon-salary'); return }
     if (IS_APP || APP_LOOK) { setSimResult(null); setSavedSpinResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1) }
@@ -750,6 +756,7 @@ export default function BaseballApp() {
   }, [])
 
   const handleReset = useCallback(() => {
+    leaveLive('baseball', markPlayed)
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setActiveDrag(null)
     setSpinResetKey(k => k + 1)
@@ -773,15 +780,16 @@ export default function BaseballApp() {
 
   // a build that already played its season goes back to that season (Back to Build can't re-roll it)
   const replayOrSpin = useCallback(() => {
-    if ((IS_APP || APP_LOOK) && simResult && gameMode !== 'salarycap') { setSimInitialScreen('final'); setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
+    if ((IS_APP || APP_LOOK) && simResult && gameMode !== 'salarycap') { const v = readLive('baseball'); setSimInitialScreen(v && !v.booked && v.sig === buildSig(`${baseballModeOf(pool)}-${position}`, build, activeTypes) ? 0 : 'final'); setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
     setShowTeamSpin(true)
-  }, [simResult, gameMode])
+  }, [simResult, gameMode, build, activeTypes, pool, position])
 
   // The season is booked once (BaseballSimPage calls this when the regular season has played out, or when it's left):
   // XP and coins, the board row. It never moves the page.
   const bookSeason = useCallback(result => {
     // (the season as played: with the moments on, the director's booked season, so View Results reopens that one)
     if (IS_APP || APP_LOOK) setSimResult(result)
+    { const v = readLive('baseball'); if (v && !v.booked && v.sig === buildSig(`${baseballModeOf(pool)}-${position}`, build, activeTypes)) bookLive(v, result) }
     // the save guard (lib/saveGuard.js): Sandbox in any form, or a build that already saved a season,
     // saves nothing and earns no XP or coins
     const saveMode = baseballModeOf(pool)
@@ -811,14 +819,33 @@ export default function BaseballApp() {
   const commitRef = useRef(null); commitRef.current = commitSeason
 
   const handleTeamPicked = useCallback(team => {
+    const kept = (IS_APP || APP_LOOK) && page === 'game'
+    const sig = buildSig(`${baseballModeOf(pool)}-${position}`, build, activeTypes)
+    // this build's season is already under way (a reload, or Simulate again): pick it back up, never a second run
+    if (kept) {
+      const v = readLive('baseball')
+      if (v && !v.booked && v.sig === sig) {
+        setSimResult(v.base); setSimInitialScreen(0); setShowTeamSpin(false); setPage('sim')
+        window.scrollTo({ top: 0, behavior: 'instant' })
+        return
+      }
+    }
     const result = BaseballSim.runBaseballSimulation(build, activeTypes, team, position, pool, null, 'classic')
     setSimResult(result)
     setSimInitialScreen(0)
     setShowTeamSpin(false)
+    // kept on the device as it plays (lib/seasonLive.js)
+    if (kept) startLive({ sig, mode: gameMode, pos: position, types: activeTypes, build, base: result, seed: Math.random().toString(36).slice(2, 8) }, 'baseball')
     // the new look books the season when it's been watched through the regular season (BaseballSimPage onFinal)
     if (IS_APP || APP_LOOK) { setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
     commitRef.current?.(result)
-  }, [build, activeTypes, pool, position])
+  }, [build, activeTypes, pool, position, page, gameMode])
+  // the kept season, for the sim page, when it's this build's (read as the page opens)
+  const liveRec = useMemo(() => {
+    if (page !== 'sim' || simInitialScreen !== 0 || !(IS_APP || APP_LOOK) || gameMode === 'salarycap') return null
+    const v = readLive('baseball')
+    return v && v.sig === buildSig(`${baseballModeOf(pool)}-${position}`, build, activeTypes) ? v : null
+  }, [page, simResult, simInitialScreen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChipTap = useCallback(chip => {
     setBuild(prev => {
@@ -1060,7 +1087,7 @@ export default function BaseballApp() {
             onCompete={() => setPage(BASEBALL_MODES.compete ? 'compete' : 'soon-compete')}
             soon={{ career: !BASEBALL_MODES.career, compete: !BASEBALL_MODES.compete, salary: !BASEBALL_MODES.salary, squad: !BASEBALL_MODES.squad }}
             faces={HOME_FACES}
-            resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${posMeta.label} · ${BASEBALL_POOL[pool].label}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+            resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${posMeta.label} · ${BASEBALL_POOL[pool].label}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
             footer={IS_APP ? null : <><SiteFeatures sport="baseball" /><SiteFooter sport="baseball" home /></>}
             renderBucketFigure={renderBaseballFigure}
           />
@@ -1132,6 +1159,7 @@ export default function BaseballApp() {
             adsDisabled={adsDisabled}
             isSalaryMode={gameMode === 'salarycap'}
             initialScreen={simInitialScreen}
+            live={liveRec}
             onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? bookSeason : null}
             userName={userName}
             arch={archOf(simResult?.ovr ?? calcOvr(build, activeTypes), build, activeTypes)}

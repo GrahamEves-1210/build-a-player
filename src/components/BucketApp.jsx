@@ -30,6 +30,7 @@ import NBA_HEADSHOTS     from '../data/nba-headshots.json'
 import { supabase, rtSupabase, apiHeaders } from '../lib/supabase'
 import { track } from '../lib/track'
 import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
+import { readLive, startLive, bookLive, leaveLive } from '../lib/seasonLive'
 import { HEADSHOT_BASE } from '../utils/simulation'
 const ProfilePage = lazy(() => import('./ProfilePage'))
 import CustomRatingsModal from './CustomRatingsModal'
@@ -422,10 +423,12 @@ const VERSUS_POS_CATS  = { guard: VERSUS_GUARD_CATEGORIES, big: VERSUS_BIG_CATEG
 
 // ─── BucketApp ────────────────────────────────────────────────────────────────
 export default function BucketApp() {
+  // a season kept on the device (lib/seasonLive.js): after a reload its build, mode and season wait on CONTINUE
+  const [liveAt] = useState(() => readLive('bucket'))
   const [page, setPage]               = useState('splash')
-  const [gameMode, setGameMode]       = useState(null)
-  const [position, setPosition]       = useState(() => { try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
-  const [build, setBuild]             = useState({})
+  const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)
+  const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
+  const [build, setBuild]             = useState(() => liveAt?.build ?? {})
   const figureRef = useRef(null)
   const captureFigure = useCallback(async () => {
     const el = figureRef.current
@@ -456,7 +459,7 @@ export default function BucketApp() {
   const [showAuth, setShowAuth]       = useState(false)
   const [spinPhase, setSpinPhase]     = useState('idle')
   const [showTeamSpin, setShowTeamSpin] = useState(false)
-  const [simResult, setSimResult]     = useState(null)
+  const [simResult, setSimResult]     = useState(() => (liveAt ? (liveAt.booked ? liveAt.final : liveAt.base) : null))
   const [simInitialScreen, setSimInitialScreen] = useState(0)
   const [salaryReturnDate, setSalaryReturnDate] = useState(null)
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
@@ -669,6 +672,8 @@ export default function BucketApp() {
         else if (last === 'squad-build' && gameMode) setPage('squad-build')
         else if (last === 'career' && careerRef.current) setPage('career')
         else if (last === 'career-build' && gameMode) setPage('career-build')
+        // (a season played or in progress: straight back to it, as football's CONTINUE does: still playing, where it was)
+        else if (gameMode && gameMode !== 'salarycap' && simResult) { const v = readLive('bucket'); setSimInitialScreen(v ? 0 : 4); setPage('sim') }
         else if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
       } else if (String(to).startsWith('mode:')) {   // the PLAY fan: straight into Current or All-Time
@@ -689,7 +694,7 @@ export default function BucketApp() {
     }
     window.addEventListener('bap:nav', onNav)
     return () => window.removeEventListener('bap:nav', onNav)
-  }, [page, gameMode, user, position])
+  }, [page, gameMode, user, position, simResult])
 
   // Ads on every page change (lib/ads.js): destroy all units, then add this
   // page's off-page units with the path set explicitly (the URL sync effect
@@ -847,7 +852,15 @@ export default function BucketApp() {
   // a 1v1 invite link (deep link): join that room by its code
   useEffect(() => { const on = e => e.detail?.code && startVersus(null, { kind: 'join', code: e.detail.code }); window.addEventListener('bap:join', on); return () => window.removeEventListener('bap:join', on) }, [startVersus])
 
+  // the kept season, for the sim page, when it's this build's (read as the page opens)
+  const liveRec = useMemo(() => {
+    if (page !== 'sim' || simInitialScreen !== 0 || !(IS_APP || APP_LOOK) || gameMode === 'salarycap') return null
+    const v = readLive('bucket')
+    return v && v.sig === buildSig(`${gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic'}-${position}`, build, activeTypes) ? v : null
+  }, [page, simResult, simInitialScreen]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleStart = useCallback((mode, pos = 'guard') => {
+    leaveLive('bucket', markPlayed)   // (a season left in progress: played, as a reload made it)
     setDailyRun(null)
     if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
       setSimResult(null); setSavedSpinResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
@@ -1171,6 +1184,7 @@ export default function BucketApp() {
 
   const handleReset = useCallback(() => {
     if (dailyLockedRef.current) return
+    leaveLive('bucket', markPlayed)
     faceoffFiredRef.current = false
     setVersusGame(null)
     setVersusRoom(prev => {
@@ -1200,26 +1214,41 @@ export default function BucketApp() {
   // (no fresh team, no fresh year: Back to Build can't re-roll it)
   const replayOrSpin = useCallback(() => {
     if ((IS_APP || APP_LOOK) && simResult && gameMode !== 'salarycap') {
-      setSimInitialScreen(4); setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return
+      // (a season still in progress picks back up where it was, not on a final report it hasn't reached)
+      const v = readLive('bucket')
+      setSimInitialScreen(v && !v.booked && v.sig === buildSig(`${gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic'}-${position}`, build, activeTypes) ? 0 : 4); setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return
     }
     setShowTeamSpin(true)
   }, [simResult, gameMode])
 
   const commitBucketRef = useRef(null)
   const handleTeamPicked = useCallback((team) => {
+    const kept = (IS_APP || APP_LOOK) && page === 'game' && !dailyRun
+    const sig = buildSig(`${gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic'}-${position}`, build, activeTypes)
+    // this build's season is already under way (a reload, or Simulate again): pick it back up, never a second run
+    if (kept) {
+      const v = readLive('bucket')
+      if (v && !v.booked && v.sig === sig) {
+        setSimResult(v.base); setSimInitialScreen(0); setShowTeamSpin(false); setPage('sim')
+        window.scrollTo({ top: 0, behavior: 'instant' })
+        return
+      }
+    }
     const result = runBucketSimulation(build, activeTypes, team, position, null, gameMode)
     setSimResult(result)
     setSimInitialScreen(0)
     setShowTeamSpin(false)
-    // The season is steered on the sim page; it's booked when it ends
+    // The season is steered on the sim page; it's booked when it ends. Kept on the device as it plays (lib/seasonLive.js)
+    if (kept) startLive({ sig, mode: gameMode, pos: position, types: activeTypes, build, base: result, seed: Math.random().toString(36).slice(2, 8) }, 'bucket')
     if (IS_APP || APP_LOOK) { setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
     commitBucketRef.current?.(result)
-  }, [build, activeTypes, position, gameMode])
+  }, [build, activeTypes, position, gameMode, page, dailyRun])
 
   // `leaving`: booked as you leave the season page mid-season (BucketSimPage's unmount), so stay
   // where you were going: setting the page back to 'sim' dropped you on the final report
   const commitBucketSeason = useCallback((result, { leaving = false } = {}) => {
     setSimResult(result)
+    { const v = readLive('bucket'); if (v && !v.booked && v.sig === buildSig(`${gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic'}-${position}`, build, activeTypes)) bookLive(v, result) }
     // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
     // already saved a season. Either way: no save, and no XP or coins either.
     const saveMode = gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic'
@@ -2115,7 +2144,7 @@ export default function BucketApp() {
               career={career}
               onCBB={CBB_LIVE ? () => { setPage('cbb'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'cbb' }) } : undefined}
               onCompete={() => setPage('compete')}
-              resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+              resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" home /></>}
               renderBucketFigure={(pos, ready, fast) => (
                 <>
@@ -2313,6 +2342,7 @@ export default function BucketApp() {
           isSalaryMode={gameMode === 'salarycap'}
           gameMode={gameMode}
           initialScreen={simInitialScreen}
+          live={liveRec}
           simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? bucketSimFor : null}
           onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitBucketSeason : null}
           pool={currentPool}

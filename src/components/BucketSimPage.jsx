@@ -21,6 +21,7 @@ const APP_SIM = IS_APP || APP_LOOK
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
+import { savePos } from '../lib/seasonLive'
 import { rampAdd, useRailOn } from '../lib/ads'
 import { IconBall } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
@@ -864,9 +865,9 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   )
 }
 
-function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false, director = null, onFinal = null, pool = null, userName = 'Guest' }) {
+function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false, director = null, onFinal = null, pool = null, userName = 'Guest', live = null }) {
   const { games = [], madePlayoffs, seed: rawSeed, playoffRounds = [], conference, ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, ovr = 0, standings, team } = result
-  const dr = useDirectedReveal({ director, pace: 70, onFinal })
+  const dr = useDirectedReveal({ director, pace: 70, onFinal, live: live && !live.booked ? live : null })
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
   const [phase,       setPhase]       = useState('loading')
@@ -2707,16 +2708,18 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
 }
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
-export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest' }) {
+export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest', live: kept = null }) {
   const tapGuard = useTapGuard()
   // a season already played and booked (it has its story) opens on its final report: never a second run at it
-  const [screen, setScreen] = useState(initialScreen === 0 && baseResult?.story && !isSalaryMode ? 4 : initialScreen)
+  // (a season kept on the device opens on the screen it was left on: lib/seasonLive.js)
+  const [screen, setScreen] = useState(() => (kept && kept.screen > 0 && initialScreen === 0) ? Math.min(kept.screen, 4) : initialScreen === 0 && baseResult?.story && !isSalaryMode ? 4 : initialScreen)
+  useEffect(() => { if (kept) savePos(kept, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
   const result = live
   const director = useMemo(() => (APP_SIM && (simFn || isSalaryMode) && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
-    ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
+    ? (d => (kept?.snap && !kept.booked ? d.restore(kept.snap) : d))(createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types, ...(kept?.seed && !kept.booked ? { seed: kept.seed } : {}) }))
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
   // leaving mid-season still books it; `leaving` keeps that from sending you back here, onto the final report
@@ -2796,7 +2799,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   const isAllTime  = gameMode === 'all-time'
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} live={kept} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
     <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} isAllTime={isAllTime} userName={userName} />,

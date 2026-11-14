@@ -37,6 +37,7 @@ import { spectrumColor } from '../lib/gradeColors'
 
 const TEAM_MAP = Object.fromEntries(MLB_TEAMS.map(t => [t.short, t]))
 const LOGO = '/logos/mlb/'
+import { savePos, saveStop } from '../lib/seasonLive'
 const BOOKED = new WeakSet()   // a season is booked once, however often its page opens
 // The app's season screens run on the website too (as basketball's: BucketSimPage APP_SIM)
 const APP_SIM = IS_APP || APP_LOOK
@@ -953,7 +954,7 @@ function ScreenFinal({ r, v, pos, build, types, card, onReset, onBack, userName,
 }
 
 // ─── The page ────────────────────────────────────────────────────────────────
-export default function BaseballSimPage({ result, build, types, pos = 'bat', pool = 'current', onBack, onReset, isSalaryMode = false, initialScreen = 0, onFinal = null, userName = 'Guest', arch = '', adsDisabled = false }) {
+export default function BaseballSimPage({ result, build, types, pos = 'bat', pool = 'current', onBack, onReset, isSalaryMode = false, initialScreen = 0, onFinal = null, userName = 'Guest', arch = '', adsDisabled = false, live: kept = null }) {
   const tapGuard = useTapGuard()
   // the season as played: the result, or the director's booked season once the moments have changed it
   const [live, setLive] = useState(result)
@@ -962,10 +963,15 @@ export default function BaseballSimPage({ result, build, types, pos = 'bat', poo
   const P = BASEBALL_POS[pos] ?? BASEBALL_POS.bat
   const LAST = 4
   // a season already booked (or reopened from View Results) opens on its final report
-  const [reopened] = useState(() => initialScreen === 'final' || (result && BOOKED.has(result) && !isSalaryMode))
-  const [screen, setScreen] = useState(() => (reopened ? LAST : 0))
+  // a season kept on the device (lib/seasonLive.js): booked, it opens on the screen it was left on (and is never booked
+  // again); still playing, the director picks back up where it was
+  const keptDone = !!kept?.booked
+  const keptDir = !!kept && !kept.booked && !!kept.dir
+  const [reopened] = useState(() => { if (keptDone && result) BOOKED.add(result); return initialScreen === 'final' || keptDone || (result && BOOKED.has(result) && !isSalaryMode) })
+  const [screen, setScreen] = useState(() => (keptDone && kept.screen > 0 ? Math.min(LAST, kept.screen) : reopened ? LAST : kept && kept.screen > 0 ? 1 : 0))
   useRailOn(screen)   // each screen brings the bottom rail back
-  const [seen, setSeen] = useState(() => (reopened ? { season: true, post: true } : {}))
+  useEffect(() => { if (kept) savePos(kept, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [seen, setSeen] = useState(() => (keptDone ? { season: true, post: kept.screen > 2 } : reopened ? { season: true, post: true } : {}))
   const [played, setPlayed] = useState(false)   // the regular season's last game is in
 
   // The moments (basketball's): on the app's look, while they're on. The director, baseball's story cards and its
@@ -978,6 +984,12 @@ export default function BaseballSimPage({ result, build, types, pos = 'bat', poo
     loading.current ??= Promise.all([import('./SeasonMoments'), import('../lib/baseballDirector')]).then(([a, b]) => { const m = { ...a, ...b }; setM(m); return m })
     return loading.current
   }, [])
+  // (a season the director was playing: rebuilt from its seed and its state at the last stop)
+  const directorOf = m => {
+    const d = m.oneOffDirector({ result, build, types, pos, mode: pool === 'alltime' ? 'alltime' : 'current', name: userName, attrMap: MLB_ATTR, seed: kept && !keptDone ? kept.seed : null })
+    return keptDir && kept.snap ? d.restore(kept.snap) : d
+  }
+  useEffect(() => { if (keptDir) loadMoments().then(m => setDirector(d => d ?? directorOf(m))) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!canMoments) return
     if (momentsOn()) loadMoments()
@@ -995,7 +1007,7 @@ export default function BaseballSimPage({ result, build, types, pos = 'bat', poo
   const handleFinal = final => { setLive(final); setPlayed(true); book(final) }
   useEffect(() => { if (screen === LAST) book() }, [screen, book])
   // (a real leave only, not React's development double mount: a season left mid-way is booked as far as it went)
-  useOnLeave(() => { if (director && !director.finalized) book(director.finalize(), true); else book(undefined, true) })
+  useOnLeave(() => { if (director && !director.finalized) book(director.finalize(), true); else if (!(keptDir && !director)) book(undefined, true) })   // (a kept season whose director hadn't loaded stays as it was)
 
   const card = useMemo(() => {
     if (!v) return null
@@ -1027,7 +1039,7 @@ export default function BaseballSimPage({ result, build, types, pos = 'bat', poo
   const next = () => {
     if (screen !== 0 || director || !canMoments || !momentsOn()) { go(); return }
     tapGuard.mark()
-    loadMoments().then(m => { setDirector(d => d ?? m.oneOffDirector({ result, build, types, pos, mode: pool === 'alltime' ? 'alltime' : 'current', name: userName, attrMap: MLB_ATTR })); go() }).catch(() => go())
+    loadMoments().then(m => { setDirector(d => d ?? directorOf(m)); if (kept && !keptDone) saveStop(kept, { dir: true }); go() }).catch(() => go())
   }
   // (the ALL-TIME pool plays an era-neutral season: the sim calls it 'All-Time')
   const yearLabel = String(r.season ?? r.year ?? 2026)
@@ -1041,9 +1053,10 @@ export default function BaseballSimPage({ result, build, types, pos = 'bat', poo
   const screens = [
     <ScreenBuild key="build" r={r} build={build} types={types} arch={arch} onNext={next} />,
     director && M && !seen.season
-      ? <M.DirectedReveal key="season-dr" director={director} pace={35} onFinal={handleFinal}>
+      ? <M.DirectedReveal key="season-dr" director={director} pace={35} onFinal={handleFinal} live={kept && !keptDone ? kept : null}>
           {dr => <ScreenSeason r={r} v={v} pos={pos} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={false} dr={dr} M={M} />}
         </M.DirectedReveal>
+      : keptDir && !(director && M) ? null   // (the director still loading: never the plain season, which would book the unsteered one)
       : <ScreenSeason key="season" r={r} v={v} pos={pos} onNext={next} onDone={() => { setPlayed(true); if (!director) book(result) }} userName={userName} adsDisabled={adsDisabled} seen={!!seen.season} />,
     <ScreenPostseason key="post" r={r} v={v} pos={pos} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.post} onSeen={() => setSeen(s => ({ ...s, post: true }))} />,
     <ScreenAwards key="awards" r={r} v={v} pos={pos} onNext={next} userName={userName} />,

@@ -1104,7 +1104,7 @@ export default function App() {
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
     result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
-    { const v = readLive(); if (v && !v.booked && !tkRef.current && v.sig === buildSig(gameMode, build, activeTypes)) bookLive(v.id, result) }
+    { const v = readLive(); if (v && !v.booked && !tkRef.current && v.sig === buildSig(gameMode, build, activeTypes)) bookLive(v, result) }
     // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
     // already saved a season. Either way: no save, and no XP or coins either.
     const saveBlock = blockReason({ mode: gameMode, build, types: activeTypes, pool: activePool, sandboxOn: isCustomMode, tainted: sandboxTainted.current })

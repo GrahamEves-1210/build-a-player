@@ -40,6 +40,7 @@ const CLUB_MAP = Object.fromEntries(SOCCER_CLUBS.map(t => [t.short, t]))
 const NATION_MAP = Object.fromEntries(WC_NATIONS.map(t => [t.short, t]))
 const LOGO = { current: '/logos/soccer/', alltime: '/logos/nations/' }
 const teamOf = (short, pool) => (pool === 'alltime' ? NATION_MAP : CLUB_MAP)[short] ?? null
+import { savePos, saveStop } from '../lib/seasonLive'
 const BOOKED = new WeakSet()   // a season is booked once, however often its page opens
 const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 
@@ -895,17 +896,22 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
 }
 
 // ─── The page ────────────────────────────────────────────────────────────────
-export default function SoccerSimPage({ result, build, types, pool = 'current', onBack, onReset, isSalaryMode = false, initialScreen = 0, onFinal = null, userName = 'Guest', arch = '', adsDisabled = false }) {
+export default function SoccerSimPage({ result, build, types, pool = 'current', onBack, onReset, isSalaryMode = false, initialScreen = 0, onFinal = null, userName = 'Guest', arch = '', adsDisabled = false, live: kept = null }) {
   const tapGuard = useTapGuard()
   const isWc = pool === 'alltime'
   const LAST = 4
   // a season that's already booked opens on its final report: no second run at it
-  const [reopened] = useState(() => initialScreen === 'final' || (result && BOOKED.has(result) && !isSalaryMode))
-  const [screen, setScreen] = useState(() => (reopened ? LAST : 0))
+  // a season kept on the device (lib/seasonLive.js): booked, it opens on the screen it was left on (and is never booked
+  // again); still playing, the director picks back up where it was
+  const keptDone = !!kept?.booked
+  const keptDir = !!kept && !kept.booked && !!kept.dir
+  const [reopened] = useState(() => { if (keptDone && result) BOOKED.add(result); return initialScreen === 'final' || keptDone || (result && BOOKED.has(result) && !isSalaryMode) })
+  const [screen, setScreen] = useState(() => (keptDone && kept.screen > 0 ? Math.min(LAST, kept.screen) : reopened ? LAST : kept && kept.screen > 0 ? 1 : 0))
   useRailOn(screen)   // each screen brings the bottom rail back
+  useEffect(() => { if (kept) savePos(kept, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
   const info = useMemo(() => (!isWc && result?.league?.id ? SoccerSim.soccerLeagueInfo?.(result.league.id) : null), [isWc, result])
   // what's been watched once plays back straight to its end (Back onto it)
-  const [seen, setSeen] = useState(() => (reopened ? { season: true, ko: true } : {}))
+  const [seen, setSeen] = useState(() => (keptDone ? { season: true, ko: kept.screen > 2 } : reopened ? { season: true, ko: true } : {}))
   // the season as played: the result, or the director's booked season once the moments have changed it
   const [live, setLive] = useState(result)
   const r = live ?? result
@@ -920,6 +926,12 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
     loading.current ??= Promise.all([import('./SeasonMoments'), import('../lib/soccerDirector')]).then(([a, b]) => { const m = { ...a, ...b }; setM(m); return m })
     return loading.current
   }, [])
+  // (a season the director was playing: rebuilt from its seed and its state at the last stop)
+  const directorOf = m => {
+    const d = m.oneOffDirector({ result, build, types, name: userName, attrMap: SOCCER_ATTR, seed: kept && !keptDone ? kept.seed : null })
+    return keptDir && kept.snap ? d.restore(kept.snap) : d
+  }
+  useEffect(() => { if (keptDir) loadMoments().then(m => setDirector(d => d ?? directorOf(m))) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!canMoments) return
     if (momentsOn()) loadMoments()
@@ -937,7 +949,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const handleFinal = final => { setLive(final); book(final) }
   useEffect(() => { if (screen === LAST) book() }, [screen, book])
   // (a real leave only, not React's development double mount: a season left mid-way is booked as far as it went)
-  useOnLeave(() => { if (director && !director.finalized) book(director.finalize(), true); else book(undefined, true) })
+  useOnLeave(() => { if (director && !director.finalized) book(director.finalize(), true); else if (!(keptDir && !director)) book(undefined, true) })   // (a kept season whose director hadn't loaded stays as it was)
 
   if (!result) return null
   const go = () => {
@@ -951,7 +963,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const next = () => {
     if (screen !== 0 || director || !canMoments || !momentsOn()) { go(); return }
     tapGuard.mark()
-    loadMoments().then(m => { setDirector(d => d ?? m.oneOffDirector({ result, build, types, name: userName, attrMap: SOCCER_ATTR })); go() }).catch(() => go())
+    loadMoments().then(m => { setDirector(d => d ?? directorOf(m)); if (kept && !keptDone) saveStop(kept, { dir: true }); go() }).catch(() => go())
   }
   const team = result.team
   const reset = () => { setScreen(0); onReset() }
@@ -959,9 +971,10 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const screens = [
     <ScreenBuild key="build" result={result} build={build} types={types} onNext={next} pool={pool} arch={arch} team={team} />,
     director && M && !seen.season
-      ? <M.DirectedReveal key="season-dr" director={director} pace={150} onFinal={handleFinal}>
+      ? <M.DirectedReveal key="season-dr" director={director} pace={150} onFinal={handleFinal} live={kept && !keptDone ? kept : null}>
           {dr => <ScreenSeason r={r} pool={pool} info={info} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={false} dr={{ ...dr, all: director.games }} M={M} />}
         </M.DirectedReveal>
+      : keptDir && !(director && M) ? null   // (the director still loading: never the plain season, which would book the unsteered one)
       : <ScreenSeason key="season" r={r} pool={pool} info={info} onNext={next} onDone={() => { if (!director) book(result) }} userName={userName} adsDisabled={adsDisabled} seen={!!seen.season} />,
     <ScreenKnockouts key="ko" r={r} pool={pool} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.ko} onSeen={() => setSeen(s => ({ ...s, ko: true }))} />,
     isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} />,

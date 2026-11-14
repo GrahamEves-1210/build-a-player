@@ -86,7 +86,7 @@ function oneOffFinal(f, games) {
 }
 // The director for a one-off season: the rest of the year re-simulated after each decision (team.fast: no award
 // field on the re-runs; the booked season's awards come from the rebook)
-export function oneOffDirector({ result, build, types, pos = 'bat', mode = 'current', name = 'Guest', attrMap = {} }) {
+export function oneOffDirector({ result, build, types, pos = 'bat', mode = 'current', name = 'Guest', attrMap = {}, seed = null }) {
   const simFn = (b, t, seed) => regular(runBaseballSimulation(b, types, { ...t, fast: true }, pos, mode, seed), pos)
-  return createDirector({ sport: 'baseball', pos, build, team: result.team, simFn, base: regular(result, pos), name, attrMap, types, onFinal: (f, t, games) => oneOffFinal(f, games), oppName: g => `the ${nickOfTeam(TEAM_BY.get(g.opponent) ?? { name: String(g.opponent ?? '') })}` })
+  return createDirector({ sport: 'baseball', pos, build, team: result.team, simFn, base: regular(result, pos), name, attrMap, types, ...(seed ? { seed } : {}), onFinal: (f, t, games) => oneOffFinal(f, games), oppName: g => `the ${nickOfTeam(TEAM_BY.get(g.opponent) ?? { name: String(g.opponent ?? '') })}` })
 }

@@ -1490,7 +1490,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   // a season kept on the device (lib/seasonLive.js) opens on the screen it was left on: the booked season from there
   // on, or the season still playing, picked back up where it was (owner 11-14)
   const [screen, setScreen] = useState(() => replay ? 4 : (kept && kept.screen > 0) ? Math.min(kept.screen, 4) : baseResult.story ? 4 : 0)
-  useEffect(() => { if (kept && !replay) savePos(kept.id, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (kept && !replay) savePos(kept, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   const tapGuard = useTapGuard()
   const [mvpResult, setMvpResult] = useState(null)

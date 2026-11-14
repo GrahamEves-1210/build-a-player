@@ -230,7 +230,7 @@ export function useDirectedReveal({ director, pace, onFinal, live = null }) {
   const stopIdx = useRef(live && director ? live.stopIdx | 0 : 0)
   const timer = useRef(null)
   const total = director?.total ?? 0
-  const keep = (at, m) => { if (live) saveStop(live.id, { snap: director.snapshot(), snapK: at, stopIdx: stopIdx.current, moment: m }) }
+  const keep = (at, m) => { if (live) saveStop(live, { snap: director.snapshot(), snapK: at, stopIdx: stopIdx.current, moment: m }) }
 
   useEffect(() => {
     if (!director || moment || done) return
@@ -261,7 +261,7 @@ export function useDirectedReveal({ director, pace, onFinal, live = null }) {
         if (rec) setRecord(director.records[director.records.length - 1])
         else if (hits.some(h => h.big)) { sfx('chime'); haptic('light') }
       }
-      if (live) savePos(live.id, { k: next })
+      if (live) savePos(live, { k: next })
       setK(next)
     }, k === 0 ? 700 : pace)
     return () => clearTimeout(timer.current)

@@ -4,8 +4,8 @@
 import { useDirectedReveal, MomentCard, Milestones, RecordOverlay } from './app/AppSeasonPlus'
 
 // render prop: children(dr) draws the season screen from the director's reveal
-export function DirectedReveal({ director, pace, onFinal, children }) {
-  const dr = useDirectedReveal({ director, pace, onFinal })
+export function DirectedReveal({ director, pace, onFinal, live = null, children }) {
+  const dr = useDirectedReveal({ director, pace, onFinal, live })
   return children(dr)
 }
 // what the season screen draws while the director drives: the decision, the chips, the record
