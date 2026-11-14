@@ -7264,4 +7264,6 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
 @media (min-width: 769px) { html.app-look .navbar .logo-text.logo-text--small { font-size: 25px; } }
 /* the top bar's drag pill the same as the drop-down's (48 by 5, white), and it goes down with it: while the drop-down is open only the drop-down's own pill shows, at its foot */
 .drop-bar-grab { width: 48px !important; height: 5px !important; margin-left: -24px !important; border-radius: 3px !important; background: #fff !important; transition: opacity .15s ease; }
-.drop-bar.is-open .drop-bar-grab { opacity: 0; }
+/* one pill, and it travels (owner, 11-13): the drop-down's own pill peeks out under the top bar while it's shut (its foot, 10px, shows), the bar's own pill is gone, and opening carries the pill down with it */
+html.app-look:not(.is-app) .drop-bar-grab { display: none !important; }
+@media (max-width: 768px) { html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) { transform: translate3d(0, calc(-100% + 10px), 0); } }
