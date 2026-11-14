@@ -456,7 +456,12 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
   letter-spacing: -.08em; text-transform: uppercase; color: #fff; white-space: nowrap;   /* much tighter (owner, 11-13; was -.5px) */
   text-shadow: 0 2px 40px rgba(149,213,178,.12);
 }
-.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.16em; margin: 0 .1em 0 0; }   /* D-A-P one run, no gaps (owner, 11-13) */   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
+.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.16em; margin: 0 .1em 0 0; }   /* D-A-P one run, no gaps (owner, 11-13) */
+/* the four gaps from the D to the P, each its own (owner, 11-13): 1 (D to dash) 1px less, 2 (dash to A), 3 (A to dash) and 4 (dash to P) 2px less */
+.ag-wordmark em > i { font-style: normal; }
+.ag-wordmark em > .wm-g1 { margin-left: -1px; }
+.ag-wordmark em > .wm-g2 { margin-left: -2px; }
+.ag-wordmark em > .wm-g3 { margin-left: -2px; margin-right: -2px; }   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
 .ag-home--bucket .ag-wordmark em { color: #f97316; }
 .ag-wordmark .hoop-u-svg { height: .82em; vertical-align: -.07em; }
 .ag-tagline {

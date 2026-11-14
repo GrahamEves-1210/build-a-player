@@ -641,7 +641,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         <div className="ag-brand">
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
           <div className="ag-wordmark">
-            BUILD<em>-A-</em>{isBucket ? <>B<HoopU />CKET</> : 'PLAYER'}
+            BUILD<em><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>{isBucket ? <>B<HoopU />CKET</> : 'PLAYER'}
           </div>
         </div>
 
