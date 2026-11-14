@@ -839,9 +839,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <span>Reset</span>
         </button>
       )}
-    <aside className="spin-panel">
+    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color } : undefined}>
       {isSpinning && <div className="spin-blocker" />}
-      <div className="spin-panel-body">
+      <div className={`spin-panel-body${isDone && selectedQB ? ' has-card' : ''}`}>
         <div className="spin-panel-static">
           <div className="spin-top-row">
             {!forceHide && (
@@ -962,10 +962,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </div>
               <div className="qb-reveal-text">
                 <div className="qb-reveal-name">{selectedQB.name}</div>
-                <div className="qb-reveal-meta">
-                  {selectedQB.teamName ?? selectedQB.team}
-                  {!isBucket && !isWR && !isBaseball && (selectedQB.starter ? '' : isK ? ' · Kickoffs' : ' · Bench')}
-                </div>
                 {selectedQB.years && (
                   <div className="qb-reveal-year">{selectedQB.years}</div>
                 )}
