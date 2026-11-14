@@ -1263,6 +1263,8 @@ export function spotMove(c) {
   if (!sportOf(c).isBucket || sportOf(c).x?.depth || c.phase !== 'preseason' || !c.team || c.spotAsked === c.year) return null
   const here = depthChart(c)
   if (here.starter) return null
+  // (not every camp he could: about one in two, the roll the career's own for the year, so a reload doesn't change it)
+  if (seeded(`${c.seed}-spotmove-${c.year}`)() >= 0.5) return null
   // (only ever one spot from where he started, owner 11-14: a PG can go to SG and back, never on to SF; the start is
   // homeSpot, set at the first move)
   const from = hoopSpot(c), home = HOOP_SPOTS.indexOf(c.homeSpot ?? from), at = HOOP_SPOTS.indexOf(from)
