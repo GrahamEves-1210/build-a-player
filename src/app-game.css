@@ -7236,7 +7236,7 @@ html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin
 /* (the card and the chips overlap a pixel: edge to edge at half pixels left a dark seam between them) */
 
 /* The card's panel ends at the last chip (it ran on to the bottom of the column); the category names and their lines white (owner, 11-13) */
-html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { flex: 0 0 auto !important; height: auto !important; min-height: 0 !important; max-height: none !important; align-self: stretch; }
+html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { flex: 0 1 auto !important; height: auto !important; min-height: 0 !important; max-height: none !important; align-self: stretch; }
 html.app-look:not(.is-app) .spin-panel .attr-category-lbl { color: #fff !important; }
 html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !important; opacity: 1 !important; }
 
