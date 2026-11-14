@@ -455,7 +455,6 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         ) : !isVersusMode && !!onSandboxToggle && APP_LOOK ? (
           // website: the card on a phone (full width); on desktop Silhouette shows the compact one in its corner
           <div className="rc-sandbox-outer rc-sandbox-outer--app">
-            <div id="ramp-cntr1-sandbox" className="rc-sandbox-ad" />
             <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} starters={sandboxStarters} />
           </div>
         ) : !isVersusMode && !!onSandboxToggle ? (
