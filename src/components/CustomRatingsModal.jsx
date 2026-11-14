@@ -14,13 +14,9 @@ import { GUARD_TYPES } from '../data/nba-guards'
 import { BIG_TYPES } from '../data/nba-bigs'
 import { valToGrade } from '../utils/simulation'
 import { IconClose, IconCaret } from './app/icons'
+import { spectrumColor } from '../lib/gradeColors'
 
-const GRADE_COLOR = {
-  S: '#c084fc', 'A+': '#34d399', A: '#34d399', 'A-': '#34d399',
-  'B+': '#86efac', B: '#86efac', 'B-': '#86efac',
-  'C+': '#fde68a', C: '#fde68a', 'C-': '#fde68a',
-  D: '#fdba74', F: '#f87171',
-}
+const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 
 const RB_ATTR = {
   speed:       { label: 'Speed' },
@@ -93,10 +89,12 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
 
   const [expandedKey, setExpandedKey] = useState(null)
   const [slotPickerPlayer, setSlotPickerPlayer] = useState(null)
+  const [selAttr, setSelAttr] = useState(null)   // the grade being changed (its picker open under the grid)
   const [editedOnly, setEditedOnly] = useState(false)   // the "N edited" tag in the header: only the players he's changed
   const listRef = useRef(null)
   // a player opened low in the list scrolls up so his grades are in view (they used to open under the bottom edge)
   useEffect(() => {
+    setSelAttr(null)
     if (!expandedKey) return
     const row = listRef.current?.querySelector('.cr-row.is-open')
     if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
@@ -183,39 +181,47 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                 </button>
                 {isExpanded && (
                   <div className="cr-attrs">
-                    {attrKeys.map(attr => {
+                    {/* every grade at a glance: tap one, then tap the grade it should be (two taps for any grade, the owner 11-13:
+                        the slider rows were tedious) */}
+                    <div className="cr-grid">
+                      {attrKeys.map(attr => {
+                        const baseVal = p.attrs?.[attr] ?? 5
+                        const currentVal = getVal(key, attr, baseVal)
+                        const isOverridden = overrides[key]?.[attr] !== undefined
+                        const his = !noPicks && build[attr]?.qbFull === p.name
+                        return (
+                          <button key={attr} className={`cr-tile${selAttr === attr ? ' is-sel' : ''}${isOverridden ? ' is-mod' : ''}${his ? ' is-his' : ''}`}
+                            style={{ '--g': spectrumColor(currentVal) }} onClick={() => setSelAttr(selAttr === attr ? null : attr)}>
+                            <span className="cr-tile-lbl">{attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr}</span>
+                            <span className="cr-tile-g">{valToGrade(currentVal)}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {selAttr && attrKeys.includes(selAttr) && (() => {
+                      const attr = selAttr
                       const baseVal = p.attrs?.[attr] ?? 5
                       const currentVal = getVal(key, attr, baseVal)
                       const isOverridden = overrides[key]?.[attr] !== undefined
+                      const label = attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr
                       return (
-                        <div key={attr} className="cr-attr-row">
-                          <span className={`cr-attr-label${isOverridden ? ' cr-attr-modified' : ''}`}>
-                            {/* a long label (Playmaking/Creativity) breaks after its slash, not mid-word */}
-                            {String(attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr).replace(/\//g, '/\u200B')}
-                          </span>
-                          <input
-                            type="range" min="0" max="11"
-                            value={currentVal}
-                            onChange={e => setVal(key, attr, e.target.value)}
-                            className="cr-slider"
-                            onTouchStart={e => e.stopPropagation()}
-                          />
-                          {/* one grade up or down, for the exact grade the slider makes fiddly on a phone */}
-                          <button className="cr-step" onClick={() => setVal(key, attr, currentVal - 1)} disabled={currentVal <= 0} aria-label="One grade down">−</button>
-                          <span
-                            className="cr-attr-val"
-                            style={{ color: GRADE_COLOR[getGrade(key, attr, baseVal)] }}
-                            title={isOverridden ? `Was ${valToGrade(baseVal)}` : undefined}
-                          >
-                            {getGrade(key, attr, baseVal)}
-                          </span>
-                          <button className="cr-step" onClick={() => setVal(key, attr, currentVal + 1)} disabled={currentVal >= 11} aria-label="One grade up">+</button>
-                          {!noPicks && (build[attr]
-                            ? <span className={`cr-attr-add is-in${build[attr].qbFull === p.name ? ' is-his' : ''}`}>{build[attr].qbFull === p.name ? 'ADDED' : 'FULL'}</span>
-                            : <button className="cr-attr-add" onClick={() => onAddToBuild?.(p, overrides[key], attr)} aria-label={`Add ${attrMeta[attr]?.label ?? attr} to the build`}>ADD</button>)}
+                        <div className="cr-pick">
+                          <div className="cr-pick-hd">
+                            <span className="cr-pick-lbl">{label}</span>
+                            {isOverridden && <button className="cr-pick-undo" onClick={() => setOverrides(prev => { const n = { ...(prev[key] || {}) }; delete n[attr]; const all = { ...prev }; if (Object.keys(n).length) all[key] = n; else delete all[key]; return all })}>BACK TO {valToGrade(baseVal)}</button>}
+                            {!noPicks && (build[attr]
+                              ? <span className={`cr-attr-add is-in${build[attr].qbFull === p.name ? ' is-his' : ''}`}>{build[attr].qbFull === p.name ? 'IN BUILD' : 'SLOT FULL'}</span>
+                              : <button className="cr-attr-add" onClick={() => onAddToBuild?.(p, overrides[key], attr)}>ADD TO BUILD</button>)}
+                          </div>
+                          <div className="cr-pick-grades">
+                            {GRADES.map((g, v) => (
+                              <button key={g} className={`cr-pick-g${v === Math.round(currentVal) ? ' is-on' : ''}${v === Math.round(baseVal) ? ' is-base' : ''}`} style={{ '--g': spectrumColor(v) }}
+                                onClick={() => { setVal(key, attr, v); setSelAttr(null) }}>{g}</button>
+                            ))}
+                          </div>
                         </div>
                       )
-                    })}
+                    })()}
                     <div className="cr-quick-btns">
                       <button className="cr-quick-btn cr-quick-f" onClick={() => {
                         const cur = overrides[key] || {}

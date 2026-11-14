@@ -7474,3 +7474,28 @@ html:is(.is-app, .app-look) .cr-attr-row .cr-attr-val { width: 30px; text-align:
   html:is(.is-app, .app-look) .cr-attr-add { width: 44px; }
   html:is(.is-app, .app-look) button.cr-mod-count { font-size: 11px; padding: 3px 6px 2px; }
 }
+
+/* Custom Ratings: a player's grades as a grid of tiles (label, grade in its colour); tap one and the twelve grades open under
+   the grid, tap the one it should be. Gold edge: changed; green edge: in the build (owner 11-13) */
+.cr-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+@media (max-width: 768px) { .cr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cr-tile { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; height: 40px; padding: 0 10px; border: 1.5px solid rgba(255,255,255,.12); border-radius: 8px;
+  background: rgba(255,255,255,.05); color: #fff; cursor: pointer; text-align: left; touch-action: manipulation; }
+.cr-tile-lbl { min-width: 0; font-family: var(--ag-font, inherit); font-size: 13px; letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; color: rgba(255,255,255,.78); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-tile-g { flex: none; min-width: 30px; height: 26px; display: grid; place-items: center; border-radius: 5px; background: var(--g); color: #fff; font-family: var(--ag-display, inherit); font-size: 17px; line-height: 1; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.cr-tile.is-mod { border-color: rgba(242,214,117,.75); }
+.cr-tile.is-his::after { content: ''; position: absolute; top: 4px; left: 4px; width: 6px; height: 6px; border-radius: 50%; background: #35e07a; }
+.cr-tile.is-sel { border-color: #fff; background: rgba(255,255,255,.14); }
+button.cr-tile:active { transform: scale(.97); }
+.cr-pick { margin-top: 8px; padding: 8px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); }
+.cr-pick-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 28px; }
+.cr-pick-lbl { flex: 1; min-width: 0; font-family: var(--ag-font, inherit); font-size: 15px; letter-spacing: 1.2px; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-pick-undo { flex: none; height: 28px; padding: 0 8px; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; background: transparent; color: rgba(255,255,255,.8); font-family: var(--ag-font, inherit); font-size: 12px; letter-spacing: 1px; cursor: pointer; }
+.cr-pick .cr-attr-add { width: auto; height: 28px; padding: 0 10px; }
+.cr-pick-grades { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 768px) { .cr-pick-grades { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.cr-pick-g { position: relative; height: 38px; padding: 0; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--g) 82%, #000); color: #fff; font-family: var(--ag-display, inherit); font-size: 18px; line-height: 1; cursor: pointer; touch-action: manipulation; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.cr-pick-g.is-on { box-shadow: 0 0 0 2px #fff; }
+.cr-pick-g.is-base::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 10px; height: 2px; margin-left: -5px; border-radius: 1px; background: rgba(255,255,255,.85); }
+button.cr-pick-g:active { transform: scale(.94); }
+html:is(.is-app, .app-look) .cr-attrs { padding: 8px 8px 10px; }
