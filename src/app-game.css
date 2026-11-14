@@ -7334,3 +7334,32 @@ html .ag-dock .ag-tab-tag.is-streak { background: var(--ag-a1); color: var(--ag-
 html .ag-dock .ag-tab-icon.has-art { opacity: 1 !important; }
 html .ag-dock .ag-tab:not(.ag-tab--on) .ag-tab-icon.has-art .avb { opacity: .72; }
 html .ag-dock .ag-tab-icon.has-art .avb-lvl { right: -9px; bottom: -5px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 4px; font-size: 10.5px; border-width: 1.5px; }
+
+/* ═══ The bottom bar, broadcast style (owner, 11-13: "redesign the nav bar") ════════════════════════
+   Five slanted panels like a sports broadcast's strip, a small gap between them, the words upright: the open tab filled in
+   the sport's colour with dark words, the others dark with dimmed words, HOME the wider middle panel outlined in the sport's
+   colour (filled when it's the open one). Bigger condensed labels, small icons. No raised button, no glow */
+html body .ag-dock { grid-template-columns: 1fr 1fr 1.35fr 1fr 1fr !important; gap: 5px; padding: 7px 12px !important; background: #070a09 !important; }
+html body .ag-dock .ag-tab, html body .ag-dock .ag-play { height: 100%; min-width: 0; border-radius: 4px; background: #151b19; transform: skewX(-12deg); transition: background .15s ease; }
+html body .ag-dock .ag-tab > *, html body .ag-dock .ag-play > * { transform: skewX(12deg); }
+html body .ag-dock .ag-tab { gap: 2px; color: rgba(255,255,255,.55); }
+html body .ag-dock .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: #fff; opacity: .55; }
+html body .ag-dock .ag-tab-icon { height: 20px; }
+html body .ag-dock .ag-tab-icon svg { width: 19px; height: 19px; }
+html body .ag-dock .ag-tab-label { font-size: 14px; letter-spacing: 1.4px; }
+html body .ag-dock .ag-tab--on { background: var(--ag-a1); color: var(--ag-on, #0b0f0d) !important; }
+html body .ag-dock .ag-tab--on .ag-tab-icon { color: var(--ag-on, #0b0f0d); opacity: 1; }
+html body .ag-dock .ag-tab-lit { display: none !important; }
+html body .ag-dock .ag-play { margin: 0 !important; width: 100%; align-self: stretch; justify-self: stretch; box-shadow: inset 0 0 0 2px var(--ag-a1); }
+html body .ag-dock .ag-play-core { inset: 0 !important; border-radius: 4px; background: transparent !important; clip-path: none !important; box-shadow: none !important; padding: 0 0 16px !important; transform: skewX(12deg) !important; }
+html body .ag-dock .ag-play-core::before { display: none !important; }
+html body .ag-dock .ag-play-glyph { top: 0 !important; bottom: 22px !important; color: var(--ag-a1); }
+html body .ag-dock .ag-play-glyph svg { width: 20px; height: 20px; }
+html body .ag-dock .ag-play-label { bottom: 6px !important; color: #fff !important; font-size: 15px !important; letter-spacing: 2px !important; transform: translateX(-50%) skewX(12deg) !important; }
+html body .ag-dock .ag-play--on { background: var(--ag-a1); }
+html body .ag-dock .ag-play--on .ag-play-glyph { color: var(--ag-on, #0b0f0d); }
+html body .ag-dock .ag-play--on .ag-play-label { color: var(--ag-on, #0b0f0d) !important; }
+html body .ag-dock .ag-play.is-fan { background: color-mix(in srgb, var(--ag-a1) 80%, #000); }
+html body .ag-dock .ag-tab-badge, html body .ag-dock .ag-tab-tag { top: 4px; }
+html body .ag-dock .ag-tab-icon.has-art .avb { width: 21px !important; height: 21px !important; }
+html body .ag-dock .ag-play.ag-play .ag-play-core { box-shadow: none !important; background: transparent !important; border: 0 !important; filter: none !important; }
