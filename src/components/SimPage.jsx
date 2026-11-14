@@ -823,9 +823,6 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
           />
         )}
         {started && <PlayoffLog rounds={playoffRounds.slice(0, status === 'playing' ? gameIdx : gameIdx + 1)} />}
-        {!adsDisabled && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
-        )}
       </>
     )
   }
@@ -835,6 +832,9 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
     <div className="simp-screen">
       {APP_SIM && <Bracket rounds={playoffRounds} gameIdx={gameIdx} status={status} hasBye={result.hasBye} />}
       {inner}
+      {/* the playoffs' ad stays put through every game, the between-games and the end (it sat in the live game's part
+          and went with it after the first win, owner 11-14) */}
+      {!adsDisabled && <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />}
       {APP_SIM && status === 'champion' && ringOpen && (
         <RingCeremony team={team} title="Super Bowl Champions"
           score={`${sbRound.mySc}–${sbRound.oppSc}${sbRound.overtime ? ' OT' : ''} vs ${sbRound.opponent}`}
