@@ -877,7 +877,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const allDone = director ? dr.done : revealed === games.length
 
   useEffect(() => {
-    if (!allDone || adsDisabled) return
+    if (!allDone || adsDisabled || window.innerWidth > 768) return
     rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
   }, [allDone]) // eslint-disable-line
 
@@ -1180,16 +1180,6 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
   const [listVisible, setListVisible] = useState(false)
   const listRef = useRef(null)
 
-  useEffect(() => {
-    if (!listVisible || adsDisabled || window.innerWidth > 768) return
-    rampAdd([
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-61' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-51' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-41' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-31' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-21' },
-      ])
-  }, [listVisible]) // eslint-disable-line
 
   useEffect(() => {
     const t = setTimeout(() => { setPhase(qualified ? 'ticker' : 'miss'); if (!qualified) setListVisible(true) }, 2200)
@@ -1259,9 +1249,6 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
             {Array.from({ length: 75 }, (_, i) => 75 - i).map(r => (
               <React.Fragment key={r}>
                 <GoatCard rank={r} entry={GOAT_MAP[r]} isPlayer={false} playerTeam={team?.short} playerTeamColor={team?.color} />
-                {(r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
-                  <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
-                )}
               </React.Fragment>
             ))}
           </div>
@@ -1303,9 +1290,6 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
                     playerTeam={team?.short}
                     playerTeamColor={team?.color}
                   />
-                  {(r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
-                    <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
-                  )}
                 </React.Fragment>
               )
             })}
@@ -2403,11 +2387,6 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   }, [result, awards, build, types, attrMap, ovr, userName, isAllTime, isSalaryMode])
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
-  useEffect(() => {
-    if (adsDisabled) return
-    const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]
-    rampAdd(ads)
-  }, [])
 
   const fgAnim    = useCountUp(fgPct,    900, show)
   const threeAnim = useCountUp(threePct, 900, show)
@@ -2524,7 +2503,6 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
         </div>
       )}
 
-      <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
 
       <div className="simp-final-actions">
         {isSalaryMode

@@ -417,7 +417,7 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
   const sr = useSeasonReveal(total, { pace: isWc ? 850 : Math.round(5600 / Math.max(1, total)), instant: seen || !!dr })
   const rv = dr ? { n: dr.k, phase: dr.done ? 'done' : dr.k === 0 ? 'loading' : 'playing', done: dr.done } : sr
   useEffect(() => { if (rv.done) onDone?.() }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (rv.done && !adsDisabled) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }]) }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (rv.done && !adsDisabled && window.innerWidth <= 768) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }]) }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
   // the season awards, tallied: the Golden Boot, then the Player of the Season, then the button
   const k = useStaged(rv.done, isWc ? [600] : [2700, 3050, 4100, 4700], seen)
   const shown = dr ? dr.games : games.slice(0, rv.n)
@@ -858,7 +858,6 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
     chips: types.filter(t => build[t]).map(t => ({ label: SOCCER_ATTR[t]?.label ?? t, name: build[t].qbFull, photo: build[t].photo, faceCenter: build[t].faceCenter, val: build[t].val })),
     site: 'build-a-player.com/soccer',
   }), [r]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!adsDisabled) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const best = r.bestGame
   const bestOpp = best ? (teamOf(best.opponent, pool)?.name ?? best.oppName ?? best.opponent) : null
   return (
@@ -886,7 +885,6 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
         <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
         <BuildRows build={build} types={types} pool={pool} small />
       </div>
-      <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
       <div className="simp-final-actions">
         {isSalaryMode
           ? <button className="simp-cta" onClick={onBack}>← Back to Salary</button>

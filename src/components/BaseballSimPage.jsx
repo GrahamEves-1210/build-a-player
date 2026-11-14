@@ -603,7 +603,7 @@ function ScreenSeason({ r, v, pos, onNext, onDone, userName, adsDisabled, seen, 
   // (the director's games, read the way the page reads a game)
   const dg = useMemo(() => (dr ? dr.games.map((g, i) => gameOf(g, i, total)) : null), [dr?.k, dr?.done]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (rv.done) onDone?.() }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (rv.done && !adsDisabled) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }]) }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (rv.done && !adsDisabled && window.innerWidth <= 768) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }]) }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
   const k = useStaged(rv.done, [2700, 3050, 3700, 4300, 4900], seen)
   const shown = dr ? dg : v.games.slice(0, rv.n)
   const W = shown.filter(g => g.won).length
@@ -918,7 +918,6 @@ function ScreenAwards({ r, v, pos, onNext, userName }) {
 function ScreenFinal({ r, v, pos, build, types, card, onReset, onBack, userName, isSalaryMode, adsDisabled, yearLabel }) {
   const isPit = pos === 'pit'
   const P = BASEBALL_POS[pos] ?? BASEBALL_POS.bat
-  useEffect(() => { if (!adsDisabled) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const bg = r.bestGame ? gameOf(r.bestGame, 0, 162) : null
   return (
     <div className="simp-screen bbs-screen">
@@ -943,7 +942,6 @@ function ScreenFinal({ r, v, pos, build, types, card, onReset, onBack, userName,
           <Hd sub={`${r.ovr} OVR`}><NameTag name={userName} self />'S BUILD</Hd>
           <BuildList build={build} types={types} />
         </section>
-        <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
         <div className="bbs-actions">
           {isSalaryMode
             ? <button className="bbs-btn is-main" onClick={onBack}>BACK TO SALARY</button>

@@ -545,7 +545,6 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
       {dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
       {final && (
         <div className="simp-stat-section simp-totals-in">
-          {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
           <div className="simp-eyebrow">Production</div>
           <StatLineTable result={final} build={build} userName={userName} kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
           {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
@@ -576,15 +575,11 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
 
   const allDone = director ? dr.done : revealed === games.length
 
+  // Simulate Season's in-page ads (owner 11-14): phones only, one under the game log here and one on the live sim page
   useEffect(() => {
-    if (adsDisabled) return
+    if (adsDisabled || window.innerWidth > 768) return
     rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season' }])
   }, [])
-
-  useEffect(() => {
-    if (!allDone || adsDisabled) return
-    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-season-prod' }])
-  }, [allDone])
 
   useEffect(() => {
     if (director) { const t = setTimeout(() => setPhase('playing'), 600); return () => clearTimeout(t) }
@@ -682,8 +677,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
 
           {allDone && (
             <div className="simp-stat-section simp-totals-in">
-              {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
-              <div className="simp-eyebrow">Production</div>
+                  <div className="simp-eyebrow">Production</div>
               <StatLineTable result={result} build={build} userName={userName} kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
             </div>
           )}
@@ -716,7 +710,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
   }, [playoffs])
 
   useEffect(() => {
-    if (adsDisabled) return
+    if (adsDisabled || window.innerWidth > 768) return
     rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
   }, [])
 
@@ -911,7 +905,6 @@ function GoatRows({ withYou, rank, byRank, team, userName, listIn, listRef }) {
       {Array.from({ length: GOAT_N }, (_, i) => GOAT_N - i).map(r => (
         <Fragment key={r}>
           <NflGoatCard rank={r} entry={withYou ? entryAt(r) : byRank[r]} isPlayer={withYou && r === rank} team={team} userName={userName} />
-          {(r === 21 || r === 11) && <div id={`ramp-cntr1-nflgoat-${r}`} className="ad-cntr1-mobile" />}
         </Fragment>
       ))}
     </div>
@@ -947,10 +940,6 @@ function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userN
     return () => clearTimeout(t)
   }, [phase, tick, playerRank])
   // phones: a banner every ten rows (after 21 and 11), like basketball's list
-  useEffect(() => {
-    if (!listIn || adsDisabled || window.innerWidth > 768) return
-    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-nflgoat-21' }, { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-nflgoat-11' }])
-  }, [listIn]) // eslint-disable-line
 
   const tickEntry = tick > GOAT_N ? null : tick > playerRank ? byRank[tick - 1] : byRank[tick]
   const rowProps = { rank: playerRank, byRank, team, userName, listIn, listRef }
@@ -1034,10 +1023,6 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
-  useEffect(() => {
-    if (adsDisabled) return
-    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }])
-  }, [])
 
   // QB count-ups
   const yds     = useCountUp(seasonPassYds, 1200, show && !isRB && !isWR && !isTE && !isDB && !isDL && !isLB && !isOL && !isK)
@@ -1460,7 +1445,6 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
       )}
 
 
-      <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
 
       <div className="simp-final-actions">
         {isSalaryMode
