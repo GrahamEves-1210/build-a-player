@@ -7255,3 +7255,5 @@ html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !i
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card .qb-reveal-card.qb-reveal-card { padding-top: 3px !important; padding-bottom: 3px !important; margin-top: -2px !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card .spin-panel-scroll { padding-top: 3px !important; padding-bottom: 3px !important; row-gap: 3px !important; }
 }
+/* phones: the card's photo circle 10% smaller (48px to 43px) */
+@media (max-width: 768px) { html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .qb-reveal-hero, html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .qb-reveal-hero > *, html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .qb-reveal-hero .qb-avatar { width: 43px !important; height: 43px !important; min-width: 43px !important; } }
