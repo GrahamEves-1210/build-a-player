@@ -78,7 +78,7 @@ export const NBA_ALLTIME_BIG_PLAYERS = [
   { name: 'Bill Laimbeer', short: 'Laimbeer', team: 'DET', starter: false, captain: false, number: 40, height: 83, weight: 260, skin: '#d09070', position: 'C', years: '1982–94',
     attrs: { jumpShot: 6, finishing: 6, rebounding: 9, playmaking: 3, interiorDefense: 6, speed: 3, bounce: 3, size: 8, basketballIQ: 7, clutch: 7 } },
   { name: 'Ben Wallace', short: 'Big Ben', team: 'DET', starter: true, captain: false, number: 3, height: 81, weight: 240, position: 'C', years: '2000–06',
-    attrs: { jumpShot: 1, finishing: 4, rebounding: 10, playmaking: 3, interiorDefense: 10, speed: 5, bounce: 6, size: 7, basketballIQ: 7, clutch: 5 } },
+    attrs: { jumpShot: 1, finishing: 4, rebounding: 10, playmaking: 3, interiorDefense: 11, speed: 5, bounce: 6, size: 7, basketballIQ: 7, clutch: 5 } },
   { name: 'Dennis Rodman', short: 'The Worm', team: 'DET', starter: false, captain: false, number: 10, height: 79, weight: 210, skin: '#8a5232', position: 'PF', years: '1986–93',
     attrs: { jumpShot: 1, finishing: 3, rebounding: 11, playmaking: 3, interiorDefense: 8, speed: 6, bounce: 8, size: 7, basketballIQ: 8, clutch: 5 } },
 

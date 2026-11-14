@@ -39,7 +39,7 @@ function _teOVR(a) {
 const _TES = [
   // ARI
   { name: 'Trey McBride',      short: 'McBride',     team: 'ARI', teamName: 'Arizona Cardinals',      skin: '#f0c4a0', height: 76, weight: 258, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 8, blocking: 5, vertical: 7, routeRunning: 11, strength: 6, hands: 11, awareness: 10, size: 7, afterCatch: 8 } },
+    attrs: { speed: 8, blocking: 5, vertical: 7, routeRunning: 11, strength: 6, hands: 11, awareness: 11, size: 7, afterCatch: 8 } },
   { name: 'Elijah Higgins',    short: 'Higgins',     team: 'ARI', teamName: 'Arizona Cardinals',      skin: '#5e3c22', height: 74, weight: 235, starter: false, number: 84,
     attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 6, strength: 4, hands: 6, awareness: 5, size: 2, afterCatch: 5 } },
   { name: 'Tip Reiman',        short: 'Reiman',      team: 'ARI', teamName: 'Arizona Cardinals',      skin: '#f0c4a0', height: 77, weight: 252, starter: false, number: 87,
@@ -71,7 +71,7 @@ const _TES = [
   { name: 'Mitchell Evans',        short: 'Evans',        team: 'CAR', teamName: 'Carolina Panthers',      skin: '#f0c4a0', height: 77, weight: 258, starter: false, number: 84,
     attrs: { speed: 4, blocking: 6, vertical: 4, routeRunning: 5, strength: 6, hands: 4, awareness: 5, size: 9, afterCatch: 3 } },
   { name: 'Darren Waller',         short: 'Waller',       team: 'CAR', teamName: 'Carolina Panthers', skin: '#5e3c22', height: 78, weight: 245, starter: false, number: 88,
-    attrs: { speed: 8, blocking: 2, vertical: 6, routeRunning: 6, strength: 4, hands: 7, awareness: 6, size: 9, afterCatch: 5 } },
+    attrs: { speed: 8, blocking: 2, vertical: 6, routeRunning: 6, strength: 4, hands: 7, awareness: 6, size: 9, afterCatch: 6 } },
   // CHI
   { name: 'Colston Loveland',  short: 'Loveland',    team: 'CHI', teamName: 'Chicago Bears',          skin: '#f0c4a0', height: 78, weight: 241, starter: true,  captain: true,  number: 84,
     attrs: { speed: 7, blocking: 4, vertical: 7, routeRunning: 9, strength: 4, hands: 8, awareness: 7, size: 10, afterCatch: 8 } },
@@ -165,7 +165,7 @@ const _TES = [
     attrs: { speed: 7, blocking: 3, vertical: 6, routeRunning: 5, strength: 4, hands: 5, awareness: 4, size: 9, afterCatch: 5 } },
   // LV
   { name: 'Brock Bowers',      short: 'Bowers',      team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#f0c4a0', height: 76, weight: 230, starter: true,  captain: true,  number: 89,
-    attrs: { speed: 8, blocking: 4, vertical: 9, routeRunning: 11, strength: 4, hands: 10, awareness: 9, size: 5, afterCatch: 9 } },
+    attrs: { speed: 8, blocking: 4, vertical: 9, routeRunning: 11, strength: 4, hands: 10, awareness: 9, size: 5, afterCatch: 10 } },
   { name: 'Michael Mayer',     short: 'Mayer',       team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#f0c4a0', height: 76, weight: 260, starter: false, number: 87,
     attrs: { speed: 4, blocking: 7, vertical: 5, routeRunning: 5, strength: 8, hands: 6, awareness: 5, size: 7, afterCatch: 4 } },
   { name: 'Ian Thomas',        short: 'Thomas',      team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#5e3c22', height: 76, weight: 259, starter: false, number: 80,

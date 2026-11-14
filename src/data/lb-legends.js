@@ -28,7 +28,7 @@ const _LB_LEGENDS = [
   { name: "Deion Jones", short: "De. Jones", team: 'ATL', teamName: "Atlanta Falcons", pos: 'LB', subpos: 'lb', spot: 'MLB', skin: '#5e3c22', height: 73, weight: 222, number: 45, starter: true, years: "2016-21",
     attrs: { range: 9, power: 9, tackling: 10, blockShed: 7, zoneInstincts: 8, passRush: 7, playRecognition: 8, leadership: 6 } },
   { name: "Ray Lewis", short: "R. Lewis", team: 'BAL', teamName: "Baltimore Ravens", pos: 'LB', subpos: 'lb', spot: 'MLB', skin: '#5e3c22', height: 73, weight: 250, number: 52, starter: true, years: "1996-2012",
-    attrs: { range: 10, power: 10, tackling: 11, blockShed: 10, zoneInstincts: 9, passRush: 7, playRecognition: 11, leadership: 11 } },
+    attrs: { range: 10, power: 11, tackling: 11, blockShed: 10, zoneInstincts: 9, passRush: 7, playRecognition: 11, leadership: 11 } },
   { name: "C.J. Mosley", short: "Mosley", team: 'BAL', teamName: "Baltimore Ravens", pos: 'LB', subpos: 'lb', spot: 'ILB', skin: '#5e3c22', height: 74, weight: 250, number: 57, starter: true, years: "2014-18",
     attrs: { range: 9, power: 9, tackling: 10, blockShed: 9, zoneInstincts: 8, passRush: 6, playRecognition: 9, leadership: 7 } },
   { name: "Jamie Sharper", short: "Sharper", team: 'BAL', teamName: "Baltimore Ravens", pos: 'LB', subpos: 'lb', spot: 'ILB', skin: '#5e3c22', height: 75, weight: 240, number: 55, starter: true, years: "1999-2001",

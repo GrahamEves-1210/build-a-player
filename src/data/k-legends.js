@@ -40,7 +40,7 @@ const _K_LEGENDS = [
   // BAL
   { name: "Justin Tucker", short: "Tucker", team: 'BAL', teamName: "Baltimore Ravens", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 73, weight: 191, number: 9, starter: true, years: "2012-24",
     fg: '417/468', long: 66, points: 1775,
-    attrs: { power: 10, accuracy: 11, clutch: 10 } },
+    attrs: { power: 10, accuracy: 11, clutch: 11 } },
   { name: "Matt Stover", short: "Stover", team: 'BAL', teamName: "Baltimore Ravens", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 180, number: 3, starter: true, years: "1996-2008",
     fg: '354/418', long: 52, points: 1464,
     attrs: { power: 4, accuracy: 9, clutch: 8 } },
@@ -221,7 +221,7 @@ const _K_LEGENDS = [
   // NE
   { name: "Adam Vinatieri", short: "Vinatieri", team: 'NE', teamName: "New England Patriots", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 72, weight: 212, number: 4, starter: true, years: "1996-2005",
     fg: '263/321', long: 57, points: 1158,
-    attrs: { power: 6, accuracy: 8, clutch: 11 } },
+    attrs: { power: 6, accuracy: 9, clutch: 11 } },
   { name: "Stephen Gostkowski", short: "Gostkowski", team: 'NE', teamName: "New England Patriots", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 73, weight: 215, number: 3, starter: true, years: "2006-19",
     fg: '374/428', long: 62, points: 1775,
     attrs: { power: 8, accuracy: 9, clutch: 7 } },

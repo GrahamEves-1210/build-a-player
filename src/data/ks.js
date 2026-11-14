@@ -64,15 +64,15 @@ const _KS = [
   // BAL
   { name: "Tyler Loop", short: "Loop", team: 'BAL', teamName: "Baltimore Ravens", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 191, number: 33, starter: true,
     fg25: '30/34', fg26: '13/17', long: 64,
-    attrs: { power: 7, accuracy: 5, clutch: 4 } },
+    attrs: { power: 7, accuracy: 4, clutch: 4 } },
   // BUF
   { name: "Tyler Bass", short: "Bass", team: 'BUF', teamName: "Buffalo Bills", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 70, weight: 183, number: 16, starter: true,
     fg25: null, fg26: '19/19', long: 56,
-    attrs: { power: 6, accuracy: 7, clutch: 5 } },
+    attrs: { power: 6, accuracy: 8, clutch: 5 } },
   // CAR
   { name: "Ryan Fitzgerald", short: "Fitzgerald", team: 'CAR', teamName: "Carolina Panthers", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 193, number: 10, starter: true,
     fg25: '24/29', fg26: '13/14', long: 57,
-    attrs: { power: 4, accuracy: 4, clutch: 7 } },
+    attrs: { power: 4, accuracy: 3, clutch: 7 } },
   // CHI
   { name: "Cairo Santos", short: "Santos", team: 'CHI', teamName: "Chicago Bears", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 68, weight: 173, number: 8, starter: true,
     fg25: '25/30', fg26: '15/19', long: 58,
@@ -80,7 +80,7 @@ const _KS = [
   // CIN
   { name: "Evan McPherson", short: "McPherson", team: 'CIN', teamName: "Cincinnati Bengals", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 185, number: 2, starter: true,
     fg25: '25/28', fg26: '12/12', long: 63,
-    attrs: { power: 9, accuracy: 8, clutch: 7 } },
+    attrs: { power: 9, accuracy: 9, clutch: 7 } },
   // CLE
   { name: "Andre Szmyt", short: "Szmyt", team: 'CLE', teamName: "Cleveland Browns", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 72, weight: 200, number: 25, starter: true,
     fg25: '24/27', fg26: '19/21', long: 56,
@@ -88,7 +88,7 @@ const _KS = [
   // DAL
   { name: "Brandon Aubrey", short: "Aubrey", team: 'DAL', teamName: "Dallas Cowboys", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 75, weight: 218, number: 17, starter: true,
     fg25: '36/42', fg26: '17/22', long: 64,
-    attrs: { power: 11, accuracy: 9, clutch: 9 } },
+    attrs: { power: 10, accuracy: 8, clutch: 9 } },
   // DEN
   { name: "Wil Lutz", short: "Lutz", team: 'DEN', teamName: "Denver Broncos", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 184, number: 3, starter: true,
     fg25: '28/32', fg26: '16/19', long: 57,
@@ -104,19 +104,19 @@ const _KS = [
   // HOU
   { name: "Ka'imi Fairbairn", short: "Fairbairn", team: 'HOU', teamName: "Houston Texans", pos: 'K', subpos: 'k', skin: '#b07848', height: 72, weight: 183, number: 15, starter: true,
     fg25: '44/48', fg26: '18/19', long: 58,
-    attrs: { power: 8, accuracy: 11, clutch: 6 } },
+    attrs: { power: 8, accuracy: 11, clutch: 7 } },
   // IND
   { name: "Spencer Shrader", short: "Shrader", team: 'IND', teamName: "Indianapolis Colts", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 74, weight: 201, number: 3, starter: true,
     fg25: '13/14', fg26: '22/24', long: 59,
-    attrs: { power: 6, accuracy: 8, clutch: 6 } },
+    attrs: { power: 8, accuracy: 10, clutch: 7 } },
   // JAX
   { name: "Cam Little", short: "Little", team: 'JAX', teamName: "Jacksonville Jaguars", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 73, weight: 172, number: 39, starter: true,
     fg25: '30/34', fg26: '14/16', long: 68,
-    attrs: { power: 11, accuracy: 7, clutch: 7 } },
+    attrs: { power: 11, accuracy: 10, clutch: 10 } },
   // KC
   { name: "Harrison Butker", short: "Butker", team: 'KC', teamName: "Kansas City Chiefs", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 76, weight: 205, number: 7, starter: true,
     fg25: '33/38', fg26: '12/19', long: 59,
-    attrs: { power: 5, accuracy: 3, clutch: 9 } },
+    attrs: { power: 5, accuracy: 2, clutch: 9 } },
   // LV
   { name: "Matt Gay", short: "Gay", team: 'LV', teamName: "Las Vegas Raiders", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 72, weight: 232, number: 14, starter: true,
     fg25: '17/23', fg26: '19/21', long: 59,
@@ -124,7 +124,7 @@ const _KS = [
   // LAC
   { name: "Cameron Dicker", short: "Dicker", team: 'LAC', teamName: "Los Angeles Chargers", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 73, weight: 216, number: 11, starter: true,
     fg25: '38/41', fg26: '15/17', long: 59,
-    attrs: { power: 5, accuracy: 10, clutch: 7 } },
+    attrs: { power: 6, accuracy: 7, clutch: 7 } },
   // LAR
   { name: "Brandon McManus", short: "McManus", team: 'LAR', teamName: "Los Angeles Rams", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 75, weight: 201, number: 19, starter: true,
     fg25: '24/30', fg26: '3/3', long: 56,
@@ -151,7 +151,7 @@ const _KS = [
   // NYG
   { name: "Dominic Zvada", short: "Zvada", team: 'NYG', teamName: "New York Giants", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 75, weight: 187, number: 34, starter: true,
     fg25: null, fg26: '17/22', long: 56,
-    attrs: { power: 5, accuracy: 3, clutch: 3 } },
+    attrs: { power: 5, accuracy: 2, clutch: 3 } },
   // NYJ
   { name: "Jason Sanders", short: "Sanders", team: 'NYJ', teamName: "New York Jets", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 186, number: 19, starter: true,
     fg25: null, fg26: '21/24', long: 54,
@@ -163,19 +163,19 @@ const _KS = [
   // PIT
   { name: "Chris Boswell", short: "Boswell", team: 'PIT', teamName: "Pittsburgh Steelers", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 74, weight: 185, number: 9, starter: true,
     fg25: '27/32', fg26: '18/23', long: 60,
-    attrs: { power: 9, accuracy: 6, clutch: 9 } },
+    attrs: { power: 9, accuracy: 5, clutch: 9 } },
   // SF
   { name: "Eddy Pineiro", short: "Pineiro", team: 'SF', teamName: "San Francisco 49ers", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 190, number: 18, starter: true,
     fg25: '28/29', fg26: '7/10', long: 59,
-    attrs: { power: 5, accuracy: 6, clutch: 7 } },
+    attrs: { power: 5, accuracy: 4, clutch: 7 } },
   // SEA
   { name: "Jason Myers", short: "Myers", team: 'SEA', teamName: "Seattle Seahawks", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 70, weight: 190, number: 5, starter: true,
     fg25: '41/48', fg26: '16/18', long: 57,
-    attrs: { power: 7, accuracy: 7, clutch: 10 } },
+    attrs: { power: 7, accuracy: 9, clutch: 10 } },
   // TB
   { name: "Chase McLaughlin", short: "McLaughlin", team: 'TB', teamName: "Tampa Bay Buccaneers", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 72, weight: 190, number: 4, starter: true,
     fg25: '32/38', fg26: '22/22', long: 65,
-    attrs: { power: 10, accuracy: 8, clutch: 7 } },
+    attrs: { power: 9, accuracy: 11, clutch: 8 } },
   // TEN
   { name: "Joey Slye", short: "Slye", team: 'TEN', teamName: "Tennessee Titans", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 71, weight: 213, number: 6, starter: true,
     fg25: '28/35', fg26: '12/13', long: 58,
