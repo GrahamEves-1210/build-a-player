@@ -583,6 +583,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   }, [resetKey])
 
   useEffect(() => () => clearAll(), [])
+  // the 320x50 is asked for as soon as the spin screen is up, not on the first SPIN (owner, 11-13); spins refresh it after that
+  useEffect(() => { if (adsDisabled) return; const t = setTimeout(rampSpinAd, 400); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!onSaveResult) return
