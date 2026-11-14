@@ -236,7 +236,8 @@ export function useDropSheet(enabled, build, types, resetKey) {
   // each pick isn't a reset of the build); clearing the build does
   const filled = types.filter(t => build[t]).length
   const prevFilled = useRef(filled)
-  useEffect(() => { if (filled < prevFilled.current) setOpen(false); prevFilled.current = filled }, [filled])
+  // (a reset no longer puts it away either, the owner 11-13: it stays where you left it)
+  useEffect(() => { prevFilled.current = filled }, [filled])
   // the build is complete: nothing left to pick, and SIMULATE is underneath
   const complete = types.length > 0 && types.every(t => build[t])
   useEffect(() => { if (enabled && complete) setOpen(false) }, [complete, enabled])

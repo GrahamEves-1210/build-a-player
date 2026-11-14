@@ -7280,3 +7280,10 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
 }
 /* the panel's outline in the team's colour on a charcoal panel (owner, 11-13). Phones: Build-A-Bucket's nav wordmark a size down (its hoop makes it wider) */
 @media (max-width: 768px) { html.app-look.is-bucket .navbar .logo-text.logo-text--small, html.app-look [data-sport="bucket"] .navbar .logo-text.logo-text--small { font-size: 14px; } }
+
+/* Desktop (website): the narrow, tall panel fades top to bottom (left to right read as a stripe): the card in the team's colour,
+   the chips' panel from that colour into charcoal (owner, 11-13) */
+@media (min-width: 769px) {
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-color, #444) 72%, #000) !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel-body.has-card .spin-panel-scroll { background: linear-gradient(180deg, color-mix(in srgb, var(--qb-color, #444) 72%, #000) 0%, #15191b 70%) !important; }
+}
