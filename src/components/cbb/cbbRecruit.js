@@ -47,9 +47,11 @@ export function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5, lift 
   const r = seeded(`cbb-offers-${seed}`)
   const tierOfConf = Object.fromEntries(data.conferences.map(c => [c.id, c.tier]))
   const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos) }))
-  let pool = all.filter(x => x.tier === stars)
-  if (pool.length < n + 2) pool = pool.concat(all.filter(x => x.tier === stars - 1 || (stars === 2 && x.tier === 3)))
-  const scored = pool.map(x => ({ ...x, need: ovr - (x.bar?.ovr ?? 70), score: r() * 2 + clamp(-8, 8, ovr - (x.bar?.ovr ?? 70)) * 0.16 + (x.tier === stars ? 0.8 : 0) + (lift ? lift * 1.4 * (75 - clamp(1, 150, x.t.bpiRank ?? 75)) / 75 : 0) }))
+  // (more variety, the owner 11-13: players kept seeing the same schools. His level, the level below always, and a few
+  // reach schools from the level above; luck counts for more and the open job for less, so the order moves)
+  let pool = all.filter(x => x.tier === stars || x.tier === stars - 1 || (stars === 2 && x.tier === 3))
+  if (stars < 5) pool = pool.concat(all.filter(x => x.tier === stars + 1 && r() < 0.35).map(x => ({ ...x, reach: true })))
+  const scored = pool.map(x => ({ ...x, need: ovr - (x.bar?.ovr ?? 70), score: r() * 3 + clamp(-8, 8, ovr - (x.bar?.ovr ?? 70)) * 0.08 + (x.tier === stars ? 0.6 : 0) - (x.reach ? 0.9 : 0) + (lift ? lift * 1.4 * (75 - clamp(1, 150, x.t.bpiRank ?? 75)) / 75 : 0) }))
     .sort((a, b) => b.score - a.score)
   const pick = scored.slice(0, n)
   if (!pick.some(x => x.need > 0)) { const s = scored.find(x => x.need > 0); if (s) pick[pick.length - 1] = s }
