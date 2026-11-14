@@ -5,15 +5,15 @@
 export const GRADE_SPECTRUM = [
   '#ef4444', // F   red
   '#f97316', // D   orange
-  '#f2a40b', // C-  yellow, a touch toward orange
+  '#eab308', // C-  (the letter's colour: no shade for a minus or a plus, owner 11-14)
   '#eab308', // C   yellow
-  '#ccc618', // C+  yellow, a touch toward green
-  '#5ec443', // B-  green, a touch toward yellow
+  '#eab308', // C+
+  '#22c55e', // B-
   '#22c55e', // B   green
-  '#16bc8a', // B+  green, a touch toward blue
-  '#2399ee', // A-  blue, a touch lighter
+  '#22c55e', // B+
+  '#3584f2', // A-
   '#3584f2', // A   blue
-  '#2f72e2', // A+  blue, a touch deeper (no purple in it)
+  '#3584f2', // A+
   '#a855f7', // S   purple
 ]
 export const spectrumColor = v0 => GRADE_SPECTRUM[Math.max(0, Math.min(11, Math.round(v0 ?? 0)))]
