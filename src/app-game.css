@@ -7287,3 +7287,27 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-color, #444) 72%, #000) !important; }
   html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel-body.has-card .spin-panel-scroll { background: linear-gradient(180deg, color-mix(in srgb, var(--qb-color, #444) 72%, #000) 0%, #15191b 70%) !important; }
 }
+
+/* ═══ The bottom bar, redesigned (owner, 2026-11-13) ═════════════════════════════════════════════
+   Same five tabs, same place, same hold-for-modes centre. A flat solid bar with squarer corners (no blur, no gradient, no
+   glow); the tabs dimmed white, the open one full white with a flat bar in the sport's colour along the top edge (it still
+   glides to the tab you open); HOME a solid slab in the sport's colour inside the bar, cut at the top-right corner like the
+   trait cards, its icon over its label; the badges small squared tags */
+html .ag-dock { border-radius: 14px; background: #0b0f0d !important; border: 1.5px solid rgba(255,255,255,.09); box-shadow: 0 10px 26px rgba(0,0,0,.6);
+  -webkit-backdrop-filter: none; backdrop-filter: none; grid-template-columns: 1fr 1fr 1.2fr 1fr 1fr; }
+html .ag-dock .ag-tab { color: rgba(255,255,255,.5); gap: 4px; }
+html .ag-dock .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: #fff; opacity: .5; }
+html .ag-dock .ag-tab--on { color: #fff !important; }
+html .ag-dock .ag-tab--on .ag-tab-icon { filter: none; opacity: 1; }
+html .ag-dock .ag-tab-label { font-size: 12.5px; letter-spacing: 1.5px; }
+html .ag-dock .ag-tab-lit { top: 0; left: 24%; right: 24%; height: 3px; border-radius: 0 0 3px 3px; background: var(--ag-a1); box-shadow: none; }
+html .ag-dock .ag-tab-badge { top: 8px; border-radius: 4px; min-width: 16px; height: 16px; font-size: 11px; box-shadow: 0 0 0 2px #0b0f0d; }
+html .ag-dock .ag-play { width: 100%; height: 100%; margin-top: 0; align-self: stretch; justify-self: stretch; }
+html .ag-dock .ag-play-core { inset: 7px 3px; border: 0; border-radius: 10px; padding: 0 0 15px; background: var(--ag-grad);
+  box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.28) !important; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); filter: none; }
+html .ag-dock .ag-play-glyph { bottom: 15px; }
+html .ag-dock .ag-play-glyph svg { width: 22px; height: 22px; }
+html .ag-dock .ag-play-label { bottom: 13px; z-index: 2; color: var(--ag-on) !important; font-size: 12.5px; letter-spacing: 1.6px; pointer-events: none; }
+html .ag-dock .ag-play.is-here .ag-play-core { filter: none; transform: none; }
+html .ag-dock .ag-play--on .ag-play-core { box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.28) !important; }
+html .ag-dock .ag-play.is-fan .ag-play-core { transform: scale(.96); }
