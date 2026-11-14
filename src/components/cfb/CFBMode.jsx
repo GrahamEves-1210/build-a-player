@@ -362,7 +362,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
       const [first, ...rest] = String(c.label).split(' ')
       return (
         <span className={`cfb-reel-conf${rest.length ? ' is-two' : ''}`}>
-          <img className="cfb-conf-plate" src={confLogo(c)} alt="" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />
+          <img className="cfb-conf-plate" src={c?.logo ?? `/logos/cfb/sm/conf-${c?.id ?? c?.short}.webp`} alt="" draggable={false} decoding="async" onError={e => { const el = e.currentTarget, full = confLogo(c); if (el.src.endsWith('.webp') && !el.dataset.tried) { el.dataset.tried = '1'; el.src = full } else el.style.display = 'none' }} />
           <span>{first}{rest.length ? <><br />{rest.join(' ')}</> : null}</span>
         </span>
       )
