@@ -43,7 +43,7 @@ const DRUM_ON = (() => { try { return localStorage.getItem('bap_reduce_motion') 
 // how soon the bend starts: a phone's short wheel needs it sooner (2.0), desktop's tall one at the edges (2.6) (owner, 11-13)
 const DRUM_PHONE = typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 768px)').matches
 const DRUM_EXP = DRUM_PHONE ? 1.25 : 1.5
-const DRUM_MAX = DRUM_PHONE ? 48 : 43   // the tilt at the window's edge (52, then a touch less on a phone and a bit less on a computer, owner 11-13)   // (a steep curve made rows seem to speed up as they left: kept gentle)
+const DRUM_MAX = DRUM_PHONE ? 48 : 32   // the tilt at the window's edge (52, then a touch less on a phone and a bit less on a computer, owner 11-13)   // (a steep curve made rows seem to speed up as they left: kept gentle)
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
