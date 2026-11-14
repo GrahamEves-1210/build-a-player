@@ -754,6 +754,7 @@ function simulate(L, { seed, user, season }) {
 }
 
 // ── Everyone else's season line (the award races, the leaders, the draft board) ──
+const SPOTS = { guard: ['PG', 'SG', 'SF'], big: ['PF', 'C'] }
 const natPosOf = (attrs, pos) => (pos === 'big' ? ((attrs.size ?? 5) >= 8 ? 'C' : 'PF') : ((attrs.passing ?? 5) + (attrs.handles ?? 5) >= (attrs.jumpShot ?? 5) + (attrs.finishing ?? 5) ? 'PG' : (attrs.size ?? 5) >= 7 ? 'SF' : 'SG'))
 const POS_AWARD = { PG: 'Bob Cousy Award', SG: 'Jerry West Award', SF: 'Julius Erving Award', PF: 'Karl Malone Award', C: 'Kareem Abdul-Jabbar Award' }
 function candidates(L, R, user, seed) {
@@ -876,12 +877,15 @@ export function runCBBSimulation(build, types = null, team = null, position = 'g
   const attrs = Object.fromEntries(ts.map(t => [t, build?.[t]?.val ?? 5]))
   const ovr = calcCBBOVR(build, ts, pos)
   const role = opts.role === 'bench' ? 'bench' : 'starter'
-  // whose minutes he takes: the last starter in his pool at the school
-  const room = (L.rooms[T.short]?.[pos] ?? []).filter(p => p.starter)
+  // whose minutes he takes: the last starter in his pool at the school (a Career player with his own spot, opts.spot:
+  // the starter at that spot when the school has one, so a point guard takes the point guard's minutes)
+  const spot = SPOTS[pos].includes(opts.spot) ? opts.spot : null
+  const room0 = (L.rooms[T.short]?.[pos] ?? []).filter(p => p.starter)
+  const room = spot && room0.some(p => p.position === spot) ? room0.filter(p => p.position === spot) : room0
   const bar = room.length ? room.reduce((a, b) => ((b.ovr ?? 0) < (a.ovr ?? 0) ? b : a)) : null
   const delta = role === 'bench' ? Math.max(0, ovr - 76) * 0.35 : ovr - (bar?.ovr ?? 76)
   const user = {
-    idx: T.idx, pos, ovr, role, attrs, natPos: natPosOf(attrs, pos), name: opts.name ?? 'Guest', year: opts.year ?? 'FR', season,
+    idx: T.idx, pos, ovr, role, attrs, natPos: spot ?? natPosOf(attrs, pos), name: opts.name ?? 'Guest', year: opts.year ?? 'FR', season,
     shift: clamp(-3, 9, delta * 0.22), line: lineOf(attrs, pos, role === 'bench' ? 17 : 32.5), r: seeded(`cbb-user-${seed}`), barKey: bar ? `${bar.name}|${bar.team}` : null,
   }
   const R = simulate(L, { seed, user, season })

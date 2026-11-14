@@ -12,7 +12,8 @@ import {
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
-  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST } from '../../lib/career'
+  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove } from '../../lib/career'
+import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import { momentSituation } from '../../lib/situations'
@@ -101,6 +102,8 @@ export function CareerGame({ c, setCareer, skipAll = true, ...p }) {
   return <MiniGame {...p} sim={mode === 'off'} onSkipAll={onSkipAll} />
 }
 const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
+// his position on a card: a basketball career's spot (PG to C), everyone else's position
+const posTag = c => (c.sport === 'bucket' ? hoopSpot(c) : POS_LABEL[c.pos])
 function NewSlot({ S, onStart, onCancel }) {
   const [first, setFirst] = useState(''), [last, setLast] = useState('')
   // opens on the position last played; changing it here is all a new career needs
@@ -108,6 +111,12 @@ function NewSlot({ S, onStart, onCancel }) {
     let saved = null
     try { saved = localStorage.getItem(S.isBucket ? 'bucketPosition' : 'lastPosition') } catch {}
     return S.positions.includes(saved) ? saved : S.positions[0]
+  })
+  // basketball: one of the five spots (a PG, SG or SF is built as a guard, a PF or C as a big), the last one picked
+  const [spot, setSpot] = useState(() => {
+    let saved = null
+    try { saved = localStorage.getItem('bucketCareerSpot') } catch {}
+    return HOOP_SPOTS.includes(saved) ? saved : pos === 'big' ? 'PF' : 'PG'
   })
   // a new name every tap (never the same one twice in a row)
   const randomize = () => {
@@ -121,14 +130,21 @@ function NewSlot({ S, onStart, onCancel }) {
   const [nation, setNation] = useState(() => (S.isSoccer ? lastNation() ?? 'ENG' : null))
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
-    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (!ok) return; if (S.isSoccer) rememberNation(nation); onStart(`${first.trim()} ${last.trim()}`, pos, games, nation, college ? start : 'draft') }}>
+    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (!ok) return; if (S.isSoccer) rememberNation(nation); if (S.isBucket) { try { localStorage.setItem('bucketCareerSpot', spot) } catch {} } onStart(`${first.trim()} ${last.trim()}`, S.isBucket ? hoopGroupOf(spot) : pos, games, nation, college ? start : 'draft', S.isBucket ? spot : null) }}>
       <span className="ag-eyebrow">POSITION</span>
-      <div className="cr-pos" role="radiogroup" aria-label="Position" style={{ '--n': S.positions.length + (S.soon?.length ?? 0) }}>
+      {S.isBucket ? <>
+        <div className="cr-pos" role="radiogroup" aria-label="Position" style={{ '--n': HOOP_SPOTS.length }}>
+          {HOOP_SPOTS.map(p => (
+            <button key={p} type="button" role="radio" aria-checked={spot === p} aria-label={HOOP_SPOT_NAME[p]} className={spot === p ? 'is-on' : ''} onClick={() => { setSpot(p); sfx('tap') }}>{p}</button>
+          ))}
+        </div>
+        <p className="cr-note">{HOOP_SPOT_NAME[spot]}: built as a {hoopGroupOf(spot)}, and he plays {spot} wherever he goes.</p>
+      </> : <div className="cr-pos" role="radiogroup" aria-label="Position" style={{ '--n': S.positions.length + (S.soon?.length ?? 0) }}>
         {S.positions.map(p => (
           <button key={p} type="button" role="radio" aria-checked={pos === p} className={pos === p ? 'is-on' : ''} onClick={() => { setPos(p); sfx('tap') }}>{POS_LABEL[p]}</button>
         ))}
         {(S.soon ?? []).map(([id, label]) => <button key={id} type="button" role="radio" aria-checked={false} disabled className="is-soon">{label}<small>COMING SOON</small></button>)}
-      </div>
+      </div>}
       {S.isSoccer && (
         <>
           <span className="ag-eyebrow">NATIONALITY</span>
@@ -186,8 +202,8 @@ function SlotCard({ c, S, onOpen, onDelete }) {
   return (
     <div className="cr-slot">
       <button className="cr-slot-main" onClick={onOpen}>
-        {c.team ? <img src={S.logo(c.team)} alt="" className="cr-slot-logo" /> : <span className="cr-slot-logo cr-slot-pos">{POS_LABEL[c.pos]}</span>}
-        <span className="cr-slot-txt"><b>{c.name}</b><small>{POS_LABEL[c.pos]}{c.fit ? ` · ${nick(c.fit.name)}` : ''} · {where} · age {c.age}</small></span>
+        {c.team ? <img src={S.logo(c.team)} alt="" className="cr-slot-logo" /> : <span className="cr-slot-logo cr-slot-pos">{posTag(c)}</span>}
+        <span className="cr-slot-txt"><b>{c.name}</b><small>{posTag(c)}{c.fit ? ` · ${nick(c.fit.name)}` : ''} · {where} · age {c.age}</small></span>
         <span className="cr-slot-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </button>
       <button className="cr-slot-x" onClick={() => setAsk(true)} aria-label={`Delete ${c.name}'s career`}>DELETE</button>
@@ -222,13 +238,13 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
           {!slots ? <SkCards n={3} label="Loading your saves" /> : <>
             {slots.map((c, i) => c && <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setNaming(null); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />)}
             {free < 0 ? <div className="tk-runs-empty">Every save is in use. Delete one to start a new career.</div>
-              : naming === free ? <NewSlot key={`n${free}`} S={S} onStart={(name, pos, games, nation, start) => onNew(free, name, pos, games, start)} onCancel={() => setNaming(null)} />
+              : naming === free ? <NewSlot key={`n${free}`} S={S} onStart={(name, pos, games, nation, start, spot) => onNew(free, name, pos, games, start, spot)} onCancel={() => setNaming(null)} />
               : <button className="cr-slot cr-slot--empty" onClick={() => { setNaming(free); sfx('tap') }}><span>+</span> NEW CAREER</button>}
           </>}
         </section>
         <div className="cr-intro-hero ag-pop" style={{ '--d': '60ms' }}>
           <span className="cr-intro-kicker">ONE PLAYER. A WHOLE CAREER.</span>
-          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.ui?.posLine ?? (S.isSoccer ? 'A striker. Goalkeepers are coming soon.' : S.isBucket ? 'Guard or big.' : `${S.positions.slice(0, -1).map(p => POS_LABEL[p]).join(', ')} or ${POS_LABEL[S.positions[S.positions.length - 1]]}.`)}</p>
+          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.ui?.posLine ?? (S.isSoccer ? 'A striker. Goalkeepers are coming soon.' : S.isBucket ? 'PG, SG, SF, PF or C.' : `${S.positions.slice(0, -1).map(p => POS_LABEL[p]).join(', ')} or ${POS_LABEL[S.positions[S.positions.length - 1]]}.`)}</p>
         </div>
         <ol className="tk-steps ag-pop" style={{ '--d': '80ms' }}>
           {steps.map(([t, d], i) => <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>)}
@@ -399,7 +415,7 @@ function Draft({ c, setCareer }) {
     const allDone = !next
     return (
       <div className={`ag-screen ${S.screen} cr`}>
-        {head(`${S.ui?.combine ?? (soccer ? 'ACADEMY TRIALS' : 'THE COMBINE')} · ${POS_LABEL[c.pos]}`, allDone ? (soccer ? `${nick(c.name)}'s trials` : `${nick(c.name)}'s numbers`) : next.label)}
+        {head(`${S.ui?.combine ?? (soccer ? 'ACADEMY TRIALS' : 'THE COMBINE')} · ${posTag(c)}`, allDone ? (soccer ? `${nick(c.name)}'s trials` : `${nick(c.name)}'s numbers`) : next.label)}
         <div className="ag-screen-body">
           {c.college && <p className="cr-note cr-college">Out of {c.sport === 'bucket' ? 'College Basketball' : 'College Football'}: {c.college.seasons?.length ? c.college.line : <>{c.college.schoolName ?? c.college.school}{c.college.line ? ` · ${c.college.line}` : ''}</>}</p>}
           {!allDone && <CareerGame c={c} setCareer={setCareer} skipAll={false} retry redo key={next.id} game={next.id} build={c.build} pos={combinePos(c)} seed={`${c.seed}-cb-${next.id}`} lock={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
@@ -478,7 +494,7 @@ function Draft({ c, setCareer }) {
             <div key={p.o} className={`cr-pick${p.you ? ' is-you' : ''}`}>
               <span className="cr-pick-n">{p.udfa ? <small>UNDRAFTED</small> : <><small>RD {p.round}</small>{p.slot}</>}</span>
               <img src={logoFor(p.team)} alt="" />
-              <span className="cr-pick-txt">{p.you ? <b><Scramble text={`${c.name} · ${POS_LABEL[c.pos]}`} ms={900} /></b> : <><b><Scramble text={p.player} ms={500} /></b><small>{p.pos}</small></>}{p.trade && <small className="cr-pick-trade">TRADED UP</small>}</span>
+              <span className="cr-pick-txt">{p.you ? <b><Scramble text={`${c.name} · ${posTag(c)}`} ms={900} /></b> : <><b><Scramble text={p.player} ms={500} /></b><small>{p.pos}</small></>}{p.trade && <small className="cr-pick-trade">TRADED UP</small>}</span>
             </div>
           ))}
           {!landed && <div className="cr-pick is-wait"><span className="bt-dots"><i /><i /><i /></span> {picks[shown] ? `The ${nick(teamName(picks[shown].team))} are on the clock…` : ''}</div>}
@@ -557,7 +573,7 @@ function Lineup({ c }) {
         <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</i>
       </span>
       {p.you ? <b className="cr-me-name" style={{ color: legacyColor(c) }}>{c.name}</b> : <b>{S.isBucket || S.isSoccer ? shortName(p.name) : nick(p.name)}</b>}
-      {!S.isBucket && <small>{slot}</small>}
+      {(!S.isBucket || slot) && <small>{slot}</small>}
       {/* the starters' ages, like the bench's */}
       {age != null && <small className="crl-age">{S.isSoccer ? (p.rookie && age <= 20 ? 'ACADEMY · AGE ' : 'AGE ') : p.rookie ? (S.isBucket ? 'ROOKIE · AGE ' : 'ROOKIE ') : 'AGE '}{age}</small>}
     </span>
@@ -588,7 +604,7 @@ function Lineup({ c }) {
   }
   return (
     <div className="ag-card crl ag-pop">
-      <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING DEFENSE' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{S.isBucket ? (dc.starter ? 'STARTER' : 'BENCH') : `${dc.starter ? 'STARTER' : 'BACKUP'} · ${dc.label}`}</span></div>
+      <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING DEFENSE' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{`${dc.starter ? 'STARTER' : S.isBucket ? 'BENCH' : 'BACKUP'} · ${dc.label}`}</span></div>
       {S.side?.[c.pos] === 'def' ? (
         // the defense, seen from behind it: the four down linemen on the line, a corner
         // out wide on each side, the linebackers behind the line and the safeties deep
@@ -620,6 +636,7 @@ function Lineup({ c }) {
         </div>
       ) : S.isBucket ? (
         <div className="crl-field crl-field--court">
+          {/* PG, SG and SF on the first row, PF and C on the second, each under his spot (lib/career.js hoopLineup) */}
           <div className="crl-row">{L.guard.map(p => <Man key={p.name} p={p} slot={p.slot ?? 'G'} />)}</div>
           <div className="crl-row">{L.big.map(p => <Man key={p.name} p={p} slot={p.slot ?? 'F/C'} />)}</div>
         </div>
@@ -644,7 +661,7 @@ function Lineup({ c }) {
       <div className="crl-bench">
         <span className="ag-eyebrow">BENCH</span>
         {L.reserves.map((p, i) => (
-          <span key={p.name + i} className={`crl-depth crl-depth--bench${p.you ? ' is-you' : ''}`}><b>{p.you ? c.name : p.name}</b><small>age {p.age}</small><em style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</em></span>
+          <span key={p.name + i} className={`crl-depth crl-depth--bench${p.you ? ' is-you' : ''}`}><b>{p.you ? c.name : p.name}</b><small>{hoopSpotOf(p)} · age {p.you ? c.age : p.age}</small><em style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</em></span>
         ))}
       </div>
       ) : (
@@ -656,6 +673,23 @@ function Lineup({ c }) {
       </div>
       )}
       {!dc.starter && last && <p className="cr-note">Behind {last.name} for now. Outplay him and the job comes to {c.name}: the {S.isBucket ? 'minutes open' : 'starter\'s spot opens'} with injuries, slumps and trades.</p>}
+    </div>
+  )
+}
+
+// The coach asks him to move over a spot (basketball, in camp): he'd start there, he's coming off the bench at his
+// own. The look of the season's moment cards; a yes moves him for good, a no keeps him where he is
+const SPOT_WORD = { PG: 'point', SG: 'two', SF: 'three', PF: 'four', C: 'five' }
+function SpotMove({ c, m, onAnswer }) {
+  return (
+    <div className="sm-moment cr-spotmove ag-pop">
+      <span className="ag-eyebrow">TRAINING CAMP · {m.from} TO {m.to}</span>
+      <h3 className="sm-moment-title">A move to {m.to}</h3>
+      <p className="sm-moment-body">{m.starter ? `${m.starter.name} has the ${m.from} job. ` : ''}The coach calls {c.name} into his office before camp: "I want you in the starting five. Play the {SPOT_WORD[m.to]} for us and the job is yours."</p>
+      <div className="sm-options">
+        <button className="sm-option" onClick={() => onAnswer(true)}><b>Move to {m.to}</b><small>{m.over ? `Starts at ${m.to}, ahead of ${m.over.name} (${m.over.ovr}).` : `Starts at ${m.to}.`} Same build, same traits.</small></button>
+        <button className="sm-option" onClick={() => onAnswer(false)}><b>Stay at {m.from}</b><small>{m.behind ? `Off the bench behind ${m.behind.name} (${m.behind.ovr}).` : 'Off the bench.'} He keeps working for the {m.from} job.</small></button>
+      </div>
     </div>
   )
 }
@@ -737,6 +771,8 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const seasonOver = a && a.k >= total && !a.moment && !a.injury && !a.po
   const last = c.seasons[c.seasons.length - 1]
   const cb = comebackYear(c)
+  // basketball, in camp: the coach's question about a new spot, until it's answered (lib/career.js spotMove)
+  const move = c.phase === 'preseason' ? spotMove(c) : null
 
   return (
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
@@ -748,7 +784,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
           {/* the team, the player (his name, not the account's look), then where he is in it */}
           <div className="cr-head-txt">
             <span className="ag-eyebrow cr-head-team">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()}</span>
-            <h1 className="ag-h1 cr-head-name" style={{ fontSize: (c.name ?? '').length > 14 ? 26 : (c.name ?? '').length > 10 ? 31 : 36 }}>{c.name} <small>{POS_LABEL[c.pos]}</small></h1>
+            <h1 className="ag-h1 cr-head-name" style={{ fontSize: (c.name ?? '').length > 14 ? 26 : (c.name ?? '').length > 10 ? 31 : 36 }}>{c.name} <small>{posTag(c)}</small></h1>
             {/* the build's body (the Size chip's player), where a roster card puts it: after the age */}
             <span className="cr-head-meta">YEAR {c.year + 1} · AGE {c.age} · {careerBody(c) ? `${bodyText(careerBody(c), ' ')} · ` : ''}{S.isSoccer ? seasonOf(c.season) : c.season}</span>
             {cb && <span className="cr-head-cb">{cb.done ? 'COMEBACK · ALL SEASONS PLAYED' : `COMEBACK · YEAR ${cb.n} OF ${cb.of}`}</span>}
@@ -778,7 +814,8 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             {(() => { const dc = depthChart(c); if (S.x?.depthLine) return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{S.x.depthLine(c, dc)}</p>; if (S.isSoccer) { const role = soccerRole(c); return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{role === 'Starter' ? 'FIRST CHOICE · leads the line' : `${role.toUpperCase()} · behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> } return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{dc.starter ? `${dc.label} · the starter` : `${dc.label} · backup behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> })()}
             <p className="cr-note">{c.loan ? `On loan from ${S.teamOf(c.loan.from).name} for the season. ` : ''}{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({pay(c, c.contract.perYear)}). {c.contract.left === 1 && !c.loan ? 'Contract year: play for the next one.' : ''}</p>
-            <button className="ag-btn ag-btn--gold tk-intro-go" onClick={begin}>START THE SEASON <IconArrow size={16} /></button>
+            {move ? <SpotMove c={c} m={move} onAnswer={yes => { setCareer(answerSpotMove(c, yes)); sfx(yes ? 'claim' : 'tap'); haptic(yes ? 'success' : 'light') }} />
+              : <button className="ag-btn ag-btn--gold tk-intro-go" onClick={begin}>START THE SEASON <IconArrow size={16} /></button>}
           </section>
         )}
 
@@ -1241,14 +1278,14 @@ function Moves({ c, setCareer, forced }) {
           {moves.map((m, i) => (
             <div key={i} className={`cr-move is-${m.kind}`}>
               <span className="crl-face crl-face--sm">{m.p?.photo ? <img src={photoSrc(m.p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(m.p?.name)}</span>}</span>
-              <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos === 'dl' || m.pos === 'ol' || c.sport === 'baseball' ? m.label : m.pos.toUpperCase()} · {m.p?.ovr ?? 70} OVR · age {m.p?.age}</small></span>
+              <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos === 'dl' || m.pos === 'ol' || c.sport === 'baseball' || c.sport === 'bucket' ? m.label : m.pos.toUpperCase()} · {m.p?.ovr ?? 70} OVR · age {m.p?.age}</small></span>
               <span className="cr-move-tag">{c.sport === 'soccer' ? ({ draft: 'ACADEMY', leave: 'SOLD' })[m.kind] ?? MOVE_TAG[m.kind] : MOVE_TAG[m.kind]}</span>
             </div>
           ))}
         </div>
       )}
       <div className={`ag-card cr-depthnote ag-pop${dc.starter ? ' is-on' : ''}`} style={{ '--d': '70ms' }}>
-        <span className="ag-eyebrow">{c.sport === 'soccer' ? 'SQUAD ROLE' : c.sport === 'bucket' || c.sport === 'baseball' ? 'ROLE' : `DEPTH CHART · ${c.pos === 'ol' ? olSpot(c) : c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}`}</span>
+        <span className="ag-eyebrow">{c.sport === 'soccer' ? 'SQUAD ROLE' : c.sport === 'bucket' ? `ROLE · ${hoopSpot(c)}` : c.sport === 'baseball' ? 'ROLE' : `DEPTH CHART · ${c.pos === 'ol' ? olSpot(c) : c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}`}</span>
         {c.sport === 'soccer'
           ? <p>{dc.starter ? `${c.name} goes into pre-season as the first-choice No. 9.` : `${c.name} goes into pre-season ${soccerRole(c) === 'Rotation' ? 'in the rotation' : 'on the bench'}, behind ${dc.ahead[dc.ahead.length - 1].name}.`}</p>
           : sportOf(c).x?.campLine ? <p>{sportOf(c).x.campLine(c, dc)}</p>

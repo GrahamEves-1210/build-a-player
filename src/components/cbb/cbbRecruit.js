@@ -34,19 +34,22 @@ export function tierOf(t, confTier) {
   if (confTier === 'HIGH' || t.bpiRank <= 75) return 3
   return 2
 }
-// who he'd have to beat at a school: the last starter in his pool (the fifth starter's spot is the one a new man takes)
-export function barAt(data, short, pos) {
-  const room = data.pools[pos].filter(p => p.team === short && p.starter)
+// who he'd have to beat at a school: the last starter in his pool (the fifth starter's spot is the one a new man takes).
+// A Career player has his own spot (spot: PG to C): the starter at it when the school has one (the engine takes the
+// same man's minutes: utils/cbbSimulation.js opts.spot)
+export function barAt(data, short, pos, spot = null) {
+  const room0 = data.pools[pos].filter(p => p.team === short && p.starter)
+  const room = spot && room0.some(p => p.position === spot) ? room0.filter(p => p.position === spot) : room0
   return room.length ? room.reduce((a, b) => ((b.ovr ?? 0) < (a.ovr ?? 0) ? b : a)) : null
 }
 export const startsOver = (bar, ovr, year = 0) => !bar || ovr > (bar.ovr ?? 0) || (year > 0 && LEAVES.has(String(bar.year).toUpperCase()))
 
 // The schools offering him: his stars' level (and the one below when it's thin), the ones with a job he can win
 // first, a little luck. lift (the transfer, -1 to 1): a big year pulls the higher-rated programs up the list
-export function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5, lift = 0 }) {
+export function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5, lift = 0, spot = null }) {
   const r = seeded(`cbb-offers-${seed}`)
   const tierOfConf = Object.fromEntries(data.conferences.map(c => [c.id, c.tier]))
-  const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos) }))
+  const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos, spot) }))
   // (more variety, the owner 11-13: players kept seeing the same schools. His level, the level below always, and a few
   // reach schools from the level above; luck counts for more and the open job for less, so the order moves)
   let pool = all.filter(x => x.tier === stars || x.tier === stars - 1 || (stars === 2 && x.tier === 3))

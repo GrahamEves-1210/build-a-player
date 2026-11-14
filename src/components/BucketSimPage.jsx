@@ -27,6 +27,7 @@ import { IconBall } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
 import { useOnLeave } from './simFlow'
 import { spectrumColor } from '../lib/gradeColors'
+import { buildSpot } from '../lib/hoopSpot'
 
 const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
@@ -2629,31 +2630,7 @@ function playerOvr(p) {
   return calcBucketOVR(Object.fromEntries(types.map(t => [t, { val: p.attrs[t] ?? 5 }])), types, guard ? 'guard' : 'big')
 }
 
-// Your spot in the five, from your build. Each position leans on its own ratings,
-// measured against the build's own average (a flat build lands in the middle: SG, or C):
-//   PG passing, handles, IQ, speed (not size) | SG jump shot, finishing, clutch
-//   SF size, perimeter D, bounce, finishing   | PF jump shot, playmaking, speed
-//   C  size, rebounding, interior D (not speed)
-const SPOT_LEANS = {
-  guard: [
-    { passing: 1.3, handles: 1.1, basketballIQ: 0.7, speed: 0.4, size: -0.5 },
-    { jumpShot: 1.4, finishing: 0.6, clutch: 0.5, handles: 0.3, size: -0.1 },
-    { size: 1.0, perimeterDefense: 0.9, bounce: 0.6, finishing: 0.5, passing: -0.3 },
-  ],
-  big: [
-    { jumpShot: 1.2, playmaking: 0.8, speed: 0.7, bounce: 0.4, size: -0.4 },
-    { size: 1.1, rebounding: 1.0, interiorDefense: 1.1, speed: -0.5, jumpShot: -0.3 },
-  ],
-}
-export function buildSpot(build, isBig) {
-  const leans = SPOT_LEANS[isBig ? 'big' : 'guard']
-  const vals = Object.values(build ?? {}).map(c => c?.val).filter(v => typeof v === 'number')
-  if (!vals.length) return 1
-  const mean = vals.reduce((a, b) => a + b, 0) / vals.length
-  const scores = leans.map(l => Object.entries(l).reduce((sum, [t, w]) => sum + w * ((build?.[t]?.val ?? mean) - mean), 0))
-  const best = Math.max(...scores)
-  return scores.filter(x => Math.abs(x - best) < 1e-9).length > 1 ? 1 : scores.indexOf(best)   // a tie: SG, or C
-}
+// (your spot in the five, from your build: lib/hoopSpot.js buildSpot, shared with Career)
 // The five with you in it: the weakest starter in your group (guards 1-3, bigs 4-5)
 // comes out, you go in at your spot, and the rest of your group keep their order
 // and slide over to fill (a PG on a team whose SF is the weakest: the PG moves to

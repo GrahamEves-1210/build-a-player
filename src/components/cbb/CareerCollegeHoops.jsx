@@ -14,7 +14,8 @@ import CBBSimPage from './CBBSimPage'
 import { CBB_POS, classLabel, seasonEvent, collegeGap, photoLookup, seasonData, registerLogos } from './cbbShared'
 import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isUnder, classAge, draftAge, upgradePoints } from './cbbClass'
 import CBBOffseason from './CBBOffseason'
-import { SPORT } from '../../lib/career'
+import { SPORT, hoopSpot } from '../../lib/career'
+import { HOOP_SPOT_NAME } from '../../lib/hoopSpot'
 import '../cfb/cfb.css'
 import './cbb.css'
 
@@ -84,7 +85,7 @@ function playSeason(data, c, s) {
   const k = Math.max(0, (c.college?.seasons ?? []).findIndex(x => x.seed === s.seed))
   const sd = s.adv ? seasonData(data, k) : data
   const b = collegeBuild(c.build, P.types, s.dev)
-  return { ...data.sim.runCBBSimulation(b, P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, season: 2026 + k, ...(s.role === 'bench' ? { role: 'bench' } : {}), ...(career ? { career } : {}), ...(k ? { pools: sd.pools } : {}) }), ovr: P.ovr(b, P.types) }   // (the college overall the recruiting card and the offseason show)
+  return { ...data.sim.runCBBSimulation(b, P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, season: 2026 + k, ...(s.role === 'bench' ? { role: 'bench' } : {}), ...(s.spot ? { spot: s.spot } : {}), ...(career ? { career } : {}), ...(k ? { pools: sd.pools } : {}) }), ovr: P.ovr(b, P.types) }   // (the college overall the recruiting card and the offseason show)
 }
 
 // what a season leaves on his résumé
@@ -145,6 +146,9 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
   const [returning, setReturning] = useState(false)
   const [offOpen, setOffOpen] = useState(false)   // the offseason's upgrade screen (its state is on the save: col.off)
   const P = POS[c.pos]
+  // his spot (PG to C, lib/career.js hoopSpot): the man he has to beat at a school is the starter there, and it's
+  // the position the season and the draft board list him at (a season from before spots plays as it did: no s.spot)
+  const spot = hoopSpot(c)
   const col = c.college ?? { stage: 'recruit', seasons: [] }
   // (in college before class years: no starting class on the save, and a season already played)
   const legacy = col.cls0 == null && col.seasons.length > 0
@@ -167,7 +171,7 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
   // the offers, made once and kept on the save
   useEffect(() => {
     if (!data || col.offers) return
-    setCareer({ ...c, college: { ...col, stars, rank, offers: offersFor(data, { stars, ovr: cOvr, pos: c.pos, seed: c.seed }) } })
+    setCareer({ ...c, college: { ...col, stars, rank, offers: offersFor(data, { stars, ovr: cOvr, pos: c.pos, seed: c.seed, spot }) } })
   }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const si = col.seasons.length - 1
@@ -180,11 +184,11 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
     const k = col.seasons.length
     const ovr = P.ovr(collegeBuild(c.build, P.types, dev), P.types)
     const cls = legacy ? YEAR_OF[k] : classAt(cls0, k)
-    const bar = barAt(legacy ? data : seasonData(data, k), short, c.pos)
+    const bar = barAt(legacy ? data : seasonData(data, k), short, c.pos, spot)
     const last = col.seasons[k - 1]
     // (an underclassman has to beat the starter, unless the job was already his there; a junior or senior plays)
     const starts = legacy ? startsOver(bar, ovr, k) : !isUnder(cls) || (last && last.school === short && last.role !== 'bench') || !bar || ovr > (bar.ovr ?? 0)
-    const s = { school: short, schoolName: teamsBy[short]?.school ?? short, seed: `${c.seed}-cbb-${k}-${short}`, cls, simYear: legacy ? SIM_YEAR[k] : cls, role: starts ? 'starter' : 'bench', dev, view: 0, ...(legacy ? {} : { adv: true }) }
+    const s = { school: short, schoolName: teamsBy[short]?.school ?? short, seed: `${c.seed}-cbb-${k}-${short}`, cls, simYear: legacy ? SIM_YEAR[k] : cls, role: starts ? 'starter' : 'bench', dev, view: 0, spot, ...(legacy ? {} : { adv: true }) }
     const seasons = [...col.seasons, s]
     // (the points he didn't spend this offseason stay in the bank)
     put({ stage: 'season', seasons, ...(legacy ? {} : { cls0 }), bank: col.off ? col.off.left : col.bank ?? 0, off: null })
@@ -268,7 +272,7 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
           <div className="cfbd-overlay" role="dialog" aria-modal="true" aria-label="Enter the NBA Draft">
             <div className="cfbd">
               <div className="cfbd-head">
-                <div><small>{CBB_POS[c.pos].label} · {sch} · {classLabel(cur.cls)}</small><h2>Enter the NBA Draft</h2></div>
+                <div><small>{spot} · {sch} · {classLabel(cur.cls)}</small><h2>Enter the NBA Draft</h2></div>
                 <button className="ag-round-btn" onClick={() => setExit(false)} aria-label="Close"><IconClose size={16} /></button>
               </div>
               <p className="cfbd-why"><b>The college boost comes off.</b> He was a pro talent against college competition. Against NBA players his ratings are his own again: <b>the ratings he was built with{Object.values(cur.dev ?? {}).some(Boolean) ? ', plus what he trained in college' : ''}</b>. His college résumé goes with him to the combine and gives his draft stock a nudge.</p>
@@ -304,13 +308,13 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
     const ovr2 = P.ovr(collegeBuild(c.build, P.types, dev), P.types)
     const nextCls = legacy ? YEAR_OF[1] : classAt(cls0, col.seasons.length)
     const nextData = legacy ? data : seasonData(data, col.seasons.length)   // (next season's rosters: who he'd be up against)
-    const stay = barAt(nextData, cur.school, c.pos)
+    const stay = barAt(nextData, cur.school, c.pos, spot)
     const stayStarts = legacy ? startsOver(stay, ovr2, 1) : !isUnder(nextCls) || cur.role !== 'bench' || !stay || ovr2 > (stay.ovr ?? 0)
-    const away = offersFor(nextData, { stars: starsFor(ovr2), ovr: ovr2, pos: c.pos, seed: `${c.seed}-portal-${col.seasons.length}`, skip: [cur.school], n: 3 })
+    const away = offersFor(nextData, { stars: starsFor(ovr2), ovr: ovr2, pos: c.pos, seed: `${c.seed}-portal-${col.seasons.length}`, skip: [cur.school], n: 3, spot })
     return (
       <div className="ag-screen cfb-screen cfbr">
         <div className="ag-screen-head">
-          <div><span className="ag-eyebrow">{c.name.toUpperCase()} · {CBB_POS[c.pos].label}</span><h1 className="ag-h1">Another Season</h1></div>
+          <div><span className="ag-eyebrow">{c.name.toUpperCase()} · {spot}</span><h1 className="ag-h1">Another Season</h1></div>
           <button className="ag-round-btn" onClick={() => { setReturning(false); setOffOpen(true) }} aria-label="Back"><IconClose size={16} /></button>
         </div>
         <div className="ag-screen-body">
@@ -337,7 +341,7 @@ export default function CareerCollegeHoops({ c, setCareer, onExit }) {
       </div>
       <div className="ag-screen-body">
         <section className="cfbr-card">
-          <div className="cfbr-who"><small>{CBB_POS[c.pos].name.toUpperCase()} · {CLASS_NAME[classAt(cls0, 0)].toUpperCase()}</small><b>{c.name}</b></div>
+          <div className="cfbr-who"><small>{HOOP_SPOT_NAME[spot].toUpperCase()} · {CLASS_NAME[classAt(cls0, 0)].toUpperCase()}</small><b>{c.name}</b></div>
           {/* his class: the one-off mode's switch (a freshman plays up to four seasons, a senior one) */}
           <div className="cfbr-name">
             <span className="cfbr-cls-l" id="cfbr-cls-l">CLASS<i>{seasonsFrom(cls0) === 1 ? '1 SEASON' : `UP TO ${seasonsFrom(cls0)} SEASONS`}</i></span>

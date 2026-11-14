@@ -55,6 +55,7 @@ import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { RESUMES } from '../data/legacy-resumes'
 import { RECORDS } from './seasonFacts'
 import { seasonRaw } from './careerStats'
+import { HOOP_SPOTS, hoopSpotsOf, leanSpot } from './hoopSpot'
 
 export const CAREER_V = 1
 const FIRST_SEASON = 2026
@@ -494,7 +495,7 @@ export const SPORT = {
       const x = clamp((c.ovr - 82) / 17, 0, 1), cost = 0.2 * x * (1 - x) + 0.02 * (1 - x) + clamp((86 - c.ovr) * 0.006, 0, 0.1), bend = cost / 0.078
       return { ...t, off: clamp(fit.off + fit.adj + (m.off ?? 0) - bend, 1, 10), def: clamp(fit.def + (m.def ?? 0) - bend, 1, 10), career: true, usage, bench: !!c.benchRole }
     },
-    fit: (ro, pos, notMe) => {
+    fit: (ro, pos, notMe, spot = null) => {
       const guards = ro.guard.filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3), bigs = ro.big.filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 2)
       // graded against the league (a median group is a C+, the best an A), not on the raw
       // overall scale: NBA groups all sit in the 78–90 range and would all read as a B
@@ -505,7 +506,9 @@ export const SPORT = {
       const benchG = vs(bench, 75.5, 1.6)
       const groups = [{ k: 'BACKCOURT', v: gG, names: guards.map(p => p.name) }, { k: 'FRONTCOURT', v: bG, names: bigs.map(p => p.name) }, { k: 'BENCH', v: benchG, names: bench.map(p => p.name) }]
       const adj = pos === 'guard' ? (bG - 6) * 0.2 + (gG - 6) * 0.15 + (benchG - 6) * 0.1 : (gG - 6) * 0.25 + (bG - 6) * 0.1 + (benchG - 6) * 0.1
-      const need = pos === 'guard' ? 11 - gG : 11 - bG
+      // (with his spot: what a team needs is a man there, its best one graded like the group he's in)
+      const atSpot = spot ? [...ro.guard, ...ro.big].filter(notMe).filter(p => hoopSpotOf(p) === spot).sort((a, b) => b.ovr - a.ovr).slice(0, 1) : null
+      const need = atSpot ? 11 - (pos === 'guard' ? vs(atSpot, 83, 0.75) : vs(atSpot, 80.5, 0.65)) : pos === 'guard' ? 11 - gG : 11 - bG
       return { groups, adj, need, backcourt: gG, frontcourt: bG, bench: benchG }
     },
     fitNote: (f, pos) => (pos === 'guard'
@@ -666,9 +669,11 @@ function healSeason(c) {
 // (an offensive lineman is never the Super Bowl MVP: a season booked before 2026-11-11 that named him one loses it)
 const noLineFmvp = c => (c?.pos === 'ol' && Array.isArray(c.seasons) && c.seasons.some(s => s.fmvp) ? { ...c, seasons: c.seasons.map(s => (s.fmvp ? { ...s, fmvp: false } : s)) } : c)
 function opened(c0) {
-  const c = noLineFmvp(healLeague(realAges(c0)))
+  const c1 = noLineFmvp(healLeague(realAges(c0)))
+  // a basketball career from before spots: the one its build leans to, written down so it never moves (hoopSpot)
+  const c = c1.sport === 'bucket' && !HOOP_SPOTS.includes(c1.spot) ? { ...c1, spot: hoopSpot(c1) } : c1
   const n = healSeason(c)
-  if (n === c) return c
+  if (n === c1) return c1
   const s = { ...n, updatedAt: Date.now() }
   try { localStorage.setItem(key(s.sport, s.uid, s.slot ?? 0), JSON.stringify(s)); queueCloudSave(s) } catch {}
   return s
@@ -745,6 +750,26 @@ export const ovrGradeVal = ovr => clamp((ovr - 60) / 3.5, 0, 11)
 export const gradeOfOvr = ovr => valToGrade(ovrGradeVal(ovr))
 export const gradeOf = v => valToGrade(clamp(v, 0, 11))
 const hashN = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) }
+// ── Basketball's spots ────────────────────────────────────────────────────────
+// A basketball career plays one of the five spots (PG, SG, SF, PF, C), picked when the career began (c.spot: a PG,
+// SG or SF built as a guard, a PF or C as a big) and changed only when he takes the coach up on a move (spotMove).
+// His depth chart is the men at his spot on that roster, one starts, the way a lineman's is. A save from before
+// spots takes the one its first build leans to (lib/hoopSpot.js), and opened() writes it down so it never moves.
+// (2026-11-14: the rooms were only guards and bigs, three and two starting, and nothing said which spot he played;
+// College Basketball read it off his boosted ratings, and most guards came out SF.)
+export const hoopSpot = c => (HOOP_SPOTS.includes(c?.spot) ? c.spot : leanSpot(c?.base ?? c?.build, c?.pos))
+// a teammate's spot: on the player (a pick's), else his real position in the NBA data, else one of his group's by his name
+const HOOP_SPOT_OF = Object.fromEntries([...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].filter(p => HOOP_SPOTS.includes(p.position)).map(p => [p.name, p.position]))
+export function hoopSpotOf(p) {
+  const s = String(p?.slot ?? '').toUpperCase()
+  if (HOOP_SPOTS.includes(s)) return s
+  if (HOOP_SPOT_OF[p?.name]) return HOOP_SPOT_OF[p.name]
+  const list = hoopSpotsOf(p?.pos)
+  return list[hashN(`${p?.name}-spot`) % list.length]
+}
+// a basketball pick goes where his room is short: the group's spot with the fewest men
+const shortHoop = (list, g) => { const n = sp => list.filter(p => hoopSpotOf(p) === sp).length; return hoopSpotsOf(g).reduce((a, b) => (n(b) < n(a) ? b : a)) }
+const hoopRoom = ro => [...(ro?.guard ?? []), ...(ro?.big ?? [])]
 // A saved roster missing a whole group: that team's real group for the year this career is in
 function withGroups(c, ro, short) {
   const S = sportOf(c)
@@ -881,7 +906,7 @@ function placeGroup(S, g, list, r, later = false) {
   if (g === 'st') { while (list.length < S.keep[g]) { const low = list.length ? Math.min(...list.map(p => p.ovr)) : 80, p = genPick(r, g, null, taken); list.push({ ...p, age: 18 + (p.age - 21) * 2, ovr: Math.max(60, Math.min(p.ovr, low - 2)) }) } }
   // (a registered sport fills its own rooms: baseball's bench and bullpen, lib/careerBaseball.js)
   if (S.fill?.[g]) return S.fill[g](list, slot => genPick(r, g, slot, taken), S.keep[g])
-  while (list.length < S.keep[g]) { const p = genPick(r, g, g === 'db' ? shortSpot(list) : null, taken); list.push(vet && startersIn(S, g, list) < S.starters[g] ? vetOf(S, g, p) : p) }
+  while (list.length < S.keep[g]) { const p = genPick(r, g, g === 'db' ? shortSpot(list) : S.isBucket ? shortHoop(list, g) : null, taken); list.push(vet && startersIn(S, g, list) < S.starters[g] ? vetOf(S, g, p) : p) }
   return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
 }
 // a group one season on: older, better or worse for it, the ones at the end retired, the gaps drafted
@@ -1127,8 +1152,10 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
   const db = c.pos === 'db', dl = c.pos === 'dl', ol = c.pos === 'ol'
   // (a registered sport's own room: baseball's pitchers, a starter with the rotation and a reliever with the bullpen)
   const own = S.x?.depth?.(c) ?? null
-  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (own ? own.same(p) : db ? spotOf(p) === dbSpot(c) : ol ? olSlotOf(p) === olSpot(c) : !dl || dlSpotOf(p) === dlSpot(c)))
-  const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
+  // (basketball: the men at his spot, from both rooms: a guard listed at power forward is a PF's competition)
+  const hoop = S.isBucket && !own, mySpot = hoop ? hoopSpot(c) : null
+  const group = (hoop ? hoopRoom(roster).filter(p => hoopSpotOf(p) === mySpot) : roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (own ? own.same(p) : db ? spotOf(p) === dbSpot(c) : ol ? olSlotOf(p) === olSpot(c) : !dl || dlSpotOf(p) === dlSpot(c)))
+  const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true, ...(hoop ? { slot: mySpot } : {}) }
   // last year's starter keeps it in a tie; the coaches trust a good name (+1) and doubt a bad one (−1)
   const trust = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
   const edge = p => p.ovr + (p.you ? (c.contract?.starter ? 99 : (c.lastRole === 'Starter' ? 2 : 0) + trust) : 0)
@@ -1145,13 +1172,14 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
     all.splice(him && w?.kind !== 'traded' ? at : Math.min(at, all.length), 0, me)
   }
   const idx = all.findIndex(p => p.you)
-  const starters = own ? own.starters : db || dl ? 2 : ol ? 1 : S.starters[c.pos]
-  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: own ? own.label(idx + 1) : ol ? `${olSpot(c)}${idx + 1}` : dl ? `${dlSpotLabel(dlSpot(c))}${idx + 1}` : db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
+  const starters = own ? own.starters : db || dl ? 2 : ol || hoop ? 1 : S.starters[c.pos]
+  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: own ? own.label(idx + 1) : hoop ? `${mySpot}${idx + 1}` : ol ? `${olSpot(c)}${idx + 1}` : dl ? `${dlSpotLabel(dlSpot(c))}${idx + 1}` : db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
 }
 // The starters, you in your spot if you've won it
 export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
   const S = sportOf(c)
   const dc = depthChart(c, roster)
+  if (S.isBucket && !S.x?.depth) return hoopLineup(c, roster, dc)
   const out = {}
   for (const g of S.groups) out[g] = g === c.pos ? dc.all.slice(0, dc.starters) : (roster?.[g] ?? []).slice(0, S.starters[g])
   // DBs: his spot's two starters (him among them if he's won it) and the other spot's two
@@ -1197,6 +1225,61 @@ export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : n
   // everyone not starting, all positions, best first (basketball's bench)
   const reserves = S.groups.flatMap(g => (g === c.pos ? dc.all : roster?.[g] ?? []).slice(S.starters[g])).sort((a, b) => b.ovr - a.ovr)
   return { ...out, bench: dc.all.slice(dc.starters), reserves, depth: dc }
+}
+// Basketball's five, PG to C: the starter at his spot (him, once he's won it), then the other four from the rest of
+// the roster, the best men where each one plays, a man a spot over from his own only when he's worth it there (each
+// spot away counts as six points of overall: an 84 center plays the four ahead of a 62 power forward, not ahead of a
+// 79), so the five is always five. guard is PG, SG, SF and big PF, C, each man with his spot in slot; reserves, the rest.
+const OFF_SPOT = 6
+function hoopLineup(c, roster, dc) {
+  const mine = HOOP_SPOTS.indexOf(hoopSpot(c))
+  const five = HOOP_SPOTS.map(() => null)
+  five[mine] = dc.all[0] ?? null
+  const rest = hoopRoom(roster).filter(p => p.name !== c.name).sort(byOvr)
+  // (the best way to fill the other four, tried every way: nine men at most, a few thousand tries)
+  const pool = rest.filter(p => p.name !== five[mine]?.name).slice(0, 9).map(p => ({ p, at: HOOP_SPOTS.indexOf(hoopSpotOf(p)) }))
+  const open = HOOP_SPOTS.map((_, i) => i).filter(i => i !== mine)
+  let best = { v: -Infinity, men: [] }
+  const fill = (k, used, v, men) => {
+    if (k === open.length) { if (v > best.v) best = { v, men: [...men] }; return }
+    let any = false
+    pool.forEach((x, j) => { if (used & (1 << j)) return; any = true; men.push(x.p); fill(k + 1, used | (1 << j), v + x.p.ovr - OFF_SPOT * Math.abs(x.at - open[k]), men); men.pop() })
+    if (!any) { men.push(null); fill(k + 1, used, v, men); men.pop() }
+  }
+  fill(0, 0, 0, [])
+  open.forEach((i, k) => { five[i] = best.men[k] ?? null })
+  const shown = five.map((p, i) => (p ? { ...p, slot: HOOP_SPOTS[i] } : null))
+  const on = new Set(five.filter(Boolean).map(p => p.name))
+  const me = dc.all.find(p => p.you)
+  const reserves = [...rest, ...(me ? [me] : [])].filter(p => !on.has(p.name)).sort(byOvr)
+  return { guard: shown.slice(0, 3).filter(Boolean), big: shown.slice(3).filter(Boolean), five: shown, bench: dc.all.slice(dc.starters), reserves, depth: dc }
+}
+// ── The coach asks him to change spots (basketball, in camp) ──────────────────
+// Off the bench at his spot, but good enough to start at the spot next to it (PG and SG, SG and SF, SF and PF, PF
+// and C): before the season the coach asks him to move over. Asked once a camp; a yes changes c.spot for good (the
+// builder and the traits stay what they are), a no keeps him where he is. With both spots beside him open, the one
+// where he's furthest ahead of the man he'd start over. Returns null when there's nothing to ask.
+export function spotMove(c) {
+  if (!sportOf(c).isBucket || sportOf(c).x?.depth || c.phase !== 'preseason' || !c.team || c.spotAsked === c.year) return null
+  const here = depthChart(c)
+  if (here.starter) return null
+  const from = hoopSpot(c), at = HOOP_SPOTS.indexOf(from)
+  const asks = [at - 1, at + 1].filter(i => i >= 0 && i < HOOP_SPOTS.length).map(i => {
+    const to = HOOP_SPOTS[i], dc = depthChart({ ...c, spot: to, lastRole: null })
+    // (the man he'd start over there: the best of the rest at that spot)
+    const over = dc.all.find(p => !p.you) ?? null
+    return dc.starter ? { to, over, by: c.ovr - (over?.ovr ?? 0) } : null
+  }).filter(Boolean).sort((a, b) => b.by - a.by)
+  if (!asks.length) return null
+  return { from, to: asks[0].to, over: asks[0].over, starter: here.all[0] ?? null, behind: here.ahead[here.ahead.length - 1] ?? null }
+}
+// his answer: yes, the new spot (and the team graded for it); no, where he was. Either way the camp's question is answered
+export function answerSpotMove(c, yes) {
+  const m = spotMove(c)
+  if (!m) return c
+  const n = { ...c, spotAsked: c.year, ...(yes ? { spot: m.to } : {}) }
+  const text = yes ? `Moved from ${m.from} to ${m.to} in camp at the coach's request` : `Turned down a move to ${m.to} in camp: stayed at ${m.from}`
+  return { ...n, fit: yes ? fitFor(n) : c.fit, decisions: [...(c.decisions ?? []), { year: c.year + 1, text }] }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
 export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [], spot = null } = {}) {
@@ -1267,7 +1350,7 @@ function teamRating(S, short, ro, pos, notMe, league, yrs = 0) {
 }
 // any team's rating this season as a career sees it (the bracket, the trade market, the league's news)
 const ratingOf = (c, short) => { const S = sportOf(c); return S.talent ? teamRating(S, short, rosterFor(c, short), null, () => true, c.league, rosterYrs(c)) : null }
-const lineSpot = c => (c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : null)
+const lineSpot = c => (c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : sportOf(c).isBucket ? hoopSpot(c) : null)
 const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short), spot: lineSpot(c) })
 // (never handed to a sim with a rating that isn't a number: soundTeam)
 function simTeam(c, fit) { const S = sportOf(c), t = S.teamOf(c.team); return soundTeam(S.simTeam(t, fit, c.nextMods ?? {}, c), t) }
@@ -1414,7 +1497,7 @@ function rosterMoves(c, r) {
   const takenLB = new Set((old.lb ?? []).map(p => p.name))
   const rLB = seeded(`${c.seed}-off-lb-${c.year}`)
   const r0 = r
-  const gl = (g, p = null) => (S.groupLabel ? S.groupLabel(g, p) : S.isBucket ? (g === 'guard' ? 'G' : 'F/C') : g === 'dl' && p ? dlSpotLabel(dlSpotOf(p)) : g.toUpperCase())
+  const gl = (g, p = null) => (S.groupLabel ? S.groupLabel(g, p) : S.isBucket ? (p ? hoopSpotOf(p) : g === 'guard' ? 'G' : 'F/C') : g === 'dl' && p ? dlSpotLabel(dlSpotOf(p)) : g.toUpperCase())
   for (const g of S.groups) {
     const r = g === 'dl' ? rDL : g === 'lb' ? rLB : r0, taken = g === 'dl' ? takenDL : g === 'lb' ? takenLB : taken0
     const grow = age => ageStep(age, r())   // the same curve as the rest of the league (makeRoster)
@@ -1451,7 +1534,7 @@ function rosterMoves(c, r) {
       const rd = 1 + Math.floor(r() * S.draft.rounds)
       // (at a one-starter position, your pick comes in behind you: a backup, not a new star)
       const pickOvr = clamp(Math.round(79 - rd * (S.isBucket ? 3 : 1.5) + (r() + r() - 1) * 8), 60, 88)
-      const p0 = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)]), g), pos: g, ovr: g === c.pos && S.starters[g] === 1 ? Math.max(60, Math.min(pickOvr, c.ovr - 8)) : pickOvr, age: S.isSoccer ? 19 : 22, photo: null, slot: need ?? lineNeed ?? (g === 'db' ? shortSpot(kept) : null), rookie: true }
+      const p0 = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)]), g), pos: g, ovr: g === c.pos && S.starters[g] === 1 ? Math.max(60, Math.min(pickOvr, c.ovr - 8)) : pickOvr, age: S.isSoccer ? 19 : 22, photo: null, slot: need ?? lineNeed ?? (g === 'db' ? shortSpot(kept) : S.isBucket ? shortHoop(kept, g) : null), rookie: true }
       const p = withBody(p0)
       // (football: a room short of starters signs a veteran starter instead, the way the rest of the league does: vetOf.
       // Never at his own spot: they don't sign a starter to take his job)
@@ -1474,9 +1557,9 @@ function rosterMoves(c, r) {
   if (r() < rivalOdds && !(oneJob && (ro[c.pos] ?? []).some(p => p.rookie && p.age <= 24 && (c.pos !== 'ol' || olSlotOf(p) === olSpot(c))))) {
     const rd = 1 + Math.floor(r() * 2)
     // (at your own spot: a safety's rival is a safety)
-    const p = withBody({ name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name)), c.pos), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 84), age: S.isSoccer ? 20 : 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : c.pos === 'dl' ? { slot: dlSpot(c) } : c.pos === 'ol' ? { slot: olSpot(c) } : {}) })
+    const p = withBody({ name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name)), c.pos), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 84), age: S.isSoccer ? 20 : 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : c.pos === 'dl' ? { slot: dlSpot(c) } : c.pos === 'ol' ? { slot: olSpot(c) } : S.isBucket ? { slot: hoopSpot(c) } : {}) })
     ro[c.pos] = c.pos === 'dl' ? keepLine([...ro.dl, p], S.keep.dl) : c.pos === 'ol' ? [...ro.ol, p] : [...(ro[c.pos] ?? []), p].sort(byOvr).slice(0, S.keep[c.pos])
-    moves.push({ kind: 'rival', pos: c.pos, label: c.pos === 'ol' ? p.slot : gl(c.pos, p), text: S.isSoccer ? `${S.teamOf(ro.team).name} sign a young striker, ${p.name}. Competition for the shirt.` : `The ${nickOf(S, ro.team)} draft ${c.pos === 'dl' ? gl('dl', p) : c.pos === 'ol' ? p.slot : S.groupLabel ? gl(c.pos, p) : S.label[c.pos]} ${p.name} in round ${rd}. Competition for ${c.name}'s ${S.snaps}.`, p })
+    moves.push({ kind: 'rival', pos: c.pos, label: c.pos === 'ol' ? p.slot : gl(c.pos, p), text: S.isSoccer ? `${S.teamOf(ro.team).name} sign a young striker, ${p.name}. Competition for the shirt.` : `The ${nickOf(S, ro.team)} draft ${c.pos === 'dl' ? gl('dl', p) : c.pos === 'ol' || S.isBucket ? p.slot : S.groupLabel ? gl(c.pos, p) : S.label[c.pos]} ${p.name} in round ${rd}. Competition for ${c.name}'s ${S.snaps}.`, p })
   }
   return { roster: ro, moves }
 }
@@ -1836,7 +1919,7 @@ export function frameOf(c) {
 // picks, which stockOf starts from }), when he entered the draft from there
 // start 'college' (football QB, WR, RB): the career opens in college (phase 'college', components/cfb/CareerCollege.jsx),
 // a year younger, and goes to the combine from there
-export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null, games = 'advanced', nation = null, college = null, start = 'draft' }) {
+export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null, games = 'advanced', nation = null, college = null, start = 'draft', spot = null }) {
   const S = SPORT[sport] ?? SPORT.nfl
   const seed = Math.random().toString(36).slice(2, 10)
   const r = seeded(`career-${seed}`)
@@ -1857,7 +1940,10 @@ export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest
   const sizeV = build[bodyTrait(S, pos)]?.val ?? 5
   const dur = (frame ? clamp(6 + frame.grade + luck, 3, 8.4) : clamp(3.5 + 0.5 * clamp(sizeV, 0, 11) + luck, 2, 8.4)) / 1.1
   return {
-    v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr, ...(body ? { body: { height: body.height, weight: body.weight } } : {}),
+    v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr,
+    // (basketball: his spot, PG to C; one that doesn't go with the builder he used, or none, is the one his build leans to)
+    ...(S.isBucket ? { spot: HOOP_SPOTS.includes(spot) && hoopSpotsOf(pos).includes(spot) ? spot : leanSpot(build, pos) } : {}),
+    ...(body ? { body: { height: body.height, weight: body.weight } } : {}),
     age: (S.isSoccer ? 17 : S.isBucket ? 19 : 21) + Math.floor(r() * 2), year: 0, season: FIRST_SEASON,
     ...(S.x?.newCareer?.(nation) ?? {}),
     phase: start === 'college' ? 'college' : 'draft', step: 'combine',
@@ -2010,7 +2096,7 @@ function lifeView(c, k, game = null) {
     took: took ? { from: b.behind, why: b.why?.kind ?? 'benched', wks: b.why?.wks ?? 0, since: k - b.weeks } : null,
     ahead: starter ? lite(starter) : null, push: push ? lite(push) : null,
     room: dc.all.filter(p => !p.you && !p.out).map(lite),
-    spot: c.pos === 'db' ? dbSpot(c) : c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : null,
+    spot: c.pos === 'db' ? dbSpot(c) : c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : S.isBucket ? hoopSpot(c) : null,
     men: g => men(ro, g),
     raw: (g, name) => (S.pool[g] ?? []).find(p => p.name === name)?.attrs ?? null,
     wk: S.isBucket ? k + 1 : weekOfGame(c, k + 1), afterBye: !!a.bye && weekOfGame(c, k + 1) === a.bye.wk + 1,
@@ -2072,7 +2158,8 @@ export function startSeason(c) {
   // Football: the season opens on the bench, until the job comes your way.
   let benched = own ? own.benched ?? null : null
   if (own) { /* (its own) */ } else if (!dc.starter && (S.isBucket || S.isSoccer)) {
-    benched = { weeks: D.total, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, bench: true, ...(S.isSoccer ? { role: S.x.role(cc) } : {}) }
+    // (basketball: the man who starts at his spot, not just the next man up, now that one starts there)
+    benched = { weeks: D.total, behind: dc.ahead[S.isBucket ? Math.min(dc.starters, dc.ahead.length) - 1 : dc.ahead.length - 1].name, label: dc.label, bench: true, ...(S.isSoccer ? { role: S.x.role(cc) } : {}) }
   } else if (!dc.starter) {
     // a backup quarterback sits; everyone else is in the rotation
     if (!share) D.sidelined(0, weeks)
@@ -2660,7 +2747,7 @@ export function bookSeason(c) {
   const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, series: !!x.series }))
   const fin = rounds.find(x => x.round === S.final)
   return {
-    year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role, ...(c.pos === 'dl' ? { spot: dlSpot(c) } : c.pos === 'ol' ? { spot: olSpot(c) } : {}),
+    year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role, ...(c.pos === 'dl' ? { spot: dlSpot(c) } : c.pos === 'ol' ? { spot: olSpot(c) } : c.sport === 'bucket' ? { spot: hoopSpot(c) } : {}),
     wins: f.wins, losses: f.losses, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
     stats, adv: seasonRaw(c.pos, f, started), award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats, c)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats, c)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
