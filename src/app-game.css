@@ -465,8 +465,8 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 /* a pixel less after the L in BUILD, and after the P, the L and the E in PLAYER (owner, 11-13) */
 .ag-wordmark i.wm-k { font-style: normal; margin-right: -1px; }
 .ag-wordmark i.wm-k2 { margin-right: -2px; }   /* L-D and E-R a pixel more (owner, 11-13) */
-.ag-wordmark i.wm-p { margin-right: -4px; }   /* P-L */
-.ag-wordmark i.wm-e { margin-right: -3px; }   /* E-R */   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
+.ag-wordmark i.wm-p { margin-right: 0; }   /* P-L */
+.ag-wordmark i.wm-e { margin-right: -1px; }   /* E-R */   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
 .ag-home--bucket .ag-wordmark em { color: #f97316; }
 .ag-wordmark .hoop-u-svg { height: .82em; vertical-align: -.07em; }
 .ag-tagline {
