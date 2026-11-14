@@ -456,7 +456,7 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
   letter-spacing: -.08em; text-transform: uppercase; color: #fff; white-space: nowrap;   /* much tighter (owner, 11-13; was -.5px) */
   text-shadow: 0 2px 40px rgba(149,213,178,.12);
 }
-.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.16em; margin: 0 .24em 0 .1em; }   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
+.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.16em; margin: 0 .1em 0 0; }   /* D-A-P one run, no gaps (owner, 11-13) */   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
 .ag-home--bucket .ag-wordmark em { color: #f97316; }
 .ag-wordmark .hoop-u-svg { height: .82em; vertical-align: -.07em; }
 .ag-tagline {
@@ -7196,7 +7196,7 @@ html.app-look:not(.is-app) .spin-panel .qb-reveal-hero .qb-avatar { background: 
 html.app-look:not(.is-app) .spin-panel .reels-wrap > .reel-tri { z-index: 6; }
 /* The spin's player card a flat team colour, no fade to black (owner, 11-13). Website */
 html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-color, #444) 72%, #000) !important; }
-
+
 
 /* Desktop (website) wheels (owner, 11-13): each 1px thinner and 1px less between them, and the arrows just outside the
    wheels with their tips at the edge (they sat over the wheels' borders, the left one cut by the panel) */
