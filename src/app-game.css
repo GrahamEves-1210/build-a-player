@@ -6472,8 +6472,8 @@ html:is(.is-app, .app-look) .sfb-sub { font-family: var(--ag-font); font-weight:
 .spin-ad-slot { display: none; }
 @media (max-width: 768px) {
   /* the label sits right on top of the slot, no gap; the slot itself is tight to what's around it */
-  html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { position: relative; display: block; width: 320px; max-width: 100%; height: 50px; margin: 8px auto 0; flex: none; }   /* (8px over the label: its 3px went to the button above, owner 11-13) */
-  .spin-ad-slot > div { width: 320px; max-width: 100%; height: 50px; overflow: hidden; }
+  html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { position: relative; display: block; width: 320px; max-width: 100%; height: auto; min-height: 64px; margin: 0 auto; flex: none; }   /* (it grows for Playwire's own ADVERTISEMENT label over the 50px ad, which the old fixed 50px cut off; 64px kept from the start so nothing jumps; no space of ours above it, the label brings its own, owner 11-13) */
+  .spin-ad-slot > div { width: 320px; max-width: 100%; min-height: 50px; }
   .spin-ad-slot.is-dev > div { border: 1.5px dashed rgba(255,255,255,.28); border-radius: 2px; background: rgba(255,255,255,.04); box-sizing: border-box; }
   .spin-ad-slot small { position: absolute; left: 0; right: 0; bottom: 100%; text-align: center; font-family: var(--ag-body, sans-serif); font-size: 7.5px; font-weight: 600; letter-spacing: 1.2px; line-height: 9px; color: rgba(255,255,255,.4); }
 }
