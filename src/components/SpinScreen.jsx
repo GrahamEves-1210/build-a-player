@@ -84,6 +84,9 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
   const prevItemsRef = useRef(items)
   const onStopRef    = useRef(onStop)
   onStopRef.current  = onStop
+  // 0.2 s before the wheel comes to rest: the reel ticks stop there (lib/juice.js), not after the slow tail and the settle
+  // (they ran on about 0.2 s past the stop, owner 11-14)
+  const reelStill = () => window.dispatchEvent(new CustomEvent('bap:reel-still', { detail: trackRef.current?.closest('.reel-outer') ?? null }))
   const windowRef    = useRef(null)
 
   // The drum: the rows tilt away from the middle like a slot machine's reel. Looks only:
@@ -229,8 +232,10 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
       if (gpuSpin(start, dist, duration, ease, settle)) {
         return () => { clearTimeout(stopRef.current); driftRef.current?.(); driftRef.current = null }
       }
+      let stillSent = false
       const frame = now => {
         const t = Math.min((now - startTime) / duration, 1)
+        if (!stillSent && now - startTime >= duration - 200) { stillSent = true; reelStill() }
         let pos = start + dist * ease(t)
         const over = pos - initOffset - loopH
         if (over >= 0) pos -= Math.ceil((over + 1) / loopH) * loopH
@@ -273,9 +278,11 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
       // Set transition once — not every frame
       if (trackRef.current) trackRef.current.style.transition = 'none'
 
+      let stillSent = false
       const frame = (now) => {
         const elapsed = now - startTime
         const t       = Math.min(elapsed / duration, 1.0)
+        if (!stillSent && elapsed >= duration - 200) { stillSent = true; reelStill() }
 
         // Full speed until KICK, then smoothstep S-curve to zero
         const KICK  = 0.45

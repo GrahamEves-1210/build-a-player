@@ -868,6 +868,8 @@ export function initJuice() {
   window.addEventListener('bap:coinpack', () => { sfx('coinpack'); haptic('success') })
   window.addEventListener('bap:achievement', () => { sfx('achievement'); haptic('success') })
   window.addEventListener('bap:victory', e => victory(e.detail || {}))
+  // the last wheel nearly at rest: the ticks stop (SpinScreen's SlotReel, 0.2 s before it stops)
+  window.addEventListener('bap:reel-still', e => { if ([...document.querySelectorAll('.reel-outer')].every(r => r === e.detail || r.classList.contains('reel-locked'))) stopTicks() })
 
   // Sounds and haptics fire on the tap itself (click), not on touch-down, so a
   // scroll that starts on a button doesn't click. Touch-down only unlocks audio.
