@@ -7433,3 +7433,19 @@ html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { min-height: 60px; }
 
 /* Playwire now puts its own ADVERTISEMENT label on every in-page ad, so ours (above) doubled it: ours is off (owner 11-13) */
 :is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe)::before { content: none !important; display: none !important; }
+
+/* phones (owner, 11-13): the ratings editor runs from just under the top of the screen to just above the rail, its top area
+   (title, Current / All-Time, search) smaller and tighter so the scrolling list gets the room */
+@media (max-width: 768px) {
+  html.app-look:not(.is-app) .cr-overlay.cr-overlay { padding: 4px 4px calc(4px + var(--web-rail, 0px)) !important; }
+  html.app-look:not(.is-app) .cr-modal.cr-modal { border-radius: 12px; }
+  html.app-look:not(.is-app) .cr-header.cr-header { padding: 6px 10px 4px; min-height: 0; gap: 8px; }
+  html.app-look:not(.is-app) .cr-title.cr-title { font-size: 22px; line-height: 1; }
+  html.app-look:not(.is-app) .cr-mod-count.cr-mod-count { font-size: 11px; padding: 2px 6px 1px; }
+  html.app-look:not(.is-app) .cr-close.cr-close { width: 30px; height: 30px; border-radius: 9px; }
+  html.app-look:not(.is-app) .cr-search-wrap.cr-search-wrap { flex-direction: row; align-items: center; gap: 6px; padding: 0 8px 6px; }
+  html.app-look:not(.is-app) .cr-era.cr-era { flex: 0 0 auto; padding: 2px; gap: 2px; border-radius: 9px; }
+  html.app-look:not(.is-app) .cr-era-btn.cr-era-btn { height: 32px; min-height: 0; padding: 0 8px; font-size: 13px; letter-spacing: 1px; border-radius: 7px; }
+  html.app-look:not(.is-app) .cr-search.cr-search { flex: 1; min-width: 0; height: 36px; min-height: 0; padding: 0 10px; border-radius: 9px; }
+  html.app-look:not(.is-app) .cr-list.cr-list { padding: 4px 6px 6px; }
+}
