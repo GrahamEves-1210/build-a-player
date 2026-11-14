@@ -620,16 +620,17 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
   }
 
   const exit = <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>
+  // (plain words, the owner 11-13: the old ones read like a machine wrote them)
   const steps = sport === 'baseball' ? [
-    ['Pick the spots', 'C to DH, the five starters and the closer: fill one spot or the whole club.'],
-    ['Build each one', 'The normal spins, one player after another.'],
-    ['Pick a team', `A 2026 club, or a franchise's legends. Its real players fill every spot ${owner} doesn't build.`],
-    ['Play the season', 'One club, 162 games and October: a box score every game, a line and awards for every build. Then run it back.'],
+    ['Pick your spots', 'Any spot in the lineup, a starter or the closer. Do one or the whole club.'],
+    ['Build them', 'Same spins as a normal build, one guy at a time.'],
+    ['Pick a team', "A 2026 club or a franchise's legends. Real players fill in the rest."],
+    ['Play the season', 'All 162 and October, with stats and awards for each of your guys.'],
   ] : [
-    sport === 'bucket' ? ['Pick the spots', 'PG to C: fill one spot or all five.'] : sport === 'soccer' ? ['Pick the front line', 'Up to three strikers: a front three, or a front two and a No. 10.'] : ['Pick the positions', 'QB, RBs, WRs, TEs, DBs and DLs: as many as a starting lineup holds.'],
-    ['Build each one', 'The normal spins, one player after another.'],
-    sport === 'soccer' ? ['Pick a side', 'A club in the top divisions, or a nation at the World Cup. Its real players fill the rest of the XI.'] : ['Pick a team', pool === 'alltime' ? `A franchise's legends fill every spot ${owner} doesn't build. The builds start.` : `Its real roster fills every spot ${owner} doesn't build. The builds start.`],
-    sport === 'soccer' ? ['Play the season', 'The league, the cup and Europe (or the World Cup) as one side: a line and awards for every build. Then run it back.'] : ['Play the season', 'One team, one schedule: a box score every game, a season and awards for every build. Then run it back.'],
+    sport === 'bucket' ? ['Pick your spots', 'Anywhere from one to all five, PG through C.'] : sport === 'soccer' ? ['Pick your front line', 'Up to three strikers, or two up top with a No. 10.'] : ['Pick your positions', 'QB, RB, WR, TE, DB, DL. Take one or fill out a lineup.'],
+    ['Build them', 'Same spins as a normal build, one guy at a time.'],
+    sport === 'soccer' ? ['Pick a side', 'Any club in the top leagues or a World Cup nation. Their real players fill out the XI.'] : ['Pick a team', pool === 'alltime' ? 'Pick a franchise and its legends fill in everywhere else.' : 'Their real roster covers every other spot.'],
+    sport === 'soccer' ? ['Play the season', 'League, cup and Europe, or the World Cup, with awards for each of your players.'] : ['Play the season', 'Full schedule, box scores every game, awards for each of your guys.'],
   ]
 
   let body
