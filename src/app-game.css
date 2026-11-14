@@ -7425,3 +7425,8 @@ html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: 
   html.app-look .cr-overlay { align-items: stretch !important; }
   html.app-look .cr-modal { height: 100% !important; max-height: 100% !important; }
 }
+
+/* the spin screen's 320x50: half the space round its ADVERTISEMENT label (owner 11-13); Playwire's own wrapper adds none */
+#ramp-cntr1-spin-mob-1:has(iframe)::before { margin: 0 0 1.5px; line-height: 1; }
+#ramp-cntr1-spin-mob-1 > *, #ramp-cntr1-spin-mob-1 iframe { margin-top: 0 !important; margin-bottom: 0 !important; }
+html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { min-height: 60px; }
