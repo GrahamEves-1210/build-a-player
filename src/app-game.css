@@ -459,12 +459,12 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 .ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.16em; margin: 0 .1em 0 0; }   /* D-A-P one run, no gaps (owner, 11-13) */
 /* the four gaps from the D to the P, each its own (owner, 11-13): 1 (D to dash) 1px less, 2 (dash to A), 3 (A to dash) and 4 (dash to P) 2px less */
 .ag-wordmark em > i { font-style: normal; }
-.ag-wordmark em > .wm-g1 { margin-left: -1px; }
-.ag-wordmark em > .wm-g2 { margin-left: -2px; }
-.ag-wordmark em > .wm-g3 { margin-left: -2px; margin-right: -2px; }
+.ag-wordmark em > .wm-g1 { margin-left: -.033em; }
+.ag-wordmark em > .wm-g2 { margin-left: -.067em; }
+.ag-wordmark em > .wm-g3 { margin-left: -.067em; margin-right: -.067em; }
 /* a pixel less after the L in BUILD, and after the P, the L and the E in PLAYER (owner, 11-13) */
-.ag-wordmark i.wm-k { font-style: normal; margin-right: -1px; }
-.ag-wordmark i.wm-k2 { margin-right: -2px; }   /* L-D and E-R a pixel more (owner, 11-13) */
+.ag-wordmark i.wm-k { font-style: normal; margin-right: -.033em; }   /* (in em, not px: the same at every size; px looked different on a phone) */
+.ag-wordmark i.wm-k2 { margin-right: -.067em; }   /* L-D and E-R a pixel more (owner, 11-13) */
 .ag-wordmark i.wm-p { margin-right: 0; }   /* P-L */
 .ag-wordmark i.wm-e { margin-right: 0; }   /* E-R */   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
 .ag-home--bucket .ag-wordmark em { color: #f97316; }
