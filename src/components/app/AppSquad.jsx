@@ -681,6 +681,8 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
         <p className="sq-note">{sport === 'soccer' ? `Pick a ${squad.pool === 'alltime' ? 'nation' : 'club'}: its real players fill the rest of the XI, and ${owner}'s builds lead the line.` : sport === 'baseball' ? `Pick a ${squad.pool === 'alltime' ? 'franchise: its legends' : 'club: its 2026 players'} fill every spot ${owner} didn't build, and the builds take the jobs they were built for.` : squad.pool === 'alltime' ? `Pick a franchise: its legends fill every spot ${owner} didn't build, and the builds take the starting jobs.` : `Pick a team: its real roster fills every spot ${owner} didn't build, and the builds take the starting jobs.`}</p>
         <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '60ms' }} onClick={() => { setPickOpen(true); sfx('tap') }}>{sport === 'soccer' ? (squad.pool === 'alltime' ? 'PICK A NATION' : 'PICK A CLUB') : 'PICK A TEAM'} <IconArrow size={16} /></button>
         {squad.team && <button className="ag-btn ag-btn--ghost" onClick={() => setSquad({ ...squad, phase: 'ready' })}>{sport === 'soccer' ? `KEEP ${(teamOf(sport, squad.team, squad.pool)?.name ?? squad.team).toUpperCase()}` : `KEEP THE ${squad.team}${squad.pool === 'alltime' && sport !== 'baseball' ? ' LEGENDS' : ''}`}</button>}
+        {/* (a new squad from every step, the owner 11-14: a built squad had no way out but a season) */}
+        <button className="ag-btn ag-btn--ghost" onClick={() => setConfirmNew(true)}>NEW SQUAD</button>
         {pickOpen && <Picker render={renderPicker} squad={squad} onPick={t => { setPickOpen(false); setSquad({ ...squad, team: t.short, phase: 'ready' }) }} onClose={() => setPickOpen(false)} />}
       </>
     )
@@ -699,6 +701,7 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
         {sport === 'bucket' ? <LineupBoard squad={squad} setSquad={setSquad} owner={owner} /> : sport === 'baseball' ? <Suspense fallback={null}><BaseballBoard squad={squad} setSquad={setSquad} owner={owner} /></Suspense> : sport === 'soccer' ? <FrontLine squad={squad} setSquad={setSquad} owner={owner} /> : <DepthChart squad={squad} owner={owner} />}
         <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '120ms' }} onClick={sim}><IconPlay size={16} /> SIM THE SEASON</button>
         <button className="ag-btn ag-btn--ghost" onClick={anotherTeam}><IconSwap size={15} /> {sport === 'soccer' ? (squad.pool === 'alltime' ? 'CHANGE NATION' : 'CHANGE CLUB') : 'CHANGE TEAM'}</button>
+        <button className="ag-btn ag-btn--ghost" onClick={() => setConfirmNew(true)}>NEW SQUAD</button>
       </>
     )
   } else {
