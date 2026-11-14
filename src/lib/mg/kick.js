@@ -1,7 +1,7 @@
 // The kicker's three, through the broadcast camera (art.js), on the numbers in lib/kicks.js.
 //
 // (the picture: from behind the kicker, in yards, through this file's own camera: see THE CAMERA below)
-//   deep-kick     four field goals from 50 to 65, each one longer, in more wind, through a narrower window
+//   deep-kick     three field goals from 50 to 65, each one longer, in more wind, through a narrower window
 //   game-winner   one kick from 25 to 65 with the game on it (Career's last play for a kicker)
 //   onside        the onside kick: behind late, they need the ball back
 //
@@ -41,7 +41,7 @@ import { hop } from './throw.js'
 import { kickReach, onsideP } from '../kicks.js'
 
 export const how = {
-  'deep-kick': 'Four kicks, each one longer. Press once to stop the aim line between the uprights: the wind pushes it to one side. Press again to stop the power past the mark. Over the top of the bar is an overswing, and it hooks.',
+  'deep-kick': 'Three kicks, each one longer. Press once to stop the aim line between the uprights: the wind pushes it to one side. Press again to stop the power past the mark. Over the top of the bar is an overswing, and it hooks.',
   'game-winner': 'One kick for the game. Press to stop the aim line between the uprights, then press to stop the power past the mark. If they call timeout to ice him, do it again.',
   onside: 'They need the ball back. Press to set the distance: it has to go 10 yards. Press as the ring closes to drive the top of the ball into the turf. Then it’s up to the bounce. It rarely works.',
 }
@@ -69,12 +69,12 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   const pw = kick?.power ?? v, acc = kick?.accuracy ?? v, clu = kick?.clutch ?? v
   const winner = game === 'game-winner'
   const reach = kickReach(pw)
-  // the kicks: four, longer each time (Deep Kick), or the one (Game Winner: never from past what a coach would ask)
+  // the kicks: three, longer each time (Deep Kick: four was a lot on top of the sim's own tries, the owner 11-13), or the one (Game Winner: never from past what a coach would ask)
   // (Deep Kick never asks for a kick past his range: each one is capped a yard under the next, up to the longest he can
-  // make (kickReach), so a short leg gets four kicks from 50 to 54 and a big one the full 50 to 65. The owner, 2026-11-13)
+  // make (kickReach), so a short leg gets three kicks from 50 to 53 and a big one the full 50 to 65. The owner, 2026-11-13)
   const kicks = winner
     ? [{ d: situation?.dist ?? 25 + Math.floor(r() * (Math.min(65, Math.round(reach) + 1) - 24)), wind: Math.round((r() - 0.5) * 2 * 9), hard: 1 }]
-    : [[50, 53], [54, 57], [58, 61], [62, 65]].map(([lo, hi], i) => ({ d: Math.min(lo + Math.floor(r() * (hi - lo + 1)), Math.max(50, Math.floor(reach)) - (3 - i)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 4 + r() * 4)), hard: 1.12 + i * 0.17, tight: 1 - i * 0.1 }))
+    : [[50, 54], [55, 59], [60, 65]].map(([lo, hi], i) => ({ d: Math.min(lo + Math.floor(r() * (hi - lo + 1)), Math.max(50, Math.floor(reach)) - (2 - i)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 6 + r() * 4)), hard: 1.12 + i * 0.25, tight: 1 - i * 0.15 }))
   const pressure = winner ? 1 : 0.25
   const accF = byV(acc, 1.25, 0.72) * EASE                  // what his accuracy does to a miss: an S pulls it 28% back to the middle
   const shake = byV(clu, 0.2, 0.02) * pressure            // the needle's shake with the game on it
@@ -165,9 +165,9 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   }
   function finish() {
     if (winner) { g.done = outcome(g.made ? 1 : g.near ? 0.3 : 0, g.made === 1, g.made ? `Good from ${kicks[0].d}` : `No good from ${kicks[0].d}`, { made: g.made, of: 1, dist: kicks[0].d }); return }
-    // two of four from 50 and out is a kicker's day; the near misses count a little toward the score, never the result
-    const score = clamp((g.made + g.near * 0.25) / 4 + (g.made >= 2 ? 0.25 : 0), 0, 1)
-    g.done = outcome(score, g.made >= 2, `${g.made} of 4 from 50+`, { made: g.made, of: 4 })
+    // two of three from 50 and out is a kicker's day; the near misses count a little toward the score, never the result
+    const score = clamp((g.made + g.near * 0.25) / 3 + (g.made >= 2 ? 0.2 : 0), 0, 1)
+    g.done = outcome(score, g.made >= 2, `${g.made} of 3 from 50+`, { made: g.made, of: 3 })
   }
   g.at = 0
   return g

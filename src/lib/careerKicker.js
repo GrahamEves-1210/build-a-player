@@ -241,6 +241,6 @@ export const K_EVENTS = [
 
 // ── The combine: a kicker's workout, as the scouts write it down ────────────
 export const K_DRILLS = {
-  'deep-kick': (v, score, raw) => { const of = raw?.of ?? 4, m = raw?.made ?? Math.round(clamp(score, 0, 1) * of); return { text: `${m} of ${of} from 50 and out`, pct: clamp((m / of - 0.45) * 2.2, -1, 1) } },
+  'deep-kick': (v, score, raw) => { const of = raw?.of ?? 3, m = raw?.made ?? Math.round(clamp(score, 0, 1) * of); return { text: `${m} of ${of} from 50 and out`, pct: clamp((m / of - 0.45) * 2.2, -1, 1) } },
   'game-winner': (v, score, raw) => { const made = raw?.made != null ? raw.made > 0 : score >= 0.5; return { text: raw?.dist ? `${made ? 'Good' : 'No good'} from ${raw.dist}, the scouts on the sideline` : made ? 'Made the pressure kick' : 'Missed the pressure kick', pct: made ? 0.6 : -0.7 } },
 }
