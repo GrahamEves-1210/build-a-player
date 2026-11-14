@@ -7257,3 +7257,5 @@ html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !i
 }
 /* phones: the card's photo circle 10% smaller (48px to 43px) */
 @media (max-width: 768px) { html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .qb-reveal-hero, html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .qb-reveal-hero > *, html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel .qb-reveal-hero .qb-avatar { width: 43px !important; height: 43px !important; min-width: 43px !important; } }
+/* the card and its chip panel: the old fade to black back, softer, the same left to right on both so it runs as one piece (owner, 11-13) */
+html.app-look:not(.is-app) .spin-panel .qb-reveal-card.qb-reveal-card, html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { background: linear-gradient(90deg, color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 72%, #000) 0%, color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 72%, #000) 30%, color-mix(in srgb, var(--qb-bg, var(--qb-color, #444)) 42%, #050705) 100%) !important; }
