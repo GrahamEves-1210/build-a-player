@@ -7408,3 +7408,10 @@ html body .ag-home--soccer .bap-wm em:not([style]), html.is-soccer body .bap-wm 
 /* (owner, 11-13) each tab marked off by its own slanted shape, the part that lights up, as a thin outline: no fill behind the
    ones that aren't open */
 html body .ag-dock .ag-tab:not(.ag-tab--on):not(.ag-tab--home)::before { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14); }
+
+/* (owner, 11-13) no bar behind the buttons at all: just the five slanted buttons floating, each its own dark panel (so it
+   reads on any page), the open one in the sport's colour */
+html body .ag-dock.ag-dock { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 2px !important; gap: 6px; }
+html body .ag-dock.ag-dock .ag-tab::before { background: #0e1311; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12), 0 6px 14px rgba(0,0,0,.55) !important; }
+html body .ag-dock.ag-dock .ag-tab--on::before { background: var(--ag-a1); box-shadow: 0 6px 14px rgba(0,0,0,.55) !important; }
+html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: inset 0 0 0 2px var(--ag-a1), 0 6px 14px rgba(0,0,0,.55) !important; }
