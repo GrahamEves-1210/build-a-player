@@ -7419,3 +7419,9 @@ html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: 
 @media (max-width: 768px) { html.app-look { --ag-dock-h: 62px; } html body .ag-dock.ag-dock { --ag-dock-h: 62px; height: 62px; } html body .ag-dock .ag-tab { gap: 2px; } }
 /* phones: the bottom buttons a tad shorter again (62px to 58px) */
 @media (max-width: 768px) { html.app-look { --ag-dock-h: 58px; } html body .ag-dock.ag-dock { --ag-dock-h: 58px; height: 58px; } html body .ag-dock .ag-tab { gap: 1px; } }
+/* phones (owner, 11-13): College Football / Basketball cards' white band of logos runs the full width (its slanted left end looked cut off); the ratings editor takes all the room down to the rail (its scrolling list had gone small) with its buttons above the rail */
+@media (max-width: 768px) {
+  html .ag-cfb-band { clip-path: none !important; left: 0 !important; right: 0 !important; padding: 0 10px !important; }
+  html.app-look .cr-overlay { align-items: stretch !important; }
+  html.app-look .cr-modal { height: 100% !important; max-height: 100% !important; }
+}
