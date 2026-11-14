@@ -323,12 +323,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   }, [complete, isBucket, isSoccer, isBaseball, compPos, types, build])
   const [view, setView] = useState('card')   // desktop: 'card' (the trait list) or 'comp'
   useEffect(() => { if (!comp) setView('card') }, [comp])
-  // the website on a phone: an in-page ad above the Sandbox card (never in the app or ad-free)
-  const sandboxAd = !IS_APP && APP_LOOK && !isVersusMode && !!onSandboxToggle
-  useEffect(() => {
-    if (!sandboxAd || window.innerWidth > 768 || document.documentElement.classList.contains('ads-hidden')) return
-    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sandbox' }])
-  }, [sandboxAd])
+  // (no in-page ad above the Sandbox card any more: a phone's build screen runs the spin drop-down's 320x50 and the bottom rail only, the owner 11-13)
+  const sandboxAd = false
   const [showChevron, setShowChevron] = useState(true)
   const [showShare, setShowShare]     = useState(false)
   const [showSandboxInfo, setShowSandboxInfo] = useState(false)
