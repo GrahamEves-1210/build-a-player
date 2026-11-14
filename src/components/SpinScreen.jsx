@@ -41,7 +41,7 @@ const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 // (everywhere, the owner 11-13: a machine marked low-power for its core count lost it, and it costs little; only Reduce Motion turns it off)
 const DRUM_ON = (() => { try { return localStorage.getItem('bap_reduce_motion') !== '1' && !matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return true } })()
 // how soon the bend starts: a phone's short wheel needs it sooner (2.0), desktop's tall one at the edges (2.6) (owner, 11-13)
-const DRUM_EXP = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches ? 2.0 : 2.6
+const DRUM_EXP = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches ? 1.25 : 1.5   // (a steep curve made rows seem to speed up as they left: kept gentle)
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
