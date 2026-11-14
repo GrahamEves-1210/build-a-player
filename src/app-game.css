@@ -7250,3 +7250,15 @@ html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !i
 @media (max-width: 768px) { html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { padding-bottom: 5px !important; } }
 /* phones: the player's photo circle on the card 2px lower */
 @media (max-width: 768px) { html.app-look:not(.is-app) .spin-panel .qb-reveal-hero { position: relative; top: 2px; } }
+
+/* Phones (website): each wheel a perfect square at any phone width (owner, 11-13). The wheel is a size container, so its
+   window, middle box and strip are set off its own height; the arrows off the row's width (two wheels and a gap) */
+@media (max-width: 768px) {
+  html.app-look:not(.is-app) .game-layout.ag-drop .reels-wrap { container-type: inline-size; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reels-row { gap: 8px !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-outer { aspect-ratio: 1 / 1; height: auto !important; container-type: size; display: flex; flex-direction: column; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-outer > .reel-window { height: 100cqh !important; flex: none; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-outer .reel-selector { top: calc(50cqh - 22px) !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reel-outer .reel-track { margin-top: calc(50cqh - 110px) !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .reels-wrap > .reel-tri { top: calc(1px + (100cqw - 8px) / 4) !important; }
+}
