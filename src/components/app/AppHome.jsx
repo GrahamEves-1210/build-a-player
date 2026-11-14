@@ -719,8 +719,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           })()}
         </div>
 
-        {/* a build in progress waits right above PLAY */}
-        {resume && (
+        {/* (the CONTINUE card above PLAY is gone, the owner 11-13) */}
+        {false && resume && (
           <button className="ag-resume ag-resume--top" onClick={resume.onClick}>
             <span className="ag-resume-icon"><IconPlay size={18} /></span>
             <span className="ag-card-txt">
