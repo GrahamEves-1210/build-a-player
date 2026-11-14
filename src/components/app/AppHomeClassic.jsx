@@ -28,6 +28,7 @@ import { K_LIVE } from '../../lib/kLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 import { FranchiseCardClassic } from '../franchise/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
+import Wordmark from '../Wordmark'
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
 // Oct 29), put back beside today's for comparison. lib/homeLook.js picks which one shows.
@@ -384,7 +385,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
           <OnlineNow />
           <img src="/bap-mark.webp" alt="" className="agc-brand-mark" draggable={false} />
           <div className="agc-wordmark">
-            BUI<i className="wm-k wm-k2">L</i>D<em><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>{isBucket ? <>B<HoopU />CKET</> : <><i className="wm-k wm-p">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-e">E</i>R</>}
+            <Wordmark tail={isBucket ? <>B<HoopU />CKET</> : null} />
           </div>
           {/* the website doesn't open the tutorial by itself (cleared browser data
               would bring it back every visit): it's here when someone wants it */}

@@ -40,14 +40,14 @@ function HoopU() {
 function MiniPlayerLogo() {
   return (
     <span className="prf-mini-logo logo-text">
-      Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>Player
+      <Wordmark />
     </span>
   )
 }
 function MiniBucketLogo() {
   return (
     <span className="prf-mini-logo logo-text">
-      Buil<span className="logo-d">d</span><em style={{ color: '#f97316', WebkitTextFillColor: '#f97316' }}>-<span className="logo-a">A</span>-</em>B<HoopU />cket
+      <Wordmark emStyle={{ color: '#f97316', WebkitTextFillColor: '#f97316' }} tail={<>B<HoopU />CKET</>} />
     </span>
   )
 }
@@ -59,6 +59,7 @@ import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { BucketModelFigure } from './BucketSimPage'
+import Wordmark from './Wordmark'
 
 const NBA_TEAM_MAP = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t]))
 

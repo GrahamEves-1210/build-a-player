@@ -28,6 +28,7 @@ import { BASEBALL_POS } from '../../lib/baseballUi'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 import FranchiseCard from '../franchise/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
+import Wordmark from '../Wordmark'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -641,7 +642,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         <div className="ag-brand">
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
           <div className="ag-wordmark">
-            BUI<i className="wm-k wm-k2">L</i>D<em><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>{isBucket ? <>B<HoopU />CKET</> : <><i className="wm-k wm-p">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-e">E</i>R</>}
+            <Wordmark tail={isBucket ? <>B<HoopU />CKET</> : null} />
           </div>
         </div>
 

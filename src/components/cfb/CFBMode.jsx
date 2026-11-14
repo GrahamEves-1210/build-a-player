@@ -31,6 +31,7 @@ import CFBOffseason from './CFBOffseason'
 import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isUnder, classAge, draftAge, upgradePoints, backupSeason } from './cfbClass'
 import { randomName } from '../../lib/playerNames'
 import './cfb.css'
+import Wordmark from '../Wordmark'
 
 // ── College Football: a mode inside football (MORE WAYS TO PLAY). Its own screens: the position
 // pick, the build (football's spin, figure, chips, report card, OVR, footer and Sandbox, on college
@@ -80,7 +81,7 @@ function CFBNav({ pos, onHome, grades, era = 'current' }) {
         <div className="logo-text-stack">
           <img src="/bap-mark.webp" alt="Build-A-Player" className="logo-img-full" draggable={false} />
           <div className="logo-text-row">
-            <div className="logo-text logo-text--small">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>Player</div>
+            <div className="logo-text logo-text--small"><Wordmark /></div>
           </div>
         </div>
       </div>

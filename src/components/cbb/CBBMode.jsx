@@ -32,6 +32,7 @@ import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isU
 import { randomName } from '../../lib/playerNames'
 import '../cfb/cfb.css'
 import './cbb.css'
+import Wordmark from '../Wordmark'
 
 // ── College Basketball: a mode inside basketball (MORE WAYS TO PLAY), College Football's (components/cfb/CFBMode.jsx)
 // screen for screen. Its own screens: the position pick (guard or big), the build (basketball's spin, figure, chips,
@@ -87,7 +88,7 @@ function CBBNav({ pos, onHome, grades, era = 'current' }) {
         <div className="logo-text-stack">
           <img src="/bap-mark.webp" alt="Build-A-Player" className="logo-img-full" draggable={false} />
           <div className="logo-text-row">
-            <div className="logo-text logo-text--small">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>Player</div>
+            <div className="logo-text logo-text--small"><Wordmark /></div>
           </div>
         </div>
       </div>

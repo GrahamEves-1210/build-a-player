@@ -12,6 +12,7 @@ import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 import { LB_LIVE } from '../lib/lbLive'
 import { OL_LIVE } from '../lib/olLive'
 import { K_LIVE } from '../lib/kLive'
+import Wordmark from './Wordmark'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL, isDL, isLB, isK) => [
   { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isK ? ' K' : isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDL ? ' DL' : isLB ? 'n LB' : isDB ? ' DB' : 'n QB'} from their roster.` },
@@ -280,7 +281,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             <img src="/bap-mark.webp" alt="Build-A-Player" className="logo-img-full" draggable={false} />
             <div className="logo-text-row">
               <div className="logo-text logo-text--small">
-                Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}
+                <Wordmark tail={isBucket ? <>B<HoopU />CKET</> : null} />
               </div>
             </div>
           </div>

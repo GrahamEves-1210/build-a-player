@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { signInWithDiscord, signInWithApple } from '../lib/discord'
 import { IconDiscord } from './Navbar'
 import { LIVE_HTTP } from '../lib/liveUrl'
+import Wordmark from './Wordmark'
 
 // Supabase requires an email internally — we derive one from the username silently
 const toEmail = (username) => `${username.trim().toLowerCase()}@buildaplayer.app`
@@ -174,7 +175,7 @@ export default function AuthModal({ onClose, onAuth }) {
           </svg>
         </button>
 
-        <div className="auth-logo">Build<em>-A-</em>Player</div>
+        <div className="auth-logo"><Wordmark /></div>
 
         <div className="auth-tabs">
           <button className={`auth-tab ${tab === 'signin' ? 'active' : ''}`} onClick={() => { setTab('signin'); setForgot(false); reset() }}>Sign In</button>

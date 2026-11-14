@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import Wordmark from './Wordmark'
 
 // The "set a new password" step. The reset email's link (live/src/reset.js) opens the site
 // with a recovery session; Supabase reports it as PASSWORD_RECOVERY, and this asks for the
@@ -35,7 +36,7 @@ export default function PasswordReset() {
   return (
     <div className="auth-overlay" role="dialog" aria-label="Set a new password">
       <div className="auth-modal">
-        <div className="auth-logo">Build<em>-A-</em>Player</div>
+        <div className="auth-logo"><Wordmark /></div>
         {done ? (
           <div className="auth-form">
             <div className="auth-forgot-title">Password changed</div>
