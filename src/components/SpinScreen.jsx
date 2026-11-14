@@ -450,6 +450,8 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
 // (a white or silver second colour): then the first
 const lum = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 1; const n = parseInt(m[1], 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 }
 // (the sport's own colour, made dark by the panel's mix: football's teal, basketball's burnt orange, the owner 11-13)
+// the panel's outline in the sport's colour (football's teal, basketball's orange: the SPIN button's), the owner 11-13
+const SPORT_LINE = { nfl: '#2fcf9c', bucket: '#f97316', soccer: '#c9cacd', baseball: '#4f8fe0' }
 const SPORT_PANEL = { nfl: '#1e2427', bucket: '#1e2427', soccer: '#1e2427', baseball: '#1e2427' }   // (charcoal for all now: the team's colour is the outline, the owner 11-13)
 
 const POS_COLORS = {
@@ -841,7 +843,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <span>Reset</span>
         </button>
       )}
-    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color, '--qb-color2': selectedQB.color2 ?? selectedQB.color, '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] } : undefined}>
+    <aside className="spin-panel" style={isDone && selectedQB ? { '--qb-color': selectedQB.color, '--qb-color2': SPORT_LINE[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'], '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] } : undefined}>
       {isSpinning && <div className="spin-blocker" />}
       <div className={`spin-panel-body${isDone && selectedQB ? ' has-card' : ''}`}>
         <div className="spin-panel-static">
@@ -952,7 +954,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               is kept from the start for anyone who sees ads, so nothing moves when it fills. The dev server outlines it (is-dev) */}
           {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><small>ADVERTISEMENT</small><div id={SPIN_AD_ID} /></div>}
           {isDone && selectedQB && (
-            <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color, '--qb-color2': selectedQB.color2 ?? selectedQB.color, '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] }}>
+            <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color, '--qb-color2': SPORT_LINE[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'], '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
                   photo={(selectedQB.headshot ?? headshotsMap[selectedQB.name]) ? `${headshotsDir}${selectedQB.headshot ?? headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}
