@@ -451,7 +451,7 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
 const lum = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 1; const n = parseInt(m[1], 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 }
 // (the sport's own colour, made dark by the panel's mix: football's teal, basketball's burnt orange, the owner 11-13)
 // the panel's outline in the sport's colour (football's teal, basketball's orange: the SPIN button's), the owner 11-13
-const SPORT_LINE = { nfl: '#2fcf9c', bucket: '#f97316', soccer: '#c9cacd', baseball: '#4f8fe0' }
+const SPORT_LINE = { nfl: '#000', bucket: '#000', soccer: '#000', baseball: '#000' }   // (black for now, the owner 11-13; the sport's colours were teal #2fcf9c, orange #f97316)
 const SPORT_PANEL = { nfl: '#1e2427', bucket: '#1e2427', soccer: '#1e2427', baseball: '#1e2427' }   // (charcoal for all now: the team's colour is the outline, the owner 11-13)
 
 const POS_COLORS = {
