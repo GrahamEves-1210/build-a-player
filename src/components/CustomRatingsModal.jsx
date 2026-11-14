@@ -205,17 +205,17 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                       const isOverridden = overrides[key]?.[attr] !== undefined
                       const label = attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr
                       return (
-                        <div className="cr-pick">
-                          <div className="cr-pick-hd">
-                            <span className="cr-pick-lbl">{label}</span>
-                            {isOverridden && <button className="cr-pick-undo" onClick={() => setOverrides(prev => { const n = { ...(prev[key] || {}) }; delete n[attr]; const all = { ...prev }; if (Object.keys(n).length) all[key] = n; else delete all[key]; return all })}>BACK TO {valToGrade(baseVal)}</button>}
+                        <div className="cr-gp">
+                          <div className="cr-gp-hd">
+                            <span className="cr-gp-lbl">{label}</span>
+                            {isOverridden && <button className="cr-gp-undo" onClick={() => setOverrides(prev => { const n = { ...(prev[key] || {}) }; delete n[attr]; const all = { ...prev }; if (Object.keys(n).length) all[key] = n; else delete all[key]; return all })}>BACK TO {valToGrade(baseVal)}</button>}
                             {!noPicks && (build[attr]
                               ? <span className={`cr-attr-add is-in${build[attr].qbFull === p.name ? ' is-his' : ''}`}>{build[attr].qbFull === p.name ? 'IN BUILD' : 'SLOT FULL'}</span>
                               : <button className="cr-attr-add" onClick={() => onAddToBuild?.(p, overrides[key], attr)}>ADD TO BUILD</button>)}
                           </div>
-                          <div className="cr-pick-grades">
+                          <div className="cr-gp-grades">
                             {GRADES.map((g, v) => (
-                              <button key={g} className={`cr-pick-g${v === Math.round(currentVal) ? ' is-on' : ''}${v === Math.round(baseVal) ? ' is-base' : ''}`} style={{ '--g': spectrumColor(v) }}
+                              <button key={g} className={`cr-gp-g${v === Math.round(currentVal) ? ' is-on' : ''}${v === Math.round(baseVal) ? ' is-base' : ''}`} style={{ '--g': spectrumColor(v) }}
                                 onClick={() => { setVal(key, attr, v); setSelAttr(null) }}>{g}</button>
                             ))}
                           </div>

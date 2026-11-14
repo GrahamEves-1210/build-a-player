@@ -7487,15 +7487,15 @@ html:is(.is-app, .app-look) .cr-attr-row .cr-attr-val { width: 30px; text-align:
 .cr-tile.is-his::after { content: ''; position: absolute; top: 4px; left: 4px; width: 6px; height: 6px; border-radius: 50%; background: #35e07a; }
 .cr-tile.is-sel { border-color: #fff; background: rgba(255,255,255,.14); }
 button.cr-tile:active { transform: scale(.97); }
-.cr-pick { margin-top: 8px; padding: 8px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); }
-.cr-pick-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 28px; }
-.cr-pick-lbl { flex: 1; min-width: 0; font-family: var(--ag-font, inherit); font-size: 15px; letter-spacing: 1.2px; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cr-pick-undo { flex: none; height: 28px; padding: 0 8px; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; background: transparent; color: rgba(255,255,255,.8); font-family: var(--ag-font, inherit); font-size: 12px; letter-spacing: 1px; cursor: pointer; }
-.cr-pick .cr-attr-add { width: auto; height: 28px; padding: 0 10px; }
-.cr-pick-grades { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
-@media (max-width: 768px) { .cr-pick-grades { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-.cr-pick-g { position: relative; height: 38px; padding: 0; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--g) 82%, #000); color: #fff; font-family: var(--ag-display, inherit); font-size: 18px; line-height: 1; cursor: pointer; touch-action: manipulation; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
-.cr-pick-g.is-on { box-shadow: 0 0 0 2px #fff; }
-.cr-pick-g.is-base::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 10px; height: 2px; margin-left: -5px; border-radius: 1px; background: rgba(255,255,255,.85); }
-button.cr-pick-g:active { transform: scale(.94); }
+.cr-gp { margin-top: 8px; padding: 8px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); }
+.cr-gp-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 28px; }
+.cr-gp-lbl { flex: 1; min-width: 0; font-family: var(--ag-font, inherit); font-size: 15px; letter-spacing: 1.2px; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-gp-undo { flex: none; height: 28px; padding: 0 8px; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; background: transparent; color: rgba(255,255,255,.8); font-family: var(--ag-font, inherit); font-size: 12px; letter-spacing: 1px; cursor: pointer; }
+.cr-gp .cr-attr-add.cr-attr-add { width: auto !important; height: 28px; padding: 0 10px; white-space: nowrap; flex: none; }
+.cr-gp-grades { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 768px) { .cr-gp-grades { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.cr-gp-g { position: relative; height: 38px; padding: 0; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--g) 82%, #000); color: #fff; font-family: var(--ag-display, inherit); font-size: 18px; line-height: 1; cursor: pointer; touch-action: manipulation; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.cr-gp-g.is-on { box-shadow: 0 0 0 2px #fff; }
+.cr-gp-g.is-base::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 10px; height: 2px; margin-left: -5px; border-radius: 1px; background: rgba(255,255,255,.85); }
+button.cr-gp-g:active { transform: scale(.94); }
 html:is(.is-app, .app-look) .cr-attrs { padding: 8px 8px 10px; }
