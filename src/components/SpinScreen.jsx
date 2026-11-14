@@ -169,7 +169,10 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
     const gpuSpin = (from, dist, duration, ease, done) => {
       const track = trackRef.current
       const rest = ((from - CENTER * ITEM_H) % loopH + loopH) % loopH + CENTER * ITEM_H
-      if (!track || DRUM_ON || !track.animate || rest + dist + (ROWS_BELOW * ITEM_H) > allItems.length * ITEM_H) return false
+      // (desktop's drum too, the owner 11-13: the spin itself runs flat on the GPU, no script a frame, and the 3D tilt comes
+      // back the moment it settles. A phone keeps its drum through the spin)
+      if (!track || (DRUM_ON && DRUM_PHONE) || !track.animate || rest + dist + (ROWS_BELOW * ITEM_H) > allItems.length * ITEM_H) return false
+      if (DRUM_ON) for (const el of track.children) if (el.style.transform) el.style.transform = ''
       const y = p => `translate3d(0,${-(p - CENTER * ITEM_H)}px,0)`
       const N = 32
       track.style.transition = 'none'
@@ -178,6 +181,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
         posRef.current = initOffset + ((p - initOffset) % loopH + loopH) % loopH
         track.style.transform = y(posRef.current)
         anim.cancel()
+        if (DRUM_ON) drum(posRef.current)
       }
       driftRef.current = () => { park(-new DOMMatrix(getComputedStyle(track).transform).m42 + CENTER * ITEM_H) }
       anim.onfinish = () => { driftRef.current = null; park(rest + dist); done() }
