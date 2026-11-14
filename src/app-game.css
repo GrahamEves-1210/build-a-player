@@ -7371,3 +7371,12 @@ html body .ag-dock .ag-tab--home:not(.ag-tab--on) .ag-tab-icon { color: var(--ag
 html body .ag-dock .ag-tab--home.ag-tab--on { box-shadow: none; }
 html body .ag-dock .ag-tab--home.ag-tab--on .ag-tab-label { color: var(--ag-on, #0b0f0d); }
 html body .ag-dock .ag-tab-tag, html body .ag-dock .ag-tab-badge { transform: skewX(12deg); }
+
+/* (owner, 11-13) it should read as floating: no dark floor filling under it on a phone (the page shows round it) and a
+   clearer gap above the rail; HOME's icon larger and on the middle (the letters' trailing spacing pushed the word left) */
+html.app-look:not(.is-app) .ag-dock-floor { display: none !important; }
+html.app-look:not(.is-app) { --ag-dock-gap: calc(var(--web-rail, 0px) + 10px); }
+html body .ag-dock .ag-tab-label { padding-left: 1.4px; }
+html body .ag-dock .ag-tab--home .ag-tab-label { padding-left: 2px; }
+html body .ag-dock .ag-tab--home .ag-tab-icon { height: 26px; }
+html body .ag-dock .ag-tab--home .ag-tab-icon svg { width: 25px; height: 25px; }
