@@ -456,7 +456,7 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
   letter-spacing: -.08em; text-transform: uppercase; color: #fff; white-space: nowrap;   /* much tighter (owner, 11-13; was -.5px) */
   text-shadow: 0 2px 40px rgba(149,213,178,.12);
 }
-.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.22em; margin: 0 .2em 0 -.06em; }   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
+.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.16em; margin: 0 .24em 0 .1em; }   /* -A- one shape: the dashes tucked into the A (owner, 11-13) */
 .ag-home--bucket .ag-wordmark em { color: #f97316; }
 .ag-wordmark .hoop-u-svg { height: .82em; vertical-align: -.07em; }
 .ag-tagline {
