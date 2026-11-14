@@ -40,6 +40,8 @@ const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 // unless they're weak (lib/lowPower.js)
 // (everywhere, the owner 11-13: a machine marked low-power for its core count lost it, and it costs little; only Reduce Motion turns it off)
 const DRUM_ON = (() => { try { return localStorage.getItem('bap_reduce_motion') !== '1' && !matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return true } })()
+// how soon the bend starts: a phone's short wheel needs it sooner (2.0), desktop's tall one at the edges (2.6) (owner, 11-13)
+const DRUM_EXP = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches ? 2.0 : 2.6
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
@@ -103,7 +105,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, ge
       const d = (off + i * ITEM_H + ITEM_H / 2 - h / 2) / (h / 2)   // -1 top edge · 0 middle · 1 bottom edge
       if (el.__dt !== transition) { el.style.transition = transition; el.__dt = transition }
       // (the bend mostly toward the edges: the middle rows nearly flat, the outer ones turned hard, the owner 11-13)
-      el.style.transform = `rotateX(${(-Math.sign(d) * Math.pow(Math.abs(d), 2.6) * 52).toFixed(2)}deg)`
+      el.style.transform = `rotateX(${(-Math.sign(d) * Math.pow(Math.abs(d), DRUM_EXP) * 52).toFixed(2)}deg)`
     }
   }
 
