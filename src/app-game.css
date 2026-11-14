@@ -7430,3 +7430,6 @@ html body .ag-dock.ag-dock .ag-tab--home:not(.ag-tab--on)::before { box-shadow: 
 #ramp-cntr1-spin-mob-1:has(iframe)::before { margin: 0 0 1.5px; line-height: 1; }
 #ramp-cntr1-spin-mob-1 > *, #ramp-cntr1-spin-mob-1 iframe { margin-top: 0 !important; margin-bottom: 0 !important; }
 html.app-look:not(.is-app):not(.ads-hidden) .spin-ad-slot { min-height: 60px; }
+
+/* Playwire now puts its own ADVERTISEMENT label on every in-page ad, so ours (above) doubled it: ours is off (owner 11-13) */
+:is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe)::before { content: none !important; display: none !important; }
