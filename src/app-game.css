@@ -7271,14 +7271,13 @@ html.app-look:not(.is-app) .drop-bar-grab { display: none !important; }
 @media (max-width: 768px) {
   html.app-look:not(.is-app) .game-layout.ag-drop .drop-bar { padding-bottom: 0 !important; border-bottom: 0 !important; }
   html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet-grip { padding: 1px 0 !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) { transform: translate3d(0, calc(-100% + 7px), 0); box-shadow: none !important; border-color: transparent !important; border-radius: 0 !important; background: rgba(9,12,11,.94) !important; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) .drop-sheet-grip { background: transparent !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) { transform: translate3d(0, calc(-100% + 23px), 0); box-shadow: none !important; border-color: transparent !important; border-radius: 0 !important; background: transparent !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) .drop-sheet-grip { padding: 1px 0 17px !important; background: linear-gradient(180deg, rgba(9,12,11,.94) 7px, transparent 7px) !important; }   /* (the pill on the bar's colour, then 16px you can't see but can tap) */
 }
 
 /* Phones (website): the pill's hit area reaches 16px below it (shut, the drop-down takes no taps but its pill does); and no
    rubber-band bounce on the build screen, which moved the bar without the drop-down and left the pill floating (owner, 11-13) */
 @media (max-width: 768px) {
   html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet:not(.is-open) .drop-sheet-grip { pointer-events: auto; }
-  html.app-look:not(.is-app) .game-layout.ag-drop .drop-sheet-grip::after { content: ''; position: absolute; left: 25%; right: 25%; top: 0; bottom: -16px; }
   html.app-look:not(.is-app):has(.game-layout.ag-drop), html.app-look:not(.is-app):has(.game-layout.ag-drop) body, html.app-look:not(.is-app) .game-page-scroll:has(.game-layout.ag-drop) { overscroll-behavior-y: none; }
 }
