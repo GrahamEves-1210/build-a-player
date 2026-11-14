@@ -7515,3 +7515,6 @@ button.cr-team:active { transform: scale(.96); background: rgba(255,255,255,.12)
 .cr-team-back span { color: rgba(255,255,255,.7); }
 .cr-team-back .cr-team-logo { width: 26px; height: 26px; margin-left: auto; }
 .cr-team-back b { font-weight: 400; font-size: 17px; letter-spacing: 1px; }
+
+/* Playwire labels these units itself (Simulate Season's two, Home's): ours would be a second ADVERTISEMENT (owner 11-13) */
+:is(#ramp-cntr1-season, #ramp-season-prod, #ramp-cntr1-home, #ramp-cntr1-home-2)::before { content: none !important; display: none !important; }
