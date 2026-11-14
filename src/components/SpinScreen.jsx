@@ -965,9 +965,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </div>
 
 
-          {/* the 320x50 (phones on the website: lib/ads.js rampSpinAd, asked for on a spin), above the player's card. Its space
-              is kept from the start for anyone who sees ads, so nothing moves when it fills. The dev server outlines it (is-dev) */}
-          {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><div id={SPIN_AD_ID} /></div>}
           {isDone && selectedQB && (
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color, '--qb-color2': SPORT_LINE[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'], '--qb-bg': SPORT_PANEL[isBucket ? 'bucket' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : 'nfl'] }}>
               <div className="qb-reveal-hero">
@@ -1043,6 +1040,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             </div>
           )}
         </div>
+        {/* the 320x50 (phones on the website: lib/ads.js rampSpinAd), at the bottom of the panel, away from the spin buttons
+            (owner 11-13). Its space is kept from the start so nothing moves when it fills. The dev server outlines it (is-dev) */}
+        {!adsDisabled && <div className={`spin-ad-slot${import.meta.env.DEV ? ' is-dev' : ''}`}><div id={SPIN_AD_ID} /></div>}
       </div>
     </aside>
     </div>
