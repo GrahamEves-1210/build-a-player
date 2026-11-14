@@ -7246,3 +7246,5 @@ html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !i
 @media (max-width: 768px) { .bap-wm em > .wm-g3 { margin-right: calc(-.067em - 1px); } }
 /* phones: half the space above the first row of chips on the card (8px to 4px) */
 @media (max-width: 768px) { html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { padding-top: 4px !important; } }
+/* phones: less space under the last row of chips on the card (10px to 5px) */
+@media (max-width: 768px) { html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { padding-bottom: 5px !important; } }
