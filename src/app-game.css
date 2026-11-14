@@ -7284,6 +7284,6 @@ html.app-look .navbar .logo-text.logo-text--small { font-size: 16px; }
 /* Desktop (website): the narrow, tall panel fades top to bottom (left to right read as a stripe): the card in the team's colour,
    the chips' panel from that colour into charcoal (owner, 11-13) */
 @media (min-width: 769px) {
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card.qb-reveal-card { background: #15191b !important; }
-  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel-body.has-card .spin-panel-scroll { background: linear-gradient(0deg, color-mix(in srgb, var(--qb-color, #444) 72%, #000) 0%, #15191b 70%) !important; }   /* (bottom to top: the team's colour at the foot) */
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel .qb-reveal-card.qb-reveal-card { background: color-mix(in srgb, var(--qb-color, #444) 72%, #000) !important; }
+  html.app-look:not(.is-app) .game-layout:not(.ag-drop) .spin-panel-body.has-card .spin-panel-scroll { background: linear-gradient(180deg, color-mix(in srgb, var(--qb-color, #444) 72%, #000) 0%, #15191b 70%) !important; }
 }
