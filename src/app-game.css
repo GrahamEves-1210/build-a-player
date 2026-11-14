@@ -7239,3 +7239,6 @@ html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin
 html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { flex: 0 0 auto !important; height: auto !important; min-height: 0 !important; max-height: none !important; align-self: stretch; }
 html.app-look:not(.is-app) .spin-panel .attr-category-lbl { color: #fff !important; }
 html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !important; opacity: 1 !important; }
+
+/* phones: a pixel less between the D and the first dash (owner, 11-13) */
+@media (max-width: 768px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - 1px); } }
