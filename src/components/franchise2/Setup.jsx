@@ -158,7 +158,7 @@ function Builds({ S, go, owner, onBuild }) {
   const slotOf = p => slots[ready.indexOf(p)]
   return (
     <div className="fsu-builds">
-      <Chyron team={S.team} tag={`${picks.length}/${MAX_BUILDS}`} title="Your players" sub="ROOKIES · BUILT ON THE BUILD PAGE" />
+      <Chyron team={S.team} tag={`${picks.length}/${MAX_BUILDS}`} title="Your players" sub="ROOKIES · UP TO 8" />
       <div className="fsu-pos">
         {POSITIONS.nfl.map(pos => {
           const st = starterAt(S.team, pos)

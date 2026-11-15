@@ -25,7 +25,7 @@
 .fsu-body { max-width: 600px; margin: 0 auto; padding-top: 14px; animation: fsu-in .26s cubic-bezier(.2,.9,.25,1) both; }
 .fsu-body > div { display: flex; flex-direction: column; gap: 12px; }
 @keyframes fsu-in { from { opacity: 0; transform: translateY(8px); } }
-.fsu-acts { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 4; display: grid; gap: 8px; margin-top: 6px; }
+.fsu-acts { position: sticky; bottom: 0; z-index: 4; display: grid; gap: 8px; margin: 6px -16px 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ink); box-shadow: 0 -1px 0 var(--fk-line); }
 .fsu-lbl { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; font-size: 15px; letter-spacing: 2.4px; color: var(--fk-mute); }
 .fsu-lbl small { font-size: 14px; letter-spacing: 1.6px; color: var(--fk-dim); }
 
@@ -186,6 +186,20 @@
 
 @media (min-width: 900px) {
   .fsu { padding-top: 12px; }
+  .fsu-top, .fsu-body { max-width: 1040px; }
+  .fsu-body > div { max-width: 640px; margin: 0 auto; }
+  .fsu-acts { margin: 6px 0 0; padding: 10px 0 14px; }
+  .fsu-body > :is(.fsu-cspin, .fsu-builds) { max-width: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: start; }
+  .fsu-cspin > .fk-chy, .fsu-builds > .fk-chy:first-child { grid-column: 1 / -1; }
+  .fsu-cspin .fsu-reel { grid-column: 1; grid-row: 2; }
+  .fsu-cspin .fsu-landed { grid-column: 1; grid-row: 3; }
+  .fsu-cspin .fsu-lines { grid-column: 2; grid-row: 2 / span 2; }
+  .fsu-cspin .fsu-acts { grid-column: 2; grid-row: 4; }
+  .fsu-builds .fsu-pos { grid-column: 1; grid-row: 2 / span 4; }
+  .fsu-builds > .fk-chy:not(:first-child) { grid-column: 2; grid-row: 2; }
+  .fsu-builds .fsu-blist { grid-column: 2; grid-row: 3; }
+  .fsu-builds .fsu-acts { grid-column: 2; grid-row: 4; position: static; }
+  .fsu-body > .fsu-wall { max-width: none; }
   .fsu-wall .fsu-div-row { gap: 6px; }
   .fsu-wall { display: grid !important; grid-template-columns: 1fr 1fr; column-gap: 14px; }
   .fsu-wall > .fk-chy { grid-column: 1 / -1; }
