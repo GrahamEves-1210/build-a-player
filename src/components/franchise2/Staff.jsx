@@ -4,7 +4,7 @@ import {
   interviewCoach, interviewsLeft, interviewView, offerCoach, closeCarousel, setCarStep, moveText, IV_N, records, recText,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, LowerThird, Stamp, Go, KLogo, fkVars, splitName, reduced } from './kit'
+import { Chyron, LowerThird, Stamp, Go, KLogo, fkVars, splitName, reduced, BackBar, ActionBar } from './kit'
 import { coachPhoto } from './coachFace'
 import './staff.css'
 
@@ -97,8 +97,8 @@ export function StaffScreen({ F, act, owner, onBack }) {
   const caller = side => callerOf(F, F.team, side)
   const flip = (side, who) => { if (T.call?.[side] === who) return; act(X => setCalls(X, side, who)); sfx('swap'); haptic('light') }
   return (
-    <div className="fd fk fst">
-      <button className="fd-back" onClick={onBack}>‹ DEPTH CHART</button>
+    <div className="fd fk fst fd-narrow">
+      <BackBar label="Depth chart" title="Coaching staff" onBack={onBack} />
       <Chyron team={F.team} title="COACHING STAFF" tag={F.year} sub={`OFFENSE: ${lastOf(caller('off').c?.n)} · DEFENSE: ${lastOf(caller('def').c?.n)}`} />
       {hot && <HotSeat F={F} hot={hot} />}
       <StaffL3 F={F} c={M.hc} role="hc" team={F.team} size="l" mine={owner} calls={callLine(F, F.team, 'hc')} line={hcRecord(F, F.team) ?? STYLES[F.coach?.style]?.name ?? 'FIRST SEASON'} />
@@ -122,8 +122,7 @@ export function StaffScreen({ F, act, owner, onBack }) {
           </div>
         )
       })}
-      <p className="fst-note">THE GRADE IS HIS PLAY-CALLING ON THAT SIDE. HEAD COACHES TAKE THE CALLS BACK OR HAND THEM OVER ANY WEEK.</p>
-      <Go ghost onClick={onBack}>BACK TO THE DEPTH CHART</Go>
+      <p className="fst-note">Tap a coach to give him the calls. The grade is his play-calling on that side; you can change it any week.</p>
     </div>
   )
 }
@@ -188,7 +187,7 @@ function Monday({ F, onNext }) {
           {co.map(e => <Wire key={`${e.k}-${e.id}`} F={F} e={e} />)}
         </>
       )}
-      <Go onClick={onNext}>THE HIRES</Go>
+      <ActionBar><Go onClick={onNext}>Next: New head coaches</Go></ActionBar>
     </div>
   )
 }
@@ -218,7 +217,7 @@ function Hires({ F, onNext }) {
           {moves.map(e => <Wire key={e.id} F={F} e={e} />)}
         </>
       )}
-      <Go onClick={onNext}>YOUR STAFF</Go>
+      <ActionBar><Go onClick={onNext}>Next: Your staff</Go></ActionBar>
     </div>
   )
 }
@@ -267,9 +266,9 @@ function MyStaff({ F, act, owner, onSearch }) {
         )
       })}
       {open.length
-        ? <p className="fst-note">{open.length === 2 ? 'BOTH JOBS ARE OPEN' : `THE ${JOB_LONG[open[0]]} JOB IS OPEN`}. LEAVE ONE OPEN AND A POSITION COACH ON YOUR STAFF IS PROMOTED.</p>
+        ? <p className="fst-note">{open.length === 2 ? 'Both coordinator jobs are open' : `The ${JOB_LONG[open[0]].toLowerCase()} job is open`}. Leave a job open and a position coach on the staff is promoted.</p>
         : null}
-      <Go onClick={() => { act(X => closeCarousel(X)); sfx('whistle') }} ghost={open.length > 0} sub={open.length ? 'PROMOTE FROM WITHIN' : null}>THE AWARDS</Go>
+      <ActionBar><Go onClick={() => { act(X => closeCarousel(X)); sfx('whistle') }} sub={open.length ? 'PROMOTE FROM WITHIN' : null}>Next: Awards</Go></ActionBar>
     </div>
   )
 }
@@ -283,8 +282,8 @@ function Search({ F, act, owner, k, onBack }) {
   if (sel != null) return <Interview key={sel} F={F} act={act} owner={owner} k={k} id={sel} onBack={() => { setSel(null); sfx('back') }} onDone={onBack} />
   return (
     <div className="fst-car">
-      <button className="fd-back" onClick={onBack}>‹ YOUR STAFF</button>
-      <Chyron team={F.team} title={`${JOB[k]} SEARCH`} right={`${left} OF ${IV_N} LEFT`} sub={`${JOB_LONG[k]} · INTERVIEWS`} />
+      <BackBar label="Your staff" title={`${JOB[k]} search`} onBack={onBack} />
+      <Chyron team={F.team} title={`${JOB[k]} SEARCH`} right={`${left} OF ${IV_N} LEFT`} sub={`${JOB_LONG[k]} · TAP A CANDIDATE`} />
       {list.map((c, i) => {
         const seen = c.home || iv.includes(c.i)
         return <StaffL3 key={c.i} F={F} c={c} role={k} team={F.team} size="s" hidden={!seen} delay={i * 35} onClick={() => { setSel(c.i); sfx('tap') }}
@@ -305,7 +304,7 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
     const t = setTimeout(() => { setShown(x => x + 1); if (shown < res.board.length) sfx('flip') }, reduced() ? 0 : shown === 0 ? 250 : 420)
     return () => clearTimeout(t)
   }, [res, shown])
-  if (!V && !res) return <Go ghost onClick={onBack}>BACK TO THE CANDIDATES</Go>
+  if (!V && !res) return <BackBar label="Candidates" onBack={onBack} />
   const c = res?.c ?? V.c
   const seen = res || V.seen
   const left = interviewsLeft(F, k)
@@ -315,12 +314,12 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
   const hcName = lastOf(F.coach?.name ?? owner)
   return (
     <div className="fst-car">
-      <button className="fd-back" onClick={onBack}>‹ THE CANDIDATES</button>
+      <BackBar label="Candidates" title={c.n} onBack={onBack} />
       <StaffL3 F={F} c={c} role={k} team={res && !won ? res.to : F.team} hidden={!seen} reveal={fresh} line={[res ? null : c.home ? `${TEAM[F.team].nick.toUpperCase()} POSITION COACH` : (c.cv ?? '').toUpperCase(), `AGE ${c.ag}`].filter(Boolean).join(' · ')} />
       {!seen && (
         <>
-          <p className="fst-note">AN INTERVIEW SHOWS HIS GRADES, WHO ELSE WANTS HIM AND WHAT HE WANTS. {left} OF {IV_N} LEFT.</p>
-          <Go onClick={sit} disabled={left <= 0}>{left > 0 ? 'INTERVIEW HIM' : 'NO INTERVIEWS LEFT'}</Go>
+          <p className="fst-note">An interview shows his grades, who else wants him and what he wants. {left} of {IV_N} left.</p>
+          <ActionBar><Go onClick={sit} disabled={left <= 0}>{left > 0 ? 'Interview him' : 'No interviews left'}</Go></ActionBar>
         </>
       )}
       {seen && !res && (
@@ -334,7 +333,7 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
             <button type="button" role="radio" aria-checked={calls} className={calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(true); sfx('tap') }}><small>{JOB[k]}</small><b>{lastOf(c.n)}</b><i>{cLetter(V.r[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])}</i></button>
             <button type="button" role="radio" aria-checked={!calls} className={!calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(false); sfx('tap') }}><small>HC</small><b>{hcName}</b><i>{cLetter(F.coach?.r?.[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])}</i></button>
           </div>
-          <Go onClick={offer}>OFFER THE JOB</Go>
+          <ActionBar><Go onClick={offer}>Offer the job</Go></ActionBar>
         </>
       )}
       {res && (
@@ -356,7 +355,7 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
               <b>{won ? `${TEAM[F.team].nick} hire ${c.n} as ${JOB_LONG[k].toLowerCase()}` : `${c.n} takes the ${TEAM[res.to].nick} job`}</b>
             </div>
           )}
-          {shown > res.board.length && <Go onClick={won ? onDone : onBack}>{won ? 'YOUR STAFF' : 'BACK TO THE CANDIDATES'}</Go>}
+          {shown > res.board.length && <ActionBar><Go onClick={won ? onDone : onBack}>{won ? 'Back to your staff' : 'Back to the candidates'}</Go></ActionBar>}
         </>
       )}
     </div>

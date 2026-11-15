@@ -9,7 +9,7 @@ import { GAMES } from '../../lib/minigames'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { romanOf } from '../../lib/mg/kit'
-import { fkVars, Chyron, Scorebug, ManL3, BigNum, Stamp, Go, Tag, Bumper, reduced } from './kit'
+import { fkVars, Chyron, Scorebug, ManL3, BigNum, Stamp, Go, Tag, Bumper, reduced, ActionBar } from './kit'
 
 const MiniGame = lazy(() => import('../app/MiniGame'))
 const MiniGameSimple = lazy(() => import('../app/MiniGameSimple'))
@@ -286,7 +286,7 @@ function Final({ F, row, news, owner, onDone }) {
           {news.filter(n => n.k === 'sign').map(n => <Tag key={n.pid} tone="line">SIGNED {n.n.toUpperCase()} OFF THE PRACTICE SQUAD</Tag>)}
         </div>
       )}
-      <Go onClick={() => { sfx('tap'); onDone() }}>CONTINUE</Go>
+      <ActionBar><Go onClick={() => { sfx('tap'); onDone() }}>Continue</Go></ActionBar>
     </section>
   )
 }

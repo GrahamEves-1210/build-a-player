@@ -119,7 +119,7 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
   return createPortal(
     <div className="fd-sheet-bg" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fd-sheet fk" role="dialog" aria-modal="true" aria-label={p.n}>
-        <button className="fd-x" onClick={onClose} aria-label="Close">×</button>
+        <div className="fd-sheet-top"><b>{s ? TEAM[s].name : 'Free agent'}</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
         <Man F={F} p={p} s={s ?? F.team} owner={owner} size="l" line={s ? TEAM[s].nick.toUpperCase() : 'FREE AGENT'} />
         <div className="fd-facts">
           <Fact v={p.ag} label="AGE" />

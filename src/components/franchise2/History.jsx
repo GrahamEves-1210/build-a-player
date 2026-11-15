@@ -45,6 +45,8 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
         <BigNum v={divs} label="DIVISION TITLES" size={34} />
       </div>
 
+      <div className="fd-cols fd-cols--hist">
+      <div className="fd-col">
       <Chyron team={F.team} title="THE RAFTERS" right={banners.length || null} />
       {banners.length ? (
         <div className="fd-rafters">
@@ -94,6 +96,8 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
         </>
       )}
 
+      </div>
+      <div className="fd-col">
       <Chyron team={F.team} size="s" title={`${String(owner || 'GUEST').toUpperCase()}'S BUILDS`} />
       {F.builds.filter(B => !B.prospect || B.pid != null).map((B, i) => <BuildCareer key={i} F={F} B={B} owner={owner} onOpen={setPage} />)}
 
@@ -110,6 +114,8 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
         </>
       )}
 
+      </div>
+      </div>
       <div className="fd-manage">
         <Go ghost onClick={() => { sfx('tap'); onSlots() }}>SAVE SLOTS</Go>
         {sure ? <Go ghost className="is-danger" onClick={onDelete}>DELETE FOR GOOD</Go> : <Go ghost onClick={() => { setSure(true); sfx('deny') }}>DELETE FRANCHISE</Go>}

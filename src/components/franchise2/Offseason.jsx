@@ -4,7 +4,7 @@ import {
   OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, BigRec, BigNum, Stamp, Meter, Go, Flip, KLogo, fkVars, reduced } from './kit'
+import { Chyron, BigRec, BigNum, Stamp, Meter, Go, Flip, KLogo, fkVars, reduced, BackBar, ActionBar } from './kit'
 import { Man, CapBar, PlayerPage, money, posText } from './dparts'
 import { DraftDay } from './Draft'
 import { Carousel } from './Staff'
@@ -12,20 +12,31 @@ import './fd.css'
 
 // THE OFFSEASON: five stops, one screen each. COACHES (the carousel, the NFL's Black Monday: Staff.jsx) → AWARDS →
 // RE-SIGN → FREE AGENCY → THE DRAFT, then a new season.
-const STOPS = [['coaches', 'COACHES'], ['awards', 'AWARDS'], ['resign', 'RE-SIGN'], ['fa', 'FREE AGENCY'], ['draft', 'DRAFT']]
+// (the steps as the player reads them: the one he's on lit, the ones behind him ticked; the next step's button is
+// always at the bottom of the screen, ActionBar; the cap and the scouting room beside the step on a wide screen)
+const STOPS = [['coaches', 'Coaches'], ['awards', 'Awards'], ['resign', 'Re-sign'], ['fa', 'Free agency'], ['draft', 'Draft']]
 
-export default function Offseason({ F, act, owner, onBuild }) {
+export default function Offseason({ F, act, owner, onBuild, foot }) {
   const i = STOPS.findIndex(([k]) => k === F.stage)
+  const cap = F.stage === 'resign' || F.stage === 'fa'
   return (
-    <div className="fd fk">
-      <div className="fd-stops" aria-label="Offseason">
-        {STOPS.map(([k, n], j) => <span key={k} className={`fd-stop${j === i ? ' is-on' : j < i ? ' is-done' : ''}`}><i>{j + 1}</i><span>{n}</span></span>)}
+    <div className="fd fk fd-off">
+      <nav className="fd-stops" aria-label="Offseason steps">
+        <span className="fd-stops-h"><b>Offseason</b><small>Step {i + 1} of {STOPS.length}: {STOPS[i]?.[1]}</small></span>
+        <ol>
+          {STOPS.map(([k, n], j) => <li key={k} className={j === i ? 'is-on' : j < i ? 'is-done' : ''} aria-current={j === i ? 'step' : undefined}><i>{j < i ? '✓' : j + 1}</i><span>{n}</span></li>)}
+        </ol>
+      </nav>
+      <div className={`fd-off-grid${cap || foot ? ' has-side' : ''}`}>
+        <div className="fd-off-main">
+          {F.stage === 'coaches' && <Carousel F={F} act={act} owner={owner} />}
+          {F.stage === 'awards' && <Awards F={F} act={act} owner={owner} />}
+          {F.stage === 'resign' && <Resign F={F} act={act} owner={owner} />}
+          {F.stage === 'fa' && <FreeAgency F={F} act={act} owner={owner} />}
+          {F.stage === 'draft' && <DraftDay F={F} act={act} owner={owner} onBuild={onBuild} />}
+        </div>
+        {(cap || foot) && <aside className="fd-off-side">{cap && <CapBar F={F} />}{foot}</aside>}
       </div>
-      {F.stage === 'coaches' && <Carousel F={F} act={act} owner={owner} />}
-      {F.stage === 'awards' && <Awards F={F} act={act} owner={owner} />}
-      {F.stage === 'resign' && <Resign F={F} act={act} owner={owner} />}
-      {F.stage === 'fa' && <FreeAgency F={F} act={act} owner={owner} />}
-      {F.stage === 'draft' && <DraftDay F={F} act={act} owner={owner} onBuild={onBuild} />}
     </div>
   )
 }
@@ -48,7 +59,7 @@ function Awards({ F, act, owner }) {
   return (
     <>
       <section className="fd-recap" style={fkVars(F.team)}>
-        <Chyron team={F.team} tone={champ ? 'gold' : 'team'} title={champ ? 'SUPER BOWL CHAMPIONS' : `${h.y} SEASON`} tag={h.y} sub={FINISH_TEXT[h.fin] ?? ''} />
+        <Chyron team={F.team} tone={champ ? 'gold' : 'team'} title={champ ? 'SUPER BOWL CHAMPIONS' : `${h.y} SEASON`} tag={h.y} sub={champ ? null : FINISH_TEXT[h.fin] ?? ''} />
         <div className="fd-recap-row">
           <BigRec w={h.w} l={h.l} t={h.t} size={72} />
           <span className="fd-recap-facts">
@@ -85,7 +96,7 @@ function Awards({ F, act, owner }) {
           {!all && !ours.length && <div className="fd-none">NONE FROM THE {TEAM[F.team].nick.toUpperCase()}</div>}
         </>
       )}
-      <Go onClick={() => { act(X => { ageLeague(X); openResign(X) }); sfx('whistle') }}>RE-SIGNING</Go>
+      <ActionBar><Go onClick={() => { act(X => { ageLeague(X); openResign(X) }); sfx('whistle') }}>Next: Re-sign players</Go></ActionBar>
       {page != null && <PlayerPage F={F} id={page} owner={owner} onClose={() => setPage(null)} />}
     </>
   )
@@ -105,11 +116,10 @@ function Resign({ F, act, owner }) {
   const keep = how => { act(X => resignOne(X, p.i, how)); sfx(how === false || how === 'decline' ? 'swap' : 'claim'); haptic(how === false ? 'light' : 'success') }
   return (
     <>
-      <CapBar F={F} />
       {p ? (
         <section key={p.i} className="fd-deal">
           <Chyron tone="ink" title={opt ? 'FIFTH-YEAR OPTION' : 'DEAL UP'} right={`${total.current - left + 1} OF ${total.current}`} />
-          <Man F={F} p={p} s={F.team} owner={owner} size="l" line={`AGE ${p.ag} · ${posText(p)}`} onClick={() => setPage(p.i)} />
+          <Man F={F} p={p} s={F.team} owner={owner} size="l" line={`AGE ${p.ag}`} onClick={() => setPage(p.i)} />
           <div className="fd-ask">
             {opt
               ? <><BigNum v={money(oPrice)} count={false} label={`${F.year + 2} SEASON`} size={56} /><small className="fd-ask-note">THEN A NEW DEAL OR FREE AGENCY</small></>
@@ -134,7 +144,7 @@ function Resign({ F, act, owner }) {
       ) : (
         <>
           <CampReport F={F} owner={owner} onMan={setPage} />
-          <Go onClick={() => { act(X => openFA(X)); sfx('whistle') }}>FREE AGENCY</Go>
+          <ActionBar><Go onClick={() => { act(X => openFA(X)); sfx('whistle') }}>Next: Free agency</Go></ActionBar>
         </>
       )}
       {page != null && <PlayerPage F={F} id={page} owner={owner} onClose={() => setPage(null)} />}
@@ -174,7 +184,7 @@ function FreeAgency({ F, act, owner }) {
   return (
     <>
       <Chyron team={F.team} title="FREE AGENCY" tag={done ? 'CLOSED' : `DAY ${F.fad}`} sub={done ? 'THE MARKET IS CLOSED' : `${F.fa.length} ON THE MARKET · DAY ${F.fad} OF ${FA_DAYS}`} />
-      <CapBar F={F} />
+      {!done && <p className="fd-tip">Tap a player to make him an offer. End the day to see who signs where.</p>}
       {day && (
         <section className="fd-day">
           <Chyron tone="ink" size="s" title={`DAY ${day.n} SIGNINGS`} right={day.list.length} />
@@ -187,16 +197,18 @@ function FreeAgency({ F, act, owner }) {
           {board.map((p, j) => (
             <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="m" delay={j * 40} stat={{ v: money(p.$), label: `${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` }} line={canSign(F, p.$ * OFFERS[0][1]) ? `AGE ${p.ag}` : `AGE ${p.ag} · NO ROOM`} onClick={() => { setBid(p.i); setDay(null); sfx('tap') }} />
           ))}
-          <Go onClick={() => { const before = deals.length; const r = act(X => nextFADay(X)); const list = marketDeals(F).slice(before).filter(d => d.s !== F.team).sort((a, b) => b.$ - a.$); setDay({ n: F.fad ? F.fad - 1 : FA_DAYS, list }); sfx(r?.done ? 'whistle' : 'flip') }} sub={F.fad === FA_DAYS ? 'THE MARKET CLOSES' : null}>END DAY {F.fad}</Go>
         </>
       )}
-      {done && <Go onClick={() => { act(X => openDraft(X)); sfx('whistle') }}>THE DRAFT</Go>}
       {deals.some(d => d.s === F.team) && (
         <>
           <Chyron team={F.team} size="s" title="SIGNED" />
           {deals.filter(d => d.s === F.team).map(d => { const p = F.teams[F.team].r.find(x => x.i === d.i); return p ? <Man key={d.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(d.$), label: `${d.y} YRS` }} onClick={() => setPage(p.i)} /> : null })}
         </>
       )}
+      <ActionBar>
+        {!done && <Go onClick={() => { const before = deals.length; const r = act(X => nextFADay(X)); const list = marketDeals(F).slice(before).filter(d => d.s !== F.team).sort((a, b) => b.$ - a.$); setDay({ n: F.fad ? F.fad - 1 : FA_DAYS, list }); sfx(r?.done ? 'whistle' : 'flip') }} sub={F.fad === FA_DAYS ? 'THE MARKET CLOSES' : null}>End day {F.fad}</Go>}
+        {done && <Go onClick={() => { act(X => openDraft(X)); sfx('whistle') }}>Next: The draft</Go>}
+      </ActionBar>
       {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
     </>
   )
@@ -222,7 +234,7 @@ function Bid({ F, act, owner, id, onBack }) {
     const t = setTimeout(() => { setShown(x => x + 1); if (shown < res.board.length) sfx('flip') }, reduced() ? 0 : shown === 0 ? 250 : 420)
     return () => clearTimeout(t)
   }, [res, shown])
-  if (!V && !res) return <><Go ghost onClick={onBack}>BACK TO THE MARKET</Go></>
+  if (!V && !res) return <BackBar label="Free agency" onBack={onBack} />
   const p = res?.p ?? V.p
   const offer = offerOf(p, tier)
   const pitch = !res ? pitchOf(F, F.team, p, offer) : null
@@ -235,7 +247,7 @@ function Bid({ F, act, owner, id, onBack }) {
   const all = res ? [...res.board].sort((a, b) => b.v - a.v) : []
   return (
     <>
-      <button className="fd-back" onClick={onBack}>‹ THE MARKET</button>
+      <BackBar label="Free agency" title="Make an offer" onBack={onBack} />
       <Man F={F} p={p} s={res ? res.to : F.team} owner={owner} size="m" line={`AGE ${p.ag} · ASKS ${money(V?.ask ?? p.$)}`} />
       {!res ? (
         <>
@@ -253,7 +265,7 @@ function Bid({ F, act, owner, id, onBack }) {
               return <button key={k} role="radio" aria-checked={tier === k} className={tier === k ? 'is-on' : ''} disabled={!ok} onClick={() => { setTier(k); sfx('tap') }}><small>{k === 'ASK' ? 'HIS ASK' : k}</small><b>{money(v)}</b></button>
             })}
           </div>
-          <Go onClick={go} disabled={!canSign(F, offer)} sub={`${p.y} ${p.y === 1 ? 'YEAR' : 'YEARS'} · ${money(offer * p.y)}`}>{canSign(F, offer) ? 'MAKE THE OFFER' : 'NO CAP ROOM'}</Go>
+          <ActionBar><Go onClick={go} disabled={!canSign(F, offer)} sub={`${p.y} ${p.y === 1 ? 'YEAR' : 'YEARS'} · ${money(offer * p.y)}`}>{canSign(F, offer) ? 'Make the offer' : 'No cap room'}</Go></ActionBar>
         </>
       ) : (
         <>
@@ -275,7 +287,7 @@ function Bid({ F, act, owner, id, onBack }) {
               <small>{res.years} {res.years === 1 ? 'YEAR' : 'YEARS'}, {money(res.offer * res.years)}</small>
             </div>
           )}
-          {shown > all.length && <Go onClick={onBack}>BACK TO THE MARKET</Go>}
+          {shown > all.length && <ActionBar><Go onClick={onBack}>Back to free agency</Go></ActionBar>}
         </>
       )}
     </>

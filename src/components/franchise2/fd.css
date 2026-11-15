@@ -3,9 +3,9 @@
 
 .fd { display: grid; gap: 10px; min-width: 0; color: var(--fk-text); }
 .fd > * { min-width: 0; }
-.fd-h { margin-top: 6px; font-family: var(--fk-f); font-size: 15px; letter-spacing: 2.6px; color: var(--fk-mute); border-bottom: 1px solid var(--fk-line); padding-bottom: 3px; }
-.fd-back { justify-self: start; padding: 4px 0; background: none; border: 0; color: var(--fk-mute); font-family: var(--fk-f); font-size: 16px; letter-spacing: 2px; cursor: pointer; }
-.fd-line { display: flex; justify-content: space-between; padding: 6px 10px; background: var(--fk-g1); font-family: var(--fk-f); font-size: 17px; letter-spacing: 1.4px; }
+.fd-h { margin-top: 6px; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; color: var(--fk-mute); border-bottom: 1px solid var(--fk-line); padding-bottom: 3px; }
+.fd-back { justify-self: start; padding: 4px 0; background: none; border: 0; color: var(--fk-mute); font-family: var(--fk-f); font-size: 16px; letter-spacing: 1px; cursor: pointer; }
+.fd-line { display: flex; justify-content: space-between; padding: 6px 10px; background: var(--fk-g1); font-family: var(--fk-f); font-size: 17px; letter-spacing: 1px; }
 .fd-line b { font-weight: 400; color: #fff; }
 
 /* the segmented switch (OFFENSE / DEFENSE, the League's views) */
@@ -21,7 +21,7 @@
 .fd-cap-room { display: grid; line-height: .95; }
 .fd-cap-room b { font-family: var(--fk-d); font-weight: 400; font-size: 34px; color: #fff; font-variant-numeric: tabular-nums; }
 .fd-cap.is-over .fd-cap-room b { color: var(--fk-l); }
-.fd-cap-room small, .fd-cap-of small { font-family: var(--fk-f); font-size: 13px; letter-spacing: 2px; color: var(--fk-mute); }
+.fd-cap-room small, .fd-cap-of small { font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
 .fd-cap-of { display: grid; justify-items: end; line-height: 1; }
 .fd-cap-of b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; color: var(--fk-mute); }
 .fd-cap-bar { display: flex; height: 14px; background: var(--fk-g3); overflow: hidden; }
@@ -30,7 +30,7 @@
 .is-men { background: var(--tc, #fff); }
 .is-dead { background: var(--fk-l); }
 .is-rest { background: var(--fk-g4); }
-.fd-cap-key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--fk-f); font-size: 13px; letter-spacing: 1.4px; color: var(--fk-mute); }
+.fd-cap-key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
 .fd-cap-key i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: 0; }
 @keyframes fd-grow { from { transform: scaleX(0); } }
 .fd-capbig { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 8px 2px 2px; }
@@ -40,21 +40,21 @@
 .fd-room { display: grid; gap: 3px; animation: fk-up .3s var(--d, 0ms) ease-out both; }
 .fd-room-h { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 2px 3px; border-bottom: 2px solid var(--fk-line2); }
 .fd-room-h b { font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .6px; }
-.fd-room-h small { font-family: var(--fk-f); font-size: 14px; letter-spacing: 2px; color: var(--fk-dim); }
+.fd-room-h small { font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .2px; color: var(--fk-dim); }
 .fd-dc { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: stretch; gap: 0; }
-.fd-dc-slot { display: grid; place-items: center; background: var(--fk-g2); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 1px; }
+.fd-dc-slot { display: grid; place-items: center; background: var(--fk-g2); color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; }
 .fd-dc.is-start .fd-dc-slot { background: #fff; color: #0b0c0e; font-family: var(--fk-d); font-size: 15px; letter-spacing: .3px; }
 .fd-dc.is-hurt .fd-dc-slot { background: var(--fk-l); color: #fff; }
 .fd-dc.is-hurt .fk-l3 { opacity: .55; }
 .fd-dc .fk-l3 { width: 100%; }
 .fd-dc.is-pick .fk-l3 { box-shadow: inset 0 0 0 2px #fff; }
 .fd-dc-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 3px; padding: 4px 0 6px; animation: fk-up .18s ease-out both; }
-.fd-dc-acts button { flex: 1 1 auto; min-width: 64px; height: 38px; padding: 0 10px; background: var(--fk-g3); border: 0; color: #fff; font-family: var(--fk-f); font-size: 16px; letter-spacing: 1.6px; cursor: pointer; }
+.fd-dc-acts button { flex: 1 1 auto; min-width: 64px; height: 38px; padding: 0 10px; background: var(--fk-g3); border: 0; color: #fff; font-family: var(--fk-f); font-size: 16px; letter-spacing: 1px; cursor: pointer; }
 .fd-dc-acts button:first-child { background: #fff; color: #0b0c0e; }
 .fd-dc-acts button:disabled { opacity: .35; cursor: default; }
 .fd-dc--empty { min-height: 40px; }
-.fd-empty { display: grid; align-items: center; padding: 0 12px; background: var(--fk-g1); color: var(--fk-dim); font-family: var(--fk-f); font-size: 15px; letter-spacing: 2px; }
-.fd-reset { justify-self: center; margin-top: 4px; padding: 8px 14px; background: none; border: 0; box-shadow: inset 0 0 0 1px var(--fk-line2); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 2px; cursor: pointer; }
+.fd-empty { display: grid; align-items: center; padding: 0 12px; background: var(--fk-g1); color: var(--fk-dim); font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; }
+.fd-reset { justify-self: center; margin-top: 4px; padding: 8px 14px; background: none; border: 0; box-shadow: inset 0 0 0 1px var(--fk-line2); color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; cursor: pointer; }
 
 /* ── A man's page ────────────────────────────────────────────────────────── */
 .fd-sheet-bg { position: fixed; inset: 0; z-index: 1270; display: grid; align-items: end; justify-items: center; padding-bottom: var(--web-rail, 0px); background: rgba(4,5,6,.72); animation: fd-fade .16s ease-out both; }
@@ -70,7 +70,7 @@
 /* ratings as the build page's grades: the trait, a bar, the letter in its colour */
 .fd-grades { display: grid; gap: 2px; }
 .fd-grade { display: grid; grid-template-columns: minmax(0, 1fr) 38% 34px; align-items: center; gap: 10px; padding: 5px 8px; background: var(--fk-g1); }
-.fd-grade small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-f); font-size: 15px; letter-spacing: 1.6px; color: var(--fk-text); }
+.fd-grade small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; color: var(--fk-text); }
 .fd-grade i { height: 8px; background: var(--fk-g3); overflow: hidden; }
 .fd-grade em { display: block; height: 100%; width: calc(var(--k) * 100%); background: var(--g); transform-origin: left; animation: fd-grow .5s var(--d, 0ms) cubic-bezier(.2,.9,.25,1) both; }
 .fd-grade b { justify-self: end; font-family: var(--fk-d); font-weight: 400; font-size: 20px; color: var(--g); }
@@ -78,12 +78,12 @@
 /* the career table: the one table in the mode, deep on a man's page */
 .fd-table-wrap { overflow-x: auto; margin: 0 -4px; }
 .fd-table { width: 100%; border-collapse: collapse; font-family: var(--fk-f); font-size: 16px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
-.fd-table th { padding: 4px 6px; text-align: right; color: var(--fk-dim); font-weight: 400; font-size: 13px; letter-spacing: 1.6px; white-space: nowrap; border-bottom: 1px solid var(--fk-line2); }
+.fd-table th { padding: 4px 6px; text-align: right; color: var(--fk-dim); font-weight: 400; font-size: 13px; letter-spacing: 0.6px; white-space: nowrap; border-bottom: 1px solid var(--fk-line2); }
 .fd-table td { padding: 5px 6px; text-align: right; border-bottom: 1px solid var(--fk-line); white-space: nowrap; }
 .fd-table th:first-child, .fd-table td:first-child, .fd-table td:nth-child(2) { text-align: left; }
 .fd-table tr.is-live td { color: #fff; background: var(--fk-g1); }
 .fd-table tfoot td { color: #fff; border-bottom: 0; border-top: 1px solid var(--fk-line2); }
-.fd-table .fd-hon { text-align: left; color: var(--fk-gold-hi); font-size: 13px; letter-spacing: 1.4px; }
+.fd-table .fd-hon { text-align: left; color: var(--fk-gold-hi); font-size: 13px; letter-spacing: 0.6px; }
 .fd-cut { display: grid; padding-top: 6px; }
 
 html.bap-reduce-motion :is(.fd-cap-bar i, .fd-room, .fd-grade em, .fd-sheet, .fd-sheet-bg, .fd-dc-acts) { animation: none !important; }

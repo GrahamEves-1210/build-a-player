@@ -23,7 +23,7 @@ import { DL_ATTR } from '../../data/dls'
 import { LB_ATTR } from '../../data/lbs'
 import { DB_ATTR } from '../../data/dbs'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, Spin, fkVars, reduced, splitName } from './kit'
+import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, Spin, fkVars, reduced, splitName, ActionBar } from './kit'
 import './draft.css'
 
 // SCOUTING AND THE DRAFT (engine: lib/franchise2/draft.js).
@@ -455,10 +455,10 @@ function DraftWeek({ F, act, onBuild }) {
           {add && <div className="dr-filters">{POS.map(p => <button key={p} type="button" onClick={() => { tap(); onBuild({ id: 'prospect', pos: p, n: 1, of: 1 }) }}>{POS_LABEL[p]}</button>)}</div>}
         </section>
       )}
-      <div className="dr-acts">
-        <Go ghost onClick={() => { setRoom(true); tap() }}>SCOUTING ROOM</Go>
-        <Go onClick={() => { act(X => startNight(X)); sfx('whistle'); haptic('medium') }}>START THE DRAFT</Go>
-      </div>
+      <ActionBar>
+        <Go onClick={() => { act(X => startNight(X)); sfx('whistle'); haptic('medium') }}>Start the draft</Go>
+        <Go ghost onClick={() => { setRoom(true); tap() }}>Scouting room</Go>
+      </ActionBar>
       {room && <DraftBoard F={F} act={act} onClose={() => setRoom(false)} />}
     </div>
   )
@@ -515,9 +515,10 @@ function DraftNight({ F, act }) {
       {showing && <button type="button" className="dr-skip" onClick={() => { setShown(feed.length); tap() }}>SKIP AHEAD</button>}
       {!showing && onClock && (
         <>
+          <p className="dr-tip">You're on the clock. Tap a player to see his card and draft him.</p>
           <div className="dr-acts">
-            <Go ghost onClick={auto}>AUTO PICK</Go>
-            <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeDownOffers(X))); tap() }}>TRADE DOWN</Go>
+            <Go ghost onClick={auto}>Auto pick</Go>
+            <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeDownOffers(X))); tap() }}>Trade down</Go>
           </div>
           {offers && <Offers F={F} offers={offers} onTake={trade} />}
           <div className="dr-tabs is-small" role="tablist">
@@ -529,15 +530,15 @@ function DraftNight({ F, act }) {
       )}
       {!showing && !onClock && !done && (
         <>
-          <div className="dr-acts">
-            <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeUpOffers(X))); tap() }}>TRADE UP</Go>
-            <Go onClick={run}>{nextMine != null ? `TO PICK ${nextMine + 1}` : 'FINISH THE DRAFT'}</Go>
-          </div>
           {offers && <Offers F={F} offers={offers} onTake={trade} />}
+          <ActionBar>
+            <Go onClick={run}>{nextMine != null ? `Sim to pick ${nextMine + 1}` : 'Finish the draft'}</Go>
+            <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeUpOffers(X))); tap() }}>Trade up</Go>
+          </ActionBar>
         </>
       )}
       {!showing && !done && roundOf(at) >= 4 && <button type="button" className="dr-skip" onClick={() => { setShown(0); act(fresh(X => simRest(X))); sfx('flip') }}>AUTO-DRAFT THE REST</button>}
-      {!showing && done && <div className="dr-acts"><Go onClick={finish}>THE CLASS</Go></div>}
+      {!showing && done && <ActionBar><Go onClick={finish}>See the class</Go></ActionBar>}
     </div>
   )
 }
@@ -632,7 +633,7 @@ function RevealCard({ F, p, onNext }) {
         </div>
       )}
       <div className="dr-rv-stamp">{landed && <Stamp kind={p.tag === 'G' ? 'gem' : p.tag === 'B' ? 'bust' : 'solid'} big>{TAG_TEXT[p.tag]}</Stamp>}</div>
-      <div className="dr-acts"><Go onClick={onNext}>{draftDone(F) ? 'THE CLASS' : 'NEXT PICK'}</Go></div>
+      <ActionBar><Go onClick={onNext}>{draftDone(F) ? 'See the class' : 'Next pick'}</Go></ActionBar>
     </div>
   )
 }
@@ -672,7 +673,7 @@ function ClassRecap({ F, act, owner }) {
           {rv.busts.length > 0 && <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="OVERRATED BY THE CONSENSUS" />{rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />)}</section>}
         </>
       )}
-      <div className="dr-acts"><Go onClick={() => { act(X => { closeDraft(X); newSeason(X) }); sfx('whistle'); haptic('medium') }}>START {F.year + 1}</Go></div>
+      <ActionBar><Go onClick={() => { act(X => { closeDraft(X); newSeason(X) }); sfx('whistle'); haptic('medium') }}>Start the {F.year + 1} season</Go></ActionBar>
     </div>
   )
 }

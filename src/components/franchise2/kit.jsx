@@ -38,7 +38,12 @@ export function fkVars(short) {
   let a = t.color, b = t.color2
   if (lum(a) < 0.012) a = mix(a, '#ffffff', 0.13)
   if (lum(b) < 0.02 || Math.abs(lum(b) - lum(a)) < 0.03) b = '#ffffff'
-  const v = { '--tc': a, '--tc2': b, '--tct': lum(a) > 0.27 ? '#0b0c0e' : '#ffffff', '--tc2t': lum(b) > 0.27 ? '#0b0c0e' : '#ffffff' }
+  // (the type on a slab: whichever of white or near-black reads better on it; --tca: the team's colour that reads on
+  // the near-black page, for bars, underlines and accents: its main colour, else its second, else white)
+  const dark = L => (L + 0.05) / 0.0527 > 1.05 / (L + 0.05)
+  const onInk = L => (L + 0.05) / 0.0527 >= 3
+  const la = lum(a), lb = lum(b)
+  const v = { '--tc': a, '--tc2': b, '--tct': dark(la) ? '#0b0c0e' : '#ffffff', '--tc2t': dark(lb) ? '#0b0c0e' : '#ffffff', '--tca': onInk(la) ? a : onInk(lb) ? b : '#ffffff' }
   VARS.set(short, v)
   return v
 }
@@ -317,22 +322,46 @@ export function Versus({ a, h, recA, recH, subA, subH, mid = 'AT', foot, size = 
     </div>
   )
 }
-// The tale of the tape: one thing about both teams, a bar from each side that meets where they compare
+// The tale of the tape: one thing about both teams, the two values either side of it; the better one in white with
+// its team's mark under it, the other dimmed (no bars: two bars that barely differ say nothing)
 //   label · a, h (the values) · fa, fh (how they read: '27.4', 'A-') · teamA, teamH · lower (lower is better: points allowed)
 export function Tape({ label, a, h, fa, fh, teamA, teamH, lower = false }) {
-  const sa = Math.max(0.001, a), sh = Math.max(0.001, h)
-  const k = lower ? sh / (sa + sh) : sa / (sa + sh)
   const better = lower ? (a < h ? 'a' : h < a ? 'h' : null) : (a > h ? 'a' : h > a ? 'h' : null)
   return (
     <div className="fk-tape">
-      <b className={better === 'a' ? 'is-up' : ''}>{fa ?? a}</b>
-      <span className="fk-tape-bar">
-        <i style={{ ...fkVars(teamA), flexGrow: k }} />
-        <small>{label}</small>
-        <i style={{ ...fkVars(teamH), flexGrow: 1 - k }} />
-      </span>
-      <b className={better === 'h' ? 'is-up' : ''}>{fh ?? h}</b>
+      <b className={better === 'a' ? 'is-up' : better ? 'is-down' : ''} style={fkVars(teamA)}>{fa ?? a}</b>
+      <small>{label}</small>
+      <b className={better === 'h' ? 'is-up' : better ? 'is-down' : ''} style={fkVars(teamH)}>{fh ?? h}</b>
     </div>
+  )
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+// The way back from a sub-view: always the top left (sticky under the hub's tabs), named for where it goes.
+export function BackBar({ label = 'Back', title, onBack, right }) {
+  return (
+    <div className="fk-back">
+      <button type="button" onClick={onBack}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="square" /></svg>
+        <span>{label}</span>
+      </button>
+      {title != null && <b>{title}</b>}
+      {right != null && <span className="fk-back-r">{right}</span>}
+    </div>
+  )
+}
+// The screen's next step: always at the bottom of the screen (it sticks there while the page scrolls)
+export const ActionBar = ({ children, className = '' }) => <div className={`fk-actbar ${className}`}>{children}</div>
+// A section that opens with a tap (the extras a screen keeps one tap away)
+export function Fold({ title, right, open: init = false, children, className = '' }) {
+  const [open, setOpen] = useState(init)
+  return (
+    <section className={`fk-fold${open ? ' is-open' : ''} ${className}`}>
+      <button type="button" className="fk-fold-h" aria-expanded={open} onClick={() => { setOpen(o => !o); sfx('tap') }}>
+        <b>{title}</b>{right != null && <span>{right}</span>}<i aria-hidden="true">▾</i>
+      </button>
+      {open && <div className="fk-fold-b">{children}</div>}
+    </section>
   )
 }
 
