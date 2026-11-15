@@ -555,7 +555,8 @@ export const SPORT = {
     honor: 'All-Star', honors: 'ALL-STARS', first: 'All-NBA',
     // games played to be considered (of 82): the 65-game rule for MVP and All-NBA, 40 for an All-Star
     minGames: { award: 65 / 82, first: 65 / 82, honor: 40 / 82 },
-    proBowl: { guard: s => s.ppg >= 21 || (s.ppg >= 17 && s.apg >= 7), big: s => s.ppg >= 20 || (s.ppg >= 16 && s.rpg >= 10) },
+    // (All-Star a hair harder, owner 11-14: was 21 / 17+7 for a guard, 20 / 16+10 for a big)
+    proBowl: { guard: s => s.ppg >= 22.5 || (s.ppg >= 18.5 && s.apg >= 7.5), big: s => s.ppg >= 21.5 || (s.ppg >= 17.5 && s.rpg >= 11) },
     allPro: { guard: s => s.ppg >= 25 || (s.ppg >= 22 && s.apg >= 8), big: s => s.ppg >= 24 || (s.ppg >= 20 && s.rpg >= 11) },
     allProNear: { guard: s => s.ppg >= 22, big: s => s.ppg >= 20 },
     // the MVP vote: points, plus playmaking or the glass, on a winner, against the year's
