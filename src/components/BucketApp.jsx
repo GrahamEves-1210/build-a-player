@@ -1072,7 +1072,7 @@ export default function BucketApp() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('../lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: CBB_LIVE && careerNew.current.start === 'college' ? 'college' : 'draft', spot: careerNew.current.spot ?? null }), sandbox: !!isBucketCustomMode }
+    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: CBB_LIVE && careerNew.current.start === 'college' ? 'college' : 'draft', spot: careerNew.current.spot ?? null }), sandbox: !!isBucketCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build, isBucketCustomMode])
@@ -2199,7 +2199,7 @@ export default function BucketApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, spot) => { careerNew.current = { slot, name, games, start, spot }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, spot, face) => { careerNew.current = { slot, name, games, start, spot, face }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }

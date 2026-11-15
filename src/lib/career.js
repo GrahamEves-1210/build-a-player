@@ -1103,7 +1103,7 @@ export function gameCast(c, opp = null) {
   const S = sportOf(c)
   const us = castTeam(c, S, c.team), them = castTeam(c, S, opp ?? c.team)
   const last = String(c.name ?? 'Guest').trim().split(/\s+/).slice(-1)[0].toUpperCase()
-  const me = { name: last, number: jerseyOf(c), skin: c.skin ?? c.build?.[FACE_RATING[c.pos]]?.skinColor ?? c.build?.skin ?? CAST_SKIN[0], speed: Math.max(-1, Math.min(1, ((c.build?.speed?.val ?? c.build?.legs?.val ?? c.build?.pace?.val ?? 6) - 6) / 5)), me: true }
+  const me = { name: last, number: jerseyOf(c), skin: c.face?.skin ?? c.skin ?? c.build?.[FACE_RATING[c.pos]]?.skinColor ?? c.build?.skin ?? CAST_SKIN[0], speed: Math.max(-1, Math.min(1, ((c.build?.speed?.val ?? c.build?.legs?.val ?? c.build?.pace?.val ?? 6) - 6) / 5)), me: true }
   const used = new Set([...Object.values(us).filter(Array.isArray).flat().filter(Boolean).map(m => String(m.number)), String(me.number)])
   for (const g in us) if (Array.isArray(us[g])) us[g] = yieldNumber(us[g], me.number, used)
   us[c.pos] = [me, ...(us[c.pos] ?? [])]
