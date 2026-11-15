@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { franchiseCard, FRANCHISE_ART } from '../../lib/franchiseLive'
+import { franchiseCard, FRANCHISE_ART, FRANCHISE_TURN } from '../../lib/franchiseLive'
 import { SkCards } from '../app/Skeleton'
+import TrophyTurn from './TrophyTurn'
 import './franchise-card.css'
 
 // FRANCHISE on football's Home: the card that takes SQUAD BUILDER's place while the switch is on
@@ -27,9 +28,10 @@ export function FranchiseWait() {
   )
 }
 
-// the mode's own picture (FRANCHISE_ART.card); its box goes if the file isn't there
+// the mode's own picture (FRANCHISE_ART.card); its box goes if the file isn't there. Over it, the same picture turning
+// slowly (TrophyTurn: asked for only once the card is on screen; if it can't play, the still stays)
 const Art = () => (FRANCHISE_ART.card
-  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="640" height="640" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /></span>
+  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="640" height="640" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={FRANCHISE_TURN.card} poster={FRANCHISE_ART.card} className="ag-fr-turn" /></span>
   : null)
 
 export default function FranchiseCard({ onClick, wide = false }) {

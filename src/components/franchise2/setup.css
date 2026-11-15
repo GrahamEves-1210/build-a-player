@@ -209,6 +209,9 @@ html.bap-reduce-motion :is(.fsu-body, .fsu-div, .fsu-empty, .fsu-line, .fsu-line
 /* ── The slots ─────────────────────────────────────────────────────────── */
 .fsu-slots-gm { font-size: 15px; letter-spacing: 0.6px; color: var(--fk-mute); }
 .fsu-hero { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: var(--fk-g1); }
+/* the trophy turning (TrophyTurn.jsx): a square the hero's height, in the middle of the still, on the same black */
+.fsu-hero-box { position: relative; }
+.fsu-hero-turn { position: absolute; top: 0; left: 50%; height: 100%; width: auto; aspect-ratio: 1; transform: translateX(-50%); background: transparent; pointer-events: none; }
 .fsu-slot {
   position: relative; display: flex; align-items: center; gap: 0; height: 104px; padding: 0; border: 0; overflow: hidden; text-align: left; font: inherit; cursor: pointer;
   background: var(--tc, var(--fk-g1)); color: var(--tct, #fff); box-shadow: inset 0 -4px 0 var(--tc2, var(--fk-g3)); animation: fk-in .32s var(--d, 0ms) both;

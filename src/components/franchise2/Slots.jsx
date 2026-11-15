@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { slotSummary, clearFranchise, SLOTS_N, TEAM } from '../../lib/franchise2'
-import { FRANCHISE_ART, FRANCHISE_CARD_KEY, franchiseCard } from '../../lib/franchiseLive'
+import { FRANCHISE_ART, FRANCHISE_TURN, FRANCHISE_CARD_KEY, franchiseCard } from '../../lib/franchiseLive'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import { Chyron, KLogo, fkVars } from './kit'
 import { NameForm } from './Setup'
+import TrophyTurn from './TrophyTurn'
 import './setup.css'
 
 // The mode's first screen: the three save slots, each a team's slab (its record, the year, rings) or an empty one.
@@ -12,6 +13,7 @@ import './setup.css'
 export function Slots({ owner, onOpen, onHome }) {
   const [sure, setSure] = useState(null)
   const [, redraw] = useState(0)
+  const hero = useRef(null)
   const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: slotSummary(i) }))
   const del = i => {
     clearFranchise(i)
@@ -26,7 +28,13 @@ export function Slots({ owner, onOpen, onHome }) {
       </div>
       <div className="fsu-body">
         <div>
-          {FRANCHISE_ART.hero && <img className="fsu-hero" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />}
+          {/* the trophy, and over it the same trophy turning slowly (TrophyTurn: a square in the middle; a tap turns it again once it rests) */}
+          {FRANCHISE_ART.hero && (
+            <div className="fsu-hero-box" ref={hero}>
+              <img className="fsu-hero" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} />
+              <TrophyTurn base={FRANCHISE_TURN.hero} className="fsu-hero-turn" replay={hero} />
+            </div>
+          )}
           <Chyron tone="ink" size="l" title="Franchise" sub="THREE SAVE SLOTS" />
           {rows.map(({ i, s }) => {
             const t = s?.team ? TEAM[s.team] : null

@@ -27,3 +27,6 @@ export const franchiseCard = () => { try { const c = JSON.parse(localStorage.get
 // The mode's art (public/franchise/art/, made with the trophy scene: the championship trophy on the mode's own
 // near-black): the picture on Home's card and the hero on the mode's first screen. (null: no picture, no box)
 export const FRANCHISE_ART = { card: '/franchise/art/trophy-card.webp', hero: '/franchise/art/trophy-wide.webp' }
+// ...and each one turning, slowly (components/franchise2/TrophyTurn.jsx: .mp4, or .webm where H.264 can't play). The
+// card's film is the card's still in motion; the hero's is a square, the middle of the 16:9 still. (null: the still only)
+export const FRANCHISE_TURN = { card: '/franchise/art/trophy-card-turn', hero: '/franchise/art/trophy-hero-turn' }
