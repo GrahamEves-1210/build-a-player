@@ -36,7 +36,7 @@
 //   openDraft(F) · combineOf(x) · startNight(F) · cpuPicks(F) · userPick · autoPick · simRest
 //   tradeUpOffers · tradeDownOffers · acceptTrade · draftDone · pickTeam · draftReview(F)
 //   ratingsOf(p): any league man's nine ratings ({ trait: { val } }, a build's shape), fitted to his OVR now
-import { TEAM, SHORTS, POS, MIN, POS_LABEL, gradeOf, GRADES, fakeName, realOf, realPool } from './league'
+import { TEAM, SHORTS, POS, MIN, POS_LABEL, gradeOf, GRADES, fakeName, realOf, realPool, foOf } from './league'
 import { standings, finishOf, pct } from './standings'
 import { rngOf, clamp, r1 } from './rng'
 import { ovrOf, TYPES_OF } from '../squadSeason'
@@ -112,11 +112,16 @@ const TALENT = [[0, 98], [0.021, 95], [0.033, 90], [0.08, 84.4], [0.145, 81.5], 
 // neither the media nor any of the 32 teams sees it. Our scouts can: a second look at his tape and a visit.
 // About one a class turns into a 90+ starter; some classes have none.
 const GEM_P = 0.016
-const talentAt = r => { for (let i = 1; i < TALENT.length; i++) { const [a, va] = TALENT[i - 1], [b, vb] = TALENT[i]; if (r <= b) return va + (vb - va) * (r - a) / (b - a) } return 62 }
+// QUARTERBACKS are scarcer (the real league: a franchise quarterback about once a class, two or three more who can
+// start, the rest backups and camp arms): a steeper curve of their own, so the league keeps teams with no answer at
+// the spot, bridge starters and backups starting, instead of a decent starter for everyone
+const QB_TALENT = [[0, 97], [0.025, 92], [0.045, 88], [0.07, 82], [0.15, 76], [0.35, 70], [0.7, 64], [1, 56]]
+const curveAt = (C, r) => { for (let i = 1; i < C.length; i++) { const [a, va] = C[i - 1], [b, vb] = C[i]; if (r <= b) return va + (vb - va) * (r - a) / (b - a) } return C[C.length - 1][1] }
+const talentAt = (r, pos) => curveAt(pos === 'qb' ? QB_TALENT : TALENT, r)
 function makeProspect(F, R, pos, id, q = 0) {
   const T = TYPES_OF[pos]
   // his ceiling first (the class's talent: a few 90s, a first round from about 83 up, a long tail), then his age
-  const t = talentAt(R.u())
+  const t = talentAt(R.u(), pos)
   let pk = Math.round(t + R.n() * 1.2 + q * 1.6 * clamp(0, 1, (t - 80) / 15))
   pk = clamp(60, 99, pk)
   const gem = pk >= 72 && pk <= 80 && R.u() < GEM_P ? Math.round(90 + R.u() * 5 + (R.u() < 0.15 ? 3 : 0)) : 0
@@ -719,12 +724,17 @@ const finalBuzz = (F, x) => F.dr?.fin?.[x.i] ?? buzzOf(F, x)
 export const tagOf = (pk, bz) => (pk - bz >= 5 ? 'G' : bz - pk >= 5 ? 'B' : 'S')
 export const TAG_TEXT = { G: 'GEM', B: 'BUST', S: 'SOLID' }
 
-// how a league team rates a man: what he really is, half the media's error, its own scouts' error; what it needs;
-// what the position is worth (a quarterback or a pass rusher goes earlier than a running back of the same grade)
+// how a league team rates a man: what he really is, some of the media's error, its own scouts' error; what it needs;
+// what the position is worth (a quarterback or a pass rusher goes earlier than a running back of the same grade).
+// Its front office (league.js foOf) decides how well it sees: a well-run club's scouts miss by a couple of points and
+// it takes the best man; a badly run one buys the hype, misses by five or six and reaches for its needs, so a top-5
+// pick can be a bust and a team can go years without finding its quarterback.
 function cpuValue(F, s, x, need, rd) {
-  const seen = seenPk(x) + (finalBuzz(F, x) - seenPk(x)) * 0.5 + g01(strHash(s), x.z) * 1.6
-  const pv = GROUP_V[gKey(x)] * (rd >= 4 ? 0.5 : 1)
-  return seen + need[needKey(x)] * (rd <= 2 ? 1.1 : 1.4) + pv
+  const bad = 1 - foOf(F, s)
+  const seen = seenPk(x) + (finalBuzz(F, x) - seenPk(x)) * (0.3 + bad * 0.6) + g01(strHash(s), x.z) * (1 + bad * 5)
+  // (a club with its quarterback doesn't spend a high pick on another one: he'd sit for years)
+  const pv = x.p === 'qb' && need.qb === 0 && rd <= 3 ? -3 : GROUP_V[gKey(x)] * (rd >= 4 ? 0.5 : 1)
+  return seen + need[needKey(x)] * (rd <= 2 ? 1.1 : 1.4) * (0.7 + bad * 0.8) + pv
 }
 // the player's man is taken: he goes on the roster, signs his slot's deal, and the pick goes on the board
 function take(F, s, x, via = null) {
