@@ -82,7 +82,7 @@ export const CHAR_TEXT = ['CONCERNS', 'CLEAN', 'HIGH CHARACTER']
 
 // ── The class ────────────────────────────────────────────────────────────────
 // how many at each position (about the real draft's mix: linemen and corners the most, few quarterbacks)
-const CLASS_MIX = { qb: 16, rb: 24, wr: 44, te: 20, ol: 56, dl: 54, lb: 32, db: 54 }
+const CLASS_MIX = { qb: 15, rb: 22, wr: 40, te: 18, ol: 52, dl: 50, lb: 30, db: 49 }
 const SPOTS = { dl: [['edge', 0.55], ['dt', 0.45]], db: [['cb', 0.58], ['s', 0.42]], ol: [['LT', 0.22], ['LG', 0.18], ['C', 0.2], ['RG', 0.18], ['RT', 0.22]] }
 // height (in) and weight (lb) of the average man at each spot, and how much weight a step of Size carries
 const BODY = { qb: [75, 219, 5], rb: [70, 212, 5], wr: [73, 196, 5], te: [77, 250, 6], LT: [78, 315, 7], RT: [78, 318, 7], LG: [76, 314, 7], RG: [76, 314, 7], C: [75, 304, 6], edge: [76, 257, 7], dt: [75, 305, 8], lb: [74, 235, 5], cb: [71, 191, 4], s: [72, 204, 4] }
@@ -116,9 +116,7 @@ function makeProspect(F, R, pos, id) {
   const o = ovrV(pos, a)
   pk = clamp(o, 97, Math.round(o + ROOM(ag) + CH_EFF[ch] + up))
   // the media's read of each rating: his own error (some men they love, some they miss) plus a little on each
-  // (their error on the whole man is `miss` OVR points, up or down alike; each rating a little off besides)
-  const miss = R.n() * 5.2
-  const m = fitVals(pos, a.map(v => v + R.n() * 0.8), clamp(45, 95, o + Math.round(miss)))
+  const z = R.int(1, 2 ** 20)
   const spots = SPOTS[pos]
   const s = spots ? spots[R.wpick(spots.map(x => x[1]))][0] : undefined
   const [h0, w0, wk] = BODY[bodyKey(pos, s)]
@@ -129,7 +127,7 @@ function makeProspect(F, R, pos, id) {
   const [lo, hi] = ranges[R.int(0, ranges.length - 1)]
   const col = CFB_TEAMS[R.wpick(SCHOOL_W)].short
   const cl = ag <= 20 ? 0 : ag === 21 ? (R.u() < 0.7 ? 1 : 2) : ag === 22 ? (R.u() < 0.6 ? 3 : 2) : 4   // SO, JR, RS-JR, SR, RS-SR
-  return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), m: enc(m), k: '0'.repeat(T.length), kc: 0, ch, z: R.int(1, 2 ** 30), sv: 0, cl }
+  return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl }
 }
 export const CLASS_LABEL = ['SO', 'JR', 'RS-JR', 'SR', 'RS-SR']
 const isSenior = x => x.cl >= 3
@@ -368,7 +366,22 @@ export function runCombine(F) {
 // Their projection of a man (an OVR he's headed for): their read of his ratings and his age, moved by his Saturdays
 // (a good game, a bad one), drawn toward the truth as the season goes, and after the combine by what he ran.
 const BUZZ = new Map()
-const mediaBase = x => ovrV(x.p, dec(x.m)) + ROOM(x.ag)
+// The media's read of each rating: their error on the whole man is `miss` OVR points (up or down alike, about 5),
+// each rating a little off besides. Drawn from his own seed, so it's never saved.
+const MEDIA = new Map()
+export function mediaOf(x) {
+  if (x.b != null) return dec(x.a)
+  const k = `${x.p}|${x.z}|${x.a}`
+  let m = MEDIA.get(k)
+  if (!m) {
+    const a = dec(x.a), o = ovrV(x.p, a)
+    m = fitVals(x.p, a.map((v, j) => v + g01(x.z, 40 + j) * 0.8), clamp(45, 95, o + Math.round(g01(x.z, 39) * 5.2)))
+    if (MEDIA.size > 4000) MEDIA.clear()
+    MEDIA.set(k, m)
+  }
+  return m
+}
+const mediaBase = x => ovrV(x.p, mediaOf(x)) + ROOM(x.ag)
 export function buzzOf(F, x, t = weeksIn(F), cmb = F.sc?.cmb ?? 0) {
   if (x.b != null) return x.pk
   const key = `${F.seed}|${F.year}|${x.i}|${t}|${cmb}`
@@ -379,7 +392,7 @@ export function buzzOf(F, x, t = weeksIn(F), cmb = F.sc?.cmb ?? 0) {
   for (let w = 1; w <= Math.min(t, 16); w++) walk += (h01(x.z, 500 + w) - 0.5) * 1.5
   v = base + walk + (x.pk - base) * 0.12 * Math.min(1, t / 18)
   if (cmb) {
-    const T = TYPES_OF[x.p], a = dec(x.a), m = dec(x.m)
+    const T = TYPES_OF[x.p], a = dec(x.a), m = mediaOf(x)
     const phys = T.map((tt, j) => (kindOf(x.p, tt) === 'p' ? a[j] : m[j]))
     const c = combineOf(x)
     if (c && !c.dnp) v += (ovrV(x.p, phys) - ovrV(x.p, m)) * 0.6
@@ -475,7 +488,7 @@ export const mockVersion = F => (F.dr ? 'FINAL' : `${1 + Math.floor(weeksIn(F) /
 // Each rating: known (exact), narrowed (a guess that may be a step off, ± 1), or unknown (the media's number, ± 2).
 // Our grade on him is what those add up to, plus his age; his character only counts once we've sat down with him.
 export function viewOf(F, x) {
-  const T = TYPES_OF[x.p], a = dec(x.a), m = dec(x.m)
+  const T = TYPES_OF[x.p], a = dec(x.a), m = mediaOf(x)
   const traits = T.map((t, j) => {
     const k = x.b != null ? 2 : +x.k[j]
     const ou = h01(x.z, 300 + j), off = ou < 0.2 ? -1 : ou > 0.8 ? 1 : 0
@@ -659,7 +672,7 @@ export function addProspect(F, b, { col = null } = {}) {
   const [h0, w0] = BODY[bodyKey(B.pos, sp)]
   const x = {
     i: Math.max(0, ...F.dc.map(p => p.i)) + 1, n: B.name ?? `${POS_LABEL[B.pos]} Prospect`, p: B.pos, ...(sp && { s: sp }), ag: 21, o, pk: clamp(o, 99, o + ROOM(21)),
-    col, ht: h0, wt: w0, nu: B.num ?? 0, a: enc(vals), m: enc(vals), k: '2'.repeat(T.length), kc: 1, ch: 1, z: 7 + b * 131, sv: 0, cl: 1, b,
+    col, ht: h0, wt: w0, nu: B.num ?? 0, a: enc(vals), k: '2'.repeat(T.length), kc: 1, ch: 1, z: 7 + b * 131, sv: 0, cl: 1, b,
   }
   F.dc.push(x)
   F.board = [x.i, ...F.board.filter(id => id !== x.i)]
@@ -851,6 +864,7 @@ export const heightText = h => `${Math.floor(h / 12)}-${h % 12}`
 
 
 // ── Saving the class ─────────────────────────────────────────────────────────
-const DK = ['i', 'n', 'p', 's', 'ag', 'o', 'pk', 'col', 'ht', 'wt', 'nu', 'a', 'm', 'k', 'kc', 'ch', 'z', 'sv', 'cl', 'b']
+// (o is read back from his ratings; the media's read is drawn from z)
+const DK = ['i', 'n', 'p', 's', 'ag', 'pk', 'col', 'ht', 'wt', 'nu', 'a', 'k', 'kc', 'ch', 'z', 'sv', 'cl', 'b']
 export const packClass = dc => (dc ?? []).map(x => { const a = DK.map(k => x[k] ?? null); while (a.length && a[a.length - 1] === null) a.pop(); return a })
-export const unpackClass = rows => (rows ?? []).map(a => { const x = {}; DK.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); return x })
+export const unpackClass = rows => (rows ?? []).map(a => { const x = {}; DK.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); x.o = ovrV(x.p, dec(x.a)); return x })

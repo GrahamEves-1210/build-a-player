@@ -11,7 +11,7 @@ const HX = '0123456789ab'
 for (let y = 0; y < N; y++) {
   const t0 = performance.now()
   const dc = F.dc
-  if (dc.length < 280) bad(`class ${dc.length}`)
+  if (dc.length < 260) bad(`class ${dc.length}`)
   const pks = dc.map(x => x.pk).sort((a, b) => b - a)
   console.log(`${F.year} class ${dc.length}: pk top ${pks.slice(0, 5)} · #32 ${pks[31]} · #100 ${pks[99]} · #224 ${pks[223]} · rookie OVR mean ${avg(dc.map(x => x.o)).toFixed(1)} (max ${Math.max(...dc.map(x => x.o))})`)
   for (const x of dc) { const b = Object.fromEntries(TYPES_OF[x.p].map((t, j) => [t, { val: HX.indexOf(x.a[j]) }])); if (ovrOf(x.p, b) !== x.o) { bad(`ovr mismatch ${x.n}`); break } }
@@ -74,7 +74,8 @@ for (let y = 0; y < N; y++) {
   const rt = FR.ratingsOf(man(0)); console.log(`   #1 ${man(0).n} ${FR.spotLabel(man(0))} o ${man(0).o} pk ${man(0).pk} ratings ${Object.values(rt).map(v => v.val).join(',')} nu ${man(0).nu} rc ${man(0).rc} op ${man(0).op}`)
   FR.newSeason(F)
   const json = FR.packFranchise(F), back = FR.unpackFranchise(json)
-  if (JSON.stringify(back.dc[5]) !== JSON.stringify(F.dc[5])) bad('class pack')
+  const same = (a, b) => ['i', 'n', 'p', 's', 'o', 'pk', 'a', 'k', 'z', 'col'].every(k => a[k] === b[k])
+  if (!back.dc.every((x, j) => same(x, F.dc[j]))) bad('class pack')
   console.log(`   ${(performance.now() - t0).toFixed(0)} ms · save ${(json.length / 1024).toFixed(0)} KB (class ${(JSON.stringify(FR.packClass(F.dc)).length / 1024).toFixed(0)} KB)`)
 }
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

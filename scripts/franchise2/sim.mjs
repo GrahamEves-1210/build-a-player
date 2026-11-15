@@ -73,11 +73,14 @@ for (let y = 0; y < N; y++) {
   }
   for (const s of FR.SHORTS) { const c = FR.capSheet(F, s); if (c.room < -25) bad(`${F.year} ${s} ${-c.room}M over the cap after FA`) }
   FR.openDraft(F)
-  // scout and star a few, then draft
-  for (const x of F.dc.slice(0, 5)) { FR.scout?.(F, x.i); FR.star(F, x.i) }
+  // visit, film and star a few, then the draft: seven rounds (scripts/franchise2/draft.mjs checks scouting and trades)
+  for (const x of FR.consensus(F).slice(0, 5)) { FR.interview(F, x.i); FR.film(F, x.i); FR.star(F, x.i) }
+  FR.startNight(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
+  FR.closeDraft(F)
   const mine = F.dr.picks.filter(p => p.s === team)
-  if (F.dr.picks.length !== 96 || new Set(F.dr.picks.map(p => p.pid)).size !== 96) bad('draft picks')
+  if (F.dr.picks.length !== FR.PICKS_N || new Set(F.dr.picks.map(p => p.pid)).size !== FR.PICKS_N) bad('draft picks')
+  if (mine.some(p => !F.teams[team].r.find(q => q.i === p.pid)?.rc)) bad('a pick without a rookie deal')
   console.log(`   offseason: ${ch.filter(c => c.k === 'ret').length} of ours retired, ${ch.filter(c => c.k === 'up').length} up, ${ch.filter(c => c.k === 'down').length} down; drafted ${mine.map(p => `${p.p.toUpperCase()} ${FR.GRADES[FR.gradeIdx(p.pk)]}${p.tag === 'G' ? ' GEM' : p.tag === 'B' ? ' BUST' : ''}`).join(', ')}; builds ${F.builds.map(b => `${b.pos} ${F.teams[team].r.find(p => p.b === F.builds.indexOf(b))?.o ?? 'gone'} age ${b.age}`).join(', ')}`)
   FR.newSeason(F)
   const size = FR.saveSize(F)
