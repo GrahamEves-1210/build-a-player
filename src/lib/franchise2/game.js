@@ -54,7 +54,9 @@ export function newGame(G) {
 const other = s => (s === 'h' ? 'a' : 'h')
 const edgeOf = (S, side) => {
   const G = S.G, mine = side === 'h' ? G.sh : G.sa, them = side === 'h' ? G.sa : G.sh
-  return (mine.off - them.def) + (side === 'h' ? (G.homeEdge ?? 0) : 0) + (G.mod?.[side] ?? 0)
+  // (late in a close game, the 4th quarter or overtime within one score, each coach's calls: coach.js coachLate)
+  const late = G.late && S.t >= REG - Q && Math.abs(S.hs - S.as) <= 8 ? (G.late[side] ?? 0) : 0
+  return (mine.off - them.def) + (side === 'h' ? (G.homeEdge ?? 0) : 0) + (G.mod?.[side] ?? 0) + late
 }
 const margin = (S, side) => (side === 'h' ? S.hs - S.as : S.as - S.hs)
 const score = (S, side, pts, kind, extra = {}) => {
@@ -65,15 +67,16 @@ const score = (S, side, pts, kind, extra = {}) => {
 function tryAfter(S, side, R) {
   const m = margin(S, side)
   const late = S.t >= REG - Q
-  if (late && (m === -2 || m === 1 || m === -5 || m === -10)) { if (R.u() < 0.48) return 2; return 0 }
-  return R.u() < 0.945 ? 1 : 0
+  if (late && (m === -2 || m === 1 || m === -5 || m === -10)) { S.tr = R.u() < 0.48 ? '2' : '2x'; return S.tr === '2' ? 2 : 0 }
+  S.tr = R.u() < 0.945 ? 'xp' : 'xpx'
+  return S.tr === 'xp' ? 1 : 0
 }
 function touchdown(S, side, R, extra = {}) {
   const pts = 6
   if (side === 'h') S.hs += pts; else S.as += pts
   const x = tryAfter(S, side, R)
   if (side === 'h') S.hs += x; else S.as += x
-  S.plays.push({ t: Math.round(S.t), s: side, p: pts + x, k: 'td', hs: S.hs, as: S.as, ...extra })
+  S.plays.push({ t: Math.round(S.t), s: side, p: pts + x, k: 'td', hs: S.hs, as: S.as, tr: S.tr, ...extra })
 }
 
 // ── A drive from its start to its end, ordinary (not the key play) ──────────
@@ -149,7 +152,7 @@ function step(S) {
   if (!fits && (d.res === 'punt' || d.res === 'to')) { S.t = end; afterDrive(S, side, 'end', R); return }
   S.t = Math.min(end - 1, S.t + d.dur)
   if (d.res === 'td') touchdown(S, side, R)
-  else if (d.res === 'fg') { if (R.u() < fgMake(clamp(55, 97, S.y + 45))) score(S, side, 3, 'fg'); else d.res = 'miss' }
+  else if (d.res === 'fg') { const los = clamp(55, 97, S.y + 45); if (R.u() < fgMake(los)) score(S, side, 3, 'fg', { y: los }); else d.res = 'miss' }
   afterDrive(S, side, d.res, R)
   if (!fits) S.t = end
 }
@@ -219,7 +222,7 @@ export function resolveKey(S, hit, kind = null, seed = 'k') {
       const dur = Math.round((100 - ny) * (S.t > REG - 150 ? 0.9 : 2.2) + R.int(10, 50))
       S.t = Math.min(REG - 1, S.t + dur)
       if (u < pTD) { touchdown(S, ball, R); line = 'conv-td' }
-      else if (u < pTD + pFG && R.u() < fgMake(ny + 5)) { score(S, ball, 3, 'fg'); line = 'conv-fg' }
+      else if (u < pTD + pFG && R.u() < fgMake(ny + 5)) { score(S, ball, 3, 'fg', { y: Math.min(97, ny + 5) }); line = 'conv-fg' }
       else { line = 'conv-stall'; S.stallY = ny }
     }
   } else {
@@ -227,7 +230,7 @@ export function resolveKey(S, hit, kind = null, seed = 'k') {
     if (kind === 'pick' && k.ball === 'them') { line = 'pick'; S.poss = k.us; S.y = clamp(5, 95, 100 - k.y - R.int(-5, 25)) }
     else if (k.down === 3 && k.y >= 55 && !(margin(S, ball) <= -4)) {
       const y = kind === 'sack' ? k.y - 7 : k.y
-      if (R.u() < fgMake(y)) { score(S, ball, 3, 'fg'); line = 'held-fg' } else line = 'held-miss'
+      if (R.u() < fgMake(y)) { score(S, ball, 3, 'fg', { y }); line = 'held-fg' } else line = 'held-miss'
       S.poss = other(ball); S.y = 25
     } else if (k.down === 3) { line = 'punt'; S.poss = other(ball); S.y = nextStart('punt', k.y, R) }
     else { line = 'downs'; S.poss = other(ball); S.y = clamp(1, 95, 100 - k.y) }
