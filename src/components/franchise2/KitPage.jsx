@@ -11,7 +11,7 @@ const TICK = [
   { k: 'news', tag: 'INJURY', s: 'CIN', text: 'Ja\'Marr Chase (hamstring) out 2 weeks' },
   { k: 'score', a: 'PHI', as: 31, h: 'DAL', hs: 28, tag: 'F/OT' },
   { k: 'news', tag: 'TRADE', s: 'NYJ', text: 'Jets acquire a 2027 3rd-round pick from the Giants' },
-  { k: 'news', tag: 'RECORD', s: 'DET', text: 'Lions 6-0 for the first time since 1956' },
+  { k: 'news', tag: 'CLINCHED', s: 'DET', text: 'Lions clinch the NFC North' },
   { k: 'score', a: 'SF', as: 13, h: 'SEA', hs: 10, tag: 'FINAL' },
 ]
 
@@ -33,7 +33,7 @@ export default function KitPage({ onHome }) {
       <Chyron team="KC" title="This week" right="6-1" />
       <Chyron tone="ink" size="s" title="Around the league" sub="WEEK 6 FINALS" />
       <Chyron team="PIT" size="l" tag="AFC" title="North standings" />
-      <Chyron tone="gold" size="l" tag="LX" title="Super Bowl" sub="FEB 7 · LEVI'S STADIUM" />
+      <Chyron tone="gold" size="l" tag="LX" title="Super Bowl" sub="FEB 8, 2026 · LEVI'S STADIUM" />
 
       <h3>SCOREBUG</h3>
       <Scorebug a="DEN" h="KC" as={score} hs={20} per="4TH" clock="2:14" dd="3RD & 6" poss="a" flash={score > 17 ? { s: 'DEN', text: 'TOUCHDOWN BRONCOS', key: score } : null} />
