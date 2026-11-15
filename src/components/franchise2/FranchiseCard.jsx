@@ -32,7 +32,7 @@ export function FranchiseWait() {
 // it, the ball spinning like a slow spiral, 5 s a turn, a minute at a time (TrophyTurn: asked for only once the card
 // is on screen; if it can't play, the still stays)
 const Art = () => (FRANCHISE_ART.card
-  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="600" height="400" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={FRANCHISE_TURN.card} turns={12} className="ag-fr-turn" /></span>
+  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="450" height="300" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={FRANCHISE_TURN.card} turns={10} className="ag-fr-turn" /></span>
   : null)
 
 export default function FranchiseCard({ onClick, wide = false }) {

@@ -460,7 +460,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
           {/* College Football: a football mode, first and full width (logos only: lib/cfbLive.js) */}
           {!isBucket && !isSoccer && !isBaseball && onCFB && (
             <button className="ag-way ag-mc ag-mc--cfb ag-cfb--classic ag-pop" style={{ '--d': '240ms', gridColumn: '1 / -1' }} onClick={onCFB}>
-              <span className="ag-mc-head"><b>COLLEGE FOOTBALL<i className="ag-mc-tag">NEW</i></b><small>Conference spin · Heisman race</small></span>
+              <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b><small>Conference spin · Heisman race</small></span>
               <span className="ag-cfb-band" aria-hidden="true">
                 {CFB_CARD_SCHOOLS.map(sc => <img key={sc} src={`/logos/cfb/${sc}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
               </span>

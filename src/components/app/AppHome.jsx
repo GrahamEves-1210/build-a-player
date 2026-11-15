@@ -215,7 +215,7 @@ function CFBCard({ onClick, small = false }) {
   const [line] = useState(cfbLine)
   return (
     <button className={`ag-way ag-mc ag-mc--cfb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
-      <span className="ag-mc-head"><b>COLLEGE FOOTBALL<i className="ag-mc-tag">NEW</i></b><small>{line}</small></span>
+      <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b><small>{line}</small></span>
       <span className="ag-cfb-band" aria-hidden="true">
         {(small ? CFB_CARD_SCHOOLS.slice(0, 3) : CFB_CARD_SCHOOLS).map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>
