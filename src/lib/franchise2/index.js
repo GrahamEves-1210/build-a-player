@@ -7,6 +7,8 @@ import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
 import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
 import { defaultFace } from './faces'
+import { capComply } from './contracts'
+import { addNews } from './news'
 
 export * from './league'
 export * from './season'
@@ -45,7 +47,9 @@ export function createFranchise(setup) {
   for (const b of setup.builds ?? []) {
     const idx = F.builds.length
     const taken = takenOn(F.team, F.builds)
-    const num = legalFor(b.pos, b.num) && !taken.has(b.num) ? b.num : pickNumber(b.pos, taken, R.u)
+    // (the number his player picked is his: only another build can hold it first; a veteran who wore it takes
+    // another, roster.js fixNumbers)
+    const num = legalFor(b.pos, b.num) && !F.builds.some(x => x.num === b.num) ? b.num : pickNumber(b.pos, taken, R.u)
     const name = cleanName(b.name).trim() || null
     // (his face: the one the player picked on the name step; never a real man's photo)
     const face = b.face ?? defaultFace(`${F.seed}-${idx}`, b.pos)
@@ -60,6 +64,13 @@ export function createFranchise(setup) {
   F.chem = 55
   F.sched = makeSchedule(F.seed, F.year)
   F.wk = 0; F.log = []; F.ss = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
+  F.lastStarters = Object.values(lineup(t)).map(p => p.i)
+  // the builds' rookie deals land on a real roster: if that puts the team over the cap, the front office gets under it
+  // before the GM's first day, the way NFL teams do by the new league year (restructures first, then releases of the
+  // contracts that save the most for the least football); the wire reports each move (contracts.js capComply)
+  for (const m of capComply(F, F.team, new Set(F.lastStarters))) {
+    if (m.k === 'rs') addNews(F, { k: 'sign', tag: 'RESTRUCTURED', s: F.team, text: `${real.nick} restructure ${m.n}${/s$/.test(m.n) ? "'" : "'s"} contract, clearing $${m.saves.toFixed(1)} million in cap space` })
+  }
   F.lastStarters = Object.values(lineup(t)).map(p => p.i)
   makeClass(F)
   return F
