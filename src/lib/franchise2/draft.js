@@ -126,10 +126,10 @@ function makeProspect(F, R, pos, id) {
   const ranges = NUM_RANGE[pos]
   const [lo, hi] = ranges[R.int(0, ranges.length - 1)]
   const col = CFB_TEAMS[R.wpick(SCHOOL_W)].short
-  const cl = ag <= 20 ? 0 : ag === 21 ? (R.u() < 0.7 ? 1 : 2) : ag === 22 ? (R.u() < 0.6 ? 3 : 2) : 4   // SO, JR, RS-JR, SR, RS-SR
+  const cl = ag <= 20 ? 0 : ag === 21 ? (R.u() < 0.7 ? 1 : 2) : ag === 22 ? (R.u() < 0.6 ? 3 : 2) : 4   // RS-SO, JR, RS-JR, SR, RS-SR
   return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl }
 }
-export const CLASS_LABEL = ['SO', 'JR', 'RS-JR', 'SR', 'RS-SR']
+export const CLASS_LABEL = ['RS-SO', 'JR', 'RS-JR', 'SR', 'RS-SR']   // (three years out of high school: a true sophomore can't declare)
 const isSenior = x => x.cl >= 3
 
 // ratings shaped like `shape`, lifted (or lowered) together until the OVR is `target`

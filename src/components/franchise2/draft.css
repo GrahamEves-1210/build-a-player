@@ -2,7 +2,8 @@
 
 /* ── The scouting room: a full sheet over the hub ─────────────────────────── */
 .dr-room { position: fixed; inset: 0; z-index: 1200; padding-bottom: var(--web-rail, 0px); display: flex; flex-direction: column; background: var(--fk-ink); color: var(--fk-text); }
-.dr-head { position: relative; flex: none; padding: max(12px, env(safe-area-inset-top)) 16px 8px; background: var(--fk-ink); }
+.dr-head { position: relative; flex: none; display: grid; padding: max(12px, env(safe-area-inset-top)) 16px 8px; background: var(--fk-ink); }
+.dr-head > .fk-chy { width: 100%; max-width: 720px; justify-self: center; }
 .dr-close { position: absolute; right: 12px; top: max(12px, env(safe-area-inset-top)); width: 40px; height: 40px; border: 0; background: var(--fk-g3); color: #fff; font-size: 16px; cursor: pointer; }
 .dr-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(40px + env(safe-area-inset-bottom)); display: grid; align-content: start; gap: 12px; }
 .dr-body > *, .dr-day > * { max-width: 720px; width: 100%; justify-self: center; }
