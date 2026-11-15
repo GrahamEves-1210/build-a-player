@@ -23,6 +23,7 @@ import { ovrOf, nameOf, TYPES_OF } from '../squadSeason'
 import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
+import { startersOfTeam, benchOfTeam } from './roster'
 
 export const FIRST_YEAR = 2026
 export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
@@ -159,35 +160,11 @@ export function fillUp(F, roster, R) {
 }
 
 // ── Starters ─────────────────────────────────────────────────────────────────
-// The best man at each slot, the player's own builds first (a build takes the job, the man he beat out sits),
-// any swap the player made on the TEAM tab first of all (team.lk: slot → id). Injured men don't start.
-export function lineup(team) {
-  const r = team.r.filter(p => !p.in)
-  const used = new Set(), out = {}
-  const lk = team.lk ?? {}
-  // the swaps first
-  for (const [slot, pos] of SLOTS) {
-    const id = lk[slot]
-    const p = id != null && r.find(x => x.i === id && x.p === pos)
-    if (p && !used.has(p.i)) { out[slot] = p; used.add(p.i) }
-  }
-  const rank = (a, b) => (b.b != null) - (a.b != null) || b.o - a.o
-  for (const [slot, pos, spot] of SLOTS) {
-    if (out[slot]) continue
-    const pool = r.filter(p => p.p === pos && !used.has(p.i)).sort(rank)
-    const p = (spot && pool.find(x => x.s === spot)) || pool[0]
-    if (p) { out[slot] = p; used.add(p.i) }
-  }
-  return out
-}
-// the men who play behind the starters (the box score's rotation): RB2, WR4, TE2, the nickel
-export function rotation(team, L = lineup(team)) {
-  const on = new Set(Object.values(L).map(p => p.i))
-  const more = { rb: 1, wr: 1, te: 1, dl: 2, db: 1, lb: 0 }
-  const out = []
-  for (const [pos, n] of Object.entries(more)) out.push(...team.r.filter(p => p.p === pos && !p.in && !on.has(p.i)).sort((a, b) => b.o - a.o).slice(0, n))
-  return out
-}
+// Who starts is the depth chart (lib/franchise2/roster.js): the player's own order on his team, by rating on the
+// league's; the next healthy man up when a starter is hurt.
+export const lineup = team => startersOfTeam(team)
+// the men who play behind the starters (the box score's rotation): RB2, WR4, TE2, two more linemen, the nickel
+export const rotation = (team, L = lineup(team)) => benchOfTeam(team, L)
 
 // ── Strength ─────────────────────────────────────────────────────────────────
 // raw: the weighted OVR of the men who start on each side
@@ -250,6 +227,6 @@ export function buildTeams(F) {
       for (const m of men) r.push(makeReal(F, m, R))
     }
     fillUp(F, r, R)
-    F.teams[s] = { r, lk: {} }
+    F.teams[s] = { r }
   }
 }
