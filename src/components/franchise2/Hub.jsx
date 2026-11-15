@@ -176,6 +176,7 @@ function ThisWeek({ F, owner, play, simToEnd }) {
       <Chyron team={F.team} tag={`WK ${F.wk + 1}`} title={`${TEAM[a].nick} at ${TEAM[h].nick}`} sub={divGame ? `${DIV_OF[F.team].toUpperCase()} GAME` : CONF_OF[a] === CONF_OF[h] ? `${CONF_OF[a]} GAME` : 'INTERCONFERENCE GAME'} />
       <Versus a={a} h={h} recA={R[a]} recH={R[h]} subA={placeOf(a)} subH={placeOf(h)} foot={<><span>{line.text}</span><span>O/U {line.total}</span></>} />
       <div className="fh-tape">
+        <Tape label="TEAM OVR" a={sa.off + sa.def} h={sh.off + sh.def} fa={sa.ovr} fh={sh.ovr} teamA={a} teamH={h} />
         <Tape label="OFFENSE" a={sa.off} h={sh.off} fa={sideGrade(sa.off)} fh={sideGrade(sh.off)} teamA={a} teamH={h} />
         <Tape label="DEFENSE" a={sa.def} h={sh.def} fa={sideGrade(sa.def)} fh={sideGrade(sh.def)} teamA={a} teamH={h} />
         {pa && ph && <Tape label="POINTS / GAME" a={pa[0]} h={ph[0]} fa={pa[0].toFixed(1)} fh={ph[0].toFixed(1)} teamA={a} teamH={h} />}

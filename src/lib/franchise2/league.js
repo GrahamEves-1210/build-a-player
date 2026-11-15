@@ -1,6 +1,6 @@
 // FRANCHISE: the league. Thirty-two real teams, every real player the game has on his real team (real ages),
 // generated depth behind them, one salary and years left per man, starters picked automatically, and the team's
-// strength (offense / defense on the football sim's 1–12 scale) read from the men who start.
+// ratings (OVR, OFFENSE, DEFENSE: ratings.js, and the same two on the football sim's 1–12) read from the men who play.
 //
 // A player (kept small: a league is ~1,000 of them):
 //   i id · n name · p position · s spot (edge/dt, cb/s, LT…) · o OVR · ag age · pk the OVR he's headed for
@@ -25,6 +25,7 @@ import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam } from './roster'
+import { rawRating, teamRating, toSim, fromSim, lastSeasonRes } from './ratings'
 import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead } from './contracts'
 
 export const FIRST_YEAR = 2026
@@ -43,8 +44,6 @@ export const SLOTS = [
   ['cb1', 'db', 'cb'], ['cb2', 'db', 'cb'], ['s1', 'db', 's'], ['s2', 'db', 's'],
 ]
 export const SLOT_LABEL = k => k.replace(/\d$/, '').toUpperCase() + (/\d$/.test(k) ? k.slice(-1) : '')
-const W_OFF = { qb1: 0.34, rb1: 0.10, wr1: 0.12, wr2: 0.10, wr3: 0.07, te1: 0.08, ol1: 0.038, ol2: 0.038, ol3: 0.038, ol4: 0.038, ol5: 0.038 }
-const W_DEF = { edge1: 0.12, edge2: 0.11, dt1: 0.11, dt2: 0.10, lb1: 0.08, lb2: 0.08, lb3: 0.08, cb1: 0.09, cb2: 0.08, s1: 0.08, s2: 0.07 }
 
 export const TEAMS = NFL_TEAMS.map(t => ({ short: t.short, name: t.name, nick: t.name.split(' ').slice(-1)[0], color: t.color, color2: t.color2, logo: t.logo, conf: t.conf, div: t.div, off: t.off, def: t.def }))
 export const TEAM = Object.fromEntries(TEAMS.map(t => [t.short, t]))
@@ -169,43 +168,29 @@ export const lineup = team => startersOfTeam(team)
 export const rotation = (team, L = lineup(team)) => benchOfTeam(team, L)
 
 // ── Strength ─────────────────────────────────────────────────────────────────
-// raw: the weighted OVR of the men who start on each side
-export function rawStrength(team, L = lineup(team)) {
-  let off = 0, def = 0
-  for (const [k, w] of Object.entries(W_OFF)) off += (L[k]?.o ?? 55) * w
-  for (const [k, w] of Object.entries(W_DEF)) def += (L[k]?.o ?? 55) * w
-  return { off, def }
-}
-// The calibration, set once when the league is made: the starting rosters read as the teams' real ratings
-// (the football sim's 1–12), so year one plays like the real league; every team's gap between its real rating
-// and what its men add up to (coaching, scheme) fades a little each year and the rosters take over.
-const mean = a => a.reduce((x, y) => x + y, 0) / a.length
-const sd = a => { const m = mean(a); return Math.sqrt(mean(a.map(x => (x - m) ** 2))) || 1 }
+// The team ratings live in ratings.js (how each side is weighted and scaled, and why). Here: a team's numbers
+// with its play-callers in, the sim's 1-12 made from them, and year one's carry-over from the real 2025 season.
+export const rawStrength = (team, L = lineup(team)) => rawRating(team, L)
+// Set once when the league is made: each team's share of its real 2025 season (team.res, rating points
+// [off, def]), against what its men and its REAL play-callers add up to (never the player's own coach: his
+// calls are his). It fades every offseason (offseason.js) and the rosters take over.
 export function calibrate(F) {
-  const raws = SHORTS.map(s => rawStrength(F.teams[s]))
-  const ro = TEAMS.map(t => t.off), rd = TEAMS.map(t => t.def)
-  F.cal = { mo: r1(mean(raws.map(x => x.off))), so: r1(sd(raws.map(x => x.off)) * 10) / 10, md: r1(mean(raws.map(x => x.def))), sd: r1(sd(raws.map(x => x.def)) * 10) / 10, ro: r1(mean(ro)), rd: r1(mean(rd)), rso: r1(sd(ro)), rsd: r1(sd(rd)) }
-  SHORTS.forEach((s, i) => {
-    const m = scaled(F, raws[i])
-    // (the real staff's play-calling is its own term, coach.js: the rest is what fades)
-    const ce = realEdge(s)
-    F.teams[s].res = [r1(TEAMS[i].off - m.off - ce.off), r1(TEAMS[i].def - m.def - ce.def)]
-  })
+  for (const s of SHORTS) {
+    const t = F.teams[s]
+    t.res = [0, 0]
+    t.res = lastSeasonRes(s, teamRating(t, lineup(t), realEdge(s)))
+  }
 }
-const scaled = (F, raw) => ({ off: F.cal.ro + ((raw.off - F.cal.mo) / F.cal.so) * F.cal.rso, def: F.cal.rd + ((raw.def - F.cal.md) / F.cal.sd) * F.cal.rsd })
-// A team's offense and defense on the sim's 1–12 scale, and its OVR (the starters' average, the number on screen).
-// The head coach's play-calling is in it (coach.js coachEdge): the player's own coach on his team, the real staff
-// everywhere else.
+// A team's OVR, OFFENSE and DEFENSE (offR, defR: the numbers on screen, a player's OVR scale; the letter is
+// gradeOf), and the same two on the football sim's 1-12 (off, def: what the games play). The play-callers are in
+// both (coach.js coachEdge): the player's own coach on his team, the real staff everywhere else.
 export function strength(F, short) {
-  const t = F.teams[short], L = lineup(t), raw = rawStrength(t, L), m = scaled(F, raw)
-  const ce = coachEdge(F, short)
-  let off = m.off + (t.res?.[0] ?? 0) + ce.off, def = m.def + (t.res?.[1] ?? 0) + ce.def
-  const starters = Object.values(L)
-  return { off: r1(clamp(1, 12, off)), def: r1(clamp(1, 12, def)), ovr: Math.round(mean(starters.map(p => p.o))), rawOff: raw.off, rawDef: raw.def }
+  const t = F.teams[short], L = lineup(t)
+  const R = teamRating(t, L, coachEdge(F, short))
+  return { off: Math.round(toSim(R.off) * 100) / 100, def: Math.round(toSim(R.def) * 100) / 100, ovr: R.ovr, offR: R.off, defR: R.def }
 }
-// the sim's 1–12 as a letter on the game's scale (Squad Builder's teamGrade)
-const TG = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
-export const sideGrade = v => TG[clamp(0, 11, Math.round(((v ?? 2) - 2) * 11 / 10))]
+// a side's letter: from the sim's 1-12 (strength's off / def) back to its rating, on the mode's one scale
+export const sideGrade = v => gradeOf(Math.round(fromSim(v ?? 6)))
 
 // ── A new league ─────────────────────────────────────────────────────────────
 export function buildTeams(F) {

@@ -515,7 +515,8 @@ export function leagueWire(F) {
 // the line on a game: the favorite by how many (from the two teams' strength, home field 1.5) and the total
 export function lineOf(F, a, h, neutral = false) {
   const A = strength(F, a), H = strength(F, h)
-  const pts = ((H.off - A.def) - (A.off - H.def)) * 1.7 + (neutral ? 0 : 1.5)
+  // (the sim's margin: about 1.5 points a point of edge, scripts/franchise2/team-ratings.mjs; 10 points of OVR is about 8.5)
+  const pts = ((H.off - A.def) - (A.off - H.def)) * 1.5 + (neutral ? 0 : 1.5)
   const r = Math.round(Math.abs(pts) * 2) / 2
   const total = clamp(36, 56, Math.round((44 + ((A.off - H.def) + (H.off - A.def)) * 1.3) * 2) / 2)   // (the market's totals: high 30s to the mid 50s)
   if (r < 0.5) return { fav: null, pts: 0, text: 'PICK', total }

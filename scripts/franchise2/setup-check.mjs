@@ -70,12 +70,13 @@ for (let k = 0; k < 10; k++) {
 }
 console.log(`CIN over 10 seasons: coach 9 ${wHi} wins, coach 2 ${wLo} wins`)
 if (wHi <= wLo) bad('a better coach does not win more')
-// the real staffs: the calibration keeps year one on the real ratings
+// the team ratings (ratings.js): the OVR is its two sides, and the sim plays the numbers on screen
+// (scripts/franchise2/team-ratings.mjs checks the spread and the odds)
 const P = FR.createFranchise({ seed: 'chk-cal', team: 'DEN', owner: 'G', builds: [], coach: coachOf(5) })
 let off = 0
-for (const t of FR.TEAMS) if (t.short !== 'DEN') off = Math.max(off, Math.abs(FR.strength(P, t.short).off - Math.min(12, Math.max(1, t.off))))
-console.log('largest year-one gap from a real offense rating:', off.toFixed(2))
-if (off > 0.25) bad(`year one is off the real ratings by ${off}`)
+for (const t of FR.TEAMS) { const x = FR.strength(P, t.short); off = Math.max(off, Math.abs(x.ovr - Math.round((x.offR + x.defR) / 2)), Math.abs(FR.sideGrade(x.off) === FR.gradeOf(x.offR) ? 0 : 1)) }
+console.log('largest year-one gap between a team OVR and its two sides:', off)
+if (off > 0) bad(`a team's OVR or letter does not follow its two sides`)
 // growth: the coach's talent development
 const young = { ag: 22 }
 if (!(FR.coachDev({ team: 'X', coach: coachOf(10) }, 'X', young) > FR.coachDev({ team: 'X', coach: coachOf(1) }, 'X', young))) bad('talent development does not change growth')

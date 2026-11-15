@@ -1,13 +1,17 @@
 // The game sim against the NFL's team game (2023-25 averages): points, touchdowns, field goals (tries, makes, how
-// long), punts, turnovers, 4th-down tries, drives, overtime and ties, home wins. Real teams' ratings, random matchups.
+// long), punts, turnovers, 4th-down tries, drives, overtime and ties, home wins. The 32 teams' year-one ratings
+// (league.js strength: the same numbers the games play), random matchups.
 //   bash scripts/franchise2/run.sh scripts/franchise2/game-stats.mjs [games=6000]
 import { playGame } from '../../src/lib/franchise2/game'
-import { NFL_TEAMS } from '../../src/data/nfl-teams'
+import * as FR from '../../src/lib/franchise2/index'
+import CONTRACTS from '../../src/data/nfl-contracts.json'
 import { seeded } from '../../src/lib/rng'
 
 const N = Number(process.argv[2] ?? 6000)
 const R = seeded('stats')
-const T = NFL_TEAMS
+FR.useContracts(CONTRACTS)
+const L = FR.createFranchise({ seed: 'stats', team: 'DEN', owner: 'G', builds: [] })
+const T = FR.SHORTS.map(short => ({ short, ...FR.strength(L, short) }))
 const sum = {}, add = (k, v) => { sum[k] = (sum[k] ?? 0) + v }
 let hw = 0, ot = 0, tie = 0
 for (let i = 0; i < N; i++) {
