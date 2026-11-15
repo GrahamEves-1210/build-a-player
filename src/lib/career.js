@@ -555,9 +555,12 @@ export const SPORT = {
     honor: 'All-Star', honors: 'ALL-STARS', first: 'All-NBA',
     // games played to be considered (of 82): the 65-game rule for MVP and All-NBA, 40 for an All-Star
     minGames: { award: 65 / 82, first: 65 / 82, honor: 40 / 82 },
-    // (All-Star a hair harder, owner 11-14: was 21 / 17+7 for a guard, 20 / 16+10 for a big)
-    proBowl: { guard: s => s.ppg >= 22.5 || (s.ppg >= 18.5 && s.apg >= 7.5), big: s => s.ppg >= 21.5 || (s.ppg >= 17.5 && s.rpg >= 11) },
-    allPro: { guard: s => s.ppg >= 25 || (s.ppg >= 22 && s.apg >= 8), big: s => s.ppg >= 24 || (s.ppg >= 20 && s.rpg >= 11) },
+    // All-Star and All-NBA read the whole line and the team, like the real votes (owner 11-14: a 22/3/3 guard was an
+    // All-Star; no real one is). hoopVote: points, plus assists and boards (a guard's assists count full, a big's boards
+    // most), plus a little for every win over .500. All-Star at 30 (24/5/4, 20/7/4 on a 50-win team, 20/10/3 big);
+    // All-NBA at 35 (27/6/5 on a winner, 25/12/4 big)
+    proBowl: { guard: (s, c) => hoopVote('guard', s, c) >= 30, big: (s, c) => hoopVote('big', s, c) >= 30 },
+    allPro: { guard: (s, c) => hoopVote('guard', s, c) >= 35, big: (s, c) => hoopVote('big', s, c) >= 35 },
     allProNear: { guard: s => s.ppg >= 22, big: s => s.ppg >= 20 },
     // the MVP vote: points, plus playmaking or the glass, on a winner, against the year's
     // best rival (a seeded field: most years a ~54 season, now and then a down year or a monster)
@@ -585,6 +588,11 @@ export const SPORT = {
     moneyOf: c => SPORT.bucket.money[c.pos],
     primeNote: pos => { const S = SPORT.bucket; return `Speed, bounce and size can be trained until ${S.trainUntil() + 1} (the last year at double the cost); finishing, handles, rebounding and defense until ${LADDER.bucket.guard.techAt[1]}, the shot and the head for good. ${fadeNote('bucket', pos ?? 'guard')} Big injuries and a fragile body can cost him a grade.` },
   },
+}
+// (basketball's All-Star / All-NBA vote: see SPORT.bucket.proBowl)
+function hoopVote(pos, s, c) {
+  const wins = c?.active?.final?.wins ?? 41
+  return (s.ppg ?? 0) + (pos === 'guard' ? (s.apg ?? 0) + 0.7 * (s.rpg ?? 0) : 0.8 * (s.rpg ?? 0) + 0.8 * (s.apg ?? 0)) + 0.12 * (wins - 41)
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
 // merged lookups (position keys never collide between the sports)
