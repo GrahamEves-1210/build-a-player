@@ -99,7 +99,7 @@ export function makeClass(F) {
   for (const [pos, n] of Object.entries(CLASS_MIX)) for (let k = 0; k < n; k++) out.push(makeProspect(F, R, pos, id++))
   F.dc = out
   F.board = []
-  F.sc = { u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
+  F.sc = { b: 3, w: 0, u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
 }
 function makeProspect(F, R, pos, id) {
   const T = TYPES_OF[pos]
@@ -175,12 +175,23 @@ export function weeksIn(F) {
   if (F.phase === 'playoffs') return 18 + (F.po?.rd ?? 0)
   return 22
 }
+// The days bank up to four weeks' worth (a scout's time doesn't keep); the spring adds 12 and the cap doubles.
+// Days past the cap aren't lost: the department works without the GM and puts them into film on its own choices.
 export const SPRING = 12
-export const scoutsLeft = F => Math.max(0, 3 + PER_WEEK(F) * weeksIn(F) + (F.sc?.cmb ? SPRING : 0) - (F.sc?.u ?? 0))
+const capOf = F => (F.sc?.cmb ? 24 : 12)
+export const scoutsLeft = F => (F.sc ? Math.max(0, Math.min(capOf(F), (F.sc.b ?? 3) + PER_WEEK(F) * Math.max(0, weeksIn(F) - (F.sc.w ?? 0)))) : 0)
+export function syncScouts(F) {
+  if (!F.sc) return
+  const t = weeksIn(F), w = F.sc.w ?? 0
+  if (t <= w) return
+  const tot = (F.sc.b ?? 3) + PER_WEEK(F) * (t - w)
+  F.sc.b = Math.min(capOf(F), tot); F.sc.w = t
+  if (tot > F.sc.b && !nightOn(F)) deptFilm(F, tot - F.sc.b)
+}
 // the spring: the Super Bowl is played (the combine, the visits, the pro days), until the draft starts
 export const springOn = F => !!F.sc && (F.phase === 'done' || F.phase === 'off') && !nightOn(F)
 export const VISITS = 30
-const spend = (F, n) => { if (scoutsLeft(F) < n) return false; F.sc.u += n; return true }
+const spend = (F, n) => { syncScouts(F); if ((F.sc.b ?? 0) < n) return false; F.sc.b -= n; F.sc.u = (F.sc.u ?? 0) + n; return true }
 const nightOn = F => !!F.dr && F.dr.ph !== 'pre'
 export const canScout = F => !!F.sc && !nightOn(F)
 
@@ -347,7 +358,9 @@ export function combineOf(x) {
 // Super Bowl is played; the screens call it when the spring comes, the draft calls it if nobody has.
 export function runCombine(F) {
   if (!F.sc || F.sc.cmb || !(F.phase === 'done' || F.phase === 'off')) return
+  syncScouts(F)
   F.sc.cmb = 1
+  F.sc.b = Math.min(capOf(F), (F.sc.b ?? 0) + SPRING)
   for (const x of F.dc) { const c = combineOf(x); if (c && !c.dnp) { raise(x, ['p']); x.sv |= 8 } }
 }
 
@@ -616,10 +629,22 @@ export function autoScout(F) {
     const gi = sl.games.map((g, i) => [i, score(g)]).sort((a, b) => b[1] - a[1])[0]?.[0]
     if (gi != null && attend(F, gi)) used += 2
   }
-  const ranked = rankMap(F)
-  const order = F.dc.filter(x => x.b == null && !filmDone(x)).sort((a, b) => (F.board.includes(b.i) - F.board.includes(a.i)) || (wanted(b) - wanted(a)) || ranked.get(a.i) - ranked.get(b.i))
-  for (const x of order) { if (scoutsLeft(F) < 1) break; if (film(F, x.i)) used++ }
+  for (const x of filmOrder(F)) { if (scoutsLeft(F) < 1) break; if (film(F, x.i)) used++ }
   return used
+}
+// who the department puts on tape: our board first, then our needs, then the consensus's order
+function filmOrder(F) {
+  const need = needsOf(F, F.team), ranked = rankMap(F)
+  const wanted = x => F.board.includes(x.i) || need[needKey(x)] >= 2
+  return F.dc.filter(x => x.b == null && !filmDone(x)).sort((a, b) => (F.board.includes(b.i) - F.board.includes(a.i)) || (wanted(b) - wanted(a)) || ranked.get(a.i) - ranked.get(b.i))
+}
+function deptFilm(F, n) {
+  const order = filmOrder(F)
+  for (let k = 0; k < n && order.length; k++) {
+    const x = order[Math.floor(k / 2) % order.length]
+    if (filmDone(x)) continue
+    raise(x, ['s']); x.sv |= (x.sv & 1) ? 2 : 1
+  }
 }
 
 // ── Sandbox: a build into the class ──────────────────────────────────────────
@@ -644,7 +669,7 @@ export function addProspect(F, b, { col = null } = {}) {
 // ── The draft ────────────────────────────────────────────────────────────────
 // stages: pre (the final board: the last visits and pro days) → night (the picks) → done
 export function openDraft(F) {
-  if (!F.sc) F.sc = { u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
+  if (!F.sc) F.sc = { b: 3, w: weeksIn(F), u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
   const order = draftOrder(F)
   F.dr = { ph: 'pre', order, own: Array.from({ length: PICKS_N }, (_, k) => order[k % 32]), at: 0, picks: [], tr: [] }
   runCombine(F)
@@ -766,7 +791,8 @@ export function tradeDownOffers(F) {
     seen.add(s)
     if (R.u() < 0.45) continue   // (not every team wants to move up)
     const later = F.dr.own.map((o, k) => (o === s && k > t ? k : null)).filter(k => k != null)
-    const add = later.find(k => pickValue(t) + pickValue(k) >= val) ?? null
+    // (the latest pick of theirs that covers the difference: moving up a few spots costs a mid-round pick, not a 2nd)
+    const add = [...later].reverse().find(k => pickValue(t) + pickValue(k) >= val * 1.02) ?? null
     if (add == null) continue
     out.push({ k: 'down', with: s, get: [t, add], give: [at] })
   }
