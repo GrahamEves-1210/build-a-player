@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useCountUp } from '../../lib/useCountUp'
 import { nflHeadshot } from '../../utils/simulation'
 import { faceOf } from '../../lib/squadSeason'
-import { TEAM, photoId, gradeOf, POS_LABEL } from '../../lib/franchise2'
+import { TEAM, photoId, POS_LABEL } from '../../lib/franchise2'
 import { CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { sfx } from '../../lib/juice'
 import { genFace } from '../../lib/franchise2/faces'
@@ -43,12 +43,11 @@ export function Count({ v, ms = 700, run = true, className = '' }) {
   const n = useCountUp(v, { run, ms })
   return <span className={className}>{n}</span>
 }
-// One big OVR and its letter
+// One big OVR (the number alone: no letter under a player's OVR, owner 11-15)
 export function Ovr({ o, size = 'm', count = false }) {
   return (
     <span className={`f2-ovr f2-ovr--${size}`}>
       <b>{count ? <Count v={o} /> : o}</b>
-      <small>{gradeOf(o)}</small>
     </span>
   )
 }

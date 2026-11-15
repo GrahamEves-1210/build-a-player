@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, gradeOf, POS_LABEL } from '../../lib/franchise2'
+import { TEAM, POS_LABEL } from '../../lib/franchise2'
 import { realOf } from '../../lib/franchise2/league'
 import { jersey } from '../../lib/franchise2/roster'
 import { sfx, haptic } from '../../lib/juice'
@@ -171,7 +171,7 @@ function BugTeam({ s, pts, rec, ball, win, lose }) {
 //   name · pos ('QB' or 'qb') · num · ovr · photo (url) · team · mine (one of the player's builds: his owner's name)
 //   line: the bar's second line (a stat line, '4 TD · 312 YDS') · stat: { v, label } in place of the OVR box
 //   size: 's' | 'm' | 'l' · onClick
-export function LowerThird({ name, pos, num, ovr, grade, photo, team, mine, line, stat, size = 'm', onClick, className = '', delay = 0 }) {
+export function LowerThird({ name, pos, num, ovr, photo, team, mine, line, stat, size = 'm', onClick, className = '', delay = 0 }) {
   const { first, last } = splitName(name)
   const [bad, setBad] = useState(false)
   const P = POS_LABEL[pos] ?? pos
@@ -192,7 +192,7 @@ export function LowerThird({ name, pos, num, ovr, grade, photo, team, mine, line
         </span>
       </span>
       {stat ? <span className="fk-l3-ovr is-stat"><b>{stat.v}</b><small>{stat.label}</small></span>
-        : ovr != null && <span className="fk-l3-ovr"><b>{ovr}</b><small>{grade ?? gradeOf(ovr)}</small></span>}
+        : ovr != null && <span className="fk-l3-ovr"><b>{ovr}</b></span>}
     </Tag>
   )
 }
@@ -367,7 +367,7 @@ export function Flip({ open, front, back, className = '', onFlipped }) {
   )
 }
 // A rating that spins to its value: the digits roll like a reel and land (run starts it). Reduce Motion: the value.
-export function Spin({ v, run = true, ms = 650, size = 64, grade, onLand, className = '' }) {
+export function Spin({ v, run = true, ms = 650, size = 64, onLand, className = '' }) {
   const [x, setX] = useState(run ? null : v)
   const [landed, setLanded] = useState(false)
   useEffect(() => {
@@ -388,7 +388,7 @@ export function Spin({ v, run = true, ms = 650, size = 64, grade, onLand, classN
   }, [run, v]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <span className={`fk-spin${landed ? ' is-landed' : ''} ${className}`} style={{ '--s': `${size}px` }}>
-      <b>{x ?? '--'}</b>{grade && <small>{landed ? grade : '\u00a0'}</small>}
+      <b>{x ?? '--'}</b>
     </span>
   )
 }
