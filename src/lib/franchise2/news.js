@@ -36,11 +36,14 @@ const NFL_RECORD = {
 const MARKS = { py: [4000, 5000], ptd: [30, 40, 50], ry: [1000, 1500, 2000], ryd: [1000, 1500], rc: [100, 125], sck: [10, 15, 20], dint: [8, 10] }
 const MARK_TEXT = { py: 'passing yards', ptd: 'touchdown passes', ry: 'rushing yards', ryd: 'receiving yards', rc: 'catches', sck: 'sacks', dint: 'interceptions' }
 
-// an injury the way a team reports it: the body part, from the man and the season (the same every time it's read)
-const PARTS = ['ankle', 'hamstring', 'knee', 'shoulder', 'concussion', 'groin', 'calf', 'foot', 'ribs', 'hand', 'back', 'quad']
-export const injuryOf = (F, p) => PARTS[hash(`${p.i}-${F.year}-${Math.floor((F.wk ?? 0) / 4)}`) % PARTS.length]
+// an injury the way a team reports it: his own (injury.js sets p.ij), else (a man limited in practice) a minor one
+// from the man and the season (the same every time it's read)
+const PARTS = ['ankle', 'hamstring', 'knee', 'shoulder', 'groin', 'calf', 'foot', 'ribs', 'hand', 'back', 'quad']
+export const injuryOf = (F, p) => p.ij?.l ?? PARTS[hash(`${p.i}-${F.year}-${Math.floor((F.wk ?? 0) / 4)}`) % PARTS.length]
 export function injuryText(F, p, s) {
   const part = injuryOf(F, p), who = `${posOf(p)} ${p.n}`
+  if (p.ij?.se) return `${nick(s)} lose ${who} for the season (${part})`
+  if (p.ij?.pup) return `${nick(s)} place ${who} on the PUP list (${part})`
   if (p.in >= 4) return `${nick(s)} place ${who} on injured reserve (${part})`
   return `${nick(s)} ${who} out ${p.in === 1 ? 'this week' : `${p.in} weeks`} (${part})`
 }

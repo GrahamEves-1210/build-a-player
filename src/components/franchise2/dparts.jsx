@@ -5,6 +5,7 @@ import {
   ratingsOf, marketKey, MARKET_LABEL, AWARD_SHORT, placeOf, slotName, cutMan, MIN,
 } from '../../lib/franchise2'
 import { genFace } from '../../lib/franchise2/faces'
+import { outText } from '../../lib/franchise2/injury'
 import { TYPES_OF } from '../../lib/squadSeason'
 import { valToGrade } from '../../utils/simulation'
 import { spectrumColor } from '../../lib/gradeColors'
@@ -32,7 +33,7 @@ export const posText = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p 
 // his initials
 export function faceFor(F, p, s) {
   if (!p) return null
-  const ph = photoOf(F, p)
+  const ph = photoOf(F, p, TEAM[s]?.color)
   if (ph) return ph
   if (p.b == null && !realOf(p.p, p.n)) return genFace(p, TEAM[s]?.color)
   return null
@@ -126,7 +127,7 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
           <Fact v={p.y > 0 ? money(p.$) : '—'} label={p.rc ? 'ROOKIE DEAL' : 'CAP HIT'} />
           <Fact v={p.y > 0 ? p.y : 0} label={p.y === 1 ? 'YEAR LEFT' : 'YEARS LEFT'} />
         </div>
-        {p.in ? <div className="fd-hurt"><Tag tone="inj">OUT {p.in} {p.in === 1 ? 'WEEK' : 'WEEKS'}</Tag></div> : null}
+        {p.in ? <div className="fd-hurt"><Tag tone="inj">{outText(p)}{p.ij?.l ? ` · ${String(p.ij.l).toUpperCase()}` : ''}</Tag></div> : null}
         <div className="fd-h">RATINGS</div>
         <Grades F={F} p={p} />
         {now && (

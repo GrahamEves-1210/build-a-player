@@ -282,7 +282,7 @@ function Final({ F, row, news, owner, onDone }) {
       )}
       {news.some(n => n.k === 'inj' || n.k === 'sign') && (
         <div className="fg-tags">
-          {news.filter(n => n.k === 'inj').map(n => <Tag key={n.pid} tone="inj">{n.n.toUpperCase()}{n.what ? ` (${String(n.what).toUpperCase()})` : ''} · {n.wk >= 4 ? `INJURED RESERVE · ${n.wk} WEEKS` : `OUT ${n.wk} ${n.wk === 1 ? 'WEEK' : 'WEEKS'}`}</Tag>)}
+          {news.filter(n => n.k === 'inj').map(n => <Tag key={n.pid} tone="inj">{n.n.toUpperCase()}{n.what ? ` (${String(n.what).toUpperCase()})` : ''} · {n.se ? 'OUT FOR THE SEASON' : n.wk >= 4 ? `INJURED RESERVE · ${n.wk} WEEKS` : `OUT ${n.wk} ${n.wk === 1 ? 'WEEK' : 'WEEKS'}`}</Tag>)}
           {news.filter(n => n.k === 'sign').map(n => <Tag key={n.pid} tone="line">SIGNED {n.n.toUpperCase()} OFF THE PRACTICE SQUAD</Tag>)}
         </div>
       )}

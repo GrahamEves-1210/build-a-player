@@ -20,6 +20,7 @@ import { coachLate, coachDay, momentLift, chemWeek } from './coach'
 import { askOf, signDeal, canSign, cutMan } from './contracts'
 import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews } from './news'
+import { rollInjuries } from './injury'
 import { syncScouts } from './draft'
 
 export const REG_WEEKS = 18
@@ -206,30 +207,23 @@ function topLine(roster, box) {
 }
 
 // ── The end of a week ────────────────────────────────────────────────────────
-// (the week's injury wire, every team, is kept for the hub's ticker: F.wire [[short, name, weeks, what]]; the body
-// part is news.js's injuryOf, so the wire, the ticker and the final card all name the same one)
-// The NFL's injury load: a starter misses time about one week in thirty (a team loses ten or eleven starters for a
-// game or more over a season); most are out one to three weeks, about a quarter four or more (injured reserve), and a
-// few for the year. (The player's own builds come back inside six weeks: a choice, so a kid's star isn't gone for good.)
-const INJ_RATE = 0.032
-function injuryWeeks(R, build) {
-  const u = R.u()
-  const w = u < 0.4 ? 1 : u < 0.62 ? 2 : u < 0.76 ? 3 : u < 0.93 ? R.int(4, 8) : R.int(9, 17)
-  return build ? Math.min(6, w) : w
-}
+// (the week's injury wire, every team's starters and the player's whole team, is kept for the hub's ticker:
+// F.wire [[short, name, weeks, what]]; the injury is the man's own (p.ij), so the wire, the ticker and the final card
+// all name the same one)
+// The injuries themselves: injury.js (the NFL's rates by position and lengths, a fifth gentler; builds the same).
 function endWeek(F, row) {
   const R = rngOf(`${F.seed}-${F.year}-wk-${F.phase}-${F.phase === 'playoffs' ? F.po.rd : F.wk}`)
   const out = { row, news: [] }
   const wire = []
-  // injuries: short ones, a starter now and then (the backup plays)
+  // injuries: the week's games' (a team on its bye plays nobody and loses nobody), then the week passes for the hurt
+  const played = new Set((F.phase === 'playoffs' ? F.po.rounds[F.po.rd] : F.sched.weeks[F.wk] ?? []).flatMap(g => [g.h, g.a]))
   for (const s of SHORTS) {
     const t = F.teams[s]
-    for (const p of t.r) if (p.in) { p.in--; if (!p.in) delete p.in }
-    const L = Object.values(lineup(t))
-    for (const p of L) if (R.u() < INJ_RATE) {
-      p.in = injuryWeeks(R, p.b != null)
-      if (s === F.team) out.news.push({ k: 'inj', pid: p.i, n: p.n, wk: p.in, what: injuryOf(F, p) })
-      wire.push([s, p.n, p.in, injuryOf(F, p)])
+    for (const p of t.r) if (p.in) { p.in--; if (!p.in) { delete p.in; delete p.ij } }
+    if (!played.has(s)) continue
+    for (const [p, ij, starter] of rollInjuries(F, s, R)) {
+      if (s === F.team) out.news.push({ k: 'inj', pid: p.i, n: p.n, wk: p.in, what: ij.l, ...(ij.se && { se: 1 }) })
+      if (starter || s === F.team) wire.push([s, p.n, p.in, ij.l])
     }
   }
   F.wire = wire.sort((a, b) => (b[0] === F.team) - (a[0] === F.team)).slice(0, 8)
@@ -456,7 +450,7 @@ export function chooseEvent(F, i) {
   if (fx.nx) { const n = typeof F.nx === 'object' && F.nx ? F.nx : { off: 0, def: 0 }; F.nx = { off: (n.off ?? 0) + (fx.nx.off ?? 0), def: (n.def ?? 0) + (fx.nx.def ?? 0) } }
   if (fx.sp && F.sc) { syncScouts(F); F.sc.b = (F.sc.b ?? 0) + fx.sp }
   const P = id => t.r.find(p => p.i === id)
-  if (fx.risk) { const p = P(fx.risk); if (p && R.u() < 0.33) { p.in = 3; out.hurt = p.n } }
+  if (fx.risk) { const p = P(fx.risk); if (p && R.u() < 0.33) { p.in = 3; p.ij = { l: injuryOf(F, p), w: 3 }; out.hurt = p.n } }
   if (fx.sit) { const p = P(fx.sit); if (p) p.in = 1 }
   if (fx.ovr) { const p = P(fx.ovr[0]); if (p) { p.o = Math.min(99, p.o + fx.ovr[1]); p.pk = Math.max(p.pk ?? p.o, p.o) } }
   if (fx.start) { try { moveInChart(F, fx.start, 0) } catch { /* (the chart's own rules) */ } }
@@ -509,7 +503,7 @@ export function leagueWire(F) {
   else if (F.phase === 'playoffs' && F.po) games = F.po.rd > 0 ? F.po.rounds[F.po.rd - 1] : F.sched.weeks[F.sched.weeks.length - 1]
   else if (F.phase === 'done' && F.po) games = F.po.rounds[F.po.rounds.length - 1] ?? []
   for (const g of games ?? []) if (g.hs != null && g.h !== F.team && g.a !== F.team) out.push({ k: 'score', a: g.a, as: g.as, h: g.h, hs: g.hs, tag: g.ot ? 'F/OT' : 'FINAL' })
-  ;(F.wire ?? []).forEach(([s, n, w, what], i) => out.splice(Math.min(out.length, 1 + i * 3), 0, { k: 'news', tag: 'INJURY', s, text: `${n}${what ? ` (${what})` : ''} out ${w} ${w === 1 ? 'week' : 'weeks'}` }))
+  ;(F.wire ?? []).forEach(([s, n, w, what], i) => out.splice(Math.min(out.length, 1 + i * 3), 0, { k: 'news', tag: 'INJURY', s, text: `${n}${what ? ` (${what})` : ''} ${w >= 60 ? 'out for the season' : `out ${w} ${w === 1 ? 'week' : 'weeks'}`}` }))
   return out
 }
 // the line on a game: the favorite by how many (from the two teams' strength, home field 1.5) and the total

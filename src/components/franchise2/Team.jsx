@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM } from '../../lib/franchise2'
+import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, Go, fkVars } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money } from './dparts'
@@ -43,7 +43,7 @@ export default function TeamTab({ F, act, owner }) {
               return (
                 <div key={p.i} className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${p.in ? ' is-hurt' : ''}`}>
                   <span className="fd-dc-slot">{p.in ? 'OUT' : slot}</span>
-                  <Man F={F} p={p} s={F.team} owner={owner} size={starts ? 'm' : 's'} line={p.in ? `OUT ${p.in} ${p.in === 1 ? 'WEEK' : 'WEEKS'}` : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p)} onClick={() => tap(p)} />
+                  <Man F={F} p={p} s={F.team} owner={owner} size={starts ? 'm' : 's'} line={p.in ? outText(p) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p)} onClick={() => tap(p)} />
                   {on && (
                     <div className="fd-dc-acts">
                       <button disabled={i === 0} onClick={() => move(0)}>TO THE TOP</button>

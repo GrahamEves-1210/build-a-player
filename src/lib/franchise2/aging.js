@@ -10,6 +10,7 @@
 import { SHORTS, lineup } from './league'
 import { tickDeal } from './contracts'
 import { coachDev } from './coach'
+import { carryInjury } from './injury'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { rngOf, clamp } from './rng'
 
@@ -64,7 +65,7 @@ export function ageLeague(F) {
     const keep = []
     for (const p of t.r) {
       p.ag++
-      delete p.in
+      carryInjury(p)
       const was = p.o
       const d = growth(F, p, R, starters.has(p.i), s)
       if (p.b != null) { p.o = was + growBuild(F.builds[p.b], d); F.builds[p.b].age = p.ag }

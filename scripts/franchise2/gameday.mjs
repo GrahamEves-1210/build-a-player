@@ -8,12 +8,16 @@ import { QBS } from '../../src/data/qbs'
 import { WRS } from '../../src/data/wrs'
 import { DBS } from '../../src/data/dbs'
 import { seeded } from '../../src/lib/rng'
+import { TALLY } from '../../src/lib/franchise2/injury'
+import { injuryReport } from './injury-report.mjs'
 
 const N = Number(process.argv[2] ?? 2), team = process.argv[3] ?? 'DEN'
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
 const qb = QBS.find(p => p.name === 'Josh Allen'), wr = WRS.find(p => p.attrs && p.name === 'Puka Nacua') ?? WRS.find(p => p.attrs), db = DBS.find(p => p.attrs && p.subpos === 'cb')
-const F = FR.createFranchise({ seed: 'gd-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb) }, { pos: 'wr', build: asBuild(wr) }, { pos: 'db', build: asBuild(db) }], coach: { name: 'Coach', scheme: 'air', style: 'developer' } })
+const F = FR.createFranchise({ seed: 'gd-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb) }, { pos: 'wr', build: asBuild(wr) }, { pos: 'db', build: asBuild(db) }], coach: { name: 'Coach', style: 'developer', r: { talentDev: 6, offPlaycalling: 6, defPlaycalling: 6, culture: 6, situational: 6 }, ovr: 72 } })
 const problems = []
+TALLY.on = true
+const opening = {}, buildYears = {}
 const bad = m => { problems.push(m); if (problems.length < 40) console.log('  !! ' + m) }
 const H = seeded('gd-hits')
 const BANNED = /drive of the year|clutch|statement|dominant|epic|huge|massive|unbelievable|!|\bundefined\b|\bnull\b|\bNaN\b/i
@@ -54,6 +58,8 @@ function moment() {
   FR.finishMoment(F, H() < FR.normalRate(F.teams[F.team].r.find(p => p.i === v.pid).o))
 }
 for (let y = 0; y < N; y++) {
+  opening[F.year] = new Map(FR.SHORTS.flatMap(s => Object.values(FR.startersOf(F, s)).map(p => [p.i, FR.groupOf(p)])))
+  buildYears[F.year] = F.teams[team].r.filter(p => p.b != null).map(p => ({ id: p.i, g: FR.groupOf(p) }))
   while (F.phase === 'season') {
     if (F.ev) {
       evs++
@@ -67,7 +73,13 @@ for (let y = 0; y < N; y++) {
     const t0 = performance.now()
     const r = FR.playWeek(F, { moments: true })
     if (r.pending) moment()
-    for (const n of (r.pending ? [] : r.news ?? [])) { inj++; if (n.wk >= 4) ir++ }
+    for (const n of (r.pending ? [] : r.news ?? [])) if (n.k === 'inj') { inj++; if (n.wk >= 4) ir++; if (!n.what) bad(`an injury with no name: ${JSON.stringify(n)}`) }
+    // every man out has his injury, and what the screens say about it reads right
+    for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.in) {
+      if (!p.ij?.l) bad(`${p.n} out ${p.in} with no injury`)
+      const t = FR.outText(p), w = FR.injuryText(F, p, s)
+      if (/\b(60|5\d) WEEKS/.test(t) || /\b(60|5\d) weeks/.test(w) || BANNED.test(w)) bad(`injury text "${t}" / "${w}"`)
+    }
     const dt = performance.now() - t0; ms += dt; longest = Math.max(longest, dt)
     const row = F.log[F.log.length - 1]
     if (row && row !== checkRow.last) { checkRow.last = row; checkRow(row) }
@@ -84,7 +96,7 @@ for (let y = 0; y < N; y++) {
     const row = F.log[F.log.length - 1]
     if (row && row !== checkRow.last) { checkRow.last = row; checkRow(row) }
   }
-  console.log(`   injuries to ${team} starters so far: ${inj} (${ir} of 4+ weeks)`)
+  console.log(`   injuries to ${team} men so far: ${inj} (${ir} of 4+ weeks)`)
   if (F.ssr == null) bad('no regular-season totals kept at the playoffs (F.ssr)')
   console.log(`${F.year} ${team} ${FR.recText(FR.records(F)[team])} · champ ${F.po.champ} · ${games} games, ${moments} moments, ${evs} events · ${(ms / Math.max(1, games)).toFixed(0)} ms a week (longest ${longest.toFixed(0)})`)
   FR.closeSeason(F)
@@ -100,5 +112,8 @@ const fgs = F.log.flatMap(r => (r.kp ?? []).map(x => x[3].match(/ (\d+)-yd field
 const share = k => (fgs.filter(d => d >= k).length / Math.max(1, fgs.length) * 100).toFixed(0)
 console.log(`field goals ${fgs.length}: ${share(50)}% from 50+, ${share(55)}% from 55+, ${share(60)}% from 60+`)
 if (fgs.length > 20 && +share(60) > 2.5) bad(`${share(60)}% of field goals from 60+`)
+console.log(`INJURIES (injury.js, NFL x${FR.QOL}):`)
+for (const line of injuryReport(TALLY.rows, { seasons: N, opening, builds: buildYears, qol: FR.QOL })) console.log('   ' + line)
+console.log(`   the builds' injuries: ${TALLY.rows.filter(r => r.b).map(r => `${r.y} wk ${r.wk + 1} ${r.l} ${r.se ? 'season' : r.w + ' wk'}`).join(' · ') || 'none'}`)
 console.log(samples.join('\n'))
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

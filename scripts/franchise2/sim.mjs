@@ -7,6 +7,9 @@ import { scheduleProblems } from '../../src/lib/franchise2/schedule'
 import { QBS } from '../../src/data/qbs'
 import { WRS } from '../../src/data/wrs'
 import { seeded } from '../../src/lib/rng'
+import { TALLY, injuryRate, hurt } from '../../src/lib/franchise2/injury'
+import { rngOf } from '../../src/lib/franchise2/rng'
+import { injuryReport } from './injury-report.mjs'
 
 const N = Number(process.argv[2] ?? 6), team = process.argv[3] ?? 'DEN', moments = process.argv[4] !== '0'
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
@@ -30,6 +33,8 @@ function league() {
   const rooms = FR.SHORTS.map(s => FR.capSheet(F, s).room).sort((a, b) => a - b)
   return { mean: avg(st.map(p => p.o)), age: avg(st.map(p => p.ag)), n90: stars.length, n95: all.filter(p => p.o >= 95).length, starAge: avg(stars.map(p => p.ag)), real: all.filter(p => realNames.has(p.n)).length, qb85: all.filter(p => p.p === 'qb' && p.o >= 85).length, room: rooms[16] }
 }
+TALLY.on = true
+const opening = {}, buildYears = {}
 const blooms = {}   // the late bloomers (hb) each class had, and the best each became
 let classOne = null   // the first class the league drafts, followed to the end: did the 1st round start, did the late rounds hit
 for (let y = 0; y < N; y++) {
@@ -37,6 +42,10 @@ for (let y = 0; y < N; y++) {
   blooms[F.year + 1] ??= { n: F.dc.filter(x => x.hb).length, best: {} }
   for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.hb && blooms[p.rk]) blooms[p.rk].best[p.i] = Math.max(blooms[p.rk].best[p.i] ?? 0, p.o)
   const sp = scheduleProblems(F.sched.weeks, F.sched.bye); if (sp.length) bad(`${F.year} schedule: ${sp.slice(0, 3)}`)
+  // (opening day's starters and the builds on the roster: the injury check's men)
+  opening[F.year] = new Map(FR.SHORTS.flatMap(s => Object.values(FR.startersOf(F, s)).map(p => [p.i, FR.groupOf(p)])))
+  buildYears[F.year] = F.teams[team].r.filter(p => p.b != null).map(p => ({ id: p.i, g: FR.groupOf(p) }))
+  if (F.builds.some(b => !b.face?.skin || !b.face?.hair)) bad('a build without a face')
   while (F.phase === 'season') {
     const r = FR.playWeek(F, { moments })
     if (r.pending) { dealt++; const v = FR.momentView(F); FR.finishMoment(F, H() < FR.normalRate(F.teams[F.team].r.find(p => p.i === v.pid).o)) }
@@ -119,6 +128,30 @@ if (classOne) {
   const all = FR.SHORTS.flatMap(s => F.teams[s].r), starting = new Set(FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])).map(p => p.i)))
   const sum = rds => { const g = classOne.filter(c => rds.includes(c.rd)); const men = g.map(c => all.find(p => p.i === c.pid)).filter(Boolean); return `${g.length} picked, ${men.length} in the league, ${men.filter(p => starting.has(p.i)).length} starting, ${men.filter(p => p.o >= 90).length} at 90+` }
   console.log(`the first class after ${N} seasons: round 1 ${sum([1])} · rounds 2-3 ${sum([2, 3])} · rounds 4-7 ${sum([4, 5, 6, 7])}`)
+}
+console.log(`INJURIES (injury.js, NFL x${FR.QOL}):`)
+for (const line of injuryReport(TALLY.rows, { seasons: N, opening, builds: buildYears, qol: FR.QOL })) console.log('   ' + line)
+{
+  const reg = TALLY.rows.filter(r => r.wk < 18), ts = 32 * N
+  if (reg.length / ts < 16 || reg.length / ts > 30) bad(`${(reg.length / ts).toFixed(1)} injuries a team-season`)
+}
+// a build who starts every week, by position, over 4,000 seasons each (the same model; the sim's builds are too few)
+{
+  const R = rngOf('build-risk'), rows = []
+  for (const g of ['qb', 'rb', 'wr', 'te', 'ol', 'edge', 'dt', 'lb', 'cb', 's']) {
+    let miss = 0, over = 0, games = 0
+    const p = { i: 1, p: { edge: 'dl', dt: 'dl', cb: 'db', s: 'db' }[g] ?? g, s: { edge: 'edge', dt: 'dt', cb: 'cb', s: 's' }[g] }
+    for (let k = 0; k < 4000; k++) {
+      let out = 0, hit = false
+      for (let wk = 0; wk < 17; wk++) {
+        if (out > 0) { out--; games++; continue }
+        if (R.u() < injuryRate(g)) { hit = true; const ij = hurt({ wk, phase: 'season' }, p, R); if (ij.se) { over++; games += 16 - wk; break } out = ij.w }
+      }
+      if (hit) miss++
+    }
+    rows.push(`${g} ${(miss / 40).toFixed(0)}%/${(over / 40).toFixed(1)}%/${(games / 4000).toFixed(1)}`)
+  }
+  console.log(`   a build who starts all year (misses a game / season over / games missed): ${rows.join(' · ')}`)
 }
 console.log('starters 90+ by year:', ages.map(a => a.n90).join(' '), '· mean OVR by year:', ages.map(a => a.mean).join(' '))
 { const P = JSON.parse(FR.packFranchise(F)); console.log('save by part (KB):', Object.entries(P).map(([k, v]) => [k, JSON.stringify(v ?? null).length]).filter(([, n]) => n > 1500).map(([k, n]) => `${k} ${(n / 1024).toFixed(1)}`).join(', '), '· careers', FR.SHORTS.reduce((a, s) => a + F.teams[s].r.filter(p => p.cr).length, 0), '· men', FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)) }
