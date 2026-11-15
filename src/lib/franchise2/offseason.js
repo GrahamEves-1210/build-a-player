@@ -11,6 +11,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { fbCase, honorsOf } from '../teamSeason'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { makeClass } from './draft'
+import { leagueUnderCap } from './market'
 import { signRookie } from './contracts'
 
 // (1 awards: awards.js · the league ages: aging.js · 2 re-sign and 3 free agency: market.js · the cap: contracts.js)
@@ -34,6 +35,8 @@ export function newSeason(F) {
     t.res = (t.res ?? [0, 0]).map(v => r1(v * 0.6))
     if (s !== F.team) t.lk = {}
   }
+  // the roster cuts and fill-ins done: every league team under the cap for the new season
+  leagueUnderCap(F); F.fa = []
   // the schedule follows last season's finish in each division
   const S = standings(F)
   F.year++
@@ -65,8 +68,8 @@ function signUDFAs(F, R) {
       if (n >= 3) break
       const room = t.r.filter(p => p.p === x.p)
       const worst = room.reduce((m, p) => Math.min(m, p.o), 99)
-      if (room.length >= MIN[x.p] && x.o < worst - 1 && x.pk < worst + 6) continue
-      const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, a: x.a, nu: x.nu }
+      if (room.length >= MIN[x.p] && x.o < worst - 1 && x.pk - (x.hb ?? 0) < worst + 6) continue   // (what the teams can see)
+      const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, a: x.a, nu: x.nu, ...(x.hb && { hb: x.hb }) }
       signRookie(p, 262, F.year + 1); p.y = 3; p.g = 0
       t.r.push(p)
       left.splice(left.indexOf(x), 1)

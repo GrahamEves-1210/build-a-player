@@ -9,7 +9,7 @@
 //          signs the best of the rest. After the third day the league fills its holes, and it's the draft.
 import { SHORTS, POS, MIN, lineup, makeGen, fillUp } from './league'
 import { depthChart, groupOf, GROUP } from './roster'
-import { askOf, marketValue, signDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice } from './contracts'
+import { askOf, marketValue, signDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice, minimumFor, capComply } from './contracts'
 import { coachOf, recruits } from './coach'
 import { standings } from './standings'
 import { rngOf, clamp, r1 } from './rng'
@@ -177,13 +177,32 @@ function cpuFill(F) {
         const i = F.fa.findIndex(p => p.p === pos)
         if (i < 0) break
         const p = F.fa.splice(i, 1)[0]
-        signDeal(p, { $: Math.min(p.$, marketValue(p, F.year + 1)), y: 1 })
+        // (a hole filled late in the market: his price if it fits, else a one-year minimum deal)
+        const $ = Math.min(p.$, marketValue(p, F.year + 1))
+        signDeal(p, { $: canSign(F, $, s) ? $ : minimumFor(p.ag, F.year + 1), y: 1 })
         t.r.push(p)
       }
     }
     fillUp(F, t.r, R)
   }
+  leagueUnderCap(F)
   F.fa = []
+}
+// every league team under the cap before the new league year (restructures, then releases; the holes refilled at
+// the minimum). The draft's rookies are signed after this; draft.js calls it again when the draft closes.
+export function leagueUnderCap(F) {
+  const R = rngOf(`${F.seed}-${F.year}-capfix`)
+  for (const s of SHORTS) {
+    if (s === F.team) continue
+    const t = F.teams[s]
+    if (capRoom(F, s) >= 0) continue
+    const on = new Set(Object.values(lineup(t)).map(p => p.i))
+    capComply(F, s, on)
+    const before = t.r.length
+    fillUp(F, t.r, R)
+    for (const p of t.r.slice(before)) { p.$ = minimumFor(p.ag, F.year + 1); p.y = 1; p.g = 0 }
+    if (capRoom(F, s) < 0) capComply(F, s, on)
+  }
 }
 // how the market went: the biggest deals, and the player's team's own (the wire reads it)
 export const marketDeals = F => (F.fas ?? []).map(([i, n, p, s, $, y, o]) => ({ i, n, p, s, $, y, o }))

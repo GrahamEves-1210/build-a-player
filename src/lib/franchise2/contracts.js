@@ -211,6 +211,32 @@ export function cutMan(F, id, short = F.team) {
   if (F.phase === 'off' && Array.isArray(F.fa)) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; F.fa.push(p) }
   return { p, ...c }
 }
+// Getting under the cap (a league team, by the start of the new league year): first restructures, the way NFL
+// teams do it (part of a big salary turned into a bonus spread over his years plus one added year: less on this
+// year's cap, more owed if he's cut later), then releases, the most cap saved for the least football lost: backups
+// before starters, the old and overpaid first. starters: the ids that start (they go last).
+//   returns [{ k: 'rs' | 'cut', n, saves }]
+export function capComply(F, short, starters = new Set()) {
+  const t = F.teams[short], out = []
+  let room = capRoom(F, short)
+  if (room >= 0) return out
+  for (const p of t.r.filter(x => x.y >= 2 && (x.$ ?? 0) >= 8 && !x.rc && x.ag <= 30 && x.rx !== F.year).sort((a, b) => b.$ - a.$)) {
+    if (room >= 0) break
+    const move = r1(p.$ * 0.4), saves = r1(move * p.y / (p.y + 1))
+    p.$ = r1(p.$ - saves); p.g = r1((p.g ?? 0) + move / (p.y + 1)); p.y += 1; p.rx = F.year
+    room = r1(room + saves)
+    out.push({ k: 'rs', n: p.n, saves })
+  }
+  const worthCut = p => { const c = cutCost(p); return c.saves - (starters.has(p.i) ? 12 : 0) - Math.max(0, p.o - 70) * 0.25 + Math.max(0, p.ag - 29) * 0.8 }
+  for (let guard = 0; room < 0 && guard < 30; guard++) {
+    const p = t.r.filter(x => x.b == null && !x.rc && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
+    if (!p) break
+    const c = cutMan(F, p.i, short)
+    room = capRoom(F, short)
+    out.push({ k: 'cut', n: p.n, saves: c?.saves ?? 0 })
+  }
+  return out
+}
 // A year passes on every deal (in the offseason, as the league ages): a year off; a picked-up option's price is his
 // cap hit in the option year. Dead money from last year is gone.
 export function tickDeal(p) {

@@ -41,6 +41,7 @@ import { standings, finishOf, pct } from './standings'
 import { rngOf, clamp, r1 } from './rng'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { signRookie } from './contracts'
+import { leagueUnderCap } from './market'
 import { depthChart, groupOf, fixNumbers } from './roster'
 import { CFB_TEAMS, CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 
@@ -105,7 +106,12 @@ export function makeClass(F) {
 // The class's talent, by where a man ranks in it (0 the best): what he's headed for. Shaped so the league keeps its
 // stars: about 10 men a class headed for 90+ and 5 or 6 for 95+ (a franchise player or two most years), the first
 // round's men starters, the 3rd round's backups with a chance, the long tail depth and camp bodies.
-const TALENT = [[0, 98], [0.024, 95], [0.04, 90], [0.08, 84.8], [0.145, 81.9], [0.27, 79.1], [0.5, 75.4], [0.8, 70], [1, 61]]
+const TALENT = [[0, 98], [0.021, 95], [0.033, 90], [0.08, 84.4], [0.145, 81.5], [0.27, 78.9], [0.5, 75.3], [0.8, 70], [1, 61]]
+// THE ONES EVERYBODY MISSED (Brady in the 6th round, Nacua in the 5th, Purdy at 262): now and then a man graded as a
+// backup is headed for 90+. His ratings now are a backup's; the extra (hb) is in how much he has left to grow, and
+// neither the media nor any of the 32 teams sees it. Our scouts can: a second look at his tape and a visit.
+// About one a class turns into a 90+ starter; some classes have none.
+const GEM_P = 0.016
 const talentAt = r => { for (let i = 1; i < TALENT.length; i++) { const [a, va] = TALENT[i - 1], [b, vb] = TALENT[i]; if (r <= b) return va + (vb - va) * (r - a) / (b - a) } return 62 }
 function makeProspect(F, R, pos, id, q = 0) {
   const T = TYPES_OF[pos]
@@ -113,6 +119,7 @@ function makeProspect(F, R, pos, id, q = 0) {
   const t = talentAt(R.u())
   let pk = Math.round(t + R.n() * 1.2 + q * 1.6 * clamp(0, 1, (t - 80) / 15))
   pk = clamp(60, 99, pk)
+  const gem = pk >= 72 && pk <= 80 && R.u() < GEM_P ? Math.round(90 + R.u() * 5 + (R.u() < 0.15 ? 3 : 0)) : 0
   const ag = R.wpick([0.03, 0.32, 0.45, 0.2]) + 20
   const ch = R.wpick([0.12, 0.7, 0.18])
   const up = r1(R.n() * 1.4)   // what nobody can see: some men just grow more
@@ -122,6 +129,7 @@ function makeProspect(F, R, pos, id, q = 0) {
   const a = fitVals(pos, shape, target)
   const o = ovrV(pos, a)
   pk = clamp(o, 99, Math.round(o + ROOM(ag) + CH_EFF[ch] + up))
+  const hb = gem > pk ? gem - pk : 0
   // the media's read of each rating: his own error (some men they love, some they miss) plus a little on each
   const z = R.int(1, 2 ** 20)
   const spots = SPOTS[pos]
@@ -134,7 +142,7 @@ function makeProspect(F, R, pos, id, q = 0) {
   const [lo, hi] = ranges[R.int(0, ranges.length - 1)]
   const col = CFB_TEAMS[R.wpick(SCHOOL_W)].short
   const cl = ag <= 20 ? 0 : ag === 21 ? (R.u() < 0.7 ? 1 : 2) : ag === 22 ? (R.u() < 0.6 ? 3 : 2) : 4   // RS-SO, JR, RS-JR, SR, RS-SR
-  return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl }
+  return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl, ...(hb && { pk: pk + hb, hb }) }
 }
 export const CLASS_LABEL = ['RS-SO', 'JR', 'RS-JR', 'SR', 'RS-SR']   // (three years out of high school: a true sophomore can't declare)
 const isSenior = x => x.cl >= 3
@@ -375,6 +383,10 @@ export function runCombine(F) {
 const BUZZ = new Map()
 // The media's read of each rating: their error on the whole man is `miss` OVR points (up or down alike, about 5),
 // each rating a little off besides. Drawn from his own seed, so it's never saved.
+// what a man is headed for as everybody but our scouts can see it (a late bloomer's extra hidden)
+export const seenPk = x => x.pk - (x.hb ?? 0)
+// our people found him: a second look at his tape and a visit
+export const foundGem = x => !!x.hb && filmDone(x) && !!x.kc
 const MEDIA = new Map()
 export function mediaOf(x) {
   if (x.b != null) return dec(x.a)
@@ -397,7 +409,7 @@ export function buzzOf(F, x, t = weeksIn(F), cmb = F.sc?.cmb ?? 0) {
   const base = mediaBase(x)
   let walk = 0
   for (let w = 1; w <= Math.min(t, 16); w++) walk += (h01(x.z, 500 + w) - 0.5) * 1.5
-  v = base + walk + (x.pk - base) * 0.12 * Math.min(1, t / 18)
+  v = base + walk + (seenPk(x) - base) * 0.12 * Math.min(1, t / 18)
   if (cmb) {
     const T = TYPES_OF[x.p], a = dec(x.a), m = mediaOf(x)
     const phys = T.map((tt, j) => (kindOf(x.p, tt) === 'p' ? a[j] : m[j]))
@@ -510,11 +522,12 @@ export function viewOf(F, x) {
   // (what we haven't seen ourselves we take from the consensus: the media's read as it stands now)
   const unseen = traits.filter(e => e.k === 0).length / T.length
   const lean = x.b != null ? 0 : (buzzOf(F, x) - mediaBase(x)) * unseen
-  const my = Math.round(clamp(55, 99, est + room + chE + lean))
+  const found = foundGem(x), flash = !!x.hb && !!(x.sv & 1)
+  const my = Math.round(clamp(55, 99, est + room + chE + lean + (found ? x.hb : 0)))
   return {
     traits, known, seen, all: T.length, now: est,
-    my, lo: Math.round(clamp(55, 99, lo + room + lean + (kc ? chE : CH_EFF[0]))), hi: Math.round(clamp(55, 99, hi + room + lean + (kc ? chE : CH_EFF[2]))),
-    grade: gradeOf(my), kc,
+    my, lo: Math.round(clamp(55, 99, lo + room + lean + (kc ? chE : CH_EFF[0]) + (found ? x.hb : 0))), hi: Math.round(clamp(55, 99, hi + room + lean + (kc ? chE : CH_EFF[2]) + (found || flash ? x.hb : 0))),
+    grade: gradeOf(my), kc, sleeper: found,
   }
 }
 export const rangeText = v => { const a = gradeOf(v.lo), b = gradeOf(v.hi); return a === b ? a : `${a} – ${b}` }
@@ -620,6 +633,8 @@ export function reportOf(F, x, v = viewOf(F, x)) {
     const mid = [...seen].sort((a, b) => b.v - a.v)[0]
     lines.push({ good: true, t: mid.t, text: say(x.p, mid.t, true).replace(/\.$/, '') + ', when he\'s at his best.' })
   }
+  // the late bloomer: the tape shows more than his ratings; with a visit our people are sure of it
+  if (x.hb && (x.sv & 1)) lines.unshift({ good: true, t: 'gem', text: v.sleeper ? 'Our area scout grades him as a future starter. Nobody else has him there.' : "Flashes on tape that the box score doesn't show. Worth a second look." })
   const pool = CHAR_LINES[x.ch]
   return {
     lines,
@@ -707,7 +722,7 @@ export const TAG_TEXT = { G: 'GEM', B: 'BUST', S: 'SOLID' }
 // how a league team rates a man: what he really is, half the media's error, its own scouts' error; what it needs;
 // what the position is worth (a quarterback or a pass rusher goes earlier than a running back of the same grade)
 function cpuValue(F, s, x, need, rd) {
-  const seen = x.pk + (finalBuzz(F, x) - x.pk) * 0.5 + g01(strHash(s), x.z) * 1.6
+  const seen = seenPk(x) + (finalBuzz(F, x) - seenPk(x)) * 0.5 + g01(strHash(s), x.z) * 1.6
   const pv = GROUP_V[gKey(x)] * (rd >= 4 ? 0.5 : 1)
   return seen + need[needKey(x)] * (rd <= 2 ? 1.1 : 1.4) + pv
 }
@@ -716,7 +731,7 @@ function take(F, s, x, via = null) {
   F.dc = F.dc.filter(p => p !== x)
   const at = F.dr.at, rd = roundOf(at)
   const bz = finalBuzz(F, x)
-  const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, dr: [rd, at + 1], a: x.a, nu: x.nu, tg: tagOf(x.pk, bz), ...(x.b != null && { b: x.b }) }
+  const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, dr: [rd, at + 1], a: x.a, nu: x.nu, tg: tagOf(x.pk, bz), ...(x.hb && { hb: x.hb }), ...(x.b != null && { b: x.b }) }
   signRookie(p, realNo(at), F.year + 1)
   if (x.b != null) { F.builds[x.b].pid = p.i; F.builds[x.b].age = x.ag; F.builds[x.b].draft = [rd, at + 1, s]; delete F.builds[x.b].prospect }
   F.teams[s].r.push(p)
@@ -858,6 +873,8 @@ export function closeDraft(F) {
     F.builds[x.b].pid = p.i; F.builds[x.b].age = x.ag; delete F.builds[x.b].prospect
     F.dc = F.dc.filter(y => y !== x)
   }
+  // the rookies' deals are on the books: every league team under the cap again
+  leagueUnderCap(F)
   F.dr.closed = 1
 }
 
@@ -880,6 +897,6 @@ export const heightText = h => `${Math.floor(h / 12)}-${h % 12}`
 
 // ── Saving the class ─────────────────────────────────────────────────────────
 // (o is read back from his ratings; the media's read is drawn from z)
-const DK = ['i', 'n', 'p', 's', 'ag', 'pk', 'col', 'ht', 'wt', 'nu', 'a', 'k', 'kc', 'ch', 'z', 'sv', 'cl', 'b']
+const DK = ['i', 'n', 'p', 's', 'ag', 'pk', 'col', 'ht', 'wt', 'nu', 'a', 'k', 'kc', 'ch', 'z', 'sv', 'cl', 'b', 'hb']
 export const packClass = dc => (dc ?? []).map(x => { const a = DK.map(k => x[k] ?? null); while (a.length && a[a.length - 1] === null) a.pop(); return a })
 export const unpackClass = rows => (rows ?? []).map(a => { const x = {}; DK.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); x.o = ovrV(x.p, dec(x.a)); return x })

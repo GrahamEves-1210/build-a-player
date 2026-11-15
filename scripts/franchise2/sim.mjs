@@ -30,9 +30,12 @@ function league() {
   const rooms = FR.SHORTS.map(s => FR.capSheet(F, s).room).sort((a, b) => a - b)
   return { mean: avg(st.map(p => p.o)), age: avg(st.map(p => p.ag)), n90: stars.length, n95: all.filter(p => p.o >= 95).length, starAge: avg(stars.map(p => p.ag)), real: all.filter(p => realNames.has(p.n)).length, qb85: all.filter(p => p.p === 'qb' && p.o >= 85).length, room: rooms[16] }
 }
+const blooms = {}   // the late bloomers (hb) each class had, and the best each became
 let classOne = null   // the first class the league drafts, followed to the end: did the 1st round start, did the late rounds hit
 for (let y = 0; y < N; y++) {
   const t0 = performance.now()
+  blooms[F.year + 1] ??= { n: F.dc.filter(x => x.hb).length, best: {} }
+  for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.hb && blooms[p.rk]) blooms[p.rk].best[p.i] = Math.max(blooms[p.rk].best[p.i] ?? 0, p.o)
   const sp = scheduleProblems(F.sched.weeks, F.sched.bye); if (sp.length) bad(`${F.year} schedule: ${sp.slice(0, 3)}`)
   while (F.phase === 'season') {
     const r = FR.playWeek(F, { moments })
@@ -75,7 +78,7 @@ for (let y = 0; y < N; y++) {
     if (p) { const b = FR.placeBid(F, p.i, p.$); bids++; if (b?.to === team) won++ }
     FR.nextFADay(F)
   }
-  for (const s of FR.SHORTS) { const c = FR.capSheet(F, s); if (c.room < -25) bad(`${F.year} ${s} ${-c.room}M over the cap after FA`) }
+  for (const s of FR.SHORTS) { const c = FR.capSheet(F, s); if (c.room < (s === team ? -25 : 0)) bad(`${F.year} ${s} ${-c.room}M over the cap after FA`) }
   FR.openDraft(F)
   // visit, film and star a few, then the draft: seven rounds (scripts/franchise2/draft.mjs checks scouting and trades)
   for (const x of FR.consensus(F).slice(0, 5)) { FR.interview(F, x.i); FR.film(F, x.i); FR.star(F, x.i) }
@@ -88,6 +91,7 @@ for (let y = 0; y < N; y++) {
   if (mine.some(p => !F.teams[team].r.find(q => q.i === p.pid)?.rc)) bad('a pick without a rookie deal')
   console.log(`   offseason: ${ch.filter(c => c.k === 'ret').length} of ours retired, ${ch.filter(c => c.k === 'up').length} up, ${ch.filter(c => c.k === 'down').length} down; drafted ${mine.map(p => `${p.p.toUpperCase()} ${FR.GRADES[FR.gradeIdx(p.pk)]}${p.tag === 'G' ? ' GEM' : p.tag === 'B' ? ' BUST' : ''}`).join(', ')}; builds ${F.builds.map(b => `${b.pos} ${F.teams[team].r.find(p => p.b === F.builds.indexOf(b))?.o ?? 'gone'} age ${b.age}`).join(', ')}`)
   FR.newSeason(F)
+  for (const s of FR.SHORTS) { if (s !== team && FR.capRoom(F, s) < 0) bad(`${F.year} ${s} ${-FR.capRoom(F, s)}M over the cap at the start of the season`) }
   const size = FR.saveSize(F)
   const players = FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)
   const cap = FR.capSheet(F, team)
@@ -102,6 +106,15 @@ for (let y = 0; y < N; y++) {
   if (L.n90 < base.n90 * 0.45 || L.n90 > base.n90 * 1.8) bad(`${F.year} ${L.n90} men 90+ (started with ${base.n90})`)
 }
 // the shape of a career: how old the league's starters are, and when men retire
+{
+  // a late bloomer counts when he's a 90+ man on a roster (by the class he came out in)
+  const all = FR.SHORTS.flatMap(s => F.teams[s].r)
+  for (const p of all) if (p.hb && blooms[p.rk]) blooms[p.rk].best[p.i] = Math.max(blooms[p.rk].best[p.i] ?? 0, p.o)
+  const hitOf = b => Object.values(b.best).filter(o => o >= 90).length
+  const row = Object.entries(blooms).filter(([y]) => +y <= F.year - 2).map(([y, b]) => `${y}: ${hitOf(b)}/${b.n}`)
+  const hits = Object.entries(blooms).filter(([y]) => +y <= F.year - 2).reduce((a, [, b]) => a + hitOf(b), 0)
+  console.log(`late bloomers at 90+ (class: became 90+ / had): ${row.join(' · ')} · ${(hits / Math.max(1, row.length)).toFixed(1)} a class`)
+}
 if (classOne) {
   const all = FR.SHORTS.flatMap(s => F.teams[s].r), starting = new Set(FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])).map(p => p.i)))
   const sum = rds => { const g = classOne.filter(c => rds.includes(c.rd)); const men = g.map(c => all.find(p => p.i === c.pid)).filter(Boolean); return `${g.length} picked, ${men.length} in the league, ${men.filter(p => starting.has(p.i)).length} starting, ${men.filter(p => p.o >= 90).length} at 90+` }

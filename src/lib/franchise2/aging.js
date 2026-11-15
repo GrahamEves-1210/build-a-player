@@ -21,7 +21,8 @@ export function growth(F, p, R, starter = false, short = null) {
   let d
   if (p.ag <= grow) {
     // the rest of the way to his peak, spread over the years he has left to grow (a wide spread: some boom early)
-    const left = Math.max(1, grow + 1 - p.ag)
+    // (a late bloomer, the one the draft missed (hb), gets there in two or three years once he's in the building)
+    const left = Math.max(1, p.hb ? Math.min(2, grow + 1 - p.ag) : grow + 1 - p.ag)
     d = Math.max(0, ((p.pk ?? p.o) - p.o) / left) * (0.55 + 0.9 * R.u()) + dev + (starter && p.ag <= 25 ? 0.6 : 0) + R.n() * 0.8
   } else if (p.ag <= prime) d = R.n() * 0.9 + (p.o < (p.pk ?? p.o) ? 0.4 : -0.1)
   else d = -(0.9 + (p.ag - prime) * 0.75) * (0.5 + R.u())
