@@ -1,49 +1,64 @@
 import { useMemo, useState } from 'react'
 import { TEAM } from '../../lib/franchise2'
-import { FACE_SKIN, FACE_HAIR, FACE_HC, FACE_BEARD, defaultFace, buildFaceUrl } from '../../lib/franchise2/faces'
+import { FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_BROWS, FACE_NOSE, FACE_MOUTH, FACE_HAIR, FACE_HC, FACE_BEARD, FACE_STACHE, FACE_GEAR, defaultFace, buildFaceUrl } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { fkVars } from './kit'
 import './face.css'
 
-// A BUILD'S FACE, on his name step (Setup.jsx NameForm): skin tone, hair, hair colour, facial hair.
-// It sits right under the name step's big lower-third, so his face changes in view: four tabs (each shows what it's
-// set to) and the tab's choices: swatches for the two colours, his own head with each cut or beard for the other two.
-//   face: { skin, hair, hc, beard } · pos (the head's width: a lineman's is wider) · team · onChange(face)
+// A BUILD'S FACE, on his name step (Setup.jsx NameForm). It sits right under the name step's big lower-third, so his
+// face changes in view. Seven categories (a 4 × 2 block with the shuffle), then the category's choices as big
+// previews of his own face with that one thing changed, zoomed to where it shows (the eyes, the mouth, the beard).
+// Colours (skin, hair colour) are plain swatches.
+//   face: faces.js B.face · pos (the head's width: a lineman's is wider) · team · onChange(face)
 //   shuffleKey: what a new random look is keyed by (the setup's seed and the spot, plus a count)
-const TABS = [['skin', 'SKIN', FACE_SKIN], ['hair', 'HAIR', FACE_HAIR], ['hc', 'COLOUR', FACE_HC], ['beard', 'BEARD', FACE_BEARD]]
+const CATS = [
+  ['skin', 'SKIN', [['skin', 'SKIN TONE', FACE_SKIN, 'swatch']]],
+  ['head', 'HEAD', [['head', 'FACE SHAPE', FACE_HEAD, 'full']]],
+  ['hair', 'HAIR', [['hair', 'STYLE', FACE_HAIR, 'full'], ['hc', 'COLOUR', FACE_HC, 'swatch']]],
+  ['beard', 'BEARD', [['beard', 'BEARD', FACE_BEARD, 'low'], ['stache', 'MOUSTACHE', FACE_STACHE, 'mouth']]],
+  ['eyes', 'EYES', [['eyes', 'EYES', FACE_EYES, 'eyes'], ['brows', 'BROWS', FACE_BROWS, 'eyes']]],
+  ['nose', 'NOSE · MOUTH', [['nose', 'NOSE', FACE_NOSE, 'mouth'], ['mouth', 'MOUTH', FACE_MOUTH, 'mouth']]],
+  ['gear', 'GEAR', [['gear', 'GAME DAY', FACE_GEAR, 'full']]],
+]
 const labelOf = (list, v) => list.find(x => x[0] === v)?.[1] ?? ''
 
-export default function FacePick({ face, pos, team, shuffleKey, onChange }) {
-  const [tab, setTab] = useState('hair')
-  const [n, setN] = useState(0)
-  const color = TEAM[team]?.color
-  const [, , list] = TABS.find(t => t[0] === tab)
-  const thumbs = useMemo(() => (tab === 'hair' || tab === 'beard'
-    ? list.map(([v]) => buildFaceUrl({ pos, face: { ...face, [tab]: v } }, color)) : null), [tab, face.skin, face.hc, face.hair, face.beard, pos, color]) // eslint-disable-line react-hooks/exhaustive-deps
-  const set = (k, v) => { if (face[k] === v) return; onChange({ ...face, [k]: v }); sfx('tap') }
-  const shuffle = () => { const k = n + 1; setN(k); onChange(defaultFace(`${shuffleKey}-${k}`, pos)); sfx('flip') }
+function Group({ k, title, list, kind, face, pos, color, onSet }) {
+  const thumbs = useMemo(() => (kind === 'swatch' ? null : list.map(([v]) => buildFaceUrl({ pos, face: { ...face, [k]: v } }, color))),
+    [kind, k, pos, color, ...Object.values(face)]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="ffp" style={fkVars(team)}>
-      <div className="ffp-top">
-        <div className="ffp-tabs" role="tablist" aria-label="Face">
-          {TABS.map(([k, label, opts]) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} className={`ffp-tab${tab === k ? ' is-on' : ''}`} onClick={() => { setTab(k); sfx('tap') }}>
-              <small>{label}</small>
-              <b>{k === 'skin' ? <i className="ffp-dot ffp-dot--wide" style={{ background: face[k] }} title={labelOf(opts, face[k])} /> : <>{k === 'hc' && <i className="ffp-dot" style={{ background: face[k] }} />}{labelOf(opts, face[k])}</>}</b>
-            </button>
-          ))}
-        </div>
-        <button type="button" className="ffp-shuf" onClick={shuffle} aria-label="New random look"><IconSpin size={18} /></button>
-      </div>
-      <div className={`ffp-opts ffp-opts--${tab}`} role="radiogroup" aria-label={TABS.find(t => t[0] === tab)[1]}>
+    <div className="ffp-grp">
+      <span className="ffp-grp-h"><small>{title}</small><b>{labelOf(list, face[k])}</b></span>
+      <div className={`ffp-opts ffp-opts--${kind}`} role="radiogroup" aria-label={title}>
         {list.map(([v, label], i) => (
-          <button key={v} type="button" role="radio" aria-checked={face[tab] === v} aria-label={label} title={label}
-            className={`ffp-o${face[tab] === v ? ' is-on' : ''}`} onClick={() => set(tab, v)}>
+          <button key={v} type="button" role="radio" aria-checked={face[k] === v} aria-label={label} title={label}
+            className={`ffp-o${face[k] === v ? ' is-on' : ''}`} onClick={() => onSet(k, v)}>
             {thumbs ? <img src={thumbs[i]} alt="" draggable={false} /> : <i style={{ background: v }} />}
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+export default function FacePick({ face: given, pos, team, shuffleKey, onChange }) {
+  const [cat, setCat] = useState('hair')
+  const [n, setN] = useState(0)
+  const color = TEAM[team]?.color
+  // (a face saved before the picker had every part: the rest filled from his default look)
+  const face = useMemo(() => ({ ...defaultFace(shuffleKey ?? pos, pos), ...given }), [given, shuffleKey, pos])
+  const set = (k, v) => { if (face[k] === v) return; onChange({ ...face, [k]: v }); sfx('tap') }
+  const shuffle = () => { const k = n + 1; setN(k); onChange(defaultFace(`${shuffleKey}-${k}`, pos)); sfx('flip') }
+  const [, , groups] = CATS.find(c => c[0] === cat)
+  return (
+    <div className="ffp" style={fkVars(team)}>
+      <div className="ffp-cats" role="tablist" aria-label="Face">
+        {CATS.map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={cat === k} className={`ffp-cat${cat === k ? ' is-on' : ''}`} onClick={() => { setCat(k); sfx('tap') }}>{label}</button>
+        ))}
+        <button type="button" className="ffp-cat ffp-shuf" onClick={shuffle} aria-label="New random look"><IconSpin size={16} />RANDOM</button>
+      </div>
+      {groups.map(([k, title, list, kind]) => <Group key={k} k={k} title={title} list={list} kind={kind} face={face} pos={pos} color={color} onSet={set} />)}
     </div>
   )
 }

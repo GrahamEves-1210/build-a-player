@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { SlotReel } from '../SpinScreen'
-import { TEAM, CTYPES, CLABEL, STYLES, RESPINS, cLetter, coachGrade, wheelOf, dealSpin, dealRespin, coachByName, takeLine, linesDone, realHC } from '../../lib/franchise2'
-import { faceUrl, lookOf } from '../../lib/franchise2/faces'
-import { cleanName, nameOk, randomFirstLast } from '../../lib/franchise2/identity'
+import { TEAM, CTYPES, CLABEL, STYLES, RESPINS, cLetter, coachGrade, wheelOf, dealSpin, dealRespin, coachByName, takeLine, linesDone, realHC, FIRST_YEAR } from '../../lib/franchise2'
+import { coachLook, coachFaceUrl } from '../../lib/franchise2/faces'
+import { cleanName, nameOk } from '../../lib/franchise2/identity'
+import { randomCoachName } from '../../lib/franchise2/coachNames'
 import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
@@ -110,27 +111,29 @@ export function StylePick({ S, go, onDone }) {
 }
 
 // ── 3. The name and the face ─────────────────────────────────────────────────
-// faces: made-up men (lib/franchise2/faces.js), a strip of eight that covers the league's backgrounds
-const FACE_POS = ['qb', 'te', 'lb', 'ol', 'wr', 'db', 'dl', 'rb']
+// faces: drawn coaches (lib/franchise2/faces.js coachLook), a strip of eight, between 38 and 58 the way first-time
+// head coaches are, white and Black men in it (the league's staffs: mostly white, about a fifth Black). His face
+// keeps the year it was picked (y), so he greys as the seasons go (coach.js myHC passes his age now).
 export function faceChoices(seed, page = 0) {
-  const out = [], seen = new Set()
-  for (let k = 0; k < 60 && out.length < 8; k++) {
-    const key = `coach-${seed}-${page}-${k}`, pos = FACE_POS[k % FACE_POS.length]
-    const g = lookOf(key, pos).g
-    // one of each background first, then anyone
-    if (out.length < 5 && seen.has(g)) continue
-    seen.add(g); out.push({ key, pos })
+  const out = []
+  let black = 0
+  for (let k = 0; k < 80 && out.length < 8; k++) {
+    const key = `coach-${seed}-${page}-${k}`, ag = 38 + ((k * 7 + page * 5) % 21)
+    const g = coachLook(key, { ag }).g
+    if (g !== 'b' && out.length >= 6 && black < 2) continue
+    if (g === 'b') black++
+    out.push({ key, coach: 1, g, ag, y: FIRST_YEAR })
   }
   return out
 }
-export const coachFace = (c, team) => (c?.face ? faceUrl(c.face.key, c.face.pos, TEAM[team]?.color) : null)
+export const coachFace = (c, team) => (c?.face ? coachFaceUrl(c.face, TEAM[team]?.color) : null)
 export function CoachWho({ S, go, owner, onDone }) {
   const c = S.coach ?? {}
   const [page, setPage] = useState(c.facePage ?? 0)
   const faces = useMemo(() => faceChoices(S.seed, page), [S.seed, page])
   const first = c.first ?? '', last = c.last ?? ''
   const set = (patch, s) => go({ coach: { ...c, ...patch } }, s)
-  const rand = () => { const n = randomFirstLast({ first, last }); set(n, 'tap') }
+  const rand = () => { const n = randomCoachName({ first, last }); set(n, 'tap') }
   const ok = nameOk(first, last) && c.face
   const name = `${first} ${last}`.trim()
   return (
@@ -145,7 +148,7 @@ export function CoachWho({ S, go, owner, onDone }) {
       <div className="fsu-faces" role="radiogroup" aria-label="Face">
         {faces.map(f => (
           <button key={f.key} type="button" role="radio" aria-checked={c.face?.key === f.key} className={`fsu-face${c.face?.key === f.key ? ' is-on' : ''}`} style={fkVars(S.team)} onClick={() => set({ face: f, facePage: page }, 'tap')}>
-            <img src={faceUrl(f.key, f.pos, TEAM[S.team]?.color)} alt="" draggable={false} />
+            <img src={coachFaceUrl(f, TEAM[S.team]?.color)} alt="" draggable={false} />
           </button>
         ))}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>
