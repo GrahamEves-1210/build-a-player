@@ -1,24 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, FINISH_TEXT, ageLeague, openResign, resignOne, resignAsk, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, faBoard, bidView, pitchOf, placeBid,
-  OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL,
+  OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigRec, BigNum, Stamp, Meter, Go, Flip, KLogo, fkVars, reduced } from './kit'
 import { Man, CapBar, PlayerPage, money, posText } from './dparts'
 import { DraftDay } from './Draft'
+import { Carousel } from './Staff'
 import './fd.css'
 
-// THE OFFSEASON: four stops, one screen each. AWARDS → RE-SIGN → FREE AGENCY → THE DRAFT, then a new season.
-const STOPS = [['awards', 'AWARDS'], ['resign', 'RE-SIGN'], ['fa', 'FREE AGENCY'], ['draft', 'DRAFT']]
+// THE OFFSEASON: five stops, one screen each. COACHES (the carousel, the NFL's Black Monday: Staff.jsx) → AWARDS →
+// RE-SIGN → FREE AGENCY → THE DRAFT, then a new season.
+const STOPS = [['coaches', 'COACHES'], ['awards', 'AWARDS'], ['resign', 'RE-SIGN'], ['fa', 'FREE AGENCY'], ['draft', 'DRAFT']]
 
 export default function Offseason({ F, act, owner, onBuild }) {
   const i = STOPS.findIndex(([k]) => k === F.stage)
   return (
     <div className="fd fk">
       <div className="fd-stops" aria-label="Offseason">
-        {STOPS.map(([k, n], j) => <span key={k} className={`fd-stop${j === i ? ' is-on' : j < i ? ' is-done' : ''}`}><i>{j + 1}</i>{n}</span>)}
+        {STOPS.map(([k, n], j) => <span key={k} className={`fd-stop${j === i ? ' is-on' : j < i ? ' is-done' : ''}`}><i>{j + 1}</i><span>{n}</span></span>)}
       </div>
+      {F.stage === 'coaches' && <Carousel F={F} act={act} owner={owner} />}
       {F.stage === 'awards' && <Awards F={F} act={act} owner={owner} />}
       {F.stage === 'resign' && <Resign F={F} act={act} owner={owner} />}
       {F.stage === 'fa' && <FreeAgency F={F} act={act} owner={owner} />}
@@ -242,7 +245,7 @@ function Bid({ F, act, owner, id, onBack }) {
           </div>
           <Chyron tone="ink" size="s" title="WHAT HE WANTS" right={TEAM[F.team].nick.toUpperCase()} />
           <div className="fd-wants">
-            {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(offer) : undefined} />)}
+            {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(offer) : k === 'coach' ? coachGrade(F.coach?.r) ?? '-' : undefined} />)}
           </div>
           <div className="fd-offers" role="radiogroup" aria-label="Offer">
             {OFFERS.map(([k]) => {

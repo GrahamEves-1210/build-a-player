@@ -10,6 +10,7 @@ import { standings, finishOf } from './standings'
 import { groupOf } from './roster'
 import { leagueStats, whoIs } from './stats'
 import { coachOf } from './coach'
+import { openCarousel } from './carousel'
 import { lastSeason } from './lastSeason'
 import { fbCase } from '../teamSeason'
 import { rngOf } from './rng'
@@ -145,7 +146,9 @@ export function closeSeason(F) {
   }
   F.hist.push(banner)
   if (F.po.champ === F.team) F.rings = (F.rings ?? 0) + 1
+  // (the offseason opens with the coaching carousel, the NFL's Black Monday: carousel.js; then the awards)
   F.phase = 'off'; F.stage = 'awards'
+  openCarousel(F)
   void lineup
   return banner
 }

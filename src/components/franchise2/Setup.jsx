@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { TEAM, buildTeams, calibrate, strength, lineup, sideGrade, POS_LABEL, DIVISIONS, DIV_OF, realHC, newCoachBuild, linesDone } from '../../lib/franchise2'
+import { TEAM, buildTeams, calibrate, strength, lineup, sideGrade, POS_LABEL, DIVISIONS, DIV_OF, realHC, coachGrade, newCoachBuild, linesDone } from '../../lib/franchise2'
+import { coachPhoto } from './coachFace'
 import { lastSeason } from '../../lib/franchise2/lastSeason'
 import { rookieScale } from '../../lib/franchise2/contracts'
 import { cleanName, nameOk, randomFirstLast, takenOn, freeNumbers, legalFor, pickNumber, rookieSlots } from '../../lib/franchise2/identity'
@@ -118,7 +119,7 @@ function TeamCard({ s, onPick, onGo }) {
       {hc && (
         <>
           <Chyron tone="ink" size="s" title="Head coach" />
-          <LowerThird name={hc.name} pos="HC" team={s} ovr={hc.ovr} line={hc.since === 2026 ? 'FIRST SEASON' : `SINCE ${hc.since}`} delay={60} />
+          <LowerThird name={hc.name} pos="HC" team={s} photo={coachPhoto({ n: hc.name, ag: hc.age }, s)} stat={{ v: coachGrade(hc.attrs), label: 'GRADE' }} line={hc.since === 2026 ? 'FIRST SEASON' : `SINCE ${hc.since}`} delay={60} />
         </>
       )}
       <Chyron tone="ink" size="s" title="Best players" />

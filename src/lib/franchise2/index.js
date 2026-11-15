@@ -9,12 +9,14 @@ import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identit
 import { defaultFace } from './faces'
 import { capComply } from './contracts'
 import { addNews } from './news'
+import { packStaff, unpackStaff } from './coach'
 
 export * from './league'
 export * from './season'
 export * from './offseason'
 export * from './draft'
 export * from './coach'
+export * from './carousel'
 export * from './identity'
 export * from './roster'
 export * from './contracts'
@@ -95,7 +97,7 @@ const obj = (keys, a) => { const x = {}; keys.forEach((k, j) => { if (a[j] != nu
 export function packFranchise(F) {
   if (!F.teams) return JSON.stringify(F)
   const teams = Object.fromEntries(Object.entries(F.teams).map(([s, t]) => [s, { ...t, r: t.r.map(p => row(PK, p)) }]))
-  return JSON.stringify({ ...F, teams, fa: (F.fa ?? []).map(p => row(PK, p)), dc: packClass(F.dc), pk: 1 })
+  return JSON.stringify({ ...F, teams, fa: (F.fa ?? []).map(p => row(PK, p)), dc: packClass(F.dc), ...packStaff(F), pk: 1 })
 }
 export function unpackFranchise(json) {
   const F = JSON.parse(json)
@@ -104,6 +106,7 @@ export function unpackFranchise(json) {
   for (const t of Object.values(F.teams)) t.r = t.r.map(a => obj(PK, a))
   F.fa = (F.fa ?? []).map(a => obj(PK, a))
   F.dc = unpackClass(F.dc)
+  unpackStaff(F)
   return F
 }
 export function saveFranchise(F) {

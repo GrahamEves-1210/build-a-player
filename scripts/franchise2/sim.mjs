@@ -69,6 +69,7 @@ for (let y = 0; y < N; y++) {
   // the 1 seed hosts the conference's later rounds while it's alive
   const t1 = performance.now()
   const banner = FR.closeSeason(F)
+  FR.closeCarousel(F)   // (the coaching carousel, the offseason's first stop: the league's moves; scripts/franchise2/coaches.mjs checks it)
   const my = recs[team]
   console.log(`${F.year} ${team} ${FR.recText(my)} ${banner.fin}${banner.seed ? ` (${banner.seed} seed)` : ''} · champ ${po.champ} over ${po.runner} ${po.score} · MVP ${F.aw.mvp?.n} (${F.aw.mvp?.t}) · ties ${ties} · ovr ${FR.strength(F, team).ovr} · league starters ${meanOvr()} · hype ${F.hype} chem ${F.chem} · ${(t1 - t0).toFixed(0)} ms`)
   const ch = FR.ageLeague(F)
@@ -105,7 +106,7 @@ for (let y = 0; y < N; y++) {
   const players = FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)
   const cap = FR.capSheet(F, team)
   console.log(`   new season ${F.year}: ${players} players, cap ${cap.cap} used ${cap.used} room ${cap.room}, FA bids ${bids} won ${won}, save ${(size / 1024).toFixed(0)} KB, moments so far ${dealt}`)
-  if (size > 190 * 1024) bad(`save ${size}`)   // (15 seasons in: about 170 KB)
+  if (size > 215 * 1024) bad(`save ${size}`)   // (15 seasons in: about 200 KB, the coaching staffs and their pool ~16 of it)
   // the league's talent over the years (aging and growth): it should hold about where the real league started
   const L = league()
   console.log(`   league: starters ${L.mean} OVR, age ${L.age}, ${L.n90} men 90+, ${L.n95} 95+, stars' ages ${L.starAge}, real men left ${L.real}, QBs 85+ ${L.qb85}, cap room median ${L.room}M`)

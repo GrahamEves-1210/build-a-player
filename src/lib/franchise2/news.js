@@ -17,6 +17,7 @@ import { gameLines, leagueStats, whoIs } from './stats'
 import { lastSeason } from './lastSeason'
 import { marketDeals } from './market'
 import { lhRow } from './awards'
+import { coachWire } from './carousel'
 
 const nick = s => TEAM[s]?.nick ?? s
 const num = v => Math.round(v ?? 0).toLocaleString('en-US')
@@ -71,6 +72,8 @@ export function wire(F, { n = 30 } = {}) {
   const S = standings(F)
   // the offseason's own news first (the most recent things)
   if (F.phase === 'off') {
+    // (the coaching carousel: carousel.js, the head coaches first)
+    for (const x of coachWire(F).sort((a, b) => (b.big ? 1 : 0) - (a.big ? 1 : 0)).slice(0, 24)) put(x.k, x.tag, x.s, x.text, { big: x.big })
     for (const d of marketDeals(F).filter(d => d.o >= 80 || d.s === F.team).slice(-14).reverse()) put('sign', 'SIGNED', d.s, `${nick(d.s)} sign ${POS_LABEL[d.p]} ${d.n}: ${d.y} ${d.y === 1 ? 'year' : 'years'}, $${num(d.$ * d.y)} million`, { big: d.$ >= 25 })
     for (const e of (F.ext ?? []).slice(0, 8)) put('sign', 'EXTENDED', e[3], `${nick(e[3])} re-sign ${POS_LABEL[e[2]]} ${e[1]}: ${e[5]} ${e[5] === 1 ? 'year' : 'years'}, $${num(e[4] * e[5])} million`)
     for (const g of (F.gone ?? []).slice().sort((a, b) => b.o - a.o).slice(0, 8)) put('ret', 'RETIRED', g.s, `${g.n} retires at ${g.ag}`, { big: g.o >= 90 })

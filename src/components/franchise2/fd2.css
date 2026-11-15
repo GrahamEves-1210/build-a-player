@@ -1,7 +1,10 @@
 /* D's screens, part two: the offseason, the league, the hall (fd.css has the depth chart, the cap, a man's page). */
 
 /* ── The offseason ───────────────────────────────────────────────────────── */
-.fd-stops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+.fd-stops { display: flex; gap: 2px; }
+.fd-stop { flex: 1 1 0; min-width: 0; }
+/* (five stops on a phone: the stop you're on reads in full, the rest by number) */
+@media (max-width: 560px) { .fd-stop:not(.is-on) span { display: none; } .fd-stop.is-on { flex: 4 1 auto; } }
 .fd-stop { display: flex; align-items: center; justify-content: center; gap: 5px; height: 30px; background: var(--fk-g1); color: var(--fk-dim); font-family: var(--fk-f); font-size: 14px; letter-spacing: 1.4px; white-space: nowrap; overflow: hidden; }
 .fd-stop i { font-style: normal; font-family: var(--fk-d); font-size: 13px; }
 .fd-stop.is-done { color: var(--fk-mute); }

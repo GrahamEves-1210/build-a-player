@@ -3,6 +3,7 @@ import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveIn
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, Go, fkVars } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money } from './dparts'
+import { StaffStrip, StaffScreen } from './Staff'
 
 // TEAM: the depth chart. The order the games play: the starters on top of each room, the men behind them in the
 // order they come in. Tap a man to move him (up, down, to the top, to the room next door) or open his page.
@@ -15,17 +16,20 @@ export default function TeamTab({ F, act, owner }) {
   const [pick, setPick] = useState(null)       // the man picked to move (his id)
   const [page, setPage] = useState(null)       // a man's page open
   const [cap, setCap] = useState(false)
+  const [staff, setStaff] = useState(false)   // the coaching staff (Staff.jsx)
   const C = depthChart(F, F.team), L = startersOf(F, F.team)
   const st = strength(F, F.team)
   const starting = new Set(Object.values(L).map(p => p.i))
   const groups = side === 'off' ? OFF_GROUPS : DEF_GROUPS
   const tap = p => { setPick(pick === p.i ? null : p.i); sfx('tap'); haptic('light') }
   const move = to => { const id = pick; act(X => moveInChart(X, id, to)); sfx('swap'); haptic('medium') }
+  if (staff) return <StaffScreen F={F} act={act} owner={owner} onBack={() => { setStaff(false); sfx('back') }} />
   if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
   return (
     <div className="fd fk">
       <Chyron team={F.team} title="DEPTH CHART" tag={F.year} right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)}`} />
       <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
+      <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
       <div className="fd-seg" role="tablist">
         {[['off', 'OFFENSE'], ['def', 'DEFENSE']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
       </div>

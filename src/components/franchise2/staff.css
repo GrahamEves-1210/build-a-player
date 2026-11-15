@@ -1,0 +1,82 @@
+/* THE STAFF and THE COACHING CAROUSEL (Staff.jsx): the kit's lower-thirds with a coach's five grades under them. */
+.fst, .fst-car { display: grid; gap: 10px; min-width: 0; }
+.fst-car { color: var(--fk-text); }
+
+/* a coach: the lower-third, then his grades as a strip of five letters */
+.fst-man { position: relative; display: grid; min-width: 0; animation: fk-in .32s var(--d, 0ms) cubic-bezier(.2,.9,.25,1) both; }
+.fst-man > .fk-stamp { position: absolute; right: 74px; top: 10px; z-index: 2; }
+.fst-man--l > .fk-stamp { top: 16px; right: 96px; font-size: 24px; }
+.fst-g { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 2px; }
+.fst-gc { display: flex; align-items: baseline; justify-content: center; gap: 6px; height: 30px; align-items: center; background: var(--fk-g1); font-family: var(--fk-f); }
+.fst-gc small { font-size: 13px; letter-spacing: 1.6px; color: var(--fk-dim); }
+.fst-gc b { font-family: var(--fk-d); font-weight: 400; font-size: 19px; line-height: 1; color: #fff; }
+.fst-gc.is-on { background: var(--tc, var(--fk-g4)); box-shadow: inset 0 -3px 0 var(--tc2, transparent); }
+.fst-gc.is-on small, .fst-gc.is-on b { color: var(--tct, #fff); }
+.fst-man--s .fst-gc { height: 24px; } .fst-man--s .fst-gc b { font-size: 16px; } .fst-man--s .fst-gc small { font-size: 12px; }
+.fst-man--l .fst-gc { height: 38px; } .fst-man--l .fst-gc b { font-size: 24px; }
+.fst-g.is-reveal .fst-gc b { animation: fst-pop .34s var(--d, 0ms) cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes fst-pop { from { transform: translateY(8px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* the strip on the TEAM tab */
+.fst-strip { display: grid; gap: 4px; width: 100%; padding: 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fst-strip-h { display: flex; justify-content: space-between; align-items: center; height: 26px; padding: 0 10px; background: var(--fk-g3); font-family: var(--fk-f); font-size: 15px; letter-spacing: 2.2px; }
+.fst-strip-h b { font-weight: 400; } .fst-strip-h small { font-size: 20px; color: var(--fk-mute); }
+.fst-strip-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+.fst-chip { display: flex; align-items: center; gap: 6px; min-width: 0; height: 46px; padding-right: 6px; background: var(--fk-g2); }
+.fst-chip-face { position: relative; flex: none; width: 34px; height: 100%; overflow: hidden; background: var(--tc, var(--fk-g4)); clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%); }
+.fst-chip-face img { position: absolute; left: -4px; bottom: 0; width: 42px; height: 104%; object-fit: cover; object-position: 50% 0; }
+.fst-chip-txt { display: grid; min-width: 0; line-height: 1; }
+.fst-chip-txt small { font-family: var(--fk-f); font-size: 12px; letter-spacing: 1.6px; color: var(--fk-dim); }
+.fst-chip-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 15px; letter-spacing: .2px; }
+.fst-chip-txt small i { margin-left: 6px; font-style: normal; font-family: var(--fk-d); font-size: 13px; letter-spacing: .3px; color: #fff; }
+
+/* who calls the plays: a side, then the two men who could */
+.fst-call { display: grid; grid-template-columns: 78px 1fr 1fr; gap: 3px; align-items: stretch; }
+.fst-call-l { display: flex; align-items: center; padding-left: 8px; background: var(--fk-ink); font-family: var(--fk-f); font-size: 14px; letter-spacing: 2px; color: var(--fk-mute); line-height: 1.05; }
+.fst-call button { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 6px; align-items: end; padding: 7px 10px; background: var(--fk-g2); border: 0; color: #fff; text-align: left; cursor: pointer; font: inherit; }
+.fst-call button small { grid-column: 1; font-family: var(--fk-f); font-size: 12px; letter-spacing: 1.8px; color: var(--fk-dim); }
+.fst-call button b { grid-column: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 18px; line-height: 1.05; }
+.fst-call button i { grid-column: 2; grid-row: 1 / 3; align-self: center; font-style: normal; font-family: var(--fk-d); font-size: 26px; }
+.fst-call button.is-on { background: var(--tc, #fff); color: var(--tct, #0b0c0e); box-shadow: inset 0 -3px 0 var(--tc2, transparent); }
+.fst-call button.is-on small { color: inherit; opacity: .7; }
+.fst-call button:disabled { opacity: .35; cursor: default; }
+.fst-note { margin: 0; font-family: var(--fk-f); font-size: 14px; letter-spacing: 1.6px; line-height: 1.25; color: var(--fk-dim); }
+.fst-open { display: flex; justify-content: space-between; align-items: center; height: 56px; padding: 0 12px; background: var(--fk-g1); box-shadow: inset 0 0 0 1px var(--fk-line2); font-family: var(--fk-f); letter-spacing: 2px; }
+.fst-open b { font-weight: 400; } .fst-open span { color: var(--fk-l); }
+
+/* the owner's warning */
+.fst-hot { display: grid; gap: 0; }
+.fst-hot-b { display: flex; align-items: baseline; gap: 12px; padding: 8px 12px; background: var(--fk-ink); }
+.fst-hot-b b { font-family: var(--fk-d); font-weight: 400; font-size: 34px; line-height: 1; }
+.fst-hot-b span { font-family: var(--fk-f); font-size: 15px; letter-spacing: 2px; color: var(--fk-mute); }
+
+/* the carousel */
+.fst-list { display: grid; gap: 6px; }
+.fst-evt { position: relative; opacity: .55; transition: opacity .2s; }
+.fst-evt.is-in { opacity: 1; }
+.fst-evt > .fk-stamp { position: absolute; right: 12px; top: 50%; margin-top: -14px; z-index: 2; font-size: 20px; }
+.fst-wire { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 6px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc, var(--fk-g4)); font-family: var(--fk-f); font-size: 16px; letter-spacing: 1px; line-height: 1.15; }
+.fst-wire.is-me { background: var(--fk-g2); }
+.fst-gone { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--tc, var(--fk-g4)); }
+.fst-gone > .fk-stamp { flex: none; }
+.fst-gone > span { display: grid; flex: 1; min-width: 0; line-height: 1.1; }
+.fst-gone b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; }
+.fst-gone small { font-family: var(--fk-f); font-size: 13px; letter-spacing: 1.6px; color: var(--fk-mute); }
+.fst-keep { display: grid; gap: 4px; }
+.fst-fire { justify-self: end; padding: 6px 12px; background: none; border: 0; box-shadow: inset 0 0 0 1px var(--fk-line2); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 2px; cursor: pointer; }
+.fst-fire:hover { color: #fff; box-shadow: inset 0 0 0 1px var(--fk-l); }
+.fst-job { display: grid; gap: 8px; padding: 10px 0 0 12px; background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--tc, var(--fk-g4)); }
+.fst-job > span { display: grid; line-height: 1.05; }
+.fst-job small { font-family: var(--fk-f); font-size: 14px; letter-spacing: 2px; color: var(--fk-l); }
+.fst-job b { font-family: var(--fk-d); font-weight: 400; font-size: 21px; }
+.fst-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.fst-facts > span { display: grid; gap: 3px; padding: 8px 10px; background: var(--fk-g1); }
+.fst-facts small { font-family: var(--fk-f); font-size: 13px; letter-spacing: 1.8px; color: var(--fk-dim); }
+.fst-facts b { font-family: var(--fk-d); font-weight: 400; font-size: 18px; }
+.fst-facts em { display: flex; flex-wrap: wrap; gap: 4px; font-style: normal; }
+
+@media (min-width: 900px) {
+  .fst-list { grid-template-columns: 1fr 1fr; }
+  .fst-call { grid-template-columns: 120px 1fr 1fr; }
+}
+:root.bap-reduce-motion .fst-man, :root.bap-reduce-motion .fst-g.is-reveal .fst-gc b { animation: none; }

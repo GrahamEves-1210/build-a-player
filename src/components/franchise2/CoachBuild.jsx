@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { SlotReel } from '../SpinScreen'
-import { TEAM, CTYPES, CLABEL, STYLES, RESPINS, cLetter, coachOvr, wheelOf, dealSpin, dealRespin, coachByName, takeLine, linesDone, realHC } from '../../lib/franchise2'
+import { TEAM, CTYPES, CLABEL, STYLES, RESPINS, cLetter, coachGrade, wheelOf, dealSpin, dealRespin, coachByName, takeLine, linesDone, realHC } from '../../lib/franchise2'
 import { faceUrl, lookOf } from '../../lib/franchise2/faces'
 import { cleanName, nameOk, randomFirstLast } from '../../lib/franchise2/identity'
 import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
+import { coachPhoto } from './coachFace'
 
 // THE COACH: built like a player. The wheel is the league's real head coaches (not the player's own team's); it
 // lands on one, and the player takes ONE of his five ratings into the matching line of his coach. Five spins fill
@@ -50,10 +51,11 @@ export function CoachSpin({ S, go, onDone }) {
     haptic('success')
     setJust(type)
   }
-  const ovr = coachOvr(Object.fromEntries(CTYPES.filter(t => cb.lines[t]).map(t => [t, cb.lines[t].v])))
+  // (a coach has no overall number (owner): one letter for the lines taken so far)
+  const grade = coachGrade(Object.fromEntries(CTYPES.filter(t => cb.lines[t]).map(t => [t, cb.lines[t].v])))
   return (
     <div className="fsu-cspin">
-      <Chyron team={team} tag={`${Math.min(5, filled + (cb.cur ? 1 : 0)) || 1}/5`} title="Build your coach" sub="TAKE ONE RATING FROM EACH COACH" right={ovr != null ? <span className="fsu-chy-ovr">{ovr}<small>OVR</small></span> : null} />
+      <Chyron team={team} tag={`${Math.min(5, filled + (cb.cur ? 1 : 0)) || 1}/5`} title="Build your coach" sub="TAKE ONE RATING FROM EACH COACH" right={grade != null ? <span className="fsu-chy-ovr">{grade}<small>GRADE</small></span> : null} />
       <div className="fsu-reel reels-row">
         <SlotReel label="HEAD COACHES" items={items} spinning={spinning} idle={false} locked={!!landed}
           getDisplay={c => c.name.toUpperCase()} getSub={c => TEAM[c.team]?.name.toUpperCase()}
@@ -61,7 +63,7 @@ export function CoachSpin({ S, go, onDone }) {
           onStop={() => { setSpinning(false); haptic('medium') }} />
       </div>
       {landed && (
-        <LowerThird key={landed.name} className="fsu-landed" name={landed.name} pos="HC" team={landed.team} ovr={landed.ovr} line={TEAM[landed.team]?.name.toUpperCase()} />
+        <LowerThird key={landed.name} className="fsu-landed" name={landed.name} pos="HC" team={landed.team} photo={coachPhoto({ n: landed.name, ag: landed.age }, landed.team)} stat={{ v: coachGrade(landed.attrs), label: 'GRADE' }} line={TEAM[landed.team]?.name.toUpperCase()} />
       )}
       <div className={`fsu-lines${landed ? ' is-choosing' : ''}`} style={fkVars(team)}>
         {CTYPES.map((t, i) => {
@@ -74,7 +76,7 @@ export function CoachSpin({ S, go, onDone }) {
                 {L ? <small><KLogo s={L.t} size={14} />{lastOf(L.from).toUpperCase()}</small> : offer != null ? <small>TAKE FROM {lastOf(landed.name).toUpperCase()}</small> : <small>OPEN</small>}
               </span>
               <span className="fsu-line-v">
-                {L ? <><b>{cLetter(L.v)}</b><small>{L.v}</small></> : offer != null ? <><b>{cLetter(offer)}</b><small>{offer}</small></> : <b className="is-dash">-</b>}
+                {L ? <><b>{cLetter(L.v)}</b></> : offer != null ? <><b>{cLetter(offer)}</b></> : <b className="is-dash">-</b>}
               </span>
             </Tag>
           )
@@ -134,7 +136,7 @@ export function CoachWho({ S, go, owner, onDone }) {
   return (
     <div className="fsu-who">
       <Chyron team={S.team} title="Your coach" sub="NAME AND FACE" />
-      <LowerThird className="fsu-who-prev" size="l" name={name || owner} pos="HC" team={S.team} photo={coachFace(c, S.team)} ovr={coachOvr(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v])))} line={STYLES[c.style]?.name} />
+      <LowerThird className="fsu-who-prev" size="l" name={name || owner} pos="HC" team={S.team} photo={coachFace(c, S.team)} stat={{ v: coachGrade(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v]))), label: 'GRADE' }} line={STYLES[c.style]?.name} />
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => set({ first: cleanName(e.target.value) })} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's first name" />
         <input className="fsu-in" value={last} onChange={e => set({ last: cleanName(e.target.value) })} placeholder="LAST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's last name" />
@@ -155,7 +157,7 @@ export function CoachWho({ S, go, owner, onDone }) {
 
 // ── The coach card ───────────────────────────────────────────────────────────
 // The finished coach as the broadcast puts him up: his face cut against the team's colour, HEAD COACH, the name,
-// the OVR in its box, his style, then the five ratings, each a meter and its letter, with the coach it came from.
+// one letter grade in the box (no overall number for a coach), his style, then the five ratings, each a meter and its letter, with the coach it came from.
 //   c: the franchise's coach (coach.js finishCoach) or the setup's (lines from cb) · team
 export function CoachCard({ c, team, from, small = false, delay = 0 }) {
   const { first, last } = splitName(c.name)
@@ -172,7 +174,7 @@ export function CoachCard({ c, team, from, small = false, delay = 0 }) {
           <span className="fsu-cc-name">{first && <small>{first}</small>}<b>{last}</b></span>
           {c.style && <em className="fsu-cc-style">{STYLES[c.style]?.name}</em>}
         </span>
-        <span className="fsu-cc-ovr"><BigNum v={c.ovr ?? coachOvr(r)} size={small ? 34 : 48} /><small>OVR</small></span>
+        <span className="fsu-cc-ovr"><BigNum v={coachGrade(r) ?? '-'} count={false} size={small ? 34 : 48} /><small>GRADE</small></span>
       </div>
       {!small && (
         <div className="fsu-cc-lines">
@@ -200,7 +202,7 @@ export function CoachReveal({ S, owner, onStart }) {
   return (
     <div className="fsu-reveal">
       <Chyron team={S.team} title={`${TEAM[S.team].nick} hire ${lastOf(name)}`} sub={real ? `REPLACES ${real.name.toUpperCase()}` : 'HEAD COACH'} />
-      <CoachCard c={{ ...c, name, r, ovr: coachOvr(r) }} team={S.team} from={from} />
+      <CoachCard c={{ ...c, name, r }} team={S.team} from={from} />
       <div className="fsu-acts"><Go onClick={onStart}>Start the season</Go></div>
     </div>
   )
