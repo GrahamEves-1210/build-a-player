@@ -557,9 +557,10 @@ export const SPORT = {
     minGames: { award: 65 / 82, first: 65 / 82, honor: 40 / 82 },
     // All-Star and All-NBA read the whole line and the team, like the real votes (owner 11-14: a 22/3/3 guard was an
     // All-Star; no real one is). hoopVote: points, plus assists and boards (a guard's assists count full, a big's boards
-    // most), plus a little for every win over .500. All-Star at 30 (24/5/4, 20/7/4 on a 50-win team, 20/10/3 big);
+    // most), plus a little for every win over .500. All-Star at 29, checked on real ones (Middleton 18/6/4 on 60 wins, JJJ
+    // 22/6/2 on 48, Siakam 20/7/3 on 50 just in; a 22/3/3 guard only on a 55-win team; Korver's 12 ppg, Conley's 16 left out);
     // All-NBA at 35 (27/6/5 on a winner, 25/12/4 big)
-    proBowl: { guard: (s, c) => hoopVote('guard', s, c) >= 30, big: (s, c) => hoopVote('big', s, c) >= 30 },
+    proBowl: { guard: (s, c) => hoopVote('guard', s, c) >= 29, big: (s, c) => hoopVote('big', s, c) >= 29 },
     allPro: { guard: (s, c) => hoopVote('guard', s, c) >= 35, big: (s, c) => hoopVote('big', s, c) >= 35 },
     allProNear: { guard: s => s.ppg >= 22, big: s => s.ppg >= 20 },
     // the MVP vote: points, plus playmaking or the glass, on a winner, against the year's
@@ -592,7 +593,7 @@ export const SPORT = {
 // (basketball's All-Star / All-NBA vote: see SPORT.bucket.proBowl)
 function hoopVote(pos, s, c) {
   const wins = c?.active?.final?.wins ?? 41
-  return (s.ppg ?? 0) + (pos === 'guard' ? (s.apg ?? 0) + 0.7 * (s.rpg ?? 0) : 0.8 * (s.rpg ?? 0) + 0.8 * (s.apg ?? 0)) + 0.12 * (wins - 41)
+  return (s.ppg ?? 0) + (pos === 'guard' ? (s.apg ?? 0) + 0.7 * (s.rpg ?? 0) : 0.8 * (s.rpg ?? 0) + 0.8 * (s.apg ?? 0)) + 0.15 * (wins - 41)
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
 // merged lookups (position keys never collide between the sports)
