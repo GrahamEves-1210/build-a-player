@@ -24,7 +24,7 @@ function full(when) {
   const names = FR.SHORTS.flatMap(s => { const M = FR.staffMen(F, s); return [M.hc, M.oc, M.dc].filter(Boolean).map(c => c.n) })
   if (new Set(names).size !== names.length) bad(`${F.year} ${when}: one man on two staffs`)
 }
-console.log(`year one callers off/def ${callers().join(' / ')} (the real league: 6.13 / 5.31)`)
+console.log(`year one callers off/def ${callers().join(' / ')} (the real league: 6.66 / 6.25)`)
 full('start')
 const tot = { hc: 0, oc: 0, dc: 0, fire: 0, ret: 0, poach: 0, src: { coord: 0, retread: 0, college: 0 }, mine: 0 }
 const firedW = []

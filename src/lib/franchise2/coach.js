@@ -12,12 +12,12 @@
 //   The player's head coach is F.coach (finishCoach); his slot in F.staff holds `{ mine: 1 }`.
 //
 // WHAT EACH RATING DOES (the same rules for every team)
-//   play-calling   the side's sim rating gets (v - 5) x 0.15 from WHOEVER CALLS THAT SIDE: the head coach when he
-//                  calls it, else the coordinator (a 10 is +0.75, a 2 is -0.45)
-//   situational    a close game late (4th quarter or overtime, within 8): the head coach (v - 5) x 0.2, and the two
-//                  coordinators' average a little (x 0.1, against the real league's coordinators)
-//   talentDev      a young man's growth (25 and under) a year: the head coach (v - 5) x 0.18, and his side's
-//                  coordinator (v - 5.3) x 0.12 (5.3: the real coordinators' average, so year one is the real league)
+//   play-calling   the side's sim rating gets (v - mid) x 0.15 from WHOEVER CALLS THAT SIDE: the head coach when he
+//                  calls it, else the coordinator (mid 5.53 offense, 5.94 defense: CALL_MID; an 11 is about +0.8)
+//   situational    a close game late (4th quarter or overtime, within 8): the head coach (v - 4.66) x 0.2, and the
+//                  two coordinators' average a little (x 0.1, against the real league's coordinators)
+//   talentDev      a young man's growth (25 and under) a year: the head coach (v - 5.41) x 0.18, and his side's
+//                  coordinator (v - 5.39) x 0.12 (the middles keep year one's league averages: see CALL_MID)
 //   culture        chemistry (the player's team): how fast it builds a week, how much a turnover costs
 // STYLE (the player's coach only): PLAYERS' COACH chemistry builds faster · DEVELOPER young players grow +1 a
 // year · MOTIVATOR a lift in the playoffs and on a moment · RECRUITER the market and the draft lean his way.
@@ -93,7 +93,7 @@ const KEY = { off: 'offPlaycalling', def: 'defPlaycalling' }
 // the real staff's edge for a team, as the league's calibration counts it in (never the player's coach)
 export function realEdge(short) {
   const off = realCaller(short, 'off'), def = realCaller(short, 'def')
-  return { off: callEdge(off?.attrs[KEY.off] ?? 5), def: callEdge(def?.attrs[KEY.def] ?? 5) }
+  return { off: callEdge(off?.attrs[KEY.off] ?? 5, 'off'), def: callEdge(def?.attrs[KEY.def] ?? 5, 'def') }
 }
 
 // ── A coach as the engine holds him ──────────────────────────────────────────
@@ -207,19 +207,25 @@ export function coachOf(F, short) {
 
 // ── The effects ──────────────────────────────────────────────────────────────
 const r2 = v => Math.round(v * 100) / 100
-export const callEdge = v => r2((v - 5) * 0.15)
+// The league-average references every rating is measured against. Re-centred 11-15, when the grades were re-rated
+// on reputation (nfl-coaches.js): the real league's averages moved (year-one play-callers 6.13 / 5.31 -> 6.66 / 6.25,
+// head coaches' talentDev 6.91 -> 7.31 and situational 6.03 -> 5.69), so each middle moved with them and the
+// league's average edge in year one is what it was before; only who is above and below the middle changed.
+const CALL_MID = { off: 5.53, def: 5.94 }
+const HC_SIT = 4.66, HC_DEV = 5.41
+export const callEdge = (v, side = 'off') => r2((v - CALL_MID[side]) * 0.15)
 export function coachEdge(F, short) {
   const c = coachOf(F, short)
-  return { off: callEdge(c.calls.off), def: callEdge(c.calls.def) }
+  return { off: callEdge(c.calls.off, 'off'), def: callEdge(c.calls.def, 'def') }
 }
 // a close game late (the 4th quarter or overtime, within one score): the head coach, and his coordinators a little
-const SIT_COORD = 4.44   // (the real league's coordinators' average situational rating)
+const SIT_COORD = 4.41   // (the real league's coordinators' average situational rating)
 export function coachLate(F, short) {
   const M = staffMen(F, short)
   const hc = (Array.isArray(M.hc?.r) ? M.hc.r[4] : null) ?? 5
   const co = [M.oc, M.dc].filter(c => Array.isArray(c?.r)).map(c => c.r[4] ?? SIT_COORD)
   const avg = co.length ? co.reduce((a, b) => a + b, 0) / co.length : SIT_COORD
-  return r2((hc - 5) * 0.2 + (avg - SIT_COORD) * 0.1)
+  return r2((hc - HC_SIT) * 0.2 + (avg - SIT_COORD) * 0.1)
 }
 // the day's lift (a Motivator in the playoffs)
 export const coachDay = (F, short, { po = false } = {}) => (short === F.team && po && F.coach?.style === 'motivator' ? 0.5 : 0)
@@ -234,12 +240,12 @@ export const chemKept = F => clamp(0.4, 0.95, 0.55 + (F.coach?.r?.culture ?? 5) 
 // growth: OVR a year added to a young man's (25 and under) on this team: the head coach's talent development and
 // his side's coordinator's (offense: the OC; defense: the DC)
 const OFF_POS = new Set(['qb', 'rb', 'wr', 'te', 'ol'])
-const DEV_COORD = 5.3    // (the real league's coordinators' average talentDev: year one grows like before)
+const DEV_COORD = 5.39   // (the real league's coordinators' average talentDev: year one grows like before)
 export function coachDev(F, short, p) {
   if (!p || p.ag > 25) return 0
   const c = coachOf(F, short), M = staffMen(F, short)
   const co = OFF_POS.has(p.p) ? M.oc : M.dc
-  return r2(((c.r?.talentDev ?? 5) - 5) * 0.18 + (((Array.isArray(co?.r) ? co.r[0] : null) ?? DEV_COORD) - DEV_COORD) * 0.12 + (c.mine && F.coach?.style === 'developer' ? 1 : 0))
+  return r2(((c.r?.talentDev ?? 5) - HC_DEV) * 0.18 + (((Array.isArray(co?.r) ? co.r[0] : null) ?? DEV_COORD) - DEV_COORD) * 0.12 + (c.mine && F.coach?.style === 'developer' ? 1 : 0))
 }
 export const recruits = F => F.coach?.style === 'recruiter'
 
