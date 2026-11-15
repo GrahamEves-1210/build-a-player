@@ -5,6 +5,7 @@ import { faceOf } from '../../lib/squadSeason'
 import { TEAM, photoId, gradeOf, POS_LABEL } from '../../lib/franchise2'
 import { CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { sfx } from '../../lib/juice'
+import { genFace } from '../../lib/franchise2/faces'
 
 // The small parts every Franchise screen is made of: a logo, a face, a number that counts, a meter that fills,
 // a stamp. Flat team colours, the game's type, nothing that moves unless it's delivering a result.
@@ -19,7 +20,7 @@ export function photoOf(F, p) {
   if (!p) return null
   if (p.b != null) return faceOf(F.builds[p.b]?.build)
   const id = photoId(p)
-  return id ? nflHeadshot(id) : null
+  return id ? nflHeadshot(id) : genFace(p)
 }
 export function Face({ F, p, src, name, size = 44, mine, col }) {
   const [bad, setBad] = useState(false)

@@ -23,6 +23,9 @@ import { ovrOf, nameOf, TYPES_OF } from '../squadSeason'
 import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
+import { coachEdge, realEdge } from './coach'
+import { startersOfTeam, benchOfTeam } from './roster'
+import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead } from './contracts'
 
 export const FIRST_YEAR = 2026
 export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
@@ -75,13 +78,9 @@ export function realOf(pos, name) {
 }
 
 // ── Money ────────────────────────────────────────────────────────────────────
-const PAY = { qb: 1.9, rb: 0.55, wr: 1.0, te: 0.65, ol: 0.8, dl: 1.1, lb: 0.7, db: 0.85 }
-// what a man is worth a year ($M): stars cost, depth is cheap
-export function worth(p) {
-  const base = 0.9 + 27 * Math.pow(clamp(0, 1, (p.o - 64) / 35), 2.6)
-  const age = p.ag >= 32 ? 0.75 : p.ag >= 30 ? 0.9 : 1
-  return r1(Math.max(0.9, base * PAY[p.p] * age))
-}
+// (the market, the cap and the rookie scale: lib/franchise2/contracts.js)
+// what a man is worth a year ($M) on the open market, at his spot and rating
+export const worth = p => marketValue(p)
 export const yearsFor = p => (p.ag <= 26 ? 4 : p.ag <= 29 ? 3 : p.ag <= 31 ? 2 : 1)
 export const payroll = roster => r1(roster.reduce((a, p) => a + (p.$ ?? 0), 0))
 
@@ -102,16 +101,19 @@ export const fakeName = R => `${R.pick(FIRSTS)} ${R.pick(LASTS)}`
 // ── Making players ───────────────────────────────────────────────────────────
 // the OVR a man is headed for, from where he is and how young (a veteran is already there)
 export function peakFor(R, o, ag) {
+  // (a young man has a few points a year left in him, fewer the closer he already is to the top)
   const left = Math.max(0, 27 - ag)
-  return clamp(40, 99, Math.round(o + left * (2.2 + R.n() * 0.8)))
+  return clamp(40, 99, Math.round(o + left * Math.max(0, 1.35 + R.n() * 0.75) * clamp(0.3, 1, (99 - o) / 18)))
 }
 export function makeReal(F, r, R) {
   const ag = r.age ?? R.int(23, 30)
   const p = { i: F.nid++, n: r.name, p: r.pos, o: r.o, ag }
   if (r.s) p.s = r.s
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
-  p.$ = worth(p)
-  p.y = clamp(1, 5, Math.round(yearsFor(p) * (0.4 + R.u() * 0.8)))
+  // his real deal (src/data/nfl-contracts.json), or the market's estimate
+  const d = realDeal(r.name, r.team, p, R)
+  p.$ = d.$; p.y = d.y; p.g = d.g
+  if (d.rc) p.rc = 1
   return p
 }
 const GEN_SPOT = { dl: ['edge', 'dt'], db: ['cb', 's'], ol: ['LT', 'LG', 'C', 'RG', 'RT'] }
@@ -121,8 +123,7 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   const p = { i: F.nid++, n: fakeName(R), p: pos, o: o ?? clamp(55, 76, Math.round(66 + R.n() * 4)), ag: age }
   if (GEN_SPOT[pos]) p.s = R.pick(GEN_SPOT[pos])
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 4)
-  p.$ = worth(p)
-  p.y = R.int(1, 3)
+  signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
   return p
 }
 // the player's own build as a man on the roster
@@ -130,12 +131,13 @@ export const buildSpot = (pos, build) => (pos === 'dl' ? dlBuildSpot(build) : po
 export function makeBuilt(F, idx, R) {
   const B = F.builds[idx]
   const o = ovrOf(B.pos, B.build)
-  const p = { i: F.nid++, n: nameOf(B.pos, B.build) ?? POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx }
+  const p = { i: F.nid++, n: B.name || nameOf(B.pos, B.build) || POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx, ...(B.rk && { rk: B.rk }) }
   const s = buildSpot(B.pos, B.build)
   if (s) p.s = s
   p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
-  p.$ = worth(p)
-  p.y = 4
+  // a build is a rookie: the rookie scale at the slot his OVR would have gone in the draft (contracts.js buildSlot)
+  signRookie(p, B.slot ?? buildSlot(o), F.year ?? FIRST_YEAR)
+  B.slot = B.slot ?? buildSlot(o)
   B.pid = p.i
   return p
 }
@@ -147,8 +149,9 @@ export function trim(roster, keep = new Set()) {
   const out = [], cut = []
   for (const pos of POS) {
     const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || keep.has(b.i) - keep.has(a.i) || b.o - a.o)
-    out.push(...at.slice(0, Math.max(MAX[pos], at.filter(p => p.b != null).length)))
-    cut.push(...at.slice(Math.max(MAX[pos], at.filter(p => p.b != null).length)))
+    const n = Math.max(MAX[pos], at.filter(p => p.b != null || keep.has(p.i)).length)
+    out.push(...at.slice(0, n))
+    cut.push(...at.slice(n))
   }
   return { roster: out, cut }
 }
@@ -159,35 +162,11 @@ export function fillUp(F, roster, R) {
 }
 
 // ── Starters ─────────────────────────────────────────────────────────────────
-// The best man at each slot, the player's own builds first (a build takes the job, the man he beat out sits),
-// any swap the player made on the TEAM tab first of all (team.lk: slot → id). Injured men don't start.
-export function lineup(team) {
-  const r = team.r.filter(p => !p.in)
-  const used = new Set(), out = {}
-  const lk = team.lk ?? {}
-  // the swaps first
-  for (const [slot, pos] of SLOTS) {
-    const id = lk[slot]
-    const p = id != null && r.find(x => x.i === id && x.p === pos)
-    if (p && !used.has(p.i)) { out[slot] = p; used.add(p.i) }
-  }
-  const rank = (a, b) => (b.b != null) - (a.b != null) || b.o - a.o
-  for (const [slot, pos, spot] of SLOTS) {
-    if (out[slot]) continue
-    const pool = r.filter(p => p.p === pos && !used.has(p.i)).sort(rank)
-    const p = (spot && pool.find(x => x.s === spot)) || pool[0]
-    if (p) { out[slot] = p; used.add(p.i) }
-  }
-  return out
-}
-// the men who play behind the starters (the box score's rotation): RB2, WR4, TE2, the nickel
-export function rotation(team, L = lineup(team)) {
-  const on = new Set(Object.values(L).map(p => p.i))
-  const more = { rb: 1, wr: 1, te: 1, dl: 2, db: 1, lb: 0 }
-  const out = []
-  for (const [pos, n] of Object.entries(more)) out.push(...team.r.filter(p => p.p === pos && !p.in && !on.has(p.i)).sort((a, b) => b.o - a.o).slice(0, n))
-  return out
-}
+// Who starts is the depth chart (lib/franchise2/roster.js): the player's own order on his team, by rating on the
+// league's; the next healthy man up when a starter is hurt.
+export const lineup = team => startersOfTeam(team)
+// the men who play behind the starters (the box score's rotation): RB2, WR4, TE2, two more linemen, the nickel
+export const rotation = (team, L = lineup(team)) => benchOfTeam(team, L)
 
 // ── Strength ─────────────────────────────────────────────────────────────────
 // raw: the weighted OVR of the men who start on each side
@@ -208,29 +187,19 @@ export function calibrate(F) {
   F.cal = { mo: r1(mean(raws.map(x => x.off))), so: r1(sd(raws.map(x => x.off)) * 10) / 10, md: r1(mean(raws.map(x => x.def))), sd: r1(sd(raws.map(x => x.def)) * 10) / 10, ro: r1(mean(ro)), rd: r1(mean(rd)), rso: r1(sd(ro)), rsd: r1(sd(rd)) }
   SHORTS.forEach((s, i) => {
     const m = scaled(F, raws[i])
-    F.teams[s].res = [r1(TEAMS[i].off - m.off), r1(TEAMS[i].def - m.def)]
+    // (the real staff's play-calling is its own term, coach.js: the rest is what fades)
+    const ce = realEdge(s)
+    F.teams[s].res = [r1(TEAMS[i].off - m.off - ce.off), r1(TEAMS[i].def - m.def - ce.def)]
   })
 }
 const scaled = (F, raw) => ({ off: F.cal.ro + ((raw.off - F.cal.mo) / F.cal.so) * F.cal.rso, def: F.cal.rd + ((raw.def - F.cal.md) / F.cal.sd) * F.cal.rsd })
-// Coaching on the player's team (the coach's scheme)
-export const SCHEMES = {
-  air: { name: 'AIR RAID', off: 0.45, def: 0 },
-  ground: { name: 'GROUND & POUND', off: 0.3, def: 0.15 },
-  blitz: { name: 'BLITZ HAPPY', off: 0, def: 0.45 },
-  nofly: { name: 'NO FLY ZONE', off: 0, def: 0.45 },
-  balanced: { name: 'BALANCED', off: 0.22, def: 0.22 },
-}
-export const STYLES = {
-  players: { name: "PLAYERS' COACH" },
-  developer: { name: 'DEVELOPER' },
-  motivator: { name: 'MOTIVATOR' },
-  recruiter: { name: 'RECRUITER' },
-}
-// A team's offense and defense on the sim's 1–12 scale, and its OVR (the starters' average, the number on screen)
+// A team's offense and defense on the sim's 1–12 scale, and its OVR (the starters' average, the number on screen).
+// The head coach's play-calling is in it (coach.js coachEdge): the player's own coach on his team, the real staff
+// everywhere else.
 export function strength(F, short) {
   const t = F.teams[short], L = lineup(t), raw = rawStrength(t, L), m = scaled(F, raw)
-  let off = m.off + (t.res?.[0] ?? 0), def = m.def + (t.res?.[1] ?? 0)
-  if (short === F.team && F.coach) { const sc = SCHEMES[F.coach.scheme]; if (sc) { off += sc.off; def += sc.def } }
+  const ce = coachEdge(F, short)
+  let off = m.off + (t.res?.[0] ?? 0) + ce.off, def = m.def + (t.res?.[1] ?? 0) + ce.def
   const starters = Object.values(L)
   return { off: r1(clamp(1, 12, off)), def: r1(clamp(1, 12, def)), ovr: Math.round(mean(starters.map(p => p.o))), rawOff: raw.off, rawDef: raw.def }
 }
@@ -250,6 +219,7 @@ export function buildTeams(F) {
       for (const m of men) r.push(makeReal(F, m, R))
     }
     fillUp(F, r, R)
-    F.teams[s] = { r, lk: {} }
+    F.teams[s] = { r }
   }
+  seedDead(F)
 }

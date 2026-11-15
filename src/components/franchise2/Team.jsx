@@ -1,93 +1,103 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
-import { SLOTS, lineup, payroll, POS_LABEL, gradeOf } from '../../lib/franchise2'
+import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose, IconSwap } from '../app/icons'
-import { Face, Ovr, nameOn, Count } from './bits'
+import { Chyron, BigNum, Go, fkVars } from './kit'
+import { Man, CapBar, PlayerPage, dealText, money } from './dparts'
 
-// TEAM: who starts. One row a man: his spot, his face, his name, one big OVR. Tap a starter to put someone else
-// in (the men at his position on the bench); the budget on top.
-const UNITS = [['OFFENSE', SLOTS.filter(([, pos]) => ['qb', 'rb', 'wr', 'te', 'ol'].includes(pos))], ['DEFENSE', SLOTS.filter(([, pos]) => ['dl', 'lb', 'db'].includes(pos))]]
-const slotTag = (k, p) => (k.startsWith('ol') ? (p?.s && p.s.length <= 2 ? p.s : 'OL') : k.replace(/\d$/, '').toUpperCase())
+// TEAM: the depth chart. The order the games play: the starters on top of each room, the men behind them in the
+// order they come in. Tap a man to move him (up, down, to the top, to the room next door) or open his page.
+// The cap on top; tap it for where the money goes.
+const ROOM_NAME = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', ol: 'OFFENSIVE LINE', edge: 'EDGE RUSHERS', dt: 'INTERIOR LINE', lb: 'LINEBACKERS', cb: 'CORNERBACKS', s: 'SAFETIES' }
+const NEXT_DOOR = { edge: 'dt', dt: 'edge', cb: 's', s: 'cb' }
 
 export default function TeamTab({ F, act, owner }) {
-  const t = F.teams[F.team]
-  const L = lineup(t)
-  const [swap, setSwap] = useState(null)
-  const pay = payroll(t.r)
-  const room = Math.round((F.budget - pay) * 10) / 10
-  const bench = t.r.filter(p => !Object.values(L).includes(p))
+  const [side, setSide] = useState('off')
+  const [pick, setPick] = useState(null)       // the man picked to move (his id)
+  const [page, setPage] = useState(null)       // a man's page open
+  const [cap, setCap] = useState(false)
+  const C = depthChart(F, F.team), L = startersOf(F, F.team)
+  const st = strength(F, F.team)
+  const starting = new Set(Object.values(L).map(p => p.i))
+  const groups = side === 'off' ? OFF_GROUPS : DEF_GROUPS
+  const tap = p => { setPick(pick === p.i ? null : p.i); sfx('tap'); haptic('light') }
+  const move = to => { const id = pick; act(X => moveInChart(X, id, to)); sfx('swap'); haptic('medium') }
+  if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
   return (
-    <>
-      <section className="f2-budget ag-pop">
-        <span className="f2-budget-top"><small>BUDGET</small><b>${Math.round(pay)}M <i>/ ${Math.round(F.budget)}M</i></b></span>
-        <span className="f2-budget-bar"><i style={{ transform: `scaleX(${Math.min(1, pay / F.budget)})` }} className={room < 0 ? 'is-over' : ''} /></span>
-        <small className={`f2-budget-room${room < 0 ? ' is-over' : ''}`}>{room < 0 ? `$${-room}M OVER` : `$${room}M ROOM`}</small>
-      </section>
-      {UNITS.map(([unit, slots], u) => (
-        <section key={unit} className="f2-unit ag-pop" style={{ '--d': `${40 + u * 50}ms` }}>
-          <span className="ag-eyebrow">{unit}</span>
-          {slots.map(([k, pos]) => {
-            const p = L[k]
-            return (
-              <button key={k} className={`f2-row${p?.b != null ? ' is-mine' : ''}`} onClick={() => { setSwap({ k, pos }); sfx('tap') }} disabled={!p}>
-                <span className="f2-row-slot">{slotTag(k, p)}</span>
-                {p ? <Face F={F} p={p} size={40} /> : <span className="f2-face is-empty" style={{ width: 40, height: 40 }} />}
-                <span className="f2-row-name"><b>{p ? nameOn(p) : 'OPEN'}{p?.b != null && <i className="f2-star">★</i>}</b><small>{p ? `${p.b != null ? owner.toUpperCase() : `AGE ${p.ag}`}${p.rk === F.year ? ' · ROOKIE' : ''}` : ''}</small></span>
-                {p && <Ovr o={p.o} size="s" />}
-              </button>
-            )
-          })}
-        </section>
-      ))}
-      <section className="f2-unit ag-pop" style={{ '--d': '140ms' }}>
-        <span className="ag-eyebrow">BENCH · {bench.length}</span>
-        <div className="f2-bench">
-          {bench.sort((a, b) => b.o - a.o).map(p => (
-            <span key={p.i} className={`f2-bench-man${p.in ? ' is-hurt' : ''}`}>
-              <Face F={F} p={p} size={34} />
-              <b>{p.o}</b>
-              <small>{POS_LABEL[p.p]}{p.in ? ' · OUT' : ''}</small>
-            </span>
-          ))}
-        </div>
-      </section>
-      {swap && <SwapSheet F={F} act={act} slot={swap} L={L} onClose={() => setSwap(null)} />}
-    </>
+    <div className="fd fk">
+      <Chyron team={F.team} title="DEPTH CHART" tag={F.year} right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)}`} />
+      <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
+      <div className="fd-seg" role="tablist">
+        {[['off', 'OFFENSE'], ['def', 'DEFENSE']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
+      </div>
+      {groups.map((k, gi) => {
+        const men = C[k], n = GROUP[k].n
+        let up = 0
+        return (
+          <section key={k} className="fd-room" style={{ '--d': `${gi * 40}ms` }}>
+            <div className="fd-room-h"><b>{ROOM_NAME[k]}</b><small>{men.length}</small></div>
+            {men.map((p, i) => {
+              const starts = starting.has(p.i)
+              const slot = starts ? (k === 'ol' ? OL_SPOTS[up] : `${GROUP[k].label}${up + 1}`) : `${i + 1}`
+              if (starts) up++
+              const on = pick === p.i
+              return (
+                <div key={p.i} className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${p.in ? ' is-hurt' : ''}`}>
+                  <span className="fd-dc-slot">{p.in ? 'OUT' : slot}</span>
+                  <Man F={F} p={p} s={F.team} owner={owner} size={starts ? 'm' : 's'} line={p.in ? `OUT ${p.in} ${p.in === 1 ? 'WEEK' : 'WEEKS'}` : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p)} onClick={() => tap(p)} />
+                  {on && (
+                    <div className="fd-dc-acts">
+                      <button disabled={i === 0} onClick={() => move(0)}>TO THE TOP</button>
+                      <button disabled={i === 0} onClick={() => move(i - 1)}>UP</button>
+                      <button disabled={i === men.length - 1} onClick={() => move(i + 1)}>DOWN</button>
+                      {NEXT_DOOR[k] && <button onClick={() => { act(X => setGroup(X, p.i, NEXT_DOOR[k])); setPick(null); sfx('swap') }}>TO {GROUP[NEXT_DOOR[k]].label}</button>}
+                      <button onClick={() => { setPage(p.i); setPick(null); sfx('tap') }}>PLAYER</button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {men.filter(p => !p.in).length < n && <div className="fd-dc fd-dc--empty"><span className="fd-dc-slot">+</span><span className="fd-empty">{NEXT_DOOR[k] ? `A ${GROUP[NEXT_DOOR[k]].label} FILLS IN` : 'SHORT A MAN'}</span></div>}
+          </section>
+        )
+      })}
+      <button className="fd-reset" onClick={() => { act(X => resetChart(X)); setPick(null); sfx('flip') }}>SET BY RATING</button>
+      {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
+    </div>
   )
 }
 
-function SwapSheet({ F, act, slot, L, onClose }) {
-  const t = F.teams[F.team]
-  const cur = L[slot.k]
-  const options = t.r.filter(p => p.p === slot.pos && p !== cur && !p.in).sort((a, b) => b.o - a.o)
-  const pick = p => {
-    act(X => {
-      const T = X.teams[X.team]
-      T.lk = { ...(T.lk ?? {}) }
-      // (if he started somewhere else, the man he replaces takes that spot)
-      const was = Object.entries(L).find(([, q]) => q === p)?.[0]
-      T.lk[slot.k] = p.i
-      if (was && cur) T.lk[was] = cur.i
-    })
-    sfx('swap'); haptic('light'); onClose()
-  }
-  return createPortal(
-    <div className="f2-sheet-bg" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="f2-sheet ag-pop" role="dialog" aria-modal="true">
-        <div className="f2-sheet-head"><span className="ag-eyebrow">{slot.k.replace(/\d$/, '').toUpperCase()} · SWAP</span><button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={14} /></button></div>
-        {cur && <div className="f2-row is-cur"><span className="f2-row-slot">NOW</span><Face F={F} p={cur} size={40} /><span className="f2-row-name"><b>{nameOn(cur)}</b><small>{gradeOf(cur.o)}</small></span><Ovr o={cur.o} size="s" /></div>}
-        {options.length ? options.map(p => (
-          <button key={p.i} className="f2-row" onClick={() => pick(p)}>
-            <IconSwap size={14} className="f2-row-slot" />
-            <Face F={F} p={p} size={40} />
-            <span className="f2-row-name"><b>{nameOn(p)}</b><small>{Object.values(L).includes(p) ? 'STARTS ELSEWHERE' : `AGE ${p.ag}`}</small></span>
-            <Ovr o={p.o} size="s" />
-          </button>
-        )) : <p className="f2-hint">NOBODY ELSE AT THIS SPOT</p>}
+// ── THE CAP: where the money goes ────────────────────────────────────────────
+function CapScreen({ F, owner, act, onBack, page, setPage }) {
+  const t = F.teams[F.team], c = capSheet(F)
+  const paid = t.r.filter(p => p.y > 0).sort((a, b) => b.$ - a.$)
+  const top = paid.slice(0, 10)
+  const share = Math.round((top.slice(0, 3).reduce((a, p) => a + p.$, 0) / c.cap) * 100)
+  const next = t.r.filter(p => p.y === 1).sort((a, b) => b.o - a.o)
+  return (
+    <div className="fd fk">
+      <button className="fd-back" onClick={onBack}>‹ DEPTH CHART</button>
+      <Chyron team={F.team} title="THE CAP" tag={c.year} sub={`${TEAM[F.team].nick.toUpperCase()} · ${paid.length} UNDER CONTRACT`} />
+      <div className="fd-capbig" style={fkVars(F.team)}>
+        <BigNum v={Math.round(Math.abs(c.room))} label={c.room < 0 ? '$M OVER THE CAP' : '$M CAP ROOM'} size={76} tone={c.room < 0 ? 'l' : undefined} />
+        <span className="fd-capbig-r"><BigNum v={Math.round(c.used)} label="$M USED" size={34} /><BigNum v={share} label="% ON THE TOP 3" size={34} /></span>
       </div>
-    </div>,
-    document.body,
+      <CapBar F={F} />
+      <Chyron tone="ink" size="s" title="BIGGEST CAP HITS" />
+      {top.map((p, i) => <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(p.$), label: `${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` }} line={p.rc ? 'ROOKIE DEAL' : null} onClick={() => setPage(p.i)} delay={i * 30} />)}
+      {c.dead > 0 && (
+        <>
+          <Chyron tone="ink" size="s" title="DEAD MONEY" right={money(c.dead)} />
+          {(t.dead ?? []).map(([n, v], i) => <div key={i} className="fd-line"><b>{n}</b><span>{money(v)}</span></div>)}
+        </>
+      )}
+      {next.length > 0 && (
+        <>
+          <Chyron tone="ink" size="s" title="DEALS UP AFTER THIS SEASON" right={next.length} />
+          {next.slice(0, 8).map(p => <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(p.$), label: 'NOW' }} onClick={() => setPage(p.i)} />)}
+        </>
+      )}
+      {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
+      <Go ghost onClick={onBack}>BACK TO THE DEPTH CHART</Go>
+    </div>
   )
 }
-export { Count }

@@ -23,18 +23,109 @@ import { rngOf, clamp } from './rng'
 const REG = 3600, Q = 900, HALF = 1800
 const OT_REG = 600, OT_PO = 900
 
-// a drive's chances from where it starts (y: yards from its own goal line) and the edge (offense minus defense)
+// ── A drive ──────────────────────────────────────────────────────────────────
+// A drive starts at y (yards from its own goal line) with an edge e (offense minus defense on the sim's 1-12 scale)
+// and ends one of six ways: a touchdown, a turnover, or a stall that becomes a 4th down: the field goal try, the punt,
+// or going for it (converted, the drive goes on from there; stopped, it's over on downs). Where it stalls is a real
+// spot, and so is every kick: a field goal is 17 yards longer than the spot is from the goal line.
+// Tuned (scripts/franchise2/game-stats.mjs) to the NFL's team game, 2023-25: about 22 points, 2.5 touchdowns, 1.9
+// field goal tries made 85% of the time, 3.9 punts, 1.2 turnovers, a 4th-down try or so (about half made), drives
+// starting near the 30, and very few kicks of 60 yards.
 const c01 = v => clamp(0, 1, v)
+const TD_K = 0.69, TD_E = 0.017    // a drive's touchdown chance: its scale and how much the edge moves it
+const TO_BASE = 0.115              // turnovers a drive
+const THREE_OUT = 0.36             // of the drives that stall: three and out
+const RZ_STALL = 0.08              // ...in the red zone (the 19 and in)
+const MID_B = 0.35                 // ...and the rest: the share of the field they got through
 export function tdChance(y, e) {
   const base = y >= 25 ? 0.25 + 0.65 * Math.pow(c01((y - 25) / 73), 1.3) : 0.25 - 0.006 * (25 - y)
-  return clamp(0.03, 0.93, base + 0.021 * e)
+  return clamp(0.03, 0.93, base * TD_K + TD_E * e)
 }
-export function fgChance(y, e) {
-  const base = 0.165 + 0.2 * c01((y - 25) / 40) - 0.17 * c01((y - 65) / 33)
-  return clamp(0.02, 0.5, base + 0.004 * e)
+// field goals by distance (the kick: the spot + 17): the league's make rates
+const MAKE = [[18, 0.995], [25, 0.985], [30, 0.965], [35, 0.935], [40, 0.89], [45, 0.835], [50, 0.765], [55, 0.67], [60, 0.52], [65, 0.32], [70, 0.12]]
+export function fgMakeAt(d) {
+  if (d <= MAKE[0][0]) return MAKE[0][1]
+  for (let i = 1; i < MAKE.length; i++) if (d <= MAKE[i][0]) { const [a, pa] = MAKE[i - 1], [b, pb] = MAKE[i]; return pa + (pb - pa) * (d - a) / (b - a) }
+  return 0.05
 }
-// a field goal from the line of scrimmage at y (the kick is from 7 back, the posts 10 deep)
-export const fgMake = y => clamp(0.2, 0.98, 1.12 - (117 - y) * 0.0125)
+// a 4th down at `togo`, the spot `toGoal` yards out: the call a coach makes. ctx: the game around it
+//   { m (the offense's margin), late (the last 5:00), late2 (the last 2:00), needTD, end (the half's last drive), sudden (overtime, next score wins) }
+export function fourthDown(toGoal, togo, e, ctx, R) {
+  const d = toGoal + 17
+  // the longest kick he's sent out for: 55 on an ordinary 4th down (a strong leg, a couple more); 60 and past only
+  // with the half or the game on it
+  const range = ctx.end ? 63 : ctx.sudden ? 58 : 54 + (R.u() < 0.35 ? 3 : 0)
+  if (ctx.needTD) return toGoal <= 70 || ctx.late2 ? 'go' : 'punt'
+  if (ctx.late2 && ctx.m < 0) return ctx.m >= -3 && d <= 60 ? 'fg' : 'go'
+  if (ctx.end) return d <= range ? 'fg' : 'punt'
+  let go = 0
+  if (toGoal <= 2) go = 0.6
+  else if (togo <= 1) go = toGoal <= 50 ? 0.8 : 0.42
+  else if (togo <= 2) go = toGoal <= 45 ? 0.55 : 0.12
+  else if (togo <= 5 && toGoal >= 35 && toGoal <= 45) go = 0.42   // (no man's land: too far to kick, too close to punt)
+  if (ctx.late && ctx.m > 0) go *= 0.35                           // (ahead late: the points or the field position)
+  if (R.u() < go) return 'go'
+  return d <= range ? 'fg' : 'punt'
+}
+// going for it: the chance to make it at `togo`
+export const goRate = (togo, e) => clamp(0.2, 0.8, 0.66 - 0.065 * (togo - 1) + 0.01 * e)
+// how long the drive took (the clock), from what it was and how far it went
+function durOf(kind, gained, R) {
+  if (kind === 'td') return 120 + Math.max(0, gained) * 2 + R.u() * 100
+  if (kind === 'to') return 45 + Math.max(0, gained) * 2.2 + R.u() * 70
+  return 95 + Math.max(0, gained) * 2.4 + R.u() * 65   // (a stall: three and out about a minute and a half)
+}
+// One drive, from y: { res: 'td' | 'to' | 'fg' | 'punt' | 'downs', at (where it ended, from its own goal line), dist (a kick), dur }
+export function driveOutcome(y0, e, R, ctx = {}) {
+  let y = y0, dur = 0, go = 0
+  for (let leg = 0; leg < 3; leg++) {
+    const room = 100 - y
+    const pTD = tdChance(y, e) * (ctx.needTD ? 1.12 : 1)
+    const pTO = clamp(0.05, 0.2, TO_BASE - 0.005 * e + (ctx.late && ctx.m < 0 ? 0.035 : 0))
+    const u = R.u()
+    if (u < pTD) return { res: 'td', at: 100, dur: dur + durOf('td', room, R), go }
+    if (u < pTD + pTO) { const at = clamp(y, 99, y + Math.round(R.u() * room * 0.6)); return { res: 'to', at, dur: dur + durOf('to', at - y, R), go } }
+    // it stalls: three and out, in the red zone, or somewhere between
+    const v = R.u()
+    let gain
+    if (v < THREE_OUT) gain = R.int(-3, 8)
+    else if (v < THREE_OUT + RZ_STALL && room > 24) gain = room - R.int(3, 19)
+    else gain = Math.round(room * clamp(0.06, 0.94, MID_B + 0.21 * R.n() + 0.012 * e))
+    const at = clamp(1, 99, y + gain), toGoal = 100 - at
+    const togo = Math.min(toGoal, toGoal <= 8 && R.u() < 0.5 ? toGoal : R.u() < 0.3 ? R.int(1, 2) : R.int(3, 13))
+    dur += durOf('stall', at - y, R)
+    const call = fourthDown(toGoal, togo, e, ctx, R)
+    if (call === 'fg') return { res: 'fg', at, dist: toGoal + 17, dur, go }
+    if (call === 'punt') return { res: 'punt', at, dur, go }
+    go++
+    if (R.u() < goRate(togo, e)) {
+      const gain2 = togo + R.int(0, 8)
+      if (at + gain2 >= 100) return { res: 'td', at: 100, dur: dur + 6, go }
+      y = at + gain2
+      continue
+    }
+    return { res: 'downs', at, dur, go }
+  }
+  return { res: 'punt', at: y, dur, go }
+}
+// the kickoff after a score (2025 rules: a touchback to the 35; the return the rest of the time)
+const kickoff = R => (R.u() < 0.55 ? 35 : clamp(8, 55, Math.round(27 + 8 * R.n())))
+// the punt: about 46 yards in the air, a fair catch or a short return; a touchback to the 20
+function puntStart(at, R) {
+  const land = at + Math.round(46 + 6 * R.n())
+  if (land >= 100) return 20
+  const ret = R.u() < 0.45 ? 0 : R.int(2, 14)
+  return clamp(1, 70, 100 - land + ret)
+}
+// where the other team starts after a drive ends
+function nextStart(d, R) {
+  if (d.res === 'td' || d.res === 'fg') return kickoff(R)
+  if (d.res === 'miss') return Math.max(20, 100 - d.at + 7)   // (a miss: the spot of the kick, the 20 at worst)
+  if (d.res === 'to') return clamp(1, 95, 100 - d.at + R.int(-4, 14))
+  if (d.res === 'downs') return clamp(1, 99, 100 - d.at)
+  if (d.res === 'end') return kickoff(R)
+  return puntStart(d.at ?? 40, R)
+}
 
 // The key play's chance for the offense: a third or fourth down at d to go
 export const convChance = (d, e) => clamp(0.08, 0.92, 0.8 - 0.036 * d + 0.016 * e)
@@ -49,12 +140,14 @@ export const normalRate = ovr => clamp(0.4, 0.75, 0.55 + (ovr - 80) * 0.008)
 export function newGame(G) {
   const R = rngOf(`${G.seed}-coin`)
   const first = R.u() < 0.5 ? 'h' : 'a'
-  return { G, t: 0, poss: first, recv2: first === 'h' ? 'a' : 'h', y: 25, hs: 0, as: 0, plays: [], di: 0, ot: null, keyAt: null, key: null, done: false, half: 1 }
+  return { G, t: 0, poss: first, recv2: first === 'h' ? 'a' : 'h', y: 30, hs: 0, as: 0, plays: [], di: 0, ot: null, keyAt: null, key: null, done: false, half: 1, ct: { h: {}, a: {} } }
 }
 const other = s => (s === 'h' ? 'a' : 'h')
 const edgeOf = (S, side) => {
   const G = S.G, mine = side === 'h' ? G.sh : G.sa, them = side === 'h' ? G.sa : G.sh
-  return (mine.off - them.def) + (side === 'h' ? (G.homeEdge ?? 0) : 0) + (G.mod?.[side] ?? 0)
+  // (late in a close game, the 4th quarter or overtime within one score, each coach's calls: coach.js coachLate)
+  const late = G.late && S.t >= REG - Q && Math.abs(S.hs - S.as) <= 8 ? (G.late[side] ?? 0) : 0
+  return (mine.off - them.def) + (side === 'h' ? (G.homeEdge ?? 0) : 0) + (G.mod?.[side] ?? 0) + late
 }
 const margin = (S, side) => (side === 'h' ? S.hs - S.as : S.as - S.hs)
 const score = (S, side, pts, kind, extra = {}) => {
@@ -65,47 +158,42 @@ const score = (S, side, pts, kind, extra = {}) => {
 function tryAfter(S, side, R) {
   const m = margin(S, side)
   const late = S.t >= REG - Q
-  if (late && (m === -2 || m === 1 || m === -5 || m === -10)) { if (R.u() < 0.48) return 2; return 0 }
-  return R.u() < 0.945 ? 1 : 0
+  if (late && (m === -2 || m === 1 || m === -5 || m === -10)) { S.tr = R.u() < 0.48 ? '2' : '2x'; return S.tr === '2' ? 2 : 0 }
+  S.tr = R.u() < 0.956 ? 'xp' : 'xpx'
+  return S.tr === 'xp' ? 1 : 0
 }
 function touchdown(S, side, R, extra = {}) {
   const pts = 6
   if (side === 'h') S.hs += pts; else S.as += pts
   const x = tryAfter(S, side, R)
   if (side === 'h') S.hs += x; else S.as += x
-  S.plays.push({ t: Math.round(S.t), s: side, p: pts + x, k: 'td', hs: S.hs, as: S.as, ...extra })
+  S.plays.push({ t: Math.round(S.t), s: side, p: pts + x, k: 'td', hs: S.hs, as: S.as, tr: S.tr, ...extra })
 }
 
-// ── A drive from its start to its end, ordinary (not the key play) ──────────
-// returns how it ended and how long it took
+// ── A drive in the game: the clock and the score around it ──────────────────
+function ctxOf(S, side) {
+  const m = margin(S, side)
+  const late = !S.ot && S.t >= REG - 300, late2 = !S.ot && S.t >= REG - 120
+  const end = S.ot ? S.t >= S.ot.end - 100 : (S.half === 1 && S.t >= HALF - 110) || (S.half === 2 && S.t >= REG - 40)
+  // (behind by more than a field goal late, three does nothing: a touchdown or nothing)
+  const needTD = (late && m <= -4 && m >= -8) || (late2 && m <= -4) || (!!S.ot && m <= -4)
+  // (overtime: once both have had it, or the other side has already scored, the next score wins)
+  const sudden = !!S.ot && (S.ot.sudden || margin(S, side) < 0)
+  return { m, late, late2, end, needTD, sudden }
+}
 function drive(S, R, fromY = S.y) {
-  const side = S.poss, e = edgeOf(S, side), m = margin(S, side)
-  const left = (S.ot ? S.ot.end : REG) - S.t
-  const late = !S.ot && S.t >= REG - 300
-  let pTD = tdChance(fromY, e), pFG = fgChance(fromY, e)
-  // behind by more than a field goal, late: three does nothing; they go for it (more touchdowns, more turnovers)
-  if (late && m <= -4 && m >= -8) { pTD += pFG * 0.25; pFG = 0 }
-  // down 9 or more late: a field goal first, then the onside kick (rarely), so take what's there
-  // overtime: the next score ends it, a team kicks as soon as it's in range
-  if (S.ot && S.ot.sudden) { pFG = Math.min(0.6, pFG * 1.5) }
-  const u = R.u()
-  const res = u < pTD ? 'td' : u < pTD + pFG ? 'fg' : R.u() < 0.27 ? 'to' : 'punt'
-  // time: a scoring drive is longer; a team ahead late burns clock, one behind hurries
-  let dur = res === 'td' ? 150 + R.u() * 190 : res === 'fg' ? 140 + R.u() * 170 : res === 'to' ? 50 + R.u() * 160 : 95 + R.u() * 150
-  if (late && m > 0) dur *= 1.45
-  if (late && m < 0) dur *= 0.5
+  const side = S.poss, e = edgeOf(S, side), ctx = ctxOf(S, side)
+  const d = driveOutcome(fromY, e, R, ctx)
+  let dur = d.dur
+  if (ctx.late && ctx.m > 0) dur *= 1.45      // (ahead late: running the clock)
+  if (ctx.late && ctx.m < 0) dur *= 0.5       // (behind late: hurrying)
   dur *= 0.86
-  if (S.ot) dur *= 0.85
-  return { res, dur: Math.round(dur), left }
+  if (S.ot) dur *= 0.72   // (overtime: both sides move fast, timeouts and the clock in play)
+  const c = S.ct[side]
+  c.dr = (c.dr ?? 0) + 1
+  return { ...d, dur: Math.round(dur) }
 }
-
-// what happens after a drive ends (the other team's start)
-function nextStart(res, y, R) {
-  if (res === 'td' || res === 'fg') return 25 + (R.u() < 0.2 ? R.int(-8, 10) : 0)
-  if (res === 'to') return clamp(5, 80, 100 - clamp(10, 95, y + R.int(0, 35)))
-  if (res === 'downs') return clamp(1, 95, 100 - y)
-  return clamp(5, 45, 100 - clamp(40, 99, y + 40 + R.int(-6, 12)))   // a punt
-}
+const count = (S, side, k) => { const c = S.ct?.[side]; if (c) c[k] = (c[k] ?? 0) + 1 }
 
 // ── Running the game ─────────────────────────────────────────────────────────
 // Plays possessions until the game ends or its key play comes up (S.key set: the game waits for it)
@@ -120,13 +208,13 @@ function endOfRegulation(S) {
   const first = R.u() < 0.5 ? 'h' : 'a'
   const len = S.G.po ? OT_PO : OT_REG
   S.ot = { n: 1, first, had: [], sudden: false, end: REG + len }
-  S.t = REG; S.poss = first; S.y = 25
+  S.t = REG; S.poss = first; S.y = 30
 }
 function step(S) {
   const R = rngOf(`${S.G.seed}-d${S.di}`)
   S.di++
   // halftime: the team that didn't get the opening kick gets the ball
-  if (!S.ot && S.half === 1 && S.t >= HALF) { S.half = 2; S.t = HALF; S.poss = S.recv2; S.y = 25 }
+  if (!S.ot && S.half === 1 && S.t >= HALF) { S.half = 2; S.t = HALF; S.poss = S.recv2; S.y = 30 }
   if (!S.ot && S.t >= REG) { endOfRegulation(S); return }
   if (S.ot && S.t >= S.ot.end) {
     if (S.G.po) { S.ot.n++; S.ot.end += OT_PO; S.ot.sudden = true }
@@ -146,30 +234,56 @@ function step(S) {
   const end = S.ot ? S.ot.end : S.half === 1 ? HALF : REG
   const fits = S.t + d.dur < end
   // a drive that runs into the half or the end: it scores only if it got there in time (a last-second kick)
-  if (!fits && (d.res === 'punt' || d.res === 'to')) { S.t = end; afterDrive(S, side, 'end', R); return }
+  if (!fits && (d.res === 'punt' || d.res === 'to' || d.res === 'downs')) { S.t = end; afterDrive(S, side, { res: 'end' }, R); return }
   S.t = Math.min(end - 1, S.t + d.dur)
+  count(S, side, d.res === 'downs' ? 'downs' : d.res)
+  for (let i = 0; i < (d.go ?? 0); i++) count(S, side, 'go')
   if (d.res === 'td') touchdown(S, side, R)
-  else if (d.res === 'fg') { if (R.u() < fgMake(clamp(55, 97, S.y + 45))) score(S, side, 3, 'fg'); else d.res = 'miss' }
-  afterDrive(S, side, d.res, R)
+  else if (d.res === 'fg') { count(S, side, 'fga'); count(S, side, `k${Math.min(6, Math.floor(d.dist / 10))}`); if (R.u() < fgMakeAt(d.dist)) score(S, side, 3, 'fg', { y: 117 - d.dist, d: d.dist }); else d.res = 'miss' }
+  afterDrive(S, side, d, R)
   if (!fits) S.t = end
 }
-function afterDrive(S, side, res, R) {
+function afterDrive(S, side, d, R) {
   if (S.ot) {
     S.ot.had.push(side)
     const both = S.ot.had.includes('h') && S.ot.had.includes('a')
     if (both) S.ot.sudden = true
     if ((S.ot.sudden || both) && S.hs !== S.as) { S.done = true; return }
   }
-  const y = S.y
   S.poss = other(side)
-  S.y = res === 'end' ? 25 : nextStart(res === 'miss' ? 'to' : res, clamp(30, 90, y + 35), R)
+  S.y = nextStart(d, R)
 }
 
-// what a possession is worth on average (points), from a start or a spot
+// what a possession is worth on average (points), from where it starts: the drives themselves, played out (a table
+// for each whole edge, made once when it's first needed; a touchdown is worth its try too)
 export const KEY_TUNE = 0.85
-const driveValue = (y, e, needTD) => 7 * tdChance(y, e) + (needTD ? 0 : 3 * fgChance(y, e) * fgMake(clamp(55, 97, y + 45)))
-const winValue = (ny, e, needTD) => (ny >= 100 ? 7 : 7 * tdChance(ny, e) + (needTD ? 0 : 3 * fgChance(ny, e) * 1.3 * fgMake(ny + 5)))
-const stopValue = (y, down, needTD) => (down === 3 && y >= 55 && !needTD ? 3 * fgMake(y) : 0)
+const EV = new Map()
+function evRow(e, needTD) {
+  const k = `${e}|${needTD ? 1 : 0}`
+  let row = EV.get(k)
+  if (row) return row
+  row = new Float32Array(101)
+  const R = rngOf(`ev-${k}`), N = 300
+  for (let y = 1; y <= 100; y++) {
+    let v = 0
+    for (let i = 0; i < N; i++) {
+      const d = driveOutcome(y, e, R, { needTD, m: needTD ? -5 : 0 })
+      v += d.res === 'td' ? 6.95 : d.res === 'fg' && !needTD ? 3 * fgMakeAt(d.dist) : 0
+    }
+    row[y] = v / N
+  }
+  row[0] = row[1]
+  EV.set(k, row)
+  return row
+}
+function evAt(y, e, needTD) {
+  const yy = clamp(0, 100, Math.round(y)), lo = Math.floor(clamp(-8, 8, e)), hi = Math.min(8, lo + 1), f = clamp(-8, 8, e) - lo
+  return evRow(lo, needTD)[yy] * (1 - f) + evRow(hi, needTD)[yy] * f
+}
+const driveValue = (y, e, needTD) => evAt(y, e, needTD)
+const winValue = (ny, e, needTD) => (ny >= 100 ? 7 : evAt(ny, e, needTD))
+// stopped on 3rd down at y: the 4th-down kick if it's in range (it isn't worth anything when they need a touchdown)
+const stopValue = (y, down, needTD) => (down === 3 && !needTD && 117 - y <= 55 ? 3 * fgMakeAt(117 - y) : 0)
 
 // ── The key play ─────────────────────────────────────────────────────────────
 // The game stops on a third or fourth down on this possession: where it lands is set so the offense's chance on
@@ -213,27 +327,27 @@ export function resolveKey(S, hit, kind = null, seed = 'k') {
     const ny = k.y + gain
     if (ny >= 100) { touchdown(S, ball, R, { key: 1 }); line = 'td' }
     else {
-      // the drive goes on from the new spot: its own chances from there, the clock it takes
-      const pTD = tdChance(ny, e), pFG = margin(S, ball) <= -4 && S.t > REG - 300 ? 0 : fgChance(ny, e) * 1.3
-      const u = R.u()
-      const dur = Math.round((100 - ny) * (S.t > REG - 150 ? 0.9 : 2.2) + R.int(10, 50))
-      S.t = Math.min(REG - 1, S.t + dur)
-      if (u < pTD) { touchdown(S, ball, R); line = 'conv-td' }
-      else if (u < pTD + pFG && R.u() < fgMake(ny + 5)) { score(S, ball, 3, 'fg'); line = 'conv-fg' }
-      else { line = 'conv-stall'; S.stallY = ny }
+      // the drive goes on from the new spot, the way every drive goes (its kick from where it stalls), on the clock left
+      const ctx = ctxOf(S, ball)
+      const d = driveOutcome(ny, e, R, ctx)
+      S.t = Math.min(REG - 1, S.t + Math.round(d.dur * (ctx.late && ctx.m < 0 ? 0.45 : ctx.late && ctx.m > 0 ? 1.2 : 0.8)))
+      if (d.res === 'td') { touchdown(S, ball, R); line = 'conv-td' }
+      else if (d.res === 'fg' && R.u() < fgMakeAt(d.dist)) { score(S, ball, 3, 'fg', { y: 117 - d.dist, d: d.dist }); line = 'conv-fg' }
+      else { line = 'conv-stall'; S.stall = d.res === 'fg' ? { ...d, res: 'miss' } : d }
     }
   } else {
     // stopped: a pick (the defense has it there), a sack and the kick or the punt, fourth down turned over
     if (kind === 'pick' && k.ball === 'them') { line = 'pick'; S.poss = k.us; S.y = clamp(5, 95, 100 - k.y - R.int(-5, 25)) }
-    else if (k.down === 3 && k.y >= 55 && !(margin(S, ball) <= -4)) {
-      const y = kind === 'sack' ? k.y - 7 : k.y
-      if (R.u() < fgMake(y)) { score(S, ball, 3, 'fg'); line = 'held-fg' } else line = 'held-miss'
-      S.poss = other(ball); S.y = 25
-    } else if (k.down === 3) { line = 'punt'; S.poss = other(ball); S.y = nextStart('punt', k.y, R) }
+    // (held on 3rd down: the 4th-down kick from that spot if it's in range, the punt if it isn't)
+    else if (k.down === 3 && 117 - (kind === 'sack' ? k.y - 7 : k.y) <= (margin(S, ball) < 0 && S.t >= REG - 120 ? 60 : 55) && !(margin(S, ball) <= -4)) {
+      const y = kind === 'sack' ? k.y - 7 : k.y, dist = 117 - y
+      if (R.u() < fgMakeAt(dist)) { score(S, ball, 3, 'fg', { y, d: dist }); line = 'held-fg'; S.poss = other(ball); S.y = kickoff(R) }
+      else { line = 'held-miss'; S.poss = other(ball); S.y = Math.max(20, 100 - y + 7) }
+    } else if (k.down === 3) { line = 'punt'; S.poss = other(ball); S.y = puntStart(k.y, R) }
     else { line = 'downs'; S.poss = other(ball); S.y = clamp(1, 95, 100 - k.y) }
   }
-  if (line === 'td' || line === 'conv-td' || line === 'conv-fg') { S.poss = other(ball); S.y = 25 }
-  if (line === 'conv-stall') { S.poss = other(ball); S.y = nextStart('punt', S.stallY, R); delete S.stallY }
+  if (line === 'td' || line === 'conv-td' || line === 'conv-fg') { S.poss = other(ball); S.y = kickoff(R) }
+  if (line === 'conv-stall') { S.poss = other(ball); S.y = nextStart(S.stall, R); delete S.stall }
   S.keyOut = { hit: !!hit, line, kind }
   S.key = null
   return run(S)

@@ -1,0 +1,226 @@
+/* SETUP (Setup.jsx, CoachBuild.jsx): the new franchise, in the kit's "Sunday broadcast" look (kit.css).
+   Near-black page, graphite rows, the team's colour as flat slabs, Anton / Bebas. One column on a phone (390),
+   the same column centred on a computer. */
+
+.fsu {
+  min-height: 100dvh; background: var(--fk-ink); color: var(--fk-text);
+  padding: 0 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--fk-f);
+}
+.fsu-top {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; max-width: 600px; margin: 0 auto;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 0 10px; background: var(--fk-ink); box-shadow: 0 1px 0 var(--fk-line);
+}
+.fsu-x { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; background: var(--fk-g3); color: #fff; cursor: pointer; }
+.fsu-x:active { transform: translateY(1px); }
+.fsu-steps { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin: 0; padding: 0; list-style: none; }
+.fsu-steps li {
+  display: flex; align-items: baseline; gap: 5px; min-width: 0; padding: 6px 0 5px 7px; overflow: hidden; white-space: nowrap;
+  font-size: 14px; letter-spacing: 1.6px; color: var(--fk-dim); background: var(--fk-g1); box-shadow: inset 0 -3px 0 var(--fk-g3);
+}
+.fsu-steps li b { font-family: var(--fk-d); font-weight: 400; font-size: 13px; letter-spacing: 0; }
+.fsu-steps li.is-done { color: var(--fk-mute); box-shadow: inset 0 -3px 0 var(--fk-mute); }
+.fsu-steps li.is-on { color: #fff; background: var(--fk-g2); box-shadow: inset 0 -3px 0 var(--tc, #fff); }
+
+.fsu-body { max-width: 600px; margin: 0 auto; padding-top: 14px; animation: fsu-in .26s cubic-bezier(.2,.9,.25,1) both; }
+.fsu-body > div { display: flex; flex-direction: column; gap: 12px; }
+@keyframes fsu-in { from { opacity: 0; transform: translateY(8px); } }
+.fsu-acts { position: sticky; bottom: 0; z-index: 4; display: grid; gap: 8px; margin: 6px -16px 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ink); box-shadow: 0 -1px 0 var(--fk-line); }
+.fsu-lbl { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; font-size: 15px; letter-spacing: 2.4px; color: var(--fk-mute); }
+.fsu-lbl small { font-size: 14px; letter-spacing: 1.6px; color: var(--fk-dim); }
+
+/* ── The team wall ─────────────────────────────────────────────────────── */
+.fsu-div { display: grid; gap: 5px; animation: fsu-in .3s calc(var(--d, 0ms)) both; }
+.fsu-div-lbl { font-size: 14px; letter-spacing: 2.4px; color: var(--fk-mute); }
+.fsu-div-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.fsu-tm {
+  display: grid; justify-items: center; gap: 2px; padding: 9px 0 7px; border: 0; background: var(--fk-g1); color: var(--fk-mute); cursor: pointer;
+  box-shadow: inset 0 -3px 0 var(--tc, var(--fk-g3)); font: inherit; font-size: 14px; letter-spacing: 1.6px;
+}
+.fsu-tm small { font-size: 14px; }
+.fsu-tm.is-on { background: var(--tc); color: var(--tct); box-shadow: inset 0 -3px 0 var(--tc2); }
+.fsu-tm:active { transform: translateY(1px); }
+@media (hover: hover) { .fsu-tm:hover { background: var(--fk-g2); color: #fff; } .fsu-tm.is-on:hover { background: var(--tc); } }
+
+/* ── A team's card ─────────────────────────────────────────────────────── */
+.fsu-card-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; letter-spacing: 2px; color: var(--fk-mute); }
+.fsu-card-nav button { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 8px; border: 0; background: var(--fk-g1); color: #fff; font: inherit; font-size: 15px; letter-spacing: 1.6px; cursor: pointer; }
+.fsu-card-nums { display: flex; align-items: flex-end; gap: 22px; padding: 4px 2px 2px; }
+.fsu-card-nums .fk-big { align-items: flex-start; }
+.fsu-stars { display: grid; gap: 6px; }
+.fsu-last { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: -6px; padding: 8px 12px 7px; background: var(--fk-g1); font-size: 15px; letter-spacing: 2px; color: var(--fk-mute); }
+.fsu-last b { font-weight: 400; color: #fff; }
+.fsu-last .is-gold { color: var(--fk-gold-hi); }
+
+/* ── The players ───────────────────────────────────────────────────────── */
+.fsu-pos { display: grid; gap: 4px; }
+.fsu-pos-row {
+  display: grid; grid-template-columns: 62px 1fr auto; align-items: center; gap: 10px; height: 58px; padding: 0 6px 0 12px;
+  background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--fk-g3);
+}
+.fsu-pos-row.is-on { background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tc, #fff); }
+.fsu-pos-k { display: grid; line-height: 1; }
+.fsu-pos-k b { font-family: var(--fk-d); font-weight: 400; font-size: 28px; color: #fff; }
+.fsu-pos-k small { display: none; }
+.fsu-pos-st { display: grid; min-width: 0; line-height: 1.05; }
+.fsu-pos-st small { font-size: 13px; letter-spacing: 2px; color: var(--fk-dim); }
+.fsu-pos-st b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; font-size: 17px; letter-spacing: 1.2px; color: var(--fk-mute); }
+.fsu-step { display: flex; align-items: center; gap: 2px; }
+.fsu-step button { width: 42px; height: 42px; border: 0; background: var(--fk-g3); color: #fff; font-family: var(--fk-f); font-size: 30px; line-height: 1; cursor: pointer; }
+.fsu-step button:disabled { opacity: .3; cursor: default; }
+.fsu-step button:not(:disabled):active { transform: translateY(1px); }
+.fsu-step b { width: 34px; text-align: center; font-family: var(--fk-d); font-weight: 400; font-size: 26px; color: #fff; }
+.fsu-pos-row:not(.is-on) .fsu-step b { color: var(--fk-dim); }
+.fsu-blist { display: grid; gap: 6px; }
+.fsu-empty {
+  display: flex; align-items: stretch; height: 64px; padding: 0; border: 0; background: transparent; color: #fff; cursor: pointer; text-align: left; font: inherit;
+  box-shadow: inset 0 0 0 1px var(--fk-line2); animation: fk-in .3s var(--d, 0ms) both;
+}
+.fsu-empty-pos { display: grid; place-items: center; width: 72px; background: var(--fk-g3); font-family: var(--fk-d); font-size: 26px; clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.fsu-empty-txt { flex: 1; display: grid; align-content: center; gap: 2px; padding-left: 10px; line-height: 1; }
+.fsu-empty-txt b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; color: var(--fk-mute); }
+.fsu-empty-txt small { font-size: 14px; letter-spacing: 1.8px; color: var(--fk-dim); }
+.fsu-empty-go { align-self: center; margin-right: 10px; padding: 7px 16px 6px 12px; background: #fff; color: #0b0c0e; font-size: 17px; letter-spacing: 2px; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+
+/* ── Name and number ───────────────────────────────────────────────────── */
+.fsu-nameform { display: flex; flex-direction: column; gap: 10px; }
+.fsu-name { display: grid; grid-template-columns: 1fr 1fr 50px; gap: 6px; }
+.fsu-in {
+  min-width: 0; height: 52px; padding: 0 12px; border: 0; border-radius: 0; background: var(--fk-g2); color: #fff; outline: none;
+  font-family: var(--fk-d); font-size: 22px; letter-spacing: .5px; text-transform: uppercase; box-shadow: inset 0 -3px 0 var(--fk-g4);
+}
+.fsu-in:focus { box-shadow: inset 0 -3px 0 var(--tc, #fff); }
+.fsu-in::placeholder { color: var(--fk-dim); font-family: var(--fk-f); letter-spacing: 2px; }
+.fsu-rand { display: grid; place-items: center; height: 52px; border: 0; background: var(--fk-g3); color: #fff; cursor: pointer; }
+.fsu-rand:active { transform: rotate(-30deg); transition: transform .12s; }
+.fsu-nums { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.fsu-nums button { height: 44px; border: 0; background: var(--fk-g1); color: var(--fk-mute); font-family: var(--fk-d); font-size: 22px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.fsu-nums button.is-on { background: var(--tc, #fff); color: var(--tct, #0b0c0e); box-shadow: inset 0 -3px 0 var(--tc2, transparent); }
+.fsu-nums .fsu-nums-more { font-family: var(--fk-f); font-size: 16px; letter-spacing: 2px; }
+.fsu-deal { display: flex; justify-content: space-between; gap: 10px; padding: 12px 14px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc, #fff); }
+
+/* ── The coach spin ────────────────────────────────────────────────────── */
+.fsu-chy-ovr { display: inline-flex; align-items: baseline; gap: 4px; font-family: var(--fk-d); font-size: 24px; }
+.fsu-chy-ovr small { font-family: var(--fk-f); font-size: 14px; letter-spacing: 1.6px; opacity: .8; }
+.fsu-reel { --grey-900: #101216; display: flex; }
+.fsu .fsu-reel .reel-outer { flex: 1; border: 0 !important; border-radius: 0 !important; background: var(--fk-g1) !important; box-shadow: inset 0 -3px 0 var(--fk-g3) !important; overflow: hidden; filter: none !important; }
+.fsu .fsu-reel .reel-outer.reel-locked { box-shadow: inset 0 -3px 0 var(--tc, #fff) !important; }
+.fsu .fsu-reel .reel-label { margin: 0 !important; display: block !important; padding: 6px 10px 4px !important; border: 0 !important; border-radius: 0 !important; background: var(--fk-g3) !important; font-family: var(--fk-f) !important; font-size: 14px !important; letter-spacing: 2.4px !important; color: var(--fk-mute) !important; text-align: left; }
+.fsu .fsu-reel .reel-window { border-radius: 0 !important; background: var(--fk-g1) !important; box-shadow: none !important; }
+.fsu .fsu-reel .reel-label { box-shadow: none !important; }
+.fsu .fsu-reel .reel-selector { left: 0 !important; right: 0 !important; border-radius: 0 !important; border: 0 !important; background: color-mix(in srgb, var(--tc, #fff) 22%, transparent) !important; box-shadow: inset 4px 0 0 var(--tc, #fff), inset -4px 0 0 var(--tc, #fff) !important; }
+.fsu .fsu-reel .reel-primary { color: #fff !important; font-family: var(--fk-d) !important; font-size: 21px !important; font-weight: 400 !important; letter-spacing: .4px !important; text-transform: uppercase; }
+.fsu .fsu-reel .reel-secondary { font-family: var(--fk-f) !important; font-size: 13px !important; font-weight: 400 !important; letter-spacing: 1.8px !important; color: var(--fk-mute) !important; }
+.fsu .fsu-reel .reel-locked-pip { display: none; }
+.fsu-landed { --h: 60px; }
+
+.fsu-lines { display: grid; gap: 4px; }
+.fsu-line {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: 0; text-align: left; font: inherit; color: #fff;
+  background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--fk-g3);
+}
+.fsu-line-lbl { flex: 1; min-width: 0; display: grid; gap: 2px; line-height: 1; }
+.fsu-line-lbl b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; font-size: 17px; letter-spacing: 1.6px; color: var(--fk-mute); }
+.fsu-line-lbl small { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; letter-spacing: 1.6px; color: var(--fk-dim); }
+.fsu-line-v { flex: none; display: flex; align-items: baseline; gap: 6px; line-height: 1; }
+.fsu-line-v b { min-width: 34px; text-align: right; font-family: var(--fk-d); font-weight: 400; font-size: 30px; }
+.fsu-line-v small { width: 18px; font-family: var(--fk-d); font-size: 15px; color: var(--fk-dim); }
+.fsu-line-v b.is-dash { color: var(--fk-g4); }
+.fsu-line.is-in { background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tc, #fff); }
+.fsu-line.is-in .fsu-line-lbl b { color: #fff; }
+.fsu-line.is-in .fsu-line-lbl small { color: var(--fk-mute); }
+.fsu-lines.is-choosing .fsu-line.is-in { opacity: .5; }
+.fsu-line.is-offer { cursor: pointer; background: var(--fk-g2); box-shadow: inset 0 0 0 2px var(--tc, #fff); animation: fk-in .26s var(--d, 0ms) both; }
+.fsu-line.is-offer .fsu-line-lbl b { color: #fff; }
+.fsu-line.is-offer .fsu-line-lbl small { color: var(--fk-text); }
+.fsu-line.is-offer:active { transform: translateY(1px); }
+@media (hover: hover) { .fsu-line.is-offer:hover { background: var(--fk-g3); } }
+.fsu-line.is-just { animation: fsu-lock .45s cubic-bezier(.2,.9,.25,1) both; }
+.fsu-line.is-just .fsu-line-v b { animation: fsu-slam .36s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes fsu-lock { 0% { background: var(--tc, #fff); } 100% { background: var(--fk-g2); } }
+@keyframes fsu-slam { from { transform: scale(1.7); opacity: 0; } }
+
+/* ── Style, name, face ─────────────────────────────────────────────────── */
+.fsu-opts { display: grid; gap: 6px; }
+.fsu-opt {
+  display: grid; gap: 3px; padding: 13px 34px 11px 14px; border: 0; text-align: left; font: inherit; color: #fff; cursor: pointer; line-height: 1;
+  background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--fk-g3); clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  animation: fk-in .3s var(--d, 0ms) both;
+}
+.fsu-opt b { font-family: var(--fk-d); font-weight: 400; font-size: 27px; letter-spacing: .3px; }
+.fsu-opt small { font-size: 15px; letter-spacing: 2px; color: var(--fk-mute); }
+.fsu-opt.is-on { background: var(--tc); color: var(--tct); box-shadow: inset 0 -3px 0 var(--tc2); }
+.fsu-opt.is-on small { color: inherit; opacity: .78; }
+@media (hover: hover) { .fsu-opt:not(.is-on):hover { background: var(--fk-g2); } }
+.fsu-who-prev { --h: 104px; }
+.fsu-faces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.fsu-face { position: relative; aspect-ratio: 1.25; padding: 0; border: 0; overflow: hidden; background: var(--fk-g2); cursor: pointer; }
+.fsu-face img { position: absolute; left: 50%; bottom: 0; height: 104%; transform: translateX(-50%); }
+.fsu-face.is-on { background: var(--tc); box-shadow: inset 0 0 0 3px #fff; }
+.fsu-face-more { display: grid; place-items: center; align-content: center; gap: 4px; color: #fff; font-size: 15px; letter-spacing: 2px; background: var(--fk-g1); box-shadow: inset 0 0 0 1px var(--fk-line2); }
+
+/* ── The coach card ────────────────────────────────────────────────────── */
+.fsu-cc { background: var(--fk-g1); animation: fk-in .34s var(--d, 0ms) both; }
+.fsu-cc-top { display: flex; align-items: stretch; height: 150px; box-shadow: inset 0 -3px 0 var(--tc2, #fff); }
+.fsu-cc.is-small .fsu-cc-top { height: 86px; }
+.fsu-cc-slab { position: relative; flex: none; width: 112px; overflow: hidden; background: var(--tc); clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); }
+.fsu-cc.is-small .fsu-cc-slab { width: 84px; }
+.fsu-cc-hc { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-family: var(--fk-d); font-size: 120px; line-height: 1; color: var(--tct); opacity: .16; letter-spacing: -4px; }
+.fsu-cc.is-small .fsu-cc-hc { font-size: 66px; }
+.fsu-cc-slab img { position: absolute; left: 50%; bottom: 0; height: 100%; transform: translateX(-54%); }
+.fsu-cc-init { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--fk-d); font-weight: 400; font-size: 44px; color: var(--tct); }
+.fsu-cc-id { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 6px 0 8px; }
+.fsu-cc-job { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; letter-spacing: 2.2px; color: var(--fk-mute); }
+.fsu-cc-name { display: grid; line-height: .95; min-width: 0; }
+.fsu-cc-name small { font-size: 22px; letter-spacing: 1.6px; color: var(--fk-mute); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fsu-cc-name b { font-family: var(--fk-d); font-weight: 400; font-size: 34px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fsu-cc.is-small .fsu-cc-name b { font-size: 26px; } .fsu-cc.is-small .fsu-cc-name small { font-size: 16px; }
+.fsu-cc-style { align-self: flex-start; padding: 2px 8px 1px; font-style: normal; font-size: 15px; letter-spacing: 1.8px; background: var(--tc); color: var(--tct); }
+.fsu-cc-ovr { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 80px; background: #fff; color: #0b0c0e; line-height: 1; }
+.fsu-cc-ovr .fk-big b { color: #0b0c0e; }
+.fsu-cc-ovr > small { font-size: 16px; letter-spacing: 2px; color: #4a4f57; }
+.fsu-cc.is-small .fsu-cc-ovr { width: 70px; }
+.fsu-cc-lines { display: grid; gap: 12px; padding: 14px 14px 16px; }
+.fsu-cc-line { display: grid; gap: 3px; animation: fk-in .3s var(--d, 0ms) both; }
+.fsu-cc-from { display: inline-flex; align-items: center; gap: 5px; justify-self: end; font-size: 13px; letter-spacing: 1.6px; color: var(--fk-dim); }
+
+@media (min-width: 900px) {
+  .fsu { padding-top: 12px; }
+  .fsu-top, .fsu-body { max-width: 1040px; }
+  .fsu-body > div { max-width: 640px; margin: 0 auto; }
+  .fsu-acts { margin: 6px 0 0; padding: 10px 0 14px; }
+  .fsu-body > :is(.fsu-cspin, .fsu-builds) { max-width: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: start; }
+  .fsu-cspin > .fk-chy, .fsu-builds > .fk-chy:first-child { grid-column: 1 / -1; }
+  .fsu-cspin .fsu-reel { grid-column: 1; grid-row: 2; }
+  .fsu-cspin .fsu-landed { grid-column: 1; grid-row: 3; }
+  .fsu-cspin .fsu-lines { grid-column: 2; grid-row: 2 / span 2; }
+  .fsu-cspin .fsu-acts { grid-column: 2; grid-row: 4; }
+  .fsu-builds .fsu-pos { grid-column: 1; grid-row: 2 / span 4; }
+  .fsu-builds > .fk-chy:not(:first-child) { grid-column: 2; grid-row: 2; }
+  .fsu-builds .fsu-blist { grid-column: 2; grid-row: 3; }
+  .fsu-builds .fsu-acts { grid-column: 2; grid-row: 4; position: static; }
+  .fsu-body > .fsu-wall { max-width: none; }
+  .fsu-wall .fsu-div-row { gap: 6px; }
+  .fsu-wall { display: grid !important; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+  .fsu-wall > .fk-chy { grid-column: 1 / -1; }
+}
+html.bap-reduce-motion :is(.fsu-body, .fsu-div, .fsu-empty, .fsu-line, .fsu-line-v b, .fsu-opt, .fsu-cc, .fsu-cc-line) { animation: none !important; }
+
+/* ── The slots ─────────────────────────────────────────────────────────── */
+.fsu-slots-gm { font-size: 15px; letter-spacing: 2.4px; color: var(--fk-mute); }
+.fsu-hero { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: var(--fk-g1); }
+.fsu-slot {
+  position: relative; display: flex; align-items: center; gap: 0; height: 104px; padding: 0; border: 0; overflow: hidden; text-align: left; font: inherit; cursor: pointer;
+  background: var(--tc, var(--fk-g1)); color: var(--tct, #fff); box-shadow: inset 0 -4px 0 var(--tc2, var(--fk-g3)); animation: fk-in .32s var(--d, 0ms) both;
+}
+.fsu-slot.is-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--fk-line2); }
+.fsu-slot-n { align-self: stretch; display: grid; place-items: center; width: 40px; background: var(--fk-ink); color: #fff; font-family: var(--fk-d); font-size: 22px; }
+.fsu-slot-logo { position: absolute; right: -10px; top: 50%; transform: translateY(-50%); opacity: .95; }
+.fsu-slot-txt { position: relative; display: grid; gap: 3px; padding: 0 100px 0 14px; line-height: 1; }
+.fsu-slot-txt small { font-size: 15px; letter-spacing: 2px; opacity: .8; }
+.fsu-slot-txt b { font-family: var(--fk-d); font-weight: 400; font-size: 36px; letter-spacing: .3px; }
+.fsu-slot-txt em { font-style: normal; font-size: 16px; letter-spacing: 1.8px; opacity: .9; }
+.fsu-slot.is-empty .fsu-slot-txt b { color: var(--fk-mute); }
+.fsu-slot:active { transform: translateY(1px); }
+.fsu-sheet { position: fixed; inset: 0; z-index: 60; overflow-y: auto; }
+html.bap-reduce-motion .fsu-slot { animation: none !important; }

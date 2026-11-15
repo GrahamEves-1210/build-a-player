@@ -96,7 +96,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
       {stage === 'intro' && (
         <div className="mg-intro">
           <p>{how}</p>
-          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} empty={empty} />}
+          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} empty={empty} situation={situation} />}
           <button className="ag-btn ag-btn--gold" onClick={() => { setStage('play'); sfx('whistle') }}>READY</button>
           {onSkipAll && <button className="ag-btn ag-btn--ghost mg-skipall" onClick={() => { sfx('tap'); onSkipAll() }}>TURN OFF KEY MOMENTS</button>}
         </div>

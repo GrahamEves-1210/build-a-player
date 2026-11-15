@@ -2,21 +2,33 @@
 // three slots on this device. The screens are components/franchise2.
 import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, payroll, lineup, strength } from './league'
 import { makeSchedule } from './schedule'
-import { makeClass } from './offseason'
+import { makeClass, packClass, unpackClass } from './draft'
 import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
+import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
 
 export * from './league'
 export * from './season'
 export * from './offseason'
+export * from './draft'
+export * from './coach'
+export * from './identity'
+export * from './roster'
+export * from './contracts'
+export * from './stats'
+export * from './aging'
+export * from './awards'
+export * from './market'
+export * from './news'
 export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, finishOf } from './standings'
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 export { clockText, periodOf, spotText, normalRate } from './game'
 
-export const SAVE_V = 2
-const NUMS = { qb: [1, 19], rb: [20, 49], wr: [10, 19], te: [80, 89], ol: [60, 79], dl: [90, 99], lb: [40, 59], db: [20, 39] }
+export const SAVE_V = 6
 
-// setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox }], coach: { name, av, scheme, style } }
+// setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num }],
+//         coach: coach.js finishCoach { name, face, style, r: { the five ratings }, from, ovr } }
+// A build is a rookie (22, his first year): his name and number are the ones the player gave him (identity.js)
 export function createFranchise(setup) {
   const F = {
     v: SAVE_V, seed: setup.seed, slot: setup.slot ?? 0, owner: setup.owner ?? 'Guest', sandbox: !!setup.sandbox,
@@ -27,14 +39,13 @@ export function createFranchise(setup) {
   calibrate(F)
   const R = rngOf(`${F.seed}-builds`)
   const t = F.teams[F.team]
-  const used = new Set()
+  const slots = rookieSlots(setup.builds ?? [])
   for (const b of setup.builds ?? []) {
     const idx = F.builds.length
-    const [lo, hi] = NUMS[b.pos] ?? [1, 99]
-    let num = R.int(lo, hi)
-    for (let k = 0; k < 20 && used.has(num); k++) num = R.int(lo, hi)
-    used.add(num)
-    F.builds.push({ pos: b.pos, build: b.build, types: b.types ?? null, num, age: 23, car: [], ...(b.sandbox && { sandbox: 1 }) })
+    const taken = takenOn(F.team, F.builds)
+    const num = legalFor(b.pos, b.num) && !taken.has(b.num) ? b.num : pickNumber(b.pos, taken, R.u)
+    const name = cleanName(b.name).trim() || null
+    F.builds.push({ pos: b.pos, build: b.build, types: b.types ?? null, name, num, age: 22, rk: F.year, slot: slots[idx], car: [], ...(b.sandbox && { sandbox: 1 }) })
     t.r.push(makeBuilt(F, idx, R))
   }
   // the budget: what a team in this league spends, a little over; the player's team always starts under it
@@ -54,14 +65,22 @@ export function createFranchise(setup) {
 const KEY = slot => `bap_fr2_slot_${slot}`
 export const SLOTS_N = 3
 // packed: a man is a row of values (the keys once, not on every man), a league ~60 KB
-const PK = ['i', 'n', 'p', 's', 'o', 'ag', 'pk', '$', 'y', 'b', 'in', 'rk', 'c', 'dr']
-const DK = ['i', 'n', 'p', 's', 'ag', 'o', 'pk', 'tag', 'c', 'sc', 'ht', 'wt', 'ft', 'nt', 'col', 'b']
-const row = (keys, x) => { const a = keys.map(k => x[k] ?? null); while (a.length && a[a.length - 1] === null) a.pop(); return a }
-const obj = (keys, a) => { const x = {}; keys.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); return x }
+// a man as a row: the fields every man has, in order, then (if he has any) an object of the rest (a rookie's college,
+// draft slot and ratings, an injury, a career): no nulls held for what most men don't have
+const PK = ['i', 'n', 'p', 's', 'o', 'ag', 'pk', '$', 'y', 'g', 'nu', 'rk', 'c', 'dr', 'a', 'tg']
+const row = (keys, x) => {
+  const a = keys.map(k => x[k] ?? null)
+  const more = {}
+  for (const k in x) if (!keys.includes(k) && x[k] != null) more[k] = x[k]
+  if (Object.keys(more).length) a.push(more)
+  else while (a.length && a[a.length - 1] === null) a.pop()
+  return a
+}
+const obj = (keys, a) => { const x = {}; keys.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); const m = a[keys.length]; if (m && typeof m === 'object') Object.assign(x, m); return x }
 export function packFranchise(F) {
   if (!F.teams) return JSON.stringify(F)
   const teams = Object.fromEntries(Object.entries(F.teams).map(([s, t]) => [s, { ...t, r: t.r.map(p => row(PK, p)) }]))
-  return JSON.stringify({ ...F, teams, fa: (F.fa ?? []).map(p => row(PK, p)), dc: (F.dc ?? []).map(x => row(DK, x)), pk: 1 })
+  return JSON.stringify({ ...F, teams, fa: (F.fa ?? []).map(p => row(PK, p)), dc: packClass(F.dc), pk: 1 })
 }
 export function unpackFranchise(json) {
   const F = JSON.parse(json)
@@ -69,7 +88,7 @@ export function unpackFranchise(json) {
   delete F.pk
   for (const t of Object.values(F.teams)) t.r = t.r.map(a => obj(PK, a))
   F.fa = (F.fa ?? []).map(a => obj(PK, a))
-  F.dc = (F.dc ?? []).map(a => obj(DK, a))
+  F.dc = unpackClass(F.dc)
   return F
 }
 export function saveFranchise(F) {

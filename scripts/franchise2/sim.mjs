@@ -2,6 +2,7 @@
 // the schedule's shape, records, the bracket, aging, the league's talent over time, save size, speed.
 //   bash scripts/franchise2/run.sh scripts/franchise2/sim.mjs [seasons=6] [team=DEN] [moments=1]
 import * as FR from '../../src/lib/franchise2/index'
+import CONTRACTS from '../../src/data/nfl-contracts.json'
 import { scheduleProblems } from '../../src/lib/franchise2/schedule'
 import { QBS } from '../../src/data/qbs'
 import { WRS } from '../../src/data/wrs'
@@ -10,14 +11,31 @@ import { seeded } from '../../src/lib/rng'
 const N = Number(process.argv[2] ?? 6), team = process.argv[3] ?? 'DEN', moments = process.argv[4] !== '0'
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
 const qb = QBS.find(p => p.name === 'Josh Allen'), wr = WRS.find(p => p.attrs && p.name === 'Puka Nacua') ?? WRS.find(p => p.attrs)
-let F = FR.createFranchise({ seed: 'sim-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb) }, { pos: 'wr', build: asBuild(wr) }], coach: { name: 'Coach', scheme: 'air', style: 'developer' } })
+// (the real contracts: Vite reads the file itself; a headless run hands it in)
+console.log(`real contracts: ${FR.useContracts(CONTRACTS)}`)
+let F = FR.createFranchise({ seed: 'sim-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }, { pos: 'wr', build: asBuild(wr), name: 'Tre Holloway', num: 81 }], coach: { name: 'Isaiah Vance', style: 'developer', r: { talentDev: 7, offPlaycalling: 8, defPlaycalling: 5, culture: 6, situational: 6 }, ovr: 78 } })
 const problems = []
 const bad = m => { problems.push(m); console.log('  !! ' + m) }
 const meanOvr = () => { const all = FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])).map(p => p.o)); return (all.reduce((a, b) => a + b, 0) / all.length).toFixed(1) }
 const H = seeded('hits')
 let dealt = 0
+let base = null
+const ages = []
+const realNames = new Set(FR.SHORTS.flatMap(s => F.teams[s].r.filter(p => FR.realOf(p.p, p.n)).map(p => p.n)))
+function league() {
+  const st = FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])))
+  const all = FR.SHORTS.flatMap(s => F.teams[s].r)
+  const avg = a => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : 0
+  const stars = all.filter(p => p.o >= 90)
+  const rooms = FR.SHORTS.map(s => FR.capSheet(F, s).room).sort((a, b) => a - b)
+  return { mean: avg(st.map(p => p.o)), age: avg(st.map(p => p.ag)), n90: stars.length, n95: all.filter(p => p.o >= 95).length, starAge: avg(stars.map(p => p.ag)), real: all.filter(p => realNames.has(p.n)).length, qb85: all.filter(p => p.p === 'qb' && p.o >= 85).length, room: rooms[16] }
+}
+const blooms = {}   // the late bloomers (hb) each class had, and the best each became
+let classOne = null   // the first class the league drafts, followed to the end: did the 1st round start, did the late rounds hit
 for (let y = 0; y < N; y++) {
   const t0 = performance.now()
+  blooms[F.year + 1] ??= { n: F.dc.filter(x => x.hb).length, best: {} }
+  for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.hb && blooms[p.rk]) blooms[p.rk].best[p.i] = Math.max(blooms[p.rk].best[p.i] ?? 0, p.o)
   const sp = scheduleProblems(F.sched.weeks, F.sched.bye); if (sp.length) bad(`${F.year} schedule: ${sp.slice(0, 3)}`)
   while (F.phase === 'season') {
     const r = FR.playWeek(F, { moments })
@@ -46,19 +64,62 @@ for (let y = 0; y < N; y++) {
   console.log(`${F.year} ${team} ${FR.recText(my)} ${banner.fin}${banner.seed ? ` (${banner.seed} seed)` : ''} · champ ${po.champ} over ${po.runner} ${po.score} · MVP ${F.aw.mvp?.n} (${F.aw.mvp?.t}) · ties ${ties} · ovr ${FR.strength(F, team).ovr} · league starters ${meanOvr()} · hype ${F.hype} chem ${F.chem} · ${(t1 - t0).toFixed(0)} ms`)
   const ch = FR.ageLeague(F)
   FR.openResign(F)
-  for (const id of [...F.rs]) { const p = F.teams[team].r.find(x => x.i === id); FR.resignOne(F, id, p.b != null || (p.o >= 74 && FR.resignAsk(p).$ <= FR.budgetLeft(F))) }
+  for (const id of [...F.rs]) {
+    const p = F.teams[team].r.find(x => x.i === id)
+    if (FR.optionDue(p)) { FR.resignOne(F, id, p.o >= 80 ? 'option' : 'decline'); continue }
+    const ask = FR.resignAsk(p, F)
+    FR.resignOne(F, id, p.b != null || (p.o >= 76 && FR.canSign(F, ask.$)))
+  }
   FR.openFA(F)
-  for (let r = 0; r < 3; r++) { const id = F.offers.find(i => { const p = F.fa.find(x => x.i === i); return p && p.$ <= FR.budgetLeft(F) }); if (id) FR.signFA(F, id); FR.nextFA(F) }
-  // scout and star a few, then draft
-  for (const x of F.dc.slice(0, 5)) { FR.scout(F, x.i); FR.star(F, x.i) }
+  let bids = 0, won = 0
+  while (F.fad) {
+    // a bid a day on the best man the team can fit, at his ask
+    const p = FR.faBoard(F, 8).find(x => FR.canSign(F, x.$) && x.o >= 78)
+    if (p) { const b = FR.placeBid(F, p.i, p.$); bids++; if (b?.to === team) won++ }
+    FR.nextFADay(F)
+  }
+  for (const s of FR.SHORTS) { const c = FR.capSheet(F, s); if (c.room < (s === team ? -25 : 0)) bad(`${F.year} ${s} ${-c.room}M over the cap after FA`) }
+  FR.openDraft(F)
+  // visit, film and star a few, then the draft: seven rounds (scripts/franchise2/draft.mjs checks scouting and trades)
+  for (const x of FR.consensus(F).slice(0, 5)) { FR.interview(F, x.i); FR.film(F, x.i); FR.star(F, x.i) }
+  FR.startNight(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
+  FR.closeDraft(F)
+  if (y === 0) classOne = F.dr.picks.map(p => ({ pid: p.pid, s: p.s, rd: FR.roundOf(p.at) }))
   const mine = F.dr.picks.filter(p => p.s === team)
-  if (F.dr.picks.length !== 96 || new Set(F.dr.picks.map(p => p.pid)).size !== 96) bad('draft picks')
+  if (F.dr.picks.length !== FR.PICKS_N || new Set(F.dr.picks.map(p => p.pid)).size !== FR.PICKS_N) bad('draft picks')
+  if (mine.some(p => !F.teams[team].r.find(q => q.i === p.pid)?.rc)) bad('a pick without a rookie deal')
   console.log(`   offseason: ${ch.filter(c => c.k === 'ret').length} of ours retired, ${ch.filter(c => c.k === 'up').length} up, ${ch.filter(c => c.k === 'down').length} down; drafted ${mine.map(p => `${p.p.toUpperCase()} ${FR.GRADES[FR.gradeIdx(p.pk)]}${p.tag === 'G' ? ' GEM' : p.tag === 'B' ? ' BUST' : ''}`).join(', ')}; builds ${F.builds.map(b => `${b.pos} ${F.teams[team].r.find(p => p.b === F.builds.indexOf(b))?.o ?? 'gone'} age ${b.age}`).join(', ')}`)
   FR.newSeason(F)
+  for (const s of FR.SHORTS) { if (s !== team && FR.capRoom(F, s) < 0) bad(`${F.year} ${s} ${-FR.capRoom(F, s)}M over the cap at the start of the season`) }
   const size = FR.saveSize(F)
   const players = FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)
-  console.log(`   new season ${F.year}: ${players} players, budget ${F.budget} payroll ${FR.payroll(F.teams[team].r)}, save ${(size / 1024).toFixed(0)} KB, moments so far ${dealt}`)
-  if (size > 160 * 1024) bad(`save ${size}`)
+  const cap = FR.capSheet(F, team)
+  console.log(`   new season ${F.year}: ${players} players, cap ${cap.cap} used ${cap.used} room ${cap.room}, FA bids ${bids} won ${won}, save ${(size / 1024).toFixed(0)} KB, moments so far ${dealt}`)
+  if (size > 190 * 1024) bad(`save ${size}`)   // (15 seasons in: about 170 KB)
+  // the league's talent over the years (aging and growth): it should hold about where the real league started
+  const L = league()
+  console.log(`   league: starters ${L.mean} OVR, age ${L.age}, ${L.n90} men 90+, ${L.n95} 95+, stars' ages ${L.starAge}, real men left ${L.real}, QBs 85+ ${L.qb85}, cap room median ${L.room}M`)
+  ages.push(L)
+  if (y === 0) base = L
+  else if (Math.abs(L.mean - base.mean) > 2.5) bad(`${F.year} league starters ${L.mean} vs ${base.mean} at the start`)
+  if (L.n90 < base.n90 * 0.45 || L.n90 > base.n90 * 1.8) bad(`${F.year} ${L.n90} men 90+ (started with ${base.n90})`)
 }
+// the shape of a career: how old the league's starters are, and when men retire
+{
+  // a late bloomer counts when he's a 90+ man on a roster (by the class he came out in)
+  const all = FR.SHORTS.flatMap(s => F.teams[s].r)
+  for (const p of all) if (p.hb && blooms[p.rk]) blooms[p.rk].best[p.i] = Math.max(blooms[p.rk].best[p.i] ?? 0, p.o)
+  const hitOf = b => Object.values(b.best).filter(o => o >= 90).length
+  const row = Object.entries(blooms).filter(([y]) => +y <= F.year - 2).map(([y, b]) => `${y}: ${hitOf(b)}/${b.n}`)
+  const hits = Object.entries(blooms).filter(([y]) => +y <= F.year - 2).reduce((a, [, b]) => a + hitOf(b), 0)
+  console.log(`late bloomers at 90+ (class: became 90+ / had): ${row.join(' · ')} · ${(hits / Math.max(1, row.length)).toFixed(1)} a class`)
+}
+if (classOne) {
+  const all = FR.SHORTS.flatMap(s => F.teams[s].r), starting = new Set(FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])).map(p => p.i)))
+  const sum = rds => { const g = classOne.filter(c => rds.includes(c.rd)); const men = g.map(c => all.find(p => p.i === c.pid)).filter(Boolean); return `${g.length} picked, ${men.length} in the league, ${men.filter(p => starting.has(p.i)).length} starting, ${men.filter(p => p.o >= 90).length} at 90+` }
+  console.log(`the first class after ${N} seasons: round 1 ${sum([1])} · rounds 2-3 ${sum([2, 3])} · rounds 4-7 ${sum([4, 5, 6, 7])}`)
+}
+console.log('starters 90+ by year:', ages.map(a => a.n90).join(' '), '· mean OVR by year:', ages.map(a => a.mean).join(' '))
+{ const P = JSON.parse(FR.packFranchise(F)); console.log('save by part (KB):', Object.entries(P).map(([k, v]) => [k, JSON.stringify(v ?? null).length]).filter(([, n]) => n > 1500).map(([k, n]) => `${k} ${(n / 1024).toFixed(1)}`).join(', '), '· careers', FR.SHORTS.reduce((a, s) => a + F.teams[s].r.filter(p => p.cr).length, 0), '· men', FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)) }
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

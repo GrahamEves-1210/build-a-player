@@ -89,3 +89,19 @@ html.has-rail:not(.is-app) .frt {
   clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0,
     var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) 100%, var(--web-rail-l, 0px) 100%, var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)));
 }
+
+/* ── The broadcast look (kit.css, 2026-11-14): the title on the one gold slab, the team's name on its own colour,
+   the button the kit's white slab. Hard edges, an angled end, nothing that glows. */
+.frt-title {
+  padding: 7px 26px 8px 18px; margin-bottom: calc(var(--frt-side) * -.035);
+  background: linear-gradient(180deg, #f0d68c 0 50%, #d2aa4f 50% 100%); color: #1a1405; box-shadow: inset 0 -3px 0 #8f6b22;
+  font-family: var(--ag-display, 'BAP Anton', 'Anton', Impact, sans-serif); font-size: clamp(18px, 5vw, 26px); letter-spacing: .06em; text-indent: 0;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+}
+.frt-rule { display: none; }
+.frt-name {
+  padding: 6px 30px 9px 18px; background: var(--tc, var(--frt-c1)); color: var(--tct, #fff); box-shadow: inset 0 -4px 0 var(--tc2, var(--frt-c2));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+}
+.frt-line { margin-top: 0; padding: 5px 18px 4px 12px; background: #08090b; color: rgba(244,245,247,.7); clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%); }
+.frt-btn { border-radius: 0; background: #fff; font-family: var(--ag-display, 'BAP Anton', 'Anton', Impact, sans-serif); font-size: 20px; letter-spacing: .05em; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); box-shadow: inset 0 -4px 0 var(--tc, #9aa3ad); }
