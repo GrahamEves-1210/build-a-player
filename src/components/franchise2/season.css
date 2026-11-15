@@ -182,7 +182,7 @@ html.is-app .fg { padding-bottom: 24px; }
 .fg-board-side.is-r { justify-items: end; text-align: right; }
 .fg-board-side img { position: absolute; top: 8px; width: 46px; height: 46px; object-fit: contain; }
 .fg-board-side:not(.is-r) img { left: 10px; } .fg-board-side.is-r img { right: 10px; }
-.fg-board-side small { font-family: var(--fk-f); font-size: 14px; letter-spacing: 2px; opacity: .85; }
+.fg-board-side small { display: none; }
 .fg-board-side .fk-big b { color: inherit; font-size: 74px; }
 .fg-board-side.is-lose { filter: saturate(.35) brightness(.55); }
 .fg-board .fk-stamp { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; }
