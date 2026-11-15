@@ -3,8 +3,17 @@
 Fetched 2026-11-14 for Franchise mode. Names match `src/data/nfl-coaches.js`; the map is `coach-headshots.json`.
 
 Rule followed: clean front-facing studio headshots only. No Wikipedia, no sideline/game/press-conference/Hall of Fame/fan photos.
-Every file below was opened and looked at before it was kept. Photos are only resized (to fit inside 260x190, aspect kept,
-no crop) and converted to webp with sharp.
+Every file below was opened and looked at before it was kept.
+
+Cut out 2026-11-15 so a coach sits on the team slab like a player: every photo is a transparent cutout on ESPN's player
+headshot canvas (600x436), framed the way ESPN frames a player. The eyes sit where a player's eyes sit (the median of the
+player headshots: eye line at y 160, centred at x 298) and the face is a player's size (eye spacing 70px, face 200px tall,
+both measured with OpenCV's YuNet face detector). Backdrops removed with rembg (ISNet; BiRefNet-portrait for the ones with
+fine hair or a halo), the backdrop's colour unmixed from the soft edges. ESPN's own coach cutouts keep ESPN's framing.
+A photo cropped at the chest is zoomed in up to 20% (and he sits up to 24px lower) so his shoulders run off the bottom
+like a player's; a photo too narrow for the canvas has its straight side edge softened below the chin. Each result was
+looked at on dark, light and grey. Scripts and originals: F:\bap-agents\coachcut (cut.py, finalize.py, publish.mjs) and
+F:\bap-agents\coachshots (raw/, team/).
 
 ## Sources
 
@@ -32,12 +41,15 @@ Free-agent coaches (`COACH_FREE_AGENTS`): 7 of 27, ESPN only (they have no team 
   (Ravens), Mike McCarthy (Packers), Dan Quinn (Falcons) and Sean Payton (Saints) wear their previous team's gear, and Frank Reich
   and Matt Nagy are in old photos without their current team's gear. All seven now use their current team's studio portrait.
   ESPN is kept only for Andy Reid, Kyle Shanahan (suit, no other team's mark), Sean McVay (Rams gear) and the free agents.
-- John Harbaugh (NYG): the Giants' portrait is a vertical waist-up studio shot, so it comes out 127x190 with a smaller face.
+- John Harbaugh (NYG): the Giants' portrait is a vertical waist-up studio shot; cut out and reframed, his face is the
+  same size as everyone's.
 - Matt LaFleur (GB): the Packers' photo is a studio portrait on a mottled backdrop, a little more styled than the others.
 - Tampa Bay has no defensive coordinator; George Edwards' photo is from his Buccaneers card (Pass Game Coordinator).
 - Todd Wash (CAR) is listed by the Panthers as interim defensive coordinator.
 
 ## Per coach
+
+Size is the first (uncut) webp; every file is now a 600x436 cutout.
 
 | Coach | Job | Source | Image | Size |
 |---|---|---|---|---|
