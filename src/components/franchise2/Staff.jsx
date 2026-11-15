@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  TEAM, CTYPES, CSHORT, STYLES, cLetter, coachGrade, rOf, staffOf, staffMen, callerOf, setCalls, cvOf, hotSeat, myOpenings, fireMine, shortlist,
+  TEAM, CTYPES, STYLES, cLetter, coachGrade, rOf, staffOf, staffMen, callerOf, setCalls, cvOf, hotSeat, myOpenings, fireMine, shortlist,
   interviewCoach, interviewsLeft, interviewView, offerCoach, closeCarousel, setCarStep, moveText, IV_N, records, recText,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
@@ -23,13 +23,17 @@ const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND
 // his five ratings as an object, whoever he is (a staff man's array, the player's coach's own)
 const fiveOf = (F, c) => (c?.mine ? F.coach?.r : rOf(c)) ?? null
 
+// The five ratings in words a player reads at a glance: spelled out where there's room (full), a one-word form
+// in a tight list (a candidate list, the league's new hires)
+const CNAME = { talentDev: 'Develops players', offPlaycalling: 'Offense play-calling', defPlaycalling: 'Defense play-calling', culture: 'Team culture', situational: 'Game management' }
+const CWORD = { talentDev: 'Develop', offPlaycalling: 'Offense', defPlaycalling: 'Defense', culture: 'Culture', situational: 'Game mgmt' }
 // The five grades under a coach's lower-third. on: the rating in use (his play-calling, when he calls a side)
-export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0 }) {
+export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0, full = true }) {
   return (
-    <div className={`fst-g${reveal ? ' is-reveal' : ''}`} role="list">
+    <div className={`fst-g${full ? ' fst-g--full' : ''}${reveal ? ' is-reveal' : ''}`} role="list">
       {CTYPES.map((t, i) => (
-        <span key={t} role="listitem" className={`fst-gc${on.includes(t) ? ' is-on' : ''}`} style={{ '--d': `${delay + i * 110}ms` }}>
-          <small>{CSHORT[t]}</small><b>{hidden || !r ? '?' : cLetter(r[t])}</b>
+        <span key={t} role="listitem" className={`fst-gc${on.includes(t) ? ' is-on' : ''}`} style={{ '--d': `${delay + i * 110}ms` }} title={CNAME[t]}>
+          <small>{(full ? CNAME : CWORD)[t]}</small><b>{hidden || !r ? '?' : cLetter(r[t])}</b>
         </span>
       ))}
     </div>
@@ -37,7 +41,7 @@ export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0 }
 }
 // A coach as a lower-third, his grades under it.
 //   c: staff man / myHC / a pool man · role 'hc' | 'oc' | 'dc' · team · line · calls: ['off'] the sides he calls
-export function StaffL3({ F, c, role, team, line, calls = [], size = 'm', mine, hidden = false, reveal = false, onClick, delay = 0, stamp }) {
+export function StaffL3({ F, c, role, team, line, calls = [], size = 'm', mine, hidden = false, reveal = false, onClick, delay = 0, stamp, full = size !== 's' }) {
   const r = fiveOf(F, c)
   const on = calls.map(s => (s === 'off' ? 'offPlaycalling' : 'defPlaycalling'))
   return (
@@ -45,7 +49,7 @@ export function StaffL3({ F, c, role, team, line, calls = [], size = 'm', mine, 
       <LowerThird name={c?.n ?? c?.name} pos={JOB[role]} team={team} photo={coachPhoto(c, team)} size={size} mine={mine} line={line} onClick={onClick} delay={delay}
         stat={hidden || !r ? { v: c?.ag ?? '-', label: 'AGE' } : { v: coachGrade(r, role), label: 'GRADE' }} />
       {stamp}
-      <Grades r={r} on={on} hidden={hidden} reveal={reveal} delay={delay} />
+      <Grades r={r} on={on} hidden={hidden} reveal={reveal} delay={delay} full={full} />
     </div>
   )
 }
@@ -206,7 +210,7 @@ function Hires({ F, onNext }) {
           const c = staffOf(F, e.s)?.hc
           return (
             <div key={e.id} className={`fst-evt${i < k ? ' is-in' : ''}`}>
-              <StaffL3 F={F} c={c ?? { n: e.n }} role="hc" team={e.s} line={[TEAM[e.s].nick.toUpperCase(), fromShort(e)].filter(Boolean).join(' · ')} calls={callLine(F, e.s, 'hc')} stamp={i < k ? <Stamp kind="w" quiet={reduced()}>HIRED</Stamp> : null} />
+              <StaffL3 F={F} c={c ?? { n: e.n }} role="hc" team={e.s} line={[TEAM[e.s].nick.toUpperCase(), fromShort(e)].filter(Boolean).join(' · ')} calls={callLine(F, e.s, 'hc')} full={false} stamp={i < k ? <Stamp kind="w" quiet={reduced()}>HIRED</Stamp> : null} />
             </div>
           )
         })}

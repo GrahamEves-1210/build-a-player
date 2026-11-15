@@ -348,3 +348,8 @@ html.bap-reduce-motion .fk-bump-a, html.bap-reduce-motion .fk-bump-b { transform
 .fk-x { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: var(--fk-g3); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; }
 @media (hover: hover) { .fk-x:hover { background: var(--fk-g4); } }
 html.bap-reduce-motion .fk-fold-h i { transition: none; }
+
+/* a logo that vanishes on its team's colour and on near-black (bits.jsx LOGO_CHIP): a white chip when small, a thin
+   white outline when it's big and decorative */
+:is(.fk-logo, .f2-logo, .fg-board-side img).is-chip { box-sizing: border-box; padding: calc(var(--ls, 46px) * .1); background: #fff; border-radius: calc(var(--ls, 46px) * .18); }
+.is-outline { filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); }

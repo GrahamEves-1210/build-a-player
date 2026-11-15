@@ -10,7 +10,13 @@ import { genFace, buildFaceUrl } from '../../lib/franchise2/faces'
 // a stamp. Flat team colours, the game's type, nothing that moves unless it's delivering a result.
 
 export const teamVars = short => { const t = TEAM[short]; return t ? { '--tc': t.color, '--tc2': t.color2 } : undefined }
-export const Logo = ({ s, size = 32, className = '' }) => (TEAM[s] ? <img className={`f2-logo ${className}`} src={TEAM[s].logo} alt="" width={size} height={size} style={{ width: size, height: size }} draggable={false} /> : null)
+// Three logos vanish on their own team colour and on the near-black page (the Rams' blue horns, the Giants' navy
+// NY, the Jets' green wordmark; all 32 checked against the team colour, near-black and graphite). Small, they sit
+// on a white chip; a big one (a slab's, the hall's) gets a thin white outline.
+export const LOGO_CHIP = new Set(['LAR', 'NYG', 'NYJ'])
+export const chipCls = s => (LOGO_CHIP.has(s) ? ' is-chip' : '')
+export const outlineCls = s => (LOGO_CHIP.has(s) ? ' is-outline' : '')
+export const Logo = ({ s, size = 32, className = '' }) => (TEAM[s] ? <img className={`f2-logo${chipCls(s)} ${className}`} src={TEAM[s].logo} alt="" width={size} height={size} style={{ width: size, height: size, '--ls': `${size}px` }} draggable={false} /> : null)
 export const lastName = n => { const w = String(n || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
 const initials = n => String(n || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 

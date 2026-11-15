@@ -80,3 +80,14 @@
   .fst-call { grid-template-columns: 120px 1fr 1fr; }
 }
 :root.bap-reduce-motion .fst-man, :root.bap-reduce-motion .fst-g.is-reveal .fst-gc b { animation: none; }
+
+/* the five grades, spelled out (Staff.jsx Grades full): label left, letter right, two to three a row; the compact
+   form stacks a one-word label over the letter */
+.fst-g--full { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.fst-g--full .fst-gc { justify-content: space-between; gap: 8px; height: 34px; padding: 0 10px; }
+.fst-g--full .fst-gc small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-text); text-transform: none; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fst-g--full .fst-gc b { font-size: 20px; }
+.fst-man--l .fst-g--full .fst-gc { height: 38px; }
+.fst-g:not(.fst-g--full) .fst-gc { flex-direction: column; gap: 2px; height: auto; min-height: 40px; padding: 4px 2px; }
+.fst-g:not(.fst-g--full) .fst-gc small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-text); text-transform: none; letter-spacing: 0; line-height: 1.1; text-align: center; }
+.fst-gc.is-on small { color: var(--tct, #fff) !important; }
