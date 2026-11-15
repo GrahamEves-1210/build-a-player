@@ -505,9 +505,11 @@ function blowout(c, g, ahead) {
 // ═════════════════════════════════════════════════════════════════════════════
 function nbaState(g) {
   const m = g.mySc - g.oppSc
-  // the last possession is rewritten from the final, so a 10-point game still had a late turn
-  if (m < 0 && m >= -10) return 'comeback'
-  if (m > 0 && m <= 10) return 'protect'
+  // the last possession is the one the final had in it: down two (the card's own spot) or up two (they have to foul).
+  // (It used to rewrite any game decided by ten or less into a two-point game with eight seconds left, so a 10-point
+  // loss became a buzzer-beater to win: owner, 2026-11-14, the moment has to match the real game)
+  if (m === -2) return 'comeback'
+  if (m === 2) return 'protect'
   if (m >= 16) return 'garbage'
   if (m <= -16) return 'chase'
   return null

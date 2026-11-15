@@ -193,7 +193,7 @@ const SOUND = {
 // onSkipAll (Career): the intro's TURN OFF KEY MOMENTS, as on the Advanced card
 // pos (optional): the position the build plays, where the build alone can't say (Practice's
 // Fourth & Goal rows); without it, Fourth & Goal in Practice asks which side of the ball first
-export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, onSkipAll = null, labV = null, pos = null }) {
+export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, onSkipAll = null, labV = null, pos = null, situation = null }) {
   const def = GAMES[game]
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
@@ -267,7 +267,7 @@ export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoSt
       )}
       {stage !== 'intro' && (
         <div className={`mg-body${result ? ' is-over' : ''}`}>
-          <Game key={tries} def={def} v={v} seed={tries ? `${seed}-again` : seed} build={build} pos={pos} onDone={done} />
+          <Game key={tries} def={situation?.reps && def.rounds ? { ...def, rounds: situation.reps } : situation?.kicks?.length && def.n ? { ...def, n: Math.max(1, situation.kicks.filter(k => !k.xp).length) } : def} v={v} seed={tries ? `${seed}-again` : seed} build={build} pos={pos} onDone={done} />
           {result && (stat ? (
             <div className="mg-result mg-result--stat" role="status">
               <span className="mg-official">OFFICIAL · {stat.label}</span>

@@ -171,7 +171,8 @@ function fbPlay(R, b, hit, F) {
   }
   if (t === 'game-winner') return [{ p: 1, u: hit || pts === 3 ? 3 : 0, next: null, T: 0, tag: hit ? 'fg' : 'miss' }]
   if (t === 'deep-kick') {
-    if (pts != null) return [{ p: 1, u: pts, next: 't', T: c - 10, tag: 'kicks' }]
+    // (a report without the extra point, Simple mode's field goals only: the try after the touchdown at the usual rate)
+    if (pts != null) return b.kicks?.some(k => k.xp) && F?.xpa == null ? [{ p: 0.94, u: pts + 1, next: 't', T: c - 10, tag: 'kicks' }, { p: 0.06, u: pts, next: 't', T: c - 10, tag: 'kicks' }] : [{ p: 1, u: pts, next: 't', T: c - 10, tag: 'kicks' }]
     // his kicks today, each made at about his usual rate for its kind, a little better or worse with the drill
     let M = new Map([[0, 1]])
     for (const k of b.kicks) {
