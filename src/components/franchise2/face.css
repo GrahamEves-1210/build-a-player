@@ -1,38 +1,79 @@
-/* A BUILD'S FACE (FacePick.jsx): the kit's look. Seven flat category tabs and a shuffle in a 4 × 2 block, then each
-   group's choices: big previews of his own face (zoomed to the eyes, the mouth or the beard where that's what
-   changes), plain chips for the colours. The chosen one: a white edge and the team's colour under it. */
+/* A BUILD'S FACE (FacePick.jsx): the kit's look. His face big on the team's colour and the categories beside it,
+   the choices in a box under them that scrolls on its own, so his face stays in view while they scroll (the app's
+   root clips overflow, so nothing on this screen can stick to the top). Choices: his own face zoomed to the part that
+   changes, a label under each; colours as plain chips; shape sliders. The chosen one: a white edge and the team's
+   colour under it. */
 
-.ffp { display: grid; gap: 10px; }
-.ffp-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.ffp-cat {
-  display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; height: 40px; padding: 0 4px; border: 0; cursor: pointer;
-  background: var(--fk-g1); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 1.4px; white-space: nowrap; overflow: hidden;
+.ffp { display: grid; gap: 12px; }
+.ffp-stage {
+  display: grid; grid-template-columns: 168px 1fr; gap: 6px;
+}
+.ffp-hero { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--tc, var(--fk-g3)); box-shadow: inset 0 -4px 0 var(--tc2, transparent); }
+.ffp-hero img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ffp-tabs { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 4px; min-width: 0; }
+.ffp-tab {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; padding: 0 4px; border: 0; cursor: pointer;
+  background: var(--fk-g1); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 1.2px; white-space: nowrap; overflow: hidden;
   box-shadow: inset 0 -3px 0 var(--fk-g3);
 }
-.ffp-cat.is-on { background: var(--fk-g2); color: #fff; box-shadow: inset 0 -3px 0 var(--tc, #fff); }
+.ffp-tab.is-on { background: var(--fk-g2); color: #fff; box-shadow: inset 0 -3px 0 var(--tca, #fff); }
 .ffp-shuf { background: var(--fk-g3); color: #fff; box-shadow: none; }
 .ffp-shuf:active svg { transform: rotate(-30deg); transition: transform .12s; }
 
-.ffp-grp { display: grid; gap: 5px; }
-.ffp-grp-h { display: flex; align-items: baseline; justify-content: space-between; font-family: var(--fk-f); letter-spacing: 2px; line-height: 1; }
-.ffp-grp-h small { font-size: 13px; color: var(--fk-dim); }
-.ffp-grp-h b { font-weight: 400; font-size: 15px; color: #fff; }
+.ffp-panel {
+  display: grid; align-content: start; gap: 14px; max-height: min(58vh, 560px); overflow-y: auto; padding: 2px 2px 12px 0;
+  scrollbar-width: thin; scrollbar-color: var(--fk-g4) transparent; box-shadow: inset 0 -1px 0 var(--fk-g3);
+}
+.ffp-grp { display: grid; gap: 6px; }
+.ffp-grp-h { display: flex; align-items: baseline; justify-content: space-between; font-family: var(--fk-f); letter-spacing: 1.6px; line-height: 1; }
+.ffp-grp-h small { font-size: 14px; color: var(--fk-dim); }
+.ffp-grp-h b { font-weight: 400; font-size: 16px; color: #fff; }
 
+/* the choices: his face, zoomed (faces.js VIEWS: the eyes' crop is twice as wide as it is tall) */
 .ffp-opts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.ffp-opts--swatch { grid-template-columns: repeat(6, 1fr); }
+.ffp-opts--eyes, .ffp-opts--mouth { grid-template-columns: repeat(3, 1fr); }
 .ffp-o {
   position: relative; display: block; aspect-ratio: 1; min-width: 0; padding: 0; border: 0; overflow: hidden; cursor: pointer;
   background: var(--fk-g1); box-shadow: inset 0 -3px 0 var(--fk-g3);
 }
-.ffp-opts--swatch .ffp-o { aspect-ratio: 1.3; }
-/* the preview, zoomed to what this group changes (the face is drawn in a 74-unit frame: faces.js VIEW) */
-.ffp-o img { position: absolute; left: -7.5%; top: -2%; width: 115%; height: 115%; pointer-events: none; }
-.ffp-opts--eyes .ffp-o img { left: -60%; top: -54%; width: 220%; height: 220%; }
-.ffp-opts--mouth .ffp-o img { left: -50%; top: -86%; width: 200%; height: 200%; }
-.ffp-opts--low .ffp-o img { left: -22%; top: -48%; width: 144%; height: 144%; }
-.ffp-o i { position: absolute; inset: 7px 7px 10px; }
+.ffp-opts--eyes .ffp-o { aspect-ratio: 1.6; }
+.ffp-opts--mouth .ffp-o { aspect-ratio: 1.2; }
+.ffp-o img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.ffp-o-l {
+  position: absolute; left: 0; right: 0; bottom: 3px; height: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(8,9,11,.78);
+  font-family: var(--fk-f); font-size: 13px; line-height: 17px; letter-spacing: .8px; color: var(--fk-mute); text-align: center;
+}
 .ffp-o.is-on { background: var(--fk-g3); }
-.ffp-o.is-on::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px #fff, inset 0 -5px 0 var(--tc, #fff); pointer-events: none; }
+.ffp-o.is-on .ffp-o-l { color: #fff; }
+.ffp-o.is-on::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px #fff, inset 0 -5px 0 var(--tca, #fff); pointer-events: none; }
 .ffp-o:not(.is-on):active { transform: translateY(1px); }
-@media (hover: hover) { .ffp-o:not(.is-on):hover { background: var(--fk-g2); } .ffp-cat:not(.is-on):hover { color: #fff; } }
-@media (min-width: 700px) { .ffp-opts { grid-template-columns: repeat(6, 1fr); } .ffp-opts--swatch { grid-template-columns: repeat(12, 1fr); } }
+
+/* the colours */
+.ffp-sw { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.ffp-sw--iris { grid-template-columns: repeat(6, 1fr); }
+.ffp-s { position: relative; height: 40px; min-width: 0; padding: 0; border: 0; cursor: pointer; background: var(--fk-g1); }
+.ffp-s i { position: absolute; inset: 6px; }
+.ffp-s.is-on { background: var(--fk-g3); box-shadow: inset 0 0 0 2px #fff, inset 0 -4px 0 var(--tca, #fff); }
+
+/* the shape sliders: a plain track, the team's colour to the thumb */
+.ffp-sl { display: grid; gap: 4px; }
+.ffp-sl input { width: 100%; height: 30px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; touch-action: pan-y; }
+.ffp-sl input::-webkit-slider-runnable-track { height: 4px; background: var(--fk-g4); }
+.ffp-sl input::-moz-range-track { height: 4px; background: var(--fk-g4); }
+.ffp-sl input::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px; border: 0; background: #fff; box-shadow: inset 0 -3px 0 var(--tca, #fff); }
+.ffp-sl input::-moz-range-thumb { width: 22px; height: 22px; border: 0; border-radius: 0; background: #fff; }
+.ffp-sl input:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+@media (hover: hover) {
+  .ffp-o:not(.is-on):hover, .ffp-s:not(.is-on):hover { background: var(--fk-g2); }
+  .ffp-tab:not(.is-on):hover { color: #fff; }
+}
+@media (min-width: 700px) {
+  .ffp-stage { grid-template-columns: 236px 1fr; gap: 8px; }
+  .ffp-tab { font-size: 17px; }
+  .ffp-opts { grid-template-columns: repeat(6, 1fr); }
+  .ffp-opts--eyes, .ffp-opts--mouth { grid-template-columns: repeat(4, 1fr); }
+  .ffp-sw { grid-template-columns: repeat(9, 1fr); }
+  .ffp-panel { grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .ffp-panel > .ffp-grp { grid-column: 1 / -1; }
+}
