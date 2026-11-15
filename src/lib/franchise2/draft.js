@@ -90,8 +90,17 @@ const BODY = { qb: [75, 219, 5], rb: [70, 212, 5], wr: [73, 196, 5], te: [77, 25
 const bodyKey = (pos, s) => (pos === 'ol' || pos === 'dl' || pos === 'db' ? s : pos)
 // the college numbers a position wears
 const NUM_RANGE = { qb: [[1, 19]], rb: [[0, 9], [20, 39]], wr: [[0, 19], [80, 89]], te: [[80, 89], [40, 49]], ol: [[50, 79]], dl: [[90, 99], [50, 59], [0, 9]], lb: [[0, 9], [30, 59]], db: [[0, 9], [20, 39]] }
-// where the class comes from: every FBS school, the strong programs far more often
-const SCHOOL_W = CFB_TEAMS.map(t => Math.pow(Math.max(1, t.ovr ?? 4), 2.6) * (['sec', 'b10'].includes(t.conf) ? 1.5 : ['acc', 'b12'].includes(t.conf) ? 1.1 : 0.6))
+// WHERE THE CLASS COMES FROM (owner 11-15: "a top 10 pick from Georgia Southern is possible but highly unlikely").
+// The better the prospect, the harder it leans to the SEC, the Big Ten and the blue bloods, the way real drafts go:
+// a first round about a third SEC and a quarter Big Ten, a top ten almost never from a Group of Five school, while the
+// late rounds spread across the whole of FBS. g: 0 for a camp body, 1 for a top-ten talent.
+const BLUE_BLOODS = new Set(['ALA', 'UGA', 'OSU', 'TEX', 'LSU', 'MICH', 'USC', 'ORE', 'CLEM', 'NDAM', 'PSU', 'FSU', 'MIA', 'OKLA', 'TENN', 'TAMU', 'FLA', 'AUB'])
+const confW = (conf, g) => (conf === 'sec' ? 1.1 + 0.3 * g : conf === 'bigten' ? 1.05 + 0.3 * g : ['acc', 'big12', 'ind'].includes(conf) ? 1 : 1.15 * (1 - 0.86 * g))
+const SCHOOL_W = Array.from({ length: 11 }, (_, k) => {
+  const g = k / 10
+  return CFB_TEAMS.map(t => Math.pow(Math.max(1, t.ovr ?? 4) + (BLUE_BLOODS.has(t.short) ? 2.5 : 0), 1.1 + 2.2 * g) * confW(t.conf, g))
+})
+const schoolFor = (R, pk) => CFB_TEAMS[R.wpick(SCHOOL_W[Math.round(clamp(0, 1, (pk - 70) / 15) * 10)])].short
 
 export function makeClass(F) {
   const R = rngOf(`${F.seed}-${F.year}-class`)
@@ -145,7 +154,7 @@ function makeProspect(F, R, pos, id, q = 0) {
   const ht = clamp(h0 - 5, h0 + 5, Math.round(h0 + (size - 5) * 0.35 + R.n() * 1.3))
   const ranges = NUM_RANGE[pos]
   const [lo, hi] = ranges[R.int(0, ranges.length - 1)]
-  const col = CFB_TEAMS[R.wpick(SCHOOL_W)].short
+  const col = schoolFor(R, pk)   // (a hidden gem: his pk is still a backup's here, so is his school)
   const cl = ag <= 20 ? 0 : ag === 21 ? (R.u() < 0.7 ? 1 : 2) : ag === 22 ? (R.u() < 0.6 ? 3 : 2) : 4   // RS-SO, JR, RS-JR, SR, RS-SR
   return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl, ...(hb && { pk: pk + hb, hb }) }
 }
