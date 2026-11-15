@@ -10,7 +10,7 @@ import { seeded } from '../../src/lib/rng'
 const N = Number(process.argv[2] ?? 6), team = process.argv[3] ?? 'DEN', moments = process.argv[4] !== '0'
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
 const qb = QBS.find(p => p.name === 'Josh Allen'), wr = WRS.find(p => p.attrs && p.name === 'Puka Nacua') ?? WRS.find(p => p.attrs)
-let F = FR.createFranchise({ seed: 'sim-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb) }, { pos: 'wr', build: asBuild(wr) }], coach: { name: 'Coach', scheme: 'air', style: 'developer' } })
+let F = FR.createFranchise({ seed: 'sim-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }, { pos: 'wr', build: asBuild(wr), name: 'Tre Holloway', num: 81 }], coach: { name: 'Isaiah Vance', style: 'developer', r: { talentDev: 7, offPlaycalling: 8, defPlaycalling: 5, culture: 6, situational: 6 }, ovr: 78 } })
 const problems = []
 const bad = m => { problems.push(m); console.log('  !! ' + m) }
 const meanOvr = () => { const all = FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])).map(p => p.o)); return (all.reduce((a, b) => a + b, 0) / all.length).toFixed(1) }
