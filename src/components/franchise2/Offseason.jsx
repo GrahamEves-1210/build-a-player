@@ -107,7 +107,8 @@ function Resign({ F, act, owner }) {
           <Ovr o={p.o} size="m" count />
           <span className="f2-deal-ask"><b>${ask.$}M</b><small>{ask.y} {ask.y === 1 ? 'YEAR' : 'YEARS'}</small></span>
           <div className="f2-two">
-            <button className="ag-btn ag-btn--gold" disabled={ask.$ > room} onClick={() => { act(X => resignOne(X, p.i, true)); sfx('claim'); haptic('success') }}>{ask.$ > room ? 'OVER BUDGET' : 'KEEP'}</button>
+            {/* (the player's own builds can always be kept: the team goes over and can't sign anyone until it's under) */}
+            <button className="ag-btn ag-btn--gold" disabled={ask.$ > room && p.b == null} onClick={() => { act(X => resignOne(X, p.i, true)); sfx('claim'); haptic('success') }}>{ask.$ > room && p.b == null ? 'OVER BUDGET' : 'KEEP'}</button>
             <button className="ag-btn ag-btn--ghost" onClick={() => { act(X => resignOne(X, p.i, false)); sfx('swap') }}>LET GO</button>
           </div>
           <small className={`f2-budget-room${room - ask.$ < 0 ? ' is-over' : ''}`}>${Math.round(budgetLeft(F) * 10) / 10}M ROOM</small>

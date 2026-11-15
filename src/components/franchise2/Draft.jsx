@@ -40,7 +40,7 @@ function Prospect({ F, act, x, open, onOpen, onPick }) {
       <button className="f2-pros-row" onClick={() => { onOpen(open ? null : x.i); sfx('tap') }}>
         <Face name={x.n} col={x.col} size={38} />
         <span className="f2-row-name"><b>{x.n}</b><small>{POS_LABEL[x.p]}{x.s && x.s.length > 2 ? '' : x.s ? ` · ${x.s.toUpperCase()}` : ''} · {col?.school?.toUpperCase() ?? (x.b != null ? 'SANDBOX' : '')}</small></span>
-        <span className={`f2-range${a === b ? ' is-known' : ''}`}>{a === b ? GRADES[a] : <>{GRADES[a]}<i>–</i>{GRADES[b]}</>}</span>
+        <span className={`f2-range${a === b ? ' is-known' : ''}`}>{a === b ? GRADES[a] : <>{GRADES[a]}<i>TO</i>{GRADES[b]}</>}</span>
       </button>
       <button className={`f2-pros-star${starred ? ' is-on' : ''}`} onClick={() => { act(X => star(X, x.i)); sfx('slot') }} aria-label={starred ? 'Off the board' : 'On the board'}><IconStar size={16} /></button>
       {open && (

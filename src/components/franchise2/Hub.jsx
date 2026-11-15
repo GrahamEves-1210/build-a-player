@@ -192,12 +192,12 @@ const fxTags = fx => [
 function EventCard({ F, act }) {
   const ev = F.ev
   const [done, setDone] = useState(null)
-  const pick = i => { if (done) return; const out = act(X => chooseEvent(X, i)); setDone({ i, out }); sfx(i === 0 ? 'claim' : 'tap'); haptic('medium') }
-  // (the answer shows for a beat; the next tap moves on)
+  // (the pick shows for a beat, then the week's game comes back)
+  const pick = i => { if (done) return; setDone({ i }); sfx(i === 0 ? 'claim' : 'tap'); haptic('medium'); setTimeout(() => act(X => chooseEvent(X, i)), 650) }
   return (
     <section className="f2-event ag-pop">
       <span className="ag-eyebrow">THIS WEEK</span>
-      <h2 className="f2-event-title">{done ? (done.out?.hurt ? `${done.out.hurt.toUpperCase()} AGGRAVATED IT` : done.out?.traded ? `ACQUIRED ${done.out.traded.toUpperCase()}` : ev.title) : ev.title}</h2>
+      <h2 className="f2-event-title">{ev.title}</h2>
       <div className="f2-event-opts">
         {[ev.a, ev.b].map(([label, fx], i) => (
           <button key={i} className={`f2-event-opt${done ? (done.i === i ? ' is-picked' : ' is-dim') : ''}`} onClick={() => pick(i)} disabled={!!done}>

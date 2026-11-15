@@ -394,7 +394,7 @@ html.bap-reduce-motion .f2-stamp, html.bap-reduce-motion .f2-wk.is-now { animati
 .f2-pros.is-G .f2-range { color: #5edbd8; border-color: rgba(94,219,216,.5); }
 .f2-pros.is-B .f2-range { color: var(--f2-l); border-color: rgba(248,113,113,.5); }
 .f2-range { flex: none; display: inline-flex; align-items: baseline; gap: 2px; padding: 4px 8px; border: 1px solid var(--f2-line); border-radius: 4px; font-family: var(--ag-display); font-size: 20px; line-height: 1; color: #fff; }
-.f2-range i { font-style: normal; color: var(--ag-muted); font-size: 14px; }
+.f2-range i { font-style: normal; margin: 0 4px; font-family: var(--ag-font); color: var(--ag-muted); font-size: 12px; letter-spacing: 1px; }
 .f2-range.is-known { border-color: var(--f2-gold); color: var(--f2-gold); }
 .f2-range.is-sm { padding: 2px 6px; font-size: 15px; }
 .f2-ticker { display: grid; gap: 4px; }
