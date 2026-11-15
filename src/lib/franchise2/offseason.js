@@ -290,7 +290,9 @@ function cpuValue(F, s, x, R) {
   const at = t.r.filter(p => p.p === x.p).sort((a, b) => b.o - a.o)
   const need = (at[0]?.o ?? 60) < 76 ? 4 : at.length < MIN[x.p] ? 3 : 0
   const posW = x.p === 'qb' ? 2 : x.p === 'rb' || x.p === 'te' ? -2 : 0
-  return x.pk + R.n() * 3.5 + need + posW
+  // (the league's scouts are fooled too, about half as much: a GEM goes later than he should, a BUST RISK earlier)
+  const seen = (gradeFloor(x.c) + gradeFloor(Math.min(GRADES.length - 1, x.c + 1))) / 2
+  return x.pk * 0.55 + seen * 0.45 + R.n() * 3 + need + posW
 }
 function take(F, s, x) {
   F.dc = F.dc.filter(p => p !== x)
@@ -329,7 +331,7 @@ export function userPick(F, id) {
 // AUTO: the best on the player's board, or the best grade the scouts show
 export function autoPick(F) {
   const board = F.board.map(id => F.dc.find(p => p.i === id)).filter(Boolean)
-  const mid = x => { const [a, b] = rangeOf(x); return (a + b) / 2 }
+  const mid = x => (x.sc >= 2 ? gradeIdx(x.pk) + (x.tag === 'B' ? -0.5 : 0) : (rangeOf(x)[0] + rangeOf(x)[1]) / 2 - (x.sc ? 0 : 0.4))
   const x = board[0] ?? [...F.dc].sort((a, b) => mid(b) - mid(a))[0]
   return x ? userPick(F, x.i) : null
 }

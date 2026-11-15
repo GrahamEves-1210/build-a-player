@@ -168,7 +168,7 @@ function RevealCard({ F, p, onNext }) {
       <Face name={p.n} col={p.col} size={84} />
       <b className="f2-reveal-name">{p.n}</b>
       <small>{POS_LABEL[p.p]} · {CFB_TEAM_BY_SHORT[p.col]?.school?.toUpperCase() ?? ''}</small>
-      {flip && <><b className="f2-reveal-grade ag-pop">{GRADES[gradeIdx(p.pk)]}</b><Stamp kind={p.tag === 'G' ? 'gem' : p.tag === 'B' ? 'bust' : 'solid'} big delay={200}>{tagText[p.tag]}</Stamp></>}
+      {flip && <><small className="f2-reveal-was">SCOUTS SAID {GRADES[Math.max(0, p.c - (p.sc ? 0 : 1))]} – {GRADES[Math.min(GRADES.length - 1, p.c + 1)]}</small><b className="f2-reveal-grade ag-pop">{GRADES[gradeIdx(p.pk)]}</b><Stamp kind={p.tag === 'G' ? 'gem' : p.tag === 'B' ? 'bust' : 'solid'} big delay={200}>{tagText[p.tag]}</Stamp></>}
       <button className="ag-btn ag-btn--gold f2-go" onClick={onNext}>{draftDoneLabel(F)} <IconArrow size={16} /></button>
     </section>
   )
@@ -184,7 +184,7 @@ function ClassCard({ F, p, delay }) {
       <Face name={p.n} col={p.col} size={40} />
       <span className="f2-row-name"><b>{p.n}</b><small>{POS_LABEL[p.p]} · PICK {p.at + 1}</small></span>
       <span className="f2-range is-known">{GRADES[gradeIdx(p.pk)]}</span>
-      <Stamp kind={p.tag === 'G' ? 'gem' : p.tag === 'B' ? 'bust' : 'solid'}>{tagText[p.tag]}</Stamp>
+      <Stamp kind={p.tag === 'G' ? 'gem' : p.tag === 'B' ? 'bust' : 'solid'}>{p.tag === 'G' ? 'GEM' : p.tag === 'B' ? 'BUST' : 'SOLID'}</Stamp>
     </div>
   )
 }
