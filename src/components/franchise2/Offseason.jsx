@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
-import { TEAM, FINISH_TEXT, POS_LABEL, ageLeague, openResign, resignOne, resignAsk, budgetLeft, openFA, signFA, nextFA, payroll } from '../../lib/franchise2'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  TEAM, FINISH_TEXT, ageLeague, openResign, resignOne, resignAsk, optionAsk, optionDue, canSign, openFA, faBoard, bidView, pitchOf, placeBid,
+  OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL,
+} from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { IconArrow, IconTrophy } from '../app/icons'
-import { Face, Ovr, Count, Logo, Stamp, teamVars, nameOn } from './bits'
+import { Chyron, BigRec, BigNum, Stamp, Meter, Go, Flip, KLogo, fkVars, reduced } from './kit'
+import { Man, CapBar, PlayerPage, money, posText } from './dparts'
 import { DraftDay } from './Draft'
+import './fd.css'
 
 // THE OFFSEASON: four stops, one screen each. AWARDS → RE-SIGN → FREE AGENCY → THE DRAFT, then a new season.
 const STOPS = [['awards', 'AWARDS'], ['resign', 'RE-SIGN'], ['fa', 'FREE AGENCY'], ['draft', 'DRAFT']]
@@ -11,143 +15,266 @@ const STOPS = [['awards', 'AWARDS'], ['resign', 'RE-SIGN'], ['fa', 'FREE AGENCY'
 export default function Offseason({ F, act, owner, onBuild }) {
   const i = STOPS.findIndex(([k]) => k === F.stage)
   return (
-    <>
-      <div className="f2-stops" aria-label="Offseason">
-        {STOPS.map(([k, n], j) => <span key={k} className={`f2-stopn${j === i ? ' is-on' : j < i ? ' is-done' : ''}`}><i>{j + 1}</i>{n}</span>)}
+    <div className="fd fk">
+      <div className="fd-stops" aria-label="Offseason">
+        {STOPS.map(([k, n], j) => <span key={k} className={`fd-stop${j === i ? ' is-on' : j < i ? ' is-done' : ''}`}><i>{j + 1}</i>{n}</span>)}
       </div>
       {F.stage === 'awards' && <Awards F={F} act={act} owner={owner} />}
       {F.stage === 'resign' && <Resign F={F} act={act} owner={owner} />}
-      {F.stage === 'fa' && <FreeAgency F={F} act={act} />}
+      {F.stage === 'fa' && <FreeAgency F={F} act={act} owner={owner} />}
       {F.stage === 'draft' && <DraftDay F={F} act={act} owner={owner} onBuild={onBuild} />}
-    </>
+    </div>
   )
 }
 
 // ── 1. AWARDS ────────────────────────────────────────────────────────────────
+// the season in one card, then the league's awards turned over one at a time, then the All-Pros
+const AW = [['mvp', 'MOST VALUABLE PLAYER'], ['opoy', 'OFFENSIVE PLAYER OF THE YEAR'], ['dpoy', 'DEFENSIVE PLAYER OF THE YEAR'], ['oroy', 'OFFENSIVE ROOKIE OF THE YEAR'], ['droy', 'DEFENSIVE ROOKIE OF THE YEAR']]
+const SPOT_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ot: 'OT', og: 'OG', c: 'C', edge: 'EDGE', dt: 'DT', lb: 'LB', cb: 'CB', s: 'S' }
+function findMan(F, w) { const p = w && F.teams[w.t]?.r.find(x => x.i === w.i); return p ?? (w ? { i: w.i, n: w.n, p: w.p, o: 0, b: w.b } : null) }
 function Awards({ F, act, owner }) {
-  const h = F.hist[F.hist.length - 1]
-  const aw = F.aw
-  const find = w => w && F.teams[w.t]?.r.find(p => p.i === w.i)
-  const mvp = find(aw.mvp)
+  const h = F.hist[F.hist.length - 1], aw = F.aw
+  const list = AW.filter(([k]) => aw?.[k])
+  const [n, setN] = useState(() => (reduced() ? list.length : 0))
+  const [page, setPage] = useState(null)
+  const [all, setAll] = useState(false)
+  useEffect(() => { if (n >= list.length) return; const t = setTimeout(() => setN(x => x + 1), n === 0 ? 500 : 650); return () => clearTimeout(t) }, [n, list.length])
+  const champ = h.fin === 'champ'
+  const ours = (aw?.ap ?? []).filter(x => x.t === F.team)
+  const pb = Object.entries(aw?.hon ?? {}).filter(([id, v]) => v === 'PB' && F.teams[F.team].r.some(p => String(p.i) === id)).length
   return (
     <>
-      <section className={`f2-recap ag-pop is-${h.fin}`} style={teamVars(F.team)}>
-        <span className="ag-eyebrow">{h.y} SEASON</span>
-        <b className="f2-big"><Count v={h.w} />–<Count v={h.l} />{h.t ? `–${h.t}` : ''}</b>
-        <b className="f2-recap-fin">{h.fin === 'champ' && <IconTrophy size={18} />} {FINISH_TEXT[h.fin]}</b>
-        {h.stars.map(s => <span key={s.aw} className="f2-tag is-gold">{s.aw} · {s.n.toUpperCase()}</span>)}
+      <section className="fd-recap" style={fkVars(F.team)}>
+        <Chyron team={F.team} tone={champ ? 'gold' : 'team'} title={champ ? 'SUPER BOWL CHAMPIONS' : `${h.y} SEASON`} tag={h.y} sub={FINISH_TEXT[h.fin] ?? ''} />
+        <div className="fd-recap-row">
+          <BigRec w={h.w} l={h.l} t={h.t} size={72} />
+          <span className="fd-recap-facts">
+            <BigNum v={h.pf} label="POINTS" size={30} /><BigNum v={h.pa} label="ALLOWED" size={30} />
+            {ours.length > 0 && <BigNum v={ours.length} label="ALL-PROS" size={30} />}
+            {pb > 0 && <BigNum v={pb} label="PRO BOWLS" size={30} />}
+          </span>
+        </div>
       </section>
-      {aw.mvp && (
-        <section className="f2-mvp ag-pop" style={{ '--d': '80ms', ...teamVars(aw.mvp.t) }}>
-          <span className="ag-eyebrow">MOST VALUABLE PLAYER</span>
-          <div className="f2-mvp-row">
-            <Face F={F} p={mvp ?? { n: aw.mvp.n, p: aw.mvp.p, b: aw.mvp.b }} size={84} mine={aw.mvp.b != null && aw.mvp.t === F.team} />
-            <span className="f2-mvp-txt"><b>{aw.mvp.n}</b><small><Logo s={aw.mvp.t} size={20} /> {TEAM[aw.mvp.t].nick.toUpperCase()}{aw.mvp.b != null && aw.mvp.t === F.team ? ` · ${owner.toUpperCase()}` : ''}</small></span>
-          </div>
-        </section>
+      <div className="fd-awards" onClick={() => setN(list.length)}>
+        {list.map(([k, title], j) => {
+          const w = aw[k], p = findMan(F, w)
+          return (
+            <Flip key={k} open={j < n} className="fd-award"
+              back={<div className="fd-award-back"><small>{F.year}</small><b>{title}</b></div>}
+              front={<div className="fd-award-face"><small>{title}</small><Man F={F} p={p} s={w.t} owner={owner} size={k === 'mvp' ? 'l' : 'm'} line={TEAM[w.t].nick.toUpperCase()} onClick={p?.o ? () => setPage(p.i) : undefined} /><span className="fd-award-line" style={fkVars(w.t)}>{w.line}</span>{w.t === F.team && j < n && <Stamp kind="gold" delay={200}>{k.toUpperCase()}</Stamp>}</div>} />
+          )
+        })}
+      </div>
+      {aw?.coy && n >= list.length && (
+        <div className="fd-coy" style={fkVars(aw.coy.t)}>
+          <KLogo s={aw.coy.t} size={40} />
+          <span><small>COACH OF THE YEAR</small><b>{aw.coy.n}</b><em>{aw.coy.was} WINS TO {aw.coy.w}</em></span>
+        </div>
       )}
-      <section className="f2-unit ag-pop" style={{ '--d': '140ms' }}>
-        {[['OFFENSIVE PLAYER', aw.opoy], ['DEFENSIVE PLAYER', aw.dpoy], ['ROOKIE OF THE YEAR', aw.roy]].filter(([, w]) => w).map(([label, w]) => (
-          <div key={label} className={`f2-award${w.t === F.team ? ' is-me' : ''}`}>
-            <Face F={F} p={find(w) ?? { n: w.n, p: w.p }} size={40} />
-            <span className="f2-row-name"><small>{label}</small><b>{w.n}</b></span>
-            <Logo s={w.t} size={28} />
-          </div>
-        ))}
-      </section>
-      <button className="ag-btn ag-btn--gold f2-go" onClick={() => { act(X => { ageLeague(X); openResign(X) }); sfx('whistle') }}>TO THE OFFSEASON <IconArrow size={16} /></button>
+      {n >= list.length && (
+        <>
+          <Chyron tone="ink" size="s" title="ALL-PRO FIRST TEAM" right={<button className="fd-link" onClick={() => { setAll(x => !x); sfx('tap') }}>{all ? TEAM[F.team].nick.toUpperCase() : `ALL ${aw.ap.length}`}</button>} />
+          {(all ? aw.ap : ours).map((x, j) => (
+            <div key={`${x.spot}-${x.i}`} className={`fd-ap${x.t === F.team ? ' is-me' : ''}`} style={{ ...fkVars(x.t), '--d': `${j * 25}ms` }}>
+              <i>{SPOT_LABEL[x.spot]}</i><KLogo s={x.t} size={22} /><b>{x.n}</b><small>{x.line}</small>
+            </div>
+          ))}
+          {!all && !ours.length && <div className="fd-none">NONE FROM THE {TEAM[F.team].nick.toUpperCase()}</div>}
+        </>
+      )}
+      <Go onClick={() => { act(X => { ageLeague(X); openResign(X) }); sfx('whistle') }}>RE-SIGNING</Go>
+      {page != null && <PlayerPage F={F} id={page} owner={owner} onClose={() => setPage(null)} />}
     </>
   )
 }
 
 // ── 2. RE-SIGN: one man at a time ────────────────────────────────────────────
-function CampReport({ F, owner }) {
-  const ch = (F.aging ?? []).filter(c => c.b != null || c.k === 'ret')
-  if (!ch.length) return null
-  return (
-    <section className="f2-unit ag-pop">
-      <span className="ag-eyebrow">CAMP REPORT</span>
-      {ch.map(c => {
-        const p = F.teams[F.team].r.find(x => x.i === c.pid)
-        return (
-          <div key={c.pid} className={`f2-row is-static${c.b != null ? ' is-mine' : ''}`}>
-            <Face F={F} p={p ?? { n: c.n, p: c.p, b: c.b }} size={36} />
-            <span className="f2-row-name"><b>{c.n}</b><small>{c.k === 'ret' ? 'RETIRED' : c.b != null ? owner.toUpperCase() : POS_LABEL[c.p]}</small></span>
-            {c.k !== 'ret' && <span className={`f2-delta ${c.k === 'up' ? 'is-up' : 'is-down'}`}>{c.from} <IconArrow size={11} /> <b><Count v={c.to} /></b></span>}
-          </div>
-        )
-      })}
-    </section>
-  )
-}
-function Budget({ F }) {
-  const pay = payroll(F.teams[F.team].r), room = budgetLeft(F)
-  return (
-    <section className="f2-budget">
-      <span className="f2-budget-top"><small>BUDGET</small><b>${Math.round(pay)}M <i>/ ${Math.round(F.budget)}M</i></b></span>
-      <span className="f2-budget-bar"><i style={{ transform: `scaleX(${Math.min(1, pay / F.budget)})` }} className={room < 0 ? 'is-over' : ''} /></span>
-      <small className={`f2-budget-room${room < 0 ? ' is-over' : ''}`}>{room < 0 ? `$${-room}M OVER` : `$${room}M ROOM`}</small>
-    </section>
-  )
-}
 function Resign({ F, act, owner }) {
+  const [page, setPage] = useState(null)
+  const total = useRef(F.rs?.length ?? 0)
   const id = F.rs?.[0]
   const p = id != null ? F.teams[F.team].r.find(x => x.i === id) : null
   const left = F.rs?.length ?? 0
-  const ask = p ? resignAsk(p) : null
-  const room = budgetLeft(F) + (p?.$ ?? 0)
+  const opt = p && optionDue(p)
+  const ask = p && !opt ? resignAsk(p, F) : null
+  const oPrice = opt ? optionAsk(p, F) : null
+  const fits = p ? canSign(F, opt ? oPrice - p.$ : ask.$) : true
+  const keep = how => { act(X => resignOne(X, p.i, how)); sfx(how === false || how === 'decline' ? 'swap' : 'claim'); haptic(how === false ? 'light' : 'success') }
   return (
     <>
+      <CapBar F={F} />
       {p ? (
-        <section key={p.i} className={`f2-deal ag-pop${p.b != null ? ' is-mine' : ''}`}>
-          <span className="ag-eyebrow">DEAL'S UP · {left} LEFT</span>
-          <Face F={F} p={p} size={72} />
-          <b className="f2-deal-name">{p.n}{p.b != null && <i className="f2-star">★</i>}</b>
-          <small className="f2-deal-sub">{POS_LABEL[p.p]} · AGE {p.ag}</small>
-          <Ovr o={p.o} size="m" count />
-          <span className="f2-deal-ask"><b>${ask.$}M</b><small>{ask.y} {ask.y === 1 ? 'YEAR' : 'YEARS'}</small></span>
-          <div className="f2-two">
-            {/* (the player's own builds can always be kept: the team goes over and can't sign anyone until it's under) */}
-            <button className="ag-btn ag-btn--gold" disabled={ask.$ > room && p.b == null} onClick={() => { act(X => resignOne(X, p.i, true)); sfx('claim'); haptic('success') }}>{ask.$ > room && p.b == null ? 'OVER BUDGET' : 'KEEP'}</button>
-            <button className="ag-btn ag-btn--ghost" onClick={() => { act(X => resignOne(X, p.i, false)); sfx('swap') }}>LET GO</button>
+        <section key={p.i} className="fd-deal">
+          <Chyron tone="ink" title={opt ? 'FIFTH-YEAR OPTION' : 'DEAL UP'} right={`${total.current - left + 1} OF ${total.current}`} />
+          <Man F={F} p={p} s={F.team} owner={owner} size="l" line={`AGE ${p.ag} · ${posText(p)}`} onClick={() => setPage(p.i)} />
+          <div className="fd-ask">
+            {opt
+              ? <><BigNum v={money(oPrice)} count={false} label={`${F.year + 2} SEASON`} size={56} /><small className="fd-ask-note">THEN A NEW DEAL OR FREE AGENCY</small></>
+              : <><BigNum v={money(ask.$)} count={false} label="A YEAR" size={56} /><BigNum v={ask.y} label={ask.y === 1 ? 'YEAR' : 'YEARS'} size={56} /><BigNum v={money(ask.$ * ask.y)} count={false} label="TOTAL" size={30} /></>}
           </div>
-          <small className={`f2-budget-room${room - ask.$ < 0 ? ' is-over' : ''}`}>${Math.round(budgetLeft(F) * 10) / 10}M ROOM</small>
+          <div className="fd-two">
+            {opt ? (
+              <>
+                <Go disabled={!fits} onClick={() => keep('option')}>{fits ? 'PICK IT UP' : 'NO CAP ROOM'}</Go>
+                <Go ghost onClick={() => keep('decline')}>DECLINE</Go>
+              </>
+            ) : (
+              <>
+                {/* (the player's own builds can always be kept: the team is then over the cap and can't sign anyone until it's under) */}
+                <Go disabled={!fits && p.b == null} onClick={() => keep(true)} sub={!fits && p.b != null ? 'OVER THE CAP' : null}>{!fits && p.b == null ? 'NO CAP ROOM' : 'RE-SIGN'}</Go>
+                <Go ghost onClick={() => keep(false)}>LET HIM GO</Go>
+              </>
+            )}
+          </div>
         </section>
       ) : (
-        <button className="ag-btn ag-btn--gold f2-go" onClick={() => { act(X => openFA(X)); sfx('whistle') }}>FREE AGENCY <IconArrow size={16} /></button>
+        <>
+          <CampReport F={F} owner={owner} onMan={setPage} />
+          <Go onClick={() => { act(X => openFA(X)); sfx('whistle') }}>FREE AGENCY</Go>
+        </>
       )}
-      <CampReport F={F} owner={owner} />
+      {page != null && <PlayerPage F={F} id={page} owner={owner} onClose={() => setPage(null)} />}
+    </>
+  )
+}
+// the camp report: who got better, who slipped, who retired
+function CampReport({ F, owner, onMan }) {
+  const ch = (F.aging ?? []).filter(c => c.b != null || c.k === 'ret' || Math.abs((c.to ?? 0) - (c.from ?? 0)) >= 3)
+  if (!ch.length) return null
+  const t = F.teams[F.team]
+  return (
+    <>
+      <Chyron team={F.team} size="s" title="CAMP REPORT" right={F.year + 1} />
+      {ch.slice(0, 12).map(c => {
+        const p = t.r.find(x => x.i === c.pid)
+        return (
+          <div key={c.pid} className="fd-camp">
+            {p ? <Man F={F} p={p} s={F.team} owner={owner} size="s" onClick={() => onMan(p.i)} line={c.k === 'ret' ? 'RETIRED' : null} /> : <div className="fd-line"><b>{c.n}</b><span>RETIRED</span></div>}
+            {c.k !== 'ret' && <span className={`fd-delta ${c.k === 'up' ? 'is-up' : 'is-down'}`}>{c.to > c.from ? '+' : ''}{c.to - c.from}</span>}
+          </div>
+        )
+      })}
     </>
   )
 }
 
-// ── 3. FREE AGENCY: three rounds of three ────────────────────────────────────
-function FreeAgency({ F, act }) {
-  const [signed, setSigned] = useState(null)
-  const offers = (F.offers ?? []).map(id => F.fa.find(p => p.i === id)).filter(Boolean)
-  useEffect(() => { setSigned(null) }, [F.far])
-  const sign = p => {
-    const ok = act(X => signFA(X, p.i))
-    if (!ok) { sfx('deny'); return }
-    setSigned(p.i); sfx('claim'); haptic('success')
-    setTimeout(() => act(X => nextFA(X)), 900)
-  }
+// ── 3. FREE AGENCY: three days of bidding ────────────────────────────────────
+function FreeAgency({ F, act, owner }) {
+  const [bid, setBid] = useState(null)
+  const [page, setPage] = useState(null)
+  const [day, setDay] = useState(null)   // the day that just ended: the league's signings
+  const done = !F.fad
+  if (bid != null) return <Bid F={F} act={act} owner={owner} id={bid} onBack={() => { setBid(null); sfx('back') }} />
+  const board = done ? [] : faBoard(F, 8)
+  const deals = marketDeals(F)
   return (
     <>
-      <Budget F={F} />
-      <section className="f2-fa ag-pop" key={F.far}>
-        <div className="f2-h"><span className="ag-eyebrow">ROUND {F.far + 1} OF 3</span><span className="f2-hype">HYPE <b>{F.hype}</b></span></div>
-        {offers.map((p, i) => (
-          <button key={p.i} className={`f2-fa-man ag-pop${signed === p.i ? ' is-signed' : signed ? ' is-dim' : ''}`} style={{ '--d': `${i * 70}ms` }} onClick={() => !signed && sign(p)} disabled={!!signed || p.$ > budgetLeft(F)}>
-            <Face F={F} p={p} size={56} />
-            <span className="f2-row-name"><b>{nameOn(p, true)}</b><small>{POS_LABEL[p.p]} · AGE {p.ag} · ${p.$}M</small></span>
-            <Ovr o={p.o} size="m" />
-            {signed === p.i && <Stamp kind="w">SIGNED</Stamp>}
-          </button>
-        ))}
-        {!signed && <button className="f2-ghost" onClick={() => { act(X => nextFA(X)); sfx('tap') }}>PASS</button>}
-      </section>
+      <Chyron team={F.team} title="FREE AGENCY" tag={done ? 'CLOSED' : `DAY ${F.fad}`} sub={done ? 'THE MARKET IS CLOSED' : `${F.fa.length} ON THE MARKET · DAY ${F.fad} OF ${FA_DAYS}`} />
+      <CapBar F={F} />
+      {day && (
+        <section className="fd-day">
+          <Chyron tone="ink" size="s" title={`DAY ${day.n} SIGNINGS`} right={day.list.length} />
+          {day.list.slice(0, 6).map(d => <WireDeal key={d.i} d={d} F={F} />)}
+        </section>
+      )}
+      {!done && (
+        <>
+          <Chyron tone="ink" size="s" title="BEST AVAILABLE" />
+          {board.map((p, j) => (
+            <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="m" delay={j * 40} stat={{ v: money(p.$), label: `${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` }} line={canSign(F, p.$ * OFFERS[0][1]) ? `AGE ${p.ag}` : `AGE ${p.ag} · NO ROOM`} onClick={() => { setBid(p.i); setDay(null); sfx('tap') }} />
+          ))}
+          <Go onClick={() => { const before = deals.length; const r = act(X => nextFADay(X)); const list = marketDeals(F).slice(before).filter(d => d.s !== F.team).sort((a, b) => b.$ - a.$); setDay({ n: F.fad ? F.fad - 1 : FA_DAYS, list }); sfx(r?.done ? 'whistle' : 'flip') }} sub={F.fad === FA_DAYS ? 'THE MARKET CLOSES' : null}>END DAY {F.fad}</Go>
+        </>
+      )}
+      {done && <Go onClick={() => { act(X => openDraft(X)); sfx('whistle') }}>THE DRAFT</Go>}
+      {deals.some(d => d.s === F.team) && (
+        <>
+          <Chyron team={F.team} size="s" title="SIGNED" />
+          {deals.filter(d => d.s === F.team).map(d => { const p = F.teams[F.team].r.find(x => x.i === d.i); return p ? <Man key={d.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(d.$), label: `${d.y} YRS` }} onClick={() => setPage(p.i)} /> : null })}
+        </>
+      )}
+      {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
     </>
   )
 }
-export { TEAM }
+const WireDeal = ({ d }) => (
+  <div className="fd-wire-deal" style={fkVars(d.s)}>
+    <KLogo s={d.s} size={24} />
+    <span><b>{d.n}</b><small>{TEAM[d.s].nick.toUpperCase()} · {POS_LABEL[d.p]} · {d.y} {d.y === 1 ? 'YR' : 'YRS'}, {money(d.$ * d.y)}</small></span>
+  </div>
+)
+
+// The bid: his ask, who else is in, what he's weighing (the money, a winner, a starting job, the coach), three
+// offers; then the teams' offers turn over and he picks
+const WANTS = [['money', 'MONEY'], ['winning', 'WINNING'], ['role', 'PLAYING TIME'], ['coach', 'HEAD COACH']]
+function Bid({ F, act, owner, id, onBack }) {
+  const V = useMemo(() => bidView(F, id), [F, id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [tier, setTier] = useState('ASK')
+  const [res, setRes] = useState(null)
+  const [shown, setShown] = useState(0)
+  useEffect(() => {
+    if (!res) return
+    if (shown > res.board.length) return
+    const t = setTimeout(() => { setShown(x => x + 1); if (shown < res.board.length) sfx('flip') }, reduced() ? 0 : shown === 0 ? 250 : 420)
+    return () => clearTimeout(t)
+  }, [res, shown])
+  if (!V && !res) return <><Go ghost onClick={onBack}>BACK TO THE MARKET</Go></>
+  const p = res?.p ?? V.p
+  const offer = offerOf(p, tier)
+  const pitch = !res ? pitchOf(F, F.team, p, offer) : null
+  const go = () => {
+    const r = act(X => placeBid(X, id, offer))
+    if (!r) { sfx('deny'); return }
+    setRes(r); setShown(0); haptic('medium')
+  }
+  const won = res && res.to === F.team
+  const all = res ? [...res.board].sort((a, b) => b.v - a.v) : []
+  return (
+    <>
+      <button className="fd-back" onClick={onBack}>‹ THE MARKET</button>
+      <Man F={F} p={p} s={res ? res.to : F.team} owner={owner} size="m" line={`AGE ${p.ag} · ASKS ${money(V?.ask ?? p.$)}`} />
+      {!res ? (
+        <>
+          <div className="fd-in">
+            <small>{V.rivals.length ? 'ALSO IN ON HIM' : 'NO OTHER OFFERS'}</small>
+            <span>{V.rivals.map(r => <span key={r.s} className="fd-in-team" style={fkVars(r.s)}><KLogo s={r.s} size={30} /><b>?</b></span>)}</span>
+          </div>
+          <Chyron tone="ink" size="s" title="WHAT HE WANTS" right={TEAM[F.team].nick.toUpperCase()} />
+          <div className="fd-wants">
+            {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(offer) : undefined} />)}
+          </div>
+          <div className="fd-offers" role="radiogroup" aria-label="Offer">
+            {OFFERS.map(([k]) => {
+              const v = offerOf(p, k), ok = canSign(F, v)
+              return <button key={k} role="radio" aria-checked={tier === k} className={tier === k ? 'is-on' : ''} disabled={!ok} onClick={() => { setTier(k); sfx('tap') }}><small>{k === 'ASK' ? 'HIS ASK' : k}</small><b>{money(v)}</b></button>
+            })}
+          </div>
+          <Go onClick={go} disabled={!canSign(F, offer)} sub={`${p.y} ${p.y === 1 ? 'YEAR' : 'YEARS'} · ${money(offer * p.y)}`}>{canSign(F, offer) ? 'MAKE THE OFFER' : 'NO CAP ROOM'}</Go>
+        </>
+      ) : (
+        <>
+          <Chyron tone="ink" size="s" title="THE OFFERS" right={all.length} />
+          <div className="fd-reveal">
+            {all.map((b, j) => (
+              <div key={b.s} className={`fd-offer${j < shown ? ' is-open' : ''}${shown > all.length - 1 && b.s === res.to ? ' is-win' : ''}`} style={fkVars(b.s)}>
+                <KLogo s={b.s} size={34} />
+                <b>{TEAM[b.s].nick.toUpperCase()}</b>
+                <span className="fd-offer-v">{j < shown ? money(b.offer) : '—'}</span>
+                <small>{j < shown ? (b.starts ? 'STARTS' : 'BACKUP') : ''}</small>
+              </div>
+            ))}
+          </div>
+          {shown > all.length && (
+            <div className="fd-verdict">
+              <Stamp kind={won ? 'w' : 'l'} big>{won ? 'SIGNED' : 'GONE'}</Stamp>
+              <b>{won ? `${p.n} signs with the ${TEAM[F.team].nick}` : `${p.n} signs with the ${TEAM[res.to].nick}`}</b>
+              <small>{res.years} {res.years === 1 ? 'YEAR' : 'YEARS'}, {money(res.offer * res.years)}</small>
+            </div>
+          )}
+          {shown > all.length && <Go onClick={onBack}>BACK TO THE MARKET</Go>}
+        </>
+      )}
+    </>
+  )
+}
+

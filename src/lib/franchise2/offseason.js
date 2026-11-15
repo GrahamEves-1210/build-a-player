@@ -34,7 +34,7 @@ export function newSeason(F) {
   const S = standings(F)
   F.year++
   F.sched = makeSchedule(F.seed, F.year, S.div)
-  F.wk = 0; F.log = []; F.ss = {}; F.po = null; F.moments = 0; F.streak = 0; F.nx = 0; F.ev = null; F.nextEv = 3; F.evSeen = []
+  F.wk = 0; F.log = []; F.ss = {}; F.ssr = null; F.po = null; F.moments = 0; F.streak = 0; F.nx = 0; F.ev = null; F.nextEv = 3; F.evSeen = []
   F.phase = 'season'; F.stage = null; F.aging = null
   // chemistry: a core that stays together grows; many new starters set it back. Hype cools toward the middle.
   const now = Object.values(lineup(F.teams[F.team])).map(p => p.i)

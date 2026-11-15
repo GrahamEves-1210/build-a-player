@@ -60,7 +60,9 @@ export function seasonAwards(F) {
   const pick = x => x && { i: x.p.i, n: x.p.n, t: x.s, p: x.p.p, b: x.p.b ?? null, line: statLine(x.p, x.t) }
   const best = (list, v = x => x.c) => list.map(x => [x, v(x)]).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
   // the MVP: a quarterback on a winner nearly every year, unless someone else's season was bigger
-  const mvp = best(men.filter(x => OFFENSE.includes(x.p.p) || x.c > 1.3), x => x.c + (wins(x.s) - 10) * 0.045 + (x.p.p === 'qb' ? 0.32 : x.p.p === 'ol' ? -2 : OFFENSE.includes(x.p.p) ? 0 : -0.4))
+  // (since 2000 the voters have picked a quarterback all but three times, a back each of those; a defender once
+  // in the award's history: a defender here needs a season far past an All-Pro's)
+  const mvp = best(men.filter(x => (OFFENSE.includes(x.p.p) && x.p.p !== 'ol') || x.c > 2.2), x => x.c + (wins(x.s) - 10) * 0.05 + (x.p.p === 'qb' ? 0.45 : x.p.p === 'rb' ? 0 : OFFENSE.includes(x.p.p) ? -0.15 : -0.9))
   const opoy = best(men.filter(x => OFFENSE.includes(x.p.p) && x.p.p !== 'ol' && x.p.i !== mvp?.p.i), x => x.c - (x.p.p === 'qb' ? 0.2 : 0))
   const dpoy = best(men.filter(x => !OFFENSE.includes(x.p.p)), x => x.c + (x.p.p === 'dl' ? 0.05 : 0))
   const rookie = x => x.p.rk === F.year
@@ -122,6 +124,12 @@ export function closeSeason(F) {
     const a = awardOf(p.i)
     if (a.length) row.push(a.join(','))
     p.cr = [...(p.cr ?? []), row].slice(-14)
+  }
+  // the franchise's one-season records (kept here: a man's career lines go when he retires)
+  F.frec = F.frec ?? {}
+  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk']) for (const p of t.r) {
+    const v = tot[String(p.i)]?.[k] ?? 0
+    if (v > 0 && v > (F.frec[k]?.[0] ?? 0)) F.frec[k] = [v, p.n, F.year]
   }
   // each build's season on his career
   for (const p of t.r) if (p.b != null) {

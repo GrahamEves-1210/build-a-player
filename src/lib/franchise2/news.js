@@ -10,7 +10,7 @@
 // league's box scores (stats.js), the market's signings (market.js F.fas), the retirements (aging.js F.gone),
 // the league's history (awards.js F.lh) for "first since" and "most since".
 import { TEAM, SHORTS, POS_LABEL } from './league'
-import { DIVISIONS, DIV_OF } from './schedule'
+import { DIVISIONS } from './schedule'
 import { standings, records, recText } from './standings'
 import { groupOf, GROUP } from './roster'
 import { gameLines, leagueStats, whoIs } from './stats'
@@ -165,4 +165,3 @@ export function tickerItems(F) {
   for (const x of wire(F, { n: 10 }).filter(x => x.k !== 'final')) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
   return items
 }
-export { DIV_OF }

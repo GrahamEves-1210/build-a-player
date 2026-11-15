@@ -76,7 +76,8 @@ function teamSeason(F, short) {
 export function leagueStats(F) {
   const out = {}
   for (const s of SHORTS) {
-    if (s === F.team) { for (const [id, v] of Object.entries(F.ss ?? {})) out[id] = v; continue }
+    // (the player's team: its own games' box scores; the regular season's, kept when the playoffs start, F.ssr)
+    if (s === F.team) { for (const [id, v] of Object.entries(F.ssr ?? F.ss ?? {})) out[id] = v; continue }
     Object.assign(out, teamSeason(F, s).tot)
   }
   return out
