@@ -46,7 +46,7 @@ export function StaffL3({ F, c, role, team, line, calls = [], size = 'm', mine, 
   const on = calls.map(s => (s === 'off' ? 'offPlaycalling' : 'defPlaycalling'))
   return (
     <div className={`fst-man fst-man--${size}`} style={{ '--d': `${delay}ms` }}>
-      <LowerThird name={c?.n ?? c?.name} pos={JOB[role]} team={team} photo={coachPhoto(c, team)} size={size} mine={mine} line={line} onClick={onClick} delay={delay}
+      <LowerThird name={c?.n ?? c?.name} pos={JOB[role]} team={team} photo={coachPhoto(c, team, size === 's')} size={size} mine={mine} line={line} onClick={onClick} delay={delay}
         stat={hidden || !r ? { v: c?.ag ?? '-', label: 'AGE' } : { v: coachGrade(r, role), label: 'GRADE' }} />
       {stamp}
       <Grades r={r} on={on} hidden={hidden} reveal={reveal} delay={delay} full={full} />
@@ -84,7 +84,7 @@ export function StaffStrip({ F, onOpen }) {
           const c = M[k], r = fiveOf(F, c)
           return (
             <span key={k} className="fst-chip">
-              <span className="fst-chip-face">{c && <img src={coachPhoto(c, F.team)} alt="" draggable={false} />}</span>
+              <span className="fst-chip-face">{c && <img src={coachPhoto(c, F.team, true)} alt="" draggable={false} />}</span>
               <span className="fst-chip-txt"><small>{JOB[k]}{r && <i>{coachGrade(r, k)}</i>}</small><b>{c ? lastOf(c.n) : 'OPEN'}</b></span>
             </span>
           )

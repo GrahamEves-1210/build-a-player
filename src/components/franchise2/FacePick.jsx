@@ -15,6 +15,8 @@ import './face.css'
 // zoomed to where it shows (faces.js VIEWS), colour swatches, and shape sliders.
 //   face: faces.js B.face · pos (the head's width: a lineman's is wider) · team · onChange(face)
 //   shuffleKey: what a new random look is keyed by (the setup's seed and the spot, plus a count)
+//   color: the colour he wears when it isn't a Franchise team's (Career: his club's) · kit: what he wears under his
+//   face (faces.js KITS: a basketball tank, a crew neck; eye black is football's only)
 //
 // Light on the CPU: a face is built once and cached by its look (faces.js). Only the open category's thumbnails are
 // built. A slider moves the big face at most once a frame (requestAnimationFrame) and the thumbnails catch up when it
@@ -37,8 +39,8 @@ const signed = v => { const n = Math.round(v * 10); return n > 0 ? `+${n}` : Str
 // thumbnails swap in a few a frame (each new one is a face to build and an image to decode), so a change that touches
 // every thumbnail (a new random look, a new hair colour) never lands as one long task.
 const PER_FRAME = 2
-const Pick = memo(function Pick({ k, title, list, view, tf, pos, color, value, onSet }) {
-  const urlOf = useCallback(v => buildFaceUrl({ pos, face: { ...tf, [k]: v } }, color, view), [tf, k, pos, color, view])
+const Pick = memo(function Pick({ k, title, list, view, tf, pos, kit, color, value, onSet }) {
+  const urlOf = useCallback(v => buildFaceUrl({ pos, kit, face: { ...tf, [k]: v } }, color, view), [tf, k, pos, kit, color, view])
   const [shown, setShown] = useState(() => list.map(([v], i) => (i < PER_FRAME + 1 ? urlOf(v) : null)))
   const ref = useRef(shown)
   useEffect(() => {
@@ -94,10 +96,10 @@ function Slider({ k, value, onLive, onEnd }) {
   )
 }
 
-export default function FacePick({ face: given, pos, team, shuffleKey, onChange }) {
+export default function FacePick({ face: given, pos, team, color: given2 = null, kit = 'fb', shuffleKey, onChange }) {
   const [cat, setCat] = useState('hair')
   const [n, setN] = useState(0)
-  const color = TEAM[team]?.color
+  const color = given2 ?? TEAM[team]?.color
   // (a face saved before today's parts: the rest filled from his default look, its old parts mapped)
   const [face, setFace] = useState(() => normFace(given, defaultFace(shuffleKey ?? pos, pos)))
   const [tf, setTf] = useState(face)              // the face the thumbnails are built from (settles after a drag)
@@ -123,10 +125,11 @@ export default function FacePick({ face: given, pos, team, shuffleKey, onChange 
     const k = n + 1, f = normFace(defaultFace(`${shuffleKey}-${k}`, pos), defaultFace(`${shuffleKey}-${k}`, pos))
     cur.current = f; setN(k); setFace(f); setTf(f); onChange(f); setGen(g => g + 1); sfx('flip')
   }
-  const rows = CATS.find(c => c[0] === cat)[2]
-  const hero = buildFaceUrl({ pos, face }, color)
+  // (eye black is football's: off a basketball or soccer kit)
+  const rows = CATS.find(c => c[0] === cat)[2].filter(r => kit === 'fb' || r[1] !== 'eb')
+  const hero = buildFaceUrl({ pos, kit, face }, color)
   return (
-    <div className="ffp" style={fkVars(team)}>
+    <div className="ffp fk-root" style={team && TEAM[team] ? fkVars(team) : { '--tc': color, '--tca': color }}>
       <div className="ffp-stage">
         <div className="ffp-hero"><img src={hero} alt="His face" draggable={false} /></div>
         <div className="ffp-tabs" role="tablist" aria-label="Face">
@@ -138,7 +141,7 @@ export default function FacePick({ face: given, pos, team, shuffleKey, onChange 
       </div>
       <div className="ffp-panel" role="tabpanel">
         {rows.map(([kind, k, title, list, view]) => (
-          kind === 'pick' ? <Pick key={k} k={k} title={title} list={list} view={view} tf={tf} pos={pos} color={color} value={face[k]} onSet={set} />
+          kind === 'pick' ? <Pick key={k} k={k} title={title} list={list} view={view} tf={tf} pos={pos} kit={kit} color={color} value={face[k]} onSet={set} />
             : kind === 'swatch' ? <Swatches key={k} k={k} title={title} list={list} value={face[k]} onSet={set} />
               : <Slider key={`${k}-${gen}`} k={k} value={face[k] ?? 0} onLive={live} onEnd={settle} />
         ))}
