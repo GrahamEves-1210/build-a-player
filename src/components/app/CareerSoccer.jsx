@@ -170,7 +170,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · {rd.legs === 2 ? 'SECOND LEG · ' : ''}VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''}{odds ? ` Score: about ${pct(odds.hit)}% to ${rd.final ? 'lift the trophy' : 'go through'}. Miss it: about ${pct(odds.miss)}%.` : ''}</small></div>
-      <CareerGame home={rd.home === false ? 'opp' : 'team'} retry c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={oppOf(rd)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
+      <CareerGame home={rd.home === false ? 'opp' : 'team'} c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={oppOf(rd)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
     </div>
   )
   return (

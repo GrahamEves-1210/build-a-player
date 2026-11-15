@@ -304,7 +304,7 @@ export function BaseballPostseason({ c, setCareer, onBook, step, setStep, game, 
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.short.toUpperCase()} · VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''} {stakes}</small></div>
-      <CareerGame home={rd.home === false ? 'opp' : 'team'} retry c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={S.teamOf(rd.opp)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
+      <CareerGame home={rd.home === false ? 'opp' : 'team'} c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={S.teamOf(rd.opp)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
     </div>
   )
   return (
