@@ -96,25 +96,32 @@ export function makeClass(F) {
   const R = rngOf(`${F.seed}-${F.year}-class`)
   const out = []
   let id = 1
-  for (const [pos, n] of Object.entries(CLASS_MIX)) for (let k = 0; k < n; k++) out.push(makeProspect(F, R, pos, id++))
+  const q = clamp(-2, 2, R.n())   // the class's strength at the top (some years are deep in stars, some thin)
+  for (const [pos, n] of Object.entries(CLASS_MIX)) for (let k = 0; k < n; k++) out.push(makeProspect(F, R, pos, id++, q))
   F.dc = out
   F.board = []
   F.sc = { b: 3, w: 0, u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
 }
-function makeProspect(F, R, pos, id) {
+// The class's talent, by where a man ranks in it (0 the best): what he's headed for. Shaped so the league keeps its
+// stars: about 10 men a class headed for 90+ and 5 or 6 for 95+ (a franchise player or two most years), the first
+// round's men starters, the 3rd round's backups with a chance, the long tail depth and camp bodies.
+const TALENT = [[0, 98], [0.024, 95], [0.04, 90], [0.08, 84.8], [0.145, 81.9], [0.27, 79.1], [0.5, 75.4], [0.8, 70], [1, 61]]
+const talentAt = r => { for (let i = 1; i < TALENT.length; i++) { const [a, va] = TALENT[i - 1], [b, vb] = TALENT[i]; if (r <= b) return va + (vb - va) * (r - a) / (b - a) } return 62 }
+function makeProspect(F, R, pos, id, q = 0) {
   const T = TYPES_OF[pos]
   // his ceiling first (the class's talent: a few 90s, a first round from about 83 up, a long tail), then his age
-  let pk = Math.round(75.5 + R.n() * 6.4 + (R.u() < 0.012 ? 7 : 0))
-  pk = clamp(60, 97, pk)
+  const t = talentAt(R.u())
+  let pk = Math.round(t + R.n() * 1.2 + q * 1.6 * clamp(0, 1, (t - 80) / 15))
+  pk = clamp(60, 99, pk)
   const ag = R.wpick([0.03, 0.32, 0.45, 0.2]) + 20
   const ch = R.wpick([0.12, 0.7, 0.18])
   const up = r1(R.n() * 1.4)   // what nobody can see: some men just grow more
-  const target = clamp(50, 84, Math.round(pk - ROOM(ag) - CH_EFF[ch] - up))
+  const target = clamp(50, 88, Math.round(pk - ROOM(ag) - CH_EFF[ch] - up))
   // his ratings: a shape (what he's good at), lifted to where his OVR is now
   const shape = T.map(() => R.n() * 1.5)
   const a = fitVals(pos, shape, target)
   const o = ovrV(pos, a)
-  pk = clamp(o, 97, Math.round(o + ROOM(ag) + CH_EFF[ch] + up))
+  pk = clamp(o, 99, Math.round(o + ROOM(ag) + CH_EFF[ch] + up))
   // the media's read of each rating: his own error (some men they love, some they miss) plus a little on each
   const z = R.int(1, 2 ** 20)
   const spots = SPOTS[pos]

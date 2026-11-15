@@ -30,6 +30,7 @@ function league() {
   const rooms = FR.SHORTS.map(s => FR.capSheet(F, s).room).sort((a, b) => a - b)
   return { mean: avg(st.map(p => p.o)), age: avg(st.map(p => p.ag)), n90: stars.length, n95: all.filter(p => p.o >= 95).length, starAge: avg(stars.map(p => p.ag)), real: all.filter(p => realNames.has(p.n)).length, qb85: all.filter(p => p.p === 'qb' && p.o >= 85).length, room: rooms[16] }
 }
+let classOne = null   // the first class the league drafts, followed to the end: did the 1st round start, did the late rounds hit
 for (let y = 0; y < N; y++) {
   const t0 = performance.now()
   const sp = scheduleProblems(F.sched.weeks, F.sched.bye); if (sp.length) bad(`${F.year} schedule: ${sp.slice(0, 3)}`)
@@ -81,6 +82,7 @@ for (let y = 0; y < N; y++) {
   FR.startNight(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft(F)
+  if (y === 0) classOne = F.dr.picks.map(p => ({ pid: p.pid, s: p.s, rd: FR.roundOf(p.at) }))
   const mine = F.dr.picks.filter(p => p.s === team)
   if (F.dr.picks.length !== FR.PICKS_N || new Set(F.dr.picks.map(p => p.pid)).size !== FR.PICKS_N) bad('draft picks')
   if (mine.some(p => !F.teams[team].r.find(q => q.i === p.pid)?.rc)) bad('a pick without a rookie deal')
@@ -100,6 +102,11 @@ for (let y = 0; y < N; y++) {
   if (L.n90 < base.n90 * 0.45 || L.n90 > base.n90 * 1.8) bad(`${F.year} ${L.n90} men 90+ (started with ${base.n90})`)
 }
 // the shape of a career: how old the league's starters are, and when men retire
+if (classOne) {
+  const all = FR.SHORTS.flatMap(s => F.teams[s].r), starting = new Set(FR.SHORTS.flatMap(s => Object.values(FR.lineup(F.teams[s])).map(p => p.i)))
+  const sum = rds => { const g = classOne.filter(c => rds.includes(c.rd)); const men = g.map(c => all.find(p => p.i === c.pid)).filter(Boolean); return `${g.length} picked, ${men.length} in the league, ${men.filter(p => starting.has(p.i)).length} starting, ${men.filter(p => p.o >= 90).length} at 90+` }
+  console.log(`the first class after ${N} seasons: round 1 ${sum([1])} · rounds 2-3 ${sum([2, 3])} · rounds 4-7 ${sum([4, 5, 6, 7])}`)
+}
 console.log('starters 90+ by year:', ages.map(a => a.n90).join(' '), '· mean OVR by year:', ages.map(a => a.mean).join(' '))
 { const P = JSON.parse(FR.packFranchise(F)); console.log('save by part (KB):', Object.entries(P).map(([k, v]) => [k, JSON.stringify(v ?? null).length]).filter(([, n]) => n > 1500).map(([k, n]) => `${k} ${(n / 1024).toFixed(1)}`).join(', '), '· careers', FR.SHORTS.reduce((a, s) => a + F.teams[s].r.filter(p => p.cr).length, 0), '· men', FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)) }
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')
