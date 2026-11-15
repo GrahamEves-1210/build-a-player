@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, slotSummary, SLOTS_N, TEAM, recText, records, addProspect } from '../../lib/franchise2'
-import { FRANCHISE_CARD_KEY } from '../../lib/franchiseLive'
+import { FRANCHISE_CARD_KEY, FRANCHISE_ART } from '../../lib/franchiseLive'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconArrow } from '../app/icons'
@@ -93,6 +93,7 @@ function Slots({ owner, onOpen, onHome }) {
         <button className="ag-round-btn" onClick={onHome} aria-label="Home"><IconClose size={16} /></button>
       </div>
       <div className="ag-screen-body">
+        {FRANCHISE_ART.hero && <img className="f2-hero ag-pop" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />}
         {rows.map(({ i, s }) => (
           <button key={i} className={`f2-slot ag-pop${s ? '' : ' is-empty'}`} style={{ '--d': `${i * 60}ms`, ...(s?.team ? teamVars(s.team) : null) }} onClick={() => onOpen(i)}>
             <span className="f2-slot-n">{i + 1}</span>

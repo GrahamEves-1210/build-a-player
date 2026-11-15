@@ -1,6 +1,6 @@
 // ── FRANCHISE_LIVE: the one switch for everything players can see about Franchise ──────────
 // Franchise (football): take over an NFL team as its general manager, build the players you want on the game's
-// own build screen, and run it season after season (components/franchise, lib/franchise).
+// own build screen, and run it season after season (components/franchise2, lib/franchise2).
 // false: the mode is wired but nothing about it renders: football's Home keeps its SQUAD BUILDER card and the
 // mode can't be opened. true: a FRANCHISE card takes SQUAD BUILDER's place on football's Home (both home looks).
 // Squad Builder itself is untouched for the other sports, and its football saves are never deleted.
@@ -19,8 +19,8 @@ const FRANCHISE_DEV = (() => {
 export const FRANCHISE_LIVE = false || FRANCHISE_DEV   // off until the rebuild (SPEC2) is ready; ?franchise=1 on the dev server
 
 // What Home's card says about the franchise on this device, without loading the mode: the mode leaves this
-// small note every time it saves (components/franchise/frStore.js)
-//   { slot: 0, team: 'KC', color: '#E31837', line: 'Chiefs 3-1 · Week 5' }
+// small note every time it saves (components/franchise2/FranchiseMode.jsx leaveNote)
+//   { slot: 0, team: 'KC', color: '#E31837', line: 'Chiefs 3-1 · Week 5' }   (the team, its record, where the season is)
 export const FRANCHISE_CARD_KEY = 'bap_franchise_card'
 export const franchiseCard = () => { try { const c = JSON.parse(localStorage.getItem(FRANCHISE_CARD_KEY)); return c && typeof c.line === 'string' && c.line ? c : null } catch { return null } }
 

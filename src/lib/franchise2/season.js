@@ -263,8 +263,10 @@ function headline(F, row, S) {
   // the biggest hole they climbed out of, and when the winning points came
   let worst = 0, a = 0, b = 0
   for (const [, mine, p] of row.pl) { if (mine) a += p; else b += p; worst = Math.min(worst, a - b) }
-  const last = [...row.pl].reverse().find(x => x[2] > 0)
-  const late = last && last[0] >= 3540 && last[1] === (m > 0 ? 1 : 0)
+  // the deciding score came at the end: the last points, in the final minute, put the winner ahead
+  const scores = row.pl.filter(x => x[2] > 0), last = scores[scores.length - 1]
+  const before = scores.slice(0, -1).reduce((d, x) => d + (x[1] ? x[2] : -x[2]), 0)
+  const late = !!last && last[0] >= 3540 && last[1] === (m > 0 ? 1 : 0) && (m > 0 ? before <= 0 : before >= 0)
   if (row.mo?.hit && m > 0) return row.mo.line === 'pick' ? 'PICKED OFF TO SEAL IT' : row.mo.line === 'td' || row.mo.line === 'conv-td' ? 'THE DRIVE OF THE YEAR' : 'CLUTCH WHEN IT MATTERED'
   if (row.t) return `TIED WITH THE ${opp}`
   if (m > 0) {

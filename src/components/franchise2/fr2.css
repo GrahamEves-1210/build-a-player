@@ -58,6 +58,7 @@
 html.bap-reduce-motion .f2-stamp, html.bap-reduce-motion .f2-wk.is-now { animation: none; }
 
 /* ── Slots ── */
+.f2-hero { display: block; width: 100%; height: auto; aspect-ratio: 16 / 7; object-fit: cover; border-radius: var(--f2-r); border: 1px solid var(--f2-line); background: #0a0c0f; }
 .f2-slot { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border: 1px solid var(--f2-line); border-left: 4px solid var(--tc, rgba(255,255,255,.18)); border-radius: var(--f2-r); background: var(--f2-panel); color: var(--ag-text); text-align: left; cursor: pointer; }
 .f2-slot.is-empty { border-left-color: rgba(255,255,255,.12); }
 .f2-slot-n { font-family: var(--ag-display); font-size: 20px; color: var(--ag-muted); width: 14px; }
@@ -408,6 +409,9 @@ html.bap-reduce-motion .f2-stamp, html.bap-reduce-motion .f2-wk.is-now { animati
 .f2-reveal > small { font-family: var(--ag-font); font-size: 15px; letter-spacing: 2px; color: var(--ag-muted); }
 .f2-reveal-grade { font-family: var(--ag-display); font-weight: 400; font-size: 76px; line-height: 1; color: var(--f2-gold); }
 
+@media (min-width: 700px) {
+  .f2-bug { width: 100%; max-width: 640px; margin: 0 auto; border-radius: 0 0 var(--f2-r) var(--f2-r); overflow: hidden; }
+}
 @media (min-width: 900px) {
   .f2 .ag-screen-body { max-width: 640px; margin: 0 auto; }
   .f2 .ag-screen-head { max-width: 668px; margin: 0 auto; }
