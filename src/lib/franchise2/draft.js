@@ -843,6 +843,14 @@ export function closeDraft(F) {
   if (!F.dr || F.dr.closed) return
   const rv = draftReview(F)
   F.dh = [...(F.dh ?? []), { y: F.year + 1, g: rv.grade, picks: rv.mine.map(p => ({ n: p.n, p: p.p, pid: p.pid, no: p.at + 1, pk: p.pk, my: p.my ?? null, tag: p.tag })) }]
+  // a Sandbox build nobody drafted signs with the player's team as an undrafted free agent (three years at the minimum)
+  for (const x of F.dc.filter(y => y.b != null)) {
+    const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, a: x.a, nu: x.nu, b: x.b }
+    signRookie(p, 262, F.year + 1); p.y = 3
+    F.teams[F.team].r.push(p)
+    F.builds[x.b].pid = p.i; F.builds[x.b].age = x.ag; delete F.builds[x.b].prospect
+    F.dc = F.dc.filter(y => y !== x)
+  }
   F.dr.closed = 1
 }
 

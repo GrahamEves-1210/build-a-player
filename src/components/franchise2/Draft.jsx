@@ -11,7 +11,7 @@ import {
 import { groupOf } from '../../lib/franchise2/roster'
 import { faceUrl } from '../../lib/franchise2/faces'
 import { realOf } from '../../lib/franchise2/league'
-import { TYPES_OF } from '../../lib/squadSeason'
+import { TYPES_OF, faceOf as buildFace } from '../../lib/squadSeason'
 import { nflHeadshot } from '../../utils/simulation'
 import { CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { ATTR } from '../../data/qbs'
@@ -50,7 +50,9 @@ export function colVars(col) {
 }
 const colColor = col => school(col)?.color ?? '#2b3039'
 const SUIT = '#1c1f25'
-const faceOf = x => faceUrl(x.n, x.p, colColor(x.col))
+// a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js)
+const faceFor = (F, x, color) => (x.b != null && buildFace(F?.builds?.[x.b]?.build)) || faceUrl(x.n, x.p, color)
+const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
 const ord = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] ?? 'TH'}`
@@ -68,7 +70,7 @@ function Prospect({ F, x, rank, onOpen, line, right, delay = 0, starOk = true, a
         {rank != null && <span className="dr-p-rank">{rank}</span>}
         <span className="dr-p-slab" style={colVars(x.col)} aria-hidden="true">
           <span className="dr-p-num">{x.nu}</span>
-          <img className="dr-p-face" src={faceOf(x)} alt="" draggable={false} />
+          <img className="dr-p-face" src={faceFor(F, x, colColor(x.col))} alt="" draggable={false} />
         </span>
         <span className="dr-p-bar">
           <span className="dr-p-name"><small>{first}</small><b>{last}</b></span>
@@ -109,7 +111,7 @@ function ProspectCard({ F, act, id, onClose, onDraft, draftLabel }) {
       <div className="dr-card">
         <div className="dr-hero" style={colVars(x.col)}>
           <span className="dr-hero-num" aria-hidden="true">{x.nu}</span>
-          <img className="dr-hero-face" src={faceOf(x)} alt="" draggable={false} />
+          <img className="dr-hero-face" src={faceFor(F, x, colColor(x.col))} alt="" draggable={false} />
           <span className="dr-hero-logo"><CollegeLogo col={x.col} size={46} /></span>
           <button type="button" className="dr-x" onClick={() => { onClose(); tap() }} aria-label="Close">✕</button>
         </div>
@@ -424,14 +426,16 @@ const CLOCK = [600, 420, 300, 300, 300, 300, 240]   // the real draft's clock by
 const DAY_OF = rd => (rd === 1 ? 'DAY 1' : rd <= 3 ? 'DAY 2' : 'DAY 3')
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-export function DraftDay({ F, act, owner }) {
-  if (F.dr.ph === 'pre') return <DraftWeek F={F} act={act} />
+export function DraftDay({ F, act, owner, onBuild }) {
+  if (F.dr.ph === 'pre') return <DraftWeek F={F} act={act} onBuild={onBuild} />
   if (draftDone(F) && F.dr.over) return <ClassRecap F={F} act={act} owner={owner} />
   return <DraftNight F={F} act={act} />
 }
 
-function DraftWeek({ F, act }) {
+function DraftWeek({ F, act, onBuild }) {
   const [room, setRoom] = useState(false)
+  const [add, setAdd] = useState(false)
+  const sandbox = sandboxOn() && !!onBuild
   const mine = myPicks(F)
   const ranks = rankMap(F)
   const top = (F.board.length ? F.board.map(id => F.dc.find(x => x.i === id)).filter(Boolean) : consensus(F)).slice(0, 5)
@@ -445,6 +449,12 @@ function DraftWeek({ F, act }) {
         <Chyron title={F.board.length ? 'OUR BOARD' : 'CONSENSUS BOARD'} tone="ink" size="s" sub="TOP 5" />
         <div className="dr-list">{top.map((x, i) => <Prospect key={x.i} F={F} x={x} rank={F.board.length ? i + 1 : ranks.get(x.i)} onOpen={() => setRoom(true)} delay={i * 50} />)}</div>
       </section>
+      {sandbox && (
+        <section className="dr-sec">
+          <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" right={<button type="button" className="dr-add" onClick={() => { setAdd(!add); tap() }}>{add ? 'CLOSE' : 'ADD A PROSPECT'}</button>} />
+          {add && <div className="dr-filters">{POS.map(p => <button key={p} type="button" onClick={() => { tap(); onBuild({ id: 'prospect', pos: p, n: 1, of: 1 }) }}>{POS_LABEL[p]}</button>)}</div>}
+        </section>
+      )}
       <div className="dr-acts">
         <Go ghost onClick={() => { setRoom(true); tap() }}>SCOUTING ROOM</Go>
         <Go onClick={() => { act(X => startNight(X)); sfx('whistle'); haptic('medium') }}>START THE DRAFT</Go>
@@ -495,8 +505,8 @@ function DraftNight({ F, act }) {
     <div className="dr-day dr-night fk" style={fkVars(F.team)}>
       {!done && <Clock F={F} at={cur ? cur.at : at} team={cur ? cur.s : pickTeam(F)} ours={onClock && !showing} nextMine={nextMine} />}
       {done && <Chyron team={F.team} title="THE DRAFT IS OVER" tag={F.year + 1} size="l" sub={`${F.dr.picks.length} PICKS · 7 ROUNDS`} />}
-      {done && !showing && F.dr.picks.length > 0 && <PickCard p={F.dr.picks[F.dr.picks.length - 1]} label="MR. IRRELEVANT" />}
-      {cur && roundOf(cur.at) === 1 && <PickCard key={cur.at} p={cur} trade={trades.get(cur.at)} />}
+      {done && !showing && F.dr.picks.length > 0 && <PickCard F={F} p={F.dr.picks[F.dr.picks.length - 1]} label="MR. IRRELEVANT" />}
+      {cur && roundOf(cur.at) === 1 && <PickCard key={cur.at} F={F} p={cur} trade={trades.get(cur.at)} />}
       {recent.length > 0 && (
         <section className="dr-feed">
           {recent.slice(0, showing ? 6 : 10).map(p => <FeedRow key={p.at} F={F} p={p} trade={trades.get(p.at)} />)}
@@ -551,14 +561,14 @@ function Clock({ F, at, team, ours, nextMine }) {
   )
 }
 // a first-round pick, announced: the team's slab, the man under it (in his draft-night suit)
-function PickCard({ p, trade, label }) {
+function PickCard({ F, p, trade, label }) {
   const t = TEAM[p.s]
   const { first, last } = splitName(p.n)
   return (
     <div className="dr-pc" style={fkVars(p.s)}>
       <div className="dr-pc-top"><KLogo s={p.s} size={40} /><span><small>{label ? `PICK ${p.at + 1} · ${label}` : trade ? `PICK ${p.at + 1} · VIA TRADE WITH ${TEAM[trade.down].nick.toUpperCase()}` : `PICK ${p.at + 1}`}</small><b>THE {t.nick.toUpperCase()} SELECT</b></span></div>
       <div className="dr-pc-man">
-        <span className="dr-pc-face" style={colVars(p.col)}><img src={faceUrl(p.n, p.p, SUIT)} alt="" draggable={false} /></span>
+        <span className="dr-pc-face" style={colVars(p.col)}><img src={faceFor(F, p, SUIT)} alt="" draggable={false} /></span>
         <span className="dr-pc-name"><small>{first}</small><b>{last}</b><em>{pickSpot(p)} · {schoolName(p.col)}</em></span>
         <CollegeLogo col={p.col} size={34} />
       </div>
@@ -610,7 +620,7 @@ function RevealCard({ F, p, onNext }) {
         back={<div className="dr-rv-back"><KLogo s={F.team} size={96} /><b>RD {roundOf(p.at)} · PICK {p.at + 1}</b></div>}
         front={(
           <div className="dr-rv-front">
-            <span className="dr-rv-slab"><span className="dr-rv-num">{nu ?? ''}</span><img src={faceUrl(p.n, p.p, t.color)} alt="" draggable={false} /></span>
+            <span className="dr-rv-slab"><span className="dr-rv-num">{nu ?? ''}</span><img src={faceFor(F, p, t.color)} alt="" draggable={false} /></span>
             <span className="dr-rv-name"><small>{first}</small><b>{last}</b><em>{pickSpot(p)} · {schoolName(p.col)}</em></span>
           </div>
         )} />
@@ -640,7 +650,7 @@ function ClassRecap({ F, act, owner }) {
         {rv.mine.map((p, i) => i < n && (
           <div key={p.at} className="dr-cls">
             <span className="dr-cls-no"><small>RD {roundOf(p.at)}</small><b>{p.at + 1}</b></span>
-            <span className="dr-p-slab" style={fkVars(F.team)}><span className="dr-p-num">{nu(p)}</span><img className="dr-p-face" src={faceUrl(p.n, p.p, TEAM[F.team].color)} alt="" draggable={false} /></span>
+            <span className="dr-p-slab" style={fkVars(F.team)}><span className="dr-p-num">{nu(p)}</span><img className="dr-p-face" src={faceFor(F, p, TEAM[F.team].color)} alt="" draggable={false} /></span>
             <span className="dr-p-bar"><span className="dr-p-name"><small>{splitName(p.n).first}</small><b>{splitName(p.n).last}</b></span><span className="dr-p-meta"><em>{pickSpot(p)}</em><CollegeLogo col={p.col} size={15} /><span>{schoolName(p.col)}</span></span></span>
             <span className="dr-cls-o"><small>OURS</small><b>{p.my != null ? gradeOf(p.my) : '—'}</b></span>
             <span className="dr-cls-g"><small>TRUE</small><b>{gradeOf(p.pk)}</b></span>

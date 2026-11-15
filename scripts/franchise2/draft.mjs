@@ -47,9 +47,15 @@ for (let y = 0; y < N; y++) {
   FR.ageLeague(F)
   FR.openResign(F); for (const id of [...F.rs]) FR.resignOne(F, id, true)
   FR.openFA(F); for (let k = 0; k < 9 && !FR.nextFADay(F).done; k++);
+  // a Sandbox build into the class (the league leaves him; nobody drafts him here, so he signs as an undrafted free agent)
+  const bi = F.builds.length
+  F.builds.push({ pos: 'wr', build: Object.fromEntries(TYPES_OF.wr.map(t => [t, { val: 6 }])), num: 11, age: 21, car: [], prospect: 1, name: 'Sandbox Kid' })
+  const bx = FR.addProspect(F, bi)
+  if (F.board[0] !== bx.i || bx.o !== ovrOf('wr', F.builds[bi].build)) bad('sandbox prospect')
   FR.openDraft(F)
   if (F.dr.order.length !== 32 || new Set(F.dr.order).size !== 32) bad('order')
   if (F.dr.order[31] !== F.po.champ) bad(`champ picks ${F.dr.order.indexOf(F.po.champ) + 1}`)
+  F.board = F.board.filter(id => id !== bx.i)
   FR.startNight(F)
   let ups = 0, downs = 0
   while (!FR.draftDone(F)) {
@@ -64,7 +70,10 @@ for (let y = 0; y < N; y++) {
   if (F.dr.picks.length !== FR.PICKS_N) bad(`picks ${F.dr.picks.length}`)
   if (new Set(F.dr.picks.map(p => p.pid)).size !== F.dr.picks.length) bad('dup picks')
   const rv = FR.draftReview(F)
+  if (F.dr.picks.some(p => p.b != null && p.s !== team)) bad('the league drafted a build')
   FR.closeDraft(F)
+  const kid = F.teams[team].r.find(p => p.b === bi)
+  if (!kid || !kid.rc || F.builds[bi].pid !== kid.i) bad('the sandbox build did not land on the roster')
   const cpuTr = F.dr.tr.filter(t => !t.mine).length
   console.log(`   draft: ${F.dr.picks.length} picks, trades ${F.dr.tr.length} (league ${cpuTr}, ours up ${ups} down ${downs}) · our class ${rv.mine.map(p => `${p.at + 1}:${FR.pickSpot(p)} ${FR.gradeOf(p.pk)}/${p.my ? FR.gradeOf(p.my) : '-'}${p.tag !== 'S' ? ' ' + FR.TAG_TEXT[p.tag] : ''}`).join(', ')}`)
   console.log(`   scouting grade ${rv.grade} (err ${rv.myErr}) vs media ${rv.mediaGrade} (${rv.mediaErr}) · gems ${rv.gems.map(p => `${p.s}@${p.at + 1}`).join(' ')} · busts ${rv.busts.map(p => `${p.s}@${p.at + 1}`).join(' ')} · steal ${rv.steal?.n} (${rv.steal?.at + 1}) · league tags ${['G', 'B'].map(t => F.dr.picks.filter(p => p.tag === t).length).join('/')}`)

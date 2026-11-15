@@ -179,6 +179,9 @@
 .dr-board-btn { height: 38px; border: 0; background: transparent; color: var(--fk-mute); font-family: var(--fk-f); font-size: 16px; letter-spacing: 2px; cursor: pointer; }
 .dr-board-btn.is-on { color: #fff; }
 
+/* Sandbox: a build into the class */
+.dr-add { height: 26px; padding: 0 10px; border: 0; background: #fff; color: #0b0c0e; font-family: var(--fk-f); font-size: 14px; letter-spacing: 1.6px; cursor: pointer; }
+
 /* ── Draft day ────────────────────────────────────────────────────────────── */
 .dr-day { display: grid; align-content: start; gap: 12px; min-width: 0; color: var(--fk-text); }
 .dr-picks-strip { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }
