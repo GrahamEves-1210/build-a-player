@@ -223,6 +223,13 @@ html.bap-reduce-motion :is(.fsu-body, .fsu-div, .fsu-empty, .fsu-line, .fsu-line
 .fsu-slot.is-empty .fsu-slot-txt b { color: var(--fk-mute); }
 .fsu-slot:active { transform: translateY(1px); }
 .fsu-sheet { position: fixed; inset: 0; z-index: 60; overflow-y: auto; }
+.fsu-slotw { display: grid; }
+.fsu-slotw > .fsu-slot { width: 100%; }
+.fsu-del { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 40px; }
+.fsu-del > span { margin-right: auto; font-size: 15px; color: #fff; }
+.fsu-del-b { min-height: 36px; padding: 0 14px; border: 0; background: var(--fk-g1); color: var(--fk-mute); font: inherit; font-size: 14px; letter-spacing: .6px; cursor: pointer; }
+.fsu-del-b:hover { color: #fff; }
+.fsu-del-b.is-danger { background: #c8102e; color: #fff; }
 html.bap-reduce-motion .fsu-slot { animation: none !important; }
 
 /* a wide screen: the 32 teams in two columns of divisions */

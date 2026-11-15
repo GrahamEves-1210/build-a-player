@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
-import { slotSummary, SLOTS_N, TEAM } from '../../lib/franchise2'
-import { FRANCHISE_ART } from '../../lib/franchiseLive'
+import { useMemo, useState } from 'react'
+import { slotSummary, clearFranchise, SLOTS_N, TEAM } from '../../lib/franchise2'
+import { FRANCHISE_ART, FRANCHISE_CARD_KEY, franchiseCard } from '../../lib/franchiseLive'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import { Chyron, KLogo, fkVars } from './kit'
@@ -8,8 +8,16 @@ import { NameForm } from './Setup'
 import './setup.css'
 
 // The mode's first screen: the three save slots, each a team's slab (its record, the year, rings) or an empty one.
+// A save that's there (a franchise or a setup) has DELETE SAVE under it, asked twice (owner 11-15: it was only in History).
 export function Slots({ owner, onOpen, onHome }) {
+  const [sure, setSure] = useState(null)
+  const [, redraw] = useState(0)
   const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: slotSummary(i) }))
+  const del = i => {
+    clearFranchise(i)
+    try { if (franchiseCard()?.slot === i) localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}
+    setSure(null); redraw(n => n + 1); sfx('deny')
+  }
   return (
     <div className="fk-root fsu fsu-slots">
       <div className="fsu-top">
@@ -22,8 +30,10 @@ export function Slots({ owner, onOpen, onHome }) {
           <Chyron tone="ink" size="l" title="Franchise" sub="THREE SAVE SLOTS" />
           {rows.map(({ i, s }) => {
             const t = s?.team ? TEAM[s.team] : null
+            const name = t ? `${t.nick} save` : 'setup'
             return (
-              <button key={i} type="button" className={`fsu-slot${t ? '' : ' is-empty'}`} style={{ ...(t ? fkVars(s.team) : null), '--d': `${i * 60}ms` }} onClick={() => { sfx('tap'); onOpen(i) }}>
+              <div key={i} className="fsu-slotw">
+              <button type="button" className={`fsu-slot${t ? '' : ' is-empty'}`} style={{ ...(t ? fkVars(s.team) : null), '--d': `${i * 60}ms` }} onClick={() => { sfx('tap'); onOpen(i) }}>
                 <span className="fsu-slot-n">{i + 1}</span>
                 {t ? <span className="fsu-slot-logo"><KLogo s={s.team} size={92} /></span> : null}
                 <span className="fsu-slot-txt">
@@ -32,6 +42,14 @@ export function Slots({ owner, onOpen, onHome }) {
                   <em>{s?.setup ? 'PICK UP WHERE YOU LEFT IT' : s ? `${s.year} · ${s.rec} · ${s.phase === 'season' ? `WEEK ${(s.wk ?? 0) + 1}` : s.phase === 'playoffs' ? 'PLAYOFFS' : 'OFFSEASON'}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.sandbox ? ' · SANDBOX' : ''}` : 'START A FRANCHISE'}</em>
                 </span>
               </button>
+              {s && (sure === i
+                ? <div className="fsu-del is-sure" role="group" aria-label="Delete save">
+                    <span>Delete the {name} for good?</span>
+                    <button type="button" className="fsu-del-b" onClick={() => { setSure(null); sfx('tap') }}>KEEP</button>
+                    <button type="button" className="fsu-del-b is-danger" onClick={() => del(i)}>DELETE</button>
+                  </div>
+                : <div className="fsu-del"><button type="button" className="fsu-del-b" onClick={() => { setSure(i); sfx('tap') }}>DELETE SAVE</button></div>)}
+              </div>
             )
           })}
         </div>
