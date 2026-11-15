@@ -5,6 +5,8 @@
 // and that nobody else on the team wears (the real men's numbers from the data, the other builds').
 import { FIRST_NAMES, LAST_NAMES, pickName } from '../playerNames'
 import { realPool } from './league'
+import { buildSlot } from './contracts'
+import { ovrOf } from '../squadSeason'
 
 // a name's letters (Career's cleanName): letters, spaces, apostrophes, hyphens, periods
 export const cleanName = v => String(v ?? '').replace(/[^A-Za-zÀ-ſ' .-]/g, '').replace(/\s+/g, ' ').replace(/^ /, '').slice(0, 14)
@@ -48,4 +50,14 @@ export function pickNumber(pos, taken, rnd = Math.random) {
   const free = freeNumbers(pos, taken)
   const usual = free.slice(0, Math.max(1, Math.min(free.length, 10)))
   return usual.length ? usual[Math.floor(rnd() * usual.length)] : (LEGAL[pos] ?? [0])[0]
+}
+
+// The draft slot each build signs his rookie deal at (contracts.js buildSlot: where a man of his OVR goes in the
+// draft). Two builds can't be the same pick: the better one takes the slot, the next one the pick after it.
+//   builds: [{ pos, build }] -> [slot, ...] in the same order
+export function rookieSlots(builds) {
+  const order = builds.map((b, i) => ({ i, o: ovrOf(b.pos, b.build) })).sort((a, b) => b.o - a.o || a.i - b.i)
+  const out = [], used = new Set()
+  for (const x of order) { let s = buildSlot(x.o); while (used.has(s)) s++; used.add(s); out[x.i] = s }
+  return out
 }
