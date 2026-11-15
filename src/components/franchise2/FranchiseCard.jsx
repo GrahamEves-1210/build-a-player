@@ -7,8 +7,8 @@ import './franchise-card.css'
 // FRANCHISE on football's Home: the card that takes SQUAD BUILDER's place while the switch is on
 // (lib/franchiseLive.js). This file, its stylesheet and one small picture are all of Franchise that Home loads:
 // the mode and its engine come when the card is tapped (App.jsx: lazy).
-// The card is the mode's look in small: near-black and flat under a bar in the team's colour, the championship
-// trophy the GM is after (public/franchise/art), and one line: the job, or, once there's a franchise on this
+// The card is the mode's look in small: near-black and flat under a bar in the team's colour, the football off the
+// championship trophy the GM is after, spinning (public/franchise/art), and one line: the job, or, once there's a franchise on this
 // device, where it stands (the note the mode leaves when it saves: franchiseCard).
 
 const OPEN = 'Be the GM'
@@ -28,10 +28,11 @@ export function FranchiseWait() {
   )
 }
 
-// the mode's own picture (FRANCHISE_ART.card); its box goes if the file isn't there. Over it, the same picture turning
-// slowly (TrophyTurn: asked for only once the card is on screen; if it can't play, the still stays)
+// the mode's own picture (FRANCHISE_ART.card: the trophy's football, 3:2); its box goes if the file isn't there. Over
+// it, the ball spinning like a slow spiral, 5 s a turn, a minute at a time (TrophyTurn: asked for only once the card
+// is on screen; if it can't play, the still stays)
 const Art = () => (FRANCHISE_ART.card
-  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="640" height="640" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={FRANCHISE_TURN.card} poster={FRANCHISE_ART.card} className="ag-fr-turn" /></span>
+  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="600" height="400" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={FRANCHISE_TURN.card} turns={12} className="ag-fr-turn" /></span>
   : null)
 
 export default function FranchiseCard({ onClick, wide = false }) {

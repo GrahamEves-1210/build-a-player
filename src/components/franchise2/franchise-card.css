@@ -1,7 +1,7 @@
 /* ═══ FRANCHISE: its card on football's Home ═══════════════════════════════════════════════════════════
    The only Franchise file Home loads (AppHome.jsx, AppHomeClassic.jsx, through FranchiseCard.jsx): the mode's
    own look is franchise.css, which comes with the mode. The card is the mode's look in small: near-black,
-   flat, the championship trophy and one line under a bar in the team's colour.
+   flat, the trophy's football spinning and one line under a bar in the team's colour.
    --fr-team: the saved franchise's team colour (white before there is one). */
 .ag-mc.ag-mc--fr { --fr-team: #f2f4f5; background: #0a0c0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 8px 18px rgba(0,0,0,.35); }
 .ag-mc--fr::before { content: ''; position: absolute; left: 0; right: 0; top: 0; z-index: 3; height: 3px; background: var(--fr-team); }
@@ -9,15 +9,14 @@
 .ag-mc--fr .ag-mc-head b { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; text-shadow: none; color: #f2f4f5; }
 .ag-mc--fr .ag-mc-head b .ag-mc-tag { margin-top: 0; }
 .ag-mc--fr .ag-mc-head small { background: #1b2129; }
-/* the trophy (public/franchise/art, on the card's own near-black): bottom right, under the words */
+/* the trophy's football (public/franchise/art, 3:2 on the card's own near-black): bottom right, under the words */
 .ag-fr-art { position: absolute; right: 1px; bottom: 1px; z-index: 1; display: block; width: 60%; height: 74%; pointer-events: none; }
-.ag-fr-art :is(img, video) { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
+.ag-fr-art :is(img, video) { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
 /* the same picture turning (TrophyTurn.jsx), over the still in the same box and the same crop */
 .ag-fr-art .ag-fr-turn { position: absolute; inset: 0; background: transparent; }
 @media (min-width: 1024px) {
-  /* the wide second row: the trophy stands at the right end */
+  /* the wide second row: the ball at the right end */
   html.app-look .ag-mc--fr .ag-fr-art { width: 30%; height: 100%; right: 10px; }
-  html.app-look .ag-mc--fr .ag-fr-art :is(img, video) { object-position: center bottom; }
 }
 
 /* the classic Home (Settings → Classic Home): Squad Builder's row, in the mode's own colours */
@@ -46,11 +45,12 @@ html.is-app .fr-wait { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .fr-wait-page { width: 100%; max-width: 640px; margin: 0 auto; padding: 12px; }
 .fr-wait .sk-card { border-radius: 4px; }
 
-/* on top of football's Home (College Football's old spot, owner 11-14): full width, the trophy on the right half */
+/* on top of football's Home (College Football's old spot, owner 11-14): full width, the ball on the right half, as
+   wide as it can be and keep clear of the title and its NEW tag (phones: about 180 x 120 of a 132 px card), between
+   the team bar and the card's edge */
 .ag-mc.ag-mc--fr.ag-mc--fr-wide { display: block; width: 100%; min-height: 150px; margin: 0 0 8px; }
-.ag-mc--fr-wide .ag-fr-art { width: 46%; height: 100%; right: 6px; }
-.ag-mc--fr-wide .ag-fr-art :is(img, video) { object-position: center bottom; }
-@media (min-width: 1024px) { html.app-look .ag-mc.ag-mc--fr.ag-mc--fr-wide { margin-bottom: 12px; } html.app-look .ag-mc--fr-wide .ag-fr-art { width: 30%; } }
+.ag-mc--fr-wide .ag-fr-art { width: 50%; height: auto; top: 3px; right: 4px; bottom: 1px; }
+@media (min-width: 1024px) { html.app-look .ag-mc.ag-mc--fr.ag-mc--fr-wide { margin-bottom: 12px; } html.app-look .ag-mc--fr-wide .ag-fr-art { width: 30%; height: auto; } }
 /* College Football in a grid spot (football's Home with Franchise on): three logos on the band */
 .ag-mc.ag-mc--cfb.ag-mc--cfb-sm { min-height: 0; margin: 0; }
 .ag-mc--cfb-sm .ag-cfb-band { padding: 0 6px 0 16px; height: 48px; }

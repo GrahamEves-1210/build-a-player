@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 
-// The championship trophy turning, slowly, over its still (Home's FRANCHISE card and the hero on the mode's save
-// slots: lib/franchiseLive.js FRANCHISE_ART). One turn is 12 seconds, rendered from the trophy scene with only the
-// trophy turning (the light and the camera hold), and its first frame is the still's pose: the still underneath is
-// its poster (the film shows only once it's playing), so the swap can't be seen. Its CSS puts it over the still.
+// A film from the trophy scene turning, slowly, over its still (lib/franchiseLive.js FRANCHISE_ART/TURN): the whole
+// trophy on the mode's save slots (one turn, 12 s), the trophy's football spinning like a slow spiral on Home's
+// FRANCHISE card (one turn, 5 s). Only the trophy or the ball turns (the light and the camera hold), and the first
+// frame is the still: the still underneath is its poster (the film shows only once it's playing), so the swap can't
+// be seen. Its CSS puts it over the still.
 // Light on the machine, like every loop on the site (lib/fxPause.js): nothing is asked for until it's on screen
 // (preload none, no src), it plays only while on screen and the tab is showing, never while a skill game covers
-// the page (html.mg-live), and after TURNS turns it rests on the still's pose; scrolling it back into view (or a
+// the page (html.mg-live), and after `turns` turns (about a minute) it rests on the still's pose; scrolling it back into view (or a
 // tap, where there's one to give) turns it again. Reduce Motion and weak machines (html.low-power): the still only.
 // If the film can't play, it never shows and the still stays.
-const TURNS = 5
+const TURNS = 5   // the trophy's 12 s turn: a minute (the card's 5 s football passes 12)
 const quiet = () => {
   try {
     const c = document.documentElement.classList
@@ -36,7 +37,7 @@ const whenIdle = fn => {
   if (document.readyState === 'complete') idle(); else addEventListener('load', idle, { once: true })
 }
 
-export default function TrophyTurn({ base, className, replay = null }) {
+export default function TrophyTurn({ base, className, replay = null, turns: runs = TURNS }) {
   const [src, setSrc] = useState(null)
   const [shown, setShown] = useState(false)
   const [off] = useState(() => !base || quiet() || typeof IntersectionObserver === 'undefined')
@@ -57,7 +58,7 @@ export default function TrophyTurn({ base, className, replay = null }) {
       const p = v.play()
       if (p?.catch) p.catch(() => {})
     }
-    // a fresh run of turns: the film turns TURNS times, then stops on its last frame (a hair short of the still's pose)
+    // a fresh run of turns: the film turns `runs` times, then stops on its last frame (a hair short of the still's pose)
     const again = () => { rested = false; turns = 0; last = 0; v.loop = true; go() }
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting === inView) return
@@ -66,7 +67,7 @@ export default function TrophyTurn({ base, className, replay = null }) {
     }, { rootMargin: '60px 0px' })
     io.observe(v)
     // (a wrap of the loop: the time goes back to the start)
-    const wrapped = () => { const t = v.currentTime; if (t < last - 1 && ++turns >= TURNS - 1) v.loop = false; last = t }
+    const wrapped = () => { const t = v.currentTime; if (t < last - 1 && ++turns >= runs - 1) v.loop = false; last = t }
     const ended = () => { rested = true }
     const playing = () => setShown(true)
     const failed = () => { dead = true; setShown(false) }
@@ -87,7 +88,7 @@ export default function TrophyTurn({ base, className, replay = null }) {
       tap?.removeEventListener('pointerdown', poke)
       v.pause()
     }
-  }, [off, base, replay])
+  }, [off, base, replay, runs])
 
   if (off) return null
   return (
