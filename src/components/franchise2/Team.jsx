@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, BigNum, Go, fkVars } from './kit'
+import { Chyron, BigNum, fkVars, BackBar } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money } from './dparts'
 import { StaffStrip, StaffScreen } from './Staff'
 
@@ -27,12 +27,15 @@ export default function TeamTab({ F, act, owner }) {
   if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
   return (
     <div className="fd fk">
-      <Chyron team={F.team} title="DEPTH CHART" tag={F.year} right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)}`} />
-      <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
-      <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
+      <Chyron team={F.team} title="DEPTH CHART" tag={F.year} right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)} · TAP A PLAYER TO MOVE HIM`} />
+      <div className="fd-team-top">
+        <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
+        <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
+      </div>
       <div className="fd-seg" role="tablist">
         {[['off', 'OFFENSE'], ['def', 'DEFENSE']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
       </div>
+      <div className="fd-rooms">
       {groups.map((k, gi) => {
         const men = C[k], n = GROUP[k].n
         let up = 0
@@ -50,11 +53,11 @@ export default function TeamTab({ F, act, owner }) {
                   <Man F={F} p={p} s={F.team} owner={owner} size={starts ? 'm' : 's'} line={p.in ? outText(p) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p)} onClick={() => tap(p)} />
                   {on && (
                     <div className="fd-dc-acts">
-                      <button disabled={i === 0} onClick={() => move(0)}>TO THE TOP</button>
-                      <button disabled={i === 0} onClick={() => move(i - 1)}>UP</button>
-                      <button disabled={i === men.length - 1} onClick={() => move(i + 1)}>DOWN</button>
-                      {NEXT_DOOR[k] && <button onClick={() => { act(X => setGroup(X, p.i, NEXT_DOOR[k])); setPick(null); sfx('swap') }}>TO {GROUP[NEXT_DOOR[k]].label}</button>}
-                      <button onClick={() => { setPage(p.i); setPick(null); sfx('tap') }}>PLAYER</button>
+                      <button onClick={() => { setPage(p.i); setPick(null); sfx('tap') }}>Player page</button>
+                      <button disabled={i === 0} onClick={() => move(0)}>To the top</button>
+                      <button disabled={i === 0} onClick={() => move(i - 1)}>▲ Up</button>
+                      <button disabled={i === men.length - 1} onClick={() => move(i + 1)}>▼ Down</button>
+                      {NEXT_DOOR[k] && <button onClick={() => { act(X => setGroup(X, p.i, NEXT_DOOR[k])); setPick(null); sfx('swap') }}>Move to {GROUP[NEXT_DOOR[k]].label}</button>}
                     </div>
                   )}
                 </div>
@@ -64,7 +67,8 @@ export default function TeamTab({ F, act, owner }) {
           </section>
         )
       })}
-      <button className="fd-reset" onClick={() => { act(X => resetChart(X)); setPick(null); sfx('flip') }}>SET BY RATING</button>
+      </div>
+      <button className="fd-reset" onClick={() => { act(X => resetChart(X)); setPick(null); sfx('flip') }}>Reset the chart by rating</button>
       {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
     </div>
   )
@@ -78,8 +82,8 @@ function CapScreen({ F, owner, act, onBack, page, setPage }) {
   const share = Math.round((top.slice(0, 3).reduce((a, p) => a + p.$, 0) / c.cap) * 100)
   const next = t.r.filter(p => p.y === 1).sort((a, b) => b.o - a.o)
   return (
-    <div className="fd fk">
-      <button className="fd-back" onClick={onBack}>‹ DEPTH CHART</button>
+    <div className="fd fk fd-narrow">
+      <BackBar label="Depth chart" title="Salary cap" onBack={onBack} />
       <Chyron team={F.team} title="THE CAP" tag={c.year} sub={`${TEAM[F.team].nick.toUpperCase()} · ${paid.length} UNDER CONTRACT`} />
       <div className="fd-capbig" style={fkVars(F.team)}>
         <BigNum v={Math.round(Math.abs(c.room))} label={c.room < 0 ? '$M OVER THE CAP' : '$M CAP ROOM'} size={76} tone={c.room < 0 ? 'l' : undefined} />
@@ -101,7 +105,6 @@ function CapScreen({ F, owner, act, onBack, page, setPage }) {
         </>
       )}
       {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
-      <Go ghost onClick={onBack}>BACK TO THE DEPTH CHART</Go>
     </div>
   )
 }

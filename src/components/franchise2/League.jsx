@@ -15,7 +15,7 @@ export default function LeagueTab({ F, owner, act }) {
   const [page, setPage] = useState(null)
   return (
     <div className="fd fk">
-      <div className="fd-seg fd-seg--4" role="tablist">
+      <div className="fd-seg fd-seg--4 fd-seg--views" role="tablist">
         {VIEWS.map(([k, label]) => <button key={k} role="tab" aria-selected={view === k} className={view === k ? 'is-on' : ''} onClick={() => { setView(k); sfx('tap') }}>{label}</button>)}
       </div>
       {view === 'table' && <Standings F={F} />}
@@ -40,7 +40,7 @@ function Standings({ F }) {
       <div className="fd-seg" role="tablist">
         {CONFS.map(c => <button key={c} role="tab" aria-selected={conf === c} className={conf === c ? 'is-on' : ''} onClick={() => { setConf(c); sfx('tap') }}>{c}</button>)}
       </div>
-      <Chyron tone="ink" title={F.po ? `${conf} FIELD` : `${conf} · IN TODAY`} sub={F.phase === 'season' ? `AFTER WEEK ${F.wk}` : `${F.year} FINAL`} />
+      <Chyron tone="ink" title={F.po ? `${conf} FIELD` : `${conf} PLAYOFF PICTURE`} sub={F.phase === 'season' ? `IF THE SEASON ENDED AFTER WEEK ${F.wk}` : `${F.year} FINAL`} />
       <div className="fd-seeds">
         {seeds.map((s, i) => (
           <span key={s} className={`fd-seed${s === F.team ? ' is-me' : ''}${i === 0 ? ' is-bye' : ''}`} style={fkVars(s)}>
@@ -49,6 +49,7 @@ function Standings({ F }) {
         ))}
       </div>
       {!F.po && hunt.length > 0 && <div className="fd-hunt"><small>IN THE HUNT</small>{hunt.map(s => <span key={s} className={s === F.team ? 'is-me' : ''}><KLogo s={s} size={20} />{recText(S.R[s])}</span>)}</div>}
+      <div className="fd-cols">
       {DIVISIONS.filter(d => d.conf === conf).map((d, di) => (
         <section key={d.name} className="fd-div" style={{ '--d': `${di * 50}ms` }}>
           <div className="fd-room-h"><b>{d.name.toUpperCase()}</b><small>W-L · DIV</small></div>
@@ -63,6 +64,7 @@ function Standings({ F }) {
           })}
         </section>
       ))}
+      </div>
     </>
   )
 }
@@ -73,7 +75,7 @@ function Leaders({ F, owner, onMan }) {
   const who = useMemo(() => whoIs(F), [F, F.wk, F.phase]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!Object.keys(tot).length) return <div className="fd-none">THE LEADERS START AFTER WEEK 1</div>
   return (
-    <>
+    <div className="fd-cols">
       {LEADER_CATS.map((c, ci) => {
         const L = leaders(F, c.f ?? c.k, 5, { tot, who })
         if (!L.length) return null
@@ -90,7 +92,7 @@ function Leaders({ F, owner, onMan }) {
           </section>
         )
       })}
-    </>
+    </div>
   )
 }
 
