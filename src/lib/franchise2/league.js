@@ -23,6 +23,7 @@ import { ovrOf, nameOf, TYPES_OF } from '../squadSeason'
 import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
+import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam } from './roster'
 
 export const FIRST_YEAR = 2026
@@ -131,7 +132,7 @@ export const buildSpot = (pos, build) => (pos === 'dl' ? dlBuildSpot(build) : po
 export function makeBuilt(F, idx, R) {
   const B = F.builds[idx]
   const o = ovrOf(B.pos, B.build)
-  const p = { i: F.nid++, n: nameOf(B.pos, B.build) ?? POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx }
+  const p = { i: F.nid++, n: B.name || nameOf(B.pos, B.build) || POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx, ...(B.rk && { rk: B.rk }) }
   const s = buildSpot(B.pos, B.build)
   if (s) p.s = s
   p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
@@ -185,29 +186,19 @@ export function calibrate(F) {
   F.cal = { mo: r1(mean(raws.map(x => x.off))), so: r1(sd(raws.map(x => x.off)) * 10) / 10, md: r1(mean(raws.map(x => x.def))), sd: r1(sd(raws.map(x => x.def)) * 10) / 10, ro: r1(mean(ro)), rd: r1(mean(rd)), rso: r1(sd(ro)), rsd: r1(sd(rd)) }
   SHORTS.forEach((s, i) => {
     const m = scaled(F, raws[i])
-    F.teams[s].res = [r1(TEAMS[i].off - m.off), r1(TEAMS[i].def - m.def)]
+    // (the real staff's play-calling is its own term, coach.js: the rest is what fades)
+    const ce = realEdge(s)
+    F.teams[s].res = [r1(TEAMS[i].off - m.off - ce.off), r1(TEAMS[i].def - m.def - ce.def)]
   })
 }
 const scaled = (F, raw) => ({ off: F.cal.ro + ((raw.off - F.cal.mo) / F.cal.so) * F.cal.rso, def: F.cal.rd + ((raw.def - F.cal.md) / F.cal.sd) * F.cal.rsd })
-// Coaching on the player's team (the coach's scheme)
-export const SCHEMES = {
-  air: { name: 'AIR RAID', off: 0.45, def: 0 },
-  ground: { name: 'GROUND & POUND', off: 0.3, def: 0.15 },
-  blitz: { name: 'BLITZ HAPPY', off: 0, def: 0.45 },
-  nofly: { name: 'NO FLY ZONE', off: 0, def: 0.45 },
-  balanced: { name: 'BALANCED', off: 0.22, def: 0.22 },
-}
-export const STYLES = {
-  players: { name: "PLAYERS' COACH" },
-  developer: { name: 'DEVELOPER' },
-  motivator: { name: 'MOTIVATOR' },
-  recruiter: { name: 'RECRUITER' },
-}
-// A team's offense and defense on the sim's 1–12 scale, and its OVR (the starters' average, the number on screen)
+// A team's offense and defense on the sim's 1–12 scale, and its OVR (the starters' average, the number on screen).
+// The head coach's play-calling is in it (coach.js coachEdge): the player's own coach on his team, the real staff
+// everywhere else.
 export function strength(F, short) {
   const t = F.teams[short], L = lineup(t), raw = rawStrength(t, L), m = scaled(F, raw)
-  let off = m.off + (t.res?.[0] ?? 0), def = m.def + (t.res?.[1] ?? 0)
-  if (short === F.team && F.coach) { const sc = SCHEMES[F.coach.scheme]; if (sc) { off += sc.off; def += sc.def } }
+  const ce = coachEdge(F, short)
+  let off = m.off + (t.res?.[0] ?? 0) + ce.off, def = m.def + (t.res?.[1] ?? 0) + ce.def
   const starters = Object.values(L)
   return { off: r1(clamp(1, 12, off)), def: r1(clamp(1, 12, def)), ovr: Math.round(mean(starters.map(p => p.o))), rawOff: raw.off, rawDef: raw.def }
 }

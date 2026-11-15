@@ -5,18 +5,22 @@ import { makeSchedule } from './schedule'
 import { makeClass } from './offseason'
 import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
+import { takenOn, legalFor, pickNumber, cleanName } from './identity'
 
 export * from './league'
 export * from './season'
 export * from './offseason'
+export * from './coach'
+export * from './identity'
 export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, finishOf } from './standings'
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 export { clockText, periodOf, spotText, normalRate } from './game'
 
-export const SAVE_V = 2
-const NUMS = { qb: [1, 19], rb: [20, 49], wr: [10, 19], te: [80, 89], ol: [60, 79], dl: [90, 99], lb: [40, 59], db: [20, 39] }
+export const SAVE_V = 3
 
-// setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox }], coach: { name, av, scheme, style } }
+// setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num }],
+//         coach: coach.js finishCoach { name, face, style, r: { the five ratings }, from, ovr } }
+// A build is a rookie (22, his first year): his name and number are the ones the player gave him (identity.js)
 export function createFranchise(setup) {
   const F = {
     v: SAVE_V, seed: setup.seed, slot: setup.slot ?? 0, owner: setup.owner ?? 'Guest', sandbox: !!setup.sandbox,
@@ -27,14 +31,12 @@ export function createFranchise(setup) {
   calibrate(F)
   const R = rngOf(`${F.seed}-builds`)
   const t = F.teams[F.team]
-  const used = new Set()
   for (const b of setup.builds ?? []) {
     const idx = F.builds.length
-    const [lo, hi] = NUMS[b.pos] ?? [1, 99]
-    let num = R.int(lo, hi)
-    for (let k = 0; k < 20 && used.has(num); k++) num = R.int(lo, hi)
-    used.add(num)
-    F.builds.push({ pos: b.pos, build: b.build, types: b.types ?? null, num, age: 23, car: [], ...(b.sandbox && { sandbox: 1 }) })
+    const taken = takenOn(F.team, F.builds)
+    const num = legalFor(b.pos, b.num) && !taken.has(b.num) ? b.num : pickNumber(b.pos, taken, R.u)
+    const name = cleanName(b.name).trim() || null
+    F.builds.push({ pos: b.pos, build: b.build, types: b.types ?? null, name, num, age: 22, rk: F.year, car: [], ...(b.sandbox && { sandbox: 1 }) })
     t.r.push(makeBuilt(F, idx, R))
   }
   // the budget: what a team in this league spends, a little over; the player's team always starts under it

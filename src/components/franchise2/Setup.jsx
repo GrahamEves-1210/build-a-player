@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { TEAMS, TEAM, buildTeams, calibrate, strength, lineup, sideGrade, SCHEMES, STYLES, POS_LABEL, DIVISIONS } from '../../lib/franchise2'
+import { TEAMS, TEAM, buildTeams, calibrate, strength, lineup, sideGrade, STYLES, POS_LABEL, DIVISIONS } from '../../lib/franchise2'
 import { POSITIONS, CAPS, POS_NAME } from '../../lib/squad'
 import { ovrOf, nameOf, faceOf } from '../../lib/squadSeason'
 import { sfx, haptic } from '../../lib/juice'
@@ -7,6 +7,7 @@ import { IconClose, IconArrow, IconCheck } from '../app/icons'
 import { AvatarBadge } from '../app/NameTag'
 import { Logo, Face, Ovr, Count, teamVars, lastName } from './bits'
 
+const SCHEMES = { balanced: { name: 'BALANCED' } }   // (being rebuilt: the coach is spun)
 // SETUP: the team (the wall of 32 logos), the builds (how many, which spots: each made on the build page),
 // the coach (a name, the player's own avatar, a scheme and a style), then the season.
 const MAX_BUILDS = 8
