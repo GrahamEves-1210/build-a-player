@@ -25,6 +25,7 @@ import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam } from './roster'
+import { marketValue, realDeal, signDeal, signRookie, buildSlot } from './contracts'
 
 export const FIRST_YEAR = 2026
 export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
@@ -77,13 +78,9 @@ export function realOf(pos, name) {
 }
 
 // ── Money ────────────────────────────────────────────────────────────────────
-const PAY = { qb: 1.9, rb: 0.55, wr: 1.0, te: 0.65, ol: 0.8, dl: 1.1, lb: 0.7, db: 0.85 }
-// what a man is worth a year ($M): stars cost, depth is cheap
-export function worth(p) {
-  const base = 0.9 + 27 * Math.pow(clamp(0, 1, (p.o - 64) / 35), 2.6)
-  const age = p.ag >= 32 ? 0.75 : p.ag >= 30 ? 0.9 : 1
-  return r1(Math.max(0.9, base * PAY[p.p] * age))
-}
+// (the market, the cap and the rookie scale: lib/franchise2/contracts.js)
+// what a man is worth a year ($M) on the open market, at his spot and rating
+export const worth = p => marketValue(p)
 export const yearsFor = p => (p.ag <= 26 ? 4 : p.ag <= 29 ? 3 : p.ag <= 31 ? 2 : 1)
 export const payroll = roster => r1(roster.reduce((a, p) => a + (p.$ ?? 0), 0))
 
@@ -112,8 +109,10 @@ export function makeReal(F, r, R) {
   const p = { i: F.nid++, n: r.name, p: r.pos, o: r.o, ag }
   if (r.s) p.s = r.s
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
-  p.$ = worth(p)
-  p.y = clamp(1, 5, Math.round(yearsFor(p) * (0.4 + R.u() * 0.8)))
+  // his real deal (src/data/nfl-contracts.json), or the market's estimate
+  const d = realDeal(r.name, r.team, p, R)
+  p.$ = d.$; p.y = d.y; p.g = d.g
+  if (d.rc) p.rc = 1
   return p
 }
 const GEN_SPOT = { dl: ['edge', 'dt'], db: ['cb', 's'], ol: ['LT', 'LG', 'C', 'RG', 'RT'] }
@@ -123,8 +122,7 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   const p = { i: F.nid++, n: fakeName(R), p: pos, o: o ?? clamp(55, 76, Math.round(66 + R.n() * 4)), ag: age }
   if (GEN_SPOT[pos]) p.s = R.pick(GEN_SPOT[pos])
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 4)
-  p.$ = worth(p)
-  p.y = R.int(1, 3)
+  signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
   return p
 }
 // the player's own build as a man on the roster
@@ -136,8 +134,9 @@ export function makeBuilt(F, idx, R) {
   const s = buildSpot(B.pos, B.build)
   if (s) p.s = s
   p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
-  p.$ = worth(p)
-  p.y = 4
+  // a build is a rookie: the rookie scale at the slot his OVR would have gone in the draft (contracts.js buildSlot)
+  signRookie(p, B.slot ?? buildSlot(o), F.year ?? FIRST_YEAR)
+  B.slot = B.slot ?? buildSlot(o)
   B.pid = p.i
   return p
 }

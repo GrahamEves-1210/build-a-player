@@ -56,7 +56,7 @@ export function createFranchise(setup) {
 const KEY = slot => `bap_fr2_slot_${slot}`
 export const SLOTS_N = 3
 // packed: a man is a row of values (the keys once, not on every man), a league ~60 KB
-const PK = ['i', 'n', 'p', 's', 'o', 'ag', 'pk', '$', 'y', 'b', 'in', 'rk', 'c', 'dr']
+const PK = ['i', 'n', 'p', 's', 'o', 'ag', 'pk', '$', 'y', 'b', 'in', 'rk', 'c', 'dr', 'nu', 'g', 'rc', 'op', 'ox', 'cr']
 const DK = ['i', 'n', 'p', 's', 'ag', 'o', 'pk', 'tag', 'c', 'sc', 'ht', 'wt', 'ft', 'nt', 'col', 'b']
 const row = (keys, x) => { const a = keys.map(k => x[k] ?? null); while (a.length && a[a.length - 1] === null) a.pop(); return a }
 const obj = (keys, a) => { const x = {}; keys.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); return x }
