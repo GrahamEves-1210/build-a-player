@@ -20,17 +20,19 @@ no crop) and converted to webp with sharp.
 
 | | HC | OC | DC |
 |---|---|---|---|
-| ESPN | 8 | 2 | 0 |
-| Team site | 24 | 30 | 32 |
+| ESPN | 3 | 0 | 0 |
+| Team site | 29 | 32 | 32 |
 | Total (of 32) | 32 | 32 | 32 |
 
 Free-agent coaches (`COACH_FREE_AGENTS`): 7 of 27, ESPN only (they have no team page).
 
 ## Notes
 
-- ESPN photos are old (2018-2019) and several show the coach's previous team: Mike Vrabel (Titans), John Harbaugh (Ravens),
-  Mike McCarthy (Packers), Dan Quinn (Falcons), Sean Payton (Saints). Frank Reich and Matt Nagy are older photos without their current team gear.
-  Each of their current teams' sites has a current studio portrait if the up-to-date uniform matters more than the source order.
+- Current team beats source order (2026-11-15). ESPN's photos are from 2018-2019. In them Mike Vrabel (Titans), John Harbaugh
+  (Ravens), Mike McCarthy (Packers), Dan Quinn (Falcons) and Sean Payton (Saints) wear their previous team's gear, and Frank Reich
+  and Matt Nagy are in old photos without their current team's gear. All seven now use their current team's studio portrait.
+  ESPN is kept only for Andy Reid, Kyle Shanahan (suit, no other team's mark), Sean McVay (Rams gear) and the free agents.
+- John Harbaugh (NYG): the Giants' portrait is a vertical waist-up studio shot, so it comes out 127x190 with a smaller face.
 - Matt LaFleur (GB): the Packers' photo is a studio portrait on a mottled backdrop, a little more styled than the others.
 - Tampa Bay has no defensive coordinator; George Edwards' photo is from his Buccaneers card (Pass Game Coordinator).
 - Todd Wash (CAR) is listed by the Panthers as interim defensive coordinator.
@@ -66,7 +68,7 @@ Free-agent coaches (`COACH_FREE_AGENTS`): 7 of 27, ESPN only (they have no team 
 | Brian Schottenheimer | DAL HC | Team site | https://static.clubs.nfl.com/image/upload/cowboys/x6xkpcqontxqwt8mdyr9.jpg (from https://www.dallascowboys.com/team/coaches-roster/) | 260x146 |
 | Klayton Adams | DAL OC | Team site | https://static.clubs.nfl.com/image/upload/cowboys/pg1nmocflsxszn8wrnye.jpg (from https://www.dallascowboys.com/team/coaches-roster/) | 260x146 |
 | Christian Parker | DAL DC | Team site | https://static.clubs.nfl.com/image/upload/cowboys/pez2mf6i9sj6poiihuva.png (from https://www.dallascowboys.com/team/coaches-roster/) | 260x146 |
-| Sean Payton | DEN HC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/17567.png | 260x189 |
+| Sean Payton | DEN HC | Team site | https://static.clubs.nfl.com/image/private/f_auto/broncos/b1br0juh1rp9krapsae8.jpg (from https://www.denverbroncos.com/team/coaches-roster/) | 260x146 |
 | Davis Webb | DEN OC | Team site | https://static.clubs.nfl.com/image/private/f_auto/broncos/jyqa2i3yr2d4bhpei76w.jpg (from https://www.denverbroncos.com/team/coaches-roster/) | 260x146 |
 | Vance Joseph | DEN DC | Team site | https://static.clubs.nfl.com/image/private/f_auto/broncos/aljefugdig4lmscpjzjv.jpg (from https://www.denverbroncos.com/team/coaches-roster/) | 260x146 |
 | Dan Campbell | DET HC | Team site | https://static.clubs.nfl.com/image/upload/lions/wnlvnnw7pr8bcdf8yt7f.jpg (from https://www.detroitlions.com/team/coaches-roster/) | 260x146 |
@@ -102,22 +104,22 @@ Free-agent coaches (`COACH_FREE_AGENTS`): 7 of 27, ESPN only (they have no team 
 | Kevin O'Connell | MIN HC | Team site | https://static.clubs.nfl.com/image/private/f_auto/vikings/hozn31ftfmnuslvaojle.jpg (from https://www.vikings.com/team/coaches-roster/) | 260x146 |
 | Wes Phillips | MIN OC | Team site | https://static.clubs.nfl.com/image/private/f_auto/vikings/rzzjaguw0xrvmdepn8t8.jpg (from https://www.vikings.com/team/coaches-roster/) | 260x146 |
 | Brian Flores | MIN DC | Team site | https://static.clubs.nfl.com/image/private/f_auto/vikings/njq3aeug6vj7r7oejdyj.jpg (from https://www.vikings.com/team/coaches-roster/) | 260x146 |
-| Mike Vrabel | NE HC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/1257.png | 260x189 |
+| Mike Vrabel | NE HC | Team site | https://static.clubs.nfl.com/image/upload/patriots/vyawltlzxdygn1ubmr7c.png (from https://www.patriots.com/team/coaches-roster/) | 260x146 |
 | Josh McDaniels | NE OC | Team site | https://static.clubs.nfl.com/image/upload/patriots/bidlnwaxv8yq9fmel75c.png (from https://www.patriots.com/team/coaches-roster/) | 260x146 |
 | Zak Kuhr | NE DC | Team site | https://static.clubs.nfl.com/image/upload/patriots/x3hgjac4pejjnrtz3rji.png (from https://www.patriots.com/team/coaches-roster/) | 260x146 |
 | Kellen Moore | NO HC | Team site | https://static.clubs.nfl.com/image/upload/saints/ahvamdhwedu0nqkumb9h.jpg (from https://www.neworleanssaints.com/team/coaches-roster/) | 260x146 |
 | Doug Nussmeier | NO OC | Team site | https://static.clubs.nfl.com/image/upload/saints/zxhcovmyv0kqer28r49d.jpg (from https://www.neworleanssaints.com/team/coaches-roster/) | 260x146 |
 | Brandon Staley | NO DC | Team site | https://static.clubs.nfl.com/image/upload/saints/crs6v11guoqyiohtotlq.jpg (from https://www.neworleanssaints.com/team/coaches-roster/) | 260x146 |
-| John Harbaugh | NYG HC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/17587.png | 260x189 |
-| Matt Nagy | NYG OC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/13162.png | 260x189 |
+| John Harbaugh | NYG HC | Team site | https://static.clubs.nfl.com/image/upload/giants/e5xqbb3eaaevzutrzyei.jpg (from https://www.giants.com/team/coaches-roster/) | 127x190 |
+| Matt Nagy | NYG OC | Team site | https://static.clubs.nfl.com/image/upload/giants/nmkq4gyrtd0tbkhtourt.jpg (from https://www.giants.com/team/coaches-roster/) | 190x190 |
 | Dennard Wilson | NYG DC | Team site | https://static.clubs.nfl.com/image/upload/giants/yadslf0t6mioqiirws76.jpg (from https://www.giants.com/team/coaches-roster/) | 190x190 |
 | Aaron Glenn | NYJ HC | Team site | https://static.clubs.nfl.com/image/upload/jets/o9oqdjxllj9fiqdgd1sx.png (from https://www.newyorkjets.com/team/coaches-roster/) | 260x173 |
-| Frank Reich | NYJ OC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/6532.png | 260x189 |
+| Frank Reich | NYJ OC | Team site | https://static.clubs.nfl.com/image/upload/jets/aco3lepunfgtdyv6i2ks.png (from https://www.newyorkjets.com/team/coaches-roster/) | 260x173 |
 | Brian Duker | NYJ DC | Team site | https://static.clubs.nfl.com/image/upload/jets/xomu5ytr5be7dfhi8mll.png (from https://www.newyorkjets.com/team/coaches-roster/) | 260x173 |
 | Nick Sirianni | PHI HC | Team site | https://static.clubs.nfl.com/image/private/f_auto/eagles/bqj3sr1r5pbs3w6epgrx.jpg (from https://www.philadelphiaeagles.com/team/coaches/) | 260x146 |
 | Sean Mannion | PHI OC | Team site | https://static.clubs.nfl.com/image/upload/eagles/bpixaidvibwkawmetq0m.png (from https://www.philadelphiaeagles.com/team/coaches/) | 222x190 |
 | Vic Fangio | PHI DC | Team site | https://static.clubs.nfl.com/image/upload/eagles/xbe3sxkbtqqqzpf38jet.jpg (from https://www.philadelphiaeagles.com/team/coaches/) | 260x146 |
-| Mike McCarthy | PIT HC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/17578.png | 260x189 |
+| Mike McCarthy | PIT HC | Team site | https://static.clubs.nfl.com/image/upload/steelers/zpjgzcniseurh5r1yr7o.jpg (from https://www.steelers.com/team/coaches-roster/) | 260x146 |
 | Brian Angelichio | PIT OC | Team site | https://static.clubs.nfl.com/image/upload/steelers/ddj4njduyy4gvhkbrfrf.jpg (from https://www.steelers.com/team/coaches-roster/) | 260x146 |
 | Patrick Graham | PIT DC | Team site | https://static.clubs.nfl.com/image/upload/steelers/bxuatzdmh7bkklmqceny.jpg (from https://www.steelers.com/team/coaches-roster/) | 260x146 |
 | Kyle Shanahan | SF HC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/17533.png | 260x189 |
@@ -132,7 +134,7 @@ Free-agent coaches (`COACH_FREE_AGENTS`): 7 of 27, ESPN only (they have no team 
 | Robert Saleh | TEN HC | Team site | https://static.clubs.nfl.com/image/upload/titans/fflteh2nl88z9oocmsnj.jpg (from https://www.tennesseetitans.com/team/coaches-roster/) | 260x146 |
 | Brian Daboll | TEN OC | Team site | https://static.clubs.nfl.com/image/upload/titans/a9bztzhfpemeemalfxkn.jpg (from https://www.tennesseetitans.com/team/coaches-roster/) | 260x146 |
 | Gus Bradley | TEN DC | Team site | https://static.clubs.nfl.com/image/upload/titans/m7yrk4kr4dboiqajfezt.jpg (from https://www.tennesseetitans.com/team/coaches-roster/) | 260x146 |
-| Dan Quinn | WAS HC | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/2485644.png | 260x189 |
+| Dan Quinn | WAS HC | Team site | https://static.clubs.nfl.com/image/upload/commanders/gsrnytky7zjsvlxyk5gq.jpg (from https://www.commanders.com/team/coaches-roster/) | 238x190 |
 | David Blough | WAS OC | Team site | https://static.clubs.nfl.com/image/upload/commanders/p7huagfywwgrwcwsyfp5.jpg (from https://www.commanders.com/team/coaches-roster/) | 237x190 |
 | Daronte Jones | WAS DC | Team site | https://static.clubs.nfl.com/image/upload/commanders/zq0bffhhxs8ghslzive6.jpg (from https://www.commanders.com/team/coaches-roster/) | 238x190 |
 | Mike Tomlin | free agent (HC) | ESPN | https://a.espncdn.com/i/headshots/nfl/coaches/65/17582.png | 260x189 |
