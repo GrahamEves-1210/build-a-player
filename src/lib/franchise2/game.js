@@ -136,8 +136,11 @@ function step(S) {
   const K = S.G.key
   if (K && !S.keyDone && !S.ot && S.t >= REG - (K.window ?? 300) && S.t <= REG - 25) {
     const team = K.side === 'off' ? K.us : other(K.us)
-    if (S.poss === team && Math.abs(margin(S, K.us)) <= 8) { S.key = dealKey(S, R); return }
+    // (a team ahead with the ball under two minutes kneels: no moment there)
+    if (S.poss === team && Math.abs(margin(S, K.us)) <= 8 && !(REG - S.t <= 130 && margin(S, team) > 0)) { S.key = dealKey(S, R); return }
   }
+  // ahead with the ball and under two minutes left: the victory formation
+  if (!S.ot && S.half === 2 && REG - S.t <= 110 && margin(S, S.poss) > 0) { S.t = REG; S.kneel = 1; return }
   const side = S.poss
   const d = drive(S, R)
   const end = S.ot ? S.ot.end : S.half === 1 ? HALF : REG

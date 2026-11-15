@@ -98,24 +98,24 @@ function Resign({ F, act, owner }) {
   const room = budgetLeft(F) + (p?.$ ?? 0)
   return (
     <>
-      <CampReport F={F} owner={owner} />
-      <Budget F={F} />
       {p ? (
         <section key={p.i} className={`f2-deal ag-pop${p.b != null ? ' is-mine' : ''}`}>
           <span className="ag-eyebrow">DEAL'S UP · {left} LEFT</span>
-          <Face F={F} p={p} size={88} />
+          <Face F={F} p={p} size={72} />
           <b className="f2-deal-name">{p.n}{p.b != null && <i className="f2-star">★</i>}</b>
           <small className="f2-deal-sub">{POS_LABEL[p.p]} · AGE {p.ag}</small>
-          <Ovr o={p.o} size="l" count />
+          <Ovr o={p.o} size="m" count />
           <span className="f2-deal-ask"><b>${ask.$}M</b><small>{ask.y} {ask.y === 1 ? 'YEAR' : 'YEARS'}</small></span>
           <div className="f2-two">
             <button className="ag-btn ag-btn--gold" disabled={ask.$ > room} onClick={() => { act(X => resignOne(X, p.i, true)); sfx('claim'); haptic('success') }}>{ask.$ > room ? 'OVER BUDGET' : 'KEEP'}</button>
             <button className="ag-btn ag-btn--ghost" onClick={() => { act(X => resignOne(X, p.i, false)); sfx('swap') }}>LET GO</button>
           </div>
+          <small className={`f2-budget-room${room - ask.$ < 0 ? ' is-over' : ''}`}>${Math.round(budgetLeft(F) * 10) / 10}M ROOM</small>
         </section>
       ) : (
         <button className="ag-btn ag-btn--gold f2-go" onClick={() => { act(X => openFA(X)); sfx('whistle') }}>FREE AGENCY <IconArrow size={16} /></button>
       )}
+      <CampReport F={F} owner={owner} />
     </>
   )
 }

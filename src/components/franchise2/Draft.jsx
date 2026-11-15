@@ -84,10 +84,14 @@ export default function DraftBoard({ F, act, onClose }) {
 
 // ── Draft day ────────────────────────────────────────────────────────────────
 export function DraftDay({ F, act, owner, onBuild }) {
-  const [ticker, setTicker] = useState([])     // the league's picks, shown one at a time
+  // the league's picks since the player's last one, shown one at a time (read from the draft itself)
+  const lastMine = F.dr.picks.map(p => p.s).lastIndexOf(F.team)
+  const ticker = F.dr.picks.slice(lastMine + 1)
   const [shownN, setShownN] = useState(0)
   const [reveal, setReveal] = useState(null)   // the player's pick, its card
-  const [filter, setFilter] = useState('star')
+  const [pickF, setFilter] = useState('star')
+  // (the board's starred men all gone: the whole class)
+  const filter = pickF === 'star' && !F.board.some(id => F.dc.some(x => x.i === id)) ? 'all' : pickF
   const [open, setOpen] = useState(null)
   const [addPos, setAddPos] = useState(false)
   const list = useBoard(F, filter)
@@ -100,13 +104,13 @@ export function DraftDay({ F, act, owner, onBuild }) {
     T.current = setTimeout(() => { setShownN(n => n + 1); sfx('tick') }, shownN === 0 ? 150 : 110)
     return () => clearTimeout(T.current)
   }, [ticking, shownN])
-  const simToMe = () => { const made = act(X => cpuPicks(X)); setTicker(made); setShownN(0); setReveal(null); sfx('flip') }
+  const simToMe = () => { act(X => cpuPicks(X)); setShownN(0); setReveal(null); sfx('flip') }
   const take = x => { const pk = act(X => userPick(X, x.i)); if (pk) { setReveal(pk); setOpen(null); sfx('card', 2); haptic('success') } }
   const auto = () => { const pk = act(X => autoPick(X)); if (pk) { setReveal(pk); sfx('card', 2) } }
   const mine = F.dr.picks.filter(p => p.s === F.team)
   const no = F.dr.at + 1, round = Math.floor(F.dr.at / 32) + 1
   // (the draft opens straight onto the league's picks before the player's first)
-  useEffect(() => { if (!done && !myTurn && !ticker.length) simToMe() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!done && !myTurn) simToMe() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (done && !reveal && !ticking) return (
     <>

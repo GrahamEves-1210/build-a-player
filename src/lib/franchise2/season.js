@@ -147,6 +147,8 @@ export function momentView(F) {
     game: P.game, pid: P.pid, b: P.b, po: P.po, opp, us: F.team, home: k.us === 'h',
     mine: k.mine, theirs: k.opp, clock: clockText(k.t), period: periodOf(k.t), down: k.down, d: k.d, y: k.y, goal: k.goal,
     ball: k.ball, spot: k.goal ? 'goal' : spotText(k.y), seed: `${P.S.G.seed}-mg`,
+    // the spot the broadcast way: "DEN 35" on the offense's own side, "ARI 47" across midfield
+    spotTxt: (() => { const off = k.ball === 'us' ? F.team : opp, def = k.ball === 'us' ? opp : F.team; return k.y === 50 ? '50' : k.y < 50 ? `${off} ${k.y}` : `${def} ${100 - k.y}` })(),
   }
 }
 export function finishMoment(F, hit) {
@@ -295,7 +297,7 @@ const EVENTS = [
   { id: 'crowd', make: () => ({ title: 'PRIMETIME NEXT WEEK', a: ['OPEN PRACTICE', { hype: 5 }], b: ['CLOSED DOORS', { nx: 0.3 }] }) },
   { id: 'trade', make: (F, t, R) => tradeEvent(F, t, R) },
 ]
-const last = p => p.n.split(' ').slice(-1)[0].toUpperCase()
+const last = p => { const w = p.n.split(' '); const k = w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.length - 2 : w.length - 1; return w[k].toUpperCase() }
 function nextOpp(F) {
   const g = F.sched.weeks[F.wk]?.find(x => x.h === F.team || x.a === F.team)
   return g ? (g.h === F.team ? g.a : g.h) : null

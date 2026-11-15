@@ -90,7 +90,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const me = TEAM[F.team], them_ = TEAM[opp]
   const per = periodOf(Math.min(T, endT - 0.01 < 0 ? 0 : T))
   return createPortal(
-    <div className={`f2-gd${phase === 'play' ? ' is-play' : ''}`} style={teamVars(F.team)} onClick={phase === 'live' ? skip : undefined}>
+    <div className={`f2 f2-gd${phase === 'play' ? ' is-play' : ''}`} style={teamVars(F.team)} onClick={phase === 'live' ? skip : undefined}>
       <div className="f2-bug" role="status">
         <span className="f2-bug-team" style={teamVars(F.team)}><Logo s={F.team} size={30} /><b>{me.short}</b><strong>{us}</strong></span>
         <span className="f2-bug-clock"><b>{phase === 'final' ? (row?.ot ? 'F/OT' : 'FINAL') : per}</b><small>{phase === 'final' ? '' : clockText(Math.min(T, 3599.9))}</small></span>
@@ -127,10 +127,10 @@ function MomentCard({ F, mv, owner, onPlay }) {
     <section className="f2-moment ag-pop">
       <span className="ag-eyebrow">KEY MOMENT · {mv.clock} {mv.period}</span>
       <h2 className="f2-moment-dd">{DOWN[mv.down]} &amp; {mv.goal ? 'GOAL' : mv.d}</h2>
-      <b className="f2-moment-spot">{mv.goal ? `AT THE ${100 - mv.y}` : mv.spot.toUpperCase().replace('THE', 'AT THE').replace('OWN', 'OWN')} · {where}</b>
+      <b className="f2-moment-spot">{mv.goal ? 'GOAL TO GO' : `AT ${mv.spotTxt}`} · {where}</b>
       <div className="f2-moment-who">
         {p && <Face F={F} p={p} size={64} />}
-        <span><b>{p?.n}</b><small>{POS_LABEL[p?.p]} · {owner.toUpperCase()}</small></span>
+        <span><b>{p?.n?.toUpperCase()}</b><small>{POS_LABEL[p?.p]} · {owner.toUpperCase()}</small></span>
       </div>
       <b className="f2-moment-need">{def ? 'GET A STOP' : mv.goal ? 'PUNCH IT IN' : 'MOVE THE CHAINS'}</b>
       <button className="ag-btn ag-btn--gold f2-go" onClick={e => { e.stopPropagation(); onPlay() }}>PLAY IT <IconArrow size={16} /></button>
@@ -143,7 +143,8 @@ function MomentPlay({ F, mv, onDone, onSkipAll }) {
   const us = TEAM[F.team], opp = TEAM[mv.opp]
   const def = mv.ball === 'them'
   const line = `${us.short} ${mv.mine === mv.theirs ? `and ${opp.short} tied at ${mv.mine}` : mv.mine < mv.theirs ? `down ${mv.mine}-${mv.theirs} to ${opp.short}` : `up ${mv.mine}-${mv.theirs} on ${opp.short}`}, ${mv.clock} left in the ${mv.period === '4TH' ? '4th' : mv.period}.`
-  const tail = def ? `${opp.short} has the ball, ${DOWN[mv.down].toLowerCase()} and ${mv.goal ? 'goal' : mv.d}. ${us.short} needs a stop.` : `${DOWN[mv.down].replace('RD', 'rd').replace('TH', 'th')} and ${mv.goal ? 'goal' : mv.d}${mv.goal ? '' : ` at ${mv.spot}`}.`
+  const dn = DOWN[mv.down].toLowerCase()
+  const tail = def ? `${opp.short} has the ball, ${dn} and ${mv.goal ? 'goal' : mv.d}. ${us.short} needs a stop.` : `${dn[0].toUpperCase()}${dn.slice(1)} and ${mv.goal ? 'goal' : mv.d}${mv.goal ? '' : ` at the ${mv.spotTxt}`}.`
   const sit = { us: us.short, them: opp.short, mine: mv.mine, opp: mv.theirs, hoops: false, clock: 60, clockText: mv.clock, period: mv.period, line, tail, dist: mv.d, ...(def && { stop: true }) }
   const simple = (F.games ?? 'advanced') === 'simple' && SIMPLE_GAMES[mv.game]
   return (
@@ -183,6 +184,7 @@ function Final({ F, row, news, owner, onDone }) {
         </div>
       </div>
       <h2 className="f2-final-hl">{row.hl}</h2>
+      {row.mo && <span className={`f2-tag ${row.mo.hit ? 'is-gold' : 'is-inj'}`}>KEY MOMENT · {row.mo.hit ? 'MADE THE PLAY' : 'CAME UP SHORT'}</span>}
       {lines.length > 0 && (
         <div className="f2-final-lines">
           {lines.map(l => { const p = F.teams[F.team].r.find(x => x.i === l.pid); return p ? <span key={l.pid} className="f2-final-line"><Face F={F} p={p} size={34} /><b>{p.n}</b><small>{l.line}</small></span> : null })}

@@ -63,7 +63,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
         <button className="ag-round-btn" onClick={onHome} aria-label="Home"><IconClose size={16} /></button>
       </div>
       <div className="ag-screen-body">
-        <TeamBand F={F} r={r} st={st} />
+        {!off && <TeamBand F={F} r={r} st={st} />}
         <div className="ag-seg cr-tabs" role="tablist">
           <span className="ag-seg-pill cr-tabs-pill" style={{ '--i': ['season', 'team', 'league', 'history'].indexOf(tab) }} aria-hidden="true" />
           {[['season', off ? 'OFFSEASON' : 'SEASON'], ['team', 'TEAM'], ['league', 'LEAGUE'], ['history', 'HISTORY']].map(([id, label]) => (

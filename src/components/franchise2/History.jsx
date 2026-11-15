@@ -55,6 +55,7 @@ export default function HistoryTab({ F, owner, onSlots, onDelete }) {
         {F.builds.filter(B => !B.prospect || B.pid != null).map((B, i) => {
           const tot = {}
           for (const c of B.car) for (const [k, v] of Object.entries(c.st ?? {})) tot[k] = (tot[k] ?? 0) + v
+          if (!B.done && B.pid != null && F.phase !== 'off') for (const [k, v] of Object.entries(F.ss?.[B.pid] ?? {})) if (k !== 'gp') tot[k] = (tot[k] ?? 0) + v
           const awards = B.car.filter(c => c.aw).map(c => c.aw)
           const counts = Object.entries(awards.reduce((a, k) => ({ ...a, [k]: (a[k] ?? 0) + 1 }), {}))
           const pros = B.car.filter(c => c.hon === 'AP').length

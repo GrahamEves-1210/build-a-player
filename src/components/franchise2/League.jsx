@@ -27,6 +27,17 @@ export default function LeagueTab({ F }) {
   )
 }
 
+function Game({ F, g }) {
+  const po = F.po
+  const done = g.hs != null, hw = done && g.hs > g.as
+  const seedOf = s => (g.c === 'SB' ? '' : po.seeds[g.c].indexOf(s) + 1)
+  const side = (s, sc, won) => (
+    <span className={`f2-br-side${done ? (won ? ' is-w' : ' is-l') : ''}${s === F.team ? ' is-me' : ''}`}>
+      <i>{seedOf(s)}</i><Logo s={s} size={24} /><b>{done ? sc : ''}</b>
+    </span>
+  )
+  return <div className="f2-br-game">{side(g.h, g.hs, hw)}{side(g.a, g.as, done && !hw)}</div>
+}
 // The bracket: each round's games as logo against logo, the winner lit
 export function Bracket({ F }) {
   const po = F.po
@@ -36,23 +47,11 @@ export function Bracket({ F }) {
       {po.rounds.map((games, rd) => (
         <div key={rd} className={`f2-br-round${rd === po.rd && !po.champ ? ' is-now' : ''}`}>
           <span className="ag-eyebrow">{ROUNDS[rd]}</span>
-          <div className={`f2-br-games${rd === 3 ? ' is-sb' : ''}`}>
-            {games.map((g, i) => {
-              const done = g.hs != null, hw = done && g.hs > g.as
-              const side = (s, sc, won, seed) => (
-                <span className={`f2-br-side${done ? (won ? ' is-w' : ' is-l') : ''}${s === F.team ? ' is-me' : ''}`}>
-                  <i>{seed}</i><Logo s={s} size={24} /><b>{done ? sc : ''}</b>
-                </span>
-              )
-              const seedOf = s => (g.c === 'SB' ? '' : po.seeds[g.c].indexOf(s) + 1)
-              return (
-                <div key={i} className="f2-br-game">
-                  {side(g.h, g.hs, hw, seedOf(g.h))}
-                  {side(g.a, g.as, done && !hw, seedOf(g.a))}
-                </div>
-              )
-            })}
-          </div>
+          {rd === 3 ? <div className="f2-br-games is-sb">{games.map((g, i) => <Game key={i} F={F} g={g} />)}</div> : (
+            <div className="f2-br-games">
+              {CONFS.map(c => <div key={c} className="f2-br-conf"><small>{c}</small>{games.filter(g => g.c === c).map((g, i) => <Game key={i} F={F} g={g} />)}</div>)}
+            </div>
+          )}
         </div>
       ))}
       {po.rd === 0 && !po.rounds[0].some(g => g.hs != null) && (
