@@ -18,7 +18,7 @@ import { clamp, r1 } from './rng'
 // a man's 0-11 traits: a build's own; a real man's real ones, moved by how far his OVR has come since; a generated
 // man's from his OVR
 export const valOfOvr = o => clamp(0, 11, (-2.2 + Math.sqrt(Math.max(0, 4.84 + 0.96 * (o - 58)))) / 0.48)
-export function traitsOf(F, p) {
+export function boxTraits(F, p) {
   if (p.b != null) {
     const b = F.builds[p.b]?.build ?? {}
     const vals = Object.values(b).map(c => c?.val).filter(v => typeof v === 'number')
@@ -28,7 +28,7 @@ export function traitsOf(F, p) {
   const real = realOf(p.p, p.n), base = valOfOvr(p.o), shift = real ? base - valOfOvr(real.o) : 0
   return Object.fromEntries(KEYS[p.p].map(k => [k, r1(clamp(0, 11, real ? (real.attrs[k] ?? base) + shift : base))]))
 }
-export const ratingsOf = (F, p) => { const t = traitsOf(F, p); return KEYS[p.p].map(k => t[k]) }
+export const boxRatings = (F, p) => { const t = boxTraits(F, p); return KEYS[p.p].map(k => t[k]) }
 
 export function boxRoster(F, short) {
   const L = startersOf(F, short), rot = benchOf(F, short)
@@ -36,7 +36,7 @@ export function boxRoster(F, short) {
   const add = (p, st) => {
     const d = (dAt[p.p] = (dAt[p.p] ?? -1) + 1)
     const g = groupOf(p)
-    out.push({ k: `p${p.i}`, n: p.n, pos: p.p, o: p.o, a: ratingsOf(F, p), st, d, ...((p.p === 'dl' || p.p === 'db') && { sub: g === 'dt' || g === 's' ? g : g === 'edge' ? 'edge' : 'cb' }), ...(p.p === 'ol' && { sub: OL_SPOTS[d] ?? 'OL' }), ...(p.b != null && { s: String(p.b) }) })
+    out.push({ k: `p${p.i}`, n: p.n, pos: p.p, o: p.o, a: boxRatings(F, p), st, d, ...((p.p === 'dl' || p.p === 'db') && { sub: g === 'dt' || g === 's' ? g : g === 'edge' ? 'edge' : 'cb' }), ...(p.p === 'ol' && { sub: OL_SPOTS[d] ?? 'OL' }), ...(p.b != null && { s: String(p.b) }) })
   }
   Object.values(L).forEach(p => add(p, 1))
   rot.forEach(p => add(p, 0))

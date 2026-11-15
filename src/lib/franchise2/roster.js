@@ -80,6 +80,8 @@ export function chartTeam(team) {
 export function depthChart(F, short = F.team, { healthy = false } = {}) {
   const t = F.teams[short]
   if (short === F.team && !t.dc) chartOf(t)
+  // (a man new to the team gets his number the first time the chart is read)
+  if (t.r.some(p => p.b == null && p.nu == null)) fixNumbers(F, short)
   const C = chartTeam(t)
   if (healthy) for (const k of GROUP_KEYS) C[k] = C[k].filter(p => !p.in)
   return C

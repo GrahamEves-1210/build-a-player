@@ -101,8 +101,9 @@ export const fakeName = R => `${R.pick(FIRSTS)} ${R.pick(LASTS)}`
 // ── Making players ───────────────────────────────────────────────────────────
 // the OVR a man is headed for, from where he is and how young (a veteran is already there)
 export function peakFor(R, o, ag) {
+  // (a young man has a few points a year left in him, fewer the closer he already is to the top)
   const left = Math.max(0, 27 - ag)
-  return clamp(40, 99, Math.round(o + left * (2.2 + R.n() * 0.8)))
+  return clamp(40, 99, Math.round(o + left * Math.max(0, 1.35 + R.n() * 0.75) * clamp(0.3, 1, (99 - o) / 18)))
 }
 export function makeReal(F, r, R) {
   const ag = r.age ?? R.int(23, 30)

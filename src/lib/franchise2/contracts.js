@@ -167,13 +167,16 @@ export function optionPrice(p, year) {
 
 // ── A team's cap ─────────────────────────────────────────────────────────────
 // team.dead: [[name, $M]] dead money on this year's cap
-export const payrollOf = team => r1(team.r.reduce((a, p) => a + (p.$ ?? 0), 0))
+// (a deal with no years left is off the books: he's up for a new one)
+export const payrollOf = team => r1(team.r.reduce((a, p) => a + (p.y > 0 ? p.$ ?? 0 : 0), 0))
+// the league year the cap is for: the offseason is already next year's (the new league year starts in March)
+export const capYear = F => (F.phase === 'off' ? F.year + 1 : F.year)
 export const deadOf = team => r1((team.dead ?? []).reduce((a, d) => a + d[1], 0))
 export function capSheet(F, short = F.team) {
-  const t = F.teams[short], cap = capOf(F.year)
-  const pay = payrollOf(t), dead = deadOf(t), rest = restOf53(t.r.length, F.year)
+  const t = F.teams[short], yr = capYear(F), cap = capOf(yr)
+  const pay = payrollOf(t), dead = deadOf(t), rest = restOf53(t.r.filter(p => p.y > 0).length, yr)
   const used = r1(pay + dead + rest)
-  return { cap, pay, dead, rest, used, room: r1(cap - used) }
+  return { cap, pay, dead, rest, used, room: r1(cap - used), year: yr }
 }
 export const capRoom = (F, short = F.team) => capSheet(F, short).room
 export const canSign = (F, $, short = F.team) => capRoom(F, short) >= $ - 1e-9
