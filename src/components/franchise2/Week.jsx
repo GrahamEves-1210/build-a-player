@@ -280,9 +280,10 @@ function Final({ F, row, news, owner, onDone }) {
           {star && <ManL3 F={F} p={star} team={F.team} size="s" line={row.st.line} />}
         </div>
       )}
-      {news.filter(n => n.k === 'inj').length > 0 && (
+      {news.some(n => n.k === 'inj' || n.k === 'sign') && (
         <div className="fg-tags">
-          {news.filter(n => n.k === 'inj').map(n => <Tag key={n.pid} tone="inj">{n.n.toUpperCase()}{n.what ? ` (${String(n.what).toUpperCase()})` : ''} · OUT {n.wk} {n.wk === 1 ? 'WEEK' : 'WEEKS'}</Tag>)}
+          {news.filter(n => n.k === 'inj').map(n => <Tag key={n.pid} tone="inj">{n.n.toUpperCase()}{n.what ? ` (${String(n.what).toUpperCase()})` : ''} · {n.wk >= 4 ? `INJURED RESERVE · ${n.wk} WEEKS` : `OUT ${n.wk} ${n.wk === 1 ? 'WEEK' : 'WEEKS'}`}</Tag>)}
+          {news.filter(n => n.k === 'sign').map(n => <Tag key={n.pid} tone="line">SIGNED {n.n.toUpperCase()} OFF THE PRACTICE SQUAD</Tag>)}
         </div>
       )}
       <Go onClick={() => { sfx('tap'); onDone() }}>CONTINUE</Go>

@@ -18,7 +18,7 @@ const bad = m => { problems.push(m); if (problems.length < 40) console.log('  !!
 const H = seeded('gd-hits')
 const BANNED = /drive of the year|clutch|statement|dominant|epic|huge|massive|unbelievable|!|\bundefined\b|\bnull\b|\bNaN\b/i
 const names = s => new Set(F.teams[s].r.map(p => p.n))
-let games = 0, moments = 0, evs = 0, ms = 0, longest = 0
+let games = 0, moments = 0, evs = 0, ms = 0, longest = 0, inj = 0, ir = 0
 const samples = []
 function checkRow(row) {
   games++
@@ -47,7 +47,7 @@ function moment() {
   for (const [side, ok] of [['us', okUs], ['them', okThem]]) {
     const xi = cast[side].xi
     for (const m of [...xi.off, ...xi.def]) if (m && !ok.has(m.name) && !ok.has(m.name.split(' ').pop())) bad(`cast ${side} ${m.name} isn't on the roster`)
-    if (xi.off.filter(Boolean).length < 10 || xi.def.filter(Boolean).length < 10) bad(`cast ${side} short: ${xi.off.filter(Boolean).length} on offense, ${xi.def.filter(Boolean).length} on defense`)
+    if (xi.off.filter(Boolean).length < 10 || xi.def.filter(Boolean).length < 10) bad(`cast ${side} short: ${xi.off.filter(Boolean).length} on offense, ${xi.def.filter(Boolean).length} on defense (missing def ${xi.def.map((m, i) => (m ? "" : i)).join("")}; rooms ${Object.entries(FR.depthChart(F, side === "us" ? F.team : v.opp, { healthy: true })).map(([k, l]) => k + l.length).join(" ")})`)
   }
   if (!cast.me?.me || cast.me.number == null) bad('cast without the build')
   moments++
@@ -67,6 +67,7 @@ for (let y = 0; y < N; y++) {
     const t0 = performance.now()
     const r = FR.playWeek(F, { moments: true })
     if (r.pending) moment()
+    for (const n of (r.pending ? [] : r.news ?? [])) { inj++; if (n.wk >= 4) ir++ }
     const dt = performance.now() - t0; ms += dt; longest = Math.max(longest, dt)
     const row = F.log[F.log.length - 1]
     if (row && row !== checkRow.last) { checkRow.last = row; checkRow(row) }
@@ -83,6 +84,8 @@ for (let y = 0; y < N; y++) {
     const row = F.log[F.log.length - 1]
     if (row && row !== checkRow.last) { checkRow.last = row; checkRow(row) }
   }
+  console.log(`   injuries to ${team} starters so far: ${inj} (${ir} of 4+ weeks)`)
+  if (F.ssr == null) bad('no regular-season totals kept at the playoffs (F.ssr)')
   console.log(`${F.year} ${team} ${FR.recText(FR.records(F)[team])} · champ ${F.po.champ} · ${games} games, ${moments} moments, ${evs} events · ${(ms / Math.max(1, games)).toFixed(0)} ms a week (longest ${longest.toFixed(0)})`)
   FR.closeSeason(F)
   if (y < N - 1) {

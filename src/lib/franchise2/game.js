@@ -174,9 +174,9 @@ function touchdown(S, side, R, extra = {}) {
 function ctxOf(S, side) {
   const m = margin(S, side)
   const late = !S.ot && S.t >= REG - 300, late2 = !S.ot && S.t >= REG - 120
-  const end = !S.ot && ((S.half === 1 && S.t >= HALF - 110) || (S.half === 2 && S.t >= REG - 40))
+  const end = S.ot ? S.t >= S.ot.end - 100 : (S.half === 1 && S.t >= HALF - 110) || (S.half === 2 && S.t >= REG - 40)
   // (behind by more than a field goal late, three does nothing: a touchdown or nothing)
-  const needTD = (late && m <= -4 && m >= -8) || (late2 && m <= -4)
+  const needTD = (late && m <= -4 && m >= -8) || (late2 && m <= -4) || (!!S.ot && m <= -4)
   // (overtime: once both have had it, or the other side has already scored, the next score wins)
   const sudden = !!S.ot && (S.ot.sudden || margin(S, side) < 0)
   return { m, late, late2, end, needTD, sudden }
@@ -188,7 +188,7 @@ function drive(S, R, fromY = S.y) {
   if (ctx.late && ctx.m > 0) dur *= 1.45      // (ahead late: running the clock)
   if (ctx.late && ctx.m < 0) dur *= 0.5       // (behind late: hurrying)
   dur *= 0.86
-  if (S.ot) dur *= 0.85
+  if (S.ot) dur *= 0.72   // (overtime: both sides move fast, timeouts and the clock in play)
   const c = S.ct[side]
   c.dr = (c.dr ?? 0) + 1
   return { ...d, dur: Math.round(dur) }

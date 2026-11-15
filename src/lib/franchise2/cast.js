@@ -58,6 +58,18 @@ export function castSide(F, short, meId = null) {
   const behind = (k, slot, n) => [at(slot), ...C[k].filter(p => p !== L[slot]).slice(0, n - 1).map(M)].filter(Boolean)
   const qb = behind('qb', 'qb1', 2), rb = behind('rb', 'rb1', 3), te = behind('te', 'te1', 3)
   const wr = [at('wr1'), at('wr2'), at('wr3'), ...room('wr', 5).slice(3)].filter(Boolean)
+  // (a room short of healthy men for its starting spots takes the next man from the room beside it, the way a team
+  // does on Sunday: a safety drops into the box, an end stands up as a backer, a receiver lines up in the slot)
+  const used = new Set([qb, rb, wr, te, line, edge, dt, lb, cb, s].flat().map(m => m.name + m.number))
+  const NEXT = { lb: ['s', 'edge', 'dt', 'cb'], edge: ['dt', 'lb'], dt: ['edge'], cb: ['s'], s: ['cb', 'lb'], wr: ['te', 'rb'], te: ['wr'], ol: ['dt'] }
+  const NEED = { lb: [lb, 3], edge: [edge, 2], dt: [dt, 2], cb: [cb, 2], s: [s, 2], wr: [wr, 3], te: [te, 1], ol: [line, 5] }
+  for (const [k, [list, n]] of Object.entries(NEED)) {
+    for (const from of NEXT[k]) for (const p of C[from] ?? []) {
+      if (list.length >= n) break
+      const m = M(p), key = m.name + m.number
+      if (!used.has(key)) { used.add(key); list.push(m) }
+    }
+  }
   const x = (list, i) => list[i] ?? null
   const xi = { qb, rb, wr, te, ol: line, edge, dt, lb, cb, s }
   xi.dl = [x(edge, 0), x(dt, 0), x(dt, 1), x(edge, 1)]

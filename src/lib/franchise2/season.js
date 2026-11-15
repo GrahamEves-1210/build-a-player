@@ -6,7 +6,7 @@
 // with real names (plays.js), a headline written the way a beat writer files it, the builds' lines.
 // Chemistry, injuries, events and scout points move with the weeks. (Hype is gone, owner 2026-11-14: nothing on
 // the season side reads or moves it.)
-import { TEAM, SHORTS, OFFENSE, lineup, strength } from './league'
+import { TEAM, SHORTS, OFFENSE, lineup, strength, makeGen } from './league'
 import { newGame, run, resolveKey, boxOf, normalRate, clockText, periodOf, spotText } from './game'
 import { DIV_OF } from './schedule'
 import { standings, startPlayoffs, endRound, finishOf, ROUNDS, records } from './standings'
@@ -15,7 +15,7 @@ import { playFootballSeason } from '../teamSeason'
 import { fbLine } from '../squadSeason'
 import { momentsOf } from '../minigames'
 import { boxRoster, gameLines } from './stats'
-import { startersOf, depthChart, moveInChart, groupOf } from './roster'
+import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
 import { coachLate, coachDay, momentLift, chemWeek } from './coach'
 import { askOf, signDeal, canSign, cutMan } from './contracts'
 import { scoringSummary, whenOf } from './plays'
@@ -208,6 +208,15 @@ function topLine(roster, box) {
 // ── The end of a week ────────────────────────────────────────────────────────
 // (the week's injury wire, every team, is kept for the hub's ticker: F.wire [[short, name, weeks, what]]; the body
 // part is news.js's injuryOf, so the wire, the ticker and the final card all name the same one)
+// The NFL's injury load: a starter misses time about one week in thirty (a team loses ten or eleven starters for a
+// game or more over a season); most are out one to three weeks, about a quarter four or more (injured reserve), and a
+// few for the year. (The player's own builds come back inside six weeks: a choice, so a kid's star isn't gone for good.)
+const INJ_RATE = 0.032
+function injuryWeeks(R, build) {
+  const u = R.u()
+  const w = u < 0.4 ? 1 : u < 0.62 ? 2 : u < 0.76 ? 3 : u < 0.93 ? R.int(4, 8) : R.int(9, 17)
+  return build ? Math.min(6, w) : w
+}
 function endWeek(F, row) {
   const R = rngOf(`${F.seed}-${F.year}-wk-${F.phase}-${F.phase === 'playoffs' ? F.po.rd : F.wk}`)
   const out = { row, news: [] }
@@ -217,13 +226,26 @@ function endWeek(F, row) {
     const t = F.teams[s]
     for (const p of t.r) if (p.in) { p.in--; if (!p.in) delete p.in }
     const L = Object.values(lineup(t))
-    for (const p of L) if (R.u() < 0.011) {
-      p.in = R.u() < 0.8 ? R.int(1, 2) : R.int(3, 5)
+    for (const p of L) if (R.u() < INJ_RATE) {
+      p.in = injuryWeeks(R, p.b != null)
       if (s === F.team) out.news.push({ k: 'inj', pid: p.i, n: p.n, wk: p.in, what: injuryOf(F, p) })
       wire.push([s, p.n, p.in, injuryOf(F, p)])
     }
   }
   F.wire = wire.sort((a, b) => (b[0] === F.team) - (a[0] === F.team)).slice(0, 8)
+  // a room without enough healthy men to start: the team signs one off its practice squad, as every team does
+  for (const s of SHORTS) {
+    const C = depthChart(F, s, { healthy: true })
+    for (const [k, , pos, spot, n] of GROUPS) {
+      for (let have = C[k].length; have < n; have++) {
+        const p = makeGen(F, pos, R, { o: clamp(58, 70, Math.round(64 + R.n() * 3)), ag: R.int(23, 28) })
+        if (spot) p.s = spot
+        p.y = 1
+        F.teams[s].r.push(p)
+        if (s === F.team) { out.news.push({ k: 'sign', pid: p.i, n: p.n }); addNews(F, { k: 'sign', tag: 'SIGNED', s, text: `${TEAM[s].nick} sign ${k.toUpperCase()} ${p.n} off the practice squad` }) }
+      }
+    }
+  }
   F.chem = clamp(0, 100, r1(F.chem + chemWeek(F)))
   if (F.phase === 'playoffs') {
     endRound(F)
@@ -239,6 +261,8 @@ function endWeek(F, row) {
 }
 // the regular season is over: the bracket
 export function intoPlayoffs(F) {
+  // (the regular season's totals, kept: the playoffs' games don't count toward season lines, awards or records)
+  F.ssr = JSON.parse(JSON.stringify(F.ss ?? {}))
   startPlayoffs(F)
   const inIt = F.po.seeds.AFC.includes(F.team) || F.po.seeds.NFC.includes(F.team)
   F.phase = 'playoffs'
@@ -493,7 +517,7 @@ export function lineOf(F, a, h, neutral = false) {
   const A = strength(F, a), H = strength(F, h)
   const pts = ((H.off - A.def) - (A.off - H.def)) * 1.7 + (neutral ? 0 : 1.5)
   const r = Math.round(Math.abs(pts) * 2) / 2
-  const total = Math.round((44 + ((A.off - H.def) + (H.off - A.def)) * 1.3) * 2) / 2
+  const total = clamp(36, 56, Math.round((44 + ((A.off - H.def) + (H.off - A.def)) * 1.3) * 2) / 2)   // (the market's totals: high 30s to the mid 50s)
   if (r < 0.5) return { fav: null, pts: 0, text: 'PICK', total }
   return { fav: pts > 0 ? h : a, pts: r, text: `${pts > 0 ? h : a} -${r}`, total }
 }
