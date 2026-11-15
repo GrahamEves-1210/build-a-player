@@ -1,5 +1,6 @@
 import svgRaw from '../assets/wr-figure-color.svg?raw'
 import { warmSkin, warmSkinLight } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 const PROCESSED_SVG = (() => {
   let html = svgRaw
@@ -7,6 +8,9 @@ const PROCESSED_SVG = (() => {
     '<svg id="wr-fg" width="568" height="975" style="width:100%;height:100%;display:block" preserveAspectRatio="xMidYMid meet"')
   return html
 })()
+
+// the captain's patch (Career): upper right chest, the viewer's left; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(187 281) rotate(3) scale(0.9)'
 
 const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%' }
 
@@ -172,6 +176,9 @@ export default function WRFigureOverlay({ build, isTE = false }) {
             }}
           >{build?.['size']?.number ?? ''}</text>
         </g>
+
+        {/* Captain's patch (Career): upper right chest, the viewer's left */}
+        <CaptainPatch cap={captainIn(build)} color={tc('size')} color2={build?.['size']?.teamColor2} transform={CAPTAIN_AT} />
 
       </svg>
 

@@ -9,7 +9,7 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast, FACE_RATING,
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove } from '../../lib/career'
@@ -283,7 +283,8 @@ function Model({ c, devPick }) {
   const whyT = useRef(0)
   useEffect(() => () => clearTimeout(whyT.current), [])
   const tellWhy = t => { const w = upgradeBlock(c, t); if (!w) return; clearTimeout(whyT.current); setWhy({ text: w, k: Date.now() }); whyT.current = setTimeout(() => setWhy(null), 3200); sfx('tap') }
-  const shown = useMemo(() => inTeamColors(c.build, c.fit, jerseyOf(c)), [c.build, c.fit, c.number, c.team, c.roster]) // eslint-disable-line react-hooks/exhaustive-deps
+  const cap = captainOf(c)
+  const shown = useMemo(() => inTeamColors(c.build, c.fit, jerseyOf(c), cap), [c.build, c.fit, c.number, c.team, c.roster, cap.on, cap.years]) // eslint-disable-line react-hooks/exhaustive-deps
   const Card = ({ t }) => {
     const ch = c.build[t]
     const maxed = !!ch && maxedTrait(ch.val, ch, t)

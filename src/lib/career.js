@@ -611,7 +611,31 @@ export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
 // a build dressed in its team's colours (the model on Career and on home's Career card), and in his own number
 // (num: jerseyOf; every chip carries it, since each figure reads the number off a different trait)
-export const inTeamColors = (build, fit, num = null) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short, ...(num != null ? { number: num } : null) } : ch])) : build)
+// (cap: captainOf, from Career only. Every chip then carries captain: { years } when he wears the C this season and
+// false when he doesn't, so the figure draws the career's patch and never a spun real player's captain flag)
+export const inTeamColors = (build, fit, num = null, cap) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short, ...(num != null ? { number: num } : null), ...(cap !== undefined ? { captain: cap?.on ? { years: cap.years } : false } : null) } : ch])) : build)
+// The captain's C on his jersey (football). Named in an offseason ('captain' event, dated the season it is for), he
+// wears it that season and every season after it on the same team; a move to another team takes it off. years: the
+// seasons he has worn it, any team (the patch's stars: one a year, four at most, a gold C past four).
+// The season it shows for: the one under way, or in the offseason the one coming (the vote is in, his team is c.team).
+export function captainOf(c) {
+  const none = { on: false, years: 0 }
+  if (!c || (c.sport ?? 'nfl') !== 'nfl') return none
+  const named = new Set((c.events ?? []).filter(e => e.id === 'captain').map(e => e.year))
+  if (!named.size) return none
+  const now = c.phase === 'offseason' ? c.year + 1 : c.year
+  // (a played season's record is dated a year on: the season played while c.year was Y says year Y + 1)
+  const runs = (c.seasons ?? []).map((s, i) => ({ y: (s.year ?? i + 1) - 1, team: s.team })).filter(s => s.y < now)
+  runs.push({ y: now, team: c.team })
+  let on = false, years = 0, prev = null
+  for (const s of runs) {
+    if (named.has(s.y)) on = true
+    else if (on && s.team !== prev) on = false
+    if (on) years++
+    prev = s.team
+  }
+  return { on, years }
+}
 export const STAT_LABEL = { retTDs: 'KR TD', passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', drops: 'DROPS', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', sacks: 'SCK', tfl: 'TFL', qbHits: 'QB HITS', ff: 'FF', fr: 'FR', safeties: 'SFTY', pds: 'PD', rtgA: 'RTG ALLOWED', ydsA: 'YDS ALLOWED', sacksA: 'SACKS ALLOWED', prs: 'PRESSURES', pancakes: 'PANCAKES', pen: 'PENALTIES', grade: 'GRADE', hitsA: 'QB HITS ALLOWED', starts: 'STARTS', fgm: 'FG', fga: 'FGA', fgPct: 'FG%', long: 'LONG', m50: '50+', a50: '50+ ATT', xpm: 'XP', xpa: 'XPA', points: 'PTS', gw: 'GAME-WINNERS', cost: 'COSTLY MISSES', passGrade: 'PASS GRADE', runGrade: 'RUN GRADE', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST',
   // soccer
   apps: 'APPS', goals: 'G', assists: 'A', xg: 'xG', avgRating: 'RATING', lgGoals: 'LEAGUE G', mins: 'MINS', shots: 'SHOTS', sot: 'ON TARGET', hatTricks: 'HAT-TRICKS', motm: 'MOTM', cupGoals: 'CUP G', euroGoals: 'EUROPE G' }

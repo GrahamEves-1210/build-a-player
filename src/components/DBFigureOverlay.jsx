@@ -1,5 +1,6 @@
 import svgRaw from '../assets/db-figure-color.svg?raw'
 import { warmSkin, warmSkinLight } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 const PROCESSED_SVG = (() => {
   let html = svgRaw
@@ -22,6 +23,8 @@ const BODY_ANGLE = 7
 // waistband (the front panel runs about x 110-300 and y 330-445), a little left of the V so
 // the panel's diagonal right edge never clips it; `tilt` is the chest's lean (was 7 + 8 degrees).
 const CHEST_NUM = { x: 220, y: 386, size: 120, tilt: 13, squash: 0.9 }
+// the captain's patch (Career): upper right chest, the viewer's left; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(181 277) rotate(10) scale(1)'
 const CHEST_NICK = { size: 22, gap: 50 }   // centred over the number, `gap` up its tilted axis
 // Bebas Neue's figures stand 0.7 em tall: half of that below the centre puts the baseline right
 const capMid = size => size * 0.35
@@ -261,6 +264,8 @@ export default function DBFigureOverlay({ build, numberNudgePx = null, parts = n
               opacity="0.92"
             >{sizeChip?.number ?? ''}</text>
           </g>
+          {/* Captain's patch (Career): upper right chest, the viewer's left */}
+          <CaptainPatch cap={captainIn(build)} color={tc(P.jersey)} color2={build?.[P.jersey]?.teamColor2} transform={CAPTAIN_AT} />
         </g>
 
         {/* Left shoulder number (viewer left) — sideways, top pointing outward/left */}

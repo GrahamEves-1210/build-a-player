@@ -1,9 +1,12 @@
 import svgRaw from '../assets/k-figure-color.svg?raw'
 import { warmSkin } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 // The kicker's figure (public/k-silhouette.webp), through the ball on a field goal: the team colors laid over
 // the art from src/assets/k-figure-color.svg (its parts named by side of the picture: "left" is the left of the
 // image, so "left leg" is his kicking leg). The ball in the art is left as it is.
+// the captain's patch (Career): upper right chest, the viewer's left, on the shoulders' turn; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(505 316) scale(1.25)'
 const FIG_W = 1199
 const FIG_H = 1312
 
@@ -132,6 +135,8 @@ export default function KFigureOverlay({ build }) {
               paintOrder="stroke"
               style={{ opacity: show * 0.92, transition: 'opacity 0.5s ease', userSelect: 'none', pointerEvents: 'none' }}
             >{num}</text>
+            {/* Captain's patch (Career): upper right chest, the viewer's left */}
+            <CaptainPatch cap={captainIn(build)} color={tc(J)} color2={build?.[J]?.teamColor2} transform={CAPTAIN_AT} />
           </g>
         </g>
 

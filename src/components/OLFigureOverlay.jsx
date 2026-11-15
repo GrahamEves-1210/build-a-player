@@ -1,9 +1,12 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/ol-figure-color.svg?raw'
 import { warmSkin } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 // The lineman's figure (public/ol-silhouette.webp), set in a wide two-point pass set: the team colors laid over
 // the art from src/assets/ol-figure-color.svg (its parts named by side of the picture: "r" is the right of the image)
+// the captain's patch (Career): upper right chest, the viewer's left; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(271 338) scale(1.45)'
 const FIG_W = 888
 const FIG_H = 1289
 
@@ -190,6 +193,8 @@ export default function OLFigureOverlay({ build, numberNudgePx = null, nameNudge
               paintOrder="stroke"
               style={{ opacity: show * 0.92, transition: 'opacity 0.5s ease', userSelect: 'none', pointerEvents: 'none' }}
             >{num}</text>
+            {/* Captain's patch (Career): upper right chest, the viewer's left */}
+            <CaptainPatch cap={captainIn(build)} color={tc(J)} color2={build?.[J]?.teamColor2} transform={CAPTAIN_AT} />
           </g>
         </g>
 

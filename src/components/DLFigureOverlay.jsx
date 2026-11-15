@@ -1,12 +1,15 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/dl-figure-color.svg?raw'
 import { warmSkin, warmSkinLight } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 // The torso leans: collar to belt runs about 9 degrees off plumb, so what's printed on it does too
 const BODY_ANGLE = 12
 // the chest's plane: the print gets smaller toward the bottom left, where the body turns away
 const CHEST_PLANE = { transform: 'perspective(620px) rotateX(-13deg)', transformBox: 'fill-box', transformOrigin: 'right top' }
 const NAME_PLANE = { transform: 'rotate(-5deg) perspective(620px)', transformBox: 'fill-box', transformOrigin: 'right center' }
+// the captain's patch (Career): upper right chest, the viewer's left, on the chest's turn; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(330 430) scale(1.25)'
 const FIG_W = 912
 const FIG_H = 1496
 
@@ -209,6 +212,8 @@ export default function DLFigureOverlay({ build, numberNudgePx = null, nameNudge
                 paintOrder="stroke"
                 style={{ opacity: has(J) ? 0.92 : 0, transition: 'opacity 0.5s ease', userSelect: 'none', pointerEvents: 'none', ...CHEST_PLANE }}
               >{num}</text>
+              {/* Captain's patch (Career): upper right chest, the viewer's left */}
+              <CaptainPatch cap={captainIn(build)} color={tc(J)} color2={build?.[J]?.teamColor2} transform={CAPTAIN_AT} />
             </g>
           </g>
         </g>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { warmSkin } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 // The figure is 330 KB: its own file, fetched the first time a QB figure shows
 const scopeSvg = svgRaw => {
@@ -19,6 +20,9 @@ const loadBaseSvg = () => import('../assets/qb-figure-color.svg?raw').then(m => 
 
 
 const HELMET_SHELL = 'M244.5 120.156L256 128.656L276 134.656L287 130.156C284.333 129.156 278.4 126.556 276 124.156C273 121.156 277.5 109.156 279 109.156C280.2 109.156 280.833 102.489 281 99.1556L276 89.1556L260.5 79.6556C252.1 72.0556 258.333 62.8222 262.5 59.1556L292 60.1556L322.5 53.1556V44.6556H345.5V43.1556C333.5 5.95558 298.167 -0.677753 282 0.65558C226.8 3.45558 212.667 44.4889 212.5 64.6556L215 68.6556C213.4 73.4556 219.333 93.9889 222.5 103.656V107.656V113.656L228.5 121.656H237.5L244.5 120.156Z'
+
+// the captain's patch (Career): upper right chest, the viewer's left; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(228 215) rotate(-3) scale(1)'
 
 const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%' }
 
@@ -230,6 +234,9 @@ export default function QBFigureOverlay({ build, className }) {
             >{build?.['size']?.number ?? ''}</text>
           </g>
 
+          {/* Captain's patch (Career): upper right chest, the viewer's left */}
+          <CaptainPatch cap={captainIn(build)} color={tc('size')} color2={build?.['size']?.teamColor2} transform={CAPTAIN_AT} />
+
           {/* Team logo — right shoulder pad (arm-strength team) */}
           {has('arm') && build['arm'].team && (
             <g transform="rotate(-10, 409, 136)" style={{ pointerEvents: 'none' }}>
@@ -289,7 +296,7 @@ export default function QBFigureOverlay({ build, className }) {
       </div>
 
       {/* Captain badge — outside screen-blend div so it renders at full opacity */}
-      {has('leadership') && build['leadership'].captain && (
+      {has('leadership') && build['leadership'].captain === true && (
         <svg viewBox="0 0 622 844" preserveAspectRatio="xMidYMid meet"
              style={{ ...SVG_STYLE, zIndex: 4 }} aria-hidden="true">
           <image

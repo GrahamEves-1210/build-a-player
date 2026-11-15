@@ -1,9 +1,12 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/lb-figure-color.svg?raw'
 import { warmSkin } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 // The linebacker's figure (public/lb-silhouette.webp), squared up in his stance: the team colors laid over
 // the art from src/assets/lb-figure-color.svg (its parts named by side of the picture: "r" is the right of the image)
+// the captain's patch (Career): upper right chest, the viewer's left; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(442 372) scale(1.35)'
 const FIG_W = 1005
 const FIG_H = 1267
 
@@ -176,6 +179,8 @@ export default function LBFigureOverlay({ build, numberNudgePx = null, nameNudge
               paintOrder="stroke"
               style={{ opacity: show * 0.92, transition: 'opacity 0.5s ease', userSelect: 'none', pointerEvents: 'none' }}
             >{num}</text>
+            {/* Captain's patch (Career): upper right chest, the viewer's left */}
+            <CaptainPatch cap={captainIn(build)} color={tc(J)} color2={build?.[J]?.teamColor2} transform={CAPTAIN_AT} />
           </g>
         </g>
 

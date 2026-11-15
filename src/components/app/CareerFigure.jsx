@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Silhouette from '../Silhouette'
-import { POS_ATTR, inTeamColors, ensureSport, sportReady, jerseyOf } from '../../lib/career'
+import { POS_ATTR, inTeamColors, captainOf, ensureSport, sportReady, jerseyOf } from '../../lib/career'
 
 // Home's Career card: the career's own player, the same model as in Career.
 // Its own file, so home loads this (and the career code) only once there is a career.
@@ -9,7 +9,8 @@ import { POS_ATTR, inTeamColors, ensureSport, sportReady, jerseyOf } from '../..
 export default function CareerFigure({ c }) {
   const [, bump] = useState(0)
   const ready = sportReady(c.sport ?? 'nfl')
-  const shown = useMemo(() => inTeamColors(c.build, c.fit, ready ? jerseyOf(c) : null), [c.build, c.fit, ready, c.number, c.team]) // eslint-disable-line react-hooks/exhaustive-deps
+  const cap = captainOf(c)
+  const shown = useMemo(() => inTeamColors(c.build, c.fit, ready ? jerseyOf(c) : null, cap), [c.build, c.fit, ready, c.number, c.team, cap.on, cap.years]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!ready) ensureSport(c.sport).then(() => bump(n => n + 1)) }, [c.sport, ready])
   if (!ready) return <span className="ag-career-fig" aria-hidden="true" />
   return (

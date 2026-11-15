@@ -1,5 +1,6 @@
 import svgRaw from '../assets/rb-figure-color.svg?raw'
 import { warmSkin } from '../utils/footballSkin'
+import CaptainPatch, { captainIn } from './CaptainPatch'
 
 const PROCESSED_SVG = (() => {
   let html = svgRaw
@@ -10,6 +11,9 @@ const PROCESSED_SVG = (() => {
   html = html.replace(/<style>[\s\S]*?<\/style>/, '')
   return html
 })()
+
+// the captain's patch (Career): upper right chest, the viewer's left; CaptainPatch's units, 24x32
+const CAPTAIN_AT = 'translate(213 220) rotate(-6) scale(1.1)'
 
 const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%' }
 const WHITE = 'rgba(255,255,255,0.72)'
@@ -202,6 +206,9 @@ export default function RBFigureOverlay({ build }) {
           >{build?.['size']?.number ?? ''}</text>
         </g>
 
+
+        {/* Captain's patch (Career): upper right chest, the viewer's left */}
+        <CaptainPatch cap={captainIn(build)} color={tc('size')} color2={build?.['size']?.teamColor2} transform={CAPTAIN_AT} />
 
         {/* Team logo — left shoulder */}
         {has('size') && (
