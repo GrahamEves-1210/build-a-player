@@ -58,6 +58,6 @@ export function pickNumber(pos, taken, rnd = Math.random) {
 export function rookieSlots(builds) {
   const order = builds.map((b, i) => ({ i, o: ovrOf(b.pos, b.build) })).sort((a, b) => b.o - a.o || a.i - b.i)
   const out = [], used = new Set()
-  for (const x of order) { let s = buildSlot(x.o); while (used.has(s)) s++; used.add(s); out[x.i] = s }
+  for (const x of order) out[x.i] = buildSlot(x.o)   // (two 90s both sign the No. 1 pick's deal: the price is his OVR's)
   return out
 }

@@ -169,9 +169,10 @@ export function signRookie(p, pick, year = 2026) {
   if (d.opt) { p.op = 1; p.ox = null } else delete p.op
   return p
 }
-// The slot a build signs at: where a man of his OVR would have gone in the draft (a 99 at No. 1, an 85 around the
-// end of the first round, a 78 in the second, anything under 70 in the third round's back half)
-export const buildSlot = o => clamp(1, 100, Math.round(1 + Math.pow(Math.max(0, 99 - o), 1.18) * 1.85))
+// A build's rookie deal (owner 11-15): the real NFL rookie scale, priced by his OVR. A 90 or better signs the No. 1
+// pick's deal; below that the pay steps down the scale (an 85 about the 12th pick's, an 80 the 33rd's, a 75 the
+// 61st's, a 70 the 95th's, a 60 the 176th's). The pick is only the scale's price point: it is never shown.
+export const buildSlot = o => (o >= 90 ? 1 : clamp(1, 224, Math.round(1 + Math.pow(90 - o, 1.55) * 0.9)))
 // the fifth-year option's price: the top of his spot's market for a top-10 pick, a step below for the rest
 export function optionPrice(p, year) {
   const top = (MARKET[marketKey(p)] ?? MARKET.lb)

@@ -194,7 +194,7 @@ function Builds({ S, go, owner, onBuild }) {
           const sl = slotOf(p)
           return (
             <LowerThird key={p.id} name={b.name || `${POS_LABEL[p.pos]} ${k + 1}`} pos={p.pos} num={b.num} ovr={o} photo={buildFaceUrl({ pos: p.pos, face: b.face ?? defaultFace(`${S.seed}-${p.id}`, p.pos) }, TEAM[S.team]?.color)} team={S.team} mine={owner}
-              line={b.name ? `PICK ${sl}` : 'NAME HIM'} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
+              line={b.name ? (d => `ROOKIE DEAL · $${d.$.toFixed(1)}M · ${d.y} YRS`)(rookieScale(sl)) : 'NAME HIM'} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
           )
         })}
       </div>
@@ -228,7 +228,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
   return (
     <div className="fsu-nameform">
       <LowerThird size="l" name={`${first} ${last}`.trim() || POS_NAME[pos]} pos={pos} num={showNum ? num : null} ovr={o} photo={buildFaceUrl({ pos, face }, TEAM[team]?.color)} team={team} mine={owner}
-        line={deal ? `ROOKIE · NO. ${slot} PICK` : null} />
+        line={deal ? `ROOKIE DEAL · $${deal.$.toFixed(1)}M A YEAR` : null} />
       <span className="fsu-lbl">FACE</span>
       <FacePick face={face} pos={pos} team={team} shuffleKey={faceKey ?? pos} onChange={setFace} />
       <span className="fsu-lbl">NAME</span>
@@ -246,7 +246,6 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
       </>}
       {deal && (
         <div className="fsu-deal">
-          <Fact v={`NO. ${slot}`} label={`ROUND ${deal.round} SLOT`} size={28} />
           <Fact v={`$${deal.$.toFixed(1)}M`} label="A YEAR" size={28} />
           <Fact v={`${deal.y} YRS`} label={deal.opt ? '+ 5TH-YEAR OPTION' : 'ROOKIE DEAL'} size={28} />
         </div>
