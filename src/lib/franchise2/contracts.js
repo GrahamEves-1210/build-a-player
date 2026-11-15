@@ -58,7 +58,10 @@ function curve(tab, o) {
 }
 // what the market pays him a year: his rating at his spot, less for age (a back at 28, anyone past 30)
 export function marketValue(p, year = 2026) {
-  const base = curve(MARKET[marketKey(p)] ?? MARKET.lb, p.o)
+  // (the middle of the market, a solid starter, is paid more than the stars' curve alone says: the real league
+  // spends most of its cap on its starters, not just its stars)
+  const mid = 1 + 0.4 * clamp(0, 1, (92 - p.o) / 12) * clamp(0, 1, (p.o - 70) / 6)
+  const base = curve(MARKET[marketKey(p)] ?? MARKET.lb, p.o) * mid
   const age = p.p === 'rb' ? (p.ag >= 30 ? 0.55 : p.ag >= 28 ? 0.75 : 1) : p.p === 'qb' ? (p.ag >= 37 ? 0.7 : p.ag >= 34 ? 0.88 : 1) : p.ag >= 33 ? 0.6 : p.ag >= 31 ? 0.78 : p.ag >= 30 ? 0.9 : 1
   return r1(Math.max(minimumFor(p.ag, year), base * age * scaleOf(year)))
 }
@@ -81,7 +84,7 @@ export const askOf = (p, year = 2026) => ({ $: r1(marketValue(p, year) * (p.ag <
 let REAL = null
 let loaded = {}
 try { loaded = import.meta.glob('../../data/nfl-contracts.json', { eager: true, import: 'default' }) } catch { loaded = {} }
-export function useContracts(data) { REAL = index(data); return REAL?.size ?? 0 }
+export function useContracts(data) { REAL = index(data); if (data?.teamDead) DEAD = data.teamDead; return new Set(REAL.values()).size }
 const money = v => {
   if (v == null || v === '') return null
   const x = typeof v === 'number' ? v : parseFloat(String(v).replace(/[$,M\s]/g, ''))
@@ -91,6 +94,7 @@ const keyOf = n => String(n ?? '').toLowerCase().replace(/[^a-z]/g, '')
 function index(data) {
   const out = new Map()
   if (!data) return out
+  if (data.players && !Array.isArray(data.players)) data = Object.values(data.players)
   const rows = Array.isArray(data) ? data : Array.isArray(data.players) ? data.players : Array.isArray(data.contracts) ? data.contracts
     : Object.entries(data).filter(([k]) => !k.startsWith('_')).map(([name, v]) => (v && typeof v === 'object' && !Array.isArray(v) ? { name, ...v } : null)).filter(Boolean)
   for (const r of rows) {
@@ -101,7 +105,7 @@ function index(data) {
     // (a bonus a year as given, or the dead money if he were cut now spread over the years left)
     const per = money(r.proratedBonus ?? r.prorated ?? r.bonusPerYear), dead = money(r.dead ?? r.deadCap ?? r.dead_cap)
     const g = per ?? (dead != null ? r1(dead / yy) : null)
-    out.set(`${keyOf(r.name)}|${String(r.team ?? '').toUpperCase()}`, { $, y: yy, g })
+    out.set(`${keyOf(r.name)}|${String(r.team ?? '').toUpperCase()}`, { $, y: yy, g, ...(r.rookie && { rc: 1 }) })
     out.set(keyOf(r.name), out.get(keyOf(r.name)) ?? { $, y: yy, g })
   }
   return out
@@ -117,10 +121,20 @@ function realTable() {
 export function realDeal(name, team, p, R) {
   const T = realTable()
   const hit = T.get(`${keyOf(name)}|${String(team ?? '').toUpperCase()}`) ?? T.get(keyOf(name))
-  if (hit) return { $: hit.$, y: hit.y, g: hit.g ?? r1(hit.$ * bonusShare(hit.$)), src: 'real' }
+  if (hit) return { $: hit.$, y: hit.y, g: hit.g ?? r1(hit.$ * bonusShare(hit.$)), ...(hit.rc && { rc: 1 }), src: 'real' }
   return estimateDeal(p, R)
 }
 export const realContractsLoaded = () => realTable().size > 0
+// each team's real dead money on the 2026 cap (the file's teamDead): it sits on year one's cap, then it's gone
+let DEAD = null
+export function realTeamDead(short) {
+  if (!DEAD) DEAD = Object.values(loaded)[0]?.teamDead ?? {}
+  const v = money(DEAD[short])
+  return v > 0 ? v : 0
+}
+export function seedDead(F) {
+  for (const s of Object.keys(F.teams)) { const d = realTeamDead(s); if (d > 0) F.teams[s].dead = [['DEAD MONEY FROM PAST DEALS', d]] }
+}
 // the estimate: what the market pays him, partway through a deal of the usual length
 export function estimateDeal(p, R) {
   // (a man 24 or under is still on his rookie deal: the scale where a man of his rating goes, the years he has left)
@@ -202,6 +216,12 @@ export function cutMan(F, id, short = F.team) {
 export function tickDeal(p) {
   p.y = Math.max(0, (p.y ?? 0) - 1)
   if (p.op === 2 && p.y === 1 && p.ox) { p.$ = p.ox; delete p.rc }
+}
+// The franchise tag: one a team a year, a one-year deal at about the average of the top five at his spot (all of it
+// guaranteed; cut him and it's all dead money)
+export function tagPrice(p, year) {
+  const tab = MARKET[marketKey(p)] ?? MARKET.lb
+  return r1(((curve(tab, 99) + curve(tab, 97) + curve(tab, 96) + curve(tab, 95) + curve(tab, 94)) / 5) * scaleOf(year))
 }
 export const optionDue = p => p.rc && p.op === 1 && p.y === 1
 export function pickUpOption(F, p) {

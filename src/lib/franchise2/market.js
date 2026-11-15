@@ -9,7 +9,7 @@
 //          signs the best of the rest. After the third day the league fills its holes, and it's the draft.
 import { SHORTS, POS, MIN, lineup, makeGen, fillUp } from './league'
 import { depthChart, groupOf, GROUP } from './roster'
-import { askOf, marketValue, signDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor } from './contracts'
+import { askOf, marketValue, signDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice } from './contracts'
 import { coachOf, recruits } from './coach'
 import { standings } from './standings'
 import { rngOf, clamp, r1 } from './rng'
@@ -40,13 +40,17 @@ export function openResign(F) {
 }
 export const resignAsk = (p, F) => askOf(p, (F?.year ?? 2026) + 1)
 export const optionAsk = (p, F) => optionPrice(p, F.year + 1)
-// keep: true (re-sign at his ask) · false (let him go) · 'option' (pick up the fifth-year option) · 'decline'
+export const tagAsk = (p, F) => tagPrice(p, F.year + 1)
+export const canTag = F => F.tagged !== F.year + 1
+// keep: true (re-sign at his ask) · false (let him go) · 'option' (pick up the fifth-year option) · 'decline' ·
+// 'tag' (the franchise tag: one year at the top five's average, once a year)
 export function resignOne(F, id, keep) {
   const t = F.teams[F.team], p = t.r.find(x => x.i === id)
   F.rs = (F.rs ?? []).filter(x => x !== id)
   if (!p) return null
   if (keep === 'option') { pickUpOption(F, p); return 'option' }
   if (keep === 'decline') { declineOption(p); return 'decline' }
+  if (keep === 'tag') { const $ = tagAsk(p, F); signDeal(p, { $, y: 1, g: $ }); F.tagged = F.year + 1; return 'tag' }
   if (keep) { signDeal(p, resignAsk(p, F)); return 'kept' }
   t.r = t.r.filter(x => x !== p)
   if (p.b == null) F.fa.push(p)

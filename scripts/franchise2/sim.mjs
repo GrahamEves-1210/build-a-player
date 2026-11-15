@@ -2,6 +2,7 @@
 // the schedule's shape, records, the bracket, aging, the league's talent over time, save size, speed.
 //   bash scripts/franchise2/run.sh scripts/franchise2/sim.mjs [seasons=6] [team=DEN] [moments=1]
 import * as FR from '../../src/lib/franchise2/index'
+import CONTRACTS from '../../src/data/nfl-contracts.json'
 import { scheduleProblems } from '../../src/lib/franchise2/schedule'
 import { QBS } from '../../src/data/qbs'
 import { WRS } from '../../src/data/wrs'
@@ -10,6 +11,8 @@ import { seeded } from '../../src/lib/rng'
 const N = Number(process.argv[2] ?? 6), team = process.argv[3] ?? 'DEN', moments = process.argv[4] !== '0'
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
 const qb = QBS.find(p => p.name === 'Josh Allen'), wr = WRS.find(p => p.attrs && p.name === 'Puka Nacua') ?? WRS.find(p => p.attrs)
+// (the real contracts: Vite reads the file itself; a headless run hands it in)
+console.log(`real contracts: ${FR.useContracts(CONTRACTS)}`)
 let F = FR.createFranchise({ seed: 'sim-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }, { pos: 'wr', build: asBuild(wr), name: 'Tre Holloway', num: 81 }], coach: { name: 'Isaiah Vance', style: 'developer', r: { talentDev: 7, offPlaycalling: 8, defPlaycalling: 5, culture: 6, situational: 6 }, ovr: 78 } })
 const problems = []
 const bad = m => { problems.push(m); console.log('  !! ' + m) }

@@ -1,8 +1,11 @@
 // A long save's size: N seasons (moments off, the user's calls automatic), then where the bytes go, by part and by
 // player field.   bash scripts/franchise2/run.sh scripts/franchise2/size-long.mjs [seasons=15]
 import * as FR from '../../src/lib/franchise2/index'
+import CONTRACTS from '../../src/data/nfl-contracts.json'
 
 const N = Number(process.argv[2] ?? 15)
+// (the real contracts: Vite reads the file itself; a headless run hands it in)
+console.log(`real contracts: ${FR.useContracts(CONTRACTS)}`)
 const F = FR.createFranchise({ seed: 'long', team: 'DEN', owner: 'G', builds: [] })
 for (let y = 0; y < N; y++) {
   FR.simWeeks(F); FR.intoPlayoffs(F); FR.simPlayoffs(F); FR.closeSeason(F); FR.ageLeague(F); FR.openResign(F)

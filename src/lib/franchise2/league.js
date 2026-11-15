@@ -25,7 +25,7 @@ import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam } from './roster'
-import { marketValue, realDeal, signDeal, signRookie, buildSlot } from './contracts'
+import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead } from './contracts'
 
 export const FIRST_YEAR = 2026
 export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
@@ -221,4 +221,5 @@ export function buildTeams(F) {
     fillUp(F, r, R)
     F.teams[s] = { r }
   }
+  seedDead(F)
 }

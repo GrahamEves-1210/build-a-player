@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  TEAM, FINISH_TEXT, ageLeague, openResign, resignOne, resignAsk, optionAsk, optionDue, canSign, openFA, faBoard, bidView, pitchOf, placeBid,
+  TEAM, FINISH_TEXT, ageLeague, openResign, resignOne, resignAsk, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, faBoard, bidView, pitchOf, placeBid,
   OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
@@ -126,6 +126,7 @@ function Resign({ F, act, owner }) {
               </>
             )}
           </div>
+          {!opt && canTag(F) && p.o >= 84 && (() => { const tg = tagAsk(p, F), ok = canSign(F, tg); return <Go ghost disabled={!ok} onClick={() => keep('tag')} sub={`1 YEAR · ${money(tg)}`}>FRANCHISE TAG</Go> })()}
         </section>
       ) : (
         <>
