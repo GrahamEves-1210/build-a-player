@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, slotSummary, SLOTS_N, TEAM, recText, records, addProspect } from '../../lib/franchise2'
 import { FRANCHISE_CARD_KEY, FRANCHISE_ART } from '../../lib/franchiseLive'
 import { getUsername } from '../../lib/discord'
@@ -8,6 +8,7 @@ import { Logo, teamVars } from './bits'
 import Setup from './Setup'
 import Hub from './Hub'
 import './fr2.css'
+const KitPage = import.meta.env.DEV ? lazy(() => import('./KitPage')) : null   // (dev only: ?fkit shows the kit)
 
 // FRANCHISE (take two): take over an NFL team, put your own builds on it, and run it season after season.
 // This file is the mode's frame: the three save slots, the setup, then the hub. The builds are made on the game's
@@ -77,6 +78,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   const toSlots = () => { try { localStorage.removeItem(LAST) } catch {}; setSlot(null); setF(null); setSetup(null) }
   const remove = () => { clearFranchise(F?.slot ?? slot); try { localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}; toSlots() }
 
+  if (KitPage && /[?&]fkit\b/.test(location.search)) return <Suspense fallback={null}><KitPage onHome={onHome} /></Suspense>   // (dev only: the kit, kit.jsx)
   if (slot == null) return <Slots owner={owner} onOpen={open} onHome={onHome} />
   if (!F && setup) return <Setup setup={setup} owner={owner} put={putSetup} onBuild={onBuild} onStart={start} onBack={toSlots} />
   if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} />
