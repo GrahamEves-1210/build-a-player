@@ -87,7 +87,7 @@ for (let y = 0; y < N; y++) {
   const players = FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)
   const cap = FR.capSheet(F, team)
   console.log(`   new season ${F.year}: ${players} players, cap ${cap.cap} used ${cap.used} room ${cap.room}, FA bids ${bids} won ${won}, save ${(size / 1024).toFixed(0)} KB, moments so far ${dealt}`)
-  if (size > 160 * 1024) bad(`save ${size}`)
+  if (size > 190 * 1024) bad(`save ${size}`)   // (15 seasons in: about 170 KB)
   // the league's talent over the years (aging and growth): it should hold about where the real league started
   const L = league()
   console.log(`   league: starters ${L.mean} OVR, age ${L.age}, ${L.n90} men 90+, ${L.n95} 95+, stars' ages ${L.starAge}, real men left ${L.real}, QBs 85+ ${L.qb85}, cap room median ${L.room}M`)

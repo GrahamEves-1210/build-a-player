@@ -57,7 +57,7 @@
 .fd-reset { justify-self: center; margin-top: 4px; padding: 8px 14px; background: none; border: 0; box-shadow: inset 0 0 0 1px var(--fk-line2); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 2px; cursor: pointer; }
 
 /* ── A man's page ────────────────────────────────────────────────────────── */
-.fd-sheet-bg { position: fixed; inset: 0; z-index: 80; display: grid; align-items: end; justify-items: center; background: rgba(4,5,6,.72); animation: fd-fade .16s ease-out both; }
+.fd-sheet-bg { position: fixed; inset: 0; z-index: 1270; display: grid; align-items: end; justify-items: center; padding-bottom: var(--web-rail, 0px); background: rgba(4,5,6,.72); animation: fd-fade .16s ease-out both; }
 .fd-sheet { position: relative; display: grid; gap: 10px; width: min(560px, 100%); max-height: 92dvh; overflow-y: auto; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); background: var(--fk-ink); border-top: 3px solid #fff; color: var(--fk-text); animation: fd-rise .24s cubic-bezier(.2,.9,.25,1) both; overscroll-behavior: contain; }
 @media (min-width: 700px) { .fd-sheet-bg { align-items: center; } .fd-sheet { border: 1px solid var(--fk-line2); border-top: 3px solid #fff; } }
 .fd-x { position: absolute; top: 4px; right: 6px; z-index: 2; width: 34px; height: 34px; background: none; border: 0; color: var(--fk-mute); font-size: 26px; line-height: 1; cursor: pointer; }

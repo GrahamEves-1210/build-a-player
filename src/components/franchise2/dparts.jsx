@@ -122,7 +122,7 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
         <Man F={F} p={p} s={s ?? F.team} owner={owner} size="l" line={s ? TEAM[s].nick.toUpperCase() : 'FREE AGENT'} />
         <div className="fd-facts">
           <Fact v={p.ag} label="AGE" />
-          {pl && <Fact v={pl.starts ? slotName(pl.starts) : `${GROUP[pl.k].label}${pl.at + 1}`} label={pl.starts ? 'STARTER' : 'DEPTH'} />}
+          {pl && <Fact v={pl.starts ? (pl.starts.startsWith('ol') ? slotName(pl.starts) : pl.starts.toUpperCase()) : `${GROUP[pl.k].label}${pl.at + 1}`} label={pl.starts ? 'STARTER' : 'DEPTH CHART'} />}
           <Fact v={p.y > 0 ? money(p.$) : '—'} label={p.rc ? 'ROOKIE DEAL' : 'CAP HIT'} />
           <Fact v={p.y > 0 ? p.y : 0} label={p.y === 1 ? 'YEAR LEFT' : 'YEARS LEFT'} />
         </div>

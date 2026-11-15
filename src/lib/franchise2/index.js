@@ -24,7 +24,7 @@ export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, fini
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 export { clockText, periodOf, spotText, normalRate } from './game'
 
-export const SAVE_V = 5
+export const SAVE_V = 6
 
 // setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num }],
 //         coach: coach.js finishCoach { name, face, style, r: { the five ratings }, from, ovr } }
@@ -65,9 +65,18 @@ export function createFranchise(setup) {
 const KEY = slot => `bap_fr2_slot_${slot}`
 export const SLOTS_N = 3
 // packed: a man is a row of values (the keys once, not on every man), a league ~60 KB
-const PK = ['i', 'n', 'p', 's', 'o', 'ag', 'pk', '$', 'y', 'g', 'nu', 'rc', 'b', 'in', 'rk', 'c', 'dr', 'op', 'ox', 'cr', 'a', 'tg']
-const row = (keys, x) => { const a = keys.map(k => x[k] ?? null); while (a.length && a[a.length - 1] === null) a.pop(); return a }
-const obj = (keys, a) => { const x = {}; keys.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); return x }
+// a man as a row: the fields every man has, in order, then (if he has any) an object of the rest (a rookie's college,
+// draft slot and ratings, an injury, a career): no nulls held for what most men don't have
+const PK = ['i', 'n', 'p', 's', 'o', 'ag', 'pk', '$', 'y', 'g', 'nu', 'rk', 'c', 'dr', 'a', 'tg']
+const row = (keys, x) => {
+  const a = keys.map(k => x[k] ?? null)
+  const more = {}
+  for (const k in x) if (!keys.includes(k) && x[k] != null) more[k] = x[k]
+  if (Object.keys(more).length) a.push(more)
+  else while (a.length && a[a.length - 1] === null) a.pop()
+  return a
+}
+const obj = (keys, a) => { const x = {}; keys.forEach((k, j) => { if (a[j] != null) x[k] = a[j] }); const m = a[keys.length]; if (m && typeof m === 'object') Object.assign(x, m); return x }
 export function packFranchise(F) {
   if (!F.teams) return JSON.stringify(F)
   const teams = Object.fromEntries(Object.entries(F.teams).map(([s, t]) => [s, { ...t, r: t.r.map(p => row(PK, p)) }]))

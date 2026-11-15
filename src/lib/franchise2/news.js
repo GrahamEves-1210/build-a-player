@@ -16,6 +16,7 @@ import { groupOf, GROUP } from './roster'
 import { gameLines, leagueStats, whoIs } from './stats'
 import { lastSeason } from './lastSeason'
 import { marketDeals } from './market'
+import { lhRow } from './awards'
 
 const nick = s => TEAM[s]?.nick ?? s
 const num = v => Math.round(v ?? 0).toLocaleString('en-US')
@@ -142,7 +143,7 @@ function lastWon(F, s, wk) {
 // " for the first time since 2027" / " for the second straight year" (from the league's history in this save,
 // and the real 2025 season before it); nothing when the history doesn't say
 export function sinceText(F, s, kind) {
-  const hist = [...(F.lh ?? []).map(h => ({ y: h.y, div: h.r[s]?.[3] >= 1 && isDivWinner(h, s), po: h.r[s]?.[3] >= 2 })), { y: 2025, div: !!lastSeason(s)?.div, po: lastSeason(s)?.end !== 'MISSED PLAYOFFS' }]
+  const hist = [...(F.lh ?? []).map(h => ({ y: h.y, div: isDivWinner(h, s), po: (lhRow(h, s)?.[3] ?? 0) >= 2 })), { y: 2025, div: !!lastSeason(s)?.div, po: lastSeason(s)?.end !== 'MISSED PLAYOFFS' }]
   hist.sort((a, b) => b.y - a.y)
   if (!hist.length) return ''
   let run = 0
@@ -152,10 +153,9 @@ export function sinceText(F, s, kind) {
   return last ? ` for the first time since ${last.y}` : ''
 }
 const isDivWinner = (h, s) => {
-  const d = DIVISIONS.find(x => x.teams.includes(s))
   if (h.dw) return h.dw.includes(s)
-  const best = [...d.teams].sort((a, b) => (h.r[b][0] - h.r[a][0]) || (h.r[b][3] - h.r[a][3]))[0]
-  return best === s
+  const d = DIVISIONS.find(x => x.teams.includes(s))
+  return [...d.teams].sort((a, b) => (lhRow(h, b)?.[0] ?? 0) - (lhRow(h, a)?.[0] ?? 0))[0] === s
 }
 // the hub's ticker: the other games this week, the top of the wire
 export function tickerItems(F) {

@@ -22,8 +22,8 @@ export function growth(F, p, R, starter = false, short = null) {
   if (p.ag <= grow) {
     // the rest of the way to his peak, spread over the years he has left to grow (a wide spread: some boom early)
     const left = Math.max(1, grow + 1 - p.ag)
-    d = Math.max(0, (p.pk - p.o) / left) * (0.55 + 0.9 * R.u()) + dev + (starter && p.ag <= 25 ? 0.6 : 0) + R.n() * 0.8
-  } else if (p.ag <= prime) d = R.n() * 0.9 + (p.o < p.pk ? 0.4 : -0.1)
+    d = Math.max(0, ((p.pk ?? p.o) - p.o) / left) * (0.55 + 0.9 * R.u()) + dev + (starter && p.ag <= 25 ? 0.6 : 0) + R.n() * 0.8
+  } else if (p.ag <= prime) d = R.n() * 0.9 + (p.o < (p.pk ?? p.o) ? 0.4 : -0.1)
   else d = -(0.9 + (p.ag - prime) * 0.75) * (0.5 + R.u())
   return Math.round(d)
 }
@@ -68,7 +68,9 @@ export function ageLeague(F) {
       const d = growth(F, p, R, starters.has(p.i), s)
       if (p.b != null) { p.o = was + growBuild(F.builds[p.b], d); F.builds[p.b].age = p.ag }
       else p.o = clamp(40, 99, p.o + d)
-      if (p.o > p.pk) p.pk = p.o
+      if (p.o > (p.pk ?? 0)) p.pk = p.o
+      // (past his prime what he was headed for no longer matters: dropped, the save stays small)
+      if (p.ag > (CURVE[p.p]?.[1] ?? 29)) delete p.pk
       const out = R.u() < retireChance(p, starters.has(p.i)) * (p.b != null ? 0.6 : 1)
       if (out) {
         if (p.b != null) retireBuild(F, p)

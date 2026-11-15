@@ -149,8 +149,9 @@ export function trim(roster, keep = new Set()) {
   const out = [], cut = []
   for (const pos of POS) {
     const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || keep.has(b.i) - keep.has(a.i) || b.o - a.o)
-    out.push(...at.slice(0, Math.max(MAX[pos], at.filter(p => p.b != null).length)))
-    cut.push(...at.slice(Math.max(MAX[pos], at.filter(p => p.b != null).length)))
+    const n = Math.max(MAX[pos], at.filter(p => p.b != null || keep.has(p.i)).length)
+    out.push(...at.slice(0, n))
+    cut.push(...at.slice(n))
   }
   return { roster: out, cut }
 }

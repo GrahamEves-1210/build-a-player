@@ -69,7 +69,7 @@ export function seasonAwards(F) {
   const oroy = best(men.filter(x => rookie(x) && OFFENSE.includes(x.p.p) && x.p.p !== 'ol'))
   const droy = best(men.filter(x => rookie(x) && !OFFENSE.includes(x.p.p)))
   // the coach: the biggest turnaround, among the winners
-  const before = s => F.lh?.length ? F.lh[F.lh.length - 1].r[s]?.[0] ?? 8 : lastSeason(s)?.w ?? 8
+  const before = s => F.lh?.length ? lhRow(F.lh[F.lh.length - 1], s)?.[0] ?? 8 : lastSeason(s)?.w ?? 8
   const coy = [...SHORTS].filter(s => wins(s) >= 10).sort((a, b) => (wins(b) - before(b)) * 1 + wins(b) * 0.5 - ((wins(a) - before(a)) + wins(a) * 0.5))[0] ?? null
   // All-Pro and the Pro Bowl
   const hon = {}, ap = []
@@ -86,10 +86,17 @@ export function seasonAwards(F) {
   }
 }
 export const AWARD_KEYS = ['mvp', 'opoy', 'dpoy', 'oroy', 'droy']
+export function lhRow(h, s) {
+  if (!h?.r) return null
+  if (typeof h.r === 'object') return h.r[s] ?? null
+  const i = SHORTS.indexOf(s), part = h.r.split(' ')[i]
+  return part ? part.split('-').map(Number) : null
+}
 const CODE = { mvp: 'MVP', opoy: 'OPOY', dpoy: 'DPOY', oroy: 'OROY', droy: 'DROY' }
 
 // ── The season, kept ─────────────────────────────────────────────────────────
-// F.lh: the league's seasons [{ y, r: { short: [w, l, t, finish] }, champ, runner, score, aw: { MVP: [name, team, pos] … } }]
+// F.lh: the league's seasons [{ y, r: 'w-l-t-finish' for each team in SHORTS order, one string, champ, runner, score,
+//   dw: the division winners, aw: { MVP: [name, team, pos, line] … } }]; lhRow(h, s) reads a team's [w, l, t, finish]
 // p.cr: a man's career [[year, team, games, a, b, c (CAREER_KEYS), honor (1 Pro Bowl, 2 All-Pro), award codes]]
 export function closeSeason(F) {
   const S = standings(F), r = S.R[F.team]
@@ -107,23 +114,23 @@ export function closeSeason(F) {
   // the league's history: every team's year in a line
   const fcode = s => ({ champ: 6, sb: 5, conf: 4, div: 3, wc: 2 }[finishOf(F, s)] ?? (S.div[DIVISIONS.find(d => d.teams.includes(s)).name][0] === s ? 1 : 0))
   F.lh = [...(F.lh ?? []), {
-    y: F.year, r: Object.fromEntries(SHORTS.map(s => [s, [S.R[s].w, S.R[s].l, S.R[s].t, fcode(s)]])), champ: F.po.champ, runner: F.po.runner, score: F.po.score,
+    y: F.year, r: SHORTS.map(s => `${S.R[s].w}-${S.R[s].l}-${S.R[s].t}-${fcode(s)}`).join(' '), champ: F.po.champ, runner: F.po.runner, score: F.po.score,
     dw: DIVISIONS.map(d => S.div[d.name][0]),
     aw: Object.fromEntries([...AWARD_KEYS.filter(k => aw[k]).map(k => [CODE[k], [aw[k].n, aw[k].t, aw[k].p, aw[k].line]]), ...(aw.coy ? [['COY', [aw.coy.n, aw.coy.t]]] : [])]),
   }]
   // careers: the player's team's men, and anyone the league noticed (an award, an honor, a top-ten season)
   const tot = leagueStats(F)
   const top = new Set()
-  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk']) Object.entries(tot).filter(([, x]) => x[k]).sort((a, b) => b[1][k] - a[1][k]).slice(0, 10).forEach(([id]) => top.add(id))
+  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk']) Object.entries(tot).filter(([, x]) => x[k]).sort((a, b) => b[1][k] - a[1][k]).slice(0, 3).forEach(([id]) => top.add(id))
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const id = String(p.i), st = tot[id]
     if (!st?.gp) continue
-    if (!(s === F.team || aw.hon[p.i] || top.has(id) || p.cr)) continue
+    if (!(s === F.team || aw.hon[p.i] === 'AP' || awardOf(p.i).length || top.has(id) || p.cr)) continue
     const keys = CAREER_KEYS[p.p] ?? []
     const row = [F.year, s, st.gp, ...keys.map(k => st[k] ?? 0), aw.hon[p.i] === 'AP' ? 2 : aw.hon[p.i] === 'PB' ? 1 : 0]
     const a = awardOf(p.i)
     if (a.length) row.push(a.join(','))
-    p.cr = [...(p.cr ?? []), row].slice(-14)
+    p.cr = [...(p.cr ?? []), row].slice(-10)
   }
   // the franchise's one-season records (kept here: a man's career lines go when he retires)
   F.frec = F.frec ?? {}
