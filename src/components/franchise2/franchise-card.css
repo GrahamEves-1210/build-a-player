@@ -11,13 +11,13 @@
 .ag-mc--fr .ag-mc-head small { background: #1b2129; }
 /* the trophy (public/franchise/art, on the card's own near-black): bottom right, under the words */
 .ag-fr-art { position: absolute; right: 1px; bottom: 1px; z-index: 1; display: block; width: 60%; height: 74%; pointer-events: none; }
-.ag-fr-art :is(img, video) { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }
+.ag-fr-art :is(img, video) { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
 /* the same picture turning (TrophyTurn.jsx), over the still in the same box and the same crop */
 .ag-fr-art .ag-fr-turn { position: absolute; inset: 0; background: transparent; }
 @media (min-width: 1024px) {
   /* the wide second row: the trophy stands at the right end */
   html.app-look .ag-mc--fr .ag-fr-art { width: 30%; height: 100%; right: 10px; }
-  html.app-look .ag-mc--fr .ag-fr-art :is(img, video) { object-position: center 22%; }
+  html.app-look .ag-mc--fr .ag-fr-art :is(img, video) { object-position: center bottom; }
 }
 
 /* the classic Home (Settings → Classic Home): Squad Builder's row, in the mode's own colours */
@@ -49,7 +49,7 @@ html.is-app .fr-wait { padding-bottom: env(safe-area-inset-bottom, 0px); }
 /* on top of football's Home (College Football's old spot, owner 11-14): full width, the trophy on the right half */
 .ag-mc.ag-mc--fr.ag-mc--fr-wide { display: block; width: 100%; min-height: 150px; margin: 0 0 8px; }
 .ag-mc--fr-wide .ag-fr-art { width: 46%; height: 100%; right: 6px; }
-.ag-mc--fr-wide .ag-fr-art :is(img, video) { object-position: center 22%; }
+.ag-mc--fr-wide .ag-fr-art :is(img, video) { object-position: center bottom; }
 @media (min-width: 1024px) { html.app-look .ag-mc.ag-mc--fr.ag-mc--fr-wide { margin-bottom: 12px; } html.app-look .ag-mc--fr-wide .ag-fr-art { width: 30%; } }
 /* College Football in a grid spot (football's Home with Franchise on): three logos on the band */
 .ag-mc.ag-mc--cfb.ag-mc--cfb-sm { min-height: 0; margin: 0; }
