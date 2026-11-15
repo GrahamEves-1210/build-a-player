@@ -59,8 +59,10 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   const putSetup = useCallback(s => { setSetup(s); if (s) saveSetup(s.slot, s) }, [])
 
   // a build back from the build page: into the setup (or, a Sandbox prospect, into this year's draft class)
+  const took = useRef(null)   // (each build is taken once: StrictMode runs this effect twice in development)
   useEffect(() => {
-    if (!built) return
+    if (!built || took.current === built) return
+    took.current = built
     if (built.id === 'prospect' && F) {
       // (named next, ProspectNamer: `unnamed` keeps the sheet up through a reload)
       act(X => { const idx = X.builds.length; X.builds.push({ pos: built.pos, build: built.build, types: built.types, num: null, age: 21, car: [], prospect: 1, unnamed: 1 }); X.sandbox = true; addProspect(X, idx) })

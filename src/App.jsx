@@ -1541,7 +1541,7 @@ export default function App() {
       {/* Squad Builder: which of the squad's players this is */}
       {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
       {/* Franchise: which of the new franchise's players this is, and the way back to its setup */}
-      {page === 'franchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{frJob.current?.of ? ` · PLAYER ${frJob.current.n} OF ${frJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: frJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (frJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={franchiseBack}>BACK</button></div>}
+      {page === 'franchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{frJob.current?.id === 'prospect' ? ' · DRAFT PROSPECT' : frJob.current?.of ? ` · PLAYER ${frJob.current.n} OF ${frJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: frJob.current?.id === 'prospect' ? 0 : frJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (frJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={franchiseBack}>BACK</button></div>}
       {dailyLive && page === 'game' && <div className="cp-hud dc-hud" role="status"><span><small>DAILY CHALLENGE · {String(dailyRun.pos).toUpperCase()} · ONE RUN</small></span><LiveLeaveButton /></div>}
       {IS_APP && !drop && (
         <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
@@ -1615,7 +1615,7 @@ export default function App() {
           <ReportCard
             build={build}
             onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'franchise-build' ? franchiseBuilt : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'franchise-build' ? 'ADD TO THE ROSTER' : page === 'career-build' ? (careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'franchise-build' ? (frJob.current?.id === 'prospect' ? 'ADD TO THE DRAFT CLASS' : 'ADD TO THE ROSTER') : page === 'career-build' ? (careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
