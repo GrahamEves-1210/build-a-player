@@ -4,7 +4,7 @@
 //   hit   every moment landed      miss  every moment missed
 // The moment is planned and played by lib/inGame.js, the way a playoff round plays it. sim should sit on off; hit and
 // miss show how much one play is worth. Builds are spread over the grades (a rate of 0.5, 0.68 and 0.86 at the play).
-// Run from the repo root:  node scripts/moments/calibrate.mjs [rounds]
+// Run from the repo root:  node scripts/moments/calibrate.mjs [rounds] [sport: nfl | hoops | soccer | baseball]
 import { planMoment, playMoment, expectAt } from '../../src/lib/inGame.js'
 import { seeded } from '../../src/lib/rng.js'
 
@@ -30,7 +30,7 @@ const RATES = [0.5, 0.68, 0.86]
 const pct = x => `${(x * 100).toFixed(1)}`.padStart(5)
 const t0 = Date.now()
 const rows = []
-for (const S of SPORTS) {
+for (const S of SPORTS.filter(x => !process.argv[3] || x.sport === process.argv[3])) {
   console.log(`\n${S.name}`)
   console.log('  band    off    sim    hit   miss   card  (sim - off)')
   for (const p of S.bands) {
