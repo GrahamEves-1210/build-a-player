@@ -4,7 +4,7 @@ import { TEAM, POS_LABEL } from '../../lib/franchise2'
 import { realOf } from '../../lib/franchise2/league'
 import { jersey } from '../../lib/franchise2/roster'
 import { sfx, haptic } from '../../lib/juice'
-import { photoOf } from './bits'
+import { photoOf, chipCls, outlineCls } from './bits'
 import './kit.css'
 
 // THE KIT: Franchise's "Sunday broadcast" look (F:\bap-agents\franchise2\TEAM.md, THE LOOK). Every Franchise
@@ -47,7 +47,7 @@ export function fkVars(short) {
   VARS.set(short, v)
   return v
 }
-export const KLogo = ({ s, size = 28, className = '' }) => (TEAM[s] ? <img className={`fk-logo ${className}`} src={TEAM[s].logo} alt="" width={size} height={size} style={{ width: size, height: size }} draggable={false} /> : null)
+export const KLogo = ({ s, size = 28, className = '' }) => (TEAM[s] ? <img className={`fk-logo${chipCls(s)} ${className}`} src={TEAM[s].logo} alt="" width={size} height={size} style={{ width: size, height: size, '--ls': `${size}px` }} draggable={false} /> : null)
 
 // ── A man's name, number and face, the broadcast way ─────────────────────────
 const SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i
@@ -298,7 +298,7 @@ export function TeamSlab({ s, rec, sub, side = 'l', size = 'm', name, onClick, c
   const r = typeof rec === 'object' && rec ? <BigRec w={rec.w} l={rec.l} t={rec.t} size={size === 'l' ? 44 : size === 's' ? 24 : 34} /> : rec != null ? <span className="fk-slab-rec">{rec}</span> : null
   return (
     <Tag className={`fk-slab fk-slab--${side} fk-slab--${size} ${className}`} style={fkVars(s)} onClick={onClick} type={onClick ? 'button' : undefined}>
-      <img className="fk-slab-logo" src={t.logo} alt="" draggable={false} />
+      <img className={`fk-slab-logo${outlineCls(s)}`} src={t.logo} alt="" draggable={false} />
       <span className="fk-slab-txt">
         <small>{name ?? t.name.replace(` ${t.nick}`, '').toUpperCase()}</small>
         <b>{t.nick.toUpperCase()}</b>

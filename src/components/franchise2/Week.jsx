@@ -9,6 +9,7 @@ import { GAMES } from '../../lib/minigames'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { romanOf } from '../../lib/mg/kit'
+import { chipCls } from './bits'
 import { fkVars, Chyron, Scorebug, ManL3, BigNum, Stamp, Go, Tag, Bumper, reduced, ActionBar } from './kit'
 
 const MiniGame = lazy(() => import('../app/MiniGame'))
@@ -238,7 +239,7 @@ function Side({ s, pts, right, lose, label }) {
   const t = TEAM[s]
   return (
     <div className={`fg-board-side${right ? ' is-r' : ''}${lose ? ' is-lose' : ''}`} style={fkVars(s)}>
-      <img src={t.logo} alt="" draggable={false} />
+      <img className={chipCls(s).trim()} src={t.logo} alt="" draggable={false} />
       <small>{label}</small>
       <BigNum v={pts} size={74} ms={600} />
     </div>

@@ -5,6 +5,7 @@ import { buildFaceUrl } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
 import { Chyron, BigNum, Banner, KLogo, LowerThird, Go, fkVars } from './kit'
 import { PlayerPage } from './dparts'
+import { outlineCls } from './bits'
 import './fd.css'
 
 // HISTORY: the team's hall. The banners in the rafters (division titles, conference titles, Super Bowls), the
@@ -34,7 +35,7 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
   return (
     <div className="fd fk">
       <section className="fd-hall" style={fkVars(F.team)}>
-        <img className="fd-hall-logo" src={T.logo} alt="" draggable={false} />
+        <img className={`fd-hall-logo${outlineCls(F.team)}`} src={T.logo} alt="" draggable={false} />
         <span className="fd-hall-txt"><small>{T.name.toUpperCase()}</small><b>THE HALL</b><em>SINCE {H[0]?.y ?? F.year} · GM {String(owner || 'GUEST').toUpperCase()}</em></span>
       </section>
       <div className="fd-hall-facts">
