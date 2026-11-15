@@ -59,7 +59,7 @@ html.bap-reduce-motion .f2-meter-bar i, html.bap-reduce-motion .f2-budget-bar i 
 html.bap-reduce-motion .f2-stamp, html.bap-reduce-motion .f2-wk.is-now { animation: none; }
 
 /* ── Slots ── */
-.f2-hero { display: block; width: 100%; height: auto; aspect-ratio: 16 / 7; object-fit: cover; border-radius: var(--f2-r); border: 1px solid var(--f2-line); background: #0a0c0f; }
+.f2-hero { display: block; width: 100%; height: auto; aspect-ratio: 16 / 7; object-fit: contain; border-radius: var(--f2-r); border: 1px solid var(--f2-line); background: #0a0c0f; }
 .f2-slot { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border: 1px solid var(--f2-line); border-left: 4px solid var(--tc, rgba(255,255,255,.18)); border-radius: var(--f2-r); background: var(--f2-panel); color: var(--ag-text); text-align: left; cursor: pointer; }
 .f2-slot.is-empty { border-left-color: rgba(255,255,255,.12); }
 .f2-slot-n { font-family: var(--ag-display); font-size: 20px; color: var(--ag-muted); width: 14px; }

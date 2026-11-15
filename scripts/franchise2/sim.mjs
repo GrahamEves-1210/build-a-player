@@ -45,7 +45,6 @@ for (let y = 0; y < N; y++) {
   const my = recs[team]
   console.log(`${F.year} ${team} ${FR.recText(my)} ${banner.fin}${banner.seed ? ` (${banner.seed} seed)` : ''} · champ ${po.champ} over ${po.runner} ${po.score} · MVP ${F.aw.mvp?.n} (${F.aw.mvp?.t}) · ties ${ties} · ovr ${FR.strength(F, team).ovr} · league starters ${meanOvr()} · hype ${F.hype} chem ${F.chem} · ${(t1 - t0).toFixed(0)} ms`)
   const ch = FR.ageLeague(F)
-  const retired = FR.SHORTS.length
   FR.openResign(F)
   for (const id of [...F.rs]) { const p = F.teams[team].r.find(x => x.i === id); FR.resignOne(F, id, p.b != null || (p.o >= 74 && FR.resignAsk(p).$ <= FR.budgetLeft(F))) }
   FR.openFA(F)
