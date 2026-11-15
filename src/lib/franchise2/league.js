@@ -25,7 +25,7 @@ import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam } from './roster'
-import { rawRating, teamRating, toSim, fromSim, lastSeasonRes } from './ratings'
+import { rawRating, teamRating, toSim, fromSim, lastSeasonRes, SEASON_2025 } from './ratings'
 import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead } from './contracts'
 
 export const FIRST_YEAR = 2026
@@ -207,4 +207,20 @@ export function buildTeams(F) {
     F.teams[s] = { r }
   }
   seedDead(F)
+  // every club's front office (its general manager and scouts: hidden, never on screen)
+  const RF = rngOf(`${F.seed}-fo`)
+  for (const s of SHORTS) F.teams[s].fo = newFrontOffice(RF, s)
 }
+
+// ── Front offices ────────────────────────────────────────────────────────────
+// The NFL keeps its haves and have-nots because clubs aren't run equally well: some draft well, keep their core
+// and find a quarterback, some miss for a decade. fo (0-1, 0.5 an average shop) is how well a league club is run.
+// It moves how well it scouts the draft, how hard it reaches for a need, how it values a quarterback, and who it
+// keeps when deals are up (draft.js cpuValue, market.js openResign). Never the player's team: his calls are his.
+// Year one leans on how the club was really run going into 2026 (its 2025 season); a front office changes slowly,
+// and a club that keeps losing cleans house (aging.js).
+export function newFrontOffice(R, short = null) {
+  const r = short && SEASON_2025[short], wp = r ? (r[0] + r[2] / 2) / 17 : 0.5
+  return Math.round(clamp(0.05, 0.95, 0.5 + R.n() * 0.25 + (wp - 0.5) * 0.4) * 100) / 100
+}
+export const foOf = (F, s) => (s === F.team ? 0.5 : F.teams[s]?.fo ?? 0.5)

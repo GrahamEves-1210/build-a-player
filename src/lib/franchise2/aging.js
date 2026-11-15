@@ -7,7 +7,8 @@
 //   ageLeague(F)   every man a year older, his OVR moved, his deal a year shorter; the retirements
 //   growth(F, p, R, starter, short)   the OVR change for one man this year
 //   growBuild(B, d)   the player's build moves a trait a step at a time until his OVR has moved by d
-import { SHORTS, lineup } from './league'
+import { SHORTS, lineup, newFrontOffice, foOf } from './league'
+import { records } from './standings'
 import { tickDeal } from './contracts'
 import { coachDev } from './coach'
 import { carryInjury } from './injury'
@@ -16,9 +17,13 @@ import { rngOf, clamp } from './rng'
 
 // [still growing until, prime until, the age most are gone by]
 export const CURVE = { qb: [27, 33, 38], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 30, 34], ol: [26, 31, 35], dl: [25, 29, 33], lb: [25, 28, 32], db: [24, 28, 32] }
+export const FO_DEV = 4     // OVR a year for a young man: a best-run club's about +1.5 over the league's middle shop
 export function growth(F, p, R, starter = false, short = null) {
   const [grow, prime] = CURVE[p.p] ?? [26, 29, 33]
-  const dev = short ? coachDev(F, short, p) : 0
+  // (the club's development: a well-run organization gets more out of its young men, a badly run one less (against
+  // the league's middle shop, so the league as a whole doesn't drift);
+  // with how it drafts and who it keeps, it's what makes the league's haves and have-nots last. league.js foOf)
+  const dev = short ? coachDev(F, short, p) + (foOf(F, short) - (F.foMid ?? 0.5)) * FO_DEV : 0
   let d
   if (p.ag <= grow) {
     // the rest of the way to his peak, spread over the years he has left to grow (a wide spread: some boom early)
@@ -60,6 +65,8 @@ export function ageLeague(F) {
   const changes = []
   const starters = new Set(SHORTS.flatMap(s => Object.values(lineup(F.teams[s])).map(p => p.i)))
   F.gone = []
+  const rec = records(F)
+  F.foMid = SHORTS.reduce((a, s) => a + foOf(F, s), 0) / SHORTS.length
   for (const s of SHORTS) {
     const t = F.teams[s]
     const keep = []
@@ -87,8 +94,17 @@ export function ageLeague(F) {
     }
     t.r = keep
     t.dead = []
+    // the front office (league.js): it changes a little every year; three losing seasons in a row and the owner
+    // often cleans house (a new general manager, a new front office, better or worse)
+    if (s !== F.team) {
+      const r = rec[s], lost = r && r.w + r.t / 2 < (r.w + r.l + r.t) * 0.4
+      t.ls = lost ? (t.ls ?? 0) + 1 : 0
+      if (t.ls >= 3 && R.u() < 0.5) { t.fo = newFrontOffice(R); t.ls = 0 }
+      else { const f = t.fo ?? 0.5; t.fo = Math.round(clamp(0.05, 0.95, f + (0.5 - f) * 0.03 + R.n() * 0.04) * 100) / 100 }
+    }
   }
   F.aging = changes
+  delete F.foMid
   return changes
 }
 function retireBuild(F, p) {

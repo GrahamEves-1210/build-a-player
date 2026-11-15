@@ -3,7 +3,7 @@
 // the overall"). What the screens show is what the games play: the sim's 1-12 ratings ARE these two numbers.
 //
 //   teamRating(team, L, ce)  { ovr, off, def }  the numbers on screen (off / def 40-99; ovr = the two's average)
-//   toSim(v)                 a side's number on the football sim's 1-12 scale (6 + (v - 80) / 3.5)
+//   toSim(v)                 a side's number on the football sim's 1-12 scale (6 + (v - 80) / 2.8)
 //   lastSeasonRes(short, r)  year one's carry-over from the real 2025 season (league.js calibrate)
 //   The letter for OFFENSE / DEFENSE is league.js gradeOf: the same letters (and numbers) a player's OVR uses.
 //
@@ -23,8 +23,10 @@
 // OVR = (OFFENSE + DEFENSE) / 2. No special teams: the rosters carry no kickers.
 //
 // WIN ODDS: the games read toSim of the two numbers. The sim is about 1.5 points of margin a point of edge (the
-// offense's sim rating minus the defense's), so 10 points of OVR is 20 of the two sides = 5.7 of edge = about an
-// 8.5-point favourite on a neutral field (the NFL's 7-10 for a gap like that), about 75% to win.
+// offense's sim rating minus the defense's), so 10 points of OVR is 20 of the two sides = 7.1 of edge = a 10-point
+// line on game day; over a season (the OVR at kickoff of Week 1 against every game played, injuries and all) a
+// 10-point gap plays as about a 9-point favourite (the NFL's 7-10), and the 32 teams' win totals spread close to
+// the NFL's (sd about 2.9 against the real 3.1; three teams a year at 13 wins or more, two or three at 4 or fewer).
 // (scripts/franchise2/team-ratings.mjs measures all of it.)
 import { startersOfTeam, benchOfTeam, groupOf, GROUP } from './roster'
 
@@ -48,7 +50,7 @@ const REPL = 60   // (a man off the street)
 // the league's middle and the stretch (fitted to 2026's rosters: scripts/franchise2/team-ratings.mjs)
 export const CENTER = { off: 82.6, def: 81.8 }, STRETCH = { off: 1.9, def: 2.4 }
 export const MID = 80        // the league's middle team on screen
-export const SIM_PER = 3.5   // rating points a point of the sim's 1-12
+export const SIM_PER = 2.8   // rating points a point of the sim's 1-12
 
 // ── A team ───────────────────────────────────────────────────────────────────
 // every slot that counts: the starting 22 and the depth behind them (rb2 wr4 te2 edge3 dt3 cb3)

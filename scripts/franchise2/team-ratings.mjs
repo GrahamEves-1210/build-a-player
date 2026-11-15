@@ -1,10 +1,11 @@
 // The team ratings (league.js teamRating / strength): OVR, OFFENSE and DEFENSE across the 32 real teams in year one,
 // against the real 2025 season, and their spread over a long sim (the league's rosters turning over).
-//   bash scripts/franchise2/run.sh scripts/franchise2/team-ratings.mjs [seasons=15] [detail=0]
+//   bash scripts/franchise2/run.sh scripts/franchise2/team-ratings.mjs [seasons=15] [detail=0] [seed=ratings]
 import * as FR from '../../src/lib/franchise2/index'
 import CONTRACTS from '../../src/data/nfl-contracts.json'
 import { SEASON_2025, teamRating, rawRating, rosterSide } from '../../src/lib/franchise2/ratings'
 import { coachEdge } from '../../src/lib/franchise2/coach'
+import * as RT from '../../src/lib/franchise2/ratings'
 
 const N = Number(process.argv[2] ?? 15), detail = process.argv[3] === '1'
 FR.useContracts(CONTRACTS)
@@ -19,7 +20,7 @@ const q = (a, k) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(
 const pad = (s, n) => String(s).padEnd(n), lp = (s, n) => String(s).padStart(n)
 const spreadOf = v => `${q(v, 0)}-${q(v, 1)} (p10 ${q(v, 0.1)}, median ${q(v, 0.5)}, p90 ${q(v, 0.9)}, sd ${sd(v).toFixed(1)})`
 
-let F = FR.createFranchise({ seed: 'ratings', team: 'DEN', owner: 'Graham', builds: [] })
+let F = FR.createFranchise({ seed: process.argv[4] ?? 'ratings', team: 'DEN', owner: 'Graham', builds: [] })
 // (ROSTER: the men alone, no play-callers, no carry-over from 2025)
 const rosterOnly = s => { const r = rawRating(F.teams[s]); return Math.round((rosterSide(r.off, 'off') + rosterSide(r.def, 'def')) / 2) }
 const rows = FR.SHORTS.map(s => ({ s, ...FR.strength(F, s), r: REAL[s], ro: rosterOnly(s), res: F.teams[s].res, ce: coachEdge(F, s) }))
@@ -52,11 +53,20 @@ const yearOf = () => {
   const sl = {}; for (const s of FR.SHORTS) for (const [k, p] of Object.entries(FR.lineup(F.teams[s]))) (sl[k] ??= []).push(p.o)
   const raw = FR.SHORTS.map(s => rawRating(F.teams[s]))
   const qbs = FR.SHORTS.flatMap(s => F.teams[s].r.filter(p => p.p === 'qb')).map(p => p.o).sort((a, b) => b - a)
+  if (detail) {
+    // how much of the side's spread is the men being good together (a well-run club) vs one slot at a time
+    const W = { ...RT.W_OFF }, D = { ...RT.W_DEF }, sw = o => Object.values(o).reduce((a, b) => a + b, 0)
+    const indep = (Wt) => { let v = 0; for (const [k, w] of Object.entries(Wt)) { const xs = FR.SHORTS.map(s => RT.slotsOf(F.teams[s])[k]?.o ?? 60); v += (w / sw(Wt)) ** 2 * sd(xs) ** 2 } return Math.sqrt(v) }
+    const fo = FR.SHORTS.map(s => F.teams[s].fo ?? 0.5)
+    console.log(`  ${F.year} spread: off ${sd(raw.map(r => r.off)).toFixed(2)} (one slot at a time ${indep(W).toFixed(2)}) def ${sd(raw.map(r => r.def)).toFixed(2)} (${indep(D).toFixed(2)}) · front office vs OVR r ${corr(fo, v.map(x => x.ovr)).toFixed(2)} · fo ${q(fo, 0)}-${q(fo, 1)}`)
+  }
+  if (detail) console.log(`  ${F.year} QB1s: ${FR.SHORTS.map(s => { const p = FR.lineup(F.teams[s]).qb1; return `${s} ${p.o}/${p.pk ?? '-'} ${p.ag}y ${p.dr ? 'R' + p.dr[0] + (p.rk ? "'" + String(p.rk).slice(2) : '') : p.rk ? 'udfa' : FR.realOf('qb', p.n) ? 'real' : 'gen'}` }).join(', ')}`)
   if (detail) console.log(`  ${F.year} QBs: top 40 ${qbs.slice(0, 40).join(' ')} · QB1s ${sl.qb1.sort((a, b) => b - a).join(' ')} · QB2 best ${FR.SHORTS.map(s => FR.depthChart(F, s).qb[1]?.o ?? 0).sort((a, b) => b - a).slice(0, 6).join(' ')}`)
   if (detail || F.year === FR.FIRST_YEAR || F.year === FR.FIRST_YEAR + N - 1) console.log(`  ${F.year} slots (mean±sd): ${['qb1', 'wr1', 'ol1', 'edge1', 'cb1', 'dt1', 'lb1', 's1'].map(k => `${k} ${mean(sl[k]).toFixed(0)}±${sd(sl[k]).toFixed(1)}`).join(' ')} · raw off ${mean(raw.map(r => r.off)).toFixed(1)}±${sd(raw.map(r => r.off)).toFixed(2)} def ${mean(raw.map(r => r.def)).toFixed(1)}±${sd(raw.map(r => r.def)).toFixed(2)} · carry left ${mean(FR.SHORTS.map(s => Math.abs(F.teams[s].res?.[0] ?? 0) + Math.abs(F.teams[s].res?.[1] ?? 0))).toFixed(2)}`)
   // (old: the number the screens showed before 11-15, the plain average of the 22 starters)
   const old = FR.SHORTS.map(s => Math.round(mean(Object.values(FR.lineup(F.teams[s])).map(p => p.o))))
-  return { ovr: v.map(x => x.ovr), off: v.map(x => x.offR), def: v.map(x => x.defR), old }
+  const n90 = FR.SHORTS.reduce((a, s) => a + F.teams[s].r.filter(p => p.o >= 90).length, 0)
+  return { ovr: v.map(x => x.ovr), off: v.map(x => x.offR), def: v.map(x => x.defR), old, qb: sl.qb1, n90 }
 }
 const seasons = [], games = []
 for (let y = 0; y < N; y++) {
@@ -87,7 +97,7 @@ for (let y = 0; y < N; y++) {
   FR.newSeason(F)
 }
 console.log(`\nOVER ${N} SEASONS (the OVR at the start of each season; r = its correlation with that season's win% / point diff)`)
-for (const S of seasons) console.log(`${S.y}: OVR ${spreadOf(S.ovr)} · before ${q(S.old, 0)}-${q(S.old, 1)} sd ${sd(S.old).toFixed(1)} · wins sd ${sd(S.wins).toFixed(1)}, 13+ ${S.wins.filter(w => w >= 13).length}, 4- ${S.wins.filter(w => w <= 4).length} · OFF ${q(S.off, 0)}-${q(S.off, 1)} DEF ${q(S.def, 0)}-${q(S.def, 1)} · r ${S.r.toFixed(2)}/${S.rpd.toFixed(2)} · champ ${S.champ} (${S.champOvr}, #${S.champRank})`)
+for (const S of seasons) console.log(`${S.y}: OVR ${spreadOf(S.ovr)} · before ${q(S.old, 0)}-${q(S.old, 1)} sd ${sd(S.old).toFixed(1)} · QB1 ${q(S.qb, 0)}-${q(S.qb, 1)} sd ${sd(S.qb).toFixed(1)} (under 76: ${S.qb.filter(o => o < 76).length}) · 90+ men ${S.n90} · wins sd ${sd(S.wins).toFixed(1)}, 13+ ${S.wins.filter(w => w >= 13).length}, 4- ${S.wins.filter(w => w <= 4).length} · OFF ${q(S.off, 0)}-${q(S.off, 1)} DEF ${q(S.def, 0)}-${q(S.def, 1)} · r ${S.r.toFixed(2)}/${S.rpd.toFixed(2)} · champ ${S.champ} (${S.champOvr}, #${S.champRank})`)
 const all = seasons.flatMap(S => S.ovr)
 console.log(`all ${N} seasons: OVR ${spreadOf(all)} · 90+ teams a year ${(all.filter(v => v >= 90).length / N).toFixed(1)} · under 75 a year ${(all.filter(v => v < 75).length / N).toFixed(1)} · mean r ${mean(seasons.map(S => S.r)).toFixed(2)} · champ's OVR rank median ${q(seasons.map(S => S.champRank), 0.5)}`)
 const allOld = seasons.flatMap(S => S.old), allW = seasons.flatMap(S => S.wins)

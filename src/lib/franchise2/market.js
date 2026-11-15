@@ -7,7 +7,7 @@
 //          Other teams with the room and the need bid too, and the man picks the team the way a player does: the
 //          money first, then a winner, a starting job at his spot, and the head coach. Between days the league
 //          signs the best of the rest. After the third day the league fills its holes, and it's the draft.
-import { SHORTS, POS, MIN, lineup, makeGen, fillUp } from './league'
+import { SHORTS, POS, MIN, lineup, makeGen, fillUp, foOf } from './league'
 import { depthChart, groupOf, GROUP } from './roster'
 import { askOf, marketValue, signDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice, minimumFor, capComply } from './contracts'
 import { coachOf, recruits } from './coach'
@@ -27,7 +27,9 @@ export function openResign(F) {
     const up = t.r.filter(p => p.y === 0).sort((a, b) => b.o - a.o)
     for (const p of up) {
       const ask = askOf(p, F.year + 1)
-      const want = p.ag <= 33 && R.u() < (p.o >= 88 ? 0.95 : p.o >= 82 ? 0.8 : p.o >= 75 ? 0.5 : 0.15)
+      // (a well-run club keeps its core and lets the aging ones go a year early; a badly run one lets good men walk)
+      const fo = foOf(F, s)
+      const want = p.ag <= 33 - (fo >= 0.65 && p.o < 88 ? 2 : 0) && R.u() < (p.o >= 88 ? 0.95 : p.o >= 82 ? 0.8 : p.o >= 75 ? 0.5 : 0.15) * (0.75 + fo * 0.5)
       if (want && canSign(F, ask.$, s)) { signDeal(p, ask); if (p.o >= 85) F.ext.push([p.i, p.n, p.p, s, p.$, p.y, p.o]) }
       else { t.r = t.r.filter(x => x !== p); F.fa.push(p) }
     }
@@ -63,7 +65,8 @@ export const FA_DAYS = 3
 export function openFA(F) {
   const R = rngOf(`${F.seed}-${F.year}-fa`)
   // the market: the men nobody kept, and the veterans cut loose around the league (generated, a few good ones)
-  for (let i = 0; i < 16; i++) { const pos = R.pick(POS); F.fa.push(makeGen(F, pos, R, { o: clamp(64, 86, Math.round(74 + R.n() * 4.5)), ag: R.int(26, 32) })) }
+  // (a quarterback cut loose is a backup or a bridge starter at best: the good ones never reach the street)
+  for (let i = 0; i < 16; i++) { const pos = R.pick(POS); F.fa.push(makeGen(F, pos, R, { o: clamp(64, pos === 'qb' ? 77 : 86, Math.round(74 + R.n() * 4.5)), ag: R.int(26, 32) })) }
   for (const p of F.fa) { const a = askOf(p, F.year + 1); p.$ = a.$; p.y = a.y; delete p.rc; delete p.op }
   F.fa.sort((a, b) => b.o - a.o)
   F.fad = 1
@@ -101,7 +104,9 @@ export function rivalsFor(F, p) {
   const R = rngOf(`${F.seed}-${F.year}-fa-${p.i}`)
   const g = groupOf(p)
   const out = []
-  for (const s of R.shuffle(SHORTS.filter(x => x !== F.team))) {
+  // (the best-run clubs are first to the phone: league.js foOf)
+  const order = SHORTS.filter(x => x !== F.team).map(s => [s, foOf(F, s) + R.u() * 0.6]).sort((a, b) => b[1] - a[1]).map(x => x[0])
+  for (const s of order) {
     const room = capRoom(F, s)
     if (room < p.$ * 0.9) continue
     const at = depthChart(F, s)[g].filter(x => !x.in)
