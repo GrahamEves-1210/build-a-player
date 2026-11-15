@@ -5,7 +5,8 @@
 // A player (kept small: a league is ~1,000 of them):
 //   i id · n name · p position · s spot (edge/dt, cb/s, LT…) · o OVR · ag age · pk the OVR he's headed for
 //   $ salary ($M a year) · y years left · h ESPN headshot id · b the player's own build (index in F.builds)
-//   in weeks out injured · rk rookie year · c college
+//   in weeks out injured · rk rookie year · c college · dr [round, pick]
+// (a real man's headshot is looked up by his name: photoOf)
 import { NFL_TEAMS } from '../../data/nfl-teams'
 import NFL_HEADSHOTS from '../../data/headshots.json'
 import { BIRTH_NFL } from '../../data/player-ages'
@@ -64,6 +65,8 @@ export function realPool() {
   }
   return realCache
 }
+// a man's ESPN headshot id (real players only; a build's face is its own)
+export const photoId = p => (p && p.b == null ? realOf(p.p, p.n)?.h ?? null : null)
 const REAL_BY = new Map()
 export function realOf(pos, name) {
   const k = `${pos}|${name}`
@@ -104,7 +107,7 @@ export function peakFor(R, o, ag) {
 }
 export function makeReal(F, r, R) {
   const ag = r.age ?? R.int(23, 30)
-  const p = { i: F.nid++, n: r.name, p: r.pos, o: r.o, ag, h: r.h }
+  const p = { i: F.nid++, n: r.name, p: r.pos, o: r.o, ag }
   if (r.s) p.s = r.s
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
   p.$ = worth(p)
@@ -130,7 +133,7 @@ export function makeBuilt(F, idx, R) {
   const p = { i: F.nid++, n: nameOf(B.pos, B.build) ?? POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx }
   const s = buildSpot(B.pos, B.build)
   if (s) p.s = s
-  p.pk = Math.max(o, peakFor(R, o, p.ag))
+  p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
   p.$ = worth(p)
   p.y = 4
   B.pid = p.i
