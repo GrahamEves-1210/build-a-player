@@ -299,8 +299,8 @@ export function BaseballPostseason({ c, setCareer, onBook, step, setStep, game, 
   // (a last play decides one game of the series, the need-th: the score going in, and the series after it)
   const ss = odds?.state
   const stakes = !odds ? '' : ss
-    ? `${ss.a === ss.b ? `Tied ${ss.a}-${ss.b}` : ss.a > ss.b ? `Up ${ss.a}-${ss.b}` : `Down ${ss.a}-${ss.b}`} in the series. Land it and ${ss.a + 1 === need ? 'they take the series' : `it’s ${ss.a + 1}-${ss.b}: about ${pct(ss.win)}% to take it`}. Miss it: ${ss.b + 1 === need && odds.game <= 0.03 ? 'they’re out' : `about ${pct(ss.miss)}%`}.`
-    : `A big moment in the series, not the last of it. Land it: about ${pct(odds.hit)}% to take the series. Miss it: about ${pct(odds.miss)}%.`
+    ? `${ss.a === ss.b ? `Tied ${ss.a}-${ss.b}` : ss.a > ss.b ? `Up ${ss.a}-${ss.b}` : `Down ${ss.a}-${ss.b}`} in the series. Land it: ${ss.hit >= 0.995 ? 'they take the series' : `about ${pct(ss.hit)}% to take it`}. Miss it: ${ss.miss <= 0.005 ? 'they’re out' : `about ${pct(ss.miss)}%`}.`
+    : `Land it: about ${pct(odds.hit)}% to take the series. Miss it: about ${pct(odds.miss)}%.`
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.short.toUpperCase()} · VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''} {stakes}</small></div>

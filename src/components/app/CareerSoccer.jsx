@@ -2,7 +2,7 @@
 // season-by-season table, the Ballon d'Or banners and the big nights. Loaded only for a soccer career
 // (AppCareer.jsx lazy-loads them), so football and basketball never download them.
 import { useState } from 'react'
-import { sportOf, openTalks, acceptTalks, momentOdds, playoffRound, combinePos, gameCast } from '../../lib/career'
+import { sportOf, openTalks, acceptTalks, roundOdds, playoffRound, combinePos, gameCast } from '../../lib/career'
 import { wageText, feeText, nationName, stayPut } from '../../lib/careerSoccer'
 import { sfx } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck } from './icons'
@@ -131,14 +131,15 @@ export function AwardBanners({ c }) {
   )
 }
 // The big nights: the European knockouts and the cup final, one tie at a time (a close one turns on a key moment)
-const KO_DEPTH_UI = { 'Knockout play-off': 0, 'Round of 16': 0, 'Quarter-final': 1, 'Semi-final': 2, Final: 3 }
 export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit }) {
   const S = sportOf(c)
   const po = c.active.po
   const rd = po.rounds[po.idx]
   const last = po.line[po.line.length - 1]
   const oppOf = r => (r.extra ? { short: r.opp, name: r.oppName, color: '#3f3f46', color2: '#e4e4e7' } : S.teamOf(r.opp))
-  const missIt = Math.round(momentOdds(rd?.p ?? 0.5, false, 0.75, KO_DEPTH_UI[rd?.stage] ?? 3) * 100)
+  // (from the state his chance comes up in: lib/inGame.js)
+  const odds = rd && game && rd.close !== false ? roundOdds(c, rd, game) : null
+  const pct = x => Math.min(99, Math.max(1, Math.round(x * 100)))
   if (po.stage === 'done' || step === 'result') {
     const x = last
     const nextOf = x => { const i = po.rounds.findIndex(r => r.name === x.name); return po.rounds.slice(i + 1).find(r => r.track === x.track && !r.skip) }
@@ -168,7 +169,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   }
   if (step === 'game') return (
     <div className="cr-po">
-      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · {rd.legs === 2 ? 'SECOND LEG · ' : ''}VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{rd.legs === 2 ? 'Level on aggregate after the first leg. ' : ''}{sit.line}{sit.tail ? ` ${sit.tail}` : ''} Score and {rd.final ? 'the trophy is theirs' : 'they’re through'}. Miss it: about {missIt}% they still find a way.</small></div>
+      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · {rd.legs === 2 ? 'SECOND LEG · ' : ''}VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''}{odds ? ` Score: about ${pct(odds.hit)}% to ${rd.final ? 'lift the trophy' : 'go through'}. Miss it: about ${pct(odds.miss)}%.` : ''}</small></div>
       <CareerGame home={rd.home === false ? 'opp' : 'team'} retry c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={oppOf(rd)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
     </div>
   )

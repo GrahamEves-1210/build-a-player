@@ -8,8 +8,10 @@
 
 import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNorms.js'
 import { seeded } from './rng'
-import { traitValue, pickMomentGame, pickPlayoffGame, GAMES } from './minigames'
+import { traitValue, pickMomentGame, pickPlayoffGame, GAMES, momentsOf } from './minigames'
 import { momentSituation, finalScore, momentFacts } from './situations'
+import { planMoment, playMoment } from './inGame.js'
+import { SIMPLE_GAMES } from './minigamesSimple'
 import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
@@ -2475,14 +2477,18 @@ export const bestOf = (n, g) => { if (n === 7) return bestOf7(g); const need = (
 export const gameOf = (p, n = 7) => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (bestOf(n, m) > p) hi = m; else lo = m } return (lo + hi) / 2 }
 // a series from a-b on, at g a game: the chance to get to need (four in a best of seven) first
 export const seriesFrom = (g, a, b, need = 4) => (a >= need ? 1 : b >= need ? 0 : g * seriesFrom(g, a + 1, b, need) + (1 - g) * seriesFrom(g, a, b + 1, need))
-// A last-play moment in a series decides one game of it, the need-th (game 4 of seven, 3 of five, 2 of three):
-// the ones before it played at the series' own game rate (seeded, so the screen and the result agree on the score going in)
+// The series his moment is in: it comes up in one of the games every series plays (the first to need: games 1 to 4 of
+// seven), a later one more often, seeded; the ones before it played at the series' own game rate (rd.g when the round
+// has one). { a, b (the series score going into his game), g, need, k (his game) }
 export function seriesState(c, idx, rd) {
   const n = seriesLen(rd), need = (n + 1) / 2
-  const g = gameOf(rd.p, n), r = seeded(`${c.seed}-${c.year}-${idx}-series`)
+  const g = rd.g ?? gameOf(rd.p, n), r = seeded(`${c.seed}-${c.year}-${idx}-series`)
+  const tot = need * (need + 1) / 2
+  let u = r() * tot, k = need
+  for (let j = 1; j <= need; j++) { u -= j; if (u < 0) { k = j; break } }
   let a = 0
-  for (let i = 0; i < need - 1; i++) if (r() < g) a++
-  return { a, b: need - 1 - a, g, need }
+  for (let i = 0; i < k - 1; i++) if (r() < g) a++
+  return { a, b: k - 1 - a, g, need, k }
 }
 // that game by his moment, then the rest of the series at g: { won, my, opp } (the series score)
 export function seriesPlay(c, idx, rd, LAST, hit, h) {
@@ -2578,84 +2584,81 @@ function watchBracket(c, po) {
   const won = !!last?.won && last.name === S.final
   return { ...po, rounds: po.rounds.map((x, i) => line[i] ?? x), line, idx: line.length - 1, stage: 'done', won, out: !won }
 }
-// The round turns on its moment, and the chance the card shows is the chance it is: land it and the
-// odds go up, miss it and they go down, by as much either way that across his usual hits and misses the
-// round is still won p of the time. A miss hurts most when it was likely to go in: a 95% team that misses
-// is still about 70% to win its series, a 60% one about 20%; a hit takes a 20% underdog to about 30%.
-// the moments that are the game's last play (lib/situations.js has their clocks): see playoffRound
-// (soccer's: a late chance from the 82nd minute on, level or a goal up: his goal wins it, a miss leaves it to the odds)
-// (the kicker's: the game-winner is the last snap, make it and win; the onside kick is its own rule: get it back and
-// they still have to score, don't and it's over)
+// The round's moment. lib/inGame.js plays the game: up to his moment on the two teams' strength, the play he's dealt
+// there (one that fits the state), what he did in it, and the rest of the game from there. Nothing here moves the odds
+// after the fact: the play is on the scoreboard as it happened, and the game goes on from it.
+// (LAST_PLAY, momentOdds and lastPlayOf are the old model's, kept for anything still reading them: the rounds no longer do)
 const LAST_PLAY = { 'game-winner': 'both', onside: 'onside', 'clutch-shot': 'both', 'two-minute': 'both', 'goal-line': 'both', 'free-throws': 'hit', lockdown: 'hit', 'rim-protect': 'hit', penalty: 'hit', 'one-on-one': 'hit', header: 'hit', volley: 'hit', 'free-kick': 'hit', 'two-on-one': 'hit' }
 const logit = x => Math.log(x / (1 - x)), sigmoid = x => 1 / (1 + Math.exp(-x))
-const MOMENT_SWING = 1.3   // a hit or a miss, in log-odds off the round's own (the shift below keeps the average at p)
+const MOMENT_SWING = 1.3
 // how often the moment's game goes in: the rate the Career sim lands it at for his grade (MiniGame's sim, 45% at a 1, 92% at an 11)
 export const momentHitRate = (c, game) => game === 'onside' ? onsideP(kValsOf(c?.build)) * 1.1 : clamp(0.45 + 0.47 * (traitValue(game, c?.build) - 1) / 10, 0.45, 0.92)
-// p: the round. h: how often he lands it. score and round are no longer used (a round's difficulty is its opponent, in p)
 export const momentOdds = (p, hit, score = 0.75, round = 0, h = 0.7) => {
   const q = clamp(p, 0.02, 0.98), L = logit(q)
   let lo = -8, hi = 8
   for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (h * sigmoid(L + m + MOMENT_SWING) + (1 - h) * sigmoid(L + m - MOMENT_SWING) > q) hi = m; else lo = m }
   return sigmoid(L + (lo + hi) / 2 + (hit ? MOMENT_SWING : -MOMENT_SWING))
 }
-// The round as it will be played: all (the chance to win it, the one the card shows), hit and miss (the
-// odds after landing or missing the moment). A last-play moment decides it (see LAST_PLAY), so there the
-// chance is his own: 'both' is how often he lands it; 'hit', that or the odds after a miss, set so the
-// round stays at p when it can (when he lands it more often than p, he's better than p there).
-// game null with off: no moment (Career's mini games set to None), the round on its odds
-// A basketball series: the last play decides game 4 only (seriesState), the rest is played at the series'
-// game rate g. Won game 4, the series is his three of the other six (W1); lost it, four of six (W0).
-// idx (the round's): adds state, the score going into game 4 and the series odds after a hit or a miss
-export function roundOdds(c, rd, game = null, off = false, idx = null) {
-  const p = rd.p
-  if (off) return { all: p, hit: p, miss: p }
-  const h = momentHitRate(c, game), LAST = lastPlayOf(c, rd, game)
-  if (LAST && rd.series) {
-    // (any length: won the deciding-moment game, he needs need - 1 of the other n - 1 (W1); lost it, need of them (W0))
-    const n = seriesLen(rd), need = (n + 1) / 2, m = n - 1
-    const g = gameOf(p, n), q = LAST === 'both' ? 0 : clamp((g - h) / (1 - h), 0.03, 0.97)
-    const tail = from => { let s = 0; for (let k = from; k <= m; k++) s += choose(m, k) * g ** k * (1 - g) ** (m - k); return s }
-    const W1 = n === 7 ? [3, 4, 5, 6].reduce((s, k) => s + [20, 15, 6, 1][k - 3] * g ** k * (1 - g) ** (6 - k), 0) : tail(need - 1)
-    const W0 = n === 7 ? [4, 5, 6].reduce((s, k) => s + [15, 6, 1][k - 4] * g ** k * (1 - g) ** (6 - k), 0) : tail(need)
-    const G = h + (1 - h) * q, out = { all: G * W1 + (1 - G) * W0, hit: W1, miss: q * W1 + (1 - q) * W0, game: q }
-    if (idx == null) return out
-    const { a, b } = seriesState(c, idx, rd), win = seriesFrom(g, a + 1, b, need), lose = seriesFrom(g, a, b + 1, need)
-    return { ...out, state: { a, b, need, win, lose, miss: q * win + (1 - q) * lose } }
-  }
-  // the onside kick: recovered, they win it about half the time from there; not recovered, the other team kneels
-  if (LAST === 'onside') { const got = afterOnsideP(5) + 0.14; return { all: h * got, hit: got, miss: 0 } }
-  if (LAST === 'both') return { all: h, hit: 1, miss: 0 }
-  if (LAST === 'hit') { const miss = clamp((p - h) / (1 - h), 0.03, 0.97); return { all: h + (1 - h) * miss, hit: 1, miss } }
-  return { all: p, hit: momentOdds(p, true, 0.75, 0, h), miss: momentOdds(p, false, 0.75, 0, h) }
-}
-// the round's last-play rule for this game, or null: football only plays one in a game that's close at
-// the end (rd.close, closeChance); basketball always (a series' game 4, or the play-in)
 export const lastPlayOf = (c, rd, game) => (LAST_PLAY[game] && (sportOf(c).isBucket || rd?.close !== false) ? LAST_PLAY[game] : null)
-// The round's moment game (the hub deals it, the result is played on it). A football game that isn't
-// close at the end deals a regular moment, not a last play (every position has one).
-// allow: Simple mode's own filter
-export function playoffGame(c, po, allow = null) {
-  // (a sport can rule a moment out for this game: baseball deals a walk-off only when his club bats last)
-  const own = sportOf(c).x?.allowGame?.(c, po)
-  if (own) { const ask = allow; allow = g => own(g) && (!ask || ask(g)) }
-  if (c.pos === 'k') return kPlayoffGame(c, po, allow)   // (a kicker's round: the long one, the game-winner, or the onside kick when they're behind)
-  const rd = po.rounds[po.idx], seed = `${c.seed}-${c.year}-${po.idx}`, used = po.line.map(x => x.game).filter(Boolean)
-  const open = rd && !sportOf(c).isBucket && !sportOf(c).isSoccer && rd.close === false
-  return (open && pickMomentGame(c.pos, seed, used, g => !LAST_PLAY[g] && (!allow || allow(g)))) || pickMomentGame(c.pos, seed, used, allow)
+// Simple mode deals only the plays with a quick version
+const allowOf = c => (gamesMode(c) === 'simple' ? g => !!SIMPLE_GAMES[g] : null)
+// the hosts of each game of a series (2-3-2 in seven, 2-2-1 in five, all three of a Wild Card Series)
+const SERIES_HOSTS = { 3: [1, 2, 3], 5: [1, 2, 5], 7: [1, 2, 6, 7] }
+function momentCtx(c, po, allow, only = null) {
+  const S = sportOf(c), rd = po.rounds[po.idx]
+  const sport = S.isBucket ? 'hoops' : S.isSoccer ? 'soccer' : S.isBaseball ? 'baseball' : 'nfl'
+  let pool = only ? [only] : momentsOf(c.pos).filter(g => !allow || allow(g))
+  if (!pool.length) pool = momentsOf(c.pos)
+  const st = rd.series ? seriesState(c, po.idx, rd) : null
+  const ctx = { sport, seed: `${c.seed}-${c.year}-${po.idx}`, pGame: Math.round((st ? st.g : rd.p) * 1000) / 1000, pool, used: po.line.map(x => x.game).filter(Boolean), hOf: g => momentHitRate(c, g), us: c.team, them: rd.opp }
+  if (sport === 'soccer') { ctx.legs = rd.legs ?? 1; ctx.home = rd.home ?? null }
+  if (st) { const n = st.a + st.b + 1, hosts = SERIES_HOSTS[seriesLen(rd)] ?? SERIES_HOSTS[7]; ctx.gameNo = n; if (sport === 'baseball') ctx.home = rd.home === false ? !hosts.includes(n) : hosts.includes(n) }
+  return { ctx, st }
 }
-// The chance the round card shows. Football: blended by how often a game is close at the end
-// (closeChance): close, the moment it deals (a last play or not); not close, a regular one, at p
-export function cardOdds(c, po, allow = null, off = false) {
-  const rd = po.rounds[po.idx], S = sportOf(c)
+// the round's moment as planned: { plan (lib/inGame.js), st (a series: the score going into his game) }. game: the play
+// the screen dealt (a mode switch since: that play, set where it fits)
+export function playoffPlan(c, po = c.active.po, allow = allowOf(c), game = null) {
+  const { ctx, st } = momentCtx(c, po, allow)
+  let plan = planMoment(ctx)
+  if (game && plan.game !== game) plan = planMoment(momentCtx(c, po, allow, game).ctx)
+  // (a series game says which one it is)
+  const sit = st && !plan.sit.baseball ? { ...plan.sit, line: `Game ${st.a + st.b + 1}. ${plan.sit.line}` } : plan.sit
+  return { plan, st, sit }
+}
+// a series from the moment's game on: the chance to take it from a-b, at g a game the rest of the way
+const seriesAt = (st, w) => w * seriesFrom(st.g, st.a + 1, st.b, st.need) + (1 - w) * seriesFrom(st.g, st.a, st.b + 1, st.need)
+// before a ball is played: the games before his at g (k - 1 of them), his game at w, the rest at g
+const seriesBefore = (st, w) => { const k = st.a + st.b; let s = 0; for (let a = 0; a <= k; a++) s += choose(k, a) * st.g ** a * (1 - st.g) ** (k - a) * seriesAt({ ...st, a, b: k - a }, w); return s }
+// The round as it will be played: all (the chance to win it before a ball is played: the card's), hit and miss (from
+// the state his moment comes up in, landing it or not). A series: state, the score going into his game and the series
+// after a win or a loss there. off (Career's mini games set to None): no moment, the round on its own odds
+export function roundOdds(c, rd, game = null, off = false, idx = null) {
+  const p = rd.p, po = c.active?.po
+  if (off || !po) return { all: p, hit: p, miss: p }
+  const { plan, st } = playoffPlan(c, po, allowOf(c), game)
+  if (!st) return { all: plan.all, hit: plan.hit, miss: plan.miss, last: plan.hit >= 0.995 || plan.miss <= 0.005 }
+  const win = seriesFrom(st.g, st.a + 1, st.b, st.need), lose = seriesFrom(st.g, st.a, st.b + 1, st.need)
+  return { all: seriesBefore(st, plan.all), hit: seriesAt(st, plan.hit), miss: seriesAt(st, plan.miss), game: plan.miss, gameHit: plan.hit, state: { a: st.a, b: st.b, need: st.need, n: st.a + st.b + 1, win, lose, miss: seriesAt(st, plan.miss), hit: seriesAt(st, plan.hit) } }
+}
+// The round's moment game (the hub deals it, the result is played on it). allow: Simple mode's own filter
+export const playoffGame = (c, po, allow = allowOf(c)) => (po?.rounds?.[po.idx] ? playoffPlan(c, po, allow).plan.game : null)
+// The chance the round card shows: the chance the round is won, as it will be played
+export function cardOdds(c, po, allow = allowOf(c), off = false) {
+  const rd = po.rounds[po.idx]
   if (off) return rd.p
-  if (S.isBucket || S.isSoccer || S.isBaseball) return roundOdds(c, rd, playoffGame(c, po, allow), false, po.idx).all
-  const cc = closeChance(rd.p), closeRd = { ...rd, close: true }
-  return cc * roundOdds(c, closeRd, playoffGame(c, { ...po, rounds: po.rounds.map((x, i) => (i === po.idx ? closeRd : x)) }, allow)).all + (1 - cc) * rd.p
+  return roundOdds({ ...c, active: { ...c.active, po } }, rd, playoffGame(c, po, allow)).all
 }
 // how deep a round is, counted back from the final (3): the same with a bye or a play-in
 export const momentRound = po => Math.max(0, 3 - (po.rounds.length - 1 - po.idx))
 // A round with no moment: the matchup's own odds (round is no longer used)
 export const blowoutOdds = (p, round = 0) => p
+// A series with his game in it: the games before (seriesState's), his game (won: the moment's), then the rest at g
+function seriesWith(c, idx, st, won) {
+  const r = seeded(`${c.seed}-${c.year}-${idx}-series-rest`)
+  let x = st.a + (won ? 1 : 0), y = st.b + (won ? 0 : 1)
+  while (x < st.need && y < st.need) { if (r() < st.g) x++; else y++ }
+  return { won: x === st.need, my: x, opp: y }
+}
 // This round's moment is in: the result, with a stat line sized to the season
 // hit: the drill's own verdict (MiniGame), the same one it showed the player
 // pts: the game's own report of what it showed (MiniGame's raw: lib/situations.js momentFacts reads the points, the
@@ -2668,102 +2671,83 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
   // auto (score null): no moment, Career's mini games are set to None; the round on its own odds
   const auto = score == null
-  const odds = roundOdds(c, rd, game, auto)
-  let won = r() < (auto ? odds.all : hit ? odds.hit : odds.miss)
-  // the last play of the game: what he did decides it, nobody gets the ball back after a buzzer-beater or a walk-off.
-  // both: land it and win, miss it and lose. hit: a stop or the free throws at the end win it; a miss leaves it to the odds
-  const LAST = lastPlayOf(c, rd, game)
-  // (a basketball series: it decides game 4, and the series plays on from there)
-  const ser = !auto && LAST && rd.series ? seriesPlay(c, po.idx, rd, LAST, hit, momentHitRate(c, game)) : null
-  if (ser) won = ser.won
-  else if (!auto && LAST && LAST !== 'onside') { if (hit) won = true; else if (LAST === 'both') won = false }
-  if (auto) score = won ? 0.8 : 0.25
+  let won, res = null, ser = null, st = null, F = {}, mySc, oppSc, swing = null, moment = null
+  if (auto) { won = r() < rd.p; score = won ? 0.8 : 0.25 }
+  else {
+    // the game his moment was in: the play on the board, and the rest of it played from there
+    const pl = playoffPlan(c, po, allowOf(c), game)
+    st = pl.st
+    F = momentFacts(game, pts, hit)
+    res = playMoment(pl.plan, hit, F, pts)
+    if (st) {
+      ser = seriesWith(c, po.idx, st, res.won)
+      won = ser.won
+      moment = { n: st.a + st.b + 1, my: res.mine, opp: res.opp, won: res.won, note: res.note }
+      swing = `Game ${moment.n}: ${c.team} ${res.mine}, ${rd.opp} ${res.opp}.${res.note ? ` ${res.note}` : ''}`
+    } else { won = res.won; mySc = res.mine; oppSc = res.opp; swing = res.note }
+  }
   const k = 0.82 + score * 0.5 + (r() - 0.5) * 0.2             // the moment sets the day: 0.6–1.4× a normal game
-  let mySc, oppSc, line
+  let line
   if (S.isBucket) {
     // a series the winner was expected to take goes four or five; an even one, six or seven
     if (rd.series) { const fav = won ? rd.p : 1 - rd.p, len = fav >= 0.8 ? [0, 0, 1, 1] : fav >= 0.55 ? [1, 2, 2, 3] : [2, 3, 3], other = len[Math.floor(r() * len.length)]; mySc = ser ? ser.my : won ? 4 : other; oppSc = ser ? ser.opp : won ? other : 4 }
-    else { const gap = auto ? 15 + Math.floor(r() * 16) : 1 + Math.floor(r() * 8); if (won) { mySc = Math.round(100 + score * 12 + r() * 10); oppSc = Math.max(80, mySc - gap) } else { oppSc = Math.round(104 + r() * 16); mySc = Math.max(80, oppSc - gap) } }
-    const st = seasonStats(c.pos, f)
+    else if (auto) { const gap = 15 + Math.floor(r() * 16); if (won) { mySc = Math.round(100 + score * 12 + r() * 10); oppSc = Math.max(80, mySc - gap) } else { oppSc = Math.round(104 + r() * 16); mySc = Math.max(80, oppSc - gap) } }
+    const st0 = seasonStats(c.pos, f)
     // a series is four to seven games: the average barely moves off the season's (0.85–1.15×), never past a real ceiling
     const kb = clamp(0.9 + score * 0.18 + (r() - 0.5) * 0.08 + (won ? 0.02 : -0.03), 0.84, 1.15)
-    line = { pts: r10(Math.min(st.ppg * kb, 42)), reb: r10(Math.min(st.rpg * kb, 17)), ast: r10(Math.min(st.apg * kb, 13)), perGame: true }
+    line = { pts: r10(Math.min(st0.ppg * kb, 42)), reb: r10(Math.min(st0.rpg * kb, 17)), ast: r10(Math.min(st0.apg * kb, 13)), perGame: true }
+    // (the Play-In is one game: he scored at least what the moment showed, and took the boards it showed)
+    if (res && !rd.series) { if (res.got > 0) line.pts = Math.max(line.pts, res.got); if (F.reb > 0) line.reb = Math.max(line.reb, F.reb) }
   } else {
     const g = f.wins + f.losses || 17
     const n = (sum, mult = 1) => Math.max(0, Math.round(((sum ?? 0) / g) * k * mult))
-    // close: one score. Not close: two scores or more
-    const gap = auto ? 14 + Math.floor(r() * 15) : 1 + Math.floor(r() * 8)
-    // (the winner's score is a real one, and the loser's comes off it: a loss used to stack the gap on top
-    // of his team's own points, so the other team kept putting up 50 and 60)
-    if (won) { mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6); oppSc = Math.max(3, mySc - gap) }
-    else { oppSc = Math.round(24 + r() * 14); mySc = Math.max(3, oppSc - gap) }
+    // (no moment: two scores or more, the winner's a real score and the loser's off it)
+    if (auto) {
+      const gap = 14 + Math.floor(r() * 15)
+      if (won) { mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6); oppSc = Math.max(3, mySc - gap) }
+      else { oppSc = Math.round(24 + r() * 14); mySc = Math.max(3, oppSc - gap) }
+    }
     line = c.pos === 'qb' ? { passYds: n(f.seasonPassYds), tds: n(f.seasonTDs, won ? 1.1 : 0.8), ints: Math.round((1 - score) * 2 * r()), rushYds: n(f.seasonRushYds) }
       : c.pos === 'db' ? { tackles: n(f.seasonTackles), ints: n(f.seasonINTs, won ? 1.4 : 0.6), pbus: n(f.seasonPBUs) }
       // (sacks come in ones: a rate rounds to the same number every game, so it's a roll around his rate)
       : c.pos === 'dl' ? (() => { const roll = (sum, mult = 1) => Math.floor(((sum ?? 0) / g) * k * mult + r()); const sacks = roll(f.seasonSacks, won ? 1.25 : 0.75); return { sacks, tfl: sacks + roll(Math.max(0, (f.seasonTFL ?? 0) - (f.seasonSacks ?? 0))), tackles: Math.max(sacks, n(f.seasonTackles)), qbHits: sacks + roll(Math.max(0, (f.seasonQBHits ?? 0) - (f.seasonSacks ?? 0))), ff: roll(f.seasonFF), fr: 0, pbus: roll(f.seasonPBUs), safeties: 0 } })()
       : c.pos === 'lb' ? (() => { const roll = (sum, mult = 1) => Math.floor(((sum ?? 0) / g) * k * mult + r()); const sacks = roll(f.seasonSacks, won ? 1.2 : 0.8), ints = roll(f.seasonINTs, won ? 1.4 : 0.6); return { tackles: Math.max(sacks, n(f.seasonTackles)), tfl: sacks + roll(Math.max(0, (f.seasonTFL ?? 0) - (f.seasonSacks ?? 0))), sacks, qbHits: sacks + roll(Math.max(0, (f.seasonQBHits ?? 0) - (f.seasonSacks ?? 0))), pds: ints + roll(Math.max(0, (f.seasonPDs ?? 0) - (f.seasonINTs ?? 0))), ints, pickSixes: 0, ff: roll(f.seasonFF), fr: 0, missed: 0 } })()
-      : c.pos === 'ol' ? (() => { const st = seasonStats('ol', f), roll = (sum, mult = 1) => Math.max(0, Math.floor(((sum ?? 0) / g) * mult + r())); return { pancakes: roll(st.pancakes, k), prs: roll(st.prs, (won ? 0.85 : 1.25) / k), sacksA: roll(st.sacksA, (won ? 0.6 : 1.5) / k), pen: roll(st.pen) } })()
+      : c.pos === 'ol' ? (() => { const st0 = seasonStats('ol', f), roll = (sum, mult = 1) => Math.max(0, Math.floor(((sum ?? 0) / g) * mult + r())); return { pancakes: roll(st0.pancakes, k), prs: roll(st0.prs, (won ? 0.85 : 1.25) / k), sacksA: roll(st0.sacksA, (won ? 0.6 : 1.5) / k), pen: roll(st0.pen) } })()
       : c.pos === 'rb' ? { rushYds: n(f.seasonRushYds), rushTDs: n(f.seasonRushTDs, won ? 1.2 : 0.7), recTDs: 0, recYds: n(f.seasonRecYds), carries: n(f.seasonCarries) }
       : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
-  }
-  // a one-game moment: the final grows out of the score it was played at (the odds above decided who won)
-  let swing = null, F = {}
-  if (!auto && !rd.series && game) {
-    const seed = `${c.seed}-${c.year}-${po.idx}`
-    F = momentFacts(game, pts, hit)
-    const end = finalScore(momentSituation(game, seed, { us: c.team, them: rd.opp }), game, won, hit, seed, F)
-    mySc = end.mine; oppSc = end.opp; swing = end.note
-    // what he did in the moment is in his line (it used to be drawn from his season alone: a pick, a sack or a forced
-    // fumble on the screen and none in the box score). up: at least that many
-    const up = (k, n) => { if (n > 0 && line[k] != null) line[k] = Math.max(line[k], n) }
-    if (S.isBucket) {
-      // (the Play-In is one game: he scored at least what the moment showed, and took the boards it showed)
-      up('pts', end.got); up('reb', F.reb)
-    } else {
-      // (he can't score the touchdown that won it and have none in the box score. A touchdown the game showed counts
-      // whether or not the drill was landed: a catch in the end zone in a drill he lost is still his)
-      const tds = F.tds ?? (hit && (game === 'two-minute' || game === 'goal-line' || game === 'sneak') ? 1 : 0)
+    if (res) {
+      // what he did in the moment is in his line (a pick, a sack or a forced fumble on the screen is in the box score). up: at least that many
+      const up = (key, x) => { if (x > 0 && line[key] != null) line[key] = Math.max(line[key], x) }
+      // (the touchdown the play scored is his: a catch in the end zone in a drill he lost is still his)
+      const tds = F.tds ?? res.tds ?? 0
       const key = c.pos === 'qb' ? 'tds' : c.pos === 'rb' ? 'rushTDs' : 'recTDs'
-      // (a kick return taken back: his 7 are on the board, a return touchdown in his box score and the game's line)
       if (game === 'kick-return') { if (tds) { line.retTDs = tds; swing = swing ? `Kick return TD. ${swing}` : 'Kick return TD.' } }
-      else up(key, tds)
-      // (and the board holds his touchdowns: the rest of his day comes down to what the final has room for, never
-      // below the ones the moment showed. The score that grew out of the moment's situation stands)
-      let extra = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0) + (line.retTDs ?? 0) - Math.floor(mySc / 6)
-      for (const k of ['recTDs', 'rushTDs', 'tds']) while (extra > 0 && (line[k] ?? 0) > (k === key && game !== 'kick-return' ? tds : 0)) { line[k]--; extra-- }
+      else if (c.pos !== 'k' && c.pos !== 'ol' && !['db', 'dl', 'lb'].includes(c.pos)) up(key, tds)
       if (c.pos === 'qb') up('ints', F.ints)
       else if (c.pos === 'ol') { up('sacksA', F.sacks); up('prs', F.pressures); up('pancakes', F.pancakes) }
-      else {
+      else if (['db', 'dl', 'lb'].includes(c.pos)) {
         up('ints', F.picks); up('pbus', F.pbus); up('sacks', F.sacks); up('ff', F.fumbles)
         if (line.pds != null) line.pds = Math.max(line.pds, (line.ints ?? 0) + (F.pbus ?? 0))
         if (line.tfl != null) line.tfl = Math.max(line.tfl, line.sacks ?? 0, (F.sacks ?? 0) + (F.tfl ?? 0))
         if (line.qbHits != null) line.qbHits = Math.max(line.qbHits, line.sacks ?? 0)
         up('tackles', Math.max(F.tackles ?? 0, (F.sacks ?? 0) + (F.tfl ?? 0), line.sacks ?? 0))
       }
+      // (his touchdowns fit on the board: the rest of his day comes down to what the final has room for, never below
+      // the ones the moment showed. The board is the game as it was played, and it stands)
+      let extra = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0) + (line.retTDs ?? 0) - Math.floor(mySc / 6)
+      for (const kk of ['recTDs', 'rushTDs', 'tds']) while (extra > 0 && (line[kk] ?? 0) > (kk === key && game !== 'kick-return' ? tds : 0)) { line[kk]--; extra-- }
     }
   }
-  // (his touchdowns are on the board: a team can't score fewer points than the touchdowns he had in the box score,
-  // and a loss stays a loss)
-  if (!S.isBucket && line) {
-    const tds = (line.tds ?? 0) + (line.rushTDs ?? 0) + (line.recTDs ?? 0) + (line.retTDs ?? 0)
-    if (tds && mySc < 6 * tds) {
-      mySc = 7 * tds
-      if (!won && oppSc <= mySc) oppSc = mySc + 1 + Math.floor(r() * 7)
-      if (won && oppSc >= mySc) mySc = oppSc + 3
-    }
-  }
-  // (a football final is a real football score: the loser's points came off the winner's by a gap, and a
-  // 24-point game minus a 20-point gap was a team that scored 4. Field goals and touchdowns only, the
-  // result kept: 2026-11-08)
-  if (!S.isBucket && !S.isSoccer && !S.isBaseball && !rd.series) {
+  // (a football final with no moment behind it is a real football score: field goals and touchdowns, the result kept)
+  if (auto && !S.isBucket && !rd.series) {
     mySc = snapNFL(mySc); oppSc = snapNFL(oppSc)
     if (won && mySc <= oppSc) mySc = snapNFL(oppSc + 3)
     if (!won && oppSc <= mySc) oppSc = snapNFL(mySc + 3)
   }
-  // (a kicker's line is read off the final: the field goals and extra points that add up to what his team scored)
-  // (the kicks the moment showed are in it: every make, every miss)
-  if (c.pos === 'k') line = kPlayoffLine(mySc, { hit: !auto && !!hit && won, game: auto ? null : game, acc: c.build.accuracy?.val ?? 5, u: r(), made: F.fgm ?? (!auto && hit && (game === 'game-winner' || game === 'deep-kick') ? 1 : null), tries: F.fga ?? null })
-  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, swing, game: auto ? null : game, ...line }
+  // (a kicker's line is read off the final: the field goals and extra points that add up to what his team scored;
+  // the kicks the moment showed are in it, every make and every miss)
+  if (c.pos === 'k') line = kPlayoffLine(mySc, { hit: !auto && !!hit && won, game: auto ? null : game, acc: c.build.accuracy?.val ?? 5, u: r(), made: F.fgm ?? (!auto && hit && game === 'game-winner' ? 1 : null), tries: F.fga ?? null })
+  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, swing, game: auto ? null : game, ...(moment ? { moment } : {}), ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === S.final
   const done = !won || fin

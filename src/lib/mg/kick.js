@@ -72,8 +72,12 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   // the kicks: three, longer each time (Deep Kick: four was a lot on top of the sim's own tries, the owner 11-13), or the one (Game Winner: never from past what a coach would ask)
   // (Deep Kick never asks for a kick past his range: each one is capped a yard under the next, up to the longest he can
   // make (kickReach), so a short leg gets three kicks from 50 to 53 and a big one the full 50 to 65. The owner, 2026-11-13)
+  // (a playoff game's own kicks, when it has them: the tries his team's drives ended in, short or long, and the extra
+  // point, as many as the game had. lib/inGame.js deals them; each one as hard as its distance)
+  const own = !winner && Array.isArray(situation?.kicks) && situation.kicks.length ? situation.kicks : null
   const kicks = winner
     ? [{ d: situation?.dist ?? 25 + Math.floor(r() * (Math.min(65, Math.round(reach) + 1) - 24)), wind: Math.round((r() - 0.5) * 2 * 9), hard: 1 }]
+    : own ? own.map(k => { const d = Math.min(k.d, Math.max(50, Math.floor(reach))), long = d >= 50; return { d, xp: !!k.xp, wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + (long ? 6 : 2) + r() * 4)), hard: long ? 1.12 + (d - 50) * 0.04 : 1, tight: long ? 1 - (d - 50) * 0.02 : 1 } })
     : [[50, 54], [55, 59], [60, 65]].map(([lo, hi], i) => ({ d: Math.min(lo + Math.floor(r() * (hi - lo + 1)), Math.max(50, Math.floor(reach)) - (2 - i)), wind: Math.round((r() < 0.5 ? -1 : 1) * (2 + i * 6 + r() * 4)), hard: 1.12 + i * 0.25, tight: 1 - i * 0.15 }))
   const pressure = winner ? 1 : 0.25
   const accF = byV(acc, 1.25, 0.72) * EASE                  // what his accuracy does to a miss: an S pulls it 28% back to the middle
@@ -83,7 +87,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   const aimPer = byV(acc, 520, 900) * SLOW, powMs = byV((pw + acc) / 2, 640, 880) * SLOW
   const g = {
     t: 0, game, zones: 'none', pads: ['KICK'], padLit: null, fx: [], done: null, outro: 1700, stamp: null, nudge: nudge(),
-    kicks, i: 0, made: 0, near: 0, phase: 'set', at: 0, reach, accF, winner, iced, icedDone: false,
+    kicks, i: 0, made: 0, near: 0, hits: [], phase: 'set', at: 0, reach, accF, winner, iced, icedDone: false,
     // (aimAt, not aim: MgStage reads g.aim as "this game is played by pointing at the field" and stops sending keys, which
     // is why the space bar set the aim and then did nothing for the power)
     aimAt: null, pow: null, res: null, ball: null, k: kicks[0], noise: 0, noiseAt: 0, noiseFrom: 0, noiseTo: 0,
@@ -150,6 +154,7 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   }
   function settle() {
     const res = g.res
+    g.hits.push(!!res.good)
     if (res.good) g.made++
     else if (res.close) g.near++
     if (!winner) g.hud.dots[g.i] = res.good
@@ -166,6 +171,13 @@ function makeFG({ v, seed, game, kick = null, situation = null }) {
   function finish() {
     if (winner) { g.done = outcome(g.made ? 1 : g.near ? 0.3 : 0, g.made === 1, g.made ? `Good from ${kicks[0].d}` : `No good from ${kicks[0].d}`, { made: g.made, of: 1, dist: kicks[0].d }); return }
     // two of three from 50 and out is a kicker's day; the near misses count a little toward the score, never the result
+    if (own) {
+      // (the game's own kicks: all of them made, or all but one of three or more. pts: what they put on the board)
+      const n = kicks.length, xpa = kicks.filter(k => k.xp).length, xpm = g.hits.filter((h, i) => h && kicks[i].xp).length, fgm = g.made - xpm
+      const score = clamp((g.made + g.near * 0.25) / n + (g.made >= n - (n >= 3 ? 1 : 0) ? 0.2 : 0), 0, 1)
+      g.done = outcome(score, g.made >= n - (n >= 3 ? 1 : 0), `${g.made} of ${n}`, { made: fgm, of: n - xpa, xpm, xpa, pts: fgm * 3 + xpm })
+      return
+    }
     const score = clamp((g.made + g.near * 0.25) / 3 + (g.made >= 2 ? 0.2 : 0), 0, 1)
     g.done = outcome(score, g.made >= 2, `${g.made} of 3 from 50+`, { made: g.made, of: 3 })
   }

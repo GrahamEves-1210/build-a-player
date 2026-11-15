@@ -177,7 +177,7 @@ export function momentFacts(game, raw = null, hit = false) {
   else if (game === 'lockdown' || game === 'rim-protect') { if (num(raw.allowed) != null) F.allowed = raw.allowed }
   else if (game === 'board') { if (made != null) F.reb = made }
   else if (game === 'game-winner') { if (made != null) { F.pts = made ? 3 : 0; F.fgm = made ? 1 : 0; F.fga = 1 } }
-  else if (game === 'deep-kick') { if (made != null && of) { F.pts = made * 3; F.fgm = made; F.fga = of } }
+  else if (game === 'deep-kick') { if (made != null && of != null) { F.pts = num(raw.pts) ?? made * 3; F.fgm = made; F.fga = of } }
   else {
     // football: the touchdowns (his own, on the board), and the plays that go in the book
     // (raw.fg: the two-minute drill's field goal, three on the board and still behind)
