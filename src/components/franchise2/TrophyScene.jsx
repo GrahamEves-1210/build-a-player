@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { sfx } from '../../lib/juice'
+import { fkVars } from './kit'
 import './trophy.css'
 
 // The trophy, after a Super Bowl win: Franchise's own cup (three silver flames off a stepped plinth, bound by a
@@ -96,7 +97,7 @@ export default function TrophyScene({ team, title = 'SUPER BOWL CHAMPIONS', line
 
   const showPoster = still || failed || rest
   return (
-    <div className={`frt${rest ? ' is-rest' : ''}${words > 0 ? ' has-title' : ''}${words > 1 ? ' has-name' : ''}${still ? ' is-still' : ''}`} style={{ '--frt-c1': colors[0], '--frt-c2': colors[1] }}
+    <div className={`frt${rest ? ' is-rest' : ''}${words > 0 ? ' has-title' : ''}${words > 1 ? ' has-name' : ''}${still ? ' is-still' : ''}`} style={{ '--frt-c1': colors[0], '--frt-c2': colors[1], ...(team?.short ? fkVars(team.short) : null) }}
       ref={root} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`${title}. ${team?.name ?? ''}`} onClick={tap} onKeyDown={onKey}>
       <div className="frt-col">
         <p className="frt-title">{title}</p>

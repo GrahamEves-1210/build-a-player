@@ -113,7 +113,9 @@ export function playWeek(F, opts = {}) {
     const p = F.teams[F.team].r.find(x => x.i === G.key.pid)
     const game = gameForMoment(p.p, S.key, R, opts.allow)
     if (game) {
-      F.pend = { S, pid: p.i, b: p.b, game, po: !!po }
+      // (the plays before it, named now: the live feed shows them, and the final summary keeps them as they were)
+      const kp0 = scoringSummary(F, S, S.key.us, null, null, null, { credits: true })
+      F.pend = { S, pid: p.i, b: p.b, game, po: !!po, kp0 }
       return { pending: true }
     }
     // (no play of his fits the spot: the game goes on without a moment)
@@ -131,13 +133,14 @@ export function momentView(F) {
     mine: k.mine, theirs: k.opp, clock: clockText(k.t), period: periodOf(k.t), t: k.t, down: k.down, d: k.d, y: k.y, goal: k.goal,
     ball: k.ball, spot: k.goal ? 'goal' : spotText(k.y), seed: `${P.S.G.seed}-mg`,
     // the spot the broadcast way: "DEN 35" on the offense's own side, "ARI 47" across midfield
+    feed: (P.kp0 ?? []).map(x => x.slice(0, 4)),
     spotTxt: (() => { const off = k.ball === 'us' ? F.team : opp, def = k.ball === 'us' ? opp : F.team; return k.y === 50 ? '50' : k.y < 50 ? `${off} ${k.y}` : `${def} ${100 - k.y}` })(),
   }
 }
 export function finishMoment(F, hit) {
   const P = F.pend
   const S = P.S, k = S.key
-  const mo = { pid: P.pid, b: P.b, game: P.game, hit: !!hit, ball: k.ball, down: k.down, d: k.d, goal: k.goal, togo: 100 - k.y, t: k.t }
+  const mo = { pid: P.pid, b: P.b, game: P.game, hit: !!hit, ball: k.ball, down: k.down, d: k.d, goal: k.goal, togo: 100 - k.y, t: k.t, pre: P.kp0 ?? null }
   resolveKey(S, hit, hit ? KIND[P.game] ?? null : null, 'play')
   mo.line = S.keyOut?.line
   mo.kind = S.keyOut?.kind
@@ -163,7 +166,7 @@ function finishUserGame(F, { g }, S, mo) {
   if (mo?.hit && mo.game === 'pass-rush') { const x = box[`p${mo.pid}`] ??= {}; x.sck = Math.max(1, x.sck ?? 0) }
   let oppLines = null
   if (!po) { try { oppLines = gameLines(F, F.wk)[opp] ?? null } catch { oppLines = null } }
-  const kp = scoringSummary(F, S, home ? 'h' : 'a', box, oppLines, mo)
+  const kp = scoringSummary(F, S, home ? 'h' : 'a', box, oppLines, mo, { pre: mo?.pre ?? null })
   const ss = F.ss ?? (F.ss = {})
   for (const p of roster) { const id = p.k.slice(1); ss[id] ??= { gp: 0 }; ss[id].gp++; addStats(ss[id], box[p.k]) }
   // the builds' lines (one line each), and the day's best line on the team (the broadcast's player of the game)
@@ -376,7 +379,7 @@ const EVENTS = [
   } },
 ]
 function tradeEvent(F, R) {
-  if (F.wk > TRADE_DEADLINE) return null
+  if (F.wk >= TRADE_DEADLINE) return null   // (F.wk: weeks played; after Week 9 the deadline has passed)
   const L = startersMine(F).filter(p => p.b == null && p.ag <= 29 && p.p !== 'qb' && p.p !== 'ol')
   if (!L.length) return null
   const mine = R.pick(L)

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TEAM, gradeOf, POS_LABEL } from '../../lib/franchise2'
 import { realOf } from '../../lib/franchise2/league'
+import { jersey } from '../../lib/franchise2/roster'
 import { sfx, haptic } from '../../lib/juice'
 import { photoOf } from './bits'
 import './kit.css'
@@ -58,6 +59,7 @@ const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 
 // his jersey number: a build's own (setup), a real man's from the data, a depth player's from his name (stable)
 export function jerseyOf(F, p) {
   if (!p) return null
+  if (F) { const n = jersey(F, p); if (n != null) return n }   // (the depth chart's numbers: roster.js)
   if (p.b != null) return F?.builds?.[p.b]?.num ?? null
   if (p.num != null) return p.num
   const r = realOf(p.p, p.n)
@@ -142,7 +144,7 @@ function TickItem({ x }) {
 export function Scorebug({ a, h, as = 0, hs = 0, per, clock, dd, poss, final, flash, recA, recH, label }) {
   return (
     <div className={`fk-bug${final ? ' is-final' : ''}`} role="status" aria-label={`${a} ${as}, ${h} ${hs}`}>
-      {label && <span className="fk-bug-label">{label}</span>}
+      {label && !(dd && !final) && <span className="fk-bug-label">{label}</span>}
       <BugTeam s={a} pts={as} rec={recA} ball={poss === 'a'} win={final && as > hs} lose={final && as < hs} />
       <BugTeam s={h} pts={hs} rec={recH} ball={poss === 'h'} win={final && hs > as} lose={final && hs < as} />
       <span className="fk-bug-st">

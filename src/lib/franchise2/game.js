@@ -102,6 +102,13 @@ function drive(S, R, fromY = S.y) {
   return { res, dur: Math.round(dur), left }
 }
 
+// where a made field goal was kicked from, as the summary reads it (its own stream: the game's odds don't move).
+// The NFL's made kicks: about 39 yards on average, one in six from 50 and out, very few from 60 (spot y: 117 - y)
+export function kickSpot(S) {
+  const R = rngOf(`${S.G.seed}-kick-${S.di}`)
+  const toGoal = clamp(2, 47, Math.round(23 + R.n() * 9.5))
+  return 100 - toGoal
+}
 // what happens after a drive ends (the other team's start)
 function nextStart(res, y, R) {
   if (res === 'td' || res === 'fg') return 25 + (R.u() < 0.2 ? R.int(-8, 10) : 0)
@@ -152,7 +159,7 @@ function step(S) {
   if (!fits && (d.res === 'punt' || d.res === 'to')) { S.t = end; afterDrive(S, side, 'end', R); return }
   S.t = Math.min(end - 1, S.t + d.dur)
   if (d.res === 'td') touchdown(S, side, R)
-  else if (d.res === 'fg') { const los = clamp(55, 97, S.y + 45); if (R.u() < fgMake(los)) score(S, side, 3, 'fg', { y: los }); else d.res = 'miss' }
+  else if (d.res === 'fg') { if (R.u() < fgMake(clamp(55, 97, S.y + 45))) score(S, side, 3, 'fg', { y: kickSpot(S) }); else d.res = 'miss' }
   afterDrive(S, side, d.res, R)
   if (!fits) S.t = end
 }

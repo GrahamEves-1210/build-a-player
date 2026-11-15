@@ -80,14 +80,18 @@ const tryText = tr => (tr === 'xpx' ? ' (kick no good)' : tr === '2' ? ' (two-po
 // S: the finished game · us: 'h' | 'a' (the player's team) · box: the player's box score (`p{id}` → line) ·
 // oppLines: the other team's line for the game (id → line) or null · mo: the moment { pid, game, hit, line, kind }
 // Returns [[t, mine, pts, text]] in order, and sets the player's box touchdowns from it.
-export function scoringSummary(F, S, us, box, oppLines, mo = null) {
+export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null, credits = false } = {}) {
   const R = rngOf(`${S.G.seed}-summary`)
   const shortOf = side => S.G[side]
   const ourLines = Object.fromEntries(Object.entries(box ?? {}).map(([k, v]) => [k.slice(1), v]))
   const sides = { [us]: sideOf(F, shortOf(us), ourLines), [us === 'h' ? 'a' : 'h']: sideOf(F, shortOf(us === 'h' ? 'a' : 'h'), oppLines) }
   const credit = {}   // the player's team: id → { ptd, rctd, rtd }
-  const give = (p, k, side) => { if (side !== us || !p) return; const c = credit[p.i] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++ }
+  let cur = []
+  const give = (p, k, side) => { if (side !== us || !p) return; const c = credit[p.i] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++; cur.push([p.i, k]) }
   const out = []
+  // (pre: the plays already named before the moment (the live feed showed them): kept as they were, credits and all)
+  let pj = 0
+  const preTD = pre?.filter(x => x[2] >= 6)
 
   for (let i = 0; i < S.plays.length; i++) {
     const pl = S.plays[i], Sd = sides[pl.s], mine = pl.s === us ? 1 : 0
@@ -98,6 +102,14 @@ export function scoringSummary(F, S, us, box, oppLines, mo = null) {
     }
     if (pl.k === 'key') { const x = keyText(F, S, pl, sides, us, mo, R); if (x) out.push([pl.t, mine, 0, x]); continue }
     if (pl.k !== 'td') continue
+    const was = preTD?.[pj]
+    if (was && was[0] === pl.t && was[2] === pl.p) {
+      pj++
+      for (const [id, k] of was[4] ?? []) { const c = credit[id] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++ }
+      out.push(credits ? was : was.slice(0, 4))
+      continue
+    }
+    cur = []
     // the moment's own touchdown: the build in it scored it (a quarterback threw it, a lineman's back ran behind him)
     let txt
     if (pl.key && mo && mine) txt = momentTD(F, Sd, mo, R, give, us)
@@ -109,7 +121,7 @@ export function scoringSummary(F, S, us, box, oppLines, mo = null) {
       else if (p) { const y = yardsFor(Sd, p, 'run', R); txt = `${p.n} ${y}-yd run`; give(p, 'rtd', pl.s) }
       else txt = `${Sd.short} touchdown`
     }
-    out.push([pl.t, mine, pl.p, txt + tryText(pl.tr)])
+    out.push(credits ? [pl.t, mine, pl.p, txt + tryText(pl.tr), cur] : [pl.t, mine, pl.p, txt + tryText(pl.tr)])
   }
 
   // the box's touchdowns are the summary's

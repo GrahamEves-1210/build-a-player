@@ -41,6 +41,7 @@
 .fk-chy--s .fk-chy-slab { height: 32px; } .fk-chy--s .fk-chy-title { font-size: 18px; } .fk-chy--s .fk-chy-tag { font-size: 15px; }
 .fk-chy--l .fk-chy-slab { height: 54px; --fk-cut: 20px; } .fk-chy--l .fk-chy-title { font-size: 32px; } .fk-chy--l .fk-chy-tag { font-size: 20px; padding: 0 14px 3px; }
 .fk-chy--ink .fk-chy-slab { --tc: var(--fk-g3); --tct: #fff; --tc2: var(--fk-line2); }
+.fk-chy--ink .fk-chy-tag { background: #fff; color: #0b0c0e; }
 .fk-chy--w .fk-chy-slab { --tc: var(--fk-w); --tct: #04130a; --tc2: rgba(0,0,0,.25); }
 .fk-chy--l.fk-chy-x .fk-chy-slab, .fk-chy--loss .fk-chy-slab { --tc: var(--fk-l); --tct: #fff; --tc2: rgba(0,0,0,.25); }
 .fk-chy--gold .fk-chy-slab { background: linear-gradient(180deg, var(--fk-gold-hi) 0 50%, var(--fk-gold) 50% 100%); color: #1a1405; box-shadow: inset 0 -3px 0 var(--fk-gold-lo); }
@@ -206,6 +207,7 @@ button.fk-slab { cursor: pointer; }
 .fk-vs .fk-slab--l .fk-slab-logo { left: 12px; right: auto; }
 .fk-vs .fk-slab--r .fk-slab-logo { right: 12px; left: auto; }
 .fk-vs .fk-slab-txt > b { font-size: 24px; }
+.fk-vs .fk-slab-txt > small { display: none; }
 .fk-vs--l .fk-slab { --sh: 168px; } .fk-vs--l .fk-slab-logo, .fk-vs--l .fk-slab--r .fk-slab-logo { width: 80px; height: 80px; } .fk-vs--l .fk-slab-txt > b { font-size: 32px; }
 
 /* the tale of the tape */
@@ -300,3 +302,12 @@ html.bap-reduce-motion .fk-bump-a, html.bap-reduce-motion .fk-bump-b { transform
 .fk-kit-card { display: grid; place-items: center; height: 190px; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line2); }
 .fk-kit-card.is-back { background: #fb4f14; color: #fff; font-family: var(--fk-d); font-size: 18px; text-align: center; padding: 10px; }
 .fk-kit-wall { align-items: flex-start; }
+
+@media (max-width: 420px) {
+  .fk-bug-t { gap: 4px; padding-left: 4px; }
+  .fk-bug-t .fk-logo { width: 20px !important; height: 20px !important; }
+  .fk-bug-n b { font-size: 15px; }
+  .fk-bug-pts { min-width: 34px; font-size: 22px; }
+  .fk-bug-st { min-width: 50px; padding: 0 6px; }
+  .fk-bug-dd { padding: 0 7px; font-size: 13px; }
+}
