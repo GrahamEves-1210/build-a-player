@@ -43,3 +43,18 @@ html.is-app .fr-wait { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .fr-wait-bug b { padding-left: 11px; border-left: 3px solid #f2f4f5; font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-weight: 400; font-size: 22px; letter-spacing: .3px; line-height: 1; }
 .fr-wait-page { width: 100%; max-width: 640px; margin: 0 auto; padding: 12px; }
 .fr-wait .sk-card { border-radius: 4px; }
+
+/* on top of football's Home (College Football's old spot, owner 11-14): full width, the trophy on the right half */
+.ag-mc.ag-mc--fr.ag-mc--fr-wide { display: block; width: 100%; min-height: 150px; margin: 0 0 8px; }
+.ag-mc--fr-wide .ag-fr-art { width: 46%; height: 100%; right: 6px; }
+.ag-mc--fr-wide .ag-fr-art img { object-position: center 22%; }
+@media (min-width: 1024px) { html.app-look .ag-mc.ag-mc--fr.ag-mc--fr-wide { margin-bottom: 12px; } html.app-look .ag-mc--fr-wide .ag-fr-art { width: 30%; } }
+/* College Football in a grid spot (football's Home with Franchise on): three logos on the band */
+.ag-mc.ag-mc--cfb.ag-mc--cfb-sm { min-height: 0; margin: 0; }
+.ag-mc--cfb-sm .ag-cfb-band { padding: 0 6px 0 16px; height: 48px; }
+.ag-mc--cfb-sm .ag-cfb-band img { width: 34px; height: 34px; }
+@media (min-width: 1024px) {
+  html.app-look .ag-mc.ag-mc--cfb.ag-mc--cfb-sm { min-height: 0; margin: 0; }
+  html.app-look .ag-mc--cfb-sm .ag-cfb-band { left: 0; top: auto; width: auto; height: 60px; padding: 0 10px 0 22px; clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%); }
+  html.app-look .ag-mc--cfb-sm .ag-cfb-band img { width: 44px; height: 44px; }
+}

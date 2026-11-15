@@ -211,13 +211,13 @@ const cfbLine = () => {
   } catch {}
   return 'Conference spin · Heisman race'
 }
-function CFBCard({ onClick }) {
+function CFBCard({ onClick, small = false }) {
   const [line] = useState(cfbLine)
   return (
-    <button className="ag-way ag-mc ag-mc--cfb" onClick={onClick}>
+    <button className={`ag-way ag-mc ag-mc--cfb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
       <span className="ag-mc-head"><b>COLLEGE FOOTBALL<i className="ag-mc-tag">NEW</i></b><small>{line}</small></span>
       <span className="ag-cfb-band" aria-hidden="true">
-        {CFB_CARD_SCHOOLS.map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
+        {(small ? CFB_CARD_SCHOOLS.slice(0, 3) : CFB_CARD_SCHOOLS).map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>
     </button>
   )
@@ -586,7 +586,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   ) : (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
-      {!isBucket && hasCFB && <CFBCard onClick={() => cfbRef.current?.()} />}
+      {/* football: Franchise on top, College Football in Compete's spot, Compete in the small row (owner 11-14) */}
+      {!isBucket && (hasFranchise ? <FranchiseCard wide onClick={() => frRef.current?.()} /> : hasCFB && <CFBCard onClick={() => cfbRef.current?.()} />)}
       {isBucket && hasCBB && <CBBCard onClick={() => cbbRef.current?.()} />}
       <div className="ag-cards">
         {onCareer && (
@@ -605,6 +606,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <span className="ag-paint" aria-hidden="true"><b>1V1</b><b>2V2</b><b>3V3</b></span>
             </ModeArt>
           ))
+          : hasFranchise && hasCFB ? <CFBCard small onClick={() => cfbRef.current?.()} />
           : (onCompete && (
             <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
               <Podium />
@@ -621,7 +623,11 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <Podium />
           </ModeArt>
         )}
-        {hasFranchise ? <FranchiseCard onClick={() => frRef.current?.()} /> : onSquad && (
+        {hasFranchise ? (hasCFB && onCompete && (
+          <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
+            <Podium />
+          </ModeArt>
+        )) : onSquad && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
             {isBucket
               ? <Lineup />

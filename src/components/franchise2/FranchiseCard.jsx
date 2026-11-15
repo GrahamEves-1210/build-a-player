@@ -32,10 +32,10 @@ const Art = () => (FRANCHISE_ART.card
   ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="640" height="640" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /></span>
   : null)
 
-export default function FranchiseCard({ onClick }) {
+export default function FranchiseCard({ onClick, wide = false }) {
   const [c] = useState(franchiseCard)
   return (
-    <button className="ag-way ag-mc ag-mc--fr is-small" style={c?.color ? { '--fr-team': c.color } : undefined} onClick={onClick} {...WARM}>
+    <button className={`ag-way ag-mc ag-mc--fr${wide ? ' ag-mc--fr-wide' : ' is-small'}`} style={c?.color ? { '--fr-team': c.color } : undefined} onClick={onClick} {...WARM}>
       <span className="ag-mc-head"><b>FRANCHISE<i className="ag-mc-tag">NEW</i></b><small>{c?.line ?? OPEN}</small></span>
       <Art />
     </button>
