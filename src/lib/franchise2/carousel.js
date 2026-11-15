@@ -22,6 +22,8 @@
 import { SHORTS, strength } from './league'
 import { records, recText } from './standings'
 import { rngOf, clamp, roll } from './rng'
+import { coachName } from './coachNames'
+import { COACH_MIX } from './faces'
 import { ensureStaff, staffOf, staffMen, coachOvr, coachGrade, rOf, nickOf, ROLE_LONG, cLetter, CTYPES, toArr } from './coach'
 
 const SIDE = { oc: 'off', dc: 'def' }
@@ -31,12 +33,11 @@ const NK = s => nickOf(s).toUpperCase()
 const ROLE_ABBR = { hc: 'HC', oc: 'OC', dc: 'DC' }
 
 // ── Up-and-comers: the year's new names ──────────────────────────────────────
-const FIRST = ['Mike', 'Matt', 'Brian', 'Joe', 'Dan', 'Kevin', 'Steve', 'Jim', 'Chris', 'Todd', 'Jason', 'Scott', 'Greg', 'Mark', 'Jeff', 'Rob', 'Tom', 'Pete', 'Ken', 'Jon', 'Eric', 'Ryan', 'Tim', 'Dave', 'Nick', 'Shane', 'Josh', 'Kyle', 'Ron', 'Marcus', 'Darrell', 'Derrick', 'Terrell', 'Andre', 'Curtis', 'Reggie', 'Lance', 'Wes', 'Drew', 'Bobby', 'Anthony', 'Jerome', 'Cedric', 'Tony', 'Chad', 'Brad', 'Doug', 'Rick', 'Travis', 'Corey', 'Luke', 'Sam', 'Ben', 'Adam', 'Jamal', 'DeShawn', 'Troy', 'Keith', 'Aaron', 'Justin']
-const LAST = ['Adams', 'Barnes', 'Collins', 'Dixon', 'Evans', 'Foster', 'Griffin', 'Hughes', 'Ingram', 'Knox', 'Lewis', 'Nelson', 'Owens', 'Parker', 'Ross', 'Simmons', 'Tucker', 'Walker', 'Banks', 'Dunn', 'Ford', 'Mack', 'Price', 'Shaw', 'Brennan', 'Carroway', 'Dwyer', 'Fairley', 'Gaskins', 'Hartman', 'Kessler', 'Lindqvist', 'McAllister', 'Novak', 'Pruitt', 'Quinlan', 'Riggs', 'Sorensen', 'Thornton', 'Vickers', 'Whitlock', 'Yates', 'Albright', 'Bowers', 'Cutler', 'Delaney', 'Easton', 'Fenwick', 'Garner', 'Holloway', 'Jarrett', 'Keene', 'Lockhart', 'Mercer', 'Oakes', 'Pennington', 'Rowe', 'Stanton', 'Talbert', 'Underwood']
 const SCHOOLS = ['MICHIGAN', 'OHIO STATE', 'GEORGIA', 'ALABAMA', 'OREGON', 'TEXAS', 'LSU', 'PENN STATE', 'NOTRE DAME', 'CLEMSON', 'USC', 'WASHINGTON', 'UTAH', 'IOWA', 'OLE MISS', 'TENNESSEE', 'MISSOURI', 'KANSAS STATE', 'OKLAHOMA', 'MIAMI', 'FLORIDA STATE', 'WISCONSIN', 'INDIANA', 'BOISE STATE', 'TEXAS A&M', 'SMU', 'ARIZONA STATE', 'BYU']
 const POS_JOB = { off: ['QB COACH', 'PASS GAME COORD.', 'RUN GAME COORD.', 'WR COACH', 'OL COACH', 'TE COACH'], def: ['LB COACH', 'SECONDARY COACH', 'DL COACH', 'DEF. PASS GAME COORD.', 'DEF. RUN GAME COORD.', 'DEF. BACKS COACH'] }
-// NFL staffs: about six in ten white, a third Black (the drawn face's background)
-const BG = [['w', 60], ['b', 33], ['l', 5], ['p', 2]]
+// NFL coaching staffs: mostly white, about a fifth Black, a few others (faces.js COACH_MIX); the name and the drawn
+// face both follow it (coachNames.js, faces.js coachLook)
+const BG = COACH_MIX
 function takenNames(F) {
   const out = new Set()
   for (const s of SHORTS) { const M = staffMen(F, s); for (const c of [M.hc, M.oc, M.dc]) if (c?.n) out.add(c.n) }
@@ -46,8 +47,9 @@ function takenNames(F) {
 // kind: 'pos' an NFL position coach · 'col' a college coordinator · 'colhc' a college head coach · 'home' the
 // player's own staff (promote from within)
 export function genCoach(F, R, side, kind, { team, taken = takenNames(F) } = {}) {
+  const g = BG[R.wpick(BG.map(x => x[1]))][0]
   let n
-  for (let k = 0; k < 30; k++) { n = `${R.pick(FIRST)} ${R.pick(LAST)}`; if (!taken.has(n)) break }
+  for (let k = 0; k < 30; k++) { n = coachName(R.u, g); if (!taken.has(n)) break }
   taken.add(n)
   const v = (m, s, lo = 1, hi = 9) => clamp(lo, hi, Math.round(m + R.n() * s))
   const hc = kind === 'colhc'
@@ -57,7 +59,7 @@ export function genCoach(F, R, side, kind, { team, taken = takenNames(F) } = {})
     : [v(5.1, 1.3), hc ? v(3, 0.8) : 2, own, hc ? v(5.4, 1.3) : v(3.6, 0.9), v(hc ? 4.8 : 4.3, 1.1)]
   const ag = hc ? R.int(42, 58) : kind === 'col' ? R.int(35, 52) : R.int(31, 46)
   const cv = kind === 'colhc' ? `${R.pick(SCHOOLS)} HEAD COACH` : kind === 'col' ? `${R.pick(SCHOOLS)} ${side === 'off' ? 'OC' : 'DC'}` : `${NK(team ?? R.pick(SHORTS))} ${R.pick(POS_JOB[side])}`
-  return { i: F.cid++, n, ag, r, sd: side, st: F.year + 1, cv, g: BG[R.wpick(BG.map(x => x[1]))][0], ...(R.u() >= 0.85 && { nc: 1 }), nw: 1, ...(kind === 'colhc' && { col: 1 }), ...(kind === 'home' && { home: team }) }
+  return { i: F.cid++, n, ag, r, sd: side, st: F.year + 1, cv, g, ...(R.u() >= 0.85 && { nc: 1 }), nw: 1, ...(kind === 'colhc' && { col: 1 }), ...(kind === 'home' && { home: team }) }
 }
 
 // ── How the league reads a coach ─────────────────────────────────────────────

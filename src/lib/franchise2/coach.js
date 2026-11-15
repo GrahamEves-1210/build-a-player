@@ -176,7 +176,9 @@ export function unpackStaff(F) {
 // the player's coach in the staff's shape (his ratings as the five in order)
 export function myHC(F) {
   const c = F.coach
-  return c ? { mine: 1, n: c.name, r: toArr(c.r), sd: (c.r?.offPlaycalling ?? 5) >= (c.r?.defPlaycalling ?? 5) ? 'off' : 'def', face: c.face, style: c.style } : null
+  return c ? { mine: 1, n: c.name, r: toArr(c.r), sd: (c.r?.offPlaycalling ?? 5) >= (c.r?.defPlaycalling ?? 5) ? 'off' : 'def', face: c.face, style: c.style,
+    // (his age: the one his face was picked at, a year older every season, so he greys on the staff screen)
+    ...(c.face?.ag != null && { ag: c.face.ag + Math.max(0, F.year - (c.face.y ?? F.year)) }) } : null
 }
 // the three men on a team's staff now: { hc, oc, dc } (the player's head coach as myHC)
 export function staffMen(F, short) {
