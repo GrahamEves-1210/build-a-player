@@ -3,6 +3,7 @@ import {
   TEAM, CTYPES, STYLES, cLetter, coachGrade, rOf, staffOf, staffMen, callerOf, setCalls, cvOf, hotSeat, myOpenings, fireMine, shortlist,
   interviewCoach, interviewsLeft, interviewView, offerCoach, closeCarousel, setCarStep, moveText, IV_N, records, recText,
 } from '../../lib/franchise2'
+import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, LowerThird, Stamp, Go, KLogo, fkVars, splitName, reduced, BackBar, ActionBar } from './kit'
 import { coachPhoto } from './coachFace'
@@ -33,7 +34,7 @@ export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0, 
     <div className={`fst-g${full ? ' fst-g--full' : ''}${reveal ? ' is-reveal' : ''}`} role="list">
       {CTYPES.map((t, i) => (
         <span key={t} role="listitem" className={`fst-gc${on.includes(t) ? ' is-on' : ''}`} style={{ '--d': `${delay + i * 110}ms` }} title={CNAME[t]}>
-          <small>{(full ? CNAME : CWORD)[t]}</small><b>{hidden || !r ? '?' : cLetter(r[t])}</b>
+          <small>{(full ? CNAME : CWORD)[t]}</small><b style={hidden || !r ? undefined : { '--g': letterColor(cLetter(r[t])) }}>{hidden || !r ? '?' : cLetter(r[t])}</b>
         </span>
       ))}
     </div>
@@ -85,7 +86,7 @@ export function StaffStrip({ F, onOpen }) {
           return (
             <span key={k} className="fst-chip">
               <span className="fst-chip-face">{c && <img src={coachPhoto(c, F.team, true)} alt="" draggable={false} />}</span>
-              <span className="fst-chip-txt"><small>{JOB[k]}{r && <i>{coachGrade(r, k)}</i>}</small><b>{c ? lastOf(c.n) : 'OPEN'}</b></span>
+              <span className="fst-chip-txt"><small>{JOB[k]}{r && <i style={{ color: letterColor(coachGrade(r, k)) }}>{coachGrade(r, k)}</i>}</small><b>{c ? lastOf(c.n) : 'OPEN'}</b></span>
             </span>
           )
         })}
@@ -119,7 +120,7 @@ export function StaffScreen({ F, act, owner, onBack }) {
               const r = fiveOf(F, c), on = (T.call?.[side] ?? co) === who
               return (
                 <button key={who} type="button" role="radio" aria-checked={on} disabled={!c} className={on ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => flip(side, who)}>
-                  <small>{JOB[who]}</small><b>{c ? lastOf(c.n) : 'OPEN'}</b><i>{r ? cLetter(r[j]) : '-'}</i>
+                  <small>{JOB[who]}</small><b>{c ? lastOf(c.n) : 'OPEN'}</b><i style={r && !on ? { color: letterColor(cLetter(r[j])) } : undefined}>{r ? cLetter(r[j]) : '-'}</i>
                 </button>
               )
             })}
@@ -334,8 +335,8 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
           </div>
           <div className="fst-call" role="radiogroup" aria-label="Play-calling">
             <span className="fst-call-l">{SIDE_WORD[side]} PLAYS</span>
-            <button type="button" role="radio" aria-checked={calls} className={calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(true); sfx('tap') }}><small>{JOB[k]}</small><b>{lastOf(c.n)}</b><i>{cLetter(V.r[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])}</i></button>
-            <button type="button" role="radio" aria-checked={!calls} className={!calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(false); sfx('tap') }}><small>HC</small><b>{hcName}</b><i>{cLetter(F.coach?.r?.[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])}</i></button>
+            <button type="button" role="radio" aria-checked={calls} className={calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(true); sfx('tap') }}><small>{JOB[k]}</small><b>{lastOf(c.n)}</b><i style={calls ? undefined : { color: letterColor(cLetter(V.r[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])) }}>{cLetter(V.r[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])}</i></button>
+            <button type="button" role="radio" aria-checked={!calls} className={!calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(false); sfx('tap') }}><small>HC</small><b>{hcName}</b><i style={!calls ? undefined : { color: letterColor(cLetter(F.coach?.r?.[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])) }}>{cLetter(F.coach?.r?.[side === 'off' ? 'offPlaycalling' : 'defPlaycalling'])}</i></button>
           </div>
           <ActionBar><Go onClick={offer}>Offer the job</Go></ActionBar>
         </>

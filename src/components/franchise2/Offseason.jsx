@@ -3,6 +3,7 @@ import {
   TEAM, FINISH_TEXT, ageLeague, openResign, resignOne, resignAsk, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, faBoard, bidView, pitchOf, placeBid,
   OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade,
 } from '../../lib/franchise2'
+import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigRec, BigNum, Stamp, Meter, Go, Flip, KLogo, fkVars, reduced, BackBar, ActionBar } from './kit'
 import { Man, CapBar, PlayerPage, money, posText } from './dparts'
@@ -257,7 +258,7 @@ function Bid({ F, act, owner, id, onBack }) {
           </div>
           <Chyron tone="ink" size="s" title="WHAT HE WANTS" right={TEAM[F.team].nick.toUpperCase()} />
           <div className="fd-wants">
-            {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(offer) : k === 'coach' ? coachGrade(F.coach?.r) ?? '-' : undefined} />)}
+            {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(offer) : k === 'coach' ? coachGrade(F.coach?.r) ?? '-' : undefined} color={k === 'coach' ? letterColor(coachGrade(F.coach?.r)) : undefined} />)}
           </div>
           <div className="fd-offers" role="radiogroup" aria-label="Offer">
             {OFFERS.map(([k]) => {

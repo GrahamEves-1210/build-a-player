@@ -9,7 +9,7 @@
 .fst-g { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 2px; }
 .fst-gc { display: flex; align-items: baseline; justify-content: center; gap: 6px; height: 30px; align-items: center; background: var(--fk-g1); font-family: var(--fk-f); }
 .fst-gc small { font-size: 13px; letter-spacing: 0.6px; color: var(--fk-dim); }
-.fst-gc b { font-family: var(--fk-d); font-weight: 400; font-size: 19px; line-height: 1; color: #fff; }
+.fst-gc b { font-family: var(--fk-d); font-weight: 400; font-size: 19px; line-height: 1; color: var(--g, #fff); }
 .fst-gc.is-on { background: var(--tc, var(--fk-g4)); box-shadow: inset 0 -3px 0 var(--tc2, transparent); }
 .fst-gc.is-on small, .fst-gc.is-on b { color: var(--tct, #fff); }
 .fst-man--s .fst-gc { height: 24px; } .fst-man--s .fst-gc b { font-size: 16px; } .fst-man--s .fst-gc small { font-size: 13px; }

@@ -4,6 +4,7 @@ import { TEAM, CTYPES, CLABEL, STYLES, RESPINS, cLetter, coachGrade, wheelOf, de
 import { coachLook, coachFaceUrl } from '../../lib/franchise2/faces'
 import { cleanName, nameOk } from '../../lib/franchise2/identity'
 import { randomCoachName } from '../../lib/franchise2/coachNames'
+import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
@@ -77,7 +78,7 @@ export function CoachSpin({ S, go, onDone }) {
                 {L ? <small><KLogo s={L.t} size={14} />{lastOf(L.from).toUpperCase()}</small> : offer != null ? <small>TAKE FROM {lastOf(landed.name).toUpperCase()}</small> : <small>OPEN</small>}
               </span>
               <span className="fsu-line-v">
-                {L ? <><b>{cLetter(L.v)}</b></> : offer != null ? <><b>{cLetter(offer)}</b></> : <b className="is-dash">-</b>}
+                {L ? <><b style={{ color: letterColor(cLetter(L.v)) }}>{cLetter(L.v)}</b></> : offer != null ? <><b style={{ color: letterColor(cLetter(offer)) }}>{cLetter(offer)}</b></> : <b className="is-dash">-</b>}
               </span>
             </Tag>
           )
@@ -185,7 +186,7 @@ export function CoachCard({ c, team, from, small = false, delay = 0 }) {
             const src = from?.[t] ?? c.from?.[t]
             return (
               <div key={t} className="fsu-cc-line" style={{ '--d': `${delay + 200 + i * 90}ms` }}>
-                <Meter label={SHORT_LABEL[t]} v={r[t] ?? 0} max={11} segs={11} team={team} show={cLetter(r[t])} />
+                <Meter label={SHORT_LABEL[t]} v={r[t] ?? 0} max={11} segs={11} team={team} show={cLetter(r[t])} color={letterColor(cLetter(r[t]))} />
                 {src && <small className="fsu-cc-from"><KLogo s={src[1]} size={14} />{lastOf(src[0]).toUpperCase()}</small>}
               </div>
             )

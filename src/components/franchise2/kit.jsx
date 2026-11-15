@@ -264,7 +264,7 @@ export function Stamp({ kind = 'ink', children, big = false, delay = 0, quiet = 
 
 // ── Meter: chunky, segmented, fills once it's on screen ──────────────────────
 //   label · v · max (100) · segs (10) · tone: 'team' | 'w' | 'l' | 'ink' · show: the number on the right (v by default)
-export function Meter({ label, v, max = 100, segs = 10, tone = 'team', show, team, className = '' }) {
+export function Meter({ label, v, max = 100, segs = 10, tone = 'team', show, color, team, className = '' }) {
   const box = useRef(null)
   const [on, setOn] = useState(false)
   useEffect(() => {
@@ -277,7 +277,7 @@ export function Meter({ label, v, max = 100, segs = 10, tone = 'team', show, tea
   const n = useTween(on ? Math.round(v) : 0, { ms: 700 })
   return (
     <div ref={box} className={`fk-meter fk-meter--${tone} ${className}`} style={team ? fkVars(team) : undefined}>
-      <span className="fk-meter-top">{label && <small>{label}</small>}<b>{show ?? n}</b></span>
+      <span className="fk-meter-top">{label && <small>{label}</small>}<b style={color ? { color } : undefined}>{show ?? n}</b></span>
       <span className="fk-meter-segs" style={{ '--n': segs }}>
         {Array.from({ length: segs }, (_, i) => {
           const f = Math.max(0, Math.min(1, full - i))

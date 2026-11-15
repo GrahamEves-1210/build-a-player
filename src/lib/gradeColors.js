@@ -17,3 +17,6 @@ export const GRADE_SPECTRUM = [
   '#a855f7', // S   purple
 ]
 export const spectrumColor = v0 => GRADE_SPECTRUM[Math.max(0, Math.min(11, Math.round(v0 ?? 0)))]
+// a letter's colour, read off the letter (a coach's grades step D-, D, C-...: the letter, not the number, picks it)
+const LETTER_AT = { F: 0, D: 1, C: 3, B: 6, A: 9, S: 11 }
+export const letterColor = l => (typeof l === 'string' && l[0] in LETTER_AT ? GRADE_SPECTRUM[LETTER_AT[l[0]]] : undefined)
