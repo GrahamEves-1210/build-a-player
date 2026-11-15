@@ -186,7 +186,7 @@ export function CoachCard({ c, team, from, small = false, delay = 0 }) {
             const src = from?.[t] ?? c.from?.[t]
             return (
               <div key={t} className="fsu-cc-line" style={{ '--d': `${delay + 200 + i * 90}ms` }}>
-                <Meter label={SHORT_LABEL[t]} v={r[t] ?? 0} max={11} segs={11} team={team} show={cLetter(r[t])} color={letterColor(cLetter(r[t]))} />
+                <Meter label={SHORT_LABEL[t]} v={r[t] == null ? 0 : Math.round(r[t]) + 1} max={12} segs={12} team={team} show={cLetter(r[t])} color={letterColor(cLetter(r[t]))} />
                 {src && <small className="fsu-cc-from"><KLogo s={src[1]} size={14} />{lastOf(src[0]).toUpperCase()}</small>}
               </div>
             )
