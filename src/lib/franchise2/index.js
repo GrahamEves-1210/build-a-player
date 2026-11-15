@@ -76,14 +76,16 @@ export function saveFranchise(F) {
   try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packFranchise(F)); return true } catch { return false }
 }
 export function loadFranchise(slot) {
-  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); return F && F.v === SAVE_V ? F : null } catch { return null }
+  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); return F && F.v === SAVE_V && !F.setup && F.teams ? F : null } catch { return null }
 }
 export function clearFranchise(slot) { try { localStorage.removeItem(KEY(slot)) } catch {} }
 // a slot's line on the slot screen, without keeping the whole save around
 export function slotSummary(slot) {
+  let raw = null
+  try { raw = JSON.parse(localStorage.getItem(KEY(slot))) } catch {}
+  if (raw?.setup) return { slot, setup: true, team: raw.setup.team ?? null }
   const F = loadFranchise(slot)
   if (!F) return null
-  if (F.setup) return { slot, setup: true, team: F.setup.team ?? null }
   const r = F.sched ? records(F)[F.team] : { w: 0, l: 0, t: 0 }
   return { slot, team: F.team, year: F.year, rec: recText(r), rings: F.rings ?? 0, phase: F.phase, wk: F.wk, sandbox: F.sandbox, at: F.at }
 }

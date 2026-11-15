@@ -29,7 +29,7 @@ import CompeteHud from './components/app/CompeteHud'
 const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
 const CFBMode        = lazy(() => import('./components/cfb/CFBMode'))   // College Football (a football mode): its rosters and sim load with it
-const FranchiseMode  = lazy(() => import('./components/franchise/FranchiseMode'))   // Franchise (a football mode): the mode, its engine and its art load with it
+const FranchiseMode  = lazy(() => import('./components/franchise2/FranchiseMode'))   // Franchise (a football mode): the mode, its engine and its art load with it
 import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
@@ -50,7 +50,7 @@ import { K_LEGENDS } from './data/k-legends'
 import { K_LIVE } from './lib/kLive'
 import { CFB_LIVE } from './lib/cfbLive'
 import { FRANCHISE_LIVE } from './lib/franchiseLive'
-import { FranchiseWait } from './components/franchise/FranchiseCard'   // (the skeleton while the mode's file loads: FranchiseCard is on Home already)
+import { FranchiseWait } from './components/franchise2/FranchiseCard'   // (the skeleton while the mode's file loads: FranchiseCard is on Home already)
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
 import { COMPETE_POS } from './lib/competeCore'

@@ -14,7 +14,7 @@ const OPEN = 'Be the GM'
 
 // a finger or a pointer on the card: the mode and its engine start loading before the tap lands
 let warmed = false
-const warm = () => { if (warmed) return; warmed = true; import('./FranchiseMode').catch(() => { warmed = false }); import('../../lib/franchise').catch(() => {}) }
+const warm = () => { if (warmed) return; warmed = true; import('./FranchiseMode').catch(() => { warmed = false }); import('../../lib/franchise2').catch(() => {}) }
 const WARM = { onPointerEnter: warm, onPointerDown: warm, onFocus: warm }
 
 // While the mode's file is on its way (App.jsx Suspense): the mode's frame in the site's skeletons, at once

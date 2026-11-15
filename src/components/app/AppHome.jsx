@@ -27,7 +27,7 @@ import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
-import FranchiseCard from '../franchise/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
+import FranchiseCard from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 import Wordmark from '../Wordmark'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use

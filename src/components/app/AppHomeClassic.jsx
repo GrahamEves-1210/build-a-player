@@ -27,7 +27,7 @@ import { OL_LIVE, OL_SOON } from '../../lib/olLive'
 import { K_LIVE } from '../../lib/kLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
-import { FranchiseCardClassic } from '../franchise/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
+import { FranchiseCardClassic } from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 import Wordmark from '../Wordmark'
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
