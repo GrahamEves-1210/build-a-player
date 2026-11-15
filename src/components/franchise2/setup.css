@@ -2,9 +2,12 @@
    Near-black page, graphite rows, the team's colour as flat slabs, Anton / Bebas. One column on a phone (390),
    the same column centred on a computer. */
 
+/* #root is a fixed-height, overflow-hidden box: every setup screen is its own scroll area (owner 11-15: nothing
+   scrolled), and its foot clears the website's bottom ad rail (--web-rail) */
 .fsu {
-  min-height: 100dvh; background: var(--fk-ink); color: var(--fk-text);
-  padding: 0 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  height: 100dvh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: var(--fk-ink); color: var(--fk-text);
+  padding: 0 16px calc(28px + var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px));
   font-family: var(--fk-f);
 }
 .fsu-top {
