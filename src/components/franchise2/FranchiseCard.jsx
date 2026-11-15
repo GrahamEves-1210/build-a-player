@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { franchiseCard, FRANCHISE_ART, FRANCHISE_TURN } from '../../lib/franchiseLive'
-import { SkCards } from '../app/Skeleton'
 import TrophyTurn from './TrophyTurn'
 import './franchise-card.css'
 
@@ -18,12 +17,31 @@ let warmed = false
 const warm = () => { if (warmed) return; warmed = true; import('./FranchiseMode').catch(() => { warmed = false }); import('../../lib/franchise2').catch(() => {}) }
 const WARM = { onPointerEnter: warm, onPointerDown: warm, onFocus: warm }
 
-// While the mode's file is on its way (App.jsx Suspense): the mode's frame in the site's skeletons, at once
-export function FranchiseWait() {
+// While the mode's file is on its way (App.jsx Suspense, and the season's screens inside the mode): the screen that's
+// coming, drawn flat in its own shapes (owner 11-15: the site's generic card skeletons looked wrong here). kind 'slots':
+// the save slots (the trophy still, FRANCHISE, three slots); 'hub': a team's header, the four tabs, this week's game and
+// its rows. Nothing moves, and it fades in only after a beat, so a quick load shows nothing at all.
+export function FranchiseWait({ kind = 'slots' }) {
+  if (kind === 'hub') {
+    return (
+      <div className="fr-wait fr-wait--hub" role="status" aria-label="Opening the front office">
+        <div className="fr-wait-in">
+          <div className="fr-wait-team"><i /><span><i /><i /></span></div>
+          <div className="fr-wait-tabs"><i /><i /><i /><i /></div>
+          <div className="fr-wait-game" />
+          <div className="fr-wait-rows"><i /><i /><i /><i /></div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="fr-wait" role="status" aria-label="Opening the front office">
-      <div className="fr-wait-bug"><b>FRANCHISE</b></div>
-      <div className="fr-wait-page"><SkCards n={3} label="Opening the front office" /></div>
+      <div className="fr-wait-in">
+        <div className="fr-wait-top"><i /><span /></div>
+        <div className="fr-wait-hero">{FRANCHISE_ART.hero && <img src={FRANCHISE_ART.hero} alt="" width="1280" height="720" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />}</div>
+        <div className="fr-wait-chy"><b>FRANCHISE</b></div>
+        <div className="fr-wait-slots"><i /><i /><i /></div>
+      </div>
     </div>
   )
 }

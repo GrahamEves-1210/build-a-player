@@ -42,6 +42,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   const [slot, setSlot] = useState(() => { if (!tripBack() && !built) return null; const s = readLast(); return s != null && rawSlot(s) ? s : null })
   const buildOut = useCallback(job => { tripOut(); onBuild?.(job) }, [onBuild])
   useEffect(() => { tripDone() }, [])   // (read once on the way in; StrictMode runs the state's first value twice)
+  // the season's screens, fetched while the slots are up (the browser idle), so opening a save rarely waits on them
+  useEffect(() => { const go = () => { import('./Hub').catch(() => {}) }; const id = window.requestIdleCallback ? requestIdleCallback(go, { timeout: 2500 }) : setTimeout(go, 800); return () => (window.cancelIdleCallback ? cancelIdleCallback(id) : clearTimeout(id)) }, [])
   const [F, setF] = useState(() => (slot != null ? loadFranchise(slot) : null))
   const [setup, setSetup] = useState(() => (slot != null && !F ? rawSlot(slot)?.setup ?? null : null))
   const [, bump] = useState(0)
@@ -103,5 +105,5 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} />
   const naming = F.builds.findIndex(b => b.prospect && b.unnamed)
   if (naming >= 0) return <ProspectNamer F={F} B={F.builds[naming]} owner={owner} onDone={(name, face) => { act(X => { const B = X.builds[naming]; B.name = name; if (face) B.face = face; delete B.unnamed; for (const x of X.dc ?? []) if (x.b === naming) x.n = name }); sfx('claim') }} />
-  return <Suspense fallback={<FranchiseWait />}><Hub F={F} act={act} owner={owner} onHome={onHome} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>
+  return <Suspense fallback={<FranchiseWait kind="hub" />}><Hub F={F} act={act} owner={owner} onHome={onHome} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>
 }
