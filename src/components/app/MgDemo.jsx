@@ -24,7 +24,7 @@ const bad = new Map()
 const SEEDS = ['demo-0', 'demo-1', 'demo-2', 'demo-3', 'demo-4']
 const SCAN_STYLE = { position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px)', opacity: 0.6 }   // (black: no blend mode needed, the same picture)
 
-export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, empty = false }) {
+export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = null, opp = null, home = 'team', superBowl = null, empty = false, situation = null }) {
   const box = useRef(null), cv = useRef(null), ov = useRef(null)
   const [still, setStill] = useState(() => quiet())
   const [playing, setPlaying] = useState(false)   // (the still version: one run on a tap)
@@ -62,7 +62,7 @@ export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = nu
     let plan = [], lastPlan = [], cur = null   // (the cursor: where each press of the last run was, so it can get there first)
     const seedNow = () => { const b = bad.get(key) ?? 0; seedI = Math.min(b, SEEDS.length - 1); return SEEDS[seedI] }
     const start = () => {
-      g = engine.make({ v: V, arm: V, seed: seedNow(), def, game, sport, pos, cast: null, situation: null })
+      g = engine.make({ v: V, arm: V, seed: seedNow(), def, game, sport, pos, cast: null, situation })   // (the moment's own score and clock, when the card is for one)
       step = pilotFor(engine.botName, g, game)
       marks = []; res = null; resAt = 0; endAt = Infinity; firstIn = null; phase = 'still'; clock = 0
       lastPlan = plan.length ? plan : lastPlan; plan = []; cur = null

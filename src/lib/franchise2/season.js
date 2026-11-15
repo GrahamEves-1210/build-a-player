@@ -20,6 +20,7 @@ import { coachLate, coachDay, momentLift, chemWeek } from './coach'
 import { askOf, signDeal, canSign, cutMan } from './contracts'
 import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews } from './news'
+import { syncScouts } from './draft'
 
 export const REG_WEEKS = 18
 export const TRADE_DEADLINE = 9   // (the NFL's: after Week 9; no event offers a deal past it)
@@ -62,7 +63,8 @@ function bigGame(F, g, R, po) {
 }
 // The play that fits the moment: what the build does on that down, distance and spot
 const OFF_PICK = {
-  qb: k => (k.goal ? (k.d <= 1 ? ['sneak', 'goal-line'] : ['goal-line']) : k.down === 4 && k.margin < 0 && k.d >= 5 ? ['two-minute', 'third-long'] : k.d >= 9 ? (k.y < 55 ? ['bomb', 'third-long'] : ['third-long']) : k.d <= 3 ? ['audible', 'hot-read', 'sneak'] : ['hot-read', 'escape', 'third-long']),
+  // (one snap, never a whole drive: the two-minute drill starts its own drive at 1st and 10, not this down and spot)
+  qb: k => (k.goal ? (k.d <= 1 ? ['sneak', 'goal-line'] : ['goal-line']) : k.down === 4 && k.margin < 0 && k.d >= 5 ? ['third-long', 'hot-read'] : k.d >= 9 ? (k.y < 55 ? ['bomb', 'third-long'] : ['third-long']) : k.d <= 3 ? ['audible', 'hot-read', 'sneak'] : ['hot-read', 'escape', 'third-long']),
   rb: k => (k.goal ? ['goal-line', 'gap'] : k.d <= 3 ? ['gap'] : ['juke', 'gap']),
   wr: k => (k.goal ? ['goal-line', 'catch'] : k.d >= 8 ? ['catch', 'release'] : ['juke-wr', 'catch', 'release']),
   te: k => (k.goal ? ['goal-line', 'catch'] : k.d <= 3 ? ['seal', 'catch'] : ['catch', 'juke-te', 'release']),
@@ -229,8 +231,7 @@ function endWeek(F, row) {
     return out
   }
   F.wk++
-  // scout points: a few a month
-  if (F.wk % 4 === 0) F.sp += F.coach?.style === 'recruiter' ? 3 : 2
+  // (the scouts' days: draft.js scoutsLeft, by the week)
   // an event card about every three or four weeks
   if (F.wk < REG_WEEKS && F.wk >= (F.nextEv ?? 3)) { F.ev = makeEvent(F, R); F.nextEv = F.wk + R.int(3, 4); if (F.ev) out.event = true }
   if (F.wk >= REG_WEEKS) { F.phase = 'post'; out.over = true }
@@ -415,7 +416,7 @@ export function fxList(F, ev, i) {
   if (fx.pay) out.push([`${ev.ask.y + 1} YRS · $${ev.ask.$}M A YEAR`, 'up'])
   if (fx.trade) { const g = P(ev.get), m = P(ev.give); out.push([`GET ${last(g)} · ${g?.o} OVR · AGE ${g?.ag}`, 'up'], [`GIVE ${last(m)} · ${m?.o} OVR · AGE ${m?.ag}`, 'down']) }
   if (fx.sign) { const p = P(fx.sign); out.push([`${last(p)} · ${p?.o} OVR · $${ev.cost}M`, 'up']); if (ev.cut != null) out.push([`RELEASE ${last(P(ev.cut))}`, 'down']) }
-  if (fx.sp) out.push([`+${fx.sp} SCOUT POINTS`, 'up'])
+  if (fx.sp) out.push([`+${fx.sp} SCOUTING DAYS`, 'up'])
   if (fx.chem) out.push([`CHEMISTRY ${fx.chem > 0 ? '+' : ''}${fx.chem}`, fx.chem > 0 ? 'up' : 'down'])
   if (!out.length) out.push(['NO CHANGE', 'flat'])
   return out
@@ -429,7 +430,7 @@ export function chooseEvent(F, i) {
   const out = { chem: 0 }
   if (fx.chem) { F.chem = H_CLAMP(F.chem + fx.chem); out.chem = fx.chem }
   if (fx.nx) { const n = typeof F.nx === 'object' && F.nx ? F.nx : { off: 0, def: 0 }; F.nx = { off: (n.off ?? 0) + (fx.nx.off ?? 0), def: (n.def ?? 0) + (fx.nx.def ?? 0) } }
-  if (fx.sp) F.sp = (F.sp ?? 0) + fx.sp
+  if (fx.sp && F.sc) { syncScouts(F); F.sc.b = (F.sc.b ?? 0) + fx.sp }
   const P = id => t.r.find(p => p.i === id)
   if (fx.risk) { const p = P(fx.risk); if (p && R.u() < 0.33) { p.in = 3; out.hurt = p.n } }
   if (fx.sit) { const p = P(fx.sit); if (p) p.in = 1 }

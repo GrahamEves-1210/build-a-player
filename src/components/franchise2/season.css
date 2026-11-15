@@ -1,7 +1,11 @@
 /* THE SEASON (Hub.jsx) and GAME DAY (Week.jsx), in the kit's broadcast look (kit.css). Agent C's screens. */
 
 /* ── The hub's frame ────────────────────────────────────────────────────── */
-.fh.ag-screen { background: var(--fk-ink); color: var(--fk-text); padding-top: var(--safe-top, 0px); }
+/* (the page is a column: everything scrolls in .fh-scroll, the ticker sits under it and never over it, above the
+   website's ad rail and, in the app, above the dock) */
+.fh.ag-screen { display: flex; flex-direction: column; overflow: hidden; background: var(--fk-ink); color: var(--fk-text); padding: var(--safe-top, 0px) 0 var(--web-rail, 0px); }
+html.is-app .fh.ag-screen { padding-bottom: calc(var(--app-bottom) - 12px); }
+.fh-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: 18px; }
 .fh .fh-body { gap: 18px; padding: 14px 16px 18px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 .fh button { -webkit-tap-highlight-color: transparent; }
 .fh-top { position: relative; display: flex; align-items: stretch; height: 58px; background: var(--fk-g1); border-bottom: 1px solid var(--fk-line); }
@@ -85,8 +89,7 @@
 .fh-seg button.is-on { background: #fff; color: #0b0c0e; }
 
 /* the ticker along the bottom (it stays above the website's ad rail) */
-.fh-tick { position: sticky; bottom: var(--web-rail, 0px); z-index: 6; margin-top: 8px; }
-html.is-app .fh-tick { bottom: 0; }
+.fh-tick { flex: none; position: relative; z-index: 6; }
 
 /* ── An event ───────────────────────────────────────────────────────────── */
 .fh-event { display: grid; gap: 10px; }
@@ -137,7 +140,6 @@ html.is-app .fh-tick { bottom: 0; }
 /* ═══ GAME DAY (Week.jsx) ═══════════════════════════════════════════════════ */
 .fg { position: fixed; inset: 0; z-index: 1300; display: flex; flex-direction: column; background: var(--fk-ink); color: var(--fk-text); overflow-y: auto; padding: calc(var(--safe-top, 0px) + 8px) 0 calc(var(--web-rail, 0px) + 18px); overscroll-behavior: contain; }
 html.is-app .fg { padding-bottom: 24px; }
-.fg.is-play { overflow: hidden; padding: 0; }
 .fg-in { display: grid; gap: 14px; width: 100%; max-width: 640px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
 .fg-bug { position: sticky; top: 0; z-index: 3; padding-top: 2px; background: var(--fk-ink); }
 .fg-tap { justify-self: center; font-family: var(--fk-f); font-size: 14px; letter-spacing: 3px; color: var(--fk-dim); }
@@ -168,8 +170,11 @@ html.is-app .fg { padding-bottom: 24px; }
 .fg-dd span small { color: var(--fk-mute); font-size: 13px; }
 .fg-vs { justify-self: center; font-family: var(--fk-f); font-size: 14px; letter-spacing: 3px; color: var(--fk-dim); }
 .fg-need { justify-self: center; text-shadow: none; -webkit-text-stroke: 0; font-family: var(--fk-d); font-size: 26px; letter-spacing: .6px; color: #fff; }
-.fg-mg { position: fixed; inset: 0; z-index: 1310; background: #000; }
-.fg-mg-wait { position: absolute; inset: 0; background: #000; }
+/* (the mini game's card sits in the page; its stage is its own layer over everything (app-game.css .mg-stage, z 1290),
+   so while it plays this page steps under it) */
+.fg.is-play { z-index: 1280; overflow-y: auto; padding: calc(var(--safe-top, 0px) + 8px) 0 calc(var(--web-rail, 0px) + 18px); }
+.fg-mg { position: relative; width: 100%; max-width: 640px; margin: 0 auto; padding: 0 12px; box-sizing: border-box; }
+.fg-mg-wait { min-height: 60vh; }
 
 /* the moment's result */
 .fg-result { display: grid; justify-items: center; gap: 14px; padding: 30px 0 10px; text-align: center; }

@@ -8,6 +8,7 @@ import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
 import { startersOf } from '../../lib/franchise2/roster'
 import { leagueStats } from '../../lib/franchise2/stats'
 import { tickerItems } from '../../lib/franchise2/news'
+import { scoutsLeft, draftNews } from '../../lib/franchise2/draft'
 import { GAMES } from '../../lib/minigames'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { romanOf } from '../../lib/mg/kit'
@@ -64,6 +65,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
       {live && <Gameday F={F} act={act} start={live} onDone={after} owner={owner} />}
       {trophy && <Suspense fallback={null}><TrophyScene team={{ name: t.name, color: t.color, color2: t.color2, short: t.short }} title={`${sbName(F)} CHAMPIONS`} line={`${F.year} · ${recText(r)}`} onDone={() => setTrophy(false)} /></Suspense>}
       {board && <DraftBoard F={F} act={act} onClose={() => setBoard(false)} />}
+      <div className="fh-scroll">
       <header className="fh-top">
         <span className="fh-top-slab"><KLogo s={F.team} size={40} /></span>
         <span className="fh-top-txt">
@@ -80,10 +82,12 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
         ))}
       </nav>
       <div className="ag-screen-body fh-body">
+        {tab === 'season' && off && <ScoutRow F={F} onBoard={() => { setBoard(true); sfx('tap') }} />}
         {tab === 'season' && (off ? <Offseason F={F} act={act} owner={owner} onBuild={onBuild} /> : <Season F={F} act={act} owner={owner} r={r} play={play} simToEnd={simToEnd} onBoard={() => { setBoard(true); sfx('tap') }} onTrophy={() => setTrophy(true)} />)}
         {tab === 'team' && <TeamTab F={F} act={act} owner={owner} />}
         {tab === 'league' && <LeagueTab F={F} />}
         {tab === 'history' && <HistoryTab F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
+      </div>
       </div>
       {tab === 'season' && !off && <LeagueTicker F={F} />}
     </div>
@@ -128,14 +132,21 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
       {(ph === 'season' || ph === 'post') && F.log.length > 0 && <LastWeek F={F} />}
       {(ph === 'season' || ph === 'post') && <Strip F={F} />}
       {(ph === 'season' || ph === 'post') && <Ladder F={F} />}
-      {ph !== 'done' && (
-        <button className="fh-row fh-scout" onClick={onBoard}>
-          <span><small>DRAFT BOARD</small><b>SCOUT THE {F.year + 1} CLASS</b></span>
-          <span className="fh-scout-pts"><b>{F.sp}</b><small>SCOUT PTS</small></span>
-        </button>
-      )}
+      <ScoutRow F={F} onBoard={onBoard} />
       <GamesSwitch F={F} act={act} />
     </>
+  )
+}
+
+// the scouting room: the draft board and the days the scouts have left (open all year: the spring's combine, visits
+// and pro days are in it after the Super Bowl)
+export function ScoutRow({ F, onBoard }) {
+  const n = scoutsLeft(F)
+  return (
+    <button className="fh-row fh-scout" onClick={onBoard}>
+      <span><small>DRAFT BOARD</small><b>SCOUT THE {F.year + 1} CLASS</b></span>
+      <span className="fh-scout-pts"><b>{n}</b><small>{n === 1 ? 'SCOUTING DAY' : 'SCOUTING DAYS'}</small></span>
+    </button>
   )
 }
 
@@ -401,7 +412,13 @@ function GamesSwitch({ F, act }) {
 
 // ── The league along the bottom edge ─────────────────────────────────────────
 function LeagueTicker({ F }) {
-  const items = useMemo(() => { try { const x = tickerItems(F); return x?.length ? x : leagueWire(F) } catch { return leagueWire(F) } }, [F, F.wk, F.phase, F.po?.rd]) // eslint-disable-line react-hooks/exhaustive-deps
+  const items = useMemo(() => {
+    let x
+    try { x = tickerItems(F) } catch { x = null }
+    if (!x?.length) x = leagueWire(F)
+    try { const d = draftNews(F) ?? []; if (d.length) x = [...x.slice(0, 6), ...d, ...x.slice(6)] } catch { /* (no class yet) */ }
+    return x
+  }, [F, F.wk, F.phase, F.po?.rd]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!items.length) return null
   return <div className="fh-tick"><Ticker items={items} label={F.phase === 'playoffs' || F.phase === 'done' ? 'PLAYOFFS' : F.wk > 0 ? `WEEK ${Math.min(F.wk, REG_WEEKS)}` : 'AROUND THE LEAGUE'} /></div>
 }

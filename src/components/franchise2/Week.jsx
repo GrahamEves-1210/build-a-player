@@ -186,7 +186,7 @@ function MomentPlay({ F, mv, onDone, onSkipAll }) {
   const line = `${us.short} ${mv.mine === mv.theirs ? `and ${opp.short} tied at ${mv.mine}` : mv.mine < mv.theirs ? `down ${mv.mine}-${mv.theirs} to ${opp.short}` : `up ${mv.mine}-${mv.theirs} on ${opp.short}`}, ${mv.clock} left in the ${mv.period === '4TH' ? '4th' : mv.period}.`
   const dn = DOWN[mv.down].toLowerCase()
   const tail = def ? `${opp.short} has the ball, ${dn} and ${mv.goal ? 'goal' : mv.d}. ${us.short} needs a stop.` : `${dn[0].toUpperCase()}${dn.slice(1)} and ${mv.goal ? 'goal' : mv.d}${mv.goal ? '' : ` at the ${mv.spotTxt}`}.`
-  const sit = { us: us.short, them: opp.short, mine: mv.mine, opp: mv.theirs, hoops: false, clock: 60, clockText: mv.clock, period: mv.period, line, tail, dist: mv.d, ...(def && { stop: true }) }
+  const sit = { us: us.short, them: opp.short, mine: mv.mine, opp: mv.theirs, hoops: false, clock: Math.max(1, Math.round(3600 - mv.t)), clockText: mv.clock, period: mv.period, line, tail, dist: mv.d, ...(def && { stop: true }) }
   const simple = (F.games ?? 'advanced') === 'simple' && SIMPLE_GAMES[mv.game]
   return (
     <div className="fg-mg" onClick={e => e.stopPropagation()}>

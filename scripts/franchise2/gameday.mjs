@@ -96,6 +96,6 @@ for (let y = 0; y < N; y++) {
 const fgs = F.log.flatMap(r => (r.kp ?? []).map(x => x[3].match(/ (\d+)-yd field goal/)).filter(Boolean).map(m => +m[1]))
 const share = k => (fgs.filter(d => d >= k).length / Math.max(1, fgs.length) * 100).toFixed(0)
 console.log(`field goals ${fgs.length}: ${share(50)}% from 50+, ${share(55)}% from 55+, ${share(60)}% from 60+`)
-if (fgs.length > 20 && +share(60) > 6) bad(`${share(60)}% of field goals from 60+`)
+if (fgs.length > 20 && +share(60) > 2.5) bad(`${share(60)}% of field goals from 60+`)
 console.log(samples.join('\n'))
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')
