@@ -1,12 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, slotSummary, SLOTS_N, TEAM, recText, records, addProspect } from '../../lib/franchise2'
-import { FRANCHISE_CARD_KEY, FRANCHISE_ART } from '../../lib/franchiseLive'
+import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach } from '../../lib/franchise2'
+import { POSITIONS } from '../../lib/squad'
+import { FRANCHISE_CARD_KEY } from '../../lib/franchiseLive'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose, IconArrow } from '../app/icons'
-import { Logo, teamVars } from './bits'
 import Setup from './Setup'
-import Hub from './Hub'
+import { Slots, ProspectNamer } from './Slots'
+import { FranchiseWait } from './FranchiseCard'
+const Hub = lazy(() => import('./Hub'))   // (the season's screens load once a franchise is open: the slots and the setup don't wait on them)
 import './fr2.css'
 const KitPage = import.meta.env.DEV ? lazy(() => import('./KitPage')) : null   // (dev only: ?fkit shows the kit)
 
@@ -17,6 +18,13 @@ const KitPage = import.meta.env.DEV ? lazy(() => import('./KitPage')) : null   /
 
 const LAST = 'bap_fr2_last'
 const readLast = () => { try { const v = Number(localStorage.getItem(LAST)); return Number.isInteger(v) && v >= 0 && v < SLOTS_N ? v : null } catch { return null } }
+// FRANCHISE on Home always opens the save slots (owner, 11-14), never straight into the last franchise. The one way
+// back into a slot without picking it: coming back from the build page (a setup's build, a Sandbox prospect). The
+// mode marks that trip for this tab when it sends a build out (it survives a reload on the build page).
+const TRIP = 'bap_fr2_trip'
+const tripOut = () => { try { sessionStorage.setItem(TRIP, '1') } catch {} }
+const tripBack = () => { try { return sessionStorage.getItem(TRIP) === '1' } catch { return false } }
+const tripDone = () => { try { sessionStorage.removeItem(TRIP) } catch {} }
 const rawSlot = slot => { try { const s = localStorage.getItem(`bap_fr2_slot_${slot}`); return s ? JSON.parse(s) : null } catch { return null } }
 const newSeed = () => `${Date.now().toString(36)}${Math.floor(performance.now() * 1000).toString(36)}`
 
@@ -31,7 +39,9 @@ function leaveNote(F) {
 
 export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTaken }) {
   const owner = getUsername(user) || 'Guest'
-  const [slot, setSlot] = useState(() => { const s = readLast(); return s != null && rawSlot(s) ? s : null })
+  const [slot, setSlot] = useState(() => { if (!tripBack() && !built) return null; const s = readLast(); return s != null && rawSlot(s) ? s : null })
+  const buildOut = useCallback(job => { tripOut(); onBuild?.(job) }, [onBuild])
+  useEffect(() => { tripDone() }, [])   // (read once on the way in; StrictMode runs the state's first value twice)
   const [F, setF] = useState(() => (slot != null ? loadFranchise(slot) : null))
   const [setup, setSetup] = useState(() => (slot != null && !F ? rawSlot(slot)?.setup ?? null : null))
   const [, bump] = useState(0)
@@ -52,10 +62,13 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   useEffect(() => {
     if (!built) return
     if (built.id === 'prospect' && F) {
-      act(X => { const idx = X.builds.length; X.builds.push({ pos: built.pos, build: built.build, types: built.types, num: 0, age: 21, car: [], prospect: 1 }); X.sandbox = true; addProspect(X, idx) })
+      // (named next, ProspectNamer: `unnamed` keeps the sheet up through a reload)
+      act(X => { const idx = X.builds.length; X.builds.push({ pos: built.pos, build: built.build, types: built.types, num: null, age: 21, car: [], prospect: 1, unnamed: 1 }); X.sandbox = true; addProspect(X, idx) })
       sfx('claim')
     } else if (setup && built.id) {
-      putSetup({ ...setup, builds: { ...setup.builds, [built.id]: { pos: built.pos, build: built.build, types: built.types, sandbox: !!built.sandbox } }, sandbox: setup.sandbox || !!built.sandbox })
+      // back to the setup on this build's name and number (Setup.jsx NameStep); a rebuilt spot keeps them
+      const was = setup.builds?.[built.id]
+      putSetup({ ...setup, naming: built.id, builds: { ...setup.builds, [built.id]: { ...(was?.name && { name: was.name, num: was.num }), pos: built.pos, build: built.build, types: built.types, sandbox: !!built.sandbox } }, sandbox: setup.sandbox || !!built.sandbox })
       sfx('claim'); haptic('success')
     }
     onBuiltTaken?.()
@@ -67,9 +80,13 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     setSlot(s); setF(X); setSetup(X ? null : rawSlot(s)?.setup ?? { slot: s, seed: newSeed(), owner, step: 'team', picks: [], builds: {} })
     sfx('tap')
   }
-  const start = coach => {
+  const start = () => {
     const S = setup
-    const X = createFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, sandbox: S.sandbox, coach, builds: S.picks.map(p => S.builds[p.id]).filter(Boolean) })
+    const c = S.coach ?? {}
+    const coach = finishCoach(S.cb, { name: `${c.first ?? ''} ${c.last ?? ''}`.trim() || owner, face: c.face ?? null, style: c.style ?? null })
+    // (the builds in the setup's order, position by position: the order their rookie slots were shown in)
+    const builds = POSITIONS.nfl.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).map(p => S.builds[p.id]).filter(Boolean)
+    const X = createFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, sandbox: S.sandbox, coach, builds })
     X.games = S.games ?? 'advanced'
     saveFranchise(X); leaveNote(X)
     setF(X); setSetup(null)
@@ -80,34 +97,9 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
 
   if (KitPage && /[?&]fkit\b/.test(location.search)) return <Suspense fallback={null}><KitPage onHome={onHome} /></Suspense>   // (dev only: the kit, kit.jsx)
   if (slot == null) return <Slots owner={owner} onOpen={open} onHome={onHome} />
-  if (!F && setup) return <Setup setup={setup} owner={owner} put={putSetup} onBuild={onBuild} onStart={start} onBack={toSlots} />
+  if (!F && setup) return <Setup setup={setup} owner={owner} put={putSetup} onBuild={buildOut} onStart={start} onBack={toSlots} />
   if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} />
-  return <Hub F={F} act={act} owner={owner} onHome={onHome} onSlots={toSlots} onDelete={remove} onBuild={onBuild} />
-}
-
-// ── The three slots ──────────────────────────────────────────────────────────
-function Slots({ owner, onOpen, onHome }) {
-  const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: slotSummary(i) }))
-  return (
-    <div className="ag-screen f2 f2-slots">
-      <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{owner.toUpperCase()} · GM</span><h1 className="ag-h1">FRANCHISE</h1></div>
-        <button className="ag-round-btn" onClick={onHome} aria-label="Home"><IconClose size={16} /></button>
-      </div>
-      <div className="ag-screen-body">
-        {FRANCHISE_ART.hero && <img className="f2-hero ag-pop" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />}
-        {rows.map(({ i, s }) => (
-          <button key={i} className={`f2-slot ag-pop${s ? '' : ' is-empty'}`} style={{ '--d': `${i * 60}ms`, ...(s?.team ? teamVars(s.team) : null) }} onClick={() => onOpen(i)}>
-            <span className="f2-slot-n">{i + 1}</span>
-            {s?.team ? <Logo s={s.team} size={48} /> : <span className="f2-slot-plus">+</span>}
-            <span className="f2-slot-txt">
-              <b>{s?.team ? TEAM[s.team].nick.toUpperCase() : s?.setup ? 'NEW FRANCHISE' : 'EMPTY'}</b>
-              <small>{s?.setup ? 'SETTING UP' : s ? `${s.year} · ${s.rec}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.sandbox ? ' · SANDBOX' : ''}` : 'START A FRANCHISE'}</small>
-            </span>
-            <IconArrow size={16} />
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+  const naming = F.builds.findIndex(b => b.prospect && b.unnamed)
+  if (naming >= 0) return <ProspectNamer F={F} B={F.builds[naming]} owner={owner} onDone={name => { act(X => { const B = X.builds[naming]; B.name = name; delete B.unnamed; for (const x of X.dc ?? []) if (x.b === naming) x.n = name }); sfx('claim') }} />
+  return <Suspense fallback={<FranchiseWait />}><Hub F={F} act={act} owner={owner} onHome={onHome} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>
 }

@@ -51,7 +51,7 @@ const DRUM_MAX = DRUM_PHONE ? 48 : 32   // the tilt at the window's edge (52, th
 const reelKey = x => `${x?.name}|${x?.team ?? x?.short}`
 
 // the wheels show names only: no logos or headshots in the rows (owner 11-14)
-function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, getImg = null, getImgFull = null, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
+export function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, getImg = null, getImgFull = null, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
