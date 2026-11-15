@@ -11,12 +11,12 @@
 //   service, extension offers, trade requests, development points, Tommy John risk for pitchers.
 //   The legacy: MVPs, Cy Youngs and rings first; the Hall of Fame is the BBWAA's vote at Cooperstown (75%).
 import {
-  SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, roundOdds, lastPlayOf, momentHitRate, seriesPlay, seriesState, bestOf,
+  SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, playoffPlan, bestOf,
   countedHonors, earnLegacy, CAREER_X, pickLabel, registerDrills,
 } from './career'
 import { GAMES, PLAYOFF_GAMES, COMBINE_GAMES } from './minigames'
 import { seeded } from './rng'
-import { momentSituation, finalScore } from './situations'
+import { playMoment } from './inGame.js'
 import { RECORDS } from './seasonFacts'
 import { seasonRaw, registerStats } from './careerStats'
 import { HEADSHOT_BASE } from '../utils/simulation'
@@ -709,116 +709,31 @@ function seriesLine(c, f, n, score, won, hit, r, R = null) {
   const rbi = Math.max(shown('runs'), hr + Math.floor((h - hr) * 0.35 + r() * 1.5) + (hit ? 1 : 0))
   return { app: n, ab, h, hr, rbi, bb: Math.round(n * 0.35), k: Math.round(ab * 0.22 / k), avg: ab ? r3(h / ab) : 0 }
 }
-// The round's moment is in. A last-play moment (a walk-off at-bat, the last out of a save) decides one game of the
-// series, the need-th; the games around it are played at the series' own game rate (lib/career.js seriesPlay), so
-// the odds the card showed are the odds it was played at.
-// The moment's game inside the series: the need-th game (the series score going in is seriesState's), and whether
-// his club bats last in it. The higher seed hosts games 1-2 and 5 of a best of five (2-2-1), 1-2 and 6-7 of a best of
-// seven (2-3-2), and all three of the Wild Card Series.
-const HOSTS = { 3: [1, 2, 3], 5: [1, 2, 5], 7: [1, 2, 6, 7] }
-function bbGameAt(c, po) {
-  const rd = po.rounds[po.idx]
-  const { a, b } = seriesState(c, po.idx, rd)
-  const n = a + b + 1, hosts = HOSTS[rd.bestOf] ?? HOSTS[7]
-  return { n, a, b, home: rd.home === false ? !hosts.includes(n) : hosts.includes(n) }
-}
-// (a walk-off needs the last at-bat: on the road that game deals another moment)
-const bbAllowGame = (c, po) => (po?.rounds?.[po.idx] && !bbGameAt(c, po).home ? g => g !== 'walk-off' : null)
-const OUTS_W = ['nobody out', 'one out', 'two out']
-const ON_W = { '000': 'bases empty', '100': 'a runner on first', '010': 'a runner on second', '001': 'a runner on third', '110': 'runners on first and second', '101': 'runners on the corners', '011': 'runners on second and third', '111': 'bases loaded' }
-// The moment's situation, set in its game: at the plate he bats in the bottom at home and the top on the road, on the
-// mound the other way round, and a home side ahead after the top of the 9th never bats again (that spot moves to the 8th)
-function bbMomentSit(c, po, game) {
-  const rd = po?.rounds?.[po.idx]
-  if (!rd || !game) return null
-  const base = momentSituation(game, `${c.seed}-${c.year}-${po.idx}`, { us: c.team, them: rd.opp })
-  if (!base?.baseball) return base
-  const at = bbGameAt(c, po)
-  const half = base.def ? (at.home ? 'T' : 'B') : (at.home ? 'B' : 'T')
-  const homeAhead = at.home ? base.mine > base.opp : base.opp > base.mine
-  const inning = half === 'B' && base.inning >= 9 && homeAhead ? 8 : base.inning
-  const tail = game === 'walk-off' && half === 'T' ? 'Two strikes. The go-ahead run is on.' : base.tail
-  const { us, them, mine, opp, outs, on, balls, strikes } = base
-  const where = mine < opp ? `${us} down ${mine}-${opp} to ${them}` : mine > opp ? `${us} up ${mine}-${opp} on ${them}` : `${us} and ${them} tied at ${mine}`
-  const count = balls || strikes ? `, ${balls}-${strikes} count` : ''
-  const line = `Game ${at.n}. ${half === 'B' ? 'Bottom' : 'Top'} of the ${ordinal(inning)}, ${OUTS_W[outs]}, ${ON_W[on.map(Number).join('')]}${count}. ${where}.`
-  return { ...base, inning, half, clock: inning, clockText: `${half === 'B' ? 'BOT' : 'TOP'} ${inning}`, period: ordinal(inning).toUpperCase(), line, tail, gameNo: at.n, home: at.home }
-}
-// seriesPlay's own draws (the same seed, the same order), and whether his club won the moment's game
-// (sure: the moment itself ended that game on the screen, won or lost: the draw is still taken, so the rest of the
-// series plays out on the same numbers)
-function bbSeriesPlay(c, idx, rd, LAST, hit, h, sure = null) {
-  const { a, b, g, need } = seriesState(c, idx, rd), r = seeded(`${c.seed}-${c.year}-${idx}-series-rest`)
-  let x = a, y = b
-  const roll = !!(hit || (LAST === 'hit' && r() < clamp((g - h) / (1 - h), 0.03, 0.97)))
-  const gw = sure != null ? sure : roll
-  if (gw) x++; else y++
-  while (x < need && y < need) { if (r() < g) x++; else y++ }
-  return { won: x === need, my: x, opp: y, gw }
-}
-// The round's moment is in. A last-play moment (a walk-off at-bat) decides one game of the series, the need-th; the
-// games around it are played at the series' own game rate (lib/career.js seriesPlay), so the odds the card showed are
-// the odds it was played at. raw: the moment's own result (lib/mg: raw.pts, the runs he drove in or let in;
-// raw.final, the score right after the play). That game's final grows out of raw.final: a walk-off ends it there
-// (a single in a tie reads 5-4), anything else is played out from that score (lib/situations.js finalScore).
+// The round's moment is in. His moment is in one game of the series (lib/career.js seriesState: the series score going
+// into it), set in that game's own inning, outs and runners (lib/inGame.js: who's home bats last, a walk-off only for
+// the home side). What he did is on the board: the runs that scored, the outs made (raw.final, the score right after
+// the play, when the game kept it), and the game is played out from there; the series after it at the series' own rate.
+const bbMomentSit = (c, po, game) => (po?.rounds?.[po.idx] && game ? playoffPlan(c, po, undefined, game).sit : null)
+const bbAllowGame = () => null
 function bbRound(c, score, game = null, hit = score >= 0.5, raw = null) {
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
   const auto = score == null
-  const odds = roundOdds(c, rd, game, auto)
-  let won = r() < (auto ? odds.all : hit ? odds.hit : odds.miss)
-  const LAST = lastPlayOf(c, rd, game)
-  // the moment's game: its number, who bats last and its final
-  let moment = null, mySc, oppSc
-  const sit = !auto && game ? bbMomentSit(c, po, game) : null
-  const R = raw && typeof raw === 'object' ? raw : { pts: raw }
-  const fin0 = sit?.baseball && R.final && Number.isFinite(R.final.mine) && Number.isFinite(R.final.opp) ? R.final : null
-  // (a report with the runs and no score after them, the Simple games': the runs go on the side that scored them)
-  const ran = sit?.baseball && !fin0 && Number.isFinite(R.pts) ? R.pts : null
-  const now = fin0 ? { ...sit, mine: fin0.mine, opp: fin0.opp } : ran != null ? { ...sit, mine: sit.mine + (sit.def ? 0 : ran), opp: sit.opp + (sit.def ? ran : 0) } : sit
-  // (a walk-off: the winning run is in and the game is over on the play)
-  const walked = !!sit?.baseball && !sit.def && sit.half === 'B' && sit.inning >= 9 && now.mine > now.opp
-  // The game the screen itself ended (2026-11-13: what was shown is what happened). Won: the walk-off, or the last out
-  // of the 9th or later on the mound with the lead (the home side doesn't bat again; on the road that was the game).
-  // Lost: the last out of the home 9th or later at the plate while behind, or the run that walks them off on the road.
-  // It used to be left to a roll: a walk-off homer and "they held on", the third out behind in the bottom of the 9th
-  // and "a teammate came through late". (raw.outs: the outs the moment made; a report without it decides nothing but the walk-off)
-  const late = !!sit?.baseball && sit.inning >= 9, third = late && Number.isFinite(R.outs) && sit.outs + R.outs >= 3
-  const sure = !sit?.baseball ? null : walked || (sit.def && third && now.mine > now.opp) ? true
-    : (!sit.def && sit.half === 'B' && third && now.mine < now.opp) || (sit.def && late && sit.half === 'B' && now.opp > now.mine) ? false : null
-  const ser = !auto && LAST ? bbSeriesPlay(c, po.idx, rd, LAST, hit, momentHitRate(c, game), sure) : null
-  if (ser) won = ser.won
-  if (auto) score = won ? 0.8 : 0.25
-  if (sit?.baseball) {
-    let gw
-    if (ser) { gw = ser.gw; [mySc, oppSc] = [ser.my, ser.opp] }
-    else {
-      // a moment that isn't the last play: the game still turns on it (about three in four when he comes through),
-      // and the series around it agrees with the round (won: the odds above): the score going in, that game, the rest
-      const st = seriesState(c, po.idx, rd), need = st.need, rr = seeded(`${c.seed}-${c.year}-${po.idx}-gw`)
-      gw = rr() < (hit ? 0.74 : 0.36)
-      if (sure != null) {
-        // (the game the screen ended stands, and so does a series it ended: the clincher or the elimination)
-        gw = sure
-        if (gw && st.a + 1 >= need) won = true
-        if (!gw && st.b + 1 >= need) won = false
-      } else {
-        if (gw && !won && st.a + 1 >= need) gw = false
-        if (!gw && won && st.b + 1 >= need) gw = true
-      }
-      const x = st.a + (gw ? 1 : 0), y = st.b + (gw ? 0 : 1)
-      // (that game can end it: then the loser's count stands)
-      ;[mySc, oppSc] = won ? [need, x >= need ? y : y + Math.floor(rr() * (need - y))] : [y >= need ? x : x + Math.floor(rr() * (need - x)), need]
-    }
-    const end = sure != null ? { mine: now.mine, opp: now.opp, note: null } : finalScore(now, game, gw, !!hit, `${c.seed}-${c.year}-${po.idx}`, fin0 || ran != null ? 0 : R.pts ?? null)
-    // (level after the moment and settled later: that's extra innings, not a lead held)
-    const extras = now.mine === now.opp && (sit.inning >= 9 || now.inning >= 9) && !(walked && gw)
-    const note = extras ? (end.mine > end.opp ? 'Won it in extra innings.' : 'Lost it in extra innings.') : end.note ?? null
-    moment = { n: sit.gameNo, home: sit.home, my: end.mine, opp: end.opp, won: end.mine > end.opp, note, walkoff: walked && gw }
-  } else [mySc, oppSc] = ser ? [ser.my, ser.opp] : seriesScore(r, rd.bestOf, won, rd.p)
+  let won, mySc, oppSc, moment = null, decider = null
+  if (auto) { won = r() < rd.p; score = won ? 0.8 : 0.25;[mySc, oppSc] = seriesScore(r, rd.bestOf, won, rd.p) }
+  else {
+    const { plan, st } = playoffPlan(c, po, undefined, game)
+    const res = playMoment(plan, hit, null, raw)
+    const rr = seeded(`${c.seed}-${c.year}-${po.idx}-series-rest`)
+    let x = st.a + (res.won ? 1 : 0), y = st.b + (res.won ? 0 : 1)
+    while (x < st.need && y < st.need) { if (rr() < st.g) x++; else y++ }
+    won = x === st.need; mySc = x; oppSc = y
+    decider = x + y >= 2 * st.need - 1
+    moment = { n: st.a + st.b + 1, home: !!plan.ctx.home, my: res.mine, opp: res.opp, won: res.won, note: res.note, walkoff: !!res.walkoff }
+  }
   const line = seriesLine(c, f, mySc + oppSc, score, won, !auto && hit, r, auto ? null : raw)
-  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit: !auto && !!hit, auto, game: auto ? null : game, decider: ser ? (ser.my + ser.opp >= 2 * ((rd.bestOf + 1) / 2) - 1) : null, moment, ...line }
+  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit: !auto && !!hit, auto, game: auto ? null : game, decider, moment, ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === 'World Series'
   const done = !won || fin

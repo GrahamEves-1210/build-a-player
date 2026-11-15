@@ -9,14 +9,13 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, cardOdds, gameCast, FACE_RATING,
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast, FACE_RATING,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove } from '../../lib/career'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
-import { momentSituation } from '../../lib/situations'
 import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
@@ -98,7 +97,7 @@ export function CareerGame({ c, setCareer, skipAll = true, ...p }) {
   // (a game that isn't in yet, either kind: played from the grade, so the career never stalls on it)
   if (!GAMES[p.game] && !SIMPLE_GAMES[p.game]) return <MiniGame {...p} sim onSkipAll={onSkipAll} />
   // (an Advanced-only game, Hit Stick, plays as itself in Simple: Simple careers aren't dealt it, but a game picked before the switch can still come up)
-  if (mode === 'simple' && SIMPLE_GAMES[p.game]) return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} redo={p.redo} onDone={p.onDone} onSkipAll={onSkipAll} />
+  if (mode === 'simple' && SIMPLE_GAMES[p.game]) return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} redo={p.redo} situation={p.situation} onDone={p.onDone} onSkipAll={onSkipAll} />
   return <MiniGame {...p} sim={mode === 'off'} onSkipAll={onSkipAll} />
 }
 const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
@@ -1808,7 +1807,8 @@ function Playoffs({ c, setCareer, onBook }) {
   // (football: a game that isn't close at the end deals a regular moment, not a last play)
   const game = useMemo(() => playoffGame(c, po, gamesMode(c) === 'simple' ? g => !!SIMPLE_GAMES[g] : null), [c.seed, c.year, po.idx]) // eslint-disable-line
   // (a sport can set the moment inside its game: baseball's inning, half and score agree with the series game it's in)
-  const sit = useMemo(() => sportOf(c).x?.momentSit?.(c, po, game) ?? momentSituation(game, `${c.seed}-${c.year}-${po.idx}`, { us: c.team, them: rd?.opp }), [c.seed, c.year, po.idx, game]) // eslint-disable-line
+  // (the game to his moment, played: the score, the clock, the inning, the minute it comes up at: lib/inGame.js)
+  const sit = useMemo(() => (rd && game ? playoffPlan(c, po, gamesMode(c) === 'simple' ? g => !!SIMPLE_GAMES[g] : null, game).sit : null), [c.seed, c.year, po.idx, game]) // eslint-disable-line
   // the round's odds as it will be played (with Mini Games on None, no moment: the matchup's own)
   const noGames = gamesMode(c) === 'off'
   const odds = rd ? roundOdds(c, rd, game, noGames, po.idx) : null
@@ -1816,9 +1816,10 @@ function Playoffs({ c, setCareer, onBook }) {
   const word = rd?.series ? 'series' : 'game'
   // (a last play in a series decides game 4: the score going in, and the series after it)
   const ss = odds?.state
-  const serStakes = ss && `${ss.a > ss.b ? 'Up' : 'Down'} ${ss.a}–${ss.b} in the series. ${odds.game === 0 ? 'Win this one' : 'Land it'} and ${ss.a === 3 ? 'they sweep it' : `it’s ${ss.a + 1}–${ss.b}: about ${pct(ss.win)}% to take the series`}. ${odds.game === 0 ? (ss.b === 3 ? 'Lose it and they’re swept.' : `Lose it and it’s ${ss.a}–${ss.b + 1}: about ${pct(ss.lose)}%.`) : `Miss it: about ${pct(ss.miss)}%.`}`
+  const serStakes = ss && `${ss.a === ss.b ? 'Tied' : ss.a > ss.b ? 'Up' : 'Down'} ${ss.a}–${ss.b} in the series. Land it: about ${pct(ss.hit)}% to take the series. Miss it: about ${pct(ss.miss)}%.`
   // (which kind it is: the last play decides it, or a big play with the rest of the game still to come)
-  const stakes = !odds ? '' : serStakes ? serStakes : odds.hit === 1 ? `The last play. Land it: they win the ${word}. Miss it: ${odds.miss === 0 ? 'they’re out' : `about ${pct(odds.miss)}% to win`}.` : `${rd?.series ? '' : 'A big play, not the last one. '}Land it: about ${pct(odds.hit)}% to win. Miss it: about ${pct(odds.miss)}%.`
+  // (the chances from the state it comes up in: a last play is all or nothing, a play earlier leaves the rest of the game)
+  const stakes = !odds ? '' : serStakes ? serStakes : `Land it: ${odds.hit >= 0.995 ? `they win the ${word}` : `about ${pct(odds.hit)}% to win`}. Miss it: ${odds.miss <= 0.005 ? 'they’re out' : `about ${pct(odds.miss)}%`}.`
   if (S.isBaseball) return <Suspense fallback={null}><BaseballPostseason c={c} setCareer={setCareer} onBook={onBook} step={step} setStep={setStep} game={game} sit={sit} odds={odds} noGames={noGames} /></Suspense>
   if (S.isSoccer) return <Suspense fallback={null}><SoccerNights c={c} setCareer={setCareer} onBook={onBook} step={step} setStep={setStep} game={game} sit={sit} /></Suspense>
   if (po.stage === 'done' || step === 'result') {

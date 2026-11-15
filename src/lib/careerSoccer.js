@@ -4,11 +4,12 @@
 // The academy (trials, the scouts and coaches, the first contract), the club season (the league through the season
 // director, then the big nights), the transfer window, international duty and the World Cup, the awards and legacy.
 import {
-  SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, closeChance, blowoutOdds, momentOdds,
+  SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, closeChance, playoffPlan,
   countedHonors, earnLegacy, HOF_LEGACY, CAREER_X,
 } from './career'
 import { seeded } from './rng'
-import { momentSituation, finalScore } from './situations'
+import { momentFacts } from './situations'
+import { playMoment } from './inGame.js'
 import { RECORDS } from './seasonFacts'
 import { seasonRaw } from './careerStats'
 import { HEADSHOT_BASE } from '../utils/simulation'
@@ -385,28 +386,24 @@ export function soccerRound(c, score, game = null, hit = score >= 0.5, pts = nul
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
-  const auto = rd.close === false
-  const depth = KO_DEPTH[rd.stage] ?? 3
-  let won = r() < (auto ? blowoutOdds(rd.p, depth) : momentOdds(rd.p, hit, score, depth))
-  const LAST = LAST_PLAY[game]
-  if (!auto && LAST) { if (hit) won = true; else if (LAST === 'both') won = false }
-  if (auto) score = won ? 0.8 : 0.25
-  let legs, note = null
-  if (auto) legs = autoLegs(r, rd.legs === 2, won)
+  const auto = rd.close === false || score == null
+  let legs, note = null, won, pens = null, at = -1
+  if (auto) { won = r() < rd.p; score = won ? 0.8 : 0.25; legs = autoLegs(r, rd.legs === 2, won) }
   else {
-    const seed = `${c.seed}-${c.year}-${po.idx}`
-    const end = finalScore(momentSituation(game, seed, { us: c.team, them: rd.opp }), game, won, hit, seed, pts)
-    note = end.note
-    legs = rd.legs === 2 ? [pickOf(r, [[1, 1], [0, 0], [2, 2], [1, 1]]), [end.mine, end.opp]] : [[end.mine, end.opp]]
+    // the tie his chance was in (lib/inGame.js): either leg of two, the goal on the board when it went in, the rest played
+    const { plan } = playoffPlan(c, po, undefined, game)
+    const res = playMoment(plan, hit, momentFacts(game, pts, hit), pts)
+    won = res.won; legs = res.legs; note = res.note; pens = res.pens
+    at = plan.b.leg === 1 && legs.length === 2 ? 0 : legs.length - 1
   }
   const mySc = legs.reduce((s, l) => s + l[0], 0), oppSc = legs.reduce((s, l) => s + l[1], 0)
-  const pens = mySc === oppSc ? (won ? 'won' : 'lost') : null
+  if (mySc === oppSc && !pens) pens = won ? 'won' : 'lost'
   // his line: the moment's goal when he scored it, and his usual share of the rest
   const lg = soccerStats(f)
   const rate = lg.apps ? lg.goals / lg.apps : 0.3, arate = lg.apps ? lg.assists / lg.apps : 0.1
   let goals = 0, assists = 0
   legs.forEach((l, i) => {
-    const moment = !auto && i === legs.length - 1
+    const moment = i === at
     let g = Math.min(l[0], Math.floor(rate * (0.8 + score * 0.4) + r()))
     if (moment) g = setUp && hit ? Math.min(g, Math.max(0, l[0] - 1)) : Math.min(l[0], Math.max(hit ? 1 : 0, hit ? g : Math.min(g, Math.max(0, l[0] - 1))))
     goals += g

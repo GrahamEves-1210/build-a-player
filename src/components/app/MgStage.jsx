@@ -193,7 +193,8 @@ export default function MgStage({ game, def, v, arm, kick = null, seed, sport = 
     // prompts, the pads and the stamps are never under a bar or a texture)
     const split = () => !!octx
     const hudCtx = () => (split() ? octx : ctx)
-    const g = engine.make({ v, arm, kick, seed, def, game, sport, pos: playerPos, cast, situation })   // (kick: a kicker's three ratings, each its own: lib/mg/kick.js)
+    // (the snaps or trips a playoff moment has in it come with its situation: lib/inGame.js, from the game)
+    const g = engine.make({ v, arm, kick, seed, def: situation?.reps ? { ...def, rounds: situation.reps } : def, game, sport, pos: playerPos, cast, situation })   // (kick: a kicker's three ratings, each its own: lib/mg/kick.js)
     g.sit ??= situation
     if (import.meta.env.DEV) window.__bapGame = g   // (for scripts/mg's browser tests)
     const c = colorsFor(sport, team, opp)
