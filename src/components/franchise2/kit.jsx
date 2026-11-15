@@ -199,7 +199,7 @@ export function LowerThird({ name, pos, num, ovr, photo, team, mine, line, stat,
 // a man on a franchise roster as a lower-third (F, p: league.js's player); the rest as LowerThird
 export function ManL3({ F, p, team, owner, ...rest }) {
   if (!p) return null
-  return <LowerThird name={p.n} pos={p.s && (p.p === 'dl' || p.p === 'db') ? p.s.toUpperCase() : p.p} num={jerseyOf(F, p)} ovr={p.o} photo={photoOf(F, p)} team={team} mine={p.b != null ? owner ?? true : null} {...rest} />
+  return <LowerThird name={p.n} pos={p.s && (p.p === 'dl' || p.p === 'db') ? p.s.toUpperCase() : p.p} num={jerseyOf(F, p)} ovr={p.o} photo={photoOf(F, p, TEAM[team]?.color)} team={team} mine={p.b != null ? owner ?? true : null} {...rest} />
 }
 
 // ── Big numbers ──────────────────────────────────────────────────────────────

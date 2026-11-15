@@ -201,3 +201,56 @@ export function faceUrl(key, pos, color) {
 }
 // a league man's face (a made-up man only: the caller checks he isn't real and isn't a build)
 export const genFace = (p, color) => (p ? faceUrl(p.fk ?? p.n, p.p, color) : null)
+
+// ── A build's face: the player's own pick ────────────────────────────────────
+// Every build gets a face of its own (never a real man's photo). It starts as one coherent made-up man (lookOf, keyed
+// by the setup's seed and the roster spot), and the player can change the four things a man changes about how he
+// looks: skin tone, hair, hair colour, facial hair. Saved on the build as B.face = { skin, hair, hc, beard }.
+//   FACE_SKIN, FACE_HAIR, FACE_HC, FACE_BEARD   the picker's choices (value, label)
+//   defaultFace(key, pos)     a coherent random look, snapped to the picker's choices
+//   buildLook(B)              the look the drawing reads (B.face, or the default from his name)
+//   buildFaceUrl(B, color)    the build's face as a data: URL
+export const FACE_SKIN = [
+  ['#f4d2b6', 'FAIR'], ['#eab996', 'LIGHT'], ['#d9a582', 'SAND'], ['#deae84', 'TAN'], ['#c99064', 'OLIVE'], ['#b98058', 'GOLDEN'],
+  ['#a06c44', 'BRONZE'], ['#9c6440', 'BROWN'], ['#8a5634', 'CHESTNUT'], ['#7a4a2c', 'MAHOGANY'], ['#5e3a22', 'DEEP'], ['#432818', 'DARKEST'],
+]
+export const FACE_HAIR = [
+  ['fade', 'FADE'], ['buzz', 'BUZZ'], ['waves', 'WAVES'], ['crew', 'CREW'], ['textured', 'TEXTURED'], ['sidepart', 'PART'],
+  ['curly', 'CURLS'], ['twists', 'TWISTS'], ['locs', 'LOCS'], ['cornrows', 'BRAIDS'], ['afro', 'AFRO'], ['hightop', 'HIGH TOP'],
+  ['flow', 'FLOW'], ['long', 'LONG'], ['bun', 'BUN'], ['mullet', 'MULLET'], ['shaved', 'SHAVED'],
+]
+export const FACE_HC = [
+  ['#16110e', 'BLACK'], ['#2a1d15', 'DARK'], ['#5a3b24', 'BROWN'], ['#86492a', 'AUBURN'], ['#a8824e', 'SANDY'], ['#c9a46c', 'BLOND'], ['#b8893c', 'TIPS'],
+]
+export const FACE_BEARD = [
+  ['none', 'CLEAN'], ['stubble', 'STUBBLE'], ['chin', 'STRAP'], ['goatee', 'GOATEE'], ['stache', 'STACHE'], ['full', 'FULL'],
+]
+const lum = c => { const x = hex(c); return 0.299 * ((x >> 16) & 255) + 0.587 * ((x >> 8) & 255) + 0.114 * (x & 255) }
+const near = (list, c) => list.reduce((a, x) => (Math.abs(lum(x[0]) - lum(c)) < Math.abs(lum(a[0]) - lum(c)) ? x : a))[0]
+// (the drawing's lip colour and how dark stubble reads go by how light the skin is)
+const groupOfSkin = s => (lum(s) > 175 ? 'w' : lum(s) > 120 ? 'm' : 'b')
+const HAIRS = new Set(FACE_HAIR.map(x => x[0])), BEARDS = new Set(FACE_BEARD.map(x => x[0]))
+export function defaultFace(key, pos) {
+  const L = lookOf(`build|${key}`, pos)
+  return { skin: near(FACE_SKIN, L.skin), hair: HAIRS.has(L.hair) ? L.hair : 'fade', hc: FACE_HC.some(x => x[0] === L.hc) ? L.hc : near(FACE_HC, L.hc), beard: BEARDS.has(L.beard) ? L.beard : 'none' }
+}
+export function buildLook(B) {
+  const f = B?.face ?? defaultFace(B?.name ?? 'build', B?.pos)
+  const pos = B?.pos ?? 'wr'
+  // dyed tips only show on locs and twists; on any other cut the colour underneath is black
+  const hc = f.hc === '#b8893c' && f.hair !== 'locs' && f.hair !== 'twists' ? '#16110e' : f.hc
+  return { g: groupOfSkin(f.skin), skin: f.skin, hair: f.hair, hc, beard: f.beard, brow: f.hc === '#b8893c' ? '#16110e' : hc, wide: BIG.has(pos) ? 1 : pos === 'lb' || pos === 'rb' ? 0.5 : 0, eye: 0 }
+}
+const BCACHE = new Map()
+export function buildFaceUrl(B, color) {
+  if (!B) return null
+  const L = buildLook(B)
+  const k = `${L.skin}|${L.hair}|${L.hc}|${L.beard}|${L.wide}|${color ?? ''}`
+  let u = BCACHE.get(k)
+  if (!u) {
+    u = `data:image/svg+xml,${encodeURIComponent(faceSvg(L, { color }))}`
+    if (BCACHE.size > 400) BCACHE.clear()
+    BCACHE.set(k, u)
+  }
+  return u
+}

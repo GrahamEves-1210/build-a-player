@@ -49,7 +49,7 @@ export function ProspectNamer({ F, B, owner, onDone }) {
       <div className="fsu-body">
         <div>
           <Chyron team={F.team} tag="DRAFT CLASS" title="Name the prospect" sub="SANDBOX" />
-          <NameForm pos={B.pos} build={B.build} team={F.team} taken={taken} owner={owner} showNum={false} cta="Add him to the class" onDone={x => onDone(x.name)} />
+          <NameForm pos={B.pos} build={B.build} team={F.team} taken={taken} owner={owner} showNum={false} faceKey={`${F.seed}-prospect-${F.builds.indexOf(B)}`} cta="Add him to the class" onDone={x => onDone(x.name, x.face)} />
         </div>
       </div>
     </div>

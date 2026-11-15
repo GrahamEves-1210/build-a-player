@@ -4,11 +4,13 @@ import { lastSeason } from '../../lib/franchise2/lastSeason'
 import { rookieScale } from '../../lib/franchise2/contracts'
 import { cleanName, nameOk, randomFirstLast, takenOn, freeNumbers, legalFor, pickNumber, rookieSlots } from '../../lib/franchise2/identity'
 import { POSITIONS, CAPS, POS_NAME } from '../../lib/squad'
-import { ovrOf, faceOf } from '../../lib/squadSeason'
+import { ovrOf } from '../../lib/squadSeason'
+import { defaultFace, buildFaceUrl } from '../../lib/franchise2/faces'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
 import { CoachSpin, StylePick, CoachWho, CoachReveal } from './CoachBuild'
+import FacePick from './FacePick'
 import './setup.css'
 
 // SETUP: a new franchise, in the order a new GM's first week goes.
@@ -190,7 +192,7 @@ function Builds({ S, go, owner, onBuild }) {
           const o = ovrOf(p.pos, b.build)
           const sl = slotOf(p)
           return (
-            <LowerThird key={p.id} name={b.name || `${POS_LABEL[p.pos]} ${k + 1}`} pos={p.pos} num={b.num} ovr={o} photo={faceOf(b.build)} team={S.team} mine={owner}
+            <LowerThird key={p.id} name={b.name || `${POS_LABEL[p.pos]} ${k + 1}`} pos={p.pos} num={b.num} ovr={o} photo={buildFaceUrl({ pos: p.pos, face: b.face ?? defaultFace(`${S.seed}-${p.id}`, p.pos) }, TEAM[S.team]?.color)} team={S.team} mine={owner}
               line={b.name ? `PICK ${sl}` : 'NAME HIM'} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
           )
         })}
@@ -210,12 +212,13 @@ function Builds({ S, go, owner, onBuild }) {
 // may wear and nobody on the team has. His rookie deal shows under it: the slot his OVR goes at in the draft.
 //   used for the setup's builds and for Sandbox's prospects (FranchiseMode: NameSheet)
 const RANGE = { qb: '0-19', ol: '50-79', dl: '50-79, 90-99', lb: '0-59, 90-99', db: '0-49' }
-export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDone, showNum = true }) {
+export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDone, faceKey, showNum = true }) {
   const [first, setFirst] = useState(() => init?.first ?? '')
   const [last, setLast] = useState(() => init?.last ?? '')
   const free = useMemo(() => freeNumbers(pos, taken), [pos, taken])
   const [num, setNum] = useState(() => (legalFor(pos, init?.num) && !taken.has(init.num) ? init.num : pickNumber(pos, taken)))
   const [all, setAll] = useState(false)
+  const [face, setFace] = useState(() => init?.face ?? defaultFace(faceKey ?? `${first}-${last}-${pos}`, pos))
   const o = ovrOf(pos, build)
   const deal = slot ? rookieScale(slot) : null
   const ok = nameOk(first, last)
@@ -223,8 +226,10 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
   const shown = all ? free : free.slice(0, 18)
   return (
     <div className="fsu-nameform">
-      <LowerThird size="l" name={`${first} ${last}`.trim() || POS_NAME[pos]} pos={pos} num={showNum ? num : null} ovr={o} photo={faceOf(build)} team={team} mine={owner}
+      <LowerThird size="l" name={`${first} ${last}`.trim() || POS_NAME[pos]} pos={pos} num={showNum ? num : null} ovr={o} photo={buildFaceUrl({ pos, face }, TEAM[team]?.color)} team={team} mine={owner}
         line={deal ? `ROOKIE · NO. ${slot} PICK` : null} />
+      <span className="fsu-lbl">FACE</span>
+      <FacePick face={face} pos={pos} team={team} shuffleKey={faceKey ?? pos} onChange={setFace} />
       <span className="fsu-lbl">NAME</span>
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="First name" />
@@ -245,7 +250,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
           <Fact v={`${deal.y} YRS`} label={deal.opt ? '+ 5TH-YEAR OPTION' : 'ROOKIE DEAL'} size={28} />
         </div>
       )}
-      <div className="fsu-acts"><Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, first: first.trim(), last: last.trim(), num })} disabled={!ok}>{cta}</Go></div>
+      <div className="fsu-acts"><Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, first: first.trim(), last: last.trim(), num, face })} disabled={!ok}>{cta}</Go></div>
     </div>
   )
 }
@@ -259,9 +264,9 @@ function NameStep({ S, id, owner, onDone }) {
   const n = splitName(b.name ?? '')
   return (
     <div className="fsu-namestep">
-      <Chyron team={S.team} title={b.name ? 'Edit your player' : `Name your ${POS_LABEL[pick?.pos ?? b.pos]}`} sub="NAME AND NUMBER" />
-      <NameForm pos={b.pos} build={b.build} team={S.team} taken={taken} owner={owner} slot={slot} init={{ first: n.first, last: n.last, num: b.num }} cta="Sign him"
-        onDone={x => onDone({ builds: { ...S.builds, [id]: { ...b, name: x.name, num: x.num } } })} />
+      <Chyron team={S.team} title={b.name ? 'Edit your player' : `Name your ${POS_LABEL[pick?.pos ?? b.pos]}`} sub="NAME, FACE AND NUMBER" />
+      <NameForm pos={b.pos} build={b.build} team={S.team} taken={taken} owner={owner} slot={slot} init={{ first: n.first, last: n.last, num: b.num, face: b.face }} faceKey={`${S.seed}-${id}`} cta="Sign him"
+        onDone={x => onDone({ builds: { ...S.builds, [id]: { ...b, name: x.name, num: x.num, face: x.face } } })} />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { makeClass, packClass, unpackClass } from './draft'
 import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
 import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
+import { defaultFace } from './faces'
 
 export * from './league'
 export * from './season'
@@ -26,7 +27,7 @@ export { clockText, periodOf, spotText, normalRate } from './game'
 
 export const SAVE_V = 6
 
-// setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num }],
+// setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num, face }],
 //         coach: coach.js finishCoach { name, face, style, r: { the five ratings }, from, ovr } }
 // A build is a rookie (22, his first year): his name and number are the ones the player gave him (identity.js)
 export function createFranchise(setup) {
@@ -45,7 +46,9 @@ export function createFranchise(setup) {
     const taken = takenOn(F.team, F.builds)
     const num = legalFor(b.pos, b.num) && !taken.has(b.num) ? b.num : pickNumber(b.pos, taken, R.u)
     const name = cleanName(b.name).trim() || null
-    F.builds.push({ pos: b.pos, build: b.build, types: b.types ?? null, name, num, age: 22, rk: F.year, slot: slots[idx], car: [], ...(b.sandbox && { sandbox: 1 }) })
+    // (his face: the one the player picked on the name step; never a real man's photo)
+    const face = b.face ?? defaultFace(`${F.seed}-${idx}`, b.pos)
+    F.builds.push({ pos: b.pos, build: b.build, types: b.types ?? null, name, num, face, age: 22, rk: F.year, slot: slots[idx], car: [], ...(b.sandbox && { sandbox: 1 }) })
     t.r.push(makeBuilt(F, idx, R))
   }
   // the budget: what a team in this league spends, a little over; the player's team always starts under it

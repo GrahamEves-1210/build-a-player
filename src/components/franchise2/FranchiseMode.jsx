@@ -70,7 +70,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     } else if (setup && built.id) {
       // back to the setup on this build's name and number (Setup.jsx NameStep); a rebuilt spot keeps them
       const was = setup.builds?.[built.id]
-      putSetup({ ...setup, naming: built.id, builds: { ...setup.builds, [built.id]: { ...(was?.name && { name: was.name, num: was.num }), pos: built.pos, build: built.build, types: built.types, sandbox: !!built.sandbox } }, sandbox: setup.sandbox || !!built.sandbox })
+      putSetup({ ...setup, naming: built.id, builds: { ...setup.builds, [built.id]: { ...(was?.name && { name: was.name, num: was.num }), ...(was?.face && { face: was.face }), pos: built.pos, build: built.build, types: built.types, sandbox: !!built.sandbox } }, sandbox: setup.sandbox || !!built.sandbox })
       sfx('claim'); haptic('success')
     }
     onBuiltTaken?.()
@@ -102,6 +102,6 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   if (!F && setup) return <Setup setup={setup} owner={owner} put={putSetup} onBuild={buildOut} onStart={start} onBack={toSlots} />
   if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} />
   const naming = F.builds.findIndex(b => b.prospect && b.unnamed)
-  if (naming >= 0) return <ProspectNamer F={F} B={F.builds[naming]} owner={owner} onDone={name => { act(X => { const B = X.builds[naming]; B.name = name; delete B.unnamed; for (const x of X.dc ?? []) if (x.b === naming) x.n = name }); sfx('claim') }} />
+  if (naming >= 0) return <ProspectNamer F={F} B={F.builds[naming]} owner={owner} onDone={(name, face) => { act(X => { const B = X.builds[naming]; B.name = name; if (face) B.face = face; delete B.unnamed; for (const x of X.dc ?? []) if (x.b === naming) x.n = name }); sfx('claim') }} />
   return <Suspense fallback={<FranchiseWait />}><Hub F={F} act={act} owner={owner} onHome={onHome} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>
 }

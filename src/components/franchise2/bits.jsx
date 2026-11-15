@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCountUp } from '../../lib/useCountUp'
 import { nflHeadshot } from '../../utils/simulation'
-import { faceOf } from '../../lib/squadSeason'
 import { TEAM, photoId, POS_LABEL } from '../../lib/franchise2'
 import { CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { sfx } from '../../lib/juice'
-import { genFace } from '../../lib/franchise2/faces'
+import { genFace, buildFaceUrl } from '../../lib/franchise2/faces'
 
 // The small parts every Franchise screen is made of: a logo, a face, a number that counts, a meter that fills,
 // a stamp. Flat team colours, the game's type, nothing that moves unless it's delivering a result.
@@ -15,12 +14,13 @@ export const Logo = ({ s, size = 32, className = '' }) => (TEAM[s] ? <img classN
 export const lastName = n => { const w = String(n || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
 const initials = n => String(n || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
-// A man's face: his ESPN headshot, a build's own face (its best trait's photo), or his initials
-export function photoOf(F, p) {
+// A man's face: his ESPN headshot, a build's own face (the one his player picked: never a real man's photo), a made-up
+// man's drawn face, or his initials. color: the jersey under a drawn face (a build: his team's, the player's by default)
+export function photoOf(F, p, color) {
   if (!p) return null
-  if (p.b != null) return faceOf(F.builds[p.b]?.build)
+  if (p.b != null) return buildFaceUrl(F.builds[p.b], color ?? TEAM[F.team]?.color)
   const id = photoId(p)
-  return id ? nflHeadshot(id) : genFace(p)
+  return id ? nflHeadshot(id) : genFace(p, color)
 }
 export function Face({ F, p, src, name, size = 44, mine, col }) {
   const [bad, setBad] = useState(false)

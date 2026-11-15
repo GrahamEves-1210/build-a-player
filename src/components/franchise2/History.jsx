@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { TEAM, POS_LABEL, DIVISIONS, CONF_OF, leagueStats } from '../../lib/franchise2'
-import { ovrOf, faceOf } from '../../lib/squadSeason'
+import { ovrOf } from '../../lib/squadSeason'
+import { buildFaceUrl } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
 import { Chyron, BigNum, Banner, KLogo, LowerThird, Go, fkVars } from './kit'
 import { PlayerPage } from './dparts'
@@ -133,7 +134,7 @@ function BuildCareer({ F, B, owner, onOpen }) {
   const line = (MAIN[B.pos] ?? []).map(k => `${n(tot[k])} ${LBL[k]}`).join(' · ')
   return (
     <div className="fd-build">
-      <LowerThird name={B.name ?? POS_LABEL[B.pos]} pos={POS_LABEL[B.pos]} num={B.num} ovr={ovrOf(B.pos, B.build)} photo={faceOf(B.build)} team={F.team} mine={owner || 'GM'} line={`${B.car.length} ${B.car.length === 1 ? 'SEASON' : 'SEASONS'}${B.done ? ' · RETIRED' : B.left ? ' · GONE' : ''}`} onClick={p ? () => onOpen(p.i) : undefined} />
+      <LowerThird name={B.name ?? POS_LABEL[B.pos]} pos={POS_LABEL[B.pos]} num={B.num} ovr={ovrOf(B.pos, B.build)} photo={buildFaceUrl(B, TEAM[F.team]?.color)} team={F.team} mine={owner || 'GM'} line={`${B.car.length} ${B.car.length === 1 ? 'SEASON' : 'SEASONS'}${B.done ? ' · RETIRED' : B.left ? ' · GONE' : ''}`} onClick={p ? () => onOpen(p.i) : undefined} />
       <div className="fd-build-row">
         <span className="fd-build-tot">{line}</span>
         <span className="fd-build-hon">
