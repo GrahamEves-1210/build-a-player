@@ -1,4 +1,4 @@
-// A contact sheet of drawn faces (faces.js), to look at them the way the screens show them: 28 made-up men by
+// A contact sheet of drawn faces (faces.js), to look at them the way the screens show them: 30 made-up men by
 // position at list size (40 and 64 px) on a team slab and on the dark page, a few large, then every choice the face
 // creator offers (each list, every skin tone and hair colour, each shape slider at both ends), the ages, the coaches,
 // and an older save's face. It also times the builder (500 faces, built fresh) and prints the numbers.
@@ -12,16 +12,17 @@ import {
 const out = process.argv[2] ?? 'faces.html'
 const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
 const TEAMS = ['#fb4f14', '#0b2265', '#e31837', '#203731', '#241773', '#004c54', '#a71930', '#002244']
-const men = Array.from({ length: 28 }, (_, i) => ({ key: `sheet-${i}-${i * 7}`, pos: POS[i % 8], color: TEAMS[i % 8] }))
+// (30 men, a sample whose mix is the league's: about 57% Black, a third white, a few Polynesian and Latino men)
+const men = Array.from({ length: 30 }, (_, i) => ({ key: `man10-${i}`, pos: POS[i % 8], color: TEAMS[i % 8] }))
 const tile = (src, bg, size, label = '') => `<span style="display:inline-block;margin:3px;vertical-align:top;text-align:center;font-size:10px"><span style="display:block;width:${size}px;height:${size}px;background:${bg}"><img src="${src}" width="${size}" height="${size}"></span>${label}</span>`
 const mine = { pos: 'wr', face: { skin: '#7a4a2c', head: 'square', eyes: 'almond', brows: 'thick', nose: 'broad', mouth: 'full', hair: 'locs', hc: '#b8893c', beard: 'full', stache: 'full', gear: 'none', eb: 'paint' } }
 const old = { pos: 'qb', name: 'Old Save', face: { skin: '#eab996', hair: 'flow', hc: '#a8824e', beard: 'stubble', gear: 'eyeblack' } }
 let h = `<!doctype html><meta charset="utf-8"><body style="margin:12px;background:#08090b;color:#aaa;font:12px sans-serif">`
 const sec = t => `<div style="margin:14px 0 4px;color:#ddd">${t}</div>`
-h += sec('28 made-up men, 40 px and 64 px on their team\'s colour') + men.map(m => tile(faceUrl(m.key, m.pos, m.color), m.color, 40)).join('') + '<br>' + men.map(m => tile(faceUrl(m.key, m.pos, m.color), m.color, 64)).join('')
-h += sec('the same on the dark page, 64 px') + men.map(m => tile(faceUrl(m.key, m.pos, m.color), '#171a1f', 64)).join('')
-h += sec('large: 132 px (the name step\'s lower-third), then a customised build and an older save\'s face') + men.slice(0, 6).map(m => tile(faceUrl(m.key, m.pos, m.color), m.color, 132)).join('') + tile(buildFaceUrl(mine, '#fb4f14'), '#fb4f14', 132) + tile(buildFaceUrl(old, '#0b2265'), '#0b2265', 132)
-h += sec('up close: 260 px') + [0, 2, 12, 17, 5].map(i => tile(faceUrl(men[i].key, men[i].pos, men[i].color), '#171a1f', 260)).join('')
+h += sec("30 made-up men, 40 px and 64 px on their team's colour (the list drawing)") + men.map(m => tile(faceUrl(m.key, m.pos, m.color, null, true), m.color, 40)).join('') + '<br>' + men.map(m => tile(faceUrl(m.key, m.pos, m.color, null, true), m.color, 64)).join('')
+h += sec('the same on the dark page, 64 px') + men.map(m => tile(faceUrl(m.key, m.pos, m.color, null, true), '#08090b', 64)).join('')
+h += sec("132 px: all 30 on their team colour, then a customised build and an older save's face") + men.map(m => tile(faceUrl(m.key, m.pos, m.color), m.color, 132)).join('') + tile(buildFaceUrl(mine, '#fb4f14'), '#fb4f14', 132) + tile(buildFaceUrl(old, '#0b2265'), '#0b2265', 132)
+h += sec('up close: 300 px on the dark page') + [0, 2, 13, 10, 20, 9].map(i => tile(faceUrl(men[i].key, men[i].pos, men[i].color), '#08090b', 300)).join('')
 const base = { ...mine.face, hc: '#16110e', eb: 'none', iris: '#2b1a10' }
 const cust = (k, list, extra = {}, size = 92) => list.map(([v, label]) => tile(buildFaceUrl({ pos: 'te', face: { ...base, ...extra, [k]: v } }, '#d2aa4f'), '#20242b', size, label)).join('')
 h += sec('every haircut') + cust('hair', FACE_HAIR, { beard: 'short' })
@@ -44,7 +45,8 @@ const ms = [], sizes = []
 for (const [L, c] of looks) { const t = performance.now(); const s = faceSvg(L, { color: c }); ms.push(performance.now() - t); sizes.push(s.length) }
 ms.sort((a, b) => a - b)
 const urlSize = looks.slice(0, 100).reduce((a, [L, c], i) => a + faceUrl(`bench-${i}`, POS[i % 8], c).length, 0) / 100
-const line = `500 faces: median ${ms[250].toFixed(3)} ms, p95 ${ms[475].toFixed(3)} ms, max ${ms[499].toFixed(2)} ms · SVG avg ${(sizes.reduce((a, b) => a + b, 0) / sizes.length / 1024).toFixed(1)} KB (max ${(Math.max(...sizes) / 1024).toFixed(1)} KB) · data URL avg ${(urlSize / 1024).toFixed(1)} KB`
+const smSize = looks.reduce((a, [L, c]) => a + faceSvg(L, { color: c, view: 'sm' }).length, 0) / looks.length
+const line = `500 faces: median ${ms[250].toFixed(3)} ms, p95 ${ms[475].toFixed(3)} ms, max ${ms[499].toFixed(2)} ms · SVG avg ${(sizes.reduce((a, b) => a + b, 0) / sizes.length / 1024).toFixed(1)} KB (max ${(Math.max(...sizes) / 1024).toFixed(1)} KB) · data URL avg ${(urlSize / 1024).toFixed(1)} KB · list drawing avg ${(smSize / 1024).toFixed(1)} KB`
 h += sec(line)
 writeFileSync(out, h + '</body>')
 console.log(line)

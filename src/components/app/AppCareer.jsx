@@ -9,7 +9,7 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast, FACE_RATING,
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove } from '../../lib/career'
@@ -40,6 +40,9 @@ const COLLEGE_POS = ['qb', 'wr', 'rb']   // the positions College Football has r
 const CLASS_WORD = { FR: 'Freshman', SO: 'Sophomore' }
 import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
+import { careerFace, careerFaceUrl, careerKit, careerColor, careerFacePos, newCareerFace } from '../../lib/careerFace'
+// his face's creator (Franchise's): loaded only when a name step or the face editor opens
+const FacePick = lazy(() => import('../franchise2/FacePick'))
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -69,12 +72,29 @@ const RUN_DATE = { month: 'short', day: 'numeric' }
 const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null)
 const LEGACY_COLOR = { Starter: '#b9c4bd', Star: '#5edbd8', Superstar: '#b79bff', 'All-Time Great': '#f5dc8a', 'Squad Player': '#b9c4bd', 'World Class': '#b79bff', Legend: '#f5dc8a' }
 export const legacyColor = c => LEGACY_COLOR[legacyOf(c).tier] ?? '#b9c4bd'
+// his own drawn face (lib/careerFace.js), in his club's colour: never the account's avatar, never a real man's photo
 function CareerFace({ c, size = 34 }) {
-  const ch = c.build?.[FACE_RATING[c.pos]] ?? null
+  const url = careerFaceUrl(c, size <= 64)
   return (
-    <span className="cr-me-face" style={{ width: size, height: size, borderColor: legacyColor(c) }}>
-      {ch?.photo ? <img src={ch.photo} alt="" loading="lazy" /> : <span className="crl-init">{initials(c.name)}</span>}
+    <span className="cr-me-face" style={{ width: size, height: size, borderColor: legacyColor(c), background: careerColor(c) }}>
+      {url ? <img src={url} alt="" loading="lazy" /> : <span className="crl-init">{initials(c.name)}</span>}
     </span>
+  )
+}
+// his face's editor: the creator in a sheet, his face saved when he's done
+function FaceSheet({ c, onDone, onClose }) {
+  const [face, setFace] = useState(() => careerFace(c))
+  return createPortal(
+    <div className="cr-face-sheet" role="dialog" aria-modal="true" aria-label="His face">
+      <div className="cr-face-box">
+        <div className="cr-face-top"><span className="ag-eyebrow">HIS FACE</span><button type="button" className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button></div>
+        <Suspense fallback={<div className="cr-face-wait" />}>
+          <FacePick face={face} pos={careerFacePos(c)} color={careerColor(c)} kit={careerKit(c)} shuffleKey={`career|${c.seed ?? c.name}-face`} onChange={setFace} />
+        </Suspense>
+        <button type="button" className="ag-btn ag-btn--gold cr-face-done" onClick={() => onDone(face)}>DONE</button>
+      </div>
+    </div>,
+    document.body,
   )
 }
 // per-game averages keep one decimal; counts get commas
@@ -127,9 +147,13 @@ function NewSlot({ S, onStart, onCancel }) {
   const [start, setStart] = useState('draft')   // football QB, WR, RB: straight to the draft, or college first
   const college = (CFB_LIVE && S.id === 'nfl' && COLLEGE_POS.includes(pos)) || (CBB_LIVE && S.id === 'bucket')
   const [nation, setNation] = useState(() => (S.isSoccer ? lastNation() ?? 'ENG' : null))
+  // his face: a coherent random man to start, keyed by this name step (lib/careerFace.js)
+  const [faceKey] = useState(() => Math.random().toString(36).slice(2, 10))
+  const fc = { sport: S.id, pos: S.isBucket ? hoopGroupOf(spot) : pos }
+  const [face, setFace] = useState(() => newCareerFace(faceKey, fc))
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
-    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (!ok) return; if (S.isSoccer) rememberNation(nation); if (S.isBucket) { try { localStorage.setItem('bucketCareerSpot', spot) } catch {} } onStart(`${first.trim()} ${last.trim()}`, S.isBucket ? hoopGroupOf(spot) : pos, games, nation, college ? start : 'draft', S.isBucket ? spot : null) }}>
+    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (!ok) return; if (S.isSoccer) rememberNation(nation); if (S.isBucket) { try { localStorage.setItem('bucketCareerSpot', spot) } catch {} } onStart(`${first.trim()} ${last.trim()}`, S.isBucket ? hoopGroupOf(spot) : pos, games, nation, college ? start : 'draft', S.isBucket ? spot : null, face) }}>
       <span className="ag-eyebrow">POSITION</span>
       {S.isBucket ? <>
         <div className="cr-pos" role="radiogroup" aria-label="Position" style={{ '--n': HOOP_SPOTS.length }}>
@@ -160,6 +184,12 @@ function NewSlot({ S, onStart, onCancel }) {
         <input className="cr-name-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="First name" autoComplete="off" autoFocus aria-label="First name" />
         <input className="cr-name-in" value={last} onChange={e => setLast(cleanName(e.target.value))} placeholder="Last name" autoComplete="off" aria-label="Last name" />
         <button type="button" className="cr-name-rand" onClick={randomize} aria-label="Random name" title="Random name"><IconSpin size={18} /></button>
+      </div>
+      <span className="ag-eyebrow">HIS FACE</span>
+      <div className="cr-face-new">
+        <Suspense fallback={<div className="cr-face-wait" />}>
+          <FacePick face={face} pos={careerFacePos(fc)} color="#3a4048" kit={careerKit(fc)} shuffleKey={`career|${faceKey}`} onChange={setFace} />
+        </Suspense>
       </div>
       {/* the career's mini games, for the whole career (it can still be changed on the career screen) */}
       {college && (
@@ -237,7 +267,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
           {!slots ? <SkCards n={3} label="Loading your saves" /> : <>
             {slots.map((c, i) => c && <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setNaming(null); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />)}
             {free < 0 ? <div className="tk-runs-empty">Every save is in use. Delete one to start a new career.</div>
-              : naming === free ? <NewSlot key={`n${free}`} S={S} onStart={(name, pos, games, nation, start, spot) => onNew(free, name, pos, games, start, spot)} onCancel={() => setNaming(null)} />
+              : naming === free ? <NewSlot key={`n${free}`} S={S} onStart={(name, pos, games, nation, start, spot, face) => onNew(free, name, pos, games, start, spot, face)} onCancel={() => setNaming(null)} />
               : <button className="cr-slot cr-slot--empty" onClick={() => { setNaming(free); sfx('tap') }}><span>+</span> NEW CAREER</button>}
           </>}
         </section>
@@ -284,7 +314,8 @@ function Model({ c, devPick }) {
   useEffect(() => () => clearTimeout(whyT.current), [])
   const tellWhy = t => { const w = upgradeBlock(c, t); if (!w) return; clearTimeout(whyT.current); setWhy({ text: w, k: Date.now() }); whyT.current = setTimeout(() => setWhy(null), 3200); sfx('tap') }
   const cap = captainOf(c)
-  const shown = useMemo(() => inTeamColors(c.build, c.fit, jerseyOf(c), cap), [c.build, c.fit, c.number, c.team, c.roster, cap.on, cap.years]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (his figure in his face's skin, so the face and the body match: a career with a face of its own)
+  const shown = useMemo(() => { const b = inTeamColors(c.build, c.fit, jerseyOf(c), cap); const sk = c.face?.skin; return sk && b ? Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v && typeof v === 'object' && 'skinColor' in v ? { ...v, skinColor: sk } : v])) : b }, [c.build, c.fit, c.number, c.team, c.roster, cap.on, cap.years, c.face?.skin]) // eslint-disable-line react-hooks/exhaustive-deps
   const Card = ({ t }) => {
     const ch = c.build[t]
     const maxed = !!ch && maxedTrait(ch.val, ch, t)
@@ -697,6 +728,7 @@ function SpotMove({ c, m, onAnswer }) {
 // ── Hub ─────────────────────────────────────────────────────────────────────
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
+  const [faceOpen, setFaceOpen] = useState(false)   // his face's editor
   const [recHit, setRecHit] = useState(null)       // an all-time record just fell
   const [honor, setHonor] = useState(null)         // an award or a title, just won
   const D = useRef(null)
@@ -777,10 +809,17 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   return (
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
       {recHit && <RecordOverlay record={recHit} name={c.name || 'Guest'} onClose={() => setRecHit(null)} />}
+      {faceOpen && <FaceSheet c={c} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
+      {faceOpen && <FaceSheet c={c} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
       {honor && !recHit && <HonorOverlay honor={honor} name={c.name || 'Guest'} onClose={() => setHonor(null)} />}
       <div className="ag-screen-head">
         <div className="cr-head">
-          <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
+          {/* his face (tap: change it), his club's logo on its corner */}
+          <button type="button" className="cr-head-face" onClick={() => { setFaceOpen(true); sfx('tap') }} aria-label="Change his face">
+            <CareerFace c={c} size={64} />
+            <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
+            <span className="cr-head-edit">EDIT</span>
+          </button>
           {/* the team, the player (his name, not the account's look), then where he is in it */}
           <div className="cr-head-txt">
             <span className="ag-eyebrow cr-head-team">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()}</span>

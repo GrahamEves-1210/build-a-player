@@ -3,7 +3,8 @@
 // run of games, and the postseason series by series. Loaded only for a baseball career (AppCareer.jsx lazy-loads
 // them), so football, basketball and soccer never download them. The player is always his own name, never "You".
 import { useMemo, useState } from 'react'
-import { sportOf, openTalks, playoffRound, combinePos, gameCast, lineup, depthChart, cardOdds, gradeOf, ovrGradeVal, FACE_RATING } from '../../lib/career'
+import { sportOf, openTalks, playoffRound, combinePos, gameCast, lineup, depthChart, cardOdds, gradeOf, ovrGradeVal } from '../../lib/career'
+import { careerFaceUrl } from '../../lib/careerFace'
 import { sfx } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck, IconRing } from './icons'
 import { Analytics, CareerGame, honorsOf, fmt } from './AppCareer'
@@ -171,7 +172,7 @@ export function BaseballLineup({ c }) {
   const S = sportOf(c), X = bx()
   const dc = useMemo(() => depthChart(c), [c.roster, c.ovr, c.name, c.lastRole, c.contract, c.pos, c.active?.k]) // eslint-disable-line react-hooks/exhaustive-deps
   const u = X.usageOf(c)
-  const face = c.build?.[FACE_RATING[c.pos]]?.photo ?? null
+  const face = careerFaceUrl(c, true)   // (his own drawn face: lib/careerFace.js)
   const Row = ({ p, tag }) => (
     <span className={`crl-depth${p.you ? ' is-you' : ''}`}>
       <i>{tag}</i>

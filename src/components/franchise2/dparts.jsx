@@ -31,17 +31,17 @@ export const money = v => (v >= 10 ? `$${Math.round(v)}M` : `$${(Math.round(v * 
 export const posText = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p === 'db' ? GROUP[groupOf(p)].label : POS_LABEL[p.p])
 // a man's face: his photo, a build's own, or (a man the game made up) his drawn face; a real man without a photo:
 // his initials
-export function faceFor(F, p, s) {
+export function faceFor(F, p, s, small = false) {
   if (!p) return null
-  const ph = photoOf(F, p, TEAM[s]?.color)
+  const ph = photoOf(F, p, TEAM[s]?.color, small)
   if (ph) return ph
-  if (p.b == null && !realOf(p.p, p.n)) return genFace(p, TEAM[s]?.color)
+  if (p.b == null && !realOf(p.p, p.n)) return genFace(p, TEAM[s]?.color, small)
   return null
 }
 // a man as a lower-third (his team's colours, his number, his OVR; a build: his owner's name)
 export function Man({ F, p, s, owner, size = 'm', line, stat, onClick, className = '', delay = 0 }) {
   if (!p) return null
-  return <LowerThird name={p.n} pos={posText(p)} num={jersey(F, p)} ovr={stat ? null : p.o} stat={stat} photo={faceFor(F, p, s)} team={s} mine={p.b != null ? owner || 'GM' : null} line={line} size={size} onClick={onClick} className={className} delay={delay} />
+  return <LowerThird name={p.n} pos={posText(p)} num={jersey(F, p)} ovr={stat ? null : p.o} stat={stat} photo={faceFor(F, p, s, size === 's')} team={s} mine={p.b != null ? owner || 'GM' : null} line={line} size={size} onClick={onClick} className={className} delay={delay} />
 }
 // a deal in a few words: $12.5M · 3 YRS
 export const dealText = p => (p.y > 0 ? `${money(p.$)} · ${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` : 'DEAL UP')

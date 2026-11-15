@@ -703,7 +703,7 @@ export default function BaseballApp() {
     const { newCareer, saveCareer, ensureSport } = await import('../lib/career')
     await ensureSport?.('baseball')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'baseball', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games }), sandbox: !!isCustomMode }
+    const c = { ...newCareer({ sport: 'baseball', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games }), sandbox: !!isCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, build, isCustomMode, position])
@@ -1119,7 +1119,7 @@ export default function BaseballApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="baseball" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games) => { careerNew.current = { slot, name, games }; startCareerBuild(pos) }} onClose={backHome} />
+        <CareerIntro sport="baseball" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, _start, _spot, face) => { careerNew.current = { slot, name, games, face }; startCareerBuild(pos) }} onClose={backHome} />
       </Suspense>
     )
   }

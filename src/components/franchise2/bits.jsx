@@ -22,15 +22,16 @@ const initials = n => String(n || '?').split(' ').filter(Boolean).slice(0, 2).ma
 
 // A man's face: his ESPN headshot, a build's own face (the one his player picked: never a real man's photo), a made-up
 // man's drawn face, or his initials. color: the jersey under a drawn face (a build: his team's, the player's by default)
-export function photoOf(F, p, color) {
+// small: a list's face (64 px and under), the lighter drawing
+export function photoOf(F, p, color, small = false) {
   if (!p) return null
-  if (p.b != null) return buildFaceUrl(F.builds[p.b], color ?? TEAM[F.team]?.color)
+  if (p.b != null) return buildFaceUrl(F.builds[p.b], color ?? TEAM[F.team]?.color, small ? 'sm' : 'full')
   const id = photoId(p)
-  return id ? nflHeadshot(id) : genFace(p, color)
+  return id ? nflHeadshot(id) : genFace(p, color, small)
 }
 export function Face({ F, p, src, name, size = 44, mine, col }) {
   const [bad, setBad] = useState(false)
-  const url = bad ? null : src ?? photoOf(F, p)
+  const url = bad ? null : src ?? photoOf(F, p, undefined, size <= 64)
   const own = mine ?? p?.b != null
   const college = col ? CFB_TEAM_BY_SHORT[col] : null
   return (

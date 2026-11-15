@@ -806,7 +806,7 @@ export default function App() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('./lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: careerNew.current.start === 'college' ? 'college' : 'draft' }), sandbox: !!isCustomMode }
+    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: careerNew.current.start === 'college' ? 'college' : 'draft' }), sandbox: !!isCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -1864,7 +1864,7 @@ export default function App() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start) => { careerNew.current = { slot, name, games, start }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, _spot, face) => { careerNew.current = { slot, name, games, start, face }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
