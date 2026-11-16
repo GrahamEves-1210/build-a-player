@@ -273,11 +273,12 @@ export { faceSvg, VIEWS }
 // ── Coaches ──────────────────────────────────────────────────────────────────
 // A coach is a grown man from his mid-thirties to his late sixties, the way NFL head coaches run (the young ones in
 // modern cuts and beards, no grey; grey only from his late forties, white past sixty; lines with the years; glasses
-// more often as he ages), a visor or a team cap with its mark, a team polo or a quarter-zip. The backgrounds of the
+// more often as he ages), a plain visor or a team cap with its logo, a team polo or a quarter-zip. The backgrounds of the
 // NFL's coaching staffs: mostly white, about a fifth Black, a few others.
 //   coachLook(key, { g, ag })         the look (g: his background if it's known, ag: his age, greyer every year)
 //   coachUrl(key, { g, ag, color, small, mark })   the same as a data: URL (cached; small: the lighter drawing for
-//                                           64 px and under; mark: his team's mark on a cap or visor, { t, c })
+//                                           64 px and under; mark: his team's logo for his cap and chest,
+//                                           coachFace.js teamMark)
 export const COACH_MIX = [['w', 74], ['b', 20], ['l', 4], ['p', 2]]
 const COACH_HAIR = {
   w: [['crew', 24], ['sidepart', 20], ['textured', 12], ['fade', 8], ['receding', 14], ['balding', 8], ['buzz', 8], ['shaved', 6]],
@@ -327,7 +328,7 @@ const CCACHE = new Map()
 export function coachUrl(key, { g = null, ag = null, color = '#d2aa4f', small = false, mark = null } = {}) {
   // (the face changes only as he ages: drawn at his age in steps, the steps where his hair greys and his lines come)
   const a = ag == null ? null : ag < 40 ? 36 : ag < 42 ? 40 : ag < 47 ? 44 : ag < 54 ? 50 : ag < 61 ? 57 : 64
-  const k = `${key}|${g ?? ''}|${a ?? ''}|${ck(color)}|${small ? 1 : 0}|${mark?.t ?? ''}${mark?.c ?? ''}`
+  const k = `${key}|${g ?? ''}|${a ?? ''}|${ck(color)}|${small ? 1 : 0}|${mark?.id ?? ''}`
   let u = CCACHE.get(k)
   if (!u) {
     u = toUrl(faceSvg(coachLook(key, { g, ag: a }), { color, view: small ? 'sm' : 'full', mark }))

@@ -8,6 +8,7 @@
 import { coachUrl, coachFaceUrl } from '../../lib/franchise2/faces'
 import { TEAM } from '../../lib/franchise2'
 import { teamKit } from '../../lib/franchise2/kits'
+import { CAP_LOGOS } from '../../lib/franchise2/capLogos'
 
 // (the file may not be there yet: the glob finds it when it is)
 const FILES = import.meta.glob('../../data/coach-headshots.json', { eager: true, import: 'default' })
@@ -40,12 +41,22 @@ export function coachPhoto(c, team, small = false) {
   if (!c.g) { const s = shotOf(name); if (s) return s }
   return drawnCoach(c, color, small, mark)
 }
-// his team's mark on a drawn cap or visor: the team's initial, in its second colour when that stands off the first,
-// else white (or near-black on a light colour); faces.js draws it as one clean letter, never a traced logo
-const lumOf = h => { const x = parseInt(String(h ?? '#000000').slice(1, 7), 16); return 0.299 * ((x >> 16) & 255) + 0.587 * ((x >> 8) & 255) + 0.114 * (x & 255) }
+// his team's logo on a drawn cap and on his chest (owner 11-16: "put the logo not a letter"; never on a visor): a small
+// copy of the team's logo (capLogos.js, made by scripts/franchise2/cap-logos.mjs) the drawing embeds; outlined in white
+// (or near-black on a light colour) when its own colours would vanish on the team-coloured cloth
+const rgbOf = h => { const x = parseInt(String(h ?? '#000000').slice(1, 7), 16); return [(x >> 16) & 255, (x >> 8) & 255, x & 255] }
+const lumOf = h => { const [r, g, b] = rgbOf(h); return 0.299 * r + 0.587 * g + 0.114 * b }
+const MARKS = new Map()
 export function teamMark(team) {
-  const t = TEAM[team]
-  if (!t) return null
-  const c = Math.abs(lumOf(t.color2) - lumOf(t.color)) > 70 ? t.color2 : lumOf(t.color) > 170 ? '#14161b' : '#ffffff'
-  return { t: t.short[0], c }
+  if (MARKS.has(team)) return MARKS.get(team)
+  const L = CAP_LOGOS[team], t = TEAM[team]
+  let m = null
+  if (L && t) {
+    const [src, w, h, avg] = L, cloth = teamKit(team)?.c1 ?? t.color
+    const a = rgbOf(avg), b = rgbOf(cloth)
+    const o = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 50 ? (lumOf(cloth) > 150 ? '#14161b' : '#ffffff') : null
+    m = { id: team, src, w, h, o }
+  }
+  MARKS.set(team, m)
+  return m
 }
