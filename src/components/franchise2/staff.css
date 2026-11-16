@@ -91,3 +91,35 @@
 .fst-g:not(.fst-g--full) .fst-gc { flex-direction: column; gap: 2px; height: auto; min-height: 40px; padding: 4px 2px; }
 .fst-g:not(.fst-g--full) .fst-gc small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-text); text-transform: none; letter-spacing: 0; line-height: 1.1; text-align: center; }
 .fst-gc.is-on small { color: var(--tct, #fff) !important; }
+
+/* who calls his side (CallPick, the interview's offer): two men side by side, what each does under the name */
+.fst-calls { display: grid; gap: 6px; }
+.fst-call--two { grid-template-columns: 1fr 1fr; }
+.fst-call button em { grid-column: 1 / 3; margin-top: 4px; font-style: normal; font-family: var(--fk-b); font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.fst-call button.is-on em { color: inherit; }
+.fst-other { margin: 0; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .2px; color: var(--fk-mute); }
+.fst-other i { font-style: normal; font-family: var(--fk-d); font-size: 17px; }
+.fst-mine { display: grid; gap: 6px; }
+.fst-mine .fst-fire { margin-top: 2px; }
+@media (min-width: 900px) { .fst-call--two { grid-template-columns: 1fr 1fr; } }
+
+/* a logo that wouldn't load: the team's letters on its colour */
+.fst-mark { display: inline-grid; place-items: center; flex: none; background: var(--tc); color: var(--tct); font-family: var(--fk-d); letter-spacing: .5px; }
+
+/* the offer's result: what happened, why, then each team's offer */
+.fst-verdict { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; background: var(--fk-g1); box-shadow: inset 5px 0 0 var(--tca, var(--fk-g4)); }
+.fst-verdict > span { display: grid; gap: 3px; min-width: 0; }
+.fst-verdict small { font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-dim); }
+.fst-verdict b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; line-height: 1.08; }
+.fst-verdict em { font-style: normal; font-family: var(--fk-b); font-size: 15px; line-height: 1.3; color: var(--fk-text); }
+.fst-verdict > .fk-stamp { font-size: 18px; }
+.fst-offers { display: grid; gap: 3px; }
+.fst-offer { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 8px 10px; background: var(--fk-g1); animation: fk-in .28s var(--d, 0ms) ease-out both; }
+.fst-offer-t { display: grid; gap: 2px; min-width: 0; }
+.fst-offer-t b { display: flex; align-items: center; gap: 8px; font-family: var(--fk-d); font-weight: 400; font-size: 19px; line-height: 1.05; }
+.fst-offer-t small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
+.fst-offer.is-mine { box-shadow: inset 4px 0 0 var(--tc); background: var(--fk-g2); }
+.fst-offer.is-win { box-shadow: inset 0 0 0 2px #fff; }
+.fst-offer.is-mine.is-win { box-shadow: inset 4px 0 0 var(--tc), inset 0 0 0 2px #fff; }
+.fst-offer-pick { padding: 4px 8px; background: #fff; color: #0b0c0e; font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .2px; white-space: nowrap; }
+:root.bap-reduce-motion .fst-offer { animation: none; }
