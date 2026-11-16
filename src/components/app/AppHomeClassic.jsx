@@ -450,7 +450,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
 
         {/* Modes — the website's cards */}
         <div className="ag-modes">
-          <ModeCard title={isSoccer ? SOCCER_POOL.current.label : 'CURRENT'} badge={isSoccer ? 'Top five leagues' : `Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
+          <ModeCard title={isSoccer ? SOCCER_POOL.current.label : 'CURRENT'} badge={isSoccer ? '36 clubs' : `Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
             tone={isBucket ? 'orange' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : null} />
           <ModeCard tone="gold" title={isSoccer ? SOCCER_POOL.alltime.label : 'ALL-TIME'} badge={isSoccer ? '48 nations' : 'Draft the Greats'} mark={IconCrown} delay="270ms" onClick={() => start('all-time')}
             isNew={isBucket || NEW_ALLTIME.has(position)} />

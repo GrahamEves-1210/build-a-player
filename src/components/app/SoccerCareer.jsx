@@ -7,7 +7,7 @@ import { IconSoccer, IconTrophy } from './icons'
 import { spectrumColor } from '../../lib/gradeColors'
 
 // Profile → SOCCER: the player's soccer career, the way the BASKETBALL section shows basketball's
-// (ProfilePage's prf- cards). TOP DIVISIONS and WORLD CUP side by side, like Current and All-Time.
+// (ProfilePage's prf- cards). CHAMPIONS LEAGUE and WORLD CUP side by side, like Current and All-Time.
 // Real football numbers: W-D-L, goals, assists, the average match rating, titles, Golden Boots and
 // the Ballon d'Or (the World Cup's Golden Ball). A row's columns: lib/soccerAwards.js.
 
@@ -61,7 +61,7 @@ export default function SoccerCareer({ user, show = true }) {
   return (
     <>
       <div className={`prf-cgame-toggle ${anim}`} style={{ animationDelay: '0.25s' }}>
-        {[['current', 'Top Divisions'], ['alltime', 'World Cup']].map(([id, label]) => (
+        {[['current', 'Champions League'], ['alltime', 'World Cup']].map(([id, label]) => (
           <button key={id} className={`prf-cgame-btn${pool === id ? ' active' : ''}`} onClick={() => setPool(id)}>
             <div className="prf-cgame-icon-wrap"><IconSoccer size={16} />{id === 'alltime' && <span className="prf-cgame-star">★</span>}</div>
             <span className="prf-cgame-label">{label}</span>
@@ -72,7 +72,7 @@ export default function SoccerCareer({ user, show = true }) {
       {!c && (
         <div className={`prf-card prf-card-empty ${anim}`} style={{ animationDelay: '0.3s' }}>
           <div className="prf-card-hd"><span className="prf-card-title">Career</span></div>
-          <div className="prf-empty-msg">{rows === null ? 'Couldn\'t load soccer seasons.' : `No ${wc ? 'World Cup' : 'Top Divisions'} seasons yet.`}</div>
+          <div className="prf-empty-msg">{rows === null ? 'Couldn\'t load soccer seasons.' : `No ${wc ? 'World Cup' : 'Champions League'} seasons yet.`}</div>
         </div>
       )}
 

@@ -38,12 +38,13 @@ console.log('data:', JSON.stringify(used))
 
 const T = S.SOCCER_TRAITS
 const mk = vals => Object.fromEntries(T.map((t, i) => [t, { type: t, val: vals[i] }]))
-//                          fin sp hd dr ft lu pa st ob co
+// (the nine since 11-16; the same four builds as the ten were, dribbling = dribbling and first touch averaged)
+//                          pa fin sp dr pas pos hd sz co
 const BUILDS = {
-  elite: mk([10, 9, 8, 7, 9, 7, 9, 8, 10, 9]),
-  good: mk([8, 8, 7, 7, 8, 7, 8, 7, 8, 7]),
-  average: mk([6, 6, 6, 6, 6, 6, 6, 6, 6, 6]),
-  poor: mk([4, 4, 4, 3, 4, 4, 4, 4, 4, 4]),
+  elite: mk([9, 10, 9, 8, 7, 10, 8, 8, 9]),
+  good: mk([8, 8, 8, 8, 7, 8, 7, 7, 7]),
+  average: mk([6, 6, 6, 6, 6, 6, 6, 6, 6]),
+  poor: mk([4, 4, 4, 3, 4, 4, 4, 4, 4]),
 }
 for (const [k, b] of Object.entries(BUILDS)) console.log(`${k.padEnd(8)} OVR ${S.calcSoccerOVR(b, T)}  ${S.getSoccerArchetype(S.calcSoccerOVR(b, T), b, T)}`)
 
@@ -75,7 +76,8 @@ function check(r, tag) {
     if (gf !== ga) errs.push(`${tag} table gf ${gf} != ga ${ga}`)
     const w = r.games.filter(g => g.won).length, d = r.games.filter(g => g.drawn).length
     if (w !== r.wins || d !== r.draws || r.points !== 3 * r.wins + r.draws) errs.push(`${tag} record mismatch`)
-    if (r.games.length !== 2 * (t.length - 1)) errs.push(`${tag} ${r.games.length} league games for ${t.length} clubs`)
+    // (a pending season, a Champions League club from outside the five leagues, has no table)
+    if (r.ucl !== 'pending' && r.games.length !== 2 * (t.length - 1)) errs.push(`${tag} ${r.games.length} league games for ${t.length} clubs`)
   }
 }
 
@@ -189,4 +191,19 @@ console.log(`career team (off 8, def 7) at ${WEAK.short}: pos ${car.seed}, att $
 console.log(`10-scale: ${JSON.stringify(S.soccerTeam10(TOP))} ${JSON.stringify(S.soccerTeam10(WEAK))} · lift at ${WEAK.short}: elite ${JSON.stringify(S.soccerStrikerLift(BUILDS.elite, WEAK))}, poor ${JSON.stringify(S.soccerStrikerLift(BUILDS.poor, WEAK))}`)
 const nr = S.runSoccerSimulation(BUILDS.good, T, TOP, 'current', null)
 console.log(`no seed runs: ${nr.games.length} league games`)
+// a Champions League club from outside the five leagues (the wheel since 11-16): a plain season, flagged pending
+// (only with the real data: the fixture has no such clubs)
+const PEND = (D.clubs.UCL_CLUBS ?? []).filter(c => S.soccerPendingClub?.(c.short)).map(c => c.short)
+for (const short of PEND) {
+  const pr = S.runSoccerSimulation(BUILDS.good, T, { short }, 'current', 'pend-' + short)
+  check(pr, 'pending ' + short)
+  if (pr.ucl !== 'pending' || pr.team.short !== short || pr.standings.length || pr.games.some(g => g.opponent !== 'OPP') || pr.cup || pr.europe) errs.push(`pending ${short}: not a plain flagged season`)
+}
+// a Serie A and a Ligue 1 club play their own league (the engine plays all five; Career's three are untouched)
+for (const short of (D.clubs.UCL_CLUBS ? ['INT', 'PSG'] : [])) {
+  const r5 = S.runSoccerSimulation(BUILDS.good, T, { short }, 'current', 'five-' + short)
+  check(r5, 'five ' + short)
+  if (r5.team.short !== short || r5.ucl || !r5.standings.some(x => x.short === short)) errs.push(`${short}: not in its own league`)
+}
+console.log(`Champions League clubs outside the five leagues: ${PEND.length} play a pending season (${PEND.join(' ')})`)
 console.log(errs.length ? `ERRORS (${errs.length}):\n${errs.slice(0, 20).join('\n')}` : 'every line adds up: OK')

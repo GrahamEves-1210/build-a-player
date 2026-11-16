@@ -3,13 +3,15 @@
 import { SOCCER_CLUBS } from './soccer-clubs.js'
 import { WC_NATIONS } from './soccer-nations.js'
 
-export const ST_TYPES = ['finishing', 'shotPower', 'heading', 'dribbling', 'firstTouch', 'linkUp', 'pace', 'strength', 'offBall', 'composure']
+export const ST_TYPES = ['pace', 'finishing', 'shotPower', 'dribbling', 'passing', 'positioning', 'heading', 'size', 'composure']
 export const ST_CATEGORIES = [
-  { id: 'skills', label: 'Skills', types: ['finishing', 'shotPower', 'heading', 'dribbling', 'firstTouch', 'linkUp'] },
-  { id: 'physical', label: 'Physical', types: ['pace', 'strength'] },
-  { id: 'mental', label: 'Mental', types: ['offBall', 'composure'] },
+  { id: 'skills', label: 'Skills', types: ['finishing', 'shotPower', 'dribbling', 'passing', 'heading'] },
+  { id: 'physical', label: 'Physical', types: ['pace', 'size'] },
+  { id: 'mental', label: 'Mental', types: ['positioning', 'composure'] },
 ]
-const A = arr => Object.fromEntries(ST_TYPES.map((t, i) => [t, arr[i]]))
+// (the rows below keep the ten old grades in their old order; A turns them into the nine the way the data did:
+// dribbling and first touch averaged, link-up -> passing, off-ball -> positioning, strength -> size)
+const A = a => ({ pace: a[6], finishing: a[0], shotPower: a[1], dribbling: Math.round((a[3] + a[4]) / 2), passing: a[5], positioning: a[8], heading: a[2], size: a[7], composure: a[9] })
 //                     fin sp hd dr ft lu pa st ob co
 const NAMED = [
   ['Erling Haaland', 'MCI', 'NOR', 26, [11, 10, 9, 7, 8, 6, 10, 11, 11, 10]],
@@ -77,3 +79,4 @@ export const WC_STRIKERS = WC_NATIONS.flatMap(n => {
   const extra = NATION_NAMED.filter(([nm, nat]) => nat === n.short && nm !== first.name).map(([nm, nat, age, a]) => ({ name: nm, short: nm.split(' ').slice(-1)[0], team: nat, nation: nat, number: 10, height: 70, weight: 160, age, foot: 'L', skin: '#b87b60', espn: null, starter: true, position: 'ST', attrs: A(a) }))
   return [{ ...first, role: 'ST' }, ...extra.map(x => ({ ...x, role: 'RW' })), gen(`${n.name} Backup`, n.short, n.short, lvl - 1.2, 20, false), gen(`${n.name} Eight`, n.short, n.short, lvl - 0.8, 24, false, 'CM')]
 })
+export const SOCCER_ALL_STRIKERS = SOCCER_STRIKERS

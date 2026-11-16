@@ -204,8 +204,8 @@ function SoccerSplash({ onStart }) {
         <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0 }}>
           <div className="splash-modes">
             <button className="splash-mode-classic" onClick={() => onStart('classic', 'st')}>
-              <div className="smode-title">Top Divisions</div>
-              <div className="smode-badge">Premier League, La Liga, Bundesliga</div>
+              <div className="smode-title">Champions League</div>
+              <div className="smode-badge">The 36 clubs of 2026-27</div>
               <div className="smode-cta">START DRAFTING
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </div>

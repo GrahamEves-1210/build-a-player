@@ -1,4 +1,9 @@
-// Top Divisions: the 96 clubs of the 2026-27 Premier League, La Liga, Serie A, Bundesliga and Ligue 1.
+// Top Divisions: the 96 clubs of the 2026-27 Premier League, La Liga, Serie A, Bundesliga and Ligue 1, and the 15
+// Champions League clubs from outside those five leagues (UCL_ONLY below).
+// Two lists come out of it (the owner, 2026-11-16):
+//   UCL_CLUBS     the wheel and the card binder: the 36 clubs of the 2026-27 Champions League league phase.
+//   SOCCER_CLUBS  Career (and Squad Builder): the domestic leagues it plays in, SOCCER_LIVE_LEAGUES below. Unchanged.
+//   SOCCER_SIM_CLUBS  every club the season engine plays a league season for (all five leagues).
 // Club list, ESPN team ids (espn) and logos: ESPN soccer API (site.api.espn.com .../soccer/{league}/teams), 2026-27.
 // short: a 3-character code unique across all 96 clubs (and not a World Cup nation code). Bundesliga's own codes keep
 //   their digits for Leverkusen (B04), Mainz (M05) and Schalke (S04); Espanyol is RCD, Parma PRM, Monza MNZ, Brest BST,
@@ -13,12 +18,21 @@
 //         att = ovr + 3 x (zAttack - zDefence) / 2, def = ovr - the same. A balanced club has att = def = ovr.
 //   2025-26 finishes and the 2026-27 table so far (ESPN standings) are inside both Opta and the xG rates.
 
+// (the five leagues; the Champions League clubs from elsewhere carry their own league id, OTHER_LEAGUES)
 const ALL_LEAGUES = [
   { id: 'eng.1', name: 'Premier League', short: 'EPL', country: 'England' },
   { id: 'esp.1', name: 'La Liga', short: 'LIGA', country: 'Spain' },
   { id: 'ita.1', name: 'Serie A', short: 'SA', country: 'Italy' },
   { id: 'ger.1', name: 'Bundesliga', short: 'BUN', country: 'Germany' },
   { id: 'fra.1', name: 'Ligue 1', short: 'L1', country: 'France' },
+]
+export const OTHER_LEAGUES = [
+  { id: 'por.1', name: 'Liga Portugal', country: 'Portugal' }, { id: 'ned.1', name: 'Eredivisie', country: 'Netherlands' },
+  { id: 'bel.1', name: 'Belgian Pro League', country: 'Belgium' }, { id: 'tur.1', name: 'Süper Lig', country: 'Turkey' },
+  { id: 'nor.1', name: 'Eliteserien', country: 'Norway' }, { id: 'ukr.1', name: 'Ukrainian Premier League', country: 'Ukraine' },
+  { id: 'cze.1', name: 'Czech First League', country: 'Czechia' }, { id: 'svk.1', name: 'Slovak First League', country: 'Slovakia' },
+  { id: 'gre.1', name: 'Super League Greece', country: 'Greece' }, { id: 'aut.1', name: 'Austrian Bundesliga', country: 'Austria' },
+  { id: 'aze.1', name: 'Azerbaijan Premier League', country: 'Azerbaijan' },
 ]
 
 const ALL_CLUBS = [
@@ -123,11 +137,30 @@ const ALL_CLUBS = [
   { short: 'STR', name: "Strasbourg", league: 'fra.1', color: '#009FE3', color2: '#FFFFFF', espn: 180, att: 85, def: 84, ovr: 85 },
   { short: 'TOU', name: "Toulouse", league: 'fra.1', color: '#5B2B8C', color2: '#FFFFFF', espn: 179, att: 84, def: 86, ovr: 85 },
   { short: 'TRO', name: "Troyes", league: 'fra.1', color: '#1B3F8E', color2: '#FFFFFF', espn: 170, att: 80, def: 81, ovr: 80 },
+  // Champions League clubs outside the five leagues (2026-27 league phase). ovr: Opta Power Rankings 2026-11-16, as
+  // above; att / def split the same way from FotMob's 2026-27 and 2025-26 league xG for and against (70/30 with
+  // goals; Shakhtar and Sabah, whose leagues FotMob gives no xG for, from goals only). Codes as the season
+  // engine already used them for Europe's other sides (utils/soccerSimulation.js EURO_EXTRA): FCP, CLB, SPO...
+  { short: 'FCP', name: "Porto", league: 'por.1', color: '#003C8F', color2: '#FFFFFF', espn: 437, att: 91, def: 91, ovr: 91 },
+  { short: 'CLB', name: "Club Brugge", league: 'bel.1', color: '#0080C6', color2: '#000000', espn: 570, att: 94, def: 91, ovr: 92 },
+  { short: 'SPO', name: "Sporting CP", league: 'por.1', color: '#00805A', color2: '#FFFFFF', espn: 2250, att: 93, def: 90, ovr: 92 },
+  { short: 'PSV', name: "PSV Eindhoven", league: 'ned.1', color: '#ED1C24', color2: '#FFFFFF', espn: 148, att: 91, def: 88, ovr: 90 },
+  { short: 'BOD', name: "Bodø/Glimt", league: 'nor.1', color: '#FFD700', color2: '#000000', espn: 2980, att: 91, def: 89, ovr: 90 },
+  { short: 'GAL', name: "Galatasaray", league: 'tur.1', color: '#A90432', color2: '#FDB912', espn: 432, att: 89, def: 88, ovr: 89 },
+  { short: 'FEN', name: "Fenerbahçe", league: 'tur.1', color: '#163962', color2: '#FFED00', espn: 436, att: 88, def: 88, ovr: 88 },
+  { short: 'SHA', name: "Shakhtar Donetsk", league: 'ukr.1', color: '#F26522', color2: '#000000', espn: 493, att: 85, def: 83, ovr: 84 },
+  { short: 'FEY', name: "Feyenoord", league: 'ned.1', color: '#E30613', color2: '#FFFFFF', espn: 142, att: 87, def: 87, ovr: 87 },
+  { short: 'SLA', name: "Slavia Prague", league: 'cze.1', color: '#D7141A', color2: '#FFFFFF', espn: 494, att: 89, def: 88, ovr: 89 },
+  { short: 'SBR', name: "Slovan Bratislava", league: 'svk.1', color: '#7FC1E8', color2: '#FFFFFF', espn: 521, att: 81, def: 81, ovr: 81 },
+  { short: 'AEK', name: "AEK Athens", league: 'gre.1', color: '#FFD100', color2: '#000000', espn: 887, att: 87, def: 86, ovr: 87 },
+  { short: 'LSK', name: "LASK", league: 'aut.1', color: '#000000', color2: '#FFFFFF', espn: 4411, att: 86, def: 83, ovr: 85 },
+  { short: 'VIK', name: "Viking", league: 'nor.1', color: '#00205B', color2: '#FFFFFF', espn: 510, att: 88, def: 87, ovr: 88 },
+  { short: 'SAB', name: "Sabah", league: 'aze.1', color: '#000000', color2: '#E4007C', espn: 21922, att: 84, def: 82, ovr: 83 },
 ]
 
-// What the game deals from (the owner, 2026-11-11): the Premier League, La Liga and the Bundesliga. Serie A and Ligue 1
+// What Career deals from (the owner, 2026-11-11): the Premier League, La Liga and the Bundesliga. Serie A and Ligue 1
 // stay in the lists above, switched off: add their ids here to bring them back (their players come back with them,
-// data/soccer-strikers.js).
+// data/soccer-strikers.js). Since 11-16 the wheel and the cards deal from UCL_CLUBS below instead.
 export const SOCCER_LIVE_LEAGUES = ['eng.1', 'esp.1', 'ger.1']
 // Spin weight (w): the wheel favours the Premier League and La Liga's good sides (87 and up: Barcelona, Real Madrid,
 // Atletico, Betis, Villarreal, Real Sociedad). Three times a Bundesliga club's or a lesser La Liga club's chance:
@@ -136,3 +169,25 @@ export const SOCCER_GOOD_LIGA = 87
 const spinWeight = c => (c.league === 'eng.1' || (c.league === 'esp.1' && c.ovr >= SOCCER_GOOD_LIGA) ? 3 : 1)
 export const SOCCER_LEAGUES = ALL_LEAGUES.filter(l => SOCCER_LIVE_LEAGUES.includes(l.id))
 export const SOCCER_CLUBS = ALL_CLUBS.filter(c => SOCCER_LIVE_LEAGUES.includes(c.league)).map(c => ({ ...c, w: spinWeight(c) }))
+
+// The season engine plays every league season in the five leagues (so a Champions League club from Serie A or Ligue 1
+// plays its real league), whatever Career deals from.
+export const SOCCER_SIM_LEAGUES = ALL_LEAGUES
+export const SOCCER_SIM_CLUBS = ALL_CLUBS.filter(c => ALL_LEAGUES.some(l => l.id === c.league))
+// every club in the data, for lookups (logos, names, colours) by code
+export const SOCCER_ALL_CLUBS = ALL_CLUBS
+
+// ── The Champions League: the wheel and the cards (the owner, 2026-11-16) ──────────────────────────────────────
+// The 36 clubs of the 2026-27 league phase, as UEFA lists them (uefa.com; SI's ranking of the 36 and ESPN's
+// uefa.champions team list name the same 36). Order: SI's ranking, best first.
+export const UCL_SHORTS = ['PSG', 'ARS', 'FCB', 'BAR', 'MCI', 'RMA', 'INT', 'ATM', 'MUN', 'LIV', 'NAP', 'BVB', 'AVL', 'ROM', 'FCP', 'CLB', 'SPO', 'PSV',
+  'LIL', 'RBL', 'VIL', 'BOD', 'GAL', 'COM', 'BET', 'RCL', 'FEN', 'SHA', 'VFB', 'FEY', 'SLA', 'SBR', 'AEK', 'LSK', 'VIK', 'SAB']
+// Spin weight: the giants a kid knows come up most. The 12 biggest names 7, the well-known sides 2.5, the rest 1, and
+// the four smallest (Slovan, LASK, Viking, Sabah) 0.5. A club's chance is its weight over the total (124; lib/rng.js
+// seededTeamOrder): 68% of spins land on the top 12 (1 in 18 on each), 24% on the next 12, 1 in 250 on Sabah.
+export const UCL_GIANTS = ['RMA', 'BAR', 'MCI', 'LIV', 'ARS', 'FCB', 'PSG', 'MUN', 'INT', 'ATM', 'BVB', 'NAP']
+const UCL_KNOWN = ['AVL', 'ROM', 'FCP', 'SPO', 'PSV', 'RBL', 'GAL', 'FEN', 'BET', 'VIL', 'LIL', 'COM']
+const UCL_SMALL = ['SBR', 'LSK', 'VIK', 'SAB']
+const uclWeight = s => (UCL_GIANTS.includes(s) ? 7 : UCL_KNOWN.includes(s) ? 2.5 : UCL_SMALL.includes(s) ? 0.5 : 1)
+const CLUB_OF = new Map(ALL_CLUBS.map(c => [c.short, c]))
+export const UCL_CLUBS = UCL_SHORTS.map(s => ({ ...CLUB_OF.get(s), w: uclWeight(s), ucl: true }))

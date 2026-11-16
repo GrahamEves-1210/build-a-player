@@ -236,7 +236,7 @@ const MODES = {
   ...(K_LIVE ? { K: ['k-classic', 'k-all-time'] } : {}),      // K_LIVE: lib/kLive.js
 }
 const BUCKET_MODES = ['bucket-classic', 'bucket-all-time']
-// soccer: TOP DIVISIONS, then WORLD CUP (lib/soccerAwards.js)
+// soccer: CHAMPIONS LEAGUE (TOP DIVISIONS until 11-16), then WORLD CUP (lib/soccerAwards.js)
 const SOCCER_MODES = [SOCCER_MODES_DB.current, SOCCER_MODES_DB.alltime]
 // baseball: CURRENT, then ALL-TIME (lib/baseballAwards.js); batters and pitchers share the two modes (position 'bat' / 'pit')
 const BASEBALL_MODE_LIST = [BASEBALL_MODES_DB.current, BASEBALL_MODES_DB.alltime]
@@ -469,7 +469,7 @@ export function todayBoards() {
 // Blacktop's own choice: the total, or one size of game
 export const blacktopModes = () => [{ id: 'bt', label: 'Total' }, { id: 'bt1', label: '1v1' }, { id: 'bt2', label: '2v2' }, { id: 'bt3', label: '3v3' }]
 // Soccer's records: real football numbers, by pool (TOP DIVISIONS = 'soccer-classic', WORLD CUP = 'soccer-all-time')
-const TD = 'TOP DIVISIONS', WC = 'WORLD CUP'
+const TD = 'CHAMPIONS LEAGUE', WC = 'WORLD CUP'
 function soccerRecords() {
   return [
     { id: 'rings', label: 'Most League Titles', unit: 'TITLES', group: TD },

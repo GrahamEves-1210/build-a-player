@@ -63,7 +63,8 @@ async function loadNba() {
     photo: name => { const id = hs.default[name]; return id ? `${HEADSHOT_BASE}/nba/${id}.webp` : null },
   }
 }
-// Soccer (once it's live, SOCCER_LIVE): TOP DIVISIONS is its 'classic' pool, WORLD CUP its 'all-time' one.
+// Soccer (once it's live, SOCCER_LIVE): the CHAMPIONS LEAGUE is its 'classic' pool (the wheel's 36 clubs, since
+// 2026-11-16), WORLD CUP its 'all-time' one.
 // A card's tag is the player's real position (ST, LW, AM…), the build's is always ST
 async function loadSoccer() {
   const [pl, clubs, nations, hs] = await Promise.all([
@@ -71,11 +72,11 @@ async function loadSoccer() {
   ])
   const isNation = new Set(nations.WC_NATIONS.map(t => t.short))
   return {
-    pools: { st: { classic: pl.SOCCER_STRIKERS, 'all-time': pl.WC_STRIKERS } },
+    pools: { st: { classic: pl.UCL_STRIKERS, 'all-time': pl.WC_STRIKERS } },
     posLabel: { st: 'ST' },
     tagOf: p => p.role || 'ST',
-    poolSet: { classic: ['TOP DIVISIONS', 'Every player in the Premier League, La Liga and the Bundesliga'], 'all-time': ['WORLD CUP', 'Every player at the 2026 World Cup'] },
-    teams: [...clubs.SOCCER_CLUBS, ...nations.WC_NATIONS],
+    poolSet: { classic: ['CHAMPIONS LEAGUE', 'Every player in this season’s Champions League'], 'all-time': ['WORLD CUP', 'Every player at the 2026 World Cup'] },
+    teams: [...clubs.UCL_CLUBS, ...nations.WC_NATIONS],
     logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
     photo: (name, p) => { const f = p?.espn != null ? hs.default[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null },
   }

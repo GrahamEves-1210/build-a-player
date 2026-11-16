@@ -83,7 +83,7 @@ function shelves(h, st, ach) {
       // soccer's (SOCCER_LIVE: lib/soccerLive.js)
       ...(SOCCER_LIVE || boot.total > 0 ? [{ id: 'boot', art: 'boot', label: 'GOLDEN BOOT', title: 'Golden Boot', n: boot.total, rows: true,
         line: 'Finish as top scorer in your league, or at the World Cup.',
-        facts: [['Top Divisions', fmt(boot.current)], ['World Cup', fmt(boot.alltime)]].filter(([, v]) => v !== '0') }] : []),
+        facts: [['Champions League', fmt(boot.current)], ['World Cup', fmt(boot.alltime)]].filter(([, v]) => v !== '0') }] : []),
       ...(SOCCER_LIVE || ballon.total > 0 ? [{ id: 'ballon', art: 'ballon', label: 'BALLON D\'OR', title: 'Ballon d\'Or', n: ballon.total, rows: true,
         line: 'Win the Ballon d\'Or with a club season, or the Golden Ball at the World Cup.',
         facts: [['Ballon d\'Or', fmt(ballon.bdor)], ['Golden Ball', fmt(ballon.gball)]].filter(([, v]) => v !== '0') }] : []),

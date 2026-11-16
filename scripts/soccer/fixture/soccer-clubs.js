@@ -45,3 +45,8 @@ export const SOCCER_CLUBS = [
     ['PFC', 'Paris FC', 68, 69], ['FCM', 'Metz', 63, 66],
   ]),
 ]
+// (the engine's lists since 11-16: every club it plays, every club in the data; no Champions League clubs from elsewhere)
+export const SOCCER_SIM_LEAGUES = SOCCER_LEAGUES
+export const SOCCER_SIM_CLUBS = SOCCER_CLUBS
+export const SOCCER_ALL_CLUBS = SOCCER_CLUBS
+export const OTHER_LEAGUES = []

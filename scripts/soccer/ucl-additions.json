@@ -1,0 +1,4025 @@
+{
+ "made": "2026-11-16",
+ "cap": 8,
+ "clubs": {
+  "PSG": {
+   "fotmob": 9847,
+   "espn": 160,
+   "kept": [
+    {
+     "name": "Ferran Torres",
+     "fotmob": 881771
+    },
+    {
+     "name": "Khvicha Kvaratskhelia",
+     "fotmob": 900433
+    },
+    {
+     "name": "Ousmane Dembélé",
+     "fotmob": 692984
+    },
+    {
+     "name": "Vitinha",
+     "fotmob": 1061249
+    },
+    {
+     "name": "Warren Zaïre-Emery",
+     "fotmob": 1367615
+    }
+   ],
+   "added": [
+    {
+     "name": "Désiré Doué",
+     "fotmobName": "Désiré Doué",
+     "fotmob": 1339208,
+     "espn": 336388,
+     "number": 14,
+     "height": 71,
+     "weight": 172,
+     "age": 21,
+     "nationCode": "FRA",
+     "positions": "RW,LW,ST,CM",
+     "role": "RW",
+     "m27": 526,
+     "m26": 1356,
+     "value": 103136743,
+     "score": 0.886
+    },
+    {
+     "name": "João Neves",
+     "fotmobName": "João Neves",
+     "fotmob": 1342757,
+     "espn": 355061,
+     "number": 87,
+     "height": 69,
+     "weight": 146,
+     "age": 22,
+     "nationCode": "POR",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 528,
+     "m26": 1287,
+     "value": 90777079,
+     "score": 0.828
+    },
+    {
+     "name": "Maghnes Akliouche",
+     "fotmobName": "Maghnes Akliouche",
+     "fotmob": 1305618,
+     "espn": 329690,
+     "number": 11,
+     "height": 72,
+     "weight": 152,
+     "age": 24,
+     "nationCode": "FRA",
+     "positions": "RW,CAM,ST,CM",
+     "role": "RW",
+     "m27": 550,
+     "m26": 2410,
+     "value": 57422369,
+     "score": 0.78
+    }
+   ],
+   "nextUp": [
+    "Mika Godts (LW,LM, 351/2686 min, €48m)",
+    "Fabián Ruiz (CM,CDM, 502/1129 min, €23m)",
+    "Senny Mayulu (CM,ST,RB, 219/1681 min, €48m)",
+    "Beraldo (CM,CB, 248/1570 min, €27m)"
+   ]
+  },
+  "ARS": {
+   "fotmob": 9825,
+   "espn": 359,
+   "kept": [
+    {
+     "name": "Kai Havertz",
+     "fotmob": 749736
+    },
+    {
+     "name": "Declan Rice",
+     "fotmob": 654096
+    },
+    {
+     "name": "Bukayo Saka",
+     "fotmob": 961995
+    },
+    {
+     "name": "Martin Ødegaard",
+     "fotmob": 534670
+    },
+    {
+     "name": "Bruno Guimarães",
+     "fotmob": 850354
+    }
+   ],
+   "added": [
+    {
+     "name": "Eberechi Eze",
+     "fotmobName": "Eberechi Eze",
+     "fotmob": 818975,
+     "espn": 251400,
+     "number": 10,
+     "height": 70,
+     "weight": 161,
+     "age": 28,
+     "nationCode": "ENG",
+     "positions": "CAM,LW,CM,CDM",
+     "role": "AM",
+     "m27": 231,
+     "m26": 1900,
+     "value": 58385994,
+     "score": 10.638
+    },
+    {
+     "name": "Viktor Gyökeres",
+     "fotmobName": "Viktor Gyökeres",
+     "fotmob": 664500,
+     "espn": 258906,
+     "number": 14,
+     "height": 74,
+     "weight": 196,
+     "age": 28,
+     "nationCode": "SWE",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 181,
+     "m26": 2230,
+     "value": 59665200,
+     "score": 10.633
+    },
+    {
+     "name": "Christos Tzolis",
+     "fotmobName": "Christos Tzolis",
+     "fotmob": 1157237,
+     "espn": 303793,
+     "number": 17,
+     "height": 70,
+     "weight": 152,
+     "age": 24,
+     "nationCode": "GRE",
+     "positions": "LW,LM,CAM",
+     "role": "LW",
+     "m27": 518,
+     "m26": 3072,
+     "value": 48202284,
+     "score": 0.846
+    }
+   ],
+   "nextUp": [
+    "Myles Lewis-Skelly (CDM,LB,CM, 432/698 min, €73m)",
+    "Noni Madueke (RW,LW, 428/1217 min, €54m)",
+    "Martín Zubimendi (CDM,CM,RB, 100/3001 min, €70m)",
+    "Max Dowman (RW,CAM,CM, 19/153 min, €63m)"
+   ]
+  },
+  "FCB": {
+   "fotmob": 9823,
+   "espn": 132,
+   "kept": [
+    {
+     "name": "Harry Kane",
+     "fotmob": 194165
+    },
+    {
+     "name": "Jamal Musiala",
+     "fotmob": 1156141
+    },
+    {
+     "name": "Michael Olise",
+     "fotmob": 1029063
+    },
+    {
+     "name": "Aleksandar Pavlovic",
+     "fotmob": 1473580
+    },
+    {
+     "name": "Luis Díaz",
+     "fotmob": 860914
+    }
+   ],
+   "added": [
+    {
+     "name": "Joshua Kimmich",
+     "fotmobName": "Joshua Kimmich",
+     "fotmob": 460632,
+     "espn": 190161,
+     "number": 6,
+     "height": 70,
+     "weight": 163,
+     "age": 31,
+     "nationCode": "GER",
+     "positions": "CDM,RB",
+     "role": "DM",
+     "m27": 651,
+     "m26": 2280,
+     "value": 36659722,
+     "score": 0.804
+    },
+    {
+     "name": "Ismael Saibari",
+     "fotmobName": "Ismael Saibari",
+     "fotmob": 1180288,
+     "espn": 304572,
+     "number": 34,
+     "height": 73,
+     "weight": 179,
+     "age": 25,
+     "nationCode": "MAR",
+     "positions": "CAM,ST,LW,CM",
+     "role": "SS",
+     "m27": 362,
+     "m26": 2145,
+     "value": 59791439,
+     "score": 0.798
+    },
+    {
+     "name": "Lennart Karl",
+     "fotmobName": "Lennart Karl",
+     "fotmob": 1737700,
+     "espn": 402841,
+     "number": 42,
+     "height": 66,
+     "weight": 148,
+     "age": 18,
+     "nationCode": "GER",
+     "positions": "CAM,RW",
+     "role": "AM",
+     "m27": 321,
+     "m26": 1282,
+     "value": 64877724,
+     "score": 0.735
+    }
+   ],
+   "nextUp": [
+    "Tom Bischof (CDM,LB,CM,RB, 261/1294 min, €50m)",
+    "Serge Gnabry (CAM,LW, 159/1228 min, €12m)",
+    "Bara Ndiaye (CDM, 0/142 min, €10m)"
+   ]
+  },
+  "BAR": {
+   "fotmob": 8634,
+   "espn": 83,
+   "kept": [
+    {
+     "name": "Raphinha",
+     "fotmob": 696679
+    },
+    {
+     "name": "Lamine Yamal",
+     "fotmob": 1467236
+    },
+    {
+     "name": "Pedri",
+     "fotmob": 1083323
+    },
+    {
+     "name": "Fermín López",
+     "fotmob": 1404415
+    },
+    {
+     "name": "Anthony Gordon",
+     "fotmob": 906937
+    }
+   ],
+   "added": [
+    {
+     "name": "Rodri",
+     "fotmobName": "Rodri",
+     "fotmob": 675088,
+     "espn": 231828,
+     "number": 16,
+     "height": 75,
+     "weight": 196,
+     "age": 30,
+     "nationCode": "ESP",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 697,
+     "m26": 1513,
+     "value": 53364886,
+     "score": 10.913
+    },
+    {
+     "name": "Dani Olmo",
+     "fotmobName": "Dani Olmo",
+     "fotmob": 614834,
+     "espn": 227765,
+     "number": 20,
+     "height": 72,
+     "weight": 161,
+     "age": 28,
+     "nationCode": "ESP",
+     "positions": "CAM,CM,LW,ST",
+     "role": "AM",
+     "m27": 348,
+     "m26": 2077,
+     "value": 57508645,
+     "score": 10.825
+    },
+    {
+     "name": "Frenkie de Jong",
+     "fotmobName": "Frenkie de Jong",
+     "fotmob": 638622,
+     "espn": 219022,
+     "number": 21,
+     "height": 71,
+     "weight": 161,
+     "age": 29,
+     "nationCode": "NED",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 143,
+     "m26": 1631,
+     "value": 24384932,
+     "score": 10.42
+    }
+   ],
+   "nextUp": [
+    "Marc Bernal (CDM,CM, 430/787 min, €47m)",
+    "Karim Adeyemi (CAM,RW,LW,ST, 422/1196 min, €40m)",
+    "Gavi (CDM,LW, 161/574 min, €32m)",
+    "Gabriel Jesus (ST, 227/421 min, €16m)"
+   ]
+  },
+  "MCI": {
+   "fotmob": 8456,
+   "espn": 382,
+   "kept": [
+    {
+     "name": "Erling Haaland",
+     "fotmob": 737066
+    },
+    {
+     "name": "Phil Foden",
+     "fotmob": 815006
+    },
+    {
+     "name": "Elliot Anderson",
+     "fotmob": 1089691
+    },
+    {
+     "name": "Enzo Fernández",
+     "fotmob": 1137705
+    },
+    {
+     "name": "Iliman Ndiaye",
+     "fotmob": 965764
+    }
+   ],
+   "added": [
+    {
+     "name": "Rayan Cherki",
+     "fotmobName": "Rayan Cherki",
+     "fotmob": 1104053,
+     "espn": 298008,
+     "number": 10,
+     "height": 71,
+     "weight": 157,
+     "age": 23,
+     "nationCode": "FRA",
+     "positions": "CAM,RW,LW,CM",
+     "role": "AM",
+     "m27": 565,
+     "m26": 1786,
+     "value": 99250133,
+     "score": 10.587
+    },
+    {
+     "name": "Antoine Semenyo",
+     "fotmobName": "Antoine Semenyo",
+     "fotmob": 933576,
+     "espn": 273292,
+     "number": 42,
+     "height": 73,
+     "weight": 161,
+     "age": 26,
+     "nationCode": "GHA",
+     "positions": "RW,LW,ST,RM",
+     "role": "RW",
+     "m27": 553,
+     "m26": 3200,
+     "value": 73829945,
+     "score": 10.584
+    },
+    {
+     "name": "Jérémy Doku",
+     "fotmobName": "Jérémy Doku",
+     "fotmob": 942368,
+     "espn": 283672,
+     "number": 11,
+     "height": 68,
+     "weight": 181,
+     "age": 24,
+     "nationCode": "BEL",
+     "positions": "LW,CAM",
+     "role": "LW",
+     "m27": 396,
+     "m26": 1784,
+     "value": 79205637,
+     "score": 10.479
+    }
+   ],
+   "nextUp": [
+    "Ayyoub Bouaddi (CDM,CM,RB, 177/2329 min, €128m)",
+    "Allan (RW,RM,RWB,LW, 1553/906 min, €40m)",
+    "Ryan McAidoo (RW, 32/0 min, €14m)",
+    "Mateo Kovačić (CDM,CAM, 92/126 min, €6m)"
+   ]
+  },
+  "RMA": {
+   "fotmob": 8633,
+   "espn": 86,
+   "kept": [
+    {
+     "name": "Kylian Mbappé",
+     "fotmob": 701154
+    },
+    {
+     "name": "Jude Bellingham",
+     "fotmob": 1077894
+    },
+    {
+     "name": "Federico Valverde",
+     "fotmob": 743533
+    },
+    {
+     "name": "Vinícius Júnior",
+     "fotmob": 846033
+    },
+    {
+     "name": "Yan Diomande",
+     "fotmob": 1735453
+    }
+   ],
+   "added": [
+    {
+     "name": "Arda Güler",
+     "fotmobName": "Arda Güler",
+     "fotmob": 1253890,
+     "espn": 310452,
+     "number": 15,
+     "height": 69,
+     "weight": 148,
+     "age": 21,
+     "nationCode": "TUR",
+     "positions": "CAM,CM,RW,LM,CDM,RM,ST",
+     "role": "AM",
+     "m27": 744,
+     "m26": 2026,
+     "value": 97531874,
+     "score": 0.94
+    },
+    {
+     "name": "Aurélien Tchouaméni",
+     "fotmobName": "Aurélien Tchouaméni",
+     "fotmob": 914458,
+     "espn": 265919,
+     "number": 14,
+     "height": 74,
+     "weight": 179,
+     "age": 26,
+     "nationCode": "FRA",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 628,
+     "m26": 2622,
+     "value": 59724229,
+     "score": 0.753
+    },
+    {
+     "name": "Bernardo Silva",
+     "fotmobName": "Bernardo Silva",
+     "fotmob": 488139,
+     "espn": 199833,
+     "number": 20,
+     "height": 68,
+     "weight": 139,
+     "age": 32,
+     "nationCode": "POR",
+     "positions": "CDM,CAM,CM,RW",
+     "role": "DM",
+     "m27": 544,
+     "m26": 2886,
+     "value": 15735556,
+     "score": 0.529
+    }
+   ],
+   "nextUp": [
+    "Eduardo Camavinga (CDM,CM,LM,LB, 294/1526 min, €61m)",
+    "Endrick (RW,ST, 84/1222 min, €49m)",
+    "Brahim Díaz (RW,ST,RM,LM, 149/1252 min, €23m)",
+    "Rodrygo (RM,RW, 0/676 min, €40m)"
+   ]
+  },
+  "INT": {
+   "fotmob": 8636,
+   "espn": 110,
+   "kept": [
+    {
+     "name": "Marcus Thuram",
+     "fotmob": 621562
+    },
+    {
+     "name": "Nicolò Barella",
+     "fotmob": 541820
+    },
+    {
+     "name": "Lautaro Martínez",
+     "fotmob": 690230
+    },
+    {
+     "name": "Pio Esposito",
+     "fotmob": 1367618
+    },
+    {
+     "name": "Petar Sucic",
+     "fotmob": 1382000
+    }
+   ],
+   "added": [
+    {
+     "name": "Federico Dimarco",
+     "fotmobName": "Federico Dimarco",
+     "fotmob": 605224,
+     "espn": 194748,
+     "number": 32,
+     "height": 69,
+     "weight": 163,
+     "age": 29,
+     "nationCode": "ITA",
+     "positions": "LM,LW",
+     "role": "LW",
+     "m27": 657,
+     "m26": 2704,
+     "value": 45468201,
+     "score": 0.957
+    },
+    {
+     "name": "Andy Diouf",
+     "fotmobName": "Andy Diouf",
+     "fotmob": 1254297,
+     "espn": 319167,
+     "number": 17,
+     "height": 74,
+     "weight": 181,
+     "age": 23,
+     "nationCode": "FRA",
+     "positions": "RM,CM,CAM,LB",
+     "role": "RW",
+     "m27": 694,
+     "m26": 480,
+     "value": 34262427,
+     "score": 0.72
+    },
+    {
+     "name": "Aleksandar Stanković",
+     "fotmobName": "Aleksandar Stanković",
+     "fotmob": 1410437,
+     "espn": 240109,
+     "number": 5,
+     "height": 74,
+     "weight": 181,
+     "age": 21,
+     "nationCode": "SRB",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 89,
+     "m26": 3076,
+     "value": 42007164,
+     "score": 0.661
+    }
+   ],
+   "nextUp": [
+    "Ange-Yoan Bonny (ST, 246/1129 min, €42m)",
+    "Curtis Jones (CDM,RB,CAM,CM, 152/1929 min, €40m)",
+    "Piotr Zieliński (CM,CDM, 623/2044 min, €8m)",
+    "Luis Henrique (RM, 209/1622 min, €23m)"
+   ]
+  },
+  "ATM": {
+   "fotmob": 9906,
+   "espn": 1068,
+   "kept": [
+    {
+     "name": "Jonathan David",
+     "fotmob": 939569
+    },
+    {
+     "name": "Julián Álvarez",
+     "fotmob": 974753
+    },
+    {
+     "name": "Giuliano Simeone",
+     "fotmob": 1226147
+    },
+    {
+     "name": "Pablo Barrios",
+     "fotmob": 1338192
+    },
+    {
+     "name": "Álex Baena",
+     "fotmob": 942372
+    }
+   ],
+   "added": [
+    {
+     "name": "Morten Hjulmand",
+     "fotmobName": "Morten Hjulmand",
+     "fotmob": 950199,
+     "espn": 274911,
+     "number": 23,
+     "height": 73,
+     "weight": 170,
+     "age": 27,
+     "nationCode": "DEN",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 620,
+     "m26": 2325,
+     "value": 42106207,
+     "score": 0.919
+    },
+    {
+     "name": "Lee Kang-In",
+     "fotmobName": "Lee Kang-In",
+     "fotmob": 940976,
+     "espn": 274197,
+     "number": 7,
+     "height": 68,
+     "weight": 146,
+     "age": 25,
+     "nationCode": "KOR",
+     "positions": "ST,RW,CAM,RM,CM",
+     "role": "ST",
+     "m27": 758,
+     "m26": 1522,
+     "value": 38115855,
+     "score": 0.877
+    },
+    {
+     "name": "Ademola Lookman",
+     "fotmobName": "Ademola Lookman",
+     "fotmob": 690516,
+     "espn": 229645,
+     "number": 11,
+     "height": 69,
+     "weight": 157,
+     "age": 29,
+     "nationCode": "NGA",
+     "positions": "ST,LM,CAM,LW",
+     "role": "ST",
+     "m27": 609,
+     "m26": 797,
+     "value": 40237819,
+     "score": 0.774
+    }
+   ],
+   "nextUp": [
+    "Johnny Cardoso (CM,CDM, 333/892 min, €22m)",
+    "Koke (CM,CDM, 520/2220 min, €3m)",
+    "Rodrigo Mendoza (CM,CDM,CAM,LM, 140/1231 min, €24m)",
+    "Obed Vargas (CM,LM, 0/2542 min, €14m)"
+   ]
+  },
+  "MUN": {
+   "fotmob": 10260,
+   "espn": 360,
+   "kept": [
+    {
+     "name": "Matheus Cunha",
+     "fotmob": 863098
+    },
+    {
+     "name": "Bryan Mbeumo",
+     "fotmob": 923312
+    },
+    {
+     "name": "Kobbie Mainoo",
+     "fotmob": 1292810
+    },
+    {
+     "name": "Bruno Fernandes",
+     "fotmob": 422685
+    },
+    {
+     "name": "Youri Tielemans",
+     "fotmob": 465960
+    }
+   ],
+   "added": [
+    {
+     "name": "Amad Diallo",
+     "fotmobName": "Amad Diallo",
+     "fotmob": 1070052,
+     "espn": 291630,
+     "number": 16,
+     "height": 68,
+     "weight": 159,
+     "age": 24,
+     "nationCode": "CIV",
+     "positions": "RW,RWB",
+     "role": "RW",
+     "m27": 370,
+     "m26": 2344,
+     "value": 54718206,
+     "score": 10.874
+    },
+    {
+     "name": "Marcus Rashford",
+     "fotmobName": "Marcus Rashford",
+     "fotmob": 696365,
+     "espn": 230945,
+     "number": 9,
+     "height": 74,
+     "weight": 174,
+     "age": 29,
+     "nationCode": "ENG",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 356,
+     "m26": 1761,
+     "value": 36736997,
+     "score": 10.705
+    },
+    {
+     "name": "Benjamin Šeško",
+     "fotmobName": "Benjamin Šeško",
+     "fotmob": 1073977,
+     "espn": 289155,
+     "number": 30,
+     "height": 77,
+     "weight": 185,
+     "age": 23,
+     "nationCode": "SVN",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 76,
+     "m26": 1635,
+     "value": 75917475,
+     "score": 10.661
+    }
+   ],
+   "nextUp": [
+    "Carlos Baleba (CDM,CM, 235/1662 min, €70m)",
+    "Andrey Santos (CDM,CM, 329/1255 min, €55m)",
+    "Patrick Dorgu (LW,LB,LWB,RW, 195/1445 min, €49m)",
+    "Mason Mount (CDM,CAM, 164/1018 min, €22m)"
+   ]
+  },
+  "LIV": {
+   "fotmob": 8650,
+   "espn": 364,
+   "kept": [
+    {
+     "name": "Alexander Isak",
+     "fotmob": 690107
+    },
+    {
+     "name": "Dominik Szoboszlai",
+     "fotmob": 846005
+    },
+    {
+     "name": "Florian Wirtz",
+     "fotmob": 1152455
+    },
+    {
+     "name": "Bradley Barcola",
+     "fotmob": 1297165
+    },
+    {
+     "name": "Alexis Mac Allister",
+     "fotmob": 831489
+    }
+   ],
+   "added": [
+    {
+     "name": "Cody Gakpo",
+     "fotmobName": "Cody Gakpo",
+     "fotmob": 806552,
+     "espn": 249524,
+     "number": 18,
+     "height": 76,
+     "weight": 172,
+     "age": 27,
+     "nationCode": "NED",
+     "positions": "LW,ST,RW",
+     "role": "SS",
+     "m27": 604,
+     "m26": 2747,
+     "value": 74912371,
+     "score": 10.983
+    },
+    {
+     "name": "Ryan Gravenberch",
+     "fotmobName": "Ryan Gravenberch",
+     "fotmob": 956683,
+     "espn": 274632,
+     "number": 38,
+     "height": 75,
+     "weight": 183,
+     "age": 24,
+     "nationCode": "NED",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 344,
+     "m26": 2996,
+     "value": 74389120,
+     "score": 10.846
+    },
+    {
+     "name": "Hugo Ekitiké",
+     "fotmobName": "Hugo Ekitiké",
+     "fotmob": 1197030,
+     "espn": 304901,
+     "number": 22,
+     "height": 75,
+     "weight": 168,
+     "age": 24,
+     "nationCode": "FRA",
+     "positions": "ST,LW",
+     "role": "ST",
+     "m27": 0,
+     "m26": 1810,
+     "value": 70875948,
+     "score": 10.547
+    }
+   ],
+   "nextUp": [
+    "Víctor Muñoz (LW,RW, 458/2668 min, €51m)",
+    "Rio Ngumoha (LW,RW, 203/551 min, €73m)",
+    "Trey Nyoni (CDM, 224/21 min, €26m)",
+    "Lewis Koumas (ST,LW,CAM,RW, 131/1364 min, €13m)"
+   ]
+  },
+  "NAP": {
+   "fotmob": 9875,
+   "espn": 114,
+   "kept": [
+    {
+     "name": "Rasmus Højlund",
+     "fotmob": 1199272
+    },
+    {
+     "name": "Kevin De Bruyne",
+     "fotmob": 169200
+    },
+    {
+     "name": "Scott McTominay",
+     "fotmob": 843099
+    },
+    {
+     "name": "Stanislav Lobotka",
+     "fotmob": 308517
+    },
+    {
+     "name": "Noa Lang",
+     "fotmob": 837341
+    }
+   ],
+   "added": [
+    {
+     "name": "Billy Gilmour",
+     "fotmobName": "Billy Gilmour",
+     "fotmob": 942549,
+     "espn": 274217,
+     "number": 6,
+     "height": 67,
+     "weight": 130,
+     "age": 25,
+     "nationCode": "SCO",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 451,
+     "m26": 803,
+     "value": 22331351,
+     "score": 0.715
+    },
+    {
+     "name": "Alisson Santos",
+     "fotmobName": "Alisson Santos",
+     "fotmob": 1355552,
+     "espn": 319697,
+     "number": 27,
+     "height": 70,
+     "weight": 181,
+     "age": 24,
+     "nationCode": "BRA",
+     "positions": "CAM,LW",
+     "role": "AM",
+     "m27": 216,
+     "m26": 836,
+     "value": 32625814,
+     "score": 0.693
+    },
+    {
+     "name": "Frank Anguissa",
+     "fotmobName": "Frank Anguissa",
+     "fotmob": 612863,
+     "espn": 215721,
+     "number": 99,
+     "height": 72,
+     "weight": 172,
+     "age": 31,
+     "nationCode": "CMR",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 491,
+     "m26": 1256,
+     "value": 11571444,
+     "score": 0.644
+    }
+   ],
+   "nextUp": [
+    "Antonio Vergara (CAM,CM,RW, 271/614 min, €24m)",
+    "Lorenzo Lucca (ST, 285/401 min, €22m)",
+    "Giovane Nascimento (ST,CAM,RW, 114/1873 min, €15m)",
+    "David Neres (CAM,RW, 131/925 min, €15m)"
+   ]
+  },
+  "BVB": {
+   "fotmob": 9789,
+   "espn": 124,
+   "kept": [
+    {
+     "name": "Serhou Guirassy",
+     "fotmob": 448540
+    },
+    {
+     "name": "Felix Nmecha",
+     "fotmob": 966019
+    },
+    {
+     "name": "Jobe Bellingham",
+     "fotmob": 1287373
+    },
+    {
+     "name": "Maximilian Beier",
+     "fotmob": 1047667
+    },
+    {
+     "name": "Ethan Nwaneri",
+     "fotmob": 1254234
+    }
+   ],
+   "added": [
+    {
+     "name": "Konstantinos Karetsas",
+     "fotmobName": "Konstantinos Karetsas",
+     "fotmob": 1536436,
+     "espn": 357801,
+     "number": 19,
+     "height": 68,
+     "weight": 141,
+     "age": 18,
+     "nationCode": "GRE",
+     "positions": "RW,CAM,RM",
+     "role": "RW",
+     "m27": 280,
+     "m26": 2247,
+     "value": 44938122,
+     "score": 0.846
+    },
+    {
+     "name": "Joey Veerman",
+     "fotmobName": "Joey Veerman",
+     "fotmob": 792429,
+     "espn": 240912,
+     "number": 25,
+     "height": 73,
+     "weight": 179,
+     "age": 27,
+     "nationCode": "NED",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 476,
+     "m26": 2370,
+     "value": 24991328,
+     "score": 0.8
+    },
+    {
+     "name": "Fábio Silva",
+     "fotmobName": "Fábio Silva",
+     "fotmob": 1050158,
+     "espn": 291629,
+     "number": 21,
+     "height": 73,
+     "weight": 163,
+     "age": 24,
+     "nationCode": "POR",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 332,
+     "m26": 805,
+     "value": 23838871,
+     "score": 0.551
+    }
+   ],
+   "nextUp": [
+    "Giannis Konstantelias (CAM,ST, 54/1682 min, €24m)",
+    "Carney Chukwuemeka (CAM, 148/907 min, €18m)",
+    "Marcel Sabitzer (CDM,LW,CM,CAM, 239/1822 min, €2m)",
+    "Samuele Inácio (CAM, 6/383 min, €25m)"
+   ]
+  },
+  "AVL": {
+   "fotmob": 10252,
+   "espn": 362,
+   "kept": [
+    {
+     "name": "Nicolas Jackson",
+     "fotmob": 1197347
+    },
+    {
+     "name": "Johan Manzambi",
+     "fotmob": 1520063
+    },
+    {
+     "name": "Boubacar Kamara",
+     "fotmob": 816325
+    },
+    {
+     "name": "João Gomes",
+     "fotmob": 1174672
+    },
+    {
+     "name": "Ibrahim Mbaye",
+     "fotmob": 1593857
+    }
+   ],
+   "added": [
+    {
+     "name": "John McGinn",
+     "fotmobName": "John McGinn",
+     "fotmob": 356406,
+     "espn": 162843,
+     "number": 7,
+     "height": 70,
+     "weight": 150,
+     "age": 32,
+     "nationCode": "SCO",
+     "positions": "RW,CAM,CM,LW",
+     "role": "RW",
+     "m27": 795,
+     "m26": 2157,
+     "value": 12475415,
+     "score": 0.664
+    },
+    {
+     "name": "Amadou Onana",
+     "fotmobName": "Amadou Onana",
+     "fotmob": 1185748,
+     "espn": 304799,
+     "number": 24,
+     "height": 77,
+     "weight": 168,
+     "age": 25,
+     "nationCode": "BEL",
+     "positions": "CDM",
+     "role": "DM",
+     "m27": 0,
+     "m26": 1764,
+     "value": 49035438,
+     "score": 0.614
+    },
+    {
+     "name": "Emiliano Buendía",
+     "fotmobName": "Emiliano Buendía",
+     "fotmob": 610184,
+     "espn": 214375,
+     "number": 10,
+     "height": 68,
+     "weight": 163,
+     "age": 29,
+     "nationCode": "ARG",
+     "positions": "LW,CAM,LM",
+     "role": "LW",
+     "m27": 588,
+     "m26": 1759,
+     "value": 13952879,
+     "score": 0.55
+    }
+   ],
+   "nextUp": [
+    "Alysson Edward (RW, 332/1729 min, €21m)",
+    "Alejandro Garnacho (LW, 34/1268 min, €29m)",
+    "Leon Goretzka (CDM,CAM, 170/1954 min, €10m)",
+    "Tammy Abraham (ST, 71/1252 min, €20m)"
+   ]
+  },
+  "ROM": {
+   "fotmob": 8686,
+   "espn": 104,
+   "kept": [
+    {
+     "name": "Donyell Malen",
+     "fotmob": 660301
+    },
+    {
+     "name": "Manu Koné",
+     "fotmob": 1016132
+    },
+    {
+     "name": "Matìas Soulè",
+     "fotmob": 1280082
+    },
+    {
+     "name": "Santiago Castro",
+     "fotmob": 1282008
+    },
+    {
+     "name": "Bryan Cristante",
+     "fotmob": 299799
+    }
+   ],
+   "added": [
+    {
+     "name": "Paulo Dybala",
+     "fotmobName": "Paulo Dybala",
+     "fotmob": 325916,
+     "espn": 164839,
+     "number": 21,
+     "height": 70,
+     "weight": 163,
+     "age": 33,
+     "nationCode": "ARG",
+     "positions": "CAM,ST",
+     "role": "SS",
+     "m27": 496,
+     "m26": 1355,
+     "value": 2180119,
+     "score": 10.471
+    },
+    {
+     "name": "Rodrigo Mora",
+     "fotmobName": "Rodrigo Mora",
+     "fotmob": 1525065,
+     "espn": 387204,
+     "number": 86,
+     "height": 66,
+     "weight": 121,
+     "age": 19,
+     "nationCode": "POR",
+     "positions": "CM,CAM,ST",
+     "role": "CM",
+     "m27": 399,
+     "m26": 1179,
+     "value": 46170144,
+     "score": 0.819
+    },
+    {
+     "name": "Niccolò Pisilli",
+     "fotmobName": "Niccolò Pisilli",
+     "fotmob": 1451196,
+     "espn": 360235,
+     "number": 61,
+     "height": 71,
+     "weight": 161,
+     "age": 22,
+     "nationCode": "ITA",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 446,
+     "m26": 1284,
+     "value": 35734552,
+     "score": 0.758
+    }
+   ],
+   "nextUp": [
+    "Marten de Roon (CDM,CM, 472/2704 min, €3m)",
+    "Lorenzo Pellegrini (CAM,ST, 72/1475 min, €4m)",
+    "Alessandro Di Nunzio (CM, 2/0 min, €1m)",
+    "Antonio Arena (ST, 0/21 min, €0m)"
+   ]
+  },
+  "FCP": {
+   "fotmob": 9773,
+   "espn": 437,
+   "kept": [],
+   "added": [
+    {
+     "name": "Victor Froholdt",
+     "fotmobName": "Victor Froholdt",
+     "fotmob": 1436856,
+     "espn": 373520,
+     "number": 8,
+     "height": 74,
+     "weight": 161,
+     "age": 20,
+     "nationCode": "DEN",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 899,
+     "m26": 2875,
+     "value": 71327284,
+     "score": 0.988
+    },
+    {
+     "name": "Gabri Veiga",
+     "fotmobName": "Gabriel Veiga",
+     "fotmob": 1116734,
+     "espn": 307381,
+     "number": 10,
+     "height": 72,
+     "weight": 168,
+     "age": 24,
+     "nationCode": "ESP",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 714,
+     "m26": 1623,
+     "value": 40273455,
+     "score": 0.636
+    },
+    {
+     "name": "Pepê",
+     "fotmobName": "Pepê",
+     "fotmob": 850356,
+     "espn": 256909,
+     "number": 11,
+     "height": 69,
+     "weight": 150,
+     "age": 29,
+     "nationCode": "BRA",
+     "positions": "RW,LW",
+     "role": "RW",
+     "m27": 930,
+     "m26": 2241,
+     "value": 13185470,
+     "score": 0.589
+    },
+    {
+     "name": "William Gomes",
+     "fotmobName": "William Gomes",
+     "fotmob": 1580427,
+     "espn": 376664,
+     "number": 7,
+     "height": 68,
+     "weight": 139,
+     "age": 20,
+     "nationCode": "BRA",
+     "positions": "RW",
+     "role": "RW",
+     "m27": 521,
+     "m26": 1168,
+     "value": 36110737,
+     "score": 0.505
+    },
+    {
+     "name": "Pablo Rosario",
+     "fotmobName": "Pablo Rosario",
+     "fotmob": 664226,
+     "espn": 223776,
+     "number": 13,
+     "height": 74,
+     "weight": 161,
+     "age": 29,
+     "nationCode": "DOM",
+     "positions": "CM,CB,CDM",
+     "role": "CM",
+     "m27": 837,
+     "m26": 1365,
+     "value": 10498363,
+     "score": 0.476
+    },
+    {
+     "name": "Samu Aghehowa",
+     "fotmobName": "Samuel Aghehowa",
+     "fotmob": 1414859,
+     "espn": 364815,
+     "number": 9,
+     "height": 76,
+     "weight": 196,
+     "age": 22,
+     "nationCode": "ESP",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 185,
+     "m26": 1414,
+     "value": 44538010,
+     "score": 0.449
+    },
+    {
+     "name": "Alan Varela",
+     "fotmobName": "Alan Varela",
+     "fotmob": 1186684,
+     "espn": 307601,
+     "number": 22,
+     "height": 70,
+     "weight": 161,
+     "age": 25,
+     "nationCode": "ARG",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 197,
+     "m26": 2320,
+     "value": 32119194,
+     "score": 0.438
+    },
+    {
+     "name": "Borja Sainz",
+     "fotmobName": "Borja Sainz",
+     "fotmob": 1083204,
+     "espn": 292268,
+     "number": 17,
+     "height": 70,
+     "weight": 163,
+     "age": 25,
+     "nationCode": "ESP",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 419,
+     "m26": 1603,
+     "value": 22592284,
+     "score": 0.412
+    }
+   ],
+   "nextUp": [
+    "André Silva (ST, 666/1853 min, €2m)",
+    "Gabriel Mec (CAM,LW,CM,RW, 714/0 min, €0m)",
+    "Oskar Pietuszewski (LW, 16/1075 min, €27m)",
+    "In-Beom Hwang (CDM,CM,CAM, 339/983 min, €5m)"
+   ]
+  },
+  "CLB": {
+   "fotmob": 8342,
+   "espn": 570,
+   "kept": [],
+   "added": [
+    {
+     "name": "Nicolò Tresoldi",
+     "fotmobName": "Nicolò Tresoldi",
+     "fotmob": 1334552,
+     "espn": 335201,
+     "number": 7,
+     "height": 72,
+     "weight": 170,
+     "age": 22,
+     "nationCode": "GER",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 865,
+     "m26": 2500,
+     "value": 41143635,
+     "score": 0.938
+    },
+    {
+     "name": "Carlos Forbs",
+     "fotmobName": "Carlos Forbs",
+     "fotmob": 1186529,
+     "espn": 78836,
+     "number": 9,
+     "height": 67,
+     "weight": 137,
+     "age": 22,
+     "nationCode": "POR",
+     "positions": "RW,RM",
+     "role": "RW",
+     "m27": 836,
+     "m26": 2816,
+     "value": 23928228,
+     "score": 0.757
+    },
+    {
+     "name": "Hans Vanaken",
+     "fotmobName": "Hans Vanaken",
+     "fotmob": 203666,
+     "espn": 193849,
+     "number": 20,
+     "height": 77,
+     "weight": 190,
+     "age": 34,
+     "nationCode": "BEL",
+     "positions": "CAM,CDM,CM",
+     "role": "AM",
+     "m27": 893,
+     "m26": 3366,
+     "value": 3568531,
+     "score": 0.589
+    },
+    {
+     "name": "Freddie Potts",
+     "fotmobName": "Freddie Potts",
+     "fotmob": 1206287,
+     "espn": 310325,
+     "number": 8,
+     "height": 72,
+     "weight": null,
+     "age": 23,
+     "nationCode": "ENG",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 888,
+     "m26": 1167,
+     "value": 12553120,
+     "score": 0.555
+    },
+    {
+     "name": "Jan Virgili",
+     "fotmobName": "Jan Virgili",
+     "fotmob": 1690093,
+     "espn": 403592,
+     "number": 11,
+     "height": 66,
+     "weight": null,
+     "age": 20,
+     "nationCode": "ESP",
+     "positions": "LW,LM,ST",
+     "role": "LW",
+     "m27": 457,
+     "m26": 1797,
+     "value": 19860000,
+     "score": 0.503
+    },
+    {
+     "name": "Hugo Vetlesen",
+     "fotmobName": "Hugo Vetlesen",
+     "fotmob": 837064,
+     "espn": 255261,
+     "number": 10,
+     "height": 69,
+     "weight": 159,
+     "age": 26,
+     "nationCode": "NOR",
+     "positions": "CAM,RW,CM,CDM",
+     "role": "AM",
+     "m27": 798,
+     "m26": 1289,
+     "value": 4730426,
+     "score": 0.441
+    },
+    {
+     "name": "Romeo Vermant",
+     "fotmobName": "Romeo Vermant",
+     "fotmob": 1178453,
+     "espn": 360422,
+     "number": 17,
+     "height": 71,
+     "weight": 161,
+     "age": 22,
+     "nationCode": "BEL",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 281,
+     "m26": 1317,
+     "value": 13866397,
+     "score": 0.34
+    },
+    {
+     "name": "Mamadou Diakhon",
+     "fotmobName": "Mamadou Diakhon",
+     "fotmob": 1484998,
+     "espn": 362875,
+     "number": 67,
+     "height": 71,
+     "weight": 163,
+     "age": 21,
+     "nationCode": "SEN",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 426,
+     "m26": 796,
+     "value": 9977097,
+     "score": 0.323
+    }
+   ],
+   "nextUp": [
+    "Cheveyo Tsawa (CM,CDM,CAM, 129/2676 min, €8m)",
+    "Félix Lemaréchal (CDM, 302/554 min, €7m)",
+    "Andrej Vasović (ST, 9/953 min, €8m)",
+    "Wisdom Mike (LW,LM, 0/27 min, €7m)"
+   ]
+  },
+  "SPO": {
+   "fotmob": 9768,
+   "espn": 2250,
+   "kept": [],
+   "added": [
+    {
+     "name": "Luis Suárez",
+     "fotmobName": "Luis Suárez",
+     "fotmob": 792303,
+     "espn": 272722,
+     "number": 97,
+     "height": 71,
+     "weight": 183,
+     "age": 28,
+     "nationCode": "COL",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 739,
+     "m26": 2698,
+     "value": 32651771,
+     "score": 0.824
+    },
+    {
+     "name": "Geny Catamo",
+     "fotmobName": "Geny Catamo",
+     "fotmob": 1088753,
+     "espn": 296969,
+     "number": 10,
+     "height": 68,
+     "weight": 150,
+     "age": 25,
+     "nationCode": "MOZ",
+     "positions": "RW,RWB",
+     "role": "RW",
+     "m27": 687,
+     "m26": 1953,
+     "value": 37865669,
+     "score": 0.82
+    },
+    {
+     "name": "Issa Doumbia",
+     "fotmobName": "Issa Doumbia",
+     "fotmob": 1339345,
+     "espn": 386592,
+     "number": 77,
+     "height": 74,
+     "weight": 172,
+     "age": 23,
+     "nationCode": "ITA",
+     "positions": "CM,CDM,LW,CAM",
+     "role": "CM",
+     "m27": 848,
+     "m26": 3120,
+     "value": 23893745,
+     "score": 0.786
+    },
+    {
+     "name": "Sergi Altimira",
+     "fotmobName": "Sergi Altimira",
+     "fotmob": 1310480,
+     "espn": 331426,
+     "number": 5,
+     "height": 74,
+     "weight": 174,
+     "age": 25,
+     "nationCode": "ESP",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 982,
+     "m26": 1182,
+     "value": 25138714,
+     "score": 0.725
+    },
+    {
+     "name": "Rodrigo Zalazar",
+     "fotmobName": "Rodrigo Zalazar",
+     "fotmob": 1070776,
+     "espn": 287494,
+     "number": 17,
+     "height": 70,
+     "weight": 152,
+     "age": 27,
+     "nationCode": "URU",
+     "positions": "RW,CAM,CM,ST",
+     "role": "RW",
+     "m27": 562,
+     "m26": 1944,
+     "value": 33067693,
+     "score": 0.718
+    },
+    {
+     "name": "Silas Andersen",
+     "fotmobName": "Silas Andersen",
+     "fotmob": 1425101,
+     "espn": 355408,
+     "number": 4,
+     "height": 75,
+     "weight": 168,
+     "age": 22,
+     "nationCode": "DEN",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 783,
+     "m26": 2182,
+     "value": 9059400,
+     "score": 0.527
+    },
+    {
+     "name": "Nestory Irankunda",
+     "fotmobName": "Nestory Irankunda",
+     "fotmob": 1327214,
+     "espn": 328535,
+     "number": 19,
+     "height": 65,
+     "weight": 163,
+     "age": 20,
+     "nationCode": "AUS",
+     "positions": "RM,LW,LM,ST,CAM",
+     "role": "RW",
+     "m27": 414,
+     "m26": 2031,
+     "value": 18828004,
+     "score": 0.502
+    },
+    {
+     "name": "Flávio Gonçalves",
+     "fotmobName": "Flávio Gonçalves",
+     "fotmob": 1691190,
+     "espn": 414123,
+     "number": 58,
+     "height": 69,
+     "weight": 139,
+     "age": 19,
+     "nationCode": "POR",
+     "positions": "LW,LM,RW",
+     "role": "LW",
+     "m27": 539,
+     "m26": 15,
+     "value": 18805827,
+     "score": 0.417
+    }
+   ],
+   "nextUp": [
+    "Luís Guilherme (LW,RW, 352/634 min, €16m)",
+    "Fotis Ioannidis (ST,CAM, 324/456 min, €17m)",
+    "João Simões (CDM,CM, 20/754 min, €19m)",
+    "Pedro Lima (CM,CAM, 82/1896 min, €2m)"
+   ]
+  },
+  "PSV": {
+   "fotmob": 8640,
+   "espn": 148,
+   "kept": [],
+   "added": [
+    {
+     "name": "Kodai Sano",
+     "fotmobName": "Kodai Sano",
+     "fotmob": 1337282,
+     "espn": 341715,
+     "number": 24,
+     "height": 69,
+     "weight": 150,
+     "age": 23,
+     "nationCode": "JPN",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 913,
+     "m26": 3060,
+     "value": 20792761,
+     "score": 0.826
+    },
+    {
+     "name": "Ricardo Pepi",
+     "fotmobName": "Ricardo Pepi",
+     "fotmob": 1036401,
+     "espn": 289120,
+     "number": 9,
+     "height": 73,
+     "weight": 161,
+     "age": 23,
+     "nationCode": "USA",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 491,
+     "m26": 1415,
+     "value": 32709580,
+     "score": 0.725
+    },
+    {
+     "name": "Guus Til",
+     "fotmobName": "Guus Til",
+     "fotmob": 774947,
+     "espn": 240965,
+     "number": 20,
+     "height": 74,
+     "weight": 172,
+     "age": 28,
+     "nationCode": "NED",
+     "positions": "CAM,ST,CM,RW",
+     "role": "SS",
+     "m27": 940,
+     "m26": 2248,
+     "value": 13128061,
+     "score": 0.678
+    },
+    {
+     "name": "Sven Mijnans",
+     "fotmobName": "Sven Mijnans",
+     "fotmob": 1035643,
+     "espn": 287279,
+     "number": 21,
+     "height": 75,
+     "weight": 152,
+     "age": 26,
+     "nationCode": "NED",
+     "positions": "CAM,CM,ST",
+     "role": "AM",
+     "m27": 596,
+     "m26": 2350,
+     "value": 16355415,
+     "score": 0.601
+    },
+    {
+     "name": "Paul Wanner",
+     "fotmobName": "Paul Wanner",
+     "fotmob": 1327149,
+     "espn": 333399,
+     "number": 10,
+     "height": 73,
+     "weight": 163,
+     "age": 20,
+     "nationCode": "AUT",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 402,
+     "m26": 1641,
+     "value": 24760289,
+     "score": 0.598
+    },
+    {
+     "name": "Ruben Van Bommel",
+     "fotmobName": "Ruben van Bommel",
+     "fotmob": 1359970,
+     "espn": 340252,
+     "number": 7,
+     "height": 73,
+     "weight": 183,
+     "age": 22,
+     "nationCode": "NED",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 744,
+     "m26": 381,
+     "value": 20762029,
+     "score": 0.588
+    },
+    {
+     "name": "Ivan Perišić",
+     "fotmobName": "Ivan Perišić",
+     "fotmob": 163670,
+     "espn": 103485,
+     "number": 5,
+     "height": 73,
+     "weight": 174,
+     "age": 37,
+     "nationCode": "CRO",
+     "positions": "LW,RW,LB,LM,LWB",
+     "role": "LW",
+     "m27": 661,
+     "m26": 2218,
+     "value": 876555,
+     "score": 0.403
+    },
+    {
+     "name": "Esmir Bajraktarević",
+     "fotmobName": "Esmir Bajraktarević",
+     "fotmob": 1346860,
+     "espn": 325410,
+     "number": 19,
+     "height": 69,
+     "weight": 139,
+     "age": 21,
+     "nationCode": "BIH",
+     "positions": "RW,RM,ST",
+     "role": "RW",
+     "m27": 380,
+     "m26": 1062,
+     "value": 12694700,
+     "score": 0.386
+    }
+   ],
+   "nextUp": [
+    "Dennis Man (RW,RM,ST, 109/1496 min, €13m)",
+    "Sam Lammers (ST, 21/1545 min, €2m)",
+    "Amir Bouhamdi (LW,ST,CAM,LM, 198/0 min, €1m)",
+    "Alassane Pléa (ST, 22/112 min, €2m)"
+   ]
+  },
+  "LIL": {
+   "fotmob": 8639,
+   "espn": 166,
+   "kept": [
+    {
+     "name": "Olivier Giroud",
+     "fotmob": 46469
+    },
+    {
+     "name": "Hákon Haraldsson",
+     "fotmob": 1044470
+    },
+    {
+     "name": "Dilane Bakwa",
+     "fotmob": 1079539
+    },
+    {
+     "name": "Ngal'ayel Mukau",
+     "fotmob": 1428153
+    },
+    {
+     "name": "Ethan Mbappé",
+     "fotmob": 1426809
+    }
+   ],
+   "added": [
+    {
+     "name": "Ayase Ueda",
+     "fotmobName": "Ayase Ueda",
+     "fotmob": 942393,
+     "espn": 274277,
+     "number": 18,
+     "height": 72,
+     "weight": 168,
+     "age": 28,
+     "nationCode": "JPN",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 308,
+     "m26": 2533,
+     "value": 21622389,
+     "score": 0.791
+    },
+    {
+     "name": "Benjamin André",
+     "fotmobName": "Benjamin André",
+     "fotmob": 148830,
+     "espn": 123683,
+     "number": 21,
+     "height": 71,
+     "weight": 168,
+     "age": 36,
+     "nationCode": "FRA",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 554,
+     "m26": 2333,
+     "value": 2259770,
+     "score": 0.485
+    },
+    {
+     "name": "Nabil Bentaleb",
+     "fotmobName": "Nabil Bentaleb",
+     "fotmob": 500520,
+     "espn": 179187,
+     "number": 6,
+     "height": 74,
+     "weight": 168,
+     "age": 31,
+     "nationCode": "ALG",
+     "positions": "CDM,CM,CB",
+     "role": "DM",
+     "m27": 765,
+     "m26": 1278,
+     "value": 1246539,
+     "score": 0.477
+    }
+   ],
+   "nextUp": [
+    "Hamza Igamane (ST, 0/428 min, €21m)",
+    "Maurits Kjærgaard (CM,CDM, 196/1334 min, €10m)",
+    "Osame Sahraoui (LW, 115/495 min, €7m)",
+    "Gaëtan Perrin (LW,RW, 133/468 min, €4m)"
+   ]
+  },
+  "RBL": {
+   "fotmob": 178475,
+   "espn": 11420,
+   "kept": [
+    {
+     "name": "Rômulo",
+     "fotmob": 1314412
+    },
+    {
+     "name": "Antonio Nusa",
+     "fotmob": 1248482
+    },
+    {
+     "name": "Neil El Aynaoui",
+     "fotmob": 1274060
+    },
+    {
+     "name": "Ezechiel Banzuzi",
+     "fotmob": 1310001
+    },
+    {
+     "name": "Brajan Gruda",
+     "fotmob": 1430151
+    }
+   ],
+   "added": [
+    {
+     "name": "Christopher Nkunku",
+     "fotmobName": "Christopher Nkunku",
+     "fotmob": 704523,
+     "espn": 222176,
+     "number": 28,
+     "height": 70,
+     "weight": 150,
+     "age": 29,
+     "nationCode": "FRA",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 448,
+     "m26": 1351,
+     "value": 23912073,
+     "score": 0.72
+    },
+    {
+     "name": "Christoph Baumgartner",
+     "fotmobName": "Christoph Baumgartner",
+     "fotmob": 747718,
+     "espn": 274897,
+     "number": 14,
+     "height": 71,
+     "weight": 161,
+     "age": 27,
+     "nationCode": "AUT",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 72,
+     "m26": 2789,
+     "value": 35385418,
+     "score": 0.701
+    },
+    {
+     "name": "Rocco Reitz",
+     "fotmobName": "Rocco Reitz",
+     "fotmob": 1174726,
+     "espn": 307364,
+     "number": 20,
+     "height": 69,
+     "weight": 163,
+     "age": 24,
+     "nationCode": "GER",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 294,
+     "m26": 2636,
+     "value": 23328502,
+     "score": 0.695
+    }
+   ],
+   "nextUp": [
+    "Nicolas Seiwald (CM,CDM,CB, 303/2703 min, €21m)",
+    "Tidiam Gomis (ST,LW, 491/337 min, €19m)",
+    "Assan Ouédraogo (CM, 35/954 min, €33m)",
+    "Johan Bakayoko (RW, 85/773 min, €25m)"
+   ]
+  },
+  "VIL": {
+   "fotmob": 10205,
+   "espn": 102,
+   "kept": [
+    {
+     "name": "Ayoze Pérez",
+     "fotmob": 479020
+    },
+    {
+     "name": "Alberto Moleiro",
+     "fotmob": 1184694
+    },
+    {
+     "name": "Pape Gueye",
+     "fotmob": 844544
+    },
+    {
+     "name": "Georges Mikautadze",
+     "fotmob": 1117069
+    },
+    {
+     "name": "Santi Comesaña",
+     "fotmob": 671865
+    }
+   ],
+   "added": [
+    {
+     "name": "Nathan Saliba",
+     "fotmobName": "Nathan Saliba",
+     "fotmob": 1216798,
+     "espn": 311163,
+     "number": 24,
+     "height": 71,
+     "weight": 157,
+     "age": 22,
+     "nationCode": "CAN",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 360,
+     "m26": 2319,
+     "value": 18089620,
+     "score": 0.842
+    },
+    {
+     "name": "Tajon Buchanan",
+     "fotmobName": "Tajon Buchanan",
+     "fotmob": 1026135,
+     "espn": 284769,
+     "number": 17,
+     "height": 72,
+     "weight": 150,
+     "age": 27,
+     "nationCode": "CAN",
+     "positions": "RM,LM,RW,LW",
+     "role": "RW",
+     "m27": 635,
+     "m26": 1821,
+     "value": 12892437,
+     "score": 0.823
+    },
+    {
+     "name": "Ilias Akhomach",
+     "fotmobName": "Ilias Akhomach",
+     "fotmob": 1311915,
+     "espn": 331047,
+     "number": 11,
+     "height": 69,
+     "weight": 152,
+     "age": 22,
+     "nationCode": "MAR",
+     "positions": "RW,RM",
+     "role": "RW",
+     "m27": 388,
+     "m26": 893,
+     "value": 14881043,
+     "score": 0.659
+    }
+   ],
+   "nextUp": [
+    "Nicolas Pépé (RM,ST,RW, 509/2396 min, €4m)",
+    "Tani Oluwaseyi (ST,LW, 207/1862 min, €8m)",
+    "Gerard Moreno (ST, 434/1350 min, €2m)",
+    "Carlos Maciá (CM,CDM, 368/78 min, €5m)"
+   ]
+  },
+  "BOD": {
+   "fotmob": 8402,
+   "espn": 2980,
+   "kept": [],
+   "added": [
+    {
+     "name": "Patrick Berg",
+     "fotmobName": "Patrick Berg",
+     "fotmob": 530635,
+     "espn": 205924,
+     "number": 7,
+     "height": 70,
+     "weight": 161,
+     "age": 28,
+     "nationCode": "NOR",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 2060,
+     "m26": 2292,
+     "value": 10792412,
+     "score": 0.913
+    },
+    {
+     "name": "Jens Petter Hauge",
+     "fotmobName": "Jens Petter Hauge",
+     "fotmob": 741397,
+     "espn": 235789,
+     "number": 10,
+     "height": 72,
+     "weight": 163,
+     "age": 27,
+     "nationCode": "NOR",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 1552,
+     "m26": 2227,
+     "value": 12497931,
+     "score": 0.883
+    },
+    {
+     "name": "Ole Didrik Blomberg",
+     "fotmobName": "Ole Blomberg",
+     "fotmob": 1086551,
+     "espn": 307798,
+     "number": 11,
+     "height": 70,
+     "weight": 157,
+     "age": 26,
+     "nationCode": "NOR",
+     "positions": "RW,LW,ST",
+     "role": "RW",
+     "m27": 1925,
+     "m26": 1207,
+     "value": 4487530,
+     "score": 0.58
+    },
+    {
+     "name": "Sondre Auklend",
+     "fotmobName": "Sondre Auklend",
+     "fotmob": 1160076,
+     "espn": 303740,
+     "number": 8,
+     "height": null,
+     "weight": null,
+     "age": 23,
+     "nationCode": "NOR",
+     "positions": "CM,RM",
+     "role": "CM",
+     "m27": 1719,
+     "m26": 1159,
+     "value": 2695374,
+     "score": 0.477
+    },
+    {
+     "name": "Håkon Evjen",
+     "fotmobName": "Håkon Evjen",
+     "fotmob": 632870,
+     "espn": 271088,
+     "number": 26,
+     "height": 68,
+     "weight": 152,
+     "age": 26,
+     "nationCode": "NOR",
+     "positions": "CM",
+     "role": "CM",
+     "m27": 753,
+     "m26": 2213,
+     "value": 4209015,
+     "score": 0.448
+    },
+    {
+     "name": "Sondre Brunstad Fet",
+     "fotmobName": "Sondre Brunstad Fet",
+     "fotmob": 540975,
+     "espn": 208353,
+     "number": 19,
+     "height": 70,
+     "weight": 161,
+     "age": 29,
+     "nationCode": "NOR",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 1688,
+     "m26": 958,
+     "value": 1233812,
+     "score": 0.404
+    },
+    {
+     "name": "Ola Brynhildsen",
+     "fotmobName": "Ola Brynhildsen",
+     "fotmob": 837066,
+     "espn": 255311,
+     "number": 17,
+     "height": 69,
+     "weight": 152,
+     "age": 27,
+     "nationCode": "NOR",
+     "positions": "ST,LW,LM",
+     "role": "ST",
+     "m27": 959,
+     "m26": 1345,
+     "value": 1778144,
+     "score": 0.329
+    },
+    {
+     "name": "Joshua Kitolano",
+     "fotmobName": "Joshua Kitolano",
+     "fotmob": 902675,
+     "espn": 268460,
+     "number": 16,
+     "height": 67,
+     "weight": 157,
+     "age": 25,
+     "nationCode": "NOR",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 202,
+     "m26": 2631,
+     "value": 1919109,
+     "score": 0.303
+    }
+   ],
+   "nextUp": [
+    "Andreas Helmersen (ST, 1063/499 min, €2m)",
+    "Ulrik Saltnes (CM, 452/1609 min, €0m)",
+    "Joel Mvuka (RW, 146/556 min, €2m)",
+    "August Mikkelsen (ST, 6/426 min, €1m)"
+   ]
+  },
+  "GAL": {
+   "fotmob": 8637,
+   "espn": 432,
+   "kept": [],
+   "added": [
+    {
+     "name": "Victor Osimhen",
+     "fotmobName": "Victor Osimhen",
+     "fotmob": 687681,
+     "espn": 228296,
+     "number": 45,
+     "height": 73,
+     "weight": 172,
+     "age": 27,
+     "nationCode": "NGA",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 555,
+     "m26": 1711,
+     "value": 66738294,
+     "score": 0.823
+    },
+    {
+     "name": "Barış Alper Yılmaz",
+     "fotmobName": "Barış Alper Yılmaz",
+     "fotmob": 890232,
+     "espn": 322538,
+     "number": 53,
+     "height": 73,
+     "weight": 190,
+     "age": 26,
+     "nationCode": "TUR",
+     "positions": "LW,ST,RW,RB",
+     "role": "SS",
+     "m27": 750,
+     "m26": 2318,
+     "value": 28995795,
+     "score": 0.7
+    },
+    {
+     "name": "Alexey Batrakov",
+     "fotmobName": "Aleksey Batrakov",
+     "fotmob": 1504343,
+     "espn": 355113,
+     "number": 83,
+     "height": 68,
+     "weight": null,
+     "age": 21,
+     "nationCode": "RUS",
+     "positions": "CAM,CM,ST",
+     "role": "AM",
+     "m27": 547,
+     "m26": 2494,
+     "value": 34750313,
+     "score": 0.667
+    },
+    {
+     "name": "Yunus Akgün",
+     "fotmobName": "Yunus Akgün",
+     "fotmob": 845991,
+     "espn": 266575,
+     "number": 11,
+     "height": 68,
+     "weight": 159,
+     "age": 26,
+     "nationCode": "TUR",
+     "positions": "CAM,RW,LW",
+     "role": "AM",
+     "m27": 823,
+     "m26": 1825,
+     "value": 19148055,
+     "score": 0.625
+    },
+    {
+     "name": "Gabriel Sara",
+     "fotmobName": "Gabriel Sara",
+     "fotmob": 902710,
+     "espn": 268478,
+     "number": 8,
+     "height": 69,
+     "weight": 168,
+     "age": 27,
+     "nationCode": "BRA",
+     "positions": "CDM,CAM",
+     "role": "DM",
+     "m27": 711,
+     "m26": 1840,
+     "value": 24794748,
+     "score": 0.617
+    },
+    {
+     "name": "Rafael Leão",
+     "fotmobName": "Rafael Leão",
+     "fotmob": 848844,
+     "espn": 258917,
+     "number": 27,
+     "height": 74,
+     "weight": 174,
+     "age": 27,
+     "nationCode": "POR",
+     "positions": "ST,LW",
+     "role": "ST",
+     "m27": 447,
+     "m26": 1859,
+     "value": 39164315,
+     "score": 0.603
+    },
+    {
+     "name": "Lucas Torreira",
+     "fotmobName": "Lucas Torreira",
+     "fotmob": 592909,
+     "espn": 212973,
+     "number": 34,
+     "height": 65,
+     "weight": 141,
+     "age": 30,
+     "nationCode": "URU",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 787,
+     "m26": 2224,
+     "value": 6295248,
+     "score": 0.555
+    },
+    {
+     "name": "Leroy Sané",
+     "fotmobName": "Leroy Sané",
+     "fotmob": 530859,
+     "espn": 202641,
+     "number": 10,
+     "height": 72,
+     "weight": 174,
+     "age": 30,
+     "nationCode": "GER",
+     "positions": "RW",
+     "role": "RW",
+     "m27": 450,
+     "m26": 2286,
+     "value": 11915576,
+     "score": 0.455
+    }
+   ],
+   "nextUp": [
+    "Lesley Ugochukwu (CDM,CM,CAM, 86/2350 min, €24m)",
+    "Mario Lemina (CDM,CB, 513/1683 min, €2m)",
+    "Deniz Gül (ST,LW, 288/1170 min, €13m)",
+    "Renato Nhaga (CDM,CM, 47/1170 min, €8m)"
+   ]
+  },
+  "COM": {
+   "fotmob": 10171,
+   "espn": 2572,
+   "kept": [
+    {
+     "name": "Tasos Douvikas",
+     "fotmob": 873270
+    },
+    {
+     "name": "Nico Paz",
+     "fotmob": 1347574
+    },
+    {
+     "name": "Lucas Da Cunha",
+     "fotmob": 1076647
+    },
+    {
+     "name": "Máximo Perrone",
+     "fotmob": 1336582
+    },
+    {
+     "name": "Martin Baturina",
+     "fotmob": 1215064
+    }
+   ],
+   "added": [
+    {
+     "name": "Assane Diao",
+     "fotmobName": "Assane Diao",
+     "fotmob": 1434889,
+     "espn": 364742,
+     "number": 11,
+     "height": 73,
+     "weight": 174,
+     "age": 21,
+     "nationCode": "SEN",
+     "positions": "RW,LW",
+     "role": "RW",
+     "m27": 427,
+     "m26": 1084,
+     "value": 37252771,
+     "score": 0.731
+    },
+    {
+     "name": "Jesús Rodriguez",
+     "fotmobName": "Jesús Rodríguez",
+     "fotmob": 1624039,
+     "espn": 387491,
+     "number": 17,
+     "height": 73,
+     "weight": 150,
+     "age": 20,
+     "nationCode": "ESP",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 175,
+     "m26": 1734,
+     "value": 38026168,
+     "score": 0.648
+    },
+    {
+     "name": "Moise Kean",
+     "fotmobName": "Moise Kean",
+     "fotmob": 747926,
+     "espn": 248633,
+     "number": 90,
+     "height": 72,
+     "weight": 148,
+     "age": 26,
+     "nationCode": "ITA",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 160,
+     "m26": 2041,
+     "value": 36095131,
+     "score": 0.636
+    }
+   ],
+   "nextUp": [
+    "Luis Milla (CM,CDM, 668/3273 min, €6m)",
+    "Maxence Caqueret (CAM,CDM,LW, 429/1487 min, €15m)",
+    "Samuele Ricci (CM,CDM, 248/1297 min, €23m)",
+    "Jayden Addai (RW, 67/688 min, €25m)"
+   ]
+  },
+  "BET": {
+   "fotmob": 8603,
+   "espn": 244,
+   "kept": [
+    {
+     "name": "Cucho Hernández",
+     "fotmob": 852071
+    },
+    {
+     "name": "Antony",
+     "fotmob": 967622
+    },
+    {
+     "name": "Abde Ezzalzouli",
+     "fotmob": 1209399
+    },
+    {
+     "name": "Pablo Fornals",
+     "fotmob": 683450
+    },
+    {
+     "name": "Troy Parrott",
+     "fotmob": 942365
+    }
+   ],
+   "added": [
+    {
+     "name": "Isco",
+     "fotmobName": "Isco",
+     "fotmob": 191315,
+     "espn": 143564,
+     "number": 22,
+     "height": 69,
+     "weight": 172,
+     "age": 34,
+     "nationCode": "ESP",
+     "positions": "CAM",
+     "role": "AM",
+     "m27": 614,
+     "m26": 228,
+     "value": 2176294,
+     "score": 10.377
+    },
+    {
+     "name": "Facundo Bernal",
+     "fotmobName": "Facundo Bernal",
+     "fotmob": 1436133,
+     "espn": 359912,
+     "number": 6,
+     "height": 74,
+     "weight": 174,
+     "age": 23,
+     "nationCode": "URU",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 551,
+     "m26": 1035,
+     "value": 12607909,
+     "score": 0.801
+    },
+    {
+     "name": "Marc Roca",
+     "fotmobName": "Marc Roca",
+     "fotmob": 640220,
+     "espn": 242008,
+     "number": 21,
+     "height": 72,
+     "weight": 170,
+     "age": 29,
+     "nationCode": "ESP",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 776,
+     "m26": 2025,
+     "value": 2622687,
+     "score": 0.644
+    }
+   ],
+   "nextUp": [
+    "Nelson Deossa (CDM,CM,CAM,ST, 447/736 min, €10m)",
+    "Rodrigo Riquelme (LW,RW, 480/810 min, €4m)",
+    "Giovani Lo Celso (CM,CAM,RW, 92/1396 min, €5m)",
+    "Dani Ceballos (CDM,CM, 258/482 min, €5m)"
+   ]
+  },
+  "RCL": {
+   "fotmob": 8588,
+   "espn": 175,
+   "kept": [
+    {
+     "name": "Abdallah Sima",
+     "fotmob": 1189856
+    },
+    {
+     "name": "Florian Thauvin",
+     "fotmob": 254308
+    },
+    {
+     "name": "Franjo Ivanovic",
+     "fotmob": 1406419
+    },
+    {
+     "name": "Odsonne Édouard",
+     "fotmob": 637746
+    },
+    {
+     "name": "Yassine Titraoui",
+     "fotmob": 1288907
+    }
+   ],
+   "added": [
+    {
+     "name": "Michaël Cuisance",
+     "fotmobName": "Michaël Cuisance",
+     "fotmob": 861445,
+     "espn": 258871,
+     "number": 27,
+     "height": 71,
+     "weight": 161,
+     "age": 27,
+     "nationCode": "FRA",
+     "positions": "CAM,CDM",
+     "role": "AM",
+     "m27": 571,
+     "m26": 2512,
+     "value": 5959369,
+     "score": 0.78
+    },
+    {
+     "name": "Andrija Bulatović",
+     "fotmobName": "Andrija Bulatović",
+     "fotmob": 1634789,
+     "espn": 387061,
+     "number": 5,
+     "height": 71,
+     "weight": 157,
+     "age": 19,
+     "nationCode": "MNE",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 274,
+     "m26": 752,
+     "value": 10909692,
+     "score": 0.673
+    },
+    {
+     "name": "Amadou Haidara",
+     "fotmobName": "Amadou Haidara",
+     "fotmob": 688830,
+     "espn": 228557,
+     "number": 21,
+     "height": 69,
+     "weight": 159,
+     "age": 28,
+     "nationCode": "MLI",
+     "positions": "CDM",
+     "role": "DM",
+     "m27": 475,
+     "m26": 257,
+     "value": 4296144,
+     "score": 0.487
+    }
+   ],
+   "nextUp": [
+    "Thorgan Hazard (ST,CAM, 327/2722 min, €1m)",
+    "Junior Kadile (LW,LM,CAM, 128/1096 min, €6m)",
+    "Florian Sotoca (CAM, 412/494 min, €1m)",
+    "Mezian Mesloub Soares (CAM, 149/11 min, €0m)"
+   ]
+  },
+  "FEN": {
+   "fotmob": 8695,
+   "espn": 436,
+   "kept": [],
+   "added": [
+    {
+     "name": "Marco Asensio",
+     "fotmobName": "Marco Asensio",
+     "fotmob": 498033,
+     "espn": 195821,
+     "number": 10,
+     "height": 72,
+     "weight": 168,
+     "age": 30,
+     "nationCode": "ESP",
+     "positions": "CAM,RW",
+     "role": "AM",
+     "m27": 187,
+     "m26": 1878,
+     "value": 8764777,
+     "score": 10.283
+    },
+    {
+     "name": "Romelu Lukaku",
+     "fotmobName": "Romelu Lukaku",
+     "fotmob": 181276,
+     "espn": 139437,
+     "number": 9,
+     "height": 75,
+     "weight": 225,
+     "age": 33,
+     "nationCode": "BEL",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 483,
+     "m26": 40,
+     "value": 2328339,
+     "score": 10.207
+    },
+    {
+     "name": "Mason Greenwood",
+     "fotmobName": "Mason Greenwood",
+     "fotmob": 950473,
+     "espn": 276221,
+     "number": 11,
+     "height": 71,
+     "weight": 152,
+     "age": 25,
+     "nationCode": "ENG",
+     "positions": "RW,CAM,ST",
+     "role": "RW",
+     "m27": 716,
+     "m26": 2469,
+     "value": 42115973,
+     "score": 0.874
+    },
+    {
+     "name": "Mattéo Guendouzi",
+     "fotmobName": "Mattéo Guendouzi",
+     "fotmob": 800609,
+     "espn": 248676,
+     "number": 6,
+     "height": 73,
+     "weight": 150,
+     "age": 27,
+     "nationCode": "FRA",
+     "positions": "CDM,CM,CB,CAM",
+     "role": "DM",
+     "m27": 939,
+     "m26": 1430,
+     "value": 25049401,
+     "score": 0.709
+    },
+    {
+     "name": "Kerem Aktürkoglu",
+     "fotmobName": "Kerem Aktürkoglu",
+     "fotmob": 1117570,
+     "espn": 306789,
+     "number": 7,
+     "height": 68,
+     "weight": 150,
+     "age": 28,
+     "nationCode": "TUR",
+     "positions": "LW,ST",
+     "role": "SS",
+     "m27": 512,
+     "m26": 1959,
+     "value": 18430431,
+     "score": 0.513
+    },
+    {
+     "name": "Vedat Muriqi",
+     "fotmobName": "Vedat Muriqi",
+     "fotmob": 517052,
+     "espn": 240209,
+     "number": 19,
+     "height": 76,
+     "weight": 203,
+     "age": 32,
+     "nationCode": "KVX",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 461,
+     "m26": 3134,
+     "value": 5308462,
+     "score": 0.429
+    },
+    {
+     "name": "N'Golo Kanté",
+     "fotmobName": "N'Golo Kanté",
+     "fotmob": 319300,
+     "espn": 173556,
+     "number": 91,
+     "height": 66,
+     "weight": 152,
+     "age": 35,
+     "nationCode": "FRA",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 795,
+     "m26": 1567,
+     "value": 2113443,
+     "score": 0.419
+    },
+    {
+     "name": "Ismail Yüksek",
+     "fotmobName": "İsmail Yüksek",
+     "fotmob": 1183589,
+     "espn": 305629,
+     "number": 5,
+     "height": 72,
+     "weight": 163,
+     "age": 27,
+     "nationCode": "TUR",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 342,
+     "m26": 1764,
+     "value": 13717837,
+     "score": 0.387
+    }
+   ],
+   "nextUp": [
+    "Dorgeles Nene (RW,LW, 98/1465 min, €24m)",
+    "Oğuz Aydın (LW,RW,RWB,RM,RB, 630/640 min, €10m)",
+    "İrfan Kahveci (RW,CAM,CDM, 631/1653 min, €2m)",
+    "Bartuğ Elmaz (CDM,CM,CAM, 12/1138 min, €2m)"
+   ]
+  },
+  "SHA": {
+   "fotmob": 9728,
+   "espn": 493,
+   "kept": [],
+   "added": [
+    {
+     "name": "Alisson Santana",
+     "fotmobName": "Alisson Santana",
+     "fotmob": 1503318,
+     "espn": 359420,
+     "number": 30,
+     "height": 72,
+     "weight": 172,
+     "age": 21,
+     "nationCode": "BRA",
+     "positions": "RW",
+     "role": "RW",
+     "m27": 348,
+     "m26": 0,
+     "value": 0,
+     "score": 0.636
+    },
+    {
+     "name": "Marlon Gomes",
+     "fotmobName": "Marlon Gomes",
+     "fotmob": 1396465,
+     "espn": 314851,
+     "number": 6,
+     "height": 72,
+     "weight": 152,
+     "age": 22,
+     "nationCode": "BRA",
+     "positions": "CAM,CDM,CM",
+     "role": "AM",
+     "m27": 344,
+     "m26": 0,
+     "value": 0,
+     "score": 0.629
+    },
+    {
+     "name": "Oleg Ocheretko",
+     "fotmobName": "Oleg Ocheretko",
+     "fotmob": 1192419,
+     "espn": null,
+     "number": null,
+     "height": null,
+     "weight": null,
+     "age": null,
+     "nationCode": "UKR",
+     "positions": "CDM,CAM,CM",
+     "role": "DM",
+     "m27": 342,
+     "m26": 0,
+     "value": 0,
+     "score": 0.625
+    },
+    {
+     "name": "Kauã Elias",
+     "fotmobName": "Kauã Elias",
+     "fotmob": 1483508,
+     "espn": 361432,
+     "number": 9,
+     "height": 71,
+     "weight": 157,
+     "age": 20,
+     "nationCode": "BRA",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 315,
+     "m26": 0,
+     "value": 0,
+     "score": 0.576
+    },
+    {
+     "name": "Bruninho",
+     "fotmobName": "Bruninho",
+     "fotmob": 1903980,
+     "espn": 417344,
+     "number": 99,
+     "height": null,
+     "weight": null,
+     "age": 18,
+     "nationCode": "BRA",
+     "positions": "RW,CAM",
+     "role": "RW",
+     "m27": 310,
+     "m26": 0,
+     "value": 0,
+     "score": 0.567
+    },
+    {
+     "name": "Gleiker Mendoza",
+     "fotmobName": "Gleiker Mendoza",
+     "fotmob": 1460572,
+     "espn": 382379,
+     "number": 77,
+     "height": null,
+     "weight": null,
+     "age": 24,
+     "nationCode": "VEN",
+     "positions": "LW,CAM,LM",
+     "role": "LW",
+     "m27": 232,
+     "m26": 0,
+     "value": 0,
+     "score": 0.424
+    },
+    {
+     "name": "Lucas Ferreira",
+     "fotmobName": "Lucas Ferreira",
+     "fotmob": 1699018,
+     "espn": 383068,
+     "number": 37,
+     "height": 71,
+     "weight": 161,
+     "age": 20,
+     "nationCode": "BRA",
+     "positions": "RW,RM",
+     "role": "RW",
+     "m27": 0,
+     "m26": 759,
+     "value": 0,
+     "score": 0.364
+    },
+    {
+     "name": "Yegor Nazaryna",
+     "fotmobName": "Yegor Nazaryna",
+     "fotmob": 728941,
+     "espn": null,
+     "number": null,
+     "height": null,
+     "weight": null,
+     "age": null,
+     "nationCode": "UKR",
+     "positions": "CDM,CB,CM",
+     "role": "DM",
+     "m27": 134,
+     "m26": 0,
+     "value": 0,
+     "score": 0.245
+    }
+   ],
+   "nextUp": [
+    "Newerton (LW,LM, 128/0 min, €0m)",
+    "Lassina Traoré (ST, 49/0 min, €0m)",
+    "Luca Meirelles (ST, 0/83 min, €0m)",
+    "Isaque (CAM,CM, 0/21 min, €0m)"
+   ]
+  },
+  "VFB": {
+   "fotmob": 10269,
+   "espn": 134,
+   "kept": [
+    {
+     "name": "Ermedin Demirovic",
+     "fotmob": 840241
+    },
+    {
+     "name": "Angelo Stiller",
+     "fotmob": 1071186
+    },
+    {
+     "name": "Jamie Leweling",
+     "fotmob": 1074968
+    },
+    {
+     "name": "Bilal El Khannouss",
+     "fotmob": 1340895
+    },
+    {
+     "name": "Deniz Undav",
+     "fotmob": 661519
+    }
+   ],
+   "added": [
+    {
+     "name": "Dženan Pejčinović",
+     "fotmobName": "Dženan Pejčinović",
+     "fotmob": 1366602,
+     "espn": 345905,
+     "number": 17,
+     "height": 74,
+     "weight": 172,
+     "age": 21,
+     "nationCode": "GER",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 355,
+     "m26": 1454,
+     "value": 25863015,
+     "score": 0.815
+    },
+    {
+     "name": "Chris Führich",
+     "fotmobName": "Chris Führich",
+     "fotmob": 892679,
+     "espn": 268951,
+     "number": 10,
+     "height": 71,
+     "weight": 161,
+     "age": 28,
+     "nationCode": "GER",
+     "positions": "LW,LWB,CAM,LM",
+     "role": "LW",
+     "m27": 545,
+     "m26": 1705,
+     "value": 11132435,
+     "score": 0.699
+    },
+    {
+     "name": "Grischa Prömel",
+     "fotmobName": "Grischa Prömel",
+     "fotmob": 625175,
+     "espn": 218714,
+     "number": 21,
+     "height": 71,
+     "weight": 163,
+     "age": 31,
+     "nationCode": "GER",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 588,
+     "m26": 1746,
+     "value": 2355640,
+     "score": 0.576
+    }
+   ],
+   "nextUp": [
+    "Leo Sauer (LW,RW, 100/1419 min, €19m)",
+    "Tiago Tomás (RW,CAM,ST, 87/1013 min, €18m)",
+    "Atakan Karazor (CDM,CM, 318/1890 min, €4m)",
+    "Nikolas Nartey (CAM,RB, 50/1256 min, €10m)"
+   ]
+  },
+  "FEY": {
+   "fotmob": 10235,
+   "espn": 142,
+   "kept": [],
+   "added": [
+    {
+     "name": "Anis Hadj Moussa",
+     "fotmobName": "Anis Hadj Moussa",
+     "fotmob": 1576876,
+     "espn": 341711,
+     "number": 23,
+     "height": 69,
+     "weight": 163,
+     "age": 24,
+     "nationCode": "ALG",
+     "positions": "RW",
+     "role": "RW",
+     "m27": 976,
+     "m26": 2553,
+     "value": 30801418,
+     "score": 0.957
+    },
+    {
+     "name": "Gjivai Zechiël",
+     "fotmobName": "Gjivai Zechiël",
+     "fotmob": 1523822,
+     "espn": 365021,
+     "number": 8,
+     "height": 67,
+     "weight": 148,
+     "age": 22,
+     "nationCode": "NED",
+     "positions": "CM,CDM,CAM",
+     "role": "CM",
+     "m27": 1030,
+     "m26": 2808,
+     "value": 23746147,
+     "score": 0.89
+    },
+    {
+     "name": "Luciano Valente",
+     "fotmobName": "Luciano Valente",
+     "fotmob": 1256180,
+     "espn": 319296,
+     "number": 10,
+     "height": 74,
+     "weight": 172,
+     "age": 23,
+     "nationCode": "NED",
+     "positions": "CDM,CAM,LW,CM",
+     "role": "DM",
+     "m27": 949,
+     "m26": 2549,
+     "value": 24065292,
+     "score": 0.849
+    },
+    {
+     "name": "Nacho Ferri",
+     "fotmobName": "Nacho Ferri",
+     "fotmob": 1382019,
+     "espn": 364582,
+     "number": 19,
+     "height": 76,
+     "weight": 174,
+     "age": 22,
+     "nationCode": "ESP",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 658,
+     "m26": 2910,
+     "value": 12812812,
+     "score": 0.611
+    },
+    {
+     "name": "Oussama Targhaline",
+     "fotmobName": "Oussama Targhalline",
+     "fotmob": 1228273,
+     "espn": 313354,
+     "number": 28,
+     "height": 73,
+     "weight": 152,
+     "age": 24,
+     "nationCode": "MAR",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 706,
+     "m26": 1911,
+     "value": 15568344,
+     "score": 0.599
+    },
+    {
+     "name": "Charles Vanhoutte",
+     "fotmobName": "Charles Vanhoutte",
+     "fotmob": 952057,
+     "espn": 276260,
+     "number": 34,
+     "height": 72,
+     "weight": 168,
+     "age": 28,
+     "nationCode": "BEL",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 893,
+     "m26": 1778,
+     "value": 6212043,
+     "score": 0.516
+    },
+    {
+     "name": "Sem Steijn",
+     "fotmobName": "Sem Steijn",
+     "fotmob": 947898,
+     "espn": 277106,
+     "number": 14,
+     "height": 68,
+     "weight": 132,
+     "age": 25,
+     "nationCode": "NED",
+     "positions": "CAM,CM",
+     "role": "AM",
+     "m27": 214,
+     "m26": 1106,
+     "value": 11318271,
+     "score": 0.314
+    },
+    {
+     "name": "Gaoussou Diarra",
+     "fotmobName": "Gaoussou Diarra",
+     "fotmob": 1675966,
+     "espn": 402344,
+     "number": 27,
+     "height": 72,
+     "weight": 152,
+     "age": 23,
+     "nationCode": "MLI",
+     "positions": "LW",
+     "role": "LW",
+     "m27": 427,
+     "m26": 205,
+     "value": 1426870,
+     "score": 0.18
+    }
+   ],
+   "nextUp": [
+    "Shaqueel van Persie (RW, 111/37 min, €8m)",
+    "Jakub Moder (CM,CAM, 1/803 min, €6m)",
+    "Reiss Nelson (LW, 12/118 min, €5m)",
+    "Tobias van den Elshout (LW, 60/366 min, €2m)"
+   ]
+  },
+  "SLA": {
+   "fotmob": 7787,
+   "espn": 494,
+   "kept": [],
+   "added": [
+    {
+     "name": "Michal Sadílek",
+     "fotmobName": "Michal Sadílek",
+     "fotmob": 806551,
+     "espn": 249525,
+     "number": 23,
+     "height": 67,
+     "weight": 141,
+     "age": 27,
+     "nationCode": "CZE",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 1065,
+     "m26": 2093,
+     "value": 7014872,
+     "score": 0.776
+    },
+    {
+     "name": "Wiktor Nowak",
+     "fotmobName": "Wiktor Nowak",
+     "fotmob": 1395322,
+     "espn": 410093,
+     "number": 30,
+     "height": 74,
+     "weight": null,
+     "age": 22,
+     "nationCode": "POL",
+     "positions": "CM,CDM,ST,RB,CAM",
+     "role": "CM",
+     "m27": 977,
+     "m26": 2603,
+     "value": 6112630,
+     "score": 0.752
+    },
+    {
+     "name": "David Moses",
+     "fotmobName": "David Moses",
+     "fotmob": 1509423,
+     "espn": 256751,
+     "number": 16,
+     "height": 67,
+     "weight": null,
+     "age": 22,
+     "nationCode": "NGA",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 383,
+     "m26": 1690,
+     "value": 11909064,
+     "score": 0.706
+    },
+    {
+     "name": "Emmanuel Dennis Ayaosi",
+     "fotmobName": "Emmanuel Ayaosi",
+     "fotmob": 1327747,
+     "espn": 3098601,
+     "number": 20,
+     "height": 68,
+     "weight": null,
+     "age": 22,
+     "nationCode": "NGA",
+     "positions": "RW,CAM,LW,ST",
+     "role": "RW",
+     "m27": 836,
+     "m26": 2133,
+     "value": 6241902,
+     "score": 0.674
+    },
+    {
+     "name": "Lukás Provod",
+     "fotmobName": "Lukás Provod",
+     "fotmob": 791682,
+     "espn": 294618,
+     "number": 17,
+     "height": 75,
+     "weight": 185,
+     "age": 30,
+     "nationCode": "CZE",
+     "positions": "CAM,RW,LW,CM",
+     "role": "AM",
+     "m27": 660,
+     "m26": 2495,
+     "value": 4817897,
+     "score": 0.591
+    },
+    {
+     "name": "Mojmír Chytil",
+     "fotmobName": "Mojmír Chytil",
+     "fotmob": 988769,
+     "espn": 343733,
+     "number": 13,
+     "height": 74,
+     "weight": 181,
+     "age": 27,
+     "nationCode": "CZE",
+     "positions": "ST,CAM,RW",
+     "role": "ST",
+     "m27": 702,
+     "m26": 1500,
+     "value": 3557218,
+     "score": 0.48
+    },
+    {
+     "name": "Danijel Šturm",
+     "fotmobName": "Danijel Šturm",
+     "fotmob": 1270718,
+     "espn": 322169,
+     "number": 10,
+     "height": 72,
+     "weight": null,
+     "age": 27,
+     "nationCode": "SVN",
+     "positions": "LW,CAM,RW,LM,ST",
+     "role": "LW",
+     "m27": 748,
+     "m26": 993,
+     "value": 1857285,
+     "score": 0.392
+    },
+    {
+     "name": "Tomás Chorý",
+     "fotmobName": "Tomás Chorý",
+     "fotmob": 523217,
+     "espn": 257336,
+     "number": 25,
+     "height": 78,
+     "weight": 218,
+     "age": 31,
+     "nationCode": "CZE",
+     "positions": "ST,LW",
+     "role": "ST",
+     "m27": 485,
+     "m26": 1907,
+     "value": 1222241,
+     "score": 0.352
+    }
+   ],
+   "nextUp": [
+    "Mubarak Suleiman (CAM,LWB,LM, 691/311 min, €2m)",
+    "Toumani Diakité (CDM,CM, 117/1634 min, €4m)",
+    "Pavel Kačor (CDM,RW,CM, 236/879 min, €2m)",
+    "Adonija Ouanda (ST,RW,LW, 181/1007 min, €0m)"
+   ]
+  },
+  "SBR": {
+   "fotmob": 6019,
+   "espn": 521,
+   "kept": [],
+   "added": [
+    {
+     "name": "Nino Marcelli",
+     "fotmobName": "Nino Marcelli",
+     "fotmob": 1449716,
+     "espn": 360153,
+     "number": 10,
+     "height": 70,
+     "weight": null,
+     "age": 21,
+     "nationCode": "SVK",
+     "positions": "LW,ST,RW",
+     "role": "SS",
+     "m27": 510,
+     "m26": 1601,
+     "value": 7206353,
+     "score": 0.772
+    },
+    {
+     "name": "Daiki Matsuoka",
+     "fotmobName": "Daiki Matsuoka",
+     "fotmob": 1023982,
+     "espn": 286533,
+     "number": 88,
+     "height": 68,
+     "weight": 150,
+     "age": 25,
+     "nationCode": "JPN",
+     "positions": "CDM,RB,CAM",
+     "role": "DM",
+     "m27": 782,
+     "m26": 3135,
+     "value": 873283,
+     "score": 0.591
+    },
+    {
+     "name": "Peter Pokorný",
+     "fotmobName": "Peter Pokorný",
+     "fotmob": 951951,
+     "espn": 307484,
+     "number": 3,
+     "height": 72,
+     "weight": 161,
+     "age": 25,
+     "nationCode": "SVK",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 813,
+     "m26": 1196,
+     "value": 1108407,
+     "score": 0.496
+    },
+    {
+     "name": "Tigran Barseghyan",
+     "fotmobName": "Tigran Barseghyan",
+     "fotmob": 552700,
+     "espn": 235045,
+     "number": 11,
+     "height": 70,
+     "weight": null,
+     "age": 33,
+     "nationCode": "ARM",
+     "positions": "RW,LW",
+     "role": "RW",
+     "m27": 734,
+     "m26": 1591,
+     "value": 543745,
+     "score": 0.451
+    },
+    {
+     "name": "Artur Gajdoš",
+     "fotmobName": "Artur Gajdoš",
+     "fotmob": 1201843,
+     "espn": 340723,
+     "number": 8,
+     "height": 70,
+     "weight": null,
+     "age": 22,
+     "nationCode": "SVK",
+     "positions": "CAM,CM",
+     "role": "AM",
+     "m27": 698,
+     "m26": 1337,
+     "value": 966587,
+     "score": 0.446
+    },
+    {
+     "name": "Rahim Ibrahim",
+     "fotmobName": "Rahim Ibrahim",
+     "fotmob": 1239580,
+     "espn": 386509,
+     "number": 5,
+     "height": 73,
+     "weight": null,
+     "age": 25,
+     "nationCode": "GHA",
+     "positions": "CAM,CM,CDM",
+     "role": "AM",
+     "m27": 516,
+     "m26": 1502,
+     "value": 1102882,
+     "score": 0.387
+    },
+    {
+     "name": "Andraž Šporar",
+     "fotmobName": "Andraž Šporar",
+     "fotmob": 338136,
+     "espn": 189717,
+     "number": 99,
+     "height": 73,
+     "weight": 181,
+     "age": 32,
+     "nationCode": "SVN",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 574,
+     "m26": 984,
+     "value": 1088376,
+     "score": 0.378
+    },
+    {
+     "name": "Cristian Martínez",
+     "fotmobName": "Cristian Martínez",
+     "fotmob": 727101,
+     "espn": 176145,
+     "number": 70,
+     "height": 67,
+     "weight": 159,
+     "age": 29,
+     "nationCode": "PAN",
+     "positions": "CDM,CAM,CM,RM",
+     "role": "DM",
+     "m27": 365,
+     "m26": 2437,
+     "value": 998988,
+     "score": 0.375
+    }
+   ],
+   "nextUp": [
+    "Suleiman Camara (LW,LM,RW, 524/792 min, €1m)",
+    "Alen Mustafić (CAM,CM,RB,CDM,ST, 541/1324 min, €0m)",
+    "Danylo Ignatenko (CDM,CM, 453/1331 min, €0m)",
+    "Roman Čerepkai (ST,LW, 243/2294 min, €1m)"
+   ]
+  },
+  "AEK": {
+   "fotmob": 8563,
+   "espn": 887,
+   "kept": [],
+   "added": [
+    {
+     "name": "Luka Jović",
+     "fotmobName": "Luka Jović",
+     "fotmob": 463291,
+     "espn": 221332,
+     "number": 9,
+     "height": 71,
+     "weight": 172,
+     "age": 28,
+     "nationCode": "SRB",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 687,
+     "m26": 2166,
+     "value": 5309189,
+     "score": 0.861
+    },
+    {
+     "name": "Lovro Majer",
+     "fotmobName": "Lovro Majer",
+     "fotmob": 762721,
+     "espn": 237549,
+     "number": 14,
+     "height": 70,
+     "weight": 168,
+     "age": 28,
+     "nationCode": "CRO",
+     "positions": "CAM,RM,RW,LM",
+     "role": "AM",
+     "m27": 589,
+     "m26": 1373,
+     "value": 6669510,
+     "score": 0.846
+    },
+    {
+     "name": "Răzvan Marin",
+     "fotmobName": "Răzvan Marin",
+     "fotmob": 574844,
+     "espn": 239738,
+     "number": 18,
+     "height": 70,
+     "weight": 152,
+     "age": 30,
+     "nationCode": "ROU",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 694,
+     "m26": 2206,
+     "value": 2236547,
+     "score": 0.661
+    },
+    {
+     "name": "Aboubakary Koïta",
+     "fotmobName": "Aboubakary Koïta",
+     "fotmob": 725695,
+     "espn": 260026,
+     "number": 11,
+     "height": 69,
+     "weight": 150,
+     "age": 28,
+     "nationCode": "MTN",
+     "positions": "LM,RM,CAM,RW,LW,ST",
+     "role": "LW",
+     "m27": 486,
+     "m26": 1948,
+     "value": 3844682,
+     "score": 0.646
+    },
+    {
+     "name": "Kaan Kairinen",
+     "fotmobName": "Kaan Kairinen",
+     "fotmob": 547454,
+     "espn": 235669,
+     "number": 6,
+     "height": 73,
+     "weight": 152,
+     "age": 27,
+     "nationCode": "FIN",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 164,
+     "m26": 2763,
+     "value": 4936044,
+     "score": 0.616
+    },
+    {
+     "name": "Oleksandr Zubkov",
+     "fotmobName": "Oleksandr Zubkov",
+     "fotmob": 655636,
+     "espn": 228267,
+     "number": 10,
+     "height": 72,
+     "weight": 172,
+     "age": 30,
+     "nationCode": "UKR",
+     "positions": "RW,RM,LW",
+     "role": "RW",
+     "m27": 199,
+     "m26": 2182,
+     "value": 3572762,
+     "score": 0.499
+    },
+    {
+     "name": "Barnabás Varga",
+     "fotmobName": "Barnabás Varga",
+     "fotmob": 796504,
+     "espn": 246666,
+     "number": 25,
+     "height": 71,
+     "weight": 161,
+     "age": 32,
+     "nationCode": "HUN",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 515,
+     "m26": 1200,
+     "value": 2132278,
+     "score": 0.49
+    },
+    {
+     "name": "Milán Vitális",
+     "fotmobName": "Milán Vitális",
+     "fotmob": 1197823,
+     "espn": 364626,
+     "number": 27,
+     "height": 70,
+     "weight": null,
+     "age": 24,
+     "nationCode": "HUN",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 499,
+     "m26": 0,
+     "value": 1728510,
+     "score": 0.368
+    }
+   ],
+   "nextUp": [
+    "Zine (ST, 322/693 min, €2m)",
+    "Mijat Gaćinović (LM,RM,LW,CAM,ST, 336/676 min, €1m)",
+    "Kervin Arriaga (CDM,CM, 77/1526 min, €1m)",
+    "Petros Mantalos (CDM,CM,LM,CAM, 243/1214 min, €0m)"
+   ]
+  },
+  "LSK": {
+   "fotmob": 9977,
+   "espn": 4411,
+   "kept": [],
+   "added": [
+    {
+     "name": "Moses Usor",
+     "fotmobName": "Moses Usor",
+     "fotmob": 1366348,
+     "espn": 340760,
+     "number": 8,
+     "height": 71,
+     "weight": 150,
+     "age": 24,
+     "nationCode": "NGA",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 555,
+     "m26": 2273,
+     "value": 8129322,
+     "score": 0.846
+    },
+    {
+     "name": "Melayro Bogarde",
+     "fotmobName": "Melayro Bogarde",
+     "fotmob": 1108604,
+     "espn": 290638,
+     "number": 6,
+     "height": 73,
+     "weight": 181,
+     "age": 24,
+     "nationCode": "SUR",
+     "positions": "CDM,CM,LWB",
+     "role": "DM",
+     "m27": 789,
+     "m26": 2275,
+     "value": 4371599,
+     "score": 0.729
+    },
+    {
+     "name": "Sascha Horvath",
+     "fotmobName": "Sascha Horvath",
+     "fotmob": 426726,
+     "espn": 193294,
+     "number": 30,
+     "height": 66,
+     "weight": 137,
+     "age": 30,
+     "nationCode": "AUT",
+     "positions": "CDM,CM",
+     "role": "DM",
+     "m27": 903,
+     "m26": 2513,
+     "value": 1304104,
+     "score": 0.622
+    },
+    {
+     "name": "Samuel Adeniran",
+     "fotmobName": "Samuel Adeniran",
+     "fotmob": 1188855,
+     "espn": 318956,
+     "number": 7,
+     "height": 76,
+     "weight": 201,
+     "age": 28,
+     "nationCode": "USA",
+     "positions": "ST,LW",
+     "role": "ST",
+     "m27": 475,
+     "m26": 2068,
+     "value": 3714790,
+     "score": 0.554
+    },
+    {
+     "name": "Robert Ljubičić",
+     "fotmobName": "Robert Ljubičić",
+     "fotmob": 939430,
+     "espn": 273480,
+     "number": 10,
+     "height": 70,
+     "weight": 163,
+     "age": 27,
+     "nationCode": "AUT",
+     "positions": "CM,RM,CAM,RW",
+     "role": "CM",
+     "m27": 720,
+     "m26": 678,
+     "value": 1805966,
+     "score": 0.433
+    },
+    {
+     "name": "Christoph Lang",
+     "fotmobName": "Christoph Lang",
+     "fotmob": 1232205,
+     "espn": 37442,
+     "number": 27,
+     "height": 72,
+     "weight": 159,
+     "age": 24,
+     "nationCode": "AUT",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 726,
+     "m26": 750,
+     "value": 689425,
+     "score": 0.379
+    },
+    {
+     "name": "Saša Kalajdžić",
+     "fotmobName": "Saša Kalajdžić",
+     "fotmob": 858198,
+     "espn": 259131,
+     "number": 11,
+     "height": 79,
+     "weight": 196,
+     "age": 29,
+     "nationCode": "AUT",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 348,
+     "m26": 1323,
+     "value": 2405787,
+     "score": 0.373
+    },
+    {
+     "name": "Kryštof Daněk",
+     "fotmobName": "Kryštof Daněk",
+     "fotmob": 1118147,
+     "espn": 306899,
+     "number": 9,
+     "height": 72,
+     "weight": 150,
+     "age": 23,
+     "nationCode": "CZE",
+     "positions": "CAM,CM",
+     "role": "AM",
+     "m27": 421,
+     "m26": 1372,
+     "value": 1693598,
+     "score": 0.366
+    }
+   ],
+   "nextUp": [
+    "Alessandro Schöpf (CDM,CM, 348/1804 min, €1m)",
+    "Ramiz Harakaté (ST, 0/2401 min, €1m)",
+    "Art Smakaj (CDM, 0/159 min, €1m)",
+    "Naël Kane (RW, 33/0 min, €0m)"
+   ]
+  },
+  "VIK": {
+   "fotmob": 8478,
+   "espn": 510,
+   "kept": [],
+   "added": [
+    {
+     "name": "Peter Christiansen",
+     "fotmobName": "Peter Christiansen",
+     "fotmob": 955759,
+     "espn": 9167,
+     "number": 20,
+     "height": 69,
+     "weight": 159,
+     "age": 26,
+     "nationCode": "DEN",
+     "positions": "ST,RW,LW",
+     "role": "ST",
+     "m27": 2130,
+     "m26": 2107,
+     "value": 5654184,
+     "score": 0.966
+    },
+    {
+     "name": "Simen Kvia-Egeskog",
+     "fotmobName": "Simen Kvia-Egeskog",
+     "fotmob": 1267374,
+     "espn": 320678,
+     "number": 26,
+     "height": null,
+     "weight": null,
+     "age": 23,
+     "nationCode": "NOR",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 1769,
+     "m26": 1175,
+     "value": 3804058,
+     "score": 0.686
+    },
+    {
+     "name": "Kristoffer Askildsen",
+     "fotmobName": "Kristoffer Askildsen",
+     "fotmob": 964535,
+     "espn": 280963,
+     "number": 7,
+     "height": 75,
+     "weight": 163,
+     "age": 25,
+     "nationCode": "NOR",
+     "positions": "CM,CAM",
+     "role": "CM",
+     "m27": 1766,
+     "m26": 1550,
+     "value": 2663879,
+     "score": 0.624
+    },
+    {
+     "name": "Joe Bell",
+     "fotmobName": "Joe Bell",
+     "fotmob": 848345,
+     "espn": 228294,
+     "number": 8,
+     "height": 72,
+     "weight": 181,
+     "age": 27,
+     "nationCode": "NZL",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 1356,
+     "m26": 2541,
+     "value": 2184488,
+     "score": 0.597
+    },
+    {
+     "name": "Erik Botheim",
+     "fotmobName": "Erik Botheim",
+     "fotmob": 741561,
+     "espn": 239925,
+     "number": 22,
+     "height": 71,
+     "weight": 152,
+     "age": 26,
+     "nationCode": "NOR",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 1522,
+     "m26": 427,
+     "value": 3373345,
+     "score": 0.552
+    },
+    {
+     "name": "Zlatko Tripić",
+     "fotmobName": "Zlatko Tripić",
+     "fotmob": 279191,
+     "espn": 164279,
+     "number": 10,
+     "height": 72,
+     "weight": 161,
+     "age": 33,
+     "nationCode": "NOR",
+     "positions": "LW,RW,LM",
+     "role": "LW",
+     "m27": 1944,
+     "m26": 1938,
+     "value": 965689,
+     "score": 0.549
+    },
+    {
+     "name": "Henrik Bjørdal",
+     "fotmobName": "Henrik Rørvik Bjørdal",
+     "fotmob": 440313,
+     "espn": 186172,
+     "number": 16,
+     "height": 74,
+     "weight": 190,
+     "age": 29,
+     "nationCode": "NOR",
+     "positions": "RM,ST,CM,RW",
+     "role": "SS",
+     "m27": 1886,
+     "m26": 1829,
+     "value": 1169081,
+     "score": 0.547
+    },
+    {
+     "name": "Niklas Fuglestad",
+     "fotmobName": "Niklas Fuglestad",
+     "fotmob": 1636186,
+     "espn": 386923,
+     "number": 23,
+     "height": 68,
+     "weight": 161,
+     "age": 20,
+     "nationCode": "NOR",
+     "positions": "RW,LW",
+     "role": "RW",
+     "m27": 776,
+     "m26": 49,
+     "value": 1920897,
+     "score": 0.284
+    }
+   ],
+   "nextUp": [
+    "Jakob Segadal Hansen (CAM, 218/1553 min, €2m)",
+    "Tobias Moi (CM,CDM, 1053/0 min, €0m)",
+    "Amin Ćosić (LW,LM, 175/0 min, €1m)",
+    "Romano Postema (ST, 93/0 min, €1m)"
+   ]
+  },
+  "SAB": {
+   "fotmob": 951893,
+   "espn": 21922,
+   "kept": [],
+   "added": [
+    {
+     "name": "Ivan Lepinjica",
+     "fotmobName": "Ivan Lepinjica",
+     "fotmob": 906920,
+     "espn": 260848,
+     "number": 13,
+     "height": 71,
+     "weight": 148,
+     "age": 27,
+     "nationCode": "CRO",
+     "positions": "CM,CDM",
+     "role": "CM",
+     "m27": 360,
+     "m26": 0,
+     "value": 0,
+     "score": 0.636
+    },
+    {
+     "name": "Umarali Rakhmonaliev",
+     "fotmobName": "Umarali Rakhmonaliev",
+     "fotmob": 1429286,
+     "espn": 362336,
+     "number": 7,
+     "height": 67,
+     "weight": 150,
+     "age": 23,
+     "nationCode": "UZB",
+     "positions": "CDM",
+     "role": "DM",
+     "m27": 321,
+     "m26": 0,
+     "value": 0,
+     "score": 0.567
+    },
+    {
+     "name": "Joy-Lance Mickels",
+     "fotmobName": "Joy-Lance Mickels",
+     "fotmob": 617465,
+     "espn": 291791,
+     "number": 20,
+     "height": 72,
+     "weight": 181,
+     "age": 32,
+     "nationCode": "RWA",
+     "positions": "ST,CAM",
+     "role": "ST",
+     "m27": 318,
+     "m26": 0,
+     "value": 0,
+     "score": 0.562
+    },
+    {
+     "name": "Veljko Simić",
+     "fotmobName": "Veljko Simić",
+     "fotmob": 458807,
+     "espn": 193291,
+     "number": 21,
+     "height": 71,
+     "weight": 152,
+     "age": 31,
+     "nationCode": "SRB",
+     "positions": "LW,RW",
+     "role": "LW",
+     "m27": 284,
+     "m26": 0,
+     "value": 0,
+     "score": 0.502
+    },
+    {
+     "name": "Du Queiroz",
+     "fotmobName": "Du Queiroz",
+     "fotmob": 1271367,
+     "espn": 321356,
+     "number": 37,
+     "height": 67,
+     "weight": 161,
+     "age": 26,
+     "nationCode": "BRA",
+     "positions": "CDM,CM,CAM",
+     "role": "DM",
+     "m27": 0,
+     "m26": 1710,
+     "value": 0,
+     "score": 0.364
+    },
+    {
+     "name": "Kaheem Parris",
+     "fotmobName": "Kaheem Parris",
+     "fotmob": 876149,
+     "espn": 268529,
+     "number": 11,
+     "height": 70,
+     "weight": 150,
+     "age": 26,
+     "nationCode": "JAM",
+     "positions": "RW",
+     "role": "RW",
+     "m27": 201,
+     "m26": 0,
+     "value": 0,
+     "score": 0.355
+    },
+    {
+     "name": "Orphé Mbina",
+     "fotmobName": "Orphé Mbina",
+     "fotmob": 1197093,
+     "espn": 308907,
+     "number": 99,
+     "height": 74,
+     "weight": null,
+     "age": 26,
+     "nationCode": "GAB",
+     "positions": "ST",
+     "role": "ST",
+     "m27": 157,
+     "m26": 0,
+     "value": 0,
+     "score": 0.278
+    },
+    {
+     "name": "Christian Nwachukwu",
+     "fotmobName": "Christian Nwachukwu",
+     "fotmob": 1624072,
+     "espn": 385377,
+     "number": 8,
+     "height": null,
+     "weight": null,
+     "age": 20,
+     "nationCode": "NGA",
+     "positions": "LW,LM",
+     "role": "LW",
+     "m27": 142,
+     "m26": 0,
+     "value": 0,
+     "score": 0.251
+    }
+   ],
+   "nextUp": [
+    "Carlos Eduardo (ST, 106/269 min, €0m)",
+    "Abdulakh Khaybulaev (CM,CDM, 103/0 min, €0m)",
+    "Aleksey Isaev (CAM,CM, 52/0 min, €0m)",
+    "Xayal Əliyev (LW,LM, 20/0 min, €0m)"
+   ]
+  }
+ }
+}

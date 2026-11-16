@@ -19,7 +19,7 @@ const HOLD_MS = 380
 
 // soccer: its two pools by name, and football as the other sport
 const fanFor = sport => sport === 'soccer' ? [
-  { id: 'current', label: 'TOP DIVS', Icon: IconBolt, go: () => nav('mode:classic') },
+  { id: 'current', label: 'UCL', Icon: IconBolt, go: () => nav('mode:classic') },
   { id: 'alltime', label: 'WORLD CUP', Icon: IconCrown, go: () => nav('mode:all-time') },
   { id: 'career', label: 'CAREER', Icon: IconTrophy, go: () => nav('career') },
   { id: 'squad', label: 'SQUAD', Icon: IconProfile, go: () => nav('squad') },

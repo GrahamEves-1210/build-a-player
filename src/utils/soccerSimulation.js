@@ -6,10 +6,11 @@
 // `script` (scriptSoccerSeason) so Squad Builder can play one season for a whole squad.
 //
 // ── How a season is played ───────────────────────────────────────────────────
-// 1. The build's ten traits make a striker profile (profileOf): his share of the team's chances
-//    (movement, pace, first touch, aerial and physical presence), his finishing against xG
-//    (finishing, composure, shot power), how good his chances are (big-chance share), headers,
-//    long shots, assists (link-up), penalties.
+// 1. The build's nine traits make a striker profile (profileOf): his share of the team's chances
+//    (positioning, pace, dribbling and ball control, heading, size), his finishing against xG
+//    (finishing, composure, shot power), how good his chances are (big-chance share), headers
+//    (heading, then size), long shots, the chances he makes for the others and his assists (passing),
+//    holding the ball up (size), penalties.
 // 2. He takes the place of the club's real No. 9 (`starter: true` in SOCCER_STRIKERS, see 5). The
 //    club's att/def ratings already include that player, so the team scores more or less in every
 //    match by how much better or worse the build is than him (the lift, M) while he's on the pitch.
@@ -147,11 +148,14 @@
 // his goals are drawn as a share of them (team.usage: his share of the chances).
 
 import { seeded } from '../lib/rng'
-import { SOCCER_LEAGUES, SOCCER_CLUBS } from '../data/soccer-clubs'
+import { SOCCER_SIM_LEAGUES, SOCCER_SIM_CLUBS, SOCCER_ALL_CLUBS, OTHER_LEAGUES } from '../data/soccer-clubs'
 import { WC_NATIONS } from '../data/soccer-nations'
-import { SOCCER_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
+import { SOCCER_ALL_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
+// (every league season in the five leagues is played, whichever leagues Career deals from; the players are every
+// club player in the data, the Champions League clubs from outside the five leagues included)
+const SOCCER_STRIKERS = SOCCER_ALL_STRIKERS
 
-export const SOCCER_TRAITS = ['finishing', 'shotPower', 'heading', 'dribbling', 'firstTouch', 'linkUp', 'pace', 'strength', 'offBall', 'composure']
+export const SOCCER_TRAITS = ['pace', 'finishing', 'shotPower', 'dribbling', 'passing', 'positioning', 'heading', 'size', 'composure']
 const SEASON = '2026-27'
 
 // ─── Small helpers ───────────────────────────────────────────────────────────
@@ -184,15 +188,18 @@ const stream = (base, tag) => seeded(`${base}|${tag}`)
 
 // ─── OVR ─────────────────────────────────────────────────────────────────────
 // What makes a striker score, in order: finishing (goals against xG is a real, lasting skill for the best,
-// but small next to chance volume), then movement (offBall: getting the chances at all; most of a striker's
-// goals are decided by where he is when the ball arrives), then composure (big-chance conversion, penalties)
-// and first touch. EA FC's own ST rating leans the same way (finishing 18%, positioning 13%, then heading,
-// shot power and ball control at 10% each; pace 9% between acceleration and sprint speed); link-up play
-// counts here for the modern No. 9's assists. Same scale as the other sports (grades 0-11: A = 96, B+ = 86,
-// B = 81, B- = 77), so an elite real striker (mostly A and A+) lands 93-99, an average starter (B/B+) 78-84.
+// but small next to chance volume), then positioning (getting the chances at all; most of a striker's goals
+// are decided by where he is when the ball arrives), then dribbling (with ball control and first touch in it
+// since 11-16) and composure (big-chance conversion, penalties). EA FC's own ST rating leans the same way
+// (finishing 18%, positioning 13%, then heading, shot power and ball control at 10% each; pace 9% between
+// acceleration and sprint speed); passing counts here for the modern No. 9's assists and size for the duels.
+// Same scale as the other sports (grades 0-11: A = 96, B+ = 86, B = 81, B- = 77), so an elite real striker
+// (mostly A and A+) lands 93-99, an average starter (B/B+) 78-84.
+// (until 11-16, ten: finishing .18, offBall .16, composure .10, firstTouch .10, pace .09, shotPower .08,
+// heading .08, dribbling .07, linkUp .07, strength .07)
 export const SOCCER_OVR_WEIGHTS = {
-  finishing: 0.18, offBall: 0.16, composure: 0.10, firstTouch: 0.10, pace: 0.09,
-  shotPower: 0.08, heading: 0.08, dribbling: 0.07, linkUp: 0.07, strength: 0.07,
+  finishing: 0.18, positioning: 0.17, dribbling: 0.12, composure: 0.11, pace: 0.10,
+  shotPower: 0.08, heading: 0.08, passing: 0.08, size: 0.08,
 }
 export function calcSoccerOVR(build, types = SOCCER_TRAITS) {
   let sum = 0, wt = 0
@@ -215,12 +222,12 @@ const BOX_X = 0.03 + 0.12 / 2.5     // a normal shot in the box: 0.03-0.15, mean
 const LONG_X = 0.035                // from outside the box: 0.015-0.055
 function profileOf(get) {
   const v = t => clamp(Number(get(t) ?? 5), 0, 11)
-  const fin = v('finishing'), sp = v('shotPower'), hd = v('heading'), dr = v('dribbling'), ft = v('firstTouch')
-  const lu = v('linkUp'), pa = v('pace'), st = v('strength'), ob = v('offBall'), co = v('composure')
+  const fin = v('finishing'), sp = v('shotPower'), hd = v('heading'), dr = v('dribbling')
+  const lu = v('passing'), pa = v('pace'), st = v('size'), ob = v('positioning'), co = v('composure')
   // his share of the team's chances (at an average team), flattening at the top: a poor No. 9 ~0.11, an
   // average starter ~0.20, a good one ~0.33, elite ~0.40, an S striker ~0.45 (Haaland takes ~0.38 of City's
-  // xG, a weaker side's No. 9 more of less)
-  const volIdx = 0.38 * ob + 0.14 * pa + 0.11 * ft + 0.10 * hd + 0.10 * dr + 0.08 * st + 0.07 * sp + 0.02 * lu
+  // xG, a weaker side's No. 9 more of less). Positioning first: being where the ball arrives.
+  const volIdx = 0.40 * ob + 0.14 * pa + 0.17 * dr + 0.11 * hd + 0.09 * st + 0.07 * sp + 0.02 * lu
   const share = 0.08 + 0.355 / (1 + Math.exp(-0.8 * (volIdx - 7)))
   // goals per xG: elite +12-18% (Haaland, Kane and Son over their careers), average 1.0, poor -8%
   const finIdx = 0.55 * fin + 0.30 * co + 0.15 * sp
@@ -231,17 +238,18 @@ function profileOf(get) {
   const long = clamp(0.18 + 0.015 * (sp - 6) - 0.015 * (ob - 6), 0.05, 0.35)
   const head = clamp(0.13 + 0.025 * (hd - 6) + 0.01 * (st - 6), 0.03, 0.42)
   const q = big * BIG_X + (1 - big) * ((1 - long) * BOX_X + long * LONG_X)
-  // of his teammates' goals while he's on, how many he sets up (average ~0.11, a Kane ~0.17)
-  const assist = clamp(0.02 + 0.009 * lu + 0.003 * dr + 0.002 * ft + 0.002 * ob, 0.02, 0.24)
+  // of his teammates' goals while he's on, how many he sets up (average ~0.11, a Kane ~0.17): passing
+  const assist = clamp(0.02 + 0.010 * lu + 0.004 * dr + 0.002 * ob, 0.02, 0.24)
   const penIdx = 0.45 * fin + 0.40 * co + 0.15 * sp
   const penConv = clamp(0.60 + 0.03 * penIdx, 0.6, 0.93)     // B 78%, A 87%, S 93%
   const taker = penIdx >= 6 ? 1 : penIdx >= 4 ? 0.6 : 0.25    // his club's taker (a weak one shares them)
   const onTarget = clamp(0.26 + 0.012 * (fin - 6) + 0.006 * (sp - 6), 0.15, 0.4)   // a miss that still tests the keeper
-  return { share, F, big, long, head, q, assist, penConv, taker, onTarget, link: lu, strength: st }
+  // size: his durability and minutes (spellsOf, p90) and, with his touch, holding the ball up for the others
+  return { share, F, big, long, head, q, assist, penConv, taker, onTarget, link: lu, size: st, hold: 0.6 * st + 0.4 * dr }
 }
 const profileOfBuild = build => profileOf(t => build?.[t]?.val)
 const profileOfAttrs = attrs => profileOf(t => attrs?.[t])
-const GENERIC_BACKUP = { share: 0.14, F: 0.92, link: 4, assist: 0.08 }
+const GENERIC_BACKUP = { share: 0.14, F: 0.92, link: 4, hold: 5, assist: 0.08 }
 const LAM_REF = 1.45
 // his share of the chances at a team that scores `lam` a game: the best sides spread the goals around
 // (Haaland ~0.38 of City's xG), a weak side leans on its No. 9 (~0.45 for an elite one)
@@ -266,8 +274,8 @@ function countryKey(l) {
   if (/spai|espa|laliga|la liga/.test(s)) return 'ESP'
   return 'ENG'
 }
-const LEAGUES = (SOCCER_LEAGUES ?? []).map(l => ({ ...l, key: countryKey(l) }))
-const CLUBS = (SOCCER_CLUBS ?? []).map(c => ({ ...c, att: Number(c.att) || 75, def: Number(c.def) || 75 }))
+const LEAGUES = (SOCCER_SIM_LEAGUES ?? []).map(l => ({ ...l, key: countryKey(l) }))
+const CLUBS = (SOCCER_SIM_CLUBS ?? []).map(c => ({ ...c, att: Number(c.att) || 75, def: Number(c.def) || 75 }))
 const leagueOfClub = c => LEAGUES.find(l => c.league === l.id || c.league === l.short || c.league === l.name) ?? LEAGUES[0]
 for (const c of CLUBS) { const L = leagueOfClub(c); c.lid = L?.id; c.country = L?.key ?? 'ENG' }
 const CLUB_BY = new Map(CLUBS.map(c => [c.short, c]))
@@ -290,7 +298,7 @@ const ROLE = {
 const FORWARDS = new Set(['ST', 'SS', 'LW', 'RW'])
 const roleOf = p => { const r = String(p?.role ?? 'ST').toUpperCase(); return ROLE[r] ? r : 'ST' }
 const isForward = p => FORWARDS.has(roleOf(p))
-const playValue = p => { const a = p.attrs ?? {}; return ROLE[roleOf(p)].v * Math.max(0, ((a.linkUp ?? 5) + (a.firstTouch ?? 5) + (a.composure ?? 5) + (a.dribbling ?? 5)) / 4 - 5) }
+const playValue = p => { const a = p.attrs ?? {}; return ROLE[roleOf(p)].v * Math.max(0, (2 * (a.passing ?? 5) + (a.composure ?? 5) + (a.dribbling ?? 5)) / 4 - 5) }
 const withProf = p => ({ ...p, role: roleOf(p), ovr: ovrOfAttrs(p.attrs), prof: profileOfAttrs(p.attrs), value: playValue(p) })
 const byTeam = list => {
   const m = new Map()
@@ -538,11 +546,11 @@ function playSingle(W, A, B, { comp, wk, name, ri, neutral = false }) {
 }
 
 // ─── His minutes ─────────────────────────────────────────────────────────────
-// Injuries: a spell out in about two seasons of five (strength is his durability), 1-9 weeks; small knocks
+// Injuries: a spell out in about two seasons of five (size is his durability), 1-9 weeks; small knocks
 // keep him out of ~4% of matches; the manager rests him in early cup rounds. A first-choice No. 9 starts
-// ~93% of the matches he's fit for and plays 90 in about half of them (more if he's strong and elite).
+// ~93% of the matches he's fit for and plays 90 in about half of them (more if he's big and elite).
 function spellsOf(rand, prof) {
-  const p1 = clamp(0.42 - 0.025 * (prof.strength - 6), 0.18, 0.6)
+  const p1 = clamp(0.42 - 0.025 * ((prof.size ?? 6) - 6), 0.18, 0.6)
   const u = [rand(), rand(), rand(), rand(), rand(), rand()]
   const out = []
   if (u[0] < p1) { const from = 1 + u[1] * 36; out.push([from, from + 1 + Math.floor(u[2] * u[2] * 9)]) }
@@ -565,10 +573,11 @@ function planOf(rand, S, wk, kind) {
 // M: how much more (or less) the team scores with him on than with the real No. 9 he replaced. 20% of the
 // chances he takes beyond the other man's would have been a teammate's; when he's the weaker one, half of
 // the chances he doesn't get go to the others instead. A No. 9 who gets more of the ball pulls defenders
-// with him (a little more for the others), and link-up play lifts them a little too.
+// with him (a little more for the others), his passing makes chances for them (about 1% more of their goals a
+// grade), and a No. 9 who holds the ball up (size and touch) brings them into the game.
 function liftOf(b, r, lam, usage) {
   const sb = shareAt(b, lam, usage), sr = shareAt(r, lam)
-  const lk = 1 + 0.006 * ((b.link ?? 6) - (r.link ?? 6)) + 0.1 * Math.max(0, sb - sr)
+  const lk = 1 + 0.010 * ((b.link ?? 6) - (r.link ?? 6)) + 0.003 * ((b.hold ?? 6) - (r.hold ?? 6)) + 0.1 * Math.max(0, sb - sr)
   const den = (1 - sr) + sr * r.F
   const absorb = sb >= sr ? 0.2 : 0.5
   return { M: clamp(((1 - sr - absorb * (sb - sr)) * lk + sb * b.F) / den, 0.7, 1.45), den, sb }
@@ -578,7 +587,7 @@ function strikerSide({ build, prof, team, mates, lamAvg, base, script }) {
   const replaced = mates[0] ?? null
   // (who plays up front when he's off: the side's next striker, or a forward who can)
   const backup = mates.slice(1).find(p => p.role === 'ST' || p.role === 'SS') ?? mates.slice(1).find(isForward) ?? null
-  const real = replaced?.prof ?? { share: 0.2, F: 1, link: 6 }
+  const real = replaced?.prof ?? { share: 0.2, F: 1, link: 6, hold: 6 }
   const L = liftOf(prof, real, lamAvg, usage)
   const bk = backup?.prof ?? GENERIC_BACKUP
   const LB = liftOf({ ...GENERIC_BACKUP, ...bk }, real, lamAvg, 1)
@@ -593,7 +602,7 @@ function strikerSide({ build, prof, team, mates, lamAvg, base, script }) {
     M: script ? 1 : L.M, Mbk: script ? 1 : LB.M,
     startP: benchRole ? 0.16 : weaker ? 0.55 : 0.93,
     subP: benchRole ? 0.78 : 0.7,
-    p90: clamp(0.40 + 0.03 * (prof.strength - 6) + (ovr - 85) * 0.01, 0.2, 0.72),
+    p90: clamp(0.40 + 0.03 * ((prof.size ?? 6) - 6) + (ovr - 85) * 0.01, 0.2, 0.72),
     spells: spellsOf(stream(base, 'injury'), prof),
     // a hot or a cold year
     formF: Math.exp(0.03 * gauss(fr)), formV: Math.exp(0.03 * gauss(fr)),
@@ -1214,23 +1223,24 @@ export function getSoccerArchetype(ovr, build, types = SOCCER_TRAITS) {
   const rem = types.length - filled.length
   if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
   const g = t => build[t]?.val ?? 0
-  const fin = g('finishing'), sp = g('shotPower'), hd = g('heading'), dr = g('dribbling'), ft = g('firstTouch')
-  const lu = g('linkUp'), pa = g('pace'), st = g('strength'), ob = g('offBall'), co = g('composure')
+  const fin = g('finishing'), sp = g('shotPower'), hd = g('heading'), dr = g('dribbling')
+  const lu = g('passing'), pa = g('pace'), st = g('size'), ob = g('positioning'), co = g('composure')
   const vals = filled.map(t => build[t].val ?? 0)
   const spread = Math.max(...vals) - Math.min(...vals), mean = avg(vals)
-  const ranked = [['fin', fin], ['sp', sp], ['hd', hd], ['dr', dr], ['ft', ft], ['lu', lu], ['pa', pa], ['st', st], ['ob', ob], ['co', co]].sort((a, b) => b[1] - a[1])
+  // (lu: passing, st: size, ob: positioning; dribbling carries ball control and first touch)
+  const ranked = [['fin', fin], ['sp', sp], ['hd', hd], ['dr', dr], ['lu', lu], ['pa', pa], ['st', st], ['ob', ob], ['co', co]].sort((a, b) => b[1] - a[1])
   const t1 = ranked[0][0], t2 = ranked[1][0], t3 = ranked[2][0]
   const top = k => t1 === k || t2 === k, top3 = k => top(k) || t3 === k, peak = k => t1 === k
-  const complete = (spread <= 2 && mean >= 7.5) || vals.filter(v => v >= 8).length >= 8
+  const complete = (spread <= 2 && mean >= 7.5) || vals.filter(v => v >= 8).length >= 7
   const poacher = ((top('fin') && top3('ob')) || (top('ob') && top3('fin'))) && !peak('pa')
   const fox = poacher && pa <= 6
   const target = top3('hd') && top3('st')
-  const falseNine = top('lu') && (top3('dr') || top3('ft'))
-  const deep = top('lu') && (top3('st') || top3('ft'))
+  const falseNine = top('lu') && top3('dr')
+  const deep = top('lu') && (top3('st') || top3('co'))
   const runner = top('pa') && top3('ob')
   const advanced = top('pa') && top3('fin')
   const iceCold = top('co') && top3('fin')
-  const holdUp = top('st') && top3('ft')
+  const holdUp = top('st') && top3('dr')
   const second = top('dr') && top3('fin')
   const balanced = spread <= 1
   if (ovr >= 95) {
@@ -1331,22 +1341,22 @@ function tieOf(legs, comp) {
 }
 const scoreLine = g => (g ? `${g.mySc}-${g.oppSc}${g.shootout ? ` (${g.shootout.my}-${g.shootout.opp} pens)` : g.et ? ' a.e.t.' : ''}` : null)
 
-function clubSeason(build, types, team, base, gameMode, script) {
-  const club = resolveClub(team)
+function clubSeason(build, types, team, base, gameMode, script, pend = null) {
+  const club = pend ? pend.proxy : resolveClub(team)
   const L = leagueOfClub(club)
   const meta = LEAGUE_META[L.key]
   const U = club.short
   const prof = profileOfBuild(build)
   const ovr = calcSoccerOVR(build, types)
-  const mates = CLUB_STRIKERS.get(U) ?? []
+  const mates = CLUB_STRIKERS.get(pend ? pend.real.short : U) ?? []
   let world
   if (script) world = script.world
-  const uRate = world ? world.uRate : ratingsOf(club, team, 'current', null)
+  const uRate = world ? world.uRate : ratingsOf(pend ? pend.real : club, team, 'current', null)
   const lamAvg = lamAvgOf(U, uRate, L.id)
   const S = strikerSide({ build, prof, team, mates, lamAvg, base, script: !!script })
   if (!world) {
     const place = team?.lastPos ?? lastPlace(club)
-    const uComp = team?.europe !== undefined ? team.europe : place <= meta.ucl ? 'ucl' : place <= meta.ucl + meta.uel ? 'uel' : null
+    const uComp = pend ? null : team?.europe !== undefined ? team.europe : place <= meta.ucl ? 'ucl' : place <= meta.ucl + meta.uel ? 'uel' : null
     world = clubWorld({ U, uRate, uComp, uPlace: place, hook: hookFor(S, base), rand: stream(base, 'world') })
   } else {
     // a script's season: his minutes are planned now, from his own streams, match by match in each competition
@@ -1520,12 +1530,49 @@ export function soccerStrikerLift(build, team, mode = 'current') {
   return { M: r2(L.M), att: r1(rate.att + Math.log(L.M) / (mode === 'alltime' ? KW_ATT : K_ATT)), replaced: mates[0]?.name ?? null }
 }
 
+// ─── A Champions League club from outside the five leagues (PENDING) ────────────────────────────────────────
+// The wheel deals the 36 Champions League clubs (2026-11-16), and this engine only plays the five leagues. Until the
+// Champions League season lands (branch socucl), a club from elsewhere (Porto, PSV, Sabah...) plays a plain season:
+// its league matches, at its own strength, against a neutral schedule (the matches of the five-league side nearest
+// its strength, every opponent shown as "League opponent"), with no table, no cup, no Europe and no awards race, so
+// nothing names a league or a rival it doesn't play. The result carries ucl: 'pending' (the flag the season branch
+// checks for); clubs in the five leagues are untouched.
+const OTHER_CLUBS = new Map((SOCCER_ALL_CLUBS ?? []).filter(c => !CLUB_BY.has(c.short)).map(c => [c.short, { ...c, att: Number(c.att) || 75, def: Number(c.def) || 75 }]))
+export const soccerPendingClub = short => OTHER_CLUBS.has(short)
+function pendingSeason(build, types, team, base, gameMode) {
+  const real = OTHER_CLUBS.get(team.short)
+  const proxy = CLUBS.slice().sort((a, b) => Math.abs(a.att - real.att) + Math.abs(a.def - real.def) - Math.abs(b.att - real.att) - Math.abs(b.def - real.def) || (a.short < b.short ? -1 : 1))[0]
+  const r = clubSeason(build, types, { ...team, short: proxy.short, name: proxy.name }, base, gameMode, null, { proxy, real })
+  const OPP = { opponent: 'OPP', oppName: 'League opponent', oppExtra: true }
+  const games = r.games.map(g => ({ ...g, ...OPP }))
+  const t = totalsOf(games)
+  const none = totalsOf([])
+  const lg = (OTHER_LEAGUES ?? []).find(l => l.id === real.league)
+  const w = games.filter(g => g.result === 'W').length, d = games.filter(g => g.result === 'D').length
+  const gf = games.reduce((s, g) => s + g.mySc, 0), ga = games.reduce((s, g) => s + g.oppSc, 0)
+  return {
+    ...r, ucl: 'pending',
+    team: { ...real, ...(team ?? {}), att: r.team.att, def: r.team.def },
+    league: { id: 'pending', name: lg?.name ?? 'League', short: '', country: lg?.country ?? '', cup: null, boot: 'Top Scorer', poty: 'Player of the Season', size: 0, games: games.length },
+    wins: w, draws: d, losses: games.length - w - d, points: 3 * w + d, gf, ga, gd: gf - ga,
+    seed: null, conference: 'pending', standings: [], champion: false, madePlayoffs: false, playoffs: false,
+    playoffRounds: [], games, gameLog: games.map(g => g.result), bestGame: bestOf(games), finalsOpp: null, finalsSeries: null,
+    ...t, ...seasonFields(t), allComps: t, byComp: { league: t, cup: none, europe: none }, fixtures: games,
+    cup: null, europe: null, trophies: [], qualified: null, relegated: false, relegationPlayoff: false, otherLeagues: {}, europeWinners: {},
+    goldenBoot: { name: 'Top Scorer', won: false, shared: false, rank: null, goals: t.goals, winner: null, race: [] },
+    playerOfSeason: { name: 'Player of the Season', won: false, rank: null, winner: null }, teamOfSeason: false, mvp: false,
+    goldenShoe: { won: false, rank: null, goals: t.goals, points: null, winner: null, race: [] },
+    ballonDor: { rank: null, finish: null, winner: null, top: [] }, book: null,
+  }
+}
+
 // ─── Entry points ────────────────────────────────────────────────────────────
 // `script` (Squad Builder): a season from scriptSoccerSeason; the scores, table, cup, Europe and the award
 // field come from it and this build only makes his own line.
 export function runSoccerSimulation(build, types = SOCCER_TRAITS, team = null, mode = 'current', rngSeed = null, gameMode = 'classic', script = null) {
   const base = seedBase(rngSeed)
   const t = types?.length ? types : SOCCER_TRAITS
+  if ((script?.mode ?? mode) !== 'alltime' && !script && team?.short && !CLUB_BY.has(team.short) && OTHER_CLUBS.has(team.short)) return pendingSeason(build, t, team, base, gameMode)
   return (script?.mode ?? mode) === 'alltime' ? wcSeason(build, t, team, base, gameMode, script) : clubSeason(build, t, team, base, gameMode, script)
 }
 // The squad's one season: every result decided once from its strength (`tr`: { att, def } on the club or

@@ -164,7 +164,7 @@ export function modeLabel(gameMode, position) {
     const pos = position === 'big' ? 'Big' : position === 'guard' ? 'Guard' : 'Bucket'
     return `${pos} · ${m === 'bucket-all-time' ? 'All-Time' : 'Classic'}`
   }
-  if (m.startsWith('soccer-')) return `Striker · ${m === 'soccer-all-time' ? 'World Cup' : 'Top Divisions'}`
+  if (m.startsWith('soccer-')) return `Striker · ${m === 'soccer-all-time' ? 'World Cup' : 'Champions League'}`
   if (m.startsWith('baseball-')) return `${position === 'pit' ? 'Pitcher' : 'Batter'} · ${m === 'baseball-all-time' ? 'All-Time' : 'Current'}`
   const [head, ...rest] = m.split('-')
   const pos = POS[head] || 'QB'

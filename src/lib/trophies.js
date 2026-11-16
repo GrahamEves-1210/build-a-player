@@ -155,8 +155,8 @@ export function seasonPos(row) {
   return POS_BY_KEY[gm.split('-')[0]] || POS_BY_KEY.qb
 }
 export const isAllTime = row => /all-time|legends/.test(String(row?.game_mode || ''))
-// (soccer's pools have their own names: TOP DIVISIONS and WORLD CUP)
-export const modeName = row => (isSoccerMode(row?.game_mode) ? (isAllTime(row) ? 'WORLD CUP' : 'TOP DIVISIONS') : isAllTime(row) ? 'ALL-TIME' : 'CURRENT')
+// (soccer's pools have their own names: CHAMPIONS LEAGUE and WORLD CUP)
+export const modeName = row => (isSoccerMode(row?.game_mode) ? (isAllTime(row) ? 'WORLD CUP' : 'CHAMPIONS LEAGUE') : isAllTime(row) ? 'ALL-TIME' : 'CURRENT')
 
 // The awards a season won ('MVP', 'OPOY', 'DPOY', 'ALL-PRO')
 export function seasonAwards(row) {

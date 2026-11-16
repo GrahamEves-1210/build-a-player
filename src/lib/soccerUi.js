@@ -10,19 +10,21 @@ export const SOCCER_SILHOUETTE = { src: '/basketballsilhouette.png', headless: '
 
 // Each striker trait takes one of the basketball figure's spots and body parts:
 // heading on the head (and his face), composure on the shirt (crest, name and number),
-// shot power on the boots, pace on the legs and shorts, strength the build (height, weight, arms)
+// shot power on the boots, pace on the legs and shorts, size the build (height, weight, arms). Nine traits since
+// 11-16: the basketball figure's jump-shot spot is left empty (four a side, Size's row under the right four).
 export const SOCCER_AS_BUCKET = {
-  heading: 'basketballIQ', linkUp: 'passing', firstTouch: 'jumpShot', composure: 'clutch', shotPower: 'bounce',
-  strength: 'size', dribbling: 'handles', finishing: 'finishing', offBall: 'perimeterDefense', pace: 'speed',
+  heading: 'basketballIQ', passing: 'passing', composure: 'clutch', shotPower: 'bounce',
+  size: 'size', dribbling: 'handles', finishing: 'finishing', positioning: 'perimeterDefense', pace: 'speed',
 }
 export const SOCCER_PHOTO_SLOT = 'heading'   // whose face the figure wears
 export const SOCCER_KIT_SLOT = 'composure'   // whose shirt, crest and number
-export const SOCCER_SIZE_SLOT = 'strength'   // whose height and weight
+export const SOCCER_SIZE_SLOT = 'size'       // whose height and weight
 export const soccerAsBucketBuild = build => Object.fromEntries(Object.entries(build ?? {}).map(([t, c]) => [SOCCER_AS_BUCKET[t] ?? t, c]))
 
 // ── Pools: the keys stay 'current' / 'alltime' everywhere (boards, compete, saves) ──
 export const SOCCER_POOL = {
-  current: { key: 'current', mode: 'classic', label: 'TOP DIVISIONS', short: 'TOP DIVS', line: 'Europe\'s top five leagues', team: 'CLUB', teams: 'clubs' },
+  // (the wheel's clubs are the Champions League's 36 since 11-16; Career still plays the domestic leagues)
+  current: { key: 'current', mode: 'classic', label: 'CHAMPIONS LEAGUE', short: 'UCL', line: 'The 36 clubs of 2026-27', team: 'CLUB', teams: 'clubs' },
   alltime: { key: 'alltime', mode: 'all-time', label: 'WORLD CUP', short: 'WORLD CUP', line: 'The 48 nations of 2026', team: 'NATION', teams: 'nations' },
 }
 // the app's game modes are 'classic' / 'all-time' (like basketball); the pool key from either
@@ -55,12 +57,12 @@ export function soccerArchetype(ovr, build, types) {
   const vals = filled.map(t => build[t].val ?? 0)
   const spread = Math.max(...vals) - Math.min(...vals)
   const avg = vals.reduce((s, v) => s + v, 0) / vals.length
-  const fin = g('finishing'), pow = g('shotPower'), hed = g('heading'), dri = g('dribbling'), ft = g('firstTouch')
-  const lnk = g('linkUp'), pac = g('pace'), str = g('strength'), off = g('offBall'), com = g('composure')
+  const fin = g('finishing'), pow = g('shotPower'), hed = g('heading'), dri = g('dribbling')
+  const lnk = g('passing'), pac = g('pace'), str = g('size'), off = g('positioning'), com = g('composure')
   let kind
   if (spread <= 2 && avg >= 8) kind = 'Complete Forward'
-  else if (hed + str >= Math.max(fin + off, lnk + ft, pac + dri, pow + fin) && hed >= 7) kind = 'Target Man'
-  else if (lnk + ft + com >= (fin + off + pac) && lnk >= 7) kind = 'False Nine'
+  else if (hed + str >= Math.max(fin + off, lnk + dri, pac + dri, pow + fin) && hed >= 7) kind = 'Target Man'
+  else if (lnk + dri + com >= (fin + off + pac) && lnk >= 7) kind = 'False Nine'
   else if (pac + dri >= fin + off && pac >= 8) kind = 'Inside Forward'
   else if (fin + off >= pow + str && fin >= 7) kind = 'Poacher'
   else if (pow + str >= 14) kind = 'Battering Ram'
