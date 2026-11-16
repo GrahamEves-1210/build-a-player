@@ -5,7 +5,7 @@ import { playoffWeather } from '../../utils/simulation'
 import { createPortal } from 'react-dom'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
-  startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
+  startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, TRADE_ODDS, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
@@ -1232,6 +1232,24 @@ function NumberSheet({ c, cur, onPick, onClose }) {
     document.body,
   )
 }
+// Demand a trade: where to (ANY TEAM, always granted; A CONTENDER, 70%, and a no keeps him), or stay put
+function TradeAsk({ onPick, onNo }) {
+  return createPortal(
+    <div className="ll-overlay" onClick={e => e.target === e.currentTarget && onNo()}>
+      <div className="ll-sheet" role="alertdialog" aria-modal="true" aria-labelledby="cr-trade-title">
+        <div className="ll-head"><span className="ag-eyebrow">TRADE REQUEST</span><button className="ag-round-btn" onClick={onNo} aria-label="Close"><IconClose size={15} /></button></div>
+        <h2 className="ll-title" id="cr-trade-title">Demand a trade?</h2>
+        <p className="ll-body">Reputation takes a hit either way.</p>
+        <div className="cr-trade-pick">
+          <button className="cr-trade-opt" onClick={() => onPick('contender')}><b>TO A CONTENDER</b><small>{Math.round(TRADE_ODDS.contender * 100)}% shipped · {Math.round((1 - TRADE_ODDS.contender) * 100)}% he stays</small></button>
+          <button className="cr-trade-opt" onClick={() => onPick('any')}><b>TO ANY TEAM</b><small>100% shipped</small></button>
+        </div>
+        <div className="ll-actions"><button className="ag-btn ag-cta" onClick={onNo} autoFocus>STAY PUT</button></div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
 // A yes or no in the app's own look (never the browser's box)
 function AskSheet({ eyebrow, title, body, yes, no = 'NOT NOW', danger = false, onYes, onNo }) {
   return createPortal(
@@ -1297,18 +1315,18 @@ function Moves({ c, setCareer, forced }) {
   const dc = depthChart(c)
   const [askTrade, setAskTrade] = useState(false)
   const [tradeRes, setTradeRes] = useState(null)
-  const doTrade = () => {
+  const doTrade = (aim = 'contender') => {
     setAskTrade(false)
     const from = c.team
-    const next = demandTrade(c)
+    const next = demandTrade(c, aim)
     setCareer(next)
     setTradeRes({ granted: next.team !== from, from, c: next })
   }
   return (
     <>
       {askTrade && (c.sport === 'soccer'
-        ? <AskSheet eyebrow="TRANSFER REQUEST" title="Hand in a transfer request?" body={c.contract.noTrade ? 'His release clause means the club has to let him go. His reputation takes a hit.' : 'His reputation takes a hit, and the club can say no.'} yes="HAND IT IN" no="STAY PUT" danger onYes={doTrade} onNo={() => setAskTrade(false)} />
-        : <AskSheet eyebrow="TRADE REQUEST" title="Demand a trade?" body="Reputation takes a hit, and the team can say no." yes="DEMAND IT" no="STAY PUT" danger onYes={doTrade} onNo={() => setAskTrade(false)} />)}
+        ? <AskSheet eyebrow="TRANSFER REQUEST" title="Hand in a transfer request?" body={c.contract.noTrade ? 'His release clause means the club has to let him go. His reputation takes a hit.' : 'His reputation takes a hit, and the club can say no.'} yes="HAND IT IN" no="STAY PUT" danger onYes={() => doTrade()} onNo={() => setAskTrade(false)} />
+        : <TradeAsk onPick={doTrade} onNo={() => setAskTrade(false)} />)}
       {tradeRes && <TradeOverlay res={tradeRes} onClose={() => setTradeRes(null)} />}
       {ev.map((e, i) => <div key={i} className="ag-card cr-event ag-pop"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()}</span><p>{withLegacy(e.text)}</p></div>)}
       {moves.length > 0 && (

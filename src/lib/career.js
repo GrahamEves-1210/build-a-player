@@ -3368,25 +3368,29 @@ export function ask(c, kind) {
 }
 export const closeTalks = c => ({ ...c, talks: null })
 export const acceptTalks = c => (c.talks && !c.talks.walked ? signOffer(c, c.talks) : c)
-// Mid-contract: ask out. Costs reputation; the team doesn't have to say yes.
-export function demandTrade(c) {
+// Mid-contract: ask out. Costs reputation either way. Two asks (owner 11-15): ANY TEAM, always granted, anywhere in
+// the league; A CONTENDER, granted 7 times in 10 (the team won't always do his shopping for him), to one of the
+// league's best (the top quarter as the teams rate this year), and a no keeps him where he is.
+export const TRADE_ODDS = { contender: 0.7, any: 1 }
+export function demandTrade(c, aim = 'contender') {
   const S = sportOf(c)
   if (c.tradeAsked) return c
   if (S.x?.transferRequest) return S.x.transferRequest(c)
   const r = seeded(`${c.seed}-trade-${c.year}`)
-  const granted = r() < 0.7
+  const any = aim === 'any'
+  const granted = any || r() < TRADE_ODDS.contender
   const rep = Math.max(1, c.rep - 2)
-  if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: `${c.name} asked for a trade. The team said no, and the locker room heard about it.` }] }
+  if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: `${c.name} asked to be traded to a contender. The team said no, and the locker room heard about it.` }], decisions: [...c.decisions, { year: c.year + 1, text: 'Demanded a trade to a contender, turned down' }] }
   // any team in the stronger half (it was the top six: the same two or three every time), as the teams rate this
   // year (their rosters, the league's moves); a skill player leans to the ones with a quarterback and a line (supportW)
   const pool = S.teams.filter(t => t.short !== c.team).map(t => { const roster = rosterOf(c, t.short); return { short: t.short, roster, fit: teamFit(t.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), spot: lineSpot(c) }) } })
     .sort((a, b) => (b.fit.off + b.fit.def) - (a.fit.off + a.fit.def))
-  const half = pool.slice(0, Math.ceil(pool.length / 2))
-  const dest = SKILL[c.pos] ? pickBy(half, x => supportW(c.pos, x.fit), r()) : half[Math.floor(r() * half.length)]
+  const top = any ? pool : pool.slice(0, Math.max(4, Math.round(pool.length / 4)))
+  const dest = !any && SKILL[c.pos] ? pickBy(top, x => supportW(c.pos, x.fit), r()) : top[Math.floor(r() * top.length)]
   const { roster, fit } = dest
   // a starter guarantee was the old team's promise: it stays with them
   // (the summer's event was the old team's: dealt again for the new one, after the trade is on the record)
-  const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade${any ? '' : ' to a contender'}, dealt to the ${fit.name}` }] }
   return redealEvent(moved, c.team)
 }
 // (the chance a veteran, 29 to 34, picks up a grade in a trait that never fades: football and basketball)

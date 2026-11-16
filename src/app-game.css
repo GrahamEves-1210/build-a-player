@@ -4643,6 +4643,13 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 
 /* Offseason: the trade demand sits with the depth chart / role */
 .cr-trade-btn { margin-top: 10px; width: 100%; }
+/* demand a trade: where to (TradeAsk) */
+.cr-trade-pick { display: grid; gap: 8px; margin: 4px 0 12px; }
+.cr-trade-opt { display: grid; gap: 4px; width: 100%; padding: 13px 16px; border: 1px solid var(--ag-line, rgba(255,255,255,.16)); border-radius: 10px; background: rgba(255,255,255,.04); color: #fff; text-align: left; font: inherit; cursor: pointer; }
+.cr-trade-opt b { font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-weight: 400; font-size: 21px; letter-spacing: .4px; line-height: 1; }
+.cr-trade-opt small { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.72); }
+.cr-trade-opt:hover { border-color: rgba(255,255,255,.4); }
+.cr-trade-opt:active { transform: translateY(1px); }
 
 /* Contract talks: what an ask may cost */
 .cr-ask .cr-ask-cost { color: #f5dc8a; opacity: .95; }
