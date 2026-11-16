@@ -115,6 +115,31 @@ console.log(`  games with none: ${pct(rowsOn.slice(0, N).filter(x => x.n.off + x
 console.log(`  where: ${Object.entries(kinds).map(([k, v]) => `${FR.SNAP_KIND[k]} (${k}) ${v}`).join(' · ')}`)
 console.log(`  checked: ${tdChecked} moment touchdowns in the summary, ${statChecked} men's lines in the box, ${toChecked} moment turnovers in the team box`)
 console.log(`  wins: ${pct(wins.on, played.on)} with the sim playing the moments, ${pct(wins.off, played.off)} without moments (same seasons; ${played.on} and ${played.off} games)`)
+// 5. Saves: a game waiting on a moment survives the save (packed and read back, the same moment); a save from before
+//    (version 7, a game waiting on one of the old key moments) loads, its game put back to before kickoff and played again
+{
+  const F = make('mc-save', true)
+  let r = null
+  for (let i = 0; i < 18 && !F.pend; i++) { if (F.ev) FR.chooseEvent(F, 0); r = FR.playWeek(F, { moments: true }) }
+  if (!F.pend) bad('no moment to save across')
+  else {
+    const v1 = FR.momentView(F)
+    const G = FR.upgradeSave(FR.unpackFranchise(FR.packFranchise(F)))
+    const v2 = FR.momentView(G)
+    if (!v2 || v2.t !== v1.t || v2.down !== v1.down || v2.d !== v1.d || v2.y !== v1.y) bad('a game waiting on its moment did not come back the same from the save')
+    const out = FR.finishMoment(G, null)
+    if (!out?.pending && !out?.row) bad('the saved moment would not finish')
+    // the old shape: version 7, F.pend from the old key moment (a build's mini game, no snaps)
+    const O = FR.unpackFranchise(FR.packFranchise(F))
+    O.v = 7; O.pend = { S: O.pend.S, pid: 1, b: 0, game: 'hot-read', po: false, kp0: [] }
+    const wk = O.wk
+    const U = FR.upgradeSave(O)
+    if (U.v !== FR.SAVE_V || U.pend) bad(`an old save with a moment waiting: v ${U.v}, pend ${!!U.pend}`)
+    const again = FR.playWeek(U, { moments: false })
+    if (!again?.row || U.wk !== wk + 1) bad('the old save game was not played again')
+    console.log(`  saves: a moment kept across a save (${v1.kind}, ${v1.down} & ${v1.d}); an old v7 save with a key moment waiting loads and replays its game (${again?.row?.hl ?? 'none'})`)
+  }
+}
 const maxOff = Math.max(...rowsOn.map(x => x.n.off)), maxDef = Math.max(...rowsOn.map(x => x.n.def))
 if (maxOff > 3 || maxDef > 1) bad(`a game with ${maxOff} offense / ${maxDef} defense moments`)
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

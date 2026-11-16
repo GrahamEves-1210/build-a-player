@@ -18,7 +18,7 @@ import { sfx, haptic } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import { GamesSwitch as MomentsModes } from '../simFlow'
 import { fkVars, KLogo, Chyron, Ticker, Scorebug, ManL3, BigRec, Stamp, TeamSlab, Tape, Go, Fold } from './kit'
-import Gameday from './Week'
+import Gameday, { GameBoxSheet } from './Week'
 import TeamTab from './Team'
 import LeagueTab from './League'
 import HistoryTab from './History'
@@ -147,7 +147,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
         {/* (the side column a frame after the game: the next thing to do is on screen first) */}
         {side && (
           <>
-            {reg && F.log.length > 0 && <LastWeek F={F} />}
+            {reg && F.log.length > 0 && <LastWeek F={F} owner={owner} />}
             {reg && <Ladder F={F} />}
             {reg && <Strip F={F} />}
             <ScoutRow F={F} onBoard={onBoard} />
@@ -287,8 +287,9 @@ function KeyPlayers({ F, owner, teams }) {
 }
 
 // ── Last week: the final and the line under it ───────────────────────────────
-function LastWeek({ F }) {
+function LastWeek({ F, owner }) {
   const g = F.log[F.log.length - 1]
+  const [box, setBox] = useState(false)
   const a = g.home ? g.opp : F.team, h = g.home ? F.team : g.opp
   const as = g.home ? g.them : g.us, hs = g.home ? g.us : g.them
   return (
@@ -296,6 +297,8 @@ function LastWeek({ F }) {
       <h3 className="fh-h"><b>Last week</b><span className={`fh-res is-${g.w ? 'w' : g.t ? 't' : 'l'}`}>{g.w ? 'Win' : g.t ? 'Tie' : 'Loss'}</span></h3>
       <Scorebug a={a} h={h} as={as} hs={hs} final={g.ot ? 'F/OT' : 'FINAL'} />
       {g.sub && <p className="fh-last-sub">{g.sub}</p>}
+      {g.bx && <button type="button" className="fh-textbtn" onClick={() => { setBox(true); sfx('tap') }}>Box score</button>}
+      {box && <GameBoxSheet F={F} row={g} owner={owner} portal onClose={() => setBox(false)} />}
     </section>
   )
 }

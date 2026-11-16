@@ -8,6 +8,16 @@
 .gd-week span { flex: none; display: inline-flex; align-items: center; gap: 6px; padding-right: 8px; font-family: var(--fk-f); font-size: 16px; letter-spacing: 1.2px; }
 .gd-live { width: 8px; height: 8px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 0 2px rgba(0,0,0,.25); }
 .gd-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gd-barrow { display: grid; gap: 6px; }
+.gd-side-scoring { display: none; }
+@media (min-width: 900px) {
+  .gd-barrow { grid-template-columns: minmax(0, 620px) minmax(0, 1fr); align-items: center; gap: 14px; }
+  .gd-side-scoring { display: block; }
+  .gd-side-scoring .gd-list { max-height: none; }
+  /* (the scoring is under the field on a wide screen: the tabs are the play-by-play and the box score) */
+  .gd:not(.is-final) .gd-tabs { grid-template-columns: 1fr 1fr; }
+  .gd:not(.is-final) .gd-tabs button:nth-child(2) { display: none; }
+}
 /* the speed (simFlow.jsx SpeedSeg) in the kit: flat, square, white on the picked one */
 .gd .plf-seg.gd-speed { flex: 1 1 280px; display: flex; gap: 0; padding: 0; margin: 0; border-radius: 0; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line2); }
 .gd .gd-speed .plf-seg-btn { flex: 1 1 0; min-width: 0; height: 40px; margin: 0; padding: 0 8px; border: 0; border-radius: 0; background: transparent; color: var(--fk-mute); font-family: var(--fk-d); font-size: 15px; letter-spacing: .4px; line-height: 1; text-transform: uppercase; cursor: pointer; }
@@ -91,6 +101,10 @@ html.bap-reduce-motion .gd-pbp { animation: none; }
 .gd-sheet .ss-sheet.sq-box { position: static; max-width: none; width: auto; max-height: none; overflow: visible; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; transform: none;
   --ag-a1: var(--tca); --ag-panel: var(--fk-g2); --ag-line: var(--fk-line2); --ag-line-hi: var(--fk-line2); --ag-muted: var(--fk-mute); --ag-text: #fff; --ag-text-2: #fff; }
 .gd-sheet .sq-box-score { border-radius: 0; background: var(--fk-g2); }
+/* (from the hub: the same sheet over the page) */
+.gd-sheet-modal .ss-sheet.sq-box { border-radius: 0; background: var(--fk-ink); color: var(--fk-text);
+  --ag-a1: var(--tca, #fff); --ag-panel: var(--fk-g2); --ag-line: var(--fk-line2); --ag-line-hi: var(--fk-line2); --ag-muted: var(--fk-mute); --ag-text: #fff; --ag-text-2: #fff; }
+.gd-sheet-modal :is(.sq-box-score, .sq-bt, .sq-tstat, .sq-box-me) { border-radius: 0; }
 .gd-sheet .sq-bt, .gd-sheet .sq-tstat, .gd-sheet .sq-box-me { border-radius: 0; }
 .gd-sheet .sq-bt-row { font-size: 13px; }
 .gd-sheet .sq-bt-name small { font-size: 11px; }
