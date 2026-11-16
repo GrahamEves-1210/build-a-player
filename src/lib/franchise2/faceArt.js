@@ -214,7 +214,7 @@ function geo(look) {
     // (the neck by his build: a lineman's as wide as his jaw, a receiver's a good deal narrower)
     nw: 10.4 + w * 3.4 + wt * 1.1,
     lean: clamp(0.45 - w * 0.3 - wt * 0.5 + chk * 0.4, 0, 1) * (young ? 0.4 : 1), soft: clamp(wt * 0.8 + w * 0.15 + (young ? 0.35 : 0), 0, 1),
-    ey: 38.3 + V.ey, es: 6.5 + sv(look, 'esp') * 0.5 + V.es, ez: 1 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),
+    ey: 38.3 + V.ey, es: 7.3 + sv(look, 'esp') * 0.5 + V.es, ez: 1.4 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),   // (owner 11-16: eyes bigger, a second time)
     nb: 47.5 + sv(look, 'nsl') * 0.9 + (look.head === 'long' ? 0.4 : 0) + V.nb,
   }
   G.by = G.ey - 2.85 - sv(look, 'brh') * 0.75 + V.by - (young ? 0.3 : 0)
