@@ -210,6 +210,27 @@ function extras(key, L, pos) {
   return x
 }
 
+// Young NFL rooms by position (owner 11-16: "less big beards for skill positions and less bald"), from a stream of its
+// own so his other parts keep their draws: a shaved head is rare (a lineman's now and then), the others keep a cut of
+// their background's (a fade, waves, a buzz, curls, a crop); the backs, receivers, corners, safeties, quarterbacks and
+// kickers are mostly clean, stubbled, lined up or in a thin goatee, a full beard rare; the big men keep more beards
+const SKILL = new Set(['qb', 'rb', 'wr', 'cb', 's', 'db', 'k'])
+const NOT_BALD = { b: [['fade', 50], ['waves', 22], ['buzz', 18], ['twists', 10]], m: [['fade', 50], ['curly', 30], ['buzz', 20]], p: [['fade', 40], ['curly', 35], ['buzz', 25]], l: [['fade', 50], ['crew', 30], ['buzz', 20]], w: [['crew', 40], ['textured', 40], ['buzz', 20]] }
+const LIGHT = [['none', 46], ['stubble', 24], ['chin', 12], ['goatee', 12], ['patch', 6]]
+function byPosition(key, L, pos) {
+  const r = seeded(`face4|${key}`), room = roomOf(pos), skill = SKILL.has(room)
+  if (L.hair === 'shaved' && r() > (BIG.has(room) ? 0.9 : 0.4)) L.hair = pickW(r, NOT_BALD[L.g] ?? NOT_BALD.w)
+  const heavy = L.beard === 'full' || L.beard === 'long', mid = L.beard === 'short'
+  // (long hair keeps the beard that goes with it)
+  if (L.hair === 'long' || L.hair === 'bun') return
+  let nb = L.beard
+  if (skill && heavy && r() < 0.6) nb = pickW(r, LIGHT)
+  else if (skill && mid && r() < 0.55) nb = pickW(r, LIGHT)
+  else if (!skill && L.beard === 'long' && r() < 0.6) nb = 'full'
+  if (nb === L.beard) return
+  L.beard = nb
+  L.stache = nb === 'goatee' ? 'full' : nb === 'full' || nb === 'short' ? 'full' : 'none'
+}
 export function lookOf(key, pos = 'wr', ag = null) {
   const r = seeded(`face|${key}`)
   const mix = MIX[roomOf(pos)]
@@ -240,6 +261,7 @@ export function lookOf(key, pos = 'wr', ag = null) {
     g, skin, head, eyes: pickW(r, EYES[g] ?? EYES.w), brows: pickW(r, BROWS), nose: pickW(r, NOSE[g]), mouth: pickW(r, MOUTH[g]),
     hair, hc, brow: hc === '#b8893c' ? '#16110e' : hc, beard, stache, gear, wide: wideOf(pos),
   }
+  byPosition(key, L, pos)
   const x = extras(key, L, pos)
   return { ...L, ...x, gear: gear === 'eyeblack' || gear === 'studs' ? 'none' : gear, ag: ag ?? 24 }
 }

@@ -214,7 +214,7 @@ function geo(look) {
     // (the neck by his build: a lineman's as wide as his jaw, a receiver's a good deal narrower)
     nw: 10.4 + w * 3.4 + wt * 1.1,
     lean: clamp(0.45 - w * 0.3 - wt * 0.5 + chk * 0.4, 0, 1) * (young ? 0.4 : 1), soft: clamp(wt * 0.8 + w * 0.15 + (young ? 0.35 : 0), 0, 1),
-    ey: 38.3 + V.ey, es: 6.35 + sv(look, 'esp') * 0.5 + V.es, ez: 1 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),
+    ey: 38.3 + V.ey, es: 6.5 + sv(look, 'esp') * 0.5 + V.es, ez: 1 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),
     nb: 47.5 + sv(look, 'nsl') * 0.9 + (look.head === 'long' ? 0.4 : 0) + V.nb,
   }
   G.by = G.ey - 2.85 - sv(look, 'brh') * 0.75 + V.by - (young ? 0.3 : 0)
@@ -597,12 +597,12 @@ function eyesOf(look, G, T, S, lo) {
   const K = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', X = G.X
   let wh = '', ir = '', pu = '', lash = '', lid = '', cl = ''
   for (const s of [-1, 1]) {
-    const yo = G.young ? 1.08 : 1, cx = 50 + s * G.es, y = G.ey, ew = 3.2 * G.ez, up = K[0] * G.ez * X.eo * yo, dn = K[1] * G.ez * X.eo * yo, tl = K[2]
+    const yo = G.young ? 1.08 : 1, cx = 50 + s * G.es, y = G.ey, ew = 3.4 * G.ez, up = K[0] * G.ez * X.eo * yo * 1.05, dn = K[1] * G.ez * X.eo * yo * 1.05, tl = K[2]
     const I = [cx - s * ew, y + 0.2], O = [cx + s * ew, y - tl]
     const U1 = [cx - s * ew * 0.35, y - up * 1.34], U2 = [cx + s * ew * 0.45, y - up * 1.2 - tl * 0.5]
     const L1 = [cx + s * ew * 0.42, y + dn * 1.28], L2 = [cx - s * ew * 0.42, y + dn * 1.24]
     wh += `M${P2(I)}C${P2(U1)} ${P2(U2)} ${P2(O)}C${P2(L1)} ${P2(L2)} ${P2(I)}Z`
-    const r = 1.27 * G.ez, ix = cx + s * 0.06, iy = y - 0.12
+    const r = 1.36 * G.ez, ix = cx + s * 0.06, iy = y - 0.12
     ir += ell(ix, iy, r, r)
     pu += ell(ix, iy, r * 0.46, r * 0.46)
     cl += ell(ix - r * 0.38, iy - r * 0.36, r * 0.16, r * 0.16)
@@ -640,7 +640,7 @@ function browsOf(look, G, T, lo) {
   const arch = { arched: 1.0, angled: 0.8, straight: 0.2, thick: 0.35, thin: 0.6, bushy: 0.3 }[look.brows] ?? 0.4
   let d = '', h = ''
   for (const s of [-1, 1]) {
-    const x = k => 50 + s * k, b = G.by, es = G.es, ew = 3.2 * G.ez
+    const x = k => 50 + s * k, b = G.by, es = G.es, ew = 3.4 * G.ez
     const ang = look.brows === 'angled'
     const top = [[x(1.85), b + 0.15, 1], [x(es - 2.4), b - 0.5 - arch * 0.3], [x(es + (ang ? 1.4 : 0.4)), b - 0.75 - arch * 0.65], [x(es + ew + 1.5), b + 0.1 - arch * 0.2], [x(es + ew + 1.9), b + 0.55, 1]]
     const bot = [[x(es + ew + 0.8), b + 0.55], [x(es + 0.6), b + 0.32 * th - arch * 0.45], [x(es - 2.4), b + 0.75 * th - arch * 0.2], [x(1.9), b + 1.35 * th, 1]]
@@ -744,25 +744,30 @@ function markOf(mark, x, y, size, color) {
   return fill(ell(x, y, size * 0.32, size * 0.32), c)
 }
 // a sideline visor: a stiff band round the head, the mark on its front, a flat brim out over the brow
+// a sideline visor (owner 11-16: "too low"): the band round the top of his forehead, following the skull (its ends
+// wrap round out of sight at the temples), the bill's front edge at his brow line and never over his eyes, its top seen
+// from just above, its underside in shadow, a soft shadow on the forehead under it; his hair shows over the open top
 function visorOf(G, color, mark) {
-  const { cw } = G, L = 50 - cw - 0.5, R = 50 + cw + 0.5, y = G.hl + 1
-  const band = sm([[L, y + 3.2, 1], [50, y + 0.3], [R, y + 3.2, 1], [R - 0.2, y + 5.4, 1], [50, y + 3], [L + 0.2, y + 5.4, 1]])
-  const brim = sm([[L - 1.6, y + 4.4, 1], [50, y + 2.4], [R + 1.6, y + 4.4, 1], [R - 2.6, y + 8.6], [50, y + 10.1], [L + 2.6, y + 8.6]])
-  return fill(sm([[L + 1.6, y + 9.6], [50, y + 11.6], [R - 1.6, y + 9.6], [50, y + 13.4]]), '#000000', ' fill-opacity=".18"')
-    + fill(band, color) + fill(sm([[50 + cw * 0.4, y + 1], [R, y + 3.2, 1], [R - 0.2, y + 5.4, 1], [50 + cw * 0.4, y + 3.6]]), dark(color, 0.22))
-    + markOf(mark, 50, y + 1.9, 2.4, color)
-    + fill(brim, dark(color, 0.1)) + fill(sm([[50 + cw * 0.2, y + 3], [R + 1.6, y + 4.4, 1], [R - 2.6, y + 8.6], [50 + cw * 0.3, y + 9.8]]), dark(color, 0.24)) + fill(sm([[L + 1.4, y + 8.2], [50, y + 10], [R - 1.4, y + 8.2], [R - 2.6, y + 8.6], [50, y + 10.1], [L + 2.6, y + 8.6]]), dark(color, 0.5))
+  const yb = G.by - 7.4, w0 = hx(G, yb) + 0.45, w1 = hx(G, yb + 3.2) + 0.45, bot = G.by - 1.1
+  const band = sm([[50 - w0, yb + 1.2, 1], [50 - w0 * 0.55, yb + 0.1], [50, yb - 0.2], [50 + w0 * 0.55, yb + 0.1], [50 + w0, yb + 1.2, 1], [50 + w1, yb + 3.6, 1], [50 + w1 * 0.55, yb + 2.7], [50, yb + 2.5], [50 - w1 * 0.55, yb + 2.7], [50 - w1, yb + 3.6, 1]])
+  const bl = 50 - w1 - 2.2, br = 50 + w1 + 2.2
+  const brim = sm([[bl, yb + 3.2, 1], [50 - w1 * 0.5, yb + 2.3], [50, yb + 2.1], [50 + w1 * 0.5, yb + 2.3], [br, yb + 3.2, 1], [br - 2.4, bot - 1.8], [50, bot], [bl + 2.4, bot - 1.8]])
+  const under = sm([[bl + 1.6, bot - 2.4], [50, bot - 0.7], [br - 1.6, bot - 2.4], [br - 2.4, bot - 1.8], [50, bot], [bl + 2.4, bot - 1.8]])
+  return fill(sm([[bl + 2.6, bot - 1.2], [50, bot + 0.6], [br - 2.6, bot - 1.2], [50, bot + 2]]), '#000000', ' fill-opacity=".16"')
+    + fill(band, color) + fill(sm([[50 + w0 * 0.45, yb + 0.1], [50 + w0, yb + 1.2, 1], [50 + w1, yb + 3.6, 1], [50 + w1 * 0.45, yb + 2.7]]), dark(color, 0.22))
+    + markOf(mark, 50, yb + 1.2, 2.2, color)
+    + fill(brim, dark(color, 0.1)) + line(`M${f(bl + 0.4)} ${f(yb + 3.5)}Q50 ${f(yb + 1.6)} ${f(br - 0.4)} ${f(yb + 3.5)}`, light(color, 0.3), 0.45) + fill(sm([[50 + w1 * 0.25, yb + 2.3], [br, yb + 3.2, 1], [br - 2.4, bot - 1.8], [50 + w1 * 0.35, bot - 0.6]]), dark(color, 0.22)) + fill(under, dark(color, 0.55)) + line(`M${f(bl + 2.6)} ${f(bot - 1.9)}Q50 ${f(bot + 0.5)} ${f(br - 2.6)} ${f(bot - 1.9)}`, light(color, 0.22), 0.4)
 }
 function earringsOf(look, G) {
   if (!look.ear || look.ear === 'none') return ''
-  const one = s => fill(ell(50 + s * (G.tw - 0.1), 47.2, 0.62, 0.62), '#e9eef6') + fill(ell(50 + s * (G.tw - 0.25), 47, 0.24, 0.24), '#ffffff')
+  const one = s => fill(ell(50 + s * (G.tw + 0.25), 46.5, 0.6, 0.6), '#e9eef6') + fill(ell(50 + s * (G.tw + 0.1), 46.3, 0.22, 0.22), '#ffffff')
   return look.ear === 'stud' ? one(-1) : one(-1) + one(1)
 }
 function chainOf(look, G, lo) {
   if (!look.chain || look.chain === 'none') return ''
   const c = look.chain === 'gold' ? ['#7d5c14', '#d9b24a', '#fff0b0'] : ['#5f646d', '#c9ced6', '#ffffff']
   // (from under the collar's band on each side, where the V is at 66.6, down to 72.6 in the middle)
-  const nw = G.nw, x = (nw - 0.5) * (76.4 - 66.6) / 13 - 0.9, d = `M${f(50 - x)} 66.6Q${f(50 - x * 0.4)} 72.8 50 72.6Q${f(50 + x * 0.4)} 72.8 ${f(50 + x)} 66.6`
+  const nw = G.nw, x = nw * 0.9 - 1.9, d = `M${f(50 - x)} 66.6Q${f(50 - x * 0.4)} 72.4 50 72.2Q${f(50 + x * 0.4)} 72.4 ${f(50 + x)} 66.6`
   return line(d, '#000000', 1.2, ' stroke-opacity=".28" transform="translate(.3 .55)"') + line(d, c[0], 0.85)
     + (lo ? '' : line(d, c[1], 0.62, ' stroke-dasharray=".5 .3"') + line(`M${f(50 - x + 0.4)} 67.4Q${f(50 - x * 0.5)} 72.2 ${f(50 - 1.2)} 72.4`, c[2], 0.22, ' stroke-opacity=".8" stroke-dasharray=".4 .5"'))
 }
@@ -783,7 +788,7 @@ function glassesOf(look, G) {
 function capOf(look, G, color, mark) {
   if (!look.cap) return ''
   if (look.cap === 'visor') return visorOf(G, color, mark)
-  const { cw } = G, L = 50 - cw - 0.9, R = 50 + cw + 0.9, y = G.hl + 2.6, top = C0 - 2.2
+  const { cw } = G, L = 50 - cw - 0.9, R = 50 + cw + 0.9, y = Math.min(G.hl + 2.6, G.by - 6), top = C0 - 2.2
   const crown = sm([[L, y + 0.6, 1], [L - 0.1, C0 + 4.4], [50 - cw * 0.62, top + 0.7], [50, top], [50 + cw * 0.62, top + 0.7], [R + 0.1, C0 + 4.4], [R, y + 0.6, 1], [50, y - 0.8]])
   const brim = sm([[L - 1.2, y + 0.5, 1], [50, y - 1.2], [R + 1.2, y + 0.5, 1], [R - 2, y + 3.8], [50, y + 4.8], [L + 2, y + 3.8]])
   return fill(sm([[L + 1.6, y + 3.6], [50, y + 6.4], [R - 1.6, y + 3.6], [50, y + 8]]), '#000000', ' fill-opacity=".2"')
@@ -798,18 +803,21 @@ function capOf(look, G, color, mark) {
 
 // ── The bust ─────────────────────────────────────────────────────────────────
 // the neck and the shoulders under the shirt: a football player's thick neck sloping into big shoulders
-function neckLoop(G) {
+function neckLoop(G, bare) {
   const { nw } = G
-  return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 5, 66.2], [nw + 14, 68.6], [nw + 24, 71.6], [nw + 32, 76.4], [56, 87], [56, 104], [0, 104]])
+  if (!bare) return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 4.4, 66.4], [nw + 9, 68.8], [nw + 9, 104], [0, 104]])
+  return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 4.4, 66.2], [nw + 10.4, 68.2], [nw + 17.4, 71.2], [nw + 24, 75.8], [nw + 29.6, 82.6], [56, 94], [56, 104], [0, 104]])
 }
-// the shirt: neck the neckline's right half from its bottom up to the side of the neck; the shoulders built up over the
-// pads (the collar sits on them, the caps round off at the frame's edges)
+// the shirt: neck the neckline's right half from its bottom up to the side of the neck; the shoulders slope off the
+// collar over the pads the way ESPN's headshots show them (owner 11-16: "shoulders too broad"), reaching the frame's
+// edges only near its bottom
+const SHOULDER = [[3.6, 64.6], [10, 66.6], [17, 69.6], [23.6, 74.2], [29.4, 80.6], [34.4, 88.4], [39, 97], [41, 104]]
 function shirtLoop(G, neck) {
   const { nw } = G
-  return sym([...neck, [nw + 4.4, 64.9], [nw + 12, 66.2], [nw + 21, 67.6], [nw + 29, 70.4], [nw + 35, 76.2], [56, 86], [56, 104], [0, 104]])
+  return sym([...neck, ...SHOULDER.map(p => [nw + p[0], p[1]]), [0, 104]])
 }
 // the seam where the shoulder panel meets the chest, collar to sleeve (right side; mirrored)
-const seamPts = nw => [[nw + 1.2, 66.4], [nw + 9, 70.2], [nw + 19, 73.4], [nw + 28, 79], [nw + 31, 90]]
+const seamPts = nw => [[nw + 1, 66.8], [nw + 7.6, 70.8], [nw + 14.6, 74.8], [nw + 20.6, 80.4], [nw + 24.6, 92]]
 // cloth: its colour, the far side in shade, the folds, the mesh, the rim of light on the shoulders
 function clothOf(G, loop, c, P, lo, rim = true) {
   const { nw } = G, d = sm(loop)
@@ -817,7 +825,7 @@ function clothOf(G, loop, c, P, lo, rim = true) {
     + `<g clip-path="url(#${P}Jc)">${fill(sm([[50 + nw + 19, 58], [104, 58], [104, 104], [50 + nw + 21, 104, 1], [50 + nw + 18.4, 88], [50 + nw + 17.6, 76], [50 + nw + 18.2, 66]]), dark(c, 0.2))}`
     + (lo ? '' : fill(sm([[50 - nw - 3, 74], [50 - nw - 9, 84], [50 - nw - 12, 104], [50 - nw - 9.6, 104], [50 - nw - 7, 86]]) + sm([[50 + nw + 3, 74], [50 + nw + 8, 85], [50 + nw + 10, 104], [50 + nw + 12.4, 104], [50 + nw + 10, 84]]), dark(c, 0.1))
       + `<rect x="-5" y="55" width="110" height="55" fill="${dotTex('#000000', 1.3, 0.24, 0.16)}"/>`)
-    + (rim ? line(sm(loop.slice(3, 8), false), light(c, 0.14), 1.8) + line(sm(loop.slice(-7, -2), false), light(c, 0.24), 2.2) : '')
+    + (rim ? line(sm(loop.slice(3, 9), false), light(c, 0.14), 1.6) + line(sm(loop.slice(-8, -2), false), light(c, 0.24), 2) : '')
     + `</g>`
 }
 // a football jersey in its team's kit (kits.js): the V-neck's band in the trim with the dark inner neckline showing,
@@ -826,32 +834,40 @@ function clothOf(G, loop, c, P, lo, rim = true) {
 function jerseyOf(G, K, P, lo, crew = false) {
   const { nw } = G
   const c1 = K.c1, c2 = K.c2, c3 = K.c3 ?? (lum(c1) > 190 ? '#1d2230' : '#ffffff'), pat = K.pat
-  const vb = crew ? 71 : 76.4, y0 = 63.4
-  const neck = crew ? [[0, vb, 1], [nw * 0.7, vb - 1], [nw - 0.2, y0, 1]] : [[0, vb, 1], [nw * 0.5, (vb + y0) / 2], [nw - 0.5, y0, 1]]
-  const v = crew ? `M${f(50 - nw + 0.2)} ${y0}C${f(50 - nw + 0.6)} ${f(vb - 2.6)} ${f(50 - nw * 0.5)} ${f(vb)} 50 ${f(vb)}C${f(50 + nw * 0.5)} ${f(vb)} ${f(50 + nw - 0.6)} ${f(vb - 2.6)} ${f(50 + nw - 0.2)} ${y0}`
-    : `M${f(50 - nw + 0.5)} ${y0}L50 ${f(vb)}L${f(50 + nw - 0.5)} ${y0}`
-  const seam = seamPts(nw), seamD = sm(seam.map(RX), false) + sm(seam.map(LX), false)
+  // the neckline (ESPN's collars): it rises round the back of the neck at the sides, then runs down the front in a
+  // shallow-to-medium V whose sides bow out a little; the band follows it at an even width
+  const vb = crew ? 70.6 : 74.4, y0 = 62.6
+  const half = crew ? [[nw - 0.3, y0, 1], [nw - 0.6, 66], [nw * 0.6, vb - 0.5], [0, vb]] : [[nw - 0.3, y0, 1], [nw - 1.5, 65.4], [nw * 0.52, 70.2], [nw * 0.2, 73.2], [0, vb, 1]]
+  const neck = half.slice().reverse()
+  const v = sm([...half.map(LX), ...half.slice(0, -1).reverse().map(RX)], false)
+  const seam = seamPts(nw), sh = (o, k = 0.8) => SHOULDER.slice(0, 5).map((p, i) => [nw + p[0] - 0.4, p[1] + o * (i ? 1 : k)]), seamD = sm(seam.map(RX), false) + sm(seam.map(LX), false)
   let g = ''
   // a contrast yoke: the shoulders above the seam in the trim
   if (pat === 'yoke') g += fill(sm([...seam.map(RX), [104, 90], [104, 56], [-4, 56], [-4, 90], ...seam.slice().reverse().map(LX)].map((p, i) => (i === seam.length - 1 || i === seam.length + 4 ? [...p.slice(0, 2), 1] : p))), c2)
   // the seams
   if (!lo) g += line(seamD, pat === 'yoke' ? dark(c2, 0.3) : dark(c1, 0.28), 0.35)
   // a stripe pair over the shoulders, collar to sleeve
-  if (pat === 'shoulder') for (const [o, c, w] of [[1.7, c2, 1.3], [3.3, c3, 0.6]]) g += line(sm([[nw + 3, 65.6 + o * 0.8], [nw + 12, 66.9 + o], [nw + 21, 68.3 + o], [nw + 29, 71.2 + o], [nw + 35, 77 + o]].map(RX), false) + sm([[nw + 3, 65.6 + o * 0.8], [nw + 12, 66.9 + o], [nw + 21, 68.3 + o], [nw + 29, 71.2 + o], [nw + 35, 77 + o]].map(LX), false), c, w)
+  if (pat === 'shoulder') for (const [o, c, w] of [[2.4, c2, 1.6], [4.3, c3, 0.8]]) g += line(sm(sh(o).map(RX), false) + sm(sh(o).map(LX), false), c, w)
   // sleeve stripes round the shoulder caps at the frame's edges
   if (pat === 'stripes2' || pat === 'stripes3') {
-    const set = pat === 'stripes2' ? [[0, c2, 1.5], [2.4, c2, 1.5]] : [[0, c2, 1.3], [1.5, c3, 1], [3, c2, 1.3]]
+    const set = pat === 'stripes2' ? [[0, c2, 1.7], [2.8, c2, 1.7]] : [[0, c2, 1.5], [1.7, c3, 1.1], [3.4, c2, 1.5]]
     for (const [o, c, w] of set) {
-      const R = [[nw + 26.6 + o, 69.6], [nw + 25.4 + o, 80], [nw + 26.4 + o, 92], [nw + 28 + o, 104]]
+      const R = [[nw + 26.4 + o, 77 + o * 0.9], [nw + 26.6 + o, 86], [nw + 28.4 + o, 95], [nw + 30.4 + o, 104]]
       g += line(sm(R.map(RX), false) + sm(R.map(LX), false), c, w)
     }
   }
   // the collar: its dark inner neckline (the inside of the band, on the neck's side), the band in the trim; a double
   // collar's two stripes; the band's own shade on the far side
-  const band = pat === 'double' ? line(v, c2, 3.6) + line(v, c1, 2.2) + line(v, c2, 1) : line(v, c2, 3.6) + (lo ? '' : line(v, mixC(c2, c1, 0.5), 0.5))
-  return line(v, dark(c1, 0.55), 2.8)
-    + clothOf(G, shirtLoop(G, neck), c1, P, lo)
-    + `<g clip-path="url(#${P}Jc)">${g}${band}${fill(poly([[50, vb + 1], [50 + nw + 1, y0 - 1], [50 + nw + 4, y0 - 1], [50 + 2, vb + 4]]), '#000000', ' fill-opacity=".12"')}</g>`
+  // (the band: an even 2.2 wide in the trim, a double collar's stripes in it, its far side in shade; behind the neck
+  // its back rises at the sides; inside the V a small dark gap of undershirt and shadow)
+  const band = pat === 'double' ? line(v, c2, 5.4) + line(v, c1, 3.2) + line(v, c2, 1.2) : line(v, c2, 5.4) + (lo ? '' : line(v, mixC(c2, c1, 0.45), 0.45))
+  const back = `M${f(50 - nw - 0.8)} ${f(y0 + 1.6)}Q50 ${f(y0 - 2.6)} ${f(50 + nw + 0.8)} ${f(y0 + 1.6)}`
+  const gap = sm([[50 - nw * 0.42, 70.8], [50, vb - 1.8], [50 + nw * 0.42, 70.8], [50 + nw * 0.3, 72.6], [50, vb - 0.6, 1], [50 - nw * 0.3, 72.6]])
+  // (the collar's back goes behind his neck: faceSvg draws it before the neck)
+  G.collarBack = line(back, c2, 2.2) + line(back, dark(c2, 0.35), 0.5, ' transform="translate(0 1)"')
+  return clothOf(G, shirtLoop(G, neck), c1, P, lo)
+    + `<g clip-path="url(#${P}Jc)">${g}${band}${fill(sm([[50 + 1.6, vb + 1.6], [50 + nw - 0.4, y0 + 2.6], [50 + nw + 2.2, y0 + 3], [50 + 2.4, vb + 4.4]]), '#000000', ' fill-opacity=".14"')}</g>`
+    + fill(gap, mixC(dark(c1, 0.6), '#08090b', 0.5), ' fill-opacity=".85"')
 }
 // a basketball tank: bare shoulders, the scoop neck and the arm holes trimmed
 function tankOf(G, T, color, P, lo) {
@@ -930,7 +946,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
         + fill(ell(X(0.35), 41.6, 0.45, 0.8), s < 0 ? T.S : T.D))
   }
   // the neck: under the jaw in shadow, its far side, the collar's shadow inside the neckline
-  const neckD = sm(neckLoop(G))
+  const neckD = sm(neckLoop(G, look.kit === 'hoops' && !look.top))
   const neck = shape(`${P}N`, neckD, T.B)
     + `<g clip-path="url(#${P}Nc)">`
     + fill(sm([[50 - nw - 1, 44], [50 + nw + 1, 44], [50 + nw + 1, jy + 5.6], [50 + ch + 3, cy + 3.6], [50, cy + 4.6], [50 - ch - 3, cy + 3.4], [50 - nw - 1, jy + 4]]), T.S)
@@ -947,7 +963,8 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const e = eyes.P
   // (a durag's tails hang behind his neck)
   const tails = look.gear === 'durag' ? fill(sm([[50 + cw - 2, 40], [50 + cw + 0.4, 44], [50 + nw + 3.4, 60], [50 + nw + 4.4, 70], [50 + nw + 1.6, 70], [50 + nw + 0.6, 58], [50 + cw - 3.4, 45]]), '#121317') : ''
-  const body = (close ? '' : hp.back + tails + neck + shirt + chainOf(look, G, lo) + hp.mid + ears)
+  // (the studs sit on the lobes, drawn before the head, so the jaw's edge, a beard, sideburns and hair all cover them)
+  const body = (close ? '' : hp.back + tails + (G.collarBack ?? '') + neck + shirt + chainOf(look, G, lo) + hp.mid + ears + earringsOf(look, G))
     + `<use href="#${P}h" fill="${T.B}"/>`
     + `<g clip-path="url(#${P}C)">${T.blush && !lo ? fill(sm([[50 - cb + 2, 44], [50 - cb + 6.4, 43.4], [50 - cb + 5.6, 47.6], [50 - cb + 2.4, 48]]) + sm([[50 + cb - 2, 44], [50 + cb - 6.4, 43.4], [50 + cb - 5.6, 47.6], [50 + cb - 2.4, 48]]), T.blush) : ''}`
     + `${fill(S.M, T.M)}${fill(S.S, T.S)}${fill(S.H, T.H)}${lo ? '' : `<rect x="20" y="10" width="60" height="60" fill="${dotTex(T.D, 0.9, 0.13, 0.07)}"/>`}${beard.under}`
@@ -957,7 +974,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + fill(e.lid, T.S) + fill(e.lash, T.lash)
     + browsOf(look, G, T, lo) + nose
     + beard.over + mouth + stacheOf(look, G, T, rnd, bc) + eyeBlackOf(look, G)
-    + hairFront + headGearOf(look, G, col) + earringsOf(look, G) + glassesOf(look, G) + capOf(look, G, col, mark)
+    + hairFront + headGearOf(look, G, col) + glassesOf(look, G) + capOf(look, G, col, mark)
   const defs = `<defs>${Object.values(TX.defs).join('')}<path id="${P}h" d="${headD}"/><path id="${P}e" d="${eyes.wh}"/><clipPath id="${P}C"><use href="#${P}h"/></clipPath><clipPath id="${P}E"><use href="#${P}e"/></clipPath>${look.cap === 'cap' ? `<clipPath id="${P}K"><path d="M0 ${f(G.hl + 3)}H100V100H0Z"/></clipPath>` : ''}</defs>`
   TX = null
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${defs}${body}</svg>`
