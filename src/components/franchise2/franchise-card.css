@@ -5,10 +5,9 @@
    --fr-team: the saved franchise's team colour (white before there is one). */
 .ag-mc.ag-mc--fr { --fr-team: #f2f4f5; background: #0a0c0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 8px 18px rgba(0,0,0,.35); }
 .ag-mc--fr::before { content: ''; position: absolute; left: 0; right: 0; top: 0; z-index: 3; height: 3px; background: var(--fr-team); }
-.ag-mc--fr .ag-mc-head { top: 14px; gap: 0; }
-.ag-mc--fr .ag-mc-head b { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; text-shadow: none; color: #f2f4f5; }
+.ag-mc--fr .ag-mc-head { top: 14px; }
+.ag-mc--fr .ag-mc-head b { text-shadow: none; color: #f2f4f5; }
 .ag-mc--fr .ag-mc-head b .ag-mc-tag { margin-top: 0; }
-.ag-mc--fr .ag-mc-head small { background: #1b2129; }
 /* the trophy's football (public/franchise/art, 3:2 on the card's own near-black): bottom right, under the words */
 .ag-fr-art { position: absolute; right: 1px; bottom: 1px; z-index: 1; display: block; width: 60%; height: 74%; pointer-events: none; }
 .ag-fr-art :is(img, video) { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
@@ -51,12 +50,14 @@ html.is-app .fr-wait { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .ag-mc.ag-mc--fr.ag-mc--fr-wide { display: block; width: 100%; min-height: 150px; margin: 0 0 8px; }
 .ag-mc--fr-wide .ag-fr-art { width: 50%; height: auto; top: 3px; right: 4px; bottom: 1px; }
 @media (min-width: 1024px) { html.app-look .ag-mc.ag-mc--fr.ag-mc--fr-wide { margin-bottom: 12px; } html.app-look .ag-mc--fr-wide .ag-fr-art { width: 30%; height: auto; } }
-/* College Football in a grid spot (football's Home with Franchise on): three logos on the band */
+/* College Football in a grid spot (football's Home with Franchise on): four logos on the band, the band square at
+   both ends and the card's full width at every size (its slanted end read as cut off, owner 11-15), the logos spaced
+   evenly with the same room at each end */
 .ag-mc.ag-mc--cfb.ag-mc--cfb-sm { min-height: 0; margin: 0; }
-.ag-mc--cfb-sm .ag-cfb-band { padding: 0 6px 0 16px; height: 48px; }
-.ag-mc--cfb-sm .ag-cfb-band img { width: 34px; height: 34px; }
+.ag-mc--cfb-sm .ag-cfb-band { left: 0; right: 0; padding: 0 6px; height: 48px; clip-path: none; justify-content: space-evenly; }
+.ag-mc--cfb-sm .ag-cfb-band img { flex: none; width: 32px; height: 32px; }
 @media (min-width: 1024px) {
   html.app-look .ag-mc.ag-mc--cfb.ag-mc--cfb-sm { min-height: 0; margin: 0; }
-  html.app-look .ag-mc--cfb-sm .ag-cfb-band { left: 0; top: auto; width: auto; height: 60px; padding: 0 10px 0 22px; clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%); }
-  html.app-look .ag-mc--cfb-sm .ag-cfb-band img { width: 44px; height: 44px; }
+  html.app-look .ag-mc--cfb-sm .ag-cfb-band { left: 0; right: 0; top: auto; width: auto; height: 60px; padding: 0 10px; clip-path: none; }
+  html.app-look .ag-mc--cfb-sm .ag-cfb-band img { width: 42px; height: 42px; }
 }

@@ -217,7 +217,7 @@ function CFBCard({ onClick, small = false }) {
     <button className={`ag-way ag-mc ag-mc--cfb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
       <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b><small>{line}</small></span>
       <span className="ag-cfb-band" aria-hidden="true">
-        {(small ? CFB_CARD_SCHOOLS.slice(0, 3) : CFB_CARD_SCHOOLS).map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
+        {(small ? CFB_CARD_SCHOOLS.slice(0, 4) : CFB_CARD_SCHOOLS).map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>
     </button>
   )
@@ -271,15 +271,11 @@ function Rafters({ career, sport = null }) {
     </span>
   )
 }
-// Compete: same spins, one board, and three of them make the podium
-const Podium = () => (
-  <span className="ag-pod" aria-hidden="true">
-    {[2, 1, 3].map(rank => (
-      <span key={rank} className={`ag-pod-col is-${rank}`}>
-        {rank === 1 && <IconCrown size={22} />}
-        <b>{rank}</b>
-      </span>
-    ))}
+// Compete: a pool of five on the same spins, its board as it stands: five builds' scores, the leader in gold
+const POOL = [97, 93, 90, 87, 84]
+const Pool = () => (
+  <span className="ag-pool" aria-hidden="true">
+    {POOL.map((n, i) => <i key={i} className={i === 0 ? 'is-1' : undefined} style={{ height: `${Math.round(52 + (n - 84) / 13 * 48)}%` }}><b>{n}</b></i>)}
   </span>
 )
 // Squad Builder, football: the whole team, one at each position, side by side
@@ -568,7 +564,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
         {onCompete && (
           <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete} soon={!!soon?.compete}>
-            <Podium />
+            <Pool />
           </ModeArt>
         )}
         <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="Daily grid" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
@@ -609,7 +605,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           : hasFranchise && hasCFB ? <CFBCard small onClick={() => cfbRef.current?.()} />
           : (onCompete && (
             <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
-              <Podium />
+              <Pool />
             </ModeArt>
           ))}
         <button className="ag-way ag-mc ag-mc--salary ag-way--quick" onClick={() => startRef.current('salarycap')}>
@@ -620,12 +616,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       <div className="ag-more">
         {isBucket && onCompete && (
           <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
-            <Podium />
+            <Pool />
           </ModeArt>
         )}
         {hasFranchise ? (hasCFB && onCompete && (
           <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
-            <Podium />
+            <Pool />
           </ModeArt>
         )) : onSquad && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
