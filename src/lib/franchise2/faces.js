@@ -29,18 +29,33 @@ import { seeded } from '../rng'
 
 // ── Who he is ────────────────────────────────────────────────────────────────
 // background: b Black · w white · m mixed · p Polynesian · l Latino
-// (the shares by room: across the league about 57% Black and a third white, a few Polynesian, mixed and Latino men;
-// QB rooms and offensive lines are mostly white, corners almost all Black, Polynesian men mostly on the lines)
+// (the shares by position, the way NFL rooms are: corners almost all Black, safeties, receivers and backs mostly
+// Black, the defensive line Black with a few Polynesian men, linebackers about 70/25, tight ends and offensive lines
+// about half and half with Polynesian linemen, quarterbacks mostly white, kickers and punters nearly all white)
 const MIX = {
-  qb: { b: 0.30, w: 0.62, m: 0.04, p: 0.02, l: 0.02 },
-  rb: { b: 0.74, w: 0.17, m: 0.05, p: 0.02, l: 0.02 },
-  wr: { b: 0.72, w: 0.20, m: 0.05, p: 0.01, l: 0.02 },
-  te: { b: 0.34, w: 0.56, m: 0.05, p: 0.03, l: 0.02 },
-  ol: { b: 0.34, w: 0.50, m: 0.04, p: 0.09, l: 0.03 },
-  dl: { b: 0.70, w: 0.15, m: 0.05, p: 0.08, l: 0.02 },
-  lb: { b: 0.56, w: 0.32, m: 0.05, p: 0.05, l: 0.02 },
-  db: { b: 0.82, w: 0.11, m: 0.05, p: 0.01, l: 0.01 },
+  qb: { b: 0.38, w: 0.58, m: 0.02, p: 0.01, l: 0.01 },
+  rb: { b: 0.85, w: 0.12, m: 0.02, p: 0.005, l: 0.005 },
+  wr: { b: 0.88, w: 0.1, m: 0.015, l: 0.005 },
+  te: { b: 0.45, w: 0.52, m: 0.01, p: 0.01, l: 0.01 },
+  ol: { b: 0.42, w: 0.48, p: 0.08, m: 0.01, l: 0.01 },
+  dl: { b: 0.8, w: 0.1, p: 0.08, m: 0.015, l: 0.005 },
+  lb: { b: 0.7, w: 0.25, p: 0.03, m: 0.015, l: 0.005 },
+  cb: { b: 0.97, w: 0.01, m: 0.02 },
+  s: { b: 0.8, w: 0.17, m: 0.02, p: 0.01 },
+  db: { b: 0.9, w: 0.075, m: 0.02, p: 0.005 },
+  k: { b: 0.05, w: 0.92, l: 0.02, m: 0.01 },
+  any: { b: 0.57, w: 0.36, p: 0.03, m: 0.03, l: 0.01 },
 }
+// any position or spot a caller has (league.js's p and s, a real roster's subpos, a Career position) to its room
+const ROOM = {
+  edge: 'dl', dt: 'dl', de: 'dl', di: 'dl', idl: 'dl', nt: 'dl', olb: 'lb', ilb: 'lb', mlb: 'lb', big: 'lb',
+  nb: 'cb', fs: 's', ss: 's', saf: 's', p: 'k', ls: 'k', lt: 'ol', lg: 'ol', c: 'ol', rg: 'ol', rt: 'ol', g: 'ol', t: 'ol', ot: 'ol', og: 'ol', iol: 'ol',
+  hb: 'rb', fb: 'rb',
+}
+export const roomOf = pos => { const k = String(pos ?? '').toLowerCase(); return MIX[k] ? k : ROOM[k] ?? 'any' }
+// a league man's room: his spot when it splits his position (a corner or a safety; an edge or a tackle)
+// (fs: the spot he had when he was first drawn, kept when he moves rooms, so a corner moved to safety keeps his face)
+export const facePos = p => { const s = p?.fs ?? p?.s; return p ? ((p.p === 'db' || p.p === 'dl') && s ? s : p.p) : 'any' }
 
 // ── The choices (the creator's lists: value, label) ──────────────────────────
 // skin: value, label, undertone (the older saves' twelve tones are all still here, so an old face keeps its skin)
@@ -84,7 +99,7 @@ const SL = FACE_SLIDERS.map(x => x[0])
 // ── How often each goes with each background ─────────────────────────────────
 // (the draws for the first parts are the older faces' own, in their order, so a made-up man keeps who he was)
 const SKIN = {
-  b: ['#a06c44', '#9c6440', '#8a5634', '#8a5634', '#7a4a2c', '#7a4a2c', '#5e3a22', '#432818'],
+  b: ['#a06c44', '#9c6440', '#8a5634', '#8a5634', '#7a4a2c', '#7a4a2c', '#6a4128', '#5e3a22', '#5e3a22', '#4e2f1e', '#432818'],
   w: ['#f4d2b6', '#eab996', '#eab996', '#d9a582', '#deae84'],
   m: ['#c99064', '#b98058', '#a06c44', '#deae84'],
   p: ['#a06c44', '#9c6440', '#8a5634', '#b98058'],
@@ -93,10 +108,10 @@ const SKIN = {
 // (then, now and then, a neighbouring tone the older list didn't have)
 const SKIN_NEXT = { '#f4d2b6': '#f6dccb', '#d9a582': '#cfa27c', '#b98058': '#ae7a56', '#7a4a2c': '#6a4128', '#5e3a22': '#4e2f1e', '#432818': '#33201a', '#deae84': '#cfa27c' }
 const HAIR = {
-  b: [['fade', 26], ['waves', 12], ['buzz', 12], ['locs', 13], ['twists', 9], ['cornrows', 6], ['hightop', 3], ['shaved', 9], ['afro', 4], ['curly', 3]],
-  w: [['crew', 24], ['sidepart', 13], ['textured', 16], ['flow', 12], ['buzz', 14], ['curly', 5], ['shaved', 5], ['mullet', 4], ['fade', 5], ['long', 2]],
-  m: [['fade', 24], ['curly', 24], ['buzz', 12], ['twists', 10], ['locs', 8], ['afro', 6], ['shaved', 6], ['textured', 6], ['waves', 4]],
-  p: [['curly', 22], ['long', 16], ['buzz', 18], ['fade', 18], ['bun', 14], ['shaved', 8], ['mullet', 4]],
+  b: [['fade', 28], ['waves', 12], ['buzz', 12], ['locs', 12], ['twists', 8], ['cornrows', 5], ['hightop', 2], ['shaved', 9], ['afro', 3], ['curly', 4]],
+  w: [['crew', 26], ['sidepart', 12], ['textured', 16], ['flow', 12], ['buzz', 16], ['curly', 5], ['shaved', 4], ['mullet', 3], ['fade', 6]],   // (no long hair on a made-up white man: it read as a costume)
+  m: [['fade', 26], ['curly', 24], ['buzz', 12], ['twists', 8], ['locs', 8], ['afro', 4], ['shaved', 6], ['textured', 8], ['waves', 4]],
+  p: [['curly', 20], ['long', 14], ['buzz', 18], ['fade', 20], ['bun', 10], ['shaved', 10], ['mullet', 4]],
   l: [['fade', 32], ['crew', 20], ['textured', 16], ['buzz', 14], ['curly', 8], ['shaved', 6], ['sidepart', 4]],
 }
 const HC = {
@@ -107,8 +122,8 @@ const HC = {
   l: [['#16110e', 62], ['#2a1d15', 38]],
 }
 const BEARD = {
-  b: [['none', 32], ['stubble', 10], ['goatee', 15], ['short', 20], ['full', 14], ['chin', 8], ['long', 1]],
-  w: [['none', 40], ['stubble', 22], ['short', 16], ['full', 14], ['goatee', 4], ['chin', 2], ['long', 2]],
+  b: [['none', 28], ['stubble', 12], ['goatee', 12], ['short', 22], ['full', 16], ['chin', 8], ['long', 1]],
+  w: [['none', 38], ['stubble', 24], ['short', 18], ['full', 14], ['goatee', 3], ['chin', 1], ['long', 2]],
   m: [['none', 40], ['goatee', 16], ['short', 14], ['full', 12], ['stubble', 12], ['chin', 6]],
   p: [['none', 22], ['full', 30], ['short', 20], ['goatee', 14], ['stubble', 10], ['long', 4]],
   l: [['none', 40], ['goatee', 20], ['short', 14], ['full', 12], ['stubble', 14]],
@@ -150,7 +165,7 @@ const EYES = {
 const BROWS = [['straight', 34], ['thick', 28], ['angled', 18], ['arched', 12], ['thin', 8]]
 const pickW = (r, list) => { const t = list.reduce((a, x) => a + x[1], 0); let u = r() * t; for (const x of list) { u -= x[1]; if (u < 0) return x[0] } return list[list.length - 1][0] }
 const BIG = new Set(['ol', 'dl', 'te'])
-const wideOf = pos => (BIG.has(pos) ? 1 : pos === 'lb' || pos === 'rb' ? 0.5 : 0.2)
+const wideOf = pos => { const k = roomOf(pos); return BIG.has(k) ? 1 : k === 'lb' || k === 'rb' ? 0.5 : 0.2 }
 const r2 = v => Math.round(v * 100) / 100
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 
@@ -158,11 +173,11 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 // second stream so the first parts keep their older draws
 function extras(key, L, pos) {
   const r = seeded(`face2|${key}`)
-  const g = L.g, big = BIG.has(pos), lean = pos === 'db' || pos === 'wr'
+  const room = roomOf(pos), g = L.g, big = BIG.has(room), lean = room === 'db' || room === 'cb' || room === 's' || room === 'wr'
   const s = () => r2((r() + r() + r()) / 1.5 - 1)   // -1 … 1, most near the middle
   const x = {
     iris: pickW(r, IRIS[g] ?? IRIS.w),
-    wt: r2(clamp((big ? 0.55 : lean ? -0.35 : pos === 'qb' ? -0.1 : 0.1) + s() * 0.45, -1, 1)),
+    wt: r2(clamp((big ? 0.55 : lean ? -0.35 : room === 'qb' || room === 'k' ? -0.1 : 0.1) + s() * 0.45, -1, 1)),
     jaw: r2(s() * 0.7 + (big ? 0.2 : 0)), chn: r2(s() * 0.6), chk: r2(s() * 0.7 + (lean ? 0.15 : 0)),
     esz: r2(s() * 0.5), esp: r2(s() * 0.5), brh: r2(s() * 0.5),
     nsw: r2(s() * 0.6), nsl: r2(s() * 0.5), lip: r2(s() * 0.6 + (g === 'b' ? 0.2 : 0)), mw: r2(s() * 0.5),
@@ -171,9 +186,9 @@ function extras(key, L, pos) {
   if (L.gear === 'eyeblack') x.eb = 'paint'
   if (L.gear === 'studs') x.ear = 'studs'
   const u = r()
-  if (x.eb === 'none' && u < 0.04) x.eb = 'strips'
-  if (x.ear === 'none' && g !== 'w' && u > 0.9) x.ear = u > 0.96 ? 'stud' : 'studs'
-  if (r() < 0.07) x.chain = r() < 0.75 ? 'gold' : 'silver'
+  // (a headshot: eye black is rare, strips never; a stud now and then; a chain now and then)
+  if (x.ear === 'none' && g !== 'w' && u > 0.94) x.ear = u > 0.98 ? 'stud' : 'studs'
+  if (r() < 0.04) x.chain = r() < 0.75 ? 'gold' : 'silver'
   if (r() < 0.25 && SKIN_NEXT[L.skin]) x.skin = SKIN_NEXT[L.skin]
   if (r() < 0.12) x.head = 'chiseled'
   const v = r()
@@ -184,13 +199,13 @@ function extras(key, L, pos) {
   else if (w > 0.94) x.eyes = 'upturn'
   if (r() < 0.08 && L.brows === 'thick') x.brows = 'bushy'
   if (L.hair === 'fade' && (g === 'b' || g === 'm') && r() < 0.06) x.hair = 'frohawk'
-  if (L.beard === 'none' && r() < 0.06) x.beard = 'patch'
+  if (L.beard === 'none' && r() < 0.05) x.beard = 'patch'
   return x
 }
 
 export function lookOf(key, pos = 'wr', ag = null) {
   const r = seeded(`face|${key}`)
-  const mix = MIX[pos] ?? MIX.wr
+  const mix = MIX[roomOf(pos)]
   const g = pickW(r, Object.entries(mix).map(([k, v]) => [k, v * 100]))
   const skin = SKIN[g][Math.floor(r() * SKIN[g].length)]
   const hair = pickW(r, HAIR[g])
@@ -198,15 +213,20 @@ export function lookOf(key, pos = 'wr', ag = null) {
   // dyed tips only on locs or twists; otherwise his natural colour
   if (hc === '#b8893c' && hair !== 'locs' && hair !== 'twists') hc = '#16110e'
   let beard = pickW(r, BEARD[g])
-  // (a shaved head usually comes with a beard)
+  // (a shaved head usually comes with a beard; hair to the shoulders or tied up always does, so it reads as a
+  // football player's, never a woman's)
   if (hair === 'shaved' && beard === 'none' && r() < 0.6) beard = 'full'
+  if ((hair === 'long' || hair === 'bun') && (beard === 'none' || beard === 'stubble' || beard === 'chin')) beard = g === 'p' ? 'full' : 'short'
+  // (hair over the ears with a bare face reads young and soft in a drawing: a flow or a mullet gets some stubble)
+  if ((hair === 'flow' || hair === 'mullet') && beard === 'none') beard = 'stubble'
   // the moustache that goes with the beard: a full beard or a goatee has one, a clean face now and then a thin one
   const stache = beard === 'full' || beard === 'long' || beard === 'short' ? 'full' : beard === 'goatee' ? (r() < 0.8 ? 'full' : 'horseshoe')
-    : beard === 'none' && r() < 0.08 ? 'thin' : 'none'
+    : beard === 'none' && r() < 0.04 ? 'thin' : 'none'
   let head = pickW(r, HEAD[g])
-  if (BIG.has(pos) && head === 'long' && r() < 0.6) head = 'broad'
+  if (BIG.has(roomOf(pos)) && head === 'long' && r() < 0.6) head = 'broad'
   const u = r()
-  const gear = u < 0.07 ? 'eyeblack' : u < 0.1 ? 'headband' : u < 0.12 && (g === 'b' || g === 'm') && hair !== 'afro' && hair !== 'hightop' ? 'durag' : u < 0.16 && g !== 'w' ? 'studs' : 'none'
+  // (a headshot: now and then eye black or a headband, a stud; never a durag on a made-up man)
+  const gear = u < 0.02 ? 'eyeblack' : u < 0.04 && hair !== 'afro' && hair !== 'hightop' ? 'headband' : u < 0.09 && g !== 'w' ? 'studs' : 'none'
   const L = {
     g, skin, head, eyes: pickW(r, EYES[g] ?? EYES.w), brows: pickW(r, BROWS), nose: pickW(r, NOSE[g]), mouth: pickW(r, MOUTH[g]),
     hair, hc, brow: hc === '#b8893c' ? '#16110e' : hc, beard, stache, gear, wide: wideOf(pos),
@@ -224,11 +244,13 @@ const lum = c => { const x = hex(c); return 0.299 * ((x >> 16) & 255) + 0.587 * 
 // numbers as short as they go (".5", "-1.2")
 const f1 = n => { const r = Math.round(n * 10) / 10; return r >= 1 || r <= -1 ? String(r) : r === 0 ? '0' : r > 0 ? String(r).slice(1) : `-${String(-r).slice(1)}` }
 
-// the ink: one warm near-black for every line on the man
+// the ink: one warm near-black (the jersey, the hair); on the skin the ink is the skin's own darkest brown, so the
+// lines read as drawn edges, not a black cartoon outline
 const INK = '#150d0a'
-// a skin's flat tones (the style is inked cel shading, two or three flat tones a material, no gradients): its base,
+// a skin's flat tones (inked cel shading: flat tones, no gradients): its base, a half tone (the planes turning away),
 // its shadow (tinted by its undertone), the deep creases, its highlight (deep skin takes a cool sheen in place of a
-// warm one), the rim of cool light down the shadow side, the line of the features, the lips, the whites of the eyes
+// warm one), the rim of cool light down the shadow side, the ink on the skin, the line of the features, the lips, the
+// whites of the eyes
 const UT = { pink: '#8c2e2c', neutral: '#6e3622', golden: '#7c4612', olive: '#4e4220', red: '#76200f', cool: '#3c1832' }
 const UT_OF = new Map(FACE_SKIN.map(x => [x[0], x[2]]))
 const TONES = new Map()
@@ -237,77 +259,93 @@ function tonesOf(sk) {
   if (t) return t
   const L = lum(sk), d = clamp((205 - L) / 150, 0, 1)      // 0 the fairest … 1 the deepest
   const tint = mixC(UT[UT_OF.get(sk) ?? (L > 110 && L < 170 ? 'golden' : 'neutral')], '#000000', 0.2 + d * 0.5)
+  const sh = mixC(sk, tint, 0.3 + d * 0.06)
   t = {
-    d, base: sk,
-    sh: mixC(sk, tint, 0.36 + d * 0.06),
-    dk: mixC(sk, mixC(tint, '#000000', 0.5), 0.6 + d * 0.06),
-    hl: d < 0.5 ? mixC(sk, '#fff5ea', 0.4 - d * 0.3) : mixC(sk, '#e8dde6', 0.24 - d * 0.06),
-    rim: mixC(sk, '#cfe0ff', 0.3 + d * 0.12),
-    line: mixC(sk, INK, 0.74),
-    lipU: d < 0.5 ? mixC(sk, '#7a2c34', 0.42 - d * 0.2) : mixC(sk, '#1e0c16', 0.32),
-    lipL: d < 0.5 ? mixC(sk, '#c0645f', 0.3 - d * 0.1) : mixC(sk, '#8a4c58', 0.22),
-    white: mixC('#f1ebe4', sk, 0.06 + d * 0.06), whiteS: mixC('#a99c93', sk, 0.3),
+    d, base: sk, sh,
+    md: mixC(sk, sh, 0.5),
+    dk: mixC(sk, mixC(tint, '#000000', 0.5), 0.52 + d * 0.08),
+    hl: d < 0.5 ? mixC(sk, '#fff3e6', 0.3 - d * 0.22) : mixC(sk, '#e3d7e0', 0.17 - d * 0.04),
+    rim: mixC(sk, '#cfe0ff', 0.2 + d * 0.1),
+    ink: mixC(sk, INK, 0.8 + d * 0.06),
+    line: mixC(sk, INK, 0.6),
+    lipU: d < 0.5 ? mixC(sk, '#7a2c34', 0.34 - d * 0.16) : mixC(sk, '#1e0c16', 0.26),
+    lipL: d < 0.5 ? mixC(sk, '#c0645f', 0.24 - d * 0.08) : mixC(sk, '#8a4c58', 0.18),
+    white: mixC('#e8e0d6', sk, 0.12 + d * 0.1),
   }
   TONES.set(sk, t)
   return t
 }
 
 // ── The frame ────────────────────────────────────────────────────────────────
-// the head and the tops of the shoulders, the way a broadcast headshot is cropped (a high top or an afro may touch
-// the top edge); the creator's thumbnails crop to the part they change ('sm' is the full frame drawn for a list:
-// 64 px and under, the fine lines left out)
-export const VIEWS = { full: '13 6 74 74', sm: '13 6 74 74', eyes: '30 33 40 25', nose: '36 41 28 28', mouth: '35 49 30 25', low: '24 38 52 52', hair: '14 3 72 72', ear: '21 36 26 26' }
+// ESPN's headshot framing (their cutouts are 600 × 436, and a square slot shows the middle of one; measured against
+// them side by side at the same box): the face about 35% of the frame's width, the eyes about a third of the way
+// down, the chin at about 62%, the shoulders and the top of the chest filling the bottom, the frame's full width by
+// about 80% down (a high top or an afro can run out of the top, as they do in the photos).
+// hero: the creator's big face, a closer crop to edit by. The creator's thumbnails crop to the part they change.
+// ('sm' is the full frame drawn for a list: 64 px and under, the fine lines left out.)
+export const VIEWS = {
+  full: '4 11 92 92', sm: '4 11 92 92', hero: '12 10 76 76', head: '21 11 58 58',
+  eyes: '30 34 40 25', nose: '36 41 28 28', mouth: '35 49 30 25', low: '24 40 52 52', hair: '16 4 68 68', ear: '21 36 26 26',
+}
 const TOP = 17
 
 // ── The head ─────────────────────────────────────────────────────────────────
 // a grown man's skull: cw half the skull's width · tw the temples · cb the cheekbones · jw the jaw at its corner · jy
 // the corner's height · ch half the chin · cy the chin. The face is narrower than the skull at the temples, widest at
-// the cheekbones, and its width below comes from the jaw, not from the cheeks.
+// the cheekbones, a little hollow under them, then the jaw's corner and a chin with some width to it.
 const SHAPE = {
-  oval: { cw: 15.8, tw: 15.0, cb: 15.3, jw: 12.6, jy: 59.4, ch: 5.4, cy: 68.6 },
-  square: { cw: 16.0, tw: 15.3, cb: 15.5, jw: 13.8, jy: 60.2, ch: 6.3, cy: 68.4 },
-  round: { cw: 16.5, tw: 15.9, cb: 16.2, jw: 13.6, jy: 58.8, ch: 6.0, cy: 67.8 },
-  long: { cw: 15.2, tw: 14.4, cb: 14.7, jw: 12.6, jy: 61.2, ch: 5.8, cy: 70.2 },
-  broad: { cw: 16.9, tw: 16.3, cb: 16.8, jw: 14.8, jy: 59.8, ch: 7.0, cy: 68.6 },
-  chiseled: { cw: 15.8, tw: 14.8, cb: 15.8, jw: 13.6, jy: 60.6, ch: 5.9, cy: 69.4 },
+  oval: { cw: 15.6, tw: 14.8, cb: 15.2, jw: 12.4, jy: 59.6, ch: 4.9, cy: 68.6 },
+  square: { cw: 15.8, tw: 15.1, cb: 15.4, jw: 13.4, jy: 60.2, ch: 5.8, cy: 68.4 },
+  round: { cw: 16.2, tw: 15.6, cb: 15.9, jw: 13.2, jy: 59.2, ch: 5.4, cy: 68.0 },
+  long: { cw: 15.0, tw: 14.2, cb: 14.6, jw: 12.3, jy: 61.0, ch: 5.2, cy: 70.0 },
+  broad: { cw: 16.6, tw: 16.0, cb: 16.4, jw: 14.2, jy: 60.0, ch: 6.2, cy: 68.6 },
+  chiseled: { cw: 15.6, tw: 14.6, cb: 15.6, jw: 13.2, jy: 60.6, ch: 5.5, cy: 69.2 },
 }
 // what his background gives his structure (always with his skin, his hair and his beard): br the height of the
 // nose's bridge · nk the nose's width · lk the lips' fullness · rid how deep the brow ridge sets the eyes · ck the
 // cheekbones · eo how open the eyes are
 const BGS = {
   w: { br: 1, nk: 0.92, lk: 0.86, rid: 1, ck: 0, eo: 1 },
-  b: { br: 0.42, nk: 1.2, lk: 1.32, rid: 0.82, ck: 0.25, eo: 1.08 },
-  m: { br: 0.62, nk: 1.08, lk: 1.14, rid: 0.86, ck: 0.2, eo: 1.05 },
+  b: { br: 0.42, nk: 1.2, lk: 1.32, rid: 0.82, ck: 0.25, eo: 1.06 },
+  m: { br: 0.62, nk: 1.08, lk: 1.14, rid: 0.86, ck: 0.2, eo: 1.04 },
   l: { br: 0.78, nk: 1.02, lk: 1.06, rid: 0.92, ck: 0.2, eo: 1.02 },
   p: { br: 0.7, nk: 1.18, lk: 1.2, rid: 0.84, ck: 0.6, eo: 1 },
 }
-const NOSE_W = { straight: 3.6, broad: 4.1, narrow: 3.1, short: 3.6, wide: 4.6, boxer: 3.9 }
+const NOSE_W = { straight: 3.4, broad: 3.9, narrow: 2.95, short: 3.4, wide: 4.3, boxer: 3.7 }
 const NOSE_BR = { straight: 0, broad: -0.12, narrow: 0.28, short: -0.1, wide: -0.18, boxer: 0.06 }
-const MOUTH_W = { neutral: 5.9, full: 6.2, thin: 5.7, smirk: 5.9, wide: 6.8, stern: 6.0 }
+const MOUTH_W = { neutral: 5.7, full: 5.9, thin: 5.5, smirk: 5.7, wide: 6.5, stern: 5.8 }
 // the eye: the upper lid's rise, the lower's drop, the tilt up to the outer corner
-const EYE = { almond: [1.42, 0.92, 0.25], round: [1.62, 1.1, 0], narrow: [1.14, 0.8, 0.1], hooded: [1.3, 0.9, 0], deep: [1.32, 0.92, 0], upturn: [1.38, 0.86, 0.6] }
+const EYE = { almond: [1.3, 0.82, 0.25], round: [1.48, 0.98, 0], narrow: [1.02, 0.72, 0.1], hooded: [1.18, 0.8, 0], deep: [1.2, 0.82, 0], upturn: [1.26, 0.78, 0.55] }
 const sv = (look, k) => clamp(+look[k] || 0, -1, 1)
 function geo(look) {
   const s = SHAPE[look.head] ?? SHAPE.oval, w = look.wide ?? 0.2, B = BGS[look.g] ?? BGS.w
   const wt = sv(look, 'wt'), jaw = sv(look, 'jaw'), chk = sv(look, 'chk'), chn = sv(look, 'chn')
   const G = {
-    cw: s.cw + w * 0.6 + wt * 0.45,
-    tw: s.tw + w * 0.6 + wt * 0.5,
-    cb: s.cb + w * 0.7 + wt * 0.7 + chk * 0.7 + B.ck * 0.4,
-    jw: s.jw + w * 0.8 + wt * 0.8 + jaw * 1.6,
-    ch: s.ch + w * 0.3 + wt * 0.3 + jaw * 0.9,
+    cw: s.cw + 0.4 + w * 0.5 + wt * 0.45,
+    tw: s.tw + 0.4 + w * 0.5 + wt * 0.5,
+    cb: s.cb + 0.5 + w * 0.6 + wt * 0.7 + chk * 0.6 + B.ck * 0.35,
+    jw: s.jw + 0.4 + w * 0.8 + wt * 0.8 + jaw * 1.5,
+    ch: s.ch + w * 0.3 + wt * 0.3 + jaw * 0.8,
     jy: s.jy + chn * 0.5 + wt * 0.3,
     cy: s.cy + chn * 1.5 + wt * 0.3,
-    nw: 10.4 + w * 2.6 + wt * 1.2,
+    nw: 9.6 + w * 2.4 + wt * 1.0,
     lean: clamp(0.5 - w * 0.35 - wt * 0.5 + chk * 0.35, 0, 1),
     soft: clamp(wt * 0.7 + w * 0.25, 0, 1),
-    ey: 43.2, es: 6.8 + sv(look, 'esp') * 0.7, ez: 1 + sv(look, 'esz') * 0.13, eo: B.eo,
-    by: 40.3 - sv(look, 'brh') * 1.2, rid: B.rid * (look.eyes === 'deep' ? 1.35 : 1),
-    ny: 53.8 + sv(look, 'nsl') * 1.3, nwid: (NOSE_W[look.nose] ?? 3.6) * B.nk * (1 + sv(look, 'nsw') * 0.2),
+    ey: 43.2, es: 6.5 + sv(look, 'esp') * 0.65, ez: 0.94 + sv(look, 'esz') * 0.12, eo: B.eo,
+    by: 40.2 - sv(look, 'brh') * 1.1, rid: B.rid * (look.eyes === 'deep' ? 1.35 : 1),
+    ny: 53.6 + sv(look, 'nsl') * 1.3, nwid: (NOSE_W[look.nose] ?? 3.4) * B.nk * (1 + sv(look, 'nsw') * 0.2),
     br: clamp(B.br + (NOSE_BR[look.nose] ?? 0), 0.15, 1.3),
-    mwid: (MOUTH_W[look.mouth] ?? 5.2) * 1.04 * (1 + sv(look, 'mw') * 0.12), lipk: (1 + sv(look, 'lip') * 0.4) * B.lk,
+    mwid: (MOUTH_W[look.mouth] ?? 5.2) * (1 + sv(look, 'mw') * 0.12), lipk: (1 + sv(look, 'lip') * 0.4) * B.lk,
   }
-  G.my = 59.4 + sv(look, 'nsl') * 0.4 + chn * 0.35
+  G.my = 59.3 + sv(look, 'nsl') * 0.4 + chn * 0.35
+  // the head's outline: a smooth curve through these points (the right side, top to chin; the left is its mirror)
+  const { cw, tw, cb, jw, jy, ch, cy, lean, soft } = G
+  G.R = [
+    [50 + cw * 0.52, TOP + 0.6], [50 + cw * 0.87, TOP + 4.2], [50 + cw, TOP + 10.2], [50 + cw - 0.15, TOP + 15.4],
+    [50 + tw, 37.2], [50 + cb, 44.6], [50 + cb - 0.5 - lean * 0.55 + soft * 0.35, 50.8],
+    [50 + jw + 0.3, jy - 2.5], [50 + jw - 0.25, jy + 0.35], [50 + jw - 2.1, jy + 3.1], [50 + ch + 1.4, cy - 1.45], [50 + ch * 0.5, cy - 0.12],
+  ]
+  G.segs = crSegs([[50, TOP], ...G.R, [50, cy], ...G.R.slice().reverse().map(mr)])
   return G
 }
 // a shape mirrored down the middle: p0 on the middle line, segs the right side's curves down to the middle again
@@ -319,12 +357,35 @@ function sym(p0, segs) {
   for (let i = segs.length - 1; i >= 0; i--) { const [a, b] = segs[i]; d += `C${pt(mr(b))} ${pt(mr(a))} ${pt(mr(i ? segs[i - 1][2] : p0))}` }
   return d + 'Z'
 }
-// an open line mirrored: from the left of S, through the middle, to S (segs: S's side, from S to the middle)
-function arc2(S, segs) {
-  let d = `M${pt(mr(S))}`
-  for (const [a, b, c] of segs) d += `C${pt(mr(a))} ${pt(mr(b))} ${pt(mr(c))}`
-  for (let i = segs.length - 1; i >= 0; i--) { const [a, b] = segs[i]; d += `C${pt(b)} ${pt(a)} ${pt(i ? segs[i - 1][2] : S)}` }
-  return d
+// a smooth closed curve through points as its Bézier pieces ([from, handle, handle, to] each), so a stretch of it can
+// be drawn on its own (the jaw's ink lies exactly on the head's edge)
+function crSegs(p) {
+  const n = p.length, at = i => p[(i + n) % n], s = []
+  for (let i = 0; i < n; i++) {
+    const a = at(i - 1), b = at(i), c = at(i + 1), e = at(i + 2)
+    s.push([b, [b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6], [c[0] - (e[0] - b[0]) / 6, c[1] - (e[1] - b[1]) / 6], c])
+  }
+  return s
+}
+const segD = (s, close = false) => `M${pt(s[0][0])}${s.map(x => `C${pt(x[1])} ${pt(x[2])} ${pt(x[3])}`).join('')}${close ? 'Z' : ''}`
+// a point along a piece (t 0 … 1) and the outward normal there (the outline runs clockwise)
+function onSeg([a, b, c, d], t) {
+  const u = 1 - t
+  const p = [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]]
+  const dx = 3 * u * u * (b[0] - a[0]) + 6 * u * t * (c[0] - b[0]) + 3 * t * t * (d[0] - c[0]), dy = 3 * u * u * (b[1] - a[1]) + 6 * u * t * (c[1] - b[1]) + 3 * t * t * (d[1] - c[1])
+  const l = Math.hypot(dx, dy) || 1
+  return [p, [dy / l, -dx / l]]
+}
+// the outline sampled from piece i0 to piece i1 (k points a piece), each point pushed out along its normal by off(u)
+// (u 0 … 1 along the stretch)
+function along(G, i0, i1, k, off = () => 0) {
+  const out = [], n = (i1 - i0) * k
+  for (let j = 0; j <= n; j++) {
+    const i = Math.min(i0 + Math.floor(j / k), i1 - 1), t = j === n ? 1 : (j % k) / k
+    const [p, nm] = onSeg(G.segs[i], t), o = off(j / n)
+    out.push([p[0] + nm[0] * o, p[1] + nm[1] * o])
+  }
+  return out
 }
 // a smooth curve through points (Catmull-Rom as Béziers), closed by default
 // (big, soft-edged shapes pass whole numbers: q)
@@ -340,30 +401,21 @@ function crv(p, close = true, q = false) {
   }
   return close ? d + 'Z' : d
 }
+// a polyline (hair's broken edges)
+const poly = (p, close = false) => `M${p.map(pt).join('L')}${close ? 'Z' : ''}`
 // an ellipse as path data (so many go in one path)
 const ell = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(rx * 2)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-rx * 2)} 0Z`
 const stroke = (d, c, w, extra = '') => (d ? `<path d="${d}" fill="none" stroke="${c}" stroke-width="${String(w).replace(/^0\./, '.')}"${extra}/>` : '')
 const fill = (d, c, extra = '') => (d ? `<path d="${d}" fill="${c}"${extra}/>` : '')
 const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36) }
-const headSegs = G => {
-  const { cw, tw, cb, jw, jy, ch, cy, soft, lean } = G
-  return [
-    [[50 + cw * 0.6, TOP], [50 + cw, TOP + 6], [50 + cw, 31]],
-    [[50 + cw, 34.4], [50 + tw + 0.1, 36.6], [50 + tw, 39]],
-    [[50 + tw - 0.1, 41.6], [50 + cb, 43.4], [50 + cb, 46.6]],
-    [[50 + cb - lean * 0.5, 50.4 + soft], [50 + jw + 0.6 + soft, jy - 4], [50 + jw, jy]],
-    [[50 + jw - 0.9, jy + 2.2], [50 + ch + 2.6, cy - 1.6], [50 + ch, cy - 0.5]],
-    [[50 + ch - 0.8, cy + 0.1], [50 + ch * 0.45, cy + 0.15], [50, cy + 0.15]],
-  ]
-}
-const headD = G => sym([50, TOP], headSegs(G))
-// the jaw, cheekbone to cheekbone under the chin (its ink is the heaviest line on him)
-const jawD = G => { const s = headSegs(G); return arc2(s[2][2], s.slice(3)) }
+const headD = G => segD(G.segs, true)
+// the jaw: from under one cheekbone round the chin to under the other (pieces 7 … 19 of the outline)
+const jawD = G => segD(G.segs.slice(7, 20))
 // a cap of hair on the skull: t how far it stands off the skull, line the hairline's middle, side how far down the
 // sides it comes, tc the temple corner (0 a line-up's square corner … 1 a soft round one), rec how far the temples go
 // back (a receding line)
 function capD(G, { t = 1, line = 27.6, side = 39, tc = 0.3, rec = 0 } = {}) {
-  const { cw } = G, o = cw + 0.7 + t * 0.3
+  const { cw } = G, o = cw + 0.5 + t * 0.3
   const tx = 50 + cw - 2.4 - tc * 0.8 - rec * 1.4, ty = line + 2.2 - rec * 2.4
   return sym([50, TOP - t], [
     [[50 + o * 0.58, TOP - t], [50 + o, TOP + 8 - t * 0.4], [50 + o, side]],
@@ -374,120 +426,131 @@ function capD(G, { t = 1, line = 27.6, side = 39, tc = 0.3, rec = 0 } = {}) {
 }
 
 // ── The features ─────────────────────────────────────────────────────────────
-// Each feature adds its flat shapes to the head's three shading tones (S.sh the shadow, S.dk the deep creases, S.hl
-// the light: one path each, so the whole face is a handful of elements) and returns its own drawing.
+// Each feature adds its flat shapes to the head's shading tones (S.md the half tone, S.sh the shadow, S.dk the deep
+// creases, S.hl the light: one path each, so the whole face is a handful of elements) and returns its own drawing.
 function eyesOf(look, G, T, S, P, lo) {
-  const k = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', ring = shade(iris, 0.55)
+  const k = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', ring = shade(iris, 0.5)
   let wh = '', band = '', ir = '', pu = '', cl = '', lash = '', crease = '', lid = '', fold = ''
   for (const s of [-1, 1]) {
-    const cx = 50 + s * G.es, y = G.ey, ew = 3.4 * G.ez, up = k[0] * G.ez * G.eo, dn = k[1] * G.ez * G.eo, tilt = k[2]
-    const I = [cx - s * ew, y + 0.35], O = [cx + s * ew, y - tilt + 0.15]
-    const u1 = [cx - s * ew * 0.5, y - up * 1.32], u2 = [cx + s * ew * 0.42, y - up * 1.3 - tilt * 0.4]
-    const l1 = [cx + s * ew * 0.45, y + dn * 1.25], l2 = [cx - s * ew * 0.45, y + dn * 1.2]
+    const cx = 50 + s * G.es, y = G.ey, ew = 3.15 * G.ez, up = k[0] * G.ez * G.eo, dn = k[1] * G.ez * G.eo, tilt = k[2]
+    const I = [cx - s * ew, y + 0.3], O = [cx + s * ew, y - tilt + 0.15]
+    const u1 = [cx - s * ew * 0.45, y - up * 1.3], u2 = [cx + s * ew * 0.42, y - up * 1.26 - tilt * 0.4]
+    const l1 = [cx + s * ew * 0.45, y + dn * 1.2], l2 = [cx - s * ew * 0.45, y + dn * 1.15]
     wh += `M${pt(I)}C${pt(u1)} ${pt(u2)} ${pt(O)}C${pt(l1)} ${pt(l2)} ${pt(I)}Z`
     // the upper lid's shadow across the top of the ball
-    band += `M${pt(I)}C${pt(u1)} ${pt(u2)} ${pt(O)}L${pt([O[0], O[1] + 0.4])}C${pt([u2[0], u2[1] + up * 0.6 + 0.3])} ${pt([u1[0], u1[1] + up * 0.6 + 0.3])} ${pt([I[0], I[1] + 0.3])}Z`
-    // the iris (its dark ring), the pupil, the catchlight up toward the key light
-    const r = Math.min(1.34 * G.ez, (up + dn) * 0.66), ix = cx + s * 0.06, iy = y + 0.1
+    band += `M${pt(I)}C${pt(u1)} ${pt(u2)} ${pt(O)}L${pt([O[0], O[1] + 0.5])}C${pt([u2[0], u2[1] + up * 0.7 + 0.3])} ${pt([u1[0], u1[1] + up * 0.7 + 0.3])} ${pt([I[0], I[1] + 0.3])}Z`
+    // the iris (tucked a little under the upper lid, the way a relaxed eye sits), the pupil, a small catchlight
+    const r = Math.min(1.18 * G.ez, (up + dn) * 0.6), ix = cx + s * 0.05, iy = y - 0.05
     ir += ell(ix, iy, r, r)
-    pu += ell(ix, iy, r * 0.44, r * 0.44)
-    cl += ell(ix - r * 0.42, iy - r * 0.42, r * 0.24, r * 0.24)
-    // the lash line: heavy ink, thickest toward the outer corner, a flick past it
-    lash += `M${pt([I[0] + s * 0.1, I[1] - 0.05])}C${pt([u1[0], u1[1] - 0.12])} ${pt([u2[0], u2[1] - 0.18])} ${pt([O[0] + s * 0.6, O[1] - 0.3])}L${pt([O[0] - s * 0.1, O[1] + 0.45])}C${pt([u2[0], u2[1] + 0.78])} ${pt([u1[0], u1[1] + 0.58])} ${pt([I[0] + s * 0.4, I[1] + 0.22])}Z`
+    pu += ell(ix, iy, r * 0.42, r * 0.42)
+    cl += ell(ix - r * 0.4, iy - r * 0.38, r * 0.17, r * 0.17)
+    // the lash line: the upper lid's edge, thin at the inner corner, a touch heavier to the outer
+    lash += `M${pt([I[0] + s * 0.1, I[1] - 0.05])}C${pt([u1[0], u1[1] - 0.06])} ${pt([u2[0], u2[1] - 0.1])} ${pt([O[0] + s * 0.35, O[1] - 0.15])}L${pt([O[0] - s * 0.15, O[1] + 0.3])}C${pt([u2[0], u2[1] + 0.48])} ${pt([u1[0], u1[1] + 0.36])} ${pt([I[0] + s * 0.4, I[1] + 0.14])}Z`
     // the lid's crease (a deep-set eye's sits higher; a hooded eye's is a fold of skin over the outer lid)
-    const ch = look.eyes === 'deep' ? 2.6 : look.eyes === 'narrow' ? 1.95 : 2.25
+    const ch = look.eyes === 'deep' ? 2.5 : look.eyes === 'narrow' ? 1.9 : 2.15
     if (look.eyes === 'hooded') {
-      fold += `M${pt([cx - s * ew * 0.35, y - up * 1.75])}Q${f1(cx + s * ew * 0.7)} ${f1(y - up * 1.7)} ${pt([O[0] + s * 0.7, O[1] + 0.1])}Q${f1(cx + s * ew * 0.45)} ${f1(y - up * 0.9)} ${pt([cx - s * ew * 0.35, y - up * 1.75])}Z`
-      crease += `M${pt([I[0] + s * 0.6, I[1] - up * 0.9])}Q${f1(cx - s * ew * 0.2)} ${f1(y - up * 1.8)} ${pt([cx + s * ew * 0.2, y - up * 1.25])}Q${f1(cx + s * ew * 0.6)} ${f1(y - up * 1.05)} ${pt([O[0] + s * 0.7, O[1] + 0.1])}`
-    } else crease += `M${pt([I[0] + s * 0.7, I[1] - up * 0.95])}Q${f1(cx + s * 0.1)} ${f1(y - up * ch - 0.5)} ${pt([O[0] + s * 0.25, O[1] - up * 0.7])}`
-    // the lower lid
-    lid += `M${pt([O[0] - s * 0.5, O[1] + 0.5])}Q${f1(cx + s * 0.1)} ${f1(y + dn * 1.3 + 0.2)} ${pt([I[0] + s * 0.8, I[1] + 0.42])}`
-    // the socket under the brow ridge (its shadow down to the crease) and the deep corner beside the bridge
+      fold += `M${pt([cx - s * ew * 0.3, y - up * 1.7])}Q${f1(cx + s * ew * 0.7)} ${f1(y - up * 1.65)} ${pt([O[0] + s * 0.5, O[1] + 0.1])}Q${f1(cx + s * ew * 0.45)} ${f1(y - up * 0.95)} ${pt([cx - s * ew * 0.3, y - up * 1.7])}Z`
+      crease += `M${pt([I[0] + s * 0.6, I[1] - up * 0.9])}Q${f1(cx - s * ew * 0.2)} ${f1(y - up * 1.75)} ${pt([cx + s * ew * 0.2, y - up * 1.25])}Q${f1(cx + s * ew * 0.6)} ${f1(y - up * 1.05)} ${pt([O[0] + s * 0.5, O[1] + 0.1])}`
+    } else crease += `M${pt([I[0] + s * 0.8, I[1] - up * 0.95])}Q${f1(cx + s * 0.1)} ${f1(y - up * ch - 0.4)} ${pt([O[0] + s * 0.1, O[1] - up * 0.75])}`
+    // the lower lid: a short line under the outer half
+    lid += `M${pt([O[0] - s * 0.4, O[1] + 0.45])}Q${f1(cx + s * 0.6)} ${f1(y + dn * 1.25 + 0.15)} ${pt([cx - s * ew * 0.35, y + dn * 1.1 + 0.2])}`
+    // the socket under the brow ridge (a half tone down to the crease, its inner corner by the bridge in shadow)
     const rd = G.rid, sy = y - up * ch - 0.3
-    S.sh += crv([[50 + s * 2, G.by + 1.2], [50 + s * (G.es - 0.6), G.by + 1.1], [50 + s * (G.es + ew + 0.5), G.by + 1.6], [O[0] + s * 0.9, O[1] - 0.5 - (1 - rd) * 0.8],
-      [cx + s * ew * 0.4, sy + 0.2 - (1 - rd) * 1.2], [cx - s * ew * 0.3, sy - (1 - rd) * 1.2], [I[0] - s * 0.2, I[1] - 0.9], [50 + s * 1.7, y + 1.3 * rd]])
-    S.dk += crv([[50 + s * 1.9, G.by + 2.4], [I[0] - s * 0.15, I[1] - 1.5], [I[0] - s * 0.35, I[1] + 0.35], [50 + s * 1.55, y + 0.4]])
-    // the bag under the eye, with the years
-    if (!lo && (look.ag ?? 24) >= 28) S.sh += `M${pt([I[0] + s * 0.6, I[1] + 1.2])}Q${f1(cx)} ${f1(y + dn * 1.3 + 1.9)} ${pt([O[0] - s * 0.2, O[1] + 1.1])}Q${f1(cx)} ${f1(y + dn * 1.3 + 1.1)} ${pt([I[0] + s * 0.6, I[1] + 1.2])}Z`
+    S.md += crv([[50 + s * 2, G.by + 1.4], [50 + s * (G.es - 0.6), G.by + 1.3], [50 + s * (G.es + ew + 0.6), G.by + 1.9], [O[0] + s * 0.9, O[1] - 0.2],
+      [O[0] + s * 0.3, O[1] + 1.2], [cx + s * ew * 0.4, sy + 0.5 - (1 - rd) * 1.1], [cx - s * ew * 0.3, sy + 0.2 - (1 - rd) * 1.1], [I[0] - s * 0.2, I[1] - 0.6], [50 + s * 1.6, y + 1.2 * rd]])
+    S.sh += crv([[50 + s * 1.9, G.by + 2.5], [I[0] - s * 0.1, I[1] - 1.3], [I[0] - s * 0.3, I[1] + 0.3], [50 + s * 1.5, y + 0.4]])
+    // under the eye: the lid's lower edge turning into the cheek; with the years, a bag
+    S.md += `M${pt([I[0] + s * 0.4, I[1] + 0.9])}Q${f1(cx)} ${f1(y + dn * 1.25 + 1.5)} ${pt([O[0] + s * 0.2, O[1] + 0.9])}Q${f1(cx)} ${f1(y + dn * 1.25 + 0.7)} ${pt([I[0] + s * 0.4, I[1] + 0.9])}Z`
+    if (!lo && (look.ag ?? 24) >= 28) S.sh += `M${pt([I[0] + s * 0.6, I[1] + 1.3])}Q${f1(cx)} ${f1(y + dn * 1.3 + 2)} ${pt([O[0] - s * 0.2, O[1] + 1.2])}Q${f1(cx)} ${f1(y + dn * 1.3 + 1.3)} ${pt([I[0] + s * 0.6, I[1] + 1.3])}Z`
   }
   // (the eyes' shape is drawn once, in the defs: filled here and the clip for what's inside them)
   const clip = `<path id="${P}e" d="${wh}"/>`
   const eyes = `<use href="#${P}e" fill="${T.white}"/>`
-    + `<g clip-path="url(#${P}E)">${fill(ir, iris, lo ? '' : ` stroke="${ring}" stroke-width=".3"`)}${fill(pu, '#070505')}${lo ? '' : fill(band, '#2a1a14', ' fill-opacity=".38"')}${fill(cl, '#ffffff')}</g>`
-    + fill(lash, INK)
-    + (fold ? fill(fold, T.sh) : '')
-    + (lo ? '' : stroke(crease, T.line, 0.42) + stroke(lid, T.dk, 0.42))
+    + `<g clip-path="url(#${P}E)">${fill(ir, iris, lo ? '' : ` stroke="${ring}" stroke-width=".25"`)}${fill(pu, '#080505')}${fill(band, '#2a1a14', ' fill-opacity=".42"')}${lo ? '' : fill(cl, '#ffffff', ' fill-opacity=".85"')}</g>`
+    + fill(lash, mixC(INK, T.base, 0.12))
+    + (fold ? fill(fold, T.md) : '')
+    + (lo ? '' : stroke(crease, T.line, 0.3) + stroke(lid, T.sh, 0.3))
   return { clip, eyes }
 }
-function browsOf(look, G) {
-  const c = mixC(look.brow ?? look.hc, INK, 0.2)
-  const t = { thick: 1.6, thin: 0.85, bushy: 1.85, straight: 1.2, arched: 1.1, angled: 1.25 }[look.brows] ?? 1.2
-  const arch = { arched: 1.3, angled: 0.95, straight: 0.3, thick: 0.45, thin: 0.7, bushy: 0.4 }[look.brows] ?? 0.45
+function browsOf(look, G, T) {
+  // (the brow's hair over the skin: a touch of the skin in it, so a black brow on dark skin isn't a cut-out)
+  const c = mixC(mixC(look.brow ?? look.hc, INK, 0.15), T.base, 0.12)
+  const t = { thick: 1.35, thin: 0.72, bushy: 1.55, straight: 1.02, arched: 0.95, angled: 1.08 }[look.brows] ?? 1.02
+  const arch = { arched: 1.2, angled: 0.9, straight: 0.3, thick: 0.4, thin: 0.65, bushy: 0.38 }[look.brows] ?? 0.42
   let d = ''
   for (const s of [-1, 1]) {
-    const y = G.by, x0 = 50 + s * 2.3, x1 = 50 + s * (G.es + 3.2 * G.ez + 1.5), at = u => x0 + (x1 - x0) * u
-    const yi = y + (look.brows === 'angled' ? 1.3 : 0.8)
-    d += crv([[x0, yi + t * 0.35], [at(0.35), y + 0.55 - arch * 0.4], [at(0.66), y + 0.15 - arch * 0.85], [x1, y + 1.1],
-      [x1 - s * 0.7, y + 0.35], [at(0.64), y - arch - t * 0.75], [at(0.3), y - t * 0.85 - arch * 0.35], [x0 + s * 0.15, yi - t * 0.6]])
+    const y = G.by, x0 = 50 + s * 2.4, x1 = 50 + s * (G.es + 3.15 * G.ez + 1.3), at = u => x0 + (x1 - x0) * u
+    const yi = y + (look.brows === 'angled' ? 1.2 : 0.75)
+    // the inner end soft and squared, the tail tapering to a point
+    d += crv([[x0, yi + t * 0.35], [at(0.35), y + 0.5 - arch * 0.4], [at(0.68), y + 0.1 - arch * 0.82], [x1, y + 1.05],
+      [x1 - s * 0.9, y + 0.15], [at(0.64), y - arch - t * 0.7], [at(0.3), y - t * 0.8 - arch * 0.35], [x0 + s * 0.1, yi - t * 0.55]])
   }
   return fill(d, c)
 }
 function noseOf(look, G, T, S, lo) {
   const y = G.ny - (look.nose === 'short' ? 0.8 : 0), w = G.nwid, br = G.br
   // a high bridge starts its plane right under the brow; a low one only lower down
-  const ys = G.by + 1.6 + (1 - br) * 5.2, xs = 51 + (1 - br) * 0.3, mid = (ys + y) / 2, pw = 0.85 + (1 - br) * 0.8
-  // the side of the nose away from the light, from the bridge down round the wing
-  S.sh += crv([[xs - 0.2, ys], [xs + pw, mid], [50 + w * 0.95, y - 2.6], [50 + w + 0.3, y - 0.6], [50 + w * 0.5, y - 0.9], [51.3, y - 2.2], [xs + 0.1, mid + 1]])
-  // the wing on the lit side, the underside of the nose, its shadow thrown down on the lip
-  if (!lo) S.sh += crv([[50 - w - 0.2, y - 2], [50 - w + 0.7, y - 2.6], [50 - w + 1.3, y - 0.6], [50 - w + 0.3, y + 0.6]])
-  S.sh += crv([[50.4, y + 1.2], [50 + w * 0.8, y + 0.9], [50 + w * 0.5, y + 2.7], [51, y + 3.2]])
+  const ys = G.by + 1.8 + (1 - br) * 5, xs = 50.9 + (1 - br) * 0.3, mid = (ys + y) / 2, pw = 0.8 + (1 - br) * 0.7
+  // the side of the nose away from the light, from the bridge down round the wing (a half tone, the shadow by the wing)
+  S.md += crv([[xs - 0.2, ys], [xs + pw, mid], [50 + w * 0.95, y - 2.6], [50 + w + 0.3, y - 0.6], [50 + w * 0.5, y - 0.9], [51.2, y - 2.2], [xs + 0.1, mid + 1]])
+  S.sh += crv([[50 + w * 0.55, y - 2.4], [50 + w + 0.35, y - 0.9], [50 + w * 0.8, y + 0.5], [50 + w * 0.45, y - 0.6]])
+  // the wing on the lit side, the nose's shadow thrown down on the lip
+  if (!lo) S.md += crv([[50 - w - 0.2, y - 2], [50 - w + 0.7, y - 2.6], [50 - w + 1.2, y - 0.6], [50 - w + 0.3, y + 0.6]])
+  S.sh += crv([[50.3, y + 1.2], [50 + w * 0.8, y + 0.9], [50 + w * 0.5, y + 2.5], [50.9, y + 2.9]])
   // the underside: between the nostrils in deep shadow, the nostrils (a broad nose shows more of them)
-  const nr = 0.55 + w * 0.12
-  S.dk += `M${f1(50 - w * 0.75)} ${f1(y + 0.1)}C${f1(50 - w * 0.3)} ${f1(y + 1.3)} ${f1(50 + w * 0.3)} ${f1(y + 1.3)} ${f1(50 + w * 0.75)} ${f1(y + 0.1)}C${f1(50 + w * 0.3)} ${f1(y + 0.7)} ${f1(50 - w * 0.3)} ${f1(y + 0.7)} ${f1(50 - w * 0.75)} ${f1(y + 0.1)}Z`
-  for (const s of [-1, 1]) S.dk += ell(50 + s * w * 0.44, y + 0.3, nr, 0.5)
+  const nr = 0.5 + w * 0.11
+  S.dk += `M${f1(50 - w * 0.72)} ${f1(y + 0.1)}C${f1(50 - w * 0.3)} ${f1(y + 1.15)} ${f1(50 + w * 0.3)} ${f1(y + 1.15)} ${f1(50 + w * 0.72)} ${f1(y + 0.1)}C${f1(50 + w * 0.3)} ${f1(y + 0.6)} ${f1(50 - w * 0.3)} ${f1(y + 0.6)} ${f1(50 - w * 0.72)} ${f1(y + 0.1)}Z`
+  for (const s of [-1, 1]) S.dk += ell(50 + s * w * 0.44, y + 0.3, nr, 0.45)
   // the light down the bridge and on the ball of the tip
-  S.hl += crv([[49.5, ys + 1], [49.95, mid + 0.4], [49.8, y - 3], [49, mid + 0.6]]) + ell(49.2, y - 1.7, 0.95 + w * 0.06, 0.65)
-  if (look.nose === 'boxer') S.dk += crv([[50.2, ys + 2.4], [51.4, ys + 3.6], [50.7, ys + 4.4]])
-  // the ink: round each wing into its nostril, the far edge of a high bridge
-  let ink = ''
-  for (const s of [-1, 1]) ink += `M${f1(50 + s * (w - 1.1))} ${f1(y - 2.7)}C${f1(50 + s * (w + 0.5))} ${f1(y - 2.2)} ${f1(50 + s * (w + 0.6))} ${f1(y + 0.4)} ${f1(50 + s * (w - 0.4))} ${f1(y + 0.8)}Q${f1(50 + s * w * 0.6)} ${f1(y + 1)} ${f1(50 + s * w * 0.3)} ${f1(y + 0.5)}`
-  if (!lo && br > 0.6) ink += `M${f1(xs + 0.5)} ${f1(ys + 2.4)}Q${f1(xs + pw + 0.1)} ${f1(mid + 1)} ${f1(50 + w * 0.6)} ${f1(y - 3)}`
-  return stroke(ink, T.line, lo ? 0.6 : 0.5)
+  S.hl += crv([[49.5, ys + 1.2], [49.9, mid + 0.4], [49.75, y - 3], [49.05, mid + 0.6]]) + ell(49.3, y - 1.6, 0.8 + w * 0.05, 0.55)
+  if (look.nose === 'boxer') S.sh += crv([[50.2, ys + 2.4], [51.3, ys + 3.6], [50.6, ys + 4.4]])
+  // the ink: round each wing into its nostril (the lit side's lighter), the far edge of a high bridge
+  let ink = '', inkL = ''
+  for (const s of [-1, 1]) {
+    const d = `M${f1(50 + s * (w - 1))} ${f1(y - 2.5)}C${f1(50 + s * (w + 0.45))} ${f1(y - 2)} ${f1(50 + s * (w + 0.55))} ${f1(y + 0.4)} ${f1(50 + s * (w - 0.4))} ${f1(y + 0.75)}Q${f1(50 + s * w * 0.6)} ${f1(y + 0.95)} ${f1(50 + s * w * 0.3)} ${f1(y + 0.5)}`
+    if (s > 0) ink += d; else inkL += d
+  }
+  if (!lo && br > 0.6) ink += `M${f1(xs + 0.4)} ${f1(ys + 2.6)}Q${f1(xs + pw)} ${f1(mid + 1)} ${f1(50 + w * 0.6)} ${f1(y - 3)}`
+  return stroke(ink, T.line, lo ? 0.5 : 0.36) + stroke(inkL, T.dk, lo ? 0.45 : 0.32)
 }
 function mouthOf(look, G, T, S, lo) {
   const y = G.my, w = G.mwid, k = G.lipk
-  const up = ({ full: 1.75, thin: 0.8, wide: 1.25, stern: 1.05, smirk: 1.25 }[look.mouth] ?? 1.3) * k
-  const dn = ({ full: 2.3, thin: 1.2, wide: 1.7, stern: 1.45, smirk: 1.7 }[look.mouth] ?? 1.75) * k
-  const rise = look.mouth === 'smirk' ? 0.9 : 0, drop = look.mouth === 'stern' ? 0.5 : 0
-  const L = [50 - w, y + drop], R = [50 + w, y - rise + drop]
-  // the philtrum's far side, the shadow under the lower lip, the chin's light
-  if (!lo) S.sh += crv([[50.6, G.ny + 2.6], [51.5, G.ny + 2.9], [51.3, y - up - 0.2], [50.6, y - up - 0.3]])
+  const up = ({ full: 1.6, thin: 0.75, wide: 1.15, stern: 0.95, smirk: 1.15 }[look.mouth] ?? 1.2) * k
+  const dn = ({ full: 2.1, thin: 1.1, wide: 1.55, stern: 1.3, smirk: 1.55 }[look.mouth] ?? 1.6) * k
+  const rise = look.mouth === 'smirk' ? 0.8 : 0, drop = look.mouth === 'stern' ? 0.4 : 0
+  // (a relaxed mouth: the corners a touch up, the way most headshots are taken)
+  const lift = look.mouth === 'stern' ? 0 : 0.25
+  const L = [50 - w, y + drop - lift], R = [50 + w, y - rise + drop - lift]
+  // the philtrum's far side, the shadow under the lower lip, the chin's ball of light
+  if (!lo) S.md += crv([[50.6, G.ny + 2.6], [51.4, G.ny + 2.9], [51.2, y - up - 0.2], [50.6, y - up - 0.3]])
   const ly = y + dn * 1.15
-  S.sh += `M${f1(50 - w * 0.7)} ${f1(ly + 0.5)}Q50 ${f1(ly + 2.4)} ${f1(50 + w * 0.75)} ${f1(ly + 0.4)}Q50 ${f1(ly + 1.1)} ${f1(50 - w * 0.7)} ${f1(ly + 0.5)}Z`
+  S.sh += `M${f1(50 - w * 0.65)} ${f1(ly + 0.4)}Q50 ${f1(ly + 2.2)} ${f1(50 + w * 0.7)} ${f1(ly + 0.3)}Q50 ${f1(ly + 1)} ${f1(50 - w * 0.65)} ${f1(ly + 0.4)}Z`
+  // the folds out from the corners of the mouth (the muscles round it), the half tone on the far side of the chin
+  S.md += `M${f1(50 + w + 0.4)} ${f1(y - 1.4)}Q${f1(50 + w + 1.6)} ${f1(y + 0.4)} ${f1(50 + w + 0.6)} ${f1(y + 2.2)}Q${f1(50 + w + 0.9)} ${f1(y + 0.4)} ${f1(50 + w + 0.4)} ${f1(y - 1.4)}Z`
   let s = ''
   // the upper lip (turned down, in shade), the lower (turned up to the light, its highlight), the line between
-  s += fill(`M${pt(L)}C${f1(50 - w * 0.62)} ${f1(y - up * 0.5)} ${f1(50 - w * 0.32)} ${f1(y - up * 1.05)} 48.9 ${f1(y - up)}Q50 ${f1(y - up * 0.7)} 51.1 ${f1(y - up)}C${f1(50 + w * 0.32)} ${f1(y - up * 1.05)} ${f1(50 + w * 0.62)} ${f1(y - up * 0.5 - rise)} ${pt(R)}Q50 ${f1(y + 0.5)} ${pt(L)}Z`, T.lipU)
-  s += fill(`M${f1(L[0] + 0.5)} ${f1(L[1] + 0.1)}C${f1(50 - w * 0.55)} ${f1(y + dn * 1.2)} ${f1(50 + w * 0.55)} ${f1(y + dn * 1.2 - rise * 0.3)} ${f1(R[0] - 0.5)} ${f1(R[1] + 0.1)}Q50 ${f1(y + 0.6)} ${f1(L[0] + 0.5)} ${f1(L[1] + 0.1)}Z`, T.lipL)
-  if (!lo) s += fill(crv([[47.4, y + dn * 0.55], [49.4, y + dn * 0.32], [51, y + dn * 0.5], [49.2, y + dn * 0.78]]), mixC(T.lipL, '#ffffff', T.d > 0.5 ? 0.16 : 0.22))
-  s += stroke(`M${pt(L)}Q${f1(50 - w * 0.5)} ${f1(y + 0.6)} 50 ${f1(y + 0.4)}Q${f1(50 + w * 0.5)} ${f1(y + 0.6 - rise * 0.6)} ${pt(R)}`, INK, 0.6)
-  if (!lo) s += stroke(`M${f1(L[0] - 0.5)} ${f1(L[1] - 0.6)}q.4 .5 .3 1.3M${f1(R[0] + 0.5)} ${f1(R[1] - 0.6)}q-.4 .5 -.3 1.3`, T.line, 0.4)
+  s += fill(`M${pt(L)}C${f1(50 - w * 0.62)} ${f1(y - up * 0.5)} ${f1(50 - w * 0.32)} ${f1(y - up * 1.05)} 48.9 ${f1(y - up)}Q50 ${f1(y - up * 0.7)} 51.1 ${f1(y - up)}C${f1(50 + w * 0.32)} ${f1(y - up * 1.05)} ${f1(50 + w * 0.62)} ${f1(y - up * 0.5 - rise)} ${pt(R)}Q50 ${f1(y + 0.4)} ${pt(L)}Z`, T.lipU)
+  s += fill(`M${f1(L[0] + 0.6)} ${f1(L[1] + 0.2)}C${f1(50 - w * 0.55)} ${f1(y + dn * 1.15)} ${f1(50 + w * 0.55)} ${f1(y + dn * 1.15 - rise * 0.3)} ${f1(R[0] - 0.6)} ${f1(R[1] + 0.2)}Q50 ${f1(y + 0.5)} ${f1(L[0] + 0.6)} ${f1(L[1] + 0.2)}Z`, T.lipL)
+  if (!lo) s += fill(crv([[47.6, y + dn * 0.55], [49.4, y + dn * 0.34], [50.8, y + dn * 0.5], [49.2, y + dn * 0.76]]), mixC(T.lipL, '#ffffff', T.d > 0.5 ? 0.12 : 0.18))
+  s += stroke(`M${pt(L)}Q${f1(50 - w * 0.5)} ${f1(y + 0.45)} 50 ${f1(y + 0.3)}Q${f1(50 + w * 0.5)} ${f1(y + 0.45 - rise * 0.6)} ${pt(R)}`, mixC(INK, T.lipU, 0.25), 0.42)
+  if (!lo) s += stroke(`M${f1(L[0] - 0.4)} ${f1(L[1] - 0.5)}q.3 .4 .25 1.1M${f1(R[0] + 0.4)} ${f1(R[1] - 0.5)}q-.3 .4 -.25 1.1`, T.sh, 0.32)
   return s
 }
 // the years: lines from the nose to the mouth, across the forehead, out from the eyes, a heavier jaw
 function linesOf(look, G, T, S, lo) {
-  const ag = look.ag ?? 24
-  if (ag < 27) return ''
-  const k = clamp((ag - 24) / 26, 0, 1), y = G.ny, my = G.my
+  const ag = look.ag ?? 24, y = G.ny, my = G.my
+  // (every man has a faint fold from the nose's wing toward the mouth; it deepens with the years)
   for (const s of [-1, 1]) {
-    // the fold from the nose's wing to the corner of the mouth
-    S.sh += crv([[50 + s * (G.nwid + 0.6), y - 1.6], [50 + s * (G.nwid + 2.6), y + 1.4], [50 + s * (G.mwid + 1.6), my + 1.2], [50 + s * (G.mwid + 0.9), my + 0.6], [50 + s * (G.nwid + 1.6 - k), y + 1.2]])
+    const k = clamp((ag - 24) / 26, 0, 1)
+    S[ag >= 30 ? 'sh' : 'md'] += crv([[50 + s * (G.nwid + 0.7), y - 1.4], [50 + s * (G.nwid + 2.4), y + 1.2], [50 + s * (G.mwid + 1.4), my + 0.6], [50 + s * (G.mwid + 1), my + 0.1], [50 + s * (G.nwid + 1.5 - k * 0.6), y + 1]])
     if (ag >= 45) S.sh += crv([[50 + s * (G.jw - 2.6), G.jy - 2], [50 + s * (G.jw - 0.4), G.jy + 1], [50 + s * (G.ch + 2), G.cy - 1.6], [50 + s * (G.jw - 2.4), G.jy + 0.6]])
   }
-  if (lo) return ''
+  if (lo || ag < 27) return ''
+  const k = clamp((ag - 24) / 26, 0, 1)
   let d = ''
-  if (ag >= 34 && !look.cap) d += `M43 31Q50 29.8 57 31M44.4 33.6Q50 32.6 55.6 33.6${ag >= 52 ? 'M45.6 28.6Q50 27.6 54.4 28.6' : ''}`
-  if (ag >= 45) for (const s of [-1, 1]) { const x = 50 + s * (G.es + 3.9); d += `M${f1(x)} ${f1(G.ey - 0.8)}l${f1(s * 1.5)} -.7M${f1(x + s * 0.2)} ${f1(G.ey + 0.7)}l${f1(s * 1.5)} .5` }
-  return stroke(d, T.sh, 0.45 + k * 0.15)
+  if (ag >= 42 && !look.cap) d += `M43 31Q50 29.8 57 31${ag >= 48 ? 'M44.4 33.6Q50 32.6 55.6 33.6' : ''}${ag >= 56 ? 'M45.6 28.6Q50 27.6 54.4 28.6' : ''}`
+  if (ag >= 45) for (const s of [-1, 1]) { const x = 50 + s * (G.es + 3.7); d += `M${f1(x)} ${f1(G.ey - 0.8)}l${f1(s * 1.4)} -.7M${f1(x + s * 0.2)} ${f1(G.ey + 0.7)}l${f1(s * 1.4)} .5` }
+  return stroke(d, T.sh, 0.38 + k * 0.14)
 }
 
 // ── Hair ─────────────────────────────────────────────────────────────────────
@@ -513,12 +576,12 @@ function hairParts(look, G, T, P, lo) {
   // the one mass a cut is shaded on: the mass in its shadow tone, its lit part (the mass moved up and toward the
   // light, so a band along the hairline and the far edge stays in shadow), the far side, the light, the texture, the
   // ink round it
-  const cel = (d, { hi = '', tex = '', c = H, w = 0.8, dy = 1.5 } = {}) => `<defs><path id="${P}m" d="${d}"/><clipPath id="${P}H"><use href="#${P}m"/></clipPath></defs><use href="#${P}m" fill="${c.hD}"/>`
+  const cel = (d, { hi = '', tex = '', c = H, w = 0.55, dy = 1.5 } = {}) => `<defs><path id="${P}m" d="${d}"/><clipPath id="${P}H"><use href="#${P}m"/></clipPath></defs><use href="#${P}m" fill="${c.hD}"/>`
     + `<g clip-path="url(#${P}H)"><use href="#${P}m" fill="${c.hc}" transform="translate(-.8 -${dy})"/>`
     + fill(`M${f1(50 + cw * 0.22)} -2C${f1(50 + cw * 0.55)} 10 ${f1(R)} 18 ${f1(R - 1.4)} 30L${f1(R - 3)} 92H104V-2Z`, c.hD)
     + hi + (lo ? '' : tex) + `</g><use href="#${P}m" fill="none" stroke="${c.hI}" stroke-width="${w}"/>`
   // a piece of hair outside the mass: flat, inked
-  const flat = (d, c = hc, w = 0.7) => fill(d, c, ` stroke="${hI}" stroke-width="${w}"`)
+  const flat = (d, c = hc, w = 0.5) => fill(d, c, ` stroke="${hI}" stroke-width="${w}"`)
   // the light on a smooth crop: a crescent over the crown toward the key light
   const band = (t = 1, c = hL) => fill(crv([[L + 1.6, TOP + 9.4 - t * 0.3], [L + 3.2, TOP + 3.6 - t * 0.6], [50 - cw * 0.3, TOP + 0.4 - t * 0.9], [50 + cw * 0.24, TOP - t + 1], [50 - cw * 0.28, TOP + 2 - t * 0.8], [L + 3.8, TOP + 5.6 - t * 0.5], [L + 2.6, TOP + 9.8 - t * 0.3]]), c)
   // the light on a cut with strands: a few sharp flicks swept with the hair
@@ -569,16 +632,17 @@ function hairParts(look, G, T, P, lo) {
     return d
   }
   // a rope (a loc, a twist, a braid): ink under, the hair, a light broken line down it
-  const ropes = (d, w, dash) => stroke(d, hI, w + 0.8) + stroke(d, hc, w) + (lo ? '' : stroke(d, hL, w * 0.4, ` stroke-dasharray="${dash}"`))
+  const ropes = (d, w, dash) => stroke(d, hI, w + 0.55) + stroke(d, hc, w) + (lo ? '' : stroke(d, hL, w * 0.4, ` stroke-dasharray="${dash}"`))
   // the coil light, up on the lit side of a coily cut
   const coilHi = (y0, y1, n = 9) => coils(L + 2.4, 50 + cw * 0.25, y0, y1, n, hL, 0.5)
   switch (hair) {
     case 'shaved':
-      front.push(fill(capD(G, { t: -5, line: 27.8, side: 44, tc: 0 }), mixC(T.base, hc, T.d > 0.6 ? 0.26 : 0.16)))
+      front.push(fill(capD(G, { t: -5, line: 27.8, side: 44, tc: 0 }), mixC(T.base, hc, T.d > 0.6 ? 0.07 : 0.1)))   // (a shaved scalp: the skin, a shadow of stubble on it)
       break
     case 'buzz': {
-      const c = { hc: mixC(hc, T.base, 0.28), hD: mixC(hc, T.base, 0.1), hL: mixC(mixC(hc, T.base, 0.28), T.hl, 0.45), hI: mixC(hc, INK, 0.5) }
-      front.push(cel(capD(G, { t: 0.4, line: 27.6, side: 43, tc: 0.3 }), { c: { ...c, hI: mixC(c.hD, INK, 0.4) }, hi: band(0.4, c.hL), w: 0.5, dy: 1 }))
+      // (a buzz is hair close to the scalp: the hair's own colour with a little skin through it, a soft sheen, no hard edge)
+      const c = { hc: mixC(hc, T.base, 0.2), hD: mixC(hc, T.base, 0.08), hL: mixC(mixC(hc, T.base, 0.2), '#a3acbd', 0.16), hI: mixC(hc, T.base, 0.1) }
+      front.push(cel(capD(G, { t: 0.4, line: 27.6, side: 43, tc: 0.3 }), { c: { ...c, hI: mixC(c.hD, INK, 0.4) }, hi: band(0.4, c.hL), w: 0.4, dy: 1 }))
       break
     }
     case 'crew':
@@ -623,7 +687,7 @@ function hairParts(look, G, T, P, lo) {
       const pts = [[L + 2.6, 28.2], [L + 4.6, 23.2], [L + 8.2, 19.4], [44.4, 17], [50, 16], [55.6, 17], [R - 8.2, 19.4], [R - 4.6, 23.2], [R - 2.6, 28.2], [43, 27.4], [48.4, 27.8], [53.6, 27.6]]
       let c = '', h = ''
       for (const [x, y] of pts) { c += ell(x, y, 2.7, 2.6); h += `M${f1(x - 1.6)} ${f1(y - 0.4)}q1.1 -1.7 2.8 -.6` }
-      front.push(fadeSides({ side: 44 }), cel(capD(G, { t: 1.6, line: 28.4, side: 32, tc: 0.8 }), { hi: band(1.6) }), fill(c, hc, ` stroke="${hI}" stroke-width=".6"`), lo ? '' : stroke(h, hL, 0.5))
+      front.push(fadeSides({ side: 44 }), cel(capD(G, { t: 1.6, line: 28.4, side: 32, tc: 0.8 }), { hi: band(1.6) }), fill(c, hc, ` stroke="${hI}" stroke-width=".45"`), lo ? '' : stroke(h, hL, 0.5))
       break
     }
     case 'afro': {
@@ -633,8 +697,8 @@ function hairParts(look, G, T, P, lo) {
       let d = `M${pt(at(Math.PI * a0))}`
       for (let i = 1; i <= n; i++) d += `A${f1(r)} ${f1(r)} 0 0 1 ${pt(at(Math.PI * (a0 + ((a1 - a0) * i) / n)))}`
       d += `C${f1(R + 5)} 42 ${f1(R + 2)} 44 ${f1(R)} 44L${f1(L)} 44C${f1(L - 2)} 44 ${f1(L - 5)} 42 ${pt(at(Math.PI * a0))}Z`
-      back.push(cel(d, { hi: coils(cx - rx + 3, 50, cy - ry + 1, cy - 4, 16, hL, 0.55), tex: coils(52, cx + rx - 4, cy - ry + 4, 36, 14, hD, 0.5), w: 0.9, dy: 2 }))
-      front.push(fill(capD(G, { t: 1, line: 28, side: 40, tc: 1 }), hc), lo ? '' : coils(L + 3, 50, TOP + 2, 27, 8, hL, 0.5), stroke(`M${f1(L + 1.6)} 33Q${f1(L + 3)} 28.6 ${f1(L + 6)} 28Q50 26.6 ${f1(R - 6)} 28Q${f1(R - 3)} 28.6 ${f1(R - 1.6)} 33`, hI, 0.6))
+      back.push(cel(d, { hi: coils(cx - rx + 3, 50, cy - ry + 1, cy - 4, 16, hL, 0.55), tex: coils(52, cx + rx - 4, cy - ry + 4, 36, 14, hD, 0.5), w: 0.6, dy: 2 }))
+      front.push(fill(capD(G, { t: 1, line: 28, side: 40, tc: 1 }), hc), lo ? '' : coils(L + 3, 50, TOP + 2, 27, 8, hL, 0.5), stroke(`M${f1(L + 1.6)} 33Q${f1(L + 3)} 28.6 ${f1(L + 6)} 28Q50 26.6 ${f1(R - 6)} 28Q${f1(R - 3)} 28.6 ${f1(R - 1.6)} 33`, hI, 0.45))
       break
     }
     case 'hightop':
@@ -676,7 +740,7 @@ function hairParts(look, G, T, P, lo) {
       break
     }
     case 'flow': case 'mullet': case 'long': {
-      const to = hair === 'long' ? 79 : hair === 'flow' ? 62 : 72
+      const to = hair === 'long' ? 79 : hair === 'flow' ? 57 : 72
       // behind: the hair falling to the neck (or the shoulders), its ends in clumps, the far half in shadow
       back.push(flat(`M${f1(L - 2.6)} 38C${f1(L - 3.6)} 22 ${f1(50 - cw * 0.6)} ${TOP - 3} 50 ${TOP - 3}C${f1(50 + cw * 0.6)} ${TOP - 3} ${f1(R + 3.6)} 22 ${f1(R + 2.6)} 38L${f1(R + 3.4)} ${to - 5}`
         + tipsE([R + 3.4, to - 5], [R - 2.6, to - 3], 3, 0.6, 2.6) + `L${f1(R - 3)} 50L${f1(L + 3)} 50L${f1(L + 2.6)} ${to - 3}` + tipsE([L + 2.6, to - 3], [L - 3.4, to - 5], 3, -0.6, 2.6) + 'Z', hc, 0.8))
@@ -723,76 +787,129 @@ function hairParts(look, G, T, P, lo) {
 }
 
 // ── Facial hair ──────────────────────────────────────────────────────────────
-// the beard's ground: its outer edge on the head's own edge (a touch outside it) from the sideburns round the jaw,
-// past the chin by its length; its edge on the cheek a diagonal from the sideburn to the corner of the mouth (cl: 0 a
-// high, full cheek line … 1 a low one), then under the lower lip
-function beardArea(G, len, cl) {
-  const { cw, cb, jw, jy, ch, cy, my, mwid, soft, tw } = G
-  const by = cy + len, bw = ch + 0.8 + len * 0.12, lo = len > 5 ? 1.6 : 0
-  const segs = [
-    [[50 + tw + 0.2, 42], [50 + cb + 0.4, 44.2], [50 + cb + 0.35, 47]],
-    [[50 + cb + 0.35, 51.2], [50 + jw + 0.9 + soft * 1.2, jy - 3], [50 + jw + 0.45, jy + 0.2]],
-    [[50 + jw - 1 + soft * 0.8, jy + 3 + len * 0.5], [50 + bw + 2.2, by - 0.6], [50 + bw, by]],
-    [[50 + bw - 1.4, by + 0.4 + lo], [51.8, by + 0.8 + lo], [50, by + 0.8 + lo]],
-  ]
-  const x0 = 50 + tw + 0.3
-  let d = `M${f1(x0)} 38.6`
-  for (const [a, b, c] of segs) d += `C${pt(a)} ${pt(b)} ${pt(c)}`
-  for (let i = segs.length - 1; i >= 0; i--) { const [a, b] = segs[i]; d += `C${pt(mr(b))} ${pt(mr(a))} ${pt(mr(i ? segs[i - 1][2] : [x0, 38.6]))}` }
-  const ix = tw - 1.6, mx = mwid + 1.3
-  const side = sd => [[50 + sd * (ix - cl * 1.4), 44 + cl * 4], [50 + sd * (mx + 3.2 - cl), my - 5.4 + cl * 2], [50 + sd * mx, my - 1.2]]
-  const [a, b, c] = side(-1)
-  d += `L${f1(50 - ix)} 38.6C${pt(a)} ${pt(b)} ${pt(c)}`
-  d += `C${f1(50 - mwid - 0.6)} ${f1(my + 1.8)} 47.6 ${f1(my + 2.5)} 50 ${f1(my + 2.5)}C52.4 ${f1(my + 2.5)} ${f1(50 + mwid + 0.6)} ${f1(my + 1.8)} ${pt([50 + mx, my - 1.2])}`
-  const [a2, b2] = side(1)
-  return d + `C${pt(b2)} ${pt(a2)} ${f1(50 + ix)} 38.6Z`
+// Hair on the face, not a shape stuck on it: every edge where it thins onto the skin is broken into short tufts, a
+// light layer runs past the main one so the cheek line fades instead of stopping, the density varies (skin shows
+// through stubble and through a short beard's edges), and it takes its own light and shadow (a cool sheen on the lit
+// side, the far side and the underside dark), so a black beard reads as hair on the deepest skin.
+const bell = (u, h = 0.3) => Math.max(0, 1 - ((u - 0.5) / h) ** 2)
+// a line made denser: each straight stretch cut in m
+function dense(p, m) {
+  const out = [p[0]]
+  for (let i = 1; i < p.length; i++) for (let j = 1; j <= m; j++) out.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * j / m, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * j / m])
+  return out
+}
+// a broken edge of hair: between each two points a tuft pushed amp along the line's normal (its right hand: on the
+// head's clockwise outline, outward), the lengths varying; sk skews each tuft along the line
+function tufts(p, amp, sk = 0.15) {
+  const out = [p[0]]
+  for (let i = 1; i < p.length; i++) {
+    const a = p[i - 1], b = p[i], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1
+    const k = amp * (0.5 + ((i * 7) % 5) / 7)
+    out.push([(a[0] + b[0]) / 2 + (dy / l) * k + dx * sk, (a[1] + b[1]) / 2 - (dx / l) * k + dy * sk], b)
+  }
+  return out
+}
+function beardTones(hc, T) {
+  const dark = lum(hc) < 70
+  // (a black beard: lifted toward a cool grey so it is hair on any skin, its sheen a cool light)
+  const base = dark ? mixC(hc, '#3c3b42', 0.26 + T.d * 0.14) : hc
+  return {
+    dark, base, dk: dark ? '#0a0707' : mixC(hc, '#1a0c06', 0.4), lt: dark ? mixC(base, '#a6afc0', 0.36 + T.d * 0.1) : mixC(hc, '#fff4e0', 0.4),
+    stub: dark ? mixC('#1d1a1e', T.base, 0.1) : mixC(hc, '#3a3f4c', 0.35),
+  }
+}
+// the cheek line, left sideburn to right: down the cheek to the corner of the mouth, under the lower lip (gap: how far
+// under it), up the other side. cl 0 a high, full cheek line … 1 a low one
+function cheekLine(G, cl, gap = 2.2) {
+  const { tw, cb, mwid, my } = G
+  const L = [[50 - tw + 1.1, 38.6], [50 - cb + 2.3 + cl * 1.9, 44.6 + cl * 3.4], [50 - mwid - 3.1 + cl * 0.6, my - 4.2 + cl * 1.8], [50 - mwid - 1.15, my - 0.5],
+    [50 - mwid * 0.62, my + gap - 0.2], [50, my + gap + 0.3]]
+  return [...L, ...L.slice(0, -1).reverse().map(mr)]
+}
+// a beard's ground: its outer edge on the head's own edge (len more below the chin, out more past the face), its
+// inner edge the cheek line; both broken into tufts (amp: how ragged)
+function beardD(G, { len = 0, out = 0.3, cl = 0.5, gap = 2.2, amp = 0.55, ampO = 0.5, lo = false }) {
+  const k = lo ? 1 : 2
+  const o = along(G, 5, 21, k, u => out + len * bell(u, 0.34))
+  const inn = dense(cheekLine(G, cl, gap), lo ? 1 : 2)
+  return poly([...tufts(o, ampO), ...tufts(inn, amp)], true)
 }
 function beardOf(look, G, T, P, lo) {
-  const H = hairTones(look.bc ?? look.brow ?? look.hc), { hD, hL, hI } = H, { cy, my, jw, jy, mwid } = G
-  // (a black beard is lifted a little toward its sheen, so it reads as hair on any skin, not as a black shape)
-  const hc = lum(H.hc) < 70 ? mixC(H.hc, hL, 0.48) : H.hc
-  const body = (len, cl) => {
-    // cel: the beard in shadow, its lit part (moved up toward the light, so its underside stays dark), the far
-    // side, a few strokes of grain catching the light, the ink round it
-    let g = ''
-    for (let i = 0; i < 9; i++) { const a = -0.95 + i * 0.15, x = 50 + a * (jw - 1.5), yy = jy + (cy - jy) * (1 - a * a) + len * 0.5 - 3; g += `M${f1(x)} ${f1(yy - 1.8 - len * 0.2)}l${f1(a * 0.5)} ${f1(1.8 + len * 0.25)}` }
-    return `<defs><path id="${P}B" d="${beardArea(G, len, cl)}"/><clipPath id="${P}Q"><use href="#${P}B"/></clipPath></defs><use href="#${P}B" fill="${H.hc}"/>`
-      + `<g clip-path="url(#${P}Q)"><use href="#${P}B" fill="${hc}" transform="translate(-.6 -${f1(1.2 + len * 0.15)})"/>${fill(`M${f1(50 + jw * 0.4)} 36C${f1(50 + jw * 0.62)} 50 ${f1(50 + jw * 0.45)} 60 ${f1(52.5)} 82H100V36Z`, lum(H.hc) < 70 ? H.hc : hD)}${lo ? '' : stroke(g, hL, 0.5)}</g>`
-      + `<use href="#${P}B" fill="none" stroke="${hI}" stroke-width=".7"/>`
+  const B = beardTones(look.bc ?? look.brow ?? look.hc, T), { cy, jw, jy, my, mwid } = G
+  const op = (c, a) => ` fill-opacity="${a}"`
+  // the grain: short strokes down and out along the jaw, light on the lit side, dark on the far side
+  const grain = len => {
+    let l = '', d = ''
+    for (let i = 0; i < 15; i++) {
+      const a = -0.92 + i * 0.131, x = 50 + a * (jw - 1.8), yy = jy - 1 + (cy - jy) * (1 - a * a) + len * 0.45 * (1 - a * a) - 1.4
+      const s = `M${f1(x)} ${f1(yy - 1.6)}l${f1(a * 0.7)} ${f1(1.6 + len * 0.18)}`
+      if (a < 0.1) l += s; else d += s
+    }
+    return stroke(l, B.lt, 0.34, ' stroke-opacity=".8"') + stroke(d, B.dk, 0.32, ' stroke-opacity=".55"')
+  }
+  // a beard: its fading edge, its body, then (clipped to it) the far side and the underside in shadow, the lit side's
+  // sheen, the grain
+  const body = (o, dens) => {
+    const d = beardD(G, { ...o, lo })
+    if (lo) return fill(beardD(G, { ...o, cl: o.cl - 0.3, amp: 0.9, lo }), B.base, op(0, 0.35)) + fill(d, B.base, op(0, dens))
+    return fill(beardD(G, { ...o, cl: o.cl - 0.2, gap: (o.gap ?? 2.2) - 0.4, amp: 0.9, ampO: 0.3 }), B.base, op(0, B.dark ? 0.3 : 0.26))
+      + `<defs><path id="${P}B" d="${d}"/><clipPath id="${P}Q"><use href="#${P}B"/></clipPath></defs><use href="#${P}B" fill="${B.base}" fill-opacity="${dens}"/>`
+      + `<g clip-path="url(#${P}Q)">${fill(`M${f1(50 + jw * 0.3)} 40C${f1(50 + jw * 0.55)} 52 ${f1(50 + jw * 0.4)} ${f1(cy)} 51 ${f1(cy + 12)}H104V40Z`, B.dk, op(0, 0.3))}`
+      + fill(`M${f1(50 - jw - 3)} ${f1(jy - 6)}C${f1(50 - jw + 3)} ${f1(jy + 4)} ${f1(50 - G.ch)} ${f1(cy + 2)} 50 ${f1(cy + 2)}V40H${f1(50 - jw - 3)}Z`, B.lt, op(0, B.dark ? 0.14 : 0.12))
+      + fill(`M30 ${f1(cy + 0.4 + (o.len ?? 0) * 0.55)}Q50 ${f1(cy - 1.6 + (o.len ?? 0) * 0.55)} 70 ${f1(cy + 0.4 + (o.len ?? 0) * 0.55)}V100H30Z`, B.dk, op(0, 0.3))
+      + grain(o.len ?? 0) + `</g>`
   }
   switch (look.beard) {
     case 'stubble': {
-      // a shadow of hair, not a shape: one flat tone between the skin's shadow and the hair
-      const d = beardArea(G, 0.3, 0.8) + `M${f1(50 - mwid - 0.4)} ${f1(my - 0.8)}C${f1(50 - mwid + 0.4)} ${f1(G.ny + 2.8)} 47 ${f1(G.ny + 2.2)} 50 ${f1(G.ny + 2.4)}C53 ${f1(G.ny + 2.2)} ${f1(50 + mwid - 0.4)} ${f1(G.ny + 2.8)} ${f1(50 + mwid + 0.4)} ${f1(my - 0.8)}Q50 ${f1(my - 1.6)} ${f1(50 - mwid - 0.4)} ${f1(my - 0.8)}Z`
-      return fill(d, mixC(T.base, mixC(H.hc, '#3a3f4c', T.d < 0.5 && lum(H.hc) < 120 ? 0.3 : 0), T.d > 0.6 ? 0.36 : 0.24))
+      // a shadow of hair, not a shape: a light even layer, a little denser along the jaw and the chin
+      const d = beardD(G, { out: 0, cl: 0.55, gap: 2.4, amp: 0.4, ampO: 0.15, lo })
+      const lip = `M${f1(50 - mwid - 0.6)} ${f1(my - 0.7)}C${f1(50 - mwid + 0.3)} ${f1(G.ny + 2.6)} 47 ${f1(G.ny + 2.1)} 50 ${f1(G.ny + 2.3)}C53 ${f1(G.ny + 2.1)} ${f1(50 + mwid - 0.3)} ${f1(G.ny + 2.6)} ${f1(50 + mwid + 0.6)} ${f1(my - 0.7)}Q50 ${f1(my - 1.5)} ${f1(50 - mwid - 0.6)} ${f1(my - 0.7)}Z`
+      const a = T.d > 0.6 ? 0.34 : 0.24
+      return fill(d + lip, B.stub, op(0, a)) + (lo ? '' : fill(beardD(G, { out: 0, cl: 1.1, gap: 3, amp: 0.5, ampO: 0.1 }), B.stub, op(0, a * 0.6)))
     }
-    case 'short': return body(1, 0.75)
-    case 'full': return body(3.4, 0.2)
-    case 'long': return body(9, 0.1) + (lo ? '' : stroke(`M46 ${f1(cy + 3)}q.4 3 1 6.4M50 ${f1(cy + 4)}v7.4`, hL, 0.5))
+    case 'short': return body({ len: 0.4, out: 0.25, cl: 0.7, amp: 0.55, ampO: 0.3 }, 0.78)
+    case 'full': return body({ len: 2.4, out: 0.6, cl: 0.42, amp: 0.65, ampO: 0.6 }, 0.86)
+    case 'long': return body({ len: 6.5, out: 0.9, cl: 0.32, amp: 0.7, ampO: 0.8 }, 0.88)
     case 'chin': {
-      // a strap along the jaw line, sideburn to sideburn
-      const d = `M${f1(50 - G.tw)} 38.6C${f1(50 - G.tw)} 44 ${f1(50 - G.cb)} 45 ${f1(50 - G.cb)} 48C${f1(50 - G.cb)} 52 ${f1(50 - jw - 0.5)} ${f1(jy - 3)} ${f1(50 - jw)} ${f1(jy)}C${f1(50 - jw + 1.5)} ${f1(jy + 3)} ${f1(50 - G.ch - 2)} ${f1(cy - 0.6)} 50 ${f1(cy + 0.4)}C${f1(50 + G.ch + 2)} ${f1(cy - 0.6)} ${f1(50 + jw - 1.5)} ${f1(jy + 3)} ${f1(50 + jw)} ${f1(jy)}C${f1(50 + jw + 0.5)} ${f1(jy - 3)} ${f1(50 + G.cb)} 52 ${f1(50 + G.cb)} 48C${f1(50 + G.cb)} 45 ${f1(50 + G.tw)} 44 ${f1(50 + G.tw)} 38.6`
-      return `<g clip-path="url(#${P}C)">${stroke(d, hI, 5.4)}${stroke(d, hc, 4.2)}</g>`
+      // a strap: a band along the jaw line, sideburn to sideburn, its inner edge broken
+      const o = along(G, 5, 21, lo ? 1 : 2, () => 0.25), i = along(G, 5, 21, lo ? 1 : 2, u => -(1.7 + 1.3 * bell(u, 0.2))).reverse()
+      return fill(poly([...tufts(o, 0.25), ...tufts(i, 0.45)], true), B.base, op(0, 0.88)) + (lo ? '' : grain(0))
     }
     case 'goatee': {
-      const w = mwid + 0.5
-      const d = `M${f1(50 - w)} ${f1(my + 0.6)}C${f1(50 - w)} ${f1(cy)} 47 ${f1(cy + 2.4)} 50 ${f1(cy + 2.4)}C53 ${f1(cy + 2.4)} ${f1(50 + w)} ${f1(cy)} ${f1(50 + w)} ${f1(my + 0.6)}C${f1(50 + w - 1.4)} ${f1(my + 2.6)} 51.6 ${f1(my + 2.9)} 50 ${f1(my + 2.9)}C48.4 ${f1(my + 2.9)} ${f1(50 - w + 1.4)} ${f1(my + 2.6)} ${f1(50 - w)} ${f1(my + 0.6)}Z`
-      return fill(d, hc, ` stroke="${hI}" stroke-width=".6"`) + fill(`M50.6 ${f1(my + 3)}C${f1(50 + w - 1)} ${f1(my + 3)} ${f1(50 + w - 0.2)} ${f1(cy)} 50.6 ${f1(cy + 2.1)}Z`, H.hc) + (lo ? '' : stroke(`M47.4 ${f1(cy - 1.4)}l.3 2.6M49.2 ${f1(cy - 1)}v2.6`, hL, 0.45))
+      // round the mouth to the chin: the moustache joins it at the corners; under the lower lip a little skin shows
+      const w = mwid + 0.9, ly = my + 1.9 * G.lipk
+      const p = dense([[50 + w - 0.1, my - 0.4], [50 + w + 0.3, my + 2.4], [50 + G.ch + 0.4, cy - 1.6], [50 + G.ch * 0.4, cy + 0.9], [50, cy + 1.2],
+        [50 - G.ch * 0.4, cy + 0.9], [50 - G.ch - 0.4, cy - 1.6], [50 - w - 0.3, my + 2.4], [50 - w + 0.1, my - 0.4]], lo ? 1 : 2)
+      const inn = dense([[50 - w + 0.8, my + 0.2], [50 - mwid * 0.55, ly + 0.5], [50, ly + 1], [50 + mwid * 0.55, ly + 0.5], [50 + w - 0.8, my + 0.2]], lo ? 1 : 2)
+      const d = poly([...tufts(p, 0.45), ...tufts(inn, 0.4)], true)
+      return fill(d, B.base, op(0, 0.88)) + (lo ? '' : fill(`M47.6 ${f1(cy - 1)}Q50 ${f1(cy + 0.4)} 52.4 ${f1(cy - 1)}L52 ${f1(cy + 0.8)}Q50 ${f1(cy + 1.4)} 48 ${f1(cy + 0.8)}Z`, B.dk, op(0, 0.4))
+        + stroke(`M47.4 ${f1(cy - 2.4)}l-.2 1.6M48.8 ${f1(cy - 2)}l-.1 1.6M50.4 ${f1(cy - 2)}l.1 1.6`, B.lt, 0.3, ' stroke-opacity=".75"'))
     }
-    case 'patch': return fill(`M48.5 ${f1(my + 2.9)}Q50 ${f1(my + 2.4)} 51.5 ${f1(my + 2.9)}L50.9 ${f1(my + 5.8)}Q50 ${f1(my + 6.4)} 49.1 ${f1(my + 5.8)}Z`, hc, ` stroke="${hI}" stroke-width=".5"`)
+    case 'patch': {
+      const ly = my + 2 * G.lipk + 0.4
+      return fill(poly(tufts(dense([[48.7, ly], [50, ly - 0.3], [51.3, ly], [50.8, ly + 2.4], [50, ly + 3.2], [49.2, ly + 2.4], [48.7, ly]], 1), 0.3), true), B.base, op(0, 0.85))
+    }
     default: return ''
   }
 }
-function stacheOf(look, G) {
-  const H = hairTones(look.bc ?? look.brow ?? look.hc), y = G.my - 1.1 * G.lipk - 0.5, w = G.mwid
-  const ink = ` stroke="${H.hI}" stroke-width=".5"`
-  switch (look.stache) {
-    case 'thin': return fill(`M${f1(50 - w + 0.6)} ${f1(y + 0.5)}Q50 ${f1(y - 1.4)} ${f1(50 + w - 0.6)} ${f1(y + 0.5)}Q50 ${f1(y - 0.3)} ${f1(50 - w + 0.6)} ${f1(y + 0.5)}Z`, H.hc)
-    case 'full': return fill(`M${f1(50 - w - 0.8)} ${f1(y + 1.6)}C${f1(50 - w)} ${f1(y - 1.4)} 47.6 ${f1(y - 2.4)} 50 ${f1(y - 1.5)}C52.4 ${f1(y - 2.4)} ${f1(50 + w)} ${f1(y - 1.4)} ${f1(50 + w + 0.8)} ${f1(y + 1.6)}C${f1(50 + w - 2)} ${f1(y + 0.6)} ${f1(50 - w + 2)} ${f1(y + 0.6)} ${f1(50 - w - 0.8)} ${f1(y + 1.6)}Z`, H.hc, ink)
-      + fill(`M50 ${f1(y - 1.4)}C52.4 ${f1(y - 2.2)} ${f1(50 + w)} ${f1(y - 1.2)} ${f1(50 + w + 0.6)} ${f1(y + 1.3)}C${f1(50 + w - 2)} ${f1(y + 0.5)} 52 ${f1(y + 0.5)} 50 ${f1(y + 0.4)}Z`, H.hD)
-    case 'horseshoe': return fill(`M${f1(50 - w - 0.6)} ${f1(y + 1.4)}C${f1(50 - w)} ${f1(y - 1.4)} 47.6 ${f1(y - 2.3)} 50 ${f1(y - 1.4)}C52.4 ${f1(y - 2.3)} ${f1(50 + w)} ${f1(y - 1.4)} ${f1(50 + w + 0.6)} ${f1(y + 1.4)}L${f1(50 + w + 0.9)} ${f1(G.my + 6)}L${f1(50 + w - 0.7)} ${f1(G.my + 6)}L${f1(50 + w - 0.8)} ${f1(y + 1.8)}C52 ${f1(y + 0.6)} 48 ${f1(y + 0.6)} ${f1(50 - w + 0.8)} ${f1(y + 1.8)}L${f1(50 - w + 0.7)} ${f1(G.my + 6)}L${f1(50 - w - 0.9)} ${f1(G.my + 6)}Z`, H.hc, ink)
-    default: return ''
-  }
+// the moustache: from under the nose down over the upper lip, its lower edge broken where it meets the lip; with a
+// beard its ends run down into the beard at the corners of the mouth
+function stacheOf(look, G, T) {
+  if (!look.stache || look.stache === 'none') return ''
+  const B = beardTones(look.bc ?? look.brow ?? look.hc, T), y = G.my - 1.05 * G.lipk - 0.35, w = G.mwid, ny = G.ny
+  const joined = ['short', 'full', 'long', 'goatee'].includes(look.beard)
+  const top = look.stache === 'thin' ? y - 0.5 : Math.max(ny + 1.9, y - 2.1)
+  const end = joined ? G.my + 1.2 : look.stache === 'horseshoe' ? G.my + 6.2 : y + 1.7
+  const ow = w + (look.stache === 'thin' ? 0.1 : 0.9)
+  // the upper edge (left corner up under the nose, a dip at the philtrum, down to the right corner)
+  const up = dense([[50 - ow, end], [50 - ow + 0.1, y + 0.6], [50 - w * 0.62, top + 0.5], [50 - 1.4, top], [50, top + 0.35], [50 + 1.4, top], [50 + w * 0.62, top + 0.5], [50 + ow - 0.1, y + 0.6], [50 + ow, end]], 1)
+  // the lower edge, back over the lip (tufts down onto it)
+  const lowY = look.stache === 'thin' ? y + 0.5 : y + 1.05
+  const dn = dense([[50 + ow - 1, end], [50 + w - 0.2, lowY + 0.6], [50 + w * 0.5, lowY], [50, lowY + 0.1], [50 - w * 0.5, lowY], [50 - w + 0.2, lowY + 0.6], [50 - ow + 1, end]], 2)
+  const d = poly([...up, ...tufts(dn, look.stache === 'thin' ? 0.25 : 0.5)], true)
+  return fill(d, B.base, ` fill-opacity="${look.stache === 'thin' ? 0.8 : 0.92}"`)
+    + fill(`M50 ${f1(top + 0.4)}L${f1(50 + w * 0.62)} ${f1(top + 0.6)}L${f1(50 + ow)} ${f1(y + 0.8)}L${f1(50 + w * 0.4)} ${f1(lowY + 0.3)}Z`, B.dk, ' fill-opacity=".35"')
+    + stroke(`M${f1(50 - w * 0.7)} ${f1(top + 0.9)}l-.5 1.2M${f1(50 - w * 0.4)} ${f1(top + 0.5)}l-.3 1.3M48.4 ${f1(top + 0.4)}l-.2 1.2`, B.lt, 0.28, ' stroke-opacity=".7"')
 }
 
 // ── Gear ─────────────────────────────────────────────────────────────────────
@@ -818,18 +935,32 @@ function headGearOf(look, G, color) {
       return fill(d, '#1b1c22', ` stroke="${INK}" stroke-width=".8"`) + fill(`M${f1(50 + cw * 0.3)} ${TOP - 1}C${f1(R)} ${TOP + 2} ${f1(R + 1.6)} 30 ${f1(R + 1.4)} 40L${f1(R - 1.4)} 39C${f1(R - 1)} 30 ${f1(R - 3)} 22 ${f1(50 + cw * 0.2)} ${TOP + 1}Z`, '#0c0c0f')
         + stroke(`M${f1(L + 2)} 27Q${f1(L + 6)} 18 47 ${TOP - 0.4}M43 ${TOP + 2}Q${f1(L + 4)} 22 ${f1(L + 2.4)} 31`, '#6a7080', 0.9) + stroke(`M50 ${TOP - 1.2}V27.2`, '#000000', 0.5)
     }
-    case 'visor': return visorOf(G, color)
+    case 'visor': return visorOf(G, color, null)
     default: return ''
   }
 }
-function visorOf(G, color) {
-  const { cw } = G, L = 50 - cw, R = 50 + cw
-  const band = `M${f1(L - 1.2)} 31.4C${f1(L - 0.6)} 26.6 ${f1(R + 0.6)} 26.6 ${f1(R + 1.2)} 31.4L${f1(R + 0.8)} 34.2C${f1(R - 2)} 30.6 ${f1(L + 2)} 30.6 ${f1(L - 0.8)} 34.2Z`
-  const brim = `M${f1(L + 0.6)} 32.4C${f1(L + 4)} 29.2 ${f1(R - 4)} 29.2 ${f1(R - 0.6)} 32.4C${f1(R - 3)} 37.4 ${f1(L + 3)} 37.4 ${f1(L + 0.6)} 32.4Z`
-  const ink = ` stroke="${INK}" stroke-width=".8"`
-  // the brim's shadow over the brow, the band, the brim
-  return fill(`M${f1(L + 0.4)} 33C${f1(L + 4)} 37.6 ${f1(R - 4)} 37.6 ${f1(R - 0.4)} 33L${f1(R - 0.6)} 38.6C${f1(R - 5)} 40.4 ${f1(L + 5)} 40.4 ${f1(L + 0.6)} 38.6Z`, '#000000', ' fill-opacity=".28"')
-    + fill(band, color, ink) + fill(brim, shade(color, 0.4), ink) + stroke(`M${f1(L + 2)} 32.6C${f1(L + 5)} 30.2 ${f1(R - 5)} 30.2 ${f1(R - 2)} 32.6`, lite(color, 0.35), 0.5)
+// a team's mark on a cap or a visor: one clean letter (mark.t, the team's initial) in its contrasting colour (mark.c),
+// or without one a plain star; never a traced logo
+const markOf = (mark, x, y, size, color) => {
+  const c = mark?.c ?? (lum(color) > 170 ? '#14161b' : '#ffffff')
+  if (mark?.t && /^[A-Z]$/.test(mark.t)) return `<text x="${f1(x)}" y="${f1(y + size * 0.36)}" text-anchor="middle" font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-size="${f1(size)}" fill="${c}">${mark.t}</text>`
+  const r = size * 0.48
+  let d = ''
+  for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, q = k % 2 ? r * 0.42 : r; d += `${k ? 'L' : 'M'}${f1(x + Math.cos(a) * q)} ${f1(y + Math.sin(a) * q)}` }
+  return fill(d + 'Z', c)
+}
+// a sideline visor: a stiff band round the head in the team's colour, the mark on its front, a wide flat brim out over
+// the brow (its underside dark), his hair showing over the top
+function visorOf(G, color, mark) {
+  const { cw } = G, L = 50 - cw - 0.6, R = 50 + cw + 0.6
+  const ink = ` stroke="${INK}" stroke-width=".55"`
+  const band = `M${f1(L)} 32.4C${f1(L + 0.4)} 27.4 ${f1(R - 0.4)} 27.4 ${f1(R)} 32.4L${f1(R - 0.3)} 34.6C${f1(R - 3)} 31.2 ${f1(L + 3)} 31.2 ${f1(L + 0.3)} 34.6Z`
+  const brim = `M${f1(L - 1.4)} 33.4C${f1(L + 5)} 30.4 ${f1(R - 5)} 30.4 ${f1(R + 1.4)} 33.4C${f1(R + 0.4)} 37.6 ${f1(R - 6)} 41.2 50 41.2C${f1(L + 6)} 41.2 ${f1(L - 0.4)} 37.6 ${f1(L - 1.4)} 33.4Z`
+  return fill(`M${f1(L + 1.4)} 38C${f1(L + 6)} 42.6 ${f1(R - 6)} 42.6 ${f1(R - 1.4)} 38L${f1(R - 2)} 42.4C${f1(R - 7)} 44.6 ${f1(L + 7)} 44.6 ${f1(L + 2)} 42.4Z`, '#000000', ' fill-opacity=".26"')
+    + fill(band, color, ink) + fill(`M${f1(50 + cw * 0.35)} 28.6C${f1(R - 2)} 29 ${f1(R)} 30.6 ${f1(R)} 32.4L${f1(R - 0.3)} 34.6C${f1(R - 1.6)} 33 ${f1(R - 4)} 31.8 ${f1(50 + cw * 0.35)} 31.2Z`, shade(color, 0.25))
+    + markOf(mark, 50, 30.4, 3.2, color)
+    + fill(brim, shade(color, 0.08), ink) + fill(`M${f1(L)} 35.6C${f1(L + 6)} 39.2 ${f1(R - 6)} 39.2 ${f1(R)} 35.6C${f1(R - 1.6)} 39.4 ${f1(R - 7)} 41 50 41C${f1(L + 7)} 41 ${f1(L + 1.6)} 39.4 ${f1(L)} 35.6Z`, shade(color, 0.5))
+    + stroke(`M${f1(L + 3)} 33.4C${f1(L + 7)} 31.8 ${f1(R - 7)} 31.8 ${f1(R - 3)} 33.4`, lite(color, 0.28), 0.4)
 }
 function earringsOf(look, G) {
   if (!look.ear || look.ear === 'none') return ''
@@ -839,8 +970,8 @@ function earringsOf(look, G) {
 function chainOf(look, G) {
   if (!look.chain || look.chain === 'none') return ''
   const c = look.chain === 'gold' ? ['#8a6418', '#e8c25a'] : ['#6d727c', '#e2e6ee']
-  const d = `M${f1(50 - G.nw + 1)} 66.4Q${f1(50 - G.nw * 0.5)} 74.6 50 75.4Q${f1(50 + G.nw * 0.5)} 74.6 ${f1(50 + G.nw - 1)} 66.4`
-  return stroke(d, c[0], 1.2) + stroke(d, c[1], 0.7, ' stroke-dasharray=".8 .5"')
+  const d = `M${f1(50 - G.nw - 0.4)} 69.4Q${f1(50 - G.nw * 0.45)} 81.4 50 82.2Q${f1(50 + G.nw * 0.45)} 81.4 ${f1(50 + G.nw + 0.4)} 69.4`
+  return stroke(d, c[0], 1.1) + stroke(d, c[1], 0.65, ' stroke-dasharray=".8 .5"')
 }
 
 // ── A coach's pieces ─────────────────────────────────────────────────────────
@@ -850,30 +981,18 @@ function topOf(look, G, color, P, lo) {
   const { nw } = G
   const polo = look.top === 'polo'
   const top = polo ? mixC(color, '#0b0c10', 0.12) : '#2a2e37'
-  const body = sym([50, 76], [
-    [[50 + 2, 74], [50 + nw - 1, 70], [50 + nw + 0.4, 67.6]],
-    [[50 + nw + 8, 68.6], [50 + nw + 20, 70], [50 + nw + 26, 72.4]],
-    [[50 + nw + 29, 73.6], [100, 76], [102, 79]],
-    [[102, 84], [90, 86], [50, 86]],
-  ])
-  let s = clothOf(body, top, P, lo)
+  let s = clothOf(shirtD(G, 77, [[50 + nw * 0.55, 77], [50 + nw, 73], [50 + nw + 0.4, 69]]), top, P, lo, G)
   if (polo) {
-    const fl = lite(color, 0.1), ink = ` stroke="${INK}" stroke-width=".6"`
+    const fl = lite(color, 0.1), ink = ` stroke="${INK}" stroke-width=".5"`
     // the collar's two points lying open at the throat, the placket and its button
-    s += fill(`M${f1(50 - nw - 0.4)} 66.4L${f1(50 - nw - 4.2)} 69.6L${f1(50 - 3.6)} 75.6L50 73.4Z`, fl, ink) + fill(`M${f1(50 + nw + 0.4)} 66.4L${f1(50 + nw + 4.2)} 69.6L${f1(50 + 3.6)} 75.6L50 73.4Z`, shade(fl, 0.25), ink)
-    s += stroke(`M48.6 74.4V86M51.4 74.4V86`, shade(color, 0.45), 0.5) + fill(ell(50, 78.6, 0.75, 0.75), '#f2f3f5')
+    s += fill(`M${f1(50 - nw - 0.4)} 68.4L${f1(50 - nw - 4.4)} 72.4L${f1(50 - 3.4)} 79.4L50 76.8Z`, fl, ink) + fill(`M${f1(50 + nw + 0.4)} 68.4L${f1(50 + nw + 4.4)} 72.4L${f1(50 + 3.4)} 79.4L50 76.8Z`, shade(fl, 0.25), ink)
+    s += stroke(`M48.6 77.8V92M51.4 77.8V92`, shade(color, 0.45), 0.45) + fill(ell(50, 82.6, 0.7, 0.7), '#f2f3f5')
   } else {
-    s += fill(`M${f1(50 - nw - 1.2)} 64.6Q50 70.6 ${f1(50 + nw + 1.2)} 64.6L${f1(50 + nw + 2.4)} 70.6Q50 78.4 ${f1(50 - nw - 2.4)} 70.6Z`, color, ` stroke="${INK}" stroke-width=".7"`)
-      + fill(`M50 ${f1(68)}Q${f1(50 + nw)} 67 ${f1(50 + nw + 1.2)} 64.8L${f1(50 + nw + 2.4)} 70.6Q${f1(50 + nw)} 74 50 74.6Z`, shade(color, 0.3))
-    s += stroke('M50 74.6V86', '#0d0e12', 1.2) + stroke('M50 74.6V86', '#9aa0aa', 0.45) + `<rect x="48.9" y="77.6" width="2.2" height="3.4" rx=".6" fill="#c9ced6"/>`
+    s += fill(`M${f1(50 - nw - 1.2)} 66.8Q50 73 ${f1(50 + nw + 1.2)} 66.8L${f1(50 + nw + 2.4)} 73Q50 80.8 ${f1(50 - nw - 2.4)} 73Z`, color, ` stroke="${INK}" stroke-width=".55"`)
+      + fill(`M50 70.4Q${f1(50 + nw)} 69.4 ${f1(50 + nw + 1.2)} 67L${f1(50 + nw + 2.4)} 73Q${f1(50 + nw)} 76.4 50 77Z`, shade(color, 0.3))
+    s += stroke('M50 77V120', '#0d0e12', 1.1) + stroke('M50 77V120', '#9aa0aa', 0.4) + `<rect x="49" y="80" width="2" height="3.2" rx=".6" fill="#c9ced6"/>`
   }
   return s
-}
-// cloth: its flat colour, the far side in shadow, the near shoulder's light, the ink round it
-function clothOf(body, c, P, lo) {
-  return `<defs><path id="${P}j" d="${body}"/><clipPath id="${P}J"><use href="#${P}j"/></clipPath></defs><use href="#${P}j" fill="${c}"/>`
-    + `<g clip-path="url(#${P}J)">${fill('M58 70C66 74 70 80 70 90H104V60H64Z', shade(c, 0.3))}${lo ? '' : fill('M14 76C20 72.6 28 70.4 36 69.6L37 71C29 72 22 74.2 15 78Z', lite(c, 0.1))}</g>`
-    + `<use href="#${P}j" fill="none" stroke="${INK}" stroke-width=".9"/>`
 }
 function glassesOf(look, G) {
   if (!look.specs) return ''
@@ -888,85 +1007,116 @@ function glassesOf(look, G) {
   }
   return s + fill(g, '#ffffff', ' fill-opacity=".22"')
 }
-// a ball cap or a visor in the team's colour, his hair under it
-function capOf(look, G, color) {
+// a ball cap or a visor in the team's colour, his hair under it: the cap a structured crown of six panels (the seams
+// and the button), the mark on the front panels, a curved brim seen from just above (its top in the team's colour
+// darkened, the underside a dark sliver), the brim's shadow over his brow
+function capOf(look, G, color, mark) {
   if (!look.cap) return ''
-  if (look.cap === 'visor') return visorOf(G, color)
-  const { cw } = G, L = 50 - cw, R = 50 + cw, ink = ` stroke="${INK}" stroke-width=".8"`
-  const crown = `M${f1(L - 1.2)} 32.6C${f1(L - 2)} ${TOP + 1} ${f1(50 - cw * 0.6)} ${TOP - 3.8} 50 ${TOP - 3.8}C${f1(50 + cw * 0.6)} ${TOP - 3.8} ${f1(R + 2)} ${TOP + 1} ${f1(R + 1.2)} 32.6C${f1(R - 3)} 30 ${f1(L + 3)} 30 ${f1(L - 1.2)} 32.6Z`
-  const brim = `M${f1(L + 0.4)} 31.6C${f1(L + 4)} 28.8 ${f1(R - 4)} 28.8 ${f1(R - 0.4)} 31.6C${f1(R - 2.6)} 37.2 ${f1(L + 2.6)} 37.2 ${f1(L + 0.4)} 31.6Z`
-  return fill(`M${f1(L + 0.4)} 32.4C${f1(L + 4)} 37.4 ${f1(R - 4)} 37.4 ${f1(R - 0.4)} 32.4L${f1(R - 0.6)} 38.8C${f1(R - 5)} 40.6 ${f1(L + 5)} 40.6 ${f1(L + 0.6)} 38.8Z`, '#000000', ' fill-opacity=".28"')
-    + fill(crown, color, ink) + fill(`M${f1(50 + cw * 0.15)} ${TOP - 3.6}C${f1(R)} ${TOP - 2} ${f1(R + 2)} ${TOP + 3} ${f1(R + 1.2)} 32.4C${f1(R - 1)} 31.4 ${f1(R - 3)} 30.8 ${f1(R - 4)} 30.6C${f1(R - 3)} 24 ${f1(R - 6)} ${TOP} ${f1(50 + cw * 0.15)} ${TOP - 3.6}Z`, shade(color, 0.28))
-    + stroke(`M50 ${TOP - 3.6}V30.6M${f1(50 - cw * 0.5)} ${TOP - 1}Q${f1(50 - cw * 0.42)} 24 ${f1(50 - cw * 0.46)} 30.8`, shade(color, 0.4), 0.5)
-    + fill(ell(50, TOP - 3.4, 1.2, 1.2), shade(color, 0.2)) + fill(brim, shade(color, 0.42), ink) + stroke(`M${f1(L + 2)} 31.6C${f1(L + 5)} 29.6 ${f1(R - 5)} 29.6 ${f1(R - 2)} 31.6`, lite(color, 0.3), 0.5)
+  if (look.cap === 'visor') return visorOf(G, color, mark)
+  const { cw } = G, L = 50 - cw - 0.9, R = 50 + cw + 0.9, ink = ` stroke="${INK}" stroke-width=".55"`
+  const top = TOP - 4.2
+  const crown = `M${f1(L)} 32.2C${f1(L - 0.6)} ${f1(top + 6)} ${f1(50 - cw * 0.62)} ${f1(top)} 50 ${f1(top)}C${f1(50 + cw * 0.62)} ${f1(top)} ${f1(R + 0.6)} ${f1(top + 6)} ${f1(R)} 32.2C${f1(R - 4)} 30.4 ${f1(L + 4)} 30.4 ${f1(L)} 32.2Z`
+  const brim = `M${f1(L + 0.2)} 31.8C${f1(L + 5)} 29.8 ${f1(R - 5)} 29.8 ${f1(R - 0.2)} 31.8C${f1(R - 0.6)} 35.6 ${f1(R - 6)} 38.2 50 38.2C${f1(L + 6)} 38.2 ${f1(L + 0.6)} 35.6 ${f1(L + 0.2)} 31.8Z`
+  return fill(`M${f1(L + 1.4)} 36C${f1(L + 6)} 40.2 ${f1(R - 6)} 40.2 ${f1(R - 1.4)} 36L${f1(R - 1.8)} 40C${f1(R - 6)} 42 ${f1(L + 6)} 42 ${f1(L + 1.8)} 40Z`, '#000000', ' fill-opacity=".24"')
+    + fill(crown, color, ink)
+    // the far side of the crown in shade, the near front panel catching the light
+    + fill(`M${f1(50 + cw * 0.3)} ${f1(top + 0.2)}C${f1(R - 1)} ${f1(top + 1.6)} ${f1(R + 0.6)} ${f1(top + 6)} ${f1(R)} 32.2C${f1(R - 1.4)} 31.4 ${f1(R - 3)} 31 ${f1(R - 4.4)} 30.8C${f1(R - 3.6)} 24 ${f1(R - 6)} ${f1(top + 3)} ${f1(50 + cw * 0.3)} ${f1(top + 0.2)}Z`, shade(color, 0.26))
+    + fill(`M${f1(L + 2)} 29C${f1(L + 2.4)} ${f1(top + 6)} ${f1(50 - cw * 0.5)} ${f1(top + 2)} ${f1(50 - cw * 0.3)} ${f1(top + 1.2)}L${f1(50 - cw * 0.36)} ${f1(top + 3)}C${f1(50 - cw * 0.6)} ${f1(top + 4.4)} ${f1(L + 3.4)} ${f1(top + 8)} ${f1(L + 3.2)} 29Z`, lite(color, 0.14))
+    + stroke(`M50 ${f1(top + 0.4)}V30.6M${f1(50 - cw * 0.52)} ${f1(top + 2)}Q${f1(50 - cw * 0.5)} 24 ${f1(50 - cw * 0.56)} 31M${f1(50 + cw * 0.52)} ${f1(top + 2)}Q${f1(50 + cw * 0.5)} 24 ${f1(50 + cw * 0.56)} 31`, shade(color, 0.38), 0.35)
+    + fill(ell(50, top + 0.4, 1, 0.6), shade(color, 0.2))
+    + markOf(mark, 50, 24.6, 7.4, color)
+    + fill(brim, shade(color, 0.3), ink)
+    + fill(`M${f1(L + 1.2)} 33.4C${f1(L + 4)} 36.6 ${f1(R - 4)} 36.6 ${f1(R - 1.2)} 33.4C${f1(R - 2)} 36.8 ${f1(R - 7)} 38 50 38C${f1(L + 7)} 38 ${f1(L + 2)} 36.8 ${f1(L + 1.2)} 33.4Z`, shade(color, 0.55))
+    + stroke(`M${f1(L + 2.4)} 32C${f1(L + 7)} 30.6 ${f1(R - 7)} 30.6 ${f1(R - 2.4)} 32`, lite(color, 0.25), 0.4)
 }
 
 // ── The bust ─────────────────────────────────────────────────────────────────
+// the shirt's outline from the bottom of its neckline round the shoulders: a football player's build (the trapezius
+// sloping off a thick neck, the shoulders filling the frame's width by about 85% down). vb: how low the neckline
+// dips (a V's point, a crew's front), cut: the neckline's own curve from there up to the side of the neck
+function shirtD(G, vb, cut) {
+  const { nw } = G
+  return sym([50, vb], [
+    cut,
+    [[50 + nw + 3, 69.8], [50 + nw + 9, 71.9], [50 + nw + 15, 74.2]],
+    [[50 + nw + 22, 77], [91, 78.6], [97, 82.4]],
+    [[102, 85.6], [105, 92], [106, 100]],
+    [[106.5, 108], [106, 116], [106, 120]],
+    [[90, 120], [70, 120], [50, 120]],
+  ])
+}
+// cloth: its flat colour, the far side in shadow, the near shoulder's light, the seams from the collar to the arms,
+// the ink round it
+function clothOf(body, c, P, lo, G) {
+  const nw = G.nw
+  return `<defs><path id="${P}j" d="${body}"/><clipPath id="${P}J"><use href="#${P}j"/></clipPath></defs><use href="#${P}j" fill="${c}"/>`
+    + `<g clip-path="url(#${P}J)">${fill('M62 72C72 77 78 88 77 120H110V60H66Z', shade(c, 0.26))}`
+    + (lo ? '' : fill(`M-6 94C0 83 13 77.6 ${f1(50 - nw - 12)} 74.6L${f1(50 - nw - 11)} 76.2C14 79 4 85 -4 96Z`, lite(c, 0.12))
+      + stroke(`M${f1(50 - nw - 6)} 71.8Q20 82 13 120M${f1(50 + nw + 6)} 71.8Q80 82 87 120`, shade(c, 0.32), 0.45))
+    + `</g><use href="#${P}j" fill="none" stroke="${INK}" stroke-width=".6"/>`
+}
 function jerseyOf(G, color, P, lo, crew = false) {
   const { nw } = G
-  // (a crew neck: the collar round the base of the neck, not a V)
-  const body = sym([50, crew ? 73.4 : 79.6], [
-    [crew ? [50 + nw * 0.6, 73.4] : [50 + 2.2, 76.6], crew ? [50 + nw, 70.6] : [50 + nw - 1.2, 70.6], [50 + nw + 0.4, 66.4]],
-    [[50 + nw + 1.4, 66.6], [50 + nw + 2.6, 67.2], [50 + nw + 4, 67.6]],
-    [[50 + nw + 10, 68.6], [50 + nw + 19, 69.4], [50 + nw + 25, 71.4]],
-    [[50 + nw + 28, 72.6], [100, 75], [102, 78]],
-    [[102, 84], [90, 86], [50, 86]],
-  ])
-  const trim = crew ? `M${f1(50 - nw - 0.2)} 66.2C${f1(50 - nw)} 70.8 ${f1(50 - nw * 0.6)} 73.6 50 73.6C${f1(50 + nw * 0.6)} 73.6 ${f1(50 + nw)} 70.8 ${f1(50 + nw + 0.2)} 66.2`
-    : `M${f1(50 - nw - 0.2)} 66.2C${f1(50 - nw + 1)} 70.8 ${f1(50 - 3)} 76.8 50 80.2C${f1(50 + 3)} 76.8 ${f1(50 + nw - 1)} 70.8 ${f1(50 + nw + 0.2)} 66.2`
+  const vb = crew ? 75.6 : 82.2
+  const cut = crew ? [[50 + nw * 0.6, 75.6], [50 + nw, 72.8], [50 + nw + 0.4, 69]] : [[50 + 2.2, 79.6], [50 + nw - 1, 72.6], [50 + nw + 0.4, 69]]
+  const trim = crew ? `M${f1(50 - nw - 0.2)} 68.8C${f1(50 - nw)} 73 ${f1(50 - nw * 0.6)} 75.8 50 75.8C${f1(50 + nw * 0.6)} 75.8 ${f1(50 + nw)} 73 ${f1(50 + nw + 0.2)} 68.8`
+    : `M${f1(50 - nw - 0.2)} 68.8C${f1(50 - nw + 1)} 73 ${f1(50 - 3)} 79 50 82.4C${f1(50 + 3)} 79 ${f1(50 + nw - 1)} 73 ${f1(50 + nw + 0.2)} 68.8`
   const accent = lum(color) > 200 ? '#1d2230' : '#f4f5f7'
   const u = (c, w) => `<use href="#${P}v" fill="none" stroke="${c}" stroke-width="${w}"/>`
-  return clothOf(body, color, P, lo) + `<defs><path id="${P}v" d="${trim}"/></defs>` + u(INK, 3.6) + u(accent, 2.8) + u(color, 1.4)
+  return clothOf(shirtD(G, vb, cut), color, P, lo, G) + `<defs><path id="${P}v" d="${trim}"/></defs>` + u(INK, 2.5) + u(accent, 1.9) + u(color, 0.8)
 }
 // a basketball tank: bare shoulders (the skin's tones, the far one in shadow, the deltoid's line), the tank's scoop
 // neck and its arm holes trimmed, the straps over the traps
 function tankOf(G, T, color, P, lo) {
   const { nw } = G
-  const sh = sym([50, 76], [
-    [[50 + nw * 0.5, 76], [50 + nw, 69], [50 + nw + 0.6, 66]],
-    [[50 + nw + 6, 68.2], [50 + nw + 16, 68.6], [50 + nw + 23, 71.6]],
-    [[50 + nw + 28, 73.6], [100, 77], [102, 80]],
-    [[102, 86], [90, 86], [50, 86]],
-  ])
-  const ink = ` stroke="${INK}" stroke-width=".9"`
-  const tank = sym([50, 76.4], [
-    [[50 + nw * 0.55, 76.4], [50 + nw + 1.2, 71], [50 + nw + 1.6, 67.4]],
-    [[50 + nw + 3.4, 67.6], [50 + nw + 5.4, 67.8], [50 + nw + 7, 68.2]],
-    [[50 + nw + 7.4, 74], [50 + nw + 10, 79], [50 + nw + 15, 81.6]],
-    [[50 + nw + 15, 84], [80, 86], [50, 86]],
+  const sh = shirtD(G, 76, [[50 + nw * 0.5, 76], [50 + nw, 72], [50 + nw + 0.4, 69]])
+  const ink = ` stroke="${T.ink}" stroke-width=".6"`
+  const tank = sym([50, 80.6], [
+    [[50 + nw * 0.6, 80.6], [50 + nw + 1.4, 75.4], [50 + nw + 1.8, 70.4]],
+    [[50 + nw + 3.6, 70.8], [50 + nw + 5.6, 71.4], [50 + nw + 7.4, 72]],
+    [[50 + nw + 7.8, 80], [50 + nw + 10.6, 92], [50 + nw + 19, 100]],
+    [[50 + nw + 24, 104], [104, 110], [106, 120]],
+    [[90, 120], [70, 120], [50, 120]],
   ])
   const accent = lum(color) > 200 ? '#1d2230' : '#f4f5f7'
-  return fill(sh, T.base, ink) + fill(`M${f1(50 + nw + 6)} 70C${f1(50 + nw + 14)} 70.4 ${f1(50 + nw + 22)} 72 100 77L102 86H${f1(50 + nw + 8)}Z`, T.sh)
-    + (lo ? '' : stroke(`M${f1(50 - nw - 14)} 70.6Q${f1(50 - nw - 17)} 76 ${f1(50 - nw - 15)} 84M${f1(50 + nw + 14)} 70.6Q${f1(50 + nw + 17)} 76 ${f1(50 + nw + 15)} 84`, T.sh, 0.9))
-    + clothOf(tank, color, P, lo)
-    + stroke(`M${f1(50 - nw - 1.4)} 68C${f1(50 - nw - 1)} 71.4 ${f1(50 - nw * 0.55)} 75.8 50 75.8C${f1(50 + nw * 0.55)} 75.8 ${f1(50 + nw + 1)} 71.4 ${f1(50 + nw + 1.4)} 68`
-      + `M${f1(50 - nw - 6.6)} 68.8C${f1(50 - nw - 7)} 74 ${f1(50 - nw - 9.6)} 78.6 ${f1(50 - nw - 14.4)} 81.2M${f1(50 + nw + 6.6)} 68.8C${f1(50 + nw + 7)} 74 ${f1(50 + nw + 9.6)} 78.6 ${f1(50 + nw + 14.4)} 81.2`, accent, 1.2)
+  return fill(sh, T.base, ink) + fill(`M${f1(50 + nw + 7)} 72.6C${f1(50 + nw + 16)} 74 ${f1(50 + nw + 26)} 78 104 88L106 120H${f1(50 + nw + 10)}Z`, T.sh)
+    + (lo ? '' : stroke(`M${f1(50 - nw - 20)} 77Q${f1(50 - nw - 24)} 88 ${f1(50 - nw - 22)} 100M${f1(50 + nw + 20)} 77Q${f1(50 + nw + 24)} 88 ${f1(50 + nw + 22)} 100`, T.sh, 0.7))
+    + clothOf(tank, color, P, lo, G)
+    + stroke(`M${f1(50 - nw - 1.6)} 70.6C${f1(50 - nw - 1.2)} 74.6 ${f1(50 - nw * 0.6)} 80.4 50 80.4C${f1(50 + nw * 0.6)} 80.4 ${f1(50 + nw + 1.2)} 74.6 ${f1(50 + nw + 1.6)} 70.6`
+      + `M${f1(50 - nw - 7.2)} 72.4C${f1(50 - nw - 7.8)} 80 ${f1(50 - nw - 10.4)} 91 ${f1(50 - nw - 18.4)} 99.4M${f1(50 + nw + 7.2)} 72.4C${f1(50 + nw + 7.8)} 80 ${f1(50 + nw + 10.4)} 91 ${f1(50 + nw + 18.4)} 99.4`, accent, 1.1)
 }
-export function faceSvg(look, { color = '#d2aa4f', view = 'full' } = {}) {
+export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } = {}) {
   const col = color || '#d2aa4f', lo = view === 'sm'
-  const P = `f${hashStr(`${JSON.stringify(look)}|${col}|${view}`).slice(0, 4)}`
+  const P = `f${hashStr(`${JSON.stringify(look)}|${col}|${view}|${mark?.t ?? ''}`).slice(0, 4)}`
   const G = geo(look), T = tonesOf(look.skin)
   const { cw, tw, cb, jw, jy, cy, ch, nw, es, ey, mwid, my, lean } = G
   const durag = look.gear === 'durag'
   // (a durag covers the hair; long hair that hangs still shows behind it)
   const hp = hairParts(durag ? { ...look, hair: ['locs', 'long', 'flow', 'mullet', 'cornrows'].includes(look.hair) ? look.hair : 'shaved' } : look, G, T, P, lo)
   const hfront = durag || look.cap === 'cap' ? '' : hp.front
-  // the head's shading: three flat tones, each one path, every shape designed (no soft blends)
-  const S = { sh: '', dk: '', hl: '' }
-  // the side of the face away from the light: down the forehead, round the outer eye, out over the cheekbone (it
-  // catches the light), into the hollow under it, down the jaw to the chin
-  S.sh += crv([[50 + cw * 0.42, TOP - 3], [50 + cw * 0.64, 28], [50 + es + 3.6, G.by - 0.4], [50 + es + 2.1, ey + 2], [50 + cb - 2.6, 46.8],
-    [50 + cb - 4.4 - lean * 0.9, 51.8], [50 + jw - 3.4, jy - 0.6], [50 + ch + 0.5, cy - 2.6], [51.6, cy + 2.4], [104, cy + 3], [104, TOP - 4]], true, true)
-  // the lit side's own edge turning away (the temple, the cheek's side, the jaw's underside)
-  S.sh += crv([[50 - cw - 2, 27], [50 - cw + 0.9, 31.4], [50 - tw + 0.7, 38.4], [50 - cb + 0.5, 46.4], [50 - cb + 1.1 + lean * 0.4, 51], [50 - jw + 0.8, jy - 0.6],
-    [50 - ch - 0.6, cy - 1], [49, cy + 2.6], [-4, cy + 4], [-4, 27]], true, true)
-  // the hollow under the lit cheekbone, down toward the mouth
-  if (lean > 0.15) S.sh += crv([[50 - cb + 1.6, 48.4], [50 - cb + 4.4, 49.8], [50 - mwid - 2, my - 2.2], [50 - cb + 2.4, 52.8]])
-  // the chin's light, the forehead's, the brow ridge, the lit cheekbone
-  S.hl += crv([[43.4, 22.6], [48.4, 21.2], [50.4, 25.2], [47.8, 30], [43.6, 28.6]])
-  S.hl += crv([[50 - cb + 2.2, 45.7], [50 - cb + 6.4, 45.8], [50 - cb + 3.4, 47.4]])
-  if (!lo) S.hl += crv([[50 - es - 2.6, G.by - 1.9], [50 - 2.2, G.by - 1.3], [50 - es - 2, G.by - 1.1]]) + ell(48.8, cy - 3.2, 1.6, 0.9)
-  if (look.cleft) S.dk += crv([[50, cy - 3], [50.4, cy - 1.4], [49.8, cy - 1.2]])
+  // the head's shading: flat tones, each one path, every shape designed (no soft blends). The light is up to his
+  // right (the viewer's left), so the far side turns away in a half tone with a narrower shadow at its edge; the lit
+  // side's edge turns away in a thin half tone.
+  const S = { lm: '', md: '', sh: '', dk: '', hl: '' }
+  // the far side: the temple, round the outer eye, the cheekbone's side, the hollow under it, down the jaw to the chin
+  S.md += crv([[50 + cw * 0.55, TOP - 3], [50 + cw - 3.4, TOP + 7], [50 + tw - 3, 34], [50 + es + 3.7, G.by + 1.6], [50 + es + 3.5, ey + 2.4], [50 + cb - 3, 47],
+    [50 + cb - 4.4 - lean, 52], [50 + jw - 3.2, jy - 0.4], [50 + ch + 0.6, cy - 2.6], [51.4, cy + 1], [56, cy + 5], [104, cy + 5], [104, TOP - 4]], true, false)
+  S.sh += crv([[50 + cw - 1.1, TOP + 9], [50 + tw - 1.2, 37.6], [50 + cb - 1.3, 45.4], [50 + cb - 2.2 - lean * 0.6, 51], [50 + jw - 1.5, jy - 0.2],
+    [50 + ch + 0.3, cy - 1.4], [52, cy + 0.8], [60, cy + 5], [104, cy + 4], [104, TOP]])
+  // the lit side's own edge turning away
+  S.md += crv([[50 - cw - 2, 27], [50 - cw + 1, 31], [50 - tw + 0.9, 38.2], [50 - cb + 0.8, 46], [50 - cb + 1.4 + lean * 0.5, 51], [50 - jw + 1, jy - 0.4],
+    [50 - ch - 0.4, cy - 1.2], [49, cy + 1.4], [-4, cy + 4], [-4, 27]])
+  // the temples, a little hollow; the hollow under each cheekbone, down toward the mouth (deeper on a lean face)
+  for (const s of [-1, 1]) S.md += crv([[50 + s * (tw - 2.4), 31.6], [50 + s * (tw - 0.8), 34], [50 + s * (tw - 1), 38.4], [50 + s * (tw - 2.6), 36]])
+  S.lm += crv([[50 - cb + 1.7, 48.6], [50 - cb + 4, 49.6], [50 - mwid - 2.6, my - 3], [50 - cb + 2.4, 52.6]])
+  if (lean > 0.15) S.sh += crv([[50 + cb - 2.4, 48.6], [50 + cb - 4.6, 49.8], [50 + mwid + 2.6, my - 2.6], [50 + cb - 3.2, 53]])
+  // the underside of the chin
+  S.sh += crv([[50 - ch - 1.2, cy - 0.9], [50, cy - 0.3], [50 + ch + 1.2, cy - 0.9], [50 + ch + 2, cy + 3], [50 - ch - 2, cy + 3]])
+  // the light: on the forehead, down the brow ridge, on the lit cheekbone, the ball of the chin
+  S.hl += crv([[43.6, 23.4], [47.6, 22.2], [49.4, 25.4], [47.4, 29.2], [44, 28]])
+  S.hl += crv([[50 - cb + 2.4, 45.8], [50 - cb + 6, 45.6], [50 - cb + 3.4, 47.2]])
+  if (!lo) S.hl += crv([[50 - es - 2.6, G.by - 1.6], [50 - 2.4, G.by - 1.2], [50 - es - 2, G.by - 0.9]]) + ell(48.9, cy - 2.6, 1.4, 0.75)
+  if (look.cleft) S.sh += crv([[50, cy - 2.8], [50.4, cy - 1.3], [49.8, cy - 1.1]])
   const ey2 = eyesOf(look, G, T, S, P, lo)
   const nose = noseOf(look, G, T, S, lo)
   const mouth = mouthOf(look, G, T, S, lo)
@@ -974,43 +1124,44 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full' } = {}) {
   // the ears: lit and in shade, the bowl inside, the rim
   let ears = '', rims = ''
   for (const s of [-1, 1]) {
-    const ex = 50 + s * (tw - 0.6), X = d => f1(ex + s * d)
-    ears += fill(`M${X(0)} 40.6C${X(2.2)} 38.6 ${X(3.8)} 40 ${X(3.7)} 43.6C${X(3.6)} 47.4 ${X(2.6)} 51 ${X(0.6)} 52.8L${X(-0.8)} 50.6Z`, s < 0 ? T.base : T.sh, ` stroke="${INK}" stroke-width=".8"`)
-      + fill(`M${X(0.9)} 42.2C${X(2.4)} 41.2 ${X(2.9)} 43 ${X(2.6)} 45C${X(2.3)} 47.4 ${X(1.6)} 48.6 ${X(1)} 48.2Z`, s < 0 ? T.sh : T.dk)
-    rims += `M${X(1.3)} 40.6C${X(2.8)} 40.2 ${X(3.2)} 42 ${X(3)} 44.2`
+    const ex = 50 + s * (tw - 0.7), X = d => f1(ex + s * d)
+    ears += fill(`M${X(0)} 40.8C${X(2)} 38.8 ${X(3.5)} 40.2 ${X(3.4)} 43.6C${X(3.3)} 47.2 ${X(2.4)} 50.6 ${X(0.6)} 52.4L${X(-0.8)} 50.4Z`, s < 0 ? T.base : T.md, ` stroke="${T.ink}" stroke-width=".5"`)
+      + fill(`M${X(0.8)} 42.3C${X(2.2)} 41.4 ${X(2.7)} 43 ${X(2.4)} 45C${X(2.1)} 47.2 ${X(1.5)} 48.3 ${X(0.9)} 48Z`, s < 0 ? T.md : T.sh)
+    rims += `M${X(1.2)} 40.8C${X(2.6)} 40.4 ${X(3)} 42 ${X(2.8)} 44.2`
   }
-  if (!lo) ears += stroke(rims, T.line, 0.4)
-  // the neck: into the jersey, the jaw's shadow on it, the two neck muscles, the far side in shade
+  if (!lo) ears += stroke(rims, T.line, 0.3)
+  // the neck: into the shirt, the jaw's shadow on it, the two neck muscles, the far side in shade
   const neckD = sym([50, 49], [
-    [[50 + nw * 0.3, 49], [50 + nw * 0.6, 49], [50 + nw * 0.86, 49]],
-    [[50 + nw * 0.9, 57], [50 + nw, 62], [50 + nw + 0.6, 66]],
-    [[50 + nw + 3, 68.4], [50 + nw + 9, 69.6], [50 + nw + 16, 71]],
-    [[50 + nw + 16, 76], [50 + nw + 16, 80], [50 + nw + 16, 84]],
-    [[50 + nw, 84], [55, 84], [50, 84]],
+    [[50 + nw * 0.3, 49], [50 + nw * 0.6, 49], [50 + nw * 0.85, 49]],
+    [[50 + nw * 0.88, 56], [50 + nw * 0.95, 63], [50 + nw + 0.4, 68.4]],
+    [[50 + nw + 3, 70.4], [50 + nw + 10, 72.4], [50 + nw + 18, 75]],
+    [[50 + nw + 18, 82], [50 + nw + 18, 88], [50 + nw + 18, 92]],
+    [[50 + nw, 92], [55, 92], [50, 92]],
   ])
   const neck = `<use href="#${P}n" fill="${T.base}"/><g clip-path="url(#${P}N)">`
-    + fill(`M${f1(50 + nw * 0.42)} 48C${f1(50 + nw * 0.6)} 60 ${f1(50 + nw * 0.25)} 70 ${f1(50 + nw * 0.3)} 86H104V48Z`, T.sh)
-    + `<use href="#${P}p" fill="${T.sh}" transform="translate(.6 3.8)"/><use href="#${P}p" fill="${T.dk}" transform="translate(.6 1.6)"/>`
-    + fill(`M47 72L50 81L53 72Q50 74 47 72Z`, T.sh)
-    + (lo ? '' : stroke(`M${f1(50 - nw + 2.4)} 56C${f1(50 - nw + 3.4)} 62 47.4 67.6 47.6 71M${f1(50 + nw - 2.4)} 56C${f1(50 + nw - 3.4)} 62 52.6 67.6 52.4 71`, T.sh, 0.9))
-    + `</g><use href="#${P}n" fill="none" stroke="${INK}" stroke-width=".9"/>`
+    + fill(`M${f1(50 + nw * 0.4)} 48C${f1(50 + nw * 0.62)} 60 ${f1(50 + nw * 0.3)} 70 ${f1(50 + nw * 0.4)} 92H104V48Z`, T.md)
+    + fill(`M${f1(50 + nw * 0.72)} 48C${f1(50 + nw * 0.85)} 60 ${f1(50 + nw * 0.8)} 66 ${f1(50 + nw + 2)} 72H104V48Z`, T.sh)
+    + `<use href="#${P}p" fill="${T.sh}" transform="translate(.4 3.4)"/><use href="#${P}p" fill="${T.dk}" transform="translate(.4 1.3)"/>`
+    + fill(`M46.6 74L50 83L53.4 74Q50 76 46.6 74Z`, T.md)
+    + (lo ? '' : stroke(`M${f1(50 - nw + 2.2)} 57C${f1(50 - nw + 3.4)} 63 47.4 69 47.6 73M${f1(50 + nw - 2.2)} 57C${f1(50 + nw - 3.4)} 63 52.6 69 52.4 73`, T.md, 0.8))
+    + `</g><use href="#${P}n" fill="none" stroke="${T.ink}" stroke-width=".55"/>`
   const vb = VIEWS[view] ?? VIEWS.full
   // (a close crop of the eyes, the nose or the mouth leaves out what it can't show: less to draw for a thumbnail)
   const close = view === 'eyes' || view === 'nose' || view === 'mouth'
-  const body = (close ? '' : hp.back + neck + chainOf(look, G) + (look.top ? topOf(look, G, col, P, lo) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, col, P, lo, look.kit === 'crew')))
+  const body = (close ? '' : hp.back + neck + (look.top ? topOf(look, G, col, P, lo) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, col, P, lo, look.kit === 'crew')) + chainOf(look, G))
     + (view === 'nose' || view === 'mouth' ? '' : ears)
     + `<use href="#${P}p" fill="${T.base}"/>`
-    + `<g clip-path="url(#${P}C)">${fill(S.sh, T.sh)}${fill(S.dk, T.dk)}${fill(S.hl, T.hl)}`
-    // the hard rim of cool light down the far edge
-    + (lo ? '' : stroke(`M${f1(50 + tw - 0.7)} 36C${f1(50 + tw - 0.6)} 41 ${f1(50 + cb - 0.7)} 43 ${f1(50 + cb - 0.7)} 47C${f1(50 + cb - 0.8)} 51 ${f1(50 + jw)} ${f1(jy - 3.4)} ${f1(50 + jw - 0.7)} ${f1(jy)}C${f1(50 + jw - 1.4)} ${f1(jy + 2)} ${f1(50 + ch + 2.4)} ${f1(cy - 2)} ${f1(50 + ch - 0.2)} ${f1(cy - 1.2)}`, T.rim, 0.75))
+    + `<g clip-path="url(#${P}C)">${fill(S.lm, mixC(T.base, T.md, 0.5))}${fill(S.md, T.md)}${fill(S.sh, T.sh)}${fill(S.dk, T.dk)}${fill(S.hl, T.hl)}`
+    // the thin rim of cool light down the far edge
+    + (lo ? '' : stroke(`M${f1(50 + tw - 0.5)} 37C${f1(50 + tw - 0.4)} 41 ${f1(50 + cb - 0.5)} 43 ${f1(50 + cb - 0.5)} 47C${f1(50 + cb - 0.6)} 51 ${f1(50 + jw + 0.1)} ${f1(jy - 3.4)} ${f1(50 + jw - 0.5)} ${f1(jy)}C${f1(50 + jw - 1.2)} ${f1(jy + 2)} ${f1(50 + ch + 2.2)} ${f1(cy - 2)} ${f1(50 + ch - 0.2)} ${f1(cy - 1.1)}`, T.rim, 0.5))
     + `</g>`
-    // the ink: the head's edge, heaviest round the jaw
-    + `<use href="#${P}p" fill="none" stroke="${INK}" stroke-width="1"/>` + stroke(jawD(G), INK, 1.7)
+    // the ink: the head's edge in the skin's darkest brown, a touch more weight under the jaw
+    + `<use href="#${P}p" fill="none" stroke="${T.ink}" stroke-width=".6"/>` + stroke(jawD(G), T.ink, 0.45, ' transform="translate(.15 .15)"')
     + (look.beard === 'stubble' ? beardOf(look, G, T, P, lo) : '')
-    + lines + ey2.eyes + browsOf(look, G) + nose
+    + lines + ey2.eyes + browsOf(look, G, T) + nose
     + (look.beard !== 'stubble' ? beardOf(look, G, T, P, lo) : '')
-    + mouth + stacheOf(look, G) + eyeBlackOf(look, G)
-    + hfront + headGearOf(look, G, col) + earringsOf(look, G) + glassesOf(look, G) + capOf(look, G, col)
+    + mouth + stacheOf(look, G, T) + eyeBlackOf(look, G)
+    + hfront + headGearOf(look, G, col) + earringsOf(look, G) + glassesOf(look, G) + capOf(look, G, col, mark)
   const defs = `<defs><path id="${P}p" d="${headD(G)}"/><path id="${P}n" d="${neckD}"/>${ey2.clip}<clipPath id="${P}C"><use href="#${P}p"/></clipPath><clipPath id="${P}N"><use href="#${P}n"/></clipPath><clipPath id="${P}E"><use href="#${P}e"/></clipPath></defs>`
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" stroke-linecap="round" stroke-linejoin="round">${defs}${body}</svg>`
 }
@@ -1020,34 +1171,37 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full' } = {}) {
 const toUrl = svg => `data:image/svg+xml,${svg.replace(/"/g, "'").replace(/#/g, '%23').replace(/</g, '%3C').replace(/>/g, '%3E')}`
 
 // ── Coaches ──────────────────────────────────────────────────────────────────
-// A coach is an older man (35 to 70): hair greying with the years, receding or gone, a crew cut or a side part, the
-// lines of his face, a heavier jaw; often glasses, a moustache or a grey beard, a visor or a cap; a team polo or a
-// quarter-zip. The backgrounds of the NFL's coaching staffs: mostly white, about a fifth Black, a few others.
+// A coach is a grown man from his mid-thirties to his late sixties, the way NFL head coaches run (the young ones in
+// modern cuts and beards, no grey; grey only from his late forties, white past sixty; lines with the years; glasses
+// more often as he ages), a visor or a team cap with its mark, a team polo or a quarter-zip. The backgrounds of the
+// NFL's coaching staffs: mostly white, about a fifth Black, a few others.
 //   coachLook(key, { g, ag })         the look (g: his background if it's known, ag: his age, greyer every year)
-//   coachUrl(key, { g, ag, color, small })   the same as a data: URL (cached; small: the lighter drawing for 64 px
-//                                           and under)
+//   coachUrl(key, { g, ag, color, small, mark })   the same as a data: URL (cached; small: the lighter drawing for
+//                                           64 px and under; mark: his team's mark on a cap or visor, { t, c })
 export const COACH_MIX = [['w', 74], ['b', 20], ['l', 4], ['p', 2]]
 const COACH_HAIR = {
-  w: [['crew', 26], ['sidepart', 24], ['receding', 20], ['balding', 12], ['buzz', 10], ['shaved', 8]],
-  b: [['buzz', 30], ['shaved', 30], ['fade', 16], ['receding', 14], ['balding', 6], ['waves', 4]],
-  l: [['crew', 30], ['sidepart', 20], ['receding', 20], ['buzz', 16], ['shaved', 14]],
-  p: [['buzz', 40], ['shaved', 30], ['crew', 30]],
-  m: [['buzz', 34], ['crew', 26], ['receding', 20], ['shaved', 20]],
+  w: [['crew', 24], ['sidepart', 20], ['textured', 12], ['fade', 8], ['receding', 14], ['balding', 8], ['buzz', 8], ['shaved', 6]],
+  b: [['fade', 26], ['buzz', 26], ['shaved', 24], ['waves', 8], ['receding', 10], ['balding', 6]],
+  l: [['crew', 24], ['sidepart', 18], ['fade', 16], ['textured', 10], ['receding', 14], ['buzz', 10], ['shaved', 8]],
+  p: [['buzz', 34], ['shaved', 26], ['crew', 20], ['fade', 20]],
+  m: [['fade', 26], ['buzz', 26], ['crew', 20], ['receding', 14], ['shaved', 14]],
 }
-const COACH_BEARD = [['none', 46], ['stache', 18], ['short', 16], ['goatee', 10], ['stubble', 6], ['full', 4]]
+const COACH_BEARD = [['none', 40], ['short', 20], ['stubble', 14], ['stache', 10], ['goatee', 8], ['full', 8]]
 const GREYS = { w: ['#9b958c', '#c9c4bb', '#e2ded6'], b: ['#6f6b66', '#9d9993', '#c8c4bd'], l: ['#77726c', '#aaa59d', '#d6d2ca'], m: ['#77726c', '#aaa59d', '#d6d2ca'], p: ['#6f6b66', '#9d9993', '#c8c4bd'] }
 export function coachLook(key, { g = null, ag = null } = {}) {
   const r = seeded(`coach-face|${key}`)
   const bg = g ?? pickW(r, COACH_MIX)
-  const age = ag ?? 38 + Math.floor(r() * 26)
+  const age = ag ?? 34 + Math.floor(r() * 32)
   const base = lookOf(`coach|${key}|${bg}`, 'qb')
   const skin = SKIN[bg] ? SKIN[bg][Math.floor(r() * SKIN[bg].length)] : base.skin
   let hair = pickW(r, COACH_HAIR[bg] ?? COACH_HAIR.w)
-  if (age < 42 && hair === 'balding') hair = 'receding'
-  // his natural colour, then grey: salt and pepper in his late forties, grey in his fifties, white past sixty
+  // (the hairline goes with the years: none of it before forty, a receding line before a bald crown)
+  if (age < 46 && hair === 'balding') hair = 'receding'
+  if (age < 40 && hair === 'receding') hair = bg === 'b' ? 'fade' : 'crew'
+  // his natural colour, then grey: salt and pepper from his late forties, grey in his fifties, white past sixty
   const nat = pickW(r, HC[bg] ?? HC.w).replace('#b8893c', '#16110e')
   const G3 = GREYS[bg] ?? GREYS.w
-  const grey = age < 45 ? null : age < 52 ? mixC(nat, G3[0], 0.55) : age < 60 ? G3[1] : G3[2]
+  const grey = age < 47 ? null : age < 54 ? mixC(nat, G3[0], 0.45) : age < 61 ? G3[1] : G3[2]
   const hc = grey ?? nat
   let beard = pickW(r, COACH_BEARD), stache = 'none'
   if (beard === 'stache') { beard = 'none'; stache = 'full' } else if (beard === 'short' || beard === 'full' || beard === 'goatee') stache = 'full'
@@ -1055,8 +1209,8 @@ export function coachLook(key, { g = null, ag = null } = {}) {
   const L = {
     g: bg, ag: age, skin, head: pickW(r, [['square', 40], ['broad', 30], ['oval', 20], ['round', 10]]), eyes: pickW(r, [['hooded', 40], ['narrow', 30], ['almond', 30]]),
     brows: pickW(r, [['thick', 34], ['straight', 40], ['angled', 26]]), nose: base.nose, mouth: pickW(r, [['thin', 40], ['neutral', 50], ['smirk', 10]]),
-    hair, hc, brow: age >= 58 ? mixC(nat, G3[1], 0.6) : nat, bc: hc, beard, stache, gear: 'none', wide: 0.45,
-    specs: r() < (age >= 55 ? 0.45 : 0.25) ? (r() < 0.75 ? 1 : 2) : 0,
+    hair, hc, brow: age >= 60 ? mixC(nat, G3[1], 0.6) : nat, bc: hc, beard, stache, gear: 'none', wide: 0.45,
+    specs: r() < (age >= 55 ? 0.4 : age >= 45 ? 0.2 : 0.08) ? (r() < 0.75 ? 1 : 2) : 0,
     cap: u < 0.18 ? 'visor' : u < 0.3 ? 'cap' : null,
     top: r() < 0.55 ? 'polo' : 'zip',
   }
@@ -1070,13 +1224,13 @@ export function coachLook(key, { g = null, ag = null } = {}) {
   }
 }
 const CCACHE = new Map()
-export function coachUrl(key, { g = null, ag = null, color = '#d2aa4f', small = false } = {}) {
-  // (the face changes only as he greys: keyed by his age in steps)
-  const step = ag == null ? '' : ag < 45 ? 0 : ag < 52 ? 1 : ag < 58 ? 2 : ag < 60 ? 3 : 4
-  const k = `${key}|${g ?? ''}|${step}|${color}|${small ? 1 : 0}`
+export function coachUrl(key, { g = null, ag = null, color = '#d2aa4f', small = false, mark = null } = {}) {
+  // (the face changes only as he ages: drawn at his age in steps, the steps where his hair greys and his lines come)
+  const a = ag == null ? null : ag < 40 ? 36 : ag < 42 ? 40 : ag < 47 ? 44 : ag < 54 ? 50 : ag < 61 ? 57 : 64
+  const k = `${key}|${g ?? ''}|${a ?? ''}|${color}|${small ? 1 : 0}|${mark?.t ?? ''}${mark?.c ?? ''}`
   let u = CCACHE.get(k)
   if (!u) {
-    u = toUrl(faceSvg(coachLook(key, { g, ag }), { color, view: small ? 'sm' : 'full' }))
+    u = toUrl(faceSvg(coachLook(key, { g, ag: a }), { color, view: small ? 'sm' : 'full', mark }))
     if (CCACHE.size > 400) CCACHE.clear()
     CCACHE.set(k, u)
   }
@@ -1084,7 +1238,7 @@ export function coachUrl(key, { g = null, ag = null, color = '#d2aa4f', small = 
 }
 // a coach's saved face (the player's built coach: { key, coach: 1, g?, ag? }, or an older save's player-style
 // { key, pos }) as a url
-export const coachFaceUrl = (face, color, ag = null, small = false) => (!face ? null : face.coach ? coachUrl(face.key, { g: face.g ?? null, ag: ag ?? face.ag ?? null, color, small }) : faceUrl(face.key, face.pos, color, null, small))
+export const coachFaceUrl = (face, color, ag = null, small = false, mark = null) => (!face ? null : face.coach ? coachUrl(face.key, { g: face.g ?? null, ag: ag ?? face.ag ?? null, color, small, mark }) : faceUrl(face.key, face.pos, color, null, small))
 
 // a league man's age in steps (his face changes only as he matures: 25, 29, 32)
 const ageStep = ag => (ag == null || ag <= 25 ? 24 : ag <= 29 ? 28 : ag <= 32 ? 31 : 34)
@@ -1102,7 +1256,7 @@ export function faceUrl(key, pos, color, ag = null, small = false) {
   return u
 }
 // a league man's face (a made-up man only: the caller checks he isn't real and isn't a build)
-export const genFace = (p, color, small = false) => (p ? faceUrl(p.fk ?? p.n, p.p, color, p.ag ?? null, small) : null)
+export const genFace = (p, color, small = false) => (p ? faceUrl(p.fk ?? p.n, facePos(p), color, p.ag ?? null, small) : null)
 
 // ── A build's face: the player's own pick ────────────────────────────────────
 // Every build gets a face of his own (never a real man's photo). It starts as one coherent made-up man (lookOf, keyed

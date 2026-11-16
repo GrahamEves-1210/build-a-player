@@ -8,7 +8,7 @@ import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
-import { coachPhoto } from './coachFace'
+import { coachPhoto, teamMark } from './coachFace'
 
 // THE COACH: built like a player. The wheel is the league's real head coaches (not the player's own team's); it
 // lands on one, and the player takes ONE of his five ratings into the matching line of his coach. Five spins fill
@@ -112,14 +112,16 @@ export function StylePick({ S, go, onDone }) {
 }
 
 // ── 3. The name and the face ─────────────────────────────────────────────────
-// faces: drawn coaches (lib/franchise2/faces.js coachLook), a strip of eight, between 38 and 58 the way first-time
-// head coaches are, white and Black men in it (the league's staffs: mostly white, about a fifth Black). His face
+// faces: drawn coaches (lib/franchise2/faces.js coachLook), a strip of eight, from 34 to 61 the way the
+// league's head coaches are, white and Black men in it (the league's staffs: mostly white, about a fifth Black). His face
 // keeps the year it was picked (y), so he greys as the seasons go (coach.js myHC passes his age now).
+// (ages the way the league's head coaches run: from the mid-thirties to the sixties, half of a strip under 45)
+const COACH_AGES = [34, 37, 40, 43, 46, 50, 55, 61]
 export function faceChoices(seed, page = 0) {
   const out = []
   let black = 0
   for (let k = 0; k < 80 && out.length < 8; k++) {
-    const key = `coach-${seed}-${page}-${k}`, ag = 38 + ((k * 7 + page * 5) % 21)
+    const key = `coach-${seed}-${page}-${k}`, ag = COACH_AGES[(k + page * 3) % COACH_AGES.length]
     const g = coachLook(key, { ag }).g
     if (g !== 'b' && out.length >= 6 && black < 2) continue
     if (g === 'b') black++
@@ -127,7 +129,7 @@ export function faceChoices(seed, page = 0) {
   }
   return out
 }
-export const coachFace = (c, team) => (c?.face ? coachFaceUrl(c.face, TEAM[team]?.color) : null)
+export const coachFace = (c, team) => (c?.face ? coachFaceUrl(c.face, TEAM[team]?.color, null, false, teamMark(team)) : null)
 export function CoachWho({ S, go, owner, onDone }) {
   const c = S.coach ?? {}
   const [page, setPage] = useState(c.facePage ?? 0)
@@ -149,7 +151,7 @@ export function CoachWho({ S, go, owner, onDone }) {
       <div className="fsu-faces" role="radiogroup" aria-label="Face">
         {faces.map(f => (
           <button key={f.key} type="button" role="radio" aria-checked={c.face?.key === f.key} className={`fsu-face${c.face?.key === f.key ? ' is-on' : ''}`} style={fkVars(S.team)} onClick={() => set({ face: f, facePage: page }, 'tap')}>
-            <img src={coachFaceUrl(f, TEAM[S.team]?.color)} alt="" draggable={false} />
+            <img src={coachFaceUrl(f, TEAM[S.team]?.color, null, false, teamMark(S.team))} alt="" draggable={false} />
           </button>
         ))}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>

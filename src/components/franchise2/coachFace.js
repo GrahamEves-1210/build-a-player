@@ -24,18 +24,27 @@ const BLACK = ['Anthony Weaver', 'Christian Parker', 'Vance Joseph', 'Kelvin She
 const BG = { ...Object.fromEntries(BLACK.map(n => [n, 'b'])), 'Dave Canales': 'l', 'Robert Saleh': 'l', 'Mike McDaniel': 'm' }
 // a coach the game draws: c.g his background if known (generated coaches carry it), c.ag his age (greyer each year)
 // small: a list's face (64 px and under), the lighter drawing
-export function drawnCoach(c, color, small = false) {
+export function drawnCoach(c, color, small = false, mark = null) {
   const name = c?.n ?? c?.name ?? 'Coach'
   // (a generated coach carries his background; a real one is in BG or white, as the real staffs are)
-  return coachUrl(name, { g: c?.g ?? BG[name] ?? 'w', ag: c?.ag ?? null, color, small })
+  return coachUrl(name, { g: c?.g ?? BG[name] ?? 'w', ag: c?.ag ?? null, color, small, mark })
 }
 // any coach on a team: the player's built coach (his own face), a real man's photo, else the drawing
 //   c: a staff coach (coach.js: { n, ag, g, ... }), myHC (mine, face), or the setup's coach ({ name, face })
 export function coachPhoto(c, team, small = false) {
-  const color = TEAM[team]?.color
+  const color = TEAM[team]?.color, mark = teamMark(team)
   if (!c) return null
-  if (c.mine || c.face) return c.face ? coachFaceUrl(c.face, color, c.ag ?? null, small) : drawnCoach(c, color, small)
+  if (c.mine || c.face) return c.face ? coachFaceUrl(c.face, color, c.ag ?? null, small, mark) : drawnCoach(c, color, small, mark)
   const name = c.n ?? c.name
   if (!c.g) { const s = shotOf(name); if (s) return s }
-  return drawnCoach(c, color, small)
+  return drawnCoach(c, color, small, mark)
+}
+// his team's mark on a drawn cap or visor: the team's initial, in its second colour when that stands off the first,
+// else white (or near-black on a light colour); faces.js draws it as one clean letter, never a traced logo
+const lumOf = h => { const x = parseInt(String(h ?? '#000000').slice(1, 7), 16); return 0.299 * ((x >> 16) & 255) + 0.587 * ((x >> 8) & 255) + 0.114 * (x & 255) }
+export function teamMark(team) {
+  const t = TEAM[team]
+  if (!t) return null
+  const c = Math.abs(lumOf(t.color2) - lumOf(t.color)) > 70 ? t.color2 : lumOf(t.color) > 170 ? '#14161b' : '#ffffff'
+  return { t: t.short[0], c }
 }

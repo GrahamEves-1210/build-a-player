@@ -6,12 +6,11 @@ import { rookieScale } from '../../lib/franchise2/contracts'
 import { cleanName, nameOk, randomFirstLast, takenOn, freeNumbers, legalFor, pickNumber, rookieSlots } from '../../lib/franchise2/identity'
 import { POSITIONS, CAPS, POS_NAME } from '../../lib/squad'
 import { ovrOf } from '../../lib/squadSeason'
-import { defaultFace, buildFaceUrl } from '../../lib/franchise2/faces'
+import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../lib/franchise2/faces'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
 import { CoachSpin, StylePick, CoachWho, CoachReveal } from './CoachBuild'
-import FacePick from './FacePick'
 import './setup.css'
 
 // SETUP: a new franchise, in the order a new GM's first week goes.
@@ -208,6 +207,14 @@ function Builds({ S, go, owner, onBuild }) {
   )
 }
 
+// a build's face choices: eight made-up men for his position (faces.js defaultFace: the position's room, so a corner
+// is drawn the way NFL corners look), a new eight a page (the MORE button spins the next page); the first of the
+// first page is the face he starts with
+function buildFaceChoices(key, pos, page) {
+  return Array.from({ length: 8 }, (_, k) => ({ key: `${key}|${page}|${k}`, face: defaultFace(page || k ? `${key}|f${page}-${k}` : key, pos) }))
+}
+const sameFace = (a, b) => !!a && FACE_KEYS.every(k => a[k] === b.face[k])
+
 // ── A build's name and number ────────────────────────────────────────────────
 // First and last name (Career's name step: the same letters, the random-name button) and a number his position
 // may wear and nobody on the team has. His rookie deal shows under it: the slot his OVR goes at in the draft.
@@ -220,6 +227,8 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
   const [num, setNum] = useState(() => (legalFor(pos, init?.num) && !taken.has(init.num) ? init.num : pickNumber(pos, taken)))
   const [all, setAll] = useState(false)
   const [face, setFace] = useState(() => init?.face ?? defaultFace(faceKey ?? `${first}-${last}-${pos}`, pos))
+  const [page, setPage] = useState(0)
+  const faces = useMemo(() => buildFaceChoices(faceKey ?? `${first}-${last}-${pos}`, pos, page), [faceKey, pos, page]) // eslint-disable-line react-hooks/exhaustive-deps
   const o = ovrOf(pos, build)
   const deal = slot ? rookieScale(slot) : null
   const ok = nameOk(first, last)
@@ -230,7 +239,18 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
       <LowerThird size="l" name={`${first} ${last}`.trim() || POS_NAME[pos]} pos={pos} num={showNum ? num : null} ovr={o} photo={buildFaceUrl({ pos, face }, TEAM[team]?.color)} team={team} mine={owner}
         line={deal ? `ROOKIE DEAL · $${deal.$.toFixed(1)}M A YEAR` : null} />
       <span className="fsu-lbl">FACE</span>
-      <FacePick face={face} pos={pos} team={team} shuffleKey={faceKey ?? pos} onChange={setFace} />
+      {/* his face the way the coach's is picked: a strip of made-up men who could play his position, MORE spins eight more */}
+      <div className="fsu-faces fsu-faces--build" role="radiogroup" aria-label="Face">
+        {faces.map(f => {
+          const on = sameFace(face, f)
+          return (
+            <button key={f.key} type="button" role="radio" aria-checked={on} className={`fsu-face${on ? ' is-on' : ''}`} style={fkVars(team)} onClick={() => { setFace(f.face); sfx('tap') }}>
+              <img src={buildFaceUrl({ pos, face: f.face }, TEAM[team]?.color)} alt="" draggable={false} />
+            </button>
+          )
+        })}
+        <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>
+      </div>
       <span className="fsu-lbl">NAME</span>
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="First name" />

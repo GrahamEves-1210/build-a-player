@@ -13,7 +13,7 @@ import { DLS } from '../../data/dls'
 import { LBS } from '../../data/lbs'
 import { OLS } from '../../data/ols'
 import { depthChart, startersOf, jersey } from './roster'
-import { buildLook, lookOf } from './faces'
+import { buildLook, lookOf, facePos } from './faces'
 
 const SKINS = ['#8d5a3b', '#5e3c22', '#7a5030', '#c09060', '#f0c4a0', '#9a6840']
 const CATCHERS = new Set(['wr', 'te', 'rb'])
@@ -33,7 +33,7 @@ function castMan(F, p) {
   const first = String(p.n ?? '').trim()[0]
   const at = B ? Object.fromEntries(Object.entries(B.build ?? {}).map(([k, v]) => [k, v?.val])) : raw?.attrs ?? null
   // (a build: the skin his player picked for his face; a made-up man: his drawn face's; a real man: his own)
-  const skin = B ? buildLook(B).skin : raw?.skin ?? (raw ? SKINS[h % SKINS.length] : lookOf(p.fk ?? p.n, p.p).skin)
+  const skin = B ? buildLook(B).skin : raw?.skin ?? (raw ? SKINS[h % SKINS.length] : lookOf(p.fk ?? p.n, facePos(p)).skin)
   const number = jersey(F, p) ?? raw?.number ?? null
   const m = {
     name: last, last, short: first ? `${first.toUpperCase()}. ${last}` : last, number, skin, look: { number, skin },

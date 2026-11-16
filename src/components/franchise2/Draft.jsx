@@ -9,7 +9,7 @@ import {
   tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT,
 } from '../../lib/franchise2'
 import { groupOf } from '../../lib/franchise2/roster'
-import { faceUrl, buildFaceUrl } from '../../lib/franchise2/faces'
+import { faceUrl, buildFaceUrl, facePos } from '../../lib/franchise2/faces'
 import { realOf } from '../../lib/franchise2/league'
 import { TYPES_OF } from '../../lib/squadSeason'
 import { nflHeadshot } from '../../utils/simulation'
@@ -51,7 +51,7 @@ export function colVars(col) {
 const colColor = col => school(col)?.color ?? '#2b3039'
 const SUIT = '#1c1f25'
 // a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js)
-const faceFor = (F, x, color) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color) : faceUrl(x.n, x.p, color))
+const faceFor = (F, x, color) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color) : faceUrl(x.fk ?? x.n, facePos(x), color))
 const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
