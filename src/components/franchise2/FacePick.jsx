@@ -127,8 +127,10 @@ export default function FacePick({ face: given, pos, team, color: given2 = null,
   useLayoutEffect(() => {
     if (!moved.current) return
     moved.current = false
-    const s = stage.current?.getBoundingClientRect(), p = panel.current?.getBoundingClientRect()
-    if (s && p && p.top < s.bottom - 1) scrollerOf(panel.current).scrollBy(0, p.top - s.bottom - 6)
+    // (the face's own height under where it sticks: its rect may be pushed up by the end of a short list)
+    const st = stage.current, s = st?.getBoundingClientRect(), p = panel.current?.getBoundingClientRect()
+    const under = s ? (parseFloat(getComputedStyle(st).top) || 0) + s.height : 0
+    if (s && p && p.top < under - 1) scrollerOf(panel.current).scrollBy(0, p.top - under - 6)
   }, [cat, part])
   // a pick: the big face, the thumbnails and the setup's lower-third, all at once
   const set = useCallback((k, v) => {

@@ -136,11 +136,11 @@ function hairTones(hc, sk) {
 }
 
 // ── The frame ────────────────────────────────────────────────────────────────
-// full: the headshot. hero: the creator's big face, the same headshot framing (owner 11-15: never a close-up).
+// full: the headshot (crown to chin 46% of the frame, the chin at 62%, beside ESPN's photos in the same list). hero: the creator's big face, the same headshot framing (owner 11-15: never a close-up).
 // sm: the full frame drawn lighter for lists (64 px and under). The rest are the creator's thumbnails, each cropped
 // to the part it changes.
 export const VIEWS = {
-  full: '0 0 100 100', sm: '0 0 100 100', hero: '0 0 100 100', head: '22 9 56 56',
+  full: '3.7 3.2 92.6 92.6', sm: '3.7 3.2 92.6 92.6', hero: '3.7 3.2 92.6 92.6', head: '22 9 56 56',
   eyes: '33 30 34 21', nose: '37 35 26 26', mouth: '36 44 28 23', low: '24 35 52 52', hair: '16 4 68 68', ear: '24 29 25 25',
 }
 
@@ -632,8 +632,8 @@ function eyeBlackOf(look, G) {
   if (!look.eb || look.eb === 'none') return ''
   let d = ''
   for (const s of [-1, 1]) {
-    const x = 50 + s * (G.es + 0.3), y = G.ey + 2.5
-    d += look.eb === 'paint' ? sm([[x - 3, y], [x, y - 0.4], [x + 3, y], [x + 2.6, y + 1.9], [x, y + 2.3], [x - 2.6, y + 1.9]]) : poly([[x - 2.8, y - 0.1], [x + 2.8, y - 0.1], [x + 2.8, y + 1.7], [x - 2.8, y + 1.7]])
+    const x = 50 + s * (G.es + 0.3), y = G.ey + 3.1
+    d += look.eb === 'paint' ? sm([[x - 2.7, y], [x, y - 0.35], [x + 2.7, y], [x + 2.3, y + 1.6], [x, y + 1.95], [x - 2.3, y + 1.6]]) : poly([[x - 2.8, y - 0.1], [x + 2.8, y - 0.1], [x + 2.8, y + 1.7], [x - 2.8, y + 1.7]])
   }
   return fill(d, '#131417')
 }
@@ -661,11 +661,11 @@ function markOf(mark, x, y, size, color) {
 function visorOf(G, color, mark) {
   const { cw } = G, L = 50 - cw - 0.5, R = 50 + cw + 0.5, y = G.hl + 1
   const band = sm([[L, y + 3.2, 1], [50, y + 0.3], [R, y + 3.2, 1], [R - 0.2, y + 5.4, 1], [50, y + 3], [L + 0.2, y + 5.4, 1]])
-  const brim = sm([[L - 1.4, y + 4.6, 1], [50, y + 2.6], [R + 1.4, y + 4.6, 1], [R - 2, y + 8.6], [50, y + 9.6], [L + 2, y + 8.6]])
-  return fill(sm([[L + 1.4, y + 8.4], [50, y + 10.8], [R - 1.4, y + 8.4], [50, y + 12.4]]), '#000000', ' fill-opacity=".18"')
+  const brim = sm([[L - 1.6, y + 4.4, 1], [50, y + 2.4], [R + 1.6, y + 4.4, 1], [R - 2.6, y + 8.6], [50, y + 10.1], [L + 2.6, y + 8.6]])
+  return fill(sm([[L + 1.6, y + 9.6], [50, y + 11.6], [R - 1.6, y + 9.6], [50, y + 13.4]]), '#000000', ' fill-opacity=".18"')
     + fill(band, color) + fill(sm([[50 + cw * 0.4, y + 1], [R, y + 3.2, 1], [R - 0.2, y + 5.4, 1], [50 + cw * 0.4, y + 3.6]]), dark(color, 0.22))
     + markOf(mark, 50, y + 1.9, 2.4, color)
-    + fill(brim, dark(color, 0.12)) + fill(sm([[L + 0.6, y + 6.6], [50, y + 8.1], [R - 0.6, y + 6.6], [R - 2, y + 8.6], [50, y + 9.6], [L + 2, y + 8.6]]), dark(color, 0.45))
+    + fill(brim, dark(color, 0.1)) + fill(sm([[50 + cw * 0.2, y + 3], [R + 1.6, y + 4.4, 1], [R - 2.6, y + 8.6], [50 + cw * 0.3, y + 9.8]]), dark(color, 0.24)) + fill(sm([[L + 1.4, y + 8.2], [50, y + 10], [R - 1.4, y + 8.2], [R - 2.6, y + 8.6], [50, y + 10.1], [L + 2.6, y + 8.6]]), dark(color, 0.5))
 }
 function earringsOf(look, G) {
   if (!look.ear || look.ear === 'none') return ''
