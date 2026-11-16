@@ -2444,14 +2444,17 @@ export function byeRest(c, D) {
 // Train: the drill's result (score 0-1, hit: the drill's own verdict), a seeded roll at byeChance. A gain is
 // one grade in the drill's trait with the most room, the way offseason work does it (one grade, counted against
 // UPGRADE_CAP), free of points; the rest of the season is played at it (a nudge on the build the season was simulated on)
+// (the trait a grade would go to: the one with the most room. A grade from A up comes one rep in its cost,
+// TOP_COST: a week's work rarely moves a grade that high. 2026-11-16)
+export const byeTarget = (c, game) => [...byeTraits(c, game)].sort((x, y) => (c.build[x].val ?? 0) - (c.build[y].val ?? 0))[0] ?? null
 export function byeTrain(c, D, game, score, hit = score >= 0.75, sim = false) {
   if (!byeNow(c) || byeHurt(c, D)) return c
-  const traits = byeTraits(c, game)
-  const chance = traits.length ? byeChance(score, hit) : 0
-  const won = traits.length > 0 && seeded(`${c.seed}-byegain-${c.year}`)() < chance
-  const base = { pick: 'train', game, score, hit: !!hit, chance, sim: !!sim }
+  const t = byeTarget(c, game)
+  const top = t && !((c.build[t].faded ?? 0) > 0) ? stepCost(c.build[t].val, c) : 1   // (a slipped grade won back: as before)
+  const chance = t ? byeChance(score, hit) / top : 0
+  const won = !!t && seeded(`${c.seed}-byegain-${c.year}`)() < chance
+  const base = { pick: 'train', game, score, hit: !!hit, chance, sim: !!sim, ...(top > 1 ? { top } : {}) }
   if (!won) return byeDone(c, D, { ...base, gain: null })
-  const t = [...traits].sort((x, y) => (c.build[x].val ?? 0) - (c.build[y].val ?? 0))[0]
   const from = c.build[t].val, to = Math.min(11, Math.round(from) + 1)
   const build = { ...c.build, [t]: gradeUp(c.build[t], to) }   // (a slipped grade won back is not a new upgrade: lib/careerAging.js)
   D.nudge({ attr: { [t]: to - from } }, c.active.k, D.total, null, true)
@@ -2984,9 +2987,32 @@ export const K_UPGRADE_CAP = 2
 const kCapped = (c, ch) => c?.pos === 'k' && (ch?.upgraded ?? 0) >= K_UPGRADE_CAP
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
-// The last step costs more: A+ to S takes 2 points, everything else 1; past a trait's
-// full years (the age ladder, lib/ageLadder.js) it takes double that
-export const upgradeCost = (v, c = null, type = null) => (c && type && vetWork(c, type)?.cost) || (Math.round(v ?? 0) >= 10 ? 2 : 1) * (c && type && trainWindow(c, type)?.late ? 2 : 1)
+// The top of the scale is earned (2026-11-16, the owner: "people in career modes are reaching maxed out all S too
+// fast"). Up to A- a grade is a point, as it always was. A to A+ takes 2, and A+ to S 3, plus a point for every S
+// on his card past his first two (sFree): a player can be the best there is at a few things, not at everything. (It was 1, and 2 for A+
+// to S: an engaged career had half its traits at S by its fifth season and all of them, a third of the time, by its
+// eighth.) Past a trait's full years (the age ladder, lib/ageLadder.js) it takes double that.
+// The free grades follow the same curve: a year of growth or experience, or the bye week's drill, lands on a trait
+// at A or better one time in its cost (topGrade). Nothing already earned moves: an old save keeps every grade it
+// has, and only the next one costs more.
+// College (Start in College, the one-off College Football and College Basketball modes: a stand-in with no seasons)
+// keeps the old 1, and 2 for A+ to S: those grades are read on his college-boosted build, a few seasons only.
+export const TOP_COST = { 9: 2, 10: 3 }
+const proCareer = c => Array.isArray(c?.seasons)
+// the S grades on his card now, and how many come at the plain price: two (nine or ten traits), none on a kicker's
+// three ratings
+export const sCount = c => (c?.types ?? []).filter(t => Math.round(c.build?.[t]?.val ?? 0) >= 11).length
+export const sFree = c => Math.floor((c?.types?.length ?? 8) / 4)
+export const sExtra = c => Math.max(0, sCount(c) - sFree(c))
+// the points one grade up costs from v, before the age ladder's double
+export function stepCost(v, c = null) {
+  const g = clamp(Math.round(v ?? 0), 0, 11)
+  if (c && !proCareer(c)) return g >= 10 ? 2 : 1
+  return (TOP_COST[g] ?? 1) + (g === 10 && c ? sExtra(c) : 0)
+}
+export const upgradeCost = (v, c = null, type = null) => (c && type && vetWork(c, type)?.cost) || stepCost(v, c) * (c && type && trainWindow(c, type)?.late ? 2 : 1)
+// a free grade at the top of the scale comes one time in its cost (u: a seeded 0-1 roll of its own)
+export const topGrade = (v, u, c = null) => u < 1 / stepCost(v, c)
 // The age ladder (lib/ageLadder.js): the physical traits train while young, the technique
 // into the early thirties, the mental side for good. { tier, open, late (double cost),
 // left (offseasons incl. this one), until (the last age), full } or null (no window)
@@ -3046,7 +3072,7 @@ function trainNote(c) {
   const phys = of('phys'), tech = of('tech'), mind = andList(mindTraits(sp, c.pos, c.types, S.physical[c.pos] ?? []).filter(live).map(label))
   const p = phys[0]?.[1], t = tech[0]?.[1]
   const up = s => s.charAt(0).toUpperCase() + s.slice(1)
-  if (!LADDER[sp]?.[c.pos]) return p ? { last: p.open && p.left <= 1, text: !p.open ? `${up(list(phys))} can't be trained any more (past ${p.until}). Skills and reads still can.` : p.left <= 1 ? `Last offseason to train ${list(phys)}: the window shuts after ${p.until}.` : `${up(list(phys))} can be trained until ${p.until}: ${p.left} offseasons left. Skills and reads, any time. A+ to S costs 2 points.` } : null
+  if (!LADDER[sp]?.[c.pos]) return p ? { last: p.open && p.left <= 1, text: !p.open ? `${up(list(phys))} can't be trained any more (past ${p.until}). Skills and reads still can.` : p.left <= 1 ? `Last offseason to train ${list(phys)}: the window shuts after ${p.until}.` : `${up(list(phys))} can be trained until ${p.until}: ${p.left} offseasons left. Skills and reads, any time.` } : null
   const anyAge = mind ? ` ${up(mind)} at any age.` : ''
   const techTo = t ? ` ${up(list(tech))} through ${t.until}.` : ''
   if (p?.open) return p.late ? { last: true, text: `Last offseason to train ${list(phys)}, at double cost.${techTo}${anyAge}` }
@@ -3097,9 +3123,13 @@ export function upgradeBlock(c, type) {
   if (w && !w.open && !vetWork(c, type)) return LADDER[S.id ?? 'nfl']?.[c.pos] ? closedLine(S.id ?? 'nfl', c.age, w.tier, name, andList(mindTraits(S.id ?? 'nfl', c.pos, c.types, S.physical[c.pos] ?? []).filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => lowLabel(traitName(c, t)))), w.until) : `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
   if (c.phase === 'season') return 'Development points are spent in the offseason.'
   if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'
-  const cost = upgradeCost(ch.val, c, type)
-  if (pts < cost && w?.late) return lateLine(c.age, name, cost, pts)
-  return pts < cost ? `A+ to S costs ${cost} points. ${pts} left.` : null
+  const cost = upgradeCost(ch.val, c, type), vw = vetWork(c, type)
+  if (pts >= cost) return null
+  if (vw) return `${vw.kind === 'hold' ? `Holding ${lowLabel(name)} this year` : `Winning back a grade of ${lowLabel(name)}`} costs ${cost} points. ${pts} left.`
+  if (w?.late) return lateLine(c.age, name, cost, pts)
+  // (from A up each grade costs more: stepCost)
+  const n = Math.round(ch.val) >= 10 ? sExtra(c) : 0, fr = sFree(c)
+  return `${valToGrade(ch.val)} to ${valToGrade(Math.round(ch.val) + 1)} costs ${cost} points${n ? `: ${TOP_COST[10]}, and one more for each S ${fr ? `past his first${fr > 1 ? ` ${['', '', 'two', 'three'][fr] ?? fr}` : ''}` : 'he already has'}` : stepCost(ch.val, c) > 1 ? ': the top grades take the most work' : ''}. ${pts} left.`
 }
 export function spendDev(c, type) {
   if (!canUpgrade(c, type)) return c
@@ -3531,7 +3561,7 @@ const EXPERIENCE = 0.1
 export function nextSeason(c) {
   const S = sportOf(c)
   if (c.contract.left <= 0) return c      // sign first (no deal, no season)
-  const r = seeded(`${c.seed}-age-${c.year}`)
+  const r = seeded(`${c.seed}-age-${c.year}`), rTop = seeded(`${c.seed}-agetop-${c.year}`)
   const age = c.age + 1
   let build = { ...c.build }
   const notes = []
@@ -3540,6 +3570,8 @@ export function nextSeason(c) {
     const ch = build[t]; if (!ch) return
     const to = Math.round(ch.val) + d
     if (to > 11 || to < 1) return
+    // (a free grade from A up comes one year in its cost: stepCost. Its own roll, so the year's other rolls stay)
+    if (d > 0 && !topGrade(ch.val, rTop(), { ...c, build })) return
     build[t] = { ...ch, val: to, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1, ...(fade ? { slipY: c.year + 1 } : {}) }) }
     notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(to)}`)
     if (d < 0) fell.push(t)
