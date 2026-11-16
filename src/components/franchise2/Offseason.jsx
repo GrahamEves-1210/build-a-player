@@ -47,7 +47,7 @@ export default function Offseason({ F, act, owner, onBuild, foot }) {
 // ── 1. AWARDS ────────────────────────────────────────────────────────────────
 // the season in one card, then the league's awards turned over one at a time, then the All-Pros
 const AW = [['mvp', 'MOST VALUABLE PLAYER'], ['opoy', 'OFFENSIVE PLAYER OF THE YEAR'], ['dpoy', 'DEFENSIVE PLAYER OF THE YEAR'], ['oroy', 'OFFENSIVE ROOKIE OF THE YEAR'], ['droy', 'DEFENSIVE ROOKIE OF THE YEAR']]
-const SPOT_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ot: 'OT', og: 'OG', c: 'C', edge: 'EDGE', dt: 'DT', lb: 'LB', cb: 'CB', s: 'S' }
+const SPOT_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ot: 'OT', og: 'OG', c: 'C', edge: 'EDGE', dt: 'DT', lb: 'LB', cb: 'CB', s: 'S', k: 'K' }
 function findMan(F, w) { const p = w && F.teams[w.t]?.r.find(x => x.i === w.i); return p ?? (w ? { i: w.i, n: w.n, p: w.p, o: 0, b: w.b } : null) }
 function Awards({ F, act, owner }) {
   const h = F.hist[F.hist.length - 1], aw = F.aw

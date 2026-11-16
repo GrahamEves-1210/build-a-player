@@ -260,7 +260,7 @@ function Compare({ F, a, h }) {
 }
 // two men a side the broadcast puts up: the quarterback and the best of the rest (the player's builds first on his own team)
 function keyMen(F, s) {
-  const L = Object.values(startersOf(F, s)).filter(p => !p.in)
+  const L = Object.values(startersOf(F, s)).filter(p => !p.in && (p.p !== 'k' || p.b != null))
   const qb = L.find(p => p.p === 'qb')
   const rest = L.filter(p => p !== qb).sort((x, y) => (s === F.team ? (y.b != null) - (x.b != null) : 0) || y.o - x.o)
   const first = s === F.team && rest[0]?.b != null && (!qb || qb.b == null) ? rest[0] : qb ?? rest[0]

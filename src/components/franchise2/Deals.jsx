@@ -209,7 +209,7 @@ export function CampReport({ F, owner, onMan }) {
 // ═════════════════════════════════════════════════════════════════════════════
 // 3. FREE AGENCY: three days. The whole market, filtered and sorted; offers out until the day ends.
 // ═════════════════════════════════════════════════════════════════════════════
-const FILTERS = [['all', 'ALL'], ['qb', 'QB'], ['rb', 'RB'], ['wr', 'WR'], ['te', 'TE'], ['ol', 'OL'], ['edge', 'EDGE'], ['dt', 'DT'], ['lb', 'LB'], ['cb', 'CB'], ['s', 'S']]
+const FILTERS = [['all', 'ALL'], ['qb', 'QB'], ['rb', 'RB'], ['wr', 'WR'], ['te', 'TE'], ['ol', 'OL'], ['edge', 'EDGE'], ['dt', 'DT'], ['lb', 'LB'], ['cb', 'CB'], ['s', 'S'], ['k', 'K']]
 const SORTS = [['ovr', 'OVR'], ['age', 'AGE'], ['price', 'PRICE'], ['fit', 'FIT']]
 const PAGE = 15
 const FIT_TEXT = { hole: 'FILLS A HOLE', start: 'WOULD START', depth: 'DEPTH' }
@@ -326,7 +326,7 @@ function FACard({ F, p, fit, V, owner, on, delay, onClick }) {
       <button type="button" className="dl-card-info" onClick={onClick} aria-label={`Make ${p.n} an offer`}>
         <span className="dl-card-top">
           <span className="dl-ask"><small>ASKS</small><b>{money(p.$)}</b><em>{yrs(p.y)}</em></span>
-          <span className={`dl-fit is-${fit.k}`}>{FIT_TEXT[fit.k]}{fit.k === 'start' ? ` +${fit.d}` : ''}</span>
+          <span className={`dl-fit is-${fit.k}`}>{fit.k === 'depth' && p.p === 'k' ? 'CAMP BATTLE' : FIT_TEXT[fit.k]}{fit.k === 'start' ? ` +${fit.d}` : ''}</span>
         </span>
         <LastLine F={F} p={p} />
         <ScoutNote p={p} />

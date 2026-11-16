@@ -4,7 +4,7 @@
 //   AP All-Pro (the first team, the best at each spot league-wide) · the Pro Bowl (each conference's best)
 // closeSeason(F) keeps the season: the wall's banner, the league's history (every team's record, the awards),
 // the builds' careers, and a career line for every man who's on the player's team or earned a mention.
-import { TEAM, SHORTS, OFFENSE, lineup, strength } from './league'
+import { TEAM, SHORTS, OFFENSE, DEFENSE, lineup, strength } from './league'
 import { DIVISIONS, CONF_OF } from './schedule'
 import { standings, finishOf } from './standings'
 import { groupOf } from './roster'
@@ -30,17 +30,20 @@ export function statLine(p, t = {}) {
     case 'lb': return `${g('tk')} TKL · ${g('sck')} SACKS${g('dint') ? ` · ${g('dint')} INT` : ''}`
     case 'db': return `${g('dint')} INT · ${g('pbu')} PD · ${g('tk')} TKL`
     case 'ol': return `${g('gp')} STARTS · ${g('sa')} SACKS ALLOWED`
+    case 'k': return `${g('fgm')}/${g('fga')} FG${g('fga') ? ` · ${Math.round((g('fgm') / g('fga')) * 100)}%` : ''}${g('lg') ? ` · LONG ${g('lg')}` : ''}`
     default: return ''
   }
 }
 // the three numbers a career line keeps, by position
-export const CAREER_KEYS = { qb: ['py', 'ptd', 'int'], rb: ['ry', 'rtd', 'ryd'], wr: ['rc', 'ryd', 'rctd'], te: ['rc', 'ryd', 'rctd'], ol: ['sa', 'pnk', 'sn'], dl: ['sck', 'tfl', 'tk'], lb: ['tk', 'sck', 'dint'], db: ['dint', 'pbu', 'tk'] }
-export const CAREER_LABEL = { py: 'YDS', ptd: 'TD', int: 'INT', ry: 'YDS', rtd: 'TD', ryd: 'REC YDS', rc: 'REC', rctd: 'TD', sa: 'SACKS ALLOWED', pnk: 'PANCAKES', sn: 'SNAPS', sck: 'SACKS', tfl: 'TFL', tk: 'TKL', dint: 'INT', pbu: 'PD' }
+export const CAREER_KEYS = { qb: ['py', 'ptd', 'int'], rb: ['ry', 'rtd', 'ryd'], wr: ['rc', 'ryd', 'rctd'], te: ['rc', 'ryd', 'rctd'], ol: ['sa', 'pnk', 'sn'], dl: ['sck', 'tfl', 'tk'], lb: ['tk', 'sck', 'dint'], db: ['dint', 'pbu', 'tk'], k: ['fgm', 'fga', 'lg'] }
+export const CAREER_LABEL = { py: 'YDS', ptd: 'TD', int: 'INT', ry: 'YDS', rtd: 'TD', ryd: 'REC YDS', rc: 'REC', rctd: 'TD', sa: 'SACKS ALLOWED', pnk: 'PANCAKES', sn: 'SNAPS', sck: 'SACKS', tfl: 'TFL', tk: 'TKL', dint: 'INT', pbu: 'PD', fgm: 'FG', fga: 'FGA', lg: 'LONG' }
 
 // ── The voting ───────────────────────────────────────────────────────────────
 // his case, on one scale for every spot: 1.0 is an All-Pro season at his position (lib/teamSeason fbCase)
 function caseOf(p, t, wins) {
   if (!t?.gp) return 0
+  // (a kicker: the AP's ballot reads his percentage, his makes and his long ones; 1.0 about 33 of 37 with six from 50+)
+  if (p.p === 'k') return t.fga ? 0.45 + ((t.fgm / t.fga) - 0.85) * 5 + (t.fgm - 25) * 0.015 + (t.m50 ?? 0) * 0.04 + (p.o - 85) * 0.006 : 0
   const c = fbCase({ pos: p.p, sub: groupOf(p) === 'dt' ? 'dt' : undefined }, t, wins)
   return c.v / c.ap + (p.o - 85) * 0.006
 }
@@ -59,7 +62,7 @@ function offCase(x, lean = OFF_LEAN) {
 const DEF_LEAN = { edge: 0.05, dt: 0.08, lb: 0.1, cb: -0.1, s: -0.12 }
 const defCase = x => x.c + (DEF_LEAN[groupOf(x.p)] ?? 0)
 // the All-Pro team's spots (the AP's first team) and each conference's Pro Bowl roster
-const SPOTS = [['qb', 1, 3], ['rb', 1, 3], ['wr', 3, 4], ['te', 1, 2], ['ot', 2, 3], ['og', 2, 3], ['c', 1, 2], ['edge', 2, 3], ['dt', 2, 3], ['lb', 2, 3], ['cb', 2, 4], ['s', 2, 3]]
+const SPOTS = [['qb', 1, 3], ['rb', 1, 3], ['wr', 3, 4], ['te', 1, 2], ['ot', 2, 3], ['og', 2, 3], ['c', 1, 2], ['edge', 2, 3], ['dt', 2, 3], ['lb', 2, 3], ['cb', 2, 4], ['s', 2, 3], ['k', 1, 1]]
 const spotOf = p => (p.p === 'ol' ? (p.s === 'C' ? 'c' : p.s === 'LG' || p.s === 'RG' ? 'og' : 'ot') : groupOf(p))
 
 export function seasonAwards(F) {
@@ -77,14 +80,15 @@ export function seasonAwards(F) {
   // the MVP: a quarterback on a winner nearly every year, unless someone else's season was bigger
   // (since 2000 the voters have picked a quarterback all but three times, a back each of those; a defender once
   // in the award's history: a defender here needs a season far past an All-Pro's)
-  const mvp = best(men.filter(x => (OFFENSE.includes(x.p.p) && x.p.p !== 'ol') || x.c > 2.2), x => x.c + (wins(x.s) - 10) * 0.05 + (x.p.p === 'qb' ? 0.45 : x.p.p === 'rb' ? 0 : OFFENSE.includes(x.p.p) ? -0.15 : -0.9))
+  // (a kicker is never on these ballots: his honor is the All-Pro team and the Pro Bowl)
+  const mvp = best(men.filter(x => (OFFENSE.includes(x.p.p) && x.p.p !== 'ol') || (DEFENSE.includes(x.p.p) && x.c > 2.2)), x => x.c + (wins(x.s) - 10) * 0.05 + (x.p.p === 'qb' ? 0.45 : x.p.p === 'rb' ? 0 : OFFENSE.includes(x.p.p) ? -0.15 : -0.9))
   const opoy = best(men.filter(x => OFFENSE.includes(x.p.p) && x.p.p !== 'ol' && x.p.i !== mvp?.p.i), offCase)
-  const dpoy = best(men.filter(x => !OFFENSE.includes(x.p.p)), defCase)
+  const dpoy = best(men.filter(x => DEFENSE.includes(x.p.p)), defCase)
   // the rookies: every man in his first season, the real ones (the real class on the rosters in year one: their draft
   // year, league.js makeReal), the league's draft picks and the player's own builds and picks, on the same scale
   const rookie = x => x.p.rk === F.year
   const oroy = best(men.filter(x => rookie(x) && OFFENSE.includes(x.p.p) && x.p.p !== 'ol'), x => offCase(x, ROOKIE_LEAN))
-  const droy = best(men.filter(x => rookie(x) && !OFFENSE.includes(x.p.p)), defCase)
+  const droy = best(men.filter(x => rookie(x) && DEFENSE.includes(x.p.p)), defCase)
   // the coach: a big turnaround, or a record well past what the roster said (the AP's picks: Vrabel 4-13 to 14-3,
   // O'Connell 7-10 to 14-3, Stefanski 7-10 to 11-6, Daboll 4-13 to 9-7-1). A playoff team, nine wins at least.
   const prev = s => (F.lh?.length ? lhRow(F.lh[F.lh.length - 1], s) : null) ?? (() => { const x = lastSeason(s); return x ? [x.w, x.l, x.t] : [8, 9, 0] })()
@@ -155,7 +159,7 @@ export function closeSeason(F) {
   // careers: the player's team's men, and anyone the league noticed (an award, an honor, a top-ten season)
   const tot = leagueStats(F)
   const top = new Set()
-  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk']) Object.entries(tot).filter(([, x]) => x[k]).sort((a, b) => b[1][k] - a[1][k]).slice(0, 3).forEach(([id]) => top.add(id))
+  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk', 'fgm']) Object.entries(tot).filter(([, x]) => x[k]).sort((a, b) => b[1][k] - a[1][k]).slice(0, 3).forEach(([id]) => top.add(id))
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const id = String(p.i), st = tot[id]
     if (!st?.gp) continue
@@ -168,7 +172,7 @@ export function closeSeason(F) {
   }
   // the franchise's one-season records (kept here: a man's career lines go when he retires)
   F.frec = F.frec ?? {}
-  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk']) for (const p of t.r) {
+  for (const k of ['py', 'ptd', 'ry', 'ryd', 'rc', 'sck', 'dint', 'tk', 'fgm']) for (const p of t.r) {
     const v = tot[String(p.i)]?.[k] ?? 0
     if (v > 0 && v > (F.frec[k]?.[0] ?? 0)) F.frec[k] = [v, p.n, F.year]
   }

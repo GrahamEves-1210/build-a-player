@@ -96,7 +96,8 @@ export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null,
   for (let i = 0; i < S.plays.length; i++) {
     const pl = S.plays[i], Sd = sides[pl.s], mine = pl.s === us ? 1 : 0
     if (pl.k === 'fg') {
-      const k = kickerOf(Sd.short), d = clamp(18, 66, 117 - (pl.y ?? 70))
+      // (the man who kicked it: the game's own kicker for that side; an old game without one, the team's real K)
+      const k = Sd.by.get(String(S.G.kid?.[pl.s]))?.n ?? kickerOf(Sd.short), d = clamp(18, 70, 117 - (pl.y ?? 70))
       out.push([pl.t, mine, pl.p, `${k ?? `${Sd.short}`} ${d}-yd field goal`])
       continue
     }

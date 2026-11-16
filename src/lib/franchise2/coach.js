@@ -266,7 +266,7 @@ const DEV_COORD = 5.39   // (the real league's coordinators' average talentDev: 
 export function coachDev(F, short, p) {
   if (!p || p.ag > 25) return 0
   const c = coachOf(F, short), M = staffMen(F, short)
-  const co = OFF_POS.has(p.p) ? M.oc : M.dc
+  const co = p.p === 'k' ? null : OFF_POS.has(p.p) ? M.oc : M.dc
   return r2(((c.r?.talentDev ?? 5) - HC_DEV) * 0.18 + (((Array.isArray(co?.r) ? co.r[0] : null) ?? DEV_COORD) - DEV_COORD) * 0.12 + (c.mine && F.coach?.style === 'developer' ? 1 : 0))
 }
 export const recruits = F => F.coach?.style === 'recruiter'

@@ -38,7 +38,8 @@ export function boxRoster(F, short) {
     const g = groupOf(p)
     out.push({ k: `p${p.i}`, n: p.n, pos: p.p, o: p.o, a: boxRatings(F, p), st, d, ...((p.p === 'dl' || p.p === 'db') && { sub: g === 'dt' || g === 's' ? g : g === 'edge' ? 'edge' : 'cb' }), ...(p.p === 'ol' && { sub: OL_SPOTS[d] ?? 'OL' }), ...(p.b != null && { s: String(p.b) }) })
   }
-  Object.values(L).forEach(p => add(p, 1))
+  // (the kicker's line is his kicks, from the game itself: kick.js, F.kst)
+  Object.values(L).forEach(p => { if (p.p !== 'k') add(p, 1) })
   rot.forEach(p => add(p, 0))
   return out
 }
@@ -83,6 +84,8 @@ export function leagueStats(F) {
     if (s === F.team) { for (const [id, v] of Object.entries(F.ssr ?? F.ss ?? {})) out[id] = v; continue }
     Object.assign(out, teamSeason(F, s).tot)
   }
+  // the kickers: every game's kicks as they were played (kick.js addKickStats)
+  for (const [id, v] of Object.entries(F.kst ?? {})) out[id] = { ...(out[id] ?? {}), ...v }
   return out
 }
 // one week's lines for every team (the player's team: only its season totals are kept, so its line is the one the
@@ -120,4 +123,5 @@ export const LEADER_CATS = [
   { k: 'sck', label: 'SACKS', unit: 'SCK' },
   { k: 'dint', label: 'INTERCEPTIONS', unit: 'INT' },
   { k: 'tk', label: 'TACKLES', unit: 'TKL' },
+  { k: 'fgm', label: 'FIELD GOALS', unit: 'FG' },
 ]

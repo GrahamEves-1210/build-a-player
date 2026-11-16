@@ -11,7 +11,7 @@
 //          the head coach; an offer under what he'll take that day (his ask, less as the market dries up) he turns
 //          down. Then the league signs the best of the rest. After the third day the league fills its holes.
 import { SHORTS, POS, MIN, lineup, makeGen, fillUp, foOf } from './league'
-import { depthChart, groupOf, GROUP } from './roster'
+import { depthChart, groupOf, GROUP, backupsOf } from './roster'
 import { askOf, marketValue, signDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice, minimumFor, capComply } from './contracts'
 import { coachOf, recruits } from './coach'
 import { worthOf, signTerms } from './deals'
@@ -37,7 +37,9 @@ export function openResign(F) {
       const ask = askOf(p, F.year + 1)
       // (a well-run club keeps its core and lets the aging ones go a year early; a badly run one lets good men walk)
       const fo = foOf(F, s)
-      const want = p.ag <= 33 - (fo >= 0.65 && p.o < 88 ? 2 : 0) && R.u() < (p.o >= 88 ? 0.95 : p.o >= 82 ? 0.8 : p.o >= 75 ? 0.5 : 0.15) * (0.75 + fo * 0.5)
+      // (a kicker who still makes his kicks is kept into his late 30s: a team has one)
+      const want = p.p === 'k' ? p.ag <= 39 && R.u() < (p.o >= 76 ? 0.9 : 0.35) * (0.75 + fo * 0.5)
+        : p.ag <= 33 - (fo >= 0.65 && p.o < 88 ? 2 : 0) && R.u() < (p.o >= 88 ? 0.95 : p.o >= 82 ? 0.8 : p.o >= 75 ? 0.5 : 0.15) * (0.75 + fo * 0.5)
       if (want && canSign(F, ask.$, s)) { signDeal(p, ask); if (p.o >= 85) F.ext.push([p.i, p.n, p.p, s, p.$, p.y, p.o]) }
       else { t.r = t.r.filter(x => x !== p); F.fa.push(p) }
     }
@@ -79,7 +81,7 @@ export function openFA(F) {
   // (a veteran cut loose: his last team, for the market's card; his ceiling is where he is, near enough)
   for (let i = 0; i < 16; i++) {
     const pos = R.pick(POS)
-    const p = makeGen(F, pos, R, { o: clamp(64, pos === 'qb' ? 77 : 86, Math.round(74 + R.n() * 4.5)), ag: R.int(26, 32) })
+    const p = makeGen(F, pos, R, { o: pos === 'k' ? clamp(70, 86, Math.round(77 + R.n() * 4)) : clamp(64, pos === 'qb' ? 77 : 86, Math.round(74 + R.n() * 4.5)), ag: pos === 'k' ? R.int(27, 36) : R.int(26, 32) })
     p.pk = Math.min(p.pk ?? p.o, p.o + (p.ag <= 27 ? 2 : 0)); p.ls = [R.pick(SHORTS.filter(s => s !== F.team)), 0]; delete p.fl
     F.fa.push(p)
   }
@@ -141,7 +143,7 @@ export function rivalsFor(F, p, V = null) {
     const room = T ? T.room : capRoom(F, s)
     if (room < p.$ * 0.9) continue
     const at = T ? T.rooms[g] : depthChart(F, s)[g].filter(x => !x.in).map(x => x.o)
-    const need = at.length < GROUP[g].n + 1 || (at[GROUP[g].n - 1] ?? 0) < p.o - 2
+    const need = at.length < GROUP[g].n + backupsOf(g) || (at[GROUP[g].n - 1] ?? 0) < p.o - 2
     if (!need) continue
     const offer = r1(Math.min(room, p.$ * (0.92 + R.u() * 0.22)))
     out.push({ s, offer })

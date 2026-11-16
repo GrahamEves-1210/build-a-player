@@ -1,6 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach } from '../../lib/franchise2'
-import { POSITIONS } from '../../lib/squad'
+import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach, POS } from '../../lib/franchise2'
 import { FRANCHISE_CARD_KEY } from '../../lib/franchiseLive'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
@@ -102,7 +101,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     const c = S.coach ?? {}
     const coach = finishCoach(S.cb, { name: `${c.first ?? ''} ${c.last ?? ''}`.trim() || owner, face: c.face ?? null, style: c.style ?? null })
     // (the builds in the setup's order, position by position: the order their rookie slots were shown in)
-    const builds = POSITIONS.nfl.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).map(p => S.builds[p.id]).filter(Boolean)
+    const builds = POS.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).map(p => S.builds[p.id]).filter(Boolean)
     const X = createFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, sandbox: S.sandbox, coach, builds })
     X.games = S.games ?? 'advanced'
     saveFranchise(X); leaveNote(X)

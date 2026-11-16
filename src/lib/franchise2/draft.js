@@ -42,7 +42,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { signRookie } from './contracts'
 import { leagueUnderCap } from './market'
-import { depthChart, groupOf, fixNumbers } from './roster'
+import { depthChart, groupOf, fixNumbers, backupsOf } from './roster'
 import { CFB_TEAMS, CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 
 export const ROUNDS_N = 7
@@ -70,6 +70,7 @@ const KIND = {
   dl: { getOff: 'p', speed: 'p', size: 'p', powerMoves: 's', finesseMoves: 's', strength: 'p', playRecognition: 'm', bend: 'p', blockShed: 's' },
   lb: { range: 'p', size: 'p', power: 'p', tackling: 's', blockShed: 's', zoneInstincts: 'm', passRush: 's', playRecognition: 'm', leadership: 'm' },
   db: { speed: 'p', size: 'p', fluidity: 'p', press: 's', hands: 's', zoneIQ: 'm', manCoverage: 's', playRecognition: 'm', runSupport: 's' },
+  k: { power: 'p', accuracy: 's', clutch: 'm' },
 }
 export const kindOf = (pos, t) => KIND[pos]?.[t] ?? 's'
 export const KIND_LABEL = { p: 'PHYSICAL', s: 'SKILL', m: 'MENTAL' }
@@ -83,13 +84,14 @@ export const CHAR_TEXT = ['CONCERNS', 'CLEAN', 'HIGH CHARACTER']
 
 // ── The class ────────────────────────────────────────────────────────────────
 // how many at each position (about the real draft's mix: linemen and corners the most, few quarterbacks)
-const CLASS_MIX = { qb: 15, rb: 22, wr: 40, te: 18, ol: 52, dl: 50, lb: 30, db: 49 }
+// (two kickers a class: two or three go in a real draft, most of them on the third day)
+const CLASS_MIX = { qb: 15, rb: 22, wr: 40, te: 18, ol: 52, dl: 50, lb: 30, db: 49, k: 2 }
 const SPOTS = { dl: [['edge', 0.55], ['dt', 0.45]], db: [['cb', 0.58], ['s', 0.42]], ol: [['LT', 0.22], ['LG', 0.18], ['C', 0.2], ['RG', 0.18], ['RT', 0.22]] }
 // height (in) and weight (lb) of the average man at each spot, and how much weight a step of Size carries
-const BODY = { qb: [75, 219, 5], rb: [70, 212, 5], wr: [73, 196, 5], te: [77, 250, 6], LT: [78, 315, 7], RT: [78, 318, 7], LG: [76, 314, 7], RG: [76, 314, 7], C: [75, 304, 6], edge: [76, 257, 7], dt: [75, 305, 8], lb: [74, 235, 5], cb: [71, 191, 4], s: [72, 204, 4] }
+const BODY = { qb: [75, 219, 5], rb: [70, 212, 5], wr: [73, 196, 5], te: [77, 250, 6], LT: [78, 315, 7], RT: [78, 318, 7], LG: [76, 314, 7], RG: [76, 314, 7], C: [75, 304, 6], edge: [76, 257, 7], dt: [75, 305, 8], lb: [74, 235, 5], cb: [71, 191, 4], s: [72, 204, 4], k: [72, 195, 3] }
 const bodyKey = (pos, s) => (pos === 'ol' || pos === 'dl' || pos === 'db' ? s : pos)
 // the college numbers a position wears
-const NUM_RANGE = { qb: [[1, 19]], rb: [[0, 9], [20, 39]], wr: [[0, 19], [80, 89]], te: [[80, 89], [40, 49]], ol: [[50, 79]], dl: [[90, 99], [50, 59], [0, 9]], lb: [[0, 9], [30, 59]], db: [[0, 9], [20, 39]] }
+const NUM_RANGE = { qb: [[1, 19]], rb: [[0, 9], [20, 39]], wr: [[0, 19], [80, 89]], te: [[80, 89], [40, 49]], ol: [[50, 79]], dl: [[90, 99], [50, 59], [0, 9]], lb: [[0, 9], [30, 59]], db: [[0, 9], [20, 39]], k: [[1, 49], [90, 99]] }
 // WHERE THE CLASS COMES FROM (owner 11-15: "a top 10 pick from Georgia Southern is possible but highly unlikely").
 // The better the prospect, the harder it leans to the SEC, the Big Ten and the blue bloods, the way real drafts go:
 // a first round about a third SEC and a quarter Big Ten, a top ten almost never from a Group of Five school, while the
@@ -126,7 +128,12 @@ const GEM_P = 0.016
 // the spot, bridge starters and backups starting, instead of a decent starter for everyone
 const QB_TALENT = [[0, 97], [0.025, 92], [0.045, 88], [0.07, 82], [0.15, 76], [0.35, 70], [0.7, 64], [1, 56]]
 const curveAt = (C, r) => { for (let i = 1; i < C.length; i++) { const [a, va] = C[i - 1], [b, vb] = C[i]; if (r <= b) return va + (vb - va) * (r - a) / (b - a) } return C[C.length - 1][1] }
-const talentAt = (r, pos) => curveAt(pos === 'qb' ? QB_TALENT : TALENT, r)
+// KICKERS: a class's two are headed for a working NFL leg at best (the league's kicker is about an 80), now and
+// then a very good one; none is a star on the media's board (kSeen: the best kicker in a class is a 5th-round
+// projection, an ordinary one a 7th-rounder or a priority free agent, the way the boards rank them)
+const K_TALENT = [[0, 92], [0.2, 86], [0.6, 79], [1, 70]]
+const talentAt = (r, pos) => curveAt(pos === 'qb' ? QB_TALENT : pos === 'k' ? K_TALENT : TALENT, r)
+export const kSeen = (x, v) => (x?.p === 'k' ? 62 + (v - 60) * 0.4 : v)
 function makeProspect(F, R, pos, id, q = 0) {
   const T = TYPES_OF[pos]
   // his ceiling first (the class's talent: a few 90s, a first round from about 83 up, a long tail), then his age
@@ -329,6 +336,11 @@ export function gameLine(x, w) {
     case 'ol': return { st: 1, sa: u(1) < 0.16 - (tv(x, 'passPro') - 5) * 0.015 ? 1 : 0 }
     case 'dl': return { tk: cnt(x.s === 'dt' ? 3 : 3.5, u(1)), tfl: cnt(0.8 + lift * 2, u(2)) * 1, sck: Math.round(cnt(Math.max(0.1, 0.45 + (tv(x, 'getOff') + tv(x, x.s === 'dt' ? 'powerMoves' : 'bend') - 10) * 0.07), u(3)) * 2) / 2 }
     case 'lb': return { tk: cnt(7 + (tv(x, 'tackling') - 5) * 0.4, u(1)), tfl: cnt(0.7, u(2)), sck: Math.round(cnt(Math.max(0.05, 0.25 + (tv(x, 'passRush') - 5) * 0.05), u(3)) * 2) / 2, int: u(4) < 0.06 ? 1 : 0 }
+    case 'k': {
+      const fga = cnt(1.5, u(1)), fgm = clamp(0, fga, Math.round(fga * clamp(0.55, 0.97, 0.77 + (tv(x, 'accuracy') - 5) * 0.025) + (u(2) - 0.5) * 0.9))
+      const xpa = cnt(3.6, u(3))
+      return { fgm, fga, xpm: xpa && u(4) < 0.04 + (6 - tv(x, 'accuracy')) * 0.006 ? xpa - 1 : xpa, xpa }
+    }
     default: return { tk: cnt(x.s === 's' ? 5.5 : 4, u(1)), int: u(2) < 0.08 + (tv(x, 'hands') - 5) * 0.012 ? 1 : 0, pbu: cnt(Math.max(0.2, 0.9 + (tv(x, 'manCoverage') - 5) * 0.12), u(3)) }
   }
 }
@@ -355,6 +367,7 @@ export function lineText(pos, s) {
     case 'ol': return s.g != null ? `${s.g} STARTS · ${s.sa} ${s.sa === 1 ? 'SACK' : 'SACKS'} ALLOWED` : (s.sa ? '1 SACK ALLOWED' : 'NO SACKS ALLOWED')
     case 'dl': return `${s.tk} TKL · ${n1(s.tfl)} TFL · ${n1(s.sck)} SACKS`
     case 'lb': return `${s.tk} TKL · ${n1(s.tfl)} TFL · ${n1(s.sck)} SACKS${s.int ? ` · ${s.int} INT` : ''}`
+    case 'k': return `${s.fgm}/${s.fga} FG · ${s.xpm}/${s.xpa} XP`
     default: return `${s.tk} TKL · ${s.int} INT · ${s.pbu} PBU`
   }
 }
@@ -371,6 +384,8 @@ export function combineOf(x) {
   const z = x.z, sk = h01(z, 901)
   const out = { dnp: sk < 0.09 }
   if (out.dnp) return out
+  // (a kicker doesn't run or lift: the scouts chart his kicks, his longest make and how many of ten he hits)
+  if (x.p === 'k') return { ...out, kick: 1, lng: Math.round(52 + (tv(x, 'power') - 5) * 1.6 + g01(z, 908) * 2), made: clamp(4, 10, Math.round(8 + (tv(x, 'accuracy') - 5) * 0.35 + g01(z, 909))) }
   const [t40, b40] = F40[x.p]
   const dtB = x.p === 'dl' && x.s === 'dt' ? 0.2 : 0
   out.f40 = x.pk >= 88 && h01(z, 902) < 0.3 ? null : Math.round((b40 + dtB - (tv(x, t40) - 5) * 0.034 + g01(z, 903) * 0.025) * 100) / 100
@@ -414,21 +429,21 @@ export function mediaOf(x) {
   }
   return m
 }
-const mediaBase = x => ovrV(x.p, mediaOf(x)) + ROOM(x.ag)
+const mediaBase = x => kSeen(x, ovrV(x.p, mediaOf(x)) + ROOM(x.ag))
 export function buzzOf(F, x, t = weeksIn(F), cmb = F.sc?.cmb ?? 0) {
-  if (x.b != null) return x.pk
+  if (x.b != null) return kSeen(x, x.pk)
   const key = `${F.seed}|${F.year}|${x.i}|${t}|${cmb}`
   let v = BUZZ.get(key)
   if (v != null) return v
   const base = mediaBase(x)
   let walk = 0
   for (let w = 1; w <= Math.min(t, 16); w++) walk += (h01(x.z, 500 + w) - 0.5) * 1.5
-  v = base + walk + (seenPk(x) - base) * 0.12 * Math.min(1, t / 18)
+  v = base + walk * (x.p === 'k' ? 0.4 : 1) + (kSeen(x, seenPk(x)) - base) * 0.12 * Math.min(1, t / 18)
   if (cmb) {
     const T = TYPES_OF[x.p], a = dec(x.a), m = mediaOf(x)
     const phys = T.map((tt, j) => (kindOf(x.p, tt) === 'p' ? a[j] : m[j]))
     const c = combineOf(x)
-    if (c && !c.dnp) v += (ovrV(x.p, phys) - ovrV(x.p, m)) * 0.6
+    if (c && !c.dnp) v += (ovrV(x.p, phys) - ovrV(x.p, m)) * (x.p === 'k' ? 0.24 : 0.6)
   }
   v = r1(clamp(55, 99, v))
   if (BUZZ.size > 20000) BUZZ.clear()
@@ -486,17 +501,17 @@ export function pickValue(at) {
 export function needsOf(F, s) {
   const dc = depthChart(F, s)
   const out = {}
-  for (const [g, n] of [['qb', 1], ['rb', 1], ['wr', 3], ['te', 1], ['ol', 5], ['edge', 2], ['dt', 2], ['lb', 3], ['cb', 2], ['s', 2]]) {
+  for (const [g, n] of [['qb', 1], ['rb', 1], ['wr', 3], ['te', 1], ['ol', 5], ['edge', 2], ['dt', 2], ['lb', 3], ['cb', 2], ['s', 2], ['k', 1]]) {
     const men = (dc[g] ?? []).filter(p => !p.fl)   // (a filler backup fills no need)
     // the weakest starter in the room (a line's fourth man: one weak guard is a need, not an emergency)
     const worst = men[Math.max(0, n - (n >= 5 ? 2 : 1))]?.o ?? 60
-    const old = men.slice(0, n).some(p => p.ag >= 31)
-    out[g] = clamp(0, 4, (78 - worst) / 3 + (men.length < n + 1 ? 1 : 0) + (old ? 0.6 : 0))
+    const old = men.slice(0, n).some(p => p.ag >= (g === 'k' ? 37 : 31))
+    out[g] = clamp(0, 4, (78 - worst) / 3 + (men.length < n + backupsOf(g) ? 1 : 0) + (old ? 0.6 : 0))
     if (g === 'qb' && (men[0]?.o ?? 0) >= 84 && men[0].ag <= 33) out[g] = 0
   }
   return out
 }
-const GROUP_V = { qb: 3, edge: 1.8, ot: 1.4, cb: 1, wr: 0.7, dt: 0.3, s: -0.8, lb: -1.2, og: -1.7, c: -2, te: -1.6, rb: -1.8 }
+const GROUP_V = { qb: 3, edge: 1.8, ot: 1.4, cb: 1, wr: 0.7, dt: 0.3, s: -0.8, lb: -1.2, og: -1.7, c: -2, te: -1.6, rb: -1.8, k: -14 }
 const gKey = x => (x.p === 'ol' ? (x.s === 'LT' || x.s === 'RT' ? 'ot' : x.s === 'C' ? 'c' : 'og') : groupOf(x))
 const needKey = x => groupOf(x)
 export function mockDraft(F, n = 32) {
@@ -615,7 +630,13 @@ const SAY = {
   zoneIQ: ['Reads the quarterback in zone.', 'Gets lost in zone assignments.'],
   manCoverage: ['Sticky in man coverage.', 'Gives up separation in man.'],
   runSupport: ['Comes downhill and fits the run.', 'Hesitant in run support.'],
+  'power.k': ['Big leg; range past 55 yards and touchbacks on kickoffs.', 'Short leg; his range ends around 50.'],
+  'accuracy.k': ['Consistent ball striker; rarely misses inside 45.', 'Misses from inside 40 show up on tape.'],
+  'clutch.k': ['Made his kicks with the game on the line.', 'Missed late kicks with the game on the line.'],
 }
+// (a kicker's line reads where kickers land: a job, a camp battle, a camp leg)
+const K_BOTTOM = [[86, 'Starting kicker from day one.'], [80, 'Will compete for a starting job.'], [0, 'Camp leg.']]
+const bottomOf = (x, my) => (x.p === 'k' ? K_BOTTOM : BOTTOM).find(([g]) => my >= g)[1]
 const say = (pos, t, good) => (SAY[`${t}.${pos}`] ?? SAY[t] ?? ['', ''])[good ? 0 : 1]
 const CHAR_LINES = [
   ['Suspended for a game this season. Staff has questions about his maturity.', 'Missed time for a violation of team rules.', 'Two schools in three years; questions about his work habits.'],
@@ -638,7 +659,7 @@ function compOf(x, v) {
   return best ? { name: best.name, team: best.team } : null
 }
 export function reportOf(F, x, v = viewOf(F, x)) {
-  if (x.b != null) return { lines: [], char: null, bottom: BOTTOM.find(([g]) => v.my >= g)[1], comp: null }
+  if (x.b != null) return { lines: [], char: null, bottom: bottomOf(x, v.my), comp: null }
   const seen = v.traits.filter(e => e.k >= 1)
   const good = seen.filter(e => e.v >= 7).sort((a, b) => b.v - a.v || b.k - a.k).slice(0, 2)
   const bad = seen.filter(e => e.v <= 4).sort((a, b) => a.v - b.v || b.k - a.k).slice(0, 1)
@@ -653,7 +674,7 @@ export function reportOf(F, x, v = viewOf(F, x)) {
   return {
     lines,
     char: v.kc ? pool[Math.floor(h01(x.z, 77) * pool.length)] : null,
-    bottom: v.seen >= 3 ? BOTTOM.find(([g]) => v.my >= g)[1] : null,
+    bottom: v.seen >= 3 ? bottomOf(x, v.my) : null,
     comp: compOf(x, v),
   }
 }
@@ -742,7 +763,7 @@ function cpuValue(F, s, x, need, rd) {
   const bad = 1 - foOf(F, s)
   const seen = seenPk(x) + (finalBuzz(F, x) - seenPk(x)) * (0.3 + bad * 0.6) + g01(strHash(s), x.z) * (1 + bad * 5)
   // (a club with its quarterback doesn't spend a high pick on another one: he'd sit for years)
-  const pv = x.p === 'qb' && need.qb === 0 && rd <= 3 ? -3 : GROUP_V[gKey(x)] * (rd >= 4 ? 0.5 : 1)
+  const pv = x.p === 'qb' && need.qb === 0 && rd <= 3 ? -3 : GROUP_V[gKey(x)] * (rd >= 4 && x.p !== 'k' ? 0.5 : 1)
   return seen + need[needKey(x)] * (rd <= 2 ? 1.1 : 1.4) * (0.7 + bad * 0.8) + pv
 }
 // the player's man is taken: he goes on the roster, signs his slot's deal, and the pick goes on the board
@@ -750,7 +771,7 @@ function take(F, s, x, via = null) {
   F.dc = F.dc.filter(p => p !== x)
   const at = F.dr.at, rd = roundOf(at)
   const bz = finalBuzz(F, x)
-  const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, dr: [rd, at + 1], a: x.a, nu: x.nu, tg: tagOf(x.pk, bz), ...(x.hb && { hb: x.hb }), ...(x.b != null && { b: x.b }) }
+  const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, dr: [rd, at + 1], a: x.a, nu: x.nu, tg: tagOf(kSeen(x, x.pk), bz), ...(x.hb && { hb: x.hb }), ...(x.b != null && { b: x.b }) }
   signRookie(p, realNo(at), F.year + 1)
   if (x.b != null) { F.builds[x.b].pid = p.i; F.builds[x.b].age = x.ag; F.builds[x.b].draft = [rd, at + 1, s]; delete F.builds[x.b].prospect }
   F.teams[s].r.push(p)
@@ -799,7 +820,7 @@ export function autoPick(F) {
   let x = left[0]
   if (!x) {
     const need = needsOf(F, F.team)
-    const score = y => { const v = viewOf(F, y); return v.my + need[needKey(y)] * 0.8 + GROUP_V[gKey(y)] * 0.3 }
+    const score = y => { const v = viewOf(F, y); return v.my + need[needKey(y)] * 0.8 + GROUP_V[gKey(y)] * (y.p === 'k' ? 1 : 0.3) }
     x = [...F.dc].sort((a, b) => score(b) - score(a))[0]
   }
   return x ? userPick(F, x.i) : null
@@ -875,7 +896,7 @@ export function draftReview(F) {
   const gems = picks.filter(p => p.tag === 'G' && p.b == null).sort((a, b) => (b.pk - b.bz) - (a.pk - a.bz)).slice(0, 3)
   const busts = picks.filter(p => p.tag === 'B' && p.b == null).sort((a, b) => (b.bz - b.pk) - (a.bz - a.pk)).slice(0, 3)
   // the best value: the highest true grade taken after the first round
-  const steal = picks.filter(p => p.at >= 32 && p.b == null).sort((a, b) => b.pk - a.pk)[0] ?? null
+  const steal = picks.filter(p => p.at >= 32 && p.b == null && p.p !== 'k').sort((a, b) => b.pk - a.pk)[0] ?? null
   const grade = myErr == null ? null : SCOUT_GRADE.find(([e]) => myErr <= e)[1]
   return { mine, myErr: myErr == null ? null : r1(myErr), mediaErr: mediaErr == null ? null : r1(mediaErr), grade, mediaGrade: mediaErr == null ? null : SCOUT_GRADE.find(([e]) => mediaErr <= e)[1], gems, busts, steal }
 }
