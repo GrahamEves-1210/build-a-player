@@ -12,7 +12,8 @@ import {
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
-  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove } from '../../lib/career'
+  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
+  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord } from '../../lib/career'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -800,6 +801,9 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const played = a ? a.feed.flatMap(e => (e.g ? [e.g] : e.chunk ? e.games : [])) : []
   const wins = played.filter(g => g.won).length, draws = S.isSoccer ? played.filter(g => g.drawn).length : 0, losses = played.length - wins - draws
   const recText = S.isSoccer ? `${wins}–${draws}–${losses}` : `${wins}–${losses}`
+  // traded at the deadline: the new team's record (its games before he got there, then his), the one the playoffs go by
+  const teamRec = a ? teamRecord(c, played) : null
+  const teamNick = (c.fit?.name ?? '').split(' ').pop()
   const seasonOver = a && a.k >= total && !a.moment && !a.injury && !a.po
   const last = c.seasons[c.seasons.length - 1]
   const cb = comebackYear(c)
@@ -860,7 +864,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'season' && a && (
           <section className="cr-sec">
             <div className="cr-season-bar ag-pop">
-              <span className="cr-rec"><b>{recText}</b><small>{S.isSoccer ? `${wins * 3 + draws} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : a.bye ? (byeNow(c) ? `BYE · WEEK ${a.bye.wk} OF ${seasonWeeks(c)}` : `WEEK ${weekOfGame(c, Math.min(a.k + 1, total))} OF ${seasonWeeks(c)}`) : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
+              <span className="cr-rec"><b>{recText}</b>{teamRec && <em className="cr-rec-team">{teamNick.toUpperCase()} {teamRec.wins}–{teamRec.losses}</em>}<small>{S.isSoccer ? `${wins * 3 + draws} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : a.bye ? (byeNow(c) ? `BYE · WEEK ${a.bye.wk} OF ${seasonWeeks(c)}` : `WEEK ${weekOfGame(c, Math.min(a.k + 1, total))} OF ${seasonWeeks(c)}`) : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
               <div className="cr-goals cr-goals--inline">{c.goals.map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             </div>
             {a.bye && <Schedule c={c} />}
@@ -877,6 +881,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               </div>
             )}
             {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={a.moment} onPick={pick} />}
+            {(canDeadlineTrade(c) || (a.deadline && a.deadline.k === a.k)) && <Deadline c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} setD={d => { D.current = d }} />}
             {byeNow(c) && <ByeWeek key={`bye-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} />}
             {a.bye?.done && a.k === a.bye.wk - 1 && !a.moment && !a.injury && <ByeResult c={c} done={a.bye.done} />}
             {hotHandOn(c) &&<div className="cr-hot ag-pop"><IconFlame size={15} /> HOT HAND · two grades up through {S.isSoccer ? 'match' : S.gameWord.toLowerCase()} {a.hot.to}</div>}
@@ -891,8 +896,8 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 {S.isSoccer ? <>
                   <p className="cr-note">{(wins * 3 + draws) / Math.max(1, played.length) >= 2 ? 'Up at the top of the table. Now the finals and the European nights, if the club got there.' : 'The league is in. The cup final and the European knockouts, if the club got there.'}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>THE FINAL TABLE <IconArrow size={16} /></button>
-                </> : (() => { const pct = wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
-                  <p className="cr-note">{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>
+                </> : (() => { const pct = teamRec ? teamRec.wins / Math.max(1, teamRec.wins + teamRec.losses) : wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
+                  <p className="cr-note">{teamRec ? `The ${teamNick} finish ${teamRec.wins}–${teamRec.losses}. ` : ''}{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>{pct >= 0.45 ? 'INTO THE PLAYOFFS' : 'WRAP THE SEASON'} <IconArrow size={16} /></button>
                 </> })()}
               </div>
@@ -902,7 +907,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 <Chunk key={`c${e.k}`} c={c} e={e} />
               ) : e.g ? (
                 <div key={`g${e.k}`} className="cr-feed-game">
-                  <NowCard game={e.g} pos={c.pos} sport={c.sport} team={{ short: c.team }} logoFor={x => logoFor(S.teams.find(t => t.short === x || t.name === x)?.short ?? x)} idx={e.k - 1} total={total} />
+                  <NowCard game={e.g} pos={c.pos} sport={c.sport} team={{ short: e.g.tm ?? c.team }} logoFor={x => logoFor(S.teams.find(t => t.short === x || t.name === x)?.short ?? x)} idx={e.k - 1} total={total} />
                   {(e.hits?.filter(h => h.big).length > 0 || e.headline?.length > 0) && (
                     <div className="cr-feed-lines">{e.hits?.filter(h => h.big).map(h => <span key={h.id} className="cr-ms"><IconStar size={12} /> {h.label}</span>)}{e.headline?.slice(0, 1).map((t, k) => <span key={k} className="cr-hl">{t}</span>)}</div>
                   )}
@@ -997,6 +1002,36 @@ function ByeWeek({ c, setCareer, getD }) {
         </button>
       </div>
     </div>
+  )
+}
+// The trade deadline (football: the Tuesday after Week 9; basketball: early February). Open the stop or two before
+// it: DEMAND A TRADE, the same two asks as the summer's (lib/career.js deadlineTrade). Once he's asked, the answer.
+function Deadline({ c, setCareer, getD, setD }) {
+  const [ask, setAsk] = useState(false)
+  const [res, setRes] = useState(null)
+  const S = sportOf(c), a = c.active
+  const nick = (c.fit?.name ?? '').split(' ').pop()
+  const go = aim => {
+    setAsk(false)
+    const from = c.team
+    const [n, d] = deadlineTrade(c, getD(), aim)
+    setD(d); setCareer(n)
+    setRes({ granted: n.team !== from, from, c: n, deadline: true })
+  }
+  const last = !S.isBucket && a.k < deadlineGame(c) ? 'a week from Tuesday' : S.isBucket ? 'Thursday' : 'Tuesday'
+  const when = S.isBucket ? `${last} at 3 p.m. Eastern` : `${last} at 4 p.m. Eastern`
+  return (
+    <>
+      {ask && <TradeAsk onPick={go} onNo={() => setAsk(false)} body={`The deadline is ${when}. Shipped, he finishes the season with the new team. Reputation takes a hit either way.`} />}
+      {res && <TradeOverlay res={res} onClose={() => setRes(null)} />}
+      {!a.deadline && (
+        <div className="ag-card cr-depthnote cr-deadline ag-pop">
+          <span className="ag-eyebrow">{S.isBucket ? `GAME ${a.k}` : `WEEK ${weekOfGame(c, a.k)}`} · TRADE DEADLINE</span>
+          <p>{c.tradeAsked ? `${c.name} already asked for a trade this year. He rides out the deadline with the ${nick}.` : `The trade deadline is ${when}. After that, ${c.name} finishes the season with the ${nick}.`}</p>
+          {!c.tradeAsked && <button className="ag-btn ag-btn--ghost cr-trade-btn" onClick={() => { setAsk(true); sfx('tap') }}>DEMAND A TRADE</button>}
+        </div>
+      )}
+    </>
   )
 }
 // how the week off went, until the next game
@@ -1232,13 +1267,13 @@ function NumberSheet({ c, cur, onPick, onClose }) {
   )
 }
 // Demand a trade: where to (ANY TEAM, always granted; A CONTENDER, 70%, and a no keeps him), or stay put
-function TradeAsk({ onPick, onNo }) {
+function TradeAsk({ onPick, onNo, body = 'Reputation takes a hit either way.' }) {
   return createPortal(
     <div className="ll-overlay" onClick={e => e.target === e.currentTarget && onNo()}>
       <div className="ll-sheet" role="alertdialog" aria-modal="true" aria-labelledby="cr-trade-title">
         <div className="ll-head"><span className="ag-eyebrow">TRADE REQUEST</span><button className="ag-round-btn" onClick={onNo} aria-label="Close"><IconClose size={15} /></button></div>
         <h2 className="ll-title" id="cr-trade-title">Demand a trade?</h2>
-        <p className="ll-body">Reputation takes a hit either way.</p>
+        <p className="ll-body">{body}</p>
         <div className="cr-trade-pick">
           <button className="cr-trade-opt" onClick={() => onPick('contender')}><b>TO A CONTENDER</b><small>{Math.round(TRADE_ODDS.contender * 100)}% shipped · {Math.round((1 - TRADE_ODDS.contender) * 100)}% he stays</small></button>
           <button className="cr-trade-opt" onClick={() => onPick('any')}><b>TO ANY TEAM</b><small>100% shipped</small></button>
@@ -1297,10 +1332,10 @@ function TradeOverlay({ res, onClose }) {
     <div className={`ag-ring sm-record cr-trade-res${res.granted ? ' is-yes' : ' is-no'}`} onClick={onClose} style={{ '--tc': t.color2 && t.color === '#000000' ? t.color2 : t.color }}>
       {res.granted && <div className="ag-ring-rays" />}
       <div className="ag-ring-inner">
-        <span className="ag-eyebrow">TRADE REQUEST · {res.granted ? 'GRANTED' : 'DENIED'}</span>
+        <span className="ag-eyebrow">{res.deadline ? 'TRADE DEADLINE' : 'TRADE REQUEST'} · {res.granted ? 'GRANTED' : 'DENIED'}</span>
         <img className="cr-trade-logo" src={S.logo(t.short)} alt="" />
         <h2 className="ag-ring-title">{res.granted ? `TRADED TO THE ${t.name.toUpperCase()}` : 'REQUEST DENIED'}</h2>
-        <span className="ag-ring-score">{res.granted ? `${res.c.name} is a ${t.nick ?? nick(t.name)} now.` : `The ${t.nick ?? nick(t.name)} said no, and the locker room heard about it.`}</span>
+        <span className="ag-ring-score">{res.granted ? (res.deadline ? `${res.c.name} finishes the season with the ${t.nick ?? nick(t.name)}.` : `${res.c.name} is a ${t.nick ?? nick(t.name)} now.`) : `The ${t.nick ?? nick(t.name)} said no, and the locker room heard about it.`}</span>
         <span className="sm-honor-line">Reputation −2</span>
         <span className="ag-ring-count">TAP TO CONTINUE</span>
       </div>
@@ -1309,7 +1344,7 @@ function TradeOverlay({ res, onClose }) {
   )
 }
 function Moves({ c, setCareer, forced }) {
-  const ev = c.events.filter(e => e.year === c.year + 1)
+  const ev = c.events.filter(e => e.year === c.year + 1 && !e.season)
   const moves = c.off?.moves ?? []
   const dc = depthChart(c)
   const [askTrade, setAskTrade] = useState(false)
@@ -1522,7 +1557,7 @@ function SeasonTable({ c, t }) {
               <tr key={s.year} className={`cr-seasons-row${s.champion ? ' is-ring' : ''}${open === s.year ? ' is-open' : ''}`}
                 tabIndex={0} aria-expanded={open === s.year} onClick={() => flip(s.year)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(s.year) } }}>
                 <th scope="row"><IconArrow size={10} className="cr-seasons-chev" />{s.season}</th>
-                <td className="cr-seasons-team"><img src={S.logo(s.team)} alt="" loading="lazy" />{s.team}</td>
+                <td className="cr-seasons-team">{s.from && <img src={S.logo(s.from.team)} alt="" loading="lazy" />}<img src={S.logo(s.team)} alt="" loading="lazy" />{s.from ? `${s.from.team}/${s.team}` : s.team}</td>
                 <td>{gamesIn(s)}</td>
                 <td>{s.wins}-{s.losses}</td>
                 {cols.map(k => <td key={k}>{(k === 'grade' || k === 'drops') && s.stats[k] == null ? '—' : fmt(s.stats[k])}</td>)}
@@ -1645,6 +1680,7 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
       )}
       <Analytics key={s.year} c={c} s={s} />
       <div className="cl-season-notes">
+        {s.from && <p><b>Traded</b> At the deadline, from the {s.from.teamName}: {s.from.wins}–{s.from.losses} there, {s.wins - s.from.wins}–{s.losses - s.from.losses} with the {(s.teamName ?? '').split(' ').pop()}, who went {s.from.teamWins}–{s.from.teamLosses}</p>}
         {s.rounds?.length > 0 && <p><b>{S.isSoccer ? 'The big nights' : 'Playoffs'}</b> {s.rounds.map(r => (S.isSoccer ? `${r.won ? 'W' : 'L'} ${tieText(r)} ${r.opponent}` : `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${String(r.opponent ?? '').split(' ').pop()}`)).join(' · ')}</p>}
         {S.isSoccer && s.wc?.called && <p><b>World Cup {s.wc.year}</b> {s.wc.champion ? 'Winners' : s.wc.finish}, {s.wc.goals} {s.wc.goals === 1 ? 'goal' : 'goals'}</p>}
         {(s.goals ?? []).length > 0 && <p><b>Goals</b> {met} of {s.goals.length} met</p>}

@@ -4648,6 +4648,8 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 
 /* Offseason: the trade demand sits with the depth chart / role */
 .cr-trade-btn { margin-top: 10px; width: 100%; }
+/* traded at the deadline: the new team's record, the one the playoffs go by (the season bar, under his own) */
+.cr-rec-team { font-family: var(--ag-font); font-style: normal; font-size: 13px; font-weight: 700; letter-spacing: 1px; margin: 3px 0 1px; }
 /* demand a trade: where to (TradeAsk) */
 .cr-trade-pick { display: grid; gap: 8px; margin: 4px 0 12px; }
 .cr-trade-opt { display: grid; gap: 4px; width: 100%; padding: 13px 16px; border: 1px solid var(--ag-line, rgba(255,255,255,.16)); border-radius: 10px; background: rgba(255,255,255,.04); color: #fff; text-align: left; font: inherit; cursor: pointer; }

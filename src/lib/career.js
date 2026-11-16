@@ -2160,7 +2160,9 @@ function careerMarksFor(c) {
   const t = careerTotals(c), held = new Set((c.seasons ?? []).flatMap(s => s.records ?? []))
   return recs.filter(x => !held.has(x.label)).map(x => ({ id: x.id, label: x.label, value: x.value, holder: x.holder, live: x.live, before: x.career(t) ?? 0 }))
 }
-const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, pre: dealtPre(c), ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+// (a deadline trade: the new team's record over the games before he got there, so its record decides the playoffs)
+const dealtPre = c => { const d = c.active?.deadline; return d?.granted && d.pre ? { k: d.k, wins: d.pre.wins, losses: d.pre.losses } : null }
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -2796,7 +2798,11 @@ export function bookSeason(c) {
   // and he has to have played enough of the season to be in the conversation
   const share = started.length / Math.max(1, (f.games ?? []).length)
   const can = k => share >= S.minGames[k] - 1e-9
-  const benched = c.active.benched?.weeks ?? 0
+  // (traded at the deadline: the games off the chart on the old team, then on the new one)
+  const dl = c.active.deadline?.granted ? c.active.deadline : null
+  const benched = dl ? (dl.benchedBefore ?? 0) + (c.active.benched ? Math.max(0, c.active.benched.weeks - dl.k) : 0) : c.active.benched?.weeks ?? 0
+  // his own record (a traded player's: the old team's games, then the new team's); f.wins is the team's
+  const myW = f.mine?.wins ?? f.wins, myL = f.mine?.losses ?? f.losses
   // (soccer books its own season: the league, the cup, Europe, the World Cup and the Ballon d'Or)
   const s = S.x?.season ? S.x.season(c, f, po) : (() => {
   const stats = seasonStats(c.pos, f)
@@ -2807,10 +2813,11 @@ export function bookSeason(c) {
   const fin = rounds.find(x => x.round === S.final)
   return {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role, ...(c.pos === 'dl' ? { spot: dlSpot(c) } : c.pos === 'ol' ? { spot: olSpot(c) } : c.sport === 'bucket' ? { spot: hoopSpot(c) } : {}),
-    wins: f.wins, losses: f.losses, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
+    wins: myW, losses: myL, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
+    ...(dl ? { from: { team: dl.from, teamName: dl.fromName, games: dl.k, wins: dl.there?.wins ?? 0, losses: dl.there?.losses ?? 0, teamWins: f.wins, teamLosses: f.losses } } : {}),
     stats, adv: seasonRaw(c.pos, f, started), award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats, c)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats, c)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
-    goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
+    goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: myW, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
   }
   })()
@@ -2840,7 +2847,7 @@ export function bookSeason(c) {
   // (soccer: a Golden Boot is the striker's yearly honor, not a rare one, so it earns no point of its own)
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
-  const lastRole = S.isSoccer ? ((s.stats.starts ?? 0) >= (f.games?.length ?? 38) / 2 ? 'Starter' : 'Backup') : benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
+  const lastRole = S.isSoccer ? ((s.stats.starts ?? 0) >= (f.games?.length ?? 38) / 2 ? 'Starter' : 'Backup') : benched < (myW + myL || 17) / 2 ? 'Starter' : 'Backup'
   let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false, ...healDurability(c) }
   if (S.x?.afterSeason) next = S.x.afterSeason(next, s)
   // a kicker's year: his streak of makes, the franchise's records and the league's career marks, and whether he keeps the job
@@ -3381,17 +3388,137 @@ export function demandTrade(c, aim = 'contender') {
   const granted = any || r() < TRADE_ODDS.contender
   const rep = Math.max(1, c.rep - 2)
   if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: `${c.name} asked to be traded to a contender. The team said no, and the locker room heard about it.` }], decisions: [...c.decisions, { year: c.year + 1, text: 'Demanded a trade to a contender, turned down' }] }
-  // any team in the stronger half (it was the top six: the same two or three every time), as the teams rate this
-  // year (their rosters, the league's moves); a skill player leans to the ones with a quarterback and a line (supportW)
-  const pool = S.teams.filter(t => t.short !== c.team).map(t => { const roster = rosterOf(c, t.short); return { short: t.short, roster, fit: teamFit(t.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), spot: lineSpot(c) }) } })
-    .sort((a, b) => (b.fit.off + b.fit.def) - (a.fit.off + a.fit.def))
-  const top = any ? pool : pool.slice(0, Math.max(4, Math.round(pool.length / 4)))
-  const dest = !any && SKILL[c.pos] ? pickBy(top, x => supportW(c.pos, x.fit), r()) : top[Math.floor(r() * top.length)]
-  const { roster, fit } = dest
+  const { roster, fit } = tradeDest(c, any, r)
   // a starter guarantee was the old team's promise: it stays with them
   // (the summer's event was the old team's: dealt again for the new one, after the trade is on the record)
   const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade${any ? '' : ' to a contender'}, dealt to the ${fit.name}` }] }
   return redealEvent(moved, c.team)
+}
+// Where a granted demand sends him. ANY TEAM: anywhere in the league. A CONTENDER: the top quarter (it was the top
+// six: the same two or three every time), as the teams rate this year (their rosters, the league's moves); a skill
+// player leans to the ones with a quarterback and a line (supportW). { short, roster, fit }
+function tradeDest(c, any, r) {
+  const S = sportOf(c)
+  const pool = S.teams.filter(t => t.short !== c.team).map(t => { const roster = rosterOf(c, t.short); return { short: t.short, roster, fit: teamFit(t.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), spot: lineSpot(c) }) } })
+    .sort((a, b) => (b.fit.off + b.fit.def) - (a.fit.off + a.fit.def))
+  const top = any ? pool : pool.slice(0, Math.max(4, Math.round(pool.length / 4)))
+  return !any && SKILL[c.pos] ? pickBy(top, x => supportW(c.pos, x.fit), r()) : top[Math.floor(r() * top.length)]
+}
+
+// -- A trade demand at the deadline (football, basketball; owner 11-15) --
+// The deadline is the NFL's and the NBA's own: football, the Tuesday after Week 9 (eight games in when his bye came
+// by then, nine when it hasn't); basketball, early February, about game 51 of 82. The ask is open the last stop or
+// two before it (the deadline weeks). The same asks and odds as the summer's (TRADE_ODDS), the same rules (under
+// contract, no no-trade clause, not on loan), and the same price: reputation -2 either way.
+// One ask a contract year: the summer before a season and its deadline are the same year of the deal (the
+// contract counts down when the season is booked), so an ask in the summer uses up the deadline's and the other way
+// round; the summer after the season is the next year of the deal, and he can ask again (bookSeason resets it).
+// Granted: he finishes the season on the new team. Its depth chart sets his role, its grades the games, its
+// schedule the games left (the rest of the season is played again from the trade, on the new team); the games he
+// played stay as they were, and the season line is one line for both teams, the way the record books keep a traded
+// player's. His W-L is his own games (the old team's, then the new one's); the playoffs, the seed and the bracket
+// go by the new team's record (its games before he got there, then his: active.deadline.pre). The contract goes
+// with him; a starter guarantee was the old team's promise and stays with them, so does the summer's team news.
+// Turned down (a contender, 3 in 10): he stays, and the locker room heard about it, the rest of the season
+// (the summer's ask costs the next season the same: nextMods, off -0.5).
+export function deadlineGame(c) {
+  const S = sportOf(c), a = c?.active
+  if (!a?.base?.games?.length || S.x || S.isSoccer) return null
+  if (S.isBucket) return Math.round(a.base.games.length * 0.62)
+  return a.bye && a.bye.wk <= 9 ? 8 : 9
+}
+// the deadline weeks: the stops before it, the last one the deadline itself (a run of games in basketball). A bye
+// right after the deadline is the week after it: once he has taken it, the deadline has passed
+export const deadlineOpen = c => {
+  const k0 = deadlineGame(c), a = c?.active, k = a?.k ?? -1
+  if (k0 == null || k > k0 || k <= k0 - Math.max(2, sportOf(c).step)) return false
+  return !(a.bye?.done && k === k0 && a.bye.wk > 9 && a.bye.wk === weekOfGame(c, k) + 1)
+}
+// he can ask now (tradeAsked aside: the screen says why when the year's ask is gone)
+export function canDeadlineTrade(c) {
+  const S = sportOf(c), a = c?.active
+  if (!a || c.phase !== 'season' || S.x || S.isSoccer) return false
+  if (a.po || a.final || a.moment || a.injury || a.out || a.deadline) return false
+  if (!c.contract || c.contract.left <= 0 || c.contract.noTrade || c.loan) return false
+  return deadlineOpen(c)
+}
+// [career, director]: the director is a new one when he's traded (the screen keeps it)
+export function deadlineTrade(c, D, aim = 'contender') {
+  if (!canDeadlineTrade(c) || c.tradeAsked || !D) return [c, D]
+  const S = sportOf(c), a = c.active, k = a.k, yr = c.year + 1
+  const r = seeded(`${c.seed}-dltrade-${c.year}`)
+  const any = aim === 'any'
+  const granted = any || r() < TRADE_ODDS.contender
+  const rep = Math.max(1, c.rep - 2)
+  const from = c.team, fromNick = nickOf(S, from), fromName = S.teamOf(from).name
+  if (!granted) {
+    D.nudge({ team: { off: -0.5 } }, k, D.total, null, true)
+    const n = { ...c, rep, tradeAsked: true,
+      events: [...c.events, { year: yr, season: true, text: `${c.name} asked the ${fromNick} to trade him to a contender before the deadline. They kept him, and the locker room heard about it.` }],
+      decisions: [...c.decisions, { year: yr, text: 'Demanded a trade to a contender at the deadline, turned down' }] }
+    const feed = [...a.feed, { k, note: `${c.name} asks out before the deadline. The ${fromNick} say no, and the locker room heard about it.`, noteKind: 'TRADE DEADLINE' }]
+    return [withSnap(n, D, { feed, deadline: { k, aim, granted: false } }), D]
+  }
+  const dest = tradeDest(c, any, r)
+  const { roster, fit } = dest, to = dest.short, toNick = nickOf(S, to)
+  // the new team as it rates with him on it (the old team's summer news stays behind: nextMods)
+  let n = { ...c, rep, tradeAsked: true, team: to, roster, kept: keepRoster(c), fit, lastRole: null, nextMods: null, contract: { ...c.contract, starter: false } }
+  const dc = depthChart({ ...n, active: { ...a, benched: null } }, roster)
+  const team = simTeam({ ...n, benchRole: !dc.starter }, fit)
+  // not the starter there: basketball, off the bench the rest of the way; football, a backup's share of the snaps
+  // (a quarterback, or a man too far down the chart for one, sits)
+  let share = null, benched = null
+  if (!dc.starter) {
+    const behind = dc.ahead[Math.min(dc.starters, dc.ahead.length) - 1]?.name ?? dc.ahead[0]?.name
+    if (S.isBucket) benched = { weeks: D.total, behind, label: dc.label, bench: true, from: k }
+    else {
+      const u = backupShare(c.pos, dc.idx - dc.starters)
+      if (u > 0) share = { u, weeks: D.total }
+      benched = { weeks: D.total, behind, label: dc.label, rotation: !!share, from: k }
+    }
+  }
+  const plain = S.sim(c.pos), simFn = share ? shareSim(plain, share.u, share.weeks) : plain
+  const build = a.dirBuild ?? c.build
+  // the new team's season: its schedule from here; its record before he got there the way the engine plays a game
+  // without him (a coin weighted by the team's strength, the director's sitGame), from its own rating
+  const run = simFn(build, team)
+  const old = a.base.games
+  const base = { ...run, games: run.games.map((g, i) => (i < k ? D.games[i] : { ...g, wk: old[i]?.wk ?? g.wk, g: old[i]?.g })) }
+  const rp = seeded(`${c.seed}-dlpre-${c.year}`), str = ((fit.off ?? 5) + (fit.def ?? 5)) / 20
+  let preW = 0
+  for (let i = 0; i < k; i++) if (rp() < clamp(str - 0.05, 0.2, 0.7)) preW++
+  const mine = D.games.slice(0, k), myW = mine.filter(g => g.won).length
+  const deadline = { k, aim, granted: true, from, fromName, to, toName: fit.name, pre: { wins: preW, losses: k - preW }, there: { wins: myW, losses: k - myW }, benchedBefore: a.benched ? Math.min(a.benched.weeks, k) : 0 }
+  const wkWord = S.isBucket ? `${k} games in` : `after Week ${weekOfGame(c, k)}`
+  const role = dc.starter ? 'He steps in as the starter' : S.isBucket ? `He comes off the bench behind ${benched.behind}` : `He joins as ${dc.label}, behind ${benched.behind}`
+  const note = `Deadline deal: the ${fromNick} trade ${c.name} to the ${toNick}. ${role}, and the ${toNick} are ${preW}-${k - preW}.`
+  // (the games he played for the old team keep its logo)
+  const feed = [...a.feed.map(e => (e.g ? { ...e, g: { ...e.g, tm: e.g.tm ?? from } } : e.chunk ? { ...e, tm: e.tm ?? from } : e)), { k, note, noteKind: 'TRADE DEADLINE' }]
+  n = { ...n, role: dc.starter ? 'Starter' : 'Backup', simTeam: team,
+    events: [...c.events, { year: yr, season: true, text: `Traded to the ${fit.name} at the deadline (${wkWord}), after demanding a trade${any ? '' : ' to a contender'}.` }],
+    decisions: [...c.decisions, { year: yr, text: `Demanded a trade${any ? '' : ' to a contender'} at the deadline, dealt to the ${toNick}` }],
+    active: { ...a, base, share, benched, feed, deadline } }
+  // the season so far, on a director for the new team: the games played stay (locked), his form and his streaks go
+  // with him (the traits), the old team's moves stay behind (the team mods); the rest is played again from here
+  const D2 = director(n, team, base, a.seed, simFn, build)
+  const snap = D.snapshot()
+  const own = m => ({ attr: { ...(m?.attr ?? {}) }, team: { off: 0, def: 0 } })
+  const benchSit = i => !!a.benched && !a.benched.bench && !a.benched.rotation && i < a.benched.weeks
+  const carry = (snap.sat ?? []).filter(i => i >= k && !benchSit(i) && !(D.games[i]?.tags ?? []).includes('BENCHED'))
+  D2.restore({ ...snap, games: base.games.map(g => ({ ...g })), locked: [...new Set([...(snap.locked ?? []).filter(i => i < k), ...Array.from({ length: k }, (_, i) => i)])], cum: own(snap.cum), windows: snap.windows.map(w => ({ ...w, mods: own(w.mods) })), playoffMods: own(snap.playoffMods), sat: (snap.sat ?? []).filter(i => i < k), last: base, po: null, poRun: null, finalized: false, final: null })
+  // (still out with an injury: he misses those games on the new team too; a quarterback behind a starter sits)
+  for (const i of carry) D2.sitOut(i, (D.games[i]?.tags ?? [])[0] ?? null)
+  if (benched && !share && !S.isBucket) for (let i = k; i < D2.total; i++) D2.sitOut(i)
+  D2.redo(k)
+  return [withSnap(n, D2), D2]
+}
+// the team's record in a season under way: the new team's once he's been traded at the deadline (its games
+// before he got there, then his), null otherwise (his own record is the team's)
+export function teamRecord(c, games) {
+  const d = c?.active?.deadline
+  if (!d?.granted || games.length < d.k) return null
+  const w = d.pre.wins + games.slice(d.k).filter(g => g.won).length
+  return { wins: w, losses: games.length - w }
 }
 // (the chance a veteran, 29 to 34, picks up a grade in a trait that never fades: football and basketball)
 const EXPERIENCE = 0.1

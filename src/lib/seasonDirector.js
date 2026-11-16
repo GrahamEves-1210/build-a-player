@@ -110,7 +110,7 @@ export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY
 // stats went on the day's board when it was locked in, and View Results replays that same season)
 // onFinal (soccer's Career): the booked season again from the games as played (the table, the awards)
 // oppName: how an opponent reads in a headline (the one-off baseball page: a club's nickname, not its code)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, careerMarks = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null, career = null }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, careerMarks = null, deals = null, made = null, injuryOdds = null, onFinal = null, oppName = null, career = null, pre = null }) {
   const isBucket = sport === 'bucket'
   // soccer: a match can be drawn, a season is 34-38 matchweeks, and the table counts points
   const isSoccer = sport === 'soccer'
@@ -169,6 +169,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     finalized: false, final: null,
     xp: 0, sat: [],
     deals,                        // Career: who the front office can trade for, and what he does to the team
+    pre,                          // Career, traded at the deadline: { k, wins, losses }, the new team's record over the k games before he got there
     career,                       // Career: (k, next game) => where the career stands, for the LIFE cards (lib/career.js lifeView)
   }
 
@@ -310,9 +311,12 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   }
 
   // ── Moments ────────────────────────────────────────────────────────────────
+  // the team's wins over these games: his, or once he's been traded at the deadline (pre), the new team's record
+  // before he got there and his games since (the standings, the playoff race and the bracket are the new team's)
+  const teamWins = games => (pre && games.length >= pre.k ? pre.wins + games.slice(pre.k).filter(g => g.won).length : games.filter(g => g.won).length)
   D.ctxAt = k => {
     const games = D.games.slice(0, k)
-    const wins = games.filter(g => g.won).length, draws = isSoccer ? games.filter(g => g.drawn).length : 0, losses = games.length - wins - draws
+    const wins = teamWins(games), draws = isSoccer ? games.filter(g => g.drawn).length : 0, losses = games.length - wins - draws
     let streak = 0, skid = 0
     for (let i = games.length - 1; i >= 0; i--) { if (games[i].won) { if (skid) break; streak++ } else { if (streak) break; skid++ } }
     return { games, wins, losses, streak, skid, last: games[games.length - 1] ?? null, ...(isSoccer ? { draws, points: wins * 3 + draws } : {}) }
@@ -326,7 +330,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   D.po = null
   D.qualify = () => {
     if (D.po != null) return D.po
-    const want = D.games.filter(g => g.won).length
+    const want = teamWins(D.games)
     let best = null
     for (let i = 0; i < 40; i++) {
       const run = runWith(D.cum, `q-${i}`)
@@ -418,6 +422,9 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   // Sidelined from game `at` for `n` games (Career: an injury): the team plays
   // on without you, and the rest of the season is re-simulated from there
   D.sidelined = (at, n) => { for (let i = at; i < Math.min(total, at + n); i++) sitGame(i); resplice(at) }
+  // (Career, a deadline trade: a game he misses on the new team, and the rest of the season played again from `from`)
+  D.sitOut = (i, tag = null) => { if (i < total) sitGame(i, tag) }
+  D.redo = from => resplice(from)
   // A stretch played a little above or below the ratings (Career: a hidden form
   // for the year, a hot or cold streak). No tag: nothing on the schedule shows it.
   // mods.lean (a hot or cold streak, Hot Hand): the stretch's games are picked to read that way (leaned)
@@ -549,7 +556,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       D.finalized = true
       return D.final
     }
-    const want = t.wins
+    const want = pre ? teamWins(D.games) : t.wins
     const mods = addMods(D.cum, D.playoffMods)
     // the run that books the season: same record and, once decided, the same
     // playoff fate the season already showed
@@ -583,6 +590,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       }
     }
     if (!isBucket && !isSoccer && !X) D.final.hasBye = D.final.playoffs && bestRun.hasBye
+    // (traded at the deadline: the record the playoffs go by is the new team's, his own is kept beside it)
+    if (pre) D.final = { ...D.final, wins: want, losses: total - want, mine: { wins: t.wins, losses: t.losses } }
     if (onFinal) D.final = onFinal(D.final, t, D.games)
     D.finalized = true
     return D.final
