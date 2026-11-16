@@ -227,6 +227,8 @@ function SportPick({ sport }) {
   }
   return (
     <div className="sp-rack" ref={rowRef} role="radiogroup" aria-label="Sport" style={{ '--n': SPORTS.length }} onKeyDown={onKey}>
+      {/* the block behind the sport you're on: it slides to the one tapped (owner 11-16: a sliding block, not an underline) */}
+      <span className={`sp-hl sp-hl--${on}`} style={{ '--i': Math.max(0, SPORTS.findIndex(s => s.id === on)) }} aria-hidden="true" />
       {SPORTS.map(({ id, label, soon }) => {
         const locked = soon && id !== on
         return (

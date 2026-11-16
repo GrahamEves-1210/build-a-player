@@ -5,15 +5,25 @@
 .sp-rack {
   --sp-bg: #111816;
   display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); column-gap: 0;
-  margin: 0 0 -12px; padding: 0 4px; background: var(--sp-bg);   /* (owner 11-16: one slim row, no dead space) */
+  position: relative; margin: 0 0 -12px; padding: 5px; background: var(--sp-bg);   /* (owner 11-16: one slim row, no dead space) */
 }
+/* the sliding block: one column wide, behind the sport you're on, in that sport's colour */
+.sp-hl {
+  position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / var(--n, 3));
+  border-radius: var(--hm-r, 5px); background: #4fd8b4;
+  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .17s cubic-bezier(.3, 1.05, .45, 1), background-color .17s ease;
+}
+.sp-hl--bucket { background: #ffad66; }   /* (lighter than the ball, so the ball reads on it) */
+.sp-opt--bucket.is-on .sp-ball circle { stroke: #2a1408; stroke-width: 1.3; }
+.sp-hl--soccer { background: #f2f2ee; }
+.sp-hl--baseball { background: #e0313f; }
 .ag-home--bucket .sp-rack { --sp-bg: #1a1410; }
 .ag-home--soccer .sp-rack { --sp-bg: #131416; }
 
 .sp-opt {
   --c: #4fd8b4;
   display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px;
-  min-width: 0; min-height: 48px; padding: 0 2px; border: 0; border-radius: var(--hm-r, 5px); background: none;
+  position: relative; z-index: 1; min-width: 0; min-height: 44px; padding: 0 2px; transition: color .17s ease; border: 0; border-radius: var(--hm-r, 5px); background: none;
   color: #a3ada9; font-family: var(--ag-font); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .sp-opt--bucket { --c: #f97316; }
@@ -24,11 +34,11 @@
 .sp-opt .sp-ball { opacity: .55; transform: scale(.9); transition: transform .16s cubic-bezier(.3, 1.2, .5, 1), opacity .12s ease; }
 .sp-opt b {
   font-weight: 400; font-size: 15px; line-height: 1; letter-spacing: 1px; white-space: nowrap;
-  padding: 15px 0 13px;   /* (the underline sits on the strip's bottom edge, under the name) */
+  padding: 0;
 }
-.sp-opt.is-on { color: #fff; cursor: default; }
+.sp-opt.is-on { color: #0b0c0e; cursor: default; }
+.sp-opt--baseball.is-on { color: #fff; }
 .sp-opt.is-on .sp-ball { opacity: 1; transform: scale(1.1); }
-.sp-opt.is-on b { box-shadow: inset 0 -3px 0 var(--c); }
 .sp-opt:not(.is-on):active .sp-ball { transform: scale(.78); }
 @media (hover: hover) {
   .sp-opt:not(.is-on):not(.is-soon):hover { color: #fff; }
@@ -40,7 +50,7 @@
 .sp-opt.is-soon { cursor: default; }
 .sp-opt.is-soon .sp-ball { opacity: .3; }
 .sp-opt.is-soon .sp-opt-ball svg:not(.sp-ball) { position: absolute; color: #fff; }
-.sp-opt.is-soon b { padding-bottom: 13px; }
+.sp-opt.is-soon b { padding: 0; }
 .sp-opt small { font-family: var(--ag-body); font-size: 11px; font-weight: 700; letter-spacing: .6px; line-height: 1; padding-bottom: 3px; }
 
 /* while the other sport opens: its stage clears (the strip, the bars and PLAY stay where they are) */
@@ -49,16 +59,17 @@ html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-pla
 
 @media (max-width: 360px) { .sp-opt b { font-size: 14px; letter-spacing: .4px; } }
 @media (min-width: 1024px) {
-  html.app-look .sp-rack { grid-area: sport; align-self: start; margin: 0; padding: 0 6px; border-radius: var(--hm-r, 5px); }
-  html.app-look .sp-opt { min-height: 54px; gap: 9px; }
+  html.app-look .sp-rack { grid-area: sport; align-self: start; margin: 0; padding: 6px; border-radius: var(--hm-r, 5px); }
+  html.app-look .sp-hl { top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / var(--n, 3)); }
+  html.app-look .sp-opt { min-height: 50px; gap: 9px; }
   html.app-look .sp-opt-ball { width: 30px; height: 30px; }
   html.app-look .sp-opt .sp-ball { width: 28px; height: 28px; }
-  html.app-look .sp-opt b { font-size: 17px; padding: 17px 0 15px; }
+  html.app-look .sp-opt b { font-size: 17px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sp-opt .sp-ball { transition: none; }
+  .sp-opt .sp-ball, .sp-hl, .sp-opt { transition: none; }
   html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: none; opacity: 0; }
 }
-html.bap-reduce-motion .sp-opt .sp-ball { transition: none; }
+html.bap-reduce-motion :is(.sp-opt .sp-ball, .sp-hl, .sp-opt) { transition: none; }
 html.bap-reduce-motion.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: none; opacity: 0; }
