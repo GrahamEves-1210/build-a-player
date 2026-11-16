@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, FINISH_TEXT, ageLeague, openResign, resignOne, resignAsk, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, faBoard, bidView, pitchOf, placeBid,
-  OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade,
+  OFFERS, offerOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade, coyRec,
 } from '../../lib/franchise2'
 import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
@@ -83,7 +83,7 @@ function Awards({ F, act, owner }) {
       {aw?.coy && n >= list.length && (
         <div className="fd-coy" style={fkVars(aw.coy.t)}>
           <KLogo s={aw.coy.t} size={40} />
-          <span><small>COACH OF THE YEAR</small><b>{aw.coy.n}</b><em>{aw.coy.was} WINS TO {aw.coy.w}</em></span>
+          <span><small>COACH OF THE YEAR</small><b>{aw.coy.n}</b><em>{TEAM[aw.coy.t].nick} · {coyRec(aw.coy)}</em></span>
         </div>
       )}
       {n >= list.length && (

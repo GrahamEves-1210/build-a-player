@@ -15,7 +15,10 @@
 //   play-calling   the side's sim rating gets (v - mid) x 0.15 from WHOEVER CALLS THAT SIDE: the head coach when he
 //                  calls it, else the coordinator (mid 5.53 offense, 5.94 defense: CALL_MID; an 11 is about +0.8)
 //   situational    a close game late (4th quarter or overtime, within 8): the head coach (v - 4.66) x 0.2, and the
-//                  two coordinators' average a little (x 0.1, against the real league's coordinators)
+//                  two coordinators' average a little (x 0.1, against the real league's coordinators). On the head
+//                  coach's own side, the man NOT calling the plays gets +2 to it (owner, 11-16: a head coach who
+//                  hands off the calls is free to manage the game; one who calls them leaves more of it to his
+//                  coordinator): FREE_SIT
 //   talentDev      a young man's growth (25 and under) a year: the head coach (v - 5.41) x 0.18, and his side's
 //                  coordinator (v - 5.39) x 0.12 (the middles keep year one's league averages: see CALL_MID)
 //   culture        chemistry (the player's team): how fast it builds a week, how much a turnover costs
@@ -141,6 +144,10 @@ export function ensureStaff(F) {
       T.hc = { mine: 1 }
       // the real head coach the player replaced: out of work, the pool's first man
       if (hc) { const x = fromReal(F, hc, { team: null }); x.cv = hc.since < F.year ? `${NICK[s].toUpperCase()} HC ${hc.since}-${yy(F.year - 1)}` : `FORMER ${NICK[s].toUpperCase()} HC`; x.hy = 1; x.out = 0; F.cpool.push(x) }
+      // (his own side's calls: his when he's at least as good a play-caller as the coordinator there; the other side's
+      // are its coordinator's. He can change it on the staff screen: setCalls)
+      const me = myHC(F)
+      if (me) { const co = me.sd === 'off' ? 'oc' : 'dc', j = me.sd === 'off' ? 1 : 2; T.call = { off: 'oc', def: 'dc', [me.sd]: !T[co] || me.r[j] >= T[co].r[j] ? 'hc' : co } }
     } else T.hc = hc ? fromReal(F, hc) : null
     F.staff[s] = T
   }
@@ -188,9 +195,13 @@ export function staffMen(F, short) {
 }
 // the man who calls a side's plays on a team now, and the rating he calls it with (a job still open mid-carousel:
 // the head coach has it)
+// The player's head coach calls his own side or hands it to that coordinator (setCalls); the other side is always
+// its coordinator's (a head coach calling both sides isn't an NFL job), whatever the real staff he took over did.
 export function callerOf(F, short, side, M = staffMen(F, short)) {
   const T = staffOf(F, short)
-  const who = T?.call?.[side] === 'hc' || !M[side === 'off' ? 'oc' : 'dc'] ? 'hc' : side === 'off' ? 'oc' : 'dc'
+  const co = side === 'off' ? 'oc' : 'dc'
+  const mineOther = short === F.team && M.hc?.mine && M.hc.sd !== side && M[co]
+  const who = !mineOther && (T?.call?.[side] === 'hc' || !M[co]) ? 'hc' : co
   const c = M[who]
   return { who, c, v: (Array.isArray(c?.r) ? c.r[side === 'off' ? 1 : 2] : null) ?? 4 }
 }
@@ -222,10 +233,19 @@ export function coachEdge(F, short) {
 }
 // a close game late (the 4th quarter or overtime, within one score): the head coach, and his coordinators a little
 const SIT_COORD = 4.41   // (the real league's coordinators' average situational rating)
+export const FREE_SIT = 2
+// the head coach's side, and who on it is free of the calls: 'hc' (his coordinator calls them) or 'oc' / 'dc'
+export function freeMan(F, short, M = staffMen(F, short)) {
+  const side = M.hc?.sd === 'def' ? 'def' : 'off', co = side === 'off' ? 'oc' : 'dc'
+  if (!M.hc || !M[co]) return null
+  return { side, who: callerOf(F, short, side, M).who === 'hc' ? co : 'hc' }
+}
 export function coachLate(F, short) {
   const M = staffMen(F, short)
-  const hc = (Array.isArray(M.hc?.r) ? M.hc.r[4] : null) ?? 5
-  const co = [M.oc, M.dc].filter(c => Array.isArray(c?.r)).map(c => c.r[4] ?? SIT_COORD)
+  const free = freeMan(F, short, M)
+  const plus = k => (free?.who === k ? FREE_SIT : 0)
+  const hc = ((Array.isArray(M.hc?.r) ? M.hc.r[4] : null) ?? 5) + plus('hc')
+  const co = ['oc', 'dc'].filter(k => Array.isArray(M[k]?.r)).map(k => (M[k].r[4] ?? SIT_COORD) + plus(k))
   const avg = co.length ? co.reduce((a, b) => a + b, 0) / co.length : SIT_COORD
   return r2((hc - HC_SIT) * 0.2 + (avg - SIT_COORD) * 0.1)
 }
@@ -259,6 +279,7 @@ export function setCalls(F, side, who) {
   if (!T) return
   const co = side === 'off' ? 'oc' : 'dc'
   if (who !== 'hc' && who !== co) return
+  if (who === 'hc' && myHC(F)?.sd !== side) return     // (his own side only: the other is his coordinator's)
   if (who === co && !T[co]) return
   T.call = { ...T.call, [side]: who }
 }

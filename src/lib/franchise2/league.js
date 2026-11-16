@@ -119,6 +119,7 @@ export function makeReal(F, r, R) {
   const d = realDeal(r.name, r.team, p, R)
   p.$ = d.$; p.y = d.y; p.g = d.g
   if (d.rc) p.rc = 1
+  if (d.dy >= FIRST_YEAR) p.rk = d.dy   // (a real rookie of this season: his draft year, as a pick's rk)
   return p
 }
 const GEN_SPOT = { dl: ['edge', 'dt'], db: ['cb', 's'], ol: ['LT', 'LG', 'C', 'RG', 'RT'] }
