@@ -9,7 +9,7 @@
 // centred, the eyes a little above the middle, the jersey's collar across the bottom.
 //
 //   faceSvg(look, { color, view, mark })  the SVG (viewBox 0 0 100 100; transparent; color: his team's; view: VIEWS;
-//                                         mark: a coach's cap letter { t, c })
+//                                         mark: a coach's team logo for his cap and chest, { id, src, w, h, o })
 //   toUrl(svg)                            a data: URL for an <img>
 // Pure: no DOM, no Math.random. The look decides everything; small detail (a beard's broken edge) is seeded by it.
 
@@ -735,28 +735,42 @@ function headGearOf(look, G, color) {
       + fill(sm([[50 - cw * 0.78, C0 + 6], [50 - cw * 0.45, C0 + 1.6], [50 - cw * 0.08, C0 + 0.4], [50 - cw * 0.12, C0 + 1.8], [50 - cw * 0.5, C0 + 3.2], [50 - cw * 0.72, C0 + 7.4]]), mixC(c, '#cfd4e0', 0.2))
       + line(`M50 ${f(y - 2.8)}Q49.8 ${f(C0 + 3)} 50 ${f(C0 - 0.5)}`, '#08080a', 0.5) + line(`M50.5 ${f(y - 2.8)}Q50.3 ${f(C0 + 3)} 50.5 ${f(C0 - 0.4)}`, mixC(c, '#ffffff', 0.18), 0.25)
   }
-  if (look.gear === 'visor') return visorOf(G, color, null)
+  if (look.gear === 'visor') return visorOf(G, color)
   return ''
 }
-function markOf(mark, x, y, size, color) {
-  const c = mark?.c ?? (lum(color) > 170 ? '#14161b' : '#ffffff')
-  if (mark?.t && /^[A-Z]$/.test(mark.t)) return `<text x="${f(x)}" y="${f(y + size * 0.36)}" text-anchor="middle" font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-size="${f(size)}" fill="${c}">${mark.t}</text>`
-  return fill(ell(x, y, size * 0.32, size * 0.32), c)
+// his team's logo (a coach's cap and chest; mark: { id, src, w, h, o }: a small png as a data URI, its size, and an
+// outline colour when it would vanish on the cloth) centred at x, y in a box mw x mh; sy squashes it a little where the
+// cloth leans back (a cap's crown). Never a letter (owner 11-16): no logo, nothing.
+function logoOf(mark, x, y, mw, mh, sy = 1) {
+  if (!mark?.src) return ''
+  const k = Math.min(mw / mark.w, mh / mark.h), w = mark.w * k, h = mark.h * k
+  let flt = ''
+  if (mark.o) {
+    const id = `${TX.P}O`, r = TX.lo ? 0.55 : 0.4
+    TX.defs.lo = `<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feMorphology in="SourceAlpha" operator="dilate" radius="${r}" result="d"/><feFlood flood-color="${mark.o}"/><feComposite in2="d" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+    flt = ` filter="url(#${id})"`
+  }
+  const img = `<image href="${mark.src}" x="${f(-w / 2)}" y="${f(-h / 2)}" width="${f(w)}" height="${f(h)}"${flt}/>`
+  return `<g transform="translate(${f(x)} ${f(y)})${sy !== 1 ? ` scale(1 ${sy})` : ''}">${img}</g>`
 }
-// a sideline visor: a stiff band round the head, the mark on its front, a flat brim out over the brow
-// a sideline visor (owner 11-16: "too low"): the band round the top of his forehead, following the skull (its ends
-// wrap round out of sight at the temples), the bill's front edge at his brow line and never over his eyes, its top seen
-// from just above, its underside in shadow, a soft shadow on the forehead under it; his hair shows over the open top
-function visorOf(G, color, mark) {
-  const yb = G.by - 7.4, w0 = hx(G, yb) + 0.45, w1 = hx(G, yb + 3.2) + 0.45, bot = G.by - 1.1
+// a sideline visor (owner 11-16: "visor too short", "none on visor"): a plain band round the top of his forehead,
+// following the skull (its ends wrap round out of sight at the temples), and a long bill out from it, seen from just
+// above: wider than his head at its front edge, which sits at his brow line and never over his eyes; the far half in
+// shade, the bill's thickness a thin light rim, a soft shadow on the brow under it; his hair shows over the open top
+function visorOf(G, color) {
+  const yb = G.by - 9.6, w0 = hx(G, yb) + 0.45, w1 = hx(G, yb + 2.6) + 0.5, bot = G.by - 0.4
   const band = sm([[50 - w0, yb + 1.2, 1], [50 - w0 * 0.55, yb + 0.1], [50, yb - 0.2], [50 + w0 * 0.55, yb + 0.1], [50 + w0, yb + 1.2, 1], [50 + w1, yb + 3.6, 1], [50 + w1 * 0.55, yb + 2.7], [50, yb + 2.5], [50 - w1 * 0.55, yb + 2.7], [50 - w1, yb + 3.6, 1]])
-  const bl = 50 - w1 - 2.2, br = 50 + w1 + 2.2
-  const brim = sm([[bl, yb + 3.2, 1], [50 - w1 * 0.5, yb + 2.3], [50, yb + 2.1], [50 + w1 * 0.5, yb + 2.3], [br, yb + 3.2, 1], [br - 2.4, bot - 1.8], [50, bot], [bl + 2.4, bot - 1.8]])
-  const under = sm([[bl + 1.6, bot - 2.4], [50, bot - 0.7], [br - 1.6, bot - 2.4], [br - 2.4, bot - 1.8], [50, bot], [bl + 2.4, bot - 1.8]])
-  return fill(sm([[bl + 2.6, bot - 1.2], [50, bot + 0.6], [br - 2.6, bot - 1.2], [50, bot + 2]]), '#000000', ' fill-opacity=".16"')
+  // the bill: from the band's foot out to its front edge, its corners well out past his temples
+  const bl = 50 - w1 - 5.2, br = 50 + w1 + 5.2, cy = bot - 3
+  const brim = sm([[50 - w1 + 0.2, yb + 3.2, 1], [50 - w1 * 0.5, yb + 2.5], [50, yb + 2.3], [50 + w1 * 0.5, yb + 2.5], [50 + w1 - 0.2, yb + 3.2, 1], [br, cy, 1], [br - 3.6, bot - 1.1], [50, bot], [bl + 3.6, bot - 1.1], [bl, cy, 1]])
+  const far = sm([[50 + w1 * 0.3, yb + 2.4], [50 + w1 - 0.2, yb + 3.2, 1], [br, cy, 1], [br - 3.6, bot - 1.1], [50 + w1 * 0.42, bot - 0.2]])
+  const rim = sm([[bl, cy], [bl + 3.6, bot - 1.1], [50, bot], [br - 3.6, bot - 1.1], [br, cy]], false)
+  return fill(sm([[bl + 3.4, bot - 0.4], [50, bot + 0.9], [br - 3.4, bot - 0.4], [50, bot + 2.1]]), '#000000', ' fill-opacity=".16"')
     + fill(band, color) + fill(sm([[50 + w0 * 0.45, yb + 0.1], [50 + w0, yb + 1.2, 1], [50 + w1, yb + 3.6, 1], [50 + w1 * 0.45, yb + 2.7]]), dark(color, 0.22))
-    + markOf(mark, 50, yb + 1.2, 2.2, color)
-    + fill(brim, dark(color, 0.1)) + line(`M${f(bl + 0.4)} ${f(yb + 3.5)}Q50 ${f(yb + 1.6)} ${f(br - 0.4)} ${f(yb + 3.5)}`, light(color, 0.3), 0.45) + fill(sm([[50 + w1 * 0.25, yb + 2.3], [br, yb + 3.2, 1], [br - 2.4, bot - 1.8], [50 + w1 * 0.35, bot - 0.6]]), dark(color, 0.22)) + fill(under, dark(color, 0.55)) + line(`M${f(bl + 2.6)} ${f(bot - 1.9)}Q50 ${f(bot + 0.5)} ${f(br - 2.6)} ${f(bot - 1.9)}`, light(color, 0.22), 0.4)
+    + fill(brim, dark(color, 0.06)) + fill(far, dark(color, 0.22))
+    + line(`M${f(50 - w1 + 0.6)} ${f(yb + 3.3)}Q50 ${f(yb + 1.7)} ${f(50 + w1 - 0.6)} ${f(yb + 3.3)}`, dark(color, 0.4), 0.45)
+    + fill(sm([[50 - w1 * 0.6, yb + 3.4], [50 - w1 * 0.2, yb + 3], [50 - w1 * 0.3, yb + 4.6], [bl + 4.2, cy + 0.2]]), light(color, 0.14))
+    + line(rim, light(color, 0.28), 0.5) + line(sm([[bl + 0.4, cy + 0.5], [bl + 3.8, bot - 0.6], [50, bot + 0.45], [br - 3.8, bot - 0.6], [br - 0.4, cy + 0.5]], false), dark(color, 0.6), 0.45)
 }
 function earringsOf(look, G) {
   if (!look.ear || look.ear === 'none') return ''
@@ -783,11 +797,12 @@ function glassesOf(look, G) {
   return fill(g, '#ffffff', ' fill-opacity=".14"') + line(d, fr, 0.75)
     + line(`M${f(50 - es + w)} ${f(ey - 1.6)}Q50 ${f(ey - 2.6)} ${f(50 + es - w)} ${f(ey - 1.6)}M${f(50 - es - w)} ${f(ey - 2.2)}L${f(50 - tw + 0.2)} ${f(ey - 2.4)}M${f(50 + es + w)} ${f(ey - 2.2)}L${f(50 + tw - 0.2)} ${f(ey - 2.4)}`, fr, 0.75)
 }
-// a ball cap in the team's colour: a structured crown (its far panel in shade, the seams), the mark, a curved brim
-// seen from just above, its shadow on the brow
+// a ball cap in the team's colour: a structured crown (its far panel in shade, the seams), his team's logo across the
+// front panels (owner 11-16: "put the logo not a letter"), leaning back with the crown, a curved brim seen from just
+// above, its shadow on the brow
 function capOf(look, G, color, mark) {
   if (!look.cap) return ''
-  if (look.cap === 'visor') return visorOf(G, color, mark)
+  if (look.cap === 'visor') return visorOf(G, color)
   const { cw } = G, L = 50 - cw - 0.9, R = 50 + cw + 0.9, y = Math.min(G.hl + 2.6, G.by - 6), top = C0 - 2.2
   const crown = sm([[L, y + 0.6, 1], [L - 0.1, C0 + 4.4], [50 - cw * 0.62, top + 0.7], [50, top], [50 + cw * 0.62, top + 0.7], [R + 0.1, C0 + 4.4], [R, y + 0.6, 1], [50, y - 0.8]])
   const brim = sm([[L - 1.2, y + 0.5, 1], [50, y - 1.2], [R + 1.2, y + 0.5, 1], [R - 2, y + 3.8], [50, y + 4.8], [L + 2, y + 3.8]])
@@ -797,7 +812,9 @@ function capOf(look, G, color, mark) {
     + fill(sm([[50 - cw * 0.62, top + 2.4], [50 - cw * 0.3, top + 1], [50 - cw * 0.36, top + 3.4], [L + 2.4, y - 1.4]]), light(color, 0.12))
     + line(`M50 ${f(top + 0.4)}V${f(y - 0.8)}M${f(50 - cw * 0.52)} ${f(top + 1.6)}Q${f(50 - cw * 0.48)} 22 ${f(50 - cw * 0.56)} ${f(y - 0.2)}M${f(50 + cw * 0.52)} ${f(top + 1.6)}Q${f(50 + cw * 0.48)} 22 ${f(50 + cw * 0.56)} ${f(y - 0.2)}`, dark(color, 0.32), 0.3)
     + fill(ell(50, top + 0.3, 0.9, 0.5), dark(color, 0.2))
-    + markOf(mark, 50, (top + y) / 2 + 0.6, 6.4, color)
+    + logoOf(mark, 50, (top + y) / 2 + 0.9, cw * 0.86, Math.min(9.2, y - top - 3), 0.92)
+    // (the far side's shade over the logo too, so it sits on the crown, not on top of the picture)
+    + (mark?.src ? fill(sm([[50 + cw * 0.42, top + 0.6], [50 + cw * 0.6, top + 0.8], [R + 0.2, 22], [R, y + 0.6, 1], [50 + cw * 0.5, y - 0.4]]), '#000000', ' fill-opacity=".16"') : '')
     + fill(brim, dark(color, 0.14)) + fill(sm([[L + 0.8, y + 1.8], [50, y + 3.4], [R - 0.8, y + 1.8], [R - 2.4, y + 4.2], [50, y + 5.3], [L + 2.4, y + 4.2]]), dark(color, 0.5))
 }
 
@@ -878,32 +895,63 @@ function tankOf(G, T, color, P, lo) {
     + `M${f(50 - nw - 6.6)} 70.8C${f(50 - nw - 7.2)} 80 ${f(50 - nw - 9)} 90 ${f(50 - nw - 15)} 104M${f(50 + nw + 6.6)} 70.8C${f(50 + nw + 7.2)} 80 ${f(50 + nw + 9)} 90 ${f(50 + nw + 15)} 104`
   return clothOf(G, loop, color, P, lo, false) + `<g clip-path="url(#${P}Jc)">${line(trim, accent, 2.2)}</g>`
 }
-// a coach's top: a team polo (its collar open at the neck, the placket) or a dark quarter-zip (the collar in the team's
-// colour, the zip)
-function topOf(look, G, K, P, lo) {
-  const { nw } = G, color = K.c1
-  if (look.top === 'polo') {
-    const c = color
-    let s = clothOf(G, shirtLoop(G, [[0, 76.4, 1], [nw * 0.5, 73], [nw + 0.2, 67, 1]]), c, P, lo)
-    // (the collar clean, in the team's trim)
-    const col = Math.abs(lum(K.c2) - lum(c)) > 40 ? K.c2 : light(c, 0.12)
-    s += fill(poly([[50 - nw - 0.6, 66.2], [50 - nw - 4.6, 70.6], [50 - 3.2, 78.6], [50, 76.2]]), col) + fill(poly([[50 + nw + 0.6, 66.2], [50 + nw + 4.6, 70.6], [50 + 3.2, 78.6], [50, 76.2]]), dark(col, 0.16))
-    s += fill(poly([[48.4, 76.6], [51.6, 76.6], [51.6, 88], [48.4, 88]]), dark(c, 0.1)) + fill(ell(50, 81, 0.6, 0.6), '#f2f3f5') + fill(ell(50, 85.2, 0.6, 0.6), '#f2f3f5')
-    return s
+// a coach's top, the way NFL sideline coaches dress (owner 11-16: the old dark top with a coloured collar band "looks
+// like some kind of religious robe"): a team quarter-zip pullover or a team polo, the body in the team's colour, on a
+// man's shoulders (no pads: they come down to his arms inside the frame, not out to its edges)
+const COACH_SHOULDER = [[2.6, 63.6], [9.4, 66], [16.4, 68.6], [22.4, 72], [27, 76.8], [29.6, 83.4], [30.8, 92], [31.2, 104]]
+const coachLoop = (G, neck) => sym([...neck, ...COACH_SHOULDER.map(p => [G.nw + p[0], p[1]]), [0, 104]])
+// quarter-zip: a stand-up collar round his neck (its inside seen behind the neck at the sides), unzipped to a short V
+// with the pull hanging at its foot, the zip running on down the chest, a trim line on the collar's edge, raglan seams
+// from the collar to the arms, the logo on his left chest
+// polo: the collar's band round the neck and its two points lying on the chest, a thin trim on their edges, the
+// placket and its buttons, the logo on his left chest
+function topOf(look, G, K, P, lo, mark) {
+  const { nw } = G, c = K.c1
+  const trim = Math.abs(lum(K.c2) - lum(c)) > 40 ? K.c2 : lum(c) > 150 ? dark(c, 0.45) : light(c, 0.45)
+  const near = light(c, 0.07), farC = dark(c, 0.18)
+  const both = (pts, a, b) => fill(sm(pts.map(LX)), a) + fill(sm(pts.map(RX)), b)
+  const edge = (pts, col, w, x = '') => line(sm(pts.map(LX), false) + sm(pts.map(RX), false), col, w, x)
+  // the logo on his left chest (the viewer's right), when the drawing is big enough to show it
+  const chest = lo ? '' : logoOf(mark, 50 + nw * 0.5 + 7.6, 81.4, 7.4, 5.6)
+  const zip = look.top !== 'polo'
+  // (the collar's inside, behind his neck: only its sides show, standing up round the neck)
+  const back = sm([[50 - nw - 2.2, 64.4], [50 - nw - 1.3, zip ? 57.4 : 59.4], [50, zip ? 55.6 : 57.6], [50 + nw + 1.3, zip ? 57.4 : 59.4], [50 + nw + 2.2, 64.4], [50, 62]])
+  G.collarBack = fill(back, dark(c, 0.42))
+  let s = clothOf(G, coachLoop(G, [[0, zip ? 73 : 71, 1], [nw * 0.6, 67.6], [nw + 1.6, 62.6, 1]]), c, P, lo)
+  if (zip) {
+    // raglan seams, collar to underarm
+    const rag = [[nw + 2.6, 64.6], [nw + 7, 70], [nw + 12.4, 78.4], [nw + 16.4, 90], [nw + 17.6, 104]]
+    if (!lo) s += `<g clip-path="url(#${P}Jc)">${edge(rag, dark(c, 0.3), 0.35)}</g>`
+    // the zip down the chest: the tape, its teeth
+    s += line('M50 73V89.4', dark(c, 0.5), 0.95) + (lo ? '' : line('M50 74V89', '#aeb4bd', 0.42, ' stroke-dasharray=".28 .28"'))
+    // the collar's two halves: the fold on top, open to a V at the zip; the bottom edge's shadow on the chest
+    const half = [[nw + 0.9, 57.2, 1], [nw * 0.62, 62.4], [1.1, 69.6, 1], [0.55, 74.6, 1], [nw * 0.55, 70.6], [nw + 3.4, 64.6, 1], [nw + 2.4, 60.4]]
+    s += edge([[0.5, 75.4], [nw * 0.55, 71.4], [nw + 3.6, 65.4]], '#000000', 1.1, ' stroke-opacity=".2"')
+    s += both(half, near, farC)
+    s += edge([[nw + 0.9, 57.2], [nw * 0.62, 62.4], [1.1, 69.6]], trim, lo ? 0.8 : 0.55)
+    // (inside the V his neck in the collar's shadow)
+    s += fill(sm([[50 - nw * 0.62, 62.4], [50 - 1.1, 69.6], [50, 70.4], [50 + 1.1, 69.6], [50 + nw * 0.62, 62.4], [50, 66.4]]), '#000000', ' fill-opacity=".22"')
+    // the pull at the V's foot
+    s += fill(sm([[49.3, 69.6, 1], [50.7, 69.6, 1], [50.9, 74.4], [50, 75.3], [49.1, 74.4]]), '#c9ced6') + (lo ? '' : fill(ell(50, 70.5, 0.32, 0.32), dark(c, 0.4)))
+    return s + chest
   }
-  const top = '#262a33'
-  let s = clothOf(G, shirtLoop(G, [[0, 74, 1], [nw * 0.6, 72.6], [nw + 0.6, 66.2, 1]]), top, P, lo)
-  s += fill(sm([[50 - nw - 1.4, 64.4], [50, 70.6], [50 + nw + 1.4, 64.4], [50 + nw + 2.4, 70.6, 1], [50, 77], [50 - nw - 2.4, 70.6, 1]]), color)
-    + fill(sm([[50, 70.6], [50 + nw + 1.4, 64.4], [50 + nw + 2.4, 70.6, 1], [50, 77]]), dark(color, 0.25))
-    + line('M50 77V104', '#0e0f13', 1.1) + fill(poly([[49.1, 77.6], [50.9, 77.6], [50.9, 80.8], [49.1, 80.8]]), '#c9ced6')
-  return s
+  // the placket: its two edges stitched, the buttons
+  s += fill(poly([[48.2, 69], [51.8, 69], [51.8, 84.6], [48.2, 84.6]]), mixC(c, farC, 0.4)) + line('M48.2 69V84.6M51.8 69V84.6', dark(c, 0.32), 0.3)
+    + fill(ell(50, 76, 0.6, 0.6) + ell(50, 81, 0.6, 0.6), lum(c) > 170 ? '#3a3f48' : '#eef0f3')
+  // the collar: the band round the neck, its points down on the chest either side of the placket
+  const leaf = [[nw + 0.6, 59, 1], [nw * 0.55, 64.8], [2, 69.4, 1], [nw * 0.32 + 1.2, 76.4, 1], [nw + 2.6, 70.4], [nw + 4, 65.4, 1], [nw + 2.4, 61.2]]
+  s += edge([[2.4, 70.4], [nw * 0.32 + 1.6, 77.4], [nw + 2.8, 71.2], [nw + 4.2, 66.2]], '#000000', 1, ' stroke-opacity=".22"')
+  s += both(leaf, near, farC)
+  s += edge([[nw * 0.32 + 1.2, 76.4], [nw + 2.6, 70.4], [nw + 4, 65.4]], trim, lo ? 0.8 : 0.5)
+  s += fill(sm([[50 - nw * 0.55, 64.8], [50 - 2, 69.4], [50 + 2, 69.4], [50 + nw * 0.55, 64.8], [50, 67.4]]), '#000000', ' fill-opacity=".2"')
+  return s + chest
 }
 
 // ── The whole bust ───────────────────────────────────────────────────────────
 export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } = {}) {
   // (his team's kit, kits.js: a caller may pass the kit, or just the team's colour)
   const K = kitOf(color), col = K.c1, lo = view === 'sm'
-  const key = `${JSON.stringify(look)}|${K.id}${col}|${view}|${mark?.t ?? ''}${mark?.c ?? ''}`
+  const key = `${JSON.stringify(look)}|${K.id}${col}|${view}|${mark?.id ?? ''}`
   const P = `f${(hashStr(key) % 1679616).toString(36)}`
   const rnd = rngOf(hashStr(JSON.stringify(look)))
   const G = geo(look), T = skinTones(lo && lum(look.skin) < 80 ? mixC(look.skin, '#8a5a3e', 0.22) : look.skin)
@@ -955,7 +1003,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + fill(poly([[50 - nw + 0.4, 62.6], [50, 75.2], [50 + nw - 0.4, 62.6], [50 + nw, 62.6], [50, 80], [50 - nw, 62.6]]), T.S)
     + (lo || G.young ? '' : fill(sm([[50 - nw + 2.6, 55], [50 - 1.8, 65.4], [50 - 2.4, 66], [50 - nw + 2, 57.4]]), T.M))
     + `</g>`
-  const shirt = look.top ? topOf(look, G, K, P, lo) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
+  const shirt = look.top ? topOf(look, G, K, P, lo, mark) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
   const headD = sm(sym(G.R))
   const vb = VIEWS[view] ?? VIEWS.full
   const close = view === 'eyes' || view === 'nose' || view === 'mouth'
