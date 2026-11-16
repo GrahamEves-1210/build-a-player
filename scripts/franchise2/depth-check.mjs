@@ -41,7 +41,9 @@ function audit(when, { counts = false } = {}) {
     }
     const L = FR.startersOf(F, s)
     for (const p of Object.values(L)) if (isGen(p) && !p.fl) { genStart++; if (p.o < 63) genLow++ }
-    for (const p of FR.benchOf(F, s)) if (p.fl) bad(`${when} ${s} filler ${p.n} in the rotation`)
+    // a filler rotates only when no healthy real man in his room is left out of the rotation
+    { const B = FR.benchOf(F, s), on = new Set([...Object.values(L), ...B].map(p => p.i)), C = FR.depthChart(F, s)
+      for (const p of B) if (p.fl) for (const k of Object.keys(C)) if (C[k].some(x => x.i === p.i) && C[k].some(x => !x.fl && !x.in && !on.has(x.i))) bad(`${when} ${s} filler ${p.n} rotates ahead of a real man`) }
     if (counts) for (const pos of FR.POS) {
       const c = t.r.filter(p => p.p === pos).length, protectedN = t.r.filter(p => p.p === pos && p.b != null).length
       if (c < FR.MIN[pos]) bad(`${when} ${s} ${pos}: ${c} < MIN ${FR.MIN[pos]}`)

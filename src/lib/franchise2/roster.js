@@ -107,7 +107,8 @@ export const startersOf = (F, short = F.team) => startersOfTeam(F.teams[short])
 // him a starter)
 export function benchFromChart(C, L = startersFromChart(C)) {
   const on = new Set(Object.values(L).map(p => p.i)), out = []
-  for (const [k, n] of Object.entries(ROT)) out.push(...C[k].filter(p => !p.in && !p.fl && !on.has(p.i)).slice(0, n))
+  // real men first; a filler only takes a rotation spot nobody else can (a team's only nickel corner), never an empty slot
+  for (const [k, n] of Object.entries(ROT)) { const ok = C[k].filter(p => !p.in && !on.has(p.i)); out.push(...[...ok.filter(p => !p.fl), ...ok.filter(p => p.fl)].slice(0, n)) }
   return out
 }
 export const benchOfTeam = (team, L) => benchFromChart(chartTeam(team), L)
