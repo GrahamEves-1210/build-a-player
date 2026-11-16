@@ -5880,6 +5880,12 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-home .ag-mode--gold.is-on { background: linear-gradient(135deg, #fbe28c 0%, #f0bd2e 48%, #c8920f 100%); color: #1d1503; }
 .ag-home .ag-mode--gold.is-on .ag-mode-title { color: #1d1503; }
 .ag-home .ag-mode--gold:focus-visible { outline-color: #f7cf55; }
+/* soccer's Champions League pool: the competition's deep navy-purple, flat (owner 11-16) */
+.ag-home .ag-mode--ucl { background: #15123a; }
+.ag-home .ag-mode--ucl .ag-mode-title { color: #c4bcff; }
+.ag-home .ag-mode--ucl.is-on { background: #2b1d86; color: #fff; }
+.ag-home .ag-mode--ucl.is-on .ag-mode-title { color: #fff; }
+.ag-home .ag-mode--ucl:focus-visible { outline-color: #c4bcff; }
 .ag-mode-title { position: absolute; left: 11px; top: 9px; z-index: 1; font-family: var(--ag-display); font-size: 21px; line-height: 1; letter-spacing: .5px; white-space: nowrap; }
 .ag-mode-line { position: absolute; left: 11px; right: 8px; top: 32px; z-index: 1; overflow: hidden; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; opacity: .85; }
 .ag-mode-faces { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: flex-end; height: 62px; padding: 0 6px; }
@@ -6595,6 +6601,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-
 .ag-home--soccer .ag-stage .ag-positions { background: #1a1b1e; }
 .ag-home--soccer .ag-mode { background: #141518; }
 .ag-home--soccer .ag-mode.is-on { background: var(--hm-a); color: var(--hm-on); }
+.ag-home--soccer .ag-mode--ucl.is-on { background: #2b1d86; color: #fff; }   /* (the Champions League card keeps its navy-purple when picked) */
 .ag-home--soccer .ag-start { background: #f2f2ee; color: #0b0c0e; }
 @media (hover: hover) { .ag-home--soccer .ag-start:hover { background: #d9d9d5; } }
 .ag-home--soccer .ag-mc--career { background: linear-gradient(100deg, rgba(8,9,11,.92) 30%, rgba(8,9,11,.35)), url('/soccerbackground.webp') center 44% / cover no-repeat, #0e0f11; }

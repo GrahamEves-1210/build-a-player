@@ -175,9 +175,9 @@ function SportSwitch({ sport }) {
 }
 
 // The pool: the players in it, standing there. It only picks; PLAY starts.
-function ModeCard({ gold = false, title, line, faces, on, onClick }) {
+function ModeCard({ gold = false, ucl = false, title, line, faces, on, onClick }) {
   return (
-    <button role="radio" aria-checked={on} className={`ag-mode${gold ? ' ag-mode--gold' : ''}${on ? ' is-on' : ''}`} onClick={onClick}>
+    <button role="radio" aria-checked={on} className={`ag-mode${gold ? ' ag-mode--gold' : ''}${ucl ? ' ag-mode--ucl' : ''}${on ? ' is-on' : ''}`} onClick={onClick}>
       <span className="ag-mode-title">{title}</span>
       <span className="ag-mode-line">{line}</span>
       <span className="ag-mode-faces" aria-hidden="true">
@@ -735,7 +735,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
         <div className="ag-modes" role="radiogroup" aria-label="Player pool">
           {/* soccer's pools: the clubs of the top five leagues, and the World Cup's nations */}
-          <ModeCard title={isSoccer ? SOCCER_POOL.current.label : 'CURRENT'} line={isSoccer ? SOCCER_POOL.current.line : `Today's ${PLURAL[position] ?? ''}`} faces={facesNow} on={pool === 'classic'} onClick={() => pickPool('classic')} />
+          <ModeCard ucl={isSoccer} title={isSoccer ? SOCCER_POOL.current.label : 'CURRENT'} line={isSoccer ? SOCCER_POOL.current.line : `Today's ${PLURAL[position] ?? ''}`} faces={facesNow} on={pool === 'classic'} onClick={() => pickPool('classic')} />
           <ModeCard gold title={isSoccer ? SOCCER_POOL.alltime.label : 'ALL-TIME'} line={isSoccer ? SOCCER_POOL.alltime.line : `The greatest ${PLURAL[position] ?? ''}`} faces={facesGreat} on={pool === 'all-time'} onClick={() => pickPool('all-time')} />
         </div>
 
