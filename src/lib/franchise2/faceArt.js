@@ -214,7 +214,7 @@ function geo(look) {
     // (the neck by his build: a lineman's as wide as his jaw, a receiver's a good deal narrower)
     nw: 10.4 + w * 3.4 + wt * 1.1,
     lean: clamp(0.45 - w * 0.3 - wt * 0.5 + chk * 0.4, 0, 1) * (young ? 0.4 : 1), soft: clamp(wt * 0.8 + w * 0.15 + (young ? 0.35 : 0), 0, 1),
-    ey: 38.3 + V.ey, es: 7.3 + sv(look, 'esp') * 0.5 + V.es, ez: 1.4 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),   // (owner 11-16: eyes bigger, a second time)
+    ey: 38.3 + V.ey, es: 6.5 + sv(look, 'esp') * 0.5 + V.es, ez: 1 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),
     nb: 47.5 + sv(look, 'nsl') * 0.9 + (look.head === 'long' ? 0.4 : 0) + V.nb,
   }
   G.by = G.ey - 2.85 - sv(look, 'brh') * 0.75 + V.by - (young ? 0.3 : 0)
@@ -222,7 +222,7 @@ function geo(look) {
   G.br = clamp(X.br + (NOSE_BR[look.nose] ?? 0), 0.2, 1.3)
   const M = MOUTH[look.mouth] ?? MOUTH.neutral
   G.M = M
-  G.mw = 4.75 * M[2] * (1 + sv(look, 'mw') * 0.1) * (0.96 + X.nk * 0.04)
+  G.mw = 5.3 * M[2] * (1 + sv(look, 'mw') * 0.1) * (0.96 + X.nk * 0.04)
   G.lk = (1 + sv(look, 'lip') * 0.35) * X.lk
   G.my = G.nb + (G.cy - G.nb) * 0.33 + V.my
   G.hl = 24.8 + ((hashStr(`${look.hair}|${look.skin}|${look.head}`) % 9) - 4) * 0.12
@@ -673,7 +673,7 @@ function noseOf(look, G, T, S, lo) {
 }
 function mouthOf(look, G, T, S, lo) {
   const { mw, my, lk, M } = G
-  const ul = 0.95 * lk * M[0], ll = 1.25 * lk * M[1], up = M[3], smirk = M[4]
+  const ul = 1.05 * lk * M[0], ll = 1.38 * lk * M[1], up = M[3], smirk = M[4]   // (owner 11-16: the mouth a little bigger)
   const Lc = [50 - mw, my + 0.1 - up], Rc = [50 + mw, my + 0.1 - up - smirk]
   const mid = [[50 - mw * 0.5, my + 0.18], [50, my + 0.28], [50 + mw * 0.5, my + 0.18 - smirk * 0.3]]
   const upper = sm([[...Lc, 1], [50 - mw * 0.55, my - ul * 0.78], [50 - 1.05, my - ul], [50, my - ul + 0.32], [50 + 1.05, my - ul], [50 + mw * 0.55, my - ul * 0.78 - smirk * 0.2], [...Rc, 1], ...mid.slice().reverse()])
