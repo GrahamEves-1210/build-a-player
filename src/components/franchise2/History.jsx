@@ -8,6 +8,7 @@ import { PlayerPage } from './dparts'
 import { outlineCls } from './bits'
 import './fd.css'
 import { teamKit } from '../../lib/franchise2/kits'
+import { memoF, warmKey } from './perf'
 
 // HISTORY: the team's hall. The banners in the rafters (division titles, conference titles, Super Bowls), the
 // rings, every season, the numbers hung up for the player's builds, the franchise's records, his builds' careers,
@@ -135,7 +136,7 @@ function BuildCareer({ F, B, owner, onOpen }) {
   const p = B.done ? null : F.teams[F.team].r.find(x => x.b === idx)
   const tot = {}
   for (const c of B.car) for (const [k, v] of Object.entries(c.st ?? {})) tot[k] = (tot[k] ?? 0) + v
-  if (p && F.phase !== 'off') { const st = leagueStats(F)[String(p.i)] ?? {}; for (const k of MAIN[B.pos] ?? []) tot[k] = (tot[k] ?? 0) + (st[k] ?? 0) }
+  if (p && F.phase !== 'off') { const st = memoF(F, 'lstats', warmKey(F), () => { try { return leagueStats(F) } catch { return {} } })[String(p.i)] ?? {}; for (const k of MAIN[B.pos] ?? []) tot[k] = (tot[k] ?? 0) + (st[k] ?? 0) }
   const counts = Object.entries(B.car.filter(c => c.aw).reduce((a, c) => ({ ...a, [c.aw]: (a[c.aw] ?? 0) + 1 }), {}))
   const pros = B.car.filter(c => c.hon === 'AP').length, bowls = B.car.filter(c => c.hon === 'AP' || c.hon === 'PB').length
   const rings = B.car.filter(c => c.ring).length

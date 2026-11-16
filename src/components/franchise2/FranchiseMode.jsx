@@ -7,6 +7,7 @@ import { sfx, haptic } from '../../lib/juice'
 import Setup from './Setup'
 import { Slots, ProspectNamer } from './Slots'
 import { FranchiseWait } from './FranchiseCard'
+import { touch } from './perf'
 const Hub = lazy(() => import('./Hub'))   // (the season's screens load once a franchise is open: the slots and the setup don't wait on them)
 import './fr2.css'
 const KitPage = import.meta.env.DEV ? lazy(() => import('./KitPage')) : null   // (dev only: ?fkit shows the kit)
@@ -40,7 +41,6 @@ function leaveNote(F) {
 export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTaken }) {
   const owner = getUsername(user) || 'Guest'
   const [slot, setSlot] = useState(() => { if (!tripBack() && !built) return null; const s = readLast(); return s != null && rawSlot(s) ? s : null })
-  const buildOut = useCallback(job => { tripOut(); onBuild?.(job) }, [onBuild])
   useEffect(() => { tripDone() }, [])   // (read once on the way in; StrictMode runs the state's first value twice)
   // the season's screens, fetched while the slots are up (the browser idle), so opening a save rarely waits on them
   useEffect(() => { const go = () => { import('./Hub').catch(() => {}) }; const id = window.requestIdleCallback ? requestIdleCallback(go, { timeout: 2500 }) : setTimeout(go, 800); return () => (window.cancelIdleCallback ? cancelIdleCallback(id) : clearTimeout(id)) }, [])
@@ -49,15 +49,27 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   const [, bump] = useState(0)
   const Fr = useRef(F); Fr.current = F
 
-  // every change to the franchise is saved (after every week and every offseason stop)
+  // every change to the franchise is saved (after every week and every offseason stop). The save itself (the whole
+  // league packed, ~150 KB) waits until the change is on screen: a tap answers first, then it's written; changes in
+  // a row are one write. Leaving the mode, the page or the tab writes it straight away.
+  const pend = useRef(null)
+  const flush = useCallback(() => { const X = pend.current; if (!X) return; pend.current = null; saveFranchise(X); leaveNote(X) }, [])
   const act = useCallback(fn => {
     const X = Fr.current
     if (!X) return
     const out = fn(X)
-    saveFranchise(X); leaveNote(X)
+    touch(X)
+    if (!pend.current) requestAnimationFrame(() => setTimeout(flush, 0))
+    pend.current = X
     bump(n => n + 1)
     return out
-  }, [])
+  }, [flush])
+  useEffect(() => {
+    const away = () => { if (document.visibilityState === 'hidden') flush() }
+    window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', away)
+    return () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', away); flush() }
+  }, [flush])
+  const buildOut = useCallback(job => { flush(); tripOut(); onBuild?.(job) }, [onBuild, flush])
   const putSetup = useCallback(s => { setSetup(s); if (s) saveSetup(s.slot, s) }, [])
 
   // a build back from the build page: into the setup (or, a Sandbox prospect, into this year's draft class)
@@ -79,6 +91,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   }, [built]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = s => {
+    flush()
     try { localStorage.setItem(LAST, String(s)) } catch {}
     const X = loadFranchise(s)
     setSlot(s); setF(X); setSetup(X ? null : rawSlot(s)?.setup ?? { slot: s, seed: newSeed(), owner, step: 'team', picks: [], builds: {} })
@@ -96,8 +109,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')
   }
-  const toSlots = () => { try { localStorage.removeItem(LAST) } catch {}; setSlot(null); setF(null); setSetup(null) }
-  const remove = () => { clearFranchise(F?.slot ?? slot); try { localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}; toSlots() }
+  const toSlots = () => { flush(); try { localStorage.removeItem(LAST) } catch {}; setSlot(null); setF(null); setSetup(null) }
+  const remove = () => { pend.current = null; clearFranchise(F?.slot ?? slot); try { localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}; toSlots() }
 
   if (KitPage && /[?&]fkit\b/.test(location.search)) return <Suspense fallback={null}><KitPage onHome={onHome} /></Suspense>   // (dev only: the kit, kit.jsx)
   if (slot == null) return <Slots owner={owner} onOpen={open} onHome={onHome} />
@@ -105,5 +118,5 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} />
   const naming = F.builds.findIndex(b => b.prospect && b.unnamed)
   if (naming >= 0) return <ProspectNamer F={F} B={F.builds[naming]} owner={owner} onDone={(name, face) => { act(X => { const B = X.builds[naming]; B.name = name; if (face) B.face = face; delete B.unnamed; for (const x of X.dc ?? []) if (x.b === naming) x.n = name }); sfx('claim') }} />
-  return <Suspense fallback={<FranchiseWait kind="hub" />}><Hub F={F} act={act} owner={owner} onHome={onHome} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>
+  return <Suspense fallback={<FranchiseWait kind="hub" />}><Hub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>
 }

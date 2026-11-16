@@ -52,8 +52,9 @@ export function colVars(col) {
 const colColor = col => school(col)?.color ?? '#2b3039'
 const colKit = col => schoolKit(school(col)) ?? colColor(col)
 const SUIT = '#1c1f25'
-// a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js)
-const faceFor = (F, x, color) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color) : faceUrl(x.fk ?? x.n, facePos(x), color))
+// a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js); small: a list row's, the
+// lighter drawing
+const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color, small ? 'sm' : 'full') : faceUrl(x.fk ?? x.n, facePos(x), color, null, small))
 const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
@@ -72,7 +73,7 @@ function Prospect({ F, x, rank, onOpen, line, right, delay = 0, starOk = true, a
         {rank != null && <span className="dr-p-rank">{rank}</span>}
         <span className="dr-p-slab" style={colVars(x.col)} aria-hidden="true">
           <span className="dr-p-num">{x.nu}</span>
-          <img className="dr-p-face" src={faceFor(F, x, colKit(x.col))} alt="" draggable={false} />
+          <img className="dr-p-face" src={faceFor(F, x, colKit(x.col), true)} alt="" loading="lazy" decoding="async" draggable={false} />
         </span>
         <span className="dr-p-bar">
           <span className="dr-p-name"><small>{first}</small><b>{last}</b></span>
@@ -653,7 +654,7 @@ function ClassRecap({ F, act, owner }) {
         {rv.mine.map((p, i) => i < n && (
           <div key={p.at} className="dr-cls">
             <span className="dr-cls-no"><small>RD {roundOf(p.at)}</small><b>{p.at + 1}</b></span>
-            <span className="dr-p-slab" style={fkVars(F.team)}><span className="dr-p-num">{nu(p)}</span><img className="dr-p-face" src={faceFor(F, p, teamKit(F.team) ?? TEAM[F.team].color)} alt="" draggable={false} /></span>
+            <span className="dr-p-slab" style={fkVars(F.team)}><span className="dr-p-num">{nu(p)}</span><img className="dr-p-face" src={faceFor(F, p, teamKit(F.team) ?? TEAM[F.team].color, true)} alt="" loading="lazy" decoding="async" draggable={false} /></span>
             <span className="dr-p-bar"><span className="dr-p-name"><small>{splitName(p.n).first}</small><b>{splitName(p.n).last}</b></span><span className="dr-p-meta"><em>{pickSpot(p)}</em><CollegeLogo col={p.col} size={15} /><span>{schoolName(p.col)}</span></span></span>
             <span className="dr-cls-o"><small>OURS</small><b>{p.my != null ? gradeOf(p.my) : '—'}</b></span>
             <span className="dr-cls-g"><small>TRUE</small><b>{gradeOf(p.pk)}</b></span>

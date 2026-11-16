@@ -1,13 +1,16 @@
-import { useState } from 'react'
-import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText } from '../../lib/franchise2'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
+import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, BigNum, fkVars, BackBar } from './kit'
-import { Man, CapBar, PlayerPage, dealText, money } from './dparts'
+import { Chyron, BigNum, fkVars, BackBar, LowerThird } from './kit'
+import { Man, CapBar, PlayerPage, dealText, money, faceFor, posText } from './dparts'
 import { StaffStrip, StaffScreen } from './Staff'
+import { revOf, useStaged } from './perf'
 
 // TEAM: the depth chart. The order the games play: the starters on top of each room, the men behind them in the
 // order they come in. Tap a man to move him (up, down, to the top, to the room next door) or open his page.
 // The cap on top; tap it for where the money goes.
+// (a slow phone: the chart is worked out once per change to the franchise, and a tap redraws only the rows it
+// changes: each row is a memo of plain values)
 const ROOM_NAME = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', ol: 'OFFENSIVE LINE', edge: 'EDGE RUSHERS', dt: 'INTERIOR LINE', lb: 'LINEBACKERS', cb: 'CORNERBACKS', s: 'SAFETIES' }
 const NEXT_DOOR = { edge: 'dt', dt: 'edge', cb: 's', s: 'cb' }
 
@@ -17,53 +20,69 @@ export default function TeamTab({ F, act, owner }) {
   const [page, setPage] = useState(null)       // a man's page open
   const [cap, setCap] = useState(false)
   const [staff, setStaff] = useState(false)   // the coaching staff (Staff.jsx)
-  const C = depthChart(F, F.team), L = startersOf(F, F.team)
-  const st = strength(F, F.team)
-  const starting = new Set(Object.values(L).map(p => p.i))
+  const rev = revOf(F)
+  // the chart, who starts and each man's row (the same lower-third Man draws), once per change to the franchise
+  const D = useMemo(() => {
+    const C = depthChart(F, F.team), L = startersOf(F, F.team)
+    const starting = new Set(Object.values(L).map(p => p.i))
+    const rooms = {}
+    for (const k of [...OFF_GROUPS, ...DEF_GROUPS]) {
+      let up = 0
+      rooms[k] = C[k].map((p, i) => {
+        const starts = starting.has(p.i)
+        const slot = starts ? (k === 'ol' ? OL_SPOTS[up] : `${GROUP[k].label}${up + 1}`) : `${i + 1}`
+        if (starts) up++
+        const size = starts ? 'm' : 's'
+        return {
+          id: p.i, i, starts, hurt: !!p.in, slot: p.in ? 'OUT' : slot,
+          name: p.n, pos: posText(p), num: jersey(F, p), ovr: p.o, photo: faceFor(F, p, F.team, size === 's'), mine: p.b != null ? owner || 'GM' : null,
+          line: p.in ? outText(p) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p), size,
+        }
+      })
+      rooms[k].short = C[k].filter(p => !p.in).length < GROUP[k].n
+    }
+    return { rooms, st: strength(F, F.team) }
+  }, [F, rev, owner]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { rooms, st } = D
   const groups = side === 'off' ? OFF_GROUPS : DEF_GROUPS
-  const tap = p => { setPick(pick === p.i ? null : p.i); sfx('tap'); haptic('light') }
-  const move = to => { const id = pick; act(X => moveInChart(X, id, to)); sfx('swap'); haptic('medium') }
-  if (staff) return <StaffScreen F={F} act={act} owner={owner} onBack={() => { setStaff(false); sfx('back') }} />
-  if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
-  return (
-    <div className="fd fk">
+  // (opening the tab: the first two rooms on the first frame, the rest a room a frame, so a phone shows the first
+  // screenful sooner; offense and defense swap whole, in place)
+  const shown = useStaged(cap || staff ? 0 : groups.length, 2)
+  // (the rows' taps read the latest state through one stable function)
+  const api = useRef(null)
+  api.current = {
+    tap: id => { setPick(cur => (cur === id ? null : id)); sfx('tap'); haptic('light') },
+    page: id => { setPage(id); setPick(null); sfx('tap') },
+    move: (id, to) => { act(X => moveInChart(X, id, to)); sfx('swap'); haptic('medium') },
+    group: (id, k) => { act(X => setGroup(X, id, k)); setPick(null); sfx('swap') },
+  }
+  const run = useCallback((k, ...a) => api.current[k](...a), [])
+  // (the header, the cap and the staff change only with the franchise: a tap on a row leaves them be)
+  const top = useMemo(() => (
+    <>
       <Chyron team={F.team} title="DEPTH CHART" tag={F.year} right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)} · TAP A PLAYER TO MOVE HIM`} />
       <div className="fd-team-top">
         <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
         <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
       </div>
+    </>
+  ), [F, rev, st]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (staff) return <StaffScreen F={F} act={act} owner={owner} onBack={() => { setStaff(false); sfx('back') }} />
+  if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
+  return (
+    <div className="fd fk">
+      {top}
       <div className="fd-seg" role="tablist">
         {[['off', 'OFFENSE'], ['def', 'DEFENSE']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
       </div>
       <div className="fd-rooms">
-      {groups.map((k, gi) => {
-        const men = C[k], n = GROUP[k].n
-        let up = 0
+      {groups.slice(0, shown).map((k, gi) => {
+        const men = rooms[k]
         return (
           <section key={k} className="fd-room" style={{ '--d': `${gi * 40}ms` }}>
             <div className="fd-room-h"><b>{ROOM_NAME[k]}</b><small>{men.length}</small></div>
-            {men.map((p, i) => {
-              const starts = starting.has(p.i)
-              const slot = starts ? (k === 'ol' ? OL_SPOTS[up] : `${GROUP[k].label}${up + 1}`) : `${i + 1}`
-              if (starts) up++
-              const on = pick === p.i
-              return (
-                <div key={p.i} className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${p.in ? ' is-hurt' : ''}`}>
-                  <span className="fd-dc-slot">{p.in ? 'OUT' : slot}</span>
-                  <Man F={F} p={p} s={F.team} owner={owner} size={starts ? 'm' : 's'} line={p.in ? outText(p) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p)} onClick={() => tap(p)} />
-                  {on && (
-                    <div className="fd-dc-acts">
-                      <button onClick={() => { setPage(p.i); setPick(null); sfx('tap') }}>Player page</button>
-                      <button disabled={i === 0} onClick={() => move(0)}>To the top</button>
-                      <button disabled={i === 0} onClick={() => move(i - 1)}>▲ Up</button>
-                      <button disabled={i === men.length - 1} onClick={() => move(i + 1)}>▼ Down</button>
-                      {NEXT_DOOR[k] && <button onClick={() => { act(X => setGroup(X, p.i, NEXT_DOOR[k])); setPick(null); sfx('swap') }}>Move to {GROUP[NEXT_DOOR[k]].label}</button>}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            {men.filter(p => !p.in).length < n && <div className="fd-dc fd-dc--empty"><span className="fd-dc-slot">+</span><span className="fd-empty">{NEXT_DOOR[k] ? `A ${GROUP[NEXT_DOOR[k]].label} FILLS IN` : 'SHORT A MAN'}</span></div>}
+            {men.map(r => <DcRow key={r.id} {...r} team={F.team} last={men.length - 1} on={pick === r.id} next={NEXT_DOOR[k]} run={run} />)}
+            {men.short && <div className="fd-dc fd-dc--empty"><span className="fd-dc-slot">+</span><span className="fd-empty">{NEXT_DOOR[k] ? `A ${GROUP[NEXT_DOOR[k]].label} FILLS IN` : 'SHORT A MAN'}</span></div>}
           </section>
         )
       })}
@@ -73,6 +92,24 @@ export default function TeamTab({ F, act, owner }) {
     </div>
   )
 }
+// one man on the chart: his slot, his lower-third and (picked) what he can do
+const DcRow = memo(function DcRow({ id, i, last, starts, hurt, slot, on, next, run, team, name, pos, num, ovr, photo, mine, line, size }) {
+  return (
+    <div className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${hurt ? ' is-hurt' : ''}`}>
+      <span className="fd-dc-slot">{slot}</span>
+      <LowerThird name={name} pos={pos} num={num} ovr={ovr} photo={photo} team={team} mine={mine} line={line} size={size} onClick={() => run('tap', id)} />
+      {on && (
+        <div className="fd-dc-acts">
+          <button onClick={() => run('page', id)}>Player page</button>
+          <button disabled={i === 0} onClick={() => run('move', id, 0)}>To the top</button>
+          <button disabled={i === 0} onClick={() => run('move', id, i - 1)}>▲ Up</button>
+          <button disabled={i === last} onClick={() => run('move', id, i + 1)}>▼ Down</button>
+          {next && <button onClick={() => run('group', id, next)}>Move to {GROUP[next].label}</button>}
+        </div>
+      )}
+    </div>
+  )
+})
 
 // ── THE CAP: where the money goes ────────────────────────────────────────────
 function CapScreen({ F, owner, act, onBack, page, setPage }) {
