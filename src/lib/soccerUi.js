@@ -25,7 +25,7 @@ export const soccerAsBucketBuild = build => Object.fromEntries(Object.entries(bu
 export const SOCCER_POOL = {
   // (the wheel's clubs are the Champions League's 36 since 11-16; Career still plays the domestic leagues)
   current: { key: 'current', mode: 'classic', label: 'CHAMPIONS LEAGUE', short: 'UCL', line: 'The 36 clubs of 2026-27', team: 'CLUB', teams: 'clubs' },
-  alltime: { key: 'alltime', mode: 'all-time', label: 'WORLD CUP', short: 'WORLD CUP', line: 'The 48 nations of 2026', team: 'NATION', teams: 'nations' },
+  alltime: { key: 'alltime', mode: 'all-time', label: 'WORLD CUP', short: 'WORLD CUP', line: '48 nations across history', team: 'NATION', teams: 'nations' },
 }
 // the app's game modes are 'classic' / 'all-time' (like basketball); the pool key from either
 export const soccerPoolOf = gameMode => (gameMode === 'all-time' || gameMode === 'alltime' ? 'alltime' : 'current')

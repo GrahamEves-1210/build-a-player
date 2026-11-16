@@ -217,7 +217,7 @@ function SoccerSplash({ onStart }) {
             <div className="splash-modes-secondary">
               <button className="splash-mode-alltime" onClick={() => onStart('all-time', 'st')}>
                 <div className="smode-title">World Cup</div>
-                <div className="smode-badge">The 48 nations</div>
+                <div className="smode-badge">48 nations across history</div>
               </button>
               {SOCCER_MODES.salary && (
                 <button className="splash-mode-salarycap" onClick={() => onStart('salarycap', 'st')}>
