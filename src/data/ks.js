@@ -3,8 +3,8 @@ const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color,
 
 export { K_LIVE } from '../lib/kLive'   // the switch for everything players see about the kicker
 
-// Kickers: the current-player pool for K mode. One per team, the man kicking now on ESPN's rosters (Nov 10, 2026);
-// a second only where two placekickers are on the active roster (the Rams: McManus kicks, Karty kicks off).
+// Kickers: the current-player pool for K mode. One per team: the starter on ESPN's depth chart (Nov 10, 2026; the Rams'
+// is McManus, owner 11-16: one kicker a team, so the kickoff man Karty is out).
 // Three ratings on the 0-11 grade scale (F … S), graded from 2025 and 2026 production (ESPN season stats and play-by-play):
 //   power     50+ makes and attempts, the longest makes, how often he's sent out from 55+
 //   accuracy  field goal percentage, weighted to 40-49 and in, extra-point misses against him
@@ -129,9 +129,6 @@ const _KS = [
   { name: "Brandon McManus", short: "McManus", team: 'LAR', teamName: "Los Angeles Rams", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 75, weight: 201, number: 19, starter: true,
     fg25: '24/30', fg26: '3/3', long: 56,
     attrs: { power: 5, accuracy: 4, clutch: 5 } },
-  { name: "Joshua Karty", short: "Karty", team: 'LAR', teamName: "Los Angeles Rams", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 74, weight: 208, number: 16, starter: false,
-    fg25: '10/15', fg26: null, long: 51,
-    attrs: { power: 5, accuracy: 3, clutch: 3 } },
   // MIA
   { name: "Zane Gonzalez", short: "Gonzalez", team: 'MIA', teamName: "Miami Dolphins", pos: 'K', subpos: 'k', skin: '#f0c4a0', height: 72, weight: 202, number: 45, starter: true,
     fg25: '19/22', fg26: '5/7', long: 56,
