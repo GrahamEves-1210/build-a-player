@@ -72,6 +72,16 @@ const WC_FINISH = {
   'Quarter-finals': 'OUT IN THE QUARTER-FINALS', 'Round of 16': 'OUT IN THE ROUND OF 16', 'Round of 32': 'OUT IN THE ROUND OF 32', 'Group stage': 'OUT IN THE GROUP STAGE',
 }
 const BDO_FINISH = { winner: 'BALLON D\'OR WINNER', top3: 'THE BALLON D\'OR PODIUM', top10: 'IN THE BALLON D\'OR TOP 10', nominated: 'BALLON D\'OR NOMINEE' }
+// A build's season is the Champions League (since 2026-11-16: utils/soccerSimulation.js uclSeason). A season kept from
+// before that is a domestic one, and plays out on the domestic screens as it always did (isUclResult tells them apart).
+const UCL_FINISH = {
+  'Winners': 'CHAMPIONS LEAGUE WINNERS', 'Runners-up': 'RUNNERS-UP', 'Semi-finals': 'OUT IN THE SEMI-FINALS', 'Quarter-finals': 'OUT IN THE QUARTER-FINALS',
+  'Round of 16': 'OUT IN THE ROUND OF 16', 'Knockout play-offs': 'OUT IN THE KNOCKOUT PLAY-OFFS', 'League phase': 'OUT IN THE LEAGUE PHASE',
+}
+const UCL_TAG = { po: 'PO', r16: 'R16', qf: 'QF', sf: 'SF', final: 'FINAL' }
+// the league phase table's bands: 1st-8th the Round of 16, 9th-24th the play-offs, 25th-36th out
+const UCL_INFO = { ucl: 8, uel: 16, down: 12 }
+const fxTag = m => (m.comp === 'ucl' ? (m.stage === 'md' ? `MD${m.md ?? ''}` : UCL_TAG[m.stage] ?? 'UCL') : null)
 
 // A crest: the club's or the nation's (a club without art gets its code)
 // (a side outside the data, Europe's other clubs or a cup's lower-league one, has no art: `extra`)
@@ -245,7 +255,7 @@ function LeagueTable({ rows = [], pool, info, compact = false }) {
         {rows.map(row => (
           <tr key={row.short} className={`${row.isUs ? 'is-us' : ''}${zone(row.pos)}`}>
             <td className="ssp-c-pos">{row.pos}</td>
-            <td className="ssp-c-team"><Crest short={row.short} pool={pool} size={18} /><span>{teamOf(row.short, pool)?.name ?? row.name ?? row.short}</span></td>
+            <td className="ssp-c-team"><Crest short={row.short} pool={pool} size={18} extra={!!row.extra} /><span>{teamOf(row.short, pool)?.name ?? row.name ?? row.short}</span></td>
             <td>{row.played}</td><td>{row.wins}</td><td>{row.draws}</td><td>{row.losses}</td>
             <td>{row.gd > 0 ? `+${row.gd}` : row.gd}</td><td className="ssp-c-pts">{row.points}</td>
           </tr>
@@ -263,7 +273,7 @@ function Fixtures({ list = [], pool, league, initial = 10 }) {
       <ol className="ssp-fx">
         {shown.map((m, i) => {
           const res = resultOf(m)
-          const tag = m.comp === 'league' ? (league?.short ?? 'LGE') : m.comp === 'cup' ? 'CUP' : m.stage ? STAGE_TAG[m.stage] ?? 'WC' : COMP_TAG[m.comp] ?? String(m.comp).toUpperCase()
+          const tag = fxTag(m) ?? (m.comp === 'league' ? (league?.short ?? 'LGE') : m.comp === 'cup' ? 'CUP' : m.stage ? STAGE_TAG[m.stage] ?? 'WC' : COMP_TAG[m.comp] ?? String(m.comp).toUpperCase())
           return (
             <li key={i} className={`ssp-fx-row is-${String(res).toLowerCase()}`}>
               <span className="ssp-fx-comp">{tag}</span>
@@ -385,7 +395,7 @@ function lineOf(ms) {
   }
 }
 // the wire: what the papers say as the matches come in (the latest one shows)
-function wireOf(games, n, { userName, team, isWc }) {
+function wireOf(games, n, { userName, team, isWc, isUcl = false }) {
   const out = []
   const club = team?.name ?? 'The side'
   let run = 0, winless = 0, goals = 0
@@ -404,7 +414,7 @@ function wireOf(games, n, { userName, team, isWc }) {
     else if (winless >= 4 && winless % 2 === 0) out.push(`${club} without a win in ${winless}`)
     else if (res === 'W' && i === 0) out.push(`${club} open with a win over ${opp}`)
     const mk = marks.find(x => before < x && goals >= x)
-    if (mk && !isWc) out.push(`${userName} reaches ${mk} league goals`)
+    if (mk && !isWc && !isUcl) out.push(`${userName} reaches ${mk} league goals`)
   }
   return out
 }
@@ -412,35 +422,40 @@ function wireOf(games, n, { userName, team, isWc }) {
 // dr: the season director's reveal (the moments on: SeasonMoments.jsx), else the season plays straight from the result
 function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, seen, dr = null, M = null }) {
   const isWc = pool === 'alltime'
+  const isUcl = !isWc && SoccerSim.isUclResult(r)
+  // (the Champions League's league phase: eight matches, a beat each, as the World Cup's group)
+  const short = isWc || isUcl
   const games = useMemo(() => (dr ? dr.all : isWc ? (r.games ?? []).filter(g => g.stage === 'group') : (r.games ?? [])), [r, isWc, dr?.all])
   const total = games.length
   // basketball's pace: the season in about six seconds (a group's three matches a beat each)
-  const sr = useSeasonReveal(total, { pace: isWc ? 850 : Math.round(5600 / Math.max(1, total)), instant: seen || !!dr })
+  const sr = useSeasonReveal(total, { pace: isWc ? 850 : isUcl ? 700 : Math.round(5600 / Math.max(1, total)), instant: seen || !!dr })
   const rv = dr ? { n: dr.k, phase: dr.done ? 'done' : dr.k === 0 ? 'loading' : 'playing', done: dr.done } : sr
   useEffect(() => { if (rv.done) onDone?.() }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (rv.done && !adsDisabled && window.innerWidth <= 768) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }]) }, [rv.done]) // eslint-disable-line react-hooks/exhaustive-deps
   // the season awards, tallied: the Golden Boot, then the Player of the Season, then the button
-  const k = useStaged(rv.done, isWc ? [600] : [2700, 3050, 4100, 4700], seen)
+  const k = useStaged(rv.done, short ? [600] : [2700, 3050, 4100, 4700], seen)
   const shown = dr ? dr.games : games.slice(0, rv.n)
   const W = shown.filter(g => resultOf(g) === 'W').length, D = shown.filter(g => resultOf(g) === 'D').length, L = shown.length - W - D
-  const wireOwn = useMemo(() => (dr ? [] : wireOf(games, rv.n, { userName, team: r.team, isWc })), [games, rv.n, !!dr]) // eslint-disable-line react-hooks/exhaustive-deps
+  const wireOwn = useMemo(() => (dr ? [] : wireOf(games, rv.n, { userName, team: r.team, isWc, isUcl })), [games, rv.n, !!dr]) // eslint-disable-line react-hooks/exhaustive-deps
   const wire = dr ? dr.headlines.filter(h => h.at <= dr.k).map(h => h.text) : wireOwn
   const lg = r.league ?? {}
   const gb = r.goldenBoot, poty = r.playerOfSeason
   const head = isWc
     ? (r.seed === 1 ? 'TOP OF THE GROUP' : r.madePlayoffs ? `THROUGH IN ${ordinal(r.seed).toUpperCase()}` : `${ordinal(r.seed).toUpperCase()} · OUT IN THE GROUP`)
+    : isUcl ? (r.seed === 1 ? 'TOP OF THE LEAGUE PHASE' : `${ordinal(r.seed ?? 0)} in the league phase`.toUpperCase())
     : r.champion ? `${String(lg.name ?? 'League').toUpperCase()} CHAMPIONS` : r.relegated ? 'RELEGATED' : `${ordinal(r.seed ?? 0)} in ${inLeague(lg.name)}`.toUpperCase()
-  const cta = isWc ? (r.madePlayoffs ? 'Enter the Knockouts' : 'The Knockouts') : 'Enter the Knockouts'
+  const cta = short ? (r.madePlayoffs ? 'Enter the Knockouts' : 'The Knockouts') : 'Enter the Knockouts'
+  const band = isUcl ? (r.seed <= 8 ? 'Through to the Round of 16' : r.seed <= 24 ? 'Into the knockout play-offs' : 'Out of the competition') : null
   return (
     <div className="simp-screen ssp-season">
-      {rv.phase === 'loading' && <SimLoading label={isWc ? 'Simulating the group…' : 'Simulating season…'} />}
+      {rv.phase === 'loading' && <SimLoading label={isWc ? 'Simulating the group…' : isUcl ? 'Simulating the league phase…' : 'Simulating season…'} />}
       {rv.phase !== 'loading' && (
         <>
-          <div className="simp-eyebrow">{isWc ? `World Cup · Group ${r.conference}` : `${lg.name ?? 'League'} · ${r.season}`}</div>
+          <div className="simp-eyebrow">{isWc ? `World Cup · Group ${r.conference}` : isUcl ? `Champions League · League phase · ${r.season}` : `${lg.name ?? 'League'} · ${r.season}`}</div>
           <div className="simp-live-record ssp-live-record">
             <span className="slr-w">{W}</span><span className="slr-sep">–</span><span className="slr-d">{D}</span><span className="slr-sep">–</span><span className="slr-l">{L}</span>
           </div>
-          <div className="ssp-live-pts">{W * 3 + D} PTS · {total - shown.length > 0 ? `${total - shown.length} ${isWc ? 'to play' : 'matches left'}` : isWc ? 'the group is done' : 'full time on the season'}</div>
+          <div className="ssp-live-pts">{W * 3 + D} PTS · {total - shown.length > 0 ? `${total - shown.length} ${isWc ? 'to play' : 'matches left'}` : isWc ? 'the group is done' : isUcl ? 'the league phase is done' : 'full time on the season'}</div>
           {!isWc && <Pulse games={shown} total={total} step={g => (resultOf(g) === 'W' ? 1 : resultOf(g) === 'D' ? 0 : -1)} need={Math.round(total * 0.3)} />}
           <WireLine items={wire} />
           {dr && M && <M.MomentsLayer dr={dr} userName={userName} />}
@@ -449,18 +464,26 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
           </div>
           {rv.done && (
             <>
-              <div className={`ssp-hero${(isWc ? r.seed <= 2 : r.champion) ? ' is-champ' : ''}`}>
-                <span className="ssp-eyebrow">{isWc ? `FIFA World Cup ${r.season} · Group ${r.conference}` : `${lg.name} · ${r.season}`}</span>
+              <div className={`ssp-hero${(isWc ? r.seed <= 2 : isUcl ? r.seed === 1 : r.champion) ? ' is-champ' : ''}`}>
+                <span className="ssp-eyebrow">{isWc ? `FIFA World Cup ${r.season} · Group ${r.conference}` : isUcl ? `Champions League ${r.season} · League phase` : `${lg.name} · ${r.season}`}</span>
                 <h2 className="ssp-head">{head}</h2>
                 <div className="ssp-record"><b>{r.wins}</b>W<b>{r.draws}</b>D<b>{r.losses}</b>L<em>·</em><b>{r.points}</b>PTS<em>·</em><b>{r.gf}</b>–<b>{r.ga}</b></div>
+                {band && <span className="ssp-band">{band}</span>}
               </div>
               {isWc
                 ? <Section title={`GROUP ${r.conference}`}><LeagueTable rows={r.standings} pool="alltime" compact /></Section>
+                : isUcl ? (
+                  <Section title="THE TABLE" aside={`${r.standings?.length ?? 36} clubs`}>
+                    <LeagueTable rows={r.standings} pool="current" info={UCL_INFO} />
+                    <p className="ssp-zone-key"><span className="is-ucl">1–8 Round of 16</span><span className="is-uel">9–24 knockout play-offs</span><span className="is-down">25–36 out</span></p>
+                    {r.team?.inPlaceOf && <p className="ssp-line-notes">{r.team.name} play in the place of {r.standings.find(x => x.short === r.team.inPlaceOf)?.name ?? teamOf(r.team.inPlaceOf, 'current')?.name ?? r.team.inPlaceOf}, in pot {r.team.pot}.</p>}
+                  </Section>
+                )
                 : <Section title="THE TABLE" aside={r.qualified ? { ucl: 'Champions League next season', uel: 'Europa League next season', uecl: 'Conference League next season' }[r.qualified] : null}><LeagueTable rows={r.standings} pool="current" info={info} /></Section>}
               {!adsDisabled && <div id="ramp-cntr1-square" className="simp-season-ad" />}
-              {isWc ? <GroupLine ms={games} /> : <StrikerLine r={r} title={`THE ${String(lg.name ?? 'LEAGUE').toUpperCase()} SEASON`} comps={false} />}
-              <Section title={isWc ? 'THE GROUP GAMES' : 'MATCH BY MATCH'}><Fixtures list={games} pool={pool} league={lg} initial={isWc ? 3 : 10} /></Section>
-              {!isWc && gb?.race?.length > 0 && (() => {
+              {isWc ? <GroupLine ms={games} /> : isUcl ? <GroupLine ms={shown} title="THE LEAGUE PHASE" /> : <StrikerLine r={r} title={`THE ${String(lg.name ?? 'LEAGUE').toUpperCase()} SEASON`} comps={false} />}
+              <Section title={isWc ? 'THE GROUP GAMES' : 'MATCH BY MATCH'}><Fixtures list={games} pool={pool} league={lg} initial={isWc ? 3 : isUcl ? 8 : 10} /></Section>
+              {!short && gb?.race?.length > 0 && (() => {
                 const top = gb.race.slice(0, 6)
                 const meIn = top.some(e => e.isPlayer)
                 const meE = gb.race.find(e => e.isPlayer) ?? { isPlayer: true, team: r.team?.short, goals: gb.goals }
@@ -468,7 +491,7 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
                   .map(({ e, rank }) => ({ rank, me: !!e.isPlayer, name: e.isPlayer ? <NameTag name={userName} self /> : e.name, team: teamOf(e.team, 'current')?.name ?? e.team, value: e.goals ?? 0 }))
                 return <LeadersBoard label="GOALS" rows={rows} rank={gb.rank} who={userName} />
               })()}
-              {!isWc && (gb || poty) && (
+              {!short && (gb || poty) && (
                 <>
                   <div className="sawd-title">Season Awards</div>
                   {k === 0 && <div className="sawd-tallying"><div className="sawd-tally-dots"><span className="sawd-dot" /><span className="sawd-dot" /><span className="sawd-dot" /></div><div className="sawd-tally-lbl">Tallying votes…</div></div>}
@@ -488,7 +511,7 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
                   )}
                 </>
               )}
-              {(isWc ? k >= 1 : k >= 4) && <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>{cta}</button>}
+              {(short ? k >= 1 : k >= 4) && <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>{cta}</button>}
             </>
           )}
         </>
@@ -496,10 +519,10 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
     </div>
   )
 }
-function GroupLine({ ms }) {
+function GroupLine({ ms, title = 'THE GROUP STAGE' }) {
   const s = lineOf(ms)
   return (
-    <Section title="THE GROUP STAGE">
+    <Section title={title}>
       <Tiles items={[[s.goals, s.goals === 1 ? 'GOAL' : 'GOALS', true], [s.assists, s.assists === 1 ? 'ASSIST' : 'ASSISTS', true], [s.apps, 'APPS'], [s.shots, 'SHOTS'], [one(s.xg), 'xG'], [one(s.avgRating), 'AVG RATING']]} />
     </Section>
   )
@@ -572,11 +595,12 @@ function LegLive({ m, before, label, team, pool, userName, speed, paused, onDone
 
 function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen }) {
   const isWc = pool === 'alltime'
+  const isUcl = !isWc && SoccerSim.isUclResult(r)
   const ties = useMemo(() => (r.playoffRounds ?? []).filter(t => t?.legs?.length), [r])
   const team = r.team
-  const compName = t => (isWc ? 'World Cup' : t.comp === 'cup' ? (r.cup?.name ?? 'The Cup') : (r.europe?.name ?? 'Europe'))
+  const compName = t => (isWc ? 'World Cup' : isUcl ? 'Champions League' : t.comp === 'cup' ? (r.cup?.name ?? 'The Cup') : (r.europe?.name ?? 'Europe'))
   const roundName = t => (isWc ? (STAGE_NAME[t.legs?.[0]?.stage] ?? t.name) : t.name)
-  const title = t => (isWc ? roundName(t) : `${compName(t)} ${roundName(t)}`)
+  const title = t => (isWc || isUcl ? roundName(t) : `${compName(t)} ${roundName(t)}`)
   const oppOf = t => teamOf(t.opponent?.short, pool)?.name ?? t.opponent?.name ?? t.opponent?.short
   const last = ties[ties.length - 1]
   const champ = isWc ? !!r.champion : !!(last?.final && last.won)
@@ -612,16 +636,33 @@ function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen 
     setTi(ties.length - 1); setLi(0); setStatus('end')
   }
   const tiesDone = status === 'end' ? ties.length : status === 'between' ? ti + 1 : ti
-  const nextLbl = isWc ? 'The Awards →' : 'Ballon d\'Or →'
+  const nextLbl = isWc || isUcl ? 'The Awards →' : 'Ballon d\'Or →'
+  // (the Champions League's bracket: the rounds before his current tie have their scores, his round its pairings)
+  const uclUpto = status === 'end' ? 99 : (ties[tiesDone]?.roundIndex ?? 99)
+  const uclRoad = isUcl && (
+    <Section title="THE BRACKET" aside={`${ordinal(r.seed ?? 0)} of ${r.standings?.length ?? 36} in the league phase`}>
+      <UclBracket bracket={r.bracket} us={team?.short} upto={uclUpto} rows={r.standings} />
+    </Section>
+  )
 
   // out in the group: no knockouts (basketball's Missed the Playoffs)
   if (isWc && !r.madePlayoffs) {
     return <MissCard eyebrow="The Knockouts" title="Out in the Group Stage" sub={`${ordinal(r.seed ?? 0)} in Group ${r.conference}`} onNext={onNext} />
   }
+  // out after the league phase: the competition goes on without them (its bracket, played to the final)
+  if (isUcl && (!r.madePlayoffs || !ties.length)) {
+    return (
+      <div className="ssp-ucl-out">
+        <MissCard eyebrow="The Knockouts" title="Out in the League Phase" sub={`${ordinal(r.seed ?? 0)} of ${r.standings?.length ?? 36}. The top 24 go through.`} cta={nextLbl} onNext={onNext} />
+        <div className="simp-screen">{uclRoad}</div>
+      </div>
+    )
+  }
   if (!ties.length) return <MissCard eyebrow="Cups & Europe" title="No Cup Run" sub="No knockout football this season." onNext={onNext} />
 
   const road = isWc
     ? <Section title="THE BRACKET"><Bracket bracket={r.bracket} us={team?.short} upto={status === 'end' ? 99 : tiesDone} /></Section>
+    : isUcl ? uclRoad
     : (
       <Section title="THE ROAD">
         {r.europe && <p className="ssp-europe-pos"><b>{r.europe.name}</b>: {ordinal(r.europe.position ?? 0)} in the league phase{r.europe.table?.length ? ` of ${r.europe.table.length}` : ''}{r.europe.result === 'League phase' ? ', out' : ''}</p>}
@@ -634,9 +675,9 @@ function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen 
   if (!started) {
     return (
       <div className="simp-screen">
-        <div className="simp-eyebrow" style={{ textAlign: 'center' }}>{isWc ? 'The Knockouts' : 'Cups & Europe'}</div>
+        <div className="simp-eyebrow" style={{ textAlign: 'center' }}>{isWc || isUcl ? 'The Knockouts' : 'Cups & Europe'}</div>
         <div className="tipoff-header ssp-kickoff">
-          <div className="tipoff-sub">{isWc ? `Group ${r.conference} · ${ordinal(r.seed ?? 0)}` : [r.cup?.name, r.europe?.name].filter(Boolean).join(' · ')}</div>
+          <div className="tipoff-sub">{isWc ? `Group ${r.conference} · ${ordinal(r.seed ?? 0)}` : isUcl ? `Champions League · ${ordinal(r.seed ?? 0)} in the league phase` : [r.cup?.name, r.europe?.name].filter(Boolean).join(' · ')}</div>
           <div className="ssp-first">First up: {title(ties[0])} vs {oppOf(ties[0])}</div>
           <button className="tipoff-spin-btn" onClick={() => setStarted(true)}>KICK OFF</button>
         </div>
@@ -656,7 +697,7 @@ function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen 
   const matchLog = <Section title="MATCH BY MATCH"><Fixtures list={log} pool={pool} initial={20} /></Section>
   return (
     <div className="simp-screen">
-      <div className="simp-eyebrow-row"><div className="simp-eyebrow">{isWc ? 'The Knockouts' : 'Cups & Europe'}</div></div>
+      <div className="simp-eyebrow-row"><div className="simp-eyebrow">{isWc ? 'The Knockouts' : isUcl ? 'Champions League' : 'Cups & Europe'}</div></div>
       {status === 'end' && (
         <>
           {champ
@@ -702,7 +743,7 @@ function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen 
               label={`${title(t)}${t.legs.length > 1 ? ` · ${li === 0 ? 'First' : 'Second'} Leg` : ''}`} />
           )}
           <div className="po-log-toggle-row">
-            <SpeedSeg speed={speed} paused={paused} onSpeed={v => { setSpeed(v); setPaused(false) }} onPause={() => setPaused(true)} onSkip={skip} skipLabel={['Skip', isWc ? 'Knockouts' : 'Cups']} />
+            <SpeedSeg speed={speed} paused={paused} onSpeed={v => { setSpeed(v); setPaused(false) }} onPause={() => setPaused(true)} onSkip={skip} skipLabel={['Skip', isWc || isUcl ? 'Knockouts' : 'Cups']} />
             {log.length > 0 ? <button className="po-log-toggle-btn" onClick={() => setShowLog(s => !s)}>{showLog ? 'Hide' : 'View'} Match Log</button> : <div />}
           </div>
           {showLog && matchLog}
@@ -734,6 +775,35 @@ function Bracket({ bracket, us, upto = 99 }) {
                   : <span key={j} className="ssp-br-t is-tbd"><em>TBD</em><b /></span>))}
               </div>
             ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// the Champions League's bracket: play-offs, Round of 16, quarter-finals, semi-finals, the final, each tie's aggregate
+// (penalties after); `upto`: the round he's playing (the rounds before it have their scores, his its pairings)
+const UCL_COLS = [['po', 'PO'], ['r16', 'R16'], ['qf', 'QF'], ['sf', 'SF'], ['final', 'FINAL']]
+function UclBracket({ bracket, us, upto = 99, rows = [] }) {
+  const noLogo = useMemo(() => new Set(rows.filter(x => x.extra).map(x => x.short)), [rows])
+  if (!bracket) return null
+  return (
+    <div className="ssp-bracket ssp-bracket--ucl">
+      {UCL_COLS.map(([k, tag], ri) => {
+        const known = ri < upto, open = ri === upto
+        return (
+          <div key={k} className="ssp-br-col">
+            <span className="ssp-br-rnd">{tag}</span>
+            <div className="ssp-br-list">
+              {(bracket[k] ?? []).map((t, i) => (
+                <div key={i} className={`ssp-br-m${(known || open) && (t.a === us || t.b === us) ? ' is-us' : ''}`}>
+                  {[[t.a, t.sa, 0], [t.b, t.sb, 1]].map(([s, g, j]) => (known || open
+                    ? <span key={j} className={`ssp-br-t${known && t.winner === s ? ' is-w' : ''}`}><Crest short={s} pool="current" size={14} extra={noLogo.has(s)} /><em>{s}</em><b>{known ? <>{g}{t.pens ? <small>({t.pens[j]})</small> : null}</> : ''}</b></span>
+                    : <span key={j} className="ssp-br-t is-tbd"><em>TBD</em><b /></span>))}
+                </div>
+              ))}
             </div>
           </div>
         )
@@ -839,13 +909,52 @@ function ScreenWcAwards({ r, onNext, userName }) {
   )
 }
 
+// A Champions League season: UEFA's awards, counted one at a time (the top scorer, the Player of the Season, the Young
+// Player of the Season, the Team of the Season)
+function ScreenUclAwards({ r, onNext, userName }) {
+  const gb = r.goldenBoot, poty = r.playerOfSeason, young = r.youngPlayer
+  const k = useStaged(true, [2000, 2700, 3400, 4100, 4700])
+  return (
+    <div className="simp-screen goat-screen ssp-legacy">
+      <div className="goat-screen-title">THE AWARDS</div>
+      <div className="goat-page-title">Champions League {r.season}</div>
+      <div className="goat-eyebrow">THE SEASON'S BEST</div>
+      {k === 0 && <Checking label="Counting the votes…" />}
+      {k >= 1 && <div className="ag-pop"><StrikerLine r={r} title="THE CAMPAIGN" comps={false} /></div>}
+      {k >= 2 && gb && (
+        <div className="ag-pop">
+          <Award title="TOP SCORER" won={gb.won} tag={gb.won ? (gb.shared ? 'SHARED' : 'WINNER') : `${ordinal(gb.rank)} · ${gb.goals} ${gb.goals === 1 ? 'GOAL' : 'GOALS'}`}>
+            <Race list={gb.race} userName={userName} pool="current" />
+          </Award>
+        </div>
+      )}
+      {k >= 3 && poty && (
+        <div className="ag-pop">
+          <Award title="PLAYER OF THE SEASON" won={poty.won} tag={poty.won ? 'WINNER' : `WON BY ${who(poty.winner, userName).toUpperCase()}`}>
+            <Race list={poty.top} userName={userName} pool="current" unit={null} n={5} />
+            {r.teamOfSeason && <p className="ssp-award-note">{userName} is named in the Team of the Season.</p>}
+          </Award>
+        </div>
+      )}
+      {k >= 4 && young?.eligible && (
+        <div className="ag-pop"><Award title="YOUNG PLAYER OF THE SEASON" won={young.won} tag={young.won ? 'WINNER' : `WON BY ${who(young.winner, userName).toUpperCase()}`} /></div>
+      )}
+      {k >= 5 && <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginTop: 12 }}>Final Report →</button>}
+    </div>
+  )
+}
+
 function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, isSalaryMode, adsDisabled }) {
   const isWc = pool === 'alltime'
+  const isUcl = !isWc && SoccerSim.isUclResult(r)
   const lg = r.league ?? {}
   const head = isWc ? (WC_FINISH[r.finish] ?? 'THE WORLD CUP')
+    : isUcl ? (UCL_FINISH[r.finish] ?? 'THE CHAMPIONS LEAGUE')
     : r.champion ? `${String(lg.name ?? 'League').toUpperCase()} CHAMPIONS` : r.relegated ? 'RELEGATED' : `${ordinal(r.seed ?? 0)} in ${inLeague(lg.name)}`.toUpperCase()
   const ribbons = isWc
     ? [r.champion && 'WORLD CHAMPIONS', r.goldenBoot?.won && 'GOLDEN BOOT', r.goldenBall?.medal && r.goldenBall.medal.toUpperCase(), r.bestYoungPlayer?.won && 'BEST YOUNG PLAYER'].filter(Boolean)
+    : isUcl
+    ? [r.champion && 'CHAMPIONS LEAGUE WINNERS', r.goldenBoot?.won && (r.goldenBoot.shared ? 'JOINT TOP SCORER' : 'TOP SCORER'), r.playerOfSeason?.won && 'PLAYER OF THE SEASON', r.youngPlayer?.won && 'YOUNG PLAYER OF THE SEASON', r.teamOfSeason && 'TEAM OF THE SEASON'].filter(Boolean)
     : [...(r.trophies ?? []).map(t => t.toUpperCase()), r.goldenBoot?.won && String(r.goldenBoot.name ?? 'Golden Boot').toUpperCase(), r.playerOfSeason?.won && 'PLAYER OF THE SEASON', r.goldenShoe?.won && 'GOLDEN SHOE', BDO_FINISH[r.ballonDor?.finish]].filter(Boolean)
   const tier = r.champion ? 'champ' : r.madePlayoffs ? 'playoffs' : 'miss'
   const card = useMemo(() => ({
@@ -865,18 +974,18 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
     <div className="simp-screen ssp-screen ssp-final">
       {APP_SIM && <SeasonRewards result={r} />}
       <div className={`ssp-hero is-final${r.champion ? ' is-champ' : ''}`}>
-        <span className="ssp-eyebrow">{userName} · ST · {isWc ? `World Cup ${r.season}` : `${r.team?.name} ${r.season}`}</span>
+        <span className="ssp-eyebrow">{userName} · ST · {isWc ? `World Cup ${r.season}` : isUcl ? `${r.team?.name} · Champions League ${r.season}` : `${r.team?.name} ${r.season}`}</span>
         <h2 className="ssp-head">{head}</h2>
         <div className="ssp-final-ovr"><b>{r.ovr}</b><small>OVR</small><span>{arch}</span></div>
         {ribbons.length > 0 && <div className="ssp-ribbons">{ribbons.map(x => <span key={x}>{x}</span>)}</div>}
       </div>
       {APP_SIM && <ShareSeasonButton card={card} className="ssp-share" />}
-      <Tiles items={[[r.goals ?? 0, `${isWc ? '' : 'LEAGUE '}${r.goals === 1 ? 'GOAL' : 'GOALS'}`, true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true], isWc ? [r.apps ?? 0, 'APPS'] : [r.allComps?.goals ?? r.goals ?? 0, 'ALL COMPS'], [one(r.avgRating), 'AVG RATING']]} />
+      <Tiles items={[[r.goals ?? 0, `${isWc || isUcl ? '' : 'LEAGUE '}${r.goals === 1 ? 'GOAL' : 'GOALS'}`, true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true], isWc || isUcl ? [r.apps ?? 0, 'APPS'] : [r.allComps?.goals ?? r.goals ?? 0, 'ALL COMPS'], [one(r.avgRating), 'AVG RATING']]} />
       {best && (
         <div className="simp-best-game">
           <div className="simp-section-lbl">Best Match</div>
           <div className="simp-best-body">
-            <span className="sbg-week">{isWc ? (STAGE_TAG[best.stage] ?? 'WC') : `MW ${best.wk ?? best.g ?? ''}`}</span>
+            <span className="sbg-week">{isWc ? (STAGE_TAG[best.stage] ?? 'WC') : fxTag(best) ?? `MW ${best.wk ?? best.g ?? ''}`}</span>
             <span className="sbg-opp">{best.neutral ? 'v' : best.home ? 'vs' : '@'} {bestOpp}</span>
             <span className="sbg-line">{scoreOf(best)} · {best.goals ?? 0} {best.goals === 1 ? 'goal' : 'goals'}{best.assists ? `, ${best.assists} ${best.assists === 1 ? 'assist' : 'assists'}` : ''}{best.rating != null ? ` · ${one(best.rating)}` : ''}</span>
           </div>
@@ -909,7 +1018,8 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const [screen, setScreen] = useState(() => (keptDone && kept.screen > 0 ? Math.min(LAST, kept.screen) : reopened ? LAST : kept && kept.screen > 0 ? 1 : 0))
   useRailOn(screen)   // each screen brings the bottom rail back
   useEffect(() => { if (kept) savePos(kept, { screen }) }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
-  const info = useMemo(() => (!isWc && result?.league?.id ? SoccerSim.soccerLeagueInfo?.(result.league.id) : null), [isWc, result])
+  const isUcl = !isWc && SoccerSim.isUclResult(result)
+  const info = useMemo(() => (isUcl ? UCL_INFO : !isWc && result?.league?.id ? SoccerSim.soccerLeagueInfo?.(result.league.id) : null), [isWc, isUcl, result])
   // what's been watched once plays back straight to its end (Back onto it)
   const [seen, setSeen] = useState(() => (keptDone ? { season: true, ko: kept.screen > 2 } : reopened ? { season: true, ko: true } : {}))
   // the season as played: the result, or the director's booked season once the moments have changed it
@@ -977,7 +1087,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
       : keptDir && !(director && M) ? null   // (the director still loading: never the plain season, which would book the unsteered one)
       : <ScreenSeason key="season" r={r} pool={pool} info={info} onNext={next} onDone={() => { if (!director) book(result) }} userName={userName} adsDisabled={adsDisabled} seen={!!seen.season} />,
     <ScreenKnockouts key="ko" r={r} pool={pool} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.ko} onSeen={() => setSeen(s => ({ ...s, ko: true }))} />,
-    isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} />,
+    isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} /> : isUcl ? <ScreenUclAwards key="awards" r={r} onNext={next} userName={userName} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} />,
     <ScreenFinal key="final" r={r} pool={pool} build={build} types={types} arch={arch} onReset={reset} onBack={back} userName={userName} isSalaryMode={isSalaryMode} adsDisabled={adsDisabled} />,
   ]
   const teamStyle = team ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color } : undefined

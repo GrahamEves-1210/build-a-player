@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, fkVars, BackBar, LowerThird } from './kit'
@@ -57,10 +57,17 @@ export default function TeamTab({ F, act, owner }) {
     group: (id, k) => { act(X => setGroup(X, id, k)); setPick(null); sfx('swap') },
   }
   const run = useCallback((k, ...a) => api.current[k](...a), [])
+  // a tap anywhere off the picked man (and his buttons) lets him go
+  useEffect(() => {
+    if (pick == null) return
+    const off = e => { if (!e.target.closest?.('.fd-dc.is-pick')) setPick(null) }
+    document.addEventListener('pointerdown', off, true)
+    return () => document.removeEventListener('pointerdown', off, true)
+  }, [pick])
   // (the header, the cap and the staff change only with the franchise: a tap on a row leaves them be)
   const top = useMemo(() => (
     <>
-      <Chyron team={F.team} title="DEPTH CHART" tag={F.year} right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)} · TAP A PLAYER TO MOVE HIM`} />
+      <Chyron team={F.team} title="DEPTH CHART" right={`${st.ovr} OVR`} sub={`OFFENSE ${sideGrade(st.off)} · DEFENSE ${sideGrade(st.def)}`} />
       <div className="fd-team-top">
         <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
         <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
@@ -75,6 +82,7 @@ export default function TeamTab({ F, act, owner }) {
       <div className="fd-seg" role="tablist">
         {[['off', 'OFFENSE'], ['def', 'DEFENSE']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
       </div>
+      <p className="fd-hint">Tap a player to move him</p>
       <div className="fd-rooms">
       {groups.slice(0, shown).map((k, gi) => {
         const men = rooms[k]

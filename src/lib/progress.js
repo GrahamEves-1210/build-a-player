@@ -88,17 +88,18 @@ export function levelUnlocks(level, from = level - 1) {
 // Same weights the rebuild from saved seasons uses (see sync), so a season is
 // worth the same either way.
 export const XP = { season: 20, winning: 15, playoffs: 25, ring: 100, award: 60 }
-// (soccer: a club season wins half its 38 games; a World Cup's run is out of the group, its title the trophy)
+// (soccer: a build's season is the Champions League, five of its eight league phase matches won; Career's club season
+// wins half its 38; a World Cup's run is out of the group, its title the trophy)
 // (baseball: 82 of its 162, lib/baseballAwards.js BASEBALL_WINNING)
 // a baseball season's wins in the cross-sport win total: 82 of its 162 games, a basketball season's worth
 export const BASEBALL_WIN_WEIGHT = 82 / 162
-const winningSeason = d => (d.sport === 'bucket' ? d.wins >= 50 : d.sport === 'cfb' ? d.wins >= 9 : d.sport === 'cbb' ? d.wins >= 22 : d.sport === 'soccer' ? (d.mode === 'all-time' ? d.wins >= 3 : d.wins >= 19) : d.sport === 'baseball' ? d.wins >= 82 : d.wins >= 10)
+const winningSeason = d => (d.sport === 'bucket' ? d.wins >= 50 : d.sport === 'cfb' ? d.wins >= 9 : d.sport === 'cbb' ? d.wins >= 22 : d.sport === 'soccer' ? (d.mode === 'all-time' ? d.wins >= 3 : d.mode === 'career' ? d.wins >= 19 : d.wins >= 5) : d.sport === 'baseball' ? d.wins >= 82 : d.wins >= 10)
 export function seasonLines(d) {
   const winning = winningSeason(d)
   const lines = [{ label: 'Season played', xp: XP.season }]
   if (winning) lines.push({ label: 'Winning season', xp: XP.winning })
-  if (d.playoffs && d.sport !== 'bucket') lines.push({ label: d.sport === 'cfb' ? 'Made the College Football Playoff' : d.sport === 'cbb' ? 'Made the NCAA Tournament' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'Out of the group' : 'Champions League football') : d.sport === 'baseball' ? 'Made the postseason' : 'Made the playoffs', xp: XP.playoffs })
-  if (d.champion) lines.push({ label: d.sport === 'cfb' || d.sport === 'cbb' ? 'National Champions' : d.sport === 'bucket' ? 'NBA Champions' : d.sport === 'baseball' ? 'World Series Champions' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'World Cup winners' : 'League champions') : 'Super Bowl Champions', xp: XP.ring })
+  if (d.playoffs && d.sport !== 'bucket') lines.push({ label: d.sport === 'cfb' ? 'Made the College Football Playoff' : d.sport === 'cbb' ? 'Made the NCAA Tournament' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'Out of the group' : d.mode === 'career' ? 'Champions League football' : 'Champions League knockouts') : d.sport === 'baseball' ? 'Made the postseason' : 'Made the playoffs', xp: XP.playoffs })
+  if (d.champion) lines.push({ label: d.sport === 'cfb' || d.sport === 'cbb' ? 'National Champions' : d.sport === 'bucket' ? 'NBA Champions' : d.sport === 'baseball' ? 'World Series Champions' : d.sport === 'soccer' ? (d.mode === 'all-time' ? 'World Cup winners' : d.mode === 'career' ? 'League champions' : 'Champions League winners') : 'Super Bowl Champions', xp: XP.ring })
   if (d.award) lines.push({ label: d.awardName ? `${d.awardName} award` : 'Season award', xp: XP.award })
   return lines
 }
@@ -971,13 +972,13 @@ async function sync(force = false) {
   try {
     const count = q => q.then(r => (r.error ? null : r.count ?? 0))
     const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', id)
-    // (soccer's rows: a winning season is 19 league wins, or all three group games; its awards are
+    // (soccer's rows: a winning season is 5 Champions League league phase wins, or all three group games; its awards are
     // season_award tags, one award's XP a season like everywhere else. Its modes: lib/soccerAwards.js)
     const [seasons, playoffs, rings, winning, bucketAwards, allPros, dlDpoys, acct, soccerAwards, baseballAwards] = await Promise.all([
       count(base()),
       count(base().eq('playoffs', true)),
       count(base().eq('champion', true)),
-      count(base().or('and(game_mode.like.bucket*,wins.gte.50),and(game_mode.eq.soccer-classic,wins.gte.19),and(game_mode.eq.soccer-all-time,wins.gte.3),and(game_mode.like.baseball*,wins.gte.82),and(game_mode.not.like.bucket*,game_mode.not.like.soccer*,game_mode.not.like.baseball*,wins.gte.10)')),
+      count(base().or('and(game_mode.like.bucket*,wins.gte.50),and(game_mode.eq.soccer-classic,wins.gte.5),and(game_mode.eq.soccer-all-time,wins.gte.3),and(game_mode.like.baseball*,wins.gte.82),and(game_mode.not.like.bucket*,game_mode.not.like.soccer*,game_mode.not.like.baseball*,wins.gte.10)')),
       count(base().or('mvp.is.true,dpoy.is.true')),
       count(base().eq('season_award', 'allpro')),
       count(base().eq('season_award', 'dpoy').or('game_mode.like.dl-*,game_mode.like.lb-*')),   // DL's and LB's: no counter on accounts, like All-Pros
@@ -1121,10 +1122,10 @@ export function initProgress() {
 // or two, rares within a week, epics in one to two weeks, legendaries (~5,500–
 // 13,000) in two to four.
 // (baseball's 162 games: 0.1 a win, so a 100-win season pays about what a 17-0 football one does)
-export const COINS = { season: 10, winNfl: 1, winNba: 0.25, winSoccer: 0.45, winBaseball: 0.1, playoffs: 10, ring: 40, award: 25, daily: 20, free: 25, freePro: 50 }
+export const COINS = { season: 10, winNfl: 1, winNba: 0.25, winSoccer: 0.45, winUcl: 2, winBaseball: 0.1, playoffs: 10, ring: 40, award: 25, daily: 20, free: 25, freePro: 50 }
 export function seasonCoins(d) {
   if (d.sandbox) return 0
-  let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : d.sport === 'soccer' ? COINS.winSoccer : d.sport === 'baseball' ? COINS.winBaseball : COINS.winNfl))
+  let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : d.sport === 'soccer' ? (d.mode === 'career' || d.mode === 'all-time' ? COINS.winSoccer : COINS.winUcl) : d.sport === 'baseball' ? COINS.winBaseball : COINS.winNfl))
   if (d.playoffs) c += COINS.playoffs
   if (d.champion) c += COINS.ring
   if (d.award) c += COINS.award

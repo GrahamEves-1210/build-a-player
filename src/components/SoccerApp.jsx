@@ -687,7 +687,7 @@ export default function SoccerApp() {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
         sport: 'soccer', pos: 'st', mode: 'salarycap', localOnly: true, infinite: !!saveData?.infinite,
         wins: result.wins ?? 0, losses: result.losses ?? 0, playoffs: !!result.madePlayoffs,
-        champion: !!result.champion, award: !!(result.mvp || result.goldenBoot), awardName: result.mvp ? 'Player of the Season' : 'Golden Boot',
+        champion: !!result.champion, award: soccerAwardTags(result).length > 0, awardName: soccerAwardName(soccerAwardTags(result), SoccerSim.isUclResult?.(result)),
         ovr: result.ovr, ref: result,
       } }))
     }
@@ -752,7 +752,7 @@ export default function SoccerApp() {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
         sport: 'soccer', pos: 'st', mode: gameMode,
         wins: result.wins ?? 0, losses: result.losses ?? 0, playoffs: !!result.madePlayoffs,
-        champion: !!result.champion, award: soccerAwardTags(result).length > 0, awardName: soccerAwardName(soccerAwardTags(result)), awards: soccerAwardTags(result),
+        champion: !!result.champion, award: soccerAwardTags(result).length > 0, awardName: soccerAwardName(soccerAwardTags(result), SoccerSim.isUclResult?.(result)), awards: soccerAwardTags(result),
         ovr: result.ovr, sandbox: !!saveBlock, ref: result,
       } }))
     }

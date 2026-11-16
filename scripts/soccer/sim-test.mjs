@@ -1,7 +1,8 @@
 // Soccer sim check: node scripts/soccer/sim-test.mjs [seasons=500]
 // Bundles src/utils/soccerSimulation.js with esbuild (SOCCER_FIXTURE=1: always the fixture). The data imports go to src/data/soccer-*.js when the data
 // agent's files are there, and to scripts/soccer/fixture/ when they aren't (printed at the top).
-// Plays N club seasons for an elite, good, average and poor build at the Premier League's best and worst
+// Plays N domestic club seasons (Career's and Squad Builder's: team.domestic; a build's own season is the Champions
+// League, scripts/soccer/ucl-test.mjs) for an elite, good, average and poor build at the Premier League's best and worst
 // clubs, N World Cups for each at a top and a weak nation, then checks determinism, script mode and that
 // every line adds up.
 import { build } from 'esbuild'
@@ -84,7 +85,7 @@ function check(r, tag) {
 function clubRun(bk, club, n) {
   const R = []
   const t0 = Date.now()
-  for (let i = 0; i < n; i++) { const r = S.runSoccerSimulation(BUILDS[bk], T, club, 'current', `test-${bk}-${club.short}-${i}`); check(r, `${bk}/${club.short}/${i}`); R.push(r) }
+  for (let i = 0; i < n; i++) { const r = S.runSoccerSimulation(BUILDS[bk], T, { ...club, domestic: true }, 'current', `test-${bk}-${club.short}-${i}`); check(r, `${bk}/${club.short}/${i}`); R.push(r) }
   const ms = (Date.now() - t0) / n
   const g = k => mean(R.map(r => r[k] ?? 0))
   return {
