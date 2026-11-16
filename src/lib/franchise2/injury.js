@@ -28,11 +28,11 @@ import { depthChart, startersOf, groupOf, GROUPS } from './roster'
 // (headless checks count every injury here: scripts/franchise2/sim.mjs, gameday.mjs)
 export const TALLY = { on: false, rows: [] }
 export const QOL = 0.8                 // the NFL's rate times this, for every man (owner: a bit gentler than real)
-const RATE = { qb: 0.025, rb: 0.052, wr: 0.045, te: 0.049, ol: 0.034, edge: 0.039, dt: 0.043, lb: 0.043, cb: 0.044, s: 0.047 }
+const RATE = { qb: 0.025, rb: 0.052, wr: 0.045, te: 0.049, ol: 0.034, edge: 0.039, dt: 0.043, lb: 0.043, cb: 0.044, s: 0.047, k: 0.006 }
 const EXPOSE = { start: 1.4, rest: 0.15 }
 // the men behind the starters who play: how many in each room, and how much (a backup QB or guard hardly plays; the
 // second running back, the third and fourth receivers, the line's rotation, the nickel corner do)
-const NEXT = { qb: [1, 0.2], rb: [1, 0.85], wr: [2, 0.85], te: [1, 0.85], ol: [2, 0.35], edge: [2, 0.85], dt: [2, 0.85], lb: [1, 0.6], cb: [1, 0.85], s: [1, 0.6] }
+const NEXT = { qb: [1, 0.2], rb: [1, 0.85], wr: [2, 0.85], te: [1, 0.85], ol: [2, 0.35], edge: [2, 0.85], dt: [2, 0.85], lb: [1, 0.6], cb: [1, 0.85], s: [1, 0.6], k: [0, 0] }
 const SEASON = 60                       // weeks out for a season-ender (cleared at the end of the season)
 
 // the injuries, each as a team reports it, how common (share of all missed-game injuries, %), its time out, and where
@@ -120,7 +120,7 @@ export function rollInjuries(F, short, R) {
       seen.add(p.i)
       const ex = on.has(p.i) ? EXPOSE.start : nextUp++ < NEXT[k][0] ? NEXT[k][1] : EXPOSE.rest
       if (R.u() < RATE[k] * ex * QOL) {
-        const ij = hurt(F, p, R)
+        const ij = hurt(F, p, R, { minor: k === 'k' })
         out.push([p, ij, on.has(p.i)])
         if (TALLY.on) TALLY.rows.push({ y: F.year, wk: F.phase === 'playoffs' ? 18 + F.po.rd : F.wk, s: short, g: k, st: on.has(p.i), b: p.b != null, i: p.i, w: ij.w, se: !!ij.se, l: ij.l, nx: ij.nx ?? 0 })
       }

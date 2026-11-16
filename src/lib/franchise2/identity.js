@@ -1,7 +1,7 @@
 // FRANCHISE: a build's name and number.
 // Every build the player makes gets a first and last name (Career's name step: the same letters, the same
 // random-name lists) and a jersey number his position may wear under the NFL's rule (2023 on):
-//   QB 0-19 · RB / WR / TE 0-49 and 80-89 · OL 50-79 · DL 50-79 and 90-99 · LB 0-59 and 90-99 · DB 0-49
+//   QB 0-19 · RB / WR / TE 0-49 and 80-89 · OL 50-79 · DL 50-79 and 90-99 · LB 0-59 and 90-99 · DB 0-49 · K 0-49 and 90-99
 // and that nobody else on the team wears (the real men's numbers from the data, the other builds').
 import { FIRST_NAMES, LAST_NAMES, pickName } from '../playerNames'
 import { realPool } from './league'
@@ -21,10 +21,10 @@ export function randomFirstLast(not = null, rnd = Math.random) {
 const span = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i)
 export const LEGAL = {
   qb: span(0, 19), rb: [...span(0, 49), ...span(80, 89)], wr: [...span(0, 49), ...span(80, 89)], te: [...span(0, 49), ...span(80, 89)],
-  ol: span(50, 79), dl: [...span(50, 79), ...span(90, 99)], lb: [...span(0, 59), ...span(90, 99)], db: span(0, 49),
+  ol: span(50, 79), dl: [...span(50, 79), ...span(90, 99)], lb: [...span(0, 59), ...span(90, 99)], db: span(0, 49), k: [...span(0, 49), ...span(90, 99)],
 }
 // the numbers a position usually wears first (the picker opens on these; any legal one can be typed in)
-const USUAL = { qb: span(1, 19), rb: [...span(20, 39), 0, ...span(1, 9)], wr: [...span(10, 19), ...span(80, 89), ...span(1, 9)], te: [...span(80, 89), ...span(40, 49)], ol: span(60, 79), dl: [...span(90, 99), ...span(50, 59)], lb: [...span(40, 59), ...span(0, 9)], db: [...span(20, 39), ...span(0, 9)] }
+const USUAL = { qb: span(1, 19), rb: [...span(20, 39), 0, ...span(1, 9)], wr: [...span(10, 19), ...span(80, 89), ...span(1, 9)], te: [...span(80, 89), ...span(40, 49)], ol: span(60, 79), dl: [...span(90, 99), ...span(50, 59)], lb: [...span(40, 59), ...span(0, 9)], db: [...span(20, 39), ...span(0, 9)], k: [...span(1, 19), ...span(30, 39)] }
 export const legalFor = (pos, n) => Number.isInteger(n) && (LEGAL[pos] ?? []).includes(n)
 // the numbers the real men on a team wear (by the data)
 export function realNumbers(team) {
@@ -58,6 +58,6 @@ export function pickNumber(pos, taken, rnd = Math.random) {
 export function rookieSlots(builds) {
   const order = builds.map((b, i) => ({ i, o: ovrOf(b.pos, b.build) })).sort((a, b) => b.o - a.o || a.i - b.i)
   const out = [], used = new Set()
-  for (const x of order) out[x.i] = buildSlot(x.o)   // (two 90s both sign the No. 1 pick's deal: the price is his OVR's)
+  for (const x of order) out[x.i] = buildSlot(x.o, builds[x.i].pos)   // (two 90s both sign the No. 1 pick's deal: the price is his OVR's)
   return out
 }

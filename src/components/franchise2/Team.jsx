@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
-import { GROUP, OFF_GROUPS, DEF_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
+import { GROUP, OFF_GROUPS, DEF_GROUPS, ST_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, fkVars, BackBar, LowerThird } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money, faceFor, posText } from './dparts'
@@ -11,7 +11,7 @@ import { revOf, useStaged } from './perf'
 // The cap on top; tap it for where the money goes.
 // (a slow phone: the chart is worked out once per change to the franchise, and a tap redraws only the rows it
 // changes: each row is a memo of plain values)
-const ROOM_NAME = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', ol: 'OFFENSIVE LINE', edge: 'EDGE RUSHERS', dt: 'INTERIOR LINE', lb: 'LINEBACKERS', cb: 'CORNERBACKS', s: 'SAFETIES' }
+const ROOM_NAME = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', ol: 'OFFENSIVE LINE', edge: 'EDGE RUSHERS', dt: 'INTERIOR LINE', lb: 'LINEBACKERS', cb: 'CORNERBACKS', s: 'SAFETIES', k: 'KICKER' }
 const NEXT_DOOR = { edge: 'dt', dt: 'edge', cb: 's', s: 'cb' }
 
 export default function TeamTab({ F, act, owner }) {
@@ -26,7 +26,7 @@ export default function TeamTab({ F, act, owner }) {
     const C = depthChart(F, F.team), L = startersOf(F, F.team)
     const starting = new Set(Object.values(L).map(p => p.i))
     const rooms = {}
-    for (const k of [...OFF_GROUPS, ...DEF_GROUPS]) {
+    for (const k of [...OFF_GROUPS, ...DEF_GROUPS, ...ST_GROUPS]) {
       let up = 0
       rooms[k] = C[k].map((p, i) => {
         const starts = starting.has(p.i)
@@ -44,7 +44,7 @@ export default function TeamTab({ F, act, owner }) {
     return { rooms, st: strength(F, F.team) }
   }, [F, rev, owner]) // eslint-disable-line react-hooks/exhaustive-deps
   const { rooms, st } = D
-  const groups = side === 'off' ? OFF_GROUPS : DEF_GROUPS
+  const groups = side === 'off' ? OFF_GROUPS : side === 'def' ? DEF_GROUPS : ST_GROUPS
   // (opening the tab: the first two rooms on the first frame, the rest a room a frame, so a phone shows the first
   // screenful sooner; offense and defense swap whole, in place)
   const shown = useStaged(cap || staff ? 0 : groups.length, 2)
@@ -73,7 +73,7 @@ export default function TeamTab({ F, act, owner }) {
     <div className="fd fk">
       {top}
       <div className="fd-seg" role="tablist">
-        {[['off', 'OFFENSE'], ['def', 'DEFENSE']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
+        {[['off', 'OFFENSE'], ['def', 'DEFENSE'], ['st', 'SPECIAL TEAMS']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
       </div>
       <div className="fd-rooms">
       {groups.slice(0, shown).map((k, gi) => {

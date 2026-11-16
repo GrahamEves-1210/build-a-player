@@ -19,7 +19,7 @@ import { EV, KEYS, playFootballSeason, playBucketSeason, honorsOf, fbCase, bkCas
 import {
   calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, scriptNFLSeason,
   calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult,
-  getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, getArchetypeOL, dlBuildSpot, olBuildSpot, nflHeadshot, HEADSHOT_BASE, valToGrade,
+  getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, getArchetypeOL, calcOVRK, getArchetypeK, dlBuildSpot, olBuildSpot, nflHeadshot, HEADSHOT_BASE, valToGrade,
 } from '../utils/simulation'
 import { scriptBucketSeason, calcBucketOVR, TEAM_RATINGS, ALLTIME_TEAM_RATINGS, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
@@ -30,6 +30,7 @@ import { DBS, DB_TYPES } from '../data/dbs'
 import { DLS, DL_TYPES } from '../data/dls'
 import { LBS, LB_TYPES } from '../data/lbs'
 import { OLS, OL_TYPES } from '../data/ols'
+import { K_TYPES } from '../data/ks'
 import { NFL_TEAMS, ALLTIME_RATINGS } from '../data/nfl-teams'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
@@ -72,9 +73,9 @@ const poolOf = sq => (sq?.pool === 'alltime' ? 'alltime' : 'current')
 
 // ── Per position ─────────────────────────────────────────────────────────────
 const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, lb: LBS, ol: OLS, guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }
-export const TYPES_OF = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, dl: DL_TYPES, lb: LB_TYPES, ol: OL_TYPES, guard: GUARD_TYPES, big: BIG_TYPES, st: ST_TYPES }
+export const TYPES_OF = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, dl: DL_TYPES, lb: LB_TYPES, ol: OL_TYPES, k: K_TYPES, guard: GUARD_TYPES, big: BIG_TYPES, st: ST_TYPES }
 const OVR = {
-  qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES), dl: b => calcOVRDL(b, DL_TYPES), lb: b => calcOVRLB(b, LB_TYPES), ol: b => calcOVROL(b, OL_TYPES),
+  qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES), dl: b => calcOVRDL(b, DL_TYPES), lb: b => calcOVRLB(b, LB_TYPES), ol: b => calcOVROL(b, OL_TYPES), k: b => calcOVRK(b, K_TYPES) ?? 0,
   guard: b => calcBucketOVR(b, GUARD_TYPES, 'guard'), big: b => calcBucketOVR(b, BIG_TYPES, 'big'),
   st: b => SX.calcSoccerOVR(b, ST_TYPES),
   bat: b => BB?.ovrOf('bat', b) ?? 0, pit: b => BB?.ovrOf('pit', b) ?? 0,
@@ -82,7 +83,7 @@ const OVR = {
 export const ovrOf = (pos, build) => Math.round(OVR[pos]?.(build || {}) ?? 0)
 const ARCH = {
   qb: (o, b) => getArchetype(o, b, TYPES), rb: (o, b) => getArchetypeRB(o, b, RB_TYPES), wr: (o, b) => getArchetypeWR(o, b, WR_TYPES),
-  te: (o, b) => getArchetypeTE(o, b, TE_TYPES), db: (o, b) => getArchetypeDB(o, b, DB_TYPES), dl: (o, b) => getArchetypeDL(o, b, DL_TYPES), lb: (o, b) => getArchetypeLB(o, b, LB_TYPES), ol: (o, b) => getArchetypeOL(o, b, OL_TYPES),
+  te: (o, b) => getArchetypeTE(o, b, TE_TYPES), db: (o, b) => getArchetypeDB(o, b, DB_TYPES), dl: (o, b) => getArchetypeDL(o, b, DL_TYPES), lb: (o, b) => getArchetypeLB(o, b, LB_TYPES), ol: (o, b) => getArchetypeOL(o, b, OL_TYPES), k: (o, b) => getArchetypeK(o, b, K_TYPES),
   guard: (o, b) => getBucketGuardArchetype(o, b, GUARD_TYPES), big: (o, b) => getBucketBigArchetype(o, b, BIG_TYPES),
   st: (o, b) => SX.getSoccerArchetype(o, b, ST_TYPES),
   bat: (o, b) => BB?.nameOf('bat', b) ?? null, pit: (o, b) => BB?.nameOf('pit', b) ?? null,

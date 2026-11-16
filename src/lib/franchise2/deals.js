@@ -155,7 +155,7 @@ export const SAY = {
 // ── Last season's line ───────────────────────────────────────────────────────
 // p.ls: [team, games, ...his position's numbers (LINE_KEYS)] on every man who played, from the end of the season
 // until the new one starts (the market's cards read it); a veteran the market made up: [his old team, 0]
-const LINE_KEYS = { qb: ['py', 'ptd', 'int'], rb: ['ry', 'rtd', 'rctd', 'rc'], wr: ['rc', 'ryd', 'rctd'], te: ['rc', 'ryd', 'rctd'], ol: ['sa'], dl: ['sck', 'tfl'], lb: ['tk', 'sck', 'dint'], db: ['dint', 'pbu', 'tk'] }
+const LINE_KEYS = { qb: ['py', 'ptd', 'int'], rb: ['ry', 'rtd', 'rctd', 'rc'], wr: ['rc', 'ryd', 'rctd'], te: ['rc', 'ryd', 'rctd'], ol: ['sa'], dl: ['sck', 'tfl'], lb: ['tk', 'sck', 'dint'], db: ['dint', 'pbu', 'tk'], k: ['fgm', 'fga', 'lg'] }
 export function snapLines(F, tot) {
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const t = tot[String(p.i)]

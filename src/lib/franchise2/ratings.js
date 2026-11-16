@@ -20,7 +20,7 @@
 // 3. The play-caller (coach.js coachEdge, the side's sim edge) in rating points: a great caller is worth 2-3.
 // 4. Year one only: a share of the real 2025 season (points scored and allowed), the way a preseason power rating
 //    carries last year in. It fades every offseason (offseason.js: x 0.6 a year) and the rosters take over.
-// OVR = (OFFENSE + DEFENSE) / 2. No special teams: the rosters carry no kickers.
+// OVR = (OFFENSE + DEFENSE) / 2. The kicker isn't in it: his kicks are played in the game itself (game.js fgChance).
 //
 // WIN ODDS: the games read toSim of the two numbers. The sim is about 1.5 points of margin a point of edge (the
 // offense's sim rating minus the defense's), so 10 points of OVR is 20 of the two sides = 7.1 of edge = a 10-point

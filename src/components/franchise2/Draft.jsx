@@ -22,6 +22,7 @@ import { OL_ATTR } from '../../data/ols'
 import { DL_ATTR } from '../../data/dls'
 import { LB_ATTR } from '../../data/lbs'
 import { DB_ATTR } from '../../data/dbs'
+import { K_ATTR } from '../../data/ks'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, Spin, fkVars, reduced, splitName, ActionBar } from './kit'
 import './draft.css'
@@ -32,7 +33,7 @@ import { teamKit, schoolKit } from '../../lib/franchise2/kits'
 //   DraftDay    the offseason's last stop: draft week (the final board), then draft night (the clock, the league's
 //               picks, trades, our picks turned over), then our class and how good the scouting was
 
-const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, ol: OL_ATTR, dl: DL_ATTR, lb: LB_ATTR, db: DB_ATTR }
+const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, ol: OL_ATTR, dl: DL_ATTR, lb: LB_ATTR, db: DB_ATTR, k: K_ATTR }
 const attrName = (pos, t) => (ATTRS[pos]?.[t]?.label ?? t).toUpperCase()
 const school = col => CFB_TEAM_BY_SHORT[col] ?? null
 const schoolName = col => (school(col)?.school ?? 'SANDBOX').toUpperCase()
@@ -170,7 +171,11 @@ function ProspectCard({ F, act, id, onClose, onDraft, draftLabel }) {
           {c && (
             <div className="dr-combine">
               <span className="dr-traits-h">COMBINE{c.dnp ? ' · DID NOT WORK OUT' : ''}</span>
-              {!c.dnp && <div className="dr-facts">
+              {!c.dnp && c.kick && <div className="dr-facts">
+                <CFact v={c.lng} label="LONG FG" />
+                <CFact v={`${c.made}/10`} label="FG" />
+              </div>}
+              {!c.dnp && !c.kick && <div className="dr-facts">
                 <CFact v={c.f40?.toFixed(2)} label="40" />
                 <CFact v={c.vert != null ? `${c.vert}"` : null} label="VERT" />
                 <CFact v={c.bench} label="BENCH" />

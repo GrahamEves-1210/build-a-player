@@ -17,6 +17,7 @@ import { OL_ATTR } from '../../data/ols'
 import { DL_ATTR } from '../../data/dls'
 import { LB_ATTR } from '../../data/lbs'
 import { DB_ATTR } from '../../data/dbs'
+import { K_ATTR } from '../../data/ks'
 import { sfx, haptic } from '../../lib/juice'
 import { LowerThird, KLogo, Tag, Go, Fact, fkVars, BigNum } from './kit'
 import { photoOf } from './bits'
@@ -29,7 +30,7 @@ import { memoF, warmKey } from './perf'
 // D's parts: a man's face (a real man's photo, a build's own face, a made-up man's drawn face), a man as a
 // lower-third on any of D's screens, the cap bar, a man's page (his ratings as grades, his deal, his seasons).
 
-const LABELS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, ol: OL_ATTR, dl: DL_ATTR, lb: LB_ATTR, db: DB_ATTR }
+const LABELS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, ol: OL_ATTR, dl: DL_ATTR, lb: LB_ATTR, db: DB_ATTR, k: K_ATTR }
 export const money = v => (v >= 10 ? `$${Math.round(v)}M` : `$${(Math.round(v * 10) / 10).toFixed(1)}M`)
 export const posText = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p === 'db' ? GROUP[groupOf(p)].label : POS_LABEL[p.p])
 // a man's face: his photo, a build's own, or (a man the game made up) his drawn face; a real man without a photo:

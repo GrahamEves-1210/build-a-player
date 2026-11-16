@@ -15,7 +15,7 @@ import { memoF, warmKey } from './perf'
 // and the league's champions while he's run the team.
 const FIN_SHORT = { champ: 'WON SUPER BOWL', sb: 'LOST SUPER BOWL', conf: 'LOST CONF. TITLE', div: 'LOST DIVISIONAL', wc: 'LOST WILD CARD', out: 'MISSED PLAYOFFS' }
 const n = v => Math.round(v ?? 0).toLocaleString('en-US')
-const RECORDS = [['py', 'PASSING YARDS'], ['ptd', 'TOUCHDOWN PASSES'], ['ry', 'RUSHING YARDS'], ['ryd', 'RECEIVING YARDS'], ['rc', 'CATCHES'], ['sck', 'SACKS'], ['dint', 'INTERCEPTIONS'], ['tk', 'TACKLES']]
+const RECORDS = [['py', 'PASSING YARDS'], ['ptd', 'TOUCHDOWN PASSES'], ['ry', 'RUSHING YARDS'], ['ryd', 'RECEIVING YARDS'], ['rc', 'CATCHES'], ['sck', 'SACKS'], ['dint', 'INTERCEPTIONS'], ['tk', 'TACKLES'], ['fgm', 'FIELD GOALS']]
 
 export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
   const [sure, setSure] = useState(false)
@@ -129,8 +129,8 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
 }
 
 // A build's career: his card, his seasons, his awards, his totals
-const MAIN = { qb: ['py', 'ptd'], rb: ['ry', 'rtd'], wr: ['ryd', 'rctd'], te: ['ryd', 'rctd'], ol: ['sn', 'sa'], dl: ['sck', 'tfl'], lb: ['tk', 'sck'], db: ['dint', 'pbu'] }
-const LBL = { py: 'YDS', ptd: 'TD', ry: 'YDS', rtd: 'TD', ryd: 'YDS', rctd: 'TD', sn: 'SNAPS', sa: 'SACKS ALLOWED', sck: 'SACKS', tfl: 'TFL', tk: 'TKL', dint: 'INT', pbu: 'PD' }
+const MAIN = { qb: ['py', 'ptd'], rb: ['ry', 'rtd'], wr: ['ryd', 'rctd'], te: ['ryd', 'rctd'], ol: ['sn', 'sa'], dl: ['sck', 'tfl'], lb: ['tk', 'sck'], db: ['dint', 'pbu'], k: ['fgm', 'fga'] }
+const LBL = { py: 'YDS', ptd: 'TD', ry: 'YDS', rtd: 'TD', ryd: 'YDS', rctd: 'TD', sn: 'SNAPS', sa: 'SACKS ALLOWED', sck: 'SACKS', tfl: 'TFL', tk: 'TKL', dint: 'INT', pbu: 'PD', fgm: 'FG MADE', fga: 'FG TRIES' }
 function BuildCareer({ F, B, owner, onOpen }) {
   const idx = F.builds.indexOf(B)
   const p = B.done ? null : F.teams[F.team].r.find(x => x.b === idx)

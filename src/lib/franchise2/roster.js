@@ -1,8 +1,8 @@
 // FRANCHISE: the depth chart. THE order every game reads: who starts, who comes in behind him, who plays the
 // moment. The games (lineup(), strength, the box score) and the moments' cast all read it from here.
 //
-//   depthChart(F, short, { healthy })  { qb: [men in order], rb, wr, te, ol, edge, dt, lb, cb, s }
-//   startersOf(F, short)               { qb1, rb1, wr1..3, te1, ol1..5 (LT LG C RG RT), edge1..2, dt1..2, lb1..3, cb1..2, s1..2 }
+//   depthChart(F, short, { healthy })  { qb: [men in order], rb, wr, te, ol, edge, dt, lb, cb, s, k }
+//   startersOf(F, short)               { qb1, rb1, wr1..3, te1, ol1..5 (LT LG C RG RT), edge1..2, dt1..2, lb1..3, cb1..2, s1..2, k1 }
 //   benchOf(F, short)                  the rotation behind the starters (RB2, WR4, TE2, two more linemen, the nickel back)
 //   swapInChart(F, a, b) · moveInChart(F, id, to) · setGroup(F, id, group) · resetChart(F)   (the player's team)
 //   jersey(F, p) · fixNumbers(F, short)                   the number on his back
@@ -19,10 +19,13 @@ import { realOf } from './league'
 export const GROUPS = [
   ['qb', 'QB', 'qb', null, 1], ['rb', 'RB', 'rb', null, 1], ['wr', 'WR', 'wr', null, 3], ['te', 'TE', 'te', null, 1], ['ol', 'OL', 'ol', null, 5],
   ['edge', 'EDGE', 'dl', 'edge', 2], ['dt', 'DT', 'dl', 'dt', 2], ['lb', 'LB', 'lb', null, 3], ['cb', 'CB', 'db', 'cb', 2], ['s', 'S', 'db', 's', 2],
+  ['k', 'K', 'k', null, 1],
 ]
 export const GROUP = Object.fromEntries(GROUPS.map(([k, label, pos, spot, n]) => [k, { k, label, pos, spot, n }]))
 export const GROUP_KEYS = GROUPS.map(g => g[0])
-export const OFF_GROUPS = ['qb', 'rb', 'wr', 'te', 'ol'], DEF_GROUPS = ['edge', 'dt', 'lb', 'cb', 's']
+export const OFF_GROUPS = ['qb', 'rb', 'wr', 'te', 'ol'], DEF_GROUPS = ['edge', 'dt', 'lb', 'cb', 's'], ST_GROUPS = ['k']
+// how many men a room keeps behind its starters: one everywhere, none behind the kicker (no NFL team carries two)
+export const backupsOf = k => (k === 'k' ? 0 : 1)
 export const OL_SPOTS = ['LT', 'LG', 'C', 'RG', 'RT']
 // the room a man is in
 export const groupOf = p => (p.p === 'dl' ? (p.s === 'dt' ? 'dt' : 'edge') : p.p === 'db' ? (p.s === 's' ? 's' : 'cb') : p.p)
@@ -167,7 +170,7 @@ export function resetChart(F) {
 
 // ── Numbers ──────────────────────────────────────────────────────────────────
 // the NFL's rules by spot (2021 on), the range a new man is given first
-const NUM_RULE = { qb: [[1, 19], [0, 49]], rb: [[20, 39], [0, 49], [80, 89]], wr: [[10, 19], [80, 89], [0, 49]], te: [[80, 89], [40, 49]], ol: [[60, 79], [50, 59]], edge: [[90, 99], [50, 59]], dt: [[90, 99], [50, 79]], lb: [[40, 59], [0, 39]], cb: [[20, 39], [0, 19]], s: [[20, 49], [0, 19]] }
+const NUM_RULE = { qb: [[1, 19], [0, 49]], rb: [[20, 39], [0, 49], [80, 89]], wr: [[10, 19], [80, 89], [0, 49]], te: [[80, 89], [40, 49]], ol: [[60, 79], [50, 59]], edge: [[90, 99], [50, 59]], dt: [[90, 99], [50, 79]], lb: [[40, 59], [0, 39]], cb: [[20, 39], [0, 19]], s: [[20, 49], [0, 19]], k: [[1, 19], [0, 49], [90, 99]] }
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
 export function jersey(F, p) {
   if (!p) return null
