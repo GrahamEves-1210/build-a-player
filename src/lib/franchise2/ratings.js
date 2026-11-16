@@ -20,7 +20,7 @@
 // 3. The play-caller (coach.js coachEdge, the side's sim edge) in rating points: a great caller is worth 2-3.
 // 4. Year one only: a share of the real 2025 season (points scored and allowed), the way a preseason power rating
 //    carries last year in. It fades every offseason (offseason.js: x 0.6 a year) and the rosters take over.
-// OVR = (OFFENSE + DEFENSE) / 2. No special teams: the rosters carry no kickers.
+// OVR = (OFFENSE + DEFENSE) / 2. The kicker isn't in it: his kicks are played in the game itself (game.js fgChance).
 //
 // WIN ODDS: the games read toSim of the two numbers. The sim is about 1.5 points of margin a point of edge (the
 // offense's sim rating minus the defense's), so 10 points of OVR is 20 of the two sides = 7.1 of edge = a 10-point
@@ -90,12 +90,32 @@ export const SEASON_2025 = {
   CAR: [8, 9, 0, 311, 380], TB: [8, 9, 0, 380, 411], ATL: [8, 9, 0, 353, 401], NO: [6, 11, 0, 306, 383],
   SEA: [14, 3, 0, 483, 292], LAR: [12, 5, 0, 518, 346], SF: [12, 5, 0, 437, 371], ARI: [3, 14, 0, 355, 488],
 }
+// The live 2026 season so far: [W, L, T, points for, points against] (ESPN standings, through week 10, 2026-11-16).
+// Year one leans a little toward it as well (owner 11-16: "steer closer", nothing drastic; player ratings untouched)
+export const SEASON_2026 = {
+  NE: [5, 5, 0, 221, 242], BUF: [8, 1, 0, 287, 199], MIA: [1, 8, 0, 148, 224], NYJ: [2, 8, 0, 194, 254],
+  PIT: [6, 3, 0, 198, 182], BAL: [4, 5, 0, 189, 236], CIN: [7, 2, 0, 278, 193], CLE: [6, 4, 0, 188, 220],
+  JAX: [7, 2, 0, 269, 144], HOU: [3, 6, 0, 233, 219], IND: [3, 7, 0, 208, 271], TEN: [1, 8, 0, 167, 239],
+  DEN: [7, 2, 0, 198, 186], LAC: [0, 8, 0, 121, 219], KC: [7, 2, 0, 237, 156], LV: [4, 6, 0, 251, 289],
+  PHI: [2, 7, 0, 148, 221], DAL: [4, 6, 0, 286, 282], WAS: [3, 5, 1, 196, 223], NYG: [5, 3, 1, 203, 196],
+  CHI: [7, 2, 0, 241, 184], GB: [6, 4, 0, 226, 221], MIN: [7, 2, 0, 176, 126], DET: [7, 2, 0, 257, 199],
+  CAR: [4, 5, 0, 219, 236], TB: [3, 6, 0, 202, 178], ATL: [3, 7, 0, 201, 258], NO: [3, 6, 0, 202, 236],
+  SEA: [6, 4, 0, 223, 175], LAR: [6, 4, 0, 248, 187], SF: [8, 1, 0, 281, 196], ARI: [3, 7, 0, 184, 289],
+}
 const PPG = Object.values(SEASON_2025).reduce((a, r) => a + r[3], 0) / 32 / 17   // (the league's points a game, 23.4)
 const PTS_PER = 1.48 / SIM_PER   // points a game a rating point moves (the sim: 1.48 a point of edge)
 // how much of last season a preseason rating carries (last year's points regress about halfway to the middle)
-export const CARRY = 0.25
+export const CARRY = 0.3   // (0.25 before the live 2026 season came in: a nudge, not a copy)
 // what the season's points say a side was, in rating points
-export const seasonSide = (short, k) => { const r = SEASON_2025[short]; return r ? MID + (k === 'off' ? r[3] / 17 - PPG : PPG - r[4] / 17) / PTS_PER : null }
+// (points a game: last season's blended with the live 2026 season, the live one weighted by the games it has, g / (g + 6):
+// about 60% after nine games; the league average stays last season's so the scale doesn't move)
+const perGame = (short, i) => {
+  const a = SEASON_2025[short], b = SEASON_2026[short]
+  if (!a) return null
+  const g = b ? b[0] + b[1] + b[2] : 0, w = g ? g / (g + 6) : 0
+  return (1 - w) * a[i] / 17 + (g ? w * b[i] / g : 0)
+}
+export const seasonSide = (short, k) => { const v = perGame(short, k === 'off' ? 3 : 4); return v == null ? null : MID + (k === 'off' ? v - PPG : PPG - v) / PTS_PER }
 // year one's carry-over for a team: a share of the gap between what its 2025 season said and what its men add up to
 // (the roster's number with its play-callers in: r = teamRating without res)
 export function lastSeasonRes(short, r) {
