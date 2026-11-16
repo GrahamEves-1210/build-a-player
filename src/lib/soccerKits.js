@@ -7,7 +7,8 @@
 // The kits are SoccerApp.jsx's: the striker's nine traits (SOCCER_TYPES), the OVR the season page
 // shows (calcSoccerOVR), and the pool's spins dealt from the same rosters and teams the spin
 // screen gets (SoccerApp TEAMS_OF / POOL_PLAYERS): 'current' = the CHAMPIONS LEAGUE (its 36 clubs' players,
-// since 2026-11-16), 'alltime' = WORLD CUP (the nations'). The live worker must be redeployed with this file.
+// since 2026-11-16), 'alltime' = WORLD CUP (the legends of the 48 greatest World Cup nations, since 2026-11-16). The live
+// worker must be redeployed with this file.
 
 import { addCompeteKit } from './competeCore'
 import { addSeasonKit, addSalaryKit } from './verifyCore'

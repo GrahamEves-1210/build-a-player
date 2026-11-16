@@ -51,7 +51,7 @@ export const sameName = (a, b) => { const A = toks(a), B = toks(b); if (!A.lengt
 
 // the data's current rows (name, team)
 const DATA = fs.readFileSync(path.join(ROOT, 'src', 'data', 'soccer-strikers.js'), 'utf8')
-const wcAt = DATA.indexOf('export const WC_STRIKERS')
+const wcAt = DATA.indexOf('export const WC2026_STRIKERS')
 const rows = [...DATA.slice(0, wcAt).matchAll(/\{ name: "([^"]+)"[^\n]*?team: '([A-Z0-9]+)'[^\n]*?espn: (\d+|null)/g)].map(m => ({ name: m[1], team: m[2], espn: m[3] === 'null' ? null : +m[3] }))
 const allNames = rows.map(r => r.name)
 

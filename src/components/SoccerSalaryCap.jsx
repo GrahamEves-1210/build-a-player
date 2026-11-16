@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { SkRows } from './app/Skeleton'
 import { NameTag } from './app/NameTag'
 import { SOCCER_CLUBS } from '../data/soccer-clubs'
-import { WC_NATIONS } from '../data/soccer-nations'
+import { WC_ALL_NATIONS } from '../data/soccer-nations'
 import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
 import { migrateSoccerKeys } from '../data/soccer-attrs'
 import { SOCCER_SAL_POOL as ALL_PLAYERS, SOCCER_SAL_COLS as SAL_COLS, soccerSalTypesFor as typesFor, soccerSalBuild, soccerSalStats } from '../data/soccer-salary'
@@ -43,7 +43,7 @@ function getESTDate(daysOffset = 0) {
 
 // ─── The cards: club crest (or nation flag), club colours, ESPN photo or none ───
 const CLUB_META = Object.fromEntries(SOCCER_CLUBS.map(t => [t.short, t]))
-const NATION_META = Object.fromEntries(WC_NATIONS.map(t => [t.short, t]))
+const NATION_META = Object.fromEntries(WC_ALL_NATIONS.map(t => [t.short, t]))   // (its nation cards are the 2026 squads')
 const metaOf = p => (p.teamKind === 'nation' ? NATION_META : CLUB_META)[p.team]
 const logoOf = p => `${p.teamKind === 'nation' ? '/logos/nations/' : '/logos/soccer/'}${p.team}.png`
 const photoOf = p => { const f = p?.espn != null ? SOCCER_HEADSHOTS[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null }

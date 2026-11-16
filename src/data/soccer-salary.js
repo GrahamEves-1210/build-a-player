@@ -2,16 +2,17 @@
 // screen (components/SoccerSalaryCap.jsx) and the live server's check (lib/verifyCore.js).
 // The parallel of data/nba-salary.js. Prices are basketball's: the same five rating tiers
 // (lib/salaryCore.js), not real wages or transfer fees.
-import { SOCCER_STRIKERS, WC_STRIKERS } from './soccer-strikers'
+import { SOCCER_STRIKERS, WC2026_STRIKERS } from './soccer-strikers'
 
 // ─── The pool ────────────────────────────────────────────────────────────────
-// Every player on the Top Divisions wheel (team = club), plus the World Cup players who
-// aren't at a top-five-league club (Messi, Ronaldo...: team = nation, teamKind 'nation').
+// Every player on the Top Divisions wheel (team = club), plus the 2026 World Cup players who
+// aren't at a top-five-league club (Messi, Ronaldo...: team = nation, teamKind 'nation'). (The real 2026 squads,
+// not WORLD CUP mode's legends: Salary Cap is today's players.)
 // A player in both pools keeps his club card. Same floor as basketball's pool.
 const CLUB_NAMES = new Set(SOCCER_STRIKERS.map(p => p.name))
 export const SOCCER_SAL_POOL = [
   ...SOCCER_STRIKERS.map(p => ({ ...p, teamKind: 'club' })),
-  ...WC_STRIKERS.filter(p => !CLUB_NAMES.has(p.name)).map(p => ({ ...p, teamKind: 'nation' })),
+  ...WC2026_STRIKERS.filter(p => !CLUB_NAMES.has(p.name)).map(p => ({ ...p, teamKind: 'nation' })),
 ]
   .filter(p => {
     if (!p.attrs) return false

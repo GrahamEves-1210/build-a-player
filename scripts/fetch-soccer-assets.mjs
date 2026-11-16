@@ -15,8 +15,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 import { SOCCER_ALL_CLUBS as SOCCER_CLUBS } from '../src/data/soccer-clubs.js'   // every club (the Champions League's from outside the five leagues too)
-import { WC_NATIONS } from '../src/data/soccer-nations.js'
-import { SOCCER_ALL_STRIKERS as SOCCER_STRIKERS, WC_STRIKERS } from '../src/data/soccer-strikers.js' // every club's players and the nations'
+import { WC_ALL_NATIONS } from '../src/data/soccer-nations.js'   // the legends' 48 and the 2026 World Cup's
+import { SOCCER_ALL_STRIKERS as SOCCER_STRIKERS, WC_STRIKERS, WC2026_STRIKERS } from '../src/data/soccer-strikers.js' // every club's players, the legends and the 2026 squads
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PUB = path.join(ROOT, 'public')
@@ -52,7 +52,7 @@ for (const c of SOCCER_CLUBS) {
   if (!buf || buf.length < 1000) { console.log(`no logo: ${c.short} (espn ${c.espn})`); continue }
   fs.writeFileSync(f, buf); logos++
 }
-for (const n of WC_NATIONS) {
+for (const n of WC_ALL_NATIONS) {
   const f = path.join(FLAGS, `${n.short}.png`)
   if (fs.existsSync(f)) continue
   if (DRY) { console.log('would fetch flag', n.short); continue }
@@ -63,7 +63,7 @@ for (const n of WC_NATIONS) {
 }
 
 const map = fs.existsSync(MAP) ? JSON.parse(fs.readFileSync(MAP, 'utf8')) : {}
-const ids = [...new Set([...SOCCER_STRIKERS, ...WC_STRIKERS].map(p => p.espn).filter(Boolean).map(String))]
+const ids = [...new Set([...SOCCER_STRIKERS, ...WC2026_STRIKERS, ...WC_STRIKERS].map(p => p.espn).filter(Boolean).map(String))]
 for (const id of ids) {
   if (SKIP.has(id)) { delete map[id]; continue }
   const f = path.join(HEADS, `${id}.webp`)

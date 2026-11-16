@@ -80,3 +80,5 @@ export const WC_STRIKERS = WC_NATIONS.flatMap(n => {
   return [{ ...first, role: 'ST' }, ...extra.map(x => ({ ...x, role: 'RW' })), gen(`${n.name} Backup`, n.short, n.short, lvl - 1.2, 20, false), gen(`${n.name} Eight`, n.short, n.short, lvl - 0.8, 24, false, 'CM')]
 })
 export const SOCCER_ALL_STRIKERS = SOCCER_STRIKERS
+
+export const WC2026_STRIKERS = WC_STRIKERS

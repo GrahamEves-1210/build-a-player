@@ -22,10 +22,10 @@ const AppCompete = lazy(() => import('./app/AppCompete'))
 const SoccerSalaryCap = lazy(() => import('./SoccerSalaryCap'))
 import CompeteHud from './app/CompeteHud'
 import { SOCCER_ATTR, SOCCER_TYPES, SOCCER_CATEGORIES } from '../data/soccer-attrs'
-import { SOCCER_STRIKERS, UCL_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
+import { SOCCER_STRIKERS, UCL_STRIKERS, WC_STRIKERS, WC2026_STRIKERS } from '../data/soccer-strikers'
 import { SOCCER_CLUBS, UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
 import { migrateSoccerKeys } from '../data/soccer-attrs'
-import { WC_NATIONS } from '../data/soccer-nations'
+import { WC_NATIONS, WC_ALL_NATIONS } from '../data/soccer-nations'
 import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
 import * as SoccerSim from '../utils/soccerSimulation'
 import { HEADSHOT_BASE } from '../utils/simulation'
@@ -100,11 +100,12 @@ try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStora
 // Clubs and nations by their 3-letter code (a club's code and a nation's can match: each
 // pool reads its own map). A player's photo is his ESPN headshot (data/soccer-headshots.json).
 const CLUB_MAP = Object.fromEntries(SOCCER_ALL_CLUBS.map(t => [t.short, t]))
-const NATION_MAP = Object.fromEntries(WC_NATIONS.map(t => [t.short, t]))
+// (WORLD CUP's nations are the 48 of history since 11-16; a 2026 nation from an old save or link still finds its row)
+const NATION_MAP = Object.fromEntries(WC_ALL_NATIONS.map(t => [t.short, t]))
 // the wheel: the Champions League's 36 clubs and their players (the owner, 2026-11-16); a Squad Builder squad
 // still spins its club players from the domestic leagues it plays in (LEAGUE_*)
 const TEAMS_OF = { current: UCL_CLUBS, alltime: WC_NATIONS }
-const TEAM_MAP_OF = { current: CLUB_MAP, alltime: NATION_MAP }
+const TEAM_MAP_OF = { current: CLUB_MAP, alltime: NATION_MAP, wc2026: NATION_MAP }
 export const LOGO_DIR = { current: '/logos/soccer/', alltime: '/logos/nations/' }
 const hsKey = p => {
   const f = p?.espn != null ? SOCCER_HEADSHOTS[String(p.espn)] : null
@@ -124,6 +125,8 @@ function enrich(p, pool) {
 }
 const POOL_PLAYERS = { current: UCL_STRIKERS.map(p => enrich(p, 'current')), alltime: WC_STRIKERS.map(p => enrich(p, 'alltime')) }
 const LEAGUE_PLAYERS = SOCCER_STRIKERS.map(p => enrich(p, 'current'))
+// a World Cup link from before the legends (lib/soccerShare.js): the 2026 squads it was made from, read only for it
+const SHARE_POOLS = { ...POOL_PLAYERS, get wc2026() { return WC2026_STRIKERS.map(p => ({ ...enrich(p, 'wc2026'), pool: 'alltime' })) } }
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _byTeam = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
 const CUSTOM_POOLS = { current: _dedup(POOL_PLAYERS.current).sort(_byTeam), alltime: _dedup(POOL_PLAYERS.alltime).sort(_byTeam) }
@@ -141,7 +144,7 @@ const archOf = (ovr, b, types) => (SoccerSim.getSoccerArchetype ?? soccerArchety
 // Home's pool cards: the best-known players in each pool with an ESPN photo
 const FACE_PICKS = {
   current: ['Erling Haaland', 'Kylian Mbappé', 'Harry Kane', 'Robert Lewandowski', 'Lautaro Martínez', 'Victor Osimhen'],
-  alltime: ['Lionel Messi', 'Cristiano Ronaldo', 'Kylian Mbappé', 'Harry Kane', 'Erling Haaland', 'Vinícius Júnior'],
+  alltime: ['Lionel Messi', 'Cristiano Ronaldo', 'Kylian Mbappé', 'Harry Kane', 'Erling Haaland', 'Lamine Yamal'],
 }
 const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => {
   const list = POOL_PLAYERS[k]
@@ -262,7 +265,7 @@ function SoccerSoon({ title, onBack }) {
 
 // /soccer's search and link-preview tags (scripts/prerender-soccer.mjs bakes the same into soccer.html)
 const SOCCER_TITLE = 'Build-A-Player Soccer: Build a Striker — Soccer Player Creator & Simulator'
-const SOCCER_DESC = 'Build a soccer player — spin the wheel to make your own striker from real players at Europe\'s top clubs or the World Cup, then play a full season, chase the Golden Boot and the Ballon d\'Or. Free soccer player creator.'
+const SOCCER_DESC = 'Build a soccer player — spin the wheel to make your own striker from real players at Europe\'s top clubs or World Cup legends, then play a full season, chase the Golden Boot and the Ballon d\'Or. Free soccer player creator.'
 const soccerHead = (
   <Helmet>
     <title>{SOCCER_TITLE}</title>
@@ -276,7 +279,7 @@ const soccerHead = (
 )
 
 // A shared soccer build (/soccer?b=…), read once at load
-const SHARED = (() => { try { const b = new URLSearchParams(window.location.search).get('b'); return b ? decodeSoccerBuild(b, POOL_PLAYERS, soccerPhoto) : null } catch { return null } })()
+const SHARED = (() => { try { const b = new URLSearchParams(window.location.search).get('b'); return b ? decodeSoccerBuild(b, SHARE_POOLS, soccerPhoto) : null } catch { return null } })()
 
 // ── The season's save ─────────────────────────────────────────────────────────
 // The row for the boards (lib/soccerAwards.js says which column holds what: game_mode 'soccer-classic' /

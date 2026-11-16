@@ -120,7 +120,7 @@ function statsOf(fid) {
 const SRC = fs.readFileSync(DATA_FILE, 'utf8')
 const CRLF = SRC.includes('\r\n')
 let text = SRC.replace(/\r\n/g, '\n')
-const wcAt = text.indexOf('export const WC_STRIKERS')
+const wcAt = text.indexOf('export const WC2026_STRIKERS')
 const ROW_RE = /  \{ name: "([^"]+)"[^\n]*?team: '([A-Z0-9]+)'[^\n]*?\n    attrs: \{[^}]*\} \},/g
 const parseRow = (m, pool) => {
   const line = m[0]
@@ -303,7 +303,7 @@ const attrsText = a => `attrs: { ${NINE.map(t => `${t}: ${a[t]}`).join(', ')} }`
 const byKey = new Map()
 for (const e of P) for (const r of e.rows) byKey.set(`${r.pool}:${r.key}`, e)
 text = text.replace(ROW_RE, (m0, name, team, off) => {
-  const pool = off < text.indexOf('export const WC_STRIKERS') ? 'club' : 'wc'
+  const pool = off < text.indexOf('export const WC2026_STRIKERS') ? 'club' : 'wc'
   const e = byKey.get(`${pool}:${name}|${team}`)
   return e ? m0.replace(/attrs: \{[^}]*\}/, attrsText(e.attrs)) : m0
 })
@@ -342,7 +342,7 @@ for (const [short, c] of Object.entries(ADD.clubs)) {
     text = text.slice(0, end) + '\n' + head.slice(1) + block + text.slice(end)
   } else {
     // after the club's last row in the club list
-    const clubPart = text.slice(0, text.indexOf('export const WC_STRIKERS'))
+    const clubPart = text.slice(0, text.indexOf('export const WC2026_STRIKERS'))
     let last = -1
     for (const m of clubPart.matchAll(ROW_RE)) if (m[2] === short) last = m.index + m[0].length
     if (last < 0) throw new Error(`no rows for ${short}`)

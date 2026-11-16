@@ -1,4 +1,11 @@
-// World Cup: the 48 nations of the 2026 FIFA World Cup (USA, Canada, Mexico, June 11 - July 19, 2026; Spain won the
+// World Cup nations (2026-11-16):
+//   WC_NATIONS      WORLD CUP mode (pool 'alltime'): the 48 greatest World Cup nations across history, their legends
+//                   and their all-time tournament strength (data/soccer-legends.js, its header has the method).
+//   WC2026_NATIONS  the real 2026 World Cup (below): Career's national teams and its World Cups every four years.
+//   WC_ALL_NATIONS  both, for looking up a code (an old save or result from the 2026 pool still finds its name and colours).
+import { WC_LEGEND_NATIONS } from './soccer-legends.js'
+
+// WC2026_NATIONS: the 48 nations of the 2026 FIFA World Cup (USA, Canada, Mexico, June 11 - July 19, 2026; Spain won the
 // final 1-0 after extra time against Argentina).
 // Nations, groups and ESPN team ids (espn): ESPN soccer API, fifa.world 2026 (teams + standings).
 // short: FIFA code. color / color2: home kit colour and second colour.
@@ -9,7 +16,7 @@
 //         match, as z-scores across the 48 (pulled toward average for sides with 3 games), att = ovr + 3 x (zAttack -
 //         zDefence) / 2, def = ovr - the same.
 
-export const WC_NATIONS = [
+export const WC2026_NATIONS = [
   { short: 'MEX', name: "Mexico", color: '#006847', color2: '#FFFFFF', espn: 203, att: 82, def: 84, ovr: 83, group: 'A' },
   { short: 'KOR', name: "South Korea", color: '#CD2E3A', color2: '#000000', espn: 451, att: 78, def: 78, ovr: 78, group: 'A' },
   { short: 'CZE', name: "Czechia", color: '#D7141A', color2: '#11457E', espn: 450, att: 75, def: 75, ovr: 75, group: 'A' },
@@ -59,3 +66,6 @@ export const WC_NATIONS = [
   { short: 'PAN', name: "Panama", color: '#D21034', color2: '#005293', espn: 2659, att: 75, def: 75, ovr: 75, group: 'L' },
   { short: 'GHA', name: "Ghana", color: '#FFFFFF', color2: '#000000', espn: 4469, att: 68, def: 70, ovr: 69, group: 'L' },
 ]
+
+export const WC_NATIONS = WC_LEGEND_NATIONS
+export const WC_ALL_NATIONS = [...WC_LEGEND_NATIONS, ...WC2026_NATIONS.filter(n => !WC_LEGEND_NATIONS.some(l => l.short === n.short))]
