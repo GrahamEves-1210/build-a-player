@@ -309,7 +309,9 @@ text = text.replace(ROW_RE, (m0, name, team, off) => {
 })
 // the added rows
 const PARTICLE = new Set(['de', 'van', 'da', 'dos', 'di', 'del', 'der', 'den', 'le', 'la', 'el', 'ter', 'von', 'mac'])
-const shortOf = name => { const w = name.split(' '); if (w.length === 1) return name; let i = w.length - 1; while (i > 0 && PARTICLE.has(w[i - 1].toLowerCase())) i--; const s = w.slice(i).join(' '); return s[0].toUpperCase() + s.slice(1) }
+// (the name he goes by, where it isn't the last word; a World Cup player keeps that row's)
+const SHORT = { 'Anis Hadj Moussa': 'Hadj Moussa', 'Emmanuel Dennis Ayaosi': 'Dennis' }
+const shortOf = name => { if (SHORT[name]) return SHORT[name]; const w = name.split(' '); if (w.length === 1) return name; let i = w.length - 1; while (i > 0 && PARTICLE.has(w[i - 1].toLowerCase())) i--; const s = w.slice(i).join(' '); return s[0].toUpperCase() + s.slice(1) }
 const footOf = fid => { const pg = pageOf(fid); const v = pg?.playerInformation?.find(x => x.translationKey === 'preferred_foot')?.value?.key; return v === 'left' || v === 'right' || v === 'both' ? v : 'right' }
 const SKIN = (() => { const f = path.join(HERE, 'ucl-skin.json'); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {} })()
 const rowText = (a, starter) => {
@@ -319,7 +321,7 @@ const rowText = (a, starter) => {
   const height = wc?.height ?? a.height, weight = wc?.weight ?? a.weight, age = wc?.age ?? a.age, espn = wc?.espn ?? a.espn
   const skin = wc?.text.match(/skin: '([^']*)'/)?.[1] ?? SKIN[a.fid] ?? null
   const foot = wc?.text.match(/foot: '([^']*)'/)?.[1] ?? footOf(a.fid)
-  return `  { name: ${q(wc?.name ?? a.name)}, short: ${q(shortOf(wc?.name ?? a.name))}, team: '${a.team}', nation: '${wc?.nation ?? a.nationCode}', number: ${a.number ?? null}, height: ${height ?? null}, weight: ${weight ?? null}, age: ${age ?? null}, foot: '${foot}', skin: ${skin ? `'${skin}'` : null}, espn: ${espn ?? null}, starter: ${starter}, position: 'ST', role: '${a.role}',\n    ${attrsText(e.attrs)} },`
+  return `  { name: ${q(wc?.name ?? a.name)}, short: ${q(wc?.text.match(/short: "([^"]*)"/)?.[1] ?? shortOf(wc?.name ?? a.name))}, team: '${a.team}', nation: '${wc?.nation ?? a.nationCode}', number: ${a.number ?? null}, height: ${height ?? null}, weight: ${weight ?? null}, age: ${age ?? null}, foot: '${foot}', skin: ${skin ? `'${skin}'` : null}, espn: ${espn ?? null}, starter: ${starter}, position: 'ST', role: '${a.role}',\n    ${attrsText(e.attrs)} },`
 }
 const NEW_CLUBS = Object.entries(ADD.clubs).filter(([, c]) => !c.kept.length).map(([s]) => s)
 for (const [short, c] of Object.entries(ADD.clubs)) {

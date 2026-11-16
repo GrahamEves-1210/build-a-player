@@ -1531,7 +1531,7 @@ const ALL_STRIKERS = [
   { name: "Yegor Nazaryna", short: "Nazaryna", team: 'SHA', nation: 'UKR', number: null, height: null, weight: null, age: null, foot: 'right', skin: '#cd987c', espn: null, starter: false, position: 'ST', role: 'DM',
     attrs: { pace: 3, finishing: 5, shotPower: 3, dribbling: 6, passing: 6, positioning: 5, heading: 5, size: 5, composure: 3 } },
   // ─── FEY ────────────────────────────────────────────────────────────
-  { name: "Anis Hadj Moussa", short: "Moussa", team: 'FEY', nation: 'ALG', number: 23, height: 69, weight: 163, age: 24, foot: 'left', skin: '#bc8f79', espn: 341711, starter: false, position: 'ST', role: 'RW',
+  { name: "Anis Hadj Moussa", short: "Hadj Moussa", team: 'FEY', nation: 'ALG', number: 23, height: 69, weight: 163, age: 24, foot: 'left', skin: '#bc8f79', espn: 341711, starter: false, position: 'ST', role: 'RW',
     attrs: { pace: 8, finishing: 10, shotPower: 7, dribbling: 8, passing: 9, positioning: 5, heading: 2, size: 5, composure: 5 } },
   { name: "Gjivai Zechiël", short: "Zechiël", team: 'FEY', nation: 'NED', number: 8, height: 67, weight: 148, age: 22, foot: 'right', skin: '#a87a61', espn: 365021, starter: false, position: 'ST', role: 'CM',
     attrs: { pace: 3, finishing: 5, shotPower: 3, dribbling: 5, passing: 7, positioning: 4, heading: 1, size: 2, composure: 3 } },
@@ -1554,7 +1554,7 @@ const ALL_STRIKERS = [
     attrs: { pace: 3, finishing: 2, shotPower: 5, dribbling: 1, passing: 2, positioning: 2, heading: 5, size: 8, composure: 0 } },
   { name: "David Moses", short: "Moses", team: 'SLA', nation: 'NGA', number: 16, height: 67, weight: null, age: 22, foot: 'right', skin: '#835b4c', espn: 256751, starter: false, position: 'ST', role: 'DM',
     attrs: { pace: 3, finishing: 1, shotPower: 1, dribbling: 3, passing: 3, positioning: 0, heading: 1, size: 2, composure: 0 } },
-  { name: "Emmanuel Dennis Ayaosi", short: "Ayaosi", team: 'SLA', nation: 'NGA', number: 20, height: 68, weight: null, age: 22, foot: 'right', skin: '#6c4943', espn: 3098601, starter: false, position: 'ST', role: 'RW',
+  { name: "Emmanuel Dennis Ayaosi", short: "Dennis", team: 'SLA', nation: 'NGA', number: 20, height: 68, weight: null, age: 22, foot: 'right', skin: '#6c4943', espn: 3098601, starter: false, position: 'ST', role: 'RW',
     attrs: { pace: 9, finishing: 1, shotPower: 1, dribbling: 6, passing: 5, positioning: 4, heading: 1, size: 2, composure: 0 } },
   { name: "Lukás Provod", short: "Provod", team: 'SLA', nation: 'CZE', number: 17, height: 75, weight: 185, age: 30, foot: 'left', skin: '#b38473', espn: 294618, starter: false, position: 'ST', role: 'AM',
     attrs: { pace: 4, finishing: 3, shotPower: 7, dribbling: 3, passing: 6, positioning: 4, heading: 6, size: 10, composure: 3 } },
