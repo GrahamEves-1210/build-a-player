@@ -373,6 +373,7 @@ const scaleLine = (x, f) => Object.fromEntries(Object.entries(x ?? {}).map(([k, 
 function Box({ F, row, tl, T, fin, status, owner }) {
   const B = useMemo(() => (row ? gameBox(F, row) : null), [row]) // eslint-disable-line react-hooks/exhaustive-deps
   const a = tl.opp
+  if (row && !B) return <div className="gd-list gd-box"><p className="gd-note">No box score was kept for games played before this update.</p></div>
   if (!row || !B) {
     // the drives so far: the time with the ball, the scores, the turnovers, the punts
     const dr = (tl.dr ?? []).filter(d => d[1] <= T)
@@ -384,7 +385,7 @@ function Box({ F, row, tl, T, fin, status, owner }) {
           <div className="sq-tstat-row sq-tstat-head"><span /><span><KLogo s={F.team} size={18} />{F.team}</span><span><KLogo s={a} size={18} />{a}</span></div>
           {[['DRIVES', u.n, o.n], ['YARDS ON DRIVES', u.yds, o.yds], ['TOUCHDOWNS', u.td, o.td], ['FIELD GOALS', u.fg, o.fg], ['TURNOVERS', u.to, o.to], ['PUNTS', u.p, o.p], ['POSSESSION', mmss(u.top), mmss(o.top)]].map(([k, x, y]) => <div key={k} className="sq-tstat-row"><span>{k}</span><b>{x}</b><b>{y}</b></div>)}
         </div>
-        <p className="gd-note">{row ? 'No box score was kept for games played before this update.' : 'The players’ lines come in with the final.'}</p>
+        <p className="gd-note">The players’ lines come in with the final.</p>
       </div>
     )
   }
