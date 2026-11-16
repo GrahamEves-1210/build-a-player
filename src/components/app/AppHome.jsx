@@ -29,6 +29,7 @@ import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 import FranchiseCard from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 import Wordmark from '../Wordmark'
+import './sport-pick.css'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -80,7 +81,7 @@ const BUCKET_NOW = {
 }
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
-// the figure's bands fall one by one once a page load, then just arrive
+// the figure's bands fall one by one once a page load, then just arrive (not after a sport switch: SportPick)
 let figureShown = false
 // the website on a desktop-width screen: the home ad is a pair of boxes
 const HOME_AD_PAIR = !IS_APP && typeof matchMedia === 'function' && matchMedia('(min-width: 769px)').matches
@@ -138,38 +139,103 @@ function Hud({ user }) {
   )
 }
 
-// Football ⇄ basketball, one tap at the top of Home. The other game opens on its
-// own Home; a build in progress here waits for PLAY.
-export function switchSport(to) {
-  try { sessionStorage.setItem('bap_go_home', '1') } catch {}
+// Switching sport: each sport is its own page (/, /bucket, /soccer), so the tap marks the new ball at once,
+// the stage clears, and the other game opens on its own Home; a build in progress here waits for PLAY.
+// (`--sport-to` and data-sport-to: the classic Home's switch slides to them while it goes)
+export function switchSport(to, { keyboard = false } = {}) {
+  try {
+    sessionStorage.setItem('bap_go_home', '1')
+    sessionStorage.setItem('bap_sport_switch', keyboard ? 'key' : '1')   // (the new Home: the figure just arrives, and a keyboard keeps its place on the sports)
+  } catch {}
   document.documentElement.classList.add('ag-sport-leaving')
-  document.documentElement.style.setProperty('--sport-to', String(Math.max(0, SPORTS.findIndex(s => s.id === to))))   // (three sports: where the thumb slides)
+  document.documentElement.style.setProperty('--sport-to', String(Math.max(0, SPORTS.findIndex(s => s.id === to))))
   document.documentElement.dataset.sportTo = to
   // (the dev server's ?soccer=1 rides along, so the switch keeps showing SOCCER: lib/soccerLive.js)
   // (and ?baseball=1: lib/baseballLive.js)
   const keep = import.meta.env.DEV ? [/[?&]soccer=1\b/.test(window.location.search) && 'soccer=1', /[?&]baseball=1\b/.test(window.location.search) && 'baseball=1'].filter(Boolean).join('&') : ''
   setTimeout(() => { window.location.href = (to === 'bucket' ? '/bucket' : to === 'soccer' ? '/soccer' : to === 'baseball' ? '/baseball' : '/') + (keep ? `?${keep}` : '') }, 170)
 }
-// the sports on the switch, in order (soccer only once it's switched on)
+// the sports, in order (soccer only once it's switched on)
 export const SPORTS = [
   { id: 'nfl', label: 'FOOTBALL', Icon: IconFootball },
   { id: 'bucket', label: 'BASKETBALL', Icon: IconBasketball },
-  // (soccer while it's coming soon: on the switch, locked, SOON under it)
+  // (soccer while it's coming soon: there, locked, SOON under it)
   ...(SOCCER_LIVE || SOCCER_SOON ? [{ id: 'soccer', label: 'SOCCER', Icon: IconSoccer, soon: !SOCCER_LIVE }] : []),
   ...(BASEBALL_LIVE ? [{ id: 'baseball', label: 'BASEBALL', Icon: IconBaseball }] : []),
 ]
-function SportSwitch({ sport }) {
-  const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
-  const three = SPORTS.length > 2
+// arrived here from the sport picker (read once a page load: the figure skips its band-by-band fall)
+const ARRIVED = (() => { try { const v = sessionStorage.getItem('bap_sport_switch'); sessionStorage.removeItem('bap_sport_switch'); return v } catch { return null } })()
+if (ARRIVED) figureShown = true
+
+// each sport's ball, drawn flat in its real colours (Home's sport picker)
+export function SportBall({ id, size = 24 }) {
   return (
-    <div className={`ag-sport ag-sport--${sport}${three ? ' ag-sport--three' : ''}${SPORTS.length > 3 ? ' ag-sport--four' : ''}`} style={three ? { '--si': Math.max(0, SPORTS.findIndex(s => s.id === sport)) } : undefined} role="tablist" aria-label="Sport">
-      <span className="ag-sport-thumb" aria-hidden="true" />
-      {SPORTS.map(({ id, label, Icon, soon }) => (
-        <button key={id} role="tab" aria-selected={sport === id} aria-disabled={soon && sport !== id ? 'true' : undefined} className={`ag-sport-btn ag-sport-btn--${id}${sport === id ? ' is-on' : ''}${soon && sport !== id ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
-          <span className="ag-sport-ico">{soon && sport !== id ? <IconLock size={15} /> : <Icon size={17} />}</span>
-          <span className="ag-sport-txt"><b>{label}</b>{soon && sport !== id && <small className="ag-sport-soon">COMING SOON</small>}</span>
-        </button>
-      ))}
+    <svg className={`sp-ball sp-ball--${id}`} viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
+      {id === 'nfl' && (
+        <g transform="rotate(-38 12 12)">
+          <ellipse cx="12" cy="12" rx="11" ry="6.8" fill="#8b4a22" />
+          <path d="M3.4 9.2c.9 1.6.9 4 0 5.6M20.6 9.2c-.9 1.6-.9 4 0 5.6" stroke="#f3eee4" strokeWidth="1.1" fill="none" />
+          <path d="M8 12h8M9.3 10.6v2.8M11 10.6v2.8M12.7 10.6v2.8M14.4 10.6v2.8" stroke="#f3eee4" strokeWidth="1" strokeLinecap="round" />
+        </g>
+      )}
+      {id === 'bucket' && (
+        <>
+          <circle cx="12" cy="12" r="10.6" fill="#e2712a" />
+          <path d="M1.4 12h21.2M12 1.4v21.2M5 4.4c2.9 2.2 2.9 13 0 15.2M19 4.4c-2.9 2.2-2.9 13 0 15.2" stroke="#2a1408" strokeWidth="1.15" fill="none" />
+        </>
+      )}
+      {id === 'soccer' && (
+        <>
+          <circle cx="12" cy="12" r="10.6" fill="#f4f4f0" />
+          <path fill="#16181b" d="M12 8.3l3.52 2.56-1.35 4.13H9.83L8.48 10.86zM12 5.3L7.99 3.39 10.02 2.71 12 2.5l1.98.21 2.03.68zM18.37 9.93l.58-4.41 1.28 1.73.81 1.81.41 1.95-.02 2.15zM15.94 17.42l4.37-.81-1.25 1.75-1.48 1.33-1.72.99-2.05.65zM8.06 17.42l2.13 3.91-2.05-.65-1.72-.99-1.48-1.33-1.25-1.75zM5.63 9.93l-3.06 3.23-.02-2.15.41-1.95.81-1.81 1.28-1.73z" />
+          <path stroke="#16181b" strokeWidth="1" fill="none" d="M12 8.3v-3M15.52 10.86l2.85-.93M14.17 14.99l1.77 2.43M9.83 14.99l-1.77 2.43M8.48 10.86l-2.85-.93" />
+        </>
+      )}
+      {id === 'baseball' && (
+        <>
+          <circle cx="12" cy="12" r="10.6" fill="#f4f1ea" />
+          <path d="M6 3.6c2.6 2.6 2.6 14.2 0 16.8M18 3.6c-2.6 2.6-2.6 14.2 0 16.8" stroke="#c8202f" strokeWidth="1.2" fill="none" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+// The sports: their balls in a row, the one you're on bigger, lit, its name underlined. One tap on another
+// ball opens that sport. A radio group: Tab lands on the sport you're on, the arrow keys move along the
+// balls (they move focus only: picking one opens another page), Enter or Space picks.
+function SportPick({ sport }) {
+  const [on, setOn] = useState(sport)
+  const rowRef = useRef(null)
+  // back from another sport by keyboard: focus where it was, on the sports
+  useEffect(() => { if (ARRIVED === 'key') rowRef.current?.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true }) }, [])
+  const go = (to, keyboard) => {
+    if (to === on) return
+    setOn(to); sfx('swap'); switchSport(to, { keyboard })
+  }
+  const onKey = e => {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+    if (!(e.key in keys) && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault(); e.stopPropagation()
+    const btns = [...rowRef.current.querySelectorAll('.sp-opt:not([aria-disabled="true"])')]
+    const at = btns.indexOf(document.activeElement)
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1 : (Math.max(0, at) + keys[e.key] + btns.length) % btns.length
+    btns[next]?.focus()
+  }
+  return (
+    <div className="sp-rack" ref={rowRef} role="radiogroup" aria-label="Sport" style={{ '--n': SPORTS.length }} onKeyDown={onKey}>
+      {SPORTS.map(({ id, label, soon }) => {
+        const locked = soon && id !== on
+        return (
+          <button key={id} type="button" role="radio" aria-checked={id === on} aria-disabled={locked || undefined} tabIndex={id === on ? 0 : -1}
+            className={`sp-opt sp-opt--${id}${id === on ? ' is-on' : ''}${locked ? ' is-soon' : ''}`}
+            onClick={e => { if (!locked) go(id, e.detail === 0) }}>
+            <span className="sp-opt-ball"><SportBall id={id} size={36} />{locked && <IconLock size={14} />}</span>
+            <b>{label}</b>
+            {locked && <small>SOON</small>}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -382,7 +448,7 @@ function PlayersOfDay() {
 }
 
 const HudOnce = memo(Hud)
-const SportOnce = memo(SportSwitch)
+const SportOnce = memo(SportPick)
 const BoardOnce = memo(PlayersOfDay)
 const PromosOnce = memo(function Promos() {
   return (
@@ -648,10 +714,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </div>
         </div>
 
-        <div className="ag-sport-wrap">
-          <h2 className="ag-sport-label">PICK YOUR SPORT</h2>
-          <SportOnce sport={sport} />
-        </div>
+        <SportOnce sport={sport} />
 
         {/* Character-select stage under stadium lights: swipe it, or tap a position */}
         <div className="ag-stage"
