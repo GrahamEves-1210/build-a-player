@@ -25,7 +25,7 @@ export const LADDER = {
     big: { phys: ['size'], tech: ['finishing', 'rebounding', 'interiorDefense'], techAt: [31, 33] },
   },
   soccer: {
-    st: { phys: [], tech: ['shotPower', 'heading', 'dribbling', 'firstTouch'], techAt: [30, 32] },
+    st: { fixed: ['size'], phys: [], tech: ['shotPower', 'heading', 'dribbling'], techAt: [30, 32] },
   },
   baseball: {
     bat: { phys: [], tech: ['contact', 'power', 'gap', 'fielding'], techAt: [33, 35] },

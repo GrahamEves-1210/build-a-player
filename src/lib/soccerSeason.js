@@ -139,7 +139,7 @@ function soccerMoment(c, g) {
           sub: sub(mid, `the winner, ${score(g.mySc + 1, g.oppSc)}`, 'a draw') },
       ] }
     }
-    const early = odds(c, 0.4, ['finishing', 'composure', 'offBall']), round = odds(c, 0.34, ['dribbling', 'composure', 'pace']), square = odds(c, 0.46, ['linkUp', 'offBall'])
+    const early = odds(c, 0.4, ['finishing', 'composure', 'positioning']), round = odds(c, 0.34, ['dribbling', 'composure', 'pace']), square = odds(c, 0.46, ['passing', 'positioning'])
     return { title: `Level, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} with ${opp}. A ball over the top and he's through, a defender chasing and the keeper coming out.`, options: [
       { id: 'early', label: 'Shoot early, before the keeper sets', outcomes: [{ p: early.p, ...fcWin(g.mySc + 1, g.oppSc, shot, `Low into the far corner. ${c.nick} win ${score(g.mySc + 1, g.oppSc)}.`, 'LATE WINNER') }, { p: 1 - early.p, ...fcStay(g.mySc, g.oppSc, miss, `Wide of the post. It finishes ${score(g.mySc, g.oppSc)}.`, 'CHANCE MISSED') }],
         sub: sub(early, `the winner, ${score(g.mySc + 1, g.oppSc)}`, 'a draw') },
@@ -150,7 +150,7 @@ function soccerMoment(c, g) {
     ] }
   }
   if (m === -1) {
-    const first = odds(c, 0.3, ['shotPower', 'finishing']), touch = odds(c, 0.32, ['firstTouch', 'finishing', 'composure'])
+    const first = odds(c, 0.3, ['shotPower', 'finishing']), touch = odds(c, 0.32, ['dribbling', 'finishing', 'composure'])
     return { title: `A goal down, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} to ${opp}. A clearance drops to him on the edge of the box.`, options: [
       { id: 'first', label: 'Hit it first time', outcomes: [{ p: first.p, ...fcStay(g.oppSc, g.oppSc, shot, `Volleyed in off the bar. ${score(g.oppSc, g.oppSc)}, a point saved.`, 'LATE EQUALISER', true) }, { p: 1 - first.p, ...fcStay(g.mySc, g.oppSc, miss, `Into the stand. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'CHANCE MISSED') }],
         sub: sub(first, `the equaliser, ${score(g.oppSc, g.oppSc)}`, 'the defeat stands') },
@@ -159,7 +159,7 @@ function soccerMoment(c, g) {
     ] }
   }
   if (m === 1) {
-    const hold = odds(c, 0.7, ['strength', 'firstTouch'], 0.04), second = odds(c, 0.33, ['pace', 'finishing'])
+    const hold = odds(c, 0.7, ['size', 'dribbling'], 0.04), second = odds(c, 0.33, ['pace', 'finishing'])
     const eq = Math.round((1 - second.p) * 0.3 * 100) / 100
     return { title: `A goal up, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} against ${opp}, and they're throwing everyone forward. The ball is cleared to him.`, options: [
       { id: 'hold', label: 'Hold it up in the corner', outcomes: [{ p: hold.p, ...fcStay(g.mySc, g.oppSc, {}, `He wins a corner, then a throw, then a free kick. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'SAW IT OUT', true) }, { p: 1 - hold.p, ...fcStay(g.mySc, g.mySc, {}, `Muscled off it, and they break to equalise. ${score(g.mySc, g.mySc)}.`, 'LATE EQUALISER CONCEDED') }],
@@ -169,7 +169,7 @@ function soccerMoment(c, g) {
     ] }
   }
   if (m >= 3) {
-    const stay = odds(c, 0.32, ['finishing', 'offBall'])
+    const stay = odds(c, 0.32, ['finishing', 'positioning'])
     return { title: `${score(g.mySc, g.oppSc)} up, the board goes up`, body: `${c.nick} are cruising against ${opp}. The manager wants to bring him off and rest his legs.`, options: [
       { id: 'stay', label: 'Ask to stay on', outcomes: outs([{ p: stay.p * 0.95, ...fcStay(g.mySc + 1, g.oppSc, shot, `One more for the season: ${score(g.mySc + 1, g.oppSc)}.`, 'ANOTHER ONE', true) }, { p: (1 - stay.p) * 0.95, ...fcStay(g.mySc, g.oppSc, {}, 'Nothing more in it, but he played the full ninety.', 'FULL NINETY', true) }, { p: 0.05, good: false, line: 'A knock in the last minute. He misses the next two.', tag: 'HURT LATE ON', game: { add: {} }, sit: 2, sitTag: 'INJURED' }]),
         sub: `${pc(stay.p * 0.95)}: another goal. 5% he picks up a knock and misses two matches.` },
@@ -185,15 +185,15 @@ registerScenarios('soccer', {
   // (a build's Champions League season: its team is marked comp 'ucl', utils/soccerSimulation.js)
   ctx: ({ team }) => ({ ucl: team?.comp === 'ucl' }),
   role: {
-  st:    { legs: ['pace'], feel: ['finishing', 'firstTouch'], mind: ['offBall'], nerve: ['composure'], power: ['strength', 'heading', 'shotPower'], make: ['dribbling', 'linkUp'] },
+  st:    { legs: ['pace'], feel: ['finishing', 'dribbling'], mind: ['positioning'], nerve: ['composure'], power: ['heading', 'shotPower'], make: ['dribbling', 'passing'] },   // (Size is his frame: no story card moves it)
   },
   injuries: {
   st: [
     { name: 'Hamstring strain', hit: { pace: -3, shotPower: -1 }, out: 3, hurt: 5 },
-    { name: 'Ankle sprain', hit: { dribbling: -2, firstTouch: -2 }, out: 2, hurt: 4 },
+    { name: 'Ankle sprain', hit: { dribbling: -2 }, out: 2, hurt: 4 },
     { name: 'Groin strain', hit: { pace: -2, shotPower: -2 }, out: 3, hurt: 5 },
     { name: 'Thigh strain', hit: { shotPower: -3, pace: -1 }, out: 2, hurt: 4 },
-    { name: 'Knock to the knee', hit: { strength: -2, heading: -2 }, out: 2, hurt: 4 },
+    { name: 'Knock to the knee', hit: { heading: -2, pace: -1 }, out: 2, hurt: 4 },
   ],
   },
 })

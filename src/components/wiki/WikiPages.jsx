@@ -33,7 +33,7 @@ const DL_W = [['Get off', 16], ['Bend', 13], ['Block shed', 13], ['Power moves',
 const G_W = [['Jump shot', 14], ['Speed', 14], ['Size', 14], ['Finishing', 14], ['Basketball IQ', 14], ['Passing', 8], ['Handles', 8], ['Perimeter defense', 8], ['Bounce', 3], ['Clutch', 3]]
 const B_W = [['Finishing', 15], ['Size', 15], ['Interior defense', 15], ['Rebounding', 15], ['Jump shot', 9], ['Bounce', 7], ['Playmaking', 7], ['Basketball IQ', 7], ['Speed', 7], ['Clutch', 3]]
 // soccer's striker (SOCCER_OVR_WEIGHTS in utils/soccerSimulation.js)
-const ST_W = [['Finishing', 18], ['Off-ball movement', 16], ['Composure', 10], ['First touch', 10], ['Pace', 9], ['Shot power', 8], ['Heading', 8], ['Dribbling', 7], ['Link-up play', 7], ['Strength', 7]]
+const ST_W = [['Finishing', 18], ['Positioning', 17], ['Dribbling', 12], ['Composure', 11], ['Pace', 10], ['Shot power', 8], ['Heading', 8], ['Passing', 8], ['Size', 8]]
 const sportName = sport => (sport === 'nfl' ? 'NFL' : sport === 'soccer' ? 'Soccer' : sport === 'baseball' ? 'MLB' : 'NBA')
 
 // ── Main page ────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ function MainPage({ go }) {
         <tbody>
           <tr><td colSpan={2}><img src="/bap-mark.webp" alt="Build-A-Player logo" /></td></tr>
           <tr><th>Type</th><td>Free browser game</td></tr>
-          <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA){SOCCER_LIVE && <><br />Soccer (Top Divisions, World Cup)</>}{BASEBALL_LIVE && <><br />Baseball (MLB)</>}</td></tr>
+          <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA){SOCCER_LIVE && <><br />Soccer (Champions League, World Cup)</>}{BASEBALL_LIVE && <><br />Baseball (MLB)</>}</td></tr>
           <tr><th>Positions</th><td>QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}{K_LIVE ? ', K' : ''}<br />Guard, Big{SOCCER_LIVE && <><br />Striker</>}{BASEBALL_LIVE && <><br />Batter, Pitcher</>}</td></tr>
           <tr><th>Modes</th><td>Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
           <tr><th>Developer</th><td>Playmaker Games (independent)</td></tr>
@@ -122,7 +122,7 @@ function GameplayPage({ go }) {
             {LB_LIVE && <tr><td>Linebacker</td><td>Range, Size, Power, Tackling, Block Shed, Zone Instincts, Pass Rush, Play Recognition, Leadership</td></tr>}
             <tr><td>Guard (PG · SG · SF)</td><td>Jump Shot, Finishing, Passing, Handles, Perimeter Defense, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
             <tr><td>Big (PF · C)</td><td>Jump Shot, Finishing, Playmaking, Interior Defense, Rebounding, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
-            {SOCCER_LIVE && <tr><td>Striker (ST)</td><td>Finishing, Shot Power, Heading, Dribbling, First Touch, Link-Up Play, Pace, Strength, Off-Ball Movement, Composure</td></tr>}
+            {SOCCER_LIVE && <tr><td>Striker (ST)</td><td>Pace, Finishing, Shot Power, Dribbling, Passing, Positioning, Heading, Size, Composure</td></tr>}
           </tbody>
         </table>
       </div>
@@ -156,7 +156,7 @@ OVR = min(99, round(57 + (avg − 1) / 9 × 44))`}</pre>
       {SOCCER_LIVE && (
         <>
           <h3 id="overall-soccer">Soccer</h3>
-          <p>A striker's overall uses basketball's scale: the weighted average of his ten ratings, all 1s a 57 and all 10s a 99. Finishing and off-ball movement count the most, then composure and first touch: the things that put the ball in the net.</p>
+          <p>A striker's overall uses basketball's scale: the weighted average of his nine ratings, all 1s a 57 and all 10s a 99. Finishing and positioning count the most, then dribbling and composure: the things that put the ball in the net. Size comes from his height and weight, like a defensive back's.</p>
           <div className="wk-weights"><Weights title="Striker" rows={ST_W} /></div>
         </>
       )}
@@ -223,16 +223,16 @@ win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
         <>
           <h2 id="soccer">Simulating a soccer season</h2>
           <p>The striker takes the place of his club's or his nation's first-choice No. 9. The team's real attack and defence ratings already include that player, so the side scores more or less in every match by how much better or worse the build is than the man he replaced.</p>
-          <h3 id="soccer-club">Top Divisions</h3>
+          <h3 id="soccer-club">Champions League</h3>
           <ul>
-            <li>Every match in all three leagues is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores. The Premier League, La Liga, Serie A and Ligue 1 play 38 games; the Bundesliga 34.</li>
-            <li>The league table decides the title, Europe and relegation. Alongside it run the domestic cup and the Champions League or Europa League, from the league phase to the final.</li>
+            <li>The wheel deals the 36 clubs of the 2026-27 Champions League. His season is his club's campaign: eight league phase matches, two against clubs from each pot, then the top eight go to the Round of 16, ninth to 24th play two-legged play-offs, and two-legged knockouts lead to a one-match final.</li>
+            <li>Every match is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores.</li>
             <li>His goals are a share of his team's goals, drawn from his expected goals; shots, xG, assists and a match rating come from the same match, so the line always adds up.</li>
           </ul>
           <h3 id="soccer-wc">World Cup</h3>
           <p>The 2026 format: 48 nations in twelve groups of four, the top two and the best eight third-placed sides into a Round of 32, then single-match knockouts with extra time and penalties. A finalist plays eight matches.</p>
           <h3 id="soccer-awards">Awards</h3>
-          <p>The <b>Golden Boot</b> goes to the league's (or the tournament's) top scorer, raced against the real forwards of every club. A club season also has its league's <b>Player of the Season</b> and the <b>Ballon d'Or</b>, voted on the whole year; a World Cup has the <b>Golden Ball</b>. Midfielders count for the player awards, only forwards for the Golden Boot.</p>
+          <p>The <b>Top Scorer</b> award goes to the Champions League's (or the World Cup's <b>Golden Boot</b> to the tournament's) top scorer, raced against the real players of every club. A Champions League season also has UEFA's <b>Player of the Season</b> and <b>Young Player of the Season</b>; a World Cup has the <b>Golden Ball</b>. Midfielders count for the player awards.</p>
         </>
       )}
     </>
@@ -469,7 +469,7 @@ export const PAGES = [
   { slug: 'gameplay', title: 'Gameplay', description: 'Spins, chips and respins, the 0–11 rating scale, positions and attributes, and the exact overall formulas and weights per position.', Component: GameplayPage,
     toc: [['spinning', 'Spinning', 'spin reel respin team player chips tap'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', `QB RB WR TE DB DL${LB_LIVE ? ' LB' : ''}${OL_LIVE ? ' OL' : ''} guard big attributes`], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ...(SOCCER_LIVE ? [['overall-soccer', 'Soccer overall', 'OVR formula striker']] : []), ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
   { slug: 'seasons', title: 'Seasons', description: 'How an NFL or NBA season is simulated: team grades, schedules, win chances, stats, playoffs, the Super Bowl, the play-in and awards.', Component: SeasonsPage,
-    toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY'], ...(SOCCER_LIVE ? [['soccer', 'Soccer season', 'simulate soccer football league'], ['soccer-club', 'Top Divisions', 'premier league la liga serie a bundesliga ligue 1 champions league cup'], ['soccer-wc', 'World Cup', 'group round of 32 penalties'], ['soccer-awards', 'Soccer awards', 'golden boot ballon d\'or golden ball player of the season']] : [])] },
+    toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY'], ...(SOCCER_LIVE ? [['soccer', 'Soccer season', 'simulate soccer football league'], ['soccer-club', 'Champions League', 'champions league league phase play-offs knockouts final'], ['soccer-wc', 'World Cup', 'group round of 32 penalties'], ['soccer-awards', 'Soccer awards', 'golden boot ballon d\'or golden ball player of the season']] : [])] },
   { slug: 'career', title: 'Career', description: 'Career mode: the combine, interviews and draft, seasons and decisions, the depth chart, contracts and talks, reputation, aging, legacy and the Hall of Fame.', Component: CareerPage,
     toc: [['draft', 'The combine and the draft', 'combine drills interviews draft rookie deal pro comp'], ['seasons', 'Seasons', 'moments decisions depth chart backup goals injuries playoffs'], ['offseason', 'The offseason', 'contract talks patience trade demand camp development points'], ['reputation', 'Reputation', 'rep shoe deal signature contract'], ['aging', 'Aging and retirement', 'retire age decline'], ['legacy', 'Legacy and the Hall of Fame', 'legacy score all-time greatest hall of fame records']] },
   { slug: 'modes', title: 'Modes', description: 'Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, coins and the shop, BAP Pro, and leaderboards.', Component: ModesPage,

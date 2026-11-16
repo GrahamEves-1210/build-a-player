@@ -20,15 +20,15 @@ export const SOCCER_SAL_POOL = [
   })
   .filter((p, i, a) => a.findIndex(q => q.name === p.name) === i)
 
-// ─── The five columns: each covers two of the striker's ten traits ─────────────
+// ─── The five columns: each covers one or two of the striker's nine traits (11-16) ─
 // A pick's card is his real ratings on his column's traits; the five picks make the
 // whole striker (nothing is averaged in, unlike basketball's IQ / clutch / rebounding).
 export const SOCCER_SAL_COLS = [
   { key: 'finishing', label: 'FINISHING',    types: ['finishing', 'shotPower'] },
-  { key: 'control',   label: 'BALL CONTROL', types: ['dribbling', 'firstTouch'] },
-  { key: 'linkup',    label: 'LINK-UP PLAY', types: ['linkUp', 'composure'] },
-  { key: 'box',       label: 'IN THE BOX',   types: ['offBall', 'heading'] },
-  { key: 'physical',  label: 'PACE & POWER', types: ['pace', 'strength'] },
+  { key: 'control',   label: 'DRIBBLING',    types: ['dribbling'] },
+  { key: 'linkup',    label: 'PASSING',      types: ['passing', 'composure'] },
+  { key: 'box',       label: 'IN THE BOX',   types: ['positioning', 'heading'] },
+  { key: 'physical',  label: 'PACE & SIZE',  types: ['pace', 'size'] },
 ]
 
 export const soccerSalTypesFor = (player, col) => col.types

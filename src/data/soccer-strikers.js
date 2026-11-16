@@ -3,7 +3,10 @@ import { SOCCER_TYPES, SOCCER_CATEGORIES } from './soccer-attrs.js'
 // Strikers for soccer, Build-A-Player's third sport. Same shape as data/nba-guards.js (one row per player, attrs on
 // the 0-11 grade scale: F=0, D=1, C-=2, C=3, C+=4, B-=5, B=6, B+=7, A-=8, A=9, A+=10, S=11).
 //
-//   SOCCER_STRIKERS  TOP DIVISIONS (pool key 'current'), team = club short in soccer-clubs.js. Up to 5 per club.
+//   UCL_STRIKERS     CHAMPIONS LEAGUE (pool key 'current': the wheel and the card binder since 2026-11-16), the
+//                    players of the 36 clubs of the 2026-27 league phase (soccer-clubs.js UCL_SHORTS). 8 per club.
+//   SOCCER_STRIKERS  Career's and Squad Builder's: the clubs of the leagues Career plays (SOCCER_LIVE_LEAGUES).
+//   SOCCER_ALL_STRIKERS every club row below (Serie A, Ligue 1 and the Champions League clubs from elsewhere too).
 //   WC_STRIKERS      WORLD CUP (pool key 'alltime'), team = FIFA code in soccer-nations.js. 5 per nation.
 //   SOCCER_PLAYERS / WC_PLAYERS are the same arrays. A player in both pools has the same bio, espn id and attrs.
 //
@@ -22,12 +25,21 @@ import { SOCCER_TYPES, SOCCER_CATEGORIES } from './soccer-attrs.js'
 //   Headline players short on minutes through injury were kept in by hand (Dembélé, Kvaratskhelia, De Bruyne,
 //   Foden, Musiala; Messi, Ronaldo, Modrić, Salah, Son, Vinícius, Bellingham, Saka, Yamal, Pedri, Ødegaard,
 //   Wirtz at the World Cup where needed). Everton (Barry) is the one club with a single centre-forward.
+//   Up to 5 per club in the five leagues, 8 for the 36 Champions League clubs (2026-11-16, scripts/soccer/ucl-squads.mjs):
+//   the 21 clubs already here kept every player they had (the owner: "keep the current players from these clubs")
+//   and were topped up to 8, the 15 new clubs got 8, by the same minutes-and-market-value order from FotMob's squad
+//   pages (Shakhtar and Sabah, which have none: their FotMob leaderboards and ESPN roster, minutes only). Kept in by
+//   hand as stars a kid expects: Gyökeres, Eze (Arsenal), Rodri, De Jong, Olmo (Barcelona), Cherki, Doku, Semenyo
+//   (City), Šeško, Amad, Rashford (United), Ekitiké, Gakpo, Gravenberch (Liverpool), Dybala (Roma), Isco (Betis),
+//   Lukaku, Asensio (Fenerbahçe). A new club's main striker: its ST with the most league minutes this season.
 //
 // BIO   name, number, height (inches), weight (lb), age: ESPN rosters (club number in SOCCER_STRIKERS, World Cup
 //       number in WC_STRIKERS). foot: FotMob. nation: FIFA code of the national team the player plays for (FotMob).
 //       weight is null where ESPN lists none. skin: the sampler from scripts/extract-nba-skin-colors.mjs run on the
 //       ESPN headshot (or, with no ESPN photo, on the FotMob player cut-out, sampled only and never stored), snapped
-//       to the nearest skin swatch used in data/nba-*.js.
+//       to the nearest skin swatch used in data/nba-*.js. The 2026-11-16 Champions League rows: ESPN's uefa.champions
+//       rosters (a player ESPN doesn't list: FotMob's height and age, no weight, no ESPN id), foot from FotMob's player
+//       page, skin by scripts/soccer/sample-skin.mjs (the same sampler).
 //
 // SOURCES (2025-26 full season plus 2026-27 to 2026-11-07)
 //   FotMob (Opta event data): league leaderboards for 2025-26 and 2026-27 in the top five leagues and 30+ other
@@ -39,7 +51,30 @@ import { SOCCER_TYPES, SOCCER_CATEGORIES } from './soccer-attrs.js'
 //   Published top speeds: bundesliga.com 2025-26 top speed table, CIES Football Observatory (Gradient) UCL
 //     2025-26 league stage, Kognia/BeSoccer LaLiga 2025-26 (via Mundo Deportivo), Squawka LaLiga speed list.
 //
-// RUBRIC (each trait = weighted z-score of the inputs over both seasons; small samples are pulled toward the pool)
+// RUBRIC: THE NINE (since 2026-11-16, the owner's: Pace, Finishing, Shot Power, Dribbling, Passing, Positioning, Heading,
+// Size, Composure; scripts/soccer/grade-nine.mjs, rerun it after fotmob-compact.mjs and ucl-squads.mjs)
+//   pace, finishing, shotPower, heading, composure   the grades of the ten (rubric below), kept.
+//   positioning  Off-Ball Movement's grade (below), kept: being where the ball arrives.
+//   dribbling    now with ball control and first touch in it: the old Dribbling and First Touch averaged, half and
+//                half, then put back on Dribbling's own spread rank for rank (so it has as many S and F as before).
+//   passing      new, from FotMob's 2025-26 and 2026-27 leaderboards (every league above, the Champions League and
+//                Europa League too): chances created per 90 (28%), xA per 90 (24%), big chances created per 90
+//                (12%), assists per 90 (12%), pass completion (12%), accurate passes per 90 (12%), each a z-score on the
+//                Top Divisions regulars (900+ minutes); weaker leagues lowered at 0.6 of the league levels below; few
+//                minutes pulled toward a prior (900 minutes: half data, half prior; the prior is half the old Link-Up
+//                grade's z, or the role's average for a new player); cut on the grade table below. Hand corrections
+//                after the spot-check: Kane A+, Modrić and Rodri A (the stats count the pass before a shot, not the
+//                tempo or the pass before the assist).
+//   size         data/soccer-attrs.js soccerSizeGrade: weight 65% (136 lb = F, 192 lb = S) and height 35% (5'6" = F,
+//                6'4" = S); no weight on ESPN: his height at his role's typical build. Strength's place.
+//   The Champions League players new on 11-16 (154 with no grades before; 29 more already in the World Cup pool keep
+//   those): pace, finishing, shot power, heading, composure, positioning and dribbling predicted from their FotMob
+//   numbers and bio (a ridge regression fitted on the 600-odd graded players: goals, xG, xA, chances, shots, dribbles,
+//   passes, rating, top speed, height, weight, age, role, league level; in-sample R^2 0.6 shot power to 0.91
+//   positioning), put on each trait's spread rank for rank. Kanté's pace was set by hand to C (F from the numbers).
+//
+// RUBRIC: THE TEN (as graded 2026-11-07; first touch, link-up, strength and off-ball live on in the nine as above)
+//   (each trait = weighted z-score of the inputs over both seasons; small samples are pulled toward the pool)
 //   finishing   goals minus xG per shot, xGOT minus xG per shot, goals per 90, shot conversion, big chances missed
 //               per xG (lower is better), three seasons of league goals per game.
 //   shotPower   share of shots from outside the box, outside-the-box goals, xGOT of those shots, free-kick goals,

@@ -9,6 +9,7 @@
 import { queueSquadSave, deleteCloudSquad, fetchCloudSquad, mergeSquads } from './squadCloud'
 import { LB_LIVE } from './lbLive'
 import { OL_LIVE } from './olLive'
+import { migrateSoccerKeys, hasOldSoccerKeys } from '../data/soccer-attrs'
 
 // How many of each position a squad can carry (never shown as text: the tile shakes)
 export const CAPS = {
@@ -114,9 +115,11 @@ export const afterBuilding = sq => (!sq.team ? 'team' : 'ready')
 // ── Saves ────────────────────────────────────────────────────────────────────
 const key = (sport, uid) => `bap_squad_${sport}_${uid || 'guest'}`
 const good = (sq, sport) => !!sq && sq.v === V && sq.sport === sport && Array.isArray(sq.slots)
+// (a soccer squad saved before the nine ratings, 2026-11-16: its builds read with the new keys)
+const nines = sq => (sq?.sport === 'soccer' && hasOldSoccerKeys(sq) ? migrateSoccerKeys(sq) : sq)
 export function loadSquad(sport, uid) {
   dropOldSaves()
-  try { const sq = JSON.parse(localStorage.getItem(key(sport, uid))); return good(sq, sport) ? sq : null } catch { return null }
+  try { const sq = JSON.parse(localStorage.getItem(key(sport, uid))); return good(sq, sport) ? nines(sq) : null } catch { return null }
 }
 const same = (a, b) => { try { return JSON.stringify({ ...a, updatedAt: 0 }) === JSON.stringify({ ...b, updatedAt: 0 }) } catch { return false } }
 // Every save that changes something stamps `updatedAt` and (signed in) queues the account's copy
@@ -137,7 +140,7 @@ export async function syncSquadFromCloud(sport, uid) {
   const cloud = await fetchCloudSquad(sport, uid)
   const local = loadSquad(sport, uid)
   if (cloud === undefined) return local
-  const remote = good(cloud, sport) ? { ...cloud, uid } : null
+  const remote = good(cloud, sport) ? nines({ ...cloud, uid }) : null
   const merged = mergeSquads(local, remote)
   if (!merged) return null
   try { localStorage.setItem(key(sport, uid), JSON.stringify(merged)) } catch {}

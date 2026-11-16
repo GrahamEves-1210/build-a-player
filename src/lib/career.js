@@ -40,6 +40,7 @@ import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { NFL_TEAMS } from '../data/nfl-teams'
 import { NBA_TEAMS } from '../data/nba-teams'
+import { migrateSoccerKeys, hasOldSoccerKeys } from '../data/soccer-attrs'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
@@ -704,7 +705,11 @@ function healSeason(c) {
 // (here and in the cloud), so every screen that opens the career sees the same one.
 // (an offensive lineman is never the Super Bowl MVP: a season booked before 2026-11-11 that named him one loses it)
 const noLineFmvp = c => (c?.pos === 'ol' && Array.isArray(c.seasons) && c.seasons.some(s => s.fmvp) ? { ...c, seasons: c.seasons.map(s => (s.fmvp ? { ...s, fmvp: false } : s)) } : c)
-function opened(c0) {
+// (a soccer career saved before the nine ratings, 2026-11-16: its build, types and history read with the new keys,
+// data/soccer-attrs.js migrateSoccerKeys; the next save writes them)
+const ninesOf = c => (c?.sport === 'soccer' && hasOldSoccerKeys(c) ? migrateSoccerKeys(c) : c)
+function opened(c00) {
+  const c0 = ninesOf(c00)
   const c1 = noLineFmvp(healLeague(realAges(c0)))
   // a basketball career from before spots: the one its build leans to, written down so it never moves (hoopSpot)
   const c = c1.sport === 'bucket' && !HOOP_SPOTS.includes(c1.spot) ? { ...c1, spot: hoopSpot(c1) } : c1
@@ -3541,7 +3546,7 @@ export function nextSeason(c) {
   }
   // (football and basketball age by lib/careerAging.js; soccer and baseball by the rule from before)
   const fade = hasFade(S.id ?? 'nfl', c.pos), fell = []
-  const grows = c.pos === 'dl' || c.pos === 'lb' ? c.types.filter(t => t !== 'size') : c.pos === 'ol' ? c.types.filter(t => t !== 'size' && t !== 'length') : c.types
+  const grows = c.pos === 'dl' || c.pos === 'lb' || c.pos === 'st' ? c.types.filter(t => t !== 'size') : c.pos === 'ol' ? c.types.filter(t => t !== 'size' && t !== 'length') : c.types
   // (a footballer comes in at 17: he grows until 22, not 24)
   if (age <= (S.isSoccer ? 22 : 24) && r() < 0.45) move(grows[Math.floor(r() * grows.length)], 1, 'Still growing')
   else if (age <= 28 && r() < 0.2) move(grows[Math.floor(r() * grows.length)], 1, 'A step forward')

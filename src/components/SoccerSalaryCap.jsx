@@ -4,6 +4,7 @@ import { NameTag } from './app/NameTag'
 import { SOCCER_CLUBS } from '../data/soccer-clubs'
 import { WC_NATIONS } from '../data/soccer-nations'
 import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
+import { migrateSoccerKeys } from '../data/soccer-attrs'
 import { SOCCER_SAL_POOL as ALL_PLAYERS, SOCCER_SAL_COLS as SAL_COLS, soccerSalTypesFor as typesFor, soccerSalBuild, soccerSalStats } from '../data/soccer-salary'
 import { salaryKit, seededRandom, TIERS, TIER_BANDS, BUDGET_OPTIONS, RECENT_PENALTY, budgetForDateStr } from '../lib/salaryCore'
 import { supabase } from '../lib/supabase'
@@ -67,7 +68,7 @@ function calcStats(sel) {
 const PLAYED_KEY     = (str, uid) => uid ? `soc_sal_play_${uid}_${str}`     : `soc_sal_play_${str}`
 const SHUFFLED_KEY   = (str, uid) => uid ? `soc_sal_shuffled_${uid}_${str}` : `soc_sal_shuffled_${str}`
 const parseShuffle = saved => {
-  try { const v = JSON.parse(saved); return { col: v?.players ? { [v.ci]: v.players } : {}, row: v?.row ? { [v.ti]: v.row } : {} } } catch { return { col: {}, row: {} } }
+  try { const v = migrateSoccerKeys(JSON.parse(saved)); return { col: v?.players ? { [v.ci]: v.players } : {}, row: v?.row ? { [v.ti]: v.row } : {} } } catch { return { col: {}, row: {} } }
 }
 const SCOUTED_KEY    = (str, uid) => uid ? `soc_sal_scouted_${uid}_${str}`  : `soc_sal_scouted_${str}`
 const POWER_SEEN_KEY = 'sal_power_seen'

@@ -45,6 +45,9 @@ console.log('his clubs:', CLUBS.map(c => c.short).join(' '))
 
 const errs = []
 const err = (tag, msg) => { if (errs.length < 400) errs.push(`${tag}: ${msg}`) }
+// one list of the 36: the engine's pots name exactly the data's UCL_SHORTS (the wheel's clubs), each once
+if (!(UCL.length === 36 && new Set(UCL.map(c => c.short)).size === 36 && (C.UCL_SHORTS ?? []).length === 36 && C.UCL_SHORTS.every(s => UCL.some(c => c.short === s)))) err('entrants', 'not the 36 of data/soccer-clubs.js UCL_SHORTS')
+else console.log("the engine's 36 are data/soccer-clubs.js's UCL_SHORTS, each once")
 const mean = a => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length)
 const pctl = (a, p) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))] }
 

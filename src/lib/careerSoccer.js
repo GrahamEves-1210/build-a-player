@@ -68,18 +68,19 @@ const SOCCER = {
     return { groups: [{ k: 'SUPPLY', v: supply, names: [...mates].sort(byOvr).slice(0, 3).map(p => p.name) }, { k: 'STRIKERS', v: room, names: [...nines].sort(byOvr).slice(0, 2).map(p => p.name) }], adj: 0, need: 11 - room, supply, room }
   },
   fitNote: f => (f.supply >= 8 ? 'Real creators behind him. The chances will come: he has to put them away.' : f.supply < 5 ? 'Not much service from wide or from midfield. He has to make his own.' : 'Honest service from the wide men and the midfield.'),
-  physical: { st: ['pace', 'strength'] },
-  // composure and link-up only get better with the years (the movement goes with the legs)
-  ageless: ['composure', 'linkUp'],
+  // (Size is his frame, from his height and weight: it's never trained and never fades, lib/ageLadder.js)
+  physical: { st: ['pace'] },
+  // composure and passing only get better with the years (the movement goes with the legs)
+  ageless: ['composure', 'passing'],
   finalsAward: 'MAN OF THE MATCH IN THE FINAL',
   ageShift: () => 0,
   trainUntil: () => 26, declineAt: () => 30,
   // (two seasons more than basketball's draftees, so about the same development in all)
   devYoung: () => 18, devPrime: () => 24,
-  durTrait: 'strength',
+  durTrait: 'size',
   bigInjury: 8,
   draft: { rounds: 1, stock: () => [1, 1], rookie: () => ({ kind: 'rookie', years: 3, left: 3, perYear: 0.5 }), posList: ['ST'] },
-  combine: { st: [['sprint30', '30m sprint', 'pace'], ['slalom', 'Dribble slalom', 'dribbling'], ['finishing', 'Finishing drill', 'finishing'], ['first-touch', 'First touch', 'firstTouch']] },
+  combine: { st: [['sprint30', '30m sprint', 'pace'], ['slalom', 'Dribble slalom', 'dribbling'], ['finishing', 'Finishing drill', 'finishing'], ['first-touch', 'First touch', 'dribbling']] },
   goals: {
     st: ovr => [['lgGoals', 'Score', ovr >= 92 ? 25 : ovr >= 86 ? 18 : ovr >= 80 ? 12 : 8, 'league goals'], ['assists', 'Make', ovr >= 92 ? 9 : ovr >= 86 ? 6 : 4, 'assists'], ['avgRating', 'Average a', ovr >= 92 ? 7.4 : ovr >= 86 ? 7.1 : 6.8, 'match rating']],
   },

@@ -9,7 +9,7 @@ import { useRailOn } from '../lib/ads'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 import { ShareSeasonButton } from './app/SeasonShare'
 import { SOCCER_ATTR, SOCCER_CATEGORIES } from '../data/soccer-attrs'
-import { SOCCER_CLUBS } from '../data/soccer-clubs'
+import { UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
 import { WC_NATIONS } from '../data/soccer-nations'
 import * as SoccerSim from '../utils/soccerSimulation'
 import { SOCCER_POOL, SOCCER_SIZE_SLOT } from '../lib/soccerUi'
@@ -36,7 +36,7 @@ const APP_SIM = IS_APP || APP_LOOK
 // Styling: app-game.css (ssp-*), on the shared sim page frame (simp-*, sts-*).
 // ═════════════════════════════════════════════════════════════════════════════
 
-const CLUB_MAP = Object.fromEntries(SOCCER_CLUBS.map(t => [t.short, t]))
+const CLUB_MAP = Object.fromEntries(SOCCER_ALL_CLUBS.map(t => [t.short, t]))
 const NATION_MAP = Object.fromEntries(WC_NATIONS.map(t => [t.short, t]))
 const LOGO = { current: '/logos/soccer/', alltime: '/logos/nations/' }
 const teamOf = (short, pool) => (pool === 'alltime' ? NATION_MAP : CLUB_MAP)[short] ?? null
@@ -136,10 +136,11 @@ function TeamReel({ items, spinning, onStop, label, pool }) {
   )
 }
 // `pool`: 'current' (a club) or 'alltime' (a nation). Normal builds spin the sides in the build; Sandbox (or
-// anyTeam) any of them. Pick lists them to choose from.
-export function SoccerTeamSpin({ pool = 'current', isCustomMode, onTeamSelected, build = {}, anyTeam = false, eyebrow = null }) {
+// anyTeam) any of them. Pick lists them to choose from. `teams`: the clubs to deal (a build's: the Champions
+// League's 36; Squad Builder hands in the domestic leagues' clubs).
+export function SoccerTeamSpin({ pool = 'current', isCustomMode, onTeamSelected, build = {}, anyTeam = false, eyebrow = null, teams = null }) {
   const tapGuard = useTapGuard()
-  const all = pool === 'alltime' ? WC_NATIONS : SOCCER_CLUBS
+  const all = teams ?? (pool === 'alltime' ? WC_NATIONS : UCL_CLUBS)
   const word = pool === 'alltime' ? 'Nation' : 'Club'
   const [phase, setPhase] = useState('idle')
   const [result, setResult] = useState(null)

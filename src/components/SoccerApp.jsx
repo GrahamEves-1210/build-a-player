@@ -22,8 +22,9 @@ const AppCompete = lazy(() => import('./app/AppCompete'))
 const SoccerSalaryCap = lazy(() => import('./SoccerSalaryCap'))
 import CompeteHud from './app/CompeteHud'
 import { SOCCER_ATTR, SOCCER_TYPES, SOCCER_CATEGORIES } from '../data/soccer-attrs'
-import { SOCCER_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
-import { SOCCER_CLUBS } from '../data/soccer-clubs'
+import { SOCCER_STRIKERS, UCL_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
+import { SOCCER_CLUBS, UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
+import { migrateSoccerKeys } from '../data/soccer-attrs'
 import { WC_NATIONS } from '../data/soccer-nations'
 import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
 import * as SoccerSim from '../utils/soccerSimulation'
@@ -98,9 +99,11 @@ try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStora
 // ── The rosters ──────────────────────────────────────────────────────────────
 // Clubs and nations by their 3-letter code (a club's code and a nation's can match: each
 // pool reads its own map). A player's photo is his ESPN headshot (data/soccer-headshots.json).
-const CLUB_MAP = Object.fromEntries(SOCCER_CLUBS.map(t => [t.short, t]))
+const CLUB_MAP = Object.fromEntries(SOCCER_ALL_CLUBS.map(t => [t.short, t]))
 const NATION_MAP = Object.fromEntries(WC_NATIONS.map(t => [t.short, t]))
-const TEAMS_OF = { current: SOCCER_CLUBS, alltime: WC_NATIONS }
+// the wheel: the Champions League's 36 clubs and their players (the owner, 2026-11-16); a Squad Builder squad
+// still spins its club players from the domestic leagues it plays in (LEAGUE_*)
+const TEAMS_OF = { current: UCL_CLUBS, alltime: WC_NATIONS }
 const TEAM_MAP_OF = { current: CLUB_MAP, alltime: NATION_MAP }
 export const LOGO_DIR = { current: '/logos/soccer/', alltime: '/logos/nations/' }
 const hsKey = p => {
@@ -119,7 +122,8 @@ function enrich(p, pool) {
     headshot: hsKey(p), pool,
   }
 }
-const POOL_PLAYERS = { current: SOCCER_STRIKERS.map(p => enrich(p, 'current')), alltime: WC_STRIKERS.map(p => enrich(p, 'alltime')) }
+const POOL_PLAYERS = { current: UCL_STRIKERS.map(p => enrich(p, 'current')), alltime: WC_STRIKERS.map(p => enrich(p, 'alltime')) }
+const LEAGUE_PLAYERS = SOCCER_STRIKERS.map(p => enrich(p, 'current'))
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _byTeam = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
 const CUSTOM_POOLS = { current: _dedup(POOL_PLAYERS.current).sort(_byTeam), alltime: _dedup(POOL_PLAYERS.alltime).sort(_byTeam) }
@@ -148,7 +152,7 @@ const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => {
 function avgAttr(p) { const v = Object.values(p.attrs ?? {}); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0 }
 
 // ── Home's figure: the striker's traits, colour by colour, falling into the silhouette ──
-const SOCCER_SPLASH_ATTRS = ['heading', 'composure', 'linkUp', 'firstTouch', 'finishing', 'dribbling', 'offBall', 'strength', 'pace', 'shotPower']
+const SOCCER_SPLASH_ATTRS = ['heading', 'composure', 'passing', 'finishing', 'dribbling', 'positioning', 'size', 'pace', 'shotPower']
   .map(t => ({ label: SOCCER_ATTR[t]?.label ?? t, col: SOCCER_ATTR[t]?.hex ?? '#ffffff', tall: t === 'heading', grow: t === 'composure' ? 1.6 : undefined }))
 function useRevealOnMount(ready) {
   const [visible, setVisible] = useState(false)
@@ -299,7 +303,8 @@ function saveSoccerSeason(args) {
 // ─── SoccerApp ────────────────────────────────────────────────────────────────
 export default function SoccerApp() {
   // a season kept on the device (lib/seasonLive.js): after a reload its build, mode and season wait on CONTINUE
-  const [liveAt] = useState(() => (SHARED ? null : readLive('soccer')))
+  // (a season saved before the nine ratings, 11-16: its build and types read with the new keys)
+  const [liveAt] = useState(() => (SHARED ? null : migrateSoccerKeys(readLive('soccer'))))
   const [page, setPage]               = useState(SHARED ? 'shared' : 'splash')
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)   // 'classic' (Top Divisions) | 'all-time' (World Cup) | 'salarycap'
   const position = 'st'
@@ -333,7 +338,7 @@ export default function SoccerApp() {
     try { const r = JSON.parse(localStorage.getItem('bas_spin_result')); return r?.starters ? null : r } catch { return null }
   })
   const [isCustomMode, setIsCustomMode] = useState(() => { try { return localStorage.getItem('bas_custom_mode') === '1' } catch { return false } })
-  const [customRatings, setCustomRatings] = useState(() => { try { return JSON.parse(localStorage.getItem('bas_soccer_custom_ratings') || '{}') } catch { return {} } })
+  const [customRatings, setCustomRatings] = useState(() => { try { return migrateSoccerKeys(JSON.parse(localStorage.getItem('bas_soccer_custom_ratings') || '{}')) } catch { return {} } })
   const [showCustomModal, setShowCustomModal] = useState(false)
   const [startersPick, setStartersPick] = useState(false)
   const [squad, setSquad] = useState(null)
@@ -529,13 +534,15 @@ export default function SoccerApp() {
   setSandboxGate(sandboxItemFor(page))
 
   // the pool the spins deal from: the clubs' attackers and midfielders or the nations', with Sandbox's edits on top
+  // (a club squad in Squad Builder spins from the domestic leagues' players, not the Champions League's)
+  const squadClubSpin = page === 'squad-build' && pool === 'current'
   const currentPool = useMemo(() => {
-    const base = POOL_PLAYERS[pool]
+    const base = squadClubSpin ? LEAGUE_PLAYERS : POOL_PLAYERS[pool]
     if (!isCustomMode) return base
     const overrides = customRatings[`soccer_st${pool === 'alltime' ? '_wc' : ''}`] || {}
     if (!Object.keys(overrides).length) return base
     return base.map(p => { const o = overrides[`${p.name}|${p.team}`]; return o ? { ...p, attrs: { ...p.attrs, ...o } } : p })
-  }, [pool, isCustomMode, customRatings])
+  }, [pool, isCustomMode, customRatings, squadClubSpin])
 
   const handleStart = useCallback((mode, _pos = 'st') => {
     leaveLive('soccer', markPlayed)   // (a season left in progress: played, as a reload made it)
@@ -558,7 +565,7 @@ export default function SoccerApp() {
   const setCompetePool = k => { setCompetePoolRaw(k); try { localStorage.setItem('soccerCompetePool', k) } catch {} }
   const cp = useCompete({
     enabled: (IS_APP || APP_LOOK) && SOCCER_MODES.compete, user, sport: 'soccer', pos: 'st', mode: competePool,
-    botFor: (seed, idx, skill) => botBuild({ seed, idx, skill, teams: SOCCER_CLUBS, pool: POOL_PLAYERS.current, types: activeTypes, calcOvr: b => calcOvr(b, activeTypes) }),
+    botFor: (seed, idx, skill) => botBuild({ seed, idx, skill, teams: UCL_CLUBS, pool: POOL_PLAYERS.current, types: activeTypes, calcOvr: b => calcOvr(b, activeTypes) }),
   })
   const competeOn = SOCCER_MODES.compete && cp.phase === 'build' && !cp.results[cp.me.vid]
   const competeKey = useRef(null)
@@ -919,7 +926,7 @@ export default function SoccerApp() {
             isAllTime={pool === 'alltime'}
             attrMap={SOCCER_ATTR}
             categoriesData={activeCategories}
-            teamsPool={TEAMS_OF[pool]}
+            teamsPool={squadClubSpin ? SOCCER_CLUBS : TEAMS_OF[pool]}
             teamLabel={SOCCER_POOL[pool].team}
             getTeamSub={teamSub}
             logoDir={logoDir}
@@ -976,7 +983,7 @@ export default function SoccerApp() {
 
       {!parked && IS_APP && buildPage && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcOvr(build, activeTypes) : 0} name={buildComplete ? archOf(calcOvr(build, activeTypes), build, activeTypes) : null} build={build} types={activeTypes} attrMap={SOCCER_ATTR} />}
       {!parked && showTeamSpin && <Suspense fallback={null}><SoccerTeamSpin pool={pool} isCustomMode={isCustomMode} onTeamSelected={handleTeamPicked} build={build} /></Suspense>}
-      {!parked && squadPick && page === 'squad-build' && <Suspense fallback={null}><SoccerTeamSpin pool={squad?.pool === 'alltime' ? 'alltime' : 'current'} isCustomMode={false} onTeamSelected={squadPicked} build={build} anyTeam eyebrow="Squad Builder" /></Suspense>}
+      {!parked && squadPick && page === 'squad-build' && <Suspense fallback={null}><SoccerTeamSpin pool={squad?.pool === 'alltime' ? 'alltime' : 'current'} isCustomMode={false} onTeamSelected={squadPicked} build={build} anyTeam teams={squad?.pool === 'alltime' ? null : SOCCER_CLUBS} eyebrow="Squad Builder" /></Suspense>}
       {!parked && customModal}
 
       {gameMode !== 'salarycap' && !drop && <nav className="mobile-tab-bar">
@@ -1077,7 +1084,7 @@ export default function SoccerApp() {
     return (
       <Suspense fallback={null}>
         <AppSquad sport="soccer" squad={squad} setSquad={putSquad} user={user} onBuild={buildSquad} onExit={backHome}
-          renderPicker={(onPick, b, sq) => <Suspense fallback={null}><SoccerTeamSpin pool={(sq ?? squad)?.pool === 'alltime' ? 'alltime' : 'current'} isCustomMode={!!squad?.sandbox} onTeamSelected={onPick} build={b} anyTeam eyebrow="Squad Builder" /></Suspense>} />
+          renderPicker={(onPick, b, sq) => <Suspense fallback={null}><SoccerTeamSpin pool={(sq ?? squad)?.pool === 'alltime' ? 'alltime' : 'current'} isCustomMode={!!squad?.sandbox} onTeamSelected={onPick} build={b} anyTeam teams={(sq ?? squad)?.pool === 'alltime' ? null : SOCCER_CLUBS} eyebrow="Squad Builder" /></Suspense>} />
       </Suspense>
     )
   }

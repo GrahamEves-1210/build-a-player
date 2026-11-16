@@ -4,23 +4,23 @@
 // bundles: competeCore and verifyCore are in every app's. The live worker imports it
 // (live/src/compete.js, live/src/submit.js); the soccer app doesn't need it.
 //
-// The kits are SoccerApp.jsx's: the striker's ten traits (SOCCER_TYPES), the OVR the season page
+// The kits are SoccerApp.jsx's: the striker's nine traits (SOCCER_TYPES), the OVR the season page
 // shows (calcSoccerOVR), and the pool's spins dealt from the same rosters and teams the spin
-// screen gets (SoccerApp TEAMS_OF / POOL_PLAYERS): 'current' = TOP DIVISIONS (the clubs' players),
-// 'alltime' = WORLD CUP (the nations').
+// screen gets (SoccerApp TEAMS_OF / POOL_PLAYERS): 'current' = the CHAMPIONS LEAGUE (its 36 clubs' players,
+// since 2026-11-16), 'alltime' = WORLD CUP (the nations'). The live worker must be redeployed with this file.
 
 import { addCompeteKit } from './competeCore'
 import { addSeasonKit, addSalaryKit } from './verifyCore'
 import { SOCCER_SAL_POOL, SOCCER_SAL_COLS, soccerSalTypesFor, soccerSalBuild, soccerSalStats } from '../data/soccer-salary'
 import { calcSoccerOVR } from '../utils/soccerSimulation'
 import { SOCCER_TYPES } from '../data/soccer-attrs'
-import { SOCCER_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
-import { SOCCER_CLUBS } from '../data/soccer-clubs'
+import { UCL_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
+import { UCL_CLUBS } from '../data/soccer-clubs'
 import { WC_NATIONS } from '../data/soccer-nations'
 
 const ovr = b => calcSoccerOVR(b, SOCCER_TYPES)
 export const SOCCER_KITS = {
-  current: { pool: SOCCER_STRIKERS, types: SOCCER_TYPES, teams: SOCCER_CLUBS, ovr },
+  current: { pool: UCL_STRIKERS, types: SOCCER_TYPES, teams: UCL_CLUBS, ovr },
   alltime: { pool: WC_STRIKERS, types: SOCCER_TYPES, teams: WC_NATIONS, ovr },
 }
 // the app's game modes ('classic' / 'all-time') or the pool keys ('current' / 'alltime')

@@ -14,9 +14,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
-import { SOCCER_CLUBS } from '../src/data/soccer-clubs.js'
+import { SOCCER_ALL_CLUBS as SOCCER_CLUBS } from '../src/data/soccer-clubs.js'   // every club (the Champions League's from outside the five leagues too)
 import { WC_NATIONS } from '../src/data/soccer-nations.js'
-import { SOCCER_STRIKERS, WC_STRIKERS } from '../src/data/soccer-strikers.js' // all players, not only strikers
+import { SOCCER_ALL_STRIKERS as SOCCER_STRIKERS, WC_STRIKERS } from '../src/data/soccer-strikers.js' // every club's players and the nations'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PUB = path.join(ROOT, 'public')
@@ -37,6 +37,7 @@ const SKIP = new Set([
 for (const d of [LOGOS, FLAGS, HEADS]) fs.mkdirSync(d, { recursive: true })
 
 async function grab(url) {
+  await new Promise(r => setTimeout(r, 150))   // (a polite gap between ESPN requests)
   const res = await fetch(url, { headers: UA })
   if (res.status !== 200) return null
   return Buffer.from(await res.arrayBuffer())
