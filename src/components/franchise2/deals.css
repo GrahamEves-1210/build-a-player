@@ -124,7 +124,7 @@
 @media (min-width: 900px) {
   .dl-fa.is-wide { grid-template-columns: minmax(0, 1fr) minmax(360px, 420px); gap: 22px; align-items: start; }
   .dl-fa-side { position: sticky; top: calc(var(--fk-stick, 0px) + 14px); max-height: calc(100dvh - var(--fk-stick, 0px) - 130px - var(--web-rail, 0px)); overflow-y: auto; overscroll-behavior: contain; }
-  .dl-filter { grid-template-columns: repeat(11, minmax(0, 1fr)); }
+  .dl-filter { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   .fd-off-grid.is-fa { max-width: none; }
 }
 html.bap-reduce-motion :is(.dl-card, .dl-res) { animation: none !important; }

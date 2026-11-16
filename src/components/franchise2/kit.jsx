@@ -61,7 +61,7 @@ export function splitName(n) {
 }
 // "B. NIX", the scorebug and ticker shorthand
 export const shortName = n => { const { first, last } = splitName(n); return `${first ? `${first[0]}. ` : ''}${last}`.toUpperCase() }
-const NUM_SPAN = { qb: [1, 19], rb: [20, 39], wr: [10, 19], te: [80, 89], ol: [60, 79], dl: [90, 99], lb: [40, 59], db: [20, 39] }
+const NUM_SPAN = { qb: [1, 19], rb: [20, 39], wr: [10, 19], te: [80, 89], ol: [60, 79], dl: [90, 99], lb: [40, 59], db: [20, 39], k: [1, 19] }
 const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return Math.abs(h) }
 // his jersey number: a build's own (setup), a real man's from the data, a depth player's from his name (stable)
 export function jerseyOf(F, p) {

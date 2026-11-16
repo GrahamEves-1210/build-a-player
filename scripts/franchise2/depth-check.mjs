@@ -1,5 +1,6 @@
 // The depth chart two deep on every team, over several seasons (league.js DEPTH, fillUp, trim; roster.js byOvr):
-// every room has its starters and a man behind them (the line: three tackles and four inside), no room has more
+// every room has its starters and a man behind them (the line: three tackles and four inside; the kicker alone, no
+// backup kicker or filler behind him), no room has more
 // than one filler backup, fillers are 63-68, never ahead of a real man, never in the weekly rotation, rosters
 // within MIN and MAX at each season's start; a filler is never on the re-sign list, the market, a free-agency
 // headline, an event card (trade ask, extension, starting job) or an award ballot. Then a save from before the fillers, read back (index.js depthOnLoad).
@@ -25,14 +26,15 @@ function audit(when, { counts = false } = {}) {
     const t = F.teams[s], C = FR.depthChart(F, s)
     for (const [k, , , , n] of FR.GROUPS) {
       const men = C[k]
-      if (men.length < n + 1) bad(`${when} ${s} ${k}: ${men.length} men, needs ${n + 1}`)
+      if (men.length < n + FR.backupsOf(k)) bad(`${when} ${s} ${k}: ${men.length} men, needs ${n + FR.backupsOf(k)}`)
       // (a filler behind every real man: the league's chart by rating; the player's as he set it, new men in place)
       const firstFl = men.findIndex(p => p.fl)
       if (firstFl >= 0 && men.slice(firstFl).some(p => !p.fl) && s !== F.team) bad(`${when} ${s} ${k}: a filler ahead of a real man`)
     }
     for (const [u, pos, st] of FR.DEPTH) {
       const men = t.r.filter(p => p.p === pos && FR.unitOf(p) === u), fl = men.filter(p => p.fl)
-      if (men.length < st + 1) bad(`${when} ${s} ${u}: ${men.length} men, needs ${st + 1}`)
+      if (men.length < st + FR.backupsOf(u)) bad(`${when} ${s} ${u}: ${men.length} men, needs ${st + FR.backupsOf(u)}`)
+      if (u === 'k' && (men.length < 1 || men.length > 2 || fl.length)) bad(`${when} ${s} k: ${men.length} kickers, ${fl.length} fillers (one kicker, a second only while one is hurt, no filler)`)
       if (fl.length > 1) bad(`${when} ${s} ${u}: ${fl.length} fillers`)
       if (fl.length) where[u] = (where[u] ?? 0) + 1
     }
@@ -102,9 +104,9 @@ per.push(audit(`${F.year} wk1`, { counts: true }))
 const old = JSON.parse(FR.packFranchise(F))
 const G = FR.unpackFranchise(JSON.stringify(old))
 for (const s of FR.SHORTS) { const t = G.teams[s]; t.r = t.r.filter(p => !p.fl) }
-const thin = FR.SHORTS.reduce((a, s) => a + FR.GROUPS.filter(([k, , , , n]) => FR.depthChart(G, s)[k].length < n + 1).length, 0)
+const thin = FR.SHORTS.reduce((a, s) => a + FR.GROUPS.filter(([k, , , , n]) => FR.depthChart(G, s)[k].length < n + FR.backupsOf(k)).length, 0)
 FR.depthOnLoad(G)
-const thinAfter = FR.SHORTS.reduce((a, s) => a + FR.GROUPS.filter(([k, , , , n]) => FR.depthChart(G, s)[k].length < n + 1).length, 0)
+const thinAfter = FR.SHORTS.reduce((a, s) => a + FR.GROUPS.filter(([k, , , , n]) => FR.depthChart(G, s)[k].length < n + FR.backupsOf(k)).length, 0)
 const added = FR.SHORTS.reduce((a, s) => a + G.teams[s].r.filter(p => p.fl).length, 0)
 console.log(`old save: ${thin} rooms with no backup before load, ${thinAfter} after, ${added} fillers signed on load`)
 if (thinAfter) bad(`old save: ${thinAfter} rooms still with no backup`)

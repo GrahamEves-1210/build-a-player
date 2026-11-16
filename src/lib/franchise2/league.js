@@ -18,23 +18,27 @@ import { DBS } from '../../data/dbs'
 import { DLS } from '../../data/dls'
 import { LBS } from '../../data/lbs'
 import { OLS } from '../../data/ols'
+import { KS } from '../../data/ks'
 import { FIRST_NAMES, LAST_NAMES } from '../playerNames'
 import { ovrOf, nameOf, TYPES_OF } from '../squadSeason'
 import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
-import { startersOfTeam, benchOfTeam, groupOf } from './roster'
+import { startersOfTeam, benchOfTeam, groupOf, backupsOf } from './roster'
 import { rawRating, teamRating, toSim, fromSim, lastSeasonRes, SEASON_2025 } from './ratings'
 import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead, minimumFor, capYear } from './contracts'
 
 export const FIRST_YEAR = 2026
-export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
-export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ol: 'OL', dl: 'DL', lb: 'LB', db: 'DB' }
+// (the order every list in the mode reads: the offense, the defense, then special teams)
+export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db', 'k']
+export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ol: 'OL', dl: 'DL', lb: 'LB', db: 'DB', k: 'K' }
 export const OFFENSE = ['qb', 'rb', 'wr', 'te', 'ol']
-// a roster: at least MIN at each spot, never more than MAX (29 to 37 men: the ones who play)
-export const MIN = { qb: 2, rb: 2, wr: 4, te: 2, ol: 6, dl: 5, lb: 3, db: 5 }
-export const MAX = { qb: 3, rb: 3, wr: 5, te: 3, ol: 7, dl: 6, lb: 4, db: 6 }
+export const DEFENSE = ['dl', 'lb', 'db']
+// a roster: at least MIN at each spot, never more than MAX (30 to 38 men: the ones who play). One kicker: an NFL
+// team carries one on the 53 and signs another only when he's hurt (season.js endWeek)
+export const MIN = { qb: 2, rb: 2, wr: 4, te: 2, ol: 6, dl: 5, lb: 3, db: 5, k: 1 }
+export const MAX = { qb: 3, rb: 3, wr: 5, te: 3, ol: 7, dl: 6, lb: 4, db: 6, k: 1 }
 // the starting 22, by slot
 export const SLOTS = [
   ['qb1', 'qb'], ['rb1', 'rb'], ['wr1', 'wr'], ['wr2', 'wr'], ['wr3', 'wr'], ['te1', 'te'],
@@ -50,7 +54,7 @@ export const TEAM = Object.fromEntries(TEAMS.map(t => [t.short, t]))
 export const SHORTS = TEAMS.map(t => t.short)
 
 // ── The real players ─────────────────────────────────────────────────────────
-const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, ol: OLS, dl: DLS, lb: LBS, db: DBS }
+const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, ol: OLS, dl: DLS, lb: LBS, db: DBS, k: KS }
 const asBuild = (attrs, pos) => Object.fromEntries(TYPES_OF[pos].map(t => [t, { val: attrs?.[t] ?? 5 }]))
 const spotOfReal = (pos, p) => (pos === 'dl' ? (p.subpos === 'dt' ? 'dt' : 'edge') : pos === 'db' ? (p.subpos === 's' ? 's' : 'cb') : pos === 'ol' ? (p.subpos ?? p.pos) : undefined)
 let realCache = null
@@ -126,7 +130,8 @@ const GEN_SPOT = { dl: ['edge', 'dt'], db: ['cb', 's'], ol: ['LT', 'LG', 'C', 'R
 // a depth player (no photo: his initials)
 export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   const age = ag ?? R.int(23, 30)
-  const p = { i: F.nid++, n: fakeName(R), p: pos, o: o ?? clamp(55, 76, Math.round(66 + R.n() * 4)), ag: age }
+  // (a kicker off the street is a working NFL leg, a few points under the league's average one)
+  const p = { i: F.nid++, n: fakeName(R), p: pos, o: o ?? (pos === 'k' ? clamp(68, 84, Math.round(76 + R.n() * 4)) : clamp(55, 76, Math.round(66 + R.n() * 4))), ag: age }
   if (GEN_SPOT[pos]) p.s = R.pick(GEN_SPOT[pos])
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 4)
   signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
@@ -142,8 +147,8 @@ export function makeBuilt(F, idx, R) {
   if (s) p.s = s
   p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
   // a build is a rookie: the rookie scale at the slot his OVR would have gone in the draft (contracts.js buildSlot)
-  signRookie(p, B.slot ?? buildSlot(o), F.year ?? FIRST_YEAR)
-  B.slot = B.slot ?? buildSlot(o)
+  signRookie(p, B.slot ?? buildSlot(o, B.pos), F.year ?? FIRST_YEAR)
+  B.slot = B.slot ?? buildSlot(o, B.pos)
   B.pid = p.i
   return p
 }
@@ -159,7 +164,8 @@ export const byPos = (roster, pos) => roster.filter(p => p.p === pos)
 // minimum deal. A filler never outranks a real man (roster.js byOvr), sits out the weekly rotation (he plays when
 // injuries force it), is the first man cut, and leaves when his year is up (market.js openResign). The Team screen
 // draws his row smaller.
-export const DEPTH = [['qb', 'qb', 1], ['rb', 'rb', 1], ['wr', 'wr', 3], ['te', 'te', 1], ['ot', 'ol', 2], ['oi', 'ol', 3], ['edge', 'dl', 2], ['dt', 'dl', 2], ['lb', 'lb', 3], ['cb', 'db', 2], ['s', 'db', 2]]
+// The kicker's room is one man and no filler behind him (roster.js backupsOf: no NFL team carries a second kicker).
+export const DEPTH = [['qb', 'qb', 1], ['rb', 'rb', 1], ['wr', 'wr', 3], ['te', 'te', 1], ['ot', 'ol', 2], ['oi', 'ol', 3], ['edge', 'dl', 2], ['dt', 'dl', 2], ['lb', 'lb', 3], ['cb', 'db', 2], ['s', 'db', 2], ['k', 'k', 1]]
 const TACKLES = ['LT', 'RT'], INSIDE = ['C', 'LG', 'RG']
 export const unitOf = p => (p.p === 'ol' ? (TACKLES.includes(p.s) ? 'ot' : 'oi') : groupOf(p))
 const UNITS_OF = Object.fromEntries(POS.map(pos => [pos, DEPTH.filter(u => u[1] === pos)]))
@@ -173,7 +179,8 @@ const GEN_SPOT_OF = { edge: 'edge', dt: 'dt', cb: 'cb', s: 's' }
 // a generated starter (a room the real rosters leave short) or a filler backup (fl; top: the lowest man ahead of him,
 // so the chart never shows a backup rated over the starter he's behind)
 export function makeDepth(F, pos, spot, R, fl = false, top = 68, roster = []) {
-  const o = R.int(63, clamp(63, 68, top)), ag = R.int(23, 29)
+  // (a kicker signed to start: a working NFL leg, 70-77)
+  const o = pos === 'k' ? R.int(70, 77) : R.int(63, clamp(63, 68, top)), ag = R.int(23, 29)
   const p = { i: F.nid++, n: freshName(R, roster), p: pos, o, ag }
   if (spot) p.s = spot
   p.pk = fl ? o : Math.max(o, peakFor(R, o, ag) - 4)
@@ -189,25 +196,27 @@ function keepAt(at, pos, n, must = 0) {
   const inUnit = k => sel.filter(p => unitOf(p) === k)
   let held = 0
   for (const [k, , st] of units) {
+    const want = st + backupsOf(k)
     for (const p of at) {
       const have = inUnit(k)
-      if (have.length >= st + 1) break
+      if (have.length >= want) break
       if (unitOf(p) !== k || sel.includes(p)) continue
       if (p.fl && (have.length < st || have.some(x => x.fl))) continue
       sel.push(p)
     }
-    held += Math.max(0, st + 1 - inUnit(k).length)
+    held += Math.max(0, want - inUnit(k).length)
   }
   for (const p of at) { if (sel.length + held >= n) break; if (!p.fl && !sel.includes(p)) sel.push(p) }
   return sel
 }
 // trim a roster to the maximum at each spot (the weakest go, fillers first; every room keeps its two-deep; the
-// player's own builds are never cut)
+// player's own builds are never cut; the kickers in camp: the better leg keeps the job, a draft pick or not)
 export function trim(roster, keep = new Set()) {
   const out = [], cut = []
   for (const pos of POS) {
-    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || keep.has(b.i) - keep.has(a.i) || (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o)
-    const must = at.filter(p => p.b != null || keep.has(p.i)).length
+    const kept = p => pos !== 'k' && keep.has(p.i)
+    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || kept(b) - kept(a) || (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o)
+    const must = at.filter(p => p.b != null || kept(p)).length
     const sel = keepAt(at, pos, Math.max(MAX[pos], must), must)
     out.push(...sel)
     cut.push(...at.filter(p => !sel.includes(p)))
@@ -219,12 +228,13 @@ export function trim(roster, keep = new Set()) {
 // in the season, when a filler under contract stays on even if a real backup arrives)
 export function fillUp(F, roster, R, { cut = true } = {}) {
   for (const [k, pos, st] of DEPTH) {
+    const bk = backupsOf(k)
     const unit = () => roster.filter(p => p.p === pos && unitOf(p) === k)
     const fl = unit().filter(p => p.fl), real = unit().length - fl.length
-    if (cut) for (const p of fl.slice(real >= st + 1 ? 0 : 1)) roster.splice(roster.indexOf(p), 1)
+    if (cut) for (const p of fl.slice(real >= st + bk || !bk ? 0 : 1)) roster.splice(roster.indexOf(p), 1)
     for (let have = real; have < st; have++) roster.push(makeDepth(F, pos, unitSpot(k, unit()), R, false, 68, roster))
     // (the line is one room on the chart: its filler is rated under the whole line)
-    if (unit().length < st + 1) roster.push(makeDepth(F, pos, unitSpot(k, unit()), R, true, Math.min(...roster.filter(p => p.p === pos && !p.fl && (pos === 'ol' || unitOf(p) === k)).map(p => p.o)), roster))
+    if (bk && unit().length < st + 1) roster.push(makeDepth(F, pos, unitSpot(k, unit()), R, true, Math.min(...roster.filter(p => p.p === pos && !p.fl && (pos === 'ol' || unitOf(p) === k)).map(p => p.o)), roster))
   }
   return roster
 }

@@ -17,7 +17,8 @@ import { momentsOf } from '../minigames'
 import { boxRoster, gameLines } from './stats'
 import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
 import { coachLate, coachDay, momentLift, chemWeek } from './coach'
-import { askOf, signDeal, canSign, cutMan } from './contracts'
+import { askOf, signDeal, canSign, cutMan, minimumFor } from './contracts'
+import { kickTraits, kickerOf, addKickStats, kickLine } from './kick'
 import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews } from './news'
 import { rollInjuries } from './injury'
@@ -39,7 +40,10 @@ function gameOf(F, g, seed, po) {
     mod[mine] += (F.chem - 50) * 0.012 + (nx.off ?? 0)
     mod[mine === 'h' ? 'a' : 'h'] -= nx.def ?? 0
   }
-  return { h: g.h, a: g.a, sh: { off: H.off, def: H.def }, sa: { off: A.off, def: A.def }, seed, po: !!po, homeEdge: g.n ? 0 : 0.9, mod, late: { h: coachLate(F, g.h), a: coachLate(F, g.a) } }
+  // (each side's kicker: his three ratings make his kicks, game.js fgChance)
+  const kh = kickerOf(F, g.h), ka = kickerOf(F, g.a)
+  return { h: g.h, a: g.a, sh: { off: H.off, def: H.def }, sa: { off: A.off, def: A.def }, seed, po: !!po, homeEdge: g.n ? 0 : 0.9, mod, late: { h: coachLate(F, g.h), a: coachLate(F, g.a) },
+    k: { h: kickTraits(F, kh), a: kickTraits(F, ka) }, kid: { h: kh?.i ?? null, a: ka?.i ?? null } }
 }
 
 const STAT_KEYS = ['pc', 'pa', 'py', 'ptd', 'int', 'ra', 'ry', 'rtd', 'rc', 'ryd', 'rctd', 'tg', 'tk', 'sck', 'tfl', 'dint', 'pbu', 'ff', 'qbh', 'sa', 'prs', 'pnk', 'sn']
@@ -49,7 +53,8 @@ function addStats(into, from) { for (const k of STAT_KEYS) if (from?.[k]) into[k
 // which build plays it: one of the player's builds who starts (a quarterback first on offense)
 function momentBuild(F, R, allow) {
   const L = lineup(F.teams[F.team])
-  const mine = Object.values(L).filter(p => p.b != null && momentsOf(p.p).some(g => !allow || allow(g)))
+  // (a kicker's moment would be a kick, not a third down: the moments are the down-and-distance plays)
+  const mine = Object.values(L).filter(p => p.b != null && p.p !== 'k' && momentsOf(p.p).some(g => !allow || allow(g)))
   if (!mine.length) return null
   const qb = mine.find(p => p.p === 'qb')
   return qb && R.u() < 0.5 ? qb : R.pick(mine)
@@ -99,6 +104,7 @@ export function playWeek(F, opts = {}) {
     if (g.h === F.team || g.a === F.team) { mine = { g, i, seed }; return }
     const S = run(newGame(gameOf(F, g, seed, po)))
     Object.assign(g, { hs: S.hs, as: S.as, ...(S.ot && { ot: 1 }) })
+    addKickStats(F, S)
   })
   if (!mine) return endWeek(F, null)
   const { g, seed } = mine
@@ -175,6 +181,10 @@ function finishUserGame(F, { g }, S, mo) {
   // the builds' lines (one line each), and the day's best line on the team (the broadcast's player of the game)
   const lineOf = p => fbLine(p.pos, box[p.k] ?? {}).slice(0, 3).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(' · ')
   const lines = roster.filter(p => p.s != null).map(p => ({ b: +p.s, pid: +p.k.slice(1), line: lineOf(p) }))
+  // (the kicking: the season's lines, and a build at K gets his line from the game: "2/3 FG · 4/4 XP · LONG 51")
+  addKickStats(F, S)
+  { const side = home ? 'h' : 'a', kid = S.G.kid?.[side], kp = kid != null ? F.teams[F.team].r.find(p => p.i === kid) : null
+    if (kp?.b != null) lines.push({ b: kp.b, pid: kp.i, line: kickLine(S.kk?.[side]) }) }
   const star = topLine(roster, box)
   const bx = boxOf(S)
   const row = {
@@ -229,12 +239,21 @@ function endWeek(F, row) {
   F.wire = wire.sort((a, b) => (b[0] === F.team) - (a[0] === F.team)).slice(0, 8)
   // every room two deep again after the week's cuts and trades (league.js fillUp: a filler where nobody's behind)
   fillLeague(F)
-  // a room without enough healthy men to start: the team signs one off its practice squad, as every team does
+  // a room without enough healthy men to start: the team signs one off its practice squad, as every team does (a
+  // league team with its kicker hurt calls the best kicker on the street first, the way they do)
   for (const s of SHORTS) {
     const C = depthChart(F, s, { healthy: true })
     for (const [k, , pos, spot, n] of GROUPS) {
       for (let have = C[k].length; have < n; have++) {
-        const p = makeGen(F, pos, R, { o: R.int(63, 68), ag: R.int(23, 28) })
+        const street = k === 'k' && s !== F.team ? (F.fa ?? []).filter(x => x.p === 'k' && !x.fl && !x.in).sort((a, b) => b.o - a.o)[0] : null
+        if (street) {
+          F.fa = F.fa.filter(x => x !== street)
+          signDeal(street, { $: minimumFor(street.ag, F.year), y: 1, g: 0 })
+          F.teams[s].r.push(street)
+          addNews(F, { k: 'sign', tag: 'SIGNED', s, text: `${TEAM[s].nick} sign K ${street.n}` })
+          continue
+        }
+        const p = makeGen(F, pos, R, { o: pos === 'k' ? R.int(70, 76) : R.int(63, 68), ag: R.int(23, 28) })
         p.n = freshName(R, F.teams[s].r)
         if (spot) p.s = spot
         p.y = 1
@@ -377,7 +396,7 @@ const EVENTS = [
   { id: 'plan', make: F => {
     const o = nextOpp(F)
     if (!o) return null
-    const L = startersOf(F, o), star = Object.values(L).filter(p => !p.in).sort((a, b) => b.o - a.o)[0]
+    const L = startersOf(F, o), star = Object.values(L).filter(p => !p.in && p.p !== 'k').sort((a, b) => b.o - a.o)[0]
     if (!star) return null
     const off = ['qb', 'rb', 'wr', 'te', 'ol'].includes(star.p)
     return { title: `Game plan for ${nm(star)} and the ${TEAM[o].nick}`, pid: star.i, team: o, opp: o,
@@ -394,7 +413,8 @@ const EVENTS = [
       const k = groupOf(p), worst = Object.entries(L).filter(([s]) => s.replace(/\d$/, '') === k).map(([, x]) => x).sort((a, b) => a.o - b.o)[0]
       if (!worst || worst.b != null || p.o < worst.o + 3) continue
       const cost = r1(Math.min(p.$ ?? 1.2, 4))
-      const cut = F.teams[F.team].r.filter(x => groupOf(x) === k && x.b == null && !x.fl && x !== worst).sort((a, b) => a.o - b.o)[0] ?? null
+      // (a kicker in: the one there now is released, a team carries one)
+      const cut = k === 'k' ? worst : F.teams[F.team].r.filter(x => groupOf(x) === k && x.b == null && !x.fl && x !== worst).sort((a, b) => a.o - b.o)[0] ?? null
       if (!canSign(F, cost)) continue
       return { title: `Free agent ${nm(p)} still unsigned`, pid: p.i, cost, cut: cut?.i ?? null, a: [`Sign ${nm(p)}`, { sign: p.i }], b: ['Keep the roster', { chem: 1 }] }
     }
@@ -403,7 +423,7 @@ const EVENTS = [
 ]
 function tradeEvent(F, R) {
   if (F.wk >= TRADE_DEADLINE) return null   // (F.wk: weeks played; after Week 9 the deadline has passed)
-  const L = startersMine(F).filter(p => p.b == null && !p.fl && p.ag <= 29 && p.p !== 'qb' && p.p !== 'ol')
+  const L = startersMine(F).filter(p => p.b == null && !p.fl && p.ag <= 29 && p.p !== 'qb' && p.p !== 'ol' && p.p !== 'k')
   if (!L.length) return null
   const mine = R.pick(L)
   const others = SHORTS.filter(s => s !== F.team)

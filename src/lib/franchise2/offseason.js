@@ -42,7 +42,7 @@ export function newSeason(F) {
   const S = standings(F)
   F.year++
   F.sched = makeSchedule(F.seed, F.year, S.div)
-  F.wk = 0; F.log = []; F.ss = {}; F.ssr = null; F.po = null; F.moments = 0; F.streak = 0; F.nx = 0; F.ev = null; F.nextEv = 3; F.evSeen = []
+  F.wk = 0; F.log = []; F.ss = {}; F.kst = {}; F.ssr = null; F.po = null; F.moments = 0; F.streak = 0; F.nx = 0; F.ev = null; F.nextEv = 3; F.evSeen = []
   F.phase = 'season'; F.stage = null; F.aging = null
   // (the offseason's own lists go: the wire has moved on; the league's history keeps what lasts)
   F.fas = null; F.ext = null; F.gone = null; F.aw = null; F.fad = null

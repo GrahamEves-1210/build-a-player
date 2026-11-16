@@ -48,15 +48,33 @@ export function fgMakeAt(d) {
   for (let i = 1; i < MAKE.length; i++) if (d <= MAKE[i][0]) { const [a, pa] = MAKE[i - 1], [b, pb] = MAKE[i]; return pa + (pb - pa) * (d - a) / (b - a) }
   return 0.05
 }
+// THE KICKER (kick.js reads his three ratings, 0-11): the table above is the league's kicker; each side's own moves
+// it. ACCURACY moves every kick, POWER the long ones (and how far out his coach sends him: kickRange), CLUTCH the
+// kicks late in a close game (the 4th quarter or overtime, within one score). Centred on the 32 starting kickers of
+// 2026 (ks.js), so the league kicks what the NFL kicks: about 85% of field goals, 95% of extra points, 70% from 50+.
+export const K_MID = [6.3, 5.9, 6.5]   // [power, accuracy, clutch]: the league's kicker
+const logit = p => Math.log(p / (1 - p)), sig = x => 1 / (1 + Math.exp(-x))
+export function fgChance(d, k, clutch = false) {
+  const base = fgMakeAt(d)
+  if (!k) return base
+  const long = clamp(0, 1, (d - 38) / 17)
+  return sig(logit(base) + 0.13 * (k[1] - K_MID[1]) + 0.16 * (k[0] - K_MID[0]) * long + (clutch ? 0.1 * (k[2] - K_MID[2]) : 0))
+}
+const XP = 0.956
+export const xpChance = (k, clutch = false) => (k ? sig(logit(XP) + 0.11 * (k[1] - K_MID[1]) + (clutch ? 0.08 * (k[2] - K_MID[2]) : 0)) : XP)
+// yards past the usual range his coach will send him out from: a big leg 3 to 5, a short one 2 to 4 fewer
+export const kickRange = k => (k ? Math.round(clamp(-4, 5, (k[0] - K_MID[0]) * 1.1)) : 0)
 // a 4th down at `togo`, the spot `toGoal` yards out: the call a coach makes. ctx: the game around it
 //   { m (the offense's margin), late (the last 5:00), late2 (the last 2:00), needTD, end (the half's last drive), sudden (overtime, next score wins) }
 export function fourthDown(toGoal, togo, e, ctx, R) {
   const d = toGoal + 17
   // the longest kick he's sent out for: 55 on an ordinary 4th down (a strong leg, a couple more); 60 and past only
   // with the half or the game on it
-  const range = ctx.end ? 63 : ctx.sudden ? 58 : 54 + (R.u() < 0.35 ? 3 : 0)
+  // (the kicker's leg moves it: kickRange, ctx.kr)
+  // (60 at most on an ordinary 4th down even for the biggest leg; never past 66, the longest the league has seen made)
+  const range = Math.min(ctx.end ? 66 : 60, (ctx.end ? 63 : ctx.sudden ? 58 : 54 + (R.u() < 0.35 ? 3 : 0)) + (ctx.kr ?? 0))
   if (ctx.needTD) return toGoal <= 70 || ctx.late2 ? 'go' : 'punt'
-  if (ctx.late2 && ctx.m < 0) return ctx.m >= -3 && d <= 60 ? 'fg' : 'go'
+  if (ctx.late2 && ctx.m < 0) return ctx.m >= -3 && d <= 60 + (ctx.kr ?? 0) ? 'fg' : 'go'
   if (ctx.end) return d <= range ? 'fg' : 'punt'
   let go = 0
   if (toGoal <= 2) go = 0.6
@@ -135,7 +153,9 @@ export const distFor = (p, e) => clamp(1, 15, Math.round((0.8 + 0.016 * e - p) /
 export const normalRate = ovr => clamp(0.4, 0.75, 0.55 + (ovr - 80) * 0.008)
 
 // ── State ────────────────────────────────────────────────────────────────────
-// G (the game): { h, a, sh: {off, def}, sa: {off, def}, seed, po, ot (minutes), key: null | { team, side, h, bonus } }
+// G (the game): { h, a, sh: {off, def}, sa: {off, def}, seed, po, ot (minutes), key: null | { team, side, h, bonus },
+//   k: { h, a } each side's kicker [power, accuracy, clutch] (none: the league's kicker), kid: { h, a } who kicked }
+// S.kk: the kicking, a side's [FGA, FGM, XPA, XPM, long, 50+ tries, 50+ made] (kick.js addKickStats keeps the season's)
 //   key.team: the player's team; side 'off' (his build is on offense: the play is on his team's drive) or 'def'
 export function newGame(G) {
   const R = rngOf(`${G.seed}-coin`)
@@ -154,12 +174,25 @@ const score = (S, side, pts, kind, extra = {}) => {
   if (side === 'h') S.hs += pts; else S.as += pts
   S.plays.push({ t: Math.round(S.t), s: side, p: pts, k: kind, hs: S.hs, as: S.as, ...extra })
 }
+// a kick that matters late: the 4th quarter or overtime, within one score
+const clutchOn = (S, side) => (!!S.ot || S.t >= REG - Q) && Math.abs(margin(S, side)) <= 8
+const kickTally = (S, side) => { const kk = S.kk ?? (S.kk = { h: [0, 0, 0, 0, 0, 0, 0], a: [0, 0, 0, 0, 0, 0, 0] }); return kk[side] }
+// a field goal try from d yards: made or not, and on the kicker's line
+function kickFG(S, side, d, R) {
+  const ok = R.u() < fgChance(d, S.G.k?.[side], clutchOn(S, side))
+  const t = kickTally(S, side)
+  t[0]++; if (ok) { t[1]++; t[4] = Math.max(t[4], d) }
+  if (d >= 50) { t[5]++; if (ok) t[6]++ }
+  return ok
+}
 // the try after a touchdown: two (late, when the chart says so) or the kick
 function tryAfter(S, side, R) {
   const m = margin(S, side)
   const late = S.t >= REG - Q
   if (late && (m === -2 || m === 1 || m === -5 || m === -10)) { S.tr = R.u() < 0.48 ? '2' : '2x'; return S.tr === '2' ? 2 : 0 }
-  S.tr = R.u() < 0.956 ? 'xp' : 'xpx'
+  S.tr = R.u() < xpChance(S.G.k?.[side], clutchOn(S, side)) ? 'xp' : 'xpx'
+  const t = kickTally(S, side)
+  t[2]++; if (S.tr === 'xp') t[3]++
   return S.tr === 'xp' ? 1 : 0
 }
 function touchdown(S, side, R, extra = {}) {
@@ -179,7 +212,7 @@ function ctxOf(S, side) {
   const needTD = (late && m <= -4 && m >= -8) || (late2 && m <= -4) || (!!S.ot && m <= -4)
   // (overtime: once both have had it, or the other side has already scored, the next score wins)
   const sudden = !!S.ot && (S.ot.sudden || margin(S, side) < 0)
-  return { m, late, late2, end, needTD, sudden }
+  return { m, late, late2, end, needTD, sudden, kr: kickRange(S.G.k?.[side]) }
 }
 function drive(S, R, fromY = S.y) {
   const side = S.poss, e = edgeOf(S, side), ctx = ctxOf(S, side)
@@ -239,7 +272,7 @@ function step(S) {
   count(S, side, d.res === 'downs' ? 'downs' : d.res)
   for (let i = 0; i < (d.go ?? 0); i++) count(S, side, 'go')
   if (d.res === 'td') touchdown(S, side, R)
-  else if (d.res === 'fg') { count(S, side, 'fga'); count(S, side, `k${Math.min(6, Math.floor(d.dist / 10))}`); if (R.u() < fgMakeAt(d.dist)) score(S, side, 3, 'fg', { y: 117 - d.dist, d: d.dist }); else d.res = 'miss' }
+  else if (d.res === 'fg') { count(S, side, 'fga'); count(S, side, `k${Math.min(6, Math.floor(d.dist / 10))}`); if (kickFG(S, side, d.dist, R)) score(S, side, 3, 'fg', { y: 117 - d.dist, d: d.dist }); else d.res = 'miss' }
   afterDrive(S, side, d, R)
   if (!fits) S.t = end
 }
@@ -332,16 +365,16 @@ export function resolveKey(S, hit, kind = null, seed = 'k') {
       const d = driveOutcome(ny, e, R, ctx)
       S.t = Math.min(REG - 1, S.t + Math.round(d.dur * (ctx.late && ctx.m < 0 ? 0.45 : ctx.late && ctx.m > 0 ? 1.2 : 0.8)))
       if (d.res === 'td') { touchdown(S, ball, R); line = 'conv-td' }
-      else if (d.res === 'fg' && R.u() < fgMakeAt(d.dist)) { score(S, ball, 3, 'fg', { y: 117 - d.dist, d: d.dist }); line = 'conv-fg' }
+      else if (d.res === 'fg' && kickFG(S, ball, d.dist, R)) { score(S, ball, 3, 'fg', { y: 117 - d.dist, d: d.dist }); line = 'conv-fg' }
       else { line = 'conv-stall'; S.stall = d.res === 'fg' ? { ...d, res: 'miss' } : d }
     }
   } else {
     // stopped: a pick (the defense has it there), a sack and the kick or the punt, fourth down turned over
     if (kind === 'pick' && k.ball === 'them') { line = 'pick'; S.poss = k.us; S.y = clamp(5, 95, 100 - k.y - R.int(-5, 25)) }
     // (held on 3rd down: the 4th-down kick from that spot if it's in range, the punt if it isn't)
-    else if (k.down === 3 && 117 - (kind === 'sack' ? k.y - 7 : k.y) <= (margin(S, ball) < 0 && S.t >= REG - 120 ? 60 : 55) && !(margin(S, ball) <= -4)) {
+    else if (k.down === 3 && 117 - (kind === 'sack' ? k.y - 7 : k.y) <= (margin(S, ball) < 0 && S.t >= REG - 120 ? 60 : 55) + kickRange(S.G.k?.[ball]) && !(margin(S, ball) <= -4)) {
       const y = kind === 'sack' ? k.y - 7 : k.y, dist = 117 - y
-      if (R.u() < fgMakeAt(dist)) { score(S, ball, 3, 'fg', { y, d: dist }); line = 'held-fg'; S.poss = other(ball); S.y = kickoff(R) }
+      if (kickFG(S, ball, dist, R)) { score(S, ball, 3, 'fg', { y, d: dist }); line = 'held-fg'; S.poss = other(ball); S.y = kickoff(R) }
       else { line = 'held-miss'; S.poss = other(ball); S.y = Math.max(20, 100 - y + 7) }
     } else if (k.down === 3) { line = 'punt'; S.poss = other(ball); S.y = puntStart(k.y, R) }
     else { line = 'downs'; S.poss = other(ball); S.y = clamp(1, 95, 100 - k.y) }

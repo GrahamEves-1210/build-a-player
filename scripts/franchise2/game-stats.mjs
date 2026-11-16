@@ -11,12 +11,15 @@ const N = Number(process.argv[2] ?? 6000)
 const R = seeded('stats')
 FR.useContracts(CONTRACTS)
 const L = FR.createFranchise({ seed: 'stats', team: 'DEN', owner: 'G', builds: [] })
-const T = FR.SHORTS.map(short => ({ short, ...FR.strength(L, short) }))
+// (each team's kicker kicks: kick.js kickTraits, game.js fgChance)
+const T = FR.SHORTS.map(short => ({ short, ...FR.strength(L, short), k: FR.kickTraits(L, FR.kickerOf(L, short)) }))
 const sum = {}, add = (k, v) => { sum[k] = (sum[k] ?? 0) + v }
 let hw = 0, ot = 0, tie = 0
 for (let i = 0; i < N; i++) {
   const a = T[Math.floor(R() * T.length)], b = T[Math.floor(R() * T.length)]
-  const S = playGame({ h: a.short, a: b.short, sh: { off: a.off, def: a.def }, sa: { off: b.off, def: b.def }, seed: `g${i}`, homeEdge: 0.9 })
+  const S = playGame({ h: a.short, a: b.short, sh: { off: a.off, def: a.def }, sa: { off: b.off, def: b.def }, seed: `g${i}`, homeEdge: 0.9, k: { h: a.k, a: b.k } })
+  for (const p of S.plays) if (p.k === 'fg') { add('made', 1); if (p.d >= 50) add('m50', 1); if (p.d >= 55) add('m55', 1); if (p.d >= 60) add('m60', 1) }
+  for (const s of ['h', 'a']) { const kk = S.kk?.[s]; if (kk) { add('a50', kk[5]); add('k50', kk[6]) } }
   add('pts', S.hs + S.as)
   for (const s of ['h', 'a']) for (const [k, v] of Object.entries(S.ct[s])) add(k, v)
   add('fgm', S.plays.filter(p => p.k === 'fg').length)
@@ -33,6 +36,8 @@ row('field goals made', g('fgm').toFixed(2), '~1.6')
 row('field goal %', (100 * sum.fgm / sum.fga).toFixed(1), '~85')
 const kb = ['k1', 'k2', 'k3', 'k4', 'k5', 'k6'].map(k => sum[k] ?? 0), kt = kb.reduce((x, y) => x + y, 0)
 console.log(`   tries by range: under 30 ${(100 * (kb[0] + kb[1]) / kt).toFixed(0)}%, 30-39 ${(100 * kb[2] / kt).toFixed(0)}%, 40-49 ${(100 * kb[3] / kt).toFixed(0)}%, 50-59 ${(100 * kb[4] / kt).toFixed(0)}%, 60+ ${(100 * kb[5] / kt).toFixed(1)}%   NFL ~18 / 29 / 31 / 21 / under 1`)
+console.log(`   made by range: 50+ ${(100 * sum.m50 / sum.made).toFixed(1)}%, 55+ ${(100 * sum.m55 / sum.made).toFixed(1)}%, 60+ ${(100 * sum.m60 / sum.made).toFixed(1)}% (NFL: about 20%, 5%, 1%)`)
+row('50+ make %', (100 * sum.k50 / sum.a50).toFixed(1), '~70')
 row('extra points %', (100 * sum.xpm / sum.xp).toFixed(1), '~95.5')
 row('punts', g('punt').toFixed(2), '~3.9')
 row('turnovers', g('to').toFixed(2), '~1.2')

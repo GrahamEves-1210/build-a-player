@@ -29,9 +29,10 @@ import { clamp } from './rng'
 
 // ── Age curves ───────────────────────────────────────────────────────────────
 // [growing until, prime until, the age most are gone by]
-export const CURVE = { qb: [27, 33, 38], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 30, 34], ol: [26, 32, 35], dl: [25, 30, 33], lb: [25, 29, 32], db: [24, 29, 32] }
+// (a kicker grows into his late 20s and kicks into his late 30s: Vinatieri, Tucker, Gostkowski, Prater)
+export const CURVE = { qb: [27, 33, 38], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 30, 34], ol: [26, 32, 35], dl: [25, 30, 33], lb: [25, 29, 32], db: [24, 29, 32], k: [29, 35, 40] }
 // the fall past his prime: [the first year's OVR, more each year after]
-const FALL = { qb: [1.1, 0.6], rb: [2.2, 1.1], wr: [1.5, 0.8], te: [1.4, 0.7], ol: [1.2, 0.6], dl: [1.4, 0.7], lb: [1.5, 0.8], db: [1.6, 0.85] }
+const FALL = { qb: [1.1, 0.6], rb: [2.2, 1.1], wr: [1.5, 0.8], te: [1.4, 0.7], ol: [1.2, 0.6], dl: [1.4, 0.7], lb: [1.5, 0.8], db: [1.6, 0.85], k: [0.8, 0.45] }
 const curveOf = p => CURVE[p.p] ?? [26, 29, 33]
 
 // ── Production ───────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ const WORK = {
   dl: t => 25 * g(t, 'sck') + 8 * g(t, 'tfl') + 2 * g(t, 'tk'),
   lb: t => 2 * g(t, 'tk') + 25 * g(t, 'sck') + 30 * g(t, 'dint') + 8 * g(t, 'tfl'),
   db: t => 30 * g(t, 'dint') + 8 * g(t, 'pbu') + 2 * g(t, 'tk'),
+  k: t => 9 * g(t, 'fgm') - 18 * (g(t, 'fga') - g(t, 'fgm')) + 6 * g(t, 'm50') + 2 * g(t, 'xpm') - 8 * (g(t, 'xpa') - g(t, 'xpm')),
 }
 // Every man's season against the league's men at his spot with his rating (-2..2: 0 is what his rating says he'd do;
 // a short season counts for less). { [id]: { z, gp } }
@@ -112,7 +114,9 @@ const h01 = (a, b) => { let h = Math.imul((a | 0) ^ 0x5bd1e995, 0x9E3779B1) ^ Ma
 // the ceiling as scouts put it
 // (the league's starters average about 82: a starter's ceiling is 81 and up, a Pro Bowl one 91)
 const CEIL = [[95, 'ALL-PRO'], [91, 'PRO BOWL'], [86, 'QUALITY STARTER'], [81, 'STARTER'], [76, 'SPOT STARTER'], [70, 'BACKUP'], [0, 'DEPTH']]
-export const ceilWord = v => CEIL.find(([x]) => v >= x)[1]
+// (a kicker: a team carries one, so the scouts' words are a job or a camp leg, never a backup)
+const K_CEIL = [[95, 'ALL-PRO'], [91, 'PRO BOWL'], [85, 'QUALITY STARTER'], [78, 'STARTER'], [0, 'CAMP LEG']]
+export const ceilWord = (v, pos = null) => (pos === 'k' ? K_CEIL : CEIL).find(([x]) => v >= x)[1]
 // Our read of a man: { ceil: 'PRO BOWL', stage: 'STILL DEVELOPING' | 'NEAR HIS CEILING' | 'IN HIS PRIME' | 'PAST HIS PEAK', line } (never a
 // number). own: he's on our roster (the coaches see him every day: a closer read, and a late bloomer is known)
 export function scoutRead(p, own = false) {
@@ -122,8 +126,8 @@ export function scoutRead(p, own = false) {
   const read = truth + (h01(p.i, 41) - 0.5) * (own ? 2 : 5)
   const room = read - p.o
   const stage = p.ag > prime ? 'PAST HIS PEAK' : room >= 2.5 && p.ag < prime ? 'STILL DEVELOPING' : p.ag <= grow ? 'NEAR HIS CEILING' : 'IN HIS PRIME'
-  const ceil = ceilWord(stage === 'STILL DEVELOPING' ? read : Math.max(p.o, Math.min(read, p.o + 2)))
-  return { ceil, stage, line: stage === 'PAST HIS PEAK' ? stage : ceil === 'DEPTH' ? 'DEPTH PLAYER' : `${ceil} CEILING` }
+  const ceil = ceilWord(stage === 'STILL DEVELOPING' ? read : Math.max(p.o, Math.min(read, p.o + 2)), p.p)
+  return { ceil, stage, line: stage === 'PAST HIS PEAK' ? stage : ceil === 'DEPTH' ? 'DEPTH PLAYER' : ceil === 'CAMP LEG' ? 'CAMP LEG' : `${ceil} CEILING` }
 }
 
 // ── Coaches ──────────────────────────────────────────────────────────────────

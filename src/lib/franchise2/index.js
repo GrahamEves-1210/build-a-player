@@ -1,13 +1,13 @@
 // FRANCHISE (take two, 2026-11-14): the engine. Pure and seeded; the state (F) is plain JSON, saved in one of
 // three slots on this device. The screens are components/franchise2.
-import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, payroll, lineup, strength, fillLeague } from './league'
+import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, payroll, lineup, strength, fillLeague, realPool, makeReal, makeDepth } from './league'
 import { makeSchedule } from './schedule'
 import { makeClass, packClass, unpackClass } from './draft'
 import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
 import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
 import { defaultFace } from './faces'
-import { capComply } from './contracts'
+import { capComply, cutMan, marketValue, termFor } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
 import { fillPotential } from './potential'
@@ -28,6 +28,7 @@ export * from './market'
 export * from './news'
 export * from './potential'
 export * from './deals'
+export * from './kick'
 export { outText, QOL } from './injury'
 export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, finishOf } from './standings'
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
@@ -70,6 +71,15 @@ export function createFranchise(setup) {
   F.chem = 55
   F.sched = makeSchedule(F.seed, F.year)
   F.wk = 0; F.log = []; F.ss = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
+  // a kicker build takes the job outright: a team carries one kicker, so the veteran is released (his bonus still
+  // owed is dead money, the NFL's rule) and goes to the street, where a team that needs a kicker can sign him
+  if (F.builds.some(b => b.pos === 'k')) {
+    for (const p of t.r.filter(x => x.p === 'k' && x.b == null)) {
+      cutMan(F, p.i)
+      p.$ = marketValue(p, F.year); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op
+      F.fa = [...(F.fa ?? []), p]
+    }
+  }
   F.lastStarters = Object.values(lineup(t)).map(p => p.i)
   // the builds' rookie deals land on a real roster: if that puts the team over the cap, the front office gets under it
   // before the GM's first day, the way NFL teams do by the new league year (restructures first, then releases of the
@@ -120,9 +130,31 @@ export function loadFranchise(slot) {
   try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); if (F && F.v === 6 && !F.setup && F.teams) { fillPotential(F); F.v = SAVE_V } return F && F.v === SAVE_V && !F.setup && F.teams ? depthOnLoad(F) : null } catch { return null }
 }
 // a save read back: every room two deep (a save from before the filler backups gets them here, the same version
-// kept so no franchise is lost; in the offseason the new season's cut-down does it: offseason.js newSeason)
+// kept so no franchise is lost; in the offseason the new season's cut-down does it: offseason.js newSeason), and a
+// kicker on every roster (a save from before kickers: kickersOnLoad)
 export function depthOnLoad(F) {
+  kickersOnLoad(F)
   if (F.phase !== 'off') fillLeague(F)
+  return F
+}
+// A save made before the rosters carried kickers: each team gets its real kicker (ks.js) as he'd be now, his age and
+// the years left on his deal moved on by the seasons played; a team whose real kicker is already somewhere else signs
+// a working leg off the street. Seeded by the save, add only: the same kickers every time it's read until it's saved.
+export function kickersOnLoad(F) {
+  if (!F?.teams) return F
+  const has = s => F.teams[s].r.some(p => p.p === 'k')
+  if (SHORTS.every(has)) return F
+  const R = rngOf(`${F.seed}-kickers`)
+  const taken = new Set([...SHORTS.flatMap(s => F.teams[s].r), ...(F.fa ?? [])].filter(p => p.p === 'k').map(p => p.n))
+  const gone = Math.max(0, (F.year ?? FIRST_YEAR) - FIRST_YEAR) + (F.phase === 'off' ? 1 : 0)
+  for (const s of SHORTS) {
+    if (has(s)) continue
+    const r = realPool().k.find(x => x.team === s && !taken.has(x.name))
+    let p
+    if (r) { p = makeReal(F, r, R); p.ag += gone; p.y = Math.max(1, p.y - gone); if (p.rk && p.rk < F.year) delete p.rk }
+    else p = makeDepth(F, 'k', null, R, false, 77, F.teams[s].r)
+    F.teams[s].r.push(p)
+  }
   return F
 }
 export function clearFranchise(slot) { try { localStorage.removeItem(KEY(slot)) } catch {} }

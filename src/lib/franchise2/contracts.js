@@ -4,7 +4,7 @@
 //                  rc 1 on a rookie deal · op the fifth-year option (1 there to pick up, 2 picked up) · ox its price
 //   The cap:       capOf(year): the real cap ($301.2M in 2026), up about five percent a year after that.
 //   Cap used:      every man's cap hit + dead money + the rest of the 53 (the men the mode doesn't play: the
-//                  backups past the 37th man, the kicker, the punter, the snapper, at about the minimum).
+//                  backups past the 38th man, the punter, the snapper, at about the minimum).
 //   Signing:       a team signs a man only when his cap hit fits under the cap (capRoom >= his $).
 //   Cutting:       his cap hit comes off; his bonus still owed (g x years left) hits this year's cap as dead money.
 //
@@ -26,7 +26,8 @@ const scaleOf = year => capOf(year) / CAP[2026]
 export const minimumFor = (ag, year = 2026) => r1((ag <= 22 ? 0.885 : ag <= 23 ? 0.885 : ag <= 24 ? 1.03 : ag <= 25 ? 1.105 : ag <= 27 ? 1.18 : ag <= 29 ? 1.255 : 1.38) * scaleOf(year))
 // the men past the ones the mode plays (a 53-man roster): about the minimum each, and the specialists
 export const ROSTER_FULL = 53
-export const restOf53 = (n, year = 2026) => r1(Math.max(0, ROSTER_FULL - n) * 1.1 * scaleOf(year) + 7.5 * scaleOf(year))
+// (the punter and the long snapper: about $4.5M between them; the kicker is on the roster with his own deal)
+export const restOf53 = (n, year = 2026) => r1(Math.max(0, ROSTER_FULL - n) * 1.1 * scaleOf(year) + 4.5 * scaleOf(year))
 
 // ── The market ───────────────────────────────────────────────────────────────
 // What a man at this spot and rating makes a year on the open market (2026 $M): the top of each spot is the real
@@ -44,10 +45,12 @@ const MARKET = {
   lb: [[99, 21], [96, 19], [93, 16], [90, 12.5], [87, 9], [84, 6], [81, 3.8], [78, 2.2], [74, 1.2], [60, 1]],
   cb: [[99, 30], [96, 26.5], [93, 22.5], [90, 18], [87, 13], [84, 8.5], [81, 5], [78, 2.6], [74, 1.3], [60, 1]],
   s: [[99, 21], [96, 19], [93, 16.5], [90, 13.5], [87, 10], [84, 6.5], [81, 4], [78, 2.2], [74, 1.2], [60, 1]],
+  // (the kicker: the top of the market $7M a year, Aubrey's and Boswell's deals; a starter $2-4M)
+  k: [[97, 7], [93, 6], [89, 5], [85, 4], [81, 3], [77, 2], [73, 1.3], [60, 1]],
 }
 // a man's market: his spot (a lineman by where he lines up)
 export const marketKey = p => (p.p === 'ol' ? (p.s === 'C' ? 'c' : p.s === 'LG' || p.s === 'RG' ? 'og' : 'ot') : p.p === 'dl' ? (p.s === 'dt' ? 'dt' : 'edge') : p.p === 'db' ? (p.s === 's' ? 's' : 'cb') : p.p)
-export const MARKET_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ot: 'OT', og: 'OG', c: 'C', edge: 'EDGE', dt: 'DT', lb: 'LB', cb: 'CB', s: 'S' }
+export const MARKET_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ot: 'OT', og: 'OG', c: 'C', edge: 'EDGE', dt: 'DT', lb: 'LB', cb: 'CB', s: 'S', k: 'K' }
 function curve(tab, o) {
   if (o >= tab[0][0]) return tab[0][1]
   for (let i = 1; i < tab.length; i++) {
@@ -62,11 +65,12 @@ export function marketValue(p, year = 2026) {
   // spends most of its cap on its starters, not just its stars)
   const mid = 1 + 0.4 * clamp(0, 1, (92 - p.o) / 12) * clamp(0, 1, (p.o - 70) / 6)
   const base = curve(MARKET[marketKey(p)] ?? MARKET.lb, p.o) * mid
-  const age = p.p === 'rb' ? (p.ag >= 30 ? 0.55 : p.ag >= 28 ? 0.75 : 1) : p.p === 'qb' ? (p.ag >= 37 ? 0.7 : p.ag >= 34 ? 0.88 : 1) : p.ag >= 33 ? 0.6 : p.ag >= 31 ? 0.78 : p.ag >= 30 ? 0.9 : 1
+  // (a kicker's leg lasts: his price holds into his late 30s)
+  const age = p.p === 'k' ? (p.ag >= 39 ? 0.7 : p.ag >= 37 ? 0.85 : 1) : p.p === 'rb' ? (p.ag >= 30 ? 0.55 : p.ag >= 28 ? 0.75 : 1) : p.p === 'qb' ? (p.ag >= 37 ? 0.7 : p.ag >= 34 ? 0.88 : 1) : p.ag >= 33 ? 0.6 : p.ag >= 31 ? 0.78 : p.ag >= 30 ? 0.9 : 1
   return r1(Math.max(minimumFor(p.ag, year), base * age * scaleOf(year)))
 }
 // how long a deal runs at his age
-export const termFor = p => (p.ag <= 25 ? 4 : p.ag <= 27 ? (p.o >= 85 ? 5 : 4) : p.ag <= 29 ? 3 : p.ag <= 31 ? 2 : 1)
+export const termFor = p => (p.p === 'k' ? (p.ag <= 30 ? 4 : p.ag <= 34 ? 3 : p.ag <= 37 ? 2 : 1) : p.ag <= 25 ? 4 : p.ag <= 27 ? (p.o >= 85 ? 5 : 4) : p.ag <= 29 ? 3 : p.ag <= 31 ? 2 : 1)
 // the share of a deal that's signing bonus (what's still owed if he's cut): stars get more of it up front
 export const bonusShare = $ => ($ >= 30 ? 0.42 : $ >= 15 ? 0.35 : $ >= 6 ? 0.25 : $ >= 2.5 ? 0.12 : 0)
 // a deal on a man (a new contract replaces his old one)
@@ -139,7 +143,7 @@ export function seedDead(F) {
 export function estimateDeal(p, R) {
   // (a man 24 or under is still on his rookie deal: the scale where a man of his rating goes, the years he has left)
   if (p.ag <= 24) {
-    const d = rookieScale(buildSlot(p.o - (24 - p.ag)))
+    const d = rookieScale(buildSlot(p.o - (24 - p.ag), p.p))
     return { $: d.$, y: clamp(1, 4, 25 - p.ag), g: d.g, rc: 1, src: 'est' }
   }
   const $ = marketValue(p)
@@ -172,7 +176,9 @@ export function signRookie(p, pick, year = 2026) {
 // A build's rookie deal (owner 11-15): the real NFL rookie scale, priced by his OVR. A 90 or better signs the No. 1
 // pick's deal; below that the pay steps down the scale (an 85 about the 12th pick's, an 80 the 33rd's, a 75 the
 // 61st's, a 70 the 95th's, a 60 the 176th's). The pick is only the scale's price point: it is never shown.
-export const buildSlot = o => (o >= 90 ? 1 : clamp(1, 224, Math.round(1 + Math.pow(90 - o, 1.55) * 0.9)))
+// A kicker is priced where kickers really go: the best one a 3rd-rounder's deal (Moody went 99th, Aguayo 59th, a reach
+// everyone remembers), an 85 a 4th-rounder's, an 80 a 6th-rounder's, below that an undrafted man's.
+export const buildSlot = (o, pos = null) => (pos === 'k' ? clamp(64, 262, Math.round(64 + Math.pow(Math.max(0, 92 - o), 1.4) * 4)) : o >= 90 ? 1 : clamp(1, 224, Math.round(1 + Math.pow(90 - o, 1.55) * 0.9)))
 // the fifth-year option's price: the top of his spot's market for a top-10 pick, a step below for the rest
 export function optionPrice(p, year) {
   const top = (MARKET[marketKey(p)] ?? MARKET.lb)

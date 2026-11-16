@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { TEAM, buildTeams, calibrate, strength, lineup, sideGrade, POS_LABEL, DIVISIONS, DIV_OF, realHC, coachGrade, newCoachBuild, linesDone } from '../../lib/franchise2'
+import { TEAM, buildTeams, calibrate, strength, lineup, sideGrade, POS, POS_LABEL, DIVISIONS, DIV_OF, realHC, coachGrade, newCoachBuild, linesDone } from '../../lib/franchise2'
 import { coachPhoto } from './coachFace'
 import { lastSeason } from '../../lib/franchise2/lastSeason'
 import { rookieScale } from '../../lib/franchise2/contracts'
 import { cleanName, nameOk, randomFirstLast, takenOn, freeNumbers, legalFor, pickNumber, rookieSlots } from '../../lib/franchise2/identity'
-import { POSITIONS, CAPS, POS_NAME } from '../../lib/squad'
+import { CAPS, POS_NAME as SQ_POS_NAME } from '../../lib/squad'
+import { K_LIVE } from '../../lib/kLive'
 import { ovrOf } from '../../lib/squadSeason'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../lib/franchise2/faces'
 import { sfx, haptic } from '../../lib/juice'
@@ -23,6 +24,11 @@ import { teamKit } from '../../lib/franchise2/kits'
 // The setup is saved in its slot after every change (FranchiseMode putSetup), so leaving for the build page and
 // coming back, or a reload, picks up where it was.
 const MAX_BUILDS = 8
+// the positions a build can play, in the mode's order: the offense, the defense, then the kicker (one at most: a team
+// carries one)
+export const SETUP_POS = POS.filter(p => p !== 'k' || K_LIVE)
+const POS_NAME = { ...SQ_POS_NAME, k: 'Kicker' }
+const capOf = pos => (pos === 'k' ? 1 : CAPS.nfl[pos] ?? 0)
 const STEPS = [['team', 'TEAM'], ['builds', 'PLAYERS'], ['coach', 'COACH'], ['hire', 'HIRE']]
 const GROUP = { team: 'team', card: 'team', builds: 'builds', coach: 'coach', style: 'coach', who: 'coach', hire: 'hire' }
 const BACK = { card: 'team', builds: 'card', coach: 'builds', style: 'coach', who: 'style', hire: 'who' }
@@ -99,7 +105,7 @@ function TeamCard({ s, onPick, onGo }) {
   const st = strength(F, s)
   const ls = lastSeason(s)
   const hc = realHC(s)
-  const stars = Object.values(lineup(F.teams[s])).sort((a, b) => b.o - a.o).slice(0, 3)
+  const stars = Object.values(lineup(F.teams[s])).filter(p => p.p !== 'k').sort((a, b) => b.o - a.o).slice(0, 3)
   const i = ORDER.indexOf(s)
   const prev = ORDER[(i + 31) % 32], next = ORDER[(i + 1) % 32]
   return (
@@ -141,7 +147,7 @@ const lastName = n => splitName(n).last
 function Builds({ S, go, owner, onBuild }) {
   const picks = S.picks ?? []
   const count = pos => picks.filter(p => p.pos === pos).length
-  const can = pos => picks.length < MAX_BUILDS && count(pos) < CAPS.nfl[pos]
+  const can = pos => picks.length < MAX_BUILDS && count(pos) < capOf(pos)
   const add = pos => { if (!can(pos)) { sfx('deny'); return } go({ picks: [...picks, { id: `${pos}${count(pos) + 1}-${Date.now().toString(36)}`, pos }] }, 'slot') }
   const drop = pos => {
     const last = [...picks].reverse().find(p => p.pos === pos)
@@ -149,7 +155,7 @@ function Builds({ S, go, owner, onBuild }) {
     const builds = { ...S.builds }; delete builds[last.id]
     go({ picks: picks.filter(p => p !== last), builds }, 'tap')
   }
-  const ordered = POSITIONS.nfl.flatMap(pos => picks.filter(p => p.pos === pos))
+  const ordered = SETUP_POS.flatMap(pos => picks.filter(p => p.pos === pos))
   const built = p => S.builds?.[p.id]
   const next = ordered.find(p => !built(p))
   const unnamed = ordered.find(p => built(p) && !built(p).name)
@@ -163,7 +169,7 @@ function Builds({ S, go, owner, onBuild }) {
     <div className="fsu-builds">
       <Chyron team={S.team} tag={`${picks.length}/${MAX_BUILDS}`} title="Your players" sub="ROOKIES · UP TO 8" />
       <div className="fsu-pos">
-        {POSITIONS.nfl.map(pos => {
+        {SETUP_POS.map(pos => {
           const st = starterAt(S.team, pos)
           const n = count(pos)
           return (
@@ -220,7 +226,7 @@ const sameFace = (a, b) => !!a && FACE_KEYS.every(k => a[k] === b.face[k])
 // First and last name (Career's name step: the same letters, the random-name button) and a number his position
 // may wear and nobody on the team has. His rookie deal shows under it: the slot his OVR goes at in the draft.
 //   used for the setup's builds and for Sandbox's prospects (FranchiseMode: NameSheet)
-const RANGE = { qb: '0-19', ol: '50-79', dl: '50-79, 90-99', lb: '0-59, 90-99', db: '0-49' }
+const RANGE = { qb: '0-19', ol: '50-79', dl: '50-79, 90-99', lb: '0-59, 90-99', db: '0-49', k: '0-49, 90-99' }
 export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDone, faceKey, showNum = true }) {
   const [first, setFirst] = useState(() => init?.first ?? '')
   const [last, setLast] = useState(() => init?.last ?? '')
@@ -280,7 +286,7 @@ function NameStep({ S, id, owner, onDone }) {
   const pick = (S.picks ?? []).find(p => p.id === id)
   const others = Object.entries(S.builds).filter(([k, x]) => k !== id && x?.num != null).map(([, x]) => x)
   const taken = useMemo(() => takenOn(S.team, others), [S.team, others.map(x => x.num).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const ordered = POSITIONS.nfl.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).filter(p => S.builds[p.id])
+  const ordered = SETUP_POS.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).filter(p => S.builds[p.id])
   const slot = rookieSlots(ordered.map(p => S.builds[p.id]))[ordered.findIndex(p => p.id === id)]
   const n = splitName(b.name ?? '')
   return (
