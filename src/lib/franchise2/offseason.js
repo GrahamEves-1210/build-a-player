@@ -13,6 +13,7 @@ import { ovrOf, TYPES_OF } from '../squadSeason'
 import { makeClass } from './draft'
 import { leagueUnderCap } from './market'
 import { signRookie } from './contracts'
+import { clearLines } from './deals'
 
 // (1 awards: awards.js · the league ages: aging.js · 2 re-sign and 3 free agency: market.js · the cap: contracts.js)
 
@@ -45,6 +46,7 @@ export function newSeason(F) {
   F.phase = 'season'; F.stage = null; F.aging = null
   // (the offseason's own lists go: the wire has moved on; the league's history keeps what lasts)
   F.fas = null; F.ext = null; F.gone = null; F.aw = null; F.fad = null
+  F.talks = null; F.rsd = null; F.fao = null; F.far = null; clearLines(F)
   // chemistry: a core that stays together grows; many new starters set it back. Hype cools toward the middle.
   const now = Object.values(lineup(F.teams[F.team])).map(p => p.i)
   const changed = now.filter(i => !before.has(i)).length

@@ -1,11 +1,11 @@
 // FRANCHISE: the league ages a year (the offseason, after the awards).
 //
-// Each position has its own curve, the way the NFL's do: a young man grows toward what he's headed for (pk), faster
-// when he starts and with a coach who develops players; in his prime he holds, a point either way; past it he
-// slips, a little more each year. Backs fall off first (28), quarterbacks last (34). Men retire when the curve and
-// their rating say so; a man past 31 who's no longer good enough to start is likelier to go.
+// Each man's year comes from his hidden potential (pk: the OVR he's headed for), his position's age curve, how
+// much he played and what he did with it, his coaches and front office, and a little luck: potential.js has the
+// rules and why. Men retire when the curve and their rating say so; a man past 31 who's no longer good enough to
+// start is likelier to go.
 //   ageLeague(F)   every man a year older, his OVR moved, his deal a year shorter; the retirements
-//   growth(F, p, R, starter, short)   the OVR change for one man this year
+//   growth(F, p, R, starter, short, ctx)   the OVR change for one man this year
 //   growBuild(B, d)   the player's build moves a trait a step at a time until his OVR has moved by d
 import { SHORTS, lineup, newFrontOffice, foOf } from './league'
 import { records } from './standings'
@@ -14,25 +14,19 @@ import { coachDev } from './coach'
 import { carryInjury } from './injury'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { rngOf, clamp } from './rng'
+import { CURVE, growthOf, settlePk, prodScores, playTime, myCoachYear } from './potential'
+import { leagueStats } from './stats'
+import { snapLines } from './deals'
 
-// [still growing until, prime until, the age most are gone by]
-export const CURVE = { qb: [27, 33, 38], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 30, 34], ol: [26, 31, 35], dl: [25, 29, 33], lb: [25, 28, 32], db: [24, 28, 32] }
+export { CURVE }
 export const FO_DEV = 4     // OVR a year for a young man: a best-run club's about +1.5 over the league's middle shop
-export function growth(F, p, R, starter = false, short = null) {
-  const [grow, prime] = CURVE[p.p] ?? [26, 29, 33]
+// ctx: { prod, gp } this season's production (potential.js prodScores)
+export function growth(F, p, R, starter = false, short = null, ctx = {}) {
   // (the club's development: a well-run organization gets more out of its young men, a badly run one less (against
   // the league's middle shop, so the league as a whole doesn't drift);
   // with how it drafts and who it keeps, it's what makes the league's haves and have-nots last. league.js foOf)
-  const dev = short ? coachDev(F, short, p) + (foOf(F, short) - (F.foMid ?? 0.5)) * FO_DEV : 0
-  let d
-  if (p.ag <= grow) {
-    // the rest of the way to his peak, spread over the years he has left to grow (a wide spread: some boom early)
-    // (a late bloomer, the one the draft missed (hb), gets there in two or three years once he's in the building)
-    const left = Math.max(1, p.hb ? Math.min(2, grow + 1 - p.ag) : grow + 1 - p.ag)
-    d = Math.max(0, ((p.pk ?? p.o) - p.o) / left) * (0.55 + 0.9 * R.u()) + dev + (starter && p.ag <= 25 ? 0.6 : 0) + R.n() * 0.8
-  } else if (p.ag <= prime) d = R.n() * 0.9 + (p.o < (p.pk ?? p.o) ? 0.4 : -0.1)
-  else d = -(0.9 + (p.ag - prime) * 0.75) * (0.5 + R.u())
-  return Math.round(d)
+  const dev = short && p.ag <= (CURVE[p.p]?.[0] ?? 26) ? coachDev(F, short, p) + (foOf(F, short) - (F.foMid ?? 0.5)) * FO_DEV : 0
+  return growthOf(p, R, { pt: playTime(starter, ctx.gp), prod: ctx.prod ?? 0, dev })
 }
 // A build grows a step at a time: a trait up a grade until his OVR has moved by d (or down, the same way)
 export function growBuild(B, d) {
@@ -67,6 +61,9 @@ export function ageLeague(F) {
   F.gone = []
   const rec = records(F)
   F.foMid = SHORTS.reduce((a, s) => a + foOf(F, s), 0) / SHORTS.length
+  // (the season just played: every man's production, and the lines the market reads: deals.js snapLines)
+  const tot = leagueStats(F), prod = prodScores(F, tot)
+  snapLines(F, tot)
   for (const s of SHORTS) {
     const t = F.teams[s]
     const keep = []
@@ -74,12 +71,10 @@ export function ageLeague(F) {
       p.ag++
       carryInjury(p)
       const was = p.o
-      const d = growth(F, p, R, starters.has(p.i), s)
+      const d = growth(F, p, R, starters.has(p.i), s, { prod: prod[p.i]?.z ?? 0, gp: prod[p.i]?.gp ?? 0 })
       if (p.b != null) { p.o = was + growBuild(F.builds[p.b], d); F.builds[p.b].age = p.ag }
       else p.o = clamp(40, 99, p.o + d)
-      if (p.o > (p.pk ?? 0)) p.pk = p.o
-      // (past his prime what he was headed for no longer matters: dropped, the save stays small)
-      if (p.ag > (CURVE[p.p]?.[1] ?? 29)) delete p.pk
+      settlePk(p)
       const out = R.u() < retireChance(p, starters.has(p.i)) * (p.b != null ? 0.6 : 1)
       if (out) {
         if (p.b != null) retireBuild(F, p)
@@ -103,6 +98,8 @@ export function ageLeague(F) {
       else { const f = t.fo ?? 0.5; t.fo = Math.round(clamp(0.05, 0.95, f + (0.5 - f) * 0.03 + R.n() * 0.04) * 100) / 100 }
     }
   }
+  // the player's own head coach: a year of results and a year older (potential.js)
+  for (const c of myCoachYear(F, rngOf(`${F.seed}-${F.year}-mycoach`))) changes.push({ k: 'coach', ...c })
   F.aging = changes
   delete F.foMid
   return changes

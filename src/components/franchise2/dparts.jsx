@@ -23,6 +23,7 @@ import { photoOf } from './bits'
 import './fd.css'
 import './fd2.css'
 import { teamKit } from '../../lib/franchise2/kits'
+import { ScoutNote, LastLine } from './dealbits'
 
 // D's parts: a man's face (a real man's photo, a build's own face, a made-up man's drawn face), a man as a
 // lower-third on any of D's screens, the cap bar, a man's page (his ratings as grades, his deal, his seasons).
@@ -129,6 +130,8 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
           <Fact v={p.y > 0 ? money(p.$) : '—'} label={p.rc ? 'ROOKIE DEAL' : 'CAP HIT'} />
           <Fact v={p.y > 0 ? p.y : 0} label={p.y === 1 ? 'YEAR LEFT' : 'YEARS LEFT'} />
         </div>
+        {/* what the scouts say about him (his hidden potential, never a number: potential.js), last season's line in the offseason */}
+        <div className="dl-about dl-page-scout"><ScoutNote p={p} own={mine} />{F.phase === 'off' && <LastLine F={F} p={p} />}</div>
         {p.in ? <div className="fd-hurt"><Tag tone="inj">{p.ij?.l ? String(p.ij.l).toUpperCase() : outText(p)}</Tag></div> : null}
         <div className="fd-h">RATINGS</div>
         <Grades F={F} p={p} />

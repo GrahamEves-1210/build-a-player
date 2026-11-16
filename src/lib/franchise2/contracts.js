@@ -209,7 +209,7 @@ export function cutMan(F, id, short = F.team) {
   if (c.dead > 0) (t.dead ??= []).push([p.n, c.dead])
   // the wire has it; in the offseason he's a free agent the market can sign
   F.news = [...(F.news ?? []), { k: 'cut', tag: 'RELEASED', s: short, text: `${TEAM[short]?.nick ?? short} release ${p.n}`, y: F.year, wk: F.wk }].slice(-40)
-  if (F.phase === 'off' && Array.isArray(F.fa)) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; F.fa.push(p) }
+  if (F.phase === 'off' && Array.isArray(F.fa) && !p.fl) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; F.fa.push(p) }
   return { p, ...c }
 }
 // Getting under the cap (a league team, by the start of the new league year): first restructures, the way NFL

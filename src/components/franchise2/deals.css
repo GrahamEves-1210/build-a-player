@@ -1,0 +1,130 @@
+/* Re-sign talks and free agency (Deals.jsx, dealbits.jsx), on the kit (kit.css) and D's parts (fd.css, fd2.css).
+   Near-black, graphite, the team's flat colours, white type. Text 13px and up. */
+
+/* what the scouts say, his last season */
+.dl-about { display: grid; gap: 4px; }
+.dl-scout { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-family: var(--fk-b); font-weight: 600; font-size: 14px; letter-spacing: .2px; text-transform: uppercase; color: var(--fk-text); }
+.dl-scout small { padding: 1px 6px; background: var(--fk-g4); color: #fff; font-size: 13px; }
+.dl-scout b { font-family: var(--fk-f); font-weight: 400; font-size: 18px; letter-spacing: .8px; color: #fff; }
+.dl-scout em { font-style: normal; color: var(--fk-mute); }
+.dl-last { display: flex; align-items: center; gap: 7px; min-width: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; letter-spacing: .2px; text-transform: uppercase; color: var(--fk-text); }
+.dl-last > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-last i { font-style: normal; color: var(--fk-mute); }
+
+/* the talks: his number, the patience, what the agent said */
+.dl-table { display: grid; gap: 8px; padding: 10px 12px; background: var(--fk-g1); box-shadow: inset 3px 0 0 #fff; }
+.dl-num { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 18px; }
+.dl-num-h { flex: 1 0 100%; font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .4px; color: var(--fk-mute); }
+.dl-pat { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dl-pat small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.dl-pat span { display: flex; gap: 5px; }
+.dl-pat i { width: 22px; height: 10px; background: var(--fk-g4); transform: skewX(-18deg); }
+.dl-pat i.is-on { background: #fff; }
+.dl-say { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 15px; line-height: 1.3; color: #fff; }
+.dl-say.is-short, .dl-say.is-insult, .dl-say.is-walk { color: #ff8a8c; }
+.dl-say.is-yes { color: var(--fk-w); }
+.dl-facts { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 2px 2px 4px; }
+.dl-meet { margin: 0; font-family: var(--fk-f); font-size: 18px; letter-spacing: 1px; color: var(--fk-mute); text-align: center; }
+.dl-alt { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dl-alt > :first-child { grid-column: 1 / -1; }
+.dl-over { display: grid; justify-items: center; gap: 8px; padding: 18px 10px 4px; text-align: center; }
+.dl-over > b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; }
+.dl-over > small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
+.dl-over .fk-actbar { width: 100%; }
+.dl-gone { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--fk-g1); }
+.dl-gone b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; }
+.dl-coachup { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc, #fff); }
+.dl-coachup span { display: grid; line-height: 1.1; }
+.dl-coachup small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.dl-coachup b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; }
+.dl-coachup em { font-style: normal; font-family: var(--fk-d); font-size: 20px; }
+.dl-coachup em.is-up { color: var(--fk-w); } .dl-coachup em.is-down { color: var(--fk-l); }
+
+/* the offer builder */
+.dl-terms { display: grid; gap: 8px; padding: 10px 12px; background: var(--fk-g1); }
+.dl-step { display: grid; grid-template-columns: minmax(0, 1fr) 46px minmax(96px, auto) 46px; align-items: center; gap: 6px; }
+.dl-step-l { font-family: var(--fk-b); font-weight: 700; font-size: 14px; letter-spacing: .3px; color: var(--fk-mute); }
+.dl-step button { height: 44px; background: var(--fk-g3); border: 0; color: #fff; font-family: var(--fk-d); font-size: 24px; line-height: 1; cursor: pointer; }
+.dl-step button:disabled { opacity: .3; cursor: default; }
+.dl-step button:active:not(:disabled) { background: var(--fk-g4); }
+.dl-step b { text-align: center; font-family: var(--fk-d); font-weight: 400; font-size: 26px; color: #fff; font-variant-numeric: tabular-nums; }
+.dl-range { width: 100%; height: 28px; margin: 0; accent-color: #fff; cursor: pointer; }
+.dl-bonus { display: grid; gap: 6px; }
+.dl-seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line2); }
+.dl-seg button { height: 40px; background: none; border: 0; color: var(--fk-mute); font-family: var(--fk-d); font-size: 15px; letter-spacing: .6px; cursor: pointer; }
+.dl-seg button.is-on { background: #fff; color: #0b0c0e; }
+.dl-sum { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.dl-sum b { font-family: var(--fk-d); font-weight: 400; font-size: 16px; color: #fff; }
+.dl-cap { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 12px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc, #fff); }
+.dl-cap span { display: grid; line-height: 1.05; }
+.dl-cap small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.dl-cap b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; color: #fff; font-variant-numeric: tabular-nums; }
+.dl-cap span:last-child b { color: var(--fk-w); }
+.dl-cap.is-over span:last-child b { color: var(--fk-l); }
+
+/* free agency: the filters, the cards, the offer beside them on a wide screen */
+.dl-fa { display: grid; gap: 12px; min-width: 0; }
+.dl-fa-list { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.dl-filter { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+.dl-filter button, .dl-sort button { height: 38px; padding: 0 4px; background: var(--fk-g2); border: 0; box-shadow: inset 0 0 0 1px var(--fk-line); color: var(--fk-mute); font-family: var(--fk-d); font-size: 15px; letter-spacing: .5px; cursor: pointer; }
+.dl-filter button.is-on, .dl-sort button.is-on { background: #fff; color: #0b0c0e; box-shadow: none; }
+.dl-sort { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); align-items: center; gap: 3px; }
+.dl-sort > span { padding: 0 8px 0 2px; font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; color: var(--fk-mute); }
+.dl-card { display: grid; gap: 0; animation: fk-up .22s var(--d, 0ms) ease-out both; }
+.dl-card.is-on .fk-l3 { box-shadow: inset 0 0 0 2px #fff; }
+.dl-card-info { display: grid; gap: 5px; width: 100%; padding: 8px 10px 9px; background: var(--fk-g1); border: 0; border-top: 1px solid var(--fk-line); color: var(--fk-text); text-align: left; font: inherit; cursor: pointer; }
+.dl-card.is-on .dl-card-info { box-shadow: inset 2px 0 0 #fff, inset -2px 0 0 #fff, inset 0 -2px 0 #fff; }
+.dl-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dl-ask { display: flex; align-items: baseline; gap: 6px; }
+.dl-ask small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; color: var(--fk-mute); }
+.dl-ask b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; color: #fff; }
+.dl-ask em { font-style: normal; font-family: var(--fk-f); font-size: 17px; letter-spacing: .8px; color: var(--fk-mute); }
+.dl-fit { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; padding: 2px 7px; background: var(--fk-g3); color: var(--fk-mute); }
+.dl-fit.is-start, .dl-fit.is-hole { background: #fff; color: #0b0c0e; }
+.dl-bid { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.dl-bid-teams { display: flex; align-items: center; gap: 4px; }
+.dl-bid-teams small { margin-left: 4px; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.dl-stand { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; padding: 3px 8px; }
+.dl-stand.is-w { background: var(--fk-w); color: #04130a; }
+.dl-stand.is-l { background: var(--fk-l); color: #fff; }
+.dl-stand.is-n { background: var(--fk-g4); color: #fff; }
+.dl-more { height: 44px; background: none; border: 0; box-shadow: inset 0 0 0 1px var(--fk-line2); color: #fff; font-family: var(--fk-f); font-size: 17px; letter-spacing: 1px; cursor: pointer; }
+.dl-pick { display: grid; gap: 6px; padding: 22px 16px; background: var(--fk-g1); text-align: center; }
+.dl-pick b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; }
+.dl-pick small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
+
+/* the offer */
+.dl-offer { display: grid; gap: 10px; min-width: 0; }
+.dl-standing { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--fk-g2); }
+.dl-standing small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.dl-standing b { font-family: var(--fk-d); font-weight: 400; font-size: 24px; letter-spacing: .4px; }
+.dl-standing.is-w { box-shadow: inset 4px 0 0 var(--fk-w); } .dl-standing.is-w b { color: var(--fk-w); }
+.dl-standing.is-l { box-shadow: inset 4px 0 0 var(--fk-l); } .dl-standing.is-l b { color: #ff8a8c; }
+.dl-standing.is-n { box-shadow: inset 4px 0 0 #fff; }
+.dl-side-go { display: grid; grid-template-columns: 2fr 1fr; gap: 6px; }
+.dl-side-go > :only-child { grid-column: 1 / -1; }
+.dl-x { position: static; width: 30px; height: 30px; font-size: 20px; }
+
+/* an offer out */
+.dl-outnote { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-text); }
+/* the day's answers */
+.dl-results .fd-offer { grid-template-columns: 40px minmax(0, 1fr) auto auto; }
+.dl-results { display: grid; gap: 10px; }
+.dl-res { display: grid; gap: 4px; animation: fk-up .25s var(--d, 0ms) ease-out both; }
+.dl-res-h { display: flex; align-items: center; gap: 10px; }
+.dl-res-h b { font-family: var(--fk-d); font-weight: 400; font-size: 19px; }
+.dl-res-h small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.dl-res-h .fk-stamp { margin-left: auto; }
+.dl-res-t { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-text); }
+
+/* a man's page: the scouts' line under his facts */
+.dl-page-scout { padding: 6px 10px; background: var(--fk-g1); }
+
+@media (min-width: 900px) {
+  .dl-fa.is-wide { grid-template-columns: minmax(0, 1fr) minmax(360px, 420px); gap: 22px; align-items: start; }
+  .dl-fa-side { position: sticky; top: calc(var(--fk-stick, 0px) + 14px); max-height: calc(100dvh - var(--fk-stick, 0px) - 130px - var(--web-rail, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+  .dl-filter { grid-template-columns: repeat(11, minmax(0, 1fr)); }
+  .fd-off-grid.is-fa { max-width: none; }
+}
+html.bap-reduce-motion :is(.dl-card, .dl-res) { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { :is(.dl-card, .dl-res) { animation: none !important; } }

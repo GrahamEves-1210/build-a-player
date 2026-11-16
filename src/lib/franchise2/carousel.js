@@ -23,6 +23,7 @@ import { SHORTS, strength } from './league'
 import { records, recText } from './standings'
 import { rngOf, clamp, roll } from './rng'
 import { coachName } from './coachNames'
+import { callerYear, cultureYear, coachAge } from './potential'
 import { COACH_MIX } from './faces'
 import { ensureStaff, staffOf, staffMen, coachOvr, coachGrade, rOf, nickOf, ROLE_LONG, cLetter, CTYPES, toArr } from './coach'
 
@@ -114,19 +115,17 @@ export function openCarousel(F) {
       const c = M[who]
       if (!c || c.mine) continue
       const rk = side === 'off' ? offRank[s] : defRank[s], j = J[side]
-      // (the league's average holds: a step up is likelier from the middle, a step down from the top)
-      if (rk <= 5 && R.u() < (c.r[j] >= 8 ? 0.12 : 0.28)) c.r[j] = Math.min(11, c.r[j] + 1)
-      else if (rk >= 26 && R.u() < (c.r[j] >= 6 ? 0.4 : 0.25)) c.r[j] = Math.max(1, c.r[j] - 1)
+      // (up to his hidden ceiling: potential.js)
+      callerYear(c, j, rk, R)
     }
-    if (T.hc && !T.hc.mine) { if (r.w >= 12 && R.u() < 0.3) T.hc.r[3] = Math.min(11, T.hc.r[3] + 1); else if (r.w <= 4 && R.u() < 0.25) T.hc.r[3] = Math.max(1, T.hc.r[3] - 1) }
+    if (T.hc && !T.hc.mine) cultureYear(T.hc, r.w, R)
   }
   // 2. a year older; the young learn, the old slip; the old retire
   const everyone = []
   for (const s of SHORTS) { const T = staffOf(F, s); for (const k of ['hc', 'oc', 'dc']) if (T[k] && !T[k].mine) everyone.push([T[k], s, k]) }
   for (const [c] of everyone) {
     c.ag++
-    if (c.ag <= 40 && R.u() < 0.12) { const j = J[c.sd]; c.r[j] = Math.min(11, c.r[j] + 1) }
-    if (c.ag >= 67 && R.u() < 0.2) { const j = R.int(0, 4); c.r[j] = Math.max(1, c.r[j] - 1) }
+    coachAge(c, R)
   }
   for (const c of F.cpool) { c.ag++; c.out = (c.out ?? 0) + 1 }
   for (const [c, s, k] of everyone) {

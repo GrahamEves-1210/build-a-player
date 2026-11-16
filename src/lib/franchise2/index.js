@@ -10,6 +10,7 @@ import { defaultFace } from './faces'
 import { capComply } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
+import { fillPotential } from './potential'
 
 export * from './league'
 export * from './season'
@@ -25,12 +26,15 @@ export * from './aging'
 export * from './awards'
 export * from './market'
 export * from './news'
+export * from './potential'
+export * from './deals'
 export { outText, QOL } from './injury'
 export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, finishOf } from './standings'
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 export { clockText, periodOf, spotText, normalRate } from './game'
 
-export const SAVE_V = 6
+// (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)
+export const SAVE_V = 7
 
 // setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num, face }],
 //         coach: coach.js finishCoach { name, face, style, r: { the five ratings }, from, ovr } }
@@ -113,7 +117,7 @@ export function saveFranchise(F) {
   try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packFranchise(F)); return true } catch { return false }
 }
 export function loadFranchise(slot) {
-  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); return F && F.v === SAVE_V && !F.setup && F.teams ? F : null } catch { return null }
+  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); if (F && F.v === 6 && !F.setup && F.teams) { fillPotential(F); F.v = SAVE_V } return F && F.v === SAVE_V && !F.setup && F.teams ? F : null } catch { return null }
 }
 export function clearFranchise(slot) { try { localStorage.removeItem(KEY(slot)) } catch {} }
 // a slot's line on the slot screen, without keeping the whole save around
