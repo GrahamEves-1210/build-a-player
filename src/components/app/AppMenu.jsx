@@ -179,7 +179,9 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
   const goOut = fn => () => { onClose(); fn() }
 
   if (feedbackUser !== null) {
-    return <FeedbackModal user={feedbackUser || null} isBucket={isBucket} onClose={() => { setFeedbackUser(null); onClose() }} />
+    // closing it closes the whole menu: only onClose. Resetting feedbackUser here too re-mounted the menu sheet
+    // while AnimatePresence was already exiting it, so its exit never finished and the More menu stayed stuck open
+    return <FeedbackModal user={feedbackUser || null} isBucket={isBucket} onClose={onClose} />
   }
 
   const grab = <div className="ag-menu-grab" onPointerDown={startDrag} aria-hidden="true" />
