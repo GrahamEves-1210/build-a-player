@@ -10,6 +10,12 @@
   padding: 0 16px calc(28px + var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px));
   font-family: var(--fk-f);
 }
+/* the face creator holds his face under the top bar while its choices scroll (FacePick, face.css) */
+.fsu .ffp { --ffp-stick: calc(60px + env(safe-area-inset-top, 0px)); }
+.fsu-sheet .ffp { --ffp-stick: 0px; }
+/* (the action bar sticks to the page's bottom edge, over the page's own bottom padding, so nothing shows under it;
+   the rail and the safe area stay clear) */
+.fsu .fsu-acts { bottom: -28px; }
 .fsu-top {
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; max-width: 600px; margin: 0 auto;
   padding: calc(10px + env(safe-area-inset-top, 0px)) 0 10px; background: var(--fk-ink); box-shadow: 0 1px 0 var(--fk-line);
@@ -157,8 +163,11 @@
 @media (hover: hover) { .fsu-opt:not(.is-on):hover { background: var(--fk-g2); } }
 .fsu-who-prev { --h: 104px; }
 .fsu-faces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.fsu-face { position: relative; aspect-ratio: 1.25; padding: 0; border: 0; overflow: hidden; background: var(--fk-g2); cursor: pointer; }
-.fsu-face img { position: absolute; left: 50%; bottom: 0; height: 104%; transform: translateX(-50%); }
+/* a build's faces (NameForm): eight and MORE, three across on a phone; on a computer as many as fit at about 120 px */
+@media (min-width: 700px) { .fsu-faces--build { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); } }
+.fsu-face { position: relative; aspect-ratio: 1; padding: 0; border: 0; overflow: hidden; background: var(--fk-g2); cursor: pointer; }
+/* (a drawn face is framed the way an ESPN headshot is: the square fills the box, the head centred near the top) */
+.fsu-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
 .fsu-face.is-on { background: var(--tc); box-shadow: inset 0 0 0 3px #fff; }
 .fsu-face-more { display: grid; place-items: center; align-content: center; gap: 4px; color: #fff; font-size: 15px; letter-spacing: 0.6px; background: var(--fk-g1); box-shadow: inset 0 0 0 1px var(--fk-line2); }
 
@@ -170,7 +179,7 @@
 .fsu-cc.is-small .fsu-cc-slab { width: 84px; }
 .fsu-cc-hc { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-family: var(--fk-d); font-size: 120px; line-height: 1; color: var(--tct); opacity: .16; letter-spacing: -4px; }
 .fsu-cc.is-small .fsu-cc-hc { font-size: 66px; }
-.fsu-cc-slab img { position: absolute; left: 50%; bottom: 0; height: 100%; transform: translateX(-54%); }
+.fsu-cc-slab img { position: absolute; top: 0; left: 0; width: calc(100% - 8px); height: 100%; object-fit: cover; object-position: 50% 0; }
 .fsu-cc-init { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--fk-d); font-weight: 400; font-size: 44px; color: var(--tct); }
 .fsu-cc-id { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 6px 0 8px; }
 .fsu-cc-job { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; letter-spacing: 0.6px; color: var(--fk-mute); }

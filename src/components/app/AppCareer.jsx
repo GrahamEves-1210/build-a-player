@@ -810,7 +810,6 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
       {recHit && <RecordOverlay record={recHit} name={c.name || 'Guest'} onClose={() => setRecHit(null)} />}
       {faceOpen && <FaceSheet c={c} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
-      {faceOpen && <FaceSheet c={c} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
       {honor && !recHit && <HonorOverlay honor={honor} name={c.name || 'Guest'} onClose={() => setHonor(null)} />}
       <div className="ag-screen-head">
         <div className="cr-head">

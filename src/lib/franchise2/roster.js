@@ -149,6 +149,8 @@ export function setGroup(F, id, k) {
   const from = p && groupOf(p)
   if (!p || BORROW[from] !== k) return false
   dc[from] = dc[from].filter(x => x !== id)
+  // (his drawn face stays the one he was drawn with: faces.js facePos reads fs first)
+  if (p.fs == null && p.s) p.fs = p.s
   p.s = GROUP[k].spot
   dc[k].push(id)
   return true
