@@ -38,7 +38,8 @@ function sm(pts, close = true) {
     const a = at(i - 1), b = at(i), c = at(i + 1), e = at(i + 2)
     const h1 = b[2] ? b : [b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6]
     const h2 = c[2] ? c : [c[0] - (e[0] - b[0]) / 6, c[1] - (e[1] - b[1]) / 6]
-    d += `C${P2(h1)} ${P2(h2)} ${P2(c)}`
+    // (a smooth point's first handle mirrors the last one's second: S, two points a piece instead of three)
+    d += i && !b[2] ? `S${P2(h2)} ${P2(c)}` : `C${P2(h1)} ${P2(h2)} ${P2(c)}`
   }
   return close ? d + 'Z' : d
 }
@@ -101,6 +102,27 @@ const fill = (d, c, extra = '') => (d ? `<path d="${d}" fill="${c}"${extra}/>` :
 const shape = (id, d, c) => `<defs><path id="${id}" d="${d}"/><clipPath id="${id}c"><use href="#${id}"/></clipPath></defs><use href="#${id}" fill="${c}"/>`
 const line = (d, c, w, extra = '') => (d ? `<path d="${d}" fill="none" stroke="${c}" stroke-width="${f(w)}"${extra}/>` : '')
 
+// ── Texture ──────────────────────────────────────────────────────────────────
+// Print texture in the flat style (owner 11-16: "maybe add some texture"): a jersey's mesh, a halftone in the skin's
+// shadows, the grain of short coils, a beard's stipple. Each is one small pattern, defined once in the drawing that uses
+// it, laid over the shape's flat colour by reusing the shape's path; the list drawing (64 px and under) has none.
+let TX = null
+const tag = c => String(c).slice(1, 7)
+const pat = (name, w, h, body) => {
+  const id = `${TX.P}${name}`
+  if (!TX.defs[name]) TX.defs[name] = `<pattern id="${id}" width="${w}" height="${h}" patternUnits="userSpaceOnUse">${body}</pattern>`
+  return `url(#${id})`
+}
+const coilTex = c => (TX && !TX.lo ? pat(`k${tag(c)}`, 1.8, 1.5, `<path d="M.1 .62q.36-.5.72 0M1 1.38q.36-.5.72 0" fill="none" stroke="${c}" stroke-width=".28" stroke-linecap="round"/>`) : null)
+const dotTex = (c, k, r, o) => (TX && !TX.lo ? pat(`d${tag(c)}${String(k).replace('.', '')}`, k, k, `<circle cx="${f(k * 0.25)}" cy="${f(k * 0.25)}" r="${r}" fill="${c}" fill-opacity="${o}"/><circle cx="${f(k * 0.75)}" cy="${f(k * 0.75)}" r="${r}" fill="${c}" fill-opacity="${o}"/>`) : null)
+// a shape in its flat colour with a texture over it (its path once, used twice)
+function tfill(d, c, tex) {
+  if (!d) return ''
+  if (!tex) return fill(d, c)
+  const id = `${TX.P}t${TX.n++}`
+  return `<defs><path id="${id}" d="${d}"/></defs><use href="#${id}" fill="${c}"/><use href="#${id}" fill="${tex}"/>`
+}
+
 // ── Tones ────────────────────────────────────────────────────────────────────
 // a skin's flat tones: B the base, M the half tone (planes turning away), S the shadow, D the deepest creases
 // (nostrils, the mouth's line), H the light; warm shadows on fair skin, deeper and richer on dark skin; lips, whites
@@ -130,8 +152,8 @@ function hairTones(hc, sk) {
   const dk = lum(hc) < 70
   return {
     c: hc, S: dk ? mixC(hc, '#000000', 0.45) : mixC(hc, '#2a1308', 0.36),
-    H: dk ? mixC(hc, '#8e8680', 0.22) : mixC(hc, '#fff4dc', 0.3),
-    f1: mixC(hc, sk, 0.46), f2: mixC(hc, sk, 0.72),
+    H: dk ? mixC(hc, '#7a5640', 0.3) : mixC(hc, '#fff4dc', 0.3),
+    f1: mixC(hc, sk, 0.4), f2: mixC(hc, sk, 0.66),
   }
 }
 
@@ -175,30 +197,38 @@ const sv = (look, k) => clamp(+look[k] || 0, -1, 1)
 function geo(look) {
   const s = SHAPE[look.head] ?? SHAPE.oval, w = look.wide ?? 0.2, X = STRUCT[look.g] ?? STRUCT.w
   const wt = sv(look, 'wt'), jaw = sv(look, 'jaw'), chk = sv(look, 'chk'), chn = sv(look, 'chn')
+  // his own bones (look.bone, a seed): where his jaw turns, how square it is, his chin, cheekbones, temples, the set of
+  // his eyes and brow, so two men with the same choices don't share one skull
+  const br = rngOf(1 + (Number.isFinite(+look.bone) ? +look.bone : hashStr(`${look.head}|${look.skin}|${look.nose}|${look.eyes}`) % 1000) * 7919)
+  const b = () => br() - 0.5
+  const V = { jw: b() * 1.3, jy: b() * 1.8, ch: b() * 1.1, cy: b() * 1.2, cb: b() * 0.9, tw: b() * 0.8, sq: br(), es: b() * 0.5, ey: b() * 0.6, by: b() * 0.6, nb: b() * 0.8, my: b() * 0.5, rid: br() }
+  // a player is 21 to 30: full cheeks and a tight jaw; a coach's face has his years in it (co)
+  const young = !look.co
   const G = {
-    w, wt, X,
-    cw: s.cw + w * 0.55 + wt * 0.45, tw: s.tw + w * 0.55 + wt * 0.5,
-    cb: s.cb + w * 0.6 + wt * 0.65 + chk * 0.55 + X.ck * 0.3,
-    jw: s.jw + w * 0.9 + wt * 0.95 + jaw * 1.3, ch: s.ch + w * 0.3 + wt * 0.45 + jaw * 0.65,
-    jy: s.jy + chn * 0.45 + wt * 0.35, cy: s.cy + chn * 1.2 + wt * 0.25,
-    nw: 11.2 + w * 2.6 + wt * 1.1,
-    lean: clamp(0.45 - w * 0.3 - wt * 0.5 + chk * 0.4, 0, 1), soft: clamp(wt * 0.8 + w * 0.15, 0, 1),
-    ey: 38.3, es: 6.35 + sv(look, 'esp') * 0.5, ez: 1 + sv(look, 'esz') * 0.11,
-    nb: 47.5 + sv(look, 'nsl') * 0.9 + (look.head === 'long' ? 0.4 : 0),
+    w, wt, X, V, young,
+    cw: s.cw + w * 0.55 + wt * 0.45, tw: s.tw + w * 0.55 + wt * 0.5 + V.tw,
+    cb: s.cb + w * 0.6 + wt * 0.65 + chk * 0.55 + X.ck * 0.3 + V.cb + (young ? 0.35 : 0),
+    jw: s.jw + w * 0.9 + wt * 0.95 + jaw * 1.3 + V.jw, ch: s.ch + w * 0.3 + wt * 0.45 + jaw * 0.65 + V.ch,
+    jy: s.jy + chn * 0.45 + wt * 0.35 + V.jy - (young ? 0.5 : 0), cy: s.cy + chn * 1.2 + wt * 0.25 + V.cy - (young ? 0.9 : 0),
+    // (the neck by his build: a lineman's as wide as his jaw, a receiver's a good deal narrower)
+    nw: 10.4 + w * 3.4 + wt * 1.1,
+    lean: clamp(0.45 - w * 0.3 - wt * 0.5 + chk * 0.4, 0, 1) * (young ? 0.4 : 1), soft: clamp(wt * 0.8 + w * 0.15 + (young ? 0.35 : 0), 0, 1),
+    ey: 38.3 + V.ey, es: 6.35 + sv(look, 'esp') * 0.5 + V.es, ez: 1 + sv(look, 'esz') * 0.11 + (young ? 0.05 : 0),
+    nb: 47.5 + sv(look, 'nsl') * 0.9 + (look.head === 'long' ? 0.4 : 0) + V.nb,
   }
-  G.by = G.ey - 2.85 - sv(look, 'brh') * 0.75
+  G.by = G.ey - 2.85 - sv(look, 'brh') * 0.75 + V.by - (young ? 0.3 : 0)
   G.nwid = (NOSE_W[look.nose] ?? 3.3) * X.nk * (1 + sv(look, 'nsw') * 0.18)
   G.br = clamp(X.br + (NOSE_BR[look.nose] ?? 0), 0.2, 1.3)
   const M = MOUTH[look.mouth] ?? MOUTH.neutral
   G.M = M
   G.mw = 4.75 * M[2] * (1 + sv(look, 'mw') * 0.1) * (0.96 + X.nk * 0.04)
   G.lk = (1 + sv(look, 'lip') * 0.35) * X.lk
-  G.my = G.nb + (G.cy - G.nb) * 0.33
+  G.my = G.nb + (G.cy - G.nb) * 0.33 + V.my
   G.hl = 24.8 + ((hashStr(`${look.hair}|${look.skin}|${look.head}`) % 9) - 4) * 0.12
   const { cw, tw, cb, jw, jy, ch, cy, lean, soft } = G
   // the head's right half, crown to chin (offsets from the middle)
   G.R = [[0, C0], [cw * 0.5, C0 + 1.25], [cw * 0.84, C0 + 4.6], [cw * 0.98, C0 + 9.2], [cw, C0 + 12.2], [tw, 33.6], [cb, 40.4], [cb - 0.5 - lean * 0.7 + soft * 0.45, 46.2],
-    [jw + 0.4, jy - 2.1], [jw - 0.3, jy + 0.6], [jw - 2.7 + soft * 0.6, jy + 3.9], [ch + 1.1, cy - 1.15], [ch * 0.42, cy - 0.08], [0, cy]]
+    [jw + 0.4, jy - 2.1], [jw - 0.3 + V.sq * 0.3, jy + 0.6 - V.sq * 0.3], [jw - 2.7 + soft * 0.6 + V.sq * 0.7, jy + 3.9 - V.sq * 0.4], [ch + 1.1 + V.sq * 0.3, cy - 1.15], [ch * 0.42, cy - 0.08], [0, cy]]
   G.Rd = dense(G.R, 6)
   return G
 }
@@ -231,7 +261,7 @@ function capD(G, o, r = 0, rnd = null, ctr = [50, 33]) {
   const outer = [...out.map(RX), ...out.slice(0, -1).reverse().map(LX)]
   const inner = [...inn.slice(1).reverse().map(LX), ...inn.map(RX)]
   if (!r) return sm([...outer, ...inner])
-  const od = even(dense(outer, 6), r * 1.7)
+  const od = even(dense(outer, 6), r * 1.95)
   return tufts(od, r, ctr, rnd) + `L${dense(inner, 4).map(P2).join('L')}Z`
 }
 // long hair's mass behind the head (to y1, w past the skull), and the part of it that falls over the shoulders in
@@ -273,27 +303,41 @@ function hairOf(look, G, T, rnd, lo, hide) {
   const coil = tex === 'coil', R = { back: '', mid: '', front: '' }
   const { cw, hl } = G
   const sides = (c, o = {}) => fill(capD(G, { t: 0.3, ts: 0.2, sq: true, ...o }), c)
+  // short coils in their grain (so a fade or a buzz on a Black man reads as hair, not a cap); straight hair in strands
+  const kt = coilTex(lum(H.c) < 70 ? mixC(H.c, '#a08068', 0.36) : mixC(H.H, H.c, 0.1))
+  const coilD = (d, c) => tfill(d, c, kt)
+  const strands = (n, sweep = 0, y0 = hl - 0.5, y1 = C0 + 0.6) => {
+    if (lo) return ''
+    let d = '', e = ''
+    for (let i = 0; i < n; i++) {
+      const x = -cw + 3.2 + ((i + 0.5) * (2 * cw - 6.4)) / n + (rnd() - 0.5) * 0.8
+      const a = [50 + x, y0 + Math.abs(x) * 0.1 - rnd() * 0.8], c = [50 + x * 0.92 + sweep, (y0 + y1) / 2 - 1.2], b = [50 + x * 0.66 + sweep * 1.8, y1 + Math.abs(x) * 0.22]
+      if (i % 2) e += `M${P2(a)}Q${P2(c)} ${P2(b)}`
+      else d += `M${P2(a)}Q${P2(c)} ${P2(b)}`
+    }
+    return line(d, H.S, 0.38, ' stroke-linecap="round"') + line(e, H.H, 0.3, ' stroke-linecap="round"')
+  }
   // the light across the top of short hair: one designed crescent on the near side
   const sheen = t => (lo ? '' : fill(sm([[50 - cw * 0.8, C0 + 5 - t * 0.45], [50 - cw * 0.5, C0 + 1.4 - t * 0.75], [50 - cw * 0.05, C0 + 0.3 - t * 0.85], [50 + cw * 0.3, C0 + 0.9 - t * 0.78],
     [50 - cw * 0.05, C0 + 1.5 - t * 0.6], [50 - cw * 0.48, C0 + 2.8 - t * 0.5], [50 - cw * 0.72, C0 + 6 - t * 0.4]]), H.H))
   switch (st) {
     case 'shaved': return R
     case 'buzz':
-      R.front = fill(capD(G, { t: 0.35, ts: 0.2, sq: true }, coil ? 0.22 : 0, rnd), mixC(H.c, T.B, coil ? 0.3 : 0.5))
+      R.front = (coil ? coilD : fill)(capD(G, { t: 0.35, ts: 0.2, sq: true }, coil ? 0.22 : 0, rnd), mixC(H.c, T.B, coil ? 0.25 : 0.36))
       return R
     case 'crew':
-      if (coil) { R.front = fill(capD(G, { t: 1.0, ts: 0.3, sq: true }, 0.32, rnd), mixC(H.c, T.B, 0.12)) + sheen(1); return R }
-      R.front = sides(H.f1) + fill(capD(G, { t: 1.9, ts: 0.4, sb: 30.4, hl: hl - 0.2 }), H.c)
+      if (coil) { R.front = coilD(capD(G, { t: 1.0, ts: 0.3, sq: true }, 0.32, rnd), mixC(H.c, T.B, 0.12)); return R }
+      R.front = sides(H.f1) + fill(capD(G, { t: 1.9, ts: 0.4, sb: 30.4, hl: hl - 0.2 }), H.c) + strands(9, 0.4)
         + (lo ? '' : fill(sm([[38.6, hl - 0.4], [44, C0 + 0.8], [53, C0 - 0.2], [50, C0 + 1.9], [42.4, hl - 2.2]]), H.H))
       return R
     case 'fade': {
-      const top = coil ? fill(capD({ ...G, cw: G.cw - 1.1 }, { t: 1.6, ts: 0.2, sb: 29.4, sq: true }, 0.42, rnd), H.c) + sheen(1.5)
-        : fill(capD(G, { t: 2.6, ts: 0.4, sb: 29.6, hl: hl - 0.4 }), H.c) + (lo ? '' : fill(sm([[39, hl - 0.6], [45, C0 - 0.4], [54, C0 - 1.2], [50, C0 + 1.6], [42.6, hl - 2.4]]), H.H))
+      const top = coil ? coilD(capD({ ...G, cw: G.cw - 1.1 }, { t: 1.6, ts: 0.2, sb: 29.4, sq: true }, 0.42, rnd), H.c)
+        : fill(capD(G, { t: 2.6, ts: 0.4, sb: 29.6, hl: hl - 0.4 }), H.c) + strands(9, 0.6) + (lo ? '' : fill(sm([[39, hl - 0.6], [45, C0 - 0.4], [54, C0 - 1.2], [50, C0 + 1.6], [42.6, hl - 2.4]]), H.H))
       R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.6, sq: true }), H.f1) + top
       return R
     }
     case 'waves': {
-      R.front = fill(capD(G, { t: 0.8, ts: 0.3, sq: true }, 0.18, rnd), mixC(H.c, T.B, 0.08))
+      R.front = coilD(capD(G, { t: 0.8, ts: 0.3, sq: true }, 0.18, rnd), mixC(H.c, T.B, 0.08))
       if (!lo) {
         let d = ''
         for (let k = 0; k < 3; k++) { const r = 5 + k * 2.8, y = hl + 2 - k * 0.6; d += `M${f(50 - r)} ${f(y - k * 1.4)}Q50 ${f(y - r * 0.8 - k * 1.6)} ${f(50 + r)} ${f(y - k * 1.4)}` }
@@ -304,7 +348,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
     case 'sidepart': {
       // a side part on his right (the viewer's left): the hair lifted off the part and swept across
       const part = 50 - cw * 0.34
-      R.front = sides(H.f1) + fill(capD(G, { t: 2.7, ts: 0.45, sb: 30.6, hl: hl - 0.2 }), H.c)
+      R.front = sides(H.f1) + fill(capD(G, { t: 2.7, ts: 0.45, sb: 30.6, hl: hl - 0.2 }), H.c) + strands(10, 2.4)
       if (!lo) R.front += fill(sm([[part + 1.4, hl - 0.6], [52, hl - 2], [50 + cw - 3.4, hl - 0.6], [50 + cw - 1.6, hl - 2.8], [56, C0 + 0.6], [part + 1.6, C0 + 2.4]]), H.H)
         + line(`M${f(part)} ${f(hl + 0.2)}Q${f(part - 0.4)} ${f(C0 + 4)} ${f(part + 0.6)} ${f(C0 - 1.6)}`, H.S, 0.55)
       return R
@@ -313,7 +357,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
       const { out, inn } = capPts(G, { t: 2.7, ts: 0.4, sb: 30.4, hl: hl + 0.3 })
       const outer = broken(dense([...out.map(RX), ...out.slice(0, -1).reverse().map(LX)], 6), 0.55, 1.25, rnd, 0.25)
       const fringe = broken(dense([...inn.slice(1).reverse().map(LX), ...inn.map(RX)], 4), 0.4, 1.1, rnd)
-      R.front = sides(H.f1) + fill(poly([...outer, ...fringe]), H.c) + sheen(2.7)
+      R.front = sides(H.f1) + fill(poly([...outer, ...fringe]), H.c) + strands(10, 0.3) + sheen(2.7)
       return R
     }
     case 'curly': case 'afro': {
@@ -326,7 +370,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
         const od = even(dense([...o.map(RX), ...o.slice(0, -1).reverse().map(LX)], 6), r * 1.7)
         top = tufts(od, r, [50, 30], rnd) + `L${dense([...inn.slice(1).reverse().map(LX), ...inn.map(RX)], 4).map(P2).join('L')}Z`
       } else top = capD(G, { t: coil ? 3.2 : 3.8, ts: 0.6, sb: 31.4, hl: hl + 0.2 }, r, rnd)
-      R.front = (big ? '' : sides(H.f1)) + fill(top, H.c)
+      R.front = (big ? '' : sides(H.f1)) + coilD(top, H.c)
       if (!lo) {
         let d = '', e = ''
         const n = big ? 14 : 9, y0 = big ? C0 - 4 : C0 - 0.5, y1 = hl - 3, x0 = big ? 50 - cw - 1 : 50 - cw + 3.5, x1 = 100 - x0
@@ -335,13 +379,14 @@ function hairOf(look, G, T, rnd, lo, hide) {
           d += `M${f(x - q)} ${f(y)}q${f(q)} ${f(q * 0.9)} ${f(q * 2)} 0`
           if (x < 50 && rnd() < 0.6) e += `M${f(x - q)} ${f(y - 0.5)}q${f(q)} ${f(-q * 0.8)} ${f(q * 2)} 0`
         }
-        R.front += line(d, H.S, 0.45, ' stroke-linecap="round"') + line(e, mixC(H.H, H.c, 0.3), 0.4, ' stroke-linecap="round"')
+        // (curls: their grain is the texture; an afro also gets a few loose curls on its near side)
+        if (big) R.front += line(e, mixC(H.H, H.c, 0.3), 0.4, ' stroke-linecap="round"')
       }
       return R
     }
     case 'twists': {
       R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1)
-        + fill(capD(G, { t: 4.6, ts: 0.5, sb: 30.2, sq: true }, 1.25, rnd, [50, 34]), H.c)
+        + coilD(capD(G, { t: 4.6, ts: 0.5, sb: 30.2, sq: true }, 1.25, rnd, [50, 34]), H.c)
       if (!lo) {
         let d = ''
         for (let x = -cw + 3; x <= cw - 3; x += 2.1) { const xb = 50 + x, y0 = hl - 0.6 + Math.abs(x) * 0.12; d += `M${f(xb)} ${f(y0)}Q${f(xb + x * 0.08 + 0.6)} ${f(y0 - 4)} ${f(xb + x * 0.22)} ${f(C0 - 2.6 + Math.abs(x) * 0.18)}` }
@@ -369,7 +414,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
       }
       const tips = t ? line(t, tip, 1.6, ' stroke-linecap="round"') : ''
       R.mid += line(d, H.S, 2.1, ' stroke-linecap="round"') + line(d, H.c, 1.45, ' stroke-linecap="round"') + line(h, H.H, 0.36, ' stroke-linecap="round"') + tips
-      R.front = fill(capD(G, { t: 1.9, ts: 0.6, sb: 37.6, sq: true }, 0.7, rnd), H.c)
+      R.front = coilD(capD(G, { t: 1.9, ts: 0.6, sb: 37.6, sq: true }, 0.7, rnd), H.c)
       if (!lo) {
         let e = ''
         for (let x = -cw + 2; x <= cw - 2; x += 2.3) e += `M${f(50 + x)} ${f(hl + 0.4 + Math.abs(x) * 0.15)}Q${f(50 + x * 1.06)} ${f(hl - 4)} ${f(50 + x * 0.8)} ${f(C0 - 1.4 + Math.abs(x) * 0.25)}`
@@ -388,18 +433,18 @@ function hairOf(look, G, T, rnd, lo, hide) {
       return R
     }
     case 'hightop': {
-      const o = [[cw - 0.6, 30.4, 1], [cw + 0.3, 24], [cw + 0.1, C0 - 4.2], [cw - 1.6, C0 - 6.4], [0, C0 - 6.8]]
+      const o = [[cw - 0.6, 30.4, 1], [cw + 0.1, 25], [cw - 0.5, C0 - 3.4], [cw - 2.6, C0 - 6], [cw * 0.4, C0 - 6.9], [0, C0 - 7]]
       const { inn } = capPts(G, { sb: 30.4, sq: true })
       const od = even(dense([...o.map(RX), ...o.slice(0, -1).reverse().map(LX)], 6), 0.75)
       R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1)
-        + fill(tufts(od, 0.45, [50, 20], rnd) + `L${dense([...inn.slice(1).reverse().map(LX), ...inn.map(RX)], 4).map(P2).join('L')}Z`, H.c) + sheen(5)
+        + coilD(tufts(od, 0.45, [50, 20], rnd) + `L${dense([...inn.slice(1).reverse().map(LX), ...inn.map(RX)], 4).map(P2).join('L')}Z`, H.c)
       return R
     }
     case 'frohawk': {
       const s = [[0, hl - 0.2], [4.6, hl + 0.2, 1], [5.6, C0], [3.6, C0 - 4.6], [0, C0 - 5.6]]
       const od = even(dense([...s.slice(1).map(RX), ...s.slice(1, -1).reverse().map(LX)], 6), 1.3)
       R.front = sides(H.f2) + fill(capD(G, { t: 0.4, ts: 0.25, sb: 33, sq: true }), H.f1)
-        + fill(tufts(od, 0.85, [50, 26], rnd) + `L${f(50 - 4.6)} ${f(hl + 0.2)}L50 ${f(hl - 0.2)}Z`, H.c)
+        + coilD(tufts(od, 0.85, [50, 26], rnd) + `L${f(50 - 4.6)} ${f(hl + 0.2)}L50 ${f(hl - 0.2)}Z`, H.c)
       return R
     }
     case 'flow': case 'mullet': case 'long': {
@@ -408,9 +453,9 @@ function hairOf(look, G, T, rnd, lo, hide) {
       const kind = st, y1 = kind === 'flow' ? 56 : kind === 'mullet' ? 66 : 71
       R.back = fill(kind === 'flow' ? flowD(G, rnd) : mass(G, y1, kind === 'mullet' ? 1 : 1.4, rnd, kind === 'mullet' ? 52 : 46), mixC(H.c, H.S, 0.8))
       if (kind === 'long') R.mid = fill(panels(G, 76, 3.4, rnd), H.c)
-      if (kind === 'mullet') R.front = sides(H.f1) + fill(capD(G, { t: 2.2, ts: 0.5, sb: 30.6, hl: hl + 0.2 }), H.c) + sheen(2.2)
+      if (kind === 'mullet') R.front = sides(H.f1) + fill(capD(G, { t: 2.2, ts: 0.5, sb: 30.6, hl: hl + 0.2 }), H.c) + strands(9, 0.3) + sheen(2.2)
       else if (kind === 'flow') {
-        R.front = fill(capD(G, { t: 3.1, ts: 0.5, sb: 33.4, hl: hl - 0.9 }), H.c)
+        R.front = fill(capD(G, { t: 3.1, ts: 0.5, sb: 33.4, hl: hl - 0.9 }), H.c) + strands(11, 0, hl - 1.2, C0 - 0.6)
         if (!lo) R.front += fill(sm([[39, hl - 1.4], [44, C0 + 0.4], [56, C0 - 0.6], [61, C0 + 1.6], [52, C0 + 2.2], [43.4, hl - 3.2]]), H.H)
           + line(`M${f(50 - cw + 2.6)} ${f(hl + 0.6)}Q${f(50 - cw + 0.6)} ${f(hl - 1)} ${f(50 - cw)} ${f(hl + 5)}M${f(50 + cw - 2.6)} ${f(hl + 0.6)}Q${f(50 + cw - 0.6)} ${f(hl - 1)} ${f(50 + cw)} ${f(hl + 5)}`, H.S, 0.5)
       } else {
@@ -484,8 +529,8 @@ function beardOf(look, G, T, rnd, lo, bc) {
   const lip = [[mw + 0.5, my + 0.4], [mw * 0.55, my + ll + 0.2], [0, my + ll + 0.35]]
   const stub = kind === 'stubble'
   const rOut = [[xs + 0.05, sb], ...edge, ...dense(neckL, 4).slice(1)]
-  const rOutB = broken(rOut, stub ? 0.26 : 0.34, lo ? 1.6 : 0.9, rnd, stub ? 0 : 0.08)
-  const rIn = broken(dense([...cheek, ...lip], lo ? 2 : 4), stub ? 0.3 : 0.42, lo ? 1.5 : 0.8, rnd)
+  const rOutB = broken(rOut, stub ? 0.26 : 0.34, lo ? 1.8 : 1.05, rnd, stub ? 0 : 0.08)
+  const rIn = broken(dense([...cheek, ...lip], lo ? 2 : 4), stub ? 0.3 : 0.42, lo ? 1.7 : 0.92, rnd)
   const half = [...rOutB, ...rIn.slice().reverse()]
   // (the whole loop: the right half's outside down to the middle, the left's up, the left's inside down, the right's up)
   const L = p => [50 - p[0], p[1]], Rr = p => [50 + p[0], p[1]]
@@ -507,7 +552,7 @@ function beardOf(look, G, T, rnd, lo, bc) {
   const shade = sm([[50 + cb - 2.4, 42], [104, 42], [104, 92], [50 + ch, 92], [50 + ch + 0.6, cy + 0.4], [50 + jw - 3.4, jy + 1.6], [50 + cb - 3.8, 47.6]])
   const over = shape(P, d, base)
     + `<g clip-path="url(#${P}c)">${fill(shade, dark(base, 0.18))}${fill(sm([[50 - jw, jy + 1.4], [50 - ch - 1.4, cy - 0.2], [50, cy + 0.7], [50 + ch + 1.4, cy - 0.2], [50 + jw, jy + 1.4], [104, 92], [-4, 92]]), dark(base, 0.3))}`
-    + (lo ? '' : fill(thin, mixC(base, T.B, 0.3)))
+    + (lo ? '' : fill(thin, mixC(base, T.B, 0.3)) + `<rect x="30" y="36" width="40" height="40" fill="${dotTex(mixC(base, T.B, 0.45), 1.1, 0.2, 0.55)}"/>`)
     + `</g>`
   return { under: '', over }
 }
@@ -531,7 +576,7 @@ function eyesOf(look, G, T, S, lo) {
   const K = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', X = G.X
   let wh = '', ir = '', pu = '', lash = '', lid = '', cl = ''
   for (const s of [-1, 1]) {
-    const cx = 50 + s * G.es, y = G.ey, ew = 3.2 * G.ez, up = K[0] * G.ez * X.eo, dn = K[1] * G.ez * X.eo, tl = K[2]
+    const yo = G.young ? 1.08 : 1, cx = 50 + s * G.es, y = G.ey, ew = 3.2 * G.ez, up = K[0] * G.ez * X.eo * yo, dn = K[1] * G.ez * X.eo * yo, tl = K[2]
     const I = [cx - s * ew, y + 0.2], O = [cx + s * ew, y - tl]
     const U1 = [cx - s * ew * 0.35, y - up * 1.34], U2 = [cx + s * ew * 0.45, y - up * 1.2 - tl * 0.5]
     const L1 = [cx + s * ew * 0.42, y + dn * 1.28], L2 = [cx - s * ew * 0.42, y + dn * 1.24]
@@ -558,7 +603,9 @@ function eyesOf(look, G, T, S, lo) {
     if (!lo) {
       // the crease's own shadow, and under the eye the lower lid turning into the cheek
       lid += sm([crease[0], crease[1], crease[2], crease[3], [crease[2][0], crease[2][1] + 0.38], [crease[1][0], crease[1][1] + 0.34]])
-      S.M += sm([[I[0] + s * 0.4, I[1] + 0.45], [L2[0], y + dn * 1.05 + 0.85], [L1[0], y + dn * 1.05 + 0.75], [O[0] - s * 0.2, O[1] + 0.6], [L1[0], y + dn * 1.05 + 0.25], [L2[0], y + dn * 1.05 + 0.3]])
+      // (a young man's lower lid is a fine line, not a bag; a coach's has its years)
+      if (look.co) S.M += sm([[I[0] + s * 0.4, I[1] + 0.45], [L2[0], y + dn * 1.05 + 0.85], [L1[0], y + dn * 1.05 + 0.75], [O[0] - s * 0.2, O[1] + 0.6], [L1[0], y + dn * 1.05 + 0.25], [L2[0], y + dn * 1.05 + 0.3]])
+      lid += sm([[L2[0], y + dn * 1.18 + 0.12], [L1[0], y + dn * 1.22 + 0.1], [O[0] - s * 0.3, O[1] + 0.32], [L1[0], y + dn * 1.22 + 0.32]])
     }
   }
   const light = lum(iris) > 60
@@ -613,6 +660,8 @@ function mouthOf(look, G, T, S, lo) {
 }
 // the years: smile lines, the lids, the forehead, then the jowls
 function linesOf(look, G, T, S, lo) {
+  // (players are 21 to 30: no lines at all, owner 11-16; only a coach's face shows his years)
+  if (!look.co) return
   const ag = look.ag ?? 24, { nb, nwid: w, mw, my, ey, es } = G
   if (ag >= 28 || G.X === STRUCT.p) S.M += sm([[50 + w + 0.4, nb - 1.6], [50 + mw + 1.9, my - 0.4], [50 + mw + 1.2, my + 1.4], [50 + mw + 1.2, my - 0.3], [50 + w + 0.1, nb - 0.8]])
   if (ag < 38 || lo) return
@@ -723,6 +772,7 @@ function clothOf(G, loop, c, P, lo, rim = true) {
   const { nw } = G, d = sm(loop)
   return shape(`${P}J`, d, c)
     + `<g clip-path="url(#${P}Jc)">${fill(sm([[50 + nw + 19, 58], [104, 58], [104, 104], [50 + nw + 21, 104, 1], [50 + nw + 18.4, 88], [50 + nw + 17.6, 76], [50 + nw + 18.2, 66]]), dark(c, 0.2))}`
+    + (lo ? '' : `<rect x="-5" y="55" width="110" height="55" fill="${dotTex('#000000', 1.3, 0.24, 0.16)}"/>`)
     + (rim ? line(sm(loop.slice(3, 8), false), light(c, 0.14), 1.8) + line(sm(loop.slice(-7, -2), false), light(c, 0.24), 2.2) : '')
     + `</g>`
 }
@@ -771,7 +821,8 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const key = `${JSON.stringify(look)}|${col}|${view}|${mark?.t ?? ''}${mark?.c ?? ''}`
   const P = `f${(hashStr(key) % 1679616).toString(36)}`
   const rnd = rngOf(hashStr(JSON.stringify(look)))
-  const G = geo(look), T = skinTones(look.skin)
+  const G = geo(look), T = skinTones(lo && lum(look.skin) < 80 ? mixC(look.skin, '#8a5a3e', 0.22) : look.skin)
+  TX = { P, n: 0, defs: {}, lo }
   const { cw, tw, cb, jw, jy, ch, cy, nw, es, ey, mw, my, lean } = G
   const hc0 = look.hc === TIPS ? '#16110e' : look.hc
   const bc = look.bc ?? (lum(hc0) > 120 ? mixC(hc0, '#5e321a', 0.5) : hc0)
@@ -781,7 +832,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const S = { M: '', S: '', H: '' }
   // the far side (his left, the viewer's right) turning away into shadow: narrow on the temple, in at the
   // cheekbone, wide in the hollow under it, along the jaw to the chin
-  S.S += sm([[50 + cw * 0.62, C0 - 3], [50 + cw - 2.8, 20.4], [50 + cw - 2.6, 26], [50 + tw - 2.5, 31], [50 + tw - 2.2, 35.6], [50 + cb - 1.7, 40.6], [50 + cb - 3.4 - lean * 1.3, 46.6],
+  S.S += sm([[50 + cw * 0.62, C0 - 3], [50 + cw - 2.8, 20.4], [50 + cw - 2.6, 26], [50 + tw - 2.5, 31], [50 + tw - 2.2, 35.6], [50 + cb - 1.7, 40.6], [50 + cb - (G.young ? 2.6 : 3.4) - lean * 1.3, 46.6],
     [50 + jw - 1.7, jy - 0.4], [50 + jw - 3.4, jy + 3.4], [50 + ch + 0.5, cy - 1.6], [50 + ch - 0.4, cy + 2], [70, cy + 4], [104, cy + 4], [104, C0 - 3]])
   // the near side's edge turning away, a half tone
   S.M += sm([[50 - cw - 3, 22], [50 - cw + 1.1, 25], [50 - tw + 0.9, 34], [50 - cb + 0.7, 41], [50 - cb + 1.3, 46.4], [50 - jw + 0.9, jy], [50 - ch - 0.4, cy - 1.2], [48, cy + 3], [-4, cy + 3]])
@@ -815,7 +866,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + fill(sm([[50 + nw * 0.5, 52], [50 + nw * 0.6, 61], [50 + nw + 6, 66], [50 + nw + 8, 104], [104, 104], [104, 44]]), T.M)
     + fill(sm([[50 + nw * 0.8, 52], [50 + nw * 0.88, 59], [50 + nw + 4, 65], [104, 68], [104, 44]]), T.S)
     + fill(poly([[50 - nw + 0.4, 62.6], [50, 75.2], [50 + nw - 0.4, 62.6], [50 + nw, 62.6], [50, 80], [50 - nw, 62.6]]), T.S)
-    + (lo ? '' : fill(sm([[50 - nw + 2.6, 55], [50 - 1.8, 65.4], [50 - 2.4, 66], [50 - nw + 2, 57.4]]), T.M))
+    + (lo || G.young ? '' : fill(sm([[50 - nw + 2.6, 55], [50 - 1.8, 65.4], [50 - 2.4, 66], [50 - nw + 2, 57.4]]), T.M))
     + `</g>`
   const shirt = look.top ? topOf(look, G, col, P, lo) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, col, P, lo, look.kit === 'crew')
   const headD = sm(sym(G.R))
@@ -826,14 +877,16 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const body = (close ? '' : hp.back + neck + shirt + chainOf(look, G) + hp.mid + ears)
     + `<use href="#${P}h" fill="${T.B}"/>`
     + `<g clip-path="url(#${P}C)">${T.blush && !lo ? fill(sm([[50 - cb + 2, 44], [50 - cb + 6.4, 43.4], [50 - cb + 5.6, 47.6], [50 - cb + 2.4, 48]]) + sm([[50 + cb - 2, 44], [50 + cb - 6.4, 43.4], [50 + cb - 5.6, 47.6], [50 + cb - 2.4, 48]]), T.blush) : ''}`
-    + `${fill(S.M, T.M)}${fill(S.S, T.S)}${fill(S.H, T.H)}${beard.under}</g>`
+    + `${fill(S.M, T.M)}${fill(S.S, T.S)}${fill(S.H, T.H)}${beard.under}`
+    + line(poly(G.Rd.filter(p => p[1] > 27 && p[1] < jy + 1).map(p => [50 + p[0], p[1]]), false), mixC(T.B, '#f4f0ff', 0.2 + T.d * 0.12), lo ? 1.3 : 0.7) + `</g>`
     + `<use href="#${P}e" fill="${T.white}"/>`
     + `<g clip-path="url(#${P}E)">${fill(e.ir, e.iris)}${e.light ? fill(e.pu, '#0c0807') : ''}${fill(`M0 0H100V${f(ey - 0.1)}H0Z`, '#2a1a12', ' fill-opacity=".18"')}${lo ? '' : fill(e.cl, '#ffffff', ' fill-opacity=".7"')}</g>`
     + fill(e.lid, T.S) + fill(e.lash, T.lash)
     + browsOf(look, G, T) + nose
     + beard.over + mouth + stacheOf(look, G, T, rnd, bc) + eyeBlackOf(look, G)
     + hairFront + headGearOf(look, G, col) + earringsOf(look, G) + glassesOf(look, G) + capOf(look, G, col, mark)
-  const defs = `<defs><path id="${P}h" d="${headD}"/><path id="${P}e" d="${eyes.wh}"/><clipPath id="${P}C"><use href="#${P}h"/></clipPath><clipPath id="${P}E"><use href="#${P}e"/></clipPath>${look.cap === 'cap' ? `<clipPath id="${P}K"><path d="M0 ${f(G.hl + 3)}H100V100H0Z"/></clipPath>` : ''}</defs>`
+  const defs = `<defs>${Object.values(TX.defs).join('')}<path id="${P}h" d="${headD}"/><path id="${P}e" d="${eyes.wh}"/><clipPath id="${P}C"><use href="#${P}h"/></clipPath><clipPath id="${P}E"><use href="#${P}e"/></clipPath>${look.cap === 'cap' ? `<clipPath id="${P}K"><path d="M0 ${f(G.hl + 3)}H100V100H0Z"/></clipPath>` : ''}</defs>`
+  TX = null
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${defs}${body}</svg>`
 }
 

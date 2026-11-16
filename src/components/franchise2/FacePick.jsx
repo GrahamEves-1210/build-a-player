@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { TEAM } from '../../lib/franchise2'
 import {
-  FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_IRIS, FACE_BROWS, FACE_NOSE, FACE_MOUTH, FACE_HAIR, FACE_HC, FACE_BEARD, FACE_STACHE,
+  FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_IRIS, FACE_BROWS, FACE_NOSE, FACE_MOUTH, PLAYER_HAIR, PLAYER_HC, FACE_BEARD, FACE_STACHE,
   FACE_GEAR, FACE_EB, FACE_EAR, FACE_CHAIN, FACE_SLIDERS, defaultFace, normFace, buildFaceUrl,
 } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
@@ -34,7 +34,7 @@ const CATS = [
     ['BROWS', [['pick', 'brows', 'BROWS', FACE_BROWS, 'eyes'], ['slider', 'brh']]]]],
   ['nose', 'NOSE · MOUTH', [['NOSE', [['pick', 'nose', 'NOSE', FACE_NOSE, 'nose'], ['slider', 'nsw'], ['slider', 'nsl']]],
     ['MOUTH', [['pick', 'mouth', 'MOUTH', FACE_MOUTH, 'mouth'], ['slider', 'lip'], ['slider', 'mw']]]]],
-  ['hair', 'HAIR', [['STYLE', [['pick', 'hair', 'HAIR STYLE', FACE_HAIR, 'hair']]], ['COLOUR', [['swatch', 'hc', 'HAIR COLOUR', FACE_HC]]]]],
+  ['hair', 'HAIR', [['STYLE', [['pick', 'hair', 'HAIR STYLE', PLAYER_HAIR, 'hair']]], ['COLOUR', [['swatch', 'hc', 'HAIR COLOUR', PLAYER_HC]]]]],
   ['beard', 'BEARD', [['BEARD', [['pick', 'beard', 'BEARD', FACE_BEARD, 'low']]], ['MOUSTACHE', [['pick', 'stache', 'MOUSTACHE', FACE_STACHE, 'mouth']]]]],
   ['gear', 'GEAR', [['HEAD', [['pick', 'gear', 'HEAD', FACE_GEAR, 'hair']]], ['EYE BLACK', [['pick', 'eb', 'EYE BLACK', FACE_EB, 'eyes']]],
     ['EARRINGS', [['pick', 'ear', 'EARRINGS', FACE_EAR, 'ear']]], ['CHAIN', [['pick', 'chain', 'CHAIN', FACE_CHAIN, 'low']]]]],

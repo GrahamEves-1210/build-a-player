@@ -69,10 +69,16 @@ export const FACE_HAIR = [
   ['hightop', 'HIGH TOP'], ['frohawk', 'FROHAWK'], ['flow', 'FLOW'], ['long', 'LONG'], ['bun', 'BUN'], ['mullet', 'MULLET'],
   ['receding', 'RECEDING'], ['balding', 'THINNING'],
 ]
+// a player is 21 to 30 (owner 11-16: "no gray hair please these are supposed to be 21yos"): his creator never offers
+// grey hair or a hairline that's going (the full lists stay for coaches and for reading older saves)
+const OLD_HAIR = { receding: 'crew', balding: 'buzz' }
+export const PLAYER_HAIR = FACE_HAIR.filter(x => !OLD_HAIR[x[0]])
 export const FACE_HC = [
   ['#16110e', 'BLACK'], ['#2a1d15', 'DARK'], ['#5a3b24', 'BROWN'], ['#86492a', 'AUBURN'], ['#9a4526', 'RED'], ['#a8824e', 'SANDY'],
   ['#c9a46c', 'BLOND'], ['#ddd0ac', 'PLATINUM'], ['#b8893c', 'TIPS'], ['#57534f', 'SALT & PEPPER'], ['#8f8a82', 'GREY'], ['#b4b0a9', 'SILVER'], ['#e2dfd8', 'WHITE'],
 ]
+const GREY = new Set(['#57534f', '#8f8a82', '#b4b0a9', '#e2dfd8', '#ddd0ac'])
+export const PLAYER_HC = FACE_HC.filter(x => !GREY.has(x[0]))
 export const FACE_BEARD = [['none', 'CLEAN'], ['stubble', 'STUBBLE'], ['patch', 'CHIN PATCH'], ['chin', 'STRAP'], ['goatee', 'GOATEE'], ['short', 'SHORT'], ['full', 'FULL'], ['long', 'LONG']]
 export const FACE_STACHE = [['none', 'NONE'], ['thin', 'THIN'], ['full', 'FULL'], ['horseshoe', 'HORSESHOE']]
 export const FACE_GEAR = [['none', 'NONE'], ['headband', 'HEADBAND'], ['durag', 'DURAG'], ['visor', 'VISOR']]
@@ -100,7 +106,7 @@ const SKIN = {
 const SKIN_NEXT = { '#f4d2b6': '#f6dccb', '#d9a582': '#cfa27c', '#b98058': '#ae7a56', '#7a4a2c': '#6a4128', '#5e3a22': '#4e2f1e', '#432818': '#33201a', '#deae84': '#cfa27c' }
 const HAIR = {
   b: [['fade', 28], ['waves', 12], ['buzz', 12], ['locs', 12], ['twists', 8], ['cornrows', 5], ['hightop', 2], ['shaved', 9], ['afro', 3], ['curly', 4]],
-  w: [['crew', 26], ['sidepart', 12], ['textured', 16], ['flow', 12], ['buzz', 16], ['curly', 5], ['shaved', 4], ['mullet', 3], ['fade', 6]],   // (no long hair on a made-up white man: it read as a costume)
+  w: [['crew', 18], ['sidepart', 8], ['textured', 26], ['flow', 12], ['buzz', 8], ['curly', 12], ['shaved', 1], ['mullet', 4], ['fade', 11]],   // (young men's cuts: a textured crop, curls, a fade, the flow; a shaved head read older; no long hair: it read as a costume)
   m: [['fade', 26], ['curly', 24], ['buzz', 12], ['twists', 8], ['locs', 8], ['afro', 4], ['shaved', 6], ['textured', 8], ['waves', 4]],
   p: [['curly', 20], ['long', 14], ['buzz', 18], ['fade', 20], ['bun', 10], ['shaved', 10], ['mullet', 4]],
   l: [['fade', 32], ['crew', 20], ['textured', 16], ['buzz', 14], ['curly', 8], ['shaved', 6], ['sidepart', 4]],
@@ -113,8 +119,8 @@ const HC = {
   l: [['#16110e', 62], ['#2a1d15', 38]],
 }
 const BEARD = {
-  b: [['none', 28], ['stubble', 12], ['goatee', 12], ['short', 22], ['full', 16], ['chin', 8], ['long', 1]],
-  w: [['none', 38], ['stubble', 24], ['short', 18], ['full', 14], ['goatee', 3], ['chin', 1], ['long', 2]],
+  b: [['none', 32], ['stubble', 15], ['goatee', 13], ['short', 20], ['full', 11], ['chin', 8], ['long', 1]],   // (players 21 to 30: fewer heavy beards)
+  w: [['none', 54], ['stubble', 24], ['short', 13], ['full', 5], ['goatee', 3], ['chin', 1]],   // (players are 21 to 30: mostly clean or a light beard)
   m: [['none', 40], ['goatee', 16], ['short', 14], ['full', 12], ['stubble', 12], ['chin', 6]],
   p: [['none', 22], ['full', 30], ['short', 20], ['goatee', 14], ['stubble', 10], ['long', 4]],
   l: [['none', 40], ['goatee', 20], ['short', 14], ['full', 12], ['stubble', 14]],
@@ -155,8 +161,11 @@ const EYES = {
 }
 const BROWS = [['straight', 34], ['thick', 28], ['angled', 18], ['arched', 12], ['thin', 8]]
 const pickW = (r, list) => { const t = list.reduce((a, x) => a + x[1], 0); let u = r() * t; for (const x of list) { u -= x[1]; if (u < 0) return x[0] } return list[list.length - 1][0] }
-const BIG = new Set(['ol', 'dl', 'te'])
-const wideOf = pos => { const k = roomOf(pos); return BIG.has(k) ? 1 : k === 'lb' || k === 'rb' ? 0.5 : 0.2 }
+// the build by position (owner 11-16: "why are my TEs fat"): linemen wide, tight ends and linebackers athletic, the
+// backs, receivers, corners, safeties, quarterbacks and kickers lean
+const BIG = new Set(['ol', 'dl'])
+const MID = new Set(['te', 'lb'])
+const wideOf = pos => { const k = roomOf(pos); return BIG.has(k) ? 1 : MID.has(k) ? 0.5 : k === 'rb' ? 0.3 : 0.1 }
 const r2 = v => Math.round(v * 100) / 100
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 
@@ -164,12 +173,12 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 // second stream so the first parts keep their older draws
 function extras(key, L, pos) {
   const r = seeded(`face2|${key}`)
-  const room = roomOf(pos), g = L.g, big = BIG.has(room), lean = room === 'db' || room === 'cb' || room === 's' || room === 'wr'
+  const room = roomOf(pos), g = L.g, big = BIG.has(room), mid = MID.has(room), lean = room === 'db' || room === 'cb' || room === 's' || room === 'wr'
   const s = () => r2((r() + r() + r()) / 1.5 - 1)   // -1 … 1, most near the middle
   const x = {
     iris: pickW(r, IRIS[g] ?? IRIS.w),
-    wt: r2(clamp((big ? 0.55 : lean ? -0.35 : room === 'qb' || room === 'k' ? -0.1 : 0.1) + s() * 0.45, -1, 1)),
-    jaw: r2(s() * 0.7 + (big ? 0.2 : 0)), chn: r2(s() * 0.6), chk: r2(s() * 0.7 + (lean ? 0.15 : 0)),
+    wt: r2(clamp((big ? 0.5 : mid ? -0.05 : lean ? -0.5 : room === 'rb' ? -0.2 : -0.3) + s() * (big ? 0.4 : 0.3), -1, big ? 1 : 0.35)),
+    jaw: r2(s() * 0.7 + (big ? 0.2 : mid ? 0.1 : 0)), chn: r2(s() * 0.6), chk: r2(s() * 0.7 + (lean ? 0.15 : 0)),
     esz: r2(s() * 0.5), esp: r2(s() * 0.5), brh: r2(s() * 0.5),
     nsw: r2(s() * 0.6), nsl: r2(s() * 0.5), lip: r2(s() * 0.6 + (g === 'b' ? 0.2 : 0)), mw: r2(s() * 0.5),
     eb: 'none', ear: 'none', chain: 'none', cleft: r() < 0.25,
@@ -191,6 +200,8 @@ function extras(key, L, pos) {
   if (r() < 0.08 && L.brows === 'thick') x.brows = 'bushy'
   if (L.hair === 'fade' && (g === 'b' || g === 'm') && r() < 0.06) x.hair = 'frohawk'
   if (L.beard === 'none' && r() < 0.05) x.beard = 'patch'
+  // (his bones, faceArt.js: a seed for where his jaw turns, his chin, cheekbones and the set of his eyes)
+  x.bone = Math.floor(r() * 1000)
   return x
 }
 
@@ -211,7 +222,7 @@ export function lookOf(key, pos = 'wr', ag = null) {
   // (hair over the ears with a bare face reads young and soft in a drawing: a flow or a mullet gets some stubble)
   if ((hair === 'flow' || hair === 'mullet') && beard === 'none') beard = 'stubble'
   // (and in the flat drawing a grown-out cut on a bare or stubbled face read as a woman's bob: most get a trimmed beard)
-  if ((hair === 'flow' || hair === 'mullet' || hair === 'long') && (beard === 'stubble' || beard === 'none') && seeded(`face3|${key}`)() < 0.7) beard = 'short'
+  if ((hair === 'flow' || hair === 'mullet' || hair === 'long') && (beard === 'stubble' || beard === 'none') && seeded(`face3|${key}`)() < 0.4) beard = 'short'
   // the moustache that goes with the beard: a full beard or a goatee has one, a clean face now and then a thin one
   const stache = beard === 'full' || beard === 'long' || beard === 'short' ? 'full' : beard === 'goatee' ? (r() < 0.8 ? 'full' : 'horseshoe')
     : beard === 'none' && r() < 0.04 ? 'thin' : 'none'
@@ -282,7 +293,7 @@ export function coachLook(key, { g = null, ag = null } = {}) {
   return {
     ...L, iris: pickW(r3, IRIS[bg] ?? IRIS.w), wt: r2(clamp(s() * 0.6 + (age - 50) / 70, -1, 1)), jaw: r2(s() * 0.6), chn: r2(s() * 0.5), chk: r2(s() * 0.5 - 0.2),
     esz: r2(s() * 0.4 - 0.15), esp: r2(s() * 0.5), brh: r2(s() * 0.5 - 0.2), nsw: r2(s() * 0.5), nsl: r2(s() * 0.5 + 0.15), lip: r2(s() * 0.5 - 0.2), mw: r2(s() * 0.4),
-    eb: 'none', ear: 'none', chain: 'none', cleft: r3() < 0.2,
+    eb: 'none', ear: 'none', chain: 'none', cleft: r3() < 0.2, co: 1, bone: Math.floor(r3() * 1000),
   }
 }
 const CCACHE = new Map()
@@ -330,7 +341,7 @@ export const genFace = (p, color, small = false) => (p ? faceUrl(p.fk ?? p.n, fa
 //                             it never had from the default, its beard and its gear mapped onto today's)
 //   buildFaceUrl(B, color, view)  the build's face as a data: URL (view: a crop, VIEWS; 'sm' the lighter drawing
 //                             for a list)
-export const FACE_KEYS = ['skin', 'head', 'eyes', 'iris', 'brows', 'nose', 'mouth', 'hair', 'hc', 'beard', 'stache', 'gear', 'eb', 'ear', 'chain', ...SL]
+export const FACE_KEYS = ['skin', 'head', 'eyes', 'iris', 'brows', 'nose', 'mouth', 'hair', 'hc', 'beard', 'stache', 'gear', 'eb', 'ear', 'chain', ...SL, 'bone']
 const near = (list, c) => list.reduce((a, x) => (Math.abs(lum(x[0]) - lum(c)) < Math.abs(lum(a[0]) - lum(c)) ? x : a))[0]
 const ok = (list, v) => list.some(x => x[0] === v)
 export function defaultFace(key, pos) {
@@ -355,7 +366,12 @@ export function normFace(face, base) {
   // (a skin off the list is kept when it's a real colour: a Career saved before its face keeps its old skin exactly)
   if (!ok(FACE_SKIN, f.skin)) f.skin = /^#[0-9a-f]{6}$/i.test(f.skin ?? '') ? f.skin : near(FACE_SKIN, f.skin ?? base.skin)
   if (!ok(FACE_HC, f.hc)) f.hc = base.hc
+  // (a player's face: an older save's grey, platinum or thinning hair back to his own colour and a full head of it)
+  if (GREY.has(f.hc)) f.hc = GREY.has(base.hc) ? '#2a1d15' : base.hc
+  if (OLD_HAIR[f.hair]) f.hair = groupOfSkin(f.skin) === 'b' && f.hair === 'receding' ? 'fade' : OLD_HAIR[f.hair]
   for (const k of SL) f[k] = Number.isFinite(+f[k]) ? clamp(+f[k], -1, 1) : 0
+  // (a face saved before his bones had a seed takes his default's)
+  f.bone = Number.isFinite(+f.bone) && f.bone !== null && f.bone !== '' ? Math.floor(+f.bone) % 1000 : (base.bone ?? 0)
   return f
 }
 // what a man wears under his face: fb a football jersey's V-neck (the default) · hoops a basketball tank · crew a
