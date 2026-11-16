@@ -15,8 +15,10 @@ import { seasonRaw } from './careerStats'
 import { HEADSHOT_BASE } from '../utils/simulation'
 import { runSoccerSimulation, calcSoccerOVR, soccerTeam10, soccerLeagueInfo } from '../utils/soccerSimulation'
 import { SOCCER_CLUBS } from '../data/soccer-clubs'
-import { WC_NATIONS } from '../data/soccer-nations'
-import { SOCCER_STRIKERS, WC_STRIKERS, ST_TYPES } from '../data/soccer-strikers'
+// (Career's national teams are the real 2026 ones, not WORLD CUP mode's legends: since 2026-11-16 WC_NATIONS and
+// WC_STRIKERS are the legends', so Career reads the 2026 lists under its old names)
+import { WC2026_NATIONS as WC_NATIONS } from '../data/soccer-nations'
+import { SOCCER_STRIKERS, WC2026_STRIKERS as WC_STRIKERS, ST_TYPES } from '../data/soccer-strikers'
 import { SOCCER_ATTR } from '../data/soccer-attrs'
 import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
 import { SOCCER_RESUMES } from '../data/legacy-resumes-soccer'
@@ -456,7 +458,7 @@ function soccerWorldCup(c) {
   const call = soccerCallUp(c)
   const year = c.season + 1
   if (!call.called) return { year, nation: c.nation, called: false }
-  const r = runSoccerSimulation(c.build, ST_TYPES, { short: c.nation, usage: call.role === 'Starter' ? 1 : 0.8, bench: call.role === 'Bench', age: c.age }, 'alltime', `${c.seed}-wc-${c.year}`)
+  const r = runSoccerSimulation(c.build, ST_TYPES, { short: c.nation, wc: 2026, usage: call.role === 'Starter' ? 1 : 0.8, bench: call.role === 'Bench', age: c.age }, 'alltime', `${c.seed}-wc-${c.year}`)
   return {
     year, nation: c.nation, called: true, role: call.role, finish: r.finish, champion: !!r.champion, goals: r.goals ?? 0, assists: r.assists ?? 0, apps: r.apps ?? 0,
     games: (r.games ?? []).map(g => ({ stage: g.stage, round: g.round, opp: g.opponent, oppName: g.oppName, mySc: g.mySc, oppSc: g.oppSc, goals: g.goals, app: g.app, won: g.won, drawn: g.drawn, pens: g.shootout ? [g.shootout.my, g.shootout.opp] : null })),

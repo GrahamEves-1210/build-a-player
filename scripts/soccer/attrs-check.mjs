@@ -1,11 +1,12 @@
 // Soccer's ratings and pools, checked (2026-11-16): node scripts/soccer/attrs-check.mjs
-//  - every player in both pools (every club row, the World Cup's) has exactly the nine keys of data/soccer-attrs.js,
+//  - every player in both pools (every club row, the 2026 World Cup's) has exactly the nine keys of data/soccer-attrs.js,
 //    each an integer 0-11, and none of the ten old ones (firstTouch, linkUp, strength, offBall)
 //  - a player in both pools has the same bio, ESPN id and attrs; Size is soccerSizeGrade of his bio
 //  - the Champions League pool (the wheel and the card binder): every player's club is one of the 36, 8 a club, one
 //    main striker a club, no name|club twice (so every card can be landed on a spin)
 //  - old saves: migrateSoccerKeys turns a ten-trait build into the nine
-import { SOCCER_ALL_STRIKERS, UCL_STRIKERS, WC_STRIKERS, SOCCER_STRIKERS } from '../../src/data/soccer-strikers.js'
+// (WORLD CUP mode's legends, since 11-16 a pool of their own with peak ratings: scripts/soccer/wc-legends-check.mjs)
+import { SOCCER_ALL_STRIKERS, UCL_STRIKERS, WC2026_STRIKERS as WC_STRIKERS, SOCCER_STRIKERS } from '../../src/data/soccer-strikers.js'
 import { UCL_CLUBS, UCL_SHORTS, SOCCER_CLUBS } from '../../src/data/soccer-clubs.js'
 import { SOCCER_TYPES, SOCCER_ATTR, soccerSizeGrade, migrateSoccerKeys } from '../../src/data/soccer-attrs.js'
 
@@ -63,7 +64,7 @@ if (m.types.length !== 9 || !SOCCER_TYPES.every(t => m.types.includes(t) && m.bu
 
 const W = UCL_CLUBS.reduce((s, c) => s + c.w, 0)
 const top = [...UCL_CLUBS].sort((a, b) => b.w - a.w).slice(0, 12)
-console.log(`${rows.length} rows (${SOCCER_ALL_STRIKERS.length} club, ${WC_STRIKERS.length} World Cup), ${both} players in both pools`)
+console.log(`${rows.length} rows (${SOCCER_ALL_STRIKERS.length} club, ${WC_STRIKERS.length} 2026 World Cup), ${both} players in both pools`)
 console.log(`Champions League pool: ${UCL_STRIKERS.length} players at ${UCL_CLUBS.length} clubs; spins on the 12 biggest: ${(top.reduce((s, c) => s + c.w, 0) / W * 100).toFixed(1)}%`)
 console.log(errs.length ? `ERRORS (${errs.length}):\n${errs.join('\n')}` : 'nine keys everywhere, both pools identical, every card on the wheel: OK')
 process.exitCode = errs.length ? 1 : 0

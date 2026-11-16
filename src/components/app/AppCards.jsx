@@ -64,7 +64,7 @@ async function loadNba() {
   }
 }
 // Soccer (once it's live, SOCCER_LIVE): the CHAMPIONS LEAGUE is its 'classic' pool (the wheel's 36 clubs, since
-// 2026-11-16), WORLD CUP its 'all-time' one.
+// 2026-11-16), WORLD CUP its 'all-time' one (the legends of the 48 greatest World Cup nations, since 2026-11-16).
 // A card's tag is the player's real position (ST, LW, AM…), the build's is always ST
 async function loadSoccer() {
   const [pl, clubs, nations, hs] = await Promise.all([
@@ -75,7 +75,7 @@ async function loadSoccer() {
     pools: { st: { classic: pl.UCL_STRIKERS, 'all-time': pl.WC_STRIKERS } },
     posLabel: { st: 'ST' },
     tagOf: p => p.role || 'ST',
-    poolSet: { classic: ['CHAMPIONS LEAGUE', 'Every player in this season’s Champions League'], 'all-time': ['WORLD CUP', 'Every player at the 2026 World Cup'] },
+    poolSet: { classic: ['CHAMPIONS LEAGUE', 'Every player in this season’s Champions League'], 'all-time': ['WORLD CUP', 'The legends of the 48 greatest World Cup nations'] },
     teams: [...clubs.UCL_CLUBS, ...nations.WC_NATIONS],
     logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
     photo: (name, p) => { const f = p?.espn != null ? hs.default[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null },
@@ -231,7 +231,8 @@ export function CardsStrip() {
   const [data, setData] = useState(null)
   useEffect(() => { let live = true; loadAll().then(d => live && setData(d)); return () => { live = false } }, [])
   const all = useMemo(() => (data ? allSets(data, p.cards, p.sets) : null), [data, p.cards, p.sets])
-  const owned = Object.keys(p.cards).length, total = all?.cards.length ?? 0
+  // (cards that left the game, like the 2026 World Cup squads the WORLD CUP pool had until 11-16, don't count)
+  const owned = all ? all.cards.filter(c => c.owned).length : Object.keys(p.cards).length, total = all?.cards.length ?? 0
   const ready = all ? readyOf(all.sets) : []
   const readyKey = ready.map(s => s.id).join()
   useEffect(() => { if (all) noteSetsReady(ready.map(s => ({ id: s.id, title: s.title }))) }, [!!all, readyKey])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -306,7 +307,7 @@ export default function AppCards({ sport: startSport, onClose }) {
     <div className={`ag-screen ag-screen--${startSport}`}>
       <div className="ag-screen-head">
         <div>
-          <span className="ag-eyebrow">COLLECTION · {Object.keys(p.cards).length} CARDS</span>
+          <span className="ag-eyebrow">COLLECTION · {data ? totals.owned : Object.keys(p.cards).length} CARDS</span>
           <h1 className="ag-h1">Cards</h1>
         </div>
         <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>

@@ -10,7 +10,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import { ShareSeasonButton } from './app/SeasonShare'
 import { SOCCER_ATTR, SOCCER_CATEGORIES } from '../data/soccer-attrs'
 import { UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
-import { WC_NATIONS } from '../data/soccer-nations'
+import { WC_NATIONS, WC_ALL_NATIONS } from '../data/soccer-nations'
 import * as SoccerSim from '../utils/soccerSimulation'
 import { SOCCER_POOL, SOCCER_SIZE_SLOT } from '../lib/soccerUi'
 import { rampAdd } from '../lib/ads'
@@ -37,7 +37,10 @@ const APP_SIM = IS_APP || APP_LOOK
 // ═════════════════════════════════════════════════════════════════════════════
 
 const CLUB_MAP = Object.fromEntries(SOCCER_ALL_CLUBS.map(t => [t.short, t]))
-const NATION_MAP = Object.fromEntries(WC_NATIONS.map(t => [t.short, t]))
+// (an old result's 2026 nations still find their names: WC_ALL_NATIONS; the pick list is the 48 of history)
+const NATION_MAP = Object.fromEntries(WC_ALL_NATIONS.map(t => [t.short, t]))
+// the tournament's name: the all-time World Cup (WORLD CUP mode since 11-16), or a real year (an old result, Career)
+const wcName = (season, fifa = false) => (season === 'All-Time' ? 'All-Time World Cup' : `${fifa ? 'FIFA ' : ''}World Cup ${season ?? ''}`.trim())
 const LOGO = { current: '/logos/soccer/', alltime: '/logos/nations/' }
 const teamOf = (short, pool) => (pool === 'alltime' ? NATION_MAP : CLUB_MAP)[short] ?? null
 import { savePos, saveStop } from '../lib/seasonLive'
@@ -466,7 +469,7 @@ function ScreenSeason({ r, pool, info, onNext, onDone, userName, adsDisabled, se
           {rv.done && (
             <>
               <div className={`ssp-hero${(isWc ? r.seed <= 2 : isUcl ? r.seed === 1 : r.champion) ? ' is-champ' : ''}`}>
-                <span className="ssp-eyebrow">{isWc ? `FIFA World Cup ${r.season} · Group ${r.conference}` : isUcl ? `Champions League ${r.season} · League phase` : `${lg.name} · ${r.season}`}</span>
+                <span className="ssp-eyebrow">{isWc ? `${wcName(r.season, true)} · Group ${r.conference}` : isUcl ? `Champions League ${r.season} · League phase` : `${lg.name} · ${r.season}`}</span>
                 <h2 className="ssp-head">{head}</h2>
                 <div className="ssp-record"><b>{r.wins}</b>W<b>{r.draws}</b>D<b>{r.losses}</b>L<em>·</em><b>{r.points}</b>PTS<em>·</em><b>{r.gf}</b>–<b>{r.ga}</b></div>
                 {band && <span className="ssp-band">{band}</span>}
@@ -888,7 +891,7 @@ function ScreenWcAwards({ r, onNext, userName }) {
   return (
     <div className="simp-screen goat-screen ssp-legacy">
       <div className="goat-screen-title">THE AWARDS</div>
-      <div className="goat-page-title">FIFA World Cup {r.season}</div>
+      <div className="goat-page-title">{wcName(r.season, true)}</div>
       <div className="goat-eyebrow">THE TOURNAMENT'S BEST</div>
       {k === 0 && <Checking label="Counting the votes…" />}
       {k >= 1 && <div className="ag-pop"><StrikerLine r={r} title="THE TOURNAMENT" comps={false} /></div>}
@@ -975,7 +978,7 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
     <div className="simp-screen ssp-screen ssp-final">
       {APP_SIM && <SeasonRewards result={r} />}
       <div className={`ssp-hero is-final${r.champion ? ' is-champ' : ''}`}>
-        <span className="ssp-eyebrow">{userName} · ST · {isWc ? `World Cup ${r.season}` : isUcl ? `${r.team?.name} · Champions League ${r.season}` : `${r.team?.name} ${r.season}`}</span>
+        <span className="ssp-eyebrow">{userName} · ST · {isWc ? wcName(r.season) : isUcl ? `${r.team?.name} · Champions League ${r.season}` : `${r.team?.name} ${r.season}`}</span>
         <h2 className="ssp-head">{head}</h2>
         <div className="ssp-final-ovr"><b>{r.ovr}</b><small>OVR</small><span>{arch}</span></div>
         {ribbons.length > 0 && <div className="ssp-ribbons">{ribbons.map(x => <span key={x}>{x}</span>)}</div>}
@@ -1092,7 +1095,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
     <ScreenFinal key="final" r={r} pool={pool} build={build} types={types} arch={arch} onReset={reset} onBack={back} userName={userName} isSalaryMode={isSalaryMode} adsDisabled={adsDisabled} />,
   ]
   const teamStyle = team ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color } : undefined
-  const sub = isWc ? `World Cup ${result.season} · Group ${result.conference}` : `${result.league?.name ?? ''} · ${result.season}`
+  const sub = isWc ? `${wcName(result.season)} · Group ${result.conference}` : `${result.league?.name ?? ''} · ${result.season}`
   // the size the build plays at: height and weight off his Strength player
   const sz = build?.[SOCCER_SIZE_SLOT]
   return (

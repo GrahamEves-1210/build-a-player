@@ -3,6 +3,8 @@
 // and a bigger roster, so they're their own: 1 bit for the pool (Top Divisions / World Cup),
 // 4 bits for the slot count, then per slot 4 (trait) + 4 (grade 0–11) + 10 (the player's
 // place in his pool's roster, so his club or nation comes with him).
+// WORLD CUP links since 2026-11-16 (the legends) start 'L.'; a World Cup link without it is from before, when the pool
+// was the 2026 squads: it reads from pools.wc2026 (those squads), so an old link still shows the players it was made with.
 import { SOCCER_TYPES } from '../data/soccer-attrs'
 
 function pack(fields) {
@@ -46,16 +48,18 @@ export function encodeSoccerBuild(build, types, pool, pools) {
       return [ti, Math.max(0, Math.min(11, Math.round(c.val ?? 0))), pi]
     })
     if (!slots.length || slots.includes(null)) return null
-    return pack([[pool === 'alltime' ? 1 : 0, 1], [slots.length, 4], ...slots.flatMap(([ti, v, pi]) => [[ti, 4], [v, 4], [pi, 10]])])
+    const code = pack([[pool === 'alltime' ? 1 : 0, 1], [slots.length, 4], ...slots.flatMap(([ti, v, pi]) => [[ti, 4], [v, 4], [pi, 10]])])
+    return pool === 'alltime' ? `L.${code}` : code
   } catch { return null }
 }
 
 export function decodeSoccerBuild(code, pools, photoOf) {
   try {
-    const read = reader(code)
+    const legends = String(code).startsWith('L.')
+    const read = reader(legends ? String(code).slice(2) : code)
     const pool = read(1) ? 'alltime' : 'current'
     const n = read(4)
-    const list = pools[pool] ?? []
+    const list = (pool === 'alltime' && !legends ? pools.wc2026 : pools[pool]) ?? []
     const build = {}, types = []
     for (let i = 0; i < n; i++) {
       const t = SOCCER_TYPES[read(4)], val = read(4), p = list[read(10)]

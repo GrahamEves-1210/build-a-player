@@ -15,3 +15,6 @@ export const WC_NATIONS = [
   ...N('K', [['POR', 'Portugal', 87, 82], ['COD', 'DR Congo', 67, 70], ['UZB', 'Uzbekistan', 66, 69], ['COL', 'Colombia', 80, 79]]),
   ...N('L', [['ENG', 'England', 87, 86], ['CRO', 'Croatia', 79, 78], ['GHA', 'Ghana', 70, 69], ['PAN', 'Panama', 66, 68]]),
 ]
+
+export const WC2026_NATIONS = WC_NATIONS
+export const WC_ALL_NATIONS = WC_NATIONS

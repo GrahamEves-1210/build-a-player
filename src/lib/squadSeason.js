@@ -41,7 +41,7 @@ import NBA_HEADSHOTS from '../data/nba-headshots.json'
 // engine load only for a soccer squad (lib/squadSoccer.js): football and basketball never download them.
 // SoccerApp calls loadSquadSoccer() before Squad Builder shows; until then soccer's lists are empty.
 import { SOCCER_TYPES as ST_TYPES } from '../data/soccer-attrs'
-let SX = { SOCCER_CLUBS: [], WC_NATIONS: [], SOCCER_STRIKERS: [], WC_STRIKERS: [], SOCCER_HEADSHOTS: {} }
+let SX = { SOCCER_CLUBS: [], WC_NATIONS: [], WC_ALL_NATIONS: [], SOCCER_STRIKERS: [], WC_STRIKERS: [], SOCCER_HEADSHOTS: {} }
 let sxLoad = null
 export const loadSquadSoccer = () => (sxLoad ??= import('./squadSoccer.js').then(m => { SX = m; return m }))
 // baseball (the fourth sport): the whole club's season is lib/squadBaseball.js (its rosters and engine with it),
@@ -101,15 +101,15 @@ const photoOf = (sport, p) => (sport === 'bucket'
 // clubs first when no pool is given. A side outside the data has no crest: null, the initials show)
 export const teamsOf = (sport, pool) => (sport === 'bucket' ? NBA_TEAMS : sport === 'baseball' ? (BB?.MLB_TEAMS ?? []) : sport === 'soccer' ? (pool === 'alltime' ? SX.WC_NATIONS : SX.SOCCER_CLUBS) : NFL_TEAMS)
 export const teamOf = (sport, short, pool) => (sport === 'soccer' && !pool
-  ? SX.SOCCER_CLUBS.find(t => t.short === short) ?? SX.WC_NATIONS.find(t => t.short === short) ?? null
-  : teamsOf(sport, pool).find(t => t.short === short) ?? null)
+  ? SX.SOCCER_CLUBS.find(t => t.short === short) ?? SX.WC_ALL_NATIONS.find(t => t.short === short) ?? null
+  : teamsOf(sport, pool).find(t => t.short === short) ?? (sport === 'soccer' && pool === 'alltime' ? SX.WC_ALL_NATIONS.find(t => t.short === short) ?? null : null))
 export const logoOf = (sport, short, pool) => (sport === 'bucket' ? `/logos/nba/${short}.png`
   : sport === 'baseball' ? (short ? `/logos/mlb/${short}.png` : null)
   : sport === 'soccer' ? soccerLogo(short, pool)
   : teamOf(sport, short)?.logo ?? `/logos/${short}.png`)
 function soccerLogo(short, pool) {
   if (pool !== 'alltime' && SX.SOCCER_CLUBS.some(t => t.short === short)) return `/logos/soccer/${short}.png`
-  if (pool !== 'current' && SX.WC_NATIONS.some(t => t.short === short)) return `/logos/nations/${short}.png`
+  if (pool !== 'current' && SX.WC_ALL_NATIONS.some(t => t.short === short)) return `/logos/nations/${short}.png`   // (an old squad's 2026 nation keeps its flag)
   return null
 }
 // an NFL team by its full name (the schedule keeps names)
@@ -685,7 +685,7 @@ const SPOT_WEIGHT = { ST: 1, LS: 0.85, RS: 0.85, LW: 0.7, RW: 0.7, CAM: 0.6 }
 const SPOT_USAGE = { ST: 0.85, LS: 0.72, RS: 0.72, LW: 0.6, RW: 0.6, CAM: 0.45 }
 // a spot the side can't fill: a squad player (every trait a C+)
 const SQUAD_PLAYER = Object.fromEntries(ST_TYPES.map(t => [t, { val: 4 }]))
-const soccerTeamRow = (pool, short) => (pool === 'alltime' ? SX.WC_NATIONS : SX.SOCCER_CLUBS).find(t => t.short === short) ?? null
+const soccerTeamRow = (pool, short) => (pool === 'alltime' ? SX.WC_ALL_NATIONS : SX.SOCCER_CLUBS).find(t => t.short === short) ?? null
 // the side's own attackers and midfielders (the pool's), best first
 const sideCache = new Map()
 function soccerSide(pool, short) {

@@ -1,5 +1,6 @@
 import { SOCCER_CLUBS, UCL_SHORTS } from './soccer-clubs.js'
 import { SOCCER_TYPES, SOCCER_CATEGORIES } from './soccer-attrs.js'
+import { WC_LEGENDS } from './soccer-legends.js'
 // Strikers for soccer, Build-A-Player's third sport. Same shape as data/nba-guards.js (one row per player, attrs on
 // the 0-11 grade scale: F=0, D=1, C-=2, C=3, C+=4, B-=5, B=6, B+=7, A-=8, A=9, A+=10, S=11).
 //
@@ -7,8 +8,12 @@ import { SOCCER_TYPES, SOCCER_CATEGORIES } from './soccer-attrs.js'
 //                    players of the 36 clubs of the 2026-27 league phase (soccer-clubs.js UCL_SHORTS). 8 per club.
 //   SOCCER_STRIKERS  Career's and Squad Builder's: the clubs of the leagues Career plays (SOCCER_LIVE_LEAGUES).
 //   SOCCER_ALL_STRIKERS every club row below (Serie A, Ligue 1 and the Champions League clubs from elsewhere too).
-//   WC_STRIKERS      WORLD CUP (pool key 'alltime'), team = FIFA code in soccer-nations.js. 5 per nation.
-//   SOCCER_PLAYERS / WC_PLAYERS are the same arrays. A player in both pools has the same bio, espn id and attrs.
+//   WC2026_STRIKERS  the real 2026 World Cup squads, team = FIFA code in soccer-nations.js WC2026_NATIONS. 5 per nation.
+//                    Career's national teams (and Salary Cap's nation cards). Was WC_STRIKERS until 2026-11-16.
+//   WC_STRIKERS      WORLD CUP (pool key 'alltime', since 2026-11-16): the legends of the 48 greatest World Cup nations,
+//                    each at his career peak (data/soccer-legends.js, its header has the method).
+//   SOCCER_PLAYERS / WC_PLAYERS are the same arrays. A player in the club pool and WC2026_STRIKERS has the same bio,
+//   espn id and attrs (a legend's row is his own: his peak, not his club row).
 //
 // WHO IS IN
 //   The build is a striker, but the wheel holds every kind of outfield player who isn't a defender or keeper:
@@ -34,7 +39,7 @@ import { SOCCER_TYPES, SOCCER_CATEGORIES } from './soccer-attrs.js'
 //   Lukaku, Asensio (Fenerbahçe). A new club's main striker: its ST with the most league minutes this season.
 //
 // BIO   name, number, height (inches), weight (lb), age: ESPN rosters (club number in SOCCER_STRIKERS, World Cup
-//       number in WC_STRIKERS). foot: FotMob. nation: FIFA code of the national team the player plays for (FotMob).
+//       number in WC2026_STRIKERS). foot: FotMob. nation: FIFA code of the national team the player plays for (FotMob).
 //       weight is null where ESPN lists none. skin: the sampler from scripts/extract-nba-skin-colors.mjs run on the
 //       ESPN headshot (or, with no ESPN photo, on the FotMob player cut-out, sampled only and never stored), snapped
 //       to the nearest skin swatch used in data/nba-*.js. The 2026-11-16 Champions League rows: ESPN's uefa.champions
@@ -1660,8 +1665,8 @@ export const UCL_STRIKERS = ALL_STRIKERS.filter(p => UCL_SET.has(p.team))
 // every club player in the data (the season engine's award field, photos, the checks)
 export const SOCCER_ALL_STRIKERS = ALL_STRIKERS
 
-// ─── WORLD CUP 2026 (team = nation FIFA code from soccer-nations.js) ─────────
-export const WC_STRIKERS = [
+// ─── WORLD CUP 2026 (team = nation FIFA code from soccer-nations.js WC2026_NATIONS) ─────────
+export const WC2026_STRIKERS = [
 
   // ─── ALG ────────────────────────────────────────────────────────────
   { name: "Amine Gouiri", short: "Gouiri", team: 'ALG', nation: 'ALG', number: 9, height: 71, weight: 174, age: 26, foot: 'right', skin: '#bf8660', espn: 259743, starter: true, position: 'ST', role: 'ST',
@@ -2242,4 +2247,6 @@ export const WC_STRIKERS = [
 
 // The pool is wider than strikers (wingers and midfielders too); same arrays under player names
 export const SOCCER_PLAYERS = SOCCER_STRIKERS
+// WORLD CUP mode: the legends
+export const WC_STRIKERS = WC_LEGENDS
 export const WC_PLAYERS = WC_STRIKERS

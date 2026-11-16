@@ -1,6 +1,7 @@
 // ─── Soccer Simulation Engine (Striker) ──────────────────────────────────────
 // The third sport's season engine: a striker (ST) build dropped into a real club (TOP DIVISIONS, mode
-// 'current') or a real nation at the 2026 World Cup (WORLD CUP, mode 'alltime'). Basketball's engine
+// 'current') or a nation at the World Cup (WORLD CUP, mode 'alltime': the all-time World Cup of the 48 greatest World Cup
+// nations and their legends; Career's World Cups are the real 2026 nations, team.wc 2026). Basketball's engine
 // (utils/bucketSimulation.js) is the model: the same call shape, the same top-level result fields, a
 // seeded RNG so the live server can play a season back from its seed (lib/verifyCore.js), and a
 // `script` (scriptSoccerSeason) so Squad Builder can play one season for a whole squad.
@@ -78,7 +79,9 @@
 // ── Which season (since 2026-11-16) ──────────────────────────────────────────
 // mode 'current': a build's season is his club's 2026-27 Champions League campaign (uclSeason; its result is under
 // "The Champions League" further down). Career (team.career), Squad Builder (a script, team.squad) and team.domestic
-// play the domestic season described next (clubSeason). Mode 'alltime' is the World Cup, as before.
+// play the domestic season described next (clubSeason). Mode 'alltime' is the World Cup: since 2026-11-16 the all-time one
+// (the legends field, data/soccer-legends.js, no hosts, season 'All-Time'); team.wc 2026 (Career) or a nation only the 2026
+// World Cup has (an old save) plays the real 2026 field (season '2026'). A script carries its field (script.wcField).
 //
 // `team`: a club (mode 'current') or nation (mode 'alltime') from the data, at least { short }.
 //   team.offMod / team.defMod: the season director's moments (±1 on the 1-10 scale each).
@@ -155,8 +158,8 @@
 
 import { seeded } from '../lib/rng'
 import { SOCCER_SIM_LEAGUES, SOCCER_SIM_CLUBS, SOCCER_ALL_CLUBS, OTHER_LEAGUES } from '../data/soccer-clubs'
-import { WC_NATIONS } from '../data/soccer-nations'
-import { SOCCER_ALL_STRIKERS, WC_STRIKERS } from '../data/soccer-strikers'
+import { WC_NATIONS, WC2026_NATIONS } from '../data/soccer-nations'
+import { SOCCER_ALL_STRIKERS, WC_STRIKERS, WC2026_STRIKERS } from '../data/soccer-strikers'
 // (every league season in the five leagues is played, whichever leagues Career deals from; the players are every
 // club player in the data, the Champions League clubs from outside the five leagues included)
 const SOCCER_STRIKERS = SOCCER_ALL_STRIKERS
@@ -286,9 +289,11 @@ const leagueOfClub = c => LEAGUES.find(l => c.league === l.id || c.league === l.
 for (const c of CLUBS) { const L = leagueOfClub(c); c.lid = L?.id; c.country = L?.key ?? 'ENG' }
 const CLUB_BY = new Map(CLUBS.map(c => [c.short, c]))
 const clubsOf = lid => CLUBS.filter(c => c.lid === lid)
-const NATIONS = (WC_NATIONS ?? []).map(n => ({ ...n, att: Number(n.att) || 70, def: Number(n.def) || 70 }))
-const NATION_BY = new Map(NATIONS.map(n => [n.short, n]))
-const HOSTS = new Set(['USA', 'MEX', 'CAN'])
+// The World Cup's field (the nations, their players, the scale, the hosts and the extra stars) is one of two: the
+// legends (WORLD CUP mode) or the real 2026 World Cup (Career). wcField() below builds each; withField() points these
+// at one for a call (the engine is synchronous, so a call never sees the other's).
+let NATIONS = [], NATION_BY = new Map(), HOSTS = new Set(), NATION_STRIKERS = new Map(), STARS_WC = []
+let W_SD_ATT = 6, W_SD_DEF = 6, W_ATT = 80, W_DEF = 80, KW_ATT = 0.04, KW_DEF = 0.04, WC_BASE = 1.3, WC_KEY = 'legends'
 
 // The players (every attacker and midfielder, up to 5 a side, each with his real `role`). A side's list
 // starts with its main striker, the one a build replaces: `starter: true`, or the best ST by role, or the
@@ -318,7 +323,6 @@ const byTeam = list => {
   return m
 }
 const CLUB_STRIKERS = byTeam(SOCCER_STRIKERS)
-const NATION_STRIKERS = byTeam(WC_STRIKERS)
 
 // The rating scale. One rating point means the same everywhere: it's scaled so the spread inside a league
 // gives real tables (the best attack ~2.3 goals a game, the worst ~0.8; champions ~85-90 points). A team's
@@ -337,11 +341,7 @@ const H_EURO = 0.09
 const RHO = -0.10              // Dixon-Coles
 const ET_F = 0.30              // extra time: a third of a match at ~90% of the rate
 const PEN_RATE = 0.115         // penalties awarded per team-match
-// the World Cup: one pool of 48, a wider spread (Spain against Curaçao)
-const W_SD_ATT = Math.max(2, Math.sqrt(avg(NATIONS.map(n => (n.att - avg(NATIONS.map(x => x.att))) ** 2)))) || 6
-const W_SD_DEF = Math.max(2, Math.sqrt(avg(NATIONS.map(n => (n.def - avg(NATIONS.map(x => x.def))) ** 2)))) || 6
-const W_ATT = avg(NATIONS.map(n => n.att)), W_DEF = avg(NATIONS.map(n => n.def))
-const KW_ATT = 0.24 / W_SD_ATT, KW_DEF = 0.22 / W_SD_DEF
+// the World Cup: one pool of 48, a wider spread (Spain against Curaçao); its W_* are the field's (wcField below)
 // A rating far above the rest counts for less past two spreads (half as much): a 3-spread outlier (Barcelona
 // in La Liga, Spain at the World Cup) is great, not unbeatable. k: per rating point, sd: the spread.
 const soft = z => (z > 1.8 ? 1.8 + (z - 1.8) * 0.45 : z < -1.8 ? -1.8 + (z + 1.8) * 0.45 : z)
@@ -359,17 +359,13 @@ for (const l of LEAGUES) {
   LEAGUE_BASE.set(l.id, { base: n ? (LEAGUE_META[l.key].goals) / (s / n) : 1.4, mA, mD, minA: Math.min(...cs.map(c => c.att)), minD: Math.min(...cs.map(c => c.def)) })
 }
 const EURO_BASE = 1.47
-const WC_BASE = (() => {
-  let s = 0, n = 0
-  for (const a of NATIONS) for (const b of NATIONS) if (a !== b && a.group && a.group === b.group) { s += Math.exp(waT(a.att - W_ATT) - wdT(b.def - W_DEF)); n++ }
-  return n ? 1.33 / (s / n) : 1.3
-})()
 
 // ─── Career's 1-10 scale ─────────────────────────────────────────────────────
 // 5.5 is an average side; one point is 0.55 of a league's spread (about 17% more goals). The season
 // director's moments move a team by whole points (team.offMod / defMod).
 const scaleOf = mode => (mode === 'alltime' ? { mA: W_ATT, mD: W_DEF, sA: W_SD_ATT * 0.55, sD: W_SD_DEF * 0.55 } : { mA: G_ATT, mD: G_DEF, sA: SD_ATT * 0.55, sD: SD_DEF * 0.55 })
 export function soccerTeam10(team, mode = 'current') {
+  if (mode === 'alltime' && FIELD !== fieldFor(team)) return withField(fieldFor(team), () => soccerTeam10(team, mode))
   const src = (mode === 'alltime' ? NATION_BY : CLUB_BY).get(team?.short) ?? team ?? {}
   const s = scaleOf(mode)
   return { off: r1(clamp(5.5 + ((src.att ?? s.mA) - s.mA) / s.sA, 1, 10)), def: r1(clamp(5.5 + ((src.def ?? s.mD) - s.mD) / s.sD, 1, 10)) }
@@ -453,7 +449,7 @@ const NATION_STARS = [
   ['Pau Cubarsí', 'ESP', 6, 19], ['Estêvão', 'BRA', 8, 19], ['Endrick', 'BRA', 6, 19], ['Désiré Doué', 'FRA', 8, 21], ['Warren Zaïre-Emery', 'FRA', 6, 20],
   ['Franco Mastantuono', 'ARG', 6, 18], ['Kobbie Mainoo', 'ENG', 6, 21], ['Lennart Karl', 'GER', 6, 18], ['Jorrel Hato', 'NED', 5, 20], ['Rodrigo Mora', 'POR', 6, 19],
 ]
-const strikerNames = new Set([...(SOCCER_STRIKERS ?? []), ...(WC_STRIKERS ?? [])].map(p => norm(p.name)))
+const strikerNames = new Set([...(SOCCER_STRIKERS ?? []), ...(WC2026_STRIKERS ?? []), ...(WC_STRIKERS ?? [])].map(p => norm(p.name)))
 function clubByKeys(keys) {
   for (const k of keys) {
     const nk = norm(k)
@@ -464,8 +460,55 @@ function clubByKeys(keys) {
 }
 const STARS_CLUB = CLUB_STARS.map(([name, keys, nation, lvl, age]) => ({ name, club: clubByKeys(keys), nation, lvl, age }))
   .filter(s => s.club && !strikerNames.has(norm(s.name))).map(s => ({ ...s, team: s.club.short, lid: s.club.lid }))
-const STARS_WC = NATION_STARS.filter(([name, nation]) => NATION_BY.has(nation) && !strikerNames.has(norm(name)))
-  .map(([name, nation, lvl, age]) => ({ name, team: nation, lvl, age }))
+// the all-time World Cup's: the greatest defenders and keepers (the legends pool is attackers only), at their peak
+// ages, so the Golden Ball has its Beckenbauer and its Cannavaro (level as above: about a goal's worth a point)
+const LEGEND_STARS = [
+  ['Franz Beckenbauer', 'GER', 12, 29], ['Paolo Maldini', 'ITA', 10, 26], ['Fabio Cannavaro', 'ITA', 11, 32], ['Gianluigi Buffon', 'ITA', 10, 28],
+  ['Manuel Neuer', 'GER', 10, 28], ['Philipp Lahm', 'GER', 8, 30], ['Cafu', 'BRA', 9, 32], ['Roberto Carlos', 'BRA', 9, 29],
+  ['Lilian Thuram', 'FRA', 9, 26], ['Iker Casillas', 'ESP', 9, 29], ['Sergio Ramos', 'ESP', 9, 28], ['Carles Puyol', 'ESP', 8, 32],
+  ['Bobby Moore', 'ENG', 10, 25], ['Virgil van Dijk', 'NED', 9, 28], ['Javier Mascherano', 'ARG', 8, 30], ['Emiliano Martínez', 'ARG', 8, 30],
+  ['Diego Godín', 'URU', 8, 28], ['Achraf Hakimi', 'MAR', 8, 24],
+]
+// ─── The World Cup's two fields ──────────────────────────────────────────────
+function wcField(key, nationList, strikerList, hosts, starList) {
+  const nations = (nationList ?? []).map(n => ({ ...n, att: Number(n.att) || 70, def: Number(n.def) || 70 }))
+  const by = new Map(nations.map(n => [n.short, n]))
+  const mA = avg(nations.map(n => n.att)), mD = avg(nations.map(n => n.def))
+  const sdA = Math.max(2, Math.sqrt(avg(nations.map(n => (n.att - mA) ** 2)))) || 6
+  const sdD = Math.max(2, Math.sqrt(avg(nations.map(n => (n.def - mD) ** 2)))) || 6
+  const kA = 0.24 / sdA, kD = 0.22 / sdD
+  let s = 0, n = 0
+  for (const a of nations) for (const b of nations) if (a !== b && a.group && a.group === b.group) { s += Math.exp(term(kA, a.att - mA, sdA) - term(kD, b.def - mD, sdD)); n++ }
+  const stars = starList.filter(([name, nation]) => by.has(nation) && !strikerNames.has(norm(name))).map(([name, nation, lvl, age]) => ({ name, team: nation, lvl, age }))
+  return { key, NATIONS: nations, NATION_BY: by, HOSTS: new Set(hosts), NATION_STRIKERS: byTeam(strikerList), STARS_WC: stars,
+    W_SD_ATT: sdA, W_SD_DEF: sdD, W_ATT: mA, W_DEF: mD, KW_ATT: kA, KW_DEF: kD, WC_BASE: n ? 1.33 / (s / n) : 1.3 }
+}
+const FIELDS = {
+  legends: wcField('legends', WC_NATIONS, WC_STRIKERS, [], LEGEND_STARS),
+  wc2026: wcField('wc2026', WC2026_NATIONS, WC2026_STRIKERS, ['USA', 'MEX', 'CAN'], NATION_STARS),
+}
+let FIELD = null
+function useField(f) {
+  FIELD = f
+  ;({ NATIONS, NATION_BY, HOSTS, NATION_STRIKERS, STARS_WC, W_SD_ATT, W_SD_DEF, W_ATT, W_DEF, KW_ATT, KW_DEF, WC_BASE } = f)
+  WC_KEY = f.key
+}
+useField(FIELDS.legends)
+function withField(f, fn) {
+  if (f === FIELD) return fn()
+  const prev = FIELD
+  useField(f)
+  try { return fn() } finally { useField(prev) }
+}
+// which field a call plays: a script's own; Career's (team.wc 2026); a nation only the 2026 World Cup has (an old save
+// or result from before the legends) plays that one; everyone else the legends
+function fieldFor(team, script) {
+  if (script?.wcField && FIELDS[script.wcField]) return FIELDS[script.wcField]
+  if (team?.wc === 2026 || team?.wc === '2026') return FIELDS.wc2026
+  const s = team?.short ?? team?.nation
+  if (s && !FIELDS.legends.NATION_BY.has(s) && FIELDS.wc2026.NATION_BY.has(s)) return FIELDS.wc2026
+  return FIELDS.legends
+}
 
 // ─── The goal model ──────────────────────────────────────────────────────────
 // Dixon-Coles: independent Poissons with the four low scores (0-0, 1-0, 0-1, 1-1) reweighted
@@ -1511,7 +1554,7 @@ function wcSeason(build, types, team, base, gameMode, script) {
   }
   const awards = wcAwards(book, book.me)
   return {
-    sport: 'soccer', mode: 'alltime', position: 'st', gameMode, season: '2026',
+    sport: 'soccer', mode: 'alltime', position: 'st', gameMode, season: WC_KEY === 'wc2026' ? '2026' : 'All-Time', wcField: WC_KEY,
     ovr, archetype: getSoccerArchetype(ovr, build, types),
     team: { ...nat, ...(team ?? {}), att: r1(uRate.att), def: r1(uRate.def) },
     wins: row.wins, draws: row.draws, losses: row.losses, points: row.points, gf: row.gf, ga: row.ga, gd: row.gd,
@@ -1889,6 +1932,7 @@ export function soccerUclRebook(result, games) {
 // The side's attack with this build in place of its real No. 9 (the lift M, as a rating on the side's own
 // att scale), so a squad's strength can be worked out before scriptSoccerSeason plays the season.
 export function soccerStrikerLift(build, team, mode = 'current') {
+  if (mode === 'alltime' && FIELD !== fieldFor(team)) return withField(fieldFor(team), () => soccerStrikerLift(build, team, mode))
   const src = mode === 'alltime' ? resolveNation(team) : resolveClub(team)
   const mates = (mode === 'alltime' ? NATION_STRIKERS : CLUB_STRIKERS).get(src.short) ?? []
   const rate = ratingsOf(src, team, mode, null)
@@ -1903,7 +1947,7 @@ export function soccerStrikerLift(build, team, mode = 'current') {
 export function runSoccerSimulation(build, types = SOCCER_TRAITS, team = null, mode = 'current', rngSeed = null, gameMode = 'classic', script = null) {
   const base = seedBase(rngSeed)
   const t = types?.length ? types : SOCCER_TRAITS
-  if ((script?.mode ?? mode) === 'alltime') return wcSeason(build, t, team, base, gameMode, script)
+  if ((script?.mode ?? mode) === 'alltime') return withField(fieldFor(team, script), () => wcSeason(build, t, team, base, gameMode, script))
   // a club: Career, Squad Builder (a script) and team.domestic play the domestic season; a build, the Champions League
   return script || team?.career || team?.squad || team?.domestic ? clubSeason(build, t, team, base, gameMode, script) : uclSeason(build, t, team, base, gameMode)
 }
@@ -1912,13 +1956,14 @@ export function runSoccerSimulation(build, types = SOCCER_TRAITS, team = null, m
 // builds are its strikers).
 export function scriptSoccerSeason(team, tr, rngSeed, mode = 'current') {
   const base = seedBase(rngSeed)
+  if (mode === 'alltime' && FIELD !== fieldFor(team)) return withField(fieldFor(team), () => scriptSoccerSeason(team, tr, rngSeed, mode))
   if (mode === 'alltime') {
     const nat = resolveNation(team)
     const uRate = ratingsOf(nat, team, 'alltime', tr)
     const world = wcWorld({ U: nat.short, uRate, hook: nullHook, rand: stream(base, 'world') })
     const fixtures = world.fixtures.map(({ plan, ...f }) => f)
     const g = fixtures.filter(f => f.stage === 'group')
-    return { sport: 'soccer', mode, team: nat.short, tr: uRate, world: { ...world, fixtures }, wins: g.filter(f => f.mySc > f.oppSc).length, draws: g.filter(f => f.mySc === f.oppSc).length, losses: g.filter(f => f.mySc < f.oppSc).length, champion: world.champion === nat.short, finish: world.reached[nat.short] }
+    return { sport: 'soccer', mode, wcField: WC_KEY, team: nat.short, tr: uRate, world: { ...world, fixtures }, wins: g.filter(f => f.mySc > f.oppSc).length, draws: g.filter(f => f.mySc === f.oppSc).length, losses: g.filter(f => f.mySc < f.oppSc).length, champion: world.champion === nat.short, finish: world.reached[nat.short] }
   }
   const club = resolveClub(team)
   const L = leagueOfClub(club), meta = LEAGUE_META[L.key]
