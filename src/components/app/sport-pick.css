@@ -4,30 +4,30 @@
    the stage clears, and the other sport's Home opens with the picker in the same place. */
 .sp-rack {
   --sp-bg: #111816;
-  display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 118px)); justify-content: center; column-gap: 6px;
-  margin: 0 0 -12px; padding: 6px 8px 4px; background: var(--sp-bg);
+  display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); column-gap: 0;
+  margin: 0 0 -12px; padding: 0 4px; background: var(--sp-bg);   /* (owner 11-16: one slim row, no dead space) */
 }
 .ag-home--bucket .sp-rack { --sp-bg: #1a1410; }
 .ag-home--soccer .sp-rack { --sp-bg: #131416; }
 
 .sp-opt {
   --c: #4fd8b4;
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 5px;
-  min-width: 0; min-height: 70px; padding: 4px 2px 0; border: 0; border-radius: var(--hm-r, 5px); background: none;
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px;
+  min-width: 0; min-height: 48px; padding: 0 2px; border: 0; border-radius: var(--hm-r, 5px); background: none;
   color: #a3ada9; font-family: var(--ag-font); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .sp-opt--bucket { --c: #f97316; }
 .sp-opt--soccer { --c: #f2f2ee; }
 .sp-opt--baseball { --c: #e0313f; }
-.sp-opt-ball { position: relative; display: grid; place-items: center; width: 46px; height: 40px; }
+.sp-opt-ball { position: relative; display: grid; place-items: center; width: 26px; height: 26px; flex: none; }
 .sp-ball { display: block; flex: none; }
-.sp-opt .sp-ball { opacity: .6; transform: scale(.86); transition: transform .16s cubic-bezier(.3, 1.2, .5, 1), opacity .12s ease; }
+.sp-opt .sp-ball { opacity: .55; transform: scale(.9); transition: transform .16s cubic-bezier(.3, 1.2, .5, 1), opacity .12s ease; }
 .sp-opt b {
   font-weight: 400; font-size: 15px; line-height: 1; letter-spacing: 1px; white-space: nowrap;
-  padding-bottom: 6px;   /* (the name and its line change at once: the tap shows on the next frame) */
+  padding: 15px 0 13px;   /* (the underline sits on the strip's bottom edge, under the name) */
 }
 .sp-opt.is-on { color: #fff; cursor: default; }
-.sp-opt.is-on .sp-ball { opacity: 1; transform: scale(1.16) translateY(-1px); }
+.sp-opt.is-on .sp-ball { opacity: 1; transform: scale(1.1); }
 .sp-opt.is-on b { box-shadow: inset 0 -3px 0 var(--c); }
 .sp-opt:not(.is-on):active .sp-ball { transform: scale(.78); }
 @media (hover: hover) {
@@ -40,7 +40,7 @@
 .sp-opt.is-soon { cursor: default; }
 .sp-opt.is-soon .sp-ball { opacity: .3; }
 .sp-opt.is-soon .sp-opt-ball svg:not(.sp-ball) { position: absolute; color: #fff; }
-.sp-opt.is-soon b { padding-bottom: 2px; }
+.sp-opt.is-soon b { padding-bottom: 13px; }
 .sp-opt small { font-family: var(--ag-body); font-size: 11px; font-weight: 700; letter-spacing: .6px; line-height: 1; padding-bottom: 3px; }
 
 /* while the other sport opens: its stage clears (the strip, the bars and PLAY stay where they are) */
@@ -49,11 +49,11 @@ html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-pla
 
 @media (max-width: 360px) { .sp-opt b { font-size: 14px; letter-spacing: .4px; } }
 @media (min-width: 1024px) {
-  html.app-look .sp-rack { grid-area: sport; align-self: start; margin: 0; padding: 10px 8px 6px; border-radius: var(--hm-r, 5px); }
-  html.app-look .sp-opt { min-height: 78px; }
-  html.app-look .sp-opt-ball { width: 52px; height: 46px; }
-  html.app-look .sp-opt .sp-ball { width: 42px; height: 42px; }
-  html.app-look .sp-opt b { font-size: 16px; }
+  html.app-look .sp-rack { grid-area: sport; align-self: start; margin: 0; padding: 0 6px; border-radius: var(--hm-r, 5px); }
+  html.app-look .sp-opt { min-height: 54px; gap: 9px; }
+  html.app-look .sp-opt-ball { width: 30px; height: 30px; }
+  html.app-look .sp-opt .sp-ball { width: 28px; height: 28px; }
+  html.app-look .sp-opt b { font-size: 17px; padding: 17px 0 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

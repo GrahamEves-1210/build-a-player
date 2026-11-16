@@ -172,10 +172,13 @@ export function SportBall({ id, size = 24 }) {
   return (
     <svg className={`sp-ball sp-ball--${id}`} viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
       {id === 'nfl' && (
-        <g transform="rotate(-38 12 12)">
-          <ellipse cx="12" cy="12" rx="11" ry="6.8" fill="#8b4a22" />
-          <path d="M3.4 9.2c.9 1.6.9 4 0 5.6M20.6 9.2c-.9 1.6-.9 4 0 5.6" stroke="#f3eee4" strokeWidth="1.1" fill="none" />
-          <path d="M8 12h8M9.3 10.6v2.8M11 10.6v2.8M12.7 10.6v2.8M14.4 10.6v2.8" stroke="#f3eee4" strokeWidth="1" strokeLinecap="round" />
+        <g transform="rotate(-35 12 12)">
+          {/* a real ball's shape: pointed ends, a darker seam side, white laces */}
+          <path d="M1.2 12C4.6 5.4 19.4 5.4 22.8 12C19.4 18.6 4.6 18.6 1.2 12Z" fill="#8a4520" />
+          <path d="M1.2 12C4.6 18.6 19.4 18.6 22.8 12C19 16 5 16 1.2 12Z" fill="#6b3216" />
+          <path d="M5.2 8.6c.7 1.1.7 5.7 0 6.8M18.8 8.6c-.7 1.1-.7 5.7 0 6.8" stroke="#efe6d8" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M8.6 11.2h6.8" stroke="#f6f1e8" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M9.5 10.1v2.2M11 10.1v2.2M12.5 10.1v2.2M14 10.1v2.2" stroke="#f6f1e8" strokeWidth=".9" strokeLinecap="round" />
         </g>
       )}
       {id === 'bucket' && (
@@ -230,7 +233,7 @@ function SportPick({ sport }) {
           <button key={id} type="button" role="radio" aria-checked={id === on} aria-disabled={locked || undefined} tabIndex={id === on ? 0 : -1}
             className={`sp-opt sp-opt--${id}${id === on ? ' is-on' : ''}${locked ? ' is-soon' : ''}`}
             onClick={e => { if (!locked) go(id, e.detail === 0) }}>
-            <span className="sp-opt-ball"><SportBall id={id} size={36} />{locked && <IconLock size={14} />}</span>
+            <span className="sp-opt-ball"><SportBall id={id} size={24} />{locked && <IconLock size={14} />}</span>
             <b>{label}</b>
             {locked && <small>SOON</small>}
           </button>
