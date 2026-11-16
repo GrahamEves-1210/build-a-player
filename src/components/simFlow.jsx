@@ -96,16 +96,18 @@ export function useTimerBar(active, ms, onDone) {
 export const TimerBar = ({ pct }) => <div className="plf-series-timer"><div className="plf-series-timer-fill" style={{ width: `${pct}%` }} /></div>
 
 // Slowest / Slow / pause / Fast / Skip (basketball's playoff controls; speed is the tick's multiplier)
-export function SpeedSeg({ speed, paused, onSpeed, onPause, onSkip, skipLabel = ['Skip', 'Playoff'] }) {
-  const b = (v, label) => <button className={`plf-seg-btn${!paused && speed === v ? ' plf-seg-btn--active' : ''}`} onClick={() => onSpeed(v)}>{label}</button>
+// steps: the speeds and their names, 'pause' where the pause button goes (Franchise's game day: Slow / Normal / Fast)
+const SPEED_STEPS = [[10, 'Slowest'], [4, 'Slow'], 'pause', [1, 'Fast']]
+export function SpeedSeg({ speed, paused, onSpeed, onPause, onSkip, skipLabel = ['Skip', 'Playoff'], steps = SPEED_STEPS, className = '' }) {
+  const b = (v, label) => <button key={v} type="button" className={`plf-seg-btn${!paused && speed === v ? ' plf-seg-btn--active' : ''}`} aria-pressed={!paused && speed === v} onClick={() => onSpeed(v)}>{label}</button>
   return (
-    <div className="plf-seg">
-      {b(10, 'Slowest')}{b(4, 'Slow')}
-      <button className={`plf-seg-btn plf-seg-btn-pause-icon${paused ? ' plf-seg-btn--pause' : ''}`} onClick={onPause} aria-label="Pause">
-        <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3.5" height="12" rx="1" /><rect x="6.5" y="0" width="3.5" height="12" rx="1" /></svg>
-      </button>
-      {b(1, 'Fast')}
-      <button className="plf-seg-btn plf-seg-btn-skip" onClick={onSkip}>{skipLabel[0]}<br />{skipLabel[1]}</button>
+    <div className={`plf-seg ${className}`} role="group" aria-label="Speed">
+      {steps.map(x => (x === 'pause'
+        ? <button key="pause" type="button" className={`plf-seg-btn plf-seg-btn-pause-icon${paused ? ' plf-seg-btn--pause' : ''}`} onClick={onPause} aria-label="Pause" aria-pressed={!!paused}>
+            <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3.5" height="12" rx="1" /><rect x="6.5" y="0" width="3.5" height="12" rx="1" /></svg>
+          </button>
+        : b(x[0], x[1])))}
+      <button type="button" className="plf-seg-btn plf-seg-btn-skip" onClick={onSkip}>{skipLabel[0]}{skipLabel[1] ? <><br />{skipLabel[1]}</> : null}</button>
     </div>
   )
 }
@@ -270,18 +272,42 @@ const momentsOff = () => !momentsOn()
 const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
 // Moments on / off (the sim page's team card). Off: the season plays straight
 // through, no decisions; the milestones and records still fire.
-export function MomentsToggle() {
-  const [off, setOff] = useState(() => momentsOff())
+// on / onChange: a mode that keeps the switch itself (Franchise: the save's moments setting); label: 'KEY MOMENTS'
+export function MomentsToggle({ on = null, onChange = null, label = 'MOMENTS', className = '' }) {
+  const [own, setOwn] = useState(() => momentsOff())
   // (a moment's own button can turn them off while this is on screen)
   useEffect(() => {
-    const sync = () => setOff(momentsOff())
+    if (on != null) return undefined
+    const sync = () => setOwn(momentsOff())
     window.addEventListener('bap:moments-off', sync)
     return () => window.removeEventListener('bap:moments-off', sync)
-  }, [])
+  }, [on])
+  const off = on != null ? !on : own
+  const flip = () => {
+    sfx('tap')
+    if (on != null) { onChange?.(off); return }
+    setMomentsOff(!off); setOwn(!off); window.dispatchEvent(new Event('bap:moments-off'))
+  }
   return (
-    <button className={`sts-moments${off ? ' is-off' : ''}`} onClick={() => { setMomentsOff(!off); setOff(!off); sfx('tap'); window.dispatchEvent(new Event('bap:moments-off')) }} aria-pressed={!off} title={off ? 'Turn the season\'s moments back on' : 'Play the season straight through, no decisions'}>
-      <span className="sts-moments-knob" /><span>MOMENTS {off ? 'OFF' : 'ON'}</span>
+    <button type="button" className={`sts-moments${off ? ' is-off' : ''} ${className}`} onClick={flip} aria-pressed={!off} title={off ? 'Turn the moments back on' : 'Play straight through, no decisions'}>
+      <span className="sts-moments-knob" /><span>{label} {off ? 'OFF' : 'ON'}</span>
     </button>
+  )
+}
+
+// How the key moments play (Career's and Franchise's switch, one component): the modes as a segmented radio group.
+//   modes: [[id, label]] · what: { id: a line under the label } · title · extra: anything on the title row (a link)
+//   cls: { root, top, group } the classes each mode's page dresses it in
+export function GamesSwitch({ mode, modes, onPick, title = 'KEY MOMENTS', what = null, extra = null, cls = {}, sub = null }) {
+  return (
+    <div className={cls.root ?? 'gsw'}>
+      <div className={cls.top ?? 'gsw-top'}><span><b>{title}</b>{sub && <small>{sub}</small>}</span>{extra}</div>
+      <div className={cls.group ?? 'gsw-seg'} role="radiogroup" aria-label={title} style={{ '--n': modes.length }}>
+        {modes.map(([m, label]) => (
+          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'is-on' : ''} onClick={() => { if (m !== mode) { onPick(m); sfx('tap') } }}>{label}{what?.[m] && <small>{what[m]}</small>}</button>
+        ))}
+      </div>
+    </div>
   )
 }
 

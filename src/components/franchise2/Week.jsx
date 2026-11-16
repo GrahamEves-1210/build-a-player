@@ -1,72 +1,162 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, momentView, finishMoment, clockText, periodOf, normalRate, ROUNDS, CONF_OF } from '../../lib/franchise2'
-import { startersOf } from '../../lib/franchise2/roster'
-import { momentCast } from '../../lib/franchise2/cast'
+import { TEAM, momentView, finishMoment, ROUNDS, CONF_OF, DIV_OF, SNAP_KIND, playsFor, PLAYS, playSetup, playResult, nameSnap, snapWord, simSnap, ctlFor } from '../../lib/franchise2'
+import { gameBox } from '../../lib/franchise2/stats'
 import { whenOf } from '../../lib/franchise2/plays'
-import { roll } from '../../lib/franchise2/rng'
-import { GAMES } from '../../lib/minigames'
-import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
+import { seeded } from '../../lib/rng'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { romanOf } from '../../lib/mg/kit'
-import { chipCls } from './bits'
-import { fkVars, Chyron, Scorebug, ManL3, BigNum, Stamp, Go, Tag, Bumper, reduced, ActionBar } from './kit'
+import { minigameOpen } from '../../lib/ads'
+import { SpeedSeg, MomentsToggle } from '../simFlow'
+import { BoxSheet, FootballBox, FbTable } from '../app/SquadSeason'
+import { fkVars, KLogo, Chyron, Scorebug, ManL3, Stamp, Go, Tag, Bumper, reduced, ActionBar } from './kit'
+import { faceFor } from './dparts'
+import './gameday.css'
 
-const MiniGame = lazy(() => import('../app/MiniGame'))
-const MiniGameSimple = lazy(() => import('../app/MiniGameSimple'))
+const MgStage = lazy(() => import('../app/MgStage'))
 
-// GAME DAY: the player's game, live and quick. The scorebug runs the clock through the game in about three seconds
-// (a tap skips it); the scoring plays come up as they happen, with the men who made them ("Bo Nix 18-yd pass to
-// Courtland Sutton"). A moment stops it where it falls in the 4th: a broadcast bumper, the down and distance, the build
-// and the man across from him, then the play (the build's mini game, with both teams' real men from their depth
-// charts). The game goes on from whatever the play did, and ends on the FINAL graphic.
+// GAME DAY (owner, 2026-11-16): the player's game as a broadcast. The week's bar and the scorebug on top; under them
+// the speed (SLOW, NORMAL, FAST, pause, SKIP) and the KEY MOMENTS switch; then the field (who has it, the down and
+// distance, where the ball is, the drive so far) beside the play-by-play, the scoring and the box score. A moment stops
+// the clock where the game put it (game.js snapOf): the player calls the play and runs it on the mini games' engines
+// (moments.js), or plays the backer on defense, and the game goes on from what the snap did. FINAL: the score by
+// quarter, the line under it, the builds' lines, the moments, and the box score.
 //   start: { row } a finished game, or { pend: true } a game waiting on its moment (F.pend)
-const RUN_MS = 2800
+const GAME_MS = 32000                     // NORMAL: a game in about half a minute (it was under three seconds)
+const SPEEDS = [[2, 'Slow'], 'pause', [1, 'Normal'], [0.4, 'Fast']]
+const SPEED_KEY = 'bap_fr2_speed'
+const readSpeed = () => { try { const v = Number(localStorage.getItem(SPEED_KEY)); return [2, 1, 0.4].includes(v) ? v : 1 } catch { return 1 } }
+const keepSpeed = v => { try { localStorage.setItem(SPEED_KEY, String(v)) } catch { /* (private mode: the choice lasts the visit) */ } }
 const DOWN = ['', '1ST', '2ND', '3RD', '4TH']
 const nick = s => TEAM[s].nick.toUpperCase()
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+
+// ── The game's timeline: the scoring plays and the drives, to the end or to the moment it's waiting on ──────
+function timelineOf(F, row, mv) {
+  if (row) {
+    const dr = row.dr ?? null
+    return { opp: row.opp, home: row.home, kp: row.kp ?? [], dr, endT: Math.max(3600, ...(row.pl ?? []).map(p => p[0]), ...(dr ?? []).map(d => d[1])), ms: row.ms ?? [], cur: null }
+  }
+  return { opp: mv.opp, home: mv.home, kp: mv.feed ?? [], dr: mv.dr ?? [], endT: mv.t, ms: mv.ms ?? [], cur: mv.from ? [mv.from.t0, mv.t, mv.ball === 'us' ? 1 : 0, mv.from.y0, 'M', mv.y] : null }
+}
+// A drive's snaps as the broadcast shows them (the down, the distance, the spot), from where it started to how it
+// ended. The game plays drives, not snaps; these are laid out along the drive (seeded, the same every time): the
+// series it moved the chains on, and the last one, the one that ended it. end: the moment's own snap.
+function driveSnaps(d, seed, end = null) {
+  const [t0, t1, , y0, res, at0] = d
+  const R = seeded(`${seed}-${t0}`)
+  const int = (a, b) => (b <= a ? a : a + Math.floor(R() * (b - a + 1)))
+  const at = res === 'T' ? 100 : Math.max(1, at0)
+  const out = []
+  const push = (down, togo, y) => out.push({ down, togo: Math.max(1, Math.min(togo, 100 - y)), y: Math.max(1, Math.min(99, y)), goal: y + togo >= 100 })
+  if (res === 'K') { push(1, 10, y0); push(2, 10, y0); push(3, 10, y0) }
+  else if (res === 'E' && t1 - t0 < 20) push(1, 10, y0)
+  else {
+    // the series that moved the chains, then the last one
+    const lastStart = end ? Math.max(y0, end.y + end.d - 10) : null
+    const stop = end ? lastStart : res === 'T' ? 100 : at
+    let s = y0
+    while (stop - s >= (end ? 1 : 10) + (res === 'T' ? 8 : 0)) {
+      const to = end ? Math.min(stop, s + 10 + int(0, 6)) : s + 10 + int(0, Math.min(8, stop - s - 10))
+      if (end && to > stop) break
+      // 1st & 10, sometimes 2nd, sometimes 3rd, then the play that moves the chains
+      const n = int(0, 2), g1 = int(1, 7), g2 = int(0, Math.max(0, 9 - g1))
+      push(1, 10, s); if (n >= 1) push(2, 10 - g1, s + g1); if (n >= 2) push(3, 10 - g1 - g2, s + g1 + g2)
+      s = to
+      if (end && s >= stop) break
+    }
+    if (end) {
+      s = Math.max(y0, Math.min(s, lastStart))
+      for (let dn = 1; dn < end.down; dn++) { const y = s + Math.round(((end.y - s) * (dn - 1)) / Math.max(1, end.down - 1)); push(dn, s + 10 - y, y) }
+      push(end.down, end.d, end.y)
+    } else if (res === 'T') {
+      push(1, Math.min(10, 100 - s), s)
+      if (100 - s > 3) push(2, Math.min(10, 100 - s) - int(1, 3), s + int(1, 3))
+    } else {
+      // it ended here: third down short of the line, then fourth (the kick, or going for it); a turnover on any down
+      const g = Math.min(9, at - s)
+      push(1, 10, s)
+      if (res === 'X') { if (g > 2) push(2, 10 - Math.floor(g / 2), s + Math.floor(g / 2)) }
+      else { push(2, 10 - Math.max(0, Math.floor(g / 2)), s + Math.max(0, Math.floor(g / 2))); push(3, 10 - g, at); if (res !== 'E') push(4, 10 - g, at) }
+    }
+  }
+  const n = out.length
+  out.forEach((x, i) => { x.t = t0 + ((t1 - t0) * i) / n })
+  return out
+}
+// where the game is at T: the drive on (who has it, the snap, how far it's come), or null between drives
+function situationAt(T, tl, F) {
+  const rows = tl.dr ?? []
+  let d = rows.find(x => x[0] <= T && T < x[1])
+  let end = null
+  if (!d && tl.cur && T >= tl.cur[0]) { d = tl.cur; end = { down: tl.moment.down, d: tl.moment.d, y: tl.moment.y } }
+  if (!d) return null
+  // (a drive with one of the moments in it: up to the snap, the snap itself; after it, the drive from where it left
+  // the ball: a new series past the line, fourth down short of it)
+  const m = !end && (tl.ms ?? []).find(x => x.t >= d[0] && x.t < d[1])
+  if (m && !m.to && !m.td) {
+    if (T < m.t) { d = [d[0], m.t, d[2], d[3], 'M', m.y]; end = { down: m.down, d: m.d, y: m.y } }
+    else {
+      const ny = Math.max(1, Math.min(99, m.y + (m.yards ?? 0)))
+      if ((m.yards ?? 0) >= m.d) d = [m.t + 6, d[1], d[2], ny, d[4], d[5]]
+      else if (m.down === 3) { d = [m.t + 6, d[1], d[2], d[3], 'M', ny]; end = { down: 4, d: m.d - (m.yards ?? 0), y: ny } }
+    }
+  }
+  const snaps = driveSnaps(d, `${F.seed}-${F.year}-${tl.opp}`, end)
+  const k = snaps.filter(x => x.t <= T + 0.01).pop() ?? snaps[0]
+  const off = d[2] ? F.team : tl.opp, def = d[2] ? tl.opp : F.team
+  return { off, def, ...k, y0: d[3], plays: snaps.indexOf(k) + 1, t0: d[0], el: Math.max(0, T - d[0]) }
+}
+const spotOf = (y, off, def) => (y === 50 ? 'MIDFIELD' : y < 50 ? `${off} ${y}` : `${def} ${100 - y}`)
 
 export default function Gameday({ F, act, start, onDone, owner }) {
   const [row, setRow] = useState(start.row ?? null)
-  const [news] = useState(start.news ?? [])
-  const mv = useMemo(() => (start.pend ? momentView(F) : null), []) // eslint-disable-line react-hooks/exhaustive-deps
-  // the plays: [t, mine, pts, text] (the finished game's summary, or the plays named before the moment)
-  const plays = row?.kp ?? mv?.feed ?? []
-  const opp = row?.opp ?? mv?.opp
-  const home = row ? row.home : mv?.home
-  const endT = row ? Math.max(3600, ...(row.pl ?? []).map(p => p[0])) : mv ? mv.t : 3600
-  const [phase, setPhase] = useState('live')   // live · bump · moment · play · result · final
+  const [news, setNews] = useState(start.news ?? [])
+  const [mv, setMv] = useState(() => (start.pend ? momentView(F) : null))
+  const tl = useMemo(() => { const t = timelineOf(F, row, mv); if (mv) t.moment = mv; return t }, [row, mv]) // eslint-disable-line react-hooks/exhaustive-deps
+  const endT = tl.endT
+  const [phase, setPhase] = useState('live')   // live · bump · call · play · result · final
   const [T, setT] = useState(0)
-  const fromRef = useRef(0)
-  const raf = useRef(0)
+  const Tref = useRef(0)
+  const hold = useRef(0)
+  const [speed, setSpeed] = useState(readSpeed)
+  const [paused, setPaused] = useState(false)
+  const [tab, setTab] = useState('pbp')
+  const [pick, setPick] = useState(null)
+  const [last, setLast] = useState(null)   // the moment just played: { v, out, word }
   const po = row ? row.rd != null : !!mv?.po
   const rd = row?.rd ?? F.po?.rd
-  const label = po ? (rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][rd]) : `WK ${row?.wk ?? F.wk + 1}`
+  const wk = row?.wk ?? F.wk + 1
+  const momentsOnNow = (F.games ?? 'advanced') !== 'off'
 
-  // the clock runs from where it is to the end (or to the moment)
+  // the clock runs from where it is to the end (or to the moment), at the speed picked; a score holds it a beat
   useEffect(() => {
-    if (phase !== 'live') return
-    const from = fromRef.current, span = Math.max(1, endT - from)
-    if (reduced()) { setT(endT); arrive(); return }
-    let t0
-    const ms = RUN_MS * Math.min(1.15, span / 3600) + 300
+    if (phase !== 'live' || paused) return undefined
+    if (reduced() && !mv) { Tref.current = endT; setT(endT); arrive(); return undefined }
+    let lastNow = performance.now(), lastSet = 0, raf
+    const rate = 3600 / (GAME_MS * speed)
     const step = now => {
-      t0 ??= now
-      const k = Math.min(1, (now - t0) / ms)
-      setT(from + span * k)
-      if (k < 1) raf.current = requestAnimationFrame(step)
-      else arrive()
+      const dt = Math.min(100, now - lastNow); lastNow = now
+      if (now >= hold.current) Tref.current = Math.min(endT, Tref.current + dt * rate)
+      if (Tref.current >= endT) { setT(endT); arrive(); return }
+      if (now - lastSet > 90) { lastSet = now; setT(Tref.current) }
+      raf = requestAnimationFrame(step)
     }
-    raf.current = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf.current)
-  }, [phase, endT]) // eslint-disable-line react-hooks/exhaustive-deps
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [phase, paused, speed, endT]) // eslint-disable-line react-hooks/exhaustive-deps
   const arrive = () => {
-    if (!row && mv) { setPhase('bump'); sfx('whistle'); haptic('medium'); return }
+    if (mv && !row) {
+      // (the moments switched off: the sim plays the snap and the game goes on)
+      if ((F.games ?? 'advanced') === 'off') { commit(null, true); return }
+      setPhase('bump'); sfx('whistle'); haptic('medium'); return
+    }
     setPhase('final')
   }
-  const skip = () => { if (phase !== 'live') return; cancelAnimationFrame(raf.current); setT(endT); arrive() }
+  const skip = () => { if (phase !== 'live') return; Tref.current = endT; setT(endT); hold.current = 0; arrive() }
 
   // the score at the clock, and the play that just came up
-  const shown = plays.filter(p => p[0] <= T)
+  const shown = tl.kp.filter(p => p[0] <= T)
   const us = shown.filter(p => p[1]).reduce((a, p) => a + p[2], 0)
   const them = shown.filter(p => !p[1]).reduce((a, p) => a + p[2], 0)
   const lastN = useRef(0)
@@ -76,201 +166,363 @@ export default function Gameday({ F, act, start, onDone, owner }) {
       const p = shown[shown.length - 1]
       if (p[2] > 0 && phase === 'live') {
         sfx(p[1] ? 'pop' : 'tap')
-        const s = p[1] ? F.team : opp
-        setFlash({ s, text: `${p[2] >= 6 ? 'TOUCHDOWN' : 'FIELD GOAL'} ${nick(s)}`, key: `${p[0]}-${shown.length}` })
+        const s = p[1] ? F.team : tl.opp
+        setFlash({ s, text: `${p[2] >= 6 ? 'TOUCHDOWN' : p[2] === 2 ? 'SAFETY' : 'FIELD GOAL'} ${nick(s)}`, key: `${p[0]}-${shown.length}` })
+        hold.current = performance.now() + 900 * Math.min(1.6, speed)
       }
     }
     lastN.current = shown.length
   }, [shown.length]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 1100); return () => clearTimeout(t) }, [flash])
+  useEffect(() => { if (!flash) return undefined; const t = setTimeout(() => setFlash(null), 1500); return () => clearTimeout(t) }, [flash])
 
-  // the moment's play is in: the game goes on from there
-  const played = res => {
-    const hit = !!res?.hit
-    act(X => finishMoment(X, hit))
-    const r = F.log[F.log.length - 1]
-    fromRef.current = T
-    lastN.current = r.kp.filter(p => p[0] <= T).length
-    setRow(r); setPhase('result')
-    sfx(hit ? 'claim' : 'deny'); haptic(hit ? 'success' : 'heavy')
+  // ── a moment: the play is in, the game goes on to its next one or to the final ──
+  const commit = (out, quiet = false) => {
+    const v = mv
+    const named = out ? nameSnap(F, v, out) : null
+    const res = act(X => finishMoment(X, named))
+    let kp
+    if (res?.pending) { const next = momentView(F); setMv(next); kp = next.feed }
+    else { const r = res?.row ?? F.log[F.log.length - 1]; setRow(r); setNews(res?.news ?? []); setMv(null); kp = r.kp ?? [] }
+    Tref.current = v.t; setT(v.t)
+    // (the snap's own score is on the stamp: the flash waits for the next one)
+    lastN.current = kp.filter(p => p[0] <= v.t + 15).length
+    if (quiet || !named) { setPhase('live'); return }
+    const word = snapWord(v, named)
+    const good = (word === 'TOUCHDOWN' || word === 'FIRST DOWN') === (v.ball === 'us') || (v.ball !== 'us' && named.to)
+    setLast({ v, out: named, word, good })
+    setPhase('result')
+    sfx(good ? 'claim' : 'deny'); haptic(good ? 'success' : 'heavy')
   }
-  const resume = () => { if (phase === 'result') setPhase('live') }
-  useEffect(() => { if (phase !== 'result') return; const t = setTimeout(resume, 1900); return () => clearTimeout(t) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
-  const skipAll = () => {
-    act(X => { X.games = 'off' })
-    const p = F.teams[F.team].r.find(x => x.i === mv.pid)
-    played({ hit: roll(`${F.seed}-${F.year}-${F.wk}-skip`) < normalRate(p?.o ?? 80) })
+  const callPlay = id => {
+    sfx('tap')
+    if ((F.games ?? 'advanced') === 'simple') {
+      const P = PLAYS[id]
+      commit({ ...simSnap(F.pend.S, P.kind === 'stop' ? 'run' : P.kind, `simple-${id}`), call: P.kind === 'stop' ? 'run' : P.kind, play: id })
+      return
+    }
+    setPick(id); setPhase('play')
   }
+  const played = done => { const out = playResult(F, mv, pick, done); setPick(null); commit(out) }
+  const simIt = id => { const P = PLAYS[id]; commit({ ...simSnap(F.pend.S, P.kind === 'stop' ? 'run' : P.kind, 'skip'), call: P.kind === 'stop' ? 'run' : P.kind, play: id }) }
+  useEffect(() => { if (phase !== 'result') return undefined; const t = setTimeout(() => setPhase('live'), 2400); return () => clearTimeout(t) }, [phase])
   const finalRow = row && phase === 'final' ? row : null
-  useEffect(() => { if (finalRow) { if (finalRow.w) { if (finalRow.rd === 3) victory({ big: true }); else sfx('claim') } else sfx('lock') } }, [finalRow])
+  useEffect(() => { if (finalRow) { setTab(t => (t === 'pbp' ? 'scoring' : t)); if (finalRow.w) { if (finalRow.rd === 3) victory({ big: true }); else sfx('claim') } else sfx('lock') } }, [finalRow])
+
+  // the moments switch: off sims the rest of this game's moments; on comes back with the mode it had
+  const setMoments = on => act(X => { if (on) X.games = X.gamesWas ?? 'advanced'; else { if (X.games !== 'off') X.gamesWas = X.games ?? 'advanced'; X.games = 'off' } })
 
   // the bug, away team first (the broadcast's order)
-  const a = home ? opp : F.team, h = home ? F.team : opp
-  const as = home ? them : us, hs = home ? us : them
-  const atMoment = phase === 'moment' || phase === 'bump'
-  const poss = atMoment && mv ? ((mv.ball === 'us') === home ? 'h' : 'a') : null
+  const a = tl.home ? tl.opp : F.team, h = tl.home ? F.team : tl.opp
+  const fin = phase === 'final'
+  const as = fin ? (tl.home ? row.them : row.us) : tl.home ? them : us
+  const hs = fin ? (tl.home ? row.us : row.them) : tl.home ? us : them
   const tt = Math.min(T, endT)
+  const sit = !fin ? situationAt(tt, tl, F) : null
+  const atMoment = (phase === 'bump' || phase === 'call') && mv
+  const ballSide = atMoment ? (mv.ball === 'us' ? F.team : mv.opp) : sit?.off
+  const poss = ballSide ? (ballSide === h ? 'h' : 'a') : null
+  const label = po ? (rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][rd]) : `WK ${wk}`
+  const kindTxt = po ? (rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[rd]} ROUND`) : `WEEK ${wk}${DIV_OF[tl.opp] === DIV_OF[F.team] ? ' · DIVISION GAME' : ''}`
+  const status = fin ? (row?.ot ? 'FINAL/OT' : 'FINAL') : `${tt >= 3600 ? 'OT' : `Q${Math.min(4, Math.floor(tt / 900) + 1)}`} ${whenOf(Math.min(tt, tt >= 3600 ? tt : 3599.9)).split(' ')[1]}`
+  const dd = atMoment ? `${DOWN[mv.down]} & ${mv.goal ? 'GOAL' : mv.d}` : sit && !fin ? `${DOWN[sit.down]} & ${sit.goal ? 'GOAL' : sit.togo}` : null
   return createPortal(
-    <div className={`fk fk-root fg${phase === 'play' ? ' is-play' : ''}`} style={fkVars(F.team)} onClick={phase === 'live' ? skip : phase === 'result' ? resume : undefined}>
-      {phase === 'bump' && mv && <Bumper team={F.team} kicker={`${mv.period} QUARTER · ${mv.clock}`.replace('OT QUARTER', 'OVERTIME')} title="KEY MOMENT" onDone={() => setPhase('moment')} />}
+    <div className={`fk fk-root fg gd${phase === 'play' ? ' is-play' : ''}${fin ? ' is-final' : ''}`} style={fkVars(F.team)}>
+      {phase === 'bump' && mv && <Bumper team={mv.ball === 'us' ? F.team : mv.opp} kicker={`${SNAP_KIND[mv.kind]} · ${mv.period === 'OT' ? 'OT' : `Q${mv.period[0]}`} ${mv.clock}`} title="KEY MOMENT" onDone={() => setPhase('call')} />}
+      {phase === 'play' && mv && pick && <MomentStage F={F} mv={mv} pick={pick} onDone={played} />}
       {phase !== 'play' && (
-        <div className="fg-in">
-          <div className="fg-bug">
-            <Scorebug a={a} h={h} as={phase === 'final' ? (home ? row.them : row.us) : as} hs={phase === 'final' ? (home ? row.us : row.them) : hs} label={label}
-              per={periodOf(tt >= 3600 ? 3600 : Math.min(tt, 3599.9))} clock={clockText(Math.min(tt, 3599.9))}
-              final={phase === 'final' ? (row?.ot ? 'F/OT' : 'FINAL') : null} poss={poss}
-              dd={atMoment && mv ? `${DOWN[mv.down]} & ${mv.goal ? 'GOAL' : mv.d}` : null} flash={phase === 'live' ? flash : null} />
+        <>
+          <header className="gd-head">
+            {/* (the week's bar: on top, where the broadcast puts it) */}
+            <div className="gd-weekrow">
+              <div className="gd-week" style={fkVars(F.team)}><b>{kindTxt}</b><span>{fin ? 'FINAL' : <><i className="gd-live" />LIVE</>}</span></div>
+              <MomentsToggle className="gd-mom" label="KEY MOMENTS" on={momentsOnNow} onChange={setMoments} />
+            </div>
+            <div className="gd-barrow">
+            <Scorebug a={a} h={h} as={as} hs={hs} label={label}
+              per={tt >= 3600 ? 'OT' : ['1ST', '2ND', '3RD', '4TH'][Math.min(3, Math.floor(tt / 900))]} clock={whenOf(Math.min(tt, tt >= 3600 ? tt : 3599.9)).split(' ')[1]}
+              final={fin ? (row?.ot ? 'F/OT' : 'FINAL') : null} poss={fin ? null : poss} dd={fin ? null : dd} />
+            <div className="gd-ctl">
+              {fin || phase === 'call' || phase === 'bump' ? null : <SpeedSeg className="gd-speed" steps={SPEEDS} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); keepSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)} onSkip={skip} skipLabel={mv && !row ? ['Skip to', 'moment'] : ['Skip to', 'end']} />}
+            </div>
+            </div>
+          </header>
+          <div className="gd-main">
+            <div className="gd-left">
+              {phase === 'live' && flash && <div key={flash.key} className="gd-flash" style={fkVars(flash.s)} role="status"><KLogo s={flash.s} size={26} /><b>{flash.text}</b></div>}
+              {phase === 'live' && <Field F={F} sit={sit} tl={tl} T={tt} />}
+              {phase === 'call' && mv && <MomentCall F={F} mv={mv} owner={owner} onCall={callPlay} onSim={simIt} />}
+              {phase === 'result' && last && <MomentResult last={last} onGo={() => setPhase('live')} />}
+              {fin && row && <Final F={F} row={row} news={news} owner={owner} onDone={onDone} />}
+              {/* (a wide screen: the scoring under the field, always in view) */}
+              {!fin && <div className="gd-side-scoring"><Scoring F={F} tl={tl} row={null} T={tt} /></div>}
+            </div>
+            <div className="gd-right">
+              <div className="gd-tabs" role="tablist" aria-label="Game">
+                {[['pbp', 'Play-by-play'], ['scoring', 'Scoring'], ['box', 'Box score']].map(([id, l]) => <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => { setTab(id); sfx('tap') }}>{l}</button>)}
+              </div>
+              {tab === 'pbp' && <PlayByPlay F={F} tl={tl} T={fin ? Infinity : tt} />}
+              {tab === 'scoring' && <Scoring F={F} tl={tl} row={fin ? row : null} T={fin ? Infinity : tt} />}
+              {tab === 'box' && <Box F={F} row={row} tl={tl} T={tt} fin={fin} status={status} owner={owner} />}
+            </div>
           </div>
-          {phase === 'live' && <Board a={a} h={h} as={as} hs={hs} />}
-          {phase === 'live' && <Live F={F} plays={shown} opp={opp} />}
-          {phase === 'moment' && mv && <MomentCard F={F} mv={mv} owner={owner} onPlay={() => { setPhase('play'); sfx('tap') }} />}
-          {phase === 'result' && row?.mo && <MomentResult F={F} row={row} mv={mv} />}
-          {phase === 'final' && row && <Final F={F} row={row} news={news} owner={owner} onDone={onDone} />}
-        </div>
+        </>
       )}
-      {phase === 'play' && mv && <MomentPlay F={F} mv={mv} onDone={played} onSkipAll={skipAll} />}
     </div>,
     document.body,
   )
 }
 
-// ── Live: the scoring plays as they happen, newest first ─────────────────────
-function PlayRow({ F, p, opp, keyT }) {
-  const s = p[1] ? F.team : opp
-  const [q, clock] = whenOf(p[0]).split(' ')
+// ── The field: who has it, the down and distance, the spot, and the drive so far ─────────────────────────────────
+function Field({ F, sit, tl, T }) {
+  if (!sit) {
+    const kick = T < 1 ? 'KICKOFF' : T >= 1800 && T < 1830 ? 'SECOND HALF' : tl.dr ? 'CHANGE OF POSSESSION' : 'IN PROGRESS'
+    return <section className="gd-field is-idle"><span className="gd-idle">{kick}</span></section>
+  }
+  const { off, def, y, togo, goal, y0 } = sit
+  const pct = v => `${Math.max(0, Math.min(100, v))}%`
   return (
-    <div className={`fg-play${p[2] === 0 || p[0] === keyT ? ' is-key' : ''}`} style={fkVars(s)}>
-      <span className="fg-play-when"><b>{q}</b>{clock}</span>
-      <span className="fg-play-txt">{p[3]}</span>
-      <span className="fg-play-pts">{p[2] >= 6 ? 'TD' : p[2] === 3 ? 'FG' : p[2] === 2 ? 'SAF' : 'KEY'}</span>
-    </div>
+    <section className="gd-field" aria-label={`${TEAM[off].nick} ball, ${DOWN[sit.down]} and ${goal ? 'goal' : togo} at ${spotOf(y, off, def)}`}>
+      <div className="gd-poss" style={fkVars(off)}>
+        <KLogo s={off} size={34} />
+        <span><small>{TEAM[off].nick} ball</small><b>{DOWN[sit.down]} &amp; {goal ? 'GOAL' : togo}</b></span>
+        <span className="gd-spot"><small>Ball on</small><b>{spotOf(y, off, def)}</b></span>
+      </div>
+      {/* (the offense going left to right: its own end zone on the left) */}
+      <div className="gd-strip" style={fkVars(off)}>
+        <span className="gd-ez is-own" style={fkVars(off)}>{TEAM[off].short}</span>
+        <div className="gd-grass">
+          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(n => <i key={n} className="gd-yl" style={{ left: `${n}%` }}><em>{n > 50 ? 100 - n : n}</em></i>)}
+          <span className="gd-drv" style={{ left: pct(Math.min(y0, y)), width: pct(Math.abs(y - y0)) }} />
+          <span className="gd-los" style={{ left: pct(y) }} />
+          {!goal && y + togo < 100 && <span className="gd-ltg" style={{ left: pct(y + togo) }} />}
+          <span className="gd-ball" style={{ left: pct(y) }} />
+        </div>
+        <span className="gd-ez" style={fkVars(def)}>{TEAM[def].short}</span>
+      </div>
+      <div className="gd-drive"><span><b>{sit.plays}</b> {sit.plays === 1 ? 'play' : 'plays'}</span><span><b>{y - y0}</b> yds</span><span><b>{mmss(sit.el)}</b> drive</span></div>
+    </section>
   )
 }
-function Live({ F, plays, opp }) {
-  const list = plays.slice(-4).reverse()
+
+// ── Play-by-play: the drives as they end, newest first, the scores named, the moments' snaps ─────────────────────
+const RES_WORD = { T: 'Touchdown', F: 'Field goal', M: 'Missed field goal', P: 'Punt', X: 'Turnover', D: 'Turnover on downs', E: 'End of half', K: 'Kneel', S: 'Safety' }
+function PlayByPlay({ F, tl, T }) {
+  const list = []
+  for (const d of tl.dr ?? []) {
+    if (d[1] > T) continue
+    const [t0, t1, mine, y0, res, at] = d
+    const s = mine ? F.team : tl.opp
+    const score = (res === 'T' || res === 'F') ? tl.kp.find(p => p[0] === t1 && !!p[1] === !!mine && p[2] > 0) : null
+    const yds = (res === 'T' ? 100 : at) - y0
+    const plays = Math.max(1, Math.round((t1 - t0) / 27))
+    const end = res === 'E' && t1 >= 3600 ? 'End of regulation' : null
+    list.push({ t: t1, key: `d${t0}`, s, word: end ?? RES_WORD[res] ?? 'Drive', txt: score?.[3] ?? null, sub: res === 'K' ? null : `${plays} ${plays === 1 ? 'play' : 'plays'} · ${yds} yds · ${mmss(t1 - t0)}`, kind: res })
+  }
+  for (const p of tl.kp) if (p[2] === 0 && p[0] <= T) list.push({ t: p[0] + 0.5, key: `k${p[0]}`, s: p[1] ? F.team : tl.opp, word: 'Key moment', txt: p[3], kind: 'key' })
+  // (an old game, played before the drives were kept: the scoring plays)
+  if (!tl.dr) for (const p of tl.kp) if (p[2] > 0 && p[0] <= T) list.push({ t: p[0], key: `s${p[0]}`, s: p[1] ? F.team : tl.opp, word: p[2] >= 6 ? 'Touchdown' : 'Field goal', txt: p[3], kind: p[2] >= 6 ? 'T' : 'F' })
+  list.sort((x, y) => y.t - x.t)
+  if (!list.length) return <div className="gd-list"><div className="gd-empty">{T < 1 ? 'Kickoff' : 'First drive under way'}</div></div>
   return (
-    <div className="fg-feed" aria-live="polite">
-      {list.length ? list.map(p => <PlayRow key={`${p[0]}-${p[3]}`} F={F} p={p} opp={opp} />) : <div className="fg-empty">KICKOFF</div>}
-      <small className="fg-tap">TAP TO SKIP</small>
+    <ol className="gd-list" aria-live="polite">
+      {list.map(e => {
+        const [q, clock] = whenOf(Math.min(e.t, e.t >= 3600 ? e.t : 3599)).split(' ')
+        return (
+          <li key={e.key} className={`gd-pbp is-${e.kind}`} style={fkVars(e.s)}>
+            <span className="gd-when"><b>{q}</b>{clock}</span>
+            <span className="gd-pbp-txt"><b><KLogo s={e.s} size={16} />{e.word}</b>{e.txt && <span>{e.txt}</span>}{e.sub && <small>{e.sub}</small>}</span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+// ── Scoring: every score, by quarter, with the line score on top ─────────────────────────────────────────────────
+function Scoring({ F, tl, row, T }) {
+  const a = tl.home ? tl.opp : F.team, h = tl.home ? F.team : tl.opp
+  const kp = tl.kp.filter(p => p[2] > 0 && p[0] <= T)
+  // the score by quarter: the final's own, or the scores so far
+  const qOf = t => (t >= 3600 ? 4 : Math.min(3, Math.floor(t / 900)))
+  const n = Math.max(4, ...kp.map(p => qOf(p[0]) + 1), row?.ot ? 5 : 4)
+  const line = side => { const q = Array(n).fill(0); for (const p of kp) if (!!p[1] === (side === F.team)) q[qOf(p[0])] += p[2]; return q }
+  return (
+    <div className="gd-list gd-scoring">
+      <div className="fg-quarters" style={{ '--n': n }}>
+        <span className="is-head" />{Array.from({ length: n }, (_, i) => <span key={i} className="is-head">{i === 4 ? 'OT' : i + 1}</span>)}<span className="is-head">T</span>
+        {[a, h].map(s => { const q = line(s); return [<span key={`${s}n`} className="is-team"><KLogo s={s} size={18} />{s}</span>, ...q.map((v, i) => <span key={`${s}${i}`}>{v}</span>), <span key={`${s}t`} className="is-tot">{q.reduce((x, y) => x + y, 0)}</span>] })}
+      </div>
+      {kp.length ? kp.map(p => {
+        const s = p[1] ? F.team : tl.opp
+        const [q, clock] = whenOf(p[0]).split(' ')
+        return (
+          <div key={`${p[0]}-${p[3]}`} className="fg-play" style={fkVars(s)}>
+            <span className="fg-play-when"><b>{q}</b>{clock}</span>
+            <span className="fg-play-txt">{p[3]}</span>
+            <span className="fg-play-pts">{p[2] >= 6 ? 'TD' : p[2] === 3 ? 'FG' : 'SAF'}</span>
+          </div>
+        )
+      }) : <div className="gd-empty">No score yet</div>}
     </div>
   )
 }
 
-// ── The moment: the down, the distance, the spot, the clock, the build and the man across from him ─────────
-// (who lines up across: a receiver's corner, a back's linebacker, a lineman's edge rusher; on defense the man he's on)
-const ACROSS = { qb: ['edge1', 's1'], rb: ['lb1'], wr: ['cb1'], te: ['lb1', 's1'], ol: ['edge1'], db: ['wr1'], dl: ['ol1', 'qb1'], lb: ['rb1', 'te1'] }
-function MomentCard({ F, mv, owner, onPlay }) {
-  const p = F.teams[F.team].r.find(x => x.i === mv.pid)
-  const L = startersOf(F, mv.opp)
-  const vs = (ACROSS[p?.p] ?? []).map(k => L[k]).find(Boolean)
+// ── The box score (SquadSeason.jsx BoxSheet, in Franchise's colours): both teams' lines, the men's, the kicking ───
+// (live: the final's lines as far as the game has gone; a game waiting on a moment: the drives so far)
+const scaleLine = (x, f) => Object.fromEntries(Object.entries(x ?? {}).map(([k, v]) => [k, typeof v === 'number' ? Math.round(v * f) : v]))
+function Box({ F, row, tl, T, fin, status, owner }) {
+  const B = useMemo(() => (row ? gameBox(F, row) : null), [row]) // eslint-disable-line react-hooks/exhaustive-deps
+  const a = tl.opp
+  if (row && !B) return <div className="gd-list gd-box"><p className="gd-note">No box score was kept for games played before this update.</p></div>
+  if (!row || !B) {
+    // the drives so far: the time with the ball, the scores, the turnovers, the punts
+    const dr = (tl.dr ?? []).filter(d => d[1] <= T)
+    const of = m => { const x = dr.filter(d => !!d[2] === m); return { top: x.reduce((s, d) => s + d[1] - d[0], 0), td: x.filter(d => d[4] === 'T').length, fg: x.filter(d => d[4] === 'F').length, to: x.filter(d => d[4] === 'X' || d[4] === 'D').length, p: x.filter(d => d[4] === 'P').length, n: x.length, yds: x.reduce((s, d) => s + Math.max(0, (d[4] === 'T' ? 100 : d[5]) - d[3]), 0) } }
+    const u = of(true), o = of(false)
+    return (
+      <div className="gd-list gd-box">
+        <div className="sq-tstat">
+          <div className="sq-tstat-row sq-tstat-head"><span /><span><KLogo s={F.team} size={18} />{F.team}</span><span><KLogo s={a} size={18} />{a}</span></div>
+          {[['DRIVES', u.n, o.n], ['YARDS ON DRIVES', u.yds, o.yds], ['TOUCHDOWNS', u.td, o.td], ['FIELD GOALS', u.fg, o.fg], ['TURNOVERS', u.to, o.to], ['PUNTS', u.p, o.p], ['POSSESSION', mmss(u.top), mmss(o.top)]].map(([k, x, y]) => <div key={k} className="sq-tstat-row"><span>{k}</span><b>{x}</b><b>{y}</b></div>)}
+        </div>
+        <p className="gd-note">The players’ lines come in with the final.</p>
+      </div>
+    )
+  }
+  const f = fin ? 1 : Math.max(0, Math.min(1, T / Math.max(1, tl.endT)))
+  const shown = tl.kp.filter(p => p[0] <= T)
+  return (
+    <div className="gd-list gd-box">
+      <GameBoxSheet F={F} row={row} B={B} owner={owner} f={f} status={fin ? null : status} my={fin ? null : shown.filter(p => p[1]).reduce((s, p) => s + p[2], 0)} op={fin ? null : shown.filter(p => !p[1]).reduce((s, p) => s + p[2], 0)} />
+      {!fin && <p className="gd-note">Live: the lines so far.</p>}
+    </div>
+  )
+}
+
+// The game's box score sheet: on the game screen (in place, f: how far the game has gone), and from the hub's last
+// result (portal, onClose: over the page)
+export function GameBoxSheet({ F, row, B: B0 = null, owner, f = 1, status = null, my = null, op = null, portal = false, onClose = null }) {
+  const B = useMemo(() => B0 ?? gameBox(F, row), [row, B0]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!B) return null
+  const S = x => (f === 1 ? x : scaleLine(x, f))
+  const game = { s: Object.fromEntries(Object.entries(B.game.s).map(([k, x]) => [k, S(x)])), us: S(B.game.us), them: S(B.game.them) }
+  const opp = { s: Object.fromEntries(Object.entries(B.opp.game.s).map(([k, x]) => [k, S(x)])) }
+  const g = { i: 0, po: false, opp: row.opp, home: row.home, my: my ?? row.us, op: op ?? row.them, won: row.us > row.them, tie: !!row.t, ot: row.ot, label: row.rd != null ? ROUNDS[row.rd] ?? 'PLAYOFFS' : `WEEK ${row.wk}` }
+  const u = game.us, o = game.them
+  const fd = [Math.round(B.fd[0] * f), Math.round(B.fd[1] * f)], top = [B.top[0] * f, B.top[1] * f]
+  const rows = [
+    ['FIRST DOWNS', fd[0], fd[1]], ['TOTAL YARDS', u.yds, o.yds], ['PASSING', u.py, o.py], ['RUSHING', u.ry, o.ry],
+    ['COMP / ATT', `${u.pc ?? 0}/${u.pa ?? 0}`, `${o.pc ?? 0}/${o.pa ?? 0}`], ['SACKED', u.sk, o.sk], ['TURNOVERS', u.to, o.to], ['POSSESSION', mmss(top[0]), mmss(top[1])],
+  ]
+  const kick = f === 1 ? B.kick.filter(Boolean) : []
+  // (the builds' faces, as everywhere else in Franchise)
+  const faces = Object.fromEntries((F.builds ?? []).map((_, i) => { const p = F.teams[F.team].r.find(x => x.b === i); let src = null; try { src = p ? faceFor(F, p, F.team, true) : null } catch { src = null } return [String(i), src] }))
+  return (
+    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} faces={faces} portal={portal} onClose={onClose} rows={rows} status={status ?? (row.ot ? 'FINAL · OT' : 'FINAL')} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'}>
+      {kick.length > 0 && <div className="sq-box-sec"><span className="sq-box-h">KICKING</span><FbTable head={['KICKING', 'FG', 'XP', 'LONG', '50+']} rows={kick.map((k, i) => ({ k: `k${i}`, name: k.n.split(' ').slice(-1)[0], role: i ? row.opp : F.team, cells: [`${k.line[1]}/${k.line[0]}`, `${k.line[3]}/${k.line[2]}`, k.line[4] || '—', `${k.line[6] ?? 0}/${k.line[5] ?? 0}`] }))} /></div>}
+      {Object.keys(opp.s).length > 0 && <FootballBox r={B.opp.r} game={opp} owner={owner} label={TEAM[row.opp].name.toUpperCase()} />}
+    </BoxSheet>
+  )
+}
+
+// ── The moment: the snap, the score, the clock, and the calls (or the backer on defense) ─────────────────────────
+function MomentCall({ F, mv, owner, onCall, onSim }) {
+  const off = mv.ball === 'us'
+  const ballTeam = off ? F.team : mv.opp
   const m = mv.mine - mv.theirs
   const where = m === 0 ? `TIED ${mv.mine}-${mv.theirs}` : m < 0 ? `DOWN ${-m}` : `UP ${m}`
-  const def = mv.ball === 'them'
-  const ballTeam = def ? mv.opp : F.team
+  const calls = playsFor(mv)
+  const simple = (F.games ?? 'advanced') === 'simple'
+  const qb = ctlFor(F, mv, calls.find(id => PLAYS[id].kind === 'pass') ?? calls[0])
+  const rb = calls.some(id => PLAYS[id].kind === 'run') ? ctlFor(F, mv, calls.find(id => PLAYS[id].kind === 'run')) : null
+  const lb = !off ? ctlFor(F, mv, 'stop') : null
   return (
-    <section className="fg-moment" onClick={e => e.stopPropagation()}>
-      <Chyron team={ballTeam} tag={`${mv.period === 'OT' ? 'OT' : `Q${mv.period[0]}`} ${mv.clock}`} title={`${TEAM[ballTeam].nick} ball`} sub={mv.goal ? `GOAL TO GO · ${where}` : `AT THE ${mv.spotTxt} · ${where}`} />
-      <div className="fg-dd"><b>{DOWN[mv.down]} &amp; {mv.goal ? 'GOAL' : mv.d}</b><span>{def ? 'DEFENSE' : 'OFFENSE'}<small>{mv.clock} LEFT</small></span></div>
-      {p && <ManL3 F={F} p={p} team={F.team} owner={owner} size="l" />}
-      {vs && <><span className="fg-vs">ACROSS FROM HIM</span><ManL3 F={F} p={vs} team={mv.opp} size="s" /></>}
-      <span className="fg-need">{def ? (mv.goal ? 'KEEP THEM OUT' : 'GET A STOP') : mv.goal ? 'PUNCH IT IN' : 'MOVE THE CHAINS'}</span>
-      <Go onClick={onPlay}>PLAY IT</Go>
+    <section className="gd-call" onClick={e => e.stopPropagation()}>
+      <Chyron team={ballTeam} tag={`${mv.period === 'OT' ? 'OT' : `Q${mv.period[0]}`} ${mv.clock}`} title={SNAP_KIND[mv.kind]} sub={`${TEAM[ballTeam].nick} ball · ${where}`} />
+      <div className="fg-dd"><b>{DOWN[mv.down]} &amp; {mv.goal ? 'GOAL' : mv.d}</b><span>{mv.goal ? 'GOAL TO GO' : `AT THE ${mv.spotTxt}`}<small>{mv.clock} LEFT IN THE {mv.period === 'OT' ? 'OVERTIME' : `${mv.period} QUARTER`}</small></span></div>
+      {off ? (
+        <>
+          <h3 className="gd-h">Call the play</h3>
+          <div className="gd-plays">
+            {calls.map(id => {
+              const P = PLAYS[id]
+              return (
+                <button key={id} type="button" className={`gd-play is-${P.kind}`} onClick={() => onCall(id)}>
+                  <small>{P.kind === 'pass' ? 'PASS' : 'RUN'}</small><b>{P.name}</b><span>{P.tag}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="gd-men">
+            {qb && <ManL3 F={F} p={qb} team={F.team} owner={owner} size="s" line="On a pass" />}
+            {rb && <ManL3 F={F} p={rb} team={F.team} owner={owner} size="s" line="On a run" />}
+          </div>
+          <button type="button" className="gd-sim" onClick={() => onSim(calls[0])}>Let the sim play this snap</button>
+        </>
+      ) : (
+        <>
+          <h3 className="gd-h">Make the stop</h3>
+          {lb && <ManL3 F={F} p={lb} team={F.team} owner={owner} size="m" line="Read the back, fill the hole" />}
+          <Go onClick={() => onCall('stop')}>{simple ? 'Play it' : 'Take the field'}</Go>
+          <button type="button" className="gd-sim" onClick={() => onSim('stop')}>Let the sim play this snap</button>
+        </>
+      )}
     </section>
   )
 }
-function MomentPlay({ F, mv, onDone, onSkipAll }) {
-  const B = F.builds[mv.b]
-  const p = F.teams[F.team].r.find(x => x.i === mv.pid)
-  const us = TEAM[F.team], opp = TEAM[mv.opp]
-  const def = mv.ball === 'them'
-  const cast = useMemo(() => { try { return momentCast(F, mv.opp, mv.pid) } catch { return null } }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const line = `${us.short} ${mv.mine === mv.theirs ? `and ${opp.short} tied at ${mv.mine}` : mv.mine < mv.theirs ? `down ${mv.mine}-${mv.theirs} to ${opp.short}` : `up ${mv.mine}-${mv.theirs} on ${opp.short}`}, ${mv.clock} left in the ${mv.period === '4TH' ? '4th' : mv.period}.`
-  const dn = DOWN[mv.down].toLowerCase()
-  const tail = def ? `${opp.short} has the ball, ${dn} and ${mv.goal ? 'goal' : mv.d}. ${us.short} needs a stop.` : `${dn[0].toUpperCase()}${dn.slice(1)} and ${mv.goal ? 'goal' : mv.d}${mv.goal ? '' : ` at the ${mv.spotTxt}`}.`
-  const sit = { us: us.short, them: opp.short, mine: mv.mine, opp: mv.theirs, hoops: false, clock: Math.max(1, Math.round(3600 - mv.t)), clockText: mv.clock, period: mv.period, line, tail, dist: mv.d, ...(def && { stop: true }) }
-  const simple = (F.games ?? 'advanced') === 'simple' && SIMPLE_GAMES[mv.game]
+function MomentResult({ last, onGo }) {
   return (
-    <div className="fg-mg" onClick={e => e.stopPropagation()}>
-      <Suspense fallback={<div className="fg-mg-wait" />}>
-        {simple
-          ? <MiniGameSimple game={mv.game} build={B.build} pos={p?.p ?? B.pos} seed={mv.seed} situation={sit} onDone={onDone} onSkipAll={onSkipAll} />
-          : <MiniGame game={mv.game} build={B.build} pos={p?.p ?? B.pos} seed={mv.seed} team={us} opp={opp} cast={cast} situation={sit} home={mv.home ? 'team' : 'opp'} superBowl={mv.po && F.po?.rd === 3 ? romanOf(F.year - 1965) : null} onDone={onDone} onSkipAll={onSkipAll} />}
-      </Suspense>
-      {!GAMES[mv.game] && !SIMPLE_GAMES[mv.game] && <Go onClick={() => onDone({ hit: roll(mv.seed) < 0.55 })}>CONTINUE</Go>}
-    </div>
-  )
-}
-// what the play was, stamped: the offense's or the defense's side of it
-function resultWord(mo, def) {
-  const { hit, line, game } = mo
-  if (!def) {
-    if (hit) return line === 'td' ? 'TOUCHDOWN' : 'FIRST DOWN'
-    return line === 'pick' ? 'INTERCEPTED' : line === 'downs' ? 'TURNOVER ON DOWNS' : line === 'held-fg' ? 'HELD TO 3' : 'STOPPED'
-  }
-  if (hit) return line === 'pick' ? 'INTERCEPTION' : game === 'pass-rush' ? 'SACK' : line === 'downs' ? 'TURNOVER ON DOWNS' : line === 'held-fg' ? 'HELD TO 3' : 'STOPPED'
-  return line === 'td' ? 'TOUCHDOWN' : 'FIRST DOWN'
-}
-function MomentResult({ F, row, mv }) {
-  const def = mv?.ball === 'them'
-  const t = Math.round(mv?.t ?? 0)
-  const play = row.kp.find(p => p[0] >= t)
-  const good = row.mo.hit
-  return (
-    <section className="fg-result">
-      <Stamp kind={good ? 'w' : 'l'} big>{resultWord(row.mo, def)}</Stamp>
-      {play && <p>{play[3]}</p>}
-      <small className="fg-tap">TAP TO GO ON</small>
+    <section className="gd-result" onClick={onGo}>
+      <Stamp kind={last.good ? 'w' : 'l'} big>{last.word}</Stamp>
+      {last.out?.txt && <p>{last.out.txt}</p>}
+      <small className="fg-tap">Tap to go on</small>
     </section>
   )
 }
-
-// the live board: the two teams and the score, big, counting as it goes
-function Board({ a, h, as, hs }) {
+// the snap on the mini games' stage (the engine, the men from both depth charts, the down and distance the game set)
+function MomentStage({ F, mv, pick, onDone }) {
+  useEffect(() => minigameOpen(), [])
+  const S = useMemo(() => playSetup(F, mv, pick), []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="fg-board is-live">
-      <Side s={a} pts={as} label={TEAM[a].nick.toUpperCase()} />
-      <Side s={h} pts={hs} right label={TEAM[h].nick.toUpperCase()} />
-    </div>
+    <Suspense fallback={<div className="gd-wait" />}>
+      <MgStage game={S.game} def={S.def} v={S.v} arm={S.arm} seed={S.seed} sport="nfl" team={S.team} opp={S.opp} home={S.home} pos={S.pos} cast={S.cast} situation={S.situation}
+        superBowl={mv.po && F.po?.rd === 3 ? romanOf(F.year - 1965) : null} onDone={onDone} />
+    </Suspense>
   )
 }
 
 // ── FINAL ────────────────────────────────────────────────────────────────────
-function Side({ s, pts, right, lose, label }) {
-  const t = TEAM[s]
-  return (
-    <div className={`fg-board-side${right ? ' is-r' : ''}${lose ? ' is-lose' : ''}`} style={fkVars(s)}>
-      <img className={chipCls(s).trim()} src={t.logo} alt="" draggable={false} />
-      <small>{label}</small>
-      <BigNum v={pts} size={74} ms={600} />
-    </div>
-  )
-}
 function Final({ F, row, news, owner, onDone }) {
   const res = row.w ? 'w' : row.t ? 't' : 'l'
-  const [all, setAll] = useState(false)
   const a = row.home ? row.opp : F.team, h = row.home ? F.team : row.opp
-  const as = row.home ? row.them : row.us, hs = row.home ? row.us : row.them
-  const kp = row.kp ?? []
-  const list = all ? kp : kp.slice(-5)
+  const qa = row.home ? row.q?.[1] : row.q?.[0], qh = row.home ? row.q?.[0] : row.q?.[1]
+  const sa = row.home ? row.them : row.us, sh = row.home ? row.us : row.them
   const mine = (row.lines ?? []).map(l => ({ ...l, p: F.teams[F.team].r.find(x => x.i === l.pid) })).filter(l => l.p && l.line)
   const star = row.st && !mine.some(l => l.pid === row.st.pid) ? F.teams[F.team].r.find(x => x.i === row.st.pid) : null
   const tag = row.rd != null ? (row.rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : row.rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[row.rd]} ROUND`) : `WEEK ${row.wk}`
+  const n = Math.max(4, qa?.length ?? 4)
+  const T = (s, q, pts, lose) => (
+    <div className={`gd-fin-t${lose ? ' is-lose' : ''}`} style={fkVars(s)}>
+      <KLogo s={s} size={30} /><b>{TEAM[s].nick}</b>
+      {Array.from({ length: n }, (_, i) => <span key={i}>{q?.[i] ?? 0}</span>)}
+      <strong>{pts}</strong>
+    </div>
+  )
   return (
-    <section className="fg-final" onClick={e => e.stopPropagation()}>
-      <div className="fg-board">
-        <Side s={a} pts={as} lose={!row.t && as < hs} label={TEAM[a].nick.toUpperCase()} />
-        <Side s={h} pts={hs} right lose={!row.t && hs < as} label={TEAM[h].nick.toUpperCase()} />
-        <Stamp kind={res} big delay={350}>{res === 'w' ? 'W' : res === 't' ? 'T' : 'L'}</Stamp>
+    <section className="gd-final" onClick={e => e.stopPropagation()}>
+      <div className="gd-fin">
+        <div className="gd-fin-h" style={{ '--n': n }}><span>{tag}{row.ot ? ' · OT' : ''}</span>{Array.from({ length: n }, (_, i) => <span key={i}>{i === 4 ? 'OT' : i + 1}</span>)}<span>T</span></div>
+        <div style={{ '--n': n }}>{T(a, qa, sa, !row.t && sa < sh)}</div>
+        <div style={{ '--n': n }}>{T(h, qh, sh, !row.t && sh < sa)}</div>
       </div>
-      <div className="fg-head">
-        <Tag tone="line">{tag}{row.ot ? ' · OVERTIME' : ''}</Tag>
-        <h2>{row.hl}</h2>
-        {row.sub && <p>{row.sub}</p>}
+      <div className="fg-head gd-hl">
+        <Stamp kind={res} delay={350}>{res === 'w' ? 'WIN' : res === 't' ? 'TIE' : 'LOSS'}</Stamp>
+        <span><h2>{row.hl}</h2>{row.sub && <p>{row.sub}</p>}</span>
       </div>
-      {kp.length > 0 && (
+      {row.ms?.length > 0 && (
         <div className="fg-feed">
-          <Chyron tone="ink" size="s" title="Scoring summary" right={kp.length > 5 ? <button className="fg-more" onClick={() => setAll(x => !x)}>{all ? 'LESS' : `ALL ${kp.length}`}</button> : null} />
-          {list.map(p => <PlayRow key={`${p[0]}-${p[3]}`} F={F} p={p} opp={row.opp} />)}
+          <Chyron tone="ink" size="s" title="Key moments" />
+          {row.ms.map((m, i) => <div key={i} className={`gd-mo${m.ok ? ' is-ok' : ''}`}><span className="fg-play-when"><b>{whenOf(m.t).split(' ')[0]}</b>{whenOf(m.t).split(' ')[1]}</span><span>{m.txt}</span><i>{m.ok ? (m.side === 'def' ? 'STOP' : 'MADE IT') : (m.side === 'def' ? 'THEIRS' : 'NO')}</i></div>)}
         </div>
       )}
       {(mine.length > 0 || star) && (
@@ -281,13 +533,13 @@ function Final({ F, row, news, owner, onDone }) {
           {star && <ManL3 F={F} p={star} team={F.team} size="s" line={row.st.line} />}
         </div>
       )}
-      {news.some(n => n.k === 'inj' || n.k === 'sign') && (
+      {news.some(x => x.k === 'inj' || x.k === 'sign') && (
         <div className="fg-tags">
-          {news.filter(n => n.k === 'inj').map(n => <Tag key={n.pid} tone="inj">{n.n.toUpperCase()}{n.what ? ` (${String(n.what).toUpperCase()})` : ''} · {n.se ? 'OUT FOR THE SEASON' : n.wk >= 4 ? `INJURED RESERVE · ${n.wk} WEEKS` : `OUT ${n.wk} ${n.wk === 1 ? 'WEEK' : 'WEEKS'}`}</Tag>)}
-          {news.filter(n => n.k === 'sign').map(n => <Tag key={n.pid} tone="line">SIGNED {n.n.toUpperCase()} OFF THE PRACTICE SQUAD</Tag>)}
+          {news.filter(x => x.k === 'inj').map(x => <Tag key={x.pid} tone="inj">{x.n.toUpperCase()}{x.what ? ` (${String(x.what).toUpperCase()})` : ''} · {x.se ? 'OUT FOR THE SEASON' : x.wk >= 4 ? `INJURED RESERVE · ${x.wk} WEEKS` : `OUT ${x.wk} ${x.wk === 1 ? 'WEEK' : 'WEEKS'}`}</Tag>)}
+          {news.filter(x => x.k === 'sign').map(x => <Tag key={x.pid} tone="line">SIGNED {x.n.toUpperCase()} OFF THE PRACTICE SQUAD</Tag>)}
         </div>
       )}
-      <ActionBar><Go onClick={() => { sfx('tap'); onDone() }}>Continue</Go></ActionBar>
+      <ActionBar className="gd-go"><Go onClick={() => { sfx('tap'); onDone() }}>Continue</Go></ActionBar>
     </section>
   )
 }

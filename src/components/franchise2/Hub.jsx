@@ -16,8 +16,9 @@ import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { romanOf } from '../../lib/mg/kit'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose } from '../app/icons'
+import { GamesSwitch as MomentsModes } from '../simFlow'
 import { fkVars, KLogo, Chyron, Ticker, Scorebug, ManL3, BigRec, Stamp, TeamSlab, Tape, Go, Fold } from './kit'
-import Gameday from './Week'
+import Gameday, { GameBoxSheet } from './Week'
 import TeamTab from './Team'
 import LeagueTab from './League'
 import HistoryTab from './History'
@@ -102,6 +103,8 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           </span>
           <button className="fh-x" onClick={onHome} aria-label="Leave Franchise"><IconClose size={16} /><span>Exit</span></button>
         </header>
+        {/* (the league's ticker and its week: at the top, under the team, owner 2026-11-16) */}
+        {tab === 'season' && !off && <LeagueTicker F={F} />}
         <nav className="fh-tabs" role="tablist" aria-label="Franchise">
           <div className="fh-tabs-in">
             {TABS.map(([id, label]) => (
@@ -118,7 +121,6 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           {tab === 'history' && <HistoryTab F={F} owner={owner} act={act} onSlots={onSlots} onDelete={onDelete} />}
         </div>
       </div>
-      {tab === 'season' && !off && <LeagueTicker F={F} />}
     </div>
   )
 }
@@ -145,7 +147,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
         {/* (the side column a frame after the game: the next thing to do is on screen first) */}
         {side && (
           <>
-            {reg && F.log.length > 0 && <LastWeek F={F} />}
+            {reg && F.log.length > 0 && <LastWeek F={F} owner={owner} />}
             {reg && <Ladder F={F} />}
             {reg && <Strip F={F} />}
             <ScoutRow F={F} onBoard={onBoard} />
@@ -285,8 +287,9 @@ function KeyPlayers({ F, owner, teams }) {
 }
 
 // ── Last week: the final and the line under it ───────────────────────────────
-function LastWeek({ F }) {
+function LastWeek({ F, owner }) {
   const g = F.log[F.log.length - 1]
+  const [box, setBox] = useState(false)
   const a = g.home ? g.opp : F.team, h = g.home ? F.team : g.opp
   const as = g.home ? g.them : g.us, hs = g.home ? g.us : g.them
   return (
@@ -294,6 +297,8 @@ function LastWeek({ F }) {
       <h3 className="fh-h"><b>Last week</b><span className={`fh-res is-${g.w ? 'w' : g.t ? 't' : 'l'}`}>{g.w ? 'Win' : g.t ? 'Tie' : 'Loss'}</span></h3>
       <Scorebug a={a} h={h} as={as} hs={hs} final={g.ot ? 'F/OT' : 'FINAL'} />
       {g.sub && <p className="fh-last-sub">{g.sub}</p>}
+      {g.bx && <button type="button" className="fh-textbtn" onClick={() => { setBox(true); sfx('tap') }}>Box score</button>}
+      {box && <GameBoxSheet F={F} row={g} owner={owner} portal onClose={() => setBox(false)} />}
     </section>
   )
 }
@@ -468,22 +473,16 @@ function Champions({ F, act, onTrophy }) {
   )
 }
 
-// ── ADVANCED / SIMPLE / NONE for the moments ────────────────────────────────
-function GamesSwitch({ F, act }) {
-  const mode = F.games ?? 'advanced'
+// ── ADVANCED / SIMPLE / NONE for the moments ── (Career's switch: simFlow.jsx GamesSwitch, in Franchise's kit)
+export const GAMES_WHAT = { advanced: 'Call the play and run it', simple: 'Call the play', off: 'Simulated' }
+export function GamesSwitch({ F, act }) {
   return (
-    <section className="fh-games">
-      <span className="fh-games-label">Key moments<small>the mini games in your games</small></span>
-      <div className="fh-seg" role="radiogroup" aria-label="Mini games">
-        {GAMES_MODES.map(([m, label]) => (
-          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'is-on' : ''} onClick={() => { if (m !== mode) { act(X => { X.games = m }); sfx('tap') } }}>{label}</button>
-        ))}
-      </div>
-    </section>
+    <MomentsModes mode={F.games ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the snaps you play in your games"
+      onPick={m => act(X => { X.games = m })} cls={{ root: 'fh-games', top: 'fh-games-label', group: 'fh-seg' }} />
   )
 }
 
-// ── The league along the bottom edge ─────────────────────────────────────────
+// ── The league along the top, under the team's header ─────────────────────────────────────────
 function LeagueTicker({ F }) {
   // (the reel once the league's week is in; until then the strip with its label, the same size, so nothing moves)
   const ready = useLeagueWarm(F)

@@ -257,7 +257,7 @@ const Teammates = memo(function Teammates({ r, sport }) {
 })
 
 // ── One game's box score ─────────────────────────────────────────────────────
-function FbTable({ head, rows }) {
+export function FbTable({ head, rows }) {
   if (!rows.length) return null
   return (
     <div className="sq-bt sq-bt--fb">
@@ -276,7 +276,8 @@ const FB_CELLS = {
   db: [['TKL', 'INT', 'PBU', 'FF'], g => [g('tk'), g('dint'), g('pbu'), g('ff')]],
   ol: [['SCK', 'PRS', 'PNK', 'PEN'], g => [g('sa'), g('prs'), g('pnk'), g('pen')]],
 }
-function FootballBox({ r, game, owner, faces }) {
+// (label: the heading over the real men's tables; Franchise's box score shows the other team's men with it too)
+export function FootballBox({ r, game, owner, faces = {}, label = 'TEAMMATES' }) {
   const roster = r.roster, s = game.s
   const get = p => k => s[p.k]?.[k] ?? 0
   const mine = roster.filter(p => p.s)
@@ -305,7 +306,7 @@ function FootballBox({ r, game, owner, faces }) {
         </div>
       )}
       <div className="sq-box-sec">
-        <span className="sq-box-h">TEAMMATES</span>
+        <span className="sq-box-h">{label}</span>
         <FbTable head={['PASSING', 'C/ATT', 'YDS', 'TD', 'INT']} rows={pass.map(p => row(p, FB_CELLS.qb[1](get(p))))} />
         <FbTable head={['RUSHING', 'CAR', 'YDS', 'TD', 'AVG']} rows={rush.map(p => { const g = get(p); return row(p, [g('ra'), g('ry'), g('rtd'), fmt(r1(g('ra') ? g('ry') / g('ra') : 0))]) })} />
         <FbTable head={['RECEIVING', 'REC', 'YDS', 'TD', 'TGT']} rows={rec.map(p => row(p, FB_CELLS.wr[1](get(p))))} />
@@ -352,9 +353,12 @@ function BucketBox({ r, game, owner, faces }) {
     </div>
   )
 }
-// (portal: the sheet over the page; false renders it in place)
-export function BoxSheet({ r, sport, g, box, owner, faces, onClose, portal = true }) {
+// (portal: the sheet over the page; false renders it in place. Franchise's game day reads its box score with it too:
+// rows the team lines it shows, status the line under the score (a live game's clock), children more sections after the
+// team's lines, onClose none: no close button)
+export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, portal = true, rows = null, status = null, children = null, className = '' }) {
   useEffect(() => {
+    if (!onClose) return undefined
     const k = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
@@ -366,22 +370,22 @@ export function BoxSheet({ r, sport, g, box, owner, faces, onClose, portal = tru
     ? (g.po ? `${g.round} · GAME ${g.gm}` : `GAME ${g.i + 1}`)
     : g.label
   const sheet = (
-    <div className="ss-overlay sq-box-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ss-sheet sq-box" role="dialog" aria-modal="true" aria-labelledby="sq-box-title">
+    <div className={`ss-overlay sq-box-overlay ${className}`} onClick={e => e.target === e.currentTarget && onClose?.()}>
+      <div className="ss-sheet sq-box" role={portal ? 'dialog' : 'region'} aria-modal={portal ? 'true' : undefined} aria-labelledby="sq-box-title">
         <div className="ss-head">
           <span className="ag-eyebrow">{where} · {g.home ? 'VS' : 'AT'} {(oppTeam?.name ?? g.oppName ?? g.opp).toUpperCase()}</span>
-          <button className="ss-close" onClick={onClose} aria-label="Close"><IconClose size={15} /></button>
+          {onClose && <button className="ss-close" onClick={onClose} aria-label="Close"><IconClose size={15} /></button>}
         </div>
         <div className={`sq-box-score${g.won ? ' is-w' : ' is-l'}`} id="sq-box-title">
           <span className="sq-box-team"><img src={logoOf(sport, r.team)} alt="" /><b>{r.team}</b></span>
           <span className="sq-box-pts"><b>{g.my}</b><i>–</i><b>{g.op}</b></span>
           <span className="sq-box-team"><img src={logoOf(sport, g.opp)} alt="" /><b>{g.opp}</b></span>
-          <span className="sq-box-final">{g.won ? 'WIN' : 'LOSS'}{g.ot ? ` · ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''}</span>
+          <span className="sq-box-final">{status ?? <>{g.won ? 'WIN' : g.tie ? 'TIE' : 'LOSS'}{g.ot ? ` · ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''}</>}</span>
         </div>
         {sport === 'bucket'
           ? <BucketBox r={r} game={{ ...game, g }} owner={owner} faces={faces} />
           : <FootballBox r={r} game={game} owner={owner} faces={faces} />}
-        <TeamStats sport={sport} r={r} game={g} rows={sport === 'bucket' ? [
+        <TeamStats sport={sport} r={r} game={g} rows={rows ?? (sport === 'bucket' ? [
           ['FG%', pct1(game.us.fgm, game.us.fga), pct1(game.them.fgm, game.them.fga)],
           ['3PT%', pct1(game.us.tpm, game.us.tpa), pct1(game.them.tpm, game.them.tpa)],
           ['FREE THROWS', `${game.us.ftm}-${game.us.fta}`, `${game.them.ftm}-${game.them.fta}`],
@@ -389,7 +393,8 @@ export function BoxSheet({ r, sport, g, box, owner, faces, onClose, portal = tru
         ] : [
           ['TOTAL YARDS', game.us.yds, game.them.yds], ['PASSING', game.us.py, game.them.py], ['RUSHING', game.us.ry, game.them.ry],
           ['TOUCHDOWNS', game.us.td, game.them.td], ['FIELD GOALS', game.us.fg ?? 0, game.them.fg ?? 0], ['TURNOVERS', game.us.to, game.them.to], ['SACKED', game.us.sk, game.them.sk],
-        ]} />
+        ])} />
+        {children}
       </div>
     </div>
   )

@@ -48,7 +48,7 @@ for (let y = 0; y < N; y++) {
   if (F.builds.some(b => !b.face?.skin || !b.face?.hair)) bad('a build without a face')
   while (F.phase === 'season') {
     const r = FR.playWeek(F, { moments })
-    if (r.pending) { dealt++; const v = FR.momentView(F); FR.finishMoment(F, H() < FR.normalRate(F.teams[F.team].r.find(p => p.i === v.pid).o)) }
+    if (r.pending) while (F.pend) { dealt++; FR.finishMoment(F, null) }
     if (F.ev) FR.chooseEvent(F, H() < 0.5 ? 0 : 1)
   }
   const recs = FR.records(F)
@@ -60,7 +60,7 @@ for (let y = 0; y < N; y++) {
   if (po.rounds[0].length !== 6 || po.rounds[0].some(g => g.h === po.seeds.AFC[0] || g.h === po.seeds.NFC[0] || g.a === po.seeds.AFC[0] || g.a === po.seeds.NFC[0])) bad(`${F.year} wild card round`)
   while (F.phase === 'playoffs') {
     const r = FR.playWeek(F, { moments })
-    if (r.pending) { dealt++; const v = FR.momentView(F); FR.finishMoment(F, H() < FR.normalRate(F.teams[F.team].r.find(p => p.i === v.pid).o)) }
+    if (r.pending) while (F.pend) { dealt++; FR.finishMoment(F, null) }
   }
   // nobody twice in a run; every round half the teams; the Super Bowl across conferences
   const met = {}

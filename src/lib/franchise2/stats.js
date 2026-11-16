@@ -125,3 +125,40 @@ export const LEADER_CATS = [
   { k: 'tk', label: 'TACKLES', unit: 'TKL' },
   { k: 'fgm', label: 'FIELD GOALS', unit: 'FG' },
 ]
+
+// ── One game's box score (the player's game: season.js keeps it on its result, row.bx) ───────────────────────────────
+// For the box score sheet (SquadSeason.jsx BoxSheet): { r: { team, roster }, game: { s, us, them }, opp: { r, game },
+// top: [ours, theirs] (seconds), fd: [ours, theirs], kick: [{ n, line }] } or null when the game kept none (a game
+// played before box scores were kept). The other team's men: its own box for the week (gameLines), or, in the
+// playoffs, its box played from the final the same way.
+// first downs from the lines (the league's game: about one a completion and a half, one every four or five carries)
+export const firstDowns = T => Math.round((T.pc ?? 0) * 0.55 + (T.ra ?? 0) * 0.22 + 1.2)
+const who = (F, id) => { for (const s of SHORTS) { const p = F.teams[s].r.find(x => String(x.i) === String(id)); if (p) return p } return (F.fa ?? []).find(x => String(x.i) === String(id)) ?? null }
+export function gameBox(F, row) {
+  if (!row?.bx) return null
+  const bx = row.bx
+  // the men as they lined up that day (their places kept with the box: a man hurt or gone since still has his line)
+  const roster = []
+  if (bx.ro) for (const [id, [pos, d, sub, b]] of Object.entries(bx.ro)) { const p = who(F, id); roster.push({ k: `p${id}`, n: p?.n ?? '?', pos, d, ...(sub && { sub }), ...(b != null && { s: String(b) }) }) }
+  else {
+    roster.push(...boxRoster(F, F.team))
+    const have = new Set(roster.map(p => p.k.slice(1)))
+    for (const id of Object.keys(bx.s ?? {})) if (!have.has(id)) { const p = who(F, id); if (p) roster.push({ k: `p${p.i}`, n: p.n, pos: p.p, o: p.o, d: 9, ...(p.b != null && { s: String(p.b) }) }) }
+  }
+  const s = Object.fromEntries(Object.entries(bx.s ?? {}).map(([id, x]) => [`p${id}`, x]))
+  const kp = row.kp ?? []
+  const tds = m => kp.filter(x => x[1] === m && x[2] >= 6).length, fgs = m => kp.filter(x => x[1] === m && x[2] === 3).length
+  const us = { ...bx.u, td: tds(1), fg: fgs(1) }, them = { ...bx.o, td: tds(0), fg: fgs(0) }
+  let oppLines = {}
+  try {
+    if (row.wk != null) oppLines = gameLines(F, row.wk - 1)[row.opp] ?? {}
+    else {
+      const played = playFootballSeason({ roster: boxRoster(F, row.opp), games: [{ wk: 1, opponent: row.opp, home: !row.home, won: row.them > row.us, mySc: row.them, oppSc: row.us }], seed: `${F.seed}-${F.year}-pobox-${row.rd}-${row.opp}` })
+      oppLines = Object.fromEntries(Object.entries(played.reg[0]?.s ?? {}).map(([k, v]) => [k.slice(1), v]))
+    }
+  } catch { oppLines = {} }
+  const oppRoster = boxRoster(F, row.opp).filter(p => oppLines[p.k.slice(1)])
+  const oppS = Object.fromEntries(Object.entries(oppLines).map(([id, x]) => [`p${id}`, x]))
+  const kick = [0, 1].map(i => { const k = bx.kk?.[i], p = bx.kid?.[i] != null ? who(F, bx.kid[i]) : null; return k && p ? { n: p.n, line: k } : null })
+  return { r: { team: F.team, roster }, game: { s, us, them }, opp: { r: { team: row.opp, roster: oppRoster }, game: { s: oppS, us: them, them: us } }, top: bx.top ?? [0, 0], fd: [firstDowns(us), firstDowns(them)], kick }
+}

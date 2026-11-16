@@ -86,6 +86,13 @@ export const ENGINES = {
   ...map(steal, 'steal', ['steal-second']),
   ...map(dash60, 'dash', ['sixty']),
   ...map(ofarm, 'ofarm', ['arm-strength']),
+  // Franchise's moments (owner, 2026-11-16): a snap of the player's own game, on these engines. The pass is Third & Long
+  // at the game's down, distance and spot with the called play; a pass at the goal line, Fourth & Goal's; the run, the
+  // back from scrimmage on the kick return's stick; the stop, Hit Stick's backer, one handoff
+  ...map(throwGame, 'throw', ['fr-pass'], 'third-long'),
+  ...map(goalline, 'goalline', ['fr-fade'], 'goal-line'),
+  ...map(kickret, 'kickret', ['fr-run'], 'kick-return'),
+  ...map(hitstick, 'hitstick', ['fr-stop'], 'run-stuff'),
 }
 export const engineFor = game => ENGINES[game] ?? null
 export const GAME_IDS = Object.keys(ENGINES)

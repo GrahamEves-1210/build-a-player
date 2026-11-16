@@ -32,10 +32,12 @@ export * from './kick'
 export { outText, QOL } from './injury'
 export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, finishOf } from './standings'
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
-export { clockText, periodOf, spotText, normalRate } from './game'
+export { clockText, periodOf, spotText, normalRate, simSnap, SNAP_KIND } from './game'
+export * from './moments'
 
 // (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)
-export const SAVE_V = 7
+// (8: game day's moments are snaps of the game, 2026-11-16; an older save is brought up to date on load: upgradeSave)
+export const SAVE_V = 8
 
 // setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num, face }],
 //         coach: coach.js finishCoach { name, face, style, r: { the five ratings }, from, ovr } }
@@ -127,7 +129,19 @@ export function saveFranchise(F) {
   try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packFranchise(F)); return true } catch { return false }
 }
 export function loadFranchise(slot) {
-  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); if (F && F.v === 6 && !F.setup && F.teams) { fillPotential(F); F.v = SAVE_V } return F && F.v === SAVE_V && !F.setup && F.teams ? depthOnLoad(F) : null } catch { return null }
+  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = upgradeSave(unpackFranchise(s)); return F && F.v === SAVE_V && !F.setup && F.teams ? depthOnLoad(F) : null } catch { return null }
+}
+// An older save brought up to date, a version at a time (never thrown away)
+//   6 → 7: every man's potential (potential.js)
+//   7 → 8: a game waiting on one of the old key moments (F.pend: a build's mini game) is put back to before kickoff:
+//          the week's other games keep their scores, and his game is played again from its seed, now with the new
+//          moments (the same game up to them). Nothing else in the save changes shape: old results simply have no
+//          drives or box score kept (the screens say so)
+export function upgradeSave(F) {
+  if (!F || F.setup || !F.teams) return F
+  if (F.v === 6) { fillPotential(F); F.v = 7 }
+  if (F.v === 7) { if (F.pend && !Array.isArray(F.pend.ms)) F.pend = null; F.v = 8 }
+  return F
 }
 // a save read back: every room two deep (a save from before the filler backups gets them here, the same version
 // kept so no franchise is lost; in the offseason the new season's cut-down does it: offseason.js newSeason), and a
