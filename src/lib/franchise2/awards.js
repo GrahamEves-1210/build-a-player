@@ -55,7 +55,7 @@ export function seasonAwards(F) {
   const men = []
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const t = tot[String(p.i)]
-    if (!t?.gp || t.gp < 8) continue
+    if (!t?.gp || t.gp < 8 || p.fl) continue   // (a filler backup is never on a ballot)
     men.push({ p, s, t, c: caseOf(p, t, wins(s)) + R.n() * 0.03 })
   }
   const pick = x => x && { i: x.p.i, n: x.p.n, t: x.s, p: x.p.p, b: x.p.b ?? null, line: statLine(x.p, x.t) }

@@ -34,7 +34,8 @@ const ROT = { rb: 1, wr: 1, te: 1, edge: 1, dt: 1, cb: 1 }
 export const slotName = k => (k.startsWith('ol') ? OL_SPOTS[+k.slice(2) - 1] : k.replace(/\d$/, '').toUpperCase())
 
 // ── The order ────────────────────────────────────────────────────────────────
-const byOvr = (a, b) => b.o - a.o || (b.b != null) - (a.b != null) || a.i - b.i
+// (a filler backup, league.js fillUp, is behind every real man in his room whatever the ratings say)
+const byOvr = (a, b) => (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o || (b.b != null) - (a.b != null) || a.i - b.i
 // the line by rating, then its five starters stood at their own spots, left tackle to right tackle
 function olOrder(men) {
   const all = [...men].sort(byOvr), five = all.slice(0, 5), rest = all.slice(5)
@@ -63,7 +64,7 @@ export function chartOf(team) {
   for (const p of [...team.r].sort(byOvr)) {
     if (placed.has(p.i)) continue
     const k = groupOf(p), ids = team.dc[k]
-    let at = ids.findIndex(id => byId.get(id).o < p.o)
+    let at = p.fl ? -1 : ids.findIndex(id => byId.get(id).fl || byId.get(id).o < p.o)
     if (at < 0) at = ids.length
     ids.splice(at, 0, p.i); placed.add(p.i)
   }
@@ -102,10 +103,11 @@ export function startersFromChart(C) {
 }
 export const startersOfTeam = team => startersFromChart(chartTeam(team))
 export const startersOf = (F, short = F.team) => startersOfTeam(F.teams[short])
-// the men who come in behind the starters, in chart order
+// the men who come in behind the starters, in chart order (a filler backup isn't one: he plays when injuries make
+// him a starter)
 export function benchFromChart(C, L = startersFromChart(C)) {
   const on = new Set(Object.values(L).map(p => p.i)), out = []
-  for (const [k, n] of Object.entries(ROT)) out.push(...C[k].filter(p => !p.in && !on.has(p.i)).slice(0, n))
+  for (const [k, n] of Object.entries(ROT)) out.push(...C[k].filter(p => !p.in && !p.fl && !on.has(p.i)).slice(0, n))
   return out
 }
 export const benchOfTeam = (team, L) => benchFromChart(chartTeam(team), L)

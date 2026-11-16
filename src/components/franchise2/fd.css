@@ -53,6 +53,17 @@
 .fd-dc-acts button:first-child { background: #fff; color: #0b0c0e; }
 .fd-dc-acts button:disabled { opacity: .35; cursor: default; }
 .fd-dc--empty { min-height: 40px; }
+/* a filler backup (league.js fillUp): a shorter, quieter row, his name still 15px */
+.fd-dc.is-fill { grid-template-columns: 40px minmax(0, 1fr); }
+.fd-dc.is-fill .fd-dc-slot { background: var(--fk-g1); color: var(--fk-dim); font-size: 13px; }
+.fd-dc.is-fill .fk-l3 { --h: 40px; --sw: 44px; background: var(--fk-g1); }
+.fd-dc.is-fill .fk-l3-bar { flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; }
+.fd-dc.is-fill .fk-l3-name b { font-size: 15px; color: var(--fk-mute); }
+.fd-dc.is-fill .fk-l3-meta { flex: 0 1 auto; color: var(--fk-dim); }
+.fd-dc.is-fill .fk-l3-line { display: none; }
+.fd-dc.is-fill .fk-l3-cut { opacity: .7; }
+.fd-dc.is-fill .fk-l3-ovr { width: 40px; background: var(--fk-g3); color: var(--fk-mute); }
+.fd-dc.is-fill .fk-l3-ovr b { font-size: 17px; }
 .fd-empty { display: grid; align-items: center; padding: 0 12px; background: var(--fk-g1); color: var(--fk-dim); font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; }
 .fd-reset { justify-self: center; margin-top: 4px; padding: 8px 14px; background: none; border: 0; box-shadow: inset 0 0 0 1px var(--fk-line2); color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; cursor: pointer; }
 

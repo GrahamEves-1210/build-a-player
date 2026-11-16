@@ -20,6 +20,9 @@ export function openResign(F) {
   const R = rngOf(`${F.seed}-${F.year}-resign`)
   F.fa = []
   F.ext = []      // the league's re-signings that make the wire
+  // (a filler backup's year is up: he goes quietly, every team's, the player's too; the new season signs another
+  // where a room still needs one: league.js fillUp)
+  for (const s of SHORTS) F.teams[s].r = F.teams[s].r.filter(p => !(p.fl && p.y <= 0))
   for (const s of SHORTS) {
     if (s === F.team) continue
     const t = F.teams[s]

@@ -1,6 +1,6 @@
 // FRANCHISE (take two, 2026-11-14): the engine. Pure and seeded; the state (F) is plain JSON, saved in one of
 // three slots on this device. The screens are components/franchise2.
-import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, payroll, lineup, strength } from './league'
+import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, payroll, lineup, strength, fillLeague } from './league'
 import { makeSchedule } from './schedule'
 import { makeClass, packClass, unpackClass } from './draft'
 import { rngOf, clamp, r1 } from './rng'
@@ -113,7 +113,13 @@ export function saveFranchise(F) {
   try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packFranchise(F)); return true } catch { return false }
 }
 export function loadFranchise(slot) {
-  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); return F && F.v === SAVE_V && !F.setup && F.teams ? F : null } catch { return null }
+  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackFranchise(s); return F && F.v === SAVE_V && !F.setup && F.teams ? depthOnLoad(F) : null } catch { return null }
+}
+// a save read back: every room two deep (a save from before the filler backups gets them here, the same version
+// kept so no franchise is lost; in the offseason the new season's cut-down does it: offseason.js newSeason)
+export function depthOnLoad(F) {
+  if (F.phase !== 'off') fillLeague(F)
+  return F
 }
 export function clearFranchise(slot) { try { localStorage.removeItem(KEY(slot)) } catch {} }
 // a slot's line on the slot screen, without keeping the whole save around

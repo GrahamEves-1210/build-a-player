@@ -230,7 +230,7 @@ export function capComply(F, short, starters = new Set()) {
   }
   const worthCut = p => { const c = cutCost(p); return c.saves - (starters.has(p.i) ? 12 : 0) - Math.max(0, p.o - 70) * 0.25 + Math.max(0, p.ag - 29) * 0.8 }
   for (let guard = 0; room < 0 && guard < 30; guard++) {
-    const p = t.r.filter(x => x.b == null && !x.rc && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
+    const p = t.r.filter(x => x.b == null && !x.rc && !x.fl && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
     if (!p) break
     const c = cutMan(F, p.i, short)
     room = capRoom(F, short)

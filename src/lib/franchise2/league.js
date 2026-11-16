@@ -5,7 +5,7 @@
 // A player (kept small: a league is ~1,000 of them):
 //   i id · n name · p position · s spot (edge/dt, cb/s, LT…) · o OVR · ag age · pk the OVR he's headed for
 //   $ salary ($M a year) · y years left · h ESPN headshot id · b the player's own build (index in F.builds)
-//   in weeks out injured · rk rookie year · c college · dr [round, pick]
+//   in weeks out injured · rk rookie year · c college · dr [round, pick] · fl a filler backup (fillUp)
 // (a real man's headshot is looked up by his name: photoOf)
 import { NFL_TEAMS } from '../../data/nfl-teams'
 import NFL_HEADSHOTS from '../../data/headshots.json'
@@ -24,9 +24,9 @@ import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
 import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
-import { startersOfTeam, benchOfTeam } from './roster'
+import { startersOfTeam, benchOfTeam, groupOf } from './roster'
 import { rawRating, teamRating, toSim, fromSim, lastSeasonRes, SEASON_2025 } from './ratings'
-import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead } from './contracts'
+import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead, minimumFor, capYear } from './contracts'
 
 export const FIRST_YEAR = 2026
 export const POS = ['qb', 'rb', 'wr', 'te', 'ol', 'dl', 'lb', 'db']
@@ -96,6 +96,12 @@ const MORE_FIRST = ['Aaron', 'Brandon', 'Chris', 'Derrick', 'Eric', 'Frank', 'Ga
 const MORE_LAST = ['Adams', 'Barnes', 'Collins', 'Dixon', 'Evans', 'Foster', 'Griffin', 'Hughes', 'Ingram', 'James', 'Knox', 'Lewis', 'Moore', 'Nelson', 'Owens', 'Parker', 'Ross', 'Simmons', 'Tucker', 'Walker', 'Young', 'Banks', 'Curry', 'Dunn', 'Ford', 'Hill', 'Mack', 'Price', 'Shaw', 'Webb']
 const FIRSTS = [...FIRST_NAMES, ...MORE_FIRST], LASTS = [...LAST_NAMES, ...MORE_LAST]
 export const fakeName = R => `${R.pick(FIRSTS)} ${R.pick(LASTS)}`
+// a made-up name nobody on the roster already has
+export function freshName(R, roster = []) {
+  let n = fakeName(R)
+  for (let k = 0; k < 12 && roster.some(p => p.n === n); k++) n = fakeName(R)
+  return n
+}
 
 // ── Making players ───────────────────────────────────────────────────────────
 // the OVR a man is headed for, from where he is and how young (a veteran is already there)
@@ -143,21 +149,87 @@ export function makeBuilt(F, idx, R) {
 
 // ── Rosters ──────────────────────────────────────────────────────────────────
 export const byPos = (roster, pos) => roster.filter(p => p.p === pos)
-// trim a roster to the maximum at each spot (the weakest go; the player's own builds are never cut)
+// ── Depth ────────────────────────────────────────────────────────────────────
+// Every room on the depth chart is two deep: its starters and a man behind them, the way an NFL depth chart reads.
+// The line is one room of seven: the five, a swing tackle and an inside man who backs up at guard and centre.
+//   DEPTH [unit, roster position, starters]: a unit is a chart room (the line split into its tackles and its inside)
+// Where the real rosters leave a starting job empty, a generated starter takes it (63-68, a normal row). Where a
+// room has its starters and nobody behind them, ONE filler backup is signed (fl: 1): 63-68, 23-29, a one-year
+// minimum deal. A filler never outranks a real man (roster.js byOvr), sits out the weekly rotation (he plays when
+// injuries force it), is the first man cut, and leaves when his year is up (market.js openResign). The Team screen
+// draws his row smaller.
+export const DEPTH = [['qb', 'qb', 1], ['rb', 'rb', 1], ['wr', 'wr', 3], ['te', 'te', 1], ['ot', 'ol', 2], ['oi', 'ol', 3], ['edge', 'dl', 2], ['dt', 'dl', 2], ['lb', 'lb', 3], ['cb', 'db', 2], ['s', 'db', 2]]
+const TACKLES = ['LT', 'RT'], INSIDE = ['C', 'LG', 'RG']
+export const unitOf = p => (p.p === 'ol' ? (TACKLES.includes(p.s) ? 'ot' : 'oi') : groupOf(p))
+const UNITS_OF = Object.fromEntries(POS.map(pos => [pos, DEPTH.filter(u => u[1] === pos)]))
+// the spot a new man in a unit takes: the one the unit has fewest of (a centre first inside)
+function unitSpot(k, men) {
+  const spots = k === 'ot' ? TACKLES : k === 'oi' ? INSIDE : null
+  if (!spots) return GEN_SPOT_OF[k] ?? null
+  return [...spots].sort((a, b) => men.filter(p => p.s === a).length - men.filter(p => p.s === b).length)[0]
+}
+const GEN_SPOT_OF = { edge: 'edge', dt: 'dt', cb: 'cb', s: 's' }
+// a generated starter (a room the real rosters leave short) or a filler backup (fl; top: the lowest man ahead of him,
+// so the chart never shows a backup rated over the starter he's behind)
+export function makeDepth(F, pos, spot, R, fl = false, top = 68, roster = []) {
+  const o = R.int(63, clamp(63, 68, top)), ag = R.int(23, 29)
+  const p = { i: F.nid++, n: freshName(R, roster), p: pos, o, ag }
+  if (spot) p.s = spot
+  p.pk = fl ? o : Math.max(o, peakFor(R, o, ag) - 4)
+  signDeal(p, { $: minimumFor(ag, capYear(F)), y: 1, g: 0 })
+  if (fl) p.fl = 1
+  return p
+}
+// The men a position keeps (at: sorted, the ones that must stay first): each unit its starters and a man behind
+// them (the best of the unit; its filler only when nobody else), a place held for a unit that has nobody to keep,
+// then the best of the rest up to n. Fillers are never kept for anything but their unit's backup job.
+function keepAt(at, pos, n, must = 0) {
+  const sel = at.slice(0, must), units = UNITS_OF[pos]
+  const inUnit = k => sel.filter(p => unitOf(p) === k)
+  let held = 0
+  for (const [k, , st] of units) {
+    for (const p of at) {
+      const have = inUnit(k)
+      if (have.length >= st + 1) break
+      if (unitOf(p) !== k || sel.includes(p)) continue
+      if (p.fl && (have.length < st || have.some(x => x.fl))) continue
+      sel.push(p)
+    }
+    held += Math.max(0, st + 1 - inUnit(k).length)
+  }
+  for (const p of at) { if (sel.length + held >= n) break; if (!p.fl && !sel.includes(p)) sel.push(p) }
+  return sel
+}
+// trim a roster to the maximum at each spot (the weakest go, fillers first; every room keeps its two-deep; the
+// player's own builds are never cut)
 export function trim(roster, keep = new Set()) {
   const out = [], cut = []
   for (const pos of POS) {
-    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || keep.has(b.i) - keep.has(a.i) || b.o - a.o)
-    const n = Math.max(MAX[pos], at.filter(p => p.b != null || keep.has(p.i)).length)
-    out.push(...at.slice(0, n))
-    cut.push(...at.slice(n))
+    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || keep.has(b.i) - keep.has(a.i) || (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o)
+    const must = at.filter(p => p.b != null || keep.has(p.i)).length
+    const sel = keepAt(at, pos, Math.max(MAX[pos], must), must)
+    out.push(...sel)
+    cut.push(...at.filter(p => !sel.includes(p)))
   }
   return { roster: out, cut }
 }
-// fill a roster to the minimum at each spot with depth players
-export function fillUp(F, roster, R) {
-  for (const pos of POS) for (let n = byPos(roster, pos).length; n < MIN[pos]; n++) roster.push(makeGen(F, pos, R, { o: clamp(55, 72, Math.round(64 + R.n() * 3.5)) }))
+// every room two deep: a generated starter where a starting job is empty, one filler where a room has nobody
+// behind its starters, and a filler no room needs any more let go (the roster array, changed in place; cut false:
+// in the season, when a filler under contract stays on even if a real backup arrives)
+export function fillUp(F, roster, R, { cut = true } = {}) {
+  for (const [k, pos, st] of DEPTH) {
+    const unit = () => roster.filter(p => p.p === pos && unitOf(p) === k)
+    const fl = unit().filter(p => p.fl), real = unit().length - fl.length
+    if (cut) for (const p of fl.slice(real >= st + 1 ? 0 : 1)) roster.splice(roster.indexOf(p), 1)
+    for (let have = real; have < st; have++) roster.push(makeDepth(F, pos, unitSpot(k, unit()), R, false, 68, roster))
+    // (the line is one room on the chart: its filler is rated under the whole line)
+    if (unit().length < st + 1) roster.push(makeDepth(F, pos, unitSpot(k, unit()), R, true, Math.min(...roster.filter(p => p.p === pos && !p.fl && (pos === 'ol' || unitOf(p) === k)).map(p => p.o)), roster))
+  }
   return roster
+}
+// a league's rooms two deep (a save from before the fillers, read back; a week's cuts and trades)
+export function fillLeague(F, R = rngOf(`${F.seed}-${F.year}-${F.wk ?? 0}-depth`)) {
+  for (const s of SHORTS) fillUp(F, F.teams[s].r, R, { cut: false })
 }
 
 // ── Starters ─────────────────────────────────────────────────────────────────
@@ -200,8 +272,9 @@ export function buildTeams(F) {
   for (const s of SHORTS) {
     const r = []
     for (const pos of POS) {
-      const men = pool[pos].filter(p => p.team === s).sort((a, b) => b.o - a.o).slice(0, MAX[pos])
-      for (const m of men) r.push(makeReal(F, m, R))
+      // (the best at the position, each room's two-deep kept first: keepAt)
+      const at = pool[pos].filter(p => p.team === s).sort((a, b) => b.o - a.o).map(m => ({ p: pos, s: m.s, o: m.o, m }))
+      for (const x of keepAt(at, pos, MAX[pos])) r.push(makeReal(F, x.m, R))
     }
     fillUp(F, r, R)
     F.teams[s] = { r }
