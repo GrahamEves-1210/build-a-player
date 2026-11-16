@@ -1,0 +1,139 @@
+/* GAME DAY (Week.jsx, owner 2026-11-16): the player's game as a broadcast. The week's bar, the scorebug and the controls
+   on top (they stay while the page scrolls); the field beside the play-by-play, the scoring and the box score: one
+   column on a phone, two on a wide screen. Franchise's kit throughout (kit.css: --fk-*, the team's --tc slabs). */
+.gd.fg { padding-top: 0; }
+.gd-head { position: sticky; top: 0; z-index: 4; display: grid; gap: 6px; width: 100%; max-width: 1180px; margin: 0 auto; padding: calc(var(--safe-top, 0px) + 8px) 16px 8px; box-sizing: border-box; background: var(--fk-ink); box-shadow: 0 1px 0 var(--fk-line); }
+.gd-week { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 30px; padding: 0 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -3px 0 var(--tc2); clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.gd-week b { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--fk-d); font-weight: 400; font-size: 16px; letter-spacing: .6px; }
+.gd-week span { flex: none; display: inline-flex; align-items: center; gap: 6px; padding-right: 8px; font-family: var(--fk-f); font-size: 16px; letter-spacing: 1.2px; }
+.gd-live { width: 8px; height: 8px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 0 2px rgba(0,0,0,.25); }
+.gd-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* the speed (simFlow.jsx SpeedSeg) in the kit: flat, square, white on the picked one */
+.gd .plf-seg.gd-speed { flex: 1 1 280px; display: flex; gap: 0; padding: 0; margin: 0; border-radius: 0; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line2); }
+.gd .gd-speed .plf-seg-btn { flex: 1 1 0; min-width: 0; height: 40px; margin: 0; padding: 0 8px; border: 0; border-radius: 0; background: transparent; color: var(--fk-mute); font-family: var(--fk-d); font-size: 15px; letter-spacing: .4px; line-height: 1; text-transform: uppercase; cursor: pointer; }
+.gd .gd-speed .plf-seg-btn--active { background: #fff; color: #0b0c0e; }
+.gd .gd-speed .plf-seg-btn-pause-icon { flex: 0 0 44px; display: grid; place-items: center; }
+.gd .gd-speed .plf-seg-btn--pause { background: var(--fk-l); color: #fff; }
+.gd .gd-speed .plf-seg-btn-skip { flex: 1.3 1 0; font-size: 13px; line-height: 1.05; color: #fff; background: var(--fk-g4); }
+/* the moments switch (simFlow.jsx MomentsToggle) in the kit */
+.gd-weekrow { display: flex; align-items: stretch; gap: 6px; }
+.gd-weekrow .gd-week { flex: 1 1 auto; min-width: 0; }
+.gd .sts-moments.gd-mom { position: static; top: auto; right: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; height: 30px; margin: 0; padding: 0 10px; border: 0; border-radius: 0; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line2); color: #fff; font-family: var(--fk-d); font-size: 14px; letter-spacing: .4px; cursor: pointer; }
+.gd .gd-mom .sts-moments-knob { width: 26px; height: 14px; border-radius: 7px; background: var(--fk-w); position: relative; }
+.gd .gd-mom .sts-moments-knob::after { content: ''; position: absolute; top: 2px; left: 14px; width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.gd .gd-mom.is-off { color: var(--fk-mute); }
+.gd .gd-mom.is-off .sts-moments-knob { background: var(--fk-g4); }
+.gd .gd-mom.is-off .sts-moments-knob::after { left: 2px; background: #cfd8d2; }
+
+.gd-main { display: grid; gap: 14px; width: 100%; max-width: 1180px; margin: 0 auto; padding: 12px 16px 0; box-sizing: border-box; }
+.gd-left, .gd-right { display: grid; gap: 12px; align-content: start; min-width: 0; }
+@media (min-width: 900px) {
+  .gd-main { grid-template-columns: minmax(380px, 460px) minmax(0, 1fr); gap: 22px; padding-top: 16px; }
+  /* (the right column scrolls on its own, so nothing in it is ever cut off and the field stays in view) */
+  .gd-right { position: sticky; top: 150px; max-height: calc(100vh - 170px - var(--web-rail, 0px)); grid-template-rows: auto minmax(0, 1fr); }
+  .gd-right .gd-list { overflow-y: auto; overscroll-behavior: contain; min-height: 0; padding-right: 4px; }
+}
+
+/* a score: the banner over the field (the scorebug's own flash would sit over the controls) */
+.gd-flash { display: flex; align-items: center; justify-content: center; gap: 10px; height: 44px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -4px 0 var(--tc2); animation: fk-in .3s cubic-bezier(.2,.9,.25,1) both; }
+.gd-flash b { font-family: var(--fk-d); font-weight: 400; font-size: 24px; letter-spacing: .8px; }
+html.bap-reduce-motion .gd-flash { animation: none; }
+@media (max-width: 480px) { .gd-week span { font-size: 0; gap: 0; padding-right: 10px; } }
+/* the field: who has it, the down and distance, the spot, the drive */
+.gd-field { display: grid; gap: 8px; }
+.gd-field.is-idle { place-items: center; min-height: 150px; background: var(--fk-g1); }
+.gd-idle { font-family: var(--fk-d); font-size: 22px; letter-spacing: .8px; color: var(--fk-mute); }
+.gd-poss { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -4px 0 var(--tc2); }
+.gd-poss span { display: grid; gap: 2px; line-height: 1; min-width: 0; }
+.gd-poss small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; text-transform: uppercase; opacity: .9; }
+.gd-poss b { font-family: var(--fk-d); font-weight: 400; font-size: 34px; letter-spacing: .4px; white-space: nowrap; }
+.gd-spot { justify-items: end; text-align: right; }
+.gd-spot b { font-size: 24px !important; }
+.gd-strip { display: grid; grid-template-columns: 9% minmax(0, 1fr) 9%; height: 58px; background: #1c5b2c; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.gd-ez { display: grid; place-items: center; background: var(--tc); color: var(--tct); font-family: var(--fk-d); font-size: 13px; letter-spacing: .6px; writing-mode: vertical-rl; transform: rotate(180deg); }
+.gd-ez:not(.is-own) { transform: none; }
+.gd-grass { position: relative; overflow: hidden; background: repeating-linear-gradient(90deg, #1f6431 0 10%, #1b5a2c 10% 20%); }
+.gd-yl { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.35); }
+.gd-yl em { position: absolute; bottom: 3px; left: 50%; translate: -50% 0; font-style: normal; font-family: var(--fk-d); font-size: 11px; color: rgba(255,255,255,.6); }
+.gd-drv { position: absolute; top: 18px; height: 8px; background: rgba(255,255,255,.28); }
+.gd-los { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #3f86ff; }
+.gd-ltg { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #f7d64a; }
+.gd-ball { position: absolute; top: 14px; width: 16px; height: 10px; margin-left: -8px; border-radius: 50%; background: #7a3f1d; box-shadow: 0 0 0 2px #fff; transition: left .25s ease-out; }
+html.bap-reduce-motion .gd-ball { transition: none; }
+.gd-drive { display: flex; gap: 0; background: var(--fk-g1); }
+.gd-drive span { flex: 1; padding: 8px 10px; font-family: var(--fk-b); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .2px; color: var(--fk-mute); border-right: 1px solid var(--fk-line); }
+.gd-drive span:last-child { border-right: 0; }
+.gd-drive b { font-family: var(--fk-d); font-weight: 400; font-size: 18px; color: #fff; margin-right: 3px; }
+
+/* the right column: three tabs, and their lists (every entry; long lists scroll) */
+.gd-tabs { display: grid; grid-template-columns: repeat(3, 1fr); box-shadow: inset 0 -2px 0 var(--fk-line); }
+.gd-tabs button { height: 42px; border: 0; background: transparent; color: var(--fk-mute); font-family: var(--fk-d); font-size: 16px; letter-spacing: .4px; text-transform: uppercase; cursor: pointer; }
+.gd-tabs button.is-on { color: #fff; box-shadow: inset 0 -3px 0 var(--tca); }
+.gd-list { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.gd-list > * { flex: none; }
+.gd-empty { padding: 16px; text-align: center; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .2px; color: var(--fk-dim); background: var(--fk-g1); }
+.gd-pbp { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 44px; padding: 7px 10px 7px 0; background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tc); animation: fk-in .3s cubic-bezier(.2,.9,.25,1) both; }
+.gd-when { display: grid; justify-items: center; line-height: 1.05; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.gd-when b { font-family: var(--fk-d); font-weight: 400; font-size: 15px; color: #fff; }
+.gd-pbp-txt { display: grid; gap: 2px; min-width: 0; line-height: 1.3; }
+.gd-pbp-txt b { display: flex; align-items: center; gap: 6px; font-family: var(--fk-d); font-weight: 400; font-size: 15px; letter-spacing: .3px; text-transform: uppercase; color: #fff; }
+.gd-pbp-txt span { font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: #fff; }
+.gd-pbp-txt small { font-family: var(--fk-b); font-weight: 500; font-size: 13px; color: var(--fk-mute); }
+.gd-pbp.is-P .gd-pbp-txt b, .gd-pbp.is-E .gd-pbp-txt b, .gd-pbp.is-K .gd-pbp-txt b { color: var(--fk-mute); }
+.gd-pbp.is-X, .gd-pbp.is-D { background: color-mix(in srgb, var(--fk-l) 14%, var(--fk-g2)); }
+.gd-pbp.is-key { box-shadow: inset 4px 0 0 #fff; background: var(--fk-g3); }
+html.bap-reduce-motion .gd-pbp { animation: none; }
+.gd-scoring .fg-quarters { margin-bottom: 8px; }
+.gd-note { margin: 6px 0 0; font-family: var(--fk-b); font-size: 14px; color: var(--fk-mute); }
+.gd-box .sq-tstat { border-radius: 0; border-color: var(--fk-line2); }
+/* the box score sheet (SquadSeason.jsx BoxSheet) on the page, in the kit */
+.gd-sheet.ss-overlay { position: static; inset: auto; display: block; padding: 0; background: none !important; z-index: auto; animation: none; }
+.gd-sheet .ss-sheet.sq-box { position: static; max-width: none; width: auto; max-height: none; overflow: visible; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; transform: none;
+  --ag-a1: var(--tca); --ag-panel: var(--fk-g2); --ag-line: var(--fk-line2); --ag-line-hi: var(--fk-line2); --ag-muted: var(--fk-mute); --ag-text: #fff; --ag-text-2: #fff; }
+.gd-sheet .sq-box-score { border-radius: 0; background: var(--fk-g2); }
+.gd-sheet .sq-bt, .gd-sheet .sq-tstat, .gd-sheet .sq-box-me { border-radius: 0; }
+.gd-sheet .sq-bt-row { font-size: 13px; }
+.gd-sheet .sq-bt-name small { font-size: 11px; }
+.gd-sheet .sq-box-h { font-size: 14px; }
+
+/* the moment: the call */
+.gd-call { display: grid; gap: 10px; }
+.gd-h { margin: 4px 0 0; font-family: var(--fk-d); font-weight: 400; font-size: 20px; letter-spacing: .5px; text-transform: uppercase; color: #fff; }
+.gd-plays { display: grid; gap: 6px; }
+.gd-play { display: grid; grid-template-columns: 54px minmax(0, 1fr); grid-template-areas: 'k n' 'k t'; align-items: center; gap: 0 12px; min-height: 64px; padding: 8px 14px 8px 0; border: 0; text-align: left; background: var(--fk-g2); color: #fff; box-shadow: inset 0 0 0 1px var(--fk-line2); cursor: pointer; }
+.gd-play small { grid-area: k; align-self: stretch; display: grid; place-items: center; margin: -8px 0; background: var(--fk-g4); font-family: var(--fk-d); font-size: 13px; letter-spacing: .6px; }
+.gd-play.is-pass small { background: var(--tc); color: var(--tct); }
+.gd-play b { grid-area: n; font-family: var(--fk-d); font-weight: 400; font-size: 24px; letter-spacing: .4px; text-transform: uppercase; line-height: 1.05; }
+.gd-play span { grid-area: t; font-family: var(--fk-b); font-weight: 500; font-size: 14px; color: var(--fk-mute); }
+.gd-play:hover, .gd-play:focus-visible { box-shadow: inset 0 0 0 2px #fff; outline: none; }
+.gd-men { display: grid; gap: 4px; }
+.gd-sim { justify-self: start; border: 0; background: none; padding: 6px 0; color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.gd-result { display: grid; justify-items: center; gap: 14px; padding: 28px 0 12px; text-align: center; cursor: pointer; }
+.gd-result p { margin: 0; max-width: 460px; font-family: var(--fk-d); font-size: 22px; line-height: 1.15; color: #fff; }
+.gd-wait { position: fixed; inset: 0; background: #060a0c; }
+
+/* FINAL: the score by quarter, the line, the moments, the builds */
+.gd-final { display: grid; gap: 14px; }
+.gd-fin { position: relative; display: grid; gap: 3px; }
+.gd-fin-h, .gd-fin-t { display: grid; grid-template-columns: minmax(0, 1fr) repeat(var(--n, 4), 30px) 56px; align-items: center; }
+.gd-fin-h { height: 24px; padding: 0 0 0 12px; font-family: var(--fk-b); font-weight: 600; font-size: 13px; text-transform: uppercase; color: var(--fk-dim); }
+.gd-fin-h span { text-align: center; } .gd-fin-h span:first-child { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-fin-t { grid-template-columns: 34px minmax(0, 1fr) repeat(var(--n, 4), 30px) 56px; gap: 0; min-height: 56px; padding-left: 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -4px 0 var(--tc2); }
+.gd-fin-t > b { padding-left: 8px; font-family: var(--fk-d); font-weight: 400; font-size: 22px; letter-spacing: .4px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-fin-t > span { text-align: center; font-family: var(--fk-d); font-size: 16px; opacity: .85; }
+.gd-fin-t > strong { align-self: stretch; display: grid; place-items: center; background: rgba(0,0,0,.28); font-family: var(--fk-d); font-weight: 400; font-size: 34px; color: #fff; }
+.gd-fin-t.is-lose { filter: saturate(.35) brightness(.6); }
+.gd-hl { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.gd-hl > span { display: grid; gap: 5px; min-width: 0; }
+.gd-mo { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px 6px 0; background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--fk-l); font-family: var(--fk-b); font-weight: 600; font-size: 15px; line-height: 1.3; color: #fff; }
+.gd-mo.is-ok { box-shadow: inset 4px 0 0 var(--fk-w); }
+.gd-mo i { font-style: normal; padding: 3px 7px 2px; background: var(--fk-l); color: #fff; font-family: var(--fk-d); font-size: 13px; letter-spacing: .4px; }
+.gd-mo.is-ok i { background: var(--fk-w); color: #04130a; }
+.gd-final .fk-actbar.gd-go { position: sticky; bottom: calc(var(--web-rail, 0px) + 8px); }
+@media (min-width: 900px) { .gd-final .fk-actbar.gd-go { position: static; } }
+
+/* the hub's moments switch (Hub.jsx GamesSwitch, simFlow.jsx's markup): a line under each mode */
+.fh-games-label > span { display: grid; gap: 2px; }
+.fh-games-label b { font-weight: 400; }
+.fh-seg button { display: grid; place-content: center; gap: 2px; height: 50px; line-height: 1; }
+.fh-seg button small { font-family: var(--fk-b); font-weight: 500; font-size: 11px; letter-spacing: 0; text-transform: none; color: inherit; opacity: .8; }

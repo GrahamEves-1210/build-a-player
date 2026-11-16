@@ -6,17 +6,16 @@
 // the ball against the defense facing it (the football sim's 1–12 ratings), where it starts, and the game
 // state late (a team ahead burns clock, a team behind hurries and can't settle for three).
 //
-// MOMENTS (the owner's rule, 2026-11-14): a moment is a real play inside this game, never a boost to the odds.
-//   1. The game is simulated first; the moment is dealt on a real possession late in the 4th quarter of a close
-//      game, from that game's own score, clock and possession, and the play fits it (third and 6 at the 42,
-//      fourth and goal, a stop on their side of the ball).
-//   2. The play moves the scoreboard by exactly what it was: a touchdown (6 and the try), a first down that the
-//      drive goes on from, a stop, a pick, a sack.
+// MOMENTS (the owner's rule, 2026-11-14; snaps, 2026-11-16): a moment is a real play inside this game, never a
+// boost to the odds.
+//   1. The game is simulated a drive at a time; a moment is one snap of a real drive (snapOf, below): the down,
+//      distance, spot and clock the game put there (third and 6 at the 42, fourth and goal, their last drive).
+//   2. The snap moves the game by exactly what it was: the yards, a first down the drive goes on from, a
+//      touchdown (6 and the try), a stop and the fourth-down call, a pick, a fumble, a sack, the clock.
 //   3. The rest of the game plays out from the new state (margin, clock, who has the ball); a last play is the end.
-//   4. Where it lands is calibrated, not the result: the distance to go is set so the play's own chance (what it
-//      would be if the game were simulated without the player) matches the build's normal success rate. So with
-//      moments on and the player playing at his usual level, the team wins as often as with moments off.
-//   5. The final score includes the play (the box score is made from the final).
+//   4. The sim's own version of the snap (simSnap: the league's results on that down and distance) is what a
+//      skipped or SIMPLE moment gets, so a game with moments the player doesn't play wins as often as one without.
+//   5. The final score includes the play; so does the box score (season.js).
 // Pure, seeded, JSON-serializable: a game paused on its moment is kept in the save and finished later.
 import { rngOf, clamp } from './rng'
 
@@ -113,8 +112,9 @@ export function driveOutcome(y0, e, R, ctx = {}) {
     const togo = Math.min(toGoal, toGoal <= 8 && R.u() < 0.5 ? toGoal : R.u() < 0.3 ? R.int(1, 2) : R.int(3, 13))
     dur += durOf('stall', at - y, R)
     const call = fourthDown(toGoal, togo, e, ctx, R)
-    if (call === 'fg') return { res: 'fg', at, dist: toGoal + 17, dur, go }
-    if (call === 'punt') return { res: 'punt', at, dur, go }
+    // (togo: the 4th down's distance, where the drive stalled: a moment on this drive comes up there)
+    if (call === 'fg') return { res: 'fg', at, dist: toGoal + 17, dur, go, togo }
+    if (call === 'punt') return { res: 'punt', at, dur, go, togo }
     go++
     if (R.u() < goRate(togo, e)) {
       const gain2 = togo + R.int(0, 8)
@@ -122,7 +122,7 @@ export function driveOutcome(y0, e, R, ctx = {}) {
       y = at + gain2
       continue
     }
-    return { res: 'downs', at, dur, go }
+    return { res: 'downs', at, dur, go, togo }
   }
   return { res: 'punt', at: y, dur, go }
 }
@@ -145,22 +145,26 @@ function nextStart(d, R) {
   return puntStart(d.at ?? 40, R)
 }
 
-// The key play's chance for the offense: a third or fourth down at d to go
+// (the old key play's numbers, kept for the scripts that measured it: scripts/franchise2/game-calib.mjs)
 export const convChance = (d, e) => clamp(0.08, 0.92, 0.8 - 0.036 * d + 0.016 * e)
-// the distance that puts that chance at p for the offense
-export const distFor = (p, e) => clamp(1, 15, Math.round((0.8 + 0.016 * e - p) / 0.036))
-// a build's normal success rate on a moment (its mini game at his usual level), from his OVR
 export const normalRate = ovr => clamp(0.4, 0.75, 0.55 + (ovr - 80) * 0.008)
 
 // ── State ────────────────────────────────────────────────────────────────────
-// G (the game): { h, a, sh: {off, def}, sa: {off, def}, seed, po, ot (minutes), key: null | { team, side, h, bonus },
+// G (the game): { h, a, sh: {off, def}, sa: {off, def}, seed, po, ot (minutes), key: null | { us, off, def } (moments: snapOf),
 //   k: { h, a } each side's kicker [power, accuracy, clutch] (none: the league's kicker), kid: { h, a } who kicked }
 // S.kk: the kicking, a side's [FGA, FGM, XPA, XPM, long, 50+ tries, 50+ made] (kick.js addKickStats keeps the season's)
-//   key.team: the player's team; side 'off' (his build is on offense: the play is on his team's drive) or 'def'
 export function newGame(G) {
   const R = rngOf(`${G.seed}-coin`)
   const first = R.u() < 0.5 ? 'h' : 'a'
-  return { G, t: 0, poss: first, recv2: first === 'h' ? 'a' : 'h', y: 30, hs: 0, as: 0, plays: [], di: 0, ot: null, keyAt: null, key: null, done: false, half: 1, ct: { h: {}, a: {} } }
+  // dr: the drives, in order ({ s, t0, t1, y0, res, at }); top: each side's time with the ball (seconds)
+  return { G, t: 0, poss: first, recv2: first === 'h' ? 'a' : 'h', y: 30, hs: 0, as: 0, plays: [], di: 0, ot: null, keyAt: null, key: null, done: false, half: 1, ct: { h: {}, a: {} }, dr: [], top: { h: 0, a: 0 } }
+}
+// a drive as the game keeps it: who had it, the clock it took, where it started and how it ended
+function logDrive(S, side, t0, y0, res, at) {
+  const t1 = Math.max(t0, Math.round(S.t))
+  S.dr ??= []; S.top ??= { h: 0, a: 0 }
+  S.dr.push({ s: side, t0: Math.round(t0), t1, y0: Math.round(y0), res, at: Math.round(at ?? y0) })
+  S.top[side] += t1 - Math.round(t0)
 }
 const other = s => (s === 'h' ? 'a' : 'h')
 const edgeOf = (S, side) => {
@@ -253,26 +257,29 @@ function step(S) {
     if (S.G.po) { S.ot.n++; S.ot.end += OT_PO; S.ot.sudden = true }
     else { S.done = true; S.tie = S.hs === S.as; return }
   }
-  // the key play: the player's team's possession (or the other team's, for a defender) late in a close 4th
-  const K = S.G.key
-  if (K && !S.keyDone && !S.ot && S.t >= REG - (K.window ?? 300) && S.t <= REG - 25) {
-    const team = K.side === 'off' ? K.us : other(K.us)
-    // (a team ahead with the ball under two minutes kneels: no moment there)
-    if (S.poss === team && Math.abs(margin(S, K.us)) <= 8 && !(REG - S.t <= 130 && margin(S, team) > 0)) { S.key = dealKey(S, R); return }
-  }
   // ahead with the ball and under two minutes left: the victory formation
-  if (!S.ot && S.half === 2 && REG - S.t <= 110 && margin(S, S.poss) > 0) { S.t = REG; S.kneel = 1; return }
+  if (!S.ot && S.half === 2 && REG - S.t <= 110 && margin(S, S.poss) > 0) { const t0 = S.t; S.t = REG; logDrive(S, S.poss, t0, S.y, 'kneel', S.y); S.kneel = 1; return }
   const side = S.poss
   const d = drive(S, R)
+  // a moment: this drive's deciding snap, played by the player (the game waits on it: S.key)
+  if (S.G.key) {
+    const k = snapOf(S, side, d)
+    if (k) { S.key = k; S.keyFrom = { side, t0: Math.round(S.t), y0: S.y }; return }
+  }
+  applyDrive(S, side, d, R, S.t, S.y)
+}
+// A drive's end on the scoreboard and the clock (from S.t, where the drive, or what's left of it, starts)
+function applyDrive(S, side, d, R, t0, y0) {
   const end = S.ot ? S.ot.end : S.half === 1 ? HALF : REG
   const fits = S.t + d.dur < end
   // a drive that runs into the half or the end: it scores only if it got there in time (a last-second kick)
-  if (!fits && (d.res === 'punt' || d.res === 'to' || d.res === 'downs')) { S.t = end; afterDrive(S, side, { res: 'end' }, R); return }
+  if (!fits && (d.res === 'punt' || d.res === 'to' || d.res === 'downs')) { S.t = end; logDrive(S, side, t0, y0, 'end', d.at); afterDrive(S, side, { res: 'end' }, R); return }
   S.t = Math.min(end - 1, S.t + d.dur)
   count(S, side, d.res === 'downs' ? 'downs' : d.res)
   for (let i = 0; i < (d.go ?? 0); i++) count(S, side, 'go')
   if (d.res === 'td') touchdown(S, side, R)
   else if (d.res === 'fg') { count(S, side, 'fga'); count(S, side, `k${Math.min(6, Math.floor(d.dist / 10))}`); if (kickFG(S, side, d.dist, R)) score(S, side, 3, 'fg', { y: 117 - d.dist, d: d.dist }); else d.res = 'miss' }
+  logDrive(S, side, t0, y0, d.res, d.res === 'td' ? 100 : d.at)
   afterDrive(S, side, d, R)
   if (!fits) S.t = end
 }
@@ -287,103 +294,157 @@ function afterDrive(S, side, d, R) {
   S.y = nextStart(d, R)
 }
 
-// what a possession is worth on average (points), from where it starts: the drives themselves, played out (a table
-// for each whole edge, made once when it's first needed; a touchdown is worth its try too)
-export const KEY_TUNE = 0.85
-const EV = new Map()
-function evRow(e, needTD) {
-  const k = `${e}|${needTD ? 1 : 0}`
-  let row = EV.get(k)
-  if (row) return row
-  row = new Float32Array(101)
-  const R = rngOf(`ev-${k}`), N = 300
-  for (let y = 1; y <= 100; y++) {
-    let v = 0
-    for (let i = 0; i < N; i++) {
-      const d = driveOutcome(y, e, R, { needTD, m: needTD ? -5 : 0 })
-      v += d.res === 'td' ? 6.95 : d.res === 'fg' && !needTD ? 3 * fgMakeAt(d.dist) : 0
-    }
-    row[y] = v / N
+// ── The moments: snaps the player plays (owner, 2026-11-16) ─────────────────
+// The game is played a drive at a time; a moment is one snap inside one of those drives, the one that decides it,
+// at the down, distance, spot and clock this game put there. The player calls the play and runs it on his offense,
+// or plays the backer on his defense; what the snap does is what the game gets: the yards, the first down, the
+// touchdown, the turnover, the clock. The rest of the drive and the game go on from there.
+//   G.key: { us: 'h' | 'a', off: bool, def: bool }   (the player's team, and which side's moments are on)
+//   S.key: the snap waiting on the player: { side, kind, ball: 'us' | 'them', us, down, d (to go), y (the spot,
+//          from the offense's own goal line), goal, t, mine, opp (the score, the player's side first), left }
+// Where they come up (never in a blowout; more the closer it is):
+//   offense: the two-minute drill before the half, a drive in a one-score 4th quarter (more in the last seven
+//            minutes, nearly always behind or tied in the last two), overtime
+//   defense: their last drive with the player's team ahead or level by a score in the last five minutes, a stand
+//            in the red zone in a one-score 4th quarter
+export const SNAP_MAX = { off: 3, def: 1 }
+const SNAP_P = { half: 0.75, q4: 0.55, late: 0.85, two: 1, ot: 0.9, final: 0.85, stand: 0.45, otd: 0.35 }
+// (kind → what the broadcast calls it)
+export const SNAP_KIND = { half: 'TWO-MINUTE DRILL', two: 'TWO-MINUTE DRILL', late: '4TH QUARTER', q4: '4TH QUARTER', ot: 'OVERTIME', final: 'FINAL DRIVE', stand: 'RED ZONE', otd: 'OVERTIME' }
+function snapOf(S, side, d) {
+  const K = S.G.key, us = K.us, off = side === us
+  if (off ? !K.off : !K.def) return null
+  const n = S.mo ?? (S.mo = { off: 0, def: 0 })
+  const which = off ? 'off' : 'def'
+  if (n[which] >= SNAP_MAX[which]) return null
+  const R = rngOf(`${S.G.seed}-snap-${S.di}`)
+  const m = margin(S, us), t = S.t
+  const end = S.ot ? S.ot.end : S.half === 1 ? HALF : REG
+  const q4 = !S.ot && t >= REG - Q, left = REG - t
+  const red = d.res === 'td' || ((d.res === 'fg' || d.res === 'downs') && d.at >= 80)
+  let kind = null
+  if (off) {
+    if (S.ot) kind = 'ot'
+    else if (S.half === 1 && end - t <= 125 && end - t >= 30 && Math.abs(m) <= 14) kind = 'half'
+    else if (q4 && Math.abs(m) <= 8) kind = left <= 135 && m <= 0 ? 'two' : left <= 420 ? 'late' : 'q4'
+  } else {
+    if (S.ot) kind = 'otd'
+    else if (q4 && left <= 300 && m >= 0 && m <= 8) kind = 'final'
+    else if (q4 && Math.abs(m) <= 8 && red) kind = 'stand'
   }
-  row[0] = row[1]
-  EV.set(k, row)
-  return row
+  if (!kind || end - t < 30 || R.u() >= SNAP_P[kind]) return null
+  // the snap: where this drive's deciding down comes up
+  let y, down, togo
+  if (red) {
+    // in close: third down inside the 20, or at the goal line
+    const lo = Math.min(97, Math.max(S.y + 1, 80))
+    y = R.int(lo, 97)
+    down = d.res === 'downs' || ((kind === 'two' || kind === 'ot') && R.u() < 0.35) ? 4 : 3
+    togo = 100 - y <= 9 && R.u() < 0.55 ? 100 - y : Math.min(100 - y, R.int(2, 8))
+  } else if (d.res === 'to' || d.res === 'td') {
+    // a third down on the way (a turnover's drive: the snap it came on)
+    const lo = Math.min(S.y + 4, 72)
+    y = d.res === 'to' ? clamp(S.y + 1, 97, d.at) : R.int(lo, Math.max(lo, 76))
+    down = 3; togo = Math.min(100 - y, R.int(3, 10))
+  } else {
+    // where it stalled: third down there (fourth when they went for it, or have to)
+    y = clamp(1, 97, d.at)
+    togo = clamp(1, 100 - y, d.togo ?? 5)
+    down = d.res === 'downs' || ((kind === 'two' || kind === 'ot') && m < 0 && togo <= 6 && R.u() < 0.5) ? 4 : 3
+  }
+  // (on defense, the backer's play: they're running it, short yardage)
+  if (!off) togo = Math.min(togo, 100 - y, R.int(1, 4))
+  // the clock: most of the way through the drive, and never on the half's last tick
+  let ts = t + Math.round(d.dur * (red ? 0.85 : d.res === 'to' ? 0.6 : 0.8))
+  ts = Math.max(t + Math.min(20, end - t - 6), Math.min(ts, end - R.int(4, 16)))
+  n[which]++
+  return {
+    side: which, kind, ball: off ? 'us' : 'them', us, down, d: togo, y, goal: y + togo >= 100, t: Math.round(ts),
+    mine: S[us === 'h' ? 'hs' : 'as'], opp: S[us === 'h' ? 'as' : 'hs'], half: S.half, ot: S.ot ? 1 : 0, left: Math.round(end - ts), i: n.off + n.def,
+  }
 }
-function evAt(y, e, needTD) {
-  const yy = clamp(0, 100, Math.round(y)), lo = Math.floor(clamp(-8, 8, e)), hi = Math.min(8, lo + 1), f = clamp(-8, 8, e) - lo
-  return evRow(lo, needTD)[yy] * (1 - f) + evRow(hi, needTD)[yy] * f
-}
-const driveValue = (y, e, needTD) => evAt(y, e, needTD)
-const winValue = (ny, e, needTD) => (ny >= 100 ? 7 : evAt(ny, e, needTD))
-// stopped on 3rd down at y: the 4th-down kick if it's in range (it isn't worth anything when they need a touchdown)
-const stopValue = (y, down, needTD) => (down === 3 && !needTD && 117 - y <= 55 ? 3 * fgMakeAt(117 - y) : 0)
 
-// ── The key play ─────────────────────────────────────────────────────────────
-// The game stops on a third or fourth down on this possession: where it lands is set so the offense's chance on
-// the play matches the build's normal rate (for a defender, the offense's chance is one minus it).
-function dealKey(S, R) {
-  const K = S.G.key, ball = S.poss, e = edgeOf(S, ball), mUs = margin(S, K.us)
-  const late = S.t >= REG - 150
-  const p = clamp(0.1, 0.9, (K.side === 'off' ? K.h : 1 - K.h) + (K.bonus ?? 0) * (K.side === 'off' ? 1 : -1))
-  const d = distFor(p, e)
-  const mBall = margin(S, ball)
-  const needTD = mBall <= -4 && late
-  const down = late && mBall < 0 ? 4 : 3
-  // where on the field: the spot where the play is worth what this possession was worth before it (the points
-  // the drive would have scored on average), at the offense's chance on it. Fourth and goal when that's at the goal.
-  const want = driveValue(S.y, e, needTD) + KEY_TUNE   // (KEY_TUNE: the gap the late clock leaves, measured by scripts/franchise2/game-calib.mjs)
-  let y = 30, best = 1e9
-  for (let yy = 20; yy <= 100 - d; yy++) {
-    const v = p * winValue(yy + d + 6, e, needTD) + (1 - p) * stopValue(yy, down, needTD)
-    const gap = Math.abs(v - want) + R.u() * 0.05
-    if (gap < best) { best = gap; y = yy }
+// The snap's play is in. out: { yards (from the line of scrimmage), td, to ('int' | 'fum'), inc (incomplete: the
+// clock stops), sack, txt (the play, named: "Jared Goff 14-yd pass to Sam LaPorta"), cr ([[id, 'ptd' | 'rctd' | 'rtd']]
+// for a touchdown), st (the men's lines from the play, for the box score) }
+export function resolveSnap(S, out = {}) {
+  const k = S.key, from = S.keyFrom ?? { side: k.ball === 'us' ? k.us : other(k.us), t0: k.t, y0: k.y }
+  const R = rngOf(`${S.G.seed}-snap-${S.di}-play`)
+  const ball = from.side, def = other(ball)
+  const e = edgeOf(S, ball)
+  S.key = null; S.keyFrom = null
+  const end = S.ot ? S.ot.end : S.half === 1 ? HALF : REG
+  const yards = Math.round(out.yards ?? 0), ny = k.y + yards
+  const td = !out.to && (!!out.td || ny >= 100)
+  const ok = out.to ? 0 : td || yards >= k.d ? 1 : 0
+  // (success for the player's side: his offense moving the chains, his defense holding)
+  const good = k.ball === 'us' ? ok : 1 - ok
+  const rec = { t: Math.round(k.t), s: ball, p: 0, k: 'snap', ok: good, y: yards, down: k.down, d: k.d, at: k.y, ...(out.txt && { txt: out.txt }), ...(out.to && { to: out.to }) }
+  S.t = Math.min(end - 1, k.t + (out.inc ? R.int(4, 6) : R.int(5, 8)))
+  if (out.to) {
+    // the ball's theirs where the play ended (a pick: where it was caught)
+    const spot = clamp(1, 99, out.to === 'int' ? k.y + Math.max(0, yards) : ny)
+    S.plays.push(rec)
+    count(S, ball, 'to'); logDrive(S, ball, from.t0, from.y0, 'to', spot)
+    afterDrive(S, ball, { res: 'to', at: spot }, R)
+    return run(S)
   }
-  const goal = y + d >= 100
-  const clock = REG - S.t - R.int(5, 40)
-  S.t = REG - Math.max(15, clock)
-  return { ball: ball === K.us ? 'us' : 'them', y, d, down, goal, t: S.t, us: K.us, mine: S[K.us === 'h' ? 'hs' : 'as'], opp: S[K.us === 'h' ? 'as' : 'hs'], margin: mUs, chance: K.side === 'off' ? convChance(d, e) : 1 - convChance(d, e) }
+  if (td) {
+    count(S, ball, 'td')
+    touchdown(S, ball, R, { snap: 1, ok: good, ...(out.txt && { txt: out.txt }), ...(out.cr && { cr: out.cr }) })
+    logDrive(S, ball, from.t0, from.y0, 'td', 100)
+    afterDrive(S, ball, { res: 'td' }, R)
+    return run(S)
+  }
+  S.plays.push(rec)
+  if (ny <= 0) {
+    // tackled in his own end zone: a safety, and the free kick
+    score(S, def, 2, 'sf')
+    logDrive(S, ball, from.t0, from.y0, 'sf', 0)
+    if (S.ot) { S.done = true; return S }
+    S.poss = def; S.y = R.int(30, 45)
+    return run(S)
+  }
+  // the drive from here, the way every drive goes (the clock as it runs late: hurrying behind, bleeding it ahead)
+  const goOn = y => {
+    const ctx = ctxOf(S, ball)
+    const d = driveOutcome(y, e, R, ctx)
+    d.dur = Math.round(d.dur * (ctx.late && ctx.m < 0 ? 0.45 : ctx.late && ctx.m > 0 ? 1.2 : 0.8) * (S.ot ? 0.72 : 1))
+    applyDrive(S, ball, d, R, from.t0, from.y0)
+  }
+  if (yards >= k.d || k.down < 3) goOn(ny)
+  else if (k.down === 3) {
+    // held on third down: the coach's call on fourth, from the spot
+    const togo = k.d - yards, call = fourthDown(100 - ny, togo, e, ctxOf(S, ball), R)
+    if (call === 'fg') applyDrive(S, ball, { res: 'fg', at: ny, dist: 117 - ny, dur: 5 }, R, from.t0, from.y0)
+    else if (call === 'punt') applyDrive(S, ball, { res: 'punt', at: ny, dur: 7 }, R, from.t0, from.y0)
+    else if (R.u() < goRate(togo, e)) goOn(Math.min(99, ny + togo + R.int(0, 5)))
+    else applyDrive(S, ball, { res: 'downs', at: ny, dur: 6 }, R, from.t0, from.y0)
+  } else applyDrive(S, ball, { res: 'downs', at: ny, dur: 0 }, R, from.t0, from.y0)
+  return run(S)
 }
-// The key play's result: success for the player's side (a hit), the play's own outcome, and the game from there.
-// kind: what the play was ('pick' a defender's interception, 'sack', 'big' a deep shot): only how it reads.
-export function resolveKey(S, hit, kind = null, seed = 'k') {
-  const k = S.key, R = rngOf(`${S.G.seed}-key-${seed}`)
+// A snap's chance for the offense, the league's by down and distance (third down: about two in three on 3rd & 1,
+// one in two at 4 or 5, one in four at 10)
+export const snapChance = (d, e) => clamp(0.12, 0.78, 0.69 - 0.046 * (d - 1) + 0.015 * e)
+// The snap played by the sim (the player's SIMPLE setting calls the play and lets the sim run it; a skip): a pass or a
+// run (call), the league's results for it on that down and distance
+export function simSnap(S, call = 'pass', tag = 'sim') {
+  const k = S.key, R = rngOf(`${S.G.seed}-snap-${S.di}-${tag}`)
   const ball = k.ball === 'us' ? k.us : other(k.us)
   const e = edgeOf(S, ball)
-  const converted = k.ball === 'us' ? hit : !hit
-  S.keyDone = true
-  const playT = S.t
-  S.plays.push({ t: Math.round(playT), s: ball, p: 0, k: 'key', ok: hit ? 1 : 0, hs: S.hs, as: S.as })
-  S.t = Math.min(REG - 1, S.t + R.int(4, 9))
-  let line
-  if (converted) {
-    const gain = k.goal ? k.d : k.d + R.int(0, kind === 'big' ? 30 : 14)
-    const ny = k.y + gain
-    if (ny >= 100) { touchdown(S, ball, R, { key: 1 }); line = 'td' }
-    else {
-      // the drive goes on from the new spot, the way every drive goes (its kick from where it stalls), on the clock left
-      const ctx = ctxOf(S, ball)
-      const d = driveOutcome(ny, e, R, ctx)
-      S.t = Math.min(REG - 1, S.t + Math.round(d.dur * (ctx.late && ctx.m < 0 ? 0.45 : ctx.late && ctx.m > 0 ? 1.2 : 0.8)))
-      if (d.res === 'td') { touchdown(S, ball, R); line = 'conv-td' }
-      else if (d.res === 'fg' && kickFG(S, ball, d.dist, R)) { score(S, ball, 3, 'fg', { y: 117 - d.dist, d: d.dist }); line = 'conv-fg' }
-      else { line = 'conv-stall'; S.stall = d.res === 'fg' ? { ...d, res: 'miss' } : d }
-    }
-  } else {
-    // stopped: a pick (the defense has it there), a sack and the kick or the punt, fourth down turned over
-    if (kind === 'pick' && k.ball === 'them') { line = 'pick'; S.poss = k.us; S.y = clamp(5, 95, 100 - k.y - R.int(-5, 25)) }
-    // (held on 3rd down: the 4th-down kick from that spot if it's in range, the punt if it isn't)
-    else if (k.down === 3 && 117 - (kind === 'sack' ? k.y - 7 : k.y) <= (margin(S, ball) < 0 && S.t >= REG - 120 ? 60 : 55) + kickRange(S.G.k?.[ball]) && !(margin(S, ball) <= -4)) {
-      const y = kind === 'sack' ? k.y - 7 : k.y, dist = 117 - y
-      if (kickFG(S, ball, dist, R)) { score(S, ball, 3, 'fg', { y, d: dist }); line = 'held-fg'; S.poss = other(ball); S.y = kickoff(R) }
-      else { line = 'held-miss'; S.poss = other(ball); S.y = Math.max(20, 100 - y + 7) }
-    } else if (k.down === 3) { line = 'punt'; S.poss = other(ball); S.y = puntStart(k.y, R) }
-    else { line = 'downs'; S.poss = other(ball); S.y = clamp(1, 95, 100 - k.y) }
+  const toGoal = 100 - k.y
+  const run = call === 'run' || k.ball === 'them'
+  let p = snapChance(k.d, e) + (run ? (k.d <= 2 ? 0.06 : k.d >= 7 ? -0.2 : -0.06) : 0) - (k.goal ? 0.05 : 0)
+  if (R.u() < p) {
+    const y = k.goal ? toGoal : Math.min(toGoal, k.d + Math.floor(-Math.log(1 - R.u() * 0.99) * (run ? 4 : 9)))
+    return { yards: y, td: y >= toGoal, call }
   }
-  if (line === 'td' || line === 'conv-td' || line === 'conv-fg') { S.poss = other(ball); S.y = kickoff(R) }
-  if (line === 'conv-stall') { S.poss = other(ball); S.y = nextStart(S.stall, R); delete S.stall }
-  S.keyOut = { hit: !!hit, line, kind }
-  S.key = null
-  return run(S)
+  const v = R.u()
+  if (run) return v < 0.02 ? { yards: R.int(-1, 2), to: 'fum', call } : { yards: Math.min(k.d - 1, R.int(-2, Math.max(-1, k.d - 1))), call }
+  if (v < 0.05) return { yards: Math.min(toGoal - 1, R.int(4, 22)), to: 'int', call }
+  if (v < 0.16) return { yards: -R.int(4, 9), sack: true, call }
+  if (v < 0.36) return { yards: R.int(0, Math.max(0, k.d - 1)), call }
+  return { yards: 0, inc: true, call }
 }
 
 // ── Reading a finished game ──────────────────────────────────────────────────
@@ -400,7 +461,7 @@ export function quarters(S) {
 }
 // a finished game, small: what the season keeps
 export function boxOf(S) {
-  return { h: S.G.h, a: S.G.a, hs: S.hs, as: S.as, ot: S.ot ? 1 : 0, tie: S.tie ? 1 : 0, q: quarters(S), pl: S.plays.map(p => [p.t, p.s === 'h' ? 0 : 1, p.p, p.k === 'key' ? (p.ok ? 'K' : 'k') : p.k === 'td' ? 'T' : 'F']), ...(S.keyOut && { ko: S.keyOut }) }
+  return { h: S.G.h, a: S.G.a, hs: S.hs, as: S.as, ot: S.ot ? 1 : 0, tie: S.tie ? 1 : 0, q: quarters(S), pl: S.plays.map(p => [p.t, p.s === 'h' ? 0 : 1, p.p, p.k === 'key' || p.k === 'snap' ? (p.ok ? 'K' : 'k') : p.k === 'td' ? 'T' : 'F']), ...(S.keyOut && { ko: S.keyOut }) }
 }
 // the clock at a moment, as the broadcast reads it
 export function clockText(t) {

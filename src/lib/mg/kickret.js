@@ -17,6 +17,11 @@
 //                man still stuck on a block, can be run through, and the faster he's going the more he breaks
 // Down past the 30, it's a good return. All the way, it's a touchdown.
 //
+// fr-run (Franchise's moments): the same back and the same stick on a running play from scrimmage, at the snap the
+// game put there (situation: { los, togo, down, goal, hole: 'inside' | 'power' | 'outside' | 'draw', side }). Five
+// up front against four, the tight end and the receivers blocking, the backers and the safeties coming down; the
+// hole the play is drawn to is lit at the snap. Past the yellow line is a first down; the goal line, a touchdown.
+//
 // The rules are here with no screen, in yards: x across from the left sideline (0 to 53.3), d up the field
 // from our goal line, z up off the turf. What a bot (or the demo) gets is what's on the screen: where everyone
 // is and where they're going, the ball and its shadow. It steers through steer(), below.
@@ -75,11 +80,27 @@ function castOf(cast, pos) {
   return { me: cast?.me ?? null, pace, us: [], them: [], themPace: [], mate: null }
 }
 
+// a scrimmage play's men: ours the line (LT to RT), the tight end, the receivers and the quarterback; theirs the four
+// up front, the three backers, the corners and the safeties
+function scrimCast(cast) {
+  const pace = 1 + (cast?.me?.speed ?? 0) * 0.06
+  const x = (side, spot, i) => xiOf(cast, side, spot, i)
+  const us = [['ol', 0], ['ol', 1], ['ol', 2], ['ol', 3], ['ol', 4], ['te', 0], ['wr', 0], ['wr', 1], ['qb', 0], ['wr', 2]].map(([g, i]) => quiet(x('us', g, i)))
+  const them = [['dl', 0], ['dl', 1], ['dl', 2], ['dl', 3], ['lb', 0], ['lb', 1], ['lb', 2], ['cb', 0], ['cb', 1], ['s', 0], ['s', 1]].map(([g, i]) => quiet(x('them', g, i)))
+  const themPace = [0, 1, 2, 3].map(i => paceOf(cast, 'them', 'dl', i)).concat([0, 1, 2].map(() => 1), [0, 1, 2, 3].map(i => paceOf(cast, 'them', 'db', i)))
+  return { me: cast?.me ?? null, pace, us, them, themPace, mate: null }
+}
+const SNAP_MS = 750
+// where the play is drawn to: the gap off the ball (yards across from the ball, toward the play's side)
+const HOLE = { inside: 2.3, power: 4.6, outside: 9, draw: 1.2 }
+
 // ── The rules ───────────────────────────────────────────────────────────────
-export function make({ v, seed, cast, pos }) {
+export function make({ v, seed, cast, pos, game = null, situation = null }) {
   const r = rngOf(seed)
   const W = { top: TOP(v), acc: ACC(v), reach: REACH(v), brk: BRK(v), juke: JUKE_P(v), hands: byV(v, 0, 0.05) }
-  const who = castOf(cast, pos)
+  const sc = game === 'fr-run' && situation ? situation : null
+  const scrim = sc ? { los: clamp(Math.round(sc.los ?? 25), 1, 99), togo: Math.max(1, Math.round(sc.togo ?? 10)), down: sc.down ?? 3, goal: !!sc.goal, hole: HOLE[sc.hole] != null ? sc.hole : 'inside', side: sc.side < 0 ? -1 : 1 } : null
+  const who = scrim ? scrimCast(cast) : castOf(cast, pos)
   W.top *= who.pace
   // the kick: where it comes down, how long it hangs, the wind on it
   const land = { x: MID + (r() - 0.5) * 26, d: 4 + r() * 10 }
@@ -101,10 +122,46 @@ export function make({ v, seed, cast, pos }) {
   // (he sets up a step or three deeper than where it's coming down and comes up to it: the ring is in front of
   // him, in the open field, never under his feet or under the thumbstick)
   const me = { x: clamp(land.x + (r() - 0.5) * 6, 6, W_YD - 6), d: clamp(land.d - 1 - r() * 2, 1.5, 20), vx: 0, vd: 0, carry: false, juke: -1e9, jukeSide: 0, slow: 0, bump: -1e9, caughtAt: null, catchD: null }
+  if (scrim) setScrim()
+  // the scrimmage play: everyone on the ball, the back seven yards deep with it (he has it from the snap: the handoff)
+  function setScrim() {
+    const L = scrim.los, sd = scrim.side, hx = MID + sd * HOLE[scrim.hole]
+    scrim.hx = hx
+    Object.assign(ball, { x: MID, d: L - 5.5, z: 1.1, vx: 0, vd: 0, vz: 0, state: 'held', touched: true, landed: true })
+    const D = (i, x, d, v, extra = {}) => ({ i, k: false, safe: false, x, d, vx: 0, vd: 0, lane: x, eng: null, down: 0, tried: -1e9, v: v * (who.themPace[i] ?? 1) * (0.96 + r() * 0.08), ...extra })
+    const front = [-5.6, -1.7, 1.7, 5.6], backers = [-4.6, 0.4, 4.8]
+    cover.length = 0
+    front.forEach((dx, i) => cover.push(D(i, MID + dx, L + 0.9, 7.6)))
+    // (the second level reads it before it comes: the backers a beat, the corners and the safeties longer)
+    backers.forEach((dx, i) => cover.push(D(4 + i, MID + dx, L + 4.6 + r() * 0.8, 8.6, { hold: SNAP_MS + 330 + r() * 150 })))
+    cover.push(D(7, 6.5, L + 6.5, 9.4, { hold: SNAP_MS + 520 }), D(8, W_YD - 6.5, L + 6.5, 9.4, { hold: SNAP_MS + 520 }))
+    cover.push(D(9, MID - 7, L + 11, 9.2, { safe: true, hold: SNAP_MS + 600 }), D(10, MID + 7, L + 12.5, 9.2, { safe: true, hold: SNAP_MS + 600 }))
+    const O = (i, x, d, extra = {}) => ({ i, mate: false, x, d, vx: 0, vd: 0, tgt: null, eng: null, re: 0, beaten: 0, shedAt: 0, ...extra })
+    ours.length = 0
+    ;[-4.6, -2.3, 0, 2.3, 4.6].forEach((dx, i) => ours.push(O(i, MID + dx, L - 0.7)))
+    ours.push(O(5, MID + sd * 6.9, L - 0.9), O(6, 5.5, L - 0.5), O(7, W_YD - 5.5, L - 0.5), O(8, MID - sd * 0.6, L - 1.6, { qb: true }), O(9, MID - sd * 11, L - 0.8))
+    Object.assign(me, { x: MID, d: L - 5.5, carry: true, catchD: L, caughtAt: 0 })
+  }
+  // the snap: the line fires out and takes the four up front; the man over the hole is moved off it
+  function snapNow() {
+    const hx = scrim.hx, pair = [[0, 0], [1, 1], [3, 2], [4, 3]]
+    for (const [o, c] of pair) {
+      const b = ours[o], d = cover[c], at = Math.abs(d.x - hx) < 3.2
+      b.eng = d.i; d.eng = b.i
+      d.shedAt = g.t + 1000 * lerp(at ? 1.5 : 0.8, at ? 2.9 : 2.3, r()) * (scrim.hole === 'draw' ? 1.15 : 1)
+      if (at) d.x += Math.sign(d.x - hx || 1) * 1.15
+    }
+    // (a draw: the line shows pass first, and the rush comes up the field past the back)
+    if (scrim.hole === 'draw') for (const c of cover.slice(0, 4)) c.d += 0.6
+    // the center and the tight end climb to the backers on the play's side; the receivers take the corners
+    const lbs = cover.slice(4, 7).sort((a, b) => Math.abs(a.x - hx) - Math.abs(b.x - hx))
+    ours[2].tgt = lbs[0].i; ours[5].tgt = lbs[1].i; ours[6].tgt = 7; ours[7].tgt = 8
+    for (const b of [ours[2], ours[5], ours[6], ours[7]]) b.re = g.t + 900
+  }
   const g = {
     t: 0, game: 'kick-return', zones: 'none', stick: true, fx: [], done: null, outro: 1700, stamp: null, later: null,
     dirt: particles(64, fxSeed(seed)), nudge: nudge(), W, who, v,
-    me, ball, cover, ours, land, hang, phase: 'set', rel: null, res: null, broken: 0, word: null, prompt: 'WATCH THE KICK',
+    me, ball, cover, ours, land, hang, phase: 'set', rel: null, res: null, broken: 0, word: null, prompt: scrim ? 'FIND THE HOLE' : 'WATCH THE KICK', scrim,
     ctl: { tid: null, ox: 0, oy: 0, tx: 0, ty: 0, ax: 0, ay: 0, ext: false, keys: { L: 0, R: 0, U: 0, D: 0 }, jid: null, jukeLit: -999 },
     stick: { x: 0, y: 0 },
     hud: { prompt: null, dots: [null] },
@@ -112,12 +169,14 @@ export function make({ v, seed, cast, pos }) {
       g.t += dt
       if (g.later && g.t >= g.later.at) { g.stamp = g.later; g.later = null }
       const s = dt / 1000
+      if (g.phase === 'set' && scrim) { if (g.t >= SNAP_MS) { g.phase = 'live'; release(); snapNow(); g.fx.push('tap', 'h:light') } return }
       if (g.phase === 'set') { const k = cover[10], f = clamp(g.t / KICK_AT, 0, 1); k.d = lerp(KICK_D + 6, KICK_D + 0.7, f); k.vd = f < 1 ? -7 : 0; if (g.t >= KICK_AT) { g.phase = 'live'; ball.state = 'air'; g.fx.push('tap', 'h:light') } return }
       if (g.res) return after(s)
       // (a line on the play stays up a moment, then it's off the screen)
       if (g.prompt !== g.saidW) { g.saidW = g.prompt; g.saidAt = g.t }
       if (g.prompt && me.carry && g.t - g.saidAt > 1500) g.prompt = null
       if (ball.state === 'air' && g.prompt === 'WATCH THE KICK' && ball.z > 6) g.prompt = 'GET UNDER IT'
+      if (scrim && g.prompt === 'FIND THE HOLE' && g.t - g.rel > 1300) g.prompt = null
       stickNow()
       moveMe(s)
       moveBall(s)
@@ -274,7 +333,8 @@ export function make({ v, seed, cast, pos }) {
       }
       if (g.t < b.beaten) { b.vx *= 0.9; b.vd *= 0.9; b.x += b.vx * s; b.d += b.vd * s; continue }
       // (first they turn and drop to set the wall, the way a return team does, then go and find a man)
-      if (!b.mate && g.t - g.rel < 380) { seek(b, b.x0 ?? (b.x0 = b.x), (b.d0 ?? (b.d0 = b.d)) - 3, 6.5, s); continue }
+      if (b.qb) { seek(b, MID - scrim.side * 6, scrim.los - 4, 6.5, s); continue }
+      if (!b.mate && !scrim && g.t - g.rel < 380) { seek(b, b.x0 ?? (b.x0 = b.x), (b.d0 ?? (b.d0 = b.d)) - 3, 6.5, s); continue }
       if (b.tgt == null || g.t >= b.re || cover[b.tgt].eng != null) {
         b.re = g.t + 400
         let best = null, bd = 1e9
@@ -308,6 +368,7 @@ export function make({ v, seed, cast, pos }) {
     for (const c of cover) {
       if (!live) continue
       if (g.t < c.down) { c.vx *= 0.8; c.vd *= 0.8; continue }
+      if (g.t < (c.hold ?? 0) && c.eng == null) continue
       if (c.eng != null) {
         const b = ours[c.eng]
         // he's past the pair, or the man sheds him: free again
@@ -399,6 +460,7 @@ export function make({ v, seed, cast, pos }) {
     }
   }
   function settle(kind, why, spotD) {
+    if (scrim) return settleScrim(kind, why, spotD)
     const spot = clamp(Math.round(spotD), kind === 'tackle' || kind === 'out' ? 0 : 1, 100)
     const catchD = me.catchD != null ? Math.round(me.catchD) : Math.round(land.d)
     const td = kind === 'td'
@@ -419,6 +481,24 @@ export function make({ v, seed, cast, pos }) {
     const note = td ? `kick return touchdown, ${yards} yards` : kind === 'touchback' ? 'touchback at the 20' : kind === 'lost' ? 'muffed it, and they recovered' : `${yards > 0 ? `${yards}-yard return` : 'return'} to ${yardWord(spot).toLowerCase()}`
     g.done = outcome(good ? Math.max(score, 0.5) : Math.min(score, 0.45), good, note, { made: good ? 1 : 0, of: 1, yards, spot, td, tds: td ? 1 : 0, long: yards, broken: g.broken, pts: td ? 7 : null, kind }, false)
     g.outro = td ? 3600 : 2200
+  }
+  // a run from scrimmage: the gain, the line to gain, the goal line
+  function settleScrim(kind, why, spotD) {
+    const L = scrim.los, td = kind === 'td'
+    const spot = td ? 100 : clamp(Math.round(spotD), -5, 99)
+    const gain = spot - L, first = td || gain >= scrim.togo, safety = !td && spot <= 0
+    g.res = { kind, why, at: g.t, spot, yards: gain, catchD: L, td, good: first }
+    g.hud.dots[0] = first
+    const word = td ? 'TOUCHDOWN' : safety ? 'SAFETY' : first ? 'FIRST DOWN' : gain > 0 ? `GAIN OF ${gain}` : gain === 0 ? 'NO GAIN' : `LOSS OF ${-gain}`
+    g.prompt = td ? `${gain}-YARD RUN` : kind === 'out' ? 'PUSHED OUT OF BOUNDS' : why
+    g.stamp = { text: word, good: first ? true : gain > 0 && !safety ? null : false, at: g.t + (td ? 150 : 0), size: word.length > 12 ? 36 : 50 }
+    g.fx.push('stamp', td ? 'h:success' : kind === 'tackle' ? 'h:heavy' : 'h:medium')
+    if (first) g.popAt = g.t
+    if (td) g.fx.push('claim')
+    if (kind === 'tackle') g.nudge.kick(g.t, 4, 0, 1)
+    const score = td ? 1 : clamp(0.5 + (gain - scrim.togo) / 20, 0, 0.95)
+    g.done = outcome(first ? Math.max(score, 0.5) : Math.min(score, 0.45), first, td ? `${gain}-yard touchdown run` : `${gain}-yard run`, { made: first ? 1 : 0, of: 1, yards: gain, spot, td, kind, broken: g.broken, oob: kind === 'out' }, false)
+    g.outro = td ? 3200 : 1900
   }
   // after it's decided: a touchdown pulls up in the end zone, a tackle drives him down, the others come to the ball
   function after(s) {
@@ -534,6 +614,7 @@ export function draw(ctx, g, view) {
     },
   })
   crowdPop(ctx, view, [c.us, c.trim], t - (g.popAt ?? -1e9), { ms: res?.td ? 2800 : 1300, power: res?.td ? 1 : 0.55 })
+  if (g.scrim) scrimLines(ctx, view, g, fy)
   const party = res?.td ? since - 900 : -1
   // ── theirs
   g.cover.forEach((m, i) => {
@@ -629,6 +710,28 @@ export function draw(ctx, g, view) {
   if (g.phase === 'set') warm(g, us, them)
   vignette(ctx, view)
   drawControls(ctx, view, g)
+}
+// the line of scrimmage (blue) and the line to gain (yellow) on the grass, and the hole the play's drawn to, at the snap
+function scrimLines(ctx, view, g, fy) {
+  const s = g.scrim
+  const across = (d, color, w) => {
+    const a = tilt(view, X(0), fy(d)), b = tilt(view, X(W_YD), fy(d))
+    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, w * a.s)
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
+  }
+  across(s.los, 'rgba(63,134,255,.9)', 2.6)
+  if (!s.goal && s.los + s.togo < 100) across(s.los + s.togo, 'rgba(247,214,74,.95)', 3.4)
+  const age = g.rel == null ? 0 : g.t - g.rel
+  if (age < 1400 && !g.res) {
+    // (an arrow from the back to the hole, fading as he gets there)
+    const a = tilt(view, X(g.me.x), fy(g.me.d + 1.2)), b = tilt(view, X(s.hx), fy(s.los + 1.5))
+    ctx.globalAlpha = clamp(1 - age / 1400, 0, 1) * 0.85
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.4 * b.s; ctx.setLineDash([6 * b.s, 5 * b.s])
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([])
+    const ang = Math.atan2(b.y - a.y, b.x - a.x), h = 9 * b.s
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - h * Math.cos(ang - 0.45), b.y - h * Math.sin(ang - 0.45)); ctx.lineTo(b.x - h * Math.cos(ang + 0.45), b.y - h * Math.sin(ang + 0.45)); ctx.fill()
+    ctx.globalAlpha = 1
+  }
 }
 function prompt(ctx, view, str, y, size = 17) {
   ctx.font = `${size}px ${LABEL}`

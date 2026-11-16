@@ -40,7 +40,7 @@ function checkRow(row) {
     if (t < 0 || t > 5400) bad(`play at ${t}`)
   }
   if (!row.hl || BANNED.test(row.hl) || BANNED.test(row.sub ?? '')) bad(`headline "${row.hl}" / "${row.sub}"`)
-  if (samples.length < 14 && (row.mo || games % 4 === 0)) samples.push(`${row.hl} | ${row.sub} | ${kp.map(x => `${FR.whenOf(x[0])} ${x[3]}`).slice(-3).join(' · ')}`)
+  if (samples.length < 14 && (row.ms || games % 4 === 0)) samples.push(`${row.hl} | ${row.sub} | ${kp.map(x => `${FR.whenOf(x[0])} ${x[3]}`).slice(-3).join(' · ')}`)
 }
 function moment() {
   const v = FR.momentView(F)
@@ -55,7 +55,7 @@ function moment() {
   }
   if (!cast.me?.me || cast.me.number == null) bad('cast without the build')
   moments++
-  FR.finishMoment(F, H() < FR.normalRate(F.teams[F.team].r.find(p => p.i === v.pid).o))
+  FR.finishMoment(F, null)
 }
 for (let y = 0; y < N; y++) {
   opening[F.year] = new Map(FR.SHORTS.flatMap(s => Object.values(FR.startersOf(F, s)).map(p => [p.i, FR.groupOf(p)])))
@@ -72,7 +72,7 @@ for (let y = 0; y < N; y++) {
     if (wk && !wk.bye) { const l = lineOf(F, wk.home ? wk.opp : F.team, wk.home ? F.team : wk.opp); if (!/^[A-Z]{2,3} -\d+(\.5)?$|^PICK$/.test(l.text) || l.total < 30 || l.total > 60) bad(`line ${l.text} ${l.total}`) }
     const t0 = performance.now()
     const r = FR.playWeek(F, { moments: true })
-    if (r.pending) moment()
+    if (r.pending) while (F.pend) moment()
     for (const n of (r.pending ? [] : r.news ?? [])) if (n.k === 'inj') { inj++; if (n.wk >= 4) ir++; if (!n.what) bad(`an injury with no name: ${JSON.stringify(n)}`) }
     // every man out has his injury, and what the screens say about it reads right
     for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.in) {
@@ -92,7 +92,7 @@ for (let y = 0; y < N; y++) {
   FR.intoPlayoffs(F)
   while (F.phase === 'playoffs') {
     const r = FR.playWeek(F, { moments: true })
-    if (r.pending) moment()
+    if (r.pending) while (F.pend) moment()
     const row = F.log[F.log.length - 1]
     if (row && row !== checkRow.last) { checkRow.last = row; checkRow(row) }
   }

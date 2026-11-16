@@ -17,6 +17,7 @@ import {
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
+import { GamesSwitch as MomentsModes } from '../simFlow'
 import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
@@ -1428,20 +1429,12 @@ function Contract({ c, setCareer }) {
 
 // The dashboard's Mini Games choice (the one made on the New Career screen, still changeable):
 // SIMPLE, ADVANCED or OFF for the key moments, camp drills and the combine. PRACTICE opens the lab
+// (the switch itself is the one Franchise uses too: simFlow.jsx GamesSwitch)
 function GamesSwitch({ c, setCareer }) {
-  const mode = gamesMode(c)
   return (
-    <div className="cr-gamesw cr-gamesw--3">
-      <div className="cr-gamesw-top">
-        <span><b>KEY MOMENTS MINI GAMES</b></span>
-        <button className="cr-gamesw-practice" onClick={() => { sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'mglab' })) }}>PRACTICE <IconArrow size={12} /></button>
-      </div>
-      <div className="cr-pos cr-games" role="radiogroup" aria-label="Mini games" style={{ '--n': GAMES_MODES.length }}>
-        {GAMES_MODES.map(([m, label]) => (
-          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'is-on' : ''} onClick={() => { if (m !== mode) { setCareer(setGamesMode(c, m)); sfx('tap') } }}>{label}<small>{GAMES_WHAT[m]}</small></button>
-        ))}
-      </div>
-    </div>
+    <MomentsModes mode={gamesMode(c)} modes={GAMES_MODES} what={GAMES_WHAT} title="KEY MOMENTS MINI GAMES" onPick={m => setCareer(setGamesMode(c, m))}
+      cls={{ root: 'cr-gamesw cr-gamesw--3', top: 'cr-gamesw-top', group: 'cr-pos cr-games' }}
+      extra={<button className="cr-gamesw-practice" onClick={() => { sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'mglab' })) }}>PRACTICE <IconArrow size={12} /></button>} />
   )
 }
 function Player({ c, setCareer }) {

@@ -30,7 +30,7 @@ const DB_V = 0.084, LB_V = 0.074, PEDAL_V = 0.052
 const FLIP_GAP = 17, FLIP_MS = 1100, TURN_MS = 170   // how much cushion he gives before he turns and runs, and what the turn costs
 const TRAIL_TAU = 105, LEV = 17                      // in phase: this far behind (as a lag, ms) and this far to the side of him
 const WIN_P = 0.84, HALF_P = 0.5                     // how often someone gets a step on his man: most snaps, not all of them
-const GOAL = 50 * YD, TOP = GOAL + 10 * YD
+const GOAL = 50 * YD, TOP = GOAL + 10 * YD, GOAL0 = GOAL
 const curve = (v, p) => Math.pow(clamp((v - 1) / 10, 0, 1), p)
 export const catchOf = v => 7 + 35 * curve(v, 1.4)        // how far he can reach for it
 export const scatterOf = v => byV(v, 3, 0.8)              // sd of where a good throw really lands
@@ -170,8 +170,9 @@ function moveAt(p, r) {
 }
 
 // ── An offense and a defense, on the ball ───────────────────────────────────────────────────────
-function mkTeams(r, calls, Mx, cast, bomb = false) {
-  const call = calls[Math.floor(r() * calls.length)]
+function mkTeams(r, calls, Mx, cast, bomb = false, called = null) {
+  // (pick: a called play, Franchise's moments; the draw is made either way, so the rest of the snap plays the same)
+  const c0 = Math.floor(r() * calls.length), call = calls[called ?? c0] ?? calls[c0]
   const flipped = Mx(0) !== 0
   const pacey = (id, base) => {
     const [g, i] = OFF_ROLE[id]
@@ -279,8 +280,8 @@ function mkTeams(r, calls, Mx, cast, bomb = false) {
 }
 
 // ── The play ────────────────────────────────────────────────────────────────────────────────────
-export function make({ v, arm = v, seed, game, cast = null }) {
-  return game === 'acc' ? makeAcc({ v, arm, seed, game }) : makePlay({ v, arm, seed, game, cast })
+export function make({ v, arm = v, seed, game, cast = null, situation = null }) {
+  return game === 'acc' ? makeAcc({ v, arm, seed, game }) : makePlay({ v, arm, seed, game, cast, sit: situation })
 }
 const DEF_H = 700
 // a press on the screen → the spot on the field. A press on one of his own men aims at that man: the
@@ -305,13 +306,17 @@ function aimOf(g, a, own) {
 // (low in the picture: the QB's the man in front of us, and the field runs away from him)
 const losOf = h => Math.round(h * 0.84)
 const kOf = (los, top) => (los - 30) / top
-function makePlay({ v, arm, seed, game, cast }) {
+// fr-pass (Franchise's moments): the snap the game put there: sit { togo, toGoal, down, call (LONG_CALLS' index) }; the
+// line to gain, the goal line and the play are the game's, the rest is Third & Long
+function makePlay({ v, arm, seed, game, cast, sit = null }) {
+  const fr = game === 'fr-pass' && sit ? sit : null
+  const GOAL = fr ? clamp(fr.toGoal ?? 50, 1, 99) * YD : GOAL0
   const r = rngOf(seed)
   const mirror = r() < 0.5
   const Mx = x => (mirror ? 360 - x : x)
   const bomb = game === 'bomb'
-  const T = mkTeams(r, bomb ? BOMB_CALLS : LONG_CALLS, Mx, cast, bomb)
-  const line = bomb ? 0 : 9 * YD        // the line to gain (third & nine)
+  const T = mkTeams(r, bomb ? BOMB_CALLS : LONG_CALLS, Mx, cast, bomb, fr?.call ?? null)
+  const line = bomb ? 0 : (fr ? clamp(fr.togo ?? 9, 1, 40) : 9) * YD        // the line to gain (third & nine)
   const need = bomb ? 15 * YD : line    // how far down the field counts
   const reach = bomb ? catchOf(v) * 0.8 + 2 : catchOf(v) + 2, scat = scatterOf(v)
   // (the bomb: he's on the ball's placement sooner, and the rush gets home sooner)
@@ -322,7 +327,7 @@ function makePlay({ v, arm, seed, game, cast }) {
   const g = {
     t: 0, game, zones: 'none', aim: true, fx: [], done: null, outro: 1500, stamp: null,
     flair, nudge: nudge(), dirt: particles(48, flair + 1), cz: 1,
-    phase: 'set', snap: SET_MS, mirror, ...T, GOAL, TOP, line, need, reach, scat, sackAt,
+    phase: 'set', snap: SET_MS, mirror, ...T, GOAL, TOP, line, need, reach, scat, sackAt, down: fr?.down ?? 3,
     ball: null, res: null, rush: 0, hold: null, tap: null, pump: null,
     los: los0, k: kOf(los0, TOP),
     tilted: true, cam: { w: 360, h: DEF_H },
@@ -529,7 +534,7 @@ function makePlay({ v, arm, seed, game, cast }) {
       const depth = scores ? GOAL : headY
       const mz = res.miss
       if (depth < need) {
-        g.done = outcome(bomb ? 0.25 : 0.32, false, mz ? 'Made a man miss, but a checkdown is no bomb.' : bomb ? 'A checkdown is no bomb.' : 'Short of the sticks.', { made: 0, of: 1, gain: Math.max(0, Math.round(depth / YD)) })   // (caught short: the yards he got, for a mode that plays the result on)
+        g.done = outcome(bomb ? 0.25 : 0.32, false, mz ? 'Made a man miss, but a checkdown is no bomb.' : bomb ? 'A checkdown is no bomb.' : 'Short of the sticks.', { made: 0, of: 1, gain: Math.max(0, Math.round(depth / YD)), to: tp.id })   // (caught short: the yards he got, for a mode that plays the result on)
         g.stamp = { text: bomb ? 'TOO SHORT' : 'SHORT OF THE STICKS', good: false, at: when + 40, size: bomb ? 46 : 32 }
         g.outro = clamp(when - g.t + 1400, 1200, 4600)
         res.afterAt = when
@@ -540,7 +545,7 @@ function makePlay({ v, arm, seed, game, cast }) {
       const score = bomb ? clamp(0.6 + (depth / GOAL) * 0.4, 0.6, 1) : clamp(0.72 + (past / (20 * YD)) * 0.28, 0.72, 1)
       const word = scores ? 'TOUCHDOWN' : bomb ? 'BIG GAIN' : 'FIRST DOWN'
       const said = scores ? 'Touchdown.' : bomb ? `A ${Math.round(depth / YD)} yard strike.` : `${Math.round(past / YD)} past the sticks.`
-      g.done = outcome(scores ? 1 : score, true, mz ? (scores ? 'Broke a tackle and took it to the house.' : `Made the first man miss. ${said}`) : said, { made: 1, of: 1, gain: Math.round(depth / YD), past: Math.max(0, Math.round(past / YD)), ...(scores ? { pts: 7 } : {}) })   // (a throw that scores is 7 on the board)
+      g.done = outcome(scores ? 1 : score, true, mz ? (scores ? 'Broke a tackle and took it to the house.' : `Made the first man miss. ${said}`) : said, { made: 1, of: 1, gain: Math.round(depth / YD), past: Math.max(0, Math.round(past / YD)), to: tp.id, ...(scores ? { pts: 7 } : {}) })   // (a throw that scores is 7 on the board)
       g.stamp = mz ? { text: `${scores ? 'BROKE A TACKLE' : 'MADE HIM MISS'}: ${word}`, good: true, at: when + 40, size: 24 } : { text: word, good: true, at: when + 40 }
       // (a touchdown is the payoff: time for the spike, his dance and everyone getting to him)
       g.outro = scores ? clamp(when - g.t + 2900, 2600, 6200) : clamp(when - g.t + 1700, 1400, 5000)
@@ -550,7 +555,7 @@ function makePlay({ v, arm, seed, game, cast }) {
     }
     const words = { pick: 'PICKED OFF', swat: 'BROKEN UP', over: 'OVERTHROWN', under: 'UNDERTHROWN', wide: 'INCOMPLETE' }
     const near = clamp(1 - rr / (reach * 4 + 40), 0, 1)
-    g.done = outcome(why === 'pick' ? 0 : 0.1 + near * 0.2, false, words[why].toLowerCase(), { made: 0, of: 1, ...(why === 'pick' ? { ints: 1 } : {}) })   // (picked off: an interception in his box score)
+    g.done = outcome(why === 'pick' ? 0 : 0.1 + near * 0.2, false, words[why].toLowerCase(), { made: 0, of: 1, to: tp.id, ...(why === 'pick' ? { ints: 1, at: Math.max(0, Math.round(b.ly / YD)) } : {}) })   // (picked off: an interception in his box score)
     g.stamp = { text: words[why], good: false, at: g.t + 120 }
     g.outro = why === 'pick' ? 2900 : 1900
     g.fx.push('pop', 'h:medium')
@@ -1051,7 +1056,7 @@ export function paintFieldFlat(x, view, ez, pyd, us, numbers = true, lines = tru
   x.fillStyle = 'rgba(10,20,14,.5)'; x.fillRect(-view.w * 0.25, 0, view.w * 0.25 - 26, view.h); x.fillRect(view.w + 26, 0, view.w * 0.25, view.h)
 }
 function paintFlat(x, view, g, c, los, k) {
-  paintFieldFlat(x, view, g ? los - GOAL * k : los - 75 * YD * k, YD * k, c.us)
+  paintFieldFlat(x, view, g ? los - (g.GOAL ?? GOAL) * k : los - 75 * YD * k, YD * k, c.us)
   // the line of scrimmage and the line to gain lie on the grass
   if (g) { x.fillStyle = '#3f86ff'; x.fillRect(SL, los - 1.6, SR - SL, 3.2) }
   if (g?.line) { x.fillStyle = '#f7d64a'; x.fillRect(SL, los - g.line * k - 2, SR - SL, 4) }
@@ -1239,14 +1244,14 @@ function drawBroadcast(ctx, g, view) {
   ctx.save()
   pushIn(ctx, g, view, los, k)
   // the camera doesn't move on this one, so the crowd and the field are one painted picture
-  layer(ctx, view, `broadcast|${g.game}|${c.us}|${them.color}`, x => {
+  layer(ctx, view, `broadcast|${g.game}|${c.us}|${them.color}|${g.line}|${g.GOAL}|${g.down}`, x => {
     stands(x, view, 'field', [c.us, c.trim])
     const hy = tilt(view, 0, 0).y
-    ground(x, view, f => paintFlat(f, view, g, c, los, k), `flat|${g.game}|${c.us}`, 0, Math.round((h - hy) * view.px * 0.7))
+    ground(x, view, f => paintFlat(f, view, g, c, los, k), `flat|${g.game}|${c.us}|${g.line}|${g.GOAL}`, 0, Math.round((h - hy) * view.px * 0.7))
     goalPosts(x, view, view.field?.backY)
     floodlight(x, view)
-    endZonePylons(x, view, los - GOAL * k, YD * k)
-    chainStick(x, view, SR + 5, los, '3')
+    endZonePylons(x, view, los - (g.GOAL ?? GOAL) * k, YD * k)
+    chainStick(x, view, SR + 5, los, String(g.down ?? 3))
     if (g.line) chainStick(x, view, SR + 5, los - g.line * k)
     // the benches: both teams, standing along their sidelines
     // (in knots, the way a sideline stands: not a fence)
@@ -1471,7 +1476,7 @@ function drawBroadcast(ctx, g, view) {
   if (!lightFx()) g.dirt.draw(ctx, g.t)
   // the man in stripes on the sideline: he comes down to the spot and calls it. The head coach beside his bench.
   const ref = res?.runner ?? (res?.dq && res.why === 'pick' ? res.dq : null)
-  const refY0 = Math.max(g.line, 18 * YD), refTo = ref ? Math.min(GOAL, ref.y) : res && !sack ? res.y : refY0
+  const refY0 = Math.max(g.line, 18 * YD), refTo = ref ? Math.min(g.GOAL ?? GOAL, ref.y) : res && !sack ? res.y : refY0
   const refGo = res ? easeOut(prog(g.t, res.at + 80, res.at + 1100)) : 0
   const ry = lerp(refY0, refTo, refGo)
   const refSig = mood === 'td' && after > 40 ? 'arms-up' : mood === 'first' && after > 120 ? 'point-l' : (mood === 'over' || mood === 'under' || mood === 'wide' || mood === 'swat' || mood === 'bat') && after > 520 ? (Math.floor(after / 150) % 2 ? 'wave-a' : 'wave-b') : null

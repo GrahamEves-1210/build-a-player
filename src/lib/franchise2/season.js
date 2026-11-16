@@ -1,22 +1,22 @@
 // FRANCHISE: the season, a week at a time.
 //   playWeek(F, opts)  every game of the week; the player's team's game can stop on its moment (F.pend)
-//   finishMoment(F, hit)  the moment's play is in: the game plays out from there and the week ends
+//   finishMoment(F, out)  a moment's snap is in: the game plays on to its next moment, or to the final and the week's end
 //   chooseEvent(F, i)  one of the two answers to the week's event card
 // The player's team's games keep a result row (F.log) the hub reads: the score, the quarters, the scoring summary
 // with real names (plays.js), a headline written the way a beat writer files it, the builds' lines.
 // Chemistry, injuries, events and scout points move with the weeks. (Hype is gone, owner 2026-11-14: nothing on
 // the season side reads or moves it.)
-import { TEAM, SHORTS, OFFENSE, lineup, strength, makeGen, fillLeague, freshName } from './league'
-import { newGame, run, resolveKey, boxOf, normalRate, clockText, periodOf, spotText } from './game'
+import { TEAM, SHORTS, strength, makeGen, fillLeague, freshName } from './league'
+import { newGame, run, resolveSnap, simSnap, boxOf, clockText, periodOf } from './game'
+import { nameSnap } from './moments'
 import { DIV_OF } from './schedule'
 import { standings, startPlayoffs, endRound, finishOf, ROUNDS, records } from './standings'
 import { rngOf, clamp, r1 } from './rng'
 import { playFootballSeason } from '../teamSeason'
 import { fbLine } from '../squadSeason'
-import { momentsOf } from '../minigames'
 import { boxRoster, gameLines } from './stats'
 import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
-import { coachLate, coachDay, momentLift, chemWeek } from './coach'
+import { coachLate, coachDay, chemWeek } from './coach'
 import { askOf, signDeal, canSign, cutMan, minimumFor } from './contracts'
 import { kickTraits, kickerOf, addKickStats, kickLine } from './kick'
 import { scoringSummary, whenOf } from './plays'
@@ -50,47 +50,13 @@ const STAT_KEYS = ['pc', 'pa', 'py', 'ptd', 'int', 'ra', 'ry', 'rtd', 'rc', 'ryd
 function addStats(into, from) { for (const k of STAT_KEYS) if (from?.[k]) into[k] = (into[k] ?? 0) + from[k] }
 
 // ── Moments ──────────────────────────────────────────────────────────────────
-// which build plays it: one of the player's builds who starts (a quarterback first on offense)
-function momentBuild(F, R, allow) {
-  const L = lineup(F.teams[F.team])
-  // (a kicker's moment would be a kick, not a third down: the moments are the down-and-distance plays)
-  const mine = Object.values(L).filter(p => p.b != null && p.p !== 'k' && momentsOf(p.p).some(g => !allow || allow(g)))
-  if (!mine.length) return null
-  const qb = mine.find(p => p.p === 'qb')
-  return qb && R.u() < 0.5 ? qb : R.pick(mine)
-}
-// a big game: the division, the stretch run, the playoffs, or now and then any week (most seasons: five to eight)
-function bigGame(F, g, R, po) {
-  if (po) return true
-  if ((F.moments ?? 0) >= 8) return false
-  if (DIV_OF[g.h] === DIV_OF[g.a]) return R.u() < 0.9
-  if (F.wk >= 12) return R.u() < 0.75
-  return R.u() < 0.45
-}
-// The play that fits the moment: what the build does on that down, distance and spot
-const OFF_PICK = {
-  // (one snap, never a whole drive: the two-minute drill starts its own drive at 1st and 10, not this down and spot)
-  qb: k => (k.goal ? (k.d <= 1 ? ['sneak', 'goal-line'] : ['goal-line']) : k.down === 4 && k.margin < 0 && k.d >= 5 ? ['third-long', 'hot-read'] : k.d >= 9 ? (k.y < 55 ? ['bomb', 'third-long'] : ['third-long']) : k.d <= 3 ? ['audible', 'hot-read', 'sneak'] : ['hot-read', 'escape', 'third-long']),
-  rb: k => (k.goal ? ['goal-line', 'gap'] : k.d <= 3 ? ['gap'] : ['juke', 'gap']),
-  wr: k => (k.goal ? ['goal-line', 'catch'] : k.d >= 8 ? ['catch', 'release'] : ['juke-wr', 'catch', 'release']),
-  te: k => (k.goal ? ['goal-line', 'catch'] : k.d <= 3 ? ['seal', 'catch'] : ['catch', 'juke-te', 'release']),
-  ol: k => (k.d <= 3 || k.goal ? ['seal', 'pass-pro'] : ['pass-pro']),
-}
-const DEF_PICK = {
-  db: k => (k.d >= 5 ? ['jump-route', 'tackle-angle'] : ['tackle-angle', 'jump-route']),
-  dl: k => (k.d >= 5 ? ['pass-rush', 'run-stuff'] : ['run-stuff', 'pass-rush', 'tackle-angle']),
-  lb: k => (k.d >= 6 ? ['zone-drop', 'pass-rush', 'hit-stick'] : ['run-stuff', 'tackle-angle', 'hit-stick']),
-}
-export function gameForMoment(pos, key, R, allow) {
-  const list = (OFFENSE.includes(pos) ? OFF_PICK[pos] : DEF_PICK[pos])?.(key) ?? []
-  const ok = list.filter(g => momentsOf(pos).includes(g) && (!allow || allow(g)))
-  return ok.length ? (R.u() < 0.7 ? ok[0] : R.pick(ok)) : null
-}
-// what a hit means on the play (how the result reads; the scoreboard follows what it was)
-const KIND = { 'jump-route': 'pick', 'pass-rush': 'sack', bomb: 'big', 'third-long': 'big' }
+// (owner, 2026-11-16) A moment is a snap of the player's own game: the game puts it where it falls (game.js snapOf:
+// the two-minute drill, third and long late, the red zone with the game on it, fourth down; on defense their last
+// drive or a goal-line stand), he calls the play and runs it (moments.js names it), and the game goes on from what
+// the snap did. A game can stop on more than one: F.pend holds the game between them.
+// opts: { moments: bool (the player's moments switch) }
 
 // ── A week ───────────────────────────────────────────────────────────────────
-// opts: { moments: bool (the mini games aren't on NONE), allow: game id → bool (SIMPLE's games) }
 export function playWeek(F, opts = {}) {
   if (F.pend) return { pending: true }
   if (F.ev) return { event: true }
@@ -109,73 +75,89 @@ export function playWeek(F, opts = {}) {
   if (!mine) return endWeek(F, null)
   const { g, seed } = mine
   const G = gameOf(F, g, seed, po)
-  const R = rngOf(`${seed}-moment`)
-  if (opts.moments && bigGame(F, g, R, po)) {
-    const p = momentBuild(F, R, opts.allow)
-    if (p) {
-      const us = g.h === F.team ? 'h' : 'a'
-      G.key = { us, side: OFFENSE.includes(p.p) ? 'off' : 'def', h: normalRate(p.o), bonus: momentLift(F), window: 180 + Math.floor(R.u() * 360), pid: p.i }
-    }
-  }
+  if (opts.moments) G.key = { us: g.h === F.team ? 'h' : 'a', off: true, def: true }
   const S = run(newGame(G))
   if (S.key) {
-    const p = F.teams[F.team].r.find(x => x.i === G.key.pid)
-    const game = gameForMoment(p.p, S.key, R, opts.allow)
-    if (game) {
-      // (the plays before it, named now: the live feed shows them, and the final summary keeps them as they were)
-      const kp0 = scoringSummary(F, S, S.key.us, null, null, null, { credits: true })
-      F.pend = { S, pid: p.i, b: p.b, game, po: !!po, kp0 }
-      return { pending: true }
-    }
-    // (no play of his fits the spot: the game goes on without a moment)
-    resolveKey(S, R.u() < S.key.chance, null, 'auto')
+    // (the plays before it, named now: the live feed shows them, and the final summary keeps them as they were)
+    const kp0 = scoringSummary(F, S, S.key.us, null, null, null, { credits: true })
+    F.pend = { S, po: !!po, kp0, ms: [] }
+    return { pending: true }
   }
-  return finishUserGame(F, mine, S, null)
+  return finishUserGame(F, mine, S, [], null)
 }
+// the drives as the screens read them: [t0, t1, mine (1 the player's team), y0 (from that offense's own goal), res, at]
+const RES = { td: 'T', fg: 'F', miss: 'M', punt: 'P', to: 'X', downs: 'D', end: 'E', kneel: 'K', sf: 'S' }
+export const driveRows = (S, us) => (S.dr ?? []).map(d => [d.t0, d.t1, d.s === us ? 1 : 0, d.y0, RES[d.res] ?? 'E', d.at])
 // the moment as the screen shows it: the game's own state
 export function momentView(F) {
   const P = F.pend
-  if (!P) return null
-  const k = P.S.key, opp = P.S.G[k.us === 'h' ? 'a' : 'h']
+  const S = P?.S, k = S?.key
+  if (!k) return null
+  const us = k.us, opp = S.G[us === 'h' ? 'a' : 'h']
+  const off = k.ball === 'us'
+  const offT = off ? F.team : opp, defT = off ? opp : F.team
+  const L = startersOf(F, F.team)
+  // the man the player runs: the quarterback on a pass, the back on a run, the middle linebacker on defense
+  const ctl = off ? { pass: L.qb1?.i ?? null, run: L.rb1?.i ?? null } : { stop: (L.lb1 ?? L.lb2 ?? L.s1 ?? L.edge1)?.i ?? null }
   return {
-    game: P.game, pid: P.pid, b: P.b, po: P.po, opp, us: F.team, home: k.us === 'h',
-    mine: k.mine, theirs: k.opp, clock: clockText(k.t), period: periodOf(k.t), t: k.t, down: k.down, d: k.d, y: k.y, goal: k.goal,
-    ball: k.ball, spot: k.goal ? 'goal' : spotText(k.y), seed: `${P.S.G.seed}-mg`,
+    kind: k.kind, side: k.side, ball: k.ball, down: k.down, d: k.d, y: k.y, goal: k.goal, t: k.t, clock: clockText(k.t), period: periodOf(k.t), left: k.left,
+    mine: k.mine, theirs: k.opp, opp, us: F.team, home: us === 'h', po: P.po, i: k.i, half: k.half, ot: k.ot,
     // the spot the broadcast way: "DEN 35" on the offense's own side, "ARI 47" across midfield
-    feed: (P.kp0 ?? []).map(x => x.slice(0, 4)),
-    spotTxt: (() => { const off = k.ball === 'us' ? F.team : opp, def = k.ball === 'us' ? opp : F.team; return k.y === 50 ? '50' : k.y < 50 ? `${off} ${k.y}` : `${def} ${100 - k.y}` })(),
+    spotTxt: k.y === 50 ? '50' : k.y < 50 ? `${offT} ${k.y}` : `${defT} ${100 - k.y}`,
+    seed: `${S.G.seed}-mg-${S.di}`, ctl, pid: off ? ctl.pass ?? ctl.run : ctl.stop,
+    feed: (P.kp0 ?? []).map(x => x.slice(0, 4)), dr: driveRows(S, us), ms: P.ms ?? [],
+    // (the drive it's on: when and where it started)
+    from: S.keyFrom ? { t0: S.keyFrom.t0, y0: S.keyFrom.y0 } : null,
   }
 }
-export function finishMoment(F, hit) {
-  const P = F.pend
-  const S = P.S, k = S.key
-  const mo = { pid: P.pid, b: P.b, game: P.game, hit: !!hit, ball: k.ball, down: k.down, d: k.d, goal: k.goal, togo: 100 - k.y, t: k.t, pre: P.kp0 ?? null }
-  resolveKey(S, hit, hit ? KIND[P.game] ?? null : null, 'play')
-  mo.line = S.keyOut?.line
-  mo.kind = S.keyOut?.kind
+// The moment's snap is in (out: what the play did, moments.js playResult; nothing, or true/false from a script: the
+// sim plays it). The game goes on to its next moment ({ pending: true }) or to the final (the week's end).
+export function finishMoment(F, out = null) {
+  const P = F.pend, S = P.S
+  const v = momentView(F)
+  if (!out || typeof out !== 'object') out = simSnap(S, v.ball === 'us' ? (rngOf(`${S.G.seed}-call-${S.di}`).u() < 0.62 ? 'pass' : 'run') : 'run', 'auto')
+  out = nameSnap(F, v, out)
+  const ok = out.to ? (v.ball === 'us' ? 0 : 1) : (out.td || (out.yards ?? 0) >= v.d) === (v.ball === 'us') ? 1 : 0
+  P.ms = [...(P.ms ?? []), { t: v.t, side: v.side, kind: v.kind, down: v.down, d: v.d, y: v.y, call: out.call ?? null, play: out.play ?? null, yards: Math.round(out.yards ?? 0), td: out.td || v.y + (out.yards ?? 0) >= 100 ? 1 : 0, to: out.to ?? null, ok, txt: out.txt, st: out.st ?? null, by: out.played ? 1 : 0, ...(out.sack && { sack: 1 }), ...(out.inc && { inc: 1 }) }]
+  resolveSnap(S, out)
+  F.moments = (F.moments ?? 0) + 1
+  if (S.key) {
+    P.kp0 = scoringSummary(F, S, S.key.us, null, null, null, { pre: P.kp0, credits: true })
+    return { pending: true }
+  }
   const games = P.po ? F.po.rounds[F.po.rd] : F.sched.weeks[F.wk]
   const i = games.findIndex(g => g.h === F.team || g.a === F.team)
   F.pend = null
-  F.moments = (F.moments ?? 0) + 1
-  return finishUserGame(F, { g: games[i], i }, S, mo)
+  return finishUserGame(F, { g: games[i], i }, S, P.ms, P.kp0)
 }
 
 // ── The player's game is over ────────────────────────────────────────────────
-function finishUserGame(F, { g }, S, mo) {
+// (ms: the moments he played in it; pre: the plays named while the game waited on them)
+const TEAM_KEYS = ['yds', 'py', 'ry', 'pa', 'pc', 'ra', 'sk', 'int', 'fum', 'to']
+function finishUserGame(F, { g }, S, ms = [], pre = null) {
   Object.assign(g, { hs: S.hs, as: S.as, ...(S.ot && { ot: 1 }) })
   const home = g.h === F.team, opp = home ? g.a : g.h
   const us = home ? S.hs : S.as, them = home ? S.as : S.hs
   const won = us > them, tie = us === them
   const po = F.phase === 'playoffs'
-  // the box score from the final; its touchdowns are then the scoring summary's (plays.js), the moment's play in it
+  // the box score from the final; its touchdowns are then the scoring summary's (plays.js), the moments' plays in it
   const roster = boxRoster(F, F.team)
   const played = playFootballSeason({ roster, games: [{ wk: F.wk + 1, opponent: TEAM[opp].name, home, won, mySc: us, oppSc: them }], seed: `${F.seed}-${F.year}-box-${po ? `p${F.po.rd}` : F.wk}` })
   const box = played.reg[0]?.s ?? {}
-  if (mo?.hit && mo.line === 'pick') { const x = box[`p${mo.pid}`] ??= {}; x.dint = Math.max(1, x.dint ?? 0) }
-  if (mo?.hit && mo.game === 'pass-rush') { const x = box[`p${mo.pid}`] ??= {}; x.sck = Math.max(1, x.sck ?? 0) }
+  const tu = { ...(played.reg[0]?.us ?? {}) }, tt = { ...(played.reg[0]?.them ?? {}) }
+  // the moments' snaps, on the men who made them and on the team's lines
+  for (const m of ms ?? []) {
+    for (const [id, line] of Object.entries(m.st ?? {})) addStats(box[`p${id}`] ??= {}, line)
+    const T = m.side === 'off' ? tu : tt
+    const y = m.to ? 0 : m.yards
+    if (m.call === 'pass') { T.pa = (T.pa ?? 0) + (m.sack ? 0 : 1); if (y && !m.inc) { T.pc = (T.pc ?? 0) + 1; T.py = (T.py ?? 0) + y } }
+    else { T.ra = (T.ra ?? 0) + 1; T.ry = (T.ry ?? 0) + y }
+    T.yds = (T.py ?? 0) + (T.ry ?? 0)
+    if (m.to) { T.to = (T.to ?? 0) + 1; if (m.to === 'int') T.int = (T.int ?? 0) + 1; else T.fum = (T.fum ?? 0) + 1 }
+  }
   let oppLines = null
   if (!po) { try { oppLines = gameLines(F, F.wk)[opp] ?? null } catch { oppLines = null } }
-  const kp = scoringSummary(F, S, home ? 'h' : 'a', box, oppLines, mo, { pre: mo?.pre ?? null })
+  const kp = scoringSummary(F, S, home ? 'h' : 'a', box, oppLines, null, { pre })
   const ss = F.ss ?? (F.ss = {})
   for (const p of roster) { const id = p.k.slice(1); ss[id] ??= { gp: 0 }; ss[id].gp++; addStats(ss[id], box[p.k]) }
   // the builds' lines (one line each), and the day's best line on the team (the broadcast's player of the game)
@@ -183,7 +165,8 @@ function finishUserGame(F, { g }, S, mo) {
   const lines = roster.filter(p => p.s != null).map(p => ({ b: +p.s, pid: +p.k.slice(1), line: lineOf(p) }))
   // (the kicking: the season's lines, and a build at K gets his line from the game: "2/3 FG · 4/4 XP · LONG 51")
   addKickStats(F, S)
-  { const side = home ? 'h' : 'a', kid = S.G.kid?.[side], kp = kid != null ? F.teams[F.team].r.find(p => p.i === kid) : null
+  const side = home ? 'h' : 'a'
+  { const kid = S.G.kid?.[side], kp = kid != null ? F.teams[F.team].r.find(p => p.i === kid) : null
     if (kp?.b != null) lines.push({ b: kp.b, pid: kp.i, line: kickLine(S.kk?.[side]) }) }
   const star = topLine(roster, box)
   const bx = boxOf(S)
@@ -191,7 +174,10 @@ function finishUserGame(F, { g }, S, mo) {
     wk: po ? null : F.wk + 1, rd: po ? F.po.rd : null, opp, home, us, them, w: won ? 1 : 0, t: tie ? 1 : 0, ot: S.ot ? 1 : 0,
     q: home ? [bx.q.h, bx.q.a] : [bx.q.a, bx.q.h], pl: bx.pl.map(([t, s, p, k]) => [t, (s === 0) === home ? 1 : 0, p, k]), kp, lines,
     ...(star && { st: { pid: star.pid, line: lineOf(star.p) } }),
-    ...(mo && { mo: { b: mo.b, pid: mo.pid, game: mo.game, hit: mo.hit, line: mo.line } }),
+    // the drives (the live screen's play-by-play), the moments, and the box score (gameBox in stats.js reads it)
+    dr: driveRows(S, side),
+    ...(ms?.length && { ms: ms.map(m => ({ t: m.t, side: m.side, kind: m.kind, down: m.down, d: m.d, y: m.y, yards: m.yards, ok: m.ok, txt: m.txt, ...(m.td && { td: 1 }), ...(m.to && { to: m.to }), ...(m.by && { by: 1 }) })) }),
+    bx: packBox(box, tu, tt, S, side, roster),
   }
   const h = headline(F, row)
   row.hl = h.hl; row.sub = h.sub
@@ -200,6 +186,21 @@ function finishUserGame(F, { g }, S, mo) {
   F.chem = clamp(0, 100, F.chem + (won ? 0.3 : -0.3))
   F.nx = 0
   return endWeek(F, row)
+}
+// the game's box score, small: the men's lines (only what they did), the two teams' lines, the time of possession and
+// the kicking ([FGA, FGM, XPA, XPM, long] a side)
+function packBox(box, tu, tt, S, side, roster = []) {
+  const s = {}, ro = {}
+  for (const [k, x] of Object.entries(box)) {
+    const o = {}
+    for (const [key, v] of Object.entries(x ?? {})) if (v) o[key] = v
+    if (Object.keys(o).length) s[k.slice(1)] = o
+  }
+  // (each man's place that day: his position, his place in the room, the spot he played, a build's number)
+  for (const p of roster) { const id = p.k.slice(1); if (s[id]) ro[id] = [p.pos, p.d ?? 0, p.sub ?? null, p.s ?? null] }
+  const pick = T => Object.fromEntries(TEAM_KEYS.map(k => [k, T[k] ?? 0]))
+  const other = side === 'h' ? 'a' : 'h'
+  return { s, u: pick(tu), o: pick(tt), top: [S.top?.[side] ?? 0, S.top?.[other] ?? 0], kk: [S.kk?.[side] ?? null, S.kk?.[other] ?? null], kid: [S.G.kid?.[side] ?? null, S.G.kid?.[other] ?? null], ro }
 }
 // the team's best line of the day (what the broadcast puts up after the game)
 function topLine(roster, box) {
@@ -321,7 +322,6 @@ export function headline(F, row) {
   if (row.t) sub = 'Tied after overtime'
   else if (row.ot && last) sub = `${last[3]} in overtime`
   else if (lead && lead === last && lead[0] >= 3480) sub = `${lead[3]} with ${clockLeft(lead[0])} left`
-  else if (row.mo?.hit && row.mo.line === 'pick' && row.w) { const k = kp.find(x => x[2] === 0 && / intercepts /.test(x[3])); sub = k ? `${k[3]} in the 4th quarter` : null }
   if (!sub && worst <= -10) sub = `${nickOf(W)} come back from ${-worst} down`
   if (!sub && ls === 0) sub = `${nickOf(W)} shut out the ${nickOf(L)}`
   if (!sub && row.w && row.st) { const p = F.teams[F.team].r.find(x => x.i === row.st.pid); if (p && row.st.line) sub = `${p.n}: ${row.st.line}` }

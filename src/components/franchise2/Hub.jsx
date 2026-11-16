@@ -16,6 +16,7 @@ import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { romanOf } from '../../lib/mg/kit'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose } from '../app/icons'
+import { GamesSwitch as MomentsModes } from '../simFlow'
 import { fkVars, KLogo, Chyron, Ticker, Scorebug, ManL3, BigRec, Stamp, TeamSlab, Tape, Go, Fold } from './kit'
 import Gameday from './Week'
 import TeamTab from './Team'
@@ -102,6 +103,8 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           </span>
           <button className="fh-x" onClick={onHome} aria-label="Leave Franchise"><IconClose size={16} /><span>Exit</span></button>
         </header>
+        {/* (the league's ticker and its week: at the top, under the team, owner 2026-11-16) */}
+        {tab === 'season' && !off && <LeagueTicker F={F} />}
         <nav className="fh-tabs" role="tablist" aria-label="Franchise">
           <div className="fh-tabs-in">
             {TABS.map(([id, label]) => (
@@ -118,7 +121,6 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           {tab === 'history' && <HistoryTab F={F} owner={owner} act={act} onSlots={onSlots} onDelete={onDelete} />}
         </div>
       </div>
-      {tab === 'season' && !off && <LeagueTicker F={F} />}
     </div>
   )
 }
@@ -468,22 +470,16 @@ function Champions({ F, act, onTrophy }) {
   )
 }
 
-// ── ADVANCED / SIMPLE / NONE for the moments ────────────────────────────────
-function GamesSwitch({ F, act }) {
-  const mode = F.games ?? 'advanced'
+// ── ADVANCED / SIMPLE / NONE for the moments ── (Career's switch: simFlow.jsx GamesSwitch, in Franchise's kit)
+export const GAMES_WHAT = { advanced: 'Call the play and run it', simple: 'Call the play', off: 'Simulated' }
+export function GamesSwitch({ F, act }) {
   return (
-    <section className="fh-games">
-      <span className="fh-games-label">Key moments<small>the mini games in your games</small></span>
-      <div className="fh-seg" role="radiogroup" aria-label="Mini games">
-        {GAMES_MODES.map(([m, label]) => (
-          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'is-on' : ''} onClick={() => { if (m !== mode) { act(X => { X.games = m }); sfx('tap') } }}>{label}</button>
-        ))}
-      </div>
-    </section>
+    <MomentsModes mode={F.games ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the snaps you play in your games"
+      onPick={m => act(X => { X.games = m })} cls={{ root: 'fh-games', top: 'fh-games-label', group: 'fh-seg' }} />
   )
 }
 
-// ── The league along the bottom edge ─────────────────────────────────────────
+// ── The league along the top, under the team's header ─────────────────────────────────────────
 function LeagueTicker({ F }) {
   // (the reel once the league's week is in; until then the strip with its label, the same size, so nothing moves)
   const ready = useLeagueWarm(F)

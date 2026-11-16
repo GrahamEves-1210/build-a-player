@@ -102,6 +102,8 @@ export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null,
       continue
     }
     if (pl.k === 'key') { const x = keyText(F, S, pl, sides, us, mo, R); if (x) out.push([pl.t, mine, 0, x]); continue }
+    // a moment's snap: the play as the screen named it (moments.js)
+    if (pl.k === 'snap') { if (pl.txt) out.push([pl.t, mine, 0, pl.txt]); continue }
     if (pl.k !== 'td') continue
     const was = preTD?.[pj]
     if (was && was[0] === pl.t && was[2] === pl.p) {
@@ -113,7 +115,9 @@ export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null,
     cur = []
     // the moment's own touchdown: the build in it scored it (a quarterback threw it, a lineman's back ran behind him)
     let txt
-    if (pl.key && mo && mine) txt = momentTD(F, Sd, mo, R, give, us)
+    // (a moment's touchdown: named by the play, and the men in it credited)
+    if (pl.txt) { txt = pl.txt; if (mine) for (const [id, k] of pl.cr ?? []) { const c = credit[id] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++; cur.push([id, k]) } }
+    else if (pl.key && mo && mine) txt = momentTD(F, Sd, mo, R, give, us)
     if (!txt) {
       const qb = Sd.L.qb1
       const pass = Sd.cr.pass.length ? (Sd.cr.run.length ? R.u() < 0.6 : true) : Sd.cr.run.length ? false : R.u() < 0.62

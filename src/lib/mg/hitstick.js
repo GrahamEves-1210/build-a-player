@@ -290,13 +290,14 @@ export function make({ v, seed, def, cast }) {
       const pts = plan.reduce((s, p) => s + (p.res.kind === 'stick' ? 3 + (p.res.fumble ? 1 : 0) : p.res.kind === 'tackle' ? (p.res.stop ? 2 : 1) : 0), 0)
             // (three stops of four: a hit stick or a tackle at the line. The hits only make it a better score)
       const stops = plan.filter(p => p.res.stop).length
-      const hit = stops >= n - 1
+      // (one snap, Franchise's moments: it's a stop or it isn't)
+      const hit = n === 1 ? stops === 1 : stops >= n - 1
       const score = clamp(pts / (n * 3), 0, 1)
       const note = `${g.tackles} tackle${g.tackles === 1 ? '' : 's'}, ${g.hitSticks} hit stick${g.hitSticks === 1 ? '' : 's'}${g.fumbles ? `, ${g.fumbles} forced fumble${g.fumbles === 1 ? '' : 's'}` : ''}`
-      g.done = outcome(hit ? Math.max(score, 0.5) : Math.min(score, 0.45), hit, note, { made: stops, of: n, tackles: g.tackles, hitSticks: g.hitSticks, fumbles: g.fumbles, broken: g.broken, yards: g.yards }, false)
+      g.done = outcome(hit ? Math.max(score, 0.5) : Math.min(score, 0.45), hit, note, { made: stops, of: n, tackles: g.tackles, hitSticks: g.hitSticks, fumbles: g.fumbles, broken: g.broken, yards: g.yards, kinds: plan.map(p => p.res.kind) }, false)
       const tw = hit ? (g.hitSticks >= 2 ? 'LIGHTS OUT' : 'NOTHING INSIDE') : 'GASHED'
-      g.later = { text: tw, good: hit, at: g.t + beat - 100, size: 44 }
-      g.outro = beat + 900
+      if (n > 1) g.later = { text: tw, good: hit, at: g.t + beat - 100, size: 44 }
+      g.outro = n > 1 ? beat + 900 : beat + 300
     }
   }
   // the play after it's decided: the back goes down, or on; the other backers come to the ball
