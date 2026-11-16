@@ -12,7 +12,7 @@ export default function SoccerComingSoon() {
     // the cover starts under the sport switch (it's drawn by Home, a moment after this mounts)
     let raf = 0, tries = 0
     const measure = () => {
-      const el = document.querySelector('.ag-sport')
+      const el = document.querySelector('.sp-rack, .ag-sport')
       if (el) setTop(Math.round(el.getBoundingClientRect().bottom + 10))
       else if (tries++ < 120) raf = requestAnimationFrame(measure)
       else setTop(0)
