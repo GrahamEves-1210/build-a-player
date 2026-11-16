@@ -103,6 +103,10 @@
 .fsu-rand { display: grid; place-items: center; height: 52px; border: 0; background: var(--fk-g3); color: #fff; cursor: pointer; }
 .fsu-rand:active { transform: rotate(-30deg); transition: transform .12s; }
 .fsu-nums { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+/* his expression, picked on its own under the face strip */
+.fsu-expr { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 4px; }
+.fsu-expr button { min-height: 44px; padding: 0 6px; border: 0; background: var(--fk-g1); color: var(--fk-mute); font-family: var(--fk-f); font-size: 15px; letter-spacing: 0.6px; cursor: pointer; }
+.fsu-expr button.is-on { background: var(--tc, #fff); color: var(--tct, #0b0c0e); box-shadow: inset 0 -3px 0 var(--tc2, transparent); }
 .fsu-nums button { height: 44px; border: 0; background: var(--fk-g1); color: var(--fk-mute); font-family: var(--fk-d); font-size: 22px; cursor: pointer; font-variant-numeric: tabular-nums; }
 .fsu-nums button.is-on { background: var(--tc, #fff); color: var(--tct, #0b0c0e); box-shadow: inset 0 -3px 0 var(--tc2, transparent); }
 .fsu-nums .fsu-nums-more { font-family: var(--fk-f); font-size: 16px; letter-spacing: 1px; }

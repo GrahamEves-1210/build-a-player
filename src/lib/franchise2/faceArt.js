@@ -194,6 +194,16 @@ const MOUTH = { neutral: [1, 1, 1, 0, 0], full: [1.22, 1.24, 1.02, 0, 0], thin: 
 // the eye: the upper lid's rise, the lower's drop, the tilt up to the outer corner
 const EYE = { almond: [1.14, 0.68, 0.14], round: [1.28, 0.84, 0], narrow: [0.98, 0.62, 0.06], hooded: [1.06, 0.66, 0], deep: [1.08, 0.68, 0], upturn: [1.08, 0.66, 0.38] }
 const sv = (look, k) => clamp(+look[k] || 0, -1, 1)
+// his expression (owner 11-16: "all of the football players look super serious"), the ones real headshots show:
+//   cu the mouth's corners up · cw the mouth's width · op how far it opens on the top teeth · ck how far the cheeks
+//   lift (the folds from the nose, the apples of the cheeks) · sq how far the lower lids rise · one: one side only
+const EXPR = {
+  neutral: { cu: 0.05, cw: 1, op: 0, ck: 0, sq: 0 },
+  slight: { cu: 0.55, cw: 1.04, op: 0, ck: 0.3, sq: 0.15 },
+  warm: { cu: 1, cw: 1.1, op: 0, ck: 0.65, sq: 0.36 },
+  grin: { cu: 1.15, cw: 1.16, op: 2.1, ck: 0.95, sq: 0.5 },
+  half: { cu: 0.9, cw: 1.05, op: 0, ck: 0.45, sq: 0.2, one: true },
+}
 
 function geo(look) {
   const s = SHAPE[look.head] ?? SHAPE.oval, w = look.wide ?? 0.2, X = STRUCT[look.g] ?? STRUCT.w
@@ -225,6 +235,11 @@ function geo(look) {
   G.mw = 5.3 * M[2] * (1 + sv(look, 'mw') * 0.1) * (0.96 + X.nk * 0.04)
   G.lk = (1 + sv(look, 'lip') * 0.35) * X.lk
   G.my = G.nb + (G.cy - G.nb) * 0.33 + V.my
+  G.E = EXPR[look.expr] ?? EXPR.neutral
+  // (a half smile's side: his own, from his bones)
+  G.hs = (Number.isFinite(+look.bone) ? +look.bone : 1) % 2 ? 1 : -1
+  // how much one side of the face takes the expression (a half smile: the near side barely)
+  G.ex = s => (G.E.one ? (s === G.hs ? 1 : 0.22) : 1)
   G.hl = 24.8 + ((hashStr(`${look.hair}|${look.skin}|${look.head}`) % 9) - 4) * 0.12
   const { cw, tw, cb, jw, jy, ch, cy, lean, soft } = G
   // the head's right half, crown to chin (offsets from the middle)
@@ -597,7 +612,8 @@ function eyesOf(look, G, T, S, lo) {
   const K = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', X = G.X
   let wh = '', ir = '', pu = '', lash = '', lid = '', cl = ''
   for (const s of [-1, 1]) {
-    const yo = G.young ? 1.08 : 1, cx = 50 + s * G.es, y = G.ey, ew = 3.4 * G.ez, up = K[0] * G.ez * X.eo * yo * 1.05, dn = K[1] * G.ez * X.eo * yo * 1.05, tl = K[2]
+    const q = G.E.sq * G.ex(s)
+    const yo = G.young ? 1.08 : 1, cx = 50 + s * G.es, y = G.ey, ew = 3.4 * G.ez, up = K[0] * G.ez * X.eo * yo * 1.05 * (1 - q * 0.1), dn = K[1] * G.ez * X.eo * yo * 1.05 * (1 - q * 0.45), tl = K[2]
     const I = [cx - s * ew, y + 0.2], O = [cx + s * ew, y - tl]
     const U1 = [cx - s * ew * 0.35, y - up * 1.34], U2 = [cx + s * ew * 0.45, y - up * 1.2 - tl * 0.5]
     const L1 = [cx + s * ew * 0.42, y + dn * 1.28], L2 = [cx - s * ew * 0.42, y + dn * 1.24]
@@ -625,6 +641,8 @@ function eyesOf(look, G, T, S, lo) {
       // the crease's own shadow, and under the eye the lower lid turning into the cheek
       lid += sm([crease[0], crease[1], crease[2], crease[3], [crease[2][0], crease[2][1] + 0.38], [crease[1][0], crease[1][1] + 0.34]])
       // (a young man's lower lid is a fine line, not a bag; a coach's has its years)
+      // (a smile's cheek pushing up under the eye: a soft fold below the lower lid)
+      if (q > 0.25) S.M += sm([[L2[0], y + dn * 1.2 + 0.75], [L1[0], y + dn * 1.2 + 0.65], [O[0] - s * 0.1, O[1] + 1], [L1[0], y + dn * 1.2 + 1.15 + q * 0.4], [L2[0], y + dn * 1.2 + 1.2 + q * 0.4]])
       if (look.co) S.M += sm([[I[0] + s * 0.4, I[1] + 0.45], [L2[0], y + dn * 1.05 + 0.85], [L1[0], y + dn * 1.05 + 0.75], [O[0] - s * 0.2, O[1] + 0.6], [L1[0], y + dn * 1.05 + 0.25], [L2[0], y + dn * 1.05 + 0.3]])
       lid += sm([[L2[0], y + dn * 1.18 + 0.12], [L1[0], y + dn * 1.22 + 0.1], [O[0] - s * 0.3, O[1] + 0.32], [L1[0], y + dn * 1.22 + 0.32]])
     }
@@ -672,26 +690,54 @@ function noseOf(look, G, T, S, lo) {
   return fill(d, T.D)
 }
 function mouthOf(look, G, T, S, lo) {
-  const { mw, my, lk, M } = G
-  const ul = 1.05 * lk * M[0], ll = 1.38 * lk * M[1], up = M[3], smirk = M[4]   // (owner 11-16: the mouth a little bigger)
-  const Lc = [50 - mw, my + 0.1 - up], Rc = [50 + mw, my + 0.1 - up - smirk]
-  const mid = [[50 - mw * 0.5, my + 0.18], [50, my + 0.28], [50 + mw * 0.5, my + 0.18 - smirk * 0.3]]
-  const upper = sm([[...Lc, 1], [50 - mw * 0.55, my - ul * 0.78], [50 - 1.05, my - ul], [50, my - ul + 0.32], [50 + 1.05, my - ul], [50 + mw * 0.55, my - ul * 0.78 - smirk * 0.2], [...Rc, 1], ...mid.slice().reverse()])
-  const lower = sm([[...Lc, 1], ...mid, [...Rc, 1], [50 + mw * 0.55, my + ll * 0.88], [50, my + ll], [50 - mw * 0.55, my + ll * 0.88]])
+  const { mw: mw0, my, lk, M, E } = G
+  const mw = mw0 * E.cw
+  // (a smile stretches the lips thinner, the corners up; a half smile lifts one corner)
+  const ul = 1.05 * lk * M[0] * (1 - E.ck * 0.2), ll = 1.38 * lk * M[1] * (1 - E.ck * 0.12), up = M[3], smirk = M[4], op = E.op
+  const cuL = E.cu * G.ex(-1), cuR = E.cu * G.ex(1)
+  const Lc = [50 - mw, my + 0.1 - up - cuL], Rc = [50 + mw, my + 0.1 - up - cuR - smirk]
+  const dip = (cuL + cuR) * 0.12
+  const mid = [[50 - mw * 0.5, my + 0.18 - cuL * 0.35 + dip], [50, my + 0.28 + dip], [50 + mw * 0.5, my + 0.18 - smirk * 0.3 - cuR * 0.35 + dip]]
+  // an open smile: the lower lip drops away from the top teeth, deepest in the middle
+  const midB = op ? [[50 - mw * 0.52, mid[0][1] + op * 0.72], [50, mid[1][1] + op], [50 + mw * 0.52, mid[2][1] + op * 0.72]] : mid
+  const upper = sm([[...Lc, 1], [50 - mw * 0.55, my - ul * 0.78 - cuL * 0.3], [50 - 1.05, my - ul], [50, my - ul + 0.32], [50 + 1.05, my - ul], [50 + mw * 0.55, my - ul * 0.78 - smirk * 0.2 - cuR * 0.3], [...Rc, 1], ...mid.slice().reverse()])
+  const lower = sm([[...Lc, 1], ...midB, [...Rc, 1], [50 + mw * 0.55, midB[2][1] + ll * 0.88], [50, midB[1][1] + ll * 0.95], [50 - mw * 0.55, midB[0][1] + ll * 0.88]])
   const ln = sm([[Lc[0] - 0.3, Lc[1] - 0.05, 1], ...mid.map(p => [p[0], p[1] - 0.14]), [Rc[0] + 0.3, Rc[1] - 0.05, 1], ...mid.slice().reverse().map(p => [p[0], p[1] + 0.26])])
+  const yl = midB[1][1]
   // under the lower lip, in shadow; the chin's light
-  S.S += sm([[50 - mw * 0.55, my + ll + 0.25], [50, my + ll + 1.35], [50 + mw * 0.6, my + ll + 0.3], [50 + mw * 0.2, my + ll + 0.6], [50 - mw * 0.2, my + ll + 0.6]])
+  S.S += sm([[50 - mw * 0.55, yl + ll + 0.25], [50, yl + ll + 1.35], [50 + mw * 0.6, yl + ll + 0.3], [50 + mw * 0.2, yl + ll + 0.6], [50 - mw * 0.2, yl + ll + 0.6]])
+  // the cheeks lifting: the folds from the nose's wings down past the corners, the apples of the cheeks catching the
+  // light with a soft shade under them
+  for (const sd of [-1, 1]) {
+    const k = E.ck * G.ex(sd), c = sd < 0 ? Lc : Rc, w = G.nwid
+    if (k < 0.12) continue
+    S.M += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
+    if (!lo && k > 0.3) {
+      const ax = 50 + sd * (G.es + 0.8), ay = G.ey + 5.6 - k * 0.9
+      S.H += sm([[ax - sd * 0.4 - 1.9, ay], [ax - 0.4, ay - 0.75 - k * 0.2], [ax - sd * 0.4 + 1.7, ay - 0.1], [ax - 0.4, ay - 0.35]])
+    }
+  }
   // the philtrum's groove down to the lip's bow, its far ridge in shade; the corners tucked into shadow
   if (!lo) {
     S.M += sm([[49.5, G.nb + 1.3], [50.5, G.nb + 1.3], [50.55, my - ul + 0.2], [49.45, my - ul + 0.2]])
     S.S += sm([[50.6, G.nb + 1.4], [51.1, G.nb + 1.3], [51.2, my - ul - 0.1], [50.8, my - ul + 0.2]])
     for (const c of [Lc, Rc]) S.S += ell(c[0] + (c === Lc ? -0.3 : 0.3), c[1] + 0.1, 0.55, 0.75)
   }
-  let s = fill(upper, T.lipU) + fill(lower, T.lipL)
+  let s = ''
+  if (op) {
+    // the opening: dark; the top teeth one flat off-white shape (never single teeth), a soft shadow under the lip
+    const hole = sm([[...Lc, 1], ...mid, [...Rc, 1], ...midB.slice().reverse()])
+    const tw = mw * 0.8, tb = op * 0.62
+    const teeth = sm([[mid[0][0] - mw * 0.18, mid[0][1] - 0.1], [50, mid[1][1] - 0.2], [mid[2][0] + mw * 0.18, mid[2][1] - 0.1], [50 + tw * 0.8, mid[2][1] + tb * 0.7], [50, mid[1][1] + tb], [50 - tw * 0.8, mid[0][1] + tb * 0.7]])
+    const tc = mixC('#efe9df', T.B, 0.1 + T.d * 0.06)
+    s += fill(hole, mixC(T.D, '#140608', 0.55)) + fill(teeth, tc)
+      + (lo ? '' : fill(sm([[mid[0][0], mid[0][1] - 0.05], [50, mid[1][1] - 0.1], [mid[2][0], mid[2][1] - 0.05], [50 + tw * 0.5, mid[2][1] + 0.45], [50, mid[1][1] + 0.5], [50 - tw * 0.5, mid[0][1] + 0.45]]), mixC(tc, T.D, 0.22)))
+  }
+  s += fill(upper, T.lipU) + fill(lower, T.lipL)
   // the lower lip's under-plane a shade deeper
-  if (!lo) s += fill(sm([[50 - mw * 0.7, my + ll * 0.62], [50, my + ll * 0.84], [50 + mw * 0.7, my + ll * 0.62], [50 + mw * 0.55, my + ll * 0.88], [50, my + ll], [50 - mw * 0.55, my + ll * 0.88]]), mixC(T.lipL, T.lipU, 0.45))
-  if (!lo) s += fill(sm([[50 - mw * 0.5, my + ll * 0.45], [50 - mw * 0.1, my + ll * 0.32], [50 + mw * 0.05, my + ll * 0.5], [50 - mw * 0.4, my + ll * 0.62]]), mixC(T.lipL, '#ffffff', 0.1))
-  return s + fill(ln, T.D)
+  if (!lo) s += fill(sm([[50 - mw * 0.7, yl + ll * 0.62], [50, yl + ll * 0.84], [50 + mw * 0.7, yl + ll * 0.62], [50 + mw * 0.55, yl + ll * 0.88], [50, yl + ll], [50 - mw * 0.55, yl + ll * 0.88]]), mixC(T.lipL, T.lipU, 0.45))
+  if (!lo) s += fill(sm([[50 - mw * 0.5, yl + ll * 0.45], [50 - mw * 0.1, yl + ll * 0.32], [50 + mw * 0.05, yl + ll * 0.5], [50 - mw * 0.4, yl + ll * 0.62]]), mixC(T.lipL, '#ffffff', 0.1))
+  return s + (op ? '' : fill(ln, T.D))
 }
 // the years: smile lines, the lids, the forehead, then the jowls
 function linesOf(look, G, T, S, lo) {

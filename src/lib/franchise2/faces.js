@@ -89,6 +89,14 @@ export const PLAYER_GEAR = FACE_GEAR.filter(x => x[0] !== 'visor')
 export const FACE_EB = [['none', 'NONE'], ['paint', 'EYE BLACK'], ['strips', 'STRIPS']]
 export const FACE_EAR = [['none', 'NONE'], ['studs', 'STUDS'], ['stud', 'ONE STUD']]
 export const FACE_CHAIN = [['none', 'NONE'], ['gold', 'GOLD'], ['silver', 'SILVER']]
+// his expression (owner 11-16: "all of the football players look super serious"): the ones real headshots show
+export const FACE_EXPR = [['neutral', 'RELAXED'], ['slight', 'SLIGHT SMILE'], ['warm', 'WARM SMILE'], ['grin', 'BIG SMILE'], ['half', 'HALF SMILE']]
+// how often each shows (a count of 100 ESPN headshots in public/headshots, 11-16: 53 open smiles, 25 relaxed, 11
+// slight closed smiles, 8 warm closed smiles, 3 half smiles); a coach a little more reserved
+const EXPRS = [['grin', 46], ['neutral', 26], ['slight', 13], ['warm', 10], ['half', 5]]
+const COACH_EXPRS = [['neutral', 34], ['slight', 24], ['warm', 18], ['grin', 16], ['half', 8]]
+// (from a stream of its own, keyed by his name, so his other parts keep their draws and he always wears the same face)
+export const exprOf = (key, coach = false) => pickW(seeded(`face5|${key}`), coach ? COACH_EXPRS : EXPRS)
 // the shape sliders: key, label (each -1 … 1, 0 the head's own)
 export const FACE_SLIDERS = [
   ['wt', 'FACE WEIGHT'], ['jaw', 'JAW WIDTH'], ['chn', 'CHIN LENGTH'], ['chk', 'CHEEKBONES'],
@@ -207,6 +215,7 @@ function extras(key, L, pos) {
   if (L.beard === 'none' && r() < 0.05) x.beard = 'patch'
   // (his bones, faceArt.js: a seed for where his jaw turns, his chin, cheekbones and the set of his eyes)
   x.bone = Math.floor(r() * 1000)
+  x.expr = exprOf(key)
   return x
 }
 
@@ -321,7 +330,7 @@ export function coachLook(key, { g = null, ag = null } = {}) {
   return {
     ...L, iris: pickW(r3, IRIS[bg] ?? IRIS.w), wt: r2(clamp(s() * 0.6 + (age - 50) / 70, -1, 1)), jaw: r2(s() * 0.6), chn: r2(s() * 0.5), chk: r2(s() * 0.5 - 0.2),
     esz: r2(s() * 0.4 - 0.15), esp: r2(s() * 0.5), brh: r2(s() * 0.5 - 0.2), nsw: r2(s() * 0.5), nsl: r2(s() * 0.5 + 0.15), lip: r2(s() * 0.5 - 0.2), mw: r2(s() * 0.4),
-    eb: 'none', ear: 'none', chain: 'none', cleft: r3() < 0.2, co: 1, bone: Math.floor(r3() * 1000),
+    eb: 'none', ear: 'none', chain: 'none', cleft: r3() < 0.2, co: 1, bone: Math.floor(r3() * 1000), expr: exprOf(`coach|${key}`, true),
   }
 }
 const CCACHE = new Map()
@@ -369,7 +378,7 @@ export const genFace = (p, color, small = false) => (p ? faceUrl(p.fk ?? p.n, fa
 //                             it never had from the default, its beard and its gear mapped onto today's)
 //   buildFaceUrl(B, color, view)  the build's face as a data: URL (view: a crop, VIEWS; 'sm' the lighter drawing
 //                             for a list)
-export const FACE_KEYS = ['skin', 'head', 'eyes', 'iris', 'brows', 'nose', 'mouth', 'hair', 'hc', 'beard', 'stache', 'gear', 'eb', 'ear', 'chain', ...SL, 'bone']
+export const FACE_KEYS = ['skin', 'head', 'eyes', 'iris', 'brows', 'nose', 'mouth', 'hair', 'hc', 'beard', 'stache', 'gear', 'eb', 'ear', 'chain', ...SL, 'bone', 'expr']
 const near = (list, c) => list.reduce((a, x) => (Math.abs(lum(x[0]) - lum(c)) < Math.abs(lum(a[0]) - lum(c)) ? x : a))[0]
 const ok = (list, v) => list.some(x => x[0] === v)
 export function defaultFace(key, pos) {
@@ -385,7 +394,7 @@ export function defaultFace(key, pos) {
 const OLD_BEARD = { stache: ['none', 'full'], goatee: ['goatee', 'full'], full: ['full', 'full'] }
 const OLD_GEAR = { eyeblack: ['eb', 'paint'], studs: ['ear', 'studs'] }
 const groupOfSkin = s => (lum(s) > 175 ? 'w' : lum(s) > 120 ? 'm' : 'b')
-const LISTS = [['head', FACE_HEAD], ['eyes', FACE_EYES], ['iris', FACE_IRIS], ['brows', FACE_BROWS], ['nose', FACE_NOSE], ['mouth', FACE_MOUTH], ['hair', FACE_HAIR], ['beard', FACE_BEARD], ['stache', FACE_STACHE], ['gear', FACE_GEAR], ['eb', FACE_EB], ['ear', FACE_EAR], ['chain', FACE_CHAIN]]
+const LISTS = [['expr', FACE_EXPR], ['head', FACE_HEAD], ['eyes', FACE_EYES], ['iris', FACE_IRIS], ['brows', FACE_BROWS], ['nose', FACE_NOSE], ['mouth', FACE_MOUTH], ['hair', FACE_HAIR], ['beard', FACE_BEARD], ['stache', FACE_STACHE], ['gear', FACE_GEAR], ['eb', FACE_EB], ['ear', FACE_EAR], ['chain', FACE_CHAIN]]
 export function normFace(face, base) {
   const f = { ...base, ...(face ?? {}) }
   if (face && !face.stache && OLD_BEARD[face.beard]) [f.beard, f.stache] = OLD_BEARD[face.beard]

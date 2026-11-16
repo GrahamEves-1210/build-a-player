@@ -7,7 +7,7 @@ import { cleanName, nameOk, randomFirstLast, takenOn, freeNumbers, legalFor, pic
 import { CAPS, POS_NAME as SQ_POS_NAME } from '../../lib/squad'
 import { K_LIVE } from '../../lib/kLive'
 import { ovrOf } from '../../lib/squadSeason'
-import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../lib/franchise2/faces'
+import { defaultFace, buildFaceUrl, FACE_KEYS, FACE_EXPR } from '../../lib/franchise2/faces'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
@@ -220,7 +220,8 @@ function Builds({ S, go, owner, onBuild }) {
 function buildFaceChoices(key, pos, page) {
   return Array.from({ length: 8 }, (_, k) => ({ key: `${key}|${page}|${k}`, face: defaultFace(page || k ? `${key}|f${page}-${k}` : key, pos) }))
 }
-const sameFace = (a, b) => !!a && FACE_KEYS.every(k => a[k] === b.face[k])
+// (the same man whatever his expression: the expression is picked on its own, under the strip)
+const sameFace = (a, b) => !!a && FACE_KEYS.every(k => k === 'expr' || a[k] === b.face[k])
 
 // ── A build's name and number ────────────────────────────────────────────────
 // First and last name (Career's name step: the same letters, the random-name button) and a number his position
@@ -257,6 +258,12 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
           )
         })}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>
+      </div>
+      <span className="fsu-lbl">EXPRESSION</span>
+      <div className="fsu-expr" role="radiogroup" aria-label="Expression">
+        {FACE_EXPR.map(([v, label]) => (
+          <button key={v} type="button" role="radio" aria-checked={(face.expr ?? 'neutral') === v} className={(face.expr ?? 'neutral') === v ? 'is-on' : ''} onClick={() => { setFace({ ...face, expr: v }); sfx('tap') }}>{label}</button>
+        ))}
       </div>
       <span className="fsu-lbl">NAME</span>
       <div className="fsu-name">

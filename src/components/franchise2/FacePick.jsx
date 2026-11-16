@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { TEAM } from '../../lib/franchise2'
 import {
-  FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_IRIS, FACE_BROWS, FACE_NOSE, FACE_MOUTH, PLAYER_HAIR, PLAYER_HC, FACE_BEARD, FACE_STACHE,
+  FACE_EXPR, FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_IRIS, FACE_BROWS, FACE_NOSE, FACE_MOUTH, PLAYER_HAIR, PLAYER_HC, FACE_BEARD, FACE_STACHE,
   PLAYER_GEAR, FACE_EB, FACE_EAR, FACE_CHAIN, FACE_SLIDERS, defaultFace, normFace, buildFaceUrl,
 } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
@@ -30,7 +30,7 @@ const SL = Object.fromEntries(FACE_SLIDERS)
 // title, list] · ['slider', key]
 const CATS = [
   ['skin', 'SKIN', [['SKIN TONE', [['swatch', 'skin', 'SKIN TONE', FACE_SKIN]]]]],
-  ['face', 'FACE', [['SHAPE', [['pick', 'head', 'FACE SHAPE', FACE_HEAD, 'head'], ['slider', 'wt'], ['slider', 'jaw'], ['slider', 'chn'], ['slider', 'chk']]]]],
+  ['face', 'FACE', [['SHAPE', [['pick', 'head', 'FACE SHAPE', FACE_HEAD, 'head'], ['slider', 'wt'], ['slider', 'jaw'], ['slider', 'chn'], ['slider', 'chk']]], ['EXPRESSION', [['pick', 'expr', 'EXPRESSION', FACE_EXPR, 'head']]]]],
   ['eyes', 'EYES', [['EYES', [['pick', 'eyes', 'EYES', FACE_EYES, 'eyes'], ['swatch', 'iris', 'EYE COLOUR', FACE_IRIS], ['slider', 'esz'], ['slider', 'esp']]],
     ['BROWS', [['pick', 'brows', 'BROWS', FACE_BROWS, 'eyes'], ['slider', 'brh']]]]],
   ['nose', 'NOSE · MOUTH', [['NOSE', [['pick', 'nose', 'NOSE', FACE_NOSE, 'nose'], ['slider', 'nsw'], ['slider', 'nsl']]],
