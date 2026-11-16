@@ -6,7 +6,8 @@
 // a team polo or quarter-zip. A real man's drawing keeps his background (below, from the real coaches' public
 // photos) so it isn't someone else.
 import { coachUrl, coachFaceUrl } from '../../lib/franchise2/faces'
-import { TEAM } from '../../lib/franchise2'
+import { TEAM } from '../../lib/franchise2'
+import { teamKit } from '../../lib/franchise2/kits'
 
 // (the file may not be there yet: the glob finds it when it is)
 const FILES = import.meta.glob('../../data/coach-headshots.json', { eager: true, import: 'default' })
@@ -32,7 +33,7 @@ export function drawnCoach(c, color, small = false, mark = null) {
 // any coach on a team: the player's built coach (his own face), a real man's photo, else the drawing
 //   c: a staff coach (coach.js: { n, ag, g, ... }), myHC (mine, face), or the setup's coach ({ name, face })
 export function coachPhoto(c, team, small = false) {
-  const color = TEAM[team]?.color, mark = teamMark(team)
+  const color = teamKit(team) ?? TEAM[team]?.color, mark = teamMark(team)
   if (!c) return null
   if (c.mine || c.face) return c.face ? coachFaceUrl(c.face, color, c.ag ?? null, small, mark) : drawnCoach(c, color, small, mark)
   const name = c.n ?? c.name

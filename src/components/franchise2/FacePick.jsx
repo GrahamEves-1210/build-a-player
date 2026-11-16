@@ -2,12 +2,13 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 
 import { TEAM } from '../../lib/franchise2'
 import {
   FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_IRIS, FACE_BROWS, FACE_NOSE, FACE_MOUTH, PLAYER_HAIR, PLAYER_HC, FACE_BEARD, FACE_STACHE,
-  FACE_GEAR, FACE_EB, FACE_EAR, FACE_CHAIN, FACE_SLIDERS, defaultFace, normFace, buildFaceUrl,
+  PLAYER_GEAR, FACE_EB, FACE_EAR, FACE_CHAIN, FACE_SLIDERS, defaultFace, normFace, buildFaceUrl,
 } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { fkVars } from './kit'
 import './face.css'
+import { teamKit } from '../../lib/franchise2/kits'
 
 // HIS FACE, Career's full creator: the name step and the face sheet on the career screen (AppCareer.jsx). Franchise's
 // builds pick a made-up face from a strip the way the coach's is picked (Setup.jsx NameForm, owner 11-15: "use the
@@ -36,7 +37,7 @@ const CATS = [
     ['MOUTH', [['pick', 'mouth', 'MOUTH', FACE_MOUTH, 'mouth'], ['slider', 'lip'], ['slider', 'mw']]]]],
   ['hair', 'HAIR', [['STYLE', [['pick', 'hair', 'HAIR STYLE', PLAYER_HAIR, 'hair']]], ['COLOUR', [['swatch', 'hc', 'HAIR COLOUR', PLAYER_HC]]]]],
   ['beard', 'BEARD', [['BEARD', [['pick', 'beard', 'BEARD', FACE_BEARD, 'low']]], ['MOUSTACHE', [['pick', 'stache', 'MOUSTACHE', FACE_STACHE, 'mouth']]]]],
-  ['gear', 'GEAR', [['HEAD', [['pick', 'gear', 'HEAD', FACE_GEAR, 'hair']]], ['EYE BLACK', [['pick', 'eb', 'EYE BLACK', FACE_EB, 'eyes']]],
+  ['gear', 'GEAR', [['HEAD', [['pick', 'gear', 'HEAD', PLAYER_GEAR, 'hair']]], ['EYE BLACK', [['pick', 'eb', 'EYE BLACK', FACE_EB, 'eyes']]],
     ['EARRINGS', [['pick', 'ear', 'EARRINGS', FACE_EAR, 'ear']]], ['CHAIN', [['pick', 'chain', 'CHAIN', FACE_CHAIN, 'low']]]]],
 ]
 const labelOf = (list, v) => list.find(x => x[0] === v)?.[1] ?? ''
@@ -112,7 +113,7 @@ export default function FacePick({ face: given, pos, team, color: given2 = null,
   const [cat, setCat] = useState('hair')
   const [part, setPart] = useState(0)
   const [n, setN] = useState(0)
-  const color = given2 ?? TEAM[team]?.color
+  const color = given2 ?? teamKit(team) ?? TEAM[team]?.color
   // (a face saved before today's parts: the rest filled from his default look, its old parts mapped)
   const [face, setFace] = useState(() => normFace(given, defaultFace(shuffleKey ?? pos, pos)))
   const [tf, setTf] = useState(face)              // the face the thumbnails are built from (settles after a drag)

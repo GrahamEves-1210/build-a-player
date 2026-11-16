@@ -14,6 +14,7 @@
 // Pure: no DOM, no Math.random. The look decides everything; small detail (a beard's broken edge) is seeded by it.
 
 // ── Numbers and colour ───────────────────────────────────────────────────────
+import { kitOf } from './kits'
 const hexN = h => parseInt(String(h).slice(1, 7), 16)
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 export const mixC = (a, b, k) => {
@@ -394,34 +395,54 @@ function hairOf(look, G, T, rnd, lo, hide) {
       }
       return R
     }
-    case 'locs': {
-      // locs: a mass behind the head down onto the shoulders, the locs over it (their tips in the dye), a few falling
-      // past the temples over the ears; the roots on top
-      R.back = fill(mass(G, 60, 1.6, rnd), H.S)
-      R.mid = ''
-      let d = '', t = '', h = '', fr = ''
-      for (const s of [-1, 1]) for (let k = 0; k < 8; k++) {
-        const x0 = cw - 3 + k * 0.7, y0 = 27 + k * 1.6, x1 = cw - 0.2 + k * 0.62 + rnd() * 0.8, y1 = 66 + k * 1.3 + rnd() * 6
-        const A = [50 + s * x0, y0], C = [50 + s * (x1 + 1.4), (y0 + y1) / 2], B = [50 + s * x1, y1]
-        d += `M${P2(A)}Q${P2(C)} ${P2(B)}`
-        if (tip) t += `M${P2([50 + s * (x1 + 0.45), y1 - 6])}L${P2(B)}`
-        if (!lo && k % 2 === 0) h += `M${P2([A[0] - 0.35, A[1] + 12])}Q${P2([C[0] - 0.35, C[1]])} ${P2([B[0] - 0.3, B[1] - 3])}`
+    case 'locs': case 'locsup': case 'starter': {
+      // locs (owner 11-16: separate ropes with a twisted grain, out of a parted scalp, falling over and behind the
+      // shoulders with gravity, darker at the roots, never over his eyes): shoulder-length, tied up in a bun, or short
+      // starter locs on top with faded sides
+      const root = mixC(H.c, '#000000', 0.25), body = H.c, grain = lum(H.c) < 70 ? mixC(H.c, '#9a7a62', 0.4) : H.H, tipC = tip
+      // (each rope its root-dark edge, its body and its twisted grain; the strokes share one group's fill and caps)
+      const Ls = (d, c, w, x = '') => `<path d="${d}" stroke="${c}" stroke-width="${f(w)}"${x}/>`
+      const RL = { back: '', mid: '', front: '' }
+      const rope = (pts, w, layer = 'f', tipped = true) => {
+        const d = sm(pts, false)
+        let o = Ls(d, root, w + 0.35) + Ls(d, body, w)
+        if (!lo) o += Ls(d, grain, w * 0.55, ` stroke-dasharray="${f(w * 0.32)} ${f(w * 0.55)}"`)
+        if (tipC && tipped && pts.length > 2) { const z = pts[pts.length - 1], y = pts[pts.length - 2]; o += Ls(`M${P2([z[0] + (y[0] - z[0]) * 0.35, z[1] + (y[1] - z[1]) * 0.35])}L${P2(z)}`, tipC, w) }
+        RL[layer === 'b' ? 'back' : layer === 'm' ? 'mid' : 'front'] += o
       }
-      for (const s of [-1, 1]) for (let k = 0; k < 2; k++) {
-        const A = [50 + s * (cw - 3.6 + k * 1.3), hl + 1.6 + k], C = [50 + s * (cw + 1.8 + k), 40], B = [50 + s * (cw + 1.2 + k * 1.6), 62 + k * 3 + rnd() * 3]
-        fr += `M${P2(A)}Q${P2(C)} ${P2(B)}`
-        if (tip) t += `M${P2([B[0] + s * 0.4, B[1] - 6])}L${P2(B)}`
+      const out = () => { for (const k of ['back', 'mid', 'front']) if (RL[k]) R[k] += `<g fill="none" stroke-linecap="round">${RL[k]}</g>`; return R }
+      // the scalp under them, parted in rows (dark at the roots)
+      if (st === 'starter') R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1)
+      R.front += fill(capD(G, { t: 0.7, ts: 0.3, sb: st === 'starter' ? 30.4 : 37.6, sq: true }), mixC(root, T.B, 0.18))
+      const n = 11
+      for (let i = 0; i < n; i++) {
+        const u = (i + 0.5) / n, x = (u * 2 - 1) * (cw - 2.4), w = 1.25 + rnd() * 0.45, y0 = hl + 0.6 + Math.abs(x) * 0.16
+        if (st === 'starter') { const h = 3.4 + rnd() * 2; rope([[50 + x, y0], [50 + x * 1.08 + (rnd() - 0.5), y0 - h * 0.6], [50 + x * 1.18 + (rnd() - 0.5) * 1.4, y0 - h]], w); continue }
+        // pulled back over the top (to a bun, or over the crown and down the back)
+        const top = st === 'locsup' ? [50 + x * 0.25, C0 - 1.4] : [50 + x * 0.8 + (rnd() - 0.5) * 2, C0 - 1.2 + Math.abs(x) * 0.12]
+        rope([[50 + x, y0], [50 + x * 1.02 + (rnd() - 0.5), (y0 + top[1]) / 2 - 2.2], top], w, 'f', false)
       }
-      const tips = t ? line(t, tip, 1.6, ' stroke-linecap="round"') : ''
-      R.mid += line(d, H.S, 2.1, ' stroke-linecap="round"') + line(d, H.c, 1.45, ' stroke-linecap="round"') + line(h, H.H, 0.36, ' stroke-linecap="round"') + tips
-      R.front = coilD(capD(G, { t: 1.9, ts: 0.6, sb: 37.6, sq: true }, 0.7, rnd), H.c)
-      if (!lo) {
-        let e = ''
-        for (let x = -cw + 2; x <= cw - 2; x += 2.3) e += `M${f(50 + x)} ${f(hl + 0.4 + Math.abs(x) * 0.15)}Q${f(50 + x * 1.06)} ${f(hl - 4)} ${f(50 + x * 0.8)} ${f(C0 - 1.4 + Math.abs(x) * 0.25)}`
-        R.front += line(e, H.S, 0.5) + line(e, H.H, 0.22, ' transform="translate(-.5 0)"')
+      if (st === 'starter') return out()
+      if (st === 'locsup') {
+        // the bun: short loops piled on the crown, a few ends hanging at the back
+        for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2, x = 50 + Math.cos(a) * 2.6, y = C0 - 3.6 + Math.sin(a) * 1.5; rope([[x - 1.2, y + 0.8], [x, y - 1.6], [x + 1.4, y + 0.4]], 1.5, 'b') }
+        for (const s of [-1, 1]) rope([[50 + s * (cw - 1.5), 32], [50 + s * (cw + 0.6), 40], [50 + s * (cw + 0.8), 47]], 1.3, 'b')
+        return out()
       }
-      R.front += line(fr, H.c, 1.6, ' stroke-linecap="round"') + (lo ? '' : line(fr, H.H, 0.34, ' transform="translate(-.35 0)"')) + tips
-      return R
+      // shoulder length: behind the head and shoulders (back), falling over the front of the shoulders (mid), and a few
+      // framing the face from the temples, outside the eyes (front)
+      for (const s of [-1, 1]) {
+        for (let k = 0; k < 9; k++) {
+          const x0 = cw - 3.2 + k * 0.4, y0 = 22 + k * 1.5, len = 32 + rnd() * 18, drift = 1.2 + k * 0.6 + rnd() * 2.2
+          const pts = [[50 + s * x0, y0], [50 + s * (x0 + drift * 0.8), y0 + len * 0.35], [50 + s * (x0 + drift + (rnd() - 0.3) * 1.6), y0 + len * 0.7], [50 + s * (x0 + drift * 0.9 + (rnd() - 0.5) * 2), y0 + len]]
+          rope(pts, 1.15 + rnd() * 0.7, k < 4 ? 'b' : 'm')
+        }
+        for (let k = 0; k < 2; k++) {
+          const x0 = cw - 3.4 + k * 1.1, y0 = hl + 1.8 + k * 1.2
+          rope([[50 + s * x0, y0], [50 + s * (cw + 0.9 + k * 0.6), 38 + k * 2], [50 + s * (cw + 1.6 + k), 52 + k * 3], [50 + s * (cw + 1.2 + k * 1.4), 62 + rnd() * 6]], 1.35 + rnd() * 0.3)
+        }
+      }
+      return out()
     }
     case 'cornrows': {
       R.front = fill(capD(G, { t: 0.75, ts: 0.3, sq: true }), H.c)
@@ -613,11 +634,11 @@ function eyesOf(look, G, T, S, lo) {
     wh, P: { ir, pu, cl, lash, lid, light, iris },
   }
 }
-function browsOf(look, G, T) {
+function browsOf(look, G, T, lo) {
   const c = mixC(look.brow ?? look.hc, T.B, lum(look.brow ?? look.hc) > 120 ? 0.35 : 0.1)
   const th = 1.2 * ({ thick: 1.3, thin: 0.75, bushy: 1.5, straight: 1.0, arched: 0.95, angled: 1.05 }[look.brows] ?? 1)
   const arch = { arched: 1.0, angled: 0.8, straight: 0.2, thick: 0.35, thin: 0.6, bushy: 0.3 }[look.brows] ?? 0.4
-  let d = ''
+  let d = '', h = ''
   for (const s of [-1, 1]) {
     const x = k => 50 + s * k, b = G.by, es = G.es, ew = 3.2 * G.ez
     const ang = look.brows === 'angled'
@@ -625,8 +646,14 @@ function browsOf(look, G, T) {
     const bot = [[x(es + ew + 0.8), b + 0.55], [x(es + 0.6), b + 0.32 * th - arch * 0.45], [x(es - 2.4), b + 0.75 * th - arch * 0.2], [x(1.9), b + 1.35 * th, 1]]
     const t2 = top.map((p, i) => [p[0], p[1] - (i === 1 ? 0.35 : i === 2 ? 0.15 : 0) * th, p[2]])
     d += sm([...t2, ...bot])
+    // the hairs: short strokes up and out from the head of the brow, flatter along the tail, breaking its edges
+    if (!lo) for (let i = 0; i < 7; i++) {
+      const u = i / 6, px = 1.9 + u * (es + ew - 0.2), py = b + (1.1 - u * 0.9) * th * 0.7 - Math.sin(u * Math.PI) * (0.55 + arch * 0.5)
+      const ang = 1.15 - u * 0.95, l = (0.9 - u * 0.35) * th
+      h += `M${f(x(px))} ${f(py)}l${f(s * Math.cos(ang) * l)} ${f(-Math.sin(ang) * l)}`
+    }
   }
-  return fill(d, c)
+  return fill(d, c) + (h ? line(h, c, 0.26, ' stroke-linecap="round"') : '')
 }
 function noseOf(look, G, T, S, lo) {
   const { nb, nwid: w, by, ey, br } = G
@@ -654,7 +681,15 @@ function mouthOf(look, G, T, S, lo) {
   const ln = sm([[Lc[0] - 0.3, Lc[1] - 0.05, 1], ...mid.map(p => [p[0], p[1] - 0.14]), [Rc[0] + 0.3, Rc[1] - 0.05, 1], ...mid.slice().reverse().map(p => [p[0], p[1] + 0.26])])
   // under the lower lip, in shadow; the chin's light
   S.S += sm([[50 - mw * 0.55, my + ll + 0.25], [50, my + ll + 1.35], [50 + mw * 0.6, my + ll + 0.3], [50 + mw * 0.2, my + ll + 0.6], [50 - mw * 0.2, my + ll + 0.6]])
+  // the philtrum's groove down to the lip's bow, its far ridge in shade; the corners tucked into shadow
+  if (!lo) {
+    S.M += sm([[49.5, G.nb + 1.3], [50.5, G.nb + 1.3], [50.55, my - ul + 0.2], [49.45, my - ul + 0.2]])
+    S.S += sm([[50.6, G.nb + 1.4], [51.1, G.nb + 1.3], [51.2, my - ul - 0.1], [50.8, my - ul + 0.2]])
+    for (const c of [Lc, Rc]) S.S += ell(c[0] + (c === Lc ? -0.3 : 0.3), c[1] + 0.1, 0.55, 0.75)
+  }
   let s = fill(upper, T.lipU) + fill(lower, T.lipL)
+  // the lower lip's under-plane a shade deeper
+  if (!lo) s += fill(sm([[50 - mw * 0.7, my + ll * 0.62], [50, my + ll * 0.84], [50 + mw * 0.7, my + ll * 0.62], [50 + mw * 0.55, my + ll * 0.88], [50, my + ll], [50 - mw * 0.55, my + ll * 0.88]]), mixC(T.lipL, T.lipU, 0.45))
   if (!lo) s += fill(sm([[50 - mw * 0.5, my + ll * 0.45], [50 - mw * 0.1, my + ll * 0.32], [50 + mw * 0.05, my + ll * 0.5], [50 - mw * 0.4, my + ll * 0.62]]), mixC(T.lipL, '#ffffff', 0.1))
   return s + fill(ln, T.D)
 }
@@ -694,9 +729,11 @@ function headGearOf(look, G, color) {
       + line(`M${f(50 - cw)} ${f(y0 + 4.8)}Q50 ${f(y0 + 0.6)} ${f(50 + cw)} ${f(y0 + 4.8)}`, color, 0.9)
   }
   if (look.gear === 'durag') {
-    const c = '#1d1e24'
-    return fill(capD(G, { t: 1.2, ts: 0.4, hl: hl - 0.6, sb: 34.6 }), c) + fill(sm([[50 + 2, C0 - 0.6], [50 + cw - 1, 21], [50 + cw + 1.1, 30], [50 + cw - 0.6, 29], [50 + cw - 3, 22], [52, C0 + 1.2]]), '#34363f')
-      + line(`M${f(50 - cw + 3.4)} ${f(hl + 0.6)}Q50 ${f(hl - 2.4)} ${f(50 + cw - 3.4)} ${f(hl + 0.6)}`, '#0d0d10', 0.6)
+    const c = '#1c1d23', y = hl - 0.4
+    return fill(capD(G, { t: 0.55, ts: 0.3, hl: y, sb: 33.6 }), c)
+      + fill(sm([[50 - cw + 1.4, y + 3.2], [50, y - 1.2], [50 + cw - 1.4, y + 3.2], [50 + cw - 1.7, y + 1.5], [50, y - 3], [50 - cw + 1.7, y + 1.5]]), mixC(c, '#ffffff', 0.08))
+      + fill(sm([[50 - cw * 0.78, C0 + 6], [50 - cw * 0.45, C0 + 1.6], [50 - cw * 0.08, C0 + 0.4], [50 - cw * 0.12, C0 + 1.8], [50 - cw * 0.5, C0 + 3.2], [50 - cw * 0.72, C0 + 7.4]]), mixC(c, '#cfd4e0', 0.2))
+      + line(`M50 ${f(y - 2.8)}Q49.8 ${f(C0 + 3)} 50 ${f(C0 - 0.5)}`, '#08080a', 0.5) + line(`M50.5 ${f(y - 2.8)}Q50.3 ${f(C0 + 3)} 50.5 ${f(C0 - 0.4)}`, mixC(c, '#ffffff', 0.18), 0.25)
   }
   if (look.gear === 'visor') return visorOf(G, color, null)
   return ''
@@ -721,11 +758,13 @@ function earringsOf(look, G) {
   const one = s => fill(ell(50 + s * (G.tw - 0.1), 47.2, 0.62, 0.62), '#e9eef6') + fill(ell(50 + s * (G.tw - 0.25), 47, 0.24, 0.24), '#ffffff')
   return look.ear === 'stud' ? one(-1) : one(-1) + one(1)
 }
-function chainOf(look, G) {
+function chainOf(look, G, lo) {
   if (!look.chain || look.chain === 'none') return ''
-  const c = look.chain === 'gold' ? ['#9a7420', '#e6c35c'] : ['#7a808a', '#e3e7ee']
-  const nw = G.nw, d = `M${f(50 - nw + 0.4)} 66Q${f(50 - nw * 0.4)} 77.6 50 78.2Q${f(50 + nw * 0.4)} 77.6 ${f(50 + nw - 0.4)} 66`
-  return line(d, c[0], 1.2) + line(d, c[1], 0.7, ' stroke-dasharray=".9 .45"')
+  const c = look.chain === 'gold' ? ['#7d5c14', '#d9b24a', '#fff0b0'] : ['#5f646d', '#c9ced6', '#ffffff']
+  // (from under the collar's band on each side, where the V is at 66.6, down to 72.6 in the middle)
+  const nw = G.nw, x = (nw - 0.5) * (76.4 - 66.6) / 13 - 0.9, d = `M${f(50 - x)} 66.6Q${f(50 - x * 0.4)} 72.8 50 72.6Q${f(50 + x * 0.4)} 72.8 ${f(50 + x)} 66.6`
+  return line(d, '#000000', 1.2, ' stroke-opacity=".28" transform="translate(.3 .55)"') + line(d, c[0], 0.85)
+    + (lo ? '' : line(d, c[1], 0.62, ' stroke-dasharray=".5 .3"') + line(`M${f(50 - x + 0.4)} 67.4Q${f(50 - x * 0.5)} 72.2 ${f(50 - 1.2)} 72.4`, c[2], 0.22, ' stroke-opacity=".8" stroke-dasharray=".4 .5"'))
 }
 function glassesOf(look, G) {
   if (!look.specs) return ''
@@ -763,28 +802,56 @@ function neckLoop(G) {
   const { nw } = G
   return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 5, 66.2], [nw + 14, 68.6], [nw + 24, 71.6], [nw + 32, 76.4], [56, 87], [56, 104], [0, 104]])
 }
-// the shirt: neck the neckline's right half from its bottom up to the side of the neck
+// the shirt: neck the neckline's right half from its bottom up to the side of the neck; the shoulders built up over the
+// pads (the collar sits on them, the caps round off at the frame's edges)
 function shirtLoop(G, neck) {
   const { nw } = G
-  return sym([...neck, [nw + 4.6, 65.3], [nw + 14, 67.5], [nw + 23.4, 70.4], [nw + 31.6, 75], [56, 84], [56, 104], [0, 104]])
+  return sym([...neck, [nw + 4.4, 64.9], [nw + 12, 66.2], [nw + 21, 67.6], [nw + 29, 70.4], [nw + 35, 76.2], [56, 86], [56, 104], [0, 104]])
 }
+// the seam where the shoulder panel meets the chest, collar to sleeve (right side; mirrored)
+const seamPts = nw => [[nw + 1.2, 66.4], [nw + 9, 70.2], [nw + 19, 73.4], [nw + 28, 79], [nw + 31, 90]]
+// cloth: its colour, the far side in shade, the folds, the mesh, the rim of light on the shoulders
 function clothOf(G, loop, c, P, lo, rim = true) {
   const { nw } = G, d = sm(loop)
   return shape(`${P}J`, d, c)
     + `<g clip-path="url(#${P}Jc)">${fill(sm([[50 + nw + 19, 58], [104, 58], [104, 104], [50 + nw + 21, 104, 1], [50 + nw + 18.4, 88], [50 + nw + 17.6, 76], [50 + nw + 18.2, 66]]), dark(c, 0.2))}`
-    + (lo ? '' : `<rect x="-5" y="55" width="110" height="55" fill="${dotTex('#000000', 1.3, 0.24, 0.16)}"/>`)
+    + (lo ? '' : fill(sm([[50 - nw - 3, 74], [50 - nw - 9, 84], [50 - nw - 12, 104], [50 - nw - 9.6, 104], [50 - nw - 7, 86]]) + sm([[50 + nw + 3, 74], [50 + nw + 8, 85], [50 + nw + 10, 104], [50 + nw + 12.4, 104], [50 + nw + 10, 84]]), dark(c, 0.1))
+      + `<rect x="-5" y="55" width="110" height="55" fill="${dotTex('#000000', 1.3, 0.24, 0.16)}"/>`)
     + (rim ? line(sm(loop.slice(3, 8), false), light(c, 0.14), 1.8) + line(sm(loop.slice(-7, -2), false), light(c, 0.24), 2.2) : '')
     + `</g>`
 }
-function jerseyOf(G, color, P, lo, crew = false) {
+// a football jersey in its team's kit (kits.js): the V-neck's band in the trim with the dark inner neckline showing,
+// the shoulder seams, and the team's trim pattern (sleeve stripes at the shoulder caps, a stripe pair over the
+// shoulder, a contrast yoke, a double-striped collar); crew: a crew neck in the same colours
+function jerseyOf(G, K, P, lo, crew = false) {
   const { nw } = G
-  const accent = lum(color) > 190 ? '#1d2230' : '#f2f3f5'
+  const c1 = K.c1, c2 = K.c2, c3 = K.c3 ?? (lum(c1) > 190 ? '#1d2230' : '#ffffff'), pat = K.pat
   const vb = crew ? 71 : 76.4, y0 = 63.4
   const neck = crew ? [[0, vb, 1], [nw * 0.7, vb - 1], [nw - 0.2, y0, 1]] : [[0, vb, 1], [nw * 0.5, (vb + y0) / 2], [nw - 0.5, y0, 1]]
   const v = crew ? `M${f(50 - nw + 0.2)} ${y0}C${f(50 - nw + 0.6)} ${f(vb - 2.6)} ${f(50 - nw * 0.5)} ${f(vb)} 50 ${f(vb)}C${f(50 + nw * 0.5)} ${f(vb)} ${f(50 + nw - 0.6)} ${f(vb - 2.6)} ${f(50 + nw - 0.2)} ${y0}`
     : `M${f(50 - nw + 0.5)} ${y0}L50 ${f(vb)}L${f(50 + nw - 0.5)} ${y0}`
-  return clothOf(G, shirtLoop(G, neck), dark(color, 0.08), P, lo)
-    + `<g clip-path="url(#${P}Jc)">${line(v, dark(color, 0.35), 4.6)}${line(v, accent, 3.4)}${line(v, color, 1.1)}</g>`
+  const seam = seamPts(nw), seamD = sm(seam.map(RX), false) + sm(seam.map(LX), false)
+  let g = ''
+  // a contrast yoke: the shoulders above the seam in the trim
+  if (pat === 'yoke') g += fill(sm([...seam.map(RX), [104, 90], [104, 56], [-4, 56], [-4, 90], ...seam.slice().reverse().map(LX)].map((p, i) => (i === seam.length - 1 || i === seam.length + 4 ? [...p.slice(0, 2), 1] : p))), c2)
+  // the seams
+  if (!lo) g += line(seamD, pat === 'yoke' ? dark(c2, 0.3) : dark(c1, 0.28), 0.35)
+  // a stripe pair over the shoulders, collar to sleeve
+  if (pat === 'shoulder') for (const [o, c, w] of [[1.7, c2, 1.3], [3.3, c3, 0.6]]) g += line(sm([[nw + 3, 65.6 + o * 0.8], [nw + 12, 66.9 + o], [nw + 21, 68.3 + o], [nw + 29, 71.2 + o], [nw + 35, 77 + o]].map(RX), false) + sm([[nw + 3, 65.6 + o * 0.8], [nw + 12, 66.9 + o], [nw + 21, 68.3 + o], [nw + 29, 71.2 + o], [nw + 35, 77 + o]].map(LX), false), c, w)
+  // sleeve stripes round the shoulder caps at the frame's edges
+  if (pat === 'stripes2' || pat === 'stripes3') {
+    const set = pat === 'stripes2' ? [[0, c2, 1.5], [2.4, c2, 1.5]] : [[0, c2, 1.3], [1.5, c3, 1], [3, c2, 1.3]]
+    for (const [o, c, w] of set) {
+      const R = [[nw + 26.6 + o, 69.6], [nw + 25.4 + o, 80], [nw + 26.4 + o, 92], [nw + 28 + o, 104]]
+      g += line(sm(R.map(RX), false) + sm(R.map(LX), false), c, w)
+    }
+  }
+  // the collar: its dark inner neckline (the inside of the band, on the neck's side), the band in the trim; a double
+  // collar's two stripes; the band's own shade on the far side
+  const band = pat === 'double' ? line(v, c2, 3.6) + line(v, c1, 2.2) + line(v, c2, 1) : line(v, c2, 3.6) + (lo ? '' : line(v, mixC(c2, c1, 0.5), 0.5))
+  return line(v, dark(c1, 0.55), 2.8)
+    + clothOf(G, shirtLoop(G, neck), c1, P, lo)
+    + `<g clip-path="url(#${P}Jc)">${g}${band}${fill(poly([[50, vb + 1], [50 + nw + 1, y0 - 1], [50 + nw + 4, y0 - 1], [50 + 2, vb + 4]]), '#000000', ' fill-opacity=".12"')}</g>`
 }
 // a basketball tank: bare shoulders, the scoop neck and the arm holes trimmed
 function tankOf(G, T, color, P, lo) {
@@ -797,13 +864,14 @@ function tankOf(G, T, color, P, lo) {
 }
 // a coach's top: a team polo (its collar open at the neck, the placket) or a dark quarter-zip (the collar in the team's
 // colour, the zip)
-function topOf(look, G, color, P, lo) {
-  const { nw } = G
+function topOf(look, G, K, P, lo) {
+  const { nw } = G, color = K.c1
   if (look.top === 'polo') {
     const c = color
     let s = clothOf(G, shirtLoop(G, [[0, 76.4, 1], [nw * 0.5, 73], [nw + 0.2, 67, 1]]), c, P, lo)
-    const col = light(c, 0.06)
-    s += fill(poly([[50 - nw - 0.6, 66.2], [50 - nw - 4.6, 70.6], [50 - 3.2, 78.6], [50, 76.2]]), col) + fill(poly([[50 + nw + 0.6, 66.2], [50 + nw + 4.6, 70.6], [50 + 3.2, 78.6], [50, 76.2]]), dark(c, 0.16))
+    // (the collar clean, in the team's trim)
+    const col = Math.abs(lum(K.c2) - lum(c)) > 40 ? K.c2 : light(c, 0.12)
+    s += fill(poly([[50 - nw - 0.6, 66.2], [50 - nw - 4.6, 70.6], [50 - 3.2, 78.6], [50, 76.2]]), col) + fill(poly([[50 + nw + 0.6, 66.2], [50 + nw + 4.6, 70.6], [50 + 3.2, 78.6], [50, 76.2]]), dark(col, 0.16))
     s += fill(poly([[48.4, 76.6], [51.6, 76.6], [51.6, 88], [48.4, 88]]), dark(c, 0.1)) + fill(ell(50, 81, 0.6, 0.6), '#f2f3f5') + fill(ell(50, 85.2, 0.6, 0.6), '#f2f3f5')
     return s
   }
@@ -817,8 +885,9 @@ function topOf(look, G, color, P, lo) {
 
 // ── The whole bust ───────────────────────────────────────────────────────────
 export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } = {}) {
-  const col = color || '#d2aa4f', lo = view === 'sm'
-  const key = `${JSON.stringify(look)}|${col}|${view}|${mark?.t ?? ''}${mark?.c ?? ''}`
+  // (his team's kit, kits.js: a caller may pass the kit, or just the team's colour)
+  const K = kitOf(color), col = K.c1, lo = view === 'sm'
+  const key = `${JSON.stringify(look)}|${K.id}${col}|${view}|${mark?.t ?? ''}${mark?.c ?? ''}`
   const P = `f${(hashStr(key) % 1679616).toString(36)}`
   const rnd = rngOf(hashStr(JSON.stringify(look)))
   const G = geo(look), T = skinTones(lo && lum(look.skin) < 80 ? mixC(look.skin, '#8a5a3e', 0.22) : look.skin)
@@ -857,6 +926,8 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     const x = 50 + s * (tw - 0.3), X = d => x + s * d
     ears += fill(sm([[X(-0.4), 36], [X(1.4), 35.3], [X(2.3), 37.2], [X(2.2), 40.8], [X(1.6), 44.4], [X(0.9), 46.8], [X(0.1), 47.6], [X(-0.6), 46.2]]), s < 0 ? T.B : T.M)
       + fill(sm([[X(0.3), 37.8], [X(1.3), 37.4], [X(1.5), 40.2], [X(1.1), 43.6], [X(0.3), 44.4]]), s < 0 ? T.M : T.S)
+      + (lo ? '' : line(`M${f(X(0.2))} 36.6Q${f(X(1.9))} 36.4 ${f(X(1.8))} 39.6Q${f(X(1.7))} 42.6 ${f(X(1))} 45`, s < 0 ? T.S : T.D, 0.3, ' stroke-linecap="round"')
+        + fill(ell(X(0.35), 41.6, 0.45, 0.8), s < 0 ? T.S : T.D))
   }
   // the neck: under the jaw in shadow, its far side, the collar's shadow inside the neckline
   const neckD = sm(neckLoop(G))
@@ -868,21 +939,23 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + fill(poly([[50 - nw + 0.4, 62.6], [50, 75.2], [50 + nw - 0.4, 62.6], [50 + nw, 62.6], [50, 80], [50 - nw, 62.6]]), T.S)
     + (lo || G.young ? '' : fill(sm([[50 - nw + 2.6, 55], [50 - 1.8, 65.4], [50 - 2.4, 66], [50 - nw + 2, 57.4]]), T.M))
     + `</g>`
-  const shirt = look.top ? topOf(look, G, col, P, lo) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, col, P, lo, look.kit === 'crew')
+  const shirt = look.top ? topOf(look, G, K, P, lo) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
   const headD = sm(sym(G.R))
   const vb = VIEWS[view] ?? VIEWS.full
   const close = view === 'eyes' || view === 'nose' || view === 'mouth'
   const hairFront = look.cap === 'cap' ? `<g clip-path="url(#${P}K)">${hp.front}</g>` : hp.front
   const e = eyes.P
-  const body = (close ? '' : hp.back + neck + shirt + chainOf(look, G) + hp.mid + ears)
+  // (a durag's tails hang behind his neck)
+  const tails = look.gear === 'durag' ? fill(sm([[50 + cw - 2, 40], [50 + cw + 0.4, 44], [50 + nw + 3.4, 60], [50 + nw + 4.4, 70], [50 + nw + 1.6, 70], [50 + nw + 0.6, 58], [50 + cw - 3.4, 45]]), '#121317') : ''
+  const body = (close ? '' : hp.back + tails + neck + shirt + chainOf(look, G, lo) + hp.mid + ears)
     + `<use href="#${P}h" fill="${T.B}"/>`
     + `<g clip-path="url(#${P}C)">${T.blush && !lo ? fill(sm([[50 - cb + 2, 44], [50 - cb + 6.4, 43.4], [50 - cb + 5.6, 47.6], [50 - cb + 2.4, 48]]) + sm([[50 + cb - 2, 44], [50 + cb - 6.4, 43.4], [50 + cb - 5.6, 47.6], [50 + cb - 2.4, 48]]), T.blush) : ''}`
-    + `${fill(S.M, T.M)}${fill(S.S, T.S)}${fill(S.H, T.H)}${beard.under}`
+    + `${fill(S.M, T.M)}${fill(S.S, T.S)}${fill(S.H, T.H)}${lo ? '' : `<rect x="20" y="10" width="60" height="60" fill="${dotTex(T.D, 0.9, 0.13, 0.07)}"/>`}${beard.under}`
     + line(poly(G.Rd.filter(p => p[1] > 27 && p[1] < jy + 1).map(p => [50 + p[0], p[1]]), false), mixC(T.B, '#f4f0ff', 0.2 + T.d * 0.12), lo ? 1.3 : 0.7) + `</g>`
     + `<use href="#${P}e" fill="${T.white}"/>`
     + `<g clip-path="url(#${P}E)">${fill(e.ir, e.iris)}${e.light ? fill(e.pu, '#0c0807') : ''}${fill(`M0 0H100V${f(ey - 0.1)}H0Z`, '#2a1a12', ' fill-opacity=".18"')}${lo ? '' : fill(e.cl, '#ffffff', ' fill-opacity=".7"')}</g>`
     + fill(e.lid, T.S) + fill(e.lash, T.lash)
-    + browsOf(look, G, T) + nose
+    + browsOf(look, G, T, lo) + nose
     + beard.over + mouth + stacheOf(look, G, T, rnd, bc) + eyeBlackOf(look, G)
     + hairFront + headGearOf(look, G, col) + earringsOf(look, G) + glassesOf(look, G) + capOf(look, G, col, mark)
   const defs = `<defs>${Object.values(TX.defs).join('')}<path id="${P}h" d="${headD}"/><path id="${P}e" d="${eyes.wh}"/><clipPath id="${P}C"><use href="#${P}h"/></clipPath><clipPath id="${P}E"><use href="#${P}e"/></clipPath>${look.cap === 'cap' ? `<clipPath id="${P}K"><path d="M0 ${f(G.hl + 3)}H100V100H0Z"/></clipPath>` : ''}</defs>`

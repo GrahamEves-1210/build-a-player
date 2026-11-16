@@ -4,7 +4,8 @@ import { nflHeadshot } from '../../utils/simulation'
 import { TEAM, photoId, POS_LABEL } from '../../lib/franchise2'
 import { CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { sfx } from '../../lib/juice'
-import { genFace, buildFaceUrl } from '../../lib/franchise2/faces'
+import { genFace, buildFaceUrl } from '../../lib/franchise2/faces'
+import { teamKit } from '../../lib/franchise2/kits'
 
 // The small parts every Franchise screen is made of: a logo, a face, a number that counts, a meter that fills,
 // a stamp. Flat team colours, the game's type, nothing that moves unless it's delivering a result.
@@ -25,7 +26,7 @@ const initials = n => String(n || '?').split(' ').filter(Boolean).slice(0, 2).ma
 // small: a list's face (64 px and under), the lighter drawing
 export function photoOf(F, p, color, small = false) {
   if (!p) return null
-  if (p.b != null) return buildFaceUrl(F.builds[p.b], color ?? TEAM[F.team]?.color, small ? 'sm' : 'full')
+  if (p.b != null) return buildFaceUrl(F.builds[p.b], color ?? teamKit(F.team) ?? TEAM[F.team]?.color, small ? 'sm' : 'full')
   const id = photoId(p)
   return id ? nflHeadshot(id) : genFace(p, color, small)
 }

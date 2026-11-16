@@ -11,7 +11,8 @@ import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
 import { CoachSpin, StylePick, CoachWho, CoachReveal } from './CoachBuild'
-import './setup.css'
+import './setup.css'
+import { teamKit } from '../../lib/franchise2/kits'
 
 // SETUP: a new franchise, in the order a new GM's first week goes.
 //   1 THE TEAM    the 32 logos by division; a team's card: last season, team OVR, its real head coach and stars
@@ -192,7 +193,7 @@ function Builds({ S, go, owner, onBuild }) {
           const o = ovrOf(p.pos, b.build)
           const sl = slotOf(p)
           return (
-            <LowerThird key={p.id} name={b.name || `${POS_LABEL[p.pos]} ${k + 1}`} pos={p.pos} num={b.num} ovr={o} photo={buildFaceUrl({ pos: p.pos, face: b.face ?? defaultFace(`${S.seed}-${p.id}`, p.pos) }, TEAM[S.team]?.color)} team={S.team} mine={owner}
+            <LowerThird key={p.id} name={b.name || `${POS_LABEL[p.pos]} ${k + 1}`} pos={p.pos} num={b.num} ovr={o} photo={buildFaceUrl({ pos: p.pos, face: b.face ?? defaultFace(`${S.seed}-${p.id}`, p.pos) }, teamKit(S.team) ?? TEAM[S.team]?.color)} team={S.team} mine={owner}
               line={b.name ? (d => `ROOKIE DEAL · $${d.$.toFixed(1)}M · ${d.y} YRS`)(rookieScale(sl)) : 'NAME HIM'} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
           )
         })}
@@ -236,7 +237,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
   const shown = all ? free : free.slice(0, 18)
   return (
     <div className="fsu-nameform">
-      <LowerThird size="l" name={`${first} ${last}`.trim() || POS_NAME[pos]} pos={pos} num={showNum ? num : null} ovr={o} photo={buildFaceUrl({ pos, face }, TEAM[team]?.color)} team={team} mine={owner}
+      <LowerThird size="l" name={`${first} ${last}`.trim() || POS_NAME[pos]} pos={pos} num={showNum ? num : null} ovr={o} photo={buildFaceUrl({ pos, face }, teamKit(team) ?? TEAM[team]?.color)} team={team} mine={owner}
         line={deal ? `ROOKIE DEAL · $${deal.$.toFixed(1)}M A YEAR` : null} />
       <span className="fsu-lbl">FACE</span>
       {/* his face the way the coach's is picked: a strip of made-up men who could play his position, MORE spins eight more */}
@@ -245,7 +246,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
           const on = sameFace(face, f)
           return (
             <button key={f.key} type="button" role="radio" aria-checked={on} className={`fsu-face${on ? ' is-on' : ''}`} style={fkVars(team)} onClick={() => { setFace(f.face); sfx('tap') }}>
-              <img src={buildFaceUrl({ pos, face: f.face }, TEAM[team]?.color)} alt="" draggable={false} />
+              <img src={buildFaceUrl({ pos, face: f.face }, teamKit(team) ?? TEAM[team]?.color)} alt="" draggable={false} />
             </button>
           )
         })}

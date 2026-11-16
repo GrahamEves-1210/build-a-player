@@ -24,7 +24,8 @@ import { LB_ATTR } from '../../data/lbs'
 import { DB_ATTR } from '../../data/dbs'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, Spin, fkVars, reduced, splitName, ActionBar } from './kit'
-import './draft.css'
+import './draft.css'
+import { teamKit, schoolKit } from '../../lib/franchise2/kits'
 
 // SCOUTING AND THE DRAFT (engine: lib/franchise2/draft.js).
 //   DraftBoard  the scouting room, a sheet over the hub: this week's college games, the class, our board, the mock
@@ -49,6 +50,7 @@ export function colVars(col) {
   return v
 }
 const colColor = col => school(col)?.color ?? '#2b3039'
+const colKit = col => schoolKit(school(col)) ?? colColor(col)
 const SUIT = '#1c1f25'
 // a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js)
 const faceFor = (F, x, color) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color) : faceUrl(x.fk ?? x.n, facePos(x), color))
@@ -70,7 +72,7 @@ function Prospect({ F, x, rank, onOpen, line, right, delay = 0, starOk = true, a
         {rank != null && <span className="dr-p-rank">{rank}</span>}
         <span className="dr-p-slab" style={colVars(x.col)} aria-hidden="true">
           <span className="dr-p-num">{x.nu}</span>
-          <img className="dr-p-face" src={faceFor(F, x, colColor(x.col))} alt="" draggable={false} />
+          <img className="dr-p-face" src={faceFor(F, x, colKit(x.col))} alt="" draggable={false} />
         </span>
         <span className="dr-p-bar">
           <span className="dr-p-name"><small>{first}</small><b>{last}</b></span>
@@ -111,7 +113,7 @@ function ProspectCard({ F, act, id, onClose, onDraft, draftLabel }) {
       <div className="dr-card">
         <div className="dr-hero" style={colVars(x.col)}>
           <span className="dr-hero-num" aria-hidden="true">{x.nu}</span>
-          <img className="dr-hero-face" src={faceFor(F, x, colColor(x.col))} alt="" draggable={false} />
+          <img className="dr-hero-face" src={faceFor(F, x, colKit(x.col))} alt="" draggable={false} />
           <span className="dr-hero-logo"><CollegeLogo col={x.col} size={46} /></span>
           <button type="button" className="dr-x" onClick={() => { onClose(); tap() }} aria-label="Close">✕</button>
         </div>
@@ -621,7 +623,7 @@ function RevealCard({ F, p, onNext }) {
         back={<div className="dr-rv-back"><KLogo s={F.team} size={96} /><b>RD {roundOf(p.at)} · PICK {p.at + 1}</b></div>}
         front={(
           <div className="dr-rv-front">
-            <span className="dr-rv-slab"><span className="dr-rv-num">{nu ?? ''}</span><img src={faceFor(F, p, t.color)} alt="" draggable={false} /></span>
+            <span className="dr-rv-slab"><span className="dr-rv-num">{nu ?? ''}</span><img src={faceFor(F, p, teamKit(t.short) ?? t.color)} alt="" draggable={false} /></span>
             <span className="dr-rv-name"><small>{first}</small><b>{last}</b><em>{pickSpot(p)} · {schoolName(p.col)}</em></span>
           </div>
         )} />
@@ -651,7 +653,7 @@ function ClassRecap({ F, act, owner }) {
         {rv.mine.map((p, i) => i < n && (
           <div key={p.at} className="dr-cls">
             <span className="dr-cls-no"><small>RD {roundOf(p.at)}</small><b>{p.at + 1}</b></span>
-            <span className="dr-p-slab" style={fkVars(F.team)}><span className="dr-p-num">{nu(p)}</span><img className="dr-p-face" src={faceFor(F, p, TEAM[F.team].color)} alt="" draggable={false} /></span>
+            <span className="dr-p-slab" style={fkVars(F.team)}><span className="dr-p-num">{nu(p)}</span><img className="dr-p-face" src={faceFor(F, p, teamKit(F.team) ?? TEAM[F.team].color)} alt="" draggable={false} /></span>
             <span className="dr-p-bar"><span className="dr-p-name"><small>{splitName(p.n).first}</small><b>{splitName(p.n).last}</b></span><span className="dr-p-meta"><em>{pickSpot(p)}</em><CollegeLogo col={p.col} size={15} /><span>{schoolName(p.col)}</span></span></span>
             <span className="dr-cls-o"><small>OURS</small><b>{p.my != null ? gradeOf(p.my) : '—'}</b></span>
             <span className="dr-cls-g"><small>TRUE</small><b>{gradeOf(p.pk)}</b></span>

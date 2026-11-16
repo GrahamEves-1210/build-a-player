@@ -17,6 +17,8 @@
 // Every SVG string is cached by its look, so a face is built once and then reused.
 import { seeded } from '../rng'
 import { faceSvg, VIEWS, toUrl, mixC, lum } from './faceArt'
+// (a colour a caller passes: a hex, or a team's kit from kits.js; the caches key a kit by its id)
+const ck = c => (c && typeof c === 'object' ? c.id ?? c.short ?? c.color : c ?? '')
 
 // ── Who he is ────────────────────────────────────────────────────────────────
 // background: b Black · w white · m mixed · p Polynesian · l Latino
@@ -67,7 +69,7 @@ export const FACE_HAIR = [
   ['shaved', 'BALD'], ['buzz', 'BUZZ'], ['crew', 'CREW CUT'], ['fade', 'FADE'], ['waves', 'WAVES'], ['sidepart', 'SIDE PART'],
   ['textured', 'TEXTURED'], ['curly', 'CURLS'], ['twists', 'TWISTS'], ['locs', 'LOCS'], ['cornrows', 'BRAIDS'], ['afro', 'AFRO'],
   ['hightop', 'HIGH TOP'], ['frohawk', 'FROHAWK'], ['flow', 'FLOW'], ['long', 'LONG'], ['bun', 'BUN'], ['mullet', 'MULLET'],
-  ['receding', 'RECEDING'], ['balding', 'THINNING'],
+  ['receding', 'RECEDING'], ['balding', 'THINNING'], ['locsup', 'LOCS UP'], ['starter', 'STARTER LOCS'],
 ]
 // a player is 21 to 30 (owner 11-16: "no gray hair please these are supposed to be 21yos"): his creator never offers
 // grey hair or a hairline that's going (the full lists stay for coaches and for reading older saves)
@@ -82,6 +84,8 @@ export const PLAYER_HC = FACE_HC.filter(x => !GREY.has(x[0]))
 export const FACE_BEARD = [['none', 'CLEAN'], ['stubble', 'STUBBLE'], ['patch', 'CHIN PATCH'], ['chin', 'STRAP'], ['goatee', 'GOATEE'], ['short', 'SHORT'], ['full', 'FULL'], ['long', 'LONG']]
 export const FACE_STACHE = [['none', 'NONE'], ['thin', 'THIN'], ['full', 'FULL'], ['horseshoe', 'HORSESHOE']]
 export const FACE_GEAR = [['none', 'NONE'], ['headband', 'HEADBAND'], ['durag', 'DURAG'], ['visor', 'VISOR']]
+// (no visor on a player, owner 11-16: coaches keep their caps and visors)
+export const PLAYER_GEAR = FACE_GEAR.filter(x => x[0] !== 'visor')
 export const FACE_EB = [['none', 'NONE'], ['paint', 'EYE BLACK'], ['strips', 'STRIPS']]
 export const FACE_EAR = [['none', 'NONE'], ['studs', 'STUDS'], ['stud', 'ONE STUD']]
 export const FACE_CHAIN = [['none', 'NONE'], ['gold', 'GOLD'], ['silver', 'SILVER']]
@@ -105,9 +109,9 @@ const SKIN = {
 // (then, now and then, a neighbouring tone the older list didn't have)
 const SKIN_NEXT = { '#f4d2b6': '#f6dccb', '#d9a582': '#cfa27c', '#b98058': '#ae7a56', '#7a4a2c': '#6a4128', '#5e3a22': '#4e2f1e', '#432818': '#33201a', '#deae84': '#cfa27c' }
 const HAIR = {
-  b: [['fade', 28], ['waves', 12], ['buzz', 12], ['locs', 12], ['twists', 8], ['cornrows', 5], ['hightop', 2], ['shaved', 9], ['afro', 3], ['curly', 4]],
+  b: [['fade', 28], ['waves', 12], ['buzz', 12], ['locs', 6], ['locsup', 3], ['starter', 3], ['twists', 8], ['cornrows', 5], ['hightop', 2], ['shaved', 9], ['afro', 3], ['curly', 4]],
   w: [['crew', 18], ['sidepart', 8], ['textured', 26], ['flow', 12], ['buzz', 8], ['curly', 12], ['shaved', 1], ['mullet', 4], ['fade', 11]],   // (young men's cuts: a textured crop, curls, a fade, the flow; a shaved head read older; no long hair: it read as a costume)
-  m: [['fade', 26], ['curly', 24], ['buzz', 12], ['twists', 8], ['locs', 8], ['afro', 4], ['shaved', 6], ['textured', 8], ['waves', 4]],
+  m: [['fade', 26], ['curly', 24], ['buzz', 12], ['twists', 8], ['locs', 4], ['starter', 4], ['afro', 4], ['shaved', 6], ['textured', 8], ['waves', 4]],
   p: [['curly', 20], ['long', 14], ['buzz', 18], ['fade', 20], ['bun', 10], ['shaved', 10], ['mullet', 4]],
   l: [['fade', 32], ['crew', 20], ['textured', 16], ['buzz', 14], ['curly', 8], ['shaved', 6], ['sidepart', 4]],
 }
@@ -163,6 +167,7 @@ const BROWS = [['straight', 34], ['thick', 28], ['angled', 18], ['arched', 12], 
 const pickW = (r, list) => { const t = list.reduce((a, x) => a + x[1], 0); let u = r() * t; for (const x of list) { u -= x[1]; if (u < 0) return x[0] } return list[list.length - 1][0] }
 // the build by position (owner 11-16: "why are my TEs fat"): linemen wide, tight ends and linebackers athletic, the
 // backs, receivers, corners, safeties, quarterbacks and kickers lean
+const TIPPED = new Set(['locs', 'locsup', 'starter', 'twists'])
 const BIG = new Set(['ol', 'dl'])
 const MID = new Set(['te', 'lb'])
 const wideOf = pos => { const k = roomOf(pos); return BIG.has(k) ? 1 : MID.has(k) ? 0.5 : k === 'rb' ? 0.3 : 0.1 }
@@ -213,7 +218,7 @@ export function lookOf(key, pos = 'wr', ag = null) {
   const hair = pickW(r, HAIR[g])
   let hc = pickW(r, HC[g])
   // dyed tips only on locs or twists; otherwise his natural colour
-  if (hc === '#b8893c' && hair !== 'locs' && hair !== 'twists') hc = '#16110e'
+  if (hc === '#b8893c' && !TIPPED.has(hair)) hc = '#16110e'
   let beard = pickW(r, BEARD[g])
   // (a shaved head usually comes with a beard; hair to the shoulders or tied up always does, so it reads as a
   // football player's, never a woman's)
@@ -300,7 +305,7 @@ const CCACHE = new Map()
 export function coachUrl(key, { g = null, ag = null, color = '#d2aa4f', small = false, mark = null } = {}) {
   // (the face changes only as he ages: drawn at his age in steps, the steps where his hair greys and his lines come)
   const a = ag == null ? null : ag < 40 ? 36 : ag < 42 ? 40 : ag < 47 ? 44 : ag < 54 ? 50 : ag < 61 ? 57 : 64
-  const k = `${key}|${g ?? ''}|${a ?? ''}|${color}|${small ? 1 : 0}|${mark?.t ?? ''}${mark?.c ?? ''}`
+  const k = `${key}|${g ?? ''}|${a ?? ''}|${ck(color)}|${small ? 1 : 0}|${mark?.t ?? ''}${mark?.c ?? ''}`
   let u = CCACHE.get(k)
   if (!u) {
     u = toUrl(faceSvg(coachLook(key, { g, ag: a }), { color, view: small ? 'sm' : 'full', mark }))
@@ -319,7 +324,7 @@ const CACHE = new Map()
 // small: the lighter drawing for a list (64 px and under: the fine lines left out)
 export function faceUrl(key, pos, color, ag = null, small = false) {
   const a = ageStep(ag)
-  const k = `${key}|${pos}|${color ?? ''}|${a}|${small ? 1 : 0}`
+  const k = `${key}|${pos}|${ck(color)}|${a}|${small ? 1 : 0}`
   let u = CACHE.get(k)
   if (!u) {
     u = toUrl(faceSvg(lookOf(key, pos, a), { color, view: small ? 'sm' : 'full' }))
@@ -368,6 +373,7 @@ export function normFace(face, base) {
   if (!ok(FACE_HC, f.hc)) f.hc = base.hc
   // (a player's face: an older save's grey, platinum or thinning hair back to his own colour and a full head of it)
   if (GREY.has(f.hc)) f.hc = GREY.has(base.hc) ? '#2a1d15' : base.hc
+  if (f.gear === 'visor') f.gear = 'none'
   if (OLD_HAIR[f.hair]) f.hair = groupOfSkin(f.skin) === 'b' && f.hair === 'receding' ? 'fade' : OLD_HAIR[f.hair]
   for (const k of SL) f[k] = Number.isFinite(+f[k]) ? clamp(+f[k], -1, 1) : 0
   // (a face saved before his bones had a seed takes his default's)
@@ -381,7 +387,7 @@ export function buildLook(B) {
   const pos = B?.pos ?? 'wr'
   const f = normFace(B?.face, defaultFace(B?.name ?? 'build', pos))
   // dyed tips only show on locs and twists; on any other cut the colour underneath is black
-  const hc = f.hc === '#b8893c' && f.hair !== 'locs' && f.hair !== 'twists' ? '#16110e' : f.hc
+  const hc = f.hc === '#b8893c' && !TIPPED.has(f.hair) ? '#16110e' : f.hc
   // B.kit: what he wears under his face (KITS; eye black is football's only)
   const kit = KITS.includes(B?.kit) ? B.kit : 'fb'
   return { ...f, g: groupOfSkin(f.skin), hc, brow: f.hc === '#b8893c' ? '#16110e' : hc, wide: wideOf(pos), ag: ageStep(B?.age), kit, ...(kit !== 'fb' ? { eb: 'none' } : null) }
@@ -390,7 +396,7 @@ const BCACHE = new Map()
 export function buildFaceUrl(B, color, view = 'full') {
   if (!B) return null
   const L = buildLook(B)
-  const k = `${FACE_KEYS.map(x => L[x]).join('|')}|${L.wide}|${L.ag}|${L.kit}|${color ?? ''}|${view}`
+  const k = `${FACE_KEYS.map(x => L[x]).join('|')}|${L.wide}|${L.ag}|${L.kit}|${ck(color)}|${view}`
   let u = BCACHE.get(k)
   if (!u) {
     u = toUrl(faceSvg(L, { color, view }))

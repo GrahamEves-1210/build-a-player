@@ -8,7 +8,8 @@ import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
-import { coachPhoto, teamMark } from './coachFace'
+import { coachPhoto, teamMark } from './coachFace'
+import { teamKit } from '../../lib/franchise2/kits'
 
 // THE COACH: built like a player. The wheel is the league's real head coaches (not the player's own team's); it
 // lands on one, and the player takes ONE of his five ratings into the matching line of his coach. Five spins fill
@@ -129,7 +130,7 @@ export function faceChoices(seed, page = 0) {
   }
   return out
 }
-export const coachFace = (c, team) => (c?.face ? coachFaceUrl(c.face, TEAM[team]?.color, null, false, teamMark(team)) : null)
+export const coachFace = (c, team) => (c?.face ? coachFaceUrl(c.face, teamKit(team) ?? TEAM[team]?.color, null, false, teamMark(team)) : null)
 export function CoachWho({ S, go, owner, onDone }) {
   const c = S.coach ?? {}
   const [page, setPage] = useState(c.facePage ?? 0)
@@ -151,7 +152,7 @@ export function CoachWho({ S, go, owner, onDone }) {
       <div className="fsu-faces" role="radiogroup" aria-label="Face">
         {faces.map(f => (
           <button key={f.key} type="button" role="radio" aria-checked={c.face?.key === f.key} className={`fsu-face${c.face?.key === f.key ? ' is-on' : ''}`} style={fkVars(S.team)} onClick={() => set({ face: f, facePage: page }, 'tap')}>
-            <img src={coachFaceUrl(f, TEAM[S.team]?.color, null, false, teamMark(S.team))} alt="" draggable={false} />
+            <img src={coachFaceUrl(f, teamKit(S.team) ?? TEAM[S.team]?.color, null, false, teamMark(S.team))} alt="" draggable={false} />
           </button>
         ))}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>

@@ -21,7 +21,8 @@ import { sfx, haptic } from '../../lib/juice'
 import { LowerThird, KLogo, Tag, Go, Fact, fkVars, BigNum } from './kit'
 import { photoOf } from './bits'
 import './fd.css'
-import './fd2.css'
+import './fd2.css'
+import { teamKit } from '../../lib/franchise2/kits'
 
 // D's parts: a man's face (a real man's photo, a build's own face, a made-up man's drawn face), a man as a
 // lower-third on any of D's screens, the cap bar, a man's page (his ratings as grades, his deal, his seasons).
@@ -33,9 +34,9 @@ export const posText = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p 
 // his initials
 export function faceFor(F, p, s, small = false) {
   if (!p) return null
-  const ph = photoOf(F, p, TEAM[s]?.color, small)
+  const ph = photoOf(F, p, teamKit(s) ?? TEAM[s]?.color, small)
   if (ph) return ph
-  if (p.b == null && !realOf(p.p, p.n)) return genFace(p, TEAM[s]?.color, small)
+  if (p.b == null && !realOf(p.p, p.n)) return genFace(p, teamKit(s) ?? TEAM[s]?.color, small)
   return null
 }
 // a man as a lower-third (his team's colours, his number, his OVR; a build: his owner's name)
