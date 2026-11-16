@@ -116,7 +116,7 @@ function skinTones(sk0) {
   const S = mixC(sk, warm, 0.3 - d * 0.08)
   t = {
     d, B: sk, S, M: mixC(sk, S, 0.48), D: mixC(sk, dark(warm, 0.45), 0.58),
-    H: d < 0.55 ? mixC(sk, '#fff3e8', 0.2 - d * 0.08) : mixC(sk, '#d9b8a8', 0.14 + d * 0.06),
+    H: d < 0.55 ? mixC(sk, '#fff3e8', 0.14 - d * 0.02) : mixC(sk, '#d9b8a8', 0.14 + d * 0.06),
     lipU: d < 0.5 ? mixC(sk, '#9c4a46', 0.3 - d * 0.1) : mixC(sk, '#2a1014', 0.26),
     lipL: d < 0.5 ? mixC(sk, '#c0716a', 0.2 - d * 0.06) : mixC(sk, '#93626a', 0.2),
     white: mixC('#f0ebe5', sk, 0.16 + d * 0.12),
@@ -169,7 +169,7 @@ const NOSE_W = { straight: 3.3, broad: 3.75, narrow: 2.95, short: 3.3, wide: 4.1
 const NOSE_BR = { straight: 0, broad: -0.15, narrow: 0.25, short: -0.1, wide: -0.2, boxer: 0.1 }
 const MOUTH = { neutral: [1, 1, 1, 0, 0], full: [1.22, 1.24, 1.02, 0, 0], thin: [0.72, 0.78, 0.98, 0, 0], smirk: [1, 1, 1, 0, 0.45], wide: [1, 1.05, 1.12, 0.08, 0], stern: [0.86, 0.9, 1, -0.22, 0] }
 // the eye: the upper lid's rise, the lower's drop, the tilt up to the outer corner
-const EYE = { almond: [1.05, 0.62, 0.14], round: [1.2, 0.78, 0], narrow: [0.9, 0.56, 0.06], hooded: [0.98, 0.6, 0], deep: [1.0, 0.62, 0], upturn: [1.0, 0.6, 0.38] }
+const EYE = { almond: [1.14, 0.68, 0.14], round: [1.28, 0.84, 0], narrow: [0.98, 0.62, 0.06], hooded: [1.06, 0.66, 0], deep: [1.08, 0.68, 0], upturn: [1.08, 0.66, 0.38] }
 const sv = (look, k) => clamp(+look[k] || 0, -1, 1)
 
 function geo(look) {
@@ -183,7 +183,7 @@ function geo(look) {
     jy: s.jy + chn * 0.45 + wt * 0.35, cy: s.cy + chn * 1.2 + wt * 0.25,
     nw: 11.2 + w * 2.6 + wt * 1.1,
     lean: clamp(0.45 - w * 0.3 - wt * 0.5 + chk * 0.4, 0, 1), soft: clamp(wt * 0.8 + w * 0.15, 0, 1),
-    ey: 38.3, es: 6.15 + sv(look, 'esp') * 0.5, ez: 1 + sv(look, 'esz') * 0.11,
+    ey: 38.3, es: 6.35 + sv(look, 'esp') * 0.5, ez: 1 + sv(look, 'esz') * 0.11,
     nb: 47.5 + sv(look, 'nsl') * 0.9 + (look.head === 'long' ? 0.4 : 0),
   }
   G.by = G.ey - 2.85 - sv(look, 'brh') * 0.75
@@ -236,9 +236,10 @@ function capD(G, o, r = 0, rnd = null, ctr = [50, 33]) {
 }
 // long hair's mass behind the head (to y1, w past the skull), and the part of it that falls over the shoulders in
 // front of the jersey (each side of the neck)
-function mass(G, y1, w, rnd) {
+function mass(G, y1, w, rnd, from = 44) {
   const { cw } = G
-  const right = [[0, C0 - 0.5], [cw * 0.7, C0 + 0.6], [cw + 1, C0 + 8], [cw + w, 40], [cw + w + 0.6, y1 - 3]]
+  // (tucked behind the ears: nothing round the face above them, owner 11-16)
+  const right = [[0, C0 - 0.5], [cw * 0.7, C0 + 0.6], [cw - 0.8, C0 + 8], [cw - 0.6, 37], [cw - 0.4, from - 6], [cw + w * 0.55, from], [cw + w, Math.max(from + 6, 52)], [cw + w + 0.6, y1 - 3]]
   const edge = broken(dense([[50 + cw + w + 0.6, y1 - 3], [50 + cw * 0.5, y1], [50, y1 + 0.6], [50 - cw * 0.5, y1], [50 - cw - w - 0.6, y1 - 3]], 6), 0.7, 1.1, rnd)
   return poly([...dense(right.map(RX), 4), ...edge.slice(1), ...dense(right.map(LX), 4).reverse().slice(1)])
 }
@@ -246,8 +247,8 @@ function flowD(G, rnd) {
   const { cw, nw } = G
   let d = ''
   for (const s of [-1, 1]) {
-    const out = [[cw - 2, 28], [cw + 1.2, 34], [cw + 1.8, 44], [cw + 2.6, 51], [cw + 4.8, 55.6]]
-    const bot = broken(dense([[cw + 4.8, 55.6], [cw + 2, 56.6], [nw + 3, 55.4], [nw + 0.4, 54.6]], 5), 0.6, 0.9, rnd)
+    const out = [[cw - 1.2, 38], [cw + 0.4, 43], [cw + 1.2, 48.4], [cw + 2.4, 52.6], [cw + 4, 55.2]]
+    const bot = broken(dense([[cw + 4, 55.2], [cw + 1.8, 56.4], [nw + 3, 55.4], [nw + 0.4, 54.6]], 5), 0.6, 0.9, rnd)
     d += poly([...dense(out, 4), ...bot.slice(1), [nw, 44]].map(p => [50 + s * p[0], p[1]]))
   }
   return d
@@ -405,17 +406,17 @@ function hairOf(look, G, T, rnd, lo, hide) {
       // hair grown out: swept back off the face and down behind the ears (flow, to the jaw), short on top and long at
       // the back (mullet, to the collar), or long to the shoulders with a middle part (long)
       const kind = st, y1 = kind === 'flow' ? 56 : kind === 'mullet' ? 66 : 71
-      R.back = fill(kind === 'flow' ? flowD(G, rnd) : mass(G, y1, kind === 'mullet' ? 1.4 : 2.2, rnd), mixC(H.c, H.S, 0.55))
-      if (kind !== 'flow') R.mid = fill(panels(G, kind === 'long' ? 76 : 67, kind === 'long' ? 3.4 : 2.4, rnd), kind === 'long' ? H.c : dark(H.c, 0.1))
+      R.back = fill(kind === 'flow' ? flowD(G, rnd) : mass(G, y1, kind === 'mullet' ? 1 : 1.4, rnd, kind === 'mullet' ? 52 : 46), mixC(H.c, H.S, 0.8))
+      if (kind === 'long') R.mid = fill(panels(G, 76, 3.4, rnd), H.c)
       if (kind === 'mullet') R.front = sides(H.f1) + fill(capD(G, { t: 2.2, ts: 0.5, sb: 30.6, hl: hl + 0.2 }), H.c) + sheen(2.2)
       else if (kind === 'flow') {
-        R.front = fill(capD(G, { t: 3.1, ts: 0.9, sb: 34.4, hl: hl - 0.9 }), H.c)
+        R.front = fill(capD(G, { t: 3.1, ts: 0.5, sb: 33.4, hl: hl - 0.9 }), H.c)
         if (!lo) R.front += fill(sm([[39, hl - 1.4], [44, C0 + 0.4], [56, C0 - 0.6], [61, C0 + 1.6], [52, C0 + 2.2], [43.4, hl - 3.2]]), H.H)
-          + line(`M${f(50 - cw + 1.4)} ${f(hl + 2)}Q${f(50 - cw - 0.6)} 31 ${f(50 - cw - 0.4)} 39M${f(50 + cw - 1.4)} ${f(hl + 2)}Q${f(50 + cw + 0.6)} 31 ${f(50 + cw + 0.4)} 39`, H.S, 0.5)
+          + line(`M${f(50 - cw + 2.6)} ${f(hl + 0.6)}Q${f(50 - cw + 0.6)} ${f(hl - 1)} ${f(50 - cw)} ${f(hl + 5)}M${f(50 + cw - 2.6)} ${f(hl + 0.6)}Q${f(50 + cw - 0.6)} ${f(hl - 1)} ${f(50 + cw)} ${f(hl + 5)}`, H.S, 0.5)
       } else {
-        R.front = fill(capD(G, { t: 1.9, ts: 1.6, sb: 48, hl: hl - 0.3 }), H.c) + line(`M50 ${f(hl - 0.3)}V${f(C0 + 1)}`, H.S, 0.5)
+        R.front = fill(capD(G, { t: 1.9, ts: 0.6, sb: 34.4, hl: hl - 0.3 }), H.c) + line(`M50 ${f(hl - 0.3)}V${f(C0 + 1)}`, H.S, 0.5)
         if (!lo) R.front += fill(sm([[47.4, hl - 1], [44, C0 + 2], [40, C0 + 5], [42.6, hl + 0.4]]), H.H)
-          + line(`M${f(50 - cw - 1.4)} 42Q${f(50 - cw - 2.6)} 58 ${f(50 - cw - 2.2)} 72M${f(50 + cw + 1.6)} 44Q${f(50 + cw + 2.8)} 58 ${f(50 + cw + 2.6)} 72`, H.S, 0.5)
+          + line(`M${f(50 - cw - 0.6)} 48Q${f(50 - cw - 2.4)} 60 ${f(50 - cw - 2.2)} 72M${f(50 + cw + 0.8)} 48Q${f(50 + cw + 2.6)} 60 ${f(50 + cw + 2.6)} 72`, H.S, 0.5)
       }
       return R
     }
@@ -483,8 +484,8 @@ function beardOf(look, G, T, rnd, lo, bc) {
   const lip = [[mw + 0.5, my + 0.4], [mw * 0.55, my + ll + 0.2], [0, my + ll + 0.35]]
   const stub = kind === 'stubble'
   const rOut = [[xs + 0.05, sb], ...edge, ...dense(neckL, 4).slice(1)]
-  const rOutB = stub ? rOut : broken(rOut, 0.34, lo ? 1.6 : 0.9, rnd, 0.08)
-  const rIn = broken(dense([...cheek, ...lip], lo ? 2 : 4), stub ? 0.12 : 0.42, lo ? 1.5 : 0.8, rnd)
+  const rOutB = broken(rOut, stub ? 0.26 : 0.34, lo ? 1.6 : 0.9, rnd, stub ? 0 : 0.08)
+  const rIn = broken(dense([...cheek, ...lip], lo ? 2 : 4), stub ? 0.3 : 0.42, lo ? 1.5 : 0.8, rnd)
   const half = [...rOutB, ...rIn.slice().reverse()]
   // (the whole loop: the right half's outside down to the middle, the left's up, the left's inside down, the right's up)
   const L = p => [50 - p[0], p[1]], Rr = p => [50 + p[0], p[1]]
@@ -493,16 +494,19 @@ function beardOf(look, G, T, rnd, lo, bc) {
   if (stub) {
     // stubble: one flat tone where the beard grows, and on the upper lip
     const lipD = sm([[50 - mw - 0.4, my - 0.5], [50 - mw * 0.5, G.nb + 1.6], [50, G.nb + 1.3], [50 + mw * 0.5, G.nb + 1.6], [50 + mw + 0.4, my - 0.5], [50, my - 1.1]])
-    return { under: fill(d + lipD, bb(B.k), ' fill-opacity=".85"'), over: '' }
+    // (the growth is thicker round the mouth and on the chin: a second, denser tone there, its edge broken too)
+    const ring = poly(broken(dense([[50 - mw - 1.6, my - 1.2], [50 - mw - 2.2, my + 2.4], [50 - G.ch - 1, G.cy - 0.6], [50, G.cy + 0.8], [50 + G.ch + 1, G.cy - 0.6], [50 + mw + 2.2, my + 2.4], [50 + mw + 1.6, my - 1.2], [50 + mw * 0.4, my + 1.4], [50 - mw * 0.4, my + 1.4]], 4), 0.3, 0.8, rnd))
+    return { under: fill(d + lipD, bb(B.k)) + (lo ? '' : fill(ring + lipD, bb(B.k - 0.16))), over: '' }
   }
-  const base = bb(B.k)
+  // (a light beard keeps its own colour: mixed toward the skin it went muddy)
+  const base = bb(lum(bc) > 90 ? B.k * 0.4 : B.k)
   // the cheek line thins: a band of the lighter beard inside it; the far side and under the chin in shade; a light
   // on the near side of the chin
   const thin = poly([...rIn.map(Rr), ...rIn.slice().reverse().map(p => [50 + p[0] + 0.35, p[1] + 0.5])]) + poly([...rIn.map(L), ...rIn.slice().reverse().map(p => [50 - p[0] - 0.35, p[1] + 0.5])])
   const P = `b${(hashStr(d) % 46656).toString(36)}`
   const shade = sm([[50 + cb - 2.4, 42], [104, 42], [104, 92], [50 + ch, 92], [50 + ch + 0.6, cy + 0.4], [50 + jw - 3.4, jy + 1.6], [50 + cb - 3.8, 47.6]])
   const over = shape(P, d, base)
-    + `<g clip-path="url(#${P}c)">${fill(shade, dark(base, 0.28))}${fill(sm([[50 - jw, jy + 1.4], [50 - ch - 1.4, cy - 0.2], [50, cy + 0.7], [50 + ch + 1.4, cy - 0.2], [50 + jw, jy + 1.4], [104, 92], [-4, 92]]), dark(base, 0.3))}`
+    + `<g clip-path="url(#${P}c)">${fill(shade, dark(base, 0.18))}${fill(sm([[50 - jw, jy + 1.4], [50 - ch - 1.4, cy - 0.2], [50, cy + 0.7], [50 + ch + 1.4, cy - 0.2], [50 + jw, jy + 1.4], [104, 92], [-4, 92]]), dark(base, 0.3))}`
     + (lo ? '' : fill(thin, mixC(base, T.B, 0.3)))
     + `</g>`
   return { under: '', over }
@@ -527,12 +531,12 @@ function eyesOf(look, G, T, S, lo) {
   const K = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', X = G.X
   let wh = '', ir = '', pu = '', lash = '', lid = '', cl = ''
   for (const s of [-1, 1]) {
-    const cx = 50 + s * G.es, y = G.ey, ew = 3 * G.ez, up = K[0] * G.ez * X.eo, dn = K[1] * G.ez * X.eo, tl = K[2]
+    const cx = 50 + s * G.es, y = G.ey, ew = 3.2 * G.ez, up = K[0] * G.ez * X.eo, dn = K[1] * G.ez * X.eo, tl = K[2]
     const I = [cx - s * ew, y + 0.2], O = [cx + s * ew, y - tl]
     const U1 = [cx - s * ew * 0.35, y - up * 1.34], U2 = [cx + s * ew * 0.45, y - up * 1.2 - tl * 0.5]
     const L1 = [cx + s * ew * 0.42, y + dn * 1.28], L2 = [cx - s * ew * 0.42, y + dn * 1.24]
     wh += `M${P2(I)}C${P2(U1)} ${P2(U2)} ${P2(O)}C${P2(L1)} ${P2(L2)} ${P2(I)}Z`
-    const r = 1.18 * G.ez, ix = cx + s * 0.06, iy = y - 0.12
+    const r = 1.27 * G.ez, ix = cx + s * 0.06, iy = y - 0.12
     ir += ell(ix, iy, r, r)
     pu += ell(ix, iy, r * 0.46, r * 0.46)
     cl += ell(ix - r * 0.38, iy - r * 0.36, r * 0.16, r * 0.16)
@@ -568,7 +572,7 @@ function browsOf(look, G, T) {
   const arch = { arched: 1.0, angled: 0.8, straight: 0.2, thick: 0.35, thin: 0.6, bushy: 0.3 }[look.brows] ?? 0.4
   let d = ''
   for (const s of [-1, 1]) {
-    const x = k => 50 + s * k, b = G.by, es = G.es, ew = 3 * G.ez
+    const x = k => 50 + s * k, b = G.by, es = G.es, ew = 3.2 * G.ez
     const ang = look.brows === 'angled'
     const top = [[x(1.85), b + 0.15, 1], [x(es - 2.4), b - 0.5 - arch * 0.3], [x(es + (ang ? 1.4 : 0.4)), b - 0.75 - arch * 0.65], [x(es + ew + 1.5), b + 0.1 - arch * 0.2], [x(es + ew + 1.9), b + 0.55, 1]]
     const bot = [[x(es + ew + 0.8), b + 0.55], [x(es + 0.6), b + 0.32 * th - arch * 0.45], [x(es - 2.4), b + 0.75 * th - arch * 0.2], [x(1.9), b + 1.35 * th, 1]]
@@ -769,7 +773,8 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const rnd = rngOf(hashStr(JSON.stringify(look)))
   const G = geo(look), T = skinTones(look.skin)
   const { cw, tw, cb, jw, jy, ch, cy, nw, es, ey, mw, my, lean } = G
-  const bc = look.bc ?? (look.hc === TIPS ? '#16110e' : look.hc)
+  const hc0 = look.hc === TIPS ? '#16110e' : look.hc
+  const bc = look.bc ?? (lum(hc0) > 120 ? mixC(hc0, '#5e321a', 0.5) : hc0)
   // a cap hides his hair above the band; a durag all of it
   const hide = look.gear === 'durag' ? 'all' : null
   const hp = hairOf(look, G, T, rngOf(hashStr(`${look.hair}|${look.hc}|${look.skin}`)), lo, hide)
