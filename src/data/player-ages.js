@@ -532,6 +532,7 @@ export const BIRTH_NFL = {
   "Kevin Byard III": 1993,
   "Kevin Dotson": 1997,
   "Kevin Winston Jr.": 2004,
+  "Tony Adams": 1999,
   "Kevin Zeitler": 1990,
   "Keylan Rutledge": 2004,
   "Khalil Mack": 1991,
