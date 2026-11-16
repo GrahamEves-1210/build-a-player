@@ -6,7 +6,7 @@
 // with real names (plays.js), a headline written the way a beat writer files it, the builds' lines.
 // Chemistry, injuries, events and scout points move with the weeks. (Hype is gone, owner 2026-11-14: nothing on
 // the season side reads or moves it.)
-import { TEAM, SHORTS, OFFENSE, lineup, strength, makeGen } from './league'
+import { TEAM, SHORTS, OFFENSE, lineup, strength, makeGen, fillLeague, freshName } from './league'
 import { newGame, run, resolveKey, boxOf, normalRate, clockText, periodOf, spotText } from './game'
 import { DIV_OF } from './schedule'
 import { standings, startPlayoffs, endRound, finishOf, ROUNDS, records } from './standings'
@@ -227,12 +227,15 @@ function endWeek(F, row) {
     }
   }
   F.wire = wire.sort((a, b) => (b[0] === F.team) - (a[0] === F.team)).slice(0, 8)
+  // every room two deep again after the week's cuts and trades (league.js fillUp: a filler where nobody's behind)
+  fillLeague(F)
   // a room without enough healthy men to start: the team signs one off its practice squad, as every team does
   for (const s of SHORTS) {
     const C = depthChart(F, s, { healthy: true })
     for (const [k, , pos, spot, n] of GROUPS) {
       for (let have = C[k].length; have < n; have++) {
-        const p = makeGen(F, pos, R, { o: clamp(58, 70, Math.round(64 + R.n() * 3)), ag: R.int(23, 28) })
+        const p = makeGen(F, pos, R, { o: R.int(63, 68), ag: R.int(23, 28) })
+        p.n = freshName(R, F.teams[s].r)
         if (spot) p.s = spot
         p.y = 1
         F.teams[s].r.push(p)
@@ -331,7 +334,8 @@ function topScorer(list) {
 const nm = p => p.n
 const posTxt = p => (p.p === 'dl' || p.p === 'db' ? groupOf(p).toUpperCase() : p.p === 'ol' ? (p.s ?? 'OL') : p.p.toUpperCase())
 const startersMine = F => Object.values(startersOf(F, F.team))
-const bestStarter = (F, test) => startersMine(F).filter(p => !p.in && test(p)).sort((a, b) => b.o - a.o)[0]
+// (a filler backup is never the man an event is about: league.js fillUp)
+const bestStarter = (F, test) => startersMine(F).filter(p => !p.in && !p.fl && test(p)).sort((a, b) => b.o - a.o)[0]
 function nextOpp(F) {
   const g = F.sched.weeks[F.wk]?.find(x => x.h === F.team || x.a === F.team)
   return g ? (g.h === F.team ? g.a : g.h) : null
@@ -353,8 +357,8 @@ const EVENTS = [
   { id: 'young', make: F => {
     const C = depthChart(F, F.team, { healthy: true }), L = startersOf(F, F.team), on = new Set(Object.values(L).map(p => p.i))
     for (const k of ['wr', 'rb', 'cb', 'edge', 'lb', 's', 'te', 'dt']) {
-      const young = C[k].find(p => !on.has(p.i) && p.ag <= 24 && p.b == null)
-      const starter = C[k].find(p => on.has(p.i) && p.b == null)
+      const young = C[k].find(p => !on.has(p.i) && p.ag <= 24 && p.b == null && !p.fl)
+      const starter = C[k].find(p => on.has(p.i) && p.b == null && !p.fl)
       if (young && starter && starter.o - young.o <= 4) return { title: `${nm(young)} pushing ${nm(starter)} for the starting job`, pid: young.i, sid: starter.i, a: [`Start ${nm(young)}`, { start: young.i, ovr: [young.i, 2] }], b: [`Keep ${nm(starter)} the starter`, { chem: 2 }] }
     }
     return null
@@ -390,7 +394,7 @@ const EVENTS = [
       const k = groupOf(p), worst = Object.entries(L).filter(([s]) => s.replace(/\d$/, '') === k).map(([, x]) => x).sort((a, b) => a.o - b.o)[0]
       if (!worst || worst.b != null || p.o < worst.o + 3) continue
       const cost = r1(Math.min(p.$ ?? 1.2, 4))
-      const cut = F.teams[F.team].r.filter(x => groupOf(x) === k && x.b == null && x !== worst).sort((a, b) => a.o - b.o)[0] ?? null
+      const cut = F.teams[F.team].r.filter(x => groupOf(x) === k && x.b == null && !x.fl && x !== worst).sort((a, b) => a.o - b.o)[0] ?? null
       if (!canSign(F, cost)) continue
       return { title: `Free agent ${nm(p)} still unsigned`, pid: p.i, cost, cut: cut?.i ?? null, a: [`Sign ${nm(p)}`, { sign: p.i }], b: ['Keep the roster', { chem: 1 }] }
     }
@@ -399,13 +403,13 @@ const EVENTS = [
 ]
 function tradeEvent(F, R) {
   if (F.wk >= TRADE_DEADLINE) return null   // (F.wk: weeks played; after Week 9 the deadline has passed)
-  const L = startersMine(F).filter(p => p.b == null && p.ag <= 29 && p.p !== 'qb' && p.p !== 'ol')
+  const L = startersMine(F).filter(p => p.b == null && !p.fl && p.ag <= 29 && p.p !== 'qb' && p.p !== 'ol')
   if (!L.length) return null
   const mine = R.pick(L)
   const others = SHORTS.filter(s => s !== F.team)
   for (let k = 0; k < 8; k++) {
     const s = R.pick(others)
-    const theirs = F.teams[s].r.filter(p => groupOf(p) === groupOf(mine) && p.o >= mine.o + 3 && p.o <= mine.o + 8 && p.ag >= mine.ag + 2 && p.b == null)[0]
+    const theirs = F.teams[s].r.filter(p => groupOf(p) === groupOf(mine) && p.o >= mine.o + 3 && p.o <= mine.o + 8 && p.ag >= mine.ag + 2 && p.b == null && !p.fl)[0]
     if (theirs) return { title: `${TEAM[s].nick} offer ${nm(theirs)} for ${nm(mine)}`, team: s, give: mine.i, get: theirs.i, pid: theirs.i, a: ['Make the trade', { trade: 1, chem: -3 }], b: ['Turn it down', { chem: 1 }] }
   }
   return null

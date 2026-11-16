@@ -83,13 +83,13 @@ export function ageLeague(F) {
       const out = R.u() < retireChance(p, starters.has(p.i)) * (p.b != null ? 0.6 : 1)
       if (out) {
         if (p.b != null) retireBuild(F, p)
-        if (s === F.team) changes.push({ k: 'ret', pid: p.i, n: p.n, p: p.p, b: p.b ?? null })
+        if (s === F.team && !p.fl) changes.push({ k: 'ret', pid: p.i, n: p.n, p: p.p, b: p.b ?? null })
         // (the wire: a notable man's retirement)
-        if (was >= 84 || p.b != null || s === F.team) F.gone.push({ n: p.n, p: p.p, s, ag: p.ag, o: was, i: p.i, ...(p.b != null && { b: p.b }), ...(p.cr && { cr: p.cr.length }) })
+        if (was >= 84 || p.b != null || (s === F.team && !p.fl)) F.gone.push({ n: p.n, p: p.p, s, ag: p.ag, o: was, i: p.i, ...(p.b != null && { b: p.b }), ...(p.cr && { cr: p.cr.length }) })
         continue
       }
       tickDeal(p)
-      if (s === F.team && p.o !== was) changes.push({ k: p.o > was ? 'up' : 'down', pid: p.i, n: p.n, p: p.p, b: p.b ?? null, from: was, to: p.o })
+      if (s === F.team && p.o !== was && !p.fl) changes.push({ k: p.o > was ? 'up' : 'down', pid: p.i, n: p.n, p: p.p, b: p.b ?? null, from: was, to: p.o })
       keep.push(p)
     }
     t.r = keep

@@ -48,7 +48,7 @@ export default function TeamTab({ F, act, owner }) {
               if (starts) up++
               const on = pick === p.i
               return (
-                <div key={p.i} className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${p.in ? ' is-hurt' : ''}`}>
+                <div key={p.i} className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${p.in ? ' is-hurt' : ''}${p.fl && !starts ? ' is-fill' : ''}`}>
                   <span className="fd-dc-slot">{p.in ? 'OUT' : slot}</span>
                   <Man F={F} p={p} s={F.team} owner={owner} size={starts ? 'm' : 's'} line={p.in ? outText(p) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p)} onClick={() => tap(p)} />
                   {on && (
@@ -80,7 +80,7 @@ function CapScreen({ F, owner, act, onBack, page, setPage }) {
   const paid = t.r.filter(p => p.y > 0).sort((a, b) => b.$ - a.$)
   const top = paid.slice(0, 10)
   const share = Math.round((top.slice(0, 3).reduce((a, p) => a + p.$, 0) / c.cap) * 100)
-  const next = t.r.filter(p => p.y === 1).sort((a, b) => b.o - a.o)
+  const next = t.r.filter(p => p.y === 1 && !p.fl).sort((a, b) => b.o - a.o)
   return (
     <div className="fd fk fd-narrow">
       <BackBar label="Depth chart" title="Salary cap" onBack={onBack} />

@@ -487,7 +487,7 @@ export function needsOf(F, s) {
   const dc = depthChart(F, s)
   const out = {}
   for (const [g, n] of [['qb', 1], ['rb', 1], ['wr', 3], ['te', 1], ['ol', 5], ['edge', 2], ['dt', 2], ['lb', 3], ['cb', 2], ['s', 2]]) {
-    const men = dc[g] ?? []
+    const men = (dc[g] ?? []).filter(p => !p.fl)   // (a filler backup fills no need)
     // the weakest starter in the room (a line's fourth man: one weak guard is a need, not an emergency)
     const worst = men[Math.max(0, n - (n >= 5 ? 2 : 1))]?.o ?? 60
     const old = men.slice(0, n).some(p => p.ag >= 31)
