@@ -38,6 +38,7 @@ for (let y = 0; y < N; y++) {
   // the player: fire a coordinator whose side was bottom-eight, interview four, offer the best
   const [or, dr] = F.car.ranks[team]
   for (const [k, rk] of [['oc', or], ['dc', dr]]) if (rk >= 25) FR.fireMine(F, k)
+  FR.runHires(F)   // (Black Monday done: the league hires its head coaches, then the player hires)
   for (const k of FR.myOpenings(F)) {
     tot.open = (tot.open ?? 0) + 1
     const list = FR.shortlist(F, k, 8)

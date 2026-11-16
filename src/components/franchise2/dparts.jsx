@@ -117,7 +117,7 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
   const cut = cutCost(p)
   const pl = mine ? placeOf(F, s, p.i) : null
   // (a team keeps the minimum at every spot: the last man in a room can't be let go)
-  const canCut = mine && p.b == null && F.teams[s].r.filter(x => x.p === p.p).length > MIN[p.p]
+  const canCut = mine && p.b == null && !p.fl && F.teams[s].r.filter(x => x.p === p.p).length > MIN[p.p]
   return createPortal(
     <div className="fd-sheet-bg" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fd-sheet fk" role="dialog" aria-modal="true" aria-label={p.n}>

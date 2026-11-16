@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   TEAM, POS, POS_LABEL, GRADES, gradeOf, newSeason,
@@ -182,7 +182,7 @@ function ProspectCard({ F, act, id, onClose, onDraft, draftLabel }) {
           {onDraft ? <Go onClick={() => onDraft(x)}>{draftLabel ?? 'DRAFT'}</Go> : (
             <>
               {canScout(F) && x.b == null && !filmDone(x) && <Go ghost disabled={scoutsLeft(F) < 1} onClick={() => doScout(X => film(X, x.i))} sub="1 DAY">{x.sv & 1 ? 'MORE FILM' : 'WATCH FILM'}</Go>}
-              {springOn(F) && x.b == null && !x.kc && <Go ghost disabled={visitsLeft(F) < 1} onClick={() => doScout(X => interview(X, x.i))} sub={`${visitsLeft(F)} LEFT`}>TOP-30 VISIT</Go>}
+              {springOn(F) && x.b == null && !x.kc && <Go ghost disabled={visitsLeft(F) < 1} onClick={() => doScout(X => interview(X, x.i))} sub={`${visitsLeft(F)} ${visitsLeft(F) === 1 ? 'VISIT' : 'VISITS'} LEFT`}>TOP-30 VISIT</Go>}
             </>
           )}
           <button type="button" className={`dr-board-btn${on ? ' is-on' : ''}`} onClick={() => { act(X => star(X, x.i)); sfx('slot') }}>{on ? '★ ON OUR BOARD' : '☆ ADD TO OUR BOARD'}</button>
@@ -207,19 +207,47 @@ function Filters({ value, set }) {
 const needSet = F => new Set(Object.entries(needsOf(F, F.team)).filter(([, v]) => v >= 1.5).map(([g]) => g))
 const filterBy = (F, list, f) => { if (f === 'all') return list; if (f === NEED) { const s = needSet(F); return list.filter(x => s.has(groupOf(x))) } return list.filter(x => x.p === f) }
 
+// THE CLASS's order: the media's big board (RANK), our own grades (GRADE: only what our scouts have seen; a man we
+// haven't scouted has no grade of ours, so he goes to the bottom in the big board's order), or by POSITION (each
+// room together, our graded men first). Draft night's BEST AVAILABLE keeps its own order (sortBy 'ours').
+const SORTS = [['rank', 'BIG BOARD'], ['grade', 'OUR GRADE'], ['pos', 'POSITION']]
+const scouted = x => x.b != null || !!x.kc || /[12]/.test(x.k)
+function classOrder(F, list, how, ranks) {
+  if (how === 'rank') return list
+  const rk = x => ranks.get(x.i) ?? 9999
+  const key = new Map(list.map(x => [x.i, scouted(x) ? viewOf(F, x).my : null]))
+  const byGrade = (a, b) => { const ka = key.get(a.i), kb = key.get(b.i); if (ka == null || kb == null) return ka == null && kb == null ? rk(a) - rk(b) : ka == null ? 1 : -1; return kb - ka || rk(a) - rk(b) }
+  if (how === 'grade') return [...list].sort(byGrade)
+  return [...list].sort((a, b) => POS.indexOf(a.p) - POS.indexOf(b.p) || byGrade(a, b))
+}
 function ClassList({ F, act, open, sortBy = 'consensus' }) {
   const [f, setF] = useState('all')
+  const [how, setHow] = useState('rank')
   const [more, setMore] = useState(30)
   const ranks = rankMap(F)
   const list = useMemo(() => {
-    const all = sortBy === 'ours' ? [...F.dc].map(x => ({ x, v: viewOf(F, x).my })).sort((a, b) => b.v - a.v || ranks.get(a.x.i) - ranks.get(b.x.i)).map(e => e.x) : consensus(F)
+    const all = sortBy === 'ours' ? [...F.dc].map(x => ({ x, v: viewOf(F, x).my })).sort((a, b) => b.v - a.v || ranks.get(a.x.i) - ranks.get(b.x.i)).map(e => e.x) : classOrder(F, consensus(F), how, ranks)
     return filterBy(F, all, f)
-  }, [F, F.dc.length, F.board.length, F.sc?.u, F.sc?.cmb, F.sc?.ivd?.length, f, sortBy]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [F, F.dc.length, F.board.length, F.sc?.u, F.sc?.cmb, F.sc?.ivd?.length, f, sortBy, how]) // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = list.slice(0, more)
   return (
     <>
       <Filters value={f} set={v => { setF(v); setMore(30) }} />
+      {sortBy !== 'ours' && (
+        <div className="dr-sort" role="radiogroup" aria-label="Sort the class">
+          <span>SORT</span>
+          {SORTS.map(([k, n]) => <button key={k} type="button" role="radio" aria-checked={how === k} className={how === k ? 'is-on' : ''} onClick={() => { setHow(k); setMore(30); tap() }}>{n}</button>)}
+        </div>
+      )}
+      {how === 'grade' && sortBy !== 'ours' && <p className="dr-sort-note">Graded by our scouts only. Men we haven't scouted are at the bottom, in big-board order.</p>}
       <div className="dr-list">
-        {list.slice(0, more).map((x, i) => <Prospect key={x.i} F={F} x={x} act={act} rank={ranks.get(x.i)} onOpen={open} delay={Math.min(i, 8) * 30} />)}
+        {shown.map((x, i) => (
+          <Fragment key={x.i}>
+            {how === 'pos' && sortBy !== 'ours' && f === 'all' && (i === 0 || shown[i - 1].p !== x.p) && <div className="dr-group">{POS_LABEL[x.p]}<small>{list.filter(y => y.p === x.p).length}</small></div>}
+            {how !== 'rank' && sortBy !== 'ours' && i > 0 && scouted(shown[i - 1]) && !scouted(x) && (how === 'grade' || shown[i - 1].p === x.p) && <div className="dr-group is-dim">NOT SCOUTED YET</div>}
+            <Prospect F={F} x={x} act={act} rank={ranks.get(x.i)} onOpen={open} delay={Math.min(i, 8) * 30} />
+          </Fragment>
+        ))}
         {!list.length && <p className="dr-empty">NOBODY LEFT HERE</p>}
       </div>
       {list.length > more && <button type="button" className="dr-more" onClick={() => { setMore(m => m + 30); tap() }}>MORE · {list.length - more}</button>}

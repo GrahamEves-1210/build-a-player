@@ -105,7 +105,7 @@ function index(data) {
     // (a bonus a year as given, or the dead money if he were cut now spread over the years left)
     const per = money(r.proratedBonus ?? r.prorated ?? r.bonusPerYear), dead = money(r.dead ?? r.deadCap ?? r.dead_cap)
     const g = per ?? (dead != null ? r1(dead / yy) : null)
-    out.set(`${keyOf(r.name)}|${String(r.team ?? '').toUpperCase()}`, { $, y: yy, g, ...(r.rookie && { rc: 1 }) })
+    out.set(`${keyOf(r.name)}|${String(r.team ?? '').toUpperCase()}`, { $, y: yy, g, ...(r.rookie && { rc: 1 }), ...(r.draft?.[0] && { dy: +r.draft[0] }) })
     out.set(keyOf(r.name), out.get(keyOf(r.name)) ?? { $, y: yy, g })
   }
   return out
@@ -121,7 +121,7 @@ function realTable() {
 export function realDeal(name, team, p, R) {
   const T = realTable()
   const hit = T.get(`${keyOf(name)}|${String(team ?? '').toUpperCase()}`) ?? T.get(keyOf(name))
-  if (hit) return { $: hit.$, y: hit.y, g: hit.g ?? r1(hit.$ * bonusShare(hit.$)), ...(hit.rc && { rc: 1 }), src: 'real' }
+  if (hit) return { $: hit.$, y: hit.y, g: hit.g ?? r1(hit.$ * bonusShare(hit.$)), ...(hit.rc && { rc: 1 }), ...(hit.dy && { dy: hit.dy }), src: 'real' }
   return estimateDeal(p, R)
 }
 export const realContractsLoaded = () => realTable().size > 0
@@ -230,7 +230,7 @@ export function capComply(F, short, starters = new Set()) {
   }
   const worthCut = p => { const c = cutCost(p); return c.saves - (starters.has(p.i) ? 12 : 0) - Math.max(0, p.o - 70) * 0.25 + Math.max(0, p.ag - 29) * 0.8 }
   for (let guard = 0; room < 0 && guard < 30; guard++) {
-    const p = t.r.filter(x => x.b == null && !x.rc && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
+    const p = t.r.filter(x => x.b == null && !x.rc && !x.fl && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
     if (!p) break
     const c = cutMan(F, p.i, short)
     room = capRoom(F, short)

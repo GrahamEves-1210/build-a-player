@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  TEAM, FINISH_TEXT, ageLeague, openResign,
+  TEAM, FINISH_TEXT, ageLeague, openResign, coyRec,
 } from '../../lib/franchise2'
 import { sfx } from '../../lib/juice'
 import { Chyron, BigRec, BigNum, Stamp, Go, Flip, KLogo, fkVars, reduced, ActionBar } from './kit'
@@ -85,7 +85,7 @@ function Awards({ F, act, owner }) {
       {aw?.coy && n >= list.length && (
         <div className="fd-coy" style={fkVars(aw.coy.t)}>
           <KLogo s={aw.coy.t} size={40} />
-          <span><small>COACH OF THE YEAR</small><b>{aw.coy.n}</b><em>{aw.coy.was} WINS TO {aw.coy.w}</em></span>
+          <span><small>COACH OF THE YEAR</small><b>{aw.coy.n}</b><em>{TEAM[aw.coy.t].nick} · {coyRec(aw.coy)}</em></span>
         </div>
       )}
       {n >= list.length && (

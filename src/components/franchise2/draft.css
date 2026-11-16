@@ -295,3 +295,12 @@ html.bap-reduce-motion :is(.dr-p, .dr-sec, .dr-game, .dr-mk, .dr-card, .dr-tr, .
 .dr-close, .dr-x { width: 44px; height: 44px; font-size: 18px; }
 .dr-tip { margin: 0; font-family: var(--fk-b); font-size: 15px; line-height: 1.35; color: var(--fk-text); }
 .dr-day > .fk-actbar { max-width: 720px; }
+/* THE CLASS: how it's sorted, and the room headers when it's sorted by position */
+.dr-sort { display: flex; align-items: center; gap: 3px; margin-top: 6px; }
+.dr-sort > span { margin-right: 6px; font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .4px; color: var(--fk-dim); }
+.dr-sort button { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 6px; border: 0; background: var(--fk-g2); color: var(--fk-mute); font-family: var(--fk-d); font-size: 15px; letter-spacing: .6px; cursor: pointer; white-space: nowrap; }
+.dr-sort button.is-on { background: #fff; color: #0b0c0e; box-shadow: inset 0 -3px 0 var(--tc, #9aa3ad); }
+.dr-sort-note { margin: 6px 0 0; font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
+.dr-group { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; padding: 4px 0 3px; border-bottom: 1px solid var(--fk-line); font-family: var(--fk-d); font-size: 18px; letter-spacing: .6px; color: #fff; }
+.dr-group small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-dim); }
+.dr-group.is-dim { font-size: 14px; color: var(--fk-mute); }

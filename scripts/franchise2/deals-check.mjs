@@ -13,8 +13,9 @@ const qb = QBS.find(p => p.name === 'Josh Allen')
 const F = FR.createFranchise({ seed: 'deals', team: 'NYJ', owner: 'G', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }], coach: { name: 'Test Coach', style: 'players', r: { talentDev: 6, offPlaycalling: 6, defPlaycalling: 6, culture: 6, situational: 6 }, ovr: 76 } })
 const mine = () => F.teams[F.team].r
 
-// filler depth (another branch flags it fl: 1): mark a few men on every team as fillers with deals ending
-const fillers = new Set()
+// filler depth (league.js fl: 1): the league's own fillers, and a few more men on every team marked as fillers with deals ending
+const fillers = new Set(FR.SHORTS.flatMap(s => F.teams[s].r.filter(p => p.fl).map(p => p.i)))
+console.log(`fillers in the league: ${fillers.size}`)
 for (const s of FR.SHORTS) for (const p of F.teams[s].r.filter(x => x.b == null).sort((a, b) => a.o - b.o).slice(0, 2)) { p.fl = 1; p.y = 1; fillers.add(p.i) }
 // the build's deal ends this year (to test his talks)
 const B = mine().find(p => p.b != null); B.y = 1; delete B.rc; delete B.op
@@ -26,7 +27,7 @@ for (const s of FR.SHORTS) for (const p of F.teams[s].r) { ok(p.pk != null && p.
 FR.openResign(F)
 ok(!F.rs.some(id => fillers.has(id)), 'a filler on the re-sign list')
 ok(!F.fa.some(p => p.fl || fillers.has(p.i)), 'a filler on the market after re-signing')
-ok(FR.SHORTS.every(s => F.teams[s].r.filter(p => fillers.has(p.i)).every(p => p.y >= 1)), 'a filler not re-upped')
+ok(FR.SHORTS.every(s => F.teams[s].r.filter(p => fillers.has(p.i)).every(p => p.y >= 1)), 'a filler whose year was up is still on a roster (fillers go quietly: market.js openResign)')
 ok(F.rs.includes(B.i), 'the build is not up for a new deal')
 console.log(`re-sign: ${F.rs.length} up for the ${F.team}: ${F.rs.map(id => { const p = mine().find(x => x.i === id); return `${p.n} ${p.o}` }).join(', ')}`)
 
@@ -84,9 +85,10 @@ const a = best[0], b2 = best[1], c = best.find(p => p.o < 75)
 ok(FR.setOffer(F, a.i, { $: a.$, y: a.y, b: 0 }), 'an offer at his ask was refused')
 ok(Math.abs(FR.roomLeft(F) - (room0 - a.$)) < 0.11, 'an offer out does not count against the room')
 ok(!FR.setOffer(F, b2.i, { $: FR.roomLeft(F) + 1, y: 2, b: 0 }), 'an offer past the room left was taken')
-ok(FR.setOffer(F, b2.i, { $: b2.$ * 1.2, y: b2.y, b: 2 }), 'a raise was refused')
-FR.pullOffer(F, b2.i)
-ok(!FR.offersOut(F)[b2.i], 'a pulled offer is still out')
+// a raise within the room left is taken; pulling an offer frees its room
+{ const up = Math.min(a.$ * 1.1, FR.roomLeft(F, a.i)); ok(FR.setOffer(F, a.i, { $: up, y: a.y, b: 2 }) && FR.offersOut(F)[a.i].b === 2, 'a raise was refused') }
+const small = [...F.fa].filter(p => p !== a && p.$ <= FR.roomLeft(F)).sort((x, y) => y.o - x.o)[0]
+if (small) { FR.setOffer(F, small.i, { $: small.$, y: small.y, b: 0 }); const left = FR.roomLeft(F); FR.pullOffer(F, small.i); ok(!FR.offersOut(F)[small.i] && FR.roomLeft(F) > left, 'a pulled offer is still out') }
 const short = FR.standingOf(F, c, { $: FR.minimumFor(c.ag, F.year + 1), y: 1, b: 0 }, V)
 ok(short.k === 'short' || c.$ <= FR.minimumFor(c.ag, F.year + 1) * 1.05, `a minimum offer to a ${c.o} asking ${c.$} reads ${short.k}`)
 FR.setOffer(F, c.i, { $: FR.minimumFor(c.ag, F.year + 1), y: 1, b: 0 })

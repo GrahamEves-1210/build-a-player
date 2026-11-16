@@ -1,24 +1,27 @@
 // FRANCHISE: the coaching carousel, the offseason's first stop (the NFL's Black Monday and the weeks after it).
 //
-// openCarousel(F) runs when the season closes (awards.js closeSeason), in the order the league does it:
+// openCarousel(F) runs when the season closes (awards.js closeSeason), in the order the league does it (owner,
+// 11-16: the player is part of Black Monday, not told about it afterwards):
 //   1. The season goes on every head coach's record; play-callers move a step with what their side did (a top-5
 //      unit's caller often gets better, a bottom-5 one's worse; young coaches learn, old ones slip).
 //   2. Every coach is a year older. Old coaches retire (head coaches from about 66, coordinators from about 64).
 //   3. BLACK MONDAY. CPU teams fire head coaches on the grounds the NFL does: a bad season, a disappointing one
 //      (fewer wins than the roster should have won), two bad ones in a row, with patience for a first- or
 //      second-year coach and for a winner. Coordinators go when their side is near the bottom of the league.
-//   4. The head-coach openings are filled first: the league's hot coordinators (a top unit, a play-caller, young),
+//      The player makes his own calls the same day: keep or fire his OC and DC (Staff.jsx, BLACK MONDAY).
+//   4. runHires(F), once he's done with Monday: the head-coach openings are filled: the league's hot coordinators (a top unit, a play-caller, young),
 //      fired head coaches, college head coaches. A coordinator hired as a head coach leaves a hole behind him
 //      (on the player's team too: the NFL lets any team interview another's coordinators for a head-coaching job).
 //   5. A new head coach brings his own coordinators, unless the one there is good enough to keep.
-//   6. The player's stop (Offseason.jsx, stage 'coaches'): he keeps or fires his OC and DC, interviews the men out of
-//      work (four interviews an opening), and offers the job; a man with other offers picks the best job for him
+//   6. The hiring: he interviews the men out of work (four interviews an opening; the coordinators he and the league
+//      fired on Monday are in the pool, the ones a new head coach let go too), and offers the job; a man with other offers picks the best job for him
 //      (calling plays first, then a winner, then the head coach). The league's own coordinator openings fill when the
 //      player is done (closeCarousel), from the same pool.
 // The pool (F.cpool): every coach out of work (fired, passed over, the real ones out of the league) plus the year's
 // up-and-comers (NFL position coaches, college coordinators, college head coaches), who stay a year if nobody hires
 // them. The wire reports each move (coachWire).
-//   F.car = { y, ev: [moves], mine: { oc|dc: { iv: [ids interviewed], gone: [ids] } }, done }
+//   F.car = { y, v: 2, ev: [moves], mine: { oc|dc: { iv: [ids interviewed], gone: [ids] } }, hd (the head-coach hires
+//   are done), done }  (a car with no v: an older save's, its hires already done in openCarousel)
 import { SHORTS, strength } from './league'
 import { records, recText } from './standings'
 import { rngOf, clamp, roll } from './rng'
@@ -101,7 +104,7 @@ export function openCarousel(F) {
   const mx = mean(SHORTS.map(s => xs[s])), mw = mean(SHORTS.map(s => recs[s].w + recs[s].t / 2))
   const cov = mean(SHORTS.map(s => (xs[s] - mx) * (recs[s].w - mw))), vr = mean(SHORTS.map(s => (xs[s] - mx) ** 2)) || 1
   const expW = s => mw + (cov / vr) * (xs[s] - mx)
-  const car = { y: F.year, ev: [], mine: {}, ranks: Object.fromEntries(SHORTS.map(s => [s, [offRank[s], defRank[s]]])) }
+  const car = { y: F.year, v: 2, ev: [], mine: {}, ranks: Object.fromEntries(SHORTS.map(s => [s, [offRank[s], defRank[s]]])) }
   F.car = car
   const ev = e => car.ev.push({ ...e, ...(e.s === F.team && { mine: 1 }) })
 
@@ -179,12 +182,25 @@ export function openCarousel(F) {
   for (let j = 0; j < 8; j++) F.cpool.push(genCoach(F, R, 'off', j < 5 ? 'pos' : 'col', { taken }))
   for (let j = 0; j < 8; j++) F.cpool.push(genCoach(F, R, 'def', j < 5 ? 'pos' : 'col', { taken }))
   for (let j = 0; j < 3; j++) F.cpool.push(genCoach(F, R, j % 2 ? 'def' : 'off', 'colhc', { taken }))
-  // 4. the head-coach hires, the worst record first
-  hcOpen.sort((a, b) => recs[a].w - recs[b].w)
-  for (const s of hcOpen) hireHC(F, R, s, { offRank, defRank, ev })
+  // (4. the head-coach hires wait for the player's own Monday: runHires)
   car.step = 'monday'
   F.stage = 'coaches'
   return car
+}
+// 4-5. The head-coach hires, the worst record first, once the player has made his Monday calls (a coordinator he
+// fired can be hired as someone's head coach; one he kept can leave for a head-coaching job)
+export function runHires(F) {
+  const car = F.car
+  if (!car || car.hd || !car.v || car.done) return false
+  saneStaff(F)
+  const R = rngOf(`${F.seed}-${F.year}-coaches-hires`)
+  const recs = records(F)
+  const offRank = Object.fromEntries(SHORTS.map(s => [s, car.ranks?.[s]?.[0] ?? 16])), defRank = Object.fromEntries(SHORTS.map(s => [s, car.ranks?.[s]?.[1] ?? 16]))
+  const ev = e => car.ev.push({ ...e, ...(e.s === F.team && { mine: 1 }) })
+  const hcOpen = SHORTS.filter(s => s !== F.team && !staffOf(F, s).hc).sort((a, b) => recs[a].w - recs[b].w)
+  for (const s of hcOpen) hireHC(F, R, s, { offRank, defRank, ev })
+  car.hd = 1
+  return true
 }
 const mean = a => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length)
 function rankBy(list, f) { const o = [...list].sort((a, b) => f(a) - f(b)); return Object.fromEntries(o.map((s, i) => [s, i + 1])) }
@@ -308,23 +324,30 @@ export function interviewView(F, k, id) {
   const r = rOf(c)
   return { c, r, grade: coachGrade(r, k), wants: !c.nc, rivals: c.home ? [] : rivalsFor(F, c, k), seen: c.home || F.car.mine[k]?.iv.includes(id) }
 }
-// what a job is worth to him: calling the plays first, then a winner, then the head coach
-function jobValue(F, c, s, calls) {
+// what a job is worth to him: calling the plays first, then a winner, then the head coach (and a little that's just
+// him: the city, the money, the people he knows). Each part kept, so the screen can say why he picked a team.
+function jobParts(F, c, s, calls) {
   const r = records(F)[s]   // (last season's record: the schedule is still last season's in the offseason)
   const wp = r ? (r.w + r.t / 2) / Math.max(1, r.w + r.l + r.t) : 0.5
   const M = staffMen(F, s), hr = M.hc ? rOf(M.hc) ?? F.coach?.r : null
   const hcv = s === F.team ? coachOvr(F.coach?.r ?? {}) : hr ? coachOvr(hr) : 72
-  return (calls ? (c.nc ? 0.1 : 0.35) : 0) + wp * 0.3 + clamp(0, 1, (hcv - 60) / 30) * 0.15 + roll(`${F.seed}-${F.year}-jv-${c.i}-${s}`) * 0.2
+  return { calls: calls ? (c.nc ? 0.1 : 0.35) : 0, win: wp * 0.3, hc: clamp(0, 1, (hcv - 60) / 30) * 0.15, fit: roll(`${F.seed}-${F.year}-jv-${c.i}-${s}`) * 0.2 }
 }
+const sumParts = x => x.calls + x.win + x.hc + x.fit + (x.first ?? 0)
+function jobValue(F, c, s, calls) { return sumParts(jobParts(F, c, s, calls)) }
 // The offer. calls: he calls that side's plays. Returns { to (the team he picks), board: [{ s, calls, v }] }
 export function offerCoach(F, k, id, { calls = true } = {}) {
   if (!carouselOn(F)) return null
+  runHires(F)
+  // (the side that isn't his head coach's: the coordinator always calls it)
+  if (staffMen(F, F.team).hc?.sd !== SIDE[k]) calls = true
   const T = staffOf(F, F.team)
   if (T[k]) return null
   const c = F.cpool.find(x => x.i === id)
   if (!c || !(c.home || F.car.mine[k]?.iv.includes(id))) return null
   // (the team that interviewed him and offers first has the edge: the other teams are still interviewing)
-  const board = [{ s: F.team, calls, v: c.home ? 9 : jobValue(F, c, F.team, calls) + 0.12 }, ...(c.home ? [] : rivalsFor(F, c, k).map(x => ({ ...x, v: jobValue(F, c, x.s, x.calls) })))]
+  const board = [{ s: F.team, calls, ...(c.home ? { v: 9 } : { parts: { ...jobParts(F, c, F.team, calls), first: 0.12 } }) }, ...(c.home ? [] : rivalsFor(F, c, k).map(x => ({ ...x, parts: jobParts(F, c, x.s, x.calls) })))]
+  for (const b of board) if (b.parts) b.v = sumParts(b.parts)
   board.sort((a, b) => b.v - a.v)
   const to = board[0].s
   if (to === F.team) {
@@ -345,12 +368,29 @@ function placeCoach(F, s, k, c) {
   staffOf(F, s)[k] = c
   F.car.ev.push({ k: 'hire', role: k, s, n: c.n, id: c.i, ...(s === F.team && { mine: 1, was }) })
 }
-export function setCarStep(F, step) { if (F.car) F.car.step = step }
+// Why he took the job he took, in plain words: the part of the winning offer that beat the player's (or, when the
+// player won, beat the best other offer). { k: 'calls' | 'win' | 'hc' | 'first' | 'fit' | 'only' | 'home', s, vs }
+export function offerWhy(F, res) {
+  if (!res?.board?.length) return null
+  const win = res.board.find(b => b.s === res.to), mine = res.board.find(b => b.s === F.team)
+  if (res.c?.home || !win?.parts) return { k: 'home', s: res.to }
+  const other = res.to === F.team ? res.board.find(b => b.s !== F.team) : mine
+  if (!other) return { k: 'only', s: res.to }
+  const d = Object.fromEntries(['calls', 'win', 'hc', 'first', 'fit'].map(k => [k, (win.parts[k] ?? 0) - (other.parts?.[k] ?? 0)]))
+  const k = Object.keys(d).sort((a, b) => d[b] - d[a])[0]
+  return { k: d[k] > 0.02 ? k : 'fit', s: res.to, vs: other.s }
+}
+export function setCarStep(F, step) {
+  if (!F.car) return
+  if (step !== 'monday') runHires(F)
+  F.car.step = step
+}
 
 // The player done: the league's openings fill, the pool thins out, on to the awards
 export function closeCarousel(F) {
   const car = F.car
   if (!car || car.done) { if (F.stage === 'coaches') F.stage = 'awards'; return }
+  runHires(F)
   const R = rngOf(`${F.seed}-${F.year}-coaches-close`)
   saneStaff(F)
   // (a job of his still open: his own position coach steps up)

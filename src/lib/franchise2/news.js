@@ -16,7 +16,7 @@ import { groupOf, GROUP } from './roster'
 import { gameLines, leagueStats, whoIs } from './stats'
 import { lastSeason } from './lastSeason'
 import { marketDeals } from './market'
-import { lhRow } from './awards'
+import { lhRow, coyLine } from './awards'
 import { coachWire } from './carousel'
 
 const nick = s => TEAM[s]?.nick ?? s
@@ -80,7 +80,7 @@ export function wire(F, { n = 30 } = {}) {
     const aw = F.aw
     if (aw?.mvp) put('award', 'MVP', aw.mvp.t, `${aw.mvp.n} named MVP: ${aw.mvp.line.toLowerCase().replace(/ · /g, ', ')}`, { big: true })
     for (const [k, label] of [['opoy', 'Offensive Player of the Year'], ['dpoy', 'Defensive Player of the Year'], ['oroy', 'Offensive Rookie of the Year'], ['droy', 'Defensive Rookie of the Year']]) if (aw?.[k]) put('award', 'AWARD', aw[k].t, `${aw[k].n} is the ${label}`)
-    if (aw?.coy) put('award', 'AWARD', aw.coy.t, `${aw.coy.n} is Coach of the Year: ${nick(aw.coy.t)} went from ${aw.coy.was} wins to ${aw.coy.w}`)
+    if (aw?.coy) put('award', 'AWARD', aw.coy.t, `Coach of the Year: ${coyLine(aw.coy)}`)
     const lh = F.lh?.[F.lh.length - 1]
     if (lh?.champ) put('final', 'SUPER BOWL', lh.champ, `${nick(lh.champ)} beat the ${nick(lh.runner)} ${lh.score} to win the Super Bowl`, { big: true })
   }

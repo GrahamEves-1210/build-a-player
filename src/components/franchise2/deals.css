@@ -101,6 +101,7 @@
 .dl-standing.is-w { box-shadow: inset 4px 0 0 var(--fk-w); } .dl-standing.is-w b { color: var(--fk-w); }
 .dl-standing.is-l { box-shadow: inset 4px 0 0 var(--fk-l); } .dl-standing.is-l b { color: #ff8a8c; }
 .dl-standing.is-n { box-shadow: inset 4px 0 0 #fff; }
+@media (max-width: 560px) { .dl-standing { flex-direction: column; align-items: flex-start; gap: 2px; } }
 .dl-side-go { display: grid; grid-template-columns: 2fr 1fr; gap: 6px; }
 .dl-side-go > :only-child { grid-column: 1 / -1; }
 .dl-x { position: static; width: 30px; height: 30px; font-size: 20px; }
