@@ -44,6 +44,20 @@ function caseOf(p, t, wins) {
   const c = fbCase({ pos: p.p, sub: groupOf(p) === 'dt' ? 'dt' : undefined }, t, wins)
   return c.v / c.ap + (p.o - 85) * 0.006
 }
+// The voters' lean by position, on top of the season itself (the All-Pro scale above makes a great tight end's year
+// look as big as a great receiver's; the voters have never seen it that way):
+//   OPOY since 2000: backs and receivers most years, a quarterback now and then (usually the MVP too), never a
+//   tight end or a lineman. A tight end's numbers are read on the receivers' scale, and he still trails.
+//   DPOY: an edge rusher or an interior lineman with the sacks, a linebacker, a defensive back about one year in six.
+const RECV_AP = 262
+//   The rookie awards: the same, but a rookie quarterback who starts and plays well is the voters' favourite.
+const OFF_LEAN = { rb: 0.02, wr: 0.08, qb: -0.08 }, ROOKIE_LEAN = { rb: 0, wr: 0, qb: 0.15 }
+function offCase(x, lean = OFF_LEAN) {
+  if (x.p.p === 'te') { const c = fbCase({ pos: 'wr' }, x.t, x.w); return c.v / RECV_AP + (x.p.o - 85) * 0.006 - 0.35 }
+  return x.c + (lean[x.p.p] ?? 0)
+}
+const DEF_LEAN = { edge: 0.05, dt: 0.08, lb: 0.1, cb: -0.1, s: -0.12 }
+const defCase = x => x.c + (DEF_LEAN[groupOf(x.p)] ?? 0)
 // the All-Pro team's spots (the AP's first team) and each conference's Pro Bowl roster
 const SPOTS = [['qb', 1, 3], ['rb', 1, 3], ['wr', 3, 4], ['te', 1, 2], ['ot', 2, 3], ['og', 2, 3], ['c', 1, 2], ['edge', 2, 3], ['dt', 2, 3], ['lb', 2, 3], ['cb', 2, 4], ['s', 2, 3]]
 const spotOf = p => (p.p === 'ol' ? (p.s === 'C' ? 'c' : p.s === 'LG' || p.s === 'RG' ? 'og' : 'ot') : groupOf(p))
@@ -56,7 +70,7 @@ export function seasonAwards(F) {
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const t = tot[String(p.i)]
     if (!t?.gp || t.gp < 8) continue
-    men.push({ p, s, t, c: caseOf(p, t, wins(s)) + R.n() * 0.03 })
+    men.push({ p, s, t, w: wins(s), c: caseOf(p, t, wins(s)) + R.n() * 0.03 })
   }
   const pick = x => x && { i: x.p.i, n: x.p.n, t: x.s, p: x.p.p, b: x.p.b ?? null, line: statLine(x.p, x.t) }
   const best = (list, v = x => x.c) => list.map(x => [x, v(x)]).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
@@ -64,14 +78,25 @@ export function seasonAwards(F) {
   // (since 2000 the voters have picked a quarterback all but three times, a back each of those; a defender once
   // in the award's history: a defender here needs a season far past an All-Pro's)
   const mvp = best(men.filter(x => (OFFENSE.includes(x.p.p) && x.p.p !== 'ol') || x.c > 2.2), x => x.c + (wins(x.s) - 10) * 0.05 + (x.p.p === 'qb' ? 0.45 : x.p.p === 'rb' ? 0 : OFFENSE.includes(x.p.p) ? -0.15 : -0.9))
-  const opoy = best(men.filter(x => OFFENSE.includes(x.p.p) && x.p.p !== 'ol' && x.p.i !== mvp?.p.i), x => x.c - (x.p.p === 'qb' ? 0.2 : 0))
-  const dpoy = best(men.filter(x => !OFFENSE.includes(x.p.p)), x => x.c + (x.p.p === 'dl' ? 0.05 : 0))
+  const opoy = best(men.filter(x => OFFENSE.includes(x.p.p) && x.p.p !== 'ol' && x.p.i !== mvp?.p.i), offCase)
+  const dpoy = best(men.filter(x => !OFFENSE.includes(x.p.p)), defCase)
+  // the rookies: every man in his first season, the real ones (the real class on the rosters in year one: their draft
+  // year, league.js makeReal), the league's draft picks and the player's own builds and picks, on the same scale
   const rookie = x => x.p.rk === F.year
-  const oroy = best(men.filter(x => rookie(x) && OFFENSE.includes(x.p.p) && x.p.p !== 'ol'))
-  const droy = best(men.filter(x => rookie(x) && !OFFENSE.includes(x.p.p)))
-  // the coach: the biggest turnaround, among the winners
-  const before = s => F.lh?.length ? lhRow(F.lh[F.lh.length - 1], s)?.[0] ?? 8 : lastSeason(s)?.w ?? 8
-  const coy = [...SHORTS].filter(s => wins(s) >= 10).sort((a, b) => (wins(b) - before(b)) * 1 + wins(b) * 0.5 - ((wins(a) - before(a)) + wins(a) * 0.5))[0] ?? null
+  const oroy = best(men.filter(x => rookie(x) && OFFENSE.includes(x.p.p) && x.p.p !== 'ol'), x => offCase(x, ROOKIE_LEAN))
+  const droy = best(men.filter(x => rookie(x) && !OFFENSE.includes(x.p.p)), defCase)
+  // the coach: a big turnaround, or a record well past what the roster said (the AP's picks: Vrabel 4-13 to 14-3,
+  // O'Connell 7-10 to 14-3, Stefanski 7-10 to 11-6, Daboll 4-13 to 9-7-1). A playoff team, nine wins at least.
+  const prev = s => (F.lh?.length ? lhRow(F.lh[F.lh.length - 1], s) : null) ?? (() => { const x = lastSeason(s); return x ? [x.w, x.l, x.t] : [8, 9, 0] })()
+  const before = s => prev(s)[0]
+  const po = new Set([...(F.po?.seeds?.AFC ?? []), ...(F.po?.seeds?.NFC ?? [])])
+  const xs = Object.fromEntries(SHORTS.map(s => { const st = strength(F, s); return [s, st.off + st.def] }))
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length
+  const mx = mean(SHORTS.map(s => xs[s])), mw = mean(SHORTS.map(wins))
+  const cov = mean(SHORTS.map(s => (xs[s] - mx) * (wins(s) - mw))), vr = mean(SHORTS.map(s => (xs[s] - mx) ** 2)) || 1
+  const expW = s => mw + (cov / vr) * (xs[s] - mx)
+  const coyV = s => (wins(s) - before(s)) * 1 + (wins(s) - expW(s)) * 0.6 + (wins(s) - 10) * 0.3
+  const coy = [...SHORTS].filter(s => wins(s) >= 9 && (po.has(s) || !po.size)).sort((a, b) => coyV(b) - coyV(a))[0] ?? null
   // All-Pro and the Pro Bowl
   const hon = {}, ap = []
   for (const [spot, nAP, nPB] of SPOTS) {
@@ -82,11 +107,19 @@ export function seasonAwards(F) {
   void who
   return {
     y: F.year, mvp: pick(mvp), opoy: pick(opoy), dpoy: pick(dpoy), oroy: pick(oroy), droy: pick(droy),
-    coy: coy && { t: coy, n: coachOf(F, coy).name ?? `${TEAM[coy].nick} coach`, w: wins(coy), was: before(coy), mine: coy === F.team },
+    coy: coy && { t: coy, n: coachOf(F, coy).name ?? `${TEAM[coy].nick} coach`, w: wins(coy), was: before(coy), rec: recOf(S.R[coy]), prev: recOf({ w: prev(coy)[0], l: prev(coy)[1], t: prev(coy)[2] }), mine: coy === F.team },
     hon, ap,
   }
 }
 export const AWARD_KEYS = ['mvp', 'opoy', 'dpoy', 'oroy', 'droy']
+const recOf = r => `${r.w}-${r.l}${r.t ? `-${r.t}` : ''}`
+// the Coach of the Year the way the broadcast reads it: "Zac Taylor, Bengals: 10-7, up from 6-11"
+export function coyRec(c) {
+  if (!c) return ''
+  const rec = c.rec ?? `${c.w} wins`, prev = c.prev ?? `${c.was} wins`
+  return `${rec}, ${c.w > c.was ? 'up from' : c.w < c.was ? 'down from' : 'the same as'} ${prev}`
+}
+export const coyLine = c => (c ? `${c.n}, ${TEAM[c.t]?.nick ?? c.t}: ${coyRec(c)}` : '')
 export function lhRow(h, s) {
   if (!h?.r) return null
   if (typeof h.r === 'object') return h.r[s] ?? null
