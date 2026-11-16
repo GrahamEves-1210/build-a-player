@@ -73,6 +73,9 @@ function teamSeason(F, short) {
   C[short] = { n: games.length, tot, byWk }
   return C[short]
 }
+// one team's season of boxes worked out ahead (the hub does the league a team at a time while the phone is idle, so
+// the first leaders, wire or ticker doesn't play 31 seasons at once)
+export const warmStats = (F, short) => { if (short !== F.team && F.teams?.[short]) teamSeason(F, short) }
 export function leagueStats(F) {
   const out = {}
   for (const s of SHORTS) {

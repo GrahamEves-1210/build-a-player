@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { TEAM, standings, recText, DIVISIONS, CONFS, ROUNDS, CONF_OF, DIV_OF, leagueStats, leaders, whoIs, LEADER_CATS, wire, scoreText } from '../../lib/franchise2'
+import { TEAM, recText, DIVISIONS, CONFS, ROUNDS, CONF_OF, DIV_OF, leagueStats, leaders, whoIs, LEADER_CATS, wire, scoreText } from '../../lib/franchise2'
 import { sfx } from '../../lib/juice'
 import { Chyron, KLogo, Tag, fkVars } from './kit'
 import { Man, PlayerPage } from './dparts'
 import { Logo } from './bits'
+import { memoF, standingsOf, warmKey } from './perf'
 import './fd.css'
 
 // LEAGUE: the standings as the broadcast shows them (a bar a team, as long as its winning percentage), the league's
@@ -31,7 +32,7 @@ export default function LeagueTab({ F, owner, act }) {
 const streakText = k => (k > 0 ? `W${k}` : k < 0 ? `L${-k}` : '')
 function Standings({ F }) {
   const [conf, setConf] = useState(CONF_OF[F.team])
-  const S = useMemo(() => standings(F), [F, F.wk, F.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  const S = standingsOf(F)
   const pct = s => { const r = S.R[s], g = r.w + r.l + r.t; return g ? (r.w + r.t / 2) / g : 0 }
   const seeds = S.seeds[conf], hunt = S.conf[conf].slice(7, 10)
   return (
@@ -71,7 +72,7 @@ function Standings({ F }) {
 
 // ── Leaders ──────────────────────────────────────────────────────────────────
 function Leaders({ F, owner, onMan }) {
-  const tot = useMemo(() => leagueStats(F), [F, F.wk, F.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  const tot = memoF(F, 'lstats', warmKey(F), () => { try { return leagueStats(F) } catch { return {} } })
   const who = useMemo(() => whoIs(F), [F, F.wk, F.phase]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!Object.keys(tot).length) return <div className="fd-none">THE LEADERS START AFTER WEEK 1</div>
   return (

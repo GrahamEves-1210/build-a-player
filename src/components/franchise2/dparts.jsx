@@ -24,6 +24,7 @@ import './fd.css'
 import './fd2.css'
 import { teamKit } from '../../lib/franchise2/kits'
 import { ScoutNote, LastLine } from './dealbits'
+import { memoF, warmKey } from './perf'
 
 // D's parts: a man's face (a real man's photo, a build's own face, a made-up man's drawn face), a man as a
 // lower-third on any of D's screens, the cap bar, a man's page (his ratings as grades, his deal, his seasons).
@@ -105,7 +106,7 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
   if (!found) return null
   const { p, s } = found
   const mine = s === F.team
-  const st = leagueStats(F)[String(p.i)]
+  const st = memoF(F, 'lstats', warmKey(F), () => { try { return leagueStats(F) } catch { return {} } })[String(p.i)]
   const keys = CAREER_KEYS[p.p] ?? []
   // his seasons: the ones kept (a build's from his own career), this one if it's going
   const rows = p.b != null

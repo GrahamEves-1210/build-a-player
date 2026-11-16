@@ -1,12 +1,14 @@
-import { lazy, Suspense, useMemo, useRef, useEffect, useState } from 'react'
+import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
-  TEAM, recText, records, standings, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
+  TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
 import { startersOf } from '../../lib/franchise2/roster'
 import { leagueStats } from '../../lib/franchise2/stats'
+import { depthChart } from '../../lib/franchise2'
+import { staffMen } from '../../lib/franchise2/coach'
 import { tickerItems } from '../../lib/franchise2/news'
 import { scoutsLeft, draftNews } from '../../lib/franchise2/draft'
 import { GAMES } from '../../lib/minigames'
@@ -21,6 +23,9 @@ import LeagueTab from './League'
 import HistoryTab from './History'
 import Offseason from './Offseason'
 import DraftBoard from './Draft'
+import { faceFor } from './dparts'
+import { coachPhoto } from './coachFace'
+import { memoF, peekF, idleRun, standingsOf, recordsOf, useLeagueWarm, warmKey, useStaged } from './perf'
 import './season.css'
 
 const TrophyScene = lazy(() => import('./TrophyScene'))
@@ -37,6 +42,21 @@ const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd
 const TABS = [['season', 'Season'], ['team', 'Team'], ['league', 'League'], ['history', 'History']]
 // (a wide screen: the season's extras open from the start; a phone keeps them one tap away)
 const wide = () => { try { return window.matchMedia('(min-width: 900px)').matches } catch { return false } }
+// the Team tab's faces drawn ahead while the hub sits idle (each drawn face is built once, then kept: faces.js), so
+// the depth chart opens on faces already made
+function useTeamFacesWarm(F) {
+  useEffect(() => {
+    const steps = []
+    try {
+      const C = depthChart(F, F.team), L = startersOf(F, F.team)
+      const on = new Set(Object.values(L).map(p => p.i))
+      for (const k of Object.keys(C)) for (const p of C[k]) steps.push(() => faceFor(F, p, F.team, !on.has(p.i)))
+      const M = staffMen(F, F.team)
+      for (const k of ['hc', 'oc', 'dc']) if (M?.[k]) steps.push(() => coachPhoto(M[k], F.team, true))
+    } catch { return undefined }
+    return idleRun(steps)
+  }, [F])
+}
 
 // THE HUB: the team's header, four tabs, and the tab's screen. SEASON leads with the one thing to do next (the
 // week's game, a front-office call, the playoffs, the offseason's current step); everything else sits beside it
@@ -48,8 +68,9 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   const [board, setBoard] = useState(false)
   const scroll = useRef(null)
   const t = TEAM[F.team]
-  const r = records(F)[F.team]
+  const r = recordsOf(F)[F.team]
   const off = F.phase === 'off'
+  useTeamFacesWarm(F)
 
   // PLAY WEEK: the week's games; the player's own on screen (the scorebug, a moment if it comes, the final)
   const play = () => {
@@ -107,6 +128,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
 function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
   const ph = F.phase
   const reg = ph === 'season' || ph === 'post'
+  const side = useStaged(2, 1) > 1
   return (
     <div className="fh-grid">
       <div className="fh-main">
@@ -120,11 +142,16 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
         {(ph === 'playoffs' || ph === 'done') && <PoBracket F={F} />}
       </div>
       <aside className="fh-side">
-        {reg && F.log.length > 0 && <LastWeek F={F} />}
-        {reg && <Ladder F={F} />}
-        {reg && <Strip F={F} />}
-        <ScoutRow F={F} onBoard={onBoard} />
-        <GamesSwitch F={F} act={act} />
+        {/* (the side column a frame after the game: the next thing to do is on screen first) */}
+        {side && (
+          <>
+            {reg && F.log.length > 0 && <LastWeek F={F} />}
+            {reg && <Ladder F={F} />}
+            {reg && <Strip F={F} />}
+            <ScoutRow F={F} onBoard={onBoard} />
+            <GamesSwitch F={F} act={act} />
+          </>
+        )}
       </aside>
     </div>
   )
@@ -147,7 +174,7 @@ export function ScoutRow({ F, onBoard }) {
 function Glance({ F, r }) {
   const st = strength(F, F.team)
   const s = F.streak ?? 0
-  const S = useMemo(() => standings(F), [F, F.wk, F.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  const S = standingsOf(F)
   const div = DIV_OF[F.team], place = S.div[div].indexOf(F.team) + 1
   return (
     <section className="fh-glance" aria-label={TEAM[F.team].nick}>
@@ -162,8 +189,8 @@ function Glance({ F, r }) {
 const favText = l => (l.fav ? `${TEAM[l.fav].nick} favored by ${l.pts}` : 'Even game')
 function ThisWeek({ F, play, simToEnd }) {
   const wk = mySchedule(F)[F.wk]
-  const R = records(F)
-  const S = useMemo(() => standings(F), [F, F.wk]) // eslint-disable-line react-hooks/exhaustive-deps
+  const R = recordsOf(F)
+  const S = standingsOf(F)
   if (!wk) return null
   const sim = F.wk < REG_WEEKS - 1 && <button type="button" className="fh-textbtn" onClick={simToEnd}>Sim to the playoffs</button>
   if (wk.bye) {
@@ -216,7 +243,7 @@ function MatchupMore({ F, owner }) {
   )
 }
 function Compare({ F, a, h }) {
-  const R = records(F)
+  const R = recordsOf(F)
   const sa = strength(F, a), sh = strength(F, h)
   const ppg = s => { const x = R[s], g = x.w + x.l + x.t; return g ? [x.pf / g, x.pa / g] : null }
   const pa = ppg(a), ph = ppg(h)
@@ -240,9 +267,11 @@ function keyMen(F, s) {
   return [first, [qb, ...rest].find(p => p && p !== first) ?? null].filter(Boolean)
 }
 function KeyPlayers({ F, owner, teams }) {
-  const tot = useMemo(() => { try { return leagueStats(F) } catch { return {} } }, [F, F.wk, F.po?.rd]) // eslint-disable-line react-hooks/exhaustive-deps
-  const R = records(F)[F.team]
-  const played = R.w + R.l + R.t > 0
+  // (each man's line once the league's boxes are in: useLeagueWarm)
+  const ready = useLeagueWarm(F)
+  const tot = ready ? memoF(F, 'lstats', warmKey(F), () => { try { return leagueStats(F) } catch { return {} } }) : null
+  const R = recordsOf(F)[F.team]
+  const played = R.w + R.l + R.t > 0 && !!tot
   return (
     <div className="fh-keys">
       {teams.map(s => (
@@ -294,7 +323,7 @@ export function Strip({ F }) {
 }
 // a division: four teams in order (League.jsx shows every division with it)
 export function Ladder({ F, div = DIV_OF[F.team], title = null }) {
-  const S = useMemo(() => standings(F), [F, F.wk, F.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  const S = standingsOf(F)
   const list = S.div[div]
   return (
     <section className="fh-ladder">
@@ -334,7 +363,7 @@ function EventCard({ F, act, owner }) {
 
 // ── The end of the regular season, the playoffs, the champion ───────────────
 function SeasonOver({ F, act, r }) {
-  const S = standings(F)
+  const S = standingsOf(F)
   const c = CONF_OF[F.team], seed = S.seeds[c].indexOf(F.team) + 1
   const won = S.div[DIV_OF[F.team]][0] === F.team
   return (
@@ -356,7 +385,7 @@ function PlayoffCard({ F, act, play, owner }) {
   const po = F.po, alive = userAlive(F), bye = userBye(F)
   const g = po.rounds[po.rd].find(x => x.h === F.team || x.a === F.team)
   const sb = po.rd === 3
-  const R = records(F)
+  const R = recordsOf(F)
   const l = alive && g ? lineOf(F, g.a, g.h, sb) : null
   return (
     <>
@@ -428,7 +457,7 @@ function Champions({ F, act, onTrophy }) {
       <Chyron tone="gold" size="l" tag={romanOf(F.year - 1965)} title={sbName(F)} sub={`${TEAM[c].name} · ${F.year} champions`} />
       {g && <Scorebug a={g.a} h={g.h} as={g.as} hs={g.hs} final={g.ot ? 'F/OT' : 'FINAL'} label="SB" />}
       <div className="fh-champ-team">
-        <TeamSlab s={c} size="l" rec={records(F)[c]} sub={`BEAT THE ${TEAM[F.po.runner].nick.toUpperCase()} ${F.po.score}`} />
+        <TeamSlab s={c} size="l" rec={recordsOf(F)[c]} sub={`BEAT THE ${TEAM[F.po.runner].nick.toUpperCase()} ${F.po.score}`} />
         <Stamp kind="gold" big delay={250}>CHAMPIONS</Stamp>
       </div>
       <div className="fh-go">
@@ -456,13 +485,20 @@ function GamesSwitch({ F, act }) {
 
 // ── The league along the bottom edge ─────────────────────────────────────────
 function LeagueTicker({ F }) {
-  const items = useMemo(() => {
+  // (the reel once the league's week is in; until then the strip with its label, the same size, so nothing moves)
+  const ready = useLeagueWarm(F)
+  const key = [F.year, F.phase, F.wk, F.po?.rd ?? '', F.stage ?? '', F.news?.length ?? 0, F.ev?.id ?? ''].join('|')
+  const last = useRef(null)
+  const items = ready || peekF(F, 'tick', key) ? memoF(F, 'tick', key, () => {
     let x
     try { x = tickerItems(F) } catch { x = null }
     if (!x?.length) x = leagueWire(F)
     try { const d = draftNews(F) ?? []; if (d.length) x = [...x.slice(0, 6), ...d, ...x.slice(6)] } catch { /* (no class yet) */ }
     return x
-  }, [F, F.wk, F.phase, F.po?.rd]) // eslint-disable-line react-hooks/exhaustive-deps
+  }) : last.current
+  last.current = items
+  const label = F.phase === 'playoffs' || F.phase === 'done' ? 'PLAYOFFS' : F.wk > 0 ? `WEEK ${Math.min(F.wk, REG_WEEKS)}` : 'AROUND THE LEAGUE'
+  if (!items) return <div className="fh-tick"><div className="fk-tick"><span className="fk-tick-label">{label}</span><div className="fk-tick-win" /></div></div>
   if (!items.length) return null
-  return <div className="fh-tick"><Ticker items={items} label={F.phase === 'playoffs' || F.phase === 'done' ? 'PLAYOFFS' : F.wk > 0 ? `WEEK ${Math.min(F.wk, REG_WEEKS)}` : 'AROUND THE LEAGUE'} /></div>
+  return <div className="fh-tick"><Ticker items={items} label={label} /></div>
 }

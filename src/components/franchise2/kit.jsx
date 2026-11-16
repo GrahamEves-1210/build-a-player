@@ -187,7 +187,7 @@ export function LowerThird({ name, pos, num, ovr, photo, team, mine, line, stat,
     <Tag className={`fk-l3 fk-l3--${size}${mine ? ' is-mine' : ''}${onClick ? ' is-tap' : ''} ${className}`} style={{ ...(team ? fkVars(team) : null), '--d': `${delay}ms` }} onClick={onClick} type={onClick ? 'button' : undefined}>
       <span className="fk-l3-slab" aria-hidden="true">
         {num != null && <span className="fk-l3-num">{num}</span>}
-        {photo && !bad ? <img className="fk-l3-cut" src={photo} alt="" loading="lazy" draggable={false} onError={() => setBad(true)} />
+        {photo && !bad ? <img className="fk-l3-cut" src={photo} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setBad(true)} />
           : <span className="fk-l3-init">{(first[0] ?? '') + (last[0] ?? '')}</span>}
       </span>
       <span className="fk-l3-bar">
