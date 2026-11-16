@@ -7,14 +7,14 @@ import { registerMoments, odds, sub, score, pc, outs } from './gameMoments'
 // SOCCER: a striker's season (c.nick is the club's full name)
 // ═════════════════════════════════════════════════════════════════════════════
 const SOCCER_ALL = [
-  { id: 'fc-sacked', at: ['mid', 'late'], w: 4, when: c => c.struggling,
+  { id: 'fc-sacked', at: ['mid', 'late'], w: 4, when: c => !c.ucl && c.struggling,
     make: c => ({ kicker: 'MANAGER SACKED', title: 'The board pulls the trigger',
       body: `${c.nick} are ${c.rec} and the manager is gone. An interim coach takes training on Monday, and nobody knows who starts on Saturday.`,
       options: [
         o('buy', 'Buy into the new man', gam(0.55, { team: { off: 1.5 } }, 'It clicks. The new manager plays to the No. 9.', { team: { off: -1.5 }, window: 3, tag: 'NEW MANAGER', then: { team: { off: 1 } } }, 'Three matches to find the shape, then it starts to work.')),
         o('loyal', 'Back the old manager in public', gam(0.5, { team: { off: 0.5 } }, 'The dressing room respects it. They play for each other.', { attr: c.R1('nerve', -1), window: 3, tag: 'OUT OF FAVOUR' }, 'The new man hasn\'t forgotten it. In and out of the team for a few weeks.')),
       ] }) },
-  { id: 'fc-derby', at: ['early', 'mid', 'late'], w: 3, when: c => c.k >= 2,
+  { id: 'fc-derby', at: ['early', 'mid', 'late'], w: 3, when: c => !c.ucl && c.k >= 2,
     make: c => ({ kicker: 'DERBY WEEK', title: 'The biggest match of the season',
       body: `Derby week at ${c.nick}. The press conference is on Thursday, and every question is for ${c.name}.`,
       options: [
@@ -57,14 +57,14 @@ const SOCCER_ALL = [
         o('lead', 'Lead from the front', { attr: c.R1('nerve', 1), window: 4, tag: 'CAPTAIN' }, 'First to every press, first in the huddle.'),
         o('pass', 'Let a senior pro have it', { attr: c.R1('mind', 1), window: 2, tag: 'FOCUSED' }, 'He keeps his mind on his own game.'),
       ] }) },
-  { id: 'fc-runin', at: ['late', 'stretch'], w: 5, when: c => c.contender && c.left >= 4,
+  { id: 'fc-runin', at: ['late', 'stretch'], w: 5, when: c => !c.ucl && c.contender && c.left >= 4,
     make: c => ({ kicker: 'THE RUN-IN', title: 'A title race',
       body: `${c.nick} are ${c.rec} with ${c.left} matches left, in the race for the title. The legs are heavy, and the cup and Europe are still on.`,
       options: [
         o('every', 'Play every minute', gam(0.8, { attr: c.R1('feel', 1), tag: 'ALL IN' }, 'Every minute, and healthy.', { attr: c.R('legs', -2), tag: 'RUNNING ON EMPTY' }, 'The legs go in April.')),
         o('rotate', 'Rest in the cup, save the legs', { attr: c.R('legs', 1), team: { off: -0.5 }, window: 4, tag: 'ROTATED' }, 'Fresher for the league, a little less of him in the cup.'),
       ] }) },
-  { id: 'fc-dogfight', at: ['late', 'stretch'], w: 5, when: c => c.struggling && c.left >= 3,
+  { id: 'fc-dogfight', at: ['late', 'stretch'], w: 5, when: c => !c.ucl && c.struggling && c.left >= 3,
     make: c => ({ kicker: 'RELEGATION SCRAP', title: 'A fight to stay up',
       body: `${c.nick} are ${c.rec}, down at the wrong end. ${c.left} matches to stay in the division.`,
       options: [
@@ -72,8 +72,41 @@ const SOCCER_ALL = [
         o('goals', 'Stay on the shoulder and wait for chances', { attr: c.R1('feel', 1) }, 'Goals or nothing.'),
       ] }) },
 ]
+// A build's season is the Champions League (c.ucl): its league phase and its knockouts. (Career's season: the cards above.)
+const SOCCER_UCL = [
+  { id: 'ucl-travel', at: ['early', 'mid'], w: 4, when: c => c.ucl && c.k >= 1,
+    make: c => ({ kicker: 'AWAY IN EUROPE', title: 'A long trip for a Tuesday night',
+      body: `${c.nick} fly four hours for the next league phase match, three days after a league game. The manager asks ${c.name} if he wants the whole ninety.`,
+      options: [
+        o('play', 'Play the whole match', gam(0.75, { attr: c.R1('feel', 1), window: 2, tag: 'FULL NINETY' }, 'Fresh enough. He looks sharp from the first whistle.', { attr: c.R('legs', -1), window: 2, tag: 'HEAVY LEGS' }, 'The legs feel it in the second half.')),
+        o('hour', 'An hour, then off', { attr: c.R('legs', 1), team: { off: -0.5 }, window: 2, tag: 'MANAGED' }, 'Off after an hour, fresher for the weekend.'),
+      ] }) },
+  { id: 'ucl-table', at: ['mid', 'late', 'stretch'], w: 5, when: c => c.ucl && c.k >= 4 && c.left >= 2,
+    make: c => ({ kicker: 'THE LEAGUE PHASE', title: c.ppg >= 1.7 ? 'In the race for the top eight' : 'In the race for the top 24',
+      body: `${c.nick} are ${c.rec} with ${c.left} league phase matches left. The top eight go straight to the Round of 16; ninth to 24th play a two-legged play-off in February.`,
+      options: [
+        o('attack', 'Go for the win every match', { team: { off: 1, def: -0.5 }, window: c.left, tag: 'ALL OUT' }, 'More men forward, more space at the back.'),
+        o('safe', 'Make sure of the points', { team: { def: 1 }, attr: c.R1('make', -1), window: c.left, tag: 'COMPACT' }, 'Fewer chances at both ends.'),
+      ] }) },
+  { id: 'ucl-weekend', at: ['mid', 'late'], w: 3, when: c => c.ucl,
+    make: c => ({ kicker: 'THE WEEKEND', title: 'A league match before the next European night',
+      body: `${c.nick} have a league match on Saturday and the Champions League on Wednesday. The manager could rest ${c.name} at the weekend.`,
+      options: [
+        o('rest', 'Rest on Saturday', { attr: c.R('legs', 1), window: 2, tag: 'RESTED' }, 'Feet up on Saturday, fresh on Wednesday.'),
+        o('both', 'Play both', gam(0.6, { attr: c.R1('feel', 1), window: 2, tag: 'IN FORM' }, 'Two matches, two good performances. He feels sharp.', { attr: c.R('legs', -1), window: 2, tag: 'HEAVY LEGS' }, 'The second match of the week is one too many.')),
+      ] }) },
+]
+const SOCCER_UCL_PO = [
+  { id: 'ucl-knockouts', at: ['playoffs'], w: 5, when: c => c.ucl,
+    make: c => ({ kicker: 'THE KNOCKOUTS', title: 'Two legs at a time',
+      body: `The league phase is over. From here every round is over two legs, with extra time and penalties if it is level on aggregate, and the final is one match. The manager asks how ${c.name} wants to play them.`,
+      options: [
+        o('channels', 'Lead the line, run the channels', { attr: mix(c.R('make', 1), c.R1('feel', 1)), team: { def: -0.5 } }, 'More of him, more space at the back.'),
+        o('press', 'Defend from the front', { team: { def: 1 }, attr: c.R1('make', -1) }, 'Fewer chances, fewer mistakes.'),
+      ] }) },
+]
 const SOCCER_PO = [
-  { id: 'fc-bignights', at: ['playoffs'], w: 5, when: () => true,
+  { id: 'fc-bignights', at: ['playoffs'], w: 5, when: c => !c.ucl,
     make: c => ({ kicker: 'THE BIG NIGHTS', title: 'Knockout football',
       body: 'The league is done. The finals and the European nights are what a season is remembered for. The manager asks how he wants to play them.',
       options: [
@@ -148,7 +181,9 @@ function soccerMoment(c, g) {
 
 
 registerScenarios('soccer', {
-  bank: { all: [...SOCCER_ALL, ...INJURY.filter(s => s.id !== 'concussion')], st: [], playoffs: [...SOCCER_PO, ...PO_INJURY] },
+  bank: { all: [...SOCCER_ALL, ...SOCCER_UCL, ...INJURY.filter(s => s.id !== 'concussion')], st: [], playoffs: [...SOCCER_PO, ...SOCCER_UCL_PO, ...PO_INJURY] },
+  // (a build's Champions League season: its team is marked comp 'ucl', utils/soccerSimulation.js)
+  ctx: ({ team }) => ({ ucl: team?.comp === 'ucl' }),
   role: {
   st:    { legs: ['pace'], feel: ['finishing', 'firstTouch'], mind: ['offBall'], nerve: ['composure'], power: ['strength', 'heading', 'shotPower'], make: ['dribbling', 'linkUp'] },
   },

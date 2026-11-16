@@ -124,7 +124,9 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   // each other; one more before the playoffs (only if you're in)
   const rs = seeded(`stops-${seed}`)
   const want = X?.stops ? X.stops.want(rs) : 2 + (rs() < 0.4 ? 1 : 0)
-  const lo = X?.stops ? X.stops.lo : isBucket ? 8 : isSoccer ? 4 : 2, hi = total - (X?.stops ? X.stops.end : isBucket ? 6 : isSoccer ? 4 : 2), gap = X?.stops ? X.stops.gap : isBucket ? 14 : isSoccer ? 8 : 3
+  // (soccer's short season, the Champions League's eight league phase matches: football's spacing)
+  const shortSoccer = isSoccer && total < 20
+  const lo = X?.stops ? X.stops.lo : isBucket ? 8 : shortSoccer ? 2 : isSoccer ? 4 : 2, hi = total - (X?.stops ? X.stops.end : isBucket ? 6 : shortSoccer ? 2 : isSoccer ? 4 : 2), gap = X?.stops ? X.stops.gap : isBucket ? 14 : shortSoccer ? 3 : isSoccer ? 8 : 3
   const weeks = []
   for (let tries = 0; weeks.length < want && tries < 200 && hi > lo; tries++) {
     const w = lo + Math.floor(rs() * (hi - lo + 1))

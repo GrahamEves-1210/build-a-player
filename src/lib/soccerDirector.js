@@ -4,7 +4,7 @@
 import { createDirector } from './seasonDirector'
 import './soccerFacts'       // the records and milestones (lib/seasonFacts.js RECORDS.soccer)
 import './soccerSeason'      // the season's story cards and the in-match moments (scenarios.js, gameMoments.js)
-import { runSoccerSimulation, soccerAwards, soccerLeagueInfo } from '../utils/soccerSimulation'
+import { runSoccerSimulation, soccerAwards, soccerLeagueInfo, soccerUclRebook, isUclResult } from '../utils/soccerSimulation'
 
 const r10 = v => Math.round(v * 10) / 10
 
@@ -29,6 +29,8 @@ export function soccerFinal(f, t, games) {
 // soccerFinal, and what the season page shows off the table: the league title among the trophies, where the club
 // plays in Europe next season, his goals in all competitions (the cups and Europe stay the run's)
 function oneOffFinal(f, t, games) {
+  // a build's Champions League season: the league phase from the games as played, the knockouts the run's
+  if (isUclResult(f)) return soccerUclRebook(f, games)
   const out = soccerFinal(f, t, games)
   const lg = f.league?.name
   const was = (f.standings ?? []).find(r => r.isUs)?.pos ?? f.seed
@@ -43,7 +45,10 @@ function oneOffFinal(f, t, games) {
   return out
 }
 // The director for a one-off club season: the rest of the league re-simulated after each decision
+// (a build's season is the Champions League; one kept on the device from before 2026-11-16 is a domestic season, and
+// goes on as one: team.domestic)
 export function oneOffDirector({ result, build, types, name = 'Guest', attrMap = {}, seed = null }) {
-  const simFn = (b, t, seed) => runSoccerSimulation(b, types, t, 'current', seed)
+  const legacy = !isUclResult(result)
+  const simFn = (b, t, seed) => runSoccerSimulation(b, types, legacy ? { ...t, domestic: true } : t, 'current', seed)
   return createDirector({ sport: 'soccer', pos: 'st', build, team: result.team, simFn, base: result, name, attrMap, types, onFinal: oneOffFinal, ...(seed ? { seed } : {}) })
 }

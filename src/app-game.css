@@ -6912,6 +6912,15 @@ html:is(.is-app, .app-look)[data-sport="soccer"] .simp-cta { background: #f4f4f5
 .ssp-end-won { justify-content: center; margin: 2px 0 12px; }
 .ssp-legacy .ssp-award, .ssp-legacy > .ag-pop { align-self: stretch; width: 100%; text-align: left; }
 .ssp-miss-note { margin-top: 6px; font-size: 14px; color: rgba(255,255,255,.62); }
+/* the Champions League (a build's season): the band he finished in under the record, the league phase table's key,
+   the bracket's five rounds, and the screen when they're out after the league phase (the bracket under the card) */
+.ssp-band { font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,.78); }
+.ssp-hero.is-champ .ssp-band { color: #f7cf55; }
+.ssp-zone-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.66); }
+.ssp-zone-key span { display: inline-flex; align-items: center; gap: 6px; }
+.ssp-zone-key span::before { content: ''; width: 3px; height: 13px; border-radius: 1px; background: currentColor; }
+.ssp-zone-key .is-ucl::before { background: #3b82f6; } .ssp-zone-key .is-uel::before { background: #f97316; } .ssp-zone-key .is-down::before { background: #ef4444; }
+.ssp-ucl-out > .simp-screen:last-child { padding-top: 0; }
 /* the playoff controls and clocks in football's white, not basketball's orange */
 .ssp-page .plf-seg-btn--active, .ssp-page .plf-seg-btn.plf-seg-btn--pause { background: #f4f4f5; color: #0a0a0a; }
 .ssp-page .plf-progress-fill, .ssp-page .plf-series-timer-fill { background: #f4f4f5; }

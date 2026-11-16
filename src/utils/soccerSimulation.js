@@ -72,6 +72,12 @@
 //   soccerTeam10(team, mode) / soccerTeamFrom10(off, def, mode) → club ratings ↔ Career's 1-10 scale
 //   soccerStrikerLift(build, team, mode)              → { M, att, replaced }: his side's attack with him as its No. 9
 //   soccerLeagueInfo(leagueId)                       → { country, cup, boot, poty, size, ucl, uel, games }
+//   UCL_CLUBS, isUclResult(result), soccerUclRebook(result, games) → the Champions League (below)
+//
+// ── Which season (since 2026-11-16) ──────────────────────────────────────────
+// mode 'current': a build's season is his club's 2026-27 Champions League campaign (uclSeason; its result is under
+// "The Champions League" further down). Career (team.career), Squad Builder (a script, team.squad) and team.domestic
+// play the domestic season described next (clubSeason). Mode 'alltime' is the World Cup, as before.
 //
 // `team`: a club (mode 'current') or nation (mode 'alltime') from the data, at least { short }.
 //   team.offMod / team.defMod: the season director's moments (±1 on the 1-10 scale each).
@@ -1203,6 +1209,7 @@ export function soccerAwards(result, totals = {}) {
   if (!result?.book) return null
   const b = result.book
   if (result.mode === 'alltime') return wcAwards(b, { ...b.me, goals: totals.goals ?? b.me.goals, assists: totals.assists ?? b.me.assists, mins: totals.mins ?? b.me.mins })
+  if (b.comp === 'ucl') return uclAwards(b, { ...b.me, goals: totals.goals ?? b.me.goals, assists: totals.assists ?? b.me.assists, mins: totals.mins ?? b.me.mins, finish: result.finish ?? b.me.finish })
   const goals = totals.goals ?? b.me.goals, assists = totals.assists ?? b.me.assists
   return clubAwards(b, { ...b.me, goals, assists })
 }
@@ -1508,6 +1515,382 @@ function wcSeason(build, types, team, base, gameMode, script) {
   }
 }
 
+// ─── The Champions League: a build's season (mode 'current') ─────────────────
+// Since 2026-11-16 the season a build plays is his club's 2026-27 Champions League campaign. The domestic season
+// above (clubSeason) is Career's and Squad Builder's (team.career, team.squad, a script, or team.domestic: true).
+// The format (UEFA's, since 2024-25):
+//   League phase: 36 clubs in four pots of nine by coefficient. Each club plays eight different opponents, two
+//     from each pot (its own included), one at home and one away, so four at home and four away; no opponent from
+//     its own country and no more than two from any one country (where the draw allows it).
+//   The table: points, then goal difference, goals scored, away goals scored, wins, away wins, then the points,
+//     goal difference and goals of the clubs it played, then the coefficient (UEFA's order, without the
+//     disciplinary points).
+//   1st-8th go straight to the Round of 16, 9th-24th play two-legged knockout play-offs, 25th-36th are out.
+//   Play-offs, seeded: 9th/10th against 23rd/24th, 11th/12th against 21st/22nd, 13th/14th against 19th/20th,
+//     15th/16th against 17th/18th (which of the two drawn). Round of 16: the winners meet 7th/8th, 5th/6th,
+//     3rd/4th and 1st/2nd in the same way. The bracket is fixed from there: 1st and 2nd go into opposite halves
+//     (likewise 3rd/4th, 5th/6th, 7th/8th); a quarter-final is the 1/2 path against the 7/8 path, or the 3/4 path
+//     against the 5/6 path. Every tie is two legs, the club placed higher in the league phase at home in the
+//     second; level on aggregate, extra time, then penalties (no away goals). The final is one match.
+// The 36 and the pots: the 2026-27 league phase draw (Monaco, 27 August 2026; si.com "Confirmed League Phase
+// Pots", every club's opponents on renderfoot.com agree). Each pot is in UEFA's listed order, read as its
+// coefficient order. A club in the data (data/soccer-clubs.js, by code or by name) plays at its own att/def;
+// one that isn't plays at the ratings below: Serie A and Ligue 1's from that file's full list (switched off
+// for the spins), the others in league spreads from the data's average (a Sporting or a Porto rated like a
+// top-five side's 4th-6th, a Sabah or a Viking like a relegation side). A build at a club that isn't one of the
+// 36 takes the place of his country's lowest-ranked entrant (or the last of pot 4), in that pot.
+// Every match is played from the goal model above (EURO_BASE, H_EURO): the whole league phase, the table and the
+// bracket are complete. His line is drawn from his club's scores as everywhere else.
+// The result (a club season's contract, read for the Champions League):
+//   comp: 'ucl', league: { id: 'ucl', name: 'Champions League', … size 36, games 8 }, finish: 'Winners' | 'Runners-up' |
+//   'Semi-finals' | 'Quarter-finals' | 'Round of 16' | 'Knockout play-offs' | 'League phase' (where the run ended),
+//   wins/draws/losses/points/gf/ga/gd and seed: the league phase; standings: its 36 rows (+ pot, extra: no logo,
+//   reached); games: his eight league phase matches (stage 'md', md 1-8); playoffRounds: his ties; fixtures: every
+//   match he played (stage 'md' | 'po' | 'r16' | 'qf' | 'sf' | 'final'); the striker's totals (goals …) are the
+//   whole campaign's (allComps the same; byComp: { leaguePhase, knockouts }); champion: won it; madePlayoffs /
+//   playoffs: in the top 24; bracket: { po, r16, qf, sf, final: [tie] } in bracket order, tie = { stage, a (first-leg
+//   host), b, seedA, seedB, legs: [[home goals, away goals]…], sa, sb (aggregate), et, pens: [a, b] | null, winner };
+//   leaguePhase: all 144 matches [home, away, hs, as]; uclWinner, uclRunnerUp; trophies ['Champions League'] or [];
+//   the awards: goldenBoot (UEFA's top scorer: name 'Top Scorer'), playerOfSeason ({ … top }), youngPlayer
+//   ({ eligible, won, winner }), teamOfSeason; goldenShoe and ballonDor null (no league season); cup null.
+//   team.comp 'ucl' (the story cards read it), team.inPlaceOf: the entrant a club outside the 36 replaced.
+const UCL_POTS = [
+  // [name (ours), code, country, ratings if the club isn't in the data: [att, def] or a z in league spreads]
+  [['Paris Saint-Germain', 'PSG', 'FRA', [98, 96]], ['Bayern Munich', 'FCB', 'GER', 1.6], ['Real Madrid', 'RMA', 'ESP', 1.5], ['Liverpool', 'LIV', 'ENG', 1.4], ['Inter', 'INT', 'ITA', [95, 92]],
+    ['Manchester City', 'MCI', 'ENG', 1.6], ['Arsenal', 'ARS', 'ENG', 1.7], ['Barcelona', 'BAR', 'ESP', 1.6], ['Atlético Madrid', 'ATM', 'ESP', 0.9]],
+  [['Borussia Dortmund', 'BVB', 'GER', 1.0], ['Roma', 'ROM', 'ITA', [91, 91]], ['Sporting CP', 'SPO', 'POR', 0.9], ['Aston Villa', 'AVL', 'ENG', 1.1], ['Porto', 'FCP', 'POR', 0.8],
+    ['Manchester United', 'MUN', 'ENG', 0.7], ['Club Brugge', 'CLB', 'BEL', 0.3], ['Real Betis', 'BET', 'ESP', 0.3], ['PSV Eindhoven', 'PSV', 'NED', 0.7]],
+  [['Feyenoord', 'FEY', 'NED', 0.3], ['Lille', 'LIL', 'FRA', [86, 89]], ['Bodø/Glimt', 'BOD', 'NOR', 0.1], ['Napoli', 'NAP', 'ITA', [88, 89]], ['RB Leipzig', 'RBL', 'GER', 0.5],
+    ['Villarreal', 'VIL', 'ESP', 0.2], ['Fenerbahçe', 'FEN', 'TUR', 0.4], ['Shakhtar Donetsk', 'SHA', 'UKR', -0.4], ['Galatasaray', 'GAL', 'TUR', 0.5]],
+  [['Slavia Prague', 'SLA', 'CZE', -0.5], ['Slovan Bratislava', 'SBR', 'SVK', -1.2], ['VfB Stuttgart', 'VFB', 'GER', 0.3], ['AEK Athens', 'AEK', 'GRE', -0.6], ['LASK', 'LSK', 'AUT', -0.8],
+    ['Como', 'COM', 'ITA', [92, 93]], ['Lens', 'RCL', 'FRA', [88, 86]], ['Viking', 'VIK', 'NOR', -1.0], ['Sabah', 'SAB', 'AZE', -1.3]],
+]
+// a club's other names (the data may spell it another way)
+const UCL_ALIAS = { INT: ['Inter Milan', 'Internazionale'], SPO: ['Sporting Lisbon', 'Sporting'], PSV: ['PSV'], PSG: ['Paris SG', 'Paris'], FCB: ['Bayern München', 'Bayern'],
+  ATM: ['Atletico de Madrid', 'Atlético de Madrid'], SLA: ['Slavia Praha'], LSK: ['LASK Linz'], RCL: ['RC Lens'], VIK: ['Viking FK'], SAB: ['Sabah FK'], LIL: ['LOSC Lille', 'LOSC'], CLB: ['Club Brugge KV', 'Brugge'],
+  BOD: ['Bodo/Glimt', 'Bodo Glimt'], AEK: ['AEK Athens FC'], SBR: ['ŠK Slovan Bratislava'], FCP: ['FC Porto'], FEN: ['Fenerbahce'], GAL: ['Galatasaray SK'], SHA: ['Shakhtar'], VFB: ['Stuttgart'], RBL: ['Leipzig'] }
+// (the logos in public/logos/soccer for clubs the spins don't deal: Serie A's and Ligue 1's)
+const UCL_LOGOS = new Set(['PSG', 'INT', 'ROM', 'NAP', 'LIL', 'COM', 'RCL'])
+const COUNTRY_KEY = { ENG: 'ENG', ESP: 'ESP', ITA: 'ITA', GER: 'GER', FRA: 'FRA' }
+const keyOf = s => norm(s).replace(/[^a-z0-9]/g, '')
+function dataClubFor(code, names) {
+  const byCode = CLUB_BY.get(code)
+  if (byCode && names.some(n => keyOf(n) === keyOf(byCode.name) || keyOf(byCode.name).includes(keyOf(n)) || keyOf(n).includes(keyOf(byCode.name)))) return byCode
+  const keys = names.map(keyOf).filter(k => k.length >= 4)
+  return CLUBS.find(c => keys.includes(keyOf(c.name))) ?? CLUBS.find(c => keys.some(k => keyOf(c.name).includes(k) || (keyOf(c.name).length >= 5 && k.includes(keyOf(c.name))))) ?? byCode ?? null
+}
+const UCL_BASE = UCL_POTS.flatMap((pot, p) => pot.map(([name, code, country, fb], i) => {
+  const d = dataClubFor(code, [name, ...(UCL_ALIAS[code] ?? [])])
+  const rt = d ? { att: d.att, def: d.def } : Array.isArray(fb) ? { att: fb[0], def: fb[1] } : { att: G_ATT + fb * SD_ATT, def: G_DEF + fb * SD_DEF }
+  return { canon: name, short: d?.short ?? code, name: d?.name ?? name, country: COUNTRY_KEY[country] ?? country, pot: p + 1, rank: p * 9 + i + 1, ...rt, color: d?.color ?? null, color2: d?.color2 ?? null, inData: !!d, logo: !!d || UCL_LOGOS.has(code) }
+}))
+// the 36 with his club in: an entrant, or in the place of one (see above)
+function uclEntrants(team) {
+  const club = CLUB_BY.get(team?.short) ?? CLUBS.find(c => c.name === team?.name) ?? null
+  const hit = UCL_BASE.find(e => e.short === team?.short) ?? (club ? UCL_BASE.find(e => e.short === club.short || keyOf(e.name) === keyOf(club.name)) : null)
+    ?? UCL_BASE.find(e => team?.name && keyOf(e.name) === keyOf(team.name))
+  if (hit) return { entrants: UCL_BASE, me: hit, src: club ?? hit }
+  const src = club ?? CLUBS[0]
+  const same = UCL_BASE.filter(e => e.country === src.country)
+  const out = (same.length ? same : UCL_BASE.filter(e => e.pot === 4)).reduce((a, b) => (b.rank > a.rank ? b : a))
+  const me = { canon: src.name, short: src.short, name: src.name, country: src.country, pot: out.pot, rank: out.rank, att: src.att, def: src.def, color: src.color ?? null, color2: src.color2 ?? null, inData: true, logo: true, wildcard: out.short }
+  return { entrants: UCL_BASE.map(e => (e === out ? me : e)), me, src }
+}
+export const UCL_CLUBS = UCL_BASE.map(({ canon, short, name, country, pot, rank, inData, logo }) => ({ canon, short, name, country, pot, rank, inData, logo }))
+const UCL_LEAGUE = { id: 'ucl', name: 'Champions League', short: 'UCL', country: 'Europe', boot: 'Top Scorer', poty: 'Player of the Season', size: 36, games: 8 }
+export const isUclResult = r => r?.comp === 'ucl' || r?.league?.id === 'ucl'
+const UCL_ROUNDS = ['Knockout play-off', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final']
+const UCL_STAGES = ['po', 'r16', 'qf', 'sf', 'final']
+const UCL_REACHED = ['Knockout play-offs', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Runners-up']
+
+// The draw: within a pot, a ring (each club at home to the next, away at the one before); between two pots, two
+// matchings that never pair the same two clubs (one sends pot i's clubs home, the other away). Same-country
+// meetings, and a third opponent from one country, are drawn again (up to 60 draws: the best is kept).
+function uclDraw(pots, rand) {
+  let best = null, bestBad = Infinity
+  for (let att = 0; att < 60 && bestBad > 0; att++) {
+    const games = []
+    // (each club's opponents by country so far: a pairing that would make a third, or a same-country one, clashes)
+    const cnt = new Map()
+    const n = (x, c) => cnt.get(`${x.short}|${c}`) ?? 0
+    const clash = (x, y) => x.country === y.country || n(x, y.country) >= 2 || n(y, x.country) >= 2
+    const meet = (x, y) => { cnt.set(`${x.short}|${y.country}`, n(x, y.country) + 1); cnt.set(`${y.short}|${x.country}`, n(y, x.country) + 1) }
+    for (let i = 0; i < 4; i++) {
+      let ord = null
+      for (let t = 0; t < 300 && !ord; t++) { const o = shuffle(pots[i], rand); if (o.every((x, k) => !clash(x, o[(k + 1) % o.length]))) ord = o }
+      ord = ord ?? shuffle(pots[i], rand)
+      ord.forEach((x, k) => { const y = ord[(k + 1) % ord.length]; games.push([x.short, y.short]); meet(x, y) })
+    }
+    for (let i = 0; i < 4; i++) {
+      for (let j = i + 1; j < 4; j++) {
+        const sig = matchPerm(pots[i], pots[j], rand, null, clash)
+        pots[i].forEach((x, k) => meet(x, pots[j][sig[k]]))
+        const tau = matchPerm(pots[i], pots[j], rand, sig, clash)
+        pots[i].forEach((x, k) => { games.push([x.short, pots[j][sig[k]].short]); games.push([pots[j][tau[k]].short, x.short]); meet(x, pots[j][tau[k]]) })
+      }
+    }
+    const ctry = new Map(pots.flat().map(e => [e.short, e.country]))
+    const seen = new Map()
+    let bad = 0
+    for (const [h, a] of games) {
+      if (ctry.get(h) === ctry.get(a)) bad += 10
+      for (const [x, y] of [[h, a], [a, h]]) { const k = `${x}|${ctry.get(y)}`; const n = (seen.get(k) ?? 0) + 1; seen.set(k, n); if (n > 2) bad++ }
+    }
+    if (bad < bestBad) { best = games; bestBad = bad }
+  }
+  return best
+}
+const uclOrder = (x, y) => y.points - x.points || y.gd - x.gd || y.gf - x.gf || y.awayGf - x.awayGf || y.wins - x.wins || y.awayWins - x.awayWins
+  || y.oppPts - x.oppPts || y.oppGd - x.oppGd || y.oppGf - x.oppGf || x.rank - y.rank
+const UCL_WEEKS = EURO_WEEKS
+
+function uclWorld({ U, uRate, entrants, hook, rand, drawRand, koRand }) {
+  const out = []
+  const E = new Map(entrants.map(e => [e.short, e]))
+  const rate = s => (s === U ? uRate : E.get(s) ?? { att: G_ATT, def: G_DEF })
+  const W = makeWorld({ rand, hook, U, rate, base: EURO_BASE, mA: G_ATT, mD: G_DEF, kA: K_ATT, kD: K_DEF, H: H_EURO, out })
+  const pots = [1, 2, 3, 4].map(p => entrants.filter(e => e.pot === p))
+  const draw = uclDraw(pots, drawRand)
+  const rows = Object.fromEntries(entrants.map(e => [e.short, { short: e.short, name: e.name, pot: e.pot, rank: e.rank, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0, awayGf: 0, awayWins: 0, opps: [] }]))
+  const gf = Object.fromEntries(entrants.map(e => [e.short, 0]))
+  const matches = Object.fromEntries(entrants.map(e => [e.short, 8]))
+  const played = []
+  const add = (h, a, hs, as) => {
+    addResult(rows, h, a, hs, as)
+    rows[a].awayGf += as; if (as > hs) rows[a].awayWins++
+    rows[h].opps.push(a); rows[a].opps.push(h); gf[h] += hs; gf[a] += as
+    played.push([h, a, hs, as])
+  }
+  // his eight in matchday order, then everyone else's
+  const mine = shuffle(draw.filter(([h, a]) => h === U || a === U), drawRand)
+  mine.forEach(([h, a], i) => { const m = playFx(W, { comp: 'ucl', wk: UCL_WEEKS.md[i], home: h, away: a, meta: { round: `League phase · Matchday ${i + 1}`, md: i + 1, stage: 'md' } }); add(h, a, m.hs, m.as) })
+  for (const [h, a] of draw) if (h !== U && a !== U) { const [hs, as] = quickScore(W, h, a); add(h, a, hs, as) }
+  const list = Object.values(rows)
+  for (const r of list) { r.oppPts = r.opps.reduce((s, o) => s + rows[o].points, 0); r.oppGd = r.opps.reduce((s, o) => s + rows[o].gd, 0); r.oppGf = r.opps.reduce((s, o) => s + rows[o].gf, 0) }
+  list.sort(uclOrder)
+  const S = list.map(r => r.short)
+  const seed = Object.fromEntries(S.map((s, i) => [s, i + 1]))
+  const reached = Object.fromEntries(S.map((s, i) => [s, i < 8 ? 'Round of 16' : i < 24 ? 'Knockout play-offs' : 'League phase']))
+  // a two-legged tie: the club placed lower hosts the first leg
+  const tie = (x, y, ri) => {
+    const [A, B] = seed[x] > seed[y] ? [x, y] : [y, x]
+    const name = UCL_ROUNDS[ri], wks = UCL_WEEKS[UCL_STAGES[ri]]
+    const l1 = playFx(W, { comp: 'ucl', wk: wks[0], home: A, away: B, meta: { round: name, leg: 1, ri, stage: UCL_STAGES[ri] } })
+    const l2 = playFx(W, { comp: 'ucl', wk: wks[1], home: B, away: A, ko: true, agg: [l1.as, l1.hs], meta: { round: name, leg: 2, ri, stage: UCL_STAGES[ri] } })
+    const winner = l2.winH ? B : A, loser = winner === A ? B : A
+    gf[A] += l1.hs + l2.as; gf[B] += l1.as + l2.hs; matches[A] += 2; matches[B] += 2
+    if (ri < 4) reached[winner] = UCL_REACHED[ri + 1]
+    return { stage: UCL_STAGES[ri], a: A, b: B, seedA: seed[A], seedB: seed[B], legs: [[l1.hs, l1.as], [l2.hs, l2.as]], sa: l1.hs + l2.as, sb: l1.as + l2.hs, et: l2.et, pens: l2.pens ? [l2.pens.a, l2.pens.h] : null, winner, loser }
+  }
+  const pick2 = (pair, r) => (r() < 0.5 ? pair : [pair[1], pair[0]])
+  // play-offs: [seeded pair, unseeded pair, the Round of 16 seeds they meet]
+  const GROUPS = [[[15, 16], [17, 18], [1, 2]], [[13, 14], [19, 20], [3, 4]], [[11, 12], [21, 22], [5, 6]], [[9, 10], [23, 24], [7, 8]]]
+  const at = n => S[n - 1]
+  // the halves: 1st and 2nd apart, 3rd/4th apart, 5th/6th, 7th/8th
+  const half = {}
+  for (const g of GROUPS) { const [x, y] = pick2(g[2], koRand); half[x] = 0; half[y] = 1 }
+  const po = [], r16 = []
+  for (const [sd, un, top] of GROUPS) {
+    const u = pick2(un, koRand)
+    const t1 = tie(at(sd[0]), at(u[0]), 0), t2 = tie(at(sd[1]), at(u[1]), 0)
+    const [w1, w2] = pick2([t1, t2], koRand)
+    // (the play-off winners are drawn onto the two Round of 16 seeds)
+    po.push({ t: w1, seed: top[0] }, { t: w2, seed: top[1] })
+  }
+  for (const { t, seed: s } of po) r16.push({ t: tie(at(s), t.winner, 1), po: t, seed: s })
+  // the bracket, a half at a time: [1/2 path, 7/8 path], [3/4 path, 5/6 path]
+  const pathOf = s => r16.find(x => x.seed === s)
+  const halves = [0, 1].map(h => [[1, 2], [7, 8], [3, 4], [5, 6]].map(pr => pathOf(pr.find(s => half[s] === h))))
+  const qf = [], sf = []
+  for (const h of halves) {
+    const q1 = tie(h[0].t.winner, h[1].t.winner, 2), q2 = tie(h[2].t.winner, h[3].t.winner, 2)
+    qf.push(q1, q2)
+    sf.push(tie(q1.winner, q2.winner, 3))
+  }
+  const before = out.length
+  const fm = playFx(W, { comp: 'ucl', wk: UCL_WEEKS.f, home: sf[0].winner, away: sf[1].winner, neutral: true, ko: true, meta: { round: 'Final', ri: 4, stage: 'final' } })
+  for (let i = before; i < out.length; i++) out[i].final = true
+  const fw = fm.winH ? sf[0].winner : sf[1].winner, fl = fw === sf[0].winner ? sf[1].winner : sf[0].winner
+  gf[sf[0].winner] += fm.hs; gf[sf[1].winner] += fm.as; matches[sf[0].winner]++; matches[sf[1].winner]++
+  reached[fw] = 'Winners'; reached[fl] = 'Runners-up'
+  const final = { stage: 'final', a: sf[0].winner, b: sf[1].winner, legs: [[fm.hs, fm.as]], sa: fm.hs, sb: fm.as, et: fm.et, pens: fm.pens ? [fm.pens.h, fm.pens.a] : null, winner: fw, loser: fl, final: true }
+  // (top to bottom in bracket order, so each column feeds the next)
+  const order = halves.flat()
+  const strip = ({ loser, ...t }) => t
+  const bracket = { po: order.map(x => x.po).map(strip), r16: order.map(x => x.t).map(strip), qf: qf.map(strip), sf: sf.map(strip), final: [strip(final)] }
+  const logo = new Set(entrants.filter(e => e.logo).map(e => e.short))
+  const table = list.map((r, i) => ({ short: r.short, name: r.name, played: r.played, wins: r.wins, draws: r.draws, losses: r.losses, gf: r.gf, ga: r.ga, gd: r.gd, points: r.points, pos: i + 1, isUs: r.short === U, pot: r.pot, extra: !logo.has(r.short), reached: reached[r.short] }))
+  return { U, uRate, table, matches: played, bracket, reached, gf, games: matches, winner: fw, runnerUp: fl, fixtures: out, logo, names: new Map(entrants.map(e => [e.short, e.name])) }
+}
+
+// The award field: every entrant's players (the data's, up to five a side) score their share of their club's
+// Champions League goals; the stars (CLUB_STARS) a seeded campaign around their real level.
+// UEFA's awards: the top scorer (goals, then assists), the Player of the Season and the Young Player of the
+// Season (UEFA's technical observers: here goals, 0.6 an assist, a midfielder's game, and how far his club went),
+// and the Team of the Season (a striker: one of the four best by that count).
+// Champions League top scorers (UEFA): 2018-19 Messi 12, 2019-20 Lewandowski 15, 2020-21 Haaland 10, 2021-22
+//   Benzema 15, 2022-23 Haaland 12, 2023-24 Kane and Mbappé 8, 2024-25 Guirassy 13 (the first 36-club season,
+//   play-offs in): about 8-15. The record is Cristiano Ronaldo's 17 (2013-14).
+// Players of the Season: Benzema 2021-22, Rodri 2022-23, Vinícius Júnior 2023-24, Dembélé 2024-25: all from the
+//   winners or the finalists.
+const UCL_STAGE = { Winners: 8, 'Runners-up': 4, 'Semi-finals': 2, 'Quarter-finals': 0.5, 'Round of 16': -1, 'Knockout play-offs': -3, 'League phase': -5 }
+function uclField(world, entrants, rand, exclude, mine) {
+  const out = []
+  for (const e of entrants) {
+    const list = (CLUB_STRIKERS.get(e.short) ?? []).filter(p => !exclude.has(p.name)).slice(0, 5)
+    if (!list.length) continue
+    const gfAll = world.gf[e.short] ?? 0, mt = world.games[e.short] ?? 8
+    const isU = e.short === world.U
+    const taken = isU && gfAll ? clamp((mine ?? 0) / gfAll, 0, 0.7) : 0
+    const sc = scorersOf(list, gfAll, mt, rand, taken)
+    const gl = shareGoals(sc, Math.max(0, gfAll - (isU ? mine ?? 0 : 0)), rand, taken)
+    sc.forEach(({ p, av }, i) => {
+      const goals = gl[i]
+      const assists = binom(Math.max(0, gfAll - goals), av * p.prof.assist * ROLE[p.role].a * 0.6, rand)
+      out.push({ name: p.name, team: e.short, age: p.age ?? null, fwd: isForward(p), goals, assists, mins: Math.round(mt * 84 * av),
+        score: r1(goals + 0.6 * assists + p.value * mt / 34 + (UCL_STAGE[world.reached[e.short]] ?? 0) + 2.5 * gauss(rand)) })
+    })
+  }
+  return out
+}
+function uclStars(world, entrants, rand) {
+  const out = []
+  for (const [name, keys, , lvl, age] of CLUB_STARS) {
+    if (strikerNames.has(norm(name))) continue
+    const e = entrants.find(x => keys.some(k => norm(x.canon).includes(norm(k))))
+    if (!e) continue
+    const mt = world.games[e.short] ?? 8
+    out.push({ name, team: e.short, age, score: r1(lvl * mt / 34 * 1.1 + (UCL_STAGE[world.reached[e.short]] ?? 0) + 3 * gauss(rand)) })
+  }
+  return out
+}
+function uclAwards(book, me) {
+  const bf = book.boot
+  const maxG = Math.max(0, ...bf.map(x => x.goals))
+  const won = me.goals > 0 && me.goals >= maxG
+  const bootTop = [...bf].sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.mins - b.mins)[0]
+  const goldenBoot = { name: 'Top Scorer', won, shared: won && bf.some(x => x.goals === me.goals), rank: 1 + bf.filter(x => x.goals > me.goals).length, goals: me.goals,
+    winner: won ? { name: null, team: me.team, goals: me.goals, isPlayer: true } : bootTop ? { name: bootTop.name, team: bootTop.team, goals: bootTop.goals, isPlayer: false } : null,
+    race: race(bf, me, 'goals') }
+  const mine = r1(me.goals + 0.6 * me.assists + (UCL_STAGE[me.finish] ?? 0))
+  const pf = book.pots
+  const rank = 1 + pf.filter(x => x.score > mine).length
+  const top = [...pf.map(x => ({ name: x.name, team: x.team, score: x.score, isPlayer: false })), { name: null, team: me.team, score: mine, isPlayer: true }]
+    .sort((a, b) => b.score - a.score || (a.isPlayer ? -1 : 1)).slice(0, 10)
+  const playerOfSeason = { name: 'Player of the Season', won: rank === 1, rank, score: mine, winner: top[0], top }
+  const young = pf.filter(x => x.age != null && x.age <= 21)
+  const yRank = me.eligible ? 1 + young.filter(x => x.score > mine).length : null
+  const yTop = [...young].sort((a, b) => b.score - a.score)[0]
+  const youngPlayer = { name: 'Young Player of the Season', eligible: !!me.eligible, won: !!me.eligible && yRank === 1, rank: yRank,
+    winner: me.eligible && yRank === 1 ? { name: null, team: me.team, isPlayer: true } : yTop ? { name: yTop.name, team: yTop.team, isPlayer: false } : null }
+  return { goldenBoot, playerOfSeason, youngPlayer, teamOfSeason: rank <= 4, goldenShoe: null, ballonDor: null, mvp: playerOfSeason.won, dpoy: false }
+}
+// his knockout fixtures as ties (two legs, or the final)
+function uclTies(ko) {
+  const out = []
+  let cur = []
+  for (const m of ko) {
+    if (m.leg === 1) { cur = [m]; continue }
+    if (m.leg === 2 && cur.length) { cur.push(m); out.push(tieOf(cur, 'ucl')); cur = []; continue }
+    out.push(tieOf([m], 'ucl'))
+  }
+  return out
+}
+// the season's totals and awards from his fixtures (the run, or the director's league phase spliced in)
+function uclBooked(fixtures, book, finish) {
+  const games = fixtures.filter(m => m.stage === 'md')
+  const ko = fixtures.filter(m => m.stage !== 'md')
+  const t = totalsOf(fixtures)
+  const me = { ...book.me, goals: t.goals, assists: t.assists, mins: t.mins, finish }
+  const fin = ko.find(m => m.stage === 'final') ?? null
+  return {
+    ...t, ...seasonFields(t), allComps: t, byComp: { leaguePhase: totalsOf(games), knockouts: totalsOf(ko) },
+    gameLog: games.map(g => g.result), bestGame: bestOf(fixtures),
+    finalsOpp: fin?.opponent ?? null, finalsSeries: scoreLine(fin),
+    book: { ...book, me }, ...uclAwards(book, me),
+  }
+}
+function uclSeason(build, types, team, base, gameMode) {
+  const { entrants, me: entry, src } = uclEntrants(team)
+  const U = entry.short
+  const prof = profileOfBuild(build)
+  const ovr = calcSoccerOVR(build, types)
+  const mates = CLUB_STRIKERS.get(U) ?? []
+  const uRate = ratingsOf(src, team, 'current', null)
+  // (his side's goals a game, against the other 35)
+  const lamAvg = clamp(avg(entrants.filter(e => e.short !== U).map(o => EURO_BASE * Math.exp(aT(uRate.att - G_ATT) - dT(o.def - G_DEF)) * Math.cosh(H_EURO))), 0.5, 3.5)
+  const S = strikerSide({ build, prof, team, mates, lamAvg, base, script: false })
+  const world = uclWorld({ U, uRate, entrants, hook: hookFor(S, base), rand: stream(base, 'world'), drawRand: stream(base, 'ucl:draw'), koRand: stream(base, 'ucl:ko') })
+  const nameOf = s => world.names.get(s) ?? clubName(s)
+  const ls = stream(base, 'line:ucl')
+  const fixtures = world.fixtures.slice().sort((a, b) => a.wk - b.wk).map((f, k) => ({
+    ...matchOf(f, lineFor(ls, S, f), nameOf, k + 1), oppExtra: !world.logo.has(f.opp), stage: f.stage, md: f.md ?? null, ri: f.ri ?? null,
+  }))
+  const games = fixtures.filter(m => m.stage === 'md').map((m, i) => ({ ...m, g: i + 1, wk: i + 1 }))
+  const ko = fixtures.filter(m => m.stage !== 'md')
+  const ties = uclTies(ko)
+  const row = world.table.find(r => r.isUs)
+  const finish = world.reached[U]
+  const champion = finish === 'Winners'
+  // the field
+  const fr = stream(base, 'field')
+  const exclude = new Set(S.replaced ? [S.replaced.name] : [])
+  const lineGoals = fixtures.reduce((s, m) => s + (m.goals ?? 0), 0)
+  const field = uclField(world, entrants, fr, exclude, lineGoals)
+  const stars = uclStars(world, entrants, stream(base, 'stars'))
+  const age = buildAge(build, team)
+  const book = {
+    comp: 'ucl',
+    boot: field.map(x => ({ name: x.name, team: x.team, goals: x.goals, assists: x.assists, mins: x.mins })).sort((a, b) => b.goals - a.goals || b.assists - a.assists).slice(0, 40),
+    pots: [...field, ...stars].map(x => ({ name: x.name, team: x.team, score: x.score, age: x.age ?? null })).sort((a, b) => b.score - a.score).slice(0, 40),
+    me: { team: U, eligible: age != null && age <= 21, age },
+  }
+  // (the young field keeps every eligible player, not only the top 40)
+  const youngLeft = [...field, ...stars].filter(x => x.age != null && x.age <= 21 && !book.pots.some(y => y.name === x.name && y.team === x.team))
+  book.pots.push(...youngLeft.map(x => ({ name: x.name, team: x.team, score: x.score, age: x.age })))
+  const booked = uclBooked(fixtures, book, finish)
+  const table = world.table
+  return {
+    sport: 'soccer', mode: 'current', comp: 'ucl', position: 'st', gameMode, season: SEASON,
+    ovr, archetype: getSoccerArchetype(ovr, build, types),
+    team: { ...src, ...(team ?? {}), short: U, name: entry.name, color: src.color ?? team?.color ?? null, color2: src.color2 ?? team?.color2 ?? null, att: r1(uRate.att), def: r1(uRate.def), comp: 'ucl', pot: entry.pot, ...(entry.wildcard ? { inPlaceOf: entry.wildcard } : {}) },
+    league: { ...UCL_LEAGUE },
+    wins: row.wins, draws: row.draws, losses: row.losses, points: row.points, gf: row.gf, ga: row.ga, gd: row.gd,
+    seed: row.pos, conference: 'ucl', standings: table,
+    champion, finish, madePlayoffs: row.pos <= 24, playoffs: row.pos <= 24,
+    playoffRounds: ties, games, fixtures,
+    ...booked,
+    europe: { comp: 'ucl', name: UCL_LEAGUE.name, table, position: row.pos, games, rounds: ties, result: finish, champion, winner: world.winner },
+    bracket: world.bracket, uclWinner: world.winner, uclRunnerUp: world.runnerUp, leaguePhase: world.matches,
+    cup: null, trophies: champion ? ['Champions League'] : [], qualified: null, relegated: false, relegationPlayoff: false,
+  }
+}
+// The season again from the league phase as played (the season director's moments changed some of his matches):
+// his row from those matches (the table re-sorted around him, inside the band he finished in, so the knockouts
+// he played still follow from it), and his totals and the awards from every match.
+export function soccerUclRebook(result, games) {
+  if (!isUclResult(result) || !result.book) return result
+  const lp = games.map((g, i) => ({ ...g, stage: 'md', md: g.md ?? i + 1 }))
+  const ko = (result.fixtures ?? []).filter(m => m.stage && m.stage !== 'md')
+  const W = lp.filter(g => g.won).length, D = lp.filter(g => g.drawn).length, L = lp.length - W - D
+  const gf = lp.reduce((s, g) => s + (g.mySc ?? 0), 0), ga = lp.reduce((s, g) => s + (g.oppSc ?? 0), 0)
+  const was = result.standings.find(r => r.isUs)?.pos ?? result.seed
+  const band = p => (p <= 8 ? 0 : p <= 24 ? 1 : 2)
+  const rows = result.standings.map(r => (r.isUs ? { ...r, wins: W, draws: D, losses: L, points: W * 3 + D, gf, ga, gd: gf - ga } : { ...r }))
+  rows.sort((x, y) => y.points - x.points || y.gd - x.gd || y.gf - x.gf || x.pos - y.pos)
+  let i = rows.findIndex(r => r.isUs)
+  const lo = [0, 8, 24][band(was)], hi = [7, 23, 35][band(was)]
+  if (i < lo || i > hi) { const [me] = rows.splice(i, 1); i = clamp(i, lo, hi); rows.splice(i, 0, me) }
+  rows.forEach((r, k) => { r.pos = k + 1 })
+  const fixtures = [...lp, ...ko].map((m, k) => ({ ...m, g: k + 1 }))
+  const booked = uclBooked(fixtures, result.book, result.finish)
+  return {
+    ...result, ...booked, games: lp.map((g, k) => ({ ...g, g: k + 1, wk: k + 1 })), fixtures, standings: rows, seed: i + 1,
+    wins: W, draws: D, losses: L, points: W * 3 + D, gf, ga, gd: gf - ga,
+    europe: result.europe ? { ...result.europe, table: rows, position: i + 1, games: lp } : result.europe,
+  }
+}
+
 // ─── Squad Builder: what one striker does to his side ────────────────────────
 // The side's attack with this build in place of its real No. 9 (the lift M, as a rating on the side's own
 // att scale), so a squad's strength can be worked out before scriptSoccerSeason plays the season.
@@ -1526,7 +1909,9 @@ export function soccerStrikerLift(build, team, mode = 'current') {
 export function runSoccerSimulation(build, types = SOCCER_TRAITS, team = null, mode = 'current', rngSeed = null, gameMode = 'classic', script = null) {
   const base = seedBase(rngSeed)
   const t = types?.length ? types : SOCCER_TRAITS
-  return (script?.mode ?? mode) === 'alltime' ? wcSeason(build, t, team, base, gameMode, script) : clubSeason(build, t, team, base, gameMode, script)
+  if ((script?.mode ?? mode) === 'alltime') return wcSeason(build, t, team, base, gameMode, script)
+  // a club: Career, Squad Builder (a script) and team.domestic play the domestic season; a build, the Champions League
+  return script || team?.career || team?.squad || team?.domestic ? clubSeason(build, t, team, base, gameMode, script) : uclSeason(build, t, team, base, gameMode)
 }
 // The squad's one season: every result decided once from its strength (`tr`: { att, def } on the club or
 // nation scale; { off, def } too). The award field leaves out every real striker of the side (the squad's

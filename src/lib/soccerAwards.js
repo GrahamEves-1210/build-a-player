@@ -4,16 +4,19 @@
 // A soccer season saves into the columns every season already has (the way OL's and DL's do), so the
 // hourly leaderboard_user_stats job totals it like any other mode and no new column is needed:
 //   game_mode        'soccer-classic' (TOP DIVISIONS) | 'soccer-all-time' (WORLD CUP), position 'st'
-//   wins / losses    the league record (a World Cup: the group's); draws in season_comp_pct
-//   champion         won the league (a World Cup: won it)
-//   playoffs         a Champions League place (a World Cup: out of the group)
-//   season_tds       goals (league; a World Cup: the tournament)      → total_tds
+//   (since 2026-11-16 a soccer-classic season is the build's Champions League campaign; rows from before are a domestic
+//   league season, 38 matches: their wins and goals are the league's)
+//   wins / losses    the league phase record (a World Cup: the group's); draws in season_comp_pct
+//   champion         won the Champions League (a World Cup: won it)
+//   playoffs         reached the knockouts, the top 24 (a World Cup: out of the group)
+//   season_tds       goals (the whole campaign; a World Cup: the tournament)      → total_tds
 //   season_ints      assists                                           → total_ints
 //   ppg              average match rating (6.0–10.0)                  → total_ppg
 //   season_rating    average match rating again (a single-season best reads this one)
 //   season_pass_yds  minutes
-//   finals_opp / finals_series  the European (or World Cup) final: opponent and score
-//   season_award     the season's awards, comma-joined: 'boot', 'poty', 'bdor' (a club season),
+//   finals_opp / finals_series  the Champions League (or World Cup) final: opponent and score
+//   season_award     the season's awards, comma-joined: 'boot' (the Champions League's top scorer), 'poty', 'ypoty'
+//                    (Young Player of the Season), 'bdor' (an old domestic season),
 //                    'boot', 'gball' (a World Cup). Never 'mvp' / 'dpoy' / 'allpro', and mvp / dpoy stay
 //                    null, so nothing soccer counts as a football or basketball award.
 export const SOCCER_MODES_DB = { current: 'soccer-classic', alltime: 'soccer-all-time' }
@@ -26,8 +29,9 @@ export const SOCCER_AWARD = {
   poty: 'PLAYER OF THE SEASON',
   bdor: 'BALLON D\'OR',
   gball: 'GOLDEN BALL',
+  ypoty: 'YOUNG PLAYER OF THE SEASON',
 }
-export const SOCCER_AWARD_SHORT = { boot: 'BOOT', poty: 'POTS', bdor: 'BALLON D\'OR', gball: 'GOLDEN BALL' }
+export const SOCCER_AWARD_SHORT = { boot: 'BOOT', poty: 'POTS', bdor: 'BALLON D\'OR', gball: 'GOLDEN BALL', ypoty: 'YOUNG POTS' }
 
 // The awards a finished season won, as tags (a sim result: utils/soccerSimulation.js)
 export function soccerAwardTags(result) {
@@ -38,6 +42,7 @@ export function soccerAwardTags(result) {
   if (wc) { if (result.goldenBall?.won) tags.push('gball') }
   else {
     if (result.playerOfSeason?.won) tags.push('poty')
+    if (result.youngPlayer?.won) tags.push('ypoty')
     if (result.ballonDor?.finish === 'winner') tags.push('bdor')
   }
   return tags
@@ -46,9 +51,12 @@ export function soccerAwardTags(result) {
 export const rowSoccerTags = row => String(row?.season_award || '').split(',').map(s => s.trim()).filter(t => SOCCER_AWARD[t])
 
 // The headline award of a season (for the season's XP line): the Ballon d'Or or Golden Ball first
-const AWARD_NAME = { bdor: 'Ballon d\'Or', gball: 'Golden Ball', boot: 'Golden Boot', poty: 'Player of the Season' }
-export function soccerAwardName(tags) {
-  const t = ['bdor', 'gball', 'boot', 'poty'].find(k => tags.includes(k))
+const AWARD_NAME = { bdor: 'Ballon d\'Or', gball: 'Golden Ball', boot: 'Golden Boot', poty: 'Player of the Season', ypoty: 'Young Player of the Season' }
+// (a Champions League season: its top scorer, not a Golden Boot)
+export function soccerAwardName(tags, ucl = false) {
+  const t = ['bdor', 'gball', 'boot', 'poty', 'ypoty'].find(k => tags.includes(k)) ?? null
+  if (ucl && t === 'boot') return 'Champions League top scorer'
+  if (ucl && t === 'poty') return 'Champions League Player of the Season'
   return t ? AWARD_NAME[t] : null
 }
 
@@ -73,6 +81,6 @@ export function soccerRowStats(result) {
   }
 }
 
-// A winning season, the same test progress.js uses for the season's XP: a club season wins half its
-// league games (19 of 38), a World Cup all three of its group games
-export const SOCCER_WINNING = { 'soccer-classic': 19, 'soccer-all-time': 3 }
+// A winning season, the same test progress.js uses for the season's XP: a Champions League season wins five of its
+// eight league phase matches (a domestic one, before 2026-11-16 and in Career, half its 38), a World Cup all three group games
+export const SOCCER_WINNING = { 'soccer-classic': 5, 'soccer-all-time': 3 }
