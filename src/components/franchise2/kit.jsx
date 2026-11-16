@@ -55,7 +55,8 @@ const SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i
 export function splitName(n) {
   const w = String(n || '').trim().split(/\s+/)
   if (w.length < 2) return { first: '', last: w[0] ?? '' }
-  const k = w.length > 2 && SUFFIX.test(w[w.length - 1]) ? w.length - 2 : w.length - 1
+  let k = w.length > 2 && SUFFIX.test(w[w.length - 1]) ? w.length - 2 : w.length - 1
+  if (k > 1 && /^(st\.?|de|del|la|le|van|von|da|di|mc)$/i.test(w[k - 1])) k--   // (St. Brown, Van Noy, De La Cruz are last names)
   return { first: w.slice(0, k).join(' '), last: w.slice(k).join(' ') }
 }
 // "B. NIX", the scorebug and ticker shorthand
@@ -190,7 +191,7 @@ export function LowerThird({ name, pos, num, ovr, photo, team, mine, line, stat,
           : <span className="fk-l3-init">{(first[0] ?? '') + (last[0] ?? '')}</span>}
       </span>
       <span className="fk-l3-bar">
-        <span className="fk-l3-name">{first && <small>{first}</small>}<b>{last}</b></span>
+        <span className={`fk-l3-name${last.length > 11 ? ' is-xlong' : last.length > 8 ? ' is-long' : ''}`}>{first && <small>{first}</small>}<b>{last}</b></span>
         <span className="fk-l3-meta">
           {P && <span>{P}</span>}{num != null && <span>#{num}</span>}
           {mine && <span className="fk-l3-mine">★ {String(mine).toUpperCase()}</span>}

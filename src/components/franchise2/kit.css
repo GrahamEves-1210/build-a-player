@@ -120,6 +120,10 @@
 .fk-l3--s .fk-l3-name small { display: none; }
 .fk-l3--s .fk-l3-name b { font-size: 19px; }
 .fk-l3--l .fk-l3-name b { font-size: 34px; } .fk-l3--l .fk-l3-name small { font-size: 19px; }
+/* a long last name steps down instead of being cut (THIBODEAUX, ST. BROWN, SMITH-NJIGBA) */
+.fk-l3-name.is-long b { font-size: calc(var(--h) * .28); } .fk-l3-name.is-xlong b { font-size: calc(var(--h) * .23); }
+.fk-l3--l .fk-l3-name.is-long b { font-size: 23px; } .fk-l3--l .fk-l3-name.is-xlong b { font-size: 19px; }
+.fk-l3--s .fk-l3-name.is-long b { font-size: 17px; } .fk-l3--s .fk-l3-name.is-xlong b { font-size: 15px; }
 .fk-l3-meta { display: flex; align-items: center; gap: 0; min-width: 0; overflow: hidden; white-space: nowrap; font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .1px; text-transform: uppercase; color: var(--fk-mute); }
 .fk-l3-meta > span + span::before { content: '·'; margin: 0 6px; color: var(--fk-dim); }
 .fk-l3-mine { color: #fff; }
