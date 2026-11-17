@@ -584,10 +584,11 @@ function genPoints(r, mu) {
   const td = Math.max(0, Math.round(ltd + gauss(r) * 0.75 * Math.sqrt(ltd)))
   const fg = Math.max(0, Math.round(lfg + gauss(r) * 0.8 * Math.sqrt(lfg)))
   let pts = 3 * fg
-  let nonOff = 0
+  let nonOff = 0, sf = 0
   for (let i = 0; i < td; i++) { const x = r(); pts += x < 0.035 ? 6 : x < 0.075 ? 8 : 7; if (r() < 0.06) nonOff++ }
-  if (pts >= 7 && r() < 0.015) pts += 2   // (a safety on top of real scoring, never a team's only points: no 2-0 or 5-point finals)
-  return { pts, td, fg, offTD: td - nonOff }
+  if (pts >= 7 && r() < 0.015) { pts += 2; sf = 1 }   // (a safety on top of real scoring, never a team's only points: no 2-0 or 5-point finals)
+  // (sf: the safeties, two: overtime's two-point plays; the box score's points add up from the plays: scripts/moments/cfb-score-check.mjs)
+  return { pts, td, fg, offTD: td - nonOff, sf, two: 0 }
 }
 // a score that was decided elsewhere (a forced result): read back as touchdowns and field goals
 function splitPoints(r, pts) {
@@ -601,10 +602,14 @@ function splitPoints(r, pts) {
     const cost = Math.abs(fg - 1.3) + Math.abs(diff) * 0.8
     if (!best || cost < best.cost) best = { td, fg, cost }
   }
-  if (!best) best = { td: Math.floor(pts / 7), fg: Math.floor((pts % 7) / 3) }
+  // (a 4 is two safeties, not a four-point field goal; nothing makes a 1)
+  if (!best) best = pts === 4 ? { td: 0, fg: 0, sf: 2 } : { td: Math.floor(pts / 7), fg: Math.floor((pts % 7) / 3) }
   let nonOff = 0
   for (let i = 0; i < best.td; i++) if (r() < 0.06) nonOff++
-  return { pts, td: best.td, fg: best.fg, offTD: best.td - nonOff }
+  // (two past a touchdown's eight, or two with no touchdown at all, is a safety)
+  const extra = pts - 3 * best.fg - 7 * best.td
+  const sf = best.sf ?? (extra > best.td || (best.td === 0 && extra === 2) ? 1 : 0)
+  return { pts, td: best.td, fg: best.fg, offTD: best.td - nonOff, sf, two: 0 }
 }
 // overtime: the 2021 rules (a 2-point try is mandatory from the 2nd OT, alternating 2-point plays from the 3rd)
 function overtime(r, A, B) {
@@ -612,7 +617,7 @@ function overtime(r, A, B) {
   const aWins = r() < pA
   const x = r()
   const ot = x < 0.72 ? 1 : x < 0.92 ? 2 : 3 + Math.floor(r() * 2)
-  let lose, win, tdW = 0, tdL = 0, fgW = 0, fgL = 0
+  let lose, win, tdW = 0, tdL = 0, fgW = 0, fgL = 0, twoW = 0, twoL = 0
   if (ot === 1) {
     const y = r()
     if (y < 0.35) { lose = 0; win = 3; fgW = 1 } else if (y < 0.6) { lose = 0; win = 7; tdW = 1 } else if (y < 0.85) { lose = 3; win = 7; fgL = 1; tdW = 1 } else { lose = 3; win = 6; fgL = 1; fgW = 2 }
@@ -622,9 +627,9 @@ function overtime(r, A, B) {
     if (y < 0.4) { win += 3; fgW++ } else if (y < 0.75) { lose += 6; win += 8; tdW++; tdL++ } else { win += 8; tdW++ }
   } else {
     lose = 15; win = 15; tdW = 2; tdL = 2
-    win += 2 * (ot - 2); lose += 2 * (ot - 3)
+    win += 2 * (ot - 2); lose += 2 * (ot - 3); twoW = ot - 2; twoL = ot - 3
   }
-  return { aWins, ot, add: aWins ? { a: [win, tdW, fgW], b: [lose, tdL, fgL] } : { a: [lose, tdL, fgL], b: [win, tdW, fgW] } }
+  return { aWins, ot, add: aWins ? { a: [win, tdW, fgW, twoW], b: [lose, tdL, fgL, twoL] } : { a: [lose, tdL, fgL, twoL], b: [win, tdW, fgW, twoW] } }
 }
 function playGame(r, A, B, site) {
   const h = site === 'a' ? HFA / 2 : site === 'b' ? -HFA / 2 : 0
@@ -633,12 +638,22 @@ function playGame(r, A, B, site) {
   let ot = 0
   // a one-score finish is sometimes a late tying kick instead (college games go to OT about 5% of the time)
   const gap = Math.abs(a.pts - b.pts)
-  if (gap > 0 && gap <= 3 && r() < 0.3) { if (a.pts < b.pts) a.pts = b.pts; else b.pts = a.pts }
+  // (2026-11-16: the points that tie it are a real score. Down 3, a field goal. Down 2 or 1, the tries after their
+  // touchdowns went for two, or a safety; with no touchdown to try after, down 1, the leader's extra point was the
+  // one missed. The finals are the ones the season always had, but for that last case, one point lower)
+  if (gap > 0 && gap <= 3 && r() < 0.3) {
+    const lo = a.pts < b.pts ? a : b, hi = lo === a ? b : a
+    const room = 8 * lo.td - (lo.pts - 3 * lo.fg - 2 * (lo.sf ?? 0))   // (the points its tries could still add)
+    if (gap === 3) { lo.pts += 3; lo.fg++ }
+    else if (room >= gap) lo.pts += gap
+    else if (gap === 2) { lo.pts += 2; lo.sf = (lo.sf ?? 0) + 1 }
+    else if (hi.td > 0 && hi.pts - 3 * hi.fg - 2 * (hi.sf ?? 0) > 6 * hi.td) hi.pts -= 1
+  }
   if (a.pts === b.pts) {
     const o = overtime(r, A, B)
     ot = o.ot
-    a.pts += o.add.a[0]; a.td += o.add.a[1]; a.offTD += o.add.a[1]; a.fg += o.add.a[2]
-    b.pts += o.add.b[0]; b.td += o.add.b[1]; b.offTD += o.add.b[1]; b.fg += o.add.b[2]
+    a.pts += o.add.a[0]; a.td += o.add.a[1]; a.offTD += o.add.a[1]; a.fg += o.add.a[2]; a.two = (a.two ?? 0) + o.add.a[3]
+    b.pts += o.add.b[0]; b.td += o.add.b[1]; b.offTD += o.add.b[1]; b.fg += o.add.b[2]; b.two = (b.two ?? 0) + o.add.b[3]
   }
   return { a, b, ot }
 }
@@ -1735,3 +1750,6 @@ export function finalizeCFBSeason(result, games = result?.games, build = null, t
   // the build's OVR and archetype come from the build the director started with
   return { ...result, ...next, ovr: result.ovr ?? next.ovr, archetype: result.archetype ?? next.archetype, games: next.games.map((g, k) => ({ ...games[k], ...g, ...pickLine(result.position, games[k]) })), story: result.story }
 }
+
+// (the scoring, for scripts/moments/cfb-score-check.mjs)
+export const __scoreTest = { playGame, splitPoints }
