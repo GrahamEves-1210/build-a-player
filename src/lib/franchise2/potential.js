@@ -99,7 +99,9 @@ export function growthOf(p, R, { pt = 0, prod = 0, dev = 0, inj = 0 } = {}) {
     // draft missed (hb), gets there in two or three years once he's in the building.)
     const left = Math.max(1, grow + 1 - p.ag)
     const share = p.hb ? 0.5 : 1.15 / (left + 0.35)
-    d = gap * share * (0.55 + 0.8 * R.u()) * (0.8 + 0.3 * pt) + dev + prod * 0.5 + R.n() * 0.85
+    // (the coaches' and the front office's part comes in proportion to what's left: a good staff gets a man there
+    // sooner, it doesn't stop him two years early at his ceiling)
+    d = gap * share * (0.55 + 0.8 * R.u()) * (0.8 + 0.3 * pt) + dev * clamp(0.35, 1, gap / 10) + prod * 0.5 + R.n() * 0.85
   } else if (p.ag <= prime) {
     // in his prime: what's left of his ceiling comes when he plays and produces; else he holds, a point either way
     // (from 29 what's left mostly stays left: a man that age has become who he is)

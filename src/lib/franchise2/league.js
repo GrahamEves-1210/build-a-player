@@ -137,10 +137,10 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
   return p
 }
-// a build's ceiling: a drafted man's room at his age (draft.js ROOM: a 22-year-old about nine and a half), so he keeps
+// a build's ceiling: a little past a drafted man's room at his age (draft.js ROOM: a 22-year-old about nine and a half), so he keeps
 // growing into his late twenties the way a good young starter does (2026-11-17: five or six, and a build stopped at
 // his ceiling at 24)
-export const buildPeak = (o, ag, extra = 1) => Math.min(99, o + Math.round(Math.max(0, 28 - ag) * 1.6) + extra)
+export const buildPeak = (o, ag, extra = 1) => Math.min(99, o + Math.round(Math.max(0, 28 - ag) * 1.8) + extra)
 // the player's own build as a man on the roster
 export const buildSpot = (pos, build) => (pos === 'dl' ? dlBuildSpot(build) : pos === 'db' ? (build?.size?.subpos === 's' ? 's' : 'cb') : pos === 'ol' ? olSpotOfBuild(build) : undefined)
 export function makeBuilt(F, idx, R) {

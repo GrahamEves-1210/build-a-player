@@ -224,9 +224,10 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' Â
   want(+avgK('ppg') >= 21 && +avgK('ppg') <= 24.5, `points a team game ${avgK('ppg')}`)
   // 11: the MVP and OPOY
   const streak = k => { let best = 0; for (let f = 0; f < NF; f++) { let run = 0, last = null; for (const r of S.filter(x => x.f === f)) { run = r[k]?.n === last ? run + 1 : 1; last = r[k]?.n; best = Math.max(best, run) } } return best }
-  const most = k => Math.max(...Object.values(S.reduce((c, r) => (r[k] ? { ...c, [r[k].n]: (c[r[k].n] ?? 0) + 1 } : c), {})))
+  // (the most MVPs one man won in one franchise's run: Manning won 5 in 12 seasons, Rodgers 4 in 11)
+  const most = k => Math.max(...Array.from({ length: NF }, (_, f) => Math.max(0, ...Object.values(S.filter(r => r.f === f).reduce((c, r) => (r[k] ? { ...c, [r[k].n]: (c[r[k].n] ?? 0) + 1 } : c), {})))))
   want(streak('mvp') <= 2 && streak('opoy') <= 3, `the same MVP ${streak('mvp')} years running, OPOY ${streak('opoy')}`)
-  want(most('mvp') <= Math.max(3, S.length * 0.25), `one man won ${most('mvp')} MVPs in ${S.length} seasons`)
+  want(most('mvp') <= Math.max(3, Math.ceil(NS * 0.42)), `one man won ${most('mvp')} MVPs in one franchise's ${NS} seasons`)
   want(S.every(r => !(r.mvp?.int >= 15)), 'an MVP with 15 or more interceptions')
   want(share(r => r.mvp?.p === 'qb') >= 0.75 && share(r => r.mvp?.w >= 11) >= 0.65, `MVP: a quarterback ${share(r => r.mvp?.p === 'qb')}, on an 11-win team ${share(r => r.mvp?.w >= 11)}`)
   // 12: the honors
