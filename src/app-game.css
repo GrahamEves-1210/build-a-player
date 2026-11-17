@@ -6458,6 +6458,9 @@ html:is(.is-app, .app-look) .qb-reveal-year { color: rgba(255,255,255,.8) !impor
   html.app-look:not(.is-app) .build-footer-section { margin-top: 0; }
   /* and the report card's last grades scroll up clear of the bottom ad rail */
   html.app-look:not(.is-app):not(.is-tablet) .build-slots { padding-bottom: calc(11px + var(--web-rail, 0px)); }
+  /* and the spun player's card stops at the top of the rail: its trait chips scroll inside it, the last one clear
+     of the ad (it ran on to the bottom of the window, the last chips under the rail) */
+  html.app-look:not(.is-app):not(.is-tablet) .game-layout:not(.ag-drop) .spin-panel-body { padding-bottom: var(--web-rail, 0px); }
 }
 
 /* Compete and Blacktop: how many are waiting in each queue right now (lib/liveCounts.js), only when someone is */

@@ -13498,12 +13498,18 @@ html.is-tablet:not(.app-look) .attr-chip { padding: 8px 8px 8px 12px !important;
 html.is-tablet:not(.app-look) .chip-val { width: 38px !important; height: 38px !important; font-size: 13px !important; }
 html.is-tablet:not(.app-look) .attr-category-section { gap: 8px !important; }
 
-/* On Mac the bottom rail overlaps the spin panel and blocks scroll gestures */
+/* On Mac the bottom rail overlaps the spin panel and blocks scroll gestures. Only the ad and its close tab take
+   clicks: Playwire's wrappers inside the rail run the full width of the window, and with `> *` they caught every
+   click and wheel across the bottom of the screen (the last trait chips on the build page, beside the ad) */
 html.is-mac [id^="pw-oop-bottom_rail"] {
   pointer-events: none;
 }
 html.is-mac [id^="pw-oop-bottom_rail"] iframe,
-html.is-mac [id^="pw-oop-bottom_rail"] > * {
+html.is-mac [id^="pw-oop-bottom_rail"] button,
+html.is-mac [id^="pw-oop-bottom_rail"] a,
+html.is-mac [id^="pw-oop-bottom_rail"] [class*="close" i],
+html.is-mac [id^="pw-oop-bottom_rail"] [id*="close" i],
+html.is-mac [id^="pw-oop-bottom_rail"] [aria-label*="close" i] {
   pointer-events: auto;
 }
 
