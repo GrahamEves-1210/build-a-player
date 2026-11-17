@@ -13,13 +13,14 @@ import { DIV_OF } from './schedule'
 import { standings, startPlayoffs, endRound, finishOf, ROUNDS, records } from './standings'
 import { rngOf, clamp, r1 } from './rng'
 import { fbLine } from '../squadSeason'
+import { pairText, surname } from './copy'
 import { playBox, addMoments, finishBox, recordBox, oppOf } from './box'
 import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
 import { coachLate, coachDay, chemWeek } from './coach'
 import { askOf, signDeal, canSign, cutMan, minimumFor } from './contracts'
 import { kickTraits, kickerOf, addKickStats, kickLine } from './kick'
 import { scoringSummary, whenOf } from './plays'
-import { injuryOf, addNews } from './news'
+import { injuryOf, addNews, logWeek } from './news'
 import { rollInjuries } from './injury'
 import { syncScouts } from './draft'
 
@@ -151,9 +152,9 @@ function finishUserGame(F, { g }, S, ms = [], pre = null) {
   // (the season's lines: the player's men in F.ss, theirs in the league's, box.js)
   recordBox(F, B, po)
   // the builds' lines (one line each), and the day's best line on the team (the broadcast's player of the game)
-  const lineOf = p => fbLine(p.pos, box[p.k] ?? {}).slice(0, 3).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(' · ')
+  const lineOf = p => fbLine(p.pos, box[p.k] ?? {}).slice(0, 3).filter(([, v]) => v).map(pairText).join(' · ')
   // (a build who played always has his line, a quiet day's zeros included: a lineman's sacks allowed always show)
-  const buildLine = p => { const L = fbLine(p.pos, box[p.k] ?? {}).slice(0, 3), nz = L.filter(([, v]) => v); return (p.pos === 'ol' ? L : nz.length ? nz : L.slice(0, 2)).map(([k, v]) => `${v} ${k}`).join(' · ') }
+  const buildLine = p => { const L = fbLine(p.pos, box[p.k] ?? {}).slice(0, 3), nz = L.filter(([, v]) => v); return (p.pos === 'ol' ? L.slice(0, 2) : nz.length ? nz : L.slice(0, 2)).map(pairText).join(' · ') }
   const lines = roster.filter(p => p.s != null).map(p => ({ b: +p.s, pid: +p.k.slice(1), line: buildLine(p) }))
   // (the kicking: the season's lines, and a build at K gets his line from the game: "2/3 FG · 4/4 XP · LONG 51")
   addKickStats(F, S)
@@ -255,6 +256,8 @@ function endWeek(F, row) {
     }
   }
   F.chem = clamp(0, 100, r1(F.chem + chemWeek(F)))
+  // (the wire files the week's news as it's played: news.js)
+  try { logWeek(F) } catch { /* (the wire is never worth a lost week) */ }
   if (F.phase === 'playoffs') {
     endRound(F)
     if (F.po.champ) { F.phase = 'done'; out.champ = F.po.champ }
@@ -438,7 +441,7 @@ function makeEvent(F, R) {
 export function fxList(F, ev, i) {
   const fx = (i === 0 ? ev.a : ev.b)[1], out = []
   const P = id => F.teams[F.team].r.find(p => p.i === id) ?? (F.fa ?? []).find(p => p.i === id) ?? (ev.team ? F.teams[ev.team]?.r.find(p => p.i === id) : null)
-  const last = p => (p ? String(p.n).split(' ').filter(w => !/^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w)).slice(-1)[0].toUpperCase() : '')
+  const last = p => (p ? surname(p.n, false).toUpperCase() : '')
   const opp = ev.opp ?? nextOpp(F), vs = opp ? `VS ${TEAM[opp].short}` : 'NEXT GAME'
   if (fx.nx?.off) out.push([`${vs}: OFFENSE ${fx.nx.off > 0 ? '▲' : '▼'}`, fx.nx.off > 0 ? 'up' : 'down'])
   if (fx.nx?.def) out.push([`${vs}: DEFENSE ${fx.nx.def > 0 ? '▲' : '▼'}`, fx.nx.def > 0 ? 'up' : 'down'])

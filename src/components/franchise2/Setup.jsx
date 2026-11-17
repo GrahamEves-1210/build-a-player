@@ -9,6 +9,7 @@ import { K_LIVE } from '../../lib/kLive'
 import { ovrOf } from '../../lib/squadSeason'
 import { defaultFace, buildFaceUrl, FACE_KEYS, FACE_EXPR } from '../../lib/franchise2/faces'
 import { sfx, haptic } from '../../lib/juice'
+import { seeded } from '../../lib/rng'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
 import { CoachSpin, StylePick, CoachWho, CoachReveal } from './CoachBuild'
@@ -232,7 +233,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
   const [first, setFirst] = useState(() => init?.first ?? '')
   const [last, setLast] = useState(() => init?.last ?? '')
   const free = useMemo(() => freeNumbers(pos, taken), [pos, taken])
-  const [num, setNum] = useState(() => (legalFor(pos, init?.num) && !taken.has(init.num) ? init.num : pickNumber(pos, taken)))
+  const [num, setNum] = useState(() => (legalFor(pos, init?.num) && !taken.has(init.num) ? init.num : pickNumber(pos, taken, seeded(`${faceKey ?? pos}-num`))))
   const [all, setAll] = useState(false)
   const [face, setFace] = useState(() => init?.face ?? defaultFace(faceKey ?? `${first}-${last}-${pos}`, pos))
   const [page, setPage] = useState(0)
@@ -284,7 +285,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
           <Fact v={`${deal.y} YRS`} label={deal.opt ? '+ 5TH-YEAR OPTION' : 'ROOKIE DEAL'} size={28} />
         </div>
       )}
-      <div className="fsu-acts"><Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, first: first.trim(), last: last.trim(), num, face })} disabled={!ok}>{cta}</Go></div>
+      <div className="fsu-acts">{!ok && <p className="fsu-hint">Give him a first and last name to sign him.</p>}<Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, first: first.trim(), last: last.trim(), num, face })} disabled={!ok}>{cta}</Go></div>
     </div>
   )
 }

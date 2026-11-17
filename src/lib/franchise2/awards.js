@@ -26,10 +26,10 @@ export function statLine(p, t = {}) {
     case 'qb': return `${n(g('py'))} YDS · ${g('ptd')} TD · ${g('int')} INT`
     case 'rb': return `${n(g('ry'))} YDS · ${g('rtd') + g('rctd')} TD${g('rc') >= 30 ? ` · ${g('rc')} REC` : ''}`
     case 'wr': case 'te': return `${g('rc')} REC · ${n(g('ryd'))} YDS · ${g('rctd')} TD`
-    case 'dl': return `${g('sck')} SACKS · ${g('tfl')} TFL`
-    case 'lb': return `${g('tk')} TKL · ${g('sck')} SACKS${g('dint') ? ` · ${g('dint')} INT` : ''}`
+    case 'dl': return `${plural(g('sck'), 'SACK')} · ${g('tfl')} TFL`
+    case 'lb': return `${g('tk')} TKL · ${plural(g('sck'), 'SACK')}${g('dint') ? ` · ${g('dint')} INT` : ''}`
     case 'db': return `${g('dint')} INT · ${g('pbu')} PD · ${g('tk')} TKL`
-    case 'ol': return `${g('gp')} STARTS · ${g('sa')} SACKS ALLOWED`
+    case 'ol': return `${plural(g('gp'), 'START')} · ${plural(g('sa'), 'SACK')} ALLOWED`
     case 'k': return `${g('fgm')}/${g('fga')} FG${g('fga') ? ` · ${Math.round((g('fgm') / g('fga')) * 100)}%` : ''}${g('lg') ? ` · LONG ${g('lg')}` : ''}`
     default: return ''
   }

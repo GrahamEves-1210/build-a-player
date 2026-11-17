@@ -191,10 +191,10 @@ export function LowerThird({ name, pos, num, ovr, photo, team, mine, line, stat,
           : <span className="fk-l3-init">{(first[0] ?? '') + (last[0] ?? '')}</span>}
       </span>
       <span className="fk-l3-bar">
-        <span className={`fk-l3-name${last.length > 11 ? ' is-xlong' : last.length > 8 ? ' is-long' : ''}`}>{first && <small>{first}</small>}<b>{last}</b></span>
+        <span className={`fk-l3-name${last.length > (size === 'l' ? 9 : 11) ? ' is-xlong' : last.length > (size === 'l' ? 6 : 8) ? ' is-long' : ''}`}>{first && <small>{first}</small>}<b>{last}</b></span>
         <span className="fk-l3-meta">
           {P && <span>{P}</span>}{num != null && <span>#{num}</span>}
-          {mine && <span className="fk-l3-mine">★ {String(mine).toUpperCase()}</span>}
+          {mine && <span className="fk-l3-mine" title={String(mine)}>★<b> {String(mine).toUpperCase()}</b></span>}
           {line && <span className="fk-l3-line">{line}</span>}
         </span>
       </span>

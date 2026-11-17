@@ -44,6 +44,7 @@ import { signRookie } from './contracts'
 import { leagueUnderCap } from './market'
 import { depthChart, groupOf, fixNumbers, backupsOf } from './roster'
 import { CFB_TEAMS, CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
+import { addNews } from './news'
 
 export const ROUNDS_N = 7
 export const PICKS_N = 32 * ROUNDS_N
@@ -974,17 +975,28 @@ export function closeDraft(F) {
   }
   // the rookies' deals are on the books: every league team under the cap again
   leagueUnderCap(F)
+  // the wire: the top of the first round, the quarterbacks taken in it, our first-rounder, the trades up the board
+  const sch = col => CFB_TEAM_BY_SHORT[col]?.school ?? 'Sandbox'
+  for (const p of F.dr.picks.slice(0, 32).filter(p => p.at < 3 || p.p === 'qb' || p.s === F.team)) {
+    addNews(F, { k: 'draft', tag: 'DRAFT', s: p.s, text: `${TEAM[p.s].nick} take ${pickSpot(p)} ${p.n} (${sch(p.col)}) at No. ${p.at + 1}`, ...((p.at === 0 || p.s === F.team) && { big: true }) })
+  }
+  for (const t of F.dr.tr.filter(t => roundOf(t.at) <= 2)) addNews(F, { k: 'trade', tag: 'TRADE', s: t.up, text: `${TEAM[t.up].nick} trade up to No. ${t.at + 1} with the ${TEAM[t.down].nick}` })
   F.dr.closed = 1
 }
 
 // ── The ticker's lines (the hub's league ticker reads these) ─────────────────
-export function draftNews(F, n = 4) {
-  if (!F.dc?.length) return []
+// (the college season only, and only the moves the draft's watchers talk about: a man climbing into the first
+// round's range, or a projected first-rounder falling out of it; two a week at most, never a slide to No. 111)
+export function draftNews(F, n = 2) {
+  if (!F.dc?.length || F.dr || F.phase !== 'season') return []
   const out = []
-  const ranks = rankMap(F)
-  for (const e of stockMoves(F, n)) {
+  for (const e of stockMoves(F, 12)) {
+    const was = e.rank + e.d
+    const into = e.d > 0 && e.rank <= 32 && was > 32, outOf = e.d < 0 && was <= 32 && e.rank > 32
+    if (!into && !outOf) continue
     const x = e.x, sch = CFB_TEAM_BY_SHORT[x.col]?.school?.toUpperCase() ?? ''
-    out.push({ k: 'news', tag: 'DRAFT', text: `${sch} ${spotLabel(x)} ${x.n.toUpperCase()} ${e.d > 0 ? 'UP' : 'DOWN'} TO NO. ${ranks.get(x.i)} ON THE CONSENSUS BOARD` })
+    out.push({ k: 'news', tag: 'DRAFT', text: into ? `${sch} ${spotLabel(x)} ${x.n.toUpperCase()} UP TO NO. ${e.rank} ON THE CONSENSUS BOARD` : `${sch} ${spotLabel(x)} ${x.n.toUpperCase()} FALLS OUT OF THE FIRST ROUND ON THE CONSENSUS BOARD` })
+    if (out.length >= n) break
   }
   return out
 }

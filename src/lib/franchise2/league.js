@@ -20,6 +20,7 @@ import { LBS } from '../../data/lbs'
 import { OLS } from '../../data/ols'
 import { KS } from '../../data/ks'
 import { nameFor } from './names'
+import { tidyName } from './copy'
 import { ovrOf, nameOf, TYPES_OF } from '../squadSeason'
 import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
@@ -64,8 +65,9 @@ export function realPool() {
   realCache = {}
   for (const pos of POS) {
     const seen = new Set()
+    // (a name as the screens write it: "Jr." with its period, whichever way the data has it)
     realCache[pos] = POOL[pos].filter(p => p.attrs && p.team && !seen.has(p.name) && seen.add(p.name)).map(p => ({
-      name: p.name, team: p.team, pos, s: spotOfReal(pos, p), o: ovrOf(pos, asBuild(p.attrs, pos)), attrs: p.attrs,
+      name: tidyName(p.name), team: p.team, pos, s: spotOfReal(pos, p), o: ovrOf(pos, asBuild(p.attrs, pos)), attrs: p.attrs,
       h: p.headshot ?? NFL_HEADSHOTS[p.name] ?? null, age: BIRTH_NFL[p.name] ? clamp(21, 41, FIRST_YEAR - BIRTH_NFL[p.name]) : null, num: p.number ?? null,
     }))
   }
@@ -76,7 +78,7 @@ export const photoId = p => (p && p.b == null ? realOf(p.p, p.n)?.h ?? null : nu
 const REAL_BY = new Map()
 export function realOf(pos, name) {
   const k = `${pos}|${name}`
-  if (!REAL_BY.has(k)) REAL_BY.set(k, realPool()[pos]?.find(p => p.name === name) ?? null)
+  if (!REAL_BY.has(k)) { const n = tidyName(name); REAL_BY.set(k, realPool()[pos]?.find(p => p.name === n) ?? null) }
   return REAL_BY.get(k)
 }
 

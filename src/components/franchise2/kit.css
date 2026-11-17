@@ -126,7 +126,14 @@
 .fk-l3--s .fk-l3-name.is-long b { font-size: 17px; } .fk-l3--s .fk-l3-name.is-xlong b { font-size: 15px; }
 .fk-l3-meta { display: flex; align-items: center; gap: 0; min-width: 0; overflow: hidden; white-space: nowrap; font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .1px; text-transform: uppercase; color: var(--fk-mute); }
 .fk-l3-meta > span + span::before { content: '·'; margin: 0 6px; color: var(--fk-dim); }
-.fk-l3-mine { color: #fff; }
+.fk-l3-mine { flex: none; color: #fff; }
+.fk-l3-mine b { font-weight: inherit; }
+/* (a phone: a row with its own line keeps the star and drops the GM's name, so the line is read in full; the big
+   lower third wraps its meta onto a second line instead of cutting it) */
+@media (max-width: 520px) {
+  .fk-l3-meta:has(.fk-l3-line) .fk-l3-mine b { display: none; }
+  .fk-l3--l .fk-l3-meta { flex-wrap: wrap; row-gap: 3px; white-space: normal; }
+}
 .fk-l3-line { color: var(--fk-text); overflow: hidden; text-overflow: ellipsis; }
 .fk-l3-ovr { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: calc(var(--h) * .82); background: #fff; color: #0b0c0e; line-height: 1; }
 .fk-l3-ovr b { font-family: var(--fk-d); font-weight: 400; font-size: calc(var(--h) * .42); font-variant-numeric: tabular-nums; }

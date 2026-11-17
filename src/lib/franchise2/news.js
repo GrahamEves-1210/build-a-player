@@ -3,12 +3,15 @@
 // WR Rashee Rice on injured reserve (knee)"; "Bijan Robinson: 187 yards, 2 TD in a 31-17 win over the Saints").
 //
 //   wire(F, { n })    the latest items, newest first: { k, tag, s (team), text, wk, y, big (a headline) }
-//   tickerItems(F)    the hub's ticker: the week's other scores and the top of the wire (lib Ticker's items)
-//   addNews(F, item)  anything else that happens (a trade from an event card): kept in F.news (the last 40)
+//   tickerItems(F)    the hub's ticker: the week's other scores and what's new on the wire (lib Ticker's items)
+//   addNews(F, item)  anything that happens, filed as it happens: kept in F.news (this league year and the last)
+//   logWeek(F)        a week's (or a playoff round's) news, filed when it's played (season.js playWeek): the big
+//                     days, the marks passed, records, streaks, clinches, the notable men put on IR or lost for the
+//                     season, the playoff results; so the wire keeps the whole season, not just last week
 //
-// Most of it is read off the season as it stands (nothing to save): the schedule's scores, the men out hurt, the
-// league's box scores (stats.js), the market's signings (market.js F.fas), the retirements (aging.js F.gone),
-// the league's history (awards.js F.lh) for "first since" and "most since".
+// The offseason's moves are read off the offseason as it stands: the carousel, the market's signings (market.js
+// F.fas), extensions, retirements (aging.js F.gone), the awards, the draft (filed at closeDraft: draft.js). Releases
+// and trades are filed when they happen. The league's history (awards.js F.lh) gives "first since" and "most since".
 import { TEAM, SHORTS, POS_LABEL } from './league'
 import { DIVISIONS } from './schedule'
 import { standings, records, recText } from './standings'
@@ -22,9 +25,17 @@ import { coachWire } from './carousel'
 const nick = s => TEAM[s]?.nick ?? s
 const num = v => Math.round(v ?? 0).toLocaleString('en-US')
 const posOf = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p === 'db' ? GROUP[groupOf(p)].label : POS_LABEL[p.p])
+// a market deal's man by his spot (an EDGE is an EDGE on every screen, never DL here and EDGE there)
+const spotOf = (F, d) => { const p = d.i != null ? F.teams[d.s]?.r.find(x => x.i === d.i) : null; return p ? posOf(p) : POS_LABEL[d.p] }
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
 const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
-export function addNews(F, item) { F.news = [...(F.news ?? []), { y: F.year, wk: F.wk, ...item }].slice(-40) }
+// (filed with the league year, the week and the stage it happened in; a year-old item ages out, and the log keeps
+// the newest 90)
+export const NEWS_MAX = 90
+export function addNews(F, item) {
+  const ph = F.phase === 'off' || F.phase === 'done' ? 'off' : F.phase === 'playoffs' ? 'po' : undefined
+  F.news = [...(F.news ?? []).filter(x => (x.y ?? F.year) >= F.year - 1), { y: F.year, wk: F.wk, ...(ph && { ph }), ...item }].slice(-NEWS_MAX)
+}
 
 // ── The real league's single-season records (through 2024) ─────────────────
 const NFL_RECORD = {
@@ -66,17 +77,17 @@ function bigDay(p, x) {
 // ── The wire ─────────────────────────────────────────────────────────────────
 export function wire(F, { n = 30 } = {}) {
   const out = []
-  const put = (k, tag, s, text, extra = {}) => out.push({ k, tag, s, text, y: F.year, ...extra })
+  // (what's read off the league as it stands now: now, for the ticker)
+  const put = (k, tag, s, text, extra = {}) => out.push({ k, tag, s, text, y: F.year, now: 1, ...extra })
   const season = F.phase === 'season' || F.phase === 'post'
   const lastWk = season ? F.wk - 1 : F.sched.weeks.length - 1
-  const S = standings(F)
   // the offseason's own news first (the most recent things)
   if (F.phase === 'off') {
     // (the coaching carousel: carousel.js, the head coaches first)
     for (const x of coachWire(F).sort((a, b) => (b.big ? 1 : 0) - (a.big ? 1 : 0)).slice(0, 24)) put(x.k, x.tag, x.s, x.text, { big: x.big })
-    for (const d of marketDeals(F).filter(d => d.o >= 80 || d.s === F.team).slice(-14).reverse()) put('sign', 'SIGNED', d.s, `${nick(d.s)} sign ${POS_LABEL[d.p]} ${d.n}: ${d.y} ${d.y === 1 ? 'year' : 'years'}, $${num(d.$ * d.y)} million`, { big: d.$ >= 25 })
+    for (const d of marketDeals(F).filter(d => d.o >= 80 || d.s === F.team).slice(-14).reverse()) put('sign', 'SIGNED', d.s, `${nick(d.s)} sign ${spotOf(F, d)} ${d.n}: ${d.y} ${d.y === 1 ? 'year' : 'years'}, $${num(d.$ * d.y)} million`, { big: d.$ >= 25 })
     for (const e of (F.ext ?? []).slice(0, 8)) put('sign', 'EXTENDED', e[3], `${nick(e[3])} re-sign ${POS_LABEL[e[2]]} ${e[1]}: ${e[5]} ${e[5] === 1 ? 'year' : 'years'}, $${num(e[4] * e[5])} million`)
-    for (const g of (F.gone ?? []).slice().sort((a, b) => b.o - a.o).slice(0, 8)) put('ret', 'RETIRED', g.s, `${g.n} retires at ${g.ag}`, { big: g.o >= 90 })
+    for (const g of (F.gone ?? []).slice().sort((a, b) => b.o - a.o).slice(0, 8)) put('ret', 'RETIRED', g.s, `${nick(g.s)} ${g.p ? `${POS_LABEL[g.p]} ` : ''}${g.n} retires at ${g.ag}${g.cr ? ` after ${g.cr} seasons` : ''}`, { big: g.o >= 90 })
     const aw = F.aw
     if (aw?.mvp) put('award', 'MVP', aw.mvp.t, `${aw.mvp.n} named MVP: ${aw.mvp.line.toLowerCase().replace(/ · /g, ', ')}`, { big: true })
     for (const [k, label] of [['opoy', 'Offensive Player of the Year'], ['dpoy', 'Defensive Player of the Year'], ['oroy', 'Offensive Rookie of the Year'], ['droy', 'Defensive Rookie of the Year']]) if (aw?.[k]) put('award', 'AWARD', aw[k].t, `${aw[k].n} is the ${label}`)
@@ -84,15 +95,27 @@ export function wire(F, { n = 30 } = {}) {
     const lh = F.lh?.[F.lh.length - 1]
     if (lh?.champ) put('final', 'SUPER BOWL', lh.champ, `${nick(lh.champ)} beat the ${nick(lh.runner)} ${lh.score} to win the Super Bowl`, { big: true })
   }
-  for (const x of (F.news ?? []).filter(x => x.y === F.year).slice().reverse()) out.push(x)
   // the men out hurt now (the league's starters and the player's own)
   if (season || F.phase === 'playoffs') {
     const hurt = []
     for (const s of SHORTS) for (const p of F.teams[s].r) if (p.in && (p.o >= 82 || s === F.team)) hurt.push({ p, s })
     hurt.sort((a, b) => (b.s === F.team) - (a.s === F.team) || b.p.o - a.p.o).slice(0, 8).forEach(({ p, s }) => put('inj', 'INJURY', s, injuryText(F, p, s), { pid: p.i }))
   }
-  // last week: the big games, the big days, the streaks, the clinches, the marks passed
-  if (season && lastWk >= 0) {
+  // last week: the big games, the big days, the streaks, the clinches, the marks passed (filed as the week was
+  // played, logWeek; a save from before that has last week read live)
+  if (season && lastWk >= 0 && !(F.news ?? []).some(x => x.y === F.year && x.wk === lastWk && x.lw)) for (const x of weekItems(F, lastWk)) put(x.k, x.tag, x.s, x.text, x.big ? { big: true } : {})
+  // the season's log, newest first (this league year; in the first weeks, the offseason before it too)
+  const log = (F.news ?? []).filter(x => x.y === F.year || (x.y === F.year - 1 && x.ph === 'off' && season && F.wk <= 2))
+  for (const x of log.slice().reverse()) out.push(x)
+  // (each week's own items were filed headlines first: the wire reads newest first, in the order things happened)
+  return out.slice(0, n)
+}
+// a week's news (the regular season's week wk, just played): the big days, the streaks, the clinches, the marks
+function weekItems(F, lastWk) {
+  const out = []
+  const put = (k, tag, s, text, extra = {}) => out.push({ k, tag, s, text, ...extra })
+  const S = standings(F)
+  {
     const games = F.sched.weeks[lastWk] ?? []
     const lines = gameLines(F, lastWk), who = whoIs(F)
     const days = []
@@ -138,9 +161,31 @@ export function wire(F, { n = 30 } = {}) {
     }
     for (const g of games) if (g.hs != null && (g.h === F.team || g.a === F.team || Math.abs(g.hs - g.as) <= 3)) put('final', 'FINAL', g.hs >= g.as ? g.h : g.a, scoreText(g))
   }
-  // the most important first: the player's team, then headlines
-  out.sort((a, b) => (b.s === F.team) - (a.s === F.team) || (b.big ? 1 : 0) - (a.big ? 1 : 0))
-  return out.slice(0, n)
+  return out.sort((a, b) => (b.big ? 1 : 0) - (a.big ? 1 : 0) || (b.s === F.team) - (a.s === F.team))
+}
+// File a week's news as it's played (season.js playWeek, after the week's games and injuries; before F.wk moves on).
+// The men hurt this week (endWeek's F.wire: the league's starters and the player's own): a notable one put on IR or
+// lost for the season. A playoff round: its results.
+const ROUND_TEXT = ['wild-card round', 'divisional round', 'conference championship', 'Super Bowl']
+export function logWeek(F) {
+  const po = F.phase === 'playoffs'
+  for (const [s, n, w, l] of F.wire ?? []) {
+    const p = F.teams[s]?.r.find(x => x.n === n)
+    if (!p || !(p.o >= 80 || s === F.team)) continue
+    if (p.ij?.se) addNews(F, { k: 'inj', tag: 'INJURY', s, text: `${nick(s)} lose ${posOf(p)} ${p.n} for the season (${l})`, pid: p.i, lw: 1, ...(p.o >= 88 && { big: true }) })
+    else if (w >= 4) addNews(F, { k: 'inj', tag: 'IR', s, text: `${nick(s)} place ${posOf(p)} ${p.n} on injured reserve (${l})`, pid: p.i, lw: 1 })
+  }
+  if (po) {
+    const rd = F.po?.rd ?? 0, games = F.po?.rounds?.[rd] ?? []
+    for (const g of games) {
+      if (g.hs == null) continue
+      const [w, l] = g.hs >= g.as ? [g.h, g.a] : [g.a, g.h], sc = `${Math.max(g.hs, g.as)}-${Math.min(g.hs, g.as)}${g.ot ? ' in overtime' : ''}`
+      const last = rd === 3
+      addNews(F, { k: 'final', tag: last ? 'SUPER BOWL' : 'PLAYOFFS', s: w, text: last ? `${nick(w)} beat the ${nick(l)} ${sc} to win the Super Bowl` : `${nick(w)} beat the ${nick(l)} ${sc} in the ${ROUND_TEXT[rd]}`, lw: 1, ...((last || w === F.team || l === F.team) && { big: true }) })
+    }
+    return
+  }
+  for (const x of weekItems(F, F.wk).filter(x => x.k !== 'final' || x.s === F.team).slice(0, 10)) addNews(F, { ...x, lw: 1 })
 }
 function lastWon(F, s, wk) {
   const g = F.sched.weeks[wk]?.find(x => x.h === s || x.a === s)
@@ -164,10 +209,16 @@ const isDivWinner = (h, s) => {
   return [...d.teams].sort((a, b) => (lhRow(h, b)?.[0] ?? 0) - (lhRow(h, a)?.[0] ?? 0))[0] === s
 }
 // the hub's ticker: the other games this week, the top of the wire
+// (what's new only: in the season the last two weeks' news and the men out now; in the playoffs the playoffs'; in
+// the offseason the offseason's. A practice-squad signing stays on the wire, off the ticker)
 export function tickerItems(F) {
   const wk = F.phase === 'season' ? F.wk - 1 : null
   const items = []
   if (wk != null && wk >= 0) for (const g of F.sched.weeks[wk] ?? []) if (g.hs != null) items.push({ k: 'score', a: g.a, as: g.as, h: g.h, hs: g.hs, tag: g.ot ? 'F/OT' : 'FINAL' })
-  for (const x of wire(F, { n: 10 }).filter(x => x.k !== 'final')) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
+  const fresh = x => x.now || (F.phase === 'season' || F.phase === 'post'
+    ? x.y === F.year && !x.ph && (x.wk ?? 0) >= F.wk - 2
+    : F.phase === 'playoffs' ? x.y === F.year && (x.ph === 'po' || x.k === 'inj')
+      : x.y === F.year && x.ph === 'off')
+  for (const x of wire(F, { n: 30 }).filter(x => x.k !== 'final' || x.ph === 'po').filter(fresh).filter(x => !/practice squad/i.test(x.text)).slice(0, 10)) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
   return items
 }
