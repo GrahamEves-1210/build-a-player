@@ -335,7 +335,10 @@ function fbGame(P, role, luck, g, ctx) {
   const rushYds = pool + qbRy
   // the targets, then which of them were caught (exactly the completions)
   // (one receiver only draws so much of it: past 27% of the targets, each extra share counts for less)
-  const wRaw = rec.map(p => r(p).tgt * Math.pow(0.35 + sk(p).tgt, 1.15) * L(p)), wSum = sum(wRaw) || 1
+  // (tune.coolAt: a receiver past that many yards on the season draws the coverage, and a little less of the ball
+  // for every hundred more: the way a 2,000-yard year stays rare)
+  const cool = p => (ctx.tune?.coolAt && ctx.run.ryd ? 1 / (1 + (ctx.tune.coolK ?? 0.1) * Math.max(0, ((ctx.run.ryd.get(p.k) ?? 0) - ctx.tune.coolAt) / 100)) : 1)
+  const wRaw = rec.map(p => r(p).tgt * Math.pow(0.35 + sk(p).tgt, 1.15) * L(p) * cool(p)), wSum = sum(wRaw) || 1
   const wTgt = softCap(wRaw.map(x => x / wSum), ctx.tune?.tgtCap ?? 0.27, ctx.tune?.tgtK ?? 0.3)
   const tgtBy = deal(R, att, wTgt)
   const tickets = []

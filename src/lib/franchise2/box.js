@@ -93,11 +93,22 @@ function sacksSoFar(F, roster) {
   }
   return m
 }
+// the season's receiving yards so far (a receiver past a big number sees the coverage roll his way: teamSeason.js)
+function rydSoFar(F, roster) {
+  const m = new Map()
+  for (const p of roster) {
+    if (p.pos !== 'wr' && p.pos !== 'te' && p.pos !== 'rb') continue
+    const id = p.k.slice(1)
+    const v = (F.ss?.[id]?.ryd ?? 0) + (lgLine(F.lg, id)?.ryd ?? 0)
+    if (v) m.set(p.k, v)
+  }
+  return m
+}
 // The league's own numbers for the box (lib/teamSeason.js playFootballSeason tune), against the NFL's typical leaders
 // (2026-11-17, scripts/franchise2/realism.mjs): an elite receiver draws more of his team's targets than the old cap
 // let him (Chase, Hill, Jefferson, Kupp: 35-41% of their teams' receiving yards, 1,700-1,950 yards), and an elite
 // passer's share of his team's touchdowns tops out nearer two in three (the leaders' 35-45, 40-plus not every year)
-export const FB_TUNE = { tgtCap: 0.3, tgtK: 0.4, pTdBase: 0.6, pTdK: 0.1, pTdMax: 0.66, ypaK: 4, attK: 12, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3 }
+export const FB_TUNE = { tgtCap: 0.31, tgtK: 0.5, pTdBase: 0.6, pTdK: 0.1, pTdMax: 0.66, ypaK: 4, attK: 12, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3, coolAt: 1450, coolK: 0.2 }
 // a passer's interceptions so far this season (the box eases him off past ten: below)
 const picksSoFar = (F, k) => { const id = k.slice(1); return (F.ss?.[id]?.int ?? 0) + (lgLine(F.lg, id)?.int ?? 0) }
 const other = s => (s === 'h' ? 'a' : 'h')
@@ -134,7 +145,7 @@ export function playBox(F, S, seed) {
     // the game's own scores: its touchdowns (a moment's own touchdown is named and credited by the moment), its
     // field goals and safeties
     const split = { td: plays.filter(p => p.k === 'td' && !p.snap).length, xp: 0, two: 0, fg: plays.filter(p => p.k === 'fg').length, sf: plays.filter(p => p.k === 'sf').length }
-    const played = playFootballSeason({ roster, games: [{ mySc: mine, oppSc: theirs, split, noP6: true }], seed: `${seed}-${side}`, luck: luckOf(F, roster), run: { sacks: sacksSoFar(F, roster) }, tune: FB_TUNE })
+    const played = playFootballSeason({ roster, games: [{ mySc: mine, oppSc: theirs, split, noP6: true }], seed: `${seed}-${side}`, luck: luckOf(F, roster), run: { sacks: sacksSoFar(F, roster), ryd: rydSoFar(F, roster) }, tune: FB_TUNE })
     const g = played.reg[0]
     B[side] = { short, roster, s: g.s, fum: g.us.fum ?? 0, dfum: 0 }
   }
