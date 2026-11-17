@@ -368,12 +368,14 @@ export function cutMan(F, id, short = F.team) {
 // year's cap, more owed if he's cut later), then releases, the most cap saved for the least football lost: backups
 // before starters, the old and overpaid first. starters: the ids that start (they go last).
 //   returns [{ k: 'rs' | 'cut', n, saves }]
-// Room made by restructures alone (the biggest deals first, a man once a year), until there's need of it: a club
-// keeping a star does this before it lets him go. returns [{ k: 'rs', n, saves }]
-export function makeRoom(F, short, need = 0) {
+// Room made by restructures alone (the biggest deals first, a man once a year, three or more years left so the money
+// isn't all piled on a deal's last year), until there's need of it: a club keeping a star does this before it lets
+// him go. returns [{ k: 'rs', n, saves }]
+// (last: a club still over the cap after its releases restructures anyone with two years left, at any age)
+export function makeRoom(F, short, need = 0, last = false) {
   const t = F.teams[short], out = []
   let room = capRoom(F, short)
-  for (const p of t.r.filter(x => x.y >= 2 && (x.$ ?? 0) >= 8 && !x.rc && x.ag <= 30 && x.rx !== F.year).sort((a, b) => b.$ - a.$)) {
+  for (const p of t.r.filter(x => x.y >= (last ? 2 : 3) && (x.$ ?? 0) >= (last ? 4 : 8) && !x.rc && (last || x.ag <= 30) && x.rx !== F.year).sort((a, b) => b.$ - a.$)) {
     if (room >= need) break
     const saves = restructure(p)
     p.rx = F.year
@@ -397,6 +399,7 @@ export function capComply(F, short, starters = new Set(), need = 0) {
     room = capRoom(F, short)
     out.push({ k: 'cut', n: p.n, saves: c?.saves ?? 0 })
   }
+  if (room < need) out.push(...makeRoom(F, short, need, true))
   return out
 }
 // A restructure: 40% of this year's cap hit turned into a bonus spread over the years left on his deal (two or
