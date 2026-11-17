@@ -128,7 +128,7 @@ const GEM_P = 0.016
 // QUARTERBACKS are scarcer (the real league: a franchise quarterback about once a class, two or three more who can
 // start, the rest backups and camp arms): a steeper curve of their own, so the league keeps teams with no answer at
 // the spot, bridge starters and backups starting, instead of a decent starter for everyone
-const QB_TALENT = [[0, 97], [0.025, 92], [0.045, 88], [0.07, 82], [0.15, 76], [0.35, 70], [0.7, 64], [1, 56]]
+const QB_TALENT = [[0, 97], [0.03, 92], [0.06, 88], [0.11, 83], [0.2, 77], [0.4, 71], [0.7, 64], [1, 56]]
 const curveAt = (C, r) => { for (let i = 1; i < C.length; i++) { const [a, va] = C[i - 1], [b, vb] = C[i]; if (r <= b) return va + (vb - va) * (r - a) / (b - a) } return C[C.length - 1][1] }
 // KICKERS: a class's two are headed for a working NFL leg at best (the league's kicker is about an 80), now and
 // then a very good one; none is a star on the media's board (kSeen: the best kicker in a class is a 5th-round
@@ -379,7 +379,7 @@ export function lineText(pos, s) {
 // skip the 40 to run at their pro day, about one in ten doesn't work out at all, quarterbacks don't bench.
 // (the 40: a step of speed is about 0.045 of a second, so the class's fastest men run 4.25-4.35, a few a year under
 // 4.30, the way the combine goes; the big men and the quarterbacks a little flatter)
-const F40 = { qb: ['legs', 4.8, 0.04], rb: ['speed', 4.53, 0.045], wr: ['speed', 4.5, 0.046], te: ['speed', 4.72, 0.042], ol: ['mobility', 5.24, 0.04], dl: ['speed', 4.84, 0.042], lb: ['range', 4.64, 0.042], db: ['speed', 4.49, 0.046] }
+const F40 = { qb: ['legs', 4.8, 0.04], rb: ['speed', 4.5, 0.045], wr: ['speed', 4.46, 0.046], te: ['speed', 4.72, 0.042], ol: ['mobility', 5.24, 0.04], dl: ['speed', 4.84, 0.042], lb: ['range', 4.64, 0.042], db: ['speed', 4.45, 0.046] }
 const VERT = { qb: ['legs', 31], rb: ['burst', 34.5], wr: ['vertical', 35.5], te: ['vertical', 33], ol: ['mobility', 27.5], dl: ['getOff', 31.5], lb: ['range', 34.5], db: ['fluidity', 36.5] }
 const BENCH = { qb: null, rb: ['strength', 19], wr: ['size', 13], te: ['strength', 20], ol: ['anchor', 26], dl: ['strength', 25], lb: ['power', 22], db: ['press', 14] }
 const CONE = { qb: ['legs', 7.12], rb: ['elusiveness', 7.05], wr: ['bodyControl', 6.94], te: ['speed', 7.14], ol: ['mobility', 7.78], dl: ['bend', 7.3], lb: ['range', 7.06], db: ['fluidity', 6.95] }
@@ -392,7 +392,7 @@ export function combineOf(x) {
   if (x.p === 'k') return { ...out, kick: 1, lng: Math.round(52 + (tv(x, 'power') - 5) * 1.6 + g01(z, 908) * 2), made: clamp(4, 10, Math.round(8 + (tv(x, 'accuracy') - 5) * 0.35 + g01(z, 909))) }
   const [t40, b40, s40] = F40[x.p]
   const dtB = x.p === 'dl' && x.s === 'dt' ? 0.2 : 0
-  out.f40 = x.pk >= 88 && h01(z, 902) < 0.3 ? null : Math.round((b40 + dtB - (tv(x, t40) - 5) * s40 + g01(z, 903) * 0.025) * 100) / 100
+  out.f40 = x.pk >= 88 && h01(z, 902) < 0.3 ? null : Math.max(4.22, Math.round((b40 + dtB - (tv(x, t40) - 5) * s40 + g01(z, 903) * 0.025) * 100) / 100)
   const [tv1, bv] = VERT[x.p]
   out.vert = Math.round((bv - (dtB ? 3 : 0) + (tv(x, tv1) - 5) * 1.0 + g01(z, 904) * 1.2) * 2) / 2
   out.bench = BENCH[x.p] ? Math.max(6, Math.round(BENCH[x.p][1] + (tv(x, BENCH[x.p][0]) - 5) * 1.5 + (x.s === 'dt' ? 3 : 0) + g01(z, 905) * 2)) : null
@@ -458,7 +458,7 @@ export function buzzOf(F, x, t = weeksIn(F), cmb = F.sc?.cmb ?? 0) {
 // real draft goes: quarterbacks first, then pass rushers, tackles, receivers, corners and interior pass rushers; a
 // guard, a centre, a running back or a safety needs a star's grade to go in the top 10. (Kickers: the media's
 // projection of one is already a late-round one, kSeen; a front office takes his whole grade down instead.)
-export const POS_V = { qb: 3.5, edge: 2, ot: 1.6, wr: 1, cb: 1, dt: 0.4, lb: -1.3, s: -2, te: -2.3, rb: -2.6, og: -3, c: -3.6, k: -14 }
+export const POS_V = { qb: 3.5, edge: 2.3, ot: 1.9, wr: 0.25, cb: 1.2, dt: -0.6, lb: -2.8, s: -3.4, te: -2.9, rb: -3.2, og: -3.4, c: -4, k: -14 }
 const gKey = x => (x.p === 'ol' ? (x.s === 'LT' || x.s === 'RT' ? 'ot' : x.s === 'C' ? 'c' : 'og') : groupOf(x))
 const mediaV = x => (x.p === 'k' ? 0 : POS_V[gKey(x)] ?? 0)
 // the consensus board: everyone by the media's projection and what his position is worth
@@ -543,8 +543,10 @@ export function qbHunt(F, s) {
 // for a quarterback, and how far he'd be a reach (rank: his place on the consensus board; a team reaches far past
 // the board only for a quarterback it has to have)
 function pickWorth(x, v, { need, hunt, rd, at, rank, care = 1 }) {
-  let w = v
-  if (x.p === 'qb') w += rd <= 2 ? POS_V.qb + hunt * 6.5 - (hunt === 0 ? 4 : 0) : hunt * 2
+  // (the first two rounds weigh what he is now, too: a raw 20-year-old is a projection, a polished senior plays)
+  let w = v + (rd <= 2 && x.p !== 'k' ? (x.o - 76) * 0.2 : 0)
+  // (a team that has to have a quarterback reaches for one it believes in, never for a camp arm)
+  if (x.p === 'qb') w += rd <= 2 ? POS_V.qb + hunt * 7 * clamp(0, 1, (v - 70) / 8) - (hunt === 0 ? 4 : 0) : hunt * 2
   else w += POS_V[gKey(x)] * (rd >= 4 && x.p !== 'k' ? 0.5 : 1) + (need[needKey(x)] ?? 0) * (rd <= 2 ? 0.9 : 1.3) * care
   if (rank != null && rd <= 3) {
     const room = at + 10 + at * 0.6 + (x.p === 'qb' ? 24 * hunt : 0)

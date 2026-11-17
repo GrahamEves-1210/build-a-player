@@ -53,9 +53,11 @@ for (let y = 0; y < N; y++) {
   for (const p of r1) sum.r1[spot(p)] = (sum.r1[spot(p)] ?? 0) + 1
   for (const p of t10) sum.t10[spot(p)] = (sum.t10[spot(p)] ?? 0) + 1
   const qbs = r1.filter(p => p.p === 'qb')
+  const qbAll = P.filter(p => p.p === 'qb').slice(0, 6).map(p => `${p.at + 1}`).join(',')
   sum.qb.push(qbs.length)
   if (!qbs.length) qbZero++
-  const weak = P.slice(0, 15).map(p => ({ p, ...preview.get(p.xi) })).filter(e => e.o < 76)
+  const brk = FR.boardRank(F)
+  const weak = P.slice(0, 15).map(p => ({ p, ...preview.get(p.xi), rk: brk.get(p.xi) })).filter(e => e.o < 76)
   const g5 = P.slice(0, 10).filter(p => G5.has(CFB_TEAM_BY_SHORT[p.col]?.conf))
   const ogc = t10.filter(p => ['OG', 'C'].includes(spot(p)))
   const rbs = t10.filter(p => ['RB', 'S'].includes(spot(p)))
@@ -63,8 +65,8 @@ for (let y = 0; y < N; y++) {
   console.log(`   consensus top 10: ${cons.slice(0, 10).map(x => FR.spotLabel(x)).join(' ')}`)
   console.log(`   top 10: ${t10.map(p => `${spot(p)}${preview.get(p.xi).o}/${FR.gradeOf(p.pk)}`).join(' ')}`)
   console.log(`   QB-hunting teams: ${hunts.filter(h => h >= 0.6).length} (some ${hunts.filter(h => h > 0 && h < 0.6).length}) · QBs in the class graded B or better ${cls.filter(x => x.p === 'qb' && FR.seenPk(x) >= 80).length}`)
-  console.log(`   round 1: ${tally(r1.map(spot))} · QBs ${qbs.length} (${qbs.map(p => `No. ${p.at + 1} ${p.s} ${preview.get(p.xi).o}`).join(', ')})`)
-  if (weak.length) console.log(`   under 76 now in the top 15: ${weak.map(e => `No. ${e.p.at + 1} ${spot(e.p)} ${e.o} ${e.col}`).join(', ')}`)
+  console.log(`   round 1: ${tally(r1.map(spot))} · QBs ${qbs.length} (${qbs.map(p => `No. ${p.at + 1} ${p.s} ${preview.get(p.xi).o}/${FR.gradeOf(p.pk)} board ${FR.boardRank(F).get(p.xi)}`).join(', ')}; QBs went at ${qbAll})`)
+  if (weak.length) console.log(`   under 76 now in the top 15: ${weak.map(e => `No. ${e.p.at + 1} ${spot(e.p)} ${e.o} ${e.col} (board ${e.rk})`).join(', ')}`)
   if (g5.length) console.log(`   Group of Five in the top 10: ${g5.map(p => `No. ${p.at + 1} ${p.col}`).join(', ')}`)
   if (ogc.length > 1) bad(`${F.year + 1}: ${ogc.length} guards/centres in the top 10`)
   for (const e of rbs) if (e.pk < 90) bad(`${F.year + 1}: ${spot(e)} at No. ${e.at + 1} graded ${e.pk}`)
@@ -74,7 +76,9 @@ for (let y = 0; y < N; y++) {
   // the rosters: a full name twice on one team; the league's most common surnames
   let dupRoster = 0
   const all = []
-  for (const s of FR.SHORTS) { const ns = F.teams[s].r.map(p => p.n); dupRoster += ns.length - new Set(ns).size; all.push(...ns) }
+  const dups = []
+  for (const s of FR.SHORTS) { const ns = F.teams[s].r.map(p => p.n); const d = ns.filter((n, i) => ns.indexOf(n) !== i && !realNames.has(n)); dupRoster += d.length; dups.push(...d.map(n => `${s} ${n} (${F.teams[s].r.filter(p => p.n === n).map(p => `${p.p}${p.rk ? ' rk' + p.rk : ''}${realNames.has(p.n) ? ' real' : ''}`).join('/')})`)); all.push(...ns) }
+  if (dups.length) console.log(`   duplicates: ${dups.join(', ')}`)
   const ls = {}; for (const n of all) if (!realNames.has(n)) ls[last(n)] = (ls[last(n)] ?? 0) + 1
   const gen = all.filter(n => !realNames.has(n))
   const genReal = 0

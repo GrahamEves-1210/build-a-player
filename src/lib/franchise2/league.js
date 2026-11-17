@@ -100,7 +100,8 @@ export const gradeFloor = i => GRADE_AT.find(x => x[1] === GRADES[clamp(0, GRADE
 // pos: his position or spot (the face's room); opts: names.js nameFor's (taken, surn)
 export const fakeName = (R, pos = 'any', opts = {}) => nameFor(R, pos, opts)
 // a made-up name nobody on the roster already has
-export const freshName = (R, roster = [], pos = 'any') => fakeName(R, pos, { taken: new Set(roster.map(p => p.n)) })
+// (also: more men to stay clear of, the draft class: a man signed now never shares a name with one drafted later)
+export const freshName = (R, roster = [], pos = 'any', also = []) => fakeName(R, pos, { taken: new Set([...roster, ...also].map(p => p.n)) })
 
 // ── Making players ───────────────────────────────────────────────────────────
 // the OVR a man is headed for, from where he is and how young (a veteran is already there)
@@ -127,7 +128,7 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   const age = ag ?? R.int(23, 30)
   // (a kicker off the street is a working NFL leg, a few points under the league's average one)
   const s = GEN_SPOT[pos] ? R.pick(GEN_SPOT[pos]) : null
-  const p = { i: F.nid++, n: fakeName(R, s ?? pos), p: pos, o: o ?? (pos === 'k' ? clamp(68, 84, Math.round(76 + R.n() * 4)) : clamp(55, 76, Math.round(66 + R.n() * 4))), ag: age }
+  const p = { i: F.nid++, n: fakeName(R, s ?? pos, { taken: new Set((F.dc ?? []).map(x => x.n)) }), p: pos, o: o ?? (pos === 'k' ? clamp(68, 84, Math.round(76 + R.n() * 4)) : clamp(55, 76, Math.round(66 + R.n() * 4))), ag: age }
   if (s) p.s = s
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 4)
   signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
@@ -177,7 +178,7 @@ const GEN_SPOT_OF = { edge: 'edge', dt: 'dt', cb: 'cb', s: 's' }
 export function makeDepth(F, pos, spot, R, fl = false, top = 68, roster = []) {
   // (a kicker signed to start: a working NFL leg, 70-77)
   const o = pos === 'k' ? R.int(70, 77) : R.int(63, clamp(63, 68, top)), ag = R.int(23, 29)
-  const p = { i: F.nid++, n: freshName(R, roster, spot ?? pos), p: pos, o, ag }
+  const p = { i: F.nid++, n: freshName(R, roster, spot ?? pos, F.dc ?? []), p: pos, o, ag }
   if (spot) p.s = spot
   p.pk = fl ? o : Math.max(o, peakFor(R, o, ag) - 4)
   signDeal(p, { $: minimumFor(ag, capYear(F)), y: 1, g: 0 })
