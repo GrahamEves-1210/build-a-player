@@ -535,14 +535,20 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
   )
 }
 
+// the server had to change the build he made (blacktopCore courtChanges): one plain line why, never a silent 67
+const courtNote = c => (!c ? null : c.built
+  ? "Your build didn't reach the court, so the blacktop built one for you."
+  : `${c.free} of your picks didn't reach the court, so free agents play ${c.free === 1 ? 'that spot' : 'those spots'}.`)
+
 // Every player's build in the game, grade by grade, with the points they have so far: on the game screen
 // itself, under the play-by-play (line: { [id]: { pts, run } }, as of what's been shown)
 // (memoized, and each row on its own: the game screen re-renders on every beat of a play, a call or a reaction,
 // and the panel only changes when a play's points go up; then only that player's row redraws)
-const SquadBuilds = memo(function SquadBuilds({ game, names, meVid, line = null }) {
+const SquadBuilds = memo(function SquadBuilds({ game, names, meVid, line = null, note = null }) {
   return (
     <div className="btg-builds" role="region" aria-label="Builds">
       <div className="btg-builds-head">THE BUILDS</div>
+      {note && <p className="btg-note" role="status">{note}</p>}
       {[0, 1].map(t => (
         <div key={t} className={`bt-t${t}`}>
           <div className="btg-builds-team">{names[t]}</div>
@@ -642,6 +648,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const myTeam = watch ? -1 : mine?.team ?? 0
   const colorFor = t => TEAM_COLORS[t]
   const names = useMemo(() => [teamName(match, 0), teamName(match, 1)], [match])
+  const note = watch ? null : courtNote(bt.changed)
 
   useEffect(() => { const t = setTimeout(() => setStage(s => (s === 'reveal' ? 'live' : s)), 4200); return () => clearTimeout(t) }, [])
   useEffect(() => {
@@ -725,6 +732,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             ))}
             <div className="btg-rv-vs">VS</div>
           </div>
+          {note && <p className="btg-note btg-rv-note" role="status">{note}</p>}
         </div>
       </div>
     )
@@ -869,7 +877,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             {feed.slice(1).map(p => <div key={p.id} className={`btg-log-line bt-t${p.team}${p.type === 'milestone' ? ' is-ms' : ''}`}><i aria-hidden="true" /><span>{p.text}</span></div>)}
           </div>
           {/* every build, on the screen itself: under the play-by-play (beside the court on wide screens) */}
-          <SquadBuilds game={game} names={names} meVid={bt.me.vid} line={line} />
+          <SquadBuilds game={game} names={names} meVid={bt.me.vid} line={line} note={note} />
         </div>
       </div>
       {/* team chat: rides the bottom of the screen as the page scrolls (above the dock and the ad rail) */}

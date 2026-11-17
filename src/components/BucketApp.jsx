@@ -43,7 +43,7 @@ import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, us
 import { useCompete, botBuild } from '../lib/compete'
 import { saveSeason, saveSalary } from '../lib/submit'
 import { seededTeams, seededPlayer } from '../lib/competeCore'
-import { seatSeed, seatRespinSeed } from '../lib/blacktopCore'
+import { seatSeed, seatRespinSeed, seatKit } from '../lib/blacktopCore'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
 import { FORFEIT_RATING, dailyState, setDailySpins, forfeitDaily } from '../lib/progress'
@@ -172,6 +172,9 @@ const ENRICHED_ALLTIME_BIGS   = NBA_ALLTIME_BIG_PLAYERS.map(enrichPlayer)
 const withPhoto = p => ({ ...p, photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin) })
 const LIVE_POOLS = { guard: ENRICHED_GUARDS.map(withPhoto), big: ENRICHED_BIGS.map(withPhoto) }
 const LIVE_TYPES = { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES }
+// A Blacktop build spins the pool the server checks it against (blacktopCore seatKit), never
+// the mode the player was last in: an All-Time build left open made every pick a free agent
+const LIVE_SPIN_POOLS = { guard: seatKit('guard').pool.map(enrichPlayer), big: seatKit('big').pool.map(enrichPlayer) }
 const livePhoto = p => p?.photo ?? (NBA_HEADSHOTS[p?.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
 
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
@@ -825,6 +828,8 @@ export default function BucketApp() {
   setSandboxGate(sandboxItemFor(page))
 
   const currentPool = useMemo(() => {
+    // a Blacktop build: the server's pool, never All-Time or Sandbox (whatever gameMode was left at)
+    if (liveBuild) return LIVE_SPIN_POOLS[position === 'big' ? 'big' : 'guard']
     if (gameMode === 'all-time') {
       return position === 'guard' ? ENRICHED_ALLTIME_GUARDS : ENRICHED_ALLTIME_BIGS
     }
@@ -836,7 +841,7 @@ export default function BucketApp() {
       const override = overrides[`${p.name}|${p.team}`]
       return override ? { ...p, attrs: { ...p.attrs, ...override } } : p
     })
-  }, [position, gameMode, isBucketCustomMode, bucketCustomRatings])
+  }, [liveBuild, position, gameMode, isBucketCustomMode, bucketCustomRatings])
 
   // Blacktop 1v1: from the Blacktop hub (Pickup / Play a friend / a code) and the old splash
   const [versusAuto, setVersusAuto] = useState(null)
@@ -1827,7 +1832,7 @@ export default function BucketApp() {
       )}
       {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={BUCKET_ATTR}
         waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
-      <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
+      <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' && !liveBuild ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
         {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
           gradesHidden={competeOn}
           build={build}

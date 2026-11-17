@@ -115,10 +115,17 @@ export const samePicks = (a, b) => Object.keys({ ...a, ...b }).every(t => (a?.[t
 export const FREE_AGENT_VAL = 3
 export const seatSeed = (code, vid) => `${code}:${vid}`
 export const seatRespinSeed = (code, vid) => `${code}:${vid}:r`
+// What a Blacktop seat spins from: today's players and the versus traits, whatever mode the
+// player was last in. The build page spins exactly this (BucketApp), and the server checks
+// against exactly this. (An All-Time build left open used to hand the page the legends: none
+// of them is in this pool, so every pick played as a free agent, a 67 "G-League Candidate".)
+export const seatKit = pos => (pos === 'big'
+  ? { types: VERSUS_BIG_TYPES, pool: NBA_BIG_PLAYERS, teams: NBA_TEAMS }
+  : { types: VERSUS_GUARD_TYPES, pool: NBA_GUARD_PLAYERS, teams: NBA_TEAMS })
 export function cleanBuild(build, pos, code, vid) {
   if (!build || typeof build !== 'object') return null
-  const big = pos === 'big', types = big ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES, pool = big ? NBA_BIG_PLAYERS : NBA_GUARD_PLAYERS
-  const ok = legalSlots({ seed: seatSeed(code, vid), rs: seatRespinSeed(code, vid), types, pool, teams: NBA_TEAMS, sent: build })
+  const { types, pool, teams } = seatKit(pos)
+  const ok = legalSlots({ seed: seatSeed(code, vid), rs: seatRespinSeed(code, vid), types, pool, teams, sent: build })
   const out = {}
   for (const t of types) {
     const c = build[t]
@@ -128,4 +135,17 @@ export function cleanBuild(build, pos, code, vid) {
       : { type: t, val: FREE_AGENT_VAL, qbFull: 'Free agent', team: null }
   }
   return out
+}
+// What the court did to the build a seat made, so the player is told (AppBlacktop): null when it
+// plays as he made it; { built: true } when none of it made it (the blacktop built him one);
+// else { free: n }, the picks that play as free agents. pool: the one the phones play from (playOut).
+export function courtChanges(sent, final, vid, pos, pool) {
+  if (!final || final.afk?.includes(vid)) return null
+  const named = seatKit(pos).types.filter(t => sent?.[t]?.qbFull && sent[t].qbFull !== 'Free agent')
+  if (!named.length) return null
+  const kept = final.builds?.[vid]
+  // (a build the phones can't use is played as an empty one: playOut fills it, ratings off)
+  if (!kept || !buildOk(kept, pool)) return { built: true, free: named.length }
+  const free = named.filter(t => kept[t]?.qbFull !== sent[t].qbFull).length
+  return free ? { built: free === named.length, free } : null
 }

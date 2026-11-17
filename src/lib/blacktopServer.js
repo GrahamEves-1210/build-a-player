@@ -11,7 +11,7 @@ import { clean, blockedIds, MIN_GAP_MS } from './chat'
 import { supabase, currentToken } from './supabase'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
-import { slotsFor, BUILD_SECS } from './blacktopCore'
+import { slotsFor, BUILD_SECS, courtChanges } from './blacktopCore'
 import { playOut } from './blacktopPlay'
 
 // the live server (live/, deployed on Cloudflare); VITE_LIVE_URL overrides it (a local server: ws://localhost:8787)
@@ -213,6 +213,11 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
 
   // ── The game: the engine on the server's inputs ───────────────────────────
   const game = useMemo(() => playOut({ final, match, locks, pools, types }), [final, match, locks, pools, types])
+  // the build I made against the one the court plays: if the server had to change it, I'm told why (AppBlacktop)
+  const changed = useMemo(() => {
+    const pos = match?.players.find(p => p.vid === me.vid)?.pos ?? stateRef.current.position
+    return courtChanges(stateRef.current.build, final, me.vid, pos, pools?.[pos === 'big' ? 'big' : 'guard'] ?? [])
+  }, [final]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const recorded = useRef(null)
   const book = useCallback(() => {
@@ -273,7 +278,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     size, slots: slotsFor(size), roomSize: size * 2,
     retry: () => { closeAll(); join(false, sizeRef.current) }, canFill: false, join, practice: (sz = 3) => join(true, sz), testFill: (sz, mimic) => { lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos, mimic }) }, leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader: null, isLeader: false,
-    final, game, finish, rematchVotes: votes, voteRematch, exit,
+    final, game, changed, finish, rematchVotes: votes, voteRematch, exit,
     locks, myCalls, call, arrive, lockCalls: () => {}, emotes, emote, kicked, clearKicked: () => setKicked(false),
   }
 }
