@@ -16,7 +16,7 @@
 //
 // (Nothing here reads league.js when it loads; league.js reads this back for worth().)
 import { clamp, r1 } from './rng'
-import { TEAM } from './league'   // (read only inside functions: league.js reads this file back)
+import { TEAM, SHORTS } from './league'   // (read only inside functions: league.js reads this file back)
 
 // ── The cap ──────────────────────────────────────────────────────────────────
 const CAP = { 2024: 255.4, 2025: 279.2, 2026: 301.2 }
@@ -26,8 +26,11 @@ const scaleOf = year => capOf(year) / CAP[2026]
 export const minimumFor = (ag, year = 2026) => r1((ag <= 22 ? 0.885 : ag <= 23 ? 0.885 : ag <= 24 ? 1.03 : ag <= 25 ? 1.105 : ag <= 27 ? 1.18 : ag <= 29 ? 1.255 : 1.38) * scaleOf(year))
 // the men past the ones the mode plays (a 53-man roster): about the minimum each, and the specialists
 export const ROSTER_FULL = 53
-// (the punter and the long snapper: about $4.5M between them; the kicker is on the roster with his own deal)
-export const restOf53 = (n, year = 2026) => r1(Math.max(0, ROSTER_FULL - n) * 1.1 * scaleOf(year) + 4.5 * scaleOf(year))
+// (the punter and the long snapper: about $4.5M between them; the kicker is on the roster with his own deal; the
+// practice squad, about $4.5M more. A depth man past the 38th costs about $1.4M: the veterans among them are paid
+// over the minimum. The real 2026 teams carry a median $53M outside the men the mode rosters; this counts $31M of
+// it, the rest being the cap each real team rolled over from 2025, which the mode doesn't carry.)
+export const restOf53 = (n, year = 2026) => r1(Math.max(0, ROSTER_FULL - n) * 1.4 * scaleOf(year) + 9 * scaleOf(year))
 
 // ── The market ───────────────────────────────────────────────────────────────
 // What a man at this spot and rating makes a year on the open market (2026 $M): the top of each spot is the real
@@ -59,16 +62,58 @@ function curve(tab, o) {
   }
   return tab[tab.length - 1][1]
 }
-// what the market pays him a year: his rating at his spot, less for age (a back at 28, anyone past 30)
-export function marketValue(p, year = 2026) {
+// THE ROLE THE MARKET SEES (the starter's line): the OVR of the last man who starts at his spot league-wide (the
+// 32nd QB, the 96th WR, the 64th EDGE...). A man at or over it is paid as a starter; a man under it is a backup
+// and is paid like one, whatever the curve says: a backup QB $3-10M (the real No. 2s: Mariota, Mayfield's old
+// Tampa deal, Minshew, Tyrod Taylor), a backup at any other spot at most half of what the last starter there makes.
+// marketLines(F) reads the league as it is; without it, the 2026 league's lines.
+export const STARTERS = { qb: 32, rb: 32, wr: 96, te: 32, ot: 64, og: 64, c: 32, edge: 64, dt: 64, lb: 64, cb: 96, s: 64, k: 32 }
+export const LINE_2026 = { qb: 77, rb: 77, wr: 77, te: 76, ot: 77, og: 76, c: 76, edge: 77, dt: 77, lb: 76, cb: 77, s: 76, k: 74 }
+const midOf = o => 1 + 0.4 * clamp(0, 1, (92 - o) / 12) * clamp(0, 1, (o - 70) / 6)
+// HOW AGE PRICES HIM: the share of his rating's price a man that old gets. Backs fall first (28), quarterbacks last
+// (34 on: Wilson at 36 $10.5M, Flacco at 39 $4M); a man still at the top of his spot holds more of it (Stafford,
+// Rodgers: elite at 35+ is still paid). A kicker's leg lasts into his late 30s.
+export function ageShare(p) {
+  const a = p.ag, elite = p.o >= 90
+  if (p.p === 'k') return a >= 39 ? 0.7 : a >= 37 ? 0.85 : 1
+  let f
+  if (p.p === 'qb') f = a <= 32 ? 1 : a === 33 ? 0.9 : a === 34 ? 0.75 : a === 35 ? 0.62 : a === 36 ? 0.5 : 0.4
+  else if (p.p === 'rb') f = a <= 26 ? 1 : a === 27 ? 0.92 : a === 28 ? 0.78 : a === 29 ? 0.65 : a === 30 ? 0.5 : 0.4
+  else f = a <= 29 ? 1 : a === 30 ? 0.88 : a === 31 ? 0.76 : a === 32 ? 0.64 : a === 33 ? 0.52 : 0.42
+  return elite ? Math.min(1, Math.max(f, f + (p.p === 'qb' ? 0.3 : 0.15))) : f
+}
+// what the market pays him a year: his rating at his spot as a starter, a backup's price under the line, less for age
+export function marketValue(p, year = 2026, L = null) {
+  const k = marketKey(p), tab = MARKET[k] ?? MARKET.lb
   // (the middle of the market, a solid starter, is paid more than the stars' curve alone says: the real league
   // spends most of its cap on its starters, not just its stars)
-  const mid = 1 + 0.4 * clamp(0, 1, (92 - p.o) / 12) * clamp(0, 1, (p.o - 70) / 6)
-  const base = curve(MARKET[marketKey(p)] ?? MARKET.lb, p.o) * mid
-  // (a kicker's leg lasts: his price holds into his late 30s)
-  const age = p.p === 'k' ? (p.ag >= 39 ? 0.7 : p.ag >= 37 ? 0.85 : 1) : p.p === 'rb' ? (p.ag >= 30 ? 0.55 : p.ag >= 28 ? 0.75 : 1) : p.p === 'qb' ? (p.ag >= 37 ? 0.7 : p.ag >= 34 ? 0.88 : 1) : p.ag >= 33 ? 0.6 : p.ag >= 31 ? 0.78 : p.ag >= 30 ? 0.9 : 1
-  return r1(Math.max(minimumFor(p.ag, year), base * age * scaleOf(year)))
+  let base = curve(tab, p.o) * midOf(p.o)
+  const line = L?.[k] ?? LINE_2026[k] ?? 76
+  if (p.o < line) {
+    // a backup: a QB within 8 of the line $3-10M, the rest the curve's price; anyone else at most half the last starter's
+    base = p.p === 'qb' ? (p.o >= line - 8 ? 3 + 7 * (p.o - (line - 8)) / 8 : Math.min(3, base)) : Math.min(base, curve(tab, line) * midOf(line) * 0.5)
+  }
+  return r1(Math.max(minimumFor(p.ag, year), base * ageShare(p) * scaleOf(year)))
 }
+// a starter on the market (at or over his spot's line)
+export const startsInLeague = (p, L = null) => p.o >= (L?.[marketKey(p)] ?? LINE_2026[marketKey(p)] ?? 76)
+// ── The starter's line at each spot ──────────────────────────────────────────
+// The OVR of the last man who starts at each market spot league-wide (contracts.js STARTERS: the 32nd QB, the 96th
+// WR...): the market pays a man under it as a backup. Read from the league as it is, once a stage.
+const LINES = new WeakMap()
+export function marketLines(F) {
+  const key = `${F.year}|${F.phase}|${F.stage ?? ''}`
+  const c = LINES.get(F)
+  if (c?.key === key) return c.L
+  const by = {}
+  for (const s of SHORTS) for (const p of F.teams[s].r) if (!p.fl) (by[marketKey(p)] ??= []).push(p.o)
+  for (const p of F.fa ?? []) if (!p.fl) (by[marketKey(p)] ??= []).push(p.o)
+  const L = { ...LINE_2026 }
+  for (const [k, a] of Object.entries(by)) { a.sort((x, y) => y - x); if (a.length) L[k] = a[Math.min(a.length, STARTERS[k] ?? 32) - 1] }
+  LINES.set(F, { key, L })
+  return L
+}
+
 // how long a deal runs at his age
 export const termFor = p => (p.p === 'k' ? (p.ag <= 30 ? 4 : p.ag <= 34 ? 3 : p.ag <= 37 ? 2 : 1) : p.ag <= 25 ? 4 : p.ag <= 27 ? (p.o >= 85 ? 5 : 4) : p.ag <= 29 ? 3 : p.ag <= 31 ? 2 : 1)
 // the share of a deal that's signing bonus (what's still owed if he's cut): stars get more of it up front
@@ -76,11 +121,32 @@ export const bonusShare = $ => ($ >= 30 ? 0.42 : $ >= 15 ? 0.35 : $ >= 6 ? 0.25 
 // a deal on a man (a new contract replaces his old one)
 export function signDeal(p, { $, y, g = null }) {
   p.$ = r1($); p.y = y; p.g = r1(g ?? $ * bonusShare($))
+  delete p.rc; delete p.op; delete p.ox; delete p.sc
+  return p
+}
+// An extension (a man in the last year of his deal): this year's deal stands, the new years start next year: y new
+// years at $ a year (sc), the new bonus spread over every year he's now signed for. Dead money if he's cut is the
+// bonus a year times the years left, as with any deal.
+export function extendDeal(p, { $, y, g = null }) {
+  const now = Math.max(1, p.y ?? 1)
+  const bonus = r1(g ?? $ * bonusShare($))
+  p.sc = [...(Array.isArray(p.sc) ? p.sc.slice(0, now - 1) : Array.from({ length: now - 1 }, () => p.$)), ...Array.from({ length: y }, () => r1($))]
+  p.y = now + y
+  p.g = r1(Math.max(p.g ?? 0, bonus * y / p.y))
   delete p.rc; delete p.op; delete p.ox
   return p
 }
-// his ask to stay (re-signing) or to come (free agency): the market, a few percent more for a man in his prime
-export const askOf = (p, year = 2026) => ({ $: r1(marketValue(p, year) * (p.ag <= 29 && p.o >= 85 ? 1.05 : 1)), y: termFor(p) })
+// a man's cap hit k league years from now (0: this one), on the deal he has (null past its end)
+export function hitIn(p, k = 0) {
+  if (k >= (p.y ?? 0)) return null
+  if (k === 0) return p.$ ?? 0
+  if (Array.isArray(p.sc) && p.sc[k - 1] != null) return p.sc[k - 1]
+  if (p.op === 2 && p.ox && k === p.y - 1) return p.ox
+  return p.$ ?? 0
+}
+// his ask to stay (re-signing) or to come (free agency): the market, a few percent more for a man in his prime; a
+// backup asks for a year or two (L: the league's starter lines, marketLines)
+export const askOf = (p, year = 2026, L = null) => ({ $: r1(marketValue(p, year, L) * (p.ag <= 29 && p.o >= 85 ? 1.05 : 1)), y: startsInLeague(p, L) ? termFor(p) : Math.min(2, termFor(p)) })
 
 // ── Real players' deals ──────────────────────────────────────────────────────
 // src/data/nfl-contracts.json, read once (whatever its exact shape: a list or a map by name; cap hit in dollars or
@@ -109,10 +175,32 @@ function index(data) {
     // (a bonus a year as given, or the dead money if he were cut now spread over the years left)
     const per = money(r.proratedBonus ?? r.prorated ?? r.bonusPerYear), dead = money(r.dead ?? r.deadCap ?? r.dead_cap)
     const g = per ?? (dead != null ? r1(dead / yy) : null)
-    out.set(`${keyOf(r.name)}|${String(r.team ?? '').toUpperCase()}`, { $, y: yy, g, ...(r.rookie && { rc: 1 }), ...(r.draft?.[0] && { dy: +r.draft[0] }) })
-    out.set(keyOf(r.name), out.get(keyOf(r.name)) ?? { $, y: yy, g })
+    const apy = money(r.apy ?? r.aav), total = money(r.total)
+    const sc = realSchedule({ $, y: yy, g, apy, total, rookie: !!r.rookie })
+    // (a first-rounder still on his rookie deal whose option hasn't come up yet: the 2024 class on; the 2023 class's
+    // was decided before 2026)
+    const opt = r.rookie && r.draft?.[1] === 1 && +r.draft[0] >= 2024
+    out.set(`${keyOf(r.name)}|${String(r.team ?? '').toUpperCase()}`, { $, y: yy, g, ...(sc && { sc }), ...(r.rookie && { rc: 1 }), ...(opt && { op: 1 }), ...(r.draft?.[0] && { dy: +r.draft[0] }) })
+    out.set(keyOf(r.name), out.get(keyOf(r.name)) ?? { $, y: yy, g, ...(sc && { sc }) })
   }
   return out
+}
+// A real deal's cap hits after this year (2026's is the file's own cap hit). The file has each deal's APY, total, the
+// years left and the bonus proration, not its year-by-year salaries, so the years after 2026 are built the way real
+// deals are shaped: they average the APY (a little over it in a deal's back half: a deal already under way has paid
+// its cheap early years) and rise year on year, about 12% of the APY a year (a rookie deal's base salaries about 6%).
+// A deal whose years after 2026 are all new money (an extension signed on top of 2026: Hutchinson, Gibbs, Campbell)
+// carries its APY on average over them. Never under the bonus still being spread plus the minimum.
+// (Hutchinson: $10.1M in 2026, then $39.6M, $43.2M, $46.8M, $50.4M: his $180M over 2027-30.)
+export function realSchedule({ $, y, g = 0, apy = null, total = null, rookie = false }) {
+  const n = y - 1
+  if (n <= 0) return null
+  if (!(apy > 0)) return Array.from({ length: n }, () => r1($))
+  const L = total > 0 ? clamp(1, 7, Math.round(total / apy)) : y
+  const fresh = y > L
+  const mean = fresh ? apy : apy * (rookie ? 1.04 : 1.08)
+  const slope = rookie ? 0.06 : 0.12
+  return Array.from({ length: n }, (_, i) => r1(Math.max((g ?? 0) + 1, mean * (1 + slope * (i - (n - 1) / 2)))))
 }
 function realTable() {
   if (REAL) return REAL
@@ -125,7 +213,7 @@ function realTable() {
 export function realDeal(name, team, p, R) {
   const T = realTable()
   const hit = T.get(`${keyOf(name)}|${String(team ?? '').toUpperCase()}`) ?? T.get(keyOf(name))
-  if (hit) return { $: hit.$, y: hit.y, g: hit.g ?? r1(hit.$ * bonusShare(hit.$)), ...(hit.rc && { rc: 1 }), ...(hit.dy && { dy: hit.dy }), src: 'real' }
+  if (hit) return { $: hit.$, y: hit.y, g: hit.g ?? r1(hit.$ * bonusShare(hit.$)), ...(hit.sc && { sc: [...hit.sc] }), ...(hit.rc && { rc: 1 }), ...(hit.op && { op: 1 }), ...(hit.dy && { dy: hit.dy }), src: 'real' }
   return estimateDeal(p, R)
 }
 export const realContractsLoaded = () => realTable().size > 0
@@ -138,6 +226,29 @@ export function realTeamDead(short) {
 }
 export function seedDead(F) {
   for (const s of Object.keys(F.teams)) { const d = realTeamDead(s); if (d > 0) F.teams[s].dead = [['DEAD MONEY FROM PAST DEALS', d]] }
+  F.dsc = 1   // (a new league's deals already rise as the real ones do: dealsOnLoad has nothing to do)
+}
+// A save from before the real deals rose (F.dsc unset): every real man still on the deal the league started him on
+// (his 2026 cap hit, flat, the years run down by the seasons since) gets the rest of its real years, rising as they
+// should; this year's cap hit is the one his deal has now. Anyone re-signed, extended or restructured since keeps
+// what he signed. Once a save (F.dsc).
+export function dealsOnLoad(F) {
+  if (!F?.teams || F.dsc) return F
+  const T = realTable()
+  if (T.size) {
+    for (const s of Object.keys(F.teams)) for (const p of F.teams[s].r) {
+      if (p.sc || p.b != null || !(p.y > 0)) continue
+      const hit = T.get(keyOf(p.n))
+      if (!hit?.sc || Math.abs((p.$ ?? 0) - hit.$) > 0.05) continue
+      const k = hit.y - p.y
+      if (k < 0 || k >= hit.y) continue
+      const rest = hit.sc.slice(Math.max(0, k - 1))
+      if (k > 0) p.$ = rest.shift()
+      if (p.y > 1 && rest.length) p.sc = rest.slice(0, p.y - 1)
+    }
+  }
+  F.dsc = 1
+  return F
 }
 // the estimate: what the market pays him, partway through a deal of the usual length
 export function estimateDeal(p, R) {
@@ -169,7 +280,7 @@ export function rookieScale(pick, year = 2026) {
 // a rookie's deal on him
 export function signRookie(p, pick, year = 2026) {
   const d = rookieScale(pick, year)
-  p.$ = d.$; p.y = d.y; p.g = d.g; p.rc = 1
+  p.$ = d.$; p.y = d.y; p.g = d.g; p.rc = 1; delete p.sc
   if (d.opt) { p.op = 1; p.ox = null } else delete p.op
   return p
 }
@@ -179,13 +290,39 @@ export function signRookie(p, pick, year = 2026) {
 // A kicker is priced where kickers really go: the best one a 3rd-rounder's deal (Moody went 99th, Aguayo 59th, a reach
 // everyone remembers), an 85 a 4th-rounder's, an 80 a 6th-rounder's, below that an undrafted man's.
 export const buildSlot = (o, pos = null) => (pos === 'k' ? clamp(64, 262, Math.round(64 + Math.pow(Math.max(0, 92 - o), 1.4) * 4)) : o >= 90 ? 1 : clamp(1, 224, Math.round(1 + Math.pow(90 - o, 1.55) * 0.9)))
-// the fifth-year option's price: the top of his spot's market for a top-10 pick, a step below for the rest
-export function optionPrice(p, year) {
-  const top = (MARKET[marketKey(p)] ?? MARKET.lb)
-  const pick = p.dr?.[1] ?? 32
-  const v = pick <= 10 ? curve(top, 93) : curve(top, 88)
-  return r1(v * scaleOf(year))
+// ── The CBA's tenders: the franchise tag, the transition tag, the fifth-year option ────────────────────────────
+// Each is an average of the top salaries at his spot as a share of the cap (the CBA's spots: QB RB WR TE OL DE DT
+// LB CB S K/P), measured on the real 2026 cap hits (src/data/nfl-contracts.json) and moved with the cap:
+//   tag    the franchise tag: the top 5's average (QB 14.8% of the cap, about $44.7M in 2026)
+//   trans  the transition tag: the top 10's
+//   l1     the 3rd to 20th highest
+//   basic  the 3rd to 25th highest
+const TENDER = {
+  qb: [14.83, 13.52, 9.91, 8.51], rb: [4.3, 3.83, 2.91, 2.66], wr: [9.41, 8.01, 5.54, 5.02], te: [4.3, 3.67, 2.81, 2.62],
+  ol: [8.96, 8, 6.5, 6.15], de: [9.63, 8.05, 5.79, 5.31], dt: [10.12, 8.3, 5.8, 5.27], lb: [6.69, 5.22, 3.52, 3.25],
+  cb: [7.42, 6.19, 4.48, 4.1], s: [7.44, 5.78, 3.85, 3.42], k: [2.06, 1.71, 1.03, 0.88],
 }
+const cbaSpot = p => (p.p === 'ol' ? 'ol' : p.p === 'dl' ? (p.s === 'dt' ? 'dt' : 'de') : p.p === 'db' ? (p.s === 's' ? 's' : 'cb') : TENDER[p.p] ? p.p : 'lb')
+const tender = (p, j, year) => r1(TENDER[cbaSpot(p)][j] / 100 * capOf(year))
+// his Pro Bowls (an All-Pro year counts: he was on the ballot) and his playing time, from his career lines
+// (awards.js p.cr: [year, team, games, ...his three numbers, honor]); a man with no lines kept is read by whether he
+// starts now (starts: true / false)
+export function optionTier(p, starts = null) {
+  const cr = Array.isArray(p.cr) ? p.cr.slice(-3) : []
+  const pb = cr.filter(r => (r[6] ?? 0) >= 1).length
+  const full = cr.filter(r => (r[2] ?? 0) >= 13).length, half = cr.filter(r => (r[2] ?? 0) >= 9).length
+  // (the CBA: 75% of the snaps in two of three seasons; 50% the same way. Games played stand in for the snaps)
+  const pt = full >= 2 ? 2 : half >= 2 ? 1 : cr.length ? 0 : starts ? 2 : 0
+  return pb >= 2 ? 'tag' : pb === 1 || pt === 2 ? 'trans' : pt === 1 ? 'l1' : 'basic'
+}
+// The fifth-year option's price (the 2020 CBA): two Pro Bowls, the franchise tag; one Pro Bowl or 75% playing time,
+// the transition tag; 50% playing time, the 3rd-20th average; otherwise the 3rd-25th (a QB's basic option about 8.5%
+// of the cap, not the 14% it was). Fixed when it's picked up, from that year's salaries (year: the league year then).
+export function optionPrice(p, year, starts = null) {
+  const t = optionTier(p, starts)
+  return tender(p, t === 'tag' ? 0 : t === 'trans' ? 1 : t === 'l1' ? 2 : 3, year)
+}
+export const OPTION_TIER_TEXT = { tag: 'TWO PRO BOWLS: THE FRANCHISE TAG', trans: 'PRO BOWL OR FULL-TIME STARTER', l1: 'PART-TIME STARTER', basic: 'BASIC LEVEL' }
 
 // ── A team's cap ─────────────────────────────────────────────────────────────
 // team.dead: [[name, $M]] dead money on this year's cap
@@ -201,6 +338,14 @@ export function capSheet(F, short = F.team) {
   return { cap, pay, dead, rest, used, room: r1(cap - used), year: yr }
 }
 export const capRoom = (F, short = F.team) => capSheet(F, short).room
+// the room k league years past this one, on the deals already signed (the men under contract then, the rest of the
+// 53 around them): what a front office looks at before it extends a man
+export function roomAhead(F, short, k = 1) {
+  const t = F.teams[short], yr = capYear(F) + k
+  const men = t.r.filter(p => (p.y ?? 0) > k)
+  const pay = men.reduce((a, p) => a + (hitIn(p, k) ?? 0), 0)
+  return r1(capOf(yr) - pay - restOf53(Math.max(men.length, 44), yr))
+}
 export const canSign = (F, $, short = F.team) => capRoom(F, short) >= $ - 1e-9
 // what cutting him does: his cap hit off, his bonus still owed on as dead money
 export function cutCost(p) {
@@ -215,7 +360,7 @@ export function cutMan(F, id, short = F.team) {
   if (c.dead > 0) (t.dead ??= []).push([p.n, c.dead])
   // the wire has it; in the offseason he's a free agent the market can sign
   F.news = [...(F.news ?? []), { k: 'cut', tag: 'RELEASED', s: short, text: `${TEAM[short]?.nick ?? short} release ${p.n}`, y: F.year, wk: F.wk }].slice(-40)
-  if (F.phase === 'off' && Array.isArray(F.fa) && !p.fl) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; F.fa.push(p) }
+  if (F.phase === 'off' && Array.isArray(F.fa) && !p.fl) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.sc; F.fa.push(p) }
   return { p, ...c }
 }
 // Getting under the cap (a league team, by the start of the new league year): first restructures, the way NFL
@@ -223,42 +368,74 @@ export function cutMan(F, id, short = F.team) {
 // year's cap, more owed if he's cut later), then releases, the most cap saved for the least football lost: backups
 // before starters, the old and overpaid first. starters: the ids that start (they go last).
 //   returns [{ k: 'rs' | 'cut', n, saves }]
-export function capComply(F, short, starters = new Set()) {
+// Room made by restructures alone (the biggest deals first, a man once a year, three or more years left so the money
+// isn't all piled on a deal's last year), until there's need of it: a club keeping a star does this before it lets
+// him go. returns [{ k: 'rs', n, saves }]
+// (last: a club still over the cap after its releases restructures anyone with two years left, at any age)
+export function makeRoom(F, short, need = 0, last = false) {
   const t = F.teams[short], out = []
   let room = capRoom(F, short)
-  if (room >= 0) return out
-  for (const p of t.r.filter(x => x.y >= 2 && (x.$ ?? 0) >= 8 && !x.rc && x.ag <= 30 && x.rx !== F.year).sort((a, b) => b.$ - a.$)) {
-    if (room >= 0) break
-    const move = r1(p.$ * 0.4), saves = r1(move * p.y / (p.y + 1))
-    p.$ = r1(p.$ - saves); p.g = r1((p.g ?? 0) + move / (p.y + 1)); p.y += 1; p.rx = F.year
+  for (const p of t.r.filter(x => x.y >= (last ? 2 : 3) && (x.$ ?? 0) >= (last ? 4 : 8) && !x.rc && (last || x.ag <= 30) && x.rx !== F.year).sort((a, b) => b.$ - a.$)) {
+    if (room >= need) break
+    const saves = restructure(p)
+    p.rx = F.year
     room = r1(room + saves)
     out.push({ k: 'rs', n: p.n, saves })
   }
+  return out
+}
+// (need: the room to get to, more than zero when the club is making room to keep a man)
+export function capComply(F, short, starters = new Set(), need = 0) {
+  const t = F.teams[short]
+  let room = capRoom(F, short)
+  if (room >= need) return []
+  const out = makeRoom(F, short, need)
+  room = capRoom(F, short)
   const worthCut = p => { const c = cutCost(p); return c.saves - (starters.has(p.i) ? 12 : 0) - Math.max(0, p.o - 70) * 0.25 + Math.max(0, p.ag - 29) * 0.8 }
-  for (let guard = 0; room < 0 && guard < 30; guard++) {
-    const p = t.r.filter(x => x.b == null && !x.rc && !x.fl && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
+  for (let guard = 0; room < need && guard < 30; guard++) {
+    const p = t.r.filter(x => x.b == null && !x.rc && !x.fl && x.y > 0 && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
     if (!p) break
     const c = cutMan(F, p.i, short)
     room = capRoom(F, short)
     out.push({ k: 'cut', n: p.n, saves: c?.saves ?? 0 })
   }
+  if (room < need) out.push(...makeRoom(F, short, need, true))
   return out
 }
-// A year passes on every deal (in the offseason, as the league ages): a year off; a picked-up option's price is his
-// cap hit in the option year. Dead money from last year is gone.
+// A restructure: 40% of this year's cap hit turned into a bonus spread over the years left on his deal (two or
+// more). This year's hit drops by all but this year's share; every later year carries its share (sc): money moved
+// forward, not saved, and more of it dead if he's cut. (No added years: a deal that grew a year at full pay each
+// time was an extension nobody signed, and it snowballed: a $90M quarterback by 2030.) Returns what it clears now.
+export function restructure(p) {
+  const y = Math.max(2, p.y ?? 2)
+  const move = r1(p.$ * 0.4), per = move / y, saves = r1(move - per)
+  const later = Array.from({ length: y - 1 }, (_, k) => hitIn(p, k + 1) ?? p.$)
+  p.sc = later.map(v => r1(v + per))
+  p.$ = r1(p.$ - saves); p.g = r1((p.g ?? 0) + per); p.y = y
+  delete p.op; delete p.ox
+  return saves
+}
+// A year passes on every deal (in the offseason, as the league ages): a year off, and this year's cap hit is the
+// next on his schedule (sc: a real deal's rising years, an extension's new money, a restructure's); a picked-up
+// option's price is his cap hit in the option year. Dead money from last year is gone.
 export function tickDeal(p) {
   p.y = Math.max(0, (p.y ?? 0) - 1)
+  if (Array.isArray(p.sc)) {
+    const next = p.sc.shift()
+    if (p.y > 0 && next != null) p.$ = next
+    if (!p.sc.length || p.y <= 1) delete p.sc
+  }
   if (p.op === 2 && p.y === 1 && p.ox) { p.$ = p.ox; delete p.rc }
 }
-// The franchise tag: one a team a year, a one-year deal at about the average of the top five at his spot (all of it
-// guaranteed; cut him and it's all dead money)
+// The franchise tag: one a team a year, a one-year deal at the average of the top five cap hits at his spot as a
+// share of the cap (TENDER), or 120% of what he made last year if that's more (a man tagged twice); all of it
+// guaranteed: cut him and it's all dead money
 export function tagPrice(p, year) {
-  const tab = MARKET[marketKey(p)] ?? MARKET.lb
-  return r1(((curve(tab, 99) + curve(tab, 97) + curve(tab, 96) + curve(tab, 95) + curve(tab, 94)) / 5) * scaleOf(year))
+  return r1(Math.max(tender(p, 0, year), p.rc ? 0 : (p.$ ?? 0) * 1.2))
 }
 export const optionDue = p => p.rc && p.op === 1 && p.y === 1
-export function pickUpOption(F, p) {
-  p.ox = optionPrice(p, F.year + 1); p.op = 2; p.y = 2
+export function pickUpOption(F, p, starts = null) {
+  p.ox = optionPrice(p, F.year + 1, starts); p.op = 2; p.y = 2
   return p.ox
 }
 export const declineOption = p => { p.op = 0 }

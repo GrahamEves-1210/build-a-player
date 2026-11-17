@@ -7,7 +7,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
 import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
 import { defaultFace } from './faces'
-import { capComply, cutMan, marketValue, termFor } from './contracts'
+import { capComply, cutMan, marketValue, termFor, tickDeal, dealsOnLoad } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
 import { fillPotential } from './potential'
@@ -81,7 +81,7 @@ export function createFranchise(setup) {
   if (F.builds.some(b => b.pos === 'k')) {
     for (const p of t.r.filter(x => x.p === 'k' && x.b == null)) {
       cutMan(F, p.i)
-      p.$ = marketValue(p, F.year); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op
+      p.$ = marketValue(p, F.year); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.sc
       F.fa = [...(F.fa ?? []), p]
     }
   }
@@ -155,6 +155,7 @@ export function upgradeSave(F) {
 // kicker on every roster (a save from before kickers: kickersOnLoad)
 export function depthOnLoad(F) {
   kickersOnLoad(F)
+  dealsOnLoad(F)
   if (F.phase !== 'off') fillLeague(F)
   return F
 }
@@ -172,7 +173,7 @@ export function kickersOnLoad(F) {
     if (has(s)) continue
     const r = realPool().k.find(x => x.team === s && !taken.has(x.name))
     let p
-    if (r) { p = makeReal(F, r, R); p.ag += gone; p.y = Math.max(1, p.y - gone); if (p.rk && p.rk < F.year) delete p.rk }
+    if (r) { p = makeReal(F, r, R); p.ag += gone; for (let k = 0; k < gone && p.y > 1; k++) tickDeal(p); if (p.rk && p.rk < F.year) delete p.rk }
     else p = makeDepth(F, 'k', null, R, false, 77, F.teams[s].r)
     F.teams[s].r.push(p)
   }

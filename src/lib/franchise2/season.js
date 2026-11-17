@@ -16,7 +16,7 @@ import { fbLine } from '../squadSeason'
 import { playBox, addMoments, finishBox, recordBox, oppOf } from './box'
 import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
 import { coachLate, coachDay, chemWeek } from './coach'
-import { askOf, signDeal, canSign, cutMan, minimumFor } from './contracts'
+import { askOf, signDeal, extendDeal, canSign, roomAhead, cutMan, minimumFor, marketLines } from './contracts'
 import { kickTraits, kickerOf, addKickStats, kickLine } from './kick'
 import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews } from './news'
@@ -377,8 +377,9 @@ const EVENTS = [
   { id: 'extend', make: F => {
     const p = bestStarter(F, x => x.b == null && (x.y ?? 0) <= 1 && x.o >= 80 && x.ag <= 30)
     if (!p) return null
-    const ask = askOf(p, F.year + 1)
-    if (!canSign(F, Math.max(0, ask.$ - (p.$ ?? 0)))) return null
+    // (an extension: this year's deal stands, the new years start next year; as many as talks allow, five at most)
+    const a = askOf(p, F.year + 1, marketLines(F)), ask = { $: a.$, y: Math.min(5, a.y) }
+    if (roomAhead(F, F.team, 1) < ask.$) return null
     return { title: `${nm(p)} wants an extension`, pid: p.i, ask, a: ['Extend him now', { pay: p.i, chem: 2 }], b: ['Wait until the offseason', { chem: -2 }] }
   } },
   // a trade call (before the deadline): a starter of theirs, better and older, for one of yours at his spot
@@ -434,6 +435,8 @@ function makeEvent(F, R) {
   }
   return null
 }
+// one event by its id, made now if it can be (the headless checks: scripts/franchise2/market-check.mjs)
+export const eventNow = (F, id) => { const e = EVENTS.find(x => x.id === id); const x = e?.make(F, rngOf(`${F.seed}-${F.year}-evnow-${id}`)); return x ? { id, ...x } : null }
 // what an answer does, the way its button shows it: [[text, 'up' | 'down' | 'out' | 'flat']]
 export function fxList(F, ev, i) {
   const fx = (i === 0 ? ev.a : ev.b)[1], out = []
@@ -446,7 +449,7 @@ export function fxList(F, ev, i) {
   if (fx.sit) out.push([`${last(P(fx.sit))} OUT 1 WEEK`, 'out'])
   if (fx.start) out.push([`${last(P(fx.start))} STARTS`, 'up'])
   if (fx.ovr) out.push([`${last(P(fx.ovr[0]))} +${fx.ovr[1]} OVR`, 'up'])
-  if (fx.pay) out.push([`${ev.ask.y + 1} YRS · $${ev.ask.$}M A YEAR`, 'up'])
+  if (fx.pay) out.push([`${Math.min(5, ev.ask.y)}-YR EXTENSION · $${ev.ask.$}M A YEAR`, 'up'])
   if (fx.trade) { const g = P(ev.get), m = P(ev.give); out.push([`GET ${last(g)} · ${g?.o} OVR · AGE ${g?.ag}`, 'up'], [`GIVE ${last(m)} · ${m?.o} OVR · AGE ${m?.ag}`, 'down']) }
   if (fx.sign) { const p = P(fx.sign); out.push([`${last(p)} · ${p?.o} OVR · $${ev.cost}M`, 'up']); if (ev.cut != null) out.push([`RELEASE ${last(P(ev.cut))}`, 'down']) }
   if (fx.sp) out.push([`+${fx.sp} SCOUTING DAYS`, 'up'])
@@ -469,7 +472,7 @@ export function chooseEvent(F, i) {
   if (fx.sit) { const p = P(fx.sit); if (p) p.in = 1 }
   if (fx.ovr) { const p = P(fx.ovr[0]); if (p) { p.o = Math.min(99, p.o + fx.ovr[1]); p.pk = Math.max(p.pk ?? p.o, p.o) } }
   if (fx.start) { try { moveInChart(F, fx.start, 0) } catch { /* (the chart's own rules) */ } }
-  if (fx.pay) { const p = P(fx.pay); if (p && ev.ask) { signDeal(p, { $: ev.ask.$, y: ev.ask.y + 1 }); out.paid = p.n; addNews(F, { k: 'sign', tag: 'EXTENSION', s: F.team, text: `${TEAM[F.team].nick} extend ${posTxt(p)} ${p.n}: ${ev.ask.y + 1} years, $${r1(ev.ask.$ * (ev.ask.y + 1))}M` }) } }
+  if (fx.pay) { const p = P(fx.pay); if (p && ev.ask) { const y = Math.min(5, ev.ask.y); extendDeal(p, { $: ev.ask.$, y }); out.paid = p.n; addNews(F, { k: 'sign', tag: 'EXTENSION', s: F.team, text: `${TEAM[F.team].nick} sign ${posTxt(p)} ${p.n} to a ${y}-year, $${r1(ev.ask.$ * y)} million extension` }) } }
   if (fx.trade) {
     const mine = P(ev.give), ot = F.teams[ev.team], theirs = ot?.r.find(p => p.i === ev.get)
     if (mine && theirs) {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   TEAM, CTYPES, STYLES, cLetter, coachGrade, rOf, staffOf, staffMen, callerOf, setCalls, cvOf, hotSeat, myOpenings, fireMine, shortlist,
   interviewCoach, interviewsLeft, interviewView, offerCoach, offerWhy, closeCarousel, setCarStep, moveText, IV_N, records, recText, FREE_SIT,
+  promiseOf, brokeWord, PROMISE_CHEM,
 } from '../../lib/franchise2'
 import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
@@ -116,12 +117,16 @@ export function StaffScreen({ F, act, owner, onBack }) {
 // caller's play-calling grade runs that side; the man not calling gets +2 to game management (coach.js FREE_SIT).
 // The other side is its coordinator's. Changeable any week and in the offseason.
 export function CallPick({ F, act }) {
+  const [ask, setAsk] = useState(false)
   const M = staffMen(F, F.team)
   if (!M.hc) return null
   const side = M.hc.sd === 'def' ? 'def' : 'off', co = side === 'off' ? 'oc' : 'dc', j = side === 'off' ? 'offPlaycalling' : 'defPlaycalling'
   const other = side === 'off' ? 'def' : 'off', oc = callerOf(F, F.team, other, M)
   const cur = callerOf(F, F.team, side, M).who
-  const flip = who => { if (cur === who || !M[co]) return; act(X => setCalls(X, side, who)); sfx('swap'); haptic('light') }
+  // (a coordinator promised the calls when he was hired: taking them back asks first, and says what it costs)
+  const pr = promiseOf(F, side)
+  const take = who => { act(X => setCalls(X, side, who)); setAsk(false); sfx('swap'); haptic('light') }
+  const flip = who => { if (cur === who || !M[co]) return; if (who === 'hc' && pr) { setAsk(true); sfx('deny'); return } take(who) }
   const or = fiveOf(F, oc.c), oj = other === 'off' ? 'offPlaycalling' : 'defPlaycalling'
   return (
     <section className="fst-calls">
@@ -137,7 +142,13 @@ export function CallPick({ F, act }) {
           )
         })}
       </div>
-      <p className="fst-note">The play-caller's grade runs the {SIDE_WORD[side].toLowerCase()}. The coach not calling plays gets +{FREE_SIT} in game management.</p>
+      {ask && pr ? (
+        <div className="fst-promise" role="alert">
+          <b>{pr.n} was promised the {SIDE_WORD[side].toLowerCase()}'s play-calling through the {pr.y} season.</b>
+          <span>Taking it back now costs {PROMISE_CHEM} points of team chemistry, and coordinators around the league will trust the team's promises less for two hiring cycles.</span>
+          <div className="fd-two"><Go onClick={() => take('hc')}>Take the calls back</Go><Go ghost onClick={() => { setAsk(false); sfx('back') }}>Keep the promise</Go></div>
+        </div>
+      ) : <p className="fst-note">The play-caller's grade runs the {SIDE_WORD[side].toLowerCase()}. The coach not calling plays gets +{FREE_SIT} in game management.{pr ? ` ${pr.n} was promised the calls through the ${pr.y} season.` : ''}</p>}
       {oc.c && <p className="fst-other">{SIDE_WORD[other]}: {JOB[oc.who]} {lastOf(oc.c.n)} calls it{or ? <> · <i style={{ color: letterColor(cLetter(or[oj])) }}>{cLetter(or[oj])}</i></> : null}</p>}
     </section>
   )
@@ -385,7 +396,8 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
                 <button type="button" role="radio" aria-checked={calls} className={calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(true); sfx('tap') }}><small>{JOB[k]}</small><b>{lastOf(c.n)}</b><i style={calls ? undefined : { color: letterColor(cLetter(V.r[j])) }}>{cLetter(V.r[j])}</i><em>HE CALLS PLAYS</em></button>
                 <button type="button" role="radio" aria-checked={!calls} className={!calls ? 'is-on' : ''} style={fkVars(F.team)} onClick={() => { setCalls2(false); sfx('tap') }}><small>HC</small><b>{hcName}</b><i style={!calls ? undefined : { color: letterColor(cLetter(F.coach?.r?.[j])) }}>{cLetter(F.coach?.r?.[j])}</i><em>YOU KEEP THE CALLS</em></button>
               </div>
-              <p className="fst-note">{V.wants ? 'He wants to call plays. Other teams can offer him that.' : 'He will take the job either way.'}</p>
+              <p className="fst-note">{V.wants ? 'He wants to call plays. Other teams can offer him that.' : 'He will take the job either way.'}{calls ? ` Hiring him with the calls is a promise through the ${F.year + 1} season: taking them back sooner costs team chemistry and the team's word with coordinators.` : ''}</p>
+              {brokeWord(F) && <p className="fst-note is-warn">Coordinators remember {F.brk.n} losing the calls he was promised: the play-calling in this offer counts for less.</p>}
             </>
           ) : <p className="fst-other">YOUR OFFER: HE CALLS THE {SIDE_WORD[side]}</p>}
           <ActionBar><Go onClick={offer}>Offer the job</Go></ActionBar>

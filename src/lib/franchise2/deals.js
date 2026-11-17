@@ -19,8 +19,9 @@
 //
 // THE MARKET'S LINES: last season's line on every man (snapLines, at the end of the season), read by the market's
 // cards (lastLineOf): his team and his numbers.
-import { SHORTS, lineup } from './league'
-import { askOf, marketValue, signDeal, capRoom, canSign, termFor, bonusShare, minimumFor } from './contracts'
+import { SHORTS } from './league'
+import { askOf, marketValue, marketLines, signDeal, capRoom, canSign, termFor, bonusShare, minimumFor } from './contracts'
+import { depthChart, groupOf, GROUP } from './roster'
 import { rngOf, clamp, r1 } from './rng'
 import { CAREER_KEYS } from './awards'
 
@@ -48,14 +49,20 @@ export const bonusOf = o => r1(o.$ * shareOf(o.$, o.b ?? 0) * o.y)
 //   number restated in the last offer's shape { $, y, b }, say (the agent's last word), st: 0 talking · 1 signed ·
 //   2 testing the market · 3 final number (a build) } }
 const winPct = F => { const h = F.hist?.[F.hist.length - 1]; return h ? (h.w + h.t / 2) / Math.max(1, h.w + h.l + h.t) : 0.5 }
-export const startsFor = (F, p) => Object.values(lineup(F.teams[F.team])).some(x => x.i === p.i)
+// a starter on the player's team: his place on the depth chart, injuries aside (a starter who's hurt is still the
+// starter the talks are about)
+export function startsFor(F, p) {
+  const g = groupOf(p), room = (depthChart(F, F.team)[g] ?? []).filter(x => !x.fl)
+  const at = room.findIndex(x => x.i === p.i)
+  return at >= 0 && at < GROUP[g].n
+}
 export function openTalks(F, id) {
   F.talks ??= {}
   if (F.talks[id]) return F.talks[id]
   const p = F.teams[F.team].r.find(x => x.i === id)
   if (!p) return null
   const yr = F.year + 1, R = rngOf(`${F.seed}-${F.year}-talks-${id}`)
-  const ask = askOf(p, yr), mv = marketValue(p, yr), wp = winPct(F)
+  const L = marketLines(F), ask = askOf(p, yr, L), mv = marketValue(p, yr, L), wp = winPct(F)
   const f = clamp(0.84, 1, 0.94 - (wp - 0.5) * 0.12 - (startsFor(F, p) ? 0.02 : 0) - (p.ag >= 31 ? 0.04 : 0) - (p.b != null ? 0.04 : 0) + (capRoom(F) > ask.$ * 2.5 ? 0.025 : 0) + R.n() * 0.02)
   const fl = r1(Math.max(minimumFor(p.ag, yr), mv * f))
   const open = r1(Math.max(minimumFor(p.ag, yr), ask.$ * (1.03 + 0.05 * R.u()), fl))
@@ -71,7 +78,7 @@ export function talkFacts(F, id) {
   const out = []
   if (h) out.push({ k: 'rec', v: `${h.w}-${h.l}${h.t ? `-${h.t}` : ''}`, label: 'LAST SEASON', up: wp >= 0.55 ? 1 : wp <= 0.4 ? -1 : 0 })
   out.push({ k: 'role', v: startsFor(F, p) ? 'STARTER' : 'BACKUP', label: 'HIS ROLE', up: startsFor(F, p) ? 1 : 0 })
-  out.push({ k: 'mkt', v: r1(marketValue(p, F.year + 1)), label: 'MARKET VALUE', money: true })
+  out.push({ k: 'mkt', v: r1(marketValue(p, F.year + 1, marketLines(F))), label: 'MARKET VALUE', money: true })
   out.push({ k: 'yrs', v: termFor(p), label: termFor(p) === 1 ? 'YEAR HE WANTS' : 'YEARS HE WANTS' })
   return out
 }

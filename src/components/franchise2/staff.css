@@ -41,6 +41,12 @@
 .fst-call button.is-on small { color: inherit; opacity: .7; }
 .fst-call button:disabled { opacity: .35; cursor: default; }
 .fst-note { margin: 0; font-family: var(--fk-b); font-size: 15px; line-height: 1.35; color: var(--fk-text); }
+.fst-note.is-warn { color: #ff8a8c; }
+/* a play-calling promise about to be broken: what it costs, then the two answers */
+.fst-promise { display: grid; gap: 8px; padding: 10px 12px; background: var(--fk-ink); box-shadow: inset 4px 0 0 var(--fk-l); }
+.fst-promise > b { font-family: var(--fk-b); font-weight: 700; font-size: 15px; line-height: 1.3; }
+.fst-promise > span { font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: var(--fk-text); }
+.fst-promise .fd-two { grid-template-columns: 1fr; }
 .fst-open { display: flex; justify-content: space-between; align-items: center; height: 56px; padding: 0 12px; background: var(--fk-g1); box-shadow: inset 0 0 0 1px var(--fk-line2); font-family: var(--fk-f); letter-spacing: 1px; }
 .fst-open b { font-weight: 400; } .fst-open span { color: var(--fk-l); }
 
