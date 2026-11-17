@@ -73,3 +73,57 @@ html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-pla
 }
 html.bap-reduce-motion :is(.sp-opt .sp-ball, .sp-hl, .sp-opt) { transition: none; }
 html.bap-reduce-motion.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: none; opacity: 0; }
+
+/* MOCK round 2 (dev only, ?sp2=) */
+.spm { position: absolute; z-index: 6; }
+.spm-opt { --c: #4fd8b4; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: rgba(255,255,255,.5); font-family: var(--ag-font); cursor: pointer; }
+.spm-opt--bucket { --c: #f97316; }
+.spm-opt--soccer { --c: #f2f2ee; }
+.spm-opt--baseball { --c: #e0313f; }
+.spm-opt b { font-weight: 400; line-height: 1; white-space: nowrap; }
+.spm-opt.is-on { color: #fff; }
+.spm-opt.is-soon { color: rgba(255,255,255,.32); cursor: default; }
+.spm-opt.is-soon svg { opacity: .9; }
+
+/* A: broadcast open, the names in big type across the top of the stage */
+.spm-a { left: 14px; right: 14px; top: 10px; display: flex; gap: 14px; }
+.spm-a .spm-opt { flex-direction: row; min-height: 44px; font-size: clamp(17px, 5.2vw, 24px); letter-spacing: .3px; position: relative; }
+.spm-a .spm-opt.is-on::after { content: ''; position: absolute; left: 0; right: 0; bottom: 6px; height: 3px; background: var(--c); }
+.spm-a .spm-opt.is-soon b { font-size: .8em; }
+.sp2-a .ag-stage .ag-howto { top: auto; bottom: 62px; }
+.sp2-a .ag-stage .ag-live-count { display: none; }
+.sp2-a .ag-stage-word { top: 62px; }
+
+/* B: edge tabs, cut into the top of the stage */
+.spm-b { left: 0; right: 0; top: 0; display: grid; grid-template-columns: repeat(var(--n), 1fr); height: 46px; }
+.spm-b .spm-opt { justify-content: center; background: rgba(4,6,6,.82); font-size: 15px; letter-spacing: .6px; border-top: 3px solid transparent; box-shadow: inset 0 -1px 0 rgba(255,255,255,.08); }
+.spm-b .spm-opt + .spm-opt { box-shadow: inset 1px 0 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(255,255,255,.08); }
+.spm-b .spm-opt.is-on { background: transparent; border-top-color: var(--c); box-shadow: none; }
+.spm-b .spm-opt:not(.is-on) .sp-ball { opacity: .55; }
+.spm-b .spm-opt.is-soon .sp-ball { display: none; }
+.sp2-b .ag-stage .ag-howto { top: 56px; }
+.sp2-b .ag-stage .ag-live-count { top: 56px; }
+.sp2-b .ag-stage-word { top: 84px; }
+
+/* C: side rail, a menu list down the stage's left side */
+.spm-c { left: 0; top: 14px; display: flex; flex-direction: column; }
+.spm-c .spm-opt { min-height: 44px; padding: 0 14px; font-size: 21px; letter-spacing: .4px; border-left: 4px solid transparent; }
+.spm-c .spm-opt.is-on { border-left-color: var(--c); background: linear-gradient(90deg, rgba(0,0,0,.55), transparent); }
+.spm-c .spm-opt.is-soon { font-size: 17px; }
+.sp2-c .ag-stage .ag-live-count { display: none; }
+.sp2-c .ag-figure { translate: 52px 0; }
+.sp2-c .ag-platform { translate: 52px 0; }
+.sp2-c .ag-stage-word { opacity: .5; }
+
+/* D: the ball is the hero: the sport you're on, big, top left; the others to swap, top right */
+.spm-d { left: 12px; right: 12px; top: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+.spm-d-cur { display: flex; align-items: center; gap: 10px; color: #fff; font-family: var(--ag-font); font-size: 28px; }
+.spm-d-cur b { font-weight: 400; }
+.spm-d-others { display: flex; gap: 4px; }
+.spm-d-opt { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 52px; min-height: 52px; border: 0; padding: 0; background: none; color: #c4ccc9; font-family: var(--ag-font); font-size: 13px; letter-spacing: .5px; cursor: pointer; }
+.spm-d-ball { position: relative; display: grid; place-items: center; }
+.spm-d-opt.is-soon { color: rgba(255,255,255,.4); cursor: default; }
+.spm-d-opt.is-soon .sp-ball { opacity: .35; }
+.spm-d-opt.is-soon .spm-d-ball svg:not(.sp-ball) { position: absolute; color: #fff; }
+.sp2-d .ag-stage .ag-howto, .sp2-d .ag-stage .ag-live-count { display: none; }
+.sp2-d .ag-stage-word { top: 72px; }

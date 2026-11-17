@@ -245,6 +245,48 @@ function SportPick({ sport }) {
   )
 }
 
+// MOCK (dev only, round 2): ?sp2=a|b|c|d picks a sport-picker concept to compare (0 = today's)
+const SP2 = (() => {
+  if (!import.meta.env.DEV) return null
+  try {
+    const m = /[?&]sp2=([abcd0])\b/.exec(location.search)?.[1]
+    if (m) localStorage.setItem('bap_sp2_mock', m)
+    const v = localStorage.getItem('bap_sp2_mock')
+    return v && v !== '0' ? v : null
+  } catch { return null }
+})()
+function SportPickMock({ sport, v }) {
+  const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
+  const cur = SPORTS.find(s => s.id === sport) ?? SPORTS[0]
+  if (v === 'd') {
+    return (
+      <div className="spm spm-d" role="radiogroup" aria-label="Sport">
+        <span className="spm-d-cur" role="radio" aria-checked="true"><SportBall id={cur.id} size={46} /><b>{cur.label}</b></span>
+        <span className="spm-d-others">
+          {SPORTS.filter(s => s.id !== sport).map(({ id, label, soon }) => (
+            <button key={id} type="button" role="radio" aria-checked="false" aria-disabled={soon || undefined} className={`spm-d-opt${soon ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
+              <span className="spm-d-ball"><SportBall id={id} size={30} />{soon && <IconLock size={12} />}</span>
+              <small>{soon ? 'SOON' : label}</small>
+            </button>
+          ))}
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className={`spm spm-${v}`} role="radiogroup" aria-label="Sport" style={{ '--n': SPORTS.length }}>
+      {SPORTS.map(({ id, label, soon }) => (
+        <button key={id} type="button" role="radio" aria-checked={id === sport} aria-disabled={soon || undefined}
+          className={`spm-opt spm-opt--${id}${id === sport ? ' is-on' : ''}${soon ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
+          {v === 'b' && <SportBall id={id} size={20} />}
+          {soon && <IconLock size={v === 'b' ? 12 : 13} />}
+          <b>{label}</b>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // The pool: the players in it, standing there. It only picks; PLAY starts.
 function ModeCard({ gold = false, ucl = false, title, line, faces, on, onClick }) {
   return (
@@ -709,7 +751,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise])
 
   return (
-    <div className={`ag-home ag-home--${sport}`} ref={homeRef}>
+    <div className={`ag-home ag-home--${sport}${SP2 ? ` sp2-${SP2}` : ''}`} ref={homeRef}>
       <div className="ag-home-inner">
         <HudOnce user={user} />
         <div className="ag-brand">
@@ -719,7 +761,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </div>
         </div>
 
-        <SportOnce sport={sport} />
+        {!SP2 && <SportOnce sport={sport} />}
 
         {/* Character-select stage under stadium lights: swipe it, or tap a position */}
         <div className="ag-stage"
@@ -728,6 +770,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           onPointerCancel={() => { swipeFrom.current = null }}>
           <div className="ag-stage-photo" />
           <div className="ag-stage-beam" />
+          {SP2 && <SportPickMock sport={sport} v={SP2} />}
           <span key={posWord} className="ag-stage-word" style={{ '--len': posWord.length }} aria-hidden="true">{posWord}</span>
           <OnlineNow />
           {/* the website doesn't open the tutorial by itself (cleared browser data
