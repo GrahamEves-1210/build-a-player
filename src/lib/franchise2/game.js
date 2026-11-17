@@ -36,7 +36,11 @@ const TD_K = 0.76, TD_E = 0.017    // a drive's touchdown chance: its scale and 
 const TO_BASE = 0.115              // turnovers a drive
 const THREE_OUT = 0.36             // of the drives that stall: three and out
 const RZ_STALL = 0.08              // ...in the red zone (the 19 and in)
-const MID_B = 0.35                 // ...and the rest: the share of the field they got through
+const MID_B = 0.39                 // ...and the rest: the share of the field they got through
+                                   // (0.35 before 2026-11-17: 1.73 field goal tries a team game and 4.2 punts, after the
+                                   // knees; 0.39 puts the stalls a little nearer: 1.9 tries, 3.9 punts)
+const MID_E = 0.006                // ...and how much the edge moves it (0.012 before 2026-11-17: a great offense stalled
+                                   // so deep that its kicker made 44-48 field goals; the NFL's leaders make 35-40)
 export function tdChance(y, e) {
   const base = y >= 25 ? 0.25 + 0.65 * Math.pow(c01((y - 25) / 73), 1.3) : 0.25 - 0.006 * (25 - y)
   return clamp(0.03, 0.93, base * TD_K + TD_E * e)
@@ -109,7 +113,7 @@ export function driveOutcome(y0, e, R, ctx = {}) {
     let gain
     if (v < THREE_OUT) gain = R.int(-3, 8)
     else if (v < THREE_OUT + RZ_STALL && room > 24) gain = room - R.int(3, 19)
-    else gain = Math.round(room * clamp(0.06, 0.94, MID_B + 0.21 * R.n() + 0.012 * e))
+    else gain = Math.round(room * clamp(0.06, 0.94, MID_B + 0.21 * R.n() + MID_E * e))
     const at = clamp(1, 99, y + gain), toGoal = 100 - at
     const togo = Math.min(toGoal, toGoal <= 8 && R.u() < 0.5 ? toGoal : R.u() < 0.3 ? R.int(1, 2) : R.int(3, 13))
     dur += durOf('stall', at - y, R)

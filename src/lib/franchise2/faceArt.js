@@ -201,7 +201,7 @@ const EXPR = {
   neutral: { cu: 0.05, cw: 1, op: 0, ck: 0, sq: 0 },
   slight: { cu: 0.55, cw: 1.04, op: 0, ck: 0.3, sq: 0.15 },
   warm: { cu: 1, cw: 1.1, op: 0, ck: 0.65, sq: 0.36 },
-  grin: { cu: 1.15, cw: 1.16, op: 2.1, ck: 0.95, sq: 0.5 },
+  grin: { cu: 1.2, cw: 1.18, op: 1.75, ck: 0.95, sq: 0.5, jaw: 0.7 },
   half: { cu: 0.9, cw: 1.05, op: 0, ck: 0.45, sq: 0.2, one: true },
 }
 
@@ -236,6 +236,11 @@ function geo(look) {
   G.lk = (1 + sv(look, 'lip') * 0.35) * X.lk
   G.my = G.nb + (G.cy - G.nb) * 0.33 + V.my
   G.E = EXPR[look.expr] ?? EXPR.neutral
+  // the whole face with the smile (owner 11-17): the cheeks round out and lift, the brows relax up a touch, an open
+  // smile drops the jaw a little
+  { const E = G.E, k = E.ck * (E.one ? 0.6 : 1)
+    G.cb += k * 0.35; G.soft = clamp(G.soft + k * 0.35, 0, 1); G.by -= k * 0.3
+    if (E.jaw) { G.cy += E.jaw; G.jy += E.jaw * 0.4 } }
   // (a half smile's side: his own, from his bones)
   G.hs = (Number.isFinite(+look.bone) ? +look.bone : 1) % 2 ? 1 : -1
   // how much one side of the face takes the expression (a half smile: the near side barely)
@@ -711,7 +716,7 @@ function mouthOf(look, G, T, S, lo) {
   for (const sd of [-1, 1]) {
     const k = E.ck * G.ex(sd), c = sd < 0 ? Lc : Rc, w = G.nwid
     if (k < 0.12) continue
-    S.M += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
+    S[k > 0.8 ? 'S' : 'M'] += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
     if (!lo && k > 0.3) {
       const ax = 50 + sd * (G.es + 0.8), ay = G.ey + 5.6 - k * 0.9
       S.H += sm([[ax - sd * 0.4 - 1.9, ay], [ax - 0.4, ay - 0.75 - k * 0.2], [ax - sd * 0.4 + 1.7, ay - 0.1], [ax - 0.4, ay - 0.35]])
@@ -727,11 +732,11 @@ function mouthOf(look, G, T, S, lo) {
   if (op) {
     // the opening: dark; the top teeth one flat off-white shape (never single teeth), a soft shadow under the lip
     const hole = sm([[...Lc, 1], ...mid, [...Rc, 1], ...midB.slice().reverse()])
-    const tw = mw * 0.8, tb = op * 0.62
+    const tw = mw * 0.8, tb = op * 0.6
     const teeth = sm([[mid[0][0] - mw * 0.18, mid[0][1] - 0.1], [50, mid[1][1] - 0.2], [mid[2][0] + mw * 0.18, mid[2][1] - 0.1], [50 + tw * 0.8, mid[2][1] + tb * 0.7], [50, mid[1][1] + tb], [50 - tw * 0.8, mid[0][1] + tb * 0.7]])
-    const tc = mixC('#efe9df', T.B, 0.1 + T.d * 0.06)
-    s += fill(hole, mixC(T.D, '#140608', 0.55)) + fill(teeth, tc)
-      + (lo ? '' : fill(sm([[mid[0][0], mid[0][1] - 0.05], [50, mid[1][1] - 0.1], [mid[2][0], mid[2][1] - 0.05], [50 + tw * 0.5, mid[2][1] + 0.45], [50, mid[1][1] + 0.5], [50 - tw * 0.5, mid[0][1] + 0.45]]), mixC(tc, T.D, 0.22)))
+    const tc = mixC('#e8e0d3', T.B, 0.16 + T.d * 0.08)
+    s += fill(hole, mixC(T.D, T.lipU, 0.35)) + fill(teeth, tc)
+      + fill(sm([[mid[0][0], mid[0][1] - 0.05], [50, mid[1][1] - 0.1], [mid[2][0], mid[2][1] - 0.05], [50 + tw * 0.5, mid[2][1] + 0.55], [50, mid[1][1] + 0.6], [50 - tw * 0.5, mid[0][1] + 0.55]]), mixC(tc, T.D, 0.3))
   }
   s += fill(upper, T.lipU) + fill(lower, T.lipL)
   // the lower lip's under-plane a shade deeper
@@ -799,24 +804,22 @@ function logoOf(mark, x, y, mw, mh, sy = 1) {
   const img = `<image href="${mark.src}" x="${f(-w / 2)}" y="${f(-h / 2)}" width="${f(w)}" height="${f(h)}"${flt}/>`
   return `<g transform="translate(${f(x)} ${f(y)})${sy !== 1 ? ` scale(1 ${sy})` : ''}">${img}</g>`
 }
-// a sideline visor (owner 11-16: "visor too short", "none on visor"): a plain band round the top of his forehead,
-// following the skull (its ends wrap round out of sight at the temples), and a long bill out from it, seen from just
-// above: wider than his head at its front edge, which sits at his brow line and never over his eyes; the far half in
-// shade, the bill's thickness a thin light rim, a soft shadow on the brow under it; his hair shows over the open top
+// a sideline visor (owner 11-17: "visors look too white and weird"): a deep band in the team's colour round the top
+// of his forehead (its ends wrap out of sight at the temples), and a pre-curved bill seen from just above, a little
+// wider than his head, its corners dropping, its front edge at his brow line; the bill's top in the team's colour with
+// its far half in shade, the underside a dark edge, a soft shadow on the brow; his hair shows over the open top
 function visorOf(G, color) {
-  const yb = G.by - 9.6, w0 = hx(G, yb) + 0.45, w1 = hx(G, yb + 2.6) + 0.5, bot = G.by - 0.4
-  const band = sm([[50 - w0, yb + 1.2, 1], [50 - w0 * 0.55, yb + 0.1], [50, yb - 0.2], [50 + w0 * 0.55, yb + 0.1], [50 + w0, yb + 1.2, 1], [50 + w1, yb + 3.6, 1], [50 + w1 * 0.55, yb + 2.7], [50, yb + 2.5], [50 - w1 * 0.55, yb + 2.7], [50 - w1, yb + 3.6, 1]])
-  // the bill: from the band's foot out to its front edge, its corners well out past his temples
-  const bl = 50 - w1 - 5.2, br = 50 + w1 + 5.2, cy = bot - 3
-  const brim = sm([[50 - w1 + 0.2, yb + 3.2, 1], [50 - w1 * 0.5, yb + 2.5], [50, yb + 2.3], [50 + w1 * 0.5, yb + 2.5], [50 + w1 - 0.2, yb + 3.2, 1], [br, cy, 1], [br - 3.6, bot - 1.1], [50, bot], [bl + 3.6, bot - 1.1], [bl, cy, 1]])
-  const far = sm([[50 + w1 * 0.3, yb + 2.4], [50 + w1 - 0.2, yb + 3.2, 1], [br, cy, 1], [br - 3.6, bot - 1.1], [50 + w1 * 0.42, bot - 0.2]])
-  const rim = sm([[bl, cy], [bl + 3.6, bot - 1.1], [50, bot], [br - 3.6, bot - 1.1], [br, cy]], false)
-  return fill(sm([[bl + 3.4, bot - 0.4], [50, bot + 0.9], [br - 3.4, bot - 0.4], [50, bot + 2.1]]), '#000000', ' fill-opacity=".16"')
-    + fill(band, color) + fill(sm([[50 + w0 * 0.45, yb + 0.1], [50 + w0, yb + 1.2, 1], [50 + w1, yb + 3.6, 1], [50 + w1 * 0.45, yb + 2.7]]), dark(color, 0.22))
-    + fill(brim, dark(color, 0.06)) + fill(far, dark(color, 0.22))
-    + line(`M${f(50 - w1 + 0.6)} ${f(yb + 3.3)}Q50 ${f(yb + 1.7)} ${f(50 + w1 - 0.6)} ${f(yb + 3.3)}`, dark(color, 0.4), 0.45)
-    + fill(sm([[50 - w1 * 0.6, yb + 3.4], [50 - w1 * 0.2, yb + 3], [50 - w1 * 0.3, yb + 4.6], [bl + 4.2, cy + 0.2]]), light(color, 0.14))
-    + line(rim, light(color, 0.28), 0.5) + line(sm([[bl + 0.4, cy + 0.5], [bl + 3.8, bot - 0.6], [50, bot + 0.45], [br - 3.8, bot - 0.6], [br - 0.4, cy + 0.5]], false), dark(color, 0.6), 0.45)
+  const yb = G.by - 9.4, w0 = hx(G, yb) + 0.4, w1 = hx(G, yb + 3.4) + 0.5, bot = G.by - 0.6
+  const band = sm([[50 - w0, yb + 0.9, 1], [50 - w0 * 0.55, yb - 0.1], [50, yb - 0.4], [50 + w0 * 0.55, yb - 0.1], [50 + w0, yb + 0.9, 1], [50 + w1, yb + 4, 1], [50 + w1 * 0.55, yb + 3.2], [50, yb + 3], [50 - w1 * 0.55, yb + 3.2], [50 - w1, yb + 4, 1]])
+  const bl = 50 - w1 - 1.8, br = 50 + w1 + 1.8
+  const bill = sm([[bl, yb + 4.6, 1], [50 - w1 * 0.5, yb + 3.2], [50, yb + 3], [50 + w1 * 0.5, yb + 3.2], [br, yb + 4.6, 1], [br - 0.8, yb + 6.2], [50 + w1 * 0.55, bot - 0.9], [50, bot], [50 - w1 * 0.55, bot - 0.9], [bl + 0.8, yb + 6.2]])
+  const edge = sm([[bl + 0.8, yb + 6.2], [50 - w1 * 0.55, bot - 0.9], [50, bot], [50 + w1 * 0.55, bot - 0.9], [br - 0.8, yb + 6.2], [br - 1.2, yb + 7], [50 + w1 * 0.55, bot - 0.2], [50, bot + 0.7], [50 - w1 * 0.55, bot - 0.2], [bl + 1.2, yb + 7]])
+  return fill(sm([[bl + 2.4, bot - 0.2], [50, bot + 1.4], [br - 2.4, bot - 0.2], [50, bot + 2.6]]), '#000000', ' fill-opacity=".18"')
+    + fill(band, color) + fill(sm([[50 + w0 * 0.4, yb - 0.1], [50 + w0, yb + 0.9, 1], [50 + w1, yb + 4, 1], [50 + w1 * 0.4, yb + 3.1]]), dark(color, 0.25))
+    + line(`M${f(50 - w1 + 0.4)} ${f(yb + 3.6)}Q50 ${f(yb + 2.4)} ${f(50 + w1 - 0.4)} ${f(yb + 3.6)}`, dark(color, 0.35), 0.4)
+    + fill(bill, dark(color, 0.04)) + fill(sm([[50 + w1 * 0.25, yb + 3.1], [br, yb + 4.6, 1], [br - 0.8, yb + 6.2], [50 + w1 * 0.4, bot - 0.5]]), dark(color, 0.24))
+    + fill(sm([[bl + 1.6, yb + 4.6], [50 - w1 * 0.4, yb + 3.7], [50 - w1 * 0.1, yb + 3.8], [50 - w1 * 0.45, yb + 4.8]]), light(color, 0.08))
+    + fill(edge, dark(color, 0.6))
 }
 function earringsOf(look, G) {
   if (!look.ear || look.ear === 'none') return ''
@@ -849,19 +852,24 @@ function glassesOf(look, G) {
 function capOf(look, G, color, mark) {
   if (!look.cap) return ''
   if (look.cap === 'visor') return visorOf(G, color)
-  const { cw } = G, L = 50 - cw - 0.9, R = 50 + cw + 0.9, y = Math.min(G.hl + 2.6, G.by - 6), top = C0 - 2.2
-  const crown = sm([[L, y + 0.6, 1], [L - 0.1, C0 + 4.4], [50 - cw * 0.62, top + 0.7], [50, top], [50 + cw * 0.62, top + 0.7], [R + 0.1, C0 + 4.4], [R, y + 0.6, 1], [50, y - 0.8]])
-  const brim = sm([[L - 1.2, y + 0.5, 1], [50, y - 1.2], [R + 1.2, y + 0.5, 1], [R - 2, y + 3.8], [50, y + 4.8], [L + 2, y + 3.8]])
-  return fill(sm([[L + 1.6, y + 3.6], [50, y + 6.4], [R - 1.6, y + 3.6], [50, y + 8]]), '#000000', ' fill-opacity=".2"')
-    + fill(crown, color)
-    + fill(sm([[50 + cw * 0.34, top + 0.3], [50 + cw * 0.6, top + 0.6], [R + 0.2, 22], [R, y + 0.6, 1], [50 + cw * 0.55, y - 0.4]]), dark(color, 0.24))
-    + fill(sm([[50 - cw * 0.62, top + 2.4], [50 - cw * 0.3, top + 1], [50 - cw * 0.36, top + 3.4], [L + 2.4, y - 1.4]]), light(color, 0.12))
-    + line(`M50 ${f(top + 0.4)}V${f(y - 0.8)}M${f(50 - cw * 0.52)} ${f(top + 1.6)}Q${f(50 - cw * 0.48)} 22 ${f(50 - cw * 0.56)} ${f(y - 0.2)}M${f(50 + cw * 0.52)} ${f(top + 1.6)}Q${f(50 + cw * 0.48)} 22 ${f(50 + cw * 0.56)} ${f(y - 0.2)}`, dark(color, 0.32), 0.3)
-    + fill(ell(50, top + 0.3, 0.9, 0.5), dark(color, 0.2))
-    + logoOf(mark, 50, (top + y) / 2 + 0.9, cw * 0.86, Math.min(9.2, y - top - 3), 0.92)
-    // (the far side's shade over the logo too, so it sits on the crown, not on top of the picture)
-    + (mark?.src ? fill(sm([[50 + cw * 0.42, top + 0.6], [50 + cw * 0.6, top + 0.8], [R + 0.2, 22], [R, y + 0.6, 1], [50 + cw * 0.5, y - 0.4]]), '#000000', ' fill-opacity=".16"') : '')
-    + fill(brim, dark(color, 0.14)) + fill(sm([[L + 0.8, y + 1.8], [50, y + 3.4], [R - 0.8, y + 1.8], [R - 2.4, y + 4.2], [50, y + 5.3], [L + 2.4, y + 4.2]]), dark(color, 0.5))
+  // (owner 11-17: "hats look deformed": a structured six-panel crown standing up off his head, its front panels upright
+  // round the logo, the seams and the button; a pre-curved brim a little wider than his head, its corners dropping, its
+  // front edge just above his brows; its underside a dark edge, its shadow on his brow)
+  const { cw } = G, L = 50 - cw - 1, R = 50 + cw + 1, y = Math.min(G.hl + 2.4, G.by - 6.4), top = C0 - 3.8, bot = y + 4.4
+  const crown = sm([[L, y + 0.6, 1], [L - 0.3, y - 4.2], [50 - cw * 0.72, top + 1.6], [50 - cw * 0.3, top + 0.2], [50, top], [50 + cw * 0.3, top + 0.2], [50 + cw * 0.72, top + 1.6], [R + 0.3, y - 4.2], [R, y + 0.6, 1], [50, y - 0.5]])
+  const bl = L - 1.2, br = R + 1.2
+  const brim = sm([[bl, y + 0.9, 1], [50 - cw * 0.5, y - 0.4], [50, y - 0.6], [50 + cw * 0.5, y - 0.4], [br, y + 0.9, 1], [br - 0.8, y + 2.4], [50 + cw * 0.55, bot - 0.8], [50, bot], [50 - cw * 0.55, bot - 0.8], [bl + 0.8, y + 2.4]])
+  const edge = sm([[bl + 0.8, y + 2.4], [50 - cw * 0.55, bot - 0.8], [50, bot], [50 + cw * 0.55, bot - 0.8], [br - 0.8, y + 2.4], [br - 1.2, y + 3.2], [50 + cw * 0.55, bot - 0.1], [50, bot + 0.7], [50 - cw * 0.55, bot - 0.1], [bl + 1.2, y + 3.2]])
+  const farD = sm([[50 + cw * 0.3, top + 0.2], [50 + cw * 0.72, top + 1.6], [R + 0.3, y - 4.2], [R, y + 0.6, 1], [50 + cw * 0.5, y - 0.3]])
+  return fill(sm([[bl + 2.4, bot - 0.2], [50, bot + 1.6], [br - 2.4, bot - 0.2], [50, bot + 2.8]]), '#000000', ' fill-opacity=".2"')
+    + fill(crown, color) + fill(farD, dark(color, 0.24))
+    + fill(sm([[50 - cw * 0.72, top + 2.4], [50 - cw * 0.34, top + 0.8], [50 - cw * 0.42, top + 3.4], [L + 1.6, y - 2]]), light(color, 0.12))
+    + line(`M50 ${f(top + 0.3)}V${f(y - 0.6)}M${f(50 - cw * 0.55)} ${f(top + 1.2)}Q${f(50 - cw * 0.6)} ${f(y - 4)} ${f(50 - cw * 0.66)} ${f(y - 0.3)}M${f(50 + cw * 0.55)} ${f(top + 1.2)}Q${f(50 + cw * 0.6)} ${f(y - 4)} ${f(50 + cw * 0.66)} ${f(y - 0.3)}`, dark(color, 0.32), 0.3)
+    + fill(ell(50, top + 0.2, 1, 0.55), dark(color, 0.2))
+    + logoOf(mark, 50, (top + y) / 2 + 0.8, cw * 0.95, Math.min(10, y - top - 3.4), 0.94)
+    + (mark?.src ? fill(farD, '#000000', ' fill-opacity=".14"') : '')
+    + fill(brim, dark(color, 0.1)) + fill(sm([[50 + cw * 0.3, y - 0.5], [br, y + 0.9, 1], [br - 0.8, y + 2.4], [50 + cw * 0.4, bot - 0.5]]), dark(color, 0.26))
+    + fill(edge, dark(color, 0.6))
 }
 
 // ── The bust ─────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@
 // Each man: { name (LAST), number, skin, speed (-1..1), ball?, yac? }; the eleven a side (xi) adds last, short, look.
 // Every man is a real man on that roster (the player's builds by the names their players gave them, with their own
 // numbers); an injured man doesn't play (the chart's next healthy man does). The build in the moment is `me`.
+import { tidyName } from './copy'
 import { QBS } from '../../data/qbs'
 import { RBS } from '../../data/rbs'
 import { WRS } from '../../data/wrs'
@@ -18,16 +19,17 @@ import { buildLook, lookOf, facePos } from './faces'
 const SKINS = ['#8d5a3b', '#5e3c22', '#7a5030', '#c09060', '#f0c4a0', '#9a6840']
 const CATCHERS = new Set(['wr', 'te', 'rb'])
 let IX = null
-const index = () => (IX ??= new Map([QBS, RBS, WRS, TES, DBS, DLS, LBS, OLS].flatMap(list => list.map(p => [p.name, p]))))
+const index = () => (IX ??= new Map([QBS, RBS, WRS, TES, DBS, DLS, LBS, OLS].flatMap(list => list.map(p => [tidyName(p.name), p]))))
 const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return Math.abs(h) }
 const SUFFIX = /\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i
-const lastOf = n => { const w = String(n).replace(SUFFIX, '').trim().split(/\s+/); return w[w.length - 1] }
+// (a surname of two words stays whole: St. Brown, Van Noy, De La Cruz, the way kit.jsx splitName reads them)
+const lastOf = n => { const w = String(n).replace(SUFFIX, '').trim().split(/\s+/); let k = w.length - 1; while (k > 1 && /^(st\.?|de|del|la|le|van|von|da|di|mc)$/i.test(w[k - 1])) k--; return w.slice(k).join(' ') }
 const c1 = v => Math.max(-1, Math.min(1, v))
 
 // one man as the games read him
 function castMan(F, p) {
   const B = p.b != null ? F.builds[p.b] : null
-  const raw = B ? null : index().get(p.n)
+  const raw = B ? null : index().get(tidyName(p.n))
   const h = hashOf(p.n ?? '?')
   const last = (raw?.short && String(p.n).replace(SUFFIX, '').endsWith(raw.short.replace(/^[A-Z]\.\s*/, '')) ? raw.short.replace(/^[A-Z]\.\s*/, '') : lastOf(p.n)).toUpperCase()
   const first = String(p.n ?? '').trim()[0]

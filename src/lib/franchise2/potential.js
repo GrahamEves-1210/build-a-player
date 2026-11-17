@@ -16,13 +16,18 @@
 //                 a bad one costs; a backup who plays well when he gets the snaps can show he's more than a
 //                 backup (his ceiling moves up): the few unknowns who break out each year
 //   coaches  the head coach's and his coordinator's talent development, the front office (aging.js)
+//   injuries a season lost to a torn ACL or Achilles costs a young man most of his year's growth and a veteran a step
+//            (inj: the season's worst injury, injury.js injSev); a long stay on IR costs a little
 //   luck     a little of it every year
+// The size of a year (owner, 2026-11-17): most one-year moves are within four points either way, a breakout past
+// that is rare; from 29 a man hardly ever gets better (a point now and then), and a young man grows into his late
+// twenties rather than arriving at his ceiling at 24.
 // Past his prime the ceiling is where he is: pk follows him down.
 //
 // A COACH'S POTENTIAL is cx (0-11, hidden): the highest any of his five ratings can climb. A young coach under it
 // learns a little every year; a side that ranks near the top lifts its play-caller (up to cx), one near the bottom
 // costs him; a winning head coach's culture grows; past 63 the ratings slip. The player's own head coach too.
-import { SHORTS } from './league'
+import { SHORTS, buildPeak } from './league'
 import { leagueStats } from './stats'
 import { records } from './standings'
 import { clamp } from './rng'
@@ -30,7 +35,9 @@ import { clamp } from './rng'
 // ── Age curves ───────────────────────────────────────────────────────────────
 // [growing until, prime until, the age most are gone by]
 // (a kicker grows into his late 20s and kicks into his late 30s: Vinatieri, Tucker, Gostkowski, Prater)
-export const CURVE = { qb: [27, 33, 38], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 30, 34], ol: [26, 32, 35], dl: [25, 30, 33], lb: [25, 29, 32], db: [24, 29, 32], k: [29, 35, 40] }
+// (2026-11-17: the linemen's and tight ends' primes end at 29-30, the age the NFL's own aging studies put the turn at;
+// with them ending at 32 the league's 30-and-over share grew from 15% to 25% in ten years)
+export const CURVE = { qb: [27, 32, 37], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 29, 33], ol: [26, 30, 34], dl: [25, 29, 33], lb: [25, 29, 32], db: [24, 29, 32], k: [29, 34, 39] }
 // the fall past his prime: [the first year's OVR, more each year after]
 const FALL = { qb: [1.1, 0.6], rb: [2.2, 1.1], wr: [1.5, 0.8], te: [1.4, 0.7], ol: [1.2, 0.6], dl: [1.4, 0.7], lb: [1.5, 0.8], db: [1.6, 0.85], k: [0.8, 0.45] }
 const curveOf = p => CURVE[p.p] ?? [26, 29, 33]
@@ -74,8 +81,12 @@ export function prodScores(F, tot = leagueStats(F)) {
 export const playTime = (starter, gp = 0) => (starter ? 1 : clamp(0, 0.7, (gp / 17) * 0.7))
 
 // ── A year of growth ─────────────────────────────────────────────────────────
-// ctx: { pt (playing time 0-1), prod (production -2..2), dev (the coaches' and the front office's OVR a year) }
-export function growthOf(p, R, { pt = 0, prod = 0, dev = 0 } = {}) {
+// ctx: { pt (playing time 0-1), prod (production -2..2), dev (the coaches' and the front office's OVR a year),
+//        inj (the season's worst injury: 0 none, 1 a long stay on IR, 2 a season-ender, 3 a torn ACL or Achilles) }
+// (past four points in a year each point counts for half; a young man who played has a small chance of the full
+// jump, the breakout: about one young starter in twenty-five)
+const SOFT = 4, BREAKOUT = 0.04
+export function growthOf(p, R, { pt = 0, prod = 0, dev = 0, inj = 0 } = {}) {
   const [grow, prime] = curveOf(p)
   const pk = Math.max(p.o, p.pk ?? p.o)
   // a backup who played well when he got the snaps: there's more there than a backup (his ceiling moves up)
@@ -87,21 +98,36 @@ export function growthOf(p, R, { pt = 0, prod = 0, dev = 0 } = {}) {
     // boom early); what's left after the last of them comes in his prime, by playing. (A late bloomer, the one the
     // draft missed (hb), gets there in two or three years once he's in the building.)
     const left = Math.max(1, grow + 1 - p.ag)
-    const share = p.hb ? 0.5 : 1 / (left + 0.35)
-    d = gap * share * (0.55 + 0.8 * R.u()) * (0.8 + 0.3 * pt) + dev + prod * 0.5 + R.n() * 0.85
+    const share = p.hb ? 0.5 : 1.15 / (left + 0.35)
+    // (the coaches' and the front office's part comes in proportion to what's left: a good staff gets a man there
+    // sooner, it doesn't stop him two years early at his ceiling)
+    d = gap * share * (0.55 + 0.8 * R.u()) * (0.8 + 0.3 * pt) + dev * clamp(0.35, 1, gap / 10) + prod * 0.5 + R.n() * 0.85
   } else if (p.ag <= prime) {
     // in his prime: what's left of his ceiling comes when he plays and produces; else he holds, a point either way
-    const f = gap > 0 ? clamp(0, 0.85, 0.15 + 0.35 * pt + 0.25 * Math.max(0, prod)) * (0.5 + R.u()) : 0
+    // (from 29 what's left mostly stays left: a man that age has become who he is)
+    const f = gap > 0 ? clamp(0, 0.85, 0.25 + 0.35 * pt + 0.25 * Math.max(0, prod)) * (0.5 + R.u()) * (p.ag >= LATE ? 0.25 : 1) : 0
     d = gap * f + prod * 0.45 + R.n() * 0.6
   } else {
     // past it: a little more each year; a man still producing slips slower
     const [a, b] = FALL[p.p] ?? [1.4, 0.7]
     d = -(a + b * (p.ag - prime - 1)) * (0.55 + 0.9 * R.u()) + clamp(-0.5, 2, prod) * 0.45 + R.n() * 0.4
   }
+  // the injury: a young man loses most of the year's growth (the rehab is the year), a veteran a step on top of age
+  if (inj) {
+    const young = p.ag <= grow
+    if (inj >= 3) d = young ? Math.min(d * 0.25, 1) - (0.5 + R.u() * 1.5) : d - (1.5 + R.u() * 2)
+    else if (inj === 2) d = young ? Math.min(d * 0.5, 2) - R.u() : d - (0.5 + R.u() * 1.5)
+    else d = d * (d > 0 ? 0.75 : 1) - R.u() * 0.6
+  }
+  // the size of a year: mostly within four points; past that, the rare breakout
+  if (d > SOFT && !(p.ag <= 25 && pt >= 0.5 && !inj && R.u() < BREAKOUT)) d = SOFT + (d - SOFT) / 2
+  // (29 and up: hardly ever better, a point now and then; never more than two)
+  if (p.ag >= LATE && d > 0) d = Math.min(d, p.p === 'qb' || p.p === 'k' ? 2 : 1) * (R.u() < 0.5 ? 1 : 0)
   // (nobody passes his ceiling while he's still on the way up; nobody jumps more than 8 in a year)
   if (p.ag <= prime) d = Math.min(d, Math.max(0, (p.pk ?? p.o) - p.o))
   return Math.round(Math.min(8, d))
 }
+const LATE = 29
 // after the year: a man past his ceiling raised it; past his prime his ceiling is where he is
 export function settlePk(p) {
   if (p.o > (p.pk ?? 0)) p.pk = p.o
@@ -190,4 +216,11 @@ export function myCoachYear(F, R) {
 export function fillPotential(F) {
   for (const s of Object.keys(F.teams ?? {})) for (const p of F.teams[s].r) if (p.pk == null) p.pk = p.o
   for (const p of F.fa ?? []) if (p.pk == null) p.pk = p.o
+}
+// a save from before the builds' ceilings were a drafted man's (2026-11-17): a build still young enough to grow gets
+// the room a man his age has left (never less than he had). Once.
+export function buildPotential(F) {
+  if (F.bpk || !F.teams?.[F.team]) return
+  for (const p of F.teams[F.team].r) if (p.b != null && p.ag <= curveOf(p)[1]) p.pk = Math.max(p.pk ?? p.o, buildPeak(p.o, p.ag, 0))
+  F.bpk = 1
 }

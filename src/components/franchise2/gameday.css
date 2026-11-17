@@ -151,3 +151,8 @@ html.bap-reduce-motion .gd-pbp { animation: none; }
 .fh-games-label b { font-weight: 400; }
 .fh-seg button { display: grid; place-content: center; gap: 2px; height: 50px; line-height: 1; }
 .fh-seg button small { font-family: var(--fk-b); font-weight: 500; font-size: 11px; letter-spacing: 0; text-transform: none; color: inherit; opacity: .8; }
+
+/* the defensive moment's ready step (Week.jsx MomentStage): the down, what to do, READY */
+.gd-ready { display: grid; gap: 12px; max-width: 560px; width: 100%; justify-self: center; }
+.gd-ready-how { display: grid; gap: 8px; margin: 0; padding: 12px 14px 12px 32px; background: var(--fk-g1); font-family: var(--fk-b); font-size: 16px; line-height: 1.35; color: var(--fk-text); }
+.gd-ready-how b { color: #fff; }

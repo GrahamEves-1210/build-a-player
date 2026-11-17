@@ -10,9 +10,10 @@ import { defaultFace } from './faces'
 import { capComply, cutMan, marketValue, termFor, tickDeal, dealsOnLoad } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
-import { fillPotential } from './potential'
+import { fillPotential, buildPotential } from './potential'
 import { freezeOldSeason } from './stats'
 import { numbersOnLoad } from './roster'
+import { tidyName } from './copy'
 
 export * from './league'
 export * from './season'
@@ -48,7 +49,7 @@ export function createFranchise(setup) {
   const F = {
     v: SAVE_V, seed: setup.seed, slot: setup.slot ?? 0, owner: setup.owner ?? 'Guest', sandbox: !!setup.sandbox,
     team: setup.team, year: FIRST_YEAR, nid: 1, builds: [], hist: [], retired: [], rings: 0, board: [], sp: 3, at: 0,
-    coach: setup.coach ?? null,
+    coach: setup.coach ?? null, bpk: 1,
   }
   buildTeams(F)
   calibrate(F)
@@ -148,6 +149,10 @@ export function upgradeSave(F) {
   // the old replay had it, stats.js freezeOldSeason; and its men's numbers marked as their team's, roster.js)
   if (!F.lg) freezeOldSeason(F)
   numbersOnLoad(F)
+  // (a real man's "Jr" written "Jr." the way every screen now has it: copy.js tidyName)
+  for (const t of Object.values(F.teams)) for (const p of t.r) if (p.b == null) p.n = tidyName(p.n)
+  for (const p of F.fa ?? []) if (p.b == null) p.n = tidyName(p.n)
+  buildPotential(F)   // (the builds' ceilings: potential.js)
   return F
 }
 // a save read back: every room two deep (a save from before the filler backups gets them here, the same version

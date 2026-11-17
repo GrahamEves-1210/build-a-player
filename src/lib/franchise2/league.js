@@ -19,7 +19,8 @@ import { DLS } from '../../data/dls'
 import { LBS } from '../../data/lbs'
 import { OLS } from '../../data/ols'
 import { KS } from '../../data/ks'
-import { FIRST_NAMES, LAST_NAMES } from '../playerNames'
+import { nameFor } from './names'
+import { tidyName } from './copy'
 import { ovrOf, nameOf, TYPES_OF } from '../squadSeason'
 import { dlBuildSpot } from '../../utils/simulation'
 import { olSpotOfBuild } from '../squadSeason'
@@ -64,8 +65,9 @@ export function realPool() {
   realCache = {}
   for (const pos of POS) {
     const seen = new Set()
+    // (a name as the screens write it: "Jr." with its period, whichever way the data has it)
     realCache[pos] = POOL[pos].filter(p => p.attrs && p.team && !seen.has(p.name) && seen.add(p.name)).map(p => ({
-      name: p.name, team: p.team, pos, s: spotOfReal(pos, p), o: ovrOf(pos, asBuild(p.attrs, pos)), attrs: p.attrs,
+      name: tidyName(p.name), team: p.team, pos, s: spotOfReal(pos, p), o: ovrOf(pos, asBuild(p.attrs, pos)), attrs: p.attrs,
       h: p.headshot ?? NFL_HEADSHOTS[p.name] ?? null, age: BIRTH_NFL[p.name] ? clamp(21, 41, FIRST_YEAR - BIRTH_NFL[p.name]) : null, num: p.number ?? null,
     }))
   }
@@ -76,7 +78,7 @@ export const photoId = p => (p && p.b == null ? realOf(p.p, p.n)?.h ?? null : nu
 const REAL_BY = new Map()
 export function realOf(pos, name) {
   const k = `${pos}|${name}`
-  if (!REAL_BY.has(k)) REAL_BY.set(k, realPool()[pos]?.find(p => p.name === name) ?? null)
+  if (!REAL_BY.has(k)) { const n = tidyName(name); REAL_BY.set(k, realPool()[pos]?.find(p => p.name === n) ?? null) }
   return REAL_BY.get(k)
 }
 
@@ -96,16 +98,12 @@ export const gradeIdx = o => GRADES.indexOf(gradeOf(o))
 export const gradeFloor = i => GRADE_AT.find(x => x[1] === GRADES[clamp(0, GRADES.length - 1, i)])[0]
 
 // ── Names ────────────────────────────────────────────────────────────────────
-const MORE_FIRST = ['Aaron', 'Brandon', 'Chris', 'Derrick', 'Eric', 'Frank', 'Garrett', 'Hakeem', 'Ian', 'Jarvis', 'Kenny', 'Logan', 'Marcell', 'Nate', 'Omar', 'Pat', 'Quincy', 'Ricky', 'Shane', 'Tyrell', 'Victor', 'Will', 'Zach', 'Bryson', 'Carson', 'Damon', 'Ethan', 'Jalon', 'Kobe', 'Tariq']
-const MORE_LAST = ['Adams', 'Barnes', 'Collins', 'Dixon', 'Evans', 'Foster', 'Griffin', 'Hughes', 'Ingram', 'James', 'Knox', 'Lewis', 'Moore', 'Nelson', 'Owens', 'Parker', 'Ross', 'Simmons', 'Tucker', 'Walker', 'Young', 'Banks', 'Curry', 'Dunn', 'Ford', 'Hill', 'Mack', 'Price', 'Shaw', 'Webb']
-const FIRSTS = [...FIRST_NAMES, ...MORE_FIRST], LASTS = [...LAST_NAMES, ...MORE_LAST]
-export const fakeName = R => `${R.pick(FIRSTS)} ${R.pick(LASTS)}`
+// (names.js: a made-up man's name fits his position's room, his face, and is never a real player's)
+// pos: his position or spot (the face's room); opts: names.js nameFor's (taken, surn)
+export const fakeName = (R, pos = 'any', opts = {}) => nameFor(R, pos, opts)
 // a made-up name nobody on the roster already has
-export function freshName(R, roster = []) {
-  let n = fakeName(R)
-  for (let k = 0; k < 12 && roster.some(p => p.n === n); k++) n = fakeName(R)
-  return n
-}
+// (also: more men to stay clear of, the draft class: a man signed now never shares a name with one drafted later)
+export const freshName = (R, roster = [], pos = 'any', also = []) => fakeName(R, pos, { taken: new Set([...roster, ...also].map(p => p.n)) })
 
 // ── Making players ───────────────────────────────────────────────────────────
 // the OVR a man is headed for, from where he is and how young (a veteran is already there)
@@ -133,12 +131,17 @@ const GEN_SPOT = { dl: ['edge', 'dt'], db: ['cb', 's'], ol: ['LT', 'LG', 'C', 'R
 export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   const age = ag ?? R.int(23, 30)
   // (a kicker off the street is a working NFL leg, a few points under the league's average one)
-  const p = { i: F.nid++, n: fakeName(R), p: pos, o: o ?? (pos === 'k' ? clamp(68, 84, Math.round(76 + R.n() * 4)) : clamp(55, 76, Math.round(66 + R.n() * 4))), ag: age }
-  if (GEN_SPOT[pos]) p.s = R.pick(GEN_SPOT[pos])
+  const s = GEN_SPOT[pos] ? R.pick(GEN_SPOT[pos]) : null
+  const p = { i: F.nid++, n: fakeName(R, s ?? pos, { taken: new Set((F.dc ?? []).map(x => x.n)) }), p: pos, o: o ?? (pos === 'k' ? clamp(68, 84, Math.round(76 + R.n() * 4)) : clamp(55, 76, Math.round(66 + R.n() * 4))), ag: age }
+  if (s) p.s = s
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 4)
   signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
   return p
 }
+// a build's ceiling: a little past a drafted man's room at his age (draft.js ROOM: a 22-year-old about nine and a half), so he keeps
+// growing into his late twenties the way a good young starter does (2026-11-17: five or six, and a build stopped at
+// his ceiling at 24)
+export const buildPeak = (o, ag, extra = 1) => Math.min(99, o + Math.round(Math.max(0, 28 - ag) * 1.8) + extra)
 // the player's own build as a man on the roster
 export const buildSpot = (pos, build) => (pos === 'dl' ? dlBuildSpot(build) : pos === 'db' ? (build?.size?.subpos === 's' ? 's' : 'cb') : pos === 'ol' ? olSpotOfBuild(build) : undefined)
 export function makeBuilt(F, idx, R) {
@@ -147,7 +150,7 @@ export function makeBuilt(F, idx, R) {
   const p = { i: F.nid++, n: B.name || nameOf(B.pos, B.build) || POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx, ...(B.rk && { rk: B.rk }) }
   const s = buildSpot(B.pos, B.build)
   if (s) p.s = s
-  p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
+  p.pk = buildPeak(o, p.ag, R.int(0, 2))   // (a build grows a step at a time)
   // a build is a rookie: the rookie scale at the slot his OVR would have gone in the draft (contracts.js buildSlot)
   signRookie(p, B.slot ?? buildSlot(o, B.pos), F.year ?? FIRST_YEAR)
   B.slot = B.slot ?? buildSlot(o, B.pos)
@@ -183,7 +186,7 @@ const GEN_SPOT_OF = { edge: 'edge', dt: 'dt', cb: 'cb', s: 's' }
 export function makeDepth(F, pos, spot, R, fl = false, top = 68, roster = []) {
   // (a kicker signed to start: a working NFL leg, 70-77)
   const o = pos === 'k' ? R.int(70, 77) : R.int(63, clamp(63, 68, top)), ag = R.int(23, 29)
-  const p = { i: F.nid++, n: freshName(R, roster), p: pos, o, ag }
+  const p = { i: F.nid++, n: freshName(R, roster, spot ?? pos, F.dc ?? []), p: pos, o, ag }
   if (spot) p.s = spot
   p.pk = fl ? o : Math.max(o, peakFor(R, o, ag) - 4)
   signDeal(p, { $: minimumFor(ag, capYear(F)), y: 1, g: 0 })
@@ -213,11 +216,16 @@ function keepAt(at, pos, n, must = 0) {
 }
 // trim a roster to the maximum at each spot (the weakest go, fillers first; every room keeps its two-deep; the
 // player's own builds are never cut; the kickers in camp: the better leg keeps the job, a draft pick or not)
-export function trim(roster, keep = new Set()) {
+// cpu: a league team's cut-down, which reads a man the way a front office does: his rating, less a little a year past
+// 29 (a declining veteran costs more and has less left: he has to be clearly better to keep his place over a young
+// man), plus a young man's upside as the scouts see it. The player's own team is cut by rating alone.
+const keepValue = p => p.o - Math.max(0, p.ag - (p.p === 'qb' || p.p === 'k' ? 32 : 29)) * 1.2 + (p.ag <= 25 ? clamp(0, 3, ((p.pk ?? p.o) - (p.hb ?? 0) - p.o) * 0.4) : 0)
+export function trim(roster, keep = new Set(), { cpu = false } = {}) {
   const out = [], cut = []
+  const v = cpu ? keepValue : p => p.o
   for (const pos of POS) {
     const kept = p => pos !== 'k' && keep.has(p.i)
-    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || kept(b) - kept(a) || (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o)
+    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || kept(b) - kept(a) || (a.fl ?? 0) - (b.fl ?? 0) || v(b) - v(a))
     const must = at.filter(p => p.b != null || kept(p)).length
     const sel = keepAt(at, pos, Math.max(MAX[pos], must), must)
     out.push(...sel)

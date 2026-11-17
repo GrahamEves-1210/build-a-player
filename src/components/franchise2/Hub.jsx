@@ -180,7 +180,7 @@ function Glance({ F, r }) {
   const div = DIV_OF[F.team], place = S.div[div].indexOf(F.team) + 1
   return (
     <section className="fh-glance" aria-label={TEAM[F.team].nick}>
-      <span><small>Record</small><b>{recText(r)}</b><em>{ORD(place)} in the {div}{Math.abs(s) >= 2 ? ` · ${s > 0 ? 'won' : 'lost'} ${Math.abs(s)}` : ''}</em></span>
+      <span><small>Record</small><b>{recText(r)}</b><em>{r.w + r.l + r.t > 0 ? `${ORD(place)} in the ${div}` : div}{Math.abs(s) >= 2 ? ` · ${s > 0 ? 'won' : 'lost'} ${Math.abs(s)}` : ''}</em></span>
       <span><small>Team OVR</small><b>{st.ovr}</b><em>Offense {sideGrade(st.off)} · Defense {sideGrade(st.def)}</em></span>
       <span><small>Chemistry</small><b>{Math.round(F.chem ?? 0)}</b><em>out of 100</em></span>
     </section>
@@ -206,8 +206,9 @@ function ThisWeek({ F, play, simToEnd }) {
   }
   const a = wk.home ? wk.opp : F.team, h = wk.home ? F.team : wk.opp
   const divGame = DIV_OF[wk.opp] === DIV_OF[F.team]
-  const placeOf = s => { const d = DIV_OF[s]; return `${ORD(S.div[d].indexOf(s) + 1)} ${d}` }
-  const kind = divGame ? 'Division game' : CONF_OF[a] === CONF_OF[h] ? `${CONF_OF[a]} game` : 'Non-conference'
+  // (a place in the division only once games are played: at 0-0 nobody is 4th)
+  const placeOf = s => { const d = DIV_OF[s], r = S.R?.[s]; return r && r.w + r.l + r.t > 0 ? `${ORD(S.div[d].indexOf(s) + 1)} ${d}` : d }
+  const kind = divGame ? 'Division game' : CONF_OF[a] === CONF_OF[h] ? `${CONF_OF[a]} game` : 'Interconference game'
   return (
     <section className="fh-next">
       <div className="fh-next-h"><b>Week {F.wk + 1}</b><span>{kind} · {wk.home ? 'Home' : 'Away'}</span></div>

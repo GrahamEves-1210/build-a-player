@@ -7,8 +7,9 @@ import { cleanName, nameOk, randomFirstLast, takenOn, freeNumbers, legalFor, pic
 import { CAPS, POS_NAME as SQ_POS_NAME } from '../../lib/squad'
 import { K_LIVE } from '../../lib/kLive'
 import { ovrOf } from '../../lib/squadSeason'
-import { defaultFace, buildFaceUrl, FACE_KEYS, FACE_EXPR } from '../../lib/franchise2/faces'
+import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../lib/franchise2/faces'
 import { sfx, haptic } from '../../lib/juice'
+import { seeded } from '../../lib/rng'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
 import { CoachSpin, StylePick, CoachWho, CoachReveal } from './CoachBuild'
@@ -220,8 +221,7 @@ function Builds({ S, go, owner, onBuild }) {
 function buildFaceChoices(key, pos, page) {
   return Array.from({ length: 8 }, (_, k) => ({ key: `${key}|${page}|${k}`, face: defaultFace(page || k ? `${key}|f${page}-${k}` : key, pos) }))
 }
-// (the same man whatever his expression: the expression is picked on its own, under the strip)
-const sameFace = (a, b) => !!a && FACE_KEYS.every(k => k === 'expr' || a[k] === b.face[k])
+const sameFace = (a, b) => !!a && FACE_KEYS.every(k => a[k] === b.face[k])
 
 // ── A build's name and number ────────────────────────────────────────────────
 // First and last name (Career's name step: the same letters, the random-name button) and a number his position
@@ -232,7 +232,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
   const [first, setFirst] = useState(() => init?.first ?? '')
   const [last, setLast] = useState(() => init?.last ?? '')
   const free = useMemo(() => freeNumbers(pos, taken), [pos, taken])
-  const [num, setNum] = useState(() => (legalFor(pos, init?.num) && !taken.has(init.num) ? init.num : pickNumber(pos, taken)))
+  const [num, setNum] = useState(() => (legalFor(pos, init?.num) && !taken.has(init.num) ? init.num : pickNumber(pos, taken, seeded(`${faceKey ?? pos}-num`))))
   const [all, setAll] = useState(false)
   const [face, setFace] = useState(() => init?.face ?? defaultFace(faceKey ?? `${first}-${last}-${pos}`, pos))
   const [page, setPage] = useState(0)
@@ -259,12 +259,6 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
         })}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>
       </div>
-      <span className="fsu-lbl">EXPRESSION</span>
-      <div className="fsu-expr" role="radiogroup" aria-label="Expression">
-        {FACE_EXPR.map(([v, label]) => (
-          <button key={v} type="button" role="radio" aria-checked={(face.expr ?? 'neutral') === v} className={(face.expr ?? 'neutral') === v ? 'is-on' : ''} onClick={() => { setFace({ ...face, expr: v }); sfx('tap') }}>{label}</button>
-        ))}
-      </div>
       <span className="fsu-lbl">NAME</span>
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="First name" />
@@ -284,7 +278,7 @@ export function NameForm({ pos, build, team, taken, owner, slot, init, cta, onDo
           <Fact v={`${deal.y} YRS`} label={deal.opt ? '+ 5TH-YEAR OPTION' : 'ROOKIE DEAL'} size={28} />
         </div>
       )}
-      <div className="fsu-acts"><Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, first: first.trim(), last: last.trim(), num, face })} disabled={!ok}>{cta}</Go></div>
+      <div className="fsu-acts">{!ok && <p className="fsu-hint">Give him a first and last name to sign him.</p>}<Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, first: first.trim(), last: last.trim(), num, face })} disabled={!ok}>{cta}</Go></div>
     </div>
   )
 }

@@ -222,7 +222,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const ballSide = atMoment ? (mv.ball === 'us' ? F.team : mv.opp) : sit?.off
   const poss = ballSide ? (ballSide === h ? 'h' : 'a') : null
   const label = po ? (rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][rd]) : `WK ${wk}`
-  const kindTxt = po ? (rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[rd]} ROUND`) : `WEEK ${wk}${DIV_OF[tl.opp] === DIV_OF[F.team] ? ' · DIVISION GAME' : ''}`
+  const kindTxt = po ? (rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[rd]} ROUND`) : `WEEK ${wk}${DIV_OF[tl.opp] === DIV_OF[F.team] ? ' · DIVISION' : ''}`
   // (the clock on the bug: a quarter's last tick is its 0:00, overtime's periods the right length: plays.js whenOf)
   const [nowQ, nowClock] = whenOf(tt, po).split(' ')
   const status = fin ? (row?.ot ? 'FINAL/OT' : 'FINAL') : `${nowQ} ${nowClock}`
@@ -483,9 +483,26 @@ function MomentResult({ last, onGo }) {
   )
 }
 // the snap on the mini games' stage (the engine, the men from both depth charts, the down and distance the game set)
+// (on defense the offense snaps the ball, so the backer gets a ready step first: the down, what to do, READY; the
+// snap comes after he taps it, never while he's still reading the screen)
 function MomentStage({ F, mv, pick, onDone }) {
   useEffect(() => minigameOpen(), [])
   const S = useMemo(() => playSetup(F, mv, pick), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [set, setSet] = useState(PLAYS[pick]?.kind !== 'stop')
+  if (!set) {
+    return (
+      <section className="gd-ready" onClick={e => e.stopPropagation()}>
+        <Chyron team={mv.opp} tag={`${mv.period === 'OT' ? 'OT' : `Q${mv.period[0]}`} ${mv.clock}`} title={`${DOWN[mv.down]} & ${mv.goal ? 'goal' : mv.d}`} sub={`${TEAM[mv.opp].nick} ball`} />
+        {S.me && <ManL3 F={F} p={S.me} team={F.team} size="s" line="On the stop" />}
+        <ol className="gd-ready-how">
+          <li>Read the back and get to his hole: hold <b>LEFT</b> or <b>RIGHT</b> to slide.</li>
+          <li>You come downhill on the handoff.</li>
+          <li>Tap <b>TACKLE</b> as the ring closes on him.</li>
+        </ol>
+        <Go onClick={() => { setSet(true); sfx('whistle') }}>Ready</Go>
+      </section>
+    )
+  }
   return (
     <Suspense fallback={<div className="gd-wait" />}>
       <MgStage game={S.game} def={S.def} v={S.v} arm={S.arm} seed={S.seed} sport="nfl" team={S.team} opp={S.opp} home={S.home} pos={S.pos} cast={S.cast} situation={S.situation}
@@ -501,7 +518,8 @@ function Final({ F, row, news, owner, onDone }) {
   const qa = row.home ? row.q?.[1] : row.q?.[0], qh = row.home ? row.q?.[0] : row.q?.[1]
   const sa = row.home ? row.them : row.us, sh = row.home ? row.us : row.them
   const mine = (row.lines ?? []).map(l => ({ ...l, p: F.teams[F.team].r.find(x => x.i === l.pid) })).filter(l => l.p && l.line)
-  const star = row.st && !mine.some(l => l.pid === row.st.pid) ? F.teams[F.team].r.find(x => x.i === row.st.pid) : null
+  // (the broadcast's player of the game comes from the team that won it: a loss or a tie has none)
+  const star = row.w && row.st && !mine.some(l => l.pid === row.st.pid) ? F.teams[F.team].r.find(x => x.i === row.st.pid) : null
   const tag = row.rd != null ? (row.rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : row.rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[row.rd]} ROUND`) : `WEEK ${row.wk}`
   const n = Math.max(4, qa?.length ?? 4)
   const T = (s, q, pts, lose) => (
