@@ -20,13 +20,13 @@ import { snapLines } from './deals'
 
 export { CURVE }
 export const FO_DEV = 4     // OVR a year for a young man: a best-run club's about +1.5 over the league's middle shop
-// ctx: { prod, gp } this season's production (potential.js prodScores)
+// ctx: { prod, gp } this season's production (potential.js prodScores); his season's worst injury is p.yi (injury.js)
 export function growth(F, p, R, starter = false, short = null, ctx = {}) {
   // (the club's development: a well-run organization gets more out of its young men, a badly run one less (against
   // the league's middle shop, so the league as a whole doesn't drift);
   // with how it drafts and who it keeps, it's what makes the league's haves and have-nots last. league.js foOf)
   const dev = short && p.ag <= (CURVE[p.p]?.[0] ?? 26) ? coachDev(F, short, p) + (foOf(F, short) - (F.foMid ?? 0.5)) * FO_DEV : 0
-  return growthOf(p, R, { pt: playTime(starter, ctx.gp), prod: ctx.prod ?? 0, dev })
+  return growthOf(p, R, { pt: playTime(starter, ctx.gp), prod: ctx.prod ?? 0, dev, inj: p.yi ?? 0 })
 }
 // A build grows a step at a time: a trait up a grade until his OVR has moved by d (or down, the same way)
 export function growBuild(B, d) {
@@ -46,13 +46,16 @@ export function growBuild(B, d) {
   return ovrOf(B.pos, B.build) - start
 }
 // the chance he retires this offseason
+// (from 30 some good men walk away every year as well, the body or the money: Luck, Kuechly, Donald, Gronkowski;
+// past his prime a little more each year, and a backup sooner than a starter)
 export function retireChance(p, starter) {
   const [, prime, gone] = CURVE[p.p] ?? [26, 29, 33]
   if (p.ag >= gone + 5) return 1
-  if (p.ag <= prime) return p.o < 62 ? 0.25 : 0
+  const walk = p.ag >= 30 ? 0.02 * (p.ag - 29) : 0
+  if (p.ag <= prime) return p.o < 62 ? 0.25 : walk
   const past = (p.ag - prime) / Math.max(1, gone - prime)           // 0 at the end of his prime, 1 at the usual age
   const level = (80 - p.o) * 0.035 - (starter ? 0.12 : 0)            // a starter hangs on, a backup is let go
-  return clamp(0, 0.97, past * 0.55 + level + (p.ag >= gone ? 0.25 : 0))
+  return clamp(0, 0.97, walk + past * 0.55 + level + (p.ag >= gone ? 0.25 : 0))
 }
 export function ageLeague(F) {
   const R = rngOf(`${F.seed}-${F.year}-age`)
@@ -74,6 +77,7 @@ export function ageLeague(F) {
       const d = growth(F, p, R, starters.has(p.i), s, { prod: prod[p.i]?.z ?? 0, gp: prod[p.i]?.gp ?? 0 })
       if (p.b != null) { p.o = was + growBuild(F.builds[p.b], d); F.builds[p.b].age = p.ag }
       else p.o = clamp(40, 99, p.o + d)
+      delete p.yi
       settlePk(p)
       const out = R.u() < retireChance(p, starters.has(p.i)) * (p.b != null ? 0.6 : 1)
       if (out) {

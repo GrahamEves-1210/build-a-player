@@ -63,8 +63,31 @@ function offCase(x, lean = OFF_LEAN) {
 const DEF_LEAN = { edge: 0.05, dt: 0.08, lb: 0.1, cb: -0.1, s: -0.12 }
 const defCase = x => x.c + (DEF_LEAN[groupOf(x.p)] ?? 0)
 // the All-Pro team's spots (the AP's first team) and each conference's Pro Bowl roster
-const SPOTS = [['qb', 1, 3], ['rb', 1, 3], ['wr', 3, 4], ['te', 1, 2], ['ot', 2, 3], ['og', 2, 3], ['c', 1, 2], ['edge', 2, 3], ['dt', 2, 3], ['lb', 2, 3], ['cb', 2, 4], ['s', 2, 3], ['k', 1, 1]]
+// (the NFL's own counts: each conference's Pro Bowl roster is 3 QBs, 3 backs, 4 receivers, 2 tight ends, 3 tackles,
+// 3 guards, 2 centres, 3 ends and 3 outside backers (the pass rushers: EDGE here), 3 tackles inside, 2 inside backers
+// (with the off-ball outside man: 3 here), 4 corners, 3 safeties; the All-Pro first team 1-1-3-1-2-2-1-2-2-2-2-2)
+const SPOTS = [['qb', 1, 3], ['rb', 1, 3], ['wr', 3, 4], ['te', 1, 2], ['ot', 2, 3], ['og', 2, 3], ['c', 1, 2], ['edge', 2, 5], ['dt', 2, 3], ['lb', 2, 3], ['cb', 2, 4], ['s', 2, 3], ['k', 1, 1]]
 const spotOf = p => (p.p === 'ol' ? (p.s === 'C' ? 'c' : p.s === 'LG' || p.s === 'RG' ? 'og' : 'ot') : groupOf(p))
+// HONORS are voted on more than the season's numbers (owner, 2026-11-17: "a 13-4 champion with five 94+ players got
+// no All-Pros, and linemen never made it"): the Pro Bowl is the fans', the players' and the coaches' vote, the
+// All-Pro team the writers', and both read who a man is (his rating, what the tape says), his name (an honor last year
+// carries), how his team did, and then his numbers. A lineman has no numbers anyone votes on: his rating is his case
+// (the line's grade a little), and an interior lineman's sacks count for less than an end's.
+//   honorCase(F, x, ap)  one scale for every spot (1.0 about an All-Pro): numbers, rating, name, team (ap: the
+//   writers' All-Pro ballot, which leans more on the season than the Pro Bowl's does)
+const lastHonor = (p, y) => { const r = p.cr?.[p.cr.length - 1]; return r && r[0] === y - 1 ? r[3 + (CAREER_KEYS[p.p]?.length ?? 3)] ?? 0 : 0 }
+function honorCase(F, x, ap = false) {
+  const sp = spotOf(x.p), rating = (x.p.o - 84) / 10, name = [0, 0.08, 0.16][lastHonor(x.p, F.year)] ?? 0
+  const team = x.w >= 13 ? 0.08 : x.w >= 11 ? 0.05 : x.w >= 9 ? 0.02 : x.w <= 5 ? -0.05 : 0
+  const stats = x.c - (x.p.o - 85) * 0.006
+  const v = sp === 'ot' || sp === 'og' || sp === 'c' ? 0.85 * rating + 0.15 * stats
+    : sp === 'dt' ? 0.6 * rating + 0.35 * stats
+      : sp === 'k' ? stats
+        : ap ? 0.25 * rating + 0.7 * stats : 0.4 * rating + 0.55 * stats
+  // (a man who missed a third of the season rarely makes either team: a little off for every game under 14)
+  const out = Math.max(0, 14 - (x.t.gp ?? 0)) * (sp === 'k' ? 0 : 0.1)
+  return v + name * (ap ? 0.5 : 1) + team - out + x.r
+}
 
 export function seasonAwards(F) {
   const S = standings(F), R = rngOf(`${F.seed}-${F.year}-awards`)
@@ -74,7 +97,7 @@ export function seasonAwards(F) {
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const t = tot[String(p.i)]
     if (!t?.gp || t.gp < 8 || p.fl) continue   // (a filler backup is never on a ballot)
-    men.push({ p, s, t, w: wins(s), c: caseOf(p, t, wins(s)) + R.n() * 0.03 })
+    men.push({ p, s, t, w: wins(s), c: caseOf(p, t, wins(s)) + R.n() * 0.03, r: R.n() * 0.03 })
   }
   const pick = x => x && { i: x.p.i, n: x.p.n, t: x.s, p: x.p.p, b: x.p.b ?? null, line: statLine(x.p, x.t) }
   const best = (list, v = x => x.c) => list.map(x => [x, v(x)]).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
@@ -82,8 +105,22 @@ export function seasonAwards(F) {
   // (since 2000 the voters have picked a quarterback all but three times, a back each of those; a defender once
   // in the award's history: a defender here needs a season far past an All-Pro's)
   // (a kicker is never on these ballots: his honor is the All-Pro team and the Pro Bowl)
-  const mvp = best(men.filter(x => (OFFENSE.includes(x.p.p) && x.p.p !== 'ol') || (DEFENSE.includes(x.p.p) && x.c > 2.2)), x => x.c + (wins(x.s) - 10) * 0.05 + (x.p.p === 'qb' ? 0.45 : x.p.p === 'rb' ? 0 : OFFENSE.includes(x.p.p) ? -0.15 : -0.9))
-  const opoy = best(men.filter(x => OFFENSE.includes(x.p.p) && x.p.p !== 'ol' && x.p.i !== mvp?.p.i), offCase)
+  // The voters' pattern (2026-11-17, owner: "Allen 9 of 12, one with 18 INT"): the best quarterback season on one of
+  // the best teams (a 12-to-14-win team, usually a top seed), read as a season, not a rushing total (a quarterback's
+  // runs count, a little less than the box's All-Pro scale counts them); a passer with 15 picks isn't the MVP; and the
+  // voters tire of a repeat: last year's winner needs a clearly better season, a third straight almost never happens
+  // (Manning, Rodgers, Mahomes, Jackson: back to back at most). The same fatigue for Offensive Player of the Year.
+  const seeds = new Set([F.po?.seeds?.AFC?.[0], F.po?.seeds?.NFC?.[0]].filter(Boolean))
+  const won = (code, x) => wonBefore(F, code, x.p)
+  const tired = (code, x) => { const n = won(code, x); return n >= 2 ? 0.6 : n === 1 ? 0.12 : 0 }
+  const qbSeason = x => {
+    const t = x.t, g = k => t[k] ?? 0, ypa = g('pa') ? g('py') / g('pa') : 6.5
+    return (g('py') / 25 + g('ptd') * 4 - g('int') * 4 + g('ry') / 16 + g('rtd') * 4) / 330 + (ypa - 7.2) * 0.06 + (x.p.o - 85) * 0.006 - (g('int') >= 15 ? 0.5 : g('int') >= 13 ? 0.12 : 0)
+  }
+  const mvpV = x => (x.p.p === 'qb' ? qbSeason(x) + 0.45 : x.c + (x.p.p === 'rb' ? 0 : OFFENSE.includes(x.p.p) ? -0.15 : -0.9))
+    + (wins(x.s) - 11) * 0.06 + (seeds.has(x.s) ? 0.05 : 0) - tired('MVP', x) + x.r
+  const mvp = best(men.filter(x => (OFFENSE.includes(x.p.p) && x.p.p !== 'ol') || (DEFENSE.includes(x.p.p) && x.c > 2.2)), mvpV)
+  const opoy = best(men.filter(x => OFFENSE.includes(x.p.p) && x.p.p !== 'ol' && x.p.i !== mvp?.p.i), x => offCase(x) - tired('OPOY', x))
   const dpoy = best(men.filter(x => DEFENSE.includes(x.p.p)), defCase)
   // the rookies: every man in his first season, the real ones (the real class on the rosters in year one: their draft
   // year, league.js makeReal), the league's draft picks and the player's own builds and picks, on the same scale
@@ -104,9 +141,11 @@ export function seasonAwards(F) {
   const coy = [...SHORTS].filter(s => wins(s) >= 9 && (po.has(s) || !po.size)).sort((a, b) => coyV(b) - coyV(a))[0] ?? null
   // All-Pro and the Pro Bowl
   const hon = {}, ap = []
+  for (const x of men) { x.h = honorCase(F, x); x.ha = honorCase(F, x, true) }
   for (const [spot, nAP, nPB] of SPOTS) {
-    const at = men.filter(x => spotOf(x.p) === spot).sort((a, b) => b.c - a.c)
-    at.slice(0, nAP).forEach(x => { hon[x.p.i] = 'AP'; ap.push({ spot, ...pick(x) }) })
+    const at = men.filter(x => spotOf(x.p) === spot).sort((a, b) => b.h - a.h)
+    // (the MVP at quarterback is the All-Pro quarterback: the same writers vote both)
+    ;[...at].sort((a, b) => (b === mvp) - (a === mvp) || b.ha - a.ha).slice(0, nAP).forEach(x => { hon[x.p.i] = 'AP'; ap.push({ spot, ...pick(x) }) })
     for (const c of ['AFC', 'NFC']) at.filter(x => CONF_OF[x.s] === c).slice(0, nPB).forEach(x => { hon[x.p.i] ??= 'PB' })
   }
   void who
@@ -132,6 +171,17 @@ export function lhRow(h, s) {
   return part ? part.split('-').map(Number) : null
 }
 const CODE = { mvp: 'MVP', opoy: 'OPOY', dpoy: 'DPOY', oroy: 'OROY', droy: 'DROY' }
+// how many of the last seasons in a row he won the award (code: 'MVP' | 'OPOY'): the league's history (F.lh), his id
+// where it was kept, his name and position in an older save
+function wonBefore(F, code, p) {
+  let n = 0
+  for (let j = (F.lh?.length ?? 0) - 1; j >= 0; j--) {
+    const a = F.lh[j]?.aw?.[code]
+    if (!a || !(a[4] != null ? a[4] === p.i : a[0] === p.n && a[2] === p.p)) break
+    n++
+  }
+  return n
+}
 
 // ── The season, kept ─────────────────────────────────────────────────────────
 // F.lh: the league's seasons [{ y, r: 'w-l-t-finish' for each team in SHORTS order, one string, champ, runner, score,
@@ -155,7 +205,7 @@ export function closeSeason(F) {
   F.lh = [...(F.lh ?? []), {
     y: F.year, r: SHORTS.map(s => `${S.R[s].w}-${S.R[s].l}-${S.R[s].t}-${fcode(s)}`).join(' '), champ: F.po.champ, runner: F.po.runner, score: F.po.score,
     dw: DIVISIONS.map(d => S.div[d.name][0]),
-    aw: Object.fromEntries([...AWARD_KEYS.filter(k => aw[k]).map(k => [CODE[k], [aw[k].n, aw[k].t, aw[k].p, aw[k].line]]), ...(aw.coy ? [['COY', [aw.coy.n, aw.coy.t]]] : [])]),
+    aw: Object.fromEntries([...AWARD_KEYS.filter(k => aw[k]).map(k => [CODE[k], [aw[k].n, aw[k].t, aw[k].p, aw[k].line, aw[k].i]]), ...(aw.coy ? [['COY', [aw.coy.n, aw.coy.t]]] : [])]),
   }]
   // careers: the player's team's men, and anyone the league noticed (an award, an honor, a top-ten season)
   const tot = leagueStats(F)
