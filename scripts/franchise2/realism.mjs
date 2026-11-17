@@ -207,5 +207,45 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' �
   // (the owner: the league must not get older as a whole)
   if (av(ends, r => r.ages.o30) > 20) bad(`the league ages: 30+ at ${av(ends, r => r.ages.o30)}% after ${NS} seasons`)
 }
+// ── The checks (the owner's numbers, 2026-11-17: FRFIX items 10, 11, 12, 15, 16) ─────────────────────────────
+{
+  const med = k => q(dist(k), 0.5), mx = k => dist(k)[S.length - 1], share = f => S.filter(f).length / S.length
+  const want = (ok, m) => { if (!ok) bad(m) }
+  // 10: the leaders
+  want(med('sck') >= 14 && med('sck') <= 19 && mx('sck') <= 23 && share(r => r.lead.sck[0]?.v >= 20) <= 0.25, `sack leaders: median ${med('sck')}, max ${mx('sck')}`)
+  want(med('dint') >= 6 && med('dint') <= 9 && mx('dint') <= 12, `interception leaders: median ${med('dint')}, max ${mx('dint')}`)
+  want(med('int') >= 14 && med('int') <= 19 && mx('int') <= 23, `interceptions thrown: median ${med('int')}, max ${mx('int')}`)
+  want(med('ry') >= 1500 && med('ry') <= 1900 && share(r => r.lead.ry[0]?.v >= 2000) <= 0.12, `rushing leaders: median ${med('ry')}`)
+  want(S.every(r => (r.lead.ry[0]?.o ?? 99) > 75), 'a 75-OVR back led the league in rushing')
+  want(med('ryd') >= 1550 && med('ryd') <= 1950 && mx('ryd') <= 2150, `receiving leaders: median ${med('ryd')}, max ${mx('ryd')}`)
+  want(med('ptd') >= 34 && med('ptd') <= 44 && share(r => r.lead.ptd[0]?.v >= 40) <= 0.6 && mx('ptd') <= 52, `pass TD leaders: median ${med('ptd')}, 40+ in ${share(r => r.lead.ptd[0]?.v >= 40)}`)
+  want(med('fgm') >= 34 && med('fgm') <= 41 && mx('fgm') <= 47, `FG made leaders: median ${med('fgm')}, max ${mx('fgm')}`)
+  want(+avgK('fga') >= 1.75 && +avgK('fga') <= 2.05, `FG tries a team game ${avgK('fga')}`)
+  want(+avgK('ppg') >= 21 && +avgK('ppg') <= 24.5, `points a team game ${avgK('ppg')}`)
+  // 11: the MVP and OPOY
+  const streak = k => { let best = 0; for (let f = 0; f < NF; f++) { let run = 0, last = null; for (const r of S.filter(x => x.f === f)) { run = r[k]?.n === last ? run + 1 : 1; last = r[k]?.n; best = Math.max(best, run) } } return best }
+  const most = k => Math.max(...Object.values(S.reduce((c, r) => (r[k] ? { ...c, [r[k].n]: (c[r[k].n] ?? 0) + 1 } : c), {})))
+  want(streak('mvp') <= 2 && streak('opoy') <= 3, `the same MVP ${streak('mvp')} years running, OPOY ${streak('opoy')}`)
+  want(most('mvp') <= Math.max(3, S.length * 0.25), `one man won ${most('mvp')} MVPs in ${S.length} seasons`)
+  want(S.every(r => !(r.mvp?.int >= 15)), 'an MVP with 15 or more interceptions')
+  want(share(r => r.mvp?.p === 'qb') >= 0.75 && share(r => r.mvp?.w >= 11) >= 0.65, `MVP: a quarterback ${share(r => r.mvp?.p === 'qb')}, on an 11-win team ${share(r => r.mvp?.w >= 11)}`)
+  // 12: the honors
+  const starTeams = S.flatMap(r => r.stars)
+  want(starTeams.every(x => x.pb >= 3), `a 12-win team with 4+ men 94 and up got fewer than 3 Pro Bowls: ${starTeams.filter(x => x.pb < 3).map(x => `${x.s} ${x.pb}`).join(', ')}`)
+  want(starTeams.length < 3 || starTeams.filter(x => x.ap >= 1).length / starTeams.length >= 0.75, 'star teams without an All-Pro')
+  want(S.every(r => r.hon.olAvgO >= 85), 'Pro Bowl linemen not the best-rated ones')
+  want(S.reduce((a, r) => a + r.hon.top30, 0) / S.length >= 20, 'the league\'s 30 best-rated men mostly not honored')
+  // 15: the carousel
+  const fires = S.flatMap(r => r.fire)
+  want(fires.filter(x => x.yrs <= 1).length / S.length <= 0.35, `${fires.filter(x => x.yrs <= 1).length} first-year head coaches fired in ${S.length} seasons`)
+  want(fires.length / S.length >= 3 && fires.length / S.length <= 7.5, `${r1(fires.length / S.length)} head coaches fired a season`)
+  // 16: development and the league's age
+  want(S.every(r => r.dev.young.p95 <= 6.5 && r.dev.all.max <= 8), 'one-year jumps past the size of a breakout')
+  want(S.every(r => r.dev.oldUp <= 8) && S.every(r => r.dev.ol30.length === 0), 'men 29 and up improving')
+  const se = S.map(r => r.dev.se).filter(Boolean)
+  want(se.reduce((a, x) => a + x.mean * x.n, 0) / Math.max(1, se.reduce((a, x) => a + x.n, 0)) < 0, 'a season-ending injury doesn\'t cost growth')
+  const late = S.filter(r => r.dev.builds.length).flatMap(r => r.dev.builds.map(b => b.match(/ (\d+):\d+([+-]\d+)/)).filter(m => m && +m[1] >= 24 && +m[1] <= 26).map(m => +m[2]))
+  want(!late.length || late.some(d => d > 0), 'the builds stop growing at 24')
+}
 if (OUT) writeFileSync(OUT, JSON.stringify(rows))
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'done')
