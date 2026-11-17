@@ -1,129 +1,59 @@
-/* Home's sport picker (AppHome.jsx SportPick): the sports' balls in a row on a dark strip that sits on the
-   stage. The sport you're on: its ball bigger and at full colour, its name in white, underlined in its colour.
-   The others: smaller, dimmed, grey names. A tap marks the new one at once (it grows, the old one shrinks),
-   the stage clears, and the other sport's Home opens with the picker in the same place. */
-.sp-rack {
-  --sp-bg: #111816;
-  display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); column-gap: 0;
-  position: relative; margin: 0 0 -12px; padding: 5px; background: var(--sp-bg);   /* (owner 11-16: one slim row, no dead space) */
+/* Home's sport picker (AppHome.jsx SportPick): the sport names across the top of the stage, like a broadcast's
+   open. The sport on the stage: bright white, its colour under it. The others: dimmed. One still to come:
+   a lock and a smaller, fainter name. A tap marks the new one at once, the stage clears, and the other sport's
+   Home opens with the names in the same place. No strip of its own: the stage is the picker. */
+.sp-nav {
+  position: absolute; z-index: 6; left: 8px; right: 8px; top: 4px;
+  display: flex; align-items: stretch; gap: 2px;
 }
-/* the sliding block: one column wide, behind the sport you're on, in that sport's colour */
-.sp-hl {
-  position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / var(--n, 3));
-  border-radius: var(--hm-r, 5px); background: #4fd8b4;
-  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .17s cubic-bezier(.3, 1.05, .45, 1), background-color .17s ease;
-}
-.sp-hl--bucket { background: #ffad66; }   /* (lighter than the ball, so the ball reads on it) */
-.sp-opt--bucket.is-on .sp-ball circle { stroke: #2a1408; stroke-width: 1.3; }
-.sp-hl--soccer { background: #f2f2ee; }
-.sp-hl--baseball { background: #e0313f; }
-.ag-home--bucket .sp-rack { --sp-bg: #1a1410; }
-.ag-home--soccer .sp-rack { --sp-bg: #131416; }
-
-.sp-opt {
+.sp-tab {
   --c: #4fd8b4;
-  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px;
-  position: relative; z-index: 1; min-width: 0; min-height: 44px; padding: 0 2px; transition: color .17s ease; border: 0; border-radius: var(--hm-r, 5px); background: none;
-  color: #a3ada9; font-family: var(--ag-font); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 0 7px;
+  border: 0; border-radius: var(--hm-r, 5px); background: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  color: rgba(255,255,255,.6); font-family: var(--ag-font); font-size: clamp(19px, 5.9vw, 25px); letter-spacing: .4px; line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
 }
-.sp-opt--bucket { --c: #f97316; }
-.sp-opt--soccer { --c: #f2f2ee; }
-.sp-opt--baseball { --c: #e0313f; }
-.sp-opt-ball { position: relative; display: grid; place-items: center; width: 26px; height: 26px; flex: none; }
-.sp-ball { display: block; flex: none; }
-.sp-opt .sp-ball { opacity: .55; transform: scale(.9); transition: transform .16s cubic-bezier(.3, 1.2, .5, 1), opacity .12s ease; }
-.sp-opt b {
-  font-weight: 400; font-size: 15px; line-height: 1; letter-spacing: 1px; white-space: nowrap;
-  padding: 0;
+.sp-tab--bucket { --c: #f97316; }
+.sp-tab--soccer { --c: #f2f2ee; }
+.sp-tab--baseball { --c: #e0313f; }
+.sp-tab b { font-weight: 400; white-space: nowrap; }
+/* the one on the stage: white, its colour under the name */
+.sp-tab.is-on { color: #fff; cursor: default; }
+.sp-tab::after {
+  content: ''; position: absolute; left: 7px; right: 7px; bottom: 5px; height: 3px; background: var(--c);
+  transform: scaleX(0); transform-origin: 0 50%; transition: transform .16s cubic-bezier(.3, 1, .5, 1);
 }
-.sp-opt.is-on { color: #0b0c0e; cursor: default; }
-.sp-opt--baseball.is-on { color: #fff; }
-.sp-opt.is-on .sp-ball { opacity: 1; transform: scale(1.1); }
-.sp-opt:not(.is-on):active .sp-ball { transform: scale(.78); }
-@media (hover: hover) {
-  .sp-opt:not(.is-on):not(.is-soon):hover { color: #fff; }
-  .sp-opt:not(.is-on):not(.is-soon):hover .sp-ball { opacity: .85; }
-}
-.sp-opt:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.sp-tab.is-on::after { transform: none; }
+@media (hover: hover) { .sp-tab:not(.is-on):not(.is-soon):hover { color: #fff; } }
+.sp-tab:not(.is-on):not(.is-soon):active { color: #fff; }
+.sp-tab:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+/* still to come: there, locked, quieter */
+.sp-tab.is-soon { gap: 4px; padding: 0 5px; color: rgba(255,255,255,.42); font-size: 15px; letter-spacing: .6px; cursor: default; }
+.sp-tab.is-soon svg { flex: none; margin-top: -1px; }
 
-/* a sport that's on its way: there, locked, SOON under its name */
-.sp-opt.is-soon { cursor: default; }
-.sp-opt.is-soon .sp-ball { opacity: .3; }
-.sp-opt.is-soon .sp-opt-ball svg:not(.sp-ball) { position: absolute; color: #fff; }
-.sp-opt.is-soon b { padding: 0; }
-.sp-opt small { font-family: var(--ag-body); font-size: 11px; font-weight: 700; letter-spacing: .6px; line-height: 1; padding-bottom: 3px; }
+/* the stage around it: the position word drops under the names, How To Play and the online count go to the floor */
+.ag-home .ag-stage-word { top: 54px; }
+.ag-home .ag-stage .ag-howto { top: auto; bottom: 58px; right: 10px; }
+.ag-home .ag-stage .ag-live-count { top: auto; bottom: 58px; left: 10px; }
 
-/* while the other sport opens: its stage clears (the strip, the bars and PLAY stay where they are) */
+/* while the other sport opens: its stage clears (the names, the bars and PLAY stay where they are) */
 html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: sp-clear .14s ease-in forwards; }
 @keyframes sp-clear { to { opacity: 0; } }
 
-@media (max-width: 360px) { .sp-opt b { font-size: 14px; letter-spacing: .4px; } }
+@media (max-width: 360px) { .sp-tab.is-soon { font-size: 13px; padding: 0 3px; } .sp-tab.is-soon svg { display: none; } }
 @media (min-width: 1024px) {
-  html.app-look .sp-rack { grid-area: sport; align-self: start; margin: 0; padding: 6px; border-radius: var(--hm-r, 5px); }
-  html.app-look .sp-hl { top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / var(--n, 3)); }
-  html.app-look .sp-opt { min-height: 50px; gap: 9px; }
-  html.app-look .sp-opt-ball { width: 30px; height: 30px; }
-  html.app-look .sp-opt .sp-ball { width: 28px; height: 28px; }
-  html.app-look .sp-opt b { font-size: 17px; }
+  html.app-look .sp-nav { left: 12px; right: 12px; top: 8px; gap: 8px; }
+  html.app-look .sp-tab { min-height: 52px; padding: 0 8px; font-size: 30px; }
+  html.app-look .sp-tab::after { left: 8px; right: 8px; bottom: 6px; height: 4px; }
+  html.app-look .sp-tab.is-soon { font-size: 18px; gap: 6px; }
+  html.app-look .ag-stage-word { top: 72px; }
+  html.app-look .ag-stage .ag-live-count { left: 14px; top: auto; bottom: 64px; }
+  html.app-look .ag-stage .ag-howto { bottom: 64px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sp-opt .sp-ball, .sp-hl, .sp-opt { transition: none; }
+  .sp-tab::after { transition: none; }
   html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: none; opacity: 0; }
 }
-html.bap-reduce-motion :is(.sp-opt .sp-ball, .sp-hl, .sp-opt) { transition: none; }
+html.bap-reduce-motion .sp-tab::after { transition: none; }
 html.bap-reduce-motion.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: none; opacity: 0; }
-
-/* MOCK round 2 (dev only, ?sp2=) */
-.spm { position: absolute; z-index: 6; }
-.spm-opt { --c: #4fd8b4; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: rgba(255,255,255,.5); font-family: var(--ag-font); cursor: pointer; }
-.spm-opt--bucket { --c: #f97316; }
-.spm-opt--soccer { --c: #f2f2ee; }
-.spm-opt--baseball { --c: #e0313f; }
-.spm-opt b { font-weight: 400; line-height: 1; white-space: nowrap; }
-.spm-opt.is-on { color: #fff; }
-.spm-opt.is-soon { color: rgba(255,255,255,.32); cursor: default; }
-.spm-opt.is-soon svg { opacity: .9; }
-
-/* A: broadcast open, the names in big type across the top of the stage */
-.spm-a { left: 14px; right: 14px; top: 10px; display: flex; gap: 14px; }
-.spm-a .spm-opt { flex-direction: row; min-height: 44px; font-size: clamp(17px, 5.2vw, 24px); letter-spacing: .3px; position: relative; }
-.spm-a .spm-opt.is-on::after { content: ''; position: absolute; left: 0; right: 0; bottom: 6px; height: 3px; background: var(--c); }
-.spm-a .spm-opt.is-soon b { font-size: .8em; }
-.sp2-a .ag-stage .ag-howto { top: auto; bottom: 62px; }
-.sp2-a .ag-stage .ag-live-count { display: none; }
-.sp2-a .ag-stage-word { top: 62px; }
-
-/* B: edge tabs, cut into the top of the stage */
-.spm-b { left: 0; right: 0; top: 0; display: grid; grid-template-columns: repeat(var(--n), 1fr); height: 46px; }
-.spm-b .spm-opt { justify-content: center; background: rgba(4,6,6,.82); font-size: 15px; letter-spacing: .6px; border-top: 3px solid transparent; box-shadow: inset 0 -1px 0 rgba(255,255,255,.08); }
-.spm-b .spm-opt + .spm-opt { box-shadow: inset 1px 0 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(255,255,255,.08); }
-.spm-b .spm-opt.is-on { background: transparent; border-top-color: var(--c); box-shadow: none; }
-.spm-b .spm-opt:not(.is-on) .sp-ball { opacity: .55; }
-.spm-b .spm-opt.is-soon .sp-ball { display: none; }
-.sp2-b .ag-stage .ag-howto { top: 56px; }
-.sp2-b .ag-stage .ag-live-count { top: 56px; }
-.sp2-b .ag-stage-word { top: 84px; }
-
-/* C: side rail, a menu list down the stage's left side */
-.spm-c { left: 0; top: 14px; display: flex; flex-direction: column; }
-.spm-c .spm-opt { min-height: 44px; padding: 0 14px; font-size: 21px; letter-spacing: .4px; border-left: 4px solid transparent; }
-.spm-c .spm-opt.is-on { border-left-color: var(--c); background: linear-gradient(90deg, rgba(0,0,0,.55), transparent); }
-.spm-c .spm-opt.is-soon { font-size: 17px; }
-.sp2-c .ag-stage .ag-live-count { display: none; }
-.sp2-c .ag-figure { translate: 52px 0; }
-.sp2-c .ag-platform { translate: 52px 0; }
-.sp2-c .ag-stage-word { opacity: .5; }
-
-/* D: the ball is the hero: the sport you're on, big, top left; the others to swap, top right */
-.spm-d { left: 12px; right: 12px; top: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
-.spm-d-cur { display: flex; align-items: center; gap: 10px; color: #fff; font-family: var(--ag-font); font-size: 28px; }
-.spm-d-cur b { font-weight: 400; }
-.spm-d-others { display: flex; gap: 4px; }
-.spm-d-opt { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 52px; min-height: 52px; border: 0; padding: 0; background: none; color: #c4ccc9; font-family: var(--ag-font); font-size: 13px; letter-spacing: .5px; cursor: pointer; }
-.spm-d-ball { position: relative; display: grid; place-items: center; }
-.spm-d-opt.is-soon { color: rgba(255,255,255,.4); cursor: default; }
-.spm-d-opt.is-soon .sp-ball { opacity: .35; }
-.spm-d-opt.is-soon .spm-d-ball svg:not(.sp-ball) { position: absolute; color: #fff; }
-.sp2-d .ag-stage .ag-howto, .sp2-d .ag-stage .ag-live-count { display: none; }
-.sp2-d .ag-stage-word { top: 72px; }

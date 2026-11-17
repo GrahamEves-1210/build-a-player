@@ -167,46 +167,10 @@ export const SPORTS = [
 const ARRIVED = (() => { try { const v = sessionStorage.getItem('bap_sport_switch'); sessionStorage.removeItem('bap_sport_switch'); return v } catch { return null } })()
 if (ARRIVED) figureShown = true
 
-// each sport's ball, drawn flat in its real colours (Home's sport picker)
-export function SportBall({ id, size = 24 }) {
-  return (
-    <svg className={`sp-ball sp-ball--${id}`} viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
-      {id === 'nfl' && (
-        <g transform="rotate(-35 12 12)">
-          {/* a real ball's shape: pointed ends, a darker seam side, white laces */}
-          <path d="M1.2 12C4.6 5.4 19.4 5.4 22.8 12C19.4 18.6 4.6 18.6 1.2 12Z" fill="#8a4520" />
-          <path d="M1.2 12C4.6 18.6 19.4 18.6 22.8 12C19 16 5 16 1.2 12Z" fill="#6b3216" />
-          <path d="M5.2 8.6c.7 1.1.7 5.7 0 6.8M18.8 8.6c-.7 1.1-.7 5.7 0 6.8" stroke="#efe6d8" strokeWidth="1" fill="none" strokeLinecap="round" />
-          <path d="M8.6 11.2h6.8" stroke="#f6f1e8" strokeWidth="1.2" strokeLinecap="round" />
-          <path d="M9.5 10.1v2.2M11 10.1v2.2M12.5 10.1v2.2M14 10.1v2.2" stroke="#f6f1e8" strokeWidth=".9" strokeLinecap="round" />
-        </g>
-      )}
-      {id === 'bucket' && (
-        <>
-          <circle cx="12" cy="12" r="10.6" fill="#e2712a" />
-          <path d="M1.4 12h21.2M12 1.4v21.2M5 4.4c2.9 2.2 2.9 13 0 15.2M19 4.4c-2.9 2.2-2.9 13 0 15.2" stroke="#2a1408" strokeWidth="1.15" fill="none" />
-        </>
-      )}
-      {id === 'soccer' && (
-        <>
-          <circle cx="12" cy="12" r="10.6" fill="#f4f4f0" />
-          <path fill="#16181b" d="M12 8.3l3.52 2.56-1.35 4.13H9.83L8.48 10.86zM12 5.3L7.99 3.39 10.02 2.71 12 2.5l1.98.21 2.03.68zM18.37 9.93l.58-4.41 1.28 1.73.81 1.81.41 1.95-.02 2.15zM15.94 17.42l4.37-.81-1.25 1.75-1.48 1.33-1.72.99-2.05.65zM8.06 17.42l2.13 3.91-2.05-.65-1.72-.99-1.48-1.33-1.25-1.75zM5.63 9.93l-3.06 3.23-.02-2.15.41-1.95.81-1.81 1.28-1.73z" />
-          <path stroke="#16181b" strokeWidth="1" fill="none" d="M12 8.3v-3M15.52 10.86l2.85-.93M14.17 14.99l1.77 2.43M9.83 14.99l-1.77 2.43M8.48 10.86l-2.85-.93" />
-        </>
-      )}
-      {id === 'baseball' && (
-        <>
-          <circle cx="12" cy="12" r="10.6" fill="#f4f1ea" />
-          <path d="M6 3.6c2.6 2.6 2.6 14.2 0 16.8M18 3.6c-2.6 2.6-2.6 14.2 0 16.8" stroke="#c8202f" strokeWidth="1.2" fill="none" />
-        </>
-      )}
-    </svg>
-  )
-}
-
-// The sports: their balls in a row, the one you're on bigger, lit, its name underlined. One tap on another
-// ball opens that sport. A radio group: Tab lands on the sport you're on, the arrow keys move along the
-// balls (they move focus only: picking one opens another page), Enter or Space picks.
+// The sports, across the top of the stage like a broadcast's open: the names in big condensed type, the one
+// on the stage bright with its colour under it, the others dimmed; a sport still to come shows locked. One tap
+// opens that sport's Home (its own page). A radio group: Tab lands on the sport on the stage, the arrow keys move
+// along the names (focus only: picking opens another page), Enter or Space picks.
 function SportPick({ sport }) {
   const [on, setOn] = useState(sport)
   const rowRef = useRef(null)
@@ -220,69 +184,24 @@ function SportPick({ sport }) {
     const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
     if (!(e.key in keys) && e.key !== 'Home' && e.key !== 'End') return
     e.preventDefault(); e.stopPropagation()
-    const btns = [...rowRef.current.querySelectorAll('.sp-opt:not([aria-disabled="true"])')]
+    const btns = [...rowRef.current.querySelectorAll('.sp-tab:not([aria-disabled="true"])')]
     const at = btns.indexOf(document.activeElement)
     const next = e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1 : (Math.max(0, at) + keys[e.key] + btns.length) % btns.length
     btns[next]?.focus()
   }
   return (
-    <div className="sp-rack" ref={rowRef} role="radiogroup" aria-label="Sport" style={{ '--n': SPORTS.length }} onKeyDown={onKey}>
-      {/* the block behind the sport you're on: it slides to the one tapped (owner 11-16: a sliding block, not an underline) */}
-      <span className={`sp-hl sp-hl--${on}`} style={{ '--i': Math.max(0, SPORTS.findIndex(s => s.id === on)) }} aria-hidden="true" />
+    <div className="sp-nav" ref={rowRef} role="radiogroup" aria-label="Sport" onKeyDown={onKey}>
       {SPORTS.map(({ id, label, soon }) => {
         const locked = soon && id !== on
         return (
           <button key={id} type="button" role="radio" aria-checked={id === on} aria-disabled={locked || undefined} tabIndex={id === on ? 0 : -1}
-            className={`sp-opt sp-opt--${id}${id === on ? ' is-on' : ''}${locked ? ' is-soon' : ''}`}
+            aria-label={locked ? `${label}, coming soon` : undefined} title={locked ? 'Coming soon' : undefined}
+            className={`sp-tab sp-tab--${id}${id === on ? ' is-on' : ''}${locked ? ' is-soon' : ''}`}
             onClick={e => { if (!locked) go(id, e.detail === 0) }}>
-            <span className="sp-opt-ball"><SportBall id={id} size={24} />{locked && <IconLock size={14} />}</span>
-            <b>{label}</b>
-            {locked && <small>SOON</small>}
+            {locked && <IconLock size={12} />}<b>{label}</b>
           </button>
         )
       })}
-    </div>
-  )
-}
-
-// MOCK (dev only, round 2): ?sp2=a|b|c|d picks a sport-picker concept to compare (0 = today's)
-const SP2 = (() => {
-  if (!import.meta.env.DEV) return null
-  try {
-    const m = /[?&]sp2=([abcd0])\b/.exec(location.search)?.[1]
-    if (m) localStorage.setItem('bap_sp2_mock', m)
-    const v = localStorage.getItem('bap_sp2_mock')
-    return v && v !== '0' ? v : null
-  } catch { return null }
-})()
-function SportPickMock({ sport, v }) {
-  const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
-  const cur = SPORTS.find(s => s.id === sport) ?? SPORTS[0]
-  if (v === 'd') {
-    return (
-      <div className="spm spm-d" role="radiogroup" aria-label="Sport">
-        <span className="spm-d-cur" role="radio" aria-checked="true"><SportBall id={cur.id} size={46} /><b>{cur.label}</b></span>
-        <span className="spm-d-others">
-          {SPORTS.filter(s => s.id !== sport).map(({ id, label, soon }) => (
-            <button key={id} type="button" role="radio" aria-checked="false" aria-disabled={soon || undefined} className={`spm-d-opt${soon ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
-              <span className="spm-d-ball"><SportBall id={id} size={30} />{soon && <IconLock size={12} />}</span>
-              <small>{soon ? 'SOON' : label}</small>
-            </button>
-          ))}
-        </span>
-      </div>
-    )
-  }
-  return (
-    <div className={`spm spm-${v}`} role="radiogroup" aria-label="Sport" style={{ '--n': SPORTS.length }}>
-      {SPORTS.map(({ id, label, soon }) => (
-        <button key={id} type="button" role="radio" aria-checked={id === sport} aria-disabled={soon || undefined}
-          className={`spm-opt spm-opt--${id}${id === sport ? ' is-on' : ''}${soon ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
-          {v === 'b' && <SportBall id={id} size={20} />}
-          {soon && <IconLock size={v === 'b' ? 12 : 13} />}
-          <b>{label}</b>
-        </button>
-      ))}
     </div>
   )
 }
@@ -751,7 +670,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise])
 
   return (
-    <div className={`ag-home ag-home--${sport}${SP2 ? ` sp2-${SP2}` : ''}`} ref={homeRef}>
+    <div className={`ag-home ag-home--${sport}`} ref={homeRef}>
       <div className="ag-home-inner">
         <HudOnce user={user} />
         <div className="ag-brand">
@@ -761,16 +680,14 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </div>
         </div>
 
-        {!SP2 && <SportOnce sport={sport} />}
-
-        {/* Character-select stage under stadium lights: swipe it, or tap a position */}
+        {/* Character-select stage under stadium lights, the sports across its top: swipe it, or tap a position */}
         <div className="ag-stage"
           onPointerDown={e => { swipeFrom.current = e.clientX }}
-          onPointerUp={e => { const from = swipeFrom.current; swipeFrom.current = null; if (from != null && Math.abs(e.clientX - from) > 48 && !e.target.closest('.ag-positions')) step(e.clientX < from ? 1 : -1) }}
+          onPointerUp={e => { const from = swipeFrom.current; swipeFrom.current = null; if (from != null && Math.abs(e.clientX - from) > 48 && !e.target.closest('.ag-positions, .sp-nav')) step(e.clientX < from ? 1 : -1) }}
           onPointerCancel={() => { swipeFrom.current = null }}>
           <div className="ag-stage-photo" />
           <div className="ag-stage-beam" />
-          {SP2 && <SportPickMock sport={sport} v={SP2} />}
+          <SportOnce sport={sport} />
           <span key={posWord} className="ag-stage-word" style={{ '--len': posWord.length }} aria-hidden="true">{posWord}</span>
           <OnlineNow />
           {/* the website doesn't open the tutorial by itself (cleared browser data
