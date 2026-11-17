@@ -356,8 +356,9 @@ export const SPORT = {
       // receivers and DBs at face value, a tight end ~2 worse, a running back ~3 worse;
       // an edge rusher ~2 better (the premium spot after quarterback), an interior lineman ~1 worse
       // (a tackle ~1 better, a guard or a center ~2 worse)
+      // (a safety ~2 worse, a corner at face value: safeties rarely go in the top ten, 2026-11-16)
       // (a kicker goes on the third day or not at all: the fifth round for the best leg in the class, most of them undrafted)
-      stock: (ovr0, pos, c = null) => { if (pos === 'k') return ovr0 >= 95 ? [150, 190] : ovr0 >= 90 ? [170, 215] : ovr0 >= 84 ? [195, 224] : [218, 224]; if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + (pos === 'dl' ? (c && dlSpot(c) === 'dt' ? -1 : 2) : pos === 'ol' ? (!c || olGroup(olSpot(c)) === 'tackle' ? 1 : -2) : { qb: 4, te: -2, rb: -3, lb: -1 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
+      stock: (ovr0, pos, c = null) => { if (pos === 'k') return ovr0 >= 95 ? [150, 190] : ovr0 >= 90 ? [170, 215] : ovr0 >= 84 ? [195, 224] : [218, 224]; if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + (pos === 'dl' ? (c && dlSpot(c) === 'dt' ? -1 : 2) : pos === 'ol' ? (!c || olGroup(olSpot(c)) === 'tackle' ? 1 : -2) : pos === 'db' ? (c && dbSpot(c) === 's' ? -2 : 0) : { qb: 4, te: -2, rb: -3, lb: -1 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
       rookie: o => ({ kind: 'rookie', years: 4, left: 4, perYear: o <= 5 ? 9.5 : o <= 10 ? 6.5 : o <= 16 ? 4.5 : o <= 32 ? 3.2 : o <= 64 ? 1.8 : o <= 100 ? 1.3 : 1.0, option: o <= 32 }),
       posList: ['EDGE', 'OT', 'CB', 'WR', 'QB', 'LB', 'DT', 'S', 'RB', 'TE', 'G', 'C'],
       // How much a team wants this position with this pick (1 = neutral), on top of its need:
@@ -1788,10 +1789,36 @@ const DRILLS_X = { ...K_DRILLS }   // (the kicker's workout: lib/careerKicker.js
 export const registerDrills = fns => { Object.assign(DRILLS_X, fns) }
 // who the combine's norms read: a lineman runs by his spot (a tackle isn't timed like an edge)
 export const combinePos = c => (c.pos === 'dl' ? dlSpot(c) : c.pos)
-// Skipping the rest of the workout: scouts write down a poor one, whatever the trait
+// Skipping the rest of the workout. Football and basketball (2026-11-16): he sits it out, the way top prospects do
+// (Fernando Mendoza in 2026), and the teams go off his tape and his pro day: no numbers, a small cost that grows
+// the further down the board he is, and a wider window (stockOf). A drill skipped is { dnp: true }. Soccer and
+// baseball: scouts write down a poor one, whatever the trait
 export function skipCombine(c) {
-  const combine = c.draft.combine.map(d => (d.score != null ? d : { ...d, score: 0.3, ...drillValue(d.id, Math.min(c.build[d.trait]?.val ?? 5, 3), 0.3, null, combinePos(c)) }))
-  return { ...c, draft: { ...c.draft, combine } }
+  if (sportOf(c).x) {
+    const combine = c.draft.combine.map(d => (d.score != null ? d : { ...d, score: 0.3, ...drillValue(d.id, Math.min(c.build[d.trait]?.val ?? 5, 3), 0.3, null, combinePos(c)) }))
+    return { ...c, draft: { ...c.draft, combine } }
+  }
+  const all = c.draft.combine.every(d => d.score == null)
+  const combine = c.draft.combine.map(d => (d.score != null ? d : { ...d, score: 0, dnp: true, text: sportOf(c).isBucket ? 'Sat out' : 'Pro day', pct: null }))
+  return { ...c, draft: { ...c.draft, combine, ...(all ? { sat: true } : {}) } }
+}
+// The rooms (football and basketball): an answer is the answer's own stock; a skipped interview (answer SKIP_TALK)
+// tells that team he isn't interested
+export const SKIP_TALK = -1
+export const talkSkipped = x => x?.answer === SKIP_TALK
+const answerOf = x => (x?.answer == null || talkSkipped(x) ? null : x.a?.[x.answer] ?? null)
+// what an interview does to his stock with everyone (a skip: a little, some teams notice it)
+const talkStock = x => (talkSkipped(x) ? -0.3 : answerOf(x)?.stock ?? 0)
+// each room's read of him: { int: the answers' stock, skip: he skipped it }
+function draftRooms(c) {
+  const out = {}
+  for (const x of c.draft?.interviews ?? []) {
+    if (!x.team || x.answer == null) continue
+    const o = (out[x.team] ??= { int: 0, skip: false })
+    if (talkSkipped(x)) o.skip = true
+    else o.int += answerOf(x)?.stock ?? 0
+  }
+  return out
 }
 export function recordCombine(c, id, score, raw = null) {
   const combine = c.draft.combine.map(d => (d.id === id ? { ...d, score, ...drillValue(id, c.build[d.trait]?.val ?? 5, score, raw, combinePos(c)) } : d))
@@ -1816,13 +1843,18 @@ export function stockOf(c) {
   // his workout is read against a decent one for his own traits, and only how he tested on the day moves him)
   const par = Array.isArray(proj) && played.length ? played.reduce((s, x) => s + drillValue(x.id, c.build[x.trait]?.val ?? 5, 0.6, null, combinePos(c)).pct, 0) / played.length : 0
   const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length - par : 0
-  const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
+  const inter = (d.interviews ?? []).reduce((s, x) => s + talkStock(x), 0)
+  // (sat out the combine, football and basketball: the pro day. A top-ten talent loses about a pick, a late first
+  // about three, a Day 2 grade five to nine, and the window widens: nobody timed him)
+  const dnp = d.combine.length ? d.combine.filter(x => x.dnp).length / d.combine.length : 0
+  const sat = dnp * Math.min(16, S.isBucket ? 0.2 + mid * 0.03 : 0.3 + mid * 0.12)
+  const wide = dnp * (S.isBucket ? 1 : 2 + (hi0 - lo0) * 0.25)
   // (a college résumé, START IN COLLEGE: c.college.stock picks earlier, or later, a nudge of at most seven)
-  const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2) - (c.college?.stock ?? 0))     // a good answer: about two picks earlier
-  // football: the top two picks are a quarterback's. Anyone else goes 3rd at
-  // best (2nd for a 95+ who forces it), never 1st
-  const top = S.isBucket || c.pos === 'qb' ? 1 : c.ovr >= 95 ? 2 : 3
-  const lo = clamp(lo0 + shift, top, maxPick(S)), hi = clamp(hi0 + shift, lo, maxPick(S))
+  const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2) - (c.college?.stock ?? 0) + sat)     // a good answer: about two picks earlier
+  // football: the first pick is a quarterback's, or a generational talent's (97+: Ja'Marr Chase-level or better);
+  // a 94+ can go 2nd, anyone else 3rd at best
+  const top = S.isBucket || c.pos === 'qb' || c.ovr >= 97 ? 1 : c.ovr >= 94 ? 2 : 3
+  const lo = clamp(Math.round(lo0 + shift - wide / 2), top, maxPick(S)), hi = clamp(Math.round(hi0 + shift + wide / 2), lo, maxPick(S))
   return { lo, hi, loP: pickLabel(lo, c.sport), hiP: pickLabel(hi, c.sport), shift }
 }
 // The range in draft-room terms: "Late 1st – mid 2nd round"
@@ -1864,6 +1896,194 @@ function draftOrder(c) {
   const now = S.talent ? rateBase(S).year0 : null
   return S.teams.map(t => ({ ...S.teamOf(t.short), ...(now?.[t.short] ?? {}) })).sort((a, b) => (a.off + a.def + r() * 3) - (b.off + b.def + r() * 3)).map(t => t.short)
 }
+
+// ── The football draft (2026-11-16, from a player's report the owner passed on: a quarterback whose stock had
+// dropped still went in the first round to the Bears, who have theirs, and a receiver always went to the Browns
+// or the Jets, who needed a quarterback). It runs the way the real one does:
+//  · THE ORDER (nflPicks): the 2025 records (lib/franchise2/lastSeason.js), the teams out of the playoffs worst
+//    first, then the playoff teams by the round they went out; where the game's rosters know who really picked at a
+//    spot (data/draft-2026.js), that team picks there (the real trades: the Giants at 5 and 10, the Jets at 2, 16, 30).
+//  · THE NEEDS (nflNeeds): each roster before the draft (its 2026 draftees taken off): the weakest starter at each
+//    spot, a starter 31 or older, a hole. A team with its quarterback (80+ and 34 or younger, or 74+ at 25 or
+//    younger) doesn't take one in the first two rounds; one with an old starter wants his successor.
+//  · THE BOARD (nflBoard): the real class at its real picks, and a made-up class around it (Franchise's,
+//    lib/franchise2/draft.js makeClass: real schools, the big programs at the top), ranked with each spot's real
+//    value: a quarterback, an edge and a tackle up, a back, a tight end and a safety down, a kicker last. The player
+//    sits at a rank drawn inside his projected window (stockOf).
+//  · THE PICKS (nflDraft): each team takes the best man for it, his rank, its need at his spot and its own read of
+//    him (about a point); a team that took a man at a spot needs it less. For the player, how his interview went:
+//    a team he turned off passes on him unless he has slid well past his slot; one he skipped is a little cooler.
+import { DRAFT_2026 } from '../data/draft-2026.js'
+import { lastSeason } from './franchise2/lastSeason.js'
+// the made-up class is Franchise's, loaded when the draft is near (the Draft screen calls this; the checks too).
+// Without it the board still fills: the same mix of spots, made-up names, no schools
+let DRAFT_X = null, draftXp = null
+export const loadDraftClass = () => (draftXp ??= Promise.all([import('./franchise2/draft.js'), import('../data/cfb-teams.js')])
+  .then(([d, t]) => (DRAFT_X = { makeClass: d.makeClass, school: Object.fromEntries(t.CFB_TEAMS.map(x => [x.short, x.school])) }))
+  .catch(() => null))
+const ND_N = 32, ND_LAST = 224
+// a real pick's number (compensatory picks from the 3rd round on) onto the game's 32-a-round slots
+const ND_START = [1, 33, 65, 103, 141, 177, 221], ND_LEN = [32, 32, 38, 38, 36, 44, 37]
+const ndSlot = n => { let r = 0; while (r < 6 && n >= ND_START[r + 1]) r++; return r * ND_N + 1 + clamp(Math.floor((n - ND_START[r]) * ND_N / ND_LEN[r]), 0, ND_N - 1) }
+const ND_END = { 'LOST WILD CARD': 1, 'LOST DIVISIONAL': 2, 'LOST AFC CHAMPIONSHIP': 3, 'LOST NFC CHAMPIONSHIP': 3, 'LOST SUPER BOWL LX': 4, 'WON SUPER BOWL LX': 5 }
+// equal records: the real 2026 order (the strength-of-schedule tiebreak), then by name
+const ND_TIE = ['LV', 'NYJ', 'ARI', 'TEN', 'NYG', 'CLE', 'WAS', 'NO', 'KC', 'CIN', 'MIA', 'DAL', 'ATL', 'BAL', 'TB', 'IND', 'DET', 'MIN']
+const REAL_GROUP = { QB: 'qb', RB: 'rb', WR: 'wr', TE: 'te', LT: 'ot', RT: 'ot', LG: 'og', RG: 'og', C: 'c', EDGE: 'edge', DT: 'dt', LB: 'lb', CB: 'cb', S: 's', K: 'k' }
+const GROUP_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', ot: 'OT', og: 'G', c: 'C', edge: 'EDGE', dt: 'DT', lb: 'LB', cb: 'CB', s: 'S', k: 'K' }
+const GROUP_WORD = { qb: 'quarterback', rb: 'running back', wr: 'wide receiver', te: 'tight end', ot: 'offensive tackle', og: 'guard', c: 'center', edge: 'edge rusher', dt: 'defensive tackle', lb: 'linebacker', cb: 'cornerback', s: 'safety', k: 'kicker' }
+// (Franchise's position values, lib/franchise2/draft.js GROUP_V)
+const GROUP_VALUE = { qb: 3, edge: 1.8, ot: 1.4, cb: 1, wr: 0.7, dt: 0.3, s: -0.8, lb: -1.2, og: -1.7, c: -2, te: -1.6, rb: -1.8, k: -14 }
+const GROUP_STARTERS = { qb: 1, rb: 1, wr: 3, te: 1, ot: 2, og: 2, c: 1, edge: 2, dt: 2, lb: 2, cb: 2, s: 2, k: 1 }
+const DRAFTEES = DRAFT_2026.map(x => x[3])
+// the player's spot on a draft board
+export const draftGroup = c => (c.pos === 'ol' ? REAL_GROUP[olSpot(c)] ?? 'ot' : c.pos === 'dl' ? (dlSpot(c) === 'dt' ? 'dt' : 'edge') : c.pos === 'db' ? dbSpot(c) : c.pos)
+let ND_PICKS = null
+function nflPicks() {
+  if (ND_PICKS) return ND_PICKS
+  const key = s => { const x = lastSeason(s) ?? { w: 8, l: 9, t: 0, end: 'MISSED PLAYOFFS' }; return [ND_END[x.end] ?? 0, (x.w + x.t / 2) / Math.max(1, x.w + x.l + x.t)] }
+  const tie = s => { const i = ND_TIE.indexOf(s); return i < 0 ? 99 : i }
+  const order = NFL_TEAMS.map(t => t.short).sort((a, b) => { const A = key(a), B = key(b); return A[0] - B[0] || A[1] - B[1] || tie(a) - tie(b) || (a < b ? -1 : 1) })
+  const picks = Array.from({ length: ND_LAST }, (_, i) => ({ o: i + 1, team: order[i % ND_N], real: null }))
+  for (const [n, team, pos, name, school] of DRAFT_2026) {
+    let o = ndSlot(n)
+    const base = Math.floor((o - 1) / ND_N) * ND_N
+    // (two real picks on one of our slots: the next free one in the round)
+    for (let d = 0; d < ND_N && picks[o - 1].real; d++) o = base + 1 + ((o - base) % ND_N)
+    if (!picks[o - 1].real) picks[o - 1] = { o, team, real: { name, g: REAL_GROUP[pos] ?? 'lb', school, rank: o } }
+  }
+  return (ND_PICKS = picks)
+}
+// a team's needs before the draft, 0 (none) to 4 (a hole), by board spot, and whether it has its quarterback
+const ND_NEED = {}
+export function draftNeeds(short) {
+  if (ND_NEED[short]) return ND_NEED[short]
+  const ro = makeRoster(short, 'nfl', 0, DRAFTEES)
+  const g = { qb: ro.qb ?? [], rb: ro.rb ?? [], wr: ro.wr ?? [], te: ro.te ?? [], k: ro.k ?? [], lb: ro.lb ?? [], ot: [], og: [], c: [], edge: [], dt: [], cb: [], s: [] }
+  for (const p of ro.ol ?? []) { const k = REAL_GROUP[olSlotOf(p)]; if (k) g[k].push(p) }
+  for (const p of ro.dl ?? []) g[dlSpotOf(p) === 'dt' ? 'dt' : 'edge'].push(p)
+  for (const p of ro.db ?? []) g[spotOf(p) === 's' ? 's' : 'cb'].push(p)
+  const need = {}
+  for (const [k, list] of Object.entries(g)) {
+    // (a made-up man filling a spot, rookie: true, is no answer there)
+    const men = list.map(p => ({ ovr: p.rookie ? Math.min(p.ovr, 70) : p.ovr, age: p.age ?? 27 })).sort(byOvr)
+    const n = GROUP_STARTERS[k], worst = men[n - 1]?.ovr ?? 62
+    const old = men.slice(0, n).some(p => p.age >= (k === 'k' ? 38 : k === 'qb' ? 36 : 31))
+    need[k] = clamp((84 - worst) / 3 + (old ? 0.7 : 0), 0, 4)
+  }
+  const qb = (ro.qb ?? []).filter(p => !p.rookie).sort(byOvr)[0]
+  const franchise = !!qb && ((qb.ovr >= 80 && qb.age <= 34) || (qb.age <= 25 && qb.ovr >= 74))
+  if (franchise) need.qb = 0
+  else if (qb && qb.ovr >= 80) need.qb = Math.max(need.qb, 1.8)   // (a good starter near the end: his successor)
+  return (ND_NEED[short] = { need, franchise })
+}
+const nflNeeds = draftNeeds
+// a board rank's worth, in grade points: No. 1 about 99, No. 10 about 88, No. 32 about 82, No. 100 about 74, No. 180
+// about 68 (the straight part keeps a Day 3 grade on Day 3: without it, need alone moved a late-round man a round up)
+const ndValue = rank => 99 - 4.5 * Math.log(Math.max(1, rank)) - 0.04 * rank
+// a stable bell (sd about 1) from two integers: a team's own read of a man, the same every time it's read
+const ndMix = (a, b) => { let h = Math.imul(a ^ 0x9E3779B1, 0x85EBCA77) ^ Math.imul((b + 0x7F4A7C15) | 0, 0xC2B2AE3D); h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D); h ^= h >>> 12; h = Math.imul(h, 0x297A2D39); h ^= h >>> 15; return (h >>> 0) / 4294967296 }
+const ndBell = (a, b) => (ndMix(a, b) + ndMix(a, b + 1) + ndMix(a, b + 2) - 1.5) * 2
+const GEN_MIX = [['qb', 15], ['rb', 22], ['wr', 40], ['te', 18], ['ol', 52], ['dl', 50], ['lb', 30], ['db', 49], ['k', 2]]
+const GEN_SEEN = new Map()
+function genClass(seed) {
+  const key = `${seed}|${!!DRAFT_X}`
+  if (!GEN_SEEN.has(key)) { if (GEN_SEEN.size > 6) GEN_SEEN.clear(); GEN_SEEN.set(key, makeGen(seed)) }
+  return GEN_SEEN.get(key)
+}
+function makeGen(seed) {
+  if (DRAFT_X) {
+    const F = { seed: `${seed}-crclass`, year: FIRST_SEASON }
+    DRAFT_X.makeClass(F)
+    return F.dc.map(x => ({ name: x.n, g: x.p === 'ol' ? REAL_GROUP[x.s] ?? 'og' : x.p === 'dl' || x.p === 'db' ? x.s : x.p, school: DRAFT_X.school[x.col] ?? null, v: x.pk - (x.hb ?? 0) }))
+  }
+  const r = seeded(`${seed}-crclass`), out = []
+  for (const [p, n] of GEN_MIX) for (let i = 0; i < n; i++) out.push({ name: rookieName(r), g: p === 'ol' ? ['ot', 'og', 'c', 'og', 'ot'][i % 5] : p === 'dl' ? (i % 2 ? 'dt' : 'edge') : p === 'db' ? (i % 5 < 3 ? 'cb' : 's') : p, school: null, v: 98 - 30 * Math.pow(r(), 0.6) })
+  return out
+}
+// the made-up class ranked around the real one: the real men hold their real picks' ranks, the rest fill the gaps
+function nflBoard(c) {
+  const real = new Set(nflPicks().filter(p => p.real).map(p => p.o)), h = hashN(c.seed)
+  const gen = genClass(c.seed).map((x, i) => ({ ...x, id: i + 1, s: x.v + (GROUP_VALUE[x.g] ?? 0) + ndBell(h, i * 3) })).sort((a, b) => b.s - a.s)
+  let rank = 0
+  for (const x of gen) { do rank++; while (real.has(rank)); x.rank = rank }
+  return gen
+}
+// The night: the picks in order until a team takes him. Returns { mine: the pick (null: undrafted), ticker: the
+// picks before his, rank: his place on the board }
+function nflNight(c) {
+  const g = draftGroup(c), picks = nflPicks(), board = nflBoard(c)
+  const r = seeded(`nfldraft-${c.seed}`)
+  const { lo, hi } = stockOf(c)
+  const rank = clamp(Math.round(lo + (hi - lo) * (r() + r()) / 2), 1, 260)
+  const rooms = draftRooms(c)
+  const needs = Object.fromEntries(NFL_TEAMS.map(t => { const n = nflNeeds(t.short); return [t.short, { need: { ...n.need }, franchise: n.franchise }] }))
+  const h = hashN(c.seed)
+  const score = (s, rk, grp, id, rd) => {
+    const T = needs[s]
+    const block = grp === 'qb' && T.franchise ? (rd <= 2 ? -30 : rd === 3 ? -5 : -1) : 0
+    // (a need of 4 is worth about half again a man's rank: a team with a hole reaches, it doesn't reach a round; a
+    // quarterback-needy team reaches furthest in the first round)
+    return ndValue(rk) + 0.55 * (grp === 'qb' ? (rd === 1 ? 1.5 : 1.2) : 1) * (T.need[grp] ?? 0) + ndBell(h ^ hashN(s), id * 5) + block
+  }
+  const taken = new Set(), ticker = []
+  for (const p of picks) {
+    const rd = Math.ceil(p.o / ND_N), s = p.team
+    // the man the team takes if not him: the real pick (the one it really made: read as at least a real need there,
+    // and half a point for having made it), or its best on the board
+    // (a man ranked at or behind the player sits one place further down: the player is on the board too)
+    const at = x => x.rank + (x.rank >= rank ? 1 : 0)
+    let alt = p.real, altS = alt ? score(s, at(alt), alt.g, 5000 + alt.rank, rd) + 0.55 * Math.max(0, 2 - (needs[s].need[alt.g] ?? 0)) + 0.5 : -1e9
+    if (!alt) { let seen = 0; for (const x of board) { if (taken.has(x.id)) continue; const v = score(s, at(x), x.g, x.id, rd); if (v > altS) { altS = v; alt = x } if (++seen >= 45) break } }
+    const R = rooms[s]
+    const me = score(s, rank, g, 0, rd) + (R ? (R.int > 0 ? R.int * 1.6 : R.int * 1.5) - (R.skip ? 0.8 : 0) : 0)
+    // (a room he turned off: only once he has slid well past where the board had him)
+    const sour = R && R.int < 0 && p.o - rank < Math.max(6, 0.35 * rank)
+    if (!sour && me > altS) return { mine: p, ticker, rank }
+    if (!alt) continue
+    if (!p.real) taken.add(alt.id)
+    ticker.push({ o: p.o, ...pickLabel(p.o), team: s, player: alt.name, pos: GROUP_LABEL[alt.g] ?? '', col: alt.school ?? null, ...(p.real ? { real: true } : {}) })
+    const T = needs[s]
+    if (alt.g === 'qb') { T.need.qb = 0; if (rd <= 2) T.franchise = true } else T.need[alt.g] = (T.need[alt.g] ?? 0) * 0.35
+  }
+  return { mine: null, ticker, rank }
+}
+export const draftNight = nflNight   // (scripts/moments/draft-check.mjs)
+function nflDraft(c) {
+  const S = sportOf(c)
+  const { mine: p, ticker, rank } = nflNight(c)
+  // a kicker nobody took before the draft's last picks wasn't drafted at all: he signs, three years at the
+  // minimum, with the team that needs a leg most (and didn't mind him in the room)
+  const udfa = !p || (c.pos === 'k' && p.o >= 216)
+  let team = p?.team
+  if (udfa) {
+    const rooms = draftRooms(c), r = seeded(`nfludfa-${c.seed}`)
+    const g = draftGroup(c)
+    team = NFL_TEAMS.map(t => ({ t: t.short, v: (nflNeeds(t.short).need[g] ?? 0) + r() * 1.5 - ((rooms[t.short]?.int ?? 0) < 0 ? 5 : 0) })).sort((a, b) => b.v - a.v)[0].t
+  }
+  const before = udfa ? ticker.slice(-5) : ticker.slice(-8)
+  const me = udfa ? { o: ND_LAST + 1, round: S.draft.rounds, slot: 0, team, you: true, udfa: true } : { o: p.o, ...pickLabel(p.o, c.sport), team, you: true }
+  const picks = [...before, me]
+  const roster = makeRoster(team, c.sport)
+  const fit = teamFit(team, c.pos, { roster, name: c.name, sport: c.sport, spot: lineSpot(c) })
+  const contract = udfa ? { kind: 'rookie', years: 3, left: 3, perYear: 0.9, option: false, udfa: true } : S.draft.rookie(p.o)
+  const met = (c.draft.interviews ?? []).some(x => x.team === team && !talkSkipped(x))
+  const lbl = udfa ? null : pickLabel(p.o, c.sport)
+  const text = udfa ? `Went undrafted. Signed with the ${fit.name} as a free agent the night the draft ended` : `Drafted in round ${lbl.round}, pick ${lbl.slot} (No. ${p.o} overall) by the ${fit.name}${met ? ' (they interviewed him)' : ''}`
+  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: me, rank }, team, roster, fit, contract, decisions: [...c.decisions, ...(c.draft.sat ? [{ year: 1, text: 'Sat out the combine and worked out at his pro day' }] : []), { year: 1, text }] }
+}
+// The call from the podium: "With the 14th pick in the 2026 NFL Draft, the Cincinnati Bengals select Cole Norwood,
+// wide receiver, Ohio State." (a later round: "With the 14th pick in the second round, No. 46 overall, …")
+const ROUND_WORD = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
+const nth = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+const HOOP_WORD = { PG: 'point guard', SG: 'shooting guard', SF: 'small forward', PF: 'power forward', C: 'center' }
+export function draftCall(c) {
+  const p = c.draft?.pick, S = sportOf(c)
+  if (!p || p.udfa || !c.fit?.name || S.isSoccer) return null
+  const what = c.sport === 'nfl' ? GROUP_WORD[draftGroup(c)] : S.isBucket ? HOOP_WORD[hoopSpot(c)] : null
+  const school = c.college?.schoolName ?? c.college?.school ?? null
+  const at = p.round === 1 ? `the ${nth(p.o)} pick in the ${c.seasons?.[0]?.season ?? c.season ?? FIRST_SEASON} ${S.league} Draft` : `the ${nth(p.slot)} pick in the ${ROUND_WORD[p.round - 1] ?? nth(p.round)} round, No. ${p.o} overall`
+  return `With ${at}, the ${c.fit.name} select ${c.name}${what ? `, ${what}` : ''}${school ? `, ${school}` : ''}.`
+}
 // After the combine: four teams from around your projected slot sit you down
 // One real team from your division (the same one all offseason)
 function divRival(c) {
@@ -1879,14 +2099,27 @@ export function setupInterviews(c) {
   if (sportOf(c).x?.interviews) return sportOf(c).x.interviews(c)
   const S = sportOf(c)
   const r = seeded(`int-${c.seed}`)
-  const order = draftOrder(c), N = order.length
   const { lo, hi } = stockOf(c)
-  const near = []
-  for (let o = Math.max(1, lo - 6); o <= Math.min(maxPick(S), hi + 6) && near.length < N; o++) { const t = order[(o - 1) % N]; if (!near.includes(t)) near.push(t) }
-  // (the rooms that actually want the position; a random order among them)
-  // (a back, a receiver or a tight end: the rooms with a quarterback and a line come in more often, draftLean)
-  const wantOf = t => wantFor(c, t, Math.ceil(order.indexOf(t) < 0 ? 1 : pickLabel(clamp(teamPick(c, t), 1, maxPick(S)), c.sport).round)) * draftLean(c, t)
-  const teams = near.map(t => ({ t, k: Math.pow(r(), 1 / Math.max(0.001, wantOf(t))) })).sort((a, b) => b.k - a.k).slice(0, 4).map(x => x.t)
+  let teams
+  if (c.sport === 'nfl') {
+    // football: the teams picking around his range that need his spot (a quarterback isn't brought in by a team
+    // with its own, unless he's a Day 3 arm); the window widens until there are four
+    const g = draftGroup(c), picks = nflPicks()
+    const w = t => { const n = nflNeeds(t); return g === 'qb' && n.franchise && lo <= 96 ? 0.02 : Math.pow(0.3 + (n.need[g] ?? 0), 1.5) }
+    teams = []
+    for (let pad = 4; teams.length < 4 && pad < 240; pad += 8) {
+      const near = [...new Set(picks.filter(p => p.o >= lo - pad && p.o <= hi + pad).map(p => p.team))]
+      teams = near.map(t => ({ t, k: Math.pow(r(), 1 / Math.max(0.001, w(t))) })).sort((a, b) => b.k - a.k).slice(0, 4).map(x => x.t)
+    }
+  } else {
+    const order = draftOrder(c), N = order.length
+    const near = []
+    for (let o = Math.max(1, lo - 6); o <= Math.min(maxPick(S), hi + 6) && near.length < N; o++) { const t = order[(o - 1) % N]; if (!near.includes(t)) near.push(t) }
+    // (the rooms that actually want the position; a random order among them)
+    // (a back, a receiver or a tight end: the rooms with a quarterback and a line come in more often, draftLean)
+    const wantOf = t => wantFor(c, t, Math.ceil(order.indexOf(t) < 0 ? 1 : pickLabel(clamp(teamPick(c, t), 1, maxPick(S)), c.sport).round)) * draftLean(c, t)
+    teams = near.map(t => ({ t, k: Math.pow(r(), 1 / Math.max(0.001, wantOf(t))) })).sort((a, b) => b.k - a.k).slice(0, 4).map(x => x.t)
+  }
   const qs = [...(c.pos === 'k' ? K_INTERVIEWS : c.pos === 'dl' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...DL_INTERVIEWS] : c.pos === 'lb' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...LB_INTERVIEWS] : c.pos === 'ol' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...OL_INTERVIEWS] : INTERVIEWS[c.sport] ?? INTERVIEWS.nfl)].sort(() => r() - 0.5).slice(0, teams.length)
   return { ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, a: [...q.a].sort(() => r() - 0.5), team: teams[i], answer: null })) } }   // (the answers in a random order: the best one isn't always first)
 }
@@ -2004,26 +2237,28 @@ export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest
   }
 }
 export function answerInterview(c, i, choice) {
+  // (choice SKIP_TALK: he passes on the sit-down, football and basketball)
   const inter = c.draft.interviews.map((x, k) => (k === i ? { ...x, answer: choice } : x))
   const done = inter.every(x => x.answer != null)
-  const persona = done ? ['grinder', 'confident', 'cocky'].sort((a, b) => inter.filter(x => x.a[x.answer].persona === b).length - inter.filter(x => x.a[x.answer].persona === a).length)[0] : c.draft.persona
+  const persona = done ? ['grinder', 'confident', 'cocky'].sort((a, b) => inter.filter(x => answerOf(x)?.persona === b).length - inter.filter(x => answerOf(x)?.persona === a).length)[0] : c.draft.persona
   return { ...c, draft: { ...c.draft, interviews: inter, persona } }
 }
 // Draft day: your pick inside the window, at the team that needs you most and
 // liked you most in the room
 export function runDraft(c) {
   if (sportOf(c).x?.offers) return sportOf(c).x.offers(c)
+  if (c.sport === 'nfl') return nflDraft(c)
   const S = sportOf(c)
   const r = seeded(`draft2-${c.seed}`)
   const order = draftOrder(c), N = order.length
   const { lo, hi } = stockOf(c)
   const picks = []
-  const interest = {}
-  for (const x of c.draft.interviews ?? []) if (x.answer != null) interest[x.team] = (interest[x.team] ?? 0) + x.a[x.answer].stock
+  const rooms = draftRooms(c)
   const need = short => teamFit(short, c.pos, { sport: c.sport, spot: lineSpot(c) }).need
+  // (basketball, 2026-11-16: a room he turned off rarely takes him, and one he skipped is cooler on him)
   const weigh = (team, round) => {
-    const want = wantFor(c, team, round)
-    return { want, w: (need(team) ** 2 + 1 + Math.max(0, interest[team] ?? 0) * 8) * want * draftLean(c, team) }
+    const want = wantFor(c, team, round), R = rooms[team]
+    return { want, w: (need(team) ** 2 + 1 + Math.max(0, R?.int ?? 0) * 8) * want * draftLean(c, team) * ((R?.int ?? 0) < 0 ? 0.12 : 1) * (R?.skip ? 0.6 : 1) }
   }
   let cands = []
   for (let o = lo; o <= hi; o++) { const team = order[(o - 1) % N]; cands.push({ o, team, ...weigh(team, pickLabel(o, c.sport).round) }) }

@@ -3710,6 +3710,10 @@ html.bap-reduce-motion .cr-tabs-pill { transition: none; }
 .cr-pick-txt { display: flex; flex-direction: column; } .cr-pick-txt b { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; font-weight: 400; } .cr-pick-txt small { font-family: var(--ag-body); font-size: 11px; color: var(--ag-muted); }
 .cr-pick.is-you { border-color: #f5dc8a; background: rgba(245,220,138,.1); box-shadow: 0 0 18px rgba(212,175,55,.3); } .cr-pick.is-you b { color: #f5dc8a; }
 .cr-pick.is-wait { grid-template-columns: auto 1fr; font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
+/* draft night (2026-11-16): the position and the school under each name, the call from the podium, an interview passed on */
+.cr-ticker .cr-pick-txt small { font-size: 13px; }
+.cr-call { margin: 0; padding: 12px 14px; border-left: 3px solid #f5dc8a; font-family: var(--ag-body); font-size: 15px; line-height: 1.45; color: var(--ag-text); }
+.cr-q-skip { align-self: flex-start; min-height: 40px; font-size: 13px; }
 .cr-land { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; border: 1.5px solid var(--tc, var(--ag-line-hi)); background: linear-gradient(100deg, color-mix(in srgb, var(--tc, #fff) 18%, transparent), transparent 70%), var(--ag-panel); }
 .cr-land-logo { width: 64px; height: 64px; object-fit: contain; }
 .cr-land-txt { display: flex; flex-direction: column; gap: 2px; } .cr-land-txt b { font-family: var(--ag-display); font-size: 28px; font-weight: 400; line-height: 1; } .cr-land-txt small { font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-text-2); }

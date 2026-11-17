@@ -13,7 +13,7 @@ import {
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, byeTarget, stepCost, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
-  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord } from '../../lib/career'
+  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, loadDraftClass, draftCall, SKIP_TALK, talkSkipped } from '../../lib/career'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -416,11 +416,15 @@ function Draft({ c, setCareer }) {
   )
   // a career saved before the interviews had teams: set them up
   useEffect(() => { if (step === 'interview' && !c.draft.interviews?.[0]?.team) setCareer(setupInterviews({ ...c, step: 'interview' })) }, [step]) // eslint-disable-line
+  // (football: the draft class, Franchise's, loads while he works out and sits with the teams)
+  useEffect(() => { if (c.sport === 'nfl') loadDraftClass() }, [c.sport])
+  // football and basketball: an interview can be skipped, and the combine sat out (soccer and baseball keep theirs)
+  const canSkipTalk = c.sport === 'nfl' || c.sport === 'bucket'
   // draft day: the picks tick by until yours
   useEffect(() => {
     if (step !== 'day' || !c.draft.picks) return
     if (shown >= c.draft.picks.length) return
-    const id = setTimeout(() => { setShown(n => n + 1); sfx(shown + 1 === c.draft.picks.length ? 'claim' : 'tick') }, shown === 0 ? 600 : 900)
+    const id = setTimeout(() => { setShown(n => n + 1); sfx(shown + 1 === c.draft.picks.length ? 'claim' : 'tick') }, shown === 0 ? 500 : 650)
     return () => clearTimeout(id)
   }, [step, shown, c.draft.picks])
   // soccer's academy: the offers from the clubs, in place of draft day
@@ -466,13 +470,14 @@ function Draft({ c, setCareer }) {
           </div>
           {allDone ? (
             <>
-              <p className="cr-note ag-pop">{S.ui?.combineDone ? S.ui.combineDone(c) : soccer ? `The scouts saw every trial, and their report moved with it. Next: the coaches and scouts at four clubs want to sit down with ${c.name}.` : `Scouts saw the whole workout, and the projection moved with it. Next: four teams picking near ${c.name}'s projected range want a sit-down.`}</p>
+              <p className="cr-note ag-pop">{S.ui?.combineDone ? S.ui.combineDone(c) : canSkipTalk && c.draft.combine.some(d => d.dnp) ? `${c.name} sat out ${c.draft.combine.every(d => d.dnp) ? 'the combine' : 'the rest of the combine'}. Teams go off his ${c.sport === 'bucket' ? 'film and private workouts' : 'tape and his pro day'}, and the projection moved with it. Next: four teams picking near his projected range want a sit-down.` : soccer ? `The scouts saw every trial, and their report moved with it. Next: the coaches and scouts at four clubs want to sit down with ${c.name}.` : `Scouts saw the whole workout, and the projection moved with it. Next: four teams picking near ${c.name}'s projected range want a sit-down.`}</p>
               <button className="ag-btn tk-intro-go" onClick={() => { setCareer(setupInterviews({ ...c, step: 'interview' })); setStep('interview'); sfx('tap') }}>{soccer ? 'MEET THE CLUBS' : 'THE INTERVIEWS'} <IconArrow size={16} /></button>
             </>
           ) : (
             <>
               <p className="cr-note">{c.draft.combine.length === 2 ? 'Two' : 'Three'} {soccer ? 'trials' : 'drills'}, one go each. The trait sets the range; how the {soccer ? 'trial' : 'drill'} goes sets the number.</p>
-              <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(skipCombine(c)); sfx('tap') }}>{S.ui?.combineSkip ?? (soccer ? 'SKIP THE TRIALS' : 'SKIP COMBINE')}</button>
+              {canSkipTalk && <p className="cr-note">{c.sport === 'bucket' ? 'Top prospects often skip the drills at the NBA combine. Teams go off his college film and his private workouts instead.' : 'Top prospects sometimes sit it out: Fernando Mendoza skipped the 2026 combine. Teams go off his college tape and his pro day instead.'} A top pick loses little; a prospect on the fence can slide, and his range gets wider.</p>}
+              <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(skipCombine(c)); sfx('tap') }}>{S.ui?.combineSkip ?? (soccer ? 'SKIP THE TRIALS' : canSkipTalk ? (c.draft.combine.some(d => d.score != null) ? 'SKIP THE REST' : 'SKIP THE COMBINE') : 'SKIP COMBINE')}</button>
             </>
           )}
           {/* the comp, from the start of the pre-draft: who this build plays like */}
@@ -496,7 +501,7 @@ function Draft({ c, setCareer }) {
           {i === 0 && (
             <div className="cr-howto ag-pop">
               <span className="ag-eyebrow">HOW INTERVIEWS WORK</span>
-              <p>{soccer ? 'Four clubs at his level sit him down, one question each. A good answer raises that club\u2019s interest and lifts what the scouts think of him; a bad one does the opposite. A club that liked him is likelier to offer him a contract.' : 'Four teams picking near his projected range sit him down, one question each. A good answer raises that team\'s interest and moves his stock up about two picks; a bad one does the opposite. On draft day, a team that liked him is likelier to take him when he\'s still on the board at its pick.'}</p>
+              <p>{soccer ? 'Four clubs at his level sit him down, one question each. A good answer raises that club\u2019s interest and lifts what the scouts think of him; a bad one does the opposite. A club that liked him is likelier to offer him a contract.' : canSkipTalk ? 'Four teams picking near his projected range sit him down, one question each. A good answer raises that team\'s interest and moves his stock up about two picks. A bad one can take him off that team\'s board. Skipping a meeting tells the team he isn\'t interested, and it cools on him a little.' : 'Four teams picking near his projected range sit him down, one question each. A good answer raises that team\'s interest and moves his stock up about two picks; a bad one does the opposite. On draft day, a team that liked him is likelier to take him when he\'s still on the board at its pick.'}</p>
             </div>
           )}
           {!done ? (
@@ -504,13 +509,14 @@ function Draft({ c, setCareer }) {
               <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
               <p className="cr-q-text">"{it.q}"</p>
               <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); flashIt(it.team, a.stock); sfx(a.stock > 0 ? 'claim' : a.stock < 0 ? 'deny' : 'tap') }}>{a.t}</button>)}</div>
+              {canSkipTalk && <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => { setCareer(answerInterview(c, i, SKIP_TALK)); flashIt(it.team, -1); sfx('tap') }}>SKIP THE {nick(teamName(it.team)).toUpperCase()} INTERVIEW</button>}
             </div>
           ) : (
             <div className="cr-q ag-pop">
               {soccer
                 ? <p className="cr-q-text">The meetings are done. The scouts have {c.name} down as <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => x.a[x.answer].stock > 0).map(x => teamName(x.team)); return fans.length ? `. ${fans.length > 1 ? `${fans.slice(0, -1).join(', ')} and ${fans[fans.length - 1]}` : fans[0]} came away the keenest.` : '. No club came away sold, so it comes down to the trials.' })()}</p>
-                : <p className="cr-q-text">The interviews are done. {c.name} is projected to go <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => x.a[x.answer].stock > 0).map(x => nick(teamName(x.team))); return fans.length ? `. The ${fans.length > 1 ? `${fans.slice(0, -1).join(', ')} and ${fans[fans.length - 1]}` : fans[0]} came away the most interested.` : '. No team came away sold, so it comes down to need.' })()}</p>}
-              <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(runDraft({ ...c, step: 'day' })); setStep(soccer ? 'offers' : 'day'); setShown(0); sfx('whistle') }}>{soccer ? 'THE OFFERS' : 'DRAFT DAY'} <IconArrow size={16} /></button>
+                : <p className="cr-q-text">The interviews are done. {c.name} is projected to go <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => !talkSkipped(x) && x.a[x.answer]?.stock > 0).map(x => nick(teamName(x.team))), skipped = list.filter(talkSkipped).map(x => nick(teamName(x.team))), and = l => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0]); return `${fans.length ? `. The ${and(fans)} came away the most interested.` : '. No team came away sold, so it comes down to need.'}${skipped.length ? ` He skipped the ${and(skipped)}.` : ''}` })()}</p>}
+              <button className="ag-btn ag-btn--gold tk-intro-go" onClick={async () => { if (c.sport === 'nfl') await loadDraftClass(); setCareer(runDraft({ ...c, step: 'day' })); setStep(soccer ? 'offers' : 'day'); setShown(0); sfx('whistle') }}>{soccer ? 'THE OFFERS' : 'DRAFT DAY'} <IconArrow size={16} /></button>
             </div>
           )}
         </div>
@@ -530,11 +536,13 @@ function Draft({ c, setCareer }) {
             <div key={p.o} className={`cr-pick${p.you ? ' is-you' : ''}`}>
               <span className="cr-pick-n">{p.udfa ? <small>UNDRAFTED</small> : <><small>RD {p.round}</small>{p.slot}</>}</span>
               <img src={logoFor(p.team)} alt="" />
-              <span className="cr-pick-txt">{p.you ? <b><Scramble text={`${c.name} · ${posTag(c)}`} ms={900} /></b> : <><b><Scramble text={p.player} ms={500} /></b><small>{p.pos}</small></>}{p.trade && <small className="cr-pick-trade">TRADED UP</small>}</span>
+              <span className="cr-pick-txt">{p.you ? <b><Scramble text={`${c.name} · ${posTag(c)}`} ms={900} /></b> : <><b><Scramble text={p.player} ms={500} /></b><small>{p.pos}{p.col ? ` · ${p.col}` : ''}</small></>}{p.trade && <small className="cr-pick-trade">TRADED UP</small>}</span>
             </div>
           ))}
           {!landed && <div className="cr-pick is-wait"><span className="bt-dots"><i /><i /><i /></span> {picks[shown] ? `The ${nick(teamName(picks[shown].team))} are on the clock…` : ''}</div>}
         </div>
+        {!landed && picks.length > 1 && <button className="ag-btn ag-btn--ghost" onClick={() => { setShown(picks.length); sfx('claim') }}>{mine?.udfa ? 'SKIP TO THE END' : 'SKIP TO HIS PICK'}</button>}
+        {landed && draftCall(c) && <p className="cr-call ag-pop">{draftCall(c)}</p>}
         {landed && mine && c.fit && (
           <>
             <div className="cr-land ag-pop" style={{ '--tc': c.fit.color }}>
