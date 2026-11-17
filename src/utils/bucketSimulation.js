@@ -527,13 +527,15 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
     const margin    = 3  + Math.floor(rand() * 17)
     const mySc  = sg ? sg.mySc : w ? loserBase + margin : loserBase
     const oppSc = sg ? sg.oppSc : w ? loserBase : loserBase + margin
-    const oppShort = sg ? sg.opponent : allOpps[Math.floor(rand() * allOpps.length)]
+    // (a season that already has its schedule, Career's: lib/leagueSchedule.js. The draw is still made, so the rest of the season's numbers come out the same)
+    const fx = !sg ? team?.schedule?.[i] : null
+    const oppShort = sg ? sg.opponent : fx ? (rand(), fx.opponent) : allOpps[Math.floor(rand() * allOpps.length)]
 
     const gamePts = Math.max(0, Math.round(ppg + rn(-7, 10, rand)))
     const gameReb = Math.max(0, Math.round(rpg + rn(-3, 3, rand)))
     const gameAst = Math.max(0, Math.round(apg + rn(-2, 2.5, rand)))
 
-    const game = { g: i + 1, won: w, home: sg ? sg.home : rand() < 0.5, opponent: oppShort, mySc, oppSc, pts: gamePts, reb: gameReb, ast: gameAst }
+    const game = { g: i + 1, won: w, home: sg ? sg.home : fx ? (rand(), fx.home) : rand() < 0.5, opponent: oppShort, mySc, oppSc, pts: gamePts, reb: gameReb, ast: gameAst }
     games.push(game)
     if (!bestGame || gamePts > bestGame.pts) bestGame = game
   }

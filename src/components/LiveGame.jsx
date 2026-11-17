@@ -1,94 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { TEAMS } from '../data/nfl-teams'
 import { readableTextColor } from '../utils/simulation'
+import { buildScoreTimeline } from '../lib/scoreTimeline'
 
 // The live playoff game: a scoreboard that plays the final score out over ten seconds, the clock, the
 // quarters, each score as it lands. Football's season page (SimPage) and College Football's (CFBSimPage).
 // Styles: index.css (.plf-*)
-// ── Score timeline builder ────────────────────────────────────────────────────
-
-function buildScoreTimeline(myFinal, oppFinal, overtime = false) {
-  const shuffle = arr => {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[arr[i], arr[j]] = [arr[j], arr[i]]
-    }
-    return arr
-  }
-
-  // Returns true if n can be exactly expressed as a sum of {3,6,7,8}
-  // Unreachable values: 1, 2, 4, 5 — everything else >= 0 is reachable
-  const reachable = n => n === 0 || (n >= 3 && n !== 4 && n !== 5)
-
-  const toPlays = total => {
-    if (total <= 0) return []
-    let target = total
-    while (!reachable(target)) target++
-
-    const plays = []
-    let rem = target
-    while (rem > 0) {
-      // Weighted: among TDs → 90% = 7pts, 5% = 8pts, 5% = 6pts; ~30% of all plays are FGs
-      const opts = [
-        { pts: 7, w: 63 },
-        { pts: 3, w: 30 },
-        { pts: 8, w:  4 },
-        { pts: 6, w:  3 },
-      ].filter(o => o.pts <= rem && reachable(rem - o.pts))
-      if (opts.length === 0) break
-      const pool = opts.reduce((s, o) => s + o.w, 0)
-      let r = Math.random() * pool
-      const pick = opts.find(o => (r -= o.w) < 0) ?? opts[0]
-      plays.push(pick.pts)
-      rem -= pick.pts
-    }
-    return plays
-  }
-  let regMyFinal = myFinal
-  let regOppFinal = oppFinal
-  let otEvent = null
-
-  if (overtime) {
-    // Regulation must end tied — derive tie score and isolate the OT-winning play
-    const tiedScore = Math.min(myFinal, oppFinal)
-    const otPts     = Math.abs(myFinal - oppFinal)  // 3 (FG) or 7 (TD)
-    regMyFinal  = tiedScore
-    regOppFinal = tiedScore
-    otEvent = { team: myFinal > oppFinal ? 'me' : 'opp', pts: otPts }
-  }
-
-  const myPlays  = toPlays(regMyFinal)
-  const oppPlays = toPlays(regOppFinal)
-  const all = shuffle([
-    ...myPlays.map(pts  => ({ team: 'me',  pts })),
-    ...oppPlays.map(pts => ({ team: 'opp', pts })),
-  ])
-  const spacing = all.length ? Math.floor(3400 / all.length) : 900
-  const events = all.map((evt, i) => ({
-    ...evt,
-    gameSec: Math.min(3400, Math.round(spacing * i + Math.random() * spacing * 0.7 + 25)),
-  }))
-
-  if (otEvent) {
-    // OT-winning score drops somewhere in the OT period
-    events.push({ ...otEvent, gameSec: 3700 + Math.floor(Math.random() * 600) })
-  } else {
-    // Close game: sometimes push the game-winning score into the final minute
-    const margin = Math.abs(myFinal - oppFinal)
-    if (events.length >= 1 && margin <= 7 && Math.random() < 0.50) {
-      const winner = myFinal > oppFinal ? 'me' : 'opp'
-      for (let i = events.length - 1; i >= 0; i--) {
-        if (events[i].team === winner) {
-          events[i].gameSec = 3530 + Math.floor(Math.random() * 65)
-          events.sort((a, b) => a.gameSec - b.gameSec)
-          break
-        }
-      }
-    }
-  }
-
-  return events
-}
+// ── Score timeline: lib/scoreTimeline.js (every play worth what it is, the plays add up to the final) ──
 
 const GAME_MS    = 10_000
 const TICK_MS    = 50
@@ -178,7 +96,7 @@ export function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, 
   const q         = isOTPhase ? 4 : Math.min(3, Math.floor(gameSec / 900))
   const qSec      = isOTPhase ? Math.max(0, OT_EXTRA - (gameSec - GAME_SECS)) : 900 - (gameSec % 900)
   const progress  = isOTPhase ? (gameSec - GAME_SECS) / (OT_EXTRA - 1) : gameSec / (GAME_SECS - 1)
-  const evtLabel = pts => pts === 8 ? '▲ TD + 2pt' : pts >= 6 ? '▲ TD' : '▲ FG'
+  const evtLabel = (pts, label) => `▲ ${label || (pts === 8 ? 'TD + 2PT' : pts >= 6 ? 'TD' : 'FG')}`
   const oppTeam  = TEAM_BY_NAME[opponent]
   const oppLogo  = oppLogoIn ?? oppTeam?.logo
   const oppShort = oppAbbrIn ?? oppTeam?.short ?? opponent.split(' ').slice(-1)[0]
@@ -277,7 +195,7 @@ export function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, 
 
       {visEvt && phase === 'live' && (
         <div key={evtKey} className={`plf-score-evt ${visEvt.team === 'me' ? 'plf-evt-me' : 'plf-evt-opp'} ${(visEvt.team === 'me') === home ? 'plf-evt-right' : 'plf-evt-left'}`}>
-          {evtLabel(visEvt.pts)} · {visEvt.team === 'me' ? teamAbbr : oppShort}
+          {evtLabel(visEvt.pts, visEvt.label)} · {visEvt.team === 'me' ? teamAbbr : oppShort}
         </div>
       )}
 

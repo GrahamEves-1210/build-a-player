@@ -337,7 +337,9 @@ export function make({ v, seed, def, game, cast }) {
       const avg = plan.reduce((s, p) => s + p.res.score, 0) / rounds
       const misses = plan.filter(p => p.res.kind !== 'good')
       const outs = misses.filter(p => p.res.kind === 'late').length
-      const hit = made >= rounds - 1
+      // (a quarterback's hot read with a pick in it isn't landed: the throw that was picked off ends the drive. 2026-11-16:
+      // three good reads and an interception counted as landed, and the playoff game went on from the pick)
+      const hit = made >= rounds - 1 && !(game === 'hot-read' && shown(plan).ints > 0)
       const baited = misses.some(p => p.res.kind === 'bait')
       g.done = outcome(hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit,
         hit ? `${made} of ${rounds} reads` : baited ? `${made} of ${rounds} · took the bait` : `${made} of ${rounds}${NOTES[misses[misses.length - 1].res.kind] ? ` · ${NOTES[misses[misses.length - 1].res.kind]}` : ''}`,
