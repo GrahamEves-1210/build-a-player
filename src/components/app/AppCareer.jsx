@@ -202,7 +202,7 @@ function NewSlot({ S, onStart, onCancel }) {
           <span className="ag-eyebrow cr-games-label">START</span>
           <div className="cr-pos cr-games" role="radiogroup" aria-label="Start" style={{ '--n': 2 }}>
             {[['draft', 'ENTER THE DRAFT'], ['college', 'START IN COLLEGE']].map(([m, label]) => (
-              <button key={m} type="button" role="radio" aria-checked={start === m} className={start === m ? 'is-on' : ''} onClick={() => { setStart(m); sfx('tap') }}>{label}</button>
+              <button key={m} type="button" role="radio" aria-checked={start === m} className={`cr-start cr-start--${m}${start === m ? ' is-on' : ''}`} onClick={() => { setStart(m); sfx('tap') }}>{label}</button>
             ))}
           </div>
         </>
