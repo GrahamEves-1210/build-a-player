@@ -15,4 +15,6 @@ function sweep(dir) {
   }
 }
 if (existsSync(ROOT)) sweep(ROOT)
-console.log(`strip-dist-app-art: removed ${removed} logo files; kept ${kept.length}${kept.length ? ': ' + kept.join(', ') : ''}`)
+// Salary Cap's Home art is a screenshot full of real photos: the app draws its own board (lib/appArt.js)
+for (const f of ['nfl', 'bucket', 'soccer', 'baseball']) { const p = `dist/modes/${f}-salary.webp`; if (existsSync(p)) { rmSync(p); removed++ } }
+console.log(`strip-dist-app-art: removed ${removed} logo and photo files; kept ${kept.length}${kept.length ? ': ' + kept.join(', ') : ''}`)
