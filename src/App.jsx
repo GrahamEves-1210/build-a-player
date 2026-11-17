@@ -199,7 +199,8 @@ const BUILD_PAGE_OF = { squad: 'squad-build', career: 'career-build', franchise:
 const _resumeAt = (() => {
   if (!_saved?.gameMode || _saved.gameMode === 'salarycap' || _goHome || _live) return null
   const want = _saved.tk ? BUILD_PAGE_OF[_saved.tk] : 'game'
-  return want && buildPageAtLoad('nfl') === want && (want !== 'franchise-build' || FRANCHISE_LIVE) ? want : null
+  // (a Daily build only on its own day: an old one waits on Home as it always did)
+  return want && buildPageAtLoad('nfl') === want && (want !== 'franchise-build' || FRANCHISE_LIVE) && (!_saved.daily || _saved.daily.key === dailyState().key) ? want : null
 })()
 
 export default function App() {
