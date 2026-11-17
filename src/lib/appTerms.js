@@ -91,6 +91,8 @@ export function appSafe(text, sport = sportOfPath()) {
   const ck = sport + '\u0001' + text
   const hit = cache.get(ck)
   if (hit !== undefined) return hit
+  // (a disclaimer names the leagues to say who we're not: it keeps every name)
+  if (/affiliated|endorsed|trademark|licensed/i.test(text)) { cache.set(ck, text); return text }
   let s = text
   const T = teamRules(sport)
   if (T.fullRe) s = s.replace(T.fullRe, m => T.full.get(m))
