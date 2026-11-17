@@ -69,6 +69,7 @@
 .wk-hat { font-style: italic; color: var(--wk-muted); font-size: 13.5px; padding-left: 1.4em; margin: 0 0 10px; border-left: 3px solid var(--wk-line); }
 .wk-pre { display: block; margin: 8px 0 12px; padding: 12px 14px; background: var(--wk-dark); border: 1px solid #22332a; border-radius: 8px; font-family: var(--mono, ui-monospace, Menlo, Consolas, monospace); font-size: 12.5px; line-height: 1.55; color: #cfeedc; overflow-x: auto; white-space: pre; }
 .wk-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; background: var(--wk-tint); color: var(--wk-green-dk); font-size: 10.5px; font-weight: 800; letter-spacing: .5px; vertical-align: middle; }
+.wk-loading { color: var(--wk-muted); font-size: 14px; padding: 18px 0; }
 
 /* tables */
 .wk .wikitable { border-collapse: collapse; background: #fff; border: 1px solid var(--wk-line); font-size: 13.5px; margin: 6px 0 14px; }
@@ -165,7 +166,8 @@
   .wk-brand small { display: none; }
   .wk-body { grid-template-columns: 1fr; padding: 12px 10px 40px; }
   .wk-side { display: none; margin-bottom: 12px; }
-  .wk-side.is-open { display: block; }
+  /* the menu opens over the page wherever it's scrolled to, under the top bar (in the page's flow it sat at the top, out of sight) */
+  .wk-side.is-open { display: block; position: fixed; top: 55px; left: 0; right: 0; bottom: 0; z-index: 19; margin: 0; padding: 10px 10px 24px; overflow-y: auto; overscroll-behavior: contain; background: var(--wk-bg); }
   .wk-article { padding: 14px 14px 20px; border-radius: 0 0 10px 10px; }
   .wk-h1 { font-size: 27px; }
   .wk-infobox { float: none; width: 100%; margin: 0 0 14px; }

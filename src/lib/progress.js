@@ -679,7 +679,7 @@ export async function fetchDailyBoard(key = dayKey()) {
 }
 
 // ── Events from the games ────────────────────────────────────────────────────
-const INFINITE_PAID = 10
+export const INFINITE_PAID = 10
 // A day's first 50 seasons pay full XP, in any mode; after that, half (keeps Players of the Day
 // and the pass from going to whoever sims the most)
 export const SEASONS_FULL_XP = 50

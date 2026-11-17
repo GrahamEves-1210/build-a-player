@@ -90,7 +90,7 @@ function rn(min, max, rand = Math.random) { return min + rand() * (max - min) }
 // ─── OVR Calculation ──────────────────────────────────────────────────────────
 // Guard types: jumpShot finishing passing handles perimeterDefense speed bounce size basketballIQ clutch
 // Big types:   jumpShot finishing playmaking interiorDefense rebounding speed bounce size basketballIQ clutch
-const OVR_WEIGHTS = {
+export const OVR_WEIGHTS = {
   guard: {
     // T1
     jumpShot:         0.14,

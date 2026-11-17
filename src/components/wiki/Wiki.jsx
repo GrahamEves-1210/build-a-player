@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import './wiki.css'
 import { PAGES, SEARCH_INDEX, POOLS, useLazyPools } from './WikiPages'
 import { RATINGS_AS_OF, fmtDate } from '../RatingsTable'
+import { SOCCER_LIVE } from '../../lib/soccerLive'
 
 // The Build-A-Player Wiki: its own page, with its own header, search, page
 // tabs and sidebar, and none of the game's chrome. Pages live at /wiki and
@@ -14,6 +15,12 @@ export const slugFromPath = path => {
   const m = /^\/wiki\/?([a-z0-9-]*)/.exec(path || '')
   const s = m?.[1] || 'main'
   return PAGES.some(p => p.slug === s) ? s : 'main'
+}
+// a section's heading: some pages load their numbers first, so keep looking for a moment until it's there
+function scrollToId(id, tries = 25) {
+  const el = document.getElementById(id)
+  if (el) { el.scrollIntoView({ block: 'start' }); return }
+  if (tries > 0) setTimeout(() => scrollToId(id, tries - 1), 120)
 }
 const readLocation = () => ({ slug: slugFromPath(window.location.pathname), query: new URLSearchParams(window.location.search).get('q') || '', pool: new URLSearchParams(window.location.search).get('pool') || 'qb' })
 
@@ -32,7 +39,7 @@ export default function Wiki({ onExit }) {
     const path = wikiPath(slug) + (qs.toString() ? `?${qs}` : '') + (opts.hash ? `#${opts.hash}` : '')
     if (window.location.pathname + window.location.search + window.location.hash !== path) window.history.pushState({}, '', path)
     setLoc({ slug, query: opts.query || '', pool: opts.pool || 'qb' }); setNavOpen(false); setSearch('')
-    if (opts.hash) setTimeout(() => document.getElementById(opts.hash)?.scrollIntoView({ block: 'start' }), 60)
+    if (opts.hash) setTimeout(() => scrollToId(opts.hash), 60)
     else {
       const el = rootRef.current
       if (el && el.scrollHeight > el.clientHeight + 1) el.scrollTo({ top: 0, behavior: 'instant' })
@@ -45,7 +52,7 @@ export default function Wiki({ onExit }) {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
   // a hash in the URL on arrival (shared section link)
-  useEffect(() => { const h = window.location.hash.slice(1); if (h) setTimeout(() => document.getElementById(h)?.scrollIntoView({ block: 'start' }), 120) }, []) // eslint-disable-line
+  useEffect(() => { const h = window.location.hash.slice(1); if (h) setTimeout(() => scrollToId(h), 120) }, []) // eslint-disable-line
 
   const lazyIn = useLazyPools(search.trim().length >= 2)   // (soccer's players join the search once they load)
   const results = useMemo(() => {
@@ -103,7 +110,7 @@ export default function Wiki({ onExit }) {
           {page.toc.length > 0 && (
             <nav className="wk-nav" aria-label="On this page">
               <h4>On this page</h4>
-              <ol>{page.toc.map(([id, label]) => <li key={id}><a href={`#${id}`} onClick={e => { e.preventDefault(); setNavOpen(false); setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 30); window.history.replaceState({}, '', `${wikiPath(page.slug)}#${id}`) }}>{label}</a></li>)}</ol>
+              <ol>{page.toc.map(([id, label]) => <li key={id}><a href={`#${id}`} onClick={e => { e.preventDefault(); setNavOpen(false); setTimeout(() => scrollToId(id), 30); window.history.replaceState({}, '', `${wikiPath(page.slug)}#${id}`) }}>{label}</a></li>)}</ol>
             </nav>
           )}
           <nav className="wk-nav" aria-label="Elsewhere">
@@ -127,7 +134,7 @@ export default function Wiki({ onExit }) {
             <page.Component go={go} query={loc.query} pool={loc.pool} />
             <footer className="wk-foot">
               <p>This page was last updated on {fmtDate(BUILD_DATE)}. Ratings as of {fmtDate(RATINGS_AS_OF)}; they refresh with every update to the game's data.</p>
-              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners. It is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university; school names and logos belong to their owners.</p>
+              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners. It is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university; school names and logos belong to their owners.{SOCCER_LIVE && ' It is not affiliated with FIFA, UEFA, FIFPRO, or any league or club.'}</p>
               <p><a href="/" onClick={e => { e.preventDefault(); onExit() }}>Game</a> · <a href="/?about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="mailto:buildaplayer@outlook.com">Corrections</a></p>
             </footer>
           </article>
