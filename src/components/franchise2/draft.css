@@ -181,7 +181,14 @@
 .dr-board-btn.is-on { color: #fff; }
 
 /* Sandbox: a build into the class */
-.dr-add { height: 26px; padding: 0 10px; border: 0; background: #fff; color: #0b0c0e; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .2px; cursor: pointer; }
+.dr-add { width: 100%; height: 48px; border: 0; background: transparent; box-shadow: inset 0 0 0 2px var(--fk-line2); color: #fff; font-family: var(--fk-d); font-weight: 400; text-transform: uppercase; font-size: 19px; letter-spacing: .8px; cursor: pointer; }
+.dr-add:active { transform: translateY(1px); }
+.dr-add.is-on { box-shadow: inset 0 0 0 2px #fff; }
+.dr-addpos { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; }
+.dr-addpos button { height: 44px; border: 0; background: var(--fk-g2); color: #fff; font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .6px; cursor: pointer; }
+.dr-addpos button:active { background: var(--fk-g3); }
+/* (the last thing on draft week: well clear of the sticky START THE DRAFT bar, so a tap meant for it never lands here) */
+.dr-sandbox { display: grid; gap: 8px; margin-bottom: 28px; }
 
 /* ── Draft day ────────────────────────────────────────────────────────────── */
 .dr-day { display: grid; align-content: start; gap: 12px; min-width: 0; color: var(--fk-text); }
@@ -265,11 +272,11 @@
 .dr-rv-name em { margin-top: 3px; font-style: normal; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; color: var(--fk-text); }
 .dr-rv-grades { width: min(100%, 420px); grid-template-columns: 1fr 1fr 1.2fr; animation: fk-up .3s ease-out both; }
 .dr-rv-grades .dr-gr { align-items: center; }
-.dr-rv-stamp { min-height: 90px; display: grid; place-items: center; }
+.dr-rv-note { margin: 0; max-width: 420px; text-align: center; font-family: var(--fk-b); font-size: 15px; line-height: 1.35; color: var(--fk-mute); }
 .dr-reveal .dr-acts { width: min(100%, 420px); }
 
 /* the class */
-.dr-cls { --h: 62px; position: relative; display: flex; align-items: stretch; height: var(--h); background: var(--fk-g2); animation: fk-in .3s cubic-bezier(.2,.9,.25,1) both; }
+.dr-cls { --h: 62px; position: relative; display: flex; align-items: stretch; min-width: 0; height: var(--h); background: var(--fk-g2); animation: fk-in .3s cubic-bezier(.2,.9,.25,1) both; }
 .dr-cls-no { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; background: var(--fk-ink); line-height: 1; }
 .dr-cls-no small { font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
 .dr-cls-no b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; }
@@ -293,6 +300,8 @@ html.bap-reduce-motion :is(.dr-p, .dr-sec, .dr-game, .dr-mk, .dr-card, .dr-tr, .
 
 /* ── Navigation (the UX pass, 11-15): the close button the same 44 px square on every sheet ── */
 .dr-close, .dr-x { width: 44px; height: 44px; font-size: 18px; }
+/* (one ✕ at a time: a prospect's card over the scouting room hides the room's) */
+body:has(> .dr-sheet) .dr-room .dr-close { visibility: hidden; }
 .dr-tip { margin: 0; font-family: var(--fk-b); font-size: 15px; line-height: 1.35; color: var(--fk-text); }
 .dr-day > .fk-actbar { max-width: 720px; }
 /* THE CLASS: how it's sorted, and the room headers when it's sorted by position */

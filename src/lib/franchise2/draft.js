@@ -788,6 +788,8 @@ export function openDraft(F) {
   F.stage = 'draft'
 }
 export function startNight(F) { if (!F.dr) return; F.dr.ph = 'night'; F.dr.fin = Object.fromEntries(F.dc.map(x => [x.i, buzzOf(F, x)])); F.dr.rk = consensus(F).map(x => x.i) }
+// draft night's feed: how many picks have been on screen (a reload picks up after them)
+export const markSeen = (F, n) => { if (F.dr) F.dr.seen = Math.max(F.dr.seen ?? 0, Math.min(n, F.dr.picks.length)) }
 export const pickTeam = (F, at = F.dr.at) => F.dr.own[at]
 export const draftDone = F => !!F.dr && F.dr.at >= PICKS_N
 export const myPicks = F => F.dr.own.map((s, at) => (s === F.team && at >= F.dr.at ? at : null)).filter(v => v != null)
@@ -813,6 +815,11 @@ function cpuValue(F, s, x, ctx) {
 const BOARD = new WeakMap()
 export function boardRank(F) {
   if (!F.dr) return rankMap(F)
+  // (a save from before the board was kept: rebuilt from the media's final projections, the men taken included)
+  if (!F.dr.rk && F.dr.fin) {
+    const men = [...F.dc, ...F.dr.picks.map(p => ({ i: p.xi, p: p.p, s: p.sp }))]
+    F.dr.rk = men.map(x => ({ i: x.i, v: (F.dr.fin[x.i] ?? 0) + mediaV(x) })).sort((a, b) => b.v - a.v || a.i - b.i).map(e => e.i)
+  }
   if (!F.dr.rk) F.dr.rk = consensus(F).map(x => x.i)
   let m = BOARD.get(F.dr)
   if (!m || m.size !== F.dr.rk.length) { m = new Map(F.dr.rk.map((id, r) => [id, r + 1])); BOARD.set(F.dr, m) }
@@ -829,7 +836,7 @@ function take(F, s, x, via = null) {
   F.teams[s].r.push(p)
   try { fixNumbers(F, s) } catch { /* (the depth chart file's numbering; a number is cosmetic) */ }
   const v = s === F.team ? viewOf(F, x) : null
-  const pick = { at, s, pid: p.i, xi: x.i, n: x.n, p: x.p, ...(x.s && { sp: x.s }), col: x.col, pk: x.pk, bz: Math.round(bz), tag: p.tg, ...(v && { my: v.my, lo: v.lo, hi: v.hi, kn: Math.round(knownShare(x) * 100) }), ...(via && { via }), ...(x.b != null && { b: x.b }) }
+  const pick = { at, s, pid: p.i, xi: x.i, n: x.n, p: x.p, ...(x.s && { sp: x.s }), col: x.col, pk: x.pk, bz: Math.round(bz), rk: boardRank(F).get(x.i) ?? null, tag: p.tg, ...(v && { my: v.my, lo: v.lo, hi: v.hi, kn: Math.round(knownShare(x) * 100) }), ...(via && { via }), ...(x.b != null && { b: x.b }) }
   F.dr.picks.push(pick)
   F.dr.at++
   return pick

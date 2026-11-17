@@ -5,7 +5,7 @@ import {
   scoutsLeft, syncScouts, PER_WEEK, film, filmDone, interview, visitsLeft, proDay, springOn, canScout, runCombine, slateOf, attend, autoScout,
   viewOf, rangeText, knownShare, reportOf, consensus, rankMap, projText, stockMoves, mockDraft, mockVersion, needsOf,
   seasonLine, gameLine, lineText, combineOf, star, moveOnBoard, spotLabel, pickSpot, heightText, CLASS_LABEL, KIND_LABEL, CHAR_TEXT,
-  startNight, cpuPicks, userPick, autoPick, simRest, pickTeam, draftDone, myPicks, roundOf,
+  startNight, cpuPicks, userPick, autoPick, simRest, pickTeam, draftDone, myPicks, roundOf, boardRank, markSeen,
   tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT,
 } from '../../lib/franchise2'
 import { groupOf, jersey } from '../../lib/franchise2/roster'
@@ -24,7 +24,7 @@ import { LB_ATTR } from '../../data/lbs'
 import { DB_ATTR } from '../../data/dbs'
 import { K_ATTR } from '../../data/ks'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, Spin, fkVars, reduced, splitName, ActionBar } from './kit'
+import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, fkVars, reduced, splitName, ActionBar } from './kit'
 import './draft.css'
 import { teamKit, schoolKit } from '../../lib/franchise2/kits'
 
@@ -59,6 +59,10 @@ const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b]
 const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
+// a man's CONSENSUS NO.: his place on the media's board; on draft night the board as it stood when the draft began
+// (draft.js boardRank), never his place among the men still left
+const nightOf = F => F.dr?.ph === 'night'
+const ranksOf = F => (nightOf(F) ? boardRank(F) : rankMap(F))
 const ord = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] ?? 'TH'}`
 
 // ── One prospect, the broadcast way ──────────────────────────────────────────
@@ -102,7 +106,7 @@ function ProspectCard({ F, act, id, onClose, onDraft, draftLabel }) {
   useEffect(() => { const h = e => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h) }, [onClose])
   if (!x) return null
   const v = viewOf(F, x), r = reportOf(F, x, v)
-  const rank = rankMap(F).get(x.i)
+  const rank = ranksOf(F).get(x.i)
   const c = F.sc?.cmb ? combineOf(x) : null
   const st = seasonLine(F, x)
   const { first, last } = splitName(x.n)
@@ -230,7 +234,7 @@ function ClassList({ F, act, open, sortBy = 'consensus' }) {
   const [f, setF] = useState('all')
   const [how, setHow] = useState('rank')
   const [more, setMore] = useState(30)
-  const ranks = rankMap(F)
+  const ranks = ranksOf(F)
   const list = useMemo(() => {
     const all = sortBy === 'ours' ? [...F.dc].map(x => ({ x, v: viewOf(F, x).my })).sort((a, b) => b.v - a.v || ranks.get(a.x.i) - ranks.get(b.x.i)).map(e => e.x) : classOrder(F, consensus(F), how, ranks)
     return filterBy(F, all, f)
@@ -465,7 +469,7 @@ const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 export function DraftDay({ F, act, owner, onBuild }) {
   if (F.dr.ph === 'pre') return <DraftWeek F={F} act={act} onBuild={onBuild} />
   if (draftDone(F) && F.dr.over) return <ClassRecap F={F} act={act} owner={owner} />
-  return <DraftNight F={F} act={act} />
+  return <DraftNight F={F} act={act} gm={owner && !/^guest$/i.test(owner) ? owner : null} />
 }
 
 function DraftWeek({ F, act, onBuild }) {
@@ -486,9 +490,10 @@ function DraftWeek({ F, act, onBuild }) {
         <div className="dr-list">{top.map((x, i) => <Prospect key={x.i} F={F} x={x} rank={F.board.length ? i + 1 : ranks.get(x.i)} onOpen={() => setRoom(true)} delay={i * 50} />)}</div>
       </section>
       {sandbox && (
-        <section className="dr-sec">
-          <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" right={<button type="button" className="dr-add" onClick={() => { setAdd(!add); tap() }}>{add ? 'CLOSE' : 'ADD A PROSPECT'}</button>} />
-          {add && <div className="dr-filters">{POS.map(p => <button key={p} type="button" onClick={() => { tap(); onBuild({ id: 'prospect', pos: p, n: 1, of: 1 }) }}>{POS_LABEL[p]}</button>)}</div>}
+        <section className="dr-sec dr-sandbox">
+          <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" />
+          <button type="button" className={`dr-add${add ? ' is-on' : ''}`} aria-expanded={add} onClick={() => { setAdd(!add); tap() }}>{add ? 'Pick his position' : '+ Add a prospect'}</button>
+          {add && <div className="dr-addpos">{POS.map(p => <button key={p} type="button" onClick={() => { tap(); onBuild({ id: 'prospect', pos: p, n: 1, of: 1 }) }}>{POS_LABEL[p]}</button>)}</div>}
         </section>
       )}
       <ActionBar>
@@ -502,11 +507,13 @@ function DraftWeek({ F, act, onBuild }) {
 
 // Draft night. The league's picks come up one at a time (the first round as cards, then a running list), the
 // trades with them; on our pick, the clock, the board, the trade offers; our pick is turned over.
-function DraftNight({ F, act }) {
-  // the picks not yet shown live on the draft itself (F.dr.seen), so a reload or a remount picks up where it was
-  const feed = F.dr.picks.slice(F.dr.seen ?? 0)
+function DraftNight({ F, act, gm }) {
+  // the picks not yet shown live on the draft itself (F.dr.seen), so a reload or a remount picks up where it was;
+  // base: where this run of the feed starts (the first pick not shown when it began)
+  const [base, setBase] = useState(() => F.dr.seen ?? 0)
+  const feed = F.dr.picks.slice(base)
   const [shown, setShown] = useState(0)
-  const [reveal, setReveal] = useState(null)
+  const [reveal, setReveal] = useState(() => (F.dr.rv != null ? F.dr.picks.find(p => p.at === F.dr.rv) ?? null : null))
   const [offers, setOffers] = useState(null)
   const [open, setOpen] = useState(null)
   const [f, setF] = useState(() => (F.board.some(id => F.dc.some(x => x.i === id)) ? 'board' : 'best'))
@@ -516,7 +523,7 @@ function DraftNight({ F, act }) {
   const onClock = !done && pickTeam(F) === F.team
   const showing = shown < feed.length
   const fresh = fn => X => { X.dr.seen = X.dr.picks.length; return fn(X) }
-  const run = () => { setShown(0); setOffers(null); const made = act(fresh(X => cpuPicks(X))); if (made?.length) sfx('swap') }
+  const run = () => { setBase(F.dr.picks.length); setShown(0); setOffers(null); const made = act(fresh(X => cpuPicks(X))); if (made?.length) sfx('swap') }
   // (read live: the draft object is mutated in place, and a dev remount runs this twice)
   useEffect(() => { if (!draftDone(F) && pickTeam(F) !== F.team && F.dr.picks.length === (F.dr.seen ?? 0)) run() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -525,17 +532,25 @@ function DraftNight({ F, act }) {
     T.current = setTimeout(() => { setShown(n => n + 1); sfx(big ? 'card' : 'tick') }, reduced() ? 40 : big ? (shown === 0 ? 350 : 700) : 90)
     return () => clearTimeout(T.current)
   }, [showing, shown, feed.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (each pick counts as seen once it's been on screen, so a reload picks up after the last one shown and never
+  // replays the night; the save is written every first-round card and every few picks after that)
+  useEffect(() => {
+    if (shown <= 0) return
+    markSeen(F, base + shown)
+    if (shown >= feed.length || roundOf(feed[shown - 1].at) === 1 || shown % 8 === 0) act(() => {})
+  }, [shown]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (our pick: the reveal is on screen until NEXT PICK; F.dr.rv keeps it there through a reload)
   const mark = X => { X.dr.seen = X.dr.picks.length }
-  const take = x => { const pk = act(X => { const p = userPick(X, x.i); mark(X); return p }); if (pk) { setOpen(null); setShown(0); setReveal(pk); sfx('card', 2); haptic('success') } }
-  const auto = () => { const pk = act(X => { const p = autoPick(X); mark(X); return p }); if (pk) { setShown(0); setReveal(pk); sfx('card', 2) } }
-  const next = () => { setReveal(null); if (!draftDone(F) && pickTeam(F) !== F.team) run() }
-  const finish = () => { act(X => { X.dr.over = 1 }); sfx('whistle') }
+  const take = x => { const pk = act(X => { const p = userPick(X, x.i); mark(X); if (p) X.dr.rv = p.at; return p }); if (pk) { setOpen(null); setBase(F.dr.picks.length); setShown(0); setReveal(pk); sfx('card', 2); haptic('success') } }
+  const auto = () => { const pk = act(X => { const p = autoPick(X); mark(X); if (p) X.dr.rv = p.at; return p }); if (pk) { setBase(F.dr.picks.length); setShown(0); setReveal(pk); sfx('card', 2) } }
+  const next = () => { setReveal(null); act(X => { delete X.dr.rv }); if (!draftDone(F) && pickTeam(F) !== F.team) run() }
+  const finish = () => { act(X => { X.dr.over = 1; delete X.dr.rv }); sfx('whistle') }
   const trade = o => { if (act(X => acceptTrade(X, o))) { sfx('claim'); haptic('success'); setOffers(null); if (pickTeam(F) !== F.team) run() } }
   const trades = new Map(F.dr.tr.filter(t => !t.mine).map(t => [t.at, t]))
 
   if (reveal) return <RevealCard F={F} p={reveal} onNext={draftDone(F) ? finish : next} />
   const cur = showing ? feed[shown] : null
-  const recent = feed.slice(0, shown).reverse()
+  const recent = F.dr.picks.slice(0, base + shown).reverse()
   const nextMine = myPicks(F)[0]
   return (
     <div className="dr-day dr-night fk" style={fkVars(F.team)}>
@@ -548,10 +563,10 @@ function DraftNight({ F, act }) {
           {recent.slice(0, showing ? 6 : 10).map(p => <FeedRow key={p.at} F={F} p={p} trade={trades.get(p.at)} />)}
         </section>
       )}
-      {showing && <button type="button" className="dr-skip" onClick={() => { setShown(feed.length); tap() }}>SKIP AHEAD</button>}
+      {showing && <button type="button" className="dr-skip" onClick={() => { setShown(feed.length); tap() }}>Skip ahead</button>}
       {!showing && onClock && (
         <>
-          <p className="dr-tip">You're on the clock. Tap a player to see his card and draft him.</p>
+          <p className="dr-tip">{gm ? `${gm}, the ${TEAM[F.team].nick} are on the clock.` : `The ${TEAM[F.team].nick} are on the clock.`} Tap a prospect to see his card and draft him.</p>
           <div className="dr-acts">
             <Go ghost onClick={auto}>Auto pick</Go>
             <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeDownOffers(X))); tap() }}>Trade down</Go>
@@ -573,7 +588,7 @@ function DraftNight({ F, act }) {
           </ActionBar>
         </>
       )}
-      {!showing && !done && roundOf(at) >= 4 && <button type="button" className="dr-skip" onClick={() => { setShown(0); act(fresh(X => simRest(X))); sfx('flip') }}>AUTO-DRAFT THE REST</button>}
+      {!showing && !done && roundOf(at) >= 4 && <button type="button" className="dr-skip" onClick={() => { setBase(F.dr.picks.length); setShown(0); act(fresh(X => simRest(X))); sfx('flip') }}>Auto-draft the rest</button>}
       {!showing && done && <ActionBar><Go onClick={finish}>See the class</Go></ActionBar>}
     </div>
   )
@@ -645,11 +660,11 @@ function Offers({ F, offers, onTake }) {
 // Our pick, turned over: the announcement, the card flips, the grade he really is spins up, the stamp.
 function RevealCard({ F, p, onNext }) {
   const [flip, setFlip] = useState(false)
-  const [landed, setLanded] = useState(false)
-  useEffect(() => { const t = setTimeout(() => setFlip(true), reduced() ? 0 : 700); return () => clearTimeout(t) }, [])
+  useEffect(() => { const t = setTimeout(() => { setFlip(true); sfx('gradepop', 6) }, reduced() ? 0 : 700); return () => clearTimeout(t) }, [])
   const t = TEAM[F.team]
   const { first, last } = splitName(p.n)
   const man = F.teams[F.team].r.find(q => q.i === p.pid), nu = man ? jersey(F, man) : null
+  const rank = p.rk ?? boardRank(F).get(p.xi)
   return (
     <div className="dr-day dr-reveal fk" style={fkVars(F.team)}>
       <p className="dr-announce">WITH THE {ord(p.at + 1)} PICK IN THE {F.year + 1} NFL DRAFT, THE {t.name.toUpperCase()} SELECT</p>
@@ -658,17 +673,17 @@ function RevealCard({ F, p, onNext }) {
         front={(
           <div className="dr-rv-front">
             <span className="dr-rv-slab"><span className="dr-rv-num">{nu ?? ''}</span><img src={faceFor(F, p, teamKit(t.short) ?? t.color)} alt="" draggable={false} /></span>
-            <span className="dr-rv-name"><small>{first}</small><b>{last}</b><em>{pickSpot(p)} · {schoolName(p.col)}</em></span>
+            <span className="dr-rv-name"><small>{first}</small><b>{last}</b><em>{pickSpot(p)} · {schoolName(p.col)}{man ? ` · ${man.o} OVR` : ''}</em></span>
           </div>
         )} />
       {flip && (
         <div className="dr-rv-grades">
           <span className="dr-gr"><small>OUR GRADE</small><b>{p.my != null ? gradeOf(p.my) : '—'}</b></span>
-          <span className="dr-gr"><small>CONSENSUS</small><b>{gradeOf(p.bz)}</b></span>
-          <span className="dr-gr is-true"><small>TRUE GRADE</small><Spin v={p.pk} grade={gradeOf(p.pk)} size={44} onLand={() => setLanded(true)} /></span>
+          <span className="dr-gr"><small>CONSENSUS</small><b>{rank ? `NO. ${rank}` : '—'}</b></span>
+          <span className="dr-gr is-true"><small>TRUE GRADE</small><b>{gradeOf(p.pk)}</b></span>
         </div>
       )}
-      <div className="dr-rv-stamp">{landed && <Stamp kind={p.tag === 'G' ? 'gem' : p.tag === 'B' ? 'bust' : 'solid'} big>{TAG_TEXT[p.tag]}</Stamp>}</div>
+      {flip && <p className="dr-rv-note">Grades are where he's headed. He starts at {man?.o ?? '—'} OVR.</p>}
       <ActionBar><Go onClick={onNext}>{draftDone(F) ? 'See the class' : 'Next pick'}</Go></ActionBar>
     </div>
   )
@@ -682,7 +697,7 @@ function ClassRecap({ F, act, owner }) {
   const nu = p => { const man = F.teams[F.team].r.find(q => q.i === p.pid); return man ? jersey(F, man) : null }
   return (
     <div className="dr-day fk" style={fkVars(F.team)}>
-      <Chyron team={F.team} title="DRAFT CLASS" tag={F.year + 1} size="l" sub={`${TEAM[F.team].nick.toUpperCase()} · ${rv.mine.length} PICKS · GM ${owner.toUpperCase()}`} />
+      <Chyron team={F.team} title="DRAFT CLASS" tag={F.year + 1} size="l" sub={`${TEAM[F.team].nick.toUpperCase()} · ${rv.mine.length} ${rv.mine.length === 1 ? 'PICK' : 'PICKS'}${owner && !/^guest$/i.test(owner) ? ` · GM ${owner.toUpperCase()}` : ''}`} />
       <div className="dr-list">
         {rv.mine.map((p, i) => i < n && (
           <div key={p.at} className="dr-cls">
