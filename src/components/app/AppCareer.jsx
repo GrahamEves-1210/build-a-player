@@ -8,11 +8,11 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, TRADE_ODDS, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, trainable, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
-  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
+  byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, byeTarget, stepCost, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
   canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord } from '../../lib/career'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
@@ -323,6 +323,9 @@ function Model({ c, devPick }) {
     const maxed = !!ch && maxedTrait(ch.val, ch, t)
     const canUp = !!devPick && canUpgrade(c, t)
     const cost = upgradeCost(ch?.val, c, t)
+    // (the price of the next grade shows whenever there are points to spend, short of it or not: A and up cost more,
+    // and a trait that won't take the points has to say why before it's tapped)
+    const price = !!devPick && cost > 1 && (canUp || trainable(c, t))
     // the trait's training window (the age ladder: the body first, then the technique), out
     // in the open: train it before it shuts (its own line under the player's name, so a phone
     // never cuts it off). Only while there's a point to spend: otherwise there's nothing to do
@@ -338,7 +341,7 @@ function Model({ c, devPick }) {
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : () => tellWhy(t)} role="button">
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
         <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed && !work && !heldNow ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
-        <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{valToGrade(ch?.val ?? 0)}{canUp && cost > 1 ? ` · ${cost} PTS` : ''}</span>
+        <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{valToGrade(ch?.val ?? 0)}{price ? ` · ${cost} PTS` : ''}</span>
       </div>
     )
   }
@@ -838,7 +841,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
       <div className="ag-screen-body">
         <LegacyMeter c={c} />
         <Model c={c} devPick={c.phase !== 'season' && c.dev.points > 0 ? t => { setCareer(t === '__body' ? bodyWork(c) : spendDev(c, t)); sfx('claim'); haptic('success') } : null} />
-        {c.phase !== 'season' && c.dev.points > 0 && <div className="cr-devnote ag-pop"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait to raise it.</div>}
+        {c.phase !== 'season' && c.dev.points > 0 && <div className="cr-devnote ag-pop"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait to raise it. Grades above A cost more.</div>}
         <GamesSwitch c={c} setCareer={setCareer} />
         {canChangeNumber(c) && numberClash(c) && <NumberClash c={c} setCareer={setCareer} />}
         {/* the lit pill is one element that only ever moves sideways (cr-tabs-pill): a shared-layout pill measured
@@ -971,6 +974,8 @@ function ByeWeek({ c, setCareer, getD }) {
   const game = useMemo(() => byeDrill(c, mode === 'simple' ? g => !!SIMPLE_GAMES[g] : null), [c.seed, c.year, c.pos, mode]) // eslint-disable-line
   const playing = a.bye.training && !hurt ? a.bye.training : null
   const traits = game ? byeTraits(c, game).map(t => POS_ATTR[c.pos]?.[t]?.label ?? t) : []
+  // (the grade a good rep would go to is A+ or S: it comes one rep in its cost, lib/career.js byeTrain)
+  const tgt = game ? byeTarget(c, game) : null, topWk = !!tgt && !(c.build[tgt].faded > 0) && stepCost(c.build[tgt].val, c) > 1
   const nick = c.fit?.name?.split(' ').pop() ?? 'team'
   const coach = BYE_COACH[c.pos] ?? 'position coach'
   const maxed = bodyMaxed(c)
@@ -995,7 +1000,7 @@ function ByeWeek({ c, setCareer, getD }) {
       <div className="sm-options">
         <button className="sm-option" disabled={hurt || !game} onClick={train}>
           <b>Extra work{game ? `: ${(gameTitle(c, game) ?? '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}` : ''}</b>
-          <small>{hurt ? 'Not this week: he is in the training room.' : !game ? `Nothing left to train at ${c.age}.` : `One drill with the ${coach}. A good rep can raise ${listOf(traits)} a grade: the cleaner the rep, the better the chance.${mode === 'off' ? ' Simulated from his ratings.' : ''}`}</small>
+          <small>{hurt ? 'Not this week: he is in the training room.' : !game ? `Nothing left to train at ${c.age}.` : `One drill with the ${coach}. A good rep can raise ${listOf(traits)} a grade: the cleaner the rep, the better the chance.${topWk ? ' This close to the top, a week rarely moves a grade.' : ''}${mode === 'off' ? ' Simulated from his ratings.' : ''}`}</small>
         </button>
         <button className="sm-option" onClick={rest}>
           <b>Rest and recover</b>
@@ -1044,7 +1049,7 @@ function ByeResult({ c, done }) {
     : gain ? `${gain.label} ${gain.from} → ${gain.to}` : 'No gain this week'
   const sub = done.pick === 'rest' && c.pos === 'k' ? 'A week away from the tee. Back at it Wednesday.' : done.pick === 'rest'
     ? (done.healed ? `A week off his feet. The ${done.healed.kind} heals up over the bye: back for Week ${done.healed.back}.` : `A week off his feet. Durability ${durGrade(done.to)}${done.to < BODY_MAX ? '' : ', maxed out'}.`)
-    : `${(gameTitle(c, done.game) ?? 'The drill').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}: ${done.hit ? 'passed' : 'missed'}${done.sim ? ' (simulated)' : ''}. ${gain ? `He plays the rest of the season at ${gain.to}.` : done.hit ? 'Good work, no new grade.' : 'Back to it next week.'}`
+    : `${(gameTitle(c, done.game) ?? 'The drill').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}: ${done.hit ? 'passed' : 'missed'}${done.sim ? ' (simulated)' : ''}. ${gain ? `He plays the rest of the season at ${gain.to}.` : done.hit ? (done.top ? 'Good work. This close to the top, a week rarely moves a grade.' : 'Good work, no new grade.') : 'Back to it next week.'}`
   return (
     <div className="ag-card cr-bye-done ag-pop">
       <span className="ag-eyebrow">WEEK {wk} · BYE · {done.pick === 'rest' ? 'REST' : 'EXTRA WORK'}</span>
@@ -1401,7 +1406,7 @@ function Camp({ c, setCareer }) {
             <p className="cr-note">One hard drill in front of the coaching staff. Win it for <span className="gain">+{CAMP_LEGACY} <LegacyIco /> legacy</span> and a shot at a development point (the cleaner the win, the better the shot).</p>
             <CareerGame c={c} setCareer={setCareer} retry empty team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} lock={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game, res.hit))} />
           </>}
-      {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it.</div>}
+      {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it. Grades above A cost more.</div>}
     </div>
   )
 }
@@ -1443,7 +1448,7 @@ function Player({ c, setCareer }) {
     <section className="cr-sec">
       <div className="ag-card cr-player ag-pop">
         {careerBody(c) && <span className="ag-eyebrow cr-body">{(POS_NAME[c.pos] ?? '').toUpperCase()} · {bodyText(careerBody(c))} LBS</span>}
-        <div className="cr-kv"><span><b>{c.age}</b><small>AGE</small></span>{c.pos !== 'k' && <span><b>{gradeOf(c.durability * 1.1)}</b><small>DURABILITY</small></span>}<span><b>{gradeOf(c.rep * 1.1)}</b><small>REPUTATION</small></span><span><b>{c.dev.spent}</b><small>UPGRADES</small></span>{c.sport === 'soccer' && <><span><b>{t.caps ?? 0}</b><small>CAPS</small></span><span><b>{t.intlGoals ?? 0}</b><small>{(nationName(c.nation) ?? '').toUpperCase()} GOALS</small></span></>}</div>
+        <div className="cr-kv"><span><b>{c.age}</b><small>AGE</small></span>{c.pos !== 'k' && <span><b>{gradeOf(c.durability * 1.1)}</b><small>DURABILITY</small></span>}<span><b>{gradeOf(c.rep * 1.1)}</b><small>REPUTATION</small></span><span><b>{c.types.reduce((n, t) => n + (c.build[t]?.upgraded ?? 0), 0)}</b><small>UPGRADES</small></span>{c.sport === 'soccer' && <><span><b>{t.caps ?? 0}</b><small>CAPS</small></span><span><b>{t.intlGoals ?? 0}</b><small>{(nationName(c.nation) ?? '').toUpperCase()} GOALS</small></span></>}</div>
         <div className="cr-contract">
           <span className="ag-eyebrow">CONTRACT</span>
           <b>{pay(c, c.contract.perYear)} · {c.contract.left} of {c.contract.years} {c.contract.years === 1 ? 'year' : 'years'} left</b>
