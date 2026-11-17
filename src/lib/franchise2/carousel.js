@@ -57,7 +57,9 @@ export function genCoach(F, R, side, kind, { team, taken = takenNames(F) } = {})
   taken.add(n)
   const v = (m, s, lo = 1, hi = 9) => clamp(lo, hi, Math.round(m + R.n() * s))
   const hc = kind === 'colhc'
-  const own = hc ? v(4.6, 1.4) : kind === 'home' ? v(3.4, 1.0, 2, 6) : v(3.6, 1.4)
+  // (the player's own position coaches: men he's watched every day, a quarterbacks coach or a passing-game
+  // coordinator ready for the step up; homeCandidate picks the best of them)
+  const own = hc ? v(4.6, 1.4) : kind === 'home' ? v(4.6, 1.1, 3, 7) : v(3.6, 1.4)
   const r = side === 'off'
     ? [v(5.1, 1.3), own, hc ? v(3, 0.8) : 2, hc ? v(5.4, 1.3) : v(3.7, 0.9), v(hc ? 4.8 : 4.3, 1.1)]
     : [v(5.1, 1.3), hc ? v(3, 0.8) : 2, own, hc ? v(5.4, 1.3) : v(3.6, 0.9), v(hc ? 4.8 : 4.3, 1.1)]
@@ -144,17 +146,8 @@ export function openCarousel(F) {
     if (!c) { hcOpen.push(s); continue }
     const r = recs[s], w = r.w + r.t / 2
     const t = F.year - (c.st ?? F.year) + 1
-    const prev = T.rec.length >= 2 ? T.rec[T.rec.length - 2] : null
-    let p = w <= 3 ? 0.92 : w <= 4 ? 0.86 : w <= 5 ? 0.74 : w <= 6 ? 0.58 : w <= 7 ? 0.34 : w <= 8 ? 0.16 : w <= 9 ? 0.07 : 0.015
-    if (po.has(s)) p *= 0.15
-    if (w >= 11) p = 0                                  // (an 11-win coach keeps his job)
-    p *= t <= 1 ? 0.22 : t === 2 ? 0.65 : 1
-    if (prev && prev[0] <= 6) p *= 1.3
-    const recentPo = T.rec.slice(-4, -1).some(x => x[3])
-    if (t >= 5 && recentPo) p *= 0.6
-    p *= clamp(0.55, 1.6, 1 + 0.12 * (expW(s) - w))
-    p *= clamp(0.7, 1.15, 1.25 - c.r[3] * 0.05)
-    if (R.u() < clamp(0, 0.95, p)) {
+    const p = firePay(c, T.rec, { w, t, po: po.has(s), exp: expW(s) })
+    if (R.u() < p) {
       T.hc = null; hcOpen.push(s)
       c.cv = `${NK(s)} HC ${tenureText(c.st, F.year)}`; c.out = 0; c.fired = F.year; c.fb = s; F.cpool.push(c)
       ev({ k: 'fire', role: 'hc', s, n: c.n, id: c.i, rec: recText(r), yrs: t })
@@ -186,6 +179,33 @@ export function openCarousel(F) {
   car.step = 'monday'
   F.stage = 'coaches'
   return car
+}
+// BLACK MONDAY, the head coach (owner, 2026-11-17: "Reid fired after one 7-10 year, first-year head coaches
+// fired"): owners fire on a stretch, not a season, against what the roster should have done.
+//   this season   a 3-win season puts most coaches out, a 7-win one some, a winning one almost nobody
+//   his tenure    a first-year coach is almost never fired (the NFL: about one in four years, after a disaster or a
+//                 scandal: Meyer, Culley, Lovie Smith, Wilks); a second-year coach gets most of a pass
+//   the stretch   his last three seasons together: three losing years make it likely, a run of winning makes a down
+//                 year survivable; a coach who has taken his team to the playoffs twice in the four years before this
+//                 one and been there four years or more (Reid, Tomlin, McVay) keeps his job through a bad one
+//   expectations  fewer wins than the roster should have won hurt him; more help
+//   his culture   a coach the building believes in gets a little more time
+// rec: his seasons here [w, l, t, playoffs], this one last (the franchise's own; a real coach's years before it began
+// aren't in it: a man who had already lasted four years or more in the job had won, the way Reid, Tomlin, McVay and
+// Harbaugh had, and counts as a coach with the trips). Returns the chance he's fired.
+export function firePay(c, rec, { w, t, po, exp }) {
+  let p = w <= 4 ? 0.95 : w <= 5 ? 0.9 : w <= 6 ? 0.8 : w <= 7 ? 0.6 : w <= 8 ? 0.32 : w <= 9 ? 0.08 : 0
+  if (po) p *= 0.12
+  p *= t <= 1 ? (w <= 2 ? 0.2 : 0.035) : t === 2 ? 0.5 : t === 3 ? 0.9 : 1
+  const last = rec.slice(-3), avg = last.reduce((a, x) => a + x[0] + x[2] / 2, 0) / Math.max(1, last.length)
+  if (last.length >= 2) p *= avg <= 5.5 ? 1.4 : avg <= 7 ? 1.25 : avg >= 10 ? 0.25 : avg >= 9 ? 0.5 : 1
+  const trips = rec.slice(-5, -1).filter(x => x[3]).length + (t - rec.length >= 4 ? 2 : 0)
+  if (t >= 4 && trips >= 2) p *= 0.15
+  else if (t >= 3 && trips >= 1) p *= 0.6
+  else if (t >= 4) p *= 1.3                           // (four years or more and no playoffs: the owner has seen enough)
+  p *= clamp(0.55, 1.6, 1 + 0.12 * (exp - w))
+  p *= clamp(0.7, 1.15, 1.25 - (c.r?.[3] ?? 5) * 0.05)
+  return clamp(0, 0.95, p)
 }
 // 4-5. The head-coach hires, the worst record first, once the player has made his Monday calls (a coordinator he
 // fired can be hired as someone's head coach; one he kept can leave for a head-coaching job)
@@ -289,15 +309,21 @@ export function shortlist(F, k, n = 8) {
   const list = F.cpool.filter(c => fitsRole(c, k) && !c.home && !J0.gone.includes(c.i)).map(c => ({ c, v: coordScore(F, c, k, 'buzz') })).sort((a, b) => b.v - a.v).slice(0, n).map(x => x.c)
   return [...list, homeCandidate(F, k)]
 }
-// promote from within: his own position coach (always takes it)
+// promote from within: the best of his own position coaches on that side of the ball (always takes it)
 export function homeCandidate(F, k) {
   const J0 = jobOf(F, k)
   if (J0.home) { const c = F.cpool.find(x => x.i === J0.home); if (c) return c }
   const R = rngOf(`${F.seed}-${F.year}-home-${k}`)
-  const c = genCoach(F, R, SIDE[k], 'home', { team: F.team })
+  const taken = takenNames(F)
+  const room = [0, 1, 2].map(() => genCoach(F, R, SIDE[k], 'home', { team: F.team, taken }))
+  const c = room.sort((a, b) => coachOvr(rOf(b), k) - coachOvr(rOf(a), k))[0]
   F.cpool.push(c); J0.home = c.i
   return c
 }
+// the grades a candidate shows before an interview: the player's own position coach, a coordinator the player let go,
+// and any coach an NFL team let go this offseason (his side's numbers are the league's to see); the rest are "?"
+// until he sits down for an interview
+export const gradesKnown = (F, c, k) => !!c && !!(c.home || (c.fired === F.year && c.fb) || F.car?.mine?.[k]?.iv.includes(c.i))
 // the CPU teams that want him for the same job (he's on their short list), and whether they'd let him call plays
 function rivalsFor(F, c, k) {
   const out = []
@@ -322,7 +348,7 @@ export function interviewView(F, k, id) {
   const c = F.cpool.find(x => x.i === id)
   if (!c) return null
   const r = rOf(c)
-  return { c, r, grade: coachGrade(r, k), wants: !c.nc, rivals: c.home ? [] : rivalsFor(F, c, k), seen: c.home || F.car.mine[k]?.iv.includes(id) }
+  return { c, r, grade: coachGrade(r, k), wants: !c.nc, rivals: c.home ? [] : rivalsFor(F, c, k), seen: c.home || F.car.mine[k]?.iv.includes(id), known: gradesKnown(F, c, k) }
 }
 // what a job is worth to him: calling the plays first, then a winner, then the head coach (and a little that's just
 // him: the city, the money, the people he knows). Each part kept, so the screen can say why he picked a team.

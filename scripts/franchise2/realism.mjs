@@ -111,6 +111,9 @@ for (let f = 0; f < NF; f++) {
     // the coaching carousel: the head coaches fired, with their tenure and their records
     row.fire = F.car.ev.filter(e => e.k === 'fire' && e.role === 'hc').map(e => { const T = FR.staffOf(F, e.s); return { s: e.s, n: e.n, yrs: e.yrs, rec: e.rec, hist: (T.rec ?? []).map(r => r[0]).join(',') } })
     row.fireC = F.car.ev.filter(e => e.k === 'fire' && e.role !== 'hc' && !e.newHC).length
+    row.retHC = F.car.ev.filter(e => e.k === 'ret' && e.role === 'hc').length
+    // the good teams with stars: their honors (a 12-win team with four or more men 94 and up)
+    row.stars = FR.SHORTS.filter(s => rec[s].w >= 12 && F.teams[s].r.filter(p => p.o >= 94).length >= 4).map(s => ({ s, w: rec[s].w, n94: F.teams[s].r.filter(p => p.o >= 94).length, pb: Object.entries(aw.hon).filter(([id]) => F.teams[s].r.some(p => String(p.i) === id)).length, ap: Object.entries(aw.hon).filter(([id, h]) => h === 'AP' && F.teams[s].r.some(p => String(p.i) === id)).length }))
     FR.closeCarousel(F)
     // development: every man's OVR before and after the year
     const before = new Map()
@@ -176,12 +179,13 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' �
   console.log('                 All-Pro first team ' + spots.map(sp => `${sp} ${avgOf('ap', sp)}`).join(' · '))
   console.log(`  champions: ${S.map(r => `${r.hon.champ.s} ${r.hon.champ.w}w 94+:${r.hon.champ.n94} PB${r.hon.champ.pb} AP${r.hon.champ.ap}`).join(' · ')}`)
   console.log(`  the top 30 men by rating honored: ${S.map(r => r.hon.top30).join(' ')} · OL honorees' mean OVR ${S.map(r => r.hon.olAvgO).join(' ')}`)
+  console.log(`  12-win teams with four or more men 94+: ${S.flatMap(r => r.stars.map(x => `${x.s} ${x.w}w ${x.n94}x94+ PB${x.pb} AP${x.ap}`)).join(' · ')}`)
   const maxTeam = S.map(r => Math.max(...Object.values(r.hon.team))); console.log(`  most honorees on one team: ${maxTeam.join(' ')} · teams with none: ${S.map(r => 32 - Object.keys(r.hon.team).length).join(' ')}`)
 }
 {
   const fires = S.flatMap(r => r.fire)
   const byYrs = {}; for (const x of fires) byYrs[x.yrs >= 5 ? '5+' : x.yrs] = (byYrs[x.yrs >= 5 ? '5+' : x.yrs] ?? 0) + 1
-  console.log(`COACHES: ${r1(fires.length / S.length)} head coaches fired a season (NFL ~5-7) · by tenure ${Object.entries(byYrs).map(([k, v]) => `${k}y ${v}`).join(' · ')} · coordinators fired ${r1(S.reduce((a, r) => a + r.fireC, 0) / S.length)} a season`)
+  console.log(`COACHES: ${r1(fires.length / S.length)} head coaches fired a season, ${r1(S.reduce((a, r) => a + (r.retHC ?? 0), 0) / S.length)} retired (NFL: about 5-7 openings a year) · by tenure ${Object.entries(byYrs).map(([k, v]) => `${k}y ${v}`).join(' · ')} · coordinators fired ${r1(S.reduce((a, r) => a + r.fireC, 0) / S.length)} a season`)
   console.log('  first-year firings: ' + fires.filter(x => x.yrs <= 1).map(x => `${x.s} ${x.rec}`).join(', '))
   console.log('  fired after a winning record the year before: ' + fires.filter(x => { const h = x.hist.split(',').map(Number); return h.length >= 2 && h[h.length - 2] >= 10 }).map(x => `${x.s} ${x.yrs}y [${x.hist}]`).join(', '))
 }
