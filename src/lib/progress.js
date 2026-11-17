@@ -542,18 +542,43 @@ export function forfeitDaily() {
   S.dc.ovr = null
   emit()
 }
+// Why a finished Daily isn't on the board (S.dc.why), for the Daily screen to say instead of the score
+// just never showing up: 'scouted' (played first on this device by someone else), 'spins' (the build
+// isn't one today's spins deal), 'ratings' (a player or rating the server doesn't have), 'day' (it
+// finished after the day closed), 'check' (the server turned it down for another reason), 'error' (it
+// never got there: the network, a session, the database; S.dc.retry keeps it for TRY AGAIN)
+export function dailyWhy(error) {
+  if (!error) return null
+  if (error.code !== 'rejected') return 'error'
+  const m = String(error.message ?? '')
+  return /day's spins/.test(m) ? 'spins' : /rating|unknown player|missing|no build/.test(m) ? 'ratings' : /today's Daily/.test(m) ? 'day' : 'check'
+}
 async function postDaily(ovr, pos, mode, build) {
   if (!uid || !supabase) return
   if (dailyScouted(S.dc.key)) {
     S.dc.posted = false
+    S.dc.why = 'scouted'
     toast({ kind: 'xp', title: 'DAILY NOT POSTED', sub: "Today's Daily was already played on this device" })
     return emit()
   }
   // checked by the live server (the day's own spins, the real OVR) on its way to the board
+  const key = S.dc.key
   const { error } = await saveDaily({
-    day: S.dc.key, user_id: uid, username: getUsername(user) || 'Player', ovr, position: pos, mode, build,
+    day: key, user_id: uid, username: getUsername(user) || 'Player', ovr, position: pos, mode, build,
   })
-  if (!error || error.code === '23505') { S.dc.posted = true; emit() }   // 23505: already posted today
+  if (S.dc?.key !== key) return
+  if (!error || error.code === '23505') { S.dc.posted = true; S.dc.why = null; S.dc.retry = null; return emit() }   // 23505: already posted today
+  S.dc.why = dailyWhy(error)
+  S.dc.retry = S.dc.why === 'error' ? { ovr, pos, mode, build } : null
+  emit()
+}
+// TRY AGAIN on the Daily screen: a score that never reached the server goes again
+let dailyRetrying = false
+export async function retryDaily() {
+  const r = S.dc?.retry
+  if (!r || dailyRetrying || S.dc.posted || S.dc.key !== dailyChallenge().key) return
+  dailyRetrying = true
+  try { await postDaily(r.ovr, r.pos, r.mode, r.build) } finally { dailyRetrying = false }
 }
 // The boards come from board_cache (supabase/board_cache.sql: worked out every 5 minutes
 // in the database). The old live queries are only a fallback while that table doesn't

@@ -35,7 +35,7 @@ import { bookRatings, bookVs } from './rating.js'
 import { handleSubmit } from './submit.js'
 import { whoIs } from './auth.js'
 import { handleReset } from './reset.js'
-import { countPoster } from './queue.js'
+import { countPoster, ONE_PER_DEVICE } from './queue.js'
 export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom, Games }
 
 const BUILD_SECS = 180
@@ -126,6 +126,23 @@ export class Lobby {
     this.size = 3              // 3v3, or 2v2 (the /lobby2 one): set by the first request
   }
   get slots() { return slotsFor(this.size) }
+  // One spot a player (a tab's vid), one an account, one a device (queue.js ONE_PER_DEVICE): the
+  // spots and the live holds. A squad's hold asked for twice (RUN IT BACK sent twice before the vote
+  // came back) once held the other side's spot for the same player too: "the same player on both sides".
+  liveHolds() { const now = Date.now(); return Object.entries(this.held).filter(([, h]) => h.until > now) }
+  placeOf(vid) { return Object.keys(this.spots).find(id => this.spots[id].vid === vid) ?? this.liveHolds().find(([, h]) => h.vid === vid)?.[0] ?? null }
+  // why p can't have a spot: someone else here is the same account or the same device ('account' / 'device'), or null
+  clash(p) {
+    const others = [...Object.values(this.spots), ...this.liveHolds().map(([, h]) => h)].filter(q => q.vid !== p.vid)
+    if (p.uid && others.some(q => q.uid === p.uid)) return 'account'
+    if (ONE_PER_DEVICE && p.dev && others.some(q => q.dev === p.dev)) return 'device'
+    return null
+  }
+  // a player out of every spot and every hold
+  drop(vid) {
+    for (const id of Object.keys(this.spots)) if (this.spots[id].vid === vid) delete this.spots[id]
+    for (const id of Object.keys(this.held)) if (this.held[id].vid === vid) delete this.held[id]
+  }
   async fetch(req) {
     const url = new URL(req.url)
     if (url.pathname === '/lobby2' || url.searchParams.get('size') === '2') this.size = 2
@@ -136,12 +153,20 @@ export class Lobby {
       const now = Date.now()
       for (const [id, h] of Object.entries(this.held)) if (h.until < now) delete this.held[id]
       const free = sl => !this.spots[sl.id] && !this.held[sl.id]
-      for (const team of [0, 1]) {
+      // asked again for a squad already on its way (a second RUN IT BACK): the spots it has stand,
+      // and only the ones still without a spot get one, on the same side
+      const placed = players.map(p => this.placeOf(str(p.vid))).filter(Boolean)
+      const rest = players.filter(p => !this.placeOf(str(p.vid)))
+      if (!rest.length) return new Response(JSON.stringify({ ok: placed.length > 0 }))
+      // the same account already here under another seat (his other phone): no spot held for this one
+      if (rest.some(p => this.clash(pub(p)))) return new Response(JSON.stringify({ ok: false }))
+      const sides = placed.length ? [this.slots.find(sl => sl.id === placed[0]).team] : [0, 1]
+      for (const team of sides) {
         const side = this.slots.filter(sl => sl.team === team && free(sl))
         const plan = []
         const left = [...side]
-        for (const p of players) { const i = left.findIndex(sl => sl.pos === p.pos || sl.pos === 'any'); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
-        if (plan.length === players.length) {
+        for (const p of rest) { const i = left.findIndex(sl => sl.pos === p.pos || sl.pos === 'any'); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
+        if (plan.length === rest.length) {
           for (const [sl, p] of plan) this.held[sl.id] = { ...pub(p), key: keys[p.vid] ?? null, pos: p.pos === 'big' ? 'big' : 'guard', until: now + 60000 }
           this.broadcast(this.state())
           return new Response(JSON.stringify({ ok: true }))
@@ -175,15 +200,23 @@ export class Lobby {
     if (m.t === 'hello') {
       // the name and account come from the player's session, not from what the phone says
       const who = await whoIs(m.token, this.env)
-      const p = { ...pub(m), uid: who.uid, name: who.name, key: key(m) }; if (!p.vid) return
+      // (the device stays here: it's never in what anyone is sent, pub() leaves it out)
+      const p = { ...pub(m), uid: who.uid, name: who.name, key: key(m), dev: str(m.dev, 64) || null }; if (!p.vid) return
       // one connection a player: a reconnect replaces the old one (with the same key only)
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws && q.key && q.key !== p.key) return reject(ws)
       if (Object.values(this.spots).some(s => s.vid === p.vid && s.key && s.key !== p.key)) return reject(ws)
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws) { this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
       this.conns.set(ws, p)
-      // back from a game with the squad: straight into the spot held for them
-      const mine = Object.entries(this.held).find(([, h]) => h.vid === p.vid && h.until > Date.now() && (!h.key || h.key === p.key))
-      if (mine) { const h = this.held[mine[0]]; delete this.held[mine[0]]; this.spots[mine[0]] = { ...p, at: Date.now(), pos: h.pos } }
+      // back from a game with the squad: straight into the spot held for them (one: already in a
+      // spot, a reconnect, and any other hold for them goes; the same account or device here already, none)
+      const now = Date.now()
+      const mine = Object.entries(this.held).find(([, h]) => h.vid === p.vid && h.until > now && (!h.key || h.key === p.key))
+      if (mine) {
+        const h = this.held[mine[0]]
+        const seated = Object.values(this.spots).some(s => s.vid === p.vid)
+        for (const id of Object.keys(this.held)) if (this.held[id].vid === p.vid) delete this.held[id]
+        if (!seated && !this.clash(p)) this.spots[mine[0]] = { ...p, at: now, pos: h.pos }
+      }
       this.broadcast(this.state())
       if (mine && this.slots.every(sl => this.spots[sl.id])) await this.makeMatch()
       return
@@ -193,7 +226,11 @@ export class Lobby {
       const want = this.slots.find(sl => sl.id === m.slot) ? m.slot : null
       const heldFor = want && this.held[want] && this.held[want].until > Date.now() ? this.held[want].vid : null
       if (want && ((this.spots[want] && this.spots[want].vid !== me.vid) || (heldFor && heldFor !== me.vid))) return send(ws, { t: 'bumped' })
-      for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
+      // the same account (another phone, another tab) or the same device already has a spot here
+      const why = want && this.clash(me)
+      if (why) return send(ws, { t: 'bumped', why })
+      // out of any spot, and any spot held for me, before the new one
+      this.drop(me.vid)
       if (want) this.spots[want] = { ...me, at: Date.now(), pos: posFor(this.slots.find(sl => sl.id === want), m.pos) }
       this.broadcast(this.state())
       if (this.slots.every(sl => this.spots[sl.id])) await this.makeMatch()
@@ -223,12 +260,21 @@ export class Lobby {
         return { vid: `bot-${code}-${sl.id}`, name: look?.name || BOT_NAMES[(i * 5) % BOT_NAMES.length], uid: null, cos: look?.cos ?? null, pos: posFor(sl, code.charCodeAt(0) % 2 ? 'big' : 'guard'), team: sl.team, slot: sl.id, bot: true, ...(look?.name ? { mimic: true } : {}) }
       })
       await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: true, size: this.size, keys: { [me.vid]: me.key ?? null } }) })
-      for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
+      this.drop(me.vid)
       send(ws, { t: 'match', code, players })
       this.broadcast(this.state())
     }
   }
   async makeMatch() {
+    // never a game against yourself: one player, account or device in two spots (an older
+    // lobby's state) keeps the first spot it took, the rest open up, and nobody tips off yet
+    const seen = new Set(), dup = []
+    for (const sl of [...this.slots].sort((a, b) => (this.spots[a.id]?.at ?? 0) - (this.spots[b.id]?.at ?? 0))) {
+      const s = this.spots[sl.id]; if (!s) continue
+      const ids = [`v:${s.vid}`, s.uid && `u:${s.uid}`, ONE_PER_DEVICE && s.dev && `d:${s.dev}`].filter(Boolean)
+      if (ids.some(k => seen.has(k))) dup.push(sl.id); else ids.forEach(k => seen.add(k))
+    }
+    if (dup.length) { for (const id of dup) delete this.spots[id]; this.broadcast(this.state()); return }
     const code = code6()
     const players = this.slots.map(sl => ({ ...pub(this.spots[sl.id]), pos: this.spots[sl.id].pos ?? posFor(sl, 'guard'), team: sl.team, slot: sl.id, bot: false }))
     const keys = Object.fromEntries(this.slots.map(sl => [this.spots[sl.id].vid, this.spots[sl.id].key ?? null]))
@@ -508,6 +554,9 @@ export class Room {
         // running it back is a squad thing: when everyone on my team who's still
         // here has voted, the lobby holds a side for us and we go back together
         if (m.phase === 'build') return
+        // a vote counts once (a double tap sends two before the first comes back; the lobby's
+        // hold also stands on its own if it's asked twice for one squad)
+        if (m.votes.has(vid)) return
         m.votes.add(vid)
         this.broadcast({ t: 'votes', votes: [...m.votes] })
         const squad = this.humans().filter(p => p.team === me.team && this.here().includes(p.vid))
