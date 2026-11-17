@@ -67,8 +67,8 @@ function Awards({ F, act, owner }) {
           <BigRec w={h.w} l={h.l} t={h.t} size={72} />
           <span className="fd-recap-facts">
             <BigNum v={h.pf} label="POINTS" size={30} /><BigNum v={h.pa} label="ALLOWED" size={30} />
-            {ours.length > 0 && <BigNum v={ours.length} label="ALL-PROS" size={30} />}
-            {pb > 0 && <BigNum v={pb} label="PRO BOWLS" size={30} />}
+            {ours.length > 0 && <BigNum v={ours.length} label={ours.length === 1 ? 'ALL-PRO' : 'ALL-PROS'} size={30} />}
+            {pb > 0 && <BigNum v={pb} label={pb === 1 ? 'PRO BOWL' : 'PRO BOWLS'} size={30} />}
           </span>
         </div>
       </section>

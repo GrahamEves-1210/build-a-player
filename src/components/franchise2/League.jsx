@@ -98,7 +98,7 @@ function Leaders({ F, owner, onMan }) {
 }
 
 // ── The wire ─────────────────────────────────────────────────────────────────
-const TAG_TONE = { INJURY: 'inj', RECORD: 'gold', CLINCHED: 'w', SIGNED: 'new', MVP: 'gold', 'SUPER BOWL': 'gold', RETIRED: 'ink', RELEASED: 'l', TRADE: 'new', STREAK: 'ink', MILESTONE: 'ink' }
+const TAG_TONE = { IR: 'inj', DRAFT: 'new', PLAYOFFS: 'w', EXTENDED: 'new', INJURY: 'inj', RECORD: 'gold', CLINCHED: 'w', SIGNED: 'new', MVP: 'gold', 'SUPER BOWL': 'gold', RETIRED: 'ink', RELEASED: 'l', TRADE: 'new', STREAK: 'ink', MILESTONE: 'ink' }
 function Wire({ F }) {
   const items = useMemo(() => wire(F, { n: 40 }), [F, F.wk, F.phase, F.stage]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!items.length) return <div className="fd-none">NOTHING ON THE WIRE YET</div>

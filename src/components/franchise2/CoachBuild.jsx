@@ -143,7 +143,7 @@ export function CoachWho({ S, go, owner, onDone }) {
   return (
     <div className="fsu-who">
       <Chyron team={S.team} title="Your coach" sub="NAME AND FACE" />
-      <LowerThird className="fsu-who-prev" size="l" name={name || owner} pos="HC" team={S.team} photo={coachFace(c, S.team)} stat={{ v: coachGrade(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v]))), label: 'GRADE' }} line={STYLES[c.style]?.name} />
+      <LowerThird className="fsu-who-prev" size="l" name={name || 'Head Coach'} pos="HC" team={S.team} photo={coachFace(c, S.team)} stat={{ v: coachGrade(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v]))), label: 'GRADE' }} line={STYLES[c.style]?.name} />
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => set({ first: cleanName(e.target.value) })} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's first name" />
         <input className="fsu-in" value={last} onChange={e => set({ last: cleanName(e.target.value) })} placeholder="LAST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's last name" />
@@ -157,7 +157,7 @@ export function CoachWho({ S, go, owner, onDone }) {
         ))}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>
       </div>
-      <div className="fsu-acts"><Go onClick={onDone} disabled={!ok}>See the card</Go></div>
+      <div className="fsu-acts">{!ok && <p className="fsu-hint">{!nameOk(first, last) ? (c.face ? 'Give him a first and last name to see the card.' : 'Give him a name and pick a face to see the card.') : 'Pick a face to see the card.'}</p>}<Go onClick={onDone} disabled={!ok}>See the card</Go></div>
     </div>
   )
 }

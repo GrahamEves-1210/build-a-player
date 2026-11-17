@@ -254,3 +254,9 @@ html.bap-reduce-motion .fg-play { animation: none; }
 .fg-in > * { min-width: 0; }
 .fg-tags .fk-tag { white-space: normal; line-height: 1.3; }
 @media (max-width: 420px) { .fh-top { gap: 10px; padding-left: 12px; } .fh-top-txt b { font-size: 20px; } .fh-x { padding: 0 12px; } }
+/* (a phone: the four tabs keep off the screen's edges) */
+@media (max-width: 520px) { .fh-tabs-in { padding: 0 8px; } .fh-tabs button { padding: 0 2px; font-size: 16px; } }
+/* the champions' slab: the line under the name wraps beside the logo, never under it or cut ("BEAT THE BUCCANEERS 31-24") */
+.fh-champ-team .fk-slab { height: auto; min-height: var(--sh); padding-top: 10px; padding-bottom: 12px; }
+.fh-champ-team .fk-slab-txt { max-width: calc(100% - var(--sh) * .78); }
+.fh-champ-team .fk-slab-txt em { line-height: 1.2; }

@@ -6,6 +6,7 @@ import {
 } from '../../lib/franchise2'
 import { genFace } from '../../lib/franchise2/faces'
 import { outText } from '../../lib/franchise2/injury'
+import { hurtText } from '../../lib/franchise2/copy'
 import { TYPES_OF } from '../../lib/squadSeason'
 import { valToGrade } from '../../utils/simulation'
 import { spectrumColor } from '../../lib/gradeColors'
@@ -127,14 +128,14 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
         <Man F={F} p={p} s={s ?? F.team} owner={owner} size="l" line={s ? TEAM[s].nick.toUpperCase() : 'FREE AGENT'} />
         <div className="fd-facts">
           <Fact v={p.ag} label="AGE" />
-          {pl && (p.in ? <Fact v={GROUP[pl.k].label} label={outText(p)} tone="l" />
+          {pl && (p.in ? <Fact v={GROUP[pl.k].label} label={hurtText(F, p, outText)} tone="l" />
             : <Fact v={pl.starts ? (pl.starts.startsWith('ol') ? slotName(pl.starts) : pl.starts.toUpperCase()) : `${GROUP[pl.k].label}${pl.at + 1}`} label={pl.starts ? 'STARTER' : 'DEPTH CHART'} />)}
           <Fact v={p.y > 0 ? money(p.$) : '—'} label={p.rc ? 'ROOKIE DEAL' : 'CAP HIT'} />
           <Fact v={p.y > 0 ? p.y : 0} label={p.y === 1 ? 'YEAR LEFT' : 'YEARS LEFT'} />
         </div>
         {/* what the scouts say about him (his hidden potential, never a number: potential.js), last season's line in the offseason */}
         <div className="dl-about dl-page-scout"><ScoutNote p={p} own={mine} />{F.phase === 'off' && <LastLine F={F} p={p} />}</div>
-        {p.in ? <div className="fd-hurt"><Tag tone="inj">{p.ij?.l ? String(p.ij.l).toUpperCase() : outText(p)}</Tag></div> : null}
+        {p.in ? <div className="fd-hurt"><Tag tone="inj">{p.ij?.l ? `${String(p.ij.l).toUpperCase()}${F.phase === 'done' || F.phase === 'off' ? ` · ${hurtText(F, p, outText)}` : ''}` : hurtText(F, p, outText)}</Tag></div> : null}
         <div className="fd-h">RATINGS</div>
         <Grades F={F} p={p} />
         {now && (

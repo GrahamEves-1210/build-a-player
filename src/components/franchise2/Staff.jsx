@@ -207,7 +207,7 @@ function Monday({ F, act, onNext }) {
           const c = by(e.id) ?? { n: e.n, ag: e.ag }
           return (
             <div key={e.id} className={`fst-evt${i < k ? ' is-in' : ''}`}>
-              <LowerThird name={e.n} pos="HC" team={e.s} photo={coachPhoto(c, e.s)} line={e.k === 'fire' ? `${TEAM[e.s].nick.toUpperCase()} · ${e.rec}${e.yrs > 1 ? ` · ${e.yrs} SEASONS` : ''}` : `${TEAM[e.s].nick.toUpperCase()} · AGE ${e.ag}`} />
+              <LowerThird name={e.n} pos="HC" team={e.s} photo={coachPhoto(c, e.s)} line={e.k === 'fire' ? `${TEAM[e.s].nick.toUpperCase()} · ${e.rec}${e.yrs > 1 ? ` · ${e.yrs} SEASONS` : ''}` : `${TEAM[e.s].nick.toUpperCase()} · AGE ${e.ag - 1}`} />
               {i < k && <Stamp kind={e.k === 'fire' ? 'l' : 'ink'} quiet={reduced()}>{e.k === 'fire' ? 'FIRED' : 'RETIRED'}</Stamp>}
             </div>
           )
@@ -239,7 +239,7 @@ function MyCalls({ F, act }) {
         const c = M[k], g = gone.find(e => e.role === k)
         if (!c) return g ? (
           <div key={k} className="fst-gone" style={fkVars(F.team)}>
-            <span><b>{g.n}</b><small>{JOB_LONG[k]} · {g.k === 'ret' ? `RETIRES AT ${g.ag}` : 'FIRED'}</small></span>
+            <span><b>{g.n}</b><small>{JOB_LONG[k]} · {g.k === 'ret' ? `RETIRES AT ${g.ag - 1}` : 'FIRED'}</small></span>
             <Stamp kind={g.k === 'ret' ? 'ink' : 'l'} quiet>{g.k === 'ret' ? 'RETIRED' : 'FIRED'}</Stamp>
           </div>
         ) : <div key={k} className="fst-open"><b>{JOB_LONG[k]}</b><span>OPEN</span></div>

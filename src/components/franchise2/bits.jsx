@@ -1,3 +1,4 @@
+import { surname } from '../../lib/franchise2/copy'
 import { useEffect, useRef, useState } from 'react'
 import { useCountUp } from '../../lib/useCountUp'
 import { nflHeadshot } from '../../utils/simulation'
@@ -18,7 +19,7 @@ export const LOGO_CHIP = new Set(['LAR', 'NYG', 'NYJ'])
 export const chipCls = s => (LOGO_CHIP.has(s) ? ' is-chip' : '')
 export const outlineCls = s => (LOGO_CHIP.has(s) ? ' is-outline' : '')
 export const Logo = ({ s, size = 32, className = '' }) => (TEAM[s] ? <img className={`f2-logo${chipCls(s)} ${className}`} src={TEAM[s].logo} alt="" width={size} height={size} style={{ width: size, height: size, '--ls': `${size}px` }} draggable={false} /> : null)
-export const lastName = n => { const w = String(n || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
+export const lastName = n => surname(n)   // (St. Brown, not Brown: copy.js)
 const initials = n => String(n || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
 // A man's face: his ESPN headshot, a build's own face (the one his player picked: never a real man's photo), a made-up

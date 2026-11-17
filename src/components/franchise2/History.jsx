@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { TEAM, POS_LABEL, DIVISIONS, CONF_OF, leagueStats } from '../../lib/franchise2'
+import { TEAM, POS_LABEL, DIVISIONS, CONF_OF, leagueStats, records as recordsOf } from '../../lib/franchise2'
 import { ovrOf } from '../../lib/squadSeason'
 import { buildFaceUrl } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
-import { Chyron, BigNum, Banner, KLogo, LowerThird, Go, fkVars } from './kit'
+import { Chyron, BigNum, Banner, KLogo, LowerThird, Go, fkVars, splitName } from './kit'
 import { PlayerPage } from './dparts'
 import { outlineCls } from './bits'
 import './fd.css'
@@ -23,8 +23,13 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
   const H = F.hist ?? []
   const T = TEAM[F.team]
   const divName = DIVISIONS.find(d => d.teams.includes(F.team))?.name ?? ''
-  const w = H.reduce((a, h) => a + h.w, 0), l = H.reduce((a, h) => a + h.l, 0), t = H.reduce((a, h) => a + h.t, 0)
-  const trips = H.filter(h => h.seed).length, divs = H.filter(h => h.div).length
+  // (the season under way counts in the hall's numbers, its record and a playoff trip already made, so the GM's
+  // third season reads as his third before the Super Bowl too)
+  const live = F.phase !== 'off'
+  const now = live ? recordsOf(F)[F.team] : null
+  const inPo = live && !!F.po && [...(F.po.seeds?.AFC ?? []), ...(F.po.seeds?.NFC ?? [])].includes(F.team)
+  const w = H.reduce((a, h) => a + h.w, 0) + (now?.w ?? 0), l = H.reduce((a, h) => a + h.l, 0) + (now?.l ?? 0), t = H.reduce((a, h) => a + h.t, 0) + (now?.t ?? 0)
+  const trips = H.filter(h => h.seed).length + (inPo ? 1 : 0), divs = H.filter(h => h.div).length
   // the banners: what a team hangs (a division title, a conference title, a Super Bowl)
   const banners = H.flatMap(h => {
     const out = []
@@ -42,7 +47,8 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
       </section>
       <div className="fd-hall-facts">
         <BigNum v={F.rings ?? 0} label={F.rings === 1 ? 'RING' : 'RINGS'} size={52} tone={F.rings ? 'gold' : undefined} />
-        <BigNum v={H.length} label="SEASONS" size={52} />
+        {/* (the season under way counts: the GM's third season is his third, before the Super Bowl too) */}
+        <BigNum v={H.length + (live ? 1 : 0)} label={H.length + (live ? 1 : 0) === 1 ? 'SEASON' : 'SEASONS'} size={52} />
         <span className="fk-big" style={{ '--s': '52px' }}><b>{w}-{l}{t ? `-${t}` : ''}</b><small>ALL-TIME</small></span>
         <BigNum v={trips} label="PLAYOFF TRIPS" size={34} />
         <BigNum v={divs} label="DIVISION TITLES" size={34} />
@@ -81,7 +87,7 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
         <>
           <Chyron team={F.team} size="s" title="RETIRED NUMBERS" />
           <div className="fd-jerseys">
-            {F.retired.map(r => <span key={`${r.b}-${r.num}`} className="fd-jersey" style={fkVars(F.team)}><b>{r.num}</b><small>{String(r.n).split(' ').slice(-1)[0].toUpperCase()}</small><em>{r.seasons} SEASONS</em></span>)}
+            {F.retired.map(r => <span key={`${r.b}-${r.num}`} className="fd-jersey" style={fkVars(F.team)}><b>{r.num}</b><small>{splitName(r.n).last.toUpperCase()}</small><em>{r.seasons} SEASONS</em></span>)}
           </div>
         </>
       )}
@@ -92,7 +98,7 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
           <div className="fd-plaques">
             {records.map(r => (
               <span key={r.label} className="fd-plaque">
-                <small>{r.label}</small><b>{r.v}</b><em>{r.who} · {r.y}</em>
+                <small>{r.label}</small><b>{r.v}</b><em><span>{r.who}</span><i>{r.y}</i></em>
               </span>
             ))}
           </div>
@@ -131,6 +137,7 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
 // A build's career: his card, his seasons, his awards, his totals
 const MAIN = { qb: ['py', 'ptd'], rb: ['ry', 'rtd'], wr: ['ryd', 'rctd'], te: ['ryd', 'rctd'], ol: ['sn', 'sa'], dl: ['sck', 'tfl'], lb: ['tk', 'sck'], db: ['dint', 'pbu'], k: ['fgm', 'fga'] }
 const LBL = { py: 'YDS', ptd: 'TD', ry: 'YDS', rtd: 'TD', ryd: 'YDS', rctd: 'TD', sn: 'SNAPS', sa: 'SACKS ALLOWED', sck: 'SACKS', tfl: 'TFL', tk: 'TKL', dint: 'INT', pbu: 'PD', fgm: 'FG MADE', fga: 'FG TRIES' }
+const LBL1 = { sn: 'SNAP', sa: 'SACK ALLOWED', sck: 'SACK', fga: 'FG TRY' }
 function BuildCareer({ F, B, owner, onOpen }) {
   const idx = F.builds.indexOf(B)
   const p = B.done ? null : F.teams[F.team].r.find(x => x.b === idx)
@@ -140,10 +147,12 @@ function BuildCareer({ F, B, owner, onOpen }) {
   const counts = Object.entries(B.car.filter(c => c.aw).reduce((a, c) => ({ ...a, [c.aw]: (a[c.aw] ?? 0) + 1 }), {}))
   const pros = B.car.filter(c => c.hon === 'AP').length, bowls = B.car.filter(c => c.hon === 'AP' || c.hon === 'PB').length
   const rings = B.car.filter(c => c.ring).length
-  const line = (MAIN[B.pos] ?? []).map(k => `${n(tot[k])} ${LBL[k]}`).join(' · ')
+  const line = (MAIN[B.pos] ?? []).map(k => `${n(tot[k])} ${Math.round(tot[k] ?? 0) === 1 ? LBL1[k] ?? LBL[k] : LBL[k]}`).join(' · ')
+  // (his seasons: the ones on the books, and this one while he's playing it)
+  const seasons = B.car.length + (p && F.phase !== 'off' ? 1 : 0)
   return (
     <div className="fd-build">
-      <LowerThird name={B.name ?? POS_LABEL[B.pos]} pos={POS_LABEL[B.pos]} num={B.num} ovr={ovrOf(B.pos, B.build)} photo={buildFaceUrl(B, teamKit(F.team) ?? TEAM[F.team]?.color)} team={F.team} mine={owner || 'GM'} line={`${B.car.length} ${B.car.length === 1 ? 'SEASON' : 'SEASONS'}${B.done ? ' · RETIRED' : B.left ? ' · GONE' : ''}`} onClick={p ? () => onOpen(p.i) : undefined} />
+      <LowerThird name={B.name ?? POS_LABEL[B.pos]} pos={POS_LABEL[B.pos]} num={B.num} ovr={ovrOf(B.pos, B.build)} photo={buildFaceUrl(B, teamKit(F.team) ?? TEAM[F.team]?.color)} team={F.team} mine={owner || 'GM'} line={`${seasons} ${seasons === 1 ? 'SEASON' : 'SEASONS'}${B.done ? ' · RETIRED' : B.left ? ' · GONE' : ''}`} onClick={p ? () => onOpen(p.i) : undefined} />
       <div className="fd-build-row">
         <span className="fd-build-tot">{line}</span>
         <span className="fd-build-hon">

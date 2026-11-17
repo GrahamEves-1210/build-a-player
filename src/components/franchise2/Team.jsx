@@ -3,6 +3,7 @@ import { GROUP, OFF_GROUPS, DEF_GROUPS, ST_GROUPS, OL_SPOTS, depthChart, starter
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, fkVars, BackBar, LowerThird } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money, faceFor, posText } from './dparts'
+import { hurtText } from '../../lib/franchise2/copy'
 import { StaffStrip, StaffScreen } from './Staff'
 import { revOf, useStaged } from './perf'
 
@@ -38,7 +39,7 @@ export default function TeamTab({ F, act, owner }) {
         return {
           id: p.i, i, starts, hurt: !!p.in, fill: !!p.fl && !starts, slot: p.in ? 'OUT' : slot,
           name: p.n, pos: posText(p), num: jersey(F, p), ovr: p.o, photo: faceFor(F, p, F.team, size === 's'), mine: p.b != null ? owner || 'GM' : null,
-          line: p.in ? outText(p) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p), size,
+          line: p.in ? hurtText(F, p, outText) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p), size,
         }
       })
       rooms[k].short = C[k].filter(p => !p.in).length < GROUP[k].n
@@ -156,7 +157,7 @@ function CapScreen({ F, owner, act, onBack, page, setPage }) {
       {next.length > 0 && (
         <>
           <Chyron tone="ink" size="s" title="DEALS UP AFTER THIS SEASON" right={next.length} />
-          {next.slice(0, 8).map(p => <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(p.$), label: 'NOW' }} onClick={() => setPage(p.i)} />)}
+          {next.slice(0, 8).map(p => <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(p.$), label: 'FINAL YEAR' }} onClick={() => setPage(p.i)} />)}
         </>
       )}
       {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
