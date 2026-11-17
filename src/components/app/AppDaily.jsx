@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { SkRows } from './Skeleton'
 import { XpIco } from './GainIcons'
-import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
+import { useProgress, dailyState, retryDaily, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic, claimFx } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
@@ -88,6 +88,16 @@ function Streak({ p }) {
   )
 }
 
+// why a finished Daily isn't on the board (lib/progress.js dailyWhy)
+const WHY = {
+  scouted: "Not on the board: today's Daily was already played on this device.",
+  spins: "Not on the board: this build doesn't match today's spins, so the server couldn't count it.",
+  ratings: "Not on the board: a rating in this build doesn't match today's ratings.",
+  day: "Not on the board: the run finished after today's Daily closed.",
+  check: "Not on the board: the server couldn't verify this run.",
+  error: 'Not on the board yet: the score never reached the server.',
+}
+
 function Challenge({ p, sport }) {
   const dc = dailyState()
   const [board, setBoard] = useState(null)
@@ -113,6 +123,13 @@ function Challenge({ p, sport }) {
           <button className="ag-btn ag-challenge-go" onClick={play}>{dc.spins > 0 ? 'RESUME CHALLENGE' : 'PLAY CHALLENGE'} <IconArrow size={18} /></button>
         )}
         {dc.done && !dc.forfeit && !p.signedIn && <span className="ag-challenge-note">Sign in to post your score to the board.</span>}
+        {/* finished, signed in, and the board didn't take it: why, instead of the score just never showing up (lib/progress.js dailyWhy) */}
+        {dc.done && !dc.forfeit && p.signedIn && !dc.posted && WHY[dc.why] && (
+          <span className="ag-challenge-why" role="status">
+            {WHY[dc.why]}
+            {dc.why === 'error' && dc.retry && <button className="ag-challenge-retry" onClick={() => { sfx('tap'); retryDaily() }}>TRY AGAIN</button>}
+          </span>
+        )}
       </div>
       <div className="ag-board">
         <div className="ag-board-head"><span>TODAY'S TOP BUILDS</span><span>OVR</span></div>
