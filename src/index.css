@@ -153,6 +153,16 @@
   :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-hidden,
   :is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-invisible { transform: translateY(-50%) translateX(30px) scale(1.2) !important; }
 }
+/* iPad in landscape with Safari's bars (about 1024x600): the stage is short and narrow, so the trait cards stacked
+   on each other and on the figure. On an iPad only (main.jsx is-tablet), the cards shrink to fit (owner 11-16) */
+@media (min-width: 769px) and (max-height: 760px) {
+  html.is-tablet:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left  { transform: translateY(-50%) translateX(-6px) scale(.78) !important; transform-origin: left center; }
+  html.is-tablet:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right { transform: translateY(-50%) translateX(6px) scale(.78) !important; transform-origin: right center; }
+  html.is-tablet:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left.cz-hidden,
+  html.is-tablet:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-left.cz-invisible  { transform: translateY(-50%) translateX(-14px) scale(.78) !important; }
+  html.is-tablet:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-hidden,
+  html.is-tablet:is([data-sport="bucket"], [data-sport="soccer"], [data-sport="baseball"]) .cz-right.cz-invisible { transform: translateY(-50%) translateX(14px) scale(.78) !important; }
+}
 .sil-img--bucket {
   position: relative;
   z-index: 4;
