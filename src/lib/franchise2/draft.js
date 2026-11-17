@@ -115,9 +115,11 @@ export function makeClass(F) {
   F.sc = { b: 3, w: 0, u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
 }
 // The class's talent, by where a man ranks in it (0 the best): what he's headed for. Shaped so the league keeps its
-// stars: about 10 men a class headed for 90+ and 5 or 6 for 95+ (a franchise player or two most years), the first
+// stars: about 14 men a class headed for 90+ and 5 or 6 for 95+ (a franchise player or two most years), the first
 // round's men starters, the 3rd round's backups with a chance, the long tail depth and camp bodies.
-const TALENT = [[0, 98], [0.021, 95], [0.033, 90], [0.08, 84.4], [0.145, 81.5], [0.27, 78.9], [0.5, 75.3], [0.8, 70], [1, 61]]
+// (2026-11-17: 10 a class wasn't enough to replace the real league's 90-plus men once they aged out: the count fell
+// from 93 to about 65 by year ten, and further once careers ended at a real age; 14 holds it)
+const TALENT = [[0, 98], [0.021, 95], [0.048, 90], [0.09, 84.6], [0.145, 81.5], [0.27, 78.9], [0.5, 75.3], [0.8, 70], [1, 61]]
 // THE ONES EVERYBODY MISSED (Brady in the 6th round, Nacua in the 5th, Purdy at 262): now and then a man graded as a
 // backup is headed for 90+. His ratings now are a backup's; the extra (hb) is in how much he has left to grow, and
 // neither the media nor any of the 32 teams sees it. Our scouts can: a second look at his tape and a visit.

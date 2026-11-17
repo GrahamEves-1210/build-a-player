@@ -58,7 +58,7 @@ function ageMix(F) {
   const st = FR.SHORTS.flatMap(s => Object.values(FR.startersOf(F, s)))
   const b = { '<=24': 0, '25-29': 0, '30+': 0 }
   for (const p of all) b[p.ag <= 24 ? '<=24' : p.ag <= 29 ? '25-29' : '30+']++
-  return { n: all.length, u24: pct(b['<=24'], all.length), mid: pct(b['25-29'], all.length), o30: pct(b['30+'], all.length), st30: pct(st.filter(p => p.ag >= 30).length, st.length), age: r1(all.reduce((a, p) => a + p.ag, 0) / all.length), n90: all.filter(p => p.o >= 90).length, n85: all.filter(p => p.o >= 85).length, mean: r1(st.reduce((a, p) => a + p.o, 0) / st.length) }
+  return { n: all.length, u24: pct(b['<=24'], all.length), mid: pct(b['25-29'], all.length), o30: pct(b['30+'], all.length), st30: pct(st.filter(p => p.ag >= 30).length, st.length), age: r1(all.reduce((a, p) => a + p.ag, 0) / all.length), n90: all.filter(p => p.o >= 90).length, star: [[0, 24], [25, 27], [28, 29], [30, 99]].map(([a, b]) => all.filter(p => p.o >= 90 && p.ag >= a && p.ag <= b).length).join('/'), gap: [[0, 23], [24, 25], [26, 28]].map(([a, b]) => { const m = all.filter(p => p.ag >= a && p.ag <= b && !p.fl); return r1(m.reduce((x, p) => x + Math.max(0, (p.pk ?? p.o) - p.o), 0) / Math.max(1, m.length)) }).join('/'), n85: all.filter(p => p.o >= 85).length, mean: r1(st.reduce((a, p) => a + p.o, 0) / st.length) }
 }
 
 for (let f = 0; f < NF; f++) {
@@ -112,7 +112,7 @@ for (let f = 0; f < NF; f++) {
     FR.closeCarousel(F)
     // development: every man's OVR before and after the year
     const before = new Map()
-    for (const s of FR.SHORTS) for (const p of F.teams[s].r) before.set(p.i, { o: p.o, ag: p.ag, p: p.p, s: p.s, se: !!p.ij?.se, ij: p.ij?.l ?? null, yi: p.yi ?? 0, b: p.b != null, pk: p.pk })
+    for (const s of FR.SHORTS) for (const p of F.teams[s].r) before.set(p.i, { o: p.o, ag: p.ag, p: p.p, s: p.s, se: (p.yi ?? (p.ij?.se ? 2 : 0)) >= 2, ij: p.ij?.l ?? (p.yi ? `inj ${p.yi}` : null), yi: p.yi ?? 0, b: p.b != null, pk: p.pk })
     FR.ageLeague(F)
     const dev = []
     for (const s of FR.SHORTS) for (const p of F.teams[s].r) { const x = before.get(p.i); if (x) dev.push({ ...x, d: p.o - x.o, ag1: p.ag }) }
@@ -192,7 +192,12 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' �
 }
 {
   console.log('AGE MIX at the start of each season (all rostered men):')
-  for (let f = 0; f < NF; f++) console.log(`  f${f}: ` + rows.filter(r => r.f === f).map(r => `${r.y + 1} 30+ ${r.ages.o30}% (starters ${r.ages.st30}%) ≤24 ${r.ages.u24}% age ${r.ages.age} 90+ ${r.ages.n90} 85+ ${r.ages.n85} st ${r.ages.mean}`).join('\n       '))
+  for (let f = 0; f < NF; f++) console.log(`  f${f}: ` + rows.filter(r => r.f === f).map(r => `${r.y + 1} 30+ ${r.ages.o30}% (starters ${r.ages.st30}%) ≤24 ${r.ages.u24}% age ${r.ages.age} 90+ ${r.ages.n90} (by age ${r.ages.star}) gap ${r.ages.gap} 85+ ${r.ages.n85} st ${r.ages.mean} n ${r.ages.n}${r.flow ? ` · out ${r.flow.outN} (30+ ${r.flow.out.o30}, 25-29 ${r.flow.out.mid}, -24 ${r.flow.out.u25}) in ${r.flow.inN} (30+ ${r.flow.in.o30})` : ''}`).join('\n       '))
+  const last = Math.max(...rows.map(x => x.y)), first = rows.filter(r => !r.flow), ends = rows.filter(r => r.y === last)
+  const av = (list, f) => r1(list.reduce((a, r) => a + f(r), 0) / list.length)
+  console.log(`  30+ share: start ${av(first, r => r.ages.o30)}% → end ${av(ends, r => r.ages.o30)}% (range ${Math.min(...rows.map(r => r.ages.o30))}-${Math.max(...rows.map(r => r.ages.o30))}%) · 90+ men: ${av(first, r => r.ages.n90)} → ${av(ends, r => r.ages.n90)} (range ${Math.min(...rows.map(r => r.ages.n90))}-${Math.max(...rows.map(r => r.ages.n90))}) · starters' OVR ${av(first, r => r.ages.mean)} → ${av(ends, r => r.ages.mean)}`)
+  // (the owner: the league must not get older as a whole)
+  if (av(ends, r => r.ages.o30) > 20) bad(`the league ages: 30+ at ${av(ends, r => r.ages.o30)}% after ${NS} seasons`)
 }
 if (OUT) writeFileSync(OUT, JSON.stringify(rows))
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'done')

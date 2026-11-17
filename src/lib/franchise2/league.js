@@ -137,6 +137,10 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
   return p
 }
+// a build's ceiling: a drafted man's room at his age (draft.js ROOM: a 22-year-old about nine and a half), so he keeps
+// growing into his late twenties the way a good young starter does (2026-11-17: five or six, and a build stopped at
+// his ceiling at 24)
+export const buildPeak = (o, ag, extra = 1) => Math.min(99, o + Math.round(Math.max(0, 28 - ag) * 1.6) + extra)
 // the player's own build as a man on the roster
 export const buildSpot = (pos, build) => (pos === 'dl' ? dlBuildSpot(build) : pos === 'db' ? (build?.size?.subpos === 's' ? 's' : 'cb') : pos === 'ol' ? olSpotOfBuild(build) : undefined)
 export function makeBuilt(F, idx, R) {
@@ -145,7 +149,7 @@ export function makeBuilt(F, idx, R) {
   const p = { i: F.nid++, n: B.name || nameOf(B.pos, B.build) || POS_LABEL[B.pos], p: B.pos, o, ag: B.age ?? 23, b: idx, ...(B.rk && { rk: B.rk }) }
   const s = buildSpot(B.pos, B.build)
   if (s) p.s = s
-  p.pk = Math.min(99, o + Math.max(0, 27 - p.ag) + R.int(0, 2))   // (a build grows a step at a time)
+  p.pk = buildPeak(o, p.ag, R.int(0, 2))   // (a build grows a step at a time)
   // a build is a rookie: the rookie scale at the slot his OVR would have gone in the draft (contracts.js buildSlot)
   signRookie(p, B.slot ?? buildSlot(o, B.pos), F.year ?? FIRST_YEAR)
   B.slot = B.slot ?? buildSlot(o, B.pos)
@@ -211,11 +215,16 @@ function keepAt(at, pos, n, must = 0) {
 }
 // trim a roster to the maximum at each spot (the weakest go, fillers first; every room keeps its two-deep; the
 // player's own builds are never cut; the kickers in camp: the better leg keeps the job, a draft pick or not)
-export function trim(roster, keep = new Set()) {
+// cpu: a league team's cut-down, which reads a man the way a front office does: his rating, less a little a year past
+// 29 (a declining veteran costs more and has less left: he has to be clearly better to keep his place over a young
+// man), plus a young man's upside as the scouts see it. The player's own team is cut by rating alone.
+const keepValue = p => p.o - Math.max(0, p.ag - (p.p === 'qb' || p.p === 'k' ? 32 : 29)) * 1.2 + (p.ag <= 25 ? clamp(0, 3, ((p.pk ?? p.o) - (p.hb ?? 0) - p.o) * 0.4) : 0)
+export function trim(roster, keep = new Set(), { cpu = false } = {}) {
   const out = [], cut = []
+  const v = cpu ? keepValue : p => p.o
   for (const pos of POS) {
     const kept = p => pos !== 'k' && keep.has(p.i)
-    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || kept(b) - kept(a) || (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o)
+    const at = byPos(roster, pos).sort((a, b) => (b.b != null) - (a.b != null) || kept(b) - kept(a) || (a.fl ?? 0) - (b.fl ?? 0) || v(b) - v(a))
     const must = at.filter(p => p.b != null || kept(p)).length
     const sel = keepAt(at, pos, Math.max(MAX[pos], must), must)
     out.push(...sel)
