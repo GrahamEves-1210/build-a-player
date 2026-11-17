@@ -148,7 +148,7 @@ for (let y = 0; y < N; y++) {
     if (p.ag >= 32 && p.o >= 80) asks.old.push([p.o, p.ag, r1(p.$ / sc), k, p.n])
     if (p.ag <= 27 && p.o >= 85) asks.young.push([p.o, p.ag, r1(p.$ / sc), k, p.n])
     // (age prices him down: the same man at 29 asks more)
-    if (p.ag >= 33 && p.p !== 'k' && p.$ > FR.minimumFor(p.ag, lyr) + 1) { const young = FR.marketValue({ ...p, ag: 29 }, lyr, lines); ok(p.$ <= young * 1.05 * 0.95 || p.o >= 90, `${p.n} (${p.p} ${p.o}, ${p.ag}) asks ${p.$}, as much as at 29 (${young})`) }
+    if (p.ag >= 33 && p.p !== 'k' && p.$ > FR.minimumFor(p.ag, lyr) + 1) { const now = FR.marketValue(p, lyr, lines), young = FR.marketValue({ ...p, ag: 29 }, lyr, lines); ok(now <= young * 0.95 || p.o >= 90, `${p.n} (${p.p} ${p.o}, ${p.ag}) is worth ${now}, as much as at 29 (${young})`) }
   }
   const tags = (F.ext ?? []).filter(e => e[7] === 'tag')
   const byTeam = {}; for (const t of tags) byTeam[t[3]] = (byTeam[t[3]] ?? 0) + 1
