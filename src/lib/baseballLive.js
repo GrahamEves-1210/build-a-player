@@ -6,3 +6,6 @@
 // (its own tiny file so Home can read it without loading the baseball rosters)
 const BASEBALL_DEV = typeof location !== 'undefined' && !!import.meta.env?.DEV && /[?&]baseball=1\b/.test(location.search)
 export const BASEBALL_LIVE = false || BASEBALL_DEV
+// While it's off, baseball sits on Home's sport picker locked, with SOON under it (the owner, 2026-11-17: "add baseball
+// coming soon"): nothing about it can be opened or played
+export const BASEBALL_SOON = !BASEBALL_LIVE

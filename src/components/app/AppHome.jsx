@@ -23,7 +23,7 @@ import { OL_LIVE, OL_SOON } from '../../lib/olLive'
 import { K_LIVE, K_SOON } from '../../lib/kLive'
 import { SOCCER_LIVE, SOCCER_SOON } from '../../lib/soccerLive'
 import { SOCCER_POOL } from '../../lib/soccerUi'
-import { BASEBALL_LIVE } from '../../lib/baseballLive'
+import { BASEBALL_LIVE, BASEBALL_SOON } from '../../lib/baseballLive'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
@@ -161,7 +161,7 @@ export const SPORTS = [
   { id: 'bucket', label: 'BASKETBALL', Icon: IconBasketball },
   // (soccer while it's coming soon: there, locked, SOON under it)
   ...(SOCCER_LIVE || SOCCER_SOON ? [{ id: 'soccer', label: 'SOCCER', Icon: IconSoccer, soon: !SOCCER_LIVE }] : []),
-  ...(BASEBALL_LIVE ? [{ id: 'baseball', label: 'BASEBALL', Icon: IconBaseball }] : []),
+  ...(BASEBALL_LIVE || BASEBALL_SOON ? [{ id: 'baseball', label: 'BASEBALL', Icon: IconBaseball, soon: !BASEBALL_LIVE }] : []),
 ]
 // arrived here from the sport picker (read once a page load: the figure skips its band-by-band fall)
 const ARRIVED = (() => { try { const v = sessionStorage.getItem('bap_sport_switch'); sessionStorage.removeItem('bap_sport_switch'); return v } catch { return null } })()
