@@ -61,6 +61,9 @@ function teamRules(sport) {
       seenHere.set(name, place)
     }
     for (const [name, place] of seenHere) if (!clash.has(lg + name) && !nick.has(name)) nick.set(name, place)
+    // and in capitals, the way a header or a jersey sets it
+    for (const [name, place] of [...nick]) if (/[a-z]/.test(name) && !nick.has(name.toUpperCase())) nick.set(name.toUpperCase(), place.toUpperCase())
+    for (const [name, place] of [...full]) if (/[a-z]/.test(name)) full.set(name.toUpperCase(), place.toUpperCase())
   }
   const fullRe = full.size ? new RegExp(`\\b(${[...full.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b`, 'g') : null
   // "the Chiefs are on the clock" → "Kansas City is on the clock"; "the Chiefs'" → "Kansas City's"
@@ -75,7 +78,7 @@ const VERB = { ' are': ' is', ' were': ' was', ' have': ' has' }
 export const sportOfPath = (p = (typeof location !== 'undefined' ? location.pathname : '/')) =>
   p.startsWith('/bucket') ? 'basketball' : p.startsWith('/baseball') ? 'baseball' : p.startsWith('/soccer') ? 'soccer' : 'football'
 
-const QUICK = /NFL|NBA|MLB|NCAA|Bowl|BOWL|Final|FINAL|Madness|MADNESS|Heisman|HEISMAN|Lombardi|O'Brien|World Series|[A-Z][a-z]/
+const QUICK = /[A-Z]|\ders\b/
 const cache = new Map()
 export function appSafe(text, sport = sportOfPath()) {
   if (typeof text !== 'string' || text.length < 2 || !QUICK.test(text)) return text
@@ -85,7 +88,7 @@ export function appSafe(text, sport = sportOfPath()) {
   let s = text
   const T = teamRules(sport)
   if (T.fullRe) s = s.replace(T.fullRe, m => T.full.get(m))
-  if (T.nickRe) s = s.replace(T.nickRe, (m, the, name, apos, verb) => T.nick.get(name) + (apos ? "'s" : '') + (verb ? VERB[verb] : ''))
+  if (T.nickRe) s = s.replace(T.nickRe, (m, the, name, apos, verb) => T.nick.get(name) + (apos ? (/[a-z]/.test(name) ? "'s" : "'S") : '') + (verb ? VERB[verb] : ''))
   for (const [re, to] of TERM_MAP) s = s.replace(re, to)
   if (cache.size > 6000) cache.clear()
   cache.set(ck, s)

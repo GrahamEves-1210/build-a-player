@@ -1,8 +1,10 @@
 import svgRaw from '../assets/bucket-body.svg?raw'
 import { NBA_TEAMS } from '../data/nba-teams'
+import { APP_ART } from '../lib/platform'
 
+// (the app's jersey reads the city, the way a road jersey does: the nickname is the league's trademark, lib/appTerms.js)
 const TEAM_NICKNAME = Object.fromEntries(
-  NBA_TEAMS.map(t => [t.short, t.name.split(' ').slice(-1)[0].toUpperCase()])
+  NBA_TEAMS.map(t => [t.short, (APP_ART ? (t.name.replace(/\s+(Trail Blazers|\S+)$/, '') || t.short) : t.name.split(' ').slice(-1)[0]).toUpperCase()])
 )
 
 const PROCESSED_SVG = (() => {
