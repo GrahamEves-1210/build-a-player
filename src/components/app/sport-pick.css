@@ -3,12 +3,12 @@
    a lock and a smaller, fainter name. A tap marks the new one at once, the stage clears, and the other sport's
    Home opens with the names in the same place. No strip of its own: the stage is the picker. */
 .sp-nav {
-  position: absolute; z-index: 6; left: 8px; right: 8px; top: 4px;
+  position: absolute; z-index: 6; left: 8px; right: 8px; top: 0;
   display: flex; align-items: stretch; gap: 2px;
 }
 .sp-tab {
   --c: #4fd8b4;
-  position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 0 7px;
+  position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 50px; padding: 0 7px;   /* (the stage is drawn a little smaller on a phone: 50 lands at about 44) */
   border: 0; border-radius: var(--hm-r, 5px); background: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
   color: rgba(255,255,255,.6); font-family: var(--ag-font); font-size: clamp(19px, 5.9vw, 25px); letter-spacing: .4px; line-height: 1;
   text-shadow: 0 1px 2px rgba(0,0,0,.6);
@@ -20,7 +20,7 @@
 /* the one on the stage: white, its colour under the name */
 .sp-tab.is-on { color: #fff; cursor: default; }
 .sp-tab::after {
-  content: ''; position: absolute; left: 7px; right: 7px; bottom: 5px; height: 3px; background: var(--c);
+  content: ''; position: absolute; left: 7px; right: 7px; bottom: 8px; height: 3px; background: var(--c);
   transform: scaleX(0); transform-origin: 0 50%; transition: transform .16s cubic-bezier(.3, 1, .5, 1);
 }
 .sp-tab.is-on::after { transform: none; }
@@ -31,10 +31,11 @@
 .sp-tab.is-soon { gap: 4px; padding: 0 5px; color: rgba(255,255,255,.42); font-size: 15px; letter-spacing: .6px; cursor: default; }
 .sp-tab.is-soon svg { flex: none; margin-top: -1px; }
 
-/* the stage around it: the position word drops under the names, How To Play and the online count go to the floor */
-.ag-home .ag-stage-word { top: 54px; }
-.ag-home .ag-stage .ag-howto { top: auto; bottom: 58px; right: 10px; }
-.ag-home .ag-stage .ag-live-count { top: auto; bottom: 58px; left: 10px; }
+/* the stage around it: the position word drops under the names, How To Play and the online count go to the
+   floor's left corner (the right one has the position bar's NEW tags over it) */
+.ag-home .ag-stage-word { top: 56px; }
+.ag-home .ag-stage .ag-howto { top: auto; right: auto; left: 10px; bottom: 58px; }
+.ag-home .ag-stage .ag-live-count { top: auto; left: 10px; bottom: 92px; }
 
 /* while the other sport opens: its stage clears (the names, the bars and PLAY stay where they are) */
 html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-platform) { animation: sp-clear .14s ease-in forwards; }
@@ -43,12 +44,12 @@ html.ag-sport-leaving .ag-home .ag-stage :is(.ag-figure, .ag-stage-word, .ag-pla
 @media (max-width: 360px) { .sp-tab.is-soon { font-size: 13px; padding: 0 3px; } .sp-tab.is-soon svg { display: none; } }
 @media (min-width: 1024px) {
   html.app-look .sp-nav { left: 12px; right: 12px; top: 8px; gap: 8px; }
-  html.app-look .sp-tab { min-height: 52px; padding: 0 8px; font-size: 30px; }
-  html.app-look .sp-tab::after { left: 8px; right: 8px; bottom: 6px; height: 4px; }
-  html.app-look .sp-tab.is-soon { font-size: 18px; gap: 6px; }
-  html.app-look .ag-stage-word { top: 72px; }
-  html.app-look .ag-stage .ag-live-count { left: 14px; top: auto; bottom: 64px; }
-  html.app-look .ag-stage .ag-howto { bottom: 64px; }
+  html.app-look .sp-tab { min-height: 56px; padding: 0 8px; font-size: 34px; }
+  html.app-look .sp-tab::after { left: 8px; right: 8px; bottom: 7px; height: 4px; }
+  html.app-look .sp-tab.is-soon { font-size: 19px; gap: 6px; }
+  html.app-look .ag-stage-word { top: 76px; }
+  html.app-look .ag-stage .ag-live-count { left: 14px; top: auto; bottom: 104px; }
+  html.app-look .ag-stage .ag-howto { left: 14px; bottom: 64px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
