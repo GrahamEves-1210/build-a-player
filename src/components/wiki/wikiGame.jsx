@@ -91,7 +91,6 @@ OVR is rounded and never goes past 99`}</pre>
           <thead><tr><th>Position</th>{EXAMPLES.map(v => <th key={v} className="num">All {GRADES[v]}</th>)}</tr></thead>
           <tbody>
             {NFL_OVR.map(([id, fn]) => { const p = poolOf(id); return p && <tr key={id}><td>{NAME[id]}</td>{EXAMPLES.map(v => <td key={v} className="num">{fn(flat(p.types, v), p.types)}</td>)}</tr> })}
-            {['guard', 'big'].map(id => { const p = poolOf(id); return <tr key={id}><td>{NAME[id]}</td>{EXAMPLES.map(v => <td key={v} className="num">{calcBucketOVR(flat(p.types, v), p.types, id)}</td>)}</tr> })}
           </tbody>
         </table>
       </div>
@@ -102,6 +101,14 @@ OVR is rounded and never goes past 99`}</pre>
       <pre className="wk-pre">{`avg = weighted average of the ten ratings
 OVR = 57 + (avg − 1) ÷ 9 × 44, rounded, 99 at most`}</pre>
       <p>A build of all 1s is a 57 and all 10s a 99. Guards are scored mostly on jump shot, speed, size, finishing and IQ; bigs on finishing, size, interior defense and rebounding.</p>
+      <div className="wk-table-wrap">
+        <table className="wikitable">
+          <thead><tr><th>Position</th>{EXAMPLES.map(v => <th key={v} className="num">All {GRADES[v]}</th>)}</tr></thead>
+          <tbody>
+            {['guard', 'big'].map(id => { const p = poolOf(id); return <tr key={id}><td>{NAME[id]}</td>{EXAMPLES.map(v => <td key={v} className="num">{calcBucketOVR(flat(p.types, v), p.types, id)}</td>)}</tr> })}
+          </tbody>
+        </table>
+      </div>
       <div className="wk-weights"><Weights title="Guard" weights={OVR_WEIGHTS.guard} attr={poolOf('guard').attr} /><Weights title="Big" weights={OVR_WEIGHTS.big} attr={poolOf('big').attr} /></div>
       {SOCCER_LIVE && <p>A striker's overall uses the basketball scale. Its weights are on the <Link go={go} to="soccer" hash="ratings">Soccer</Link> page.</p>}
 

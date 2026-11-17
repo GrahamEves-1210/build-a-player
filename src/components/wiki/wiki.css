@@ -166,7 +166,8 @@
   .wk-brand small { display: none; }
   .wk-body { grid-template-columns: 1fr; padding: 12px 10px 40px; }
   .wk-side { display: none; margin-bottom: 12px; }
-  .wk-side.is-open { display: block; }
+  /* the menu opens over the page wherever it's scrolled to, under the top bar (in the page's flow it sat at the top, out of sight) */
+  .wk-side.is-open { display: block; position: fixed; top: 55px; left: 0; right: 0; bottom: 0; z-index: 19; margin: 0; padding: 10px 10px 24px; overflow-y: auto; overscroll-behavior: contain; background: var(--wk-bg); }
   .wk-article { padding: 14px 14px 20px; border-radius: 0 0 10px 10px; }
   .wk-h1 { font-size: 27px; }
   .wk-infobox { float: none; width: 100%; margin: 0 0 14px; }
