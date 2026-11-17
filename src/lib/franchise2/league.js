@@ -123,6 +123,8 @@ export function makeReal(F, r, R) {
   const d = realDeal(r.name, r.team, p, R)
   p.$ = d.$; p.y = d.y; p.g = d.g
   if (d.rc) p.rc = 1
+  if (d.sc) p.sc = d.sc      // (the years after this one: a real deal's cap hits rise)
+  if (d.op) { p.op = 1; p.ox = null }
   if (d.dy >= FIRST_YEAR) p.rk = d.dy   // (a real rookie of this season: his draft year, as a pick's rk)
   return p
 }

@@ -3,6 +3,7 @@ import {
   TEAM, resignOne, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, openTalks, offerTalks, acceptTalks, talkFacts,
   worthOf, fitsDeal, capRoom, SAY, startsFor, teamView, rivalsFor, standingOf, fitOf, setOffer, pullOffer, offersOut, committed,
   floorOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade, groupOf, GROUP, minimumFor,
+  walkingStarters, decideDay, optionTier, OPTION_TIER_TEXT,
 } from '../../lib/franchise2'
 import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
@@ -33,11 +34,15 @@ const DONE_TEXT = { kept: 'RE-SIGNED', option: 'OPTION PICKED UP', decline: 'OPT
 export function Resign({ F, act, owner }) {
   const [id, setId] = useState(null)
   const [page, setPage] = useState(null)
+  const [sure, setSure] = useState(false)
   const t = F.teams[F.team]
   if (id != null) return <Talks F={F} act={act} owner={owner} id={id} onBack={() => { setId(null); sfx('back'); toTop() }} />
   const open = (F.rs ?? []).map(i => t.r.find(x => x.i === i)).filter(Boolean)
   const done = F.rsd ?? []
+  // (starters still unsigned: the GM is asked first, and told who they are)
+  const walking = walkingStarters(F)
   const next = () => {
+    if (walking.length && !sure) { setSure(true); sfx('deny'); haptic('medium'); return }
     act(X => { for (const i of [...(X.rs ?? [])]) { const p = X.teams[X.team].r.find(x => x.i === i); if (p) resignOne(X, i, optionDue(p) ? 'decline' : false) } openFA(X) })
     sfx('whistle')
   }
@@ -64,7 +69,15 @@ export function Resign({ F, act, owner }) {
         </>
       )}
       <CampReport F={F} owner={owner} onMan={setPage} />
-      <ActionBar><Go onClick={next} sub={open.length ? `${open.length} ${open.length === 1 ? 'BECOMES A FREE AGENT' : 'BECOME FREE AGENTS'}` : null}>Next: Free agency</Go></ActionBar>
+      {sure && walking.length > 0 ? (
+        <ActionBar className="dl-walk">
+          <div className="dl-walk-t" role="alert">
+            <b>{walking.length === 1 ? 'A STARTER WILL WALK' : `${walking.length} STARTERS WILL WALK`}</b>
+            <span>{walking.map(p => `${p.n} (${GROUP[groupOf(p)]?.label ?? POS_LABEL[p.p]})`).join(', ')} {walking.length === 1 ? 'becomes a free agent' : 'become free agents'}. The {TEAM[F.team].nick} can still bid in free agency, against everyone else.</span>
+          </div>
+          <div className="fd-two"><Go onClick={next}>Let them go</Go><Go ghost onClick={() => { setSure(false); sfx('back') }}>Keep negotiating</Go></div>
+        </ActionBar>
+      ) : <ActionBar><Go onClick={next} sub={open.length ? `${open.length} ${open.length === 1 ? 'BECOMES A FREE AGENT' : 'BECOME FREE AGENTS'}${walking.length ? ` · ${walking.length} ${walking.length === 1 ? 'STARTER' : 'STARTERS'}` : ''}` : null}>Next: Free agency</Go></ActionBar>}
       {page != null && <PlayerPage F={F} id={page} owner={owner} onClose={() => setPage(null)} />}
     </>
   )
@@ -169,7 +182,7 @@ function OptionCall({ F, act, owner, p, onBack }) {
         <span className="dl-num-h">THE OPTION</span>
         <BigNum v={money(price)} count={false} label={`${F.year + 2} SEASON`} size={50} />
       </div>
-      <p className="dl-meet">THEN A NEW DEAL OR FREE AGENCY</p>
+      <p className="dl-meet">{OPTION_TIER_TEXT[optionTier(p, startsFor(F, p))]} · THEN A NEW DEAL OR FREE AGENCY</p>
       <ActionBar>
         <Go disabled={!fits} onClick={() => call('option')} sub={fits ? null : 'NOT ENOUGH CAP ROOM'}>Pick it up</Go>
         <Go ghost onClick={() => call('decline')}>Decline</Go>
@@ -369,7 +382,7 @@ function OfferPanel({ F, act, owner, p, V, side = false, onBack, setPage }) {
         <small>{st.rivals.length ? 'ALSO BIDDING' : 'NO OTHER BIDS YET'}</small>
         <span>{st.rivals.map(r => <span key={r.s} className="fd-in-team" style={fkVars(r.s)}><KLogo s={r.s} size={28} /></span>)}</span>
       </div>
-      <div className={`dl-standing is-${tone}`} role="status"><small>WHERE THE {nick(F.team)} STAND</small><b>{word}</b></div>
+      <div className={`dl-standing is-${tone}`} role="status"><small>WHERE THE {nick(F.team)} STAND · {st.day > F.fad ? `HE DECIDES ON DAY ${st.day}` : 'HE DECIDES TODAY'}</small><b>{word}</b></div>
       <Chyron tone="ink" size="s" title="WHAT HE WANTS" right={nick(F.team)} />
       <div className="fd-wants">
         {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(worthOf(p, o)) : k === 'coach' ? coachGrade(c) ?? '-' : undefined} color={k === 'coach' ? letterColor(coachGrade(c)) : undefined} />)}
@@ -377,7 +390,7 @@ function OfferPanel({ F, act, owner, p, V, side = false, onBack, setPage }) {
       <Chyron tone="ink" size="s" title={`THE ${nick(F.team)} OFFER`} right={out ? 'OUT' : null} />
       <Terms o={o} set={setO} lo={lo} hi={hi} />
       <CapLine room={room} out={elsewhere} take={o.$} />
-      {same && <p className="dl-outnote"><Tag tone="new">OFFER OUT</Tag><span>{yrs(out.y)} · {money(out.$ * out.y)} · HE ANSWERS WHEN THE DAY ENDS</span></p>}
+      {same && <p className="dl-outnote"><Tag tone="new">OFFER OUT</Tag><span>{yrs(out.y)} · {money(out.$ * out.y)} · {st.day > F.fad ? `HE ANSWERS ON DAY ${st.day}` : 'HE ANSWERS WHEN THE DAY ENDS'}</span></p>}
       {side ? (
         <div className="dl-side-go">
           {!same && <Go onClick={make} disabled={!fits} sub={fits ? `${yrs(o.y)} · ${money(o.$ * o.y)}` : 'NOT ENOUGH CAP ROOM'}>{out ? 'Change the offer' : 'Make the offer'}</Go>}
@@ -394,21 +407,24 @@ function OfferPanel({ F, act, owner, p, V, side = false, onBack, setPage }) {
   )
 }
 
+// why he took less than the most money on the table, the way a beat writer would put it
+const WHY = { deal: 'more years and more of it guaranteed', role: 'a starting job', win: 'a contender', coach: 'the head coach' }
+const whyText = x => `Took ${money(x.why.less)} a year less than the ${TEAM[x.why.vs]?.nick ?? x.why.vs} offered, for ${WHY[x.why.k] ?? 'the better fit'}${x.why.k === 'win' || x.why.k === 'role' || x.why.k === 'coach' ? ` with the ${TEAM[x.to]?.nick ?? x.to}` : ''}`
 // The day's answers to the player's offers: each man's offers turned over, then where he signed
 function DayResults({ F, r }) {
   return (
     <section className="dl-results">
       <Chyron team={F.team} size="s" title={`DAY ${r.d} · THE ${nick(F.team)} OFFERS`} right={r.list.length} />
       {r.list.map((x, j) => {
-        const won = x.k === 'won', board = [...(x.board ?? [])].sort((a, b) => b.v - a.v)
+        const won = x.k === 'won', later = x.k === 'later', board = [...(x.board ?? [])].sort((a, b) => b.v - a.v)
         return (
           <div key={x.i} className="dl-res" style={{ '--d': `${j * 160}ms` }}>
             <div className="dl-res-h">
               <b>{x.n}</b>
               <small>{GROUP[groupOf(x)]?.label ?? POS_LABEL[x.p]}</small>
-              <Stamp kind={won ? 'w' : 'l'} delay={j * 160 + 300}>{won ? 'SIGNED' : x.k === 'lost' ? 'GONE' : x.k === 'wait' ? 'NO DEAL' : 'NO ROOM'}</Stamp>
+              <Stamp kind={won ? 'w' : later ? 'ink' : 'l'} delay={j * 160 + 300}>{won ? 'SIGNED' : x.k === 'lost' ? 'GONE' : later ? 'DECIDING' : x.k === 'short' || x.k === 'wait' ? 'NO DEAL' : 'NO ROOM'}</Stamp>
             </div>
-            {board.length > 0 && (
+            {board.length > 0 && !later && (
               <div className="fd-reveal">
                 {board.map((b, i) => (
                   <div key={b.s} className={`fd-offer is-open${(won && b.s === F.team) || (x.to === b.s) ? ' is-win' : ''}`} style={{ ...fkVars(b.s), animationDelay: `${j * 160 + i * 90}ms` }}>
@@ -420,7 +436,8 @@ function DayResults({ F, r }) {
                 ))}
               </div>
             )}
-            <p className="dl-res-t">{won ? `Signs with the ${TEAM[F.team].nick}: ${yrs(x.y)}, ${money(x.$ * x.y)}` : x.k === 'lost' ? `Signs with the ${TEAM[x.to].nick}: ${yrs(x.y)}, ${money(x.$ * x.y)}` : x.k === 'wait' ? 'Turned it down. Still on the market' : 'Not enough cap room when the day ended'}</p>
+            <p className="dl-res-t">{won ? `Signs with the ${TEAM[F.team].nick}: ${yrs(x.y)}, ${money(x.$ * x.y)}` : x.k === 'lost' ? `Signs with the ${TEAM[x.to].nick}: ${yrs(x.y)}, ${money(x.$ * x.y)}` : later ? `Still hearing offers. He decides on day ${x.day}, and the offer stays out until then` : x.k === 'short' || x.k === 'wait' ? 'Turned it down as too low. Still on the market' : 'Not enough cap room when the day ended'}</p>
+            {x.why && <p className="dl-res-why">{whyText(x)}</p>}
           </div>
         )
       })}

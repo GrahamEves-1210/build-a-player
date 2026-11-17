@@ -117,6 +117,12 @@
 .dl-res-h small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
 .dl-res-h .fk-stamp { margin-left: auto; }
 .dl-res-t { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-text); }
+.dl-res-why { margin: 0; font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: var(--fk-dim); }
+/* the starters who'd walk, named, before free agency opens */
+.fk-actbar.dl-walk { grid-auto-flow: row; gap: 10px; }
+.dl-walk-t { display: grid; gap: 4px; padding: 8px 12px; background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--fk-l); }
+.dl-walk-t b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; letter-spacing: .3px; color: #ff8a8c; }
+.dl-walk-t span { font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: var(--fk-text); }
 
 /* a man's page: the scouts' line under his facts */
 .dl-page-scout { padding: 6px 10px; background: var(--fk-g1); }

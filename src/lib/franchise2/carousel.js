@@ -28,7 +28,7 @@ import { rngOf, clamp, roll } from './rng'
 import { coachName } from './coachNames'
 import { callerYear, cultureYear, coachAge } from './potential'
 import { COACH_MIX } from './faces'
-import { ensureStaff, staffOf, staffMen, coachOvr, coachGrade, rOf, nickOf, ROLE_LONG, cLetter, CTYPES, toArr } from './coach'
+import { ensureStaff, staffOf, staffMen, coachOvr, coachGrade, rOf, nickOf, ROLE_LONG, cLetter, CTYPES, toArr, brokeWord, BROKEN_WORD } from './coach'
 
 const SIDE = { oc: 'off', dc: 'def' }
 const J = { off: 1, def: 2 }
@@ -331,7 +331,9 @@ function jobParts(F, c, s, calls) {
   const wp = r ? (r.w + r.t / 2) / Math.max(1, r.w + r.l + r.t) : 0.5
   const M = staffMen(F, s), hr = M.hc ? rOf(M.hc) ?? F.coach?.r : null
   const hcv = s === F.team ? coachOvr(F.coach?.r ?? {}) : hr ? coachOvr(hr) : 72
-  return { calls: calls ? (c.nc ? 0.1 : 0.35) : 0, win: wp * 0.3, hc: clamp(0, 1, (hcv - 60) / 30) * 0.15, fit: roll(`${F.seed}-${F.year}-jv-${c.i}-${s}`) * 0.2 }
+  // (the player's team, two hiring cycles after its head coach went back on a play-calling promise: coach.js brokeWord)
+  const word = s === F.team && brokeWord(F) ? BROKEN_WORD : 1
+  return { calls: calls ? (c.nc ? 0.1 : 0.35) * word : 0, win: wp * 0.3, hc: clamp(0, 1, (hcv - 60) / 30) * 0.15, fit: roll(`${F.seed}-${F.year}-jv-${c.i}-${s}`) * 0.2 }
 }
 const sumParts = x => x.calls + x.win + x.hc + x.fit + (x.first ?? 0)
 function jobValue(F, c, s, calls) { return sumParts(jobParts(F, c, s, calls)) }
@@ -353,6 +355,9 @@ export function offerCoach(F, k, id, { calls = true } = {}) {
   if (to === F.team) {
     placeCoach(F, F.team, k, c)
     T.call = { ...T.call, [SIDE[k]]: calls ? k : 'hc' }
+    // the play-calling on the head coach's own side, handed over to get him: a promise for his first season
+    // (coach.js promiseOf / breakPromise)
+    if (calls && staffMen(F, F.team).hc?.sd === SIDE[k]) T.pr = { ...(T.pr ?? {}), [SIDE[k]]: { c: c.i, n: c.n, y: F.year + 1 } }
   } else {
     placeCoach(F, to, k, c)
     const OT = staffOf(F, to)

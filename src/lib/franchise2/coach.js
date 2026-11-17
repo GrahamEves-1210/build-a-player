@@ -274,6 +274,9 @@ export const recruits = F => F.coach?.style === 'recruiter'
 // ── The player's staff: who calls the plays ──────────────────────────────────
 // side 'off' | 'def', who 'hc' (the player's head coach) or 'oc' / 'dc' (the coordinator). Head coaches take the calls
 // back and hand them over in the NFL, in the offseason and during a season.
+// A coordinator hired with the play-calling on the head coach's own side was promised it (carousel.js offerCoach:
+// T.pr[side] = { c: his id, n: his name, y: the season it runs through}). Taking it back before that season is over
+// breaks the promise (breakPromise).
 export function setCalls(F, side, who) {
   const T = staffOf(F, F.team)
   if (!T) return
@@ -281,8 +284,34 @@ export function setCalls(F, side, who) {
   if (who !== 'hc' && who !== co) return
   if (who === 'hc' && myHC(F)?.sd !== side) return     // (his own side only: the other is his coordinator's)
   if (who === co && !T[co]) return
+  if (who === 'hc' && T.call?.[side] !== 'hc' && promiseOf(F, side)) breakPromise(F, side)
   T.call = { ...T.call, [side]: who }
 }
+// the promise standing on a side: { c, n, y } while its coordinator still has the job and his first season isn't over
+export function promiseOf(F, side) {
+  const T = staffOf(F, F.team), pr = T?.pr?.[side], co = side === 'off' ? 'oc' : 'dc'
+  if (!pr || T[co]?.i !== pr.c) return null
+  return F.year < pr.y || (F.year === pr.y && F.phase !== 'off') ? pr : null
+}
+// What breaking it costs, the way it plays out in a real building: the room sees the head coach go back on his word
+// to his own coordinator (chemistry down 8), the wire has it, and coordinators around the league hear about it: for
+// the next two hiring cycles the play-calling the team offers counts for less in a candidate's mind (BROKEN_WORD;
+// carousel.js jobParts). The coordinator keeps his job.
+export const PROMISE_CHEM = 8
+export function breakPromise(F, side) {
+  const pr = promiseOf(F, side)
+  if (!pr) return null
+  const T = staffOf(F, F.team)
+  F.chem = clamp(0, 100, Math.round(((F.chem ?? 50) - PROMISE_CHEM) * 10) / 10)
+  F.brk = { y: F.year, n: pr.n, side }
+  const job = side === 'off' ? 'offensive' : 'defensive'
+  F.news = [...(F.news ?? []), { k: 'coach', tag: 'PLAY-CALLING', s: F.team, text: `${nickOf(F.team)} head coach ${F.coach?.name ?? ''} takes ${side === 'off' ? 'offensive' : 'defensive'} play-calling back from ${job} coordinator ${pr.n}, who was promised it when he was hired`.replace(/ {2,}/g, ' '), y: F.year, wk: F.wk }].slice(-40)
+  delete T.pr[side]
+  return { chem: -PROMISE_CHEM }
+}
+// coordinators remember a broken promise for two hiring cycles: the play-calling offered counts this much
+export const brokeWord = F => F.brk && F.year - F.brk.y <= 1
+export const BROKEN_WORD = 0.4
 
 // ── The spin (the build page's rules, on head coaches) ───────────────────────
 // The wheel is the other 31 clubs' real head coaches (owner, round 3b: no coordinators). It lands on one; take ONE

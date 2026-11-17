@@ -80,8 +80,12 @@ ok(!F.fa.some(p => p.fl), 'a filler on the market')
 ok(F.fa.every(p => p.pk != null), 'a free agent without a ceiling')
 const V = FR.teamView(F)
 const best = [...F.fa].sort((a, b) => b.o - a.o)
+// (the real deals' rising years can leave a club with little room: the GM releases his biggest contract until the best
+// man it can afford is a real player)
+for (let k = 0; k < 4 && !best.some(p => p.o >= 80 && p.$ * 1.15 + 4 <= FR.capRoom(F)); k++) { const big = mine().filter(p => p.b == null && p.y > 0).sort((x, y) => FR.cutCost(y).saves - FR.cutCost(x).saves)[0]; if (big) FR.cutMan(F, big.i) }
 const room0 = FR.capRoom(F)
-const a = best[0], b2 = best[1], c = best.find(p => p.o < 75)
+const a = best.find(p => p.$ * 1.15 + 4 <= room0) ?? best[0], b2 = best.find(p => p !== a), c = best.find(p => p.o < 75)
+console.log(`free agency opens: room ${room0}, the best man the ${F.team} can afford ${a.n} ${a.o} asking ${a.$}`)
 ok(FR.setOffer(F, a.i, { $: a.$, y: a.y, b: 0 }), 'an offer at his ask was refused')
 ok(Math.abs(FR.roomLeft(F) - (room0 - a.$)) < 0.11, 'an offer out does not count against the room')
 ok(!FR.setOffer(F, b2.i, { $: FR.roomLeft(F) + 1, y: 2, b: 0 }), 'an offer past the room left was taken')
@@ -100,7 +104,8 @@ console.log(`  day 1: ${res.map(x => `${x.n} ${x.k}${x.to ? ` ${x.to}` : ''}`).j
 ok(res.length === 2, `day 1 answered ${res.length} offers`)
 const rc = res.find(x => x.i === c.i)
 if (c.$ > FR.minimumFor(c.ag, F.year + 1) * 1.05) ok(rc && rc.k !== 'won' && (rc.k === 'lost' || F.fa.includes(c)), `a lowball to ${c.n} was ${rc?.k}`)
-ok(Object.keys(FR.offersOut(F)).length === 0, 'offers still out after the day')
+// (an offer stays out only to a man who hasn't decided yet: he decides on his own day)
+ok(Object.keys(FR.offersOut(F)).every(id => res.find(x => x.i === +id)?.k === 'later'), 'offers still out after the day to men who decided')
 while (F.fad) FR.nextFADay(F)
 ok(FR.capRoom(F) > -60, 'way over the cap after free agency')
 
