@@ -169,6 +169,8 @@ export function gameBox(F, row) {
     const have = new Set(roster.map(p => p.k.slice(1)))
     for (const id of Object.keys(bx.s ?? {})) if (!have.has(id)) { const p = who(F, id); if (p) roster.push({ k: `p${p.i}`, n: p.n, pos: p.p, o: p.o, d: 9, ...(p.b != null && { s: String(p.b) }) }) }
   }
+  // (each table in depth order: the left tackle to the right tackle, the starters before the men who came in)
+  roster.sort((a, b) => (a.d ?? 9) - (b.d ?? 9))
   const s = Object.fromEntries(Object.entries(bx.s ?? {}).map(([id, x]) => [`p${id}`, x]))
   const kp = row.kp ?? []
   const tds = m => kp.filter(x => x[1] === m && x[2] >= 6).length, fgs = m => kp.filter(x => x[1] === m && x[2] === 3).length
@@ -177,6 +179,7 @@ export function gameBox(F, row) {
   const opp = oppUnpack(bx.ox)
   const oppRoster = opp.map(({ id, pos, d, sub }) => { const p = who(F, id); return { k: `p${id}`, n: p?.n ?? '?', pos, d, ...(sub && { sub }) } })
   const oppS = Object.fromEntries(opp.map(({ id, line }) => [`p${id}`, line]))
+  oppRoster.sort((a, b) => (a.d ?? 9) - (b.d ?? 9))
   const kick = [0, 1].map(i => { const k = bx.kk?.[i], p = bx.kid?.[i] != null ? who(F, bx.kid[i]) : null; return k && p ? { n: p.n, line: k } : null })
   return { r: { team: F.team, roster }, game: { s, us, them }, opp: { r: { team: row.opp, roster: oppRoster }, game: { s: oppS, us: them, them: us } }, top: bx.top ?? [0, 0], fd: [firstDowns(us), firstDowns(them)], kick }
 }

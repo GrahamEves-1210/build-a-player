@@ -49,7 +49,7 @@ export function spotCost(spot, s) {
   const t1 = TACKLE.has(spot), t2 = TACKLE.has(s)
   if (t1 && t2) return 3
   if (!t1 && !t2) return spot === 'C' || s === 'C' ? 4 : 2
-  return spot === 'C' || s === 'C' ? 14 : 6
+  return spot === 'C' || s === 'C' ? 25 : 6
 }
 // the best man left for a spot (a filler only when nobody else is left)
 function bestFor(spot, men) {
@@ -63,22 +63,39 @@ function olOrder(men, sort = byOvr) {
   const left = [...men].sort(sort), line = {}
   // (the player's own builds first: a build lineman holds his own spot)
   for (const p of left.filter(x => x.b != null && sort !== byOvr)) { const spot = OL_SPOTS.includes(p.s) && !line[p.s] ? p.s : FILL_ORDER.find(x => !line[x]); if (spot) { line[spot] = p; left.splice(left.indexOf(p), 1) } }
+  // (each spot's own man first, the best real one who plays it; then the spots nobody plays, the best fit left)
+  for (const spot of FILL_ORDER) { if (line[spot]) continue; const i = left.findIndex(p => p.s === spot && !p.fl); if (i >= 0) line[spot] = left.splice(i, 1)[0] }
   for (const spot of FILL_ORDER) { if (line[spot] || !left.length) continue; line[spot] = left.splice(bestFor(spot, left), 1)[0] }
   // (then the swaps that make the line better: two starters trading spots, or a backup in for a starter; the
   // greedy pass alone can put a right guard at left guard and the left guard at right guard)
-  const val = (spot, p) => (p ? p.o - spotCost(spot, p.s) - (p.fl ? 100 : 0) : -999)
+  // (the left tackle counts a little more, then the right: on a tie the better man protects the blind side)
+  const val = (spot, p) => (p ? (p.o - spotCost(spot, p.s) - (p.fl ? 100 : 0)) * (spot === 'LT' ? 1.02 : spot === 'RT' ? 1.01 : 1) : -999)
   const fixed = spot => line[spot]?.b != null && sort !== byOvr
-  for (let pass = 0, better = true; better && pass < 6; pass++) {
-    better = false
+  // (the best single move each pass, until none helps: two starters trade spots, a backup comes in at a spot, or a
+  // backup comes in and the man he replaces slides to another spot, pushing that one out)
+  const open = a => !fixed(a) && line[a]
+  for (let pass = 0; pass < 8; pass++) {
+    let best = 0, move = null
     for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) {
       const a = OL_SPOTS[i], b = OL_SPOTS[j]
-      if (fixed(a) || fixed(b) || !line[a] || !line[b]) continue
-      if (val(a, line[b]) + val(b, line[a]) > val(a, line[a]) + val(b, line[b])) { [line[a], line[b]] = [line[b], line[a]]; better = true }
+      if (!open(a) || !open(b)) continue
+      const g = val(a, line[b]) + val(b, line[a]) - val(a, line[a]) - val(b, line[b])
+      if (g > best) { best = g; move = () => { [line[a], line[b]] = [line[b], line[a]] } }
     }
-    for (const a of OL_SPOTS) for (let k = 0; k < left.length; k++) {
-      if (fixed(a) || !line[a]) continue
-      if (val(a, left[k]) > val(a, line[a])) { const out = line[a]; line[a] = left[k]; left[k] = out; better = true }
-    }
+    left.forEach((x, k) => {
+      for (const a of OL_SPOTS) {
+        if (!open(a)) continue
+        const g = val(a, x) - val(a, line[a])
+        if (g > best) { best = g; move = () => { left[k] = line[a]; line[a] = x } }
+        for (const c of OL_SPOTS) {
+          if (c === a || !open(c)) continue
+          const g2 = val(a, x) + val(c, line[a]) - val(a, line[a]) - val(c, line[c])
+          if (g2 > best) { best = g2; move = () => { const out = line[c]; line[c] = line[a]; line[a] = x; left[k] = out } }
+        }
+      }
+    })
+    if (!move) break
+    move()
   }
   left.sort(sort)
   return [...OL_SPOTS.map(s => line[s]).filter(Boolean), ...left]
