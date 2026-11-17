@@ -78,11 +78,12 @@ try {
 
   await check('the basketball build page keeps the Daily build through a reload (BucketApp)', async () => {
     const src = readFileSync(new URL('../src/components/BucketApp.jsx', import.meta.url), 'utf8')
-    assert.match(src, /localStorage\.setItem\(DAILY_BUILD, JSON\.stringify\(\{ key: dailyRun\.key, build \}\)\)/, 'the build is not kept')
+    // (kept with every build in progress, bab_progress: the run's key goes with it)
+    assert.match(src, /localStorage\.setItem\(PROGRESS_KEY, JSON\.stringify\(\{[\s\S]{0,200}daily: dailyRun\?\.key/, 'the build is not kept')
     const start = src.match(/const startDaily = useCallback\(\(\) => \{([\s\S]*?)\r?\n  \}, \[/)?.[1] ?? ''
     const resume = start.indexOf('if (dailyRun?.key === dc.key) {'), fresh = start.indexOf('handleStart(dc.mode, dc.pos)')
     assert.ok(resume > 0 && fresh > resume, 'startDaily starts a fresh build before it looks for the run in progress')
-    assert.match(start.slice(resume, fresh), /localStorage\.getItem\(DAILY_BUILD\)/)
+    assert.match(start.slice(resume, fresh), /localStorage\.getItem\(PROGRESS_KEY\)[\s\S]{0,80}daily === dc\.key/)
   })
 } catch (e) {
   failed++

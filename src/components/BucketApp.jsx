@@ -176,8 +176,6 @@ const LIVE_TYPES = { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES }
 // A Blacktop build spins the pool the server checks it against (blacktopCore seatKit), never
 // the mode the player was last in: an All-Time build left open made every pick a free agent
 const LIVE_SPIN_POOLS = { guard: seatKit('guard').pool.map(enrichPlayer), big: seatKit('big').pool.map(enrichPlayer) }
-// the Daily Challenge's build so far ({ key, build }): a reload mid-run picks it back up (startDaily)
-const DAILY_BUILD = 'bab_daily_build'
 const livePhoto = p => p?.photo ?? (NBA_HEADSHOTS[p?.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
 
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
@@ -1050,15 +1048,12 @@ export default function BucketApp() {
   const [dailyRun, setDailyRun] = useState(() => {
     try { const r = JSON.parse(localStorage.getItem('bab_daily_run') || 'null'); const dc = dailyState(); return r && r.key === dc.key && dc.sport === 'bucket' && !dc.done ? r : null } catch { return null }
   })
-  useEffect(() => { try { if (dailyRun) localStorage.setItem('bab_daily_run', JSON.stringify(dailyRun)); else { localStorage.removeItem('bab_daily_run'); localStorage.removeItem(DAILY_BUILD) } } catch {} }, [dailyRun])
+  useEffect(() => { try { if (dailyRun) localStorage.setItem('bab_daily_run', JSON.stringify(dailyRun)); else { localStorage.removeItem('bab_daily_run'); localStorage.removeItem('bab_daily_build') } } catch {} }, [dailyRun])   // (bab_daily_build: the Daily's own save before bab_progress kept it, 11-17)
   const dailyLocked = !!dailyRun && !dailyState().done
-  // The run's build so far, kept on the device as it fills (football keeps it in bap_progress, App.jsx). A reload or
-  // the app closing mid-run used to bring the Daily back with an empty build on the next spins: every pick so far was
-  // thrown away, and once the spins ran past the day's set the server refused the score ("not the day's spins")
-  useEffect(() => {
-    if (!dailyRun || !dailyLocked || gameMode !== dailyRun.mode || position !== dailyRun.pos) return
-    try { localStorage.setItem(DAILY_BUILD, JSON.stringify({ key: dailyRun.key, build })) } catch {}
-  }, [dailyRun, dailyLocked, gameMode, position, build])
+  // The run's build so far is kept on the device as it fills, with every other build in progress (bab_progress, its
+  // daily: the run's key). A reload or the app closing mid-run used to bring the Daily back with an empty build on the
+  // next spins: every pick so far was thrown away, and once the spins ran past the day's set the server refused the
+  // score ("not the day's spins")
   const dailyLockedRef = useRef(dailyLocked)
   dailyLockedRef.current = dailyLocked
   const dailyLive = (IS_APP || APP_LOOK) && dailyLocked && (page === 'game' || page === 'sim')
@@ -1080,7 +1075,7 @@ export default function BucketApp() {
     // today's run, after a reload (or the app closed): the same run, with the build it had, on the spins it was on
     if (dailyRun?.key === dc.key) {
       let kept = null
-      try { const k = JSON.parse(localStorage.getItem(DAILY_BUILD) || 'null'); if (k?.key === dc.key) kept = k.build } catch {}
+      try { const k = JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null'); if (k?.daily === dc.key && k.gameMode === dc.mode && k.position === dc.pos) kept = k.build } catch {}
       const types = POS_TYPES[dc.pos] ?? GUARD_TYPES
       setIsBucketCustomMode(false)
       setGameMode(dc.mode)
