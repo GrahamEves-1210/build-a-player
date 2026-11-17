@@ -33,6 +33,31 @@ export function teamArt(folder, team) {
   return svgUri(teamMarkSvg({ team }))
 }
 
+// Salary Cap's Home card shows a screenshot of the board (public/modes/*-salary.webp), real photos and all: the app
+// draws the board instead, five rows of five jerseys under the column heads, one of each row picked
+const SALARY = /\/modes\/(nfl|bucket|soccer|baseball)-salary\.webp$/
+function salaryArt(sport) {
+  const lg = sport === 'bucket' ? 'nba' : sport === 'baseball' ? 'mlb' : sport === 'soccer' ? 'soc' : 'nfl'
+  const teams = Object.entries(INDEX.teams[lg] ?? {})
+  const W = 480, H = 726, cw = 86, ch = 112, x0 = 32, y0 = 92
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" rx="22" fill="#0d1117"/>`
+  for (let c = 0; c < 5; c++) s += `<rect x="${x0 + c * cw + 8}" y="56" width="${cw - 16}" height="10" rx="5" fill="#ffffff" opacity=".18"/>`
+  let n = 7
+  for (let r = 0; r < 5; r++) {
+    s += `<rect x="6" y="${y0 + r * ch + 46}" width="18" height="12" rx="3" fill="#ffffff" opacity=".22"/>`
+    const pick = (r * 3 + 1) % 5
+    for (let c = 0; c < 5; c++) {
+      n = (n * 37 + 11) % 997
+      const [, col] = teams[n % Math.max(1, teams.length)] ?? ['', null]
+      const x = x0 + c * cw, y = y0 + r * ch
+      s += `<rect x="${x + 3}" y="${y + 3}" width="${cw - 6}" height="${ch - 6}" rx="10" fill="#1a212b" stroke="${c === pick ? '#f2c94c' : '#2a3340'}" stroke-width="${c === pick ? 3 : 1.5}"/>`
+      s += jerseySvg({ league: lg, colors: col, number: (n % 98) + 1 }).replace(/^<svg ([^>]*?)width="\d+" height="\d+">/, `<svg $1x="${x + 8}" y="${y + 6}" width="${cw - 16}" height="${cw - 16}">`)
+      s += `<rect x="${x + 14}" y="${y + ch - 26}" width="${cw - 28}" height="8" rx="4" fill="#ffffff" opacity="${c === pick ? 0.55 : 0.2}"/>`
+    }
+  }
+  return svgUri(s + '</svg>')
+}
+
 // the address the app shows in place of a photo or a logo, or the address itself when it's neither
 export function appImage(src) {
   if (typeof src !== 'string' || src.startsWith('data:') || src.length > 600) return src
@@ -47,6 +72,8 @@ export function appImage(src) {
     out = svgUri(teamMarkSvg({ team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
+  } else if ((m = SALARY.exec(src))) {
+    out = salaryArt(m[1])
   } else out = src
   if (cache.size > 4000) cache.clear()
   cache.set(src, out)
