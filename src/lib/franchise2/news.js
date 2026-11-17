@@ -81,10 +81,12 @@ export function wire(F, { n = 30 } = {}) {
   const put = (k, tag, s, text, extra = {}) => out.push({ k, tag, s, text, y: F.year, now: 1, ...extra })
   const season = F.phase === 'season' || F.phase === 'post'
   const lastWk = season ? F.wk - 1 : F.sched.weeks.length - 1
-  // the offseason's own news first (the most recent things)
+  // the season's log (this league year; in the first weeks, the offseason before it too), newest first
+  const log = (F.news ?? []).filter(x => x.y === F.year || (x.y === F.year - 1 && x.ph === 'off' && season && F.wk <= 2)).reverse()
+  // the offseason's own news first, the latest stop first: what was filed this offseason (the draft, releases,
+  // trades), the market, the re-signings and retirements, the awards, the carousel, the Super Bowl
   if (F.phase === 'off') {
-    // (the coaching carousel: carousel.js, the head coaches first)
-    for (const x of coachWire(F).sort((a, b) => (b.big ? 1 : 0) - (a.big ? 1 : 0)).slice(0, 24)) put(x.k, x.tag, x.s, x.text, { big: x.big })
+    for (const x of log.filter(x => x.ph === 'off')) out.push(x)
     for (const d of marketDeals(F).filter(d => d.o >= 80 || d.s === F.team).slice(-14).reverse()) put('sign', 'SIGNED', d.s, `${nick(d.s)} sign ${spotOf(F, d)} ${d.n}: ${d.y} ${d.y === 1 ? 'year' : 'years'}, $${num(d.$ * d.y)} million`, { big: d.$ >= 25 })
     for (const e of (F.ext ?? []).slice(0, 8)) put('sign', 'EXTENDED', e[3], `${nick(e[3])} re-sign ${POS_LABEL[e[2]]} ${e[1]}: ${e[5]} ${e[5] === 1 ? 'year' : 'years'}, $${num(e[4] * e[5])} million`)
     for (const g of (F.gone ?? []).slice().sort((a, b) => b.o - a.o).slice(0, 8)) put('ret', 'RETIRED', g.s, `${nick(g.s)} ${g.p ? `${POS_LABEL[g.p]} ` : ''}${g.n} retires at ${g.ag}${g.cr ? ` after ${g.cr} seasons` : ''}`, { big: g.o >= 90 })
@@ -92,8 +94,10 @@ export function wire(F, { n = 30 } = {}) {
     if (aw?.mvp) put('award', 'MVP', aw.mvp.t, `${aw.mvp.n} named MVP: ${aw.mvp.line.toLowerCase().replace(/ · /g, ', ')}`, { big: true })
     for (const [k, label] of [['opoy', 'Offensive Player of the Year'], ['dpoy', 'Defensive Player of the Year'], ['oroy', 'Offensive Rookie of the Year'], ['droy', 'Defensive Rookie of the Year']]) if (aw?.[k]) put('award', 'AWARD', aw[k].t, `${aw[k].n} is the ${label}`)
     if (aw?.coy) put('award', 'AWARD', aw.coy.t, `Coach of the Year: ${coyLine(aw.coy)}`)
+    // (the coaching carousel: carousel.js, the head coaches first)
+    for (const x of coachWire(F).sort((a, b) => (b.big ? 1 : 0) - (a.big ? 1 : 0)).slice(0, 24)) put(x.k, x.tag, x.s, x.text, { big: x.big })
     const lh = F.lh?.[F.lh.length - 1]
-    if (lh?.champ) put('final', 'SUPER BOWL', lh.champ, `${nick(lh.champ)} beat the ${nick(lh.runner)} ${lh.score} to win the Super Bowl`, { big: true })
+    if (lh?.champ && !log.some(x => x.tag === 'SUPER BOWL')) put('final', 'SUPER BOWL', lh.champ, `${nick(lh.champ)} beat the ${nick(lh.runner)} ${lh.score} to win the Super Bowl`, { big: true })
   }
   // the men out hurt now (the league's starters and the player's own)
   if (season || F.phase === 'playoffs') {
@@ -104,9 +108,7 @@ export function wire(F, { n = 30 } = {}) {
   // last week: the big games, the big days, the streaks, the clinches, the marks passed (filed as the week was
   // played, logWeek; a save from before that has last week read live)
   if (season && lastWk >= 0 && !(F.news ?? []).some(x => x.y === F.year && x.wk === lastWk && x.lw)) for (const x of weekItems(F, lastWk)) put(x.k, x.tag, x.s, x.text, x.big ? { big: true } : {})
-  // the season's log, newest first (this league year; in the first weeks, the offseason before it too)
-  const log = (F.news ?? []).filter(x => x.y === F.year || (x.y === F.year - 1 && x.ph === 'off' && season && F.wk <= 2))
-  for (const x of log.slice().reverse()) out.push(x)
+  for (const x of log) if (!(F.phase === 'off' && x.ph === 'off')) out.push(x)
   // (each week's own items were filed headlines first: the wire reads newest first, in the order things happened)
   return out.slice(0, n)
 }
@@ -131,11 +133,13 @@ function weekItems(F, lastWk) {
     days.sort((a, b) => b.v - a.v).slice(0, 4).forEach(d => put('day', 'WEEK ' + (lastWk + 1), d.s, d.text, { pid: d.pid }))
     const R = records(F)
     for (const s of SHORTS) {
+      if (!games.some(g => (g.h === s || g.a === s) && g.hs != null)) continue   // (a team on its bye: nothing new)
       const r = R[s], k = r.strk
-      if (k >= 5) put('streak', 'STREAK', s, `${nick(s)} win ${ORD(k)} straight, ${recText(r)}`)
-      else if (k <= -5) put('streak', 'STREAK', s, `${nick(s)} have lost ${-k} in a row, ${recText(r)}`)
+      // (a run is news when it gets there, not every week it goes on: 5, 7, 10 straight and on)
+      if (k >= 5 && (k === 5 || k === 7 || k >= 10)) put('streak', 'STREAK', s, `${nick(s)} win ${ORD(k)} straight, ${recText(r)}`)
+      else if (k <= -5 && (k === -5 || k === -8 || k <= -10)) put('streak', 'STREAK', s, `${nick(s)} have lost ${-k} in a row, ${recText(r)}`)
       else if (r.w === 1 && k === 1 && r.l >= 3) put('streak', 'FIRST WIN', s, `${nick(s)} get their first win, ${recText(r)}`)
-      if (r.w >= 8 && r.l === 0 && r.t === 0) put('streak', 'UNBEATEN', s, `${nick(s)} are ${recText(r)}`, { big: true })
+      if (r.w >= 8 && r.l === 0 && r.t === 0 && r.w % 2 === 0) put('streak', 'UNBEATEN', s, `${nick(s)} are ${recText(r)}`, { big: true })
     }
     // division titles clinched last week (nobody in the division can catch them now, someone could before)
     const playedWk = (x, wk) => F.sched.weeks[wk]?.some(g => (g.h === x || g.a === x) && g.hs != null) ? 1 : 0
@@ -216,9 +220,10 @@ export function tickerItems(F) {
   const items = []
   if (wk != null && wk >= 0) for (const g of F.sched.weeks[wk] ?? []) if (g.hs != null) items.push({ k: 'score', a: g.a, as: g.as, h: g.h, hs: g.hs, tag: g.ot ? 'F/OT' : 'FINAL' })
   const fresh = x => x.now || (F.phase === 'season' || F.phase === 'post'
-    ? x.y === F.year && !x.ph && (x.wk ?? 0) >= F.wk - 2
-    : F.phase === 'playoffs' ? x.y === F.year && (x.ph === 'po' || x.k === 'inj')
+    ? (x.y === F.year && !x.ph && (x.wk ?? 0) >= F.wk - 2) || (F.wk <= 1 && x.y === F.year - 1 && x.ph === 'off')
+    : F.phase === 'playoffs' || F.phase === 'done' ? x.y === F.year && x.ph === 'po'
       : x.y === F.year && x.ph === 'off')
-  for (const x of wire(F, { n: 30 }).filter(x => x.k !== 'final' || x.ph === 'po').filter(fresh).filter(x => !/practice squad/i.test(x.text)).slice(0, 10)) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
+  // (the men out hurt now are on the wire; the ticker has only the injuries filed in the last two weeks)
+  for (const x of wire(F, { n: 30 }).filter(x => x.k !== 'final' || x.ph === 'po').filter(x => !(x.now && x.k === 'inj')).filter(fresh).filter(x => !/practice squad/i.test(x.text)).slice(0, 10)) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
   return items
 }

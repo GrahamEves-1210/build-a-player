@@ -14,6 +14,7 @@ import { openCarousel } from './carousel'
 import { lastSeason } from './lastSeason'
 import { fbCase } from '../teamSeason'
 import { rngOf } from './rng'
+import { plural } from './copy'
 
 export const AWARD_NAME = { MVP: 'MOST VALUABLE PLAYER', OPOY: 'OFFENSIVE PLAYER OF THE YEAR', DPOY: 'DEFENSIVE PLAYER OF THE YEAR', OROY: 'OFFENSIVE ROOKIE OF THE YEAR', DROY: 'DEFENSIVE ROOKIE OF THE YEAR', COY: 'COACH OF THE YEAR' }
 export const AWARD_SHORT = { MVP: 'MVP', OPOY: 'OFF. PLAYER OF THE YEAR', DPOY: 'DEF. PLAYER OF THE YEAR', OROY: 'OFF. ROOKIE OF THE YEAR', DROY: 'DEF. ROOKIE OF THE YEAR', COY: 'COACH OF THE YEAR' }
