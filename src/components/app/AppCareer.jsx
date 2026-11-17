@@ -13,11 +13,12 @@ import {
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, byeTarget, stepCost, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
-  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord } from '../../lib/career'
+  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, raceNow } from '../../lib/career'
+import { RACE_SHORT, RACE_NAME } from '../../lib/careerAwards'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
-import { GamesSwitch as MomentsModes } from '../simFlow'
+import { GamesSwitch as MomentsModes, LeadersBoard } from '../simFlow'
 import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
@@ -100,6 +101,8 @@ function FaceSheet({ c, onDone, onClose }) {
   )
 }
 // per-game averages keep one decimal; counts get commas
+// (basketball's free agency board: his title odds on each team, lib/career.js titleOdds)
+const titlePct = p => (p < 0.005 ? 'Under 1%' : `${Math.round(p * 100)}%`)
 export const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
 // ── Career home: what Career is, your save slots, past careers ────────
@@ -793,7 +796,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
       colors: s.champion ? [c.fit?.color, c.fit?.color2, '#ffffff'] : null,
       season: s.season, team: (s.teamName ?? '').toUpperCase(),
       title: s.award && s.champion ? `${s.awardName} + ${S.ui?.champ ?? (S.isBucket ? 'CHAMPION' : 'SUPER BOWL')}` : s.award ? s.awardName : S.ui?.champs ? S.ui.champs : S.isBucket ? 'NBA CHAMPIONS' : 'SUPER BOWL CHAMPIONS',
-      sub: s.award ? `${{ MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year', PROTECTOR: 'Protector of the Year', 'CY YOUNG': 'The Cy Young Award', 'MVP + CY YOUNG': 'The MVP and the Cy Young' }[s.awardName] ?? s.awardName}${s.champion ? ', and a ring' : ''}` : `${s.wins}–${s.losses}, then all the way`,
+      sub: s.award ? `${{ MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year', PROTECTOR: 'Protector of the Year', 'CY YOUNG': 'The Cy Young Award', 'MVP + CY YOUNG': 'The MVP and the Cy Young', 'MVP + OPOY': 'Most Valuable Player and Offensive Player of the Year', 'MVP + DPOY': 'Most Valuable Player and Defensive Player of the Year' }[s.awardName] ?? s.awardName}${s.champion ? ', and a ring' : ''}` : `${s.wins}–${s.losses}, then all the way`,
       line: HEADLINE_STATS[c.pos].map(k => `${fmtK(S, k, s.stats[k])} ${STAT_LABEL[k]}`).join(' · '),
     })
     else sfx('complete')
@@ -894,6 +897,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             )}
             {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
             {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
+            {!a.po && <AwardRace c={c} games={played} />}
             {seasonOver && (
               <div className="ag-card cr-over ag-pop">
                 <span className="ag-eyebrow">{S.isSoccer ? `THE LEAGUE IS DONE · ${recText} · ${wins * 3 + draws} PTS` : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
@@ -1191,6 +1195,51 @@ function AnalyticsByYear({ c }) {
   )
 }
 
+// ── The award races (football): his award's race and the MVP's, the top ten on the pace each man is on, then the vote
+// (lib/careerAwards.js). The College Football season page's leaders board (simFlow.jsx LeadersBoard), the same rows
+// the Heisman's: the place, the man, his school or team and his line. ──
+const RACE_TAB = { MVP: 'MVP', OPOY: 'OPOY', DPOY: 'DPOY' }
+function RaceTabs({ keys, on, onPick }) {
+  if (keys.length < 2) return null
+  return <div className="cr-race-tabs" role="tablist">{keys.map(k => <button key={k} role="tab" aria-selected={k === on} className={k === on ? 'is-on' : ''} onClick={() => { onPick(k); sfx('tap') }}>{RACE_TAB[k]}</button>)}</div>
+}
+const raceRow = (c, x, i, value = '') => ({ rank: i + 1, me: !!x.me, name: x.me ? c.name : x.name, team: `${x.team} · ${x.line}`, value })
+function AwardRace({ c, games }) {
+  const [pick, setPick] = useState(null)
+  const R = useMemo(() => raceNow(c, games), [c.seed, c.year, c.team, c.ovr, games.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!R || R.k < 2) return null
+  const keys = R.award === 'MVP' ? ['MVP'] : [R.award, 'MVP']
+  const A = keys.includes(pick) ? pick : keys[0]
+  const list = R.races[A], at = list.findIndex(x => x.me)
+  const rows = list.slice(0, 10).map((x, i) => raceRow(c, x, i))
+  // (outside the top ten: his own row under it, at his place)
+  if (at >= 10) rows.push(raceRow(c, list[at], at))
+  return (
+    <div className="cr-race ag-pop">
+      <RaceTabs keys={keys} on={A} onPick={setPick} />
+      <LeadersBoard title={RACE_SHORT[A]} label={`${c.sport === 'bucket' ? 'GAME' : 'WEEK'} ${weekOfGame(c, R.k)}`} rank={at + 1} who={c.name} rows={rows} />
+      <p className="cr-race-note">{at === 0 ? `${c.name} leads the ${A === 'MVP' ? 'MVP' : RACE_NAME[A].toLowerCase()} race.` : at < 5 ? `${c.name} is ${ordinalOf(at + 1)} in the ${A === 'MVP' ? 'MVP' : RACE_NAME[A].toLowerCase()} race.` : at >= 0 ? `${c.name} is ${ordinalOf(at + 1)}. The voters go by the whole season.` : ''} Ranked on the pace each man is on.</p>
+    </div>
+  )
+}
+function RaceVote({ c, s }) {
+  const own = Object.keys(s.race).find(k => k !== 'MVP') ?? 'MVP'
+  const keys = own === 'MVP' ? ['MVP'] : [own, 'MVP']
+  const [pick, setPick] = useState(keys[0])
+  const A = keys.includes(pick) ? pick : keys[0]
+  const v = s.race[A]
+  if (!v?.rows?.length) return null
+  const rows = v.rows.map((x, i) => raceRow(c, x, i, `${x.pts}`))
+  if (v.place > v.rows.length) rows.push({ rank: v.place, me: true, name: c.name, team: `${c.team} · ${v.pts} PTS`, value: `${v.pts}` })
+  const w = v.rows[0]
+  return (
+    <div className="cr-race cr-race--vote">
+      <RaceTabs keys={keys} on={A} onPick={setPick} />
+      <LeadersBoard title={`${RACE_TAB[A]} VOTING`} label="50 VOTERS" rank={v.place} who={c.name} rows={rows} />
+      <p className="cr-race-note">{v.place === 1 ? `${c.name} wins it, with ${w.first} of 50 first-place votes.` : `${w.me ? c.name : w.name} wins it. ${c.name} ${v.place ? `finishes ${ordinalOf(v.place)}${v.pts ? `, ${v.pts} points` : ''}` : 'gets no votes'}.`}</p>
+    </div>
+  )
+}
 function Recap({ c, last, user }) {
   const S = sportOf(c)
   const met = last.goals.filter(g => g.met).length
@@ -1211,6 +1260,7 @@ function Recap({ c, last, user }) {
         {last.benched > 0 && <span className="cr-badge">{c.sport === 'bucket' ? 'OFF THE BENCH' : last.benched >= last.wins + last.losses ? 'BACKUP ALL YEAR' : `${last.benched} GAMES AS THE BACKUP`}</span>}
         {last.records.map((r, i) => <span key={i} className="cr-badge is-rec"><IconFlame size={12} /> {r}</span>)}
       </div>
+      {last.race && <RaceVote c={c} s={last} />}
       {last.sb && <p className="cr-note">{last.sb.won ? `${S.final} champions${last.sb.series ? `, ${last.sb.mySc}–${last.sb.oppSc} in the series` : `: ${last.sb.mySc ?? ''}${last.sb.oppSc != null ? `–${last.sb.oppSc}` : ''}`}.` : `Lost the ${S.final}${last.sb.series ? ` ${last.sb.mySc}–${last.sb.oppSc}` : ''}. Close.`}</p>}
       <Analytics c={c} s={last} />
       {!last.sb && last.rounds?.length > 0 && <p className="cr-note">Playoffs: {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${nick(r.opponent)}`).join(' · ')}</p>}
@@ -1424,7 +1474,7 @@ function Contract({ c, setCareer }) {
       {c.offers.map(o => (
         <button key={o.team} className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={() => { setCareer(openTalks(c, o)); sfx('tap') }}>
           <img src={logoFor(o.team)} alt="" />
-          <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{o.stand ? (o.stand.starter ? 'Would start' : `Backup behind ${o.stand.behind}`) : o.fit.status} · {(o.fit.groups ?? [{ k: 'O-LINE', v: o.fit.ol }, { k: c.pos === 'qb' ? 'WEAPONS' : 'QB', v: c.pos === 'qb' ? o.fit.weapons : o.fit.qb }]).slice(0, 2).map(g => `${g.k.toLowerCase()} ${gradeOf(g.v)}`).join(' · ')}</i></span>
+          <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small>{o.title != null && <em className="cr-offer-odds">{titlePct(o.title)} to win the title with him · {o.fit.status}</em>}<i>{o.stand ? (o.stand.starter ? 'Would start' : `Backup behind ${o.stand.behind}`) : o.fit.status} · {(o.fit.groups ?? [{ k: 'O-LINE', v: o.fit.ol }, { k: c.pos === 'qb' ? 'WEAPONS' : 'QB', v: c.pos === 'qb' ? o.fit.weapons : o.fit.qb }]).slice(0, 2).map(g => `${g.k.toLowerCase()} ${gradeOf(g.v)}`).join(' · ')}</i></span>
           <span className="cr-offer-money"><b>{money(o.perYear)}</b><small>× {o.years} {o.years === 1 ? 'YR' : 'YRS'}</small></span>
         </button>
       ))}
