@@ -1,7 +1,7 @@
 ﻿import { Fragment, useState, useEffect, useRef, useMemo } from 'react'
 import { NameTag } from './app/NameTag'
 import { useTapGuard } from '../lib/tapGuard'
-import { ATTR, TYPES } from '../data/qbs'
+import { ATTR, TYPES, QBS } from '../data/qbs'
 import { QB_SAL_COLS } from '../data/qb-salary'
 import { TEAMS } from '../data/nfl-teams'
 import { WR_ATTR, WRS } from '../data/wrs'
@@ -548,7 +548,7 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
         <div className="simp-stat-section simp-totals-in">
           <div className="simp-eyebrow">Production</div>
           <StatLineTable result={final} build={build} userName={userName} kind={isK ? 'k' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
-          {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
+          {pool && <Leaders sport="nfl" pos={pos} pool={pool} league={result.team?.isAllTime ? LEAGUE[pos] : null} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
         </div>
       )}
       {/* outside the section above: it has to stick to the whole screen, not just that section */}
@@ -556,6 +556,8 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
     </>
   )
 }
+// an All-Time season's leaders take the current league's lines (lib/seasonFacts.js legendsField)
+const LEAGUE = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, lb: LBS, ol: OLS, k: KS }
 const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? r.seasonRushYds : pos === 'dl' ? r.seasonSacks : pos === 'lb' ? r.seasonTackles : pos === 'db' ? r.seasonINTs : pos === 'ol' ? r.seasonPancakes : pos === 'k' ? r.seasonPoints : r.seasonRecYds
 
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────

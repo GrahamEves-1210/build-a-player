@@ -235,17 +235,13 @@ function boardOf(def, field, you) {
   const top = all.slice(0, 5)
   return { label: def.label, key: def.key, rows: me.rank <= 5 ? top : [...top, me], rank: me.rank, of: all.length }
 }
-export function leaderBoard({ sport, pos, pool, seed, you }) {
-  const def = LEADER_STAT[sport]?.[pos]
-  if (!def) return null
-  const r = seeded(`leaders-${seed}`)
-  // basketball: the real scorers in the pool, at their real averages give or take
-  // a point (an all-time pool has none of them, and falls through to the ratings)
+// The field's lines for one league: every player in the pool, unsorted (see leaderBoard)
+function fieldOf(def, sport, pool, r) {
+  // basketball: the real scorers in the pool, at their real averages give or take a point
   const real = sport === 'bucket' ? (pool || []).filter(p => REAL_PPG[p.name] != null) : []
   if (real.length >= 4) {
     const seen = new Set()
-    const field = real.filter(p => !seen.has(p.name) && seen.add(p.name)).map(p => ({ name: p.name, team: p.team, value: +(REAL_PPG[p.name] + (r() - 0.5) * 2).toFixed(1) }))
-    return boardOf(def, field, you)
+    return real.filter(p => !seen.has(p.name) && seen.add(p.name)).map(p => ({ name: p.name, team: p.team, value: +(REAL_PPG[p.name] + (r() - 0.5) * 2).toFixed(1) }))
   }
   const rate = def.rate ?? avgAttr
   const named = new Set()   // (an all-time pool can list a player twice, once per team)
@@ -253,19 +249,45 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
     // the whole pool plays the year: expected total x a season's luck, then a Poisson count
     const normal = () => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
     const poisson = lam => { const L = Math.exp(-lam); let k = 0, p = 1; do { k++; p *= r() } while (p > L); return k - 1 }
-    const rows = (pool || []).filter(p => p.attrs && !named.has(p.name) && named.add(p.name))
+    return (pool || []).filter(p => p.attrs && !named.has(p.name) && named.add(p.name))
       .map(p => ({ name: p.name, team: p.team, value: Math.min(def.max, poisson(def.mu(rate(p)) * Math.min(def.luck, Math.exp(normal() * def.sigma - def.sigma * def.sigma / 2)))) }))
-    return boardOf(def, rows, you)
   }
   // (def.curve: the value comes from his place in the field, best rated first, with a little luck in the order)
   const order = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name))))
   const key = new Map(order.map(p => [p, rate(p) + (def.curve ? (r() - 0.5) * 2 * (def.shuffle ?? 0) : 0)]))
-  const rows = order.sort((a, b) => key.get(b) - key.get(a)).map((p, i) => {
+  return order.sort((a, b) => key.get(b) - key.get(a)).map((p, i) => {
     let v = (def.curve ? def.curve(i) : def.base + (rate(p) - 5.2) * def.per) + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))
     return { name: p.name, team: p.team, value: v }
   })
-  return boardOf(def, rows, you)
+}
+// An All-Time season: `league` is the current league at the position, `pool` the legends. The legends can't each be
+// scored off their ratings: every one of them rates like a star, and the pool lists about three per franchise (some
+// twice, once per team), so all of them got a starter's year at a star's rate. 2026-11-17: the 50th QB threw for
+// 4,000 yards and the 80th back ran for 1,350, so a 4,000-yard season read about 48th. A league still has one
+// passing title and a few dozen starters, so the year's lines are the current league's (the same model, the same
+// seed), and the legends take them in order of their ratings, with a little luck in the order so the same legend
+// doesn't lead every year. The same line ranks the same in both modes.
+const AT_SHUFFLE = 0.6
+function legendsField(def, sport, pool, league, r) {
+  const lines = fieldOf(def, sport, league, r).map(x => x.value).sort((a, b) => b - a)
+  const rate = def.rate ?? avgAttr
+  const named = new Set()
+  const legends = (pool || []).filter(p => p.attrs && !named.has(p.name) && named.add(p.name))
+  const key = new Map(legends.map(p => [p, rate(p) + (r() - 0.5) * 2 * AT_SHUFFLE]))
+  return legends.sort((a, b) => key.get(b) - key.get(a)).slice(0, lines.length).map((p, i) => ({ name: p.name, team: p.team, value: lines[i] }))
+}
+// the year's lines at the position (his own not among them); `league`: an All-Time season, see legendsField
+export function leaderField({ sport, pos, pool, seed, league = null }) {
+  const def = LEADER_STAT[sport]?.[pos]
+  if (!def) return null
+  const r = seeded(`leaders-${seed}`)
+  return league && league !== pool ? legendsField(def, sport, pool, league, r) : fieldOf(def, sport, pool, r)
+}
+export function leaderBoard({ sport, pos, pool, seed, you, league = null }) {
+  const def = LEADER_STAT[sport]?.[pos]
+  if (!def) return null
+  return boardOf(def, leaderField({ sport, pos, pool, seed, league }), you)
 }
 export const leaderStatKey = (sport, pos) => LEADER_STAT[sport]?.[pos]?.key ?? null
 

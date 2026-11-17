@@ -147,8 +147,8 @@ export function HonorOverlay({ honor, name, onClose }) {
 }
 
 // ── League leaders you slot into ────────────────────────────────────────────
-export function Leaders({ sport, pos, pool, seed, you }) {
-  const board = useMemo(() => leaderBoard({ sport, pos, pool, seed, you }), [sport, pos, pool, seed, you.value])
+export function Leaders({ sport, pos, pool, seed, you, league = null }) {
+  const board = useMemo(() => leaderBoard({ sport, pos, pool, seed, you, league }), [sport, pos, pool, seed, you.value, league])
   if (!board) return null
   return (
     <div className="sm-leaders ag-pop">

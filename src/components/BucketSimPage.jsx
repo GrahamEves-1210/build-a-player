@@ -959,7 +959,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />
           )}
-          {allDone && director && pool && <Leaders sport="bucket" pos={result.position} pool={pool} seed={director.seed} you={{ name: userName, team: team?.short, value: ppg }} />}
+          {allDone && director && pool && <Leaders sport="bucket" pos={result.position} pool={pool} league={isAllTime ? (result.position === 'big' ? NBA_BIG_PLAYERS : NBA_GUARD_PLAYERS) : null} seed={director.seed} you={{ name: userName, team: team?.short, value: ppg }} />}
 
           {allDone && awards && (
             <>
