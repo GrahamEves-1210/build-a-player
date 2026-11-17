@@ -122,6 +122,7 @@ export const REWARDS_TOC = [
 ]
 
 // ── Leaderboards (the Ranks tab) ─────────────────────────────────────────────
+const TODAY_NOTE = { daily: 'the Daily Challenge', grid: 'the Salary Cap board' }
 const loadBoards = () => import('../../lib/boards')
 export function LeaderboardsPage({ go }) {
   const B = useMod('boards', loadBoards)
@@ -134,7 +135,7 @@ export function LeaderboardsPage({ go }) {
       <h2 id="online">Online</h2>
       <p>{andList(B.onlineBoards().map(b => b.label))}. Blacktop can be shown in total or by size ({andList(B.blacktopModes().slice(1).map(m => m.label))}). The online rating is explained on <Link go={go} to="modes" hash="compete">Modes § Compete</Link>.</p>
       <h2 id="today">Today</h2>
-      <p>{andList(B.todayBoards().map(b => b.label))}. See <Link go={go} to="rewards" hash="daily">Rewards § The Daily tab</Link> for what the top places pay.</p>
+      <p>{andList(B.todayBoards().map(b => b.label + (TODAY_NOTE[b.id] ? ` (${TODAY_NOTE[b.id]})` : '')))}. See <Link go={go} to="rewards" hash="daily">Rewards § The Daily tab</Link> for what the top places pay.</p>
       <h2 id="records">Records</h2>
       <p>Records for each sport ({andList(sports.map(s => s.label.toLowerCase()))}). Football's are kept by position. A quarterback's, for example:</p>
       <ul>{[...new Set(fb.map(b => b.group))].map(g => <li key={g}><b>{g.charAt(0) + g.slice(1).toLowerCase()}:</b> {andList(fb.filter(b => b.group === g).map(b => b.label))}</li>)}</ul>
