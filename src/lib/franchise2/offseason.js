@@ -30,11 +30,13 @@ export function newSeason(F) {
   F.dc = []; F.dr = null; F.offers = null; F.rs = null; F.fa = []
   for (const s of SHORTS) {
     const t = F.teams[s]
-    // the cuts to the roster: the men at the bottom go. The player's own picks are his to cut, never the game's:
-    // every man on his team still on his rookie deal stays (a pick from two drafts ago was being cut here without a
-    // word, 2026-11-17); the league's teams keep their picks from the first four rounds and let the late ones compete
+    // the cuts to the roster: the men at the bottom go. The player's new class is his to cut, never the game's, and so
+    // are his picks from the first four rounds while they're on their rookie deals; a late pick from an earlier class
+    // competes for his job like anyone, and if camp cuts him he's released the way the wire sees it (2026-11-17: a
+    // pick from two drafts ago was being dropped here without a word). The league's teams keep their picks from the
+    // first four rounds and let the late ones compete.
     const mine = s === F.team
-    const keep = t.r.filter(p => (mine ? p.rk === F.year + 1 || (p.rc && p.dr) : p.rk === F.year + 1 && (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
+    const keep = t.r.filter(p => (mine ? p.rk === F.year + 1 || (p.rc && (p.dr?.[0] ?? 8) <= 4) : p.rk === F.year + 1 && (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
     const { roster, cut } = trim(t.r, new Set(keep))
     if (mine) {
       // (anyone the cut-down does let go from the player's team is released the way the wire and the cap see it:

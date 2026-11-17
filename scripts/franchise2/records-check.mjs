@@ -143,7 +143,7 @@ function offseason() {
   FR.closeDraft?.(F)
   // 3: the player's drafted men on rookie deals, before and after the new season
   const t = F.teams[F.team]
-  const rookies = t.r.filter(p => p.rc && p.dr).map(p => p.i)
+  const rookies = t.r.filter(p => p.rc && p.dr).map(p => p.i), size0 = t.r.length
   // 5: who wears what, for the men who'll stay
   const nums = {}
   for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.nu != null) nums[p.i] = [s, p.nu]
@@ -159,7 +159,7 @@ function offseason() {
     if (p && wire) { rel++; console.log(`   released in camp: ${p.n} ${p.p} ${p.o}`); continue }
     gone++; bad(`${F.year}: drafted man ${id} on his rookie deal is gone from the player's team (${p ? 'a free agent with no RELEASED line' : 'nowhere'})`)
   }
-  console.log(`${F.year} camp: ${rookies.length} drafted men on rookie deals, ${gone} gone without a word, ${rel} released on the wire`)
+  console.log(`${F.year} camp: ${rookies.length} drafted men on rookie deals, ${gone} gone without a word, ${rel} released on the wire · roster ${size0} → ${F.teams[F.team].r.length}`)
   // 4: the line by spot, every team
   for (const s of FR.SHORTS) olCheck(`${F.year} camp`, s)
   // 5: in order after camp; numbers
