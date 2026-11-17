@@ -10,6 +10,7 @@ import { Chyron, BigNum, Stamp, Meter, Go, KLogo, fkVars, BackBar, ActionBar, Fa
 import { Man, PlayerPage } from './dparts'
 import { ScoutNote, LastLine, Terms, CapLine, money } from './dealbits'
 import './deals.css'
+import { spotOf } from '../../lib/franchise2/news'
 
 // RE-SIGN and FREE AGENCY (the offseason's second and third stops). The engine: lib/franchise2/deals.js (the talks,
 // what a deal is worth to a man), market.js (the market, the offers, the day's end), contracts.js (the cap).
@@ -260,7 +261,7 @@ export function FreeAgency({ F, act, owner }) {
       {wire && wire.list.length > 0 && (
         <section className="fd-day">
           <Chyron tone="ink" size="s" title={`DAY ${wire.n} AROUND THE LEAGUE`} right={wire.list.length} />
-          {wire.list.slice(0, 6).map(d => <WireDeal key={d.i} d={d} />)}
+          {wire.list.slice(0, 6).map(d => <WireDeal key={d.i} F={F} d={d} />)}
         </section>
       )}
       {!done && (
@@ -300,10 +301,10 @@ export function FreeAgency({ F, act, owner }) {
     </>
   )
 }
-const WireDeal = ({ d }) => (
+const WireDeal = ({ F, d }) => (
   <div className="fd-wire-deal" style={fkVars(d.s)}>
     <KLogo s={d.s} size={24} />
-    <span><b>{d.n}</b><small>{nick(d.s)} · {POS_LABEL[d.p]} · {yrs(d.y)}, {money(d.$ * d.y)}</small></span>
+    <span><b>{d.n}</b><small>{nick(d.s)} · {spotOf(F, d)} · {yrs(d.y)}, {money(d.$ * d.y)}</small></span>
   </div>
 )
 // where an offer stands, in plain words

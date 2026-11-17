@@ -543,12 +543,16 @@ export function qbHunt(F, s) {
 // what a man is worth to a team at a pick, from where it thinks he's headed (v): his position, its needs, its hunt
 // for a quarterback, and how far he'd be a reach (rank: his place on the consensus board; a team reaches far past
 // the board only for a quarterback it has to have)
-function pickWorth(x, v, { need, hunt, rd, at, rank, care = 1 }) {
+function pickWorth(x, v, { need, hunt, rd, at, rank, care = 1, took = null }) {
   // (the first two rounds weigh what he is now, too: a raw 20-year-old is a projection, a polished senior plays)
   let w = v + (rd <= 2 && x.p !== 'k' ? (x.o - 76) * 0.2 : 0)
   // (a team that has to have a quarterback reaches for one it believes in, never for a camp arm)
   if (x.p === 'qb') w += rd <= 2 ? POS_V.qb + hunt * 7 * clamp(0, 1, (v - 70) / 8) - (hunt === 0 ? 4 : 0) : hunt * 2
   else w += POS_V[gKey(x)] * (rd >= 4 && x.p !== 'k' ? 0.5 : 1) + (need[needKey(x)] ?? 0) * (rd <= 2 ? 0.9 : 1.3) * care
+  // (a spot a team has already drafted this year: a second edge in the first four rounds is a luxury, a third
+  // almost never happens; it also keeps a camp roster's rooms in shape)
+  const twice = took?.[gKey(x)] ?? 0
+  if (twice && x.p !== 'k') w -= twice * (rd <= 4 ? 3 : 1.5)
   if (rank != null && rd <= 3) {
     const room = at + 10 + at * 0.6 + (x.p === 'qb' ? 24 * hunt : 0)
     if (rank > room) w -= (rank - room) * (rd === 1 ? 0.3 : 0.15)
@@ -857,7 +861,9 @@ function cpuPickOne(F) {
     }
   }
   const s = F.dr.own[at]
-  const ctx = { need: needsOf(F, s), hunt: qbHunt(F, s), rd, at }
+  const took = {}
+  for (const pk of F.dr.picks) if (pk.s === s) { const g = gKey({ p: pk.p, s: pk.sp }); took[g] = (took[g] ?? 0) + 1 }
+  const ctx = { need: needsOf(F, s), hunt: qbHunt(F, s), rd, at, took }
   let best = null, bv = -1e9
   for (const x of F.dc) { if (x.b != null) continue; const v = cpuValue(F, s, x, ctx); if (v > bv) { bv = v; best = x } }
   if (!best) { F.dr.at++; return null }

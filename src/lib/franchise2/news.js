@@ -26,7 +26,7 @@ const nick = s => TEAM[s]?.nick ?? s
 const num = v => Math.round(v ?? 0).toLocaleString('en-US')
 const posOf = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p === 'db' ? GROUP[groupOf(p)].label : POS_LABEL[p.p])
 // a market deal's man by his spot (an EDGE is an EDGE on every screen, never DL here and EDGE there)
-const spotOf = (F, d) => { const p = d.i != null ? F.teams[d.s]?.r.find(x => x.i === d.i) : null; return p ? posOf(p) : POS_LABEL[d.p] }
+export const spotOf = (F, d) => { const p = d.i != null ? F.teams[d.s]?.r.find(x => x.i === d.i) : null; return p ? posOf(p) : POS_LABEL[d.p] }
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
 const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 // (filed with the league year, the week and the stage it happened in; a year-old item ages out, and the log keeps
@@ -88,7 +88,7 @@ export function wire(F, { n = 30 } = {}) {
   if (F.phase === 'off') {
     for (const x of log.filter(x => x.ph === 'off')) out.push(x)
     for (const d of marketDeals(F).filter(d => d.o >= 80 || d.s === F.team).slice(-14).reverse()) put('sign', 'SIGNED', d.s, `${nick(d.s)} sign ${spotOf(F, d)} ${d.n}: ${d.y} ${d.y === 1 ? 'year' : 'years'}, $${num(d.$ * d.y)} million`, { big: d.$ >= 25 })
-    for (const e of (F.ext ?? []).slice(0, 8)) put('sign', 'EXTENDED', e[3], `${nick(e[3])} re-sign ${POS_LABEL[e[2]]} ${e[1]}: ${e[5]} ${e[5] === 1 ? 'year' : 'years'}, $${num(e[4] * e[5])} million`)
+    for (const e of (F.ext ?? []).slice(0, 8)) put('sign', 'EXTENDED', e[3], `${nick(e[3])} re-sign ${spotOf(F, { i: e[0], s: e[3], p: e[2] })} ${e[1]}: ${e[5]} ${e[5] === 1 ? 'year' : 'years'}, $${num(e[4] * e[5])} million`)
     for (const g of (F.gone ?? []).slice().sort((a, b) => b.o - a.o).slice(0, 8)) put('ret', 'RETIRED', g.s, `${nick(g.s)} ${g.p ? `${POS_LABEL[g.p]} ` : ''}${g.n} retires at ${g.ag}${g.cr ? ` after ${g.cr} seasons` : ''}`, { big: g.o >= 90 })
     const aw = F.aw
     if (aw?.mvp) put('award', 'MVP', aw.mvp.t, `${aw.mvp.n} named MVP: ${aw.mvp.line.toLowerCase().replace(/ · /g, ', ')}`, { big: true })
