@@ -1,44 +1,40 @@
 import { useState } from 'react'
-import RatingsTable, { POOLS, RATINGS_AS_OF, RATINGS_DATES, fmtDate, poolCounts, gradeColor, useLazyPools } from '../RatingsTable'
+import RatingsTable, { POOLS, RATINGS_AS_OF, RATINGS_DATES, fmtDate, poolCounts, useLazyPools } from '../RatingsTable'
 import { CREATORS, CREATORS_AS_OF } from '../../data/creators'
-import { LB_LIVE } from '../../lib/lbLive'
-import { OL_LIVE } from '../../lib/olLive'
-import { K_LIVE } from '../../lib/kLive'
 import { SOCCER_LIVE } from '../../lib/soccerLive'
 import { BASEBALL_LIVE } from '../../lib/baseballLive'
 import { CBB_LIVE } from '../../lib/cbbLive'
+import { CFB_LIVE } from '../../lib/cfbLive'
+import { FRANCHISE_LIVE } from '../../lib/franchiseLive'
+import { BAT_TYPES, PIT_TYPES, MLB_ATTR } from '../../data/mlb-attrs'
+import { Link, andList } from './wikiBits'
+import { GameplayPage, GAMEPLAY_TOC, SeasonsPage, SEASONS_TOC } from './wikiGame'
+import { CareerPage, CAREER_TOC } from './wikiCareer'
+import { FranchisePage, FRANCHISE_TOC } from './wikiFranchise'
+import { CollegePage, COLLEGE_TOC } from './wikiCollege'
+import { SoccerPage, SOCCER_TOC } from './wikiSoccer'
+import { ModesPage, MODES_TOC } from './wikiModes'
+import { RewardsPage, REWARDS_TOC, LeaderboardsPage, LEADERBOARDS_TOC } from './wikiRewards'
 
-// The wiki's pages. Each exports its content as a component plus a table of
-// contents the shell uses for the sidebar and search. Everything here is
-// written from the game's engines (src/utils/simulation.js, bucketSimulation.js
-// and the components the modes live in).
+// The wiki's pages. Each is a component plus a table of contents the shell uses for the sidebar and search. Every
+// page is written from the game's own code and reads its numbers from the modules the game runs on, so a change to
+// a price, a rule or a roster shows here on the next build.
+//
+// The switches it reads: a mode's page or section appears when its switch is on, and nothing about a mode that's
+// off shows anywhere, search included. LB_LIVE, OL_LIVE, K_LIVE, SOCCER_LIVE, CFB_LIVE, CBB_LIVE, FRANCHISE_LIVE,
+// BASEBALL_LIVE (lib/*Live.js); REWARDED_ON (lib/rewardedAd.js) for the video rewards; CFB_CLOUD / CBB_CLOUD
+// (components/cfb/cfbShared.js, cbb/cbbShared.js) for whether college seasons are saved to the account.
 
-const GRADES = [['F', 0], ['D', 1], ['C-', 2], ['C', 3], ['C+', 4], ['B-', 5], ['B', 6], ['B+', 7], ['A-', 8], ['A', 9], ['A+', 10], ['S', 11]]
-const Link = ({ go, to, hash, children }) => <a href={to === 'main' ? '/wiki' : `/wiki/${to}`} onClick={e => { e.preventDefault(); go(to, { hash }) }}>{children}</a>
-
-const Weights = ({ title, rows }) => (
-  <table className="wikitable">
-    <caption>{title}</caption>
-    <tbody>{rows.map(([k, w]) => <tr key={k}><td>{k}</td><td className="num">{w}%</td></tr>)}</tbody>
-  </table>
-)
-const QB_W = [['Accuracy', 17], ['Processing', 16], ['Arm', 15], ['Legs', 15], ['Playmaking', 10], ['Vision', 9], ['Pocket presence', 7], ['Size', 7], ['Leadership', 4]]
-const RB_W = [['Elusiveness', 15], ['Speed', 14], ['Burst', 14], ['Strength', 14], ['Balance', 13], ['Vision', 12], ['Size', 11], ['Hands', 11], ['Carrying', 5]]
-const WR_W = [['Hands', 14], ['Route running', 14], ['Speed', 14], ['Size', 14], ['Awareness', 10], ['After the catch', 10], ['Body control', 8], ['Vertical', 8], ['Release', 8]]
-const TE_W = [['Hands', 16], ['Route running', 15], ['Size', 12], ['Awareness', 11], ['After the catch', 11], ['Blocking', 9], ['Strength', 9], ['Vertical', 9], ['Speed', 8]]
-const DB_W = [['Man coverage', 15], ['Speed', 14], ['Play recognition', 14], ['Zone IQ', 13], ['Press', 11], ['Fluidity', 10], ['Hands', 10], ['Run support', 7], ['Size', 6]]
-const LB_W = [['Range', 15], ['Tackling', 15], ['Play recognition', 14], ['Zone instincts', 12], ['Block shed', 11], ['Power', 9], ['Pass rush', 8], ['Leadership', 8], ['Size', 8]]
-const OL_W = [['Pass pro', 18], ['Run block', 15], ['Anchor', 14], ['Pancake', 10], ['Mobility', 10], ['Blitz pickup', 9], ['Discipline', 8], ['Size', 8], ['Length', 8]]
-const DL_W = [['Get off', 16], ['Bend', 13], ['Block shed', 13], ['Power moves', 12], ['Finesse moves', 12], ['Play recognition', 11], ['Strength', 10], ['Speed', 7], ['Size', 6]]
-const G_W = [['Jump shot', 14], ['Speed', 14], ['Size', 14], ['Finishing', 14], ['Basketball IQ', 14], ['Passing', 8], ['Handles', 8], ['Perimeter defense', 8], ['Bounce', 3], ['Clutch', 3]]
-const B_W = [['Finishing', 15], ['Size', 15], ['Interior defense', 15], ['Rebounding', 15], ['Jump shot', 9], ['Bounce', 7], ['Playmaking', 7], ['Basketball IQ', 7], ['Speed', 7], ['Clutch', 3]]
-// soccer's striker (SOCCER_OVR_WEIGHTS in utils/soccerSimulation.js)
-const ST_W = [['Finishing', 18], ['Positioning', 17], ['Dribbling', 12], ['Composure', 11], ['Pace', 10], ['Shot power', 8], ['Heading', 8], ['Passing', 8], ['Size', 8]]
-const sportName = sport => (sport === 'nfl' ? 'NFL' : sport === 'soccer' ? 'Soccer' : sport === 'baseball' ? 'MLB' : 'NBA')
+const sportName = sport => (sport === 'nfl' ? 'Football' : sport === 'soccer' ? 'Soccer' : sport === 'baseball' ? 'Baseball' : 'Basketball')
+const COLLEGE_ON = CFB_LIVE || CBB_LIVE
+const poolName = c => `${sportName(c.sport)} · ${c.label === sportName(c.sport) ? 'forwards and midfielders' : c.label}`
 
 // ── Main page ────────────────────────────────────────────────────────────────
 function MainPage({ go }) {
-  const counts = poolCounts()
+  const counts = poolCounts().filter(c => c.current || c.legends)   // (soccer's pools load with the Ratings page)
+  const fbPos = POOLS.filter(p => p.sport === 'nfl').map(p => p.label)
+  const games = ['Build-A-Player (football)', 'Build-A-Bucket (basketball)', ...(SOCCER_LIVE ? ['Soccer'] : []), ...(BASEBALL_LIVE ? ['Baseball'] : [])]
+  const modes = [...(FRANCHISE_LIVE ? ['Franchise'] : []), 'Career', ...(CFB_LIVE ? ['College Football'] : []), ...(CBB_LIVE ? ['College Basketball'] : []), 'Compete', 'Trait Auction', 'Blacktop', 'Salary Cap', 'Squad Builder', 'Depth Chart', 'Daily Challenge', 'Sandbox']
   return (
     <>
       <table className="wk-infobox">
@@ -46,323 +42,56 @@ function MainPage({ go }) {
         <tbody>
           <tr><td colSpan={2}><img src="/bap-mark.webp" alt="Build-A-Player logo" /></td></tr>
           <tr><th>Type</th><td>Free browser game</td></tr>
-          <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA){SOCCER_LIVE && <><br />Soccer (Champions League, World Cup)</>}{BASEBALL_LIVE && <><br />Baseball (MLB)</>}</td></tr>
-          <tr><th>Positions</th><td>QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}{K_LIVE ? ', K' : ''}<br />Guard, Big{SOCCER_LIVE && <><br />Striker</>}{BASEBALL_LIVE && <><br />Batter, Pitcher</>}</td></tr>
-          <tr><th>Modes</th><td>Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
+          <tr><th>Sports</th><td>{games.map((g, i) => <span key={g}>{i > 0 && <br />}{g}</span>)}</td></tr>
+          <tr><th>Positions</th><td>{fbPos.join(', ')}<br />Guard, Big{SOCCER_LIVE && <><br />Striker</>}{BASEBALL_LIVE && <><br />Batter, Pitcher</>}</td></tr>
+          <tr><th>Modes</th><td>{modes.join(', ')}</td></tr>
           <tr><th>Developer</th><td>Playmaker Games (independent)</td></tr>
           <tr><th>Platform</th><td>Web browser, iOS, Android</td></tr>
           <tr><th>Ratings as of</th><td>{fmtDate(RATINGS_AS_OF)}</td></tr>
           <tr><th>Website</th><td><a href="/">build-a-player.com</a></td></tr>
         </tbody>
       </table>
-      <p className="wk-lead"><b>Build-A-Player</b> is a fan-made browser game in which you build one {SOCCER_LIVE ? 'football, basketball or soccer' : 'football or basketball'} player out of pieces of many real ones. Spin for a team, spin for a player, keep one part of his game, and repeat until the silhouette is full. Then simulate a season and find out what you made.</p>
-      <p>This wiki documents how every part of the game works, written from the game's own code rather than from guesswork: the spin, the 0–11 rating scale, the overall formulas, the season engines, the playoffs, the awards, every mode, and every rating in the game. Ratings on this wiki update automatically whenever the game's data does.</p>
+      <p className="wk-lead"><b>Build-A-Player</b> is a fan-made game about building one {SOCCER_LIVE ? 'football, basketball or soccer' : 'football or basketball'} player out of pieces of many real ones. Spin for a team, spin for a player, keep one of his ratings, and repeat until every slot is full. Then play a season and see what the build can do.</p>
+      <p>This wiki explains how every part of the game works, written from the game's own code: the spin, the 0–11 scale, the overall formulas, the seasons, every mode, the rewards, and every player's ratings. The numbers on these pages are read from the game itself, so they change when the game does.</p>
 
       <h2 id="start">Start here</h2>
       <ul className="wk-start">
-        <li><Link go={go} to="gameplay">Gameplay</Link><span>Spins, chips, respins, the 0–11 scale, and how your overall is scored.</span></li>
-        <li><Link go={go} to="seasons">Seasons</Link><span>How an NFL or NBA season is simulated, game by game, through the playoffs and awards.</span></li>
-        <li><Link go={go} to="career">Career</Link><span>One player from the combine to the Hall of Fame: the draft, seasons, contracts, legacy.</span></li>
-        <li><Link go={go} to="modes">Modes</Link><span>Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart, Sandbox.</span></li>
-        <li><Link go={go} to="ratings">Ratings</Link><span>Every player in every pool, sortable and searchable, with the date each pool last changed.</span></li>
-        <li><Link go={go} to="creators">Creators</Link><span>YouTubers and podcasters who have played the game on camera.</span></li>
-        <li><Link go={go} to="behind-the-scenes">Behind the scenes</Link><span>Where the ratings come from, how random the game is, what it runs on.</span></li>
+        {PAGES.filter(p => p.slug !== 'main').map(p => <li key={p.slug}><Link go={go} to={p.slug}>{p.title}</Link><span>{p.blurb}</span></li>)}
       </ul>
 
-      <h2 id="two-games">The two games</h2>
-      <p><b>Build-A-Player</b> is the football game: quarterbacks, running backs, wide receivers, tight ends, defensive backs{LB_LIVE || OL_LIVE ? `, defensive linemen${LB_LIVE && OL_LIVE ? ', linebackers and offensive linemen' : LB_LIVE ? ' and linebackers' : ' and offensive linemen'}` : ' and defensive linemen'}, each with nine attributes, simulated through a 17-game NFL season with playoffs, a Super Bowl and an awards vote. <b>Build-A-Bucket</b> is the basketball game at <a href="/bucket">build-a-player.com/bucket</a>: guards and bigs with ten attributes, an 82-game season, the play-in, four rounds of best-of-seven, and an MVP race.{SOCCER_LIVE && <> <b>Soccer</b> is at <a href="/soccer">build-a-player.com/soccer</a>: a striker with ten attributes, built from the forwards and midfielders of Europe's top five leagues (<b>Top Divisions</b>) or the 48 nations of the 2026 World Cup (<b>World Cup</b>), then played through a league season with the domestic cup and Europe, or a whole World Cup.</>}</p>
+      <h2 id="sports">The sports</h2>
+      <p><b>Build-A-Player</b> is the football game: {andList(POOLS.filter(p => p.sport === 'nfl').map(p => p.plural))}, played through a 17-game NFL season with the playoffs, the Super Bowl and the awards. <b>Build-A-Bucket</b> is basketball, at <a href="/bucket">build-a-player.com/bucket</a>: guards and bigs with ten ratings, an 82-game season, the play-in and four best-of-seven rounds.{SOCCER_LIVE && <> <b>Soccer</b> is at <a href="/soccer">build-a-player.com/soccer</a>: a striker with nine ratings, played through a Champions League campaign or a World Cup.</>}{BASEBALL_LIVE && <> <b>Baseball</b> builds a batter or a pitcher (see <Link go={go} to="baseball">Baseball</Link>).</>}{COLLEGE_ON && <> The <b>college modes</b> ({andList([...(CFB_LIVE ? ['College Football'] : []), ...(CBB_LIVE ? ['College Basketball'] : [])])}) play real college seasons and lead into Career.</>}</p>
 
       <h2 id="numbers">By the numbers</h2>
       <div className="wk-table-wrap">
         <table className="wikitable">
           <thead><tr><th>Pool</th><th className="num">Current players</th><th className="num">All-time legends</th><th>Ratings last changed</th></tr></thead>
           <tbody>
-            {counts.map(c => <tr key={c.id}><td>{sportName(c.sport)} · {c.label}</td><td className="num">{c.current}</td><td className="num">{c.legends}</td><td>{fmtDate(c.updated)}</td></tr>)}
+            {counts.map(c => <tr key={c.id}><td>{poolName(c)}</td><td className="num">{c.current || '…'}</td><td className="num">{c.legends || '…'}</td><td>{fmtDate(c.updated)}</td></tr>)}
           </tbody>
         </table>
       </div>
-      <p>All ratings sit on a 0–11 scale shown as letter grades from F to S. The full lists are on the <Link go={go} to="ratings">Ratings</Link> page.</p>
+      {counts.some(c => c.sport === 'soccer') && <p>In soccer the two columns are the Champions League pool and the World Cup legends.</p>}
+      <p>Every rating sits on a 0–11 scale shown as letter grades from F to S. The full lists are on the <Link go={go} to="ratings">Ratings</Link> page.</p>
     </>
   )
 }
 
-// ── Gameplay ─────────────────────────────────────────────────────────────────
-function GameplayPage({ go }) {
+// ── Baseball (only while BASEBALL_LIVE is on) ────────────────────────────────
+function BaseballPage() {
   return (
     <>
-      <p className="wk-hat">This page covers building a player. For what happens after you hit Simulate, see <Link go={go} to="seasons">Seasons</Link>.</p>
-      <p className="wk-lead">A build is one player made from pieces of many. Every spin lands on a <b>real player</b>, and you keep exactly <b>one</b> part of his game. Do that for every slot on the body and you have a complete player with an overall rating, an archetype and a season to play.</p>
-
-      <h2 id="spinning">Spinning</h2>
-      <ul>
-        <li><b>Two reels.</b> The first reel stops on a team; the second stops on one of that team's players at your position. Teams already drawn in this build are skipped, so you see the whole league before anyone repeats.</li>
-        <li><b>Chips.</b> The player's ratings appear as chips, one per attribute. Tap a chip to lock that rating into your build. The chip carries the player's name, number, team colours and headshot, which is why finished builds look the way they do.</li>
-        <li><b>One attribute per spin.</b> Everything else about that player is gone once you pick. Football builds have <b>nine</b> slots; basketball{SOCCER_LIVE ? ' and soccer' : ''} builds have <b>ten</b>.</li>
-        <li><b>Respins.</b> Each spin gives you one team respin and one player respin. In the app, once your player respin is used you can watch a short video for one more, once per build. A player respin never shows you the same player twice.</li>
-        <li><b>Bench players spin too.</b> Backups are in the pool with their real ratings, which is where the hard choices come from.</li>
-      </ul>
-
-      <h2 id="scale">The 0–11 scale</h2>
-      <p>Every attribute is rated from 0 to 11 and shown as a letter. S is reserved for the very best in the league at that one thing.</p>
-      <div className="wk-grades">{GRADES.map(([g, v]) => <span key={g} className="wk-grade" style={{ '--g': gradeColor(v) }}>{g}<small>{v}</small></span>)}</div>
-
-      <h2 id="positions">Positions and attributes</h2>
+      <p className="wk-lead"><b>Baseball</b> builds a batter or a pitcher from real MLB players, ten ratings each, and plays him through a season.</p>
+      <h2 id="ratings">The ratings</h2>
       <div className="wk-table-wrap">
         <table className="wikitable">
-          <thead><tr><th>Position</th><th>Attributes</th></tr></thead>
+          <thead><tr><th>Position</th><th>Ratings</th></tr></thead>
           <tbody>
-            <tr><td>Quarterback</td><td>Arm, Legs, Size, Processing, Leadership, Vision, Playmaking, Accuracy, Pocket Presence</td></tr>
-            <tr><td>Running back</td><td>Speed, Burst, Strength, Size, Balance, Elusiveness, Vision, Hands, Carrying</td></tr>
-            <tr><td>Wide receiver</td><td>Hands, Route Running, Speed, Size, Awareness, After the Catch, Body Control, Vertical, Release</td></tr>
-            <tr><td>Tight end</td><td>Hands, Route Running, Size, Awareness, After the Catch, Blocking, Strength, Vertical, Speed</td></tr>
-            <tr><td>Defensive back</td><td>Speed, Size, Fluidity, Press, Hands, Zone IQ, Man Coverage, Play Recognition, Run Support</td></tr>
-            <tr><td>Defensive line (EDGE · DT)</td><td>Get Off, Speed, Size, Power Moves, Finesse Moves, Strength, Play Recognition, Bend, Block Shed</td></tr>
-            {OL_LIVE && <tr><td>Offensive line</td><td>Size, Length, Anchor, Pass Pro, Run Block, Mobility, Blitz Pickup, Discipline, Pancake</td></tr>}
-            {K_LIVE && <tr><td>Kicker</td><td>Power, Accuracy, Clutch</td></tr>}
-            {LB_LIVE && <tr><td>Linebacker</td><td>Range, Size, Power, Tackling, Block Shed, Zone Instincts, Pass Rush, Play Recognition, Leadership</td></tr>}
-            <tr><td>Guard (PG · SG · SF)</td><td>Jump Shot, Finishing, Passing, Handles, Perimeter Defense, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
-            <tr><td>Big (PF · C)</td><td>Jump Shot, Finishing, Playmaking, Interior Defense, Rebounding, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
-            {SOCCER_LIVE && <tr><td>Striker (ST)</td><td>Pace, Finishing, Shot Power, Dribbling, Passing, Positioning, Heading, Size, Composure</td></tr>}
+            <tr><td>Batter</td><td>{BAT_TYPES.map(t => MLB_ATTR[t]?.label ?? t).join(', ')}</td></tr>
+            <tr><td>Pitcher</td><td>{PIT_TYPES.map(t => MLB_ATTR[t]?.label ?? t).join(', ')}</td></tr>
           </tbody>
         </table>
       </div>
-      <p>The pills above the silhouette group these into categories (physical, mental, skill). You can hide grades in the menu to draft on instinct.</p>
-
-      <h2 id="overall">Overall rating</h2>
-      <p>Your overall is a <b>weighted average</b> of the ratings you locked in, not a plain mean. Each position weights the things that actually win games, and the football formula rewards balance on top.</p>
-      <h3 id="overall-nfl">Football</h3>
-      <pre className="wk-pre">{`avg = weighted average of your nine ratings (weights below)
-OVR = min(99, round(base + balance bonus + floor bonus))`}</pre>
-      <div className="wk-table-wrap">
-        <table className="wikitable">
-          <thead><tr><th>Position</th><th>Base</th><th>Balance bonus<br />(best minus worst ≤ 1 / ≤ 2 / ≤ 3)</th><th>Floor bonus<br />(lowest ≥ 9 / ≥ 8)</th></tr></thead>
-          <tbody>
-            <tr><td>Quarterback</td><td>58 + 2.2 × avg + 0.24 × avg²</td><td>+3 / +1.5 / +0.5</td><td>+2.5 / +0.8</td></tr>
-            <tr><td>Running back</td><td>62 + 2.0 × avg + 0.19 × avg²</td><td>+2.5 / +1 / +0.3</td><td>+2 / +0.5</td></tr>
-            <tr><td>Wide receiver, tight end, defensive back</td><td>60 + 2.1 × avg + 0.21 × avg²</td><td>+2.5 / +1 / +0.3</td><td>+2 / +0.5</td></tr>
-            <tr><td>{['Defensive line', ...(LB_LIVE ? ['linebacker'] : []), ...(OL_LIVE ? ['offensive line'] : [])].join(', ')}</td><td>60 + 2.1 × avg + 0.21 × avg²</td><td>None</td><td>+2 / +0.5</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>Bonuses only apply to complete builds, and a quarterback loses his balance bonus if any rating is an F. For reference, a complete build with every rating the same scores: all 3s (C) 70 to 72 depending on position, all 5s (B-) 78 or 79, all 8s (A-) 93 to 95, and nine S ratings hit the 99 cap.</p>
-      <div className="wk-weights">
-        <Weights title="Quarterback" rows={QB_W} /><Weights title="Running back" rows={RB_W} /><Weights title="Wide receiver" rows={WR_W} /><Weights title="Tight end" rows={TE_W} /><Weights title="Defensive back" rows={DB_W} /><Weights title="Defensive line" rows={DL_W} />{LB_LIVE && <Weights title="Linebacker" rows={LB_W} />}{OL_LIVE && <Weights title="Offensive line" rows={OL_W} />}
-      </div>
-      <h3 id="overall-nba">Basketball</h3>
-      <pre className="wk-pre">{`avg = weighted average of your ten ratings
-OVR = min(99, round(57 + (avg − 1) / 9 × 44))`}</pre>
-      <p>That maps a build of all 1s to 57 and all 10s to 99. Guards are scored on five big things (jump shot, speed, size, finishing, IQ) with passing, handles and perimeter defense behind them; bigs live on finishing, size, interior defense and rebounding.</p>
-      <div className="wk-weights"><Weights title="Guard" rows={G_W} /><Weights title="Big" rows={B_W} /></div>
-      {SOCCER_LIVE && (
-        <>
-          <h3 id="overall-soccer">Soccer</h3>
-          <p>A striker's overall uses basketball's scale: the weighted average of his nine ratings, all 1s a 57 and all 10s a 99. Finishing and positioning count the most, then dribbling and composure: the things that put the ball in the net. Size comes from his height and weight, like a defensive back's.</p>
-          <div className="wk-weights"><Weights title="Striker" rows={ST_W} /></div>
-        </>
-      )}
-
-      <h2 id="archetypes">Archetypes</h2>
-      <p>The name under your overall comes from the overall tier and your two strongest traits. A 90+ quarterback whose best traits are legs and arm is an <b>Elite Dual Threat</b>; arm and accuracy make a <b>Gunslinger</b>; a tight spread across the board is a <b>Franchise Cornerstone</b>. At 95+ two 10-or-better ratings in arm and legs read <b>Once-in-a-Generation Talent</b>. Below 68 the names get honest: <b>Raw Talent</b>, <b>One-Trick Pony</b>, <b>Clipboard Manager</b>, <b>Practice Squad Arm</b>.</p>
-    </>
-  )
-}
-
-// ── Seasons ──────────────────────────────────────────────────────────────────
-function SeasonsPage({ go }) {
-  return (
-    <>
-      <p className="wk-hat">For how the overall that drives these numbers is scored, see <Link go={go} to="gameplay" hash="overall">Gameplay § Overall rating</Link>.</p>
-      <h2 id="nfl">Simulating an NFL season</h2>
-      <p>When the build is complete you spin for (or pick) a team, and the season runs game by game. Each position has its own engine written the same way: your attributes set a per-game win chance and a set of stat baselines, the team you land on pushes both, and every game adds variance.</p>
-      <h3 id="nfl-team">Your team matters</h3>
-      <p>Every NFL team carries an <b>offense</b> and a <b>defense</b> grade from 1 to 10, where 5 is league average. Those grades feed your win chance (defense slightly more than offense), your supporting-cast stats, and how often you get sacked. In All-Time mode the franchises use their historical-peak grades, and the opponent's grades count at full weight instead of 60%.</p>
-      <h3 id="nfl-schedule">The schedule</h3>
-      <p>Seventeen games built like the real league: six divisional games (each rival twice), four against each of two same-conference divisions, four against a cross-conference division, and three flex games, shuffled with nine home dates and eight on the road. Cold-weather outdoor stadiums see bad weather in about 18% of games, which trims completions and yards.</p>
-      <h3 id="nfl-winning">Winning (quarterback example)</h3>
-      <pre className="wk-pre">{`win chance = 22%
-  + accuracy × 11%  + processing × 10%  + vision × 9%
-  + arm × 7%  + pocket presence × 7%  + playmaking × 5%  + legs × 4%
-  + leadership × 3%  + size × 2%
-  + team offense × 5.5%  + team defense × 6.5%
-  − penalty for an overall under 80 (steeper under 75, 70 and 67)
-clamped between 15% and 84%        (attributes count as rating ÷ 11)`}</pre>
-      <p>Stats come from the same ratings. A quarterback's passing yards per game start at 138 and climb with arm (up to +65), accuracy (+45), vision (+24), pocket presence (+14), playmaking (+10) and the team's offense (+16). Completion percentage is mostly accuracy; touchdown rate is accuracy, vision and processing; interceptions fall with processing first. Rushing yards are almost entirely legs. Scores are snapped to real football numbers (sevens and threes), and the game log, best game and season totals are kept for the report.</p>
-      <h3 id="nfl-playoffs">Playoffs</h3>
-      <ul>
-        <li><b>Getting in.</b> Ten wins makes the playoffs. Nine wins is a coin flip; eight wins gets in about 6% of the time.</li>
-        <li><b>The bye.</b> Fourteen wins earns a first-round bye; thirteen wins earns one 60% of the time. With a bye you need three playoff wins for the title instead of four.</li>
-        <li><b>Each game.</b> A playoff game starts at 30% and moves with your overall (up to about +61% on a scale that treats 97 as elite) and the gap between your team and the opponent's (±41%), plus 3% for home field. Opponents come from each conference's contender pool, never your own team, and the Super Bowl opponent from the other conference's elite.</li>
-        <li><b>Weather and overtime.</b> Cold-weather hosts bring snow or rain that lowers scoring; close matchups go to overtime about one game in five.</li>
-      </ul>
-      <h3 id="nfl-awards">Awards</h3>
-      <p>MVP voting is about production. Combined touchdowns are the biggest factor (50 or more adds 52%; 30 is the floor to be considered at all), total yards next (5,500 adds 32%), then overall, wins and a playoff berth. Like the real vote, it's settled on the regular season: nothing that happens in the playoffs counts. Fewer than ten wins and you are out of the race; All-Time seasons are judged 20% harder, and nobody is ever more than a 90% lock. Lose the vote and a real MVP-calibre player takes it with a stat line built to top yours. Running backs, receivers and tight ends chase Offensive Player of the Year on the same principle; defensive backs and defensive linemen chase Defensive Player of the Year.</p>
-      {OL_LIVE && <p>An offensive lineman's award is <b>Protector of the Year</b>, the NFL's award for its best lineman (first given for the 2025 season, to Bears guard Joe Thuney, and voted by a panel of former linemen). The case is the season's grade with pass protection weighing most, then the sacks, the flags, a full season of starts and the team's record; the rivals are the award's real finalists. Whoever wins it is on the First-Team All-Pro line, which is voted spot by spot. A lineman's <b>season grade</b> (0–100) is read off the season he had: his pressure rate and sacks allowed for the pass half (60%), his run block win rate and pancakes for the run half (40%), less the flags past the fifth. An elite year grades in the 90s, a good starter in the high 70s to mid 80s, an average one in the 60s. An offensive lineman is never the Super Bowl MVP.</p>}
-
-      <h2 id="nba">Simulating an NBA season</h2>
-      <p>Build-A-Bucket plays 82 games, the play-in, and four best-of-seven rounds. Here your team's strength sets the baseline and your build moves it; in All-Time mode you are one star among legends, so the team counts for more.</p>
-      <h3 id="nba-team">Team strength</h3>
-      <p>Every team has an offense and a defense rating out of 100, calibrated to the 2025–26 standings (the Thunder and Spurs at the top, the Wizards and Pacers at the bottom). The average of the two becomes a baseline win rate between 13% and 77%. All-Time teams use their peak eras: the 73-win Warriors' offense, the Russell and Bird Celtics' defense, the Jordan Bulls.</p>
-      <h3 id="nba-boost">Your boost</h3>
-      <pre className="wk-pre">{`delta = (OVR − 82) / 17
-boost = delta ≥ 0 ? min(+20%, delta × 20%) : max(−10%, delta × 10%)
-All-Time: boost × 0.45, capped at +9% / −5%
-win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
-      <p>An 82 build adds nothing. A 99 adds the full 20 points. Below 82 the penalty is gentler than the reward. Then 82 games are played one at a time at that chance, each with a realistic score and your line for the night.</p>
-      <h3 id="nba-stats">Your numbers</h3>
-      <p>Per-game averages come from composites of your ratings. A guard's scoring is jump shot (32%), finishing (24%), speed (18%), size (12%), handles and clutch; a big's is finishing (50%), jump shot (25%), playmaking and clutch. Rebounding leans on size and bounce, assists on passing or playmaking plus IQ, steals on perimeter defense and IQ, blocks on size and interior defense. Shooting splits follow: a 0 jump shot never attempts a three, an elite one approaches 45% from deep, and free throws track jump shot and IQ.</p>
-      <h3 id="nba-playoffs">Standings, play-in, playoffs</h3>
-      <ul>
-        <li>The other fourteen teams in your conference play their own 82 games from their ratings, and you are seeded by wins.</li>
-        <li>Seeds 1–6 go straight in. Seeds 7–10 play the <b>play-in</b>: the 7 and 8 get two chances, the 9 and 10 need two straight wins, with a small edge or handicap on each game.</li>
-        <li>Series are best of seven. Each game uses the <b>log5</b> formula between your win rate and the opponent's, stretched 12% so the better team wins more decisively, with a +4% playoff bump for you. The bracket is real: the other series in your half are simulated so your next opponent is whoever actually won.</li>
-        <li>The Finals opponent is one of the other conference's elite teams with 52–64 wins.</li>
-      </ul>
-      <h3 id="nba-awards">Awards</h3>
-      <p>MVP is scored as <b>2 × PPG + RPG + 1.5 × APG</b> against a pool of real candidates with MVP-level lines. Beat the best of them and it is yours; fall short and the vote becomes a lottery weighted by score to the power of 2.5, so a near miss still has a real chance. Defensive Player of the Year goes to a build of 80 or better averaging 2.8 blocks and 1.5 steals; otherwise the award goes to the league's rim protector.</p>
-      {SOCCER_LIVE && (
-        <>
-          <h2 id="soccer">Simulating a soccer season</h2>
-          <p>The striker takes the place of his club's or his nation's first-choice No. 9. The team's real attack and defence ratings already include that player, so the side scores more or less in every match by how much better or worse the build is than the man he replaced.</p>
-          <h3 id="soccer-club">Champions League</h3>
-          <ul>
-            <li>The wheel deals the 36 clubs of the 2026-27 Champions League. His season is his club's campaign: eight league phase matches, two against clubs from each pot, then the top eight go to the Round of 16, ninth to 24th play two-legged play-offs, and two-legged knockouts lead to a one-match final.</li>
-            <li>Every match is played from a goal model: goals off attack against defence, home advantage, and the Dixon–Coles correction for low scores.</li>
-            <li>His goals are a share of his team's goals, drawn from his expected goals; shots, xG, assists and a match rating come from the same match, so the line always adds up.</li>
-          </ul>
-          <h3 id="soccer-wc">World Cup</h3>
-          <p>The 2026 format: 48 nations in twelve groups of four, the top two and the best eight third-placed sides into a Round of 32, then single-match knockouts with extra time and penalties. A finalist plays eight matches.</p>
-          <h3 id="soccer-awards">Awards</h3>
-          <p>The <b>Top Scorer</b> award goes to the Champions League's (or the World Cup's <b>Golden Boot</b> to the tournament's) top scorer, raced against the real players of every club. A Champions League season also has UEFA's <b>Player of the Season</b> and <b>Young Player of the Season</b>; a World Cup has the <b>Golden Ball</b>. Midfielders count for the player awards.</p>
-        </>
-      )}
-    </>
-  )
-}
-
-// ── Career ───────────────────────────────────────────────────────────────────
-function CareerPage({ go }) {
-  return (
-    <>
-      <p className="wk-lead"><b>Career</b> follows one player you build from the combine to retirement, in football (QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}{OL_LIVE ? ', OL' : ''}{K_LIVE ? ', K' : ''}) or basketball (guard, big). You name him, and every season, contract and decision is his. There are three save slots per sport, and a career runs at most 20 seasons, starting in 2026.</p>
-
-      <h2 id="draft">The combine and the draft</h2>
-      <ul>
-        <li><b>The build.</b> A normal spin-and-pick build becomes the player's starting ratings. His age starts at 21–22 in football and 19–20 in basketball.</li>
-        <li><b>The combine.</b> Three drills played as mini-games, matched to the position (the 40, the 3-cone, the bench, a route-throwing accuracy drill for quarterbacks; sprints, lane agility and spot-up shooting in basketball). The results move the projected pick by up to nine picks in football and three in basketball. A <b>pro comparison</b> (the real player, current or all-time, whose grades sit closest) is shown before the first drill.</li>
-        <li><b>Interviews.</b> Four teams near the projected slot ask questions. Answers raise or lower each team's interest.</li>
-        <li><b>Draft day.</b> Seven rounds in football, two in basketball. Need and interview interest decide where he goes, and the pick sets the rookie deal.</li>
-      </ul>
-
-      <h2 id="seasons">Seasons</h2>
-      <ul>
-        <li><b>Week by week.</b> Football advances one week at a time; basketball ten games at a time. The season is the same engine described on <Link go={go} to="seasons">Seasons</Link>, with the career's own team around the player.</li>
-        <li><b>Decisions.</b> Two or three times a season a moment stops the sim: a game on the line, a trade deadline offer, resting after clinching, playing out a lost year. Each choice lists what it does, and some are gambles with the odds shown.</li>
-        <li><b>The depth chart.</b> A player who isn't the best at his spot starts as a backup. In football he sits until the job comes his way; in basketball he comes off the bench all year in a smaller role.</li>
-        <li><b>Goals.</b> Three goals a year, sized to the overall. A football backup is judged per start and on winning his starts; a basketball reserve's numbers are sized for bench minutes.</li>
-        <li><b>Injuries.</b> The chance rises as durability falls and after age 31. Sit out, or play through it with two physical traits down for a while and a chance it gets worse.</li>
-        <li><b>Durability.</b> In football and basketball it starts from the real body behind the Size pick, his height and weight against others at his position: a thick frame for his height holds up better, a thin one breaks down more. Most knocks heal over the offseason. A season-ending injury, playing through one, and the years past his prime take it down for good. Body work raises it.</li>
-        <li><b>Seasons vary.</b> No two years play the same: form comes and goes, and short hot and cold stretches happen.</li>
-        <li><b>Playoffs.</b> Football's four rounds to the Super Bowl; basketball's play-in and four best-of-seven series. Each round turns on a mini-game played in the moment.</li>
-      </ul>
-
-      <h2 id="offseason">The offseason</h2>
-      <ul>
-        <li><b>Recap</b> of the year: the record, the numbers, the goals met, awards.</li>
-        <li><b>Contract.</b> When a deal runs out, three teams make offers: the current team, a contender paying less, and a rebuilding team paying more. Sit down with one and push: more money, another year, a no-trade clause, a starter guarantee. Each ask costs the team's patience (shown as a range with the odds of the higher cost); run it out and they walk. Leverage (recent seasons, reputation, age) sets how much patience there is.</li>
-        <li><b>Moves.</b> The roster turns over, one offseason event lands (a new coach, a mentor, a lingering camp tweak, a rival loading up), and the depth chart is set. Once an offseason the player can <b>demand a trade</b>: usually granted, always a reputation hit.</li>
-        <li><b>Camp.</b> One hard drill in front of the coaches. Win it for legacy points and a chance at a development point.</li>
-        <li><b>Development.</b> A point every offseason, two after an award or All-Pro/All-NBA year. Each raises one trait a grade. Size can be raised twice in a career, speed and bounce three times.</li>
-      </ul>
-
-      <h2 id="reputation">Reputation</h2>
-      <p>Reputation runs from 1 to 10. Goals met and titles raise it; bad seasons and trade demands lower it. A good name earns more money and longer contracts, wins depth-chart ties, draws the good offseason breaks, and can land a <b>shoe deal</b> (and later a signature shoe), which pays every year and adds to the legacy. A bad name does the opposite.</p>
-
-      <h2 id="aging">Aging and retirement</h2>
-      <p>Young players can grow a trait on their own. Age takes a grade at a time, spread over the traits that really age: speed, burst and bounce go first (a running back’s from 26, most positions around 29), strength and power a few years later, technique after that, and the reads, leadership and the jump shot never fade. A trait rarely drops two years running, and some offseasons cost nothing. Offensive linemen and kickers hold what they have the longest. Two development points of offseason work hold a trait that is due to drop, or win back a lost grade as far as the player’s age allows, and a durable body ages slower. A player can retire from 29 or after eight seasons. The career ends on its own at 40 (42 for quarterbacks), after 20 seasons, or when free agency brings no offers.</p>
-
-      <h2 id="legacy">Legacy and the Hall of Fame</h2>
-      <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 (half after the 8th)
-       + All-Pro/All-NBA × 10 + awards (below)
-       + rings × 20 + playoff years × 3 + production + records × 8
-       + small camp, shoe-deal and earnings bonuses
-
-awards, football: MVP and DPOY 18, 26, 30, then 32 each
-                  OPOY and Protector of the Year 18, 24, 27, then 28 each
-awards, basketball: MVP 18, then 22 each`}</pre>
-      <p>An award is worth more each time it is won again: a second MVP says more than the first, a third more than the second. Football's records now include the career marks at each position (passing yards and touchdowns, rushing yards, receiving yards, receptions, interceptions, sacks, tackles): the week a career passes one, the game calls it, and the totals card lists each mark with the career's number beside it. An offensive lineman's First-Team All-Pros carry 10 more each, the way the greats' do, since Protector of the Year did not exist before 2025; a year he wins the award counts the award instead.</p>
-      <p>The same formula scores the real greats from their real careers (seasons, Pro Bowls or All-Star picks, AP First-Team All-Pro or All-NBA teams, the position's award counted once a season, rings, playoff years, career stats and the all-time records they hold), so a finished career slots into the all-time list for its position (one top 25 for basketball). Records count once each, however many times a career raises its own. Camp and shoe-deal bonuses are the only points the greats don't get. Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>
-    </>
-  )
-}
-
-// ── Modes ────────────────────────────────────────────────────────────────────
-function ModesPage({ go }) {
-  return (
-    <>
-      <h2 id="career">Career</h2>
-      <p>One player from the combine to the Hall of Fame. It has its own page: <Link go={go} to="career">Career</Link>.</p>
-      <h2 id="squad-builder">Squad Builder</h2>
-      <p>Build more than one player and play a season with all of them on the same team. Pick the positions first (in football up to a starting lineup's worth of QBs, RBs, WRs, TEs, DBs and DLs; in basketball the spots you want to fill, PG to C, one build each), then build each one with the normal spins, one after another.</p>
-      <ul>
-        <li><b>The team.</b> Pick a real team. Its roster fills every spot you didn't build, and your builds take the starting jobs at their positions. A build better than the starter it replaces makes the team better; a worse one makes it worse.</li>
-        <li><b>The lineup.</b> In basketball, each build starts at the spot you picked it for. Drag them to swap: the 1, 2 and 3 trade places, so do the 4 and 5. The real starters fill the rest.</li>
-        <li><b>One season.</b> The whole squad shares one schedule and one record, playoffs included. Every build gets its own stat line and its own shot at the awards (one MVP a season).</li>
-        <li><b>Run it back.</b> After the season, add a player, cut one or change the team, and play another. One squad per sport at a time: New squad starts over.</li>
-      </ul>
-      <p>A season pays XP and coins like any other. Sandbox in Squad Builder is an unlock from the Shop, and a sandbox squad earns nothing.</p>
-      <h2 id="compete">Compete <span className="wk-tag">ONLINE</span></h2>
-      <p>Up to five real players build at the same time from the <b>same spins</b> (respins are your own). Three minutes on the clock; the highest overall wins, and an earlier submit breaks a tie. Places pay XP and coins and move an online rating through the tiers Rookie, Starter (900), Pro (1100), All-Star (1300), MVP (1500) and Legend (1750).</p>
-      <h2 id="auction">Trait Auction <span className="wk-tag">ONLINE</span></h2>
-      <p>1v1: two players, $20 each. A slot card is pulled and a real player is spun for it, his grade face down until the gavel. Bids go up $1 at a time: going once, going twice, and every bid puts the clock back up. You always keep $1 for each of your other empty slots, and a slot still empty when the auction ends gets a free agent (a C). The best overall wins; money left breaks ties.</p>
-      <h2 id="blacktop">Blacktop <span className="wk-tag">ONLINE · NBA</span></h2>
-      <p>Live 3v3 streetball: two guards and a big a side. Pick a spot in the lobby, build together in three minutes with team chat and a role (Balanced, Scorer, Playmaker, Lockdown), then play to 11, win by 2. Anyone who walks away mid-build gets an automatic build. There is also a 1v1 version.</p>
-      <h2 id="live">Leaving a live game</h2>
-      <p>Compete, Trait Auction and Blacktop lock your build in while the game is live. Leaving (or closing the app) is a forfeit: last place, no rewards, and −20 rating. Only one live game per device at a time.</p>
-      <h2 id="current">Current</h2>
-      <p>Today's rosters, starters and backups, at real ratings. Ratings move through the season as players do; the <Link go={go} to="ratings">Ratings</Link> page shows every one of them with the date each pool last changed.</p>
-      <h2 id="all-time">All-Time</h2>
-      <p>Legends pools (four quarterbacks per franchise, with the greats of every position behind them) and peak-era franchises. The sims are tuned so All-Time plays a few points easier: a handful more wins and a better shot at a title with the same build.</p>
-      <h2 id="salary-cap">Salary Cap <span className="wk-tag">DAILY · NBA</span></h2>
-      <p>A five-column board (Finishing, Shooting, Defense, Playmaking, Size &amp; Athleticism) with five price tiers from $50 down to $10, priced strictly by rating. Pick one card per column under the day's budget (130–170, drawn from the date). One Shuffle re-deals a row or a column and one Scout reveals a hidden grade. Everyone plays the same board; the leaderboard ranks overall, then budget used. Infinite mode is for practice.</p>
-      <h2 id="head-to-head">Head-to-Head</h2>
-      <p>Build live against a friend by code or a random opponent. <b>Football:</b> both finished builds play a full season and the better record wins, overall breaking ties. <b>Basketball:</b> a live 1v1 to 11 on the court. Inside buckets count one, shots from the arc two; steals and blocks flip possession; your make rates come from finishing, handles, speed, jump shot, bounce and IQ (size, playmaking and finishing for bigs), with size and speed edges paying off inside. Drive or Shoot adjustments steer your shot selection at a 12% efficiency cost.</p>
-      <h2 id="depth-chart">The Depth Chart <span className="wk-tag">MINI-GAME</span></h2>
-      <p>Three real players, one hidden stat (passing touchdowns, passing or rushing yards for quarterbacks; rushing yards or touchdowns for backs; receiving yards or touchdowns for receivers), ten seconds to order them. Get it right and the streak grows; miss once and it ends. Best streaks go on two boards: all-time, and a weekly board that resets every Monday.</p>
-      <h2 id="sandbox">Sandbox</h2>
-      <p>Flip on Sandbox from the build screen and the game is yours to bend. <b>Custom Ratings</b> opens every player's grades on 0–11 sliders, one player at a time or everyone at once, with a toggle at the top to switch between current players and All-Time legends (it opens on whichever you're playing). You can drop any player straight into a slot of your build, and pick any team for the season. Sandbox seasons are yours to enjoy but never save, rank or count toward lifetime awards.</p>
-      <h2 id="coins">Coins, the shop and the daily</h2>
-      <ul>
-        <li><b>Coins</b> come from seasons (more for playoffs, rings and awards), levels, online places, a free daily drop, and achievements.</li>
-        <li><b>The shop</b> sells cosmetics only: avatars, name colours and effects, name plates, victory effects and sounds, and courts. Some are level-locked or earned through achievements. Nothing in the shop changes a rating.</li>
-        <li><b>The daily challenge</b> rotates position and era, with the same spins for everyone. Daily logins build a streak with XP rewards at 3, 7 and 21 days.</li>
-        <li><b>Cards.</b> Every player you spin is collected into binder sets: franchises, positions, legends, decades.</li>
-      </ul>
-      {CBB_LIVE && (
-        <>
-          <h2 id="college-basketball">College Basketball <span className="wk-tag">NEW</span></h2>
-          <p>College Basketball is a mode inside Build-A-Bucket. You build a guard or a big from real college players, pick a school from the offers your build earns, and play a full college season, then enter the NBA Draft and carry the player into Career.</p>
-          <ul>
-            <li><b>The pools.</b> Current deals the 2026-27 rotations of 146 schools in eleven conferences: the SEC, Big Ten, Big 12, ACC, Big East, Pac-12, Mountain West, American, Atlantic 10, West Coast and Missouri Valley. All-Time deals each school's legends, one to three guards and wings and one to three bigs a school. The first wheel is a conference, the second one of its starters.</li>
-            <li><b>College ratings.</b> College players are graded against college players, two grades above the same player on the NBA scale. Size is height and weight and is the same at both levels.</li>
-            <li><b>Class years.</b> Start as a freshman, sophomore, junior or senior. Each season earns one to three upgrade points to spend on traits in the offseason. An underclassman who signs where the starter at his spot grades out better comes off the bench that year.</li>
-            <li><b>The season.</b> About 31 regular-season games against real opponents, with the AP Top 25 every week, then the conference tournament, Selection Sunday and the 68-team NCAA Tournament: 32 automatic bids, 36 at-large, the First Four, four regions, the Final Four. A team left out can play the NIT.</li>
-            <li><b>Awards.</b> The Wooden Award ceremony with five finalists and the vote, the Naismith, the position award (Cousy, West, Erving, Malone or Abdul-Jabbar), national Defensive Player of the Year, three All-America teams, all-conference teams and conference Player of the Year.</li>
-            <li><b>Draft stock.</b> After every season a scouting report projects the pick: top five, lottery, first round, second round or undrafted. Age counts, the way it does in the real draft: a freshman and a senior with the same season are not the same prospect. A player may enter the draft after any season.</li>
-            <li><b>Enter the NBA Draft.</b> The build becomes a new Career. Every trait drops two grades except Size, and the college draft projection sets where the Career draft starts him. Or return to school, or transfer through the portal, where a big season brings bigger programs.</li>
-            <li><b>Start in College.</b> A new basketball Career can start in college instead of at the combine: the build plays two grades up in college, and the boost comes off at the draft.</li>
-            <li><b>Saving.</b> College seasons are kept on the device and earn XP and coins like any season. They are not on the leaderboards.</li>
-          </ul>
-        </>
-      )}
-      <h2 id="pro">BAP Pro <span className="wk-tag">SUBSCRIPTION</span></h2>
-      <p>BAP Pro is an optional subscription. It adds 50% to the coins from every game, includes the Pro Vault's four looks while you're a member, removes ads on the website, doubles the free daily coins, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
-      <h2 id="leaderboards">Leaderboards and profiles</h2>
-      <ul>
-        <li><b>Saving.</b> Sign in and every completed season is saved with its build, record, stats and awards. Sandbox seasons and guest seasons are not saved.</li>
-        <li><b>Best Builds</b> lists saved seasons with an overall of 80 or better, ranked by overall and then by wins. <b>Worst Builds</b> does the opposite for everything under 80, because a 3–14 season deserves witnesses.</li>
-        <li><b>Career</b> boards total your saved seasons: wins, titles and awards, and they are what the profile page shows.</li>
-        <li><b>Share cards</b> render your finished build and season as an image you can post anywhere.</li>
-      </ul>
     </>
   )
 }
@@ -377,9 +106,10 @@ function RatingsPage({ query, pool }) {
       <div className="wk-table-wrap">
         <table className="wikitable">
           <thead><tr><th>Pool</th><th className="num">Current</th><th className="num">All-time</th><th>Last changed</th></tr></thead>
-          <tbody>{counts.map(c => <tr key={c.id}><td>{sportName(c.sport)} · {c.label}</td><td className="num">{c.current}</td><td className="num">{c.legends}</td><td>{fmtDate(c.updated)}</td></tr>)}</tbody>
+          <tbody>{counts.map(c => <tr key={c.id}><td>{poolName(c)}</td><td className="num">{c.current || '…'}</td><td className="num">{c.legends || '…'}</td><td>{fmtDate(c.updated)}</td></tr>)}</tbody>
         </table>
       </div>
+      {SOCCER_LIVE && <p>In soccer the two columns are the Champions League pool and the World Cup legends.</p>}
       <h2 id="table">All ratings</h2>
       <RatingsTable key={`${query}|${pool}`} initialQuery={query} initialPool={pool} />
       <p className="wk-hat" style={{ marginTop: 10 }}>Latest change across all pools: {fmtDate(RATINGS_DATES.all)}.</p>
@@ -450,36 +180,39 @@ function CreatorsPage() {
 }
 
 // ── Behind the scenes ────────────────────────────────────────────────────────
-function BehindPage() {
+function BehindPage({ go }) {
   return (
     <>
       <h2 id="ratings-from">Where the ratings come from</h2>
-      <p>Every rating is set by hand on the 0–11 scale, position by position, with anchors at the top: Dan Marino's arm is an 11, Tom Brady's processing and leadership are 11s, and current players are graded against those same posts. Current rosters are updated through the season; All-Time pools are curated per franchise. Team grades are calibrated to real results: the NFL's 1–10 offense and defense grades, the NBA's ratings out of 100 fitted to the 2025–26 standings.</p>
+      <p>Every rating is set by hand on the 0–11 scale, position by position, with anchors at the top: Dan Marino's arm is an 11, Tom Brady's processing and leadership are 11s, and current players are graded against those same marks. Current rosters are updated through the season; All-Time pools are picked franchise by franchise. Team grades are fitted to real results: the NFL's 1–10 offense and defense grades, the NBA's ratings out of 100 fitted to the 2025–26 standings{COLLEGE_ON ? ', and ESPN\'s power index for the college teams' : ''}.</p>
       <h2 id="random">How random the game is</h2>
-      <p>Spins are random, but the daily Salary Cap board is <b>seeded</b> from the date, so everyone plays the same board on the same day. Seasons are Monte Carlo: hundreds of individual coin flips at the probabilities on the <a href="/wiki/seasons">Seasons</a> page, which is why the same build can go 13–4 and 9–8 on different days. The engines never fudge a result after the fact; the stories, awards and box scores are read from what the dice produced.</p>
+      <p>Every build deals from its own seed, so reloading in the middle of a spin deals the same player again. The Daily Challenge, the Salary Cap board and every Compete pool are <b>seeded</b> the same for everyone, so all players see the same spins. Seasons are played one game at a time at the chances on the <Link go={go} to="seasons">Seasons</Link> page, which is why the same build can go 13–4 one day and 9–8 the next. A result is never changed after the fact: the stories, awards and box scores are read from what the games produced, and a season in progress comes back the same after a reload.</p>
       <h2 id="stack">What it runs on</h2>
-      <p>Build-A-Player is a React app built with Vite, served from Cloudflare Pages, with accounts, saves, leaderboards and the live Head-to-Head rooms on Supabase. It is an independent fan project by Playmaker Games LLC, with no affiliation to the NFL, the NBA, their teams or players.</p>
+      <p>Build-A-Player is a React app built with Vite and served from Cloudflare Pages. Accounts, saves and leaderboards are on Supabase, and the live games (Compete, the Trait Auction, Blacktop) run on a Cloudflare Worker that checks every result. It is an independent fan project by Playmaker Games LLC, with no tie to the NFL, the NBA, the NCAA, their teams or players.</p>
     </>
   )
 }
 
+// slug, title, the line on the Main Page (blurb), the page, its contents ([id, label, search words])
 export const PAGES = [
-  { slug: 'main', title: 'Main Page', heading: 'Build-A-Player Wiki', description: 'How Build-A-Player and Build-A-Bucket work: spins, ratings, overall formulas, season simulation, modes, every player rating, and the creators who play.', Component: MainPage,
-    toc: [['start', 'Start here'], ['two-games', 'The two games'], ['numbers', 'By the numbers']] },
-  { slug: 'gameplay', title: 'Gameplay', description: 'Spins, chips and respins, the 0–11 rating scale, positions and attributes, and the exact overall formulas and weights per position.', Component: GameplayPage,
-    toc: [['spinning', 'Spinning', 'spin reel respin team player chips tap'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', `QB RB WR TE DB DL${LB_LIVE ? ' LB' : ''}${OL_LIVE ? ' OL' : ''} guard big attributes`], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ...(SOCCER_LIVE ? [['overall-soccer', 'Soccer overall', 'OVR formula striker']] : []), ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
-  { slug: 'seasons', title: 'Seasons', description: 'How an NFL or NBA season is simulated: team grades, schedules, win chances, stats, playoffs, the Super Bowl, the play-in and awards.', Component: SeasonsPage,
-    toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY'], ...(SOCCER_LIVE ? [['soccer', 'Soccer season', 'simulate soccer football league'], ['soccer-club', 'Champions League', 'champions league league phase play-offs knockouts final'], ['soccer-wc', 'World Cup', 'group round of 32 penalties'], ['soccer-awards', 'Soccer awards', 'golden boot ballon d\'or golden ball player of the season']] : [])] },
-  { slug: 'career', title: 'Career', description: 'Career mode: the combine, interviews and draft, seasons and decisions, the depth chart, contracts and talks, reputation, aging, legacy and the Hall of Fame.', Component: CareerPage,
-    toc: [['draft', 'The combine and the draft', 'combine drills interviews draft rookie deal pro comp'], ['seasons', 'Seasons', 'moments decisions depth chart backup goals injuries playoffs'], ['offseason', 'The offseason', 'contract talks patience trade demand camp development points'], ['reputation', 'Reputation', 'rep shoe deal signature contract'], ['aging', 'Aging and retirement', 'retire age decline'], ['legacy', 'Legacy and the Hall of Fame', 'legacy score all-time greatest hall of fame records']] },
-  { slug: 'modes', title: 'Modes', description: 'Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, coins and the shop, BAP Pro, and leaderboards.', Component: ModesPage,
-    toc: [['career', 'Career'], ['squad-builder', 'Squad Builder', 'squad team lineup positions run it back season'], ['compete', 'Compete', 'online pool same spins rating tiers'], ['auction', 'Trait Auction', 'bid budget online'], ['blacktop', 'Blacktop', '3v3 streetball online lobby'], ['live', 'Leaving a live game', 'forfeit leave lock'], ['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['coins', 'Coins, the shop and the daily', 'coins shop cosmetics daily challenge streak cards'], ['pro', 'BAP Pro', 'subscription pro no ads vault badge'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save']] },
-  { slug: 'ratings', title: 'Ratings', description: 'Every player rating in Build-A-Player and Build-A-Bucket, current and all-time, sortable and searchable, with the date each pool last changed.', Component: RatingsPage,
+  { slug: 'main', title: 'Main Page', heading: 'Build-A-Player Wiki', description: `How Build-A-Player works: spins, ratings, overall formulas, seasons, Career${FRANCHISE_LIVE ? ', Franchise' : ''}${COLLEGE_ON ? ', the college modes' : ''}, every mode, rewards and every player rating.`, Component: MainPage,
+    toc: [['start', 'Start here'], ['sports', 'The sports'], ['numbers', 'By the numbers']] },
+  { slug: 'gameplay', title: 'Gameplay', blurb: 'Home, spinning, the 0–11 scale, positions and how the overall is worked out.', description: 'Home and the sport picker, spins and respins, the 0–11 rating scale, every position\'s ratings, and the overall formulas and weights.', Component: GameplayPage, toc: GAMEPLAY_TOC },
+  { slug: 'seasons', title: 'Seasons', blurb: 'How an NFL or NBA season is simulated, through the playoffs and the awards.', description: 'How a season is simulated: team grades, schedules, win chances, stats, playoffs and awards.', Component: SeasonsPage, toc: SEASONS_TOC },
+  { slug: 'career', title: 'Career', blurb: 'One player from the draft to the Hall of Fame: seasons, trades, contracts, development, legacy.', description: 'Career mode: the face creator, the combine and draft, seasons, trade demands and the deadline, contracts, development points and trait costs, aging, legacy and the Hall of Fame.', Component: CareerPage, toc: CAREER_TOC },
+  ...(FRANCHISE_LIVE ? [{ slug: 'franchise', title: 'Franchise', blurb: 'Run an NFL team: the coach, the cap, re-signing, free agency, scouting and the draft.', description: 'Franchise mode: the coach build, game day, play-callers, Black Monday, contracts and the cap, re-sign talks, free agency, scouting, the draft and potential.', Component: FranchisePage, toc: FRANCHISE_TOC }] : []),
+  ...(COLLEGE_ON ? [{ slug: 'college', title: 'College', blurb: `${andList([...(CFB_LIVE ? ['College Football'] : []), ...(CBB_LIVE ? ['College Basketball'] : [])])}: offers, class years, the season and the draft.`, description: 'The college modes: conferences, offers, class years, upgrade points, the season, awards, draft stock, the transfer portal and Start in College.', Component: CollegePage, toc: COLLEGE_TOC }] : []),
+  ...(SOCCER_LIVE ? [{ slug: 'soccer', title: 'Soccer', blurb: 'The striker\'s nine ratings, the Champions League and World Cup pools, and the season.', description: 'Soccer: the nine striker ratings, the Champions League wheel and season, the World Cup legends, and the soccer modes.', Component: SoccerPage, toc: SOCCER_TOC }] : []),
+  ...(BASEBALL_LIVE ? [{ slug: 'baseball', title: 'Baseball', blurb: 'Batters and pitchers.', description: 'Baseball: batters, pitchers and their ratings.', Component: BaseballPage, toc: [['ratings', 'The ratings', 'batter pitcher']] }] : []),
+  { slug: 'modes', title: 'Modes', blurb: 'Compete, the Trait Auction, Blacktop, Salary Cap, Squad Builder, the Depth Chart and Sandbox.', description: 'Current and All-Time, Compete, the Trait Auction, Blacktop, Salary Cap, Squad Builder, the Depth Chart mini game and Sandbox.', Component: ModesPage, toc: MODES_TOC },
+  { slug: 'rewards', title: 'Rewards', blurb: 'XP, levels, coins, the Shop, boosts, the Builder Pass, BAP Pro, cards and achievements.', description: 'XP and levels, the Daily tab, coins, the Shop, boosts, the Builder Pass, BAP Pro, cards and sets, and achievements.', Component: RewardsPage, toc: REWARDS_TOC },
+  { slug: 'leaderboards', title: 'Leaderboards', blurb: 'The Ranks tab: online, today\'s boards and records, and profiles.', description: 'The Ranks tab: online boards, today\'s boards, records by sport and position, and profiles.', Component: LeaderboardsPage, toc: LEADERBOARDS_TOC },
+  { slug: 'ratings', title: 'Ratings', blurb: 'Every player in every pool, sortable and searchable.', description: 'Every player rating in the game, current and all-time, sortable and searchable, with the date each pool last changed.', Component: RatingsPage,
     toc: [['table', 'All ratings', 'players table search sort']] },
-  { slug: 'creators', title: 'Creators', description: 'YouTubers, podcasters and TikTok creators who have played Build-A-Player and Build-A-Bucket, with their videos and shorts.', Component: CreatorsPage,
+  { slug: 'creators', title: 'Creators', blurb: 'YouTubers and podcasters who have played the game on camera.', description: 'YouTubers, podcasters and TikTok creators who have played Build-A-Player and Build-A-Bucket, with their videos.', Component: CreatorsPage,
     toc: [['submit', 'Made a video?', 'submit creator youtube tiktok']] },
-  { slug: 'behind-the-scenes', title: 'Behind the scenes', description: 'Where the ratings come from, how random the game is, and what Build-A-Player runs on.', Component: BehindPage,
-    toc: [['ratings-from', 'Where the ratings come from', 'anchors Marino Brady'], ['random', 'How random the game is', 'seeded Monte Carlo dice'], ['stack', 'What it runs on', 'React Vite Cloudflare Supabase']] },
+  { slug: 'behind-the-scenes', title: 'Behind the scenes', blurb: 'Where the ratings come from, how random the game is, what it runs on.', description: 'Where the ratings come from, how random the game is, and what Build-A-Player runs on.', Component: BehindPage,
+    toc: [['ratings-from', 'Where the ratings come from', 'anchors Marino Brady'], ['random', 'How random the game is', 'seeded dice seed'], ['stack', 'What it runs on', 'React Vite Cloudflare Supabase']] },
 ]
 
 export const SEARCH_INDEX = PAGES.flatMap(p => [

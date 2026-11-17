@@ -23,12 +23,15 @@ const RATINGS_DATES = {
   te:    lastChanged([d + 'tes.js', d + 'te-legends.js']),
   db:    lastChanged([d + 'dbs.js', d + 'db-legends.js']),
   dl:    lastChanged([d + 'dls.js', d + 'dl-legends.js']),
+  lb:    lastChanged([d + 'lbs.js', d + 'lb-legends.js']),
+  ol:    lastChanged([d + 'ols.js', d + 'ol-legends.js']),
+  k:     lastChanged([d + 'ks.js', d + 'k-legends.js']),
   guard: lastChanged([d + 'nba-guards.js', d + 'nba-guard-legends.js']),
   big:   lastChanged([d + 'nba-bigs.js', d + 'nba-big-legends.js']),
 }
 RATINGS_DATES.all = Object.values(RATINGS_DATES).sort().slice(-1)[0]
 // soccer's strikers (the wiki's table shows them once soccer is on); not in `all` while it's off
-RATINGS_DATES.st = lastChanged([d + 'soccer-strikers.js'])
+RATINGS_DATES.st = lastChanged([d + 'soccer-strikers.js', d + 'soccer-legends.js'])
 
 export default defineConfig(({ mode }) => ({
   define: {

@@ -69,6 +69,7 @@
 .wk-hat { font-style: italic; color: var(--wk-muted); font-size: 13.5px; padding-left: 1.4em; margin: 0 0 10px; border-left: 3px solid var(--wk-line); }
 .wk-pre { display: block; margin: 8px 0 12px; padding: 12px 14px; background: var(--wk-dark); border: 1px solid #22332a; border-radius: 8px; font-family: var(--mono, ui-monospace, Menlo, Consolas, monospace); font-size: 12.5px; line-height: 1.55; color: #cfeedc; overflow-x: auto; white-space: pre; }
 .wk-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; background: var(--wk-tint); color: var(--wk-green-dk); font-size: 10.5px; font-weight: 800; letter-spacing: .5px; vertical-align: middle; }
+.wk-loading { color: var(--wk-muted); font-size: 14px; padding: 18px 0; }
 
 /* tables */
 .wk .wikitable { border-collapse: collapse; background: #fff; border: 1px solid var(--wk-line); font-size: 13.5px; margin: 6px 0 14px; }

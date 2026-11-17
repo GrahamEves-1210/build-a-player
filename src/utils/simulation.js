@@ -109,7 +109,7 @@ export function valToGrade(val) {
 }
 
 // Mirrors the win probability coefficients — accuracy/processing/vision matter most
-const ATTR_WEIGHT = {
+export const ATTR_WEIGHT = {
   'accuracy':        0.17,
   'processing':      0.16,
   'arm':             0.15,
@@ -873,7 +873,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
 // ── RB SIMULATION ─────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
-const RB_ATTR_WEIGHT = {
+export const RB_ATTR_WEIGHT = {
   'speed':       0.14,
   'burst':       0.14,
   'strength':    0.14,
@@ -1516,7 +1516,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
 // ── WR SIMULATION ─────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
-const WR_ATTR_WEIGHT = {
+export const WR_ATTR_WEIGHT = {
   'hands':       0.14,
   'routeRunning':0.14,
   'speed':       0.14,
@@ -2118,7 +2118,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 // ── TE SIMULATION ─────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
-const TE_ATTR_WEIGHT = {
+export const TE_ATTR_WEIGHT = {
   'hands':        0.16,
   'routeRunning': 0.15,
   'size':         0.12,
@@ -2679,7 +2679,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 // ── DB SIMULATION ─────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
-const DB_ATTR_WEIGHT = {
+export const DB_ATTR_WEIGHT = {
   'speed':           0.14,
   'size':            0.06,
   'fluidity':        0.10,
@@ -3326,7 +3326,7 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
 //   Both  0.5-1 fumble recovery a year, 1-6 batted passes (J.J. Watt, 6'5", took
 //         that to double digits), a safety once in a long while.
 
-const DL_ATTR_WEIGHT = {
+export const DL_ATTR_WEIGHT = {
   'getOff':          0.16,
   'bend':            0.13,
   'blockShed':       0.13,
@@ -3795,7 +3795,7 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
 //   Brian Urlacher 2005: 121 tkl, 6 sacks (DPOY) · Derrick Brooks 2002: 117 tkl, 5 INT, 3 TD (DPOY)
 //   Roquan Smith 2022: 169 tkl, 4.5 sacks, 3 INT · Fred Warner 2023: 132 tkl, 4 INT, 2.5 sacks
 
-const LB_ATTR_WEIGHT = {
+export const LB_ATTR_WEIGHT = {
   'range':           0.15,
   'tackling':        0.15,
   'playRecognition': 0.14,
