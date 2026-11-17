@@ -14,6 +14,7 @@ import { planMoment, playMoment } from './inGame.js'
 import { SIMPLE_GAMES } from './minigamesSimple'
 import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
+import { nflSchedule, nbaSchedule } from './leagueSchedule'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
   calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, olGradeOf, olProtectorCase, lbStyle,
@@ -1398,7 +1399,24 @@ const ratingOf = (c, short) => { const S = sportOf(c); return S.talent ? teamRat
 const lineSpot = c => (c.pos === 'dl' ? dlSpot(c) : c.pos === 'ol' ? olSpot(c) : sportOf(c).isBucket ? hoopSpot(c) : null)
 const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short), spot: lineSpot(c) })
 // (never handed to a sim with a rating that isn't a number: soundTeam)
-function simTeam(c, fit) { const S = sportOf(c), t = S.teamOf(c.team); return soundTeam(S.simTeam(t, fit, c.nextMods ?? {}, c), t) }
+// (with the season's schedule on it, football and basketball: scheduleFor)
+function simTeam(c, fit) { const S = sportOf(c), t = S.teamOf(c.team), sc = scheduleFor(c); const out = soundTeam(S.simTeam(t, fit, c.nextMods ?? {}, c), t); return sc ? { ...out, schedule: sc } : out }
+// The season's schedule, drawn the way the league draws it (lib/leagueSchedule.js): football's division games home and
+// away, its rotations and same-place games, a bye; basketball's 82. Last season's finish (the same-place games) is read
+// off each team's rating and the league's moves. (2026-11-16: the sims drew 21 opponents and kept 17, and every re-run
+// of the season drew them again, so a rival came three times and a non-division team twice.)
+function scheduleFor(c) {
+  const S = sportOf(c)
+  if (S.x || S.isSoccer || !c.team) return null
+  if (S.isBucket) return nbaSchedule(c.team, c.season ?? FIRST_SEASON, S.teams.map(t => S.teamOf(t.short)))
+  const place = sh => { const t = S.teamOf(sh), d = c.league?.[sh]; return t.off + t.def + (Number.isFinite(d?.off) ? d.off : 0) + (Number.isFinite(d?.def) ? d.def : 0) + (Number.isFinite(d?.coach) ? 2 * d.coach : 0) }
+  return nflSchedule(c.team, c.season ?? FIRST_SEASON, place)
+}
+// the director re-runs the season on the schedule its first run was played on (a season saved before the schedule
+// was fixed keeps its own opponents too)
+// (the save keeps the team without it: the schedule is the base season's games)
+const unscheduled = t => { if (!t?.schedule) return t; const { schedule, ...rest } = t; void schedule; return rest }
+const onSchedule = (c, team, base) => { const S = sportOf(c); return S.x || S.isSoccer || !team || !base?.games?.length ? team : { ...team, schedule: base.games.map(g => ({ opponent: g.opponent, home: g.home })) } }
 // A side of the ball that isn't a number (see healLeague) falls back to the team's own rating; a sound team
 // comes back as it is, the same object
 function soundTeam(team, base) {
@@ -2165,7 +2183,7 @@ function careerMarksFor(c) {
   const t = careerTotals(c), held = new Set((c.seasons ?? []).flatMap(s => s.records ?? []))
   return recs.filter(x => !held.has(x.label)).map(x => ({ id: x.id, label: x.label, value: x.value, holder: x.holder, live: x.live, before: x.career(t) ?? 0 }))
 }
-const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, pre: dealtPre(c), ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team: onSchedule(c, team, base), simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, pre: dealtPre(c), ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
 // (a deadline trade: the new team's record over the games before he got there, so its record decides the playoffs)
 const dealtPre = c => { const d = c.active?.deadline; return d?.granted && d.pre ? { k: d.k, wins: d.pre.wins, losses: d.pre.losses } : null }
 export function startSeason(c) {
@@ -2228,7 +2246,7 @@ export function startSeason(c) {
     }
   }
   const feed = own ? own.feed ?? [] : benched ? [{ k: 0, note: S.isSoccer ? `${benched.behind} leads the line. ${c.name} starts the season ${benched.role === 'Rotation' ? 'in the rotation: some starts, minutes off the bench' : 'on the bench: a sub’s minutes, the odd start in the cup'}.` : benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation' : ''}.`, noteKind: S.isSoccer ? 'SQUAD ROLE' : benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
-  const next = { ...cc, phase: 'season', fit, role: own ? own.role : S.isSoccer ? S.x.role(cc) : dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share, ...(bye ? { bye: { wk: bye } } : {}), ...(own?.active ?? {}) } }
+  const next = { ...cc, phase: 'season', fit, role: own ? own.role : S.isSoccer ? S.x.role(cc) : dc.starter ? 'Starter' : 'Backup', simTeam: unscheduled(team), goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share, ...(bye ? { bye: { wk: bye } } : {}), ...(own?.active ?? {}) } }
   return [next, D]
 }
 // The unpredictable part of a year. Never shown, only felt:
@@ -3529,7 +3547,7 @@ export function deadlineTrade(c, D, aim = 'contender') {
   const note = `Deadline deal: the ${fromNick} trade ${c.name} to the ${toNick}. ${role}, and the ${toNick} are ${preW}-${k - preW}.`
   // (the games he played for the old team keep its logo)
   const feed = [...a.feed.map(e => (e.g ? { ...e, g: { ...e.g, tm: e.g.tm ?? from } } : e.chunk ? { ...e, tm: e.tm ?? from } : e)), { k, note, noteKind: 'TRADE DEADLINE' }]
-  n = { ...n, role: dc.starter ? 'Starter' : 'Backup', simTeam: team,
+  n = { ...n, role: dc.starter ? 'Starter' : 'Backup', simTeam: unscheduled(team),
     events: [...c.events, { year: yr, season: true, text: `Traded to the ${fit.name} at the deadline (${wkWord}), after demanding a trade${any ? '' : ' to a contender'}.` }],
     decisions: [...c.decisions, { year: yr, text: `Demanded a trade${any ? '' : ' to a contender'} at the deadline, dealt to the ${toNick}` }],
     active: { ...a, base, share, benched, feed, deadline } }

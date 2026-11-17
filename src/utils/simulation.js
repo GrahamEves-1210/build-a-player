@@ -277,6 +277,8 @@ function passerRating(comps, atts, yards, tds, ints) {
 // ── Schedule ──────────────────────────────────────────────────────────────────
 
 function buildSchedule(team) {
+  // a season that already has its schedule (Career: lib/leagueSchedule.js, the same opponents on every re-run)
+  if (Array.isArray(team?.schedule) && team.schedule.length) return team.schedule.map(({ opponent, home }) => ({ opponent, home }))
   // Fallback static schedule when no team is selected
   if (!team?.div) {
     return [
