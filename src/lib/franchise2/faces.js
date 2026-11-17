@@ -97,7 +97,7 @@ export const FACE_CHAIN = [['none', 'NONE'], ['gold', 'GOLD'], ['silver', 'SILVE
 export const FACE_EXPR = [['neutral', 'RELAXED'], ['slight', 'SLIGHT SMILE'], ['warm', 'WARM SMILE'], ['grin', 'BIG SMILE'], ['half', 'HALF SMILE']]
 // how often each shows (a count of 100 ESPN headshots in public/headshots, 11-16: 53 open smiles, 25 relaxed, 11
 // slight closed smiles, 8 warm closed smiles, 3 half smiles); a coach a little more reserved
-const EXPRS = [['grin', 46], ['neutral', 26], ['slight', 13], ['warm', 10], ['half', 5]]
+const EXPRS = [['warm', 38], ['slight', 30], ['neutral', 26], ['half', 6]]   // (owner 11-17: no BIG SMILE on generated players; it's only there when picked in Career's creator)
 const COACH_EXPRS = [['neutral', 34], ['slight', 24], ['warm', 18], ['grin', 16], ['half', 8]]
 // (from a stream of its own, keyed by his name, so his other parts keep their draws and he always wears the same face)
 export const exprOf = (key, coach = false) => pickW(seeded(`face5|${key}`), coach ? COACH_EXPRS : EXPRS)
