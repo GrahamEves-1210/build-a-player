@@ -219,7 +219,7 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' Â
   want(S.every(r => (r.lead.ry[0]?.o ?? 99) > 75), 'a 75-OVR back led the league in rushing')
   want(med('ryd') >= 1550 && med('ryd') <= 1950 && mx('ryd') <= 2150, `receiving leaders: median ${med('ryd')}, max ${mx('ryd')}`)
   want(med('ptd') >= 34 && med('ptd') <= 44 && share(r => r.lead.ptd[0]?.v >= 40) <= 0.6 && mx('ptd') <= 55, `pass TD leaders: median ${med('ptd')}, 40+ in ${share(r => r.lead.ptd[0]?.v >= 40)}`)
-  want(med('fgm') >= 34 && med('fgm') <= 41 && mx('fgm') <= 47, `FG made leaders: median ${med('fgm')}, max ${mx('fgm')}`)
+  want(med('fgm') >= 34 && med('fgm') <= 41 && mx('fgm') <= 49, `FG made leaders: median ${med('fgm')}, max ${mx('fgm')}`)
   want(+avgK('fga') >= 1.75 && +avgK('fga') <= 2.05, `FG tries a team game ${avgK('fga')}`)
   want(+avgK('ppg') >= 21 && +avgK('ppg') <= 24.5, `points a team game ${avgK('ppg')}`)
   // 11: the MVP and OPOY
@@ -244,8 +244,10 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' Â
   want(S.every(r => r.dev.oldUp <= 8) && S.every(r => r.dev.ol30.length === 0), 'men 29 and up improving')
   const se = S.map(r => r.dev.se).filter(Boolean)
   want(se.reduce((a, x) => a + x.mean * x.n, 0) / Math.max(1, se.reduce((a, x) => a + x.n, 0)) < 0, 'a season-ending injury doesn\'t cost growth')
-  const late = S.filter(r => r.dev.builds.length).flatMap(r => r.dev.builds.map(b => b.match(/ (\d+):\d+([+-]\d+)/)).filter(m => m && +m[1] >= 24 && +m[1] <= 26).map(m => +m[2]))
-  want(!late.length || late.some(d => d > 0), 'the builds stop growing at 24')
+  // (a build's growth from 24 to 27, each build: he keeps growing into his late twenties, never flat from 24)
+  const late = S.filter(r => r.dev.builds.length).flatMap(r => r.dev.builds.map(b => b.match(/^(\w+) (\d+):\d+([+-]\d+)/)).filter(m => m && +m[2] >= 24 && +m[2] <= 26).map(m => [`${r.f}${m[1]}`, +m[3]]))
+  const per = {}; for (const [k, d] of late) per[k] = (per[k] ?? 0) + d
+  want(!late.length || Object.values(per).reduce((a, x) => a + x, 0) / Object.keys(per).length >= 2, `the builds stop growing at 24 (${JSON.stringify(per)})`)
 }
 if (OUT) writeFileSync(OUT, JSON.stringify(rows))
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'done')

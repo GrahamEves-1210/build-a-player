@@ -109,7 +109,7 @@ export function seasonAwards(F) {
   // (Manning, Rodgers, Mahomes, Jackson: back to back at most). The same fatigue for Offensive Player of the Year.
   const seeds = new Set([F.po?.seeds?.AFC?.[0], F.po?.seeds?.NFC?.[0]].filter(Boolean))
   const won = (code, x) => wonBefore(F, code, x.p)
-  const tired = (code, x) => { const n = won(code, x); return n >= 2 ? 0.3 : n === 1 ? 0.1 : 0 }
+  const tired = (code, x) => { const n = won(code, x); return n >= 2 ? 0.6 : n === 1 ? 0.12 : 0 }
   const qbSeason = x => {
     const t = x.t, g = k => t[k] ?? 0, ypa = g('pa') ? g('py') / g('pa') : 6.5
     return (g('py') / 25 + g('ptd') * 4 - g('int') * 4 + g('ry') / 16 + g('rtd') * 4) / 330 + (ypa - 7.2) * 0.06 + (x.p.o - 85) * 0.006 - (g('int') >= 15 ? 0.5 : g('int') >= 13 ? 0.12 : 0)
