@@ -420,7 +420,7 @@ export function GameBoxSheet({ F, row, B: B0 = null, owner, f = 1, status = null
   // (the builds' faces, as everywhere else in Franchise)
   const faces = Object.fromEntries((F.builds ?? []).map((_, i) => { const p = F.teams[F.team].r.find(x => x.b === i); let src = null; try { src = p ? faceFor(F, p, F.team, true) : null } catch { src = null } return [String(i), src] }))
   return (
-    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} faces={faces} portal={portal} all onClose={onClose} rows={rows} status={status ?? (row.ot ? 'FINAL · OT' : 'FINAL')} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'}>
+    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} faces={faces} portal={portal} all label={TEAM[F.team].name.toUpperCase()} onClose={onClose} rows={rows} status={status ?? (row.ot ? 'FINAL · OT' : 'FINAL')} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'}>
       {kick.length > 0 && <div className="sq-box-sec"><span className="sq-box-h">KICKING</span><FbTable head={['KICKING', 'FG', 'XP', 'LONG', '50+']} rows={kick.map((k, i) => ({ k: `k${i}`, name: k.n.split(' ').slice(-1)[0], role: i ? row.opp : F.team, cells: [`${k.line[1]}/${k.line[0]}`, `${k.line[3]}/${k.line[2]}`, k.line[4] || '—', `${k.line[6] ?? 0}/${k.line[5] ?? 0}`] }))} /></div>}
       {Object.keys(opp.s).length > 0 && <FootballBox r={B.opp.r} game={opp} owner={owner} label={TEAM[row.opp].name.toUpperCase()} all />}
     </BoxSheet>

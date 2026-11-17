@@ -240,8 +240,8 @@ export function sortChartAfterCamp(F) {
   t.dc = Object.fromEntries(GROUP_KEYS.map(k => [k, ratedOrder(t, k, true).map(p => p.i)]))
   return t.dc
 }
-// The chart's out of date (in the season: a man back from injury, a jump at camp, a trade): a healthy backup rated
-// 3 or more over the starter ahead of him in his room. [{ k, starter, better }] (the Team screen offers the reset)
+// The chart's out of date (in the season: a man back from injury, a jump at camp, a trade): a healthy man rated 3 or
+// more over a starter ahead of him in his room (a backup over a starter, a WR3 over the WR1). [{ k, starter, better }] (the Team screen offers the reset)
 export function staleChart(F) {
   const C = depthChart(F, F.team), L = startersOf(F, F.team), out = []
   const on = new Set(Object.values(L).map(p => p.i))
@@ -256,6 +256,11 @@ export function staleChart(F) {
         const gap = spot ? (p.o - spotCost(spot, p.s)) - (st.o - spotCost(spot, st.s)) : p.o - st.o
         if (gap >= 3) { out.push({ k, starter: st, better: p }); break }
       }
+    }
+    // (and among the starters off the line: a WR3 rated well past the WR1 ahead of him gets fewer of the throws)
+    if (k !== 'ol' && !out.some(x => x.k === k)) {
+      const up = C[k].filter(p => on.has(p.i) && !p.in && !p.fl)
+      for (let i = 1; i < up.length; i++) { const hi = up.slice(0, i).find(x => x.b == null && up[i].b == null && up[i].o >= x.o + 3); if (hi) { out.push({ k, starter: hi, better: up[i] }); break } }
     }
     void n
   }

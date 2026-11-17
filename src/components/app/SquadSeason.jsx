@@ -358,7 +358,7 @@ function BucketBox({ r, game, owner, faces }) {
 // team's lines, onClose none: no close button)
 // (all: the builds' own numbers in the team's tables too, so the rushing table has the quarterback build's runs:
 // Franchise's box score)
-export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, portal = true, rows = null, status = null, children = null, className = '', all = false }) {
+export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, portal = true, rows = null, status = null, children = null, className = '', all = false, label = 'TEAMMATES' }) {
   useEffect(() => {
     if (!onClose) return undefined
     const k = e => { if (e.key === 'Escape') onClose() }
@@ -386,7 +386,7 @@ export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, 
         </div>
         {sport === 'bucket'
           ? <BucketBox r={r} game={{ ...game, g }} owner={owner} faces={faces} />
-          : <FootballBox r={r} game={game} owner={owner} faces={faces} all={all} />}
+          : <FootballBox r={r} game={game} owner={owner} faces={faces} all={all} label={label} />}
         <TeamStats sport={sport} r={r} game={g} rows={rows ?? (sport === 'bucket' ? [
           ['FG%', pct1(game.us.fgm, game.us.fga), pct1(game.them.fgm, game.them.fga)],
           ['3PT%', pct1(game.us.tpm, game.us.tpa), pct1(game.them.tpm, game.them.tpa)],
