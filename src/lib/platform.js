@@ -5,6 +5,18 @@ export const IS_APP = Capacitor.isNativePlatform()
 // 'ios' | 'android' | 'web'
 export const APP_PLATFORM = Capacitor.getPlatform()
 
+// The app shows jerseys and team tags where the website shows photos and logos (lib/appArt.js). The dev server
+// can show the app's art on the website with ?appsim=1 (it sticks for the tab; ?appsim=0 ends it). Dev only.
+const appSim = () => {
+  if (!import.meta.env.DEV) return false
+  try {
+    const q = new URLSearchParams(window.location.search).get('appsim')
+    if (q != null) sessionStorage.setItem('bap_appsim', q === '0' ? '' : '1')
+    return sessionStorage.getItem('bap_appsim') === '1'
+  } catch { return false }
+}
+export const APP_ART = IS_APP || appSim()
+
 // The website uses the app's look for its home and profile screens: the app's
 // home menu, profile card, shop, achievements, locker and the More sheet.
 // Game screens keep the website's own layout. IS_APP still decides anything

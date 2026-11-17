@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
+import { useFigureFace, usesDrawnHead } from '../lib/useFigureFace'
 import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
 import { useTapGuard } from '../lib/tapGuard'
@@ -637,7 +638,9 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
     ? Object.fromEntries(Object.entries(build).map(([k, v]) => [k, v ? { ...v, teamColor: team.color, teamColor2: team.color2, team: team.short } : v]))
     : build
 
-  const bucketPhoto = build[photoKey]?.photo || null
+  // (the app shows no photos: a drawn face in his skin tone instead, lib/useFigureFace.js)
+  const drawnHead = useFigureFace(build[photoKey])
+  const bucketPhoto = usesDrawnHead(build[photoKey]?.photo) ? drawnHead : (build[photoKey]?.photo || null)
 
   useLayoutEffect(() => {
     if (!modelRef.current) return
@@ -659,7 +662,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
   const hx        = 50
   const collarY   = 50 + (BUCKET_COLLAR_AY / BUCKET_FIG_H * 100 - 50) * BUCKET_FIGURE_SCALE
   const hpx       = BUCKET_HEAD.r * 2 * scale * 1.805 * BUCKET_FIGURE_SCALE * 1.05
-  const fc        = build['basketballIQ']?.faceCenter
+  const fc        = drawnHead ? null : build['basketballIQ']?.faceCenter
   const R         = hsImgRatio
   const objPosY   = fc && Math.abs(R - 1) > 0.05
     ? Math.max(0, Math.min(100, 100 * (0.58 - (fc[1] / 100) * R) / (1 - R)))

@@ -38,7 +38,7 @@ const BaseballApp = lazy(() => import('./components/BaseballApp.jsx'))
 import { BASEBALL_LIVE } from './lib/baseballLive'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
-import { IS_APP, APP_LOOK, APP_PLATFORM } from './lib/platform'
+import { IS_APP, APP_LOOK, APP_PLATFORM, APP_ART } from './lib/platform'
 // App shell (dock, Daily, Cards, shop, toasts). The website loads it too for
 // the app-look home and profile screens (APP_LOOK in lib/platform.js).
 const AppTabBar = (IS_APP || APP_LOOK) ? lazy(() => import('./components/AppTabBar.jsx')) : null
@@ -137,7 +137,8 @@ if (!IS_APP) import('./lib/railWatch').then(m => m.startRailWatch()).catch(() =>
 // dev server only: ?rail puts a simulated rail on the page and outlines anything left under it (lib/railGuard.js)
 if (import.meta.env.DEV && !IS_APP) import('./lib/railGuard').then(m => m.startRailGuard()).catch(() => {})
 
-createRoot(document.getElementById('root')).render(
+// The app: jerseys and team tags in place of photos and logos (lib/appArt.js), in before the first picture
+const start = () => createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <HelmetProvider>
@@ -155,6 +156,9 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+// and the leagues' trademarks out of its copy (lib/appTerms.js; after appArt, whose <img> hook it keeps)
+if (APP_ART) import('./lib/appArt').then(m => m.installAppArt()).then(() => import('./lib/appTerms')).then(m => m.installAppTerms()).catch(() => {}).finally(start)
+else start()
 // the native splash waits for the loading screen (capacitor.config.json); index.html
 // lets it go as soon as it paints, and this is the backup once the app's code runs
 if (IS_APP) import('@capacitor/splash-screen').then(m => m.SplashScreen.hide({ fadeOutDuration: 150 })).catch(() => {})

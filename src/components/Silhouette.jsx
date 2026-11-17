@@ -41,6 +41,7 @@ import OLFigureOverlay from './OLFigureOverlay'
 import DLFigureOverlay from './DLFigureOverlay'
 import LBFigureOverlay from './LBFigureOverlay'
 import KFigureOverlay from './KFigureOverlay'
+import { useFigureFace, usesDrawnHead } from '../lib/useFigureFace'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
 import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
@@ -508,7 +509,9 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const complete = types.every(t => build[t])
 
   // Headshot only from basketballIQ slot for bucket builds
-  const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
+  // (the app shows no photos: a drawn face in his skin tone instead, lib/useFigureFace.js)
+  const drawnHead = useFigureFace(isBucket ? build['basketballIQ'] : null)
+  const bucketPhoto = isBucket ? (usesDrawnHead(build['basketballIQ']?.photo) ? drawnHead : (build['basketballIQ']?.photo || null)) : null
   // the figure scales that make it fill the build screen; a model fits its box as-is
   const appBucket = (IS_APP || APP_LOOK) && isBucket && isMobile && !modelOnly
   // (the model keeps the build screen's bucket scale: the jersey overlay and the face
@@ -908,7 +911,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           const hx       = 50 + (hxRaw     - 50) * bucketScale
           const collarY  = 50 + (collarYRaw - 50) * bucketScale
           const faceChip = build['basketballIQ']
-          const fc = faceChip?.faceCenter
+          const fc = drawnHead ? null : faceChip?.faceCenter
           const hpx = BUCKET_HEAD.r * 2 * scale * 1.805 * bucketScale
           const R = hsImgRatio
           // Target face at ~58% of container: with clip bottom (89%) at collar,
@@ -919,7 +922,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           const objPos = `50% ${objPosY}%`
           const clipY = 45
           const faceScale = fc ? Math.max(0.93, Math.min(1.12, 1 + (42 - fc[1]) * 0.014)) : 1
-          const adj = faceChip?.faceAdjust || { dx: 0, dy: 0, scale: 1 }
+          const adj = (!drawnHead && faceChip?.faceAdjust) || { dx: 0, dy: 0, scale: 1 }
           const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
           const isGenericLight = bucketPhoto === '/genericlight.webp'
           const genericYAdj = isGenericLight ? 2.5 : isGeneric ? 4.5 : 0
