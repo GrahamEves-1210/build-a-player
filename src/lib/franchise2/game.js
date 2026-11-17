@@ -397,8 +397,9 @@ function snapOf(S, side, d) {
   // the clock: most of the way through the drive, and never on the half's last tick
   let ts = t + Math.round(d.dur * (red ? 0.85 : d.res === 'to' ? 0.6 : 0.8))
   ts = Math.max(t + Math.min(20, end - t - 6), Math.min(ts, end - R.int(4, 16)))
-  // (no moment once the game is decided: ahead with the ball inside the two-minute mark, a team kneels)
-  if (off && m > 0 && !S.ot && S.half === 2 && REG - ts <= 110) return null
+  // (ahead with the ball late: the snap that can end it comes before the two-minute mark, a first down there and he
+  // kneels; inside it, no moment: the knee)
+  if (off && m > 0 && !S.ot && S.half === 2 && REG - ts <= 110) { if (REG - t < 130) return null; ts = REG - R.int(115, 128) }
   n[which]++
   return {
     side: which, kind, ball: off ? 'us' : 'them', us, down, d: togo, y, goal: y + togo >= 100, t: Math.round(ts),
@@ -453,7 +454,7 @@ export function resolveSnap(S, out = {}) {
     const d = driveOutcome(y, e, R, ctx)
     d.dur = Math.round(d.dur * (ctx.late && ctx.m < 0 ? 0.45 : ctx.late && ctx.m > 0 ? 1.2 : 0.8) * (S.ot ? 0.72 : 1))
     // (ahead and still going at the two-minute mark: the knee, as on any drive)
-    if (!S.ot && S.half === 2 && ctx.m > 0 && (d.res === 'td' || d.res === 'fg') && S.t + d.dur >= REG - 110) { S.t = REG; logDrive(S, ball, from.t0, from.y0, 'kneel', Math.min(99, y)); S.kneel = 1; return }
+    if (!S.ot && S.half === 2 && ctx.m > 0 && (d.res === 'td' || d.res === 'fg' || REG - S.t <= 125) && S.t + d.dur >= REG - 110) { S.t = REG; logDrive(S, ball, from.t0, from.y0, 'kneel', Math.min(99, y)); S.kneel = 1; return }
     applyDrive(S, ball, d, R, from.t0, from.y0)
   }
   if (yards >= k.d || k.down < 3) goOn(ny)
