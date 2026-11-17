@@ -6,7 +6,7 @@
 // the same game).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { myVid, myVidKey, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
+import { myVid, myVidKey, myDevice, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
 import { clean, blockedIds, MIN_GAP_MS } from './chat'
 import { supabase, currentToken } from './supabase'
 import { getUsername } from './discord'
@@ -53,7 +53,8 @@ export { playOut }
 export function useBlacktopServer({ enabled, user, position, pools, types, build, player, onExit, onSeatPos }) {
   const [cosV, setCosV] = useState(0)
   useEffect(() => { const on = () => setCosV(v => v + 1); window.addEventListener('bap:cosmetics', on); return () => window.removeEventListener('bap:cosmetics', on) }, [])
-  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position, cos: myCosmetics() }), [user?.id, position, cosV]) // eslint-disable-line
+  // dev: this device, so the lobby gives it one spot (live/src/index.js Lobby clash; never shown to anyone)
+  const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position, cos: myCosmetics() }), [user?.id, position, cosV]) // eslint-disable-line
   const meRef = useRef(me); meRef.current = me
   // a game this device left before it was decided (reload, the app killed): it's a loss
   useEffect(() => {
@@ -158,7 +159,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     setPhase('queue'); setWaited(0); setLobbyChat([]); setKicked(false); setSpots({})
     lobbyRef.current = liveSocket(sz === 1 ? '/lobby1' : sz === 2 ? '/lobby2' : '/lobby', () => ({ t: 'hello', ...meRef.current }), m => {
       if (m.t === 'lobby') { setSpots(m.spots ?? {}); setLobbyHere(m.here ?? []); return }
-      if (m.t === 'bumped') { setBumped(true); setTimeout(() => setBumped(false), 2600); return }
+      // why: null (someone took it first), 'account' / 'device' (this account or device has a spot here already)
+      if (m.t === 'bumped') { setBumped(m.why || true); setTimeout(() => setBumped(false), 3200); return }
       if (m.t === 'match') return enterRoom(m.code, m.players, !!m.players.filter(p => p.bot).length)
       if (m.t === 'chat') {
         if (blockedIds().has(m.uid)) return
@@ -236,7 +238,14 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     return true
   }, [game, match, final, me.vid, user, position])
   const finish = useCallback(() => { book(); setPhase('result'); roomRef.current?.send({ t: 'done' }) }, [book])
-  const voteRematch = useCallback(() => roomRef.current?.send({ t: 'rematch' }), [])
+  // once a game: a double tap sent two votes before the first came back (the server counts one too)
+  const votedFor = useRef(null)
+  const voteRematch = useCallback(() => {
+    const g = final?.seed ?? match?.code
+    if (!g || votedFor.current === g) return
+    votedFor.current = g
+    roomRef.current?.send({ t: 'rematch' })
+  }, [final, match])
   const exit = useCallback(() => { leave(); onExit?.() }, [leave, onExit])
 
   // didn't finish in time: a CPU has the spot, and I'm out (it counts as leaving the game)
