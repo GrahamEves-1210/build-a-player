@@ -169,6 +169,10 @@ function calcStats(sel) {
 
 const PLAYED_KEY     = (str, uid) => uid ? `qbsal_play_${uid}_${str}`     : `qbsal_play_${str}`
 const SHUFFLED_KEY   = (str, uid) => uid ? `qbsal_shuffled_${uid}_${str}` : `qbsal_shuffled_${str}`
+// the day's picks so far, kept on the device: a reload or a killed tab picks them back up (everyone gets the same board,
+// so there's nothing to reroll). Only the daily board's: an Infinite board is a new one each time
+const PICKS_KEY = 'bap_sal_picks'
+const savedPicks = str => { try { const p = JSON.parse(localStorage.getItem(PICKS_KEY)); return p?.date === str && p.sel && typeof p.sel === 'object' ? p.sel : {} } catch { return {} } }
 // A day's shuffle as saved: a column ({ ci, players }) or a row ({ ti, row })
 const parseShuffle = saved => {
   try { const v = JSON.parse(saved); return { col: v?.players ? { [v.ci]: v.players } : {}, row: v?.row ? { [v.ti]: v.row } : {} } } catch { return { col: {}, row: {} } }
@@ -504,7 +508,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   const S = fbSalFor(position)
   const [mode,          setMode]          = useState(() => (position === 'qb' ? 'daily' : 'infinite'))
   const startDaily = mode === 'daily'   // a day's saved shuffle only belongs on the daily board
-  const [sel,           setSel]           = useState({})
+  const [sel,           setSel]           = useState(() => (mode === 'daily' ? savedPicks(activeDate.str) : {}))
   const [alreadyPlayed, setAlreadyPlayed] = useState(null)
   const [showLB,        setShowLB]        = useState(false)
   const [showLBPrompt,  setShowLBPrompt]  = useState(false)
@@ -775,7 +779,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
       }
     } catch {}
     setAlreadyPlayed(null)
-    setSel({})
+    setSel(savedPicks(dateStr))
   }
   // on a date or account change (an Infinite board is left alone: going back to the daily
   // one restores the day then)
@@ -822,6 +826,11 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     })
     setSel(newSel)
   }, [alreadyPlayed, effectiveGrid])
+
+  useEffect(() => {
+    if (mode !== 'daily' || alreadyPlayed) return
+    try { if (Object.keys(sel).length) localStorage.setItem(PICKS_KEY, JSON.stringify({ date: activeDate.str, sel })); else localStorage.removeItem(PICKS_KEY) } catch {}
+  }, [sel, mode, alreadyPlayed, activeDate.str])
 
   const totalCost       = Object.values(sel).reduce((s, p) => s + p.price, 0)
   const pickedAll       = Object.keys(sel).length === S.cols.length

@@ -31,6 +31,7 @@ import { supabase, rtSupabase, apiHeaders } from '../lib/supabase'
 import { track } from '../lib/track'
 import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
 import { readLive, startLive, bookLive, leaveLive } from '../lib/seasonLive'
+import { buildPageAtLoad, markBuildPage } from '../lib/buildSave'
 import { HEADSHOT_BASE } from '../utils/simulation'
 const ProfilePage = lazy(() => import('./ProfilePage'))
 import CustomRatingsModal from './CustomRatingsModal'
@@ -175,8 +176,6 @@ const LIVE_TYPES = { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES }
 // A Blacktop build spins the pool the server checks it against (blacktopCore seatKit), never
 // the mode the player was last in: an All-Time build left open made every pick a free agent
 const LIVE_SPIN_POOLS = { guard: seatKit('guard').pool.map(enrichPlayer), big: seatKit('big').pool.map(enrichPlayer) }
-// the Daily Challenge's build so far ({ key, build }): a reload mid-run picks it back up (startDaily)
-const DAILY_BUILD = 'bab_daily_build'
 const livePhoto = p => p?.photo ?? (NBA_HEADSHOTS[p?.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
 
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
@@ -422,6 +421,27 @@ const bucketHead = (
 )
 
 const POS_TYPES = { guard: GUARD_TYPES, big: BIG_TYPES }
+
+// A build in progress (bab_progress), saved after every placement so a reload or a killed tab picks it back up: the
+// build, its mode and position, which mode it's for (tk: a Squad Builder or Career build, with that career's player),
+// Sandbox's mark and its Starters Only / One Team picks. Its spin is saved beside it (bab_spin_result: the build's own
+// seed and the spin to deal next, so a reload never rerolls one). A Daily Challenge build counts only on its own day,
+// while that run is still going; a Compete pool or a Blacktop build is never kept (a reload forfeits those).
+const PROGRESS_KEY = 'bab_progress'
+const BUILD_PAGE_OF = { squad: 'squad-build', career: 'career-build' }
+function readProgress() {
+  if (readLive('bucket')) return null   // a season kept on the device: its build is the one that comes back
+  try {
+    const p = JSON.parse(localStorage.getItem(PROGRESS_KEY))
+    if (!p || (p.gameMode !== 'classic' && p.gameMode !== 'all-time') || !POS_TYPES[p.position] || !p.build || typeof p.build !== 'object') return null
+    if (p.tk && !BUILD_PAGE_OF[p.tk]) return null
+    if (p.daily) {
+      const r = JSON.parse(localStorage.getItem('bab_daily_run') || 'null'), dc = dailyState()
+      if (!(r && r.key === p.daily && r.key === dc.key && dc.sport === 'bucket' && !dc.done)) return null
+    }
+    return p
+  } catch { return null }
+}
 const POS_CATS  = { guard: GUARD_CATEGORIES, big: BIG_CATEGORIES }
 const VERSUS_POS_TYPES = { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES }
 const VERSUS_POS_CATS  = { guard: VERSUS_GUARD_CATEGORIES, big: VERSUS_BIG_CATEGORIES }
@@ -430,10 +450,20 @@ const VERSUS_POS_CATS  = { guard: VERSUS_GUARD_CATEGORIES, big: VERSUS_BIG_CATEG
 export default function BucketApp() {
   // a season kept on the device (lib/seasonLive.js): after a reload its build, mode and season wait on CONTINUE
   const [liveAt] = useState(() => readLive('bucket'))
-  const [page, setPage]               = useState('splash')
-  const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)
-  const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
-  const [build, setBuild]             = useState(() => liveAt?.build ?? {})
+  // a build in progress kept on the device (bab_progress above)
+  const [saved] = useState(readProgress)
+  // its Sandbox picks: only a plain Current or All-Time build, with Sandbox still on
+  const [savedPicks] = useState(() => {
+    let on = false; try { on = localStorage.getItem('bab_custom_mode') === '1' } catch {}
+    return saved && !saved.tk && !saved.daily && on
+      ? { starters: saved.starters === true, oneTeam: saved.starters !== true && saved.oneTeam?.short ? saved.oneTeam : null }
+      : { starters: false, oneTeam: null }
+  })
+  // a reload on the build page lands back on it (lib/buildSave.js); opened fresh, the build waits on Home's CONTINUE card
+  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : 'splash' })
+  const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? saved?.gameMode ?? null)
+  const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; if (saved) return saved.position; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
+  const [build, setBuild]             = useState(() => liveAt?.build ?? saved?.build ?? {})
   const figureRef = useRef(null)
   const captureFigure = useCallback(async () => {
     const el = figureRef.current
@@ -468,7 +498,8 @@ export default function BucketApp() {
   const [simInitialScreen, setSimInitialScreen] = useState(0)
   const [salaryReturnDate, setSalaryReturnDate] = useState(null)
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
-    try { const r = JSON.parse(localStorage.getItem('bab_spin_result')); return r?.starters || r?.lockedTeam ? null : r } catch { return null }
+    // (a Starters Only or One Team spin only with its own build, picked back up with those picks)
+    try { const r = JSON.parse(localStorage.getItem('bab_spin_result')); return (r?.starters && !savedPicks.starters) || (r?.lockedTeam && r.lockedTeam.short !== savedPicks.oneTeam?.short) ? null : r } catch { return null }
   })
   const [isBucketCustomMode, setIsBucketCustomMode] = useState(() => {
     try { return localStorage.getItem('bab_custom_mode') === '1' } catch { return false }
@@ -477,10 +508,10 @@ export default function BucketApp() {
     try { return JSON.parse(localStorage.getItem('bab_bucket_custom_ratings') || '{}') } catch { return {} }
   })
   const [showBucketCustomModal, setShowBucketCustomModal] = useState(false)
-  // Sandbox's Starters Only, for this build (in memory: a reload ends the build too). Only ever read through startersOn
-  const [startersPick, setStartersPick] = useState(false)
-  // Sandbox's One Team, for this build (in memory too): the first spin's team is the whole build's
-  const [oneTeamPick, setOneTeamPick] = useState(null)        // the team (an NBA_TEAMS row), or null
+  // Sandbox's Starters Only, for this build (kept with it: a reload picks it back up too). Only ever read through startersOn
+  const [startersPick, setStartersPick] = useState(savedPicks.starters)
+  // Sandbox's One Team, for this build (kept with it too): the first spin's team is the whole build's
+  const [oneTeamPick, setOneTeamPick] = useState(savedPicks.oneTeam)        // the team (an NBA_TEAMS row), or null
   const [oneTeamAsk, setOneTeamAsk] = useState(false)          // the team picker, open
 
   // Versus mode
@@ -502,7 +533,7 @@ export default function BucketApp() {
   const openSquadRef = useRef(null)
   const squadRef = useRef(null); squadRef.current = squad
   const btPhaseRef = useRef('idle')          // the live hook is declared further down; the dock handler reads it through this
-  const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
+  const lastPlayRef = useRef(saved?.tk ? BUILD_PAGE_OF[saved.tk] : null)   // the last mode page, so PLAY goes back to what you were doing (after a reload: the saved build's own page)
   const [vsCountdown,    setVsCountdown]    = useState(null)
   const lastOppRef = useRef(null)   // 1v1: who we were playing (kept after the room closes, for the they-left sheet)
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
@@ -519,7 +550,7 @@ export default function BucketApp() {
 
   // Once sandbox is ever turned on during a build session, taint it permanently
   // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
-  const sandboxTainted = useRef(isBucketCustomMode)
+  const sandboxTainted = useRef(isBucketCustomMode || !!saved?.sandbox || Object.values(saved?.build ?? {}).some(c => c?.sandbox))   // (a saved build keeps its mark through a reload)
   useEffect(() => {
     if (isBucketCustomMode) { sandboxTainted.current = true; clearSandboxHint() }
   }, [isBucketCustomMode])
@@ -997,7 +1028,7 @@ export default function BucketApp() {
   openSquadRef.current = openSquad
   // the squad's next player to build, on the normal build page (sandbox left on from the
   // plain modes doesn't carry in unless Squad Builder's Sandbox is unlocked: the switch goes off)
-  const squadBuilding = useRef(null)   // the slot on the build page right now (Home and back resumes it)
+  const squadBuilding = useRef(saved?.tk === 'squad' ? 'saved' : null)   // the slot on the build page right now (Home and back resumes it; after a reload the saved build is it)
   const startSquadBuild = useCallback((slot, sq = squadRef.current) => {
     handleStart(sq?.pool === 'alltime' ? 'all-time' : 'classic', slot.pos)   // (an ALL-TIME squad spins from the legends)
     squadBuilding.current = slot.id
@@ -1007,7 +1038,7 @@ export default function BucketApp() {
   const buildSquad = useCallback(sq => {
     const next = nextToBuild(sq)
     if (!next) { setPage('squad'); return }
-    if (squadBuilding.current === next.id && gameMode === (sq.pool === 'alltime' ? 'all-time' : 'classic') && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
+    if ((squadBuilding.current === next.id || squadBuilding.current === 'saved') && gameMode === (sq.pool === 'alltime' ? 'all-time' : 'classic') && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
     startSquadBuild(next, sq)
   }, [startSquadBuild, gameMode, position])
 
@@ -1017,15 +1048,12 @@ export default function BucketApp() {
   const [dailyRun, setDailyRun] = useState(() => {
     try { const r = JSON.parse(localStorage.getItem('bab_daily_run') || 'null'); const dc = dailyState(); return r && r.key === dc.key && dc.sport === 'bucket' && !dc.done ? r : null } catch { return null }
   })
-  useEffect(() => { try { if (dailyRun) localStorage.setItem('bab_daily_run', JSON.stringify(dailyRun)); else { localStorage.removeItem('bab_daily_run'); localStorage.removeItem(DAILY_BUILD) } } catch {} }, [dailyRun])
+  useEffect(() => { try { if (dailyRun) localStorage.setItem('bab_daily_run', JSON.stringify(dailyRun)); else { localStorage.removeItem('bab_daily_run'); localStorage.removeItem('bab_daily_build') } } catch {} }, [dailyRun])   // (bab_daily_build: the Daily's own save before bab_progress kept it, 11-17)
   const dailyLocked = !!dailyRun && !dailyState().done
-  // The run's build so far, kept on the device as it fills (football keeps it in bap_progress, App.jsx). A reload or
-  // the app closing mid-run used to bring the Daily back with an empty build on the next spins: every pick so far was
-  // thrown away, and once the spins ran past the day's set the server refused the score ("not the day's spins")
-  useEffect(() => {
-    if (!dailyRun || !dailyLocked || gameMode !== dailyRun.mode || position !== dailyRun.pos) return
-    try { localStorage.setItem(DAILY_BUILD, JSON.stringify({ key: dailyRun.key, build })) } catch {}
-  }, [dailyRun, dailyLocked, gameMode, position, build])
+  // The run's build so far is kept on the device as it fills, with every other build in progress (bab_progress, its
+  // daily: the run's key). A reload or the app closing mid-run used to bring the Daily back with an empty build on the
+  // next spins: every pick so far was thrown away, and once the spins ran past the day's set the server refused the
+  // score ("not the day's spins")
   const dailyLockedRef = useRef(dailyLocked)
   dailyLockedRef.current = dailyLocked
   const dailyLive = (IS_APP || APP_LOOK) && dailyLocked && (page === 'game' || page === 'sim')
@@ -1047,7 +1075,7 @@ export default function BucketApp() {
     // today's run, after a reload (or the app closed): the same run, with the build it had, on the spins it was on
     if (dailyRun?.key === dc.key) {
       let kept = null
-      try { const k = JSON.parse(localStorage.getItem(DAILY_BUILD) || 'null'); if (k?.key === dc.key) kept = k.build } catch {}
+      try { const k = JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null'); if (k?.daily === dc.key && k.gameMode === dc.mode && k.position === dc.pos) kept = k.build } catch {}
       const types = POS_TYPES[dc.pos] ?? GUARD_TYPES
       setIsBucketCustomMode(false)
       setGameMode(dc.mode)
@@ -1092,7 +1120,7 @@ export default function BucketApp() {
     handleStart('classic', pos === 'big' ? 'big' : 'guard'); setPage('career-build')
   }, [handleStart])
   // Career opens on its home: the three save slots (CareerIntro)
-  const careerNew = useRef({ slot: 0, name: null })
+  const careerNew = useRef((saved?.tk === 'career' && saved.cn) || { slot: 0, name: null })   // (a reload in the middle of the build: its player, from the save)
   const openCareer = useCallback(() => {
     setPage('career-intro')
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -1130,6 +1158,35 @@ export default function BucketApp() {
   // the team spin lives in the sim page's chunk: have it ready before the squad's team pick needs it
   useEffect(() => { if (page === 'squad' || page === 'squad-build') import('./BucketSimPage') }, [page])
   const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
+
+  // ── The build in progress, kept on the device (bab_progress, readProgress above) ──
+  // which mode the build on the page is for: a Squad Builder or Career build, a plain one (null), or a live one
+  // (a Compete pool, Blacktop, 1v1: never kept, a reload forfeits those)
+  const tkRef = useRef(saved?.tk ?? null)
+  if (page === 'squad-build') tkRef.current = 'squad'
+  else if (page === 'career-build') tkRef.current = 'career'
+  else if (page === 'game') tkRef.current = competeOn ? 'compete' : null
+  else if (isVersusMode) tkRef.current = 'live'
+  // (only a build this page has had: a page that never loaded the save leaves it alone)
+  const progressOwned = useRef(!!saved)
+  if (gameMode) progressOwned.current = true
+  // saved after every placement; gone Home, into Salary Cap or a live game, there's no build left to keep
+  useEffect(() => {
+    const tk = tkRef.current
+    if (!gameMode || gameMode === 'salarycap' || tk === 'compete' || tk === 'live') { if (progressOwned.current) { try { localStorage.removeItem(PROGRESS_KEY) } catch {} }; return }
+    try {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+        gameMode, position, build, tk, daily: dailyRun?.key ?? null,
+        sandbox: sandboxTainted.current || isBucketCustomMode,
+        starters: startersPick && isBucketCustomMode, oneTeam: oneTeamPick && isBucketCustomMode ? oneTeamPick : null,
+        ...(tk === 'career' ? { cn: careerNew.current } : null),
+      }))
+    } catch {}
+  }, [build, gameMode, position, dailyRun, page, isBucketCustomMode, startersPick, oneTeamPick])
+  // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
+  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
+  // Home's CONTINUE card: which build it is
+  const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
 
   // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
   // at load: the URL-sync effect resets the path to /bucket on the first render.
@@ -2173,7 +2230,7 @@ export default function BucketApp() {
               career={career}
               onCBB={CBB_LIVE ? () => { setPage('cbb'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'cbb' }) } : undefined}
               onCompete={() => setPage('compete')}
-              resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+              resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean) || savedSpinResult?.selectedQB)) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${resumeKind}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" home /></>}
               renderBucketFigure={(pos, ready, fast) => (
                 <>

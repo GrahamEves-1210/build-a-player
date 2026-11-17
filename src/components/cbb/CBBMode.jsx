@@ -32,6 +32,7 @@ import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isU
 import { randomName } from '../../lib/playerNames'
 import '../cfb/cfb.css'
 import './cbb.css'
+import { buildPageAtLoad, markBuildPage } from '../../lib/buildSave'
 import Wordmark from '../Wordmark'
 
 // ── College Basketball: a mode inside basketball (MORE WAYS TO PLAY), College Football's (components/cfb/CFBMode.jsx)
@@ -253,7 +254,9 @@ export default function CBBMode({ user, onHome, onCareer }) {
   const [failed, setFailed] = useState(false)
   const saved = useMemo(loadProgress, [])
   const [progress, setProgress] = useState(saved)
-  const [phase, setPhase] = useState('pick')   // 'pick' | 'build' | 'season'
+  // (a reload on the build or the season goes straight back to it, as it was: lib/buildSave.js)
+  const [phase, setPhase] = useState(() => (saved?.build && buildPageAtLoad('bucket') === 'cbb' ? (saved.result ? 'season' : 'build') : 'pick'))   // 'pick' | 'build' | 'season'
+  useEffect(() => { markBuildPage('bucket', phase === 'pick' ? null : 'cbb') }, [phase])
   const [pos, setPos] = useState(saved?.pos ?? 'guard')
   // Current or All-Time: the pool this build's wheels deal from (cfbShared CBB_POOLS). era is the build's, kept with
   // it (a reload mid-build deals the same pool); pickEra is the switch on the first screen, which the next new build takes
