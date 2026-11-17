@@ -67,5 +67,28 @@ for (const k of ['0-2', '2-6', '6-12', '12-20', '20-30', '30-45', '45+']) { cons
 console.log('\nthe board\'s word         seasons   shown   titles')
 for (const [k, x] of Object.entries(words).sort()) console.log(`  ${k.padEnd(22)}  ${String(x.n).padStart(6)}  ${pc(x.p / x.n)}  ${pc(x.w / x.n)}`)
 console.log(`\nall: shown ${pc(sumP / n)}, titles ${pc(sumW / n)}, Brier ${(brier / n).toFixed(4)} (a coin at the average: ${((sumW / n) * (1 - sumW / n)).toFixed(4)}) · ${((Date.now() - t0) / 1000).toFixed(0)}s`)
+// the old board's 'Contender' against his own team with him on it
+if (NB) {
+  let boards = 0, called = 0, worse = 0, boardsWorse = 0
+  for (let i = 0; i < NB; i++) {
+    const pos = i % 2 ? 'big' : 'guard', r = seeded(`tb-${i}`)
+    let c = C.newCareer({ sport: 'bucket', pos, build: buildFor(pos, r, 4 + (i % 3)), name: 'Cole Norwood', owner: 'Guest', games: 'advanced', slot: 0 })
+    c = C.skipCombine(c); c = C.runDraft(c)
+    // (his team: any of the thirty, the way a few seasons on he could be anywhere)
+    const to = S.teams[(i * 7) % S.teams.length].short
+    if (to !== c.team) c = C.signOffer(c, { team: to, fit: C.teamFit(to, pos, { sport: 'bucket', name: c.name }), years: 2, perYear: 5 })
+    const mine = C.titleOdds(c, c.team, 60)
+    let any = false
+    for (const t of S.teams) {
+      if (t.short === c.team) continue
+      if (C.teamFit(t.short, pos, { sport: 'bucket', name: c.name }).status !== 'Contender') continue
+      called++
+      if (C.titleOdds(c, t.short, 60) < mine) { worse++; any = true }
+    }
+    boards++; if (any) boardsWorse++
+  }
+  console.log(`
+the old board: ${called} 'Contender' calls over ${boards} boards; ${worse} (${pc(worse / Math.max(1, called))}) were a worse shot than his own team with him on it; on ${pc(boardsWorse / boards)} of the boards at least one was`)
+}
 await server.close()
 process.exit(0)

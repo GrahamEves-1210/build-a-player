@@ -79,7 +79,8 @@ const MVP_LEAN = { qb: 0.45, rb: 0.26, wr: -0.24, te: -0.5, edge: -0.75, dt: -0.
 const OFF_LEAN = { rb: 0.02, wr: 0.08, te: 0, qb: -0.08 }
 const DEF_LEAN = { edge: 0.08, dt: 0.08, lb: -0.06, cb: -0.1, s: -0.12 }
 export const awardValue = {
-  MVP: x => x.c + (x.w - 10) * 0.05 + (MVP_LEAN[x.g] ?? -1) + x.h * (x.g === 'qb' || x.g === 'rb' ? 1 : 0.7),
+  // (a back gets the voters' look only with a historic year: without one he's a step behind the quarterbacks)
+  MVP: x => x.c + (x.w - 10) * 0.05 + (x.g === 'rb' && !x.h ? -0.05 : MVP_LEAN[x.g] ?? -1) + x.h * (x.g === 'qb' || x.g === 'rb' ? 1 : 0.7),
   OPOY: x => (OFFENSE.has(x.g) ? x.c + (OFF_LEAN[x.g] ?? 0) + x.h : null),
   DPOY: x => (DEFENSE.has(x.g) ? x.c + (DEF_LEAN[x.g] ?? 0) + x.h * 0.6 : null),
 }
