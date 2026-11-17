@@ -140,6 +140,8 @@ console.log(`  wins: ${pct(wins.on, played.on)} with the sim playing the moments
     console.log(`  saves: a moment kept across a save (${v1.kind}, ${v1.down} & ${v1.d}); an old v7 save with a key moment waiting loads and replays its game (${again?.row?.hl ?? 'none'})`)
   }
 }
-const maxOff = Math.max(...rowsOn.map(x => x.n.off)), maxDef = Math.max(...rowsOn.map(x => x.n.def))
-if (maxOff > 3 || maxDef > 1) bad(`a game with ${maxOff} offense / ${maxDef} defense moments`)
+// (overtime has its own moment on each side past the regulation ones: game.js snapOf, 2026-11-17)
+const over = (x, side, max) => x.n[side] > max + (x.row?.ot ? 1 : 0)
+const tooMany = rowsOn.filter(x => over(x, 'off', 3) || over(x, 'def', 1))
+if (tooMany.length) bad(`a game with ${tooMany[0].n.off} offense / ${tooMany[0].n.def} defense moments${tooMany[0].row?.ot ? ' (overtime)' : ''}`)
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

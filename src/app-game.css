@@ -1272,6 +1272,8 @@ html:is(.is-app, .app-look) .tpm-team-btn { border-radius: 12px !important; }
 .ag-challenge-result b { font-family: var(--ag-display); font-weight: 400; font-size: 46px; line-height: 1; letter-spacing: 0; color: var(--ag-a1); }
 .ag-challenge-rank { padding: 3px 8px 2px; border-radius: 6px; color: var(--ag-on); background: var(--ag-grad); font-size: 15px; }
 .ag-challenge-note { font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); }
+.ag-challenge-why { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: 34em; font-family: var(--ag-body); font-size: 13px; line-height: 1.4; color: var(--ag-text, #fff); }
+.ag-challenge-retry { padding: 6px 12px; border: 1px solid currentColor; border-radius: 8px; background: none; color: inherit; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; cursor: pointer; }
 .ag-board { padding: 6px 14px 12px; }
 .ag-board-head { display: flex; justify-content: space-between; padding: 8px 2px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2.5px; color: var(--ag-muted); border-bottom: 1px solid var(--ag-line); }
 .ag-board-empty { padding: 16px 4px; font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); text-align: center; }
@@ -6458,6 +6460,9 @@ html:is(.is-app, .app-look) .qb-reveal-year { color: rgba(255,255,255,.8) !impor
   html.app-look:not(.is-app) .build-footer-section { margin-top: 0; }
   /* and the report card's last grades scroll up clear of the bottom ad rail */
   html.app-look:not(.is-app):not(.is-tablet) .build-slots { padding-bottom: calc(11px + var(--web-rail, 0px)); }
+  /* and the spun player's card stops at the top of the rail: its trait chips scroll inside it, the last one clear
+     of the ad (it ran on to the bottom of the window, the last chips under the rail) */
+  html.app-look:not(.is-app):not(.is-tablet) .game-layout:not(.ag-drop) .spin-panel-body { padding-bottom: var(--web-rail, 0px); }
 }
 
 /* Compete and Blacktop: how many are waiting in each queue right now (lib/liveCounts.js), only when someone is */

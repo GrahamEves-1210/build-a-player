@@ -367,7 +367,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
             ))}
             <span className="btl-vs" aria-hidden="true">VS</span>
           </div>
-          {bt.bumped && <div className="btl-bumped">Someone grabbed that spot first. Pick another.</div>}
+          {bt.bumped && <div className="btl-bumped">{bt.bumped === 'account' ? `${bt.me.name} already has a spot in this lobby on another device or tab.` : bt.bumped === 'device' ? 'This device already has a spot in this lobby, in another tab.' : 'Someone grabbed that spot first. Pick another.'}</div>}
           {tester && <button className="ag-btn btl-btn btl-test" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
           <div className="btl-board-foot" role="status">
             {!bt.mySlot

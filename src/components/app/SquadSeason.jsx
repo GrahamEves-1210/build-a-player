@@ -277,11 +277,11 @@ const FB_CELLS = {
   ol: [['SCK', 'PRS', 'PNK', 'PEN'], g => [g('sa'), g('prs'), g('pnk'), g('pen')]],
 }
 // (label: the heading over the real men's tables; Franchise's box score shows the other team's men with it too)
-export function FootballBox({ r, game, owner, faces = {}, label = 'TEAMMATES' }) {
+export function FootballBox({ r, game, owner, faces = {}, label = 'TEAMMATES', all = false }) {
   const roster = r.roster, s = game.s
   const get = p => k => s[p.k]?.[k] ?? 0
   const mine = roster.filter(p => p.s)
-  const real = roster.filter(p => !p.s)
+  const real = all ? roster : roster.filter(p => !p.s)
   const row = (p, cells) => ({ k: p.k, name: lastName(p.n), role: roleOf(p, roster), cells })
   const pass = real.filter(p => p.pos === 'qb' && get(p)('pa'))
   const rush = real.filter(p => get(p)('ra'))
@@ -356,7 +356,9 @@ function BucketBox({ r, game, owner, faces }) {
 // (portal: the sheet over the page; false renders it in place. Franchise's game day reads its box score with it too:
 // rows the team lines it shows, status the line under the score (a live game's clock), children more sections after the
 // team's lines, onClose none: no close button)
-export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, portal = true, rows = null, status = null, children = null, className = '' }) {
+// (all: the builds' own numbers in the team's tables too, so the rushing table has the quarterback build's runs:
+// Franchise's box score)
+export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, portal = true, rows = null, status = null, children = null, className = '', all = false, label = 'TEAMMATES' }) {
   useEffect(() => {
     if (!onClose) return undefined
     const k = e => { if (e.key === 'Escape') onClose() }
@@ -384,7 +386,7 @@ export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, 
         </div>
         {sport === 'bucket'
           ? <BucketBox r={r} game={{ ...game, g }} owner={owner} faces={faces} />
-          : <FootballBox r={r} game={game} owner={owner} faces={faces} />}
+          : <FootballBox r={r} game={game} owner={owner} faces={faces} all={all} label={label} />}
         <TeamStats sport={sport} r={r} game={g} rows={rows ?? (sport === 'bucket' ? [
           ['FG%', pct1(game.us.fgm, game.us.fga), pct1(game.them.fgm, game.them.fga)],
           ['3PT%', pct1(game.us.tpm, game.us.tpa), pct1(game.them.tpm, game.them.tpa)],

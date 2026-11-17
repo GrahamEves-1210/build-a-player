@@ -12,11 +12,17 @@ import { rngOf, clamp } from './rng'
 
 const REG = 3600, Q = 900
 const DOWN = ['', '1st', '2nd', '3rd', '4th']
-// a play's place on the clock, the way it's printed: "Q4 2:14", "OT 6:30"
-export function whenOf(t) {
-  if (t >= REG) { const left = 600 - ((t - REG) % 600); return `OT ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` }
-  const q = Math.min(3, Math.floor(t / Q)), left = Q - (t - q * Q)
-  return `Q${q + 1} ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`
+// a play's place on the clock, the way it's printed: "Q4 2:14", "OT 6:30". A play that ends right on a quarter's
+// last tick is that quarter's 0:00 (the end of the half reads "Q2 0:00", never "Q3 15:00"). po: a playoff game's
+// overtime periods are 15 minutes, the regular season's 10.
+const mmss = left => `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`
+export function whenOf(t, po = false) {
+  if (t > REG) {
+    const len = po ? 900 : 600, into = t - REG, n = Math.ceil(into / len) - 1
+    return `${n > 0 ? `${n + 1}OT` : 'OT'} ${mmss(len - (into - n * len))}`
+  }
+  const q = t > 0 ? Math.min(3, Math.ceil(t / Q) - 1) : 0, left = Q - (t - q * Q)
+  return `Q${q + 1} ${mmss(left)}`
 }
 const KICKER = new Map()
 const kickerOf = short => { if (!KICKER.has(short)) KICKER.set(short, KS.find(k => k.team === short)?.name ?? null); return KICKER.get(short) }
@@ -63,13 +69,14 @@ function scorer(Sd, R, pass) {
   if (id && Sd.by.get(id)) return Sd.by.get(id)
   return pickW(R, [[Sd.L.rb1, 0.82], [Sd.L.qb1, 0.18]].filter(([p]) => p))
 }
-// yards, kept inside what the box says he gained that day
-function yardsFor(Sd, p, kind, R) {
-  let y = kind === 'rec' ? passYds(R) : runYds(R)
+// yards, kept inside what the box says he gained that day and inside the field from where the scoring play started
+// (cap: that spot to the goal line)
+function yardsFor(Sd, p, kind, R, cap = 99) {
+  let y = Math.min(cap, kind === 'rec' ? passYds(R) : runYds(R))
   const tot = Sd.cr.yd[String(p.i)]?.[kind]
   if (tot != null && tot > 0) {
     const left = Math.max(1, tot - (Sd.used[`${p.i}${kind}`] ?? 0))
-    y = Math.min(y, left)
+    y = Math.max(1, Math.min(y, left))
   }
   Sd.used[`${p.i}${kind}`] = (Sd.used[`${p.i}${kind}`] ?? 0) + y
   return y
@@ -80,14 +87,18 @@ const tryText = tr => (tr === 'xpx' ? ' (kick no good)' : tr === '2' ? ' (two-po
 // S: the finished game · us: 'h' | 'a' (the player's team) · box: the player's box score (`p{id}` → line) ·
 // oppLines: the other team's line for the game (id → line) or null · mo: the moment { pid, game, hit, line, kind }
 // Returns [[t, mine, pts, text]] in order, and sets the player's box touchdowns from it.
-export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null, credits = false } = {}) {
+// obox: the other team's box (`p{id}` → line), when the game has one: its touchdowns are set from the summary too.
+export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null, credits = false, obox = null } = {}) {
   const R = rngOf(`${S.G.seed}-summary`)
   const shortOf = side => S.G[side]
-  const ourLines = Object.fromEntries(Object.entries(box ?? {}).map(([k, v]) => [k.slice(1), v]))
-  const sides = { [us]: sideOf(F, shortOf(us), ourLines), [us === 'h' ? 'a' : 'h']: sideOf(F, shortOf(us === 'h' ? 'a' : 'h'), oppLines) }
-  const credit = {}   // the player's team: id → { ptd, rctd, rtd }
+  const them = us === 'h' ? 'a' : 'h'
+  const idLines = b => Object.fromEntries(Object.entries(b ?? {}).map(([k, v]) => [k.slice(1), v]))
+  const sides = { [us]: sideOf(F, shortOf(us), idLines(box)), [them]: sideOf(F, shortOf(them), obox ? idLines(obox) : oppLines) }
+  // each side's scorers: id → { ptd, rctd, rtd, and the yards of the scoring catches and runs }
+  const credit = { [us]: {}, [them]: {} }
+  const tally = (side, id, k, y = 0) => { const c = credit[side][id] ??= { ptd: 0, rctd: 0, rtd: 0, rcy: 0, ry: 0 }; c[k]++; if (k === 'rctd') c.rcy += y; if (k === 'rtd') c.ry += y }
   let cur = []
-  const give = (p, k, side) => { if (side !== us || !p) return; const c = credit[p.i] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++; cur.push([p.i, k]) }
+  const give = (p, k, side, y = 0) => { if (!p) return; tally(side, p.i, k, y); cur.push([p.i, k, y]) }
   const out = []
   // (pre: the plays already named before the moment (the live feed showed them): kept as they were, credits and all)
   let pj = 0
@@ -108,37 +119,42 @@ export function scoringSummary(F, S, us, box, oppLines, mo = null, { pre = null,
     const was = preTD?.[pj]
     if (was && was[0] === pl.t && was[2] === pl.p) {
       pj++
-      for (const [id, k] of was[4] ?? []) { const c = credit[id] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++ }
+      // (an old save's named plays carry the player's side only: [id, k]; now both sides, with the yards)
+      for (const [id, k, y] of was[4] ?? []) tally(pl.s, id, k, y ?? 0)
       out.push(credits ? was : was.slice(0, 4))
       continue
     }
     cur = []
     // the moment's own touchdown: the build in it scored it (a quarterback threw it, a lineman's back ran behind him)
     let txt
-    // (a moment's touchdown: named by the play, and the men in it credited)
-    if (pl.txt) { txt = pl.txt; if (mine) for (const [id, k] of pl.cr ?? []) { const c = credit[id] ??= { ptd: 0, rctd: 0, rtd: 0 }; c[k]++; cur.push([id, k]) } }
+    // (a moment's touchdown: named by the play, and the men in it credited; his yards are already on his line)
+    if (pl.txt) { txt = pl.txt; for (const [id, k] of pl.cr ?? []) { tally(pl.s, id, k); cur.push([id, k, 0]) } }
     else if (pl.key && mo && mine) txt = momentTD(F, Sd, mo, R, give, us)
     if (!txt) {
       const qb = Sd.L.qb1
       const pass = Sd.cr.pass.length ? (Sd.cr.run.length ? R.u() < 0.6 : true) : Sd.cr.run.length ? false : R.u() < 0.62
       const p = scorer(Sd, R, pass)
-      if (pass && qb && p && p !== qb) { const y = yardsFor(Sd, p, 'rec', R); txt = `${qb.n} ${y}-yd pass to ${p.n}`; give(qb, 'ptd', pl.s); give(p, 'rctd', pl.s) }
-      else if (p) { const y = yardsFor(Sd, p, 'run', R); txt = `${p.n} ${y}-yd run`; give(p, 'rtd', pl.s) }
+      // (no longer than the field from where the scoring play started: game.js keeps the spot, fy)
+      const cap = pl.fy != null ? Math.max(1, 100 - pl.fy) : 99
+      if (pass && qb && p && p !== qb) { const y = yardsFor(Sd, p, 'rec', R, cap); txt = `${qb.n} ${y}-yd pass to ${p.n}`; give(qb, 'ptd', pl.s); give(p, 'rctd', pl.s, y) }
+      else if (p) { const y = yardsFor(Sd, p, 'run', R, cap); txt = `${p.n} ${y}-yd run`; give(p, 'rtd', pl.s, y) }
       else txt = `${Sd.short} touchdown`
     }
     out.push(credits ? [pl.t, mine, pl.p, txt + tryText(pl.tr), cur] : [pl.t, mine, pl.p, txt + tryText(pl.tr)])
   }
 
-  // the box's touchdowns are the summary's
-  if (box) {
-    for (const [k, x] of Object.entries(box)) { if (x.ptd || x.rctd || x.rtd || x.p6) { x.ptd = 0; x.rctd = 0; x.rtd = 0; x.p6 = 0 } }
-    for (const [id, c] of Object.entries(credit)) {
-      const x = box[`p${id}`] ??= {}
+  // each box's touchdowns are the summary's (a scorer the box had without a catch or a carry gets the play's)
+  const setTDs = (b, cs) => {
+    if (!b) return
+    for (const x of Object.values(b)) { if (x.ptd || x.rctd || x.rtd || x.p6) { x.ptd = 0; x.rctd = 0; x.rtd = 0; x.p6 = 0 } }
+    for (const [id, c] of Object.entries(cs)) {
+      const x = b[`p${id}`] ??= {}
       x.ptd = (x.ptd ?? 0) + c.ptd; x.rctd = (x.rctd ?? 0) + c.rctd; x.rtd = (x.rtd ?? 0) + c.rtd
-      if (c.rctd && !x.rc) { x.rc = c.rctd; x.tg = Math.max(x.tg ?? 0, c.rctd) }
-      if (c.rtd && !x.ra) x.ra = c.rtd
+      if (c.rctd > (x.rc ?? 0)) { if (!x.rc) x.ryd = (x.ryd ?? 0) + c.rcy; x.rc = c.rctd; x.tg = Math.max(x.tg ?? 0, c.rctd) }
+      if (c.rtd > (x.ra ?? 0)) { if (!x.ra) x.ry = (x.ry ?? 0) + c.ry; x.ra = c.rtd }
     }
   }
+  setTDs(box, credit[us]); setTDs(obox, credit[them])
   return out
 }
 

@@ -118,8 +118,10 @@ export function nameSnap(F, v, out) {
   const R = rngOf(`${v.seed}-name`)
   const dd = `on ${DOWN[v.down]} & ${v.goal ? 'goal' : v.d}`
   const y = Math.round(out.yards ?? 0)
-  const st = {}
+  // (st: the player's men's lines from the play; ot: the other team's men's, so both boxes have it)
+  const st = {}, ot = {}
   const add = (p, k, n = 1) => { if (p && n) { const x = st[p.i] ??= {}; x[k] = (x[k] ?? 0) + n } }
+  const addO = (p, k, n = 1) => { if (p && n) { const x = ot[p.i] ??= {}; x[k] = (x[k] ?? 0) + n } }
   const nm = p => p?.n ?? null
   const themNick = TEAM[v.opp].nick, usNick = TEAM[F.team].nick
   let txt, cr = null
@@ -128,14 +130,14 @@ export function nameSnap(F, v, out) {
     if (out.call === 'run') {
       const rb = manOf(F, out.rb) ?? L.rb1 ?? qb
       add(rb, 'ra'); add(rb, 'ry', out.to ? 0 : y)
-      if (out.to === 'fum') txt = `${nm(rb)} fumbles ${dd}, ${themNick} recover`
+      if (out.to === 'fum') { const by = O.lb1 ?? O.edge1; txt = `${nm(rb)} fumbles ${dd}, ${themNick} recover`; addO(by, 'tk'); addO(by, 'ff'); addO(by, 'fr') }
       else if (out.td) { txt = `${nm(rb)} ${Math.max(1, y)}-yd run`; cr = [[rb.i, 'rtd']] }
       else txt = y > 0 ? `${nm(rb)} ${y}-yd run ${dd}` : y === 0 ? `${nm(rb)} no gain ${dd}` : `${nm(rb)} ${-y}-yd loss ${dd}`
     } else {
       const pool = ['wr1', 'wr2', 'te1', 'wr3', 'rb1'].map(k => L[k]).filter(Boolean)
       const to = manOf(F, out.rec) ?? pool[Math.floor(R.u() * Math.min(3, pool.length))] ?? qb
-      if (out.sack) { const by = O.edge1 ?? O.dt1 ?? O.lb1; txt = `${nm(by) ?? themNick} sacks ${nm(qb)} ${dd}` }
-      else if (out.to === 'int') { const by = R.u() < 0.6 ? O.cb1 ?? O.s1 : O.s1 ?? O.cb1; txt = `${nm(qb)} pass intercepted by ${nm(by) ?? themNick}`; add(qb, 'pa'); add(qb, 'int'); add(to, 'tg') }
+      if (out.sack) { const by = O.edge1 ?? O.dt1 ?? O.lb1; txt = `${nm(by) ?? themNick} sacks ${nm(qb)} ${dd}`; add(qb, 'sk'); for (const k of ['sck', 'tk', 'tfl', 'qbh']) addO(by, k) }
+      else if (out.to === 'int') { const by = R.u() < 0.6 ? O.cb1 ?? O.s1 : O.s1 ?? O.cb1; txt = `${nm(qb)} pass intercepted by ${nm(by) ?? themNick}`; add(qb, 'pa'); add(qb, 'int'); add(to, 'tg'); addO(by, 'dint') }
       else if (out.inc) { txt = `${nm(qb)} pass incomplete to ${nm(to)} ${dd}`; add(qb, 'pa'); add(to, 'tg') }
       else {
         txt = out.td ? `${nm(qb)} ${Math.max(1, y)}-yd pass to ${nm(to)}` : `${nm(qb)} ${y}-yd pass to ${nm(to)} ${dd}`
@@ -147,12 +149,14 @@ export function nameSnap(F, v, out) {
   } else {
     // their run at our backer
     const lb = manOf(F, out.lb) ?? L.lb1 ?? L.lb2 ?? L.s1, rb = O.rb1 ?? O.qb1
-    if (out.to === 'fum') { txt = `${nm(lb)} forces a fumble by ${nm(rb)} ${dd}, ${usNick} recover`; add(lb, 'tk'); add(lb, 'ff') }
-    else if (out.td) txt = `${nm(rb)} ${Math.max(1, y)}-yd run`
+    // (their back's carry is on their line; his touchdown is credited to him)
+    addO(rb, 'ra'); addO(rb, 'ry', out.to ? 0 : y)
+    if (out.to === 'fum') { txt = `${nm(lb)} forces a fumble by ${nm(rb)} ${dd}, ${usNick} recover`; add(lb, 'tk'); add(lb, 'ff'); add(lb, 'fr') }
+    else if (out.td) { txt = `${nm(rb)} ${Math.max(1, y)}-yd run`; if (rb) cr = [[rb.i, 'rtd']] }
     else if (y < v.d) { txt = y < 0 ? `${nm(lb)} stops ${nm(rb)} for a ${-y}-yd loss ${dd}` : y === 0 ? `${nm(lb)} stops ${nm(rb)} for no gain ${dd}` : `${nm(lb)} stops ${nm(rb)} after ${y} ${y === 1 ? 'yard' : 'yards'} ${dd}`; add(lb, 'tk'); if (y < 0) add(lb, 'tfl') }
     else txt = `${nm(rb)} ${y}-yd run ${dd}`
   }
-  return { ...out, txt, ...(cr && { cr }), st }
+  return { ...out, txt, ...(cr && { cr }), st, ot }
 }
 // the stamp on a snap, the player's side of it
 export function snapWord(v, m) {

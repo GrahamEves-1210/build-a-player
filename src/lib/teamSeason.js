@@ -250,7 +250,8 @@ function fbGame(P, role, luck, g, ctx) {
   const off = ctx.off, def = ctx.def
   const s = Object.fromEntries(P.map(p => [p.k, {}]))
   const us = { pts: S }, them = { pts: A }
-  const mine = splitScore(S), theirs = splitScore(A)
+  // (g.split / g.splitOpp: the touchdowns, kicks and safeties the game really had, when the caller knows them)
+  const mine = g.split ?? splitScore(S), theirs = g.splitOpp ?? splitScore(A)
   us.td = mine.td; us.fg = mine.fg; them.td = theirs.td; them.fg = theirs.fg
   if (mine.sf) us.sf = mine.sf
 
@@ -291,7 +292,7 @@ function fbGame(P, role, luck, g, ctx) {
     const o = s[p.k], x = sk(p)
     let sackTfl = 0, strips = 0
     for (let k = 0; k < sackBy[i]; k++) { if (R.u() < 0.85) sackTfl++; if (R.u() < Math.min(0.24, 0.06 + (x.ff ?? 0.3) * 0.12)) strips++ }
-    for (let k = 0; k < intBy[i]; k++) if (p6 < mine.td && R.u() < (x.p6 ?? 0.04) * 0.8) { p6++; add(o, 'p6', 1) }
+    for (let k = 0; k < intBy[i]; k++) if (!g.noP6 && p6 < mine.td && R.u() < (x.p6 ?? 0.04) * 0.8) { p6++; add(o, 'p6', 1) }
     const other = R.poi(r(p).tkl * (0.65 + 0.7 * (x.tkl ?? 0.4)) * tklVol)
     const strip = strips + R.poi(0.045 * (r(p).tkl / 4) * (0.5 + (x.ff ?? 0.3)))
     add(o, 'tk', other + sackBy[i] + tflBy[i])
@@ -467,12 +468,13 @@ function fbTeamCtx(P, role, strength) {
   }
 }
 
-export function playFootballSeason({ roster, games = [], rounds = [], strength = null, seed = 'x' }) {
+// (luck / run: a caller that plays a season one game at a time keeps each man's luck and the season's sacks so far)
+export function playFootballSeason({ roster, games = [], rounds = [], strength = null, seed = 'x', luck: luckIn = null, run = null }) {
   const P = roster.map(p => ({ ...p, sk: fbSkills(p) }))
   const role = fbRoles(P)
-  const LR = rngOf(`${seed}:fb:luck`)
-  const luck = new Map(P.map(p => [p.k, clamp(0.88, 1.12, 1 + LR.n() * 0.06)]))
-  const ctx = { ...fbTeamCtx(P, role, strength), seed, run: { sacks: new Map() } }
+  let luck = luckIn
+  if (!luck) { const LR = rngOf(`${seed}:fb:luck`); luck = new Map(P.map(p => [p.k, clamp(0.88, 1.12, 1 + LR.n() * 0.06)])) }
+  const ctx = { ...fbTeamCtx(P, role, strength), seed, run: run ?? { sacks: new Map() } }
   const reg = games.map((g, i) => fbGame(P, role, luck, g, { ...ctx, i, po: false }))
   const po = rounds.map((g, i) => fbGame(P, role, luck, g, { ...ctx, i, po: true }))
   return { reg, po, tot: totalsOf(P, reg), poTot: totalsOf(P, po), team: teamTotals(reg) }
