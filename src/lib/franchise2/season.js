@@ -232,6 +232,8 @@ function endWeek(F, row) {
   F.wire = wire.sort((a, b) => (b[0] === F.team) - (a[0] === F.team)).slice(0, 8)
   // every room two deep again after the week's cuts and trades (league.js fillUp: a filler where nobody's behind)
   fillLeague(F)
+  // one kicker: the man signed while the starter was hurt is let go the week the starter is back
+  for (const s of SHORTS) oneKicker(F, s)
   // a room without enough healthy men to start: the team signs one off its practice squad, as every team does (a
   // league team with its kicker hurt calls the best kicker on the street first, the way they do)
   for (const s of SHORTS) {
@@ -242,6 +244,7 @@ function endWeek(F, row) {
         if (street) {
           F.fa = F.fa.filter(x => x !== street)
           signDeal(street, { $: minimumFor(street.ag, F.year), y: 1, g: 0 })
+          street.tmpk = 1
           F.teams[s].r.push(street)
           addNews(F, { k: 'sign', tag: 'SIGNED', s, text: `${TEAM[s].nick} sign K ${street.n}` })
           continue
@@ -250,6 +253,7 @@ function endWeek(F, row) {
         p.n = freshName(R, F.teams[s].r, spot ?? pos, F.dc ?? [])
         if (spot) p.s = spot
         p.y = 1
+        if (k === 'k') p.tmpk = 1
         F.teams[s].r.push(p)
         if (s === F.team) { out.news.push({ k: 'sign', pid: p.i, n: p.n }); addNews(F, { k: 'sign', tag: 'SIGNED', s, text: `${TEAM[s].nick} sign ${k.toUpperCase()} ${p.n} off the practice squad` }) }
       }
@@ -269,6 +273,25 @@ function endWeek(F, row) {
   if (F.wk < REG_WEEKS && F.wk >= (F.nextEv ?? 3)) { F.ev = makeEvent(F, R); F.nextEv = F.wk + R.int(3, 4); if (F.ev) out.event = true }
   if (F.wk >= REG_WEEKS) { F.phase = 'post'; out.over = true }
   return out
+}
+// A team carries one kicker, and a second only while one is hurt (endWeek). The job goes to the healthy leg, the
+// regular kicker ahead of the man signed for the injury (tmpk); the hurt regular stays on while his stand-in kicks.
+// Everyone else is let go: the stand-in the week the regular is back, back to the street for the next team that needs one.
+function oneKicker(F, s) {
+  const t = F.teams[s], ks = t.r.filter(p => p.p === 'k')
+  if (ks.length === 1) delete ks[0].tmpk
+  if (ks.length < 2) return
+  const val = p => (p.b != null) * 1000 + !p.in * 100 + !p.tmpk * 50 + p.o
+  ks.sort((a, b) => val(b) - val(a))
+  const keep = new Set([ks[0], ...ks.filter(p => p.b != null)])
+  // (the stand-in kicking: the regular, hurt, stays on)
+  if (!ks[0].in) { const reg = ks.find(p => p.in && !p.tmpk); if (reg) keep.add(reg) }
+  for (const p of ks) {
+    if (keep.has(p)) continue
+    const c = cutMan(F, p.i, s)
+    if (c && !p.fl && F.phase !== 'off') { delete p.tmpk; (F.fa ??= []).push(p) }
+  }
+  if (keep.size === 1) delete ks[0].tmpk
 }
 // the regular season is over: the bracket
 export function intoPlayoffs(F) {
