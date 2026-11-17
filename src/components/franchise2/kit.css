@@ -57,7 +57,10 @@
 }
 .fk-tick-win { position: relative; flex: 1; min-width: 0; overflow: hidden; }
 .fk-tick-run { display: flex; width: max-content; height: 100%; align-items: center; will-change: auto; }
-.fk-tick-run.is-on { animation: fk-tick var(--dur, 30s) linear var(--passes, 2); will-change: transform; }
+.fk-tick-set { display: flex; flex: none; height: 100%; align-items: center; }
+/* (the loop: always set, paused where it is when off screen, so coming back never resets it) */
+.fk-tick-run.is-loop { animation: fk-tick var(--dur, 30s) linear infinite; animation-play-state: paused; }
+.fk-tick-run.is-on { animation-play-state: running; will-change: transform; }
 .fk-tick.is-still .fk-tick-win { overflow-x: auto; scrollbar-width: none; }
 .fk-tick.is-still .fk-tick-win::-webkit-scrollbar { display: none; }
 @keyframes fk-tick { to { transform: translateX(-50%); } }

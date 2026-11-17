@@ -95,31 +95,49 @@ export function Chyron({ team, title, tag, sub, right, tone = 'team', size = 'm'
 
 // ── Ticker: the league along the bottom edge ─────────────────────────────────
 // items: { k: 'score', a, as, h, hs, tag ('FINAL', 'F/OT', 'Q3') } | { k: 'news', tag ('INJURY', 'TRADE'…), s (team), text }
-// Scrolls while it's on screen, twice through, then rests (tap: again). Reduce Motion: a strip you swipe.
-export function Ticker({ items, label = 'AROUND THE LEAGUE', team, passes = 2 }) {
-  const box = useRef(null), run = useRef(null)
-  const [on, setOn] = useState(false), [n, setN] = useState(0)
+// A seamless loop: the reel is the items repeated until one pass is wider than the window, drawn twice, and slides
+// exactly one pass (-50%) before it starts over, so the seam never shows: no jump, no gap, no blank stretch, at any
+// length. It runs only while it's on screen and the tab is up, and it pauses where it is (no reset when it comes
+// back). Reduce Motion: a still strip you swipe.
+export function Ticker({ items, label = 'AROUND THE LEAGUE', team }) {
+  const box = useRef(null), win = useRef(null), set = useRef(null)
+  const [on, setOn] = useState(false)
+  const [reps, setReps] = useState(1)
   const [dur, setDur] = useState(30)
   const rm = reduced()
   useEffect(() => {
     if (rm || typeof IntersectionObserver === 'undefined') return
-    const io = new IntersectionObserver(([e]) => setOn(e.isIntersecting), { rootMargin: '0px' })
+    const io = new IntersectionObserver(([e]) => setOn(e.isIntersecting && !document.hidden), { rootMargin: '0px' })
     if (box.current) io.observe(box.current)
-    const vis = () => { if (document.hidden) setOn(false) }
+    const vis = () => { if (document.hidden) setOn(false); else if (box.current) { const r = box.current.getBoundingClientRect(); setOn(r.bottom > 0 && r.top < innerHeight) } }
     document.addEventListener('visibilitychange', vis)
     return () => { io.disconnect(); document.removeEventListener('visibilitychange', vis) }
   }, [rm])
-  // the speed: the same pace however long the reel (about 60 px a second)
-  useLayoutEffect(() => { const w = run.current?.scrollWidth ?? 0; if (w) setDur(Math.max(12, w / 2 / 60)) }, [items])
+  // one pass at least as wide as the window (a short list repeats inside the pass), at the same pace however long
+  // (about 60 px a second); measured again when the window's width changes
+  useLayoutEffect(() => {
+    if (rm) return
+    const fit = () => {
+      const w = win.current?.clientWidth ?? 0, one = (set.current?.scrollWidth ?? 0) / reps
+      if (!w || !one) return
+      const need = Math.max(1, Math.ceil(w / one))
+      if (need !== reps) setReps(need)
+      setDur(Math.max(12, (one * need) / 60))
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined' || !win.current) return
+    const ro = new ResizeObserver(fit); ro.observe(win.current)
+    return () => ro.disconnect()
+  }, [items, reps, rm])
   if (!items?.length) return null
-  const done = n >= passes
-  const reel = items.map((x, i) => <TickItem key={i} x={x} />)
+  const pass = (copy, n) => Array.from({ length: n }, (_, r) => items.map((x, i) => <TickItem key={`${copy}-${r}-${i}`} x={x} />))
   return (
-    <div ref={box} className={`fk-tick${rm ? ' is-still' : ''}`} style={team ? fkVars(team) : undefined} onClick={() => { if (done) { setN(0); sfx('tap') } }}>
+    <div ref={box} className={`fk-tick${rm ? ' is-still' : ''}`} style={team ? fkVars(team) : undefined}>
       <span className="fk-tick-label">{label}</span>
-      <div className="fk-tick-win">
-        <div ref={run} className={`fk-tick-run${on && !done && !rm ? ' is-on' : ''}`} style={{ '--dur': `${dur}s`, '--passes': passes }} onAnimationEnd={() => setN(passes)} onAnimationIteration={() => setN(k => k + 1)}>
-          {reel}{!rm && reel}
+      <div ref={win} className="fk-tick-win">
+        <div className={`fk-tick-run${rm ? '' : ' is-loop'}${on && !rm ? ' is-on' : ''}`} style={{ '--dur': `${dur}s` }}>
+          <span ref={set} className="fk-tick-set">{pass('a', rm ? 1 : reps)}</span>
+          {!rm && <span className="fk-tick-set" aria-hidden="true">{pass('b', reps)}</span>}
         </div>
       </div>
     </div>
