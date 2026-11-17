@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   TEAM, CTYPES, STYLES, cLetter, coachGrade, rOf, staffOf, staffMen, callerOf, setCalls, cvOf, hotSeat, myOpenings, fireMine, shortlist,
-  interviewCoach, interviewsLeft, interviewView, offerCoach, offerWhy, closeCarousel, setCarStep, moveText, IV_N, records, recText, FREE_SIT,
+  interviewCoach, interviewsLeft, interviewView, offerCoach, gradesKnown, offerWhy, closeCarousel, setCarStep, moveText, IV_N, records, recText, FREE_SIT,
   promiseOf, brokeWord, PROMISE_CHEM,
 } from '../../lib/franchise2'
 import { letterColor } from '../../lib/gradeColors'
@@ -173,12 +173,14 @@ export function Carousel({ F, act, owner }) {
   if (step === 'oc' || step === 'dc') return <Search key={step} F={F} act={act} owner={owner} k={step} onBack={() => go('staff')} />
   return <MyStaff F={F} act={act} owner={owner} onSearch={k => go(k)} />
 }
-// where a new head coach came from, short: "BILLS DC", "FMR BILLS HC", "OHIO STATE HC"
+// where a new head coach came from, short: "BILLS DC", "FMR BILLS HC", "OHIO STATE HC", "FMR BROWNS DC" (a résumé
+// that already says FORMER keeps one: never "FMR FORMER")
 const ABBR = [['offensive coordinator', 'OC'], ['defensive coordinator', 'DC']]
 function fromShort(e) {
   if (e.from) { let t = e.from; for (const [a, b] of ABBR) t = t.replace(a, b); return `FROM ${t.toUpperCase()}` }
-  const w = (e.was ?? '').toUpperCase()
-  return w ? (w.endsWith('HEAD COACH') ? w.replace('HEAD COACH', 'HC') : `FMR ${w.split(' · ')[0]}`) : null
+  const w = (e.was ?? '').toUpperCase().split(' · ')[0].replace('HEAD COACH', 'HC')
+  if (!w) return null
+  return w.startsWith('FORMER ') ? `FMR ${w.slice(7)}` : / HC$/.test(w) && !/\d/.test(w) ? w : `FMR ${w}`
 }
 // a team's record last season: "11-6"
 function lastRec(F, s) { const r = records(F)[s]; return r ? recText(r) : '' }
@@ -347,9 +349,9 @@ function Search({ F, act, owner, k, onBack }) {
       <BackBar label="Your staff" title={`${JOB[k]} search`} onBack={onBack} />
       <Chyron team={F.team} title={`${JOB[k]} SEARCH`} right={`${left} OF ${IV_N} INTERVIEWS LEFT`} sub={`${JOB_LONG[k]} · TAP A CANDIDATE`} />
       {list.map((c, i) => {
-        const seen = c.home || iv.includes(c.i)
-        return <StaffL3 key={c.i} F={F} c={c} role={k} team={F.team} size="s" hidden={!seen} delay={i * 35} onClick={() => { setSel(c.i); sfx('tap') }}
-          line={[c.home ? 'ON YOUR STAFF' : (c.cv ?? '').toUpperCase(), seen ? `AGE ${c.ag}` : null].filter(Boolean).join(' · ')} />
+        const seen = c.home || iv.includes(c.i), known = gradesKnown(F, c, k)
+        return <StaffL3 key={c.i} F={F} c={c} role={k} team={F.team} size="s" hidden={!known} delay={i * 35} onClick={() => { setSel(c.i); sfx('tap') }}
+          line={[c.home ? `${TEAM[F.team].nick.toUpperCase()} POSITION COACH` : (c.cv ?? '').toUpperCase(), (seen || known) && !c.home ? `AGE ${c.ag}` : null].filter(Boolean).join(' · ')} />
       })}
     </div>
   )
@@ -376,7 +378,7 @@ function Interview({ F, act, owner, k, id, onBack, onDone }) {
   return (
     <div className="fst-car">
       <BackBar label="Candidates" title={c.n} onBack={onBack} />
-      <StaffL3 F={F} c={c} role={k} team={F.team} hidden={!seen} reveal={fresh} line={[c.home ? `${TEAM[F.team].nick.toUpperCase()} POSITION COACH` : (c.cv ?? '').toUpperCase(), `AGE ${c.ag}`].filter(Boolean).join(' · ')} />
+      <StaffL3 F={F} c={c} role={k} team={F.team} hidden={!seen && !V.known} reveal={fresh} line={[c.home ? `${TEAM[F.team].nick.toUpperCase()} POSITION COACH` : (c.cv ?? '').toUpperCase(), `AGE ${c.ag}`].filter(Boolean).join(' · ')} />
       {!seen && (
         <>
           <p className="fst-note">An interview shows his grades, who else wants him and what he wants. {left} of {IV_N} interviews left.</p>

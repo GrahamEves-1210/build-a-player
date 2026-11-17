@@ -89,10 +89,16 @@ const LONG = { rb: 1.25, te: 0.85, ol: 1.05 }
 
 // (a year of weeks from one season's first Sunday to the next's: the week he's hurt in, counted from week 1)
 const NFL_WEEKS_TO_NEXT = 52
+// how much an injury costs a man's growth that offseason (potential.js growthOf inj): a torn ACL or Achilles 3, the
+// other season-enders 2, a stay on IR of six weeks or more 1. p.yi keeps the season's worst until the league ages.
+const TORN = new Set(['torn ACL', 'torn Achilles'])
+export const injSev = (k, w) => (TORN.has(k.l) ? 3 : k.se ? 2 : w >= 6 ? 1 : 0)
 export function hurt(F, p, R, { minor = false } = {}) {
   const g = groupOf(p)
   const k = pickKind(R, g, minor ? MINOR : KINDS)
+  const sev = v => { if (v > (p.yi ?? 0)) p.yi = v }
   if (k.se) {
+    sev(injSev(k, SEASON))
     const wk = F.phase === 'playoffs' ? 18 + (F.po?.rd ?? 0) : F.wk ?? 0
     const back = R.int(k.rec[0], k.rec[1])
     const nx = Math.max(0, back - (NFL_WEEKS_TO_NEXT - wk))
@@ -104,6 +110,7 @@ export function hurt(F, p, R, { minor = false } = {}) {
   if (LONG[g] && w > 1 && R.u() < Math.abs(LONG[g] - 1) * 2) w += LONG[g] > 1 ? 1 : -1
   p.in = w
   p.ij = { l: k.l, w }
+  sev(injSev(k, w))
   return p.ij
 }
 

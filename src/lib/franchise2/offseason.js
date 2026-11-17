@@ -37,7 +37,7 @@ export function newSeason(F) {
     // first four rounds and let the late ones compete.
     const mine = s === F.team
     const keep = t.r.filter(p => (mine ? p.rk === F.year + 1 || (p.rc && (p.dr?.[0] ?? 8) <= 4) : p.rk === F.year + 1 && (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
-    const { roster, cut } = trim(t.r, new Set(keep))
+    const { roster, cut } = trim(t.r, new Set(keep), { cpu: !mine })
     if (mine) {
       // (anyone the cut-down does let go from the player's team is released the way the wire and the cap see it:
       // his dead money on the books, a RELEASED line, and he's a free agent)
