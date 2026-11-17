@@ -92,6 +92,13 @@ function sacksSoFar(F, roster) {
   }
   return m
 }
+// The league's own numbers for the box (lib/teamSeason.js playFootballSeason tune), against the NFL's typical leaders
+// (2026-11-17, scripts/franchise2/realism.mjs): an elite receiver draws more of his team's targets than the old cap
+// let him (Chase, Hill, Jefferson, Kupp: 35-41% of their teams' receiving yards, 1,700-1,950 yards), and an elite
+// passer's share of his team's touchdowns tops out nearer two in three (the leaders' 35-45, 40-plus not every year)
+export const FB_TUNE = { tgtCap: 0.31, tgtK: 0.5, pTdBase: 0.6, pTdK: 0.1, pTdMax: 0.66, ypaK: 3.5, attK: 9, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3 }
+// a passer's interceptions so far this season (the box eases him off past ten: below)
+const picksSoFar = (F, k) => { const id = k.slice(1); return (F.ss?.[id]?.int ?? 0) + (lgLine(F.lg, id)?.int ?? 0) }
 const other = s => (s === 'h' ? 'a' : 'h')
 const add = (o, k, v) => { if (v) o[k] = (o[k] ?? 0) + v }
 const sum = (lines, men, k) => men.reduce((a, p) => a + (lines[p.k]?.[k] ?? 0), 0)
@@ -126,7 +133,7 @@ export function playBox(F, S, seed) {
     // the game's own scores: its touchdowns (a moment's own touchdown is named and credited by the moment), its
     // field goals and safeties
     const split = { td: plays.filter(p => p.k === 'td' && !p.snap).length, xp: 0, two: 0, fg: plays.filter(p => p.k === 'fg').length, sf: plays.filter(p => p.k === 'sf').length }
-    const played = playFootballSeason({ roster, games: [{ mySc: mine, oppSc: theirs, split, noP6: true }], seed: `${seed}-${side}`, luck: luckOf(F, roster), run: { sacks: sacksSoFar(F, roster) } })
+    const played = playFootballSeason({ roster, games: [{ mySc: mine, oppSc: theirs, split, noP6: true }], seed: `${seed}-${side}`, luck: luckOf(F, roster), run: { sacks: sacksSoFar(F, roster) }, tune: FB_TUNE })
     const g = played.reg[0]
     B[side] = { short, roster, s: g.s, fum: g.us.fum ?? 0, dfum: 0 }
   }
@@ -144,6 +151,10 @@ export function playBox(F, S, seed) {
       int = 0
       for (let k = 0; k < T; k++) if (R.u() < pInt) int++
     }
+    // (a passer past ten picks is coached to throw it away and stop forcing it, or he's benched for a series: the
+    // league's leaders throw 15 to 18, not 22 to 26; the game's turnover is a fumble instead)
+    const had = qb && !S.G.po ? picksSoFar(F, qb.k) : 0
+    if (had > 10) { const keep = 1 / (1 + 0.12 * (had - 10)); for (let k = int; k > 0; k--) if (R.u() > keep) int-- }
     int = Math.min(int, Math.max(0, (ql.pa ?? 0) - (ql.pc ?? 0)))
     fum = T - int
     if (qb) { if (int) ql.int = int; else delete ql.int }

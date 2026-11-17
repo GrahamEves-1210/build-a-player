@@ -29,7 +29,7 @@ function leadersOf(F) {
     for (const p of F.teams[s].r) man[p.i] = { p, s, st: L.has(p.i) }
   }
   const top = (k, f = () => true) => Object.entries(tot).filter(([id, t]) => t[k] && man[id] && f(man[id].p)).sort((a, b) => b[1][k] - a[1][k]).slice(0, 5)
-    .map(([id, t]) => ({ v: t[k], n: man[id].p.n, s: man[id].s, o: man[id].p.o, ag: man[id].p.ag, st: man[id].st, b: man[id].p.b != null }))
+    .map(([id, t]) => ({ v: t[k], n: man[id].p.n, s: man[id].s, o: man[id].p.o, ag: man[id].p.ag, st: man[id].st, b: man[id].p.b != null, gp: t.gp, ra: t.ra, rc: t.rc, tg: t.tg, fga: t.fga }))
   return {
     sck: top('sck'), dint: top('dint'), int: top('int', p => p.p === 'qb'), ry: top('ry'), ryd: top('ryd'), ptd: top('ptd', p => p.p === 'qb'), fgm: top('fgm'), py: top('py', p => p.p === 'qb'),
   }
@@ -51,7 +51,9 @@ function leagueAvg(F) {
   }
   const m = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0)
   const r2 = v => Math.round(v * 100) / 100
-  return { ppg: r1(pts / games), fga: r2(sum('fga') / games), fgm: r2(sum('fgm') / games), sck: r2(sum('sck') / games), int: r2(sum('dint') / games), ry: r1(sum('ry') / games), py: r1(sum('py') / games), rb1: r1(m(rb1) * 100), wr1: r1(m(wr1) * 100) }
+  const pf = {}; for (const wk of F.sched.weeks) for (const g of wk) if (g.hs != null) { pf[g.h] = (pf[g.h] ?? 0) + g.hs; pf[g.a] = (pf[g.a] ?? 0) + g.as }
+  const pfs = Object.values(pf).sort((a, b) => b - a)
+  return { ppg: r1(pts / games), fga: r2(sum('fga') / games), fgm: r2(sum('fgm') / games), sck: r2(sum('sck') / games), int: r2(sum('dint') / games), ry: r1(sum('ry') / games), py: r1(sum('py') / games), rb1: r1(m(rb1) * 100), wr1: r1(m(wr1) * 100), pf1: pfs[0], pf3: pfs[2], pfLast: pfs[pfs.length - 1], rank: Object.fromEntries(Object.entries(pf).sort((a, b) => b[1] - a[1]).map(([s], i) => [s, i + 1])) }
 }
 function ageMix(F) {
   const all = FR.SHORTS.flatMap(s => F.teams[s].r)
@@ -152,9 +154,11 @@ const line = (k, lab) => { const a = dist(k); return `${lab.padEnd(10)} min ${a[
 console.log(`\n${S.length} seasons (${NF} franchises x ${NS}) in ${((Date.now() - t0) / 1000).toFixed(0)} s`)
 console.log('LEADERS')
 for (const [k, lab] of [['sck', 'sacks'], ['dint', 'INT'], ['int', 'INT thrown'], ['ry', 'rushing'], ['ryd', 'receiving'], ['ptd', 'pass TD'], ['fgm', 'FG made'], ['py', 'pass yds']]) console.log('  ' + line(k, lab))
+console.log(`  FG leaders' tries / their offense's rank: ${S.map(r => `${r.lead.fgm[0]?.fga}/${r.avg.rank?.[r.lead.fgm[0]?.s]}`).join(' ')}`)
 console.log(`  rushing leaders' OVR: ${S.map(r => `${r.lead.ry[0]?.o}${r.lead.ry[0]?.st ? '' : '(bk)'}`).join(' ')}`)
 console.log(`  2,000-yd rushers: ${S.filter(r => r.lead.ry[0]?.v >= 2000).length} · 20+ sacks: ${S.filter(r => r.lead.sck[0]?.v >= 20).length} · 40+ pass TD: ${S.filter(r => r.lead.ptd[0]?.v >= 40).length} of ${S.length}`)
 const avgK = k => (S.reduce((a, r) => a + r.avg[k], 0) / S.length).toFixed(2)
+console.log(`  best offense's points: ${S.map(r => r.avg.pf1).join(' ')} · third best ${S.map(r => r.avg.pf3).join(' ')} · worst ${S.map(r => r.avg.pfLast).join(' ')}`)
 console.log(`AVERAGES a team game: points ${avgK('ppg')} · FG tries ${avgK('fga')} made ${avgK('fgm')} · sacks ${avgK('sck')} · INT ${avgK('int')} · rush yds ${avgK('ry')} · pass yds ${avgK('py')} · RB1 share of RB yds ${avgK('rb1')}% · top receiver share ${avgK('wr1')}%`)
 console.log('MVP: ' + S.map(r => `${r.y} ${r.mvp?.n} (${r.mvp?.t} ${r.mvp?.w}w${r.mvp?.p === 'qb' ? ` ${r.mvp.ptd}td ${r.mvp.int}i` : ` ${r.mvp?.p}`})`).join(' · '))
 console.log('OPOY: ' + S.map(r => `${r.y} ${r.opoy?.n} (${r.opoy?.p})`).join(' · '))

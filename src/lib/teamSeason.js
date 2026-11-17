@@ -279,7 +279,7 @@ function fbGame(P, role, luck, g, ctx) {
   const hits = R.poi(clamp(1, 7, 1.6 + 2.6 * rushIdx) * passMore)
   const runTfl = R.poi(ctx.tflLam * (oppCar / 26))
   // who got them
-  const heat = p => (p.pos === 'dl' ? 1 / (1 + 0.22 * Math.max(0, (ctx.run.sacks.get(p.k) ?? 0) - (p.sub === 'dt' ? 11 : 13))) : 1)
+  const heat = p => (p.pos === 'dl' ? 1 / (1 + (ctx.tune?.heatK ?? 0.22) * Math.max(0, (ctx.run.sacks.get(p.k) ?? 0) - (p.sub === 'dt' ? 11 : ctx.tune?.heatAt ?? 13))) : 1)
   const wSack = dfn.map(p => r(p).sack * Math.pow(sk(p).rush ?? 0.3, 1.6) * L(p) * heat(p))
   const wInt = dfn.map(p => r(p).int * Math.pow(sk(p).int ?? 0.3, 2) * L(p))
   const wPbu = dfn.map(p => r(p).pbu * Math.pow(sk(p).pbu ?? 0.3, 1.6) * L(p))
@@ -311,11 +311,11 @@ function fbGame(P, role, luck, g, ctx) {
   const q = qb ? sk(qb) : { ypa: 0.45, comp: 0.45, td: 0.45, intAvoid: 0.45, sackAvoid: 0.45, legs: 0.3, sneak: 0.4 }
   // the volume comes from the game: a team behind throws, a team ahead runs; a better passer
   // throws a bit more and a better back gets a bit more of the ball
-  const att = Math.round(clamp(16, 58, 33.5 - 0.2 * lead + 6 * (q.ypa - ctx.qbMid) - 4 * (ctx.runQ - 0.55) + R.n() * 4.2))
+  const att = Math.round(clamp(16, 58, 33.5 - 0.2 * lead + (ctx.tune?.attK ?? 6) * (q.ypa - ctx.qbMid) - 4 * (ctx.runQ - 0.55) + R.n() * 4.2))
   const rbCarT = rbs.length ? Math.round(clamp(8, 42, 24.5 + 0.18 * lead + 6 * (ctx.runQ - 0.55) - 3 * (q.ypa - ctx.qbMid) + R.n() * 3.5)) : 0
   // …and the yards from how good they are at it (and how well the day went: points and yards go together)
   // (the line: olPass / olRun are the squad's line against the team's real one, 0 without an OL build)
-  const ypa = clamp(3.5, 12, ctx.ypaBase + 2.6 * (q.ypa - ctx.qbMid) + 0.8 * (ctx.recQ - 0.55) + 0.09 * (S - 23) + R.n() * 0.75 + 1.2 * ctx.olPass)
+  const ypa = clamp(3.5, 12, ctx.ypaBase + (ctx.tune?.ypaK ?? 2.6) * (q.ypa - ctx.qbMid) + 0.8 * (ctx.recQ - 0.55) + 0.09 * (S - 23) + R.n() * 0.75 + 1.2 * ctx.olPass)
   let passYds = Math.round(att * ypa)
   const cmpPct = clamp(0.38, 0.86, ctx.compBase + 0.22 * (q.comp - ctx.qbMid) + 0.06 * (ctx.catchQ - 0.55) + R.n() * 0.05 + 0.04 * ctx.olPass)
   let cmp = Math.max(1, Math.round(att * cmpPct))
@@ -327,14 +327,16 @@ function fbGame(P, role, luck, g, ctx) {
   const qbRy = qbCar ? Math.round(clamp(-2 * qbCar, 170, qbCar * (2.2 + 4.8 * q.legs) * R.ln(0.35))) : 0
   const ypc = clamp(2.0, 7.5, 3.2 + 1.9 * ctx.runQ + 0.10 * (off - 6) + 0.25 * (ctx.teBlock - 0.5) + 0.04 * (S - 23) + R.n() * 0.5 + 1.6 * ctx.olRun)
   const pool = Math.round(rbCarT * ypc)
-  const carBy = deal(R, rbCarT, rbs.map(p => r(p).car * Math.pow(0.35 + sk(p).run, 1.6) * L(p)))
+  const wCar = rbs.map(p => r(p).car * Math.pow(0.35 + sk(p).run, 1.6) * L(p)), wCarSum = sum(wCar) || 1
+  // (tune.carCap: no back carries more than about this share before each extra share counts for less)
+  const carBy = deal(R, rbCarT, ctx.tune?.carCap ? softCap(wCar.map(x => x / wCarSum), ctx.tune.carCap, ctx.tune.carK ?? 0.4) : wCar)
   const rawRy = rbs.map((p, i) => carBy[i] * (2.4 + 2.6 * sk(p).run) * R.ln(0.3))
   const ryBy = rbs.length ? apportion(Math.max(0, pool), rawRy) : []
   const rushYds = pool + qbRy
   // the targets, then which of them were caught (exactly the completions)
   // (one receiver only draws so much of it: past 27% of the targets, each extra share counts for less)
   const wRaw = rec.map(p => r(p).tgt * Math.pow(0.35 + sk(p).tgt, 1.15) * L(p)), wSum = sum(wRaw) || 1
-  const wTgt = softCap(wRaw.map(x => x / wSum), 0.27, 0.3)
+  const wTgt = softCap(wRaw.map(x => x / wSum), ctx.tune?.tgtCap ?? 0.27, ctx.tune?.tgtK ?? 0.3)
   const tgtBy = deal(R, att, wTgt)
   const tickets = []
   rec.forEach((p, i) => { const pc = clamp(0.3, 0.93, cmpPct * (0.80 + 0.5 * (sk(p).catch - 0.55)) * (p.pos === 'rb' ? 1.12 : p.pos === 'te' ? 1.05 : 0.96)); for (let k = 0; k < tgtBy[i]; k++) tickets.push([i, pc]) })
@@ -351,7 +353,7 @@ function fbGame(P, role, luck, g, ctx) {
   const recYd = apportion(passYds, rawYd)
   // touchdowns: the defense's first, then catches and carries
   const offTd = mine.td - p6
-  const pShare = clamp(0.35, 0.84, 0.64 + 0.30 * (q.td - ctx.qbMid) - 0.18 * (ctx.glQ - 0.5))
+  const pShare = clamp(0.35, ctx.tune?.pTdMax ?? 0.84, (ctx.tune?.pTdBase ?? 0.64) + (ctx.tune?.pTdK ?? 0.30) * (q.td - ctx.qbMid) - 0.18 * (ctx.glQ - 0.5))
   const tdCatch = rec.map(() => 0), tdRun = rbs.map(() => 0)
   let qbRtd = 0, ptd = 0
   const carriers = [...rbs.map((p, i) => carBy[i]), qbCar]
@@ -469,12 +471,13 @@ function fbTeamCtx(P, role, strength) {
 }
 
 // (luck / run: a caller that plays a season one game at a time keeps each man's luck and the season's sacks so far)
-export function playFootballSeason({ roster, games = [], rounds = [], strength = null, seed = 'x', luck: luckIn = null, run = null }) {
+// tune: a caller's own league numbers (Franchise's box scores: lib/franchise2/box.js FB_TUNE); none, the defaults here
+export function playFootballSeason({ roster, games = [], rounds = [], strength = null, seed = 'x', luck: luckIn = null, run = null, tune = null }) {
   const P = roster.map(p => ({ ...p, sk: fbSkills(p) }))
   const role = fbRoles(P)
   let luck = luckIn
   if (!luck) { const LR = rngOf(`${seed}:fb:luck`); luck = new Map(P.map(p => [p.k, clamp(0.88, 1.12, 1 + LR.n() * 0.06)])) }
-  const ctx = { ...fbTeamCtx(P, role, strength), seed, run: run ?? { sacks: new Map() } }
+  const ctx = { ...fbTeamCtx(P, role, strength), seed, run: run ?? { sacks: new Map() }, tune }
   const reg = games.map((g, i) => fbGame(P, role, luck, g, { ...ctx, i, po: false }))
   const po = rounds.map((g, i) => fbGame(P, role, luck, g, { ...ctx, i, po: true }))
   return { reg, po, tot: totalsOf(P, reg), poTot: totalsOf(P, po), team: teamTotals(reg) }
