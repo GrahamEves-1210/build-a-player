@@ -460,7 +460,7 @@ export default function BucketApp() {
       : { starters: false, oneTeam: null }
   })
   // a reload on the build page lands back on it (lib/buildSave.js); opened fresh, the build waits on Home's CONTINUE card
-  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : 'splash' })
+  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : 'splash' })
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? saved?.gameMode ?? null)
   const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; if (saved) return saved.position; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
   const [build, setBuild]             = useState(() => liveAt?.build ?? saved?.build ?? {})
@@ -1165,7 +1165,7 @@ export default function BucketApp() {
     } catch {}
   }, [build, gameMode, position, dailyRun, page, isBucketCustomMode, startersPick, oneTeamPick])
   // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
-  useEffect(() => { markBuildPage('bucket', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])
+  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
   // Home's CONTINUE card: which build it is
   const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
 

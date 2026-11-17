@@ -203,7 +203,7 @@ const _resumeAt = (() => {
 })()
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _resumeAt ?? 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _resumeAt ?? (CFB_LIVE && !_sharedData && buildPageAtLoad('nfl') === 'cfb' ? 'cfb' : 'splash'))   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -469,7 +469,7 @@ export default function App() {
     try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk, sandbox: sandboxTainted.current || isCustomMode, starters: startersPick && isCustomMode, ...(tk === 'career' ? { cn: careerNew.current } : tk === 'franchise' && frJob.current ? { job: frJob.current } : null) })) } catch {}
   }, [build, gameMode, position, dailyRun, page, isCustomMode, startersPick])
   // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
-  useEffect(() => { markBuildPage('nfl', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build') && tkRef.current !== 'compete' ? page : null) }, [page, gameMode])   // (a Compete pool: a reload forfeits it, lib/compete.js)
+  useEffect(() => { if (page !== 'cfb') markBuildPage('nfl', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build') && tkRef.current !== 'compete' ? page : null) }, [page, gameMode])   // (a Compete pool: a reload forfeits it, lib/compete.js; College Football marks its own)
 
   useEffect(() => {
     try {

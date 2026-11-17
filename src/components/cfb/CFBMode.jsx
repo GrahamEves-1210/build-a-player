@@ -30,6 +30,7 @@ import CFBOffseason from './CFBOffseason'
 import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isUnder, classAge, draftAge, upgradePoints, backupSeason } from './cfbClass'
 import { randomName } from '../../lib/playerNames'
 import './cfb.css'
+import { buildPageAtLoad, markBuildPage } from '../../lib/buildSave'
 import Wordmark from '../Wordmark'
 
 // ── College Football: a mode inside football (MORE WAYS TO PLAY). Its own screens: the position
@@ -244,7 +245,9 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const [failed, setFailed] = useState(false)
   const saved = useMemo(loadProgress, [])
   const [progress, setProgress] = useState(saved)
-  const [phase, setPhase] = useState('pick')   // 'pick' | 'build' | 'season'
+  // (a reload on the build or the season goes straight back to it, as it was: lib/buildSave.js)
+  const [phase, setPhase] = useState(() => (saved?.build && buildPageAtLoad('nfl') === 'cfb' ? (saved.result ? 'season' : 'build') : 'pick'))   // 'pick' | 'build' | 'season'
+  useEffect(() => { markBuildPage('nfl', phase === 'pick' ? null : 'cfb') }, [phase])
   const [pos, setPos] = useState(saved?.pos ?? 'qb')
   // Current or All-Time: the pool this build's wheels deal from (cfbShared CFB_POOLS). era is the build's, kept with
   // it (a reload mid-build deals the same pool); pickEra is the switch on the first screen, which the next new build takes
