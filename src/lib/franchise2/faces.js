@@ -179,6 +179,7 @@ const BROWS = [['straight', 34], ['thick', 28], ['angled', 18], ['arched', 12], 
 const pickW = (r, list) => { const t = list.reduce((a, x) => a + x[1], 0); let u = r() * t; for (const x of list) { u -= x[1]; if (u < 0) return x[0] } return list[list.length - 1][0] }
 // the build by position (owner 11-16: "why are my TEs fat"): linemen wide, tight ends and linebackers athletic, the
 // backs, receivers, corners, safeties, quarterbacks and kickers lean
+const LONGISH = new Set(['locs', 'twists', 'flow', 'mullet', 'long', 'curly', 'textured'])
 const TIPPED = new Set(['locs', 'locsup', 'starter', 'twists'])
 const BIG = new Set(['ol', 'dl'])
 const MID = new Set(['te', 'lb'])
@@ -269,7 +270,8 @@ export function lookOf(key, pos = 'wr', ag = null) {
   if (BIG.has(roomOf(pos)) && head === 'long' && r() < 0.6) head = 'broad'
   const u = r()
   // (a headshot: now and then eye black or a headband, a stud; never a durag on a made-up man)
-  const gear = u < 0.02 ? 'eyeblack' : u < 0.04 && hair !== 'afro' && hair !== 'hightop' ? 'headband' : u < 0.09 && g !== 'w' ? 'studs' : 'none'
+  // (owner 11-17: "less headbands": rare, and only on longer hair, the way it shows in real headshots)
+  const gear = u < 0.02 ? 'eyeblack' : u < 0.026 && LONGISH.has(hair) ? 'headband' : u < 0.09 && g !== 'w' ? 'studs' : 'none'
   const L = {
     g, skin, head, eyes: pickW(r, EYES[g] ?? EYES.w), brows: pickW(r, BROWS), nose: pickW(r, NOSE[g]), mouth: pickW(r, MOUTH[g]),
     hair, hc, brow: hc === '#b8893c' ? '#16110e' : hc, beard, stache, gear, wide: wideOf(pos),
