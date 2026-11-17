@@ -17,7 +17,7 @@
 //                 backup (his ceiling moves up): the few unknowns who break out each year
 //   coaches  the head coach's and his coordinator's talent development, the front office (aging.js)
 //   injuries a season lost to a torn ACL or Achilles costs a young man most of his year's growth and a veteran a step
-//            (inj: the season's worst injury, injury.js INJ_SEV); a long stay on IR costs a little
+//            (inj: the season's worst injury, injury.js injSev); a long stay on IR costs a little
 //   luck     a little of it every year
 // The size of a year (owner, 2026-11-17): most one-year moves are within four points either way, a breakout past
 // that is rare; from 29 a man hardly ever gets better (a point now and then), and a young man grows into his late
