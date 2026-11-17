@@ -204,6 +204,10 @@ function calcStats(sel) {
 
 const PLAYED_KEY     = (str, uid) => uid ? `sal_play_${uid}_${str}`     : `sal_play_${str}`
 const SHUFFLED_KEY   = (str, uid) => uid ? `sal_shuffled_${uid}_${str}` : `sal_shuffled_${str}`
+// the day's picks so far, kept on the device: a reload or a killed tab picks them back up (everyone gets the same board,
+// so there's nothing to reroll). Only the daily board's: an Infinite board is a new one each time
+const PICKS_KEY = 'bab_sal_picks'
+const savedPicks = str => { try { const p = JSON.parse(localStorage.getItem(PICKS_KEY)); return p?.date === str && p.sel && typeof p.sel === 'object' ? p.sel : {} } catch { return {} } }
 // A day's shuffle as saved: a column ({ ci, players }) or a row ({ ti, row })
 const parseShuffle = saved => {
   try { const v = JSON.parse(saved); return { col: v?.players ? { [v.ci]: v.players } : {}, row: v?.row ? { [v.ti]: v.row } : {} } } catch { return { col: {}, row: {} } }
@@ -482,7 +486,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     }
     return getESTDate(0)
   })
-  const [sel,           setSel]           = useState({})
+  const [sel,           setSel]           = useState(() => savedPicks(activeDate.str))   // (the board opens on the daily one)
   const [alreadyPlayed, setAlreadyPlayed] = useState(null)
   const [showLB,        setShowLB]        = useState(false)
   const [showLBPrompt,  setShowLBPrompt]  = useState(false)
@@ -755,7 +759,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       }
     } catch {}
     setAlreadyPlayed(null)
-    setSel({})
+    setSel(savedPicks(activeDate.str))
   }, [activeDate.str, user?.id])
 
   // For logged-in users: cross-device check via Supabase
@@ -797,6 +801,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     })
     setSel(newSel)
   }, [alreadyPlayed, effectiveGrid])
+
+  useEffect(() => {
+    if (mode !== 'daily' || alreadyPlayed) return
+    try { if (Object.keys(sel).length) localStorage.setItem(PICKS_KEY, JSON.stringify({ date: activeDate.str, sel })); else localStorage.removeItem(PICKS_KEY) } catch {}
+  }, [sel, mode, alreadyPlayed, activeDate.str])
 
   const totalCost       = Object.values(sel).reduce((s, p) => s + p.price, 0)
   const pickedAll       = Object.keys(sel).length === SAL_COLS.length
