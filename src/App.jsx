@@ -66,6 +66,7 @@ import { track } from './lib/track'
 const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import { readLive, startLive, bookLive, clearLive } from './lib/seasonLive'
+import { buildPageAtLoad, markBuildPage } from './lib/buildSave'
 import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
@@ -191,9 +192,18 @@ const _live = (() => {
 })()
 // a season simulated but never booked: played (no second run at a season by reloading), unless it's the one that picks back up
 try { const s = localStorage.getItem(SEASON_PENDING); if (s && !(_live && !_live.booked && _live.sig === s)) { markPlayed(s); localStorage.removeItem(SEASON_PENDING) } } catch {}
+// the build page each kind of saved build is made on (bap_progress tk)
+const BUILD_PAGE_OF = { squad: 'squad-build', career: 'career-build', franchise: 'franchise-build' }
+// A reload (or iPhone Safari bringing back a tab it threw away) on the build page lands back on it, the build as it was
+// (lib/buildSave.js). Opening the site fresh still lands on Home, the build on its CONTINUE card
+const _resumeAt = (() => {
+  if (!_saved?.gameMode || _saved.gameMode === 'salarycap' || _goHome || _live) return null
+  const want = _saved.tk ? BUILD_PAGE_OF[_saved.tk] : 'game'
+  return want && buildPageAtLoad('nfl') === want && (want !== 'franchise-build' || FRANCHISE_LIVE) ? want : null
+})()
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _resumeAt ?? 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -383,7 +393,7 @@ export default function App() {
   const squadRef = useRef(null); squadRef.current = squad
   const openCareerRef = useRef(null)
   const careerRef = useRef(null)
-  const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
+  const lastPlayRef = useRef(_saved?.tk ? BUILD_PAGE_OF[_saved.tk] ?? null : null)   // the last mode page, so PLAY goes back to what you were doing (after a reload: the saved build's own page)
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
     const onNav = e => {
@@ -448,10 +458,18 @@ export default function App() {
   else if (page === 'career-build') tkRef.current = 'career'
   else if (page === 'franchise-build') tkRef.current = 'franchise'
   else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
+  // (only a build this page has had: opening /wiki or a profile, which never load the save, leaves it alone)
+  const progressOwned = useRef(!!_saved)
+  if (gameMode) progressOwned.current = true
+  // saved after every placement: a reload or a killed tab picks it back up (a Career build with its player's name,
+  // slot and face; a Franchise build with the roster spot it's for). No build (gone Home, Salary Cap): nothing to keep
   useEffect(() => {
-    if (!gameMode || gameMode === 'salarycap') return
-    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current, sandbox: sandboxTainted.current || isCustomMode, starters: startersPick && isCustomMode })) } catch {}
+    if (!gameMode || gameMode === 'salarycap') { if (progressOwned.current) { try { localStorage.removeItem('bap_progress') } catch {} }; return }
+    const tk = tkRef.current
+    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk, sandbox: sandboxTainted.current || isCustomMode, starters: startersPick && isCustomMode, ...(tk === 'career' ? { cn: careerNew.current } : tk === 'franchise' && frJob.current ? { job: frJob.current } : null) })) } catch {}
   }, [build, gameMode, position, dailyRun, page, isCustomMode, startersPick])
+  // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
+  useEffect(() => { markBuildPage('nfl', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build') && tkRef.current !== 'compete' ? page : null) }, [page, gameMode])   // (a Compete pool: a reload forfeits it, lib/compete.js)
 
   useEffect(() => {
     try {
@@ -797,7 +815,7 @@ export default function App() {
     handleStart('classic', p); setPage('career-build')
   }, [handleStart])
   // Career opens on its home: the three save slots (CareerIntro)
-  const careerNew = useRef({ slot: 0, name: null })
+  const careerNew = useRef((_saved?.tk === 'career' && _saved.cn) || { slot: 0, name: null })   // (a reload in the middle of the build: its player, from the save)
   const openCareer = useCallback(() => {
     setPage('career-intro')
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -840,7 +858,7 @@ export default function App() {
   // page, one roster spot at a time, like Squad Builder's. The mode asks for a spot (onBuild); the finished build
   // goes back to it (frBuilt) and the mode keeps it: nothing of a franchise is held here.
   //   job: { id, pos, n, of }   the spot's id in the mode's setup, its position, and "player n of of" for the bar
-  const frJob = useRef(null)
+  const frJob = useRef((_saved?.tk === 'franchise' && _saved.job) || null)   // (a reload in the middle of the build: its spot, from the save)
   const [frBuilt, setFrBuilt] = useState(null)
   const openFranchise = useCallback(() => { setPage('franchise'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'franchise' }) }, [])
   const startFranchiseBuild = useCallback(job => {
@@ -1531,6 +1549,9 @@ export default function App() {
     isPlus,
   }
 
+  // Home's CONTINUE card: which build it is (a Career or Franchise build is that mode's, not a plain Current one)
+  const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'franchise' ? 'Franchise' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode
+
   const renderGame = parked => (
     <>
       {/* a live pool has no navbar: no position switch, no way out but LEAVE */}
@@ -1833,11 +1854,11 @@ export default function App() {
       </Helmet>
       {IS_APP ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined} onFranchise={FRANCHISE_LIVE ? openFranchise : undefined}
-          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean) || savedSpinResult?.selectedQB)) ? { label: `${position.toUpperCase()} · ${resumeKind}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
           onSquad={openSquad} squad={squad} onCareer={openCareer} career={career} onCFB={CFB_LIVE ? openCFB : undefined} onFranchise={FRANCHISE_LIVE ? openFranchise : undefined}
-          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean) || savedSpinResult?.selectedQB)) ? { label: `${position.toUpperCase()} · ${resumeKind}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" home onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
