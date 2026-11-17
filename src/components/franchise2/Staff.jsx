@@ -340,7 +340,7 @@ function Search({ F, act, owner, k, onBack }) {
       {list.map((c, i) => {
         const seen = c.home || iv.includes(c.i), known = gradesKnown(F, c, k)
         return <StaffL3 key={c.i} F={F} c={c} role={k} team={F.team} size="s" hidden={!known} delay={i * 35} onClick={() => { setSel(c.i); sfx('tap') }}
-          line={[c.home ? `${TEAM[F.team].nick.toUpperCase()} POSITION COACH` : (c.cv ?? '').toUpperCase(), seen || known ? `AGE ${c.ag}` : null].filter(Boolean).join(' · ')} />
+          line={[c.home ? `${TEAM[F.team].nick.toUpperCase()} POSITION COACH` : (c.cv ?? '').toUpperCase(), (seen || known) && !c.home ? `AGE ${c.ag}` : null].filter(Boolean).join(' · ')} />
       })}
     </div>
   )

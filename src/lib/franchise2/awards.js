@@ -83,7 +83,9 @@ function honorCase(F, x, ap = false) {
     : sp === 'dt' ? 0.6 * rating + 0.35 * stats
       : sp === 'k' ? stats
         : ap ? 0.25 * rating + 0.7 * stats : 0.4 * rating + 0.55 * stats
-  return v + name * (ap ? 0.5 : 1) + team + x.r
+  // (a man who missed a third of the season rarely makes either team: a little off for every game under 14)
+  const out = Math.max(0, 14 - (x.t.gp ?? 0)) * (sp === 'k' ? 0 : 0.05)
+  return v + name * (ap ? 0.5 : 1) + team - out + x.r
 }
 
 export function seasonAwards(F) {
