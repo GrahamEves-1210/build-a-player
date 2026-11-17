@@ -109,7 +109,9 @@ export function makeClass(F) {
   const out = []
   let id = 1
   const q = clamp(-2, 2, R.n())   // the class's strength at the top (some years are deep in stars, some thin)
-  for (const [pos, n] of Object.entries(CLASS_MIX)) for (let k = 0; k < n; k++) out.push(makeProspect(F, R, pos, id++, q))
+  // (names: none twice in the class or already in the league, and the surnames spread: names.js)
+  const nm = { taken: new Set(SHORTS.flatMap(s => F.teams[s]?.r.map(p => p.n) ?? [])), surn: new Map() }
+  for (const [pos, n] of Object.entries(CLASS_MIX)) for (let k = 0; k < n; k++) out.push(makeProspect(F, R, pos, id++, q, nm))
   F.dc = out
   F.board = []
   F.sc = { b: 3, w: 0, u: 0, att: [], cmb: 0, ivd: [], pdd: [] }
@@ -134,7 +136,7 @@ const curveAt = (C, r) => { for (let i = 1; i < C.length; i++) { const [a, va] =
 const K_TALENT = [[0, 92], [0.2, 86], [0.6, 79], [1, 70]]
 const talentAt = (r, pos) => curveAt(pos === 'qb' ? QB_TALENT : pos === 'k' ? K_TALENT : TALENT, r)
 export const kSeen = (x, v) => (x?.p === 'k' ? 62 + (v - 60) * 0.4 : v)
-function makeProspect(F, R, pos, id, q = 0) {
+function makeProspect(F, R, pos, id, q = 0, nm = {}) {
   const T = TYPES_OF[pos]
   // his ceiling first (the class's talent: a few 90s, a first round from about 83 up, a long tail), then his age
   const t = talentAt(R.u(), pos)
@@ -163,7 +165,7 @@ function makeProspect(F, R, pos, id, q = 0) {
   const [lo, hi] = ranges[R.int(0, ranges.length - 1)]
   const col = schoolFor(R, pk)   // (a hidden gem: his pk is still a backup's here, so is his school)
   const cl = ag <= 20 ? 0 : ag === 21 ? (R.u() < 0.7 ? 1 : 2) : ag === 22 ? (R.u() < 0.6 ? 3 : 2) : 4   // RS-SO, JR, RS-JR, SR, RS-SR
-  return { i: id, n: fakeName(R), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl, ...(hb && { pk: pk + hb, hb }) }
+  return { i: id, n: fakeName(R, s ?? pos, nm), p: pos, ...(s && { s }), ag, o, pk, col, ht, wt, nu: R.int(lo, hi), a: enc(a), k: '0'.repeat(T.length), kc: 0, ch, z, sv: 0, cl, ...(hb && { pk: pk + hb, hb }) }
 }
 export const CLASS_LABEL = ['RS-SO', 'JR', 'RS-JR', 'SR', 'RS-SR']   // (three years out of high school: a true sophomore can't declare)
 const isSenior = x => x.cl >= 3
@@ -375,7 +377,9 @@ export function lineText(pos, s) {
 // ── The combine ──────────────────────────────────────────────────────────────
 // Measured from his body (the same every time): the 40, the vertical, the bench (225 lb), the 3-cone. Some top men
 // skip the 40 to run at their pro day, about one in ten doesn't work out at all, quarterbacks don't bench.
-const F40 = { qb: ['legs', 4.82], rb: ['speed', 4.56], wr: ['speed', 4.53], te: ['speed', 4.74], ol: ['mobility', 5.26], dl: ['speed', 4.86], lb: ['range', 4.67], db: ['speed', 4.52] }
+// (the 40: a step of speed is about 0.045 of a second, so the class's fastest men run 4.25-4.35, a few a year under
+// 4.30, the way the combine goes; the big men and the quarterbacks a little flatter)
+const F40 = { qb: ['legs', 4.8, 0.04], rb: ['speed', 4.53, 0.045], wr: ['speed', 4.5, 0.046], te: ['speed', 4.72, 0.042], ol: ['mobility', 5.24, 0.04], dl: ['speed', 4.84, 0.042], lb: ['range', 4.64, 0.042], db: ['speed', 4.49, 0.046] }
 const VERT = { qb: ['legs', 31], rb: ['burst', 34.5], wr: ['vertical', 35.5], te: ['vertical', 33], ol: ['mobility', 27.5], dl: ['getOff', 31.5], lb: ['range', 34.5], db: ['fluidity', 36.5] }
 const BENCH = { qb: null, rb: ['strength', 19], wr: ['size', 13], te: ['strength', 20], ol: ['anchor', 26], dl: ['strength', 25], lb: ['power', 22], db: ['press', 14] }
 const CONE = { qb: ['legs', 7.12], rb: ['elusiveness', 7.05], wr: ['bodyControl', 6.94], te: ['speed', 7.14], ol: ['mobility', 7.78], dl: ['bend', 7.3], lb: ['range', 7.06], db: ['fluidity', 6.95] }
@@ -386,9 +390,9 @@ export function combineOf(x) {
   if (out.dnp) return out
   // (a kicker doesn't run or lift: the scouts chart his kicks, his longest make and how many of ten he hits)
   if (x.p === 'k') return { ...out, kick: 1, lng: Math.round(52 + (tv(x, 'power') - 5) * 1.6 + g01(z, 908) * 2), made: clamp(4, 10, Math.round(8 + (tv(x, 'accuracy') - 5) * 0.35 + g01(z, 909))) }
-  const [t40, b40] = F40[x.p]
+  const [t40, b40, s40] = F40[x.p]
   const dtB = x.p === 'dl' && x.s === 'dt' ? 0.2 : 0
-  out.f40 = x.pk >= 88 && h01(z, 902) < 0.3 ? null : Math.round((b40 + dtB - (tv(x, t40) - 5) * 0.034 + g01(z, 903) * 0.025) * 100) / 100
+  out.f40 = x.pk >= 88 && h01(z, 902) < 0.3 ? null : Math.round((b40 + dtB - (tv(x, t40) - 5) * s40 + g01(z, 903) * 0.025) * 100) / 100
   const [tv1, bv] = VERT[x.p]
   out.vert = Math.round((bv - (dtB ? 3 : 0) + (tv(x, tv1) - 5) * 1.0 + g01(z, 904) * 1.2) * 2) / 2
   out.bench = BENCH[x.p] ? Math.max(6, Math.round(BENCH[x.p][1] + (tv(x, BENCH[x.p][0]) - 5) * 1.5 + (x.s === 'dt' ? 3 : 0) + g01(z, 905) * 2)) : null
@@ -450,9 +454,16 @@ export function buzzOf(F, x, t = weeksIn(F), cmb = F.sc?.cmb ?? 0) {
   BUZZ.set(key, v)
   return v
 }
-// the consensus board: everyone by the media's projection
+// WHAT A POSITION IS WORTH ON DRAFT DAY, in points of where a man is headed. Boards and front offices rank the way the
+// real draft goes: quarterbacks first, then pass rushers, tackles, receivers, corners and interior pass rushers; a
+// guard, a centre, a running back or a safety needs a star's grade to go in the top 10. (Kickers: the media's
+// projection of one is already a late-round one, kSeen; a front office takes his whole grade down instead.)
+export const POS_V = { qb: 3.5, edge: 2, ot: 1.6, wr: 1, cb: 1, dt: 0.4, lb: -1.3, s: -2, te: -2.3, rb: -2.6, og: -3, c: -3.6, k: -14 }
+const gKey = x => (x.p === 'ol' ? (x.s === 'LT' || x.s === 'RT' ? 'ot' : x.s === 'C' ? 'c' : 'og') : groupOf(x))
+const mediaV = x => (x.p === 'k' ? 0 : POS_V[gKey(x)] ?? 0)
+// the consensus board: everyone by the media's projection and what his position is worth
 export function consensus(F, t) {
-  return [...F.dc].map(x => ({ x, v: buzzOf(F, x, t) })).sort((a, b) => b.v - a.v || a.x.i - b.x.i).map(e => e.x)
+  return [...F.dc].map(x => ({ x, v: buzzOf(F, x, t) + mediaV(x) })).sort((a, b) => b.v - a.v || a.x.i - b.x.i).map(e => e.x)
 }
 export const rankMap = (F, t) => new Map(consensus(F, t).map((x, r) => [x.i, r + 1]))
 export const projRound = rank => (rank <= 32 ? 1 : rank <= 64 ? 2 : rank <= 100 ? 3 : rank <= 136 ? 4 : rank <= 176 ? 5 : rank <= 216 ? 6 : rank <= 250 ? 7 : null)
@@ -511,19 +522,48 @@ export function needsOf(F, s) {
   }
   return out
 }
-const GROUP_V = { qb: 3, edge: 1.8, ot: 1.4, cb: 1, wr: 0.7, dt: 0.3, s: -0.8, lb: -1.2, og: -1.7, c: -2, te: -1.6, rb: -1.8, k: -14 }
-const gKey = x => (x.p === 'ol' ? (x.s === 'LT' || x.s === 'RT' ? 'ot' : x.s === 'C' ? 'c' : 'og') : groupOf(x))
 const needKey = x => groupOf(x)
+// HOW BADLY A TEAM WANTS A QUARTERBACK (0..1): no answer at the spot, a bridge starter, a starter near the end; zero
+// for a team with its man (a good young starter, or a quarterback it took in the first two rounds the last two years).
+// A team that wants one takes one in the first round, a round early if it has to, the way 2-4 go every April.
+export function qbHunt(F, s) {
+  const men = (depthChart(F, s).qb ?? []).filter(p => !p.fl)
+  const yr = F.year + 1
+  if (F.teams[s].r.some(p => p.p === 'qb' && p.dr && p.dr[0] <= 2 && (p.rk ?? 0) >= yr - 2)) return 0
+  const st = men[0]
+  if (!st) return 1
+  const o = st.o, ag = st.ag ?? 27
+  let h = o < 74 ? 1 : o < 78 ? 0.85 : o < 81 ? 0.6 : o < 84 ? 0.3 : 0
+  if (ag >= 36) h = Math.max(h, 0.9)
+  else if (ag >= 34) h = Math.max(h, 0.6)
+  else if (ag >= 32 && o < 88) h = Math.max(h, 0.3)
+  return h
+}
+// what a man is worth to a team at a pick, from where it thinks he's headed (v): his position, its needs, its hunt
+// for a quarterback, and how far he'd be a reach (rank: his place on the consensus board; a team reaches far past
+// the board only for a quarterback it has to have)
+function pickWorth(x, v, { need, hunt, rd, at, rank, care = 1 }) {
+  let w = v
+  if (x.p === 'qb') w += rd <= 2 ? POS_V.qb + hunt * 6.5 - (hunt === 0 ? 4 : 0) : hunt * 2
+  else w += POS_V[gKey(x)] * (rd >= 4 && x.p !== 'k' ? 0.5 : 1) + (need[needKey(x)] ?? 0) * (rd <= 2 ? 0.9 : 1.3) * care
+  if (rank != null && rd <= 3) {
+    const room = at + 10 + at * 0.6 + (x.p === 'qb' ? 24 * hunt : 0)
+    if (rank > room) w -= (rank - room) * (rd === 1 ? 0.3 : 0.15)
+  }
+  return w
+}
+// The media's first round: the order as it stands, each team the man it would take off the consensus board
 export function mockDraft(F, n = 32) {
   const order = draftOrder(F)
   const t = weeksIn(F)
   const pool = consensus(F, t).filter(x => x.b == null).slice(0, 90)
+  const rank = new Map(pool.map((x, r) => [x.i, r + 1]))
   const taken = new Set(), out = []
   for (let k = 0; k < n; k++) {
     const s = order[k]
-    const need = needsOf(F, s)
+    const ctx = { need: needsOf(F, s), hunt: qbHunt(F, s), rd: 1, at: k }
     let best = null, bv = -1e9
-    for (const x of pool) { if (taken.has(x.i)) continue; const v = buzzOf(F, x, t) + need[needKey(x)] * 0.9 + GROUP_V[gKey(x)]; if (v > bv) { bv = v; best = x } }
+    for (const x of pool) { if (taken.has(x.i)) continue; const v = pickWorth(x, buzzOf(F, x, t), { ...ctx, rank: rank.get(x.i) }); if (v > bv) { bv = v; best = x } }
     if (!best) break
     taken.add(best.i)
     out.push({ at: k, s, xi: best.i })
@@ -745,7 +785,7 @@ export function openDraft(F) {
   runCombine(F)
   F.stage = 'draft'
 }
-export function startNight(F) { if (!F.dr) return; F.dr.ph = 'night'; F.dr.fin = Object.fromEntries(F.dc.map(x => [x.i, buzzOf(F, x)])) }
+export function startNight(F) { if (!F.dr) return; F.dr.ph = 'night'; F.dr.fin = Object.fromEntries(F.dc.map(x => [x.i, buzzOf(F, x)])); F.dr.rk = consensus(F).map(x => x.i) }
 export const pickTeam = (F, at = F.dr.at) => F.dr.own[at]
 export const draftDone = F => !!F.dr && F.dr.at >= PICKS_N
 export const myPicks = F => F.dr.own.map((s, at) => (s === F.team && at >= F.dr.at ? at : null)).filter(v => v != null)
@@ -759,12 +799,22 @@ export const TAG_TEXT = { G: 'GEM', B: 'BUST', S: 'SOLID' }
 // Its front office (league.js foOf) decides how well it sees: a well-run club's scouts miss by a couple of points and
 // it takes the best man; a badly run one buys the hype, misses by five or six and reaches for its needs, so a top-5
 // pick can be a bust and a team can go years without finding its quarterback.
-function cpuValue(F, s, x, need, rd) {
+// (a badly run club's misses are bigger, but it still drafts off the same board as everyone: a man every board grades
+// a backup doesn't go in the top 15 because one team's scouts loved him)
+function cpuValue(F, s, x, ctx) {
   const bad = 1 - foOf(F, s)
-  const seen = seenPk(x) + (finalBuzz(F, x) - seenPk(x)) * (0.3 + bad * 0.6) + g01(strHash(s), x.z) * (1 + bad * 5)
-  // (a club with its quarterback doesn't spend a high pick on another one: he'd sit for years)
-  const pv = x.p === 'qb' && need.qb === 0 && rd <= 3 ? -3 : GROUP_V[gKey(x)] * (rd >= 4 && x.p !== 'k' ? 0.5 : 1)
-  return seen + need[needKey(x)] * (rd <= 2 ? 1.1 : 1.4) * (0.7 + bad * 0.8) + pv
+  const seen = seenPk(x) + (finalBuzz(F, x) - seenPk(x)) * (0.35 + bad * 0.45) + g01(strHash(s), x.z) * (0.8 + bad * 2.2)
+  return pickWorth(x, seen, { ...ctx, rank: boardRank(F).get(x.i), care: 0.7 + bad * 0.6 })
+}
+// the consensus board as it stood when the draft started (draft night's CONSENSUS NO. is a man's place on that board,
+// not among the men still there); F.dr.rk keeps it in the save
+const BOARD = new WeakMap()
+export function boardRank(F) {
+  if (!F.dr) return rankMap(F)
+  if (!F.dr.rk) F.dr.rk = consensus(F).map(x => x.i)
+  let m = BOARD.get(F.dr)
+  if (!m || m.size !== F.dr.rk.length) { m = new Map(F.dr.rk.map((id, r) => [id, r + 1])); BOARD.set(F.dr, m) }
+  return m
 }
 // the player's man is taken: he goes on the roster, signs his slot's deal, and the pick goes on the board
 function take(F, s, x, via = null) {
@@ -797,9 +847,9 @@ function cpuPickOne(F) {
     }
   }
   const s = F.dr.own[at]
-  const need = needsOf(F, s)
+  const ctx = { need: needsOf(F, s), hunt: qbHunt(F, s), rd, at }
   let best = null, bv = -1e9
-  for (const x of F.dc) { if (x.b != null) continue; const v = cpuValue(F, s, x, need, rd); if (v > bv) { bv = v; best = x } }
+  for (const x of F.dc) { if (x.b != null) continue; const v = cpuValue(F, s, x, ctx); if (v > bv) { bv = v; best = x } }
   if (!best) { F.dr.at++; return null }
   return take(F, s, best)
 }
@@ -820,7 +870,7 @@ export function autoPick(F) {
   let x = left[0]
   if (!x) {
     const need = needsOf(F, F.team)
-    const score = y => { const v = viewOf(F, y); return v.my + need[needKey(y)] * 0.8 + GROUP_V[gKey(y)] * (y.p === 'k' ? 1 : 0.3) }
+    const score = y => { const v = viewOf(F, y); return v.my + need[needKey(y)] * 0.8 + POS_V[gKey(y)] * (y.p === 'k' ? 1 : 0.3) }
     x = [...F.dc].sort((a, b) => score(b) - score(a))[0]
   }
   return x ? userPick(F, x.i) : null

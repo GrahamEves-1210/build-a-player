@@ -49,6 +49,10 @@ export const roomOf = pos => { const k = String(pos ?? '').toLowerCase(); return
 // a league man's room: his spot when it splits his position (a corner or a safety; an edge or a tackle)
 // (fs: the spot he had when he was first drawn, kept when he moves rooms, so a corner moved to safety keeps his face)
 export const facePos = p => { const s = p?.fs ?? p?.s; return p ? ((p.p === 'db' || p.p === 'dl') && s ? s : p.p) : 'any' }
+// a room's backgrounds as [background, weight] (names.js draws a made-up man's background from it), and the one his
+// face will be drawn with (lookOf's first draw), so a name and a face agree
+export const mixOf = pos => Object.entries(MIX[roomOf(pos)]).map(([k, v]) => [k, v * 100])
+export const bgOf = (key, pos) => pickW(seeded(`face|${key}`), mixOf(pos))
 
 // ── The choices (the creator's lists: value, label) ──────────────────────────
 // skin: value, label, undertone (the older saves' twelve tones are all still here, so an old face keeps its skin)

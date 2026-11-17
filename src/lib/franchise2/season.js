@@ -246,7 +246,7 @@ function endWeek(F, row) {
           continue
         }
         const p = makeGen(F, pos, R, { o: pos === 'k' ? R.int(70, 76) : R.int(63, 68), ag: R.int(23, 28) })
-        p.n = freshName(R, F.teams[s].r)
+        p.n = freshName(R, F.teams[s].r, spot ?? pos)
         if (spot) p.s = spot
         p.y = 1
         F.teams[s].r.push(p)
