@@ -201,7 +201,7 @@ const EXPR = {
   neutral: { cu: 0.05, cw: 1, op: 0, ck: 0, sq: 0 },
   slight: { cu: 0.55, cw: 1.04, op: 0, ck: 0.3, sq: 0.15 },
   warm: { cu: 1, cw: 1.1, op: 0, ck: 0.65, sq: 0.36 },
-  grin: { cu: 1.15, cw: 1.16, op: 2.1, ck: 0.95, sq: 0.5 },
+  grin: { cu: 1.2, cw: 1.18, op: 1.75, ck: 0.95, sq: 0.5, jaw: 0.7 },
   half: { cu: 0.9, cw: 1.05, op: 0, ck: 0.45, sq: 0.2, one: true },
 }
 
@@ -236,6 +236,11 @@ function geo(look) {
   G.lk = (1 + sv(look, 'lip') * 0.35) * X.lk
   G.my = G.nb + (G.cy - G.nb) * 0.33 + V.my
   G.E = EXPR[look.expr] ?? EXPR.neutral
+  // the whole face with the smile (owner 11-17): the cheeks round out and lift, the brows relax up a touch, an open
+  // smile drops the jaw a little
+  { const E = G.E, k = E.ck * (E.one ? 0.6 : 1)
+    G.cb += k * 0.35; G.soft = clamp(G.soft + k * 0.35, 0, 1); G.by -= k * 0.3
+    if (E.jaw) { G.cy += E.jaw; G.jy += E.jaw * 0.4 } }
   // (a half smile's side: his own, from his bones)
   G.hs = (Number.isFinite(+look.bone) ? +look.bone : 1) % 2 ? 1 : -1
   // how much one side of the face takes the expression (a half smile: the near side barely)
@@ -711,7 +716,7 @@ function mouthOf(look, G, T, S, lo) {
   for (const sd of [-1, 1]) {
     const k = E.ck * G.ex(sd), c = sd < 0 ? Lc : Rc, w = G.nwid
     if (k < 0.12) continue
-    S.M += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
+    S[k > 0.8 ? 'S' : 'M'] += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
     if (!lo && k > 0.3) {
       const ax = 50 + sd * (G.es + 0.8), ay = G.ey + 5.6 - k * 0.9
       S.H += sm([[ax - sd * 0.4 - 1.9, ay], [ax - 0.4, ay - 0.75 - k * 0.2], [ax - sd * 0.4 + 1.7, ay - 0.1], [ax - 0.4, ay - 0.35]])
@@ -727,11 +732,11 @@ function mouthOf(look, G, T, S, lo) {
   if (op) {
     // the opening: dark; the top teeth one flat off-white shape (never single teeth), a soft shadow under the lip
     const hole = sm([[...Lc, 1], ...mid, [...Rc, 1], ...midB.slice().reverse()])
-    const tw = mw * 0.8, tb = op * 0.62
+    const tw = mw * 0.8, tb = op * 0.6
     const teeth = sm([[mid[0][0] - mw * 0.18, mid[0][1] - 0.1], [50, mid[1][1] - 0.2], [mid[2][0] + mw * 0.18, mid[2][1] - 0.1], [50 + tw * 0.8, mid[2][1] + tb * 0.7], [50, mid[1][1] + tb], [50 - tw * 0.8, mid[0][1] + tb * 0.7]])
-    const tc = mixC('#efe9df', T.B, 0.1 + T.d * 0.06)
-    s += fill(hole, mixC(T.D, '#140608', 0.55)) + fill(teeth, tc)
-      + (lo ? '' : fill(sm([[mid[0][0], mid[0][1] - 0.05], [50, mid[1][1] - 0.1], [mid[2][0], mid[2][1] - 0.05], [50 + tw * 0.5, mid[2][1] + 0.45], [50, mid[1][1] + 0.5], [50 - tw * 0.5, mid[0][1] + 0.45]]), mixC(tc, T.D, 0.22)))
+    const tc = mixC('#e8e0d3', T.B, 0.16 + T.d * 0.08)
+    s += fill(hole, mixC(T.D, T.lipU, 0.35)) + fill(teeth, tc)
+      + fill(sm([[mid[0][0], mid[0][1] - 0.05], [50, mid[1][1] - 0.1], [mid[2][0], mid[2][1] - 0.05], [50 + tw * 0.5, mid[2][1] + 0.55], [50, mid[1][1] + 0.6], [50 - tw * 0.5, mid[0][1] + 0.55]]), mixC(tc, T.D, 0.3))
   }
   s += fill(upper, T.lipU) + fill(lower, T.lipL)
   // the lower lip's under-plane a shade deeper
