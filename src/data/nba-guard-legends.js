@@ -180,7 +180,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
   { name: 'Dwyane Wade', short: 'D-Wade', team: 'MIA', starter: true, captain: true, number: 3, height: 76, weight: 220, position: 'SG', years: '2003–19',
     attrs: { jumpShot: 8, finishing: 11, passing: 7, handles: 8, perimeterDefense: 8, speed: 11, bounce: 8, size: 5, basketballIQ: 8, clutch: 10 } },
   { name: 'LeBron James', short: 'LeBron', team: 'MIA', starter: true, captain: false, number: 6, height: 81, weight: 250, position: 'SF', years: '2010–14',
-    attrs: { jumpShot: 7, finishing: 11, passing: 11, handles: 8, perimeterDefense: 7, speed: 11, bounce: 11, size: 10, basketballIQ: 10, clutch: 9 } },
+    attrs: { jumpShot: 7, finishing: 11, passing: 11, handles: 8, perimeterDefense: 10, speed: 11, bounce: 11, size: 10, basketballIQ: 10, clutch: 9 } },
   { name: 'Tim Hardaway', short: 'T. Hardaway', team: 'MIA', starter: false, captain: false, number: 10, height: 72, weight: 195, position: 'PG', years: '1996–01',
     attrs: { jumpShot: 8, finishing: 7, passing: 8, handles: 9, perimeterDefense: 5, speed: 9, bounce: 6, size: 1, basketballIQ: 8, clutch: 8 } },
   { name: 'Jimmy Butler', short: 'Butler', team: 'MIA', starter: true, captain: false, number: 22, height: 79, weight: 232, position: 'SF', years: '2019–', faceAdjust: { dx: 0, dy: -2, scale: 1 },

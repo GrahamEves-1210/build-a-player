@@ -215,7 +215,7 @@ export const NBA_BIG_PLAYERS = [
   { name: 'Chet Holmgren', short: 'Holmgren', team: 'OKC', starter: true, captain: false, number: 7, height: 84, weight: 195, wingspan: 90, skin: '#b0856f', position: 'C', faceCenter: [49, 41],
     attrs: { jumpShot: 6, finishing: 7, rebounding: 7, playmaking: 4, interiorDefense: 8, speed: 6, bounce: 3, size: 8, basketballIQ: 6, clutch: 3 } },
   { name: 'Aday Mara', short: 'Mara', team: 'OKC', starter: false, captain: false, number: 17, height: 85, weight: 225, wingspan: 90, skin: '#bf8c78', position: 'C', faceCenter: [50, 47],
-    attrs: { jumpShot: 3, finishing: 5, rebounding: 6, playmaking: 2, interiorDefense: 7, speed: 1, bounce: 2, size: 11, basketballIQ: 4, clutch: 3 } },
+    attrs: { jumpShot: 3, finishing: 5, rebounding: 6, playmaking: 2, interiorDefense: 10, speed: 1, bounce: 2, size: 11, basketballIQ: 4, clutch: 3 } },
   { name: 'Thomas Sorber', short: 'Sorber', team: 'OKC', starter: false, captain: false, number: 12, height: 84, weight: 240, wingspan: 90, skin: '#a46d52', position: 'C', faceCenter: [50, 41],
     attrs: { jumpShot: 2, finishing: 4, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 5, bounce: 3, size: 8, basketballIQ: 3, clutch: 3 } },
   { name: 'Jaylin Williams', short: 'Williams', team: 'OKC', starter: false, captain: false, number: 6, height: 82, weight: 230, wingspan: 85, skin: '#a8775a', position: 'PF', faceCenter: [49, 41],
@@ -289,13 +289,13 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── UTA ───────────────────────────────────────────────────────
   { name: 'Mo Bamba', short: 'Bamba', team: 'UTA', starter: false, captain: false, number: 11, height: 84, weight: 228, wingspan: 94, skin: '#6e4c3c', position: 'C', faceCenter: [48, 43],
-    attrs: { jumpShot: 4, finishing: 5, rebounding: 5, playmaking: 1, interiorDefense: 10, speed: 1, bounce: 2, size: 8, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 6, finishing: 5, rebounding: 5, playmaking: 1, interiorDefense: 8, speed: 1, bounce: 2, size: 8, basketballIQ: 3, clutch: 3 } },
   { name: 'Kyle Filipowski', short: 'Filipowski', team: 'UTA', starter: false, captain: false, number: 22, height: 84, weight: 230, wingspan: 83, skin: '#c29b84', position: 'PF', faceCenter: [49, 39],
     attrs: { jumpShot: 4, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 3, speed: 3, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
   { name: 'Jaxson Hayes', short: 'Hayes', team: 'UTA', starter: false, captain: false, number: 11, height: 83, weight: 222, wingspan: 87, skin: '#b77b5a', position: 'C', faceCenter: [50, 44],
     attrs: { jumpShot: 1, finishing: 4, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 5, bounce: 6, size: 6, basketballIQ: 3, clutch: 3 } },
   { name: 'Jaren Jackson Jr.', short: 'JJJ', team: 'UTA', starter: true, captain: true, number: 20, height: 83, weight: 242, wingspan: 89, skin: '#945e44', position: 'PF', faceCenter: [49, 42],
-    attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 3, interiorDefense: 8, speed: 5, bounce: 6, size: 9, basketballIQ: 6, clutch: 5 } },
+    attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 3, interiorDefense: 9, speed: 5, bounce: 6, size: 9, basketballIQ: 6, clutch: 5 } },
   { name: 'Jusuf Nurkic', short: 'Nurkic', team: 'UTA', starter: false, captain: false, number: 30, height: 84, weight: 290, wingspan: 86, skin: '#cda28f', position: 'C', faceCenter: [48, 42],
     attrs: { jumpShot: 4, finishing: 6, rebounding: 6, playmaking: 2, interiorDefense: 3, speed: 1, bounce: 1, size: 7, basketballIQ: 6, clutch: 4 } },
 

@@ -168,7 +168,7 @@ const _DBS = [
     attrs: { speed: 5, size: 6, fluidity: 5, press: 4, hands: 6, zoneIQ: 4, manCoverage: 4, playRecognition: 4, runSupport: 6} },
   // JAX
   { name: 'Travis Hunter',       short: 'Hunter',         team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#5e3c22', height: 73, weight: 185, starter: true,  captain: true,  number: 12, subpos: 'cb',
-    attrs: { speed: 9, size: 5, fluidity: 10, press: 6, hands: 11, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 5} },
+    attrs: { speed: 9, size: 5, fluidity: 10, press: 7, hands: 11, zoneIQ: 6, manCoverage: 8, playRecognition: 8, runSupport: 6} },
   { name: 'Jourdan Lewis',       short: 'J. Lewis',       team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#3a2010', height: 70, weight: 190, starter: true,  number: 2, subpos: 'cb',
     attrs: { speed: 5, size: 2, fluidity: 7, press: 6, hands: 7, zoneIQ: 8, manCoverage: 7, playRecognition: 8, runSupport: 7} },
   { name: 'Eric Murray',         short: 'Murray',         team: 'JAX', teamName: 'Jacksonville Jaguars', skin: '#5e3c22', height: 71, weight: 199, starter: false,  captain: true,  number: 29, subpos: 's',
@@ -188,7 +188,7 @@ const _DBS = [
     attrs: { speed: 6, size: 6, fluidity: 5, press: 5, hands: 4, zoneIQ: 6, manCoverage: 4, playRecognition: 7, runSupport: 7} },
   // LAC
   { name: 'Tarheeb Still',       short: 'Still',          team: 'LAC', teamName: 'Los Angeles Chargers', skin: '#5e3c22', height: 73, weight: 196, starter: true,  captain: true,  number: 4, subpos: 'cb',
-    attrs: { speed: 6, size: 6, fluidity: 7, press: 7, hands: 5, zoneIQ: 6, manCoverage: 7, playRecognition: 7, runSupport: 5} },
+    attrs: { speed: 6, size: 6, fluidity: 7, press: 7, hands: 7, zoneIQ: 6, manCoverage: 7, playRecognition: 7, runSupport: 5} },
   { name: 'Donte Jackson',       short: 'D. Jackson',     team: 'LAC', teamName: 'Los Angeles Chargers', skin: '#5e3c22', height: 70, weight: 180, starter: true,  number: 26, subpos: 'cb',
     attrs: { speed: 9, size: 2, fluidity: 7, press: 4, hands: 8, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 3} },
   { name: 'Derwin James',        short: 'D. James',       team: 'LAC', teamName: 'Los Angeles Chargers', skin: '#5e3c22', height: 74, weight: 215, starter: true,  captain: true,  number: 3,  subpos: 's',

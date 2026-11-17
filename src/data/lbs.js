@@ -216,7 +216,7 @@ const _LBS = [
   { name: "Willie Gay Jr.", short: "Gay", team: 'MIA', teamName: "Miami Dolphins", pos: 'LB', subpos: 'lb', spot: 'SAM', skin: '#5e3c22', height: 73, weight: 246, number: 40, starter: true, years: "2025-",
     attrs: { range: 7, power: 6, tackling: 7, blockShed: 5, zoneInstincts: 7, passRush: 5, playRecognition: 7, leadership: 5 } },
   { name: "Jacob Rodriguez", short: "J. Rodriguez", team: 'MIA', teamName: "Miami Dolphins", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#f0c4a0', height: 73, weight: 235, number: 10, starter: false, years: "2026-",
-    attrs: { range: 6, power: 5, tackling: 8, blockShed: 6, zoneInstincts: 6, passRush: 5, playRecognition: 5, leadership: 6 } },
+    attrs: { range: 7, power: 6, tackling: 10, blockShed: 7, zoneInstincts: 7, passRush: 5, playRecognition: 7, leadership: 6 } },
   { name: "Shaka Heyward", short: "Heyward", team: 'MIA', teamName: "Miami Dolphins", pos: 'LB', subpos: 'lb', spot: 'WILL', skin: '#5e3c22', height: 75, weight: 238, number: 45, starter: false, years: "2026-",
     attrs: { range: 4, power: 5, tackling: 5, blockShed: 3, zoneInstincts: 3, passRush: 4, playRecognition: 3, leadership: 3 } },
   // MIN
@@ -232,7 +232,7 @@ const _LBS = [
   { name: "Robert Spillane", short: "Spillane", team: 'NE', teamName: "New England Patriots", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#f0c4a0', height: 73, weight: 234, number: 14, starter: true, captain: true, years: "2025-",
     attrs: { range: 7, power: 7, tackling: 9, blockShed: 7, zoneInstincts: 7, passRush: 6, playRecognition: 8, leadership: 6 } },
   { name: "Christian Elliss", short: "C. Elliss", team: 'NE', teamName: "New England Patriots", pos: 'LB', subpos: 'lb', spot: 'WILL', skin: '#f0c4a0', height: 74, weight: 231, number: 53, starter: true, years: "2023-",
-    attrs: { range: 7, power: 6, tackling: 7, blockShed: 5, zoneInstincts: 6, passRush: 5, playRecognition: 6, leadership: 4 } },
+    attrs: { range: 7, power: 10, tackling: 7, blockShed: 5, zoneInstincts: 6, passRush: 5, playRecognition: 6, leadership: 4 } },
   { name: "Darius Muasau", short: "Muasau", team: 'NE', teamName: "New England Patriots", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#b07848', height: 72, weight: 234, number: 54, starter: false, years: "2026-",
     attrs: { range: 7, power: 5, tackling: 6, blockShed: 6, zoneInstincts: 5, passRush: 6, playRecognition: 5, leadership: 3 } },
   { name: "Namdi Obiazor", short: "Obiazor", team: 'NE', teamName: "New England Patriots", pos: 'LB', subpos: 'lb', spot: 'WILL', skin: '#5e3c22', height: 75, weight: 229, number: 48, starter: false, years: "2026-",
@@ -304,7 +304,7 @@ const _LBS = [
   { name: "SirVocea Dennis", short: "Dennis", team: 'TB', teamName: "Tampa Bay Buccaneers", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#5e3c22', height: 72, weight: 230, number: 8, starter: true, years: "2023-",
     attrs: { range: 7, power: 6, tackling: 7, blockShed: 6, zoneInstincts: 7, passRush: 6, playRecognition: 6, leadership: 6 } },
   { name: "Josiah Trotter", short: "Jo. Trotter", team: 'TB', teamName: "Tampa Bay Buccaneers", pos: 'LB', subpos: 'lb', spot: 'MIKE', skin: '#5e3c22', height: 74, weight: 237, number: 45, starter: false, years: "2026-",
-    attrs: { range: 6, power: 5, tackling: 6, blockShed: 5, zoneInstincts: 5, passRush: 6, playRecognition: 4, leadership: 5 } },
+    attrs: { range: 8, power: 6, tackling: 8, blockShed: 7, zoneInstincts: 7, passRush: 8, playRecognition: 7, leadership: 6 } },
   // TEN
   { name: "Cody Barton", short: "Barton", team: 'TEN', teamName: "Tennessee Titans", pos: 'LB', subpos: 'lb', spot: 'WILL', skin: '#f0c4a0', height: 74, weight: 237, number: 50, starter: true, years: "2025-",
     attrs: { range: 8, power: 8, tackling: 8, blockShed: 8, zoneInstincts: 7, passRush: 6, playRecognition: 7, leadership: 6 } },

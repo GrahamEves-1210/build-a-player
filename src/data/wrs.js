@@ -76,7 +76,7 @@ const _WRS = [
     attrs: { speed: 7,  bodyControl: 8,  vertical: 9,  routeRunning: 6,  release: 6,  hands: 9,  awareness: 8,  size: 8,  afterCatch: 5  } },
   // CHI
   { name: 'Rome Odunze',         short: 'Odunze',      team: 'CHI', teamName: 'Chicago Bears',         skin: '#b07848', height: 75, weight: 215, starter: true,  captain: true,  number: 15,
-    attrs: { speed: 8,  bodyControl: 8,  vertical: 10,  routeRunning: 8,  release: 7,  hands: 8,  awareness: 6,  size: 9,  afterCatch: 6  } },
+    attrs: { speed: 8,  bodyControl: 8,  vertical: 10,  routeRunning: 8,  release: 7,  hands: 8,  awareness: 6,  size: 9,  afterCatch: 7  } },
   { name: 'Luther Burden III',   short: 'Burden',      team: 'CHI', teamName: 'Chicago Bears',         skin: '#3a2010', height: 72, weight: 210, starter: false, number: 10,
     attrs: { speed: 9,  bodyControl: 7,  vertical: 6,  routeRunning: 6,  release: 5,  hands: 8,  awareness: 7,  size: 6,  afterCatch: 9  } },
   { name: 'Zavion Thomas',         short: 'Z. Thomas',    team: 'CHI', teamName: 'Chicago Bears', skin: '#5e3c22', height: 70, weight: 190, starter: false, number: 13,
@@ -283,7 +283,7 @@ const _WRS = [
     attrs: { speed: 6,  bodyControl: 3,  vertical: 7,  routeRunning: 3,  release: 4,  hands: 4,  awareness: 7,  size: 6,  afterCatch: 10 } },
   // SEA
   { name: 'Jaxon Smith-Njigba',  short: 'JSN',         team: 'SEA', teamName: 'Seattle Seahawks',      skin: '#b07848', height: 72, weight: 196, starter: true,  captain: true,  number: 11,
-    attrs: { speed: 9,  bodyControl: 11, vertical: 9,  routeRunning: 11,  release: 10,  hands: 10,  awareness: 11,  size: 6,  afterCatch: 8  } },
+    attrs: { speed: 9,  bodyControl: 11, vertical: 10,  routeRunning: 11,  release: 10,  hands: 10,  awareness: 11,  size: 6,  afterCatch: 8  } },
   { name: 'Rashid Shaheed',      short: 'Shaheed',     team: 'SEA', teamName: 'Seattle Seahawks',      skin: '#5e3c22', height: 72, weight: 175, starter: false, number: 22,
     attrs: { speed: 10, bodyControl: 6,  vertical: 6,  routeRunning: 5,  release: 6,  hands: 4,  awareness: 6,  size: 5,  afterCatch: 8  } },
   { name: 'Tory Horton',         short: 'Horton',      team: 'SEA', teamName: 'Seattle Seahawks',      skin: '#5e3c22', height: 75, weight: 195, starter: false, number: 15,
