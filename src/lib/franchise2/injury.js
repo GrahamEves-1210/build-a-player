@@ -30,6 +30,10 @@ export const TALLY = { on: false, rows: [] }
 export const QOL = 0.8                 // the NFL's rate times this, for every man (owner: a bit gentler than real)
 const RATE = { qb: 0.025, rb: 0.052, wr: 0.045, te: 0.049, ol: 0.034, edge: 0.039, dt: 0.043, lb: 0.043, cb: 0.044, s: 0.047, k: 0.006 }
 const EXPOSE = { start: 1.4, rest: 0.15 }
+// The starting quarterback (owner, 2026-11-17: "every starting QB plays all 17"): the count's 2.5% is every QB who
+// took a snap, garbage time and the backups' series included; the men who start take far more hits. In 2022-24 only
+// 10 to 14 of the 32 Week 1 starters started all 17 games. This puts a starter at about 6.5% a game (the tone-down in): 10 to 15 a season start all 17 (records-check.mjs).
+const QB_START = 2.4
 // the men behind the starters who play: how many in each room, and how much (a backup QB or guard hardly plays; the
 // second running back, the third and fourth receivers, the line's rotation, the nickel corner do)
 const NEXT = { qb: [1, 0.2], rb: [1, 0.85], wr: [2, 0.85], te: [1, 0.85], ol: [2, 0.35], edge: [2, 0.85], dt: [2, 0.85], lb: [1, 0.6], cb: [1, 0.85], s: [1, 0.6], k: [0, 0] }
@@ -104,7 +108,7 @@ export function hurt(F, p, R, { minor = false } = {}) {
 }
 
 // a man's chance to be hurt in a game: his room's rate, how much he plays (start | next | rest), the tone-down
-export const injuryRate = (g, role = 'start') => RATE[g] * (role === 'start' ? EXPOSE.start : role === 'next' ? NEXT[g][1] : EXPOSE.rest) * QOL
+export const injuryRate = (g, role = 'start') => RATE[g] * (role === 'start' ? EXPOSE.start * (g === 'qb' ? QB_START : 1) : role === 'next' ? NEXT[g][1] : EXPOSE.rest) * QOL
 
 // after a team's game: every man who played (and the rest of the roster, a little) may have been hurt in it
 export function rollInjuries(F, short, R) {
@@ -118,7 +122,7 @@ export function rollInjuries(F, short, R) {
     for (const p of room) {
       if (seen.has(p.i)) continue
       seen.add(p.i)
-      const ex = on.has(p.i) ? EXPOSE.start : nextUp++ < NEXT[k][0] ? NEXT[k][1] : EXPOSE.rest
+      const ex = on.has(p.i) ? EXPOSE.start * (k === 'qb' ? QB_START : 1) : nextUp++ < NEXT[k][0] ? NEXT[k][1] : EXPOSE.rest
       if (R.u() < RATE[k] * ex * QOL) {
         const ij = hurt(F, p, R, { minor: k === 'k' })
         out.push([p, ij, on.has(p.i)])

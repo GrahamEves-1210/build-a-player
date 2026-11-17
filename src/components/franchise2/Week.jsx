@@ -35,9 +35,9 @@ const mmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2
 function timelineOf(F, row, mv) {
   if (row) {
     const dr = row.dr ?? null
-    return { opp: row.opp, home: row.home, kp: row.kp ?? [], dr, endT: Math.max(3600, ...(row.pl ?? []).map(p => p[0]), ...(dr ?? []).map(d => d[1])), ms: row.ms ?? [], cur: null }
+    return { opp: row.opp, home: row.home, po: row.rd != null, kp: row.kp ?? [], dr, endT: Math.max(3600, ...(row.pl ?? []).map(p => p[0]), ...(dr ?? []).map(d => d[1])), ms: row.ms ?? [], cur: null }
   }
-  return { opp: mv.opp, home: mv.home, kp: mv.feed ?? [], dr: mv.dr ?? [], endT: mv.t, ms: mv.ms ?? [], cur: mv.from ? [mv.from.t0, mv.t, mv.ball === 'us' ? 1 : 0, mv.from.y0, 'M', mv.y] : null }
+  return { opp: mv.opp, home: mv.home, po: !!mv.po, kp: mv.feed ?? [], dr: mv.dr ?? [], endT: mv.t, ms: mv.ms ?? [], cur: mv.from ? [mv.from.t0, mv.t, mv.ball === 'us' ? 1 : 0, mv.from.y0, 'M', mv.y] : null }
 }
 // A drive's snaps as the broadcast shows them (the down, the distance, the spot), from where it started to how it
 // ended. The game plays drives, not snaps; these are laid out along the drive (seeded, the same every time): the
@@ -223,7 +223,9 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const poss = ballSide ? (ballSide === h ? 'h' : 'a') : null
   const label = po ? (rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][rd]) : `WK ${wk}`
   const kindTxt = po ? (rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[rd]} ROUND`) : `WEEK ${wk}${DIV_OF[tl.opp] === DIV_OF[F.team] ? ' · DIVISION GAME' : ''}`
-  const status = fin ? (row?.ot ? 'FINAL/OT' : 'FINAL') : `${tt >= 3600 ? 'OT' : `Q${Math.min(4, Math.floor(tt / 900) + 1)}`} ${whenOf(Math.min(tt, tt >= 3600 ? tt : 3599.9)).split(' ')[1]}`
+  // (the clock on the bug: a quarter's last tick is its 0:00, overtime's periods the right length: plays.js whenOf)
+  const [nowQ, nowClock] = whenOf(tt, po).split(' ')
+  const status = fin ? (row?.ot ? 'FINAL/OT' : 'FINAL') : `${nowQ} ${nowClock}`
   const dd = atMoment ? `${DOWN[mv.down]} & ${mv.goal ? 'GOAL' : mv.d}` : sit && !fin ? `${DOWN[sit.down]} & ${sit.goal ? 'GOAL' : sit.togo}` : null
   return createPortal(
     <div className={`fk fk-root fg gd${phase === 'play' ? ' is-play' : ''}${fin ? ' is-final' : ''}`} style={fkVars(F.team)}>
@@ -239,7 +241,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
             </div>
             <div className="gd-barrow">
             <Scorebug a={a} h={h} as={as} hs={hs} label={label}
-              per={tt >= 3600 ? 'OT' : ['1ST', '2ND', '3RD', '4TH'][Math.min(3, Math.floor(tt / 900))]} clock={whenOf(Math.min(tt, tt >= 3600 ? tt : 3599.9)).split(' ')[1]}
+              per={nowQ.startsWith('Q') ? ['1ST', '2ND', '3RD', '4TH'][+nowQ[1] - 1] : nowQ} clock={nowClock}
               final={fin ? (row?.ot ? 'F/OT' : 'FINAL') : null} poss={fin ? null : poss} dd={fin ? null : dd} />
             <div className="gd-ctl">
               {fin || phase === 'call' || phase === 'bump' ? null : <SpeedSeg className="gd-speed" steps={SPEEDS} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); keepSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)} onSkip={skip} skipLabel={mv && !row ? ['Skip to', 'moment'] : ['Skip to', 'end']} />}
@@ -326,7 +328,7 @@ function PlayByPlay({ F, tl, T }) {
   return (
     <ol className="gd-list" aria-live="polite">
       {list.map(e => {
-        const [q, clock] = whenOf(Math.min(e.t, e.t >= 3600 ? e.t : 3599)).split(' ')
+        const [q, clock] = whenOf(e.t, tl.po).split(' ')
         return (
           <li key={e.key} className={`gd-pbp is-${e.kind}`} style={fkVars(e.s)}>
             <span className="gd-when"><b>{q}</b>{clock}</span>
@@ -354,7 +356,7 @@ function Scoring({ F, tl, row, T }) {
       </div>
       {kp.length ? kp.map(p => {
         const s = p[1] ? F.team : tl.opp
-        const [q, clock] = whenOf(p[0]).split(' ')
+        const [q, clock] = whenOf(p[0], tl.po).split(' ')
         return (
           <div key={`${p[0]}-${p[3]}`} className="fg-play" style={fkVars(s)}>
             <span className="fg-play-when"><b>{q}</b>{clock}</span>
@@ -418,9 +420,9 @@ export function GameBoxSheet({ F, row, B: B0 = null, owner, f = 1, status = null
   // (the builds' faces, as everywhere else in Franchise)
   const faces = Object.fromEntries((F.builds ?? []).map((_, i) => { const p = F.teams[F.team].r.find(x => x.b === i); let src = null; try { src = p ? faceFor(F, p, F.team, true) : null } catch { src = null } return [String(i), src] }))
   return (
-    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} faces={faces} portal={portal} onClose={onClose} rows={rows} status={status ?? (row.ot ? 'FINAL · OT' : 'FINAL')} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'}>
+    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} faces={faces} portal={portal} all label={TEAM[F.team].name.toUpperCase()} onClose={onClose} rows={rows} status={status ?? (row.ot ? 'FINAL · OT' : 'FINAL')} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'}>
       {kick.length > 0 && <div className="sq-box-sec"><span className="sq-box-h">KICKING</span><FbTable head={['KICKING', 'FG', 'XP', 'LONG', '50+']} rows={kick.map((k, i) => ({ k: `k${i}`, name: k.n.split(' ').slice(-1)[0], role: i ? row.opp : F.team, cells: [`${k.line[1]}/${k.line[0]}`, `${k.line[3]}/${k.line[2]}`, k.line[4] || '—', `${k.line[6] ?? 0}/${k.line[5] ?? 0}`] }))} /></div>}
-      {Object.keys(opp.s).length > 0 && <FootballBox r={B.opp.r} game={opp} owner={owner} label={TEAM[row.opp].name.toUpperCase()} />}
+      {Object.keys(opp.s).length > 0 && <FootballBox r={B.opp.r} game={opp} owner={owner} label={TEAM[row.opp].name.toUpperCase()} all />}
     </BoxSheet>
   )
 }
@@ -429,8 +431,9 @@ export function GameBoxSheet({ F, row, B: B0 = null, owner, f = 1, status = null
 function MomentCall({ F, mv, owner, onCall, onSim }) {
   const off = mv.ball === 'us'
   const ballTeam = off ? F.team : mv.opp
+  // (the score from the side of the team with the ball, the way the broadcast says it: "Rams ball · Lions up 7")
   const m = mv.mine - mv.theirs
-  const where = m === 0 ? `TIED ${mv.mine}-${mv.theirs}` : m < 0 ? `DOWN ${-m}` : `UP ${m}`
+  const where = m === 0 ? `tied ${mv.mine}-${mv.theirs}` : `${TEAM[m > 0 ? F.team : mv.opp].nick} up ${Math.abs(m)}`
   const calls = playsFor(mv)
   const simple = (F.games ?? 'advanced') === 'simple'
   const qb = ctlFor(F, mv, calls.find(id => PLAYS[id].kind === 'pass') ?? calls[0])
@@ -522,7 +525,7 @@ function Final({ F, row, news, owner, onDone }) {
       {row.ms?.length > 0 && (
         <div className="fg-feed">
           <Chyron tone="ink" size="s" title="Key moments" />
-          {row.ms.map((m, i) => <div key={i} className={`gd-mo${m.ok ? ' is-ok' : ''}`}><span className="fg-play-when"><b>{whenOf(m.t).split(' ')[0]}</b>{whenOf(m.t).split(' ')[1]}</span><span>{m.txt}</span><i>{m.ok ? (m.side === 'def' ? 'STOP' : 'MADE IT') : (m.side === 'def' ? 'THEIRS' : 'NO')}</i></div>)}
+          {row.ms.map((m, i) => <div key={i} className={`gd-mo${m.ok ? ' is-ok' : ''}`}><span className="fg-play-when"><b>{whenOf(m.t, row.rd != null).split(' ')[0]}</b>{whenOf(m.t, row.rd != null).split(' ')[1]}</span><span>{m.txt}</span><i>{m.ok ? (m.side === 'def' ? 'STOP' : 'MADE IT') : (m.side === 'def' ? 'THEIRS' : 'NO')}</i></div>)}
         </div>
       )}
       {(mine.length > 0 || star) && (

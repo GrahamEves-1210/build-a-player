@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { GROUP, OFF_GROUPS, DEF_GROUPS, ST_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
+import { GROUP, OFF_GROUPS, DEF_GROUPS, ST_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, staleChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, fkVars, BackBar, LowerThird } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money, faceFor, posText } from './dparts'
@@ -25,12 +25,14 @@ export default function TeamTab({ F, act, owner }) {
   const D = useMemo(() => {
     const C = depthChart(F, F.team), L = startersOf(F, F.team)
     const starting = new Set(Object.values(L).map(p => p.i))
+    // (each starter's slot: the line by its spots, LT to RT, whoever's filling in)
+    const slotOf = new Map(Object.entries(L).map(([k, p]) => [p.i, k]))
     const rooms = {}
     for (const k of [...OFF_GROUPS, ...DEF_GROUPS, ...ST_GROUPS]) {
       let up = 0
       rooms[k] = C[k].map((p, i) => {
         const starts = starting.has(p.i)
-        const slot = starts ? (k === 'ol' ? OL_SPOTS[up] : `${GROUP[k].label}${up + 1}`) : `${i + 1}`
+        const slot = starts ? (k === 'ol' ? OL_SPOTS[+(slotOf.get(p.i) ?? 'ol1').slice(2) - 1] : `${GROUP[k].label}${up + 1}`) : `${i + 1}`
         if (starts) up++
         const size = starts ? 'm' : 's'
         return {
@@ -41,9 +43,12 @@ export default function TeamTab({ F, act, owner }) {
       })
       rooms[k].short = C[k].filter(p => !p.in).length < GROUP[k].n
     }
-    return { rooms, st: strength(F, F.team) }
+    // (a backup rated past the starter ahead of him: the chart's out of date, and one tap sets it by rating)
+    let stale = null
+    try { stale = staleChart(F)[0] ?? null } catch { stale = null }
+    return { rooms, st: strength(F, F.team), stale }
   }, [F, rev, owner]) // eslint-disable-line react-hooks/exhaustive-deps
-  const { rooms, st } = D
+  const { rooms, st, stale } = D
   const groups = side === 'off' ? OFF_GROUPS : side === 'def' ? DEF_GROUPS : ST_GROUPS
   // (opening the tab: the first two rooms on the first frame, the rest a room a frame, so a phone shows the first
   // screenful sooner; offense and defense swap whole, in place)
@@ -82,7 +87,12 @@ export default function TeamTab({ F, act, owner }) {
       <div className="fd-seg" role="tablist">
         {[['off', 'OFFENSE'], ['def', 'DEFENSE'], ['st', 'SPECIAL TEAMS']].map(([k, label]) => <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); setPick(null); sfx('tap') }}>{label}</button>)}
       </div>
-      <p className="fd-hint">Tap a player to move him</p>
+      {stale ? (
+        <div className="fd-stale">
+          <span><b>Depth chart out of date</b>{stale.better.n} ({stale.better.o}) is behind {stale.starter.n} ({stale.starter.o})</span>
+          <button type="button" onClick={() => { act(X => resetChart(X)); setPick(null); sfx('flip') }}>Reset by rating</button>
+        </div>
+      ) : <p className="fd-hint">Tap a player to move him</p>}
       <div className="fd-rooms">
       {groups.slice(0, shown).map((k, gi) => {
         const men = rooms[k]

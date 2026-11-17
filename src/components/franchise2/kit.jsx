@@ -68,7 +68,7 @@ export function jerseyOf(F, p) {
   if (!p) return null
   if (F) { const n = jersey(F, p); if (n != null) return n }   // (the depth chart's numbers: roster.js)
   if (p.b != null) return F?.builds?.[p.b]?.num ?? null
-  if (p.nu != null) return p.nu
+  if (p.nu != null) return p.nu % 100   // (a man's number carries his team's mark past 99: roster.js)
   if (p.num != null) return p.num
   const r = realOf(p.p, p.n)
   if (r?.num != null) return r.num

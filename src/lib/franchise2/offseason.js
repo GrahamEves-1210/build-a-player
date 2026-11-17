@@ -12,7 +12,9 @@ import { fbCase, honorsOf } from '../teamSeason'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { makeClass } from './draft'
 import { leagueUnderCap } from './market'
-import { signRookie } from './contracts'
+import { signRookie, cutCost, marketValue, termFor } from './contracts'
+import { addNews } from './news'
+import { sortChartAfterCamp, fixNumbers } from './roster'
 import { clearLines } from './deals'
 
 // (1 awards: awards.js · the league ages: aging.js · 2 re-sign and 3 free agency: market.js · the cap: contracts.js)
@@ -23,14 +25,24 @@ import { clearLines } from './deals'
 export function newSeason(F) {
   const R = rngOf(`${F.seed}-${F.year}-newyear`)
   const before = new Set(F.lastStarters ?? [])
+  const released = []
   signUDFAs(F, R)
   F.dc = []; F.dr = null; F.offers = null; F.rs = null; F.fa = []
   for (const s of SHORTS) {
     const t = F.teams[s]
-    // the cuts to the roster: the men at the bottom go. The player's own picks are his to cut, never the game's;
-    // the league's teams keep their picks from the first four rounds and let the late ones compete
-    const keep = t.r.filter(p => p.rk === F.year + 1 && (s === F.team || (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
-    const { roster } = trim(t.r, new Set(keep))
+    // the cuts to the roster: the men at the bottom go. The player's new class is his to cut, never the game's, and so
+    // are his picks from the first four rounds while they're on their rookie deals; a late pick from an earlier class
+    // competes for his job like anyone, and if camp cuts him he's released the way the wire sees it (2026-11-17: a
+    // pick from two drafts ago was being dropped here without a word). The league's teams keep their picks from the
+    // first four rounds and let the late ones compete.
+    const mine = s === F.team
+    const keep = t.r.filter(p => (mine ? p.rk === F.year + 1 || (p.rc && (p.dr?.[0] ?? 8) <= 4) : p.rk === F.year + 1 && (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
+    const { roster, cut } = trim(t.r, new Set(keep))
+    if (mine) {
+      // (anyone the cut-down does let go from the player's team is released the way the wire and the cap see it:
+      // his dead money on the books, a RELEASED line, and he's a free agent)
+      for (const p of cut) if (!p.fl) { released.push(p); t.dead = [...(t.dead ?? []), ...(cutCost(p).dead > 0 ? [[p.n, cutCost(p).dead]] : [])] }
+    }
     t.r = fillUp(F, roster, R)
     for (const p of t.r) { if (p.y <= 0) { p.$ = worth(p); p.y = yearsFor(p) } }
     t.res = (t.res ?? [0, 0]).map(v => r1(v * 0.6))
@@ -38,15 +50,23 @@ export function newSeason(F) {
   }
   // the roster cuts and fill-ins done: every league team under the cap for the new season
   leagueUnderCap(F); F.fa = []
+  for (const p of released) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.ox; F.fa.push(p) }
   // the schedule follows last season's finish in each division
   const S = standings(F)
   F.year++
   F.sched = makeSchedule(F.seed, F.year, S.div)
+  // (the season's kept lines start over: box.js; last season's are in the men's careers, awards.js)
+  F.lg = {}; F.lgp = {}; F.wkl = null
   F.wk = 0; F.log = []; F.ss = {}; F.kst = {}; F.ssr = null; F.po = null; F.moments = 0; F.streak = 0; F.nx = 0; F.ev = null; F.nextEv = 3; F.evSeen = []
+  for (const p of released) addNews(F, { k: 'cut', tag: 'RELEASED', s: F.team, text: `${TEAM[F.team].nick} release ${p.n}` })
   F.phase = 'season'; F.stage = null; F.aging = null
   // (the offseason's own lists go: the wire has moved on; the league's history keeps what lasts)
   F.fas = null; F.ext = null; F.gone = null; F.aw = null; F.fad = null
   F.talks = null; F.rsd = null; F.fao = null; F.far = null; clearLines(F)
+  // camp's over: the player's chart set again by rating (last year's order was for last year's men), and every
+  // newcomer's number settled before anyone sees it (roster.js)
+  sortChartAfterCamp(F)
+  for (const s of SHORTS) fixNumbers(F, s)
   // chemistry: a core that stays together grows; many new starters set it back. Hype cools toward the middle.
   const now = Object.values(lineup(F.teams[F.team])).map(p => p.i)
   const changed = now.filter(i => !before.has(i)).length

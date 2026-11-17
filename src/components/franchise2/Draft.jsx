@@ -8,7 +8,7 @@ import {
   startNight, cpuPicks, userPick, autoPick, simRest, pickTeam, draftDone, myPicks, roundOf,
   tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT,
 } from '../../lib/franchise2'
-import { groupOf } from '../../lib/franchise2/roster'
+import { groupOf, jersey } from '../../lib/franchise2/roster'
 import { faceUrl, buildFaceUrl, facePos } from '../../lib/franchise2/faces'
 import { realOf } from '../../lib/franchise2/league'
 import { TYPES_OF } from '../../lib/squadSeason'
@@ -649,7 +649,7 @@ function RevealCard({ F, p, onNext }) {
   useEffect(() => { const t = setTimeout(() => setFlip(true), reduced() ? 0 : 700); return () => clearTimeout(t) }, [])
   const t = TEAM[F.team]
   const { first, last } = splitName(p.n)
-  const nu = F.teams[F.team].r.find(q => q.i === p.pid)?.nu
+  const man = F.teams[F.team].r.find(q => q.i === p.pid), nu = man ? jersey(F, man) : null
   return (
     <div className="dr-day dr-reveal fk" style={fkVars(F.team)}>
       <p className="dr-announce">WITH THE {ord(p.at + 1)} PICK IN THE {F.year + 1} NFL DRAFT, THE {t.name.toUpperCase()} SELECT</p>
@@ -679,7 +679,7 @@ function ClassRecap({ F, act, owner }) {
   const rv = useMemo(() => draftReview(F), [F, F.dr.picks.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const [n, setN] = useState(() => (reduced() ? 99 : 0))
   useEffect(() => { if (n > rv.mine.length + 1) return; const t = setTimeout(() => setN(k => k + 1), 380); return () => clearTimeout(t) }, [n, rv.mine.length])
-  const nu = p => F.teams[F.team].r.find(q => q.i === p.pid)?.nu
+  const nu = p => { const man = F.teams[F.team].r.find(q => q.i === p.pid); return man ? jersey(F, man) : null }
   return (
     <div className="dr-day fk" style={fkVars(F.team)}>
       <Chyron team={F.team} title="DRAFT CLASS" tag={F.year + 1} size="l" sub={`${TEAM[F.team].nick.toUpperCase()} · ${rv.mine.length} PICKS · GM ${owner.toUpperCase()}`} />
