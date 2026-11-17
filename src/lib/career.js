@@ -529,6 +529,10 @@ export const SPORT = {
     declineAt: () => 31,
     // drafted at 19–20: 2 points a year through 20, 1 through 24, then the prime holds (a 99 at 25 was every average build)
     devYoung: () => 20, devPrime: () => 25,
+    // (owner 11-17, a player's report: a college player reached the NBA at 21-22 and got half the points of a one-and-done.
+    // Basketball's points now follow his NBA seasons, not his age: 2 a season for his first two, 1 for the next four,
+    // then none; the same six-year window whether he was drafted at 19 or 22, and nothing once he's past his decline age)
+    devBySeason: n => (n < 2 ? 2 : n < 6 ? 1 : 0),
     bigInjury: 20,
     draft: {
       rounds: 2,
@@ -3225,7 +3229,7 @@ export function bookSeason(c) {
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (honors still earn theirs, and so does camp)
   const S0 = sportOf(c)
-  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
+  const base = S0.devBySeason ? (c.age < S0.declineAt(c.pos) ? S0.devBySeason(c.seasons.length) : 0) : (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
   // (soccer: a Golden Boot is the striker's yearly honor, not a rare one, so it earns no point of its own)
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)

@@ -79,7 +79,7 @@ export function CareerPage({ go }) {
       </ul>
 
       <h2 id="development">Development points and trait costs</h2>
-      <p>Development points raise his traits. He earns 2 a year while young (to {nfl.devYoung()} in football, {nba.devYoung()} in basketball), 1 a year through his prime and none after, plus 1 for an award (MVP, OPOY, DPOY or Rookie of the Year) and 1 for an All-Pro or All-NBA team. Camp and the bye week can add more.</p>
+      <p>Development points raise his traits. In football he earns 2 a year while young (to {nfl.devYoung()}), then 1 a year through his prime and none after. In basketball it follows his NBA seasons: 2 a season for his first two, 1 for the next four, then none, whether he came out of college or straight to the draft. Either way he gets 1 more for an award (MVP, OPOY, DPOY or Rookie of the Year) and 1 for an All-Pro or All-NBA team. Camp and the bye week can add more.</p>
       <div className="wk-table-wrap">
         <table className="wikitable">
           <thead><tr><th>One grade up</th><th className="num">Points</th></tr></thead>
