@@ -31,7 +31,8 @@ const OT_REG = 600, OT_PO = 900
 // field goal tries made 85% of the time, 3.9 punts, 1.2 turnovers, a 4th-down try or so (about half made), drives
 // starting near the 30, and very few kicks of 60 yards.
 const c01 = v => clamp(0, 1, v)
-const TD_K = 0.69, TD_E = 0.017    // a drive's touchdown chance: its scale and how much the edge moves it
+const TD_K = 0.76, TD_E = 0.017    // a drive's touchdown chance: its scale and how much the edge moves it (0.69 before
+                                   // the knees and the last half minutes, 2026-11-17: they took about a point a team game)
 const TO_BASE = 0.115              // turnovers a drive
 const THREE_OUT = 0.36             // of the drives that stall: three and out
 const RZ_STALL = 0.08              // ...in the red zone (the 19 and in)
