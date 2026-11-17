@@ -100,7 +100,8 @@ export function driveOutcome(y0, e, R, ctx = {}) {
     const pTD = tdChance(y, e) * (ctx.needTD ? 1.12 : 1)
     const pTO = clamp(0.05, 0.2, TO_BASE - 0.005 * e + (ctx.late && ctx.m < 0 ? 0.035 : 0))
     const u = R.u()
-    if (u < pTD) return { res: 'td', at: 100, dur: dur + durOf('td', room, R), go }
+    // (from: where the scoring play's series started, so the touchdown is never longer than the field it had)
+    if (u < pTD) return { res: 'td', at: 100, dur: dur + durOf('td', room, R), go, from: y }
     if (u < pTD + pTO) { const at = clamp(y, 99, y + Math.round(R.u() * room * 0.6)); return { res: 'to', at, dur: dur + durOf('to', at - y, R), go } }
     // it stalls: three and out, in the red zone, or somewhere between
     const v = R.u()
@@ -118,7 +119,7 @@ export function driveOutcome(y0, e, R, ctx = {}) {
     go++
     if (R.u() < goRate(togo, e)) {
       const gain2 = togo + R.int(0, 8)
-      if (at + gain2 >= 100) return { res: 'td', at: 100, dur: dur + 6, go }
+      if (at + gain2 >= 100) return { res: 'td', at: 100, dur: dur + 6, go, from: at }
       y = at + gain2
       continue
     }
@@ -260,7 +261,16 @@ function step(S) {
   // ahead with the ball and under two minutes left: the victory formation
   if (!S.ot && S.half === 2 && REG - S.t <= 110 && margin(S, S.poss) > 0) { const t0 = S.t; S.t = REG; logDrive(S, S.poss, t0, S.y, 'kneel', S.y); S.kneel = 1; return }
   const side = S.poss
+  // under half a minute left in a half: a drive is a play or two, not a march (lastPlays)
+  if (!S.ot && (S.half === 1 ? HALF : REG) - S.t < 30) { lastPlays(S, side, R); return }
   const d = drive(S, R)
+  // ahead in the fourth quarter on a drive that's still going at the two-minute mark: the clock is theirs, and they
+  // take a knee instead of scoring (most of the time with the ball under 1:50; always when it's under 0:40)
+  if (!S.ot && S.half === 2 && margin(S, side) > 0 && (d.res === 'td' || d.res === 'fg') && S.t + d.dur >= REG - 110 && (S.t + d.dur >= REG - 40 || R.u() < 0.75)) {
+    const t0 = S.t, y0 = S.y
+    count(S, side, 'kneel'); S.t = REG; logDrive(S, side, t0, y0, 'kneel', Math.min(99, d.at ?? y0)); S.kneel = 1
+    return
+  }
   // a moment: this drive's deciding snap, played by the player (the game waits on it: S.key)
   if (S.G.key) {
     const k = snapOf(S, side, d)
@@ -274,10 +284,12 @@ function applyDrive(S, side, d, R, t0, y0) {
   const fits = S.t + d.dur < end
   // a drive that runs into the half or the end: it scores only if it got there in time (a last-second kick)
   if (!fits && (d.res === 'punt' || d.res === 'to' || d.res === 'downs')) { S.t = end; logDrive(S, side, t0, y0, 'end', d.at); afterDrive(S, side, { res: 'end' }, R); return }
-  S.t = Math.min(end - 1, S.t + d.dur)
+  // (a score on a drive that runs into the end of the half: the hurry-up gets it in with a few seconds to spare, a
+  // field goal as the clock runs down, a touchdown a little before; never every one at 0:01)
+  S.t = fits ? S.t + d.dur : Math.max(S.t + 1, end - (d.res === 'fg' ? R.int(1, 6) : R.int(3, 40)))
   count(S, side, d.res === 'downs' ? 'downs' : d.res)
   for (let i = 0; i < (d.go ?? 0); i++) count(S, side, 'go')
-  if (d.res === 'td') touchdown(S, side, R)
+  if (d.res === 'td') touchdown(S, side, R, d.from != null ? { fy: d.from } : {})
   else if (d.res === 'fg') { count(S, side, 'fga'); count(S, side, `k${Math.min(6, Math.floor(d.dist / 10))}`); if (kickFG(S, side, d.dist, R)) score(S, side, 3, 'fg', { y: 117 - d.dist, d: d.dist }); else d.res = 'miss' }
   logDrive(S, side, t0, y0, d.res, d.res === 'td' ? 100 : d.at)
   afterDrive(S, side, d, R)
@@ -294,6 +306,32 @@ function afterDrive(S, side, d, R) {
   S.y = nextStart(d, R)
 }
 
+// The last half minute of a half (or of the game): one quick series from where the kickoff or the punt left the ball.
+// A team that's ahead after halftime kneels it out; in range, the kick; behind by more than a score, the heave (it
+// works about one time in twenty-five, more from close); otherwise the half runs out.
+function lastPlays(S, side, R) {
+  const end = S.half === 1 ? HALF : REG, t0 = S.t, y0 = S.y, m = margin(S, side), left = end - S.t
+  if (S.half === 2 && m > 0) { S.t = end; logDrive(S, side, t0, y0, 'kneel', y0); S.kneel = 1; return }
+  // (two or three quick throws to the sideline: how far they get)
+  const y = clamp(y0, 92, y0 + R.int(0, 14) + (left >= 15 ? R.int(0, 16) : 0)), dist = 117 - y
+  const needTD = S.half === 2 && m <= -4
+  if (!needTD && (S.half === 1 || m >= -3) && dist <= 58 + kickRange(S.G.k?.[side])) {
+    S.t = Math.min(end - 1, Math.max(t0, end - R.int(1, 3)))
+    count(S, side, 'fg'); count(S, side, 'fga'); count(S, side, `k${Math.min(6, Math.floor(dist / 10))}`)
+    if (kickFG(S, side, dist, R)) { score(S, side, 3, 'fg', { y: 117 - dist, d: dist }); logDrive(S, side, t0, y0, 'fg', y) }
+    else logDrive(S, side, t0, y0, 'miss', y)
+    S.t = end
+    return
+  }
+  if (needTD && R.u() < (y >= 70 ? 0.15 : y >= 45 ? 0.04 : 0.01)) {
+    S.t = Math.min(end - 1, Math.max(t0, end - 1))
+    count(S, side, 'td'); touchdown(S, side, R, { fy: y }); logDrive(S, side, t0, y0, 'td', 100)
+    S.t = end
+    return
+  }
+  S.t = end; logDrive(S, side, t0, y0, 'end', y)
+}
+
 // ── The moments: snaps the player plays (owner, 2026-11-16) ─────────────────
 // The game is played a drive at a time; a moment is one snap inside one of those drives, the one that decides it,
 // at the down, distance, spot and clock this game put there. The player calls the play and runs it on his offense,
@@ -308,7 +346,7 @@ function afterDrive(S, side, d, R) {
 //   defense: their last drive with the player's team ahead or level by a score in the last five minutes, a stand
 //            in the red zone in a one-score 4th quarter
 export const SNAP_MAX = { off: 3, def: 1 }
-const SNAP_P = { half: 0.75, q4: 0.55, late: 0.85, two: 1, ot: 0.9, final: 0.85, stand: 0.45, otd: 0.35 }
+const SNAP_P = { half: 0.75, q4: 0.55, late: 0.85, two: 1, ot: 1, final: 0.85, stand: 0.45, otd: 0.6 }
 // (kind → what the broadcast calls it)
 export const SNAP_KIND = { half: 'TWO-MINUTE DRILL', two: 'TWO-MINUTE DRILL', late: '4TH QUARTER', q4: '4TH QUARTER', ot: 'OVERTIME', final: 'FINAL DRIVE', stand: 'RED ZONE', otd: 'OVERTIME' }
 function snapOf(S, side, d) {
@@ -316,7 +354,8 @@ function snapOf(S, side, d) {
   if (off ? !K.off : !K.def) return null
   const n = S.mo ?? (S.mo = { off: 0, def: 0 })
   const which = off ? 'off' : 'def'
-  if (n[which] >= SNAP_MAX[which]) return null
+  // (overtime has its own: a team that's used its moments in regulation still gets one in overtime)
+  if (n[which] >= SNAP_MAX[which] + (S.ot ? 1 : 0)) return null
   const R = rngOf(`${S.G.seed}-snap-${S.di}`)
   const m = margin(S, us), t = S.t
   const end = S.ot ? S.ot.end : S.half === 1 ? HALF : REG
@@ -357,6 +396,8 @@ function snapOf(S, side, d) {
   // the clock: most of the way through the drive, and never on the half's last tick
   let ts = t + Math.round(d.dur * (red ? 0.85 : d.res === 'to' ? 0.6 : 0.8))
   ts = Math.max(t + Math.min(20, end - t - 6), Math.min(ts, end - R.int(4, 16)))
+  // (no moment once the game is decided: ahead with the ball inside the two-minute mark, a team kneels)
+  if (off && m > 0 && !S.ot && S.half === 2 && REG - ts <= 110) return null
   n[which]++
   return {
     side: which, kind, ball: off ? 'us' : 'them', us, down, d: togo, y, goal: y + togo >= 100, t: Math.round(ts),
@@ -410,6 +451,8 @@ export function resolveSnap(S, out = {}) {
     const ctx = ctxOf(S, ball)
     const d = driveOutcome(y, e, R, ctx)
     d.dur = Math.round(d.dur * (ctx.late && ctx.m < 0 ? 0.45 : ctx.late && ctx.m > 0 ? 1.2 : 0.8) * (S.ot ? 0.72 : 1))
+    // (ahead and still going at the two-minute mark: the knee, as on any drive)
+    if (!S.ot && S.half === 2 && ctx.m > 0 && (d.res === 'td' || d.res === 'fg') && S.t + d.dur >= REG - 110) { S.t = REG; logDrive(S, ball, from.t0, from.y0, 'kneel', Math.min(99, y)); S.kneel = 1; return }
     applyDrive(S, ball, d, R, from.t0, from.y0)
   }
   if (yards >= k.d || k.down < 3) goOn(ny)
@@ -464,9 +507,10 @@ export function boxOf(S) {
   return { h: S.G.h, a: S.G.a, hs: S.hs, as: S.as, ot: S.ot ? 1 : 0, tie: S.tie ? 1 : 0, q: quarters(S), pl: S.plays.map(p => [p.t, p.s === 'h' ? 0 : 1, p.p, p.k === 'key' || p.k === 'snap' ? (p.ok ? 'K' : 'k') : p.k === 'td' ? 'T' : 'F']), ...(S.keyOut && { ko: S.keyOut }) }
 }
 // the clock at a moment, as the broadcast reads it
-export function clockText(t) {
-  const inQ = t >= REG ? (t - REG) % OT_PO : t % Q
-  const left = Q - inQ
+// (po: a playoff game, whose overtime periods are 15 minutes; the regular season's is 10)
+export function clockText(t, po = false) {
+  const len = t >= REG ? (po ? OT_PO : OT_REG) : Q
+  const left = len - (t >= REG ? (t - REG) % len : t % Q)
   const m = Math.floor(left / 60), s = Math.floor(left % 60)
   return `${m}:${String(s).padStart(2, '0')}`
 }

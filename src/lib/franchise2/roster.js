@@ -39,17 +39,56 @@ export const slotName = k => (k.startsWith('ol') ? OL_SPOTS[+k.slice(2) - 1] : k
 // ── The order ────────────────────────────────────────────────────────────────
 // (a filler backup, league.js fillUp, is behind every real man in his room whatever the ratings say)
 const byOvr = (a, b) => (a.fl ?? 0) - (b.fl ?? 0) || b.o - a.o || (b.b != null) - (a.b != null) || a.i - b.i
-// the line by rating, then its five starters stood at their own spots, left tackle to right tackle
-function olOrder(men) {
-  const all = [...men].sort(byOvr), five = all.slice(0, 5), rest = all.slice(5)
-  const line = OL_SPOTS.map(spot => { const i = five.findIndex(p => p.s === spot); return i >= 0 ? five.splice(i, 1)[0] : null })
-  return [...line.map(p => p ?? five.shift()).filter(Boolean), ...rest]
+// The line goes by spot (owner, 2026-11-17: "a C spot holds an RT"): the chart's first five are the LT, LG, C, RG
+// and RT, each the best man for that spot, his own spot first. A man can slide over (a guard to centre, a left tackle
+// to the right side) for a few points of rating; a tackle at centre or a centre at tackle almost never.
+// spotCost(spot, s): the OVR a man gives up playing `spot` when he's a `s`
+const TACKLE = new Set(['LT', 'RT'])
+export function spotCost(spot, s) {
+  if (!s || s === spot) return s ? 0 : 5
+  const t1 = TACKLE.has(spot), t2 = TACKLE.has(s)
+  if (t1 && t2) return 3
+  if (!t1 && !t2) return spot === 'C' || s === 'C' ? 4 : 2
+  return spot === 'C' || s === 'C' ? 14 : 6
 }
-// the default order: by rating (the player's own builds first in his first chart, the job is his to lose)
+// the best man left for a spot (a filler only when nobody else is left)
+function bestFor(spot, men) {
+  let best = -1, v = -Infinity
+  men.forEach((p, i) => { const x = p.o - spotCost(spot, p.s) - (p.fl ? 100 : 0); if (x > v) { v = x; best = i } })
+  return best
+}
+// (the spots filled hardest first: the tackles and the centre, then the guards)
+const FILL_ORDER = ['LT', 'C', 'RT', 'LG', 'RG']
+function olOrder(men, sort = byOvr) {
+  const left = [...men].sort(sort), line = {}
+  // (the player's own builds first: a build lineman holds his own spot)
+  for (const p of left.filter(x => x.b != null && sort !== byOvr)) { const spot = OL_SPOTS.includes(p.s) && !line[p.s] ? p.s : FILL_ORDER.find(x => !line[x]); if (spot) { line[spot] = p; left.splice(left.indexOf(p), 1) } }
+  for (const spot of FILL_ORDER) { if (line[spot] || !left.length) continue; line[spot] = left.splice(bestFor(spot, left), 1)[0] }
+  // (then the swaps that make the line better: two starters trading spots, or a backup in for a starter; the
+  // greedy pass alone can put a right guard at left guard and the left guard at right guard)
+  const val = (spot, p) => (p ? p.o - spotCost(spot, p.s) - (p.fl ? 100 : 0) : -999)
+  const fixed = spot => line[spot]?.b != null && sort !== byOvr
+  for (let pass = 0, better = true; better && pass < 6; pass++) {
+    better = false
+    for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) {
+      const a = OL_SPOTS[i], b = OL_SPOTS[j]
+      if (fixed(a) || fixed(b) || !line[a] || !line[b]) continue
+      if (val(a, line[b]) + val(b, line[a]) > val(a, line[a]) + val(b, line[b])) { [line[a], line[b]] = [line[b], line[a]]; better = true }
+    }
+    for (const a of OL_SPOTS) for (let k = 0; k < left.length; k++) {
+      if (fixed(a) || !line[a]) continue
+      if (val(a, left[k]) > val(a, line[a])) { const out = line[a]; line[a] = left[k]; left[k] = out; better = true }
+    }
+  }
+  left.sort(sort)
+  return [...OL_SPOTS.map(s => line[s]).filter(Boolean), ...left]
+}
+// the default order: by rating (the player's own builds first in his first chart, the job is his to lose); the line
+// by spot
 function ratedOrder(team, k, buildsFirst = false) {
   const men = team.r.filter(p => groupOf(p) === k)
   const sort = buildsFirst ? (a, b) => (b.b != null) - (a.b != null) || byOvr(a, b) : byOvr
-  if (k === 'ol' && !buildsFirst) return olOrder(men)
+  if (k === 'ol') return olOrder(men, sort)
   return [...men].sort(sort)
 }
 // The player's chart, kept up to date with who's on the roster: gone men out, new men in where their OVR puts them
@@ -85,7 +124,7 @@ export function depthChart(F, short = F.team, { healthy = false } = {}) {
   const t = F.teams[short]
   if (short === F.team && !t.dc) chartOf(t)
   // (a man new to the team gets his number the first time the chart is read)
-  if (t.r.some(p => p.b == null && p.nu == null)) fixNumbers(F, short)
+  if (t.r.some(p => p.b == null && (p.nu == null || p.nt !== short))) fixNumbers(F, short)
   const C = chartTeam(t)
   if (healthy) for (const k of GROUP_KEYS) C[k] = C[k].filter(p => !p.in)
   return C
@@ -97,6 +136,16 @@ export function startersFromChart(C) {
   const used = new Set(), out = {}
   const healthy = k => C[k].filter(p => !p.in && !used.has(p.i))
   for (const [k, , , , n] of GROUPS) {
+    // the line by spot: a man hurt is replaced at his own spot by the best backup for it (the others stay put)
+    if (k === 'ol') {
+      const bench = C.ol.slice(5).filter(p => !p.in)
+      OL_SPOTS.forEach((spot, j) => {
+        let p = C.ol[j] && !C.ol[j].in && !used.has(C.ol[j].i) ? C.ol[j] : null
+        if (!p) { const free = bench.filter(x => !used.has(x.i)); const i = bestFor(spot, free); p = i >= 0 ? free[i] : null }
+        if (p) { out[`ol${j + 1}`] = p; used.add(p.i) }
+      })
+      continue
+    }
     for (let j = 1; j <= n; j++) {
       const p = healthy(k)[0] ?? (BORROW[k] ? healthy(BORROW[k])[GROUP[BORROW[k]].n] ?? healthy(BORROW[k]).slice(-1)[0] : null)
       if (p) { out[`${k}${j}`] = p; used.add(p.i) }
@@ -161,11 +210,39 @@ export function setGroup(F, id, k) {
   dc[k].push(id)
   return true
 }
-// back to the order the ratings say
+// back to the order the ratings say (the line: each spot's best man, by rating within the spot)
 export function resetChart(F) {
   const t = F.teams[F.team]
   t.dc = Object.fromEntries(GROUP_KEYS.map(k => [k, ratedOrder(t, k).map(p => p.i)]))
   return t.dc
+}
+// Camp is over (offseason.js newSeason): last year's order was set for last year's men, so the chart is set again by
+// rating, the way the first one was (the player's builds first in their rooms: the job is his to lose)
+export function sortChartAfterCamp(F) {
+  const t = F.teams[F.team]
+  t.dc = Object.fromEntries(GROUP_KEYS.map(k => [k, ratedOrder(t, k, true).map(p => p.i)]))
+  return t.dc
+}
+// The chart's out of date (in the season: a man back from injury, a jump at camp, a trade): a healthy backup rated
+// 3 or more over the starter ahead of him in his room. [{ k, starter, better }] (the Team screen offers the reset)
+export function staleChart(F) {
+  const C = depthChart(F, F.team), L = startersOf(F, F.team), out = []
+  const on = new Set(Object.values(L).map(p => p.i))
+  for (const [k, , , , n] of GROUPS) {
+    if (k === 'k') continue
+    const starters = Object.entries(L).filter(([s]) => s.replace(/\d$/, '') === k).map(([s, p]) => [s, p])
+    for (const p of C[k]) {
+      if (on.has(p.i) || p.in || p.fl || p.b != null) continue
+      for (const [slot, st] of starters) {
+        if (groupOf(st) !== k || st.b != null) continue
+        const spot = k === 'ol' ? OL_SPOTS[+slot.slice(2) - 1] : null
+        const gap = spot ? (p.o - spotCost(spot, p.s)) - (st.o - spotCost(spot, st.s)) : p.o - st.o
+        if (gap >= 3) { out.push({ k, starter: st, better: p }); break }
+      }
+    }
+    void n
+  }
+  return out
 }
 
 // ── Numbers ──────────────────────────────────────────────────────────────────
@@ -177,13 +254,18 @@ export function jersey(F, p) {
   if (p.b != null && F.builds?.[p.b]?.num != null) return F.builds[p.b].num
   return p.nu ?? realOf(p.p, p.n)?.num ?? null
 }
-// every man on a team gets a number, nobody shares one (a build's is his; a real man keeps his own when it's free)
+// every man on a team gets a number, nobody shares one. A build's is his. A man already on the team keeps the one he
+// wears there (p.nt: the team his number is from); a man who joins (a pick, a signing, a trade) takes the number he
+// wore before (his college's, his old team's, a real man's own) only when nobody here wears it and it's legal at his
+// spot, and otherwise a free one in his spot's range (owner, 2026-11-17: a rookie was taking a veteran's number).
+const legalAt = (g, n) => (NUM_RULE[g] ?? [[0, 99]]).some(([lo, hi]) => n >= lo && n <= hi)
 export function fixNumbers(F, short) {
   const t = F.teams[short], taken = new Set()
-  const men = [...t.r].sort((a, b) => (b.b != null) - (a.b != null) || (realOf(b.p, b.n)?.num != null) - (realOf(a.p, a.n)?.num != null) || b.o - a.o || a.i - b.i)
+  const here = p => p.b == null && p.nu != null && p.nt === short
+  const men = [...t.r].sort((a, b) => (b.b != null) - (a.b != null) || here(b) - here(a) || (realOf(b.p, b.n)?.num != null) - (realOf(a.p, a.n)?.num != null) || b.o - a.o || a.i - b.i)
   for (const p of men) {
-    let n = p.b != null ? F.builds?.[p.b]?.num : p.nu ?? realOf(p.p, p.n)?.num
-    if (n != null && !taken.has(n)) { taken.add(n); if (p.b == null && p.nu !== n) p.nu = n; continue }
+    const n = p.b != null ? F.builds?.[p.b]?.num : p.nu ?? realOf(p.p, p.n)?.num
+    if (n != null && !taken.has(n) && (p.b != null || here(p) || legalAt(groupOf(p), n))) { taken.add(n); if (p.b == null) { p.nu = n; p.nt = short } continue }
     const rules = NUM_RULE[groupOf(p)] ?? [[1, 99]]
     let got = null
     for (const [lo, hi] of rules) {
@@ -193,6 +275,19 @@ export function fixNumbers(F, short) {
     }
     if (got == null) got = [...Array(100).keys()].find(x => !taken.has(x)) ?? 0
     taken.add(got)
-    if (p.b == null) p.nu = got
+    if (p.b == null) { p.nu = got; p.nt = short }
   }
+}
+// A save from before numbers were kept by team: every man's number is his team's (one pass that settles any two men
+// sharing one, the higher rated keeping it)
+export function numbersOnLoad(F) {
+  if (!F?.teams || F.nt) return F
+  for (const [s, t] of Object.entries(F.teams)) {
+    for (const p of t.r) if (p.nu != null && p.nt == null) p.nt = s
+    const seen = new Map(), dup = t.r.filter(p => p.b == null && p.nu != null).sort((a, b) => b.o - a.o).filter(p => { if (seen.has(p.nu)) return true; seen.set(p.nu, p); return false })
+    for (const p of dup) delete p.nt
+    if (dup.length) fixNumbers(F, s)
+  }
+  F.nt = 1
+  return F
 }

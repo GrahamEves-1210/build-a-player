@@ -1,18 +1,18 @@
-// FRANCHISE: the league's numbers. Every team's men get a real box score for every game (lib/teamSeason.js, the
-// same box score the player's team gets), from the depth chart and the final score, so the league has leaders,
-// awards have real stat lines and the wire has the week's big games.
+// FRANCHISE: the league's numbers. Every game's box score, both teams, is made when the game is played (box.js) and
+// its men's lines are kept, so the league has leaders, awards have real stat lines and the wire has the week's big
+// games, and none of it changes afterwards (owner, 2026-11-17: a man hurt or traded keeps the season he played).
 //
-//   leagueStats(F)            { [player id]: season totals } for every man who's played (the player's team: F.ss)
-//   gameLines(F, wk)          the week's box scores: { [short]: { [player id]: line } }  (regular season, 0-based)
+//   leagueStats(F)            { [player id]: season totals } for every man who's played (the league's men: F.lg;
+//                             the player's team: F.ss, its regular season F.ssr once the playoffs start)
+//   gameLines(F, wk)          the last week's lines: { [short]: { [player id]: line } }  (regular season, 0-based)
 //   leaders(F, key, n)        the top n at a stat: [{ p, s (team), v }]
 //   boxRoster(F, short)       a team's men as the box score reads them (the starters and the rotation)
-//
-// The league's boxes aren't saved (they're played again from the saved scores, seeded, the same every time); the
-// player's own team's are the ones its games kept (F.ss). Played with each team's chart as it stands when read.
+//   freezeOldSeason(F)        a save from before the lines were kept: what the old replay gave, kept once
 import { SHORTS, realOf } from './league'
 import { startersOf, benchOf, groupOf, OL_SPOTS } from './roster'
 import { KEYS, playFootballSeason } from '../teamSeason'
 import { clamp, r1 } from './rng'
+import { lgAll, lgPut, addLines } from './box'
 
 // ── Ratings for the box score ────────────────────────────────────────────────
 // a man's 0-11 traits: a build's own; a real man's real ones, moved by how far his OVR has come since; a generated
@@ -45,6 +45,26 @@ export function boxRoster(F, short) {
 }
 
 // ── The league's season so far ───────────────────────────────────────────────
+// (the hub's idle work used to play the league's boxes again here; they're kept now, so there's nothing to do)
+export const warmStats = () => {}
+export function leagueStats(F) {
+  const out = lgAll(F.lg)
+  // (the player's team: its own games' box scores; the regular season's, kept when the playoffs start, F.ssr; a man
+  // traded in the season has his lines from both teams)
+  for (const [id, v] of Object.entries(F.ssr ?? F.ss ?? {})) out[id] = out[id] ? addLines(out[id], v) : v
+  // the kickers: every game's kicks as they were played (kick.js addKickStats)
+  for (const [id, v] of Object.entries(F.kst ?? {})) out[id] = { ...(out[id] ?? {}), ...v }
+  return out
+}
+// the last week's lines for every team but the player's (kept with the week, box.js recordBox; an older week: none)
+export function gameLines(F, wk) {
+  return F.wkl?.wk === wk ? F.wkl.s ?? {} : {}
+}
+
+// ── A save from before the lines were kept ───────────────────────────────────
+// Its league's lines were played again from the saved scores every time they were read (the replay below, with each
+// team's chart as it stood). On load that replay is run once and kept, and from then on it never changes: the
+// league's season so far, the last week's lines, and the other team's lines in each of the player's games.
 // a team's played regular-season games, in order
 function playedOf(F, short) {
   const out = []
@@ -56,44 +76,53 @@ function playedOf(F, short) {
   })
   return out
 }
-// (kept in memory a season at a time; a team's boxes are played again only when it has played another game)
-const CACHE = new Map()
-function teamSeason(F, short) {
-  const key = `${F.seed}|${F.year}`
-  let C = CACHE.get(key)
-  if (!C) { CACHE.clear(); C = {}; CACHE.set(key, C) }
+function oldTeamSeason(F, short) {
   const games = playedOf(F, short)
-  const have = C[short]
-  if (have && have.n === games.length) return have
   const roster = boxRoster(F, short)
   const played = playFootballSeason({ roster, games: games.map(g => ({ wk: g.wk + 1, opponent: g.opp, home: g.home, won: g.won, mySc: g.mySc, oppSc: g.oppSc })), seed: `${F.seed}-${F.year}-lg-${short}` })
   const tot = {}
   for (const [k, v] of Object.entries(played.tot)) tot[k.slice(1)] = v
   const byWk = {}
   games.forEach((g, i) => { const s = played.reg[i]?.s ?? {}; byWk[g.wk] = Object.fromEntries(Object.entries(s).map(([k, v]) => [k.slice(1), v])) })
-  C[short] = { n: games.length, tot, byWk }
-  return C[short]
+  return { tot, byWk, pos: Object.fromEntries(roster.map(p => [p.k.slice(1), p.pos])), roster }
 }
-// one team's season of boxes worked out ahead (the hub does the league a team at a time while the phone is idle, so
-// the first leaders, wire or ticker doesn't play 31 seasons at once)
-export const warmStats = (F, short) => { if (short !== F.team && F.teams?.[short]) teamSeason(F, short) }
-export function leagueStats(F) {
-  const out = {}
-  for (const s of SHORTS) {
-    // (the player's team: its own games' box scores; the regular season's, kept when the playoffs start, F.ssr)
-    if (s === F.team) { for (const [id, v] of Object.entries(F.ssr ?? F.ss ?? {})) out[id] = v; continue }
-    Object.assign(out, teamSeason(F, s).tot)
+const WK_K = ['py', 'ptd', 'int', 'ry', 'rtd', 'rc', 'ryd', 'rctd', 'sck', 'dint']
+const nonzero = x => Object.fromEntries(Object.entries(x ?? {}).filter(([, v]) => v))
+const pickKeys = (x, keys) => Object.fromEntries(keys.filter(k => x?.[k]).map(k => [k, x[k]]))
+// (true when it kept anything; the save then has F.lg and this never runs on it again)
+export function freezeOldSeason(F) {
+  if (F.lg || !F.teams || !F.sched?.weeks) return false
+  F.lg = {}
+  let last = -1
+  F.sched.weeks.forEach((games, w) => { if (games.some(g => g.hs != null)) last = w })
+  if (last < 0) return false
+  const T = {}
+  for (const s of SHORTS) if (s !== F.team) T[s] = oldTeamSeason(F, s)
+  for (const t of Object.values(T)) for (const [id, line] of Object.entries(t.tot)) if (line.gp) lgPut(F.lg, t.pos[id], id, line)
+  F.wkl = { wk: last, s: {} }
+  for (const [s, t] of Object.entries(T)) {
+    const w = {}
+    for (const [id, x] of Object.entries(t.byWk[last] ?? {})) { const y = pickKeys(x, WK_K); if (Object.keys(y).length) w[id] = y }
+    F.wkl.s[s] = w
   }
-  // the kickers: every game's kicks as they were played (kick.js addKickStats)
-  for (const [id, v] of Object.entries(F.kst ?? {})) out[id] = { ...(out[id] ?? {}), ...v }
-  return out
-}
-// one week's lines for every team (the player's team: only its season totals are kept, so its line is the one the
-// week's result card showed, read back from the log)
-export function gameLines(F, wk) {
-  const out = {}
-  for (const s of SHORTS) if (s !== F.team) out[s] = teamSeason(F, s).byWk[wk] ?? {}
-  return out
+  // the player's games: the other team's lines as his box score showed them (the week's replay; a playoff game's
+  // own replay from its final)
+  for (const row of F.log ?? []) {
+    if (!row.bx || row.bx.os) continue
+    let lines = {}, roster = []
+    try {
+      if (row.wk != null && T[row.opp]) { lines = T[row.opp].byWk[row.wk - 1] ?? {}; roster = T[row.opp].roster }
+      else {
+        roster = boxRoster(F, row.opp)
+        const played = playFootballSeason({ roster, games: [{ wk: 1, opponent: row.opp, home: !row.home, won: row.them > row.us, mySc: row.them, oppSc: row.us }], seed: `${F.seed}-${F.year}-pobox-${row.rd}-${row.opp}` })
+        lines = Object.fromEntries(Object.entries(played.reg[0]?.s ?? {}).map(([k, v]) => [k.slice(1), v]))
+      }
+    } catch { lines = {} }
+    const os = {}, oro = {}
+    for (const p of roster) { const id = p.k.slice(1), x = nonzero(lines[id]); if (Object.keys(x).length) { os[id] = x; oro[id] = [p.pos, p.d ?? 0, p.sub ?? null, null] } }
+    row.bx.os = os; row.bx.oro = oro
+  }
+  return true
 }
 // who's on which team (id → short), and the man
 export function whoIs(F) {
@@ -129,8 +158,7 @@ export const LEADER_CATS = [
 // ── One game's box score (the player's game: season.js keeps it on its result, row.bx) ───────────────────────────────
 // For the box score sheet (SquadSeason.jsx BoxSheet): { r: { team, roster }, game: { s, us, them }, opp: { r, game },
 // top: [ours, theirs] (seconds), fd: [ours, theirs], kick: [{ n, line }] } or null when the game kept none (a game
-// played before box scores were kept). The other team's men: its own box for the week (gameLines), or, in the
-// playoffs, its box played from the final the same way.
+// played before box scores were kept). The other team's men: their lines from the same game (bx.os, bx.oro).
 // first downs from the lines (the league's game: about one a completion and a half, one every four or five carries)
 export const firstDowns = T => Math.round((T.pc ?? 0) * 0.55 + (T.ra ?? 0) * 0.22 + 1.2)
 const who = (F, id) => { for (const s of SHORTS) { const p = F.teams[s].r.find(x => String(x.i) === String(id)); if (p) return p } return (F.fa ?? []).find(x => String(x.i) === String(id)) ?? null }
@@ -149,16 +177,10 @@ export function gameBox(F, row) {
   const kp = row.kp ?? []
   const tds = m => kp.filter(x => x[1] === m && x[2] >= 6).length, fgs = m => kp.filter(x => x[1] === m && x[2] === 3).length
   const us = { ...bx.u, td: tds(1), fg: fgs(1) }, them = { ...bx.o, td: tds(0), fg: fgs(0) }
-  let oppLines = {}
-  try {
-    if (row.wk != null) oppLines = gameLines(F, row.wk - 1)[row.opp] ?? {}
-    else {
-      const played = playFootballSeason({ roster: boxRoster(F, row.opp), games: [{ wk: 1, opponent: row.opp, home: !row.home, won: row.them > row.us, mySc: row.them, oppSc: row.us }], seed: `${F.seed}-${F.year}-pobox-${row.rd}-${row.opp}` })
-      oppLines = Object.fromEntries(Object.entries(played.reg[0]?.s ?? {}).map(([k, v]) => [k.slice(1), v]))
-    }
-  } catch { oppLines = {} }
-  const oppRoster = boxRoster(F, row.opp).filter(p => oppLines[p.k.slice(1)])
-  const oppS = Object.fromEntries(Object.entries(oppLines).map(([id, x]) => [`p${id}`, x]))
+  // the other team's men: their lines from the same game, kept with it (box.js; an old save's, kept on load)
+  const oppRoster = []
+  for (const [id, [pos, d, sub]] of Object.entries(bx.oro ?? {})) { const p = who(F, id); oppRoster.push({ k: `p${id}`, n: p?.n ?? '?', pos, d, ...(sub && { sub }) }) }
+  const oppS = Object.fromEntries(Object.entries(bx.os ?? {}).map(([id, x]) => [`p${id}`, x]))
   const kick = [0, 1].map(i => { const k = bx.kk?.[i], p = bx.kid?.[i] != null ? who(F, bx.kid[i]) : null; return k && p ? { n: p.n, line: k } : null })
   return { r: { team: F.team, roster }, game: { s, us, them }, opp: { r: { team: row.opp, roster: oppRoster }, game: { s: oppS, us: them, them: us } }, top: bx.top ?? [0, 0], fd: [firstDowns(us), firstDowns(them)], kick }
 }

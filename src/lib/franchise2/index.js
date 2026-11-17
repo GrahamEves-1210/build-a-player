@@ -11,6 +11,8 @@ import { capComply, cutMan, marketValue, termFor } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
 import { fillPotential } from './potential'
+import { freezeOldSeason } from './stats'
+import { numbersOnLoad } from './roster'
 
 export * from './league'
 export * from './season'
@@ -72,7 +74,7 @@ export function createFranchise(setup) {
   F.hype = clamp(20, 80, Math.round(45 + (real.off + real.def - 12) * 3))
   F.chem = 55
   F.sched = makeSchedule(F.seed, F.year)
-  F.wk = 0; F.log = []; F.ss = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
+  F.wk = 0; F.log = []; F.ss = {}; F.lg = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
   // a kicker build takes the job outright: a team carries one kicker, so the veteran is released (his bonus still
   // owed is dead money, the NFL's rule) and goes to the street, where a team that needs a kicker can sign him
   if (F.builds.some(b => b.pos === 'k')) {
@@ -141,6 +143,10 @@ export function upgradeSave(F) {
   if (!F || F.setup || !F.teams) return F
   if (F.v === 6) { fillPotential(F); F.v = 7 }
   if (F.v === 7) { if (F.pend && !Array.isArray(F.pend.ms)) F.pend = null; F.v = 8 }
+  // (any version: a save from before every game's lines were kept gets the league's season so far frozen once, as
+  // the old replay had it, stats.js freezeOldSeason; and its men's numbers marked as their team's, roster.js)
+  if (!F.lg) freezeOldSeason(F)
+  numbersOnLoad(F)
   return F
 }
 // a save read back: every room two deep (a save from before the filler backups gets them here, the same version
