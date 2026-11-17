@@ -1236,7 +1236,7 @@ function RaceVote({ c, s }) {
   return (
     <div className="cr-race cr-race--vote">
       <RaceTabs keys={keys} on={A} onPick={setPick} />
-      <LeadersBoard title={`${RACE_TAB[A]} VOTING`} label="50 VOTERS" rank={v.place} who={c.name} rows={rows} />
+      <LeadersBoard title={RACE_TAB[A]} label="THE VOTE" rank={v.place} who={c.name} rows={rows} />
       <p className="cr-race-note">{v.place === 1 ? `${c.name} wins it, with ${w.first} of 50 first-place votes.` : `${w.me ? c.name : w.name} wins it. ${c.name} ${v.place ? `finishes ${ordinalOf(v.place)}${v.pts ? `, ${v.pts} points` : ''}` : 'gets no votes'}.`}</p>
     </div>
   )

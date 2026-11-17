@@ -2892,7 +2892,8 @@ export function comebackFrom(c) {
   const prev = c.seasons?.[c.seasons.length - 1]
   if (!prev || prev.year !== c.year) return false
   if (c.unretired?.year === c.seasons.length + 1) return false   // (the first season back from retirement)
-  const hurt = (c.injuries ?? []).filter(i => i.year === c.year).reduce((n, i) => n + (i.games ?? 0), 0)
+  // (the games he sat out hurt: an injury he played through cost him no games; c.year is the season just played's number, the injury list's)
+  const hurt = (c.injuries ?? []).filter(i => i.year === c.year && !i.played).reduce((n, i) => n + (i.games ?? 0), 0)
   return hurt >= 9
 }
 // The vote (bookSeason): { MVP: { rows (the top ten), place, pts }, OPOY, DPOY, CPOY (null: nobody on that ballot) }
