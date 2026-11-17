@@ -69,17 +69,18 @@ export function openResign(F) {
         // the franchise tag, one a year: a star the club can't carry on a long deal in the years ahead, or one it
         // wants another year of before it pays him (a QB's tag is cheaper than his ask), at no more than his ask
         // plus half (the tag is the top five's average: a club pays over his number for the year it buys)
-        const tg = p.o >= 85 && p.ag <= 30 && p.p !== 'k' && t.tag !== yr ? tagPrice(p, yr) : null
+        // (twice at most: a third tag costs more than any deal, so clubs don't)
+        const tg = p.o >= 85 && p.ag <= 30 && p.p !== 'k' && t.tag !== yr && (p.tx ?? 0) < 2 ? tagPrice(p, yr) : null
         const tagIt = tg != null && tg <= ask.$ * 1.5 && (roomAhead(F, s, 1) < ask.$ || R.u() < 0.3)
         // (a man worth keeping: the room made by restructures if it isn't there; a young star's, by releases too)
         const cost = tagIt ? tg : ask.$
         if (!canSign(F, cost, s) && p.o >= 82 && starts) { if (young) capComply(F, s, on, cost); else makeRoom(F, s, cost) }
-        if (tagIt && canSign(F, tg, s)) { signDeal(p, { $: tg, y: 1, g: tg }); t.tag = yr; F.ext.push([p.i, p.n, p.p, s, tg, 1, p.o, 'tag']); continue }
+        if (tagIt && canSign(F, tg, s)) { signDeal(p, { $: tg, y: 1, g: tg }); p.tx = (p.tx ?? 0) + 1; t.tag = yr; F.ext.push([p.i, p.n, p.p, s, tg, 1, p.o, 'tag']); continue }
         if (canSign(F, ask.$, s)) { signDeal(p, ask); if (p.o >= 85) F.ext.push([p.i, p.n, p.p, s, p.$, p.y, p.o, 'rs']); continue }
         // (the deal won't fit: the tag, if it will)
         if (tg != null && !tagIt) {
           if (!canSign(F, tg, s) && young) capComply(F, s, on, tg)
-          if (canSign(F, tg, s)) { signDeal(p, { $: tg, y: 1, g: tg }); t.tag = yr; F.ext.push([p.i, p.n, p.p, s, tg, 1, p.o, 'tag']); continue }
+          if (canSign(F, tg, s)) { signDeal(p, { $: tg, y: 1, g: tg }); p.tx = (p.tx ?? 0) + 1; t.tag = yr; F.ext.push([p.i, p.n, p.p, s, tg, 1, p.o, 'tag']); continue }
         }
       }
       t.r = t.r.filter(x => x !== p); F.fa.push(p)

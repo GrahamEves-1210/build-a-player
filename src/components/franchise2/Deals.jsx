@@ -73,7 +73,7 @@ export function Resign({ F, act, owner }) {
         <ActionBar className="dl-walk">
           <div className="dl-walk-t" role="alert">
             <b>{walking.length === 1 ? 'A STARTER WILL WALK' : `${walking.length} STARTERS WILL WALK`}</b>
-            <span>{walking.map(p => `${p.n} (${GROUP[groupOf(p)]?.label ?? POS_LABEL[p.p]})`).join(', ')} {walking.length === 1 ? 'becomes a free agent' : 'become free agents'}. The {TEAM[F.team].nick} can still bid in free agency, against everyone else.</span>
+            <span>{walking.map(p => `${p.n} (${p.p === 'ol' && p.s ? p.s : GROUP[groupOf(p)]?.label ?? POS_LABEL[p.p]})`).join(', ')} {walking.length === 1 ? 'becomes a free agent' : 'become free agents'}. The {TEAM[F.team].nick} can still bid in free agency, against everyone else.</span>
           </div>
           <div className="fd-two"><Go onClick={next}>Let them go</Go><Go ghost onClick={() => { setSure(false); sfx('back') }}>Keep negotiating</Go></div>
         </ActionBar>
@@ -382,7 +382,7 @@ function OfferPanel({ F, act, owner, p, V, side = false, onBack, setPage }) {
         <small>{st.rivals.length ? 'ALSO BIDDING' : 'NO OTHER BIDS YET'}</small>
         <span>{st.rivals.map(r => <span key={r.s} className="fd-in-team" style={fkVars(r.s)}><KLogo s={r.s} size={28} /></span>)}</span>
       </div>
-      <div className={`dl-standing is-${tone}`} role="status"><small>WHERE THE {nick(F.team)} STAND · {st.day > F.fad ? `HE DECIDES ON DAY ${st.day}` : 'HE DECIDES TODAY'}</small><b>{word}</b></div>
+      <div className={`dl-standing is-${tone}`} role="status"><small>WHERE THE {nick(F.team)} STAND · {st.day > F.fad ? `DECIDES DAY ${st.day}` : 'DECIDES TODAY'}</small><b>{word}</b></div>
       <Chyron tone="ink" size="s" title="WHAT HE WANTS" right={nick(F.team)} />
       <div className="fd-wants">
         {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(worthOf(p, o)) : k === 'coach' ? coachGrade(c) ?? '-' : undefined} color={k === 'coach' ? letterColor(coachGrade(c)) : undefined} />)}
