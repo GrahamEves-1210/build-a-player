@@ -71,7 +71,7 @@ export function jerseySvg({ league = 'nfl', team = '', colors, number = '', pos 
   const n = String(number ?? '').slice(0, 2)
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="${size}" height="${size}">`, STYLE,
-    `<path d="${S.body}" fill="${k.body}" stroke="${shade(k.body, 0.62)}" stroke-width="1.6" stroke-linejoin="round"/>`,
+    `<path d="${S.body}" fill="${k.body}" stroke="${lum(k.body) < 0.03 ? '#7d8590' : shade(k.body, 0.62)}" stroke-width="1.6" stroke-linejoin="round"/>`,
     `<path d="${S.shade}" fill="#000" opacity=".12"/>`,
     `<path d="${S.stripes}" fill="${k.trim}"/>`,
     `<path d="${S.collar}" fill="${k.trim}"/>`,

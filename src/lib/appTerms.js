@@ -61,6 +61,12 @@ function teamRules(sport) {
       seenHere.set(name, place)
     }
     for (const [name, place] of seenHere) if (!clash.has(lg + name) && !nick.has(name)) nick.set(name, place)
+    // a two-word nickname is often shortened to its last word (Blazers, Sox): that's the pro team's, not a college's
+    const lastOf = n => n.split(' ').at(-1), lasts = [...seenHere.keys()].map(lastOf)
+    for (const [name, place] of seenHere) {
+      const w = lastOf(name)
+      if (w !== name && lasts.filter(x => x === w).length === 1 && !nick.has(w)) nick.set(w, place)
+    }
     // and in capitals, the way a header or a jersey sets it
     for (const [name, place] of [...nick]) if (/[a-z]/.test(name) && !nick.has(name.toUpperCase())) nick.set(name.toUpperCase(), place.toUpperCase())
     for (const [name, place] of [...full]) if (/[a-z]/.test(name)) full.set(name.toUpperCase(), place.toUpperCase())
@@ -68,7 +74,7 @@ function teamRules(sport) {
   const fullRe = full.size ? new RegExp(`\\b(${[...full.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b`, 'g') : null
   // "the Chiefs are on the clock" → "Kansas City is on the clock"; "the Chiefs'" → "Kansas City's"
   // (not inside a person's name: Magic Johnson stays Magic Johnson)
-  const nickRe = nick.size ? new RegExp(`(?<![A-Z][a-z]+ )(\\b[Tt]he )?\\b(${[...nick.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b(?! [A-Z][a-z])(['’](?!s))?( are\\b| were\\b| have\\b)?`, 'g') : null
+  const nickRe = nick.size ? new RegExp(`(?<![A-Z][a-z]+ )(\\b(?:[Tt]he|THE) )?\\b(${[...nick.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b(?! [A-Z][a-z])(['’](?!s))?( are\\b| were\\b| have\\b)?`, 'g') : null
   const r = { full, nick, fullRe, nickRe }
   built.set(sport, r)
   return r
