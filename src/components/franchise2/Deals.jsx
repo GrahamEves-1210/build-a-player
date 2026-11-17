@@ -3,7 +3,7 @@ import {
   TEAM, resignOne, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, openTalks, offerTalks, acceptTalks, talkFacts,
   worthOf, fitsDeal, capRoom, SAY, startsFor, teamView, rivalsFor, standingOf, fitOf, setOffer, pullOffer, offersOut, committed,
   floorOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade, groupOf, GROUP, minimumFor,
-  walkingStarters, decideDay, optionTier, OPTION_TIER_TEXT,
+  walkingStarters, optionTier, OPTION_TIER_TEXT,
 } from '../../lib/franchise2'
 import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
