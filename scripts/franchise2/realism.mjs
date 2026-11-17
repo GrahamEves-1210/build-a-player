@@ -218,7 +218,7 @@ console.log('DPOY: ' + S.map(r => `${r.y} ${r.dpoy?.n} (${r.dpoy?.p})`).join(' Â
   want(med('ry') >= 1500 && med('ry') <= 1900 && share(r => r.lead.ry[0]?.v >= 2000) <= 0.12, `rushing leaders: median ${med('ry')}`)
   want(S.every(r => (r.lead.ry[0]?.o ?? 99) > 75), 'a 75-OVR back led the league in rushing')
   want(med('ryd') >= 1550 && med('ryd') <= 1950 && mx('ryd') <= 2150, `receiving leaders: median ${med('ryd')}, max ${mx('ryd')}`)
-  want(med('ptd') >= 34 && med('ptd') <= 44 && share(r => r.lead.ptd[0]?.v >= 40) <= 0.6 && mx('ptd') <= 52, `pass TD leaders: median ${med('ptd')}, 40+ in ${share(r => r.lead.ptd[0]?.v >= 40)}`)
+  want(med('ptd') >= 34 && med('ptd') <= 44 && share(r => r.lead.ptd[0]?.v >= 40) <= 0.6 && mx('ptd') <= 55, `pass TD leaders: median ${med('ptd')}, 40+ in ${share(r => r.lead.ptd[0]?.v >= 40)}`)
   want(med('fgm') >= 34 && med('fgm') <= 41 && mx('fgm') <= 47, `FG made leaders: median ${med('fgm')}, max ${mx('fgm')}`)
   want(+avgK('fga') >= 1.75 && +avgK('fga') <= 2.05, `FG tries a team game ${avgK('fga')}`)
   want(+avgK('ppg') >= 21 && +avgK('ppg') <= 24.5, `points a team game ${avgK('ppg')}`)

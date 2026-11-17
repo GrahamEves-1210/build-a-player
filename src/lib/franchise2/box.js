@@ -79,8 +79,9 @@ export function addLines(a, b) {
 }
 
 // ── One game, both sides ─────────────────────────────────────────────────────
-// each man's luck for the season (the same all year: a hot hand is a hot season)
-const luckOf = (F, roster) => new Map(roster.map(p => [p.k, clamp(0.88, 1.12, 1 + rngOf(`${F.seed}-${F.year}-luck-${p.k}`).n() * 0.06)]))
+// each man's luck for the season (the same all year: a hot hand is a hot season; a little wider than the old 6%, the
+// way a receiver's or a back's year swings: the league's leaders come from the men who had theirs)
+const luckOf = (F, roster) => new Map(roster.map(p => [p.k, clamp(0.85, 1.15, 1 + rngOf(`${F.seed}-${F.year}-luck-${p.k}`).n() * 0.075)]))
 // the season's sacks so far for the pass rushers (the sim eases a man off past a big number: teamSeason.js heat)
 function sacksSoFar(F, roster) {
   const m = new Map()
@@ -96,7 +97,7 @@ function sacksSoFar(F, roster) {
 // (2026-11-17, scripts/franchise2/realism.mjs): an elite receiver draws more of his team's targets than the old cap
 // let him (Chase, Hill, Jefferson, Kupp: 35-41% of their teams' receiving yards, 1,700-1,950 yards), and an elite
 // passer's share of his team's touchdowns tops out nearer two in three (the leaders' 35-45, 40-plus not every year)
-export const FB_TUNE = { tgtCap: 0.31, tgtK: 0.5, pTdBase: 0.6, pTdK: 0.1, pTdMax: 0.66, ypaK: 3.5, attK: 9, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3 }
+export const FB_TUNE = { tgtCap: 0.3, tgtK: 0.4, pTdBase: 0.6, pTdK: 0.1, pTdMax: 0.66, ypaK: 4, attK: 12, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3 }
 // a passer's interceptions so far this season (the box eases him off past ten: below)
 const picksSoFar = (F, k) => { const id = k.slice(1); return (F.ss?.[id]?.int ?? 0) + (lgLine(F.lg, id)?.int ?? 0) }
 const other = s => (s === 'h' ? 'a' : 'h')
