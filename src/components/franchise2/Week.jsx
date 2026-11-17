@@ -222,7 +222,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const ballSide = atMoment ? (mv.ball === 'us' ? F.team : mv.opp) : sit?.off
   const poss = ballSide ? (ballSide === h ? 'h' : 'a') : null
   const label = po ? (rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][rd]) : `WK ${wk}`
-  const kindTxt = po ? (rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[rd]} ROUND`) : `WEEK ${wk}${DIV_OF[tl.opp] === DIV_OF[F.team] ? ' · DIVISION GAME' : ''}`
+  const kindTxt = po ? (rd === 3 ? `SUPER BOWL ${romanOf(F.year - 1965)}` : rd === 2 ? `${CONF_OF[F.team]} CHAMPIONSHIP` : `${ROUNDS[rd]} ROUND`) : `WEEK ${wk}${DIV_OF[tl.opp] === DIV_OF[F.team] ? ' · DIVISION' : ''}`
   // (the clock on the bug: a quarter's last tick is its 0:00, overtime's periods the right length: plays.js whenOf)
   const [nowQ, nowClock] = whenOf(tt, po).split(' ')
   const status = fin ? (row?.ot ? 'FINAL/OT' : 'FINAL') : `${nowQ} ${nowClock}`
