@@ -267,6 +267,9 @@ html:is(.is-app, .app-look) .btg.btg-wait { padding-left: 10px; padding-right: 1
 /* ── the builds: on the screen itself, under the play-by-play ── */
 .btg-builds { margin-top: 12px; background: var(--bt-panel); border-radius: var(--bt-r); box-shadow: var(--bt-edge), var(--bt-drop); color: var(--bt-text); overflow: hidden; }
 .btg-builds-head { display: flex; align-items: center; height: 30px; padding: 1px 12px 0; background: var(--bt-ink); font: 400 13px/1 var(--bt-cap); letter-spacing: 2.4px; color: var(--bt-muted); }
+/* the server changed his build: the one line why (courtNote) */
+.btg-note { margin: 0; padding: 9px 12px; background: rgba(255, 196, 0, .1); box-shadow: inset 3px 0 0 #ffc400; font: 500 13.5px/1.35 var(--bt-body); color: var(--bt-text); }
+.btg-rv-note { border-radius: var(--bt-r); }
 .btg-builds-team { display: flex; align-items: center; gap: 10px; height: 28px; padding-top: 1px; font: 400 13.5px/1 var(--bt-cap); letter-spacing: 1.8px; color: var(--bt-text); background: var(--bt-panel-hi); }
 .btg-builds-team::before { content: ''; align-self: stretch; margin-top: -1px; width: 6px; background: var(--tc); }
 .btg-builds-p { display: flex; flex-direction: column; gap: 7px; padding: 9px 10px 10px 14px; border-top: 1px solid var(--bt-line); }

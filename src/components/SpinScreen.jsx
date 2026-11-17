@@ -7,7 +7,7 @@ import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
 import { seededShuffle, useProgress } from '../lib/progress'
-import { seededTeamOrder } from '../lib/rng'
+import { dealTeam, dealPlayer } from '../lib/seatSpin'
 import { itemById } from '../lib/cosmetics'
 import { rampRail, rampSpinAd, SPIN_AD_ID } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
@@ -788,38 +788,19 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const teamTarget = useMemo(() => {
     if (!seedPlan || spinCount < 1) return null
     const sorted = [...teamReelItems].sort((a, b) => a.short.localeCompare(b.short))
-    // Compete: a respin is this seat's own draw, seeded too (respinSeed) so the server can check it
-    const order = seededTeamOrder(sorted, `${seedPlan.seed}:teams`)
-    const dealt = order[teamIndex % order.length]
-    // a team respin never lands on the team it respins (that wasted the respin: same team, and on a
-    // one-player team the same player too): the first of the seat's own order that isn't it,
-    // the same pick as competeCore respinTeam, so the server's check agrees
-    if (freeTeam) {
-      if (!seedPlan.respinSeed) return null
-      const mine = seededTeamOrder(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)
-      return mine.find(t => t.short !== dealt?.short) ?? mine[0] ?? null
-    }
-    return dealt
+    // Compete: a respin is this seat's own draw, seeded too (respinSeed) so the server can check it.
+    // A team respin never lands on the team it respins (that wasted the respin: same team, and on a
+    // one-player team the same player too): the same pick as competeCore respinTeam (lib/seatSpin.js)
+    return dealTeam({ seed: seedPlan.seed, respinSeed: seedPlan.respinSeed, sorted, i: teamIndex, free: freeTeam })
   }, [seedPlan, spinCount, teamReelItems, teamIndex, freeTeam])
   const playerTarget = useMemo(() => {
     // a respun team or a player respin is the player's own draw (seeded by the seat in Compete)
     const own = ownSpins && (freeTeam || playerDraw > 0)
     if (!seedPlan || !selectedTeam || (own && !seedPlan.respinSeed)) return null
     const roster = oneTeamRoster(selectedTeam).sort((a, b) => a.name.localeCompare(b.name))
-    if (!roster.length) return null
-    if (own) {
-      const mine = seededShuffle(roster, `${seedPlan.respinSeed}:${teamIndex}:${selectedTeam.short}`)
-      // a respun team: its own draws in order
-      if (freeTeam) return mine[playerDraw % mine.length]
-      // a player respin: never the player this spin dealt
-      const dealt = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)[0]
-      // (everywhere, the same rule as Compete's server check: a team of two shows both on the wheel, and the respin
-      // always lands on the other one: landing the same player again was just a wasted respin)
-      const rest = mine.filter(p => p.name !== dealt?.name)
-      return rest.length ? rest[(playerDraw - 1) % rest.length] : mine[0]
-    }
-    const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
-    return order[playerDraw % order.length]
+    // (a player respin never lands on the player the spin dealt, everywhere: the same rule as Compete's
+    // server check. A team of two shows both on the wheel, and the respin always lands on the other one)
+    return dealPlayer({ seed: seedPlan.seed, respinSeed: seedPlan.respinSeed, roster, team: selectedTeam, i: teamIndex, draw: playerDraw, own, free: freeTeam })
   }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam, teamLock, usedKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compete: which seeded draw this player came from, so the server can check it
