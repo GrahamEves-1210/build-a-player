@@ -18,7 +18,16 @@ const COACH_HS = (await load('coach-headshots.json')).default
 
 // ── teams: league → short → [color, color2] ──────────────────────────────────────────────────────────────────
 const teams = { nfl: {}, nba: {}, cfb: {}, cbb: {}, mlb: {}, soc: {}, nat: {} }
-const addTeams = (lg, list) => { for (const t of list ?? []) if (t?.short && t.color && !teams[lg][t.short]) teams[lg][t.short] = [t.color, t.color2 || '#ffffff'] }
+// … and its place and its nickname, for the app's copy (lib/appTerms.js: "Kansas City", never "Chiefs")
+const TWO_WORD = /\s(Trail Blazers|Red Sox|White Sox|Blue Jays|Crimson Tide|Blue Devils|Tar Heels|Golden Bears|Golden Gophers|Fighting Irish|Yellow Jackets|Red Raiders|Sun Devils|Horned Frogs|Demon Deacons|Nittany Lions|Scarlet Knights|Golden Eagles|Mean Green|Green Wave|Golden Hurricane|Black Knights|Golden Flashes|Red Wolves|Rainbow Warriors|Blue Raiders|Ragin' Cajuns|Fighting Illini)$/
+const split = t => {
+  if (t.school && t.mascot) return [t.school, t.mascot]
+  const name = String(t.name ?? '')
+  if (t.nick && name.endsWith(t.nick)) return [name.slice(0, -t.nick.length).trim() || name, t.nick]
+  const m = TWO_WORD.exec(name) ?? /\s(\S+)$/.exec(name)
+  return m ? [name.slice(0, m.index), m[1]] : [name, '']
+}
+const addTeams = (lg, list) => { for (const t of list ?? []) if (t?.short && t.color && !teams[lg][t.short]) teams[lg][t.short] = [t.color, t.color2 || '#ffffff', ...(['nfl', 'nba', 'cfb', 'cbb', 'mlb'].includes(lg) ? split(t) : [])] }
 addTeams('nfl', (await load('nfl-teams.js')).TEAMS)
 addTeams('nba', (await load('nba-teams.js')).NBA_TEAMS)
 addTeams('cfb', (await load('cfb-teams.js')).CFB_TEAMS)

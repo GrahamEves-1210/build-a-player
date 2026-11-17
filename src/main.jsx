@@ -156,7 +156,8 @@ const start = () => createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
-if (APP_ART) import('./lib/appArt').then(m => m.installAppArt()).catch(() => {}).finally(start)
+// and the leagues' trademarks out of its copy (lib/appTerms.js; after appArt, whose <img> hook it keeps)
+if (APP_ART) import('./lib/appArt').then(m => m.installAppArt()).then(() => import('./lib/appTerms')).then(m => m.installAppTerms()).catch(() => {}).finally(start)
 else start()
 // the native splash waits for the loading screen (capacitor.config.json); index.html
 // lets it go as soon as it paints, and this is the backup once the app's code runs

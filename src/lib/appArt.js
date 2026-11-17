@@ -13,7 +13,8 @@ import { jerseySvg, teamMarkSvg, svgUri } from './jerseyArt'
 
 const cache = new Map()
 const HEADSHOT = /\/headshots\/(.+?)\.(?:webp|png|jpe?g)(?:[?#].*)?$/i
-const LOGO = /\/logos\/(?:(nba|cfb|cbb|mlb|soccer|nations)\/)?(?:dark\/|light\/)?([A-Za-z0-9&_-]{2,6})\.(?:png|webp|svg)(?:[?#].*)?$/i
+// (national flags in /logos/nations are flags, not marks: they stay)
+const LOGO = /\/logos\/(?:(nba|cfb|cbb|mlb|soccer)\/)?(?:dark\/|light\/|sm\/)?(conf-)?([A-Za-z0-9&_-]{2,8})\.(?:png|webp|svg)(?:[?#].*)?$/i
 // which tables a logo folder's abbreviation is looked up in, first match wins
 const LOGO_LEAGUES = { '': ['nfl'], nba: ['nba'], cfb: ['cfb', 'cbb'], cbb: ['cbb', 'cfb'], mlb: ['mlb'], soccer: ['soc', 'nat'], nations: ['nat', 'soc'] }
 
@@ -41,8 +42,11 @@ export function appImage(src) {
   if ((m = HEADSHOT.exec(src))) {
     const key = m[1].replace(/^.*?public\/headshots\//, '')
     out = playerArt(key, key.split('/')[0])
-  } else if ((m = LOGO.exec(src)) && /^[A-Z0-9&]{2,6}$/i.test(m[2])) {
-    out = teamArt((m[1] ?? '').toLowerCase(), m[2].toUpperCase())
+  } else if ((m = LOGO.exec(src)) && m[2]) {
+    // a conference's mark: its name on a plain tag
+    out = svgUri(teamMarkSvg({ team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
+  } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
+    out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
   } else out = src
   if (cache.size > 4000) cache.clear()
   cache.set(src, out)
