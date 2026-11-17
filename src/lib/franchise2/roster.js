@@ -13,7 +13,7 @@
 // beside it (a safety plays corner, an end slides inside), the way a team does on Sunday.
 //
 // (This file reads nothing from league.js when it loads: league.js reads it back for lineup().)
-import { realOf } from './league'
+import { realOf, SHORTS } from './league'
 
 // the chart's rooms, in the order the screen shows them: [key, label, roster position, spot, starters]
 export const GROUPS = [
@@ -124,7 +124,7 @@ export function depthChart(F, short = F.team, { healthy = false } = {}) {
   const t = F.teams[short]
   if (short === F.team && !t.dc) chartOf(t)
   // (a man new to the team gets his number the first time the chart is read)
-  if (t.r.some(p => p.b == null && (p.nu == null || p.nt !== short))) fixNumbers(F, short)
+  if (t.r.some(p => p.b == null && !numHere(p, short))) fixNumbers(F, short)
   const C = chartTeam(t)
   if (healthy) for (const k of GROUP_KEYS) C[k] = C[k].filter(p => !p.in)
   return C
@@ -252,20 +252,25 @@ const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCo
 export function jersey(F, p) {
   if (!p) return null
   if (p.b != null && F.builds?.[p.b]?.num != null) return F.builds[p.b].num
-  return p.nu ?? realOf(p.p, p.n)?.num ?? null
+  return p.nu != null ? p.nu % 100 : realOf(p.p, p.n)?.num ?? null
 }
+// The number and the team it's from, in one field (p.nu = number + 100 x (the team's place + 1)), so a man who joins
+// is known by it with nothing more kept on every man; a number under 100 came from somewhere else (a college's, the
+// data's)
+const teamCode = short => 100 * (SHORTS.indexOf(short) + 1)
+export const numHere = (p, short) => p.nu != null && p.nu >= 100 && p.nu - (p.nu % 100) === teamCode(short)
 // every man on a team gets a number, nobody shares one. A build's is his. A man already on the team keeps the one he
-// wears there (p.nt: the team his number is from); a man who joins (a pick, a signing, a trade) takes the number he
+// wears there (numHere: the number is marked as this team's); a man who joins (a pick, a signing, a trade) takes the number he
 // wore before (his college's, his old team's, a real man's own) only when nobody here wears it and it's legal at his
 // spot, and otherwise a free one in his spot's range (owner, 2026-11-17: a rookie was taking a veteran's number).
 const legalAt = (g, n) => (NUM_RULE[g] ?? [[0, 99]]).some(([lo, hi]) => n >= lo && n <= hi)
 export function fixNumbers(F, short) {
   const t = F.teams[short], taken = new Set()
-  const here = p => p.b == null && p.nu != null && p.nt === short
+  const here = p => p.b == null && numHere(p, short), code = teamCode(short)
   const men = [...t.r].sort((a, b) => (b.b != null) - (a.b != null) || here(b) - here(a) || (realOf(b.p, b.n)?.num != null) - (realOf(a.p, a.n)?.num != null) || b.o - a.o || a.i - b.i)
   for (const p of men) {
-    const n = p.b != null ? F.builds?.[p.b]?.num : p.nu ?? realOf(p.p, p.n)?.num
-    if (n != null && !taken.has(n) && (p.b != null || here(p) || legalAt(groupOf(p), n))) { taken.add(n); if (p.b == null) { p.nu = n; p.nt = short } continue }
+    const n = p.b != null ? F.builds?.[p.b]?.num : p.nu != null ? p.nu % 100 : realOf(p.p, p.n)?.num
+    if (n != null && !taken.has(n) && (p.b != null || here(p) || legalAt(groupOf(p), n))) { taken.add(n); if (p.b == null) p.nu = n + code; continue }
     const rules = NUM_RULE[groupOf(p)] ?? [[1, 99]]
     let got = null
     for (const [lo, hi] of rules) {
@@ -275,7 +280,7 @@ export function fixNumbers(F, short) {
     }
     if (got == null) got = [...Array(100).keys()].find(x => !taken.has(x)) ?? 0
     taken.add(got)
-    if (p.b == null) { p.nu = got; p.nt = short }
+    if (p.b == null) p.nu = got + code
   }
 }
 // A save from before numbers were kept by team: every man's number is his team's (one pass that settles any two men
@@ -283,10 +288,14 @@ export function fixNumbers(F, short) {
 export function numbersOnLoad(F) {
   if (!F?.teams || F.nt) return F
   for (const [s, t] of Object.entries(F.teams)) {
-    for (const p of t.r) if (p.nu != null && p.nt == null) p.nt = s
-    const seen = new Map(), dup = t.r.filter(p => p.b == null && p.nu != null).sort((a, b) => b.o - a.o).filter(p => { if (seen.has(p.nu)) return true; seen.set(p.nu, p); return false })
-    for (const p of dup) delete p.nt
-    if (dup.length) fixNumbers(F, s)
+    // (every number already on a team is that team's; two men on one number: the higher rated keeps it)
+    const seen = new Set()
+    for (const p of [...t.r].sort((a, b) => b.o - a.o)) {
+      if (p.b != null || p.nu == null || p.nu >= 100) continue
+      if (seen.has(p.nu)) continue
+      seen.add(p.nu); p.nu += teamCode(s)
+    }
+    fixNumbers(F, s)
   }
   F.nt = 1
   return F

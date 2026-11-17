@@ -13,7 +13,7 @@ import { DIV_OF } from './schedule'
 import { standings, startPlayoffs, endRound, finishOf, ROUNDS, records } from './standings'
 import { rngOf, clamp, r1 } from './rng'
 import { fbLine } from '../squadSeason'
-import { playBox, addMoments, finishBox, recordBox, linesOf, placesOf } from './box'
+import { playBox, addMoments, finishBox, recordBox, oppOf } from './box'
 import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
 import { coachLate, coachDay, chemWeek } from './coach'
 import { askOf, signDeal, canSign, cutMan, minimumFor } from './contracts'
@@ -168,7 +168,7 @@ function finishUserGame(F, { g }, S, ms = [], pre = null) {
     // the drives (the live screen's play-by-play), the moments, and the box score (gameBox in stats.js reads it)
     dr: driveRows(S, side),
     ...(ms?.length && { ms: ms.map(m => ({ t: m.t, side: m.side, kind: m.kind, down: m.down, d: m.d, y: m.y, yards: m.yards, ok: m.ok, txt: m.txt, ...(m.td && { td: 1 }), ...(m.to && { to: m.to }), ...(m.by && { by: 1 }) })) }),
-    bx: { ...packBox(box, tu, tt, S, side, roster), os: linesOf(B[oside]), oro: placesOf(B[oside]) },
+    bx: { ...packBox(box, tu, tt, S, side, roster), ox: oppOf(B[oside]) },
   }
   const h = headline(F, row)
   row.hl = h.hl; row.sub = h.sub

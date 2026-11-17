@@ -22,8 +22,23 @@ const SK_K = ['ra', 'ry', 'rtd', 'tg', 'rc', 'ryd', 'rctd']
 const OL_K = ['sn', 'pbs', 'rbs', 'sa', 'prs', 'qbha', 'pnk', 'hold', 'fst', 'pen']
 const DF_K = ['tk', 'sck', 'tfl', 'qbh', 'dint', 'pbu', 'ff', 'fr', 'p6']
 export const LGK = { qb: QB_K, rb: SK_K, wr: SK_K, te: SK_K, ol: OL_K, dl: DF_K, lb: DF_K, db: DF_K }
-// (the week's lines the wire reads: the big days and the marks passed, news.js)
-const WK_K = ['py', 'ptd', 'int', 'ry', 'rtd', 'rc', 'ryd', 'rctd', 'sck', 'dint']
+// (the week's lines the wire reads: the big days and the marks passed, news.js; kept as arrays in this order)
+export const WK_K = ['py', 'ptd', 'int', 'ry', 'rtd', 'rc', 'ryd', 'rctd', 'sck', 'dint']
+export function wkPack(line) { const a = WK_K.map(k => line?.[k] ?? 0); while (a.length && !a[a.length - 1]) a.pop(); return a.length ? a : null }
+export const wkUnpack = a => Object.fromEntries(WK_K.map((k, j) => [k, a[j] ?? 0]).filter(([, v]) => v))
+// A game's other side, kept on the player's row small: { [id]: [pos, place, spot, ...his line in LGK order] }
+export function oppPack(list) {
+  const ox = {}
+  for (const { id, pos, d, sub, line } of list) {
+    const keys = LGK[pos]
+    if (!keys) continue
+    const v = keys.map(k => line?.[k] ?? 0)
+    while (v.length && !v[v.length - 1]) v.pop()
+    if (v.length) ox[id] = [pos, d ?? 0, sub ?? 0, ...v]
+  }
+  return ox
+}
+export const oppUnpack = ox => Object.entries(ox ?? {}).map(([id, [pos, d, sub, ...v]]) => ({ id, pos, d, sub: sub || null, line: Object.fromEntries((LGK[pos] ?? []).map((k, j) => [k, v[j] ?? 0]).filter(([, x]) => x)) }))
 
 // a line into a store: store[pos][id] = [games, ...the position's numbers] (trailing zeros dropped)
 export function lgAdd(store, pos, id, line) {
@@ -210,25 +225,11 @@ export function recordBox(F, B, po) {
       if (mine) { const ss = F.ss ?? (F.ss = {}); const t = ss[id] ??= { gp: 0 }; t.gp++; for (const [k, v] of Object.entries(line)) if (typeof v === 'number' && v) t[k] = (t[k] ?? 0) + v; continue }
       lgAdd(store, p.pos, id, line)
       if (!po) {
-        const w = {}
-        for (const k of WK_K) if (line[k]) w[k] = line[k]
-        if (Object.keys(w).length) (F.wkl.s[X.short] ??= {})[id] = w
+        const w = wkPack(line)
+        if (w) (F.wkl.s[X.short] ??= {})[id] = w
       }
     }
   }
 }
-// a side's men and their places that day, for the game's row (season.js packBox): { [id]: [pos, place, spot, build] }
-export function placesOf(X) {
-  const ro = {}
-  for (const p of X.roster) { const id = p.k.slice(1); if (X.s[p.k] && Object.keys(X.s[p.k]).length) ro[id] = [p.pos, p.d ?? 0, p.sub ?? null, p.s ?? null] }
-  return ro
-}
-export function linesOf(X) {
-  const s = {}
-  for (const [k, x] of Object.entries(X.s)) {
-    const o = {}
-    for (const [key, v] of Object.entries(x ?? {})) if (v) o[key] = v
-    if (Object.keys(o).length) s[k.slice(1)] = o
-  }
-  return s
-}
+// the other side of the player's game, for his row (season.js; stats.js gameBox reads it back)
+export const oppOf = X => oppPack(X.roster.map(p => ({ id: p.k.slice(1), pos: p.pos, d: p.d, sub: p.sub, line: X.s[p.k] })))

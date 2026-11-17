@@ -74,6 +74,7 @@ export function createFranchise(setup) {
   F.hype = clamp(20, 80, Math.round(45 + (real.off + real.def - 12) * 3))
   F.chem = 55
   F.sched = makeSchedule(F.seed, F.year)
+  F.nt = 1   // (numbers kept by team from the start: roster.js numbersOnLoad has nothing to do)
   F.wk = 0; F.log = []; F.ss = {}; F.lg = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
   // a kicker build takes the job outright: a team carries one kicker, so the veteran is released (his bonus still
   // owed is dead money, the NFL's rule) and goes to the street, where a team that needs a kicker can sign him

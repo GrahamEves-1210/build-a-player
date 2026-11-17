@@ -12,7 +12,7 @@ import { SHORTS, realOf } from './league'
 import { startersOf, benchOf, groupOf, OL_SPOTS } from './roster'
 import { KEYS, playFootballSeason } from '../teamSeason'
 import { clamp, r1 } from './rng'
-import { lgAll, lgPut, addLines } from './box'
+import { lgAll, lgPut, addLines, wkPack, wkUnpack, oppPack, oppUnpack } from './box'
 
 // ── Ratings for the box score ────────────────────────────────────────────────
 // a man's 0-11 traits: a build's own; a real man's real ones, moved by how far his OVR has come since; a generated
@@ -58,7 +58,8 @@ export function leagueStats(F) {
 }
 // the last week's lines for every team but the player's (kept with the week, box.js recordBox; an older week: none)
 export function gameLines(F, wk) {
-  return F.wkl?.wk === wk ? F.wkl.s ?? {} : {}
+  if (F.wkl?.wk !== wk) return {}
+  return Object.fromEntries(Object.entries(F.wkl.s ?? {}).map(([s, by]) => [s, Object.fromEntries(Object.entries(by).map(([id, a]) => [id, wkUnpack(a)]))]))
 }
 
 // ── A save from before the lines were kept ───────────────────────────────────
@@ -86,9 +87,6 @@ function oldTeamSeason(F, short) {
   games.forEach((g, i) => { const s = played.reg[i]?.s ?? {}; byWk[g.wk] = Object.fromEntries(Object.entries(s).map(([k, v]) => [k.slice(1), v])) })
   return { tot, byWk, pos: Object.fromEntries(roster.map(p => [p.k.slice(1), p.pos])), roster }
 }
-const WK_K = ['py', 'ptd', 'int', 'ry', 'rtd', 'rc', 'ryd', 'rctd', 'sck', 'dint']
-const nonzero = x => Object.fromEntries(Object.entries(x ?? {}).filter(([, v]) => v))
-const pickKeys = (x, keys) => Object.fromEntries(keys.filter(k => x?.[k]).map(k => [k, x[k]]))
 // (true when it kept anything; the save then has F.lg and this never runs on it again)
 export function freezeOldSeason(F) {
   if (F.lg || !F.teams || !F.sched?.weeks) return false
@@ -102,13 +100,13 @@ export function freezeOldSeason(F) {
   F.wkl = { wk: last, s: {} }
   for (const [s, t] of Object.entries(T)) {
     const w = {}
-    for (const [id, x] of Object.entries(t.byWk[last] ?? {})) { const y = pickKeys(x, WK_K); if (Object.keys(y).length) w[id] = y }
+    for (const [id, x] of Object.entries(t.byWk[last] ?? {})) { const y = wkPack(x); if (y) w[id] = y }
     F.wkl.s[s] = w
   }
   // the player's games: the other team's lines as his box score showed them (the week's replay; a playoff game's
   // own replay from its final)
   for (const row of F.log ?? []) {
-    if (!row.bx || row.bx.os) continue
+    if (!row.bx || row.bx.ox) continue
     let lines = {}, roster = []
     try {
       if (row.wk != null && T[row.opp]) { lines = T[row.opp].byWk[row.wk - 1] ?? {}; roster = T[row.opp].roster }
@@ -118,9 +116,7 @@ export function freezeOldSeason(F) {
         lines = Object.fromEntries(Object.entries(played.reg[0]?.s ?? {}).map(([k, v]) => [k.slice(1), v]))
       }
     } catch { lines = {} }
-    const os = {}, oro = {}
-    for (const p of roster) { const id = p.k.slice(1), x = nonzero(lines[id]); if (Object.keys(x).length) { os[id] = x; oro[id] = [p.pos, p.d ?? 0, p.sub ?? null, null] } }
-    row.bx.os = os; row.bx.oro = oro
+    row.bx.ox = oppPack(roster.map(p => ({ id: p.k.slice(1), pos: p.pos, d: p.d, sub: p.sub, line: lines[p.k.slice(1)] })))
   }
   return true
 }
@@ -178,9 +174,9 @@ export function gameBox(F, row) {
   const tds = m => kp.filter(x => x[1] === m && x[2] >= 6).length, fgs = m => kp.filter(x => x[1] === m && x[2] === 3).length
   const us = { ...bx.u, td: tds(1), fg: fgs(1) }, them = { ...bx.o, td: tds(0), fg: fgs(0) }
   // the other team's men: their lines from the same game, kept with it (box.js; an old save's, kept on load)
-  const oppRoster = []
-  for (const [id, [pos, d, sub]] of Object.entries(bx.oro ?? {})) { const p = who(F, id); oppRoster.push({ k: `p${id}`, n: p?.n ?? '?', pos, d, ...(sub && { sub }) }) }
-  const oppS = Object.fromEntries(Object.entries(bx.os ?? {}).map(([id, x]) => [`p${id}`, x]))
+  const opp = oppUnpack(bx.ox)
+  const oppRoster = opp.map(({ id, pos, d, sub }) => { const p = who(F, id); return { k: `p${id}`, n: p?.n ?? '?', pos, d, ...(sub && { sub }) } })
+  const oppS = Object.fromEntries(opp.map(({ id, line }) => [`p${id}`, line]))
   const kick = [0, 1].map(i => { const k = bx.kk?.[i], p = bx.kid?.[i] != null ? who(F, bx.kid[i]) : null; return k && p ? { n: p.n, line: k } : null })
   return { r: { team: F.team, roster }, game: { s, us, them }, opp: { r: { team: row.opp, roster: oppRoster }, game: { s: oppS, us: them, them: us } }, top: bx.top ?? [0, 0], fd: [firstDowns(us), firstDowns(them)], kick }
 }

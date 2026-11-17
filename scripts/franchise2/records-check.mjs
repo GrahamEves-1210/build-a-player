@@ -36,9 +36,11 @@ F.games = 'advanced'
 const sum = (s, men, k) => men.reduce((a, p) => a + (s[p.k]?.[k] ?? 0), 0)
 const G = { games: 0, sides: 0, pass: 0, team: 0, cross: 0, to: 0, tdMiss: 0, tdOver: 0, tdUser: 0, tdUserMiss: 0, late: 0, lateLead: 0, at1: 0, scores: 0, kneels: 0, ot: 0 }
 const byTeam = {}
+let lastS = null
 BOXLOG.fn = (Fx, B, po) => {
   G.games++
   const S = B.S
+  if (S.G.h === Fx.team || S.G.a === Fx.team) lastS = S
   for (const side of ['h', 'a']) {
     const X = B[side], Y = B[side === 'h' ? 'a' : 'h'], s = X.s, T = B.team[side]
     G.sides++
@@ -101,7 +103,10 @@ function checkRow(row) {
     if (k[2] < 6) continue
     M.tdN++
     const y = +(String(k[3]).match(/ (\d+)-yd /)?.[1] ?? 0)
-    if (y > 99) { M.tdLong++; bad(`touchdown of ${y} yards`) }
+    const pl = lastS?.plays.find(p => p.k === 'td' && p.t === k[0])
+    const cap = pl?.fy != null ? 100 - pl.fy : 99
+    if (y > cap) { M.tdLong++; bad(`week ${row.wk}: ${k[3]} from the ${pl.fy} (${cap} yards to go)`) }
+    if (pl?.fy != null) M.tdSpot = (M.tdSpot ?? 0) + 1
   }
   // 19: every build who played has his line
   const on = new Set(Object.entries(row.bx?.ro ?? {}).filter(([, x]) => x[3] != null).map(([id]) => +id))
@@ -208,7 +213,8 @@ for (let y = 0; y < N; y++) {
   const snap = JSON.stringify(FR.leagueStats(F))
   const leaders = c => FR.leaders(F, c, 5).map(x => `${x.p.n} ${x.v}`).join(', ')
   const lead0 = ['py', 'ry', 'sck'].map(leaders).join(' | ')
-  for (const s of FR.SHORTS) { const L = FR.startersOf(F, s); for (const p of Object.values(L)) if (p.o >= 85 && s !== F.team) { p.in = 60; p.ij = { l: 'torn ACL', w: 60, se: 1 } } }
+  const stars = []
+  for (const s of FR.SHORTS) { const L = FR.startersOf(F, s); for (const p of Object.values(L)) if (p.o >= 85 && s !== F.team && !p.in) { p.in = 60; p.ij = { l: 'torn ACL', w: 60, se: 1 }; stars.push(p) } }
   const a = F.teams.BUF.r.find(p => p.p === 'wr'), b = F.teams.KC.r.find(p => p.p === 'wr')
   if (a && b) { F.teams.BUF.r = F.teams.BUF.r.filter(p => p !== a); F.teams.KC.r = F.teams.KC.r.filter(p => p !== b); F.teams.BUF.r.push(b); F.teams.KC.r.push(a) }
   if (JSON.stringify(FR.leagueStats(F)) !== snap) bad(`${F.year}: the season's lines changed after injuries and a trade`)
@@ -216,7 +222,7 @@ for (let y = 0; y < N; y++) {
   if (JSON.stringify(FR.leagueStats(F2)) !== snap) bad(`${F.year}: the season's lines changed after a save and load`)
   const lead1 = ['py', 'ry', 'sck'].map(leaders).join(' | ')
   if (lead0 !== lead1) bad(`${F.year}: leaders moved: ${lead0} → ${lead1}`)
-  for (const s of FR.SHORTS) for (const p of Object.values(FR.startersOf(F, s))) { if (p.ij?.l === 'torn ACL' && p.in === 60) { delete p.in; delete p.ij } }
+  for (const p of stars) { delete p.in; delete p.ij }   // (the test's injuries undone: the playoffs play as they would have)
   // 1: the league's lines add up to its games (passing yards and touchdowns, team by team)
   let pyOff = 0, tdOff = 0
   for (const s of FR.SHORTS) {
@@ -252,14 +258,14 @@ for (let y = 0; y < N; y++) {
   FR.simWeeks(O, { until: 8 })
   const row = O.log[O.log.length - 1]
   // (what a save from before this update looks like: no F.lg, no week lines, no other team's lines on its rows)
-  delete O.lg; delete O.wkl; delete O.lgp; for (const r of O.log) if (r.bx) { delete r.bx.os; delete r.bx.oro }
-  for (const s of FR.SHORTS) for (const p of O.teams[s].r) delete p.nt
+  delete O.lg; delete O.wkl; delete O.lgp; for (const r of O.log) if (r.bx) delete r.bx.ox
+  for (const s of FR.SHORTS) for (const p of O.teams[s].r) if (p.nu != null) p.nu %= 100
   delete O.nt
   const L = FR.upgradeSave(FR.unpackFranchise(FR.packFranchise(O)))
   const a1 = JSON.stringify(FR.leagueStats(L))
   if (!L.lg || !Object.keys(L.lg).length) bad('old save: nothing frozen on load')
   const Lrow = L.log[L.log.length - 1]
-  if (!Lrow.bx?.os || !Object.keys(Lrow.bx.os).length) bad('old save: the other team\'s lines were not kept on its rows')
+  if (!Lrow.bx?.ox || !Object.keys(Lrow.bx.ox).length) bad('old save: the other team\'s lines were not kept on its rows')
   for (const s of FR.SHORTS) { const st = FR.startersOf(L, s); if (st.qb1) { st.qb1.in = 4 } }
   const L2 = FR.upgradeSave(FR.unpackFranchise(FR.packFranchise(L)))
   if (JSON.stringify(FR.leagueStats(L2)) !== a1) bad('old save: the frozen lines changed after injuries and a second load')
@@ -268,7 +274,7 @@ for (let y = 0; y < N; y++) {
   const a2 = FR.leagueStats(L2)
   const grew = Object.entries(JSON.parse(a1)).filter(([id, v]) => (a2[id]?.gp ?? 0) < (v.gp ?? 0)).length
   if (grew) bad(`old save: ${grew} men lost games after the next week`)
-  console.log(`old save: ${Object.keys(JSON.parse(a1)).length} men frozen, week ${row.wk} box: ${Object.keys(Lrow.bx.os).length} of the other team's men kept`)
+  console.log(`old save: ${Object.keys(JSON.parse(a1)).length} men frozen, week ${row.wk} box: ${Object.keys(Lrow.bx.ox).length} of the other team's men kept`)
 }
 
 // ── the clock's words ──
@@ -278,7 +284,7 @@ console.log(`\nboxes: ${G.games} games, ${G.sides} sides · passer≠receivers $
 console.log(`touchdowns with no man (returns, the league's games): ${G.tdMiss} · the player's games: ${G.tdUserMiss} of ${G.tdUser}`)
 console.log(`end of games: ${G.scores} scores, ${G.at1} at 0:01 (${(100 * G.at1 / G.scores).toFixed(2)}%), ${G.late} in the last 40 seconds, ${G.lateLead} of them by the team ahead · ${G.kneels} games ended on a knee · ${G.ot} overtimes`)
 console.log(`moments: ${M.n} · ahead with the ball inside 1:50: ${M.leadKneel} · score wrong: ${M.score} · the player's overtime games: ${M.otGames}, with an overtime moment: ${M.otMoment}`)
-console.log(`touchdowns named: ${M.tdN}, too long for the field: ${M.tdLong} · builds who played: ${M.buildsLines}, no line: ${M.buildsMissing}`)
+console.log(`touchdowns named: ${M.tdN} (${M.tdSpot ?? 0} with their play's spot kept), too long for the field: ${M.tdLong} · builds who played: ${M.buildsLines}, no line: ${M.buildsMissing}`)
 console.log(`line spots: ${C4.charts} starters checked, ${C4.off} at another spot, ${C4.badSpot} a tackle at centre or a centre at tackle`)
 console.log(`Week 1 QBs who played all 17: ${QB.full.join(', ')} (mean ${(QB.full.reduce((a, b) => a + b, 0) / QB.full.length).toFixed(1)}; NFL 10-14)`)
 const qbMean = QB.full.reduce((a, b) => a + b, 0) / QB.full.length

@@ -33,7 +33,7 @@ const EXPOSE = { start: 1.4, rest: 0.15 }
 // The starting quarterback (owner, 2026-11-17: "every starting QB plays all 17"): the count's 2.5% is every QB who
 // took a snap, garbage time and the backups' series included; the men who start take far more hits. In 2022-24 only
 // 10 to 14 of the 32 Week 1 starters started all 17 games. This puts a starter at about 5% a game (the tone-down in).
-const QB_START = 1.85
+const QB_START = 2.4
 // the men behind the starters who play: how many in each room, and how much (a backup QB or guard hardly plays; the
 // second running back, the third and fourth receivers, the line's rotation, the nickel corner do)
 const NEXT = { qb: [1, 0.2], rb: [1, 0.85], wr: [2, 0.85], te: [1, 0.85], ol: [2, 0.35], edge: [2, 0.85], dt: [2, 0.85], lb: [1, 0.6], cb: [1, 0.85], s: [1, 0.6], k: [0, 0] }
