@@ -22,7 +22,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 const gauss = r => { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) }
 const n0 = v => Math.round(v ?? 0).toLocaleString('en-US')
 export const RACE_AWARDS = ['MVP', 'OPOY', 'DPOY']
-export const RACE_NAME = { MVP: 'MVP', OPOY: 'OFFENSIVE PLAYER OF THE YEAR', DPOY: 'DEFENSIVE PLAYER OF THE YEAR' }
+export const RACE_NAME = { MVP: 'MVP', OPOY: 'OFFENSIVE PLAYER OF THE YEAR', DPOY: 'DEFENSIVE PLAYER OF THE YEAR', CPOY: 'COMEBACK PLAYER OF THE YEAR', SMOY: 'SIXTH MAN OF THE YEAR' }
 export const RACE_SHORT = { MVP: 'MVP RACE', OPOY: 'OPOY RACE', DPOY: 'DPOY RACE' }
 const OFFENSE = new Set(['qb', 'rb', 'wr', 'te']), DEFENSE = new Set(['edge', 'dt', 'lb', 'cb', 's'])
 // the single-season records the voters notice (the NFL's, 2026)
@@ -119,7 +119,9 @@ export function leagueSeasons(field, seed) {
     }
     // (his weekly pace: a season isn't a straight line, the leaders trade places)
     const wob = Array.from({ length: 17 }, () => 0.75 + 0.5 * r())
-    return { ...x, t, gp, w: winsOf[x.team], wob }
+    // (back: he missed most of last season hurt, nine games or more: about one starter in sixteen, the Comeback ballot's men)
+    const back = r() < 0.06
+    return { ...x, t, gp, w: winsOf[x.team], wob, back }
   })
 }
 // a man's line through k of 17 games (his own pace, the season's total at the end)
@@ -198,4 +200,56 @@ export function seasonVote(seasons, me, seed) {
     }
   }
   return out
+}
+
+// ── Comeback Player of the Year (football) ──
+// The owner (2026-11-16): a great year after a year that injuries took most of, never a bad one and never a comeback from
+// retirement. On the ballot only a man who missed nine games or more last season through injury (me.back, lib/career.js;
+// the league's men: back), with a season at least CPOY_BAR on the case scale (a Pro Bowl year is about 0.76, an All-Pro
+// one 1.0). The best case wins it; with nobody there, nobody does, the way some years go. Returns null (nobody on the
+// ballot) or { rows (the top five), place, pts }.
+export const CPOY_BAR = 0.75
+export function comebackVote(seasons, me, seed) {
+  const R = racesAt(seasons, me, 17)
+  const pool = R.MVP.concat(R.OPOY ?? [], R.DPOY ?? [])
+  const seen = new Set(), list = []
+  for (const x of pool) { const k = `${x.name}|${x.team}`; if (seen.has(k)) continue; seen.add(k); const back = x.me ? !!me?.back : !!seasons.find(y => y.name === x.name && y.team === x.team)?.back; if (back && x.c >= CPOY_BAR) list.push({ ...x, v: x.c + (x.w - 9) * 0.02 }) }
+  if (!list.length) return null
+  list.sort((a, b) => b.v - a.v)
+  return ballot(list, seed, 0.06, 5)
+}
+// 50 ballots, 10-5-4-3-1, each voter with his own read of the cases (spread)
+function ballot(list0, seed, spread, keep = 10) {
+  const r = seeded(`vote-${seed}`), list = list0.slice(0, 14)
+  const pts = list.map(() => 0), first = list.map(() => 0)
+  for (let v = 0; v < 50; v++) list.map((x, i) => [i, x.v + spread * gauss(r)]).sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([i], j) => { pts[i] += [10, 5, 4, 3, 1][j]; if (j === 0) first[i]++ })
+  const rows = list.map((x, i) => ({ name: x.name, team: x.team, g: x.g, line: x.line, pts: pts[i], first: first[i], me: !!x.me, v: x.v })).sort((a, b) => b.pts - a.pts || b.v - a.v)
+  const place = rows.findIndex(x => x.me) + 1
+  return { rows: rows.slice(0, keep).map(({ v, ...x }) => { void v; return x }), place: place || null, pts: place ? rows[place - 1].pts : 0 }
+}
+
+// ── Sixth Man of the Year (basketball) ──
+// The best season off the bench: more games coming off it than starting, 65 games at least. Points first, then the rest of
+// the line and the team (real winners since 2010: about 17 a game, 13 to 23; a 13-15 scorer on a playoff team takes it in a
+// thin year, a 20-a-night bench scorer nearly always). The league's reserves: every team's best man off the bench
+// (lib/career.js), each with a season drawn from how good he is, so the player is never handed it.
+export const smoyScore = x => x.ppg + 0.3 * x.rpg + 0.45 * x.apg + 0.5 * ((x.spg ?? 0.8) + (x.bpg ?? 0.4)) + (x.w - 41) * 0.05
+export function reserveSeasons(field, seed) {
+  const r = seeded(`bench-${seed}`)
+  const mid = field.reduce((s, x) => s + x.ovr, 0) / Math.max(1, field.length)
+  return field.map(x => {
+    const n = () => gauss(r), big = x.g === 'big', d = (x.ovr - mid) / 4
+    const ppg = Math.max(4, 10.2 + 1.7 * d + 3.2 * n()), rpg = Math.max(1, (big ? 6 : 3.2) + 0.6 * d + 1.2 * n()), apg = Math.max(0.4, (big ? 1.6 : 3) + 0.4 * d + 1 * n())
+    const gp = r() < 0.22 ? 82 - (8 + Math.floor(r() * 30)) : 78 + Math.floor(r() * 5)
+    const w = Math.max(15, Math.min(66, Math.round(41 + (x.str - 11) * 4.5 + 7 * n())))
+    const t = { ppg: Math.round(ppg * 10) / 10, rpg: Math.round(rpg * 10) / 10, apg: Math.round(apg * 10) / 10, spg: Math.round(Math.max(0.2, 0.8 + 0.3 * n()) * 10) / 10, bpg: Math.round(Math.max(0, (big ? 0.8 : 0.3) + 0.3 * n()) * 10) / 10 }
+    return { ...x, ...t, gp, w }
+  })
+}
+export const benchLine = x => `${x.ppg} PPG · ${x.rpg} RPG · ${x.apg} APG`
+// me: { name, team, g, ppg, rpg, apg, spg, bpg, w, gp, starts } (on the ballot only off the bench, 65 games or more)
+export function sixthVote(seasons, me, seed) {
+  const ok = x => (x.gp ?? 0) >= 65 && (x.starts ?? 0) * 2 < (x.gp ?? 0)
+  const list = [...seasons.filter(ok).map(x => ({ ...x, starts: 0 })), ...(me && ok(me) ? [{ ...me, me: true }] : [])].map(x => ({ ...x, line: benchLine(x), v: smoyScore(x) })).sort((a, b) => b.v - a.v)
+  return list.length ? ballot(list, seed, 0.9, 10) : null
 }

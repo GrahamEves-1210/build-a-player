@@ -1198,7 +1198,7 @@ function AnalyticsByYear({ c }) {
 // ── The award races (football): his award's race and the MVP's, the top ten on the pace each man is on, then the vote
 // (lib/careerAwards.js). The College Football season page's leaders board (simFlow.jsx LeadersBoard), the same rows
 // the Heisman's: the place, the man, his school or team and his line. ──
-const RACE_TAB = { MVP: 'MVP', OPOY: 'OPOY', DPOY: 'DPOY' }
+const RACE_TAB = { MVP: 'MVP', OPOY: 'OPOY', DPOY: 'DPOY', CPOY: 'COMEBACK', SMOY: 'SIXTH MAN' }
 function RaceTabs({ keys, on, onPick }) {
   if (keys.length < 2) return null
   return <div className="cr-race-tabs" role="tablist">{keys.map(k => <button key={k} role="tab" aria-selected={k === on} className={k === on ? 'is-on' : ''} onClick={() => { onPick(k); sfx('tap') }}>{RACE_TAB[k]}</button>)}</div>
@@ -1223,11 +1223,12 @@ function AwardRace({ c, games }) {
   )
 }
 function RaceVote({ c, s }) {
-  const own = Object.keys(s.race).find(k => k !== 'MVP') ?? 'MVP'
-  const keys = own === 'MVP' ? ['MVP'] : [own, 'MVP']
-  const [pick, setPick] = useState(keys[0])
+  // (his own award's ballot first, then the MVP's, then the Comeback's when he was on it; basketball's Sixth Man)
+  const keys = ['OPOY', 'DPOY', 'SMOY', 'MVP', 'CPOY'].filter(k => s.race[k]?.rows?.length)
+  const [pick, setPick] = useState(null)
   const A = keys.includes(pick) ? pick : keys[0]
   const v = s.race[A]
+  if (!A) return null
   if (!v?.rows?.length) return null
   const rows = v.rows.map((x, i) => raceRow(c, x, i, `${x.pts}`))
   if (v.place > v.rows.length) rows.push({ rank: v.place, me: true, name: c.name, team: `${c.team} · ${v.pts} PTS`, value: `${v.pts}` })
@@ -1255,6 +1256,8 @@ function Recap({ c, last, user }) {
         {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : last.awardName}</span>}
         {last.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
         {last.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
+        {last.cpoy && <span className="cr-badge is-gold"><IconTrophy size={12} /> COMEBACK PLAYER OF THE YEAR</span>}
+        {last.smoy && <span className="cr-badge is-gold"><IconTrophy size={12} /> SIXTH MAN OF THE YEAR</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
         {last.proBowl && !last.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
         {last.benched > 0 && <span className="cr-badge">{c.sport === 'bucket' ? 'OFF THE BENCH' : last.benched >= last.wins + last.losses ? 'BACKUP ALL YEAR' : `${last.benched} GAMES AS THE BACKUP`}</span>}
@@ -1576,6 +1579,8 @@ export const honorsOf = (s, S, pos) => (S.honorsOf ? S.honorsOf(s, pos) : S.isSo
   s.award && (AWARD_NAME[pos] === 'PROTECTOR' ? 'Protector of the Year' : AWARD_NAME[pos] ?? 'Season award'),
   s.fmvp && `${S.final} MVP`,
   s.roy && 'Rookie of the Year',
+  s.cpoy && 'Comeback Player of the Year',
+  s.smoy && 'Sixth Man of the Year',
   // (both, when he made both: an MVP season showed only "All-Pro" and read as no Pro Bowl. The owner, 2026-11-12)
   (s.proBowl || s.award || s.allPro) && (S.isBucket ? 'All-Star' : 'Pro Bowl'),
   s.allPro && (S.isBucket ? 'All-NBA' : 'All-Pro'),
@@ -1716,12 +1721,14 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
       <div className="cl-big cl-big--sm">{keys.map(k => <span key={k}><b>{fmtK(S, k, s.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>
       {rest.length > 0 && <div className="cl-small cl-small--season">{rest.map(k => <span key={k}><b>{fmtK(S, k, s.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>}
       {(S.isSoccer || S.isBaseball) && honorsOf(s, S, c.pos).length > 0 && <div className="cr-badges">{honorsOf(s, S, c.pos).map(h => <span key={h} className="cr-badge is-gold"><IconTrophy size={12} /> {h.toUpperCase()}</span>)}</div>}
-      {!S.isSoccer && !S.isBaseball && (s.award || s.allPro || s.proBowl || s.champion) && (
+      {!S.isSoccer && !S.isBaseball && (s.award || s.allPro || s.proBowl || s.champion || s.cpoy || s.smoy) && (
         <div className="cr-badges">
           {s.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
           {s.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {s.awardName === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : s.awardName}</span>}
           {s.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
           {s.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
+          {s.cpoy && <span className="cr-badge is-gold"><IconTrophy size={12} /> COMEBACK PLAYER OF THE YEAR</span>}
+          {s.smoy && <span className="cr-badge is-gold"><IconTrophy size={12} /> SIXTH MAN OF THE YEAR</span>}
           {s.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
           {s.proBowl && !s.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
         </div>
@@ -1790,6 +1797,8 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
     [t.awards, awardWord(c.pos, t.awards), IconTrophy, true],
     [t.fmvps, S.finalsAward, IconTrophy, false],
     [t.roy ? 1 : 0, 'ROOKIE OF THE YEAR', IconStar, false],
+    [t.cpoys ?? 0, 'COMEBACK PLAYER OF THE YEAR', IconTrophy, false],
+    [t.smoys ?? 0, 'SIXTH MAN OF THE YEAR', IconTrophy, false],
     [t.allPros, S.first.toUpperCase(), IconMedal, false],
     [t.proBowls, t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, IconStar, false],
     [t.records, t.records === 1 ? 'RECORD' : 'RECORDS', IconFlame, false],

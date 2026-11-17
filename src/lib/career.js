@@ -15,7 +15,7 @@ import { SIMPLE_GAMES } from './minigamesSimple'
 import { queueCloudSave, fetchCloudCareer, fetchCloudCareers, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import { nflSchedule, nbaSchedule } from './leagueSchedule'
-import { leagueSeasons, racesAt, seasonVote, caseKeys, RACE_AWARDS } from './careerAwards'
+import { leagueSeasons, racesAt, seasonVote, comebackVote, reserveSeasons, sixthVote, caseKeys, RACE_AWARDS } from './careerAwards'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, runOLSimulation, runKSimulation,
   calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, calcOVRK, dlBuildSpot, olBuildSpot, olGradeOf, olProtectorCase, lbStyle,
@@ -2886,15 +2886,43 @@ export function raceNow(c, games) {
   const me = raceMe(c, sumGames(c.pos, mineG), Math.max(1, k), games.filter(g => g.won).length, mineG.length / Math.max(1, k) >= 12 / 17 || k < 6 ? 1 : mineG.length / k)
   return { award: raceAward(c), k, races: racesAt(raceSeasons(c), me, k) }
 }
-// The vote (bookSeason): { MVP: { rows (the top ten), place, pts }, OPOY, DPOY }
+// Comeback Player of the Year: he missed most of last season through injury (nine games or more, on his injury
+// list), and played that season (not a year away, not a comeback from retirement)
+export function comebackFrom(c) {
+  const prev = c.seasons?.[c.seasons.length - 1]
+  if (!prev || prev.year !== c.year) return false
+  if (c.unretired?.year === c.seasons.length + 1) return false   // (the first season back from retirement)
+  const hurt = (c.injuries ?? []).filter(i => i.year === c.year).reduce((n, i) => n + (i.games ?? 0), 0)
+  return hurt >= 9
+}
+// The vote (bookSeason): { MVP: { rows (the top ten), place, pts }, OPOY, DPOY, CPOY (null: nobody on that ballot) }
 function raceVote(c, stats, wins, share) {
-  const me = raceMe(c, stats, 17, wins, share >= 12 / 17 ? 1 : share * 0.6, true)
-  return seasonVote(raceSeasons(c), me, `${c.seed}-${c.year}`)
+  const me = { ...raceMe(c, stats, 17, wins, share >= 12 / 17 ? 1 : share * 0.6, true), back: comebackFrom(c) }
+  const seasons = raceSeasons(c)
+  return { ...seasonVote(seasons, me, `${c.seed}-${c.year}`), CPOY: comebackVote(seasons, me, `${c.seed}-${c.year}-cpoy`) }
+}
+// Sixth Man of the Year (basketball): the league's reserves, every team's best man off the bench, and him if he came
+// off it in most of his games. null: he didn't (he isn't on the ballot)
+function sixthField(c) {
+  const S = sportOf(c), out = []
+  for (const t of S.teams) {
+    if (t.short === c.team) continue
+    const ro = rosterFor(c, t.short), tm = S.teamOf(t.short)
+    const gs = [...(ro.guard ?? [])].sort(byOvr), bs = [...(ro.big ?? [])].sort(byOvr)
+    const bench = [...gs.slice(S.starters.guard).map(p => ({ p, g: 'guard' })), ...bs.slice(S.starters.big).map(p => ({ p, g: 'big' }))].sort((a, b) => byOvr(a.p, b.p))[0]
+    if (bench) out.push({ name: bench.p.name, team: t.short, g: bench.g, ovr: bench.p.ovr ?? 75, str: (tm.off ?? 5.5) + (tm.def ?? 5.5) + (c.league?.[t.short]?.off ?? 0) + (c.league?.[t.short]?.def ?? 0) })
+  }
+  return out
+}
+function sixthMan(c, stats, wins, starts) {
+  const me = { name: c.name, team: c.team, g: c.pos, ppg: stats.ppg ?? 0, rpg: stats.rpg ?? 0, apg: stats.apg ?? 0, spg: stats.spg ?? 0, bpg: stats.bpg ?? 0, w: wins, gp: stats.gp ?? 0, starts }
+  if (!(me.gp >= 65 && starts * 2 < me.gp)) return null
+  return sixthVote(reserveSeasons(sixthField(c), `${c.seed}-${c.year}`), me, `${c.seed}-${c.year}-smoy`)
 }
 // the vote as a season keeps it: his own award's top ten and the MVP's, and his place in each
-const keptVote = (v, c) => Object.fromEntries(RACE_AWARDS.filter(A => A === 'MVP' || A === raceAward(c)).map(A => [A, { place: v[A].place, pts: v[A].pts, rows: v[A].rows }]))
+const keptVote = (v, c, back = false) => Object.fromEntries([...RACE_AWARDS.filter(A => A === 'MVP' || A === raceAward(c)), ...(back && v.CPOY ? ['CPOY'] : [])].map(A => [A, { place: v[A].place, pts: v[A].pts, rows: v[A].rows }]))
 // (the checks: scripts/moments/awards-check.mjs)
-export const __race = { field: raceField, vote: raceVote }
+export const __race = { field: raceField, vote: raceVote, sixth: sixthMan, sixthField }
 // (an older season keeps the winner and his place: the rows are for the recap)
 const shortVote = race => (race ? Object.fromEntries(Object.entries(race).map(([A, x]) => [A, { place: x.place, pts: x.pts, rows: (x.rows ?? []).slice(0, 1) }])) : race)
 export function bookSeason(c) {
@@ -2920,6 +2948,11 @@ export function bookSeason(c) {
   const mvpToo = vote && c.pos !== 'qb' ? can('award') && vote.MVP.place === 1 : false
   const award = vote ? own || mvpToo : can('award') && S.award(c, f, stats)
   const awardName = mvpToo ? (own ? `MVP + ${S.awardName[c.pos]}` : 'MVP') : S.awardName[c.pos]
+  // (the season's other awards: the Comeback Player of the Year, football; the Sixth Man, basketball)
+  const back = vote ? comebackFrom(c) : false
+  const cpoy = !!(back && can('award') && vote.CPOY?.place === 1)
+  const sixth = S.isBucket ? sixthMan(c, stats, myW, Math.max(0, (stats.gp ?? 0) - Math.min(stats.gp ?? 0, benched))) : null
+  const smoy = !!(sixth && sixth.place === 1)
   const allPro = can('first') && S.allPro[c.pos](stats, c)
   const missed = (f.story?.sat ?? 0)
   const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, series: !!x.series }))
@@ -2928,7 +2961,7 @@ export function bookSeason(c) {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role, ...(c.pos === 'dl' ? { spot: dlSpot(c) } : c.pos === 'ol' ? { spot: olSpot(c) } : c.sport === 'bucket' ? { spot: hoopSpot(c) } : {}),
     wins: myW, losses: myL, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
     ...(dl ? { from: { team: dl.from, teamName: dl.fromName, games: dl.k, wins: dl.there?.wins ?? 0, losses: dl.there?.losses ?? 0, teamWins: f.wins, teamLosses: f.losses } } : {}),
-    stats, adv: seasonRaw(c.pos, f, started), award, awardName, ...(vote ? { race: keptVote(vote, c), ...(mvpToo ? { mvp: true } : {}) } : {}), proBowl: (can('honor') && S.proBowl[c.pos](stats, c)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats, c)),
+    stats, adv: seasonRaw(c.pos, f, started), award, awardName, ...(vote ? { race: keptVote(vote, c, back), ...(mvpToo ? { mvp: true } : {}), ...(cpoy ? { cpoy: true } : {}) } : {}), ...(sixth ? { race: { SMOY: sixth }, ...(smoy ? { smoy: true } : {}) } : {}), proBowl: (can('honor') && S.proBowl[c.pos](stats, c)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats, c)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
     goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: myW, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
@@ -2961,7 +2994,7 @@ export function bookSeason(c) {
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = S.isSoccer ? ((s.stats.starts ?? 0) >= (f.games?.length ?? 38) / 2 ? 'Starter' : 'Backup') : benched < (myW + myL || 17) / 2 ? 'Starter' : 'Backup'
-  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons.map(x => (x.race?.MVP?.rows?.length > 1 ? { ...x, race: shortVote(x.race) } : x)), s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false, ...healDurability(c) }
+  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons.map(x => (x.race && Object.values(x.race).some(v => v?.rows?.length > 1) ? { ...x, race: shortVote(x.race) } : x)), s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false, ...healDurability(c) }
   if (S.x?.afterSeason) next = S.x.afterSeason(next, s)
   // a kicker's year: his streak of makes, the franchise's records and the league's career marks, and whether he keeps the job
   if (c.pos === 'k') next = kAfterSeason(next, s, f, { nick: nickOf(S, c.team), totals: careerTotals(next) })
@@ -3863,7 +3896,7 @@ export function careerTotals(c) {
   if (c.pos === 'k' && stats.fga) { stats.fgPct = r10((stats.fgm ?? 0) / stats.fga * 100); stats.long = Math.max(0, ...Ss.map(s => s.stats.long ?? 0)) }
   return {
     seasons: Ss.length, games, wins: Ss.reduce((a, s) => a + s.wins, 0), losses: Ss.reduce((a, s) => a + s.losses, 0),
-    playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: c.pos === 'ol' ? 0 : Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy),
+    playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: c.pos === 'ol' ? 0 : Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy), cpoys: Ss.filter(s => s.cpoy).length, smoys: Ss.filter(s => s.smoy).length,
     // records: the all-time records he holds (one each, however many times he raised his own)
     proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
