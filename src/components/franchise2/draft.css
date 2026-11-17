@@ -151,8 +151,8 @@
 .dr-traits-h { font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .2px; color: var(--fk-mute); }
 .dr-traits-h em { font-style: normal; color: var(--fk-text); }
 .dr-traits-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 3px; }
-.dr-tr { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 6px 8px 7px; background: var(--fk-g2); line-height: 1; }
-.dr-tr small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.dr-tr { display: flex; flex-direction: column; justify-content: space-between; gap: 3px; min-width: 0; padding: 6px 8px 7px; background: var(--fk-g2); line-height: 1; }
+.dr-tr small { overflow-wrap: anywhere; white-space: normal; line-height: 1.05; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
 .dr-tr b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; color: #fff; white-space: nowrap; }
 .dr-tr.is-k0 b { color: var(--fk-dim); }
 .dr-tr.is-k1 b { font-size: 18px; color: var(--fk-text); }
@@ -313,3 +313,5 @@ body:has(> .dr-sheet) .dr-room .dr-close { visibility: hidden; }
 .dr-group { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; padding: 4px 0 3px; border-bottom: 1px solid var(--fk-line); font-family: var(--fk-d); font-size: 18px; letter-spacing: .6px; color: #fff; }
 .dr-group small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-dim); }
 .dr-group.is-dim { font-size: 14px; color: var(--fk-mute); }
+/* what an S means (the top of the mode's scale, above A+) */
+.dr-key { margin: -2px 0 0; font-family: var(--fk-b); font-size: 14px; line-height: 1.3; color: var(--fk-mute); }

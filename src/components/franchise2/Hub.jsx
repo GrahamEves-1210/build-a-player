@@ -180,7 +180,7 @@ function Glance({ F, r }) {
   const div = DIV_OF[F.team], place = S.div[div].indexOf(F.team) + 1
   return (
     <section className="fh-glance" aria-label={TEAM[F.team].nick}>
-      <span><small>Record</small><b>{recText(r)}</b><em>{ORD(place)} in the {div}{Math.abs(s) >= 2 ? ` · ${s > 0 ? 'won' : 'lost'} ${Math.abs(s)}` : ''}</em></span>
+      <span><small>Record</small><b>{recText(r)}</b><em>{r.w + r.l + r.t > 0 ? `${ORD(place)} in the ${div}` : div}{Math.abs(s) >= 2 ? ` · ${s > 0 ? 'won' : 'lost'} ${Math.abs(s)}` : ''}</em></span>
       <span><small>Team OVR</small><b>{st.ovr}</b><em>Offense {sideGrade(st.off)} · Defense {sideGrade(st.def)}</em></span>
       <span><small>Chemistry</small><b>{Math.round(F.chem ?? 0)}</b><em>out of 100</em></span>
     </section>

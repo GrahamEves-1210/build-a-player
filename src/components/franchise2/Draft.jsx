@@ -34,7 +34,8 @@ import { teamKit, schoolKit } from '../../lib/franchise2/kits'
 //               picks, trades, our picks turned over), then our class and how good the scouting was
 
 const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, ol: OL_ATTR, dl: DL_ATTR, lb: LB_ATTR, db: DB_ATTR, k: K_ATTR }
-const attrName = (pos, t) => (ATTRS[pos]?.[t]?.label ?? t).toUpperCase()
+// (a rating's whole name, never cut: a long one wraps, after a slash where it has one)
+const attrName = (pos, t) => (ATTRS[pos]?.[t]?.label ?? t).toUpperCase().replace('/', '/' + String.fromCharCode(0x200b))
 const school = col => CFB_TEAM_BY_SHORT[col] ?? null
 const schoolName = col => (school(col)?.school ?? 'SANDBOX').toUpperCase()
 // a college's colours as slab colours (the same rules as the kit's team slabs)
@@ -134,6 +135,7 @@ function ProspectCard({ F, act, id, onClose, onDraft, draftLabel }) {
             <span className="dr-gr"><small>CONSENSUS</small><b>{rank ? `NO. ${rank}` : '—'}</b><em>{rank ? projText(rank) : ''}</em></span>
             <span className="dr-gr"><small>SCOUTED</small><b>{Math.round(knownShare(x) * 100)}%</b><Known x={x} /></span>
           </div>
+          {(gradeOf(v.my) === 'S' || gradeOf(v.hi) === 'S') && <p className="dr-key">S is the top grade, above A+: a 97+ player, the best in the league at his spot.</p>}
           {groups.map(([k, list]) => (
             <div key={k} className="dr-traits">
               <span className="dr-traits-h">{KIND_LABEL[k]}{k === 'm' && <em>{v.kc ? ` · ${CHAR_TEXT[x.ch]}` : ' · CHARACTER UNKNOWN'}</em>}</span>
@@ -249,7 +251,7 @@ function ClassList({ F, act, open, sortBy = 'consensus' }) {
           {SORTS.map(([k, n]) => <button key={k} type="button" role="radio" aria-checked={how === k} className={how === k ? 'is-on' : ''} onClick={() => { setHow(k); setMore(30); tap() }}>{n}</button>)}
         </div>
       )}
-      {how === 'grade' && sortBy !== 'ours' && <p className="dr-sort-note">Graded by our scouts only. Men we haven't scouted are at the bottom, in big-board order.</p>}
+      {how === 'grade' && sortBy !== 'ours' && <p className="dr-sort-note">Graded by our scouts only. Men we haven't scouted are at the bottom, in big-board order. S is the top grade, above A+.</p>}
       <div className="dr-list">
         {shown.map((x, i) => (
           <Fragment key={x.i}>
