@@ -60,7 +60,7 @@ export function playArt(v, playId) {
     // the back's path: to the hole and through it (the draw: a beat in the backfield first, the quarterback showing pass)
     if (L.draw) { path([L.o.qb, [L.o.qb[0], L.o.qb[1] - 2.4]], 'route'); path([[bx, by], [bx, by + 1.2], [L.hole, 1.2], [L.hole, 8]], 'carry') }
     else path([[bx, by], [L.hole * 0.85, -1.5], [L.hole, 1.2], [L.hole, 8]], 'carry')
-    out.view = [-27, 27, -7, 13]
+    out.view = [-22.5, 22.5, -7.5, 15]
   } else {
     // the stop: their run at our backer (the offense below the line, our front above it)
     const L = stopLook()
@@ -70,7 +70,7 @@ export function playArt(v, playId) {
     man(L.me[0], L.me[1], 'd', true)
     path([L.rb, [0, L.mesh], [0, -0.6]], 'read')
     path([L.me, [0, 1.6]], 'carry')
-    for (const [x, t] of L.gaps) out.labels.push({ x, y: -2.1, t })
+    for (const [x, t] of L.gaps) out.labels.push({ x, y: -3.3, t })
     out.view = [-13.5, 13.5, -8.5, 6.5]
     out.ltg = null
     out.goal = null
