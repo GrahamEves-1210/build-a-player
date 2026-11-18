@@ -60,6 +60,7 @@ const SUIT = '#1c1f25'
 // on the board and will be on the roster, never the team's letters read as a position)
 const manOf = x => (x.xi != null && x.at != null ? { p: x.p, s: x.sp } : x)
 const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color, small ? 'sm' : 'full') : faceUrl(x.fk ?? x.n, facePos(manOf(x)), color, null, small))
+const LockIcon = () => <svg className="dr-lock" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" strokeWidth="1.8" /><rect x="3" y="7" width="10" height="7.5" rx="1" fill="currentColor" /></svg>
 const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
@@ -499,6 +500,14 @@ function DraftWeek({ F, act, onBuild }) {
           <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" />
           <button type="button" className={`dr-add${add ? ' is-on' : ''}`} aria-expanded={add} onClick={() => { setAdd(!add); tap() }}>{add ? 'Pick his position' : '+ Add a prospect'}</button>
           {add && <div className="dr-addpos">{POS.map(p => <button key={p} type="button" onClick={() => { tap(); onBuild({ id: 'prospect', pos: p, n: 1, of: 1 }) }}>{POS_LABEL[p]}</button>)}</div>}
+        </section>
+      )}
+      {/* (not in Sandbox: the same button, locked, so the feature is there to see) */}
+      {!sandbox && (
+        <section className="dr-sec dr-sandbox is-locked">
+          <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" />
+          <button type="button" className="dr-add is-locked" aria-disabled="true" onClick={() => sfx('deny')}><LockIcon />Add a prospect</button>
+          <p className="dr-lockline">A Sandbox feature. With Sandbox on, a build can go into the draft class.</p>
         </section>
       )}
       <ActionBar>

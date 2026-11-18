@@ -184,6 +184,10 @@
 .dr-add { width: 100%; height: 48px; border: 0; background: transparent; box-shadow: inset 0 0 0 2px var(--fk-line2); color: #fff; font-family: var(--fk-d); font-weight: 400; text-transform: uppercase; font-size: 19px; letter-spacing: .8px; cursor: pointer; }
 .dr-add:active { transform: translateY(1px); }
 .dr-add.is-on { box-shadow: inset 0 0 0 2px #fff; }
+.dr-add.is-locked { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--fk-mute); box-shadow: inset 0 0 0 2px var(--fk-line); cursor: default; }
+.dr-add.is-locked:active { transform: none; }
+.dr-lock { flex: none; }
+.dr-lockline { margin: 0; font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: var(--fk-mute); }
 .dr-addpos { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; }
 .dr-addpos button { height: 44px; border: 0; background: var(--fk-g2); color: #fff; font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .6px; cursor: pointer; }
 .dr-addpos button:active { background: var(--fk-g3); }
