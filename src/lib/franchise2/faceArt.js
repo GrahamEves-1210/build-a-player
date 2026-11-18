@@ -329,8 +329,15 @@ function hairOf(look, G, T, rnd, lo, hide) {
   // short coils in their grain (so a fade or a buzz on a Black man reads as hair, not a cap); straight hair in strands
   const kt = coilTex(lum(H.c) < 70 ? mixC(H.c, '#a08068', 0.2) : mixC(H.H, H.c, 0.45))
   const coilD = (d, c) => tfill(d, c, kt)
-  const strands = (n, sweep = 0, y0 = hl - 0.5, y1 = C0 + 0.6) => {
+  // (owner 11-17: "lines that don't match the hair": every line drawn on a cut stays inside that cut's own shape)
+  const inside = (d, body) => {
+    if (!body || !TX) return body
+    const id = `${TX.P}hc${TX.n++}`
+    return `<defs><clipPath id="${id}"><path d="${d}"/></clipPath></defs><g clip-path="url(#${id})">${body}</g>`
+  }
+  const strands = (n, sweep = 0, y0 = hl - 0.5, y1 = C0 + 0.6, clipD = null) => {
     if (lo) return ''
+    if (clipD) return inside(clipD, strands(n, sweep, y0, y1))
     let d = '', e = ''
     for (let i = 0; i < n; i++) {
       const x = -cw + 3.2 + ((i + 0.5) * (2 * cw - 6.4)) / n + (rnd() - 0.5) * 0.8
@@ -350,37 +357,44 @@ function hairOf(look, G, T, rnd, lo, hide) {
       return R
     case 'crew':
       if (coil) { R.front = coilD(capD(G, { t: 1.0, ts: 0.3, sq: true }, 0.32, rnd), mixC(H.c, T.B, 0.12)); return R }
-      R.front = sides(H.f1) + fill(capD(G, { t: 1.9, ts: 0.4, sb: 30.4, hl: hl - 0.2 }), H.c) + strands(9, 0.4)
-        + (lo ? '' : fill(sm([[38.6, hl - 0.4], [44, C0 + 0.8], [53, C0 - 0.2], [50, C0 + 1.9], [42.4, hl - 2.2]]), H.H))
+      { const d = capD(G, { t: 1.9, ts: 0.4, sb: 30.4, hl: hl - 0.2 })
+        R.front = sides(H.f1) + fill(d, H.c) + strands(9, 0.4, hl - 0.5, C0 + 0.6, d)
+          + (lo ? '' : inside(d, fill(sm([[38.6, hl - 0.4], [44, C0 + 0.8], [53, C0 - 0.2], [50, C0 + 1.9], [42.4, hl - 2.2]]), H.H))) }
       return R
     case 'fade': {
+      const td = coil ? null : capD(G, { t: 2.6, ts: 0.4, sb: 29.6, hl: hl - 0.4 })
       const top = coil ? coilD(capD({ ...G, cw: G.cw - 1.1 }, { t: 1.6, ts: 0.2, sb: 29.4, sq: true }, 0.42, rnd), H.c)
-        : fill(capD(G, { t: 2.6, ts: 0.4, sb: 29.6, hl: hl - 0.4 }), H.c) + strands(9, 0.6) + (lo ? '' : fill(sm([[39, hl - 0.6], [45, C0 - 0.4], [54, C0 - 1.2], [50, C0 + 1.6], [42.6, hl - 2.4]]), H.H))
+        : fill(td, H.c) + strands(9, 0.6, hl - 0.5, C0 + 0.6, td) + (lo ? '' : inside(td, fill(sm([[39, hl - 0.6], [45, C0 - 0.4], [54, C0 - 1.2], [50, C0 + 1.6], [42.6, hl - 2.4]]), H.H)))
       R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.6, sq: true }), H.f1) + top
       return R
     }
     case 'waves': {
-      R.front = coilD(capD(G, { t: 0.8, ts: 0.3, sq: true }, 0.18, rnd), mixC(H.c, T.B, 0.08))
+      const wd = capD(G, { t: 0.8, ts: 0.3, sq: true }, 0.18, rnd)
+      R.front = coilD(wd, mixC(H.c, T.B, 0.08))
       if (!lo) {
+        // (the waves ripple back from the hairline in rings on the top of the head, inside the cut)
         let d = ''
         for (let k = 0; k < 3; k++) { const r = 5 + k * 2.8, y = hl + 2 - k * 0.6; d += `M${f(50 - r)} ${f(y - k * 1.4)}Q50 ${f(y - r * 0.8 - k * 1.6)} ${f(50 + r)} ${f(y - k * 1.4)}` }
-        R.front += line(d, mixC(H.H, H.c, 0.6), 0.38, ' stroke-linecap="round"')
+        R.front += inside(wd, line(d, mixC(H.H, H.c, 0.6), 0.38, ' stroke-linecap="round"'))
       }
       return R
     }
     case 'sidepart': {
-      // a side part on his right (the viewer's left): the hair lifted off the part and swept across
-      const part = 50 - cw * 0.34
-      R.front = sides(H.f1) + fill(capD(G, { t: 2.7, ts: 0.45, sb: 30.6, hl: hl - 0.2 }), H.c) + strands(10, 2.4)
-      if (!lo) R.front += fill(sm([[part + 1.4, hl - 0.6], [52, hl - 2], [50 + cw - 3.4, hl - 0.6], [50 + cw - 1.6, hl - 2.8], [56, C0 + 0.6], [part + 1.6, C0 + 2.4]]), H.H)
-        + line(`M${f(part)} ${f(hl + 0.2)}Q${f(part - 0.4)} ${f(C0 + 4)} ${f(part + 0.6)} ${f(C0 - 1.6)}`, H.S, 0.55)
+      // a side part on his right (the viewer's left): the hair lifted off the part and swept across, one clean shape
+      // (owner 11-17: "remove lines from sidepart") with its light on the swept side
+      const part = 50 - cw * 0.34, d = capD(G, { t: 2.7, ts: 0.45, sb: 30.6, hl: hl - 0.2 })
+      R.front = sides(H.f1) + fill(d, H.c)
+      if (!lo) R.front += inside(d, fill(sm([[part + 1.4, hl - 0.6], [52, hl - 2], [50 + cw - 3.4, hl - 0.6], [50 + cw - 1.6, hl - 2.8], [56, C0 + 0.6], [part + 1.6, C0 + 2.4]]), H.H))
       return R
     }
     case 'textured': {
       const { out, inn } = capPts(G, { t: 2.7, ts: 0.4, sb: 30.4, hl: hl + 0.3 })
+      // (the broken edge never cuts in past the side of his head: a notch there showed his temple through the hair)
       const outer = broken(dense([...out.map(RX), ...out.slice(0, -1).reverse().map(LX)], 6), 0.55, 1.25, rnd, 0.25)
+        .map(p => { if (p[1] < C0 + 3) return p; const m = hx(G, p[1]) + 0.25, dx = p[0] - 50; return Math.abs(dx) < m ? [50 + Math.sign(dx || 1) * m, p[1]] : p })
       const fringe = broken(dense([...inn.slice(1).reverse().map(LX), ...inn.map(RX)], 4), 0.4, 1.1, rnd)
-      R.front = sides(H.f1) + fill(poly([...outer, ...fringe]), H.c) + strands(10, 0.3) + sheen(2.7)
+      const d = poly([...outer, ...fringe])
+      R.front = sides(H.f1) + fill(d, H.c) + strands(10, 0.3, hl - 0.5, C0 + 0.6, d) + inside(d, sheen(2.7))
       return R
     }
     case 'curly': case 'afro': {
@@ -403,17 +417,30 @@ function hairOf(look, G, T, rnd, lo, hide) {
           if (x < 50 && rnd() < 0.6) e += `M${f(x - q)} ${f(y - 0.5)}q${f(q)} ${f(-q * 0.8)} ${f(q * 2)} 0`
         }
         // (curls: their grain is the texture; an afro also gets a few loose curls on its near side)
-        if (big) R.front += line(e, mixC(H.H, H.c, 0.55), 0.3, ' stroke-linecap="round"')
+        if (big) R.front += inside(top, line(e, mixC(H.H, H.c, 0.55), 0.3, ' stroke-linecap="round"'))
       }
       return R
     }
     case 'twists': {
-      R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1)
-        + coilD(capD(G, { t: 4.6, ts: 0.5, sb: 30.2, sq: true }, 1.25, rnd, [50, 34]), H.c)
+      // (owner 11-17, his screenshot: the twists' lines ran past the cut's edge and didn't meet its bumps) each groove
+      // runs from the hairline up to a dip in the outline, so every twist is one bump of the edge, and the grooves stay
+      // inside the cut
+      const { out, inn } = capPts(G, { t: 4.6, ts: 0.5, sb: 30.2, sq: true })
+      const outer = [...out.map(RX), ...out.slice(0, -1).reverse().map(LX)], ctr = [50, 34]
+      const od = even(dense(outer, 6), 1.25 * 1.95)
+      const td = tufts(od, 1.25, ctr, rnd) + `L${dense([...inn.slice(1).reverse().map(LX), ...inn.map(RX)], 4).map(P2).join('L')}Z`
+      R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1) + coilD(td, H.c)
       if (!lo) {
-        let d = ''
-        for (let x = -cw + 3; x <= cw - 3; x += 2.1) { const xb = 50 + x, y0 = hl - 0.6 + Math.abs(x) * 0.12; d += `M${f(xb)} ${f(y0)}Q${f(xb + x * 0.08 + 0.6)} ${f(y0 - 4)} ${f(xb + x * 0.22)} ${f(C0 - 2.6 + Math.abs(x) * 0.18)}` }
-        R.front += line(d, H.S, 0.5)
+        let d = '', e = ''
+        for (let i = 1; i < od.length - 1; i++) {
+          const [x1, y1] = od[i], dx = x1 - 50
+          if (Math.abs(dx) > cw - 1.2 || y1 > hl - 2) continue
+          const x0 = 50 + dx * 0.9, y0 = hl + 0.6 + Math.abs(dx) * 0.12
+          d += `M${f(x0)} ${f(y0)}Q${f(x0 + dx * 0.06)} ${f((y0 + y1) / 2)} ${P2([x1, y1 + 0.3])}`
+          // (a little light down the near side of each twist)
+          if (dx < 0) e += `M${f(x0 + 0.8)} ${f(y0 - 1.6)}Q${f(x0 + 0.8 + dx * 0.05)} ${f((y0 + y1) / 2)} ${f(x1 + 0.9)} ${f(y1 + 1.6)}`
+        }
+        R.front += inside(td, line(d, H.S, 0.5, ' stroke-linecap="round"') + line(e, mixC(H.H, H.c, 0.5), 0.3, ' stroke-linecap="round"'))
       }
       return R
     }
@@ -421,7 +448,11 @@ function hairOf(look, G, T, rnd, lo, hide) {
       // locs (owner 11-16: separate ropes with a twisted grain, out of a parted scalp, falling over and behind the
       // shoulders with gravity, darker at the roots, never over his eyes): shoulder-length, tied up in a bun, or short
       // starter locs on top with faded sides
-      const root = mixC(H.c, '#000000', 0.25), body = H.c, grain = lum(H.c) < 70 ? mixC(H.c, '#9a7a62', 0.4) : H.H, tipC = tip
+      // (owner 11-17: "go through all the dreads hair styles and fix them": every rope grows out of the scalp, inside
+      // the hairline; long ones part in the middle, run over the top and fall past the ears to the shoulders, each
+      // with its own sway and length, never across the face; tied up, they all run back to a bun on the crown; starter
+      // locs stand up off the top of the head, their ends making the cut's outline)
+      const root = mixC(H.c, '#000000', 0.25), body = H.c, grain = mixC(lum(H.c) < 70 ? mixC(H.c, '#9a7a62', 0.4) : H.H, H.c, 0.3), tipC = tip
       // (each rope its root-dark edge, its body and its twisted grain; the strokes share one group's fill and caps)
       const Ls = (d, c, w, x = '') => `<path d="${d}" stroke="${c}" stroke-width="${f(w)}"${x}/>`
       const RL = { back: '', mid: '', front: '' }
@@ -433,45 +464,74 @@ function hairOf(look, G, T, rnd, lo, hide) {
         RL[layer === 'b' ? 'back' : layer === 'm' ? 'mid' : 'front'] += o
       }
       const out = () => { for (const k of ['back', 'mid', 'front']) if (RL[k]) R[k] += `<g fill="none" stroke-linecap="round">${RL[k]}</g>`; return R }
-      // the scalp under them, parted in rows (dark at the roots)
-      if (st === 'starter') R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1)
-      R.front += fill(capD(G, { t: 0.7, ts: 0.3, sb: st === 'starter' ? 30.4 : 37.6, sq: true }), mixC(root, T.B, 0.18))
-      const n = 11
-      for (let i = 0; i < n; i++) {
-        const u = (i + 0.5) / n, x = (u * 2 - 1) * (cw - 2.4), w = 1.25 + rnd() * 0.45, y0 = hl + 0.6 + Math.abs(x) * 0.16
-        if (st === 'starter') { const h = 3.4 + rnd() * 2; rope([[50 + x, y0], [50 + x * 1.08 + (rnd() - 0.5), y0 - h * 0.6], [50 + x * 1.18 + (rnd() - 0.5) * 1.4, y0 - h]], w); continue }
-        // pulled back over the top (to a bun, or over the crown and down the back)
-        const top = st === 'locsup' ? [50 + x * 0.25, C0 - 1.4] : [50 + x * 0.8 + (rnd() - 0.5) * 2, C0 - 1.2 + Math.abs(x) * 0.12]
-        rope([[50 + x, y0], [50 + x * 1.02 + (rnd() - 0.5), (y0 + top[1]) / 2 - 2.2], top], w, 'f', false)
-      }
-      if (st === 'starter') return out()
-      if (st === 'locsup') {
-        // the bun: short loops piled on the crown, a few ends hanging at the back
-        for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2, x = 50 + Math.cos(a) * 2.6, y = C0 - 3.6 + Math.sin(a) * 1.5; rope([[x - 1.2, y + 0.8], [x, y - 1.6], [x + 1.4, y + 0.4]], 1.5, 'b') }
-        for (const s of [-1, 1]) rope([[50 + s * (cw - 1.5), 32], [50 + s * (cw + 0.6), 40], [50 + s * (cw + 0.8), 47]], 1.3, 'b')
+      const j = (a = 1) => (rnd() - 0.5) * a
+      const lerp = (a, b, t) => a + (b - a) * t
+      // the scalp under them, dark at the roots
+      if (st === 'starter') {
+        // faded sides; on top short locs standing up off the scalp: a back row whose ends are the cut's outline, a
+        // front row rooted just inside the hairline
+        const { out: o } = capPts(G, { t: 0.7, ts: 0.3, sb: 30.4, sq: true })
+        R.front = sides(H.f2) + fill(capD(G, { t: 0.5, ts: 0.25, sb: 33.4, sq: true }), H.f1)
+          + fill(capD(G, { t: 0.7, ts: 0.3, sb: 30.4, sq: true }), mixC(root, T.B, 0.18))
+        const rim = even(dense([...o.map(RX), ...o.slice(0, -1).reverse().map(LX)], 6), 2.05).filter(p => p[1] < 27.4)
+        for (const p of rim) {
+          // (standing up off the top more than out from the sides)
+          const dx = (p[0] - 50) * 0.6, dy = p[1] - 38, l = Math.hypot(dx, dy), nx = dx / l, ny = dy / l, h = 1 + rnd() * 0.9
+          rope([[p[0] - nx * 2.6, p[1] - ny * 2.6], [p[0] + nx * 0.4 + j(0.5), p[1] + ny * 0.4], [p[0] + nx * h + j(0.8), p[1] + ny * h]], 1.35 + rnd() * 0.35)
+        }
+        for (let i = 0; i < 9; i++) {
+          const x = ((i + 0.5) / 9 * 2 - 1) * (cw - 3), y0 = hl - 1 + Math.abs(x) * 0.05, h = 2.8 + rnd() * 1.2
+          rope([[50 + x, y0], [50 + x * 1.04 + j(0.6), y0 - h * 0.55], [50 + x * 1.1 + j(1), y0 - h]], 1.35 + rnd() * 0.3)
+        }
         return out()
       }
-      // shoulder length: behind the head and shoulders (back), falling over the front of the shoulders (mid), and a few
-      // framing the face from the temples, outside the eyes (front)
-      for (const s of [-1, 1]) {
-        for (let k = 0; k < 9; k++) {
-          const x0 = cw - 3.2 + k * 0.4, y0 = 22 + k * 1.5, len = 32 + rnd() * 18, drift = 1.2 + k * 0.6 + rnd() * 2.2
-          const pts = [[50 + s * x0, y0], [50 + s * (x0 + drift * 0.8), y0 + len * 0.35], [50 + s * (x0 + drift + (rnd() - 0.3) * 1.6), y0 + len * 0.7], [50 + s * (x0 + drift * 0.9 + (rnd() - 0.5) * 2), y0 + len]]
-          rope(pts, 1.15 + rnd() * 0.7, k < 4 ? 'b' : 'm')
+      R.front += fill(capD(G, { t: 0.7, ts: 0.3, sb: st === 'locsup' ? 33.4 : 37.6, sq: true }), mixC(root, T.B, 0.18))
+      if (st === 'locsup') {
+        // all pulled up to a bun on the crown: the sides' ropes first, then the top's from just inside the hairline
+        const bun = [50, C0 - 3.2]
+        for (const s of [-1, 1]) for (let k = 0; k < 2; k++) {
+          const y0 = 32.4 - k * 2.4, x0 = hx(G, y0) - 1
+          rope([[50 + s * x0, y0], [50 + s * (cw - 0.5 + j(0.4)), 25 - k], [50 + s * cw * 0.62, C0 + 1.2], [bun[0] + s * 1.6, bun[1] + 1.4]], 1.4 + rnd() * 0.25, 'f', false)
         }
-        for (let k = 0; k < 2; k++) {
-          const x0 = cw - 3.4 + k * 1.1, y0 = hl + 1.8 + k * 1.2
-          rope([[50 + s * x0, y0], [50 + s * (cw + 0.9 + k * 0.6), 38 + k * 2], [50 + s * (cw + 1.6 + k), 52 + k * 3], [50 + s * (cw + 1.2 + k * 1.4), 62 + rnd() * 6]], 1.35 + rnd() * 0.3)
+        for (let i = 0; i < 9; i++) {
+          const x = ((i + 0.5) / 9 * 2 - 1) * (cw - 2.6), y0 = hl - 0.5 + Math.abs(x) * 0.08
+          rope([[50 + x, y0], [50 + x * 0.88 + j(0.5), lerp(y0, C0, 0.5) - 1], [50 + x * 0.36, C0 - 0.4], [bun[0] + x * 0.1, bun[1] + 1]], 1.3 + rnd() * 0.35, 'f', false)
+        }
+        // the bun: short loops piled on the crown, over the ends of the ropes
+        R.front += fill(ell(bun[0], bun[1], 3, 2.2), root)
+        for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2, x = bun[0] + Math.cos(a) * 1.8, y = bun[1] + Math.sin(a) * 1.1; rope([[x - 1.1, y + 0.7], [x + j(0.4), y - 1.3], [x + 1.2, y + 0.4]], 1.4) }
+        return out()
+      }
+      // shoulder length, parted in the middle: behind the head and shoulders (back), falling over the front of the
+      // shoulders from behind the jaw (mid), and the top's ropes from the part over the head and down past the ears to
+      // the shoulders, outside the cheeks (front)
+      for (const s of [-1, 1]) {
+        for (let k = 0; k < 7; k++) {
+          const x0 = cw - 1.4 + k * 0.3, y0 = 30 + k * 1.6, d = rnd() * 2.4, len = 26 + rnd() * 12
+          rope([[50 + s * x0, y0], [50 + s * (cw + 1.6 + k * 0.45 + d * 0.6), y0 + len * 0.4], [50 + s * (cw + 2 + k * 0.6 + d), y0 + len * 0.75 + j()], [50 + s * (cw + 1.8 + k * 0.7 + d + j(1.4)), y0 + len]], 1.3 + rnd() * 0.5, 'b')
+        }
+        for (let k = 0; k < 3; k++) {
+          const d = rnd() * 1.6
+          rope([[50 + s * (cw - 1.2), 41 + k * 2], [50 + s * (cw + 0.8 + k * 0.8 + d * 0.5), 52 + k], [50 + s * (cw + 1.2 + k * 1.2 + d), 60 + k * 1.5 + rnd() * 5]], 1.35 + rnd() * 0.4, 'm')
+        }
+        // (the top's ropes thick and with some body: the back one stands off the crown)
+        const m = 5
+        for (let k = 0; k < m; k++) {
+          const a = k / (m - 1), d = rnd() * 1.4, end = 57 + rnd() * 8 + (1 - a) * 2
+          rope([[50 + s * (0.8 + a * 0.3), lerp(hl - 0.6, C0 - 0.2, a)], [50 + s * lerp(cw * 0.42, cw * 0.55, a), lerp(hl - 1, C0 + 0.4, a) + j(0.3)],
+            [50 + s * lerp(cw - 1.7, cw + 0.5, a), lerp(hl + 1.6, C0 + 6, a)], [50 + s * (cw + 0.8 + a * 0.7 + j(0.3)), 37 + a],
+            [50 + s * (cw + 1.2 + a * 1.2 + d * 0.5), 47], [50 + s * (cw + 1.4 + a * 1.7 + d + j(0.8)), end]], 1.6 + rnd() * 0.35)
         }
       }
       return out()
     }
     case 'cornrows': {
-      R.front = fill(capD(G, { t: 0.75, ts: 0.3, sq: true }), H.c)
+      const cd = capD(G, { t: 0.75, ts: 0.3, sq: true })
+      R.front = fill(cd, H.c)
       if (!lo) {
         let d = '', e = ''
         for (let x = -cw + 2.2; x <= cw - 2; x += 2.9) { const y0 = hl + 0.2 + Math.abs(x) * 0.18; d += `M${f(50 + x)} ${f(y0)}Q${f(50 + x * 0.98)} ${f(y0 - 4)} ${f(50 + x * 0.7)} ${f(C0 - 0.4 + Math.abs(x) * 0.3)}`; e += `M${f(50 + x + 1.3)} ${f(y0 - 0.4)}Q${f(50 + (x + 1.3) * 0.98)} ${f(y0 - 4)} ${f(50 + (x + 1.3) * 0.72)} ${f(C0 + Math.abs(x) * 0.3)}` }
-        R.front += line(d, H.S, 0.6) + line(e, H.H, 0.4, ' stroke-dasharray=".9 .5"')
+        R.front += inside(cd, line(d, H.S, 0.6) + line(e, H.H, 0.4, ' stroke-dasharray=".9 .5"'))
       }
       return R
     }
@@ -494,30 +554,37 @@ function hairOf(look, G, T, rnd, lo, hide) {
       // hair grown out: swept back off the face and down behind the ears (flow, to the jaw), short on top and long at
       // the back (mullet, to the collar), or long to the shoulders with a middle part (long)
       const kind = st, y1 = kind === 'flow' ? 56 : kind === 'mullet' ? 66 : 71
-      R.back = fill(kind === 'flow' ? flowD(G, rnd) : mass(G, y1, kind === 'mullet' ? 1 : 1.4, rnd, kind === 'mullet' ? 52 : 46), mixC(H.c, H.S, 0.8))
-      if (kind === 'long') R.mid = fill(panels(G, 76, 3.4, rnd), H.c)
-      if (kind === 'mullet') R.front = sides(H.f1) + fill(capD(G, { t: 2.2, ts: 0.5, sb: 30.6, hl: hl + 0.2 }), H.c) + strands(9, 0.3) + sheen(2.2)
+      const bd = kind === 'flow' ? flowD(G, rnd) : mass(G, y1, kind === 'mullet' ? 1 : 1.4, rnd, kind === 'mullet' ? 52 : 46)
+      R.back = fill(bd, mixC(H.c, H.S, 0.8))
+      const pd = kind === 'long' ? panels(G, 76, 3.4, rnd) : ''
+      if (kind === 'long') R.mid = fill(pd, H.c)
+      if (kind === 'mullet') { const d = capD(G, { t: 2.2, ts: 0.5, sb: 30.6, hl: hl + 0.2 }); R.front = sides(H.f1) + fill(d, H.c) + strands(9, 0.3, hl - 0.5, C0 + 0.6, d) + inside(d, sheen(2.2)) }
       else if (kind === 'flow') {
-        R.front = fill(capD(G, { t: 3.1, ts: 0.5, sb: 33.4, hl: hl - 0.9 }), H.c) + strands(11, 0, hl - 1.2, C0 - 0.6)
-        if (!lo) R.front += fill(sm([[39, hl - 1.4], [44, C0 + 0.4], [56, C0 - 0.6], [61, C0 + 1.6], [52, C0 + 2.2], [43.4, hl - 3.2]]), H.H)
-          + line(`M${f(50 - cw + 2.6)} ${f(hl + 0.6)}Q${f(50 - cw + 0.6)} ${f(hl - 1)} ${f(50 - cw)} ${f(hl + 5)}M${f(50 + cw - 2.6)} ${f(hl + 0.6)}Q${f(50 + cw - 0.6)} ${f(hl - 1)} ${f(50 + cw)} ${f(hl + 5)}`, H.S, 0.5)
+        const d = capD(G, { t: 3.1, ts: 0.5, sb: 33.4, hl: hl - 0.9 })
+        R.front = fill(d, H.c) + strands(11, 0, hl - 1.2, C0 - 0.6, d)
+        if (!lo) R.front += inside(d, fill(sm([[39, hl - 1.4], [44, C0 + 0.4], [56, C0 - 0.6], [61, C0 + 1.6], [52, C0 + 2.2], [43.4, hl - 3.2]]), H.H)
+          + line(`M${f(50 - cw + 2.6)} ${f(hl + 0.6)}Q${f(50 - cw + 0.6)} ${f(hl - 1)} ${f(50 - cw)} ${f(hl + 5)}M${f(50 + cw - 2.6)} ${f(hl + 0.6)}Q${f(50 + cw - 0.6)} ${f(hl - 1)} ${f(50 + cw)} ${f(hl + 5)}`, H.S, 0.5))
       } else {
-        R.front = fill(capD(G, { t: 1.9, ts: 0.6, sb: 34.4, hl: hl - 0.3 }), H.c) + line(`M50 ${f(hl - 0.3)}V${f(C0 + 1)}`, H.S, 0.5)
-        if (!lo) R.front += fill(sm([[47.4, hl - 1], [44, C0 + 2], [40, C0 + 5], [42.6, hl + 0.4]]), H.H)
-          + line(`M${f(50 - cw - 0.6)} 48Q${f(50 - cw - 2.4)} 60 ${f(50 - cw - 2.2)} 72M${f(50 + cw + 0.8)} 48Q${f(50 + cw + 2.6)} 60 ${f(50 + cw + 2.6)} 72`, H.S, 0.5)
+        const d = capD(G, { t: 1.9, ts: 0.6, sb: 34.4, hl: hl - 0.3 })
+        R.front = fill(d, H.c) + inside(d, line(`M50 ${f(hl - 0.3)}V${f(C0 + 1)}`, H.S, 0.5))
+        if (!lo) R.front += inside(d, fill(sm([[47.4, hl - 1], [44, C0 + 2], [40, C0 + 5], [42.6, hl + 0.4]]), H.H))
+        // (the strands down the long hair at the shoulders, only on that hair)
+        if (!lo) R.mid += inside(bd + pd, line(`M${f(50 - cw - 0.6)} 48Q${f(50 - cw - 2.4)} 60 ${f(50 - cw - 2.2)} 72M${f(50 + cw + 0.8)} 48Q${f(50 + cw + 2.6)} 60 ${f(50 + cw + 2.6)} 72`, H.S, 0.5))
       }
       return R
     }
     case 'bun': {
       R.back = fill(ell(50, C0 - 2.4, 4.4, 3.3), H.c) + fill(sm([[45.8, C0 - 1.6], [50, C0 + 0.6], [54.2, C0 - 1.6], [53, C0 + 1.2], [47, C0 + 1.2]]), H.S)
-      R.front = fill(capD(G, { t: 0.9, ts: 0.3 }), H.c)
-        + (lo ? '' : line(`M42 ${f(hl + 0.4)}Q44 20 49 ${f(C0)}M46 ${f(hl - 0.2)}Q47.4 20 50.4 ${f(C0 - 0.2)}M54 ${f(hl - 0.2)}Q53 20 51.6 ${f(C0)}M58 ${f(hl + 0.6)}Q56.4 20 53 ${f(C0 + 0.2)}`, H.H, 0.4))
+      const d = capD(G, { t: 0.9, ts: 0.3 })
+      R.front = fill(d, H.c)
+        + (lo ? '' : inside(d, line(`M42 ${f(hl + 0.4)}Q44 20 49 ${f(C0)}M46 ${f(hl - 0.2)}Q47.4 20 50.4 ${f(C0 - 0.2)}M54 ${f(hl - 0.2)}Q53 20 51.6 ${f(C0)}M58 ${f(hl + 0.6)}Q56.4 20 53 ${f(C0 + 0.2)}`, H.H, 0.4)))
       return R
     }
     case 'receding': {
       if (coil) { R.front = fill(capD(G, { t: 0.9, ts: 0.3, rec: 1, hl: hl - 0.3, sq: true }, 0.28, rnd), mixC(H.c, T.B, 0.15)); return R }
-      R.front = sides(H.f1, { rec: 1 }) + fill(capD(G, { t: 1.6, ts: 0.4, sb: 30.4, rec: 1.1, hl: hl - 0.5 }), H.c)
-        + (lo ? '' : fill(sm([[44, hl - 0.6], [46, C0 + 0.4], [54, C0 - 0.2], [50, C0 + 2]]), H.H))
+      const d = capD(G, { t: 1.6, ts: 0.4, sb: 30.4, rec: 1.1, hl: hl - 0.5 })
+      R.front = sides(H.f1, { rec: 1 }) + fill(d, H.c)
+        + (lo ? '' : inside(d, fill(sm([[44, hl - 0.6], [46, C0 + 0.4], [54, C0 - 0.2], [50, C0 + 2]]), H.H)))
       return R
     }
     case 'balding': {
