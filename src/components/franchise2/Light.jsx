@@ -116,8 +116,9 @@ export function StretchRecap({ F, act, owner, onPlayoffs }) {
           the division; the bye in its week's place) */}
       <div className="fh-next-h"><b>{stretchText(L.k)}</b>{last && <span>Regular season final</span>}</div>
       <div className="lt-rec">
-        <BigRec w={X.w} l={X.l} t={X.t} size={64} label="THESE WEEKS" />
-        <span className="lt-rec-all"><b>{recText(X.rec)}</b><small>Season</small></span>
+        {/* (the season's record first and biggest, these weeks beside it: owner 11-18) */}
+        <BigRec w={X.rec.w} l={X.rec.l} t={X.rec.t} size={64} label="SEASON" />
+        <span className="lt-rec-all"><b>{recText({ w: X.w, l: X.l, t: X.t })}</b><small>These weeks</small></span>
         <span className="lt-rec-all"><b>{ORD(X.place)}</b><small>{div}</small></span>
       </div>
       <div className="lt-games" role="list">
