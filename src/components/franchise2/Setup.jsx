@@ -158,7 +158,7 @@ function TeamCard({ s, onPick, onGo }) {
       <div className="fsu-stars">
         {stars.map((p, k) => <ManL3 key={p.i} F={F} p={p} team={s} size="s" delay={120 + k * 60} />)}
       </div>
-      <div className="fsu-acts"><Go onClick={onGo}>Take over the {TEAM[s].nick}</Go></div>
+      <div className="fsu-acts"><Go onClick={onGo}>{`Take over the ${TEAM[s].nick}`}</Go></div>
     </div>
   )
 }

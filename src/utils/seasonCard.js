@@ -93,6 +93,9 @@ async function safeImage(src) {
 }
 // the game's stand-in faces aren't a photo of the player: initials instead
 const realPhoto = src => (src && !/\/generic(dark|light)\./.test(src) ? src : null)
+// the app draws no photos: its jersey on its own (lib/appArt.js), drawn whole, never cut by the circle
+const appJersey = src => (src && globalThis.__appArtVariant?.(src, 'small')) || src
+const isArt = img => typeof img?.src === 'string' && img.src.startsWith('data:image/svg')
 
 // ── Text ─────────────────────────────────────────────────────────────────────
 const font = (ctx, size, fam = F.lbl, weight = 400) => { ctx.font = `${weight} ${size}px ${fam}` }
@@ -104,6 +107,7 @@ function width(ctx, s, sp) {
 // letter spacing by hand (Safari's canvas has none); shrinks to fit maxW
 function say(ctx, s, x, y, { size, fam = F.lbl, weight = 400, color = '#fff', align = 'center', sp = 0, maxW = 0 }) {
   s = String(s ?? '')
+  if (sp && globalThis.__appSafe) s = globalThis.__appSafe(s)   // (the app's words: drawn a letter at a time, the canvas can't swap them)
   font(ctx, size, fam, weight)
   let w = width(ctx, s, sp)
   if (maxW && w > maxW) { const k = maxW / w; size *= k; sp *= k; font(ctx, size, fam, weight); w = width(ctx, s, sp) }
@@ -256,7 +260,14 @@ function ribbons(ctx, list, x, cy, h, align = 'center', gap = h * .4) {
 // last name and the trait under it
 function chip(ctx, c, img, cx, top, A, { tint, base, nameSize, labelSize, colW }) {
   const r = A / 2, cy = top + r
+  const art = isArt(img)
   ctx.save()
+  if (art) {
+    // the app's jersey: whole, on the card itself, no circle, no ring
+    ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = A * .08; ctx.shadowOffsetY = A * .03
+    ctx.drawImage(img, cx - A * .5, top, A, A)
+    ctx.restore()
+  } else {
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
   const bg = ctx.createRadialGradient(cx, cy - r * .35, r * .1, cx, cy, r)
   bg.addColorStop(0, rgba(mix(tint, base, .45))); bg.addColorStop(1, rgba(mix(tint, base, .85)))
@@ -274,6 +285,7 @@ function chip(ctx, c, img, cx, top, A, { tint, base, nameSize, labelSize, colW }
   ctx.restore()
   ctx.beginPath(); ctx.arc(cx, cy, r - A * .012, 0, Math.PI * 2)
   ctx.lineWidth = Math.max(2, A * .025); ctx.strokeStyle = rgba(lift(tint, .55), .55); ctx.stroke()
+  }
   if (c.val != null) {
     const g = gradeOf(c.val), br = A * .2, bx = cx + r * .74, by = cy + r * .74
     ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2)
@@ -308,7 +320,7 @@ export async function drawSeasonCard(card, { format = 'story' } = {}) {
     loadFonts(),
     safeImage(card.team?.logo),
     safeImage('/bap-mark.webp'),
-    ...chips.map(c => safeImage(realPhoto(c.photo))),
+    ...chips.map(c => safeImage(appJersey(realPhoto(c.photo)))),
   ])
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H
   const ctx = canvas.getContext('2d')

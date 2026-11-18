@@ -1020,7 +1020,7 @@ function ByeWeek({ c, setCareer, getD }) {
     <div className="sm-moment cr-bye ag-pop">
       <span className="ag-eyebrow">WEEK {wk} · BYE WEEK</span>
       <h3 className="sm-moment-title">No game this week</h3>
-      <p className="sm-moment-body">The {nick} are off in Week {wk}. {c.name} can stay after it with the {coach}, or get his body right for the {wk >= 10 ? 'stretch run' : 'rest of the season'}.</p>
+      <p className="sm-moment-body">{`The ${nick} are off in Week ${wk}. ${c.name} can stay after it with the ${coach}, or get his body right for the ${wk >= 10 ? 'stretch run' : 'rest of the season'}.`}</p>
       <div className="sm-options">
         <button className="sm-option" disabled={hurt || !game} onClick={train}>
           <b>Extra work{game ? `: ${(gameTitle(c, game) ?? '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}` : ''}</b>
@@ -1768,7 +1768,7 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
       )}
       <Analytics key={s.year} c={c} s={s} />
       <div className="cl-season-notes">
-        {s.from && <p><b>Traded</b> At the deadline, from the {s.from.teamName}: {s.from.wins}–{s.from.losses} there, {s.wins - s.from.wins}–{s.losses - s.from.losses} with the {(s.teamName ?? '').split(' ').pop()}, who went {s.from.teamWins}–{s.from.teamLosses}</p>}
+        {s.from && <p><b>Traded</b> {`At the deadline, from the ${s.from.teamName}: ${s.from.wins}–${s.from.losses} there, ${s.wins - s.from.wins}–${s.losses - s.from.losses} with the ${(s.teamName ?? '').split(' ').pop()}, who went ${s.from.teamWins}–${s.from.teamLosses}`}</p>}
         {s.rounds?.length > 0 && <p><b>{S.isSoccer ? 'The big nights' : 'Playoffs'}</b> {s.rounds.map(r => (S.isSoccer ? `${r.won ? 'W' : 'L'} ${tieText(r)} ${r.opponent}` : `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${String(r.opponent ?? '').split(' ').pop()}`)).join(' · ')}</p>}
         {S.isSoccer && s.wc?.called && <p><b>World Cup {s.wc.year}</b> {s.wc.champion ? 'Winners' : s.wc.finish}, {s.wc.goals} {s.wc.goals === 1 ? 'goal' : 'goals'}</p>}
         {(s.goals ?? []).length > 0 && <p><b>Goals</b> {met} of {s.goals.length} met</p>}

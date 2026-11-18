@@ -5,14 +5,15 @@
 //
 // Like the jerseys (lib/appArt.js) it happens in one place: every piece of text React (or anything else) puts on
 // the page goes through appSafe() on its way in, so no string in the game needs its own app version and the
-// website, which never runs this, keeps every word. What it can't reach: text drawn on a canvas (share cards,
-// the mini games), and text inside an <input>.
+// website, which never runs this, keeps every word. What it can't reach: text inside an <input>. Text drawn on a
+// canvas goes through it too (below).
 import INDEX from '../data/jersey-index.json'
 
 // ── league marks ─────────────────────────────────────────────────────────────────────────────────────────────
 // order matters: the longer phrase first
 export const TERM_MAP = [
   [/\bSuper Bowl (champions?|winners?|titles?|rings?|MVPs?)\b/g, (m, w) => (/^MVP/.test(w) ? `Championship ${w}` : w === 'titles' ? 'championships' : w === 'title' ? 'championship' : w === 'rings' ? 'championship rings' : w === 'ring' ? 'championship ring' : w)],
+  [/\bSUPER BOWL (CHAMPIONS?|WINNERS?|MVPS?)\b/g, (m, w) => (/^MVP/.test(w) ? `CHAMPIONSHIP ${w}` : w)],
   [/\bSuper Bowls\b/g, 'Championships'],
   [/\bSuper Bowl\b/g, 'Championship'],
   [/\bSUPER BOWLS?\b/g, m => (m.endsWith('S') ? 'CHAMPIONSHIPS' : 'CHAMPIONSHIP')],
@@ -128,4 +129,15 @@ export function installAppTerms() {
   const fix = (name, value) => (ATTRS.has(name) && typeof value === 'string' ? appSafe(value) : value)
   Element.prototype.setAttribute = function (name, value) { return setAttr.call(this, name, fix(name, value)) }
   if (imgSet !== setAttr) HTMLImageElement.prototype.setAttribute = function (name, value) { return imgSet.call(this, name, fix(name, value)) }
+  // Text drawn on a canvas (share cards, the mini games' end zones and scoreboards, Blacktop's name tags): every
+  // fillText, strokeText and the measureText that sizes it. Code that draws a word a letter at a time asks
+  // globalThis.__appSafe for the whole word first (utils/seasonCard.js, lib/mg/kit.js).
+  globalThis.__appSafe = appSafe
+  for (const C of [globalThis.CanvasRenderingContext2D, globalThis.OffscreenCanvasRenderingContext2D]) {
+    if (!C) continue
+    for (const m of ['fillText', 'strokeText', 'measureText']) {
+      const fn = C.prototype[m]
+      if (fn) C.prototype[m] = function (text, ...rest) { return fn.call(this, typeof text === 'string' ? appSafe(text) : text, ...rest) }
+    }
+  }
 }

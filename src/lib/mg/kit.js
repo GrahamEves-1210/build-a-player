@@ -77,7 +77,9 @@ export function fieldFor(home, superBowl = null) {
   if (superBowl) return { id: `sb|${superBowl}`, superBowl, end: '#0b1f3a', endText: '#e8c15a', word: 'SUPER BOWL' }
   if (!home?.short) return null
   const nick = String(home.name ?? home.short).trim().split(/\s+/).pop().toUpperCase()
-  const f = { id: home.short, short: home.short, end: home.color, endText: inkFor(home.color, home.color2), word: nick, color: home.color, trim: home.color2 ?? '#ffffff', logo: null }
+  // (the app names a team by its place, never its nickname: lib/appTerms.js turns the full name into the place)
+  const word = globalThis.__appSafe ? globalThis.__appSafe(String(home.name ?? home.short).trim()).toUpperCase() : nick
+  const f = { id: home.short, short: home.short, end: home.color, endText: inkFor(home.color, home.color2), word, color: home.color, trim: home.color2 ?? '#ffffff', logo: null }
   const e = logoOf(home.short, () => { f.logo = e.img; f.id = `${home.short}|logo` })
   if (e?.ok) { f.logo = e.img; f.id = `${home.short}|logo` }
   return f

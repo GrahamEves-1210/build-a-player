@@ -377,7 +377,7 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
           <Chyron team={F.team} size="s" title="RE-SIGN" right={men.length || null} sub={L.rsDone ? 'THE CALLS ARE MADE' : men.length ? 'SET TO THE FRONT OFFICE’S CALL · CHANGE ANY OF THEM' : 'NO DEALS ARE UP'} />
           {L.rsDone && <ResignLines F={F} />}
           {men.some(p => p.b == null && callOf(F, p) !== true && callOf(F, p) !== 'option' && !canKeep(F, p, optionDue(p) ? 'option' : true)) && (
-            <p className="lt-line">The {nick(F.team)} have {money(Math.max(0, room.left))} in cap room. A release on a player's card clears room under the cap.</p>
+            <p className="lt-line">{`The ${nick(F.team)} have ${money(Math.max(0, room.left))} in cap room. A release on a player's card clears room under the cap.`}</p>
           )}
           {men.map(p => {
             const c = callOf(F, p), opt = optionDue(p)
