@@ -7361,6 +7361,13 @@ html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { margin
 
 /* The card's panel ends at the last chip (it ran on to the bottom of the column); the category names and their lines white (owner, 11-13) */
 html.app-look:not(.is-app) .spin-panel-body.has-card .spin-panel-scroll { flex: 0 1 auto !important; height: auto !important; min-height: 0 !important; max-height: none !important; align-self: stretch; }
+/* A short laptop window (1280x585) with the ad rail: the chips' own scroll box was left a row tall or less under the
+   slot machine. On a short desktop window the whole column scrolls instead: slot, card and every chip (player report, 11-18) */
+@media (min-width: 769px) and (max-height: 820px) {
+  html.app-look:not(.is-app):not(.is-tablet) .game-layout:not(.ag-drop) .spin-panel-body { overflow-y: auto !important; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.26) transparent; }
+  html.app-look:not(.is-app):not(.is-tablet) .game-layout:not(.ag-drop) .spin-panel-body > * { flex-shrink: 0 !important; }
+  html.app-look:not(.is-app):not(.is-tablet) .game-layout:not(.ag-drop) .spin-panel-scroll { overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important; }
+}
 html.app-look:not(.is-app) .spin-panel .attr-category-lbl { color: #fff !important; }
 html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !important; opacity: 1 !important; }
 
