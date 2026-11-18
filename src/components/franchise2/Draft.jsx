@@ -464,9 +464,7 @@ export default function DraftBoard({ F, act, onClose }) {
 }
 
 // ── Draft day ────────────────────────────────────────────────────────────────
-const CLOCK = [600, 420, 300, 300, 300, 300, 240]   // the real draft's clock by round: 10 minutes in the 1st, 7 in the 2nd, 5, then 4 in the 7th
 const DAY_OF = rd => (rd === 1 ? 'DAY 1' : rd <= 3 ? 'DAY 2' : 'DAY 3')
-const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 // (light: Franchise LIGHT's draft: the player picks in rounds 1-3, the league's picks a quick feed, no trades, then
 // SIM THE REST OF THE DRAFT; light.js)
@@ -602,20 +600,13 @@ function DraftNight({ F, act, gm, light = false }) {
   )
 }
 function Clock({ F, at, team, ours, nextMine }) {
+  // (no pick clock: the pick is in when the player makes it)
   const rd = roundOf(at)
-  const [left, setLeft] = useState(CLOCK[rd - 1])
-  useEffect(() => {
-    setLeft(CLOCK[rd - 1])
-    if (!ours || reduced()) return
-    const t = setInterval(() => setLeft(s => Math.max(0, s - 1)), 1000)
-    return () => clearInterval(t)
-  }, [at, ours, rd])
   return (
     <div className={`dr-clock${ours ? ' is-ours' : ''}`} style={fkVars(team)}>
       <span className="dr-clock-tag"><small>{DAY_OF(rd)}</small><b>RD {rd}</b></span>
       <span className="dr-clock-team"><KLogo s={team} size={34} /><span><small>{ours ? 'ON THE CLOCK' : 'THE PICK IS IN'}</small><b>{TEAM[team]?.nick.toUpperCase()}</b></span></span>
       <span className="dr-clock-no"><small>PICK</small><b>{at + 1}</b></span>
-      {ours && <span className="dr-clock-t"><b>{mmss(left)}</b></span>}
       {!ours && nextMine != null && <span className="dr-clock-next">{F.team} NEXT · NO. {nextMine + 1}</span>}
     </div>
   )
