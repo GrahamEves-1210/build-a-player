@@ -617,7 +617,7 @@ function stacheOf(look, G, T, rnd, bc) {
 // ── The features ─────────────────────────────────────────────────────────────
 function eyesOf(look, G, T, S, lo) {
   const K = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', X = G.X
-  let wh = '', ir = '', pu = '', lash = '', lid = '', cl = ''
+  let wh = '', ir = '', pu = '', lash = '', lid = '', lidLo = '', cl = ''
   for (const s of [-1, 1]) {
     const q = G.E.sq * G.ex(s)
     const yo = G.young ? 1.08 : 1, cx = 50 + s * G.es, y = G.ey, ew = 3.4 * G.ez, up = K[0] * G.ez * X.eo * yo * 1.05 * (1 - q * 0.1), dn = K[1] * G.ez * X.eo * yo * 1.05 * (1 - q * 0.45), tl = K[2]
@@ -649,14 +649,14 @@ function eyesOf(look, G, T, S, lo) {
       lid += sm([crease[0], crease[1], crease[2], crease[3], [crease[2][0], crease[2][1] + 0.38], [crease[1][0], crease[1][1] + 0.34]])
       // (a young man's lower lid is a fine line, not a bag; a coach's has its years)
       // (a smile's cheek pushing up under the eye: a soft fold below the lower lid)
-      if (q > 0.25) S.M += sm([[L2[0], y + dn * 1.2 + 0.75], [L1[0], y + dn * 1.2 + 0.65], [O[0] - s * 0.1, O[1] + 1], [L1[0], y + dn * 1.2 + 1.15 + q * 0.4], [L2[0], y + dn * 1.2 + 1.2 + q * 0.4]])
+      if (q > 0.25 && !G.young) S.M += sm([[L2[0], y + dn * 1.2 + 0.75], [L1[0], y + dn * 1.2 + 0.65], [O[0] - s * 0.1, O[1] + 1], [L1[0], y + dn * 1.2 + 1.15 + q * 0.4], [L2[0], y + dn * 1.2 + 1.2 + q * 0.4]])
       if (look.co) S.M += sm([[I[0] + s * 0.4, I[1] + 0.45], [L2[0], y + dn * 1.05 + 0.85], [L1[0], y + dn * 1.05 + 0.75], [O[0] - s * 0.2, O[1] + 0.6], [L1[0], y + dn * 1.05 + 0.25], [L2[0], y + dn * 1.05 + 0.3]])
-      lid += sm([[L2[0], y + dn * 1.18 + 0.12], [L1[0], y + dn * 1.22 + 0.1], [O[0] - s * 0.3, O[1] + 0.32], [L1[0], y + dn * 1.22 + 0.32]])
+      lidLo += sm([[L2[0], y + dn * 1.18 + 0.12], [L1[0], y + dn * 1.22 + 0.1], [O[0] - s * 0.3, O[1] + 0.32], [L1[0], y + dn * 1.22 + 0.32]])
     }
   }
   const light = lum(iris) > 60
   return {
-    wh, P: { ir, pu, cl, lash, lid, light, iris },
+    wh, P: { ir, pu, cl, lash, lid, lidLo, light, iris },
   }
 }
 function browsOf(look, G, T, lo) {
@@ -715,20 +715,28 @@ function mouthOf(look, G, T, S, lo) {
   S.S += sm([[50 - mw * 0.55, yl + ll + 0.25], [50, yl + ll + 1.35], [50 + mw * 0.6, yl + ll + 0.3], [50 + mw * 0.2, yl + ll + 0.6], [50 - mw * 0.2, yl + ll + 0.6]])
   // the cheeks lifting: the folds from the nose's wings down past the corners, the apples of the cheeks catching the
   // light with a soft shade under them
+  // (owner 11-17: "soften the smile lines around the mouth": on a player, a young man's smile, the fold is a short soft
+  // half tone from the nose's wing that fades out beside the corner, never past it; a coach keeps his deeper fold)
   for (const sd of [-1, 1]) {
     const k = E.ck * G.ex(sd), c = sd < 0 ? Lc : Rc, w = G.nwid
     if (k < 0.12) continue
-    S[k > 0.8 ? 'S' : 'M'] += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
+    if (G.young) S.L += sm([[50 + sd * (w + 0.45), G.nb - 1.1], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.5], [c[0] + sd * (0.9 + k * 0.3), c[1] - 0.2], [c[0] + sd * (0.75 + k * 0.25), c[1] - 0.45], [50 + sd * (w + 0.85 + k * 0.25), G.nb + 0.3], [50 + sd * (w + 0.2), G.nb - 0.7]])
+    else S[k > 0.8 ? 'S' : 'M'] += sm([[50 + sd * (w + 0.5), G.nb - 1.5], [50 + sd * (w + 1.6 + k * 0.6), G.nb + 0.4], [c[0] + sd * (1.2 + k * 0.5), c[1] + 0.3], [c[0] + sd * (0.9 + k * 0.6), c[1] + 1.6 + k * 0.6], [c[0] + sd * (0.7 + k * 0.4), c[1] + 0.4], [50 + sd * (w + 1.1 + k * 0.4), G.nb + 0.2], [50 + sd * (w + 0.2), G.nb - 0.9]])
+    // the apples of the cheeks catching the light (a player's: a soft round light low on the cheek, so it never reads
+    // as a line under the eye)
     if (!lo && k > 0.3) {
-      const ax = 50 + sd * (G.es + 0.8), ay = G.ey + 5.6 - k * 0.9
-      S.H += sm([[ax - sd * 0.4 - 1.9, ay], [ax - 0.4, ay - 0.75 - k * 0.2], [ax - sd * 0.4 + 1.7, ay - 0.1], [ax - 0.4, ay - 0.35]])
+      if (G.young) S.A += ell(50 + sd * (G.es + 1.6), G.ey + 7.2 - k * 0.4, 1.8, 1.1)
+      else {
+        const ax = 50 + sd * (G.es + 0.8), ay = G.ey + 5.6 - k * 0.9
+        S.H += sm([[ax - sd * 0.4 - 1.9, ay], [ax - 0.4, ay - 0.75 - k * 0.2], [ax - sd * 0.4 + 1.7, ay - 0.1], [ax - 0.4, ay - 0.35]])
+      }
     }
   }
   // the philtrum's groove down to the lip's bow, its far ridge in shade; the corners tucked into shadow
   if (!lo) {
     S.M += sm([[49.5, G.nb + 1.3], [50.5, G.nb + 1.3], [50.55, my - ul + 0.2], [49.45, my - ul + 0.2]])
     S.S += sm([[50.6, G.nb + 1.4], [51.1, G.nb + 1.3], [51.2, my - ul - 0.1], [50.8, my - ul + 0.2]])
-    for (const c of [Lc, Rc]) S.S += ell(c[0] + (c === Lc ? -0.3 : 0.3), c[1] + 0.1, 0.55, 0.75)
+    for (const c of [Lc, Rc]) S[G.young ? 'M' : 'S'] += ell(c[0] + (c === Lc ? -0.3 : 0.3), c[1] + 0.1, G.young ? 0.42 : 0.55, G.young ? 0.55 : 0.75)
   }
   let s = ''
   if (op) {
@@ -1012,7 +1020,9 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const key = `${JSON.stringify(look)}|${K.id}${col}|${view}|${mark?.id ?? ''}`
   const P = `f${(hashStr(key) % 1679616).toString(36)}`
   const rnd = rngOf(hashStr(JSON.stringify(look)))
-  const G = geo(look), T = skinTones(lo && lum(look.skin) < 80 ? mixC(look.skin, '#8a5a3e', 0.22) : look.skin)
+  const G = geo(look), T0 = skinTones(lo && lum(look.skin) < 80 ? mixC(look.skin, '#8a5a3e', 0.22) : look.skin)
+  // (a player's shadows a touch softer than a coach's: smooth young skin, the planes turning without hard creases)
+  const T = G.young ? { ...T0, S: mixC(T0.S, T0.M, 0.22) } : T0
   TX = { P, n: 0, defs: {}, lo }
   const { cw, tw, cb, jw, jy, ch, cy, nw, es, ey, mw, my, lean } = G
   const hc0 = look.hc === TIPS ? '#16110e' : look.hc
@@ -1020,7 +1030,8 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   // a cap hides his hair above the band; a durag all of it
   const hide = look.gear === 'durag' ? 'all' : null
   const hp = hairOf(look, G, T, rngOf(hashStr(`${look.hair}|${look.hc}|${look.skin}`)), lo, hide)
-  const S = { M: '', S: '', H: '' }
+  // (the skin's flat tones: M half tone, S shadow, H light; L a player's soft smile fold, A his cheeks' soft light)
+  const S = { M: '', S: '', H: '', L: '', A: '' }
   // the far side (his left, the viewer's right) turning away into shadow: narrow on the temple, in at the
   // cheekbone, wide in the hollow under it, along the jaw to the chin
   S.S += sm([[50 + cw * 0.62, C0 - 3], [50 + cw - 2.8, 20.4], [50 + cw - 2.6, 26], [50 + tw - 2.5, 31], [50 + tw - 2.2, 35.6], [50 + cb - 1.7, 40.6], [50 + cb - (G.young ? 2.6 : 3.4) - lean * 1.3, 46.6],
@@ -1032,7 +1043,9 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   // the light: the forehead, the near cheekbone, the chin (a shaved head's dome)
   if (!lo) {
     S.H += sm([[41.4, 29.8], [44.6, 27.2], [49.2, 26.8], [47.4, 28.8], [42.6, 31.4]])
-    S.H += sm([[50 - es - 3.2, 42.4], [50 - es - 0.6, 41.6], [50 - es + 1.2, 42.2], [50 - es - 1, 43.2]])
+    // (a player's a soft light high on the cheek, away from the eye: a thin streak under it read as a bag)
+    if (G.young) { if (G.E.ck <= 0.3) S.A += ell(50 - es - 1.4, 43.6, 1.9, 0.85) }
+    else S.H += sm([[50 - es - 3.2, 42.4], [50 - es - 0.6, 41.6], [50 - es + 1.2, 42.2], [50 - es - 1, 43.2]])
     S.H += ell(48.6, cy - 2.4, 1.5, 0.7)
     if (['shaved', 'balding', 'receding', 'buzz'].includes(look.hair) && !look.cap) S.H += sm([[41, C0 + 3.4], [46, C0 + 0.9], [51, C0 + 1.2], [46.4, C0 + 3.2]])
   }
@@ -1073,11 +1086,12 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
   const body = (close ? '' : hp.back + tails + (G.collarBack ?? '') + neck + shirt + chainOf(look, G, lo) + hp.mid + ears + earringsOf(look, G))
     + `<use href="#${P}h" fill="${T.B}"/>`
     + `<g clip-path="url(#${P}C)">${T.blush && !lo ? fill(sm([[50 - cb + 2, 44], [50 - cb + 6.4, 43.4], [50 - cb + 5.6, 47.6], [50 - cb + 2.4, 48]]) + sm([[50 + cb - 2, 44], [50 + cb - 6.4, 43.4], [50 + cb - 5.6, 47.6], [50 + cb - 2.4, 48]]), T.blush) : ''}`
-    + `${fill(S.M, T.M)}${fill(S.S, T.S)}${fill(S.H, T.H)}${lo ? '' : `<rect x="20" y="10" width="60" height="60" fill="${dotTex(T.D, 0.9, 0.13, 0.07)}"/>`}${beard.under}`
+    + `${fill(S.M, T.M)}${fill(S.L, mixC(T.B, T.M, 0.5))}${fill(S.S, T.S)}${fill(S.H, T.H)}${fill(S.A, mixC(T.B, T.H, 0.55))}${lo ? '' : `<rect x="20" y="10" width="60" height="60" fill="${dotTex(T.D, 0.9, 0.13, 0.07)}"/>`}${beard.under}`
     + line(poly(G.Rd.filter(p => p[1] > 27 && p[1] < jy + 1).map(p => [50 + p[0], p[1]]), false), mixC(T.B, '#f4f0ff', 0.2 + T.d * 0.12), lo ? 1.3 : 0.7) + `</g>`
     + `<use href="#${P}e" fill="${T.white}"/>`
     + `<g clip-path="url(#${P}E)">${fill(e.ir, e.iris)}${e.light ? fill(e.pu, '#0c0807') : ''}${fill(`M0 0H100V${f(ey - 0.1)}H0Z`, '#2a1a12', ' fill-opacity=".18"')}${lo ? '' : fill(e.cl, '#ffffff', ' fill-opacity=".7"')}</g>`
-    + fill(e.lid, T.S) + fill(e.lash, T.lash)
+    // (a player's lid crease and lower lid a half tone: fine lines, never the heavy creases that read as years)
+    + fill(e.lid, G.young ? mixC(T.M, T.S, 0.45) : T.S) + fill(e.lidLo, G.young ? mixC(T.B, T.M, 0.75) : T.S) + fill(e.lash, T.lash)
     + browsOf(look, G, T, lo) + nose
     + beard.over + mouth + stacheOf(look, G, T, rnd, bc) + eyeBlackOf(look, G)
     + hairFront + headGearOf(look, G, col) + glassesOf(look, G) + capOf(look, G, col, mark)
