@@ -114,7 +114,9 @@ const pat = (name, w, h, body) => {
   if (!TX.defs[name]) TX.defs[name] = `<pattern id="${id}" width="${w}" height="${h}" patternUnits="userSpaceOnUse">${body}</pattern>`
   return `url(#${id})`
 }
-const coilTex = c => (TX && !TX.lo ? pat(`k${tag(c)}`, 1.8, 1.5, `<path d="M.1 .62q.36-.5.72 0M1 1.38q.36-.5.72 0" fill="none" stroke="${c}" stroke-width=".28" stroke-linecap="round"/>`) : null)
+// (owner 11-17: "soften the hair texture, it's way too strong": a fine grain, low in contrast, so the cut reads as
+// one soft shape with a little life in it)
+const coilTex = c => (TX && !TX.lo ? pat(`k${tag(c)}`, 1.3, 1.1, `<path d="M.1 .45q.26-.36.52 0M.75 1q.26-.36.52 0" fill="none" stroke="${c}" stroke-width=".16" stroke-linecap="round" stroke-opacity=".5"/>`) : null)
 const dotTex = (c, k, r, o) => (TX && !TX.lo ? pat(`d${tag(c)}${String(k).replace('.', '')}`, k, k, `<circle cx="${f(k * 0.25)}" cy="${f(k * 0.25)}" r="${r}" fill="${c}" fill-opacity="${o}"/><circle cx="${f(k * 0.75)}" cy="${f(k * 0.75)}" r="${r}" fill="${c}" fill-opacity="${o}"/>`) : null)
 // a shape in its flat colour with a texture over it (its path once, used twice)
 function tfill(d, c, tex) {
@@ -325,7 +327,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
   const { cw, hl } = G
   const sides = (c, o = {}) => fill(capD(G, { t: 0.3, ts: 0.2, sq: true, ...o }), c)
   // short coils in their grain (so a fade or a buzz on a Black man reads as hair, not a cap); straight hair in strands
-  const kt = coilTex(lum(H.c) < 70 ? mixC(H.c, '#a08068', 0.36) : mixC(H.H, H.c, 0.1))
+  const kt = coilTex(lum(H.c) < 70 ? mixC(H.c, '#a08068', 0.2) : mixC(H.H, H.c, 0.45))
   const coilD = (d, c) => tfill(d, c, kt)
   const strands = (n, sweep = 0, y0 = hl - 0.5, y1 = C0 + 0.6) => {
     if (lo) return ''
@@ -362,7 +364,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
       if (!lo) {
         let d = ''
         for (let k = 0; k < 3; k++) { const r = 5 + k * 2.8, y = hl + 2 - k * 0.6; d += `M${f(50 - r)} ${f(y - k * 1.4)}Q50 ${f(y - r * 0.8 - k * 1.6)} ${f(50 + r)} ${f(y - k * 1.4)}` }
-        R.front += line(d, mixC(H.H, H.c, 0.35), 0.5, ' stroke-linecap="round"')
+        R.front += line(d, mixC(H.H, H.c, 0.6), 0.38, ' stroke-linecap="round"')
       }
       return R
     }
@@ -401,7 +403,7 @@ function hairOf(look, G, T, rnd, lo, hide) {
           if (x < 50 && rnd() < 0.6) e += `M${f(x - q)} ${f(y - 0.5)}q${f(q)} ${f(-q * 0.8)} ${f(q * 2)} 0`
         }
         // (curls: their grain is the texture; an afro also gets a few loose curls on its near side)
-        if (big) R.front += line(e, mixC(H.H, H.c, 0.3), 0.4, ' stroke-linecap="round"')
+        if (big) R.front += line(e, mixC(H.H, H.c, 0.55), 0.3, ' stroke-linecap="round"')
       }
       return R
     }
