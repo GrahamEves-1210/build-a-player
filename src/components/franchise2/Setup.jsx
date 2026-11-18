@@ -191,7 +191,7 @@ function Builds({ S, go, owner, onBuild }) {
   const replaces = p => { const m = out[ordered.indexOf(p)]; return m ? `REPLACES ${lastName(m.n).toUpperCase()} ${m.o}` : null }
   return (
     <div className="fsu-builds">
-      <Chyron team={S.team} tag={String(picks.length)} title="Your players" sub="ROOKIES · AS MANY AS YOU WANT" />
+      <Chyron team={S.team} tag={String(picks.length)} title="Build your players" sub="ROOKIES · REPLACE A STARTER AT EACH POSITION" />
       <div className="fsu-pos">
         {SETUP_POS.map(pos => {
           const n = count(pos)
