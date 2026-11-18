@@ -10,7 +10,7 @@
 // cadence is off: F.nextEv past the season) and its six weeks. LIGHT never goes into a game (owner, 2026-11-17: "on
 // light mode you dont even go into the games you just sim them 6 weeks at a time"): the six weeks are simmed (no
 // moments, the path simWeeks takes), then the stretch's recap with every result and its box score. The playoffs sim a
-// round a tap (lightRound). The scouts work on their own at each stretch's end (draft.js autoScout).
+// round a tap (lightRound). The scouts work on their own every week (draft.js autoScout).
 //   F.lt in the season: { y, k (0-2), w0, w1 (its weeks, [w0, w1)), ph: 'card' (the stretch to play) | 'recap' |
 //   'done' (the regular season is over), hs (the men hurt before the week being played: [[id, weeks]]), inj (the men
 //   hurt in the stretch) } (a save from before 2026-11-17 can still hold big and ph 'big': lightSettle)
@@ -131,8 +131,9 @@ export function lightRound(F) {
 }
 function finishStretch(F) {
   const L = F.lt
-  for (let g = 0; g < REG_WEEKS && F.phase === 'season' && F.wk < L.w1; g++) simWeek(F)
-  autoScout(F)
+  // (the scouts work every week, as they would in FULL: the bank never sits at its cap and each week's college slate
+  // can be attended, owner 11-18)
+  for (let g = 0; g < REG_WEEKS && F.phase === 'season' && F.wk < L.w1; g++) { simWeek(F); autoScout(F) }
   L.ph = 'recap'
   delete L.hs
 }
@@ -152,8 +153,7 @@ export function lightSimAll(F) {
   if (F.phase !== 'season') return
   F.ev = null
   if (!F.lt || F.lt.y !== F.year) F.lt = { y: F.year, k: stretchOf(F.wk), inj: [] }
-  for (let g = 0; g < REG_WEEKS + 1 && F.phase === 'season'; g++) simWeek(F)
-  autoScout(F)
+  for (let g = 0; g < REG_WEEKS + 1 && F.phase === 'season'; g++) { simWeek(F); autoScout(F) }
   F.lt.ph = 'done'
   delete F.lt.hs
 }
