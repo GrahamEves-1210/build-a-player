@@ -236,7 +236,7 @@ export const SPORT = {
     status: core => (core >= SPORT.nfl.standing.contender ? 'Contender' : core >= SPORT.nfl.standing.mix ? 'In the mix' : 'Rebuilding'),
     // the career positions, and which side of the ball each plays
     // (an OL career plays inside the 'ol' group every team already keeps: no new roster group, so nobody else's roster moves)
-    positions: ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])],   // LB_LIVE: data/lbs.js, OL_LIVE: lib/olLive.js, K_LIVE: lib/kLive.js
+    positions: ['qb', 'rb', 'wr', 'te', ...(OL_LIVE ? ['ol'] : []), 'dl', ...(LB_LIVE ? ['lb'] : []), 'db', ...(K_LIVE ? ['k'] : [])],   // (the owner's order, 11-18: offense, the line, defense front to back, the kicker)   // LB_LIVE: data/lbs.js, OL_LIVE: lib/olLive.js, K_LIVE: lib/kLive.js
     side: { qb: 'off', rb: 'off', wr: 'off', te: 'off', db: 'def', dl: 'def', lb: 'def', ol: 'off', k: 'off' },
     label: { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', k: 'K' }, posName: { qb: 'Quarterback', rb: 'Running back', wr: 'Wide receiver', te: 'Tight end', db: 'Defensive back', dl: 'Defensive lineman', lb: 'Linebacker', ol: 'Offensive lineman', k: 'Kicker' },
     types: NFL_POS_TYPES, attr: { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, lb: LB_ATTR, ol: OL_ATTR, k: K_ATTR },
