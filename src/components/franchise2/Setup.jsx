@@ -204,7 +204,13 @@ function Builds({ S, go, owner, onBuild }) {
           return (
             <div key={pos} className={`fsu-pos-row${n ? ' is-on' : ''}`}>
               <span className="fsu-pos-k"><b>{POS_LABEL[pos]}</b><small>{POS_NAME[pos].toUpperCase()}</small></span>
-              <span className="fsu-pos-st">{st && <><small>STARTER</small><b>{lastName(st.n).toUpperCase()} {st.o}</b></>}</span>
+              {/* (a player added here: the men he replaces, the best first; owner 11-18) */}
+              {(() => {
+                const gone = ordered.map((p, k) => (p.pos === pos ? out[k] : null)).filter(Boolean)
+                return gone.length
+                  ? <span className="fsu-pos-st"><small>REPLACES</small><b>{gone.map(m => `${lastName(m.n).toUpperCase()} ${m.o}`).join(', ')}</b></span>
+                  : <span className="fsu-pos-st">{st && <><small>STARTER</small><b>{lastName(st.n).toUpperCase()} {st.o}</b></>}</span>
+              })()}
               <span className="fsu-step">
                 <button type="button" onClick={() => drop(pos)} disabled={!n} aria-label={`One fewer ${POS_NAME[pos]}`}>-</button>
                 <b>{n}</b>
