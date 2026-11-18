@@ -9,6 +9,7 @@ import { outlineCls } from './bits'
 import './fd.css'
 import { teamKit } from '../../lib/franchise2/kits'
 import { memoF, warmKey } from './perf'
+import { realSeasons, realTitles, SUPER_BOWLS, REAL_FROM, REAL_TO } from '../../lib/franchise2/realHistory'
 
 // HISTORY: the team's hall. The banners in the rafters (division titles, conference titles, Super Bowls), the
 // rings, every season, the numbers hung up for the player's builds, the franchise's records, his builds' careers,
@@ -83,6 +84,8 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
         </>
       )}
 
+      <RealPast s={F.team} />
+
       {F.retired?.length > 0 && (
         <>
           <Chyron team={F.team} size="s" title="RETIRED NUMBERS" />
@@ -110,18 +113,21 @@ export default function HistoryTab({ F, owner, act, onSlots, onDelete }) {
       <Chyron team={F.team} size="s" title={`${String(owner || 'GUEST').toUpperCase()}'S BUILDS`} />
       {F.builds.filter(B => !B.prospect || B.pid != null).map((B, i) => <BuildCareer key={i} F={F} B={B} owner={owner} onOpen={setPage} />)}
 
-      {F.lh?.length > 0 && (
-        <>
-          <Chyron tone="gold" size="s" title="SUPER BOWL WINNERS" />
-          {[...F.lh].reverse().map(h => (
-            <div key={h.y} className={`fd-champ-row${h.champ === F.team ? ' is-me' : ''}`} style={fkVars(h.champ)}>
-              <small>{h.y}</small><KLogo s={h.champ} size={30} /><b>{TEAM[h.champ].nick.toUpperCase()}</b>
-              <span>{h.score} {h.runner}</span>
-              {h.aw?.MVP && <em>MVP {h.aw.MVP[0]}</em>}
-            </div>
-          ))}
-        </>
-      )}
+      {/* (the franchise's own Super Bowls, then the real ones before it: the last ten) */}
+      <Chyron tone="gold" size="s" title="SUPER BOWL WINNERS" />
+      {[...(F.lh ?? [])].reverse().map(h => (
+        <div key={h.y} className={`fd-champ-row${h.champ === F.team ? ' is-me' : ''}`} style={fkVars(h.champ)}>
+          <small>{h.y}</small><KLogo s={h.champ} size={30} /><b>{TEAM[h.champ].nick.toUpperCase()}</b>
+          <span>{h.score} {h.runner}</span>
+          {h.aw?.MVP && <em>MVP {h.aw.MVP[0]}</em>}
+        </div>
+      ))}
+      {SUPER_BOWLS.filter(x => x[0] >= REAL_FROM && !(F.lh ?? []).some(h => h.y === x[0])).reverse().map(([y, w, l, sc]) => (
+        <div key={y} className={`fd-champ-row${w === F.team ? ' is-me' : ''}`} style={fkVars(w)}>
+          <small>{y}</small><KLogo s={w} size={30} /><b>{TEAM[w].nick.toUpperCase()}</b>
+          <span>{sc} {l}</span>
+        </div>
+      ))}
 
       </div>
       </div>
@@ -181,4 +187,35 @@ function useFranchiseRecords(F) {
     for (const [k, label] of RECORDS) { const r = F.frec?.[k]; if (r) out.push({ label, v: n(r[0]), who: r[1], y: r[2] }) }
     return out
   }, [F, F.hist?.length]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+// The team's real past, before the GM: its Super Bowls, the league titles before them, and its last ten seasons
+// (realHistory.js: the real standings and playoffs, 2016-2025)
+const AFL = new Set(['TEN', 'KC', 'LAC', 'BUF'])
+const REAL_FIN = { champ: 'WON SUPER BOWL', sb: 'LOST SUPER BOWL', conf: 'LOST CONF. TITLE', div: 'LOST DIVISIONAL', wc: 'LOST WILD CARD', out: 'MISSED PLAYOFFS' }
+function RealPast({ s }) {
+  const T = realTitles(s), rows = realSeasons(s)
+  const trips = T.sb.length + T.lost.length
+  return (
+    <>
+      <Chyron team={s} size="s" title="FRANCHISE HISTORY" right="ALL-TIME" />
+      <div className="fd-hall-facts">
+        <BigNum v={T.sb.length} label={T.sb.length === 1 ? 'SUPER BOWL' : 'SUPER BOWLS'} size={34} tone={T.sb.length ? 'gold' : undefined} />
+        <BigNum v={trips} label={trips === 1 ? 'SUPER BOWL TRIP' : 'SUPER BOWL TRIPS'} size={34} />
+        {T.old.length > 0 && <BigNum v={T.old.length} label={`${AFL.has(s) ? 'AFL' : 'NFL'} ${T.old.length === 1 ? 'TITLE' : 'TITLES'} BEFORE 1966`} size={34} />}
+      </div>
+      {T.sb.length > 0 && <div className="fd-rings">{T.sb.map(y => <span key={y} className="fd-ring"><i aria-hidden="true" /><b>{y}</b></span>)}</div>}
+      {T.old.length > 0 && <p className="fd-past-old">{AFL.has(s) ? 'AFL' : 'NFL'} CHAMPIONS {T.old.join(', ')}</p>}
+      {T.lost.length > 0 && <p className="fd-past-old">LOST THE SUPER BOWL {T.lost.join(', ')}</p>}
+      <Chyron tone="ink" size="s" title="THE LAST TEN SEASONS" right={`${REAL_FROM}-${REAL_TO}`} />
+      <div className="fd-past" style={fkVars(s)}>
+        {rows.map(r => (
+          <span key={r.y} className={`fd-past-row is-${r.fin}`}>
+            <small>{r.y}</small><b>{r.w}-{r.l}{r.t ? `-${r.t}` : ''}</b>
+            <em>{REAL_FIN[r.fin]}</em>{r.div && <i>DIVISION CHAMPS</i>}
+          </span>
+        ))}
+      </div>
+    </>
+  )
 }

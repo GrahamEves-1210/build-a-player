@@ -258,3 +258,16 @@ html.bap-reduce-motion :is(.fd-ap, .fd-deal, .fd-day, .fd-offer, .fd-div, .fd-ba
 /* a record's holder can be cut short, never its year */
 .fd-plaque em span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .fd-plaque em i { flex: none; font-style: normal; color: var(--fk-mute); }
+
+/* the team's real past (History: FRANCHISE HISTORY) */
+.fd-past-old { margin: 0; padding: 0 2px; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; line-height: 1.4; color: var(--fk-mute); }
+.fd-past { display: grid; gap: 2px; margin-bottom: 14px; }
+.fd-past-row { display: grid; grid-template-columns: 46px 58px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 38px; padding: 4px 10px; background: var(--fk-g1); line-height: 1.1; }
+.fd-past-row small { font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: var(--fk-mute); }
+.fd-past-row b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; font-variant-numeric: tabular-nums; }
+.fd-past-row em { min-width: 0; font-style: normal; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.fd-past-row i { font-style: normal; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: #fff; white-space: nowrap; }
+.fd-past-row:not(.is-out) { box-shadow: inset 3px 0 0 var(--tc); }
+.fd-past-row:not(.is-out) em { color: #fff; }
+.fd-past-row.is-champ { box-shadow: inset 3px 0 0 var(--fk-gold); }
+.fd-past-row.is-champ em { color: var(--fk-gold-hi); }
