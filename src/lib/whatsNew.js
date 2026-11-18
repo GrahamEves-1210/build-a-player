@@ -47,12 +47,12 @@ const NOV_18 = {
       ],
     },
     {
-      name: 'Faces',
+      name: 'New: Player Faces',
       items: [
-        'New drawn faces for made-up players, coaches and the Career creator',
-        'Players look their age: softer lines, no grey hair',
-        'Hairstyles redone: locs, braids, twists, the side part and more, all sitting right on the head',
-        'Better jerseys under the faces, and a real tank top for basketball players',
+        'Every made-up player and coach now has a face',
+        'Create your own in Career and Franchise: skin tone, hair, beard and more',
+        'Hairstyles include locs, braids, twists, side parts, headbands and durags',
+        'Players wear their team\'s jersey, and basketball players wear a tank top',
         'Coaches wear their team\'s logo on caps and jackets',
       ],
     },
