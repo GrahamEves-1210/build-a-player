@@ -127,21 +127,32 @@ export function wire(F, { n = 30 } = {}) {
 // the league before its first game: the champion's title defence (last season's, or this league's), the best
 // rosters, Week 1's best games, and each division's favourite (by the team ratings on screen)
 function preseason(F) {
+  // (owner 11-18: not "the X are favored" over and over: one line a story, each a different kind)
   const out = []
-  const ovr = Object.fromEntries(SHORTS.map(s => [s, strength(F, s).ovr]))
+  const st = Object.fromEntries(SHORTS.map(s => [s, strength(F, s)]))
+  const ovr = s => st[s].ovr
   const lh = F.lh?.[F.lh.length - 1]
   const champ = lh?.champ ?? SHORTS.find(s => lastSeason(s)?.champ)
   if (champ) out.push({ tag: 'CHAMPIONS', s: champ, text: `${nick(champ)} open the defense of their Super Bowl title`, big: true })
-  const top = [...SHORTS].sort((a, b) => ovr[b] - ovr[a])
+  const top = [...SHORTS].sort((a, b) => ovr(b) - ovr(a))
   out.push({ tag: 'PRESEASON', s: top[0], text: `${nick(top[0])}, ${nick(top[1])} and ${nick(top[2])} start ${F.year} with the league's best rosters` })
-  const wk1 = (F.sched.weeks[0] ?? []).map(g => ({ g, v: ovr[g.a] + ovr[g.h] - Math.abs(ovr[g.a] - ovr[g.h]) })).sort((a, b) => b.v - a.v).slice(0, 3)
-  for (const { g } of wk1) {
-    const fav = ovr[g.h] + 1 >= ovr[g.a] ? g.h : g.a
-    out.push({ tag: 'WEEK 1', s: g.h, text: `${nick(g.a)} at ${nick(g.h)}: the ${nick(fav)} are favored` })
-  }
-  for (const d of DIVISIONS) {
-    const f = [...d.teams].sort((a, b) => ovr[b] - ovr[a])[0]
-    out.push({ tag: d.name, s: f, text: `${nick(f)} are favored to win the ${d.name}` })
+  const bestOff = [...SHORTS].sort((a, b) => st[b].off - st[a].off)[0], bestDef = [...SHORTS].sort((a, b) => st[b].def - st[a].def)[0]
+  out.push({ tag: 'OFFENSE', s: bestOff, text: `The ${nick(bestOff)} bring the league's top-rated offense into the season` })
+  out.push({ tag: 'DEFENSE', s: bestDef, text: `No defense rates higher than the ${nick(bestDef)}'` })
+  // the league's best quarterback, and the rookie everyone's watching
+  const men = SHORTS.flatMap(s => F.teams[s].r.filter(p => p.b == null && !p.fl).map(p => ({ p, s })))
+  const qb = men.filter(x => x.p.p === 'qb').sort((a, b) => b.p.o - a.p.o)[0]
+  if (qb) out.push({ tag: 'QB1', s: qb.s, text: `${qb.p.n} enters the season as the league's highest-rated quarterback` })
+  const rook = men.filter(x => x.p.rk === F.year && x.p.dr).sort((a, b) => (a.p.dr[0] - b.p.dr[0]) || (a.p.dr[1] - b.p.dr[1]))[0]
+  if (rook) out.push({ tag: 'ROOKIE', s: rook.s, text: `${rook.p.n}, a ${rook.p.dr[0] === 1 ? 'first-round' : 'top'} pick, makes his debut for the ${nick(rook.s)}` })
+  // Week 1: the game of the week, then the rest worth a look in one line
+  const wk1 = (F.sched.weeks[0] ?? []).map(g => ({ g, v: ovr(g.a) + ovr(g.h) - Math.abs(ovr(g.a) - ovr(g.h)) })).sort((a, b) => b.v - a.v).slice(0, 3).map(x => x.g)
+  if (wk1[0]) out.push({ tag: 'WEEK 1', s: wk1[0].h, text: `Game of the week: ${nick(wk1[0].a)} at ${nick(wk1[0].h)}` })
+  if (wk1.length > 1) out.push({ tag: 'WEEK 1', s: wk1[1].h, text: `Also on the slate: ${wk1.slice(1).map(g => `${nick(g.a)} at ${nick(g.h)}`).join(', ')}` })
+  // each conference's division picks in one line
+  for (const conf of ['AFC', 'NFC']) {
+    const picks = DIVISIONS.filter(d => d.conf === conf).map(d => nick([...d.teams].sort((a, b) => ovr(b) - ovr(a))[0]))
+    out.push({ tag: `${conf} PICKS`, s: null, text: `The preseason division picks in the ${conf}: ${picks.slice(0, -1).join(', ')} and ${picks[picks.length - 1]}` })
   }
   return out
 }
