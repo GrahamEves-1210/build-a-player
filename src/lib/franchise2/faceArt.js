@@ -1056,14 +1056,28 @@ function jerseyOf(G, K, P, lo, crew = false) {
     + `<g clip-path="url(#${P}Jc)">${g}${band}${fill(sm([[50 + 1.6, vb + 1.6], [50 + nw - 0.4, y0 + 2.6], [50 + nw + 2.2, y0 + 3], [50 + 2.4, vb + 4.4]]), '#000000', ' fill-opacity=".14"')}</g>`
     + fill(gap, mixC(dark(c1, 0.6), '#08090b', 0.5), ' fill-opacity=".85"')
 }
-// a basketball tank: bare shoulders, the scoop neck and the arm holes trimmed
-function tankOf(G, T, color, P, lo) {
-  const { nw } = G
-  const accent = lum(color) > 190 ? '#1d2230' : '#f2f3f5'
-  const loop = sym([[0, 76.6, 1], [nw * 0.7, 75.4], [nw + 1, 70.2, 1], [nw + 6.6, 70.8, 1], [nw + 8, 82], [nw + 13, 94], [nw + 15, 104], [0, 104]])
-  const trim = `M${f(50 - nw - 1)} 70.2C${f(50 - nw - 0.6)} 74.6 ${f(50 - nw * 0.6)} 76.6 50 76.6C${f(50 + nw * 0.6)} 76.6 ${f(50 + nw + 0.6)} 74.6 ${f(50 + nw + 1)} 70.2`
-    + `M${f(50 - nw - 6.6)} 70.8C${f(50 - nw - 7.2)} 80 ${f(50 - nw - 9)} 90 ${f(50 - nw - 15)} 104M${f(50 + nw + 6.6)} 70.8C${f(50 + nw + 7.2)} 80 ${f(50 + nw + 9)} 90 ${f(50 + nw + 15)} 104`
-  return clothOf(G, loop, color, P, lo, false) + `<g clip-path="url(#${P}Jc)">${line(trim, accent, 2.2)}</g>`
+// a basketball tank (owner 11-18: "jersey on basketball needs big work he's NAKED"): an NBA jersey, not a singlet's
+// thin straps: a scoop neck a little below the collarbones, wide straps over the tops of the shoulders, deep arm holes
+// so the shoulders and arms show at the sides, the body in the team's colour, the neckline and arm holes bound in the
+// trim (a thin second colour inside it), the fabric's shade under the arms and on the far side, the mesh's texture
+function tankOf(G, K, P, lo) {
+  const { nw } = G, c1 = K.c1
+  const c2 = Math.abs(lum(K.c2 ?? c1) - lum(c1)) > 40 ? K.c2 : lum(c1) > 150 ? dark(c1, 0.55) : light(c1, 0.75)
+  const c3 = K.c3 && Math.abs(lum(K.c3) - lum(c2)) > 40 ? K.c3 : lum(c2) > 150 ? dark(c1, 0.2) : light(c2, 0.6)
+  // (the right half from the neckline's foot: up the scoop to the strap's inside, across the strap on the shoulder's
+  // top, then the arm hole down the side of the chest)
+  const half = [[0, 73.6, 1], [nw * 0.62, 72.6], [nw + 0.2, 68.4], [nw + 1, 64.6, 1], [nw + 6, 65.6], [nw + 11.6, 67.6, 1],
+    [nw + 13.2, 74], [nw + 15.6, 83], [nw + 18.6, 92], [nw + 20.4, 104, 1], [0, 104]]
+  const loop = sym(half)
+  const nk = [[nw + 1, 64.6], [nw + 0.2, 68.4], [nw * 0.62, 72.6], [0, 73.6]], neckD = sm([...nk.map(LX), ...nk.slice(0, -1).reverse().map(RX)], false)
+  const arm = [[nw + 11.6, 67.6], [nw + 13.2, 74], [nw + 15.6, 83], [nw + 18.6, 92], [nw + 20.4, 104]]
+  const armD = sm(arm.map(RX), false) + sm(arm.map(LX), false)
+  // the fabric: under each arm hole a fold of shade, the far side of the chest turning away
+  const shade = lo ? '' : fill(sm([[50 + nw + 11.8, 71], [50 + nw + 15.4, 86], [50 + nw + 19.6, 104], [50 + nw + 10, 104], [50 + nw + 10.6, 86]]), dark(c1, 0.16))
+    + fill(sm([[50 - nw - 12, 72], [50 - nw - 15.2, 86], [50 - nw - 19, 104], [50 - nw - 14, 104], [50 - nw - 12.4, 88]]), dark(c1, 0.08))
+    + fill(sm([[50 - nw * 0.5, 76], [50, 78.4], [50 + nw * 0.5, 76], [50 + nw * 0.4, 77.4], [50, 79.6], [50 - nw * 0.4, 77.4]]), dark(c1, 0.12))
+  const bind = line(neckD + armD, c2, lo ? 3.6 : 3.2, ' stroke-linejoin="round"') + (lo ? '' : line(neckD + armD, c3, 0.7, ' stroke-linejoin="round" transform="translate(0 0.9)"'))
+  return clothOf(G, loop, c1, P, lo, false) + `<g clip-path="url(#${P}Jc)">${shade}${bind}</g>`
 }
 // a coach's top, the way NFL sideline coaches dress (owner 11-16: the old dark top with a coloured collar band "looks
 // like some kind of religious robe"): a team quarter-zip pullover or a team polo, the body in the team's colour, on a
@@ -1178,7 +1192,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + fill(poly([[50 - nw + 0.4, 62.6], [50, 75.2], [50 + nw - 0.4, 62.6], [50 + nw, 62.6], [50, 80], [50 - nw, 62.6]]), T.S)
     + (lo || G.young ? '' : fill(sm([[50 - nw + 2.6, 55], [50 - 1.8, 65.4], [50 - 2.4, 66], [50 - nw + 2, 57.4]]), T.M))
     + `</g>`
-  const shirt = look.top ? topOf(look, G, K, P, lo, mark) : look.kit === 'hoops' ? tankOf(G, T, col, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
+  const shirt = look.top ? topOf(look, G, K, P, lo, mark) : look.kit === 'hoops' ? tankOf(G, K, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
   const headD = sm(sym(G.R))
   const vb = VIEWS[view] ?? VIEWS.full
   const close = view === 'eyes' || view === 'nose' || view === 'mouth'
