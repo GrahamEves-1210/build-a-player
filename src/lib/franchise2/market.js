@@ -16,7 +16,7 @@
 //          ask, less as the market dries up) he turns down. After the third day the league fills its holes.
 import { SHORTS, POS, MIN, TEAM, lineup, makeGen, fillUp, foOf } from './league'
 import { depthChart, groupOf, GROUP, backupsOf } from './roster'
-import { askOf, marketValue, signDeal, extendDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice, minimumFor, capComply, makeRoom, roomAhead, marketLines } from './contracts'
+import { cutCost, cutMan, askOf, marketValue, signDeal, extendDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice, minimumFor, capComply, makeRoom, roomAhead, marketLines } from './contracts'
 import { coachOf, recruits } from './coach'
 import { worthOf, signTerms, startsFor } from './deals'
 import { standings } from './standings'
@@ -123,12 +123,23 @@ export const walkingStarters = F => (F.rs ?? []).map(i => F.teams[F.team].r.find
 export const FA_DAYS = 3
 export function openFA(F) {
   const R = rngOf(`${F.seed}-${F.year}-fa`)
-  // the market: the men nobody kept, and the veterans cut loose around the league (generated, a few good ones)
-  // (a quarterback cut loose is a backup or a bridge starter at best: the good ones never reach the street)
-  // (a veteran cut loose: his last team, for the market's card; his ceiling is where he is, near enough)
-  for (let i = 0; i < 16; i++) {
+  // the market: the men nobody kept, and the real veterans the league's teams cut loose before the new league year
+  // (owner 11-18: every good free agent a real name): the cap casualties, an older man paid well past what he's worth
+  // now, released for the room (cutMan: his dead money on his old team's books, the wire's RELEASED line, and he's
+  // on the market). Never a team's starting quarterback, two a team at most.
+  for (const s of R.shuffle(SHORTS.filter(x => x !== F.team))) {
+    const t = F.teams[s]
+    const L = lineup(t), qb = Object.values(L).find(p => p.p === 'qb')
+    const cands = t.r.filter(p => p.b == null && !p.fl && !p.rc && p.y > 0 && p.ag >= 29 && p !== qb && p.p !== 'k' && cutCost(p).saves >= 2
+      && p.$ > marketValue(p, F.year + 1) * 1.35)
+      .sort((a, b) => (b.$ - marketValue(b, F.year + 1)) - (a.$ - marketValue(a, F.year + 1)))
+    let n = 0
+    for (const p of cands) { if (n >= 2) break; if (R.u() < 0.6) { const c = cutMan(F, p.i, s); if (c) { c.p.ls = [s, 0]; n++ } } }
+  }
+  // (a thin market topped up with a few made-up journeymen: backups and stopgaps, never a star)
+  for (let i = 0; i < 8 && F.fa.length < 60; i++) {
     const pos = R.pick(POS)
-    const p = makeGen(F, pos, R, { o: pos === 'k' ? clamp(70, 86, Math.round(77 + R.n() * 4)) : clamp(64, pos === 'qb' ? 77 : 86, Math.round(74 + R.n() * 4.5)), ag: pos === 'k' ? R.int(27, 36) : R.int(26, 32) })
+    const p = makeGen(F, pos, R, { o: pos === 'k' ? clamp(68, 76, Math.round(72 + R.n() * 3)) : clamp(62, 76, Math.round(70 + R.n() * 3.5)), ag: pos === 'k' ? R.int(27, 36) : R.int(26, 32) })
     p.pk = Math.min(p.pk ?? p.o, p.o + (p.ag <= 27 ? 2 : 0)); p.ls = [R.pick(SHORTS.filter(s => s !== F.team)), 0]; delete p.fl
     F.fa.push(p)
   }
