@@ -39,6 +39,8 @@ const yearsK = (p, y) => {
 }
 const bonusK = b => 1 + 0.25 * (BONUS[b]?.[1] ?? 0)
 export const worthOf = (p, o) => o.$ * yearsK(p, o.y) * bonusK(o.b ?? 0)
+// the money a year over y years that's worth the same to him as $ a year over y0 (the talks' restatement, offerTalks)
+export const atTerm = (p, $, y0, y) => (y === y0 ? $ : r1($ * yearsK(p, y0) / yearsK(p, y)))
 // a deal on him: the money a year, the years, the bonus spread over them (contracts.js signDeal)
 export const signTerms = (p, o) => signDeal(p, { $: o.$, y: o.y, g: r1(o.$ * shareOf(o.$, o.b ?? 0)) })
 // the bonus paid at signing (all of it), for the screens

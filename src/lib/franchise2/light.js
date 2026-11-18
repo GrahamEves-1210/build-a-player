@@ -25,18 +25,21 @@
 //   3 THE DRAFT       the spring done by the scouts (lightSpring: the Senior Bowl, the combine, the visits, the film);
 //                     the player picks in rounds 1-3, the rest is simmed (draft.js simRest); no draft trades
 //   F.lt in the offseason: { y, ph: 'roster', rs: { id: the call }, off: { id: { $, y, b } }, far: the market's
-//   answers to his offers, done }
+//   answers to his offers, done, tm: { id: { d, y } } (a man kept: his ask or under it, his years: keepTerms),
+//   fc: { id: { s, y } } (an offer's price, Fair or Strong, and its years: offerFor), rsDone (the re-sign calls made),
+//   rsx: { id: [1, $, y] (took less) | [0, $] (turned it down) } }
+// (an old save without tm or fc: every man at his ask and his years, every offer Fair, as before)
 import { playWeek, makeEvent, intoPlayoffs, simPlayoffs, userAlive, finishMoment, REG_WEEKS } from './season'
 import { standings } from './standings'
 import { DIV_OF, CONF_OF } from './schedule'
-import { rngOf, roll, r1 } from './rng'
+import { rngOf, roll, r1, clamp } from './rng'
 import { autoScout, slateOf, attend, runCombine, interview, visitsLeft, consensus, rankMap, needsOf, openDraft, closeDraft, scoutsLeft, draftOrder } from './draft'
 import { carouselOn, fireMine, runHires, myOpenings, shortlist, interviewCoach, interviewsLeft, offerCoach, closeCarousel } from './carousel'
 import { staffMen, staffOf, coachOvr, rOf } from './coach'
 import { ageLeague } from './aging'
 import { openResign, resignOne, resignAsk, optionAsk, openFA, setOffer, nextFADay, standingOf, fitOf, teamView, FA_DAYS } from './market'
 import { optionDue, minimumFor, capSheet, restOf53 } from './contracts'
-import { startsFor } from './deals'
+import { startsFor, atTerm } from './deals'
 import { groupOf, depthChart, GROUP } from './roster'
 import { newSeason } from './offseason'
 import { statLine } from './awards'
@@ -243,18 +246,40 @@ export const staffMoves = F => (F.car?.y === F.year ? F.car.ev : []).filter(e =>
 //   { [id]: true (keep) | false (let go) | 'option' | 'decline' }
 const keepWorth = (p, starts) => (p.p === 'k' ? starts && p.o >= 74 && p.ag <= 38 : starts ? p.ag <= 32 || p.o >= 85 : p.ag <= 26 && p.o >= 72)
 const coreValue = p => p.o - Math.max(0, p.ag - 27) * 1.5
-export const callCost = (F, p, c) => (c === 'option' ? Math.max(0, optionAsk(p, F) - (p.$ ?? 0)) : c === true ? resignAsk(p, F).$ : 0)
+export const callCost = (F, p, c, tm = F.lt?.tm) => (c === 'option' ? Math.max(0, optionAsk(p, F) - (p.$ ?? 0)) : c === true ? keepTerms(F, p, tm).$ : 0)
+// THE TERMS on a man kept (owner 11-18, "even a little"): his ask, 5% or 10% under it, over 1 to 5 years. Other years
+// move the money a year the way the market prices term (deals.js atTerm: the same deal to him). A build is the
+// player's own man: his years can change, his price can't. { $, y, d, full (his ask over those years), ask }
+export const CUT = [0, 0.05, 0.1]
+export function keepTerms(F, p, tm = F.lt?.tm) {
+  const ask = resignAsk(p, F), t = tm?.[p.i]
+  const d = p.b != null ? 0 : clamp(0, 2, t?.d ?? 0), y = clamp(1, 5, t?.y ?? ask.y)
+  if (!d && y === ask.y) return { $: ask.$, y, d: 0, full: ask.$, ask }
+  const min = minimumFor(p.ag, F.year + 1)
+  const full = r1(Math.max(min, atTerm(p, ask.$, ask.y, y)))
+  return { $: r1(Math.max(min, full * (1 - CUT[d]))), y, d, full, ask }
+}
+// the chance he takes less to stay: always at his ask; about 70% at 5% under and 35% at 10% under, a little more for
+// an older backup (his market is thin), a little less for a young starter or a star (teams will pay him)
+export function yesChance(F, p, d) {
+  if (!d) return 1
+  const starts = startsFor(F, p)
+  const c = (d === 1 ? 0.7 : 0.35) + (!starts && p.ag >= 30 ? 0.08 : 0) - (starts && p.ag <= 27 ? 0.07 : 0) - (p.o >= 85 ? 0.07 : 0)
+  return clamp(0.05, 0.95, c)
+}
+// his answer, the same for the same save: one roll a man a year (so asking 10% under never beats 5% under)
+export const takesIt = (F, p, d) => !d || roll(`${F.seed}-${F.year}-lt-cut-${p.i}`) < yesChance(F, p, d)
 const defaultCall = p => (optionDue(p) ? 'decline' : false)
 // The cap room once the calls and the offers are made, the way the cap sheet will read it (contracts.js capSheet:
 // every man kept or signed is one fewer minimum-salary spot in the rest of the 53).
 //   { room (now), keep (the deals kept), offers, left, spend (what the player chose to spend: a build's deal aside) }
-export function lightRoom(F, calls = F.lt?.rs, off = F.lt?.off) {
+export function lightRoom(F, calls = F.lt?.rs, off = F.lt?.off, tm = F.lt?.tm) {
   const c = capSheet(F), t = F.teams[F.team]
   let keep = 0, built = 0, nk = 0, offers = 0, no = 0
   for (const i of F.rs ?? []) {
     const p = t.r.find(x => x.i === i)
     if (!p) continue
-    const ch = calls?.[i] ?? defaultCall(p), cost = callCost(F, p, ch)
+    const ch = calls?.[i] ?? defaultCall(p), cost = callCost(F, p, ch, tm)
     keep += cost
     if (p.b != null) built += cost
     if (ch === true) nk++
@@ -266,6 +291,8 @@ export function lightRoom(F, calls = F.lt?.rs, off = F.lt?.off) {
 }
 // can the team keep him (a build always: deals.js fitsDeal), with the other calls and the offers as they are
 export const canKeep = (F, p, c) => p.b != null || lightRoom(F, { ...(F.lt?.rs ?? {}), [p.i]: c }).left >= -1e-9
+// can the team keep him on these terms (keepTerms' { d, y }), the rest as it is
+export const canTerms = (F, p, t) => p.b != null || lightRoom(F, { ...(F.lt?.rs ?? {}), [p.i]: true }, F.lt?.off, { ...(F.lt?.tm ?? {}), [p.i]: t }).left >= -1e-9
 // can the team make him this offer, with the calls and the other offers as they are
 export const canOffer = (F, p, o) => lightRoom(F, F.lt?.rs, { ...(F.lt?.off ?? {}), [p.i]: o }).left >= -1e-9
 export function resignCalls(F) {
@@ -278,7 +305,7 @@ export function resignCalls(F) {
     const worth = p.b != null || (opt ? p.o >= 80 || (starts && p.o >= 76) : keepWorth(p, starts))
     if (!worth) continue
     const c = opt ? 'option' : true
-    if (p.b != null || lightRoom(F, { ...out, [p.i]: c }, {}).left >= -1e-9) out[p.i] = c
+    if (p.b != null || lightRoom(F, { ...out, [p.i]: c }, {}, {}).left >= -1e-9) out[p.i] = c
   }
   return out
 }
@@ -305,6 +332,15 @@ export function fairOffer(F, p, V = null) {
   }
   return out
 }
+// The offer on the screen: Fair (fairOffer's) or Strong (10% over it), over 1 to 5 years (other years priced the
+// way the market prices term, deals.js atTerm). c: F.lt.fc's { s, y }; none: Fair at his years, fairOffer's own
+export const STRONG = 1.1
+export function offerFor(F, p, fair, c = F.lt?.fc?.[p.i]) {
+  if (!c || (!c.s && (c.y ?? fair.y) === fair.y)) return fair
+  const y = clamp(1, 5, c.y ?? fair.y), min = minimumFor(p.ag, F.year + 1)
+  const $ = Math.max(min, atTerm(p, fair.$, fair.y, y))
+  return { $: r1(Math.max(min, $ * (c.s ? STRONG : 1))), y, b: 0 }
+}
 // THE MARKET'S BEST FITS: the free agents who'd start or fill a hole at the team's needs, the biggest lift first
 // (market.js fitOf), ten of them, three at most at one spot (the list covers the needs, not one room); a thin list is
 // topped up with the best depth at a need
@@ -327,15 +363,35 @@ export function marketFits(F, V = null, n = 10) {
 // sets them), the offers made, the market's three days run (market.js nextFADay: the league bidding exactly as in
 // FULL). The answers to his offers kept for the screen: F.lt.far [{ i, n, p, s, k: 'won' | 'lost' | 'short' |
 // 'cap', to, $, y, why, board }]
+// A man asked to take less who turns it down goes to the market the way a man let go does; when one does, the screen
+// stops here with him on the market (the player can still make him an offer) and the next tap runs the market.
 export function lightFA(F) {
   if (F.phase !== 'off' || F.stage !== 'fa' || !F.fad) return null
   const L = F.lt ?? (F.lt = { y: F.year, ph: 'roster', rs: resignCalls(F), off: {} })
-  const t = F.teams[F.team]
+  if (!L.rsDone) {
+    const rsx = lightResign(F)
+    if (Object.values(rsx).some(x => !x[0])) return null
+  }
+  return lightMarket(F)
+}
+// THE RE-SIGN CALLS MADE: each man's answer first (on the roster the screen showed), then the calls in order
+export function lightResign(F) {
+  const L = F.lt, t = F.teams[F.team]
+  const ans = {}
+  for (const id of F.rs ?? []) {
+    const p = t.r.find(x => x.i === id)
+    if (!p || callOf(F, p) !== true) continue
+    const k = keepTerms(F, p)
+    ans[id] = { k, yes: takesIt(F, p, k.d) }
+  }
+  const rsx = {}
   for (const id of [...(F.rs ?? [])]) {
     const p = t.r.find(x => x.i === id)
     if (!p) continue
-    const c = callOf(F, p)
-    resignOne(F, id, c)
+    const a = ans[id]
+    const c = a && !a.yes ? false : callOf(F, p)
+    resignOne(F, id, c, a?.yes && (a.k.d || a.k.y !== a.k.ask.y) ? a.k : null)
+    if (a?.k.d) rsx[id] = a.yes ? [1, a.k.$, a.k.y] : [0, a.k.$]
     if (c === false && p.b == null && F.fa.includes(p)) {
       const a = resignAsk(p, F)
       p.$ = a.$; p.y = a.y; delete p.rc; delete p.op; delete p.sc
@@ -343,6 +399,13 @@ export function lightFA(F) {
       F.fdd[p.i] = p.o >= 90 ? (u < 0.5 ? 2 : 3) : p.o >= 85 ? (u < 0.3 ? 1 : u < 0.8 ? 2 : 3) : (u < 0.55 ? 1 : u < 0.85 ? 2 : 3)
     }
   }
+  if (Object.keys(rsx).length) L.rsx = rsx
+  L.rsDone = 1
+  return rsx
+}
+// the offers made, the market's three days run
+function lightMarket(F) {
+  const L = F.lt
   const out = {}
   for (const [id, o] of Object.entries(L.off ?? {})) {
     const p = (F.fa ?? []).find(x => x.i === +id)

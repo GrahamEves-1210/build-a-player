@@ -18,8 +18,8 @@ const N = Number(process.argv[2] ?? 3), team = process.argv[3] ?? 'DEN'
 FR.useContracts(CONTRACTS)
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
 const qb = QBS.find(p => p.name === 'Josh Allen'), wr = WRS.find(p => p.attrs && p.name === 'Puka Nacua') ?? WRS.find(p => p.attrs)
-const make = () => {
-  const F = FR.createFranchise({ seed: 'light-' + team, team, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }, { pos: 'wr', build: asBuild(wr), name: 'Tre Holloway', num: 81 }], coach: { name: 'Isaiah Vance', style: 'developer', r: { talentDev: 7, offPlaycalling: 8, defPlaycalling: 5, culture: 6, situational: 6 }, ovr: 78 } })
+const make = (team_ = team) => {
+  const F = FR.createFranchise({ seed: 'light-' + team_, team: team_, owner: 'Graham', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }, { pos: 'wr', build: asBuild(wr), name: 'Tre Holloway', num: 81 }], coach: { name: 'Isaiah Vance', style: 'developer', r: { talentDev: 7, offPlaycalling: 8, defPlaycalling: 5, culture: 6, situational: 6 }, ovr: 78 } })
   F.games = 'advanced'
   return F
 }
@@ -279,5 +279,92 @@ if (stops.lt > 2048) bad(`LIGHT's own fields ${stops.lt} bytes`)
   const ok = !F.pend && F.lt.ph === 'recap' && !('big' in F.lt) && Math.min(F.wk, 18) === F.lt.w1
   console.log(`an old save on its big game${pend ? ', a moment waiting' : ''}: ${ok ? 'simmed on to the recap' : `STUCK (${F.lt.ph}, week ${F.wk + 1})`}`)
   if (!ok) bad('an old LIGHT save on its big game did not sim on to the recap')
+}
+// THE TERMS (owner 11-18): a man kept at 5% or 10% under his ask, over other years; an offer Strong over other years.
+// A discount taken signs at that price; one turned down sends him to the market (his ask, his day), where the player
+// can still make him an offer; years move the price the market's way; the same save gives the same answers.
+// (New England: a team with the room to make real offers; the check's own Denver starts over the cap)
+{
+  const team = 'NE'
+  const F = make(team); FR.lightInit(F); F.ev = null
+  FR.lightSimAll(F); FR.intoPlayoffs(F); FR.simPlayoffs(F)
+  FR.closeSeason(F); FR.lightStaff(F, {})
+  const t = F.teams[team]
+  // (the yes rate over the whole league at each step under his ask: about 70% and 35%)
+  const all = FR.SHORTS.flatMap(s => F.teams[s].r).filter(p => p.b == null)
+  const rate = d => all.filter(p => FR.takesIt(F, p, d)).length / all.length
+  const r5 = rate(1), r10 = rate(2)
+  console.log(`terms: he takes 5% under ${(r5 * 100).toFixed(0)}% of the time, 10% under ${(r10 * 100).toFixed(0)}% (${all.length} men)`)
+  if (r5 < 0.6 || r5 > 0.8 || r10 < 0.25 || r10 > 0.45) bad(`terms: yes rates ${r5.toFixed(2)} / ${r10.toFixed(2)}`)
+  // every man up for a deal kept (a build's price can't drop), so there's a man to say yes and one to say no
+  const men = (F.rs ?? []).map(i => t.r.find(x => x.i === i)).filter(p => p && p.b == null && !FR.optionDue(p))
+  for (const p of men) F.lt.rs[p.i] = true
+  let yes = null, no = null
+  for (const d of [1, 2]) for (const p of men) {
+    if (!yes && FR.takesIt(F, p, d)) yes = [p, d]
+    else if (!no && p !== yes?.[0] && !FR.takesIt(F, p, d)) no = [p, d]
+  }
+  const yrsMan = men.find(p => p !== yes?.[0] && p !== no?.[0])
+  // (the rest let go, so the offers have room to be real ones)
+  for (const p of men) if (p !== yes?.[0] && p !== no?.[0] && p !== yrsMan) F.lt.rs[p.i] = false
+  if (!yes || !no || !yrsMan) bad(`terms: ${men.length} men up, no yes/no/years man to test`)
+  else {
+    const room0 = FR.lightRoom(F).left
+    const askY = FR.keepTerms(F, yes[0]).ask
+    F.lt.tm = { [yes[0].i]: { d: yes[1], y: askY.y } }
+    const kY = FR.keepTerms(F, yes[0])
+    if (!(Math.abs(kY.$ - Math.max(FR.minimumFor(yes[0].ag, F.year + 1), r1(askY.$ * (1 - [0, 0.05, 0.1][yes[1]])))) < 0.051)) bad(`terms: ${yes[0].n} at ${kY.$}, ask ${askY.$}, ${yes[1]} steps under`)
+    if (!(FR.lightRoom(F).left > room0 - 1e-9)) bad('terms: the cap line did not use the lower price')
+    F.lt.tm[no[0].i] = { d: no[1] }
+    const kN = FR.keepTerms(F, no[0])
+    const ask3 = FR.resignAsk(yrsMan, F), y3 = ask3.y >= 5 ? ask3.y - 1 : ask3.y + 1
+    F.lt.tm[yrsMan.i] = { d: 0, y: y3 }
+    const k3 = FR.keepTerms(F, yrsMan)
+    if (k3.y !== y3 || Math.abs(FR.worthOf(yrsMan, { $: k3.$, y: y3 }) - FR.worthOf(yrsMan, { $: ask3.$, y: ask3.y })) > 0.06 * ask3.$) bad(`terms: ${yrsMan.n} over ${y3} years at ${k3.$} is not the same deal as ${ask3.$} x ${ask3.y}`)
+    if (!FR.canKeep(F, yrsMan, true)) console.log('   (the years man no longer fits: the room is short)')
+    // a Strong offer on the best fit, over a year more
+    const V = FR.lightView(F), fits0 = FR.marketFits(F, V), x = fits0.find(z => FR.canOffer(F, z.p, FR.offerFor(F, z.p, FR.fairOffer(F, z.p, V).o, { s: 1, y: Math.min(5, z.p.y + 1) }))) ?? fits0[0]
+    const fair = FR.fairOffer(F, x.p, V)
+    const strong = FR.offerFor(F, x.p, fair.o, { s: 1, y: fair.o.y })
+    const strong2 = FR.offerFor(F, x.p, fair.o, { s: 1, y: Math.min(5, fair.o.y + 1) })
+    if (Math.abs(strong.$ - r1(fair.o.$ * 1.1)) > 0.051 || strong.y !== fair.o.y) bad(`terms: Strong ${strong.$} vs Fair ${fair.o.$}`)
+    if (FR.offerFor(F, x.p, fair.o, { s: 0, y: fair.o.y }) !== fair.o) bad('terms: Fair at his years is not the market\'s own offer')
+    const st0 = FR.standingOf(F, x.p, fair.o, V), st1 = FR.standingOf(F, x.p, strong, V)
+    if (!(st1.mine.v > st0.mine.v)) bad('terms: a Strong offer did not stand better than Fair')
+    F.lt.fc = { [x.p.i]: { s: 1, y: strong2.y } }
+    F.lt.off = { [x.p.i]: strong2 }
+    const G = reread(F), G2 = reread(F)
+    const run = H => {
+      const r = FR.lightFA(H)
+      const L = H.lt
+      return { r, L }
+    }
+    const a = run(F)
+    if (a.r !== null) bad('terms: a man turned it down, but the market ran without a stop')
+    const py = t.r.find(p => p.i === yes[0].i), p3 = t.r.find(p => p.i === yrsMan.i)
+    if (!py || py.$ !== kY.$ || py.y !== kY.y) bad(`terms: ${yes[0].n} signed at ${py?.$} x ${py?.y}, not ${kY.$} x ${kY.y}`)
+    if (!p3 || p3.$ !== k3.$ || p3.y !== y3) bad(`terms: ${yrsMan.n} signed at ${p3?.$} x ${p3?.y}, not ${k3.$} x ${y3}`)
+    const pn = (F.fa ?? []).find(p => p.i === no[0].i)
+    if (!pn || t.r.some(p => p.i === no[0].i) || !F.fdd?.[no[0].i]) bad(`terms: ${no[0].n} turned it down but isn't on the market`)
+    else if (Math.abs(pn.$ - FR.resignAsk(pn, F).$) > 0.051) bad(`terms: ${no[0].n} on the market at ${pn.$}, not his ask`)
+    if (a.L.rsx?.[yes[0].i]?.[0] !== 1 || a.L.rsx?.[no[0].i]?.[0] !== 0) bad(`terms: the answers ${JSON.stringify(a.L.rsx)}`)
+    // the player can still bid on him there; the next tap runs the market
+    const fo = FR.fairOffer(F, pn ?? no[0])
+    F.lt.off = { ...F.lt.off, [no[0].i]: fo.o }
+    const far = FR.lightFA(F)
+    if (F.fad || !far) bad('terms: the market did not run on the second tap')
+    const ans = (far ?? []).find(z => z.i === no[0].i)
+    if (!ans) bad(`terms: no answer to the offer on ${no[0].n} on the market`)
+    const strongAns = (far ?? []).find(z => z.i === x.p.i)
+    if (!strongAns) bad('terms: no answer to the Strong offer')
+    console.log(`terms: ${yes[0].n} took ${[0, 5, 10][yes[1]]}% under (${kY.$} x ${kY.y}, ask ${askY.$}) · ${no[0].n} turned down ${kN.$} (${[0, 5, 10][no[1]]}% under), on the market, the player's offer ${ans?.k}${ans?.to ? ` ${ans.to}` : ''} · ${yrsMan.n} over ${y3} years at ${k3.$} (ask ${ask3.$} x ${ask3.y}) · Strong on ${x.p.n} ${strong2.$} x ${strong2.y} (Fair ${fair.o.$} x ${fair.o.y}, ${st0.k} → ${st1.k}): ${strongAns?.k}`)
+    // the same save, the same answers
+    // (two copies read back from the same save play field for field the same; F itself, never read back, gives the same
+    // answers and the same signings: FULL's loader can add a kicker on reading, which moves the market's scores a hair)
+    for (const H of [G, G2]) { run(H); H.lt.off = { ...H.lt.off, [no[0].i]: fo.o }; FR.lightFA(H) }
+    const same = stateOf(G) === stateOf(G2) && JSON.stringify(G.lt.rsx) === JSON.stringify(F.lt.rsx) && JSON.stringify(G.lt.far.map(z => [z.i, z.k, z.to])) === JSON.stringify(F.lt.far.map(z => [z.i, z.k, z.to]))
+    console.log(`terms: the same save read back plays the same: ${same ? 'yes' : `DIFFERENT (copies ${stateOf(G) === stateOf(G2)}, answers ${JSON.stringify(G.lt.rsx) === JSON.stringify(F.lt.rsx)}, market ${JSON.stringify(G.lt.far.map(z => [z.i, z.k, z.to])) === JSON.stringify(F.lt.far.map(z => [z.i, z.k, z.to]))})`}`)
+    if (!same) bad('terms: the same save gave different answers')
+  }
 }
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

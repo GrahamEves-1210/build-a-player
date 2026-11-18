@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import {
   TEAM, recText, mySchedule, DIV_OF, CONF_OF, REG_WEEKS, FINISH_TEXT, coyRec, optionDue, startsFor, resignAsk, optionAsk,
-  marketDeals, callerOf, staffMen, moveText, statLine,
+  marketDeals, callerOf, staffMen, moveText, statLine, standingOf, fitOf,
 } from '../../lib/franchise2'
 import {
   STRETCH, stretchText, stretchRecap, lightNext, lightStep, lightStaff, lightRoom, lightView, marketFits, fairOffer, lightFA, lightOpenDraft,
-  callOf, staffMoves, canKeep, canOffer,
+  callOf, staffMoves, canKeep, canOffer, keepTerms, canTerms, yesChance, offerFor,
 } from '../../lib/franchise2/light'
 import { lineOf } from '../../lib/franchise2/season'
 import { romanOf } from '../../lib/mg/kit'
@@ -14,6 +14,7 @@ import { Chyron, KLogo, ManL3, BigRec, BigNum, Go, Tag, ActionBar, Fold, fkVars,
 import { Man, CapBar, PlayerPage, money } from './dparts'
 import { StaffL3 } from './Staff'
 import { DayResults, CampReport } from './Deals'
+import { Step } from './dealbits'
 import { DraftDay } from './Draft'
 import { GameBoxSheet } from './Week'
 import { recordsOf, standingsOf, revOf } from './perf'
@@ -338,14 +339,31 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
   const men = (F.rs ?? []).map(i => t.r.find(x => x.i === i)).filter(Boolean)
   const callsKey = JSON.stringify(F.lt?.rs ?? {})
   const V = useMemo(() => lightView(F), [callsKey, F.fa?.length]) // eslint-disable-line react-hooks/exhaustive-deps
-  const fits = useMemo(() => marketFits(F, V).map(x => ({ ...x, fair: fairOffer(F, x.p, V) })), [V]) // eslint-disable-line react-hooks/exhaustive-deps
+  const L = F.lt ?? {}
+  // (the men who turned down less to stay: on the market now, first on the list, the player can still make an offer)
+  const back = Object.entries(L.rsx ?? {}).filter(([, x]) => !x[0]).map(([i]) => (F.fa ?? []).find(p => p.i === +i)).filter(Boolean)
+  const fits = useMemo(() => {
+    const ids = new Set(back.map(p => p.i))
+    return [...back.map(p => ({ p, fit: fitOf(F, p, V), back: true })), ...marketFits(F, V).filter(x => !ids.has(x.p.i))].map(x => ({ ...x, fair: fairOffer(F, x.p, V) }))
+  }, [V, back.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const room = lightRoom(F)
   void rev
   const setCall = (p, c) => { act(X => { X.lt = { ...(X.lt ?? {}), rs: { ...(X.lt?.rs ?? {}), [p.i]: c } } }); sfx(c === false || c === 'decline' ? 'swap' : 'claim') }
-  const offers = F.lt?.off ?? {}
+  // a man kept: his price (his ask, 5% or 10% under) and his years
+  const setTerms = (p, t) => { act(X => { X.lt = { ...(X.lt ?? {}), tm: { ...(X.lt?.tm ?? {}), [p.i]: t } } }); haptic('light') }
+  const offers = L.off ?? {}
   const toggleOffer = (p, o) => {
     act(X => { const off = { ...(X.lt?.off ?? {}) }; if (off[p.i]) delete off[p.i]; else off[p.i] = o; X.lt = { ...(X.lt ?? {}), off } })
     sfx(offers[p.i] ? 'swap' : 'claim'); haptic('light')
+  }
+  // an offer's price (Fair or Strong) and years; an offer already out changes with it
+  const setChoice = (p, fair, c) => {
+    act(X => {
+      const lt = { ...(X.lt ?? {}), fc: { ...(X.lt?.fc ?? {}), [p.i]: c } }
+      if (lt.off?.[p.i]) lt.off = { ...lt.off, [p.i]: offerFor(X, p, fair, c) }
+      X.lt = lt
+    })
+    haptic('light')
   }
   const finish = () => { act(X => lightFA(X)); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
   const over = room.left < -1e-9 && room.spend > 0
@@ -356,13 +374,14 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
       <CapBar F={F} extra={Math.round((room.room - room.left) * 10) / 10} />
       <div className="lt-roster">
         <section className="lt-sec">
-          <Chyron team={F.team} size="s" title="RE-SIGN" right={men.length || null} sub={men.length ? 'SET TO THE FRONT OFFICE’S CALL · CHANGE ANY OF THEM' : 'NO DEALS ARE UP'} />
+          <Chyron team={F.team} size="s" title="RE-SIGN" right={men.length || null} sub={L.rsDone ? 'THE CALLS ARE MADE' : men.length ? 'SET TO THE FRONT OFFICE’S CALL · CHANGE ANY OF THEM' : 'NO DEALS ARE UP'} />
+          {L.rsDone && <ResignLines F={F} />}
           {men.some(p => p.b == null && callOf(F, p) !== true && callOf(F, p) !== 'option' && !canKeep(F, p, optionDue(p) ? 'option' : true)) && (
             <p className="lt-line">The {nick(F.team)} have {money(Math.max(0, room.left))} in cap room. A release on a player's card clears room under the cap.</p>
           )}
           {men.map(p => {
             const c = callOf(F, p), opt = optionDue(p)
-            const ask = opt ? null : resignAsk(p, F)
+            const ask = opt ? null : keepTerms(F, p)
             const keep = opt ? c === 'option' : c === true
             const fits = keep || canKeep(F, p, opt ? 'option' : true)
             return (
@@ -374,22 +393,34 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
                   </button>
                   <button type="button" role="radio" aria-checked={!keep} className={!keep ? 'is-on' : ''} onClick={() => keep && setCall(p, opt ? 'decline' : false)}><span>{opt ? 'Decline' : 'Let go'}</span></button>
                 </div>
+                {keep && !opt && <KeepTerms F={F} p={p} set={t => setTerms(p, t)} />}
                 {!keep && p.b != null && <p className="lt-warn">{p.n} leaves the team if he isn't re-signed.</p>}
               </div>
             )
           })}
         </section>
         <section className="lt-sec">
-          <Chyron team={F.team} size="s" title="FREE AGENCY" right={fits.length || null} sub={`THE BEST FITS FOR THE ${NICK(F.team)} · ONE OFFER EACH AT THE MARKET'S PRICE`} />
-          {fits.map(({ p, fit, fair }) => {
+          <Chyron team={F.team} size="s" title="FREE AGENCY" right={fits.length || null} sub={`THE BEST FITS FOR THE ${NICK(F.team)} · FAIR IS THE MARKET'S PRICE, STRONG IS 10% MORE`} />
+          {fits.map(({ p, fit, fair, back: was }) => {
             const out = offers[p.i]
-            const o = out ?? fair.o
-            const [word, tone] = STAND[fair.st.k](F, fair.st)
+            const c = L.fc?.[p.i] ?? { s: 0, y: fair.o.y }
+            const want = offerFor(F, p, fair.o, c)
+            const o = out ?? want
+            const st = o === fair.o ? fair.st : standingOf(F, p, o, V)
+            const [word, tone] = STAND[st.k](F, st)
             const can = !!out || canOffer(F, p, o)
+            const pick = x => setChoice(p, fair.o, { ...c, ...x })
             return (
               <div key={p.i} className={`lt-pick${out ? ' is-out' : ''}`}>
-                <Man F={F} p={p} s={F.team} owner={owner} size="s" line={`AGE ${p.ag} · ${fit.k === 'depth' && p.p === 'k' ? 'CAMP BATTLE' : FIT_TEXT[fit.k]}${fit.k === 'start' ? ` +${fit.d}` : ''}`} onClick={() => setPage(p.i)} />
-                <button type="button" className={`lt-offer${out ? ' is-on' : ''} is-${tone}`} disabled={!can} onClick={() => toggleOffer(p, fair.o)} aria-pressed={!!out}>
+                <Man F={F} p={p} s={F.team} owner={owner} size="s" line={was ? `AGE ${p.ag} · TURNED IT DOWN` : `AGE ${p.ag} · ${fit.k === 'depth' && p.p === 'k' ? 'CAMP BATTLE' : FIT_TEXT[fit.k]}${fit.k === 'start' ? ` +${fit.d}` : ''}`} onClick={() => setPage(p.i)} />
+                <div className="lt-terms">
+                  <div className="lt-seg" role="radiogroup" aria-label={`Offer to ${p.n}`}>
+                    <button type="button" role="radio" aria-checked={!c.s} className={!c.s ? 'is-on' : ''} onClick={() => { if (c.s) { pick({ s: 0 }); sfx('tap') } }}>Fair</button>
+                    <button type="button" role="radio" aria-checked={!!c.s} className={c.s ? 'is-on' : ''} onClick={() => { if (!c.s) { pick({ s: 1 }); sfx('tap') } }}>Strong</button>
+                  </div>
+                  <Step className="lt-step" label={`Years for ${p.n}`} text={yrs(c.y)} onDown={() => pick({ y: c.y - 1 })} onUp={() => pick({ y: c.y + 1 })} downOk={c.y > 1} upOk={c.y < 5} />
+                </div>
+                <button type="button" className={`lt-offer${out ? ' is-on' : ''} is-${tone}`} disabled={!can} onClick={() => toggleOffer(p, want)} aria-pressed={!!out}>
                   <b>{out ? 'Offer made' : can ? 'Offer' : 'No cap room'}</b><small>{word}</small><span>{money(o.$)} · {yrs(o.y)}</span>
                 </button>
               </div>
@@ -407,6 +438,38 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
       {page != null && <PlayerPage F={F} id={page} owner={owner} act={act} onClose={() => setPage(null)} />}
     </>
   )
+}
+// A man kept: his price (his ask, or 5% or 10% under it) and his years, one row; under it, how it's likely to go
+const CUT_TEXT = ['HIS ASK', '5% UNDER', '10% UNDER']
+function KeepTerms({ F, p, set }) {
+  const k = keepTerms(F, p), t = F.lt?.tm?.[p.i] ?? { d: 0, y: k.ask.y }
+  const ok = x => canTerms(F, p, { ...t, ...x })
+  const ch = yesChance(F, p, k.d)
+  return (
+    <>
+      <div className={`lt-terms${p.b != null ? ' is-one' : ''}`}>
+        {p.b == null && <Step className="lt-step" label={`Price for ${p.n}`} text={money(k.$)} sub={CUT_TEXT[k.d]} onDown={() => set({ ...t, d: k.d + 1 })} onUp={() => set({ ...t, d: k.d - 1 })} downOk={k.d < 2} upOk={k.d > 0} />}
+        <Step className="lt-step" label={`Years for ${p.n}`} text={yrs(k.y)} sub={k.y === k.ask.y ? 'HIS TERM' : k.y > k.ask.y ? 'LONGER' : 'SHORTER'} onDown={() => set({ ...t, y: k.y - 1 })} onUp={() => set({ ...t, y: k.y + 1 })} downOk={k.y > 1 && ok({ y: k.y - 1 })} upOk={k.y < 5 && ok({ y: k.y + 1 })} />
+      </div>
+      {k.d > 0 && <p className={`lt-odds is-${ch >= 0.6 ? 'w' : ch >= 0.4 ? 'n' : 'l'}`}>{ch >= 0.6 ? 'He will probably take it.' : ch >= 0.4 ? 'It could go either way.' : 'He will probably turn it down.'} If he says no, he goes to free agency.</p>}
+    </>
+  )
+}
+// who took less to stay and who turned it down, the way a beat writer would put it (after the market: where he went)
+function rsText(F, p, x) {
+  const n = p.n
+  if (x[0]) return `${n} agreed to stay at ${money(x[1])} a year for ${x[2]} ${x[2] === 1 ? 'year' : 'years'}, under his asking price.`
+  const turned = `${n} turned down ${money(x[1])} a year`
+  const went = (F.fas ?? []).find(d => d[0] === p.i)
+  if (went) return went[3] === F.team ? `${turned}, then came back to the ${nick(F.team)} at ${money(went[4])} a year.` : `${turned} and signed with the ${nick(went[3])}, ${money(went[4])} a year for ${went[5]} ${went[5] === 1 ? 'year' : 'years'}.`
+  return F.fad ? `${turned} and will test free agency.` : `${turned} and is still unsigned.`
+}
+function ResignLines({ F }) {
+  const x = F.lt?.rsx ?? {}
+  const all = [...F.teams[F.team].r, ...(F.fa ?? []), ...Object.values(F.teams).flatMap(t => t.r)]
+  const rows = Object.entries(x).map(([i, v]) => [all.find(p => p.i === +i) ?? { i: +i, n: (F.rsd ?? []).find(r => r[0] === +i)?.[2] ?? '' }, v])
+  if (!rows.length) return null
+  return rows.map(([p, v]) => <p key={p.i} className={`lt-line${v[0] || F.teams[F.team].r.some(x => x.i === p.i) ? '' : ' is-inj'}`}>{rsText(F, p, v)}</p>)
 }
 const DONE_TEXT = { kept: 'RE-SIGNED', option: 'OPTION PICKED UP', decline: 'OPTION DECLINED', tag: 'FRANCHISE TAG', gone: 'LET GO' }
 function RosterDone({ F, act, owner }) {
@@ -426,11 +489,14 @@ function RosterDone({ F, act, owner }) {
       {rsd.length > 0 && (
         <section className="lt-sec">
           <Chyron tone="ink" size="s" title="RE-SIGN" right={rsd.length} />
+          <ResignLines F={F} />
           {rsd.map(([i, k, n]) => {
             const p = t.r.find(x => x.i === i)
-            const terms = p && (k === 'kept' || k === 'option') ? ` · ${money(k === 'option' ? p.ox ?? p.$ : p.$)} · ${yrs(k === 'option' ? 1 : p.y)}` : ''
-            return p ? <Man key={i} F={F} p={p} s={F.team} owner={owner} size="s" line={`${DONE_TEXT[k] ?? k}${terms}`} onClick={() => setPage(p.i)} />
-              : <div key={i} className="dl-gone"><b>{n}</b><Tag tone="ink">{DONE_TEXT[k] ?? k}</Tag></div>
+            // (a man who went to the market and signed back with the team: his new deal, not LET GO)
+            const back = p && k === 'gone'
+            const terms = p && (k === 'kept' || k === 'option' || back) ? ` · ${money(k === 'option' ? p.ox ?? p.$ : p.$)} · ${yrs(k === 'option' ? 1 : p.y)}` : ''
+            return p ? <Man key={i} F={F} p={p} s={F.team} owner={owner} size="s" line={`${back ? 'SIGNED BACK' : DONE_TEXT[k] ?? k}${terms}`} onClick={() => setPage(p.i)} />
+              : <div key={i} className="dl-gone"><b>{n}</b><Tag tone="ink">{L.rsx?.[i]?.[0] === 0 ? 'TURNED IT DOWN' : DONE_TEXT[k] ?? k}</Tag></div>
           })}
         </section>
       )}

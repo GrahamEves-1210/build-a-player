@@ -88,6 +88,18 @@
 .lt-offer.is-on { background: var(--fk-brushed); color: var(--fk-ag-ink); box-shadow: none; }
 .lt-offer:disabled { opacity: .45; cursor: default; }
 .lt-pick.is-out .fk-l3 { box-shadow: inset 0 0 0 1px #fff; }
+/* a deal's terms, one row: the price and the years (re-sign), or Fair / Strong and the years (an offer) */
+.lt-terms { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3px; }
+.lt-terms > .lt-seg { gap: 3px; }
+.lt-terms > .lt-seg button { min-height: 44px; font-size: 15px; }
+.lt-terms .lt-step { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line); }
+.lt-terms .lt-step .dl-step-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.lt-terms .lt-step button { height: 44px; background: var(--fk-g3); font-size: 22px; }
+.lt-terms .lt-step b { font-size: 17px; }
+.lt-step .dl-step-v { display: grid; justify-items: center; gap: 1px; line-height: 1.05; min-width: 0; }
+.lt-step .dl-step-v small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; color: var(--fk-mute); white-space: nowrap; }
+.lt-odds { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
+.lt-odds.is-w { color: #7ff0a6; } .lt-odds.is-n { color: #ffd27a; } .lt-odds.is-l { color: #ff9a9c; }
 .lt-cols, .lt-col { display: grid; gap: 16px; min-width: 0; align-content: start; }
 @media (min-width: 900px) {
   .lt-roster, .lt-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px; }

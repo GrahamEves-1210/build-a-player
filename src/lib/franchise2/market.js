@@ -104,7 +104,8 @@ export const tagAsk = (p, F) => tagPrice(p, F.year + 1)
 export const canTag = F => F.tagged !== F.year + 1
 // keep: true (re-sign at his ask) · false (let him go) · 'option' (pick up the fifth-year option) · 'decline' ·
 // 'tag' (the franchise tag: one year at the top five's average, once a year)
-export function resignOne(F, id, keep) {
+// (terms: LIGHT's own price and years for a man kept, { $, y }; without them, his ask)
+export function resignOne(F, id, keep, terms = null) {
   const t = F.teams[F.team], p = t.r.find(x => x.i === id)
   F.rs = (F.rs ?? []).filter(x => x !== id)
   if (!p) return null
@@ -112,7 +113,7 @@ export function resignOne(F, id, keep) {
   if (keep === 'option') { pickUpOption(F, p, startsFor(F, p)); return done('option') }
   if (keep === 'decline') { declineOption(p); return done('decline') }
   if (keep === 'tag') { const $ = tagAsk(p, F); signDeal(p, { $, y: 1, g: $ }); F.tagged = F.year + 1; return done('tag') }
-  if (keep) { signDeal(p, resignAsk(p, F)); return done('kept') }
+  if (keep) { signDeal(p, terms ? { $: terms.$, y: terms.y } : resignAsk(p, F)); return done('kept') }
   done('gone')
   t.r = t.r.filter(x => x !== p)
   if (p.b == null) F.fa.push(p)

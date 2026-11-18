@@ -35,13 +35,13 @@ export function LastLine({ F, p, className = '' }) {
   )
 }
 
-// A − value + stepper
-function Step({ label, text, onDown, onUp, downOk = true, upOk = true }) {
+// A − value + stepper (sub: a line under the value; LIGHT's compact rows, light.css .lt-terms)
+export function Step({ label, text, sub = null, onDown, onUp, downOk = true, upOk = true, className = '' }) {
   return (
-    <div className="dl-step">
+    <div className={`dl-step ${className}`}>
       <span className="dl-step-l">{label}</span>
       <button type="button" aria-label={`Less: ${label}`} disabled={!downOk} onClick={() => { onDown(); sfx('tap') }}>−</button>
-      <b>{text}</b>
+      {sub != null ? <span className="dl-step-v"><b>{text}</b><small>{sub}</small></span> : <b>{text}</b>}
       <button type="button" aria-label={`More: ${label}`} disabled={!upOk} onClick={() => { onUp(); sfx('tap') }}>+</button>
     </div>
   )
