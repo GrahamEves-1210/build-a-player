@@ -111,7 +111,7 @@ export function makeClass(F) {
   let id = 1
   const q = clamp(-2, 2, R.n())   // the class's strength at the top (some years are deep in stars, some thin)
   // (names: none twice in the class or already in the league, and the surnames spread: names.js)
-  const nm = { taken: new Set(SHORTS.flatMap(s => F.teams[s]?.r.map(p => p.n) ?? [])), surn: new Map() }
+  const nm = { taken: new Set(SHORTS.flatMap(s => F.teams?.[s]?.r.map(p => p.n) ?? [])   /* (Career's class has no teams: F.teams?) */), surn: new Map() }
   for (const [pos, n] of Object.entries(CLASS_MIX)) for (let k = 0; k < n; k++) out.push(makeProspect(F, R, pos, id++, q, nm))
   F.dc = out
   F.board = []
