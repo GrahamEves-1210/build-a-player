@@ -134,6 +134,7 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
   const s = GEN_SPOT[pos] ? R.pick(GEN_SPOT[pos]) : null
   const p = { i: F.nid++, n: fakeName(R, s ?? pos, { taken: new Set((F.dc ?? []).map(x => x.n)) }), p: pos, o: o ?? (pos === 'k' ? clamp(68, 84, Math.round(76 + R.n() * 4)) : clamp(55, 76, Math.round(66 + R.n() * 4))), ag: age }
   if (s) p.s = s
+  p.gn = 1   // (made up: never a re-sign call for the player, owner 11-18)
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 4)
   signDeal(p, { $: marketValue(p, F.year ?? FIRST_YEAR), y: R.int(1, 3) })
   return p
@@ -210,6 +211,7 @@ export function makeDepth(F, pos, spot, R, fl = false, top = 68, roster = []) {
   p.pk = fl ? o : Math.max(o, peakFor(R, o, ag) - 4)
   signDeal(p, { $: minimumFor(ag, capYear(F)), y: 1, g: 0 })
   if (fl) p.fl = 1
+  else p.gn = 1   // (made up: never a re-sign call for the player, owner 11-18)
   return p
 }
 // The men a position keeps (at: sorted, the ones that must stay first): each unit its starters and a man behind

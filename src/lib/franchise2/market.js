@@ -39,6 +39,9 @@ export function openResign(F) {
   // (a filler backup's year is up: he goes quietly, every team's, the player's too; the new season signs another
   // where a room still needs one: league.js fillUp)
   for (const s of SHORTS) F.teams[s].r = F.teams[s].r.filter(p => !(p.fl && p.y <= 0))
+  // (the player's made-up depth whose year is up goes the same quiet way, owner 11-18: the re-sign screen is real
+  // men and his own picks; a room left short is filled again when the new season starts, league.js fillUp)
+  F.teams[F.team].r = F.teams[F.team].r.filter(p => !(p.gn && p.y <= 0))
   for (const s of SHORTS) {
     if (s === F.team) continue
     const t = F.teams[s], fo = foOf(F, s)
@@ -92,7 +95,7 @@ export function openResign(F) {
     for (const m of makeRoom(F, F.team, 0)) F.news = [...(F.news ?? []), { k: 'sign', tag: 'RESTRUCTURED', s: F.team, text: `${TEAM[F.team]?.nick ?? F.team} restructure ${m.n}${/s$/.test(m.n) ? "'" : "'s"} contract, clearing $${m.saves.toFixed(1)} million in cap space`, y: F.year, wk: F.wk }].slice(-40)
   }
   const mine = F.teams[F.team].r
-  F.rs = [...mine.filter(p => p.y === 0), ...mine.filter(p => optionDue(p))].filter(p => !p.fl).sort((a, b) => b.o - a.o).map(p => p.i)
+  F.rs = [...mine.filter(p => p.y === 0), ...mine.filter(p => optionDue(p))].filter(p => !p.fl && !p.gn).sort((a, b) => b.o - a.o).map(p => p.i)
   F.stage = 'resign'
 }
 export const resignAsk = (p, F) => askOf(p, (F?.year ?? 2026) + 1, F?.teams ? marketLines(F) : null)
