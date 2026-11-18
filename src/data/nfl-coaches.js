@@ -87,7 +87,7 @@ export const NFL_COACHES = [
   { name: 'Joe Brady', team: 'BUF', role: 'HC', age: 37, since: 2026, calls: 'off', side: 'off', attrs: { talentDev: 6, offPlaycalling: 8, defPlaycalling: 4, culture: 5, situational: 5 }, ovr: 76 },
   { name: 'Pete Carmichael', team: 'BUF', role: 'OC', age: 55, since: 2026, calls: false, attrs: { talentDev: 5, offPlaycalling: 6, defPlaycalling: 2, culture: 5, situational: 5 }, ovr: 73 },
   { name: 'Jim Leonhard', team: 'BUF', role: 'DC', age: 44, since: 2026, calls: true, attrs: { talentDev: 6, offPlaycalling: 2, defPlaycalling: 5, culture: 5, situational: 5 }, ovr: 72 },
-  { name: 'Dave Canales', team: 'CAR', role: 'HC', age: 45, since: 2024, calls: null, side: 'off', attrs: { talentDev: 7, offPlaycalling: 5, defPlaycalling: 3, culture: 6, situational: 5 }, ovr: 74 },
+  { name: 'Dave Canales', team: 'CAR', role: 'HC', age: 45, since: 2024, calls: null, side: 'off', attrs: { talentDev: 9, offPlaycalling: 6, defPlaycalling: 3, culture: 6, situational: 5 }, ovr: 77 },
   { name: 'Brad Idzik', team: 'CAR', role: 'OC', age: 35, since: 2024, calls: true, attrs: { talentDev: 5, offPlaycalling: 4, defPlaycalling: 2, culture: 4, situational: 4 }, ovr: 67 },
   { name: 'Todd Wash', team: 'CAR', role: 'DC', age: 58, since: 2026, calls: true, interim: true, attrs: { talentDev: 5, offPlaycalling: 2, defPlaycalling: 5, culture: 4, situational: 4 }, ovr: 69 },
   { name: 'Ben Johnson', team: 'CHI', role: 'HC', age: 40, since: 2025, calls: 'off', side: 'off', attrs: { talentDev: 9, offPlaycalling: 10, defPlaycalling: 3, culture: 8, situational: 9 }, ovr: 89 },
