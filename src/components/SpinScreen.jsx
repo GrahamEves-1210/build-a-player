@@ -449,6 +449,8 @@ function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, dragg
         const ghost = document.createElement('div')
         ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:150px;border-radius:5px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,0.55);pointer-events:none;font-family:Outfit,sans-serif;'
         ghost.innerHTML = `<div style="display:flex;align-items:stretch;background:#fff;">${photo ? `<img src="${photo}" style="width:42px;height:42px;object-fit:cover;object-position:top center;flex-shrink:0;display:block;" />` : ''}<span style="font-size:11px;font-weight:900;color:#e8192c;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;padding:0 7px;line-height:1.2;">${selectedQB.name}</span></div>`
+        // (the photo goes in through setAttribute, so the app's jersey art can take its place: lib/appArt.js)
+        ghost.querySelectorAll('img').forEach(im => im.setAttribute('src', im.getAttribute('src')))
         document.body.appendChild(ghost)
         e.dataTransfer.setDragImage(ghost, 75, 21)
         requestAnimationFrame(() => document.body.removeChild(ghost))
