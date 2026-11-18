@@ -42,6 +42,8 @@
 .lt-game-opp b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; }
 .lt-game-sc { display: grid; gap: 2px; min-width: 0; line-height: 1.15; }
 .lt-game-sc b { font-family: var(--fk-d); font-weight: 400; font-size: 18px; font-variant-numeric: tabular-nums; }
+.lt-game.is-bye { cursor: default; box-shadow: inset 4px 0 0 var(--fk-g4); min-height: 40px; }
+.lt-game.is-bye .lt-game-opp b { font-family: var(--fk-d); font-weight: 400; font-size: 15px; color: var(--fk-mute); text-transform: uppercase; white-space: nowrap; }
 .lt-game.is-w .lt-game-sc b { color: #7ff0a6; } .lt-game.is-l .lt-game-sc b { color: #ff9a9c; }
 .lt-game-sc small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
 .lt-game-go { font-style: normal; font-family: var(--fk-d); font-size: 22px; color: var(--fk-mute); }

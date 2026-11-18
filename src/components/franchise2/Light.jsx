@@ -4,7 +4,7 @@ import {
   marketDeals, callerOf, staffMen, moveText, statLine,
 } from '../../lib/franchise2'
 import {
-  stretchText, stretchRecap, lightNext, lightStep, lightStaff, lightRoom, lightView, marketFits, fairOffer, lightFA, lightOpenDraft,
+  STRETCH, stretchText, stretchRecap, lightNext, lightStep, lightStaff, lightRoom, lightView, marketFits, fairOffer, lightFA, lightOpenDraft,
   callOf, staffMoves, canKeep, canOffer,
 } from '../../lib/franchise2/light'
 import { lineOf } from '../../lib/franchise2/season'
@@ -112,15 +112,23 @@ export function StretchRecap({ F, act, owner, onPlayoffs }) {
   const S = standingsOf(F)
   return (
     <section className="fh-next lt-recap">
-      <div className="fh-next-h"><b>{stretchText(L.k)}</b><span>{last ? 'Regular season final' : `Stretch ${L.k + 1} of 3 · Final`}</span></div>
+      {/* (owner 11-18: it read confusing. The stretch named once, then three plain facts: these weeks, the season,
+          the division; the bye in its week's place) */}
+      <div className="fh-next-h"><b>{stretchText(L.k)}</b>{last && <span>Regular season final</span>}</div>
       <div className="lt-rec">
-        <BigRec w={X.w} l={X.l} t={X.t} size={64} label={stretchText(L.k).toUpperCase()} />
-        <span className="lt-rec-all"><b>{recText(X.rec)}</b><small>{F.year} record</small></span>
+        <BigRec w={X.w} l={X.l} t={X.t} size={64} label="THESE WEEKS" />
+        <span className="lt-rec-all"><b>{recText(X.rec)}</b><small>Season</small></span>
         <span className="lt-rec-all"><b>{ORD(X.place)}</b><small>{div}</small></span>
       </div>
       <div className="lt-games" role="list">
+        {mySchedule(F).filter(g => g.bye && g.wk > STRETCH[L.k][0] && g.wk <= STRETCH[L.k][1]).map(g => (
+          <div key={`bye-${g.wk}`} role="listitem" className="lt-game is-bye" style={{ order: g.wk }}>
+            <span className="lt-game-wk">Wk {g.wk}</span>
+            <span className="lt-game-opp"><b>Bye week</b></span>
+          </div>
+        ))}
         {X.rows.map(r => (
-          <button key={r.wk} type="button" role="listitem" className={`lt-game is-${r.w ? 'w' : r.t ? 't' : 'l'}`} style={fkVars(r.opp)} onClick={() => { if (r.bx) { setBox(r); sfx('tap') } }} disabled={!r.bx} aria-label={`Week ${r.wk}: ${r.hl}. Box score`}>
+          <button key={r.wk} type="button" role="listitem" className={`lt-game is-${r.w ? 'w' : r.t ? 't' : 'l'}`} style={{ ...fkVars(r.opp), order: r.wk }} onClick={() => { if (r.bx) { setBox(r); sfx('tap') } }} disabled={!r.bx} aria-label={`Week ${r.wk}: ${r.hl}. Box score`}>
             <span className="lt-game-wk">Wk {r.wk}</span>
             <span className="lt-game-opp"><i>{r.home ? 'vs' : '@'}</i><KLogo s={r.opp} size={24} /><b>{TEAM[r.opp].short}</b></span>
             <span className="lt-game-sc"><b>{r.w ? 'W' : r.t ? 'T' : 'L'} {r.us}-{r.them}{r.ot ? ' OT' : ''}</b><small>{r.sub || r.hl}</small></span>
