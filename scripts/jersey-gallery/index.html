@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jersey cards</title>
+<style>
+  body { margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; font: 600 14px/1.3 system-ui, sans-serif; }
+  h2 { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: #9aa4b2; margin: 22px 0 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #8b949e; }
+  .ref img { image-rendering: auto; }
+  .round { border-radius: 50%; }
+  .sq { border-radius: 8px; }
+  .listrow { display: flex; align-items: center; gap: 10px; background: #161b22; border-radius: 10px; padding: 8px 12px; width: 260px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import { jerseySvg, teamMarkSvg, svgUri } from '/src/lib/jerseyArt.js'
+import INDEX from '/src/data/jersey-index.json'
+const q = new URLSearchParams(location.search)
+const part = q.get('part') || 'all'
+const CARD = +(q.get('card') || 160)
+const root = document.getElementById('root')
+const el = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.firstElementChild }
+const section = (title) => { const s = el(`<section><h2>${title}</h2><div class="row"></div></section>`); root.appendChild(s); return s.querySelector('.row') }
+const img = (svg, size, cls = '') => /viewBox="0 0 276 200"/.test(svg.slice(0, 120)) ? `<img class="${cls}" src="${svgUri(svg)}" height="${size}">` : `<img class="${cls}" src="${svgUri(svg)}" width="${size}" height="${size}">`
+const cell = (inner, label = '') => `<div class="cell">${inner}${label ? `<span>${label}</span>` : ''}</div>`
+const nfl = Object.entries(INDEX.teams.nfl), nba = Object.entries(INDEX.teams.nba)
+const POS = ['QB', 'RB', 'WR', 'TE', 'DB', 'DL', 'LB', 'EDGE', 'OL', 'K']
+const num = i => [9, 4, 14, 87, 24, 99, 54, 91, 72, 3, 1, 10, 18, 33, 7, 0, 22, 81, 56, 11][i % 20]
+
+if (part === 'all' || part === 'compare') {
+  const r = section('His references · this pass (same size)')
+  const pairs = [['41', 'CIN', 9, 'QB', 2], ['42', 'CHI', 4, 'RB', 3], ['43', 'DET', 14, 'WR', 2]]
+  for (const [f, t, n, p, rk] of pairs) {
+    r.insertAdjacentHTML('beforeend', cell(`<img class="ref" src="refs/${f}.png" style="height:${CARD}px;width:auto">`, 'reference ' + t))
+    r.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ team: t, colors: INDEX.teams.nfl[t], number: n, pos: p, rank: rk, variant: 'card' }), CARD), 'ours ' + t))
+  }
+}
+if (part === 'all' || part === 'nfl') {
+  const r = section('NFL · all 32, card size, rarity cycles common / rare / epic / legend')
+  nfl.forEach(([t, c], i) => r.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ team: t, colors: c, number: num(i), pos: POS[i % POS.length], rank: i % 4, variant: 'card' }), CARD), t)))
+}
+if (part === 'all' || part === 'rarity') {
+  const r = section('Rarity frames')
+  ;['Common', 'Rare', 'Epic', 'Legend'].forEach((name, rk) => r.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ team: 'GB', colors: INDEX.teams.nfl.GB, number: 12, pos: 'QB', rank: rk, variant: 'card' }), CARD), name)))
+}
+if (part === 'all' || part === 'small') {
+  const r = section('Avatars, 40px (circle and square), as the app draws them')
+  nfl.forEach(([t, c], i) => r.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ team: t, colors: c, number: num(i), pos: 'QB', rank: i % 4 }), 40, 'round'), t)))
+  const r2 = section('Avatars, 40px square')
+  nfl.forEach(([t, c], i) => r2.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ team: t, colors: c, number: num(i), pos: 'QB', rank: i % 4 }), 40, 'sq'))))
+  const r3 = section('In a list row')
+  nfl.slice(0, 6).forEach(([t, c], i) => r3.insertAdjacentHTML('beforeend', `<div class="listrow">${img(jerseySvg({ team: t, colors: c, number: num(i), pos: 'QB', rank: i % 4 }), 36, 'round')}<span>${c[2]} · #${num(i)}</span></div>`))
+}
+if (part === 'all' || part === 'badges') {
+  const r = section('Team badges')
+  nfl.forEach(([t, c]) => r.insertAdjacentHTML('beforeend', cell(img(teamMarkSvg({ team: t, colors: c }), 72))))
+  r.insertAdjacentHTML('beforeend', cell(img(teamMarkSvg({ team: 'KC', colors: INDEX.teams.nfl.KC, badge: 'HC' }), 72), 'coach'))
+  r.insertAdjacentHTML('beforeend', cell(img(teamMarkSvg({ team: 'KC', colors: INDEX.teams.nfl.KC }), 32), '32px'))
+}
+if (part === 'all' || part === 'nba') {
+  const r = section('NBA · card size')
+  nba.forEach(([t, c], i) => r.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ league: 'nba', team: t, colors: c, number: num(i + 3), pos: i % 2 ? 'BIG' : 'G', rank: i % 4, variant: 'card' }), CARD), t)))
+  const r2 = section('NBA · avatars and badges')
+  nba.forEach(([t, c], i) => r2.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ league: 'nba', team: t, colors: c, number: num(i + 3), rank: i % 4 }), 40, 'round'))))
+  nba.forEach(([t, c]) => r2.insertAdjacentHTML('beforeend', cell(img(teamMarkSvg({ league: 'nba', team: t, colors: c }), 56))))
+}
+if (part === 'all' || part === 'cfb') {
+  const r = section('College football · card size (from team colours)')
+  Object.entries(INDEX.teams.cfb).slice(0, 12).forEach(([t, c], i) => r.insertAdjacentHTML('beforeend', cell(img(jerseySvg({ league: 'cfb', team: t, colors: c, number: num(i + 5), pos: POS[i % 4], rank: i % 4, variant: 'card' }), CARD), t)))
+}
+if (part === 'fit') {
+  const r = section('object-fit tests: 40 fill, 40 contain, 38x44 cover, 55 contain, 64 cover round, 96 contain, 120x87')
+  const sv = svgUri(jerseySvg({ team: 'DET', colors: INDEX.teams.nfl.DET, number: 1, pos: 'QB', rank: 1 }))
+  for (const [w, h, f, rad] of [[40, 40, 'fill', 0], [40, 40, 'contain', 0], [38, 44, 'cover', 50], [55, 55, 'contain', 0], [64, 64, 'cover', 50], [96, 96, 'contain', 0], [120, 87, 'fill', 0]])
+    r.insertAdjacentHTML('beforeend', cell(`<img src="${sv}" style="width:${w}px;height:${h}px;object-fit:${f};border-radius:${rad}%;background:#222">`, `${w}x${h} ${f}`))
+}
+document.title = 'ready'
+</script>
+</body>
+</html>
