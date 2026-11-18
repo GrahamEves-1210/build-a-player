@@ -200,7 +200,7 @@ html.bap-reduce-motion :is(.fd-ap, .fd-deal, .fd-day, .fd-offer, .fd-div, .fd-ba
 .fd-room-h b, .fd-room-h small { text-transform: uppercase; }
 
 /* the offseason's steps: five circles on a line, the one he's on in white, the ones behind him ticked */
-.fd-stops { display: grid; gap: 12px; padding: 12px 12px 10px; background: var(--fk-g1); }
+.fd-stops { display: grid; gap: 12px; padding: 12px 12px 10px; background: linear-gradient(180deg, #eef0f2, #8f969f) left top / 100% 3px no-repeat, var(--fk-g1); }
 .fd-stops-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .fd-stops-h b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; text-transform: uppercase; color: #fff; }
 .fd-stops-h small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
@@ -208,11 +208,11 @@ html.bap-reduce-motion :is(.fd-ap, .fd-deal, .fd-day, .fd-offer, .fd-div, .fd-ba
 .fd-stops li { position: relative; display: grid; justify-items: center; align-content: start; gap: 5px; text-align: center; font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.15; color: var(--fk-mute); }
 .fd-stops li::before { content: ''; position: absolute; top: 14px; left: -50%; right: 50%; height: 2px; background: var(--fk-line2); }
 .fd-stops li:first-child::before { display: none; }
-.fd-stops li.is-done::before, .fd-stops li.is-on::before { background: #fff; }
+.fd-stops li.is-done::before, .fd-stops li.is-on::before { background: var(--fk-ag); }
 .fd-stops li i { position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--fk-ink); box-shadow: inset 0 0 0 2px var(--fk-line2); font-style: normal; font-family: var(--fk-d); font-size: 15px; color: var(--fk-mute); }
-.fd-stops li.is-done i { background: var(--fk-g4); box-shadow: none; color: #fff; font-family: var(--fk-b); font-weight: 700; }
+.fd-stops li.is-done i { background: var(--fk-g3); box-shadow: inset 0 0 0 2px var(--fk-ag-mid); color: var(--fk-ag-hi); font-family: var(--fk-b); font-weight: 700; }
 .fd-stops li.is-on { color: #fff; }
-.fd-stops li.is-on i { background: #fff; color: #0b0c0e; box-shadow: 0 0 0 3px var(--tca, #fff); }
+.fd-stops li.is-on i { background: var(--fk-chrome); color: var(--fk-ag-ink); box-shadow: inset 0 -2px 0 var(--fk-ag-lo), 0 0 0 2px var(--fk-ink), 0 0 0 4px var(--fk-ag-mid); }
 
 /* the step, with the cap and the scouting room beside it on a wide screen (on a phone the cap on top, the room last) */
 .fd-off-grid { display: grid; gap: 12px; min-width: 0; }

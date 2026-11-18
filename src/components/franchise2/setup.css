@@ -18,7 +18,7 @@
 .fsu .fsu-acts { bottom: -28px; }
 .fsu-top {
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; max-width: 600px; margin: 0 auto;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 0 10px; background: var(--fk-ink); box-shadow: 0 1px 0 var(--fk-line);
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 0 10px; background: var(--fk-ag-rule) left bottom / 100% 1px no-repeat, var(--fk-ink);
 }
 .fsu-x { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; background: var(--fk-g3); color: #fff; cursor: pointer; }
 .fsu-x:active { transform: translateY(1px); }
@@ -28,7 +28,7 @@
 .fsu-pace-row { display: grid; gap: 6px; width: 100%; padding: 16px 16px 18px; border: 0; background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--fk-g4); color: #fff; text-align: left; cursor: pointer; }
 .fsu-pace-row b { font-family: var(--fk-d); font-weight: 400; font-size: 30px; letter-spacing: .5px; line-height: 1; }
 .fsu-pace-row span { font-family: var(--fk-b); font-size: 16px; line-height: 1.35; color: var(--fk-text); }
-.fsu-pace-row.is-on { background: var(--fk-g2); box-shadow: inset 4px 0 0 #fff; }
+.fsu-pace-row.is-on { background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--fk-ag), inset 0 0 0 1px rgba(196,201,208,.3); }
 @media (hover: hover) { .fsu-pace-row:hover { background: var(--fk-g2); } }
 .fsu-pace-note { margin: 0; font-family: var(--fk-b); font-size: 14px; color: var(--fk-mute); }
 .fsu-steps li {
@@ -36,13 +36,13 @@
   font-size: 14px; letter-spacing: 0.6px; color: var(--fk-dim); background: var(--fk-g1); box-shadow: inset 0 -3px 0 var(--fk-g3);
 }
 .fsu-steps li b { font-family: var(--fk-d); font-weight: 400; font-size: 13px; letter-spacing: 0; }
-.fsu-steps li.is-done { color: var(--fk-mute); box-shadow: inset 0 -3px 0 var(--fk-mute); }
-.fsu-steps li.is-on { color: #fff; background: var(--fk-g2); box-shadow: inset 0 -3px 0 var(--tc, #fff); }
+.fsu-steps li.is-done { color: var(--fk-ag); box-shadow: inset 0 -3px 0 var(--fk-ag-mid); }
+.fsu-steps li.is-on { color: var(--fk-ag-ink); background: var(--fk-chrome); box-shadow: inset 0 -3px 0 var(--fk-ag-lo); }
 
 .fsu-body { max-width: 600px; margin: 0 auto; padding-top: 14px; animation: fsu-in .26s cubic-bezier(.2,.9,.25,1) both; }
 .fsu-body > div { display: flex; flex-direction: column; gap: 12px; }
 @keyframes fsu-in { from { opacity: 0; transform: translateY(8px); } }
-.fsu-acts { position: sticky; bottom: 0; z-index: 4; display: grid; gap: 8px; margin: 6px -16px 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ink); box-shadow: 0 -1px 0 var(--fk-line); }
+.fsu-acts { position: sticky; bottom: 0; z-index: 4; display: grid; gap: 8px; margin: 6px -16px 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ag-rule) left top / 100% 1px no-repeat, var(--fk-ink); }
 .fsu-lbl { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; font-size: 15px; letter-spacing: 0.6px; color: var(--fk-mute); }
 .fsu-lbl small { font-size: 14px; letter-spacing: 0.6px; color: var(--fk-dim); }
 
@@ -97,7 +97,7 @@
 .fsu-empty-txt { flex: 1; display: grid; align-content: center; gap: 2px; padding-left: 10px; line-height: 1; }
 .fsu-empty-txt b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; color: var(--fk-mute); }
 .fsu-empty-txt small { font-size: 14px; letter-spacing: 0.6px; color: var(--fk-dim); }
-.fsu-empty-go { align-self: center; margin-right: 10px; padding: 7px 16px 6px 12px; background: #fff; color: #0b0c0e; font-size: 17px; letter-spacing: 2px; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+.fsu-empty-go { align-self: center; margin-right: 10px; padding: 7px 16px 6px 12px; background: var(--fk-chrome); color: var(--fk-ag-ink); font-size: 17px; letter-spacing: 2px; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 
 /* ── Name and number ───────────────────────────────────────────────────── */
 .fsu-nameform { display: flex; flex-direction: column; gap: 10px; }
@@ -238,8 +238,10 @@ html.bap-reduce-motion :is(.fsu-body, .fsu-div, .fsu-empty, .fsu-line, .fsu-line
   position: relative; display: flex; align-items: center; gap: 0; height: 104px; padding: 0; border: 0; overflow: hidden; text-align: left; font: inherit; cursor: pointer;
   background: var(--tc, var(--fk-g1)); color: var(--tct, #fff); box-shadow: inset 0 -4px 0 var(--tc2, var(--fk-g3)); animation: fk-in .32s var(--d, 0ms) both;
 }
-.fsu-slot.is-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--fk-line2); }
-.fsu-slot-n { align-self: stretch; display: grid; place-items: center; width: 40px; background: var(--fk-ink); color: #fff; font-family: var(--fk-d); font-size: 22px; }
+.fsu-slot.is-empty { background: transparent; box-shadow: inset 0 0 0 1px rgba(196,201,208,.34); }
+/* (the slot's number: a chrome tab, the mode's frame around the team's slab) */
+.fsu-slot-n { align-self: stretch; display: grid; place-items: center; width: 40px; background: var(--fk-chrome); color: var(--fk-ag-ink); font-family: var(--fk-d); font-size: 22px; box-shadow: inset -1px 0 0 rgba(0,0,0,.35); }
+.fsu-slot.is-empty .fsu-slot-n { background: var(--fk-g2); color: var(--fk-ag); box-shadow: inset -1px 0 0 rgba(196,201,208,.34); }
 .fsu-slot-logo { position: absolute; right: -10px; top: 50%; transform: translateY(-50%); opacity: .95; }
 .fsu-slot-txt { position: relative; display: grid; gap: 3px; padding: 0 100px 0 14px; line-height: 1; }
 .fsu-slot-txt small { font-size: 15px; letter-spacing: 0.6px; opacity: .8; }
