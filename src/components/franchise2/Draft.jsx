@@ -56,7 +56,10 @@ const colKit = col => schoolKit(school(col)) ?? colColor(col)
 const SUIT = '#1c1f25'
 // a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js); small: a list row's, the
 // lighter drawing
-const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color, small ? 'sm' : 'full') : faceUrl(x.fk ?? x.n, facePos(x), color, null, small))
+// (a pick on the board keeps the team in s and his spot in sp: his face is drawn from his spot, the same man he was
+// on the board and will be on the roster, never the team's letters read as a position)
+const manOf = x => (x.xi != null && x.at != null ? { p: x.p, s: x.sp } : x)
+const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color, small ? 'sm' : 'full') : faceUrl(x.fk ?? x.n, facePos(manOf(x)), color, null, small))
 const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
