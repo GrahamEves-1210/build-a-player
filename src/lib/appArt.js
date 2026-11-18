@@ -1,4 +1,4 @@
-// The app swaps every player photo for his card and every team logo for its oval badge (lib/jerseyArt.js).
+// The app swaps every player photo for his jersey art and every team logo for its tag (lib/jerseyArt.js).
 // It's done once, where a picture gets its address: any <img> (or SVG <image>, or new Image()) given a headshot
 // or a /logos/ address is handed the jersey or the tag instead, so the hundreds of places that show a photo or a
 // logo need no change of their own and the website (which never runs this) stays exactly as it is.
@@ -20,12 +20,12 @@ const LOGO_LEAGUES = { '': ['nfl'], nba: ['nba'], cfb: ['cfb', 'cbb'], cbb: ['cb
 
 const colorsOf = (lg, team) => INDEX.teams[lg]?.[team] ?? null
 
-export function playerArt(key, folderHint) {
+export function playerArt(key, folderHint, variant = 'auto') {
   const row = INDEX.p[key]
-  if (!row) return svgUri(jerseySvg({ league: folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl' }))
+  if (!row) return svgUri(jerseySvg({ league: folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl', variant }))
   const [lg, team, number, pos, rank] = row.split('|')
   if (pos === 'HC') return svgUri(teamMarkSvg({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
-  return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0 }))
+  return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0, variant }))
 }
 
 export function teamArt(folder, team) {
@@ -80,24 +80,94 @@ export function appImage(src) {
   return out
 }
 
+// what an address became: 'p' a player's art, 't' a team's tag, '' neither
+const kindOf = (src, out) => (out === src ? '' : HEADSHOT.test(src) ? 'p' : 't')
+
+// ── Fitting the slot ───────────────────────────────────────────────────────────────────────────────────────────
+// The places a photo used to sit were made for a face: a circle crop, a ring in the team's colour, the team's logo
+// behind the head, the photo pushed down and enlarged so the chin sits on the rim. The art needs none of it: it
+// picks its own shape for the slot (lib/jerseyArt.js), so the slot only has to stop cutting it. Each swapped picture
+// is marked (data-art) and, once laid out, the frame that was built round it (a small round or clipped box about its
+// size) is marked too (data-art-frame); the CSS below takes the circle, ring, backdrop and offsets away from both.
+const FRAME_CSS = [
+  // (:not(#_) outranks the game's own !important rules for these slots)
+  // the picture itself: no circle, no ring, no backdrop; a player's art keeps a photo's proportions when the slot
+  // gives only one side
+  'html.app-art:not(#_) img[data-art]{border-radius:0!important;border-color:transparent!important;box-shadow:none!important;background:none!important;clip-path:none!important;-webkit-mask:none!important;mask:none!important}',
+  'html.app-art:not(#_) img[data-art=p]{aspect-ratio:auto 276/200}',
+  // the frame round it
+  'html.app-art:not(#_) [data-art-frame]{border-radius:0!important;background:none!important;box-shadow:none!important;border-color:transparent!important;outline:none!important;overflow:visible!important;clip-path:none!important;-webkit-mask:none!important;mask:none!important}',
+  'html.app-art:not(#_) [data-art-frame]::before,html.app-art:not(#_) [data-art-frame]::after{display:none!important}',
+  // a photo placed off-centre to frame a face fills its frame instead
+  'html.app-art:not(#_) img[data-art-fill]{position:absolute!important;inset:0!important;left:0!important;top:0!important;width:100%!important;height:100%!important;transform:none!important;margin:0!important;max-width:none!important;max-height:none!important}',
+  // the team's logo a photo stood in front of
+  'html.app-art:not(#_) [data-art-frame]:has(img[data-art=p]) img[data-art=t]{display:none!important}',
+  'html.app-art:not(#_) .qb-avatar:has(img[data-art=p]) .qb-avatar-logo{display:none}',
+].join('')
+
+const pending = new Set()
+let queued = false
+function fitLater(img) {
+  pending.add(img)
+  if (queued) return
+  queued = true
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    queued = false
+    const list = [...pending]
+    pending.clear()
+    for (const im of list) fitSlot(im)
+  }))
+}
+const px = v => parseFloat(v) || 0
+function fitSlot(img) {
+  if (!img.isConnected) return
+  const r = img.getBoundingClientRect()
+  if (r.width < 2 || r.height < 2) { if (img.isConnected && !img.__artTry) { img.__artTry = 1; setTimeout(() => fitLater(img), 400) } return }
+  const ic = getComputedStyle(img)
+  let e = img.parentElement
+  for (let depth = 0; e && depth < 2; depth++, e = e.parentElement) {
+    const b = e.getBoundingClientRect()
+    // a frame is about the picture's size: no bigger than half again, no smaller than two thirds
+    if (b.width > Math.max(r.width, 24) * 1.5 + 8 || b.height > Math.max(r.height, 24) * 1.5 + 8) break
+    if (b.width < r.width * 0.66 && b.height < r.height * 0.66) break
+    const c = getComputedStyle(e)
+    const round = px(c.borderTopLeftRadius) >= Math.min(b.width, b.height) * 0.3
+    const clips = c.overflow !== 'visible' || c.clipPath !== 'none'
+    const others = [...e.children].some(k => k.tagName !== 'IMG' && k.getBoundingClientRect().width > 0 && !k.contains(img))
+    if (others) break
+    if (round || clips) {
+      e.setAttribute('data-art-frame', '')
+      if (ic.position === 'absolute' && (Math.abs(r.width - b.width) > 2 || Math.abs(r.height - b.height) > 2 || ic.transform !== 'none')) img.setAttribute('data-art-fill', '')
+    }
+  }
+}
+
 let installed = false
 export function installAppArt() {
   if (installed || typeof window === 'undefined') return
   installed = true
-  // a round avatar is the jersey crop alone: the team badge a photo used to stand in front of stays out of it
   document.documentElement.classList.add('app-art')
+  // a canvas can't pick its picture by the slot's size: it asks for the one it wants ('small', 'square', 'card')
+  globalThis.__appArtVariant = (src, variant) => { const m = HEADSHOT.exec(String(src)); if (!m) return null; const key = m[1].replace(/^.*?public\/headshots\//, ''); return playerArt(key, key.split('/')[0], variant) }
   const st = document.createElement('style')
-  st.textContent = 'html.app-art .qb-avatar:has(.qb-avatar-photo) .qb-avatar-logo{display:none}' +
-    'html.app-art .qb-avatar-photo{inset:0;left:0;bottom:auto;width:100%;height:100%;transform:none;object-fit:cover;object-position:center}'
+  st.textContent = FRAME_CSS
   document.head.appendChild(st)
   const setAttr = Element.prototype.setAttribute
   const setAttrNS = Element.prototype.setAttributeNS
+  const mark = (img, src, out) => {
+    if (out === src && src.startsWith('data:image/svg')) return   // already swapped, set again
+    const k = kindOf(src, out)
+    if (k) { setAttr.call(img, 'data-art', k); fitLater(img) } else if (img.hasAttribute('data-art')) img.removeAttribute('data-art')
+  }
   // <img src> (React sets it as an attribute) and img.src = … (new Image() for canvases and preloads)
   HTMLImageElement.prototype.setAttribute = function (name, value) {
-    return setAttr.call(this, name, (name === 'src' || name === 'srcset') ? appImage(String(value)) : value)
+    if (name !== 'src' && name !== 'srcset') return setAttr.call(this, name, value)
+    const v = String(value), out = appImage(v)
+    if (name === 'src') mark(this, v, out)
+    return setAttr.call(this, name, out)
   }
   const srcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src')
-  if (srcDesc?.set) Object.defineProperty(HTMLImageElement.prototype, 'src', { ...srcDesc, set(v) { srcDesc.set.call(this, appImage(String(v))) } })
+  if (srcDesc?.set) Object.defineProperty(HTMLImageElement.prototype, 'src', { ...srcDesc, set(v) { const s = String(v), out = appImage(s); mark(this, s, out); srcDesc.set.call(this, out) } })
   // SVG <image href> (helmet decals, belt logos)
   SVGImageElement.prototype.setAttribute = function (name, value) {
     return setAttr.call(this, name, (name === 'href' || name === 'xlink:href') ? appImage(String(value)) : value)
