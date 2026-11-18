@@ -12,7 +12,7 @@
 // The offseason's moves are read off the offseason as it stands: the carousel, the market's signings (market.js
 // F.fas), extensions, retirements (aging.js F.gone), the awards, the draft (filed at closeDraft: draft.js). Releases
 // and trades are filed when they happen. The league's history (awards.js F.lh) gives "first since" and "most since".
-import { TEAM, SHORTS, POS_LABEL } from './league'
+import { TEAM, SHORTS, POS_LABEL, strength } from './league'
 import { DIVISIONS } from './schedule'
 import { standings, records, recText } from './standings'
 import { groupOf, GROUP } from './roster'
@@ -113,6 +113,9 @@ export function wire(F, { n = 30 } = {}) {
     for (const s of SHORTS) for (const p of F.teams[s].r) if (p.in && (p.o >= 82 || s === F.team)) hurt.push({ p, s })
     hurt.sort((a, b) => (b.s === F.team) - (a.s === F.team) || b.p.o - a.p.o).slice(0, 8).forEach(({ p, s }) => put('inj', 'INJURY', s, injuryText(F, p, s), { pid: p.i }))
   }
+  // before Week 1 (owner 11-18: the ticker was all the player's own team from the start): the league going in, the
+  // way the previews have it
+  if (season && F.wk === 0) for (const x of preseason(F)) put('pre', x.tag, x.s, x.text, x.big ? { big: true } : {})
   // last week: the big games, the big days, the streaks, the clinches, the marks passed (filed as the week was
   // played, logWeek; a save from before that has last week read live)
   if (season && lastWk >= 0 && !(F.news ?? []).some(x => x.y === F.year && x.wk === lastWk && x.lw)) for (const x of weekItems(F, lastWk)) put(x.k, x.tag, x.s, x.text, x.big ? { big: true } : {})
@@ -121,6 +124,27 @@ export function wire(F, { n = 30 } = {}) {
   return out.slice(0, n)
 }
 // a week's news (the regular season's week wk, just played): the big days, the streaks, the clinches, the marks
+// the league before its first game: the champion's title defence (last season's, or this league's), the best
+// rosters, Week 1's best games, and each division's favourite (by the team ratings on screen)
+function preseason(F) {
+  const out = []
+  const ovr = Object.fromEntries(SHORTS.map(s => [s, strength(F, s).ovr]))
+  const lh = F.lh?.[F.lh.length - 1]
+  const champ = lh?.champ ?? SHORTS.find(s => lastSeason(s)?.champ)
+  if (champ) out.push({ tag: 'CHAMPIONS', s: champ, text: `${nick(champ)} open the defense of their Super Bowl title`, big: true })
+  const top = [...SHORTS].sort((a, b) => ovr[b] - ovr[a])
+  out.push({ tag: 'PRESEASON', s: top[0], text: `${nick(top[0])}, ${nick(top[1])} and ${nick(top[2])} start ${F.year} with the league's best rosters` })
+  const wk1 = (F.sched.weeks[0] ?? []).map(g => ({ g, v: ovr[g.a] + ovr[g.h] - Math.abs(ovr[g.a] - ovr[g.h]) })).sort((a, b) => b.v - a.v).slice(0, 3)
+  for (const { g } of wk1) {
+    const fav = ovr[g.h] + 1 >= ovr[g.a] ? g.h : g.a
+    out.push({ tag: 'WEEK 1', s: g.h, text: `${nick(g.a)} at ${nick(g.h)}: the ${nick(fav)} are favored` })
+  }
+  for (const d of DIVISIONS) {
+    const f = [...d.teams].sort((a, b) => ovr[b] - ovr[a])[0]
+    out.push({ tag: d.name, s: f, text: `${nick(f)} are favored to win the ${d.name}` })
+  }
+  return out
+}
 function weekItems(F, lastWk) {
   const out = []
   const put = (k, tag, s, text, extra = {}) => out.push({ k, tag, s, text, ...extra })
@@ -232,6 +256,9 @@ export function tickerItems(F) {
     : F.phase === 'playoffs' || F.phase === 'done' ? x.y === F.year && x.ph === 'po'
       : x.y === F.year && x.ph === 'off')
   // (the men out hurt now are on the wire; the ticker has only the injuries filed in the last two weeks)
-  for (const x of wire(F, { n: 30 }).filter(x => x.k !== 'final' || x.ph === 'po').filter(x => !(x.now && x.k === 'inj')).filter(fresh).filter(x => !/practice squad/i.test(x.text)).slice(0, 10)) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
+  // (the player's own team: three items at most, so the ticker is the league's, owner 11-18)
+  let mine = 0
+  const keep = x => x.s !== F.team || ++mine <= 3
+  for (const x of wire(F, { n: 40 }).filter(x => x.k !== 'final' || x.ph === 'po').filter(x => !(x.now && x.k === 'inj')).filter(fresh).filter(x => !/practice squad/i.test(x.text)).filter(keep).slice(0, 12)) items.push({ k: 'news', tag: x.tag, s: x.s, text: x.text })
   return items
 }
