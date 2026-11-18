@@ -88,7 +88,7 @@ const PACES = [
 function PaceStep({ pick, onPick }) {
   return (
     <div className="fsu-pace">
-      <Chyron tone="ink" title="How do you want to run it?" />
+      <Chyron tone="ink" title="How do you want to run your franchise?" />
       {PACES.map(([k, name, line]) => (
         <button key={k} type="button" className={`fsu-pace-row${pick === k ? ' is-on' : ''}`} onClick={() => onPick(k)} aria-pressed={pick === k}>
           <b>{name}</b><span>{line}</span>
