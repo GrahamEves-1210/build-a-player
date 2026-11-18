@@ -36,7 +36,7 @@ addTeams('mlb', (await load('mlb-teams.js')).MLB_TEAMS)
 addTeams('soc', (await load('soccer-clubs.js')).SOCCER_ALL_CLUBS)
 addTeams('nat', (await load('soccer-nations.js')).WC_ALL_NATIONS)
 
-// ── players: headshot key (path under /headshots, no extension) → "lg|TEAM|number|POS" ───────────────────────
+// ── players: headshot key (path under /headshots, no extension) → "lg|TEAM|number|POS[|rarity]" ───────────────────────
 const strip = s => String(s).replace(/^\/?headshots\//, '').replace(/\.(webp|png|jpe?g)$/i, '')
 const POS_BY_FILE = { qbs: 'QB', 'qb-legends': 'QB', rbs: 'RB', 'rb-legends': 'RB', wrs: 'WR', 'wr-legends': 'WR', tes: 'TE', 'te-legends': 'TE',
   dbs: 'DB', 'db-legends': 'DB', dls: 'DL', 'dl-legends': 'DL', lbs: 'LB', 'lb-legends': 'LB', ols: 'OL', 'ol-legends': 'OL', ks: 'K', 'k-legends': 'K' }
@@ -59,14 +59,24 @@ const keyOf = (p, lg) => {
   return null
 }
 const players = {}
+// rarity (lib/progress.js rarityRank: a player's place in his own pool by his average rating): the card's frame
+const rankOf = {}
+const avgAttr = p => { const v = Object.values(p?.attrs || {}).filter(x => typeof x === 'number'); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0 }
+function poolRanks(list) {
+  const rows = list.filter(r => r && typeof r === 'object' && typeof r.name === 'string' && r.attrs)
+  if (rows.length < 8) return null
+  const sorted = [...rows].sort((a, b) => avgAttr(b) - avgAttr(a))
+  return new Map(sorted.map((p, i) => { const pct = i / sorted.length; return [p, pct < 0.06 ? 3 : pct < 0.2 ? 2 : pct < 0.5 ? 1 : 0] }))
+}
 const byName = {}   // name → entry, for headshot maps keyed by a name no roster row carries
 const seen = new Set()
-function addRow(p, f, lg, hint) {
+function addRow(p, f, lg, hint, rank) {
   if (!p || typeof p !== 'object' || typeof p.name !== 'string' || !p.team || typeof p.team !== 'string') return
   const team = p.team, num = p.number ?? p.num ?? '', pos = posOf(p, f, lg, hint)
   const tl = lg === 'soc' && teams.nat[team] && !teams.soc[team] ? 'nat' : lg
   const v = `${tl}|${team}|${num}|${pos}`
   const k = keyOf(p, lg)
+  if (k && rank != null) rankOf[k] = Math.max(rankOf[k] ?? 0, rank)
   // a photo in headshots/nba/ is an NBA photo: an NBA row beats a college row that borrows it
   if (k && (!players[k] || (k.startsWith('nba/') && lg === 'nba' && !players[k].startsWith('nba|')))) players[k] = v
   if (!byName[lg + '|' + p.name]) byName[lg + '|' + p.name] = v
@@ -75,7 +85,7 @@ function walk(x, f, lg, hint, depth = 0) {
   if (!x || depth > 3 || seen.has(x)) return
   if (typeof x !== 'object') return
   seen.add(x)
-  if (Array.isArray(x)) { for (const r of x) { if (r && typeof r === 'object' && typeof r.name === 'string') addRow(r, f, lg, hint); else walk(r, f, lg, hint, depth + 1) } return }
+  if (Array.isArray(x)) { const ranks = poolRanks(x); for (const r of x) { if (r && typeof r === 'object' && typeof r.name === 'string') addRow(r, f, lg, hint, ranks?.get(r)); else walk(r, f, lg, hint, depth + 1) } return }
   for (const [k, v] of Object.entries(x)) walk(v, f, lg, HINT(k.toUpperCase()) || hint, depth + 1)
 }
 // current rosters first (a legend shares his photo with nobody, but a current player's team is the one he plays for)
@@ -99,6 +109,7 @@ for (const c of [...(coaches.NFL_COACHES ?? []), ...(coaches.COACH_FREE_AGENTS ?
 }
 for (const [name, f] of Object.entries(COACH_HS)) { const k = strip(f); if (!players[k]) players[k] = 'nfl|||HC' }
 
+for (const k of Object.keys(players)) if (rankOf[k]) players[k] += '|' + rankOf[k]
 const out = { teams, p: players }
 writeFileSync('src/data/jersey-index.json', JSON.stringify(out))
 const total = { nfl: 0, nba: 0, cfb: 0, cbb: 0, mlb: 0, soc: 0, nat: 0 }

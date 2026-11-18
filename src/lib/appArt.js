@@ -1,4 +1,4 @@
-// The app swaps every player photo for a jersey and every team logo for its abbreviation tag (lib/jerseyArt.js).
+// The app swaps every player photo for his card and every team logo for its oval badge (lib/jerseyArt.js).
 // It's done once, where a picture gets its address: any <img> (or SVG <image>, or new Image()) given a headshot
 // or a /logos/ address is handed the jersey or the tag instead, so the hundreds of places that show a photo or a
 // logo need no change of their own and the website (which never runs this) stays exactly as it is.
@@ -23,13 +23,13 @@ const colorsOf = (lg, team) => INDEX.teams[lg]?.[team] ?? null
 export function playerArt(key, folderHint) {
   const row = INDEX.p[key]
   if (!row) return svgUri(jerseySvg({ league: folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl' }))
-  const [lg, team, number, pos] = row.split('|')
-  if (pos === 'HC') return svgUri(teamMarkSvg({ team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
-  return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number, pos }))
+  const [lg, team, number, pos, rank] = row.split('|')
+  if (pos === 'HC') return svgUri(teamMarkSvg({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
+  return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0 }))
 }
 
 export function teamArt(folder, team) {
-  for (const lg of LOGO_LEAGUES[folder ?? ''] ?? ['nfl']) { const c = colorsOf(lg, team); if (c) return svgUri(teamMarkSvg({ team, colors: c })) }
+  for (const lg of LOGO_LEAGUES[folder ?? ''] ?? ['nfl']) { const c = colorsOf(lg, team); if (c) return svgUri(teamMarkSvg({ league: lg, team, colors: c })) }
   return svgUri(teamMarkSvg({ team }))
 }
 
@@ -51,7 +51,7 @@ function salaryArt(sport) {
       const [, col] = teams[n % Math.max(1, teams.length)] ?? ['', null]
       const x = x0 + c * cw, y = y0 + r * ch
       s += `<rect x="${x + 3}" y="${y + 3}" width="${cw - 6}" height="${ch - 6}" rx="10" fill="#1a212b" stroke="${c === pick ? '#f2c94c' : '#2a3340'}" stroke-width="${c === pick ? 3 : 1.5}"/>`
-      s += jerseySvg({ league: lg, colors: col, number: (n % 98) + 1 }).replace(/^<svg ([^>]*?)width="\d+" height="\d+">/, `<svg $1x="${x + 8}" y="${y + 6}" width="${cw - 16}" height="${cw - 16}">`)
+      s += jerseySvg({ league: lg, colors: col, number: (n % 98) + 1, variant: 'small' }).replace(/^<svg ([^>]*?)width="\d+" height="\d+">/, `<svg $1x="${x + 8}" y="${y + 6}" width="${cw - 16}" height="${cw - 16}">`)
       s += `<rect x="${x + 14}" y="${y + ch - 26}" width="${cw - 28}" height="8" rx="4" fill="#ffffff" opacity="${c === pick ? 0.55 : 0.2}"/>`
     }
   }
@@ -69,7 +69,7 @@ export function appImage(src) {
     out = playerArt(key, key.split('/')[0])
   } else if ((m = LOGO.exec(src)) && m[2]) {
     // a conference's mark: its name on a plain tag
-    out = svgUri(teamMarkSvg({ team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
+    out = svgUri(teamMarkSvg({ league: 'conf', team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
   } else if ((m = SALARY.exec(src))) {

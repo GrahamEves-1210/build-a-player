@@ -305,7 +305,7 @@ function badge(team, fill, ink, cx, cy, rx, ry, u) {
     `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${u}og)"/>` +
     `<ellipse cx="${cx}" cy="${cy}" rx="${f1(rx - 4.5)}" ry="${f1(ry - 4.5)}" fill="none" stroke="${ink}" stroke-width="1.4" opacity=".55"/>` +
     `<path d="M${f1(cx - rx * 0.78)} ${f1(cy - ry * 0.32)}Q${cx} ${f1(cy - ry * 1.02)} ${f1(cx + rx * 0.78)} ${f1(cy - ry * 0.32)}Q${cx} ${f1(cy - ry * 0.62)} ${f1(cx - rx * 0.78)} ${f1(cy - ry * 0.32)}Z" fill="#fff" opacity="${pale ? 0.5 : 0.16}"/>` +
-    (t ? block(t, cx, cy + 0.5, ry * 0.98, rx * 1.48, { wide: 1.28, fill: ink, line: pale ? null : shade(fill, 0.45), lw: 0.4, drop: pale ? 0.12 : 0.3 }) : '')
+    (t ? block(t, cx, cy + 0.5, ry * 0.98, rx * 1.48, { wide: 1.28, fill: ink, line: contrast(ink, fill) < 2.6 ? mix(ink, '#fff', 0.85) : pale ? null : shade(fill, 0.45), lw: contrast(ink, fill) < 2.6 ? 0.42 : 0.4, drop: pale ? 0.12 : 0.3 }) : '')
 }
 
 // the position plaque at the foot of the card: a small peaked tab in the frame's colour
