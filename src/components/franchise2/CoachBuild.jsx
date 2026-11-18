@@ -99,7 +99,7 @@ export function StylePick({ S, go, onDone }) {
   const c = S.coach ?? {}
   return (
     <div className="fsu-style">
-      <Chyron team={S.team} title="Coach style" sub="ONE PICK" />
+      <Chyron team={S.team} title="Coach style" />
       <div className="fsu-opts">
         {Object.entries(STYLES).map(([id, x], i) => (
           <button key={id} type="button" className={`fsu-opt${c.style === id ? ' is-on' : ''}`} style={{ ...fkVars(S.team), '--d': `${i * 50}ms` }} onClick={() => { go({ coach: { ...c, style: id } }, 'slot'); haptic('light') }}>
