@@ -7674,3 +7674,7 @@ html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !impor
 /* DONE stays on the screen's bottom edge while the choices scroll */
 .cr-face-done { position: sticky; bottom: 0; z-index: 5; width: 100%; margin-bottom: calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 10px 0 #0d1013, 0 -10px 0 #0d1013; }
 @media (min-width: 700px) { .cr-face-sheet { place-items: center; } }
+
+/* Career's EDIT sheet: his number under his face (owner 11-18) */
+.cr-face-num { margin: 0; }
+.cr-face-num-note { font-size: 13px; color: var(--ag-muted, #9aa3a0); }

@@ -85,8 +85,11 @@ function CareerFace({ c, size = 34 }) {
   )
 }
 // his face's editor: the creator in a sheet, his face saved when he's done
-function FaceSheet({ c, onDone, onClose }) {
+function FaceSheet({ c, onDone, onClose, setCareer = null }) {
   const [face, setFace] = useState(() => careerFace(c))
+  const [numOpen, setNumOpen] = useState(false)
+  const n = c.team ? jerseyOf(c) : null
+  const canNum = !!setCareer && canChangeNumber(c)
   return createPortal(
     <div className="cr-face-sheet" role="dialog" aria-modal="true" aria-label="His face">
       <div className="cr-face-box">
@@ -94,6 +97,14 @@ function FaceSheet({ c, onDone, onClose }) {
         <Suspense fallback={<div className="cr-face-wait" />}>
           <FacePick face={face} pos={careerFacePos(c)} color={careerColor(c)} kit={careerKit(c)} shuffleKey={`career|${c.seed ?? c.name}-face`} onChange={setFace} />
         </Suspense>
+        {/* (his number, here too: owner 11-18; the league's rule holds, a change after the signing or in an offseason) */}
+        {n != null && (
+          <div className="cr-contract cr-jersey cr-face-num">
+            <span><span className="ag-eyebrow">{numWord(c)}</span><b>No. {n}</b></span>
+            {canNum ? <button type="button" className="cr-jersey-go" onClick={() => { setNumOpen(true); sfx('tap') }}>CHANGE</button> : <small className="cr-face-num-note">Changes in the offseason</small>}
+          </div>
+        )}
+        {numOpen && <NumberSheet c={c} cur={n} onPick={x => { setCareer(setNumber(c, x)); setNumOpen(false); sfx('tap') }} onClose={() => setNumOpen(false)} />}
         <button type="button" className="ag-btn ag-btn--gold cr-face-done" onClick={() => onDone(face)}>DONE</button>
       </div>
     </div>,
@@ -828,12 +839,12 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   return (
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
       {recHit && <RecordOverlay record={recHit} name={c.name || 'Guest'} onClose={() => setRecHit(null)} />}
-      {faceOpen && <FaceSheet c={c} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
+      {faceOpen && <FaceSheet c={c} setCareer={setCareer} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
       {honor && !recHit && <HonorOverlay honor={honor} name={c.name || 'Guest'} onClose={() => setHonor(null)} />}
       <div className="ag-screen-head">
         <div className="cr-head">
           {/* his face (tap: change it), his club's logo on its corner */}
-          <button type="button" className="cr-head-face" onClick={() => { setFaceOpen(true); sfx('tap') }} aria-label="Change his face">
+          <button type="button" className="cr-head-face" onClick={() => { setFaceOpen(true); sfx('tap') }} aria-label="Edit his face and number">
             <CareerFace c={c} size={64} />
             <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
             <span className="cr-head-edit">EDIT</span>
