@@ -1,6 +1,6 @@
 // FRANCHISE (take two, 2026-11-14): the engine. Pure and seeded; the state (F) is plain JSON, saved in one of
 // three slots on this device. The screens are components/franchise2.
-import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, payroll, lineup, strength, fillLeague, realPool, makeReal, makeDepth } from './league'
+import { TEAM, SHORTS, FIRST_YEAR, buildTeams, calibrate, makeBuilt, replacedBy, payroll, lineup, strength, fillLeague, realPool, makeReal, makeDepth } from './league'
 import { makeSchedule } from './schedule'
 import { makeClass, packClass, unpackClass } from './draft'
 import { rngOf, clamp, r1 } from './rng'
@@ -78,6 +78,15 @@ export function createFranchise(setup) {
   F.sched = makeSchedule(F.seed, F.year)
   F.nt = 1   // (numbers kept by team from the start: roster.js numbersOnLoad has nothing to do)
   F.wk = 0; F.log = []; F.ss = {}; F.lg = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
+  // each build takes a starter's job (owner 11-18): the man he replaces (league.js replacedBy, the setup showed him)
+  // leaves the team with his deal off its books and goes to the street at his market price, where a team that needs
+  // him can sign him. (The kicker: the block below, the NFL's release.)
+  const gone = replacedBy({ r: t.r.filter(p => p.b == null) }, F.builds).filter((p, k) => p && F.builds[k].pos !== 'k')
+  for (const p of gone) {
+    t.r = t.r.filter(x => x !== p)
+    p.$ = marketValue(p, F.year); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.sc; delete p.nu
+    F.fa = [...(F.fa ?? []), p]
+  }
   // a kicker build takes the job outright: a team carries one kicker, so the veteran is released (his bonus still
   // owed is dead money, the NFL's rule) and goes to the street, where a team that needs a kicker can sign him
   if (F.builds.some(b => b.pos === 'k')) {

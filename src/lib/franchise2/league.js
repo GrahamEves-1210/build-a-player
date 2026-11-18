@@ -144,6 +144,25 @@ export function makeGen(F, pos, R, { o = null, ag = null } = {}) {
 export const buildPeak = (o, ag, extra = 1) => Math.min(99, o + Math.round(Math.max(0, 28 - ag) * 1.8) + extra)
 // the player's own build as a man on the roster
 export const buildSpot = (pos, build) => (pos === 'dl' ? dlBuildSpot(build) : pos === 'db' ? (build?.size?.subpos === 's' ? 's' : 'cb') : pos === 'ol' ? olSpotOfBuild(build) : undefined)
+// The men the player's builds replace (owner 11-18): a build takes the job of the best starter at his spot still on
+// the team, a second build at the spot the next best, in the setup's order (a spot with no starter left: its best
+// backup). The spot: an edge or a tackle inside the line, a corner or a safety, a tackle or an inside man on the line
+// (before he's built, the position). Returns the replaced man (or null) for each build, in order.
+export function replacedBy(team, builds) {
+  const L = Object.values(lineup(team)).filter(p => p.b == null)
+  const pool = team.r.filter(p => p.b == null && !p.fl)
+  const taken = new Set()
+  const unitOfSpot = s => (['LT', 'RT'].includes(s) ? 'ot' : 'oi')
+  return builds.map(B => {
+    if (!B?.pos) return null
+    const s = B.build ? buildSpot(B.pos, B.build) : undefined
+    const same = p => p.p === B.pos && (!s || (B.pos === 'ol' ? unitOf(p) === unitOfSpot(s) : p.s === s))
+    const best = list => list.filter(p => same(p) && !taken.has(p.i)).sort((a, b) => b.o - a.o)[0]
+    const m = best(L) ?? best(pool) ?? null
+    if (m) taken.add(m.i)
+    return m
+  })
+}
 export function makeBuilt(F, idx, R) {
   const B = F.builds[idx]
   const o = ovrOf(B.pos, B.build)
