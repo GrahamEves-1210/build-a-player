@@ -26,12 +26,13 @@ import { teamKit } from '../../lib/franchise2/kits'
 //   4 THE HIRE    the coach card, and the season starts
 // The setup is saved in its slot after every change (FranchiseMode putSetup), so leaving for the build page and
 // coming back, or a reload, picks up where it was.
-const MAX_BUILDS = 8
+// (no limit on how many: every man at a position can be replaced by a build, owner 11-18; the kicker is one)
 // the positions a build can play, in the mode's order: the offense, the defense, then the kicker (one at most: a team
 // carries one)
 export const SETUP_POS = POS.filter(p => p !== 'k' || K_LIVE)
 const POS_NAME = { ...SQ_POS_NAME, k: 'Kicker' }
-const capOf = pos => (pos === 'k' ? 1 : CAPS.nfl[pos] ?? 0)
+// as many builds at a position as the team has men there (its fillers aside), and never fewer than Squad's caps
+const capOf = (pos, team) => (pos === 'k' ? 1 : Math.max(CAPS.nfl[pos] ?? 0, team ? preview().teams[team].r.filter(p => p.p === pos && !p.fl).length : 0))
 const STEPS = [['pace', 'MODE'], ['team', 'TEAM'], ['builds', 'PLAYERS'], ['coach', 'COACH'], ['hire', 'HIRE']]
 const GROUP = { pace: 'pace', team: 'team', card: 'team', builds: 'builds', coach: 'coach', style: 'coach', who: 'coach', hire: 'hire' }
 const BACK = { team: 'pace', card: 'team', builds: 'card', coach: 'builds', style: 'coach', who: 'style', hire: 'who' }
@@ -168,7 +169,7 @@ const lastName = n => splitName(n).last
 function Builds({ S, go, owner, onBuild }) {
   const picks = S.picks ?? []
   const count = pos => picks.filter(p => p.pos === pos).length
-  const can = pos => picks.length < MAX_BUILDS && count(pos) < capOf(pos)
+  const can = pos => count(pos) < capOf(pos, S.team)
   const add = pos => { if (!can(pos)) { sfx('deny'); return } go({ picks: [...picks, { id: `${pos}${count(pos) + 1}-${Date.now().toString(36)}`, pos }] }, 'slot') }
   const drop = pos => {
     const last = [...picks].reverse().find(p => p.pos === pos)
@@ -191,7 +192,7 @@ function Builds({ S, go, owner, onBuild }) {
   const replaces = p => { const m = out[ordered.indexOf(p)]; return m ? `REPLACES ${lastName(m.n).toUpperCase()} ${m.o}` : null }
   return (
     <div className="fsu-builds">
-      <Chyron team={S.team} tag={`${picks.length}/${MAX_BUILDS}`} title="Your players" sub="ROOKIES · UP TO 8" />
+      <Chyron team={S.team} tag={String(picks.length)} title="Your players" sub="ROOKIES · AS MANY AS YOU WANT" />
       <div className="fsu-pos">
         {SETUP_POS.map(pos => {
           const n = count(pos)
