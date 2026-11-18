@@ -8,8 +8,9 @@ import {
   callOf, staffMoves, canKeep, canOffer,
 } from '../../lib/franchise2/light'
 import { lineOf } from '../../lib/franchise2/season'
+import { romanOf } from '../../lib/mg/kit'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, KLogo, ManL3, BigRec, BigNum, Go, Tag, ActionBar, Fold, fkVars } from './kit'
+import { Chyron, KLogo, ManL3, BigRec, BigNum, Go, Tag, ActionBar, Fold, fkVars, Scorebug, Stamp } from './kit'
 import { Man, CapBar, PlayerPage, money } from './dparts'
 import { StaffL3 } from './Staff'
 import { DayResults, CampReport } from './Deals'
@@ -19,9 +20,11 @@ import { recordsOf, standingsOf, revOf } from './perf'
 import { spotOf } from '../../lib/franchise2/news'
 import './light.css'
 
-// FRANCHISE LIGHT's own screens (engine: lib/franchise2/light.js). The rest of LIGHT is FULL's: Gameday for the big
-// game and the playoffs, the event card, the Team, League and History tabs, the draft's board and pick screens.
-//   StretchCard     the season card: the stretch's six weeks, its big game, PLAY WEEKS 1–6
+// FRANCHISE LIGHT's own screens (engine: lib/franchise2/light.js). LIGHT never goes into a game: every week and every
+// playoff round is simmed, each result with its box score. The rest is FULL's: the event card, the playoff card and
+// bracket, the Team, League and History tabs, the draft's board and pick screens.
+//   StretchCard     the season card: the stretch's six opponents, PLAY WEEKS 1–6
+//   RoundResult     the player's last playoff game: the final, the line under it, its box score
 //   StretchRecap    the stretch played: the results (each one's box score), the builds' lines, the standings, who
 //                   got hurt, the wire, and the one button on
 //   LightOffseason  the offseason's three steps: STAFF & AWARDS → ROSTER → DRAFT
@@ -34,62 +37,56 @@ const yrs = y => `${y} ${y === 1 ? 'YR' : 'YRS'}`
 // ═════════════════════════════════════════════════════════════════════════════
 // THE SEASON
 // ═════════════════════════════════════════════════════════════════════════════
-// two teams side by side, away on the left (Hub.jsx's matchup, the same look)
-function Matchup({ a, h, R, subA, subH, me }) {
-  const side = (s, sub) => (
-    <div className={`fh-mu-t${s === me ? ' is-me' : ''}`} style={fkVars(s)}>
-      <KLogo s={s} size={56} />
-      <b>{TEAM[s].nick}</b>
-      <span>{recText(R[s])}</span>
-      {sub && <small>{sub}</small>}
-    </div>
-  )
-  return <div className="fh-mu">{side(a, subA)}<span className="fh-mu-mid">at</span>{side(h, subH)}</div>
-}
-// the stretch's weeks as the schedule strip's logos (the big game marked, a played week its result)
-function Weeks({ F, from, to, big }) {
-  const sch = mySchedule(F).slice(from, to)
-  return (
-    <div className="lt-weeks" aria-label="The stretch's schedule">
-      {sch.map(g => {
-        const res = g.us == null ? null : g.us > g.them ? 'w' : g.us < g.them ? 'l' : 't'
-        const isBig = g.wk - 1 === big
-        return (
-          <span key={g.wk} className={`fh-wk${res ? ` is-${res}` : ''}${isBig && !res ? ' is-now' : ''}${g.bye ? ' is-bye' : ''}`}>
-            <small>Wk {g.wk}</small>
-            {g.bye ? <em>BYE</em> : <span className="fh-wk-logo"><i>{g.home ? 'vs' : '@'}</i><KLogo s={g.opp} size={26} /></span>}
-            <b>{res ? `${res.toUpperCase()} ${g.us}-${g.them}` : g.bye ? '' : isBig ? 'BIG' : TEAM[g.opp].short}</b>
-          </span>
-        )
-      })}
-    </div>
-  )
-}
+// the stretch's six opponents, one line each: the week, home or away, the team, its record and the line
 export function StretchCard({ F, play, simToEnd }) {
   const L = F.lt
   const R = recordsOf(F), S = standingsOf(F)
-  const sch = mySchedule(F)
-  const g = L.big != null ? sch[L.big] : null
-  const a = g ? (g.home ? g.opp : F.team) : null, h = g ? (g.home ? F.team : g.opp) : null
+  const sch = mySchedule(F).slice(L.w0, L.w1)
   const placeOf = s => { const d = DIV_OF[s], r = S.R?.[s]; return r && r.w + r.l + r.t > 0 ? `${ORD(S.div[d].indexOf(s) + 1)} ${d}` : d }
-  const kind = g ? (DIV_OF[g.opp] === DIV_OF[F.team] ? 'Division game' : CONF_OF[g.opp] === CONF_OF[F.team] ? `${CONF_OF[g.opp]} game` : 'Interconference game') : null
-  const live = (F.games ?? 'advanced') !== 'off'
   return (
     <section className="fh-next lt-card">
       <div className="fh-next-h"><b>{stretchText(L.k)}</b><span>Stretch {L.k + 1} of 3</span></div>
-      <Weeks F={F} from={L.w0} to={L.w1} big={L.big} />
-      {g && (
-        <>
-          <div className="lt-big-h"><b>Big game: Week {L.big + 1}</b><span>{kind} · {g.home ? 'Home' : 'Away'}</span></div>
-          <Matchup a={a} h={h} R={R} subA={placeOf(a)} subH={placeOf(h)} me={F.team} />
-          <p className="fh-line">{favText(lineOf(F, a, h))}</p>
-        </>
-      )}
-      <p className="fh-next-note">{g ? `Week ${L.big + 1} is played live${live ? ', key moments and all' : ''}. The other weeks are simmed.` : 'Every week of this stretch is simmed.'}</p>
+      <div className="lt-opps" role="list" aria-label="The stretch's opponents">
+        {sch.map(g => {
+          if (g.bye) return <div key={g.wk} role="listitem" className="lt-opp is-bye"><span className="lt-opp-wk">Wk {g.wk}</span><b>Bye week</b></div>
+          const a = g.home ? g.opp : F.team, h = g.home ? F.team : g.opp
+          const div = DIV_OF[g.opp] === DIV_OF[F.team]
+          return (
+            <div key={g.wk} role="listitem" className="lt-opp" style={fkVars(g.opp)}>
+              <span className="lt-opp-wk">Wk {g.wk}</span>
+              <span className="lt-opp-t"><i>{g.home ? 'vs' : '@'}</i><KLogo s={g.opp} size={26} /><b>{TEAM[g.opp].nick}</b>{div && <em>DIV</em>}</span>
+              <span className="lt-opp-rec"><b>{recText(R[g.opp])}</b><small>{placeOf(g.opp)}</small></span>
+              <span className="lt-opp-line">{favText(lineOf(F, a, h))}</span>
+            </div>
+          )
+        })}
+      </div>
+      <p className="fh-next-note">All six weeks are simmed. Every result comes with its box score.</p>
       <div className="fh-go">
         <Go onClick={play}>Play {stretchText(L.k)}</Go>
         {F.wk < REG_WEEKS - 1 && <button type="button" className="fh-textbtn" onClick={simToEnd}>Sim to the playoffs</button>}
       </div>
+    </section>
+  )
+}
+
+// ── A playoff round's result (LIGHT sims the round: Hub.jsx PlayoffCard and Champions) ─────────
+const PO_ROUND = ['Wild card round', 'Divisional round', null, null]
+export function RoundResult({ F, owner }) {
+  const [box, setBox] = useState(false)
+  const g = [...(F.log ?? [])].reverse().find(r => r.rd != null)
+  if (!g) return null
+  const a = g.home ? g.opp : F.team, h = g.home ? F.team : g.opp
+  const as = g.home ? g.them : g.us, hs = g.home ? g.us : g.them
+  const name = g.rd === 3 ? `Super Bowl ${romanOf(F.year - 1965)}` : g.rd === 2 ? `${CONF_OF[F.team]} Championship` : PO_ROUND[g.rd]
+  const res = g.w ? 'w' : g.t ? 't' : 'l'
+  return (
+    <section className="fh-next lt-round">
+      <div className="fh-next-h"><b>{name}</b><span>Final{g.ot ? ' · OT' : ''}</span></div>
+      <Scorebug a={a} h={h} as={as} hs={hs} final={g.ot ? 'F/OT' : 'FINAL'} label={g.rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][g.rd]} />
+      <div className="lt-round-hl"><Stamp kind={res} delay={200}>{res === 'w' ? 'WIN' : res === 't' ? 'TIE' : 'LOSS'}</Stamp><span><b>{g.hl}</b>{g.sub && <small>{g.sub}</small>}</span></div>
+      {g.bx && <button type="button" className="fh-textbtn" onClick={() => { setBox(true); sfx('tap') }}>Box score</button>}
+      {box && <GameBoxSheet F={F} row={g} owner={owner} portal onClose={() => setBox(false)} />}
     </section>
   )
 }
@@ -124,7 +121,7 @@ export function StretchRecap({ F, act, owner, onPlayoffs }) {
       <div className="lt-games" role="list">
         {X.rows.map(r => (
           <button key={r.wk} type="button" role="listitem" className={`lt-game is-${r.w ? 'w' : r.t ? 't' : 'l'}`} style={fkVars(r.opp)} onClick={() => { if (r.bx) { setBox(r); sfx('tap') } }} disabled={!r.bx} aria-label={`Week ${r.wk}: ${r.hl}. Box score`}>
-            <span className="lt-game-wk">Wk {r.wk}{r.wk - 1 === L.big ? <em>BIG</em> : null}</span>
+            <span className="lt-game-wk">Wk {r.wk}</span>
             <span className="lt-game-opp"><i>{r.home ? 'vs' : '@'}</i><KLogo s={r.opp} size={24} /><b>{TEAM[r.opp].short}</b></span>
             <span className="lt-game-sc"><b>{r.w ? 'W' : r.t ? 'T' : 'L'} {r.us}-{r.them}{r.ot ? ' OT' : ''}</b><small>{r.sub || r.hl}</small></span>
             {r.bx && <i className="lt-game-go" aria-hidden="true">›</i>}
