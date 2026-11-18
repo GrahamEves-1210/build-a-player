@@ -93,6 +93,29 @@ function scrimCast(cast) {
 const SNAP_MS = 750
 // where the play is drawn to: the gap off the ball (yards across from the ball, toward the play's side)
 const HOLE = { inside: 2.3, power: 4.6, outside: 9, draw: 1.2 }
+// the scrimmage play's line-up, in yards: across from the middle (sd: the play's side), up the field from the line
+const SCRIM = {
+  front: [-5.6, -1.7, 1.7, 5.6], backers: [-4.6, 0.4, 4.8], ol: [-4.6, -2.3, 0, 2.3, 4.6],
+  te: 6.9, qb: [-0.6, -1.6], slot: [-11, -0.8], wr: 5.5, back: -5.5,
+}
+// Franchise's play art (franchise2/moments.js playArt): a called fr-run play as setScrim lines it up and snapNow blocks
+// it. Yards: x across from the middle of the field, y up the field from the line.
+//   { o: { ol, te, qb, slot, wr, back }, d: { front, backers, cb, s }, hole (x), blocks: [[from, to]] }
+export function runLook(hole, side) {
+  const sd = side < 0 ? -1 : 1, hx = sd * (HOLE[hole] ?? HOLE.inside)
+  const ol = SCRIM.ol.map(dx => [dx, -0.7])
+  const front = SCRIM.front.map(dx => [dx, 0.9]), backers = SCRIM.backers.map(dx => [dx, 5])
+  const cb = [[6.5 - MID, 6.5], [MID - 6.5, 6.5]], sf = [[-7, 11], [7, 12.5]]
+  const te = [sd * SCRIM.te, -0.9], wr = [[5.5 - MID, -0.5], [MID - 5.5, -0.5]]
+  // (the front four taken by the tackles and the guards; the center and the tight end up to the backers nearest the
+  // hole; the receivers on the corners)
+  const lbs = [...backers].sort((a, b) => Math.abs(a[0] - hx) - Math.abs(b[0] - hx))
+  const blocks = [[ol[0], front[0]], [ol[1], front[1]], [ol[3], front[2]], [ol[4], front[3]], [ol[2], lbs[0]], [te, lbs[1]], [wr[0], cb[0]], [wr[1], cb[1]]]
+  return {
+    o: { ol, te, qb: [-sd * 0.6, -1.6], slot: [-sd * 11, -0.8], wr, back: [0, SCRIM.back] },
+    d: { front, backers, cb, s: sf }, hole: hx, blocks, draw: hole === 'draw',
+  }
+}
 
 // ── The rules ───────────────────────────────────────────────────────────────
 export function make({ v, seed, cast, pos, game = null, situation = null }) {
@@ -129,7 +152,7 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
     scrim.hx = hx
     Object.assign(ball, { x: MID, d: L - 5.5, z: 1.1, vx: 0, vd: 0, vz: 0, state: 'held', touched: true, landed: true })
     const D = (i, x, d, v, extra = {}) => ({ i, k: false, safe: false, x, d, vx: 0, vd: 0, lane: x, eng: null, down: 0, tried: -1e9, v: v * (who.themPace[i] ?? 1) * (0.96 + r() * 0.08), ...extra })
-    const front = [-5.6, -1.7, 1.7, 5.6], backers = [-4.6, 0.4, 4.8]
+    const { front, backers } = SCRIM
     cover.length = 0
     front.forEach((dx, i) => cover.push(D(i, MID + dx, L + 0.9, 7.6)))
     // (the second level reads it before it comes: the backers a beat, the corners and the safeties longer)
@@ -138,9 +161,9 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
     cover.push(D(9, MID - 7, L + 11, 9.2, { safe: true, hold: SNAP_MS + 600 }), D(10, MID + 7, L + 12.5, 9.2, { safe: true, hold: SNAP_MS + 600 }))
     const O = (i, x, d, extra = {}) => ({ i, mate: false, x, d, vx: 0, vd: 0, tgt: null, eng: null, re: 0, beaten: 0, shedAt: 0, ...extra })
     ours.length = 0
-    ;[-4.6, -2.3, 0, 2.3, 4.6].forEach((dx, i) => ours.push(O(i, MID + dx, L - 0.7)))
-    ours.push(O(5, MID + sd * 6.9, L - 0.9), O(6, 5.5, L - 0.5), O(7, W_YD - 5.5, L - 0.5), O(8, MID - sd * 0.6, L - 1.6, { qb: true }), O(9, MID - sd * 11, L - 0.8))
-    Object.assign(me, { x: MID, d: L - 5.5, carry: true, catchD: L, caughtAt: 0 })
+    SCRIM.ol.forEach((dx, i) => ours.push(O(i, MID + dx, L - 0.7)))
+    ours.push(O(5, MID + sd * SCRIM.te, L - 0.9), O(6, SCRIM.wr, L - 0.5), O(7, W_YD - SCRIM.wr, L - 0.5), O(8, MID + sd * SCRIM.qb[0], L + SCRIM.qb[1], { qb: true }), O(9, MID + sd * SCRIM.slot[0], L + SCRIM.slot[1]))
+    Object.assign(me, { x: MID, d: L + SCRIM.back, carry: true, catchD: L, caughtAt: 0 })
   }
   // the snap: the line fires out and takes the four up front; the man over the hole is moved off it
   function snapNow() {
