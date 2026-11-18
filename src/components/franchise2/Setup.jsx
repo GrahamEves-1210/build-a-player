@@ -94,7 +94,6 @@ function PaceStep({ pick, onPick }) {
           <b>{name}</b><span>{line}</span>
         </button>
       ))}
-      <p className="fsu-pace-note">The choice stays with this franchise.</p>
     </div>
   )
 }
