@@ -721,8 +721,9 @@ function ClassRecap({ F, act, owner }) {
       )}
       {n > rv.mine.length + 1 && (
         <>
-          {rv.gems.length > 0 && <section className="dr-sec"><Chyron title="GEMS OF THE DRAFT" tone="ink" size="s" sub="UNDERRATED BY THE CONSENSUS" />{rv.gems.map(p => <LeaguePick key={p.at} p={p} kind="gem" />)}</section>}
-          {rv.busts.length > 0 && <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="OVERRATED BY THE CONSENSUS" />{rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />)}</section>}
+          {/* (what the class really has: some years a handful, some years none; draft.js tagOf) */}
+          <section className="dr-sec"><Chyron title="GEMS OF THE DRAFT" tone="ink" size="s" sub="ROUND 3 ON · UNDERRATED BY THE CONSENSUS" right={rv.gems.length || null} />{rv.gems.length ? rv.gems.map(p => <LeaguePick key={p.at} p={p} kind="gem" />) : <p className="dr-empty">NO LATE-ROUND GEMS IN THIS CLASS</p>}</section>
+          <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="ROUNDS 1-2 · OVERRATED BY THE CONSENSUS" right={rv.busts.length || null} />{rv.busts.length ? rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />) : <p className="dr-empty">NO EARLY-ROUND BUSTS IN THIS CLASS</p>}</section>
         </>
       )}
       <ActionBar><Go onClick={() => { act(X => { if (X.pace === 'light') lightNewSeason(X); else { closeDraft(X); newSeason(X) } }); sfx('whistle'); haptic('medium') }}>Start the {F.year + 1} season</Go></ActionBar>
