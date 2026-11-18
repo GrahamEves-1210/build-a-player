@@ -264,7 +264,7 @@ function StaffAwards({ F, act, owner }) {
           return (
             <div key={k} className={`lt-aw${w.t === F.team ? ' is-me' : ''}`}>
               <small>{title}</small>
-              <Man F={F} p={p} s={w.t} owner={owner} size="s" line={NICK(w.t)} onClick={p?.o ? () => setPage(p.i) : undefined} />
+              <Man F={F} p={p} s={w.t} owner={owner} size="m" line={NICK(w.t)} onClick={p?.o ? () => setPage(p.i) : undefined} />
               <span className="lt-aw-line">{w.line}</span>
             </div>
           )
