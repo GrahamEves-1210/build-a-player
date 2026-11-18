@@ -801,8 +801,16 @@ export const pickTeam = (F, at = F.dr.at) => F.dr.own[at]
 export const draftDone = F => !!F.dr && F.dr.at >= PICKS_N
 export const myPicks = F => F.dr.own.map((s, at) => (s === F.team && at >= F.dr.at ? at : null)).filter(v => v != null)
 const finalBuzz = (F, x) => F.dr?.fin?.[x.i] ?? buzzOf(F, x)
-// a stamp on a man once the truth is out: the consensus had him two grades (6 points) too low, or too high
-export const tagOf = (pk, bz) => (pk - bz >= 5 ? 'G' : bz - pk >= 5 ? 'B' : 'S')
+// a stamp on a man once the truth is out, the way the league talks about a draft years later (owner 11-18: never a
+// set number a class; it's whatever the class turned out to be):
+//   GEM   a pick after the second round (No. 65 on) headed for a starter's grade (B+ or better) that the consensus
+//         had two grades lower
+//   BUST  a first-rounder headed short of a starter (under B+), or a second-rounder headed for a backup (under B-),
+//         two grades under where the consensus had him
+// (a kicker is never either). Over many classes: about 2 or 3 gems a class, some classes none, and 2 to 7 busts.
+export const tagOf = (pk, bz, at = 0, pos = null) => (pos === 'k' ? 'S'
+  : at >= 64 && pk >= 84 && pk - bz >= 6 ? 'G'
+  : bz - pk >= 6 && ((at < 32 && pk < 84) || (at >= 32 && at < 64 && pk < 77)) ? 'B' : 'S')
 export const TAG_TEXT = { G: 'GEM', B: 'BUST', S: 'SOLID' }
 
 // how a league team rates a man: what he really is, some of the media's error, its own scouts' error; what it needs;
@@ -837,7 +845,7 @@ function take(F, s, x, via = null) {
   F.dc = F.dc.filter(p => p !== x)
   const at = F.dr.at, rd = roundOf(at)
   const bz = finalBuzz(F, x)
-  const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, dr: [rd, at + 1], a: x.a, nu: x.nu, tg: tagOf(kSeen(x, x.pk), bz), ...(x.hb && { hb: x.hb }), ...(x.b != null && { b: x.b }) }
+  const p = { i: F.nid++, n: x.n, p: x.p, ...(x.s && { s: x.s }), o: x.o, ag: x.ag, pk: x.pk, rk: F.year + 1, c: x.col, dr: [rd, at + 1], a: x.a, nu: x.nu, tg: tagOf(x.pk, Math.round(bz), at, x.p), ...(x.hb && { hb: x.hb }), ...(x.b != null && { b: x.b }) }
   signRookie(p, realNo(at), F.year + 1)
   if (x.b != null) { F.builds[x.b].pid = p.i; F.builds[x.b].age = x.ag; F.builds[x.b].draft = [rd, at + 1, s]; delete F.builds[x.b].prospect }
   F.teams[s].r.push(p)
@@ -957,12 +965,15 @@ export const pickLabel = at => `RD ${roundOf(at)} · NO. ${at + 1}`
 const SCOUT_GRADE = [[1.6, 'A+'], [2.4, 'A'], [3.2, 'A-'], [4, 'B+'], [4.8, 'B'], [5.6, 'B-'], [6.5, 'C+'], [7.5, 'C'], [99, 'D']]
 export function draftReview(F) {
   const picks = F.dr.picks
-  const mine = picks.filter(p => p.s === F.team)
+  const tag = p => tagOf(p.pk, p.bz, p.at, p.p)
+  const mine = picks.filter(p => p.s === F.team).map(p => (p.tag === tag(p) ? p : { ...p, tag: tag(p) }))
   const err = arr => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
   const myErr = err(mine.map(p => Math.abs((p.my ?? p.bz) - p.pk)))
   const mediaErr = err(mine.map(p => Math.abs(p.bz - p.pk)))
-  const gems = picks.filter(p => p.tag === 'G' && p.b == null).sort((a, b) => (b.pk - b.bz) - (a.pk - a.bz)).slice(0, 3)
-  const busts = picks.filter(p => p.tag === 'B' && p.b == null).sort((a, b) => (b.bz - b.pk) - (a.bz - a.pk)).slice(0, 3)
+  // (every gem and bust the class really has, none padded in: read from each pick's truth, so an older save's picks
+  // are read the same way; the biggest misses first, six at most on the screen)
+  const gems = picks.filter(p => p.b == null && tag(p) === 'G').sort((a, b) => (b.pk - b.bz) - (a.pk - a.bz)).slice(0, 6)
+  const busts = picks.filter(p => p.b == null && tag(p) === 'B').sort((a, b) => (b.bz - b.pk) - (a.bz - a.pk)).slice(0, 6)
   // the best value: the highest true grade taken after the first round
   const steal = picks.filter(p => p.at >= 32 && p.b == null && p.p !== 'k').sort((a, b) => b.pk - a.pk)[0] ?? null
   const grade = myErr == null ? null : SCOUT_GRADE.find(([e]) => myErr <= e)[1]

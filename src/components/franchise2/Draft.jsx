@@ -56,7 +56,11 @@ const colKit = col => schoolKit(school(col)) ?? colColor(col)
 const SUIT = '#1c1f25'
 // a face: a Sandbox build's own (his best trait's photo), anyone else's drawn (faces.js); small: a list row's, the
 // lighter drawing
-const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color, small ? 'sm' : 'full') : faceUrl(x.fk ?? x.n, facePos(x), color, null, small))
+// (a pick on the board keeps the team in s and his spot in sp: his face is drawn from his spot, the same man he was
+// on the board and will be on the roster, never the team's letters read as a position)
+const manOf = x => (x.xi != null && x.at != null ? { p: x.p, s: x.sp } : x)
+const faceFor = (F, x, color, small = false) => (x.b != null && F?.builds?.[x.b] ? buildFaceUrl(F.builds[x.b], color, small ? 'sm' : 'full') : faceUrl(x.fk ?? x.n, facePos(manOf(x)), color, null, small))
+const LockIcon = () => <svg className="dr-lock" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" strokeWidth="1.8" /><rect x="3" y="7" width="10" height="7.5" rx="1" fill="currentColor" /></svg>
 const sandboxOn = () => { try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false } }
 const CollegeLogo = ({ col, size = 22 }) => (school(col) ? <img className="dr-col" src={school(col).dark ?? school(col).logo} alt="" width={size} height={size} style={{ width: size, height: size }} loading="lazy" draggable={false} onError={e => { e.currentTarget.style.visibility = 'hidden' }} /> : null)
 const tap = () => sfx('tap')
@@ -464,9 +468,7 @@ export default function DraftBoard({ F, act, onClose }) {
 }
 
 // ── Draft day ────────────────────────────────────────────────────────────────
-const CLOCK = [600, 420, 300, 300, 300, 300, 240]   // the real draft's clock by round: 10 minutes in the 1st, 7 in the 2nd, 5, then 4 in the 7th
 const DAY_OF = rd => (rd === 1 ? 'DAY 1' : rd <= 3 ? 'DAY 2' : 'DAY 3')
-const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 // (light: Franchise LIGHT's draft: the player picks in rounds 1-3, the league's picks a quick feed, no trades, then
 // SIM THE REST OF THE DRAFT; light.js)
@@ -498,6 +500,14 @@ function DraftWeek({ F, act, onBuild }) {
           <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" />
           <button type="button" className={`dr-add${add ? ' is-on' : ''}`} aria-expanded={add} onClick={() => { setAdd(!add); tap() }}>{add ? 'Pick his position' : '+ Add a prospect'}</button>
           {add && <div className="dr-addpos">{POS.map(p => <button key={p} type="button" onClick={() => { tap(); onBuild({ id: 'prospect', pos: p, n: 1, of: 1 }) }}>{POS_LABEL[p]}</button>)}</div>}
+        </section>
+      )}
+      {/* (not in Sandbox: the same button, locked, so the feature is there to see) */}
+      {!sandbox && (
+        <section className="dr-sec dr-sandbox is-locked">
+          <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" />
+          <button type="button" className="dr-add is-locked" aria-disabled="true" onClick={() => sfx('deny')}><LockIcon />Add a prospect</button>
+          <p className="dr-lockline">A Sandbox feature. With Sandbox on, a build can go into the draft class.</p>
         </section>
       )}
       <ActionBar>
@@ -602,20 +612,13 @@ function DraftNight({ F, act, gm, light = false }) {
   )
 }
 function Clock({ F, at, team, ours, nextMine }) {
+  // (no pick clock: the pick is in when the player makes it)
   const rd = roundOf(at)
-  const [left, setLeft] = useState(CLOCK[rd - 1])
-  useEffect(() => {
-    setLeft(CLOCK[rd - 1])
-    if (!ours || reduced()) return
-    const t = setInterval(() => setLeft(s => Math.max(0, s - 1)), 1000)
-    return () => clearInterval(t)
-  }, [at, ours, rd])
   return (
     <div className={`dr-clock${ours ? ' is-ours' : ''}`} style={fkVars(team)}>
       <span className="dr-clock-tag"><small>{DAY_OF(rd)}</small><b>RD {rd}</b></span>
       <span className="dr-clock-team"><KLogo s={team} size={34} /><span><small>{ours ? 'ON THE CLOCK' : 'THE PICK IS IN'}</small><b>{TEAM[team]?.nick.toUpperCase()}</b></span></span>
       <span className="dr-clock-no"><small>PICK</small><b>{at + 1}</b></span>
-      {ours && <span className="dr-clock-t"><b>{mmss(left)}</b></span>}
       {!ours && nextMine != null && <span className="dr-clock-next">{F.team} NEXT · NO. {nextMine + 1}</span>}
     </div>
   )
@@ -727,8 +730,9 @@ function ClassRecap({ F, act, owner }) {
       )}
       {n > rv.mine.length + 1 && (
         <>
-          {rv.gems.length > 0 && <section className="dr-sec"><Chyron title="GEMS OF THE DRAFT" tone="ink" size="s" sub="UNDERRATED BY THE CONSENSUS" />{rv.gems.map(p => <LeaguePick key={p.at} p={p} kind="gem" />)}</section>}
-          {rv.busts.length > 0 && <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="OVERRATED BY THE CONSENSUS" />{rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />)}</section>}
+          {/* (what the class really has: some years a handful, some years none; draft.js tagOf) */}
+          <section className="dr-sec"><Chyron title="GEMS OF THE DRAFT" tone="ink" size="s" sub="ROUND 3 ON · UNDERRATED BY THE CONSENSUS" right={rv.gems.length || null} />{rv.gems.length ? rv.gems.map(p => <LeaguePick key={p.at} p={p} kind="gem" />) : <p className="dr-empty">NO LATE-ROUND GEMS IN THIS CLASS</p>}</section>
+          <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="ROUNDS 1-2 · OVERRATED BY THE CONSENSUS" right={rv.busts.length || null} />{rv.busts.length ? rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />) : <p className="dr-empty">NO EARLY-ROUND BUSTS IN THIS CLASS</p>}</section>
         </>
       )}
       <ActionBar><Go onClick={() => { act(X => { if (X.pace === 'light') lightNewSeason(X); else { closeDraft(X); newSeason(X) } }); sfx('whistle'); haptic('medium') }}>Start the {F.year + 1} season</Go></ActionBar>
