@@ -876,7 +876,9 @@ function capOf(look, G, color, mark) {
 // the neck and the shoulders under the shirt: a football player's thick neck sloping into big shoulders
 function neckLoop(G, bare) {
   const { nw } = G
-  if (!bare) return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 4.4, 66.4], [nw + 9, 68.8], [nw + 9, 104], [0, 104]])
+  // (under the shirt it stops short of the shoulder line: its corner at the shoulder is a corner, so the curve can't
+  // swing up over the shirt's edge and show a sliver of skin on top of the shoulder, owner 11-17)
+  if (!bare) return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 4.2, 67], [nw + 8, 70, 1], [nw + 8, 104, 1], [0, 104]])
   return sym([[0, 44], [nw * 0.9, 44], [nw * 0.94, 52], [nw, 58.6], [nw + 0.8, 62.6], [nw + 4.4, 66.2], [nw + 10.4, 68.2], [nw + 17.4, 71.2], [nw + 24, 75.8], [nw + 29.6, 82.6], [56, 94], [56, 104], [0, 104]])
 }
 // the shirt: neck the neckline's right half from its bottom up to the side of the neck; the shoulders slope off the
