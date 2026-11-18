@@ -13,7 +13,7 @@ import { seeded } from '../../lib/rng'
 import { IconClose, IconSpin, IconCaret } from '../app/icons'
 import { Chyron, LowerThird, ManL3, BigNum, Fact, Go, TeamSlab, KLogo, fkVars, splitName } from './kit'
 import { CoachSpin, StylePick, CoachWho, CoachReveal } from './CoachBuild'
-import './setup.css'
+import './setup.css'
 import { teamKit } from '../../lib/franchise2/kits'
 
 // SETUP: a new franchise, in the order a new GM's first week goes.
@@ -81,13 +81,13 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
 // ── 0. FULL or LIGHT ─────────────────────────────────────────────────────────
 // two plain rows; the one picked goes straight on to the team wall (back from the wall shows it again, lit)
 const PACES = [
-  ['full', 'FULL', 'Every week, every call. About an hour a season.'],
+  ['full', 'FULL', 'Play the season week by week and run every offseason step yourself. About an hour a season.'],
   ['light', 'LIGHT', 'The season in three stretches, the offseason in three steps. About 10 minutes a season.'],
 ]
 function PaceStep({ pick, onPick }) {
   return (
     <div className="fsu-pace">
-      <Chyron tone="ink" title="How do you want to run it?" sub="THE SAME LEAGUE AND THE SAME GAMES EITHER WAY" />
+      <Chyron tone="ink" title="How do you want to run it?" />
       {PACES.map(([k, name, line]) => (
         <button key={k} type="button" className={`fsu-pace-row${pick === k ? ' is-on' : ''}`} onClick={() => onPick(k)} aria-pressed={pick === k}>
           <b>{name}</b><span>{line}</span>
