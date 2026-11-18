@@ -51,9 +51,6 @@ const NOV_18 = {
       items: [
         'Every made-up player and coach now has a face',
         'Create your own in Career and Franchise: skin tone, hair, beard and more',
-        'Hairstyles include locs, braids, twists, side parts, headbands and durags',
-        'Players wear their team\'s jersey, and basketball players wear a tank top',
-        'Coaches wear their team\'s logo on caps and jackets',
       ],
     },
     {
