@@ -142,7 +142,7 @@ export function CoachWho({ S, go, owner, onDone }) {
   const name = `${first} ${last}`.trim()
   return (
     <div className="fsu-who">
-      <Chyron team={S.team} title="Your coach" sub="NAME AND FACE" />
+      <Chyron team={S.team} title="Your coach" />
       <LowerThird className="fsu-who-prev" size="l" name={name || 'Head Coach'} pos="HC" team={S.team} photo={coachFace(c, S.team)} stat={{ v: coachGrade(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v]))), label: 'GRADE' }} line={STYLES[c.style]?.name} />
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => set({ first: cleanName(e.target.value) })} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's first name" />
