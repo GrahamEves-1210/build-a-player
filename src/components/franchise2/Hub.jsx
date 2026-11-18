@@ -493,7 +493,7 @@ function Champions({ F, act, onTrophy }) {
       <Chyron tone="gold" size="l" tag={romanOf(F.year - 1965)} title={sbName(F)} sub={`${TEAM[c].name} · ${F.year} champions`} />
       {g && <Scorebug a={g.a} h={g.h} as={g.as} hs={g.hs} final={g.ot ? 'F/OT' : 'FINAL'} label="SB" />}
       <div className="fh-champ-team">
-        <TeamSlab s={c} size="l" rec={recordsOf(F)[c]} sub={`BEAT THE ${TEAM[F.po.runner].nick.toUpperCase()} ${F.po.score}`} />
+        <TeamSlab s={c} size="l" rec={recordsOf(F)[c]} />
         <Stamp kind="gold" big delay={250}>CHAMPIONS</Stamp>
       </div>
       <div className="fh-go">
