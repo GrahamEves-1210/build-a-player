@@ -117,7 +117,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           <span className="fh-top-logo"><KLogo s={F.team} size={36} /></span>
           <span className="fh-top-txt">
             <b>{t.name}</b>
-            <small>{F.year} · {phaseText}{F.pace === 'light' && <em className="fh-sandbox fh-light">Light</em>}{F.sandbox && <em className="fh-sandbox">Sandbox</em>}</small>
+            <small>{F.year} · {phaseText}</small>
           </span>
           <button className="fh-x" onClick={onHome} aria-label="Leave Franchise"><IconClose size={16} /><span>Exit</span></button>
         </header>
