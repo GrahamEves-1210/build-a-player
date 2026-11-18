@@ -236,6 +236,9 @@ function StaffAwards({ F, act, owner }) {
           </span>
         </div>
       </section>
+      {/* (a wide screen: the season's honors on the left, the coordinators' call on the right; a phone: one column) */}
+      <div className="lt-cols">
+      <div className="lt-col">
       {builds.length > 0 && (
         <section className="lt-sec">
           <Chyron team={F.team} size="s" title={`${owner}'s builds`} right={h.y} />
@@ -274,6 +277,8 @@ function StaffAwards({ F, act, owner }) {
         ))}
         {!all && !ours.length && <div className="fd-none">NONE FROM THE {NICK(F.team)}</div>}
       </section>
+      </div>
+      <div className="lt-col">
       <section className="lt-sec">
         <Chyron team={F.team} size="s" title="BLACK MONDAY" right="KEEP OR FIRE" />
         {['oc', 'dc'].map(k => {
@@ -291,6 +296,8 @@ function StaffAwards({ F, act, owner }) {
         })}
         <p className="fst-note">A fired coordinator is replaced by the best man on the league's short list who takes the job. {fired ? `Around the league, ${fired} head ${fired === 1 ? 'coach was' : 'coaches were'} fired today.` : 'Every head coach around the league kept his job.'}</p>
       </section>
+      </div>
+      </div>
       <ActionBar><Go onClick={go}>Next: Roster</Go></ActionBar>
       {page != null && <PlayerPage F={F} id={page} owner={owner} onClose={() => setPage(null)} />}
     </>
