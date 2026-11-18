@@ -452,7 +452,8 @@ function tradeEvent(F, R) {
   }
   return null
 }
-function makeEvent(F, R) {
+// (LIGHT makes its one a stretch at the stretch's start: light.js openStretch)
+export function makeEvent(F, R) {
   const seen = F.evSeen ?? []
   const order = R.shuffle(EVENTS.filter(e => !seen.includes(e.id)))
   for (const e of order) {

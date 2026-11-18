@@ -37,6 +37,7 @@ export { standings, records, recText, pct, ROUNDS, ROUND_NAME, FINISH_TEXT, fini
 export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 export { clockText, periodOf, spotText, normalRate, simSnap, SNAP_KIND } from './game'
 export * from './moments'
+export * from './light'
 
 // (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)
 // (8: game day's moments are snaps of the game, 2026-11-16; an older save is brought up to date on load: upgradeSave)
@@ -193,7 +194,7 @@ export function slotSummary(slot) {
   const F = loadFranchise(slot)
   if (!F) return null
   const r = F.sched ? records(F)[F.team] : { w: 0, l: 0, t: 0 }
-  return { slot, team: F.team, year: F.year, rec: recText(r), rings: F.rings ?? 0, phase: F.phase, wk: F.wk, sandbox: F.sandbox, at: F.at }
+  return { slot, team: F.team, year: F.year, rec: recText(r), rings: F.rings ?? 0, phase: F.phase, wk: F.wk, sandbox: F.sandbox, at: F.at, ...(F.pace === 'light' && { light: true }) }
 }
 // the setup, kept in its slot while it's being made (the builds are made on the build page, one at a time)
 export function saveSetup(slot, setup) { try { localStorage.setItem(KEY(slot), JSON.stringify({ v: SAVE_V, slot, setup, at: Date.now() })) } catch {} }
