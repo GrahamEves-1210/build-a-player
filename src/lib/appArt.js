@@ -84,6 +84,12 @@ let installed = false
 export function installAppArt() {
   if (installed || typeof window === 'undefined') return
   installed = true
+  // a round avatar is the jersey crop alone: the team badge a photo used to stand in front of stays out of it
+  document.documentElement.classList.add('app-art')
+  const st = document.createElement('style')
+  st.textContent = 'html.app-art .qb-avatar:has(.qb-avatar-photo) .qb-avatar-logo{display:none}' +
+    'html.app-art .qb-avatar-photo{inset:0;left:0;bottom:auto;width:100%;height:100%;transform:none;object-fit:cover;object-position:center}'
+  document.head.appendChild(st)
   const setAttr = Element.prototype.setAttribute
   const setAttrNS = Element.prototype.setAttributeNS
   // <img src> (React sets it as an attribute) and img.src = … (new Image() for canvases and preloads)
