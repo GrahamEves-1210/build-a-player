@@ -82,8 +82,8 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
 // ── 0. FULL or LIGHT ─────────────────────────────────────────────────────────
 // two plain rows; the one picked goes straight on to the team wall (back from the wall shows it again, lit)
 const PACES = [
-  ['full', 'FULL', 'Play the season week by week and run every offseason step yourself. About an hour a season.'],
-  ['light', 'LIGHT', 'The season in three stretches, the offseason in three steps. About 10 minutes a season.'],
+  ['full', 'FULL', 'Play the season week by week and run every offseason step yourself. About 30 minutes a season.'],
+  ['light', 'LIGHT', 'The season in three stretches, the offseason in three steps. About 5 minutes a season.'],
 ]
 function PaceStep({ pick, onPick }) {
   return (
