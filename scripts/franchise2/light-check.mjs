@@ -128,7 +128,9 @@ function playLight({ swap = false, log = false, exactOnly = false }) {
     F = stop(F, swap, `${yr} roster`, exactOnly)
     const calls = { ...F.lt.rs }
     const ids = Object.keys(calls)
-    if (FR.lightRoom(F).left < -1e-9 && FR.lightRoom(F).spend > 0) bad(`${yr}: the pre-set calls are over the cap (${FR.lightRoom(F).left})`)
+    // (a team already over the cap before any call, e.g. Denver's real contracts: the pre-set calls must not make it
+    // worse; keeping a minimum-salary man can even help, he fills one of the 53's minimum spots)
+    if (FR.lightRoom(F).left < -1e-9 && FR.lightRoom(F).spend > 0 && FR.lightRoom(F).left < FR.lightRoom(F, {}, {}).left - 1e-9) bad(`${yr}: the pre-set calls are over the cap (${FR.lightRoom(F).left})`)
     // (the screen's toggle: a Keep only when it fits, canKeep)
     if (ids.length && H() < 0.5) { const id = ids[Math.floor(H() * ids.length)]; const p = F.teams[team].r.find(x => x.i === +id); if (p && p.b == null) { const c = calls[id], to = c === true ? false : c === false ? true : c === 'option' ? 'decline' : 'option'; if (!(to === true || to === 'option') || FR.canKeep(F, p, to)) F.lt.rs[id] = to } }
     const V = FR.lightView(F)
