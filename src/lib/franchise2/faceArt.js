@@ -667,13 +667,14 @@ function browsOf(look, G, T, lo) {
   for (const s of [-1, 1]) {
     const x = k => 50 + s * k, b = G.by, es = G.es, ew = 3.4 * G.ez
     const ang = look.brows === 'angled'
-    const top = [[x(1.85), b + 0.15, 1], [x(es - 2.4), b - 0.5 - arch * 0.3], [x(es + (ang ? 1.4 : 0.4)), b - 0.75 - arch * 0.65], [x(es + ew + 1.5), b + 0.1 - arch * 0.2], [x(es + ew + 1.9), b + 0.55, 1]]
-    const bot = [[x(es + ew + 0.8), b + 0.55], [x(es + 0.6), b + 0.32 * th - arch * 0.45], [x(es - 2.4), b + 0.75 * th - arch * 0.2], [x(1.9), b + 1.35 * th, 1]]
+    const top = [[x(1.85), b + 0.15, 1], [x(es - 2.4), b - 0.5 - arch * 0.3], [x(es + (ang ? 1.4 : 0.4)), b - 0.75 - arch * 0.65], [x(es + ew + 1.3), b + 0.12 - arch * 0.2], [x(es + ew + 1.6), b + 0.5]]
+    const bot = [[x(es + ew + 1.0), b + 0.62], [x(es + 0.6), b + 0.32 * th - arch * 0.45], [x(es - 2.4), b + 0.75 * th - arch * 0.2], [x(1.9), b + 1.35 * th, 1]]
     const t2 = top.map((p, i) => [p[0], p[1] - (i === 1 ? 0.35 : i === 2 ? 0.15 : 0) * th, p[2]])
     d += sm([...t2, ...bot])
-    // the hairs: short strokes up and out from the head of the brow, flatter along the tail, breaking its edges
-    if (!lo) for (let i = 0; i < 7; i++) {
-      const u = i / 6, px = 1.9 + u * (es + ew - 0.2), py = b + (1.1 - u * 0.9) * th * 0.7 - Math.sin(u * Math.PI) * (0.55 + arch * 0.5)
+    // the hairs: short strokes up and out from the head of the brow, flatter toward the tail, breaking its edges; none
+    // at the tail itself, so the brow ends cleanly (owner 11-17: "remove that little fluff at the end")
+    if (!lo) for (let i = 0; i < 6; i++) {
+      const u = i / 8, px = 1.9 + u * (es + ew - 0.2), py = b + (1.1 - u * 0.9) * th * 0.7 - Math.sin(u * Math.PI) * (0.55 + arch * 0.5)
       const ang = 1.15 - u * 0.95, l = (0.9 - u * 0.35) * th
       h += `M${f(x(px))} ${f(py)}l${f(s * Math.cos(ang) * l)} ${f(-Math.sin(ang) * l)}`
     }
@@ -1087,7 +1088,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + `<use href="#${P}h" fill="${T.B}"/>`
     + `<g clip-path="url(#${P}C)">${T.blush && !lo ? fill(sm([[50 - cb + 2, 44], [50 - cb + 6.4, 43.4], [50 - cb + 5.6, 47.6], [50 - cb + 2.4, 48]]) + sm([[50 + cb - 2, 44], [50 + cb - 6.4, 43.4], [50 + cb - 5.6, 47.6], [50 + cb - 2.4, 48]]), T.blush) : ''}`
     + `${fill(S.M, T.M)}${fill(S.L, mixC(T.B, T.M, 0.5))}${fill(S.S, T.S)}${fill(S.H, T.H)}${fill(S.A, mixC(T.B, T.H, 0.55))}${lo ? '' : `<rect x="20" y="10" width="60" height="60" fill="${dotTex(T.D, 0.9, 0.13, 0.07)}"/>`}${beard.under}`
-    + line(poly(G.Rd.filter(p => p[1] > 27 && p[1] < jy + 1).map(p => [50 + p[0], p[1]]), false), mixC(T.B, '#f4f0ff', 0.2 + T.d * 0.12), lo ? 1.3 : 0.7) + `</g>`
+    + `</g>`
     + `<use href="#${P}e" fill="${T.white}"/>`
     + `<g clip-path="url(#${P}E)">${fill(e.ir, e.iris)}${e.light ? fill(e.pu, '#0c0807') : ''}${fill(`M0 0H100V${f(ey - 0.1)}H0Z`, '#2a1a12', ' fill-opacity=".18"')}${lo ? '' : fill(e.cl, '#ffffff', ' fill-opacity=".7"')}</g>`
     // (a player's lid crease and lower lid a half tone: fine lines, never the heavy creases that read as years)
