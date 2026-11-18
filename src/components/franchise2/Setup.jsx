@@ -193,7 +193,6 @@ function Builds({ S, go, owner, onBuild }) {
   const slotOf = p => slots[ready.indexOf(p)]
   // the starter each one replaces (league.js replacedBy: the best at his spot, a second build the next best)
   const out = replacedBy(preview().teams[S.team], ordered.map(p => ({ pos: p.pos, build: built(p)?.build })))
-  const replaces = p => { const m = out[ordered.indexOf(p)]; return m ? `REPLACES ${lastName(m.n).toUpperCase()} ${m.o}` : null }
   return (
     <div className="fsu-builds">
       <Chyron team={S.team} tag={`${picks.length}/${MAX_BUILDS}`} title="Your players" sub="ROOKIES · UP TO 8" />
@@ -227,7 +226,7 @@ function Builds({ S, go, owner, onBuild }) {
           if (!b) return (
             <button key={p.id} type="button" className="fsu-empty" onClick={() => build(p)} style={{ '--d': `${k * 40}ms` }}>
               <span className="fsu-empty-pos">{POS_LABEL[p.pos]}</span>
-              <span className="fsu-empty-txt"><b>NOT BUILT</b><small>{replaces(p) ?? POS_NAME[p.pos].toUpperCase()}</small></span>
+              <span className="fsu-empty-txt"><b>NOT BUILT</b><small>{POS_NAME[p.pos].toUpperCase()}</small></span>
               <span className="fsu-empty-go">BUILD</span>
             </button>
           )
@@ -235,7 +234,7 @@ function Builds({ S, go, owner, onBuild }) {
           const sl = slotOf(p)
           return (
             <LowerThird key={p.id} name={b.name || `${POS_LABEL[p.pos]} ${k + 1}`} pos={p.pos} num={b.num} ovr={o} photo={buildFaceUrl({ pos: p.pos, face: b.face ?? defaultFace(`${S.seed}-${p.id}`, p.pos) }, teamKit(S.team) ?? TEAM[S.team]?.color)} team={S.team} mine={owner}
-              line={b.name ? (d => (replaces(p) ? `${replaces(p)} · $${d.$.toFixed(1)}M` : `ROOKIE DEAL · $${d.$.toFixed(1)}M · ${d.y} YRS`))(rookieScale(sl)) : 'NAME HIM'} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
+              line={b.name ? (d => `ROOKIE DEAL · $${d.$.toFixed(1)}M · ${d.y} YRS`)(rookieScale(sl)) : 'NAME HIM'} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
           )
         })}
       </div>
