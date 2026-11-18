@@ -99,6 +99,7 @@ html.bap-reduce-motion .gd-pbp { animation: none; }
 .gd-scoring .fg-quarters { margin-bottom: 8px; }
 .gd-note { margin: 6px 0 0; font-family: var(--fk-b); font-size: 14px; color: var(--fk-mute); }
 .gd-box .sq-tstat { border-radius: 0; border-color: var(--fk-line2); }
+.gd-box > .bx-tc { --ag-line: var(--fk-line2); --ag-text: #fff; --ag-muted: var(--fk-mute); border-radius: 0; }
 /* the box score sheet (SquadSeason.jsx BoxSheet) on the page, in the kit */
 .gd-sheet.ss-overlay { position: static; inset: auto; display: block; padding: 0; background: none !important; z-index: auto; animation: none; }
 .gd-sheet .ss-sheet.sq-box { position: static; max-width: none; width: auto; max-height: none; overflow: visible; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; transform: none;
@@ -112,6 +113,9 @@ html.bap-reduce-motion .gd-pbp { animation: none; }
 .gd-sheet .sq-bt-row { font-size: 13px; }
 .gd-sheet .sq-bt-name small { font-size: 11px; }
 .gd-sheet .sq-box-h { font-size: 14px; }
+.gd-sheet .ss-sheet.sq-box, .gd-sheet-modal .ss-sheet.sq-box { --bx-r: 0px; }
+/* (a build's name in white: the team colour marks the row, a dark red never carries the name) */
+:is(.gd-sheet, .gd-sheet-modal) :is(.bx-t-row.is-mine .bx-t-name b, .bx-lead-row.is-mine .bx-lead-who b) { color: #fff; }
 
 /* the moment: the call */
 .gd-call { display: grid; gap: 10px; }

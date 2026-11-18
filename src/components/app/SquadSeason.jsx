@@ -257,6 +257,16 @@ const Teammates = memo(function Teammates({ r, sport }) {
 })
 
 // ── One game's box score ─────────────────────────────────────────────────────
+// (owner 11-18: "really hard to look at and process". The game first: the final with the score by quarter, the two
+// teams' lines side by side, the game's leaders; then the men's lines, one team at a time, in plain type: only the
+// men who did something, the builds first and marked, no blocking tables)
+// "J. Cook", "C.J. Stroud", "A. St. Brown", "M. Harrison Jr."
+export const shortName = n => { const w = String(n ?? '').trim().split(/\s+/); if (w.length < 2) return w[0] ?? ''; return `${/\./.test(w[0]) ? w[0] : `${w[0][0]}.`} ${w.slice(1).join(' ')}` }
+// the position, plain: QB, RB, WR, EDGE, LT (no depth number)
+const posTag = (p, roster) => String(roleOf(p, roster) ?? POS_LABEL[p?.pos] ?? '').replace(/\d+$/, '')
+// a team's short name, the way the broadcast says it: Bills, Commanders, Lakers
+const nickOf = (sport, short, name) => lastName(teamOf(sport, short)?.name ?? name ?? short ?? '')
+// (kept for Franchise's kicking table and any older caller)
 export function FbTable({ head, rows }) {
   if (!rows.length) return null
   return (
@@ -266,136 +276,233 @@ export function FbTable({ head, rows }) {
     </div>
   )
 }
-const FB_CELLS = {
-  qb: [['C/ATT', 'YDS', 'TD', 'INT'], g => [`${g('pc')}/${g('pa')}`, g('py'), g('ptd'), g('int')]],
-  rb: [['CAR', 'YDS', 'TD', 'REC'], g => [g('ra'), g('ry'), g('rtd') + g('rctd'), g('rc')]],
-  wr: [['REC', 'YDS', 'TD', 'TGT'], g => [g('rc'), g('ryd'), g('rctd'), g('tg')]],
-  te: [['REC', 'YDS', 'TD', 'TGT'], g => [g('rc'), g('ryd'), g('rctd'), g('tg')]],
-  dl: [['TKL', 'SCK', 'TFL', 'QBH'], g => [g('tk'), g('sck'), g('tfl'), g('qbh')]],
-  lb: [['TKL', 'SCK', 'TFL', 'INT'], g => [g('tk'), g('sck'), g('tfl'), g('dint')]],
-  db: [['TKL', 'INT', 'PBU', 'FF'], g => [g('tk'), g('dint'), g('pbu'), g('ff')]],
-  ol: [['SCK', 'PRS', 'PNK', 'PEN'], g => [g('sa'), g('prs'), g('pnk'), g('pen')]],
-}
-// (label: the heading over the real men's tables; Franchise's box score shows the other team's men with it too)
-export function FootballBox({ r, game, owner, faces = {}, label = 'TEAMMATES', all = false }) {
-  const roster = r.roster, s = game.s
-  const get = p => k => s[p.k]?.[k] ?? 0
-  const mine = roster.filter(p => p.s)
-  const real = all ? roster : roster.filter(p => !p.s)
-  const row = (p, cells) => ({ k: p.k, name: lastName(p.n), role: roleOf(p, roster), cells })
-  const pass = real.filter(p => p.pos === 'qb' && get(p)('pa'))
-  const rush = real.filter(p => get(p)('ra'))
-  const rec = real.filter(p => get(p)('tg'))
-  const line = real.filter(p => p.pos === 'ol' && get(p)('sn'))
-  const dfn = real.filter(p => ['dl', 'lb', 'db'].includes(p.pos) && (get(p)('tk') || get(p)('sck') || get(p)('dint') || get(p)('pbu')))
+
+// The final: both teams, the score by quarter when the game kept it, who won
+function LineScore({ sport, us, them, home, my, op, q, status, live, story }) {
+  // (the away team on top, the home team under it, as every scoreboard has it)
+  const rows = [{ s: us, pts: my, q: q?.[0] }, { s: them, pts: op, q: q?.[1] }]
+  if (home) rows.reverse()
+  const nq = q ? Math.max(q[0]?.length ?? 0, q[1]?.length ?? 0) : 0
+  const win = live || my === op ? null : my > op ? us : them
   return (
-    <>
-      {mine.length > 0 && (
-        <div className="sq-box-sec">
-          <span className="sq-box-h">{owner.toUpperCase()}'S BUILDS</span>
-          {mine.map(p => {
-            const [head, cells] = FB_CELLS[p.pos]
-            return (
-              <div key={p.k} className="sq-box-me">
-                <Face src={faces[p.s]} name={POS_LABEL[p.pos]} mine size={32} />
-                <span className="sq-row-txt"><b>{p.n}</b><small>{roleOf(p, roster)} · {owner}</small></span>
-                <span className="sq-box-me-cells">{cells(get(p)).map((v, i) => <span key={i}><b>{fmt(v)}</b><small>{head[i]}</small></span>)}</span>
-              </div>
-            )
-          })}
+    <div className="bx-final">
+      <div className={`bx-ls${nq ? ' has-q' : ''}`} style={{ '--nq': nq }}>
+        <div className="bx-ls-row bx-ls-head">
+          <span className={`bx-status${live ? ' is-live' : ''}`}>{status}</span>
+          {Array.from({ length: nq }, (_, i) => <span key={i}>{i < 4 ? i + 1 : 'OT'}</span>)}
+          {nq > 0 && <span>T</span>}
         </div>
-      )}
-      <div className="sq-box-sec">
-        <span className="sq-box-h">{label}</span>
-        <FbTable head={['PASSING', 'C/ATT', 'YDS', 'TD', 'INT']} rows={pass.map(p => row(p, FB_CELLS.qb[1](get(p))))} />
-        <FbTable head={['RUSHING', 'CAR', 'YDS', 'TD', 'AVG']} rows={rush.map(p => { const g = get(p); return row(p, [g('ra'), g('ry'), g('rtd'), fmt(r1(g('ra') ? g('ry') / g('ra') : 0))]) })} />
-        <FbTable head={['RECEIVING', 'REC', 'YDS', 'TD', 'TGT']} rows={rec.map(p => row(p, FB_CELLS.wr[1](get(p))))} />
-        {line.length > 0 && <FbTable head={['BLOCKING', 'SCK', 'PRS', 'PNK', 'PEN']} rows={line.map(p => row(p, FB_CELLS.ol[1](get(p))))} />}
-        <FbTable head={['DEFENSE', 'TKL', 'SCK', 'INT', 'PBU']} rows={dfn.map(p => { const g = get(p); return row(p, [g('tk'), g('sck'), g('dint'), g('pbu')]) })} />
+        {rows.map(x => (
+          <div key={x.s} className={`bx-ls-row${win === x.s ? ' is-win' : win ? ' is-lose' : ''}`}>
+            <span className="bx-ls-team"><img src={logoOf(sport, x.s)} alt="" /><b>{nickOf(sport, x.s)}</b>{win === x.s && <i className="bx-ls-w" aria-label="won" />}</span>
+            {Array.from({ length: nq }, (_, i) => <span key={i} className="bx-ls-q">{x.q?.[i] ?? 0}</span>)}
+            <span className="bx-ls-pts">{x.pts}</span>
+          </div>
+        ))}
       </div>
-    </>
-  )
-}
-function TeamStats({ sport, r, game, rows }) {
-  const oppShort = game?.opp
-  return (
-    <div className="sq-box-sec">
-      <span className="sq-box-h">TEAM</span>
-      <div className="sq-tstat">
-        <div className="sq-tstat-row sq-tstat-head"><span /><span><img src={logoOf(sport, r.team)} alt="" />{r.team}</span><span>{oppShort ? <><img src={logoOf(sport, oppShort)} alt="" />{oppShort}</> : 'OPP'}</span></div>
-        {rows.map(([k, a, b]) => <div key={k} className="sq-tstat-row"><span>{k}</span><b>{fmt(a ?? 0)}</b><b>{b == null ? '' : fmt(b)}</b></div>)}
-      </div>
+      {story && <p className="bx-story">{story}</p>}
     </div>
   )
 }
-const BK_HEAD = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG', '3PT']
-const bkCells = x => [x.mn ?? '', x.pts ?? 0, x.reb ?? 0, x.ast ?? 0, x.stl ?? 0, x.blk ?? 0, `${x.fgm ?? 0}-${x.fga ?? 0}`, `${x.tpm ?? 0}-${x.tpa ?? 0}`]
-function BucketBox({ r, game, owner, faces }) {
-  const roster = r.roster, s = game.s
-  const order = [...roster.filter(p => p.s), ...roster.filter(p => !p.s && p.spot != null), ...roster.filter(p => !p.s && p.spot == null)]
+
+// The two teams' lines, side by side; the better number of each pair stands out
+const LOWER_BETTER = /turnover|sack|penalt|interception/i
+const numOf = v => (typeof v === 'number' ? v : /^\d+:\d\d$/.test(String(v)) ? (([m, s]) => +m * 60 + +s)(String(v).split(':')) : /%$/.test(String(v)) ? parseFloat(v) : null)
+function TeamCompare({ sport, us, them, rows }) {
   return (
-    <div className="sq-box-sec">
-      <div className="sq-bt sq-bt--bk" role="table">
-        <div className="sq-bt-row sq-bt-head" role="row"><span>PLAYER</span>{BK_HEAD.map(h => <span key={h}>{h}</span>)}</div>
-        {order.map(p => {
-          const x = s[p.k] ?? {}
-          const mine = !!p.s
+    <section className="bx-sec">
+      <h3 className="bx-h">Team stats</h3>
+      <div className="bx-tc" role="table">
+        <div className="bx-tc-row bx-tc-head" role="row"><span /><span><img src={logoOf(sport, us)} alt="" />{us}</span><span><img src={logoOf(sport, them)} alt="" />{them}</span></div>
+        {rows.map(([k, a, b]) => {
+          const x = numOf(a), y = numOf(b)
+          const lead = x == null || y == null || x === y ? 0 : (LOWER_BETTER.test(k) ? x < y : x > y) ? 1 : 2
           return (
-            <div key={p.k} className={`sq-bt-row${mine ? ' is-mine' : ''}${!x.mn ? ' is-dnp' : ''}`} role="row">
-              <span className="sq-bt-name">{mine ? <Face src={faces[p.s]} name={POS_LABEL[p.pos]} mine size={20} /> : null}{mine ? owner : lastName(p.n)}<small>{roleOf(p, roster)}</small></span>
-              {x.mn ? bkCells(x).map((c, i) => <span key={i}>{c}</span>) : <span className="sq-bt-dnp">DNP</span>}
+            <div key={k} className="bx-tc-row" role="row">
+              <span className="bx-tc-k">{k}</span>
+              <span className={lead === 1 ? 'is-lead' : lead === 2 ? 'is-back' : ''}>{fmt(a ?? 0)}</span>
+              <span className={lead === 2 ? 'is-lead' : lead === 1 ? 'is-back' : ''}>{b == null ? '' : fmt(b)}</span>
             </div>
           )
         })}
-        <div className="sq-bt-row sq-bt-total" role="row"><span className="sq-bt-name">{r.team}<small>TEAM</small></span>{bkCells({ ...game.us, mn: 240 + 25 * (game.us.ot ?? 0) }).map((c, i) => <span key={i}>{c}</span>)}</div>
-        <div className="sq-bt-row sq-bt-total is-opp" role="row"><span className="sq-bt-name">{game.g.opp}<small>OPP</small></span>{bkCells({ ...game.them, mn: '' }).map((c, i) => <span key={i}>{c}</span>)}</div>
+      </div>
+    </section>
+  )
+}
+
+// The game's leaders: the best passer, runner, receiver and defender on either side
+const join = parts => parts.filter(Boolean).join(' · ')
+const FB_LEAD = [
+  { k: 'Passing', ok: x => x.pa, v: x => x.py ?? 0, line: x => join([`${x.pc ?? 0}/${x.pa}`, `${fmt(x.py ?? 0)} yds`, `${x.ptd ?? 0} TD`, x.int ? `${x.int} INT` : null]) },
+  { k: 'Rushing', ok: x => x.ra, v: x => x.ry ?? 0, line: x => join([`${x.ra} car`, `${fmt(x.ry ?? 0)} yds`, x.rtd ? `${x.rtd} TD` : null]) },
+  { k: 'Receiving', ok: x => x.rc, v: x => x.ryd ?? 0, line: x => join([`${x.rc} rec`, `${fmt(x.ryd ?? 0)} yds`, x.rctd ? `${x.rctd} TD` : null]) },
+  { k: 'Defense', ok: x => x.tk || x.sck || x.dint, v: x => (x.sck ?? 0) * 3 + (x.dint ?? 0) * 4 + (x.ff ?? 0) * 2 + (x.tk ?? 0) * 0.6 + (x.pbu ?? 0) * 0.5,
+    line: x => join([x.tk ? `${x.tk} tkl` : null, x.sck ? `${fmt(x.sck)} ${x.sck === 1 ? 'sack' : 'sacks'}` : null, x.dint ? `${x.dint} INT` : null, x.ff ? `${x.ff} FF` : null]) },
+]
+const BK_LEAD = [
+  { k: 'Points', ok: x => x.pts, v: x => x.pts ?? 0, line: x => join([`${x.pts} pts`, `${x.fgm ?? 0}-${x.fga ?? 0} FG`, x.tpm ? `${x.tpm} 3PT` : null]) },
+  { k: 'Rebounds', ok: x => x.reb, v: x => x.reb ?? 0, line: x => `${x.reb} reb` },
+  { k: 'Assists', ok: x => x.ast, v: x => x.ast ?? 0, line: x => `${x.ast} ast` },
+]
+function Leaders1({ sport, sides }) {
+  const out = []
+  for (const c of sport === 'bucket' ? BK_LEAD : FB_LEAD) {
+    let best = null
+    for (const S of sides) for (const p of S.roster) { const x = S.s[p.k]; if (x && c.ok(x) && (!best || c.v(x) > best.v)) best = { v: c.v(x), p, x, S } }
+    if (best && best.v > 0) out.push({ c, ...best })
+  }
+  if (!out.length) return null
+  return (
+    <section className="bx-sec">
+      <h3 className="bx-h">Game leaders</h3>
+      <div className="bx-lead">
+        {out.map(({ c, p, x, S }) => (
+          <div key={c.k} className={`bx-lead-row${p.s ? ' is-mine' : ''}`}>
+            <span className="bx-lead-k">{c.k}</span>
+            <img src={logoOf(sport, S.team)} alt="" />
+            <span className="bx-lead-who"><b>{p.s ? p.n : shortName(p.n)}<small>{posTag(p, S.roster)} · {S.team}</small></b><span>{c.line(x)}</span></span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// One team's men: a table a part of the game, only the men with a line in it, the builds first
+const FB_TABLES = [
+  { k: 'Passing', head: ['C/ATT', 'YDS', 'TD', 'INT'], ok: x => x.pa, cells: x => [`${x.pc ?? 0}/${x.pa}`, x.py ?? 0, x.ptd ?? 0, x.int ?? 0], v: x => x.py ?? 0 },
+  { k: 'Rushing', head: ['CAR', 'YDS', 'AVG', 'TD'], ok: x => x.ra, cells: x => [x.ra, x.ry ?? 0, fmt(r1((x.ry ?? 0) / x.ra)), x.rtd ?? 0], v: x => x.ry ?? 0 },
+  { k: 'Receiving', head: ['REC', 'YDS', 'TD', 'TGT'], ok: x => x.rc || x.ryd, cells: x => [x.rc ?? 0, x.ryd ?? 0, x.rctd ?? 0, x.tg ?? 0], v: x => x.ryd ?? 0 },
+  { k: 'Defense', head: ['TKL', 'SCK', 'INT', 'PBU'], ok: x => x.tk || x.sck || x.dint || x.pbu || x.ff, cells: x => [x.tk ?? 0, fmt(x.sck ?? 0), x.dint ?? 0, x.pbu ?? 0], v: x => (x.tk ?? 0) + (x.sck ?? 0) * 3 + (x.dint ?? 0) * 4, def: true },
+  // (a lineman's line only for a build: the player's own lineman)
+  { k: 'Blocking', head: ['SCK', 'PRS', 'PNK', 'PEN'], ok: x => x.sn || x.pnk || x.prs || x.sa, cells: x => [x.sa ?? 0, x.prs ?? 0, x.pnk ?? 0, x.pen ?? 0], v: () => 0, ol: true },
+]
+function StatTable({ title, head, rows, cap = 0 }) {
+  const [all, setAll] = useState(false)
+  if (!rows.length) return null
+  // (a long table, the defense's: the first few, the rest a tap away; the builds always show)
+  const shown = cap && !all && rows.length > cap + 1 ? rows.filter((x, i) => i < cap || x.mine) : rows
+  return (
+    <div className="bx-t" role="table" aria-label={title}>
+      <div className="bx-t-row bx-t-head" role="row"><span className="bx-t-k">{title}</span>{head.map(h => <span key={h}>{h}</span>)}</div>
+      {shown.map(x => (
+        <div key={x.k} className={`bx-t-row${x.mine ? ' is-mine' : ''}`} role="row">
+          <span className="bx-t-name"><b>{x.name}</b><small>{x.pos}</small></span>
+          {x.cells.map((c, i) => <span key={i}>{fmt(c)}</span>)}
+        </div>
+      ))}
+      {shown.length < rows.length && <button type="button" className="bx-t-more" onClick={() => { setAll(true); sfx('tap') }}>Show all {rows.length}</button>}
+    </div>
+  )
+}
+function TeamMen({ side, kick }) {
+  const { roster, s } = side
+  const tables = FB_TABLES.map(T => {
+    const men = roster.filter(p => {
+      const x = s[p.k]
+      if (!x || !T.ok(x)) return false
+      if (T.ol) return p.pos === 'ol' && !!p.s
+      if (T.def) return ['dl', 'lb', 'db'].includes(p.pos) || !!p.s
+      return true
+    })
+    // (the builds first; then the most yards, the most tackles)
+    men.sort((a, b) => (!!b.s - !!a.s) || (T.v(s[b.k]) - T.v(s[a.k])))
+    return { T, rows: men.map(p => ({ k: p.k, mine: !!p.s, name: p.s ? p.n : shortName(p.n), pos: posTag(p, roster), cells: T.cells(s[p.k]) })) }
+  }).filter(x => x.rows.length)
+  return (
+    <>
+      {tables.map(({ T, rows }) => <StatTable key={T.k} title={T.k} head={T.head} rows={rows} cap={T.def ? 6 : 0} />)}
+      {kick && <StatTable title="Kicking" head={['FG', 'XP', 'LONG']} rows={[{ k: 'k', name: shortName(kick.n), pos: 'K', mine: !!kick.mine, cells: [`${kick.line[1]}/${kick.line[0]}`, `${kick.line[3]}/${kick.line[2]}`, kick.line[4] || '—'] }]} />}
+      {!tables.length && !kick && <p className="bx-none">No player lines were kept for this team.</p>}
+    </>
+  )
+}
+
+const BK_HEAD = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG', '3PT']
+const bkCells = x => [x.mn ?? '', x.pts ?? 0, x.reb ?? 0, x.ast ?? 0, x.stl ?? 0, x.blk ?? 0, `${x.fgm ?? 0}-${x.fga ?? 0}`, `${x.tpm ?? 0}-${x.tpa ?? 0}`]
+function BucketBox({ r, game }) {
+  const roster = r.roster, s = game.s
+  // (the builds first, then the starters, then the bench; a man who didn't play isn't listed)
+  const order = [...roster.filter(p => p.s), ...roster.filter(p => !p.s && p.spot != null), ...roster.filter(p => !p.s && p.spot == null)].filter(p => s[p.k]?.mn)
+  return (
+    <div className="bx-scroll">
+      <div className="bx-t bx-t--bk" role="table" aria-label="Players">
+        <div className="bx-t-row bx-t-head" role="row"><span className="bx-t-k">Player</span>{BK_HEAD.map(h => <span key={h}>{h}</span>)}</div>
+        {order.map(p => {
+          const x = s[p.k] ?? {}
+          return (
+            <div key={p.k} className={`bx-t-row${p.s ? ' is-mine' : ''}`} role="row">
+              <span className="bx-t-name"><b>{p.s ? p.n : shortName(p.n)}</b><small>{roleOf(p, roster)}</small></span>
+              {bkCells(x).map((c, i) => <span key={i}>{c}</span>)}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
-// (portal: the sheet over the page; false renders it in place. Franchise's game day reads its box score with it too:
-// rows the team lines it shows, status the line under the score (a live game's clock), children more sections after the
-// team's lines, onClose none: no close button)
-// (all: the builds' own numbers in the team's tables too, so the rushing table has the quarterback build's runs:
-// Franchise's box score)
-export function BoxSheet({ r, sport, g, box, owner, faces = {}, onClose = null, portal = true, rows = null, status = null, children = null, className = '', all = false, label = 'TEAMMATES' }) {
+
+// The sheet. (portal: over the page; false renders it in place. Franchise's game day reads its box score with it too:
+// rows the team lines it shows, status the line under the score (a live game's clock), children more sections at the
+// end, onClose none: no close button)
+// (opp: the other team's men, { r, game } (Franchise); kick: the two kickers' lines [ours, theirs] ({ n, line }: FGA, FGM,
+// XPA, XPM, long); quarters: the points by quarter [ours, theirs]; story: the line under the final, the way the
+// broadcast sums the game up. `all` and `label` are kept for older callers: the builds are always in the tables now)
+export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = true, rows = null, status = null, children = null, className = '', opp = null, kick = null, quarters = null, story = null, live = false }) {
   useEffect(() => {
     if (!onClose) return undefined
     const k = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
   }, [onClose])
+  const [tab, setTab] = useState(0)
   const game = (g.po ? box.po : box.reg)[g.i]
   if (!game) return null
   const oppTeam = teamOf(sport, g.opp)
   const where = sport === 'bucket'
     ? (g.po ? `${g.round} · GAME ${g.gm}` : `GAME ${g.i + 1}`)
     : g.label
+  const otTxt = g.ot ? ` · ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''
+  const sides = [{ team: r.team, roster: r.roster, s: game.s }, ...(opp && sport !== 'bucket' ? [{ team: g.opp, roster: opp.r.roster, s: opp.game.s }] : [])]
+  const mineCount = sport === 'bucket' ? r.roster.filter(p => p.s && game.s[p.k]?.mn).length : r.roster.filter(p => p.s && game.s[p.k]).length
+  const teamRows = rows ?? (sport === 'bucket' ? [
+    ['Field goals', `${game.us.fgm}-${game.us.fga}`, `${game.them.fgm}-${game.them.fga}`],
+    ['Field goal %', `${pct1(game.us.fgm, game.us.fga)}%`, `${pct1(game.them.fgm, game.them.fga)}%`],
+    ['3-pointers', `${game.us.tpm}-${game.us.tpa}`, `${game.them.tpm}-${game.them.tpa}`],
+    ['Free throws', `${game.us.ftm}-${game.us.fta}`, `${game.them.ftm}-${game.them.fta}`],
+    ['Rebounds', game.us.reb, game.them.reb], ['Assists', game.us.ast, game.them.ast], ['Steals', game.us.stl, game.them.stl], ['Blocks', game.us.blk, game.them.blk], ['Turnovers', game.us.to, game.them.to],
+  ] : [
+    ['Total yards', game.us.yds, game.them.yds], ['Passing yards', game.us.py, game.them.py], ['Rushing yards', game.us.ry, game.them.ry],
+    ['Touchdowns', game.us.td, game.them.td], ['Field goals', game.us.fg ?? 0, game.them.fg ?? 0], ['Turnovers', game.us.to, game.them.to], ['Times sacked', game.us.sk, game.them.sk],
+  ])
+  const side = sides[Math.min(tab, sides.length - 1)]
   const sheet = (
     <div className={`ss-overlay sq-box-overlay ${className}`} onClick={e => e.target === e.currentTarget && onClose?.()}>
       <div className="ss-sheet sq-box" role={portal ? 'dialog' : 'region'} aria-modal={portal ? 'true' : undefined} aria-labelledby="sq-box-title">
         <div className="ss-head">
-          <span className="ag-eyebrow">{where} · {g.home ? 'VS' : 'AT'} {(oppTeam?.name ?? g.oppName ?? g.opp).toUpperCase()}</span>
+          <span className="bx-where" id="sq-box-title">{where} · {g.home ? 'vs' : 'at'} {oppTeam?.name ?? g.oppName ?? g.opp}</span>
           {onClose && <button className="ss-close" onClick={onClose} aria-label="Close"><IconClose size={15} /></button>}
         </div>
-        <div className={`sq-box-score${g.won ? ' is-w' : ' is-l'}`} id="sq-box-title">
-          <span className="sq-box-team"><img src={logoOf(sport, r.team)} alt="" /><b>{r.team}</b></span>
-          <span className="sq-box-pts"><b>{g.my}</b><i>–</i><b>{g.op}</b></span>
-          <span className="sq-box-team"><img src={logoOf(sport, g.opp)} alt="" /><b>{g.opp}</b></span>
-          <span className="sq-box-final">{status ?? <>{g.won ? 'WIN' : g.tie ? 'TIE' : 'LOSS'}{g.ot ? ` · ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''}</>}</span>
-        </div>
-        {sport === 'bucket'
-          ? <BucketBox r={r} game={{ ...game, g }} owner={owner} faces={faces} />
-          : <FootballBox r={r} game={game} owner={owner} faces={faces} all={all} label={label} />}
-        <TeamStats sport={sport} r={r} game={g} rows={rows ?? (sport === 'bucket' ? [
-          ['FG%', pct1(game.us.fgm, game.us.fga), pct1(game.them.fgm, game.them.fga)],
-          ['3PT%', pct1(game.us.tpm, game.us.tpa), pct1(game.them.tpm, game.them.tpa)],
-          ['FREE THROWS', `${game.us.ftm}-${game.us.fta}`, `${game.them.ftm}-${game.them.fta}`],
-          ['REBOUNDS', game.us.reb, game.them.reb], ['ASSISTS', game.us.ast, game.them.ast], ['STEALS', game.us.stl, game.them.stl], ['TURNOVERS', game.us.to, game.them.to],
-        ] : [
-          ['TOTAL YARDS', game.us.yds, game.them.yds], ['PASSING', game.us.py, game.them.py], ['RUSHING', game.us.ry, game.them.ry],
-          ['TOUCHDOWNS', game.us.td, game.them.td], ['FIELD GOALS', game.us.fg ?? 0, game.them.fg ?? 0], ['TURNOVERS', game.us.to, game.them.to], ['SACKED', game.us.sk, game.them.sk],
-        ])} />
+        <LineScore sport={sport} us={r.team} them={g.opp} home={g.home} my={g.my} op={g.op} q={quarters} live={live} story={story}
+          status={status ?? `${g.tie ? 'Final · tie' : 'Final'}${otTxt}`} />
+        <TeamCompare sport={sport} us={r.team} them={g.opp} rows={teamRows} />
+        <Leaders1 sport={sport} sides={sides} />
+        <section className="bx-sec">
+          <h3 className="bx-h">Player stats</h3>
+          {sides.length > 1 ? (
+            <div className="bx-seg" role="tablist" aria-label="Team">
+              {sides.map((x, i) => (
+                <button key={x.team} type="button" role="tab" aria-selected={side === x} className={side === x ? 'is-on' : ''} onClick={() => { setTab(i); sfx('tap') }}>
+                  <img src={logoOf(sport, x.team)} alt="" />{nickOf(sport, x.team)}
+                </button>
+              ))}
+            </div>
+          ) : <p className="bx-team1"><img src={logoOf(sport, r.team)} alt="" />{nickOf(sport, r.team)}</p>}
+          {side === sides[0] && mineCount > 0 && <p className="bx-key"><i aria-hidden="true" />{owner}&rsquo;s {mineCount === 1 ? 'build' : 'builds'}</p>}
+          {sport === 'bucket'
+            ? <BucketBox r={r} game={game} />
+            : <TeamMen key={side.team} side={side} kick={kick?.[side === sides[0] ? 0 : 1] ?? null} />}
+        </section>
         {children}
       </div>
     </div>
