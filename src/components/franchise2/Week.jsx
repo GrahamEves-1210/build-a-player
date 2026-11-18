@@ -251,7 +251,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
           <div className="gd-main">
             <div className="gd-left">
               {phase === 'live' && flash && <div key={flash.key} className="gd-flash" style={fkVars(flash.s)} role="status"><KLogo s={flash.s} size={26} /><b>{flash.text}</b></div>}
-              {phase === 'live' && <Field F={F} sit={sit} tl={tl} T={tt} />}
+              {phase === 'live' && <Field F={F} sit={sit} tl={tl} T={tt} a={a} h={h} />}
               {phase === 'call' && mv && <MomentCall F={F} mv={mv} owner={owner} onCall={callPlay} onSim={simIt} />}
               {phase === 'result' && last && <MomentResult last={last} onGo={() => setPhase('live')} />}
               {fin && row && <Final F={F} row={row} news={news} owner={owner} onDone={onDone} />}
@@ -275,13 +275,38 @@ export default function Gameday({ F, act, start, onDone, owner }) {
 }
 
 // ── The field: who has it, the down and distance, the spot, and the drive so far ─────────────────────────────────
-function Field({ F, sit, tl, T }) {
+// The field as the broadcast keeps it: each team defends one end zone and the field never turns with the ball. The
+// home team defends the left end in the 1st and 3rd quarters (and overtime), the teams switch ends after the 1st and
+// the 3rd; a change of possession sends the ball the other way on the same field.
+export const leftEndOf = (T, a, h) => ((T >= 3600 ? 0 : Math.floor(Math.max(0, T) / 900)) % 2 ? a : h)
+function Strip({ left, right, children }) {
+  return (
+    <div className="gd-strip">
+      <span className="gd-ez is-left" style={fkVars(left)}><b>{TEAM[left].short}</b></span>
+      <div className="gd-grass">
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(n => <i key={n} className="gd-yl" style={{ left: `${n}%` }}><em>{n > 50 ? 100 - n : n}</em></i>)}
+        {children}
+      </div>
+      <span className="gd-ez is-right" style={fkVars(right)}><b>{TEAM[right].short}</b></span>
+    </div>
+  )
+}
+function Field({ F, sit, tl, T, a, h }) {
+  const left = leftEndOf(T, a, h), right = left === a ? h : a
   if (!sit) {
     const kick = T < 1 ? 'KICKOFF' : T >= 1800 && T < 1830 ? 'SECOND HALF' : tl.dr ? 'CHANGE OF POSSESSION' : 'IN PROGRESS'
-    return <section className="gd-field is-idle"><span className="gd-idle">{kick}</span></section>
+    return (
+      <section className="gd-field is-idle">
+        <div className="gd-idle-bar"><span className="gd-idle">{kick}</span></div>
+        <Strip left={left} right={right} />
+      </section>
+    )
   }
   const { off, def, y, togo, goal, y0 } = sit
+  // (the offense's own goal line on the left when it defends the left end: it goes left to right; otherwise right to left)
+  const X = v => (off === left ? v : 100 - v)
   const pct = v => `${Math.max(0, Math.min(100, v))}%`
+  const lo = Math.min(X(y0), X(y)), hi = Math.max(X(y0), X(y))
   return (
     <section className="gd-field" aria-label={`${TEAM[off].nick} ball, ${DOWN[sit.down]} and ${goal ? 'goal' : togo} at ${spotOf(y, off, def)}`}>
       <div className="gd-poss" style={fkVars(off)}>
@@ -289,18 +314,12 @@ function Field({ F, sit, tl, T }) {
         <span><small>{TEAM[off].nick} ball</small><b>{DOWN[sit.down]} &amp; {goal ? 'GOAL' : togo}</b></span>
         <span className="gd-spot"><small>Ball on</small><b>{spotOf(y, off, def)}</b></span>
       </div>
-      {/* (the offense going left to right: its own end zone on the left) */}
-      <div className="gd-strip" style={fkVars(off)}>
-        <span className="gd-ez is-own" style={fkVars(off)}>{TEAM[off].short}</span>
-        <div className="gd-grass">
-          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(n => <i key={n} className="gd-yl" style={{ left: `${n}%` }}><em>{n > 50 ? 100 - n : n}</em></i>)}
-          <span className="gd-drv" style={{ left: pct(Math.min(y0, y)), width: pct(Math.abs(y - y0)) }} />
-          <span className="gd-los" style={{ left: pct(y) }} />
-          {!goal && y + togo < 100 && <span className="gd-ltg" style={{ left: pct(y + togo) }} />}
-          <span className="gd-ball" style={{ left: pct(y) }} />
-        </div>
-        <span className="gd-ez" style={fkVars(def)}>{TEAM[def].short}</span>
-      </div>
+      <Strip left={left} right={right}>
+        <span className="gd-drv" style={{ left: pct(lo), width: pct(hi - lo) }} />
+        <span className="gd-los" style={{ left: pct(X(y)) }} />
+        {!goal && y + togo < 100 && <span className="gd-ltg" style={{ left: pct(X(y + togo)) }} />}
+        <span className="gd-ball" style={{ left: pct(X(y)) }} />
+      </Strip>
       <div className="gd-drive"><span><b>{sit.plays}</b> {sit.plays === 1 ? 'play' : 'plays'}</span><span><b>{y - y0}</b> yds</span><span><b>{mmss(sit.el)}</b> drive</span></div>
     </section>
   )
