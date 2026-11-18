@@ -72,7 +72,7 @@ export const FACE_MOUTH = [['neutral', 'NEUTRAL'], ['full', 'FULL'], ['thin', 'T
 export const FACE_HAIR = [
   ['shaved', 'BALD'], ['buzz', 'BUZZ'], ['crew', 'CREW CUT'], ['fade', 'FADE'], ['waves', 'WAVES'], ['sidepart', 'SIDE PART'],
   ['textured', 'TEXTURED'], ['curly', 'CURLS'], ['twists', 'TWISTS'], ['locs', 'LOCS'], ['cornrows', 'BRAIDS'], ['afro', 'AFRO'],
-  ['hightop', 'HIGH TOP'], ['frohawk', 'FROHAWK'], ['flow', 'FLOW'], ['long', 'LONG'], ['bun', 'BUN'], ['mullet', 'MULLET'],
+  ['hightop', 'HIGH TOP'], ['frohawk', 'FROHAWK'], ['flow', 'FLOW'], ['bun', 'BUN'], ['mullet', 'MULLET'],
   ['receding', 'RECEDING'], ['balding', 'THINNING'], ['locsup', 'LOCS UP'], ['starter', 'STARTER LOCS'],
 ]
 // a player is 21 to 30 (owner 11-16: "no gray hair please these are supposed to be 21yos"): his creator never offers
@@ -124,7 +124,7 @@ const HAIR = {
   b: [['fade', 28], ['waves', 12], ['buzz', 12], ['locs', 6], ['locsup', 3], ['starter', 3], ['twists', 8], ['cornrows', 5], ['hightop', 2], ['shaved', 9], ['afro', 3], ['curly', 4]],
   w: [['crew', 18], ['sidepart', 8], ['textured', 26], ['flow', 12], ['buzz', 8], ['curly', 12], ['shaved', 1], ['mullet', 4], ['fade', 11]],   // (young men's cuts: a textured crop, curls, a fade, the flow; a shaved head read older; no long hair: it read as a costume)
   m: [['fade', 26], ['curly', 24], ['buzz', 12], ['twists', 8], ['locs', 4], ['starter', 4], ['afro', 4], ['shaved', 6], ['textured', 8], ['waves', 4]],
-  p: [['curly', 20], ['long', 14], ['buzz', 18], ['fade', 20], ['bun', 10], ['shaved', 10], ['mullet', 4]],
+  p: [['curly', 26], ['buzz', 18], ['fade', 20], ['bun', 18], ['shaved', 10], ['mullet', 4]],   // (no LONG hair: owner 11-18; an older face with it still draws)
   l: [['fade', 32], ['crew', 20], ['textured', 16], ['buzz', 14], ['curly', 8], ['shaved', 6], ['sidepart', 4]],
 }
 const HC = {
