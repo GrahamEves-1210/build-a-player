@@ -185,7 +185,7 @@ html.is-app .fh.ag-screen { padding-bottom: calc(var(--app-bottom) - 12px); }
 /* the champion */
 .fh-champ { box-shadow: inset 0 3px 0 var(--fk-gold); }
 .fh-champ-team { position: relative; display: grid; }
-.fh-champ-team .fk-stamp { position: static; justify-self: end; margin: 8px 0 0; font-size: 34px; transform: none; animation-name: fk-slam-flat; }   /* (straight and under the team, never over its lines: owner 11-18) */
+.fh-champ-team .fk-stamp { position: absolute; right: 10px; bottom: -14px; font-size: 34px; transform: none; animation-name: fk-slam-flat; }   /* (straight, owner 11-18) */
 @keyframes fk-slam-flat { 0% { opacity: 0; transform: scale(2.4); } 70% { opacity: 1; transform: scale(.95); } 85% { transform: scale(1.03); } 100% { transform: none; } }
 
 /* ═══ GAME DAY (Week.jsx) ═══════════════════════════════════════════════════ */
