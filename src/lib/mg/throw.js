@@ -170,6 +170,31 @@ function moveAt(p, r) {
 }
 
 // ── An offense and a defense, on the ball ───────────────────────────────────────────────────────
+// shotgun, 11 personnel: five on the line, a tight end and the X make it seven; slot, Z, back, QB off it. Each man:
+// [x, y, his route's points]. IN: the interior moved with the ball's hash
+function lineUp(call, Mx, IN) {
+  const route = (name, x, y) => {
+    if (!name) return null
+    const inward = x < 180 ? 1 : -1
+    return byTheSideline(SHAPES[name].map(([dx, dy]) => [Mx(x + dx * inward), y + dy]))
+  }
+  const teX = IN(180 + 72), rbX = IN(180 - 32), BX = IN(180)
+  return {
+    X: [Mx(30), -9, route(call.X, 30, -9)], H: [Mx(98), -20, route(call.H, 98, -20)], Z: [Mx(330), -20, route(call.Z, 330, -20)],
+    TE: [Mx(teX), -9, route(call.TE, teX, -9)], RB: [Mx(rbX), -42, route(call.RB, rbX, -42)], QB: [Mx(BX), -42],
+    OL: [-46, -23, 0, 23, 46].map(d => [Mx(BX + d), -9]),
+  }
+}
+// Franchise's play art (franchise2/moments.js playArt): a called fr-pass play lined up exactly as makePlay lines it up
+// for this seed (its first draws: the flip, the call's draw, the hash). Field units (x across 0-360, y up the field
+// from the line, YD a yard): { men: { X, H, Z, TE, RB, QB, OL }, each [x, y, route points] }
+export function passLook(seed, called) {
+  const r = rngOf(seed)
+  const mirror = r() < 0.5, Mx = x => (mirror ? 360 - x : x)
+  const c0 = Math.floor(r() * LONG_CALLS.length), call = LONG_CALLS[called ?? c0] ?? LONG_CALLS[c0]
+  const BX = [HASH_L, 180, HASH_R][Math.floor(r() * 3)]
+  return { men: lineUp(call, Mx, x => x - 180 + BX), call }
+}
 function mkTeams(r, calls, Mx, cast, bomb = false, called = null) {
   // (pick: a called play, Franchise's moments; the draw is made either way, so the rest of the snap plays the same)
   const c0 = Math.floor(r() * calls.length), call = calls[called ?? c0] ?? calls[c0]
@@ -187,22 +212,15 @@ function mkTeams(r, calls, Mx, cast, bomb = false, called = null) {
     const path = pts ? mkPath(pts) : null
     return { id, x, y, x0: x, y0: y, path, v, s: 0, scale, face: 0, spd: 0, elig: !!pts, sStop: 0, side: 'o' }
   }
-  const route = (name, x, y) => {
-    if (!name) return null
-    const inward = x < 180 ? 1 : -1
-    return byTheSideline(SHAPES[name].map(([dx, dy]) => [Mx(x + dx * inward), y + dy]))
-  }
-  // shotgun, 11 personnel: five on the line, a tight end and the X make it seven; slot, Z, back, QB off it
-  const X = mk('X', Mx(30), -9, route(call.X, 30, -9), pacey('X', WR_V))
-  const H = mk('H', Mx(98), -20, route(call.H, 98, -20), pacey('H', WR_V))
-  const Z = mk('Z', Mx(330), -20, route(call.Z, 330, -20), pacey('Z', WR_V))
-  const teX = IN(180 + 72)
-  const TE = mk('TE', Mx(teX), -9, route(call.TE, teX, -9), pacey('TE', TE_V), 0.82)
-  const rbX = IN(180 - 32)
-  const RB = mk('RB', Mx(rbX), -42, route(call.RB, rbX, -42), pacey('RB', RB_V))
-  const QB = mk('QB', Mx(BX), -42, null, 0, 0.82)
+  const P = lineUp(call, Mx, IN)
+  const X = mk('X', ...P.X, pacey('X', WR_V))
+  const H = mk('H', ...P.H, pacey('H', WR_V))
+  const Z = mk('Z', ...P.Z, pacey('Z', WR_V))
+  const TE = mk('TE', ...P.TE, pacey('TE', TE_V), 0.82)
+  const RB = mk('RB', ...P.RB, pacey('RB', RB_V))
+  const QB = mk('QB', ...P.QB, null, 0, 0.82)
   // (left to right on the screen, whichever way the play's flipped)
-  const OL = [-46, -23, 0, 23, 46].map((d, i) => { const o = mk(`OL${i}`, Mx(BX + d), -9, null, 0, 0.84); o.look = xiOf(cast, 'us', 'ol', flipped ? 4 - i : i) ?? manOf(cast, 'us', 'ol', flipped ? 4 - i : i); o.lo = (flipped ? 4 - i : i) % 2; return o })
+  const OL = P.OL.map(([x, y], i) => { const o = mk(`OL${i}`, x, y, null, 0, 0.84); o.look = xiOf(cast, 'us', 'ol', flipped ? 4 - i : i) ?? manOf(cast, 'us', 'ol', flipped ? 4 - i : i); o.lo = (flipped ? 4 - i : i) % 2; return o })
   for (const p of [X, H, Z, TE, RB, QB]) p.look = lookO(p.id)
   const off = [...OL, TE, X, H, Z, RB, QB]
   const backs = [X, H, Z, TE, RB].filter(p => p.path)

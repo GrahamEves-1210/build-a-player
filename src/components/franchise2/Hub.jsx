@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
   TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
-  lightPlay, lightAfter, lightSimAll, openStretch, stretchOk,
+  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
@@ -25,7 +25,7 @@ import LeagueTab from './League'
 import HistoryTab from './History'
 import Offseason from './Offseason'
 import DraftBoard from './Draft'
-import { StretchCard, StretchRecap } from './Light'
+import { StretchCard, StretchRecap, RoundResult } from './Light'
 import { faceFor } from './dparts'
 import { coachPhoto } from './coachFace'
 import { memoF, peekF, idleRun, standingsOf, recordsOf, useLeagueWarm, warmKey, useStaged } from './perf'
@@ -66,7 +66,8 @@ function useTeamFacesWarm(F) {
 // on a wide screen or under it on a phone.
 export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild }) {
   const [tab, setTab] = useState('season')
-  const [live, setLive] = useState(() => (F.pend ? { pend: true } : null))   // a game on screen
+  // a game on screen (LIGHT never goes into one: a save waiting on a moment is simmed on, lightSettle)
+  const [live, setLive] = useState(() => (F.pend && F.pace !== 'light' ? { pend: true } : null))
   const [trophy, setTrophy] = useState(false)
   const [board, setBoard] = useState(false)
   const scroll = useRef(null)
@@ -76,10 +77,16 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   useTeamFacesWarm(F)
 
   // PLAY WEEK: the week's games; the player's own on screen (the scorebug, a moment if it comes, the final)
-  // (LIGHT, the regular season: the stretch, its big game on screen: light.js lightPlay)
+  // (LIGHT: the stretch simmed to its recap, a playoff round simmed to its result: light.js; never a game on screen)
   const play = () => {
-    const light = F.pace === 'light' && F.phase === 'season'
-    const out = act(X => (light ? lightPlay(X, momentOpts(X)) : playWeek(X, momentOpts(X))))
+    if (F.pace === 'light') {
+      const out = act(X => (X.phase === 'playoffs' ? lightRound(X) : lightPlay(X)))
+      sfx(F.phase === 'playoffs' ? 'flip' : 'whistle'); haptic('medium')
+      if (out?.champ && out.champ === F.team) setTrophy(true)
+      try { scroll.current?.scrollTo(0, 0) } catch { /* (no scroll box) */ }
+      return
+    }
+    const out = act(X => playWeek(X, momentOpts(X)))
     sfx('whistle'); haptic('medium')
     if (out?.pending) setLive({ pend: true })
     else if (out?.row) setLive({ row: out.row, news: out.news })
@@ -88,16 +95,16 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   const simToEnd = () => { act(X => (X.pace === 'light' ? lightSimAll(X) : simWeeks(X, {}))); sfx('flip') }
   const after = () => {
     setLive(null)
-    if (F.pace === 'light' && F.lt?.ph === 'big') act(X => lightAfter(X))
     if (F.phase === 'done' && F.po?.champ === F.team) setTrophy(true)
   }
   const phaseText = F.phase === 'season' ? `Week ${F.wk + 1}` : F.phase === 'post' ? 'Regular season over' : F.phase === 'playoffs' ? 'Playoffs' : off ? 'Offseason' : 'Season over'
   const toTab = id => { if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
-  // LIGHT: a season card always has its stretch; a big game over when the save was read back goes on to its recap
+  // LIGHT: a season card always has its stretch; a save from before LIGHT stopped going into games (a moment
+  // waiting, a stretch on its big game) is simmed on to where it would be now
   useEffect(() => {
     if (F.pace !== 'light' || live) return
-    if (F.phase === 'season' && !stretchOk(F)) act(X => { openStretch(X) })
-    else if (F.lt?.ph === 'big' && !F.pend) act(X => { lightAfter(X) })
+    if (F.pend || F.lt?.ph === 'big') act(X => { lightSettle(X) })
+    else if (F.phase === 'season' && !stretchOk(F)) act(X => { openStretch(X) })
   }, [F, live, F.phase, F.wk, F.lt?.ph]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -154,6 +161,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
         {ph === 'post' && !recap && <SeasonOver F={F} act={act} r={r} />}
         {ph === 'playoffs' && <PlayoffCard F={F} act={act} play={play} owner={owner} />}
         {ph === 'done' && <Champions F={F} act={act} onTrophy={onTrophy} />}
+        {ph === 'done' && light && <RoundResult F={F} owner={owner} />}
         {reg && <Glance F={F} r={r} />}
         {ph === 'season' && !F.ev && !light && <MatchupMore F={F} owner={owner} />}
         {(ph === 'playoffs' || ph === 'done') && <PoBracket F={F} />}
@@ -166,7 +174,8 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
             {reg && !recap && <Ladder F={F} />}
             {reg && <Strip F={F} />}
             <ScoutRow F={F} onBoard={onBoard} />
-            <GamesSwitch F={F} act={act} />
+            {/* (LIGHT never goes into a game: no key moments to set) */}
+            {!light && <GamesSwitch F={F} act={act} />}
           </>
         )}
       </aside>
@@ -406,12 +415,16 @@ function SeasonOver({ F, act, r }) {
 const seedOf = (F, s) => F.po.seeds[CONF_OF[s]].indexOf(s) + 1
 function PlayoffCard({ F, act, play, owner }) {
   const po = F.po, alive = userAlive(F), bye = userBye(F)
+  // (LIGHT: the round is simmed, never played on screen; the last round's result over the next one: Light.jsx)
+  const light = F.pace === 'light'
+  const verb = light ? 'Sim' : 'Play'
   const g = po.rounds[po.rd].find(x => x.h === F.team || x.a === F.team)
   const sb = po.rd === 3
   const R = recordsOf(F)
   const l = alive && g ? lineOf(F, g.a, g.h, sb) : null
   return (
     <>
+      {light && <RoundResult F={F} owner={owner} />}
       <section className={`fh-next${sb ? ' is-sb' : ''}`}>
         <div className="fh-next-h"><b>{roundName(F, po.rd)}</b><span>{alive && g ? (sb ? 'Neutral site' : `at ${TEAM[g.h].name}`) : bye ? 'First-round bye' : FINISH_TEXT[finishOf(F, F.team)]}</span></div>
         {alive && g && (
@@ -421,7 +434,7 @@ function PlayoffCard({ F, act, play, owner }) {
           </>
         )}
         <div className="fh-go">
-          {alive && g && <Go onClick={play}>Play the {sb ? 'Super Bowl' : po.rd === 2 ? `${CONF_OF[F.team]} Championship` : `${ROUNDS[po.rd].toLowerCase()} round`}</Go>}
+          {alive && g && <Go onClick={play}>{verb} the {sb ? 'Super Bowl' : po.rd === 2 ? `${CONF_OF[F.team]} Championship` : `${ROUNDS[po.rd].toLowerCase()} round`}</Go>}
           {alive && bye && <Go onClick={play}>Sim the wild card round</Go>}
           {!alive && <Go onClick={() => { act(X => simPlayoffs(X)); sfx('flip') }}>Sim the rest of the playoffs</Go>}
         </div>

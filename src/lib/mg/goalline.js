@@ -69,6 +69,30 @@ function roleOf(pos, cast, r) {
   return ['qb', 'wr', 'te', 'rb'][Math.floor(r() * 4)]
 }
 
+// the four men's routes and their sides (pickT draws them, in this order)
+// (the back's routes run on his own side: never flipped twice)
+function playOf(role, pickT) {
+  return {
+    X: [role === 'qb' || role === 'wr' ? pickT(ROUTES.wr) : clearOut(46), -1],
+    Z: [role === 'qb' ? pickT(ROUTES.wr) : clearOut(46), 1],
+    TE: [role === 'qb' || role === 'te' ? pickT(ROUTES.te) : clearOut(118), role === 'wr' ? 1 : -1],
+    RB: [role === 'qb' || role === 'rb' ? pickT(ROUTES.rb) : STAY_IN, -1],
+  }
+}
+// Franchise's play art (franchise2/moments.js playArt): the goal-line pass as make() lines it up for this seed with
+// the quarterback played (its first draws: the flip, the snap, the four routes). Each route [start, break, on] in
+// (x across 0-360, yards from the line), already flipped; the quarterback, the line and the end zone (GOAL yards)
+export function fadeLook(seed) {
+  const r = rngOf(seed)
+  const flip = r() < 0.5, Mx = x => (flip ? 360 - x : x)
+  r()
+  const PL = playOf('qb', list => list[Math.floor(r() * list.length)])
+  const men = Object.fromEntries(Object.entries(PL).map(([id, [rt, side]]) => {
+    const X = x => Mx(side > 0 ? 360 - x : x)
+    return [id, { name: rt.name, pts: [[X(rt.a[0]), rt.a[1]], [X(rt.b[0]), rt.b[1]], [X(rt.c[0]), rt.c[1]]] }]
+  }))
+  return { men, qb: [Mx(180), QB_Y], ol: [-2, -1, 0, 1, 2].map(i => [Mx(180 + i * 30), -0.4]), goal: GOAL, xu: XU }
+}
 export function make({ v, arm = v, seed, game, pos = null, cast = null }) {
   const r = rngOf(seed)
   const look = Math.floor(rngOf(`${seed}|look`)() * 1e6)
@@ -86,11 +110,11 @@ export function make({ v, arm = v, seed, game, pos = null, cast = null }) {
     return { id, group, i, name: route.name, ax, ay, bx, by, cx: X(route.c[0]), cy: route.c[1], breakAt, cutAt: null, cutX: 0, cutY: 0, x: ax, y: ay, v: OUT_V * K * pace(group, i), run: RUN_V * K * pace(group, i), carry: false, track: false }
   }
   const pickT = list => list[Math.floor(r() * list.length)]
-  // (the back's routes run on his own side: never flipped twice)
-  const X = mkRec('X', 'wr', 0, role === 'qb' || role === 'wr' ? pickT(ROUTES.wr) : clearOut(46), -1)
-  const Z = mkRec('Z', 'wr', 1, role === 'qb' ? pickT(ROUTES.wr) : clearOut(46), 1)
-  const TE = mkRec('TE', 'te', 0, role === 'qb' || role === 'te' ? pickT(ROUTES.te) : clearOut(118), role === 'wr' ? 1 : -1)
-  const RB = mkRec('RB', 'rb', 0, role === 'qb' || role === 'rb' ? pickT(ROUTES.rb) : STAY_IN, -1)
+  const PL = playOf(role, pickT)
+  const X = mkRec('X', 'wr', 0, ...PL.X)
+  const Z = mkRec('Z', 'wr', 1, ...PL.Z)
+  const TE = mkRec('TE', 'te', 0, ...PL.TE)
+  const RB = mkRec('RB', 'rb', 0, ...PL.RB)
   const recs = [X, Z, TE, RB]
   const me = role === 'wr' ? X : role === 'te' ? TE : role === 'rb' ? RB : null
   if (me) me.v = ROUTE_V * K * pace(me.group, me.i)

@@ -7,12 +7,13 @@
 //
 // THE SEASON in three stretches: Weeks 1-6, 7-12 (the trade deadline falls after Week 9, so a trade call can still
 // come at its start) and 13-18. Each stretch opens with at most one front-office call (FULL's every-three-weeks
-// cadence is off: F.nextEv past the season), its six weeks and its big game (bigGame). Playing it: the weeks before
-// the big game simmed (no moments, the path simWeeks takes), the big game on Gameday with its key moments, the weeks
-// after it simmed, then the stretch's recap. The scouts work on their own at each stretch's end (draft.js autoScout).
-//   F.lt in the season: { y, k (0-2), w0, w1 (its weeks, [w0, w1)), big (the big game's week), ph: 'card' (the
-//   stretch to play) | 'big' (the big game on Gameday) | 'recap' | 'done' (the regular season is over),
-//   hs (the men hurt before the week being played: [[id, weeks]]), inj (the men hurt in the stretch) }
+// cadence is off: F.nextEv past the season) and its six weeks. LIGHT never goes into a game (owner, 2026-11-17: "on
+// light mode you dont even go into the games you just sim them 6 weeks at a time"): the six weeks are simmed (no
+// moments, the path simWeeks takes), then the stretch's recap with every result and its box score. The playoffs sim a
+// round a tap (lightRound). The scouts work on their own at each stretch's end (draft.js autoScout).
+//   F.lt in the season: { y, k (0-2), w0, w1 (its weeks, [w0, w1)), ph: 'card' (the stretch to play) | 'recap' |
+//   'done' (the regular season is over), hs (the men hurt before the week being played: [[id, weeks]]), inj (the men
+//   hurt in the stretch) } (a save from before 2026-11-17 can still hold big and ph 'big': lightSettle)
 //
 // THE OFFSEASON in three steps (FULL has five):
 //   1 STAFF & AWARDS  the awards in one list; keep or fire the two coordinators (lightStaff: a fired or departed man's
@@ -25,9 +26,8 @@
 //                     the player picks in rounds 1-3, the rest is simmed (draft.js simRest); no draft trades
 //   F.lt in the offseason: { y, ph: 'roster', rs: { id: the call }, off: { id: { $, y, b } }, far: the market's
 //   answers to his offers, done }
-import { strength } from './league'
-import { playWeek, makeEvent, intoPlayoffs, simPlayoffs, REG_WEEKS } from './season'
-import { records, standings } from './standings'
+import { playWeek, makeEvent, intoPlayoffs, simPlayoffs, userAlive, finishMoment, REG_WEEKS } from './season'
+import { standings } from './standings'
 import { DIV_OF, CONF_OF } from './schedule'
 import { rngOf, roll, r1 } from './rng'
 import { autoScout, slateOf, attend, runCombine, interview, visitsLeft, consensus, rankMap, needsOf, openDraft, closeDraft, scoutsLeft, draftOrder } from './draft'
@@ -81,33 +81,12 @@ function simWeek(F) {
   return r
 }
 
-// THE BIG GAME: the stretch's game with the most at stake. A division game first (the title is won and lost in
-// them), then the conference; the better the opponent and his record so far, the bigger; a later week a little bigger
-// than an early one. Seeded, so the same stretch always picks the same game.
-export function bigGame(F, w0, w1) {
-  const R = rngOf(`${F.seed}-${F.year}-lt-big-${w0}`)
-  const rec = records(F)
-  const ovr = {}
-  const ovrOf = s => (ovr[s] ??= strength(F, s).ovr)
-  let best = null
-  for (let w = w0; w < w1; w++) {
-    const g = F.sched.weeks[w]?.find(x => x.h === F.team || x.a === F.team)
-    if (!g || g.hs != null) continue
-    const opp = g.h === F.team ? g.a : g.h
-    const r = rec[opp], gp = r.w + r.l + r.t
-    const wp = gp ? (r.w + r.t / 2) / gp : 0.5
-    const v = (DIV_OF[opp] === DIV_OF[F.team] ? 3 : CONF_OF[opp] === CONF_OF[F.team] ? 1 : 0)
-      + (ovrOf(opp) - ovrOf(F.team)) * 0.25 + (wp - 0.5) * (gp >= 3 ? 3 : 1) + (w - w0) * 0.25 + R.u() * 0.4
-    if (!best || v > best.v) best = { w, v }
-  }
-  return best?.w ?? null
-}
-// A stretch opens: its weeks, its big game, its front-office call (at most one, made now and answered on the season
-// card before a snap is played)
+// A stretch opens: its weeks, its front-office call (at most one, made now and answered on the season card before a
+// snap is played)
 export function openStretch(F, k = stretchOf(F.wk ?? 0)) {
   const [w0, w1] = STRETCH[k]
   F.nextEv = NO_EVENTS
-  F.lt = { y: F.year, k, w0, w1, big: bigGame(F, Math.max(w0, F.wk ?? 0), w1), ph: 'card', hs: hurtNow(F), inj: [] }
+  F.lt = { y: F.year, k, w0, w1, ph: 'card', hs: hurtNow(F), inj: [] }
   if (!F.ev && F.phase === 'season' && F.wk < REG_WEEKS) {
     const ev = makeEvent(F, rngOf(`${F.seed}-${F.year}-lt-ev-${k}`))
     if (ev) F.ev = ev
@@ -116,30 +95,39 @@ export function openStretch(F, k = stretchOf(F.wk ?? 0)) {
 }
 // the stretch the season card shows: open, the right year (a save that lost its stretch gets the one it's in)
 export const stretchOk = F => !!F.lt && F.lt.y === F.year && F.lt.k != null && F.phase === 'season' && F.wk >= F.lt.w0 && (F.wk < F.lt.w1 || F.lt.ph !== 'card')
-// PLAY THE STRETCH: the weeks before the big game simmed, then the big game (the hub puts it on Gameday: a moment
-// waiting is { pending: true }, a game played through is { row }). No big game (a stretch of byes): straight to the
-// recap.
-export function lightPlay(F, opts = {}) {
+// PLAY THE STRETCH: its weeks simmed, every game with its box score, then the recap
+export function lightPlay(F) {
   const L = F.lt
   if (!L || L.ph !== 'card' || F.phase !== 'season') return null
   if (F.ev) return { event: true }
-  if (F.pend) return { pending: true }
-  const big = L.big != null && L.big >= F.wk ? L.big : null
-  for (let g = 0; g < REG_WEEKS && F.phase === 'season' && F.wk < (big ?? L.w1); g++) simWeek(F)
-  if (big == null || F.wk !== big || F.phase !== 'season') { finishStretch(F); return { recap: true } }
-  L.ph = 'big'
-  return playWeek(F, opts)
-}
-// The big game is over (Gameday's CONTINUE, or a reload after its final): its injuries noted, the rest of the stretch
-// simmed, the scouts' days spent, the recap.
-export function lightAfter(F) {
-  const L = F.lt
-  if (!L || L.ph !== 'big' || F.pend) return false
-  if (F.phase === 'season' && F.wk <= L.big) return false   // (the big game isn't played yet)
-  noteHurt(F, L.hs)
-  L.hs = hurtNow(F)
+  if (F.pend) lightSettle(F)
   finishStretch(F)
-  return true
+  return { recap: true }
+}
+// A save from before LIGHT stopped going into games: a game waiting on its moment is simmed to its final (the sim
+// plays the snap, as with the moments off), and a stretch that was on its big game goes on to its recap.
+export function lightSettle(F) {
+  if (!isLight(F)) return false
+  let did = false
+  for (let g = 0; g < 40 && F.pend; g++) { finishMoment(F, null); did = true }
+  const L = F.lt
+  if (L?.ph === 'big' && F.phase !== 'off') {
+    noteHurt(F, L.hs)
+    L.hs = hurtNow(F)
+    finishStretch(F)
+    did = true
+  }
+  if (L && 'big' in L) delete L.big
+  return did
+}
+// THE PLAYOFFS, a round a tap: the round simmed, the player's game with its box score (the hub shows it). A team out
+// of it sims the rest to the champion.
+//   { row, news, champ } (row null on the bye) | { out: true }
+export function lightRound(F) {
+  if (F.phase !== 'playoffs') return null
+  if (F.pend) lightSettle(F)
+  if (!userAlive(F)) { simPlayoffs(F); return { out: true, champ: F.po?.champ ?? null } }
+  return playWeek(F, { moments: false })
 }
 function finishStretch(F) {
   const L = F.lt

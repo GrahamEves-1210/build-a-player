@@ -1,6 +1,7 @@
 // Franchise LIGHT, headless (owner, 2026-11-17): LIGHT seasons played the way its screens play them (light.js), and
 // the same franchise run FULL beside it.
 //   bash scripts/franchise2/run.sh scripts/franchise2/light-check.mjs [seasons=3] [team=DEN]
+// (2026-11-17: LIGHT never goes into a game: the stretches and the playoff rounds are simmed, none is left on screen)
 // Checks: every week of every season played (17 games a team, each stretch's games in its recap); no front-office
 // call mid-stretch, at most one a stretch; the stats, awards, records, contracts and the cap as sane as FULL's (the
 // league leaders' ranges, the awards and All-Pros there, the franchise records, every man under contract at a new
@@ -73,17 +74,11 @@ function playLight({ swap = false, log = false, exactOnly = false }) {
       F = stop(F, swap, `${yr} stretch ${F.lt.k} card`, exactOnly)
       if (y === 1 && F.lt.k === 1) { FR.lightSimAll(F); break }
       if (F.ev) { S0.evs++; out.evs++; FR.chooseEvent(F, H() < 0.5 ? 0 : 1) }
-      const { k, w0, w1, big } = F.lt
-      if (big == null) bad(`${yr} stretch ${k}: no big game`)
-      const r = FR.lightPlay(F, { moments: true })
+      const { k, w0, w1 } = F.lt
+      // (LIGHT never goes into a game: the stretch is simmed to its recap in one call, no moment, no Gameday)
+      const r = FR.lightPlay(F)
       if (!r) { bad(`${yr} stretch ${k}: lightPlay did nothing`); break }
-      if (F.lt.ph === 'big') {
-        if (F.wk !== big + (r.pending ? 0 : 1)) bad(`${yr} stretch ${k}: the big game is week ${big + 1}, the season is on week ${F.wk + 1}`)
-        if (r.pending) { out.bigLive++; F = stop(F, swap, `${yr} big game moment`, exactOnly); while (F.pend) { out.moments++; FR.finishMoment(F, null) } }
-        if (F.ev) { out.midEv++; bad(`${yr} stretch ${k}: a front-office call mid-stretch`) }
-        F = stop(F, swap, `${yr} big game final`, exactOnly)
-        if (!FR.lightAfter(F)) bad(`${yr} stretch ${k}: lightAfter did nothing`)
-      }
+      if (r.pending || r.row || F.pend) { out.bigLive++; bad(`${yr} stretch ${k}: a game left on screen`) }
       if (F.lt.ph !== 'recap') { bad(`${yr} stretch ${k}: no recap (${F.lt.ph})`); break }
       if (F.ev) { out.midEv++; bad(`${yr} stretch ${k}: a front-office call left at the recap`) }
       if (Math.min(F.wk, 18) !== w1) bad(`${yr} stretch ${k}: ended on week ${F.wk}, not ${w1}`)
@@ -92,7 +87,7 @@ function playLight({ swap = false, log = false, exactOnly = false }) {
       if (X.rows.length !== games || X.w + X.l + X.t !== games) bad(`${yr} stretch ${k}: ${X.rows.length} results for ${games} games`)
       if (X.rows.some(row => !row.bx)) bad(`${yr} stretch ${k}: a game without its box score`)
       if (X.builds.some(b => b.gp && !b.line)) bad(`${yr} stretch ${k}: a build's line missing`)
-      if (log) console.log(`   ${yr} ${FR.stretchText(k)}: ${X.w}-${X.l}${X.t ? `-${X.t}` : ''} (big game wk ${big + 1}${r.pending ? ', moments' : ''}) · ${X.hurt.length} hurt · ${X.wire.length} wire · ${X.place} in the ${FR.DIV_OF[team]} · builds ${X.builds.map(b => b.line).join(' / ')}`)
+      if (log) console.log(`   ${yr} ${FR.stretchText(k)}: ${X.w}-${X.l}${X.t ? `-${X.t}` : ''} · ${X.hurt.length} hurt · ${X.wire.length} wire · ${X.place} in the ${FR.DIV_OF[team]} · builds ${X.builds.map(b => b.line).join(' / ')}`)
       out.stretches++
       F = stop(F, swap, `${yr} stretch ${k} recap`, exactOnly)
       FR.lightNext(F)
@@ -103,11 +98,14 @@ function playLight({ swap = false, log = false, exactOnly = false }) {
     const recs = FR.records(F)
     for (const s of FR.SHORTS) { const x = recs[s]; if (x.w + x.l + x.t !== 17) bad(`${yr} ${s} played ${x.w + x.l + x.t}`) }
     if (F.log.filter(row => row.wk != null).length !== 17) bad(`${yr}: ${F.log.length} rows in the log`)
-    // ── the playoffs, as FULL
+    // ── the playoffs, a round a tap (lightRound: simmed, the player's game with its box score)
     for (let g = 0; g < 6 && F.phase === 'playoffs'; g++) {
       F = stop(F, swap, `${yr} playoffs`, exactOnly)
-      const r = FR.playWeek(F, { moments: true })
-      if (r.pending) while (F.pend) { out.moments++; FR.finishMoment(F, null) }
+      const rd = F.po.rd, alive = FR.userAlive(F)
+      const r = FR.lightRound(F)
+      if (!r || r.pending || F.pend) { out.bigLive++; bad(`${yr} playoffs: round ${rd} left a game on screen`) }
+      if (alive && !r?.out && !FR.userBye(F) && r?.row && !r.row.bx) bad(`${yr} playoffs: round ${rd} without its box score`)
+      out.rounds = (out.rounds ?? 0) + 1
     }
     if (F.phase !== 'done') bad(`${yr}: the playoffs ended on ${F.phase}`)
     const lead = leaders(F)
@@ -231,7 +229,7 @@ function playFull() {
 const t0 = performance.now()
 const A = playLight({ log: true })
 const t1 = performance.now()
-console.log(`LIGHT: ${N} seasons in ${((t1 - t0) / 1000).toFixed(1)} s · ${A.out.stretches} stretches · ${A.out.evs} front-office calls (${A.out.midEv} mid-stretch) · ${A.out.bigLive} big games stopped on a moment, ${A.out.moments} moments`)
+console.log(`LIGHT: ${N} seasons in ${((t1 - t0) / 1000).toFixed(1)} s · ${A.out.stretches} stretches · ${A.out.evs} front-office calls (${A.out.midEv} mid-stretch) · ${A.out.rounds ?? 0} playoff taps · ${A.out.bigLive} games left on screen (0 wanted)`)
 for (const s of A.out.seasons) {
   console.log(`   ${s.y}: ${s.rec.w}-${s.rec.l}${s.rec.t ? `-${s.rec.t}` : ''} ${s.rec.fin} · MVP ${s.aw.mvp} (${s.aw.mvpP}) · OPOY ${s.aw.opoy} · drafted ${s.picks} · CPU draft trades ${s.cpuTrades}`)
   console.log(`      leaders: ${Object.entries(s.lead).map(([k, v]) => `${k} ${v}`).join(' · ')}`)
@@ -242,7 +240,7 @@ for (const s of A.out.seasons) {
 const B = playLight({ swap: true, exactOnly: true })
 const same = stateOf(A.F) === stateOf(B.F)
 if (!same && process.env.LT_BISECT) {
-  for (const key of ['card', 'big game moment', 'big game final', 'recap', 'playoffs', 'staff', 'roster', 'free agency done', 'draft week', 'draft night', 'draft class']) {
+  for (const key of ['card', 'recap', 'playoffs', 'staff', 'roster', 'free agency done', 'draft week', 'draft night', 'draft class']) {
     const Z = playLight({ swap: tag => tag.endsWith(key) || tag.includes(key + ' '), exactOnly: true })
     console.log(`   reading back only at "${key}": ${stateOf(Z.F) === stateOf(A.F) ? 'same' : 'DIFFERENT'}`)
   }
@@ -269,4 +267,15 @@ for (let i = 0; i < N; i++) {
 const sum = a => a.reduce((x, y) => x + y, 0)
 if (sum(A.out.sizes) > sum(C.sizes) * 1.01) bad(`the LIGHT saves ${sum(A.out.sizes)} bytes over ${N} seasons, FULL's ${sum(C.sizes)}`)
 if (stops.lt > 2048) bad(`LIGHT's own fields ${stops.lt} bytes`)
+// a save from before LIGHT stopped going into games: on its big game, a moment waiting (lightSettle sims it on)
+{
+  const F = make(); FR.lightInit(F)
+  let pend = false
+  for (let g = 0; g < 6 && !pend; g++) { const r = FR.playWeek(F, { moments: true }); pend = !!r.pending }
+  F.lt.ph = 'big'; F.lt.big = F.wk
+  FR.lightSettle(F)
+  const ok = !F.pend && F.lt.ph === 'recap' && !('big' in F.lt) && Math.min(F.wk, 18) === F.lt.w1
+  console.log(`an old save on its big game${pend ? ', a moment waiting' : ''}: ${ok ? 'simmed on to the recap' : `STUCK (${F.lt.ph}, week ${F.wk + 1})`}`)
+  if (!ok) bad('an old LIGHT save on its big game did not sim on to the recap')
+}
 console.log(problems.length ? `${problems.length} PROBLEMS` : 'OK: no problems')

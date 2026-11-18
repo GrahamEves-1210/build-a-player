@@ -64,7 +64,7 @@ export function playSetup(F, v, playId) {
   const t = boxTraitsSafe(F, me)
   const situation = {
     us: us.short, them: opp.short, mine: v.mine, opp: v.theirs, clockText: v.clock, period: v.period,
-    down: v.down, togo: v.d, toGoal: 100 - v.y, goal: v.goal, los: v.y, call: P.call ?? null, hole: P.hole ?? null, side: R.u() < 0.5 ? -1 : 1, dist: v.d,
+    down: v.down, togo: v.d, toGoal: 100 - v.y, goal: v.goal, los: v.y, call: P.call ?? null, hole: P.hole ?? null, side: sideOf(R), dist: v.d,
     ...(P.kind === 'stop' && { stop: true }),
   }
   return {
@@ -74,6 +74,8 @@ export function playSetup(F, v, playId) {
   }
 }
 const boxTraitsSafe = (F, p) => { try { return p ? boxTraits(F, p) : null } catch { return null } }
+// the side a run goes to: the snap's first draw (playSetup and the play art, playArt.js, read the same one)
+export const sideOf = R => (R.u() < 0.5 ? -1 : 1)
 
 // the receiver a throw went to, from the engine's spot for him (throw.js: X, Z and H the receivers, TE, RB)
 const TARGET = { X: 'wr1', Z: 'wr2', H: 'wr3', TE: 'te1', RB: 'rb1' }

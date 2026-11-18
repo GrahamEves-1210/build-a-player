@@ -341,6 +341,18 @@ const dirFrom = (w, still) => (w.step == null ? still : Math.abs(w.dx) > Math.ab
 const bump = (g, i) => Math.sin(g.t / (190 + i * 17) + i * 1.9) * 2.5
 // our front four: two ends out on the tackles, two tackles on the guards
 const DL_X = [-98, -30, 30, 98]
+// Franchise's play art (franchise2/moments.js playArt): the stop as the engine lines it up, in yards (x across from
+// the ball, y from the line, the offense below it at negative y): their five, the tight end (on one side or the other:
+// a coin each snap), the quarterback under center and the back seven deep; our four, the other two backers wide, and
+// the backer the player runs five yards off the ball; the gaps he reads (A, B and C, either side)
+export function stopLook() {
+  const y = d => -d / YD, x = u => u / YD
+  return {
+    ol: [-2, -1, 0, 1, 2].map(i => [x(i * SP), y(OL_D)]), te: [x(134), y(OL_D - 2)], qb: [0, y(QB_D)], rb: [0, y(RB_D0)],
+    dl: DL_X.map(dx => [x(dx), y(-14)]), lbs: [[x(-128), y(LB_D + 6)], [x(128), y(LB_D + 6)]], me: [0, y(LB_D)],
+    gaps: [1, 2, 3].flatMap(n => [-1, 1].map(sd => [x(sd * GAP[n]), GAP_WORD[n]])), mesh: y(MESH_D),
+  }
+}
 function warmList(g, us, them) {
   const who = g.who, list = []
   const me = { color: us.color, trim: us.trim, pants: us.trim, skin: who.me?.skin ?? skinOf(3), number: who.me?.number ?? 54, kit: 'pads', carry: false, pose: null }

@@ -2,12 +2,26 @@
    (kit.css), the hub's own pieces where they fit (season.css: the matchup, the week cells, the ladder). */
 
 /* ── The stretch card ── */
-.lt-weeks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
-.lt-weeks .fh-wk { min-width: 0; }
-.lt-weeks .fh-wk-logo i { left: -13px; }
-.lt-big-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 4px; line-height: 1.1; }
-.lt-big-h b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; letter-spacing: .3px; text-transform: uppercase; color: #fff; }
-.lt-big-h span { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
+/* the six opponents: week, team, record, the line (the recap's rows, the same grid) */
+.lt-opps { display: grid; gap: 3px; }
+.lt-opp { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: 'w t r' 'w l l'; align-items: center; gap: 2px 8px; min-height: 52px; padding: 6px 10px; background: var(--fk-g2); color: #fff; box-shadow: inset 4px 0 0 var(--tc, var(--fk-g4)); }
+.lt-opp.is-bye { grid-template-areas: 'w t'; grid-template-columns: 44px 1fr; box-shadow: inset 4px 0 0 var(--fk-g4); }
+.lt-opp.is-bye b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; color: var(--fk-mute); text-transform: uppercase; }
+.lt-opp-wk { grid-area: w; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.lt-opp-t { grid-area: t; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lt-opp-t i { font-style: normal; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.lt-opp-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .3px; text-transform: uppercase; }
+.lt-opp-t em { padding: 2px 4px; background: #fff; color: #0b0c0e; font-style: normal; font-family: var(--fk-b); font-weight: 700; font-size: 11px; letter-spacing: .3px; }
+.lt-opp-rec { grid-area: r; display: grid; justify-items: end; gap: 1px; line-height: 1.1; }
+.lt-opp-rec b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; font-variant-numeric: tabular-nums; }
+.lt-opp-rec small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.lt-opp-line { grid-area: l; font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
+/* a playoff round's result (Light.jsx RoundResult) */
+.lt-round-hl { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.lt-round-hl > span { display: grid; gap: 4px; min-width: 0; }
+.lt-round-hl b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; line-height: 1.1; color: #fff; }
+.lt-round-hl small { font-family: var(--fk-b); font-size: 15px; line-height: 1.35; color: var(--fk-text); }
+.lt-round .fh-textbtn { justify-self: start; }
 .lt-card .fh-next-note { color: var(--fk-mute); font-size: 15px; }
 
 /* ── The recap ── */

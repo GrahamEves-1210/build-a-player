@@ -9,11 +9,13 @@ import { romanOf } from '../../lib/mg/kit'
 import { minigameOpen } from '../../lib/ads'
 import { SpeedSeg, MomentsToggle } from '../simFlow'
 import { BoxSheet, FootballBox, FbTable } from '../app/SquadSeason'
-import { fkVars, KLogo, Chyron, Scorebug, ManL3, Stamp, Go, Tag, Bumper, reduced, ActionBar } from './kit'
+import { fkVars, KLogo, Chyron, Scorebug, ManL3, Stamp, Go, Tag, reduced, ActionBar } from './kit'
 import { faceFor } from './dparts'
 import './gameday.css'
 
 const MgStage = lazy(() => import('../app/MgStage'))
+// (the play art reads the mini games' engines: it loads with the first moment's picker)
+const PlayArt = lazy(() => import('./PlayArt'))
 
 // GAME DAY (owner, 2026-11-16): the player's game as a broadcast. The week's bar and the scorebug on top; under them
 // the speed (SLOW, NORMAL, FAST, pause, SKIP) and the KEY MOMENTS switch; then the field (who has it, the down and
@@ -115,7 +117,17 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const [mv, setMv] = useState(() => (start.pend ? momentView(F) : null))
   const tl = useMemo(() => { const t = timelineOf(F, row, mv); if (mv) t.moment = mv; return t }, [row, mv]) // eslint-disable-line react-hooks/exhaustive-deps
   const endT = tl.endT
-  const [phase, setPhase] = useState('live')   // live · bump · call · play · result · final
+  const [phase, setPhase] = useState('live')   // live · call (the moment's sheet) · play (the mini game) · result · final
+  // (the moment's sheet sits under the header, so the scorebug stays in view: the header's height, measured)
+  const headRef = useRef(null)
+  const [headH, setHeadH] = useState(0)
+  useEffect(() => {
+    const el = headRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(() => setHeadH(Math.round(el.getBoundingClientRect().height)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [phase === 'play']) // eslint-disable-line react-hooks/exhaustive-deps
   const [T, setT] = useState(0)
   const Tref = useRef(0)
   const hold = useRef(0)
@@ -149,7 +161,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
     if (mv && !row) {
       // (the moments switched off: the sim plays the snap and the game goes on)
       if ((F.games ?? 'advanced') === 'off') { commit(null, true); return }
-      setPhase('bump'); sfx('whistle'); haptic('medium'); return
+      setPhase('call'); sfx('whistle'); haptic('medium'); return
     }
     setPhase('final')
   }
@@ -200,7 +212,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
       commit({ ...simSnap(F.pend.S, P.kind === 'stop' ? 'run' : P.kind, `simple-${id}`), call: P.kind === 'stop' ? 'run' : P.kind, play: id })
       return
     }
-    setPick(id); setPhase('play')
+    setPick(id); setPhase('play'); if (PLAYS[id]?.kind === 'stop') sfx('whistle')
   }
   const played = done => { const out = playResult(F, mv, pick, done); setPick(null); commit(out) }
   const simIt = id => { const P = PLAYS[id]; commit({ ...simSnap(F.pend.S, P.kind === 'stop' ? 'run' : P.kind, 'skip'), call: P.kind === 'stop' ? 'run' : P.kind, play: id }) }
@@ -218,7 +230,7 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const hs = fin ? (tl.home ? row.us : row.them) : tl.home ? us : them
   const tt = Math.min(T, endT)
   const sit = !fin ? situationAt(tt, tl, F) : null
-  const atMoment = (phase === 'bump' || phase === 'call') && mv
+  const atMoment = phase === 'call' && mv
   const ballSide = atMoment ? (mv.ball === 'us' ? F.team : mv.opp) : sit?.off
   const poss = ballSide ? (ballSide === h ? 'h' : 'a') : null
   const label = po ? (rd === 3 ? 'SB' : ['WC', 'DIV', 'CONF'][rd]) : `WK ${wk}`
@@ -228,12 +240,11 @@ export default function Gameday({ F, act, start, onDone, owner }) {
   const status = fin ? (row?.ot ? 'FINAL/OT' : 'FINAL') : `${nowQ} ${nowClock}`
   const dd = atMoment ? `${DOWN[mv.down]} & ${mv.goal ? 'GOAL' : mv.d}` : sit && !fin ? `${DOWN[sit.down]} & ${sit.goal ? 'GOAL' : sit.togo}` : null
   return createPortal(
-    <div className={`fk fk-root fg gd${phase === 'play' ? ' is-play' : ''}${fin ? ' is-final' : ''}`} style={fkVars(F.team)}>
-      {phase === 'bump' && mv && <Bumper team={mv.ball === 'us' ? F.team : mv.opp} kicker={`${SNAP_KIND[mv.kind]} · ${mv.period === 'OT' ? 'OT' : `Q${mv.period[0]}`} ${mv.clock}`} title="KEY MOMENT" onDone={() => setPhase('call')} />}
+    <div className={`fk fk-root fg gd${phase === 'play' ? ' is-play' : ''}${fin ? ' is-final' : ''}${phase === 'call' || phase === 'result' ? ' is-moment' : ''}`} style={{ ...fkVars(F.team), '--gd-head': `${headH}px` }}>
       {phase === 'play' && mv && pick && <MomentStage F={F} mv={mv} pick={pick} onDone={played} />}
       {phase !== 'play' && (
         <>
-          <header className="gd-head">
+          <header className="gd-head" ref={headRef}>
             {/* (the week's bar: on top, where the broadcast puts it) */}
             <div className="gd-weekrow">
               <div className="gd-week" style={fkVars(F.team)}><b>{kindTxt}</b><span>{fin ? 'FINAL' : <><i className="gd-live" />LIVE</>}</span></div>
@@ -244,16 +255,14 @@ export default function Gameday({ F, act, start, onDone, owner }) {
               per={nowQ.startsWith('Q') ? ['1ST', '2ND', '3RD', '4TH'][+nowQ[1] - 1] : nowQ} clock={nowClock}
               final={fin ? (row?.ot ? 'F/OT' : 'FINAL') : null} poss={fin ? null : poss} dd={fin ? null : dd} />
             <div className="gd-ctl">
-              {fin || phase === 'call' || phase === 'bump' ? null : <SpeedSeg className="gd-speed" steps={SPEEDS} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); keepSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)} onSkip={skip} skipLabel={mv && !row ? ['Skip to', 'moment'] : ['Skip to', 'end']} />}
+              {fin || phase === 'call' ? null : <SpeedSeg className="gd-speed" steps={SPEEDS} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); keepSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)} onSkip={skip} skipLabel={mv && !row ? ['Skip to', 'moment'] : ['Skip to', 'end']} />}
             </div>
             </div>
           </header>
           <div className="gd-main">
             <div className="gd-left">
               {phase === 'live' && flash && <div key={flash.key} className="gd-flash" style={fkVars(flash.s)} role="status"><KLogo s={flash.s} size={26} /><b>{flash.text}</b></div>}
-              {phase === 'live' && <Field F={F} sit={sit} tl={tl} T={tt} />}
-              {phase === 'call' && mv && <MomentCall F={F} mv={mv} owner={owner} onCall={callPlay} onSim={simIt} />}
-              {phase === 'result' && last && <MomentResult last={last} onGo={() => setPhase('live')} />}
+              {(phase === 'live' || phase === 'call' || phase === 'result') && <Field F={F} sit={sit} tl={tl} T={tt} a={a} h={h} />}
               {fin && row && <Final F={F} row={row} news={news} owner={owner} onDone={onDone} />}
               {/* (a wide screen: the scoring under the field, always in view) */}
               {!fin && <div className="gd-side-scoring"><Scoring F={F} tl={tl} row={null} T={tt} /></div>}
@@ -267,6 +276,10 @@ export default function Gameday({ F, act, start, onDone, owner }) {
               {tab === 'box' && <Box F={F} row={row} tl={tl} T={tt} fin={fin} status={status} owner={owner} />}
             </div>
           </div>
+          {/* the moment: a sheet over game day (a phone: up from the bottom; a wide screen: a panel in the middle), the
+              scorebug and the field still in view; the mini game it launches takes the screen when it plays */}
+          {phase === 'call' && mv && <MomentSheet label="Key moment" kicker="Key moment"><MomentCall F={F} mv={mv} owner={owner} onCall={callPlay} onSim={simIt} /></MomentSheet>}
+          {phase === 'result' && last && <MomentSheet label="Key moment result" onTap={() => setPhase('live')}><MomentResult last={last} /></MomentSheet>}
         </>
       )}
     </div>,
@@ -275,13 +288,38 @@ export default function Gameday({ F, act, start, onDone, owner }) {
 }
 
 // ── The field: who has it, the down and distance, the spot, and the drive so far ─────────────────────────────────
-function Field({ F, sit, tl, T }) {
+// The field as the broadcast keeps it: each team defends one end zone and the field never turns with the ball. The
+// home team defends the left end in the 1st and 3rd quarters (and overtime), the teams switch ends after the 1st and
+// the 3rd; a change of possession sends the ball the other way on the same field.
+export const leftEndOf = (T, a, h) => ((T >= 3600 ? 0 : Math.floor(Math.max(0, T) / 900)) % 2 ? a : h)
+function Strip({ left, right, children }) {
+  return (
+    <div className="gd-strip">
+      <span className="gd-ez is-left" style={fkVars(left)}><b>{TEAM[left].short}</b></span>
+      <div className="gd-grass">
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(n => <i key={n} className="gd-yl" style={{ left: `${n}%` }}><em>{n > 50 ? 100 - n : n}</em></i>)}
+        {children}
+      </div>
+      <span className="gd-ez is-right" style={fkVars(right)}><b>{TEAM[right].short}</b></span>
+    </div>
+  )
+}
+function Field({ F, sit, tl, T, a, h }) {
+  const left = leftEndOf(T, a, h), right = left === a ? h : a
   if (!sit) {
     const kick = T < 1 ? 'KICKOFF' : T >= 1800 && T < 1830 ? 'SECOND HALF' : tl.dr ? 'CHANGE OF POSSESSION' : 'IN PROGRESS'
-    return <section className="gd-field is-idle"><span className="gd-idle">{kick}</span></section>
+    return (
+      <section className="gd-field is-idle">
+        <div className="gd-idle-bar"><span className="gd-idle">{kick}</span></div>
+        <Strip left={left} right={right} />
+      </section>
+    )
   }
   const { off, def, y, togo, goal, y0 } = sit
+  // (the offense's own goal line on the left when it defends the left end: it goes left to right; otherwise right to left)
+  const X = v => (off === left ? v : 100 - v)
   const pct = v => `${Math.max(0, Math.min(100, v))}%`
+  const lo = Math.min(X(y0), X(y)), hi = Math.max(X(y0), X(y))
   return (
     <section className="gd-field" aria-label={`${TEAM[off].nick} ball, ${DOWN[sit.down]} and ${goal ? 'goal' : togo} at ${spotOf(y, off, def)}`}>
       <div className="gd-poss" style={fkVars(off)}>
@@ -289,18 +327,12 @@ function Field({ F, sit, tl, T }) {
         <span><small>{TEAM[off].nick} ball</small><b>{DOWN[sit.down]} &amp; {goal ? 'GOAL' : togo}</b></span>
         <span className="gd-spot"><small>Ball on</small><b>{spotOf(y, off, def)}</b></span>
       </div>
-      {/* (the offense going left to right: its own end zone on the left) */}
-      <div className="gd-strip" style={fkVars(off)}>
-        <span className="gd-ez is-own" style={fkVars(off)}>{TEAM[off].short}</span>
-        <div className="gd-grass">
-          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(n => <i key={n} className="gd-yl" style={{ left: `${n}%` }}><em>{n > 50 ? 100 - n : n}</em></i>)}
-          <span className="gd-drv" style={{ left: pct(Math.min(y0, y)), width: pct(Math.abs(y - y0)) }} />
-          <span className="gd-los" style={{ left: pct(y) }} />
-          {!goal && y + togo < 100 && <span className="gd-ltg" style={{ left: pct(y + togo) }} />}
-          <span className="gd-ball" style={{ left: pct(y) }} />
-        </div>
-        <span className="gd-ez" style={fkVars(def)}>{TEAM[def].short}</span>
-      </div>
+      <Strip left={left} right={right}>
+        <span className="gd-drv" style={{ left: pct(lo), width: pct(hi - lo) }} />
+        <span className="gd-los" style={{ left: pct(X(y)) }} />
+        {!goal && y + togo < 100 && <span className="gd-ltg" style={{ left: pct(X(y + togo)) }} />}
+        <span className="gd-ball" style={{ left: pct(X(y)) }} />
+      </Strip>
       <div className="gd-drive"><span><b>{sit.plays}</b> {sit.plays === 1 ? 'play' : 'plays'}</span><span><b>{y - y0}</b> yds</span><span><b>{mmss(sit.el)}</b> drive</span></div>
     </section>
   )
@@ -450,8 +482,9 @@ function MomentCall({ F, mv, owner, onCall, onSim }) {
             {calls.map(id => {
               const P = PLAYS[id]
               return (
-                <button key={id} type="button" className={`gd-play is-${P.kind}`} onClick={() => onCall(id)}>
-                  <small>{P.kind === 'pass' ? 'PASS' : 'RUN'}</small><b>{P.name}</b><span>{P.tag}</span>
+                <button key={id} type="button" className={`gd-play is-${P.kind}`} onClick={() => onCall(id)} aria-label={`${P.name}: ${P.tag}`}>
+                  <Suspense fallback={<span className="gd-art is-none" />}><PlayArt v={mv} id={id} /></Suspense>
+                  <span className="gd-play-txt"><small>{P.kind === 'pass' ? 'PASS' : 'RUN'}</small><b>{P.name}</b><span>{P.tag}</span></span>
                 </button>
               )
             })}
@@ -465,7 +498,17 @@ function MomentCall({ F, mv, owner, onCall, onSim }) {
       ) : (
         <>
           <h3 className="gd-h">Make the stop</h3>
-          {lb && <ManL3 F={F} p={lb} team={F.team} owner={owner} size="m" line="Read the back, fill the hole" />}
+          <div className="gd-stop">
+            <Suspense fallback={<span className="gd-art is-none" />}><PlayArt v={mv} id="stop" /></Suspense>
+            {simple ? <p className="gd-stop-txt">Their back takes the handoff and picks a gap: A, B or C, either side. {lb ? lb.n : 'The backer'} reads it and fills.</p> : (
+              <ol className="gd-ready-how">
+                <li>Read the back and get to his hole: hold <b>LEFT</b> or <b>RIGHT</b> to slide.</li>
+                <li>Come downhill on the handoff.</li>
+                <li>Tap <b>TACKLE</b> as the ring closes on him.</li>
+              </ol>
+            )}
+          </div>
+          {lb && <ManL3 F={F} p={lb} team={F.team} owner={owner} size="s" line="Read the back, fill the hole" />}
           <Go onClick={() => onCall('stop')}>{simple ? 'Play it' : 'Take the field'}</Go>
           <button type="button" className="gd-sim" onClick={() => onSim('stop')}>Let the sim play this snap</button>
         </>
@@ -473,36 +516,30 @@ function MomentCall({ F, mv, owner, onCall, onSim }) {
     </section>
   )
 }
-function MomentResult({ last, onGo }) {
+// the sheet the moment sits on (and its scrim, which leaves the header uncovered)
+function MomentSheet({ label, kicker = null, onTap = null, children }) {
   return (
-    <section className="gd-result" onClick={onGo}>
+    <>
+      <div className="gd-scrim" onClick={onTap ?? undefined} aria-hidden="true" />
+      <div className={`gd-msheet${onTap ? ' is-tap' : ''}`} role="dialog" aria-modal="false" aria-label={label} onClick={onTap ?? undefined}>{kicker && <span className="gd-msheet-k"><i className="gd-live" />{kicker}</span>}{children}</div>
+    </>
+  )
+}
+function MomentResult({ last }) {
+  return (
+    <section className="gd-result">
       <Stamp kind={last.good ? 'w' : 'l'} big>{last.word}</Stamp>
       {last.out?.txt && <p>{last.out.txt}</p>}
-      <small className="fg-tap">Tap to go on</small>
+      <small className="fg-tap">TAP TO CONTINUE</small>
     </section>
   )
 }
 // the snap on the mini games' stage (the engine, the men from both depth charts, the down and distance the game set)
-// (on defense the offense snaps the ball, so the backer gets a ready step first: the down, what to do, READY; the
-// snap comes after he taps it, never while he's still reading the screen)
+// (on defense the how-to is on the moment's sheet: the snap comes after he taps TAKE THE FIELD, never while he's
+// still reading the screen)
 function MomentStage({ F, mv, pick, onDone }) {
   useEffect(() => minigameOpen(), [])
   const S = useMemo(() => playSetup(F, mv, pick), []) // eslint-disable-line react-hooks/exhaustive-deps
-  const [set, setSet] = useState(PLAYS[pick]?.kind !== 'stop')
-  if (!set) {
-    return (
-      <section className="gd-ready" onClick={e => e.stopPropagation()}>
-        <Chyron team={mv.opp} tag={`${mv.period === 'OT' ? 'OT' : `Q${mv.period[0]}`} ${mv.clock}`} title={`${DOWN[mv.down]} & ${mv.goal ? 'goal' : mv.d}`} sub={`${TEAM[mv.opp].nick} ball`} />
-        {S.me && <ManL3 F={F} p={S.me} team={F.team} size="s" line="On the stop" />}
-        <ol className="gd-ready-how">
-          <li>Read the back and get to his hole: hold <b>LEFT</b> or <b>RIGHT</b> to slide.</li>
-          <li>You come downhill on the handoff.</li>
-          <li>Tap <b>TACKLE</b> as the ring closes on him.</li>
-        </ol>
-        <Go onClick={() => { setSet(true); sfx('whistle') }}>Ready</Go>
-      </section>
-    )
-  }
   return (
     <Suspense fallback={<div className="gd-wait" />}>
       <MgStage game={S.game} def={S.def} v={S.v} arm={S.arm} seed={S.seed} sport="nfl" team={S.team} opp={S.opp} home={S.home} pos={S.pos} cast={S.cast} situation={S.situation}
