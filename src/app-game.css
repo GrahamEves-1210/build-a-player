@@ -3555,6 +3555,85 @@ button.sq-po-row:focus-visible { outline: 2px solid var(--ag-a1); outline-offset
 .sq-tstat-head span { display: flex; align-items: center; justify-content: flex-end; gap: 5px; color: var(--ag-text-2); }
 .sq-tstat-head img { width: 18px; height: 18px; object-fit: contain; }
 @media (prefers-reduced-motion: reduce) { .sq-box-overlay, .sq-box { animation: none; } }
+/* ── The box score sheet, readable (owner 11-18): the final, the team stats, the leaders, then one team's men ──
+   Body type for names and numbers, normal case; the display face only for the score. --bx-r: the corners (Franchise: square) */
+.ss-sheet.sq-box { max-width: 500px; gap: 18px; --bx-r: 12px; }
+.bx-where { min-width: 0; font-family: var(--ag-body); font-size: 14px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: none; }
+.bx-sec { display: flex; flex-direction: column; gap: 8px; }
+.bx-h { margin: 0; font-family: var(--ag-body); font-size: 17px; font-weight: 700; letter-spacing: 0; color: var(--ag-text); }
+/* the final */
+.bx-final { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: var(--bx-r); border: 1px solid var(--ag-line); background: var(--ag-panel); }
+.bx-ls { display: flex; flex-direction: column; gap: 4px; font-family: var(--ag-body); font-variant-numeric: tabular-nums; }
+.bx-ls-row { display: grid; grid-template-columns: minmax(0, 1fr) 52px; align-items: center; gap: 0; }
+.bx-ls.has-q .bx-ls-row { grid-template-columns: minmax(0, 1fr) repeat(var(--nq), 26px) 52px; }
+.bx-ls-row > span:not(.bx-ls-team) { text-align: center; }
+.bx-ls-head { font-size: 13px; font-weight: 600; color: var(--ag-muted); }
+.bx-status { justify-self: start; text-align: left !important; font-size: 13px; font-weight: 700; letter-spacing: .3px; color: var(--ag-text); }
+.bx-status.is-live { color: #ff8a8a; }
+.bx-ls-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bx-ls-team img { flex: 0 0 auto; width: 34px; height: 34px; object-fit: contain; }
+.bx-ls-team b { min-width: 0; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bx-ls-w { flex: 0 0 auto; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid var(--ag-text); }
+.bx-ls-q { font-size: 15px; color: var(--ag-muted); }
+.bx-ls-pts { font-family: var(--ag-display); font-size: 34px; line-height: 1.1; text-align: right !important; color: var(--ag-text); }
+.bx-ls-row.is-lose .bx-ls-team b, .bx-ls-row.is-lose .bx-ls-pts { color: var(--ag-muted); }
+.bx-story { margin: 0; padding-top: 10px; border-top: 1px solid var(--ag-line); font-family: var(--ag-body); font-size: 15px; line-height: 1.4; color: var(--ag-text); }
+/* the two teams side by side */
+.bx-tc { display: flex; flex-direction: column; border-radius: var(--bx-r); border: 1px solid var(--ag-line); overflow: hidden; font-family: var(--ag-body); font-variant-numeric: tabular-nums; }
+.bx-tc-row { display: grid; grid-template-columns: minmax(0, 1fr) 78px 78px; align-items: center; gap: 6px; padding: 8px 12px; font-size: 15px; }
+.bx-tc-row + .bx-tc-row { border-top: 1px solid var(--ag-line); }
+.bx-tc-row > span:not(.bx-tc-k) { text-align: right; }
+.bx-tc-k { color: var(--ag-text); }
+.bx-tc-row .is-lead { font-weight: 700; color: var(--ag-text); }
+.bx-tc-row .is-back { color: var(--ag-muted); }
+.bx-tc-head { padding: 7px 12px; background: rgba(0,0,0,.28); font-size: 13px; font-weight: 700; color: var(--ag-text); }
+.bx-tc-head span { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.bx-tc-head img { width: 20px; height: 20px; object-fit: contain; }
+/* the game's leaders */
+.bx-lead { display: flex; flex-direction: column; border-radius: var(--bx-r); border: 1px solid var(--ag-line); overflow: hidden; font-family: var(--ag-body); }
+.bx-lead-row { display: grid; grid-template-columns: 76px 26px minmax(0, 1fr); align-items: center; gap: 10px; padding: 9px 12px; }
+.bx-lead-row + .bx-lead-row { border-top: 1px solid var(--ag-line); }
+.bx-lead-k { font-size: 13px; font-weight: 600; color: var(--ag-muted); }
+.bx-lead-row img { width: 26px; height: 26px; object-fit: contain; }
+.bx-lead-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bx-lead-who b { font-size: 15px; font-weight: 700; color: var(--ag-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bx-lead-who b small { margin-left: 7px; font-size: 13px; font-weight: 500; color: var(--ag-muted); }
+.bx-lead-who > span { font-size: 14px; color: var(--ag-text); font-variant-numeric: tabular-nums; }
+.bx-lead-row.is-mine { box-shadow: inset 3px 0 0 var(--ag-a1); }
+.bx-lead-row.is-mine .bx-lead-who b { color: var(--ag-a1); }
+/* one team at a time */
+.bx-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: calc(var(--bx-r) + 2px); border: 1px solid var(--ag-line); background: rgba(255,255,255,.03); }
+.bx-seg button { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; border: 0; border-radius: var(--bx-r); background: transparent; cursor: pointer;
+  font-family: var(--ag-body); font-size: 15px; font-weight: 700; color: var(--ag-muted); transition: background-color .15s, color .15s; }
+.bx-seg button img { width: 24px; height: 24px; object-fit: contain; }
+.bx-seg button.is-on { background: var(--ag-text); color: #0b0d10; }
+@media (hover: hover) { .bx-seg button:not(.is-on):hover { color: var(--ag-text); background: rgba(255,255,255,.06); } }
+.bx-team1 { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--ag-body); font-size: 15px; font-weight: 700; color: var(--ag-text); }
+.bx-team1 img { width: 24px; height: 24px; object-fit: contain; }
+.bx-key { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
+.bx-key i { width: 4px; height: 14px; background: var(--ag-a1); }
+.bx-none { margin: 0; font-family: var(--ag-body); font-size: 14px; color: var(--ag-muted); }
+/* a table of the men */
+.bx-t { display: flex; flex-direction: column; border-radius: var(--bx-r); border: 1px solid var(--ag-line); overflow: hidden; font-family: var(--ag-body); font-variant-numeric: tabular-nums; }
+.bx-t + .bx-t { margin-top: 4px; }
+.bx-t-row { display: grid; grid-template-columns: minmax(0, 1fr) 54px 42px 32px 34px; align-items: center; gap: 4px; padding: 8px 12px; font-size: 15px; color: var(--ag-text); }
+.bx-t-row + .bx-t-row { border-top: 1px solid var(--ag-line); }
+.bx-t-row > span:not(.bx-t-name):not(.bx-t-k) { text-align: right; }
+.bx-t-head { padding: 7px 12px; background: rgba(0,0,0,.28); font-size: 13px; font-weight: 600; color: var(--ag-muted); }
+.bx-t-k { font-size: 15px; font-weight: 700; color: var(--ag-text); }
+.bx-t-name { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.bx-t-name b { min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bx-t-name small { flex: 0 0 auto; font-size: 13px; font-weight: 500; color: var(--ag-muted); }
+.bx-t-row.is-mine { box-shadow: inset 3px 0 0 var(--ag-a1); background: color-mix(in srgb, var(--ag-a1) 10%, transparent); }
+.bx-t-row.is-mine .bx-t-name b { color: var(--ag-a1); font-weight: 700; }
+.bx-t-more { min-height: 44px; border: 0; border-top: 1px solid var(--ag-line); background: transparent; cursor: pointer; font-family: var(--ag-body); font-size: 14px; font-weight: 700; color: var(--ag-text); }
+@media (hover: hover) { .bx-t-more:hover { background: rgba(255,255,255,.05); } }
+/* (kicking: three columns) */
+.bx-t:has(.bx-t-head span:nth-child(4):last-child) .bx-t-row { grid-template-columns: minmax(0, 1fr) 48px 48px 48px; }
+/* basketball: eight columns, the table scrolls sideways on a phone with the names held */
+.bx-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.bx-t--bk { min-width: 520px; }
+.bx-t--bk .bx-t-row { grid-template-columns: minmax(110px, 1fr) 34px 34px 34px 34px 32px 32px 48px 44px; }
 /* the season playing out: the record building, the weeks and the playoffs, then the results */
 .sq-reveal { display: flex; flex-direction: column; gap: 12px; }
 .sq-reveal .sq-log i:not([class]) { background: rgba(255,255,255,.05); }

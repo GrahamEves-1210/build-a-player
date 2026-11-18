@@ -8,9 +8,8 @@ import { sfx, haptic, victory } from '../../lib/juice'
 import { romanOf } from '../../lib/mg/kit'
 import { minigameOpen } from '../../lib/ads'
 import { SpeedSeg, MomentsToggle } from '../simFlow'
-import { BoxSheet, FootballBox, FbTable } from '../app/SquadSeason'
+import { BoxSheet } from '../app/SquadSeason'
 import { fkVars, KLogo, Chyron, Scorebug, ManL3, Stamp, Go, Tag, reduced, ActionBar } from './kit'
-import { faceFor } from './dparts'
 import './gameday.css'
 
 const MgStage = lazy(() => import('../app/MgStage'))
@@ -415,9 +414,9 @@ function Box({ F, row, tl, T, fin, status, owner }) {
     const u = of(true), o = of(false)
     return (
       <div className="gd-list gd-box">
-        <div className="sq-tstat">
-          <div className="sq-tstat-row sq-tstat-head"><span /><span><KLogo s={F.team} size={18} />{F.team}</span><span><KLogo s={a} size={18} />{a}</span></div>
-          {[['DRIVES', u.n, o.n], ['YARDS ON DRIVES', u.yds, o.yds], ['TOUCHDOWNS', u.td, o.td], ['FIELD GOALS', u.fg, o.fg], ['TURNOVERS', u.to, o.to], ['PUNTS', u.p, o.p], ['POSSESSION', mmss(u.top), mmss(o.top)]].map(([k, x, y]) => <div key={k} className="sq-tstat-row"><span>{k}</span><b>{x}</b><b>{y}</b></div>)}
+        <div className="bx-tc" role="table">
+          <div className="bx-tc-row bx-tc-head" role="row"><span /><span><KLogo s={F.team} size={20} />{F.team}</span><span><KLogo s={a} size={20} />{a}</span></div>
+          {[['Drives', u.n, o.n], ['Yards on drives', u.yds, o.yds], ['Touchdowns', u.td, o.td], ['Field goals', u.fg, o.fg], ['Turnovers', u.to, o.to], ['Punts', u.p, o.p], ['Possession', mmss(u.top), mmss(o.top)]].map(([k, x, y]) => <div key={k} className="bx-tc-row" role="row"><span className="bx-tc-k">{k}</span><span>{x}</span><span>{y}</span></div>)}
         </div>
         <p className="gd-note">The players’ lines come in with the final.</p>
       </div>
@@ -427,7 +426,7 @@ function Box({ F, row, tl, T, fin, status, owner }) {
   const shown = tl.kp.filter(p => p[0] <= T)
   return (
     <div className="gd-list gd-box">
-      <GameBoxSheet F={F} row={row} B={B} owner={owner} f={f} status={fin ? null : status} my={fin ? null : shown.filter(p => p[1]).reduce((s, p) => s + p[2], 0)} op={fin ? null : shown.filter(p => !p[1]).reduce((s, p) => s + p[2], 0)} />
+      <GameBoxSheet F={F} row={row} B={B} owner={owner} f={f} status={fin ? null : status} kp={fin ? null : shown} my={fin ? null : shown.filter(p => p[1]).reduce((s, p) => s + p[2], 0)} op={fin ? null : shown.filter(p => !p[1]).reduce((s, p) => s + p[2], 0)} />
       {!fin && <p className="gd-note">Live: the lines so far.</p>}
     </div>
   )
@@ -435,28 +434,38 @@ function Box({ F, row, tl, T, fin, status, owner }) {
 
 // The game's box score sheet: on the game screen (in place, f: how far the game has gone), and from the hub's last
 // result (portal, onClose: over the page)
-export function GameBoxSheet({ F, row, B: B0 = null, owner, f = 1, status = null, my = null, op = null, portal = false, onClose = null }) {
+export function GameBoxSheet({ F, row, B: B0 = null, owner, f = 1, status = null, my = null, op = null, kp = null, portal = false, onClose = null }) {
   const B = useMemo(() => B0 ?? gameBox(F, row), [row, B0]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!B) return null
   const S = x => (f === 1 ? x : scaleLine(x, f))
   const game = { s: Object.fromEntries(Object.entries(B.game.s).map(([k, x]) => [k, S(x)])), us: S(B.game.us), them: S(B.game.them) }
-  const opp = { s: Object.fromEntries(Object.entries(B.opp.game.s).map(([k, x]) => [k, S(x)])) }
+  const opp = { r: B.opp.r, game: { s: Object.fromEntries(Object.entries(B.opp.game.s).map(([k, x]) => [k, S(x)])) } }
   const g = { i: 0, po: false, opp: row.opp, home: row.home, my: my ?? row.us, op: op ?? row.them, won: row.us > row.them, tie: !!row.t, ot: row.ot, label: row.rd != null ? ROUNDS[row.rd] ?? 'PLAYOFFS' : `WEEK ${row.wk}` }
   const u = game.us, o = game.them
   const fd = [Math.round(B.fd[0] * f), Math.round(B.fd[1] * f)], top = [B.top[0] * f, B.top[1] * f]
   const rows = [
-    ['FIRST DOWNS', fd[0], fd[1]], ['TOTAL YARDS', u.yds, o.yds], ['PASSING', u.py, o.py], ['RUSHING', u.ry, o.ry],
-    ['COMP / ATT', `${u.pc ?? 0}/${u.pa ?? 0}`, `${o.pc ?? 0}/${o.pa ?? 0}`], ['SACKED', u.sk, o.sk], ['TURNOVERS', u.to, o.to], ['POSSESSION', mmss(top[0]), mmss(top[1])],
+    ['Total yards', u.yds, o.yds], ['Passing yards', u.py, o.py], ['Rushing yards', u.ry, o.ry], ['First downs', fd[0], fd[1]],
+    ['Completions', `${u.pc ?? 0}/${u.pa ?? 0}`, `${o.pc ?? 0}/${o.pa ?? 0}`], ['Turnovers', u.to, o.to], ['Times sacked', u.sk, o.sk], ['Possession', mmss(top[0]), mmss(top[1])],
   ]
-  const kick = f === 1 ? B.kick.filter(Boolean) : []
-  // (the builds' faces, as everywhere else in Franchise)
-  const faces = Object.fromEntries((F.builds ?? []).map((_, i) => { const p = F.teams[F.team].r.find(x => x.b === i); let src = null; try { src = p ? faceFor(F, p, F.team, true) : null } catch { src = null } return [String(i), src] }))
+  const live = f !== 1 || status != null
+  // (the points by quarter: the final's; a live game's from its scores so far, kp: [t, ours, points])
+  const quarters = !live ? row.q ?? null : kp ? quartersOf(kp) : null
+  // (the two kickers; a build at K is marked)
+  const kick = f === 1 ? B.kick.map(k => k && { ...k, mine: F.teams[F.team].r.some(p => p.b != null && p.n === k.n) }) : null
   return (
-    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} faces={faces} portal={portal} all label={TEAM[F.team].name.toUpperCase()} onClose={onClose} rows={rows} status={status ?? (row.ot ? 'FINAL · OT' : 'FINAL')} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'}>
-      {kick.length > 0 && <div className="sq-box-sec"><span className="sq-box-h">KICKING</span><FbTable head={['KICKING', 'FG', 'XP', 'LONG', '50+']} rows={kick.map((k, i) => ({ k: `k${i}`, name: k.n.split(' ').slice(-1)[0], role: i ? row.opp : F.team, cells: [`${k.line[1]}/${k.line[0]}`, `${k.line[3]}/${k.line[2]}`, k.line[4] || '—', `${k.line[6] ?? 0}/${k.line[5] ?? 0}`] }))} /></div>}
-      {Object.keys(opp.s).length > 0 && <FootballBox r={B.opp.r} game={opp} owner={owner} label={TEAM[row.opp].name.toUpperCase()} all />}
-    </BoxSheet>
+    <BoxSheet r={B.r} sport="nfl" g={g} box={{ reg: [game], po: [] }} owner={owner} portal={portal} onClose={onClose} rows={rows}
+      opp={Object.keys(opp.game.s).length ? opp : null} kick={kick} quarters={quarters} live={live} story={live ? null : row.sub || null}
+      status={status} className={portal ? 'fk fk-root gd-sheet-modal' : 'gd-sheet'} />
   )
+}
+const quartersOf = kp => {
+  const q = [[0, 0, 0, 0], [0, 0, 0, 0]]
+  for (const [t, m, p] of kp) {
+    const i = t >= 3600 ? 4 : Math.min(3, Math.floor(t / 900))
+    if (i === 4 && q[0].length < 5) { q[0].push(0); q[1].push(0) }
+    q[m ? 0 : 1][i] += p
+  }
+  return q
 }
 
 // ── The moment: the snap, the score, the clock, and the calls (or the backer on defense) ─────────────────────────
