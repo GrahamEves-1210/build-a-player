@@ -365,5 +365,6 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
 
 /* a logo that vanishes on its team's colour and on near-black (bits.jsx LOGO_CHIP): a white chip when small, a thin
    white outline when it's big and decorative */
-:is(.fk-logo, .f2-logo, .fg-board-side img).is-chip { box-sizing: border-box; padding: calc(var(--ls, 46px) * .1); background: #fff; border-radius: calc(var(--ls, 46px) * .18); }
+/* (owner 11-18: no white block behind them; a thin white edge keeps the dark logos visible instead) */
+:is(.fk-logo, .f2-logo, .fg-board-side img).is-chip { filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff); }
 .is-outline { filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); }

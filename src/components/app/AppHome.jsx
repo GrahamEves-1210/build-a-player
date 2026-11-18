@@ -29,7 +29,6 @@ import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 import FranchiseCard from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 import Wordmark from '../Wordmark'
-import './sport-pick.css'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -163,45 +162,20 @@ export const SPORTS = [
   ...(SOCCER_LIVE || SOCCER_SOON ? [{ id: 'soccer', label: 'SOCCER', Icon: IconSoccer, soon: !SOCCER_LIVE }] : []),
   ...(BASEBALL_LIVE || BASEBALL_SOON ? [{ id: 'baseball', label: 'BASEBALL', Icon: IconBaseball, soon: !BASEBALL_LIVE }] : []),
 ]
-// arrived here from the sport picker (read once a page load: the figure skips its band-by-band fall)
-const ARRIVED = (() => { try { const v = sessionStorage.getItem('bap_sport_switch'); sessionStorage.removeItem('bap_sport_switch'); return v } catch { return null } })()
-if (ARRIVED) figureShown = true
 
-// The sports, across the top of the stage like a broadcast's open: the names in big condensed type, the one
-// on the stage bright with its colour under it, the others dimmed; a sport still to come shows locked. One tap
-// opens that sport's Home (its own page). A radio group: Tab lands on the sport on the stage, the arrow keys move
-// along the names (focus only: picking opens another page), Enter or Space picks.
-function SportPick({ sport }) {
-  const [on, setOn] = useState(sport)
-  const rowRef = useRef(null)
-  // back from another sport by keyboard: focus where it was, on the sports
-  useEffect(() => { if (ARRIVED === 'key') rowRef.current?.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true }) }, [])
-  const go = (to, keyboard) => {
-    if (to === on) return
-    setOn(to); sfx('swap'); switchSport(to, { keyboard })
-  }
-  const onKey = e => {
-    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
-    if (!(e.key in keys) && e.key !== 'Home' && e.key !== 'End') return
-    e.preventDefault(); e.stopPropagation()
-    const btns = [...rowRef.current.querySelectorAll('.sp-tab:not([aria-disabled="true"])')]
-    const at = btns.indexOf(document.activeElement)
-    const next = e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1 : (Math.max(0, at) + keys[e.key] + btns.length) % btns.length
-    btns[next]?.focus()
-  }
+// Football / basketball / the sports coming soon: the switch at the top of Home (the live site's, owner 11-18)
+function SportSwitch({ sport }) {
+  const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
+  const three = SPORTS.length > 2
   return (
-    <div className="sp-nav" ref={rowRef} role="radiogroup" aria-label="Sport" onKeyDown={onKey}>
-      {SPORTS.map(({ id, label, soon }) => {
-        const locked = soon && id !== on
-        return (
-          <button key={id} type="button" role="radio" aria-checked={id === on} aria-disabled={locked || undefined} tabIndex={id === on ? 0 : -1}
-            aria-label={locked ? `${label}, coming soon` : undefined} title={locked ? 'Coming soon' : undefined}
-            className={`sp-tab sp-tab--${id}${id === on ? ' is-on' : ''}${locked ? ' is-soon' : ''}`}
-            onClick={e => { if (!locked) go(id, e.detail === 0) }}>
-            {locked && <IconLock size={12} />}<b>{label}</b>
-          </button>
-        )
-      })}
+    <div className={`ag-sport ag-sport--${sport}${three ? ' ag-sport--three' : ''}${SPORTS.length > 3 ? ' ag-sport--four' : ''}`} style={three ? { '--si': Math.max(0, SPORTS.findIndex(s => s.id === sport)) } : undefined} role="tablist" aria-label="Sport">
+      <span className="ag-sport-thumb" aria-hidden="true" />
+      {SPORTS.map(({ id, label, Icon, soon }) => (
+        <button key={id} role="tab" aria-selected={sport === id} aria-disabled={soon && sport !== id ? 'true' : undefined} className={`ag-sport-btn ag-sport-btn--${id}${sport === id ? ' is-on' : ''}${soon && sport !== id ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
+          <span className="ag-sport-ico">{soon && sport !== id ? <IconLock size={15} /> : <Icon size={17} />}</span>
+          <span className="ag-sport-txt"><b>{label}</b>{soon && sport !== id && <small className="ag-sport-soon">COMING SOON</small>}</span>
+        </button>
+      ))}
     </div>
   )
 }
@@ -414,7 +388,7 @@ function PlayersOfDay() {
 }
 
 const HudOnce = memo(Hud)
-const SportOnce = memo(SportPick)
+const SportOnce = memo(SportSwitch)
 const BoardOnce = memo(PlayersOfDay)
 const PromosOnce = memo(function Promos() {
   return (
@@ -680,14 +654,18 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </div>
         </div>
 
-        {/* Character-select stage under stadium lights, the sports across its top: swipe it, or tap a position */}
+        <div className="ag-sport-wrap">
+          <h2 className="ag-sport-label">PICK YOUR SPORT</h2>
+          <SportOnce sport={sport} />
+        </div>
+
+        {/* Character-select stage under stadium lights: swipe it, or tap a position */}
         <div className="ag-stage"
           onPointerDown={e => { swipeFrom.current = e.clientX }}
           onPointerUp={e => { const from = swipeFrom.current; swipeFrom.current = null; if (from != null && Math.abs(e.clientX - from) > 48 && !e.target.closest('.ag-positions, .sp-nav')) step(e.clientX < from ? 1 : -1) }}
           onPointerCancel={() => { swipeFrom.current = null }}>
           <div className="ag-stage-photo" />
           <div className="ag-stage-beam" />
-          <SportOnce sport={sport} />
           <span key={posWord} className="ag-stage-word" style={{ '--len': posWord.length }} aria-hidden="true">{posWord}</span>
           <OnlineNow />
           {/* the website doesn't open the tutorial by itself (cleared browser data

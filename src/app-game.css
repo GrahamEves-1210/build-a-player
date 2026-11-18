@@ -6425,6 +6425,11 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .spin-hint-text { f
 .ag-stage .ag-positions:has(.ag-pos-new) { z-index: 8; overflow: visible; contain: none; }
 .ag-stage .ag-pos:has(.ag-pos-new) { z-index: 8; overflow: visible; }
 .ag-stage .ag-pos .ag-pos-new { z-index: 9; }
+/* (owner 11-18: on an iPhone the tag dipped behind the stage's picture for a moment while the bar slid or a position
+   was picked: Safari paints an animating layer over plain ones whatever their z-index. The bar and its tags get layers
+   of their own, so they stay in front) */
+.ag-stage .ag-positions:has(.ag-pos-new) { transform: translateZ(0); }
+.ag-stage .ag-pos .ag-pos-new { transform: translateX(-50%) translateZ(0); }
 
 /* The More menu, phone: everything on one screen, no scrolling */
 @media (max-width: 600px) {
