@@ -497,7 +497,7 @@ function MomentResult({ last, onGo }) {
     <section className="gd-result" onClick={onGo}>
       <Stamp kind={last.good ? 'w' : 'l'} big>{last.word}</Stamp>
       {last.out?.txt && <p>{last.out.txt}</p>}
-      <small className="fg-tap">Tap to go on</small>
+      <small className="fg-tap">TAP TO CONTINUE</small>
     </section>
   )
 }
