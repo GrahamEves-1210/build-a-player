@@ -1,7 +1,7 @@
 /* THE KIT: Franchise's "Sunday broadcast" look (kit.jsx). Near-black and graphite, the team's two colours as flat
    slabs (--tc, --tc2, and the type on each: --tct, --tc2t, from fkVars), white type, one gold for trophies only.
-   Hard edges: angled slab ends, hairlines, a two-colour split where a team shows itself. No gradients that blend,
-   no glows, no glass. Motion plays once where a result lands; html.bap-reduce-motion turns it all off. */
+   Hard edges: angled slab ends, hairlines, a two-colour split where a team shows itself. The mode's own frame is
+   the silver of its art (--fk-chrome, owner 11-18); no other gradients that blend, no glows, no glass. Motion plays once where a result lands; html.bap-reduce-motion turns it all off. */
 
 .fk, .fk-root {
   --fk-ink: #08090b; --fk-g1: #101216; --fk-g2: #171a1f; --fk-g3: #20242b; --fk-g4: #2b3039;
@@ -10,6 +10,15 @@
   --fk-w: #1fc160; --fk-l: #e5383b; --fk-t: #9aa3ad;
   --fk-gold: #d2aa4f; --fk-gold-hi: #f0d68c; --fk-gold-lo: #8f6b22;
   --fk-cut: 14px;
+  /* THE SILVER: the mode's own metal, from its art (the chrome football, the trophy). Brushed chrome on the few
+     surfaces that frame the mode (the main button, the screen's header slab, the step and the tab that are on), steel
+     hairlines for its rules. The team's colours stay where they mean the team. A chrome face keeps its horizon line,
+     as the football's does. */
+  --fk-ag-hi: #f2f4f6; --fk-ag: #c4c9d0; --fk-ag-mid: #9aa1aa; --fk-ag-lo: #6c737d; --fk-ag-ink: #0b0c0e;
+  --fk-chrome: linear-gradient(180deg, #f6f7f9 0%, #e1e4e8 44%, #bcc1c8 50%, #cfd3d9 74%, #e9ecef 100%);
+  --fk-brushed: linear-gradient(180deg, #e6e9ec 0%, #c9ced4 100%);
+  --fk-steel: linear-gradient(180deg, #24282e 0%, #191c21 60%, #131519 100%);
+  --fk-ag-rule: linear-gradient(90deg, rgba(214,219,225,.75) 0%, rgba(176,183,192,.38) 50%, rgba(176,183,192,.07) 100%);
   --fk-d: 'BAP Anton', 'Anton', Impact, sans-serif;
   --fk-f: 'BAP Bebas', 'Bebas Neue', 'BAP Anton', Impact, sans-serif;
   --fk-b: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;   /* labels and sentences: the site's body font */
@@ -40,8 +49,8 @@
 }
 .fk-chy--s .fk-chy-slab { height: 32px; } .fk-chy--s .fk-chy-title { font-size: 18px; } .fk-chy--s .fk-chy-tag { font-size: 15px; }
 .fk-chy--l .fk-chy-slab { height: 54px; --fk-cut: 20px; } .fk-chy--l .fk-chy-title { font-size: 32px; } .fk-chy--l .fk-chy-tag { font-size: 20px; padding: 0 14px 3px; }
-.fk-chy--ink .fk-chy-slab { --tc: var(--fk-g3); --tct: #fff; --tc2: var(--fk-line2); }
-.fk-chy--ink .fk-chy-tag { background: #fff; color: #0b0c0e; }
+.fk-chy--ink .fk-chy-slab { --tc: var(--fk-ag); --tct: var(--fk-ag-ink); --tc2: var(--fk-ag-lo); background: var(--fk-chrome); }
+.fk-chy--ink .fk-chy-tag { background: var(--fk-ag-ink); color: var(--fk-ag-hi); }
 .fk-chy--w .fk-chy-slab { --tc: var(--fk-w); --tct: #04130a; --tc2: rgba(0,0,0,.25); }
 .fk-chy--l.fk-chy-x .fk-chy-slab, .fk-chy--loss .fk-chy-slab { --tc: var(--fk-l); --tct: #fff; --tc2: rgba(0,0,0,.25); }
 .fk-chy--gold .fk-chy-slab { background: linear-gradient(180deg, var(--fk-gold-hi) 0 50%, var(--fk-gold) 50% 100%); color: #1a1405; box-shadow: inset 0 -3px 0 var(--fk-gold-lo); }
@@ -236,17 +245,17 @@ button.fk-slab { cursor: pointer; }
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 .fk-go {
   position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 56px; padding: 0 22px; border: 0;
-  background: #fff; color: #0b0c0e; font-family: var(--fk-d); font-size: 21px; letter-spacing: .6px; text-transform: uppercase; cursor: pointer;
-  box-shadow: inset 0 -4px 0 var(--tca, #9aa3ad);
+  background: var(--fk-chrome); color: var(--fk-ag-ink); font-family: var(--fk-d); font-size: 21px; letter-spacing: .6px; text-transform: uppercase; cursor: pointer;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -4px 0 var(--fk-ag-lo);
   -webkit-tap-highlight-color: transparent; transition: transform .08s;
 }
 .fk-go:active { transform: translateY(2px); }
 .fk-go:disabled { opacity: .4; cursor: default; }
-.fk-go small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; letter-spacing: 0; color: #434850; }
+.fk-go small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; letter-spacing: 0; color: #353a41; }
 .fk-go-arrow { flex: none; }
-.fk-go.is-ghost { height: 48px; background: transparent; color: #fff; font-family: var(--fk-d); font-size: 17px; letter-spacing: .5px; box-shadow: inset 0 0 0 2px var(--fk-line2); }
+.fk-go.is-ghost { height: 48px; background: transparent; color: var(--fk-ag-hi); font-family: var(--fk-d); font-size: 17px; letter-spacing: .5px; box-shadow: inset 0 0 0 2px rgba(196,201,208,.38); }
 .fk-go.is-ghost small { color: var(--fk-mute); }
-@media (hover: hover) { .fk-go:not(:disabled):hover { background: #e9ebee; } .fk-go.is-ghost:not(:disabled):hover { background: rgba(255,255,255,.06); } }
+@media (hover: hover) { .fk-go:not(.is-ghost):not(:disabled):hover { background: var(--fk-brushed); } .fk-go.is-ghost:not(:disabled):hover { background: rgba(255,255,255,.06); } }
 
 .fk-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .2px; line-height: 1.15; text-transform: uppercase; background: var(--fk-g4); color: #fff; white-space: nowrap; }
 .fk-tag--inj, .fk-tag--out, .fk-tag--l { background: var(--fk-l); color: #fff; }
@@ -328,7 +337,7 @@ html.bap-reduce-motion .fk-bump-a, html.bap-reduce-motion .fk-bump-b { transform
 
 /* ── Readability (the UX pass, 11-15) ───────────────────────────────────── */
 /* A small section heading is plain words on a hairline, not a slab: only the screen's main header is a slab */
-.fk-chy--ink.fk-chy--s .fk-chy-slab { height: auto; min-height: 28px; padding: 0 0 6px; background: none; clip-path: none; box-shadow: inset 0 -1px 0 var(--fk-line2); color: #fff; animation: none; }
+.fk-chy--ink.fk-chy--s .fk-chy-slab { height: auto; min-height: 28px; padding: 0 0 6px; background: var(--fk-ag-rule) left bottom / 100% 1px no-repeat; clip-path: none; box-shadow: none; color: #fff; animation: none; }
 .fk-chy--ink.fk-chy--s .fk-chy-slab:not(:has(.fk-chy-tag)) { padding-left: 0; }
 .fk-chy--ink.fk-chy--s .fk-chy-title { padding-bottom: 0; font-size: 19px; }
 .fk-chy--ink.fk-chy--s .fk-chy-tag { padding: 0; background: none; color: var(--fk-mute); }
@@ -337,21 +346,21 @@ html.bap-reduce-motion .fk-bump-a, html.bap-reduce-motion .fk-bump-b { transform
 .fk-chy--ink.fk-chy--s .fk-chy-sub { padding: 5px 0 0; background: none; clip-path: none; color: var(--fk-mute); animation: none; }
 
 /* the way back: top left, sticky under the hub's tabs (--fk-stick), the same on every sub-view */
-.fk-back { position: sticky; top: var(--fk-stick, 0px); z-index: 5; display: flex; align-items: center; gap: 12px; min-height: 48px; margin: -6px 0 2px; background: var(--fk-ink); border-bottom: 1px solid var(--fk-line); }
+.fk-back { position: sticky; top: var(--fk-stick, 0px); z-index: 5; display: flex; align-items: center; gap: 12px; min-height: 48px; margin: -6px 0 2px; background: var(--fk-ag-rule) left bottom / 100% 1px no-repeat, var(--fk-ink); }
 .fk-back > button { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 14px 0 8px; border: 0; background: var(--fk-g3); color: #fff; font-family: var(--fk-b); font-weight: 700; font-size: 15px; cursor: pointer; }
 .fk-back > b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 20px; text-transform: uppercase; color: #fff; }
 .fk-back-r { flex: none; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
 @media (hover: hover) { .fk-back > button:hover { background: var(--fk-g4); } }
 
 /* the screen's next step: the bottom of the screen, always in the same place */
-.fk-actbar { position: sticky; bottom: 0; z-index: 4; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin: 8px 0 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ink); box-shadow: 0 -1px 0 var(--fk-line2), 0 -14px 14px -6px var(--fk-ink); }
+.fk-actbar { position: sticky; bottom: 0; z-index: 4; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin: 8px 0 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ag-rule) left top / 100% 1px no-repeat, var(--fk-ink); box-shadow: 0 -14px 14px -6px var(--fk-ink); }
 .fk-actbar:has(> .fk-go:not(.is-ghost) + .fk-go.is-ghost), .fk-actbar:has(> .fk-go.is-ghost + .fk-go:not(.is-ghost)) { grid-template-columns: 2fr 1fr; grid-auto-flow: row; }
 .fk-actbar:has(> .fk-go.is-ghost + .fk-go:not(.is-ghost)) { grid-template-columns: 1fr 2fr; }
 .fk-actbar .fk-go.is-ghost { height: 56px; }
 
 /* a section that opens with a tap */
 .fk-fold { display: grid; gap: 10px; min-width: 0; }
-.fk-fold-h { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 14px; border: 0; background: var(--fk-g1); color: #fff; text-align: left; cursor: pointer; }
+.fk-fold-h { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 14px; border: 0; background: var(--fk-g1); color: #fff; text-align: left; cursor: pointer; box-shadow: inset 3px 0 0 var(--fk-ag-mid); }
 .fk-fold-h b { flex: 1; font-family: var(--fk-d); font-weight: 400; font-size: 19px; text-transform: uppercase; }
 .fk-fold-h > span { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
 .fk-fold-h i { font-style: normal; font-size: 16px; color: var(--fk-mute); transition: transform .15s; }

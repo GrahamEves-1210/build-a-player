@@ -78,6 +78,7 @@ export function jerseyOf(F, p) {
 
 // ── Chyron: a section's header ───────────────────────────────────────────────
 // A flat team-colour slab with one angled edge and white caps; the thin dark bar under it for what's secondary.
+// tone 'ink' is the mode's own header: brushed chrome with black caps (small: a steel rule under plain words).
 //   tag: a block at the slab's front (WEEK 7) · sub: the bar under it · right: anything on the far side
 //   tone: 'team' (default) | 'ink' (graphite slab) | 'gold' (the Super Bowl only) | 'w' | 'l'
 export function Chyron({ team, title, tag, sub, right, tone = 'team', size = 'm', as: H = 'h2', className = '' }) {
@@ -386,7 +387,7 @@ export function Fold({ title, right, open: init = false, children, className = '
 }
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
-// The one call to action on a screen: a white slab, angled, black caps. ghost: the quiet second one.
+// The one call to action on a screen: a chrome slab (the mode's silver), black caps. ghost: the quiet second one.
 export function Go({ children, onClick, sub, disabled, ghost = false, className = '', ...rest }) {
   return (
     <button type="button" className={`fk-go${ghost ? ' is-ghost' : ''} ${className}`} onClick={onClick} disabled={disabled} {...rest}>
