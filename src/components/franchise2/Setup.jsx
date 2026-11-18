@@ -17,6 +17,8 @@ import './setup.css'
 import { teamKit } from '../../lib/franchise2/kits'
 
 // SETUP: a new franchise, in the order a new GM's first week goes.
+//   0 THE MODE    FULL (every week, every call) or LIGHT (the season in three stretches, the offseason in three
+//                 steps: lib/franchise2/light.js), kept for the save (FranchiseMode start: F.pace)
 //   1 THE TEAM    the 32 logos by division; a team's card: last season, team OVR, its real head coach and stars
 //   2 PLAYERS     how many of the player's own builds and where; each is made on the game's build page (App.jsx:
 //                 onBuild out, `built` back, FranchiseMode), then named and numbered here. Builds are rookies.
@@ -30,9 +32,11 @@ const MAX_BUILDS = 8
 export const SETUP_POS = POS.filter(p => p !== 'k' || K_LIVE)
 const POS_NAME = { ...SQ_POS_NAME, k: 'Kicker' }
 const capOf = pos => (pos === 'k' ? 1 : CAPS.nfl[pos] ?? 0)
-const STEPS = [['team', 'TEAM'], ['builds', 'PLAYERS'], ['coach', 'COACH'], ['hire', 'HIRE']]
-const GROUP = { team: 'team', card: 'team', builds: 'builds', coach: 'coach', style: 'coach', who: 'coach', hire: 'hire' }
-const BACK = { card: 'team', builds: 'card', coach: 'builds', style: 'coach', who: 'style', hire: 'who' }
+const STEPS = [['pace', 'MODE'], ['team', 'TEAM'], ['builds', 'PLAYERS'], ['coach', 'COACH'], ['hire', 'HIRE']]
+const GROUP = { pace: 'pace', team: 'team', card: 'team', builds: 'builds', coach: 'coach', style: 'coach', who: 'coach', hire: 'hire' }
+const BACK = { team: 'pace', card: 'team', builds: 'card', coach: 'builds', style: 'coach', who: 'style', hire: 'who' }
+// (a setup saved before the mode step, still on the team wall, closes from there as it did)
+const firstStep = S => (S.step ?? 'team') === 'pace' || ((S.step ?? 'team') === 'team' && !S.pace)
 
 export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
   const step = setup.step ?? 'team'
@@ -45,15 +49,15 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
   }, [step, S.team]) // eslint-disable-line react-hooks/exhaustive-deps
   const back = () => {
     if (naming) return go({ naming: null }, 'back')
-    if (step === 'team') return onBack()
+    if (firstStep(S)) return onBack()
     go({ step: BACK[step] }, 'back')
   }
   const at = STEPS.findIndex(([k]) => k === GROUP[step])
   return (
     <div className="fk-root fsu" style={S.team && step !== 'team' ? fkVars(S.team) : undefined}>
       <div className="fsu-top">
-        <button type="button" className="fsu-x" onClick={back} aria-label={step === 'team' && !naming ? 'Close' : 'Back'}>
-          {step === 'team' && !naming ? <IconClose size={16} /> : <IconCaret dir="left" size={18} />}
+        <button type="button" className="fsu-x" onClick={back} aria-label={firstStep(S) && !naming ? 'Close' : 'Back'}>
+          {firstStep(S) && !naming ? <IconClose size={16} /> : <IconCaret dir="left" size={18} />}
         </button>
         <ol className="fsu-steps" aria-label="New franchise">
           {STEPS.map(([k, label], i) => <li key={k} className={i < at ? 'is-done' : i === at ? 'is-on' : ''}><b>{i + 1}</b>{label}</li>)}
@@ -61,6 +65,7 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
       </div>
       <div className="fsu-body" key={naming ? `n-${naming}` : step}>
         {naming ? <NameStep S={S} id={naming} owner={owner} onDone={patch => go({ ...patch, naming: null }, 'claim')} />
+          : step === 'pace' ? <PaceStep pick={S.pace} onPick={p => { go({ pace: p, step: 'team' }, 'tap'); haptic('light') }} />
           : step === 'team' ? <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} />
             : step === 'card' ? <TeamCard s={S.team} onPick={t => go({ team: t }, 'tap')} onGo={() => { go({ step: 'builds' }, 'whistle'); haptic('medium') }} />
               : step === 'builds' ? <Builds S={S} go={go} owner={owner} onBuild={onBuild} />
@@ -69,6 +74,26 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
                     : step === 'who' ? <CoachWho S={S} go={go} owner={owner} onDone={() => go({ step: 'hire' }, 'whistle')} />
                       : step === 'hire' && S.cb && linesDone(S.cb) ? <CoachReveal S={S} owner={owner} onStart={onStart} /> : null}
       </div>
+    </div>
+  )
+}
+
+// ── 0. FULL or LIGHT ─────────────────────────────────────────────────────────
+// two plain rows; the one picked goes straight on to the team wall (back from the wall shows it again, lit)
+const PACES = [
+  ['full', 'FULL', 'Every week, every call. About an hour a season.'],
+  ['light', 'LIGHT', 'The season in three stretches, the offseason in three steps. About 10 minutes a season.'],
+]
+function PaceStep({ pick, onPick }) {
+  return (
+    <div className="fsu-pace">
+      <Chyron tone="ink" title="How do you want to run it?" sub="THE SAME LEAGUE AND THE SAME GAMES EITHER WAY" />
+      {PACES.map(([k, name, line]) => (
+        <button key={k} type="button" className={`fsu-pace-row${pick === k ? ' is-on' : ''}`} onClick={() => onPick(k)} aria-pressed={pick === k}>
+          <b>{name}</b><span>{line}</span>
+        </button>
+      ))}
+      <p className="fsu-pace-note">The choice stays with this franchise.</p>
     </div>
   )
 }

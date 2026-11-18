@@ -47,7 +47,7 @@ export function Slots({ owner, onOpen, onHome }) {
                 <span className="fsu-slot-txt">
                   <small>{t ? t.name.replace(` ${t.nick}`, '').toUpperCase() : s?.setup ? 'NEW FRANCHISE' : 'SLOT ' + (i + 1)}</small>
                   <b>{t ? t.nick.toUpperCase() : s?.setup ? 'SETTING UP' : 'EMPTY'}</b>
-                  <em>{s?.setup ? 'PICK UP WHERE YOU LEFT IT' : s ? `${s.year} · ${s.rec} · ${s.phase === 'season' ? `WEEK ${(s.wk ?? 0) + 1}` : s.phase === 'playoffs' ? 'PLAYOFFS' : 'OFFSEASON'}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.sandbox ? ' · SANDBOX' : ''}` : 'START A FRANCHISE'}</em>
+                  <em>{s?.setup ? 'PICK UP WHERE YOU LEFT IT' : s ? `${s.year} · ${s.rec} · ${s.phase === 'season' ? `WEEK ${(s.wk ?? 0) + 1}` : s.phase === 'playoffs' ? 'PLAYOFFS' : 'OFFSEASON'}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.light ? ' · LIGHT' : ''}${s.sandbox ? ' · SANDBOX' : ''}` : 'START A FRANCHISE'}</em>
                 </span>
               </button>
               {s && (sure === i

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach, POS } from '../../lib/franchise2'
+import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach, POS, lightInit } from '../../lib/franchise2'
 import { FRANCHISE_CARD_KEY } from '../../lib/franchiseLive'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
@@ -93,7 +93,7 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     flush()
     try { localStorage.setItem(LAST, String(s)) } catch {}
     const X = loadFranchise(s)
-    setSlot(s); setF(X); setSetup(X ? null : rawSlot(s)?.setup ?? { slot: s, seed: newSeed(), owner, step: 'team', picks: [], builds: {} })
+    setSlot(s); setF(X); setSetup(X ? null : rawSlot(s)?.setup ?? { slot: s, seed: newSeed(), owner, step: 'pace', picks: [], builds: {} })
     sfx('tap')
   }
   const start = () => {
@@ -104,6 +104,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     const builds = POS.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).map(p => S.builds[p.id]).filter(Boolean)
     const X = createFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, sandbox: S.sandbox, coach, builds })
     X.games = S.games ?? 'advanced'
+    // FULL or LIGHT, for the life of the save (a save without it is FULL: lib/franchise2/light.js)
+    if (S.pace === 'light') lightInit(X); else X.pace = 'full'
     saveFranchise(X); leaveNote(X)
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')
