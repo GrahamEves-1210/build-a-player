@@ -451,6 +451,8 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
     }
     if (!me.carry) return
     if (me.d >= 100) return settle('td', null, 100)
+    // (back out of his own end zone, over the end line: a safety; he could run on off the field before, owner 11-18)
+    if (me.d <= -10) return settle('out', 'OUT THE BACK OF THE END ZONE', 0)
     if (me.x < 0 || me.x > W_YD) return settle('out', 'PUSHED OUT OF BOUNDS', Math.round(me.d))
     for (const c of cover) {
       if (g.t < c.down || g.t - c.tried < 1200) continue
@@ -494,7 +496,7 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
     const word = td ? 'TOUCHDOWN' : kind === 'touchback' ? 'TOUCHBACK' : kind === 'oob' ? 'OUT OF BOUNDS' : kind === 'lost' ? 'FUMBLE' : kind === 'downed' ? `DOWNED AT ${yardWord(spot)}`
       : kind === 'out' ? `OUT AT ${yardWord(spot)}` : spot > PASS_AT ? `TO ${yardWord(spot)}` : `TACKLED AT ${yardWord(spot)}`
     g.prompt = td ? 'ALL THE WAY' : kind === 'touchback' ? 'LET IT ROLL IN: BALL AT THE 20' : kind === 'oob' ? 'KICKED OUT OF BOUNDS: BALL AT THE 40' : kind === 'lost' ? 'THEY RECOVERED THE MUFF'
-      : kind === 'downed' ? 'NEVER GOT TO IT: THEY DOWNED IT' : spot <= 0 ? 'TACKLED IN THE END ZONE: SAFETY' : why
+      : kind === 'downed' ? 'NEVER GOT TO IT: THEY DOWNED IT' : spot <= 0 ? (kind === 'out' ? 'OUT OF THE END ZONE: SAFETY' : 'TACKLED IN THE END ZONE: SAFETY') : why
     g.stamp = { text: word, good: good ? true : spot >= 25 && (kind === 'tackle' || kind === 'out') ? null : false, at: g.t + (td ? 150 : 0), size: word.length > 12 ? 36 : 50 }
     g.fx.push('stamp', td ? 'h:success' : kind === 'tackle' ? 'h:heavy' : 'h:medium')
     if (td || good) g.popAt = g.t
@@ -513,7 +515,7 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
     g.res = { kind, why, at: g.t, spot, yards: gain, catchD: L, td, good: first }
     g.hud.dots[0] = first
     const word = td ? 'TOUCHDOWN' : safety ? 'SAFETY' : first ? 'FIRST DOWN' : gain > 0 ? `GAIN OF ${gain}` : gain === 0 ? 'NO GAIN' : `LOSS OF ${-gain}`
-    g.prompt = td ? `${gain}-YARD RUN` : kind === 'out' ? 'PUSHED OUT OF BOUNDS' : why
+    g.prompt = td ? `${gain}-YARD RUN` : kind === 'out' ? (safety ? 'OUT OF THE END ZONE: SAFETY' : 'PUSHED OUT OF BOUNDS') : why
     g.stamp = { text: word, good: first ? true : gain > 0 && !safety ? null : false, at: g.t + (td ? 150 : 0), size: word.length > 12 ? 36 : 50 }
     g.fx.push('stamp', td ? 'h:success' : kind === 'tackle' ? 'h:heavy' : 'h:medium')
     if (first) g.popAt = g.t

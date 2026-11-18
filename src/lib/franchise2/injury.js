@@ -16,7 +16,7 @@
 //   (10-15), torn pectorals (linemen and linebackers), broken legs, Lisfranc. A torn ACL takes 9-11 months, so one
 //   torn in November runs into next September and one torn in December into next October: he starts on PUP.
 // - Injured reserve: out four games or more (the NFL's rule since 2022), as the wire says it.
-// The tone-down (QOL): the rate is 80% of the NFL's, for every man. The lengths keep the NFL's shape; in the season
+// The tone-down (QOL): the rate is half the NFL's, for every man (owner 11-18: "too many injuries"; it was 80%). The lengths keep the NFL's shape; in the season
 // they come to about 2.7 games an injury (the count's 3.1), so a team loses about 30% fewer games than a real one:
 // ~21 injuries a team-season, ~47 starter-games (sim.mjs prints it all).
 //
@@ -27,7 +27,7 @@ import { depthChart, startersOf, groupOf, GROUPS } from './roster'
 
 // (headless checks count every injury here: scripts/franchise2/sim.mjs, gameday.mjs)
 export const TALLY = { on: false, rows: [] }
-export const QOL = 0.8                 // the NFL's rate times this, for every man (owner: a bit gentler than real)
+export const QOL = 0.5                 // the NFL's rate times this, for every man (owner 11-15: a bit gentler than real; 11-18: still too many, half)
 const RATE = { qb: 0.025, rb: 0.052, wr: 0.045, te: 0.049, ol: 0.034, edge: 0.039, dt: 0.043, lb: 0.043, cb: 0.044, s: 0.047, k: 0.006 }
 const EXPOSE = { start: 1.4, rest: 0.15 }
 // The starting quarterback (owner, 2026-11-17: "every starting QB plays all 17"): the count's 2.5% is every QB who
