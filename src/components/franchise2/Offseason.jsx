@@ -8,6 +8,7 @@ import { Man, CapBar, PlayerPage } from './dparts'
 import { Resign, FreeAgency } from './Deals'
 import { DraftDay } from './Draft'
 import { Carousel } from './Staff'
+import { LightOffseason } from './Light'
 import './fd.css'
 
 // THE OFFSEASON: five stops, one screen each. COACHES (the carousel, the NFL's Black Monday: Staff.jsx) → AWARDS →
@@ -17,6 +18,8 @@ import './fd.css'
 const STOPS = [['coaches', 'Coaches'], ['awards', 'Awards'], ['resign', 'Re-sign'], ['fa', 'Free agency'], ['draft', 'Draft']]
 
 export default function Offseason({ F, act, owner, onBuild, foot }) {
+  // (LIGHT: three steps, Light.jsx)
+  if (F.pace === 'light') return <LightOffseason F={F} act={act} owner={owner} onBuild={onBuild} />
   const i = STOPS.findIndex(([k]) => k === F.stage)
   // (free agency has its own cap line, live with the offers out, and the whole width for the market)
   const cap = F.stage === 'resign'

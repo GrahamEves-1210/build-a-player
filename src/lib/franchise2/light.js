@@ -318,13 +318,21 @@ export function fairOffer(F, p, V = null) {
   return out
 }
 // THE MARKET'S BEST FITS: the free agents who'd start or fill a hole at the team's needs, the biggest lift first
-// (market.js fitOf), ten of them; a thin list is topped up with the best depth at a need
+// (market.js fitOf), ten of them, three at most at one spot (the list covers the needs, not one room); a thin list is
+// topped up with the best depth at a need
 export function marketFits(F, V = null, n = 10) {
   const need = needsOf(F, F.team)
   const all = (F.fa ?? []).filter(p => !p.fl).map(p => ({ p, fit: fitOf(F, p, V), need: need[groupOf(p)] ?? 0 }))
   const v = x => x.fit.v + x.need * 0.1
-  const top = all.filter(x => x.fit.k !== 'depth').sort((a, b) => v(b) - v(a) || b.p.o - a.p.o).slice(0, n)
-  if (top.length < 8) top.push(...all.filter(x => x.fit.k === 'depth' && x.need >= 1).sort((a, b) => b.p.o - a.p.o).slice(0, 8 - top.length))
+  const top = [], at = {}
+  for (const x of all.filter(y => y.fit.k !== 'depth').sort((a, b) => v(b) - v(a) || b.p.o - a.p.o)) {
+    const g = groupOf(x.p)
+    if ((at[g] ?? 0) >= 3) continue
+    at[g] = (at[g] ?? 0) + 1
+    top.push(x)
+    if (top.length >= n) break
+  }
+  if (top.length < 8) top.push(...all.filter(x => x.fit.k === 'depth' && x.need >= 1 && (at[groupOf(x.p)] ?? 0) < 3).sort((a, b) => b.p.o - a.p.o).slice(0, 8 - top.length))
   return top
 }
 // FINISH FREE AGENCY: the re-sign calls made (a man let go goes to the market with his ask and his day, as openFA

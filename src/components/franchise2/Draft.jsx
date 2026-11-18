@@ -6,7 +6,7 @@ import {
   viewOf, rangeText, knownShare, reportOf, consensus, rankMap, projText, stockMoves, mockDraft, mockVersion, needsOf,
   seasonLine, gameLine, lineText, combineOf, star, moveOnBoard, spotLabel, pickSpot, heightText, CLASS_LABEL, KIND_LABEL, CHAR_TEXT,
   startNight, cpuPicks, userPick, autoPick, simRest, pickTeam, draftDone, myPicks, roundOf, boardRank, markSeen,
-  tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT,
+  tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT, lightNewSeason,
 } from '../../lib/franchise2'
 import { groupOf, jersey } from '../../lib/franchise2/roster'
 import { faceUrl, buildFaceUrl, facePos } from '../../lib/franchise2/faces'
@@ -468,10 +468,12 @@ const CLOCK = [600, 420, 300, 300, 300, 300, 240]   // the real draft's clock by
 const DAY_OF = rd => (rd === 1 ? 'DAY 1' : rd <= 3 ? 'DAY 2' : 'DAY 3')
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-export function DraftDay({ F, act, owner, onBuild }) {
+// (light: Franchise LIGHT's draft: the player picks in rounds 1-3, the league's picks a quick feed, no trades, then
+// SIM THE REST OF THE DRAFT; light.js)
+export function DraftDay({ F, act, owner, onBuild, light = false }) {
   if (F.dr.ph === 'pre') return <DraftWeek F={F} act={act} onBuild={onBuild} />
   if (draftDone(F) && F.dr.over) return <ClassRecap F={F} act={act} owner={owner} />
-  return <DraftNight F={F} act={act} gm={owner && !/^guest$/i.test(owner) ? owner : null} />
+  return <DraftNight F={F} act={act} gm={owner && !/^guest$/i.test(owner) ? owner : null} light={light} />
 }
 
 function DraftWeek({ F, act, onBuild }) {
@@ -509,7 +511,7 @@ function DraftWeek({ F, act, onBuild }) {
 
 // Draft night. The league's picks come up one at a time (the first round as cards, then a running list), the
 // trades with them; on our pick, the clock, the board, the trade offers; our pick is turned over.
-function DraftNight({ F, act, gm }) {
+function DraftNight({ F, act, gm, light = false }) {
   // the picks not yet shown live on the draft itself (F.dr.seen), so a reload or a remount picks up where it was;
   // base: where this run of the feed starts (the first pick not shown when it began)
   const [base, setBase] = useState(() => F.dr.seen ?? 0)
@@ -531,7 +533,7 @@ function DraftNight({ F, act, gm }) {
   useEffect(() => {
     if (!showing) return
     const big = roundOf(feed[shown].at) === 1
-    T.current = setTimeout(() => { setShown(n => n + 1); sfx(big ? 'card' : 'tick') }, reduced() ? 40 : big ? (shown === 0 ? 350 : 700) : 90)
+    T.current = setTimeout(() => { setShown(n => n + 1); sfx(big && !light ? 'card' : 'tick') }, reduced() ? 40 : light ? 60 : big ? (shown === 0 ? 350 : 700) : 90)
     return () => clearTimeout(T.current)
   }, [showing, shown, feed.length]) // eslint-disable-line react-hooks/exhaustive-deps
   // (each pick counts as seen once it's been on screen, so a reload picks up after the last one shown and never
@@ -549,29 +551,32 @@ function DraftNight({ F, act, gm }) {
   const finish = () => { act(X => { X.dr.over = 1; delete X.dr.rv }); sfx('whistle') }
   const trade = o => { if (act(X => acceptTrade(X, o))) { sfx('claim'); haptic('success'); setOffers(null); if (pickTeam(F) !== F.team) run() } }
   const trades = new Map(F.dr.tr.filter(t => !t.mine).map(t => [t.at, t]))
+  // (LIGHT: from the 4th round on, the rest of the draft in one go: the league's picks and the player's auto picks)
+  const nextMine = myPicks(F)[0]
+  const rest = light && !done && (nextMine == null || roundOf(nextMine) >= 4)
+  const simAll = () => { setReveal(null); setBase(F.dr.picks.length); setShown(0); act(X => { simRest(X); X.dr.seen = X.dr.picks.length; X.dr.over = 1; delete X.dr.rv }); sfx('whistle'); haptic('medium') }
 
-  if (reveal) return <RevealCard F={F} p={reveal} onNext={draftDone(F) ? finish : next} />
+  if (reveal) return <RevealCard F={F} p={reveal} onNext={draftDone(F) ? finish : rest ? simAll : next} label={rest ? 'Sim the rest of the draft' : null} />
   const cur = showing ? feed[shown] : null
   const recent = F.dr.picks.slice(0, base + shown).reverse()
-  const nextMine = myPicks(F)[0]
   return (
     <div className="dr-day dr-night fk" style={fkVars(F.team)}>
       {!done && <Clock F={F} at={cur ? cur.at : at} team={cur ? cur.s : pickTeam(F)} ours={onClock && !showing} nextMine={nextMine} />}
       {done && <Chyron team={F.team} title="THE DRAFT IS OVER" tag={F.year + 1} size="l" sub={`${F.dr.picks.length} PICKS · 7 ROUNDS`} />}
       {done && !showing && F.dr.picks.length > 0 && <PickCard F={F} p={F.dr.picks[F.dr.picks.length - 1]} label="MR. IRRELEVANT" />}
-      {cur && roundOf(cur.at) === 1 && <PickCard key={cur.at} F={F} p={cur} trade={trades.get(cur.at)} />}
+      {cur && roundOf(cur.at) === 1 && !light && <PickCard key={cur.at} F={F} p={cur} trade={trades.get(cur.at)} />}
       {recent.length > 0 && (
         <section className="dr-feed">
           {recent.slice(0, showing ? 6 : 10).map(p => <FeedRow key={p.at} F={F} p={p} trade={trades.get(p.at)} />)}
         </section>
       )}
       {showing && <button type="button" className="dr-skip" onClick={() => { setShown(feed.length); tap() }}>Skip ahead</button>}
-      {!showing && onClock && (
+      {!showing && onClock && !rest && (
         <>
           <p className="dr-tip">{gm ? `${gm}, the ${TEAM[F.team].nick} are on the clock.` : `The ${TEAM[F.team].nick} are on the clock.`} Tap a prospect to see his card and draft him.</p>
           <div className="dr-acts">
             <Go ghost onClick={auto}>Auto pick</Go>
-            <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeDownOffers(X))); tap() }}>Trade down</Go>
+            {!light && <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeDownOffers(X))); tap() }}>Trade down</Go>}
           </div>
           {offers && <Offers F={F} offers={offers} onTake={trade} />}
           <div className="dr-tabs is-small" role="tablist">
@@ -581,16 +586,17 @@ function DraftNight({ F, act, gm }) {
           {open != null && <ProspectCard F={F} act={act} id={open} onClose={() => setOpen(null)} onDraft={take} draftLabel={`DRAFT HIM · NO. ${at + 1}`} />}
         </>
       )}
-      {!showing && !onClock && !done && (
+      {!showing && !onClock && !done && !rest && (
         <>
           {offers && <Offers F={F} offers={offers} onTake={trade} />}
           <ActionBar>
             <Go onClick={run}>{nextMine != null ? `Sim to pick ${nextMine + 1}` : 'Finish the draft'}</Go>
-            <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeUpOffers(X))); tap() }}>Trade up</Go>
+            {!light && <Go ghost onClick={() => { setOffers(offers ? null : act(X => tradeUpOffers(X))); tap() }}>Trade up</Go>}
           </ActionBar>
         </>
       )}
-      {!showing && !done && roundOf(at) >= 4 && <button type="button" className="dr-skip" onClick={() => { setBase(F.dr.picks.length); setShown(0); act(fresh(X => simRest(X))); sfx('flip') }}>Auto-draft the rest</button>}
+      {!showing && rest && <ActionBar><Go onClick={simAll} sub={`ROUNDS ${roundOf(Math.max(at, nextMine ?? at))}-7 · THE SCOUTS' PICKS`}>Sim the rest of the draft</Go></ActionBar>}
+      {!showing && !done && !light && roundOf(at) >= 4 && <button type="button" className="dr-skip" onClick={() => { setBase(F.dr.picks.length); setShown(0); act(fresh(X => simRest(X))); sfx('flip') }}>Auto-draft the rest</button>}
       {!showing && done && <ActionBar><Go onClick={finish}>See the class</Go></ActionBar>}
     </div>
   )
@@ -660,7 +666,7 @@ function Offers({ F, offers, onTake }) {
   )
 }
 // Our pick, turned over: the announcement, the card flips, the grade he really is spins up, the stamp.
-function RevealCard({ F, p, onNext }) {
+function RevealCard({ F, p, onNext, label = null }) {
   const [flip, setFlip] = useState(false)
   useEffect(() => { const t = setTimeout(() => { setFlip(true); sfx('gradepop', 6) }, reduced() ? 0 : 700); return () => clearTimeout(t) }, [])
   const t = TEAM[F.team]
@@ -686,7 +692,7 @@ function RevealCard({ F, p, onNext }) {
         </div>
       )}
       {flip && <p className="dr-rv-note">Grades are where he's headed. He starts at {man?.o ?? '—'} OVR.</p>}
-      <ActionBar><Go onClick={onNext}>{draftDone(F) ? 'See the class' : 'Next pick'}</Go></ActionBar>
+      <ActionBar><Go onClick={onNext}>{draftDone(F) ? 'See the class' : label ?? 'Next pick'}</Go></ActionBar>
     </div>
   )
 }
@@ -726,7 +732,7 @@ function ClassRecap({ F, act, owner }) {
           {rv.busts.length > 0 && <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="OVERRATED BY THE CONSENSUS" />{rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />)}</section>}
         </>
       )}
-      <ActionBar><Go onClick={() => { act(X => { closeDraft(X); newSeason(X) }); sfx('whistle'); haptic('medium') }}>Start the {F.year + 1} season</Go></ActionBar>
+      <ActionBar><Go onClick={() => { act(X => { if (X.pace === 'light') lightNewSeason(X); else { closeDraft(X); newSeason(X) } }); sfx('whistle'); haptic('medium') }}>Start the {F.year + 1} season</Go></ActionBar>
     </div>
   )
 }

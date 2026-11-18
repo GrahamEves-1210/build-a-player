@@ -412,10 +412,10 @@ function OfferPanel({ F, act, owner, p, V, side = false, onBack, setPage }) {
 const WHY = { deal: 'more years and more of it guaranteed', role: 'a starting job', win: 'a contender', coach: 'the head coach' }
 const whyText = x => `Took ${money(x.why.less)} a year less than the ${TEAM[x.why.vs]?.nick ?? x.why.vs} offered, for ${WHY[x.why.k] ?? 'the better fit'}${x.why.k === 'win' || x.why.k === 'role' || x.why.k === 'coach' ? ` with the ${TEAM[x.to]?.nick ?? x.to}` : ''}`
 // The day's answers to the player's offers: each man's offers turned over, then where he signed
-function DayResults({ F, r }) {
+export function DayResults({ F, r, title = null }) {
   return (
     <section className="dl-results">
-      <Chyron team={F.team} size="s" title={`DAY ${r.d} · THE ${nick(F.team)} OFFERS`} right={r.list.length} />
+      <Chyron team={F.team} size="s" title={title ?? `DAY ${r.d} · THE ${nick(F.team)} OFFERS`} right={r.list.length} />
       {r.list.map((x, j) => {
         const won = x.k === 'won', later = x.k === 'later', board = [...(x.board ?? [])].sort((a, b) => b.v - a.v)
         return (

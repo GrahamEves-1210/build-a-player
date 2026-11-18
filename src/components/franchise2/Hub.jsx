@@ -2,6 +2,7 @@ import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
   TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
+  lightPlay, lightAfter, lightSimAll, openStretch, stretchOk,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
@@ -24,6 +25,7 @@ import LeagueTab from './League'
 import HistoryTab from './History'
 import Offseason from './Offseason'
 import DraftBoard from './Draft'
+import { StretchCard, StretchRecap } from './Light'
 import { faceFor } from './dparts'
 import { coachPhoto } from './coachFace'
 import { memoF, peekF, idleRun, standingsOf, recordsOf, useLeagueWarm, warmKey, useStaged } from './perf'
@@ -74,20 +76,29 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   useTeamFacesWarm(F)
 
   // PLAY WEEK: the week's games; the player's own on screen (the scorebug, a moment if it comes, the final)
+  // (LIGHT, the regular season: the stretch, its big game on screen: light.js lightPlay)
   const play = () => {
-    const out = act(X => playWeek(X, momentOpts(X)))
+    const light = F.pace === 'light' && F.phase === 'season'
+    const out = act(X => (light ? lightPlay(X, momentOpts(X)) : playWeek(X, momentOpts(X))))
     sfx('whistle'); haptic('medium')
     if (out?.pending) setLive({ pend: true })
     else if (out?.row) setLive({ row: out.row, news: out.news })
     else if (out?.champ && out.champ === F.team) setTrophy(true)
   }
-  const simToEnd = () => { act(X => simWeeks(X, {})); sfx('flip') }
+  const simToEnd = () => { act(X => (X.pace === 'light' ? lightSimAll(X) : simWeeks(X, {}))); sfx('flip') }
   const after = () => {
     setLive(null)
+    if (F.pace === 'light' && F.lt?.ph === 'big') act(X => lightAfter(X))
     if (F.phase === 'done' && F.po?.champ === F.team) setTrophy(true)
   }
   const phaseText = F.phase === 'season' ? `Week ${F.wk + 1}` : F.phase === 'post' ? 'Regular season over' : F.phase === 'playoffs' ? 'Playoffs' : off ? 'Offseason' : 'Season over'
   const toTab = id => { if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
+  // LIGHT: a season card always has its stretch; a big game over when the save was read back goes on to its recap
+  useEffect(() => {
+    if (F.pace !== 'light' || live) return
+    if (F.phase === 'season' && !stretchOk(F)) act(X => { openStretch(X) })
+    else if (F.lt?.ph === 'big' && !F.pend) act(X => { lightAfter(X) })
+  }, [F, live, F.phase, F.wk, F.lt?.ph]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="ag-screen f2 fk fk-root fh" style={fkVars(F.team)}>
@@ -99,7 +110,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           <span className="fh-top-logo"><KLogo s={F.team} size={36} /></span>
           <span className="fh-top-txt">
             <b>{t.name}</b>
-            <small>{F.year} · {phaseText}{F.sandbox && <em className="fh-sandbox">Sandbox</em>}</small>
+            <small>{F.year} · {phaseText}{F.pace === 'light' && <em className="fh-sandbox fh-light">Light</em>}{F.sandbox && <em className="fh-sandbox">Sandbox</em>}</small>
           </span>
           <button className="fh-x" onClick={onHome} aria-label="Leave Franchise"><IconClose size={16} /><span>Exit</span></button>
         </header>
@@ -131,16 +142,20 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
   const ph = F.phase
   const reg = ph === 'season' || ph === 'post'
   const side = useStaged(2, 1) > 1
+  // (LIGHT: the stretch to play, or the one just played; its recap has the division in it)
+  const light = F.pace === 'light', recap = light && F.lt?.ph === 'recap'
   return (
     <div className="fh-grid">
       <div className="fh-main">
         {ph === 'season' && F.ev && <EventCard key={`${F.year}-${F.wk}-${F.ev.id}`} F={F} act={act} owner={owner} />}
-        {ph === 'season' && !F.ev && <ThisWeek F={F} owner={owner} play={play} simToEnd={simToEnd} />}
-        {ph === 'post' && <SeasonOver F={F} act={act} r={r} />}
+        {ph === 'season' && !F.ev && !light && <ThisWeek F={F} owner={owner} play={play} simToEnd={simToEnd} />}
+        {ph === 'season' && !F.ev && light && F.lt?.ph === 'card' && stretchOk(F) && <StretchCard F={F} play={play} simToEnd={simToEnd} />}
+        {reg && !F.ev && recap && <StretchRecap key={`${F.year}-${F.lt.k}`} F={F} act={act} owner={owner} />}
+        {ph === 'post' && !recap && <SeasonOver F={F} act={act} r={r} />}
         {ph === 'playoffs' && <PlayoffCard F={F} act={act} play={play} owner={owner} />}
         {ph === 'done' && <Champions F={F} act={act} onTrophy={onTrophy} />}
         {reg && <Glance F={F} r={r} />}
-        {ph === 'season' && !F.ev && <MatchupMore F={F} owner={owner} />}
+        {ph === 'season' && !F.ev && !light && <MatchupMore F={F} owner={owner} />}
         {(ph === 'playoffs' || ph === 'done') && <PoBracket F={F} />}
       </div>
       <aside className="fh-side">
@@ -148,7 +163,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
         {side && (
           <>
             {reg && F.log.length > 0 && <LastWeek F={F} owner={owner} />}
-            {reg && <Ladder F={F} />}
+            {reg && !recap && <Ladder F={F} />}
             {reg && <Strip F={F} />}
             <ScoutRow F={F} onBoard={onBoard} />
             <GamesSwitch F={F} act={act} />
@@ -161,12 +176,14 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
 
 // the scouting room: the draft board and the days the scouts have left (open all year: the spring's combine, visits
 // and pro days are in it after the Super Bowl)
+// (LIGHT: the scouts work on their own, light.js; the board is there to look at, no days to spend)
 export function ScoutRow({ F, onBoard }) {
   const n = scoutsLeft(F)
+  const light = F.pace === 'light'
   return (
     <button className="fh-row fh-scout" onClick={onBoard}>
-      <span><small>Draft board</small><b>Scout the {F.year + 1} class</b></span>
-      <span className="fh-scout-pts"><b>{n}</b><small>{n === 1 ? 'day left' : 'days left'}</small></span>
+      <span><small>Draft board</small><b>{light ? `The ${F.year + 1} class` : `Scout the ${F.year + 1} class`}</b></span>
+      {!light && <span className="fh-scout-pts"><b>{n}</b><small>{n === 1 ? 'day left' : 'days left'}</small></span>}
       <i className="fh-row-go" aria-hidden="true">›</i>
     </button>
   )
