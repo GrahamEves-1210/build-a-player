@@ -32,7 +32,7 @@ export function Slots({ owner, onOpen, onHome }) {
           {FRANCHISE_ART.hero && (
             <div className="fsu-hero-box" ref={hero}>
               <img className="fsu-hero" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} />
-              <TrophyTurn base={FRANCHISE_TURN.hero} className="fsu-hero-turn" replay={hero} />
+              <TrophyTurn base={FRANCHISE_TURN.hero} turns={24} className="fsu-hero-turn" replay={hero} />
             </div>
           )}
           <Chyron tone="ink" size="l" title="Franchise" sub="THREE SAVE SLOTS" />

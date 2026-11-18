@@ -27,9 +27,9 @@ export const franchiseCard = () => { try { const c = JSON.parse(localStorage.get
 // The mode's art (public/franchise/art/, made with the trophy scene: the championship trophy on the mode's own
 // near-black): the picture on Home's card (the trophy's football alone, zoomed in, 3:2) and the hero on the mode's
 // first screen. (null: no picture, no box)
-export const FRANCHISE_ART = { card: '/franchise/art/football-card.webp', hero: '/franchise/art/trophy-wide.webp' }
+export const FRANCHISE_ART = { card: '/franchise/art/football-card.webp', hero: '/franchise/art/football-card.webp' }   // (the save screen: the football, owner 11-18)
 // ...and each one turning, slowly (components/franchise2/TrophyTurn.jsx: .mp4, or .webm where H.264 can't play). The
 // card's is the football taken from the trophy, zoomed in and spinning about its long axis like a slow spiral (owner
 // 11-15), 5 s a turn, its first frame the card's still; the hero's is the whole trophy turning, the middle of the
 // 16:9 still. (null: the still only)
-export const FRANCHISE_TURN = { card: '/franchise/art/football-card-turn', hero: '/franchise/art/trophy-hero-turn' }
+export const FRANCHISE_TURN = { card: '/franchise/art/football-card-turn', hero: '/franchise/art/football-card-turn' }
