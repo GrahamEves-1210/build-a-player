@@ -1,6 +1,89 @@
 // The patch notes (components/app/AppWhatsNew.jsx), newest first. A new update: add one at the top, with a new
 // `id`, and it opens once for every returning player; the date menu goes back through the older ones.
 // Only what's new against the live site. ratings: the Ratings tab (data/ratings-patch.js) belongs to that one
+const NOV_18 = {
+  id: '2026-11-18',
+  date: 'NOV 18',
+  fullDate: 'NOV 18, 2026',
+  sections: [
+    {
+      name: 'New Mode: Franchise',
+      items: [
+        'Take over any NFL team as its general manager and run it season after season, with three save slots',
+        'Build your players on the build screen: each one replaces the best starter at his position, and the setup shows who he replaces',
+        'Build as many players as you want, every spot at a position if you like',
+        'Hire your head coach: spin his ratings, pick his style, name him and give him a face',
+        'Full or Light: Full is every week and every offseason step, about 30 minutes a season; Light is the season in three stretches and the offseason in three steps, about 5 minutes',
+        'Every game is simulated with full box scores, injuries, stats, the trade deadline and front-office calls',
+        'Game day: watch your game drive by drive with the field, play-by-play, scoring and the box score, and play key moments as real snaps',
+        'Key moments show each call as play art: the formation, the routes and the ball carrier\'s path',
+        'The field graphic follows real rules: each team defends one end and they switch after the 1st and 3rd quarters',
+        'Real rosters, real 2026 contracts and the real salary cap, with dead money, restructures and the franchise tag',
+        'The coaching carousel: Black Monday, keep or fire your coordinators, interviews and hires around the league',
+        'Re-sign your players, then bid in a three-day free agency against the other 31 teams',
+        'League teams cut their overpaid veterans before free agency, so the market is real names',
+        'The draft: scout the class all season, the Senior Bowl, the combine, visits, and seven rounds on draft night',
+        'Late-round gems and early busts happen by chance, not a set number each year',
+        'Awards, All-Pros, Coach of the Year, franchise records and a History tab with every team\'s real past: Super Bowl wins and the last ten seasons',
+        'Around the League follows the whole league, from the preseason picks to each week\'s scores and big games',
+        'In Light: adjust re-sign offers (his ask or 5% to 10% under, and 1 to 5 years) and free agent offers (Fair or Strong, 1 to 5 years)',
+        'Sandbox: add your own build to the draft class',
+      ],
+    },
+    {
+      name: 'Career',
+      items: [
+        'Award races all season: MVP, OPOY and DPOY in football, with a top-ten board week by week and a 50-voter ballot at the end',
+        'Comeback Player of the Year (football) and Sixth Man of the Year (basketball)',
+        'The race sits in a thin bar above your schedule; tap it to open the board',
+        'The draft now uses the real 2026 order and class, team needs and positional value',
+        'Interviews can be skipped, and you can sit out the combine',
+        'Real NFL schedules: division games home and away and the league\'s rotation; the NBA plays 82',
+        'The top grades are earned: A to A+ and A+ to S cost more development points',
+        'Basketball development points follow your NBA seasons, not your age',
+        'Change your jersey number from EDIT in the Career hub, next to your face',
+        'New start buttons: Enter the Draft and Start in College',
+        'Positions on the creator now run QB, RB, WR, TE, OL, DL, LB, DB, K',
+      ],
+    },
+    {
+      name: 'Faces',
+      items: [
+        'New drawn faces for made-up players, coaches and the Career creator',
+        'Players look their age: softer lines, no grey hair',
+        'Hairstyles redone: locs, braids, twists, the side part and more, all sitting right on the head',
+        'Better jerseys under the faces, and a real tank top for basketball players',
+        'Coaches wear their team\'s logo on caps and jackets',
+      ],
+    },
+    {
+      name: 'Box Scores',
+      items: [
+        'Redesigned: the final and the score by quarter first, then team stats side by side and the game\'s leaders',
+        'Player stats one team at a time, in larger type, with empty rows hidden',
+      ],
+    },
+    {
+      name: 'Home',
+      items: [
+        'Franchise replaces Squad Builder on football\'s Home',
+        'The sport picker gives football and basketball more room; soccer and baseball are coming soon',
+      ],
+    },
+    {
+      name: 'Fixes',
+      items: [
+        'Blacktop: the build page spins the right pool (an All-Time build no longer turns every pick into a 67)',
+        'Blacktop lobby: one spot per player, so the same player can no longer hold both sides',
+        'Basketball Daily: a reload keeps your run instead of starting over',
+        'The spun player card stops above the bottom ad, and on Mac only the ad takes clicks',
+        'iPad: basketball build page trait cards no longer stack on each other',
+        'All-Time season leaders no longer list you 50th',
+        'Ratings updated: 46 grades on 18 players',
+      ],
+    },
+  ],
+}
 const NOV_10 = {
   id: '2026-11-10',
   date: 'NOV 10',
@@ -403,7 +486,7 @@ const NOV_5 = {
     },
   ],
 }
-export const PATCH_NOTES = [NOV_10, NOV_7, NOV_5]
+export const PATCH_NOTES = [NOV_18, NOV_10, NOV_7, NOV_5]
 export const WHATS_NEW = PATCH_NOTES[0]
 const KEY = 'bap_whatsnew'
 export const whatsNewSeen = () => { try { return localStorage.getItem(KEY) === WHATS_NEW.id } catch { return true } }
