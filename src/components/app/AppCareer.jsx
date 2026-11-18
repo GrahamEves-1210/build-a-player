@@ -893,6 +893,8 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               <span className="cr-rec"><b>{recText}</b>{teamRec && <em className="cr-rec-team">{teamNick.toUpperCase()} {teamRec.wins}–{teamRec.losses}</em>}<small>{S.isSoccer ? `${wins * 3 + draws} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : a.bye ? (byeNow(c) ? `BYE · WEEK ${a.bye.wk} OF ${seasonWeeks(c)}` : `WEEK ${weekOfGame(c, Math.min(a.k + 1, total))} OF ${seasonWeeks(c)}`) : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
               <div className="cr-goals cr-goals--inline">{c.goals.map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             </div>
+            {/* (the award race: a thin bar that opens, above the schedule; owner 11-18) */}
+            {!a.po && <AwardRace c={c} games={played} />}
             {a.bye && <Schedule c={c} />}
             {a.injury && (
               <div className="sm-moment cr-injury ag-pop">
@@ -916,7 +918,6 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             )}
             {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
             {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
-            {!a.po && <AwardRace c={c} games={played} />}
             {seasonOver && (
               <div className="ag-card cr-over ag-pop">
                 <span className="ag-eyebrow">{S.isSoccer ? `THE LEAGUE IS DONE · ${recText} · ${wins * 3 + draws} PTS` : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
@@ -1225,6 +1226,7 @@ function RaceTabs({ keys, on, onPick }) {
 const raceRow = (c, x, i, value = '') => ({ rank: i + 1, me: !!x.me, name: x.me ? c.name : x.name, team: `${x.team} · ${x.line}`, value })
 function AwardRace({ c, games }) {
   const [pick, setPick] = useState(null)
+  const [open, setOpen] = useState(false)
   const R = useMemo(() => raceNow(c, games), [c.seed, c.year, c.team, c.ovr, games.length]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!R || R.k < 2) return null
   const keys = R.award === 'MVP' ? ['MVP'] : [R.award, 'MVP']
@@ -1233,8 +1235,20 @@ function AwardRace({ c, games }) {
   const rows = list.slice(0, 10).map((x, i) => raceRow(c, x, i))
   // (outside the top ten: his own row under it, at his place)
   if (at >= 10) rows.push(raceRow(c, list[at], at))
+  // (closed: one thin line, his place in each race; open: the tabs and the board)
+  const placeIn = k => { const j = R.races[k].findIndex(x => x.me); return j >= 0 ? ordinalOf(j + 1) : '—' }
+  if (!open) return (
+    <button type="button" className="cr-race-bar" onClick={() => { setOpen(true); sfx('tap') }} aria-expanded="false">
+      {keys.map(k => <span key={k}><small>{RACE_TAB[k]} RACE</small><b>{placeIn(k)}</b></span>)}
+      <IconCaret dir="down" size={14} />
+    </button>
+  )
   return (
     <div className="cr-race ag-pop">
+      <button type="button" className="cr-race-bar is-open" onClick={() => { setOpen(false); sfx('tap') }} aria-expanded="true">
+        {keys.map(k => <span key={k}><small>{RACE_TAB[k]} RACE</small><b>{placeIn(k)}</b></span>)}
+        <IconCaret dir="up" size={14} />
+      </button>
       <RaceTabs keys={keys} on={A} onPick={setPick} />
       <LeadersBoard title={RACE_SHORT[A]} label={`${c.sport === 'bucket' ? 'GAME' : 'WEEK'} ${weekOfGame(c, R.k)}`} rank={at + 1} who={c.name} rows={rows} />
       <p className="cr-race-note">{at === 0 ? `${c.name} leads the ${A === 'MVP' ? 'MVP' : RACE_NAME[A].toLowerCase()} race.` : at < 5 ? `${c.name} is ${ordinalOf(at + 1)} in the ${A === 'MVP' ? 'MVP' : RACE_NAME[A].toLowerCase()} race.` : at >= 0 ? `${c.name} is ${ordinalOf(at + 1)}. The voters go by the whole season.` : ''} Ranked on the pace each man is on.</p>

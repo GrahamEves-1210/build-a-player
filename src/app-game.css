@@ -7678,3 +7678,12 @@ html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !impor
 /* Career's EDIT sheet: his number under his face (owner 11-18) */
 .cr-face-num { margin: 0; }
 .cr-face-num-note { font-size: 13px; color: var(--ag-muted, #9aa3a0); }
+
+/* Career's award race (owner 11-18): a thin bar above the schedule, his place in each race; a tap opens the board */
+.cr-race-bar { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 40px; margin: 10px 0 0; padding: 6px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: rgba(255,255,255,.04); color: var(--ag-text, #eef3f0); font: inherit; text-align: left; cursor: pointer; }
+.cr-race-bar span { display: inline-flex; align-items: baseline; gap: 6px; }
+.cr-race-bar small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--ag-muted, #9aa3a0); }
+.cr-race-bar b { font-family: var(--ag-font); font-size: 17px; font-weight: 400; letter-spacing: .5px; }
+.cr-race-bar svg { margin-left: auto; flex: none; opacity: .7; }
+.cr-race > .cr-race-bar.is-open { margin: 0 0 8px; }
+.cr-race:has(> .cr-race-bar.is-open) { margin-top: 10px; }
