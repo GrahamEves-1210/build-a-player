@@ -25,7 +25,7 @@ import { DB_ATTR } from '../../data/dbs'
 import { K_ATTR } from '../../data/ks'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, KLogo, BigNum, Stamp, Go, Tag, Flip, fkVars, reduced, splitName, ActionBar } from './kit'
-import './draft.css'
+import './draft.css'
 import { teamKit, schoolKit } from '../../lib/franchise2/kits'
 
 // SCOUTING AND THE DRAFT (engine: lib/franchise2/draft.js).
@@ -691,7 +691,6 @@ function RevealCard({ F, p, onNext, label = null }) {
           <span className="dr-gr is-true"><small>TRUE GRADE</small><b>{gradeOf(p.pk)}</b></span>
         </div>
       )}
-      {flip && <p className="dr-rv-note">Grades are where he's headed. He starts at {man?.o ?? '—'} OVR.</p>}
       <ActionBar><Go onClick={onNext}>{draftDone(F) ? 'See the class' : label ?? 'Next pick'}</Go></ActionBar>
     </div>
   )
