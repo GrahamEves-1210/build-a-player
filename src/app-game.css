@@ -6993,6 +6993,14 @@ html.ag-sport-leaving[data-sport-to="baseball"] .ag-home .ag-sport .ag-sport-thu
 .ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 16px; letter-spacing: 0; }
 @media (max-width: 380px) { .ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 14.5px; } }
 @media (min-width: 1024px) { html.app-look .ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))) .ag-sport-txt b { font-size: 18px; letter-spacing: .6px; } }
+/* (owner 11-18: football and basketball, the two that are live, get the room: a third each; the two coming soon a
+   sixth each, their words smaller. The thumb only ever sits on the first two: the others can't be picked yet) */
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))):has(.ag-sport-btn.is-soon) { grid-template-columns: 2fr 2fr 1fr 1fr; }
+.ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))):has(.ag-sport-btn.is-soon) .ag-sport-thumb { width: calc((100% - 10px) / 3); }
+.ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))):has(.ag-sport-btn.is-soon) .ag-sport-thumb { width: 33.333%; }
+.ag-home .ag-sport:is(.ag-sport--four, :has(> .ag-sport-btn:nth-of-type(4))):has(.ag-sport-btn.is-soon) .ag-sport-btn:not(.is-soon) .ag-sport-txt b { font-size: 21px; letter-spacing: .6px; }
+.ag-sport .ag-sport-btn.is-soon .ag-sport-txt b { font-size: 12px; letter-spacing: .4px; }
+.ag-sport .ag-sport-btn.is-soon .ag-sport-soon { font-size: 9px; }
 .ag-home--baseball .ag-sport-btn.is-on { color: #fbf7ee; }
 /* Home's four-sport bar: the marker is exactly one tab (it ran 4% wide and swallowed the next word's edge), with
    the same slant, and a slanted rule between the tabs like the position row's; the end tabs' marker runs off the
