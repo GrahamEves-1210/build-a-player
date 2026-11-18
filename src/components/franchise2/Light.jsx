@@ -398,7 +398,8 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
           <p className="fst-note">Other teams bid too. Each player signs where the offer adds up best for him.</p>
         </section>
       </div>
-      <Fold title="Camp report" right={F.year + 1}><CampReport F={F} owner={owner} onMan={setPage} /></Fold>
+      {/* (open, no toggle: owner 11-18) */}
+      <CampReport F={F} owner={owner} onMan={setPage} />
       <ActionBar>
         <Go onClick={finish} disabled={over} sub={over ? 'OVER THE CAP' : nOff ? `${nOff} ${nOff === 1 ? 'OFFER' : 'OFFERS'}` : null}>Finish free agency</Go>
       </ActionBar>
