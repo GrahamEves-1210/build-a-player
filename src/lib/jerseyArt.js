@@ -271,6 +271,9 @@ function jerseyF(kit, number, tank, u) {
     `<linearGradient id="${u}sd" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="180" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset=".22" stop-color="#000" stop-opacity="0"/><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient>` +
     `<radialGradient id="${u}ch" gradientUnits="userSpaceOnUse" cx="84" cy="62" r="96"><stop offset="0" stop-color="#fff" stop-opacity="${hi}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<linearGradient id="${u}ft" gradientUnits="userSpaceOnUse" x1="0" y1="140" x2="0" y2="196"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient></defs>`,
+    // a thin rim of light round it, so a black or navy kit still stands off a dark card or row (a white one gets a
+    // soft dark rim instead)
+    `<path d="${S.body}" fill="none" stroke="${pale ? '#000' : '#fff'}" stroke-opacity="${pale ? 0.22 : dark ? 0.3 : 0.12}" stroke-width="7" stroke-linejoin="round"/>`,
     `<path d="${S.body}" fill="${kit.body}"/>`,
     `<g clip-path="url(#${u}b)">`,
   ]
@@ -280,12 +283,15 @@ function jerseyF(kit, number, tank, u) {
       `<path d="${sl}" fill="#000" opacity="${i ? 0.1 : dark ? 0 : 0.03}"/></g>`)
   })
   // the number, sewn on the chest (under the fabric's light and folds)
-  if (n) out.push(block(n, nx, ny, nh, nw, { fill: kit.num, line: kit.line, lw: 0.32, drop: 0.18, wide: 1.08 }))
+  // (drawn small, the number is the one thing to read: a bigger one takes its place, and the folds and seams go)
+  if (n) out.push(`<g class="nm">${block(n, nx, ny, nh, nw, { fill: kit.num, line: kit.line, lw: 0.32, drop: 0.18, wide: 1.08 })}</g>`,
+    `<g class="nb" display="none">${block(n, nx, ny + 4, nh * 1.22, nw * 1.18, { fill: kit.num, line: kit.line, lw: 0.42, wide: 1.12 })}</g>`)
   out.push(
     `<rect x="-10" y="0" width="220" height="210" fill="url(#${u}sd)"/>`,
     `<rect x="-10" y="0" width="220" height="210" fill="url(#${u}ch)"/>`,
     `<rect x="-10" y="130" width="220" height="80" fill="url(#${u}ft)"/>`,
     // folds: from each armpit in toward the chest, at the waist, and a lit ridge down the left
+    `<g class="fx">`,
     `<path d="M47 92Q70 104 82 130Q66 114 46 102Z" fill="#000" opacity=".18"/>`,
     `<path d="M153 92Q130 104 118 130Q134 114 154 102Z" fill="#000" opacity=".22"/>`,
     `<path d="M50 166Q100 156 150 170Q100 164 50 173Z" fill="#000" opacity=".12"/>`,
@@ -296,6 +302,7 @@ function jerseyF(kit, number, tank, u) {
     `<path d="${sm}" fill="none" stroke="#000" stroke-width="5" opacity=".13" transform="translate(${i ? -2.4 : 2.4} 0)"/>`,
     `<path d="${sm}" fill="none" stroke="${edge}" stroke-width="1.6"/>`,
     `<path d="${sm}" fill="none" stroke="#fff" stroke-width="1" opacity="${dark ? 0.16 : 0.24}" transform="translate(${i ? 1.6 : -1.6} 0)"/>`))
+  out.push('</g>')
   // the neck: the inside of the back, the back collar, the V trim
   out.push(
     `<path d="${S.hole}" fill="${hole}"/>`,
@@ -318,17 +325,20 @@ function tag(team, fill, ink, x, y, w, h, u, { lean = 0.24, shadow = true } = {}
   const d = h * lean
   const shape = (i, top = y, bot = y + h) => `M${f1(x + d + i)} ${f1(top + i)}H${f1(x + w + d - i)}L${f1(x + w - i)} ${f1(bot - i)}H${f1(x + i)}Z`
   const pale = lum(fill) > 0.55
-  const rim = pale ? mix(ink, '#000', 0.2) : lum(fill) < 0.03 ? mix(ink, '#000', 0.25) : shade(fill, 0.48)
+  // (a black or navy plate gets a lit rim, so it never sinks into a dark row)
+  const rim = pale ? mix(ink, '#000', 0.2) : lum(fill) < 0.03 ? mix(fill, '#fff', 0.38) : shade(fill, 0.48)
   const stripe = contrast(ink, fill) >= 1.6 ? ink : '#ffffff'
   const sh = Math.max(2.5, h * 0.11)
-  const lineCol = contrast(ink, fill) < 2.6 ? mix(ink, '#fff', 0.85) : pale ? null : shade(fill, 0.42)
+  // letters that don't read on the plate (red on navy) go white; the team's second colour stays in the stripe
+  if (contrast(ink, fill) < 3) ink = contrast('#ffffff', fill) >= 3 ? '#ffffff' : '#111111'
+  const lineCol = pale ? null : shade(fill, 0.42)
   return `<defs><linearGradient id="${u}tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(fill, '#fff', pale ? 0.12 : 0.2)}"/><stop offset=".6" stop-color="${fill}"/><stop offset="1" stop-color="${shade(fill, pale ? 0.88 : 0.75)}"/></linearGradient></defs>` +
     (shadow ? `<path d="${shape(0)}" fill="#000" opacity=".4" transform="translate(2.5 3.5)"/>` : '') +
     `<path d="${shape(0)}" fill="${rim}"/>` +
     `<path d="${shape(2)}" fill="url(#${u}tg)"/>` +
     `<path d="M${f1(x + d * (sh + 2) / h + 2)} ${f1(y + h - sh - 2)}H${f1(x + w + d * (sh + 2) / h - 2)}L${f1(x + w - 2)} ${f1(y + h - 2)}H${f1(x + 2)}Z" fill="${stripe}"/>` +
     `<path d="M${f1(x + d + 3)} ${f1(y + 3.2)}H${f1(x + w + d - 3)}" stroke="#fff" stroke-width="1.2" opacity="${pale ? 0.6 : 0.28}"/>` +
-    (t ? block(t, x + w / 2 + d * 0.55, y + (h - sh) / 2 + 0.5, (h - sh) * 0.66, w * 0.8, { wide: 1.22, fill: ink, line: lineCol, lw: 0.4, drop: pale ? 0.1 : 0.28 }) : '')
+    (t ? block(t, x + w / 2 + d * 0.5, y + (h - sh) / 2 + 0.5, (h - sh) * 0.64, w * 0.72, { wide: 1.22, fill: ink, line: lineCol, lw: 0.4, drop: pale ? 0.1 : 0.28 }) : '')
 }
 
 // the position: a short slanted chip in the rarity's metal
@@ -358,9 +368,6 @@ function frame(shape, w, h, T, u, lightAt) {
     `<path d="${shape(1.3)}" fill="none" stroke="#fff" stroke-width="1.1" opacity=".45"/>` +
     `<path d="${shape(4.5)}" fill="url(#${u}pb)"/>` +
     `<g clip-path="url(#${u}pc)"><rect width="${w}" height="${h}" fill="url(#${u}sp)"/>` +
-      // two thin rarity lines cutting across behind the jersey, on the tag's slant
-      `<path d="M${f1(w * 0.52)} ${h}L${f1(w * 0.52 + h * 0.24)} 0H${f1(w * 0.52 + h * 0.24 + 5)}L${f1(w * 0.52 + 5)} ${h}Z" fill="${T.rim}" opacity=".1"/>` +
-      `<path d="M${f1(w * 0.52 + 12)} ${h}L${f1(w * 0.52 + 12 + h * 0.24)} 0H${f1(w * 0.52 + 14 + h * 0.24)}L${f1(w * 0.52 + 14)} ${h}Z" fill="${T.rim}" opacity=".08"/>` +
       `<path d="${shape(4.5)}" fill="none" stroke="#000" stroke-width="5" opacity=".35"/></g>`
 }
 
@@ -387,8 +394,9 @@ function cardSquare(kit, team, number, pos, tank, T, u) {
 let seq = 0
 // One picture for every slot a photo used to fill, chosen by the slot's own size (lib/appArt.js draws it to the
 // slot's box): 72px wide or less, the jersey on its own; a square-ish slot, the square card; a wide one, the card.
-const STYLE = '<style>.sq,.sm{display:none}@media (max-aspect-ratio:6/5){.big{display:none}.sq{display:inline}}' +
-  '@media (max-width:72px),(max-height:60px){.big,.sq{display:none}.sm{display:inline}}</style>'
+const STYLE = '<style>.sq,.sm,.nb{display:none}@media (max-aspect-ratio:6/5){.big{display:none}.sq{display:inline}}' +
+  '@media (max-width:72px),(max-height:60px){.big,.sq{display:none}.sm{display:inline}}' +
+  '@media (max-width:44px),(max-height:44px){.fx,.nm{display:none}.nb{display:inline}}</style>'
 
 // A player. { league: 'nfl'|'nba'|'cfb'|'cbb'|'mlb'|'soc'|'nat', team: 'CIN', colors: [c1, c2], number: 9, pos: 'QB',
 //   rank: 0-3 (Common, Rare, Epic, Legend), size (height in px), variant: 'auto' | 'card' | 'square' | 'small' }
@@ -418,7 +426,7 @@ export function teamMarkSvg({ league = 'nfl', team = '', colors, badge: chip = '
   const [fill, ink] = kit.badge ?? ['#3a3f4a', '#ffffff']
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">` +
     tag(t, fill, ink, 4, chip ? 22 : 30, 82, 40, u, { shadow: false }) +
-    (chip ? posChip(chip, TIERS[0], 30, 68, 20, u + 'p') : '') +
+    (chip ? posChip(chip, TIERS[0], 27, 67, 24, u + 'p') : '') +
     '</svg>'
 }
 
