@@ -1543,7 +1543,13 @@ export function achStats() {
     fourSport: st.nflSeasons > 0 && st.bucketSeasons > 0 && (st.soccerSeasons ?? 0) > 0 && (st.baseballSeasons ?? 0) > 0 ? 1 : 0,
     cards: Object.keys(S.cards).length, streak: S.streak.best ?? 0, level: L,
     cpPlayed: st.compete?.played ?? 0, cpWins: st.compete?.wins ?? 0, cpPodiums: st.compete?.podiums ?? 0, cpStreak: st.compete?.bestStreak ?? 0, cpBeaten: st.compete?.beaten ?? 0,
-    btStreak: st.bt?.bestStreak ?? 0, btPts: st.bt?.pts ?? 0, h2hWins: st.h2h?.wins ?? 0, h2hStreak: st.h2h?.bestStreak ?? 0,
+    // Blacktop is 3v3, 2v2 or 1v1, and each keeps its own record (stats.bt, bt2, bt1); its goals count all three, as the
+    // trophy case does. 2026-11-19: they read the 3v3 record alone, so wins at 2v2 or 1v1 never earned Blacktop Debut.
+    // (only ever up from before, so nothing already earned changes)
+    btWinsAll: (st.btWins ?? 0) + (st.bt2?.wins ?? 0) + (st.bt1?.wins ?? 0), btMvpAll: (st.btMvp ?? 0) + (st.bt2?.mvp ?? 0) + (st.bt1?.mvp ?? 0),
+    btStreak: Math.max(st.bt?.bestStreak ?? 0, st.bt2?.bestStreak ?? 0, st.bt1?.bestStreak ?? 0), btPts: (st.bt?.pts ?? 0) + (st.bt2?.pts ?? 0) + (st.bt1?.pts ?? 0),
+    // (a Blacktop 1v1 is booked under bt1, never as an h2h: both count for the 1v1 goals)
+    h2hWins: (st.h2h?.wins ?? 0) + (st.bt1?.wins ?? 0), h2hStreak: Math.max(st.h2h?.bestStreak ?? 0, st.bt1?.bestStreak ?? 0),
     onlineBest: st.online?.best ?? 0, onlinePlayed: st.online?.played ?? 0,
     owned: Object.keys(S.owned).length,
     fullFit: S.equip.plate && S.equip.nameColor && S.equip.nameFx ? 1 : 0,

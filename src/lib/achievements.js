@@ -65,9 +65,9 @@ export const ACHIEVEMENTS = [
   A('streak7',   'Daily', 'Locked In',             'Reach a 7-day login streak',             'flame',    'streak',  7,    120,  60),
   A('streak30',  'Daily', 'Every Single Day',      'Reach a 30-day login streak',            'flame',    'streak',  30,   480,  280),
   // Live modes
-  A('bt1',       'Live', 'Blacktop Debut',         'Win a Blacktop game',                    'hoop',     'btWins',  1,    60,   40),
-  A('bt25',      'Live', 'Blacktop King',          'Win 25 Blacktop games',                  'hoop',     'btWins',  25,   360,  200, 'pl-blacktop'),
-  A('btmvp5',    'Live', 'Run MVP',                'Be the MVP of 5 Blacktop games',         'star',     'btMvp',   5,    180,  100),
+  A('bt1',       'Live', 'Blacktop Debut',         'Win a Blacktop game',                    'hoop',     'btWinsAll', 1,    60,   40),
+  A('bt25',      'Live', 'Blacktop King',          'Win 25 Blacktop games',                  'hoop',     'btWinsAll', 25,   360,  200, 'pl-blacktop'),
+  A('btmvp5',    'Live', 'Run MVP',                'Be the MVP of 5 Blacktop games',         'star',     'btMvpAll', 5,    180,  100),
   A('sqtitle',   'Live', 'Super Team',             'Win a title with a Squad Builder team',  'trophy',   'sqTitles',1,    240,  160),
   A('sqfull',    'Live', 'Full House',             'Play a season with a full Squad Builder squad', 'helmet', 'sqFull', 1, 180,  100),
   A('dc10',      'Live', 'Depth Chart Pro',        'Hit a 10 streak in The Depth Chart',     'clipboard','dcBest',  10,   90,   50),
