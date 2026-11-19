@@ -119,10 +119,25 @@ function fitLater(img) {
   }))
 }
 const px = v => parseFloat(v) || 0
+let sizer = null
+function waitForSize(img) {
+  if (typeof ResizeObserver === 'undefined' || img.__artWait) return
+  sizer ??= new ResizeObserver(list => {
+    for (const e of list) {
+      if (e.contentRect.width < 2 || e.contentRect.height < 2) continue
+      sizer.unobserve(e.target); e.target.__artWait = false; fitLater(e.target)
+    }
+  })
+  img.__artWait = true
+  sizer.observe(img)
+}
+// (a grade or a badge pinned to the frame's corner doesn't make it more than a frame)
+const pinned = k => { const p = getComputedStyle(k).position; return p === 'absolute' || p === 'fixed' }
 function fitSlot(img) {
   if (!img.isConnected) return
   const r = img.getBoundingClientRect()
-  if (r.width < 2 || r.height < 2) { if (img.isConnected && !img.__artTry) { img.__artTry = 1; setTimeout(() => fitLater(img), 400) } return }
+  // not laid out yet (a closed tab, a sheet still off screen): fitted the moment it gets a size
+  if (r.width < 2 || r.height < 2) { waitForSize(img); return }
   const ic = getComputedStyle(img)
   let e = img.parentElement
   for (let depth = 0; e && depth < 2; depth++, e = e.parentElement) {
@@ -133,7 +148,7 @@ function fitSlot(img) {
     const c = getComputedStyle(e)
     const round = px(c.borderTopLeftRadius) >= Math.min(b.width, b.height) * 0.3
     const clips = c.overflow !== 'visible' || c.clipPath !== 'none'
-    const others = [...e.children].some(k => k.tagName !== 'IMG' && k.getBoundingClientRect().width > 0 && !k.contains(img))
+    const others = [...e.children].some(k => k.tagName !== 'IMG' && k.getBoundingClientRect().width > 0 && !k.contains(img) && !pinned(k))
     if (others) break
     if (round || clips) {
       e.setAttribute('data-art-frame', '')
@@ -168,11 +183,14 @@ export function installAppArt() {
   }
   const srcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src')
   if (srcDesc?.set) Object.defineProperty(HTMLImageElement.prototype, 'src', { ...srcDesc, set(v) { const s = String(v), out = appImage(s); mark(this, s, out); srcDesc.set.call(this, out) } })
-  // SVG <image href> (helmet decals, belt logos)
+  // SVG <image href>: a team's logo there is a decal on a helmet, a shoulder or a belt, and a tag stuck on a helmet
+  // reads as a sticker, so the gear goes plain; anything else (a photo) is swapped as usual
+  const BLANK = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
+  const svgHref = v => (LOGO.test(v) ? BLANK : appImage(v))
   SVGImageElement.prototype.setAttribute = function (name, value) {
-    return setAttr.call(this, name, (name === 'href' || name === 'xlink:href') ? appImage(String(value)) : value)
+    return setAttr.call(this, name, (name === 'href' || name === 'xlink:href') ? svgHref(String(value)) : value)
   }
   SVGImageElement.prototype.setAttributeNS = function (ns, name, value) {
-    return setAttrNS.call(this, ns, name, (name === 'href' || name === 'xlink:href') ? appImage(String(value)) : value)
+    return setAttrNS.call(this, ns, name, (name === 'href' || name === 'xlink:href') ? svgHref(String(value)) : value)
   }
 }
