@@ -69,13 +69,15 @@ function poolRanks(list) {
   return new Map(sorted.map((p, i) => { const pct = i / sorted.length; return [p, pct < 0.06 ? 3 : pct < 0.2 ? 2 : pct < 0.5 ? 1 : 0] }))
 }
 // numbers no roster row carries (the team they're shown with)
-const NUM_FIX = { 'Josh McCown': 15, 'Teddy Bridgewater': 5, 'Ryan Fitzpatrick': 14, 'Jimmy Garoppolo': 10 }
+const NUM_FIX = { 'Josh McCown': 15, 'Teddy Bridgewater': 5, 'Ryan Fitzpatrick': 14, 'Jimmy Garoppolo': 10, 'Darius Slayton': 86 }
 const withNum = (v, num) => { const a = v.split('|'); a[2] = num; return a.join('|') }
 const byName = {}   // name → entry, for headshot maps keyed by a name no roster row carries
 const seen = new Set()
 function addRow(p, f, lg, hint, rank) {
   if (!p || typeof p !== 'object' || typeof p.name !== 'string' || !p.team || typeof p.team !== 'string') return
-  const team = p.team, num = p.number ?? p.num ?? (lg === 'nfl' && NUM_FIX[p.name]) ?? '', pos = posOf(p, f, lg, hint)
+  // (a number only if it is one: some rosters say false for a player whose number isn't known)
+  const n0 = p.number ?? p.num ?? (lg === 'nfl' && NUM_FIX[p.name])
+  const team = p.team, num = /^\d{1,2}$/.test(String(n0 ?? '')) ? n0 : '', pos = posOf(p, f, lg, hint)
   const tl = lg === 'soc' && teams.nat[team] && !teams.soc[team] ? 'nat' : lg
   const v = `${tl}|${team}|${num}|${pos}`
   const k = keyOf(p, lg)
