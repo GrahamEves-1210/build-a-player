@@ -301,6 +301,10 @@ export function jerseySvg({ league = 'nfl', team = '', colors, number = '', pos 
   const T = TIERS[Math.max(0, Math.min(3, rank | 0))]
   const w = Math.round(size * 276 / 200)
   const svg = (cls, vb, body) => `<svg class="${cls}" viewBox="${vb}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${body}</svg>`
+  // the jersey on its own, no tile, for the screens that set it loose (simplified drawn 44px or under)
+  if (variant === 'bare') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="${size}" height="${size}">` +
+    '<style>.xs{display:none}@media (max-width:44px){.fu{display:none}.xs{display:inline}}</style>' +
+    `<g class="fu">${jersey(kit, number, tank, u + 'f')}</g><g class="xs">${jersey(kit, number, tank, u + 'x', { small: true })}</g></svg>`
   if (variant === 'small') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="${size}" height="${size}">${cardSmall(kit, number, tank, u, size <= 44)}</svg>`
   if (variant === 'card') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 276 200" width="${w}" height="${size}">${card(kit, team, number, pos, tank, T, u)}</svg>`
   if (variant === 'square') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="${size}" height="${size}">${cardSquare(kit, team, number, pos, tank, T, u)}</svg>`
