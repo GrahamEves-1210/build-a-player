@@ -72,15 +72,30 @@ function teamRules(sport) {
     for (const [name, place] of [...nick]) if (/[a-z]/.test(name) && !nick.has(name.toUpperCase())) nick.set(name.toUpperCase(), place.toUpperCase())
     for (const [name, place] of [...full]) if (/[a-z]/.test(name)) full.set(name.toUpperCase(), place.toUpperCase())
   }
-  const fullRe = full.size ? new RegExp(`\\b(${[...full.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b`, 'g') : null
+  const fullRe = full.size ? new RegExp(`\\b(${[...full.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b${VERB_RE}`, 'g') : null
   // "the Chiefs are on the clock" → "Kansas City is on the clock"; "the Chiefs'" → "Kansas City's"
   // (not inside a person's name: Magic Johnson stays Magic Johnson)
-  const nickRe = nick.size ? new RegExp(`(?<![A-Z][a-z]+ )(\\b(?:[Tt]he|THE) )?\\b(${[...nick.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b(?! [A-Z][a-z])(['’](?!s))?( are\\b| were\\b| have\\b)?`, 'g') : null
+  const nickRe = nick.size ? new RegExp(`(?:(\\b(?:[Tt]he|THE) )|(?<![A-Z][a-z]+ ))\\b(${[...nick.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|')})\\b(?! [A-Z][a-z])(['’](?!s))?${VERB_RE}`, 'g') : null
   const r = { full, nick, fullRe, nickRe }
   built.set(sport, r)
   return r
 }
-const VERB = { ' are': ' is', ' were': ' was', ' have': ' has' }
+// A nickname is plural and a place is not: "the Chiefs win" becomes "Kansas City wins", "the CHIEFS WIN" "KANSAS CITY
+// WINS". Only the verbs the game's lines use, and not after will / can / to and the like ("will the Chiefs win" stays bare).
+const VERB = { are: 'is', were: 'was', have: 'has', do: 'does', go: 'goes' }
+const VERBS = ['are', 'were', 'have', 'win', 'lose', 'beat', 'keep', 'take', 'make', 'move', 'host', 'face', 'need', 'hold', 'lead',
+  'go', 'do', 'look', 'play', 'come', 'get', 'open', 'close', 'visit', 'head', 'fall', 'rally', 'pull', 'edge', 'clinch', 'finish',
+  'enter', 'trail', 'sit', 'stay', 'want', 'add', 'own', 'improve', 'drop', 'reach', 'miss', 'climb', 'slip', 'sweep', 'advance',
+  'stun', 'hang', 'cruise', 'try', 'send', 'sign', 'give']
+const VERB_RE = `( (?:${VERBS.join('|')}|${VERBS.join('|').toUpperCase()})\\b)?`
+const MODAL = /\b(will|would|can|could|to|did|does|do|should|might|may|must|let|lets|help|helps|watch|see|saw|made|make|makes)\s+(?:the\s+)?$/i
+function singular(verb, str, at) {
+  if (!verb) return ''
+  if (MODAL.test(str.slice(Math.max(0, at - 16), at))) return verb
+  const w = verb.slice(1), up = w === w.toUpperCase(), l = w.toLowerCase()
+  const one = VERB[l] ?? (/(s|sh|ch|x|z)$/.test(l) ? l + 'es' : /[^aeiou]y$/.test(l) ? l.slice(0, -1) + 'ies' : l + 's')
+  return ' ' + (up ? one.toUpperCase() : one)
+}
 
 export const sportOfPath = (p = (typeof location !== 'undefined' ? location.pathname : '/')) =>
   p.startsWith('/bucket') ? 'basketball' : p.startsWith('/baseball') ? 'baseball' : p.startsWith('/soccer') ? 'soccer' : 'football'
@@ -96,8 +111,8 @@ export function appSafe(text, sport = sportOfPath()) {
   if (/affiliated|endorsed|trademark|licensed/i.test(text)) { cache.set(ck, text); return text }
   let s = text
   const T = teamRules(sport)
-  if (T.fullRe) s = s.replace(T.fullRe, m => T.full.get(m))
-  if (T.nickRe) s = s.replace(T.nickRe, (m, the, name, apos, verb) => T.nick.get(name) + (apos ? (/[a-z]/.test(name) ? "'s" : "'S") : '') + (verb ? VERB[verb] : ''))
+  if (T.fullRe) s = s.replace(T.fullRe, (m, name, verb, at, str) => T.full.get(name) + singular(verb, str, at))
+  if (T.nickRe) s = s.replace(T.nickRe, (m, the, name, apos, verb, at, str) => T.nick.get(name) + (apos ? (/[a-z]/.test(name) ? "'s" : "'S") + (verb ?? '') : singular(verb, str, at)))
   for (const [re, to] of TERM_MAP) s = s.replace(re, to)
   if (cache.size > 6000) cache.clear()
   cache.set(ck, s)
