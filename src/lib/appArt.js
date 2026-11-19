@@ -10,6 +10,7 @@
 // Drawn faces (Franchise's generated players, the generic silhouettes) aren't photos and are left alone.
 import INDEX from '../data/jersey-index.json'
 import { jerseySvg, teamMarkSvg, svgUri } from './jerseyArt'
+import { jerseySvg as classicJersey } from './jerseyArtClassic'
 
 const cache = new Map()
 const HEADSHOT = /\/headshots\/(.+?)\.(?:webp|png|jpe?g)(?:[?#].*)?$/i
@@ -27,6 +28,16 @@ export function playerArt(key, folderHint, variant = 'auto') {
   if (pos === 'HC') return svgUri(teamMarkSvg({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
   return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0, variant }))
 }
+
+// the build figure's red attribute cards keep the art from before the redesign (owner 11-19: he likes it there)
+const CLASSIC = '.cz-card'
+const classicArt = key => {
+  const row = INDEX.p[key]
+  if (!row) return svgUri(classicJersey({ league: /^nba\/|^cbb_/.test(key) ? 'nba' : 'nfl' }))
+  const [lg, team, number, pos, rank] = row.split('|')
+  return svgUri(classicJersey({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0 }))
+}
+let nativeSet = null
 
 export function teamArt(folder, team) {
   for (const lg of LOGO_LEAGUES[folder ?? ''] ?? ['nfl']) { const c = colorsOf(lg, team); if (c) return svgUri(teamMarkSvg({ league: lg, team, colors: c })) }
@@ -135,6 +146,7 @@ function waitForSize(img) {
 const pinned = k => { const p = getComputedStyle(k).position; return p === 'absolute' || p === 'fixed' }
 function fitSlot(img) {
   if (!img.isConnected) return
+  if (img.__artKey && !img.__classic && nativeSet && img.closest(CLASSIC)) { img.__classic = true; nativeSet.call(img, 'src', classicArt(img.__artKey)) }
   const r = img.getBoundingClientRect()
   // not laid out yet (a closed tab, a sheet still off screen): fitted the moment it gets a size
   if (r.width < 2 || r.height < 2) { waitForSize(img); return }
@@ -168,10 +180,13 @@ export function installAppArt() {
   st.textContent = FRAME_CSS
   document.head.appendChild(st)
   const setAttr = Element.prototype.setAttribute
+  nativeSet = setAttr
   const setAttrNS = Element.prototype.setAttributeNS
   const mark = (img, src, out) => {
     if (out === src && src.startsWith('data:image/svg')) return   // already swapped, set again
     const k = kindOf(src, out)
+    img.__classic = false
+    const hm = k === 'p' && HEADSHOT.exec(src); img.__artKey = hm ? hm[1].replace(/^.*?public\/headshots\//, '') : null
     if (k) { setAttr.call(img, 'data-art', k); fitLater(img) } else if (img.hasAttribute('data-art')) img.removeAttribute('data-art')
   }
   // <img src> (React sets it as an attribute) and img.src = … (new Image() for canvases and preloads)

@@ -68,18 +68,24 @@ function poolRanks(list) {
   const sorted = [...rows].sort((a, b) => avgAttr(b) - avgAttr(a))
   return new Map(sorted.map((p, i) => { const pct = i / sorted.length; return [p, pct < 0.06 ? 3 : pct < 0.2 ? 2 : pct < 0.5 ? 1 : 0] }))
 }
+// numbers no roster row carries (the team they're shown with)
+const NUM_FIX = { 'Josh McCown': 15, 'Teddy Bridgewater': 5, 'Ryan Fitzpatrick': 14, 'Jimmy Garoppolo': 10 }
+const withNum = (v, num) => { const a = v.split('|'); a[2] = num; return a.join('|') }
 const byName = {}   // name → entry, for headshot maps keyed by a name no roster row carries
 const seen = new Set()
 function addRow(p, f, lg, hint, rank) {
   if (!p || typeof p !== 'object' || typeof p.name !== 'string' || !p.team || typeof p.team !== 'string') return
-  const team = p.team, num = p.number ?? p.num ?? '', pos = posOf(p, f, lg, hint)
+  const team = p.team, num = p.number ?? p.num ?? (lg === 'nfl' && NUM_FIX[p.name]) ?? '', pos = posOf(p, f, lg, hint)
   const tl = lg === 'soc' && teams.nat[team] && !teams.soc[team] ? 'nat' : lg
   const v = `${tl}|${team}|${num}|${pos}`
   const k = keyOf(p, lg)
   if (k && rank != null) rankOf[k] = Math.max(rankOf[k] ?? 0, rank)
   // a photo in headshots/nba/ is an NBA photo: an NBA row beats a college row that borrows it
   if (k && (!players[k] || (k.startsWith('nba/') && lg === 'nba' && !players[k].startsWith('nba|')))) players[k] = v
+  // (a pool without numbers loaded first doesn't leave him blank: the first row that has his number fills it in)
+  else if (k && num !== '' && players[k].split('|')[2] === '') players[k] = withNum(players[k], num)
   if (!byName[lg + '|' + p.name]) byName[lg + '|' + p.name] = v
+  else if (num !== '' && byName[lg + '|' + p.name].split('|')[2] === '') byName[lg + '|' + p.name] = withNum(byName[lg + '|' + p.name], num)
 }
 function walk(x, f, lg, hint, depth = 0) {
   if (!x || depth > 3 || seen.has(x)) return
