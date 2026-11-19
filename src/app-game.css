@@ -7711,3 +7711,11 @@ html.app-art .fk-slab-txt > small:first-child { display: none; }
 html.app-art:not(#_):not(#_) .fk-l3-slab:has(> img[data-art]) { background: linear-gradient(#1b1f26, #12151a) !important; box-shadow: inset 0 -3px 0 var(--tc, transparent) !important; overflow: hidden !important; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%) !important; }
 html.app-art .fk-l3-slab:has(> img[data-art]) .fk-l3-num { display: none; }
 html.app-art:not(#_):not(#_) .fk-l3-cut[data-art] { inset: auto !important; left: 1px !important; top: 3px !important; width: calc(100% - 14px) !important; height: calc(100% - 6px) !important; }
+/* Career's game card: the team's own tag already says its abbreviation */
+html.app-art .sm-now-side:first-child > img[data-art] + b { display: none; }
+/* Franchise team slabs: the team's tag sits whole inside the slab, not bled off its edge like a big logo */
+html.app-art:not(#_) .fk-slab:not(.fk-vs .fk-slab) > .fk-slab-logo[data-art] { right: 12px; left: auto; width: calc(var(--sh) * .95); height: calc(var(--sh) * .95); }
+html.app-art:not(#_) .fk-slab--r:not(.fk-vs .fk-slab) > .fk-slab-logo[data-art] { left: 12px; right: auto; }
+/* Home's pool cards: the jerseys stand side by side, whole, rather than overlapping cards cut off by the card's foot */
+html.app-art:not(#_) .ag-mode-faces { gap: 4px; align-items: center; }
+html.app-art:not(#_) .ag-mode-faces img[data-art] { height: 70%; width: auto; aspect-ratio: 1; margin: 0; }
