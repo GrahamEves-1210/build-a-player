@@ -273,7 +273,9 @@ function jerseyF(kit, number, tank, u) {
     `<linearGradient id="${u}ft" gradientUnits="userSpaceOnUse" x1="0" y1="140" x2="0" y2="196"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient></defs>`,
     // a thin rim of light round it, so a black or navy kit still stands off a dark card or row (a white one gets a
     // soft dark rim instead)
-    `<path d="${S.body}" fill="none" stroke="${pale ? '#000' : '#fff'}" stroke-opacity="${pale ? 0.22 : dark ? 0.3 : 0.12}" stroke-width="7" stroke-linejoin="round"/>`,
+    // (under it a soft dark edge, so a green kit still reads on a green field)
+    `<path d="${S.body}" fill="none" stroke="#000" stroke-opacity="${pale ? 0.26 : 0.32}" stroke-width="10" stroke-linejoin="round"/>`,
+    pale ? '' : `<path d="${S.body}" fill="none" stroke="#fff" stroke-opacity="${dark ? 0.32 : 0.16}" stroke-width="6" stroke-linejoin="round"/>`,
     `<path d="${S.body}" fill="${kit.body}"/>`,
     `<g clip-path="url(#${u}b)">`,
   ]
