@@ -45,7 +45,7 @@ const classicArt = key => {
 // tile, and the screen's own CSS (app-game.css, App art) sets it loose: angled behind the spin card's name, over a
 // row's edge, fanned on Home's pool cards, cut off by a Franchise slab, standing on the depth chart's field
 const BARE = '.qb-reveal-hero, .simp-attr-row .qb-avatar, .cr-trait-av, .crl-man .crl-face, .ag-mode-faces, .fk-l3-slab, .crl-face--sm'
-const bareArt = key => playerArt(key, key.split('/')[0], 'bare')
+const bareArt = key => (INDEX.p[key]?.split('|')[3] === 'HC' ? null : playerArt(key, key.split('/')[0], 'bare'))   // (a coach stays his team's mark)
 let nativeSet = null
 
 export function teamArt(folder, team) {
@@ -158,7 +158,9 @@ function fitSlot(img) {
   // the classic art on the build figure's red cards, the bare jersey where it breaks out of its box
   if (img.__artKey && !img.__classic && nativeSet) {
     const alt = img.closest(CLASSIC) ? classicArt : img.closest(BARE) ? bareArt : null
-    if (alt) { img.__classic = true; nativeSet.call(img, 'src', alt(img.__artKey)); if (alt === bareArt) nativeSet.call(img, 'data-art-bare', '') }
+    const out = alt?.(img.__artKey)
+    img.__classic = true
+    if (out) { nativeSet.call(img, 'src', out); if (alt === bareArt) nativeSet.call(img, 'data-art-bare', '') }
   }
   const r = img.getBoundingClientRect()
   // not laid out yet (a closed tab, a sheet still off screen): fitted the moment it gets a size
