@@ -9,8 +9,9 @@
 //
 // Drawn faces (Franchise's generated players, the generic silhouettes) aren't photos and are left alone.
 import INDEX from '../data/jersey-index.json'
-import { jerseySvg, teamMarkSvg, svgUri } from './jerseyArt'
-import { jerseySvg as classicJersey } from './jerseyArtClassic'
+import { jerseySvg, svgUri } from './jerseyArt'
+import { jerseySvg as classicJersey, teamMarkSvg as classicMark } from './jerseyArtClassic'
+import { numberFor } from './jerseyNumber'
 
 const cache = new Map()
 const HEADSHOT = /\/headshots\/(.+?)\.(?:webp|png|jpe?g)(?:[?#].*)?$/i
@@ -23,25 +24,33 @@ const colorsOf = (lg, team) => INDEX.teams[lg]?.[team] ?? null
 
 export function playerArt(key, folderHint, variant = 'auto') {
   const row = INDEX.p[key]
-  if (!row) return svgUri(jerseySvg({ league: folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl', variant }))
+  if (!row) { const lg = folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl'; return svgUri(jerseySvg({ league: lg, number: numberFor(key, '', '', lg), variant })) }
   const [lg, team, number, pos, rank] = row.split('|')
-  if (pos === 'HC') return svgUri(teamMarkSvg({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
-  return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0, variant }))
+  if (pos === 'HC') return svgUri(teamMark({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
+  // (every jersey carries a number: lib/jerseyNumber.js picks one for his position when the index has none)
+  return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number: numberFor(key, pos, number, lg), pos, rank: +rank || 0, variant }))
 }
+// a team's mark: the oval badge from before the redesign (owner 11-19: the flat chips read as rudimentary)
+const teamMark = classicMark
 
 // the build figure's red attribute cards keep the art from before the redesign (owner 11-19: he likes it there)
 const CLASSIC = '.cz-card'
 const classicArt = key => {
   const row = INDEX.p[key]
-  if (!row) return svgUri(classicJersey({ league: /^nba\/|^cbb_/.test(key) ? 'nba' : 'nfl' }))
+  if (!row) { const lg = /^nba\/|^cbb_/.test(key) ? 'nba' : 'nfl'; return svgUri(classicJersey({ league: lg, number: numberFor(key, '', '', lg) })) }
   const [lg, team, number, pos, rank] = row.split('|')
-  return svgUri(classicJersey({ league: lg, team, colors: colorsOf(lg, team), number, pos, rank: +rank || 0 }))
+  return svgUri(classicJersey({ league: lg, team, colors: colorsOf(lg, team), number: numberFor(key, pos, number, lg), pos, rank: +rank || 0 }))
 }
+// where the jersey breaks out of its box (owner 11-19: "these don't need to be bound to anything"): drawn bare, no
+// tile, and the screen's own CSS (app-game.css, App art) sets it loose: angled behind the spin card's name, over a
+// row's edge, fanned on Home's pool cards, cut off by a Franchise slab, standing on the depth chart's field
+const BARE = '.qb-reveal-hero, .simp-attr-row .qb-avatar, .cr-trait-av, .crl-man .crl-face, .ag-mode-faces, .fk-l3-slab, .crl-face--sm'
+const bareArt = key => playerArt(key, key.split('/')[0], 'bare')
 let nativeSet = null
 
 export function teamArt(folder, team) {
-  for (const lg of LOGO_LEAGUES[folder ?? ''] ?? ['nfl']) { const c = colorsOf(lg, team); if (c) return svgUri(teamMarkSvg({ league: lg, team, colors: c })) }
-  return svgUri(teamMarkSvg({ team }))
+  for (const lg of LOGO_LEAGUES[folder ?? ''] ?? ['nfl']) { const c = colorsOf(lg, team); if (c) return svgUri(teamMark({ league: lg, team, colors: c })) }
+  return svgUri(teamMark({ team }))
 }
 
 // Salary Cap's Home card shows a screenshot of the board (public/modes/*-salary.webp), real photos and all: the app
@@ -80,7 +89,7 @@ export function appImage(src) {
     out = playerArt(key, key.split('/')[0])
   } else if ((m = LOGO.exec(src)) && m[2]) {
     // a conference's mark: its name on a plain tag
-    out = svgUri(teamMarkSvg({ league: 'conf', team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
+    out = svgUri(teamMark({ league: 'conf', team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
   } else if ((m = SALARY.exec(src))) {
@@ -146,7 +155,11 @@ function waitForSize(img) {
 const pinned = k => { const p = getComputedStyle(k).position; return p === 'absolute' || p === 'fixed' }
 function fitSlot(img) {
   if (!img.isConnected) return
-  if (img.__artKey && !img.__classic && nativeSet && img.closest(CLASSIC)) { img.__classic = true; nativeSet.call(img, 'src', classicArt(img.__artKey)) }
+  // the classic art on the build figure's red cards, the bare jersey where it breaks out of its box
+  if (img.__artKey && !img.__classic && nativeSet) {
+    const alt = img.closest(CLASSIC) ? classicArt : img.closest(BARE) ? bareArt : null
+    if (alt) { img.__classic = true; nativeSet.call(img, 'src', alt(img.__artKey)); if (alt === bareArt) nativeSet.call(img, 'data-art-bare', '') }
+  }
   const r = img.getBoundingClientRect()
   // not laid out yet (a closed tab, a sheet still off screen): fitted the moment it gets a size
   if (r.width < 2 || r.height < 2) { waitForSize(img); return }
@@ -175,6 +188,8 @@ export function installAppArt() {
   installed = true
   document.documentElement.classList.add('app-art')
   // a canvas can't pick its picture by the slot's size: it asks for the one it wants ('small', 'square', 'card')
+  // a team's jersey with a given number, for a canvas (the share card's backdrop)
+  globalThis.__appTeamJersey = (league, team, number) => svgUri(jerseySvg({ league, team, colors: colorsOf(league, team), number: String(number ?? ''), variant: 'bare', size: 800 }))
   globalThis.__appArtVariant = (src, variant) => { const m = HEADSHOT.exec(String(src)); if (!m) return null; const key = m[1].replace(/^.*?public\/headshots\//, ''); return playerArt(key, key.split('/')[0], variant) }
   const st = document.createElement('style')
   st.textContent = FRAME_CSS
@@ -186,6 +201,7 @@ export function installAppArt() {
     if (out === src && src.startsWith('data:image/svg')) return   // already swapped, set again
     const k = kindOf(src, out)
     img.__classic = false
+    if (img.hasAttribute('data-art-bare')) img.removeAttribute('data-art-bare')
     const hm = k === 'p' && HEADSHOT.exec(src); img.__artKey = hm ? hm[1].replace(/^.*?public\/headshots\//, '') : null
     if (k) { setAttr.call(img, 'data-art', k); fitLater(img) } else if (img.hasAttribute('data-art')) img.removeAttribute('data-art')
   }
