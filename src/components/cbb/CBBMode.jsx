@@ -16,6 +16,9 @@ import { HEADSHOT_BASE } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
 import { useDropMode, useDropSheet, DropBar, DropSheet, BuildComplete } from '../app/AppBuildTray'
 import { IconGear, IconClose, IconPlay, IconSpin } from '../app/icons'
+import { IconChevron } from '../Navbar'
+// (the reload's build page is gone back to once a page load: lib/buildSave.js)
+const resumedAtLoad = {}
 import SoundToggle from '../app/SoundToggle'
 import { IS_APP } from '../../lib/platform'
 import { sfx } from '../../lib/juice'
@@ -82,7 +85,22 @@ function GradesSwitch() {
 }
 
 // The build page's top bar: the game's navbar, with the mode in place of the position menu
-function CBBNav({ pos, onHome, grades, era = 'current' }) {
+// onSwitch: the pill opens the other positions, and a pick starts a new build there (as football's does). 2026-11-19:
+// the pill looked like football's menu but did nothing, so a new build couldn't change position
+function CBBNav({ pos, onHome, grades, era = 'current', onSwitch = null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const shut = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', shut)
+    document.addEventListener('touchstart', shut)
+    return () => { document.removeEventListener('mousedown', shut); document.removeEventListener('touchstart', shut) }
+  }, [open])
+  const pill = <>
+    <span className="nav-pos-badge" style={{ '--pos-col': '#ffffff' }}>{CBB_POS[pos].label}</span>
+    <span className="nav-pos-name">{era === 'alltime' ? 'All-Time' : 'College'} {CBB_POS[pos].name}</span>
+  </>
   return (
     <header className="navbar cfb-nav">
       <div className="logo" onClick={onHome} style={{ cursor: 'pointer' }}>
@@ -93,11 +111,22 @@ function CBBNav({ pos, onHome, grades, era = 'current' }) {
           </div>
         </div>
       </div>
-      <div className="nav-pos-dropdown">
-        <span className="tab-pill tab-pill-qb active nav-pos-trigger nav-pos-trigger--static cfb-nav-pill">
-          <span className="nav-pos-badge" style={{ '--pos-col': '#ffffff' }}>{CBB_POS[pos].label}</span>
-          <span className="nav-pos-name">{era === 'alltime' ? 'All-Time' : 'College'} {CBB_POS[pos].name}</span>
-        </span>
+      <div className="nav-pos-dropdown" ref={ref}>
+        {onSwitch ? (
+          <button className="tab-pill tab-pill-qb active nav-pos-trigger cfb-nav-pill" onClick={() => { sfx('tap'); setOpen(o => !o) }} aria-expanded={open}>
+            {pill}<IconChevron up={open} />
+          </button>
+        ) : <span className="tab-pill tab-pill-qb active nav-pos-trigger nav-pos-trigger--static cfb-nav-pill">{pill}</span>}
+        {open && onSwitch && (
+          <div className="nav-pos-menu">
+            {Object.keys(CBB_POS).filter(p => p !== pos).map(p => (
+              <button key={p} className="nav-pos-item" onClick={() => { setOpen(false); onSwitch(p) }}>
+                <span className="nav-pos-badge" style={{ '--pos-col': '#ffffff' }}>{CBB_POS[p].label}</span>
+                {CBB_POS[p].name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {grades && IS_APP && <GradesSwitch />}
       <div className="nav-right">
@@ -255,7 +284,10 @@ export default function CBBMode({ user, onHome, onCareer }) {
   const saved = useMemo(loadProgress, [])
   const [progress, setProgress] = useState(saved)
   // (a reload on the build or the season goes straight back to it, as it was: lib/buildSave.js)
-  const [phase, setPhase] = useState(() => (saved?.build && buildPageAtLoad('bucket') === 'cbb' ? (saved.result ? 'season' : 'build') : 'pick'))   // 'pick' | 'build' | 'season'
+  // (only the first time the mode opens after the reload: opened again later, it starts on the position pick. 2026-11-19: a
+  // reload on the build page kept every later visit going straight back into that build, at that position)
+  const [phase, setPhase] = useState(() => (saved?.build && buildPageAtLoad('bucket') === 'cbb' && !resumedAtLoad.cbb ? (saved.result ? 'season' : 'build') : 'pick'))
+  useEffect(() => { resumedAtLoad.cbb = true }, [])   // 'pick' | 'build' | 'season'
   useEffect(() => { markBuildPage('bucket', phase === 'pick' ? null : 'cbb') }, [phase])
   const [pos, setPos] = useState(saved?.pos ?? 'guard')
   // Current or All-Time: the pool this build's wheels deal from (cfbShared CBB_POOLS). era is the build's, kept with
@@ -605,7 +637,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
           userYear={cls} season={2026 + history.length}
           roleNote={result.role === 'bench' ? `${CLASS_NAME[cls]} · off the bench behind ${result.starterName ?? 'the starter'}` : `${CLASS_NAME[cls]} · ${P.arch(P.ovr(build, P.types), build, P.types)}`}
           seasonNote={[era === 'alltime' ? 'All-Time build' : null, `${CLASS_NAME[cls]} season`, history.length ? (history[history.length - 1].school === result.team?.short ? `back at ${result.team?.school ?? result.team?.name}` : `transferred from ${history[history.length - 1].schoolName}`) : null].filter(Boolean).join(' · ')}
-          onAgain={() => start(pos)}
+          onAgain={() => { setPickEra(era); setPhase('pick'); window.scrollTo(0, 0) }}
           onDraft={canDeclare(cls) ? () => setDrafting(true) : null}
           onReturn={canReturn ? () => openOff('return') : null}
           nextNote={canReturn ? (canDeclare(cls) ? null : `${CLASS_NAME[classAt(cls0, history.length + 1)]} year is next. He can enter the NBA Draft after any season.`) : 'Out of eligibility: the NBA Draft is next.'}
@@ -659,7 +691,7 @@ export default function CBBMode({ user, onHome, onCareer }) {
   // in #root, its flex column: a wrapper here cut that chain and the page couldn't scroll)
   const page = (
     <>
-      <CBBNav pos={pos} onHome={close} grades={drop} era={era} />
+      <CBBNav pos={pos} onHome={close} grades={drop} era={era} onSwitch={p => start(p)} />
       <div className="game-page-scroll">
         {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={P.types} attrMap={P.attr}
           waiting={spin?.selectedQB?.name ?? null} complete={complete} />}
