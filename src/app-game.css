@@ -7736,6 +7736,8 @@ html.app-art:not(#_) .ag-mode-faces img[data-art-bare]:nth-child(3) { transform:
 /* Franchise lower-thirds: the jersey big on the team's colour, cut off by the slab */
 html.app-art:not(#_):not(#_) .fk-l3-slab:has(> img[data-art-bare]) { background: linear-gradient(165deg, color-mix(in srgb, var(--tc, #2a3038) 85%, #fff) 0%, color-mix(in srgb, var(--tc, #2a3038) 30%, #0b0d10) 85%) !important; clip-path: none !important; overflow: hidden !important; box-shadow: none !important; }
 html.app-art .fk-l3-slab:has(> img[data-art-bare]) .fk-l3-num { display: none; }
+/* (a coach's team mark sits whole in the slab) */
+html.app-art:not(#_):not(#_) .fk-l3-cut[data-art]:not([data-art-bare]) { inset: auto !important; left: 4px !important; top: 50% !important; transform: translateY(-50%) !important; width: calc(100% - 16px) !important; height: auto !important; aspect-ratio: 1 !important; }
 html.app-art:not(#_):not(#_) .fk-l3-cut[data-art-bare] { inset: auto !important; left: -4% !important; top: -2% !important; width: 108% !important; height: auto !important; aspect-ratio: 1 !important; transform: none !important; }
 /* the depth chart: the jerseys are the players on the field */
 html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width: 44px; height: 44px; }
