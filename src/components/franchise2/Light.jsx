@@ -159,7 +159,7 @@ export function StretchRecap({ F, act, owner, onPlayoffs }) {
       </div>
       <div className="lt-sec">
         <h3 className="fh-h"><b>Injuries</b><span>{X.hurt.length ? `${X.hurt.length} ${TEAM[F.team].nick}` : 'None'}</span></h3>
-        {X.hurt.length ? X.hurt.map(x => <p key={`${x.id}-${x.at}`} className="lt-line is-inj">{hurtText(x)}</p>) : <p className="lt-line">Nobody on the {TEAM[F.team].nick} was hurt in these weeks.</p>}
+        {X.hurt.length ? X.hurt.map(x => <p key={`${x.id}-${x.at}`} className="lt-line is-inj">{hurtText(x)}</p>) : <p className="lt-line">{`Nobody on the ${TEAM[F.team].nick} was hurt in these weeks.`}</p>}
       </div>
       {X.wire.length > 0 && (
         <div className="lt-sec">
@@ -282,7 +282,7 @@ function StaffAwards({ F, act, owner }) {
             <i>{SPOT[x.spot]}</i><KLogo s={x.t} size={22} /><b>{x.n}</b><small>{x.line}</small>
           </div>
         ))}
-        {!all && !ours.length && <div className="fd-none">NONE FROM THE {NICK(F.team)}</div>}
+        {!all && !ours.length && <div className="fd-none">{`NONE FROM THE ${NICK(F.team)}`}</div>}
       </section>
       </div>
       <div className="lt-col">
@@ -485,7 +485,7 @@ function RosterDone({ F, act, owner }) {
   return (
     <>
       <Chyron team={F.team} title="FREE AGENCY" tag="CLOSED" sub={`${mine.length} ${mine.length === 1 ? 'SIGNING' : 'SIGNINGS'} FOR THE ${NICK(F.team)} · THE MARKET IS CLOSED`} />
-      {res.length > 0 ? <DayResults F={F} r={{ d: null, list: res }} title={`THE ${NICK(F.team)} OFFERS`} /> : <p className="lt-line">The {nick(F.team)} made no offers.</p>}
+      {res.length > 0 ? <DayResults F={F} r={{ d: null, list: res }} title={`THE ${NICK(F.team)} OFFERS`} /> : <p className="lt-line">{`The ${nick(F.team)} made no offers.`}</p>}
       {rsd.length > 0 && (
         <section className="lt-sec">
           <Chyron tone="ink" size="s" title="RE-SIGN" right={rsd.length} />

@@ -311,7 +311,7 @@ function MyStaff({ F, act, owner, onSearch }) {
       {left.map(e => (
         <div key={`l-${e.id}`} className="fst-gone" style={fkVars(e.to ?? F.team)}>
           {e.to && <KLogo s={e.to} size={34} />}
-          <span><b>{e.n}</b><small>{JOB_LONG[e.role]} · HIRED AS THE {TEAM[e.to].nick.toUpperCase()} HEAD COACH</small></span>
+          <span><b>{e.n}</b><small>{`${JOB_LONG[e.role]} · HIRED AS THE ${TEAM[e.to].nick.toUpperCase()} HEAD COACH`}</small></span>
           <Stamp kind="ink" quiet>GONE</Stamp>
         </div>
       ))}

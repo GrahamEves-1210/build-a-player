@@ -641,7 +641,7 @@ function PickCard({ F, p, trade, label }) {
 function FeedRow({ F, p, trade }) {
   return (
     <>
-      {trade && <div className="dr-fr is-trade"><Tag tone="team">TRADE</Tag><span>{TEAM[trade.up].nick.toUpperCase()} MOVE UP TO NO. {trade.at + 1} WITH {TEAM[trade.down].nick.toUpperCase()}</span></div>}
+      {trade && <div className="dr-fr is-trade"><Tag tone="team">TRADE</Tag><span>{`${TEAM[trade.up].nick.toUpperCase()} MOVE UP TO NO. ${trade.at + 1} WITH ${TEAM[trade.down].nick.toUpperCase()}`}</span></div>}
       <div className={`dr-fr${p.s === F.team ? ' is-ours' : ''}`} style={fkVars(p.s)}>
         <span className="dr-fr-no">{p.at + 1}</span>
         <KLogo s={p.s} size={22} />

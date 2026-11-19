@@ -523,7 +523,7 @@ function Draft({ c, setCareer }) {
               <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
               <p className="cr-q-text">"{it.q}"</p>
               <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); flashIt(it.team, a.stock); sfx(a.stock > 0 ? 'claim' : a.stock < 0 ? 'deny' : 'tap') }}>{a.t}</button>)}</div>
-              {canSkipTalk && <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => { setCareer(answerInterview(c, i, SKIP_TALK)); flashIt(it.team, -1); sfx('tap') }}>SKIP THE {nick(teamName(it.team)).toUpperCase()} INTERVIEW</button>}
+              {canSkipTalk && <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => { setCareer(answerInterview(c, i, SKIP_TALK)); flashIt(it.team, -1); sfx('tap') }}>{`SKIP THE ${nick(teamName(it.team)).toUpperCase()} INTERVIEW`}</button>}
             </div>
           ) : (
             <div className="cr-q ag-pop">

@@ -140,7 +140,7 @@ function Talks({ F, act, owner, id, onBack }) {
         <section className="dl-over">
           <Stamp kind={t?.st === 2 || done?.[1] === 'tested' || done?.[1] === 'gone' ? 'l' : 'w'} big>{t?.st === 2 || done?.[1] === 'tested' || done?.[1] === 'gone' ? 'GONE' : 'SIGNED'}</Stamp>
           <b>{t?.st === 2 || done?.[1] === 'tested' ? `${who?.n ?? 'He'} will test free agency` : done?.[1] === 'gone' ? `${who?.n ?? 'He'} is a free agent` : `${who.n}: ${who.y} ${who.y === 1 ? 'year' : 'years'}, ${money(who.$ * who.y)}`}</b>
-          {t?.st === 2 && <small>THE {nick(F.team)} CAN STILL BID ON HIM IN FREE AGENCY</small>}
+          {t?.st === 2 && <small>{`THE ${nick(F.team)} CAN STILL BID ON HIM IN FREE AGENCY`}</small>}
           <ActionBar><Go onClick={onBack}>Back to re-sign</Go></ActionBar>
         </section>
       ) : t && o ? (
@@ -383,7 +383,7 @@ function OfferPanel({ F, act, owner, p, V, side = false, onBack, setPage }) {
         <small>{st.rivals.length ? 'ALSO BIDDING' : 'NO OTHER BIDS YET'}</small>
         <span>{st.rivals.map(r => <span key={r.s} className="fd-in-team" style={fkVars(r.s)}><KLogo s={r.s} size={28} /></span>)}</span>
       </div>
-      <div className={`dl-standing is-${tone}`} role="status"><small>WHERE THE {nick(F.team)} STAND · {st.day > F.fad ? `DECIDES DAY ${st.day}` : 'DECIDES TODAY'}</small><b>{word}</b></div>
+      <div className={`dl-standing is-${tone}`} role="status"><small>{`WHERE THE ${nick(F.team)} STAND · ${st.day > F.fad ? `DECIDES DAY ${st.day}` : 'DECIDES TODAY'}`}</small><b>{word}</b></div>
       <Chyron tone="ink" size="s" title="WHAT HE WANTS" right={nick(F.team)} />
       <div className="fd-wants">
         {WANTS.map(([k, label]) => <Meter key={k} label={label} v={Math.round(pitch[k] * 100)} team={F.team} show={k === 'role' ? (pitch.starts ? 'STARTER' : 'BACKUP') : k === 'money' ? money(worthOf(p, o)) : k === 'coach' ? coachGrade(c) ?? '-' : undefined} color={k === 'coach' ? letterColor(coachGrade(c)) : undefined} />)}

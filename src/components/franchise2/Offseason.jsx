@@ -99,7 +99,7 @@ function Awards({ F, act, owner }) {
               <i>{SPOT_LABEL[x.spot]}</i><KLogo s={x.t} size={22} /><b>{x.n}</b><small>{x.line}</small>
             </div>
           ))}
-          {!all && !ours.length && <div className="fd-none">NONE FROM THE {TEAM[F.team].nick.toUpperCase()}</div>}
+          {!all && !ours.length && <div className="fd-none">{`NONE FROM THE ${TEAM[F.team].nick.toUpperCase()}`}</div>}
         </>
       )}
       <ActionBar><Go onClick={() => { act(X => { ageLeague(X); openResign(X) }); sfx('whistle') }}>Next: Re-sign players</Go></ActionBar>
