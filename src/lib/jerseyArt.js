@@ -191,7 +191,7 @@ function jersey(kit, number, tank, u, { small = false } = {}) {
   const n = String(number ?? '').slice(0, 2)
   const [nx, ny, nh, nw] = S.num
   // light and shade, scaled to the cloth: a black kit needs more light to show its form, a white one more shade
-  const hi = dark ? 0.34 : pale ? 0.5 : 0.24, lo = dark ? 0.45 : pale ? 0.16 : 0.36
+  const hi = (dark ? 0.34 : pale ? 0.5 : 0.24) * (small ? 1.2 : 1), lo = (dark ? 0.45 : pale ? 0.16 : 0.36) * (small ? 0.55 : 1)   // (flatter drawn small: the shade would swallow a dark kit at 30px)
   const trim = kit.line ?? (contrast(kit.collar, kit.body) > 1.4 ? kit.collar : null)
   const collarLo = shade(kit.collar, pale ? 0.82 : 0.7)
   const out = [
@@ -280,7 +280,7 @@ function cardSquare(kit, team, number, pos, tank, T, u) {
 // a row's picture: the jersey in a small rounded tile
 function cardSmall(kit, number, tank, u, small) {
   return tile(200, 200, 40, washOf(kit), TIERS[0], u, [100, 92, 130]) +
-    `<g transform="translate(17 17) scale(.83)">${jersey(kit, number, tank, u + 'j', { small })}</g>`
+    `<g transform="${small ? 'translate(7 6) scale(.93)' : 'translate(14 12) scale(.86)'}">${jersey(kit, number, tank, u + 'j', { small })}</g>`
 }
 
 // ── Public ──────────────────────────────────────────────────────────────────────────────────────────────────────
