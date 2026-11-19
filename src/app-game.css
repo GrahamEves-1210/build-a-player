@@ -7707,13 +7707,34 @@ html.app-art:not(#_) .sts-city { font-size: 18px; color: var(--text, #fff) !impo
 html.app-art .fk-slab-txt > small:first-child { display: none; }
 /* Franchise lower-thirds: the jersey's own tile, square, where the face cut against the team's colour was; the faint
    number behind him is on the jersey already. (:not(#_) twice: over lib/appArt.js's own rules for photo frames) */
-html.app-art:not(#_):not(#_) .fk-l3-slab:has(> img[data-art]) { width: var(--h, 72px) !important; background: none !important; box-shadow: none !important; clip-path: none !important; overflow: visible !important; }
-html.app-art .fk-l3-slab:has(> img[data-art]) .fk-l3-num { display: none; }
-html.app-art:not(#_):not(#_) .fk-l3-cut[data-art] { inset: auto !important; left: 6px !important; top: 50% !important; transform: translateY(-50%) !important; width: calc(var(--h) - 12px) !important; height: calc(var(--h) - 12px) !important; }
 /* Career's game card: the team's own tag already says its abbreviation */
 html.app-art .sm-now-side:first-child > img[data-art] + b { display: none; }
 /* Franchise team slabs: the slab already names the team in its colours; no chip on top of it */
 html.app-art:not(#_) .fk-slab > .fk-slab-logo[data-art] { display: none; }
 /* Home's pool cards: the jerseys stand side by side, whole, rather than overlapping cards cut off by the card's foot */
-html.app-art:not(#_) .ag-mode-faces { gap: 4px; align-items: center; }
-html.app-art:not(#_) .ag-mode-faces img[data-art] { height: 70%; width: auto; aspect-ratio: 1; margin: 0; }
+
+/* ── Jerseys set loose (owner 11-19: "these don't need to be bound to anything"). lib/appArt.js draws these slots'
+   jerseys bare (data-art-bare), with no tile; here each screen places its own. (:not(#_) twice: over appArt's own
+   rules for photo frames, and the game's !important sizes) ── */
+html.app-art img[data-art-bare] { filter: drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
+/* the spin card: his jersey big and angled behind his name, bleeding off the strip's top and bottom */
+html.app-art:not(#_):not(#_) .qb-reveal-card:has(img[data-art-bare]) { overflow: hidden; min-height: 64px; }
+html.app-art:not(#_):not(#_) .qb-reveal-hero:has(img[data-art-bare]) { position: absolute; right: 50px; top: -18px; width: 104px; height: 104px; transform: rotate(-11deg); z-index: 0; pointer-events: none; }
+html.app-art:not(#_):not(#_) .qb-reveal-hero:has(img[data-art-bare]) .qb-avatar { width: 100% !important; height: 100% !important; min-width: 0 !important; }
+html.app-art .qb-reveal-card:has(img[data-art-bare]) > :not(.qb-reveal-hero) { position: relative; z-index: 1; }
+html.app-art .qb-reveal-card:has(img[data-art-bare]) .qb-reveal-name { text-shadow: 0 1px 8px rgba(0,0,0,.85); }
+/* rows: the jersey tipped over the row's left edge */
+html.app-art:not(#_):not(#_) .simp-attr-row .qb-avatar:has(img[data-art-bare]) { width: 54px !important; height: 54px !important; margin: -8px -4px -8px -14px; transform: rotate(-8deg); }
+html.app-art:not(#_):not(#_) .cr-trait-av:has(img[data-art-bare]) { width: 42px; height: 42px; margin: -8px -4px -8px -10px; transform: rotate(-8deg); }
+/* Home's pool cards: three kits fanned, the middle one forward, hung off the card's foot */
+html.app-art:not(#_) .ag-mode-faces:has(img[data-art-bare]) { align-items: flex-end; gap: 0; bottom: -10px; }
+html.app-art:not(#_) .ag-mode-faces img[data-art-bare] { height: 82%; width: auto; aspect-ratio: 1; margin: 0 -10px; transform-origin: 50% 100%; }
+html.app-art:not(#_) .ag-mode-faces img[data-art-bare]:nth-child(1) { transform: rotate(-13deg); }
+html.app-art:not(#_) .ag-mode-faces img[data-art-bare]:nth-child(2) { height: 96%; position: relative; z-index: 1; }
+html.app-art:not(#_) .ag-mode-faces img[data-art-bare]:nth-child(3) { transform: rotate(13deg); }
+/* Franchise lower-thirds: the jersey big on the team's colour, cut off by the slab */
+html.app-art:not(#_):not(#_) .fk-l3-slab:has(> img[data-art-bare]) { background: linear-gradient(160deg, var(--tc, #2a3038), color-mix(in srgb, var(--tc, #2a3038) 45%, #000)) !important; clip-path: none !important; overflow: hidden !important; box-shadow: none !important; }
+html.app-art .fk-l3-slab:has(> img[data-art-bare]) .fk-l3-num { display: none; }
+html.app-art:not(#_):not(#_) .fk-l3-cut[data-art-bare] { inset: auto !important; left: -8% !important; top: 6% !important; width: 116% !important; height: auto !important; aspect-ratio: 1 !important; transform: none !important; }
+/* the depth chart: the jerseys are the players on the field */
+html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width: 44px; height: 44px; }

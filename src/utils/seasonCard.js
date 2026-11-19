@@ -172,9 +172,10 @@ function drawStage(ctx, W, H, { base, tint, logo, logoAt }) {
   ctx.fillStyle = wash; ctx.fillRect(0, 0, W, H)
   // the team's logo, huge and faint, behind the number
   if (logo && logoAt) {
-    const s = logoAt.size, k = Math.min(s / logo.width, s / logo.height)
-    ctx.save(); ctx.globalAlpha = .07
-    ctx.drawImage(logo, logoAt.x - logo.width * k / 2, logoAt.y - logo.height * k / 2, logo.width * k, logo.height * k)
+    // (the app: the team's jersey with his OVR on it, big and cropped, in place of the logo)
+    const big = logo.isJersey ? 1.5 : 1, s = logoAt.size * big, k = Math.min(s / logo.width, s / logo.height)
+    ctx.save(); ctx.globalAlpha = logo.isJersey ? .26 : .07
+    ctx.drawImage(logo, logoAt.x - logo.width * k / 2, logoAt.y - logo.height * k / 2 + (logo.isJersey ? s * .08 : 0), logo.width * k, logo.height * k)
     ctx.restore()
   }
   // a bank of lights high in each corner, beams crossing toward the middle
@@ -325,6 +326,11 @@ export async function drawSeasonCard(card, { format = 'story' } = {}) {
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H
   const ctx = canvas.getContext('2d')
   const env = { W, H, sp, tint, logo, mark, chips, faces }
+  // the app draws no logos: the team's jersey with his number on it is the backdrop (lib/appArt.js)
+  if (globalThis.__appTeamJersey && card.team?.short) {
+    const j = await safeImage(globalThis.__appTeamJersey(card.sport === 'bucket' ? 'nba' : 'nfl', card.team.short, card.hero?.value))
+    if (j) { j.isJersey = true; env.backdrop = j }
+  }
   if (format === 'square') drawSquare(ctx, card, env)
   else drawStory(ctx, card, env)
   return canvas
@@ -426,7 +432,7 @@ function drawStory(ctx, card, env) {
   const y0 = TOP + Math.max(0, (BOT - TOP - total) / 2)
   // the backdrop first: the team's logo, faint, behind the number
   const heroY = y0 + rows.slice(0, heroAt).reduce((a, r) => a + r.h, 0) + asc / 2
-  drawStage(ctx, W, H, { base: sp.base, tint, logo, logoAt: { x: W / 2, y: heroY, size: Math.min(W * .95, asc * 2.1) } })
+  drawStage(ctx, W, H, { base: sp.base, tint, logo: env.backdrop ?? logo, logoAt: { x: W / 2, y: heroY, size: Math.min(W * .95, asc * 2.1) } })
   let y = y0
   for (const r of rows) { r.draw?.(y); y += r.h }
 
@@ -453,7 +459,7 @@ function drawSquare(ctx, card, env) {
   const RW = W - PAD - RX
   const TOPY = 222                // where the number and the season start
   const heroBase = TOPY + asc
-  drawStage(ctx, W, H, { base: sp.base, tint, logo, logoAt: { x: LX, y: heroBase - asc / 2, size: 480 } })
+  drawStage(ctx, W, H, { base: sp.base, tint, logo: env.backdrop ?? logo, logoAt: { x: LX, y: heroBase - asc / 2, size: 480 } })
 
   // who
   say(ctx, String(card.name || 'Guest').toUpperCase(), PAD, 112, { size: 58, sp: 7, align: 'left', maxW: W - PAD * 2 })

@@ -30,7 +30,7 @@ export function playerArt(key, folderHint, variant = 'auto') {
   // (every jersey carries a number: lib/jerseyNumber.js picks one for his position when the index has none)
   return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number: numberFor(key, pos, number, lg), pos, rank: +rank || 0, variant }))
 }
-// a team's mark: the oval badge from before the redesign (owner 11-19: the flat chips read as rudimentary)
+// a team's mark: the slanted tag from before the redesign (owner 11-19: the flat chips read as rudimentary)
 const teamMark = classicMark
 
 // the build figure's red attribute cards keep the art from before the redesign (owner 11-19: he likes it there)
