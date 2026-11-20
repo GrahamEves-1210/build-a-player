@@ -311,11 +311,20 @@ export function teamSide(F, s, inn, out) {
 // rest of his cap hit
 const deadOn = p => r1((p.g ?? 0) * Math.max(1, yearsOf(p)))
 const hitAfter = p => r1(Math.max(minimumFor(p.ag, 2026), (p.$ ?? 0) - (p.g ?? 0)))
+// (a filler in an incoming man's room leaves the roster as he arrives, moveMan: his deal off, his spot filled)
+function fillersOut(F, s, inMen) {
+  const out = []
+  for (const p of inMen) { const fl = menOf(F, s).find(x => x.fl && x.p === p.p && groupOf(x) === groupOf(p) && !out.includes(x)); if (fl) out.push(fl) }
+  return out
+}
 export function capAfter(F, s, outMen, inMen, cut = []) {
   const c = capSheet(F, s)
-  const pay = c.pay - [...outMen, ...cut].reduce((a, p) => a + (p.$ ?? 0), 0) + inMen.reduce((a, p) => a + hitAfter(p), 0)
+  // (NO SALARY CAP, rules.js: the player's team has no room to count)
+  if (c.nocap) return { before: 0, after: 0, nocap: true }
+  const fl = fillersOut(F, s, inMen).filter(p => p.y > 0)
+  const pay = c.pay - [...outMen, ...cut, ...fl].reduce((a, p) => a + (p.$ ?? 0), 0) + inMen.reduce((a, p) => a + hitAfter(p), 0)
   const dead = c.dead + [...outMen, ...cut].reduce((a, p) => a + deadOn(p), 0)
-  const n = menOf(F, s).filter(p => p.y > 0).length - outMen.length - cut.length + inMen.length
+  const n = menOf(F, s).filter(p => p.y > 0).length - outMen.length - cut.length - fl.length + inMen.length
   const rest = restOf53(n, c.year)
   const extra = s === F.team && F.phase === 'off' && F.stage === 'fa' ? committed(F) : 0
   return { before: r1(c.room - extra), after: r1(c.cap - pay - dead - rest - extra) }
@@ -577,6 +586,22 @@ export function proposeTrade(F, s, give, get) {
   const ct = counterOf(F, s, give, get, d)
   if (ct) return { ok: false, say: 'counter', text: sayOf(F, s, d, true), counter: ct, why: d.why }
   return { ok: false, say: 'no', text: sayOf(F, s, d), why: d.why }
+}
+// The week's trade call (season.js tradeEvent: a starter of theirs for one of the player's at his spot): one man for
+// one, legal for both books (the player's cap and roster, the other team's cap) and made the way any trade is (dead
+// money, the wire, the league year's count). eventTradeOk: can it be made now; eventTrade: make it (the line, or null)
+function eventSides(F, s, giveId, getId) {
+  const give = { pl: [giveId], pk: [] }, get = { pl: [getId], pk: [] }
+  if (!checkTrade(F, s, give, get).ok) return null
+  const { gm, tm } = resolve(F, s, give, get)
+  const cut = releasesFor(F, s, tm, gm)
+  if (cut == null || !capOk(capAfter(F, s, tm, gm, cut))) return null
+  return { gm, tm }
+}
+export const eventTradeOk = (F, s, giveId, getId) => !!eventSides(F, s, giveId, getId)
+export function eventTrade(F, s, giveId, getId) {
+  const x = eventSides(F, s, giveId, getId)
+  return x ? execute(F, F.team, s, x.gm, [], x.tm, [], true) : null
 }
 // the player takes the team's counter (or an offer): made if it still stands
 export function acceptDeal(F, s, give, get) {

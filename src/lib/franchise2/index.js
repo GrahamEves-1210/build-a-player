@@ -7,7 +7,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
 import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
 import { defaultFace } from './faces'
-import { makeRoom, cutMan, marketValue, termFor, tickDeal, dealsOnLoad } from './contracts'
+import { makeRoom, cutMan, marketValue, termFor, tickDeal, dealsOnLoad, capRoom } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
 import { fillPotential, buildPotential } from './potential'
@@ -106,6 +106,9 @@ export function createFranchise(setup) {
   for (const m of [...makeRoom(F, F.team, 0), ...makeRoom(F, F.team, 0, true)]) {
     if (m.k === 'rs') addNews(F, { k: 'sign', tag: 'RESTRUCTURED', s: F.team, text: `${real.nick} restructure ${m.n}${/s$/.test(m.n) ? "'" : "'s"} contract, clearing $${m.saves.toFixed(1)} million in cap space` })
   }
+  // the league's teams over the 2026 cap on their real deals (the mode doesn't carry the room real clubs rolled over
+  // from 2025): their front offices restructure the same way, so every club opens the season under the cap
+  for (const s of SHORTS) if (s !== F.team && capRoom(F, s) < 0) { makeRoom(F, s, 0); if (capRoom(F, s) < 0) makeRoom(F, s, 0, true) }
   F.lastStarters = Object.values(lineup(t)).map(p => p.i)
   makeClass(F)
   return F

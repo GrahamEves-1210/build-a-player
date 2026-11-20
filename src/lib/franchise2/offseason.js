@@ -11,8 +11,8 @@ import { rngOf, clamp, r1 } from './rng'
 import { fbCase, honorsOf } from '../teamSeason'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { makeClass } from './draft'
-import { leagueUnderCap } from './market'
-import { signRookie, cutCost, cutMan, marketValue, termFor } from './contracts'
+import { leagueUnderCap, restructureMine } from './market'
+import { signRookie, cutCost, cutMan, marketValue, termFor, capSheet, cutRoom, restructurable } from './contracts'
 import { addNews } from './news'
 import { sortChartAfterCamp, fixNumbers } from './roster'
 import { clearLines } from './deals'
@@ -53,7 +53,9 @@ export function newSeason(F) {
   }
   // the roster cuts and fill-ins done: every league team under the cap for the new season
   // (the men the player let go at the cut-down stay on the street for the season's signings)
-  leagueUnderCap(F); F.fa = (F.fa ?? []).filter(p => p.cc); for (const p of F.fa) delete p.cc
+  // (and the player's, by restructures, once his cut-down's dead money is on: the cut-down screen won't start the
+  // season past what they clear)
+  leagueUnderCap(F); restructureMine(F); F.fa = (F.fa ?? []).filter(p => p.cc); for (const p of F.fa) delete p.cc
   for (const p of released) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.ox; F.fa.push(p) }
   // the schedule follows last season's finish in each division
   const S = standings(F)
@@ -118,6 +120,27 @@ export function campCuts(F) {
 export function campCut(F, id) {
   const room = campCuts(F).find(r => r.men.some(p => p.i === id))
   if (!room) return null
+  const c = cutMan(F, id)
+  if (c?.p) c.p.cc = 1
+  return c
+}
+// Over the cap at the cut-down (past what the front office's restructures will clear when the season starts): the
+// season can't start until he's under. capOver: the $M still to clear (0: under, or no release would help);
+// capCuts: the men whose release clears the most room (never a build, never the last men a room needs);
+// capCut: one of them let go, the way campCut does it.
+export function capOver(F) {
+  const c = capSheet(F)
+  if (c.nocap) return 0
+  const over = r1(-(c.room + restructurable(F)))
+  return over > 0 && capCuts(F).length ? over : 0
+}
+export function capCuts(F, n = 8) {
+  const t = F.teams[F.team]
+  return t.r.filter(p => p.b == null && !p.fl && p.y > 0 && t.r.filter(x => x.p === p.p && !x.fl).length > MIN[p.p])
+    .map(p => ({ p, saves: cutRoom(F, p) })).filter(x => x.saves > 0.05).sort((a, b) => b.saves - a.saves).slice(0, n)
+}
+export function capCut(F, id) {
+  if (!capCuts(F, 99).some(x => x.p.i === id)) return null
   const c = cutMan(F, id)
   if (c?.p) c.p.cc = 1
   return c

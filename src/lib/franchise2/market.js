@@ -42,6 +42,9 @@ export function openResign(F) {
   // (the player's made-up depth whose year is up goes the same quiet way, owner 11-18: the re-sign screen is real
   // men and his own picks; a room left short is filled again when the new season starts, league.js fillUp)
   F.teams[F.team].r = F.teams[F.team].r.filter(p => !(p.gn && p.y <= 0))
+  // the new league year: every league team under the cap before it re-signs anyone, as the NFL requires in March
+  // (its cap casualties go to the market)
+  leagueUnderCap(F)
   for (const s of SHORTS) {
     if (s === F.team) continue
     const t = F.teams[s], fo = foOf(F, s)
@@ -89,11 +92,8 @@ export function openResign(F) {
       t.r = t.r.filter(x => x !== p); F.fa.push(p)
     }
   }
-  // the player's team, over the cap as the new league year starts: the front office restructures the big deals to get
-  // under it, the way NFL clubs do by March (no releases: who goes is the GM's call), and the wire reports each one
-  if (capRoom(F, F.team) < 0) {
-    for (const m of makeRoom(F, F.team, 0)) F.news = [...(F.news ?? []), { k: 'sign', tag: 'RESTRUCTURED', s: F.team, text: `${TEAM[F.team]?.nick ?? F.team} restructure ${m.n}${/s$/.test(m.n) ? "'" : "'s"} contract, clearing $${m.saves.toFixed(1)} million in cap space`, y: F.year, wk: F.wk }].slice(-40)
-  }
+  // the player's front office restructures to get his team under the new league year's cap
+  restructureMine(F)
   const mine = F.teams[F.team].r
   F.rs = [...mine.filter(p => p.y === 0), ...mine.filter(p => optionDue(p))].filter(p => !p.fl && !p.gn).sort((a, b) => b.o - a.o).map(p => p.i)
   F.stage = 'resign'
@@ -420,6 +420,16 @@ export function leagueUnderCap(F) {
     for (const p of t.r.slice(before)) { p.$ = minimumFor(p.ag, F.year + 1); p.y = 1; p.g = 0 }
     if (capRoom(F, s) < 0) capComply(F, s, on)
   }
+}
+// the player's team, over the cap at the new league year or once the rookies sign: the front office restructures the
+// big deals to get under it, the way NFL clubs do (no releases: who goes is the GM's call), and the wire reports each
+// one. Still over: the cut-down screen won't start the season until he's under (Cuts.jsx).
+export function restructureMine(F) {
+  if (F.noCap || capRoom(F, F.team) >= 0) return []
+  const out = makeRoom(F, F.team, 0)
+  if (capRoom(F, F.team) < 0) out.push(...makeRoom(F, F.team, 0, true))
+  for (const m of out) F.news = [...(F.news ?? []), { k: 'sign', tag: 'RESTRUCTURED', s: F.team, text: `${TEAM[F.team]?.nick ?? F.team} restructure ${m.n}${/s$/.test(m.n) ? "'" : "'s"} contract, clearing $${m.saves.toFixed(1)} million in cap space`, y: F.year, wk: F.wk }].slice(-40)
+  return out
 }
 // how the market went: the biggest deals, and the player's team's own (the wire reads it)
 export const marketDeals = F => (F.fas ?? []).map(([i, n, p, s, $, y, o]) => ({ i, n, p, s, $, y, o }))
