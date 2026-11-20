@@ -175,7 +175,7 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
         {canCut && act && (
           <div className="fd-cut">
             {sure
-              ? <Go onClick={() => { act(X => cutMan(X, p.i)); sfx('swap'); haptic('medium'); onClose() }} sub={`${cut.dead > 0 ? `${money(cut.dead)} DEAD MONEY` : 'NO DEAD MONEY'}${room.nocap ? '' : ` · ${cutSub}`}`}>RELEASE {String(p.n).split(' ').slice(-1)[0].toUpperCase()}</Go>
+              ? <Go onClick={() => { act(X => cutMan(X, p.i)); sfx('swap'); haptic('medium'); onClose() }} sub={`${cut.dead > 0 ? `${money(cut.dead)} DEAD MONEY` : 'NO DEAD MONEY'}${room.nocap ? '' : saves > 0 ? ` · SAVES ${money(saves)}` : saves < 0 ? ` · COSTS ${money(-saves)}` : ''}`}>RELEASE {String(p.n).split(' ').slice(-1)[0].toUpperCase()}</Go>
               : <Go ghost disabled={!!cutWhy} onClick={() => { if (cutWhy) return; setSure(true); sfx('deny') }} sub={cutWhy ?? cutSub}>RELEASE</Go>}
           </div>
         )}
