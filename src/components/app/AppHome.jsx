@@ -27,7 +27,7 @@ import { BASEBALL_LIVE, BASEBALL_SOON } from '../../lib/baseballLive'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
-import FranchiseCard from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
+import FranchiseCard, { NbaFranchiseCard } from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
 import Wordmark from '../Wordmark'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
@@ -404,7 +404,7 @@ let homeScroll = 0
 
 // `soon`: modes this sport shows locked as COMING SOON ({ career, compete, salary, squad }: soccer's
 // SOCCER_MODES). `faces`: soccer's strikers on its two pool cards ({ current, alltime }, headshot ids)
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null, onFranchise = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null, onFranchise = null, onNbaFranchise = null }) {
   const prog = useProgress()
   // Back from a mode, home opens where it was left. The lists on it fill in as they load, so the
   // spot is put back as the page grows, for a moment, until the player moves it themselves.
@@ -473,6 +473,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const hasCBB = !!onCBB
   // Franchise (football, lib/franchiseLive.js): while its switch is on, its card takes SQUAD BUILDER's place
   const frRef = useRef(onFranchise); frRef.current = onFranchise
+  const nbaRef = useRef(onNbaFranchise); nbaRef.current = onNbaFranchise
   const hasFranchise = !!onFranchise && !isBucket && !isSoccer && !isBaseball
 
   const positions = isBaseball
@@ -590,6 +591,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
       {/* football: Franchise on top, College Football in Compete's spot, Compete in the small row (owner 11-14) */}
       {!isBucket && (hasFranchise ? <FranchiseCard wide onClick={() => frRef.current?.()} /> : hasCFB && <CFBCard onClick={() => cfbRef.current?.()} />)}
+      {isBucket && onNbaFranchise && <NbaFranchiseCard onClick={() => nbaRef.current?.()} />}
       {isBucket && hasCBB && <CBBCard onClick={() => cbbRef.current?.()} />}
       <div className="ag-cards">
         {onCareer && (
@@ -641,7 +643,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
       </div>
     </section>
-  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise])
+  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise, !!onNbaFranchise])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>

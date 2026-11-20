@@ -58,6 +58,8 @@ const AppSquad = lazy(() => import('./app/AppSquad'))
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
 const CBBMode = lazy(() => import('./cbb/CBBMode'))   // College Basketball (a basketball mode): its rosters and sim load with it
+const NbaFranchise = lazy(() => import('./franchise2/nba/NbaFranchise'))   // basketball Franchise (NBA_FRANCHISE_LIVE): the mode and its engine load with it
+import { NBA_FRANCHISE_LIVE } from '../lib/franchiseLive'
 import { CBB_LIVE } from '../lib/cbbLive'
 import CompeteHud from './app/CompeteHud'
 const AppCompete = lazy(() => import('./app/AppCompete'))
@@ -2228,6 +2230,7 @@ export default function BucketApp() {
               squad={squad}
               onCareer={openCareer}
               career={career}
+              onNbaFranchise={NBA_FRANCHISE_LIVE ? () => { setPage('nbafranchise'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'nbafranchise' }) } : undefined}
               onCBB={CBB_LIVE ? () => { setPage('cbb'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'cbb' }) } : undefined}
               onCompete={() => setPage('compete')}
               resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean) || savedSpinResult?.selectedQB)) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${resumeKind}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
@@ -2293,6 +2296,13 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={openCareer} onExit={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+  if (page === 'nbafranchise' && NBA_FRANCHISE_LIVE) {
+    return (
+      <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
+        <NbaFranchise user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </Suspense>
     )
   }
