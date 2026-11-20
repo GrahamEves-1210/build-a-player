@@ -192,6 +192,7 @@ function Camp({ F, act, go, owner }) {
     <section className="nb-camp">
       <Chyron team={F.team} title="Training camp" sub={`${std.length} STANDARD · ${tw.length} TWO-WAY · MAX ${ROSTER_MAX} AND 3`} />
       {!chk.ok && <p className="nb-why">{chk.why}</p>}
+      {std.length < 14 && <MinDeals F={F} act={act} open />}
       {std.map(p => (
         <div key={p.i} className="nb-fa-row">
           <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={`AGE ${p.ag} · ${dealText(p)}${p.rk === F.year + 1 ? ' · ROOKIE' : ''}`} />
@@ -202,7 +203,6 @@ function Camp({ F, act, go, owner }) {
           </span>
         </div>
       ))}
-      {std.length < 14 && <MinDeals F={F} act={act} open />}
       {tw.length > 0 && <Chyron tone="ink" size="s" title="Two-way" />}
       {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
       <ActionBar><Go disabled={!chk.ok} onClick={go}>{`Start the ${seasonText(F.year + 1)} season`}</Go></ActionBar>

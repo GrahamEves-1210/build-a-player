@@ -71,6 +71,28 @@ const unpackMan = a => {
   return x
 }
 const PICK = ['y', 'r', 'o', 't', 'pr', 'sw', 'n']
+// a map of stat lines { id: { k: v } } as { K: [keys], R: { id: [values] } } (the keys once, not on every man)
+const packLines = M => { if (!M || M.K) return M; const K = [...new Set(Object.values(M).flatMap(x => Object.keys(x)))]; return { K, R: Object.fromEntries(Object.entries(M).map(([i, x]) => [i, K.map(k => x[k] ?? 0)])) } }
+const unpackLines = M => (M?.K ? Object.fromEntries(Object.entries(M.R).map(([i, a]) => [i, Object.fromEntries(M.K.map((k, j) => [k, a[j]]))])) : M)
+// a box's lines (a list) the same way
+function packList(L) { if (!Array.isArray(L) || !L.length) return L; const K = [...new Set(L.flatMap(x => Object.keys(x)))]; return { K, L: L.map(x => K.map(k => x[k] ?? null)) } }
+const unpackList = P => (P?.K && P.L ? P.L.map(a => Object.fromEntries(P.K.map((k, j) => [k, a[j]]).filter(([, v]) => v != null))) : P)
+// the postseason: each night's games point at their series by index (the same object in the bracket, not a copy)
+function packPo(P) {
+  if (!P) return P
+  const S = P.S ?? []
+  const ser = x => (x ? { ...x, st: packLines(x.st) } : x)
+  return { ...P, S: S.map(ser), all: (P.all ?? []).map(rd => rd.map(ser)), cur: (P.cur ?? []).map(g => { const { ser: x, ...rest } = g; return x ? { ...rest, si: S.indexOf(x) } : rest }) }
+}
+function unpackPo(P) {
+  if (!P) return P
+  const ser = x => (x ? { ...x, st: unpackLines(x.st) } : x)
+  P.all = (P.all ?? []).map(rd => rd.map(ser))
+  // (the current round is the same objects the bracket holds once it's done: P.S, then pushed onto P.all)
+  P.S = (P.S ?? []).map(ser)
+  P.cur = (P.cur ?? []).map(g => (g.si != null && g.si >= 0 ? (({ si, ...rest }) => ({ ...rest, ser: P.S[si] }))(g) : g))
+  return P
+}
 export function packNba(F) {
   const teams = Object.fromEntries(Object.entries(F.teams).map(([s, t]) => [s, { ...t, r: t.r.map(packMan) }]))
   // the schedule as rows: [d, h, a, k, hs, as, ot]
@@ -78,7 +100,8 @@ export function packNba(F) {
   // game's kind is the two teams' conference and division)
   const sched = (F.sched ?? []).map(g => { const r = [g.d, SHORTS.indexOf(g.h), SHORTS.indexOf(g.a)]; if (g.hs != null) r.push(g.hs, g.as); if (g.ot) r.push(g.ot); return r })
   const picks = (F.picks ?? []).map(p => PICK.map(k => p[k] ?? null))
-  return JSON.stringify({ ...F, teams, fa: (F.fa ?? []).map(packMan), dc: (F.dc ?? []).map(packMan), sched, picks, pk: 2 })
+  const box = (F.box ?? []).map(b => ({ ...b, box: b.box && Object.fromEntries(Object.entries(b.box).map(([t, L]) => [t, packList(L)])) }))
+  return JSON.stringify({ ...F, teams, fa: (F.fa ?? []).map(packMan), dc: (F.dc ?? []).map(packMan), sched, picks, ss: packLines(F.ss), ps: packLines(F.ps), po: packPo(F.po), box, pk: 2 })
 }
 export function unpackNba(json) {
   const F = JSON.parse(json)
@@ -93,6 +116,9 @@ export function unpackNba(json) {
     return { d, h, a, k: DIV_OF[h] === DIV_OF[a] ? 'div' : CONF_OF[h] === CONF_OF[a] ? 'conf' : 'other', ...(hs != null && { hs, as }), ...(ot && { ot }) }
   })
   if (v2) F.picks = (F.picks ?? []).map(r => { const p = {}; PICK.forEach((k, j) => { if (r[j] != null) p[k] = r[j] }); if (!p.pr) p.pr = null; return p })
+  F.ss = unpackLines(F.ss); F.ps = unpackLines(F.ps)
+  F.po = unpackPo(F.po)
+  F.box = (F.box ?? []).map(b => ({ ...b, box: b.box && Object.fromEntries(Object.entries(b.box).map(([t, L]) => [t, unpackList(L)])) }))
   return F
 }
 export function saveNba(F) { try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packNba(F)); return true } catch { return false } }
