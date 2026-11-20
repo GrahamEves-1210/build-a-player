@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { TEAM, CONF_NAME, records, recText, confOrder, gamesBack, streakText, manOf, teamOfMan, photoOf, CAP_SIM, seasonText, DIVS, CONF_DIVS, divOrder } from '../../../lib/franchise2/nba'
+import { TEAM, CONF_NAME, records, recText, confOrder, gamesBack, streakText, manOf, teamOfMan, photoOf, CAP_SIM, seasonText, DIVS, CONF_DIVS, divOrder, dateText } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { sfx } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird } from '../kit'
 
 // THE LEAGUE: the standings (each conference, the six in and the play-in four marked), the league leaders and the wire
 const VIEWS = [['stand', 'Standings'], ['lead', 'Leaders'], ['wire', 'Wire']]
-const STATS = [['pts', 'POINTS'], ['reb', 'REBOUNDS'], ['ast', 'ASSISTS'], ['stl', 'STEALS'], ['blk', 'BLOCKS']]
+const STATS = [['pts', 'POINTS', 'PPG'], ['reb', 'REBOUNDS', 'RPG'], ['ast', 'ASSISTS', 'APG'], ['stl', 'STEALS', 'SPG'], ['blk', 'BLOCKS', 'BPG']]
 export default function NbaLeague({ F }) {
   const [v, setV] = useState('stand')
   const [by, setBy] = useState('conf')
@@ -67,7 +67,7 @@ function Leaders({ F }) {
       {!L.length && <p className="fh-next-note">No games played yet.</p>}
       {L.map((x, k) => {
         const p = manOf(F, x.i), s = teamOfMan(F, x.i) ?? x.s
-        return p ? <LowerThird key={x.i} name={p.n} pos={p.p} num={p.num} photo={manPhoto(F, p)} team={s} size="s" stat={{ v: Number(x.v).toFixed(1), label: STATS.find(z => z[0] === st)[1].slice(0, 3) }} line={`${k + 1}. ${TEAM[s]?.nick?.toUpperCase() ?? ''}`} delay={k * 30} /> : null
+        return p ? <LowerThird key={x.i} name={p.n} pos={p.p} num={p.num} photo={manPhoto(F, p)} team={s} size="s" stat={{ v: Number(x.v).toFixed(1), label: STATS.find(z => z[0] === st)[2] }} line={`${k + 1}. ${TEAM[s]?.nick?.toUpperCase() ?? ''}`} delay={k * 30} /> : null
       })}
     </section>
   )
@@ -78,7 +78,7 @@ function Wire({ F }) {
     <section className="nb-wire">
       {N.map((n, k) => (
         <div key={k} className="nb-wire-row" style={n.s ? fkVars(n.s) : undefined}>
-          <span className="nb-wire-tag">{n.tag}</span>{n.s && <KLogo s={n.s} size={20} />}<p>{n.text}</p><small>{seasonText(n.y)}</small>
+          <span className="nb-wire-tag">{n.tag}</span>{n.s && <KLogo s={n.s} size={20} />}<p>{n.text}</p><small>{n.d != null && n.y === F.year ? dateText(F, n.d) : seasonText(n.y)}</small>
         </div>
       ))}
     </section>

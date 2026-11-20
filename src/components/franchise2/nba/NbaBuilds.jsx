@@ -24,7 +24,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const ready = picks.every(p => S.builds?.[p.id]?.name)
   return (
     <div className="fsu-card nb-builds">
-      <Chyron tone="ink" title="Your players" sub={`UP TO ${BUILD_MAX} · EACH TAKES THE LAST SPOT IN HIS GROUP`} />
+      <Chyron tone="ink" title="Your players" sub={`UP TO ${BUILD_MAX} OF YOUR OWN`} />
       {picks.map((p, k) => {
         const B = S.builds?.[p.id]
         if (!B?.name) {
@@ -35,7 +35,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
                 <span className="fsu-empty-txt"><b>{B ? 'NAME HIM' : 'NOT BUILT'}</b><small>{NAME[p.pos]}</small></span>
                 <span className="fsu-empty-go">{B ? 'NAME' : 'BUILD'}</span>
               </button>
-              <button type="button" className="fh-textbtn" onClick={() => drop(p.id)}>Remove</button>
+              <button type="button" className="nb-link" onClick={() => drop(p.id)}>Remove</button>
             </div>
           )
         }
