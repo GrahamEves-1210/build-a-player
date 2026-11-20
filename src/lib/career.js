@@ -3405,9 +3405,12 @@ export const sExtra = c => Math.max(0, sCount(c) - sFree(c))
 export function stepCost(v, c = null) {
   const g = clamp(Math.round(v ?? 0), 0, 11)
   if (c && !proCareer(c)) return g >= 10 ? 2 : 1
-  return (TOP_COST[g] ?? 1) + (g === 10 && c ? sExtra(c) : 0)
+  return TOP_COST[g] ?? 1
 }
-export const upgradeCost = (v, c = null, type = null) => (c && type && vetWork(c, type)?.cost) || stepCost(v, c) * (c && type && trainWindow(c, type)?.late ? 2 : 1)
+// (2026-11-20, the owner: "it should be 3 max") no grade ever costs more than 3 points, the late-window double included;
+// the extra point for each S past his first two is gone
+export const COST_MAX = 3
+export const upgradeCost = (v, c = null, type = null) => (c && type && vetWork(c, type)?.cost) || Math.min(COST_MAX, stepCost(v, c) * (c && type && trainWindow(c, type)?.late ? 2 : 1))
 // a free grade at the top of the scale comes one time in its cost (u: a seeded 0-1 roll of its own)
 export const topGrade = (v, u, c = null) => u < 1 / stepCost(v, c)
 // The age ladder (lib/ageLadder.js): the physical traits train while young, the technique
@@ -3525,8 +3528,7 @@ export function upgradeBlock(c, type) {
   if (vw) return `${vw.kind === 'hold' ? `Holding ${lowLabel(name)} this year` : `Winning back a grade of ${lowLabel(name)}`} costs ${cost} points. ${pts} left.`
   if (w?.late) return lateLine(c.age, name, cost, pts)
   // (from A up each grade costs more: stepCost)
-  const n = Math.round(ch.val) >= 10 ? sExtra(c) : 0, fr = sFree(c)
-  return `${valToGrade(ch.val)} to ${valToGrade(Math.round(ch.val) + 1)} costs ${cost} points${n ? `: ${TOP_COST[10]}, and one more for each S ${fr ? `past his first${fr > 1 ? ` ${['', '', 'two', 'three'][fr] ?? fr}` : ''}` : 'he already has'}` : stepCost(ch.val, c) > 1 ? ': the top grades take the most work' : ''}. ${pts} left.`
+  return `${valToGrade(ch.val)} to ${valToGrade(Math.round(ch.val) + 1)} costs ${cost} points${stepCost(ch.val, c) > 1 ? ': the top grades take the most work' : ''}. ${pts} left.`
 }
 export function spendDev(c, type) {
   if (!canUpgrade(c, type)) return c

@@ -63,4 +63,4 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1)
 export function closedLine(sport, age, tier, label, mindList, until) {
   return `${cap(lowLabel(label))} can't be trained after age ${until}. He's ${age}.${tier === 'tech' && mindList ? ` ${cap(mindList)} still can.` : ''}`
 }
-export const lateLine = (age, label, cost, pts) => `${cap(lowLabel(label))}: ${cost} points at his age (double cost). ${pts} left.`
+export const lateLine = (age, label, cost, pts) => `${cap(lowLabel(label))}: ${cost} points at his age, late in its window. ${pts} left.`

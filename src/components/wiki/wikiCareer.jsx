@@ -18,7 +18,6 @@ export function CareerPage({ go }) {
   const fbPos = nfl.positions.map(p => POS_WORD[p] ?? p.toUpperCase())
   const age = (sport, pos, extra = {}) => C.retireAge({ sport, pos, ovr: 80, durability: 5, ...extra })
   const retireRows = nfl.positions.map(p => [POS_WORD[p], age('nfl', p), p === 'k' ? age('nfl', p, { ovr: 90 }) : age('nfl', p, { ovr: 92, durability: 8 })])
-  const sFree = C.sFree({ types: Array(9).fill('x') })
   const awards = C.AWARD_STEPS
   return (
     <>
@@ -86,13 +85,13 @@ export function CareerPage({ go }) {
           <tbody>
             <tr><td>Any grade up to {grade(8)}</td><td className="num">{C.stepCost(5)}</td></tr>
             <tr><td>{grade(9)} to {grade(10)}</td><td className="num">{C.stepCost(9)}</td></tr>
-            <tr><td>{grade(10)} to {grade(11)}</td><td className="num">{C.stepCost(10)}, plus 1 for each S he already has past his first {word(sFree)}</td></tr>
+            <tr><td>{grade(10)} to {grade(11)}</td><td className="num">{C.stepCost(10)}</td></tr>
           </tbody>
         </table>
       </div>
       <ul>
         <li><b>The top is earned.</b> A player can be the best at a few things, not at everything. The chips show the price before a point is spent.</li>
-        <li><b>Late in a trait's window</b> it costs double. Physical traits close first, then skills; the mental side never closes.</li>
+        <li><b>Late in a trait's window</b> it costs double, never more than {C.COST_MAX} points. Physical traits close first, then skills; the mental side never closes.</li>
         <li><b>Limits.</b> Size can be raised {word(C.UPGRADE_CAP.size)} times in a career; speed, bounce, get-off and bend {word(C.UPGRADE_CAP.speed)} times{K_LIVE ? `; each of a kicker's three ratings ${word(C.K_UPGRADE_CAP)} times` : ''}.</li>
         <li><b>Free grades.</b> A year of growth, experience or the bye week's drill can land on a trait at {grade(9)} or better only one time in its cost.</li>
       </ul>
