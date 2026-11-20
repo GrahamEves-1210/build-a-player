@@ -69,9 +69,15 @@ export function peakFor(R, o, ag) {
 }
 const servedFrom = ag => clamp(0, 20, ag - 20)
 
+// the real 2026 draft class the rosters already carry: rookies in the first season (Rookie of the Year is theirs);
+// the rest of the teenagers on the rosters came in 2025 and have a season in
+export const ROOKIES_2026 = new Set(['AJ Dybantsa', 'Cameron Boozer', 'Caleb Wilson', 'Chris Cenac Jr.', 'Darius Acuff Jr.', 'Darryn Peterson', 'Jayden Quaintance',
+  'Keaton Wagler', 'Kingston Flemings', 'Koa Peat', 'Labaron Philon Jr.', 'Mikel Brown Jr.', 'Morez Johnson Jr.', 'Nate Ament', 'Hannes Steinbach', 'Christian Anderson'])
 export function makeReal(F, r, R) {
   const ag = ageIn(r.name, F.year) ?? R.int(22, 30)
   const p = { i: F.nid++, n: r.name, p: r.spot, g: r.g, o: r.o, ag, a: { ...r.a }, ht: r.ht, wt: r.wt, num: r.num, ys: servedFrom(ag), h: 1 }
+  if (ROOKIES_2026.has(r.name)) { p.rk = FIRST_YEAR; p.ys = 0 }
+  else if (BIRTH_NBA[r.name] >= 2006) p.ys = 1
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
   return p
 }

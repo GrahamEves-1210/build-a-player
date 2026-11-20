@@ -5,6 +5,7 @@
 import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder } from './league'
 import { b2bOf, dateText } from './schedule'
 import { addNews } from './news'
+import { scoutTick } from './draft'
 import * as X from './seams'
 import { rngOf } from '../rng'
 
@@ -125,6 +126,7 @@ function endDay(F, { mine = null, news = [] } = {}) {
   for (const s of SHORTS) X.tickInjuries(F, s)
   const was = F.day
   F.day++
+  scoutTick(F, was, F.day)
   // the trade deadline, the All-Star break: the wire says so the night they come
   if (was <= F.ddl && F.day > F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
   if (F.day >= F.asb[0] && !F.asDone) allStars(F)

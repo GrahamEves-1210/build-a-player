@@ -33,3 +33,19 @@ export const FRANCHISE_ART = { card: '/franchise/art/football-card.webp', hero: 
 // 11-15), 5 s a turn, its first frame the card's still; the hero's is the whole trophy turning, the middle of the
 // 16:9 still. (null: the still only)
 export const FRANCHISE_TURN = { card: '/franchise/art/football-card-turn', hero: '/franchise/art/football-card-turn' }
+
+// ── NBA_FRANCHISE_LIVE: basketball Franchise (components/franchise2/nba, lib/franchise2/nba) ────────────────────────
+// false: nothing about it renders; basketball's Home is as it was. true: a FRANCHISE card on basketball's Home.
+// On the dev server only, ?nbafranchise=1 turns it on for testing (it sticks on this browser until ?nbafranchise=0).
+const NBA_FRANCHISE_DEV = (() => {
+  if (typeof location === 'undefined' || !import.meta.env?.DEV) return false
+  try {
+    if (/[?&]nbafranchise=1\b/.test(location.search)) localStorage.setItem('bap_frnba_dev', '1')
+    if (/[?&]nbafranchise=0\b/.test(location.search)) localStorage.removeItem('bap_frnba_dev')
+    return localStorage.getItem('bap_frnba_dev') === '1'
+  } catch { return /[?&]nbafranchise=1\b/.test(location.search) }
+})()
+export const NBA_FRANCHISE_LIVE = false || NBA_FRANCHISE_DEV
+// Home's card note, the same shape as football's (components/franchise2/nba/NbaFranchise.jsx leaveNote)
+export const NBA_FRANCHISE_CARD_KEY = 'bap_frnba_card'
+export const nbaFranchiseCard = () => { try { const c = JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY)); return c && typeof c.line === 'string' && c.line ? c : null } catch { return null } }
