@@ -45,7 +45,7 @@
 // { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's value)]
 import { rngOf, clamp, r1 } from '../rng'
 import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
-const minOfY = year => minOf(0, year)
+const minOfY = year => minOf(5, year)
 import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf } from './contracts'
 
 const shortsOf = F => Object.keys(F.teams ?? {})

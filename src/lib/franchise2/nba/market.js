@@ -286,7 +286,7 @@ function aiMatches(F, s, p, d) {
 export function reserveOf(F, s, adding = 0) {
   // (the league's teams to 15: core's camp fills them there)
   const need = Math.max(0, (s === F.team ? 14 : 15) - standardOf(F.teams[s]).length - adding)
-  return need * minOf(0, capYear(F))
+  return need * minOf(5, capYear(F))   // (a camp body: a veteran's minimum, to be safe)
 }
 
 // ── The GM's moves ───────────────────────────────────────────────────────────
