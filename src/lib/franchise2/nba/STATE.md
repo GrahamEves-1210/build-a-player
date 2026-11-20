@@ -206,3 +206,61 @@ cpuDeadline(F, day) -> [news]                          // CPU-CPU deals before t
 ## Proposed
 
 (B and C: add requests here)
+
+### From B (cap, branch `frnba-cap`)
+
+**seams.js, B's half** (every name below is exported as named; signatures as in the table above unless noted):
+```
+export { capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, rookieScale, payroll, capSheet, assessTax } from './cap'
+export { dealOnLoad, canSign, signMan, rookieDeal, seasonEndDeals, resignOffer, cutMan, legalRoster } from './contracts'
+export { askOf, cpuOffseason, faDay, offerSheet, matchSheet } from './market'
+export { tradeValue, checkTrade, cpuAnswer, doTrade, cpuDeadline } from './trades'
+```
+- `rookieScale(pick, year)` returns the four seasons' salaries `[y1, y2, y3, y4]` (the stub returned one number).
+- `rookieDeal(F, man, { n, r })` also decides a second-rounder's deal (two-way when the roster's full). Please call it
+  for every pick, including the two-way branch in `closeDraft` (it sets `$`, `y`, `sc`, `tw` itself). It sets the
+  draftee's `ys` to -1 on draft night, so the sim's `ageLeague` (which adds a year of service) brings him to 0 for his
+  rookie season; a man core makes a two-way deal for by hand would start his rookie season at 1.
+- `seasonEndDeals(F)` returns the men whose deals ended (each in F.fa with `was` = `fr` = his team) and the array
+  carries `.news` (declined player options) for the wire.
+- `faDay(F, day)`: core's day number (1, 2, 3...); each call plays the rounds up to that day. Free agency is 6
+  days (`FA_DAYS`); `cpuOffseason` plays any left, then the summer's trades, the late signings, camp fills and
+  extensions. Both return news items and never write F.news themselves.
+- `doTrade(F, deal)` returns `{ line, news: [item] }` and does not write F.news (the screen's addNews is right).
+  `cpuDeadline` and `cpuOffseason` return their trades' items. `cpuAnswer` returns `{ yes, text, why, counter? }`;
+  a counter is a deal of the same shape, ready for `checkTrade` / `cpuAnswer` / `doTrade`.
+- `legalRoster(F, s, { season: true })` holds the GM to the CBA's 14-man minimum (the stub said 13).
+
+**New calls core should make**
+- `assessTax(F)` once, when the regular season ends (before the play-in): each team over the tax line pays its bill
+  and the year goes on `team.txh` (the repeater rule reads it); `F.taxl = { y, paid: [{ s, pay, over, bill,
+  repeater }], share, floor: [{ s, $ }] }` for a wire item or the history screen (`floor`: teams under the 90%
+  salary floor, who pay the shortfall to their players).
+- `cpuFill(F)` (market.js) after `cpuDeadline` each night is optional: a league team a trade left at 13 signs a man
+  off the street.
+
+**Dead money**: entries are `{ n, $, y, from, to }`; `$` counts in every season from `from` through `to`, and `y`
+is the seasons left through `to`, so core's `y - 1` at `newSeason` agrees with it. Keep that tick; B prunes spent
+entries at `seasonEndDeals`.
+
+**Fields B adds** (all small; a save from before them loads with none)
+- Man: `bird` (Bird years), `sgn`/`sgd` (league year and day he signed), `rt` (the team that drafted or traded for
+  him on his rookie deal, for the supermax), `mh` (one-year veteran minimum), `ng` (non-guaranteed), `ext` (year he
+  extended), `tx` ([from team, league year, day, paid] after a trade); while a free agent: `fr`/`was`, `hy` (hold
+  year), `$l` (last salary), `rsl`, `qo`, `rn` (renounced), `ask`, `wv` (waived that year).
+- Team: `exc` (`{ yr, mk, mle, bae, baeY, hc, room }`: exceptions used and hard caps), `txh` (years it paid tax).
+- F: `sed` (the season whose deals have ticked over: `capYear(F)` is F.year + 1 from then), `fad`/`fay` (free
+  agency's day and league year), `fao` (the GM's offers for the next FA day: `placeOffer`), `rfq` (offer sheets the
+  GM's restricted free agents signed: answer with `matchSheet`; an unanswered one is matched next day), `trl`
+  (trade log), `trc` (calls the GM has made, for `proposeTrade`), `trn` (trades made), `dlo`, `taxl`.
+
+**For the screens (optional, all in B's files)**
+- `capYear(F)`: the season the books are on (next season's from `seasonEndDeals` on). Show the sheet for it.
+- Options: `optionsDue(F, F.team)` before the `resign` stop; set `man.optd = 1 | 0` for each team option the GM
+  decides (the AI decides any left; player options are the player's call).
+- Renounce a cap hold: `renounce(F, F.team, id)`. Extensions: `extensionOk` / `extensionAsk` / `extendMan`.
+- Cuts: `cutCost(F, man, { stretch })` before `cutMan(F, s, id, { stretch: true })`.
+- Trades: `proposeTrade(F, deal)` (counts the GM's turned-down calls and offers a counter), `gauge(F, deal)` for the
+  value meter, `whyNot(F, s, man)` for a man who can't be traded now, `tradeWindow(F)`. A deal's picks may carry a
+  protection (`{ i, top: N }`) or be a swap (`{ swap: year }`); core's draft settles both as it does now.
+- Labels: `OVER_TEXT` (cap.js), `RIGHTS_TEXT`, `SIT_TEXT` (contracts.js), `EXC_TEXT` (cap.js).

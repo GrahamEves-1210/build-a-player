@@ -66,8 +66,9 @@ export function scoreOf(p) {
   return o + up - old
 }
 // the pay ladder: [rank (of 450 men), share of the cap]
-const LADDER = [[1, 0.37], [6, 0.35], [12, 0.33], [25, 0.285], [40, 0.25], [60, 0.205], [90, 0.15], [130, 0.105],
-  [180, 0.068], [240, 0.04], [300, 0.021], [360, 0.012], [450, 0.008]]
+// (about 40 men a season end up on deals worth 25% of the cap or more, as in the real league)
+const LADDER = [[1, 0.37], [8, 0.36], [16, 0.35], [25, 0.32], [35, 0.29], [45, 0.26], [60, 0.225], [90, 0.165],
+  [130, 0.115], [180, 0.074], [240, 0.044], [300, 0.024], [360, 0.013], [450, 0.008]]
 // what he'd be worth with no max (the trade value's measure): the top of the league is worth far more than the max
 const WORTH = [[1, 0.62], [3, 0.52], [6, 0.45], [12, 0.38], [25, 0.3], [40, 0.25], [60, 0.205], [90, 0.15], [130, 0.105],
   [180, 0.068], [240, 0.04], [300, 0.021], [360, 0.012], [450, 0.008]]
@@ -87,14 +88,25 @@ export function marketOf(F) {
   const c = MK.get(F)
   if (c?.key === key) return c.m
   const sc = men.map(([, p]) => [p.i, scoreOf(p)]).sort((a, b) => b[1] - a[1])
-  // (a league of more men stretches the ladder: the 450th man of 450 is the 450th rung)
-  const k = 450 / Math.max(300, sc.length)
+  // (the ladder is as long as the league: its rostered men and the street's best hundred and fifty; any more on the
+  // street fall past the end of it)
+  const n = men.filter(([s]) => s).length + Math.min(150, (F.fa ?? []).length)
+  const k = 450 / Math.max(300, n)
   const m = {}
   sc.forEach(([i, s], j) => { m[i] = { sc: s, rk: 1 + j * k } })
-  MK.set(F, { key, m })
+  MK.set(F, { key, m, desc: sc.map(x => x[1]), k })
   return m
 }
 export const rankOf = (F, p) => marketOf(F)[p.i]?.rk ?? 300
+// the rank a man of this score would have in the league now
+export function rankAt(F, score) {
+  marketOf(F)
+  const { desc, k } = MK.get(F)
+  let lo = 0, hi = desc.length
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (desc[mid] > score) lo = mid + 1; else hi = mid }
+  return 1 + lo * k
+}
+export const worthAt = (F, rk, year = capYear(F)) => ladder(WORTH, rk) * capOf(year)
 // his price on the open market for the league year being signed in ($M a year)
 export function marketValue(F, p, year = capYear(F)) {
   const rk = rankOf(F, p)
@@ -271,13 +283,14 @@ function normalize(F) {
     const vets = t.r.filter(p => est.has(p.i) && !p.rs && !p.tw && p.$ > minOf(p.ys ?? 0, year) + 0.5 && rankOf(F, p) > 25)
     for (let k = 0; k < 6; k++) {
       const pay = payroll(F, s, year)
-      const lo = capOf(year) * 0.88
+      const lo = capOf(year) * 0.93
       const flex = vets.reduce((a, p) => a + p.$, 0)
       if (!flex) break
-      const f = pay > hi ? Math.max(0.6, 1 - (pay - hi) / flex) : pay < lo ? Math.min(1.35, 1 + (lo - pay) / flex) : 1
+      const f = pay > hi ? Math.max(0.6, 1 - (pay - hi) / flex) : pay < lo ? Math.min(1.2, 1 + (lo - pay) / flex) : 1
       if (Math.abs(f - 1) < 0.005) break
       for (const p of vets) {
-        const mx = maxOf(p.ys ?? 0, year), mn = minOf(p.ys ?? 0, year)
+        const mx = Math.min(maxOf(p.ys ?? 0, year), f > 1 ? marketValue(F, p, year) * 1.3 : Infinity), mn = minOf(p.ys ?? 0, year)
+        if (f > 1 && p.$ >= mx) continue
         p.$ = r1(clamp(mn, mx * 1.05, p.$ * f))
         p.sc = (p.sc ?? []).map(v => r1(clamp(mn, mx * 1.4, v * f)))
       }
@@ -535,7 +548,7 @@ export function taxTolerance(F, s) {
   if (sit === 'mid') return { add: h === 2 ? 'cap' : 'tax', keep: big ? 'a1' : 'tax' }
   return { add: 'cap', keep: 'tax' }
 }
-export const lineOf = (k, year) => (k === 'cap' ? capOf(year) : k === 'tax' ? taxOf(year) : k === 'a1' ? apron1Of(year) : k === 'a2' ? apron2Of(year) : apron2Of(year) + 12)
+export const lineOf = (k, year) => (k === 'cap' ? capOf(year) : k === 'tax' ? taxOf(year) : k === 'a1' ? apron1Of(year) : k === 'a2' ? apron2Of(year) : apron2Of(year) + 4)
 
 // ── Extensions ───────────────────────────────────────────────────────────────
 // a rookie-scale man after his third season (one year left): up to 5 seasons at 25% (30% for an All-NBA man, the
@@ -715,7 +728,7 @@ export function renounce(F, short, id) {
 const CH = new WeakMap()
 function channels(F) {
   const year = capYear(F)
-  const key = `${year}|${F.phase}|${F.off?.step ?? ''}|${F.fad ?? 0}`
+  const key = `${year}|${F.phase}|${F.off?.step ?? ''}|${F.fay === year ? F.fad ?? 0 : 0}`
   const c = CH.get(F)
   if (c?.key === key) return c.m
   const m = {}

@@ -90,9 +90,9 @@ const tally = { tries: 0, took: 0, fleece: 0 }
     const backs = men(ME).filter(p => !top8.has(p.i) && !T.whyNot(F, ME, p)).sort((a, b) => b.o - a.o).slice(0, 3)
     if (backs.length < 3) continue
     const d = { a: ME, b: s, ga: backs.map(p => p.i), gb: [star.i], pa: [], pb: [] }
-    if (!T.checkTrade(F, d).ok) continue
+    // (the value test, whatever the salaries: decide is the team's answer before the cap rules)
     tried++
-    const ans = T.cpuAnswer(F, d)
+    const ans = T.checkTrade(F, d).ok ? T.cpuAnswer(F, d) : T.decide(F, d)
     if (!ans.yes) refused++
     else bad(`${s} gave ${tag(star)} for three backups`)
   }
@@ -102,12 +102,12 @@ const tally = { tries: 0, took: 0, fleece: 0 }
 {
   F.day = 20
   for (let k = 0; k < 400; k++) {
-    const s = S.filter(x => x !== ME)[Math.floor(R() * 29)]
+    const s = S.filter(x => x !== ME)[Math.floor(R.u() * 29)]
     const theirs = men(s).filter(p => !T.whyNot(F, s, p))
     const mine = men(ME).filter(p => !T.whyNot(F, ME, p))
-    const want = theirs[Math.floor(R() * theirs.length)]
+    const want = theirs[Math.floor(R.u() * theirs.length)]
     if (!want) continue
-    const give = [...mine].sort(() => R() - 0.5).slice(0, 1 + Math.floor(R() * 2))
+    const give = [...mine].sort(() => R.u() - 0.5).slice(0, 1 + Math.floor(R.u() * 2))
     const d = { a: ME, b: s, ga: give.map(p => p.i), gb: [want.i], pa: [], pb: [] }
     if (!T.checkTrade(F, d).ok) continue
     tally.tries++
@@ -142,11 +142,12 @@ const tally = { tries: 0, took: 0, fleece: 0 }
   }
   if (!done) bad('no fair trade found to test buy-backs and flips')
   else {
-    console.log(`  the GM's trade: ${done.d && T.tradeLine(F, { ...done.d, ga: [], gb: [], pa: [], pb: [] })}${done.p.n} from ${done.s}`)
+    console.log(`  the GM's trade: ${(F.trl ?? []).slice(-1)[0]?.t}`)
     // buy-back: the team that sold him won't take him back this league year
     const back = { a: ME, b: done.s, ga: [done.p.i], gb: [], pa: [], pb: [] }
-    const ans = T.cpuAnswer(F, back)
-    ok(!ans.yes && (ans.why === 'back' || !T.checkTrade(F, back).ok), `the ${done.s} won't take ${done.p.n} back: ${ans.text}`)
+    // (the value side, whatever the salaries)
+    const ans = T.decide(F, { ...back, pb: F.picks.map((k, i) => [k, i]).filter(([k]) => k.t === done.s && k.r === 2).slice(0, 1).map(([, i]) => i) })
+    ok(!ans.yes && ans.why === 'back', `the ${done.s} won't take ${done.p.n} back: ${T.sayOf(F, done.s, ans)}`)
     // the flip: nobody pays more than the GM paid for him
     const paid = done.p.tx?.[3] ?? 0
     let best = 0
@@ -154,8 +155,7 @@ const tally = { tries: 0, took: 0, fleece: 0 }
       const pk = F.picks.map((k, i) => [k, i]).filter(([k]) => k.t === s && k.y >= T.nextDraft(F)).sort((a, b) => T.pickValue(F, b[0]).v - T.pickValue(F, a[0]).v)
       for (let n = 1; n <= 3; n++) {
         const d = { a: ME, b: s, ga: [done.p.i], gb: [], pa: [], pb: pk.slice(0, n).map(([, i]) => i) }
-        if (!T.checkTrade(F, d).ok) continue
-        if (T.cpuAnswer(F, d).yes) best = Math.max(best, T.gauge(F, d).b)
+        if (T.decide(F, d).yes) best = Math.max(best, T.gauge(F, d).b)
       }
     }
     ok(best <= paid * 1.05 + 1, `flipping ${done.p.n}: paid ${v0(paid)}, the best offer back ${v0(best)}`)

@@ -44,8 +44,9 @@
 // State: F.picks (core) [{ y, r, o, t, pr: { top } | null, sw: { with } | null }] · F.trl [deal log] · F.trc
 // { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's value)]
 import { rngOf, clamp, r1 } from '../rng'
-import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf } from './cap'
-import { rankOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf } from './contracts'
+import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
+const minOfY = year => minOf(0, year)
+import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf } from './contracts'
 
 const shortsOf = F => Object.keys(F.teams ?? {})
 // (the league's own deals collect their wire items here while cpuDeadline / salaryDumps run)
@@ -159,7 +160,14 @@ export function pickValue(F, k) {
 
 // ── What a man is worth ──────────────────────────────────────────────────────
 // the league's scale: his rank's worth (a share of the cap) on a curve
-const talentPts = (F, p) => { const w = worthOf(F, p) / capOf(capYear(F)); return 100 * Math.pow(Math.max(0, w) / 0.3, 1.7) }
+// (a young man is traded for what he'll be: his ceiling counts more than the market's one-year read of it)
+function tradeRank(F, p) {
+  const ag = p.ag ?? 27, o = p.o ?? 60
+  if (ag > 23) return rankOf(F, p)
+  const extra = clamp(0, 10, ((p.pk ?? o) - o) * (ag <= 20 ? 0.45 : ag <= 22 ? 0.35 : 0.25)) - clamp(0, 6, ((p.pk ?? o) - o) * (ag <= 21 ? 0.4 : 0.3))
+  return Math.min(rankOf(F, p), rankAt(F, scoreOf(p) + Math.max(0, extra)))
+}
+const talentPts = (F, p) => { const w = worthAt(F, tradeRank(F, p)) / capOf(capYear(F)); return 100 * Math.pow(Math.max(0, w) / 0.3, 1.7) }
 const AGE_F = [[22, 1.25], [23, 1.2], [24, 1.15], [25, 1.1], [26, 1.05], [27, 1], [28, 0.94], [29, 0.88], [30, 0.82], [31, 0.75], [32, 0.68], [33, 0.6], [34, 0.5]]
 const ageF = p => { const a = p.ag ?? 27; return a <= 22 ? 1.25 : AGE_F.find(([x]) => x === a)?.[1] ?? 0.42 }
 const salaries = (p, n = 9) => [p.$ ?? 0, ...(p.sc ?? [])].slice(0, Math.min(n, p.y ?? 0))
@@ -174,7 +182,8 @@ function dealOf(F, p) {
   let f = clamp(0.35, 1.5, 1 + 0.6 * sur / Math.max(1, tot))
   // (an expiring deal: the rest of a season, then his Bird rights; a rookie deal comes with restricted free agency)
   if (yrs === 1 && !p.rs) f *= F.phase === 'season' ? 0.6 + 0.4 * (1 - (F.day ?? 0) / (F.days ?? SEASON_DAYS)) : 0.85
-  if (p.rs) f *= 1.1
+  // (a rookie-scale deal is cheap control however he's playing: never a burden)
+  if (p.rs) return { f: Math.min(1.4, Math.max(0.8, f) * 1.1), burden: 0 }
   return { f, burden: over * 0.8 }
 }
 // his value on the league's scale (the gauge's number); can be below zero for a bad contract
@@ -279,7 +288,10 @@ function sideRules(F, s, outMen, inMen, outPk, inPk) {
       const big = Math.max(0, ...outMen.map(p => hitOf(p, year, year)))
       if (after > apron2Of(year) && outMen.length >= 2 && I > big + 0.001) return { ok: false, why: `The ${s} would be over the second apron: they can't combine salaries in a trade`, k: 'agg' }
     }
-    const hc = hardCapOf(F, s, year)
+    // (a hard-capped team keeps room for the minimum deals that fill it out: core fills the league's to 15)
+    const st0 = standardOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => !p.tw).length
+    const fill = F.phase === 'off' ? Math.max(0, (s === F.team ? 14 : 15) - st0) * minOfY(year) : 0
+    const hc = hardCapOf(F, s, year) - fill
     const agg = outMen.length >= 2 && I > Math.max(0, ...outMen.map(p => hitOf(p, year, year))) + 0.001 && after > capOf(year)
     if (after > Math.min(hc, agg ? apron2Of(year) : Infinity) + 0.001) return { ok: false, why: `The ${s} would go over their hard cap`, k: 'hard' }
   }
@@ -589,7 +601,7 @@ function tryBuy(F, R, a, b) {
     if (!dA.yes || sideB.gain < marginOf(F, b, sideB.out, false)) continue
     // (never a give-away the league would laugh at)
     const g = gauge(F, deal)
-    if (g.a < g.b * 0.6 || g.b < g.a * 0.6) continue
+    if (g.a < g.b * 0.75 || g.b < g.a * 0.75) continue
     doTrade(F, deal, { user: false })
     return true
   }

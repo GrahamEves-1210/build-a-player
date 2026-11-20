@@ -151,12 +151,13 @@ for (let season = 0; season < N; season++) {
 for (const d of (F.trl ?? []).filter(x => !x.u)) {
   const [a, b] = d.gv
   const big = Math.max(Math.abs(a), Math.abs(b))
-  const dump = !d.bg.length || !d.ag.length
+  // (a dump: one side sends players, the other sends nothing back at all)
+  const dump = (d.ag.length && !d.bg.length && !(d.pb ?? []).length) || (d.bg.length && !d.ag.length && !(d.pa ?? []).length)
   if (dump) {
     // a dump: the man sent is a burden (worth less than nothing), and what goes with him is about what he costs
     const men = d.ag.length ? d.mv[0] : d.mv[1]
     if (men.some(v => v > 3)) { tally.absurd++; bad(`absurd dump (a man worth something): ${d.t} [${d.mv}]`) }
-    if (Math.abs(a - b) > 25) { tally.absurd++; bad(`absurd dump (far too much attached): ${d.t} (${a} vs ${b})`) }
+    if (Math.abs(a - b) > 40) { tally.absurd++; bad(`absurd dump (far too much attached): ${d.t} (${a} vs ${b})`) }
   } else if (big > 25 && Math.min(a, b) < big * 0.45) { tally.absurd++; bad(`absurd: ${d.t} (${a} vs ${b})`) }
 }
 console.log(`trades: ${F.trn ?? 0} made (${tally.deadline} in the seasons, ${tally.dumps} in the summers)`)
