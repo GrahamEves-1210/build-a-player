@@ -217,10 +217,11 @@ export function realDeal(name, team, p, R) {
   return estimateDeal(p, R)
 }
 export const realContractsLoaded = () => realTable().size > 0
-// the year a real man was drafted (the data file's), or null: his age when the data has no birth year (league.js makeReal)
-export function realDraftYear(name, team) {
-  const T = realTable()
-  return (T.get(`${keyOf(name)}|${String(team ?? '').toUpperCase()}`) ?? null)?.dy ?? null
+// what the data file says of a real man's career, for his age when the data has no birth year (league.js makeReal):
+// { dy: the year he was drafted, or null; rc: on his rookie deal; found: the file has his deal at all }
+export function realCareer(name, team) {
+  const hit = realTable().get(`${keyOf(name)}|${String(team ?? '').toUpperCase()}`)
+  return { dy: hit?.dy ?? null, rc: !!hit?.rc, found: !!hit }
 }
 // each team's real dead money on the 2026 cap (the file's teamDead): it sits on year one's cap, then it's gone
 let DEAD = null

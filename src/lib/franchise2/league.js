@@ -28,7 +28,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam, groupOf, backupsOf } from './roster'
 import { rawRating, teamRating, toSim, fromSim, lastSeasonRes, SEASON_2025 } from './ratings'
-import { marketValue, realDeal, realDraftYear, signDeal, signRookie, buildSlot, seedDead, minimumFor, capYear } from './contracts'
+import { marketValue, realDeal, realCareer, signDeal, signRookie, buildSlot, seedDead, minimumFor, capYear } from './contracts'
 
 export const FIRST_YEAR = 2026
 // (the order every list in the mode reads: the offense, the defense, then special teams)
@@ -69,6 +69,7 @@ export function realPool() {
     realCache[pos] = POOL[pos].filter(p => p.attrs && p.team && !seen.has(p.name) && seen.add(p.name)).map(p => ({
       name: tidyName(p.name), team: p.team, pos, s: spotOfReal(pos, p), o: ovrOf(pos, asBuild(p.attrs, pos)), attrs: p.attrs,
       h: p.headshot ?? NFL_HEADSHOTS[p.name] ?? null, age: BIRTH_NFL[p.name] ? clamp(21, 41, FIRST_YEAR - BIRTH_NFL[p.name]) : null, num: p.number ?? null,
+      ...(!BIRTH_NFL[p.name] && /^\d{4}/.test(p.years ?? '') && { ys: +String(p.years).slice(0, 4) }),   // (the year he joined his team: an age's floor, makeReal)
     }))
   }
   return realCache
@@ -112,11 +113,18 @@ export function peakFor(R, o, ag) {
   const left = Math.max(0, 27 - ag)
   return clamp(40, 99, Math.round(o + left * Math.max(0, 1.35 + R.n() * 0.75) * clamp(0.3, 1, (99 - o) / 18)))
 }
+function estAge(r, R) {
+  const c = realCareer(r.name, r.team)
+  if (c.dy) return clamp(21, 38, 22 + FIRST_YEAR - c.dy)
+  if (c.rc) return R.int(22, 24)
+  const since = r.ys ? 22 + FIRST_YEAR - r.ys : 0
+  return c.found ? clamp(26, 34, Math.max(26 + R.int(0, 3), since)) : clamp(23, 34, Math.max(R.int(23, 27), since))
+}
 export function makeReal(F, r, R) {
-  // (no birth year in the data, most of the linebackers: his age from the year he was drafted, a rookie 22; an
-  // undrafted man a young one. 2026-11-19: they were 23 to 30 at random, a 2026 rookie at 28)
-  const dy = r.age == null ? realDraftYear(r.name, r.team) : null
-  const ag = r.age ?? (dy ? clamp(21, 38, 22 + FIRST_YEAR - dy) : R.int(23, 26))
+  // (no birth year in the data, most of the linebackers: 2026-11-19, they were 23 to 30 at random, a 2026 rookie at
+  // 28. Now his age from the year he was drafted (a rookie is 22); a man past his rookie deal is a veteran, 26 to 29 or
+  // older if he's been with his team longer; a rookie deal without a draft year, an undrafted man of 22 to 24)
+  const ag = r.age ?? estAge(r, R)
   const p = { i: F.nid++, n: r.name, p: r.pos, o: r.o, ag }
   if (r.s) p.s = r.s
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
