@@ -8,10 +8,10 @@ const ONOFF = [['on', 'ON'], ['off', 'OFF']]
 const CLS = { root: 'fr-rule', top: 'fr-rule-top', group: 'fr-rule-seg' }
 const CAP_WHAT = { on: 'The NFL cap', off: 'Sign anyone' }
 const INJ_WHAT = { on: 'Players get hurt', off: 'Nobody gets hurt' }
-export function LeagueRules({ value, onChange, nick, className = '' }) {
+export function LeagueRules({ value, onChange, nick, className = '', capWhat = CAP_WHAT }) {
   return (
     <div className={`fr-rules ${className}`}>
-      <Switch mode={value.cap ? 'on' : 'off'} modes={ONOFF} what={CAP_WHAT} title="Salary cap" sub={nick ? `the ${nick} only` : null}
+      <Switch mode={value.cap ? 'on' : 'off'} modes={ONOFF} what={capWhat} title="Salary cap" sub={nick ? `the ${nick} only` : null}
         onPick={m => onChange({ cap: m === 'on' })} cls={CLS} />
       <Switch mode={value.inj ? 'on' : 'off'} modes={ONOFF} what={INJ_WHAT} title="Injuries" sub="across the league"
         onPick={m => onChange({ inj: m === 'on' })} cls={CLS} />

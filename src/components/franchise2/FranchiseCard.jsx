@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { franchiseCard, FRANCHISE_ART, FRANCHISE_TURN } from '../../lib/franchiseLive'
+import { franchiseCard, nbaFranchiseCard, FRANCHISE_ART, FRANCHISE_TURN } from '../../lib/franchiseLive'
 import TrophyTurn from './TrophyTurn'
 import './franchise-card.css'
 
@@ -74,6 +74,17 @@ export function FranchiseCardClassic({ onClick }) {
         <span className="ag-card-title">FRANCHISE</span>
         <span className="ag-card-sub">{c ? 'The front office is as it was left.' : 'Take over a team as its GM. Build the players you want; its real roster fills every other spot.'}</span>
       </span>
+    </button>
+  )
+}
+
+// FRANCHISE on basketball's Home (NBA_FRANCHISE_LIVE): the same card, the NBA mode's note, no art yet
+const warmNba = () => { import('./nba/NbaFranchise').catch(() => {}) }
+export function NbaFranchiseCard({ onClick }) {
+  const [c] = useState(nbaFranchiseCard)
+  return (
+    <button className="ag-way ag-mc ag-mc--fr ag-mc--fr-wide" style={c?.color ? { '--fr-team': c.color } : undefined} onClick={onClick} onPointerDown={warmNba} onFocus={warmNba}>
+      <span className="ag-mc-head"><b>FRANCHISE<i className="ag-mc-tag">NEW</i></b><small>{c?.line ?? OPEN}</small></span>
     </button>
   )
 }
