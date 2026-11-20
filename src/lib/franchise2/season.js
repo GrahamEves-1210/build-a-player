@@ -17,13 +17,14 @@ import { pairText, surname } from './copy'
 import { playBox, addMoments, finishBox, recordBox, oppOf } from './box'
 import { startersOf, depthChart, moveInChart, groupOf, GROUPS } from './roster'
 import { coachLate, coachDay, chemWeek } from './coach'
-import { askOf, signDeal, extendDeal, canSign, roomAhead, cutMan, minimumFor, marketLines } from './contracts'
+import { askOf, signDeal, extendDeal, canSign, roomAhead, cutMan, minimumFor, marketLines, makeRoom, capRoom, cutRoom } from './contracts'
 import { kickTraits, kickerOf, addKickStats, kickLine } from './kick'
 import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews, logWeek } from './news'
 import { rollInjuries } from './injury'
 import { syncScouts } from './draft'
-import { tradeWeek } from './trades'
+import { tradeWeek, eventTrade, eventTradeOk } from './trades'
+import { restructureMine } from './market'
 
 export const REG_WEEKS = 18
 export const TRADE_DEADLINE = 9   // (the NFL's: after Week 9; no event offers a deal past it)
@@ -260,6 +261,10 @@ function endWeek(F, row) {
       }
     }
   }
+  // (the week's call-ups are on the books: a league team they put over the cap restructures a deal to get back
+  // under, as clubs do in-season; the player's front office does the same for his)
+  for (const s of SHORTS) if (s !== F.team && capRoom(F, s) < 0) { makeRoom(F, s, 0); if (capRoom(F, s) < 0) makeRoom(F, s, 0, true) }
+  restructureMine(F)
   F.chem = clamp(0, 100, r1(F.chem + chemWeek(F)))
   // (the wire files the week's news as it's played: news.js)
   try { logWeek(F) } catch { /* (the wire is never worth a lost week) */ }
@@ -436,7 +441,8 @@ const EVENTS = [
       const cost = r1(Math.min(p.$ ?? 1.2, 4))
       // (a kicker in: the one there now is released, a team carries one)
       const cut = k === 'k' ? worst : F.teams[F.team].r.filter(x => groupOf(x) === k && x.b == null && !x.fl && x !== worst).sort((a, b) => a.o - b.o)[0] ?? null
-      if (!canSign(F, cost)) continue
+      // (the room after the release that makes his spot: a release with dead money can cost room)
+      if (!canSign(F, cost - (cut ? Math.min(0, cutRoom(F, cut)) : 0))) continue
       return { title: `Free agent ${nm(p)} still unsigned`, pid: p.i, cost, cut: cut?.i ?? null, a: [`Sign ${nm(p)}`, { sign: p.i }], b: ['Keep the roster', { chem: 1 }] }
     }
     return null
@@ -451,7 +457,7 @@ function tradeEvent(F, R) {
   for (let k = 0; k < 8; k++) {
     const s = R.pick(others)
     const theirs = F.teams[s].r.filter(p => groupOf(p) === groupOf(mine) && p.o >= mine.o + 3 && p.o <= mine.o + 8 && p.ag >= mine.ag + 2 && p.b == null && !p.fl)[0]
-    if (theirs) return { title: `${TEAM[s].nick} offer ${nm(theirs)} for ${nm(mine)}`, team: s, give: mine.i, get: theirs.i, pid: theirs.i, a: ['Make the trade', { trade: 1, chem: -3 }], b: ['Turn it down', { chem: 1 }] }
+    if (theirs && eventTradeOk(F, s, mine.i, theirs.i)) return { title: `${TEAM[s].nick} offer ${nm(theirs)} for ${nm(mine)}`, team: s, give: mine.i, get: theirs.i, pid: theirs.i, a: ['Make the trade', { trade: 1, chem: -3 }], b: ['Turn it down', { chem: 1 }] }
   }
   return null
 }
@@ -504,14 +510,9 @@ export function chooseEvent(F, i) {
   if (fx.start) { try { moveInChart(F, fx.start, 0) } catch { /* (the chart's own rules) */ } }
   if (fx.pay) { const p = P(fx.pay); if (p && ev.ask) { const y = Math.min(5, ev.ask.y); extendDeal(p, { $: ev.ask.$, y }); out.paid = p.n; addNews(F, { k: 'sign', tag: 'EXTENSION', s: F.team, text: `${TEAM[F.team].nick} sign ${posTxt(p)} ${p.n} to a ${y}-year, $${r1(ev.ask.$ * y)} million extension` }) } }
   if (fx.trade) {
-    const mine = P(ev.give), ot = F.teams[ev.team], theirs = ot?.r.find(p => p.i === ev.get)
-    if (mine && theirs) {
-      t.r = t.r.filter(p => p !== mine); ot.r = ot.r.filter(p => p !== theirs)
-      t.r.push(theirs); ot.r.push(mine)
-      delete theirs.nu; delete mine.nu
-      out.traded = theirs.n
-      addNews(F, { k: 'trade', tag: 'TRADE', s: F.team, text: `${TEAM[F.team].nick} acquire ${posTxt(theirs)} ${theirs.n} from the ${TEAM[ev.team].nick} for ${posTxt(mine)} ${mine.n}` })
-    }
+    // (made the way any trade is, if it still fits both books: trades.js eventTrade)
+    const theirs = F.teams[ev.team]?.r.find(p => p.i === ev.get)
+    if (theirs && eventTrade(F, ev.team, ev.give, ev.get)) out.traded = theirs.n
   }
   if (fx.sign) {
     const p = (F.fa ?? []).find(x => x.i === fx.sign)

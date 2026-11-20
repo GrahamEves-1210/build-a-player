@@ -147,10 +147,19 @@ function CapScreen({ F, owner, act, onBack, page, setPage }) {
       <BackBar label="Depth chart" title="Salary cap" onBack={onBack} />
       <Chyron team={F.team} title="THE CAP" tag={c.year} sub={`${TEAM[F.team].nick.toUpperCase()} · ${paid.length} UNDER CONTRACT`} />
       <div className="fd-capbig" style={fkVars(F.team)}>
-        {c.nocap ? <BigNum v="OFF" label="SALARY CAP" size={76} /> : <BigNum v={Math.round(Math.abs(c.room))} label={c.room < 0 ? '$M OVER THE CAP' : '$M CAP ROOM'} size={76} tone={c.room < 0 ? 'l' : undefined} />}
+        {c.nocap ? <BigNum v="OFF" label="SALARY CAP" size={76} /> : <BigNum v={Math.abs(c.room) < 10 ? (Math.round(Math.abs(c.room) * 10) / 10).toFixed(1) : Math.round(Math.abs(c.room))} label={c.room < 0 ? '$M OVER THE CAP' : '$M CAP ROOM'} count={Math.abs(c.room) >= 10} size={76} tone={c.room < 0 ? 'l' : undefined} />}
         <span className="fd-capbig-r"><BigNum v={Math.round(c.used)} label="$M USED" size={34} /><BigNum v={share} label="% ON THE TOP 3" size={34} /></span>
       </div>
       <CapBar F={F} />
+      {/* (the sum, line by line: what a first-time GM adds up against the bar) */}
+      <Chyron tone="ink" size="s" title="WHERE THE MONEY GOES" />
+      <div className="fd-line"><b>{c.year} salary cap</b><span>{money(c.base)}</span></div>
+      {c.carry > 0 && <div className="fd-line"><b>Carried over from {c.year - 1} (room not used)</b><span>+{money(c.carry)}</span></div>}
+      <div className="fd-line"><b>{paid.length} players under contract</b><span>{money(c.pay)}</span></div>
+      {c.dead > 0 && <div className="fd-line"><b>Dead money (released or traded players)</b><span>{money(c.dead)}</span></div>}
+      <div className="fd-line"><b>Rest of the 53: {Math.max(0, 53 - paid.length)} more roster spots, the punter, long snapper and practice squad</b><span>{money(c.rest)}</span></div>
+      {!c.nocap && <div className="fd-line"><b>{c.room < 0 ? 'Over the cap' : 'Cap room'}</b><span>{c.room < 0 ? `-${money(-c.room)}` : money(c.room)}</span></div>}
+      {!c.nocap && <p className="fd-cap-note">Room left unused at the end of the season carries over to next year's cap, up to a tenth of the cap.</p>}
       <Chyron tone="ink" size="s" title="BIGGEST CAP HITS" />
       {top.map((p, i) => <Man key={p.i} F={F} p={p} s={F.team} owner={owner} size="s" stat={{ v: money(p.$), label: `${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` }} line={p.rc ? 'ROOKIE DEAL' : null} onClick={() => setPage(p.i)} delay={i * 30} />)}
       {c.dead > 0 && (

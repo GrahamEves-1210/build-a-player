@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   TEAM, POS_LABEL, gradeOf, realOf, jersey, groupOf, GROUP, capSheet, cutCost, leagueStats, statLine, CAREER_KEYS, CAREER_LABEL,
-  ratingsOf, marketKey, MARKET_LABEL, AWARD_SHORT, placeOf, slotName, cutMan, MIN,
+  ratingsOf, marketKey, MARKET_LABEL, AWARD_SHORT, placeOf, slotName, cutMan, MIN, cutRoom, capYear,
 } from '../../lib/franchise2'
 import { genFace } from '../../lib/franchise2/faces'
 import { outText } from '../../lib/franchise2/injury'
@@ -32,7 +32,8 @@ import { memoF, warmKey } from './perf'
 // lower-third on any of D's screens, the cap bar, a man's page (his ratings as grades, his deal, his seasons).
 
 const LABELS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, ol: OL_ATTR, dl: DL_ATTR, lb: LB_ATTR, db: DB_ATTR, k: K_ATTR }
-export const money = v => (v >= 10 ? `$${Math.round(v)}M` : `$${(Math.round(v * 10) / 10).toFixed(1)}M`)
+// (the same as the deal screens': $34.7M, $12M, $0.9M; a whole number drops its .0 past $10M)
+export const money = v => (v >= 10 ? `$${Math.round(v * 10) % 10 ? (Math.round(v * 10) / 10).toFixed(1) : Math.round(v)}M` : `$${(Math.round(v * 10) / 10).toFixed(1)}M`)
 export const posText = p => (p.p === 'ol' ? (p.s ?? 'OL') : p.p === 'dl' || p.p === 'db' ? GROUP[groupOf(p)].label : POS_LABEL[p.p])
 // a man's face: his photo, a build's own, or (a man the game made up) his drawn face; a real man without a photo:
 // his initials
@@ -63,7 +64,7 @@ export function CapBar({ F, s = F.team, onClick, extra = 0 }) {
       <span className="fd-cap-top">
         {c.nocap ? <span className="fd-cap-room"><b>NO CAP</b><small>SALARY CAP OFF</small></span>
           : <span className="fd-cap-room"><b>{room < 0 ? `-${money(-room)}` : money(room)}</b><small>{room < 0 ? 'OVER THE CAP' : 'CAP ROOM'}</small></span>}
-        <span className="fd-cap-of"><small>{c.year} CAP</small><b>{money(c.cap)}</b></span>
+        <span className="fd-cap-of"><small>{c.year} CAP</small><b>{money(c.cap)}</b>{c.carry > 0 && <small className="fd-cap-carry">INCLUDES {money(c.carry)} CARRIED OVER</small>}</span>
       </span>
       <span className="fd-cap-bar" aria-hidden="true">
         <i className="is-men" style={{ width: k(c.pay + extra) }} />
@@ -122,6 +123,12 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
   const pl = mine ? placeOf(F, s, p.i) : null
   // (a team keeps the minimum at every spot: the last man in a room can't be let go)
   const canCut = mine && p.b == null && !p.fl && F.teams[s].r.filter(x => x.p === p.p).length > MIN[p.p]
+  // what the release does to the room (his cap hit off, his dead money on, his spot filled at the minimum); never one
+  // that takes the team over the cap; none between the season's end and the new league year (the books are closing)
+  const saves = mine ? cutRoom(F, p, s) : 0, room = mine ? capSheet(F, s) : null
+  const cutWhy = !canCut ? null : capYear(F) === F.year && F.phase === 'off' ? 'RELEASES OPEN WITH THE NEW LEAGUE YEAR'
+    : !room.nocap && saves < 0 && room.room + saves < 0 ? `WOULD PUT THE ${TEAM[s].nick.toUpperCase()} OVER THE CAP` : null
+  const cutSub = room?.nocap ? (cut.dead > 0 ? `${money(cut.dead)} DEAD MONEY` : 'NO DEAD MONEY') : saves > 0 ? `SAVES ${money(saves)} IN CAP ROOM` : saves < 0 ? `COSTS ${money(-saves)} IN CAP ROOM` : 'NO CAP SAVINGS'
   return createPortal(
     <div className="fd-sheet-bg" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fd-sheet fk" role="dialog" aria-modal="true" aria-label={p.n}>
@@ -168,8 +175,8 @@ export function PlayerPage({ F, id, owner, act, onClose }) {
         {canCut && act && (
           <div className="fd-cut">
             {sure
-              ? <Go onClick={() => { act(X => cutMan(X, p.i)); sfx('swap'); haptic('medium'); onClose() }} sub={cut.dead > 0 ? `${money(cut.dead)} DEAD MONEY` : 'NO DEAD MONEY'}>RELEASE {String(p.n).split(' ').slice(-1)[0].toUpperCase()}</Go>
-              : <Go ghost onClick={() => { setSure(true); sfx('deny') }} sub={`SAVES ${money(Math.max(0, cut.saves))}`}>RELEASE</Go>}
+              ? <Go onClick={() => { act(X => cutMan(X, p.i)); sfx('swap'); haptic('medium'); onClose() }} sub={`${cut.dead > 0 ? `${money(cut.dead)} DEAD MONEY` : 'NO DEAD MONEY'}${room.nocap ? '' : saves > 0 ? ` · SAVES ${money(saves)}` : saves < 0 ? ` · COSTS ${money(-saves)}` : ''}`}>RELEASE {String(p.n).split(' ').slice(-1)[0].toUpperCase()}</Go>
+              : <Go ghost disabled={!!cutWhy} onClick={() => { if (cutWhy) return; setSure(true); sfx('deny') }} sub={cutWhy ?? cutSub}>RELEASE</Go>}
           </div>
         )}
       </div>

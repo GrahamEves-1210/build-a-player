@@ -41,7 +41,7 @@ import { standings, finishOf, pct } from './standings'
 import { rngOf, clamp, r1 } from './rng'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { signRookie } from './contracts'
-import { leagueUnderCap } from './market'
+import { leagueUnderCap, restructureMine } from './market'
 import { depthChart, groupOf, fixNumbers, backupsOf } from './roster'
 import { CFB_TEAMS, CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { addNews } from './news'
@@ -995,8 +995,9 @@ export function closeDraft(F) {
     F.builds[x.b].pid = p.i; F.builds[x.b].age = x.ag; delete F.builds[x.b].prospect
     F.dc = F.dc.filter(y => y !== x)
   }
-  // the rookies' deals are on the books: every league team under the cap again
+  // the rookies' deals are on the books: every league team under the cap again, the player's by restructures
   leagueUnderCap(F)
+  restructureMine(F)
   // the wire: the top of the first round, the quarterbacks taken in it, our first-rounder, the trades up the board
   const sch = col => CFB_TEAM_BY_SHORT[col]?.school ?? 'Sandbox'
   for (const p of F.dr.picks.slice(0, 32).filter(p => p.at < 3 || p.p === 'qb' || p.s === F.team)) {

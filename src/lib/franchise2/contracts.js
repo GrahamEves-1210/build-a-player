@@ -334,16 +334,33 @@ export const OPTION_TIER_TEXT = { tag: 'TWO PRO BOWLS: THE FRANCHISE TAG', trans
 // team.dead: [[name, $M]] dead money on this year's cap
 // (a deal with no years left is off the books: he's up for a new one)
 export const payrollOf = team => r1(team.r.reduce((a, p) => a + (p.y > 0 ? p.$ ?? 0 : 0), 0))
-// the league year the cap is for: the offseason is already next year's (the new league year starts in March)
-export const capYear = F => (F.phase === 'off' ? F.year + 1 : F.year)
+// the league year the cap is for: the offseason is already next year's (the new league year starts in March, after
+// the coaching changes and the awards: until then the books are the season just played, its deals and its dead money)
+export const capYear = F => (F.phase === 'off' && F.stage !== 'coaches' && F.stage !== 'awards' ? F.year + 1 : F.year)
 export const deadOf = team => r1((team.dead ?? []).reduce((a, d) => a + d[1], 0))
+// ROLLOVER (the NFL's carryover): the room a team didn't use in a league year is added to its cap the next one, up
+// to a tenth of the cap (a club sitting on $120M doesn't bank it all year after year).
+// team.co: [league year, $M] (set when the league ages, aging.js; a save from before it has none)
+export const CARRY_MAX = 0.1
+export const carryOf = (team, yr) => (team?.co?.[0] === yr ? team.co[1] : 0)
+export function setCarry(F) {
+  for (const s of SHORTS) {
+    const t = F.teams[s]
+    if (!t) continue
+    // (the season just played, F.year: called before the deals tick; the player's team with no salary cap carries
+    // nothing, there's no cap to carry)
+    const yr = F.year, room = capOf(yr) + carryOf(t, yr) - payrollOf(t) - deadOf(t) - restOf53(t.r.filter(p => p.y > 0).length, yr)
+    t.co = F.noCap && s === F.team ? null : [yr + 1, r1(clamp(0, capOf(yr + 1) * CARRY_MAX, room))]
+    if (!t.co?.[1]) delete t.co
+  }
+}
 export function capSheet(F, short = F.team) {
-  const t = F.teams[short], yr = capYear(F), cap = capOf(yr)
+  const t = F.teams[short], yr = capYear(F), base = capOf(yr), carry = carryOf(t, yr), cap = r1(base + carry)
   const pay = payrollOf(t), dead = deadOf(t), rest = restOf53(t.r.filter(p => p.y > 0).length, yr)
   const used = r1(pay + dead + rest)
   // (the league rule NO SALARY CAP, rules.js: the player's team signs whoever it likes; the league's teams keep theirs)
-  if (F.noCap && short === F.team) return { cap, pay, dead, rest, used, room: NO_CAP_ROOM, year: yr, nocap: true }
-  return { cap, pay, dead, rest, used, room: r1(cap - used), year: yr }
+  if (F.noCap && short === F.team) return { cap: base, base, carry: 0, pay, dead, rest, used, room: NO_CAP_ROOM, year: yr, nocap: true }
+  return { cap, base, carry, pay, dead, rest, used, room: r1(cap - used), year: yr }
 }
 export const capRoom = (F, short = F.team) => capSheet(F, short).room
 export const NO_CAP_ROOM = 999
@@ -357,10 +374,22 @@ export function roomAhead(F, short, k = 1) {
   return r1(capOf(yr) - pay - restOf53(Math.max(men.length, 44), yr))
 }
 export const canSign = (F, $, short = F.team) => capRoom(F, short) >= $ - 1e-9
+// the room the front office could still clear by restructuring (makeRoom's two passes), without doing it
+export function restructurable(F, short = F.team) {
+  return r1(F.teams[short].r.filter(x => x.y >= 2 && (x.$ ?? 0) >= 4 && !x.rc && x.rx !== capYear(F)).reduce((a, p) => { const m = r1(p.$ * 0.4); return a + r1(m - m / Math.max(2, p.y)) }, 0))
+}
 // what cutting him does: his cap hit off, his bonus still owed on as dead money
 export function cutCost(p) {
   const dead = r1((p.g ?? 0) * Math.max(1, p.y ?? 1))
   return { dead, saves: r1((p.$ ?? 0) - dead) }
+}
+// what a release really does to the room, the number the release screens show: his cap hit off, his dead money on,
+// and the roster spot he leaves filled at about the minimum (the rest of the 53): a backup at the minimum saves
+// nothing, a man with bonus left can cost room
+export function cutRoom(F, p, short = F.team) {
+  const t = F.teams[short], yr = capYear(F), n = t.r.filter(x => x.y > 0).length
+  const spot = p.y > 0 ? restOf53(n - 1, yr) - restOf53(n, yr) : 0
+  return r1((p.y > 0 ? p.$ ?? 0 : 0) - cutCost(p).dead - spot)
 }
 export function cutMan(F, id, short = F.team) {
   const t = F.teams[short], p = t.r.find(x => x.i === id)
@@ -385,10 +414,11 @@ export function cutMan(F, id, short = F.team) {
 export function makeRoom(F, short, need = 0, last = false) {
   const t = F.teams[short], out = []
   let room = capRoom(F, short)
-  for (const p of t.r.filter(x => x.y >= (last ? 2 : 3) && (x.$ ?? 0) >= (last ? 4 : 8) && !x.rc && (last || x.ag <= 30) && x.rx !== F.year).sort((a, b) => b.$ - a.$)) {
+  for (const p of t.r.filter(x => x.y >= (last ? 2 : 3) && (x.$ ?? 0) >= (last ? 4 : 8) && !x.rc && (last || x.ag <= 30) && x.rx !== capYear(F)).sort((a, b) => b.$ - a.$)) {
     if (room >= need) break
-    const saves = restructure(p)
-    p.rx = F.year
+    // (sized to what's needed, as clubs do: a $0.5M overage isn't a $16M restructure)
+    const saves = restructure(p, need - room)
+    p.rx = capYear(F)   // (once a league year: the creation's, the season's and the offseason's are each their own)
     room = r1(room + saves)
     out.push({ k: 'rs', n: p.n, saves })
   }
@@ -401,7 +431,8 @@ export function capComply(F, short, starters = new Set(), need = 0) {
   if (room >= need) return []
   const out = makeRoom(F, short, need)
   room = capRoom(F, short)
-  const worthCut = p => { const c = cutCost(p); return c.saves - (starters.has(p.i) ? 12 : 0) - Math.max(0, p.o - 70) * 0.25 + Math.max(0, p.ag - 29) * 0.8 }
+  // (a club cuts its stars last: a starting quarterback or an 85+ man goes only when nothing else clears the room)
+  const worthCut = p => { const c = cutCost(p); return c.saves - (starters.has(p.i) ? 12 : 0) - Math.max(0, p.o - 70) * 0.25 + Math.max(0, p.ag - 29) * 0.8 - Math.max(0, p.o - 84) * 8 - (p.p === 'qb' && starters.has(p.i) ? 60 : 0) }
   for (let guard = 0; room < need && guard < 30; guard++) {
     const p = t.r.filter(x => x.b == null && !x.rc && !x.fl && x.y > 0 && cutCost(x).saves > 0.4).sort((a, b) => worthCut(b) - worthCut(a))[0]
     if (!p) break
@@ -416,9 +447,10 @@ export function capComply(F, short, starters = new Set(), need = 0) {
 // more). This year's hit drops by all but this year's share; every later year carries its share (sc): money moved
 // forward, not saved, and more of it dead if he's cut. (No added years: a deal that grew a year at full pay each
 // time was an extension nobody signed, and it snowballed: a $90M quarterback by 2030.) Returns what it clears now.
-export function restructure(p) {
+export function restructure(p, want = Infinity) {
   const y = Math.max(2, p.y ?? 2)
-  const move = r1(p.$ * 0.4), per = move / y, saves = r1(move - per)
+  // (want: the room it has to clear, when that's less than the most it can: the bonus sized to it, a little over)
+  const move = r1(Math.min(p.$ * 0.4, Math.max(1, (want + 0.2) * y / (y - 1)))), per = move / y, saves = r1(move - per)
   const later = Array.from({ length: y - 1 }, (_, k) => hitIn(p, k + 1) ?? p.$)
   p.sc = later.map(v => r1(v + per))
   p.$ = r1(p.$ - saves); p.g = r1((p.g ?? 0) + per); p.y = y

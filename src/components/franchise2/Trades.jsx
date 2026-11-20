@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, tradeWindow, tradeOffers, answerOffer, tradeTeams, tradeAssets, checkTrade, gauge, leanText, proposeTrade, acceptDeal,
   SIT_TEXT, sitOf, pickText, tradesThisYear, recText, TRADE_MAX, TRADE_DEADLINE, capSheet,
@@ -289,17 +289,25 @@ function Gauge({ F, s, g }) {
 function CapNote({ F, chk }) {
   const c = chk.cap
   return (
-    <div className={`tr-cap${c.after < 0 ? ' is-over' : ''}`}>
-      <span><small>CAP ROOM NOW</small><b>{c.before < 0 ? `-${money(-c.before)}` : money(c.before)}</b></span>
-      <span><small>AFTER THE TRADE</small><b>{c.after < 0 ? `-${money(-c.after)}` : money(c.after)}</b></span>
+    <div className={`tr-cap${!c.nocap && c.after < 0 ? ' is-over' : ''}`}>
+      {c.nocap ? <span><small>SALARY CAP</small><b>OFF</b></span> : (
+        <>
+          <span><small>CAP ROOM NOW</small><b>{c.before < 0 ? `-${money(-c.before)}` : money(c.before)}</b></span>
+          <span><small>AFTER THE TRADE</small><b>{c.after < 0 ? `-${money(-c.after)}` : money(c.after)}</b></span>
+        </>
+      )}
       {chk.cut?.length > 0 && <span className="tr-cap-cut"><small>ROSTER SPOT</small><b>{chk.cut.map(p => `${posText(p)} ${p.n} released`).join(' · ')}</b></span>}
     </div>
   )
 }
 // the other team's answer
 function Said({ ok, counter = false, text, line }) {
+  // (the answer comes in above the lists: on a phone the player's thumb is down at the Propose button, so the
+  // screen goes up to it)
+  const el = useRef(null)
+  useEffect(() => { try { el.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch { /* */ } }, [text])
   return (
-    <div className={`tr-said${ok ? ' is-yes' : counter ? ' is-counter' : ' is-no'}`} role="status">
+    <div ref={el} className={`tr-said${ok ? ' is-yes' : counter ? ' is-counter' : ' is-no'}`} role="status">
       <Stamp kind={ok ? 'w' : counter ? 'ink' : 'l'}>{ok ? 'DONE' : counter ? 'COUNTER' : 'NO DEAL'}</Stamp>
       <span><b>{text}</b>{line && <small>{line}</small>}</span>
     </div>

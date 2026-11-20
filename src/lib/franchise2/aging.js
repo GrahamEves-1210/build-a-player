@@ -9,7 +9,7 @@
 //   growBuild(B, d)   the player's build moves a trait a step at a time until his OVR has moved by d
 import { SHORTS, lineup, newFrontOffice, foOf } from './league'
 import { records } from './standings'
-import { tickDeal } from './contracts'
+import { tickDeal, setCarry } from './contracts'
 import { coachDev } from './coach'
 import { carryInjury } from './injury'
 import { ovrOf, TYPES_OF } from '../squadSeason'
@@ -70,6 +70,8 @@ export function ageLeague(F) {
   // (the season just played: every man's production, and the lines the market reads: deals.js snapLines)
   const tot = leagueStats(F), prod = prodScores(F, tot)
   snapLines(F, tot)
+  // (the room each team left unused in the league year just played carries into the next one's cap: contracts.js)
+  setCarry(F)
   for (const s of SHORTS) {
     const t = F.teams[s]
     const keep = []
