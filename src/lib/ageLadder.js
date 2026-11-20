@@ -45,12 +45,14 @@ export function ladderTier(sport, pos, type, physical = []) {
 }
 // The window a trait trains in: { tier, open, late (double cost), left (offseasons incl. this one), until (the last age), full }
 // or null (the mental side: no window)
-export function ladderWindow(sport, pos, age, type, physical, trainUntil) {
+// spec: the trait is his specialty (lib/careerSpecialty.js): its window runs `spec` years longer, full years and last year alike
+export function ladderWindow(sport, pos, age, type, physical, trainUntil, spec = 0) {
   const tier = ladderTier(sport, pos, type, physical)
   if (!tier || tier === 'mind' || tier === 'fixed') return null
   const L = LADDER[sport]?.[pos]
-  const [full, until] = tier === 'tech' ? L.techAt : [trainUntil, trainUntil + (L ? PHYS_RAMP : 0)]
-  return { tier, full, until, open: age <= until, late: age > full && age <= until, left: Math.max(0, until - age + 1) }
+  const [f0, u0] = tier === 'tech' ? L.techAt : [trainUntil, trainUntil + (L ? PHYS_RAMP : 0)]
+  const full = f0 + spec, until = u0 + spec
+  return { tier, full, until, open: age <= until, late: age > full && age <= until, left: Math.max(0, until - age + 1), ...(spec ? { spec: true } : {}) }
 }
 // "Long Speed" → "long speed", "Basketball IQ" → "basketball IQ", "Awareness/Grit" → "awareness"
 export const lowLabel = s => String(s ?? '').split('/')[0].split(' ').map(w => (w.length <= 2 && w === w.toUpperCase() ? w : w.toLowerCase())).join(' ')

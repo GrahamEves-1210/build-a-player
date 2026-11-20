@@ -29,6 +29,7 @@
 //   workY  the season number it was last held or won back before
 //   faded  (from before) the grades lost and not won back: val + faded is his best at the trait
 import { seeded } from './rng'
+import { SPEC_FADE, SPEC_RATE } from './careerSpecialty'
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 const r100 = v => Math.round(v * 100) / 100
@@ -64,7 +65,13 @@ export const FADE = {
 const PACE = { ol: 0.8, k: 1.4, qb: 1.8 }
 // this position ages by these rules (soccer and baseball keep their own)
 export const hasFade = (sport, pos) => !!FADE[sport]?.[pos]
-export const fadeOf = (sport, pos, t) => { const f = FADE[sport]?.[pos]?.[t]; return f ? { cls: f[0], from: f[1], ...CLASS[f[0]] } : null }
+// spec: the trait is his specialty (lib/careerSpecialty.js): it starts to go SPEC_FADE years later, at SPEC_RATE the pace
+export const fadeOf = (sport, pos, t, spec = false) => {
+  const f = FADE[sport]?.[pos]?.[t]
+  if (!f) return null
+  const k = CLASS[f[0]]
+  return spec ? { cls: f[0], ...k, from: f[1] + SPEC_FADE, rate: k.rate.map(x => x * SPEC_RATE), spec: true } : { cls: f[0], from: f[1], ...k }
+}
 // his best at a trait: where it stands, plus the grades age and injuries have taken and work hasn't won back
 export const primeOf = ch => Math.min(11, Math.round(ch?.val ?? 0) + (ch?.faded ?? 0))
 // the best grade offseason work can still hold at an age: his best, less a grade for every `keep` years past the trait's turn
@@ -81,13 +88,14 @@ const wearOf = (seed, t, ch) => ch.wear ?? r100(seeded(`${seed}-wear-${t}`)() * 
 // body to wear (a kicker); declineAt: his position's age (the late years are counted from it).
 // Returns { build, slipped: [trait], worked: [trait] (held by this offseason's work), spared: [trait] (would have
 // slipped on an average body: his durability held it), due: how many of his traits are aging at all }
-export function fadeYear({ sport, pos, types, build, seed, year, age, durability = null, declineAt }) {
+// spec: his specialty's traits (lib/careerSpecialty.js), which age later and slower
+export function fadeYear({ sport, pos, types, build, seed, year, age, durability = null, declineAt, spec = [] }) {
   const out = { build: { ...build }, slipped: [], worked: [], spared: [], due: 0 }
   if (!hasFade(sport, pos)) return out
   const gene = geneOf(seed) * (PACE[pos] ?? 1), body = bodyFade(durability), late = age >= declineAt + 6
   const cand = []
   for (const t of types) {
-    const f = fadeOf(sport, pos, t), ch = build[t]
+    const f = fadeOf(sport, pos, t, spec.includes(t)), ch = build[t]
     if (!f || !ch || age < f.from) continue
     out.due++
     if (ch.workY === year) { out.worked.push(t); continue }

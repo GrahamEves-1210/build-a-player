@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, TRADE_ODDS, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, trainable, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, specialtyNote, canUpgrade, upgradeCost, trainable, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -1557,6 +1557,7 @@ function Player({ c, setCareer }) {
           <small>{sportOf(c).x?.contractWord ? sportOf(c).x.contractWord(c) : c.sport === 'soccer' ? ({ rookie: 'First professional contract', ext: 'New deal', transfer: 'Transfer', fa: 'Free transfer', loan: `On loan from ${c.loan ? sportOf(c).teamOf(c.loan.from).name : 'his club'}` })[c.contract.kind] ?? 'Contract' : c.contract.kind === 'rookie' ? 'Rookie deal' : c.contract.kind === 'ext' ? 'Extension' : 'Free-agent deal'} · career earnings {earned(c, Math.round(t.earnings))}</small>
         </div>
         <Jersey c={c} setCareer={setCareer} />
+        {(() => { const s = specialtyNote(c); return s && <div className="cr-contract cr-spec"><span className="ag-eyebrow">SPECIALTY</span><b>{s.label}</b><p className="cr-note">{s.text}</p></div> })()}
         {c.injuries.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">INJURY HISTORY</span>{c.injuries.map((i, k) => <span key={k} className="cr-goal is-miss">{i.year}: {i.kind}, {i.games} {c.sport === 'soccer' ? (i.games === 1 ? 'match' : 'matches') : i.games === 1 ? 'game' : 'games'}{i.played ? ' (played through)' : ''}</span>)}</div>}
         <p className="cr-note">{sportOf(c).primeNote(c.pos)} {sportOf(c).ui?.devNote ?? `Every offseason brings a development point; an award or ${sportOf(c).first} season brings two.`}</p>
       </div>
