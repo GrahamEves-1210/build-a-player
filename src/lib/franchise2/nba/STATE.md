@@ -150,7 +150,7 @@ seasonAwards(F) -> { MVP, ROY, DPOY, '6MOY', MIP, ALL: [[5 ids],[5],[5]], ALLDEF
 finalsMvp(F, series) -> manId
 ageLeague(F) -> { retired: [Man], news: [...] }    // offseason: ag+1, o toward pk, decline by group, retirements
 // Moments seam (core moments.js uses it):
-startGame(F, home, away, opts) -> G       // a game state that can stop
+startGame(F, home, away, opts) -> G       // a game state that can stop; G is plain JSON (saved in F.pend while the moment is up), small, no F inside; G.hs / G.as = the score so far
 playTo(G, secondsLeftInQ4)                // sim until that much of the 4th (or OT) is left
 possession(G, short, outcome)             // apply one possession result: { pts: 0..4, by: manId, ast?: manId, kind: 'pnr'|'iso'|'read'|... , tov?: bool }
 finishGame(G) -> Res                      // sim the rest, give the same Res as simGame
@@ -162,12 +162,13 @@ finishGame(G) -> Res                      // sim the rest, give the same Res as 
 capOf(year), taxOf(year), apron1Of(year), apron2Of(year), minOf(ys, year), maxOf(ys, year), rookieScale(pick, year)
 payroll(F, short, year = F.year) -> $M                 // incl. dead money and cap holds where they count
 capSheet(F, short) -> { pay, cap, tax, a1, a2, room, over: 'under'|'cap'|'tax'|'a1'|'a2', bill }
-dealOnLoad(F, man, realRow)                            // at setup: his real deal (or an estimate) on the man
+dealOnLoad(F, man, short)                              // at setup, for every man on a roster: his real deal (or an estimate)
 canSign(F, short, man, deal) -> { ok, via: 'room'|'mle'|'tmle'|'bae'|'min'|'bird'|'rookie', why }
 signMan(F, short, man, deal)
-rookieDeal(F, man, pick)                               // a drafted man's scale deal (1st) / 2nd-rounder deal
+rookieDeal(F, man, pick)                               // a drafted man's scale deal (1st) / 2nd-rounder deal; pick.n = overall pick 1..60, pick.r = round; deal starts season F.year + 1
 seasonEndDeals(F)    // options decisions, years tick, expiring men to F.fa with Bird/RFA flags (start of 'resign')
-resignOffer(F, man) -> deal | null                     // what he asks the GM's team for
+resignOffer(F, man) -> deal | null                     // what he asks the GM's team for (his own team, Bird rights)
+askOf(F, man) -> deal                                  // what a free agent asks on the open market { $, y, opt? }
 cpuOffseason(F)      // the other 29 teams re-sign, sign FAs, fill to 13+ and cut to 15 (called at 'fa' end)
 faDay(F, n)          // one free-agency round; returns news
 offerSheet(F, man, deal) / matchSheet(F, short, man, yes)

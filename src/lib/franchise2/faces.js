@@ -38,6 +38,7 @@ const MIX = {
   db: { b: 0.9, w: 0.075, m: 0.02, p: 0.005 },
   k: { b: 0.05, w: 0.92, l: 0.02, m: 0.01 },
   any: { b: 0.57, w: 0.36, p: 0.03, m: 0.03, l: 0.01 },
+  nba: { b: 0.72, w: 0.23, l: 0.02, m: 0.03 },   // (basketball Franchise's made-up men: an NBA locker room)
 }
 // any position or spot a caller has (league.js's p and s, a real roster's subpos, a Career position) to its room
 const ROOM = {
