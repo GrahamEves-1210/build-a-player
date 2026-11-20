@@ -1,19 +1,19 @@
 // Trades, headless (lib/franchise2/trades.js): what men and picks are worth, the league's calls and its own deals,
 // and a GM trying to fleece the league, over a few seasons.
-//   bash scripts/franchise2/run.sh scripts/franchise2/trades-check.mjs [seasons=4] [team=NYJ]
+//   bash scripts/franchise2/run.sh scripts/franchise2/trades-check.mjs [seasons=4] [team=NYJ] [seed]
 import * as FR from '../../src/lib/franchise2/index'
 import CONTRACTS from '../../src/data/nfl-contracts.json'
 import { QBS } from '../../src/data/qbs'
 import { seeded } from '../../src/lib/rng'
 
 FR.useContracts(CONTRACTS)
-const N = Number(process.argv[2] ?? 4), team = process.argv[3] ?? 'NYJ'
+const N = Number(process.argv[2] ?? 4), team = process.argv[3] ?? 'NYJ', SEED = process.argv[4] ?? ''
 const problems = []
 const bad = m => { problems.push(m); console.log('  !! ' + m) }
 const asBuild = p => Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, { val: v }]))
 const qb = QBS.find(p => p.name === 'Josh Allen')
-const F = FR.createFranchise({ seed: 'trades-' + team, team, owner: 'G', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }], coach: { name: 'Test Coach', style: 'players', r: { talentDev: 6, offPlaycalling: 6, defPlaycalling: 6, culture: 6, situational: 6 }, ovr: 76 } })
-const H = seeded('trade-bot')
+const F = FR.createFranchise({ seed: 'trades-' + team + SEED, team, owner: 'G', builds: [{ pos: 'qb', build: asBuild(qb), name: 'Marcus Reed', num: 12 }], coach: { name: 'Test Coach', style: 'players', r: { talentDev: 6, offPlaycalling: 6, defPlaycalling: 6, culture: 6, situational: 6 }, ovr: 76 } })
+const H = seeded('trade-bot' + SEED)
 const nameOf = p => `${p.n} (${p.p.toUpperCase()} ${p.o}, ${p.ag})`
 const v0 = x => Math.round(x)
 
@@ -148,9 +148,21 @@ function audit() {
     // (the player's team may overpay; a league team never gives far more than it gets)
     const lo = d.u ? (d.a === F.team ? a : b) : Math.min(a, b), hi = d.u ? (d.a === F.team ? b : a) : Math.max(a, b)
     if (hi >= 120 && lo < hi * 0.55) { tally.absurd++; bad(`lopsided: ${d.a}<-${d.b} gave ${a} got ${b} (${d.ag.join(', ')} | ${d.bg.join(', ')} | ${d.ak.join(' ')} | ${d.bk.join(' ')})`) }
+    // a man the GM just traded for, flipped within six weeks of the same window: never for much more than he cost
+    if (d.u) {
+      const mine = d.a === F.team, sent = mine ? d.ag : d.bg, got = mine ? d.bg : d.ag, sv = mine ? a : b, gvv = mine ? b : a
+      const key = `${d.y}${d.ph}`
+      const flips = sent.filter(n => acq[n] && acq[n].key === key && (d.ph !== 'season' || d.wk - acq[n].wk < 6))
+      if (flips.length && flips.length === sent.length && !(mine ? d.ak : d.bk).length) {
+        const paid = flips.reduce((x, n) => x + acq[n].val, 0)
+        if (gvv > paid * 1.2 + 40) bad(`flip: ${flips.join(', ')} bought for ${Math.round(paid)}, sold for ${gvv}`)
+      }
+      for (const n of got) acq[n] = { key, wk: d.wk, val: sv / Math.max(1, got.length) }
+    }
   }
 }
 
+const acq = {}
 const perSeason = []
 let fresh = []
 for (let y = 0; y < N; y++) {
