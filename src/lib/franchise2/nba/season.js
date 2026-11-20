@@ -180,7 +180,7 @@ export function finishMoment(F, out) {
   const g = P.po != null ? F.po.cur.find(x => x.h === P.h && x.a === P.a && x.n === P.n) : F.sched.find(x => x.d === P.d && x.h === P.h && x.a === P.a)
   const G = P.G
   if (out?.pts != null && out.them == null) X.possession(G, F.team, out)
-  if (out?.them != null) X.possession(G, F.team === P.h ? P.a : P.h, { pts: out.them })
+  if (out?.them != null) X.possession(G, F.team === P.h ? P.a : P.h, { pts: out.them, ...(out.t && { t: out.t }) })
   const res = X.finishGame(G)
   F.pend = null
   if (P.po != null) { const r = settle(F, g, res, { playoff: true }); const row = logMine(F, g, r, poTag(F)); seriesAdd(F, g, r); return poEnd(F, row) }

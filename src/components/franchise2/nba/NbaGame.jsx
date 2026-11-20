@@ -75,7 +75,7 @@ function Moment({ F, plan, onPlay, onSim }) {
   useEffect(() => { sfx('swap'); haptic('medium') }, [])
   return (
     <div className="nb-gd-moment">
-      <Scorebug a={a} h={h} as={as} hs={hs} per="4TH" clock={S.clockText} label="KEY MOMENT" />
+      <Scorebug a={a} h={h} as={as} hs={hs} per="4TH" clock={plan.game === "clutch-shot" ? `0:${P.left ?? 24}` : S.clockText} label="KEY MOMENT" />
       <Chyron team={F.team} tag="KEY MOMENT" title={title} sub={S.line.toUpperCase()} />
       <p className="nb-gd-tail">{S.tail}</p>
       {me && <LowerThird name={me.n} pos={me.p} num={me.num} ovr={me.o} photo={manPhoto(F, me)} team={F.team} line={plan.def ? 'ON THE BALL' : 'THE BALL IN HIS HANDS'} />}

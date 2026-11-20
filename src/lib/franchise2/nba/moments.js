@@ -50,7 +50,7 @@ export function momentPlan(F) {
   const clockText = clock < 10 ? clock.toFixed(1) : `0:${String(Math.floor(clock)).padStart(2, '0')}`
   const situation = {
     us, them, mine: P.us, opp: P.them, hoops: true, clock, clockText, period: P.ot ? 'OT' : '4TH',
-    line: `${where}, ${clockText} left in the 4th.`, tail: def ? `${N(opp)} ball. A stop seals it.` : m <= -3 ? 'Down three. They need a three.' : m < 0 ? 'Last possession, down one score.' : 'Last possession, tied.',
+    line: game === 'clutch-shot' ? `${where}, ${P.left ?? 24} seconds left. They hold for the last shot.` : `${where}, ${clockText} left in the 4th.`, tail: def ? `${N(opp)} ball. A stop seals it.` : m <= -3 ? 'Down three. They need a three.' : m < 0 ? 'Last possession, down one score.' : 'Last possession, tied.',
   }
   const cast = { us: { ...floor(F, F.team, man), [man.g]: [castMan(man, true), ...floor(F, F.team, man)[man.g]] }, them: floor(F, opp), me: castMan(man, true) }
   return { game, man: man.i, name: man.n, g: man.g, build: asBuild(man.a), situation, cast, def, seed: `${F.seed}-m-${F.year}-${P.d}-${P.h}-${P.n ?? 0}`, team: { short: F.team, color: TEAM[F.team].color, color2: TEAM[F.team].color2 }, opp: { short: opp, color: TEAM[opp].color, color2: TEAM[opp].color2 } }
@@ -59,8 +59,12 @@ export function momentPlan(F) {
 export function momentDone(F, plan, r) {
   const facts = momentFacts(plan.game, r?.raw ?? null, !!r?.hit) ?? {}
   let out
-  if (plan.def) out = { pts: 0, them: facts.allowed ?? (r?.hit ? 0 : 2) }
-  else out = { pts: facts.pts ?? (r?.hit ? (plan.game === 'clutch-shot' && plan.situation.mine - plan.situation.opp <= -3 ? 3 : 2) : 0), by: plan.man, kind: plan.game }
+  // (the clock the play takes: the last shot is held for, the shot going up with two seconds left; a stop is the
+  // other team's whole possession; anything else a normal trip down, and the other team gets the ball back after it)
+  const left = F.pend?.left ?? 24
+  const t = plan.game === 'clutch-shot' ? Math.max(1, left - 2) : plan.def ? Math.max(1, left - 3) : 12
+  if (plan.def) out = { pts: 0, them: facts.allowed ?? (r?.hit ? 0 : 2), t }
+  else out = { pts: facts.pts ?? (r?.hit ? (plan.game === 'clutch-shot' && plan.situation.mine - plan.situation.opp <= -3 ? 3 : 2) : 0), by: plan.man, kind: plan.game, t }
   const res = finishMoment(F, out)
   return { out, res }
 }
