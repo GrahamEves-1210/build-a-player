@@ -122,7 +122,9 @@ export function campCut(F, id) {
   if (c?.p) c.p.cc = 1
   return c
 }
-// (the headless sims' cut-down: the player's calls made the way the old cut-down made them, by rating)
+// (the headless sims' cut-down: the player's calls made the way the old cut-down made them: his builds, the new class
+// and his early picks on their rookie deals kept, the rest by rating)
 export function autoCamp(F) {
-  for (const r of campCuts(F)) for (const p of [...r.men].sort((a, b) => (a.b != null) - (b.b != null) || a.o - b.o).slice(0, r.have - r.max)) campCut(F, p.i)
+  const kept = p => p.b != null || p.rk === F.year + 1 || (p.rc && (p.dr?.[0] ?? 8) <= 4)
+  for (const r of campCuts(F)) for (const p of [...r.men].sort((a, b) => kept(a) - kept(b) || a.o - b.o).slice(0, r.have - r.max)) campCut(F, p.i)
 }
