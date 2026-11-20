@@ -42,7 +42,7 @@ for (let k = 0; k < 400; k++) {
 const ms = (performance.now() - t0) / 400
 const mean = x => (x.reduce((s, y) => s + y, 0) / (x.length || 1)).toFixed(1)
 ok(bad === 0, `400 games: points, makes, minutes (240 + 25 an overtime), five starters, +/- all add up (${bad} bad)`)
-ok(maxPf <= 6, `nobody past six fouls (most: ${maxPf}); ${fouledOut} foul-outs in 800 team-games (the NBA: about one in 12 games)`)
+ok(maxPf <= 6, `nobody past six fouls (most: ${maxPf}); ${fouledOut} foul-outs in 800 team-games (the NBA: about one every ten games)`)
 ok(blowStar.length > 5 && +mean(blowStar) < +mean(closeStar) - 4, `a blowout sits the starters: the top scorer plays ${mean(blowStar)} in 28-point games, ${mean(closeStar)} in games within 4`)
 ok(hiMin <= 53, `the most minutes a man played in regulation or overtime: ${hiMin}`)
 ok(ms < 8, `speed: ${ms.toFixed(2)} ms a game`)
@@ -76,7 +76,13 @@ ok(!murray || G.box[murray.i].ast === ja + 1, 'the moment\'s assist is credited'
 const before2 = G.sc.a
 C.possession(G, 'OKC', { pts: 0, by: F.teams.OKC.r[0].i, kind: 'rim' })
 ok(G.sc.a === before2, 'a missed moment scores nothing')
+// (the state is plain JSON: saved mid-moment and picked up again, it plays out the same)
+const saved = JSON.stringify(G)
+const G2 = JSON.parse(saved)
+const res2 = C.finishGame(G2)
 const res = C.finishGame(G)
+ok(JSON.stringify(res) === JSON.stringify(res2), `a moment's game saved as JSON (${(saved.length / 1024).toFixed(1)} KB) and reloaded plays out the same`)
+ok(!saved.includes('"teams"'), 'no F inside the saved game')
 ok(sum(res.box.DEN, 'pts') === res.hs && sum(res.box.OKC, 'pts') === res.as && res.hs !== res.as, `finishGame: a final, ${res.hs}-${res.as}${res.ot ? ` (${res.ot}OT)` : ''}, the box adds up`)
 ok(res.q.length >= 4 && res.q.reduce((s, q) => s + q[0], 0) === res.hs, 'the quarters add up to the final')
 

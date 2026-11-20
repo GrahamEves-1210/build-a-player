@@ -13,10 +13,12 @@
 // for the young ones; a 33-year-old sits a third of them), never in the playoffs.
 //
 // The seam (nba/STATE.md):
-//   rollInjuries(F, game, res) -> [{ i, s, k, g }]   after a game: the two teams' injured men a game closer (they
-//                                                    missed this one), then who got hurt in it (sets man.inj { g, k }).
+//   rollInjuries(F, game, res) -> [{ i, s, k, g }]   after a game: who got hurt in it (sets man.inj { g, k }); the two
+//                                                    teams' men already out are marked as having missed it (inj.m).
 //                                                    Honours F.noInj (nobody is hurt, and nobody stays hurt).
-//   tickInjuries(F, days)       time off with no games (the All-Star break, the offseason): days of healing, ~2.1 a game
+//   tickInjuries(F, short)      after the night (core calls it for every team): a man who missed a game tonight is a
+//                               game closer. Games out are games, so a team's idle night heals nobody.
+//   tickInjuries(F, days)       with a number: time off with no games (the summer): days of healing, ~2.1 a game
 //   restFor(F, short, game, b2b) -> [ids]           tonight's load management (sets man.rest = 1; cleared after the game)
 //   outText(p, gamesLeft)       'OUT 3 GAMES' · 'OUT FOR SEASON' · 'DAY-TO-DAY'
 //   TALLY                       the checks count every injury here (scripts/franchise2/nba)
@@ -55,8 +57,7 @@ export function rollInjuries(F, game, res) {
   for (const s of teamsOf(F, res)) {
     const T = F.teams[s]; if (!T) continue
     for (const p of T.r) {
-      p.rest = undefined; delete p.rest
-      if (p.inj) { p.inj.g -= 1; if (p.inj.g <= 0 || F.noInj) delete p.inj }
+      if (p.inj) { if (F.noInj) delete p.inj; else p.inj.m = 1 }
     }
     if (F.noInj) continue
     for (const l of res.box[s]) {
@@ -75,9 +76,19 @@ export function rollInjuries(F, game, res) {
   return hurt
 }
 
-export function tickInjuries(F, days) {
-  const n = days / DAYS_PER_GAME
-  for (const T of Object.values(F.teams)) for (const p of T.r) if (p.inj) { p.inj.g -= n; if (p.inj.g <= 0 || F.noInj) delete p.inj; else p.inj.g = Math.ceil(p.inj.g) }
+export function tickInjuries(F, x) {
+  if (typeof x === 'string') {
+    for (const p of F.teams[x]?.r ?? []) if (p.inj) {
+      if (F.noInj) { delete p.inj; continue }
+      if (!p.inj.m) continue
+      delete p.inj.m
+      p.inj.g -= 1
+      if (p.inj.g <= 0) delete p.inj
+    }
+    return
+  }
+  const n = x / DAYS_PER_GAME
+  for (const T of Object.values(F.teams)) for (const p of T.r) if (p.inj) { delete p.inj.m; p.inj.g -= n; if (p.inj.g <= 0 || F.noInj) delete p.inj; else p.inj.g = Math.ceil(p.inj.g) }
   for (const p of F.fa ?? []) if (p.inj) { p.inj.g -= n; if (p.inj.g <= 0) delete p.inj; else p.inj.g = Math.ceil(p.inj.g) }
 }
 

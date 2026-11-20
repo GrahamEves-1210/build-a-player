@@ -83,7 +83,9 @@ export function leadersIn(tot, stat, { n = 10, teamGames = gamesIn(tot), filter 
   }
   return rows.sort((a, b) => b.v - a.v).slice(0, n)
 }
-export const leaders = (F, stat, n = 10, { playoff = false } = {}) => leadersIn((playoff ? F.ps : F.ss) ?? {}, stat, { n, playoff })
+// (a total's name reads as its per-game stat: 'pts' is points a game, as the leaders board shows them)
+const ALIAS = { pts: 'ppg', reb: 'rpg', ast: 'apg', stl: 'spg', blk: 'bpg', min: 'mpg', tov: 'tpg', oreb: 'orpg' }
+export const leaders = (F, stat, n = 10, { playoff = false } = {}) => leadersIn((playoff ? F.ps : F.ss) ?? {}, ALIAS[stat] ?? stat, { n, playoff })
 
 export function teamSeason(results) {
   const T = {}

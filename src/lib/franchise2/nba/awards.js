@@ -14,10 +14,10 @@
 //
 // The seam (nba/STATE.md):
 //   seasonAwards(F) -> { MVP, ROY, DPOY, '6MOY', MIP, CLUTCH, ALL: [[5], [5], [5]], ALLDEF: [[5], [5]], ROOKIE: [[5], [5]],
-//                        votes: { MVP: [{ i, v }, ...top 5], ... } }   ids; also adds { y, k } to each winner's aw
+//                        votes: { MVP: [{ i, v }, ...top 5], ... } }   ids (core writes them onto man.aw)
 //   finalsMvp(F, series) -> manId     (seriesMvp: the same for any series, the conference finals)
 // And:
-//   allStars(F) -> { E: [12 ids], W: [12 ids], st: { E: [5], W: [5] } }   at the break, from the stats so far (adds AS to aw)
+//   allStars(F) -> { E: [12 ids], W: [12 ids], st: { E: [5], W: [5] } }   at the break, from the stats so far
 //   eligible(row)          the 65-game rule
 //   updateRecords(F) -> [news]   the season's marks into F.rec (single game, season, career, since the save began)
 //   REAL_RECORDS            the NBA's own records, for the copy ("the NBA record is 100, Wilt Chamberlain in 1962")
@@ -101,12 +101,6 @@ export function seasonAwards(F) {
     ALL: fives(mvp, 3), ALLDEF: fives(dpoy, 2), ROOKIE: fives(roy, 2),
     votes: { MVP: mvp.slice(0, 5), DPOY: dpoy.slice(0, 5), ROY: roy.slice(0, 5), '6MOY': sixth, MIP: mip, CLUTCH: clutch },
   }
-  // on the men's records
-  const give = (id, k) => { const p = men.get(id); if (p && !(p.aw ?? []).some(a => a.y === F.year && a.k === k)) (p.aw ??= []).push({ y: F.year, k }) }
-  for (const k of ['MVP', 'DPOY', 'ROY', '6MOY', 'MIP', 'CLUTCH']) if (out[k] != null) give(out[k], k)
-  out.ALL.forEach((t, j) => t.forEach(id => give(id, `ALL${j + 1}`)))
-  out.ALLDEF.forEach((t, j) => t.forEach(id => give(id, `DEF${j + 1}`)))
-  out.ROOKIE.forEach((t, j) => t.forEach(id => give(id, `RK${j + 1}`)))
   return out
 }
 
@@ -127,12 +121,12 @@ export function allStars(F) {
     const res = [...st]
     take(pool.filter(x => x.back), 2, res); take(pool.filter(x => !x.back), 3, res); take(pool, 2, res)
     out.st[c] = st; out[c] = res
-    for (const id of res) { const p = men.get(id); if (p && !(p.aw ?? []).some(a => a.y === F.year && a.k === 'AS')) (p.aw ??= []).push({ y: F.year, k: 'AS' }) }
   }
   return out
 }
 
 // A series' MVP: the best series on the side that won it (its own lines, series.st; the postseason's if it has none)
+// (without series.st, the postseason's lines: then the Finals weigh most, as the voters do, but the whole run counts)
 export function seriesMvp(F, series) {
   const win = series.done ?? null
   const tot = series.st ?? F.ps ?? {}

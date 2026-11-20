@@ -27,7 +27,7 @@ function series(hi, lo, R, y, tag) {
     const g = { d: 1000 + k, h, a, po: true }
     const r = C.simGame(F, h, a, { seed: `${SEED}-${y}-${tag}-${k}`, playoff: true })
     C.recordGame(F, g, r, { playoff: true, series: se })
-    C.rollInjuries(F, g, r)
+    C.rollInjuries(F, g, r); C.tickInjuries(F, h); C.tickInjuries(F, a)
     const hw = r.hs > r.as
     se.g.push({ h, hs: r.hs, as: r.as, ot: r.ot })
     if ((hw && h === hi) || (!hw && a === hi)) se.wh++; else se.wl++
@@ -38,7 +38,7 @@ function series(hi, lo, R, y, tag) {
 function single(h, a, y, tag) {
   const g = { d: 999, h, a, po: true }
   const r = C.simGame(F, h, a, { seed: `${SEED}-${y}-${tag}`, playoff: true })
-  C.rollInjuries(F, g, r)
+  C.rollInjuries(F, g, r); C.tickInjuries(F, h); C.tickInjuries(F, a)
   return r.hs > r.as ? h : a
 }
 
@@ -51,7 +51,7 @@ for (let y = 0; y < N; y++) {
   const ovrStart = new Map(Object.values(F.teams).flatMap(T => T.r.map(p => [p.i, { o: p.o, ag: p.ag }])))
   for (const g of F.sched) {
     if (!asDone && g.d > 85) { asDone = true; S.as = C.allStars(F); C.tickInjuries(F, 6) }
-    if (g.d !== lastDay) { F.day = g.d; lastDay = g.d }
+    if (g.d !== lastDay) { for (const s of SHORTS) C.tickInjuries(F, s); F.day = g.d; lastDay = g.d }
     C.restFor(F, g.h, g, g.b2b.h); C.restFor(F, g.a, g, g.b2b.a)
     const r = C.simGame(F, g.h, g.a, { seed: `${SEED}-${year}-${g.d}-${g.h}` })
     g.hs = r.hs; g.as = r.as; g.ot = r.ot
@@ -107,6 +107,12 @@ for (let y = 0; y < N; y++) {
   const lead = k => C.leadersIn(F.ss, k, { n: 40 })
   const wins = SHORTS.map(s => W.w[s] ?? 0).sort((a, b) => b - a)
   const aw = C.seasonAwards(F)
+  // (core's closeSeason: the lines onto car, the awards onto aw)
+  const men = new Map(Object.values(F.teams).flatMap(T => T.r.map(p => [p.i, p])))
+  for (const [id, l] of Object.entries(F.ss)) { const p = men.get(+id); if (p) (p.car ??= []).push(C.careerRow(year, l.s, l)) }
+  const give = (id, k) => { const p = men.get(id); if (p) (p.aw ??= []).push({ y: year, k }) }
+  for (const k of ['MVP', 'DPOY', 'ROY', '6MOY', 'MIP', 'CLUTCH']) if (aw[k] != null) give(aw[k], k)
+  aw.ALL.forEach((t, j) => t.forEach(id => give(id, `ALL${j + 1}`)))
   const recNews = C.updateRecords(F)
   const inj = TALLY.rows.filter(r => r.y === year)
   const lost = inj.reduce((s, r) => s + Math.min(r.g, 90), 0)

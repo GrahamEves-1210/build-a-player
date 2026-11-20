@@ -13,8 +13,9 @@
 // one the scouts saw, a few blow past it (the late picks who pop). By 27 he is what he is.
 // Retirement: by age and how good he still is. Role players go at about 32-35, stars play to 36-40.
 //
-//   ageLeague(F) -> { retired: [Man], news: [...] }   the seam: this season's line into car, retirements (F.retired),
-//                                                       then every man a year older (ag, ys, a, o, pk)
+//   ageLeague(F) -> { retired: [Man], news: [...] }   the seam: retirements (into F.retired), then every man a year
+//                                                       older (ag, ys, a, o, pk). Core has written car by then.
+//   careerRow(y, s, line)       a SeasonLine as a car row (the checks use it; core writes its own)
 //   ageMan(p, R, { mpg })       one man's year (mutates p); returns the OVR change
 //   retireChance(p)             the chance he retires this summer
 //   prospect(R, { rank, spot, ag })   a draft prospect's grades: { p, g, o, pk, a, ag, ht, wt } (rank 1 = the best)
@@ -107,11 +108,6 @@ export function ageLeague(F) {
   const where = teamOfId(F)
   const news = [], retired = []
   const all = [...Object.values(F.teams).flatMap(T => T.r), ...(F.fa ?? [])]
-  // this season into his career (once a season: a second call doesn't add it twice)
-  for (const p of all) {
-    const l = F.ss?.[p.i]
-    if (l?.gp && !(p.car ?? []).some(r => r.y === F.year)) (p.car ??= []).push(careerRow(F.year, l.s ?? where.get(p.i) ?? 'FA', l))
-  }
   // the retirements (the GM's own builds are his call, never the dice)
   for (const p of all) {
     if (p.b != null) continue

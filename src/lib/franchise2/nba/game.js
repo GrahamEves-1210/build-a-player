@@ -19,13 +19,33 @@
 //       possession() plays one possession with the moment's result, finishGame sims the rest. The outcome:
 //       { pts: 0..4, by: manId, ast?: manId, kind?: 'three'|'rim'|'mid'|'pnr'|'iso'|'read'|'ft', tov?: bool, t?: seconds }
 //       (pts 3 or 4 is a three, 4 an and-one; 1 or 2 with kind 'ft' free throws; 0 a miss, the board left to the sim)
+//       G is plain JSON (no F inside, ~10 KB: the men's grades, the box so far, the dice's state), so core can keep it
+//       in F.pend and pick it up after a reload; G.hs / G.as are the score so far, G.per / G.clock the time.
 //       clutchTime(G) (the last five minutes of the fourth or overtime, within five) and G.sc / G.clock / G.per help
 //       pick the spots.
 //   Res = { hs, as, ot, box: { [short]: [Line] }, q: [[h1, a1], ...], lc (lead changes), big: { h, a } (largest leads) }
 //   Line = { i, min, pts, reb, oreb, ast, stl, blk, tov, pf, fgm, fga, tpm, tpa, ftm, fta, pm, st, cp } (cp: clutch points)
 // Lower level (the checks use these): newGame(G) · run(S, { stop }) · play(S, forced) · finish(S) · playGame(G)
 //   G = { seed, po, home: { short, men, set }, away } (set: rotation.js planRotation's { st, order, min })
-import { rngOf } from '../rng'
+
+// ── The game state is plain JSON (core saves it in F.pend while a moment is up): the dice keep their state in S.rs,
+// and the lookups (by id, the men's skills, the five on the floor) are rebuilt from it whenever a call comes in (hot)
+function hashSeed(str) {
+  let h = 1779033703 ^ str.length
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19) }
+  return h >>> 0
+}
+const hidden = (o, k, v) => Object.defineProperty(o, k, { value: v, enumerable: false, writable: true, configurable: true })
+function hot(S) {
+  if (!S.R) hidden(S, 'R', { u: () => { const a = S.rs = (S.rs + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 } })
+  for (const k of ['h', 'a']) {
+    const T = S[k]; if (!T || T.by) continue
+    hidden(T, 'by', new Map(T.men.map(p => [p.i, p])))
+    hidden(T, 'pr', new Map(T.men.map(p => [p.i, prof(p)])))
+    T.on = T.floor.map(id => T.pr.get(id))
+  }
+  return S
+}
 import { prof } from './skills'
 import { planRotation, dressed, setOf } from './rotation'
 
@@ -52,17 +72,16 @@ const other = s => (s === 'h' ? 'a' : 'h')
 const mean = (a, f) => a.reduce((s, x) => s + f(x), 0) / (a.length || 1)
 
 function side(T, home, po = false) {
-  const men = (T.men ?? []).filter(p => !(p.inj?.g > 0))
-  const pr = new Map(men.map(p => [p.i, prof(p)]))
+  const men = (T.men ?? []).filter(p => !(p.inj?.g > 0)).map(p => ({ i: p.i, p: p.p, g: p.g, a: { ...p.a }, ht: p.ht, o: p.o }))
   const rot = planRotation(men, { ...(T.set ?? {}), po })
-  const by = new Map(men.map(p => [p.i, p]))
-  return { short: T.short, men, by, pr, rot, floor: [], home, fouls: 0, out: new Set() }
+  return { short: T.short, men, rot, floor: [], home, fouls: 0, out: [] }
 }
 
 export function newGame(G) {
-  const R = rngOf(`nba-game-${G.seed}`)
-  const S = { R, po: !!G.po, per: 1, clock: Q, el: 0, sc: { h: 0, a: 0 }, q: { h: [0], a: [0] }, box: {}, lc: 0, big: { h: 0, a: 0 }, last: null, done: false, stop: null, next: STINT }
+  const S = { rs: hashSeed(`nba-game-${G.seed}`), hs: 0, as: 0, po: !!G.po, per: 1, clock: Q, el: 0, sc: { h: 0, a: 0 }, q: { h: [0], a: [0] }, box: {}, lc: 0, big: { h: 0, a: 0 }, last: null, done: false, stop: null, next: STINT }
   S.h = side(G.home, true, !!G.po); S.a = side(G.away, false, !!G.po)
+  hot(S)
+  const R = S.R
   for (const k of ['h', 'a']) for (const p of S[k].men) S.box[p.i] = line()
   S.poss = R.u() < 0.5 ? 'h' : 'a'     // the tip
   S.tip = S.poss
@@ -77,7 +96,7 @@ export const lead = (S, k) => S.sc[k] - S.sc[other(k)]
 const trouble = (S, b) => (S.per <= 3 ? b.pf >= S.per + 1 : S.per === 4 ? b.pf >= 5 && S.clock > 240 : false)
 function lineup(S, k, start = false) {
   const T = S[k], L = T.rot
-  const avail = T.men.filter(p => S.box[p.i].pf < 6 && !T.out.has(p.i))
+  const avail = T.men.filter(p => S.box[p.i].pf < 6 && !T.out.includes(p.i))
   const margin = lead(S, k), left = S.per >= 4 ? S.clock : 99999
   const absM = Math.abs(margin)
   const garbage = !S.po && S.per >= 4 && ((absM >= 30) || (absM >= 22 && left <= 540) || (absM >= 17 && left <= 300)) || S.po && S.per >= 4 && absM >= 25 && left <= 360
@@ -117,6 +136,7 @@ function lineup(S, k, start = false) {
 function score(S, k, pts, who) {
   const before = S.sc.h - S.sc.a
   S.sc[k] += pts
+  S.hs = S.sc.h; S.as = S.sc.a
   S.q[k][S.q[k].length - 1] += pts
   for (const id of S[k].floor) S.box[id].pm += pts
   for (const id of S[other(k)].floor) S.box[id].pm -= pts
@@ -142,7 +162,7 @@ function foulOn(S, d, kind = 'shoot') {
   const id = wpick(S.R, T.floor, w)
   S.box[id].pf++
   T.fouls++
-  if (S.box[id].pf >= 6) { T.out.add(id); lineup(S, d) }   // fouled out
+  if (S.box[id].pf >= 6) { T.out.push(id); lineup(S, d) }   // fouled out
   else if (trouble(S, S.box[id])) S.subDue = true
   return id
 }
@@ -230,6 +250,7 @@ function actor(S, k) {
 // One possession (forced: a key moment's result, in the engine's terms: { who, shot, made, foul } · { who, tov } · { who, ft, made })
 export function play(S, forced = null) {
   if (S.done) return S
+  hot(S)
   const k = S.poss, d = other(k), O = S[k], D = S[d], R = S.R
   if (S.subDue) { S.subDue = false; lineup(S, k); lineup(S, d) }
   let t = forced?.t ?? Math.max(4, TUNE.pace + (R.u() - 0.5) * 12 + (O.pace ?? 0))
@@ -292,6 +313,7 @@ function endPeriod(S) {
 }
 
 export function run(S, { stop = null } = {}) {
+  hot(S)
   S.stop = null
   let guard = 0
   while (!S.done && guard++ < 2000) {
@@ -308,6 +330,7 @@ export function teamTotals(S, k) {
   return t
 }
 export function finish(S) {
+  hot(S)
   const box = {}
   for (const k of ['h', 'a']) for (const p of S[k].men) { const b = S.box[p.i]; b.sec = Math.round(b.sec); box[p.i] = b }
   return {
@@ -325,8 +348,10 @@ export function startGame(F, home, away, { seed = null, playoff = false } = {}) 
 }
 export const playTo = (G, left = 0) => run(G, { stop: S => S.per >= 4 && S.clock <= left + 0.01 })
 // a moment's possession, in the moment's terms (the header)
+const MID_KINDS = new Set(['mid', 'iso', 'clutch-shot', 'half-court', 'read'])
 export function possession(G, short, o = {}) {
   if (G.done) return G
+  hot(G)
   const k = G.h.short === short ? 'h' : 'a', T = G[k]
   G.poss = k
   let who = o.by != null && T.by.has(o.by) ? o.by : null
@@ -342,7 +367,8 @@ export function possession(G, short, o = {}) {
   }
   const t = o.t ?? (o.kind === 'ft' ? 4 : 12)
   const pts = o.pts ?? 0
-  const shot = o.kind === 'three' || pts >= 3 ? 'three' : o.kind === 'mid' ? 'mid' : 'rim'
+  // (the play's kind: a pull-up or a step-back is a jumper; a roll, a post-up, a drive is at the rim)
+  const shot = o.kind === 'three' || pts >= 3 ? 'three' : MID_KINDS.has(o.kind) ? 'mid' : 'rim'
   const ast = o.ast === undefined ? undefined : o.ast
   let forced
   if (o.tov) forced = { who, tov: true, t }

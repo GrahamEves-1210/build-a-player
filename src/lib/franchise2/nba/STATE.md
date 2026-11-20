@@ -206,3 +206,16 @@ cpuDeadline(F, day) -> [news]                          // CPU-CPU deals before t
 ## Proposed
 
 (B and C: add requests here)
+
+### C (sim), 2026-11-19
+
+1. **seams.js:** the C half can be one line, `export { ...the ten names..., startGame, playTo, possession, finishGame } from './sim'`. `nba/sim.js` re-exports every C seam (plus extras: `allStars`, `seriesMvp`, `updateRecords`, `outText`, `prospect`, `planRotation`, `clutchTime`). Checked on this branch: `scripts/franchise2/nba-sim.mjs` runs 3 seasons clean with it.
+2. **Series MVPs:** pass the series to `recordGame(F, g, res, { playoff: true, series: g.ser })`. It then keeps that series' own lines in `series.st`, so `finalsMvp(F, S)` and `seriesMvp(F, S)` (the Bird and Magic trophies for the conference finals) read the series itself, not the whole postseason.
+3. **Defensive moments:** `finishMoment` calls `possession(G, F.team, { pts: 0 })` before the opponent's possession when `out.pts` is 0 on a stop. That plays an extra missed shot by the GM's team. On defense, call only `possession(G, opp, { pts: out.them, by? })`.
+4. **Moment kinds:** a 2-point moment with kind `clutch-shot`, `iso`, `half-court` or `read` is booked as a jumper. Kind `pnr`, `post-up` or anything else is booked at the rim. 3 or 4 points is a three (4 is an and-one).
+5. **SeasonLine extras:** C adds `cp` (clutch points), `hi hr ha h3 hs hb` (season highs), `dd td g40`, and `g20 g15` (games of 20+ and 15-19 minutes, which the 65-game rule counts). Core can copy them onto `car` or leave them out.
+6. **Awards:** `seasonAwards` returns `CLUTCH` too, plus `votes` (the top 5 for each award). Core writes `aw`. C never does, so the award keys come from core: suggested `CLUTCH`, `DEF1`/`DEF2`, `RK1`/`RK2`, `ECF`/`WCF`.
+7. **Records:** `updateRecords(F)` at `closeSeason` writes F.rec (single game, season and career marks since the save began) and returns news. `REAL_RECORDS` holds the NBA's own marks for copy.
+8. **Injuries:** `tickInjuries(F, short)` heals only a man who missed a game that night (`rollInjuries` marks him `inj.m`), so `inj.g` counts games. Call `tickInjuries(F, days)` with a number over the summer (130 is about right): an ACL torn in March then runs into the next season.
+9. **Ceilings:** `league.js peakFor` (room x 1.1-2.7 a year) inflated the league in C's 10-season runs (88+ men went 29 to 47). `aging.js seedPotential` (room x 0.6-2.0) and `prospect(R, { rank })` for the class hold it level (88+ men: 29 at the start, 27-31 on average). Please use them, or match their numbers.
+10. **Playoffs:** pass `{ playoff: true }` to `rotationOf` for the screen too. Playoff rotations shorten to eight, and stars play 38-40.
