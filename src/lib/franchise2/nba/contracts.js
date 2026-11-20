@@ -84,11 +84,15 @@ const MK = new WeakMap()
 // { [id]: { sc: score, rk: rank (scaled to 450 men) } } for every man in the league (rosters and the pool)
 export function marketOf(F) {
   // (the key without building the list: this is read for every man in every trade the league weighs)
+  // (and the count of men read at most every 40 ms: trades and signings move men without changing it; only a draft,
+  // a camp fill or a retirement does, and those are seconds apart)
+  const c = MK.get(F.teams ?? F)   // (keyed by the league's teams: a trade's look-ahead hands in a copy of F)
+  const now = Date.now()
+  if (c && c.at > now - 40 && c.y === F.year && c.ph === F.phase && c.st === F.off?.step) return c.m
   let count = (F.fa ?? []).length
   for (const s in F.teams ?? {}) count += F.teams[s].r.length
   const key = `${F.year}|${F.phase}|${F.off?.step ?? ''}|${count}`
-  const c = MK.get(F)
-  if (c?.key === key) return c.m
+  if (c?.key === key) { c.at = now; c.y = F.year; c.ph = F.phase; c.st = F.off?.step; return c.m }
   const men = allMen(F)
   const sc = men.map(([, p]) => [p.i, scoreOf(p)]).sort((a, b) => b[1] - a[1])
   // (the ladder is as long as the league: its rostered men and the street's best hundred and fifty; any more on the
@@ -97,14 +101,14 @@ export function marketOf(F) {
   const k = 450 / Math.max(300, n)
   const m = {}
   sc.forEach(([i, s], j) => { m[i] = { sc: s, rk: 1 + j * k } })
-  MK.set(F, { key, m, desc: sc.map(x => x[1]), k })
+  MK.set(F.teams ?? F, { key, m, desc: sc.map(x => x[1]), k, at: Date.now(), y: F.year, ph: F.phase, st: F.off?.step })
   return m
 }
 export const rankOf = (F, p) => marketOf(F)[p.i]?.rk ?? 300
 // the rank a man of this score would have in the league now
 export function rankAt(F, score) {
   marketOf(F)
-  const { desc, k } = MK.get(F)
+  const { desc, k } = MK.get(F.teams ?? F)
   let lo = 0, hi = desc.length
   while (lo < hi) { const mid = (lo + hi) >> 1; if (desc[mid] > score) lo = mid + 1; else hi = mid }
   return 1 + lo * k

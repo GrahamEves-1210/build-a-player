@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, photoOf, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
-  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews,
+  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet,
 } from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird, Go, Stamp, Tag, Flip, ActionBar } from '../kit'
@@ -16,7 +16,7 @@ export default function NbaOffseason({ F, act, owner }) {
   return (
     <div className="nb-off">
       <ol className="nb-steps">{STEPS.map((k, i) => <li key={k} className={i < at ? 'is-done' : i === at ? 'is-on' : ''}>{STEP_NAME[k]}</li>)}</ol>
-      {st === 'awards' && <Awards F={F} go={go} />}
+      {st === 'awards' && <Awards F={F} act={act} go={go} />}
       {st === 'lottery' && <Lottery F={F} go={go} />}
       {st === 'draft' && <Draft F={F} act={act} go={go} />}
       {st === 'resign' && <Resign F={F} act={act} go={go} />}
@@ -26,7 +26,7 @@ export default function NbaOffseason({ F, act, owner }) {
   )
 }
 
-function Awards({ F, go }) {
+function Awards({ F, act, go }) {
   const h = F.hist[F.hist.length - 1]
   const A = h?.aw ?? {}
   return (
@@ -40,6 +40,7 @@ function Awards({ F, go }) {
       {(A.ALL ?? []).map((t, k) => (
         <div key={k} className="nb-alln"><small>ALL-NBA {['FIRST', 'SECOND', 'THIRD'][k]} TEAM</small><p>{t.map(x => `${x.n} (${TEAM[x.s]?.short ?? ''})`).join(', ')}</p></div>
       ))}
+      <TeamOptions F={F} act={act} />
       <ActionBar><Go onClick={go}>The draft lottery</Go></ActionBar>
     </section>
   )
@@ -146,12 +147,19 @@ function Resign({ F, act, go }) {
 
 function FreeAgency({ F, act, go }) {
   const [why, setWhy] = useState(null)
+  const sheets = (F.rfq ?? []).map(q => ({ q, p: (F.fa ?? []).find(x => x.i === q.i) })).filter(x => x.p)
   const pool = (F.fa ?? []).slice().sort((a, b) => b.o - a.o).slice(0, 30)
   const day = F.off?.day ?? 0
   return (
     <section className="nb-fa">
       <CapBar F={F} />
       <Chyron team={F.team} tag={`DAY ${day + 1}`} title="Free agency" sub={`${(F.fa ?? []).length} ON THE MARKET · ${F.teams[F.team].r.filter(p => !p.tw).length} OF ${ROSTER_MAX} SIGNED`} />
+      {sheets.map(({ q, p }) => (
+        <div key={p.i} className="nb-counter">
+          <p>{`${p.n} signed an offer sheet with the ${TEAM[q.s].nick}: ${q.d.y} years, ${money(q.d.$)} a year. Match it to keep him.`}</p>
+          <span className="nb-fa-acts"><button type="button" className="is-go" onClick={() => { act(X => { answerSheet(X, p.i, true) }); sfx('claim') }}>Match</button><button type="button" onClick={() => { act(X => { answerSheet(X, p.i, false) }); sfx('tap') }}>Let him go</button></span>
+        </div>
+      ))}
       {pool.map(p => {
         const d = CAP_SIM.askOf(F, p)
         const ok = CAP_SIM.canSign(F, F.team, p, d)
@@ -164,7 +172,7 @@ function FreeAgency({ F, act, go }) {
       })}
       {why && <p className="nb-why">{why}</p>}
       <div className="fh-go">
-        {day < 4 && <button type="button" className="fh-textbtn" onClick={() => { act(X => { faNext(X) }); sfx('flip') }}>Next day</button>}
+        {day < CAP_SIM.FA_DAYS && <button type="button" className="fh-textbtn" onClick={() => { act(X => { faNext(X) }); sfx('flip') }}>Next day</button>}
         <ActionBar><Go onClick={go}>To training camp</Go></ActionBar>
       </div>
     </section>
@@ -196,5 +204,25 @@ function Camp({ F, act, go, owner }) {
       {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
       <ActionBar><Go disabled={!chk.ok} onClick={go}>{`Start the ${seasonText(F.year + 1)} season`}</Go></ActionBar>
     </section>
+  )
+}
+
+// team options on next season: the GM picks each up or declines it (any he leaves, the front office decides)
+function TeamOptions({ F, act }) {
+  const due = teamOptions(F)
+  if (!due.length) return null
+  return (
+    <>
+      <Chyron tone="ink" size="s" title="Team options" sub={`${F.year + 1}-${String((F.year + 2) % 100).padStart(2, '0')} SEASON`} />
+      {due.map(({ p }) => (
+        <div key={p.i} className="nb-fa-row">
+          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag} · ${money(p.sc?.[0] ?? p.$)} NEXT SEASON${p.optd === 1 ? ' · PICKED UP' : p.optd === 0 ? ' · DECLINED' : ''}`} />
+          <span className="nb-fa-acts">
+            <button type="button" className={p.optd === 1 ? 'is-go' : ''} onClick={() => { act(X => { setOption(X, p.i, true) }); sfx('tap') }}>Pick it up</button>
+            <button type="button" className={p.optd === 0 ? 'is-go' : ''} onClick={() => { act(X => { setOption(X, p.i, false) }); sfx('tap') }}>Decline</button>
+          </span>
+        </div>
+      ))}
+    </>
   )
 }

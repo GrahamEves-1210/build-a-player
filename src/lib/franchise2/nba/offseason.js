@@ -118,7 +118,7 @@ export function resignMine(F, id, yes) {
   const p = (F.fa ?? []).find(x => x.i === id)
   if (!p) return { ok: false }
   F.off.mine = (F.off.mine ?? []).filter(i => i !== id)
-  if (!yes) { addNews(F, { k: 'fa', tag: 'FREE AGENT', s: F.team, text: `${p.n} will test free agency; the ${nick(F.team)} did not make an offer` }); return { ok: true } }
+  if (!yes) { X.renounce(F, F.team, id); addNews(F, { k: 'fa', tag: 'FREE AGENT', s: F.team, text: `The ${nick(F.team)} renounce their rights to ${p.n}; he is an unrestricted free agent` }); return { ok: true } }
   const deal = X.resignOffer(F, p)
   if (!deal) return { ok: false, why: 'He wants to test the market' }
   const c = X.canSign(F, F.team, p, { ...deal, bird: true })
@@ -190,3 +190,17 @@ export function newSeason(F) {
   addNews(F, { k: 'season', tag: 'OPENING NIGHT', text: `The ${F.year}-${String((F.year + 1) % 100).padStart(2, '0')} season tips off` })
 }
 export { recText, pct, confOrder }
+
+// the GM's team options on next season (decided in June, before free agency): pick it up or decline it
+export const teamOptions = F => (X.optionsDue(F, F.team) ?? []).filter(x => x.k === 'T')
+export function setOption(F, id, keep) {
+  const p = F.teams[F.team].r.find(x => x.i === id)
+  if (!p) return
+  p.optd = keep ? 1 : 0
+}
+// an offer sheet one of the GM's restricted free agents signed: match it (he stays on those terms) or let him go
+export function answerSheet(F, id, yes) {
+  const r = X.matchSheet(F, F.team, id, yes)
+  for (const x of r?.news ?? []) addNews(F, x)
+  return r
+}
