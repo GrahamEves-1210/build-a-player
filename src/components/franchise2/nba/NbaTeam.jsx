@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, SHORTS, depthOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
+import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
 import { sfx } from '../../../lib/juice'
 import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar } from '../kit'
 import { money } from './NbaHub'
@@ -16,7 +16,7 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
   const t = F.teams[F.team]
   const rot = CAP_SIM.rotationOf(F, F.team, { playoff: F.phase === 'playin' || F.phase === 'playoffs' })
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
-  const order = depthOrder(F, F.team).filter(p => !p.tw)
+  const order = coachOrder(F, F.team, CAP_SIM.rotationOf).filter(p => !p.tw)
   const hurt = t.r.filter(p => p.inj?.g && !p.tw)
   const tw = t.r.filter(p => p.tw)
   const canTrade = F.phase === 'off' || (F.phase === 'season' && F.day <= F.ddl)
@@ -75,10 +75,10 @@ function ManSheet({ F, act, id, owner, onClose }) {
   const p = t.r.find(x => x.i === id)
   const [sure, setSure] = useState(false)
   if (!p) return null
-  const order = depthOrder(F, F.team).filter(x => !x.tw)
+  const order = coachOrder(F, F.team, CAP_SIM.rotationOf).filter(x => !x.tw)
   const k = order.findIndex(x => x.i === id)
   const move = d => act(X => {
-    const ids = depthOrder(X, X.team).filter(x => !x.tw).map(x => x.i)
+    const ids = coachOrder(X, X.team, CAP_SIM.rotationOf).filter(x => !x.tw).map(x => x.i)
     const j = ids.indexOf(id), to = j + d
     if (j < 0 || to < 0 || to >= ids.length) return
     ;[ids[j], ids[to]] = [ids[to], ids[j]]

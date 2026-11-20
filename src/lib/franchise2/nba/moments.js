@@ -6,7 +6,8 @@
 import { NBA_GUARD_PLAYERS } from '../../../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../../../data/nba-bigs'
 import { momentFacts } from '../../situations'
-import { TEAM, depthOrder, healthy } from './league'
+import { TEAM, coachOrder } from './league'
+import { rotationOf } from './seams'
 import { finishMoment } from './season'
 import { rngOf } from '../rng'
 
@@ -21,7 +22,7 @@ export function castMan(p, me = false) {
 }
 // the five on the floor, in the games' shape: { guard: [...], big: [...] }
 function floor(F, s, not = null) {
-  const five = depthOrder(F, s).filter(healthy).filter(p => p !== not).slice(0, not ? 4 : 5)
+  const five = coachOrder(F, s, rotationOf).filter(p => p !== not).slice(0, not ? 4 : 5)
   return { guard: five.filter(p => p.g === 'guard').map(p => castMan(p)), big: five.filter(p => p.g === 'big').map(p => castMan(p)) }
 }
 const OFF = { guard: ['clutch-shot', 'iso', 'pnr', 'half-court'], big: ['post-up', 'pnr', 'clutch-shot'] }
@@ -34,7 +35,7 @@ export function momentPlan(F) {
   const opp = P.h === F.team ? P.a : P.h
   const m = P.us - P.them
   const def = m > 0
-  const men = depthOrder(F, F.team).filter(healthy).slice(0, 5)
+  const men = coachOrder(F, F.team, rotationOf).slice(0, 5)
   // his build first (the GM made him for this), else the best scorer; on defense the best stopper
   const build = men.find(p => p.b != null)
   const score = p => (def ? (p.g === 'guard' ? p.a.perimeterDefense : p.a.interiorDefense) * 2 + p.o / 10 : p.o + (p.a.clutch ?? 5) * 0.8)
@@ -44,11 +45,12 @@ export function momentPlan(F) {
   const game = R.pick(list)
   const clock = game === 'clutch-shot' ? 2.8 : def ? 14 + R.int(0, 8) : 16 + R.int(0, 8)
   const us = TEAM[F.team].short, them = TEAM[opp].short
-  const where = m < 0 ? `${us} down ${P.them}-${P.us} to ${them}` : m > 0 ? `${us} up ${P.us}-${P.them} on ${them}` : `${us} and ${them} tied at ${P.us}`
+  const N = s => TEAM[s].nick
+  const where = m < 0 ? `${N(F.team)} trail the ${N(opp)} ${P.them}-${P.us}` : m > 0 ? `${N(F.team)} lead the ${N(opp)} ${P.us}-${P.them}` : `${N(F.team)} and ${N(opp)} tied at ${P.us}`
   const clockText = clock < 10 ? clock.toFixed(1) : `0:${String(Math.floor(clock)).padStart(2, '0')}`
   const situation = {
     us, them, mine: P.us, opp: P.them, hoops: true, clock, clockText, period: P.ot ? 'OT' : '4TH',
-    line: `${where}, ${clockText} left in the 4th.`, tail: def ? `${them} has the ball. ${us} needs a stop.` : m <= -3 ? 'Need a three.' : 'One possession. Get a bucket.',
+    line: `${where}, ${clockText} left in the 4th.`, tail: def ? `${N(opp)} ball. A stop seals it.` : m <= -3 ? 'Down three. They need a three.' : m < 0 ? 'Last possession, down one score.' : 'Last possession, tied.',
   }
   const cast = { us: { ...floor(F, F.team, man), [man.g]: [castMan(man, true), ...floor(F, F.team, man)[man.g]] }, them: floor(F, opp), me: castMan(man, true) }
   return { game, man: man.i, name: man.n, g: man.g, build: asBuild(man.a), situation, cast, def, seed: `${F.seed}-m-${F.year}-${P.d}-${P.h}-${P.n ?? 0}`, team: { short: F.team, color: TEAM[F.team].color, color2: TEAM[F.team].color2 }, opp: { short: opp, color: TEAM[opp].color, color2: TEAM[opp].color2 } }

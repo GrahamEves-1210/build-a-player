@@ -207,3 +207,10 @@ export function teamOvr(F, s) {
   return Math.round(avg + star)
 }
 export const nick = s => TEAM[s]?.nick ?? s
+// the coach's order tonight (the sim's rotation, its starters first), then the rest of the healthy men best first:
+// what the Team screen lists, the order the GM moves men in, and the five a key moment puts on the floor
+export function coachOrder(F, s, rotationOf, opts) {
+  const T = F.teams[s]
+  const rot = rotationOf(F, s, opts).map(x => T.r.find(p => p.i === x.i)).filter(Boolean)
+  return [...rot, ...T.r.filter(p => !p.tw && healthy(p) && !rot.includes(p)).sort((a, b) => b.o - a.o)]
+}
