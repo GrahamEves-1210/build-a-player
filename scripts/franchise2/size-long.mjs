@@ -13,7 +13,7 @@ for (let y = 0; y < N; y++) {
   FR.openFA(F); while (F.fad) FR.nextFADay(F)
   FR.openDraft(F); while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft?.(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   if (y % 5 === 4 || y === N - 1) console.log(`after ${y + 1} seasons: ${(FR.saveSize(F) / 1024).toFixed(1)} KB`)
 }
 const P = JSON.parse(FR.packFranchise(F))

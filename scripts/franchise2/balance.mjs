@@ -64,7 +64,7 @@ for (let y = 0; y < N; y++) {
   FR.openFA(F); while (F.fad) FR.nextFADay(F)
   FR.openDraft(F); FR.startNight(F); while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   const r = snap(F.year)
   console.log(`${r.y}: all ${f1(r.all)} · starters ${f1(r.st)} · 85+ ${r.n85} · 90+ ${r.n90} · 95+ ${r.n95} · 99 ${r.n99} · QB 85+ ${r.qb85} · starters' age ${f1(r.age)} · men ${r.men} · coaches HC ${f1(r.hcMean)} coord ${f1(r.coMean)} age ${f1(r.cAge)} · ${((performance.now() - t0) / (y + 1) / 1000).toFixed(1)} s/season`)
 }

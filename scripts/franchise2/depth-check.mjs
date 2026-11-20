@@ -95,7 +95,7 @@ for (let y = 0; y < N; y++) {
   }
   FR.openDraft(F); while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft?.(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
 }
 per.push(audit(`${F.year} wk1`, { counts: true }))
 

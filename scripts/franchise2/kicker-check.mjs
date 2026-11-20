@@ -77,7 +77,7 @@ for (let y = 0; y < N; y++) {
   FR.openDraft(F); while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   row.kPicks = F.dr.picks.filter(x => x.p === 'k').map(x => `R${Math.floor(x.at / 32) + 1}#${x.at + 1}`).join(' ') || 'none'
   FR.closeDraft?.(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
 }
 for (const s of FR.SHORTS) { const n = ks(s).length; if (n !== 1) bad(`${F.year} wk1 ${s}: ${n} kickers`) }
 const pc = v => `${(v * 100).toFixed(1)}%`

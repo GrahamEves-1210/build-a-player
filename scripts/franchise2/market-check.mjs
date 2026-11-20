@@ -187,7 +187,7 @@ for (let y = 0; y < N; y++) {
   FR.startNight(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   const room2 = FR.capRoom(F, team)
   roomBy.push(`${lyr}: ${team} at re-sign ${room0} · after FA ${room1} · season start ${room2}${watch !== team ? ` · ${watch} (a league club) at re-sign ${watch0}, season start ${FR.capRoom(F, watch)}` : ''}`)
   const over = FR.SHORTS.filter(s => s !== team && FR.capRoom(F, s) < 0)

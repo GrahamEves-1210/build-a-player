@@ -72,7 +72,7 @@ for (let y = 0; y < N; y++) {
   for (const e of rbs) if (e.pk < 90) bad(`${F.year + 1}: ${spot(e)} at No. ${e.at + 1} graded ${e.pk}`)
   for (const e of weak) if (e.o < 72) bad(`${F.year + 1}: a ${e.o} at No. ${e.p.at + 1}`)
   FR.closeDraft(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   // the rosters: a full name twice on one team; the league's most common surnames
   let dupRoster = 0
   const all = []

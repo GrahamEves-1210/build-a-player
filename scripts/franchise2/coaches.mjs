@@ -66,7 +66,7 @@ for (let y = 0; y < N; y++) {
   FR.openFA(F); while (F.fad) FR.nextFADay(F)
   FR.openDraft(F); FR.startNight(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
-  FR.closeDraft(F); FR.newSeason(F)
+  FR.closeDraft(F); FR.autoCamp(F); FR.newSeason(F)
   full('new season')
 }
 const st = JSON.stringify({ staff: F.staff, cpool: F.cpool, car: F.car }).length

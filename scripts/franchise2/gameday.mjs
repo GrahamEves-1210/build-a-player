@@ -104,7 +104,7 @@ for (let y = 0; y < N; y++) {
     FR.ageLeague(F); FR.openResign(F); for (const id of [...F.rs]) FR.resignOne(F, id, true)
     FR.openFA(F); for (let d = 0; d < 3; d++) FR.nextFADay(F)
     FR.openDraft(F); while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
-    FR.newSeason(F)
+    FR.autoCamp(F); FR.newSeason(F)
   }
 }
 // field goals: how long (the NFL's made kicks: about one in five from 50 and out, very few from 60)

@@ -42,7 +42,7 @@ function step(F) {
   if (F.stage === 'draft') {
     if (F.dr.ph === 'pre') { FR.startNight(F); return }
     if (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F); return }
-    FR.closeDraft(F); FR.newSeason(F)
+    FR.closeDraft(F); FR.autoCamp(F); FR.newSeason(F)
   }
 }
 const until = (F, f) => { for (let g = 0; g < 400 && !f(F); g++) step(F); if (!f(F)) throw new Error('stuck') }
