@@ -14,7 +14,7 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
   const [man, setMan] = useState(null)
   if (view === 'trades') return <Trades F={F} act={act} onBack={() => setView(null)} />
   const t = F.teams[F.team]
-  const rot = CAP_SIM.rotationOf(F, F.team)
+  const rot = CAP_SIM.rotationOf(F, F.team, { playoff: F.phase === 'playin' || F.phase === 'playoffs' })
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
   const order = depthOrder(F, F.team).filter(p => !p.tw)
   const hurt = t.r.filter(p => p.inj?.g && !p.tw)
@@ -107,7 +107,7 @@ function ManSheet({ F, act, id, owner, onClose }) {
         {car.length > 0 && (
           <div className="bx-scroll"><table className="nb-car">
             <thead><tr><th>SEASON</th><th>TM</th><th>G</th><th>PPG</th><th>RPG</th><th>APG</th></tr></thead>
-            <tbody>{car.map(c => <tr key={c.y + c.s}><td>{seasonText(c.y)}</td><td>{c.s}</td><td>{c.gp}</td><td>{(c.pts / c.gp).toFixed(1)}</td><td>{(c.reb / c.gp).toFixed(1)}</td><td>{(c.ast / c.gp).toFixed(1)}</td></tr>)}</tbody>
+            <tbody>{car.map(c => <tr key={c.y + c.s}><td>{c.y2 ? `${c.y}-${String(c.y2 + 1).slice(2)}` : seasonText(c.y)}</td><td>{c.s || `${c.y2 - c.y + 1} YRS`}</td><td>{c.gp}</td><td>{(c.pts / c.gp).toFixed(1)}</td><td>{(c.reb / c.gp).toFixed(1)}</td><td>{(c.ast / c.gp).toFixed(1)}</td></tr>)}</tbody>
           </table></div>
         )}
         <div className="nb-sheet-acts">

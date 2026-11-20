@@ -1,0 +1,2 @@
+import { makeSchedule, scheduleProblems } from '../../src/lib/franchise2/nba/schedule'
+for (const seed of ['a', 'b', 'c', 'd', 'e']) { const F = { seed, year: 2026 }; const t = Date.now(); makeSchedule(F); const P = scheduleProblems(F); const v = Object.values(P.b2b); console.log(seed, Date.now() - t, 'ms bad', P.bad.length, 'b2b', Math.min(...v), Math.max(...v), (v.reduce((a, b) => a + b) / 30).toFixed(1)) }

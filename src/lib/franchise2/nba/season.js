@@ -105,7 +105,7 @@ export function playOne(F, g, { playoff = false } = {}) {
 }
 function settle(F, g, res, { playoff = false } = {}) {
   g.hs = res.hs; g.as = res.as; if (res.ot) g.ot = res.ot
-  X.recordGame(F, g, res, { playoff })
+  X.recordGame(F, g, res, { playoff, ...(g.ser && { series: g.ser }) })
   for (const x of X.rollInjuries(F, g, res) ?? []) {
     const p = manOf(F, x.i)
     if (p && x.g >= 3) addNews(F, { k: 'inj', tag: 'INJURY', s: x.s, text: `${p.n} (${x.k}) is expected to miss ${x.g >= 14 ? `${Math.round(x.g / 3.5)} weeks` : `${x.g} games`}` })
@@ -171,7 +171,7 @@ export function finishMoment(F, out) {
   if (!P) return null
   const g = P.po != null ? F.po.cur.find(x => x.h === P.h && x.a === P.a && x.n === P.n) : F.sched.find(x => x.d === P.d && x.h === P.h && x.a === P.a)
   const G = P.G
-  if (out?.pts != null) X.possession(G, F.team, out)
+  if (out?.pts != null && out.them == null) X.possession(G, F.team, out)
   if (out?.them != null) X.possession(G, F.team === P.h ? P.a : P.h, { pts: out.them })
   const res = X.finishGame(G)
   F.pend = null
@@ -186,20 +186,11 @@ export function finishMoment(F, out) {
 // their season so far), the reserves by the coaches
 export function allStars(F) {
   F.asDone = 1
-  const val = x => (x.pts + 1.1 * x.reb + 1.4 * x.ast + 2 * (x.stl + x.blk)) / Math.max(1, x.gp) * Math.min(1, x.gp / 35)
-  const R = records(F)
-  const out = {}
-  for (const c of ['E', 'W']) {
-    const men = Object.entries(F.ss ?? {}).map(([i, x]) => ({ i: +i, x, s: teamOfMan(F, +i) })).filter(m => m.s && CONF_OF[m.s] === c)
-    men.forEach(m => { m.v = val(m.x) + pct(R[m.s]) * 4; m.p = manOf(F, m.i) })
-    men.sort((a, b) => b.v - a.v)
-    const st = [...men.filter(m => m.p.g === 'guard').slice(0, 2), ...men.filter(m => m.p.g === 'big' || m.p.p === 'SF').filter(m => !men.filter(z => z.p.g === 'guard').slice(0, 2).includes(m)).slice(0, 3)]
-    const rest = men.filter(m => !st.includes(m)).slice(0, 7)
-    out[c] = { st: st.map(m => m.i), res: rest.map(m => m.i) }
-    for (const m of [...st, ...rest]) (m.p.aw ??= []).push({ y: F.year, k: 'AS' })
-  }
+  const A = X.pickAllStars(F)
+  const out = { E: { st: A.st.E, res: A.E.filter(i => !A.st.E.includes(i)) }, W: { st: A.st.W, res: A.W.filter(i => !A.st.W.includes(i)) } }
+  for (const i of [...A.E, ...A.W]) { const p = manOf(F, i); if (p) (p.aw ??= []).push({ y: F.year, k: 'AS' }) }
   F.as = out
-  const mine = [...out.E.st, ...out.E.res, ...out.W.st, ...out.W.res].map(i => manOf(F, i)).filter(p => teamOfMan(F, p.i) === F.team)
+  const mine = [...A.E, ...A.W].map(i => manOf(F, i)).filter(p => p && teamOfMan(F, p.i) === F.team)
   addNews(F, { k: 'as', tag: 'ALL-STAR', text: `All-Star rosters are out${mine.length ? `: ${mine.map(p => p.n).join(' and ')} ${mine.length > 1 ? 'make it' : 'makes it'} for the ${nick(F.team)}` : ''}` })
   return out
 }
@@ -291,6 +282,7 @@ function poEnd(F, mine) {
       const S = P.S[0]
       P.champ = S.done; P.stage = 'done'; F.phase = 'done'
       P.fmvp = X.finalsMvp(F, S)
+      for (const C of P.all[2] ?? []) { const m = X.seriesMvp(F, C); const p = m != null && manOf(F, m); if (p) (p.aw ??= []).push({ y: F.year, k: C.c === 'E' ? 'ECF' : 'WCF' }) }
       const fm = manOf(F, P.fmvp)
       if (fm) (fm.aw ??= []).push({ y: F.year, k: 'FMVP' })
       for (const p of F.teams[S.done].r) (p.aw ??= []).push({ y: F.year, k: 'CHAMP' })

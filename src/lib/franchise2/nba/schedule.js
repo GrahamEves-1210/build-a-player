@@ -84,6 +84,7 @@ function place(pool, nights, R, last) {
   const played = Object.fromEntries(SHORTS.map(s => [s, []]))
   const out = []
   const lastOf = s => played[s][played[s].length - 1]
+  const b2b = Object.fromEntries(SHORTS.map(s => [s, 0]))
   for (let k = 0; k < nights.length; k++) {
     const d = nights[k]
     const share = (k + 1) / nights.length
@@ -91,7 +92,9 @@ function place(pool, nights, R, last) {
     const want = Math.max(2, Math.min(15, Math.round(left.length / (nights.length - k) * DOW[d % 7] + (R.u() - 0.5) * 3)))
     const yest = s => (lastOf(s) === d - 1 ? 1 : 0)
     const can = s => !(lastOf(s) === d - 1 && played[s][played[s].length - 2] === d - 2)
-    const score = g => behind(g.h) + behind(g.a) - 0.05 * (yest(g.h) + yest(g.a)) + R.u() * 0.5
+    // (a back-to-back costs a little; a team with few so far takes one sooner, one with 15 not at all)
+    const pen = t => (yest(t) ? (b2b[t] >= 15 ? 4 : b2b[t] < 12 * share ? -0.25 : 0.05) : 0)
+    const score = g => behind(g.h) + behind(g.a) - pen(g.h) - pen(g.a) + R.u() * 0.5
     const cand = left.filter(g => can(g.h) && can(g.a)).map(g => [score(g), g]).sort((x, y) => y[0] - x[0])
     const used = new Set()
     let n = 0
@@ -99,7 +102,7 @@ function place(pool, nights, R, last) {
       if (n >= want) break
       if (used.has(g.h) || used.has(g.a)) continue
       used.add(g.h); used.add(g.a)
-      played[g.h].push(d); played[g.a].push(d)
+      for (const t of [g.h, g.a]) { if (lastOf(t) === d - 1) b2b[t]++; played[t].push(d) }
       out.push({ d, h: g.h, a: g.a, k: g.k })
       left.splice(left.indexOf(g), 1); n++
     }
@@ -130,7 +133,7 @@ export function scheduleProblems(F) {
     const D = x.days.sort((a, b) => a - b)
     for (let i = 1; i < D.length; i++) { if (D[i] === D[i - 1]) bad.push(`${s} twice on day ${D[i]}`); if (D[i] === D[i - 1] + 1) x.b2b++ }
     for (let i = 2; i < D.length; i++) if (D[i] === D[i - 2] + 2 && D[i - 1] === D[i] - 1) bad.push(`${s} three nights in a row at ${D[i]}`)
-    if (x.b2b > 20 || x.b2b < 7) bad.push(`${s} has ${x.b2b} back-to-backs`)
+    if (x.b2b > 18 || x.b2b < 11) bad.push(`${s} has ${x.b2b} back-to-backs`)
   }
   for (const g of F.sched) if (g.d >= F.asb[0] && g.d <= F.asb[1]) bad.push(`game in the All-Star break ${g.h}-${g.a}`)
   return { bad, b2b: Object.fromEntries(SHORTS.map(s => [s, n[s].b2b])) }

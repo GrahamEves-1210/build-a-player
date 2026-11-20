@@ -3,8 +3,9 @@
 // branches land these come from stubs.js; at the merge each line points at its real file.
 export {
   rotationOf, simGame, recordGame, rollInjuries, tickInjuries, restFor, leaders, seasonAwards, finalsMvp, ageLeague,
-  startGame, playTo, possession, finishGame,
-} from './stubs'
+  startGame, playTo, possession, finishGame, seriesMvp, updateRecords, seedPotential, prospect, outText,
+  allStars as pickAllStars,
+} from './sim'
 export {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, rookieScale, payroll, capSheet, dealOnLoad, canSign, signMan, rookieDeal,
   seasonEndDeals, resignOffer, askOf, cpuOffseason, faDay, cutMan, legalRoster,

@@ -24,10 +24,9 @@ export function closeSeason(F) {
   const aw = X.seasonAwards(F) ?? {}
   const who = i => { const p = manOf(F, i); return p ? { i, n: p.n, s: teamOfMan(F, i) } : null }
   const A = {}
-  for (const k of ['MVP', 'ROY', 'DPOY', '6MOY', 'MIP']) if (aw[k] != null) { A[k] = who(aw[k]); const p = manOf(F, aw[k]); if (p) (p.aw ??= []).push({ y: F.year, k }) }
+  for (const k of ['MVP', 'ROY', 'DPOY', '6MOY', 'MIP', 'CLUTCH']) if (aw[k] != null) { A[k] = who(aw[k]); const p = manOf(F, aw[k]); if (p) (p.aw ??= []).push({ y: F.year, k }) }
   A.ALL = (aw.ALL ?? []).map((team, k) => team.map(i => { const p = manOf(F, i); if (p) (p.aw ??= []).push({ y: F.year, k: `ALL${k + 1}` }); return who(i) }).filter(Boolean))
-  if (aw.ALLDEF) A.ALLDEF = aw.ALLDEF.map(t => t.map(who).filter(Boolean))
-  if (aw.ROOKIE) A.ROOKIE = aw.ROOKIE.map(t => t.map(who).filter(Boolean))
+  for (const [key, tag] of [['ALLDEF', 'DEF'], ['ROOKIE', 'RK']]) if (aw[key]) A[key] = aw[key].map((t, k) => t.map(i => { const p = manOf(F, i); if (p) (p.aw ??= []).push({ y: F.year, k: `${tag}${k + 1}` }); return who(i) }).filter(Boolean))
   A.FMVP = F.po?.fmvp != null ? who(F.po.fmvp) : null
   // the GM's year
   const me = F.team, r = R[me]
@@ -36,14 +35,32 @@ export function closeSeason(F) {
   // every man's season onto his career line (regular season; the playoffs kept beside it)
   for (const s of SHORTS) for (const p of F.teams[s].r) {
     const x = F.ss?.[p.i], y = F.ps?.[p.i]
-    if (x?.gp) (p.car ??= []).push({ y: F.year, s: x.s ?? s, ...strip(x), ...(y?.gp ? { po: strip(y) } : null) })
+    if (x?.gp) { (p.car ??= []).push(carRow(F.year, x.s ?? s, x, y)); foldCareer(p) }
   }
   for (const k of ['MVP', 'ROY', 'DPOY', '6MOY', 'MIP']) if (A[k]) addNews(F, { k: 'award', tag: k === '6MOY' ? 'SIXTH MAN' : k, s: A[k].s, text: `${A[k].n} (${nick(A[k].s)}) is the ${AWARD_FULL[k]}` })
+  for (const x of X.updateRecords(F) ?? []) addNews(F, { tag: 'RECORD', ...x, k: 'record' })
   F.phase = 'off'
   F.off = { step: 'awards' }
 }
-const strip = x => { const o = { ...x }; delete o.s; return o }
-export const AWARD_FULL = { MVP: 'Most Valuable Player', ROY: 'Rookie of the Year', DPOY: 'Defensive Player of the Year', '6MOY': 'Sixth Man of the Year', MIP: 'Most Improved Player', FMVP: 'Finals MVP' }
+// a season on a man's career line: the counting stats only (C's extras, the season highs and the clutch points, stay
+// in F.ss for the season), and the playoffs as games, points, rebounds and assists. Kept small: ~500 men carry them.
+export const CAR_K = ['gp', 'min', 'pts', 'reb', 'ast', 'stl', 'blk', 'fgm', 'fga', 'tpm']
+// a long career keeps its last six seasons as rows; the ones before fold into one line ({ y, y2, s: '' }: the span)
+export function foldCareer(p, keep = 6) {
+  const c = p.car ?? []
+  if (c.length <= keep) return
+  const old = c.slice(0, c.length - keep + 1)
+  const f = { y: old[0].y, y2: old[old.length - 1].y2 ?? old[old.length - 1].y, s: '' }
+  for (const k of CAR_K) f[k] = old.reduce((a, r) => a + (r[k] ?? 0), 0)
+  p.car = [f, ...c.slice(c.length - keep + 1)]
+}
+export function carRow(y, s, x, po = null) {
+  const r = { y, s }
+  for (const k of CAR_K) r[k] = Math.round(x[k] ?? 0)
+  if (po?.gp) r.po = [po.gp, Math.round(po.pts ?? 0), Math.round(po.reb ?? 0), Math.round(po.ast ?? 0)]
+  return r
+}
+export const AWARD_FULL = { CLUTCH: 'Clutch Player of the Year', MVP: 'Most Valuable Player', ROY: 'Rookie of the Year', DPOY: 'Defensive Player of the Year', '6MOY': 'Sixth Man of the Year', MIP: 'Most Improved Player', FMVP: 'Finals MVP' }
 function runnerUp(F) { const S = F.po?.all?.[3]?.[0]; return S ? (S.done === S.hi ? S.lo : S.hi) : null }
 export function seedOf(F, s) {
   const P = F.po
@@ -77,12 +94,11 @@ function enter(F, step) {
   if (step === 'lottery') { runLottery(F); scoutSpring(F) }
   if (step === 'draft') openDraft(F)
   if (step === 'resign') {
+    X.tickInjuries(F, 130)   // (the summer: about four months off)
     const A = X.ageLeague(F) ?? {}
-    for (const p of A.retired ?? []) {
-      F.retired = [...(F.retired ?? []), { i: p.i, n: p.n, ag: p.ag, s: p.was ?? null, car: p.car ?? [], aw: p.aw ?? [], b: p.b }]
-      if ((p.aw ?? []).some(a => a.k === 'MVP' || a.k === 'ALL1') || (p.car?.length ?? 0) >= 12) addNews(F, { k: 'retire', tag: 'RETIRES', text: `${p.n} announces his retirement after ${p.car?.length ?? 0} seasons` })
-    }
-    for (const x of A.news ?? []) addNews(F, x)
+    // (ageLeague files the retired men in F.retired and writes their news; the wall keeps a man's totals, not his rows)
+    for (const x of A.news ?? []) addNews(F, { tag: 'RETIRES', ...x })
+    F.retired = (F.retired ?? []).map(retiredRow).slice(-250)
     const gone = X.seasonEndDeals(F) ?? []
     F.off.mine = gone.filter(p => p.was === F.team).map(p => p.i)
     F.off.kept = []
@@ -129,6 +145,23 @@ export function faNext(F) {
 // camp: the GM's roster has to be legal before the season (the CPU teams make theirs legal themselves)
 export const campCheck = F => X.legalRoster(F, F.team, { season: true })
 
+// a retired man, kept for the history page: his name, team, age, seasons, totals and honours (not every season's row)
+export function retiredRow(r) {
+  if (!r.car) return r
+  const t = { gp: 0, pts: 0, reb: 0, ast: 0 }
+  for (const c of r.car) for (const k in t) t[k] += c[k] ?? 0
+  const aw = (r.aw ?? []).filter(a => !['AS', 'CHAMP'].includes(a.k)).map(a => `${a.y}${a.k}`)
+  const as = (r.aw ?? []).filter(a => a.k === 'AS').length, ch = (r.aw ?? []).filter(a => a.k === 'CHAMP').length
+  return { i: r.i, n: r.n, ag: r.ag, s: r.s ?? null, yrs: r.yrs ?? r.car.length, o: r.o, y: r.car.at(-1)?.y ?? null, t: [t.gp, t.pts, t.reb, t.ast], ...(aw.length && { aw }), ...(as && { as }), ...(ch && { ch }), ...(r.b != null && { b: r.b }) }
+}
+// the street: the best 90 men left unsigned stay on the market; the rest leave the league (made-up men simply go, a
+// real one goes onto the retired list)
+export function pruneStreet(F) {
+  const fa = (F.fa ?? []).slice().sort((a, b) => b.o - a.o)
+  for (const p of fa.slice(55)) if (!p.gn) F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs: p.ys })]
+  F.fa = fa.slice(0, 55)
+  F.retired = (F.retired ?? []).slice(-250)
+}
 export function newSeason(F) {
   // the CPU rosters: legal (cut the lowest men past 15, fill short rosters off the street, then made-up men)
   const R = rngOf(`${F.seed}-camp-${F.year}`)
@@ -142,6 +175,9 @@ export function newSeason(F) {
     fillTeam(F, s, R, taken, { twoWay: 2 })
     for (const p of t.r) if (p.$ == null) X.dealOnLoad(F, p, s)
   }
+  pruneStreet(F)
+  F.drafts = Object.fromEntries(Object.entries(F.drafts ?? {}).filter(([y]) => +y > F.year - 3))
+  F.picks = (F.picks ?? []).filter(p => p.y > F.year + 1)
   F.year++
   F.phase = 'season'
   F.off = null

@@ -47,17 +47,11 @@ export function makeClass(F) {
   const taken = new Set([...leagueNames(F), ...realNames()])
   const out = []
   for (let k = 0; k < CLASS_N; k++) {
-    // talent by where he'd go: a few franchise prospects, a deep middle, a long tail of second-rounders
-    const t = k / CLASS_N
-    const pk = clamp(62, 97, Math.round(96 - 30 * Math.pow(t + 0.01, 0.6) + R.n() * 2.4))
+    // the man (aging.js prospect: his ceiling by where he'd go, a few far better than their slot; his age, body and
+    // ratings now); the international men are a little younger
     const intl = R.chance(0.24)
-    const ag = intl ? R.int(19, 21) : R.wpick([46, 22, 16, 16]) + 19
-    const spot = SPOT_W[R.wpick(SPOT_W.map(x => x[1]))][0]
-    // now: the gap to his ceiling by age (a 19-year-old is furthest off it)
-    const gap = clamp(4, 24, Math.round((23 - ag) * 3.2 + 6 + R.n() * 3))
-    const o = clamp(55, 82, pk - gap)
-    const a = attrsFor(R, spot, o)
-    const g = groupOfSpot(spot)
+    const x = X.prospect(R, { rank: k + 1, ...(intl && { ag: R.int(19, 21) }) })
+    const { p: spot, g, a, ag, pk } = x
     let n, c
     if (intl) {
       const [cty, club] = R.pick(ABROAD)
@@ -65,12 +59,10 @@ export function makeClass(F) {
       c = `${club} (${cty})`
     } else { n = nameFor(R, 'nba', { taken, real: realNames() }); c = R.pick(COLLEGES) }
     taken.add(n)
-    const p = { i: F.nid++, n, p: spot, g, o: ovrOfAttrs(g, a), a, ag, pk, ht: R.int(...HT[spot]), wt: R.int(...WT[spot]), c, yr: ag - 18 }
-    // his true ceiling sits somewhere in what the scouts first see; GEM: he'll beat it, BUST: he won't get near it
-    p.tg = R.chance(0.12) ? 'GEM' : R.chance(0.14) ? 'BUST' : 'SOLID'
-    if (p.tg === 'GEM') p.pk = clamp(64, 99, p.pk + R.int(4, 8))
-    if (p.tg === 'BUST') p.pk = Math.max(p.o + 2, p.pk - R.int(5, 10))
-    p.seen = clamp(60, 99, Math.round(pk + R.n() * 4))   // the consensus read of his ceiling (what the board ranks by)
+    const p = { i: F.nid++, n, p: spot, g, o: ovrOfAttrs(g, a), a, ag, pk: Math.max(pk, ovrOfAttrs(g, a)), ht: x.ht, wt: x.wt, c, yr: ag - 18 }
+    // what the scouts see is his ceiling give or take; GEM: he's well past that read, BUST: well short of it
+    p.seen = clamp(55, 99, Math.round(p.pk + R.n() * 3.5))   // the consensus read of his ceiling (what the board ranks by)
+    p.tg = p.pk >= p.seen + 4 ? 'GEM' : p.pk <= p.seen - 4 ? 'BUST' : 'SOLID'
     p.w = R.int(3, 6)                                     // how wide his range shows before he's scouted
     p.sc = 0
     out.push(p)
