@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
-import { sfx } from '../../../lib/juice'
+import { sfx, haptic } from '../../../lib/juice'
+import { teamWords } from '../../../lib/franchise2/nba/news'
 import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar } from '../kit'
 import { money } from './NbaHub'
 
@@ -84,7 +85,11 @@ function ManSheet({ F, act, id, owner, onClose }) {
     ;[ids[j], ids[to]] = [ids[to], ids[j]]
     X.teams[X.team].rot = ids
   })
-  const dead = p.tw ? 0 : (p.$ ?? 0) * (p.y ?? 1)
+  const cost = CAP_SIM.cutCost(F, p), costS = CAP_SIM.cutCost(F, p, { stretch: true })
+  const dead = cost?.total ?? cost?.$ ?? (typeof cost === 'number' ? cost : 0)
+  const canStretch = costS && (costS.per ?? costS.$) != null && (costS.years ?? costS.y ?? 0) > (cost?.years ?? cost?.y ?? 0)
+  const extOk = CAP_SIM.extensionOk(F, F.team, p)
+  const ext = extOk?.ok ? CAP_SIM.extensionAsk(F, F.team, p) : null
   const car = p.car ?? []
   return createPortal(
     <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -98,6 +103,7 @@ function ManSheet({ F, act, id, owner, onClose }) {
           {p.inj?.g && <span><small>Injury</small><b>{p.inj.k} · {p.inj.g} G</b></span>}
         </div>
         {ppg(F, p) && <p className="nb-sheet-line">{seasonText(F.year)}: {ppg(F, p, true)}</p>}
+        {ext && <div className="nb-sheet-acts"><button type="button" onClick={() => { const r = act(X => CAP_SIM.extendMan(X, X.team, X.teams[X.team].r.find(x => x.i === id), ext)); if (r?.ok !== false) { act(X => addNews(X, { k: 'ext', tag: 'EXTENSION', s: X.team, text: `${p.n} signs a ${ext.y}-year extension with the ${nick(X.team)}` })); sfx('claim') } else sfx('deny') }}>Extend him: {money(ext.$)} × {ext.y}</button></div>}
         {!p.tw && (
           <div className="nb-sheet-acts">
             <button type="button" disabled={k <= 0} onClick={() => { move(-1); sfx('tap') }}>Move up</button>
@@ -112,7 +118,9 @@ function ManSheet({ F, act, id, owner, onClose }) {
         )}
         <div className="nb-sheet-acts">
           {!sure ? <button type="button" className="is-danger" onClick={() => setSure(true)}>Waive him</button>
-            : <><span className="nb-sure">{dead > 0 ? `${money(dead)} stays on the books` : 'Waive him?'}</span><button type="button" onClick={() => setSure(false)}>Keep</button><button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived ${p.n}` }) }); sfx('deny'); onClose() }}>Waive</button></>}
+            : <><span className="nb-sure">{dead > 0 ? `${money(dead)} stays on the books` : 'Waive him?'}</span><button type="button" onClick={() => setSure(false)}>Keep</button>
+              <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived ${p.n}` }) }); sfx('deny'); onClose() }}>Waive</button>
+              {canStretch && <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id, { stretch: true }); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived and stretched ${p.n}` }) }); sfx('deny'); onClose() }}>Waive and stretch</button>}</>}
         </div>
       </div>
     </div>,
@@ -150,19 +158,20 @@ function Trades({ F, act, onBack }) {
   const [s0, sel, set, psel, pset] = S[side]
   const sum = (s, ids) => ids.reduce((x, i) => x + (men(s).find(p => p.i === i)?.$ ?? 0), 0)
   const list = (s, ids, pids) => [...ids.map(i => men(s).find(p => p.i === i)?.n), ...pids.map(i => pickText(F, F.picks[i]))].filter(Boolean)
+  const done = r => { for (const x of r?.news ?? []) addNews(F, x); setGa([]); setGb([]); setPa([]); setPb([]); sfx('claim'); haptic('success') }
   const ask = () => {
-    const a = CAP_SIM.cpuAnswer(F, deal)
-    setAns(a)
-    if (a?.yes) {
-      act(X => {
-        const nm = (s, ids) => ids.map(i => X.teams[s].r.find(p => p.i === i)?.n).filter(Boolean).join(' and ')
-        const txt = `The ${nick(X.team)} trade ${nm(X.team, ga) || 'draft picks'} to the ${nick(them)} for ${nm(them, gb) || 'draft picks'}`
-        CAP_SIM.doTrade(X, deal)
-        addNews(X, { k: 'trade', tag: 'TRADE', s: X.team, text: txt })
-      })
-      sfx('claim'); setGa([]); setGb([]); setPa([]); setPb([])
-    } else sfx('deny')
+    const r = act(X => CAP_SIM.proposeTrade(X, deal))
+    setAns(r)
+    if (r?.ok) done(r); else sfx('deny')
   }
+  const takeCounter = () => {
+    const c = ans?.counter
+    if (!c || !CAP_SIM.checkTrade(F, c).ok) return
+    const r = act(X => CAP_SIM.doTrade(X, c))
+    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms` })
+    done(r)
+  }
+  const g = any && chk?.ok ? CAP_SIM.gauge(F, deal) : null
   return (
     <div className="nb-trades">
       <BackBar label="Teams" title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); reset() }} />
@@ -178,19 +187,32 @@ function Trades({ F, act, onBack }) {
         {S.map(([s], k) => <button key={s} type="button" role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); sfx('tap') }}>{TEAM[s].nick}</button>)}
       </div>
       <section className="nb-tside">
-        {men(s0).sort((x, y) => y.o - x.o).map(p => (
-          <button key={p.i} type="button" className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)}>
-            <b>{p.n}</b><span>{p.p} · {p.o} · {p.ag}</span><em>{dealText(p)}</em>
-          </button>
-        ))}
+        {men(s0).sort((x, y) => y.o - x.o).map(p => {
+          const no = CAP_SIM.whyNot(F, s0, p)
+          return (
+            <button key={p.i} type="button" disabled={!!no} className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)}>
+              <b>{p.n}</b><span>{p.p} · {p.o} · {p.ag}</span><em>{no ? teamWords(no) : dealText(p)}</em>
+            </button>
+          )
+        })}
         <Fold title="Draft picks" right={`${psel.length || ''}`}>{pickIdx(s0).map(([p, i]) => <button key={i} type="button" className={`nb-tman${psel.includes(i) ? ' is-on' : ''}`} onClick={() => tog(psel, pset, i)}><b>{pickText(F, p)}</b></button>)}</Fold>
       </section>
       <ActionBar className="nb-tact">
-        {chk && !chk.ok && <p className="nb-why">{chk.why}</p>}
-        {ans && !ans.yes && <p className="nb-why">{ans.why ?? `The ${TEAM[them].nick} pass`}</p>}
-        {ans?.yes && <p className="nb-ok">Deal done</p>}
+        {g && <div className="nb-gauge" aria-label="How the offer looks to them"><span>Your side</span><i><b style={{ left: `${50 + g.lean * 50}%` }} /></i><span>Their side</span></div>}
+        {chk && !chk.ok && <p className="nb-why">{teamWords(chk.why)}</p>}
+        {ans && !ans.ok && <p className="nb-why">{teamWords(ans.text ?? `The ${TEAM[them].nick} pass`)}</p>}
+        {ans?.counter && <div className="nb-counter"><p>{counterText(F, ans.counter)}</p><button type="button" className="nb-tman is-on" onClick={takeCounter}>Take the counter</button></div>}
+        {ans?.ok && <p className="nb-ok">{teamWords(ans.text ?? 'Deal done')}</p>}
         <Go disabled={!chk?.ok} onClick={ask}>Propose the trade</Go>
       </ActionBar>
     </div>
   )
+}
+
+// a counter, the way the other GM says it: what they'd send and what they want back
+function counterText(F, c) {
+  const nm = (s, ids) => ids.map(i => F.teams[s].r.find(p => p.i === i)?.n).filter(Boolean)
+  const pk = list => (list ?? []).map(e => (typeof e === 'number' ? F.picks[e] : F.picks[e?.i])).filter(Boolean).map(p => pickText(F, p))
+  const they = [...nm(c.b, c.gb), ...pk(c.pb)], you = [...nm(c.a, c.ga), ...pk(c.pa)]
+  return `Their counter: ${they.join(', ') || 'nothing'} for ${you.join(', ') || 'nothing'}`
 }

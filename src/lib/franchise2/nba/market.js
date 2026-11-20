@@ -326,7 +326,7 @@ export const faDone = F => faDayOf(F) >= FA_DAYS
 export function cpuOffseason(F, { make = null } = {}) {
   const news = []
   while (!faDone(F)) news.push(...faDay(F, faDayOf(F) + 1))
-  news.push(...summerTrades(F, 3))
+  news.push(...summerTrades(F, 8))
   const year = capYear(F)
   news.push(...lateSignings(F))
   const R = rngOf(`${F.seed}-${year}-camp`)

@@ -2,7 +2,7 @@
 // GM's own game can stop for a clutch moment (moments.js), injuries and rest go through the sim's seams. Then the
 // play-in (7 v 8, 9 v 10, the loser of the first against the winner of the second) and four best-of-seven rounds,
 // 2-2-1-1-1, the better record at home in games 1, 2, 5 and 7.
-import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder } from './league'
+import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder, makeGen, thinSpot } from './league'
 import { b2bOf, dateText } from './schedule'
 import { addNews } from './news'
 import { scoutTick } from './draft'
@@ -130,8 +130,16 @@ function endDay(F, { mine = null, news = [] } = {}) {
   // the trade deadline, the All-Star break: the wire says so the night they come
   if (was <= F.ddl && F.day > F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
   if (F.day >= F.asb[0] && !F.asDone) allStars(F)
-  for (const x of X.cpuDeadline(F, was) ?? []) addNews(F, x)
-  if (!F.sched.some(g => g.hs == null)) { F.phase = 'post'; addNews(F, { k: 'end', tag: 'FINAL', text: `The regular season is over` }) }
+  const dl = X.cpuDeadline(F, was) ?? []
+  for (const x of dl) addNews(F, x)
+  if (dl.length) X.cpuFill(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-fill-${F2.year}-${F2.day}-${s}`)) })
+  if (!F.sched.some(g => g.hs == null)) {
+    F.phase = 'post'
+    addNews(F, { k: 'end', tag: 'FINAL', text: `The regular season is over` })
+    // the luxury tax: every team over the line pays its bill now (cap.js assessTax); the repeaters pay more
+    const T = X.assessTax(F) ?? []
+    if (T.length) addNews(F, { k: 'tax', tag: 'LUXURY TAX', text: `${T.length} ${T.length === 1 ? 'team pays' : 'teams pay'} the luxury tax: ${T.slice().sort((a, b) => b.bill - a.bill).slice(0, 3).map(x => `the ${nick(x.s)} $${x.bill.toFixed(1)} million${x.repeater ? ' (repeater)' : ''}`).join(', ')}` })
+  }
   return { mine, news }
 }
 // sim nights to a day (not playing it), no moments

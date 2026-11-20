@@ -197,9 +197,9 @@ export function closeDraft(F) {
     for (const k of ['seen', 'w', 'sc', 'rank', 'dt', 'tg', 'yr']) delete keep[k]
     keep.ys = 0
     keep.ag = p.ag - 1   // (his age on draft night; the summer's ageLeague makes it his rookie-season age)
-    if (m.r === 2 && t.r.filter(x => !x.tw).length >= ROSTER_MAX + 3 && t.r.filter(x => x.tw).length < 3) { keep.tw = 1; keep.$ = 0.6; keep.y = 2 }
-    else X.rookieDeal(F, keep, { n: m.n, r: m.r })
     t.r.push(keep)
+    // (his deal: the scale for a first-rounder; a second-rounder a standard deal or two-way, the cap engine's call)
+    X.rookieDeal(F, keep, { n: m.n, r: m.r })
   }
   F.drafts = { ...(F.drafts ?? {}), [F.year + 1]: made.map(m => ({ ...m, n2: F.dc.find(x => x.i === m.i)?.n })) }
   const top = made.slice(0, 3).map(m => `${m.n}. ${nick(m.t)}: ${F.dc.find(x => x.i === m.i)?.n}`)

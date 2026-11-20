@@ -6,7 +6,7 @@
 //           (B's seasonEndDeals); the GM's own free agents: re-sign or let go (B's resignOffer)
 //   fa      free agency (B: askOf, canSign, signMan, faDay; the other 29 teams at the end, cpuOffseason)
 //   camp    the GM's roster down to 15 standard and 3 two-way contracts (B's legalRoster, cutMan), then a new season
-import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames } from './league'
+import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeGen, thinSpot } from './league'
 import { records, recText, confOrder, pct } from './season'
 import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring } from './draft'
@@ -100,6 +100,7 @@ function enter(F, step) {
     for (const x of A.news ?? []) addNews(F, { tag: 'RETIRES', ...x })
     F.retired = (F.retired ?? []).map(retiredRow).slice(-250)
     const gone = X.seasonEndDeals(F) ?? []
+    for (const x of gone.news ?? []) addNews(F, x)
     F.off.mine = gone.filter(p => p.was === F.team).map(p => p.i)
     F.off.kept = []
   }
@@ -108,7 +109,7 @@ function enter(F, step) {
 function leave(F, step) {
   if (step === 'draft') { while (F.dn && F.dn.at < 60) { const { makePick } = DRAFT; makePick(F) } closeDraft(F) }
   if (step === 'fa') {
-    for (const x of X.cpuOffseason(F) ?? []) addNews(F, x)
+    for (const x of X.cpuOffseason(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-camp-${F2.year}-${s}`)) }) ?? []) addNews(F, x)
   }
 }
 import * as DRAFT from './draft'

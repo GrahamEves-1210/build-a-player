@@ -28,6 +28,7 @@ for (let y = 0; y < SEASONS; y++) {
   }
   const S = F.po.all
   for (const rd of S) for (const x of rd) if (Math.max(x.wh, x.wl) !== 4 || x.g.length > 7) flag(`series ${x.hi}-${x.lo} ${x.wh}-${x.wl}`)
+  console.log(`  trades so far ${F.trn ?? 0}, taxpayers ${(F.taxl?.paid ?? []).length}`)
   console.log(`  champ ${F.po.champ}, finals ${S[3][0].hi}-${S[3][0].lo} ${S[3][0].wh}-${S[3][0].wl}, seeds E ${F.po.final.E.join(' ')}`)
   for (const k of ['pts', 'reb', 'ast']) { const L = N.CAP_SIM.leaders(F, k, 1); console.log(`  leader ${k}: ${L[0]?.v}`) }
   N.closeSeason(F)

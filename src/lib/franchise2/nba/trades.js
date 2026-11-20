@@ -46,7 +46,7 @@
 import { rngOf, clamp, r1 } from '../rng'
 import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
-import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf } from './contracts'
+import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf, cutMan } from './contracts'
 
 const shortsOf = F => Object.keys(F.teams ?? {})
 // (the league's own deals collect their wire items here while cpuDeadline / salaryDumps run)
@@ -265,14 +265,14 @@ export function teamSide(F, s, inn, out) {
 export function matchLimit(F, s, out, after, year = capYear(F)) {
   const ix = capOf(year) / 136.021
   if (after > apron2Of(year)) return out
-  if (after > apron1Of(year)) return out * 1.1
+  if (after > apron1Of(year)) return out   // (over the first apron: no more back than goes out, the 2023 CBA)
   const t1 = 7.5 * ix, t2 = 29 * ix
   if (out <= t1) return out * 2 + 0.25 * ix
   if (out <= t2) return out + 7.5 * ix
   return out * 1.25 + 0.25 * ix
 }
 // one team's side of the rules: { ok, why }
-function sideRules(F, s, outMen, inMen, outPk, inPk) {
+function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
   const year = capYear(F)
   const team = F.teams[s]
   const free = F.noCap && s === F.team
@@ -298,7 +298,7 @@ function sideRules(F, s, outMen, inMen, outPk, inPk) {
   // rosters
   const st = standardOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => !p.tw).length
   const tw = twoWaysOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => p.tw).length
-  if (F.phase === 'off' ? st + tw > OFF_MAX : st > ROSTER_MAX) return { ok: false, why: `The ${s} would have too many players (${F.phase === 'off' ? '21 in the offseason' : '15 standard contracts'})`, k: 'roster' }
+  if (F.phase === 'off' ? st + tw > OFF_MAX : st > ROSTER_MAX + cuts) return { ok: false, why: `The ${s} would have too many players (${F.phase === 'off' ? '21 in the offseason' : '15 standard contracts'})`, k: 'roster' }
   if (F.phase === 'season' && st < 13) return { ok: false, why: `The ${s} would be under 13 players`, k: 'roster' }
   if (tw > TWO_WAY_MAX) return { ok: false, why: `The ${s} would have more than 3 two-way players`, k: 'roster' }
   // frozen pick (over the second apron: its first seven drafts out)
@@ -361,9 +361,9 @@ export function checkTrade(F, deal) {
     }
   }
   const pk = (list) => (list ?? []).filter(e => e?.swap == null).map(e => F.picks[pIdx(e)])
-  const ra = sideRules(F, a, am, bm, pk(deal.pa), pk(deal.pb))
+  const ra = sideRules(F, a, am, bm, pk(deal.pa), pk(deal.pb), deal.cut?.[a] ?? 0)
   if (!ra.ok) return ra
-  const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa))
+  const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa), deal.cut?.[b] ?? 0)
   if (!rb.ok) return rb
   const P = picksAfter(F, deal)
   for (const s of [a, b]) if (!stepienOk(F, s, P)) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
@@ -550,8 +550,9 @@ export function proposeTrade(F, deal) {
 // sides; returns [men] or null
 function fillerFor(F, s, need, avoid = new Set(), max = 3) {
   const year = capYear(F)
-  const top7 = new Set(F.teams[s].r.filter(p => !p.tw).sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 7).map(p => p.i))
-  const pool = F.teams[s].r.filter(p => !p.tw && !top7.has(p.i) && !avoid.has(p.i) && !whyNot(F, s, p) && hitOf(p, year, year) > 0).sort((x, y) => manValue(F, x) - manValue(F, y))
+  // (the core stays: the team's best four; a deadline deal moves the rotation's mid-salary men, the way the league's do)
+  const top7 = new Set(F.teams[s].r.filter(p => !p.tw).sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 4).map(p => p.i))
+  const pool = F.teams[s].r.filter(p => !p.tw && !top7.has(p.i) && !avoid.has(p.i) && !whyNot(F, s, p) && hitOf(p, year, year) > 0).sort((x, y) => (need > 12 ? hitOf(y, year, year) - hitOf(x, year, year) : 0) || manValue(F, x) - manValue(F, y))
   const out = []
   let sum = 0
   for (const p of pool) {
@@ -574,7 +575,7 @@ function picksCover(F, s, want, to) {
 // one deal: rebuilding team a's veteran to contender b, for filler and picks (both sides by their own book)
 function tryBuy(F, R, a, b) {
   const year = capYear(F)
-  const vets = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.ag ?? 0) >= 26 && rankOf(F, p) <= 150 && manValue(F, p) > 5 && !(p.tx && p.tx[1] === lyOf(F)))
+  const vets = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.ag ?? 0) >= 25 && rankOf(F, p) <= 230 && manValue(F, p) > 2 && !(p.tx && p.tx[1] === lyOf(F)))
   for (const p of R.shuffle(vets).slice(0, 3)) {
     // (the contender's filler, enough to match; none needed if it has the room)
     const sal = hitOf(p, year, year)
@@ -584,10 +585,12 @@ function tryBuy(F, R, a, b) {
       // smallest out that matches: invert the brackets (out such that limit(out) >= sal)
       let lo = 0, hi = sal * 1.2
       for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (matchLimit(F, b, m, payB - m + sal, year) >= sal) hi = m; else lo = m }
-      fill = fillerFor(F, b, hi, new Set(), 3)
+      fill = fillerFor(F, b, hi, new Set(), F.phase === 'season' ? 2 + (standardOf(F.teams[a]).length < 15 ? 1 : 0) : 4)
       if (!fill) continue
     }
-    const base = { a: b, b: a, ga: fill.map(x => x.i), gb: [p.i], pa: [], pb: [] }
+    const cutN = F.phase === 'season' ? Math.max(0, standardOf(F.teams[a]).length - 1 + fill.length - ROSTER_MAX) : 0
+    if (cutN > 2) continue
+    const base = { a: b, b: a, ga: fill.map(x => x.i), gb: [p.i], pa: [], pb: [], ...(cutN && { cut: { [a]: cutN } }) }
     if (!checkTrade(F, base).ok) continue
     // the rebuilder's price, in the contender's picks
     const sideA = teamSide(F, a, { pl: fill, pk: [] }, { pl: [p], pk: [] })
@@ -603,6 +606,8 @@ function tryBuy(F, R, a, b) {
     const g = gauge(F, deal)
     if (g.a < g.b * 0.75 || g.b < g.a * 0.75) continue
     doTrade(F, deal, { user: false })
+    // (the seller makes room: its lowest-paid, least-used men waived, the way a team clears a spot after a deadline deal)
+    if (cutN) for (const m of standardOf(F.teams[a]).filter(x => !deal.ga.includes(x.i)).sort((x, y) => (x.$ ?? 0) - (y.$ ?? 0) || (x.o ?? 0) - (y.o ?? 0)).slice(0, cutN)) cutMan(F, a, m.i)
     return true
   }
   return false
@@ -615,9 +620,10 @@ export function cpuDeadline(F, day = F.day ?? 0) {
   const R = rngOf(`${F.seed}-${F.year}-deadline-${day}`)
   const left = F.ddl - day
   // (about a dozen deals a season, most of them in the deadline's last two weeks)
-  const tries = left <= 2 ? 5 : left <= 14 ? 2 : R.u() < 0.25 ? 1 : 0
+  // (the real league: 20-odd deals between opening night and the deadline, half of them in its last week)
+  const tries = left <= 1 ? 14 : left <= 7 ? 4 : left <= 21 ? 2 : R.u() < 0.35 ? 1 : 0
   for (let t = 0; t < tries; t++) {
-    if (R.u() > (left <= 2 ? 0.85 : 0.6)) continue
+    if (R.u() > (left <= 1 ? 0.9 : 0.75)) continue
     const S = shortsOf(F).filter(s => s !== F.team)
     const sellers = R.shuffle(S.filter(s => situationOf(F, s) === 'reb' || (situationOf(F, s) === 'mid' && R.u() < 0.3)))
     const buyers = R.shuffle(S.filter(s => situationOf(F, s) === 'win' || (situationOf(F, s) === 'mid' && R.u() < 0.4)))
@@ -625,6 +631,8 @@ export function cpuDeadline(F, day = F.day ?? 0) {
   }
   const out = SINK
   SINK = null
+  // (deadline day: the taxpayers' salary dumps, a pick attached)
+  if (left <= 1) out.push(...salaryDumps(F))
   return out
 }
 // the summer's trades between the league's teams (core can call it on any offseason stop; cpuOffseason does): a
@@ -651,7 +659,7 @@ export function salaryDumps(F) {
   const S = shortsOf(F).filter(s => s !== F.team)
   let done = 0
   for (const a of R.shuffle(S)) {
-    if (done >= 4) break
+    if (done >= 6) break
     const pay = payroll(F, a, year)
     if (pay <= taxOf(year) + 1) continue
     // its worst contracts, by what they cost against what they're worth

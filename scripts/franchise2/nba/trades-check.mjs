@@ -48,7 +48,7 @@ const tag = p => `${p.n} (${p.o}/${p.ag} $${p.$}x${p.y})`
   const ix = CAP.capOf(year) / 136.021
   const L = (o) => T.matchLimit(F, ME, o * ix, CAP.capOf(year) + 1, year) / ix
   ok(Math.abs(L(5) - 10.25) < 0.01 && Math.abs(L(20) - 27.5) < 0.01 && Math.abs(L(40) - 50.25) < 0.01, `matching brackets: $5M -> $${L(5).toFixed(2)}M, $20M -> $${L(20).toFixed(2)}M, $40M -> $${L(40).toFixed(2)}M`)
-  ok(Math.abs(T.matchLimit(F, ME, 20, CAP.apron1Of(year) + 1, year) - 22) < 0.01 && Math.abs(T.matchLimit(F, ME, 20, CAP.apron2Of(year) + 1, year) - 20) < 0.01, 'over the first apron 110%, over the second 100%')
+  ok(Math.abs(T.matchLimit(F, ME, 20, CAP.apron1Of(year) + 1, year) - 20) < 0.01 && Math.abs(T.matchLimit(F, ME, 20, CAP.apron2Of(year) + 1, year) - 20) < 0.01, 'over either apron: 100% back (2023 CBA)')
   // the Stepien rule: two straight firsts out
   const y = T.nextDraft(F)
   const other = S.find(s => s !== ME && CAP.payroll(F, s) < CAP.capOf(year))

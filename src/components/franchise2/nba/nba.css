@@ -167,3 +167,9 @@
 .nb-deal-side p { margin: 0; font-family: var(--fk-b); font-size: 13px; line-height: 1.3; color: var(--fk-text); }
 .nb-tact { grid-auto-flow: row; }
 .nb-mine { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nb-gauge { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.nb-gauge i { position: relative; height: 8px; background: linear-gradient(90deg, var(--fk-l), var(--fk-g3) 50%, var(--fk-w)); }
+.nb-gauge b { position: absolute; top: -4px; width: 4px; height: 16px; margin-left: -2px; background: #fff; }
+.nb-counter { display: grid; gap: 6px; padding: 10px 12px; background: var(--fk-g2); border-left: 3px solid var(--fk-gold); }
+.nb-counter p { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; }
+.nb-tman:disabled { opacity: .5; cursor: default; }

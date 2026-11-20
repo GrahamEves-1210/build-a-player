@@ -83,10 +83,13 @@ function ladder(tab, r) {
 const MK = new WeakMap()
 // { [id]: { sc: score, rk: rank (scaled to 450 men) } } for every man in the league (rosters and the pool)
 export function marketOf(F) {
-  const men = allMen(F)
-  const key = `${F.year}|${F.phase}|${F.off?.step ?? ''}|${men.length}`
+  // (the key without building the list: this is read for every man in every trade the league weighs)
+  let count = (F.fa ?? []).length
+  for (const s in F.teams ?? {}) count += F.teams[s].r.length
+  const key = `${F.year}|${F.phase}|${F.off?.step ?? ''}|${count}`
   const c = MK.get(F)
   if (c?.key === key) return c.m
+  const men = allMen(F)
   const sc = men.map(([, p]) => [p.i, scoreOf(p)]).sort((a, b) => b[1] - a[1])
   // (the ladder is as long as the league: its rostered men and the street's best hundred and fifty; any more on the
   // street fall past the end of it)
