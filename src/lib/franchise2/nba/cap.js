@@ -112,7 +112,7 @@ export function salaryIn(p, year, cy) {
   const start = p.rk != null && p.rk > cy ? p.rk : cy
   const k = year - start
   if (k < 0 || k >= p.y) return 0
-  return k === 0 ? p.$ ?? 0 : p.sc?.[k - 1] ?? 0
+  return k === 0 ? p.$ ?? 0 : p.sc?.[k - 1] ?? p.$ ?? 0
 }
 // (a two-way man counts nothing; a one-year minimum for a 3+ year man counts as the two-year minimum)
 export function hitOf(p, year, cy = year) {
@@ -121,8 +121,14 @@ export function hitOf(p, year, cy = year) {
   if (v > 0 && p.mh && (p.ys ?? 0) >= 3) return Math.min(v, minExact(2, year))
   return v
 }
-// dead money in season `year` (an entry { $, y, from? } runs y seasons from `from`, or from the books' season)
-export const deadIn = (d, year, cy) => { const a = d.from ?? cy; return year >= a && year < a + (d.y ?? 0) ? d.$ ?? 0 : 0 }
+// dead money in season `year`: an entry { n, $ a season, y, from, to } runs from season `from` through `to` (y is
+// the seasons left from the books' season through `to`, so core's yearly y - 1 and these years agree); an entry
+// with no from/to runs y seasons from the books' season
+export function deadIn(d, year, cy) {
+  if (!((d.y ?? 0) > 0)) return 0
+  if (d.to != null) return year >= (d.from ?? -Infinity) && year <= d.to ? d.$ ?? 0 : 0
+  return year >= cy && year < cy + d.y ? d.$ ?? 0 : 0
+}
 export const deadThisYear = (team, cy) => r1((team?.dead ?? []).reduce((a, d) => a + deadIn(d, cy, cy), 0))
 
 // ── Cap holds (the offseason) ────────────────────────────────────────────────
@@ -213,6 +219,10 @@ export function hardCapOf(F, short, year = capYear(F)) {
   return e.hc === 'a1' ? exact(year, 2) : exact(year, 3)
 }
 
+// the salary floor: 90% of the cap. A team under it at the end of the regular season pays the shortfall to its
+// players (it doesn't count on anyone's cap)
+export const floorOf = year => r1(exact(year, 0) * 0.9)
+
 // ── The season's tax (season end) ────────────────────────────────────────────
 // at the end of the regular season each team over the tax line pays; its year goes on its record (repeater). The
 // tax collected goes back in equal shares to the teams under the line (part of it, as the league does). Returns
@@ -231,9 +241,10 @@ export function assessTax(F, year = F.year) {
       out.push({ s, pay, over, bill, repeater: rep })
     }
   }
+  const short = Object.keys(F.teams ?? {}).map(s => ({ s, $: r1(floorOf(year) - payroll(F, s, year, { holds: false })) })).filter(x => x.$ > 0)
   const pot = out.reduce((a, x) => a + x.bill, 0)
   const under = Object.keys(F.teams ?? {}).filter(s => !out.some(x => x.s === s))
   const share = under.length ? r1(pot * 0.5 / under.length) : 0
-  F.taxl = { y: year, paid: out, share }
+  F.taxl = { y: year, paid: out, share, floor: short }
   return out
 }

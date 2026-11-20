@@ -38,12 +38,13 @@ export const dayOf = F => (F?.phase === 'season' ? F.day ?? 0 : F?.phase === 'of
 // 15 standard deals and 3 two-way deals in the season, 14 standard at least (the CBA's minimum); 21 men in the
 // offseason, two-ways in
 export const ROSTER_MAX = 15, ROSTER_MIN = 14, TWO_WAY_MAX = 3, OFF_MAX = 21
-export function legalRoster(F, short, { min = ROSTER_MIN } = {}) {
+// { season: true } judges an offseason roster by the season's rules (camp: is it ready for opening night)
+export function legalRoster(F, short, { min = ROSTER_MIN, season = F?.phase !== 'off' } = {}) {
   const team = F.teams?.[short]
   if (!team) return { ok: false, why: 'No such team' }
   const st = standardOf(team).length, tw = twoWaysOf(team).length
   if (tw > TWO_WAY_MAX) return { ok: false, why: `${tw} two-way players (3 at most)`, st, tw }
-  if (F.phase === 'off') {
+  if (!season) {
     if (st + tw > OFF_MAX) return { ok: false, why: `${st + tw} players in the offseason (21 at most)`, st, tw }
   } else {
     if (st > ROSTER_MAX) return { ok: false, why: `${st} standard contracts (15 at most)`, st, tw }
@@ -145,7 +146,7 @@ export function putDeal(F, p, d, { year = capYear(F) } = {}) {
   if (d.rs || d.tw || (p.ys ?? 0) + s.length <= 3) p.rfa = 1; else delete p.rfa
   p.sgn = year
   p.sgd = dayOf(F)
-  for (const k of ['fr', 'hy', '$l', 'rsl', 'qo', 'rn', 'ask', 'fx']) delete p[k]
+  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'rn', 'ask', 'fx', 'wv']) delete p[k]
   return p
 }
 
@@ -153,15 +154,40 @@ export function putDeal(F, p, d, { year = capYear(F) } = {}) {
 // realRow { $, y, sc?, opt?, rs? } when the data has his real deal; otherwise an estimate: a young first-rounder on
 // his rookie scale (by his draft slot, or the slot his rating would have gone), a second-rounder or an undrafted man
 // on the minimum, a veteran at about his market price when he signed, with a few years left on it.
-export function dealOnLoad(F, p, realRow = null) {
-  const year = F.year
+// dealOnLoad(F, man, short | realRow): core calls it for every rostered man at setup, and at camp for the made-up
+// men it adds (no deal yet). At camp a man gets what a camp body signs for: the minimum, or a two-way deal.
+export function dealOnLoad(F, p, x = null) {
+  loadOnce(F, p, x)
+  dealOne(F, p, x)
+  runPending()
+  return p
+}
+function dealOne(F, p, x) {
+  const realRow = x && typeof x === 'object' ? x : null
+  const year = capYear(F)
   const R = rngOf(`${F.seed}-deal-${p.i}-${p.n}`)
+  if (p.tw) {
+    p.bird = p.bird ?? 0
+    putDeal(F, p, { sc: [twoWayOf(year), ...(R.u() < 0.5 ? [twoWayOf(year + 1)] : [])], tw: 1 }, { year })
+    p.sgn = F.phase === 'off' ? year : year - 1
+    return p
+  }
+  if (F.phase === 'off') {
+    p.bird = 0
+    putDeal(F, p, { $: minOf(p.ys ?? 0, year), y: 1, ng: 1 }, { year })
+    return p
+  }
+  estimate(F, p, realRow, year, R)
+  return p
+}
+function estimate(F, p, realRow, year, R) {
   p.bird = p.bird ?? Math.min(4, Math.max(0, Math.floor(R.u() * Math.min(5, (p.ys ?? 0) + 1))))
   if (realRow && realRow.$ > 0) {
     putDeal(F, p, { $: realRow.$, y: realRow.y ?? 1, sc: realRow.sc ? [realRow.$, ...realRow.sc] : null, opt: realRow.opt, rs: realRow.rs, r: 0.05 }, { year })
     if (!realRow.sc) p.sc = schedOf({ $: realRow.$, y: realRow.y ?? 1, r: 0.05 }).slice(1)
-    p.sgn = year - Math.max(0, Math.min(4, (realRow.ago ?? 1)))
+    p.sgn = year - Math.max(1, Math.min(4, (realRow.ago ?? 1)))
     p.sgd = -1
+    p.real = 1
     return p
   }
   const ys = p.ys ?? Math.max(0, (p.ag ?? 25) - 21)
@@ -171,7 +197,7 @@ export function dealOnLoad(F, p, realRow = null) {
   const young = ys <= 3 && (p.ag ?? 30) <= 25
   const rankNow = rankOf(F, p)
   const guessSlot = clamp(1, 30, Math.round(rankNow / 6))
-  if (young && (rd === 1 || (rd == null && rankNow <= 200 && R.u() < 0.8))) {
+  if (young && (rd === 1 || (rd == null && rankNow <= 250))) {
     const pick = rd === 1 ? slot : guessSlot
     const sc = rookieScale(pick, year - ys)
     const left = sc.slice(ys)
@@ -211,10 +237,26 @@ export function dealOnLoad(F, p, realRow = null) {
   if (rankNow <= 20 && (p.ys ?? 0) >= 10 && R.u() < 0.25) p.ntc = 1
   return p
 }
-// every man at setup (core calls it once the league is built): deals, then exceptions for the year
+// (core calls dealOnLoad one man at a time; once the last rostered man has his deal, the league's estimates are
+// pulled into the real range together: normalize)
+function loadOnce(F, p, x) {
+  const S = shortsOf(F)
+  const last = S[S.length - 1], t = F.teams[last]
+  if (typeof x === 'string' && x === last && t?.r[t.r.length - 1] === p && !F.dlo) { F.dlo = 1; queueMicro(() => normalize(F)) }
+}
+// (the normalize waits for this man's own deal to be on him: it runs right after, in the same call)
+let PENDING = null
+const queueMicro = fn => { PENDING = fn }
+const runPending = () => { const fn = PENDING; PENDING = null; fn?.() }
+// every man at setup in one call (the checks use it; core may too): deals, then the league's range, then exceptions
 export function dealsOnLoad(F, real = null) {
-  const est = new Set()
-  for (const [, p] of allMen(F)) if (p.y == null || p.$ == null) { const row = real?.(p) ?? null; dealOnLoad(F, p, row); if (!row) est.add(p.i) }
+  F.dlo = 1
+  for (const [, p] of allMen(F)) if (p.y == null || p.$ == null) { const row = real?.(p) ?? null; dealOnLoad(F, p, row) }
+  normalize(F)
+  return F
+}
+function normalize(F) {
+  const est = new Set(allMen(F).filter(([s, p]) => s && !p.real).map(([, p]) => p.i))
   // (the estimates are pulled into the real league's range, team by team: the CBA kept every real payroll between
   // about the salary floor and a few million past the second apron, so a team the estimates put far outside it has
   // its veterans' estimated deals scaled in)
@@ -242,7 +284,6 @@ export function dealsOnLoad(F, real = null) {
     }
   }
   for (const s of shortsOf(F)) { const t = F.teams[s]; t.dead ??= []; excFor(F, s) }
-  return F
 }
 
 // ── Exceptions ───────────────────────────────────────────────────────────────
@@ -363,9 +404,14 @@ export function signMan(F, short, p, d, { check = true } = {}) {
 // a drafted man's deal: a first-rounder signs his scale (four seasons, team options on the third and fourth); a
 // second-rounder signs the minimum for two seasons if there's a standard spot, a two-way deal if not. pick: the
 // overall number (1-60). Core places him on the roster; the deal goes on the man (returns it).
-export function rookieDeal(F, p, pick) {
+export function rookieDeal(F, p, pk) {
+  const pick = typeof pk === 'number' ? pk : pk?.n ?? 60
   const year = F.phase === 'off' ? F.year + 1 : F.year
   p.ys = p.ys ?? 0
+  // (signed on draft night, before the summer's ageLeague adds a year of service to every man: he starts a year short
+  // so he plays his rookie season with none)
+  if (F.phase === 'off' && F.off?.step === 'draft' && p.ys === 0 && F.sed !== F.year) p.ys = -1
+  p.rk = p.rk ?? year
   p.bird = 0
   p.rt = p.dr?.[3] ?? null
   if (pick <= 30) {
@@ -378,8 +424,8 @@ export function rookieDeal(F, p, pick) {
   const st = team ? standardOf(team).filter(x => x !== p).length : 0
   const tw = team ? twoWaysOf(team).filter(x => x !== p).length : 0
   // (an early second-rounder gets a standard deal when there's room for him; most go two-way)
-  if (team && (pick <= 40 ? st < ROSTER_MAX : st < ROSTER_MAX - 1 && tw >= 2)) {
-    const sc = [minOf(0, year), minOf(1, year + 1)]
+  if (team && (pick <= 40 ? st < ROSTER_MAX : st < ROSTER_MAX - 1 && tw >= 2) || tw >= TWO_WAY_MAX) {
+    const sc = [minOf(0, year), minOf(1, year + 1)].map(v => Math.max(v, 0))
     putDeal(F, p, { sc, ng: 1 }, { year })
     return { sc, via: 'min' }
   }
@@ -439,7 +485,9 @@ export function decideOption(F, p, keep) {
 // season once it's 20 games in, and its age
 const SIT = new WeakMap()
 export function teamStrength(F, s) {
-  const r = F.teams[s].r.filter(p => !p.tw).map(p => p.o ?? 60).sort((a, b) => b - a)
+  // (in the summer, its own free agents it still holds the rights to count: it can bring them back)
+  const own = F.phase === 'off' ? (F.fa ?? []).filter(p => p.fr === s && !p.rn) : []
+  const r = [...F.teams[s].r.filter(p => !p.tw), ...own].map(p => p.o ?? 60).sort((a, b) => b - a)
   const w = [1, 1, 0.9, 0.8, 0.7, 0.55, 0.45, 0.35]
   return w.reduce((a, x, k) => a + x * (r[k] ?? 55), 0) / w.reduce((a, x) => a + x, 0)
 }
@@ -487,7 +535,7 @@ export function taxTolerance(F, s) {
   if (sit === 'mid') return { add: h === 2 ? 'cap' : 'tax', keep: big ? 'a1' : 'tax' }
   return { add: 'cap', keep: 'tax' }
 }
-export const lineOf = (k, year) => (k === 'cap' ? capOf(year) : k === 'tax' ? taxOf(year) : k === 'a1' ? apron1Of(year) : k === 'a2' ? apron2Of(year) : apron2Of(year) + 25)
+export const lineOf = (k, year) => (k === 'cap' ? capOf(year) : k === 'tax' ? taxOf(year) : k === 'a1' ? apron1Of(year) : k === 'a2' ? apron2Of(year) : apron2Of(year) + 12)
 
 // ── Extensions ───────────────────────────────────────────────────────────────
 // a rookie-scale man after his third season (one year left): up to 5 seasons at 25% (30% for an All-NBA man, the
@@ -520,7 +568,10 @@ export function extendMan(F, s, p, d) {
   const e = extensionOk(F, s, p)
   if (!e.ok) return e
   if (d.$ > e.max + 0.01) return { ok: false, why: `Over his max for an extension ($${e.max}M)` }
-  const add = schedOf({ $: d.$, y: Math.min(d.y, e.y), r: Math.min(d.r ?? 0.08, 0.08) })
+  // (a veteran's deal runs five seasons at most from the extension, the ones he has left in it)
+  const yrs = e.rookie ? Math.min(d.y, e.y) : Math.min(d.y, e.y, 5 - p.y)
+  if (yrs < 1) return { ok: false, why: 'No seasons left to add' }
+  const add = schedOf({ $: d.$, y: yrs, r: Math.min(d.r ?? 0.08, 0.08) })
   p.sc = [...(p.sc ?? []), ...add]
   p.y += add.length
   p.ext = capYear(F)
@@ -558,14 +609,16 @@ export function cutMan(F, short, id, { stretch = false } = {}) {
   if (!p) return 0
   const c = cutCost(F, p, { stretch })
   team.dead ??= []
+  const cy = capYear(F)
+  const put = (v, from, to, st = 0) => team.dead.push({ n: p.n, $: r1(v), y: to - cy + 1, from, to, ...(st && { st: 1 }) })
   if (c.total > 0) {
     if (!c.stretch) {
       // (each season as it was: the per-season average carries the same total)
-      team.dead.push({ n: p.n, $: r1(c.total / c.years), y: c.years })
-    } else if (F.phase === 'off') team.dead.push({ n: p.n, $: c.now, y: c.years, st: 1 })
+      put(c.total / c.years, cy, cy + c.years - 1)
+    } else if (F.phase === 'off') put(c.now, cy, cy + c.years - 1, 1)
     else {
-      team.dead.push({ n: p.n, $: c.now, y: 1 })
-      if (c.later > 0) team.dead.push({ n: p.n, $: c.later, y: c.years - 1, st: 1, from: capYear(F) + 1 })
+      put(c.now, cy, cy)
+      if (c.later > 0) put(c.later, cy + 1, cy + c.years - 1, 1)
     }
   }
   team.r = team.r.filter(x => x !== p)
@@ -580,10 +633,12 @@ export function cutMan(F, short, id, { stretch = false } = {}) {
 // ── The season's end: options, the years tick, deals expire ───────────────────
 // called once at the start of re-signing (F.phase 'off', F.year the season just finished). The GM's team's options
 // go the way core's screen set them (decideOption); any left undecided, the AI's way. Returns news items.
+// Returns the men whose deals ended (now in F.fa, p.was = p.fr = the team he left), with .news (the wire's items).
+// (Years of service: the sim's ageLeague adds them, before this; Bird years are added here.)
 export function seasonEndDeals(F) {
-  if (F.sed === F.year) return []
+  if (F.sed === F.year) return Object.assign([], { news: [] })
   F.sed = F.year
-  const news = []
+  const news = [], gone = []
   const nx = F.year + 1
   // options for next season
   for (const { p, s, k } of optionsDue(F)) {
@@ -598,19 +653,21 @@ export function seasonEndDeals(F) {
   }
   for (const s of shortsOf(F)) {
     const team = F.teams[s]
-    // dead money ticks (a stretched payment that starts next season waits)
-    team.dead = (team.dead ?? []).map(d => (d.from && d.from > F.year ? { ...d, from: d.from } : { ...d, y: d.y - 1 })).filter(d => d.y > 0)
-    for (const d of team.dead) if (d.from && d.from <= nx) delete d.from
+    // dead money: what's done is gone (core counts y down each new season; the years on it say when it ends)
+    team.dead = (team.dead ?? []).filter(d => (d.to != null ? d.to >= nx : (d.y ?? 0) > 1))
     const keep = []
     for (const p of team.r) {
-      // a season of service and a Bird year (a man drafted this summer hasn't played yet)
-      if (p.rk == null || p.rk <= F.year) { p.ys = (p.ys ?? 0) + 1; p.bird = (p.bird ?? 0) + 1 }
+      // a Bird year (a man drafted this summer hasn't played yet)
       if (p.rk != null && p.rk > F.year) { keep.push(p); continue }
+      p.bird = (p.bird ?? 0) + 1
+      if (!Array.isArray(p.sc)) p.sc = Array.from({ length: Math.max(0, (p.y ?? 1) - 1) }, () => p.$ ?? 0)
       p.y = (p.y ?? 1) - 1
       if (p.y > 0) {
         p.$l = p.$
         p.$ = p.sc?.[0] ?? p.$
         p.sc = (p.sc ?? []).slice(1)
+        // (no season is ever paid under the minimum for his service then)
+        if (!p.tw) p.$ = r1(Math.max(p.$, minOf(p.ys ?? 0, nx)))
         if (p.mh) delete p.mh
         keep.push(p)
         continue
@@ -618,6 +675,8 @@ export function seasonEndDeals(F) {
       // his deal is up: a free agent, with his team's rights and hold
       const fa = p
       fa.fr = s
+      fa.was = s
+      gone.push(fa)
       fa.hy = nx
       fa.$l = p.$ ?? 0
       if (p.rs) fa.rsl = 1
@@ -637,7 +696,7 @@ export function seasonEndDeals(F) {
   }
   // (a man in the pool a year or more with no team: his rights are gone)
   for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { delete p.fr; delete p.hy; delete p.rfa; delete p.qo; delete p.rsl }
-  return news
+  return Object.assign(gone, { news })
 }
 // renounce him: his hold off the books, his rights gone (an RFA becomes unrestricted)
 export function renounce(F, short, id) {
@@ -650,11 +709,42 @@ export function renounce(F, short, id) {
 }
 // what he asks the GM's team to re-sign (his market; a man coming off a rookie deal or with Bird rights may give a
 // little back to stay; a man who wants out asks for more). null when the GM's team holds no rights to him.
+// THE MARKET THIS SUMMER: the most any other team could pay him now (its cap room, else its mid-level or
+// bi-annual, else the minimum), the best of the league's. A free agent's price can't outrun it: when the room is gone,
+// so is the money, and he takes what's there or goes back to his own team for less than his rating says.
+const CH = new WeakMap()
+function channels(F) {
+  const year = capYear(F)
+  const key = `${year}|${F.phase}|${F.off?.step ?? ''}|${F.fad ?? 0}`
+  const c = CH.get(F)
+  if (c?.key === key) return c.m
+  const m = {}
+  for (const s of shortsOf(F)) {
+    // (the room it could clear: its payroll without the holds it would renounce)
+    const pay = payroll(F, s, year, { holds: false })
+    const room = capOf(year) - pay
+    const e = excFor(F, s, year)
+    const mle = e.mk ? e.mle ?? 0 : pay < apron1Of(year) ? excOf('nt', year) : pay < apron2Of(year) ? excOf('tp', year) : 0
+    const full = standardOf(F.teams[s]).length >= ROSTER_MAX
+    m[s] = full ? 0 : Math.max(room, mle, e.bae > 0.05 && e.baeY !== year - 1 && pay < apron1Of(year) ? e.bae : 0)
+  }
+  CH.set(F, { key, m })
+  return m
+}
+export function outsideBest(F, p) {
+  const m = channels(F)
+  let best = minOf(p.ys ?? 0, capYear(F))
+  // (his own team's hold comes off its books if it lets him go: its room counts that way)
+  for (const [s, v] of Object.entries(m)) best = Math.max(best, s === p.fr && !p.rn ? Math.min(v + holdOf(p, capYear(F)), capOf(capYear(F))) * 0 : v)
+  return r1(best)
+}
 export function resignOffer(F, p) {
   const s = p?.fr
   if (!s || p.rn) return null
   const year = capYear(F)
-  const mv = marketValue(F, p, year)
+  // (what the open market would pay him; his own team pays about that, never under 70% of his rating's price)
+  const mv0 = marketValue(F, p, year)
+  const mv = F.phase === 'off' ? Math.max(mv0 * 0.7, Math.min(mv0, outsideBest(F, p) * 1.1)) : mv0
   const R = rngOf(`${F.seed}-${F.year}-ask-${p.i}`)
   const sit = situationOf(F, s)
   const tilt = (sit === 'win' ? 0.97 : sit === 'reb' && (p.ag ?? 27) >= 29 ? 1.08 : 1) * (1 + R.n() * 0.04)

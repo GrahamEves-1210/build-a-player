@@ -20,19 +20,18 @@
 // standard deals (the minimum, from the pool; core's `make` makes a man when the pool runs dry), cuts down to 15,
 // signs two-way men to two or three spots, and extends the young men and veterans it wants to keep.
 import { rngOf, clamp, r1 } from '../rng'
-import { capOf, minOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf } from './cap'
+import { capOf, minOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
 import {
   marketValue, worthOf, rankOf, termFor, canSign, signMan, rightsOf, resignOffer, renounce, situationOf,
   taxTolerance, lineOf, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
-  ROSTER_MAX, ROSTER_MIN, TWO_WAY_MAX, raiseMax, schedOf, legalRoster,
+  ROSTER_MAX, ROSTER_MIN, TWO_WAY_MAX, raiseMax, schedOf, legalRoster, outsideBest,
 } from './contracts'
-import { salaryDumps } from './trades'
+import { salaryDumps, summerTrades } from './trades'
 
 export const FA_DAYS = 6
 const FLOOR = [1, 0.94, 0.88, 0.82, 0.7, 0]
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
 const shortsOf = F => Object.keys(F.teams ?? {})
-const wire = (F, items) => { if (items.length) F.news = [...(F.news ?? []), ...items.map(x => ({ y: F.year, d: F.day ?? 0, ...x }))].slice(-200) }
 const money = v => `$${r1(v)}M`
 const fullName = s => s
 
@@ -43,8 +42,9 @@ export function askFor(F, p) {
   if (p.ask && p.ask.yr === capYear(F)) return p.ask
   const year = capYear(F)
   const R = rngOf(`${F.seed}-${year}-fa-${p.i}`)
-  const mv = marketValue(F, p, year)
-  const $ = r1(clamp(minOf(p.ys ?? 0, year), Infinity, mv * (1 + R.n() * 0.06)))
+  // (his price, held to what the league can pay this summer)
+  const mv = Math.min(marketValue(F, p, year), Math.max(outsideBest(F, p), minOf(p.ys ?? 0, year)))
+  const $ = r1(clamp(minOf(p.ys ?? 0, year), Infinity, mv * (1 + R.n() * 0.05)))
   p.ask = { yr: year, $, y: termFor(p) }
   return p.ask
 }
@@ -100,6 +100,7 @@ export function keepsOwn(F, s, p) {
   // (a top-three man on the team is kept up to the line for keeping; anyone else up to the line for adding)
   const top3 = F.teams[s].r.filter(x => !x.tw && (x.o ?? 0) > (p.o ?? 0)).length < 3
   if (after > lineOf(top3 ? tol.keep : tol.add, year) && ask.$ > minOf(p.ys ?? 0, year) + 0.05) return null
+  if (after + reserveOf(F, s, 1) > hardCapOf(F, s, year) + 0.01) return null
   return ask
 }
 // the best deal team s would offer free agent p now (or null): his ask, inside what it can use and will spend
@@ -118,8 +119,10 @@ function bidFor(F, s, p, day, ctx) {
   const yrs = Math.min(a.y, (p.ag ?? 27) >= 31 ? 2 : 4)
   const own = rightsOf(p, s)
   const base = Math.min(a.$, w * 1.05)
+  void 0
   const mn = minOf(p.ys ?? 0, year)
-  const tries = [base, a.$ * Math.max(floor, 0.75)]
+  const under = payroll(F, s, year) < floorOf(year)
+  const tries = [base, a.$ * Math.max(floor, 0.75), ...(under ? [Math.min(a.$ * 1.25, w * 1.4, capOf(year) - payroll(F, s, year))] : [])]
   // (its channels: what's left under the cap, its mid-level, the bi-annual, the minimum)
   const pay = payroll(F, s, year) - (own ? holdOf(p, year) : 0)
   const room = capOf(year) - pay
@@ -133,13 +136,16 @@ function bidFor(F, s, p, day, ctx) {
   for (const v of tries.map(r1).sort((x, y) => y - x)) {
     if (v < mn || seen.has(v) || v < a.$ * floor - 0.01) continue
     seen.add(v)
-    if (v > w * 1.1 && v > mn + 0.05) continue
+    // (a team under the salary floor overpays on a short deal rather than hand the shortfall back at season's end)
+    if (v > w * (under ? 1.4 : 1.1) && v > mn + 0.05) continue
     for (const y of [yrs, Math.min(yrs, 2), 1]) {
       const d = { $: v, y, r: v > mn + 0.05 ? raiseMax(own) * (v >= 15 ? 1 : 0.6) : 0 }
       const c = canSign(F, s, p, d)
       if (!c.ok) continue
-      // (the line its front office spends to; a minimum deal always fits)
-      if (c.via !== 'min' && payroll(F, s, year) - (own ? holdOf(p, year) : 0) + v > lineOf(own ? tol.keep : tol.add, year)) continue
+      // (the line its front office spends to; a minimum deal always fits; a hard-capped team keeps room to fill out)
+      const after = payroll(F, s, year) - (own ? holdOf(p, year) : 0) + v
+      if (c.via !== 'min' && after > lineOf(own ? tol.keep : tol.add, year)) continue
+      if (after + reserveOf(F, s, 1) > hardCapOf(F, s, year) + 0.01) continue
       return { ...d, via: c.via }
     }
   }
@@ -170,18 +176,21 @@ function openMarket(F) {
 const sumOf = p => r1([p.$ ?? 0, ...(p.sc ?? [])].slice(0, p.y ?? 0).reduce((a, v) => a + v, 0))
 
 // ── A round ──────────────────────────────────────────────────────────────────
-export function faDay(F, n = 1) {
+// faDay(F, day): free agency through that day (core counts its days 1, 2, 3...: each call plays the rounds up to it,
+// one a call). Returns the wire's items.
+export function faDay(F, day = (F.fad ?? 0) + 1) {
   const news = []
-  for (let k = 0; k < n; k++) {
-    const day = (F.fad ?? 0) + 1
-    if (day > FA_DAYS) break
-    F.fad = day
-    if (day === 1) news.push(...openMarket(F))
-    news.push(...faRound(F, day))
+  const to = Math.min(FA_DAYS, Math.max((F.fad ?? 0) + 1, day | 0))
+  while ((F.fad ?? 0) < to) {
+    const d = (F.fad ?? 0) + 1
+    F.fad = d
+    if (d === 1) news.push(...openMarket(F))
+    news.push(...faRound(F, d))
   }
-  wire(F, news)
   return news
 }
+// what a free agent asks on the open market: { $, y }
+export const askOf = (F, p) => { const a = askFor(F, p); return { $: a.$, y: a.y, r: a.$ >= 15 ? 0.05 : 0 } }
 function faRound(F, day) {
   const news = []
   const year = capYear(F)
@@ -190,7 +199,7 @@ function faRound(F, day) {
   const str = Object.fromEntries(S.map(s => [s, teamStrength(F, s)]))
   const ctx = { str, mean: S.reduce((a, s) => a + str[s], 0) / S.length, sit: Object.fromEntries(S.map(s => [s, situationOf(F, s)])) }
   // (the GM's sheets from last round that it never answered: matched, if it can)
-  for (const q of F.rfq ?? []) matchSheet(F, F.team, q.i, true)
+  for (const q of [...(F.rfq ?? [])]) news.push(...(matchSheet(F, F.team, q.i, true).news ?? []))
   F.rfq = []
   const pool = () => (F.fa ?? []).filter(p => p.b == null || true)
   // the offers: the best men first, each team a few a day
@@ -235,7 +244,7 @@ function faRound(F, day) {
         if (p.fr === F.team) { (F.rfq ??= []).push({ i: p.i, s: o.s, d: o.d }); signed = true; news.push({ k: 'sheet', tag: 'OFFER SHEET', s: o.s, text: `${p.n} has signed an offer sheet with the ${o.s}: ${o.d.y} years, ${money(sumOf({ $: o.d.$, y: o.d.y, sc: schedOf(o.d).slice(1) }))}. The ${p.fr} have the right to match.` }); break }
         if (aiMatches(F, p.fr, p, o.d)) {
           const was = p.fr
-          if (signMan(F, was, p, { ...o.d }, { check: false }).ok) {
+          if (signMan(F, was, p, { $: o.d.$, y: o.d.y, r: Math.min(o.d.r ?? 0, raiseMax(rightsOf(p, was))) }).ok) {
             news.push({ k: 'sign', tag: 'MATCHED', s: was, text: `The ${was} have matched the ${o.s}' offer sheet for ${p.n}: ${o.d.y} years, ${money(sumOf(p))}.` })
             signed = true
             break
@@ -251,8 +260,8 @@ function faRound(F, day) {
     }
     // the last day: an unsigned RFA takes his qualifying offer
     if (!signed && day >= FA_DAYS && p.rfa && p.qo && p.fr && !p.rn) {
-      const d = { $: p.qo, y: 1, r: 0 }
-      if (signMan(F, p.fr, p, d, { check: false }).ok) { delete p.rfa; news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: p.fr, text: `${p.n} signs his qualifying offer with the ${p.fr} and will be an unrestricted free agent next summer.` }) }
+      const d = { $: p.qo, y: 1, r: 0 }, was = p.fr
+      if (signMan(F, was, p, d).ok) { delete p.rfa; news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his qualifying offer with the ${was} and will be an unrestricted free agent next summer` }) }
     }
   }
   // (the GM's offers are for one round)
@@ -266,7 +275,13 @@ function aiMatches(F, s, p, d) {
   const tol = taxTolerance(F, s)
   const after = payroll(F, s, year) - holdOf(p, year) + d.$
   const young = (p.ag ?? 27) <= 25
-  return w >= d.$ * (young ? 0.85 : 0.95) && after <= lineOf(tol.keep, year)
+  return w >= d.$ * (young ? 0.85 : 0.95) && after + reserveOf(F, s, 1) <= Math.min(lineOf(tol.keep, year), hardCapOf(F, s, year)) && canSign(F, s, p, { $: d.$, y: d.y, r: Math.min(d.r ?? 0, raiseMax(rightsOf(p, s))) }).ok
+}
+// what a team keeps clear for the minimum deals it still needs to reach 14 (a hard-capped team can't go past its line
+// to fill its roster)
+export function reserveOf(F, s, adding = 0) {
+  const need = Math.max(0, 14 - standardOf(F.teams[s]).length - adding)
+  return need * minOf(0, capYear(F))
 }
 
 // ── The GM's moves ───────────────────────────────────────────────────────────
@@ -290,13 +305,12 @@ export function matchSheet(F, short, man, yes) {
   if (!q || !p) return { ok: false, why: 'No offer sheet' }
   if (yes) {
     const c = canSign(F, short, p, q.d)
-    if (c.ok) { signMan(F, short, p, q.d, { check: false }); wire(F, [{ k: 'sign', tag: 'MATCHED', s: short, text: `The ${short} have matched the ${q.s}' offer sheet for ${p.n}.` }]); return { ok: true, matched: true } }
+    if (c.ok) { signMan(F, short, p, q.d); return { ok: true, matched: true, news: [{ k: 'sign', tag: 'MATCHED', s: short, text: `The ${short} have matched the ${q.s}' offer sheet for ${p.n}` }] } }
   }
   // (not matched, or it can't: he goes to the team that signed him to the sheet)
   delete p.rfa
   const r = signMan(F, q.s, p, q.d, { check: false })
-  wire(F, [{ k: 'sign', tag: 'FREE AGENCY', s: q.s, text: `The ${short} decline to match. ${p.n} joins the ${q.s}.` }])
-  return { ok: r.ok, matched: false }
+  return { ok: r.ok, matched: false, news: [{ k: 'sign', tag: 'FREE AGENCY', s: q.s, text: `The ${short} decline to match. ${p.n} joins the ${q.s}` }] }
 }
 // the board: the best men still out there
 export const faBoard = (F, n = 30) => [...(F.fa ?? [])].sort((a, b) => rankOf(F, a) - rankOf(F, b)).slice(0, n)
@@ -306,7 +320,8 @@ export const faDone = F => (F.fad ?? 0) >= FA_DAYS
 // make(F, short, { tw }) -> Man: core's maker of a new man when the pool runs dry (optional)
 export function cpuOffseason(F, { make = null } = {}) {
   const news = []
-  while (!faDone(F)) news.push(...faDay(F, 1))
+  while (!faDone(F)) news.push(...faDay(F, (F.fad ?? 0) + 1))
+  news.push(...summerTrades(F, 3))
   const year = capYear(F)
   const R = rngOf(`${F.seed}-${year}-camp`)
   for (const s of shortsOf(F)) {
@@ -318,6 +333,8 @@ export function cpuOffseason(F, { make = null } = {}) {
       if (!low) break
       cutMan(F, s, low.i, { stretch: cutCost(F, low).total > 15 })
     }
+    // two-ways past three: the least of them released (nothing owed)
+    while (twoWaysOf(team).length > TWO_WAY_MAX) { const low = [...twoWaysOf(team)].sort((a, b) => (a.o ?? 0) - (b.o ?? 0))[0]; cutMan(F, s, low.i) }
     // fill to 14 (a few teams carry 15): the best men left, at the minimum
     const want = 14 + (hash(`${F.seed}-${s}-${year}`) % 3 === 0 ? 1 : 0)
     let guard = 0
@@ -326,8 +343,7 @@ export function cpuOffseason(F, { make = null } = {}) {
       if (p) { signMan(F, s, p, { $: minOf(p.ys ?? 0, year), y: 1, r: 0, ng: 1 }); continue }
       if (!make) break
       const m = make(F, s, { tw: false })
-      if (!m) break
-      signMan(F, s, m, { $: minOf(m.ys ?? 0, year), y: 1, r: 0, ng: 1 }, { check: false })
+      if (!m || !signMan(F, s, m, { $: minOf(m.ys ?? 0, year), y: 1, r: 0, ng: 1 }).ok) break
     }
     // two-ways: two or three young men
     const tw = 2 + (hash(`${F.seed}-${s}-tw-${year}`) % 2)
@@ -339,7 +355,7 @@ export function cpuOffseason(F, { make = null } = {}) {
       if (!make) break
       const m = make(F, s, { tw: true })
       if (!m) break
-      signMan(F, s, m, { ...d, sc: Array(d.y).fill(twoWayOf(year)) }, { check: false })
+      if (!signMan(F, s, m, { ...d, sc: Array(d.y).fill(twoWayOf(year)) }).ok) break
     }
     news.push(...cpuExtensions(F, s))
   }
@@ -347,7 +363,6 @@ export function cpuOffseason(F, { make = null } = {}) {
   for (const p of F.fa ?? []) { delete p.fr; delete p.hy; delete p.rfa; delete p.qo; delete p.rsl; delete p.ask }
   F.fao = {}
   F.rfq = []
-  wire(F, news)
   return news
 }
 // a league team extends the men it wants to keep (a rookie-scale man going into his fourth season, a veteran a year
@@ -357,13 +372,17 @@ export function cpuExtensions(F, s) {
   const year = capYear(F)
   for (const p of F.teams[s].r) {
     if (p.tw || p.y !== 1) continue
+    // (the men a front office locks up early: a rookie-scale man who's become a starter, a veteran still in his prime
+    // who's one of its best)
+    const rk = rankOf(F, p)
+    if (p.rs ? rk > 110 : rk > 70 || (p.ag ?? 30) >= 31) continue
     const ask = extensionAsk(F, s, p)
     if (!ask) continue
     const w = worthOf(F, { ...p, ag: (p.ag ?? 25) + 1 }, year + 1)
     const role = roleOn(F, s, p)
-    if (role < 0.5 || w < ask.$ * 0.95) continue
+    if (role < 1 || w < ask.$ * 0.95) continue
     const tol = taxTolerance(F, s)
-    if (payroll(F, s, year + 1) + ask.$ > lineOf(tol.keep, year + 1) + 5) continue
+    if (payroll(F, s, year + 1) + ask.$ > lineOf(tol.keep, year + 1)) continue
     const r = extendMan(F, s, p, ask)
     if (r.ok && (p.o ?? 0) >= 78) news.push({ k: 'ext', tag: 'EXTENSION', s, text: `${p.n} has agreed to a ${ask.y}-year, ${money(schedOf(ask).reduce((a, v) => a + v, 0))} extension with the ${s}.` })
   }
@@ -380,8 +399,7 @@ export function cpuFill(F, { make = null } = {}) {
       const p = [...(F.fa ?? [])].sort((a, b) => rankOf(F, a) - rankOf(F, b)).find(x => canSign(F, s, x, { $: minOf(x.ys ?? 0, year), y: 1 }).ok)
       if (p) { signMan(F, s, p, { $: minOf(p.ys ?? 0, year), y: 1, r: 0, ng: 1 }); continue }
       const m = make?.(F, s, { tw: false })
-      if (!m) break
-      signMan(F, s, m, { $: minOf(m.ys ?? 0, year), y: 1, r: 0, ng: 1 }, { check: false })
+      if (!m || !signMan(F, s, m, { $: minOf(m.ys ?? 0, year), y: 1, r: 0, ng: 1 }).ok) break
     }
   }
 }
