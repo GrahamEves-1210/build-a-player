@@ -285,7 +285,7 @@ export function make({ v, seed, def, game, cast }) {
     if (jumpy && kind === 'far') return `BIG GAIN · ${rep.gainYd} YDS`
     if (jumpy && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : rep.gainYd < 0 ? `${-rep.gainYd} YARD LOSS` : 'TACKLE'
     if (game === 'pnr') {
-      if (kind === 'good') return k === 1 ? 'DUNK' : k === 2 ? 'THREE' : 'BUCKET'
+      if (kind === 'good') return k === 1 ? 'DUNK' : pnrThree(g.rep, k, g.t - g.rep.at) ? 'THREE' : 'BUCKET'
       if (kind === 'early') return 'TOO EARLY'
       if (kind !== 'late') return k === 0 ? 'BLOCKED' : k === 1 ? 'STOLEN' : 'CLOSED OUT'
     }
@@ -325,7 +325,7 @@ export function make({ v, seed, def, game, cast }) {
       const age = g.t - rep.at, land = jumpLand(rep, g.h)
       flight = rep.how && (good || kind === 'far') ? Math.max(0, rep.meet - age) : Math.max(0, land - age)
     }
-    rep.res = { kind, k, at: g.t, ms, flight, beat: Math.max(W.beat ?? 0, flight + (good ? 420 * (W.afterGood ?? W.after ?? 1) : 620 * (W.after ?? 1))), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (jumpy && rep.how !== 'pick' ? 0.6 : 1) : 0 }
+    rep.res = { kind, k, at: g.t, ms, flight, ...(game === 'pnr' && kind === 'good' ? { pts: k !== 1 && pnrThree(rep, k, g.t - rep.at) ? 3 : 2 } : {}), beat: Math.max(W.beat ?? 0, flight + (good ? 420 * (W.afterGood ?? W.after ?? 1) : 620 * (W.after ?? 1))), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (jumpy && rep.how !== 'pick' ? 0.6 : 1) : 0 }
     for (let m = 0; m < n; m++) g.cues[m] = null
     g.hud.dots[g.i] = good
     g.hud.prompt = null
@@ -352,7 +352,7 @@ export function make({ v, seed, def, game, cast }) {
   // lib/situations.js momentFacts). The pick and roll: the points of each make. The rim: two for each one that went in.
   // The safety and the backer: the picks and the balls knocked out. The quarterback: the throws that were picked off
   function shown(all) {
-    if (game === 'pnr') return { pts: all.reduce((s, p) => s + (p.res.kind === 'good' ? (p.res.k === 2 ? 3 : 2) : 0), 0) }
+    if (game === 'pnr') return { pts: all.reduce((s, p) => s + (p.res.kind === 'good' ? p.res.pts ?? 2 : 0), 0) }
     if (game === 'rim-protect') return { allowed: all.filter(p => p.res.kind !== 'good').length * 2 }
     if (jumpy) return { picks: all.filter(p => p.res.kind === 'good' && p.how === 'pick').length, pbus: all.filter(p => p.res.kind === 'good' && p.how === 'swat').length }
     if (game === 'hot-read') return { ints: all.filter(p => p.res.kind !== 'good' && p.res.kind !== 'late').length }
@@ -1435,10 +1435,18 @@ const courtY = (fy, h) => rimOf(h) + fy * FT
 // Where a field point is in the arena's feet (lib/mg/arena.js)
 const xFt = x => (x - 180) / FT
 const zFt = (y, h) => -(y - rimOf(h)) / FT
-const CORNER_FT = 16.8
+// the corner man stands behind the line (22' there), so a make from him is a real three. 2026-11-19: he stood
+// at 16.8', inside it, and his make was called and scored a three. (The pick-and-roll camera's lens is capped
+// so both corners stay in the picture on a tall screen)
+const CORNER_FT = 23
+// a make from beyond the arc is a three: 22' in the corners, where the line runs straight to the baseline
+// (8.95' up from the rim), 23'9" round the arc. Feet across from the rim, and feet out from it toward half court.
+export const isThree = (fx, fy) => (fy <= 8.95 ? Math.abs(fx) >= 22 : Math.hypot(fx, fy) >= 23.75)
+// where the man who got the ball shot it from: his feet when the tap came
+function pnrThree(rep, k, age) { const q = pnrAt(rep, k, age, 700); return isThree(xFt(q.x), -zFt(q.y, 700)) }
 // the two reads' cameras: down on the floor, level with the rim. Pick-and-roll stands behind the handler, wide
 // enough for both corners. The 3-on-1 runs with the break, and stops short of the rim when the shot goes up.
-const PNR_CAM = { H: 10, D: 37, F: 294, maxF: 320, hzAt: 0.385 }, RIM_CAM = { H: 10, D: 26, F: 256, maxF: 280, hzAt: 0.385 }
+const PNR_CAM = { H: 10, D: 37, F: 294, maxF: 236, hzAt: 0.385 }, RIM_CAM = { H: 10, D: 26, F: 256, maxF: 280, hzAt: 0.385 }
 function courtCam(g, age = g.rep.res ? g.rep.res.at - g.rep.at : g.t - g.rep.at) {
   if (!g.arena || g.arena.h !== g.h) g.arena = arenaCam(g.h, g.game === 'pnr' ? PNR_CAM : RIM_CAM)
   return g.arena
@@ -1503,8 +1511,8 @@ function buildPnr(rep, h) {
   const S = {
     d1: body(courtX(-dir * 4), courtY(23, h)),                 // on the ball
     d5: body(courtX(dir * 6), courtY(13, h)),                    // on the big
-    d4: body(courtX(-dir * 14.4), courtY(5.2, h)),                 // on the far corner
-    d2: body(courtX(dir * 14.4), courtY(5.2, h)),                  // on the near corner
+    d4: body(courtX(-dir * 20), courtY(5.2, h)),                 // on the far corner
+    d2: body(courtX(dir * 20), courtY(5.2, h)),                  // on the near corner
     d3: body(courtX(-dir * 6.4), courtY(16, h)),                 // on the slot
     h: {}, r: {}, c: {}, thief: null,
   }
@@ -1521,8 +1529,8 @@ function stepPnr(g, rep, S, dt, h, age) {
   // before the coverage shows: on the ball, on the screener, everyone home. All goal side of their men
   S.d1.tx = Hx - dir * 2.6 * FT; S.d1.ty = Hy - 5 * FT; S.d1.v = 0.15
   S.d5.tx = S.r.x + dir * 1 * FT; S.d5.ty = S.r.y - 4 * FT; S.d5.v = 0.15
-  S.d4.tx = courtX(-dir * 14.4); S.d4.ty = courtY(5.2, h); S.d4.v = 0.16
-  S.d2.tx = courtX(dir * 14.4); S.d2.ty = courtY(5.2, h); S.d2.v = 0.12
+  S.d4.tx = courtX(-dir * 20); S.d4.ty = courtY(5.2, h); S.d4.v = 0.16
+  S.d2.tx = courtX(dir * 20); S.d2.ty = courtY(5.2, h); S.d2.v = 0.12
   S.d3.tx = courtX(-dir * 6.4); S.d3.ty = courtY(16, h); S.d3.v = 0.12
   if (on) {
     if (cov === 'drop') {
@@ -1542,7 +1550,7 @@ function stepPnr(g, rep, S, dt, h, age) {
   if (d && age >= d.at && (!d.early || age < d.at + d.flash)) {
     // the look that isn't: a show up high that goes back, or the corner's man cheating in and coming home
     if (d.k === 1 && d.early) { S.d5.tx = S.r.x + dir * 3 * FT; S.d5.ty = S.r.y - 1 * FT; S.d5.v = 0.17 }
-    if (d.k === 2 && cov !== 'tag') { S.d4.tx = courtX(-dir * 9.5); S.d4.ty = courtY(7, h); S.d4.v = 0.14 }
+    if (d.k === 2 && cov !== 'tag') { S.d4.tx = courtX(-dir * 14); S.d4.ty = courtY(7, h); S.d4.v = 0.14 }
   }
   // the turnover: who gets a hand on it. On a pass, the man nearest where it's going steps into the lane.
   if (res && res.kind !== 'good' && !(res.k === 2 && res.kind !== 'late')) {

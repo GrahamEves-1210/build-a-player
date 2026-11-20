@@ -7681,6 +7681,14 @@ html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !impor
 /* DONE stays on the screen's bottom edge while the choices scroll */
 .cr-face-done { position: sticky; bottom: 0; z-index: 5; width: 100%; margin-bottom: calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 10px 0 #0d1013, 0 -10px 0 #0d1013; }
 @media (min-width: 700px) { .cr-face-sheet { place-items: center; } }
+/* Sandbox: the team that drafts him (Career's draft, before DRAFT DAY) */
+.cr-draft-to { margin: 12px 0 4px; }
+.cr-draft-to-team { display: inline-flex; align-items: center; gap: 8px; }
+.cr-draft-to-team img { width: 24px; height: 24px; object-fit: contain; }
+.cr-draft-to-acts { display: inline-flex; gap: 14px; align-items: center; }
+.cr-draft-to-clear { color: var(--ag-muted) !important; }
+/* the number sheet opens from the face sheet too: over it (2026-11-19: it opened under the face sheet, out of reach) */
+.ll-overlay.cr-num-overlay { z-index: 9100; }
 
 /* Career's EDIT sheet: his number under his face (owner 11-18) */
 .cr-face-num { margin: 0; }
@@ -7739,3 +7747,14 @@ html.app-art:not(#_):not(#_) .fk-l3-cut[data-art]:not([data-art-bare]) { inset: 
 html.app-art:not(#_):not(#_) .fk-l3-cut[data-art-bare] { inset: auto !important; left: -4% !important; top: -2% !important; width: 108% !important; height: auto !important; aspect-ratio: 1 !important; transform: none !important; }
 /* the depth chart: the jerseys are the players on the field */
 html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width: 44px; height: 44px; }
+/* Website, a tablet's width on a short window (an iPad in landscape with the browser's bars: 768x448). The spin drop-down
+   has about 200px above the bottom ad rail there, so the player's grades sat under it, below the wheels. Once he's spun,
+   the wheels and his card go on the left and his grades on the right, all of it in view. Nowhere else (2026-11-19) */
+@media (min-width: 700px) and (max-width: 1024px) and (min-height: 431px) and (max-height: 540px) {
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: start; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card > .spin-panel-static { grid-column: 1; grid-row: 1; min-width: 0; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card > .spin-panel-scroll { grid-column: 2; grid-row: 1; align-self: start; height: auto !important; min-width: 0; margin-top: 14px !important; padding-top: 0 !important; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card > :not(.spin-panel-static):not(.spin-panel-scroll) { grid-column: 1 / -1; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card .reels-wrap { zoom: .72; }
+  html.app-look:not(.is-app) .game-layout.ag-drop .spin-panel-body.has-card .attr-chip { min-height: 0 !important; }
+}

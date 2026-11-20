@@ -2268,7 +2268,26 @@ export function answerInterview(c, i, choice) {
 }
 // Draft day: your pick inside the window, at the team that needs you most and
 // liked you most in the room
-export function runDraft(c) {
+// Sandbox only (2026-11-19): c.draftTeam, the team picked before the draft, takes him. He goes where the draft had him
+// going, and the team he picked trades up into that slot (an undrafted kicker signs with it instead). Without a pick
+// the draft is as it always is
+export function runDraft({ draftTeam = null, ...c }) {
+  const n = runDraftAsIs(c)
+  return c.sandbox && draftTeam && !sportOf(c).x?.offers ? draftedBy(n, draftTeam) : n
+}
+function draftedBy(n, team) {
+  const S = sportOf(n), mine = n.draft?.pick
+  if (!mine || n.team === team || !S.teams.some(t => t.short === team)) return n
+  const roster = makeRoster(team, n.sport)
+  const fit = teamFit(team, n.pos, { roster, name: n.name, sport: n.sport, spot: lineSpot(n) })
+  const met = (n.draft.interviews ?? []).some(x => x.team === team && !talkSkipped(x))
+  const lbl = mine.udfa ? null : pickLabel(mine.o, n.sport)
+  const text = mine.udfa ? `Went undrafted. Signed with the ${fit.name} as a free agent the night the draft ended`
+    : `Traded up and drafted in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed him)' : ''}`
+  const pick = { ...mine, team, ...(mine.udfa ? null : { trade: true }) }
+  return { ...n, team, roster, fit, draft: { ...n.draft, picks: [...n.draft.picks.slice(0, -1), pick], pick }, decisions: [...n.decisions.slice(0, -1), { year: 1, text }] }
+}
+function runDraftAsIs(c) {
   if (sportOf(c).x?.offers) return sportOf(c).x.offers(c)
   if (c.sport === 'nfl') return nflDraft(c)
   const S = sportOf(c)
@@ -3844,10 +3863,12 @@ export function demandTrade(c, aim = 'contender') {
   const granted = any || r() < TRADE_ODDS.contender
   const rep = Math.max(1, c.rep - 2)
   if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: `${c.name} asked to be traded to a contender. The team said no, and the locker room heard about it.` }], decisions: [...c.decisions, { year: c.year + 1, text: 'Demanded a trade to a contender, turned down' }] }
-  const { roster, fit } = tradeDest(c, any, r)
+  // (2026-11-19: this read `dest` without ever setting it, since the deadline's ask came in on 11-15, so every summer
+  // trade that was granted threw and the screen never moved: only a contender's 3-in-10 no ever came back)
+  const dest = tradeDest(c, any, r), { roster, fit } = dest
   // a starter guarantee was the old team's promise: it stays with them
   // (the summer's event was the old team's: dealt again for the new one, after the trade is on the record)
-  const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade${any ? '' : ' to a contender'}, dealt to the ${fit.name}` }] }
+  const moved = { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: ${c.name} is dealt to the ${fit.name}.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade${any ? '' : ' to a contender'}, dealt to the ${fit.name}` }] }
   return redealEvent(moved, c.team)
 }
 // Where a granted demand sends him. ANY TEAM: anywhere in the league. A CONTENDER: the top quarter (it was the top

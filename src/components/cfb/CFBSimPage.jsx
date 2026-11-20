@@ -1126,7 +1126,7 @@ function FinalPage({ r, v, pos, build, types, attrMap, archetype, userName, stor
             {onReturn && <button className={onDraft ? 'simp-ghost' : 'simp-cta'} onClick={() => { sfx('tap'); onReturn() }}>Return to {school}</button>}
             {!onReturn && returnNote && <p className="cfbs-note cfbp-return-note">{returnNote}</p>}
             {onTransfer && <button className="simp-ghost" onClick={() => { sfx('tap'); onTransfer() }}>Transfer</button>}
-            <button className="simp-ghost" onClick={() => { sfx('tap'); onAgain?.() }}>New {CFB_POS[pos].label} Build</button>
+            <button className="simp-ghost" onClick={() => { sfx('tap'); onAgain?.() }}>New Build</button>
           </div>
         </section>
       )}

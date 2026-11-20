@@ -192,7 +192,7 @@ function IconArrowRight() {
   )
 }
 
-function IconChevron({ up }) {
+export function IconChevron({ up }) {
   return (
     <svg
       width="11" height="11" viewBox="0 0 11 11"

@@ -4749,7 +4749,9 @@ export function calcOVRK(build, types = K_TYPES) {
   // all-A bonus: S / S / A+ is a 98, three A+ a 96, three A a 92; only S across the board is a 99. Below 88 it
   // reads on the same scale as every other position (the owner, 2026-11-10: kicker overalls ran high)
   const top = base > 88 ? 88 + (base - 88) * 0.54 : base
-  return Math.min(99, Math.max(0, Math.round(top)))
+  // (+3 on every kicker, capped at 99: the owner, 2026-11-19, when A+ across the board read 96 and 99 was out of reach.
+  // The build's (utils/simulation.js calcOVRK) and the real kickers' (data/ks.js kOVR) stay one scale)
+  return Math.min(99, Math.max(0, Math.round(top) + 3))
 }
 
 export function getArchetypeK(ovr, build, types = K_TYPES) {
