@@ -2027,7 +2027,8 @@ function Playoffs({ c, setCareer, onBook }) {
       <div className="cr-po">
         {x && (
           <div className={`ag-card cr-po-result ag-pop${x.won ? ' is-w' : ' is-l'}`}>
-            <span className="ag-eyebrow">FINAL · {x.name.toUpperCase()}</span>
+            {/* (a series' board is games won, not points: it says so. 2026-11-20: "FINAL 4 2" read as the game's score) */}
+            <span className="ag-eyebrow">{x.series ? 'SERIES' : 'FINAL'} · {x.name.toUpperCase()}</span>
             <div className="cr-po-board">
               {[[c.team, x.mySc, x.won], [x.opp, x.oppSc, !x.won]].map(([t, sc, up]) => (
                 <div key={t} className={`cr-po-side${up ? ' is-up' : ''}`} style={{ '--tc': S.teamOf(t)?.color ?? '#26302c' }}>

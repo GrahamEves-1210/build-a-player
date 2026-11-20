@@ -3017,6 +3017,8 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5, pts = nu
     // a series is four to seven games: the average barely moves off the season's (0.85–1.15×), never past a real ceiling
     const kb = clamp(0.9 + score * 0.18 + (r() - 0.5) * 0.08 + (won ? 0.02 : -0.03), 0.84, 1.15)
     line = { pts: r10(Math.min(st0.ppg * kb, 42)), reb: r10(Math.min(st0.rpg * kb, 17)), ast: r10(Math.min(st0.apg * kb, 13)), perGame: true }
+    // (the Play-In is one game: a box score, whole numbers. 2026-11-20: it read "17.5 pts, 6.5 reb a game" for one game)
+    if (!rd.series) line = { pts: Math.round(line.pts), reb: Math.round(line.reb), ast: Math.round(line.ast) }
     // (the Play-In is one game: he scored at least what the moment showed, and took the boards it showed)
     if (res && !rd.series) { if (res.got > 0) line.pts = Math.max(line.pts, res.got); if (F.reb > 0) line.reb = Math.max(line.reb, F.reb) }
   } else {
