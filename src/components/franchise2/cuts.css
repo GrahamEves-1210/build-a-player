@@ -1,0 +1,13 @@
+/* THE CUT-DOWN (Cuts.jsx): the rooms over their limit, a man picked to release, the action at the bottom */
+.fct { display: grid; align-content: start; gap: 12px; min-width: 0; color: var(--fk-text); }
+.fct > * { max-width: 720px; width: 100%; justify-self: center; }
+.fct-room { display: grid; gap: 6px; min-width: 0; }
+.fct-man { position: relative; display: grid; min-width: 0; background: var(--fk-g2); }
+.fct-man.is-picked { outline: 3px solid #fff; outline-offset: -3px; z-index: 1; }
+.fct-cost { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px 7px; font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; text-transform: uppercase; color: var(--fk-mute); }
+.fct-cost b { font-weight: 700; color: var(--fk-text); }
+.fct-cost b.fct-dead { color: #ff9b8a; }
+.fk-actbar.fct-act { grid-auto-flow: row; grid-template-columns: 1fr; gap: 8px; }
+.fct-what { margin: 0; font-family: var(--fk-b); font-size: 14px; color: var(--fk-text); }
+.fct-what b { font-weight: 700; }
+.fct-two { display: grid; grid-template-columns: 3fr 2fr; gap: 6px; }

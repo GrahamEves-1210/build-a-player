@@ -45,7 +45,7 @@ for (let y = 0; y < N; y++) {
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft(F)
   look(`${F.year} after the draft`, ['DRAFT'])
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   look(`${F.year} opening week`, ['DRAFT'])
   const json = FR.packFranchise(F)
   console.log(`   save ${(json.length / 1024).toFixed(0)} KB · news kept ${F.news.length} (${(JSON.stringify(F.news).length / 1024).toFixed(1)} KB)`)

@@ -73,7 +73,7 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
                 : step === 'coach' ? (S.cb?.team === S.team ? <CoachSpin S={S} go={go} onDone={() => go({ step: 'style' }, 'whistle')} /> : null)
                   : step === 'style' ? <StylePick S={S} go={go} onDone={() => go({ step: 'who' }, 'tap')} />
                     : step === 'who' ? <CoachWho S={S} go={go} owner={owner} onDone={() => go({ step: 'hire' }, 'whistle')} />
-                      : step === 'hire' && S.cb && linesDone(S.cb) ? <CoachReveal S={S} owner={owner} onStart={onStart} /> : null}
+                      : step === 'hire' && S.cb && linesDone(S.cb) ? <CoachReveal S={S} owner={owner} onStart={onStart} onRules={r => go({ rules: { cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, ...r } })} /> : null}
       </div>
     </div>
   )

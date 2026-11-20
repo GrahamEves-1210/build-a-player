@@ -119,6 +119,7 @@ export const injuryRate = (g, role = 'start') => RATE[g] * (role === 'start' ? E
 
 // after a team's game: every man who played (and the rest of the roster, a little) may have been hurt in it
 export function rollInjuries(F, short, R) {
+  if (F.noInj) return []   // (the league rule INJURIES OFF, rules.js)
   const C = depthChart(F, short, { healthy: true }), L = startersOf(F, short)
   const on = new Set(Object.values(L).map(p => p.i))
   const out = []

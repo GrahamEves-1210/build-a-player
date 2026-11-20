@@ -1,4 +1,4 @@
-import { TEAM, scoutRead, lastLineOf, statLine, BONUS, bonusOf, MAX_YEARS } from '../../lib/franchise2'
+import { TEAM, scoutRead, lastLineOf, statLine, BONUS, bonusOf, MAX_YEARS, NO_CAP_ROOM } from '../../lib/franchise2'
 import { KLogo } from './kit'
 import { sfx } from '../../lib/juice'
 import './deals.css'
@@ -67,6 +67,8 @@ export function Terms({ o, set, lo, hi }) {
 }
 // the cap, live: the room now, what's out in offers, and what's left after this one
 export function CapLine({ room, out = 0, take = 0 }) {
+  // (the league rule NO SALARY CAP: rules.js)
+  if (room >= NO_CAP_ROOM) return <div className="dl-cap"><span><small>SALARY CAP</small><b>OFF</b></span>{out > 0 && <span><small>OFFERS OUT</small><b>{money(out)}</b></span>}</div>
   const left = Math.round((room - out - take) * 10) / 10
   return (
     <div className={`dl-cap${left < 0 ? ' is-over' : ''}`}>

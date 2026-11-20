@@ -217,6 +217,12 @@ export function realDeal(name, team, p, R) {
   return estimateDeal(p, R)
 }
 export const realContractsLoaded = () => realTable().size > 0
+// what the data file says of a real man's career, for his age when the data has no birth year (league.js makeReal):
+// { dy: the year he was drafted, or null; rc: on his rookie deal; found: the file has his deal at all }
+export function realCareer(name, team) {
+  const hit = realTable().get(`${keyOf(name)}|${String(team ?? '').toUpperCase()}`)
+  return { dy: hit?.dy ?? null, rc: !!hit?.rc, found: !!hit }
+}
 // each team's real dead money on the 2026 cap (the file's teamDead): it sits on year one's cap, then it's gone
 let DEAD = null
 export function realTeamDead(short) {
@@ -335,12 +341,16 @@ export function capSheet(F, short = F.team) {
   const t = F.teams[short], yr = capYear(F), cap = capOf(yr)
   const pay = payrollOf(t), dead = deadOf(t), rest = restOf53(t.r.filter(p => p.y > 0).length, yr)
   const used = r1(pay + dead + rest)
+  // (the league rule NO SALARY CAP, rules.js: the player's team signs whoever it likes; the league's teams keep theirs)
+  if (F.noCap && short === F.team) return { cap, pay, dead, rest, used, room: NO_CAP_ROOM, year: yr, nocap: true }
   return { cap, pay, dead, rest, used, room: r1(cap - used), year: yr }
 }
 export const capRoom = (F, short = F.team) => capSheet(F, short).room
+export const NO_CAP_ROOM = 999
 // the room k league years past this one, on the deals already signed (the men under contract then, the rest of the
 // 53 around them): what a front office looks at before it extends a man
 export function roomAhead(F, short, k = 1) {
+  if (F.noCap && short === F.team) return NO_CAP_ROOM
   const t = F.teams[short], yr = capYear(F) + k
   const men = t.r.filter(p => (p.y ?? 0) > k)
   const pay = men.reduce((a, p) => a + (hitIn(p, k) ?? 0), 0)

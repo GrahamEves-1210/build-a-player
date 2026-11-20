@@ -4,7 +4,7 @@
 //   3 FREE AGENCY  three days of bidding against the league, under the cap (market.js, contracts.js)
 //   4 THE DRAFT    the class scouted all season, the combine, seven rounds in the real order (draft.js)
 // The draft class is made when the season starts so it can be scouted while it's played.
-import { TEAM, SHORTS, POS, OFFENSE, MIN, POS_LABEL, lineup, strength, worth, yearsFor, payroll, trim, fillUp, makeGen, fakeName, gradeIdx, GRADES, gradeFloor, FIRST_YEAR } from './league'
+import { TEAM, SHORTS, POS, OFFENSE, MIN, MAX, POS_LABEL, lineup, strength, worth, yearsFor, payroll, trim, fillUp, makeGen, fakeName, gradeIdx, GRADES, gradeFloor, FIRST_YEAR } from './league'
 import { makeSchedule, DIVISIONS } from './schedule'
 import { standings, finishOf } from './standings'
 import { rngOf, clamp, r1 } from './rng'
@@ -12,7 +12,7 @@ import { fbCase, honorsOf } from '../teamSeason'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { makeClass } from './draft'
 import { leagueUnderCap } from './market'
-import { signRookie, cutCost, marketValue, termFor } from './contracts'
+import { signRookie, cutCost, cutMan, marketValue, termFor } from './contracts'
 import { addNews } from './news'
 import { sortChartAfterCamp, fixNumbers } from './roster'
 import { clearLines } from './deals'
@@ -27,7 +27,7 @@ export function newSeason(F) {
   const before = new Set(F.lastStarters ?? [])
   const released = []
   signUDFAs(F, R)
-  F.dc = []; F.dr = null; F.offers = null; F.rs = null; F.fa = []
+  F.dc = []; F.dr = null; F.offers = null; F.rs = null; F.fa = (F.fa ?? []).filter(p => p.cc)
   for (const s of SHORTS) {
     const t = F.teams[s]
     // the cuts to the roster: the men at the bottom go. The player's new class is his to cut, never the game's, and so
@@ -35,8 +35,11 @@ export function newSeason(F) {
     // competes for his job like anyone, and if camp cuts him he's released the way the wire sees it (2026-11-17: a
     // pick from two drafts ago was being dropped here without a word). The league's teams keep their picks from the
     // first four rounds and let the late ones compete.
+    // (2026-11-19, players' reports: the cut-down was letting go of the player's free-agent signings and his veteran
+    // starters, a whole offensive line once, with their dead money. His team is cut by him now, on the cut-down screen
+    // (campCuts): the game keeps every man he has; only a made-up filler no room needs goes.)
     const mine = s === F.team
-    const keep = t.r.filter(p => (mine ? p.rk === F.year + 1 || (p.rc && (p.dr?.[0] ?? 8) <= 4) : p.rk === F.year + 1 && (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
+    const keep = t.r.filter(p => (mine ? !p.fl : p.rk === F.year + 1 && (p.dr?.[0] ?? 8) <= 4)).map(p => p.i)
     const { roster, cut } = trim(t.r, new Set(keep), { cpu: !mine })
     if (mine) {
       // (anyone the cut-down does let go from the player's team is released the way the wire and the cap see it:
@@ -49,7 +52,8 @@ export function newSeason(F) {
     if (s !== F.team) t.lk = {}
   }
   // the roster cuts and fill-ins done: every league team under the cap for the new season
-  leagueUnderCap(F); F.fa = []
+  // (the men the player let go at the cut-down stay on the street for the season's signings)
+  leagueUnderCap(F); F.fa = (F.fa ?? []).filter(p => p.cc); for (const p of F.fa) delete p.cc
   for (const p of released) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.ox; F.fa.push(p) }
   // the schedule follows last season's finish in each division
   const S = standings(F)
@@ -100,3 +104,27 @@ function signUDFAs(F, R) {
   }
 }
 export { POS_LABEL, FIRST_YEAR }
+
+// ── The cut-down (the player's own team) ─────────────────────────────────────
+// Before the new season every room has to fit its limit (MAX: the men who play). The league's teams cut their own
+// (newSeason, trim); the player's are his calls (2026-11-19: "releases should be manual"). The draft done, the rooms
+// over the limit: [{ pos, have, max, men }] (the made-up fillers don't count: the game lets them go itself)
+export function campCuts(F) {
+  const t = F.teams[F.team]
+  return POS.map(pos => { const men = t.r.filter(p => p.p === pos && !p.fl); return { pos, have: men.length, max: MAX[pos], men } }).filter(x => x.have > x.max)
+}
+// he lets a man go: off the roster, his bonus still owed on the books as dead money (contracts.js cutMan), and he's
+// on the street for the season (newSeason keeps him there). Only from a room over its limit.
+export function campCut(F, id) {
+  const room = campCuts(F).find(r => r.men.some(p => p.i === id))
+  if (!room) return null
+  const c = cutMan(F, id)
+  if (c?.p) c.p.cc = 1
+  return c
+}
+// (the headless sims' cut-down: the player's calls made the way the old cut-down made them: his builds, the new class
+// and his early picks on their rookie deals kept, the rest by rating)
+export function autoCamp(F) {
+  const kept = p => p.b != null || p.rk === F.year + 1 || (p.rc && (p.dr?.[0] ?? 8) <= 4)
+  for (const r of campCuts(F)) for (const p of [...r.men].sort((a, b) => kept(a) - kept(b) || a.o - b.o).slice(0, r.have - r.max)) campCut(F, p.i)
+}

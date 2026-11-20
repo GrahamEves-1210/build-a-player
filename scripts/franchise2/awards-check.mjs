@@ -58,7 +58,7 @@ for (let f = 0; f < NF; f++) {
     FR.openFA(F); while (F.fad) FR.nextFADay(F)
     FR.openDraft(F); FR.startNight(F)
     while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
-    FR.closeDraft(F); FR.newSeason(F)
+    FR.closeDraft(F); FR.autoCamp(F); FR.newSeason(F)
   }
 }
 console.log(`\n${seasons} seasons (${NF} franchises x ${NS}) in ${((Date.now() - t0) / 1000).toFixed(0)} s`)

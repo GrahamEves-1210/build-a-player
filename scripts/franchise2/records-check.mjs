@@ -147,7 +147,7 @@ function offseason() {
   // 5: who wears what, for the men who'll stay
   const nums = {}
   for (const s of FR.SHORTS) for (const p of F.teams[s].r) if (p.nu != null) nums[p.i] = [s, p.nu]
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   const now = new Set(F.teams[F.team].r.map(p => p.i)), fa = new Set((F.fa ?? []).map(p => p.i))
   let gone = 0
   // (a man the cut-down does let go is released the way the wire sees it: a free agent and a RELEASED line; the only

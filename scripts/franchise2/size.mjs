@@ -6,7 +6,7 @@ FR.simWeeks(F); FR.intoPlayoffs(F); FR.simPlayoffs(F); FR.closeSeason(F); FR.age
 for (const id of [...F.rs]) FR.resignOne(F, id, true)
 FR.openFA(F); while (F.fad) FR.nextFADay(F)
 FR.openDraft(F); while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
-FR.newSeason(F)
+FR.autoCamp(F); FR.newSeason(F)
 const packed = JSON.parse(FR.packFranchise(F))
 for (const [k, v] of Object.entries(packed)) { const n = JSON.stringify(v ?? null).length; if (n > 200) console.log(k.padEnd(12), n) }
 console.log('total', FR.saveSize(F))

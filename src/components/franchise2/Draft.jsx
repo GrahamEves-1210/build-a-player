@@ -6,8 +6,9 @@ import {
   viewOf, rangeText, knownShare, reportOf, consensus, rankMap, projText, stockMoves, mockDraft, mockVersion, needsOf,
   seasonLine, gameLine, lineText, combineOf, star, moveOnBoard, spotLabel, pickSpot, heightText, CLASS_LABEL, KIND_LABEL, CHAR_TEXT,
   startNight, cpuPicks, userPick, autoPick, simRest, pickTeam, draftDone, myPicks, roundOf, boardRank, markSeen,
-  tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT, lightNewSeason,
+  tradeUpOffers, tradeDownOffers, acceptTrade, draftReview, closeDraft, TAG_TEXT, lightNewSeason, campCuts,
 } from '../../lib/franchise2'
+import { CutDown } from './Cuts'
 import { groupOf, jersey } from '../../lib/franchise2/roster'
 import { faceUrl, buildFaceUrl, facePos } from '../../lib/franchise2/faces'
 import { realOf } from '../../lib/franchise2/league'
@@ -701,10 +702,14 @@ function RevealCard({ F, p, onNext, label = null }) {
 
 // ── After the draft: our class, how good the scouting was, the league's gems and busts ──
 function ClassRecap({ F, act, owner }) {
+  // (the cut-down: a room over its limit, the player picks who goes before the season starts, Cuts.jsx)
+  const [cuts, setCuts] = useState(false)
+  const begin = () => { act(X => { if (X.pace === 'light') lightNewSeason(X); else { closeDraft(X); newSeason(X) } }); sfx('whistle'); haptic('medium') }
   const rv = useMemo(() => draftReview(F), [F, F.dr.picks.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const [n, setN] = useState(() => (reduced() ? 99 : 0))
   useEffect(() => { if (n > rv.mine.length + 1) return; const t = setTimeout(() => setN(k => k + 1), 380); return () => clearTimeout(t) }, [n, rv.mine.length])
   const nu = p => { const man = F.teams[F.team].r.find(q => q.i === p.pid); return man ? jersey(F, man) : null }
+  if (cuts) return <CutDown F={F} act={act} owner={owner} onDone={begin} />
   return (
     <div className="dr-day fk" style={fkVars(F.team)}>
       <Chyron team={F.team} title="DRAFT CLASS" tag={F.year + 1} size="l" sub={`${TEAM[F.team].nick.toUpperCase()} · ${rv.mine.length} ${rv.mine.length === 1 ? 'PICK' : 'PICKS'}${owner && !/^guest$/i.test(owner) ? ` · GM ${owner.toUpperCase()}` : ''}`} />
@@ -735,7 +740,7 @@ function ClassRecap({ F, act, owner }) {
           <section className="dr-sec"><Chyron title="BUSTS" tone="ink" size="s" sub="ROUNDS 1-2 · OVERRATED BY THE CONSENSUS" right={rv.busts.length || null} />{rv.busts.length ? rv.busts.map(p => <LeaguePick key={p.at} p={p} kind="bust" />) : <p className="dr-empty">NO EARLY-ROUND BUSTS IN THIS CLASS</p>}</section>
         </>
       )}
-      <ActionBar><Go onClick={() => { act(X => { if (X.pace === 'light') lightNewSeason(X); else { closeDraft(X); newSeason(X) } }); sfx('whistle'); haptic('medium') }}>Start the {F.year + 1} season</Go></ActionBar>
+      <ActionBar><Go onClick={() => { act(X => closeDraft(X)); if (campCuts(F).length) { setCuts(true); sfx('tap') } else begin() }} sub={campCuts(F).length ? 'ROSTER CUTS FIRST' : null}>{campCuts(F).length ? 'Next: Roster cuts' : `Start the ${F.year + 1} season`}</Go></ActionBar>
     </div>
   )
 }

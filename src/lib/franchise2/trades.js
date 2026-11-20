@@ -339,7 +339,7 @@ export function checkTrade(F, s, give, get) {
   const cut = releasesFor(F, F.team, gm, tm)
   if (cut == null) return { ok: false, why: 'roster', text: `No room on the ${nick(F.team)} roster at that spot` }
   const cap = capAfter(F, F.team, gm, tm, cut)
-  if (!capOk(cap)) return { ok: false, why: 'ucap', text: `The ${nick(F.team)} would be $${r1(-cap.after)}M over the cap`, cap }
+  if (!F.noCap && !capOk(cap)) return { ok: false, why: 'ucap', text: `The ${nick(F.team)} would be $${r1(-cap.after)}M over the cap`, cap }
   return { ok: true, cap, cut }
 }
 // what the trades this league year say about the player's team and team s

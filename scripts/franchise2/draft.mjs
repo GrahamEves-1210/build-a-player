@@ -81,7 +81,7 @@ for (let y = 0; y < N; y++) {
   const man = k => F.teams[F.dr.picks[k].s].r.find(p => p.i === F.dr.picks[k].pid)
   console.log(`   first round: ${Object.entries(pc).map(([k, v]) => `${k} ${v}`).join(' · ')} · rookie deals: #1 $${man(0).$}M, #32 $${man(31).$}M, #100 $${man(99).$}M, #200 $${man(199).$}M`)
   const rt = FR.ratingsOf(man(0)); console.log(`   #1 ${man(0).n} ${FR.spotLabel(man(0))} o ${man(0).o} pk ${man(0).pk} ratings ${Object.values(rt).map(v => v.val).join(',')} nu ${man(0).nu} rc ${man(0).rc} op ${man(0).op}`)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   const json = FR.packFranchise(F), back = FR.unpackFranchise(json)
   const same = (a, b) => ['i', 'n', 'p', 's', 'o', 'pk', 'a', 'k', 'z', 'col'].every(k => a[k] === b[k])
   if (!back.dc.every((x, j) => same(x, F.dc[j]))) bad('class pack')

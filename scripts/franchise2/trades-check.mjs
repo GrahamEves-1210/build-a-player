@@ -184,7 +184,7 @@ for (let y = 0; y < N; y++) {
   FR.closeDraft(F)
   if (F.dr.picks.length !== FR.PICKS_N) bad('draft picks')
   noteCap(); workPhones(`${F.year} after the draft`); audit()
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   audit()
   const made = fresh
   const u = made.filter(d => d.u).length, ai = made.length - u

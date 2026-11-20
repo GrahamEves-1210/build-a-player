@@ -30,7 +30,7 @@ const DB_V = 0.084, LB_V = 0.074, PEDAL_V = 0.052
 const FLIP_GAP = 17, FLIP_MS = 1100, TURN_MS = 170   // how much cushion he gives before he turns and runs, and what the turn costs
 const TRAIL_TAU = 105, LEV = 17                      // in phase: this far behind (as a lag, ms) and this far to the side of him
 const WIN_P = 0.84, HALF_P = 0.5                     // how often someone gets a step on his man: most snaps, not all of them
-const GOAL = 50 * YD, TOP = GOAL + 10 * YD, GOAL0 = GOAL
+const GOAL = 50 * YD, TOP = GOAL + 10 * YD, GOAL0 = GOAL, TOP0 = TOP
 const curve = (v, p) => Math.pow(clamp((v - 1) / 10, 0, 1), p)
 export const catchOf = v => 7 + 35 * curve(v, 1.4)        // how far he can reach for it
 export const scatterOf = v => byV(v, 3, 0.8)              // sd of where a good throw really lands
@@ -329,6 +329,10 @@ const kOf = (los, top) => (los - 30) / top
 function makePlay({ v, arm, seed, game, cast, sit = null }) {
   const fr = game === 'fr-pass' && sit ? sit : null
   const GOAL = fr ? clamp(fr.toGoal ?? 50, 1, 99) * YD : GOAL0
+  // (the field on the screen runs to the end line, so the end zone is always there and a catch-and-run can get to it:
+  // a snap from further out than the 50 shows more of the field. 2026-11-19: from deep in his own end the goal line was
+  // off the top of the screen and the runner stopped dead 10 to 15 yards short of it)
+  const TOP = Math.max(TOP0, GOAL + 10 * YD)
   const r = rngOf(seed)
   const mirror = r() < 0.5
   const Mx = x => (mirror ? 360 - x : x)

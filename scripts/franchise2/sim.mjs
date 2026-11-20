@@ -100,7 +100,7 @@ for (let y = 0; y < N; y++) {
   if (F.dr.picks.length !== FR.PICKS_N || new Set(F.dr.picks.map(p => p.pid)).size !== FR.PICKS_N) bad('draft picks')
   if (mine.some(p => !F.teams[team].r.find(q => q.i === p.pid)?.rc)) bad('a pick without a rookie deal')
   console.log(`   offseason: ${ch.filter(c => c.k === 'ret').length} of ours retired, ${ch.filter(c => c.k === 'up').length} up, ${ch.filter(c => c.k === 'down').length} down; drafted ${mine.map(p => `${p.p.toUpperCase()} ${FR.GRADES[FR.gradeIdx(p.pk)]}${p.tag === 'G' ? ' GEM' : p.tag === 'B' ? ' BUST' : ''}`).join(', ')}; builds ${F.builds.map(b => `${b.pos} ${F.teams[team].r.find(p => p.b === F.builds.indexOf(b))?.o ?? 'gone'} age ${b.age}`).join(', ')}`)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
   for (const s of FR.SHORTS) { if (s !== team && FR.capRoom(F, s) < 0) bad(`${F.year} ${s} ${-FR.capRoom(F, s)}M over the cap at the start of the season`) }
   const size = FR.saveSize(F)
   const players = FR.SHORTS.reduce((a, s) => a + F.teams[s].r.length, 0)

@@ -21,7 +21,7 @@ for (let y = 0; y < N; y++) {
   counts.push([g, b])
   console.log(`${F.year + 1}: gems ${g} (review ${rv.gems.length}: ${rv.gems.map(p => `${FR.pickSpot(p)}@${p.at + 1} ${FR.gradeOf(p.bz)}->${FR.gradeOf(p.pk)}`).join(', ') || 'none'}) · busts ${b} (review ${rv.busts.length}: ${rv.busts.map(p => `${FR.pickSpot(p)}@${p.at + 1} ${FR.gradeOf(p.bz)}->${FR.gradeOf(p.pk)}`).join(', ') || 'none'})`)
   dump.push(F.dr.picks.map(p => [p.at, p.pk, p.bz, p.p]))
-  FR.closeDraft(F); FR.newSeason(F)
+  FR.closeDraft(F); FR.autoCamp(F); FR.newSeason(F)
 }
 const avg = i => (counts.reduce((a, c) => a + c[i], 0) / counts.length).toFixed(1)
 console.log(`per class: gems ${counts.map(c => c[0]).join(' ')} (avg ${avg(0)}) · busts ${counts.map(c => c[1]).join(' ')} (avg ${avg(1)})`)

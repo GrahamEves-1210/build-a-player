@@ -177,7 +177,7 @@ function playLight({ swap = false, log = false, exactOnly = false }) {
     const cpuTrades = F.dr.tr.length
     F.dr.over = 1
     F = stop(F, swap, `${yr} draft class`, exactOnly)
-    FR.lightNewSeason(F)
+    FR.autoCamp(F); FR.lightNewSeason(F)
     if (F.phase !== 'season' || F.lt?.ph !== 'card' || F.lt.k !== 0 || F.nextEv < 18) bad(`${yr + 1}: the new season didn't open its first stretch`)
     // contracts and the cap at a new season
     for (const s of FR.SHORTS) {
@@ -221,7 +221,7 @@ function playFull() {
     for (const x of FR.consensus(F).slice(0, 5)) { FR.interview(F, x.i); FR.film(F, x.i); FR.star(F, x.i) }
     FR.startNight(F)
     while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
-    FR.closeDraft(F); FR.newSeason(F)
+    FR.closeDraft(F); FR.autoCamp(F); FR.newSeason(F)
     sizes.push(pack(F).length); C_parts.push(partsOf(F))
     seasons.push({ lead })
   }

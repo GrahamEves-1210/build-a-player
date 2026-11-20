@@ -7,7 +7,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { recText, records } from './standings'
 import { takenOn, legalFor, pickNumber, cleanName, rookieSlots } from './identity'
 import { defaultFace } from './faces'
-import { capComply, cutMan, marketValue, termFor, tickDeal, dealsOnLoad } from './contracts'
+import { makeRoom, cutMan, marketValue, termFor, tickDeal, dealsOnLoad } from './contracts'
 import { addNews } from './news'
 import { packStaff, unpackStaff } from './coach'
 import { fillPotential, buildPotential } from './potential'
@@ -39,6 +39,7 @@ export { clockText, periodOf, spotText, normalRate, simSnap, SNAP_KIND } from '.
 export * from './moments'
 export * from './light'
 export * from './trades'
+export * from './rules'
 
 // (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)
 // (8: game day's moments are snaps of the game, 2026-11-16; an older save is brought up to date on load: upgradeSave)
@@ -98,10 +99,11 @@ export function createFranchise(setup) {
     }
   }
   F.lastStarters = Object.values(lineup(t)).map(p => p.i)
-  // the builds' rookie deals land on a real roster: if that puts the team over the cap, the front office gets under it
-  // before the GM's first day, the way NFL teams do by the new league year (restructures first, then releases of the
-  // contracts that save the most for the least football); the wire reports each move (contracts.js capComply)
-  for (const m of capComply(F, F.team, new Set(F.lastStarters))) {
+  // the builds' rookie deals land on a real roster: if that puts the team over the cap, the front office makes room
+  // before the GM's first day with restructures, the way NFL teams do by the new league year; the wire reports each
+  // one (contracts.js makeRoom). Never a release: the roster is the GM's (2026-11-19: a Dolphins franchise opened with
+  // ten men released, Malik Willis and De'Von Achane among them, and gone from the league). Still over: his call.
+  for (const m of [...makeRoom(F, F.team, 0), ...makeRoom(F, F.team, 0, true)]) {
     if (m.k === 'rs') addNews(F, { k: 'sign', tag: 'RESTRUCTURED', s: F.team, text: `${real.nick} restructure ${m.n}${/s$/.test(m.n) ? "'" : "'s"} contract, clearing $${m.saves.toFixed(1)} million in cap space` })
   }
   F.lastStarters = Object.values(lineup(t)).map(p => p.i)

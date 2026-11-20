@@ -94,7 +94,7 @@ for (let y = 0; y < N; y++) {
   FR.openDraft(F); FR.startNight(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
 }
 console.log(`\nOVER ${N} SEASONS (the OVR at the start of each season; r = its correlation with that season's win% / point diff)`)
 for (const S of seasons) console.log(`${S.y}: OVR ${spreadOf(S.ovr)} · before ${q(S.old, 0)}-${q(S.old, 1)} sd ${sd(S.old).toFixed(1)} · QB1 ${q(S.qb, 0)}-${q(S.qb, 1)} sd ${sd(S.qb).toFixed(1)} (under 76: ${S.qb.filter(o => o < 76).length}) · 90+ men ${S.n90} · wins sd ${sd(S.wins).toFixed(1)}, 13+ ${S.wins.filter(w => w >= 13).length}, 4- ${S.wins.filter(w => w <= 4).length} · OFF ${q(S.off, 0)}-${q(S.off, 1)} DEF ${q(S.def, 0)}-${q(S.def, 1)} · r ${S.r.toFixed(2)}/${S.rpd.toFixed(2)} · champ ${S.champ} (${S.champOvr}, #${S.champRank})`)

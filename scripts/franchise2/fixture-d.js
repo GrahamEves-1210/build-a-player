@@ -26,7 +26,7 @@ function offseason(F, stop = null) {
   FR.openDraft(F)
   while (!FR.draftDone(F)) { FR.cpuPicks(F); if (!FR.draftDone(F)) FR.autoPick(F) }
   FR.closeDraft?.(F)
-  FR.newSeason(F)
+  FR.autoCamp(F); FR.newSeason(F)
 }
 export function make(stage = 'wk8', team = 'DEN') {
   const qb = QBS.find(p => p.name === 'Josh Allen'), wr = WRS.find(p => p.attrs && p.name === 'Puka Nacua')

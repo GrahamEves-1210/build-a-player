@@ -108,7 +108,9 @@ function rydSoFar(F, roster) {
 // (2026-11-17, scripts/franchise2/realism.mjs): an elite receiver draws more of his team's targets than the old cap
 // let him (Chase, Hill, Jefferson, Kupp: 35-41% of their teams' receiving yards, 1,700-1,950 yards), and an elite
 // passer's share of his team's touchdowns tops out nearer two in three (the leaders' 35-45, 40-plus not every year)
-export const FB_TUNE = { tgtCap: 0.31, tgtK: 0.5, pTdBase: 0.6, pTdK: 0.1, pTdMax: 0.66, ypaK: 4, attK: 12, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3, coolAt: 1450, coolK: 0.2 }
+// (2026-11-19: the league's backs ran for 18 touchdowns a team and the leaders for 19 to 24; the NFL's teams run for
+// about 15.6 and its leaders for 15 to 18. A touchdown is a pass a little more often: pTdBase 0.60 to 0.63, the cap 0.69)
+export const FB_TUNE = { tgtCap: 0.31, tgtK: 0.5, pTdBase: 0.63, pTdK: 0.1, pTdMax: 0.69, ypaK: 4, attK: 12, carCap: 0.8, carK: 0.4, heatAt: 11, heatK: 0.3, coolAt: 1450, coolK: 0.2 }
 // a passer's interceptions so far this season (the box eases him off past ten: below)
 const picksSoFar = (F, k) => { const id = k.slice(1); return (F.ss?.[id]?.int ?? 0) + (lgLine(F.lg, id)?.int ?? 0) }
 const other = s => (s === 'h' ? 'a' : 'h')
