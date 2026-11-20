@@ -83,7 +83,7 @@ function Draft({ F, act, go }) {
     <section className="nb-draft">
       <Chyron team={pk?.t ?? F.team} tag={pk ? `NO. ${pk.n}` : 'DONE'} title={pk ? `${TEAM[pk.t].nick} on the clock` : 'The draft is over'} sub={pk ? `ROUND ${pk.r}${pk.o !== pk.t ? ` · FROM ${TEAM[pk.o].short}` : ''} · ${mineLeft.length ? `${nick(F.team).toUpperCase()} PICK ${mineLeft.map(p => p.n).join(', ')}` : 'NO PICKS LEFT'}` : `${made.length} PICKS`} />
       {pk && !mine && <div className="fh-go"><Go onClick={simTo}>{mineLeft.length ? `Sim to pick ${mineLeft[0].n}` : 'Sim the rest'}</Go></div>}
-      {pk && mine && <p className="nb-gd-tail">{(F.sp ?? 0) > 0 ? `${F.sp} scouting reports left` : 'Make the pick'}</p>}
+      {pk && mine && <div className="nb-mine"><p className="nb-gd-tail">{(F.sp ?? 0) > 0 ? `${F.sp} scouting reports left` : 'Make the pick'}</p><button type="button" className="fh-textbtn" onClick={() => pick(null)}>Best available</button></div>}
       <div className="nb-by">
         <button type="button" className={show === 'board' ? 'is-on' : ''} onClick={() => setShow('board')}>Big board</button>
         <button type="button" className={show === 'mine' ? 'is-on' : ''} onClick={() => setShow('mine')}>Starred</button>
@@ -101,7 +101,7 @@ function Draft({ F, act, go }) {
     </section>
   )
 }
-function Prospect({ F, p, act, onPick }) {
+export function Prospect({ F, p, act, onPick }) {
   const R = rangeOf(p)
   const star = (F.board ?? []).includes(p.i)
   return (

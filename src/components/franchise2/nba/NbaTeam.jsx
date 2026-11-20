@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TEAM, SHORTS, depthOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
 import { sfx } from '../../../lib/juice'
-import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold } from '../kit'
+import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar } from '../kit'
 import { money } from './NbaHub'
 
 // THE TEAM: the rotation (the order the coach plays them in: the first five start), the cap, the two-way men,
 // a man's page (his deal, his career, move him in the rotation, waive him) and trades.
-const ppg = (F, p) => { const x = F.ss?.[p.i]; return x?.gp ? `${(x.pts / x.gp).toFixed(1)} PPG · ${(x.reb / x.gp).toFixed(1)} RPG · ${(x.ast / x.gp).toFixed(1)} APG` : null }
+const ppg = (F, p, all = false) => { const x = F.ss?.[p.i]; if (!x?.gp) return null; const f = k => (x[k] / x.gp).toFixed(1); return all ? `${f('pts')} PPG · ${f('reb')} RPG · ${f('ast')} APG` : `${f('pts')} PPG · ${p.g === 'big' ? `${f('reb')} RPG` : `${f('ast')} APG`}` }
 export const dealText = p => (p.tw ? 'TWO-WAY' : p.y > 0 ? `${money(p.$)} · ${p.y} ${p.y === 1 ? 'YR' : 'YRS'}${p.opt ? ` · ${p.opt.k === 'P' ? 'PLAYER' : 'TEAM'} OPTION` : ''}` : 'DEAL UP')
 
 export default function NbaTeam({ F, act, owner, view, setView }) {
@@ -63,7 +63,7 @@ export function CapBar({ F, s = F.team }) {
       <div className="nb-cap-h"><b>{money(c.pay)}</b><span>{F.noCap && s === F.team ? 'No salary cap' : OVER[c.over]}</span></div>
       <div className="nb-cap-bar" aria-hidden="true">
         <i className="nb-cap-fill" style={{ width: at(c.pay) }} />
-        {[['CAP', c.cap], ['TAX', c.tax], ['1ST', c.a1], ['2ND', c.a2]].map(([k, v]) => <em key={k} style={{ left: at(v) }}><small>{k}</small></em>)}
+        {[['CAP', c.cap], ['TAX', c.tax], ['', c.a1], ['', c.a2]].map(([k, v], i) => <em key={i} style={{ left: at(v) }}>{k && <small>{k}</small>}</em>)}
       </div>
       <div className="nb-cap-k"><span>Cap {money(c.cap)}</span><span>Tax {money(c.tax)}</span><span>Aprons {money(c.a1)} / {money(c.a2)}</span></div>
     </section>
@@ -97,7 +97,7 @@ function ManSheet({ F, act, id, owner, onClose }) {
           {p.dr && <span><small>Drafted</small><b>{p.dr[0]} · R{p.dr[1]} NO. {p.dr[2]}</b></span>}
           {p.inj?.g && <span><small>Injury</small><b>{p.inj.k} · {p.inj.g} G</b></span>}
         </div>
-        {ppg(F, p) && <p className="nb-sheet-line">{seasonText(F.year)}: {ppg(F, p)}</p>}
+        {ppg(F, p) && <p className="nb-sheet-line">{seasonText(F.year)}: {ppg(F, p, true)}</p>}
         {!p.tw && (
           <div className="nb-sheet-acts">
             <button type="button" disabled={k <= 0} onClick={() => { move(-1); sfx('tap') }}>Move up</button>
@@ -121,61 +121,76 @@ function ManSheet({ F, act, id, owner, onClose }) {
 }
 
 // ── TRADES ───────────────────────────────────────────────────────────────────
-// pick a team, the men and picks each side sends; the league office checks it (salary matching, the aprons, the
-// Stepien rule: cap.js), then the other GM answers
+// pick a team; the deal on top (what each side sends, the salaries), one side's men and picks at a time under it;
+// the league office checks it (salary matching, the aprons, the Stepien rule: cap.js), then the other GM answers
 function Trades({ F, act, onBack }) {
   const [them, setThem] = useState(null)
+  const [side, setSide] = useState(0)
   const [ga, setGa] = useState([]), [gb, setGb] = useState([]), [pa, setPa] = useState([]), [pb, setPb] = useState([])
   const [ans, setAns] = useState(null)
   const deal = them ? { a: F.team, b: them, ga, gb, pa, pb } : null
-  const chk = useMemo(() => (deal && (ga.length + gb.length + pa.length + pb.length) ? CAP_SIM.checkTrade(F, deal) : null), [F, them, ga, gb, pa, pb]) // eslint-disable-line react-hooks/exhaustive-deps
+  const any = ga.length + gb.length + pa.length + pb.length > 0
+  const chk = useMemo(() => (deal && any ? CAP_SIM.checkTrade(F, deal) : null), [F, them, ga, gb, pa, pb]) // eslint-disable-line react-hooks/exhaustive-deps
   const tog = (arr, set, v) => { set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]); setAns(null); sfx('tap') }
+  const reset = () => { setGa([]); setGb([]); setPa([]); setPb([]); setAns(null) }
   if (!them) {
     return (
       <div className="nb-trades">
         <BackBar label="Team" title="Trades" onBack={onBack} />
         <Chyron tone="ink" size="s" title="Pick a trade partner" />
         <div className="nb-wall">
-          {SHORTS.filter(s => s !== F.team).map(s => <button key={s} type="button" className="fsu-tm" style={fkVars(s)} onClick={() => { setThem(s); sfx('tap') }} aria-label={TEAM[s].name}><KLogo s={s} size={40} /><small>{s}</small></button>)}
+          {SHORTS.filter(s => s !== F.team).map(s => <button key={s} type="button" className="fsu-tm" style={fkVars(s)} onClick={() => { setThem(s); setSide(1); sfx('tap') }} aria-label={TEAM[s].name}><KLogo s={s} size={40} /><small>{s}</small></button>)}
         </div>
       </div>
     )
   }
+  const men = s => F.teams[s].r.filter(p => !p.tw)
   const pickIdx = s => (F.picks ?? []).map((p, i) => [p, i]).filter(([p]) => p.t === s && p.y > F.year)
-  const side = (s, men, sel, set, psel, pset) => (
-    <section className="nb-tside">
-      <Chyron team={s} size="s" title={TEAM[s].nick} sub={`${money(CAP_SIM.capSheet(F, s).pay)} PAYROLL`} />
-      {F.teams[s].r.filter(p => !p.tw).sort((x, y) => y.o - x.o).map(p => (
-        <button key={p.i} type="button" className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)}>
-          <b>{p.n}</b><span>{p.p} · {p.o} · {p.ag}</span><em>{dealText(p)}</em>
-        </button>
-      ))}
-      <Fold title="Picks">{pickIdx(s).map(([p, i]) => <button key={i} type="button" className={`nb-tman${psel.includes(i) ? ' is-on' : ''}`} onClick={() => tog(psel, pset, i)}><b>{pickText(F, p)}</b></button>)}</Fold>
-    </section>
-  )
+  const S = [[F.team, ga, setGa, pa, setPa], [them, gb, setGb, pb, setPb]]
+  const [s0, sel, set, psel, pset] = S[side]
+  const sum = (s, ids) => ids.reduce((x, i) => x + (men(s).find(p => p.i === i)?.$ ?? 0), 0)
+  const list = (s, ids, pids) => [...ids.map(i => men(s).find(p => p.i === i)?.n), ...pids.map(i => pickText(F, F.picks[i]))].filter(Boolean)
   const ask = () => {
     const a = CAP_SIM.cpuAnswer(F, deal)
     setAns(a)
     if (a?.yes) {
       act(X => {
+        const nm = (s, ids) => ids.map(i => X.teams[s].r.find(p => p.i === i)?.n).filter(Boolean).join(' and ')
+        const txt = `The ${nick(X.team)} trade ${nm(X.team, ga) || 'draft picks'} to the ${nick(them)} for ${nm(them, gb) || 'draft picks'}`
         CAP_SIM.doTrade(X, deal)
-        const nm = ids => ids.map(i => [...X.teams[X.team].r, ...X.teams[them].r].find(p => p.i === i)?.n).filter(Boolean).join(', ')
-        addNews(X, { k: 'trade', tag: 'TRADE', s: X.team, text: `The ${nick(X.team)} trade ${nm(ga) || 'picks'} to the ${nick(them)} for ${nm(gb) || 'picks'}` })
+        addNews(X, { k: 'trade', tag: 'TRADE', s: X.team, text: txt })
       })
       sfx('claim'); setGa([]); setGb([]); setPa([]); setPb([])
     } else sfx('deny')
   }
   return (
     <div className="nb-trades">
-      <BackBar label="Teams" title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); setGa([]); setGb([]); setPa([]); setPb([]); setAns(null) }} />
-      <div className="nb-tgrid">
-        {side(F.team, null, ga, setGa, pa, setPa)}
-        {side(them, null, gb, setGb, pb, setPb)}
+      <BackBar label="Teams" title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); reset() }} />
+      <section className="nb-deal">
+        {S.map(([s, ids, , pids], k) => (
+          <div key={s} className="nb-deal-side" style={fkVars(s)}>
+            <span className="nb-deal-h"><KLogo s={s} size={22} /><b>{TEAM[s].nick} send</b><em>{money(sum(s, ids))}</em></span>
+            <p>{list(s, ids, pids).join(', ') || 'Nothing yet'}</p>
+          </div>
+        ))}
+      </section>
+      <div className="nb-by" role="tablist">
+        {S.map(([s], k) => <button key={s} type="button" role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); sfx('tap') }}>{TEAM[s].nick}</button>)}
       </div>
-      {chk && !chk.ok && <p className="nb-why">{chk.why}</p>}
-      {ans && !ans.yes && <p className="nb-why">{ans.why ?? `The ${TEAM[them].nick} pass`}</p>}
-      {ans?.yes && <p className="nb-ok">Deal done</p>}
-      <div className="fh-go"><Go disabled={!chk?.ok} onClick={ask}>Propose the trade</Go></div>
+      <section className="nb-tside">
+        {men(s0).sort((x, y) => y.o - x.o).map(p => (
+          <button key={p.i} type="button" className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)}>
+            <b>{p.n}</b><span>{p.p} · {p.o} · {p.ag}</span><em>{dealText(p)}</em>
+          </button>
+        ))}
+        <Fold title="Draft picks" right={`${psel.length || ''}`}>{pickIdx(s0).map(([p, i]) => <button key={i} type="button" className={`nb-tman${psel.includes(i) ? ' is-on' : ''}`} onClick={() => tog(psel, pset, i)}><b>{pickText(F, p)}</b></button>)}</Fold>
+      </section>
+      <ActionBar className="nb-tact">
+        {chk && !chk.ok && <p className="nb-why">{chk.why}</p>}
+        {ans && !ans.yes && <p className="nb-why">{ans.why ?? `The ${TEAM[them].nick} pass`}</p>}
+        {ans?.yes && <p className="nb-ok">Deal done</p>}
+        <Go disabled={!chk?.ok} onClick={ask}>Propose the trade</Go>
+      </ActionBar>
     </div>
   )
 }

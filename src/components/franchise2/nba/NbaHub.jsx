@@ -4,6 +4,7 @@ import {
   playNext, simTo, startPostseason, playPoNight, simPostseason, mySeries, myPoGame, seriesText, ROUND_NAME, closeSeason, teamOvr,
   seasonText, CAP_SIM, nick, FINISH_TEXT, finishOf, nextStep,
 } from '../../../lib/franchise2/nba'
+import * as NBA from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
 import { IconClose } from '../../app/icons'
 import { GamesSwitch } from '../../simFlow'
@@ -14,7 +15,8 @@ import NbaGame, { NbaBox } from './NbaGame'
 import NbaTeam from './NbaTeam'
 import NbaLeague from './NbaLeague'
 import NbaHistory from './NbaHistory'
-import NbaOffseason from './NbaOffseason'
+import NbaOffseason, { Prospect } from './NbaOffseason'
+import { createPortal } from 'react-dom'
 import '../season.css'
 import '../gameday.css'
 
@@ -31,6 +33,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
   const t = TEAM[F.team]
   const R = records(F)
   const off = F.phase === 'off'
+  if (import.meta.env.DEV) window.__nba = { F, act, L: NBA }   // (dev: the headless checks read the league)
   const toTab = (id, view = null) => { setTeamView(view); if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
   // PLAY: the GM's next game on screen (the scorebug, a moment if it comes, the final)
   const play = () => {
@@ -99,6 +102,7 @@ function Season({ F, R, act, play, owner, onTrades }) {
         {F.log.length > 0 && <LastGame F={F} owner={owner} />}
         {(ph === 'season' || ph === 'post') && <ConfLadder F={F} R={R} />}
         {ph === 'season' && <Strip F={F} />}
+        <ScoutRow F={F} act={act} />
         <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
           onPick={m => act(X => { X.moments = m })} cls={{ root: 'fh-games', top: 'fh-games-label', group: 'fh-seg' }} />
         <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
@@ -134,7 +138,7 @@ function NextGame({ F, R, act, play, onTrades }) {
         <Go onClick={play}>Play game {gameNo(F, g)}</Go>
         <div className="nb-sims">
           {sim(F.day + 7, 'Sim a week')}
-          {ddl ? sim(F.ddl + 1, 'Sim to the deadline') : asb ? sim(F.asb[0], 'Sim to the All-Star break') : null}
+          {ddl && F.day < F.ddl ? sim(F.ddl, 'Sim to the deadline') : asb ? sim(F.asb[0], 'Sim to the All-Star break') : null}
           {sim(F.days, 'Sim to the end')}
         </div>
       </div>
@@ -228,11 +232,12 @@ function PoCard({ F, act, play }) {
   const mine = myPoGame(F)
   const S = mySeries(F)
   const title = F.phase === 'playin' ? 'Play-In Tournament' : ROUND_NAME[P.rd]
+  const bye = F.phase === 'playin' && (P.seeds[CONF_OF[F.team]].slice(0, 6).includes(F.team) || P.pi?.[CONF_OF[F.team]]?.w78 === F.team)
   const night = () => { act(X => { playPoNight(X) }); sfx('flip') }
   const all = () => { act(X => { simPostseason(X) }); sfx('flip') }
   return (
     <section className="fh-next">
-      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase())}</b><span>{S ? seriesText(S, F.team) : mine ? 'Win or go home' : 'Eliminated'}</span></div>
+      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase())}</b><span>{S ? seriesText(S, F.team) : mine ? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
       {mine ? (
         <>
           <div className="fh-mu">
@@ -255,10 +260,10 @@ function Bracket({ F }) {
   return (
     <section className="nb-bracket">
       <h3 className="fh-h"><b>Bracket</b><span>{F.phase === 'playin' ? 'Play-in' : ''}</span></h3>
-      {F.phase === 'playin' && ['E', 'W'].map(c => (
+      {P.pi && ['E', 'W'].map(c => (
         <div key={c} className="nb-pi">
           <small>{c === 'E' ? 'EAST' : 'WEST'} PLAY-IN</small>
-          {(P.cur ?? []).filter(g => g.c === c).map(g => <SeriesRow key={g.k} F={F} hi={g.h} lo={g.a} txt={g.k === '78' ? '7 v 8' : g.k === '910' ? '9 v 10' : 'For the 8 seed'} />)}
+          {piGames(P, c).map(g => <SeriesRow key={g.k} F={F} hi={g.h} lo={g.a} g={g} txt={g.k === '78' ? '7 v 8' : g.k === '910' ? '9 v 10' : 'For No. 8'} />)}
         </div>
       ))}
       {rounds.map((rd, k) => (
@@ -270,13 +275,14 @@ function Bracket({ F }) {
     </section>
   )
 }
-function SeriesRow({ F, hi, lo, S, txt }) {
-  const won = s => S?.done === s
+const piGames = (P, c) => { const x = P.pi?.[c] ?? {}; return [x.g78, x.g910, x.gl, ...(P.cur ?? []).filter(g => g.c === c)].filter((g, i, a) => g && a.indexOf(g) === i) }
+function SeriesRow({ F, hi, lo, S, g, txt }) {
+  const won = s => S?.done === s || (g?.hs != null && (s === g.h ? g.hs > g.as : g.as > g.hs))
   return (
     <div className={`nb-ser${hi === F.team || lo === F.team ? ' is-me' : ''}`}>
       {[hi, lo].map(s => (
-        <span key={s} className={`nb-ser-t${S?.done && !won(s) ? ' is-out' : ''}`} style={fkVars(s)}>
-          <KLogo s={s} size={22} /><b>{TEAM[s].short}</b>{S && <em>{s === hi ? S.wh : S.wl}</em>}
+        <span key={s} className={`nb-ser-t${(S?.done || g?.hs != null) && !won(s) ? ' is-out' : ''}`} style={fkVars(s)}>
+          <KLogo s={s} size={22} /><b>{TEAM[s].short}</b>{S && <em>{s === hi ? S.wh : S.wl}</em>}{g?.hs != null && <em>{s === g.h ? g.hs : g.as}</em>}
         </span>
       ))}
       {txt && <small>{txt}</small>}
@@ -299,3 +305,24 @@ function Champions({ F, act }) {
   )
 }
 export { Banner, Chyron, Fold }
+
+// the scouting room: the next class on the board all season, a report a point (two a month in the season)
+function ScoutRow({ F, act }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" className="fh-row fh-scout" onClick={() => { setOpen(true); sfx('tap') }}>
+        <span><small>Draft board</small><b>Scout the {F.year + 1} class</b></span>
+        <span className="fh-scout-pts"><b>{F.sp ?? 0}</b><small>{F.sp === 1 ? 'report left' : 'reports left'}</small></span>
+        <i className="fh-row-go" aria-hidden="true">›</i>
+      </button>
+      {open && createPortal(
+        <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && setOpen(false)}>
+          <div className="fk fk-root nb-sheet" role="dialog" aria-label="Draft board" style={fkVars(F.team)}>
+            <div className="nb-sheet-top"><b>{F.year + 1} big board · {F.sp ?? 0} reports</b><button className="fk-x" onClick={() => setOpen(false)} aria-label="Close">✕</button></div>
+            <div className="nb-board">{(F.dc ?? []).slice(0, 40).map(p => <Prospect key={p.i} F={F} p={p} act={act} />)}</div>
+          </div>
+        </div>, document.body)}
+    </>
+  )
+}

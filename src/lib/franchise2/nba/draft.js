@@ -49,7 +49,7 @@ export function makeClass(F) {
   for (let k = 0; k < CLASS_N; k++) {
     // talent by where he'd go: a few franchise prospects, a deep middle, a long tail of second-rounders
     const t = k / CLASS_N
-    const pk = clamp(64, 97, Math.round(95 - t * 22 - Math.pow(t, 0.5) * 4 + R.n() * 3.2))
+    const pk = clamp(62, 97, Math.round(96 - 30 * Math.pow(t + 0.01, 0.6) + R.n() * 2.4))
     const intl = R.chance(0.24)
     const ag = intl ? R.int(19, 21) : R.wpick([46, 22, 16, 16]) + 19
     const spot = SPOT_W[R.wpick(SPOT_W.map(x => x[1]))][0]

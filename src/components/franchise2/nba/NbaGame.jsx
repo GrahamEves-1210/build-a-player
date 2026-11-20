@@ -51,11 +51,11 @@ function Live({ F, row, onEnd }) {
   const hIdx = 0, aIdx = 1
   const sum = i => (q ? q.slice(0, k).reduce((x, y) => x + (y[i] ?? 0), 0) : 0)
   const hs = q ? sum(hIdx) : (k >= n ? sides(F, row).hs : 0), as = q ? sum(aIdx) : (k >= n ? sides(F, row).as : 0)
-  const per = k >= n ? null : k < 4 ? ['1ST', '2ND', '3RD', '4TH'][k] : 'OT'
+  const per = k >= n ? null : k === 0 ? '1ST' : k <= 4 ? ['1ST', '2ND', '3RD', '4TH'][k - 1] : `${k - 4 > 1 ? k - 4 : ''}OT`
   return (
     <div className="nb-gd-live" onClick={() => setK(n)}>
       <Chyron team={F.team} tag={row.po ?? dateText(F, row.d)} title={`${nick(a)} at ${nick(h)}`} />
-      <Scorebug a={a} h={h} as={as} hs={hs} per={per} clock={per ? 'END' : ''} final={k >= n ? (row.ot ? 'F/OT' : 'FINAL') : null} />
+      <Scorebug a={a} h={h} as={as} hs={hs} per={per} clock={k === 0 ? '12:00' : 'END'} final={k >= n ? (row.ot ? 'F/OT' : 'FINAL') : null} />
       <small className="fg-tap">TAP TO SKIP</small>
     </div>
   )
@@ -130,7 +130,7 @@ export function NbaBox({ F, b, owner, onClose }) {
   const s = F.team, opp = b.h === s ? b.a : b.h
   const home = b.h === s
   const men = (b.box?.[s] ?? [])
-  const roster = men.map(l => { const p = manOf(F, l.i); return { k: String(l.i), n: p?.n ?? '-', s: p?.b != null, spot: l.st ? p?.p ?? '' : null, pos: p?.g ?? 'guard' } })
+  const roster = men.map(l => { const p = manOf(F, l.i); return { k: String(l.i), n: p?.n ?? '-', s: p?.b != null, pos: 'bat', tag: p?.p ?? '' } })   // (roleOf reads a tag off 'bat': his spot, PG to C)
   const sumOf = list => list.reduce((x, l) => { for (const k of ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'tov']) x[k] = (x[k] ?? 0) + (l[k] ?? 0); return x }, {})
   const us = sumOf(men), them = sumOf(b.box?.[opp] ?? [])
   us.to = us.tov; them.to = them.tov

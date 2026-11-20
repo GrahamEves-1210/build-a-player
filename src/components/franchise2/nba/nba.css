@@ -25,7 +25,7 @@
 .nb-ser-t.is-out { opacity: .42; }
 
 /* game day */
-.nb-gd { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: var(--fk-ink); color: var(--fk-text); padding: calc(var(--safe-top, 0px) + 14px) 16px calc(var(--web-rail, 0px) + 16px); }
+.nb-gd { position: fixed; inset: 0; z-index: 1060; overflow-y: auto; background: var(--fk-ink); color: var(--fk-text); padding: calc(var(--safe-top, 0px) + 14px) 16px calc(var(--web-rail, 0px) + 16px); }
 .nb-gd > div { display: grid; gap: 14px; max-width: 640px; margin: 0 auto; }
 .nb-gd-live { min-height: 60vh; align-content: center; cursor: pointer; }
 .nb-gd-tail { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 16px; color: #fff; }
@@ -56,7 +56,7 @@
 .nb-cap-bar em small { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-style: normal; font-family: var(--fk-b); font-weight: 700; font-size: 11px; color: var(--fk-mute); }
 .nb-cap-k { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 10px; font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
 
-.nb-sheet-ov { position: fixed; inset: 0; z-index: 70; display: grid; place-items: end center; background: rgba(0,0,0,.6); }
+.nb-sheet-ov { position: fixed; inset: 0; z-index: 1070; display: grid; place-items: end center; background: rgba(0,0,0,.6); }
 .nb-sheet { display: grid; gap: 12px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; padding: 14px 16px calc(18px + var(--web-rail, 0px)); background: var(--fk-ink); box-sizing: border-box; }
 @media (min-width: 700px) { .nb-sheet-ov { place-items: center; } .nb-sheet { padding-bottom: 18px; } }
 .nb-sheet-top { display: flex; justify-content: space-between; align-items: center; font-family: var(--fk-d); font-size: 18px; text-transform: uppercase; }
@@ -159,3 +159,11 @@
 .nb-made li.is-me { box-shadow: inset 4px 0 0 var(--tca, #fff); }
 .nb-fa-row { display: grid; gap: 6px; }
 @media (min-width: 640px) { .nb-fa-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
+.nb-deal { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; position: sticky; top: 98px; z-index: 3; }
+.nb-deal-side { display: grid; gap: 4px; align-content: start; padding: 8px 10px; background: var(--fk-g2); box-shadow: inset 0 3px 0 var(--tca, #fff); }
+.nb-deal-h { display: flex; align-items: center; gap: 6px; }
+.nb-deal-h b { font-family: var(--fk-d); font-weight: 400; font-size: 15px; text-transform: uppercase; }
+.nb-deal-h em { margin-left: auto; font-style: normal; font-family: var(--fk-b); font-weight: 700; font-size: 13px; }
+.nb-deal-side p { margin: 0; font-family: var(--fk-b); font-size: 13px; line-height: 1.3; color: var(--fk-text); }
+.nb-tact { grid-auto-flow: row; }
+.nb-mine { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
