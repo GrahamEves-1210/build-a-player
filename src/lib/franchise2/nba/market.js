@@ -20,7 +20,7 @@
 // standard deals (the minimum, from the pool; core's `make` makes a man when the pool runs dry), cuts down to 15,
 // signs two-way men to two or three spots, and extends the young men and veterans it wants to keep.
 import { rngOf, clamp, r1 } from '../rng'
-import { capOf, minOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
+import { capOf, minOf, maxOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
 import {
   marketValue, worthOf, rankOf, termFor, canSign, signMan, rightsOf, resignOffer, renounce, situationOf,
   taxTolerance, lineOf, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
@@ -44,7 +44,7 @@ export function askFor(F, p) {
   const R = rngOf(`${F.seed}-${year}-fa-${p.i}`)
   // (his price, held to what the league can pay this summer)
   const mv = Math.min(marketValue(F, p, year), Math.max(outsideBest(F, p), minOf(p.ys ?? 0, year)))
-  const $ = r1(clamp(minOf(p.ys ?? 0, year), Infinity, mv * (1 + R.n() * 0.05)))
+  const $ = r1(clamp(minOf(p.ys ?? 0, year), maxOf(p.ys ?? 0, year), mv * (1 + R.n() * 0.05)))
   p.ask = { yr: year, $, y: termFor(p) }
   return p.ask
 }

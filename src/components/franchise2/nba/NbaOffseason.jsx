@@ -127,7 +127,7 @@ function Resign({ F, act, go }) {
   return (
     <section className="nb-resign">
       <CapBar F={F} />
-      <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${men.length === 1 ? 'DEAL' : 'DEALS'} UP` : 'NOBODY LEFT TO SIGN'} />
+      <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${men.length === 1 ? 'DEAL' : 'DEALS'} UP · THE ONES NOT KEPT WALK` : 'NOBODY LEFT TO SIGN'} />
       {men.map(p => {
         const d = CAP_SIM.resignOffer(F, p)
         return (

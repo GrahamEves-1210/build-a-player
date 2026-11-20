@@ -109,6 +109,9 @@ function enter(F, step) {
   if (step === 'fa') { F.off.day = 0 }
 }
 function leave(F, step) {
+  // the re-sign stop done: the GM's free agents he didn't keep are let go (their cap holds off his books, the way a
+  // front office renounces them to open room); his restricted men stay his, so he can match an offer sheet
+  if (step === 'resign') for (const i of [...(F.off?.mine ?? [])]) { const p = (F.fa ?? []).find(x => x.i === i); if (p && !p.rfa) X.renounce(F, F.team, i) }
   if (step === 'draft') { while (F.dn && F.dn.at < 60) { const { makePick } = DRAFT; makePick(F) } closeDraft(F) }
   if (step === 'fa') {
     for (const x of X.cpuOffseason(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-camp-${F2.year}-${s}`)) }) ?? []) addNews(F, x)
