@@ -26,6 +26,7 @@ import HistoryTab from './History'
 import Offseason from './Offseason'
 import DraftBoard from './Draft'
 import { StretchCard, StretchRecap, RoundResult } from './Light'
+import { TradeNotice } from './Trades'
 import { faceFor } from './dparts'
 import { coachPhoto } from './coachFace'
 import { memoF, peekF, idleRun, standingsOf, recordsOf, useLeagueWarm, warmKey, useStaged } from './perf'
@@ -70,6 +71,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   const [live, setLive] = useState(() => (F.pend && F.pace !== 'light' ? { pend: true } : null))
   const [trophy, setTrophy] = useState(false)
   const [board, setBoard] = useState(false)
+  const [tradeGo, setTradeGo] = useState(false)   // (the trade offer note: the Team tab opens on trades)
   const scroll = useRef(null)
   const t = TEAM[F.team]
   const r = recordsOf(F)[F.team]
@@ -131,10 +133,11 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
+          {tab === 'season' && <TradeNotice F={F} onOpen={() => { setTradeGo(true); toTab('team') }} />}
           {tab === 'season' && (off
             ? <Offseason F={F} act={act} owner={owner} onBuild={onBuild} foot={F.stage !== 'draft' ? <ScoutRow F={F} onBoard={() => { setBoard(true); sfx('tap') }} /> : null} />
             : <Season F={F} act={act} owner={owner} r={r} play={play} simToEnd={simToEnd} onBoard={() => { setBoard(true); sfx('tap') }} onTrophy={() => setTrophy(true)} />)}
-          {tab === 'team' && <TeamTab F={F} act={act} owner={owner} />}
+          {tab === 'team' && <TeamTab F={F} act={act} owner={owner} tradeGo={tradeGo} onTradeGo={() => setTradeGo(false)} />}
           {tab === 'league' && <LeagueTab F={F} owner={owner} act={act} />}
           {tab === 'history' && <HistoryTab F={F} owner={owner} act={act} onSlots={onSlots} onDelete={onDelete} />}
         </div>

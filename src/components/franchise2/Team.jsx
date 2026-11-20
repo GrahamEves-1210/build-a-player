@@ -6,6 +6,7 @@ import { Man, CapBar, PlayerPage, dealText, money, faceFor, posText } from './dp
 import { hurtText } from '../../lib/franchise2/copy'
 import { StaffStrip, StaffScreen } from './Staff'
 import { revOf, useStaged } from './perf'
+import TradeScreen, { TradeStrip } from './Trades'
 
 // TEAM: the depth chart. The order the games play: the starters on top of each room, the men behind them in the
 // order they come in. Tap a man to move him (up, down, to the top, to the room next door) or open his page.
@@ -15,12 +16,14 @@ import { revOf, useStaged } from './perf'
 const ROOM_NAME = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', ol: 'OFFENSIVE LINE', edge: 'EDGE RUSHERS', dt: 'INTERIOR LINE', lb: 'LINEBACKERS', cb: 'CORNERBACKS', s: 'SAFETIES', k: 'KICKER' }
 const NEXT_DOOR = { edge: 'dt', dt: 'edge', cb: 's', s: 'cb' }
 
-export default function TeamTab({ F, act, owner }) {
+export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
   const [side, setSide] = useState('off')
   const [pick, setPick] = useState(null)       // the man picked to move (his id)
   const [page, setPage] = useState(null)       // a man's page open
   const [cap, setCap] = useState(false)
   const [staff, setStaff] = useState(false)   // the coaching staff (Staff.jsx)
+  const [trades, setTrades] = useState(tradeGo)   // trades (Trades.jsx); the Season tab's offer note opens it
+  useEffect(() => { if (tradeGo) { setTrades(true); onTradeGo?.() } }, [tradeGo]) // eslint-disable-line react-hooks/exhaustive-deps
   const rev = revOf(F)
   // the chart, who starts and each man's row (the same lower-third Man draws), once per change to the franchise
   const D = useMemo(() => {
@@ -77,9 +80,11 @@ export default function TeamTab({ F, act, owner }) {
       <div className="fd-team-top">
         <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
         <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
+        <TradeStrip F={F} onOpen={() => { setTrades(true); sfx('tap') }} />
       </div>
     </>
   ), [F, rev, st]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (trades) return <TradeScreen F={F} act={act} owner={owner} onBack={() => { setTrades(false); sfx('back') }} />
   if (staff) return <StaffScreen F={F} act={act} owner={owner} onBack={() => { setStaff(false); sfx('back') }} />
   if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
   return (

@@ -1,0 +1,118 @@
+/* Trades (Trades.jsx), on the kit (kit.css) and D's parts (fd.css). Near-black and graphite, the teams' flat
+   colours, white type, 13px and up. No card grids: the deal is two lists side by side, the gauge one bar. */
+.tr { display: grid; gap: 10px; align-content: start; }
+.tr-hint, .tr-shut, .tr-bad { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.35; color: var(--fk-mute); }
+.tr-shut { padding: 12px 14px; background: var(--fk-g1); color: var(--fk-text); box-shadow: inset 3px 0 0 var(--fk-ag-mid); }
+.tr-bad { color: #ff8a8c; }
+
+/* the Team tab's entry and the Season tab's note */
+.tr-strip { box-shadow: inset 4px 0 0 var(--tca, #fff); }
+.fd-team-top > .tr-strip { grid-column: 1 / -1; }
+.tr-strip em, .tr-notice em { font-style: normal; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.tr-strip-n { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; background: #fff; color: #0b0c0e; font-family: var(--fk-d); font-size: 18px; }
+.tr-notice { box-shadow: inset 4px 0 0 var(--tca, #fff); }
+.tr-notice > span { flex: 1; min-width: 0; display: grid; gap: 4px; line-height: 1.05; }
+.tr-notice b { font-size: 18px; }
+
+/* an offer */
+.tr-offer { display: grid; gap: 10px; padding: 12px; background: var(--fk-g1); box-shadow: inset 4px 0 0 var(--tca, #fff); }
+.tr-offer-h, .tr-with { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tr-offer-h > span, .tr-with > span { display: grid; gap: 3px; min-width: 0; line-height: 1.1; }
+.tr-offer-h small, .tr-with small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.tr-offer-h b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; text-transform: uppercase; color: #fff; }
+.tr-with { padding: 10px 12px; background: var(--tc); color: var(--tct); }
+.tr-with small, .tr-with em { color: inherit; opacity: .85; }
+.tr-with b { font-family: var(--fk-d); font-weight: 400; font-size: 22px; text-transform: uppercase; }
+.tr-with em { font-style: normal; font-family: var(--fk-b); font-weight: 600; font-size: 13px; }
+.tr-acts { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px; }
+.tr-acts--2 { grid-template-columns: 2fr 1fr; }
+.tr-acts .fk-go.is-ghost { height: 56px; }
+
+/* the deal: what each side sends */
+.tr-deal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.tr-side { display: grid; gap: 4px; align-content: start; min-width: 0; padding: 8px; background: var(--fk-g2); box-shadow: inset 0 3px 0 var(--tca, #fff); }
+.tr-side h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 2px; font-family: var(--fk-d); font-weight: 400; font-size: 15px; letter-spacing: .4px; text-transform: uppercase; color: #fff; }
+.tr-empty { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-dim); }
+.tr-a { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 34px; padding: 4px 6px; background: var(--fk-g3); }
+.tr-a i { flex: none; min-width: 30px; font-style: normal; font-family: var(--fk-f); font-size: 15px; letter-spacing: .6px; color: var(--fk-mute); }
+.tr-a b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-b); font-weight: 700; font-size: 14px; color: #fff; }
+.tr-a em { flex: none; font-style: normal; font-family: var(--fk-d); font-size: 17px; color: #fff; }
+.tr-a button { flex: none; width: 30px; height: 30px; margin: -2px -4px -2px 0; border: 0; background: none; color: var(--fk-mute); font-size: 22px; line-height: 1; cursor: pointer; }
+.tr-a.is-pk b { font-weight: 600; }
+.tr-a.is-new { box-shadow: inset 3px 0 0 var(--fk-w); }
+.tr-a.is-gone { opacity: .6; }
+.tr-a.is-gone b { text-decoration: line-through; }
+
+/* the gauge: one bar, the other team's share on the left, ours on the right, the middle marked */
+.tr-gauge { display: grid; gap: 5px; }
+.tr-gauge-h { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 8px; font-family: var(--fk-d); font-size: 14px; letter-spacing: .4px; text-transform: uppercase; color: var(--fk-mute); }
+.tr-gauge-h > span:last-child { text-align: right; }
+.tr-gauge-h b { font-weight: 400; font-size: 17px; color: #fff; text-align: center; }
+.tr-gauge.is-even .tr-gauge-h b { color: var(--fk-w); }
+.tr-gauge-bar { position: relative; display: flex; height: 16px; background: var(--fk-g3); overflow: hidden; }
+.tr-gauge-bar i { display: block; height: 100%; background: var(--tc, #fff); box-shadow: inset 0 -3px 0 var(--tc2, transparent); transition: width .35s ease; }
+.tr-gauge-bar i + i { box-shadow: inset 2px 0 0 var(--fk-ink), inset 0 -3px 0 var(--tc2, transparent); }
+.tr-gauge-bar em { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px var(--fk-ink); }
+.tr-gauge-f { display: flex; justify-content: space-between; }
+.tr-gauge-f small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-dim); }
+html.bap-reduce-motion .tr-gauge-bar i { transition: none; }
+
+/* the cap after it */
+.tr-cap { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 12px; background: var(--fk-g1); box-shadow: inset 3px 0 0 #fff; }
+.tr-cap span { display: grid; line-height: 1.1; }
+.tr-cap small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.tr-cap b { font-family: var(--fk-d); font-weight: 400; font-size: 18px; color: #fff; }
+.tr-cap.is-over b { color: #ff8a8c; }
+.tr-cap-cut { flex: 1 0 100%; }
+.tr-cap-cut b { font-family: var(--fk-b); font-weight: 700; font-size: 14px; }
+
+/* the answer */
+.tr-said { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--fk-g1); }
+.tr-said > span { display: grid; gap: 4px; min-width: 0; }
+.tr-said .fk-stamp { flex: none; }
+.tr-said b { font-family: var(--fk-b); font-weight: 700; font-size: 15px; line-height: 1.3; color: #fff; }
+.tr-said small { font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.3; color: var(--fk-mute); }
+.tr-said.is-yes { box-shadow: inset 4px 0 0 var(--fk-w); }
+.tr-said.is-no { box-shadow: inset 4px 0 0 var(--fk-l); }
+.tr-said.is-counter { box-shadow: inset 4px 0 0 #fff; }
+.tr-counter { display: grid; gap: 8px; padding: 10px; background: var(--fk-g1); }
+
+/* the lists to pick from */
+.tr-seg { margin-top: 4px; }
+.tr-list-h, .tr-teams-h { margin: 6px 0 0; font-family: var(--fk-d); font-weight: 400; font-size: 16px; letter-spacing: .6px; text-transform: uppercase; color: var(--fk-mute); }
+.tr-list { display: grid; gap: 6px; }
+.tr-pick-man { position: relative; }
+.tr-pick-man.is-on .fk-l3 { box-shadow: 0 0 0 2px #fff; }
+.tr-pick-man.is-off { opacity: .55; }
+.tr-check { position: absolute; top: 50%; right: 64px; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; background: #fff; color: #0b0c0e; font-family: var(--fk-b); font-weight: 800; font-size: 16px; pointer-events: none; }
+.tr-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.tr-pk { display: grid; gap: 2px; padding: 8px 10px; border: 0; background: var(--fk-g2); color: #fff; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 1px var(--fk-line2); }
+.tr-pk b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .3px; }
+.tr-pk small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.tr-pk.is-on { background: var(--fk-brushed); color: var(--fk-ag-ink); box-shadow: none; }
+.tr-pk.is-on small { color: var(--fk-ag-ink); }
+
+/* the teams to call */
+.tr-teams { display: grid; gap: 4px; }
+.tr-team { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto 14px; align-items: center; gap: 10px; min-height: 48px; padding: 6px 12px; border: 0; background: var(--fk-g1); color: #fff; text-align: left; cursor: pointer; box-shadow: inset 3px 0 0 var(--tca, #fff); }
+.tr-team b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 18px; text-transform: uppercase; }
+.tr-team span { font-family: var(--fk-d); font-size: 16px; color: var(--fk-mute); }
+.tr-team small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); white-space: nowrap; }
+.tr-team i { font-style: normal; font-family: var(--fk-d); font-size: 22px; color: var(--fk-mute); }
+@media (hover: hover) { .tr-team:hover, .tr-pk:hover:not(.is-on) { background: var(--fk-g2); } }
+
+/* the year's deals */
+.tr-year { display: grid; gap: 4px; }
+.tr-yr { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--fk-g1); font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.3; color: var(--fk-text); }
+.tr-yr > span { flex: 1; min-width: 0; }
+.tr-yr.is-me { box-shadow: inset 3px 0 0 #fff; }
+
+@media (max-width: 560px) {
+  .tr-deal { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .tr-team { grid-template-columns: 30px minmax(0, 1fr) auto 14px; }
+  .tr-team small { display: none; }
+  .tr-acts { grid-template-columns: 1fr 1fr; }
+  .tr-acts > :first-child { grid-column: 1 / -1; }
+}
