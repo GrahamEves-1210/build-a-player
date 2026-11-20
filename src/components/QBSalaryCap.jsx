@@ -240,8 +240,8 @@ function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, sh
       <div className="sc-card-visual" data-team={player.team}>
         <img src={`/logos/${player.team}.png`} alt="" aria-hidden="true" className="sc-card-logo-bg"
           onError={e => { e.currentTarget.style.display = 'none' }} />
-        {player.photo
-          ? <img src={player.photo} alt={player.name} className="sc-card-headshot" />
+        {player.photo || APP_ART
+          ? <img src={player.photo || noPhoto(player)} alt={player.name} className="sc-card-headshot" />
           : <div className="sc-card-no-photo">
               <img src={noPhoto(player)} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
             </div>
