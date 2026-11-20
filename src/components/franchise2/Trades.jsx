@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, tradeWindow, tradeOffers, answerOffer, tradeTeams, tradeAssets, checkTrade, gauge, leanText, proposeTrade, acceptDeal,
   SIT_TEXT, sitOf, pickText, tradesThisYear, recText, TRADE_MAX, TRADE_DEADLINE, capSheet,
@@ -302,8 +302,12 @@ function CapNote({ F, chk }) {
 }
 // the other team's answer
 function Said({ ok, counter = false, text, line }) {
+  // (the answer comes in above the lists: on a phone the player's thumb is down at the Propose button, so the
+  // screen goes up to it)
+  const el = useRef(null)
+  useEffect(() => { try { el.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch { /* */ } }, [text])
   return (
-    <div className={`tr-said${ok ? ' is-yes' : counter ? ' is-counter' : ' is-no'}`} role="status">
+    <div ref={el} className={`tr-said${ok ? ' is-yes' : counter ? ' is-counter' : ' is-no'}`} role="status">
       <Stamp kind={ok ? 'w' : counter ? 'ink' : 'l'}>{ok ? 'DONE' : counter ? 'COUNTER' : 'NO DEAL'}</Stamp>
       <span><b>{text}</b>{line && <small>{line}</small>}</span>
     </div>
