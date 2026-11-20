@@ -12,7 +12,7 @@
 // when. Where everyone is comes from formulas in the play's own time (scene), so the bot, the stamp and the
 // picture agree. We ride behind the ball, high, and the camera comes in with the finish.
 import { reactMs } from '../minigames.js'
-import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, themOf, nudge, reduceMotion } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, onBoard, themOf, nudge, reduceMotion } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, frontRun, ballIn, project, PT, FIG_FT, BALL_R, RIM_Y, IN_HANDS, SKINS, camFlashes, boardFlash, lightFx } from './meter.js'
 import { arenaCam, dolly, arenaStage, wallNow, manAt, POSE, tagAt, tagsDown, flyTo, dropThrough, hoopWith, AB } from './arena.js'
 import { crowdPop } from './art.js'
@@ -136,6 +136,7 @@ export function make({ v, seed, def, cast }) {
       res.makeAt = res.plan.makeAt
       res.beat = res.makeAt + 1400
       res.stampAt = res.makeAt + 40
+      onBoard(g, res.at + res.makeAt, 2)   // (two on the real score as it goes in: the rules keep it, not the picture)
     } else {
       res.beat = how === 'block' ? res.plan.hitAt + 1500 : 1850
       res.stampAt = how === 'pick' ? PICK_MS + 60 : how === 'charge' ? CONTACT + 40 : res.plan.hitAt + 20
@@ -380,7 +381,7 @@ export function draw(ctx, g, view) {
   if (!g._warm) { g._warm = true; if (!lightFx()) crowdPop(ctx, view, [c.us, c.trim], -1, { foot: G.wallY - 22 * U }) }
   // the building: up for a make, phones going off
   const made = res?.how === 'finish' && u >= res.makeAt
-  if (made && !rep._in) { rep._in = true; rep.popAt = g.t; if (g.sit) g.sit = { ...g.sit, mine: g.sit.mine + 2 } }
+  if (made && !rep._in) { rep._in = true; rep.popAt = g.t }
   if (rep.popAt != null) {
     const age = g.t - rep.popAt
     ctx.save(); ctx.translate(0, dy)

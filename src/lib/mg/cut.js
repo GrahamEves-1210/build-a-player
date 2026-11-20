@@ -10,7 +10,7 @@
 //   iso                      close up at the top of the key: cross him over when his hand comes for the ball
 //   post-up                  on the low block, back to the basket, a spin for each touch
 import { lanesMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, layer, manOf, xiOf, paceOf, stage, particles, nudge, text, DISPLAY } from './kit.js'
+import { clamp, lerp, prog, outcome, onBoard, rngOf, easeOut, easeIn, layer, manOf, xiOf, paceOf, stage, particles, nudge, text, DISPLAY } from './kit.js'
 import { HIT_STOP, afterStop, fxSeed, hitFx, plantFx, landFx, pushIn, warmSome } from './contact.js'
 import { tilt, untilt, ground, stands, floodlight, vignette, paintGrass, skinOf, athlete , cleanEdges } from './art.js'
 import { paintFieldFlat, SL, SR, qbPose } from './throw.js'
@@ -37,7 +37,7 @@ const SETUP = {
   'tackle-angle': { ...RUN, yards: false, rev: true, wait: 'STAY SQUARE', good: 'TACKLE', bad: 'MISSED', win: 'STOPPED', lose: 'GOT AWAY' },
   escape: { skin: 'pocket', n: 4, floor: 565, wait: 'WATCH THE RUSH', good: 'ESCAPED', bad: 'HIT', win: 'ON THE RUN', lose: 'SACKED', stampY: 0.3 },
   iso: { skin: 'court', wait: 'WATCH HIS HANDS', win: 'BUCKET', lose: 'NO LANE', stampY: 0.84 },
-  'post-up': { skin: 'post', n: 3, floor: 570, wait: 'WATCH HIS SHOULDER', good: 'BUCKET', bad: 'WALLED OFF', win: 'BIG MAN', lose: 'SHUT DOWN', stampY: 0.84, beatOk: 1050, beatBad: 760, stampLate: 620 },
+  'post-up': { skin: 'post', n: 3, floor: 570, wait: 'WATCH HIS SHOULDER', good: 'SPIN', bad: 'WALLED OFF', win: 'BUCKET', lose: 'SHUT DOWN', stampY: 0.84, beatOk: 1050, beatBad: 760, stampLate: 620 },
 }
 // The window each man gives, from the floor at grade 1, up with lanesMs. The grade buys the first men the
 // most time; the late ones stay near the floor. In the open field and the pocket it takes three of four men and the jabs sell it, so the floor stays honest: real
@@ -188,6 +188,8 @@ export function make({ v, seed, def, game, pos = null, cast = null }) {
       const misses = men.filter(m => !m.res.ok), outs = misses.filter(m => m.res.late).length
       g.done = outcome(hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, `${made} of ${n}`, { made, of: n }, !hit && outs > 0 && outs >= misses.length)
       g.later = { text: hit ? (S.yards ? `${g.yards} YARDS` : S.win) : S.lose, good: hit, at: g.t + d.res.beat - 80, size: S.skin === 'run' || S.skin === 'pocket' ? 46 : 44 }
+      // (the post move's one bucket: two on the board as it's called)
+      if (hit && S.skin === 'post') onBoard(g, g.later.at, 2)
     }
   }
   function next() {
@@ -708,6 +710,8 @@ function makeIso({ v, seed, def }, S) {
       g.clean = clean
       g.later = { text: clean ? 'ANKLES' : hit ? S.win : S.lose, good: hit, at: g.t + (clean ? 240 : 760), ms: clean ? 620 : 0, size: 46 }
       if (clean) g.then = { text: 'DUNK', good: true, at: g.t + 1150, size: 46 }
+      // (the bucket: two on the board as it goes in)
+      if (hit) onBoard(g, clean ? g.then.at : g.later.at, 2)
     }
   }
   function next() {

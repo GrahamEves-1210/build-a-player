@@ -6,7 +6,7 @@
 // over your hands that clanks off the iron. Beaten twice and he's gone, and it's a layup.
 // It's Iso turned round (cut.js): the same camera behind the ball, the same window off the trait.
 import { lanesMs } from '../minigames.js'
-import { clamp, lerp, prog, easeOut, easeInOut, outcome, rngOf, nudge, text, reduceMotion, GOOD, BAD, DISPLAY } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeInOut, outcome, onBoard, rngOf, nudge, text, reduceMotion, GOOD, BAD, DISPLAY } from './kit.js'
 import { arenaCam, CRASH_CAM, dolly, arenaStage, manAt, POSE, RUN, tagAt, tagsDown, AB, flyTo, dropThrough, hoopWith, shotApex } from './arena.js'
 import { frontRun, ballIn, easedState, easedPose, newPose, copyPose, mixPose, pose, project, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_R, RIM_Y, R_HEAD, R_HIPS, warmCrowd, crowdUp, camFlashes, boardFlash, lightFx, paintHoop } from './meter.js'
 import { castMen, teamOf } from './read.js'
@@ -126,6 +126,7 @@ export function make({ v, seed, def }) {
         const at0 = res.goEnd
         g.final = { kind: 'score', at0, rel: at0 + LAY_REL, make: at0 + LAY_REL + LAY_FLY, fired: 0 }
         g.later = { text: 'SCORED ON', good: false, at: g.final.make + 260, size: 46, y: 150 }
+        onBoard(g, g.final.make, 0, 2)   // (his two, on the real score as it goes in)
         g.outro = g.final.make + 1300 - g.t
       }
     }

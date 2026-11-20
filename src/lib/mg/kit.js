@@ -33,6 +33,16 @@ export const rngOf = seed => seeded(`mg-${seed}`)
 export const byV = (v, lo, hi) => lerp(lo, hi, clamp((v - 1) / 10, 0, 1))
 // the outcome both a game and its stamp speak in
 export const outcome = (score, hit, note = null, raw = null, out = false) => ({ score: clamp(score, 0, 1), hit: !!hit, note, raw, out: !!out })
+// The real score (a playoff moment's: g.sit) moves when the ball goes in, not when the drill ends: at time `at`, his
+// side's u points and theirs t. The points are the ones the drill reports (its raw: lib/situations.js momentFacts), so
+// the board in the drill, the score after it and the final all agree. The host (MgStage) applies them as they come due.
+// (2026-11-20: a bucket in the iso, the post, the pick and roll, the lob or at the line left the board where it was)
+export function onBoard(g, at, u = 0, t = 0) { if (g.sit && (u || t)) (g.boardQ ??= []).push({ at, u, t }) }
+export function boardTick(g) {
+  const q = g.boardQ
+  if (!q?.length || !g.sit) return
+  for (let i = 0; i < q.length; i++) if (g.t >= q[i].at) { g.sit = { ...g.sit, mine: g.sit.mine + q[i].u, opp: g.sit.opp + q[i].t }; q.splice(i--, 1) }
+}
 
 // ── Fonts ───────────────────────────────────────────────────────────────────
 export const DISPLAY = `'BAP Anton', Anton, Impact, sans-serif`

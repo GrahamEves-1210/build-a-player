@@ -7,7 +7,7 @@
 //      soon and it's off the front of the rim; a beat late and you can only lay it in (it counts, for
 //      less); later than that and it rolls off.
 // Three lobs, from either wing, the arc different every time. Two finished to pass.
-import { byV, clamp, lerp, prog, easeIn, easeOut, easeInOut, rngOf, outcome, layer, text, themOf, nudge, basketball, GOOD, BAD, GOLD, DISPLAY } from './kit.js'
+import { byV, clamp, lerp, prog, easeIn, easeOut, easeInOut, rngOf, outcome, onBoard, layer, text, themOf, nudge, basketball, GOOD, BAD, GOLD, DISPLAY } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, paintRoom, paintLines, paintHoop, rimHalf, netOf, ballIn, athleteFront, project, PT, FIG_FT, RIM_R, RIM_Y, BALL_R, SKINS, warmCrowd, crowdUp, boardFlash, camFlashes, lightFx, R_UP, R_FLEX, R_HEAD, R_HIPS, frontRun } from './meter.js'
 import { POSE, tagAt, tagsDown } from './arena.js'
 import { castMen } from './read.js'
@@ -114,6 +114,8 @@ export function make({ v, seed, game }) {
     else { b.res = 'lay'; b.why = 'lay' }
     if (b.res === 'slam') b.ev.push({ at: b.doneAt + throwOf(b), fx: ['make', 'stamp', 'h:heavy'], kick: 5 })
     else if (b.res === 'lay') b.ev.push({ at: b.doneAt + 300, fx: ['make', 'h:medium'] })
+    // (two on the real score as it goes through)
+    if (b.res !== 'miss') onBoard(g, b.res === 'slam' ? b.doneAt + throwOf(b) : b.doneAt + 300, 2)
     else b.ev.push({ at: b.doneAt + (b.why === 'front' ? 120 : 260), fx: ['rimmiss', 'h:light'], kick: 2 })
     settle(b)
   }

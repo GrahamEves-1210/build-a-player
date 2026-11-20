@@ -188,6 +188,7 @@ export function make({ v, seed, game, situation = null }) {
       g.fx.push(m.res.in ? 'make' : m.irons.length ? 'h:light' : 'pop', m.res.in ? 'h:light' : 'h:medium')
     }
     if (game === 'clutch-shot' && m.res.in && g.sit) g.sit = { ...g.sit, mine: g.sit.mine + clutchPts(g.move) }
+    if (game === 'free-throws' && m.res.in && g.sit) g.sit = { ...g.sit, mine: g.sit.mine + 1 }   // (each one that drops is a point on the real score)
     if (m.k === reps.length - 1) finish()
   }
   function finish() {

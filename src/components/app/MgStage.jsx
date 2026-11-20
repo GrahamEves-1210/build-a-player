@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { STEP, hud, pads, stamp, keyCap, THREE_KEYS, fieldFor } from '../../lib/mg/kit'
+import { STEP, hud, pads, stamp, keyCap, THREE_KEYS, fieldFor, boardTick } from '../../lib/mg/kit'
 import { engineFor } from '../../lib/mg'
 import { spriteFrame, bakeSome, spritePx } from '../../lib/mg/art'
 import { sfx, haptic } from '../../lib/juice'
@@ -297,7 +297,7 @@ export default function MgStage({ game, def, v, arm, kick = null, seed, sport = 
       const dt = Math.min(250, to - last)    // (a background tab must not fast-forward the game)
       if (dt <= 0) return
       last = to; acc += dt * TIME_SCALE
-      while (acc >= STEP) { g.tick(STEP); acc -= STEP; stepped++ }
+      while (acc >= STEP) { g.tick(STEP); boardTick(g); acc -= STEP; stepped++ }
     }
     const frame = t => {
       const began = performance.now()

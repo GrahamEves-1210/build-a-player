@@ -13,7 +13,7 @@
 // screen. Everyone else on the picture is a body with a target and a top speed, stepped in draw()
 // (bodies below): they run out of room and bump into each other, they can't teleport or pass through.
 import { reactMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, xiOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion } from './kit.js'
+import { clamp, lerp, prog, outcome, onBoard, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, xiOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion } from './kit.js'
 import { crowdRows, goalPosts, tilt, ground, stands, floodlight, vignette, athlete, paintGrass, skinOf, dirOf, airBall as artBall, ballShadow, nameTag, breakupPose, crowdPop } from './art.js'
 import { paintFieldFlat, qbPose, snapBall, SNAP_MS, looseBall } from './throw.js'
 import { arenaCam, dolly, arenaStage, manAt, POSE, RUN as RUN_F, liftPose, tapGap, chestOf, tagAt, tagsDown, flyTo, dropThrough, shotApex, hoopWith, AB } from './arena.js'
@@ -332,6 +332,9 @@ export function make({ v, seed, def, game, cast }) {
     g.fx.push(kind === 'late' ? 'pop' : 'swoosh', good ? 'h:light' : 'h:medium')
     const txt = word(kind, k, ms)
     g.stamp = { text: txt, good, at: g.t + (jumpy ? (good ? flight : Math.min(flight * 0.5, 200)) : flight + (game === 'gap' ? 420 : 0)), ms: game === 'gap' ? 760 : jumpy ? 1500 : Math.max(460, rep.res.beat - flight), size: W.stampSize ?? (txt.length > 11 ? 30 : 38) }
+    // (the real score as each one goes in: his make's two or three, the one that goes in over the rim protector)
+    if (game === 'pnr' && good) onBoard(g, g.stamp.at, rep.res.pts ?? 2)
+    if (game === 'rim-protect' && !good) onBoard(g, g.stamp.at, 0, 2)
     const made = plan.filter(p => p.res?.kind === 'good').length
     if (plan.every(p => p.res)) {
       const avg = plan.reduce((s, p) => s + p.res.score, 0) / rounds
