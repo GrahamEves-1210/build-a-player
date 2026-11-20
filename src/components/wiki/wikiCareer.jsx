@@ -51,7 +51,7 @@ export function CareerPage({ go }) {
       <ul>
         <li><b>Week by week.</b> Football moves {word(nfl.step)} week at a time, basketball {word(nba.step)} games at a time, on the same engines as <Link go={go} to="seasons">Seasons</Link>, with his own team around him.</li>
         <li><b>The depth chart.</b> If he isn't the best at his spot he starts as a backup. In football he waits for the job; in basketball he comes off the bench in a smaller role. A coach can ask a basketball player to move one spot (a PG to SG, say).</li>
-        <li><b>Goals.</b> Three goals a season, sized to his overall and his role.</li>
+        <li><b>Goals.</b> Three goals a season, sized to his overall and his role. Meeting {word(C.GOAL_POINT_AT)} of them earns a development point.</li>
         <li><b>Key moments.</b> A close game late can stop on a mini game, played as the real play: make it and the game goes his way. Every playoff game in football and every series in basketball has one.</li>
         <li><b>The bye week</b> (football). It falls between Weeks {C.BYE_FIRST} and {C.BYE_LAST}, like the NFL's. He can put in extra work on a drill for a shot at a trait upgrade, or rest for a sure durability boost.</li>
         <li><b>Injuries and durability.</b> Durability starts from his frame, his weight for his height. The lower it is, the more often he gets hurt, and the chance rises after 31. He can sit or play through it; playing through costs durability. Most knocks heal over the offseason.</li>
@@ -74,11 +74,11 @@ export function CareerPage({ go }) {
         <li><b>Recap</b> of the year: the record, the numbers, the goals met, the awards.</li>
         <li><b>Contract.</b> When a deal runs out, three teams make offers: his own team, a contender paying less, and a team paying more. He can sit down with one and push for more money, another year, a no-trade clause or a starting job. Each ask costs some of the team's patience (shown with the odds); run out of patience and they walk away. His leverage (recent seasons, reputation, age) decides how much patience there is.</li>
         <li><b>Moves.</b> The roster turns over, one offseason event lands (a new coach, a mentor, a rival loading up), and the depth chart is set. A player can change his jersey number here.</li>
-        <li><b>Camp.</b> One hard drill in front of the coaches. Win it for legacy and a chance at a development point.</li>
+        <li><b>Camp.</b> One hard drill in front of the coaches. Win it for legacy and a development point.</li>
       </ul>
 
       <h2 id="development">Development points and trait costs</h2>
-      <p>Development points raise his traits. In football he earns 2 a year while young (to {nfl.devYoung()}), then 1 a year through his prime and none after. In basketball it follows his NBA seasons: 2 a season for his first two, 1 for the next four, then none, whether he came out of college or straight to the draft. Either way he gets 1 more for an award (MVP, OPOY, DPOY or Rookie of the Year) and 1 for an All-Pro or All-NBA team. Camp and the bye week can add more.</p>
+      <p>Development points raise his traits. In football he earns 2 a year while young (to {nfl.devYoung()}), then 1 a year through his prime and none after. In basketball it follows his NBA seasons: 2 a season for his first two, 1 for the next four, then none, whether he came out of college or straight to the draft. Either way he gets 1 more for an award (MVP, OPOY, DPOY or Rookie of the Year), 1 for an All-Pro or All-NBA team, 1 for a season that meets {word(C.GOAL_POINT_AT)} of its three goals, and 1 for winning the camp drill. The bye week's drill can add a grade on its own.</p>
       <div className="wk-table-wrap">
         <table className="wikitable">
           <thead><tr><th>One grade up</th><th className="num">Points</th></tr></thead>
@@ -101,6 +101,17 @@ export function CareerPage({ go }) {
 
       <h2 id="aging">Aging and retirement</h2>
       <p>Young players can grow a trait on their own. Age takes a grade at a time from the traits that really age: speed, burst and bounce go first, strength a few years later, technique after that, and the reads, leadership and the jump shot never fade. Offseason work (2 points) can hold a trait that is about to drop or win back a lost grade. Offensive linemen and kickers hold on the longest.</p>
+      <p><b>His specialty.</b> Every build has a specialty: the role it fits best when the career starts, read from the traits that stand highest. Those one or two traits can be trained {word(C.SPEC_TRAIN)} years longer than the rest of his game and start to slip about {word(C.SPEC_FADE)} years later, and more slowly. A speedster still loses his speed by his mid-30s, just later than everyone else. The player page names his specialty. A career started before specialties gets one from its build as it stands, and no grade changes.</p>
+      <div className="wk-table-wrap">
+        <table className="wikitable">
+          <thead><tr><th>Position</th><th>Specialties (the traits that age later)</th></tr></thead>
+          <tbody>
+            {[...nfl.positions.filter(p => C.SPECIALTY.nfl[p]).map(p => [POS_WORD[p], 'nfl', p]), ['Guard', 'bucket', 'guard'], ['Big', 'bucket', 'big']].map(([l, sp, p]) => (
+              <tr key={l}><td>{l}</td><td>{C.SPECIALTY[sp][p].map(([, label, ts]) => `${label} (${andList(ts.map(t => (C.POS_ATTR[p]?.[t]?.label ?? t).toLowerCase()))})`).join('; ')}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p>He can retire from age 29 or after 8 seasons. The career also ends when he reaches the age for his position, after {C.MAX_SEASONS} seasons, or when free agency brings no offers.</p>
       <div className="wk-table-wrap">
         <table className="wikitable">

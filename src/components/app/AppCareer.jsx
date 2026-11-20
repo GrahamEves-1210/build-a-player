@@ -8,7 +8,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, TRADE_ODDS, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, canUpgrade, upgradeCost, trainable, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, specialtyNote, specialtyOf, GOAL_POINT_AT, canUpgrade, upgradeCost, trainable, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
@@ -355,7 +355,7 @@ function Model({ c, devPick }) {
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : () => tellWhy(t)} role="button">
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
-        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed && !work && !heldNow ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
+        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed && !work && !heldNow ? <em className="cr-trait-max">MAXED</em> : winTag ?? (specialtyOf(c)?.traits?.includes(t) ? <em className="cr-trait-win">SPECIALTY</em> : null)}</span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{valToGrade(ch?.val ?? 0)}{price ? ` · ${cost} PTS` : ''}</span>
       </div>
     )
@@ -895,7 +895,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
           <section className="ag-card cr-sec ag-pop">
             <div className="ag-card-head"><span className="ag-eyebrow">SEASON {S.isSoccer ? seasonOf(c.season) : c.season} · {c.fit.status.toUpperCase()}</span></div>
             {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}>{/^(Still growing|A step forward|Experience)/.test(t) ? <IconFlame size={13} /> : /^(Offseason work|Body work|Hasn.t lost a step|The leg is still there)/.test(t) ? <IconShield size={13} /> : <IconArrow size={13} className="cr-down" />} {t.replace(/^A step slower/, 'Father Time')}</li>)}</ul>}
-            <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
+            <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS{S.isSoccer || S.isBaseball ? '' : ` · MEET ${GOAL_POINT_AT} FOR A DEV POINT`}</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             {(() => { const dc = depthChart(c); if (S.x?.depthLine) return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{S.x.depthLine(c, dc)}</p>; if (S.isSoccer) { const role = soccerRole(c); return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{role === 'Starter' ? 'FIRST CHOICE · leads the line' : `${role.toUpperCase()} · behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> } return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{dc.starter ? `${dc.label} · the starter` : `${dc.label} · backup behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> })()}
             <p className="cr-note">{c.loan ? `On loan from ${S.teamOf(c.loan.from).name} for the season. ` : ''}{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({pay(c, c.contract.perYear)}). {c.contract.left === 1 && !c.loan ? 'Contract year: play for the next one.' : ''}</p>
             {move ? <SpotMove c={c} m={move} onAnswer={yes => { setCareer(answerSpotMove(c, yes)); sfx(yes ? 'claim' : 'tap'); haptic(yes ? 'success' : 'light') }} />
@@ -1316,7 +1316,7 @@ function Recap({ c, last, user }) {
       {last.sb && <p className="cr-note">{last.sb.won ? `${S.final} champions${last.sb.series ? `, ${last.sb.mySc}–${last.sb.oppSc} in the series` : `: ${last.sb.mySc ?? ''}${last.sb.oppSc != null ? `–${last.sb.oppSc}` : ''}`}.` : `Lost the ${S.final}${last.sb.series ? ` ${last.sb.mySc}–${last.sb.oppSc}` : ''}. Close.`}</p>}
       <Analytics c={c} s={last} />
       {!last.sb && last.rounds?.length > 0 && <p className="cr-note">Playoffs: {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${nick(r.opponent)}`).join(' · ')}</p>}
-      {last.goals.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">GOALS · {met}/{last.goals.length}</span>{last.goals.map(g => <span key={g.k} className={`cr-goal${g.met ? ' is-met' : ' is-miss'}`}>{g.met ? <IconCheck size={11} /> : null} {g.label}</span>)}</div>}
+      {last.goals.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">GOALS · {met}/{last.goals.length}{last.goodYear ? ' · +1 DEV POINT' : ''}</span>{last.goals.map(g => <span key={g.k} className={`cr-goal${g.met ? ' is-met' : ' is-miss'}`}>{g.met ? <IconCheck size={11} /> : null} {g.label}</span>)}</div>}
       <button className="ag-btn ag-btn--ghost cl-season-share" onClick={shareSeason} disabled={card.busy}>{card.busy ? 'MAKING THE CARD…' : `SHARE THE ${last.season} SEASON`}</button>
       {card.img && <img src={card.img} alt={`${c.name}'s ${last.season} season card`} className="cl-preview" />}
       {card.img && <a className="ag-btn ag-btn--ghost cl-season-share" href={card.img} download={`season-${last.season}.png`}>SAVE THE IMAGE</a>}
@@ -1505,7 +1505,7 @@ function Camp({ c, setCareer }) {
       {done
         ? <p className="cr-note">{(done.won ?? done.bonus) ? <>Won the drill in front of the coaches: <span className="gain">+{done.legacy ?? 0} <LegacyIco /> legacy</span>{done.bonus ? ', and +1 development point.' : '. No development point this time.'}</> : 'Lost the drill. Nothing this year.'}</p>
         : <>
-            <p className="cr-note">One hard drill in front of the coaching staff. Win it for <span className="gain">+{CAMP_LEGACY} <LegacyIco /> legacy</span> and a shot at a development point (the cleaner the win, the better the shot).</p>
+            <p className="cr-note">One hard drill in front of the coaching staff. Win it for <span className="gain">+{CAMP_LEGACY} <LegacyIco /> legacy</span> and {sportOf(c).isSoccer || sportOf(c).isBaseball ? 'a shot at a development point (the cleaner the win, the better the shot)' : 'a development point'}.</p>
             <CareerGame c={c} setCareer={setCareer} retry empty team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} lock={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game, res.hit))} />
           </>}
       {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it. Grades above A cost more.</div>}
@@ -1557,8 +1557,9 @@ function Player({ c, setCareer }) {
           <small>{sportOf(c).x?.contractWord ? sportOf(c).x.contractWord(c) : c.sport === 'soccer' ? ({ rookie: 'First professional contract', ext: 'New deal', transfer: 'Transfer', fa: 'Free transfer', loan: `On loan from ${c.loan ? sportOf(c).teamOf(c.loan.from).name : 'his club'}` })[c.contract.kind] ?? 'Contract' : c.contract.kind === 'rookie' ? 'Rookie deal' : c.contract.kind === 'ext' ? 'Extension' : 'Free-agent deal'} · career earnings {earned(c, Math.round(t.earnings))}</small>
         </div>
         <Jersey c={c} setCareer={setCareer} />
+        {(() => { const s = specialtyNote(c); return s && <div className="cr-contract cr-spec"><span className="ag-eyebrow">SPECIALTY</span><b>{s.label}</b><p className="cr-note">{s.text}</p></div> })()}
         {c.injuries.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">INJURY HISTORY</span>{c.injuries.map((i, k) => <span key={k} className="cr-goal is-miss">{i.year}: {i.kind}, {i.games} {c.sport === 'soccer' ? (i.games === 1 ? 'match' : 'matches') : i.games === 1 ? 'game' : 'games'}{i.played ? ' (played through)' : ''}</span>)}</div>}
-        <p className="cr-note">{sportOf(c).primeNote(c.pos)} {sportOf(c).ui?.devNote ?? `Every offseason brings a development point; an award or ${sportOf(c).first} season brings two.`}</p>
+        <p className="cr-note">{sportOf(c).primeNote(c.pos)} {sportOf(c).ui?.devNote ?? `Development points come every season while he’s young (two early on, then one), and one more each for an award, an ${sportOf(c).first} season, meeting ${GOAL_POINT_AT} of the season’s goals and winning the camp drill.`}</p>
       </div>
     </section>
   )
