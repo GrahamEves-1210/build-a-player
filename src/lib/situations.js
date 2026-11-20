@@ -161,20 +161,21 @@ const over = (n, hoops) => (hoops ? (n <= 1 ? 2 : n + 1) : n < 3 ? 3 : n <= 6 ? 
 // the points it put on the board (pts) and the ones it gave up (allowed), a takeaway (to), and what goes in his box
 // score. null: the game didn't say (a simulated moment has no report at all), and the final's own defaults stand.
 //   pts      a touchdown is 7 each (the catch can score twice); a bucket is what it was worth (the pick and roll adds
-//            its makes up, the post / the break / the lob are 2 a make, a free throw is 1); a field goal is 3 a make
+//            its makes up, the break / the lob are 2 a make, a free throw is 1; the iso and the post are one trip, a
+//            bucket of 2 when it's landed); a field goal is 3 a make
 //   allowed  the lockdown beaten and each shot over the rim protector is 2; a returner tackled in his end zone is 2
 // A number in raw's place is the old call (the points a landed moment was worth): kept.
-const SCORED_BY_MAKES = new Set(['post-up', 'alley-oop', 'fast-break'])
+const SCORED_BY_MAKES = new Set(['alley-oop', 'fast-break'])
 const num = x => (typeof x === 'number' && Number.isFinite(x) ? x : null)
 export function momentFacts(game, raw = null, hit = false) {
   if (game === 'onside') return { pts: 0 }   // (its raw is the kick's own chance, a number: nothing on the board either way)
   if (raw == null || typeof raw !== 'object') return { pts: num(raw) != null && hit ? raw : null }
   const made = num(raw.made), of = num(raw.of), F = { pts: null }
-  if (game === 'clutch-shot' || game === 'half-court' || game === 'iso') { if (num(raw.pts) != null) F.pts = hit ? raw.pts : 0; else if (game !== 'clutch-shot') F.pts = hit ? 2 : 0 }
+  if (game === 'clutch-shot' || game === 'half-court' || game === 'iso' || game === 'post-up') { if (num(raw.pts) != null) F.pts = hit ? raw.pts : 0; else if (game !== 'clutch-shot') F.pts = hit ? 2 : 0 }
   else if (game === 'free-throws') { if (made != null && of === 2) F.pts = made }
-  else if (game === 'pnr') F.pts = num(raw.pts)
+  else if (game === 'pnr') F.pts = num(raw.pts) ?? (made != null ? made * 2 : null)   // (the Simple game's report: its makes, two each)
   else if (SCORED_BY_MAKES.has(game)) { if (made != null) F.pts = made * 2 }
-  else if (game === 'lockdown' || game === 'rim-protect') { if (num(raw.allowed) != null) F.allowed = raw.allowed }
+  else if (game === 'lockdown' || game === 'rim-protect') { if (num(raw.allowed) != null) F.allowed = raw.allowed; else if (game === 'rim-protect' && made != null && of != null) F.allowed = (of - made) * 2 }
   else if (game === 'board') { if (made != null) F.reb = made }
   else if (game === 'game-winner') { if (made != null) { F.pts = made ? 3 : 0; F.fgm = made ? 1 : 0; F.fga = 1 } }
   else if (game === 'deep-kick') { if (made != null && of != null) { F.pts = num(raw.pts) ?? made * 3; F.fgm = made; F.fga = of; if (num(raw.xpa) != null) F.xpa = raw.xpa } }

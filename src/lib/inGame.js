@@ -412,7 +412,7 @@ function bkPlay(b, hit, F) {
     if (t === 'lockdown') return [{ p: 1, t: hit ? 0 : 2 }]
     return trips(repsOf(b), hit ? 0.18 : 0.6, [[2, 1]], 't')   // (the rim: two each time one goes in over him)
   }
-  if (F?.pts != null && !(t === 'post-up')) return [{ p: 1, u: F.pts }]
+  if (F?.pts != null) return [{ p: 1, u: F.pts }]
   if (t === 'free-throws') return list(hit ? [[2, 1]] : [[1, 0.72], [0, 0.28]])
   if (t === 'clutch-shot') return list(hit ? (m <= -2 ? [[3, 1]] : [[2, 0.4], [3, 0.6]]) : [[0, 1]])
   if (t === 'half-court') return list(hit ? [[2, 0.7], [3, 0.3]] : [[0, 1]])
@@ -502,7 +502,7 @@ function bkSit(b, ids, mine, opp) {
   const { us, them } = ids, t = b.game, late = b.k === 2
   const clockText = b.clock < 10 ? b.clock.toFixed(1) : mmss(b.clock)
   const tail = BK[t].s === 't' ? (t === 'board' ? 'The shot goes up.' : mine >= opp ? `${them} has the ball. ${us} needs a stop.` : `${them} has the ball. ${us} needs a stop to get it back.`)
-    : t === 'clutch-shot' ? 'One shot left.' : t === 'free-throws' ? 'Two shots at the line.'
+    : t === 'clutch-shot' ? (late ? 'One shot left.' : 'The shot clock is winding down.') : t === 'free-throws' ? 'Two shots at the line.'
     : t === 'fast-break' ? 'A steal, and they’re running.' : t === 'half-court' && late ? 'One possession. Get a bucket.' : ''
   return { us, them, mine, opp, hoops: true, clock: b.clock, clockText, period: '4TH', line: `${where(us, them, mine, opp)}, ${clockText} left in the 4th.`, tail }
 }
