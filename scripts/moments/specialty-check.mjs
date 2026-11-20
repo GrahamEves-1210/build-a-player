@@ -5,6 +5,7 @@
 //     seeded careers (aging only, lib/careerAging.js fadeYear), and a speedster still loses speed by his mid-30s
 //   - a save from before (no specialty) opens with one from its current build, every grade unchanged
 //   - the 3-point cap on a grade (COST_MAX) still holds
+//   - points: a won camp drill always pays its point, and a season that meets two of its goals pays one
 // Run from the repo root:  node scripts/moments/specialty-check.mjs
 import { createServer } from 'vite'
 
@@ -107,6 +108,25 @@ for (const [sport, pos] of CASES) {
   let c = C.newCareer({ sport: 'nfl', pos: 'wr', build: buildFor(S, 'wr', seeded('spec-cap')), name: 'Cole Norwood', owner: 'Guest' })
   c = { ...c, seasons: [{}], age: 33 }
   for (const t of c.types) for (const v of [8, 9, 10]) { const k = C.upgradeCost(v, { ...c, build: { ...c.build, [t]: { ...c.build[t], val: v } } }, t); if (k > 3) fail('cost over 3', t, v, k) }
+}
+
+// 6. points (2026-11-20): a won camp drill always pays a point in football and basketball (soccer and baseball keep
+// the chance), a lost one nothing; a season that meets two of its three goals pays one more
+{
+  for (const [sport, pos] of [['nfl', 'wr'], ['bucket', 'guard']]) {
+    const c = { ...C.newCareer({ sport, pos, build: buildFor(C.SPORT[sport], pos, seeded('spec-camp')), name: 'Cole Norwood', owner: 'Guest' }), off: {} }
+    for (let y = 0; y < 30; y++) {
+      const cy = { ...c, year: y }
+      if (C.campDrill(cy, 0.66, null, true).dev.points !== c.dev.points + 1) fail(sport, 'a won camp drill without its point', y)
+      if (C.campDrill(cy, 0.3, null, false).dev.points !== c.dev.points) fail(sport, 'a lost camp drill paid a point')
+    }
+  }
+  const g = n => ({ goals: [0, 1, 2].map(i => ({ k: i, met: i < n })) })
+  for (const n of [0, 1, 2, 3]) {
+    const want = n >= 2 ? 1 : 0
+    if (C.goodYearPoint(C.SPORT.nfl, g(n)) !== want || C.goodYearPoint(C.SPORT.bucket, g(n)) !== want) fail('goal point', n)
+  }
+  console.log('\n  points: a won camp drill +1, two goals met +1 (football and basketball)')
 }
 
 console.log(bad ? `\n${bad} FAILED` : '\nall specialty checks passed')

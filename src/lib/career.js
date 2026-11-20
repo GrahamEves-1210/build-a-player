@@ -39,6 +39,7 @@ import { kValsOf, kSeasonStats, kSeasonScore, K_BARS, K_LEGACY, kHome, kFitNote,
 import { ladderWindow, closedLine, lateLine, mindTraits, lowLabel, andList, LADDER } from './ageLadder'
 import { FADE, hasFade, fadeOf, fadeYear, keepCap, gradeUp } from './careerAging'
 import { specialtyFor, specialtyOf, specTraits, isSpec, SPEC_TRAIN } from './careerSpecialty'
+export { SPECIALTY, SPEC_TRAIN, SPEC_FADE, specialtyOf } from './careerSpecialty'
 import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { NFL_TEAMS } from '../data/nfl-teams'
@@ -3255,7 +3256,10 @@ export function bookSeason(c) {
   const S0 = sportOf(c)
   const base = S0.devBySeason ? (c.age < S0.declineAt(c.pos) ? S0.devBySeason(c.seasons.length) : 0) : (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
   // (soccer: a Golden Boot is the striker's yearly honor, not a rare one, so it earns no point of its own)
-  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) }
+  // (2026-11-20, a player: "the max you can get after a season and offseason camp is 5 points". Football and basketball:
+  // a season that meets two of its three goals earns one more, playing well being the work the coaches see)
+  s.goodYear = goodYearPoint(S, s)
+  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) + s.goodYear }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = S.isSoccer ? ((s.stats.starts ?? 0) >= (f.games?.length ?? 38) / 2 ? 'Starter' : 'Backup') : benched < (myW + myL || 17) / 2 ? 'Starter' : 'Backup'
   let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons.map(x => (x.race && Object.values(x.race).some(v => v?.rows?.length > 1) ? { ...x, race: shortVote(x.race) } : x)), s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false, ...healDurability(c) }
@@ -3369,11 +3373,17 @@ export const offStep = (c, step) => ({ ...c, off: { ...(c.off ?? {}), step } })
 // and a chance at a development point: better the more cleanly it's won.
 // (1 a win: at 3, fifteen camps were worth more than a DPOY, and the greats get no camp points)
 export const CAMP_LEGACY = 1
+// a season's development point for playing well: two of its three goals met (football and basketball)
+export const GOAL_POINT_AT = 2
+export const goodYearPoint = (S, s) => (!S.isSoccer && !S.isBaseball && (s.goals ?? []).filter(g => g.met).length >= GOAL_POINT_AT ? 1 : 0)
 // hit: the drill's own verdict (MiniGame), the same one it showed the player
 export function campDrill(c, score, game, hit = score >= 0.75) {
   const won = !!hit
-  const chance = won ? clamp(0.25 + (score - 0.5), 0.25, 0.75) : 0
-  const bonus = won && seeded(`${c.seed}-campdev-${c.year}`)() < chance ? 1 : 0
+  // (2026-11-20: a won drill always earns its point in football and basketball; it was a 25-75% chance by how clean
+  // the win was. Soccer and baseball keep the chance)
+  const sure = !sportOf(c).isSoccer && !sportOf(c).isBaseball
+  const chance = won ? (sure ? 1 : clamp(0.25 + (score - 0.5), 0.25, 0.75)) : 0
+  const bonus = won && (sure || seeded(`${c.seed}-campdev-${c.year}`)() < chance) ? 1 : 0
   const legacy = won ? CAMP_LEGACY : 0
   return { ...c, legacyBonus: (c.legacyBonus ?? 0) + legacy, legacyCamp: (c.legacyCamp ?? 0) + legacy, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, won, bonus, legacy, chance, game } } }
 }
@@ -3486,7 +3496,7 @@ function trainNote(c) {
   const ws = spec.filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => [t, trainWindow(c, t)]).filter(([, w]) => w?.open)
   if (!ws.length) return n
   const w = ws[0][1], up = s => s.charAt(0).toUpperCase() + s.slice(1)
-  const line = `${up(andList(ws.map(([t]) => lowLabel(traitName(c, t)))))}, his specialty, ${w.late ? 'at double cost through' : 'through'} age ${w.until}.`
+  const line = `${up(andList(ws.map(([t]) => lowLabel(traitName(c, t)))))}, his specialty, can be trained ${w.late ? 'at double cost through' : 'through'} age ${w.until}.`
   return { last: !!n?.last || w.left <= 1, text: n ? `${n.text} ${line}` : line }
 }
 function trainNoteRest(c) {
@@ -3523,13 +3533,14 @@ export function trainable(c, type) {
 }
 export const canUpgrade = (c, type) => trainable(c, type) && c.dev.points >= upgradeCost(c.build[type].val, c, type)
 // Why a trait can't go up right now, in a line (null: it can). type '__body' is body work (durability)
+const noPoints = c => (sportOf(c).isSoccer || sportOf(c).isBaseball ? 'No development points. Young players earn them every season, and awards and camp wins add more.' : `No development points. Young players earn them every season, and awards, ${sportOf(c).first} teams, meeting the season’s goals and camp wins add more.`)
 export function upgradeBlock(c, type) {
   const pts = c.dev?.points ?? 0
   const lack = cost => `That costs ${cost} points. ${pts} left.`
   if (type === '__body') {
     if (bodyMaxed(c)) return 'Durability is maxed out.'
     if (c.phase === 'season') return 'Body work happens in the offseason.'
-    if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'
+    if (!pts) return noPoints(c)
     return pts < bodyCost(c) ? lack(bodyCost(c)) : null
   }
   const ch = c.build[type]
@@ -3550,7 +3561,7 @@ export function upgradeBlock(c, type) {
   if (f && c.age + 1 >= f.from) return `${name} can\u2019t be trained after age ${w.until}. 2 points can hold it in a year it would drop.`
   if (w && !w.open && !vetWork(c, type)) return LADDER[S.id ?? 'nfl']?.[c.pos] ? closedLine(S.id ?? 'nfl', c.age, w.tier, name, andList(mindTraits(S.id ?? 'nfl', c.pos, c.types, S.physical[c.pos] ?? []).filter(t => !maxedTrait(c.build[t]?.val, c.build[t], t)).map(t => lowLabel(traitName(c, t)))), w.until) : `${name} can only be trained until age ${w.until}. He\u2019s ${c.age} now.`
   if (c.phase === 'season') return 'Development points are spent in the offseason.'
-  if (!pts) return 'No development points. Young players earn them every season, and awards, All-Pro and camp wins add more.'
+  if (!pts) return noPoints(c)
   const cost = upgradeCost(ch.val, c, type), vw = vetWork(c, type)
   if (pts >= cost) return null
   if (vw) return `${vw.kind === 'hold' ? `Holding ${lowLabel(name)} this year` : `Winning back a grade of ${lowLabel(name)}`} costs ${cost} points. ${pts} left.`

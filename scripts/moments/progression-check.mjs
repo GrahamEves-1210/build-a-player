@@ -6,8 +6,9 @@
 //   buyer a pass / Pro buyer who uses every boost: a Hot Hand whenever one can run, Quick Heal on every injury
 // Prints, by position: the median and 10th-percentile season (and age) of his first S earned (a trait that wasn't S
 // when he was built), half his traits at S, and all of them at S; the share of careers that ever get to all-S; and
-// where the top-end grades (to A+ and to S) came from. Then the numbers from before the 2026-11-16 change, for
-// comparison.
+// where the top-end grades (to A+ and to S) came from. Then the season of his third S, the development points earned a
+// season (by age and by the build's starting overall), and the numbers from before the 2026-11-16 change, for
+// comparison. PROG_SPINS=n makes each build the best of n spins a trait (6, the default; 1 or 2 for a weaker build).
 // Run from the repo root:  node scripts/moments/progression-check.mjs [careers-per-position] [free|buyer|both] [qb,rb,...]
 // (30 a position, both kinds, takes about an hour and a half on three processes split by position; 8 a position, free,
 // a quick look. Soccer and baseball careers run on the same engine: name them (st, bat, pit). PROG_TRACE=1 prints
@@ -23,13 +24,15 @@ const SX = { soccer: await server.ssrLoadModule('/src/lib/careerSoccer.js') }
 const N = Number(process.argv[2] ?? 30)
 const WHO = process.argv[3] ?? 'both'
 const ONLY = process.argv[4] ? process.argv[4].split(',') : null
+// PROG_SPINS=n: each trait the best of n spun players (6, the default: an engaged builder; 1 or 2: a weaker build)
+const SPINS = Number(process.env.PROG_SPINS ?? 6)
 
 // a build the way a player makes one: for each trait, the best of six spun players
 const buildFor = (S, pos, r) => {
   const pool = S.pool[pos].filter(p => p.attrs), b = {}
   for (const t of S.types[pos]) {
     let p = pool[Math.floor(r() * pool.length)]
-    for (let j = 0; j < 5; j++) { const q = pool[Math.floor(r() * pool.length)]; if ((q.attrs?.[t] ?? 0) > (p.attrs?.[t] ?? 0)) p = q }
+    for (let j = 0; j < SPINS - 1; j++) { const q = pool[Math.floor(r() * pool.length)]; if ((q.attrs?.[t] ?? 0) > (p.attrs?.[t] ?? 0)) p = q }
     b[t] = { type: t, val: p.attrs?.[t] ?? 5, qb: p.short || p.name, qbFull: p.name, team: p.team, number: p.number, subpos: p.subpos ?? null, pos: p.pos }
   }
   return b
@@ -71,12 +74,13 @@ function playCareer(sport, pos, i, who, tally) {
   Math.random = r   // (newCareer's seed: the same careers every run)
   let c
   try { c = C.newCareer({ sport, pos, build: buildFor(S, pos, seeded(`prog-b-${sport}-${pos}-${i}`)), name: 'Cole Norwood', owner: 'Guest', games: 'advanced', slot: 0 }) } finally { Math.random = rnd }
-  const start = Object.fromEntries(c.types.map(t => [t, S_(c.build[t].val)]))
+  const start = Object.fromEntries(c.types.map(t => [t, S_(c.build[t].val)])), ovr0 = c.ovr
   const mv = movable(c)
   for (const d of c.draft.combine) c = C.recordCombine(c, d.id, 0.55 + r() * 0.35)
   c = C.runDraft(c)
   if (!c.team && c.draft?.offers?.length && SX[sport]?.signAcademy) c = SX[sport].signAcademy(c, c.draft.offers[0])
-  const line = []   // per season: { n, age, s (S count, movable), earned (an S that wasn't one at the start) }
+  const line = []   // per season: { n, age, s (S count, movable), earned (an S that wasn't one at the start), pts (points earned since the last offseason's spending) }
+  let banked = c.dev.points
   for (let yr = 0; yr < 26; yr++) {
     let D; [c, D] = C.startSeason(c)
     let hots = who === 'buyer' ? 99 : r() < 0.3 ? 1 : 0
@@ -113,7 +117,9 @@ function playCareer(sport, pos, i, who, tally) {
     // camp
     const cs = 0.5 + r() * 0.45
     { const was = c.dev.points; c = C.campDrill(c, cs, null, cs >= 0.65); tally.earn('camp', c.dev.points - was) }
+    line[line.length - 1].pts = c.dev.points - banked
     c = spend(c, tally)
+    banked = c.dev.points
     if (C.mustRetire(c)) break
     if (Array.isArray(c.offers)) {
       if (!c.offers.length) break
@@ -128,7 +134,8 @@ function playCareer(sport, pos, i, who, tally) {
   const at = pred => line.find(pred) ?? null
   const half = Math.ceil(mv.length / 2)
   return {
-    first: at(x => x.earned), half: at(x => x.s >= half), all: at(x => x.s >= mv.length),
+    first: at(x => x.earned), third: at(x => x.s >= 3), half: at(x => x.s >= half), all: at(x => x.s >= mv.length),
+    ovr0, pts: line.map(x => ({ age: x.age, n: x.n, pts: x.pts ?? 0 })),
     startS: mv.filter(t => start[t]).length, types: mv.length, seasons: line.length, peakS: Math.max(0, ...line.map(x => x.s)),
   }
 }
@@ -189,8 +196,17 @@ for (const who of WHO === 'both' ? ['free', 'buyer'] : [WHO]) {
     console.log(`${pos.padEnd(6)}  ${avg('startS').padStart(4)}/${rs[0]?.types}  ${avg('peakS').padStart(5)}   ${cell(rs, 'first').padEnd(20)}  ${cell(rs, 'half').padEnd(18)}  ${cell(rs, 'all')}`)
   }
   console.log(`ALL     ${''.padStart(12)}   ${cell(all, 'first').padEnd(20)}  ${cell(all, 'half').padEnd(18)}  ${cell(all, 'all')}`)
-  const early = all.filter(x => x.all && x.all.n <= 6).length
-  console.log(`all-S by season 6: ${early} of ${all.length}`)
+  const early = all.filter(x => x.all && x.all.n <= 6).length, early8 = all.filter(x => x.all && x.all.n < 8).length
+  console.log(`all-S by season 6: ${early} of ${all.length} · before season 8: ${early8}`)
+  console.log(`third S: ${cell(all, 'third')}`)
+  // points a season (earned between one offseason's spending and the next: the season, honors, camp, events)
+  const P = all.flatMap(x => x.pts), mean = xs => (xs.length ? (xs.reduce((s, v) => s + v, 0) / xs.length).toFixed(2) : '-')
+  const band = (lo, hi) => P.filter(p => p.age >= lo && p.age <= hi).map(p => p.pts)
+  console.log(`points a season: all ${mean(P.map(p => p.pts))} · age <=23 ${mean(band(0, 23))} · 24-27 ${mean(band(24, 27))} · 28-31 ${mean(band(28, 31))} · 32+ ${mean(band(32, 99))} · seasons 1-5 ${mean(P.filter(p => p.n <= 5).map(p => p.pts))} · max ${Math.max(...P.map(p => p.pts))}`)
+  const q3 = all.map(x => x.ovr0).sort((a, b) => a - b), lo = q3[Math.floor(q3.length / 3)], hi = q3[Math.floor((2 * q3.length) / 3)]
+  const byQ = f => mean(all.filter(x => f(x.ovr0)).flatMap(x => x.pts.filter(p => p.n <= 8).map(p => p.pts)))
+  console.log(`points a season, seasons 1-8, by start OVR: low (<${lo}) ${byQ(o => o < lo)} · mid ${byQ(o => o >= lo && o < hi)} · high (>=${hi}) ${byQ(o => o >= hi)}`)
+  out[`${who}:ALL-points`] = P
   console.log('top-end grades by source (count, points paid):', Object.entries(tally.top).filter(([k]) => !k.endsWith(':pts')).map(([k, n]) => `${k} ${n}${tally.top[`${k}:pts`] ? ` (${tally.top[`${k}:pts`]} pts)` : ''}`).join(' · '))
   console.log('points earned by source:', Object.entries(tally.pts).map(([k, n]) => `${k} ${n}`).join(' · '))
 }
