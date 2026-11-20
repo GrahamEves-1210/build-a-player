@@ -340,12 +340,16 @@ export function capSheet(F, short = F.team) {
   const t = F.teams[short], yr = capYear(F), cap = capOf(yr)
   const pay = payrollOf(t), dead = deadOf(t), rest = restOf53(t.r.filter(p => p.y > 0).length, yr)
   const used = r1(pay + dead + rest)
+  // (the league rule NO SALARY CAP, rules.js: the player's team signs whoever it likes; the league's teams keep theirs)
+  if (F.noCap && short === F.team) return { cap, pay, dead, rest, used, room: NO_CAP_ROOM, year: yr, nocap: true }
   return { cap, pay, dead, rest, used, room: r1(cap - used), year: yr }
 }
 export const capRoom = (F, short = F.team) => capSheet(F, short).room
+export const NO_CAP_ROOM = 999
 // the room k league years past this one, on the deals already signed (the men under contract then, the rest of the
 // 53 around them): what a front office looks at before it extends a man
 export function roomAhead(F, short, k = 1) {
+  if (F.noCap && short === F.team) return NO_CAP_ROOM
   const t = F.teams[short], yr = capYear(F) + k
   const men = t.r.filter(p => (p.y ?? 0) > k)
   const pay = men.reduce((a, p) => a + (hitIn(p, k) ?? 0), 0)

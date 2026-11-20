@@ -38,6 +38,7 @@ export { DIVISIONS, DIV_OF, CONF_OF, CONFS } from './schedule'
 export { clockText, periodOf, spotText, normalRate, simSnap, SNAP_KIND } from './game'
 export * from './moments'
 export * from './light'
+export * from './rules'
 
 // (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)
 // (8: game day's moments are snaps of the game, 2026-11-16; an older save is brought up to date on load: upgradeSave)

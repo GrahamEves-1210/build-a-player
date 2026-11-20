@@ -8,7 +8,8 @@ import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
-import { coachPhoto, teamMark } from './coachFace'
+import { coachPhoto, teamMark } from './coachFace'
+import { LeagueRules } from './Rules'
 import { teamKit } from '../../lib/franchise2/kits'
 
 // THE COACH: built like a player. The wheel is the league's real head coaches (not the player's own team's); it
@@ -200,7 +201,7 @@ export function CoachCard({ c, team, from, small = false, delay = 0 }) {
   )
 }
 // the coach card on the setup's last screen: his lines from the spin
-export function CoachReveal({ S, owner, onStart }) {
+export function CoachReveal({ S, owner, onStart, onRules }) {
   const c = S.coach ?? {}
   const r = Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v ?? 5]))
   const from = Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t] ? [S.cb.lines[t].from, S.cb.lines[t].t] : null]))
@@ -210,6 +211,8 @@ export function CoachReveal({ S, owner, onStart }) {
     <div className="fsu-reveal">
       <Chyron team={S.team} title={`${TEAM[S.team].nick} hire ${lastOf(name)}`} sub={real ? `REPLACES ${real.name.toUpperCase()}` : 'HEAD COACH'} />
       <CoachCard c={{ ...c, name, r }} team={S.team} from={from} />
+      {/* (the league rules, kept for the save and changed any time on the hub: Rules.jsx) */}
+      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true }} nick={TEAM[S.team].nick} onChange={onRules} /></section>}
       <div className="fsu-acts"><Go onClick={onStart}>Start the season</Go></div>
     </div>
   )

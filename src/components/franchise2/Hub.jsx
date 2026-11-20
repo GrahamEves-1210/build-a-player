@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
   TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
-  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk,
+  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
@@ -18,6 +18,7 @@ import { romanOf } from '../../lib/mg/kit'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import { GamesSwitch as MomentsModes } from '../simFlow'
+import { LeagueRules } from './Rules'
 import { fkVars, KLogo, Chyron, Ticker, Scorebug, ManL3, BigRec, Stamp, TeamSlab, Tape, Go, Fold } from './kit'
 import Gameday, { GameBoxSheet } from './Week'
 import TeamTab from './Team'
@@ -176,6 +177,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
             <ScoutRow F={F} onBoard={onBoard} />
             {/* (LIGHT never goes into a game: no key moments to set) */}
             {!light && <GamesSwitch F={F} act={act} />}
+            <LeagueRules value={rulesOf(F)} nick={TEAM[F.team].nick} onChange={r => act(X => { setRules(X, r) })} />
           </>
         )}
       </aside>

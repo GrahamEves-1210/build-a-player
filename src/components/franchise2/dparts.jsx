@@ -61,7 +61,8 @@ export function CapBar({ F, s = F.team, onClick, extra = 0 }) {
   return (
     <Tag2 className={`fd-cap${room < 0 ? ' is-over' : ''}${onClick ? ' is-tap' : ''}`} style={fkVars(s)} onClick={onClick} type={onClick ? 'button' : undefined}>
       <span className="fd-cap-top">
-        <span className="fd-cap-room"><b>{room < 0 ? `-${money(-room)}` : money(room)}</b><small>{room < 0 ? 'OVER THE CAP' : 'CAP ROOM'}</small></span>
+        {c.nocap ? <span className="fd-cap-room"><b>NO CAP</b><small>SALARY CAP OFF</small></span>
+          : <span className="fd-cap-room"><b>{room < 0 ? `-${money(-room)}` : money(room)}</b><small>{room < 0 ? 'OVER THE CAP' : 'CAP ROOM'}</small></span>}
         <span className="fd-cap-of"><small>{c.year} CAP</small><b>{money(c.cap)}</b></span>
       </span>
       <span className="fd-cap-bar" aria-hidden="true">

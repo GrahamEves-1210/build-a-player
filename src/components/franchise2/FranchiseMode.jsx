@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach, POS, lightInit } from '../../lib/franchise2'
+import { createFranchise, loadFranchise, saveFranchise, saveSetup, clearFranchise, SLOTS_N, TEAM, recText, records, addProspect, finishCoach, POS, lightInit, setRules } from '../../lib/franchise2'
 import { FRANCHISE_CARD_KEY } from '../../lib/franchiseLive'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
@@ -104,6 +104,8 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
     const builds = POS.flatMap(pos => (S.picks ?? []).filter(p => p.pos === pos)).map(p => S.builds[p.id]).filter(Boolean)
     const X = createFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, sandbox: S.sandbox, coach, builds })
     X.games = S.games ?? 'advanced'
+    // the league rules picked on the setup's last screen (lib/franchise2/rules.js)
+    setRules(X, { cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true })
     // FULL or LIGHT, for the life of the save (a save without it is FULL: lib/franchise2/light.js)
     if (S.pace === 'light') lightInit(X); else X.pace = 'full'
     saveFranchise(X); leaveNote(X)

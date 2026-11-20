@@ -142,7 +142,7 @@ function CapScreen({ F, owner, act, onBack, page, setPage }) {
       <BackBar label="Depth chart" title="Salary cap" onBack={onBack} />
       <Chyron team={F.team} title="THE CAP" tag={c.year} sub={`${TEAM[F.team].nick.toUpperCase()} · ${paid.length} UNDER CONTRACT`} />
       <div className="fd-capbig" style={fkVars(F.team)}>
-        <BigNum v={Math.round(Math.abs(c.room))} label={c.room < 0 ? '$M OVER THE CAP' : '$M CAP ROOM'} size={76} tone={c.room < 0 ? 'l' : undefined} />
+        {c.nocap ? <BigNum v="OFF" label="SALARY CAP" size={76} /> : <BigNum v={Math.round(Math.abs(c.room))} label={c.room < 0 ? '$M OVER THE CAP' : '$M CAP ROOM'} size={76} tone={c.room < 0 ? 'l' : undefined} />}
         <span className="fd-capbig-r"><BigNum v={Math.round(c.used)} label="$M USED" size={34} /><BigNum v={share} label="% ON THE TOP 3" size={34} /></span>
       </div>
       <CapBar F={F} />
