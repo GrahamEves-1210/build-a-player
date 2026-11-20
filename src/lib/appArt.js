@@ -105,7 +105,7 @@ export function appImage(src) {
 }
 
 // what an address became: 'p' a player's art, 't' a team's tag, '' neither
-const kindOf = (src, out) => (out === src ? '' : HEADSHOT.test(src) ? 'p' : 't')
+const kindOf = (src, out) => (out === src || SALARY.test(src) ? '' : HEADSHOT.test(src) ? 'p' : 't')   // (the board's picture is no logo: its card keeps its frame)
 
 // ── Fitting the slot ───────────────────────────────────────────────────────────────────────────────────────────
 // The places a photo used to sit were made for a face: a circle crop, a ring in the team's colour, the team's logo
