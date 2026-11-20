@@ -95,9 +95,10 @@ const SNAP_MS = 750
 // kick return's open field: the back outran the secondary and broke half the tackles he met, so a good player took
 // one in five to the house from his own 25 and averaged 14 yards a carry. An NFL back is no faster than the corners
 // and safeties chasing him, and a tackle at the line is a square one. SCRIM_V: the defense's speeds, yards a second;
-// SCRIM_BRK: his chance of breaking a tackle, against a kick return's)
-const SCRIM_V = { front: 7.6, backers: 8.9, cb: 10.5, s: 10.4 }
-const SCRIM_BRK = 0.6
+// SCRIM_BRK: his chance of breaking a tackle past the line, against a kick return's; at the line, as it was, so short
+// yardage is still a fight)
+const SCRIM_V = { front: 7.6, backers: 9.0, cb: 10.9, s: 10.8 }
+const SCRIM_BRK = 0.5, SCRIM_BRK_MAX = 0.25
 // where the play is drawn to: the gap off the ball (yards across from the ball, toward the play's side)
 const HOLE = { inside: 2.3, power: 4.6, outside: 9, draw: 1.2 }
 // the scrimmage play's line-up, in yards: across from the middle (sd: the play's side), up the field from the line
@@ -474,7 +475,7 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
       if (jk) p += W.juke
       if (c.eng != null) p = 0.55 + p * 0.45     // (reaching out of a block)
       if (c.k) p += 0.08
-      if (scrim) p *= SCRIM_BRK
+      if (scrim && me.d > scrim.los + 4) p = Math.min(p * SCRIM_BRK, SCRIM_BRK_MAX)   // (past the line: the open field's tacklers wrap up)
       if (r() < clamp(p, 0.02, 0.88)) {
         // through it: he's down, and he's lost a step
         c.down = g.t + 1100; c.fellAt = g.t; c.fellX = Math.sign(dx || 1)

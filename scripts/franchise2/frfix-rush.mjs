@@ -47,7 +47,7 @@ for (let y = 0; y < N; y++) {
     if (F.ev) FR.chooseEvent(F, 0)
   }
   const tot = FR.leagueStats(F)
-  const rb = Object.values(FR.lineup(F.teams[team])).find(p => p.p === 'rb')
+  const rb = F.teams[team].r.filter(p => p.p === 'rb').sort((a, b) => (tot[b.i]?.ra ?? 0) - (tot[a.i]?.ra ?? 0))[0]
   const line = tot[rb.i] ?? {}
   console.log(`${F.year} ${team} ${FR.recText(FR.records(F)[team])} · ${rb.n} (OVR ${rb.o}): ${line.ry ?? 0} rushing yds, ${line.rtd ?? 0} rushing TDs in ${line.gp ?? 0} games · moment runs ${runs}: ${runYds} yds (${(runYds / Math.max(1, runs)).toFixed(1)} a carry), ${runTd} TDs`)
   const all = FR.SHORTS.flatMap(s => F.teams[s].r.filter(p => p.p === 'rb').map(p => ({ n: p.n, s, ry: tot[p.i]?.ry ?? 0, td: tot[p.i]?.rtd ?? 0 })))
