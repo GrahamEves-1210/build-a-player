@@ -51,10 +51,10 @@ const line = () => ({ sec: 0, pts: 0, orb: 0, drb: 0, ast: 0, stl: 0, blk: 0, to
 const other = s => (s === 'h' ? 'a' : 'h')
 const mean = (a, f) => a.reduce((s, x) => s + f(x), 0) / (a.length || 1)
 
-function side(T, home) {
+function side(T, home, po = false) {
   const men = (T.men ?? []).filter(p => !(p.inj?.g > 0))
   const pr = new Map(men.map(p => [p.i, prof(p)]))
-  const rot = planRotation(men, T.set ?? {})
+  const rot = planRotation(men, { ...(T.set ?? {}), po })
   const by = new Map(men.map(p => [p.i, p]))
   return { short: T.short, men, by, pr, rot, floor: [], home, fouls: 0, out: new Set() }
 }
@@ -62,7 +62,7 @@ function side(T, home) {
 export function newGame(G) {
   const R = rngOf(`nba-game-${G.seed}`)
   const S = { R, po: !!G.po, per: 1, clock: Q, el: 0, sc: { h: 0, a: 0 }, q: { h: [0], a: [0] }, box: {}, lc: 0, big: { h: 0, a: 0 }, last: null, done: false, stop: null, next: STINT }
-  S.h = side(G.home, true); S.a = side(G.away, false)
+  S.h = side(G.home, true, !!G.po); S.a = side(G.away, false, !!G.po)
   for (const k of ['h', 'a']) for (const p of S[k].men) S.box[p.i] = line()
   S.poss = R.u() < 0.5 ? 'h' : 'a'     // the tip
   S.tip = S.poss
@@ -95,7 +95,7 @@ function lineup(S, k, start = false) {
     // the coach's plan: who is furthest behind his minutes by the next whistle (a man on the floor gets a minute's
     // grace, so stints run six to ten minutes, not two)
     const total = S.po ? 2880 : 2880, upTo = Math.min(total, S.el + STINT)
-    const need = p => (L.min[p.i] ?? 0) * 60 * (S.po ? 1.04 : 1) * upTo / total - S.box[p.i].sec + (T.floor.includes(p.i) ? 50 : 0)
+    const need = p => (L.min[p.i] ?? 0) * 60 * upTo / total - S.box[p.i].sec + (T.floor.includes(p.i) ? 50 : 0)
     pick = avail.filter(p => ok(p) && (L.min[p.i] ?? 0) > 0).sort((a, b) => need(b) - need(a)).slice(0, 5)
   }
   // short (fouls, injuries): the next men in the plan, then anyone

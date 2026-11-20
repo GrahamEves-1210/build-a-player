@@ -11,6 +11,7 @@
 //       players: the men who can play tonight (healthy, not resting). set (the user's screen, optional):
 //         { st: [ids] }        his five starters (any left out or not available: filled by the coach)
 //         { order: [ids] }     his order for the bench
+//         { po: true }         the playoffs' shorter rotation
 //         { min: { id: m } }   minutes he wants for a man (0 = out of the rotation); the rest are scaled to fill 240
 //   startersOf(players)        the coach's best five: at least one ball-handler, one or two bigs, no more than three
 //   MIN_CAP                    the most a target can be (38: the league's minutes leaders play 36-38 now)
@@ -19,8 +20,8 @@ import { prof, groupOf } from './skills'
 // tonight's men: under contract, not hurt, not resting (a two-way man dresses too; the coach rarely plays him)
 export const dressed = T => T.r.filter(p => !(p.inj?.g > 0) && !p.rest)
 export const setOf = T => ({ st: T.rot ? T.rot.slice(0, 5) : [], order: T.rot ?? null, min: T.min ?? null })
-export function rotationOf(F, short) {
-  const T = F.teams[short], L = planRotation(dressed(T), setOf(T))
+export function rotationOf(F, short, { playoff = false } = {}) {
+  const T = F.teams[short], L = planRotation(dressed(T), { ...setOf(T), po: playoff })
   return L.order.filter(i => L.min[i] > 0).map(i => ({ i, st: L.st.includes(i), min: L.min[i] }))
 }
 
@@ -29,6 +30,9 @@ export const GAME_MIN = 240
 const ovr = p => p.o ?? 70
 // the regular-season shape of a rotation (minutes by slot, a 9-to-10-man night)
 const SLOT = [34, 33, 32, 31, 30, 25, 21, 17, 11, 6]
+// the playoffs: the rotation shortens to eight, the stars play 38-40
+const SLOT_PO = [38, 37, 35, 34, 32, 22, 18, 14, 6, 4]
+export const MIN_CAP_PO = 42
 
 // the five a coach starts: the best men, shaped like a lineup
 export function startersOf(players) {
@@ -58,6 +62,7 @@ export function startersOf(players) {
 
 export function planRotation(players, set = {}) {
   const ids = new Set(players.map(p => p.i))
+  const CAP = set.po ? MIN_CAP_PO : MIN_CAP
   let five
   const want = (set.st ?? []).filter(id => ids.has(id))
   if (want.length) {
@@ -74,7 +79,7 @@ export function planRotation(players, set = {}) {
   const min = {}
   const top = ovr(order[0] ?? {})
   order.forEach((p, k) => {
-    let m = SLOT[k] ?? 0
+    let m = (set.po ? SLOT_PO : SLOT)[k] ?? 0
     if (k < 5) m += Math.max(-4, Math.min(3, (ovr(p) - 84) * 0.28))
     // a bench man much worse than the one before him gets less (a thin team plays its starters more)
     if (k >= 5 && k < 10) m *= Math.max(0.35, Math.min(1.25, 1 + (ovr(p) - (top - 12)) * 0.03))
@@ -91,10 +96,10 @@ export function planRotation(players, set = {}) {
   const free = order.filter(p => !fixed.has(p))
   const freeSum = free.reduce((s, p) => s + min[p.i], 0)
   const room = Math.max(0, GAME_MIN - fixedSum)
-  if (freeSum > 0) for (const p of free) min[p.i] = Math.min(MIN_CAP, min[p.i] * room / freeSum)
+  if (freeSum > 0) for (const p of free) min[p.i] = Math.min(CAP, min[p.i] * room / freeSum)
   // the scale-down's leftovers (a man at the cap): to the next men in line who are under it
   let left = GAME_MIN - order.reduce((s, p) => s + min[p.i], 0)
-  for (let pass = 0; pass < 3 && left > 0.5; pass++) for (const p of free) { if (left <= 0) break; const add = Math.min(left, MIN_CAP - min[p.i], 8); if (add > 0 && min[p.i] > 0) { min[p.i] += add; left -= add } }
+  for (let pass = 0; pass < 3 && left > 0.5; pass++) for (const p of free) { if (left <= 0) break; const add = Math.min(left, CAP - min[p.i], 8); if (add > 0 && min[p.i] > 0) { min[p.i] += add; left -= add } }
   for (const p of order) min[p.i] = Math.round(min[p.i] * 10) / 10
   // closing a close game: the five best who play real minutes (a coach's closers; the starters most nights)
   const closers = [...order].filter(p => min[p.i] >= 14).sort((a, b) => ovr(b) - ovr(a)).slice(0, 5)

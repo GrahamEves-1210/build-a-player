@@ -88,6 +88,7 @@ for (let y = 0; y < N; y++) {
         const [hi, lo] = (W.w[L[x]] ?? 0) >= (W.w[L[z]] ?? 0) ? [L[x], L[z]] : [L[z], L[x]]
         const se = series(hi, lo, R, year, `r${rd}${c}${x}`)
         rounds.push(se); out.push(se.done)
+        S.ser = [...(S.ser ?? []), { fav: se.done === hi, gap: (W.w[hi] ?? 0) - (W.w[lo] ?? 0) }]
         if (rd === 2) sMvp[c] = C.seriesMvp(F, se)
       }
       nx[c] = out
@@ -168,7 +169,7 @@ for (let y = 0; y < N; y++) {
     T.r = T.r.filter(p => { if (p.ag >= 24 && !p.rk && R.u() < 0.12) { moving.push(p); return false } if (p.rk && p.ag >= 24 && R.u() < 0.12) { moving.push(p); return false } return true })
   }
   for (const p of R.shuffle(moving)) {
-    const open = SHORTS.filter(x => F.teams[x].r.length < 16), s = open[R.int(0, open.length - 1)]
+    const fewest = Math.min(...SHORTS.map(x => F.teams[x].r.length)), open = SHORTS.filter(x => F.teams[x].r.length <= fewest + 1), s = open[R.int(0, open.length - 1)]
     F.teams[s].r.push(p)
   }
   for (const s of SHORTS) {
@@ -222,6 +223,7 @@ const rows = [
   ['Mean OVR, the top 150 men', `${S.seasons[0].top150.toFixed(1)} at the start`, A('top150').toFixed(1), rng('top150')],
   ['Retirement age, stars / role players', '36-40 / 32-35', `${median(starRet.map(r => r.ag))} / ${median(roleRet.map(r => r.ag))}`, ''],
   ['Champion: regular-season rank', 'the best record wins it ~35-45%', `#1 in ${S.champRank.filter(x => x === 1).length} of ${N}`, `ranks ${S.champRank.join(' ')}`],
+  ['Series won by the better record', '~75% (first round ~80%)', `${(S.ser.filter(x => x.fav).length / S.ser.length * 100).toFixed(0)}%`, `gap 10+ wins: ${(S.ser.filter(x => x.gap >= 10 && x.fav).length / Math.max(1, S.ser.filter(x => x.gap >= 10).length) * 100).toFixed(0)}%`],
   ['Most titles by one team', `${N} seasons: rarely 3+`, String(most), `${Object.keys(S.champs).length} different champions`],
 ]
 console.log('\n' + 'REAL vs SIM'.padEnd(44) + 'REAL'.padEnd(32) + 'SIM (mean)'.padEnd(26) + 'SIM range')

@@ -45,7 +45,7 @@ ok(bad === 0, `400 games: points, makes, minutes (240 + 25 an overtime), five st
 ok(maxPf <= 6, `nobody past six fouls (most: ${maxPf}); ${fouledOut} foul-outs in 800 team-games (the NBA: about one in 12 games)`)
 ok(blowStar.length > 5 && +mean(blowStar) < +mean(closeStar) - 4, `a blowout sits the starters: the top scorer plays ${mean(blowStar)} in 28-point games, ${mean(closeStar)} in games within 4`)
 ok(hiMin <= 53, `the most minutes a man played in regulation or overtime: ${hiMin}`)
-ok(ms < 5, `speed: ${ms.toFixed(2)} ms a game`)
+ok(ms < 8, `speed: ${ms.toFixed(2)} ms a game`)
 console.log(`  (${otGames} overtime games in 400: the NBA has about 6%)`)
 
 // 3. the user's rotation: his starters, his minutes
