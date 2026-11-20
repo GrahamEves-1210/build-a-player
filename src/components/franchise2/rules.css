@@ -10,3 +10,4 @@
 .fr-rule-seg button small { font-family: var(--fk-b); font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; color: inherit; opacity: .85; }
 .fr-rule-seg button.is-on { background: var(--fk-brushed); color: var(--fk-ag-ink); }
 .fsu-rules { display: grid; gap: 10px; margin-top: 14px; }
+.fr-rule-note { margin: 0; font-family: var(--fk-b, inherit); font-size: 14px; line-height: 1.35; color: var(--fk-mute, #c4c9d0); }

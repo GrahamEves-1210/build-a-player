@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
   TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
-  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules,
+  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules, capSheet,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
@@ -181,6 +181,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
             {/* (LIGHT never goes into a game: no key moments to set) */}
             {!light && <GamesSwitch F={F} act={act} />}
             <LeagueRules value={rulesOf(F)} nick={TEAM[F.team].nick} onChange={r => act(X => { setRules(X, r) })} />
+            <CapOffNote F={F} />
           </>
         )}
       </aside>
@@ -536,4 +537,12 @@ function LeagueTicker({ F }) {
   if (!items) return <div className="fh-tick"><div className="fk-tick"><span className="fk-tick-label">{label}</span><div className="fk-tick-win" /></div></div>
   if (!items.length) return null
   return <div className="fh-tick"><Ticker items={items} label={label} /></div>
+}
+
+// with no salary cap, what turning it back on means: a team spending past the cap can't sign anyone until it's under
+function CapOffNote({ F }) {
+  const c = capSheet(F)
+  if (!c.nocap || c.used <= c.cap) return null
+  const over = Math.round((c.used - c.cap) * 10) / 10
+  return <p className="fr-rule-note">{`The ${TEAM[F.team].nick} are spending $${over >= 10 ? Math.round(over) : over.toFixed(1)}M past the ${c.year} cap. With the cap back on, they can't sign anyone, and no trade can add to their payroll, until they're under it.`}</p>
 }

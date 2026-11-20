@@ -289,9 +289,13 @@ function Gauge({ F, s, g }) {
 function CapNote({ F, chk }) {
   const c = chk.cap
   return (
-    <div className={`tr-cap${c.after < 0 ? ' is-over' : ''}`}>
-      <span><small>CAP ROOM NOW</small><b>{c.before < 0 ? `-${money(-c.before)}` : money(c.before)}</b></span>
-      <span><small>AFTER THE TRADE</small><b>{c.after < 0 ? `-${money(-c.after)}` : money(c.after)}</b></span>
+    <div className={`tr-cap${!c.nocap && c.after < 0 ? ' is-over' : ''}`}>
+      {c.nocap ? <span><small>SALARY CAP</small><b>OFF</b></span> : (
+        <>
+          <span><small>CAP ROOM NOW</small><b>{c.before < 0 ? `-${money(-c.before)}` : money(c.before)}</b></span>
+          <span><small>AFTER THE TRADE</small><b>{c.after < 0 ? `-${money(-c.after)}` : money(c.after)}</b></span>
+        </>
+      )}
       {chk.cut?.length > 0 && <span className="tr-cap-cut"><small>ROSTER SPOT</small><b>{chk.cut.map(p => `${posText(p)} ${p.n} released`).join(' · ')}</b></span>}
     </div>
   )

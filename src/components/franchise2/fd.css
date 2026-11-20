@@ -42,6 +42,11 @@
 .is-rest { background: var(--fk-g4); }
 .fd-cap-key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
 .fd-cap-key i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: 0; }
+/* the cap screen's sum, line by line, and the rollover's note */
+.fd-cap-of .fd-cap-carry { margin-top: 3px; font-size: 13px; color: var(--fk-mute); }
+.fd-line { gap: 12px; align-items: baseline; }
+.fd-line span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fd-cap-note { margin: 0; font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: var(--fk-mute); }
 @keyframes fd-grow { from { transform: scaleX(0); } }
 .fd-capbig { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 8px 2px 2px; }
 .fd-capbig-r { display: flex; gap: 16px; }
