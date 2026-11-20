@@ -41,7 +41,7 @@ for (let y = 0; y < SEASONS; y++) {
     if (st === 'camp') { const T = F.teams[F.team]; while (T.r.filter(p => !p.tw).length > 15) { const p = T.r.filter(p => !p.tw).sort((a, b) => a.o - b.o)[0]; N.CAP_SIM.cutMan(F, F.team, p.i) } }
     N.nextStep(F)
   }
-  for (const s of N.SHORTS) { const r = F.teams[s].r, std = r.filter(p => !p.tw).length; if (std > 15 || std < 13) flag(`${s} has ${std} standard men`); if (r.filter(p => p.tw).length > 3) flag(`${s} two-way > 3`) }
+  for (const s of N.SHORTS) { const r = F.teams[s].r, std = r.filter(p => !p.tw).length; if (std > 15 || std < 14) flag(`${s} has ${std} standard men`); if (r.filter(p => p.tw).length > 3) flag(`${s} two-way > 3`) }
   const ages = N.SHORTS.flatMap(s => F.teams[s].r.map(p => p.ag)); console.log(`  ages ${Math.min(...ages)}-${Math.max(...ages)}, avg ovr top8 ${(N.SHORTS.reduce((a, s) => a + N.teamOvr(F, s), 0) / 30).toFixed(1)}, save ${(N.nbaSaveSize(F) / 1024).toFixed(0)} KB`)
   { const P = JSON.parse(N.packNba(F)); const sz = Object.entries(P).map(([k, v]) => [k, JSON.stringify(v).length]).sort((a, b) => b[1] - a[1]).slice(0, 8); console.log('  size', sz.map(([k, v]) => `${k} ${(v / 1024).toFixed(0)}K`).join(' ')); const T = P.teams; let car = 0, aw = 0, rest = 0; for (const t of Object.values(T)) for (const r of t.r) { const m = r[r.length - 1]; if (m && typeof m === 'object' && !Array.isArray(m)) { car += JSON.stringify(m.car ?? '').length; aw += JSON.stringify(m.aw ?? '').length; rest += JSON.stringify(m).length } } console.log(`  men extras ${(rest / 1024).toFixed(0)}K car ${(car / 1024).toFixed(0)}K aw ${(aw / 1024).toFixed(0)}K`) }
   const J = JSON.parse(JSON.stringify(N.unpackNba(N.packNba(F)))); if (J.sched.length !== F.sched.length) flag('pack/unpack lost games')

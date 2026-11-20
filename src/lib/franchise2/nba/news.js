@@ -1,7 +1,7 @@
 // NBA FRANCHISE: the wire. Short items in the voice of a league insider: facts, the team, the man, the terms.
 // { d (the day, or null in the offseason), y (season), k (kind), tag (the chyron's word), s (team), text }
 import { TEAM } from './league'
-export const NEWS_MAX = 80
+export const NEWS_MAX = 60
 // the cap engine writes teams by their short ("the BOS"); the wire and the screens say them the way a reporter does
 // ("the Celtics", "the Heat's")
 export const teamWords = t => String(t ?? '').replace(/\b(the|The) ([A-Z]{3})\b('s|')?/g, (m, the, s, pos) => {

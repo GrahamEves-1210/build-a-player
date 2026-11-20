@@ -98,7 +98,7 @@ function enter(F, step) {
     const A = X.ageLeague(F) ?? {}
     // (ageLeague files the retired men in F.retired and writes their news; the wall keeps a man's totals, not his rows)
     for (const x of A.news ?? []) addNews(F, { tag: 'RETIRES', ...x })
-    F.retired = (F.retired ?? []).map(retiredRow).slice(-250)
+    F.retired = (F.retired ?? []).map(retiredRow).slice(-150)
     const gone = X.seasonEndDeals(F) ?? []
     for (const x of gone.news ?? []) addNews(F, x)
     F.off.mine = gone.filter(p => p.was === F.team).map(p => p.i)
@@ -161,7 +161,7 @@ export function pruneStreet(F) {
   const fa = (F.fa ?? []).slice().sort((a, b) => b.o - a.o)
   for (const p of fa.slice(55)) if (!p.gn) F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs: p.ys })]
   F.fa = fa.slice(0, 55)
-  F.retired = (F.retired ?? []).slice(-250)
+  F.retired = (F.retired ?? []).slice(-150)
 }
 export function newSeason(F) {
   // the CPU rosters: legal (cut the lowest men past 15, fill short rosters off the street, then made-up men)
