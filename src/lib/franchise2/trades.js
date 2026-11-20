@@ -353,8 +353,16 @@ const dealsAll = F => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u).length
 const weekKey = F => `${winKey(F)}-${F.phase === 'off' ? F.stage : F.wk}`
 const callsLeft = (F, s) => { const c = F.trc?.[s]; return c && c[0] === weekKey(F) ? CALLS - c[1] : CALLS }
 // the margin team s wants on a deal with the player's team
+// (7% of what it gives; on a small deal a few points more, never more than a quarter of what it gives: a sixth for a
+// sixth and a seventh is a deal, not a 25-point ask)
 function marginOf(F, s, out) {
-  return Math.max(25, out * 0.07) * (1 + 0.6 * dealsWith(F, s) + 0.1 * dealsAll(F))
+  return Math.max(Math.min(25, 4 + out * 0.25), out * 0.07) * (1 + 0.6 * dealsWith(F, s) + 0.1 * dealsAll(F))
+}
+// what the player's team sends, the league's way (the gauge), with a man it just traded for counted at what he cost
+// (the flip pricing, as inValue has it)
+function fairIn(F, s, gm, gk) {
+  const v = gm.map(p => { const x = valueOf(F, p); return p.tx?.[4] != null && recentTx(F, p) ? Math.min(x, p.tx[4] * 0.95) : x })
+  return pkgOf(v) + gk.reduce((a, k) => a + pickWorth(F, k), 0)
 }
 // team s on the deal: { ok, why, short (the value it's missing), side (teamSide) }
 export function decide(F, s, give, get, { user = true } = {}) {
@@ -380,8 +388,13 @@ export function decide(F, s, give, get, { user = true } = {}) {
     if (top >= 120 && best < top * 0.5) return { ok: false, why: 'star', side, short: Infinity, who: tm.sort((a, b) => b.o - a.o)[0] }
   }
   const need = user ? marginOf(F, s, side.out) : Math.max(10, side.out * 0.03)
-  const short = need - side.gain
-  return { ok: short <= 0, why: short <= 0 ? 'yes' : side.why ?? 'short', short, side, need }
+  let short = need - side.gain
+  // what the player's team sends already worth more than what it asks for, by the league's values: the team takes it,
+  // or asks for a little more (5% of what it gives), whatever its own needs say (a backup for it, a veteran for a
+  // rebuild): a club trades a fourth for a man it can use, it doesn't ask for a third on top
+  const fair = user ? { in: fairIn(F, s, gm, gk), out: gauge(F, s, give, get).get } : null
+  if (fair && fair.in >= fair.out && short > 0) short = Math.min(short, fair.out + Math.max(2, fair.out * 0.05) - fair.in)
+  return { ok: short <= 0, why: short <= 0 ? 'yes' : side.why ?? 'short', short, side, need, fair }
 }
 // what team s says, the way a front office puts it to a beat writer
 export function sayOf(F, s, d, counter = false) {
@@ -404,33 +417,58 @@ export function sayOf(F, s, d, counter = false) {
 }
 
 // ── A counter ────────────────────────────────────────────────────────────────
-// within reach: one of the player's picks added (the cheapest that covers it), one of his men the team wants, or
-// something taken off its own side. The one that moves the gauge least for the player.
+// within reach: one of the player's picks added (the cheapest that covers it), one of his picks moved up for a later
+// one, one of his men the team wants, one of its picks swapped for a later one of its own (it trades down), or
+// something taken off its own side. The one that moves the gauge least for the player, and never more than it
+// takes: what it costs him (the gauge) closes the gap (the team's shortfall, with room for the step between picks)
+// and nothing more, is never more than what he asked for is worth, adds no pick higher than the best one he's
+// getting, and when his side was already worth more by the league's values it's a small add at most.
+export const COUNTER_SMALL = 20       // (about a sixth-round pick: the most a counter adds on a deal he already wins)
+export function counterLimit(d, base) {
+  const short = Math.max(0, d.short)
+  let lim = Math.min(base.get, short * 1.25 + COUNTER_SMALL)
+  if (base.give >= base.get) lim = Math.min(lim, COUNTER_SMALL)
+  return lim
+}
 export function counterOf(F, s, give, get, d) {
   if (!d.side || !(d.short > 0) || d.short > Math.max(400, d.side.out * 0.8)) return null
   if (d.why !== 'short' && d.why !== 'set' && d.why !== 'reb') return null
-  const tries = []
-  const n = (give.pl?.length ?? 0) + (give.pk?.length ?? 0)
-  const mine = picksBy(F)[F.team].filter(k => !(give.pk ?? []).includes(k))
-  if (n < TRADE_MAX) {
-    for (const k of mine) tries.push({ give: { pl: [...(give.pl ?? [])], pk: [...(give.pk ?? []), k] }, get })
-    const gone = new Set(give.pl ?? [])
-    const men = menOf(F, F.team).filter(p => !gone.has(p.i) && !tradeable(F, F.team, p) && p.o >= 72).sort((a, b) => valueOf(F, a) - valueOf(F, b)).slice(0, 14)
-    for (const p of men) tries.push({ give: { pl: [...(give.pl ?? []), p.i], pk: [...(give.pk ?? [])] }, get })
-  }
-  if ((get.pl?.length ?? 0) + (get.pk?.length ?? 0) >= 2) {
-    for (const id of get.pl ?? []) tries.push({ give, get: { pl: get.pl.filter(x => x !== id), pk: [...(get.pk ?? [])] } })
-    for (const k of get.pk ?? []) tries.push({ give, get: { pl: [...(get.pl ?? [])], pk: get.pk.filter(x => x !== k) } })
-  }
-  let best = null
   const base = gauge(F, s, give, get)
+  const lim = counterLimit(d, base)
+  if (!(lim > 0)) return null
+  const tries = []
+  const gp = give.pk ?? [], gl = give.pl ?? [], tp = get.pk ?? [], tl = get.pl ?? []
+  const n = gl.length + gp.length
+  // (the best round coming back: no pick added or moved up past it)
+  const top = Math.min(8, ...tp.map(k => parsePick(k).r))
+  const mine = picksBy(F)[F.team].filter(k => !gp.includes(k) && parsePick(k).r >= (tp.length ? top : 1))
+  const w = k => pickWorth(F, k)
+  if (n < TRADE_MAX) {
+    for (const k of mine) if (w(k) <= lim) tries.push({ give: { pl: [...gl], pk: [...gp, k] }, get })
+    const gone = new Set(gl)
+    const men = menOf(F, F.team).filter(p => !gone.has(p.i) && !tradeable(F, F.team, p) && p.o >= 72 && valueOf(F, p) <= lim).sort((a, b) => valueOf(F, a) - valueOf(F, b)).slice(0, 14)
+    for (const p of men) tries.push({ give: { pl: [...gl, p.i], pk: [...gp] }, get })
+  }
+  // one of his picks for a better one of his
+  for (const k of gp) for (const k2 of mine) if (w(k2) > w(k) && w(k2) - w(k) <= lim) tries.push({ give: { pl: [...gl], pk: gp.map(x => (x === k ? k2 : x)) }, get })
+  // one of its picks for a later one of its own
+  const theirs = picksBy(F)[s].filter(k => !tp.includes(k))
+  for (const k of tp) for (const k2 of theirs) if (w(k2) < w(k) && w(k) - w(k2) <= lim) tries.push({ give, get: { pl: [...tl], pk: tp.map(x => (x === k ? k2 : x)) } })
+  if (tl.length + tp.length >= 2) {
+    for (const id of tl) tries.push({ give, get: { pl: tl.filter(x => x !== id), pk: [...tp] } })
+    for (const k of tp) tries.push({ give, get: { pl: [...tl], pk: tp.filter(x => x !== k) } })
+  }
+  // (a counter never leaves him sending a higher pick than the best he gets back, when he didn't ask for that)
+  const upside = x => { const a = Math.min(8, ...(x.give.pk ?? []).map(k => parsePick(k).r)), b = Math.min(8, ...(x.get.pk ?? []).map(k => parsePick(k).r)); return (x.get.pk ?? []).length > 0 && a < b }
+  const was = upside({ give, get })
+  let best = null
   for (const t of tries) {
-    if (!checkTrade(F, s, t.give, t.get).ok) continue
-    const e = decide(F, s, t.give, t.get)
-    if (!e.ok) continue
+    if (!was && upside(t)) continue
     const g = gauge(F, s, t.give, t.get)
     const moved = (g.give - base.give) + (base.get - g.get)
-    if (!best || moved < best.moved) best = { ...t, moved }
+    if (moved > lim + 1e-9 || (best && moved >= best.moved)) continue
+    if (!checkTrade(F, s, t.give, t.get).ok || !decide(F, s, t.give, t.get).ok) continue
+    best = { ...t, moved }
   }
   return best ? { give: best.give, get: best.get } : null
 }
