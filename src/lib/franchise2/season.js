@@ -23,6 +23,7 @@ import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews, logWeek } from './news'
 import { rollInjuries } from './injury'
 import { syncScouts } from './draft'
+import { tradeWeek } from './trades'
 
 export const REG_WEEKS = 18
 export const TRADE_DEADLINE = 9   // (the NFL's: after Week 9; no event offers a deal past it)
@@ -268,6 +269,8 @@ function endWeek(F, row) {
     return out
   }
   F.wk++
+  // (the trade calls and the league's deals, up to the deadline: trades.js)
+  try { tradeWeek(F) } catch { /* (a trade is never worth a lost week) */ }
   // (the scouts' days: draft.js scoutsLeft, by the week)
   // an event card about every three or four weeks
   if (F.wk < REG_WEEKS && F.wk >= (F.nextEv ?? 3)) { F.ev = makeEvent(F, R); F.nextEv = F.wk + R.int(3, 4); if (F.ev) out.event = true }

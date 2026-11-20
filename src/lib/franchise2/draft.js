@@ -45,6 +45,7 @@ import { leagueUnderCap } from './market'
 import { depthChart, groupOf, fixNumbers, backupsOf } from './roster'
 import { CFB_TEAMS, CFB_TEAM_BY_SHORT } from '../../data/cfb-teams'
 import { addNews } from './news'
+import { tradesAtDraft } from './trades'
 
 export const ROUNDS_N = 7
 export const PICKS_N = 32 * ROUNDS_N
@@ -793,6 +794,8 @@ export function openDraft(F) {
   F.dr = { ph: 'pre', order, own: Array.from({ length: PICKS_N }, (_, k) => order[k % 32]), at: 0, picks: [], tr: [] }
   runCombine(F)
   F.stage = 'draft'
+  // (the picks traded for this draft move into its order, and the calls a draft brings: trades.js)
+  try { tradesAtDraft(F) } catch { /* (the draft goes on) */ }
 }
 export function startNight(F) { if (!F.dr) return; F.dr.ph = 'night'; F.dr.fin = Object.fromEntries(F.dc.map(x => [x.i, buzzOf(F, x)])); F.dr.rk = consensus(F).map(x => x.i) }
 // draft night's feed: how many picks have been on screen (a reload picks up after them)
