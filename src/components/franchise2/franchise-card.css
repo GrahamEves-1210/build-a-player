@@ -82,3 +82,4 @@ html.bap-reduce-motion .fr-wait-in { animation: none; }
   html.app-look .ag-mc--cfb-sm .ag-cfb-band { left: 0; right: 0; top: auto; width: auto; height: 60px; padding: 0 10px; clip-path: none; }
   html.app-look .ag-mc--cfb-sm .ag-cfb-band img { width: 42px; height: 42px; }
 }
+.ag-fr-art--nba { padding: 6% 4%; box-sizing: border-box; } .ag-fr-art--nba img { filter: drop-shadow(0 4px 8px rgba(0,0,0,.45)); }

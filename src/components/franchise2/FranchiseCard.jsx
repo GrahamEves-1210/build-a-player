@@ -85,6 +85,27 @@ export function NbaFranchiseCard({ onClick }) {
   return (
     <button className="ag-way ag-mc ag-mc--fr ag-mc--fr-wide" style={c?.color ? { '--fr-team': c.color } : undefined} onClick={onClick} onPointerDown={warmNba} onFocus={warmNba}>
       <span className="ag-mc-head"><b>FRANCHISE<i className="ag-mc-tag">NEW</i></b><small>{c?.line ?? OPEN}</small></span>
+      <NbaArt team={c?.team} />
     </button>
+  )
+}
+
+// the basketball card's picture, in the football card's place: the GM's team's logo once there's a franchise, else a
+// flat ball (drawn: no photo), in the same box the trophy's football sits in
+function NbaArt({ team }) {
+  return (
+    <span className="ag-fr-art ag-fr-art--nba" aria-hidden="true">
+      {team ? <img src={`/logos/nba/${team}.png`} alt="" width="300" height="300" loading="lazy" decoding="async" draggable={false} />
+        : (
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <circle cx="50" cy="50" r="40" fill="#e1702b" />
+            <g fill="none" stroke="#1a0f08" strokeWidth="2.6">
+              <circle cx="50" cy="50" r="40" />
+              <path d="M10 50h80M50 10v80" />
+              <path d="M22 21c12 9 14 49 0 58M78 21c-12 9-14 49 0 58" />
+            </g>
+          </svg>
+        )}
+    </span>
   )
 }

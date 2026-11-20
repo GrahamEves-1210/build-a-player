@@ -6,6 +6,7 @@ import { makeSchedule } from './schedule'
 import { makePicks, makeClass } from './draft'
 import { records, recText } from './season'
 import { addNews } from './news'
+import { placeBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 
 export * from './league'
@@ -15,6 +16,7 @@ export * from './draft'
 export * from './offseason'
 export * from './news'
 export * from './moments'
+export * from './builds'
 export { X as CAP_SIM }
 
 export const NBA_SAVE_V = 1
@@ -31,6 +33,10 @@ export function createNbaFranchise(setup) {
   if (setup.rules?.inj === false) F.noInj = 1
   buildTeams(F, { dealOnLoad: X.dealOnLoad })
   F.phase = 'season'
+  // the GM's own builds: named in the setup, onto the roster as rookies (builds.js)
+  F.builds = (setup.builds ?? []).slice(0, BUILD_MAX).map(B => ({ pos: B.pos, build: B.build, types: B.types ?? null, name: B.name, num: B.num, face: B.face ?? null, age: 20, ...(B.sandbox && { sandbox: 1 }) }))
+  if (F.builds.some(B => B.sandbox)) F.sandbox = true
+  placeBuilds(F)
   F.ss = {}; F.ps = {}; F.log = []; F.box = []; F.po = null
   makeSchedule(F)
   makePicks(F)

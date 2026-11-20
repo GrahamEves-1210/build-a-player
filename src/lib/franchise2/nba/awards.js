@@ -92,7 +92,7 @@ export function seasonAwards(F) {
     if (n > 10) {
       const mx = xs.reduce((s, x) => s + x.p.o, 0) / n, my = xs.reduce((s, x) => s + prod(x.r), 0) / n
       const b = xs.reduce((s, x) => s + (x.p.o - mx) * (prod(x.r) - my), 0) / Math.max(1, xs.reduce((s, x) => s + (x.p.o - mx) ** 2, 0))
-      mip.push(...top(xs.filter(x => x.p.ag <= 26).map(x => ({ i: x.i, v: prod(x.r) - (my + b * (x.p.o - mx)) })), 5))
+      mip.push(...top(xs.filter(x => x.p.ag <= 25 && x.p.o < 84).map(x => ({ i: x.i, v: prod(x.r) - (my + b * (x.p.o - mx)) })), 5))
     }
   }
   const clutch = top(ok.map(x => ({ i: x.i, v: (x.r.cp ?? 0) + 25 * (x.wp - 0.5) })), 5)

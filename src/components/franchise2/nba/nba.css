@@ -174,3 +174,10 @@
 .nb-counter p { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; }
 .nb-tman:disabled { opacity: .5; cursor: default; }
 .nb-cap-holds { font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
+.nb-run { position: fixed; inset: 0; z-index: 1065; display: grid; place-items: center; padding: 16px; background: rgba(8,9,11,.92); color: var(--fk-text); }
+.nb-run-in { display: grid; gap: 14px; width: 100%; max-width: 460px; }
+.nb-run-rec { display: flex; align-items: center; gap: 12px; }
+.nb-run-rec b { font-family: var(--fk-d); font-weight: 400; font-size: 56px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.nb-run-rec small { font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: var(--fk-mute); }
+.nb-run-bar { height: 10px; background: var(--fk-g3); }
+.nb-run-bar i { display: block; height: 100%; background: var(--tca, #fff); transition: width .1s linear; }

@@ -62,7 +62,8 @@ export const openSpots = (F, short) => (F.phase === 'off' ? Math.max(0, ROSTER_M
 export function scoreOf(p) {
   const o = p.o ?? 60, ag = p.ag ?? 27
   const up = ag <= 24 ? clamp(0, 6, ((p.pk ?? o) - o) * (ag <= 21 ? 0.4 : ag <= 23 ? 0.3 : 0.2)) : 0
-  const old = ag >= 31 ? (ag - 30) * (p.g === 'big' ? 1.4 : 1.1) : 0
+  // (the market pays for what a man is now: a 34-year-old who's still a top-ten player gets paid like one, for fewer years)
+  const old = ag >= 32 ? (ag - 31) * (p.g === 'big' ? 1.0 : 0.8) : 0
   return o + up - old
 }
 // the pay ladder: [rank (of 450 men), share of the cap]

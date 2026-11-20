@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, CONF_OF, CONF_NAME, DIV_OF, SHORTS, records, recText, pct, confOrder, gamesBack, streakText, nextMine, myGames, gameNo, dateText,
   playNext, simTo, startPostseason, playPoNight, simPostseason, mySeries, myPoGame, seriesText, ROUND_NAME, closeSeason, teamOvr,
@@ -29,6 +29,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
   const [tab, setTab] = useState('season')
   const [live, setLive] = useState(() => (F.pend ? { pend: true } : null))
   const [teamView, setTeamView] = useState(null)
+  const [run, setRun] = useState(null)   // (a stretch of nights being simmed, a few at a time: SimRun)
   const scroll = useRef(null)
   const t = TEAM[F.team]
   const R = records(F)
@@ -47,6 +48,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
       {live && <NbaGame F={F} act={act} start={live} owner={owner} onDone={() => setLive(null)} />}
+      {run && <SimRun F={F} act={act} run={run} onDone={() => setRun(null)} />}
       <div ref={scroll} className="fh-scroll">
         <header className="fh-top">
           <span className="fh-top-logo"><KLogo s={F.team} size={36} /></span>
@@ -63,7 +65,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
-          {tab === 'season' && (off ? <NbaOffseason F={F} act={act} owner={owner} /> : <Season F={F} R={R} act={act} play={play} owner={owner} onTrades={() => toTab('team', 'trades')} />)}
+          {tab === 'season' && (off ? <NbaOffseason F={F} act={act} owner={owner} /> : <Season F={F} R={R} act={act} play={play} owner={owner} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
           {tab === 'team' && <NbaTeam F={F} act={act} owner={owner} view={teamView} setView={setTeamView} />}
           {tab === 'league' && <NbaLeague F={F} owner={owner} />}
           {tab === 'history' && <NbaHistory F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
@@ -86,12 +88,12 @@ function LeagueTicker({ F }) {
 }
 
 // ── SEASON ───────────────────────────────────────────────────────────────────
-function Season({ F, R, act, play, owner, onTrades }) {
+function Season({ F, R, act, play, owner, onTrades, onSim }) {
   const ph = F.phase
   return (
     <div className="fh-grid">
       <div className="fh-main">
-        {ph === 'season' && <NextGame F={F} R={R} act={act} play={play} onTrades={onTrades} />}
+        {ph === 'season' && <NextGame F={F} R={R} act={act} play={play} onTrades={onTrades} onSim={onSim} />}
         {ph === 'post' && <SeasonOver F={F} R={R} act={act} />}
         {(ph === 'playin' || ph === 'playoffs') && <PoCard F={F} act={act} play={play} />}
         {ph === 'done' && <Champions F={F} act={act} />}
@@ -113,13 +115,13 @@ function Season({ F, R, act, play, owner, onTrades }) {
 }
 
 const seedIn = (F, R, s) => confOrder(F, CONF_OF[s], R).indexOf(s) + 1
-function NextGame({ F, R, act, play, onTrades }) {
+function NextGame({ F, R, act, play, onTrades, onSim }) {
   const g = nextMine(F)
   if (!g) return null
   const home = g.h === F.team, opp = home ? g.a : g.h
   const b2b = F.sched.some(x => x.d === g.d - 1 && (x.h === F.team || x.a === F.team))
   const kind = DIV_OF[opp] === DIV_OF[F.team] ? `${DIV_OF[F.team]} Division` : CONF_OF[opp] === CONF_OF[F.team] ? `${CONF_NAME[CONF_OF[F.team]]} Conference` : 'Interconference'
-  const sim = (to, label) => <button type="button" className="fh-textbtn" onClick={() => { act(X => { simTo(X, to) }); sfx('flip') }}>{label}</button>
+  const sim = (to, label) => <button type="button" className="fh-textbtn" onClick={() => onSim(to, label)}>{label}</button>
   const ddl = F.day <= F.ddl, asb = F.day < F.asb[0]
   const sub = s => `${seedIn(F, R, s) ? `${ORD(seedIn(F, R, s))} in the ${CONF_OF[s] === 'E' ? 'East' : 'West'}` : ''}`
   return (
@@ -324,5 +326,36 @@ function ScoutRow({ F, act }) {
           </div>
         </div>, document.body)}
     </>
+  )
+}
+
+// SIMMING: the nights played a few at a time, so the screen never locks: the date, the GM's record counting, a bar
+// to the end of the stretch, and STOP to pick it up from here (Reduce Motion: the same, it's not an animation)
+function SimRun({ F, act, run, onDone }) {
+  const [, tick] = useState(0)
+  const stop = useRef(false)
+  useEffect(() => {
+    let t
+    const step = () => {
+      if (stop.current || F.phase !== 'season' || F.day >= run.to) { onDone(); return }
+      act(X => { simTo(X, Math.min(run.to, X.day + 2)) })
+      tick(n => n + 1)
+      t = setTimeout(step, 16)
+    }
+    t = setTimeout(step, 60)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const r = records(F)[F.team]
+  const k = Math.max(0, Math.min(1, (F.day - run.from) / Math.max(1, run.to - run.from)))
+  return createPortal(
+    <div className="fk-root fk nb-run" style={fkVars(F.team)} role="status" aria-label="Simming">
+      <div className="nb-run-in">
+        <Chyron team={F.team} tag={F.day < F.days ? dateText(F, Math.min(F.day, F.days - 1)) : 'FINAL'} title={run.label} />
+        <div className="nb-run-rec"><KLogo s={F.team} size={44} /><b>{recText(r)}</b><small>{TEAM[F.team].nick}</small></div>
+        <div className="nb-run-bar"><i style={{ width: `${k * 100}%` }} /></div>
+        <button type="button" className="fh-textbtn" onClick={() => { stop.current = true; sfx('tap') }}>Stop here</button>
+      </div>
+    </div>,
+    document.body,
   )
 }

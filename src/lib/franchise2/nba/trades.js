@@ -490,8 +490,10 @@ function pickWords(F, k, giver) {
 }
 export function tradeLine(F, deal) {
   const { am, bm, ak, bk } = resolve(F, deal)
-  const got = andList([...bm.map(p => `${posOf(p)} ${p.n}`), ...bk.map(k => pickWords(F, k, deal.b))])
-  const gave = andList([...am.map(p => `${posOf(p)} ${p.n}`), ...ak.map(k => pickWords(F, k, deal.a))])
+  // (picks the way a report lists them: the firsts before the seconds, the nearest year first; swaps last)
+  const order = list => [...list].sort((x, y) => (x.swap != null) - (y.swap != null) || (x.r ?? 1) - (y.r ?? 1) || (x.y ?? x.swap ?? 0) - (y.y ?? y.swap ?? 0))
+  const got = andList([...bm.map(p => `${posOf(p)} ${p.n}`), ...order(bk).map(k => pickWords(F, k, deal.b))])
+  const gave = andList([...am.map(p => `${posOf(p)} ${p.n}`), ...order(ak).map(k => pickWords(F, k, deal.a))])
   if (!gave) return `The ${deal.a} acquire ${got} from the ${deal.b}`
   if (!got) return `The ${deal.a} send ${gave} to the ${deal.b}`
   return `The ${deal.a} acquire ${got} from the ${deal.b} for ${gave}`

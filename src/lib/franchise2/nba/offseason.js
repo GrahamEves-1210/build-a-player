@@ -12,6 +12,7 @@ import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring } from './draft'
 import { addNews } from './news'
 import * as X from './seams'
+import { growBuilds } from './builds'
 import { rngOf } from '../rng'
 
 export const STEPS = ['awards', 'lottery', 'draft', 'resign', 'fa', 'camp']
@@ -98,6 +99,7 @@ function enter(F, step) {
     const A = X.ageLeague(F) ?? {}
     // (ageLeague files the retired men in F.retired and writes their news; the wall keeps a man's totals, not his rows)
     for (const x of A.news ?? []) addNews(F, { tag: 'RETIRES', ...x })
+    for (const g of growBuilds(F)) if (g.to > g.from) addNews(F, { k: 'grow', tag: 'DEVELOPMENT', s: F.team, text: `${g.n} worked his way from a ${g.from} to a ${g.to} this summer` })
     F.retired = (F.retired ?? []).map(retiredRow).slice(-150)
     const gone = X.seasonEndDeals(F) ?? []
     for (const x of gone.news ?? []) addNews(F, x)
@@ -208,7 +210,7 @@ export function answerSheet(F, id, yes) {
 // the men on the street who'd sign for the minimum (a veteran's minimum by his years in the league): the end of the
 // bench any team can add, over the cap or the aprons
 const minDeal = (F, p) => ({ $: X.minOf(p.ys ?? 0, X.capYear(F)), y: 1, r: 0 })
-export const minPool = (F, n = 12) => (F.fa ?? []).filter(p => !p.fr || p.fr !== F.team || p.rn).filter(p => (X.askOf(F, p)?.$ ?? 99) <= minDeal(F, p).$ * 1.8).sort((a, b) => b.o - a.o).slice(0, n)
+export const minPool = (F, n = 12) => (F.fa ?? []).filter(p => (!p.fr || p.fr !== F.team || p.rn) && X.rankOf(F, p) > 60 && p.o < 85).filter(p => (X.askOf(F, p)?.$ ?? 99) <= minDeal(F, p).$ * 1.8).sort((a, b) => b.o - a.o).slice(0, n)
 export function signMin(F, id) {
   const p = (F.fa ?? []).find(x => x.i === id)
   if (!p) return { ok: false }

@@ -225,7 +225,7 @@ function faRound(F, day) {
       // (what it's already offered this round counts against its room)
       if (spent[s] > 0 && payroll(F, s, year) + spent[s] > capOf(year) && busy[s] >= 1 && (p.o ?? 0) < 75) continue
       const st = standardOf(F.teams[s]).length + busy[s]
-      if (st >= ROSTER_MAX) continue
+      if (st >= ROSTER_MAX + (F.phase === 'off' && (p.o ?? 0) >= 78 ? 3 : 0)) continue
       const b = bidFor(F, s, p, day, ctx)
       if (!b) continue
       add(p.i, { s, d: b })
@@ -239,7 +239,7 @@ function faRound(F, day) {
     const list = (offers[p.i] ?? []).map(o => ({ ...o, u: offerScore(F, p, o.s, o.d, ctx) })).sort((a, b) => b.u - a.u)
     let signed = false
     for (const o of list) {
-      if (o.u < floor - 1e-9 && !(day >= FA_DAYS)) break
+      if (o.u < (rankOf(F, p) <= 60 || (p.o ?? 0) >= 85 ? Math.max(floor, 0.6) : floor) - 1e-9 && !(day >= FA_DAYS && rankOf(F, p) > 60 && (p.o ?? 0) < 85)) break
       // (still legal now that others have signed)
       const c = canSign(F, o.s, p, o.d)
       if (!c.ok) continue
@@ -345,7 +345,7 @@ export function cpuOffseason(F, { make = null } = {}) {
     const want = 14 + (hash(`${F.seed}-${s}-${year}`) % 3 === 0 ? 1 : 0)
     let guard = 0
     while (standardOf(team).length < want && guard++ < 20) {
-      const p = [...(F.fa ?? [])].filter(x => (x.ag ?? 27) <= 36).sort((a, b) => rankOf(F, a) - rankOf(F, b)).find(x => canSign(F, s, x, { $: minOf(x.ys ?? 0, year), y: 1 }).ok)
+      const p = [...(F.fa ?? [])].filter(x => (x.ag ?? 27) <= 36 && rankOf(F, x) > 60 && (x.o ?? 0) < 85).sort((a, b) => rankOf(F, a) - rankOf(F, b)).find(x => canSign(F, s, x, { $: minOf(x.ys ?? 0, year), y: 1 }).ok)
       if (p) { signMan(F, s, p, { $: minOf(p.ys ?? 0, year), y: 1, r: 0, ng: 1 }); continue }
       if (!make) break
       const m = make(F, s, { tw: false })
@@ -379,10 +379,14 @@ function lateSignings(F) {
   const S = shortsOf(F).filter(s => s !== F.team && situationOf(F, s) !== 'reb')
   const left = [...(F.fa ?? [])].filter(p => (p.ag ?? 30) <= 37 && rankOf(F, p) <= 300).sort((a, b) => rankOf(F, a) - rankOf(F, b))
   const used = new Set()
+  const chan = s => { const m = mleFor(F, s, year); return Math.max(capOf(year) - payroll(F, s, year), m?.$ ?? 0, minOf(0, year)) }
   for (const p of left) {
-    const d = { $: minOf(p.ys ?? 0, year), y: 1, r: 0 }
-    const fit = S.filter(s => !used.has(s) && roleOn(F, s, p) >= 0.5).sort((a, b) => teamStrength(F, b) - teamStrength(F, a))
+    const star = rankOf(F, p) <= 60 || (p.o ?? 0) >= 85
+    const dOf = s => (star ? { $: r1(Math.max(minOf(p.ys ?? 0, year), Math.min(askFor(F, p).$, chan(s)))), y: (p.ag ?? 27) >= 31 ? 1 : 2, r: 0 } : { $: minOf(p.ys ?? 0, year), y: 1, r: 0 })
+    const fit = (star ? shortsOf(F).filter(s => s !== F.team && !used.has(s)) : S.filter(s => !used.has(s) && roleOn(F, s, p) >= 0.5))
+      .sort((a, b) => (star ? chan(b) - chan(a) : 0) || teamStrength(F, b) - teamStrength(F, a))
     for (const s of fit) {
+      const d = dOf(s)
       const team = F.teams[s]
       if (standardOf(team).length >= ROSTER_MAX) {
         const low = standardOf(team).filter(x => x.b == null && (x.o ?? 0) < (p.o ?? 0) - 4).sort((a, b) => cutCost(F, a).total - cutCost(F, b).total || (a.o ?? 0) - (b.o ?? 0))[0]
@@ -391,7 +395,7 @@ function lateSignings(F) {
       }
       if (!signMan(F, s, p, d).ok) continue
       used.add(s)
-      if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'FREE AGENCY', s, text: `${p.n} has agreed to a one-year, ${money(d.$)} deal with the ${s}` })
+      if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'FREE AGENCY', s, text: `${p.n} has agreed to a ${d.y === 1 ? "one-year" : `${d.y}-year`}, ${money(d.$ * d.y)} deal with the ${s}` })
       break
     }
   }
@@ -428,7 +432,7 @@ export function cpuFill(F, { make = null } = {}) {
     const team = F.teams[s]
     let guard = 0
     while (standardOf(team).length < ROSTER_MIN && guard++ < 4) {
-      const p = [...(F.fa ?? [])].sort((a, b) => rankOf(F, a) - rankOf(F, b)).find(x => canSign(F, s, x, { $: minOf(x.ys ?? 0, year), y: 1 }).ok)
+      const p = [...(F.fa ?? [])].filter(x => rankOf(F, x) > 60 && (x.o ?? 0) < 85).sort((a, b) => rankOf(F, a) - rankOf(F, b)).find(x => canSign(F, s, x, { $: minOf(x.ys ?? 0, year), y: 1 }).ok)
       if (p) { signMan(F, s, p, { $: minOf(p.ys ?? 0, year), y: 1, r: 0, ng: 1 }); continue }
       const m = make?.(F, s, { tw: false })
       if (!m || !signMan(F, s, m, { $: minOf(m.ys ?? 0, year), y: 1, r: 0, ng: 1 }).ok) break
