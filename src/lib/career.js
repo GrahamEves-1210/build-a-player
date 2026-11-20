@@ -2268,7 +2268,26 @@ export function answerInterview(c, i, choice) {
 }
 // Draft day: your pick inside the window, at the team that needs you most and
 // liked you most in the room
-export function runDraft(c) {
+// Sandbox only (2026-11-19): c.draftTeam, the team picked before the draft, takes him. He goes where the draft had him
+// going, and the team he picked trades up into that slot (an undrafted kicker signs with it instead). Without a pick
+// the draft is as it always is
+export function runDraft({ draftTeam = null, ...c }) {
+  const n = runDraftAsIs(c)
+  return c.sandbox && draftTeam && !sportOf(c).x?.offers ? draftedBy(n, draftTeam) : n
+}
+function draftedBy(n, team) {
+  const S = sportOf(n), mine = n.draft?.pick
+  if (!mine || n.team === team || !S.teams.some(t => t.short === team)) return n
+  const roster = makeRoster(team, n.sport)
+  const fit = teamFit(team, n.pos, { roster, name: n.name, sport: n.sport, spot: lineSpot(n) })
+  const met = (n.draft.interviews ?? []).some(x => x.team === team && !talkSkipped(x))
+  const lbl = mine.udfa ? null : pickLabel(mine.o, n.sport)
+  const text = mine.udfa ? `Went undrafted. Signed with the ${fit.name} as a free agent the night the draft ended`
+    : `Traded up and drafted in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed him)' : ''}`
+  const pick = { ...mine, team, ...(mine.udfa ? null : { trade: true }) }
+  return { ...n, team, roster, fit, draft: { ...n.draft, picks: [...n.draft.picks.slice(0, -1), pick], pick }, decisions: [...n.decisions.slice(0, -1), { year: 1, text }] }
+}
+function runDraftAsIs(c) {
   if (sportOf(c).x?.offers) return sportOf(c).x.offers(c)
   if (c.sport === 'nfl') return nflDraft(c)
   const S = sportOf(c)

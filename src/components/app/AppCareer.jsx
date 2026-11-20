@@ -122,6 +122,7 @@ const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+
 // Random names for a new player: athlete-sounding, every combination plausible
 import { FIRST_NAMES, LAST_NAMES, pickName } from '../../lib/playerNames'   // (the random-name button's names: College Football's name step uses them too)
 import { spectrumColor } from '../../lib/gradeColors'
+import TeamPickerModal from '../TeamPickerModal'
 // the career's mini games mode, in a few words under the choice
 const GAMES_WHAT = { advanced: 'Full-screen games', simple: 'Quick tap games', off: 'Simulated games' }
 // A career mini game (combine drill, camp drill, playoff moment) in the career's own mode:
@@ -418,6 +419,11 @@ function Draft({ c, setCareer }) {
   const soccer = !!S.isSoccer
   const [step, setStep] = useState(c.step === 'trivia' ? 'interview' : c.step ?? 'combine')   // eslint-disable-line
   const [shown, setShown] = useState(0)
+  // Sandbox: the team that drafts him, picked before the draft (null: wherever the draft takes him, as always)
+  const [draftTo, setDraftTo] = useState(null)
+  const [teamPick, setTeamPick] = useState(false)
+  const canPickTeam = !!c.sandbox && !soccer
+  const pickTeams = useMemo(() => S.teams.map(t => ({ ...t, logo: t.logo ?? logoFor(t.short) })), [S]) // eslint-disable-line react-hooks/exhaustive-deps
   // an answer lands: that team's interest, up or down, for a moment
   const [flash, setFlash] = useState(null)
   const flashT = useRef(null)
@@ -530,7 +536,17 @@ function Draft({ c, setCareer }) {
               {soccer
                 ? <p className="cr-q-text">The meetings are done. The scouts have {c.name} down as <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => x.a[x.answer].stock > 0).map(x => teamName(x.team)); return fans.length ? `. ${fans.length > 1 ? `${fans.slice(0, -1).join(', ')} and ${fans[fans.length - 1]}` : fans[0]} came away the keenest.` : '. No club came away sold, so it comes down to the trials.' })()}</p>
                 : <p className="cr-q-text">The interviews are done. {c.name} is projected to go <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => !talkSkipped(x) && x.a[x.answer]?.stock > 0).map(x => nick(teamName(x.team))), skipped = list.filter(talkSkipped).map(x => nick(teamName(x.team))), and = l => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0]); return `${fans.length ? `. The ${and(fans)} came away the most interested.` : '. No team came away sold, so it comes down to need.'}${skipped.length ? ` He skipped the ${and(skipped)}.` : ''}` })()}</p>}
-              <button className="ag-btn ag-btn--gold tk-intro-go" onClick={async () => { if (c.sport === 'nfl') await loadDraftClass(); setCareer(runDraft({ ...c, step: 'day' })); setStep(soccer ? 'offers' : 'day'); setShown(0); sfx('whistle') }}>{soccer ? 'THE OFFERS' : 'DRAFT DAY'} <IconArrow size={16} /></button>
+              {canPickTeam && (
+                <div className="cr-contract cr-jersey cr-draft-to">
+                  <span><span className="ag-eyebrow">SANDBOX · DRAFTED BY</span>{draftTo ? <b className="cr-draft-to-team"><img src={logoFor(draftTo)} alt="" />{teamName(draftTo)}</b> : <b>Wherever the draft takes him</b>}</span>
+                  <span className="cr-draft-to-acts">
+                    {draftTo && <button type="button" className="cr-jersey-go cr-draft-to-clear" onClick={() => { setDraftTo(null); sfx('tap') }}>CLEAR</button>}
+                    <button type="button" className="cr-jersey-go" onClick={() => { setTeamPick(true); sfx('tap') }}>{draftTo ? 'CHANGE' : 'PICK A TEAM'}</button>
+                  </span>
+                </div>
+              )}
+              <button className="ag-btn ag-btn--gold tk-intro-go" onClick={async () => { if (c.sport === 'nfl') await loadDraftClass(); setCareer(runDraft({ ...c, step: 'day', ...(canPickTeam && draftTo ? { draftTeam: draftTo } : null) })); setStep(soccer ? 'offers' : 'day'); setShown(0); sfx('whistle') }}>{soccer ? 'THE OFFERS' : 'DRAFT DAY'} <IconArrow size={16} /></button>
+              {teamPick && <TeamPickerModal anyTeam teams={pickTeams} eyebrow="Sandbox · The Draft" onCancel={() => setTeamPick(false)} onSelect={t => { setDraftTo(t.short); setTeamPick(false) }} />}
             </div>
           )}
         </div>
