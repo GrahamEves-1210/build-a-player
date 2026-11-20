@@ -1,0 +1,669 @@
+// NBA FRANCHISE: trades (the football mode's value approach and its protections, with the NBA's rules).
+//
+// THE WINDOW: the offseason (from the Finals on, draft night included) and the regular season through the deadline
+// day (F.ddl). Never in the play-in or the playoffs.
+//
+// THE RULES (checkTrade), for each team, after the trade:
+//   - salary matching, when it ends up over the cap: it takes back at most 200% of what it sends + $250K (sending up
+//     to $7.5M), what it sends + $7.5M (up to $29M), 125% + $250K past that (the 2023 CBA's brackets, indexed to the
+//     cap since 2023-24). A team still under the cap after it absorbs freely (and up to its room + $250K past it).
+//     Over the first apron: 110%. Over the second: 100%, and it can't aggregate two salaries to take one back.
+//   - hard caps: a team hard-capped (contracts.js exc.hc) can't end up over its line; aggregating salaries in a trade
+//     hard-caps a team at the second apron.
+//   - rosters: 15 standard deals at most (21 men in the offseason), 13 at least in the season, 3 two-way.
+//   - recently signed men: a free agent (or a man re-signed) can't be traded until December 15 or three months after
+//     he signed, whichever is later; a man the GM's team traded for can't go back to the team it got him from this
+//     league year (no buy-backs).
+//   - picks: only a team's own (as owned now); a top-N protection may be put on a first as it's traded; a swap right
+//     (the other team may swap its first for this team's first that year); the Stepien rule (never without a first
+//     in two drafts running); a team over the second apron can't trade its first seven drafts out (frozen).
+//   - a man with a no-trade clause can't be moved without his say (the league's teams don't ask).
+//
+// WHAT A MAN IS WORTH (manValue, a scale where the No. 1 pick is 160 and the 30th 20): where he ranks in the league
+// on a curve that climbs fast at the top (contracts.js WORTH: the best players are worth more than the max), by his
+// age (the prime he has left), by his deal (what he's paid against what he's worth over the years he's signed; an
+// expiring deal in the season is a rental; a man paid far past his worth is a burden, worth less than nothing).
+// WHAT A PICK IS WORTH (pickValue): the chart at the slot it should land (the standings and the team's strength;
+// further out, toward the middle), a protection's odds of conveying, and a year's discount for each draft out.
+//
+// WHAT A TEAM SEES (teamSide): the same values moved by its situation (contending, in the mix, rebuilding: a
+// rebuilder wants picks and youth and pays little for veterans; a contender pays for a man who plays now), its
+// rotation (a man who wouldn't play for it is worth half), the tax its payroll would cost (a taxpayer gains from
+// shedding salary), and a package of players counted the way the league counts it: the best one whole, the rest
+// less (75%, 55%, 40%...), so three backups never add up to a star.
+//
+// A DEAL (cpuAnswer): the league team takes it when what it gets beats what it gives by its margin (7%, more for
+// every deal it's already made with the GM's team this league year); a star goes only for a real piece back; a man
+// it just traded for stays put; a man the GM's team just traded for is worth no more than it paid. Short by a
+// reachable amount, it counters (asks for a pick, or takes something off its side).
+//
+// THE LEAGUE'S OWN DEALS: contenders buy veterans from rebuilders for picks and salary filler before the deadline
+// (cpuDeadline); in the summer, taxpayers move bad money to teams with room, with a pick for their trouble
+// (salaryDumps).
+//
+// State: F.picks (core) [{ y, r, o, t, pr: { top } | null, sw: { with } | null }] · F.trl [deal log] · F.trc
+// { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's value)]
+import { rngOf, clamp, r1 } from '../rng'
+import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf } from './cap'
+import { rankOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf } from './contracts'
+
+const shortsOf = F => Object.keys(F.teams ?? {})
+const wire = (F, items) => { if (items.length) F.news = [...(F.news ?? []), ...items.map(x => ({ y: F.year, d: F.day ?? 0, ...x }))].slice(-200) }
+const PKG = [1, 0.75, 0.55, 0.4, 0.3, 0.2]
+export const TRADE_MAX = 6                // (players and picks a side)
+const CALLS = 6, DEALS_WITH = 3
+const ROUND = ['first', 'second']
+
+// ── The window ───────────────────────────────────────────────────────────────
+export function tradeWindow(F) {
+  if (!F?.teams) return { open: false, why: '' }
+  if (F.phase === 'season') {
+    if (F.pend) return { open: false, why: 'Game in progress' }
+    if (F.ddl != null && (F.day ?? 0) > F.ddl) return { open: false, why: 'The trade deadline has passed. Trades reopen after the Finals.' }
+    return { open: true, left: F.ddl != null ? F.ddl - (F.day ?? 0) : null }
+  }
+  if (F.phase === 'off') return { open: true, off: true }
+  return { open: false, why: 'No trades during the postseason.' }
+}
+// the league year a trade is filed in
+const lyOf = F => capYear(F)
+
+// ── The calendar inside the season (core's day index) ────────────────────────
+// the regular season runs about 174 days (late October to mid-April); December 15 is about day 55
+const SEASON_DAYS = 174
+const dayScale = F => (F.days ?? SEASON_DAYS) / SEASON_DAYS
+export const dec15 = F => Math.round(55 * dayScale(F))
+const months3 = F => Math.round(90 * dayScale(F))
+// when a recently signed man can be traded (a day index; -1 = now)
+export function tradableFrom(F, p) {
+  if (p.sgn == null || p.sgn !== lyOf(F)) return -1
+  // (a draft pick on his rookie deal: thirty days after he signs, so from free agency on)
+  if (p.rs && p.rk === lyOf(F)) return F.phase === 'off' && !['fa', 'camp', 'done'].includes(F.off?.step) ? Infinity : -1
+  const at = p.sgd ?? -1
+  if (at < 0) return dec15(F)
+  return Math.max(dec15(F), at + months3(F))
+}
+
+// ── Picks ────────────────────────────────────────────────────────────────────
+// a deal's pick entry: an index into F.picks, or { i, top: N } (a protection put on it as it's traded), or
+// { swap: year } (the right to swap firsts that year, from the team giving it)
+const pIdx = e => (typeof e === 'number' ? e : e?.i ?? null)
+export const nextDraft = F => (F.phase === 'off' && F.drd === F.year + 1 ? F.year + 2 : F.year + 1)
+export const picksOf = (F, s) => (F.picks ?? []).map((k, i) => ({ ...k, i })).filter(k => k.t === s && k.y >= nextDraft(F))
+// a team's first in a draft, for the Stepien rule (an unprotected first it owns, its own or another's)
+const hasFirst = (picks, s, y) => picks.some(k => k.y === y && k.r === 1 && k.t === s && !k.pr)
+export function stepienOk(F, s, picks = F.picks ?? []) {
+  const y0 = nextDraft(F)
+  const last = Math.max(y0, ...picks.map(k => k.y))
+  for (let y = y0; y < last; y++) if (!hasFirst(picks, s, y) && !hasFirst(picks, s, y + 1)) return false
+  return true
+}
+// where a team's pick should land in its round (1 = first): the standings in the season, the team's strength in the
+// offseason; drafts further out drift to the middle
+const PJ = new WeakMap()
+function projOrder(F) {
+  const key = `${F.year}|${F.phase}|${F.day ?? 0}|${F.off?.step ?? ''}`
+  const c = PJ.get(F)
+  if (c?.key === key) return c.m
+  const S = shortsOf(F)
+  const str = Object.fromEntries(S.map(s => [s, teamStrength(F, s)]))
+  const mean = S.reduce((a, s) => a + str[s], 0) / S.length
+  const rec = Object.fromEntries(S.map(s => [s, { w: 0, l: 0 }]))
+  for (const g of F.sched ?? []) if (g.hs != null) { const hw = g.hs > g.as; rec[g.h] && (hw ? rec[g.h].w++ : rec[g.h].l++); rec[g.a] && (hw ? rec[g.a].l++ : rec[g.a].w++) }
+  const proj = s => { const r = rec[s], g = r.w + r.l, ex = clamp(0.15, 0.85, 0.5 + (str[s] - mean) * 0.045); return (r.w + ex * Math.max(0, 82 - g)) / Math.max(82, g) }
+  const o = [...S].sort((a, b) => proj(a) - proj(b))
+  const m = Object.fromEntries(o.map((s, i) => [s, i + 1]))
+  PJ.set(F, { key, m })
+  return m
+}
+// the chart (slot 1..60)
+const CHART = [[1, 160], [2, 135], [3, 120], [4, 105], [5, 95], [6, 86], [7, 78], [8, 72], [9, 66], [10, 61], [14, 46], [20, 32], [25, 25], [30, 20], [31, 9], [40, 5], [50, 3], [60, 1.5]]
+export function slotValue(n) {
+  if (n <= 1) return CHART[0][1]
+  for (let i = 1; i < CHART.length; i++) {
+    const [a, va] = CHART[i - 1], [b, vb] = CHART[i]
+    if (n <= b) return va + (vb - va) * (n - a) / (b - a)
+  }
+  return 1.5
+}
+// a pick's value, any team's: { v, slot (expected), conv (the odds a protected pick conveys) }
+export function pickValue(F, k) {
+  if (!k) return { v: 0 }
+  const out = k.y - nextDraft(F)
+  const n = shortsOf(F).length || 30
+  const now = projOrder(F)[k.o] ?? (n + 1) / 2
+  const mid = (n + 1) / 2
+  const w = out <= 0 ? (F.phase === 'season' ? 0.75 : 0.85) : out === 1 ? 0.4 : 0.15
+  const slot = w * now + (1 - w) * mid
+  const sd = out <= 0 ? (F.phase === 'season' ? 4 : 5) : 8
+  // the odds of every slot in its round (a normal around the projection), the protection's cut
+  let v = 0, conv = 0, tot = 0
+  for (let s = 1; s <= n; s++) {
+    const pdf = Math.exp(-0.5 * ((s - slot) / sd) ** 2)
+    tot += pdf
+    const val = slotValue(k.r === 1 ? s : n + s)
+    if (k.pr?.top && s <= k.pr.top) { v += pdf * val * 0.25; continue }  // (it rolls to the next year: a quarter of it)
+    conv += pdf
+    v += pdf * val
+  }
+  v /= tot
+  conv /= tot
+  // (a swap right on it: the holder takes the better of the two, so this pick is worth a little less to its owner)
+  if (k.sw) v *= 0.92
+  return { v: v * Math.pow(0.92, Math.max(0, out)), slot, conv }
+}
+
+// ── What a man is worth ──────────────────────────────────────────────────────
+// the league's scale: his rank's worth (a share of the cap) on a curve
+const talentPts = (F, p) => { const w = worthOf(F, p) / capOf(capYear(F)); return 100 * Math.pow(Math.max(0, w) / 0.3, 1.7) }
+const AGE_F = [[22, 1.25], [23, 1.2], [24, 1.15], [25, 1.1], [26, 1.05], [27, 1], [28, 0.94], [29, 0.88], [30, 0.82], [31, 0.75], [32, 0.68], [33, 0.6], [34, 0.5]]
+const ageF = p => { const a = p.ag ?? 27; return a <= 22 ? 1.25 : AGE_F.find(([x]) => x === a)?.[1] ?? 0.42 }
+const salaries = (p, n = 9) => [p.$ ?? 0, ...(p.sc ?? [])].slice(0, Math.min(n, p.y ?? 0))
+// his deal against his worth: { f (a multiplier), burden (pts a team carries for the overpay) }
+function dealOf(F, p) {
+  const sal = salaries(p, 4)
+  if (!sal.length) return { f: 0, burden: 0 }
+  const W = worthOf(F, p)
+  const yrs = sal.length
+  let sur = 0, tot = 0, over = 0
+  sal.forEach((s, k) => { const wk = W * Math.pow(p.ag >= 30 ? 0.88 : p.ag <= 24 ? 1.06 : 0.98, k); sur += (wk - s) * Math.pow(0.85, k); tot += wk * Math.pow(0.85, k); over += Math.max(0, s - wk * 1.05) * Math.pow(0.85, k) })
+  let f = clamp(0.35, 1.5, 1 + 0.6 * sur / Math.max(1, tot))
+  // (an expiring deal: the rest of a season, then his Bird rights; a rookie deal comes with restricted free agency)
+  if (yrs === 1 && !p.rs) f *= F.phase === 'season' ? 0.6 + 0.4 * (1 - (F.day ?? 0) / (F.days ?? SEASON_DAYS)) : 0.85
+  if (p.rs) f *= 1.1
+  return { f, burden: over * 0.8 }
+}
+// his value on the league's scale (the gauge's number); can be below zero for a bad contract
+export function manValue(F, p) {
+  if (!p || p.tw) return p?.tw ? 1 : 0
+  const d = dealOf(F, p)
+  return talentPts(F, p) * ageF(p) * d.f - d.burden
+}
+// tradeValue(F, man | pick, forTeam): the value to a team (its situation and rotation in it), or the league's
+export function tradeValue(F, x, forTeam = null) {
+  if (x == null) return 0
+  const k = typeof x === 'number' ? F.picks?.[x] : x.y != null && x.r != null && x.o ? x : null
+  if (k) return pickValue(F, k).v * (forTeam ? pickMod(situationOf(F, forTeam)) : 1)
+  if (!forTeam) return manValue(F, x)
+  return inValue(F, forTeam, x, new Set(), situationOf(F, forTeam))
+}
+const pickMod = sit => (sit === 'reb' ? 1.15 : sit === 'win' ? 0.9 : 1)
+
+// ── A team's side of a deal ──────────────────────────────────────────────────
+function rotationRoom(F, s, gone) {
+  return F.teams[s].r.filter(x => !x.tw && !gone.has(x.i)).map(x => x.o ?? 60).sort((a, b) => b - a)
+}
+function inValue(F, s, p, gone, sit) {
+  const room = rotationRoom(F, s, gone)
+  const ahead = room.filter(o => o > (p.o ?? 60)).length
+  const role = ahead < 5 ? 1.05 : ahead < 8 ? 0.9 : ahead < 10 ? 0.6 : 0.3
+  let m = 1
+  if (sit === 'reb') m = p.ag >= 29 ? 0.55 : p.ag >= 27 ? 0.8 : p.ag <= 24 ? 1.15 : 1
+  else if (sit === 'win') m = p.ag >= 25 && ahead < 8 ? 1.12 : 1
+  const v = manValue(F, p)
+  let out = v > 0 ? v * role * m : v * (sit === 'reb' ? 0.7 : sit === 'win' ? 1.25 : 1)
+  // (a man the GM's team just traded for: nobody pays more than it did, this league year)
+  if (s !== F.team && p.tx?.[3] != null && p.tx[1] === lyOf(F)) out = Math.min(out, p.tx[3] * 0.95)
+  return out
+}
+function outValue(F, s, p, sit) {
+  const room = rotationRoom(F, s, new Set())
+  const at = room.filter(o => o > (p.o ?? 60)).length
+  let m = 1
+  if (sit === 'reb') m = p.ag >= 29 ? 0.7 : p.ag <= 24 ? 1.2 : 1
+  else if (sit === 'win') m = at < 8 ? 1.15 : 1
+  // (a cornerstone: young and among the league's best)
+  if (rankOf(F, p) <= 20 && (p.ag ?? 30) <= 27) m *= 1.3
+  const v = manValue(F, p)
+  return v > 0 ? v * m * (at < 10 ? 1 : 0.8) : v
+}
+// the tax a payroll change saves (or costs) team s this season and the next, in value points (1 point per $2M)
+function taxSwing(F, s, outMen, inMen) {
+  if (F.noCap && s === F.team) return 0
+  const y = capYear(F)
+  let pts = 0
+  for (const k of [0, 1]) {
+    const yr = y + k
+    const pay = payroll(F, s, yr)
+    const d = inMen.reduce((a, p) => a + (salaries(p)[k] ?? 0), 0) - outMen.reduce((a, p) => a + (salaries(p)[k] ?? 0), 0)
+    const rep = isRepeater(F.teams[s], yr)
+    const before = taxBill(pay - taxOf(yr), yr, rep), after = taxBill(pay + d - taxOf(yr), yr, rep)
+    // (the money itself counts too, a little: an owner pays every dollar of salary)
+    pts += ((before - after) * 0.5 - d * 0.12) * (k ? 0.6 : 1) * (F.phase === 'season' && k === 0 ? 1 - (F.day ?? 0) / (F.days ?? SEASON_DAYS) * 0.5 : 1)
+  }
+  return pts
+}
+export function teamSide(F, s, inn, out) {
+  const sit = s === F.team ? 'mid' : situationOf(F, s)
+  const gone = new Set(out.pl.map(p => p.i))
+  const ins = inn.pl.map(p => ({ p, v: inValue(F, s, p, gone, sit) })).sort((a, b) => b.v - a.v)
+  const pos = ins.filter(x => x.v > 0), neg = ins.filter(x => x.v <= 0)
+  const vIn = pos.reduce((a, x, j) => a + x.v * (PKG[j] ?? 0.2), 0) + neg.reduce((a, x) => a + x.v, 0) + inn.pk.reduce((a, k) => a + pickValue(F, k).v * pickMod(sit), 0)
+  const vOut = out.pl.reduce((a, p) => a + outValue(F, s, p, sit), 0) + out.pk.reduce((a, k) => a + pickValue(F, k).v * pickMod(sit), 0)
+  const tax = taxSwing(F, s, out.pl, inn.pl)
+  // (more men in than out: a roster spot each)
+  const cost = Math.max(0, inn.pl.filter(p => !p.tw).length - out.pl.filter(p => !p.tw).length) * 2
+  const why = ins.length && ins[0].v > 0 && sit === 'reb' && ins[0].p.ag >= 29 ? 'reb' : null
+  return { in: vIn, out: vOut, tax, cost, gain: vIn - vOut + tax - cost, sit, why, ins }
+}
+
+// ── Salary matching ──────────────────────────────────────────────────────────
+// what a team sending `out` ($M) may take back, by the line it ends up at
+export function matchLimit(F, s, out, after, year = capYear(F)) {
+  const ix = capOf(year) / 136.021
+  if (after > apron2Of(year)) return out
+  if (after > apron1Of(year)) return out * 1.1
+  const t1 = 7.5 * ix, t2 = 29 * ix
+  if (out <= t1) return out * 2 + 0.25 * ix
+  if (out <= t2) return out + 7.5 * ix
+  return out * 1.25 + 0.25 * ix
+}
+// one team's side of the rules: { ok, why }
+function sideRules(F, s, outMen, inMen, outPk, inPk) {
+  const year = capYear(F)
+  const team = F.teams[s]
+  const free = F.noCap && s === F.team
+  const O = outMen.reduce((a, p) => a + hitOf(p, year, year), 0)
+  const I = inMen.reduce((a, p) => a + hitOf(p, year, year), 0)
+  const pay = payroll(F, s, year)
+  const after = pay - O + I
+  if (!free && I > 0.001) {
+    if (after > capOf(year) + 0.001) {
+      const lim = Math.max(matchLimit(F, s, O, after, year), pay < capOf(year) ? O + capOf(year) - pay + 0.25 : 0)
+      if (I > lim + 0.001) return { ok: false, why: `The ${s} would take back $${r1(I)}M for $${r1(O)}M out; they can take back $${r1(lim)}M at most`, k: 'match' }
+      // (no aggregating over the second apron: two salaries out to take one bigger one back)
+      const big = Math.max(0, ...outMen.map(p => hitOf(p, year, year)))
+      if (after > apron2Of(year) && outMen.length >= 2 && I > big + 0.001) return { ok: false, why: `The ${s} would be over the second apron: they can't combine salaries in a trade`, k: 'agg' }
+    }
+    const hc = hardCapOf(F, s, year)
+    const agg = outMen.length >= 2 && I > Math.max(0, ...outMen.map(p => hitOf(p, year, year))) + 0.001 && after > capOf(year)
+    if (after > Math.min(hc, agg ? apron2Of(year) : Infinity) + 0.001) return { ok: false, why: `The ${s} would go over their hard cap`, k: 'hard' }
+  }
+  // rosters
+  const st = standardOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => !p.tw).length
+  const tw = twoWaysOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => p.tw).length
+  if (F.phase === 'off' ? st + tw > OFF_MAX : st > ROSTER_MAX) return { ok: false, why: `The ${s} would have too many players (${F.phase === 'off' ? '21 in the offseason' : '15 standard contracts'})`, k: 'roster' }
+  if (F.phase === 'season' && st < 13) return { ok: false, why: `The ${s} would be under 13 players`, k: 'roster' }
+  if (tw > TWO_WAY_MAX) return { ok: false, why: `The ${s} would have more than 3 two-way players`, k: 'roster' }
+  // frozen pick (over the second apron: its first seven drafts out)
+  const frozenY = nextDraft(F) + 6
+  if (!free && (after > apron2Of(year) || pay > apron2Of(year)) && outPk.some(k => k.r === 1 && k.y >= frozenY)) return { ok: false, why: `The ${s} are over the second apron: their first-round pick seven years out is frozen`, k: 'frozen' }
+  return { ok: true, O, I, after }
+}
+// the picks after a deal (for the Stepien check and to make it): [Pick]
+function picksAfter(F, deal) {
+  const P = (F.picks ?? []).map(k => ({ ...k }))
+  const move = (list, to, from) => {
+    for (const e of list ?? []) {
+      if (e?.swap != null) {
+        const mine = P.find(k => k.y === e.swap && k.r === 1 && k.o === from && k.t === from)
+        if (mine) mine.sw = { with: to }
+        continue
+      }
+      const i = pIdx(e)
+      if (i == null || !P[i]) continue
+      P[i].t = to
+      if (e?.top) P[i].pr = { top: e.top }
+    }
+  }
+  move(deal.pa, deal.b, deal.a)
+  move(deal.pb, deal.a, deal.b)
+  return P
+}
+// the whole deal: { ok, why, k }
+export function checkTrade(F, deal) {
+  const W = tradeWindow(F)
+  if (!W.open) return { ok: false, why: W.why, k: 'shut' }
+  const { a, b } = deal
+  if (!a || !b || a === b || !F.teams[a] || !F.teams[b]) return { ok: false, why: 'Pick a team', k: 'team' }
+  const am = (deal.ga ?? []).map(id => F.teams[a].r.find(p => p.i === id)), bm = (deal.gb ?? []).map(id => F.teams[b].r.find(p => p.i === id))
+  if (am.some(p => !p) || bm.some(p => !p)) return { ok: false, why: 'A player in the deal is no longer there', k: 'gone' }
+  const n = am.length + bm.length + (deal.pa ?? []).length + (deal.pb ?? []).length
+  if (!n) return { ok: false, why: 'Add players or picks', k: 'empty' }
+  if (am.length + (deal.pa ?? []).length > TRADE_MAX || bm.length + (deal.pb ?? []).length > TRADE_MAX) return { ok: false, why: `${TRADE_MAX} players and picks a side at most`, k: 'many' }
+  for (const [s, men] of [[a, am], [b, bm]]) for (const p of men) {
+    const w = whyNot(F, s, p)
+    if (w) return { ok: false, why: w, k: 'man', who: p }
+  }
+  // picks: owned, real, not twice, protections on firsts only
+  for (const [s, list] of [[a, deal.pa ?? []], [b, deal.pb ?? []]]) {
+    const seen = new Set()
+    for (const e of list) {
+      if (e?.swap != null) {
+        const o = s === a ? b : a
+        const mine = (F.picks ?? []).find(k => k.y === e.swap && k.r === 1 && k.o === s && k.t === s)
+        const theirs = (F.picks ?? []).find(k => k.y === e.swap && k.r === 1 && k.o === o && k.t === o)
+        if (!mine || !theirs || mine.sw || mine.pr || theirs.pr) return { ok: false, why: `A ${e.swap} swap needs both teams to own their own unprotected first`, k: 'pick' }
+        continue
+      }
+      const i = pIdx(e), k = F.picks?.[i]
+      if (!k || k.t !== s || k.y < nextDraft(F)) return { ok: false, why: 'A pick in the deal has changed hands', k: 'pick' }
+      if (seen.has(i)) return { ok: false, why: 'A pick is in the deal twice', k: 'pick' }
+      seen.add(i)
+      if (e?.top != null && (k.r !== 1 || k.pr || e.top < 1 || e.top > 29)) return { ok: false, why: 'Protections go on unprotected first-round picks (top 1 to 29)', k: 'pick' }
+    }
+  }
+  const pk = (list) => (list ?? []).filter(e => e?.swap == null).map(e => F.picks[pIdx(e)])
+  const ra = sideRules(F, a, am, bm, pk(deal.pa), pk(deal.pb))
+  if (!ra.ok) return ra
+  const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa))
+  if (!rb.ok) return rb
+  const P = picksAfter(F, deal)
+  for (const s of [a, b]) if (!stepienOk(F, s, P)) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
+  return { ok: true, a: ra, b: rb }
+}
+// why a man can't be traded now (or null)
+export function whyNot(F, s, p) {
+  if (!p) return 'No such player'
+  if (p.b != null && s === F.team && F.lockBuilds) return `${p.n} is the franchise's own build`
+  if (p.ntc) return `${p.n} has a no-trade clause`
+  const from = tradableFrom(F, p)
+  if (from === Infinity || (from >= 0 && (F.phase !== 'season' || (F.day ?? 0) < from))) return `${p.n} signed recently and can't be traded until ${from === Infinity || from <= dec15(F) ? 'December 15' : 'three months after he signed'}`
+  return null
+}
+
+// ── The league team's answer ─────────────────────────────────────────────────
+const dealsWith = (F, s) => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u && (d.a === s || d.b === s)).length
+const dealsAll = F => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u).length
+const callKey = F => `${lyOf(F)}-${F.phase}-${F.phase === 'season' ? Math.floor((F.day ?? 0) / 7) : F.off?.step ?? ''}`
+const callsLeft = (F, s) => { const c = F.trc?.[s]; return c && c[0] === callKey(F) ? CALLS - c[1] : CALLS }
+const marginOf = (F, s, out, user = true) => (user ? Math.max(4, out * 0.07) * (1 + 0.6 * dealsWith(F, s) + 0.1 * dealsAll(F)) : Math.max(2, out * 0.03))
+function resolve(F, deal) {
+  const am = (deal.ga ?? []).map(id => F.teams[deal.a].r.find(p => p.i === id)).filter(Boolean)
+  const bm = (deal.gb ?? []).map(id => F.teams[deal.b].r.find(p => p.i === id)).filter(Boolean)
+  const ak = (deal.pa ?? []).map(e => (e?.swap != null ? { swap: e.swap } : { ...F.picks[pIdx(e)], ...(e?.top && { pr: { top: e.top } }) }))
+  const bk = (deal.pb ?? []).map(e => (e?.swap != null ? { swap: e.swap } : { ...F.picks[pIdx(e)], ...(e?.top && { pr: { top: e.top } }) }))
+  return { am, bm, ak, bk }
+}
+// a swap right's value to its holder: what the better of the two picks adds, about a fifth of a pick in the middle
+const swapValue = (F, giver, y) => { const o = projOrder(F)[giver] ?? 15; const out = y - nextDraft(F); return Math.max(2, (20 - o) * 0.9 + 6) * Math.pow(0.9, Math.max(0, out)) }
+const pkList = (F, list, giver) => list.map(k => (k.swap != null ? { y: k.swap, r: 1, o: giver, sw: 1, _swap: swapValue(F, giver, k.swap) } : k))
+// team s (deal.b, the league's team) on a deal with deal.a: { yes, why, short, side, need }
+export function decide(F, deal, { user = true } = {}) {
+  const { a, b } = deal
+  const { am, bm, ak, bk } = resolve(F, deal)
+  const ly = lyOf(F)
+  if (user && dealsWith(F, b) >= DEALS_WITH) return { yes: false, why: 'done' }
+  // no buy-backs: a man this team traded away this league year doesn't come back
+  const back = am.find(p => p.tx?.[0] === b && p.tx[1] === ly)
+  if (back) return { yes: false, why: 'back', who: back }
+  // a man it just traded for isn't going back out
+  const fresh = bm.find(p => p.tx && p.tx[1] === ly && p.tx[2] != null && (F.phase !== 'season' || (F.day ?? 0) - p.tx[2] < 40))
+  if (fresh) return { yes: false, why: 'new', who: fresh }
+  const inPk = pkList(F, ak, a), outPk = pkList(F, bk, b)
+  const side = teamSide(F, b, { pl: am, pk: inPk.filter(k => !k._swap) }, { pl: bm, pk: outPk.filter(k => !k._swap) })
+  const sw = inPk.reduce((x, k) => x + (k._swap ?? 0), 0) - outPk.reduce((x, k) => x + (k._swap ?? 0), 0)
+  side.in += Math.max(0, sw); side.out += Math.max(0, -sw); side.gain += sw
+  if (side.in <= 0.5 && side.tax <= 1) return { yes: false, why: 'nothing', side, short: Infinity }
+  // a star goes only for a real piece back: one player or pick worth at least half of him
+  const top = Math.max(0, ...bm.map(p => outValue(F, b, p, side.sit)))
+  if (user && top >= 60) {
+    const best = Math.max(0, ...side.ins.map(x => x.v), ...inPk.map(k => (k._swap ?? pickValue(F, k).v) * pickMod(side.sit)))
+    if (best < top * 0.5) return { yes: false, why: 'star', side, short: Infinity, who: [...bm].sort((x, y) => (y.o ?? 0) - (x.o ?? 0))[0] }
+  }
+  const need = marginOf(F, b, side.out, user)
+  const short = need - side.gain
+  return { yes: short <= 0, why: short <= 0 ? 'yes' : side.why ?? 'short', short, side, need }
+}
+export function sayOf(F, s, d) {
+  const N = s, who = d.who?.n
+  if (d.yes) return `The ${N} accept. The deal is done.`
+  switch (d.why) {
+    case 'done': return `The ${N} are done dealing with the ${F.team} this season.`
+    case 'back': return `The ${N} traded ${who} away this season. They won't take him back.`
+    case 'new': return `The ${N} just traded for ${who}. He isn't going anywhere.`
+    case 'calls': return `The ${N} have stopped taking calls this week.`
+    case 'nothing': return `The ${N} want something back.`
+    case 'star': return `The ${N} want a front-line player or a high pick for ${who}, not depth.`
+    case 'reb': return `The ${N} are rebuilding. They want picks and young players, not veterans.`
+    default: return d.short <= (d.need ?? 5) * 1.5 ? `The ${N} want a little more.` : `The ${N} say the offer isn't close.`
+  }
+}
+// the league team's answer to the GM's proposal: { yes, counter?, why, text }
+export function cpuAnswer(F, deal) {
+  const c = checkTrade(F, deal)
+  if (!c.ok) return { yes: false, why: c.k, text: c.why }
+  const d = decide(F, deal)
+  if (d.yes) return { yes: true, why: 'yes', text: sayOf(F, deal.b, d), side: d.side }
+  const ct = counterOf(F, deal, d)
+  return { yes: false, why: d.why, text: ct ? `The ${deal.b} came back with a counter.` : sayOf(F, deal.b, d), ...(ct && { counter: ct }), short: d.short }
+}
+// a counter within reach: one of the GM's picks added (the cheapest that covers it), or one thing off the league
+// team's side; the one that moves the gauge least
+export function counterOf(F, deal, d) {
+  if (!d.side || !(d.short > 0) || d.short > Math.max(60, d.side.out * 0.8)) return null
+  if (d.why !== 'short' && d.why !== 'reb') return null
+  const tries = []
+  const used = new Set((deal.pa ?? []).map(pIdx))
+  for (const k of picksOf(F, deal.a)) if (!used.has(k.i)) tries.push({ ...deal, pa: [...(deal.pa ?? []), k.i] })
+  if ((deal.gb ?? []).length + (deal.pb ?? []).length >= 2) {
+    for (const id of deal.gb ?? []) tries.push({ ...deal, gb: deal.gb.filter(x => x !== id) })
+    for (const e of deal.pb ?? []) tries.push({ ...deal, pb: deal.pb.filter(x => x !== e) })
+  }
+  let best = null
+  const base = gauge(F, deal)
+  for (const t of tries) {
+    if (!checkTrade(F, t).ok) continue
+    const e = decide(F, t)
+    if (!e.yes) continue
+    const g = gauge(F, t)
+    const moved = (g.a - base.a) + (base.b - g.b)
+    if (!best || moved < best.moved) best = { t, moved }
+  }
+  return best ? { a: best.t.a, b: best.t.b, ga: best.t.ga ?? [], gb: best.t.gb ?? [], pa: best.t.pa ?? [], pb: best.t.pb ?? [] } : null
+}
+// the gauge: what each side sends, the league's way: { a, b, lean (-1 a gives far more .. 1 a gets far more) }
+const pkg = vals => { const s = [...vals].sort((x, y) => y - x); return s.filter(v => v > 0).reduce((t, v, j) => t + v * (PKG[j] ?? 0.2), 0) + s.filter(v => v <= 0).reduce((t, v) => t + v, 0) }
+export function gauge(F, deal) {
+  const { am, bm, ak, bk } = resolve(F, deal)
+  const pv = (list, giver) => pkList(F, list, giver).reduce((t, k) => t + (k._swap ?? pickValue(F, k).v), 0)
+  const ga = pkg(am.map(p => manValue(F, p))) + pv(ak, deal.a)
+  const gb = pkg(bm.map(p => manValue(F, p))) + pv(bk, deal.b)
+  const lean = Math.abs(ga) + Math.abs(gb) > 0 ? clamp(-1, 1, (gb - ga) / Math.max(Math.abs(ga), Math.abs(gb), 8)) : 0
+  return { a: ga, b: gb, lean }
+}
+
+// ── Making a trade ───────────────────────────────────────────────────────────
+const posOf = p => p.p ?? (p.g === 'big' ? 'C' : 'G')
+const andList = a => (a.length <= 1 ? a[0] ?? '' : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`)
+function pickWords(F, k, giver) {
+  if (k.swap != null) return `the right to swap ${k.swap} first-round picks`
+  const prot = k.pr?.top ? ` (top-${k.pr.top} protected)` : ''
+  return k.o === giver ? `a ${k.y} ${ROUND[k.r - 1]}-round pick${prot}` : `the ${k.o}' ${k.y} ${ROUND[k.r - 1]}-round pick${prot}`
+}
+export function tradeLine(F, deal) {
+  const { am, bm, ak, bk } = resolve(F, deal)
+  const got = andList([...bm.map(p => `${posOf(p)} ${p.n}`), ...bk.map(k => pickWords(F, k, deal.b))])
+  const gave = andList([...am.map(p => `${posOf(p)} ${p.n}`), ...ak.map(k => pickWords(F, k, deal.a))])
+  if (!gave) return `The ${deal.a} acquire ${got} from the ${deal.b}`
+  if (!got) return `The ${deal.a} send ${gave} to the ${deal.b}`
+  return `The ${deal.a} acquire ${got} from the ${deal.b} for ${gave}`
+}
+// make it (no checks: checkTrade and cpuAnswer first). Returns the wire's line.
+export function doTrade(F, deal, { user = null } = {}) {
+  const ly = lyOf(F)
+  const { a, b } = deal
+  const { am, bm } = resolve(F, deal)
+  const line = tradeLine(F, deal)
+  const g = gauge(F, deal)
+  const isUser = user ?? (a === F.team || b === F.team)
+  // (aggregating salaries over the cap hard-caps a team at the second apron)
+  const year = capYear(F)
+  for (const [s, out, inn] of [[a, am, bm], [b, bm, am]]) {
+    const I = inn.reduce((x, p) => x + hitOf(p, year, year), 0)
+    if (out.length >= 2 && I > Math.max(0, ...out.map(p => hitOf(p, year, year))) + 0.001 && payroll(F, s, year) - out.reduce((x, p) => x + hitOf(p, year, year), 0) + I > capOf(year)) {
+      const e = excFor(F, s, year)
+      if (e.hc !== 'a1') e.hc = 'a2'
+    }
+  }
+  // (what the GM's side paid for each man it gets: shared by what each is worth)
+  const paid = (men, sent) => { const vals = men.map(p => Math.max(0, manValue(F, p))), tot = vals.reduce((x, v) => x + v, 0); return vals.map(v => (tot > 0 ? sent * v / tot : 0)) }
+  const paidA = a === F.team ? paid(bm, g.a) : [], paidB = b === F.team ? paid(am, g.b) : []
+  const move = (p, from, to, pd) => {
+    F.teams[from].r = F.teams[from].r.filter(x => x !== p)
+    F.teams[to].r.push(p)
+    // (Bird rights travel with him in a trade; the rookie-deal team for the supermax is the one that traded for him)
+    if (p.rs) p.rt = to
+    p.tx = [from, ly, F.phase === 'season' ? F.day ?? 0 : -1, ...(pd != null ? [Math.round(pd)] : [])]
+  }
+  am.forEach((p, j) => move(p, a, b, paidB[j] ?? null))
+  bm.forEach((p, j) => move(p, b, a, paidA[j] ?? null))
+  F.picks = picksAfter(F, deal)
+  const ent = { ly, y: F.year, d: F.day ?? 0, ph: F.phase, a, b, ag: am.map(p => p.n), bg: bm.map(p => p.n), pa: deal.pa ?? [], pb: deal.pb ?? [], gv: [Math.round(g.a), Math.round(g.b)], t: line, ...(isUser && { u: 1 }) }
+  F.trl = [...(F.trl ?? []).filter(d => d.ly >= ly - 1), ent]
+  wire(F, [{ k: 'trade', tag: 'TRADE', s: a, text: `${line}.`, ...([...am, ...bm].some(p => rankOf(F, p) <= 40) && { big: true }) }])
+  return line
+}
+// the GM proposes (deal.a = F.team): { ok (done), say: 'yes'|'no'|'counter'|'bad', text, counter }
+export function proposeTrade(F, deal) {
+  const c = checkTrade(F, deal)
+  if (!c.ok) return { ok: false, say: 'bad', text: c.why }
+  if (callsLeft(F, deal.b) <= 0) return { ok: false, say: 'no', text: sayOf(F, deal.b, { why: 'calls' }) }
+  const ans = cpuAnswer(F, deal)
+  if (ans.yes) return { ok: true, say: 'yes', text: ans.text, line: doTrade(F, deal) }
+  const k = callKey(F), was = F.trc?.[deal.b]
+  F.trc = { ...(F.trc ?? {}), [deal.b]: [k, was && was[0] === k ? was[1] + 1 : 1] }
+  return { ok: false, say: ans.counter ? 'counter' : 'no', text: ans.text, counter: ans.counter ?? null, why: ans.why }
+}
+
+// ── The league's own deals ───────────────────────────────────────────────────
+// salary filler: the team's least valuable men (out of its top seven) whose salaries make a deal legal for both
+// sides; returns [men] or null
+function fillerFor(F, s, need, avoid = new Set(), max = 3) {
+  const year = capYear(F)
+  const top7 = new Set(F.teams[s].r.filter(p => !p.tw).sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 7).map(p => p.i))
+  const pool = F.teams[s].r.filter(p => !p.tw && !top7.has(p.i) && !avoid.has(p.i) && !whyNot(F, s, p) && hitOf(p, year, year) > 0).sort((x, y) => manValue(F, x) - manValue(F, y))
+  const out = []
+  let sum = 0
+  for (const p of pool) {
+    if (sum >= need) break
+    out.push(p); sum += hitOf(p, year, year)
+    if (out.length >= max) break
+  }
+  return sum >= need ? out : null
+}
+// the fewest of team s's picks worth at least `want` to `to` (seconds first): [index] or null
+function picksCover(F, s, want, to) {
+  const mine = picksOf(F, s).map(k => ({ i: k.i, v: pickValue(F, k).v * pickMod(situationOf(F, to)), r: k.r })).sort((x, y) => x.v - y.v)
+  if (want <= 0) return []
+  for (const k of mine) if (k.v >= want) return [k.i]
+  for (let x = 0; x < mine.length; x++) for (let y = x + 1; y < mine.length; y++) if (mine[x].v + mine[y].v >= want) return [mine[x].i, mine[y].i]
+  return null
+}
+// one deal: rebuilding team a's veteran to contender b, for filler and picks (both sides by their own book)
+function tryBuy(F, R, a, b) {
+  const year = capYear(F)
+  const vets = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.ag ?? 0) >= 26 && rankOf(F, p) <= 150 && manValue(F, p) > 5 && !(p.tx && p.tx[1] === lyOf(F)))
+  for (const p of R.shuffle(vets).slice(0, 3)) {
+    // (the contender's filler, enough to match; none needed if it has the room)
+    const sal = hitOf(p, year, year)
+    const payB = payroll(F, b, year)
+    let fill = []
+    if (payB + sal > capOf(year)) {
+      // smallest out that matches: invert the brackets (out such that limit(out) >= sal)
+      let lo = 0, hi = sal * 1.2
+      for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (matchLimit(F, b, m, payB - m + sal, year) >= sal) hi = m; else lo = m }
+      fill = fillerFor(F, b, hi, new Set(), 3)
+      if (!fill) continue
+    }
+    const base = { a: b, b: a, ga: fill.map(x => x.i), gb: [p.i], pa: [], pb: [] }
+    if (!checkTrade(F, base).ok) continue
+    // the rebuilder's price, in the contender's picks
+    const sideA = teamSide(F, a, { pl: fill, pk: [] }, { pl: [p], pk: [] })
+    const want = -sideA.gain + marginOf(F, a, sideA.out, false)
+    const pk = picksCover(F, b, want, a)
+    if (pk == null) continue
+    const deal = { ...base, pa: pk }
+    if (!checkTrade(F, deal).ok) continue
+    const dA = decide(F, { a: b, b: a, ga: deal.ga, gb: deal.gb, pa: deal.pa, pb: [] }, { user: false })
+    const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: fill, pk: pk.map(i => F.picks[i]) })
+    if (!dA.yes || sideB.gain < marginOf(F, b, sideB.out, false)) continue
+    // (never a give-away the league would laugh at)
+    const g = gauge(F, deal)
+    if (g.a < g.b * 0.6 || g.b < g.a * 0.6) continue
+    doTrade(F, deal, { user: false })
+    return true
+  }
+  return false
+}
+// before the deadline (core calls it each day): the buyers and sellers talk, more as the deadline nears.
+// Returns the wire items it added.
+export function cpuDeadline(F, day = F.day ?? 0) {
+  if (F.phase !== 'season' || F.ddl == null || day > F.ddl) return []
+  const n0 = (F.news ?? []).length
+  const R = rngOf(`${F.seed}-${F.year}-deadline-${day}`)
+  const left = F.ddl - day
+  const p = left <= 3 ? 0.35 : left <= 14 ? 0.1 : 0.025
+  if (R.u() < p) {
+    const S = shortsOf(F).filter(s => s !== F.team)
+    const sellers = R.shuffle(S.filter(s => situationOf(F, s) === 'reb'))
+    const buyers = R.shuffle(S.filter(s => situationOf(F, s) === 'win'))
+    outer: for (const a of sellers.slice(0, 5)) for (const b of buyers.slice(0, 5)) if (tryBuy(F, R, a, b)) break outer
+  }
+  return (F.news ?? []).slice(n0)
+}
+// the summer's salary dumps: a team over the tax line (or the second apron) sends a contract it would rather not
+// pay to a team with the room to take it, with a pick for the trouble. Returns wire items.
+export function salaryDumps(F) {
+  const n0 = (F.news ?? []).length
+  const year = capYear(F)
+  const R = rngOf(`${F.seed}-${year}-dumps`)
+  const S = shortsOf(F).filter(s => s !== F.team)
+  let done = 0
+  for (const a of R.shuffle(S)) {
+    if (done >= 4) break
+    const pay = payroll(F, a, year)
+    if (pay <= taxOf(year) + 1) continue
+    // its worst contracts, by what they cost against what they're worth
+    const bad = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.$ ?? 0) >= 6).map(p => ({ p, v: manValue(F, p) })).sort((x, y) => x.v - y.v).slice(0, 3)
+    for (const { p } of bad) {
+      const sal = hitOf(p, year, year)
+      const takers = S.filter(b => b !== a && payroll(F, b, year) + sal <= capOf(year) + 0.25)
+      let made = false
+      for (const b of R.shuffle(takers).slice(0, 6)) {
+        const base = { a, b, ga: [p.i], gb: [], pa: [], pb: [] }
+        if (!checkTrade(F, base).ok) continue
+        const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: [], pk: [] })
+        const want = -sideB.gain + marginOf(F, b, Math.abs(sideB.in), false)
+        const pk = picksCover(F, a, want, b)
+        if (pk == null) continue
+        const deal = { ...base, pa: pk }
+        if (!checkTrade(F, deal).ok || !decide(F, { a, b, ga: deal.ga, gb: [], pa: deal.pa, pb: [] }, { user: false }).yes) continue
+        // (the sender: the tax it saves and the man it loses, against the picks)
+        const sideA = teamSide(F, a, { pl: [], pk: [] }, { pl: [p], pk: pk.map(i => F.picks[i]) })
+        if (sideA.gain < 0) continue
+        doTrade(F, deal, { user: false })
+        made = true
+        done++
+        break
+      }
+      if (made) break
+    }
+  }
+  return (F.news ?? []).slice(n0)
+}
+
+// ── Pick resolution (core's draft can use it) ────────────────────────────────
+// the draft's order for year y (shorts, slot 1 first, one round): who picks at each slot of round r, with the
+// protections (a protected pick that lands in its protection stays with its team, and the protection rolls to the
+// next year's first, one spot less: top-N to top-(N-1)... core may keep its own rule) and the swaps applied
+export function resolvePicks(F, y, order, r = 1) {
+  const slot = Object.fromEntries(order.map((s, k) => [s, k + 1]))
+  const own = {}
+  const P = F.picks ?? []
+  for (const k of P.filter(k => k.y === y && k.r === r)) own[k.o] = { t: k.t, k }
+  for (const k of P.filter(k => k.y === y && k.r === r)) {
+    if (k.pr?.top && slot[k.o] <= k.pr.top) {
+      own[k.o] = { t: k.o, k, kept: true }
+      const nx = P.find(x => x.y === y + 1 && x.r === r && x.o === k.o)
+      if (nx && nx.t === k.o && !nx.pr) { nx.t = k.t; nx.pr = k.pr.top > 1 ? { top: Math.max(1, k.pr.top - 4) } : null }
+    }
+  }
+  // swaps: the holder takes the better slot
+  for (const k of P.filter(k => k.y === y && k.r === r && k.sw)) {
+    const hold = k.sw.with
+    const mine = Object.entries(own).find(([o, v]) => v.t === hold && o === hold)
+    if (mine && slot[k.o] < slot[hold] && own[k.o].t === k.o) { own[k.o] = { ...own[k.o], t: hold }; own[hold] = { ...own[hold], t: k.o } }
+  }
+  return order.map(s => own[s]?.t ?? s)
+}
