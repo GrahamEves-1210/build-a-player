@@ -182,6 +182,27 @@ doTrade(F, deal)
 cpuDeadline(F, day) -> [news]                          // CPU-CPU deals before the deadline
 ```
 
+## When core calls what (the order a season runs in)
+
+- Setup: `buildTeams` -> `dealOnLoad(F, man, short)` for every rostered man. Two-way men too (B decides their pay).
+- Each night (`season.js playDay`): for each game `restFor` (regular season only) -> `simGame` (or, for the GM's game with
+  moments on, `startGame` -> `playTo(G, 24)` -> maybe a moment -> `possession` -> `finishGame`) -> `recordGame` ->
+  `rollInjuries`. After the night: `tickInjuries(F, short)` for every team, then `cpuDeadline(F, day)` (B: return
+  [] after `F.ddl`).
+- Postseason nights: the same with `playoff: true`, no `restFor`.
+- Finals over: `finalsMvp(F, series)`.
+- `closeSeason`: `seasonAwards(F)`; then **core** writes each man's season line onto `man.car` (from F.ss / F.ps:
+  `{ y, s, ...SeasonLine, po?: SeasonLine }`) and awards onto `man.aw`. C does not write `car`.
+- Summer `resign` stop: `ageLeague(F)` first (it ages every man on a roster and in F.fa by one, the just-drafted
+  included: core stores a drafted man a year younger so he comes out at his rookie-season age), then
+  `seasonEndDeals(F)` (returns the men whose deals ended; core shows the GM's own with `resignOffer`).
+- `fa` stop: GM signs with `askOf` + `canSign` + `signMan`; each "next day" is `faDay(F, n)`; leaving the stop runs
+  `cpuOffseason(F)` (the other 29 teams' summer: re-sign, sign, trade if you like, fill to 13-15).
+- `camp` -> new season: core cuts CPU rosters past 15 with `cutMan` and fills short ones with made-up men, then calls
+  `dealOnLoad` for any man with no `$`. The GM's roster must pass `legalRoster(F, F.team, { season: true })`.
+- `F.year++` happens in `newSeason`, after all of the above. `dead` money years are ticked by core at that point
+  (`{ n, $, y }`, y-1, dropped at 0): B may instead own that; say so.
+
 ## Proposed
 
 (B and C: add requests here)

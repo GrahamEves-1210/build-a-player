@@ -204,6 +204,7 @@ export function closeDraft(F) {
     const keep = { ...p }
     for (const k of ['seen', 'w', 'sc', 'rank', 'dt', 'tg', 'yr']) delete keep[k]
     keep.ys = 0
+    keep.ag = p.ag - 1   // (his age on draft night; the summer's ageLeague makes it his rookie-season age)
     if (m.r === 2 && t.r.filter(x => !x.tw).length >= ROSTER_MAX + 3 && t.r.filter(x => x.tw).length < 3) { keep.tw = 1; keep.$ = 0.6; keep.y = 2 }
     else X.rookieDeal(F, keep, { n: m.n, r: m.r })
     t.r.push(keep)
