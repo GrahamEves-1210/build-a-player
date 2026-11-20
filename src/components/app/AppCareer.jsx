@@ -1342,7 +1342,7 @@ function NumberSheet({ c, cur, onPick, onClose }) {
   useEffect(() => { const k = e => { if (e.key === 'Escape') close.current() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [])
   const spot = c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : POS_LABEL[c.pos] ?? ''
   return createPortal(
-    <div className="ll-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="ll-overlay cr-num-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="ll-sheet cr-num-sheet" role="dialog" aria-modal="true" aria-labelledby="cr-num-title">
         <div className="ll-head"><span className="ag-eyebrow">{numWord(c)} NUMBER{spot ? ` · ${spot}` : ''}</span><button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={15} /></button></div>
         <h2 className="ll-title" id="cr-num-title">No. {cur}</h2>

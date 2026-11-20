@@ -7681,6 +7681,8 @@ html.app-look:not(.is-app) .game-layout.ag-drop .attr-chip { height: 100% !impor
 /* DONE stays on the screen's bottom edge while the choices scroll */
 .cr-face-done { position: sticky; bottom: 0; z-index: 5; width: 100%; margin-bottom: calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 10px 0 #0d1013, 0 -10px 0 #0d1013; }
 @media (min-width: 700px) { .cr-face-sheet { place-items: center; } }
+/* the number sheet opens from the face sheet too: over it (2026-11-19: it opened under the face sheet, out of reach) */
+.ll-overlay.cr-num-overlay { z-index: 9100; }
 
 /* Career's EDIT sheet: his number under his face (owner 11-18) */
 .cr-face-num { margin: 0; }
