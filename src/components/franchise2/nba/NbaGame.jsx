@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TEAM, nick, manOf, momentPlan, momentDone, momentSim, dateText, ROUND_NAME, seriesText } from '../../../lib/franchise2/nba'
+import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { GAMES } from '../../../lib/minigames'
 import { SIMPLE_GAMES } from '../../../lib/minigamesSimple'
@@ -77,7 +78,7 @@ function Moment({ F, plan, onPlay, onSim }) {
       <Scorebug a={a} h={h} as={as} hs={hs} per="4TH" clock={S.clockText} label="KEY MOMENT" />
       <Chyron team={F.team} tag="KEY MOMENT" title={title} sub={S.line.toUpperCase()} />
       <p className="nb-gd-tail">{S.tail}</p>
-      {me && <LowerThird name={me.n} pos={me.p} num={me.num} ovr={me.o} photo={photoOf(me.n)} team={F.team} line={plan.def ? 'ON THE BALL' : 'THE BALL IN HIS HANDS'} />}
+      {me && <LowerThird name={me.n} pos={me.p} num={me.num} ovr={me.o} photo={manPhoto(F, me)} team={F.team} line={plan.def ? 'ON THE BALL' : 'THE BALL IN HIS HANDS'} />}
       <ActionBar>
         <Go onClick={() => { sfx('tap'); mode === 'off' ? onSim() : onPlay() }}>{mode === 'off' ? 'Sim the possession' : 'Play it'}</Go>
         {mode !== 'off' && <button type="button" className="fh-textbtn" onClick={onSim}>Sim it</button>}
@@ -110,7 +111,7 @@ function Final({ F, row, owner, onDone }) {
       {S && <p className="nb-gd-sub">{seriesText(S, F.team)}</p>}
       {mo && <p className="nb-gd-sub">{momentLine(F, mo, row)}</p>}
       <div className="nb-gd-tops">
-        {[F.team, row.opp].map(s => { const l = top(s); const p = l && manOf(F, l.i); return p ? <LowerThird key={s} name={p.n} pos={p.p} num={p.num} photo={photoOf(p.n)} team={s} size="s" stat={{ v: l.pts, label: 'PTS' }} line={`${l.reb} REB · ${l.ast} AST`} /> : null })}
+        {[F.team, row.opp].map(s => { const l = top(s); const p = l && manOf(F, l.i); return p ? <LowerThird key={s} name={p.n} pos={p.p} num={p.num} photo={manPhoto(F, p)} team={s} size="s" stat={{ v: l.pts, label: 'PTS' }} line={`${l.reb} REB · ${l.ast} AST`} /> : null })}
       </div>
       {b && <button type="button" className="fh-textbtn" onClick={() => { setBox(true); sfx('tap') }}>Box score</button>}
       {box && <NbaBox F={F} b={b} owner={owner} onClose={() => setBox(false)} />}

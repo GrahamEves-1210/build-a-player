@@ -843,13 +843,13 @@ export default function BucketApp() {
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
   // Phones (app and website): the player is the screen and the spin drops down over it
-  const drop = useDropMode((IS_APP || APP_LOOK) && gameMode !== 'salarycap' && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'squad-build' || page === 'career-build'))
+  const drop = useDropMode((IS_APP || APP_LOOK) && gameMode !== 'salarycap' && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build'))
   const [dropOpen, setDropOpen] = useDropSheet(drop, build, activeTypes, spinResetKey)
-  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'squad-build' || page === 'career-build'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
   // Website: the build-complete hit (the app's BuildComplete screen plays its own)
-  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSandboxToggle = useCallback((on) => {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
@@ -1151,6 +1151,27 @@ export default function BucketApp() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [position, build, activeTypes, isBucketCustomMode, putSquad, startSquadBuild])
   const [squadPick, setSquadPick] = useState(false)
+
+  // ── BASKETBALL FRANCHISE (NBA_FRANCHISE_LIVE): the GM's own builds are made here, on the normal build page, one at a
+  // time, the way football's Franchise does it (App.jsx). The mode asks for one (onBuild); the finished build goes
+  // back to it (nbaBuilt) and the mode keeps it.
+  //   job: { id, pos, n, of }   the build's id in the setup, guard or big, and "player n of of" for the bar
+  const nbaJob = useRef(null)
+  const [nbaBuilt, setNbaBuilt] = useState(null)
+  const startNbaFranchiseBuild = useCallback(job => {
+    const same = nbaJob.current?.id === job.id && gameMode === 'classic' && position === job.pos
+    if (!same) handleStart('classic', job.pos)
+    nbaJob.current = job
+    if (!same) sandboxTainted.current = isBucketCustomMode
+    setPage('nbafranchise-build')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [handleStart, gameMode, position, isBucketCustomMode])
+  const nbaFranchiseBuilt = useCallback(() => {
+    setNbaBuilt({ ...(nbaJob.current ?? {}), pos: position, build, types: activeTypes, sandbox: !!(isBucketCustomMode || sandboxTainted.current || activeTypes.some(t => build?.[t]?.sandbox)) })
+    nbaJob.current = null; setGameMode(null); setBuild({}); setSavedSpinResult(null); setPage('nbafranchise')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [position, build, activeTypes, isBucketCustomMode])
+  const nbaFranchiseBack = useCallback(() => { setPage('nbafranchise'); window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
   const squadPicked = useCallback(t => {
     setSquadPick(false)
     putSquad({ ...squadRef.current, team: t.short, phase: 'ready' })
@@ -1478,7 +1499,7 @@ export default function BucketApp() {
   }, [isBucketCustomMode])
 
   // Starters Only needs Sandbox on, on a plain build: so it also means the save guard is blocking this build
-  const startersOk = !isVersusMode && !competeOn && !dailyRun && page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
+  const startersOk = !isVersusMode && !competeOn && !dailyRun && page !== 'career-build' && page !== 'squad-build' && page !== 'nbafranchise-build' && (gameMode === 'classic' || gameMode === 'all-time')
   const startersOn = startersPick && isBucketCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
   const oneTeamOn = !!oneTeamPick && isBucketCustomMode && startersOk
@@ -1898,6 +1919,7 @@ export default function BucketApp() {
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
       {/* Squad Builder: which of the squad's players this is */}
+      {page === 'nbafranchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{nbaJob.current?.of ? ` · PLAYER ${nbaJob.current.n} OF ${nbaJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: nbaJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (nbaJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={nbaFranchiseBack}>BACK</button></div>}
       {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {SPOTS[spotsOf(squad)[nextToBuild(squad)?.id]]?.label ?? String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
       {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
       {/* testers: fill the build in one tap (gone once it's complete, so it stays out of recordings) */}
@@ -1977,8 +1999,8 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? (CBB_LIVE && careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
+            onSimulate={page === 'squad-build' ? squadNext : page === 'nbafranchise-build' ? nbaFranchiseBuilt : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'nbafranchise-build' ? 'ADD TO THE ROSTER' : page === 'career-build' ? (CBB_LIVE && careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={false}
@@ -2007,7 +2029,7 @@ export default function BucketApp() {
       </div>
       </div>
 
-      {!parked && IS_APP && (page === 'game' || page === 'squad-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} name={buildComplete ? (position === 'big' ? getBucketBigArchetype : getBucketGuardArchetype)(calcBucketOVR(build, activeTypes, position), build, activeTypes) : null} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
+      {!parked && IS_APP && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} name={buildComplete ? (position === 'big' ? getBucketBigArchetype : getBucketGuardArchetype)(calcBucketOVR(build, activeTypes, position), build, activeTypes) : null} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
       {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
 
       {!parked && leaveConfirm && (IS_APP || APP_LOOK) && (
@@ -2302,7 +2324,8 @@ export default function BucketApp() {
   if (page === 'nbafranchise' && NBA_FRANCHISE_LIVE) {
     return (
       <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
-        <NbaFranchise user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
+        <NbaFranchise user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBuild={startNbaFranchiseBuild} built={nbaBuilt} onBuiltTaken={() => setNbaBuilt(null)} />
       </Suspense>
     )
   }

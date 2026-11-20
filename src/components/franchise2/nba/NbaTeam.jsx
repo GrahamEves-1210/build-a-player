@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
+import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
 import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar } from '../kit'
@@ -30,20 +31,20 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
         {order.map((p, k) => (
           <div key={p.i} className="nb-rot-row">
             <span className="nb-rot-k">{k < 5 ? 'START' : mins[p.i] ? `${mins[p.i]} MIN` : 'DNP'}</span>
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" mine={p.b != null ? owner : null} line={ppg(F, p) ?? `AGE ${p.ag} · ${dealText(p)}`} onClick={() => { setMan(p.i); sfx('tap') }} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={ppg(F, p) ?? `AGE ${p.ag} · ${dealText(p)}`} onClick={() => { setMan(p.i); sfx('tap') }} />
           </div>
         ))}
         {hurt.map(p => (
           <div key={p.i} className="nb-rot-row is-out">
             <span className="nb-rot-k"><Tag tone="inj">OUT</Tag></span>
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`${p.inj.k.toUpperCase()} · ${p.inj.g} G`} onClick={() => setMan(p.i)} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`${p.inj.k.toUpperCase()} · ${p.inj.g} G`} onClick={() => setMan(p.i)} />
           </div>
         ))}
       </div>
       {tw.length > 0 && (
         <>
           <Chyron tone="ink" size="s" title="Two-way contracts" sub={`${tw.length} OF 3`} />
-          <div className="nb-rot">{tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} onClick={() => setMan(p.i)} />)}</div>
+          <div className="nb-rot">{tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} onClick={() => setMan(p.i)} />)}</div>
         </>
       )}
       <Fold title="Draft picks" right={`${picksOf(F, F.team).filter(p => p.r === 1).length} firsts`}>
@@ -97,7 +98,7 @@ function ManSheet({ F, act, id, owner, onClose }) {
     <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fk fk-root nb-sheet" role="dialog" aria-label={p.n} style={fkVars(F.team)}>
         <div className="nb-sheet-top"><b>{TEAM[F.team].name}</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
-        <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="l" mine={p.b != null ? owner : null} line={`AGE ${p.ag} · ${Math.floor(p.ht / 12)}'${p.ht % 12}" · ${p.wt} LBS`} />
+        <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="l" mine={p.b != null ? owner : null} line={`AGE ${p.ag} · ${Math.floor(p.ht / 12)}'${p.ht % 12}" · ${p.wt} LBS`} />
         <div className="nb-facts">
           <span><small>Contract</small><b>{dealText(p)}</b></span>
           <span><small>Experience</small><b>{p.ys ? `${p.ys} ${p.ys === 1 ? 'YEAR' : 'YEARS'}` : 'ROOKIE'}</b></span>

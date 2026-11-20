@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TEAM, CONF_NAME, records, recText, confOrder, gamesBack, streakText, manOf, teamOfMan, photoOf, CAP_SIM, seasonText, DIVS, CONF_DIVS, divOrder } from '../../../lib/franchise2/nba'
+import { manPhoto } from './NbaBuilds'
 import { sfx } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird } from '../kit'
 
@@ -66,7 +67,7 @@ function Leaders({ F }) {
       {!L.length && <p className="fh-next-note">No games played yet.</p>}
       {L.map((x, k) => {
         const p = manOf(F, x.i), s = teamOfMan(F, x.i) ?? x.s
-        return p ? <LowerThird key={x.i} name={p.n} pos={p.p} num={p.num} photo={p.h ? photoOf(p.n) : null} team={s} size="s" stat={{ v: Number(x.v).toFixed(1), label: STATS.find(z => z[0] === st)[1].slice(0, 3) }} line={`${k + 1}. ${TEAM[s]?.nick?.toUpperCase() ?? ''}`} delay={k * 30} /> : null
+        return p ? <LowerThird key={x.i} name={p.n} pos={p.p} num={p.num} photo={manPhoto(F, p)} team={s} size="s" stat={{ v: Number(x.v).toFixed(1), label: STATS.find(z => z[0] === st)[1].slice(0, 3) }} line={`${k + 1}. ${TEAM[s]?.nick?.toUpperCase() ?? ''}`} delay={k * 30} /> : null
       })}
     </section>
   )

@@ -6,12 +6,13 @@ import { IconClose, IconCaret } from '../../app/icons'
 import { GamesSwitch } from '../../simFlow'
 import { Chyron, KLogo, fkVars, TeamSlab, BigNum, Fact, LowerThird, Go } from '../kit'
 import { LeagueRules } from '../Rules'
+import { NbaBuildsStep, NbaNameStep } from './NbaBuilds'
 import '../setup.css'
 
 // BASKETBALL FRANCHISE, the setup: pick a team (the 30 by division), its card (the team's OVR, its best men, its
 // payroll), then the league rules and key moments, and tip off.
-const STEPS = [['team', 'Team'], ['rules', 'Rules']]
-const BACK = { card: 'team', rules: 'card' }
+const STEPS = [['team', 'Team'], ['builds', 'Players'], ['rules', 'Rules']]
+const BACK = { card: 'team', builds: 'card', rules: 'builds' }
 export const GAMES_MODES = [['advanced', 'ADVANCED'], ['simple', 'SIMPLE'], ['off', 'NONE']]
 export const GAMES_WHAT = { advanced: 'Play the full mini game', simple: 'One tap to time it', off: 'Sim the play' }
 export const CAP_WHAT = { on: 'The NBA cap and tax', off: 'No cap, no tax' }
@@ -23,12 +24,13 @@ export function preview() {
 }
 const ORDER = Object.values(CONF_DIVS).flat().flatMap(d => DIVS[d])
 
-export default function NbaSetup({ setup, owner, put, onStart, onBack }) {
+export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }) {
   const S = setup
   const step = S.step ?? 'team'
   const go = (patch, s) => { put({ ...S, ...patch }); if (s) sfx(s) }
-  const back = () => (step === 'team' ? onBack() : go({ step: BACK[step] }, 'back'))
-  const at = step === 'rules' ? 1 : 0
+  const naming = S.naming && S.builds?.[S.naming] ? S.naming : null
+  const back = () => (naming ? go({ naming: null }, 'back') : step === 'team' ? onBack() : go({ step: BACK[step] }, 'back'))
+  const at = step === 'rules' ? 2 : step === 'builds' ? 1 : 0
   return (
     <div className="fk-root fsu" style={S.team && step !== 'team' ? fkVars(S.team) : undefined}>
       <div className="fsu-top">
@@ -39,10 +41,12 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack }) {
           {STEPS.map(([k, label], i) => <li key={k} className={i < at ? 'is-done' : i === at ? 'is-on' : ''}><b>{i + 1}</b>{label}</li>)}
         </ol>
       </div>
-      <div className="fsu-body" key={step}>
-        {step === 'team' && <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} />}
-        {step === 'card' && <TeamCard s={S.team} onPick={t => go({ team: t }, 'tap')} onGo={() => { go({ step: 'rules' }, 'whistle'); haptic('medium') }} />}
-        {step === 'rules' && <Rules S={S} go={go} owner={owner} onStart={onStart} />}
+      <div className="fsu-body" key={naming ? `n-${naming}` : step}>
+        {naming && <NbaNameStep S={S} id={naming} owner={owner} onDone={x => go({ naming: null, builds: { ...S.builds, [naming]: { ...S.builds[naming], ...x } } }, 'claim')} />}
+        {!naming && step === 'team' && <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} />}
+        {!naming && step === 'card' && <TeamCard s={S.team} onPick={t => go({ team: t }, 'tap')} onGo={() => { go({ step: 'builds' }, 'whistle'); haptic('medium') }} />}
+        {!naming && step === 'builds' && <NbaBuildsStep S={S} go={go} owner={owner} onBuild={onBuild} onNext={() => go({ step: 'rules' }, 'tap')} />}
+        {!naming && step === 'rules' && <Rules S={S} go={go} owner={owner} onStart={onStart} />}
       </div>
     </div>
   )

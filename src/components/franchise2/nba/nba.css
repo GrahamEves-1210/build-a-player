@@ -181,3 +181,6 @@
 .nb-run-rec small { font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: var(--fk-mute); }
 .nb-run-bar { height: 10px; background: var(--fk-g3); }
 .nb-run-bar i { display: block; height: 100%; background: var(--tca, #fff); transition: width .1s linear; }
+.nb-builds { display: grid; gap: 10px; }
+.nb-build-row { display: grid; gap: 6px; }
+.nb-build-add { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

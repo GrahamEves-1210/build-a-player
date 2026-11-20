@@ -3,6 +3,7 @@ import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, photoOf, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
   rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin,
 } from '../../../lib/franchise2/nba'
+import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird, Go, Stamp, Tag, Flip, ActionBar } from '../kit'
 import { CapBar, dealText } from './NbaTeam'
@@ -35,7 +36,7 @@ function Awards({ F, act, go }) {
       <Chyron tone="ink" size="s" title="Awards" />
       {['MVP', 'FMVP', 'DPOY', 'ROY', '6MOY', 'MIP'].filter(k => A[k]).map((k, i) => {
         const p = manOf(F, A[k].i)
-        return <LowerThird key={k} name={A[k].n} pos={p?.p} num={p?.num} ovr={p?.o} photo={p?.h ? photoOf(A[k].n) : null} team={A[k].s} size="s" line={AWARD_FULL[k].toUpperCase()} delay={i * 80} />
+        return <LowerThird key={k} name={A[k].n} pos={p?.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={A[k].s} size="s" line={AWARD_FULL[k].toUpperCase()} delay={i * 80} />
       })}
       {(A.ALL ?? []).map((t, k) => (
         <div key={k} className="nb-alln"><small>ALL-NBA {['FIRST', 'SECOND', 'THIRD'][k]} TEAM</small><p>{t.map(x => `${x.n} (${TEAM[x.s]?.short ?? ''})`).join(', ')}</p></div>
@@ -131,7 +132,7 @@ function Resign({ F, act, go }) {
         const d = CAP_SIM.resignOffer(F, p)
         return (
           <div key={p.i} className="nb-fa-row">
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag}${p.rfa ? ' · RESTRICTED' : ''} · ASKS ${d ? `${money(d.$)} × ${d.y}` : 'TO TEST THE MARKET'}`} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag}${p.rfa ? ' · RESTRICTED' : ''} · ASKS ${d ? `${money(d.$)} × ${d.y}` : 'TO TEST THE MARKET'}`} />
             <span className="nb-fa-acts">
               <button type="button" className="is-go" disabled={!d} onClick={() => { const r = act(X => resignMine(X, p.i, true)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>Keep</button>
               <button type="button" onClick={() => { act(X => { resignMine(X, p.i, false) }); sfx('tap') }}>Let go</button>
@@ -165,7 +166,7 @@ function FreeAgency({ F, act, go }) {
         const ok = CAP_SIM.canSign(F, F.team, p, d)
         return (
           <div key={p.i} className="nb-fa-row">
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ASKS ${money(d.$)} × ${d.y}${ok.ok && ok.via ? ` · ${VIA[ok.via] ?? ''}` : ''}`} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ASKS ${money(d.$)} × ${d.y}${ok.ok && ok.via ? ` · ${VIA[ok.via] ?? ''}` : ''}`} />
             <span className="nb-fa-acts"><button type="button" className="is-go" disabled={!ok.ok} title={ok.why} onClick={() => { const r = act(X => signFA(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>{ok.ok ? 'Sign' : ok.why ?? 'No room'}</button></span>
           </div>
         )
@@ -193,7 +194,7 @@ function Camp({ F, act, go, owner }) {
       {!chk.ok && <p className="nb-why">{chk.why}</p>}
       {std.map(p => (
         <div key={p.i} className="nb-fa-row">
-          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" mine={p.b != null ? owner : null} line={`AGE ${p.ag} · ${dealText(p)}${p.rk === F.year + 1 ? ' · ROOKIE' : ''}`} />
+          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={`AGE ${p.ag} · ${dealText(p)}${p.rk === F.year + 1 ? ' · ROOKIE' : ''}`} />
           <span className="nb-fa-acts">
             {sure === p.i
               ? <><button type="button" onClick={() => setSure(null)}>Keep</button><button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, p.i); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived ${p.n}` }) }); setSure(null); sfx('deny') }}>Waive</button></>
@@ -203,7 +204,7 @@ function Camp({ F, act, go, owner }) {
       ))}
       {std.length < 14 && <MinDeals F={F} act={act} open />}
       {tw.length > 0 && <Chyron tone="ink" size="s" title="Two-way" />}
-      {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
+      {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
       <ActionBar><Go disabled={!chk.ok} onClick={go}>{`Start the ${seasonText(F.year + 1)} season`}</Go></ActionBar>
     </section>
   )
@@ -218,7 +219,7 @@ function TeamOptions({ F, act }) {
       <Chyron tone="ink" size="s" title="Team options" sub={`${F.year + 1}-${String((F.year + 2) % 100).padStart(2, '0')} SEASON`} />
       {due.map(({ p }) => (
         <div key={p.i} className="nb-fa-row">
-          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag} · ${money(p.sc?.[0] ?? p.$)} NEXT SEASON${p.optd === 1 ? ' · PICKED UP' : p.optd === 0 ? ' · DECLINED' : ''}`} />
+          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · ${money(p.sc?.[0] ?? p.$)} NEXT SEASON${p.optd === 1 ? ' · PICKED UP' : p.optd === 0 ? ' · DECLINED' : ''}`} />
           <span className="nb-fa-acts">
             <button type="button" className={p.optd === 1 ? 'is-go' : ''} onClick={() => { act(X => { setOption(X, p.i, true) }); sfx('tap') }}>Pick it up</button>
             <button type="button" className={p.optd === 0 ? 'is-go' : ''} onClick={() => { act(X => { setOption(X, p.i, false) }); sfx('tap') }}>Decline</button>
@@ -239,7 +240,7 @@ function MinDeals({ F, act, open = false }) {
       <Chyron tone="ink" size="s" title="Minimum deals" sub={open ? `${F.teams[F.team].r.filter(p => !p.tw).length} OF 14 SIGNED: FILL THE ROSTER` : 'VETERANS WHO TAKE THE MINIMUM'} />
       {men.map(p => (
         <div key={p.i} className="nb-fa-row">
-          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ${p.ys ?? 0} YRS IN THE LEAGUE`} />
+          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ${p.ys ?? 0} YRS IN THE LEAGUE`} />
           <span className="nb-fa-acts"><button type="button" className="is-go" onClick={() => { const r = act(X => signMin(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>Sign for the minimum</button></span>
         </div>
       ))}
