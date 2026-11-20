@@ -10,14 +10,19 @@ import './setup.css'
 
 // The mode's first screen: the three save slots, each a team's slab (its record, the year, rings) or an empty one.
 // A save that's there (a franchise or a setup) has DELETE SAVE under it, asked twice (owner 11-15: it was only in History).
-export function Slots({ owner, onOpen, onHome }) {
+// lg: another league's saves (basketball Franchise, components/franchise2/nba): { summary, clear, TEAM, hero, where }
+export function Slots({ owner, onOpen, onHome, lg = null }) {
   const [sure, setSure] = useState(null)
   const [, redraw] = useState(0)
   const hero = useRef(null)
-  const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: slotSummary(i) }))
+  const T = lg?.TEAM ?? TEAM
+  const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: (lg?.summary ?? slotSummary)(i) }))
   const del = i => {
-    clearFranchise(i)
-    try { if (franchiseCard()?.slot === i) localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}
+    if (lg) lg.clear(i)
+    else {
+      clearFranchise(i)
+      try { if (franchiseCard()?.slot === i) localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}
+    }
     setSure(null); redraw(n => n + 1); sfx('deny')
   }
   return (
@@ -29,7 +34,7 @@ export function Slots({ owner, onOpen, onHome }) {
       <div className="fsu-body">
         <div>
           {/* the trophy, and over it the same trophy turning slowly (TrophyTurn: a square in the middle; a tap turns it again once it rests) */}
-          {FRANCHISE_ART.hero && (
+          {!lg && FRANCHISE_ART.hero && (
             <div className="fsu-hero-box" ref={hero}>
               <img className="fsu-hero" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} />
               <TrophyTurn base={FRANCHISE_TURN.hero} turns={24} className="fsu-hero-turn" replay={hero} />
@@ -37,7 +42,7 @@ export function Slots({ owner, onOpen, onHome }) {
           )}
           <Chyron tone="ink" size="l" title="Franchise" sub="THREE SAVE SLOTS" />
           {rows.map(({ i, s }) => {
-            const t = s?.team ? TEAM[s.team] : null
+            const t = s?.team ? T[s.team] : null
             const name = t ? `${t.nick} save` : 'setup'
             return (
               <div key={i} className="fsu-slotw">
@@ -47,7 +52,7 @@ export function Slots({ owner, onOpen, onHome }) {
                 <span className="fsu-slot-txt">
                   <small>{t ? t.name.replace(` ${t.nick}`, '').toUpperCase() : s?.setup ? 'NEW FRANCHISE' : 'SLOT ' + (i + 1)}</small>
                   <b>{t ? t.nick.toUpperCase() : s?.setup ? 'SETTING UP' : 'EMPTY'}</b>
-                  <em>{s?.setup ? 'PICK UP WHERE YOU LEFT IT' : s ? `${s.year} · ${s.rec} · ${s.phase === 'season' ? `WEEK ${(s.wk ?? 0) + 1}` : s.phase === 'playoffs' ? 'PLAYOFFS' : 'OFFSEASON'}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.light ? ' · LIGHT' : ''}${s.sandbox ? ' · SANDBOX' : ''}` : 'START A FRANCHISE'}</em>
+                  <em>{s?.setup ? 'PICK UP WHERE YOU LEFT IT' : s ? lg ? lg.where(s) : `${s.year} · ${s.rec} · ${s.phase === 'season' ? `WEEK ${(s.wk ?? 0) + 1}` : s.phase === 'playoffs' ? 'PLAYOFFS' : 'OFFSEASON'}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.light ? ' · LIGHT' : ''}${s.sandbox ? ' · SANDBOX' : ''}` : 'START A FRANCHISE'}</em>
                 </span>
               </button>
               {s && (sure === i

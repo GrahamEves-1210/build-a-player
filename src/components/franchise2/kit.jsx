@@ -32,9 +32,14 @@ const mix = (hex, to, k) => {
   return `#${[16, 8, 0].map(s => ch(s).toString(16).padStart(2, '0')).join('')}`
 }
 const VARS = new Map()
+// the league the kit draws: football's teams, or basketball Franchise's (components/franchise2/nba: setKitLeague on
+// the way in, null on the way out). The same short can be two teams (ATL, DAL), so the colours are kept per league
+let LEAGUE = null
+export const kitTeam = s => (LEAGUE ?? TEAM)[s]
+export function setKitLeague(T) { if (LEAGUE !== T) { LEAGUE = T; VARS.clear() } }
 export function fkVars(short) {
   if (VARS.has(short)) return VARS.get(short)
-  const t = TEAM[short]
+  const t = kitTeam(short)
   if (!t) return undefined
   let a = t.color, b = t.color2
   if (lum(a) < 0.012) a = mix(a, '#ffffff', 0.13)
@@ -48,7 +53,7 @@ export function fkVars(short) {
   VARS.set(short, v)
   return v
 }
-export const KLogo = ({ s, size = 28, className = '' }) => (TEAM[s] ? <img className={`fk-logo${chipCls(s)} ${className}`} src={TEAM[s].logo} alt="" width={size} height={size} style={{ width: size, height: size, '--ls': `${size}px` }} draggable={false} /> : null)
+export const KLogo = ({ s, size = 28, className = '' }) => (kitTeam(s) ? <img className={`fk-logo${LEAGUE ? '' : chipCls(s)} ${className}`} src={kitTeam(s).logo} alt="" width={size} height={size} style={{ width: size, height: size, '--ls': `${size}px` }} draggable={false} /> : null)
 
 // ── A man's name, number and face, the broadcast way ─────────────────────────
 const SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i
@@ -313,7 +318,7 @@ export function Meter({ label, v, max = 100, segs = 10, tone = 'team', show, col
 // A hard-edged two-colour split, the logo big and cut off by the edge, the name and the record.
 //   s · rec ('11-6' or {w,l,t}) · sub (a line under: '2 SEED', 'AFC WEST') · side: 'l' | 'r' (mirrored) · size 's' | 'm' | 'l'
 export function TeamSlab({ s, rec, sub, side = 'l', size = 'm', name, onClick, className = '' }) {
-  const t = TEAM[s]
+  const t = kitTeam(s)
   if (!t) return null
   const Tag = onClick ? 'button' : 'div'
   const r = typeof rec === 'object' && rec ? <BigRec w={rec.w} l={rec.l} t={rec.t} size={size === 'l' ? 44 : size === 's' ? 24 : 34} /> : rec != null ? <span className="fk-slab-rec">{rec}</span> : null
