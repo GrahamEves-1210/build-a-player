@@ -23,6 +23,9 @@ const LOGO_LEAGUES = { '': ['nfl'], nba: ['nba'], cfb: ['cfb', 'cbb'], cbb: ['cb
 const colorsOf = (lg, team) => INDEX.teams[lg]?.[team] ?? null
 
 export function playerArt(key, folderHint, variant = 'auto') {
+  // a man with no photo (a legend the board shows by his team): x/<league>/<TEAM>/<number>, his team's jersey
+  const nm = /^x\/(nfl|nba)\/([A-Za-z0-9]{2,4})\/(\d{0,2})$/.exec(key)
+  if (nm) { const [, lg, team, num] = nm; return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team.toUpperCase()), number: numberFor(key, '', num, lg), variant })) }
   const row = INDEX.p[key]
   if (!row) { const lg = folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl'; return svgUri(jerseySvg({ league: lg, number: numberFor(key, '', '', lg), variant })) }
   const [lg, team, number, pos, rank] = row.split('|')

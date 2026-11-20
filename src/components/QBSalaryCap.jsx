@@ -8,6 +8,9 @@ import HEADSHOTS from '../data/headshots.json'
 import { salaryKit } from '../lib/salaryCore'
 import { supabase } from '../lib/supabase'
 import { valToGrade, nflHeadshot } from '../utils/simulation'
+import { APP_ART } from '../lib/platform'
+// no photo: the website shows his team's logo, the app his team's jersey with his number (lib/appArt.js, x/ keys)
+const noPhoto = p => (APP_ART ? `/headshots/x/nfl/${p.team}/${p.number ?? ''}.webp` : `/logos/${p.team}.png`)
 import { getUsername } from '../lib/discord'
 
 /*
@@ -240,7 +243,7 @@ function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, sh
         {player.photo
           ? <img src={player.photo} alt={player.name} className="sc-card-headshot" />
           : <div className="sc-card-no-photo">
-              <img src={`/logos/${player.team}.png`} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
+              <img src={noPhoto(player)} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
             </div>
         }
       </div>
@@ -376,7 +379,7 @@ function InfiniteLeaderboard({ onClose, pos = 'qb' }) {
                   <div key={pi} className="sc-lb-pick" title={p.name} style={{ '--tc': p.teamColor || '#444' }}>
                     {p.photo
                       ? <img src={p.photo} alt={p.name} />
-                      : <img src={`/logos/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                      : <img src={noPhoto(p)} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
                     }
                   </div>
                 ))}
@@ -479,7 +482,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
                   >
                     {p.photo
                       ? <img src={p.photo} alt={p.name} />
-                      : <img src={`/logos/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                      : <img src={noPhoto(p)} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
                     }
                   </div>
                 ))}
