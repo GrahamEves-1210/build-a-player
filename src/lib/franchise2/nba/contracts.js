@@ -360,7 +360,7 @@ export function canSign(F, short, p, d) {
   const mx = maxOf(ys, year, { superMax: own === 'bird' && superMaxOk(F, p, short), last: own ? p.$l ?? 0 : 0 })
   if (first > mx + 0.01) return { ok: false, why: `Over his max ($${mx}M)` }
   if (yrs > (own === 'bird' ? 5 : 4)) return { ok: false, why: own === 'bird' ? '5 seasons at most' : '4 seasons at most (5 with Bird rights)' }
-  const rise = sc.slice(1).some((v, k) => v - sc[k] > first * raiseMax(own) + 0.06)
+  const rise = sc.slice(1).some((v, k) => v - sc[k] > first * raiseMax(own) + 0.11)
   if (rise) return { ok: false, why: `Raises are capped at ${Math.round(raiseMax(own) * 100)}% a season` }
   if (free) return { ok: true, via: own ?? 'room' }
   // (his own hold comes off when he signs)

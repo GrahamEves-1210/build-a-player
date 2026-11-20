@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, photoOf, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
-  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet,
+  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin,
 } from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird, Go, Stamp, Tag, Flip, ActionBar } from '../kit'
@@ -171,6 +171,7 @@ function FreeAgency({ F, act, go }) {
         )
       })}
       {why && <p className="nb-why">{why}</p>}
+      <MinDeals F={F} act={act} />
       <div className="fh-go">
         {day < CAP_SIM.FA_DAYS && <button type="button" className="fh-textbtn" onClick={() => { act(X => { faNext(X) }); sfx('flip') }}>Next day</button>}
         <ActionBar><Go onClick={go}>To training camp</Go></ActionBar>
@@ -200,6 +201,7 @@ function Camp({ F, act, go, owner }) {
           </span>
         </div>
       ))}
+      {std.length < 14 && <MinDeals F={F} act={act} open />}
       {tw.length > 0 && <Chyron tone="ink" size="s" title="Two-way" />}
       {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
       <ActionBar><Go disabled={!chk.ok} onClick={go}>{`Start the ${seasonText(F.year + 1)} season`}</Go></ActionBar>
@@ -223,6 +225,25 @@ function TeamOptions({ F, act }) {
           </span>
         </div>
       ))}
+    </>
+  )
+}
+
+// the minimum deals: the end of the bench, open to any team (camp lists them while the roster is short of 14)
+function MinDeals({ F, act, open = false }) {
+  const [why, setWhy] = useState(null)
+  const men = minPool(F)
+  if (!men.length) return null
+  return (
+    <>
+      <Chyron tone="ink" size="s" title="Minimum deals" sub={open ? `${F.teams[F.team].r.filter(p => !p.tw).length} OF 14 SIGNED: FILL THE ROSTER` : 'VETERANS WHO TAKE THE MINIMUM'} />
+      {men.map(p => (
+        <div key={p.i} className="nb-fa-row">
+          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={p.h ? photoOf(p.n) : null} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ${p.ys ?? 0} YRS IN THE LEAGUE`} />
+          <span className="nb-fa-acts"><button type="button" className="is-go" onClick={() => { const r = act(X => signMin(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>Sign for the minimum</button></span>
+        </div>
+      ))}
+      {why && <p className="nb-why">{why}</p>}
     </>
   )
 }

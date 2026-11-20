@@ -204,3 +204,17 @@ export function answerSheet(F, id, yes) {
   for (const x of r?.news ?? []) addNews(F, x)
   return r
 }
+
+// the men on the street who'd sign for the minimum (a veteran's minimum by his years in the league): the end of the
+// bench any team can add, over the cap or the aprons
+const minDeal = (F, p) => ({ $: X.minOf(p.ys ?? 0, X.capYear(F)), y: 1, r: 0 })
+export const minPool = (F, n = 12) => (F.fa ?? []).filter(p => !p.fr || p.fr !== F.team || p.rn).filter(p => (X.askOf(F, p)?.$ ?? 99) <= minDeal(F, p).$ * 1.8).sort((a, b) => b.o - a.o).slice(0, n)
+export function signMin(F, id) {
+  const p = (F.fa ?? []).find(x => x.i === id)
+  if (!p) return { ok: false }
+  const d = minDeal(F, p)
+  const r = X.signMan(F, F.team, p, d)
+  if (r?.ok === false) return r
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} signs a one-year minimum deal with the ${nick(F.team)}` })
+  return { ok: true }
+}
