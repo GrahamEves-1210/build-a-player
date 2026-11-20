@@ -46,16 +46,19 @@ export function growBuild(B, d) {
   return ovrOf(B.pos, B.build) - start
 }
 // the chance he retires this offseason
-// (from 30 some good men walk away every year as well, the body or the money: Luck, Kuechly, Donald, Gronkowski;
-// past his prime a little more each year, and a backup sooner than a starter)
+// (2026-11-19, players' reports: good men were retiring years early, a starting back at 30 and 31, a man signed for
+// four years gone after one. The NFL's pattern: a man good enough to start keeps playing until his rating goes,
+// a few walk away from 31 on (Luck, Kuechly, Donald, Gronkowski), and a backup past his prime is the one who's
+// done: nobody signs him. A man with years left on his deal is likelier to play them out.)
 export function retireChance(p, starter) {
   const [, prime, gone] = CURVE[p.p] ?? [26, 29, 33]
   if (p.ag >= gone + 5) return 1
-  const walk = p.ag >= 30 ? 0.02 * (p.ag - 29) : 0
+  const walk = p.ag >= 31 ? 0.015 * (p.ag - 30) : 0
   if (p.ag <= prime) return p.o < 62 ? 0.25 : walk
   const past = (p.ag - prime) / Math.max(1, gone - prime)           // 0 at the end of his prime, 1 at the usual age
-  const level = (80 - p.o) * 0.035 - (starter ? 0.12 : 0)            // a starter hangs on, a backup is let go
-  return clamp(0, 0.97, walk + past * 0.55 + level + (p.ag >= gone ? 0.25 : 0))
+  const level = (78 - p.o) * 0.04 - (starter ? 0.15 : 0)             // a starter hangs on, a backup is let go
+  const odds = clamp(0, 0.97, walk + past * 0.45 + level + (p.ag >= gone ? 0.2 : 0))
+  return (p.y ?? 0) >= 2 && p.o >= 75 ? odds * 0.5 : odds
 }
 export function ageLeague(F) {
   const R = rngOf(`${F.seed}-${F.year}-age`)

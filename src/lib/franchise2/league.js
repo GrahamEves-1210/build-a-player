@@ -28,7 +28,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { coachEdge, realEdge } from './coach'
 import { startersOfTeam, benchOfTeam, groupOf, backupsOf } from './roster'
 import { rawRating, teamRating, toSim, fromSim, lastSeasonRes, SEASON_2025 } from './ratings'
-import { marketValue, realDeal, signDeal, signRookie, buildSlot, seedDead, minimumFor, capYear } from './contracts'
+import { marketValue, realDeal, realDraftYear, signDeal, signRookie, buildSlot, seedDead, minimumFor, capYear } from './contracts'
 
 export const FIRST_YEAR = 2026
 // (the order every list in the mode reads: the offense, the defense, then special teams)
@@ -113,7 +113,10 @@ export function peakFor(R, o, ag) {
   return clamp(40, 99, Math.round(o + left * Math.max(0, 1.35 + R.n() * 0.75) * clamp(0.3, 1, (99 - o) / 18)))
 }
 export function makeReal(F, r, R) {
-  const ag = r.age ?? R.int(23, 30)
+  // (no birth year in the data, most of the linebackers: his age from the year he was drafted, a rookie 22; an
+  // undrafted man a young one. 2026-11-19: they were 23 to 30 at random, a 2026 rookie at 28)
+  const dy = r.age == null ? realDraftYear(r.name, r.team) : null
+  const ag = r.age ?? (dy ? clamp(21, 38, 22 + FIRST_YEAR - dy) : R.int(23, 26))
   const p = { i: F.nid++, n: r.name, p: r.pos, o: r.o, ag }
   if (r.s) p.s = r.s
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))

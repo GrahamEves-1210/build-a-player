@@ -37,7 +37,9 @@ import { clamp } from './rng'
 // (a kicker grows into his late 20s and kicks into his late 30s: Vinatieri, Tucker, Gostkowski, Prater)
 // (2026-11-17: the linemen's and tight ends' primes end at 29-30, the age the NFL's own aging studies put the turn at;
 // with them ending at 32 the league's 30-and-over share grew from 15% to 25% in ten years)
-export const CURVE = { qb: [27, 32, 37], rb: [24, 27, 31], wr: [25, 29, 33], te: [26, 29, 33], ol: [26, 30, 34], dl: [25, 29, 33], lb: [25, 29, 32], db: [24, 29, 32], k: [29, 34, 39] }
+// (2026-11-19: a back's prime runs through 28 and most good ones are gone by 32, not 31: a starting back of 30 or 31
+// is still in the league, Henry, Barkley, Kamara, McCaffrey)
+export const CURVE = { qb: [27, 32, 37], rb: [24, 28, 32], wr: [25, 29, 33], te: [26, 29, 33], ol: [26, 30, 34], dl: [25, 29, 33], lb: [25, 29, 32], db: [24, 29, 32], k: [29, 34, 39] }
 // the fall past his prime: [the first year's OVR, more each year after]
 const FALL = { qb: [1.1, 0.6], rb: [2.2, 1.1], wr: [1.5, 0.8], te: [1.4, 0.7], ol: [1.2, 0.6], dl: [1.4, 0.7], lb: [1.5, 0.8], db: [1.6, 0.85], k: [0.8, 0.45] }
 const curveOf = p => CURVE[p.p] ?? [26, 29, 33]
@@ -151,7 +153,10 @@ export function scoutRead(p, own = false) {
   const truth = Math.max(p.o, (p.pk ?? p.o) - (own ? 0 : p.hb ?? 0))
   const read = truth + (h01(p.i, 41) - 0.5) * (own ? 2 : 5)
   const room = read - p.o
-  const stage = p.ag > prime ? 'PAST HIS PEAK' : room >= 2.5 && p.ag < prime ? 'STILL DEVELOPING' : p.ag <= grow ? 'NEAR HIS CEILING' : 'IN HIS PRIME'
+  // (2026-11-19: "still developing" is a young man's word, through about 25 or 26 by his spot; from there to the end of
+  // his prime he's in it, room or not: a 27-year-old starter was being called still developing)
+  const young = p.ag <= Math.max(grow, p.p === 'k' ? grow : 25)
+  const stage = p.ag > prime ? 'PAST HIS PEAK' : young && room >= 2.5 ? 'STILL DEVELOPING' : young ? 'NEAR HIS CEILING' : 'IN HIS PRIME'
   const ceil = ceilWord(stage === 'STILL DEVELOPING' ? read : Math.max(p.o, Math.min(read, p.o + 2)), p.p)
   return { ceil, stage, line: stage === 'PAST HIS PEAK' ? stage : ceil === 'DEPTH' ? 'DEPTH PLAYER' : ceil === 'CAMP LEG' ? 'CAMP LEG' : `${ceil} CEILING` }
 }
