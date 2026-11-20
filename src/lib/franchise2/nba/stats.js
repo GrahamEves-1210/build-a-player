@@ -1,7 +1,8 @@
 // NBA FRANCHISE: season stats from the box scores, the league leaders.
 //
 // The seam (nba/STATE.md):
-//   recordGame(F, game, res, { playoff })   every man's line into F.ss (the postseason's into F.ps)
+//   recordGame(F, game, res, { playoff, series })   every man's line into F.ss (the postseason's into F.ps; with a
+//                                           series, into series.st too, for the Finals and conference finals MVPs)
 //   leaders(F, stat, n = 10, { playoff })   [{ i, s, v }] the top men in a per-game stat, qualified the NBA's way
 // And:
 //   addLine(row, line, short)   one box line into a SeasonLine (row: { gp, gs, min, pts, reb, oreb, ... , s })
@@ -12,7 +13,8 @@
 //   teamSeason(results)         each team's season from a list of Res (with h, a): PPG, OPP, pace, the box totals
 //
 // SeasonLine: { gp, gs, min, pts, reb, oreb, ast, stl, blk, tov, pf, fgm, fga, tpm, tpa, ftm, fta, pm, s,
-//               cp (clutch points), hi (season high), dd, td (double- and triple-doubles), g40 (40-point games) }
+//               cp (clutch points), hi hr ha h3 hs hb (his best night: points, boards, assists, threes, steals, blocks),
+//               dd, td (double- and triple-doubles), g40 (40-point games), g20 / g15 (games of 20+ / 15-19 minutes) }
 // A man who changes teams keeps one line (s: the team he plays for now), as the NBA's own season totals do.
 const SUM_K = ['min', 'pts', 'reb', 'oreb', 'ast', 'stl', 'blk', 'tov', 'pf', 'fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'pm', 'cp']
 
@@ -22,7 +24,11 @@ export function addLine(row, l, short = null) {
   row.gs = (row.gs ?? 0) + (l.st ? 1 : 0)
   for (const k of SUM_K) row[k] = (row[k] ?? 0) + (l[k] ?? 0)
   if (short) row.s = short
-  row.hi = Math.max(row.hi ?? 0, l.pts ?? 0)
+  // the season's best nights (the records book reads them), and the 65-game rule's count: 20 minutes a game, or 15-20
+  row.hi = Math.max(row.hi ?? 0, l.pts ?? 0); row.hr = Math.max(row.hr ?? 0, l.reb ?? 0); row.ha = Math.max(row.ha ?? 0, l.ast ?? 0)
+  row.h3 = Math.max(row.h3 ?? 0, l.tpm ?? 0); row.hs = Math.max(row.hs ?? 0, l.stl ?? 0); row.hb = Math.max(row.hb ?? 0, l.blk ?? 0)
+  if (l.min >= 20) row.g20 = (row.g20 ?? 0) + 1
+  else if (l.min >= 15) row.g15 = (row.g15 ?? 0) + 1
   const tens = [l.pts, l.reb, l.ast, l.stl, l.blk].filter(x => x >= 10).length
   if (tens >= 2) row.dd = (row.dd ?? 0) + 1
   if (tens >= 3) row.td = (row.td ?? 0) + 1
@@ -30,11 +36,13 @@ export function addLine(row, l, short = null) {
   return row
 }
 
-export function recordGame(F, game, res, { playoff = false } = {}) {
+export function recordGame(F, game, res, { playoff = false, series = null } = {}) {
   const tot = playoff ? (F.ps ??= {}) : (F.ss ??= {})
   for (const [short, lines] of Object.entries(res.box)) for (const l of lines) {
     if (!(l.min > 0)) continue
     addLine((tot[l.i] ??= {}), l, short)
+    // a playoff series keeps its own lines (its MVP: awards.js seriesMvp)
+    if (series) addLine(((series.st ??= {})[l.i] ??= {}), l, short)
   }
   return tot
 }

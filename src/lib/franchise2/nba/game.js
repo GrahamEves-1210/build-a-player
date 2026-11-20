@@ -39,7 +39,7 @@ export const TUNE = {
   three: 0.5, rimBase: 0.6,   // the shot mix, an average player
   p3: 0.335, pRim: 0.595, pMid: 0.39,   // makes, an average shooter against an average defense
   skill3: 0.017, skillRim: 0.021, skillMid: 0.017,
-  def3: 0.011, defRim: 0.021, defMid: 0.01,
+  def3: 0.014, defRim: 0.025, defMid: 0.012,
   foulRim: 0.22, foulMid: 0.05, foul3: 0.014, andOne: 0.055,
   oreb: 0.228, blkRim: 0.34, blkMid: 0.07, blk3: 0.015,
   ast: { three: 0.82, rim: 0.56, mid: 0.4 },
@@ -74,7 +74,7 @@ export function newGame(G) {
 // ── Who's on the floor ─────────────────────────────────────────────────────────
 export const clutchTime = S => (S.per >= 4 && S.clock <= 300 && Math.abs(S.sc.h - S.sc.a) <= 5)
 export const lead = (S, k) => S.sc[k] - S.sc[other(k)]
-const trouble = (S, b) => (S.per <= 3 ? b.pf >= S.per + 1 : S.per === 4 ? b.pf >= 5 && S.clock > 360 : false)
+const trouble = (S, b) => (S.per <= 3 ? b.pf >= S.per + 1 : S.per === 4 ? b.pf >= 5 && S.clock > 240 : false)
 function lineup(S, k, start = false) {
   const T = S[k], L = T.rot
   const avail = T.men.filter(p => S.box[p.i].pf < 6 && !T.out.has(p.i))
@@ -137,7 +137,8 @@ function freeThrows(S, k, who, n, force = null) {
 function foulOn(S, d, kind = 'shoot') {
   const T = S[d]
   // who fouls: the bigs at the rim, anyone on the perimeter; a careless defender more than a smart one
-  const w = T.on.map(s => (kind === 'rim' ? (s.big ? 1.6 : 0.8) : 1) * (1.25 - s.iq * 0.04))
+  // (a man in foul trouble plays it safe: he stops reaching and doesn't contest the drive the same way)
+  const w = T.on.map((s, j) => { const pf = S.box[T.floor[j]].pf; return (kind === 'rim' ? (s.big ? 1.15 : 0.95) : 1) * (1.1 - s.iq * 0.015) * (pf >= 5 ? 0.35 : pf >= 4 ? 0.55 : pf >= 3 ? 0.8 : 1) })
   const id = wpick(S.R, T.floor, w)
   S.box[id].pf++
   T.fouls++
@@ -333,6 +334,11 @@ export function possession(G, short, o = {}) {
   if (who != null && !T.floor.includes(who)) {
     const out = [...T.floor].sort((x, y) => (T.rot.min[x] ?? 0) - (T.rot.min[y] ?? 0))[0]
     T.floor[T.floor.indexOf(out)] = who; T.on = T.floor.map(id => T.pr.get(id))
+  }
+  // (and the man who set it up)
+  if (o.ast != null && o.ast !== who && T.by.has(o.ast) && !T.floor.includes(o.ast)) {
+    const out = [...T.floor].filter(id => id !== who).sort((x, y) => (T.rot.min[x] ?? 0) - (T.rot.min[y] ?? 0))[0]
+    T.floor[T.floor.indexOf(out)] = o.ast; T.on = T.floor.map(id => T.pr.get(id))
   }
   const t = o.t ?? (o.kind === 'ft' ? 4 : 12)
   const pts = o.pts ?? 0

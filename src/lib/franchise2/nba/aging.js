@@ -27,8 +27,8 @@ const ATH = new Set(['speed', 'bounce'])
 const TOUCH = new Set(['jumpShot', 'passing', 'playmaking', 'basketballIQ', 'clutch'])
 const kindOf = t => (t === 'size' ? 'size' : ATH.has(t) ? 'ath' : TOUCH.has(t) ? 'touch' : 'body')
 // the decline, grade points a year by age: [legs, body, touch]
-const DECL = { 26: [0.1, 0, 0], 27: [0.2, 0.04, 0], 28: [0.32, 0.1, 0], 29: [0.45, 0.18, 0.02], 30: [0.6, 0.28, 0.05], 31: [0.75, 0.38, 0.08], 32: [0.9, 0.48, 0.12], 33: [1.0, 0.58, 0.17], 34: [1.1, 0.68, 0.24], 35: [1.2, 0.78, 0.3] }
-const declAt = ag => (ag < 26 ? [0, 0, 0] : DECL[Math.min(35, ag)])
+const DECL = { 26: [0.1, 0, 0], 27: [0.2, 0.04, 0], 28: [0.32, 0.1, 0], 29: [0.45, 0.18, 0.02], 30: [0.6, 0.28, 0.05], 31: [0.75, 0.38, 0.08], 32: [0.95, 0.52, 0.14], 33: [1.1, 0.66, 0.2], 34: [1.25, 0.8, 0.28], 35: [1.4, 0.95, 0.36], 36: [1.55, 1.1, 0.45] }
+const declAt = ag => (ag < 26 ? [0, 0, 0] : DECL[Math.min(36, ag)])
 // the share of the gap to his ceiling a young man closes in a year
 const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.21, 25: 0.18, 26: 0.14, 27: 0.08 }
 const typesOf = g => (g === 'big' ? BIG_TYPES : GUARD_TYPES)
@@ -39,7 +39,7 @@ export function ageMan(p, R, { mpg = null } = {}) {
   const o0 = p.o ?? ovrOf(p)
   // the ceiling moves while he's young: a bust's sinks, a riser's climbs (now and then a big jump: the pick who pops)
   if (ag <= 24) {
-    p.pk = (p.pk ?? o0) + R.n() * 1.7 + (R.u() < 0.035 ? 4 + R.u() * 6 : 0)
+    p.pk = (p.pk ?? o0) + R.n() * 1.7 - 0.3 + (R.u() < 0.03 ? 4 + R.u() * 6 : 0)
     p.pk = clamp(o0 - 2, 99, p.pk)
   }
   // growth: part of the gap, faster for a young man who played real minutes
@@ -79,12 +79,13 @@ export function ageMan(p, R, { mpg = null } = {}) {
 const RET = { 30: 0.01, 31: 0.04, 32: 0.08, 33: 0.14, 34: 0.22, 35: 0.33, 36: 0.46, 37: 0.6, 38: 0.72, 39: 0.82, 40: 0.9 }
 export function retireChance(p) {
   const o = p.o ?? 70, ag = p.ag
-  const shift = o >= 90 ? -4.5 : o >= 86 ? -3.5 : o >= 82 ? -2 : o >= 78 ? -0.5 : o >= 74 ? 0.5 : 1.5
+  const shift = o >= 90 ? -3.5 : o >= 86 ? -2.5 : o >= 82 ? -1.5 : o >= 78 ? -0.5 : o >= 74 ? 0.5 : 1.5
   const eff = ag + shift
   let c = eff < 30 ? 0 : eff >= 41 ? 0.95 : RET[Math.floor(eff)] + (RET[Math.min(40, Math.floor(eff) + 1)] - RET[Math.floor(eff)]) * (eff % 1)
   // a man out of the league's level (the end of a bench, nobody's rotation) leaves earlier
   if (o < 70 && ag >= 27) c = Math.max(c, 0.12 + (ag - 27) * 0.06)
-  if (ag >= 43) c = 1
+  // (the forties: almost nobody; LeBron, Vince Carter and a handful of others)
+  if (ag >= 40) c = Math.max(c, 0.5 + (ag - 40) * 0.2)
   return clamp(0, 1, c)
 }
 
@@ -159,12 +160,12 @@ export function attrsFor(spot, o, R) {
   return a
 }
 // the ceiling the class's nth best prospect has, on average, and how far from it a 19-, 20-, 21-year-old is
-const pkMean = rank => 88 - 2.6 * Math.pow(Math.log(Math.max(1, rank)), 1.4)
+const pkMean = rank => 86.5 - 2.6 * Math.pow(Math.log(Math.max(1, rank)), 1.4)
 export function prospect(R, { rank = 30, spot = null, ag = null } = {}) {
   const sp = spot ?? R.pick(['PG', 'SG', 'SG', 'SF', 'SF', 'PF', 'PF', 'C'])
   const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22]))
   // right-skewed: most land near their slot, a few are far better (one pick in twenty)
-  let pk = pkMean(rank) + R.n() * 4.5 + (R.u() < 0.05 ? 5 + R.u() * 7 : 0)
+  let pk = pkMean(rank) + R.n() * 4.5 + (R.u() < 0.04 ? 5 + R.u() * 7 : 0)
   pk = clamp(60, 97, pk)
   const gap = Math.max(1, (25 - age) * 2 + 1 + R.n() * 2.5)
   const o = clamp(55, 84, Math.round(pk - gap))
@@ -175,6 +176,6 @@ export function prospect(R, { rank = 30, spot = null, ag = null } = {}) {
 export function seedPotential(p, R) {
   if (p.pk != null) return p
   const room = Math.max(0, 27 - p.ag)
-  p.pk = Math.round(clamp(p.o ?? 70, 99, (p.o ?? 70) + room * (1.1 + R.u() * 1.6) + R.n() * 2))
+  p.pk = Math.round(clamp(p.o ?? 70, 99, (p.o ?? 70) + room * (0.6 + R.u() * 1.4) + R.n() * 2.5))
   return p
 }

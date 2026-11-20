@@ -13,7 +13,7 @@
 //         { order: [ids] }     his order for the bench
 //         { min: { id: m } }   minutes he wants for a man (0 = out of the rotation); the rest are scaled to fill 240
 //   startersOf(players)        the coach's best five: at least one ball-handler, one or two bigs, no more than three
-//   MIN_CAP                    the most a target can be (40: nobody plays 44 a night in the modern league)
+//   MIN_CAP                    the most a target can be (38: the league's minutes leaders play 36-38 now)
 import { prof, groupOf } from './skills'
 
 // tonight's men: under contract, not hurt, not resting (a two-way man dresses too; the coach rarely plays him)
@@ -24,7 +24,7 @@ export function rotationOf(F, short) {
   return L.order.filter(i => L.min[i] > 0).map(i => ({ i, st: L.st.includes(i), min: L.min[i] }))
 }
 
-export const MIN_CAP = 40
+export const MIN_CAP = 38
 export const GAME_MIN = 240
 const ovr = p => p.o ?? 70
 // the regular-season shape of a rotation (minutes by slot, a 9-to-10-man night)
