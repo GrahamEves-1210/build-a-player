@@ -252,6 +252,7 @@ const PKG = [1, 0.7, 0.5, 0.35, 0.25]
 function roomOf(F, s, g, gone) {
   return depthChart(F, s)[g].filter(x => !x.fl && !x.in && !gone.has(x.i)).map(x => x.o)
 }
+const recentTx = (F, p) => p.tx?.[2] === winKey(F) && (F.phase !== 'season' || F.wk - (p.tx[3] ?? 0) < 6)
 function inValue(F, s, p, gone, sit) {
   const g = groupOf(p), n = GROUP[g].n
   const room = roomOf(F, s, g, gone)
@@ -262,7 +263,11 @@ function inValue(F, s, p, gone, sit) {
   let m = 1
   if (sit === 'reb') m = p.ag >= 29 ? 0.55 : p.ag >= 27 ? 0.8 : p.ag <= 25 ? 1.15 : 1
   else if (sit === 'win') m = p.ag >= 26 && ahead < n ? 1.1 : 1
-  return { v: valueOf(F, p) * role * m, role, m }
+  let v = valueOf(F, p) * role * m
+  // (a man the player's team just traded for: the league knows what he cost, and nobody pays more than that for him
+  // until the next window, or six weeks on in the season)
+  if (p.tx?.[4] != null && s !== F.team && recentTx(F, p)) v = Math.min(v, p.tx[4] * 0.95)
+  return { v, role, m }
 }
 function outValue(F, s, p, sit) {
   const g = groupOf(p), n = GROUP[g].n
@@ -367,6 +372,13 @@ export function decide(F, s, give, get, { user = true } = {}) {
   if (!capOk(cap)) return { ok: false, why: 'cap' }
   const side = teamSide(F, s, { pl: gm, pk: gk }, { pl: tm, pk: tk })
   if (side.in <= 1) return { ok: false, why: 'nothing', side, short: Infinity }
+  // a front-line player goes only for a real piece back: one player or pick worth at least half of him, never a pile
+  // of backups (the best of what comes back, as this team sees it)
+  if (user) {
+    const sit = side.sit, top = Math.max(0, ...tm.map(p => outValue(F, s, p, sit)))
+    const best = Math.max(0, ...side.ins.map(x => x.v), ...gk.map(k => pickWorth(F, k) * pickMod(sit)))
+    if (top >= 120 && best < top * 0.5) return { ok: false, why: 'star', side, short: Infinity, who: tm.sort((a, b) => b.o - a.o)[0] }
+  }
   const need = user ? marginOf(F, s, side.out) : Math.max(10, side.out * 0.03)
   const short = need - side.gain
   return { ok: short <= 0, why: short <= 0 ? 'yes' : side.why ?? 'short', short, side, need }
@@ -384,6 +396,7 @@ export function sayOf(F, s, d, counter = false) {
     case 'cap': return `The ${N} can't fit the money under the cap.`
     case 'calls': return `The ${N} have stopped taking calls this week.`
     case 'nothing': return `The ${N} want something back.`
+    case 'star': return `The ${N} want a front-line player or a high pick for ${who}, not depth.`
     case 'set': return `The ${N} are set at that spot. Not enough value coming back.`
     case 'reb': return `The ${N} are rebuilding. They want picks and young players, not veterans.`
     default: return d.short <= (d.need ?? 30) * 1.5 ? `The ${N} want a little more.` : `The ${N} say the offer isn't close.`
@@ -436,7 +449,7 @@ export function gauge(F, s, give, get) {
 export const leanText = (F, s, lean) => (Math.abs(lean) < 0.08 ? 'EVEN' : `${lean > 0 ? nick(F.team) : nick(s)} ${Math.abs(lean) >= 0.35 ? 'WIN BIG' : 'COME OUT AHEAD'}`.toUpperCase())
 
 // ── Making a trade ───────────────────────────────────────────────────────────
-function moveMan(F, from, to, p, ly) {
+function moveMan(F, from, to, p, ly, paid = null) {
   const t = F.teams[from], u = F.teams[to]
   const dead = deadOn(p)
   t.r = t.r.filter(x => x !== p)
@@ -448,7 +461,7 @@ function moveMan(F, from, to, p, ly) {
     if (Array.isArray(p.sc)) p.sc = p.sc.map(v => r1(Math.max(minimumFor(p.ag, 2026), v - g)))
     p.g = 0
   }
-  p.tx = [from, ly]
+  p.tx = [from, ly, winKey(F), F.wk ?? 0, ...(paid != null ? [Math.round(paid)] : [])]
   // (a filler in his room goes: he's the backup now)
   const fl = u.r.find(x => x.fl && x.p === p.p && groupOf(x) === groupOf(p))
   if (fl) u.r = u.r.filter(x => x !== fl)
@@ -489,8 +502,11 @@ function execute(F, a, b, aMen, aPk, bMen, bPk, user) {
   // (what each side sent, the league's way, as it stood: the headless checks read it)
   const gv = [aMen, bMen].map((m, j) => Math.round(pkgOf(m.map(p => valueOf(F, p))) + (j ? bPk : aPk).reduce((x, k) => x + pickWorth(F, k), 0)))
   const cutA = releasesFor(F, a, aMen, bMen) ?? [], cutB = releasesFor(F, b, bMen, aMen) ?? []
-  for (const p of aMen) moveMan(F, a, b, p, ly)
-  for (const p of bMen) moveMan(F, b, a, p, ly)
+  // (what the player's team paid for each man it gets: its side's value, shared by what each man is worth)
+  const paidFor = (men, pk, sent) => { const vals = men.map(p => valueOf(F, p)), tot = vals.reduce((x, v) => x + v, 0) + pk.reduce((x, k) => x + pickWorth(F, k), 0); return vals.map(v => (tot > 0 ? sent * v / tot : 0)) }
+  const paidB = b === F.team ? paidFor(aMen, aPk, gv[1]) : [], paidA = a === F.team ? paidFor(bMen, bPk, gv[0]) : []
+  aMen.forEach((p, j) => moveMan(F, a, b, p, ly, paidB[j] ?? null))
+  bMen.forEach((p, j) => moveMan(F, b, a, p, ly, paidA[j] ?? null))
   for (const k of aPk) setOwner(F, k, b)
   for (const k of bPk) setOwner(F, k, a)
   // (the men released to make room: on the street, where any team can sign them)
