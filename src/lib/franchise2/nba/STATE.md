@@ -205,6 +205,15 @@ cpuDeadline(F, day) -> [news]                          // CPU-CPU deals before t
 
 ## Proposed
 
+### Core, 2026-11-19 (for B)
+
+- `canSign`: the offseason roster limit is 21 (standard + Exhibit 10 men together), 15 standard from opening night; the
+  draft lands first-rounders on the roster before free agency, so a full 15 in July must still be able to sign.
+- The street: core keeps the best 55 unsigned men at each new season (offseason.js pruneStreet) and drops the rest;
+  B's market should treat F.fa as the whole pool.
+- Career rows are core's (offseason.js carRow, CAR_K): `{ y, s, gp, min, pts, reb, ast, stl, blk, fgm, fga, tpm, po? }`,
+  the oldest folded into one `{ y, y2, s: '' }` row past six seasons. Saves pack men as rows (index.js).
+
 (B and C: add requests here)
 
 ### C (sim), 2026-11-19

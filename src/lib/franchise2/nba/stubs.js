@@ -141,7 +141,7 @@ const marketOf = (F, p) => r1(clamp(minOf(p.ys ?? 0, F.year), maxOf(p.ys ?? 0, F
 export function canSign(F, s, p, deal) {
   if (F.noCap && s === F.team) return { ok: true, via: 'room' }
   const n = F.teams[s].r.filter(x => !x.tw).length
-  if (n >= ROSTER_MAX) return { ok: false, why: 'Roster full' }
+  if (n >= (F.phase === 'off' ? 21 : ROSTER_MAX)) return { ok: false, why: 'Roster full' }   // (21 in the offseason, 15 from opening night)
   const c = capSheet(F, s)
   if (deal.$ <= c.room) return { ok: true, via: 'room' }
   if (deal.$ <= minOf(p.ys ?? 0, F.year) + 0.01) return { ok: true, via: 'min' }
