@@ -80,7 +80,7 @@ export function openResign(F) {
         const tagIt = tg != null && tg <= ask.$ * 1.5 && (roomAhead(F, s, 1) < ask.$ || R.u() < 0.3)
         // (a man worth keeping: the room made by restructures if it isn't there; a young star's, by releases too)
         const cost = tagIt ? tg : ask.$
-        if (!canSign(F, cost, s) && p.o >= 82 && starts) { if (young) capComply(F, s, on, cost); else makeRoom(F, s, cost) }
+        if (!canSign(F, cost, s) && p.o >= 82 && (starts || young)) { if (young) capComply(F, s, on, cost); else makeRoom(F, s, cost) }
         if (tagIt && canSign(F, tg, s)) { signDeal(p, { $: tg, y: 1, g: tg }); p.tx = (p.tx ?? 0) + 1; t.tag = yr; F.ext.push([p.i, p.n, p.p, s, tg, 1, p.o, 'tag']); continue }
         if (canSign(F, ask.$, s)) { signDeal(p, ask); if (p.o >= 85) F.ext.push([p.i, p.n, p.p, s, p.$, p.y, p.o, 'rs']); continue }
         // (the deal won't fit: the tag, if it will)
