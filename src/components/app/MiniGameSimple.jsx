@@ -1429,7 +1429,7 @@ function BucketShot({ v, zone, speed, drive, ended, onShot, tapRef }) {
     if (done.current || ended.current) return
     done.current = true
     const ts = pressAt(e), p = at(ts) * 100, j = judgeBar(p, zone, width, dir(ts))
-    stop(p); flash(zoneEl.current, j.hit ? 'hit' : 'miss'); say(fx.current, j.hit ? (drive ? 'AND IN' : 'BUCKET') : j.word, j.hit ? 'hit' : 'miss')
+    stop(p); flash(zoneEl.current, j.hit ? 'hit' : 'miss'); say(fx.current, j.hit ? (drive ? 'LAYUP' : 'BUCKET') : j.word, j.hit ? 'hit' : 'miss')
     j.hit ? good(j.q >= 0.85) : bad()
     onShot(j)
   }

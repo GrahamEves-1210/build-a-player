@@ -450,7 +450,7 @@ export function make({ v, seed, cast, situation = null }) {
         g.fx.push('make', s.kind === 'dunk' ? 'stamp' : 'h:medium')
         if (s.kind === 'dunk') { g.nudge.kick(g.t, 5, 0, 1, 240); g.fx.push('h:heavy') }
         if (g.sit) g.sit = { ...g.sit, mine: g.sit.mine + pts }
-        const word = s.buzzer ? 'AT THE BUZZER' : s.kind === 'dunk' ? 'SLAM' : s.kind === 'layup' ? 'AND IN' : s.three && s.kind2 === 'swish' ? 'SPLASH' : s.kind2 === 'swish' ? 'SWISH' : 'BUCKET'
+        const word = s.buzzer ? 'AT THE BUZZER' : s.kind === 'dunk' ? 'SLAM' : s.kind === 'layup' ? 'LAYUP' : s.three && s.kind2 === 'swish' ? 'SPLASH' : s.kind2 === 'swish' ? 'SWISH' : 'BUCKET'
         const open = 1 - s.contest
         end(clamp(0.6 + (s.three ? 0.12 : 0) + 0.16 * s.res.q + 0.12 * open, 0, 1), true, `${s.three ? 'A three' : s.kind === 'dunk' ? 'A dunk' : s.kind === 'layup' ? 'A layup' : 'A two'}${s.contest > 0.6 ? ', contested' : s.contest < 0.2 ? ', wide open' : ''}`, word, 1, pts)
       } else {
