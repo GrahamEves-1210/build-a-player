@@ -96,7 +96,8 @@ export function appImage(src) {
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
   } else if ((m = SALARY.exec(src))) {
-    out = salaryArt(m[1])
+    // (football and basketball: a real shot of the app's own board, jerseys and five picked, owner 11-19)
+    out = m[1] === 'nfl' || m[1] === 'bucket' ? `/modes/app-${m[1]}-salary.webp` : salaryArt(m[1])
   } else out = src
   if (cache.size > 4000) cache.clear()
   cache.set(src, out)
