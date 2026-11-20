@@ -91,6 +91,13 @@ function scrimCast(cast) {
   return { me: cast?.me ?? null, pace, us, them, themPace, mate: null }
 }
 const SNAP_MS = 750
+// (2026-11-19, a player: "I think I've won Ashton Jeanty 4 MVPs with 45 TDs in a season". The run from scrimmage was a
+// kick return's open field: the back outran the secondary and broke half the tackles he met, so a good player took
+// one in five to the house from his own 25 and averaged 14 yards a carry. An NFL back is no faster than the corners
+// and safeties chasing him, and a tackle at the line is a square one. SCRIM_V: the defense's speeds, yards a second;
+// SCRIM_BRK: his chance of breaking a tackle, against a kick return's)
+const SCRIM_V = { front: 7.6, backers: 8.9, cb: 10.5, s: 10.4 }
+const SCRIM_BRK = 0.6
 // where the play is drawn to: the gap off the ball (yards across from the ball, toward the play's side)
 const HOLE = { inside: 2.3, power: 4.6, outside: 9, draw: 1.2 }
 // the scrimmage play's line-up, in yards: across from the middle (sd: the play's side), up the field from the line
@@ -154,11 +161,11 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
     const D = (i, x, d, v, extra = {}) => ({ i, k: false, safe: false, x, d, vx: 0, vd: 0, lane: x, eng: null, down: 0, tried: -1e9, v: v * (who.themPace[i] ?? 1) * (0.96 + r() * 0.08), ...extra })
     const { front, backers } = SCRIM
     cover.length = 0
-    front.forEach((dx, i) => cover.push(D(i, MID + dx, L + 0.9, 7.6)))
+    front.forEach((dx, i) => cover.push(D(i, MID + dx, L + 0.9, SCRIM_V.front)))
     // (the second level reads it before it comes: the backers a beat, the corners and the safeties longer)
-    backers.forEach((dx, i) => cover.push(D(4 + i, MID + dx, L + 4.6 + r() * 0.8, 8.6, { hold: SNAP_MS + 330 + r() * 150 })))
-    cover.push(D(7, 6.5, L + 6.5, 9.4, { hold: SNAP_MS + 520 }), D(8, W_YD - 6.5, L + 6.5, 9.4, { hold: SNAP_MS + 520 }))
-    cover.push(D(9, MID - 7, L + 11, 9.2, { safe: true, hold: SNAP_MS + 600 }), D(10, MID + 7, L + 12.5, 9.2, { safe: true, hold: SNAP_MS + 600 }))
+    backers.forEach((dx, i) => cover.push(D(4 + i, MID + dx, L + 4.6 + r() * 0.8, SCRIM_V.backers, { hold: SNAP_MS + 330 + r() * 150 })))
+    cover.push(D(7, 6.5, L + 6.5, SCRIM_V.cb, { hold: SNAP_MS + 520 }), D(8, W_YD - 6.5, L + 6.5, SCRIM_V.cb, { hold: SNAP_MS + 520 }))
+    cover.push(D(9, MID - 7, L + 11, SCRIM_V.s, { safe: true, hold: SNAP_MS + 600 }), D(10, MID + 7, L + 12.5, SCRIM_V.s, { safe: true, hold: SNAP_MS + 600 }))
     const O = (i, x, d, extra = {}) => ({ i, mate: false, x, d, vx: 0, vd: 0, tgt: null, eng: null, re: 0, beaten: 0, shedAt: 0, ...extra })
     ours.length = 0
     SCRIM.ol.forEach((dx, i) => ours.push(O(i, MID + dx, L - 0.7)))
@@ -467,6 +474,7 @@ export function make({ v, seed, cast, pos, game = null, situation = null }) {
       if (jk) p += W.juke
       if (c.eng != null) p = 0.55 + p * 0.45     // (reaching out of a block)
       if (c.k) p += 0.08
+      if (scrim) p *= SCRIM_BRK
       if (r() < clamp(p, 0.02, 0.88)) {
         // through it: he's down, and he's lost a step
         c.down = g.t + 1100; c.fellAt = g.t; c.fellX = Math.sign(dx || 1)
