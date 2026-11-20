@@ -1427,7 +1427,7 @@ function TradeOverlay({ res, onClose }) {
         <span className="ag-eyebrow">{res.deadline ? 'TRADE DEADLINE' : 'TRADE REQUEST'} · {res.granted ? 'GRANTED' : 'DENIED'}</span>
         <img className="cr-trade-logo" src={S.logo(t.short)} alt="" />
         <h2 className="ag-ring-title">{res.granted ? `TRADED TO THE ${t.name.toUpperCase()}` : 'REQUEST DENIED'}</h2>
-        <span className="ag-ring-score">{res.granted ? (res.deadline ? `${res.c.name} finishes the season with the ${t.nick ?? nick(t.name)}.` : `${res.c.name} is a ${t.nick ?? nick(t.name)} now.`) : `The ${t.nick ?? nick(t.name)} said no, and the locker room heard about it.`}</span>
+        <span className="ag-ring-score">{res.granted ? (res.deadline ? `${res.c.name} finishes the season with the ${t.nick ?? nick(t.name)}.` : `${res.c.name} reports to the ${t.nick ?? nick(t.name)} for camp.`) : `The ${t.nick ?? nick(t.name)} said no, and the locker room heard about it.`}</span>
         <span className="sm-honor-line">Reputation −2</span>
         <span className="ag-ring-count">TAP TO CONTINUE</span>
       </div>
