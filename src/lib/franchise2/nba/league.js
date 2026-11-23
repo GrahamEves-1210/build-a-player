@@ -6,6 +6,7 @@ import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../../../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../../../data/nba-bigs'
 import { BIRTH_NBA } from '../../../data/player-ages'
 import NBA_HEADSHOTS from '../../../data/nba-headshots.json'
+import { NBA_DEALS, NBA_DEAD } from '../../../data/nba-contracts'
 import { calcBucketOVR } from '../../../utils/bucketSimulation'
 import { HEADSHOT_BASE } from '../../../utils/simulation'
 import { nameFor } from '../names'
@@ -70,17 +71,36 @@ export function peakFor(R, o, ag) {
 }
 const servedFrom = ag => clamp(0, 20, ag - 20)
 
-// the real 2026 draft class the rosters already carry: rookies in the first season (Rookie of the Year is theirs);
-// the rest of the teenagers on the rosters came in 2025 and have a season in
-export const ROOKIES_2026 = new Set(['AJ Dybantsa', 'Cameron Boozer', 'Caleb Wilson', 'Chris Cenac Jr.', 'Darius Acuff Jr.', 'Darryn Peterson', 'Jayden Quaintance',
-  'Keaton Wagler', 'Kingston Flemings', 'Koa Peat', 'Labaron Philon Jr.', 'Mikel Brown Jr.', 'Morez Johnson Jr.', 'Nate Ament', 'Hannes Steinbach', 'Christian Anderson'])
+// ── The real deals (data/nba-contracts.js) ───────────────────────────────────
+// by name, spelled loosely (the data's names and Basketball-Reference's differ in accents and suffixes)
+const looseName = n => String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[.']/g, '').replace(/ (jr|sr|ii|iii|iv)$/, '').replace(/-/g, ' ').trim()
+let DEALS = null
+const dealsByName = () => DEALS ?? (DEALS = new Map(Object.entries(NBA_DEALS).map(([n, d]) => [looseName(n), { n, ...d }])))
+export const realDeal = name => dealsByName().get(looseName(name)) ?? null
+// the real 2026 draft class the rosters carry (the 2026 picks, and anyone else in his first season): rookies in the
+// first season (Rookie of the Year is theirs)
+export const ROOKIES_2026 = new Set(Object.entries(NBA_DEALS).filter(([, d]) => d.dr?.[0] === 2026 || d.ys === 0).map(([n]) => n))
 export function makeReal(F, r, R) {
   const ag = ageIn(r.name, F.year) ?? R.int(22, 30)
-  const p = { i: F.nid++, n: r.name, p: r.spot, g: r.g, o: r.o, ag, a: { ...r.a }, ht: r.ht, wt: r.wt, num: r.num, ys: servedFrom(ag), h: 1 }
-  if (ROOKIES_2026.has(r.name)) { p.rk = FIRST_YEAR; p.ys = 0 }
-  else if (BIRTH_NBA[r.name] >= 2006) p.ys = 1
+  const d = realDeal(r.name)
+  const p = { i: F.nid++, n: r.name, p: r.spot, g: r.g, o: r.o, ag, a: { ...r.a }, ht: r.ht, wt: r.wt, num: r.num, ys: d?.ys ?? servedFrom(ag), h: 1 }
+  // (his service is real: the seasons since he came in, not his age)
+  if (d?.dr) p.dr = [...d.dr]
+  if (d ? d.ys === 0 || d.dr?.[0] === FIRST_YEAR : ROOKIES_2026.has(r.name)) { p.rk = FIRST_YEAR; p.ys = 0 }
+  else if (!d && BIRTH_NBA[r.name] >= 2006) p.ys = 1
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
   return p
+}
+// the deal a man starts on, for contracts.js dealOnLoad: { s: team, $, sc, opt, rs, ng, sg, x, b, rt } (his real
+// deal; a man on another team's books in real life keeps the money, not the rights) or { s, min: 1 } (the minimum:
+// a man with no deal in the data, or a made-up man past the real men's deals) or the team alone (a two-way deal)
+function loadRow(s, d, p = null) {
+  if (p?.tw) return s
+  if (!d || !(d.s?.length > 0)) return { s, min: 1 }
+  const [$, ...sc] = d.s
+  const own = d.t === s
+  return { s, $, sc, y: d.s.length, opt: d.o ? { k: d.o[0], yr: +d.o.slice(1) } : null, rs: d.rs ? 1 : 0, ng: d.ng ? 1 : 0, sg: d.sg ?? null, x: d.x ?? null,
+    b: own ? d.b ?? 0 : 0, rt: own && d.rt ? d.rt : null }
 }
 
 // ── The made-up men: the end of the bench, the two-way men, the street ──────
@@ -123,33 +143,62 @@ export function leagueNames(F) {
 }
 
 // ── The league at the start ──────────────────────────────────────────────────
-// each team: its real men (best fourteen or fifteen on standard deals; a sixteenth and beyond on two-way deals if
-// he's young, else the street), then made-up men to fifteen and two two-way men
+// each team: its real men (best fifteen on standard deals, the men on real two-way deals on two-way deals; a
+// sixteenth and beyond on two-way deals if he's young, else the street), then made-up men to fifteen and three
+// two-way men. The made-up men take the deals of the real men on the roster the game doesn't carry, best first (so a
+// payroll is the real one); any more are on the minimum. The waived men still on a team's books go on as dead money.
 export function buildTeams(F, { dealOnLoad } = {}) {
   const R = rngOf(`${F.seed}-nba-league`)
   F.teams = {}
   const taken = new Set(realNames())
   for (const s of SHORTS) F.teams[s] = { s, conf: CONF_OF[s], div: DIV_OF[s], r: [], rot: null, min: null }
   F.fa = F.fa ?? []
+  const carried = new Set(realPool().map(r => realDeal(r.name)?.n).filter(Boolean))
+  const rows = new Map()
   for (const s of SHORTS) {
     const real = realPool().filter(r => r.team === s).sort((a, b) => b.o - a.o)
     const men = real.map(r => makeReal(F, r, R))
     const t = F.teams[s]
-    men.forEach((p, k) => {
-      if (k < ROSTER_MAX) t.r.push(p)
-      else if (p.ag <= 24 && t.r.filter(x => x.tw).length < TWO_WAY_MAX) { p.tw = 1; t.r.push(p) }
+    const tws = () => t.r.filter(x => x.tw).length
+    // (the men on real two-way deals first, so a real two-way man doesn't take a standard spot)
+    for (const p of men) if (realDeal(p.n)?.tw && tws() < TWO_WAY_MAX && (p.ys ?? 0) <= 4) { p.tw = 1; t.r.push(p) }
+    men.filter(p => !p.tw).forEach(p => {
+      const std = t.r.filter(x => !x.tw).length
+      if (std < ROSTER_MAX) t.r.push(p)
+      else if (p.ag <= 24 && tws() < TWO_WAY_MAX) { p.tw = 1; t.r.push(p) }
       else F.fa.push(p)
     })
-    fillTeam(F, s, R, taken)
+    for (const p of t.r) rows.set(p.i, loadRow(s, realDeal(p.n), p))
+    // (to the real roster's size: fifteen standard men, or fourteen where the team carries fourteen, as a team
+    // staying under the tax does)
+    const realStd = Object.values(NBA_DEALS).filter(d => d.t === s && !d.tw).length
+    const made = fillTeam(F, s, R, taken, { twoWay: TWO_WAY_MAX, std: clamp(14, ROSTER_MAX, realStd) })
+    // (the real deals on this roster no man the game carries holds, best first, for the made-up men, best first)
+    const open = Object.entries(NBA_DEALS).filter(([n, d]) => d.t === s && !d.tw && d.s?.length && !carried.has(n)).map(([, d]) => d).sort((a, b) => b.s[0] - a.s[0])
+    made.filter(p => !p.tw).sort((a, b) => b.o - a.o).forEach((p, k) => rows.set(p.i, open[k] ? loadRow(s, { ...open[k], b: 0, rt: null }) : { s, min: 1 }))
+    t.dead = deadOf(s)
   }
-  if (dealOnLoad) for (const s of SHORTS) for (const p of F.teams[s].r) dealOnLoad(F, p, s)
+  if (dealOnLoad) for (const s of SHORTS) for (const p of F.teams[s].r) dealOnLoad(F, p, rows.get(p.i) ?? s)
   return F
 }
-// a roster short of fifteen standard men (and two two-way men): made-up men at the spots it's thinnest at
-export function fillTeam(F, s, R, taken = leagueNames(F), { twoWay = 2 } = {}) {
+// a team's waived men still on its books: { n, $, y, from, to } (a run of seasons at the same money each)
+function deadOf(s) {
+  const out = []
+  for (const [n, sal] of NBA_DEAD[s] ?? []) {
+    sal.forEach(($, k) => {
+      const yr = FIRST_YEAR + k, last = out[out.length - 1]
+      if (last && last.n === n && last.$ === $ && last.to === yr - 1) { last.to = yr; last.y++ }
+      else out.push({ n, $, y: k + 1, from: yr, to: yr })
+    })
+  }
+  return out
+}
+// a roster short of fifteen standard men (or `std`), and of `twoWay` two-way men: made-up men at the spots it's
+// thinnest at
+export function fillTeam(F, s, R, taken = leagueNames(F), { twoWay = 2, std: want = ROSTER_MAX } = {}) {
   const t = F.teams[s], made = []
   const std = () => t.r.filter(p => !p.tw)
-  while (std().length < ROSTER_MAX) {
+  while (std().length < want) {
     const spot = thinSpot(std())
     const p = makeGen(F, spot, R, { o: clamp(60, 73, Math.round(67 + R.n() * 2.5)), ag: R.int(23, 31), taken })
     taken.add(p.n); t.r.push(p); made.push(p)
