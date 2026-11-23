@@ -317,7 +317,9 @@ export function newSeason(F) {
   F.phase = 'season'
   F.off = null
   F.ss = {}; F.ps = {}; F.po = null; F.log = []; F.box = []; F.asDone = 0; F.as = null; F.pend = null
-  for (const s of SHORTS) { F.teams[s].dead = (F.teams[s].dead ?? []).map(d => ({ ...d, y: d.y - 1 })).filter(d => d.y > 0) }
+  // (dead money ages once a league year: y is the seasons left from the new season through `to`, whether he was
+  // waived in the season, at the re-sign stop, in free agency or in camp; an old entry with no `to` counts y down)
+  for (const s of SHORTS) { F.teams[s].dead = (F.teams[s].dead ?? []).map(d => ({ ...d, y: d.to != null ? d.to - F.year + 1 : d.y - 1 })).filter(d => d.y > 0) }
   makeSchedule(F)
   makePicks(F)
   makeClass(F)
