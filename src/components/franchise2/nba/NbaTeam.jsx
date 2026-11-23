@@ -6,6 +6,7 @@ import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
 import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar } from '../kit'
 import { money } from './NbaHub'
+import { Rotation, PlayerSheet } from './NbaRoster'
 
 // THE TEAM: the rotation (the order the coach plays them in: the first five start), the cap, the two-way men,
 // a man's page (his deal, his career, move him in the rotation, waive him) and trades.
@@ -16,31 +17,14 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
   const [man, setMan] = useState(null)
   if (view === 'trades') return <Trades F={F} act={act} onBack={() => setView(null)} />
   const t = F.teams[F.team]
-  const rot = CAP_SIM.rotationOf(F, F.team, { playoff: F.phase === 'playin' || F.phase === 'playoffs' })
-  const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
-  const order = coachOrder(F, F.team, CAP_SIM.rotationOf).filter(p => !p.tw)
-  const hurt = t.r.filter(p => p.inj?.g && !p.tw)
   const tw = t.r.filter(p => p.tw)
   const canTrade = F.phase === 'off' || (F.phase === 'season' && F.day <= F.ddl)
   return (
     <div className="nb-team">
       <CapBar F={F} />
       {canTrade && <button type="button" className="fh-row" onClick={() => { setView('trades'); sfx('tap') }}><span><small>Trades</small><b>{F.phase === 'season' ? `Deadline ${F.ddl - F.day <= 0 ? 'today' : `in ${F.ddl - F.day} days`}` : 'Open for the summer'}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>}
-      <Chyron team={F.team} title="Rotation" sub={`TEAM OVR ${teamOvr(F, F.team)} · ${t.r.filter(p => !p.tw).length} OF ${ROSTER_MAX} STANDARD`} right={t.rot ? <button type="button" className="nb-auto" onClick={() => act(X => { X.teams[X.team].rot = null })}>AUTO</button> : null} />
-      <div className="nb-rot">
-        {order.map((p, k) => (
-          <div key={p.i} className="nb-rot-row">
-            <span className="nb-rot-k">{k < 5 ? 'START' : mins[p.i] ? `${mins[p.i]} MIN` : 'DNP'}</span>
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={ppg(F, p) ?? `AGE ${p.ag} · ${dealText(p)}`} onClick={() => { setMan(p.i); sfx('tap') }} />
-          </div>
-        ))}
-        {hurt.map(p => (
-          <div key={p.i} className="nb-rot-row is-out">
-            <span className="nb-rot-k"><Tag tone="inj">OUT</Tag></span>
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`${p.inj.k.toUpperCase()} · ${p.inj.g} G`} onClick={() => setMan(p.i)} />
-          </div>
-        ))}
-      </div>
+      {/* (the rotation, its edit and a man's page: NbaRoster.jsx) */}
+      <Rotation F={F} act={act} owner={owner} onMan={setMan} />
       {tw.length > 0 && (
         <>
           <Chyron tone="ink" size="s" title="Two-way contracts" sub={`${tw.length} OF 3`} />
@@ -50,7 +34,7 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
       <Fold title="Draft picks" right={`${picksOf(F, F.team).filter(p => p.r === 1).length} firsts`}>
         <ul className="nb-picks">{picksOf(F, F.team).map(p => <li key={`${p.y}${p.r}${p.o}`}>{pickText(F, p)}</li>)}</ul>
       </Fold>
-      {man != null && <ManSheet F={F} act={act} id={man} owner={owner} onClose={() => setMan(null)} />}
+      {man != null && <PlayerSheet F={F} act={act} id={man} owner={owner} onClose={() => setMan(null)} />}
     </div>
   )
 }
@@ -60,7 +44,7 @@ export function CapBar({ F, s = F.team }) {
   const holds = F.phase === 'off' ? c.pay - CAP_SIM.payroll(F, s, CAP_SIM.capYear(F), { holds: false }) : 0
   const top = Math.max(c.a2 * 1.06, c.pay * 1.03)
   const at = v => `${Math.min(100, (v / top) * 100)}%`
-  const OVER = { under: `${money(c.room)} in cap room`, cap: 'Over the cap', tax: `In the tax · bill ${money(c.bill)}`, a1: `Over the first apron · bill ${money(c.bill)}`, a2: `Over the second apron · bill ${money(c.bill)}` }
+  const OVER = { under: `${money(c.room)} in cap room`, cap: 'Over the cap', tax: `In the tax · ${money(c.bill)} luxury tax`, a1: `Over the first apron · ${money(c.bill)} luxury tax`, a2: `Over the second apron · ${money(c.bill)} luxury tax` }
   return (
     <section className={`nb-cap is-${c.over}`}>
       <div className="nb-cap-h"><b>{money(c.pay)}</b><span>{F.noCap && s === F.team ? 'No salary cap' : OVER[c.over]}</span></div>
@@ -71,63 +55,6 @@ export function CapBar({ F, s = F.team }) {
       </div>
       <div className="nb-cap-k"><span>Cap {money(c.cap)}</span><span>Tax {money(c.tax)}</span><span>Aprons {money(c.a1)} / {money(c.a2)}</span></div>
     </section>
-  )
-}
-
-function ManSheet({ F, act, id, owner, onClose }) {
-  const t = F.teams[F.team]
-  const p = t.r.find(x => x.i === id)
-  const [sure, setSure] = useState(false)
-  if (!p) return null
-  const order = coachOrder(F, F.team, CAP_SIM.rotationOf).filter(x => !x.tw)
-  const k = order.findIndex(x => x.i === id)
-  const move = d => act(X => {
-    const ids = coachOrder(X, X.team, CAP_SIM.rotationOf).filter(x => !x.tw).map(x => x.i)
-    const j = ids.indexOf(id), to = j + d
-    if (j < 0 || to < 0 || to >= ids.length) return
-    ;[ids[j], ids[to]] = [ids[to], ids[j]]
-    X.teams[X.team].rot = ids
-  })
-  const cost = CAP_SIM.cutCost(F, p), costS = CAP_SIM.cutCost(F, p, { stretch: true })
-  const dead = cost?.total ?? cost?.$ ?? (typeof cost === 'number' ? cost : 0)
-  const canStretch = costS && (costS.per ?? costS.$) != null && (costS.years ?? costS.y ?? 0) > (cost?.years ?? cost?.y ?? 0)
-  const extOk = CAP_SIM.extensionOk(F, F.team, p)
-  const ext = extOk?.ok ? CAP_SIM.extensionAsk(F, F.team, p) : null
-  const car = p.car ?? []
-  return createPortal(
-    <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="fk fk-root nb-sheet" role="dialog" aria-label={p.n} style={fkVars(F.team)}>
-        <div className="nb-sheet-top"><b>{TEAM[F.team].name}</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
-        <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="l" mine={p.b != null ? owner : null} line={`AGE ${p.ag} · ${Math.floor(p.ht / 12)}'${p.ht % 12}" · ${p.wt} LBS`} />
-        <div className="nb-facts">
-          <span><small>Contract</small><b>{dealText(p)}</b></span>
-          <span><small>Experience</small><b>{p.ys ? `${p.ys} ${p.ys === 1 ? 'YEAR' : 'YEARS'}` : 'ROOKIE'}</b></span>
-          {p.dr && <span><small>Drafted</small><b>{p.dr[0]} · R{p.dr[1]} NO. {p.dr[2]}</b></span>}
-          {p.inj?.g && <span><small>Injury</small><b>{p.inj.k} · {p.inj.g} G</b></span>}
-        </div>
-        {ppg(F, p) && <p className="nb-sheet-line">{seasonText(F.year)}: {ppg(F, p, true)}</p>}
-        {ext && <div className="nb-sheet-acts"><button type="button" onClick={() => { const r = act(X => CAP_SIM.extendMan(X, X.team, X.teams[X.team].r.find(x => x.i === id), ext)); if (r?.ok !== false) { act(X => addNews(X, { k: 'ext', tag: 'EXTENSION', s: X.team, text: `${p.n} signs a ${ext.y}-year extension with the ${nick(X.team)}` })); sfx('claim') } else sfx('deny') }}>Extend him: {money(ext.$)} × {ext.y}</button></div>}
-        {!p.tw && (
-          <div className="nb-sheet-acts">
-            <button type="button" disabled={k <= 0} onClick={() => { move(-1); sfx('tap') }}>Move up</button>
-            <button type="button" disabled={k < 0 || k >= order.length - 1} onClick={() => { move(1); sfx('tap') }}>Move down</button>
-          </div>
-        )}
-        {car.length > 0 && (
-          <div className="bx-scroll"><table className="nb-car">
-            <thead><tr><th>SEASON</th><th>TM</th><th>G</th><th>PPG</th><th>RPG</th><th>APG</th></tr></thead>
-            <tbody>{car.map(c => <tr key={c.y + c.s}><td>{c.y2 ? `${c.y}-${String(c.y2 + 1).slice(2)}` : seasonText(c.y)}</td><td>{c.s || `${c.y2 - c.y + 1} YRS`}</td><td>{c.gp}</td><td>{(c.pts / c.gp).toFixed(1)}</td><td>{(c.reb / c.gp).toFixed(1)}</td><td>{(c.ast / c.gp).toFixed(1)}</td></tr>)}</tbody>
-          </table></div>
-        )}
-        <div className="nb-sheet-acts">
-          {!sure ? <button type="button" className="is-danger" onClick={() => setSure(true)}>Waive him</button>
-            : <><span className="nb-sure">{dead > 0 ? `${money(dead)} stays on the books` : 'Waive him?'}</span><button type="button" onClick={() => setSure(false)}>Keep</button>
-              <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived ${p.n}` }) }); sfx('deny'); onClose() }}>Waive</button>
-              {canStretch && <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id, { stretch: true }); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived and stretched ${p.n}` }) }); sfx('deny'); onClose() }}>Waive and stretch</button>}</>}
-        </div>
-      </div>
-    </div>,
-    document.body,
   )
 }
 

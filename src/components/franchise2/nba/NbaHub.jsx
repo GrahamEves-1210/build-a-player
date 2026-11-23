@@ -10,7 +10,8 @@ import { IconClose } from '../../app/icons'
 import { GamesSwitch } from '../../simFlow'
 import { LeagueRules } from '../Rules'
 import { fkVars, KLogo, Ticker, Scorebug, Stamp, TeamSlab, Go, Fold, Chyron, Banner } from '../kit'
-import { GAMES_MODES, GAMES_WHAT, CAP_WHAT } from './NbaSetup'
+import { GAMES_MODES, GAMES_WHAT, CAP_WHAT, GAMES_CLS } from './NbaSetup'
+import { NbaSchedule } from './NbaRoster'
 import NbaGame, { NbaBox } from './NbaGame'
 import NbaTeam from './NbaTeam'
 import NbaLeague from './NbaLeague'
@@ -25,7 +26,7 @@ export const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 's
 export const money = v => (v == null ? '-' : `$${(Math.round(v * 10) / 10).toFixed(1)}M`)
 export const momentOpts = F => ({ moments: (F.moments ?? 'advanced') !== 'off' })
 
-export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
+export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveBad, onRetry }) {
   const [tab, setTab] = useState('season')
   const [live, setLive] = useState(() => (F.pend ? { pend: true } : null))
   const [teamView, setTeamView] = useState(null)
@@ -44,7 +45,10 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
     if (out?.pending) setLive({ pend: true })
     else if (F.log.length > before) setLive({ row: F.log[F.log.length - 1] })
   }
-  const sub = F.phase === 'season' ? (nextMine(F) ? `${dateText(F, nextMine(F).d)} · Game ${gameNo(F, nextMine(F))}` : 'Regular season') : off ? 'Offseason' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : 'Season over'
+  // today: the day the next night is played (the deadline card's "today"); his game number when he plays tonight
+  const ng = F.phase === 'season' ? nextMine(F) : null
+  const sub = F.phase === 'season' ? `${dateText(F, Math.min(F.day, F.days - 1))} · ${!ng ? 'Regular season' : ng.d === F.day ? `Game ${gameNo(F, ng)}` : 'No game today'}`
+    : off ? 'Offseason' : F.phase === 'post' ? 'Regular season over' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : 'Season over'
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
       {live && <NbaGame F={F} act={act} start={live} owner={owner} onDone={() => setLive(null)} />}
@@ -58,7 +62,13 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
           </span>
           <button className="fh-x" onClick={onHome} aria-label="Leave Franchise"><IconClose size={16} /><span>Exit</span></button>
         </header>
-        {tab === 'season' && !off && <LeagueTicker F={F} />}
+        {saveBad && (
+          <div className="nb-savebad" role="alert">
+            <span><b>This league isn't saving</b>The browser's storage on this device is full, so the last changes aren't saved yet. Delete a save you don't need (yours or another mode's) and it saves again. It keeps trying.</span>
+            <button type="button" onClick={onRetry}>Try again</button>
+          </div>
+        )}
+        {tab === 'season' && <LeagueTicker F={F} />}
         <nav className="fh-tabs" role="tablist" aria-label="Franchise">
           <div className="fh-tabs-in">
             {TABS.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => toTab(id)}>{id === 'season' && off ? 'Offseason' : label}</button>)}
@@ -67,7 +77,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete }) {
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
           {tab === 'season' && (off ? <NbaOffseason F={F} act={act} owner={owner} /> : <Season F={F} R={R} act={act} play={play} owner={owner} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
           {tab === 'team' && <NbaTeam F={F} act={act} owner={owner} view={teamView} setView={setTeamView} />}
-          {tab === 'league' && <NbaLeague F={F} owner={owner} />}
+          {tab === 'league' && <NbaLeague F={F} act={act} owner={owner} />}
           {tab === 'history' && <NbaHistory F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
         </div>
       </div>
@@ -106,7 +116,7 @@ function Season({ F, R, act, play, owner, onTrades, onSim }) {
         {ph === 'season' && <Strip F={F} />}
         <ScoutRow F={F} act={act} />
         <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
-          onPick={m => act(X => { X.moments = m })} cls={{ root: 'fh-games', top: 'fh-games-label', group: 'fh-seg' }} />
+          onPick={m => act(X => { X.moments = m })} cls={GAMES_CLS} />
         <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
           onChange={r => act(X => { if (r.cap != null) { if (r.cap) delete X.noCap; else X.noCap = 1 } if (r.inj != null) { if (r.inj) delete X.noInj; else { X.noInj = 1; for (const s of SHORTS) for (const p of X.teams[s].r) delete p.inj } } })} />
       </aside>
@@ -197,9 +207,11 @@ function Strip({ F }) {
   const G = myGames(F)
   const k = G.findIndex(g => g.hs == null)
   const shown = G.slice(Math.max(0, k - 5), Math.max(0, k - 5) + 10)
+  const [all, setAll] = useState(false)
   return (
     <div className="fh-strip-wrap">
-      <h3 className="fh-h"><b>Schedule</b><span>{G.filter(g => g.hs != null).length} of 82</span></h3>
+      <h3 className="fh-h"><b>Schedule</b><button type="button" className="nb-h-link" onClick={() => { setAll(true); sfx('tap') }}>Full schedule · {G.filter(g => g.hs != null).length} of 82 ›</button></h3>
+      {all && <NbaSchedule F={F} onClose={() => setAll(false)} />}
       <div className="fh-strip">
         {shown.map(g => {
           const home = g.h === F.team, opp = home ? g.a : g.h

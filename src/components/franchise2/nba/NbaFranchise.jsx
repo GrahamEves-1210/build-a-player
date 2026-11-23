@@ -42,7 +42,20 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   const [, bump] = useState(0)
   const Fr = useRef(F); Fr.current = F
   const pend = useRef(null)
-  const flush = useCallback(() => { const X = pend.current; if (!X) return; pend.current = null; saveNba(X); leaveNote(X) }, [])
+  // a save that fails (the browser's storage full): the hub says so, and it keeps trying every few seconds and on
+  // every change until one goes through
+  const [saveBad, setSaveBad] = useState(false)
+  const bad = useRef(false)
+  const flush = useCallback(() => {
+    const X = pend.current
+    if (!X) return
+    pend.current = null
+    const ok = saveNba(X)
+    if (ok) leaveNote(X)
+    if (ok !== !bad.current) { bad.current = !ok; setSaveBad(!ok) }
+  }, [])
+  const retry = useCallback(() => { const X = Fr.current; if (!X) return; pend.current = X; flush() }, [flush])
+  useEffect(() => { if (!saveBad) return; const t = setInterval(retry, 8000); return () => clearInterval(t) }, [saveBad, retry])
   // every change is saved once it's on screen (changes in a row are one write); leaving writes it straight away
   const act = useCallback(fn => {
     const X = Fr.current
@@ -85,7 +98,7 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
     const S = setup
     const builds = (S.picks ?? []).map(p => S.builds?.[p.id]).filter(B => B?.name)
     const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds })
-    saveNba(X); leaveNote(X)
+    if (saveNba(X)) leaveNote(X); else { bad.current = true; setSaveBad(true) }
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')
   }
@@ -94,5 +107,5 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
 
   if (slot == null || (!F && !setup)) return <Slots owner={owner} onOpen={open} onHome={onHome} lg={LG} />
   if (!F) return <NbaSetup setup={setup} owner={owner} put={putSetup} onStart={start} onBack={toSlots} onBuild={buildOut} />
-  return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} /></Suspense>
+  return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} saveBad={saveBad} onRetry={retry} /></Suspense>
 }
