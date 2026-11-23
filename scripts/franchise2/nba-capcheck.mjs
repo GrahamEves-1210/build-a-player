@@ -1,11 +1,13 @@
 // NBA Franchise: the cap rules, one check each (the 2023 CBA). Prints PASS/FAIL lines and a count at the end.
-//   bash scripts/franchise2/run.sh scripts/franchise2/nba-capcheck.mjs [seed=cc]
+//   bash scripts/franchise2/run.sh scripts/franchise2/nba-capcheck.mjs [seed=c2]
 import * as N from '../../src/lib/franchise2/nba/index'
 import * as K from '../../src/lib/franchise2/nba/contracts'
 import * as M from '../../src/lib/franchise2/nba/market'
 import * as CP from '../../src/lib/franchise2/nba/cap'
 const C = N.CAP_SIM
-const SEED = process.argv[2] ?? 'cc'
+// (the cases are set up on one league's state: on 'cc' after the 11-23 schedule change NYK's cap holds keep setPay from
+// reaching 'over the cap, under the apron', and BOS's owner limit refuses the match — both right, just not the case asked)
+const SEED = process.argv[2] ?? 'c2'
 let fails = 0, passes = 0
 const ok = (cond, what, more = '') => { if (cond) passes++; else fails++; console.log(`${cond ? 'PASS' : 'FAIL'} ${what}${more ? ' | ' + more : ''}`) }
 const clone = F => N.unpackNba(N.packNba(F))
