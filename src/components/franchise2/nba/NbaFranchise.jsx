@@ -16,6 +16,7 @@ const NbaHub = lazy(() => import('./NbaHub'))
 //   props: user, onHome
 const LAST = 'bap_frnba_last'
 const TRIP = 'bap_frnba_trip'
+const MOMENT = 'bap_frnba_moment'   // (a key moment's mini game was open when the tab reloaded, NbaGame.jsx: straight back to that franchise)
 const newSeed = () => `${Date.now().toString(36)}${Math.floor(performance.now() * 1000).toString(36)}`
 const PHASE = { season: 'REGULAR SEASON', post: 'REGULAR SEASON OVER', playin: 'PLAY-IN', playoffs: 'PLAYOFFS', done: 'SEASON OVER', off: 'OFFSEASON' }
 const LG = { key: NBA_KEY, summary: nbaSlotSummary, clear: i => { clearNba(i); try { if (JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY))?.slot === i) localStorage.removeItem(NBA_FRANCHISE_CARD_KEY) } catch {} }, TEAM, where: s => `${seasonText(s.year)} · ${s.rec} · ${PHASE[s.phase] ?? ''}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}` }
@@ -33,11 +34,11 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   useState(() => setKitLeague(TEAM))
   useEffect(() => { setKitLeague(TEAM); return () => setKitLeague(null) }, [])
   // (back from the build page: straight into the setup that sent him there; the trip is marked for this tab)
-  const [slot, setSlot] = useState(() => { try { const t = sessionStorage.getItem(TRIP); return t != null ? Number(t) : null } catch { return null } })
+  const [slot, setSlot] = useState(() => { try { const t = sessionStorage.getItem(TRIP) ?? sessionStorage.getItem(MOMENT); return t != null ? Number(t) : null } catch { return null } })
   const slotRef = useRef(slot)
   slotRef.current = slot
-  useEffect(() => { try { sessionStorage.removeItem(TRIP) } catch {} }, [])
-  const [F, setF] = useState(null)
+  useEffect(() => { try { sessionStorage.removeItem(TRIP); sessionStorage.removeItem(MOMENT) } catch {} }, [])
+  const [F, setF] = useState(() => { try { const m = sessionStorage.getItem(MOMENT); return m != null ? loadNba(Number(m)) : null } catch { return null } })
   const [setup, setSetup] = useState(() => (slot != null ? rawNbaSlot(slot)?.setup ?? null : null))
   const [, bump] = useState(0)
   const Fr = useRef(F); Fr.current = F

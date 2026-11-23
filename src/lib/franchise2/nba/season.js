@@ -158,34 +158,64 @@ export function playNext(F, opts = {}) {
 
 // ── The moment's seam: the GM's game stops late if it's close ───────────────
 // (moments.js reads F.pend and calls finishMoment with what the possession did)
+// The sim plays the game; at each whistle in the last 24 seconds of the fourth (or of an overtime) the ball, the
+// score and the clock say whether it's a moment, the way the game really is at that point:
+//   his team's ball, level or down one to three: the last possession ('off')
+//   his team's ball, up one or two: the other team has to foul ('ft', two free throws)
+//   their ball, level or his team up one to three: a stop ('def')
+// Anything else plays on (their ball with his team behind: his team has to foul; more than a possession apart).
+// Under two seconds there's no moment left to play.
+export function momentSpot(G, short) {
+  if (G.done || G.per < 4 || G.clock > 24.01 || G.clock < 2) return null
+  const k = G.h.short === short ? 'h' : 'a'
+  const m = G.sc[k] - G.sc[k === 'h' ? 'a' : 'h']
+  if (G.poss === k) return m >= -3 && m <= 0 ? 'off' : m >= 1 && m <= 2 && G.clock >= 3 ? 'ft' : null
+  return m >= 0 && m <= 3 ? 'def' : null
+}
 export function momentStart(F, g, { wantMoment = null } = {}) {
   prep(F, g, !!F.po?.live)
   const playoff = !!F.po?.live
   const G = X.startGame(F, g.h, g.a, { seed: seedOf(F, g, playoff), playoff })
-  X.playTo(G, 24)
+  const k = g.h === F.team ? 'h' : 'a'
+  // (wantMoment: a check's own filter on the margin, on top of the spot)
+  X.playTo(G, 24, S => momentSpot(S, F.team) && (!wantMoment || wantMoment(S.sc[k] - S.sc[k === 'h' ? 'a' : 'h'])))
+  if (G.done || !G.stop) { const res = X.finishGame(G); G.res = res; return finishInto(F, g, G, res) }
   const us = g.h === F.team ? G.hs : G.as, them = g.h === F.team ? G.as : G.hs
-  const m = us - them
-  const want = wantMoment ?? (x => x >= -3 && x <= 2)
-  if (!want(m)) { const res = X.finishGame(G); G.res = res; return finishInto(F, g, G, res) }
-  return { d: g.d, h: g.h, a: g.a, n: g.n ?? null, po: playoff ? F.po.rd : null, us, them, left: 24, G }
+  return { d: g.d, h: g.h, a: g.a, n: g.n ?? null, po: playoff ? F.po.rd : null, us, them, left: Math.round(G.clock * 10) / 10, per: G.per, ...(G.per > 4 && { ot: G.per - 4 }), spot: momentSpot(G, F.team), G }
 }
 function finishInto(F, g, G, res) {
   // (not close: the game is simply played out; the caller plays it as a normal game)
   g.__res = res
   return null
 }
+// out (moments.js momentDone): { side: 'off'|'def'|'ft', hit, by, vs, pts (his team's), them (theirs), kind, tov, t }
+// (null: the old way, a moment skipped; the sim plays it out). The play goes on the board, then the seconds after it
+// (game.js momentEnd: a landed moment that leaves his team ahead is the game), then the sim plays whatever is left.
+// The log row keeps what happened (row.mo) for the final's line.
 export function finishMoment(F, out) {
   const P = F.pend
   if (!P) return null
   const g = P.po != null ? F.po.cur.find(x => x.h === P.h && x.a === P.a && x.n === P.n) : F.sched.find(x => x.d === P.d && x.h === P.h && x.a === P.a)
   const G = P.G
-  if (out?.pts != null && out.them == null) X.possession(G, F.team, out)
-  if (out?.them != null) X.possession(G, F.team === P.h ? P.a : P.h, { pts: out.them, ...(out.t && { t: out.t }) })
+  const opp = F.team === P.h ? P.a : P.h
+  const k = G.h.short === F.team ? 'h' : 'a'
+  let mo = null
+  if (out) {
+    const at = G.clock, per = G.per
+    if (out.side === 'def' || (out.side == null && out.them != null)) X.possession(G, opp, { pts: out.them ?? 0, kind: out.kind ?? 'iso', ...(out.vs != null && { by: out.vs }), ...(out.t != null && { t: out.t }) })
+    else X.possession(G, F.team, { pts: out.pts ?? 0, by: out.by, kind: out.side === 'ft' ? 'ft' : out.kind, ...(out.tov && { tov: true }), ...(out.t != null && { t: out.t }) })
+    const left = G.done ? 0 : G.per > per ? 0 : G.clock
+    const lead = G.sc[k] - G.sc[k === 'h' ? 'a' : 'h']
+    const sealed = !!out.hit && lead > 0
+    const trip = X.momentEnd(G, F.team, { sealed })
+    mo = { side: out.side ?? (out.them != null ? 'def' : 'off'), hit: !!out.hit, by: out.by ?? null, vs: out.vs ?? null, kind: out.kind ?? null, pts: out.pts ?? 0, them: out.them ?? 0, tov: out.tov || false, at: Math.round(at * 10) / 10, left: Math.round(left * 10) / 10, per, lead, sealed, ...(trip && { trip: { us: trip.k === k, by: trip.by, made: trip.made, t: Math.round(trip.t * 10) / 10, shot: trip.shot } }) }
+  }
   const res = X.finishGame(G)
   F.pend = null
-  if (P.po != null) { const r = settle(F, g, res, { playoff: true }); const row = logMine(F, g, r, poTag(F)); seriesAdd(F, g, r); return poEnd(F, row) }
+  const tag = row => { if (mo) row.mo = mo; return row }
+  if (P.po != null) { const r = settle(F, g, res, { playoff: true }); const row = tag(logMine(F, g, r, poTag(F))); seriesAdd(F, g, r); return poEnd(F, row) }
   settle(F, g, res)
-  const mine = logMine(F, g, res)
+  const mine = tag(logMine(F, g, res))
   return endDay(F, { mine })
 }
 
