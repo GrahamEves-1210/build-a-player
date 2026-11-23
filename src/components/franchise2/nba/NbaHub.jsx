@@ -337,8 +337,9 @@ function SimRun({ F, act, run, onDone }) {
   useEffect(() => {
     let t
     const step = () => {
-      if (stop.current || F.phase !== 'season' || F.day >= run.to) { onDone(); return }
-      act(X => { simTo(X, Math.min(run.to, X.day + 2)) })
+      if (stop.current || F.phase !== 'season' || F.day >= run.to) { act(() => {}); onDone(); return }
+      // (written to the save every 30 nights and when it stops, not every step)
+      act(X => { simTo(X, Math.min(run.to, X.day + 2)) }, { save: Math.floor((F.day + 2) / 30) > Math.floor(F.day / 30) })
       tick(n => n + 1)
       t = setTimeout(step, 16)
     }

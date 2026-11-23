@@ -19,7 +19,7 @@
 //         { po: true }         the playoffs' shorter rotation
 //         { min: { id: m } }   minutes he wants for a man (0 = out of the rotation); the rest are scaled to fill 240
 //   startersOf(players)        the coach's best five: the best men who fit the five spots
-//   dressed(T, { po, year })   tonight's men: healthy, not resting; a two-way man only in the regular season, 50 games
+//   dressed(T, { po, year })   tonight's men: healthy (the playoffs: day-to-day plays), not resting; a two-way man only in the regular season, 50 games
 //                              at most (p.twa = [season, games active]), and only when the team needs him (to make 13
 //                              healthy men) or he'd be in its top ten
 //   shapeCost(spots)           how far a five is from a real lineup (0 = one man at each spot; over 2.5 a coach won't)
@@ -45,7 +45,8 @@ export function shapeCost(spots) {
 export const TW_GAMES = 50
 export const twGames = (p, year) => (Array.isArray(p.twa) && p.twa[0] === year ? p.twa[1] : 0)
 export function dressed(T, { po = false, year = null } = {}) {
-  const ok = p => !(p.inj?.g > 0) && !p.rest
+  // (the playoffs: a man listed day-to-day plays)
+  const ok = p => !(p.inj?.g > (po ? 1 : 0)) && !p.rest
   const std = T.r.filter(p => !p.tw && ok(p))
   if (po) return std
   const tenth = std.map(p => p.o ?? 0).sort((a, b) => b - a)[9] ?? 0
@@ -68,7 +69,7 @@ const clampN = (lo, hi, v) => Math.min(hi, Math.max(lo, v))
 const SLOT = [33.5, 32.5, 31.5, 30.5, 29.5]
 // the playoffs: the stars play 38-41, the rotation shortens to eight
 const SLOT_PO = [38, 37, 35.5, 34, 32]
-export const MIN_CAP_PO = 41
+export const MIN_CAP_PO = 40
 
 // the best men for the five spots (forced: men who must be in it, the user's starters); returns [[man, spot]]
 function fitFive(men, forced = []) {

@@ -117,6 +117,8 @@ export function playDay(F, { moments = false, wantMoment = null } = {}) {
   rosterFloor(F)
   const d = F.day
   const tonight = F.sched.filter(g => g.d === d && g.hs == null)
+  // (last night's teams: tonight's back-to-backs, without a pass over the schedule for every game)
+  const yday = new Set(); for (const g of F.sched) if (g.d === d - 1) { yday.add(g.h); yday.add(g.a) }
   const news = []
   let mine = null, pending = null
   for (const g of tonight) {
@@ -127,21 +129,21 @@ export function playDay(F, { moments = false, wantMoment = null } = {}) {
       const res = settle(F, g, g.__res); delete g.__res
       mine = logMine(F, g, res); continue
     }
-    const res = playOne(F, g)
+    const res = playOne(F, g, { yday })
     if (own) mine = logMine(F, g, res)
   }
   if (pending) { F.pend = pending; return { pending } }
   return endDay(F, { mine, news })
 }
 function seedOf(F, g, po = false) { return `${F.seed}-${F.year}-${po ? 'po' : 'rs'}-${g.d}-${g.h}-${g.a}${po ? `-${g.n}` : ''}` }
-function prep(F, g, playoff) {
-  const b = playoff ? { h: false, a: false } : b2bOf(F, g)
+function prep(F, g, playoff, yday = null) {
+  const b = playoff ? { h: false, a: false } : yday ? { h: yday.has(g.h), a: yday.has(g.a) } : b2bOf(F, g)
   for (const s of [g.h, g.a]) for (const p of F.teams[s].r) delete p.rest
   if (!playoff) for (const s of [g.h, g.a]) for (const i of X.restFor(F, s, g, b[s === g.h ? 'h' : 'a']) ?? []) { const p = F.teams[s].r.find(x => x.i === i); if (p) p.rest = 1 }
   return b
 }
-export function playOne(F, g, { playoff = false } = {}) {
-  const b2b = prep(F, g, playoff)
+export function playOne(F, g, { playoff = false, yday = null } = {}) {
+  const b2b = prep(F, g, playoff, yday)
   const res = X.simGame(F, g.h, g.a, { seed: seedOf(F, g, playoff), playoff, b2b })
   return settle(F, g, res, { playoff })
 }

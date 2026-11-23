@@ -66,7 +66,10 @@ export const TUNE = {
   home: 0.012,            // the home team's make, every shot (about 2.5 points a game)
   lead: 0.0012, leadCap: 20,   // the score's pull: each point of lead off the leader's make (to 20 points)
   lead4: 0.009, lateT: 360,    // and more in a close fourth quarter's last minutes (the leader slows it down, the other team pushes)
+  // the playoffs: nobody eases off, the ball goes to the stars more, the crowd counts a bit more
+  po: { lead: 0.0006, lead4: 0.006, usage: 0.15, home: 0.016 },
 }
+const tn = (S, k) => (S.po && TUNE.po?.[k] != null ? TUNE.po[k] : TUNE[k])
 const Q = 720, OT = 300, STINT = 120
 
 const line = () => ({ sec: 0, pts: 0, orb: 0, drb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, pm: 0, gs: 0, cp: 0 })
@@ -210,7 +213,7 @@ function shoot(S, k, who, forced = null, want = null) {
   const dPer = mean(D.on, t => t.perD) - 6
   const dInt = Math.max(...D.on.map(t => t.intD)) * 0.55 + mean(D.on, t => t.intD) * 0.45 - 6.2
   const cl = S.per >= 4 && S.clock <= 300 && Math.abs(S.sc.h - S.sc.a) <= 5 ? 0.008 * (s.clu - 6) : 0
-  const home = O.home ? TUNE.home : 0
+  const home = O.home ? tn(S, 'home') : 0
   let p, pFoul
   // (the very top of the scale pays less: an 11 shooter is great, not automatic; it keeps a star near 30 a night, not 37)
   const sh = s.sh <= 8 ? s.sh : 8 + (s.sh - 8) * 0.6, fin = s.fin <= 8 ? s.fin : 8 + (s.fin - 8) * 0.6
@@ -220,7 +223,7 @@ function shoot(S, k, who, forced = null, want = null) {
   // the score: a team well ahead eases off (its bench, a slower pace, the stops it doesn't need), the one behind presses;
   // NBA leads shrink like this, a blowout comes back toward 20 and a close game stays close (forced: a moment's own make)
   const up = forced ? 0 : Math.max(-TUNE.leadCap, Math.min(TUNE.leadCap, S.sc[k] - S.sc[other(k)]))
-  const pull = TUNE.lead + (S.per >= 4 && S.clock <= TUNE.lateT && Math.abs(up) <= 12 ? TUNE.lead4 : 0)
+  const pull = tn(S, 'lead') + (S.per >= 4 && S.clock <= TUNE.lateT && Math.abs(up) <= 12 ? tn(S, 'lead4') : 0)
   p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up))
   if (want?.heave) p *= S.clock <= 1.5 ? 0.35 : 0.6
   const pts = shot === 'three' ? 3 : 2
@@ -255,7 +258,8 @@ function shoot(S, k, who, forced = null, want = null) {
 // the possession's man: the usage weights of the five on the floor
 function actor(S, k) {
   const O = S[k]
-  const w = O.on.map(s => Math.exp(TUNE.usage * (s.off - 6)) * (s.big ? 0.9 : 1))
+  const u = tn(S, 'usage')
+  const w = O.on.map(s => Math.exp(u * (s.off - 6)) * (s.big ? 0.9 : 1))
   return wpick(S.R, O.floor, w)
 }
 
@@ -406,8 +410,9 @@ function sideOf(F, s, po = false) {
   let hurtOk = 0
   if (men.length < 5) for (const p of T.r.filter(x => !men.includes(x) && !(po && x.tw)).sort((a, b) => (a.inj?.g ?? 0) - (b.inj?.g ?? 0))) {
     if (men.length >= 5) break
-    men.push(p); if (p.inj?.g > 0) hurtOk = 1
+    men.push(p)
   }
+  if (men.some(p => p.inj?.g > 0)) hurtOk = 1
   const dnp = T.r.filter(p => !men.includes(p)).map(p => (p.inj?.g > 0 ? { i: p.i, r: 'inj', k: p.inj.k } : p.rest ? { i: p.i, r: 'rest' } : { i: p.i, r: 'tw', k: po ? 'not eligible for the playoffs' : twGames(p, F.year) >= TW_GAMES ? '50-game limit' : 'G League' }))
   return { short: s, men, set: setOf(T), dnp, ...(hurtOk && { hurtOk }) }
 }
