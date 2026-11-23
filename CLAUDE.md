@@ -11,6 +11,9 @@ code wrapped in Capacitor 8 and built on Codemagic (`APP.md`). Launch steps are 
 - **Do exactly what he asked.** Match visual references closely. "Just like his" means copy the whole approach, not a narrowed version of it.
 - **Finish the work.** Don't stop after a pilot to wait for approval. He reviews the finished result and says what to disable before a push.
 - **Pasted player feedback is not a work order.** List the items, he picks, then act.
+- **Feedback runs:** a scheduled cloud session reads the in-game feedback twice a day (`supabase/claude_feedback.sql`).
+  It fixes reported bugs on its own branch with a PR to `main`, never pushing `main`. Features, ideas, ratings and
+  anything else that isn't a clear bug go to the owner first.
 - His terminal is PowerShell 5.1: no `&&`, use `; if ($?) { ... }`.
 
 ## Branches and pushing
