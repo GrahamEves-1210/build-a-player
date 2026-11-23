@@ -125,13 +125,14 @@ function logMine(F, g, res, po = null) {
 function endDay(F, { mine = null, news = [] } = {}) {
   for (const s of SHORTS) X.tickInjuries(F, s)
   const was = F.day
+  // (the league's deals that night, before the day turns over: on deadline day the window is still open)
+  const dl = X.cpuDeadline(F, was) ?? []
   F.day++
   scoutTick(F, was, F.day)
+  for (const x of dl) addNews(F, x)
   // the trade deadline, the All-Star break: the wire says so the night they come
   if (was <= F.ddl && F.day > F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
   if (F.day >= F.asb[0] && !F.asDone) allStars(F)
-  const dl = X.cpuDeadline(F, was) ?? []
-  for (const x of dl) addNews(F, x)
   if (dl.length) X.cpuFill(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-fill-${F2.year}-${F2.day}-${s}`)) })
   if (!F.sched.some(g => g.hs == null)) {
     F.phase = 'post'
