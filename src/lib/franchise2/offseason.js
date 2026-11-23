@@ -62,7 +62,7 @@ export function newSeason(F) {
   F.year++
   F.sched = makeSchedule(F.seed, F.year, S.div)
   // (the season's kept lines start over: box.js; last season's are in the men's careers, awards.js)
-  F.lg = {}; F.lgp = {}; F.wkl = null
+  F.lg = {}; F.lgp = {}; F.tst = {}; F.wkl = null
   F.wk = 0; F.log = []; F.ss = {}; F.kst = {}; F.ssr = null; F.po = null; F.moments = 0; F.streak = 0; F.nx = 0; F.ev = null; F.nextEv = 3; F.evSeen = []
   for (const p of released) addNews(F, { k: 'cut', tag: 'RELEASED', s: F.team, text: `${TEAM[F.team].nick} release ${p.n}` })
   F.phase = 'season'; F.stage = null; F.aging = null

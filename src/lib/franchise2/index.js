@@ -79,7 +79,7 @@ export function createFranchise(setup) {
   F.chem = 55
   F.sched = makeSchedule(F.seed, F.year)
   F.nt = 1   // (numbers kept by team from the start: roster.js numbersOnLoad has nothing to do)
-  F.wk = 0; F.log = []; F.ss = {}; F.lg = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
+  F.wk = 0; F.log = []; F.ss = {}; F.lg = {}; F.tst = {}; F.po = null; F.phase = 'season'; F.streak = 0; F.nextEv = 3; F.moments = 0
   // each build takes a starter's job (owner 11-18): the man he replaces (league.js replacedBy, the setup showed him)
   // leaves the team with his deal off its books and goes to the street at his market price, where a team that needs
   // him can sign him. (The kicker: the block below, the NFL's release.)

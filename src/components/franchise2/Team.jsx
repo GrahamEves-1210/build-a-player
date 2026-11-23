@@ -7,6 +7,7 @@ import { hurtText } from '../../lib/franchise2/copy'
 import { StaffStrip, StaffScreen } from './Staff'
 import { revOf, useStaged } from './perf'
 import TradeScreen, { TradeStrip } from './Trades'
+import TeamPage, { StatsStrip } from './TeamPage'
 
 // TEAM: the depth chart. The order the games play: the starters on top of each room, the men behind them in the
 // order they come in. Tap a man to move him (up, down, to the top, to the room next door) or open his page.
@@ -22,6 +23,7 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
   const [page, setPage] = useState(null)       // a man's page open
   const [cap, setCap] = useState(false)
   const [staff, setStaff] = useState(false)   // the coaching staff (Staff.jsx)
+  const [mine, setMine] = useState(false)     // the team's own page, on its numbers (TeamPage.jsx)
   const [trades, setTrades] = useState(tradeGo)   // trades (Trades.jsx); the Season tab's offer note opens it
   useEffect(() => { if (tradeGo) { setTrades(true); onTradeGo?.() } }, [tradeGo]) // eslint-disable-line react-hooks/exhaustive-deps
   const rev = revOf(F)
@@ -81,9 +83,11 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
         <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
         <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
         <TradeStrip F={F} onOpen={() => { setTrades(true); sfx('tap') }} />
+        <StatsStrip F={F} onOpen={() => { setMine(true); sfx('tap') }} />
       </div>
     </>
   ), [F, rev, st]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (mine) return <TeamPage F={F} s={F.team} owner={owner} act={act} start="stats" back="Depth chart" onBack={() => { setMine(false); sfx('back') }} />
   if (trades) return <TradeScreen F={F} act={act} owner={owner} onBack={() => { setTrades(false); sfx('back') }} />
   if (staff) return <StaffScreen F={F} act={act} owner={owner} onBack={() => { setStaff(false); sfx('back') }} />
   if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
