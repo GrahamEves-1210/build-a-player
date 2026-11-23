@@ -7,42 +7,56 @@
 //   - salary matching, when it ends up over the cap: it takes back at most 200% of what it sends + $250K (sending up
 //     to $7.5M), what it sends + $7.5M (up to $29M), 125% + $250K past that (the 2023 CBA's brackets, indexed to the
 //     cap since 2023-24). A team still under the cap after it absorbs freely (and up to its room + $250K past it).
-//     Over the first apron: 110%. Over the second: 100%, and it can't aggregate two salaries to take one back.
-//   - hard caps: a team hard-capped (contracts.js exc.hc) can't end up over its line; aggregating salaries in a trade
-//     hard-caps a team at the second apron.
+//     Over the first apron: 100%. Over the second: 100%, and it can't aggregate two salaries to take one back. A man
+//     on a minimum deal (two years or less) comes in on the minimum exception, no salary back. A trade exception
+//     (team.tpe) can take in salary with nothing going back, the team no further than the first apron after.
+//   - hard caps: a team hard-capped (contracts.js exc.hc) can't end up over its line; taking back more than it sends
+//     hard-caps a team at the first apron, aggregating salaries at the second.
+//   - trade exceptions: a team over the cap that sends out more than it takes back gets one for the difference (each
+//     man's salary matched against what comes in, the biggest first), good for a year (calDay + 365).
 //   - rosters: 15 standard deals at most (21 men in the offseason), 13 at least in the season, 3 two-way.
 //   - recently signed men: a free agent (or a man re-signed) can't be traded until December 15 or three months after
-//     he signed, whichever is later; a man the GM's team traded for can't go back to the team it got him from this
-//     league year (no buy-backs).
+//     he signed, whichever is later; a draft pick's rights can be dealt on draft night, then not for 30 days after he
+//     signs (from camp on); an offer sheet his team matched, not for a year (p.osm); a man traded for can't have his
+//     salary combined with others for two months (p.txd); a man the GM's team traded for can't go back to the team it
+//     got him from this league year (no buy-backs).
 //   - picks: only a team's own (as owned now); a top-N protection may be put on a first as it's traded; a swap right
-//     (the other team may swap its first for this team's first that year); the Stepien rule (never without a first
+//     (the other team may swap its first for this team's first that year; once per pick, and it goes with the pick if
+//     it's sold: the holder's pick carries sw.with, the giver's sw.by); the Stepien rule (never without a first
 //     in two drafts running); a team over the second apron can't trade its first seven drafts out (frozen).
 //   - a man with a no-trade clause can't be moved without his say (the league's teams don't ask).
 //
 // WHAT A MAN IS WORTH (manValue, a scale where the No. 1 pick is 160 and the 30th 20): where he ranks in the league
 // on a curve that climbs fast at the top (contracts.js WORTH: the best players are worth more than the max), by his
-// age (the prime he has left), by his deal (what he's paid against what he's worth over the years he's signed; an
-// expiring deal in the season is a rental; a man paid far past his worth is a burden, worth less than nothing).
+// age (the prime he has left over the years he's signed: a productive veteran on a short deal loses little), by his
+// deal (what he's paid against what he's worth over the years he's signed, an option year the way its holder will
+// use it; an expiring deal in the season is a rental; a man paid far past his worth is a burden, worth less than
+// nothing), and by his health (the share of this season he'll miss, more of an expiring deal's value).
+// WHAT HE GIVES NOW (nowValue): his level today, for the rest of the season he'll be there for: a contender's measure.
 // WHAT A PICK IS WORTH (pickValue): the chart at the slot it should land (the standings and the team's strength;
 // further out, toward the middle), a protection's odds of conveying, and a year's discount for each draft out.
 //
 // WHAT A TEAM SEES (teamSide): the same values moved by its situation (contending, in the mix, rebuilding: a
-// rebuilder wants picks and youth and pays little for veterans; a contender pays for a man who plays now), its
+// rebuilder wants picks and youth and pays little for veterans; a contender pays for a man who plays now and won't
+// let one of its own go for less than he gives it this season), its
 // rotation (a man who wouldn't play for it is worth half), the tax its payroll would cost (a taxpayer gains from
 // shedding salary), and a package of players counted the way the league counts it: the best one whole, the rest
 // less (75%, 55%, 40%...), so three backups never add up to a star.
 //
 // A DEAL (cpuAnswer): the league team takes it when what it gets beats what it gives by its margin (7%, more for
 // every deal it's already made with the GM's team this league year); a star goes only for a real piece back; a man
-// it just traded for stays put; a man the GM's team just traded for is worth no more than it paid. Short by a
+// it just traded for stays put; a man the GM's team just traded for is worth no more than it paid; a contender
+// doesn't take a deal that leaves it weaker for the rest of the season (nowStrength). Short by a
 // reachable amount, it counters (asks for a pick, or takes something off its side).
 //
 // THE LEAGUE'S OWN DEALS: contenders buy veterans from rebuilders for picks and salary filler before the deadline
-// (cpuDeadline); in the summer, taxpayers move bad money to teams with room, with a pick for their trouble
+// (cpuDeadline: almost none before December 15, about half in the deadline's last week, deadline day included); in
+// the summer, taxpayers move bad money to teams with room, with a pick for their trouble
 // (salaryDumps).
 //
-// State: F.picks (core) [{ y, r, o, t, pr: { top } | null, sw: { with } | null }] · F.trl [deal log] · F.trc
-// { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's value)]
+// State: F.picks (core) [{ y, r, o, t, pr: { top, rl? } | null, sw: { with } | { by } | null }] · F.trl [deal log]
+// · F.trc { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's
+// value)] · p.txd (calDay he was traded) · p.osm (league year his offer sheet was matched) · team.tpe [{ $, n, until }]
 import { rngOf, clamp, r1 } from '../rng'
 import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
