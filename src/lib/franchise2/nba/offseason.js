@@ -15,6 +15,7 @@ import * as X from './seams'
 import { growBuilds } from './builds'
 import { notable } from './aging'
 import { rngOf } from '../rng'
+import { numberAll } from './numbers'
 import * as MK from './market'
 import { holdOf, hardCapOf } from './cap'
 
@@ -136,6 +137,7 @@ export function nextStep(F) {
   if (at === STEPS.length - 1) { newSeason(F); return 'season' }
   o.step = STEPS[at + 1]
   enter(F, o.step)
+  numberAll(F)   // (the summer's new men: the draft, free agency's camp bodies)
   return o.step
 }
 function enter(F, step) {
@@ -312,6 +314,7 @@ export function newSeason(F) {
   }
   pruneStreet(F)
   pruneDrafts(F)
+  numberAll(F)   // (camp's new men, and anyone a save left without one)
   F.picks = (F.picks ?? []).filter(p => p.y > F.year + 1)
   F.year++
   F.phase = 'season'

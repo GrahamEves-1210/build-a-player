@@ -6,6 +6,7 @@ import { records, pct, leagueOrder } from './season'
 import { addNews } from './news'
 import { nameFor } from '../names'
 import { rngOf, clamp } from '../rng'
+import { fixNumbers } from './numbers'
 import * as X from './seams'
 
 export const DRAFT_YEARS = 7
@@ -295,6 +296,8 @@ export function closeDraft(F) {
     // m.tw says the team means to sign him two-way, and a second-rounder without it gets a standard deal if there's room)
     X.rookieDeal(F, keep, { n: m.n, r: m.r, ...(m.r === 2 && { tw: !!m.tw }) })
   }
+  // (a number on every draftee's back: one free on his team)
+  for (const s of new Set(made.map(m => m.t))) fixNumbers(F, s)
   F.drafts = { ...(F.drafts ?? {}), [F.year + 1]: made.map(m => ({ ...m, n2: F.dc.find(x => x.i === m.i)?.n })) }
   const top = made.slice(0, 3).map(m => `${m.n}. ${nick(m.t)}: ${F.dc.find(x => x.i === m.i)?.n}`)
   addNews(F, { k: 'draft', tag: 'DRAFT', text: `The ${F.year + 1} draft: ${top.join(', ')}` })

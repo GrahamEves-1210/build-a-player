@@ -8,6 +8,7 @@ import { records, recText } from './season'
 import { addNews } from './news'
 import { placeBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
+import { numberAll, needsNumbers } from './numbers'
 
 export * from './league'
 export * from './schedule'
@@ -37,6 +38,7 @@ export function createNbaFranchise(setup) {
   F.builds = (setup.builds ?? []).slice(0, BUILD_MAX).map(B => ({ pos: B.pos, build: B.build, types: B.types ?? null, name: B.name, num: B.num, face: B.face ?? null, age: 20, ...(B.sandbox && { sandbox: 1 }) }))
   if (F.builds.some(B => B.sandbox)) F.sandbox = true
   placeBuilds(F)
+  numberAll(F)
   F.ss = {}; F.ps = {}; F.log = []; F.box = []; F.po = null
   makeSchedule(F)
   makePicks(F)
@@ -125,7 +127,7 @@ export function unpackNba(json) {
 }
 export function saveNba(F) { try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packNba(F)); queueFranchiseCloud(KEY(F.slot ?? 0)); return true } catch { return false } }
 export function loadNba(slot) {
-  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackNba(s); return F && F.v === NBA_SAVE_V && F.sport === 'nba' && F.teams ? F : null } catch { return null }
+  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackNba(s); if (!(F && F.v === NBA_SAVE_V && F.sport === 'nba' && F.teams)) return null; if (needsNumbers(F)) numberAll(F); return F } catch { return null }
 }
 export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }
 export const rawNbaSlot = slot => { try { const s = localStorage.getItem(KEY(slot)); return s ? JSON.parse(s) : null } catch { return null } }

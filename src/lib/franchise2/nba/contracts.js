@@ -26,6 +26,7 @@
 // decided, every deal ticks a year, years of service and Bird years go up, and the men whose deals are up go to the
 // free-agent pool with their cap holds, rights and RFA qualifying offers.
 import { rngOf, clamp, r1 } from '../rng'
+import { fixNumbers } from './numbers'
 import {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, maxPct, twoWayOf, rookieScale, excOf, excYears, indexed,
   payroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hardCapOf, overOf, EXC_TEXT,
@@ -511,6 +512,7 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   if (!own) p.bird = 0
   putDeal(F, p, { ...d, sc }, { year })
   if (!team.r.includes(p)) team.r.push(p)
+  fixNumbers(F, short)
   return { ok: true, via: c.via }
 }
 

@@ -60,6 +60,7 @@
 // · F.trc { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's
 // value)] · p.txd (calDay he was traded) · p.osm ({ s, y }: the team whose offer sheet was matched, the league year) · team.tpe [{ $, n, until }]
 import { rngOf, clamp, r1 } from '../rng'
+import { fixNumbers } from './numbers'
 import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
 import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf, cutMan, ownerCap } from './contracts'
@@ -729,6 +730,8 @@ export function doTrade(F, deal, { user = null } = {}) {
   }
   am.forEach((p, j) => move(p, a, b, paidB[j] ?? null))
   bm.forEach((p, j) => move(p, b, a, paidA[j] ?? null))
+  // (a man whose number is taken on his new team picks another)
+  fixNumbers(F, a); fixNumbers(F, b)
   F.picks = picksAfter(F, deal)
   const ent = { ly, y: F.year, d: F.day ?? 0, ph: F.phase, a, b, ag: am.map(p => p.n), bg: bm.map(p => p.n), pa: deal.pa ?? [], pb: deal.pb ?? [], gv: [Math.round(g.a), Math.round(g.b)], mv: [am.map(p => Math.round(manValue(F, p))), bm.map(p => Math.round(manValue(F, p)))], t: line, ...(isUser && { u: 1 }) }
   F.trl = [...(F.trl ?? []).filter(d => d.ly >= ly - 1), ent]
