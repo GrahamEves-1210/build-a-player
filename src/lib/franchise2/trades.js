@@ -387,8 +387,9 @@ export function decide(F, s, give, get, { user = true } = {}) {
   if (qb1 && tm.includes(qb1) && !gm.some(p => p.p === 'qb' && p.o >= qb1.o - 3) && !(sitOf(F, s) === 'reb' && qb1.ag >= 30)) return { ok: false, why: 'qb', who: qb1 }
   const cut = releasesFor(F, s, tm, gm)
   if (cut == null) return { ok: false, why: 'cap' }
+  // (NO SALARY CAP: a deal with the player's team isn't stopped by money, either side's; the league's own trades are)
   const cap = capAfter(F, s, tm, gm, cut)
-  if (!capOk(cap)) return { ok: false, why: 'cap' }
+  if (!(user && F.noCap) && !capOk(cap)) return { ok: false, why: 'cap' }
   const side = teamSide(F, s, { pl: gm, pk: gk }, { pl: tm, pk: tk })
   if (side.in <= 1) return { ok: false, why: 'nothing', side, short: Infinity }
   // a front-line player goes only for a real piece back: one player or pick worth at least half of him, never a pile
@@ -597,7 +598,7 @@ function eventSides(F, s, giveId, getId) {
   if (!checkTrade(F, s, give, get).ok) return null
   const { gm, tm } = resolve(F, s, give, get)
   const cut = releasesFor(F, s, tm, gm)
-  if (cut == null || !capOk(capAfter(F, s, tm, gm, cut))) return null
+  if (cut == null || (!F.noCap && !capOk(capAfter(F, s, tm, gm, cut)))) return null
   return { gm, tm }
 }
 export const eventTradeOk = (F, s, giveId, getId) => !!eventSides(F, s, giveId, getId)

@@ -286,7 +286,9 @@ export function lightRoom(F, calls = F.lt?.rs, off = F.lt?.off, tm = F.lt?.tm) {
   }
   for (const o of Object.values(off ?? {})) { offers += o.$; no++ }
   const under = t.r.filter(p => p.y > 0).length
-  const left = r1(c.cap - c.pay - c.dead - restOf53(under + nk + no, c.year) - keep - offers)
+  // (NO SALARY CAP, rules.js: the player's team has all the room it wants; 2026-11-23, players with the cap off could
+  // sign no one: this read the real cap)
+  const left = c.nocap ? r1(c.room - keep - offers) : r1(c.cap - c.pay - c.dead - restOf53(under + nk + no, c.year) - keep - offers)
   return { room: c.room, keep: r1(keep), offers: r1(offers), left, spend: r1(keep - built + offers) }
 }
 // can the team keep him (a build always: deals.js fitsDeal), with the other calls and the offers as they are
