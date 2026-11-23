@@ -908,7 +908,10 @@ function cfpRank(L, S, label, week, date, champs = null) {
 const publicPoll = p => ({ label: p.label, week: p.week, date: p.date, top25: p.top25 })
 
 // ── The build ────────────────────────────────────────────────────────────────
-const TEAM_SHIFT = { qb: 0.32, rb: 0.10, wr: 0.12 }   // points a game per OVR point over the starter he replaces
+// points a game per OVR point over the starter he replaces (2026-11-23, a player: Penn State lost three or more every
+// year even with a 98 quarterback. A quarterback was 0.32 and at most 8: a 99 over a 90 starter was under 3 points a
+// game, 67 to 99 moved Penn State 5.7 wins to 8.1. Now 0.5 and at most 10)
+const TEAM_SHIFT = { qb: 0.5, rb: 0.10, wr: 0.12 }
 const ELIGIBLE = new Set(['JR', 'SR', 'GR', 'RS-SO', 'RS-JR', 'RS-SR', 'RS-GR', '5TH', 'RS-5TH'])
 const CLASS_ORDER = ['FR', 'RS-FR', 'SO', 'RS-SO', 'JR', 'RS-JR', 'SR', 'RS-SR', 'GR']
 
@@ -934,7 +937,7 @@ function userFrom(L, build, types, team, position, opts) {
     for (const y of yrs) counts[y] = (counts[y] ?? 0) + 1
     year = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'JR'
   }
-  return { pos, team: team.short, name: opts?.name ?? 'Guest', ovr, rates: RATES[pos](nfrom(attrs), ovr), shift: clamp(-8, 8, (ovr - replaced) * TEAM_SHIFT[pos]), year, replaced, noClass: !!opts?.noClass }
+  return { pos, team: team.short, name: opts?.name ?? 'Guest', ovr, rates: RATES[pos](nfrom(attrs), ovr), shift: clamp(-10, 10, (ovr - replaced) * TEAM_SHIFT[pos]), year, replaced, noClass: !!opts?.noClass }
 }
 
 // ── The season ───────────────────────────────────────────────────────────────

@@ -43,6 +43,7 @@ export * from './rules'
 
 // (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)
 // (8: game day's moments are snaps of the game, 2026-11-16; an older save is brought up to date on load: upgradeSave)
+import { queueFranchiseCloud, dropFranchiseCloud } from './cloud'
 export const SAVE_V = 8
 
 // setup: { seed, team, slot, owner, sandbox, builds: [{ pos, build, types, sandbox, name, num, face }],
@@ -116,6 +117,7 @@ export function createFranchise(setup) {
 
 // ── Saves: three slots on this device ────────────────────────────────────────
 const KEY = slot => `bap_fr2_slot_${slot}`
+export const FR_KEY = KEY
 export const SLOTS_N = 3
 // packed: a man is a row of values (the keys once, not on every man), a league ~60 KB
 // a man as a row: the fields every man has, in order, then (if he has any) an object of the rest (a rookie's college,
@@ -146,7 +148,8 @@ export function unpackFranchise(json) {
   return F
 }
 export function saveFranchise(F) {
-  try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packFranchise(F)); return true } catch { return false }
+  // (and to the account, signed in: cloud.js)
+  try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packFranchise(F)); queueFranchiseCloud(KEY(F.slot ?? 0)); return true } catch { return false }
 }
 export function loadFranchise(slot) {
   try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = upgradeSave(unpackFranchise(s)); return F && F.v === SAVE_V && !F.setup && F.teams ? depthOnLoad(F) : null } catch { return null }
@@ -200,7 +203,7 @@ export function kickersOnLoad(F) {
   }
   return F
 }
-export function clearFranchise(slot) { try { localStorage.removeItem(KEY(slot)) } catch {} }
+export function clearFranchise(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }
 // a slot's line on the slot screen, without keeping the whole save around
 export function slotSummary(slot) {
   let raw = null

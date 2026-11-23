@@ -21,3 +21,9 @@ try { matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', 
 // The bottom nav (the dock) is always there. It used to have an off switch in Settings:
 // anyone who switched it off gets it back
 try { localStorage.removeItem('bap_hide_dock') } catch {}
+
+// COLORBLIND-FRIENDLY COLORS (the More sheet and Settings): the two teams in the mini games always differ in lightness
+// (components/app/MgStage.jsx cbFix)
+export const CB_KEY = 'bap_cb'
+export const cbSafe = () => { try { return localStorage.getItem(CB_KEY) === '1' } catch { return false } }
+export function setCbSafe(on) { try { if (on) localStorage.setItem(CB_KEY, '1'); else localStorage.removeItem(CB_KEY) } catch { /* */ } }

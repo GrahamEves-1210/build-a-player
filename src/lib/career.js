@@ -1338,6 +1338,16 @@ export function answerSpotMove(c, yes) {
   return { ...n, fit: yes ? fitFor(n) : c.fit, decisions: [...(c.decisions ?? []), { year: c.year + 1, text }] }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
+// ── Basketball: what the roster is worth ─────────────────────────────────────
+// The fit's three grades (backcourt, frontcourt, bench) weighted into one, against the league's own middle that
+// season (every team's roster as makeRoster has it), HOOP_K rating points a grade: the roster's spread about
+// matches the hand-set ratings' (a grade's sd is about 1.7, a side's rating about 2.1)
+const HOOP_K = 1.6, hoopMid = {}
+const hoopGrade = f => 0.45 * f.backcourt + 0.35 * f.frontcourt + 0.2 * f.bench
+function hoopPull(S, f, yrs) {
+  hoopMid[yrs] ??= S.teams.reduce((s, x) => s + hoopGrade(S.fit(makeRoster(x.short, S.id, yrs), 'guard', () => true)), 0) / S.teams.length
+  return HOOP_K * (hoopGrade(f) - hoopMid[yrs])
+}
 export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [], spot = null } = {}) {
   const S = SPORT[sport] ?? SPORT.nfl
   const t = S.teamOf(short)
@@ -1346,7 +1356,12 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
   // (football: from the men on the roster and the coaching staff, teamRating; the others: the team's rating and the league's moves)
   const drift = league?.[short] ?? { off: 0, def: 0 }, moved = k => (Number.isFinite(drift[k]) ? drift[k] : 0)
   const rt = S.talent ? teamRating(S, short, ro, pos, p => p.name !== name, league, yrs) : null
-  const off = rt ? rt.off : clamp(r10(t.off + moved('off')), 1, 10), def = rt ? rt.def : clamp(r10(t.def + moved('def')), 1, 10)
+  // basketball: half the team's rating and the league's moves, half the roster graded against the league that season
+  // (2026-11-23: the roster only moved the team through the fit's adj, and by year four the ratings had nothing to do
+  // with the rosters; three 91-94 stars beside an 82 went 40-42 on an average rating)
+  const pull = S.isBucket ? hoopPull(S, f, yrs) : 0
+  const side = k => clamp(r10(S.isBucket ? (t[k] + moved(k)) * 0.5 + (shapeOf(S)[k].m + pull) * 0.5 : t[k] + moved(k)), 1, 10)
+  const off = rt ? rt.off : side('off'), def = rt ? rt.def : side('def')
   return {
     short, name: t.name, color: t.color, color2: t.color2, off, def, conf: t.conf, div: t.div, status: S.status((off + def) / 2),
     ...(rt ? { coach: rt.coachG, offG: rt.offG, defG: rt.defG } : {}),

@@ -7,9 +7,12 @@
 // A save without them plays with the cap and injuries on, as every save did before.
 import { SHORTS } from './league'
 
-export const rulesOf = F => ({ cap: !F?.noCap, inj: !F?.noInj })
-export function setRules(F, { cap, inj } = {}) {
+//   F.sandbox SANDBOX (2026-11-23: a player couldn't turn it on from Franchise; it only followed the build page's own
+//            switch): a build can go into the draft class (Draft.jsx). Set at setup with the rest, changed on the hub.
+export const rulesOf = F => ({ cap: !F?.noCap, inj: !F?.noInj, sandbox: !!F?.sandbox })
+export function setRules(F, { cap, inj, sandbox } = {}) {
   if (cap != null) { if (cap) delete F.noCap; else F.noCap = 1 }
+  if (sandbox != null) F.sandbox = !!sandbox
   if (inj != null) {
     if (inj) delete F.noInj
     else {

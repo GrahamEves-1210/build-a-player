@@ -111,6 +111,8 @@ function shotType(r, R, isArc, assisted) {
   return 'layup'
 }
 
+// how much the ratings decide a shot (simStreetball: the look's distance from an even one, Q_MID, times this)
+const RATING_GAP = 1.5, Q_MID = .36 + 6 * .019 + 36 * .0022
 export const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 export const DEF_CALLS = ['press', 'sag', 'help']
 // the calls that make sense for a side this size: a 1v1 has nobody to pass to or help from
@@ -234,7 +236,9 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const edge = inside ? sizeEdge * (shot === 'post' ? .14 : .12) + (shot === 'post' ? 0 : speedEdge * .08) : sizeEdge * .04 + speedEdge * .03
     const iq = (R.iq - 5) / 6 * .015
     const handle = shot === 'drive' ? (R.handles - 5) / 6 * .03 : 0
-    const q = q0 + edge - contest + iq + handle
+    // (the ratings' part of the look, stretched away from an even one, a 6 on a 6: owner 11-23, a build about 10 OVR
+    // better didn't win as much as it should. RATING_GAP 1 is the old game)
+    const q = Q_MID + (q0 + edge - contest + iq + handle - Q_MID) * RATING_GAP
     const lockPen = Math.max(0, (d.R.lock - 1) * .08)
     const spArc = clamp((q + (cs ? csBonus(R) : 0) + dime - lockPen + arcRead * 1.6 + (off === 'pullup' ? callFor : 0)) * (R.big ? .58 : .65), .08, .6)
     const spIn = clamp(q + (cs ? csBonus(R) : passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .06 : 0) - lockPen * .75 + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)

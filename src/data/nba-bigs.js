@@ -45,7 +45,7 @@ export const NBA_BIG_PLAYERS = [
   { name: 'Naz Reid', short: 'Reid', team: 'CHA', starter: true, captain: false, number: 11, height: 81, weight: 263, wingspan: 87, skin: '#7d4d39', position: 'C', faceCenter: [50, 43],
     attrs: { jumpShot: 7, finishing: 6, rebounding: 7, playmaking: 6, interiorDefense: 5, speed: 4, bounce: 4, size: 7, basketballIQ: 6, clutch: 6 } },
   { name: 'Hannes Steinbach', short: 'Steinbach', team: 'CHA', starter: false, captain: false, number: 17, height: 81, weight: 225, wingspan: 86, skin: '#a67f6b', position: 'PF', faceCenter: [50, 37],
-    attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 3, finishing: 5, rebounding: 10, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
   { name: 'Grant Williams', short: 'Williams', team: 'CHA', starter: true, captain: false, number: 2, height: 78, weight: 236, wingspan: 82, skin: '#d29979', position: 'PF', faceCenter: [50, 43],
     attrs: { jumpShot: 5, finishing: 5, rebounding: 4, playmaking: 3, interiorDefense: 8, speed: 4, bounce: 3, size: 5, basketballIQ: 6, clutch: 3 } },
 
@@ -71,7 +71,7 @@ export const NBA_BIG_PLAYERS = [
   { name: 'Santi Aldama', short: 'Aldama', team: 'DAL', starter: false, captain: false, number: 7, height: 83, weight: 220, wingspan: 83, skin: '#d19475', position: 'PF', faceCenter: [50, 43],
     attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 5, interiorDefense: 6, speed: 5, bounce: 4, size: 7, basketballIQ: 4, clutch: 5 } },
   { name: 'Daniel Gafford', short: 'Gafford', team: 'DAL', starter: true, captain: false, number: 21, height: 83, weight: 234, wingspan: 87, skin: '#cc9278', position: 'C', faceCenter: [50, 40],
-    attrs: { jumpShot: 1, finishing: 8, rebounding: 8, playmaking: 2, interiorDefense: 7, speed: 4, bounce: 5, size: 7, basketballIQ: 4, clutch: 3 } },
+    attrs: { jumpShot: 1, finishing: 8, rebounding: 8, playmaking: 2, interiorDefense: 9, speed: 4, bounce: 8, size: 7, basketballIQ: 4, clutch: 3 } },
   { name: 'Morez Johnson Jr.', short: 'Johnson Jr.', team: 'DAL', starter: false, captain: false, number: 14, height: 84, weight: 235, wingspan: 87, skin: '#925f4b', position: 'PF', faceCenter: [51, 43],
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 3, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
   { name: 'Dereck Lively II', short: 'Lively II', team: 'DAL', starter: false, captain: false, number: 2, height: 85, weight: 230, wingspan: 91, skin: '#ad8271', position: 'C', faceCenter: [50, 44],

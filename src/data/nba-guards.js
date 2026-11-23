@@ -23,7 +23,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'CJ McCollum', short: 'McCollum', team: 'ATL', starter: true, captain: false, number: 3, height: 75, weight: 200, wingspan: 78, skin: '#b87b60', position: 'SG', faceCenter: [50, 40],
     attrs: { jumpShot: 8, finishing: 5, passing: 6, handles: 6, perimeterDefense: 3, speed: 7, bounce: 3, size: 5, basketballIQ: 8, clutch: 6 } },
   { name: 'Zaccharie Risacher', short: 'Risacher', team: 'DAL', starter: false, captain: false, number: 10, height: 81, weight: 195, wingspan: 83, skin: '#c78a68', position: 'SF', faceCenter: [49, 39],
-    attrs: { jumpShot: 5, finishing: 3, passing: 3, handles: 3, perimeterDefense: 5, speed: 5, bounce: 4, size: 9, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 5, finishing: 3, passing: 3, handles: 3, perimeterDefense: 7, speed: 5, bounce: 4, size: 9, basketballIQ: 3, clutch: 3 } },
   { name: 'Aaron Wiggins', short: 'Wiggins', team: 'ATL', starter: false, captain: false, number: 21, height: 77, weight: 196, wingspan: 81, skin: '#ae7454', position: 'SG', faceCenter: [49, 41], faceAdjust: { dx: 0, dy: -2, scale: 1 },
     attrs: { jumpShot: 6, finishing: 2, passing: 4, handles: 4, perimeterDefense: 4, speed: 6, bounce: 3, size: 5, basketballIQ: 4, clutch: 3 } },
 
@@ -31,7 +31,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Mike Conley', short: 'Conley', team: 'BOS', starter: false, captain: false, number: 10, height: 73, weight: 175, wingspan: 78, skin: '#8d563c', position: 'PG', faceCenter: [50, 37], faceAdjust: { dx: 1, dy: 0, scale: 1 },
     attrs: { jumpShot: 7, finishing: 3, passing: 8, handles: 6, perimeterDefense: 3, speed: 4, bounce: 2, size: 2, basketballIQ: 10, clutch: 7 } },
   { name: 'Paul George', short: 'PG', team: 'BOS', starter: true, captain: false, number: 8, height: 80, weight: 220, wingspan: 83, skin: '#b37757', position: 'SF', faceCenter: [49, 41], faceAdjust: { dx: 2, dy: -1, scale: 1 },
-    attrs: { jumpShot: 8, finishing: 5, passing: 6, handles: 7, perimeterDefense: 7, speed: 6, bounce: 6, size: 8, basketballIQ: 7, clutch: 7 } },
+    attrs: { jumpShot: 8, finishing: 5, passing: 6, handles: 7, perimeterDefense: 8, speed: 6, bounce: 6, size: 8, basketballIQ: 7, clutch: 7 } },
   { name: 'Hugo Gonzalez', short: 'Gonzalez', team: 'BOS', starter: false, captain: false, number: 28, height: 77, weight: 195, wingspan: 83, skin: '#ae8071', position: 'SG', faceCenter: [50, 46], faceAdjust: { dx: 0, dy: -2, scale: 1.05 },
     attrs: { jumpShot: 6, finishing: 4, passing: 4, handles: 3, perimeterDefense: 4, speed: 5, bounce: 4, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'Sam Hauser', short: 'Hauser', team: 'BOS', starter: false, captain: false, number: 30, height: 80, weight: 220, wingspan: 82, skin: '#c79287', position: 'SF', faceCenter: [50, 39],
@@ -261,7 +261,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Luka Doncic', short: 'Luka', team: 'LAL', starter: true, captain: true, number: 77, height: 79, weight: 230, wingspan: 83, skin: '#c28b73', position: 'PG', faceCenter: [50, 40], faceAdjust: { dx: 0, dy: 1, scale: 1 },
     attrs: { jumpShot: 11, finishing: 11, passing: 11, handles: 10, perimeterDefense: 3, speed: 6, bounce: 4, size: 8, basketballIQ: 10, clutch: 10 } },
   { name: 'Quentin Grimes', short: 'Grimes', team: 'LAL', starter: false, captain: false, number: 5, height: 77, weight: 210, wingspan: 80, skin: '#a16d5a', position: 'SG', faceCenter: [51, 46],
-    attrs: { jumpShot: 6, finishing: 5, passing: 3, handles: 4, perimeterDefense: 6, speed: 7, bounce: 6, size: 7, basketballIQ: 4, clutch: 3 } },
+    attrs: { jumpShot: 8, finishing: 7, passing: 3, handles: 4, perimeterDefense: 6, speed: 7, bounce: 6, size: 7, basketballIQ: 4, clutch: 3 } },
   { name: 'Bronny James', short: 'James', team: 'LAL', starter: false, captain: false, number: 9, height: 74, weight: 210, wingspan: 79, skin: '#965e40', position: 'SG', faceCenter: [50, 44],
     attrs: { jumpShot: 5, finishing: 4, passing: 4, handles: 4, perimeterDefense: 5, speed: 8, bounce: 7, size: 6, basketballIQ: 4, clutch: 3 } },
   { name: 'Dalton Knecht', short: 'Knecht', team: 'LAL', starter: false, captain: false, number: 4, height: 78, weight: 215, wingspan: 81, skin: '#cc9680', position: 'SF', faceCenter: [50, 41],
@@ -283,7 +283,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Walter Clayton Jr.', short: 'Clayton Jr.', team: 'DAL', starter: false, captain: false, number: 4, height: 74, weight: 185, wingspan: 76, skin: '#d0a995', position: 'PG', faceCenter: [50, 48],
     attrs: { jumpShot: 8, finishing: 4, passing: 4, handles: 5, perimeterDefense: 3, speed: 6, bounce: 4, size: 2, basketballIQ: 4, clutch: 3 } },
   { name: 'Cedric Coward', short: 'Coward', team: 'MEM', starter: false, captain: false, number: 23, height: 79, weight: 215, wingspan: 86, skin: '#7a604d', position: 'SF', faceCenter: [50, 41],
-    attrs: { jumpShot: 7, finishing: 5, passing: 4, handles: 4, perimeterDefense: 5, speed: 5, bounce: 5, size: 7, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 8, finishing: 7, passing: 5, handles: 5, perimeterDefense: 6, speed: 6, bounce: 5, size: 7, basketballIQ: 5, clutch: 3 } },
   { name: 'Jerami Grant', short: 'Grant', team: 'MEM', starter: true, captain: false, number: 9, height: 80, weight: 210, wingspan: 87, skin: '#59463b', position: 'SF', faceCenter: [49, 34],
     attrs: { jumpShot: 5, finishing: 6, passing: 4, handles: 3, perimeterDefense: 6, speed: 6, bounce: 6, size: 8, basketballIQ: 5, clutch: 5 } },
   { name: 'Ty Jerome', short: 'Jerome', team: 'MEM', starter: true, captain: false, number: 2, height: 77, weight: 195, wingspan: 76, skin: '#c48a6f', position: 'PG', faceCenter: [50, 41],
@@ -425,7 +425,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── ORL ───────────────────────────────────────────────────────
   { name: 'Desmond Bane', short: 'Bane', team: 'ORL', starter: true, captain: false, number: 3, height: 77, weight: 215, wingspan: 76, skin: '#9e6747', position: 'SG', faceCenter: [50, 40],
-    attrs: { jumpShot: 8, finishing: 6, passing: 6, handles: 5, perimeterDefense: 4, speed: 7, bounce: 6, size: 6, basketballIQ: 6, clutch: 6 } },
+    attrs: { jumpShot: 9, finishing: 6, passing: 6, handles: 5, perimeterDefense: 4, speed: 7, bounce: 6, size: 6, basketballIQ: 6, clutch: 6 } },
   { name: 'Anthony Black', short: 'Black', team: 'ORL', starter: false, captain: false, number: 0, height: 79, weight: 205, wingspan: 80, skin: '#b37d5e', position: 'SG', faceCenter: [49, 48],
     attrs: { jumpShot: 6, finishing: 4, passing: 5, handles: 5, perimeterDefense: 7, speed: 5, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'Tristan da Silva', short: 'Silva', team: 'ORL', starter: false, captain: false, number: 23, height: 81, weight: 215, wingspan: 83, skin: '#b47b5c', position: 'SF', faceCenter: [50, 43],
@@ -536,7 +536,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Keldon Johnson', short: 'K. Johnson', team: 'SAS', starter: false, captain: false, number: 3, height: 77, weight: 222, wingspan: 81, skin: '#a86e52', position: 'SF', faceCenter: [50, 40],
     attrs: { jumpShot: 5, finishing: 7, passing: 4, handles: 5, perimeterDefense: 6, speed: 5, bounce: 5, size: 8, basketballIQ: 5, clutch: 5 } },
   { name: 'Devin Vassell', short: 'Vassell', team: 'SAS', starter: true, captain: false, number: 24, height: 77, weight: 195, wingspan: 82, skin: '#b37757', position: 'SG', faceCenter: [50, 45], faceAdjust: { dx: 0, dy: -3, scale: 1 },
-    attrs: { jumpShot: 7, finishing: 5, passing: 5, handles: 6, perimeterDefense: 7, speed: 5, bounce: 5, size: 5, basketballIQ: 6, clutch: 5 } },
+    attrs: { jumpShot: 8, finishing: 5, passing: 5, handles: 6, perimeterDefense: 7, speed: 5, bounce: 5, size: 5, basketballIQ: 6, clutch: 5 } },
 
   // ─── TOR ───────────────────────────────────────────────────────
   { name: 'Kyle Anderson', short: 'Anderson', team: 'TOR', starter: false, captain: false, number: 1, height: 81, weight: 235, wingspan: 87, skin: '#c49276', position: 'SF', faceCenter: [48, 44],

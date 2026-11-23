@@ -86,6 +86,30 @@ function seededRandom(seed) {
 }
 
 function rn(min, max, rand = Math.random) { return min + rand() * (max - min) }
+// the standard normal's inverse (Acklam's approximation, good to about 1e-9): one uniform draw in, a z out
+function zOf(u) {
+  const p = Math.min(1 - 1e-9, Math.max(1e-9, u))
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239]
+  const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572]
+  const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783]
+  const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416]
+  const lo = 0.02425
+  if (p < lo) { const q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1) }
+  if (p > 1 - lo) { const q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1) }
+  const q = p - 0.5, r = q * q
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+}
+// A night's points: most near his average, a long tail of big ones (lognormal, the shape real scorers' nights have).
+// The same mean as before (his ppg + 1.5) and one draw a game, so a season's numbers stay where they were.
+// (2026-11-23, a player: "I can average 30 and not drop 40 once". It was his ppg -7 to +10, flat: a 30 scorer never
+// passed 40 and 50 couldn't happen. Now a 28-30 scorer has about seven 40s a season and a 50 about every other season.)
+function nightPts(ppg, rand) {
+  const mean = Math.max(1, ppg + 1.5)
+  // (a role player's nights swing more, for his size; a 35-a-night scorer's a little less, or he'd drop 50 every other week)
+  const sd = 0.22 + Math.max(0, 20 - mean) * 0.01 - Math.max(0, mean - 30) * 0.006
+  // (81 is the most anyone has scored in a game since 1962: a night stops there)
+  return Math.min(81, mean * Math.exp(sd * zOf(rand()) - sd * sd / 2))
+}
 
 // ─── OVR Calculation ──────────────────────────────────────────────────────────
 // Guard types: jumpShot finishing passing handles perimeterDefense speed bounce size basketballIQ clutch
@@ -531,7 +555,7 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
     const fx = !sg ? team?.schedule?.[i] : null
     const oppShort = sg ? sg.opponent : fx ? (rand(), fx.opponent) : allOpps[Math.floor(rand() * allOpps.length)]
 
-    const gamePts = Math.max(0, Math.round(ppg + rn(-7, 10, rand)))
+    const gamePts = Math.max(0, Math.round(nightPts(ppg, rand)))
     const gameReb = Math.max(0, Math.round(rpg + rn(-3, 3, rand)))
     const gameAst = Math.max(0, Math.round(apg + rn(-2, 2.5, rand)))
 

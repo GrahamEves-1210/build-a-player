@@ -87,7 +87,7 @@ const _DBS = [
   { name: 'Tyrique Stevenson',   short: 'Stevenson',      team: 'CHI', teamName: 'Chicago Bears',     skin: '#5e3c22', height: 72, weight: 212, starter: true,  captain: true,  number: 29, subpos: 'cb',
     attrs: { speed: 5, size: 7, fluidity: 5, press: 6, hands: 5, zoneIQ: 4, manCoverage: 4, playRecognition: 4, runSupport: 6} },
   { name: 'Jaylon Johnson',      short: 'Ja. Johnson',    team: 'CHI', teamName: 'Chicago Bears',     skin: '#5e3c22', height: 72, weight: 195, starter: true,  number: 1, subpos: 'cb',
-    attrs: { speed: 7, size: 5, fluidity: 8, press: 8, hands: 8, zoneIQ: 8, manCoverage: 7, playRecognition: 8, runSupport: 5} },
+    attrs: { speed: 7, size: 5, fluidity: 7, press: 8, hands: 8, zoneIQ: 8, manCoverage: 7, playRecognition: 8, runSupport: 5} },
   { name: 'Xavier Woods',        short: 'Woods',          team: 'CHI', teamName: 'Chicago Bears',     skin: '#5e3c22', height: 71, weight: 202, starter: true,  captain: true,  number: 32, subpos: 's',
     attrs: { speed: 4, size: 5, fluidity: 4, press: 3, hands: 5, zoneIQ: 5, manCoverage: 4, playRecognition: 6, runSupport: 5} },
   { name: 'Dillon Thieneman',    short: 'Thieneman',      team: 'CHI', teamName: 'Chicago Bears',     skin: '#f0c4a0', height: 72, weight: 201, starter: true,  number: 31, subpos: 's',
@@ -179,7 +179,7 @@ const _DBS = [
     attrs: { speed: 7, size: 7, fluidity: 7, press: 4, hands: 10, zoneIQ: 11, manCoverage: 6, playRecognition: 10, runSupport: 6} },
   // KC
   { name: 'Nohl Williams',       short: 'N. Williams',    team: 'KC',  teamName: 'Kansas City Chiefs', skin: '#5e3c22', height: 73, weight: 200, starter: true,  captain: true,  number: 20, subpos: 'cb',
-    attrs: { speed: 6, size: 6, fluidity: 6, press: 6, hands: 7, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 6} },
+    attrs: { speed: 7, size: 6, fluidity: 7, press: 8, hands: 7, zoneIQ: 6, manCoverage: 9, playRecognition: 8, runSupport: 7} },
   { name: 'Mansoor Delane',      short: 'Delane',         team: 'KC',  teamName: 'Kansas City Chiefs', skin: '#5e3c22', height: 72, weight: 190, starter: true,  number: 5, subpos: 'cb',
     attrs: { speed: 8, size: 5, fluidity: 7, press: 7, hands: 6, zoneIQ: 5, manCoverage: 9, playRecognition: 5, runSupport: 6} },
   { name: 'Alohi Gilman',        short: 'Gilman',         team: 'KC',  teamName: 'Kansas City Chiefs', skin: '#b07848', height: 70, weight: 201, starter: true,  captain: true,  number: 17, subpos: 's',

@@ -488,7 +488,7 @@ export function DraftDay({ F, act, owner, onBuild, light = false }) {
 function DraftWeek({ F, act, onBuild }) {
   const [room, setRoom] = useState(false)
   const [add, setAdd] = useState(false)
-  const sandbox = sandboxOn() && !!onBuild
+  const sandbox = (!!F.sandbox || sandboxOn()) && !!onBuild
   const mine = myPicks(F)
   const ranks = rankMap(F)
   const top = (F.board.length ? F.board.map(id => F.dc.find(x => x.i === id)).filter(Boolean) : consensus(F)).slice(0, 5)
@@ -514,7 +514,7 @@ function DraftWeek({ F, act, onBuild }) {
         <section className="dr-sec dr-sandbox is-locked">
           <Chyron title="SANDBOX" tone="ink" size="s" sub="A BUILD INTO THE CLASS" />
           <button type="button" className="dr-add is-locked" aria-disabled="true" onClick={() => sfx('deny')}><LockIcon />Add a prospect</button>
-          <p className="dr-lockline">A Sandbox feature. With Sandbox on, a build can go into the draft class.</p>
+          <p className="dr-lockline">A Sandbox feature. Turn Sandbox on in League rules on the hub, and a build can go into the draft class.</p>
         </section>
       )}
       <ActionBar>
