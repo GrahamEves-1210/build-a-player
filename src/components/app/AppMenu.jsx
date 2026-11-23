@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
-import { reduceMotion, setReduceMotion } from '../../lib/settings'
+import { reduceMotion, setReduceMotion, cbSafe, setCbSafe } from '../../lib/settings'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { openCheckout, openBillingPortal, billingDue, restorePro, PRO_PRICE, perMonth } from '../../lib/webCheckout'
@@ -167,6 +167,9 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
   const [calm, setCalm] = useState(reduceMotion)
+  // colorblind-friendly colors (MgStage.jsx cbFix), beside Reduce Motion (owner 11-23: in the More tab) and in Settings
+  const [cb, setCb] = useState(cbSafe)
+  const flipCb = () => { setCbSafe(!cb); setCb(!cb) }
   const signedIn = useProgress().signedIn
   const isBucket = sport === 'bucket'
 
@@ -242,6 +245,11 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
               <span className="ag-sound-lbl">REDUCE MOTION</span>
               <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
               <span className="ag-sound-state">{calm ? 'ON' : 'OFF'}</span>
+            </button>
+            <button className={`ag-row-btn${cb ? '' : ' ag-sound--off'}`} role="switch" aria-checked={cb} onClick={flipCb}>
+              <span className="ag-sound-lbl">COLORBLIND MODE</span>
+              <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
+              <span className="ag-sound-state">{cb ? 'ON' : 'OFF'}</span>
             </button>
             <button className="ag-row-btn" onClick={() => setView('settings')}>
               <IconGear size={18} /><span className="ag-sound-lbl">SETTINGS · HELP · ACCOUNT</span>

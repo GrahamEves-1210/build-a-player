@@ -1,3 +1,4 @@
+import { cbSafe, setCbSafe } from '../../lib/settings'
 import { useState } from 'react'
 import { IS_APP } from '../../lib/platform'
 import { isMuted, setMuted, hapticsOff, setHapticsOff, haptic } from '../../lib/juice'
@@ -74,8 +75,8 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
   const [retro, setRetro] = useState(() => { try { return localStorage.getItem('bap_mg_pixel') !== '0' } catch { return true } })
   const flipRetro = v => { try { if (v) { localStorage.removeItem('bap_mg_pixel'); localStorage.removeItem('bap_mg_pixel_pt'); localStorage.removeItem('bap_mg_tex') } else { localStorage.setItem('bap_mg_pixel', '0'); localStorage.setItem('bap_mg_tex', '') } } catch {}; setRetro(v) }
   // Colorblind-friendly colors: the two teams in the mini games always differ in lightness (MgStage.jsx cbFix)
-  const [cb, setCb] = useState(() => { try { return localStorage.getItem('bap_cb') === '1' } catch { return false } })
-  const flipCb = v => { try { if (v) localStorage.setItem('bap_cb', '1'); else localStorage.removeItem('bap_cb') } catch {}; setCb(v) }
+  const [cb, setCb] = useState(cbSafe)
+  const flipCb = v => { setCbSafe(v); setCb(v) }
   const [notifs, setNotifs] = useState(notifPrefs)
   const [faq, setFaq] = useState(null)
 

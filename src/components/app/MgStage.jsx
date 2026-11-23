@@ -1,3 +1,4 @@
+import { cbSafe } from '../../lib/settings'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { STEP, hud, pads, stamp, keyCap, THREE_KEYS, fieldFor, boardTick } from '../../lib/mg/kit'
@@ -130,8 +131,6 @@ const AWAY = '#e8edf2', DARK = '#15181c'
 // COLORBLIND-FRIENDLY COLORS (Settings, 2026-11-23: a player couldn't tell orange, red, brown and black teams apart in
 // the moments): the two sides must differ in lightness, not just hue. When they don't, the other side wears white or
 // near-black, whichever is further from his team's colour, trimmed in its own colour.
-export const CB_KEY = 'bap_cb'
-export const cbSafe = () => { try { return localStorage.getItem(CB_KEY) === '1' } catch { return false } }
 const lum = h => { const [r, g, b] = rgb(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
 const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
 function cbFix(c) {
