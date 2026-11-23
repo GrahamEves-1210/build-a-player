@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, nick, manOf, momentPlan, momentDone, momentSim, momentText, dateText, ROUND_NAME, seriesText, poTag } from '../../../lib/franchise2/nba'
+import { TEAM, nick, manOf, momentPlan, momentDone, momentSim, momentText, dateText, seriesText, poTag } from '../../../lib/franchise2/nba'
 import { markBuildPage } from '../../../lib/buildSave'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
