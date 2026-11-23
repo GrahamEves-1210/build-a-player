@@ -238,8 +238,23 @@ export function finishBox(B) {
 // ever, the playoffs included: F.ssr keeps the regular season), and the week's lines for the wire
 // (the headless checks look at every game's box as it's kept: scripts/franchise2/records-check.mjs)
 export const BOXLOG = { fn: null }
+// each team's regular season as a team, game by game (F.tst: { [short]: numbers in TST_K's order }): what it gained
+// and gave up, kept small for the save. The team stats page reads it (stats.js teamSeasonStats).
+export const TST_K = ['g', 'yds', 'py', 'ry', 'pa', 'pc', 'ra', 'sk', 'int', 'fum', 'oyds', 'opy', 'ory', 'osk', 'oint', 'ofum']
+function addTeamGame(F, B) {
+  if (!B.team) return
+  const T = (F.tst ??= {})
+  for (const [side, other] of [['h', 'a'], ['a', 'h']]) {
+    const u = B.team[side], o = B.team[other], short = B[side].short
+    if (!u || !o || !short) continue
+    const add = [1, u.yds, u.py, u.ry, u.pa, u.pc, u.ra, u.sk, u.int, u.fum, o.yds, o.py, o.ry, o.sk, o.int, o.fum]
+    const t = T[short] ??= TST_K.map(() => 0)
+    add.forEach((v, j) => { t[j] += v || 0 })
+  }
+}
 export function recordBox(F, B, po) {
   BOXLOG.fn?.(F, B, po)
+  if (!po) addTeamGame(F, B)
   const store = po ? (F.lgp ??= {}) : (F.lg ??= {})
   if (!po && (F.wkl?.wk !== F.wk)) F.wkl = { wk: F.wk, s: {} }
   for (const side of ['h', 'a']) {

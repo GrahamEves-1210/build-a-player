@@ -173,11 +173,15 @@ function logDrive(S, side, t0, y0, res, at) {
   S.top[side] += t1 - Math.round(t0)
 }
 const other = s => (s === 'h' ? 'a' : 'h')
+// how much the gap in talent counts on a drive (2026-11-23: 1.3; at 1 the league's records bunched up, a spread of
+// about 2.7 wins a season, where the NFL's is about 3.1; 1.3 makes it 2.9, the best team about 14.5 wins and the
+// worst 2 to 3: scripts/franchise2/records-spread.mjs)
+const EDGE_K = 1.3
 const edgeOf = (S, side) => {
   const G = S.G, mine = side === 'h' ? G.sh : G.sa, them = side === 'h' ? G.sa : G.sh
   // (late in a close game, the 4th quarter or overtime within one score, each coach's calls: coach.js coachLate)
   const late = G.late && S.t >= REG - Q && Math.abs(S.hs - S.as) <= 8 ? (G.late[side] ?? 0) : 0
-  return (mine.off - them.def) + (side === 'h' ? (G.homeEdge ?? 0) : 0) + (G.mod?.[side] ?? 0) + late
+  return EDGE_K * (mine.off - them.def) + (side === 'h' ? (G.homeEdge ?? 0) : 0) + (G.mod?.[side] ?? 0) + late
 }
 const margin = (S, side) => (side === 'h' ? S.hs - S.as : S.as - S.hs)
 const score = (S, side, pts, kind, extra = {}) => {

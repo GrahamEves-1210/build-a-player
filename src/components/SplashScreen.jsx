@@ -151,7 +151,6 @@ function PositionPicker({ position, onChange }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {(opt.pos === 'db' || (opt.pos === 'lb' && LB_LIVE) || (opt.pos === 'ol' && OL_LIVE) || (opt.pos === 'k' && K_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
@@ -490,7 +489,6 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
             >
               <div className="smode-title smode-title--alltime">
                 All-Time
-                {(position === 'wr' || position === 'db' || position === 'te' || position === 'lb') && <span className="splash-alltime-new-tag">NEW</span>}
               </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">

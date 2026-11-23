@@ -271,3 +271,14 @@ html.bap-reduce-motion :is(.fd-ap, .fd-deal, .fd-day, .fd-offer, .fd-div, .fd-ba
 .fd-past-row:not(.is-out) em { color: #fff; }
 .fd-past-row.is-champ { box-shadow: inset 3px 0 0 var(--fk-gold); }
 .fd-past-row.is-champ em { color: var(--fk-gold-hi); }
+
+/* A team's page (TeamPage.jsx): its numbers a game, each with its league rank; the top five in green, the bottom
+   five in red */
+.fd-tstats { display: grid; gap: 3px; margin-top: 10px; }
+.fd-tstat span { display: flex; gap: 12px; align-items: baseline; color: #fff; }
+.fd-tstat span small { min-width: 40px; text-align: right; font-family: var(--fk-b); font-weight: 600; font-size: 14px; letter-spacing: .2px; color: var(--fk-mute); }
+.fd-tstat.is-top span small { color: var(--fk-w); }
+.fd-tstat.is-low span small { color: var(--fk-l); }
+.fd-team-top > .fd-stats-strip { grid-column: 1 / -1; }
+/* the standings: a team's bar opens its page */
+button.fd-bar { width: 100%; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }

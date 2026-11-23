@@ -22,9 +22,8 @@ import { HoopU, switchSport, SPORTS } from './AppHome'
 import { SOCCER_POOL } from '../../lib/soccerUi'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import './home-classic.css'
-import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
-import { OL_LIVE, OL_SOON } from '../../lib/olLive'
-import { K_LIVE } from '../../lib/kLive'
+import { LB_SOON } from '../../lib/lbLive'
+import { OL_SOON } from '../../lib/olLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 import { FranchiseCardClassic } from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
@@ -76,7 +75,6 @@ const NFL_FIGURE = {
 }
 const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line', k: 'Kicker' }
 const PLURAL = { bat: 'Hitters', pit: 'Pitchers', qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', k: 'Kickers', guard: 'Guards', big: 'Bigs' }
-const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 // the open positions first (DL opened after this Home), then the ones still to come
 // (LB and OL are hidden, not shown as SOON, until their flags: lib/lbLive.js, lib/olLive.js)
 const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && (o.pos !== 'ol' || OL_SOON) && (o.pos !== 'lb' || LB_SOON))]   // (LB and OL while they're coming soon: locked SOON tiles)
@@ -428,7 +426,6 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             }
             return (
               <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE) || (o.pos === 'k' && K_LIVE)) && <span className="ag-pos-new">NEW</span>}
                 {o.players && <span className="agc-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
                 <span className="agc-pos-label">{o.label}</span>
                 {o.sub && <span className="agc-pos-sub">{o.sub}</span>}
@@ -452,8 +449,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
         <div className="ag-modes">
           <ModeCard title={isSoccer ? SOCCER_POOL.current.label : 'CURRENT'} badge={isSoccer ? '36 clubs' : `Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
             tone={isBucket ? 'orange' : isSoccer ? 'soccer' : isBaseball ? 'baseball' : null} />
-          <ModeCard tone="gold" title={isSoccer ? SOCCER_POOL.alltime.label : 'ALL-TIME'} badge={isSoccer ? '48 nations' : 'Draft the Greats'} mark={IconCrown} delay="270ms" onClick={() => start('all-time')}
-            isNew={isBucket || NEW_ALLTIME.has(position)} />
+          <ModeCard tone="gold" title={isSoccer ? SOCCER_POOL.alltime.label : 'ALL-TIME'} badge={isSoccer ? '48 nations' : 'Draft the Greats'} mark={IconCrown} delay="270ms" onClick={() => start('all-time')} />
         </div>
 
         <div className="ag-extras">
@@ -469,7 +465,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
           {/* College Basketball: the same card on basketball's Home (logos only: lib/cbbLive.js) */}
           {isBucket && onCBB && (
             <button className="ag-way ag-mc ag-mc--cfb ag-mc--cbb ag-cfb--classic ag-pop" style={{ '--d': '240ms', gridColumn: '1 / -1' }} onClick={onCBB}>
-              <span className="ag-mc-head"><b>COLLEGE BASKETBALL<i className="ag-mc-tag">NEW</i></b><small>Conference spin · March Madness</small></span>
+              <span className="ag-mc-head"><b>COLLEGE BASKETBALL</b><small>Conference spin · March Madness</small></span>
               <span className="ag-cfb-band" aria-hidden="true">
                 {CBB_CARD_LOGOS.map(sc => <img key={sc} src={sc} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
               </span>

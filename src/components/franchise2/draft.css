@@ -315,5 +315,7 @@ body:has(> .dr-sheet) .dr-room .dr-close { visibility: hidden; }
 .dr-group { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; padding: 4px 0 3px; border-bottom: 1px solid var(--fk-line); font-family: var(--fk-d); font-size: 18px; letter-spacing: .6px; color: #fff; }
 .dr-group small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-dim); }
 .dr-group.is-dim { font-size: 14px; color: var(--fk-mute); }
+/* POSITION over the whole class: each room's first five, then the way into the room */
+.dr-allpos { height: 36px; margin: 2px 0 6px; border: 0; background: transparent; box-shadow: inset 0 0 0 1px var(--fk-line); color: #fff; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; cursor: pointer; }
 /* what an S means (the top of the mode's scale, above A+) */
 .dr-key { margin: -2px 0 0; font-family: var(--fk-b); font-size: 14px; line-height: 1.3; color: var(--fk-mute); }

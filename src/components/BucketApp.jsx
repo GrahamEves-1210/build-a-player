@@ -347,7 +347,6 @@ function BucketSplash({ onStart, onVersus }) {
 
           <div className="splash-modes-secondary">
             <button className="splash-mode-alltime" onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('all-time', position) }}>
-              <div className="smode-daily-banner" style={{ background: 'linear-gradient(135deg, #ca8a04, #eab308)' }}>NEW</div>
               <div className="smode-title">All-Time</div>
               <div className="smode-badge">NBA Legends</div>
             </button>
@@ -361,7 +360,6 @@ function BucketSplash({ onStart, onVersus }) {
         </div>
 
         <button className="splash-minigame-btn splash-minigame-btn--h2h" style={{ position: 'relative' }} onClick={() => onVersus?.(position)}>
-          <span className="splash-h2h-new">NEW</span>
           <div className="splash-h2h-logo">HEAD<span className="h2h-to">-TO-</span>HEAD</div>
           <div className="splash-mg-sub splash-mg-sub--h2h">1v1</div>
         </button>

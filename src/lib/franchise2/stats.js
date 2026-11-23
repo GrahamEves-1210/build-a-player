@@ -12,7 +12,8 @@ import { SHORTS, realOf } from './league'
 import { startersOf, benchOf, groupOf, OL_SPOTS } from './roster'
 import { KEYS, playFootballSeason } from '../teamSeason'
 import { clamp, r1 } from './rng'
-import { lgAll, lgPut, addLines, wkPack, wkUnpack, oppPack, oppUnpack } from './box'
+import { lgAll, lgPut, addLines, wkPack, wkUnpack, oppPack, oppUnpack, TST_K } from './box'
+import { records } from './standings'
 
 // ── Ratings for the box score ────────────────────────────────────────────────
 // a man's 0-11 traits: a build's own; a real man's real ones, moved by how far his OVR has come since; a generated
@@ -137,6 +138,82 @@ export function leaders(F, key, n = 5, { tot = leagueStats(F), who = whoIs(F), f
     out.push({ p: w.p, s: w.s, v, t })
   }
   return out.sort((a, b) => b.v - a.v || a.p.i - b.p.i).slice(0, n)
+}
+// ── A team's season as a team (the team stats page) ─────────────────────────────────────────────────────────────
+// TEAM_STATS: what a broadcast's team page shows, each a game's worth, with where it ranks in the league (1 = best:
+// the most gained, the least given up). Points come from the scores; the rest from each game's box (F.tst).
+// teamSeasonStats(F, s) → { g, rows: [{ k, label, v, txt, rank }], leaders: [{ k, label, p, v, txt }] } or null
+// before a game. A save from before the tally was kept counts the games since (g says how many).
+export const TEAM_STATS = [
+  { k: 'ppg', label: 'POINTS PER GAME', side: 'off' },
+  { k: 'ypg', label: 'YARDS PER GAME', side: 'off' },
+  { k: 'pypg', label: 'PASSING YARDS PER GAME', side: 'off' },
+  { k: 'rypg', label: 'RUSHING YARDS PER GAME', side: 'off' },
+  { k: 'ypp', label: 'YARDS PER PASS ATTEMPT', side: 'off' },
+  { k: 'ypc', label: 'YARDS PER CARRY', side: 'off' },
+  { k: 'skd', label: 'SACKS ALLOWED', side: 'off', low: true },
+  { k: 'papg', label: 'POINTS ALLOWED PER GAME', side: 'def', low: true },
+  { k: 'oypg', label: 'YARDS ALLOWED PER GAME', side: 'def', low: true },
+  { k: 'opypg', label: 'PASSING YARDS ALLOWED PER GAME', side: 'def', low: true },
+  { k: 'orypg', label: 'RUSHING YARDS ALLOWED PER GAME', side: 'def', low: true },
+  { k: 'sks', label: 'SACKS', side: 'def' },
+  { k: 'take', label: 'TAKEAWAYS', side: 'to' },
+  { k: 'give', label: 'GIVEAWAYS', side: 'to', low: true },
+  { k: 'diff', label: 'TURNOVER DIFFERENTIAL', side: 'to' },
+]
+const per = (a, g) => (g ? a / g : 0)
+function teamNumbers(F, R) {
+  const out = {}
+  for (const s of SHORTS) {
+    const r = R[s], gp = r.w + r.l + r.t
+    const a = F.tst?.[s]
+    if (!gp) continue
+    const t = a ? Object.fromEntries(TST_K.map((k, j) => [k, a[j]])) : null
+    const g = t?.g ?? 0
+    out[s] = {
+      gp, g,
+      ppg: per(r.pf, gp), papg: per(r.pa, gp),
+      ...(g && {
+        ypg: per(t.yds, g), pypg: per(t.py, g), rypg: per(t.ry, g), ypp: per(t.py, t.pa), ypc: per(t.ry, t.ra),
+        skd: t.sk, oypg: per(t.oyds, g), opypg: per(t.opy, g), orypg: per(t.ory, g), sks: t.osk,
+        take: t.oint + t.ofum, give: t.int + t.fum, diff: t.oint + t.ofum - t.int - t.fum,
+      }),
+    }
+  }
+  return out
+}
+const statTxt = (k, v) => (k === 'ypp' || k === 'ypc' || k.endsWith('pg') ? (Math.round(v * 10) / 10).toFixed(1) : k === 'diff' && v > 0 ? `+${v}` : String(v))
+const TEAM_LEADS = [
+  { k: 'py', label: 'PASS YDS', txt: t => `${t.ptd ?? 0} TD · ${t.int ?? 0} INT` },
+  { k: 'ry', label: 'RUSH YDS', txt: t => `${t.ra ? (Math.round((t.ry / t.ra) * 10) / 10).toFixed(1) : '0.0'} YPC · ${t.rtd ?? 0} TD` },
+  { k: 'ryd', label: 'REC YDS', txt: t => `${t.rc ?? 0} REC · ${t.rctd ?? 0} TD` },
+  { k: 'tk', label: 'TACKLES', txt: t => `${t.tfl ?? 0} FOR LOSS` },
+  { k: 'sck', label: 'SACKS', txt: t => `${t.qbh ?? 0} QB HITS` },
+  { k: 'dint', label: 'INT', txt: t => `${t.pbu ?? 0} PASSES DEFENSED` },
+]
+export function teamSeasonStats(F, s, { tot = leagueStats(F), who = whoIs(F) } = {}) {
+  const N = teamNumbers(F, records(F))
+  const me = N[s]
+  if (!me) return null
+  const rows = []
+  for (const c of TEAM_STATS) {
+    const v = me[c.k]
+    if (v == null) continue
+    const all = Object.values(N).map(x => x[c.k]).filter(x => x != null)
+    const rank = 1 + all.filter(x => (c.low ? x < v : x > v)).length
+    rows.push({ ...c, v, txt: statTxt(c.k, v), rank, of: all.length })
+  }
+  const leaders = []
+  for (const c of TEAM_LEADS) {
+    let best = null
+    for (const [id, t] of Object.entries(tot)) {
+      const w = who.get(id)
+      if (!w || w.s !== s || !(t[c.k] > 0)) continue
+      if (!best || t[c.k] > best.t[c.k]) best = { p: w.p, t }
+    }
+    if (best) leaders.push({ k: c.k, label: c.label, p: best.p, v: best.t[c.k], txt: c.txt(best.t) })
+  }
+  return { gp: me.gp, g: me.g, rows, leaders }
 }
 export const LEADER_CATS = [
   { k: 'py', label: 'PASSING YARDS', unit: 'YDS' },

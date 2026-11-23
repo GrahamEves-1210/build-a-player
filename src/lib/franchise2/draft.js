@@ -278,6 +278,29 @@ export function proDay(F, col) {
 const schoolsWith = F => { const m = new Map(); for (const x of F.dc) if (x.col && x.b == null) m.set(x.col, (m.get(x.col) ?? 0) + 1); return m }
 const byeOf = col => 2 + (Math.abs(strHash(col)) % 11)
 export const collegeWeek = F => (F.phase === 'season' ? F.wk + 1 : null)
+const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+// one week's games worth the trip: the schools with the most prospects, each against a conference rival (anyone
+// strong after the conference title games) it hasn't played yet this season. Title week pairs the conference's two
+// best, a rematch or not, and a school plays one bowl (weeks 15 and 16).
+function weekPairs(F, counts, cw, met, bowled) {
+  const R = rngOf(`${F.seed}-${F.year}-slate-${cw}`)
+  const pool = [...counts.entries()].filter(([c, n]) => n >= 2 && (cw > 13 || byeOf(c) !== cw)).map(([c, n]) => ({ c, n: n + R.u() * 3, conf: CFB_TEAM_BY_SHORT[c]?.conf })).sort((a, b) => b.n - a.n)
+  const out = [], used = new Set()
+  const many = cw >= 15 ? 2 : 3
+  for (const t of pool) {
+    if (out.length >= many) break
+    if (used.has(t.c)) continue
+    const bowl = cw === 15 || cw === 16
+    if (bowl && bowled.has(t.c)) continue
+    const opp = pool.filter(o => !used.has(o.c) && o.c !== t.c && (cw === 14 || !met.has(pairKey(t.c, o.c))) && !(bowl && bowled.has(o.c)) && (cw > 14 || o.conf === t.conf))
+    const o = opp.length ? opp[cw === 14 ? 0 : Math.min(opp.length - 1, R.int(0, 2))] : null
+    if (!o) continue
+    used.add(t.c); used.add(o.c)
+    if (bowl) { bowled.add(t.c); bowled.add(o.c) }
+    out.push(R.u() < 0.5 ? [t.c, o.c] : [o.c, t.c])
+  }
+  return out
+}
 export function slateOf(F) {
   if (!F.sc || F.dr) return null
   const wk = weeksIn(F)
@@ -288,22 +311,14 @@ export function slateOf(F) {
   const cw = wk + 1
   const label = cw <= 12 ? `WEEK ${cw}` : cw === 13 ? 'RIVALRY WEEK' : cw === 14 ? 'CONFERENCE TITLES' : cw <= 16 ? 'BOWL SEASON' : 'COLLEGE FOOTBALL PLAYOFF'
   const counts = schoolsWith(F)
-  const R = rngOf(`${F.seed}-${F.year}-slate-${cw}`)
-  const pool = [...counts.entries()].filter(([c, n]) => n >= 2 && (cw > 13 || byeOf(c) !== cw)).map(([c, n]) => ({ c, n: n + R.u() * 3, conf: CFB_TEAM_BY_SHORT[c]?.conf })).sort((a, b) => b.n - a.n)
-  const games = [], used = new Set()
-  const many = cw >= 15 ? 2 : 3
-  for (const t of pool) {
-    if (games.length >= many) break
-    if (used.has(t.c)) continue
-    // an opponent: a conference rival in the regular season, anyone strong after it
-    const opp = pool.filter(o => !used.has(o.c) && o.c !== t.c && (cw > 14 || o.conf === t.conf))
-    const o = opp.length ? opp[Math.min(opp.length - 1, R.int(0, 2))] : null
-    if (!o) continue
-    used.add(t.c); used.add(o.c)
-    const home = R.u() < 0.5
-    const [h, a] = home ? [t.c, o.c] : [o.c, t.c]
-    games.push({ k: 'g', h, a, xs: F.dc.filter(x => x.col === h || x.col === a).map(x => x.i) })
+  // two schools meet once a season: the weeks before this one are dealt again (same seeds) so their games are known
+  const met = new Set(), bowled = new Set()
+  let pairs = []
+  for (let w = 1; w <= cw; w++) {
+    pairs = weekPairs(F, counts, w, met, bowled)
+    for (const [h, a] of pairs) met.add(pairKey(h, a))
   }
+  const games = pairs.map(([h, a]) => ({ k: 'g', h, a, xs: F.dc.filter(x => x.col === h || x.col === a).map(x => x.i) }))
   return { wk, label, games, went: F.sc.att.includes(wk) }
 }
 // GAME: a scout's trip to one of this week's games (two assignments): everyone in it, one look at his skills and body

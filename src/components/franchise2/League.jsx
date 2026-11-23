@@ -5,6 +5,7 @@ import { Chyron, KLogo, Tag, fkVars } from './kit'
 import { Man, PlayerPage } from './dparts'
 import { Logo } from './bits'
 import { memoF, standingsOf, warmKey } from './perf'
+import TeamPage from './TeamPage'
 import './fd.css'
 
 // LEAGUE: the standings as the broadcast shows them (a bar a team, as long as its winning percentage), the league's
@@ -14,12 +15,14 @@ const VIEWS = [['table', 'STANDINGS'], ['leaders', 'LEADERS'], ['wire', 'WIRE'],
 export default function LeagueTab({ F, owner, act }) {
   const [view, setView] = useState('table')
   const [page, setPage] = useState(null)
+  const [team, setTeam] = useState(null)   // a team's page (its roster and numbers), from the standings
+  if (team) return <TeamPage F={F} s={team} owner={owner} act={act} back="Standings" onBack={() => { setTeam(null); sfx('back') }} />
   return (
     <div className="fd fk">
       <div className="fd-seg fd-seg--4 fd-seg--views" role="tablist">
         {VIEWS.map(([k, label]) => <button key={k} role="tab" aria-selected={view === k} className={view === k ? 'is-on' : ''} onClick={() => { setView(k); sfx('tap') }}>{label}</button>)}
       </div>
-      {view === 'table' && <Standings F={F} />}
+      {view === 'table' && <Standings F={F} onTeam={s => { setTeam(s); sfx('tap') }} />}
       {view === 'leaders' && <Leaders F={F} owner={owner} onMan={setPage} />}
       {view === 'wire' && <Wire F={F} />}
       {view === 'scores' && <Scores F={F} />}
@@ -30,7 +33,7 @@ export default function LeagueTab({ F, owner, act }) {
 
 // ── Standings ────────────────────────────────────────────────────────────────
 const streakText = k => (k > 0 ? `W${k}` : k < 0 ? `L${-k}` : '')
-function Standings({ F }) {
+function Standings({ F, onTeam }) {
   const [conf, setConf] = useState(CONF_OF[F.team])
   const S = standingsOf(F)
   const pct = s => { const r = S.R[s], g = r.w + r.l + r.t; return g ? (r.w + r.t / 2) / g : 0 }
@@ -57,10 +60,10 @@ function Standings({ F }) {
           {S.div[d.name].map((s, i) => {
             const r = S.R[s], k = Math.max(0.1, pct(s))
             return (
-              <div key={s} className={`fd-bar${s === F.team ? ' is-me' : ''}`} style={{ ...fkVars(s), '--k': k, '--d': `${di * 50 + i * 40}ms` }}>
+              <button type="button" key={s} className={`fd-bar${s === F.team ? ' is-me' : ''}`} style={{ ...fkVars(s), '--k': k, '--d': `${di * 50 + i * 40}ms` }} onClick={() => onTeam(s)} aria-label={`${TEAM[s].nick}: roster and team stats`}>
                 <span className="fd-bar-fill"><KLogo s={s} size={26} /><b>{TEAM[s].nick.toUpperCase()}</b>{i === 0 && r.w + r.l + r.t > 0 && <em>1</em>}</span>
                 <span className="fd-bar-rec"><b>{recText(r)}</b><small>{r.dw}-{r.dl}{r.dt ? `-${r.dt}` : ''}{r.strk ? ` · ${streakText(r.strk)}` : ''}</small></span>
-              </div>
+              </button>
             )
           })}
         </section>
