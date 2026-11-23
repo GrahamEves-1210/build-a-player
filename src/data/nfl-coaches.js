@@ -137,7 +137,7 @@ export const NFL_COACHES = [
   { name: 'Sean Duggan', team: 'MIA', role: 'DC', age: 33, since: 2026, calls: false, attrs: { talentDev: 5, offPlaycalling: 2, defPlaycalling: 4, culture: 4, situational: 4 }, ovr: 67 },
   { name: 'Kevin O\'Connell', team: 'MIN', role: 'HC', age: 41, since: 2022, calls: 'off', side: 'off', attrs: { talentDev: 10, offPlaycalling: 10, defPlaycalling: 5, culture: 8, situational: 8 }, ovr: 90 },
   { name: 'Wes Phillips', team: 'MIN', role: 'OC', age: 47, since: 2022, calls: false, attrs: { talentDev: 5, offPlaycalling: 5, defPlaycalling: 2, culture: 5, situational: 4 }, ovr: 70 },
-  { name: 'Brian Flores', team: 'MIN', role: 'DC', age: 45, since: 2023, calls: true, attrs: { talentDev: 8, offPlaycalling: 3, defPlaycalling: 10, culture: 5, situational: 7 }, ovr: 88 },
+  { name: 'Brian Flores', team: 'MIN', role: 'DC', age: 45, since: 2023, calls: true, attrs: { talentDev: 8, offPlaycalling: 3, defPlaycalling: 11, culture: 5, situational: 7 }, ovr: 89 },
   { name: 'Mike Vrabel', team: 'NE', role: 'HC', age: 51, since: 2025, calls: null, side: 'def', attrs: { talentDev: 7, offPlaycalling: 4, defPlaycalling: 7, culture: 10, situational: 9 }, ovr: 86 },
   { name: 'Josh McDaniels', team: 'NE', role: 'OC', age: 50, since: 2025, calls: true, attrs: { talentDev: 7, offPlaycalling: 9, defPlaycalling: 4, culture: 5, situational: 7 }, ovr: 85 },
   { name: 'Zak Kuhr', team: 'NE', role: 'DC', age: 38, since: 2026, calls: true, attrs: { talentDev: 5, offPlaycalling: 2, defPlaycalling: 5, culture: 4, situational: 4 }, ovr: 69 },
