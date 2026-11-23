@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
-  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin,
+  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin, tenderQO, pullFA,
   records, recText,
 } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
@@ -474,10 +474,11 @@ function Resign({ F, act, go }) {
             <ul className="nbo-rs-if">
               <li><b>Keep:</b> {d ? (c?.ok ? `${money(d.$)} a season for ${d.y} ${d.y === 1 ? 'year' : 'years'}${rt ? `; with ${RIGHTS[rt]} ${RIGHTS_SAYS[rt]}` : ''}.` : `not possible: ${c?.why ?? 'no deal'}.`) : 'he wants to see what the market offers.'}</li>
               <li><b>Let go:</b> {`renounced${p.rfa ? ', he becomes an unrestricted free agent' : ''}.${free ? '' : ` His ${money(hold)} hold comes off the books${gain > 0.05 ? `: ${money(gain)} more cap room` : '; still over the cap'}.`}`}</li>
-              {p.rfa && <li><b>Do nothing:</b> {`restricted free agency. Another team can sign him to an offer sheet and you get the day to match it; if nobody does, he signs his ${money(p.qo)} qualifying offer for one season.`}</li>}
+              {p.rfa && <li><b>Do nothing:</b> {p.qot ? `restricted free agency: his ${money(p.qo)} qualifying offer is tendered. Another team can sign him to an offer sheet and you get the day to match it; if nobody does, he re-signs or plays on the qualifying offer.` : `no qualifying offer tendered, so he becomes an unrestricted free agent when re-signing ends. Tender QO keeps him restricted.`}</li>}
             </ul>
             <span className="nb-fa-acts">
               <button type="button" className="is-go" disabled={!d || c?.ok === false} onClick={() => { const r = act(X => resignMine(X, p.i, true)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>{d ? `Keep: ${money(d.$)} × ${d.y}` : 'Keep'}</button>
+              {p.rfa && p.qo && <button type="button" className={p.qot ? 'is-go' : ''} onClick={() => { act(X => { tenderQO(X, p.i, !p.qot) }); sfx('tap') }}>{p.qot ? 'QO tendered' : 'Tender QO'}</button>}
               <button type="button" onClick={() => { act(X => { resignMine(X, p.i, false) }); sfx('tap') }}>Let go</button>
             </span>
           </div>

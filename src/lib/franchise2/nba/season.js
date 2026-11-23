@@ -2,7 +2,7 @@
 // GM's own game can stop for a clutch moment (moments.js), injuries and rest go through the sim's seams. Then the
 // play-in (7 v 8, 9 v 10, the loser of the first against the winner of the second) and four best-of-seven rounds,
 // 2-2-1-1-1, the better record at home in games 1, 2, 5 and 7.
-import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder, makeGen, thinSpot } from './league'
+import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder, makeFiller, thinSpot } from './league'
 import { b2bOf, dateText } from './schedule'
 import { addNews, injuryText } from './news'
 import { scoutTick } from './draft'
@@ -150,7 +150,7 @@ function floorSign(F, s) {
   const year = X.capYear(F), deal = x => ({ $: X.minOf(x.ys ?? 0, year), y: 1, r: 0, ng: 1 })
   const p = (F.fa ?? []).filter(x => !(x.inj?.g > 0) && X.rankOf(F, x) > 60 && (x.o ?? 0) < 85).sort((a, b) => X.rankOf(F, a) - X.rankOf(F, b)).find(x => X.canSign(F, s, x, deal(x)).ok)
   if (p && X.signMan(F, s, p, deal(p))?.ok !== false) return p
-  const m = makeGen(F, thinSpot(F.teams[s].r), rngOf(`${F.seed}-floor-${F.year}-${F.day}-${s}-${F.teams[s].r.length}`))
+  const m = makeFiller(F, thinSpot(F.teams[s].r), rngOf(`${F.seed}-floor-${F.year}-${F.day}-${s}-${F.teams[s].r.length}`))
   return X.signMan(F, s, m, deal(m), { check: false })?.ok !== false ? m : null
 }
 // the Waive button's check (the GM's team): null when he can, else why not
@@ -230,7 +230,7 @@ function endDay(F, { mine = null, news = [] } = {}) {
   // the trade deadline, the All-Star break: the wire says so the night they come
   if (was <= F.ddl && F.day > F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
   allStarTick(F)
-  if (dl.length) X.cpuFill(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-fill-${F2.year}-${F2.day}-${s}`)) })
+  if (dl.length) X.cpuFill(F, { make: (F2, s, o) => makeFiller(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-fill-${F2.year}-${F2.day}-${s}`), { tw: !!o?.tw }) })
   if (!F.sched.some(g => g.hs == null)) {
     F.phase = 'post'
     addNews(F, { k: 'end', tag: 'FINAL', text: `The regular season is over` })

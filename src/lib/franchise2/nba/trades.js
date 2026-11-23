@@ -56,7 +56,7 @@
 //
 // State: F.picks (core) [{ y, r, o, t, pr: { top, rl? } | null, sw: { with } | { by } | null }] · F.trl [deal log]
 // · F.trc { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's
-// value)] · p.txd (calDay he was traded) · p.osm (league year his offer sheet was matched) · team.tpe [{ $, n, until }]
+// value)] · p.txd (calDay he was traded) · p.osm ({ s, y }: the team whose offer sheet was matched, the league year) · team.tpe [{ $, n, until }]
 import { rngOf, clamp, r1 } from '../rng'
 import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
@@ -114,7 +114,7 @@ export function tradableFrom(F, p) {
   if (draftedNow(F, p)) return F.off?.step === 'draft' || calDay(F) >= yearBase(F) + DRAFT_DAY + 30 ? -1 : Infinity
   if (pickDeal(p)) return -1
   // (an offer sheet his team matched: not for a year)
-  if (p.osm != null && p.osm === lyOf(F)) return Infinity
+  if (p.osm != null && (p.osm.y ?? p.osm) === lyOf(F)) return Infinity
   if (p.sgn == null || p.sgn !== lyOf(F)) return -1
   // (the spring, before the league year turns over: everyone signed last summer or in the season is past it)
   if (F.phase === 'off' && F.sed !== F.year) return -1
@@ -127,7 +127,7 @@ function lockText(F, p) {
   const from = tradableFrom(F, p)
   if (from < 0 || (from !== Infinity && F.phase === 'season' && (F.day ?? 0) >= from)) return null
   if (draftedNow(F, p)) return `${p.n} signed his rookie contract this summer and can't be traded until 30 days after he signed`
-  if (p.osm != null && p.osm === lyOf(F)) return `${p.n}'s offer sheet was matched this summer: he can't be traded for a year`
+  if (p.osm != null && (p.osm.y ?? p.osm) === lyOf(F)) return `${p.n}'s offer sheet was matched this summer: he can't be traded for a year`
   return `${p.n} signed recently and can't be traded until ${from === Infinity || from <= dec15(F) ? 'December 15' : 'three months after he signed'}`
 }
 // a man acquired in a trade can't be combined with other salaries in another trade for two months

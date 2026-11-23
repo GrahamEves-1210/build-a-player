@@ -6,7 +6,7 @@
 //           (B's seasonEndDeals); the GM's own free agents: re-sign or let go (B's resignOffer)
 //   fa      free agency (B: askOf, canSign, signMan, faDay; the other 29 teams at the end, cpuOffseason)
 //   camp    the GM's roster down to 15 standard and 3 two-way contracts (B's legalRoster, cutMan), then a new season
-import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeGen, thinSpot, keepRoster } from './league'
+import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeFiller, thinSpot, keepRoster } from './league'
 import { records, recText, confOrder, pct } from './season'
 import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring, pruneDrafts } from './draft'
@@ -15,6 +15,8 @@ import * as X from './seams'
 import { growBuilds } from './builds'
 import { notable } from './aging'
 import { rngOf } from '../rng'
+import * as MK from './market'
+import { holdOf, hardCapOf } from './cap'
 
 export const STEPS = ['awards', 'lottery', 'draft', 'resign', 'fa', 'camp']
 export const STEP_NAME = { awards: 'Awards', lottery: 'Lottery', draft: 'Draft', resign: 'Re-sign', fa: 'Free agency', camp: 'Camp' }
@@ -159,10 +161,17 @@ function enter(F, step) {
 function leave(F, step) {
   // the re-sign stop done: the GM's free agents he didn't keep are let go (their cap holds off his books, the way a
   // front office renounces them to open room); his restricted men stay his, so he can match an offer sheet
-  if (step === 'resign') for (const i of [...(F.off?.mine ?? [])]) { const p = (F.fa ?? []).find(x => x.i === i); if (p && !p.rfa) X.renounce(F, F.team, i) }
+  // (an RFA whose qualifying offer he tendered (tenderQO) stays restricted: he can match an offer sheet, and the man
+  // can sign the QO; one he didn't tender is unrestricted, the way the league's June 29 deadline works)
+  if (step === 'resign') for (const i of [...(F.off?.mine ?? [])]) {
+    const p = (F.fa ?? []).find(x => x.i === i)
+    if (!p || (p.rfa && p.qot)) continue
+    X.renounce(F, F.team, i)
+    if ((p.o ?? 0) >= 70) addNews(F, { k: 'fa', tag: 'FREE AGENT', s: F.team, text: `${p.n} becomes an unrestricted free agent; the ${nick(F.team)} let him go` })
+  }
   if (step === 'draft') { while (F.dn && F.dn.at < 60) { const { makePick } = DRAFT; makePick(F) } closeDraft(F) }
   if (step === 'fa') {
-    for (const x of X.cpuOffseason(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-camp-${F2.year}-${s}`)) }) ?? []) addNews(F, x)
+    for (const x of X.cpuOffseason(F, { make: (F2, s, o) => makeFiller(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-camp-${F2.year}-${s}`), { tw: !!o?.tw }) }) ?? []) addNews(F, x)
   }
 }
 import * as DRAFT from './draft'
@@ -181,16 +190,63 @@ export function resignMine(F, id, yes) {
   addNews(F, { k: 'sign', tag: 'RE-SIGNED', s: F.team, text: `${p.n} re-signs with the ${nick(F.team)}: ${deal.y} ${deal.y === 1 ? 'year' : 'years'}, $${deal.$.toFixed(1)} million a year` })
   return { ok: true }
 }
-// the GM signs a free agent at his ask
-export function signFA(F, id) {
+// the GM's offer to a free agent ({ $, y } or his ask): in free agency it's a bid, weighed with the league's on the
+// next day (an offer to another team's RFA is an offer sheet his team can match the day after); once the market's days
+// are done, or at camp, he answers at once. Returns { ok, why, offer?, sheet?, deal }
+export function signFA(F, id, deal = null) {
   const p = (F.fa ?? []).find(x => x.i === id)
-  if (!p) return { ok: false }
-  const deal = X.askOf(F, p)
-  const c = X.canSign(F, F.team, p, deal)
-  if (!c.ok) return c
-  X.signMan(F, F.team, p, { ...deal, via: c.via })
-  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} agrees to a ${deal.y}-year, $${(deal.$ * deal.y).toFixed(1)} million deal with the ${nick(F.team)}` })
-  return { ok: true, deal }
+  if (!p) return { ok: false, why: 'He has signed elsewhere' }
+  const d = deal ? { $: deal.$, y: deal.y, r: deal.r ?? (deal.$ >= 15 ? 0.05 : 0) } : X.askOf(F, p)
+  if (F.off?.step === 'fa' && !MK.faDone(F)) {
+    const r = MK.placeOffer(F, id, d)
+    return r.ok ? { ok: true, offer: true, pending: true, sheet: r.sheet, via: r.via, deal: d } : r
+  }
+  const r = MK.lateOffer(F, id, d)
+  if (!r.ok) return r
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} agrees to a ${d.y}-year, $${(d.$ * d.y).toFixed(1)} million deal with the ${nick(F.team)}` })
+  return { ok: true, deal: d }
+}
+export const faOffer = signFA
+// take an offer back (before the next day)
+export const pullFA = (F, id) => MK.pullOffer(F, id)
+// the GM's offers standing: [{ i, n, d, look, sheet }] (look: offerLook, how it reads to him)
+export const myOffers = F => Object.entries(F.fao ?? {}).map(([id, d]) => { const p = (F.fa ?? []).find(x => x.i === +id); return p ? { i: p.i, n: p.n, d, look: MK.offerLook(F, p.i, d), sheet: !!(p.rfa && p.fr && p.fr !== F.team && !p.rn) } : null }).filter(Boolean)
+// how an offer would read to him (chance 'likely' | 'close' | 'unlikely'), and the most the GM's team can offer him
+export const offerLook = (F, id, d) => MK.offerLook(F, id, d)
+export const offerRoom = (F, id) => MK.offerRoom(F, id)
+// what came of the GM's offers on the last day: [{ i, n, k: 'signed'|'lost'|'waiting'|'sheet'|'matched'|'void', s, d, why }]
+export const offerNews = F => (F.fan && F.fan.y === X.capYear(F) ? F.fan.r : [])
+
+// the GM's own free agent on the re-sign screen, everything the decision needs: { ask (resignOffer, or null: he wants
+// to test the market), rights ('bird'|'ebird'|'nbird'), rightsText, hold (his cap hold now), room (the cap room
+// letting him go would open), rfa, qo (his qualifying offer), qot (tendered), dco (a declined rookie option: the most
+// his team can pay him), can (canSign on his ask) }
+export function resignInfo(F, id) {
+  const p = (F.fa ?? []).find(x => x.i === id)
+  if (!p || p.fr !== F.team) return null
+  const y = X.capYear(F)
+  const ask = X.resignOffer(F, p)
+  const rights = p.rn ? null : (p.bird ?? 0) >= 3 ? 'bird' : p.bird === 2 ? 'ebird' : 'nbird'
+  const before = X.capSheet(F, F.team).room
+  const was = p.rn
+  p.rn = 1
+  const after = X.capSheet(F, F.team).room
+  p.rn = was
+  if (!was) delete p.rn
+  return {
+    ask, rights, rightsText: rights ? X.RIGHTS_TEXT[rights] : null, hold: holdOf(p, y), room: Math.round((after - before) * 10) / 10,
+    rfa: !!p.rfa, qo: p.qo ?? null, qot: !!p.qot, dco: p.dco ?? null, can: ask ? X.canSign(F, F.team, p, ask) : null,
+  }
+}
+// tender (or pull) the qualifying offer on the GM's own RFA: tendered, he stays restricted into free agency (the GM
+// can match any offer sheet; with no offer he signs the QO); not tendered, he walks when the re-sign stop ends
+export function tenderQO(F, id, yes = true) {
+  const p = (F.fa ?? []).find(x => x.i === id && x.fr === F.team && !x.rn)
+  if (!p || !p.rfa || !p.qo) return { ok: false, why: 'Not a restricted free agent' }
+  if (yes) p.qot = 1
+  else delete p.qot
+  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: `The ${nick(F.team)} extend a $${p.qo.toFixed(1)} million qualifying offer to ${p.n}, making him a restricted free agent` })
+  return { ok: true }
 }
 export function faNext(F) {
   F.off.day = (F.off.day ?? 0) + 1
@@ -244,8 +300,15 @@ export function newSeason(F) {
     while (std().length > ROSTER_MAX) X.cutMan(F, s, std()[0].i)
     while (t.r.filter(p => p.tw).length > 3) X.cutMan(F, s, t.r.filter(p => p.tw).sort((a, b) => a.o - b.o)[0].i)
     keepRoster(F, s, R, taken, X)   // (the floor: 10 real or drafted men, the rest fillers on one-year minimums)
-    fillTeam(F, s, R, taken, { twoWay: 2 })
+    fillTeam(F, s, R, taken, { twoWay: 3 })
     for (const p of t.r) if (p.$ == null) X.dealOnLoad(F, p, s)
+    // (a hard-capped team can't open the season past its line: it waives the camp bodies it can't pay, down to 13)
+    let g = 0
+    while (X.payroll(F, s) > hardCapOf(F, s) + 0.05 && std().length > 13 && g++ < 3) {
+      const low = std().filter(p => p.b == null && X.cutCost(F, p).total <= 0.01).sort((a, b) => (a.$ ?? 0) - (b.$ ?? 0) || a.o - b.o)[0]
+      if (!low) break
+      X.cutMan(F, s, low.i)
+    }
   }
   pruneStreet(F)
   pruneDrafts(F)
