@@ -42,6 +42,7 @@ const SPOT_W = [['PG', 15], ['SG', 21], ['SF', 22], ['PF', 21], ['C', 21]]
 const HT = { PG: [72, 77], SG: [75, 79], SF: [77, 81], PF: [79, 83], C: [81, 87] }
 const WT = { PG: [175, 200], SG: [185, 210], SF: [200, 225], PF: [215, 240], C: [225, 265] }
 export const CLASS_N = 80
+const schoolOf = p => { let h = 7; for (const ch of `${p.n}-${p.i}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return COLLEGES[h % COLLEGES.length] }
 
 export function makeClass(F) {
   const R = rngOf(`${F.seed}-class-${F.year + 1}`)
@@ -73,7 +74,7 @@ export function makeClass(F) {
   }
   // the consensus board: the read of his ceiling, a little of what he is now
   out.sort((a, b) => (b.seen + b.o * 0.25) - (a.seen + a.o * 0.25))
-  out.forEach((p, k) => { p.rank = k + 1 })
+  out.forEach((p, k) => { p.rank = k + 1; if (!p.c) p.c = schoolOf(p) })
   F.dc = out
   F.sp = F.sp ?? 0
   return out
@@ -315,6 +316,8 @@ function rookieOf(p) {
   for (const k of ['seen', 'w', 'sc', 'rank', 'dt', 'tg', 'yr']) delete keep[k]
   keep.ys = 0
   keep.ag = p.ag - 1
+  // (never without a school or a club: a class from an older save, or a man made without one)
+  if (!keep.c) keep.c = schoolOf(keep)
   return keep
 }
 // the drafts kept: the last three in full; older ones as [pick, team, id, name] rows (the history page's): the first
