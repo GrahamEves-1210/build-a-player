@@ -19,8 +19,8 @@
 //   Hard caps: using the non-taxpayer MLE or the bi-annual hard-caps a team at the first apron for the league year;
 //   using the taxpayer MLE or aggregating in a trade, at the second apron (team.exc.hc).
 //
-// THE TAX BILL (taxBill): on the payroll over the tax line at the end of the regular season, by $5M brackets
-//   (indexed): $1.50, $1.75, $2.50, $3.25 for each dollar, then +$0.50 a bracket. A repeater (a taxpayer in three of
+// THE LUXURY TAX (taxBill): on the payroll over the tax line at the end of the regular season, by $5M brackets
+//   (2023-24's width, indexed to the cap since): $1.50, $1.75, $2.50, $3.25 for each dollar, then +$0.50 a bracket. A repeater (a taxpayer in three of
 //   the previous four seasons) pays $2.50, $2.75, $3.50, $4.25, then +$0.50.
 //
 // F.noCap: the GM's team plays with no cap or tax (its sheet reads as room to spare); the league's teams still run
@@ -90,9 +90,11 @@ export function rookieScale(pick, year = 2025) {
 
 // ── The tax ──────────────────────────────────────────────────────────────────
 const RATES = [1.5, 1.75, 2.5, 3.25], REPEAT = [2.5, 2.75, 3.5, 4.25]
+// (the brackets were $5M wide in 2023-24, the CBA's first season, and grow with the cap from there)
+export const taxStep = year => Math.round(5 * exact(year, 0) / exact(2023, 0) * 1000) / 1000
 export function taxBill(over, year = 2025, repeater = false) {
   if (!(over > 0)) return 0
-  const step = indexed(5, year), R = repeater ? REPEAT : RATES
+  const step = taxStep(year), R = repeater ? REPEAT : RATES
   let bill = 0, left = over, i = 0
   while (left > 1e-9) {
     const part = Math.min(step, left)
@@ -102,8 +104,12 @@ export function taxBill(over, year = 2025, repeater = false) {
   }
   return r1(bill)
 }
-// a repeater: a taxpayer in three of the four seasons before this one (team.txh: the years it paid)
-export const isRepeater = (team, year) => (team?.txh ?? []).filter(y => y < year && y >= year - 4).length >= 3
+// a repeater: a taxpayer in three of the four seasons before this one (team.txh: the years it paid). A team with no
+// record yet reads the real league's: the seasons it paid the tax under the 2023 CBA (2022-23 for the window), as
+// far as the public payroll records show them (Boston paid in 2022-23, 2023-24 and 2024-25: a repeater in 2026-27)
+export const REAL_TXH = { BOS: [2022, 2023, 2024], GSW: [2022, 2023], LAC: [2022, 2023], MIL: [2022, 2023], PHX: [2023, 2024] }
+export const taxYearsOf = team => team?.txh ?? REAL_TXH[team?.s] ?? []
+export const isRepeater = (team, year) => taxYearsOf(team).filter(y => y < year && y >= year - 4).length >= 3
 
 // ── A man's cap hit ──────────────────────────────────────────────────────────
 // his salary in season `year` when the books are on season `cy` (a man drafted for next season starts then)
@@ -237,7 +243,7 @@ export function assessTax(F, year = F.year) {
     if (over > 0) {
       const rep = isRepeater(team, year)
       const bill = taxBill(over, year, rep)
-      team.txh = [...(team.txh ?? []).filter(y => y >= year - 5 && y !== year), year]
+      team.txh = [...taxYearsOf(team).filter(y => y >= year - 5 && y !== year), year]
       out.push({ s, pay, over, bill, repeater: rep })
     }
   }
