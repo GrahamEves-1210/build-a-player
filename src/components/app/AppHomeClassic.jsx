@@ -22,9 +22,8 @@ import { HoopU, switchSport, SPORTS } from './AppHome'
 import { SOCCER_POOL } from '../../lib/soccerUi'
 import { BASEBALL_POS } from '../../lib/baseballUi'
 import './home-classic.css'
-import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
-import { OL_LIVE, OL_SOON } from '../../lib/olLive'
-import { K_LIVE } from '../../lib/kLive'
+import { LB_SOON } from '../../lib/lbLive'
+import { OL_SOON } from '../../lib/olLive'
 import { CFB_CARD_SCHOOLS } from '../../lib/cfbLive'
 import { CBB_CARD_LOGOS } from '../../lib/cbbLive'
 import { FranchiseCardClassic } from '../franchise2/FranchiseCard'   // (the card only: the mode itself loads when it's opened)
@@ -428,7 +427,6 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             }
             return (
               <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE) || (o.pos === 'k' && K_LIVE)) && <span className="ag-pos-new">NEW</span>}
                 {o.players && <span className="agc-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
                 <span className="agc-pos-label">{o.label}</span>
                 {o.sub && <span className="agc-pos-sub">{o.sub}</span>}

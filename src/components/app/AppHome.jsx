@@ -18,9 +18,9 @@ import { CoinPill } from './AppShop'
 import { tierFor } from '../../lib/progress'
 import EmptyState from './EmptyState'
 import { RollingNumber } from './MotionText'
-import { LB_LIVE, LB_SOON } from '../../lib/lbLive'
-import { OL_LIVE, OL_SOON } from '../../lib/olLive'
-import { K_LIVE, K_SOON } from '../../lib/kLive'
+import { LB_SOON } from '../../lib/lbLive'
+import { OL_SOON } from '../../lib/olLive'
+import { K_SOON } from '../../lib/kLive'
 import { SOCCER_LIVE, SOCCER_SOON } from '../../lib/soccerLive'
 import { SOCCER_POOL } from '../../lib/soccerUi'
 import { BASEBALL_LIVE, BASEBALL_SOON } from '../../lib/baseballLive'
@@ -693,7 +693,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               </div>
             ) : (
               <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => { dir.current = i < at ? -1 : 1; pick(o.pos) }}>
-                {((o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE) || (o.pos === 'k' && K_LIVE)) && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
+                <span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
             )
@@ -709,7 +709,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             const at = (list, k) => Math.max(0, list.findIndex(o => o.pos === sideFirst(k)?.pos))
             const sw = (k, label) => (
               <button key={`to-${k}`} className={`ag-pos ag-pos--side ag-pos--to-${k}`} onClick={() => pickSide(k)} aria-label={`Show the ${label.toLowerCase()}`}>
-                {k === 'def' && (LB_LIVE || K_LIVE) && <span className="ag-pos-new">NEW</span>}
                 <span className="ag-side-word">{label}</span>
                 <svg className="ag-side-arrow" viewBox="0 0 24 10" width="24" height="10" aria-hidden="true"><path d={k === 'def' ? 'M1 5h20M16 1l5 4-5 4' : 'M23 5H3M8 1L3 5l5 4'} /></svg>
               </button>
