@@ -50,7 +50,7 @@ export const QBS = [
   { name: 'Dillon Gabriel', short: 'Gabriel', team: 'CLE', teamName: 'Cleveland Browns', color: '#FF3C00', color2: '#311D00', skin: '#c09060', starter: false, number: 8,
     attrs: { 'arm': 4, 'legs': 5, 'size': 0, 'processing': 5, 'leadership': 6, 'vision': 4, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 5 } },
   { name: 'Taylen Green', short: 'Green', team: 'CLE', teamName: 'Cleveland Browns',     color: '#FF3C00', color2: '#311D00', skin: '#7a5030', starter: false, number: 15,
-    attrs: { 'arm': 6, 'legs': 10, 'size': 8, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 5, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 6, 'legs': 10, 'size': 9, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 5, 'accuracy': 2, 'pocket-presence': 2 } },
   // DAL
   { name: 'Dak Prescott',       short: 'Prescott',    team: 'DAL', teamName: 'Dallas Cowboys',        color: '#869397', color2: '#003594', skin: '#9a6840', starter: true,  captain: true,  number: 4,
     attrs: { 'arm': 7, 'legs': 6, 'size': 7, 'processing': 10, 'leadership': 10, 'vision': 9, 'playmaking': 6, 'accuracy': 9, 'pocket-presence': 8 } },
