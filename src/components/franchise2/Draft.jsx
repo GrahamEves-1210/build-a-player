@@ -237,6 +237,7 @@ function classOrder(F, list, how, ranks) {
   if (how === 'grade') return [...list].sort(byGrade)
   return [...list].sort((a, b) => POS.indexOf(a.p) - POS.indexOf(b.p) || byGrade(a, b))
 }
+const ROOM_TOP = 5
 function ClassList({ F, act, open, sortBy = 'consensus' }) {
   const [f, setF] = useState('all')
   const [how, setHow] = useState('rank')
@@ -246,7 +247,11 @@ function ClassList({ F, act, open, sortBy = 'consensus' }) {
     const all = sortBy === 'ours' ? [...F.dc].map(x => ({ x, v: viewOf(F, x).my })).sort((a, b) => b.v - a.v || ranks.get(a.x.i) - ranks.get(b.x.i)).map(e => e.x) : classOrder(F, consensus(F), how, ranks)
     return filterBy(F, all, f)
   }, [F, F.dc.length, F.board.length, F.sc?.u, F.sc?.cmb, F.sc?.ivd?.length, f, sortBy, how]) // eslint-disable-line react-hooks/exhaustive-deps
-  const shown = list.slice(0, more)
+  // a position (or NEEDS) shows every man in it; POSITION over the whole class shows each room's first five, with a
+  // way into the room, so no position is fifteen pages down
+  const rooms = how === 'pos' && sortBy !== 'ours' && f === 'all'
+  const shown = rooms ? list.filter((x, i) => { let n = 0; for (let j = i - 1; j >= 0 && list[j].p === x.p; j--) n++; return n < ROOM_TOP }) : f === 'all' ? list.slice(0, more) : list
+  const inRoom = p => list.reduce((n, y) => n + (y.p === p), 0)
   return (
     <>
       <Filters value={f} set={v => { setF(v); setMore(30) }} />
@@ -260,14 +265,15 @@ function ClassList({ F, act, open, sortBy = 'consensus' }) {
       <div className="dr-list">
         {shown.map((x, i) => (
           <Fragment key={x.i}>
-            {how === 'pos' && sortBy !== 'ours' && f === 'all' && (i === 0 || shown[i - 1].p !== x.p) && <div className="dr-group">{POS_LABEL[x.p]}<small>{list.filter(y => y.p === x.p).length}</small></div>}
+            {rooms && (i === 0 || shown[i - 1].p !== x.p) && <div className="dr-group">{POS_LABEL[x.p]}<small>{inRoom(x.p)}</small></div>}
             {how !== 'rank' && sortBy !== 'ours' && i > 0 && scouted(shown[i - 1]) && !scouted(x) && (how === 'grade' || shown[i - 1].p === x.p) && <div className="dr-group is-dim">NOT SCOUTED YET</div>}
             <Prospect F={F} x={x} act={act} rank={ranks.get(x.i)} onOpen={open} delay={Math.min(i, 8) * 30} />
+            {rooms && (i === shown.length - 1 || shown[i + 1].p !== x.p) && inRoom(x.p) > ROOM_TOP && <button type="button" className="dr-allpos" onClick={() => { setF(x.p); tap() }}>ALL {inRoom(x.p)} {POS_LABEL[x.p]}</button>}
           </Fragment>
         ))}
         {!list.length && <p className="dr-empty">NOBODY LEFT HERE</p>}
       </div>
-      {list.length > more && <button type="button" className="dr-more" onClick={() => { setMore(m => m + 30); tap() }}>MORE · {list.length - more}</button>}
+      {!rooms && f === 'all' && list.length > more && <button type="button" className="dr-more" onClick={() => { setMore(m => m + 30); tap() }}>MORE · {list.length - more}</button>}
     </>
   )
 }
