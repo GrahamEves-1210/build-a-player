@@ -20,9 +20,11 @@ for (let f = 0; f < NF; f++) {
     const sd = Math.sqrt(wins.reduce((a, w) => a + (w - mean) ** 2, 0) / wins.length)
     const cnt = {}; for (const s of FR.SHORTS) { const k = `${rec[s].w}-${rec[s].l}`; cnt[k] = (cnt[k] ?? 0) + 1 }
     const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]
-    const s = { f, y: F.year, best: Math.max(...wins), worst: Math.min(...wins), sd: +sd.toFixed(2), mode: `${top[0]} x${top[1]}`, mine: `${rec[team].w}-${rec[team].l}` }
+    const str = FR.SHORTS.map(t => FR.strength(F, t)), sdOf = v => { const m = v.reduce((a, b) => a + b, 0) / v.length; return Math.sqrt(v.reduce((a, x) => a + (x - m) ** 2, 0) / v.length) }
+    const tal = { ovr: +sdOf(str.map(x => x.ovr)).toFixed(2), net: +sdOf(str.map(x => x.off + x.def)).toFixed(2) }
+    const s = { f, y: F.year, best: Math.max(...wins), worst: Math.min(...wins), sd: +sd.toFixed(2), mode: `${top[0]} x${top[1]}`, mine: `${rec[team].w}-${rec[team].l}`, tal }
     all.push(s)
-    console.log(`f${f} ${s.y}  best ${s.best}  worst ${s.worst}  sd ${s.sd}  most common ${s.mode}  ${team} ${s.mine}`)
+    console.log(`f${f} ${s.y}  best ${s.best}  worst ${s.worst}  sd ${s.sd}  most common ${s.mode}  ${team} ${s.mine}  talent sd: ovr ${tal.ovr} off+def ${tal.net}`)
     FR.intoPlayoffs(F)
     while (F.phase === 'playoffs') FR.playWeek(F, { moments: false })
     FR.closeSeason(F); FR.closeCarousel(F); FR.ageLeague(F)
