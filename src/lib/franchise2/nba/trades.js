@@ -317,7 +317,7 @@ function inValue(F, s, p, gone, sit) {
   if (sit === 'win') {
     const a = availOf(F, p)
     if (a.now < 1 && v > 0) v *= 1 - 0.5 * (1 - a.now)
-    if (ahead < 8) v = Math.max(v, nowValue(F, p, s) * 0.55)
+    if (ahead < 8) v = Math.max(v, nowValue(F, p, s) * 0.6)
   }
   let out = v > 0 ? v * role * m : v * (sit === 'reb' ? 0.7 : sit === 'win' ? 1.25 : 1)
   // (a man the GM's team just traded for: nobody pays more than it did, this league year)
@@ -334,7 +334,7 @@ function outValue(F, s, p, sit) {
   if (rankOf(F, p) <= 20 && (p.ag ?? 30) <= 27) m *= 1.3
   const v = manValue(F, p)
   // (a contender's rotation man is worth what he gives it now: it doesn't sell this season for the future)
-  if (sit === 'win' && at < 8) return Math.max(v > 0 ? v * m : v, nowValue(F, p, s) * (at < 5 ? 1.15 : 1))
+  if (sit === 'win' && at < 8) return Math.max(v > 0 ? v * m : v, nowValue(F, p, s) * (at < 5 ? 0.8 : 0.65))
   return v > 0 ? v * m * (at < 10 ? 1 : 0.8) : v
 }
 // a team's strength for the rest of this season after a deal: contracts.js teamStrength's read of its top eight, on
@@ -744,11 +744,12 @@ function picksCover(F, s, want, to) {
   for (let x = 0; x < mine.length; x++) for (let y = x + 1; y < mine.length; y++) if (ok(mine[x].v + mine[y].v)) return [mine[x].i, mine[y].i]
   return null
 }
-// one deal: rebuilding team a's veteran to contender b, for filler and picks (both sides by their own book)
-function tryBuy(F, R, a, b) {
+// one deal: rebuilding team a's veteran to contender b, for filler and picks (both sides by their own book; in the
+// deadline's last week, `wide`, more of the seller's men are on the table and the buyer pays a little over its book)
+function tryBuy(F, R, a, b, wide = false) {
   const year = capYear(F)
   const vets = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.ag ?? 0) >= 25 && rankOf(F, p) <= 230 && manValue(F, p) > 2 && !(p.tx && p.tx[1] === lyOf(F)))
-  for (const p of R.shuffle(vets).slice(0, 3)) {
+  for (const p of R.shuffle(vets).slice(0, wide ? 5 : 3)) {
     // (the contender's filler, enough to match; none needed if it has the room)
     const sal = hitOf(p, year, year)
     const payB = payroll(F, b, year)
@@ -775,7 +776,9 @@ function tryBuy(F, R, a, b) {
     if (!checkTrade(F, deal).ok) continue
     const dA = decide(F, { a: b, b: a, ga: deal.ga, gb: deal.gb, pa: deal.pa, pb: [] }, { user: false })
     const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: fill, pk: pk.map(i => F.picks[i]) })
-    if (!dA.yes || sideB.gain < marginOf(F, b, sideB.out, false)) continue
+    if (!dA.yes) continue
+    // (in the deadline's last week a buyer pays a little over its own book: its season is now)
+    if (sideB.gain < (wide ? -0.1 * sideB.out : marginOf(F, b, sideB.out, false))) continue
     // (never a give-away the league would laugh at)
     const g = gauge(F, deal)
     if (g.a < g.b * 0.75 || g.b < g.a * 0.75) continue
@@ -796,13 +799,15 @@ export function cpuDeadline(F, day = F.day ?? 0) {
   // (the real league: 20-odd deals between opening night and the deadline, almost none before December 15, when
   // the summer's signings become tradable, and about half in the deadline's last week)
   const early = day < dec15(F)
-  const tries = left === 0 ? 14 : left <= 2 ? 6 : left <= 7 ? 3 : left <= 21 ? 1 : early ? (R.u() < 0.03 ? 1 : 0) : R.u() < 0.3 ? 1 : 0
+  const tries = left === 0 ? 24 : left <= 2 ? 4 : left <= 7 ? 2 : left <= 21 ? 1 : early ? (R.u() < 0.015 ? 1 : 0) : R.u() < 0.2 ? 1 : 0
   for (let t = 0; t < tries; t++) {
     if (R.u() > (left <= 1 ? 0.9 : 0.75)) continue
     const S = shortsOf(F).filter(s => s !== F.team)
     const sellers = R.shuffle(S.filter(s => situationOf(F, s) === 'reb' || (situationOf(F, s) === 'mid' && R.u() < 0.3)))
     const buyers = R.shuffle(S.filter(s => situationOf(F, s) === 'win' || (situationOf(F, s) === 'mid' && R.u() < 0.4)))
-    outer: for (const a of sellers.slice(0, 8)) for (const b of buyers.slice(0, 6)) if (a !== b && tryBuy(F, R, a, b)) break outer
+    // (the deadline's last week: every front office is on the phone)
+    const wide = left <= 7
+    outer: for (const a of sellers.slice(0, wide ? 30 : 8)) for (const b of buyers.slice(0, wide ? 30 : 6)) if (a !== b && tryBuy(F, R, a, b, wide)) break outer
   }
   const out = SINK
   SINK = null
