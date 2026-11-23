@@ -184,7 +184,8 @@ function Builder({ F, act, owner, s, give, get, setGive, setGet, res, setRes, on
       </div>
       {!done && <Deal F={F} s={s} owner={owner} give={give} get={get} onRemove={(k, v, mine) => { setRes(null); if (mine) setGive(flip(give, k, v)); else setGet(flip(get, k, v)); sfx('tap') }} />}
       {!done && <Gauge F={F} s={s} g={g} />}
-      {!done && chk.ok && <CapNote F={F} chk={chk} />}
+      {/* (over the cap too: the room and the dead money say why) */}
+      {!done && (chk.ok || chk.why === 'ucap') && <CapNote F={F} chk={chk} />}
       {!done && !chk.ok && chk.why !== 'empty' && <p className="tr-bad">{chk.text}</p>}
       {res && <Said ok={res.ok} counter={res.say === 'counter'} text={res.text} line={res.line} />}
       {res?.say === 'counter' && res.counter && (
@@ -294,8 +295,11 @@ function CapNote({ F, chk }) {
         <>
           <span><small>CAP ROOM NOW</small><b>{c.before < 0 ? `-${money(-c.before)}` : money(c.before)}</b></span>
           <span><small>AFTER THE TRADE</small><b>{c.after < 0 ? `-${money(-c.after)}` : money(c.after)}</b></span>
+          {c.dead > 0 && <span><small>DEAD MONEY</small><b>{money(c.dead)}</b></span>}
         </>
       )}
+      {/* (the bonus left on each man who goes lands on this year's cap: why sending a big deal can cost room) */}
+      {!c.nocap && c.deadBy?.length > 1 && <span className="tr-cap-cut"><small>BONUS LEFT, ON THIS YEAR'S CAP</small><b>{c.deadBy.map(x => `${String(x.p.n).split(' ').slice(-1)[0]} ${money(x.d)}`).join(' · ')}</b></span>}
       {chk.cut?.length > 0 && <span className="tr-cap-cut"><small>ROSTER SPOT</small><b>{chk.cut.map(p => `${posText(p)} ${p.n} released`).join(' · ')}</b></span>}
     </div>
   )

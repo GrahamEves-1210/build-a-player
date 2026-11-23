@@ -323,11 +323,13 @@ export function capAfter(F, s, outMen, inMen, cut = []) {
   if (c.nocap) return { before: 0, after: 0, nocap: true }
   const fl = fillersOut(F, s, inMen).filter(p => p.y > 0)
   const pay = c.pay - [...outMen, ...cut, ...fl].reduce((a, p) => a + (p.$ ?? 0), 0) + inMen.reduce((a, p) => a + hitAfter(p), 0)
-  const dead = c.dead + [...outMen, ...cut].reduce((a, p) => a + deadOn(p), 0)
+  // (the bonus left on every man who goes, traded or released: the screen shows it, each man's and the total)
+  const deadBy = [...outMen, ...cut].map(p => ({ p, d: deadOn(p) })).filter(x => x.d > 0)
+  const dead = c.dead + deadBy.reduce((a, x) => a + x.d, 0)
   const n = menOf(F, s).filter(p => p.y > 0).length - outMen.length - cut.length - fl.length + inMen.length
   const rest = restOf53(n, c.year)
   const extra = s === F.team && F.phase === 'off' && F.stage === 'fa' ? committed(F) : 0
-  return { before: r1(c.room - extra), after: r1(c.cap - pay - dead - rest - extra) }
+  return { before: r1(c.room - extra), after: r1(c.cap - pay - dead - rest - extra), dead: r1(dead - c.dead), deadBy }
 }
 const capOk = x => x.after >= 0 || x.after >= x.before - 1e-9
 
@@ -353,7 +355,7 @@ export function checkTrade(F, s, give, get) {
   const cut = releasesFor(F, F.team, gm, tm)
   if (cut == null) return { ok: false, why: 'roster', text: `No room on the ${nick(F.team)} roster at that spot` }
   const cap = capAfter(F, F.team, gm, tm, cut)
-  if (!F.noCap && !capOk(cap)) return { ok: false, why: 'ucap', text: `The ${nick(F.team)} would be $${r1(-cap.after)}M over the cap`, cap }
+  if (!F.noCap && !capOk(cap)) return { ok: false, why: 'ucap', text: `The ${nick(F.team)} would be $${r1(-cap.after)}M over the cap`, cap, cut }
   return { ok: true, cap, cut }
 }
 // what the trades this league year say about the player's team and team s
