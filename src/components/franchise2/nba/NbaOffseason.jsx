@@ -295,12 +295,12 @@ function Lottery({ F, go, done = false }) {
           <Chyron tone="ink" size="s" title="The odds" sub={`${n} TEAMS · ${is321(L) ? `${L.balls ?? L.lottery.reduce((a, x) => a + (x.balls ?? 0), 0)} BALLS` : `${(L.balls ?? 1000).toLocaleString('en-US')} COMBINATIONS`} · ${all ? `ALL ${n} PICKS DRAWN` : `THE TOP ${drawn} PICKS DRAWN`}`} />
           {is321(L) && <BallsNote L={L} />}
           <ol className="nbo-odds">
-            <li className="nbo-odds-h"><i>SPOT</i><span>TEAM</span><em>{is321(L) ? 'BALLS · NO. 1' : 'NO. 1'}</em></li>
+            <li className="nbo-odds-h"><i>SPOT</i><span>TEAM</span><em>NO. 1</em></li>
             {pre.map(x => (
               <li key={x.s} className={owner(x.s) === F.team ? 'is-me' : ''} style={fkVars(x.s)}>
                 <i>{x.from}</i>
-                <span><KLogo s={x.s} size={22} /><span><b>{TEAM[x.s].nick}</b><small>{[recText(R[x.s]), x.rel ? 'NO LOWER THAN 12' : null, ownTag(x)].filter(Boolean).join(' · ')}</small></span></span>
-                <em>{x.balls != null && is321(L) ? `${x.balls} · ${x.odds.toFixed(1)}%` : `${x.odds.toFixed(1)}%`}</em>
+                <span><KLogo s={x.s} size={22} /><span><b>{TEAM[x.s].nick}</b><small>{[recText(R[x.s]), x.balls != null && is321(L) ? `${x.balls} ${x.balls === 1 ? 'BALL' : 'BALLS'}` : null, ownTag(x)].filter(Boolean).join(' · ')}</small></span></span>
+                <em>{`${x.odds.toFixed(1)}%`}</em>
               </li>
             ))}
           </ol>
