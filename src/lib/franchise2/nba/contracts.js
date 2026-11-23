@@ -26,6 +26,8 @@
 // decided, every deal ticks a year, years of service and Bird years go up, and the men whose deals are up go to the
 // free-agent pool with their cap holds, rights and RFA qualifying offers.
 import { rngOf, clamp, r1 } from '../rng'
+import { fixNumbers } from './numbers'
+import { extensionText } from './news'
 import {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, maxPct, twoWayOf, rookieScale, excOf, excYears, indexed,
   payroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hardCapOf, overOf, EXC_TEXT,
@@ -180,7 +182,7 @@ export function putDeal(F, p, d, { year = capYear(F) } = {}) {
   if (d.rs || d.tw || (p.ys ?? 0) + s.length <= 3) p.rfa = 1; else delete p.rfa
   p.sgn = year
   p.sgd = dayOf(F)
-  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'rn', 'ask', 'fx', 'wv', 'qot', 'dco', 'wvb', 'osm', 'osh']) delete p[k]
+  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'qtw', 'rn', 'ask', 'fx', 'wv', 'qot', 'dco', 'wvb', 'osm', 'osh']) delete p[k]
   return p
 }
 
@@ -511,6 +513,7 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   if (!own) p.bird = 0
   putDeal(F, p, { ...d, sc }, { year })
   if (!team.r.includes(p)) team.r.push(p)
+  fixNumbers(F, short)
   return { ok: true, via: c.via }
 }
 
@@ -714,7 +717,8 @@ export function extendMan(F, s, p, d) {
   // (the rookie-scale man's option years are behind him; the new deal is a veteran's)
   if (p.rs) { delete p.rs; delete p.opt; delete p.rfa }
   if (p.opt && p.opt.yr < e.start) delete p.opt
-  return { ok: true }
+  // (text: the wire's line for it)
+  return { ok: true, text: extensionText(p, s, add.length) }
 }
 
 // ── Waivers and the stretch provision ────────────────────────────────────────
@@ -738,9 +742,9 @@ export function cutCost(F, p, { stretch = false } = {}) {
   const total = r1(rest.reduce((a, v) => a + v, 0))
   if (!rest.length || total <= 0) return none
   if (!stretch) return { now: rest[0] ?? 0, per: r1(total / rest.length), total, years: rest.length }
-  // stretched: in the offseason, everything over twice the seasons left plus one; in the season, this season stays,
-  // the seasons after it stretch
-  if (F.phase === 'off') {
+  // stretched: in the summer (from July, the books on next season), everything over twice the seasons left plus one;
+  // in the season (June included, the league year not yet over), this season stays, the seasons after it stretch
+  if (summerOf(F)) {
     const yrs = rest.length * 2 + 1
     return { now: r1(total / yrs), per: r1(total / yrs), total, years: yrs, stretch: true }
   }
@@ -749,6 +753,8 @@ export function cutCost(F, p, { stretch = false } = {}) {
   const per = later.length ? r1(later.reduce((a, v) => a + v, 0) / yrs) : 0
   return { now: rest[0], per, total, years: later.length ? yrs + 1 : 1, stretch: true, later: per }
 }
+// the summer's books: the offseason once the deals have ticked over (seasonEndDeals; capYear is next season's)
+const summerOf = F => F.phase === 'off' && F.sed === F.year
 // can he be stretched (it spreads more seasons than a plain waiver would)
 export const canStretch = (F, p) => cutCost(F, p, { stretch: true }).years > cutCost(F, p).years
 // waive him: off the roster to the pool; what's owed stays on the cap (team.dead: { n, $ a season, y seasons }).
@@ -763,11 +769,14 @@ export function cutMan(F, short, id, { stretch = false, force = false } = {}) {
   team.dead ??= []
   const cy = capYear(F)
   const put = (v, from, to, st = 0) => team.dead.push({ n: p.n, $: r1(v), y: to - cy + 1, from, to, ...(st && { st: 1 }) })
+  // (y: the seasons left from the books' season through `to`; offseason.js newSeason resets it from `to` each new
+  // season, so a waiver ages once a league year whenever it was made)
   if (c.total > 0) {
     if (!c.stretch) {
-      // (each season as it was: the per-season average carries the same total)
-      put(c.total / c.years, cy, cy + c.years - 1)
-    } else if (F.phase === 'off') put(c.now, cy, cy + c.years - 1, 1)
+      // (this season as it is, the seasons after it at their average: the same total)
+      put(c.now, cy, cy)
+      if (c.years > 1) put((c.total - c.now) / (c.years - 1), cy + 1, cy + c.years - 1)
+    } else if (summerOf(F)) put(c.now, cy, cy + c.years - 1, 1)
     else {
       put(c.now, cy, cy)
       if (c.later > 0) put(c.later, cy + 1, cy + c.years - 1, 1)
@@ -778,7 +787,7 @@ export function cutMan(F, short, id, { stretch = false, force = false } = {}) {
   const start = p.rk != null && p.rk > cy ? p.rk : cy
   const to = start + Math.max(0, (p.y ?? 1) - 1)
   // (on the street: any team can sign him; no rights carry with him)
-  for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'rfa', 'tw', 'mh', 'ng', 'ntc', 'ext', 'fr', 'hy', 'qo', 'qot', 'dco', 'osm']) delete p[k]
+  for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'rfa', 'tw', 'mh', 'ng', 'ntc', 'ext', 'fr', 'hy', 'qo', 'qtw', 'qot', 'dco', 'osm']) delete p[k]
   p.$ = 0; p.y = 0; p.bird = 0
   p.wv = capYear(F)
   p.wvb = { s: short, t: timeOf(F), to }
@@ -801,7 +810,7 @@ export function seasonEndDeals(F) {
     if (k === 'P' || k === 'E') {
       const inn = playerOptsIn(F, p)
       decideOption(F, p, inn)
-      if (!inn && (p.o ?? 0) >= 75) news.push({ k: 'option', tag: 'FREE AGENCY', s, text: `${p.n} declines his player option with the ${s} and will become a free agent.` })
+      if (!inn && (p.o ?? 0) >= 75) news.push({ k: 'option', tag: 'FREE AGENCY', s, text: `${p.n} declines his player option with the ${s} and becomes a free agent` })
     } else {
       if (s === F.team && p.optd != null) { decideOption(F, p, !!p.optd); delete p.optd; continue }
       decideOption(F, p, teamKeeps(F, s, p))
@@ -837,21 +846,23 @@ export function seasonEndDeals(F) {
       fa.$l = p.$ ?? 0
       if (p.rs) fa.rsl = 1
       const restricted = !!p.rfa && !p.tw ? true : !!p.tw
+      const wasTw = !!p.tw
       fa.$ = 0
       fa.y = 0
       for (const k of ['sc', 'opt', 'rs', 'mh', 'ng', 'ntc', 'ext', 'tw', 'rfa']) delete fa[k]
       if (restricted) {
         // the qualifying offer: 130% of a rookie deal's last salary (125% for anyone else), the minimum + $0.2M at least
-        const qo = r1(Math.max(minOf(fa.ys ?? 0, nx) + 0.2, fa.$l * (fa.rsl ? 1.3 : 1.25)))
-        const wants = s === F.team ? true : worthOf(F, fa, nx) >= qo * 0.9
-        if (wants) { fa.rfa = 1; fa.qo = qo }
+        // (a two-way man's qualifying offer is another two-way deal, one season: fa.qtw)
+        const qo = wasTw ? twoWayOf(nx) : r1(Math.max(minOf(fa.ys ?? 0, nx) + 0.2, fa.$l * (fa.rsl ? 1.3 : 1.25)))
+        const wants = s === F.team || wasTw ? true : worthOf(F, fa, nx) >= qo * 0.9
+        if (wants) { fa.rfa = 1; fa.qo = qo; if (wasTw) fa.qtw = 1 }
       }
       ;(F.fa ??= []).push(fa)
     }
     team.r = keep
   }
   // (a man in the pool a year or more with no team: his rights are gone)
-  for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { for (const k of ['fr', 'hy', 'rfa', 'qo', 'qot', 'rsl', 'dco']) delete p[k] }
+  for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { for (const k of ['fr', 'hy', 'rfa', 'qo', 'qtw', 'qot', 'rsl', 'dco']) delete p[k] }
   return Object.assign(gone, { news })
 }
 // renounce him: his hold off the books, his rights gone (an RFA becomes unrestricted)
@@ -859,7 +870,7 @@ export function renounce(F, short, id) {
   const p = (F.fa ?? []).find(x => x.i === id && x.fr === short)
   if (!p) return false
   p.rn = 1
-  for (const k of ['rfa', 'qo', 'qot', 'dco']) delete p[k]
+  for (const k of ['rfa', 'qo', 'qtw', 'qot', 'dco']) delete p[k]
   return true
 }
 // what he asks the GM's team to re-sign (his market; a man coming off a rookie deal or with Bird rights may give a
@@ -910,5 +921,8 @@ export function resignOffer(F, p) {
   let $ = r1(clamp(minOf(p.ys ?? 0, year), maxOf(p.ys ?? 0, year, { superMax: own === 'bird' && superMaxOk(F, p, s), last: p.$l ?? 0 }), mv * tilt))
   // (his rookie option declined: his team can pay him the option at most; he takes it if it's close to his price)
   if (p.dco) { if ($ > p.dco * 1.15) return null; $ = Math.min($, p.dco) }
+  // (a two-way man worth no more than the minimum: he re-signs on another two-way deal, as two-way men do; one who
+  // played his way past it asks for a standard contract)
+  if (p.qtw && $ <= minOf(p.ys ?? 0, year) * 1.05 + 0.01 && (p.ys ?? 0) <= 3) return { $: twoWayOf(year), y: (p.ag ?? 24) <= 23 ? 2 : 1, r: 0, tw: 1, via: 'tw' }
   return { $, y, r: raiseMax(own), via: own }
 }

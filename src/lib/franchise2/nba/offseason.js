@@ -10,11 +10,12 @@ import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, le
 import { records, recText, confOrder, pct } from './season'
 import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring, pruneDrafts } from './draft'
-import { addNews } from './news'
+import { addNews, signText, millions } from './news'
 import * as X from './seams'
 import { growBuilds } from './builds'
 import { notable } from './aging'
 import { rngOf } from '../rng'
+import { numberAll } from './numbers'
 import * as MK from './market'
 import { holdOf, hardCapOf } from './cap'
 
@@ -136,6 +137,7 @@ export function nextStep(F) {
   if (at === STEPS.length - 1) { newSeason(F); return 'season' }
   o.step = STEPS[at + 1]
   enter(F, o.step)
+  numberAll(F)   // (the summer's new men: the draft, free agency's camp bodies)
   return o.step
 }
 function enter(F, step) {
@@ -187,7 +189,7 @@ export function resignMine(F, id, yes) {
   if (!c.ok) { F.off.mine.push(id); return c }
   X.signMan(F, F.team, p, { ...deal, bird: true })
   F.off.kept.push(id)
-  addNews(F, { k: 'sign', tag: 'RE-SIGNED', s: F.team, text: `${p.n} re-signs with the ${nick(F.team)}: ${deal.y} ${deal.y === 1 ? 'year' : 'years'}, $${deal.$.toFixed(1)} million a year` })
+  addNews(F, { k: 'sign', tag: 'RE-SIGNED', s: F.team, text: signText('re-signs with', p, F.team) })
   return { ok: true }
 }
 // the GM's offer to a free agent ({ $, y } or his ask): in free agency it's a bid, weighed with the league's on the
@@ -203,7 +205,7 @@ export function signFA(F, id, deal = null) {
   }
   const r = MK.lateOffer(F, id, d)
   if (!r.ok) return r
-  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} agrees to a ${d.y}-year, $${(d.$ * d.y).toFixed(1)} million deal with the ${nick(F.team)}` })
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: signText('signs with', p, F.team) })
   return { ok: true, deal: d }
 }
 export const faOffer = signFA
@@ -235,7 +237,7 @@ export function resignInfo(F, id) {
   if (!was) delete p.rn
   return {
     ask, rights, rightsText: rights ? X.RIGHTS_TEXT[rights] : null, hold: holdOf(p, y), room: Math.round((after - before) * 10) / 10,
-    rfa: !!p.rfa, qo: p.qo ?? null, qot: !!p.qot, dco: p.dco ?? null, can: ask ? X.canSign(F, F.team, p, ask) : null,
+    rfa: !!p.rfa, qo: p.qo ?? null, qtw: !!p.qtw, qot: !!p.qot, dco: p.dco ?? null, can: ask ? X.canSign(F, F.team, p, ask) : null,
   }
 }
 // tender (or pull) the qualifying offer on the GM's own RFA: tendered, he stays restricted into free agency (the GM
@@ -245,7 +247,7 @@ export function tenderQO(F, id, yes = true) {
   if (!p || !p.rfa || !p.qo) return { ok: false, why: 'Not a restricted free agent' }
   if (yes) p.qot = 1
   else delete p.qot
-  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: `The ${nick(F.team)} extend a $${p.qo.toFixed(1)} million qualifying offer to ${p.n}, making him a restricted free agent` })
+  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: p.qtw ? `The ${nick(F.team)} extend a two-way qualifying offer to ${p.n}, making him a restricted free agent` : `The ${nick(F.team)} extend a ${millions(p.qo)} qualifying offer to ${p.n}, making him a restricted free agent` })
   return { ok: true }
 }
 export function faNext(F) {
@@ -312,12 +314,15 @@ export function newSeason(F) {
   }
   pruneStreet(F)
   pruneDrafts(F)
+  numberAll(F)   // (camp's new men, and anyone a save left without one)
   F.picks = (F.picks ?? []).filter(p => p.y > F.year + 1)
   F.year++
   F.phase = 'season'
   F.off = null
   F.ss = {}; F.ps = {}; F.po = null; F.log = []; F.box = []; F.asDone = 0; F.as = null; F.pend = null
-  for (const s of SHORTS) { F.teams[s].dead = (F.teams[s].dead ?? []).map(d => ({ ...d, y: d.y - 1 })).filter(d => d.y > 0) }
+  // (dead money ages once a league year: y is the seasons left from the new season through `to`, whether he was
+  // waived in the season, at the re-sign stop, in free agency or in camp; an old entry with no `to` counts y down)
+  for (const s of SHORTS) { F.teams[s].dead = (F.teams[s].dead ?? []).map(d => ({ ...d, y: d.to != null ? d.to - F.year + 1 : d.y - 1 })).filter(d => d.y > 0) }
   makeSchedule(F)
   makePicks(F)
   makeClass(F)
@@ -349,6 +354,6 @@ export function signMin(F, id) {
   const d = minDeal(F, p)
   const r = X.signMan(F, F.team, p, d)
   if (r?.ok === false) return r
-  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} signs a one-year minimum deal with the ${nick(F.team)}` })
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: signText('signs with', p, F.team, { note: ' (the minimum)' }) })
   return { ok: true }
 }

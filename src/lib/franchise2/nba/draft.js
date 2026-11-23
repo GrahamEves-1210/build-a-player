@@ -6,6 +6,7 @@ import { records, pct, leagueOrder } from './season'
 import { addNews } from './news'
 import { nameFor } from '../names'
 import { rngOf, clamp } from '../rng'
+import { fixNumbers } from './numbers'
 import * as X from './seams'
 
 export const DRAFT_YEARS = 7
@@ -41,6 +42,7 @@ const SPOT_W = [['PG', 15], ['SG', 21], ['SF', 22], ['PF', 21], ['C', 21]]
 const HT = { PG: [72, 77], SG: [75, 79], SF: [77, 81], PF: [79, 83], C: [81, 87] }
 const WT = { PG: [175, 200], SG: [185, 210], SF: [200, 225], PF: [215, 240], C: [225, 265] }
 export const CLASS_N = 80
+const schoolOf = p => { let h = 7; for (const ch of `${p.n}-${p.i}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return COLLEGES[h % COLLEGES.length] }
 
 export function makeClass(F) {
   const R = rngOf(`${F.seed}-class-${F.year + 1}`)
@@ -72,7 +74,7 @@ export function makeClass(F) {
   }
   // the consensus board: the read of his ceiling, a little of what he is now
   out.sort((a, b) => (b.seen + b.o * 0.25) - (a.seen + a.o * 0.25))
-  out.forEach((p, k) => { p.rank = k + 1 })
+  out.forEach((p, k) => { p.rank = k + 1; if (!p.c) p.c = schoolOf(p) })
   F.dc = out
   F.sp = F.sp ?? 0
   return out
@@ -295,6 +297,8 @@ export function closeDraft(F) {
     // m.tw says the team means to sign him two-way, and a second-rounder without it gets a standard deal if there's room)
     X.rookieDeal(F, keep, { n: m.n, r: m.r, ...(m.r === 2 && { tw: !!m.tw }) })
   }
+  // (a number on every draftee's back: one free on his team)
+  for (const s of new Set(made.map(m => m.t))) fixNumbers(F, s)
   F.drafts = { ...(F.drafts ?? {}), [F.year + 1]: made.map(m => ({ ...m, n2: F.dc.find(x => x.i === m.i)?.n })) }
   const top = made.slice(0, 3).map(m => `${m.n}. ${nick(m.t)}: ${F.dc.find(x => x.i === m.i)?.n}`)
   addNews(F, { k: 'draft', tag: 'DRAFT', text: `The ${F.year + 1} draft: ${top.join(', ')}` })
@@ -312,6 +316,8 @@ function rookieOf(p) {
   for (const k of ['seen', 'w', 'sc', 'rank', 'dt', 'tg', 'yr']) delete keep[k]
   keep.ys = 0
   keep.ag = p.ag - 1
+  // (never without a school or a club: a class from an older save, or a man made without one)
+  if (!keep.c) keep.c = schoolOf(keep)
   return keep
 }
 // the drafts kept: the last three in full; older ones as [pick, team, id, name] rows (the history page's): the first

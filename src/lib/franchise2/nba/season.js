@@ -4,7 +4,7 @@
 // 2-2-1-1-1, the better record at home in games 1, 2, 5 and 7.
 import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder, makeFiller, thinSpot } from './league'
 import { b2bOf, dateText } from './schedule'
-import { addNews, injuryText } from './news'
+import { addNews, injuryText, signText } from './news'
 import { scoutTick } from './draft'
 import * as X from './seams'
 import { rngOf } from '../rng'
@@ -140,7 +140,7 @@ export function rosterFloor(F) {
       const p = floorSign(F, s)
       if (!p) break
       n++
-      if (s === F.team) addNews(F, { k: 'sign', tag: 'SIGNED', s, text: `The ${nick(s)} sign ${p.n} to a non-guaranteed minimum deal to meet the league's roster minimum` })
+      if (s === F.team) addNews(F, { k: 'sign', tag: 'SIGNED', s, text: signText('signs with', p, s, { note: `, non-guaranteed (the ${nick(s)} were under the league's roster minimum)` }) })
     }
     if (n >= FLOOR_FULL) delete thin[s]
   }
@@ -351,7 +351,8 @@ export function allStars(F) {
   F.as = out
   F.asDone = 2
   const mine = ['E', 'W'].flatMap(c => out[c].res).map(i => manOf(F, i)).filter(p => p && teamOfMan(F, p.i) === F.team)
-  addNews(F, { k: 'as', tag: 'ALL-STAR', text: `The coaches have picked the All-Star reserves${mine.length ? `: ${mine.map(p => p.n).join(' and ')} ${mine.length > 1 ? 'make it' : 'makes it'} for the ${nick(F.team)}` : ''}` })
+  const names = c => out[c].res.map(i => manOf(F, i)?.n).filter(Boolean).join(', ')
+  addNews(F, { k: 'as', tag: 'ALL-STAR', text: `The coaches have picked the All-Star reserves. East: ${names('E')}. West: ${names('W')}${mine.length ? `. ${mine.map(p => p.n).join(' and ')} ${mine.length > 1 ? 'make it' : 'makes it'} for the ${nick(F.team)}` : ''}` })
   return out
 }
 // the game: East against West, the way it's played (little defense until the fourth quarter), the MVP off the winners
@@ -425,8 +426,15 @@ function seriesAdd(F, g, res) {
   S.g.push({ h: g.h, hs: res.hs, as: res.as, ot: res.ot || 0 })
   const hiWon = (g.h === S.hi) === (res.hs > res.as)
   hiWon ? S.wh++ : S.wl++
-  if (S.wh === 4 || S.wl === 4) S.done = S.wh === 4 ? S.hi : S.lo
+  if (S.wh === 4 || S.wl === 4) {
+    S.done = S.wh === 4 ? S.hi : S.lo
+    // (the wire posts the series' result; the Finals' is the champions' item)
+    const rd = F.po?.rd ?? 0, w = S.done, l = w === S.hi ? S.lo : S.hi, lw = Math.min(S.wh, S.wl)
+    const where = rd === 2 ? ` in the ${CONF_NAME_LONG[S.c] ?? ''} Conference finals and advance to the NBA Finals` : rd === 1 ? ` in the ${CONF_NAME_LONG[S.c] ?? ''} Conference semifinals` : ' in the first round'
+    if (rd < 3) addNews(F, { k: 'po', tag: ROUND_NAME[rd], ...((w === F.team || l === F.team) && { s: F.team }), text: lw === 0 ? `The ${nick(w)} sweep the ${nick(l)}${where}` : `The ${nick(w)} beat the ${nick(l)} 4-${lw}${where}` })
+  }
 }
+const CONF_NAME_LONG = { E: 'Eastern', W: 'Western' }
 function poEnd(F, mine) {
   const P = F.po
   P.night++

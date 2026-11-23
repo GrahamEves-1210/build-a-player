@@ -105,7 +105,8 @@ Team = {
   exc: { yr, mk, mle, bae, baeY, hc, room } // B: exceptions used this league year and the hard cap triggered (hc 'a1'|'a2')
   tpe: [{ $, n, until }],           // trade exceptions: $ left, n the man whose salary made it, until a calDay (trades.js tpesOf)
   dead: [{ n, $, y, from, to, st? }], // waived salary still on the books: $ a season in every season from..to, y the
-                                    //   seasons left (core ticks y at newSeason), st 1 = stretched (contracts.js cutMan)
+                                    //   seasons left from the books' season through `to` (newSeason resets it from `to`
+                                    //   each new season, so it ages once a league year), st 1 = stretched (contracts.js cutMan)
   txh: [year],                      // seasons it paid the tax (the repeater rule)
   w: 0, l: 0                        // NOT stored: records are computed from sched (season.js records)
 }
@@ -142,6 +143,8 @@ twa  [season, games]: a two-way man's games active this season (the 50-game limi
 fl   1 = a filler: the end of the bench a team carries because it must (league.js makeFiller; made up: gn)
 real 1 = his real contract from the data (contracts.js dealOnLoad)    rt  the team that drafted or traded for him on his rookie deal (the supermax)
 ext  league year he signed an extension          ud  the draft he went undrafted in (the street after closeDraft)
+nt   the team his number (num) is for (numbers.js fixNumbers: a man who joins keeps his number only if it's free there)
+qtw  1 = his qualifying offer is a two-way deal (a two-way man's RFA: contracts.js seasonEndDeals)
 
 -- health (C) --
 inj { g: games out, k: 'sprained left ankle' }    rest 1 = sitting tonight (load management)

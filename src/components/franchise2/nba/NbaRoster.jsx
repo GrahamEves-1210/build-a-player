@@ -319,7 +319,7 @@ function MineActs({ F, act, p, onClose }) {
   const tot = ask ? Array.from({ length: yrs }, (_, j) => ask.$ * (1 + Math.min(ask.r ?? 0.08, 0.08) * j)).reduce((a, v) => a + v, 0) : 0
   const sign = () => {
     const r = act(X => CAP_SIM.extendMan(X, X.team, X.teams[X.team].r.find(x => x.i === id), ask))
-    if (r?.ok !== false) { act(X => addNews(X, { k: 'ext', tag: 'EXTENSION', s: X.team, i: id, text: `${p.n} has agreed to a ${yrs}-year, ${money(tot)} extension with the ${nick(X.team)}` })); sfx('claim') } else sfx('deny')
+    if (r?.ok !== false) { act(X => addNews(X, { k: 'ext', tag: 'EXTENSION', s: X.team, i: id, text: r?.text ?? `${p.n} agrees to an extension with the ${nick(X.team)}: ${yrs} years, ${money(tot)}` })); sfx('claim') } else sfx('deny')
     setExt(false)
   }
   return (

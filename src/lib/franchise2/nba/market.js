@@ -25,6 +25,7 @@
 // pool runs dry), cuts down to 15, signs two-way men to two or three spots, and extends the young men and veterans it
 // wants to keep.
 import { rngOf, clamp, r1 } from '../rng'
+import { signText, termsText } from './news'
 import { capOf, minOf, maxOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
 import {
   marketValue, worthOf, rankOf, termOf, canSign, signMan, rightsOf, resignOffer, renounce, situationOf,
@@ -52,9 +53,13 @@ const tierOf = (F, p) => (rankOf(F, p) <= 60 || (p.o ?? 0) >= 85 ? 2 : rankOf(F,
 // set the first day; each day after it comes down (DECAY), and when no other team has the money for it anymore, down
 // toward what they do have (a star never under 60% of where it started: his own team can still pay it, or he takes a
 // season and tries again; a good player a third). p.ask = { yr, b: the first day's, $: today's, y, d }
+// the market's day an ask is for: the round being played, else the next one to be (the screen between rounds shows
+// the ask the next round weighs offers against; before the first round day 1, once the days are done the last)
+let playing = 0
+export const marketDay = F => playing || clamp(1, FA_DAYS, faDayOf(F) + 1)
 export function askFor(F, p) {
   const year = capYear(F)
-  const day = clamp(1, FA_DAYS, faDayOf(F) || 1)
+  const day = marketDay(F)
   const mn = minOf(p.ys ?? 0, year)
   if (!p.ask || p.ask.yr !== year || p.ask.b == null) {
     const R = rngOf(`${F.seed}-${year}-fa-${p.i}`)
@@ -98,7 +103,7 @@ export function offerScore(F, p, s, d, ctx = null) {
   return (sc[0] / Math.max(0.1, a.$)) * yf * extra
 }
 // the share of his ask he'll take today (seeded: some men wait a day longer than others)
-export function takeOf(F, p, day = clamp(1, FA_DAYS, faDayOf(F) || 1)) {
+export function takeOf(F, p, day = marketDay(F)) {
   const t = tierOf(F, p)
   if (day >= FA_DAYS) return t === 2 ? TAKE[FA_DAYS - 1] : t === 1 ? 0.45 : 0
   const R = rngOf(`${F.seed}-${capYear(F)}-take-${day}-${p.i}`)
@@ -236,7 +241,7 @@ function openMarket(F) {
       if (p.rfa && (rankOf(F, p) > 150 || F.fao?.[p.i])) continue
       if (wantsOut(F, s, p)) continue
       const ask = keepsOwn(F, s, p)
-      if (ask && signMan(F, s, p, ask).ok && (p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s, text: `${p.n} is re-signing with the ${s} on a ${ask.y}-year, ${money(sumOf(p))} deal.` })
+      if (ask && signMan(F, s, p, ask).ok && (p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s, text: signText('re-signs with', p, s) })
     }
     // the rest: renounced when the team wants its room, held (Bird rights for later) when it's over the cap anyway (a
     // star it would bring back stays held)
@@ -262,8 +267,11 @@ export function faDay(F, day = faDayOf(F) + 1) {
     const d = faDayOf(F) + 1
     F.fad = d
     F.fay = capYear(F)
-    if (d === 1) news.push(...openMarket(F))
-    news.push(...faRound(F, d))
+    playing = d
+    try {
+      if (d === 1) news.push(...openMarket(F))
+      news.push(...faRound(F, d))
+    } finally { playing = 0 }
   }
   return news
 }
@@ -287,7 +295,7 @@ function settleSheets(F, news) {
     const md = { $: d.$, y: d.y, r: Math.min(d.r ?? 0, raiseMax(rightsOf(p, was))), sheet: 1 }
     if (was && aiMatches(F, was, p, d) && signMan(F, was, p, md).ok) {
       p.osm = { s: F.team, y: year }
-      news.push({ k: 'sign', tag: 'MATCHED', s: was, text: `The ${was} have matched the ${F.team}' offer sheet for ${p.n}: ${d.y} years, ${money(sumOf(p))}.` })
+      news.push({ k: 'sign', tag: 'MATCHED', s: was, text: matchedText(was, F.team, p) })
       gmLog(F, { i: p.i, n: p.n, k: 'matched', s: was, d })
       continue
     }
@@ -295,7 +303,7 @@ function settleSheets(F, news) {
     const g = { ...d, sheet: 1 }
     const r = signMan(F, F.team, p, g)
     if (!r.ok) signMan(F, F.team, p, { ...g, via: 'room' }, { check: false })
-    news.push({ k: 'sign', tag: 'OFFER SHEET', s: F.team, text: `The ${was ?? 'old team'} decline to match. ${p.n} joins the ${F.team}: ${d.y} years, ${money(sumOf(p))}.` })
+    news.push({ k: 'sign', tag: 'OFFER SHEET', s: F.team, text: unmatchedText(was, F.team, p) })
     gmLog(F, { i: p.i, n: p.n, k: 'signed', s: F.team, d })
   }
 }
@@ -362,14 +370,14 @@ function faRound(F, day) {
       if (!c.ok) continue
       if (p.rfa && p.fr && p.fr !== o.s && !p.rn) {
         // an offer sheet: his old team matches or lets him go
-        const total = money(dealSum(o.d))
-        if (p.fr === F.team) { (F.rfq ??= []).push({ i: p.i, s: o.s, d: o.d }); signed = o.s; news.push({ k: 'sheet', tag: 'OFFER SHEET', s: o.s, text: `${p.n} has signed an offer sheet with the ${o.s}: ${o.d.y} years, ${total}. The ${p.fr} have a day to match.` }); break }
+        const sheet = `${p.n} signs an offer sheet with the ${o.s}: ${termsText(o.d.y, dealSum(o.d))}; the ${p.fr} have a day to match`
+        if (p.fr === F.team) { (F.rfq ??= []).push({ i: p.i, s: o.s, d: o.d }); signed = o.s; news.push({ k: 'sheet', tag: 'OFFER SHEET', s: o.s, text: sheet }); break }
         if (o.s === F.team) {
           // (the GM's sheet: his old team answers on the next day)
           p.osh = { s: F.team, d: { $: o.d.$, y: o.d.y, r: o.d.r ?? 0 } }
           delete F.fao?.[p.i]
           signed = o.s
-          news.push({ k: 'sheet', tag: 'OFFER SHEET', s: F.team, text: `${p.n} has signed an offer sheet with the ${F.team}: ${o.d.y} years, ${total}. The ${p.fr} have a day to match.` })
+          news.push({ k: 'sheet', tag: 'OFFER SHEET', s: F.team, text: sheet })
           gmLog(F, { i: p.i, n: p.n, k: 'sheet', s: p.fr, d: o.d })
           break
         }
@@ -377,7 +385,7 @@ function faRound(F, day) {
           const was = p.fr
           if (signMan(F, was, p, { $: o.d.$, y: o.d.y, r: Math.min(o.d.r ?? 0, raiseMax(rightsOf(p, was))), sheet: 1 }).ok) {
             p.osm = { s: o.s, y: year }
-            news.push({ k: 'sign', tag: 'MATCHED', s: was, text: `The ${was} have matched the ${o.s}' offer sheet for ${p.n}: ${o.d.y} years, ${money(sumOf(p))}.` })
+            news.push({ k: 'sign', tag: 'MATCHED', s: was, text: matchedText(was, o.s, p) })
             signed = was
             break
           }
@@ -386,7 +394,9 @@ function faRound(F, day) {
       const r = signMan(F, o.s, p, o.d)
       if (!r.ok) continue
       if (o.s === F.team) { delete F.fao?.[p.i]; gmLog(F, { i: p.i, n: p.n, k: 'signed', s: F.team, d: o.d }) }
-      if ((p.o ?? 0) >= 76 || sumOf(p) >= 30 || o.s === F.team) news.push({ k: 'sign', tag: 'FREE AGENCY', s: o.s, text: `${p.n} has agreed to a ${yrsText(p.y)}, ${money(sumOf(p))} deal with the ${o.s}${o.d.via === 'mle' || o.d.via === 'tmle' || o.d.via === 'rmle' ? ', using the mid-level exception' : o.d.via === 'bird' && p.was === o.s ? ', re-signing with Bird rights' : ''}.` })
+      // (his own team bringing him back re-signs him; a deal on the mid-level says so, the way the reporters do)
+      const back = o.d.via === 'bird' || o.d.via === 'ebird' || o.d.via === 'nbird'
+      if ((p.o ?? 0) >= 76 || sumOf(p) >= 30 || o.s === F.team) news.push({ k: 'sign', tag: back ? 'RE-SIGNED' : 'FREE AGENCY', s: o.s, text: signText(back ? 're-signs with' : 'signs with', p, o.s, { note: o.d.via === 'mle' || o.d.via === 'tmle' || o.d.via === 'rmle' ? ' (mid-level exception)' : '' }) })
       signed = o.s
       break
     }
@@ -400,8 +410,10 @@ function faRound(F, day) {
     if (!signed && day >= FA_DAYS && p.rfa && p.qo && p.fr && !p.rn) {
       const was = p.fr
       const keep = was !== F.team && keepsOwn(F, was, p)
-      if (keep && signMan(F, was, p, keep).ok) { if ((p.o ?? 0) >= 76) news.push({ k: 'sign', tag: 'RE-SIGNED', s: was, text: `${p.n} re-signs with the ${was}: ${keep.y} years, ${money(sumOf(p))}.` }) }
-      else if (signMan(F, was, p, { $: p.qo, y: 1, r: 0, sheet: 1 }).ok) { delete p.rfa; news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his qualifying offer with the ${was} and will be an unrestricted free agent next summer` }) }
+      if (keep && signMan(F, was, p, keep).ok) { if ((p.o ?? 0) >= 76) news.push({ k: 'sign', tag: 'RE-SIGNED', s: was, text: signText('re-signs with', p, was) }) }
+      // (a two-way man's qualifying offer is a two-way deal: he's back on one, restricted again next summer)
+      else if (p.qtw) { if (signMan(F, was, p, { $: twoWayOf(year), y: 1, r: 0, tw: 1, sheet: 1 }).ok && (p.o ?? 0) >= 70) news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his qualifying offer with the ${was}: 1 year, two-way contract` }) }
+      else if (signMan(F, was, p, { $: p.qo, y: 1, r: 0, sheet: 1 }).ok) { delete p.rfa; news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his qualifying offer with the ${was}: ${termsText(1, p.qo)}; he can be an unrestricted free agent next summer` }) }
     }
   }
   return news
@@ -445,7 +457,7 @@ export function pullOffer(F, id) { if (F.fao?.[id]) { const n = { ...F.fao }; de
 export function offerLook(F, id, d) {
   const p = (F.fa ?? []).find(x => x.i === id)
   if (!p) return null
-  const day = clamp(1, FA_DAYS, faDayOf(F) + (faDone(F) ? 0 : 1))
+  const day = marketDay(F)
   const u = offerScore(F, p, F.team, d)
   const take = takeOf(F, p, day)
   return { u: r1(u * 100) / 100, take: r1(take * 100) / 100, chance: u >= take + 0.06 ? 'likely' : u >= take - 0.04 ? 'close' : 'unlikely', ask: askOf(F, p) }
@@ -494,14 +506,17 @@ export function matchSheet(F, short, man, yes) {
     F.rfq = F.rfq.filter(x => x.i !== id)
     signMan(F, short, p, d)
     p.osm = { s: q.s, y: year }
-    return { ok: true, matched: true, news: [{ k: 'sign', tag: 'MATCHED', s: short, text: `The ${short} have matched the ${q.s}' offer sheet for ${p.n}: ${q.d.y} years, ${money(sumOf(p))}` }] }
+    return { ok: true, matched: true, news: [{ k: 'sign', tag: 'MATCHED', s: short, text: matchedText(short, q.s, p) }] }
   }
   // (not matched: he goes to the team that signed him to the sheet)
   F.rfq = F.rfq.filter(x => x.i !== id)
   delete p.rfa
   const r = signMan(F, q.s, p, { ...q.d, sheet: 1 }, { check: false })
-  return { ok: r.ok, matched: false, news: [{ k: 'sign', tag: 'FREE AGENCY', s: q.s, text: `The ${short} decline to match. ${p.n} joins the ${q.s}: ${q.d.y} years, ${money(sumOf(p))}` }] }
+  return { ok: r.ok, matched: false, news: [{ k: 'sign', tag: 'FREE AGENCY', s: q.s, text: unmatchedText(short, q.s, p) }] }
 }
+// an offer sheet matched, or not (p: the man, his deal on him now)
+const matchedText = (was, by, p) => `The ${was} match the ${by}' offer sheet for ${p.n}: ${termsText(p.y, sumOf(p))}`
+const unmatchedText = (was, by, p) => `${was ? `The ${was} decline` : 'His team declines'} to match; ${p.n} joins the ${by}: ${termsText(p.y, sumOf(p))}`
 // the board: the best men still out there
 export const faBoard = (F, n = 30) => [...(F.fa ?? [])].sort((a, b) => rankOf(F, a) - rankOf(F, b)).slice(0, n)
 export const faDone = F => faDayOf(F) >= FA_DAYS
@@ -578,7 +593,7 @@ function lateSignings(F) {
     if (own && tier >= 1) {
       const k = keepsOwn(F, own, p)
       const d = k && { ...k, $: r1(Math.max(mn, Math.min(k.$, Math.max(ask, k.$ * 0.8)))) }
-      if (d && signMan(F, own, p, d).ok) { if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s: own, text: `${p.n} is back with the ${own}: ${yrsText(p.y)}, ${money(sumOf(p))}` }); continue }
+      if (d && signMan(F, own, p, d).ok) { if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s: own, text: signText('re-signs with', p, own) }); continue }
     }
     const yrs = tier === 2 ? Math.min(termOf(F, p), (p.ag ?? 27) >= 33 ? 2 : 3) : tier === 1 ? ((p.ag ?? 27) >= 31 ? 1 : 2) : 1
     // (a star who can only get a fraction of his price takes one season and tries the market again next summer)
@@ -610,7 +625,7 @@ function lateSignings(F) {
     if (!got) continue
     const [s, d] = got
     used.add(s)
-    if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'FREE AGENCY', s, text: `${p.n} has agreed to a ${yrsText(d.y)}, ${money(d.$ * d.y)} deal with the ${s}` })
+    if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'FREE AGENCY', s, text: signText('signs with', p, s) })
   }
   return news
 }
@@ -633,7 +648,7 @@ export function cpuExtensions(F, s) {
     const line = Math.max(keepLine(F, s, p, year + 1), lineOf(taxTolerance(F, s).keep, year + 1))
     if (payroll(F, s, year + 1) + ask.$ > line) continue
     const r = extendMan(F, s, p, ask)
-    if (r.ok && (p.o ?? 0) >= 78) news.push({ k: 'ext', tag: 'EXTENSION', s, text: `${p.n} has agreed to a ${ask.y}-year, ${money(schedOf(ask).reduce((a, v) => a + v, 0))} extension with the ${s}.` })
+    if (r.ok && (p.o ?? 0) >= 78) news.push({ k: 'ext', tag: 'EXTENSION', s, text: r.text })
   }
   return news
 }
