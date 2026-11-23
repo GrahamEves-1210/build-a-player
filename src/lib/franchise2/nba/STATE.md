@@ -56,6 +56,9 @@ F = {
   ss: { [manId]: SeasonLine },      // this season's stats per man (C writes, core reads)
   ps: { [manId]: SeasonLine },      // this postseason's stats (C writes)
   hist: [SeasonRecord],             // one per finished season (core writes, awards from C)
+                                    //   hist[].aw winners also carry p (position) and l (their line, stored at closeSeason:
+                                    //   season awards [gp, pts, reb, ast, stl, blk, gs, cp] totals; FMVP/ECF/WCF the series
+                                    //   [gp, pts, reb, ast]); saves from before 2026-11-23 have neither
   retired: [RetiredRow],            // C's retirements land here; offseason.js retiredRow/keepRetired pack them (below)
   news: [{ d, y, t, k, tag, s, text, i?, g? }], // the wire (addNews from nba/news.js): t the calendar day (days since
                                     //   1970, news.js wireTime), i the man, g games out (an injury: newsWorthy reads it)
