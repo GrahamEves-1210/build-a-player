@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
+import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF, cutBlock } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
@@ -120,7 +120,7 @@ function ManSheet({ F, act, id, owner, onClose }) {
           </table></div>
         )}
         <div className="nb-sheet-acts">
-          {!sure ? <button type="button" className="is-danger" onClick={() => setSure(true)}>Waive him</button>
+          {cutBlock(F, id) ? <span className="nb-sure">{cutBlock(F, id)}</span> : !sure ? <button type="button" className="is-danger" onClick={() => setSure(true)}>Waive him</button>
             : <><span className="nb-sure">{dead > 0 ? `${money(dead)} stays on the books` : 'Waive him?'}</span><button type="button" onClick={() => setSure(false)}>Keep</button>
               <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived ${p.n}` }) }); sfx('deny'); onClose() }}>Waive</button>
               {canStretch && <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id, { stretch: true }); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived and stretched ${p.n}` }) }); sfx('deny'); onClose() }}>Waive and stretch</button>}</>}

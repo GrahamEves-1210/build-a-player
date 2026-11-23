@@ -16,6 +16,8 @@
 //               cp (clutch points), hi hr ha h3 hs hb (his best night: points, boards, assists, threes, steals, blocks),
 //               dd, td (double- and triple-doubles), g40 (40-point games), g20 / g15 (games of 20+ / 15-19 minutes) }
 // A man who changes teams keeps one line (s: the team he plays for now), as the NBA's own season totals do.
+import { twGames } from './rotation'
+
 const SUM_K = ['min', 'pts', 'reb', 'oreb', 'ast', 'stl', 'blk', 'tov', 'pf', 'fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'pm', 'cp']
 
 export function addLine(row, l, short = null) {
@@ -38,6 +40,15 @@ export function addLine(row, l, short = null) {
 
 export function recordGame(F, game, res, { playoff = false, series = null } = {}) {
   const tot = playoff ? (F.ps ??= {}) : (F.ss ??= {})
+  for (const [short, lines] of Object.entries(res.box)) {
+    // a two-way man's games with the team (dressed, played or not): 50 at most in a season (rotation.js dressed)
+    if (!playoff) for (const p of F.teams?.[short]?.r ?? []) {
+      if (!p.tw) continue
+      const l = lines.find(x => x.i === p.i)
+      if (!l || (l.dnp && l.dnp !== 'cd')) continue
+      p.twa = [F.year, twGames(p, F.year) + 1]
+    }
+  }
   for (const [short, lines] of Object.entries(res.box)) for (const l of lines) {
     if (!(l.min > 0)) continue
     addLine((tot[l.i] ??= {}), l, short)
