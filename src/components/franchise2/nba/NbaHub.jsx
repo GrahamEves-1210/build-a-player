@@ -247,7 +247,7 @@ function SeasonOver({ F, R, act }) {
   return (
     <section className="fh-next">
       <div className="fh-next-h"><b>Regular season over</b><span>{recText(r)} · {ORD(seed)} in the {CONF_OF[F.team] === 'E' ? 'East' : 'West'}</span></div>
-      <Stamp kind={seed <= 10 ? 'w' : 'l'} big className="nb-fate">{fate.toUpperCase()}</Stamp>
+      <Stamp kind={seed <= 10 ? 'w' : 'l'} big className="nb-fate"><span>{fate.toUpperCase().split(' ').map((w, k) => <span key={k} className="nb-nw">{k ? ' ' : ''}{w}</span>)}</span></Stamp>
       <div className="fh-go"><Go onClick={() => { act(X => { startPostseason(X) }); sfx('whistle') }}>{seed <= 10 ? 'Start the postseason' : 'Watch the postseason'}</Go></div>
     </section>
   )

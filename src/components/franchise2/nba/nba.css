@@ -430,6 +430,7 @@ button.nb-st-row.is-me { color: var(--tct); }
 
 /* the season's fate on the hub: a stamp that clears the button under it (rotated, it leans past its box) */
 .fk-stamp.is-big.nb-fate { justify-self: start; margin: 14px 4px 22px; font-size: 40px; }
+.nb-fate .nb-nw { white-space: nowrap; }
 .nb-top-abbr { font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .5px; color: var(--tct); }
 .fh-row.nb-trade-shut { cursor: default; box-shadow: inset 4px 0 0 var(--fk-g4); }
 .fh-row.nb-trade-shut b { color: var(--fk-mute); }
