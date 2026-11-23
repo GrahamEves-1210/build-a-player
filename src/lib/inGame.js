@@ -433,7 +433,10 @@ function bkAfter(Rk, b, o) {
   for (const [x, q] of poss) w += q * endP(m2 + (other === 'u' ? x : -x), Rk.ot)
   return w
 }
-const bkW = (Rk, b, hit) => bkPlay(b, hit, null).reduce((s, o) => s + o.p * bkAfter(Rk, b, o), 0)
+// a late moment landed that leaves his team ahead is the game: the other side's last trip comes up empty (owner 11-23,
+// a player lost after landing the go-ahead shot: "if it's a game-winner clutch shot you should 100% win")
+const bkSealed = (b, o, hit) => hit && b.k === 2 && b.m + (o.u ?? 0) - (o.t ?? 0) > 0
+const bkW = (Rk, b, hit) => bkPlay(b, hit, null).reduce((s, o) => s + o.p * (bkSealed(b, o, hit) ? 1 : bkAfter(Rk, b, o)), 0)
 function bkModel(ctx) {
   const { pool, used, hOf } = ctx
   const d = solve(bkFull, ctx.pGame, -1.2, 0.55)
@@ -946,7 +949,7 @@ export function playMoment(plan, hit, F = null, raw = null) {
   }
   if (ctx.sport === 'hoops') {
     const list = bkPlay(b, hit, F), o = pickW(r() * list.reduce((s, x) => s + x.p, 0), list)
-    const rest = bkRest(M.R, b, o, r)
+    const rest = bkSealed(b, o, hit) ? { u: 0, t: 0, ot: 0, last: null } : bkRest(M.R, b, o, r)
     const mine = plan.mine + (o.u ?? 0) + rest.u, opp = plan.opp + (o.t ?? 0) + rest.t
     const ot = rest.ot ? (rest.ot > 1 ? `${WORDS[rest.ot]} overtimes` : 'overtime') : null
     const note = ot ? (mine > opp ? `Won it in ${ot}.` : `Lost it in ${ot}.`)
