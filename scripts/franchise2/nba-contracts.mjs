@@ -23,11 +23,13 @@ let off = 0
 console.log('team   game   real   diff  (men here on another team\'s real books)')
 for (const s of N.SHORTS) {
   const g = payroll(F, s, Y), r = realPay(s)
-  off = Math.max(off, Math.abs(g - r))
+  // (over the real payroll is wrong; under it is the owner's call, 11-23: fillers on the minimum hold the spots of
+  // the real men the game doesn't carry, so a team missing real men pays less)
+  off = Math.max(off, g - r)
   const wrong = F.teams[s].r.filter(p => { const d = N.realDeal(p.n); return d && d.t !== s }).map(p => `${p.n} (${N.realDeal(p.n).t})`)
   console.log(`${s}  ${g.toFixed(1).padStart(6)} ${r.toFixed(1).padStart(6)} ${(g - r).toFixed(1).padStart(6)}  ${wrong.join(', ')}`)
 }
-console.log(`largest payroll gap ${off.toFixed(1)}`)
+console.log(`largest payroll over the real one ${off.toFixed(1)}`)
 const top = rl.filter(([, p]) => p.o >= 88)
 console.log(`rated 88+: ${top.length}, on the last season of a deal: ${top.filter(([, p]) => p.y === 1).map(([, p]) => p.n).join(', ') || 'none'}`)
 const bd = [0, 0, 0, 0]
@@ -47,7 +49,7 @@ for (const [s, p] of rk.sort((a, b) => (a[1].dr?.[2] ?? 99) - (b[1].dr?.[2] ?? 9
 const bad = []
 if (capOf(Y) !== 165 || taxOf(Y) !== 200.4 || apron1Of(Y) !== 209 || apron2Of(Y) !== 221.7) bad.push('the 2026-27 cap lines')
 if (over.length) bad.push(`${over.length} estimated deals over the max`)
-if (off > 5) bad.push(`a payroll ${off.toFixed(1)} from the real one`)
+if (off > 5) bad.push(`a payroll ${off.toFixed(1)} over the real one`)
 if (top.some(([, p]) => p.y === 1 && !p.real)) bad.push('an 88+ man on an estimated last season')
 if (N.SHORTS.some(s => F.teams[s].r.filter(p => p.tw).length !== 3)) bad.push('a team without three two-way men')
 for (const [, p] of rk) {

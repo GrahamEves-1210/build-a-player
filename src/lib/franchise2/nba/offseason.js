@@ -6,7 +6,7 @@
 //           (B's seasonEndDeals); the GM's own free agents: re-sign or let go (B's resignOffer)
 //   fa      free agency (B: askOf, canSign, signMan, faDay; the other 29 teams at the end, cpuOffseason)
 //   camp    the GM's roster down to 15 standard and 3 two-way contracts (B's legalRoster, cutMan), then a new season
-import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeGen, thinSpot } from './league'
+import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeGen, thinSpot, keepRoster } from './league'
 import { records, recText, confOrder, pct } from './season'
 import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring } from './draft'
@@ -178,6 +178,7 @@ export function newSeason(F) {
     const std = () => t.r.filter(p => !p.tw).sort((a, b) => a.o - b.o)
     while (std().length > ROSTER_MAX) X.cutMan(F, s, std()[0].i)
     while (t.r.filter(p => p.tw).length > 3) X.cutMan(F, s, t.r.filter(p => p.tw).sort((a, b) => a.o - b.o)[0].i)
+    keepRoster(F, s, R, taken, X)   // (the floor: 10 real or drafted men, the rest fillers on one-year minimums)
     fillTeam(F, s, R, taken, { twoWay: 2 })
     for (const p of t.r) if (p.$ == null) X.dealOnLoad(F, p, s)
   }
