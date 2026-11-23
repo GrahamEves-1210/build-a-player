@@ -171,13 +171,15 @@ export function putDeal(F, p, d, { year = capYear(F) } = {}) {
 }
 
 // ── Starting deals (setup) ───────────────────────────────────────────────────
-// realRow { $, y, sc?, opt?, rs? } when the data has his real deal; otherwise an estimate: a young first-rounder on
-// his rookie scale (by his draft slot, or the slot his rating would have gone), a second-rounder or an undrafted man
-// on the minimum, a veteran at about his market price when he signed, with a few years left on it.
+// realRow { s: team, $, sc: [$M the seasons after], opt?, rs?, ng?, sg: league year signed, x: extension's league
+// year, b: Bird years, rt } when the data has his real deal (data/nba-contracts.js, through league.js); { s, min: 1 }
+// a made-up man on the minimum; otherwise an estimate: a young first-rounder on his rookie scale (by his draft slot,
+// or the slot his rating would have gone), a second-rounder or an undrafted man on the minimum, a veteran at about
+// his market price when he signed, with a few years left on it.
 // dealOnLoad(F, man, short | realRow): core calls it for every rostered man at setup, and at camp for the made-up
 // men it adds (no deal yet). At camp a man gets what a camp body signs for: the minimum, or a two-way deal.
 export function dealOnLoad(F, p, x = null) {
-  loadOnce(F, p, x)
+  loadOnce(F, p, typeof x === 'string' ? x : x?.s ?? null)
   dealOne(F, p, x)
   runPending()
   return p
@@ -201,13 +203,26 @@ function dealOne(F, p, x) {
   return p
 }
 function estimate(F, p, realRow, year, R) {
-  p.bird = p.bird ?? Math.min(4, Math.max(0, Math.floor(R.u() * Math.min(5, (p.ys ?? 0) + 1))))
+  p.bird = p.bird ?? (realRow ? realRow.b ?? 0 : Math.min(4, Math.max(0, Math.floor(R.u() * Math.min(5, (p.ys ?? 0) + 1)))))
   if (realRow && realRow.$ > 0) {
-    putDeal(F, p, { $: realRow.$, y: realRow.y ?? 1, sc: realRow.sc ? [realRow.$, ...realRow.sc] : null, opt: realRow.opt, rs: realRow.rs, r: 0.05 }, { year })
-    if (!realRow.sc) p.sc = schedOf({ $: realRow.$, y: realRow.y ?? 1, r: 0.05 }).slice(1)
-    p.sgn = year - Math.max(1, Math.min(4, (realRow.ago ?? 1)))
+    // (his real deal: the money by season, the option on it, his Bird years with the team, the year he signed)
+    const sc = realRow.sc ? [realRow.$, ...realRow.sc] : schedOf({ $: realRow.$, y: realRow.y ?? 1, r: 0.05 })
+    putDeal(F, p, { sc: sc.map(v => Math.round(v * 100) / 100), opt: realRow.opt && realRow.opt.yr > year && realRow.opt.yr < year + sc.length ? realRow.opt : null, rs: realRow.rs, ng: realRow.ng }, { year })
+    p.bird = realRow.b ?? p.bird
+    p.sgn = realRow.sg ?? (realRow.rs && p.dr ? p.dr[0] : year - Math.max(1, Math.min(4, (realRow.ago ?? 1))))
     p.sgd = -1
+    if (realRow.x != null) p.ext = realRow.x
+    if (realRow.rt) p.rt = realRow.rt
+    else if (realRow.rs && p.dr) p.rt = p.dr[3]
     p.real = 1
+    return p
+  }
+  if (realRow?.min) {
+    // (a made-up man on a real roster: the end of the bench, on the minimum)
+    p.bird = 0
+    putDeal(F, p, { $: minOf(p.ys ?? 0, year), y: 1 }, { year })
+    p.sgn = year
+    p.sgd = -1
     return p
   }
   const ys = p.ys ?? Math.max(0, (p.ag ?? 25) - 21)
@@ -276,7 +291,9 @@ export function dealsOnLoad(F, real = null) {
   return F
 }
 function normalize(F) {
-  const est = new Set(allMen(F).filter(([s, p]) => s && !p.real).map(([, p]) => p.i))
+  // (a team on its real deals is left as it is: its payroll is the real one; the made-up men on it hold the deals of
+  // the real men the game doesn't carry, or the minimum)
+  const est = new Set(allMen(F).filter(([s, p]) => s && !p.real && !F.teams[s].r.some(x => x.real)).map(([, p]) => p.i))
   // (the estimates are pulled into the real league's range, team by team: the CBA kept every real payroll between
   // about the salary floor and a few million past the second apron, so a team the estimates put far outside it has
   // its veterans' estimated deals scaled in)
