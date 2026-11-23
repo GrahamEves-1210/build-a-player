@@ -46,7 +46,9 @@ export function createNbaFranchise(setup) {
 }
 
 // ── Saves: three slots on this device, their own keys ───────────────────────
-const KEY = slot => `bap_frnba_slot_${slot}`
+import { queueFranchiseCloud, dropFranchiseCloud } from '../cloud'
+export const NBA_KEY = slot => `bap_frnba_slot_${slot}`
+const KEY = NBA_KEY
 // a man as a row: the keys every man has, then an object of the rest; his ten ratings as a list in his group's order,
 // his career rows as lists (CAR_K's order), so a league ten seasons in stays well under 400 KB
 const PK = ['i', 'n', 'p', 'g', 'o', 'pk', 'ag', 'ht', 'wt', 'num', 'ys', '$', 'y', 'h', 'tw', 'rk']
@@ -121,11 +123,11 @@ export function unpackNba(json) {
   F.box = (F.box ?? []).map(b => ({ ...b, box: b.box && Object.fromEntries(Object.entries(b.box).map(([t, L]) => [t, unpackList(L)])) }))
   return F
 }
-export function saveNba(F) { try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packNba(F)); return true } catch { return false } }
+export function saveNba(F) { try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packNba(F)); queueFranchiseCloud(KEY(F.slot ?? 0)); return true } catch { return false } }
 export function loadNba(slot) {
   try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackNba(s); return F && F.v === NBA_SAVE_V && F.sport === 'nba' && F.teams ? F : null } catch { return null }
 }
-export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {} }
+export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }
 export const rawNbaSlot = slot => { try { const s = localStorage.getItem(KEY(slot)); return s ? JSON.parse(s) : null } catch { return null } }
 export function saveNbaSetup(slot, setup) { try { localStorage.setItem(KEY(slot), JSON.stringify({ v: NBA_SAVE_V, sport: 'nba', slot, setup, at: Date.now() })) } catch {} }
 export function nbaSlotSummary(slot) {

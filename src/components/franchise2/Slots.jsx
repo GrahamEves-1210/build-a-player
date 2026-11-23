@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
-import { slotSummary, clearFranchise, SLOTS_N, TEAM } from '../../lib/franchise2'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { slotSummary, clearFranchise, SLOTS_N, TEAM, FR_KEY } from '../../lib/franchise2'
+import { pullFranchiseCloud } from '../../lib/franchise2/cloud'
 import { FRANCHISE_ART, FRANCHISE_TURN, FRANCHISE_CARD_KEY, franchiseCard } from '../../lib/franchiseLive'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
@@ -15,6 +16,9 @@ export function Slots({ owner, onOpen, onHome, lg = null }) {
   const [sure, setSure] = useState(null)
   const [, redraw] = useState(0)
   const hero = useRef(null)
+  // a signed-in player's saves from the account (lib/franchise2/cloud.js): an empty slot, or his own older one, filled
+  const keyOf = lg?.key ?? FR_KEY
+  useEffect(() => { let on = true; pullFranchiseCloud(Array.from({ length: SLOTS_N }, (_, i) => keyOf(i))).then(ch => { if (ch && on) redraw(n => n + 1) }); return () => { on = false } }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const T = lg?.TEAM ?? TEAM
   const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: (lg?.summary ?? slotSummary)(i) }))
   const del = i => {
