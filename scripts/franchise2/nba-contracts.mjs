@@ -28,6 +28,12 @@ for (const s of N.SHORTS) {
   console.log(`${s}  ${g.toFixed(1).padStart(6)} ${r.toFixed(1).padStart(6)} ${(g - r).toFixed(1).padStart(6)}  ${wrong.join(', ')}`)
 }
 console.log(`largest payroll gap ${off.toFixed(1)}`)
+const top = rl.filter(([, p]) => p.o >= 88)
+console.log(`rated 88+: ${top.length}, on the last season of a deal: ${top.filter(([, p]) => p.y === 1).map(([, p]) => p.n).join(', ') || 'none'}`)
+const bd = [0, 0, 0, 0]
+for (const [, p] of rl) if (!p.tw) bd[Math.min(3, p.bird ?? 0)]++
+console.log(`Bird years (real men on standard deals): 0 ${bd[0]} · 1 ${bd[1]} · 2 (Early Bird) ${bd[2]} · 3+ (full) ${bd[3]}`)
+console.log(`two-way men: ${N.SHORTS.map(s => F.teams[s].r.filter(p => p.tw).length).join(' ')}; standard: ${N.SHORTS.map(s => F.teams[s].r.filter(p => !p.tw).length).join(' ')}`)
 const lines = { under: 0, cap: 0, tax: 0, a1: 0, a2: 0 }
 const pays = N.SHORTS.map(s => { const pay = payroll(F, s, Y); lines[overOf(pay, Y)]++; return [s, pay, F.teams[s].r.filter(p => p.tw).length] })
 console.log('payrolls: ' + pays.map(([s, v, tw]) => `${s} ${v.toFixed(1)}${tw !== 3 ? ` (tw ${tw})` : ''}`).join(' · '))
@@ -37,3 +43,16 @@ for (const n of STARS) { const x = rl.find(([, p]) => p.n === n); if (x) { const
 const rk = rl.filter(([, p]) => p.rk === Y)
 console.log(`2026 rookies ${rk.length}:`)
 for (const [s, p] of rk.sort((a, b) => (a[1].dr?.[2] ?? 99) - (b[1].dr?.[2] ?? 99))) console.log(`  ${p.dr ? '#' + p.dr[2] + (p.dr[1] === 2 ? ' (2nd)' : '') : 'undrafted'} ${p.n} ${s}: $${p.$} x${p.y} ${p.rs ? 'rs' : ''}${p.tw ? 'tw' : ''} ${p.opt ? p.opt.k + p.opt.yr : ''} scale ${p.dr?.[1] === 1 ? rookieScale(p.dr[2], Y)[0] : '-'}`)
+// the checks
+const bad = []
+if (capOf(Y) !== 165 || taxOf(Y) !== 200.4 || apron1Of(Y) !== 209 || apron2Of(Y) !== 221.7) bad.push('the 2026-27 cap lines')
+if (over.length) bad.push(`${over.length} estimated deals over the max`)
+if (off > 5) bad.push(`a payroll ${off.toFixed(1)} from the real one`)
+if (top.some(([, p]) => p.y === 1 && !p.real)) bad.push('an 88+ man on an estimated last season')
+if (N.SHORTS.some(s => F.teams[s].r.filter(p => p.tw).length !== 3)) bad.push('a team without three two-way men')
+for (const [, p] of rk) {
+  if (p.dr?.[0] === Y && p.dr[1] === 1 && (!p.rs || p.opt?.k !== 'T' || p.y !== 4)) bad.push(`${p.n}: not on a four-year rookie-scale deal`)
+  if (p.dr?.[0] === Y && p.dr[1] === 1 && Math.abs(p.$ - rookieScale(p.dr[2], Y)[0]) > 0.6) bad.push(`${p.n}: $${p.$} for pick ${p.dr[2]}`)
+}
+for (const [, p] of rl) if (p.dr?.[0] === Y && p.rk !== Y) bad.push(`${p.n}: a 2026 pick not a rookie`)
+console.log(bad.length ? 'PROBLEMS: ' + bad.join('; ') : 'no problems')

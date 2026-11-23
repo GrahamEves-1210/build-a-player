@@ -169,7 +169,10 @@ export function buildTeams(F, { dealOnLoad } = {}) {
       else F.fa.push(p)
     })
     for (const p of t.r) rows.set(p.i, loadRow(s, realDeal(p.n), p))
-    const made = fillTeam(F, s, R, taken, { twoWay: TWO_WAY_MAX })
+    // (to the real roster's size: fifteen standard men, or fourteen where the team carries fourteen, as a team
+    // staying under the tax does)
+    const realStd = Object.values(NBA_DEALS).filter(d => d.t === s && !d.tw).length
+    const made = fillTeam(F, s, R, taken, { twoWay: TWO_WAY_MAX, std: clamp(14, ROSTER_MAX, realStd) })
     // (the real deals on this roster no man the game carries holds, best first, for the made-up men, best first)
     const open = Object.entries(NBA_DEALS).filter(([n, d]) => d.t === s && !d.tw && d.s?.length && !carried.has(n)).map(([, d]) => d).sort((a, b) => b.s[0] - a.s[0])
     made.filter(p => !p.tw).sort((a, b) => b.o - a.o).forEach((p, k) => rows.set(p.i, open[k] ? loadRow(s, { ...open[k], b: 0, rt: null }) : { s, min: 1 }))
@@ -190,11 +193,12 @@ function deadOf(s) {
   }
   return out
 }
-// a roster short of fifteen standard men (and three two-way men): made-up men at the spots it's thinnest at
-export function fillTeam(F, s, R, taken = leagueNames(F), { twoWay = 2 } = {}) {
+// a roster short of fifteen standard men (or `std`), and of `twoWay` two-way men: made-up men at the spots it's
+// thinnest at
+export function fillTeam(F, s, R, taken = leagueNames(F), { twoWay = 2, std: want = ROSTER_MAX } = {}) {
   const t = F.teams[s], made = []
   const std = () => t.r.filter(p => !p.tw)
-  while (std().length < ROSTER_MAX) {
+  while (std().length < want) {
     const spot = thinSpot(std())
     const p = makeGen(F, spot, R, { o: clamp(60, 73, Math.round(67 + R.n() * 2.5)), ag: R.int(23, 31), taken })
     taken.add(p.n); t.r.push(p); made.push(p)
