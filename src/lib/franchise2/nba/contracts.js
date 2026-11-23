@@ -180,7 +180,7 @@ export function putDeal(F, p, d, { year = capYear(F) } = {}) {
   if (d.rs || d.tw || (p.ys ?? 0) + s.length <= 3) p.rfa = 1; else delete p.rfa
   p.sgn = year
   p.sgd = dayOf(F)
-  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'rn', 'ask', 'fx', 'wv', 'qot', 'dco', 'wvb', 'osm', 'osh']) delete p[k]
+  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'qtw', 'rn', 'ask', 'fx', 'wv', 'qot', 'dco', 'wvb', 'osm', 'osh']) delete p[k]
   return p
 }
 
@@ -783,7 +783,7 @@ export function cutMan(F, short, id, { stretch = false, force = false } = {}) {
   const start = p.rk != null && p.rk > cy ? p.rk : cy
   const to = start + Math.max(0, (p.y ?? 1) - 1)
   // (on the street: any team can sign him; no rights carry with him)
-  for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'rfa', 'tw', 'mh', 'ng', 'ntc', 'ext', 'fr', 'hy', 'qo', 'qot', 'dco', 'osm']) delete p[k]
+  for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'rfa', 'tw', 'mh', 'ng', 'ntc', 'ext', 'fr', 'hy', 'qo', 'qtw', 'qot', 'dco', 'osm']) delete p[k]
   p.$ = 0; p.y = 0; p.bird = 0
   p.wv = capYear(F)
   p.wvb = { s: short, t: timeOf(F), to }
@@ -842,21 +842,23 @@ export function seasonEndDeals(F) {
       fa.$l = p.$ ?? 0
       if (p.rs) fa.rsl = 1
       const restricted = !!p.rfa && !p.tw ? true : !!p.tw
+      const wasTw = !!p.tw
       fa.$ = 0
       fa.y = 0
       for (const k of ['sc', 'opt', 'rs', 'mh', 'ng', 'ntc', 'ext', 'tw', 'rfa']) delete fa[k]
       if (restricted) {
         // the qualifying offer: 130% of a rookie deal's last salary (125% for anyone else), the minimum + $0.2M at least
-        const qo = r1(Math.max(minOf(fa.ys ?? 0, nx) + 0.2, fa.$l * (fa.rsl ? 1.3 : 1.25)))
-        const wants = s === F.team ? true : worthOf(F, fa, nx) >= qo * 0.9
-        if (wants) { fa.rfa = 1; fa.qo = qo }
+        // (a two-way man's qualifying offer is another two-way deal, one season: fa.qtw)
+        const qo = wasTw ? twoWayOf(nx) : r1(Math.max(minOf(fa.ys ?? 0, nx) + 0.2, fa.$l * (fa.rsl ? 1.3 : 1.25)))
+        const wants = s === F.team || wasTw ? true : worthOf(F, fa, nx) >= qo * 0.9
+        if (wants) { fa.rfa = 1; fa.qo = qo; if (wasTw) fa.qtw = 1 }
       }
       ;(F.fa ??= []).push(fa)
     }
     team.r = keep
   }
   // (a man in the pool a year or more with no team: his rights are gone)
-  for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { for (const k of ['fr', 'hy', 'rfa', 'qo', 'qot', 'rsl', 'dco']) delete p[k] }
+  for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { for (const k of ['fr', 'hy', 'rfa', 'qo', 'qtw', 'qot', 'rsl', 'dco']) delete p[k] }
   return Object.assign(gone, { news })
 }
 // renounce him: his hold off the books, his rights gone (an RFA becomes unrestricted)
@@ -864,7 +866,7 @@ export function renounce(F, short, id) {
   const p = (F.fa ?? []).find(x => x.i === id && x.fr === short)
   if (!p) return false
   p.rn = 1
-  for (const k of ['rfa', 'qo', 'qot', 'dco']) delete p[k]
+  for (const k of ['rfa', 'qo', 'qtw', 'qot', 'dco']) delete p[k]
   return true
 }
 // what he asks the GM's team to re-sign (his market; a man coming off a rookie deal or with Bird rights may give a
@@ -915,5 +917,8 @@ export function resignOffer(F, p) {
   let $ = r1(clamp(minOf(p.ys ?? 0, year), maxOf(p.ys ?? 0, year, { superMax: own === 'bird' && superMaxOk(F, p, s), last: p.$l ?? 0 }), mv * tilt))
   // (his rookie option declined: his team can pay him the option at most; he takes it if it's close to his price)
   if (p.dco) { if ($ > p.dco * 1.15) return null; $ = Math.min($, p.dco) }
+  // (a two-way man worth no more than the minimum: he re-signs on another two-way deal, as two-way men do; one who
+  // played his way past it asks for a standard contract)
+  if (p.qtw && $ <= minOf(p.ys ?? 0, year) * 1.05 + 0.01 && (p.ys ?? 0) <= 3) return { $: twoWayOf(year), y: (p.ag ?? 24) <= 23 ? 2 : 1, r: 0, tw: 1, via: 'tw' }
   return { $, y, r: raiseMax(own), via: own }
 }

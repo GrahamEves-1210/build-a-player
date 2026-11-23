@@ -235,7 +235,7 @@ export function resignInfo(F, id) {
   if (!was) delete p.rn
   return {
     ask, rights, rightsText: rights ? X.RIGHTS_TEXT[rights] : null, hold: holdOf(p, y), room: Math.round((after - before) * 10) / 10,
-    rfa: !!p.rfa, qo: p.qo ?? null, qot: !!p.qot, dco: p.dco ?? null, can: ask ? X.canSign(F, F.team, p, ask) : null,
+    rfa: !!p.rfa, qo: p.qo ?? null, qtw: !!p.qtw, qot: !!p.qot, dco: p.dco ?? null, can: ask ? X.canSign(F, F.team, p, ask) : null,
   }
 }
 // tender (or pull) the qualifying offer on the GM's own RFA: tendered, he stays restricted into free agency (the GM
@@ -245,7 +245,7 @@ export function tenderQO(F, id, yes = true) {
   if (!p || !p.rfa || !p.qo) return { ok: false, why: 'Not a restricted free agent' }
   if (yes) p.qot = 1
   else delete p.qot
-  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: `The ${nick(F.team)} extend a $${p.qo.toFixed(1)} million qualifying offer to ${p.n}, making him a restricted free agent` })
+  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: p.qtw ? `The ${nick(F.team)} extend a two-way qualifying offer to ${p.n}, making him a restricted free agent` : `The ${nick(F.team)} extend a $${p.qo.toFixed(1)} million qualifying offer to ${p.n}, making him a restricted free agent` })
   return { ok: true }
 }
 export function faNext(F) {

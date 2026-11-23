@@ -408,6 +408,8 @@ function faRound(F, day) {
       const was = p.fr
       const keep = was !== F.team && keepsOwn(F, was, p)
       if (keep && signMan(F, was, p, keep).ok) { if ((p.o ?? 0) >= 76) news.push({ k: 'sign', tag: 'RE-SIGNED', s: was, text: `${p.n} re-signs with the ${was}: ${keep.y} years, ${money(sumOf(p))}.` }) }
+      // (a two-way man's qualifying offer is a two-way deal: he's back on one, restricted again next summer)
+      else if (p.qtw) { if (signMan(F, was, p, { $: twoWayOf(year), y: 1, r: 0, tw: 1, sheet: 1 }).ok && (p.o ?? 0) >= 70) news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his two-way qualifying offer with the ${was}` }) }
       else if (signMan(F, was, p, { $: p.qo, y: 1, r: 0, sheet: 1 }).ok) { delete p.rfa; news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his qualifying offer with the ${was} and will be an unrestricted free agent next summer` }) }
     }
   }
