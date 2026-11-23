@@ -539,7 +539,8 @@ export function rookieDeal(F, p, pk) {
   // (about a third of the second round signs a standard deal, most of them early in the round; the rest go two-way,
   // as in the real league)
   const h = hash(`${F.seed}-r2-${p.i}-${p.n}`) % 100
-  const std = !!team && st < ROSTER_MAX && (pick <= 35 ? h < 70 : pick <= 45 ? h < 30 : h < 10)
+  // (the drafting team's intent when it gives one: pk.tw true = a two-way deal, false = a standard deal, as room allows)
+  const std = !!team && st < ROSTER_MAX && (pk?.tw === true ? false : pk?.tw === false ? true : pick <= 35 ? h < 70 : pick <= 45 ? h < 30 : h < 10)
   if (std || tw >= TWO_WAY_MAX) {
     const sc = [minOf(0, year), minOf(1, year + 1)].map(v => Math.max(v, 0))
     putDeal(F, p, { sc, ng: 1 }, { year })

@@ -113,7 +113,8 @@ export const ODDS = [140, 140, 140, 125, 105, 90, 75, 60, 45, 30, 20, 15, 10, 5]
 // in three straight. A tie at the relegation line is broken by a drawing.
 export const LOT321_FROM = 2027
 export const BALLS = { out: 3, rel: 2, pi910: 2, pi78: 1 }
-// the draft order for F.year + 1: { y, sys, order: [team for slot 1..30], lottery: [{ s, from, to, odds, balls?, rel? }], r2: [...] }
+// the draft order for F.year + 1: { y, sys, order: [team for slot 1..30], lottery: [{ s, from, to, odds, balls?, rel? }], r2: [...],
+//   balls (the 3-2-1's balls in the drum; the 2019 system's 1,000 combinations), drawn (the picks drawn: 16 or 4) }
 export function runLottery(F) {
   const R = records(F)
   const y = F.year + 1
@@ -154,7 +155,7 @@ export function runLottery(F) {
     const rest = worst.filter(s => ball[s] == null)
     order = [...won, ...rest]
     lottery = won.map((s, k) => ({ s, from: lot.indexOf(s) + 1, to: k + 1, odds: Math.round(ball[s] / total * 1000) / 10, balls: ball[s], ...(rel.has(s) && { rel: 1 }) }))
-    F.lot = { y, sys: '321', order, r2: worst.slice(), lottery, balls: total }
+    F.lot = { y, sys: '321', order, r2: worst.slice(), lottery, balls: total, drawn: lottery.length }
   } else {
     const playoff = new Set(Object.values(F.po?.final ?? {}).flat())
     const lot = worst.filter(s => !playoff.has(s)).slice(0, 14)
@@ -177,7 +178,7 @@ export function runLottery(F) {
     const top14 = [...won, ...left]
     order = [...top14, ...worst.filter(s => playoff.has(s))]
     lottery = top14.map((s, k) => ({ s, from: lot.indexOf(s) + 1, to: k + 1, odds: odds[lot.indexOf(s)] / 10 }))
-    F.lot = { y, sys: '2019', order, r2: worst.slice(), lottery }
+    F.lot = { y, sys: '2019', order, r2: worst.slice(), lottery, balls: 1000, drawn: 4 }
   }
   const r2 = F.lot.r2
   // each team's own pick's slot, for the rules on straight top picks (the last three drafts)
@@ -291,8 +292,8 @@ export function closeDraft(F) {
     const keep = rookieOf(p)
     t.r.push(keep)
     // (his deal: the scale for a first-rounder; a second-rounder a standard deal or two-way, the cap engine's call;
-    // m.tw says the team means to sign him two-way)
-    X.rookieDeal(F, keep, { n: m.n, r: m.r, ...(m.tw && { tw: true }) })
+    // m.tw says the team means to sign him two-way, and a second-rounder without it gets a standard deal if there's room)
+    X.rookieDeal(F, keep, { n: m.n, r: m.r, ...(m.r === 2 && { tw: !!m.tw }) })
   }
   F.drafts = { ...(F.drafts ?? {}), [F.year + 1]: made.map(m => ({ ...m, n2: F.dc.find(x => x.i === m.i)?.n })) }
   const top = made.slice(0, 3).map(m => `${m.n}. ${nick(m.t)}: ${F.dc.find(x => x.i === m.i)?.n}`)

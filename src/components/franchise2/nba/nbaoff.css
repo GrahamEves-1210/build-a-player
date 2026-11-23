@@ -182,3 +182,8 @@
   .nbo-camp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nb-pros { grid-template-columns: 34px minmax(0, 1fr) auto 150px; grid-template-areas: 'rk txt acts gr'; }
 }
+
+/* a row that opens the man's page (NbaOffseason tapMan): a hint of a press, no chrome */
+[data-tap] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+[data-tap]:active { filter: brightness(1.25); }
+[data-tap]:focus-visible { outline: 2px solid var(--fk-text, #fff); outline-offset: -2px; }

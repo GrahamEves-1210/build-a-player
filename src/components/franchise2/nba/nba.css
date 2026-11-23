@@ -292,6 +292,7 @@
 .nb-tman em.is-inj { color: #ff8a8c; }
 .nb-tman.is-on em.is-inj { color: #b3261e; }
 .nb-tnote { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.35; color: var(--fk-mute); }
+.nb-towner.is-over { color: #ffb4a8; }
 .nb-counter { display: grid; gap: 6px; padding: 10px 12px; background: var(--fk-g2); border-left: 3px solid var(--fk-gold); }
 .nb-counter p { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; }
 .nb-tcounter { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.35; color: #fff; }
@@ -306,6 +307,7 @@
 .nb-run-bar i { display: block; height: 100%; background: var(--tca, #fff); transition: width .1s linear; }
 .nb-builds { display: grid; gap: 10px; }
 .nb-build-row { display: grid; gap: 6px; }
+.nb-build-cap { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.35; color: var(--fk-mute); }
 .nb-build-add { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .nb-link { justify-self: start; min-height: 36px; padding: 0 4px; border: 0; background: none; color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .nb-tside .fk-fold-b { display: grid; gap: 4px; }
