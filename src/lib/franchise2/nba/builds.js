@@ -2,8 +2,10 @@
 // named and numbered in the setup, and joins the team as a rookie: 20 years old, a first-round rookie-scale deal at
 // the slot his OVR would have gone, his spot read off his ratings. The man he replaces (the last man in his group on
 // the bench) is released to the street with his deal off the books.
-// Builds grow by the game's own rule, not the sim's dice: each summer a young build's grades go up a step at a time,
-// a veteran's legs go first; a build retires when the GM says so or at 38.
+// Builds grow by the game's own rule, not the sim's dice: each summer a young build's grades go up a step at a time.
+// From 28 he ages the way every man does (aging.js ageBuild: the league's curve, the legs first), and he retires the
+// way they do, a little later (from 35, the same odds x0.6, as football's builds), at 40 at the latest. His
+// retirement is on the wire and his card keeps the year (F.builds[b].done).
 import { TEAM, TYPES, ovrOfAttrs, SPOTS, groupOfSpot } from './league'
 import { rngOf, clamp } from '../rng'
 import { addNews, POS_FULL } from './news'
@@ -49,8 +51,8 @@ export function placeBuilds(F) {
     addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${POS_FULL[p.p] ?? p.p}, to a rookie-scale deal${same ? `; ${same.n} is released` : ''}` })
   }
 }
-// a summer older: a young build's grades go up a step at a time (two or three steps at 20-23, one or two to 27),
-// a build past 30 gives back a step of his legs; his OVR follows his grades, his card follows him (F.builds)
+// a summer older (after ageLeague has aged him): a young build's grades go up a step at a time (two or three steps
+// at 20-23, one or two to 27, maybe one at 28); his OVR follows his grades, his card follows him (F.builds)
 export function growBuilds(F) {
   const out = []
   for (const s of Object.keys(F.teams)) for (const p of F.teams[s].r) {
@@ -59,13 +61,12 @@ export function growBuilds(F) {
     const R = rngOf(`${F.seed}-grow-${F.year}-${p.i}`)
     const T = TYPES[p.g] ?? []
     const was = p.o
-    const up = p.ag <= 23 ? R.int(2, 3) : p.ag <= 27 ? R.int(1, 2) : p.ag <= 30 ? R.int(0, 1) : 0
+    const up = p.ag <= 23 ? R.int(2, 3) : p.ag <= 27 ? R.int(1, 2) : p.ag <= 28 ? R.int(0, 1) : 0
     for (let k = 0; k < up; k++) {
       // (the lower grades first, the way a player works on what he can't do)
       const open = T.filter(t => p.a[t] < 11).sort((x, y) => p.a[x] - p.a[y] + (R.u() - 0.5) * 3)
       if (open.length) p.a[open[0]]++
     }
-    if (p.ag >= 31) for (const t of ['speed', 'bounce'].filter(t => T.includes(t) && R.chance(p.ag >= 34 ? 0.9 : 0.5))) p.a[t] = Math.max(0, p.a[t] - 1)
     p.o = ovrOfAttrs(p.g, p.a)
     p.pk = Math.max(p.pk ?? p.o, p.o)
     if (B) { B.age = p.ag; for (const t of T) if (B.build?.[t]) B.build[t] = { ...B.build[t], val: p.a[t] } }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   TEAM, CONF_OF, SHORTS, CONF_DIVS, DIVS, records, recText, confOrder, coachOrder, teamOvr, myGames, nextMine, dateText, seasonText, CAP_SIM,
-  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock } from '../../../lib/franchise2/nba'
+  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock, careerView } from '../../../lib/franchise2/nba'
 import { GUARD_CATEGORIES } from '../../../data/nba-guards'
 import { BIG_CATEGORIES } from '../../../data/nba-bigs'
 import { BUCKET_ATTR } from '../../../data/nba-attrs'
@@ -202,7 +202,7 @@ function Contract({ F, p }) {
 
 // his seasons: the ones closed (offseason.js carRow; the oldest folded into one row) and this one so far
 function Career({ F, p, s }) {
-  const rows = (p.car ?? []).map(c => ({ ...c, lbl: c.y2 ? `${c.y}-${String((c.y2 + 1) % 100).padStart(2, '0')}` : seasonText(c.y), tm: c.s || `${c.y2 - c.y + 1} YRS` }))
+  const rows = careerView(p).map(c => ({ ...c, lbl: c.y2 ? `${c.y}-${String((c.y2 + 1) % 100).padStart(2, '0')}` : seasonText(c.y), tm: c.s || `${c.y2 - c.y + 1} YRS` }))
   const x = F.ss?.[p.i]
   if (x?.gp && F.phase !== 'off') rows.push({ ...x, lbl: seasonText(F.year), tm: x.s ?? s ?? '', now: true })
   const f = (c, k) => (c.gp ? (c[k] / c.gp).toFixed(1) : '-')

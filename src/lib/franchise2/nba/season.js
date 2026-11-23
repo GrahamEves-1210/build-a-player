@@ -27,7 +27,8 @@ export function records(F) {
   }
   return R
 }
-export const pct = r => (r.w + r.l ? r.w / (r.w + r.l) : 0)
+// (a team that hasn't played is .500, so a 1-0 team is ahead of it and an 0-1 team behind it, as games back has them)
+export const pct = r => (r.w + r.l ? r.w / (r.w + r.l) : 0.5)
 export const recText = r => `${r?.w ?? 0}-${r?.l ?? 0}`
 export const streakText = r => (r.st ? `${r.st > 0 ? 'W' : 'L'}${Math.abs(r.st)}` : '')
 const h2h = (F, a, b) => {
@@ -35,28 +36,79 @@ const h2h = (F, a, b) => {
   for (const g of F.sched) if (g.hs != null && ((g.h === a && g.a === b) || (g.h === b && g.a === a))) { const aw = (g.h === a) === (g.hs > g.as); aw ? w++ : l++ }
   return [w, l]
 }
-// the conference's order, the NBA's tiebreakers kept to what decides most ties: the record, head to head, a
-// division winner over a team that didn't win its division, the division record (same division), the conference
-// record, then point differential
+// the conference's order, by record, then the NBA's tiebreakers (the league's standings procedure):
+//   two teams tied:   head to head, division winner, division record (same division), conference record, record
+//                     against the conference's playoff-eligible teams, against the other conference's, point differential
+//   three or more:    division winner, the record in the games among all of them, division record (all in one
+//                     division), conference record, the two playoff-eligible records, point differential
+// When a step separates some of the teams, each group still tied starts again from the top (two-team or multi-team).
+// A division winner is the team alone on top of its division (once the season's over, its tiebreakers decide it).
 export function confOrder(F, conf, R = records(F)) {
+  const T = tieTable(F, R)
   const teams = SHORTS.filter(s => CONF_OF[s] === conf)
-  const divWin = new Set(Object.entries(DIVS).filter(([d]) => CONF_OF[DIVS[d][0]] === conf).map(([, ts]) => ts.slice().sort((a, b) => pct(R[b]) - pct(R[a]) || h2hCmp(F, a, b))[0]))
-  return teams.sort((a, b) => cmp(F, R, divWin, a, b))
+  const done = !F.sched?.some(g => g.hs == null)
+  const divWin = new Set()
+  for (const [d, ts] of Object.entries(DIVS)) {
+    if (CONF_OF[ts[0]] !== conf) continue
+    const o = rankTied(T, ts, { divWin: new Set() })
+    if (done || pct(R[o[0]]) > pct(R[o[1]])) divWin.add(o[0])
+  }
+  return rankTied(T, teams, { divWin })
+}
+// every pair's games, once: h2h[a][b] = [wins, losses]; and each conference's playoff-eligible teams (the top ten
+// by record, everyone level with the tenth included)
+function tieTable(F, R) {
+  const h = Object.fromEntries(SHORTS.map(s => [s, {}]))
+  for (const g of F.sched ?? []) {
+    if (g.hs == null) continue
+    const w = g.hs > g.as ? g.h : g.a, l = w === g.h ? g.a : g.h
+    ;(h[w][l] ??= [0, 0])[0]++; (h[l][w] ??= [0, 0])[1]++
+  }
+  const elig = {}
+  for (const c of ['E', 'W']) {
+    const ts = SHORTS.filter(s => CONF_OF[s] === c).sort((a, b) => pct(R[b]) - pct(R[a]))
+    const line = pct(R[ts[9]])
+    elig[c] = new Set(ts.filter(s => pct(R[s]) >= line))
+  }
+  return { F, R, h, elig }
+}
+const share = (w, l) => (w + l ? w / (w + l) : 0.5)
+function vsSet(T, a, set) { let w = 0, l = 0; for (const b of set) { if (b === a) continue; const x = T.h[a][b]; if (x) { w += x[0]; l += x[1] } } return share(w, l) }
+// sort by record, then break each tie
+function rankTied(T, teams, ctx) {
+  const by = new Map()
+  for (const s of teams) { const k = pct(T.R[s]); if (!by.has(k)) by.set(k, []); by.get(k).push(s) }
+  return [...by.keys()].sort((a, b) => b - a).flatMap(k => breakTie(T, by.get(k), ctx))
+}
+function breakTie(T, ts, ctx) {
+  if (ts.length < 2) return ts
+  const R = T.R, two = ts.length === 2
+  const sameDiv = ts.every(s => DIV_OF[s] === DIV_OF[ts[0]])
+  const conf = s => share(R[s].cw, R[s].cl)
+  const mine = s => T.elig[CONF_OF[s]], other = s => T.elig[CONF_OF[s] === 'E' ? 'W' : 'E']
+  const steps = [
+    ...(two ? [s => vsSet(T, s, ts)] : []),
+    s => (ctx.divWin.has(s) ? 1 : 0),
+    ...(two ? [] : [s => vsSet(T, s, ts)]),
+    ...(sameDiv ? [s => share(R[s].dw, R[s].dl)] : []),
+    conf,
+    s => vsSet(T, s, mine(s)),
+    s => vsSet(T, s, other(s)),
+    s => R[s].pf - R[s].pa,
+  ]
+  for (const f of steps) {
+    const v = new Map(ts.map(s => [s, f(s)]))
+    const keys = [...new Set(v.values())].sort((a, b) => b - a)
+    if (keys.length < 2) continue
+    // separated: each group still level starts the procedure over
+    return keys.flatMap(k => breakTie(T, ts.filter(s => v.get(s) === k), ctx))
+  }
+  // (still level after all of it: the league draws lots; here, the team's short name)
+  return ts.slice().sort()
 }
 const h2hCmp = (F, a, b) => { const [w, l] = h2h(F, a, b); return l - w }
-function cmp(F, R, divWin, a, b) {
-  const A = R[a], B = R[b]
-  if (pct(A) !== pct(B)) return pct(B) - pct(A)
-  const [w, l] = h2h(F, a, b)
-  if (w !== l) return l - w
-  if (divWin.has(a) !== divWin.has(b)) return divWin.has(a) ? -1 : 1
-  if (DIV_OF[a] === DIV_OF[b]) { const d = (B.dw / Math.max(1, B.dw + B.dl)) - (A.dw / Math.max(1, A.dw + A.dl)); if (d) return d }
-  const c = (B.cw / Math.max(1, B.cw + B.cl)) - (A.cw / Math.max(1, A.cw + A.cl))
-  if (c) return c
-  return (B.pf - B.pa) - (A.pf - A.pa) || (a < b ? -1 : 1)
-}
 export function divOrder(F, div, R = records(F)) {
-  return DIVS[div].slice().sort((a, b) => pct(R[b]) - pct(R[a]) || h2hCmp(F, a, b) || (R[b].pf - R[b].pa) - (R[a].pf - R[a].pa))
+  return rankTied(tieTable(F, R), DIVS[div].slice(), { divWin: new Set() })
 }
 export function gamesBack(R, lead, s) { return ((R[lead].w - R[s].w) + (R[s].l - R[lead].l)) / 2 }
 export function leagueOrder(F, R = records(F)) {
@@ -177,7 +229,7 @@ function endDay(F, { mine = null, news = [] } = {}) {
   for (const x of dl) addNews(F, x)
   // the trade deadline, the All-Star break: the wire says so the night they come
   if (was <= F.ddl && F.day > F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
-  if (F.day >= F.asb[0] && !F.asDone) allStars(F)
+  allStarTick(F)
   if (dl.length) X.cpuFill(F, { make: (F2, s) => makeGen(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-fill-${F2.year}-${F2.day}-${s}`)) })
   if (!F.sched.some(g => g.hs == null)) {
     F.phase = 'post'
@@ -266,17 +318,59 @@ export function finishMoment(F, out) {
 }
 
 // ── The All-Star break ───────────────────────────────────────────────────────
-// 12 a conference, the starters by the fans' and players' vote (the best two guards and three frontcourt men by
-// their season so far), the reserves by the coaches
-export function allStars(F) {
+// The league's calendar: the starters (the fans', players' and media's vote: two guards and three frontcourt men a
+// conference) about three and a half weeks before the game (late January), the reserves (the coaches' pick) ten days later, the game
+// itself the Sunday of the break (East against West). F.asDone: 1 starters out, 2 reserves out, 3 the game played.
+// F.as = { E: { st: [5 ids], res: [7 ids] }, W: {...}, g?: { E: pts, W: pts, mvp: id, s: winner 'E'|'W' } }
+export const AS_STARTERS = 22, AS_RESERVES = 12   // days before the break begins
+export function allStarTick(F) {
+  if (!F.asb) return
+  const to = F.asb[0] - F.day
+  // (a save from before the calendar, its rosters named at the break: no game to play after the fact)
+  if (F.asDone === 1 && F.as?.E?.res?.length && to < 0) { F.asDone = 3; return }
+  if ((F.asDone ?? 0) < 1 && to <= AS_STARTERS) allStarStarters(F)
+  if ((F.asDone ?? 0) < 2 && to <= AS_RESERVES) allStars(F)
+  if ((F.asDone ?? 0) < 3 && to <= 0) allStarGame(F)
+}
+function allStarStarters(F) {
   F.asDone = 1
   const A = X.pickAllStars(F)
-  const out = { E: { st: A.st.E, res: A.E.filter(i => !A.st.E.includes(i)) }, W: { st: A.st.W, res: A.W.filter(i => !A.st.W.includes(i)) } }
-  for (const i of [...A.E, ...A.W]) { const p = manOf(F, i); if (p) (p.aw ??= []).push({ y: F.year, k: 'AS' }) }
+  F.as = { E: { st: A.st.E, res: [] }, W: { st: A.st.W, res: [] } }
+  const mine = [...A.st.E, ...A.st.W].map(i => manOf(F, i)).filter(p => p && teamOfMan(F, p.i) === F.team)
+  const names = c => A.st[c].map(i => manOf(F, i)?.n).filter(Boolean).join(', ')
+  addNews(F, { k: 'as', tag: 'ALL-STAR', text: `All-Star starters are in. East: ${names('E')}. West: ${names('W')}${mine.length ? `. ${mine.map(p => p.n).join(' and ')} ${mine.length > 1 ? 'start' : 'starts'} for the ${nick(F.team)}` : ''}` })
+}
+// the reserves (and, the first time in a save from before the calendar, the whole roster at once)
+export function allStars(F) {
+  if (F.as?.E?.res?.length) { F.asDone = Math.max(F.asDone ?? 0, 2); return F.as }
+  const A = X.pickAllStars(F)
+  const st = { E: F.as?.E?.st ?? A.st.E, W: F.as?.W?.st ?? A.st.W }
+  const out = {}
+  for (const c of ['E', 'W']) out[c] = { st: st[c], res: A[c].filter(i => !st[c].includes(i)).slice(0, 7) }
+  for (const i of ['E', 'W'].flatMap(c => [...out[c].st, ...out[c].res])) { const p = manOf(F, i); if (p && !(p.aw ?? []).some(a => a.y === F.year && a.k === 'AS')) (p.aw ??= []).push({ y: F.year, k: 'AS' }) }
   F.as = out
-  const mine = [...A.E, ...A.W].map(i => manOf(F, i)).filter(p => p && teamOfMan(F, p.i) === F.team)
-  addNews(F, { k: 'as', tag: 'ALL-STAR', text: `All-Star rosters are out${mine.length ? `: ${mine.map(p => p.n).join(' and ')} ${mine.length > 1 ? 'make it' : 'makes it'} for the ${nick(F.team)}` : ''}` })
+  F.asDone = 2
+  const mine = ['E', 'W'].flatMap(c => out[c].res).map(i => manOf(F, i)).filter(p => p && teamOfMan(F, p.i) === F.team)
+  addNews(F, { k: 'as', tag: 'ALL-STAR', text: `The coaches have picked the All-Star reserves${mine.length ? `: ${mine.map(p => p.n).join(' and ')} ${mine.length > 1 ? 'make it' : 'makes it'} for the ${nick(F.team)}` : ''}` })
   return out
+}
+// the game: East against West, the way it's played (little defense until the fourth quarter), the MVP off the winners
+function allStarGame(F) {
+  if ((F.asDone ?? 0) < 2) allStars(F)
+  F.asDone = 3
+  const R = rngOf(`${F.seed}-asg-${F.year}`)
+  const side = c => [...F.as[c].st, ...F.as[c].res].map(i => manOf(F, i)).filter(Boolean)
+  const str = c => side(c).reduce((a, p) => a + (p.o ?? 80), 0) / Math.max(1, side(c).length)
+  let e = Math.round(172 + R.n() * 12 + (str('E') - str('W')) * 1.2), w = Math.round(172 + R.n() * 12 + (str('W') - str('E')) * 1.2)
+  if (e === w) R.u() < 0.5 ? e++ : w++
+  const win = e > w ? 'E' : 'W'
+  const cand = side(win).map(p => ({ p, v: (p.o ?? 80) + (F.as[win].st.includes(p.i) ? 3 : 0) + R.n() * 4 })).sort((a, b) => b.v - a.v)
+  const mvp = cand[0]?.p
+  const pts = mvp ? Math.round(24 + R.u() * 14) : 0
+  F.as.g = { E: e, W: w, s: win, mvp: mvp?.i ?? null, pts }
+  if (mvp) (mvp.aw ??= []).push({ y: F.year, k: 'ASMVP' })
+  const t = mvp ? teamOfMan(F, mvp.i) : null
+  addNews(F, { k: 'asg', tag: 'ALL-STAR GAME', ...(t === F.team && { s: F.team }), text: `The ${win === 'E' ? 'East' : 'West'} beat the ${win === 'E' ? 'West' : 'East'} ${Math.max(e, w)}-${Math.min(e, w)} in the All-Star Game${mvp ? `. ${mvp.n}${t ? ` (${nick(t)})` : ''} is MVP with ${pts} points` : ''}` })
 }
 
 // ── Postseason ───────────────────────────────────────────────────────────────
