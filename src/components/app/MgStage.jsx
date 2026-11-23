@@ -126,8 +126,21 @@ const far = (a, b) => { const x = rgb(a), y = rgb(b); return Math.hypot(x[0] - y
 // colour on the jersey, its second colour on the helmet, pants and trim. When the two teams would
 // be hard to tell apart the other side changes the way an away team does: its second colour with the
 // first as trim, or white if that's close too. No team (practice): the stock look.
-const AWAY = '#e8edf2'
-export function colorsFor(sport, team, opp) {
+const AWAY = '#e8edf2', DARK = '#15181c'
+// COLORBLIND-FRIENDLY COLORS (Settings, 2026-11-23: a player couldn't tell orange, red, brown and black teams apart in
+// the moments): the two sides must differ in lightness, not just hue. When they don't, the other side wears white or
+// near-black, whichever is further from his team's colour, trimmed in its own colour.
+export const CB_KEY = 'bap_cb'
+export const cbSafe = () => { try { return localStorage.getItem(CB_KEY) === '1' } catch { return false } }
+const lum = h => { const [r, g, b] = rgb(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
+const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+function cbFix(c) {
+  if (!cbSafe() || contrast(c.us, c.them) >= 3) return c
+  const them = contrast(c.us, AWAY) >= contrast(c.us, DARK) ? AWAY : DARK
+  return { ...c, them, themTrim: them === AWAY ? (contrast(c.them, AWAY) >= 2 ? c.them : DARK) : (contrast(c.them, DARK) >= 2 ? c.them : AWAY) }
+}
+export function colorsFor(sport, team, opp) { return cbFix(colorsPlain(sport, team, opp)) }
+function colorsPlain(sport, team, opp) {
   const us = team?.color ?? (sport === 'bucket' ? '#c2571c' : sport === 'soccer' ? '#1f4fa8' : sport === 'baseball' ? '#c8102e' : '#14745a')
   const trim = team?.color2 ?? (sport === 'baseball' && !team ? '#14213d' : '#f4efe6')
   if (!opp) {
