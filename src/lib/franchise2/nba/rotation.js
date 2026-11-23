@@ -55,7 +55,8 @@ export function dressed(T, { po = false, year = null } = {}) {
     if (out.length < 13 || (p.o ?? 0) > tenth) out.push(p)
   return out
 }
-export const setOf = T => ({ st: T.rot ? T.rot.slice(0, 5) : [], order: T.rot ?? null, min: T.min ?? null })
+// (st: his whole order; planRotation starts the first five of it who can play tonight)
+export const setOf = T => ({ st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null })
 export function rotationOf(F, short, { playoff = false } = {}) {
   const T = F.teams[short], L = planRotation(dressed(T, { po: playoff, year: F.year }), { ...setOf(T), po: playoff })
   return L.order.filter(i => L.min[i] > 0).map(i => ({ i, st: L.st.includes(i), min: L.min[i] }))
@@ -130,7 +131,9 @@ export function planRotation(players, set = {}) {
   const five = fit.map(([p]) => p).sort((a, b) => ovr(b) - ovr(a))
   for (const p of players) spot.has(p) || spot.set(p, spotOf(p))
   const bench = players.filter(p => !five.includes(p)).sort((a, b) => ovr(b) - ovr(a))
-  // his order for the bench (team.rot past the first five); men he didn't place go after, best first
+  // the coach's bench, best first (his minutes go by it); the GM's order for it (team.rot past the first five; men he
+  // didn't place go after, best first) hands those minutes out place by place at the end
+  const coachBench = bench.slice()
   if (set.order?.length) { const at = id => { const j = set.order.indexOf(id); return j < 0 ? 999 : j }; bench.sort((a, b) => at(a.i) - at(b.i)) }
   const order = [...five, ...bench]
   const S = po ? SLOT_PO : SLOT
@@ -165,12 +168,10 @@ export function planRotation(players, set = {}) {
   // the rest of each spot's minutes, two at a time, to the man worth the most in it: his OVR, less what he gives up
   // away from his own spot, less his legs (a starter past his target tires fast; a bench man's minutes add up); a man
   // not yet in the rotation costs a bit more to bring in (the playoffs: a lot more), so the coach plays nine or ten
-  // (eight), not twelve. His order for the bench, if he set one, counts too.
-  const at = set.order?.length ? id => { const j = set.order.indexOf(id); return j < 0 ? 99 : j } : null
-  const benchRank = new Map(bench.map((p, k) => [p, k]))
+  // (eight), not twelve.
   const ENTRY = po ? 7 : 3.5
   const capOf = p => (tgt.has(p) ? Math.min(CAP, tgt.get(p) + 2.5) : CAP - 6)
-  const M = order.filter(p => !fixed.has(p)).map(p => ({ p, sp: spot.get(p), o: ovr(p), t: tgt.get(p), cap: capOf(p), bonus: at && !tgt.has(p) ? Math.max(0, 8 - 2 * benchRank.get(p)) : 0 }))
+  const M = order.filter(p => !fixed.has(p)).map(p => ({ p, sp: spot.get(p), o: ovr(p), t: tgt.get(p), cap: capOf(p), bonus: 0 }))
   const util = (x, j, loose) => {
     const d = Math.abs(x.sp - j)
     if (d > (loose ? 4 : 2)) return -Infinity
@@ -204,6 +205,14 @@ export function planRotation(players, set = {}) {
   if (fixed.size && freeSum > 0) for (const p of free) min[p.i] = Math.min(CAP, min[p.i] * room0 / freeSum)
   let rest = GAME_MIN - order.reduce((s, p) => s + min[p.i], 0)
   for (let pass = 0; pass < 3 && rest > 0.5; pass++) for (const p of free) { if (rest <= 0) break; const add = Math.min(rest, CAP - min[p.i], 8); if (add > 0 && min[p.i] > 0) { min[p.i] += add; rest -= add } }
+  // his order for the bench: the man in his k-th place plays what the coach's k-th man would (the coach's order: the
+  // men he plays, best first, then the rest; the GM's order the same as the coach's = the coach's minutes; two men
+  // swapped = their minutes swapped). A man with minutes the GM set keeps them.
+  if (set.order?.length) {
+    const cb = coachBench.filter(p => !fixed.has(p)).sort((a, b) => (min[a.i] > 0 ? 0 : 1) - (min[b.i] > 0 ? 0 : 1)), gb = bench.filter(p => !fixed.has(p))
+    const was = cb.map(p => min[p.i])
+    gb.forEach((p, k) => { min[p.i] = was[k] })
+  }
   for (const p of order) min[p.i] = Math.round(min[p.i] * 10) / 10
   // closing a close game: the five best who play real minutes, shaped like a lineup (the starters most nights)
   const real = order.filter(p => min[p.i] >= 14)

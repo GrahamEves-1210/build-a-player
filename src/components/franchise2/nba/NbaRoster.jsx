@@ -10,6 +10,7 @@ import { valToGrade } from '../../../utils/simulation'
 import { manPhoto } from './NbaBuilds'
 import { sfx } from '../../../lib/juice'
 import { fkVars, KLogo, LowerThird, Chyron, BackBar, Tag, TeamSlab, Fact } from '../kit'
+import { rotOrder, swapRot, moveRot } from './rotOrder'
 
 // THE ROSTERS: the GM's rotation (the order, the starters, the minutes he wants for a man), any team's roster, a
 // man's page (his ratings, his contract year by year, his career) and the GM's schedule, the whole season of it.
@@ -42,16 +43,11 @@ export function Rotation({ F, act, owner, onMan }) {
   const opts = { playoff: isPo(F) }
   const rot = CAP_SIM.rotationOf(F, F.team, opts)
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
-  const order = coachOrder(F, F.team, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
+  // (one order, shown and stored: rotOrder.js)
+  const order = rotOrder(F, opts)
   const hurt = t.r.filter(p => p.inj?.g && !p.tw)
   const custom = !!(t.rot || (t.min && Object.keys(t.min).length))
-  const swap = (a, b) => act(X => {
-    const ids = coachOrder(X, X.team, CAP_SIM.rotationOf, opts).filter(x => !x.tw).map(x => x.i)
-    const i = ids.indexOf(a), j = ids.indexOf(b)
-    if (i < 0 || j < 0) return
-    ;[ids[i], ids[j]] = [ids[j], ids[i]]
-    X.teams[X.team].rot = ids
-  })
+  const swap = (a, b) => act(X => swapRot(X, a, b, opts))
   const tap = id => {
     if (pick == null) { setPick(id); sfx('tap'); return }
     if (pick !== id) { swap(pick, id); sfx('flip') }
@@ -299,15 +295,9 @@ function MineActs({ F, act, p, onClose }) {
   const [ext, setExt] = useState(false)
   const id = p.i
   const opts = { playoff: isPo(F) }
-  const order = coachOrder(F, F.team, CAP_SIM.rotationOf, opts).filter(x => !x.tw)
+  const order = rotOrder(F, opts)
   const k = order.findIndex(x => x.i === id)
-  const move = d => act(X => {
-    const ids = coachOrder(X, X.team, CAP_SIM.rotationOf, opts).filter(x => !x.tw).map(x => x.i)
-    const j = ids.indexOf(id), to = j + d
-    if (j < 0 || to < 0 || to >= ids.length) return
-    ;[ids[j], ids[to]] = [ids[to], ids[j]]
-    X.teams[X.team].rot = ids
-  })
+  const move = d => act(X => moveRot(X, id, d, opts))
   const min = CAP_SIM.rotationOf(F, F.team, opts).find(x => x.i === id)?.min ?? 0
   const set = F.teams[F.team].min?.[id]
   const cost = CAP_SIM.cutCost(F, p), costS = CAP_SIM.cutCost(F, p, { stretch: true })
@@ -358,7 +348,7 @@ export function TeamPage({ F, s, onBack, onMan, backLabel = 'League' }) {
   const rot = CAP_SIM.rotationOf(F, s, opts)
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
   const T = F.teams[s]
-  const order = coachOrder(F, s, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
+  const order = s === F.team ? rotOrder(F, opts) : coachOrder(F, s, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
   const hurt = T.r.filter(p => p.inj?.g && !p.tw), tw = T.r.filter(p => p.tw)
   const cap = CAP_SIM.capSheet(F, s)
   const OVER = { under: 'Under the cap', cap: 'Over the cap', tax: 'In the luxury tax', a1: 'Over the first apron', a2: 'Over the second apron' }
