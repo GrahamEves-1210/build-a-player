@@ -30,8 +30,10 @@ function leaveNote(F) {
 
 export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTaken }) {
   const owner = getUsername(user) || 'Guest'
-  // the kit draws the NBA's teams while the mode is open (and football's again when it closes)
-  useState(() => setKitLeague(TEAM))
+  // the kit draws the NBA's teams while the mode is open (and football's again when it closes). Set on every render,
+  // not once: a kit reloaded under an open league (the dev server's hot reload) came back on football's teams, and the
+  // Hornets (no football CHA) lost their logos
+  setKitLeague(TEAM)
   useEffect(() => { setKitLeague(TEAM); return () => setKitLeague(null) }, [])
   // (back from the build page: straight into the setup that sent him there; the trip is marked for this tab)
   const [slot, setSlot] = useState(() => { try { const t = sessionStorage.getItem(TRIP) ?? sessionStorage.getItem(MOMENT); return t != null ? Number(t) : null } catch { return null } })

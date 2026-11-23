@@ -99,7 +99,7 @@ function Play({ F, plan, onDone }) {
     return () => { try { sessionStorage.removeItem('bap_frnba_moment') } catch {} }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const lock = lockOf(plan)
-  const p = { game: plan.game, build: plan.build, seed: plan.seed, team: plan.team, opp: plan.opp, pos: plan.g, cast: plan.cast, situation: plan.situation, autoStart: auto, lock, home: F.pend?.h === F.team ? 'team' : 'opp' }
+  const p = { game: plan.game, build: plan.build, seed: plan.seed, team: plan.team, opp: plan.opp, pos: plan.g, cast: plan.cast, demoCast: true, situation: plan.situation, autoStart: auto, lock, home: F.pend?.h === F.team ? 'team' : 'opp' }
   if (mode === 'simple' && SIMPLE_GAMES[plan.game]) return <MiniGameSimple game={p.game} build={p.build} pos={p.pos} seed={p.seed} situation={p.situation} onDone={onDone} autoStart={auto} lock={lock} />
   if (!GAMES[plan.game]) return <MiniGame {...p} sim onDone={onDone} />
   return <MiniGame {...p} onDone={onDone} />

@@ -10,6 +10,8 @@ import { valToGrade } from '../../../utils/simulation'
 import { manPhoto } from './NbaBuilds'
 import { sfx } from '../../../lib/juice'
 import { fkVars, KLogo, LowerThird, Chyron, BackBar, Tag, TeamSlab, Fact } from '../kit'
+import { rotOrder, swapRot, moveRot } from './rotOrder'
+import { NbaBoxSheet } from './NbaGameDay'
 
 // THE ROSTERS: the GM's rotation (the order, the starters, the minutes he wants for a man), any team's roster, a
 // man's page (his ratings, his contract year by year, his career) and the GM's schedule, the whole season of it.
@@ -42,16 +44,11 @@ export function Rotation({ F, act, owner, onMan }) {
   const opts = { playoff: isPo(F) }
   const rot = CAP_SIM.rotationOf(F, F.team, opts)
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
-  const order = coachOrder(F, F.team, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
+  // (one order, shown and stored: rotOrder.js)
+  const order = rotOrder(F, opts)
   const hurt = t.r.filter(p => p.inj?.g && !p.tw)
   const custom = !!(t.rot || (t.min && Object.keys(t.min).length))
-  const swap = (a, b) => act(X => {
-    const ids = coachOrder(X, X.team, CAP_SIM.rotationOf, opts).filter(x => !x.tw).map(x => x.i)
-    const i = ids.indexOf(a), j = ids.indexOf(b)
-    if (i < 0 || j < 0) return
-    ;[ids[i], ids[j]] = [ids[j], ids[i]]
-    X.teams[X.team].rot = ids
-  })
+  const swap = (a, b) => act(X => swapRot(X, a, b, opts))
   const tap = id => {
     if (pick == null) { setPick(id); sfx('tap'); return }
     if (pick !== id) { swap(pick, id); sfx('flip') }
@@ -63,7 +60,7 @@ export function Rotation({ F, act, owner, onMan }) {
   return (
     <>
       <Chyron team={F.team} title="Rotation" sub={`TEAM OVR ${teamOvr(F, F.team)} · ${t.r.filter(p => !p.tw).length} OF 15 STANDARD`} right={right} />
-      {edit && <p className="nb-ed-hint">Tap a player, then another, to swap them. Set the minutes you want a player to get; the coach splits the rest of the 240.</p>}
+      {edit && <p className="nb-ed-hint">Tap a player, then another, to swap them. − and + set a player's minutes; the coach splits the rest of the 240.</p>}
       <div className={`nb-rot${edit ? ' is-edit' : ''}`}>
         {order.map((p, k) => (
           <div key={p.i} className="nb-rot-grp">
@@ -299,15 +296,9 @@ function MineActs({ F, act, p, onClose }) {
   const [ext, setExt] = useState(false)
   const id = p.i
   const opts = { playoff: isPo(F) }
-  const order = coachOrder(F, F.team, CAP_SIM.rotationOf, opts).filter(x => !x.tw)
+  const order = rotOrder(F, opts)
   const k = order.findIndex(x => x.i === id)
-  const move = d => act(X => {
-    const ids = coachOrder(X, X.team, CAP_SIM.rotationOf, opts).filter(x => !x.tw).map(x => x.i)
-    const j = ids.indexOf(id), to = j + d
-    if (j < 0 || to < 0 || to >= ids.length) return
-    ;[ids[j], ids[to]] = [ids[to], ids[j]]
-    X.teams[X.team].rot = ids
-  })
+  const move = d => act(X => moveRot(X, id, d, opts))
   const min = CAP_SIM.rotationOf(F, F.team, opts).find(x => x.i === id)?.min ?? 0
   const set = F.teams[F.team].min?.[id]
   const cost = CAP_SIM.cutCost(F, p), costS = CAP_SIM.cutCost(F, p, { stretch: true })
@@ -358,7 +349,7 @@ export function TeamPage({ F, s, onBack, onMan, backLabel = 'League' }) {
   const rot = CAP_SIM.rotationOf(F, s, opts)
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
   const T = F.teams[s]
-  const order = coachOrder(F, s, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
+  const order = s === F.team ? rotOrder(F, opts) : coachOrder(F, s, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
   const hurt = T.r.filter(p => p.inj?.g && !p.tw), tw = T.r.filter(p => p.tw)
   const cap = CAP_SIM.capSheet(F, s)
   const OVER = { under: 'Under the cap', cap: 'Over the cap', tax: 'In the luxury tax', a1: 'Over the first apron', a2: 'Over the second apron' }
@@ -425,7 +416,8 @@ export function TeamsList({ F, onTeam }) {
 // ── The GM's schedule: the whole regular season ──────────────────────────────
 // a month at a time: the date, home or away, the result (or the other team's record), the second night of a
 // back-to-back marked; it opens at the next game
-export function NbaSchedule({ F, onClose }) {
+export function NbaSchedule({ F, owner, onClose }) {
+  const [box, setBox] = useState(null)
   const G = myGames(F)
   const R = records(F)
   const next = nextMine(F)
@@ -443,7 +435,7 @@ export function NbaSchedule({ F, onClose }) {
     <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fk fk-root nb-sheet nb-sched" role="dialog" aria-label="Schedule" style={fkVars(F.team)}>
         <div className="nb-sheet-top"><b>{seasonText(F.year)} schedule</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
-        <p className="nb-sec-note">{recText(r)} · {G.filter(g => g.hs == null).length} games left · {b2b} back-to-backs (B2B: the second night)</p>
+        <p className="nb-sec-note">{recText(r)} · {G.filter(g => g.hs == null).length} games left · {b2b} back-to-backs (B2B: the second night){(F.box ?? []).length ? '. Tap a recent result for its box score.' : ''}</p>
         {months.map(([m, gs]) => (
           <section key={m} className="nb-sch-mon">
             <h3 className="nb-sec-h">{MON[m] ?? m}</h3>
@@ -451,17 +443,22 @@ export function NbaSchedule({ F, onClose }) {
               const home = g.h === F.team, opp = home ? g.a : g.h
               const done = g.hs != null, us = home ? g.hs : g.as, them = home ? g.as : g.hs, won = done && us > them
               const two = b2bOf(F, g)[home ? 'h' : 'a']
+              // (a game played: its box score opens from the row while the league keeps it, the last dozen)
+              const b = done ? (F.box ?? []).find(x => x.d === g.d && x.h === g.h && x.a === g.a) : null
+              const Row = b ? 'button' : 'div'
               return (
-                <div key={`${g.d}-${opp}`} ref={g === next ? at : null} className={`nb-sch-row${done ? (won ? ' is-w' : ' is-l') : ''}${g === next ? ' is-next' : ''}`} style={fkVars(opp)}>
+                <Row key={`${g.d}-${opp}`} ref={g === next ? at : null} {...(b && { type: 'button', onClick: () => { setBox(b); sfx('tap') }, 'aria-label': `Box score: ${dateText(F, g.d)} ${home ? 'vs' : 'at'} ${nick(opp)}` })}
+                  className={`nb-sch-row${done ? (won ? ' is-w' : ' is-l') : ''}${g === next ? ' is-next' : ''}${b ? ' has-box' : ''}`} style={fkVars(opp)}>
                   <span className="nb-sch-d">{dateText(F, g.d)}</span>
                   <span className="nb-sch-o"><i>{home ? 'vs' : '@'}</i><KLogo s={opp} size={22} /><b>{nick(opp)}</b>{two && <em className="nb-b2b">B2B</em>}</span>
-                  <span className="nb-sch-r">{done ? <><b>{won ? 'W' : 'L'}</b> {us}-{them}{g.ot ? ` ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''}</> : g === next ? <b>NEXT</b> : recText(R[opp])}</span>
-                </div>
+                  <span className="nb-sch-r">{done ? <><b>{won ? 'W' : 'L'}</b> {us}-{them}{g.ot ? ` ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''}{b && <i className="nb-sch-go" aria-hidden="true">›</i>}</> : g === next ? <b>NEXT</b> : recText(R[opp])}</span>
+                </Row>
               )
             })}
           </section>
         ))}
       </div>
+      {box && <NbaBoxSheet F={F} b={box} owner={owner} onClose={() => setBox(null)} />}
     </div>,
     document.body,
   )

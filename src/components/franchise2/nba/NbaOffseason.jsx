@@ -10,7 +10,10 @@ import { fkVars, KLogo, Chyron, LowerThird, Go, Flip, ActionBar, BackBar, Fold, 
 import { CapBar, dealText } from './NbaTeam'
 import { money } from './NbaHub'
 import { PlayerSheet, canOpenMan } from './NbaRoster'
+import { per, f1, seasonOf, statLine } from './awardLine'
 import './nbaoff.css'
+
+export { seasonOf, statLine }
 
 // THE SUMMER, a stop at a time: awards, the lottery, the draft, re-signing, free agency, camp. A stop behind him opens
 // again from its pill, read-only (what happened there), and the next stop's button is always at the bottom.
@@ -156,32 +159,6 @@ function Development({ F, open = false }) {
 // ── 1. AWARDS ────────────────────────────────────────────────────────────────
 const AW_KEYS = ['MVP', 'FMVP', 'DPOY', 'ROY', '6MOY', 'MIP', 'CLUTCH']
 const AW_LABEL = { ...AWARD_FULL, ECF: 'Eastern Conference Finals MVP', WCF: 'Western Conference Finals MVP' }
-const per = (x, k) => (x?.gp ? (x[k] ?? 0) / x.gp : 0)
-const f1 = v => v.toFixed(1)
-// his line for that season: this season's from the box scores (until the new season clears them), else his career row
-export function seasonOf(F, i, y) {
-  if (y === F.year && F.ss?.[i]?.gp) return F.ss[i]
-  return manOf(F, i)?.car?.find(c => c.y === y && !c.y2 && c.gp) ?? null
-}
-export function statLine(F, i, y, k) {
-  if (k === 'FMVP' || k === 'ECF' || k === 'WCF') {
-    // (the series itself while the bracket is still up; his whole postseason from his career row after)
-    const S = y === F.year ? (k === 'FMVP' ? F.po?.all?.[3]?.[0] : (F.po?.all?.[2] ?? []).find(C => C.c === (k === 'ECF' ? 'E' : 'W'))) : null
-    const x = S?.st?.[i]
-    if (x?.gp) return `${f1(per(x, 'pts'))} PTS · ${f1(per(x, 'reb'))} REB · ${f1(per(x, 'ast'))} AST IN THE ${k === 'FMVP' ? 'FINALS' : 'SERIES'}`
-    const po = y === F.year ? F.ps?.[i] : null
-    if (po?.gp) return `${f1(per(po, 'pts'))} PTS · ${f1(per(po, 'reb'))} REB · ${f1(per(po, 'ast'))} AST IN THE PLAYOFFS`
-    const c = seasonOf(F, i, y)?.po
-    return c?.[0] ? `${f1(c[1] / c[0])} PTS · ${f1(c[2] / c[0])} REB · ${f1(c[3] / c[0])} AST IN THE PLAYOFFS` : ''
-  }
-  const x = seasonOf(F, i, y)
-  if (!x?.gp) return ''
-  if (k === 'DPOY' || k === 'DEF') return `${f1(per(x, 'reb'))} REB · ${f1(per(x, 'stl'))} STL · ${f1(per(x, 'blk'))} BLK`
-  const base = `${f1(per(x, 'pts'))} PTS · ${f1(per(x, 'reb'))} REB · ${f1(per(x, 'ast'))} AST`
-  if (k === 'CLUTCH' && x.cp) return `${base} · ${x.cp} CLUTCH PTS`
-  if (k === '6MOY' && x.gs != null) return `${base} · ${x.gp - x.gs} GAMES OFF THE BENCH`
-  return base
-}
 // the conference finals MVPs (kept on the men's awards: { y, k: 'ECF' | 'WCF' }), unless the year's record has them
 export function cfMvps(F, h) {
   const out = []
@@ -206,11 +183,11 @@ function Awards({ F, act, go, done = false }) {
       <div className="nbo-awards">
         {list.map(([k, w]) => {
           const p = manOf(F, w.i)
-          const line = statLine(F, w.i, h.y, k)
+          const line = statLine(F, w.i, h.y, k, w)
           return (
             <div key={k} className={`nbo-aw${w.s === F.team ? ' is-me' : ''}`} style={w.s ? fkVars(w.s) : undefined}>
               <small className="nbo-aw-k">{AW_LABEL[k] ?? k}</small>
-              <LowerThird name={w.n} pos={p?.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={w.s} size="s" line={TEAM[w.s]?.name?.toUpperCase()} onClick={open && canOpenMan(F, w.i) ? () => { open(w.i); sfx('tap') } : undefined} />
+              <LowerThird name={w.n} pos={p?.p ?? w.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={w.s} size="s" line={TEAM[w.s]?.name?.toUpperCase()} onClick={open && canOpenMan(F, w.i) ? () => { open(w.i); sfx('tap') } : undefined} />
               {line && <p className="nbo-aw-line">{line}</p>}
             </div>
           )
@@ -240,8 +217,8 @@ export function AwardTeams({ F, y, title, teams, names, k = 'ALL', me = F.team }
               return (
                 <li key={x.i} className={x.s === me ? 'is-me' : ''} style={x.s ? fkVars(x.s) : undefined} {...tap(x.i)}>
                   {x.s ? <KLogo s={x.s} size={22} /> : <i className="nbo-nologo" />}
-                  <span><b>{x.n}</b><small>{[p?.p, TEAM[x.s]?.short].filter(Boolean).join(' · ')}</small></span>
-                  <em>{statLine(F, x.i, y, k)}</em>
+                  <span><b>{x.n}</b><small>{[p?.p ?? x.p, TEAM[x.s]?.short].filter(Boolean).join(' · ')}</small></span>
+                  <em>{statLine(F, x.i, y, k, x)}</em>
                 </li>
               )
             })}
@@ -286,7 +263,7 @@ function Lottery({ F, go, done = false }) {
   const sub = `${nick(F.team).toUpperCase()}: ${parts.length ? parts.join(' · ') : 'NOT IN THE LOTTERY'}`
   const R = records(F)
   const pre = L.lottery.slice().sort((a, b) => a.from - b.from)
-  const ownTag = x => { const o = owner(x.s); return o === x.s ? null : o === F.team ? `YOURS, VIA ${TEAM[x.s].short}` : `OWNED BY ${TEAM[o].short}` }
+  const ownTag = x => { const o = owner(x.s); return o === x.s ? null : `OWNED BY ${TEAM[o].short}` }
   return (
     <section className="nb-lot">
       <Chyron team={F.team} title={`${L.y} Draft Lottery`} sub={sub} />
@@ -383,7 +360,7 @@ function Draft({ F, act, go }) {
           <ol className="nb-made">{earlier.slice().reverse().map(m => <MadeRow key={m.n} F={F} m={m} />)}</ol>
         </details>
       )}
-      {pk && mine && <p className="nbo-note">{`The ${nick(F.team)} are on the clock. ${(F.sp ?? 0) > 0 ? `${F.sp} scouting ${F.sp === 1 ? 'report' : 'reports'} left. ` : ''}Pick a man from the board, or take the best available: ${starred.length ? 'the top of your starred board' : 'the top of the consensus board (star men to make your own)'}.`}</p>}
+      {pk && mine && <p className="nbo-note">{`The ${nick(F.team)} are on the clock. ${(F.sp ?? 0) > 0 ? `${F.sp} scouting ${F.sp === 1 ? 'report' : 'reports'} left. ` : ''}Pick a man from the board, or take the best available: ${starred.length ? 'the top of the starred board' : 'the top of the consensus board (star men to set a board of the team’s own)'}.`}</p>}
       <div className="nb-by" role="tablist">
         {pk && <button type="button" role="tab" aria-selected={show === 'board'} className={show === 'board' ? 'is-on' : ''} onClick={() => setShow('board')}>Big board</button>}
         <button type="button" role="tab" aria-selected={show === 'mine'} className={show === 'mine' ? 'is-on' : ''} onClick={() => setShow('mine')}>{`Starred${starred.length ? ` (${starred.length})` : ''}`}</button>
@@ -392,7 +369,7 @@ function Draft({ F, act, go }) {
       {show !== 'made' && (
         <div className="nb-board">
           {(show === 'mine' ? starred : board).slice(0, 40).map(p => <Prospect key={p.i} F={F} p={p} act={act} sel={sel === p.i} onPick={pk && mine ? () => { setSel(p.i); sfx('tap') } : null} />)}
-          {show === 'mine' && !starred.length && <p className="nbo-note">Star the men you want on the Big board. Best available takes the top of your starred list, in the order you starred them.</p>}
+          {show === 'mine' && !starred.length && <p className="nbo-note">Star men on the Big board. Best available takes the top of the starred list, in the order they were starred.</p>}
         </div>
       )}
       {show === 'made' && <ol className="nb-made">{made.slice().reverse().map(m => <MadeRow key={m.n} F={F} m={m} />)}</ol>}
@@ -407,7 +384,7 @@ function Draft({ F, act, go }) {
       )}
       {pk && mine && !selP && best && <ActionBar><Go onClick={() => { setSel(best.i); sfx('tap') }}>{`Best available: ${lastName(best.n)}`}</Go></ActionBar>}
       {pk && !mine && <ActionBar><Go onClick={simTo}>{mineLeft.length ? `Sim to pick ${mineLeft[0].n}` : 'Sim the rest'}</Go></ActionBar>}
-      {!pk && <ActionBar><Go onClick={go}>Re-sign your players</Go></ActionBar>}
+      {!pk && <ActionBar><Go onClick={go}>Re-sign</Go></ActionBar>}
     </section>
   )
 }
@@ -423,7 +400,7 @@ function PickCard({ F, m }) {
     <div className={`nbo-pick${me ? ' is-me' : ''}`} style={fkVars(m.t)}>
       <div className="nbo-pick-h">
         <KLogo s={m.t} size={36} />
-        <span><small>{`NO. ${m.n} · ROUND ${m.r}${m.o && m.o !== m.t ? ` · FROM ${TEAM[m.o].short}` : ''}${me ? ' · YOUR PICK' : ''}`}</small><b>{`The ${TEAM[m.t].name} select`}</b></span>
+        <span><small>{`NO. ${m.n} · ROUND ${m.r}${m.o && m.o !== m.t ? ` · FROM ${TEAM[m.o].short}` : ''}${me ? ` · ${String(F.owner || 'Guest').toUpperCase()}'S PICK` : ''}`}</small><b>{`The ${TEAM[m.t].name} select`}</b></span>
       </div>
       <div className="nbo-pick-man" {...tap(m.i)}>
         <span><b>{p.n}</b><small>{`${p.p} · AGE ${inClass ? draftAge(p) : p.ag} · ${htText(p.ht)} · ${p.c ?? ''}`}</small></span>
@@ -497,11 +474,11 @@ function Resign({ F, act, go }) {
     <section className="nb-resign">
       <Development F={F} />
       <CapBar F={F} />
-      <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${men.length === 1 ? 'FREE AGENT' : 'FREE AGENTS'} OF YOUR OWN` : 'NOBODY LEFT TO DECIDE ON'} />
+      <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${nick(F.team).toUpperCase()} ${men.length === 1 ? 'FREE AGENT' : 'FREE AGENTS'}` : 'NOBODY LEFT TO DECIDE ON'} />
       {men.length > 0 && (
         <p className="nbo-note">
-          {'Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off your books. Anyone still undecided when free agency opens is renounced too, except a restricted free agent: his qualifying offer stands, and you can match any offer sheet he signs.'}
-          {!free && allHolds > 0.05 && ` Renouncing every unrestricted man here clears ${money(allHolds)} in holds${roomIf(allHolds) > 0.05 ? ` (${money(sheet.room + roomIf(allHolds))} in cap room)` : '; you would still be over the cap'}.`}
+          {`Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off the ${poss(nick(F.team))} books. Anyone still undecided when re-signing ends is renounced too. A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs. Without it he becomes an unrestricted free agent.`}
+          {!free && allHolds > 0.05 && ` Renouncing every unrestricted man here clears ${money(allHolds)} in holds${roomIf(allHolds) > 0.05 ? ` (${money(sheet.room + roomIf(allHolds))} in cap room)` : `; the ${nick(F.team)} would still be over the cap`}.`}
         </p>
       )}
       {men.map(p => {
@@ -518,16 +495,16 @@ function Resign({ F, act, go }) {
               <span><small>Asks</small><b>{d ? `${money(d.$)} × ${yrs(d.y)}` : 'To test the market'}</b></span>
               <span><small>Rights</small><b>{rt ? RIGHTS[rt] : 'None'}</b></span>
               <span><small>Cap hold</small><b>{free ? 'No cap' : money(hold)}</b></span>
-              <span><small>Status</small><b>{p.rfa ? `Restricted · QO ${money(p.qo)}` : 'Unrestricted'}</b></span>
+              <span><small>Status</small><b>{p.rfa ? `Restricted · ${p.qtw ? 'Two-way QO' : `QO ${money(p.qo)}`}` : 'Unrestricted'}</b></span>
             </div>
             <ul className="nbo-rs-if">
               <li><b>Keep:</b> {d ? (c?.ok ? `${money(d.$)} a season for ${d.y} ${d.y === 1 ? 'year' : 'years'}${rt ? `; with ${RIGHTS[rt]} ${RIGHTS_SAYS[rt]}` : ''}.` : `not possible: ${c?.why ?? 'no deal'}.`) : 'he wants to see what the market offers.'}</li>
               <li><b>Let go:</b> {`renounced${p.rfa ? ', he becomes an unrestricted free agent' : ''}.${free ? '' : ` His ${money(hold)} hold comes off the books${gain > 0.05 ? `: ${money(gain)} more cap room` : '; still over the cap'}.`}`}</li>
-              {p.rfa && <li><b>Do nothing:</b> {p.qot ? `restricted free agency: his ${money(p.qo)} qualifying offer is tendered. Another team can sign him to an offer sheet and you get the day to match it; if nobody does, he re-signs or plays on the qualifying offer.` : `no qualifying offer tendered, so he becomes an unrestricted free agent when re-signing ends. Tender QO keeps him restricted.`}</li>}
+              {p.rfa && <li><b>Do nothing:</b> {p.qot ? `restricted free agency: his ${p.qtw ? 'two-way' : money(p.qo)} qualifying offer is tendered. Another team can sign him to an offer sheet and the ${nick(F.team)} get the day to match it; if nobody does, he re-signs or plays on the qualifying offer.` : `no qualifying offer tendered, so he becomes an unrestricted free agent when re-signing ends. Tender QO keeps him restricted.`}</li>}
             </ul>
             <span className="nb-fa-acts">
               <button type="button" className="is-go" disabled={!d || c?.ok === false} onClick={() => { const r = act(X => resignMine(X, p.i, true)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>{d ? `Keep: ${money(d.$)} × ${d.y}` : 'Keep'}</button>
-              {p.rfa && p.qo && <button type="button" className={p.qot ? 'is-go' : ''} onClick={() => { act(X => { tenderQO(X, p.i, !p.qot) }); sfx('tap') }}>{p.qot ? 'QO tendered' : 'Tender QO'}</button>}
+              {p.rfa && (p.qo || p.qtw) && <button type="button" className={p.qot ? 'is-go' : ''} onClick={() => { act(X => { tenderQO(X, p.i, !p.qot) }); sfx('tap') }}>{p.qot ? 'QO tendered' : 'Tender QO'}</button>}
               <button type="button" onClick={() => { act(X => { resignMine(X, p.i, false) }); sfx('tap') }}>Let go</button>
             </span>
           </div>
@@ -563,6 +540,8 @@ function ResignDone({ F }) {
 // the market as a list he can sort through on a phone: by spot, and by whether he can fit the man; a row opens his
 // offer. With the cap engine's offers (offerSheet: an offer, or an offer sheet to a restricted man, that he answers
 // when the next day opens) the GM bids; once the days are done (or without that call) he signs a man at his ask.
+// (a team's possessive: the Hornets' books, the Heat's)
+const poss = n => (/s$/.test(n) ? `${n}'` : `${n}'s`)
 const VIA = { room: 'cap room', rmle: 'the room mid-level', mle: 'the mid-level exception', tmle: 'the taxpayer mid-level', bae: 'the bi-annual exception', min: 'a minimum deal', bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bird rights', rookie: 'the rookie scale', tw: 'a two-way deal' }
 const SPOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 const faDays = () => CAP_SIM.FA_DAYS ?? 6
@@ -579,7 +558,8 @@ function nextDay(X) {
   const left = new Set((X.fa ?? []).map(p => p.i))
   const signed = [...before].filter(i => !left.has(i)).map(i => { const p = manOf(X, i); return [d, i, teamOfMan(X, i), p?.$ ?? 0, p?.y ?? 0] }).filter(x => x[2])
   X.off.wire = [...(X.off.wire ?? []), ...signed]
-  X.off.fres = offers.map(i => [i, left.has(i) ? null : teamOfMan(X, i)])
+  // (only the offers still out when the day was played: a man who signed on an earlier day isn't listed again)
+  X.off.fres = offers.filter(i => before.has(i)).map(i => [i, left.has(i) ? null : teamOfMan(X, i)])
 }
 function FreeAgency({ F, act, go }) {
   const tap = useTap(F)
@@ -605,7 +585,7 @@ function FreeAgency({ F, act, go }) {
   const pend = Object.keys(F.fao ?? {}).length
   const sign = p => {
     const r = act(X => { const r = signFA(X, p.i); if (r?.ok && !r.pending) { const q = manOf(X, p.i); X.off.wire = [...(X.off.wire ?? []), [faDayNow(X), p.i, X.team, q?.$ ?? 0, q?.y ?? 0]] } return r })
-    if (r?.ok) { setNews({ k: r.pending ? 'offer' : 'sign', id: p.i, d: r.deal }); setOpen(null); setWhy(null); sfx('claim'); haptic('success') } else { setWhy(r?.why ?? 'He can’t sign with you'); sfx('deny') }
+    if (r?.ok) { setNews({ k: r.pending ? 'offer' : 'sign', id: p.i, d: r.deal }); setOpen(null); setWhy(null); sfx('claim'); haptic('success') } else { setWhy(r?.why ?? `He can’t sign with the ${nick(F.team)}`); sfx('deny') }
   }
   const offer = (p, d) => {
     const r = act(X => CAP_SIM.offerSheet(X, (X.fa ?? []).find(x => x.i === p.i) ?? p, d))
@@ -619,17 +599,17 @@ function FreeAgency({ F, act, go }) {
       <CapBar F={F} />
       <Chyron team={F.team} tag={day >= days ? 'LATE' : `DAY ${day + 1} OF ${days}`} title="Free agency"
         sub={`${(F.fa ?? []).length} ON THE MARKET · ${std} UNDER CONTRACT${std > ROSTER_MAX ? ` · CUT TO ${ROSTER_MAX} AT CAMP` : ''}`} />
-      <p className="nbo-note">{day >= days ? `The ${days} days of free agency are done. The men still out there sign on the spot, at their ask.` : bids ? `Make your offers. Each man answers when day ${day + 1} is played, taking the best offer he has: another team can beat yours.` : `Day ${day + 1} of ${days}. A man signs at his ask.`}</p>
+      <p className="nbo-note">{day >= days ? `The ${days} days of free agency are done. The men still out there sign on the spot, at their ask.` : bids ? `Make offers. Each man answers when day ${day + 1} is played and takes the best offer he has, from any team.` : `Day ${day + 1} of ${days}. A man signs at his ask.`}</p>
       {news && (
         <div className={`nbo-done${news.k === 'pull' ? ' is-quiet' : ''}`} style={fkVars(F.team)} role="status">
           <b>{news.k === 'sign' ? 'SIGNED' : news.k === 'offer' ? 'OFFER IN' : 'OFFER PULLED'}</b>
-          <span>{news.k === 'sign' ? `${nm(news.id)} agrees to ${news.d ? `${news.d.y} ${news.d.y === 1 ? 'year' : 'years'}, ${money(news.d.$ * news.d.y)}` : 'a deal'} with the ${nick(F.team)}.` : news.k === 'offer' ? `${nm(news.id)}: ${news.d ? `${money(news.d.$)} a season for ${news.d.y} ${news.d.y === 1 ? 'year' : 'years'}. ` : ''}He answers when day ${day + 1} is played.` : `${nm(news.id)}: your offer is off the table.`}</span>
+          <span>{news.k === 'sign' ? `${nm(news.id)} agrees to ${news.d ? `${news.d.y} ${news.d.y === 1 ? 'year' : 'years'}, ${money(news.d.$ * news.d.y)}` : 'a deal'} with the ${nick(F.team)}.` : news.k === 'offer' ? `${nm(news.id)}: ${news.d ? `${money(news.d.$)} a season for ${news.d.y} ${news.d.y === 1 ? 'year' : 'years'}. ` : ''}He answers when day ${day + 1} is played.` : `${nm(news.id)}: the offer is off the table.`}</span>
         </div>
       )}
       {(F.off?.fres ?? []).length > 0 && (
         <div className="nbo-dev-box">
-          <b>{`Your offers on day ${day}`}</b>
-          <ol className="nbo-dev-list">{F.off.fres.map(([i, s]) => { const p = manOf(F, i); return <li key={i} style={s ? fkVars(s) : undefined} {...tap(i)}>{s ? <KLogo s={s} size={20} /> : <i className="nbo-nologo" />}<span><b>{p?.n ?? '-'}</b><small>{s === F.team ? 'SIGNED WITH YOU' : s ? `CHOSE THE ${TEAM[s].nick.toUpperCase()}` : 'STILL DECIDING · YOUR OFFER STANDS'}</small></span><em>{s && p?.y ? `${money(p.$)} × ${p.y}` : ''}</em></li> })}</ol>
+          <b>{`The ${nick(F.team)} offers on day ${day}`}</b>
+          <ol className="nbo-dev-list">{F.off.fres.map(([i, s]) => { const p = manOf(F, i); return <li key={i} style={s ? fkVars(s) : undefined} {...tap(i)}>{s ? <KLogo s={s} size={20} /> : <i className="nbo-nologo" />}<span><b>{p?.n ?? '-'}</b><small>{s === F.team ? `SIGNED WITH THE ${nick(F.team).toUpperCase()}` : s ? `CHOSE THE ${TEAM[s].nick.toUpperCase()}` : 'STILL DECIDING · THE OFFER STANDS'}</small></span><em>{s && p?.y ? `${money(p.$)} × ${p.y}` : ''}</em></li> })}</ol>
         </div>
       )}
       {sheets.map(({ q, p }) => (
@@ -644,13 +624,13 @@ function FreeAgency({ F, act, go }) {
           {['all', ...SPOTS].map(k => <button key={k} type="button" aria-pressed={spot === k} className={spot === k ? 'is-on' : ''} onClick={() => { setSpot(k); sfx('tap') }}>{k === 'all' ? 'All' : k}</button>)}
         </div>
         <div className="nb-by nbo-fits" role="group" aria-label="Who">
-          <button type="button" aria-pressed={fits} className={fits ? 'is-on' : ''} onClick={() => { setFits(true); sfx('tap') }}>{`Fits your cap (${nFit})`}</button>
+          <button type="button" aria-pressed={fits} className={fits ? 'is-on' : ''} onClick={() => { setFits(true); sfx('tap') }}>{`Fits the cap (${nFit})`}</button>
           <button type="button" aria-pressed={!fits} className={!fits ? 'is-on' : ''} onClick={() => { setFits(false); sfx('tap') }}>{`Everyone (${nAll})`}</button>
         </div>
       </div>
       <div className="nbo-fa-list">
         {shown.map(({ p, d, c }) => <FaRow key={p.i} F={F} p={p} d={d} c={c} open={open === p.i} onOpen={() => { setOpen(o => (o === p.i ? null : p.i)); setWhy(null); sfx('tap') }} bids={bids} onSign={sign} onOffer={offer} onPull={pull} />)}
-        {!shown.length && <p className="nbo-note">{fits ? 'Nobody on the market fits under your cap or your exceptions now. Tap the filter to see everyone, or look at the minimum deals below.' : 'Nobody left at this spot.'}</p>}
+        {!shown.length && <p className="nbo-note">{fits ? `Nobody on the market fits under the ${poss(nick(F.team))} cap or exceptions now. Tap the filter to see everyone, or look at the minimum deals below.` : 'Nobody left at this spot.'}</p>}
       </div>
       {why && <p className="nb-why">{why}</p>}
       <MinDeals F={F} act={act} />
@@ -693,7 +673,7 @@ function OfferPanel({ F, p, ask, c, bids, pend, rfa, onSign, onOffer, onPull }) 
   return (
     <div className="nbo-offer">
       <p>{`He is asking ${money(ask.$)} a season for ${ask.y} ${ask.y === 1 ? 'year' : 'years'}, ${money(ask.$ * ask.y)} in all.${was && TEAM[was] ? ` Last season with the ${TEAM[was].nick}${p.$l ? ` at ${money(p.$l)}` : ''}.` : ''}`}</p>
-      {rfa && <p>{`Restricted: an offer to him is an offer sheet. The ${TEAM[p.fr].nick} get a day to match it and keep him on your terms.`}</p>}
+      {rfa && <p>{`Restricted: an offer to him is an offer sheet. The ${TEAM[p.fr].nick} get a day to match it and keep him on those terms.`}</p>}
       {bids && (
         <div className="nbo-steppers">
           <span className="nbo-stp"><small>A season</small><button type="button" aria-label="Less" disabled={amt - step < mn - 0.01} onClick={() => setAmt(v => Math.max(mn, Math.round((v - step) * 10) / 10))}>−</button><b>{money(deal.$)}</b><button type="button" aria-label="More" disabled={amt + step > mx + 0.01} onClick={() => setAmt(v => Math.min(mx, Math.round((v + step) * 10) / 10))}>+</button></span>

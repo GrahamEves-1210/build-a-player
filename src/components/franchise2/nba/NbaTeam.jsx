@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
+import { TEAM, SHORTS, depthOrder, photoOf, dateText, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
-import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar, Stamp } from '../kit'
+import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar, Stamp, reduced } from '../kit'
 import { money } from './NbaHub'
 import { picksOf as tradePicks, tpesOf, availOf } from '../../../lib/franchise2/nba/trades'
 import { hitOf } from '../../../lib/franchise2/nba/cap'
@@ -25,7 +25,8 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
   return (
     <div className="nb-team">
       <CapBar F={F} />
-      {canTrade && <button type="button" className="fh-row" onClick={() => { setView('trades'); sfx('tap') }}><span><small>Trades</small><b>{F.phase === 'season' ? `Deadline ${F.ddl - F.day <= 0 ? 'today' : `in ${F.ddl - F.day} days`}` : 'Open for the summer'}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>}
+      {canTrade ? <button type="button" className="fh-row" onClick={() => { setView('trades'); sfx('tap') }}><span><small>Trades</small><b>{F.phase === 'season' ? `Deadline ${F.ddl - F.day <= 0 ? 'today' : `in ${F.ddl - F.day} days`}` : 'Open for the summer'}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
+        : <div className="fh-row nb-trade-shut"><span><small>Trades</small><b>{F.phase === 'season' || F.phase === 'post' ? `Trade deadline passed (${dateText(F, F.ddl)})` : 'Trades open after the Finals'}</b></span></div>}
       {/* (the rotation, its edit and a man's page: NbaRoster.jsx) */}
       <Rotation F={F} act={act} owner={owner} onMan={setMan} />
       {tw.length > 0 && (
@@ -70,11 +71,17 @@ function Trades({ F, act, onBack }) {
   const [side, setSide] = useState(0)
   const [ga, setGa] = useState([]), [gb, setGb] = useState([]), [pa, setPa] = useState([]), [pb, setPb] = useState([])
   const [ans, setAns] = useState(null)
+  // (the deal just done: each side's names, kept on the board after the selections clear)
+  const [sent, setSent] = useState(null)
+  // (the answer comes up where the GM is looking: on the deal board, which stays in view; a counter's terms and its
+  // buttons sit under the board, brought into view when they come)
+  const said = useRef(null)
+  useEffect(() => { if (ans?.counter) said.current?.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }) }, [ans])
   const deal = them ? { a: F.team, b: them, ga, gb, pa, pb } : null
   const any = ga.length + gb.length + pa.length + pb.length > 0
   const chk = useMemo(() => (deal && any ? CAP_SIM.checkTrade(F, deal) : null), [F, them, ga, gb, pa, pb]) // eslint-disable-line react-hooks/exhaustive-deps
-  const tog = (arr, set, v) => { set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]); setAns(null); sfx('tap') }
-  const reset = () => { setGa([]); setGb([]); setPa([]); setPb([]); setAns(null) }
+  const tog = (arr, set, v) => { set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]); setAns(null); setSent(null); sfx('tap') }
+  const reset = () => { setGa([]); setGb([]); setPa([]); setPb([]); setAns(null); setSent(null) }
   if (!them) {
     return (
       <div className="nb-trades">
@@ -97,18 +104,21 @@ function Trades({ F, act, onBack }) {
   const S = [[F.team, ga, setGa, pa, setPa], [them, gb, setGb, pb, setPb]]
   const [s0, sel, set, psel, pset] = S[side]
   const list = (s, ids, pids) => [...ids.map(i => manIn(s, i)?.n), ...pids.map(i => pickText(F, F.picks[i]))].filter(Boolean)
-  const done = r => { for (const x of r?.news ?? []) addNews(F, x); setGa([]); setGb([]); setPa([]); setPb([]); sfx('claim'); haptic('success') }
+  const done = (r, names) => { for (const x of r?.news ?? []) addNews(F, x); setSent(names); setGa([]); setGb([]); setPa([]); setPb([]); sfx('claim'); haptic('success') }
+  const namesOf = d => [list(d.a, d.ga ?? [], d.pa ?? []), list(d.b, d.gb ?? [], d.pb ?? [])]
   const ask = () => {
+    const names = namesOf(deal)
     const r = act(X => CAP_SIM.proposeTrade(X, deal))
     setAns(r)
-    if (r?.ok) done(r); else sfx(r?.say === 'counter' ? 'flip' : 'deny')
+    if (r?.ok) done(r, names); else sfx(r?.say === 'counter' ? 'flip' : 'deny')
   }
   const takeCounter = () => {
     const c = ans?.counter
     if (!c || !CAP_SIM.checkTrade(F, c).ok) return
+    const names = namesOf(c)
     const r = act(X => CAP_SIM.doTrade(X, c))
     setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms`, line: r?.line })
-    done(r)
+    done(r, names)
   }
   const workFrom = () => { const c = ans?.counter; if (!c) return; setGa(c.ga ?? []); setGb(c.gb ?? []); setPa(c.pa ?? []); setPb(c.pb ?? []); setAns(null); sfx('tap') }
   const g = any && chk?.ok ? CAP_SIM.gauge(F, deal) : null
@@ -132,20 +142,21 @@ function Trades({ F, act, onBack }) {
           {`${TEAM[F.team].nick} payroll ${money(myPay)}${ga.length || gb.length ? `, ${money(myAfter)} after this deal` : ''}. Ownership's limit: ${money(own.$)}, ${CAP_SIM.OWNER_LINE_TEXT[own.k] ?? 'its line'}.`}
         </p>
       )}
+      {/* (the deal stays in view while the lists scroll: each side, then what blocks it or the answer to it) */}
       <section className="nb-deal">
-        {S.map(([s, ids, , pids]) => (
+        {S.map(([s, ids, , pids], k) => (
           <div key={s} className="nb-deal-side" style={fkVars(s)}>
-            <span className="nb-deal-h"><KLogo s={s} size={22} /><b>{TEAM[s].nick} send</b></span>
-            <p>{list(s, ids, pids).join(', ') || 'Nothing yet'}</p>
+            <span className="nb-deal-h"><KLogo s={s} size={22} /><b>{TEAM[s].nick} {!any && sent ? 'sent' : 'send'}</b></span>
+            <p>{(!any && sent ? sent[k] : list(s, ids, pids)).join(', ') || 'Nothing yet'}</p>
             {ids.length > 0 && <small className="nb-deal-cap">{money(sum(s, ids))} in cap hits</small>}
           </div>
         ))}
+        {chk && !chk.ok && <p className="nb-why nb-deal-why">{teamWords(chk.why)}</p>}
+        {ans && <TradeSaid ok={ans.ok} counter={!!ans.counter} text={teamWords(ans.text ?? `The ${TEAM[them].nick} pass`)} line={ans.ok ? teamWords(ans.line ?? '') : ''} />}
       </section>
       {g && <TradeGauge F={F} them={them} g={g} />}
-      {chk && !chk.ok && <p className="nb-why">{teamWords(chk.why)}</p>}
-      {ans && <TradeSaid ok={ans.ok} counter={!!ans.counter} text={teamWords(ans.text ?? `The ${TEAM[them].nick} pass`)} line={ans.ok ? teamWords(ans.line ?? '') : ''} />}
       {ans?.counter && (
-        <div className="tr-counter">
+        <div ref={said} className="tr-counter nb-tcounter-box">
           <p className="nb-tcounter">{counterText(F, ans.counter)}</p>
           <div className="tr-acts tr-acts--2"><Go onClick={takeCounter}>Accept the counter</Go><Go ghost onClick={workFrom}>Work from it</Go></div>
         </div>

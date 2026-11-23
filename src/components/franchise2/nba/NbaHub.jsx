@@ -36,6 +36,8 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   const R = records(F)
   const off = F.phase === 'off'
   if (import.meta.env.DEV) window.__nba = { F, act, L: NBA }   // (dev: the headless checks read the league)
+  // (after a sim the hub starts again at the top: the header, the date, the next game)
+  const toTop = () => { scroll.current?.scrollTo(0, 0); window.scrollTo(0, 0) }
   const toTab = (id, view = null) => { setTeamView(view); if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
   // PLAY: the GM's next game on screen (the scorebug, a moment if it comes, the final)
   const play = () => {
@@ -52,10 +54,10 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
       {live && <NbaGame F={F} act={act} start={live} owner={owner} onDone={() => setLive(null)} />}
-      {run && <SimRun F={F} act={act} run={run} onDone={() => setRun(null)} />}
+      {run && <SimRun F={F} act={act} run={run} onDone={() => { setRun(null); toTop() }} />}
       <div ref={scroll} className="fh-scroll">
         <header className="fh-top">
-          <span className="fh-top-logo"><KLogo s={F.team} size={36} /></span>
+          <span className="fh-top-logo"><TopLogo s={F.team} /></span>
           <span className="fh-top-txt">
             <b>{t.name}</b>
             <small>{seasonText(F.year)} · {sub}</small>
@@ -64,7 +66,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
         </header>
         {saveBad && (
           <div className="nb-savebad" role="alert">
-            <span><b>This league isn't saving</b>This device's browser storage is full, so recent changes aren't saved. Delete a save you don't need and it saves again; it keeps trying.</span>
+            <span><b>This league isn't saving</b>This device's browser storage is full, so recent changes aren't saved. Deleting a save that isn't needed frees the space; it keeps trying.</span>
             <button type="button" onClick={onRetry}>Try again</button>
           </div>
         )}
@@ -85,6 +87,14 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   )
 }
 
+// the header's logo: a load that fails (a file swapped under a cached page) tries once more, then shows the team's
+// letters on its colours rather than an empty square
+function TopLogo({ s }) {
+  const [k, setK] = useState(0)
+  useEffect(() => setK(0), [s])
+  if (k >= 2) return <b className="nb-top-abbr">{s}</b>
+  return <img className="fk-logo" src={`${TEAM[s].logo}${k ? '?retry=1' : ''}`} alt="" width={36} height={36} style={{ width: 36, height: 36, '--ls': '36px' }} draggable={false} onError={() => setK(v => v + 1)} />
+}
 function LeagueTicker({ F }) {
   const items = useMemo(() => {
     const out = []
@@ -113,7 +123,7 @@ function Season({ F, R, act, play, owner, onTrades, onSim }) {
       <aside className="fh-side">
         {F.log.length > 0 && <LastGame F={F} owner={owner} />}
         {(ph === 'season' || ph === 'post') && <ConfLadder F={F} R={R} />}
-        {ph === 'season' && <Strip F={F} />}
+        {ph === 'season' && <Strip F={F} owner={owner} />}
         <ScoutRow F={F} act={act} />
         <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
           onPick={m => act(X => { X.moments = m })} cls={GAMES_CLS} />
@@ -205,7 +215,7 @@ function ConfLadder({ F, R }) {
     </section>
   )
 }
-function Strip({ F }) {
+function Strip({ F, owner }) {
   const G = myGames(F)
   const k = G.findIndex(g => g.hs == null)
   const shown = G.slice(Math.max(0, k - 5), Math.max(0, k - 5) + 10)
@@ -213,7 +223,7 @@ function Strip({ F }) {
   return (
     <div className="fh-strip-wrap">
       <h3 className="fh-h"><b>Schedule</b><button type="button" className="nb-h-link" onClick={() => { setAll(true); sfx('tap') }}>Full schedule · {G.filter(g => g.hs != null).length} of 82 ›</button></h3>
-      {all && <NbaSchedule F={F} onClose={() => setAll(false)} />}
+      {all && <NbaSchedule F={F} owner={owner} onClose={() => setAll(false)} />}
       <div className="fh-strip">
         {shown.map(g => {
           const home = g.h === F.team, opp = home ? g.a : g.h
@@ -237,12 +247,15 @@ function SeasonOver({ F, R, act }) {
   return (
     <section className="fh-next">
       <div className="fh-next-h"><b>Regular season over</b><span>{recText(r)} · {ORD(seed)} in the {CONF_OF[F.team] === 'E' ? 'East' : 'West'}</span></div>
-      <Stamp kind={seed <= 10 ? 'w' : 'l'} big>{fate.toUpperCase()}</Stamp>
+      <Stamp kind={seed <= 10 ? 'w' : 'l'} big className="nb-fate"><span>{fate.toUpperCase().split(' ').map((w, k) => <span key={k} className="nb-nw">{k ? ' ' : ''}{w}</span>)}</span></Stamp>
       <div className="fh-go"><Go onClick={() => { act(X => { startPostseason(X) }); sfx('whistle') }}>{seed <= 10 ? 'Start the postseason' : 'Watch the postseason'}</Go></div>
     </section>
   )
 }
 
+// what a play-in game is for, the way the league puts it: the 7-8 loser gets a second chance; 9-10 and the last game
+// for the No. 8 seed end a season
+const PI_STAKES = { 78: 'For the No. 7 seed · the loser plays again', 910: 'Win or go home · the winner plays for the No. 8 seed', last: 'For the No. 8 seed · win or go home' }
 function PoCard({ F, act, play }) {
   const P = F.po
   const mine = myPoGame(F)
@@ -253,7 +266,7 @@ function PoCard({ F, act, play }) {
   const all = () => { act(X => { simPostseason(X) }); sfx('flip') }
   return (
     <section className="fh-next">
-      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase())}</b><span>{S ? seriesText(S, F.team) : mine ? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
+      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase())}</b><span>{S ? seriesText(S, F.team) : mine ? PI_STAKES[mine.k] ?? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
       {mine ? (
         <>
           <div className="fh-mu">

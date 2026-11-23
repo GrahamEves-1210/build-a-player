@@ -271,7 +271,11 @@
 .nb-made li.is-me { box-shadow: inset 4px 0 0 var(--tca, #fff); }
 .nb-fa-row { display: grid; gap: 6px; }
 @media (min-width: 640px) { .nb-fa-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
-.nb-deal { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; position: sticky; top: 98px; z-index: 3; }
+.nb-deal { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; position: sticky; top: 98px; z-index: 3; background: var(--fk-ink); }
+.nb-deal > .nb-why, .nb-deal > .tr-said { grid-column: 1 / -1; }
+.nb-deal > .nb-why { background: #3a1416; }
+.nb-deal > .tr-said { padding: 8px 10px; }
+.nb-deal > .tr-said .fk-stamp { font-size: 15px; }
 .nb-deal-side { display: grid; gap: 4px; align-content: start; padding: 8px 10px; background: var(--fk-g2); box-shadow: inset 0 3px 0 var(--tca, #fff); }
 .nb-deal-h { display: flex; align-items: center; gap: 6px; }
 .nb-deal-h { min-width: 0; }
@@ -423,3 +427,13 @@ button.nb-st-row.is-me { color: var(--tct); }
 }
 /* (football hides its wide screen's second tab, the scoring, which sits under the field; here it's the box score) */
 @media (min-width: 900px) { .nb-gdl.gd:not(.is-final) .gd-tabs button:nth-child(2) { display: block; } }
+
+/* the season's fate on the hub: a stamp that clears the button under it (rotated, it leans past its box) */
+.fk-stamp.is-big.nb-fate { justify-self: start; margin: 14px 4px 22px; font-size: 40px; }
+.nb-fate .nb-nw { white-space: nowrap; }
+.nb-top-abbr { font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .5px; color: var(--tct); }
+.fh-row.nb-trade-shut { cursor: default; box-shadow: inset 4px 0 0 var(--fk-g4); }
+.fh-row.nb-trade-shut b { color: var(--fk-mute); }
+button.nb-sch-row { width: 100%; border: 0; color: inherit; text-align: left; cursor: pointer; }
+button.nb-sch-row:active { background: var(--fk-g3); }
+.nb-sch-go { margin-left: 6px; font-style: normal; font-family: var(--fk-d); font-size: 18px; color: var(--fk-mute); }
