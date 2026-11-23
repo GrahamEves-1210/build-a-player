@@ -124,8 +124,8 @@ export function leagueNames(F) {
 }
 
 // ── The league at the start ──────────────────────────────────────────────────
-// each team: its real men (the best fifteen on standard deals, the next three on two-way deals as real teams carry
-// them, anyone past eighteen to the street), then made-up men to fifteen and two two-way men
+// each team: its real men (best fourteen or fifteen on standard deals; a sixteenth and beyond on two-way deals if
+// he's young, else the street), then made-up men to fifteen and two two-way men
 export function buildTeams(F, { dealOnLoad } = {}) {
   const R = rngOf(`${F.seed}-nba-league`)
   F.teams = {}
@@ -140,7 +140,7 @@ export function buildTeams(F, { dealOnLoad } = {}) {
     const t = F.teams[s]
     men.forEach((p, k) => {
       if (k < ROSTER_MAX) t.r.push(p)
-      else if (t.r.filter(x => x.tw).length < TWO_WAY_MAX) { p.tw = 1; t.r.push(p) }
+      else if (p.ag <= 24 && t.r.filter(x => x.tw).length < TWO_WAY_MAX) { p.tw = 1; t.r.push(p) }
       else F.fa.push(p)
     })
     fillTeam(F, s, R, taken)
