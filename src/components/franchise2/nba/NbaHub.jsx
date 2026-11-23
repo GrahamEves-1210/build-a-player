@@ -64,7 +64,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
         </header>
         {saveBad && (
           <div className="nb-savebad" role="alert">
-            <span><b>This league isn't saving</b>The browser's storage on this device is full, so the last changes aren't saved yet. Delete a save you don't need (yours or another mode's) and it saves again. It keeps trying.</span>
+            <span><b>This league isn't saving</b>This device's browser storage is full, so recent changes aren't saved. Delete a save you don't need and it saves again; it keeps trying.</span>
             <button type="button" onClick={onRetry}>Try again</button>
           </div>
         )}
@@ -124,6 +124,8 @@ function Season({ F, R, act, play, owner, onTrades, onSim }) {
   )
 }
 
+// (a long name a size down in the matchup's half-width card: "Timberwolves", "Trail Blazers" at 360px)
+const nickCls = s => (TEAM[s].nick.length >= 12 ? 'is-xlong' : TEAM[s].nick.length >= 9 ? 'is-long' : '')
 const seedIn = (F, R, s) => confOrder(F, CONF_OF[s], R).indexOf(s) + 1
 function NextGame({ F, R, act, play, onTrades, onSim }) {
   const g = nextMine(F)
@@ -140,7 +142,7 @@ function NextGame({ F, R, act, play, onTrades, onSim }) {
       <div className="fh-mu">
         {[g.a, g.h].map((s, k) => (
           <div key={s} className={`fh-mu-t${s === F.team ? ' is-me' : ''}`} style={fkVars(s)}>
-            <KLogo s={s} size={56} /><b>{TEAM[s].nick}</b><span>{recText(R[s])}</span><small>{R[s].g ? sub(s) : CONF_NAME[CONF_OF[s]]}</small>
+            <KLogo s={s} size={56} /><b className={nickCls(s)}>{TEAM[s].nick}</b><span>{recText(R[s])}</span><small>{R[s].g ? sub(s) : CONF_NAME[CONF_OF[s]]}</small>
           </div>
         )).reduce((a, x, i) => (i ? [...a, <span key="m" className="fh-mu-mid">at</span>, x] : [x]), [])}
       </div>
@@ -255,7 +257,7 @@ function PoCard({ F, act, play }) {
       {mine ? (
         <>
           <div className="fh-mu">
-            {[mine.a, mine.h].map(s => <div key={s} className={`fh-mu-t${s === F.team ? ' is-me' : ''}`} style={fkVars(s)}><KLogo s={s} size={56} /><b>{TEAM[s].nick}</b><small>{seedText(F, s)}</small></div>).reduce((a, x, i) => (i ? [...a, <span key="m" className="fh-mu-mid">at</span>, x] : [x]), [])}
+            {[mine.a, mine.h].map(s => <div key={s} className={`fh-mu-t${s === F.team ? ' is-me' : ''}`} style={fkVars(s)}><KLogo s={s} size={56} /><b className={nickCls(s)}>{TEAM[s].nick}</b><small>{seedText(F, s)}</small></div>).reduce((a, x, i) => (i ? [...a, <span key="m" className="fh-mu-mid">at</span>, x] : [x]), [])}
           </div>
           <div className="fh-go"><Go onClick={play}>{mine.n && S ? `Play game ${mine.n}` : 'Play the game'}</Go><button type="button" className="fh-textbtn" onClick={all}>Sim the rest of the postseason</button></div>
         </>

@@ -113,9 +113,13 @@
 .nb-st-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 16px; text-transform: uppercase; }
 .nb-lead { display: grid; gap: 4px; }
 .nb-wire { display: grid; gap: 3px; }
-.nb-wire-row { display: grid; grid-template-columns: auto auto 1fr; align-items: start; gap: 8px; padding: 8px 10px; background: var(--fk-g1); }
+.nb-wire-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; grid-template-areas: 'l t d' 'l p p'; align-items: center; gap: 4px 10px; padding: 8px 10px; background: var(--fk-g1); }
+.nb-wire-row > :first-child + * { grid-area: l; align-self: start; }
+.nb-wire-row > .nb-wire-tag { grid-area: t; justify-self: start; }
+.nb-wire-row > p { grid-area: p; }
+.nb-wire-row > small { grid-area: d; text-align: right; white-space: nowrap; }
 .nb-wire-row p { margin: 0; font-family: var(--fk-b); font-size: 14px; line-height: 1.35; }
-.nb-wire-row small { grid-column: 3; font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
+.nb-wire-row small { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
 .nb-wire-tag { padding: 1px 6px; background: var(--fk-g3); font-family: var(--fk-b); font-weight: 700; font-size: 13px; text-transform: uppercase; white-space: nowrap; }
 
 /* history */
@@ -290,4 +294,18 @@ button.nb-st-row.is-me { color: var(--tct); }
   .nb-sheet .fk-l3--l .fk-l3-name b { font-size: 28px; }
   .nb-sheet .fk-l3--l .fk-l3-name.is-long b { font-size: 21px; }
   .nb-sheet .fk-l3--l .fk-l3-name.is-xlong b { font-size: 17px; }
+}
+/* the big lower third at phone width wraps its meta (kit.css): the GM's star and name go onto their own line, with
+   no separator dot leading it */
+@media (max-width: 520px) {
+  :is(.nb-sheet, .fsu-nameform) .fk-l3--l .fk-l3-mine { flex-basis: 100%; }
+  :is(.nb-sheet, .fsu-nameform) .fk-l3--l .fk-l3-meta > .fk-l3-mine::before { content: none; }
+}
+.nb .fh-mu-t b.is-long { font-size: 21px; }
+.nb .fh-mu-t b.is-xlong { font-size: 17px; }
+/* the deal's two sides at phone width: "Knicks send" whole, the salaries under it */
+@media (max-width: 400px) {
+  .nb-deal-h { flex-wrap: wrap; row-gap: 2px; }
+  .nb-deal-h b { flex: 1; }
+  .nb-deal-h em { flex-basis: 100%; margin-left: 0; }
 }
