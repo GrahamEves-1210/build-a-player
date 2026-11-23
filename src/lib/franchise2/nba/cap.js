@@ -2,7 +2,9 @@
 //
 // THE NUMBERS (by season start year: 2025 = the 2025-26 season)
 //   2025-26: cap $154.647M · tax $187.895M · first apron $195.945M · second apron $207.824M
-//   They grow with the league's revenue: about 7% a year for 2026-27 and 2027-28 (the league's projections under the
+//   2026-27: cap $164.961M · tax $200.428M · first apron $209.015M · second apron $221.686M (the league's numbers;
+//   the minimum team salary, 90% of the cap, $148.465M)
+//   They grow with the league's revenue: about 7% for 2027-28 (the league's projections under the
 //   new media deal, inside the CBA's 10% smoothing limit), then 5% a year. The exceptions, the minimum scale, the
 //   rookie scale and the tax brackets grow with the cap, as the CBA indexes them.
 //
@@ -32,8 +34,9 @@ const LINES = {
   2023: [136.021, 165.294, 172.346, 182.794],
   2024: [140.588, 170.814, 178.132, 188.931],
   2025: [154.647, 187.895, 195.945, 207.824],
+  2026: [164.961, 200.428, 209.015, 221.686],
 }
-const GROW = { 2026: 1.07, 2027: 1.07 }
+const GROW = { 2027: 1.07 }
 const growOf = y => GROW[y] ?? 1.05
 function linesOf(year) {
   if (LINES[year]) return LINES[year]
