@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   TEAM, CONF_OF, SHORTS, CONF_DIVS, DIVS, records, recText, confOrder, coachOrder, teamOvr, myGames, nextMine, dateText, seasonText, CAP_SIM,
-  nick, addNews, manOf, teamOfMan, b2bOf, TYPES,
-} from '../../../lib/franchise2/nba'
+  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock } from '../../../lib/franchise2/nba'
 import { GUARD_CATEGORIES } from '../../../data/nba-guards'
 import { BIG_CATEGORIES } from '../../../data/nba-bigs'
 import { BUCKET_ATTR } from '../../../data/nba-attrs'
@@ -284,7 +283,7 @@ function MineActs({ F, act, p, onClose }) {
         </div>
       )}
       <div className="nb-sheet-acts">
-        {!sure ? <button type="button" className="is-danger" onClick={() => setSure(true)}>Waive him</button>
+        {cutBlock(F, id) ? <span className="nb-sure">{cutBlock(F, id)}</span> : !sure ? <button type="button" className="is-danger" onClick={() => setSure(true)}>Waive him</button>
           : <><span className="nb-sure">{dead > 0 ? `${money(dead)} stays on the books` : 'Waive him?'}</span><button type="button" onClick={() => setSure(false)}>Keep</button>
             <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived ${p.n}` }) }); sfx('deny'); onClose() }}>Waive</button>
             {canStretch && <button type="button" className="is-danger" onClick={() => { act(X => { CAP_SIM.cutMan(X, X.team, id, { stretch: true }); addNews(X, { k: 'cut', tag: 'WAIVED', s: X.team, text: `The ${nick(X.team)} have waived and stretched ${p.n}` }) }); sfx('deny'); onClose() }}>Waive and stretch</button>}</>}

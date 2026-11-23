@@ -68,13 +68,57 @@ export const myGames = F => F.sched.filter(g => g.h === F.team || g.a === F.team
 export const nextMine = F => F.sched.find(g => g.hs == null && (g.h === F.team || g.a === F.team) && g.d >= F.day) ?? null
 export const gameNo = (F, g) => myGames(F).indexOf(g) + 1
 
+// ── The roster floor ─────────────────────────────────────────────────────────
+// NBA teams carry 14 standard contracts; one can drop to 13 for up to two weeks, never below. Before each night: a
+// team under 13 signs men off the street to non-guaranteed minimum deals (the best who'll take one; a made-up man if
+// the street is empty), and one that has been at 13 for two weeks (or is short on opening night) signs back to 14.
+// The league's other teams fill to 14 straight away. (F.thin: { team: the day it fell under 14 }, while it is.)
+export const FLOOR = 13, FLOOR_FULL = 14, FLOOR_DAYS = 14
+const stdOf = T => T.r.filter(p => !p.tw).length
+export function rosterFloor(F) {
+  const thin = (F.thin ??= {})
+  for (const s of SHORTS) {
+    const T = F.teams[s]
+    let n = stdOf(T)
+    if (n >= FLOOR_FULL) { delete thin[s]; continue }
+    thin[s] ??= F.day
+    const to = s !== F.team || F.day === 0 || F.day - thin[s] >= FLOOR_DAYS ? FLOOR_FULL : FLOOR
+    let guard = 0
+    while (n < to && guard++ < 15) {
+      const p = floorSign(F, s)
+      if (!p) break
+      n++
+      if (s === F.team) addNews(F, { k: 'sign', tag: 'SIGNED', s, text: `The ${nick(s)} sign ${p.n} to a non-guaranteed minimum deal to meet the league's roster minimum` })
+    }
+    if (n >= FLOOR_FULL) delete thin[s]
+  }
+  if (!Object.keys(thin).length) delete F.thin
+}
+function floorSign(F, s) {
+  const year = X.capYear(F), deal = x => ({ $: X.minOf(x.ys ?? 0, year), y: 1, r: 0, ng: 1 })
+  const p = (F.fa ?? []).filter(x => !(x.inj?.g > 0) && X.rankOf(F, x) > 60 && (x.o ?? 0) < 85).sort((a, b) => X.rankOf(F, a) - X.rankOf(F, b)).find(x => X.canSign(F, s, x, deal(x)).ok)
+  if (p && X.signMan(F, s, p, deal(p))?.ok !== false) return p
+  const m = makeGen(F, thinSpot(F.teams[s].r), rngOf(`${F.seed}-floor-${F.year}-${F.day}-${s}-${F.teams[s].r.length}`))
+  return X.signMan(F, s, m, deal(m), { check: false })?.ok !== false ? m : null
+}
+// the Waive button's check (the GM's team): null when he can, else why not
+export function cutBlock(F, id) {
+  const T = F.teams[F.team], p = T?.r.find(x => x.i === id)
+  if (!p || p.tw || F.phase === 'off') return null
+  if (stdOf(T) <= FLOOR) return `NBA teams must carry at least ${FLOOR} players. Sign someone before waiving him.`
+  return null
+}
+
 // ── A night of games ─────────────────────────────────────────────────────────
 // play every game on day F.day; the GM's game (if he has one tonight and moments are on, and it's close late)
 // stops for a moment: returns { pending } and the night is finished by finishMoment
 export function playDay(F, { moments = false, wantMoment = null } = {}) {
   if (F.phase !== 'season') return null
+  rosterFloor(F)
   const d = F.day
   const tonight = F.sched.filter(g => g.d === d && g.hs == null)
+  // (last night's teams: tonight's back-to-backs, without a pass over the schedule for every game)
+  const yday = new Set(); for (const g of F.sched) if (g.d === d - 1) { yday.add(g.h); yday.add(g.a) }
   const news = []
   let mine = null, pending = null
   for (const g of tonight) {
@@ -85,21 +129,21 @@ export function playDay(F, { moments = false, wantMoment = null } = {}) {
       const res = settle(F, g, g.__res); delete g.__res
       mine = logMine(F, g, res); continue
     }
-    const res = playOne(F, g)
+    const res = playOne(F, g, { yday })
     if (own) mine = logMine(F, g, res)
   }
   if (pending) { F.pend = pending; return { pending } }
   return endDay(F, { mine, news })
 }
 function seedOf(F, g, po = false) { return `${F.seed}-${F.year}-${po ? 'po' : 'rs'}-${g.d}-${g.h}-${g.a}${po ? `-${g.n}` : ''}` }
-function prep(F, g, playoff) {
-  const b = playoff ? { h: false, a: false } : b2bOf(F, g)
+function prep(F, g, playoff, yday = null) {
+  const b = playoff ? { h: false, a: false } : yday ? { h: yday.has(g.h), a: yday.has(g.a) } : b2bOf(F, g)
   for (const s of [g.h, g.a]) for (const p of F.teams[s].r) delete p.rest
   if (!playoff) for (const s of [g.h, g.a]) for (const i of X.restFor(F, s, g, b[s === g.h ? 'h' : 'a']) ?? []) { const p = F.teams[s].r.find(x => x.i === i); if (p) p.rest = 1 }
   return b
 }
-export function playOne(F, g, { playoff = false } = {}) {
-  const b2b = prep(F, g, playoff)
+export function playOne(F, g, { playoff = false, yday = null } = {}) {
+  const b2b = prep(F, g, playoff, yday)
   const res = X.simGame(F, g.h, g.a, { seed: seedOf(F, g, playoff), playoff, b2b })
   return settle(F, g, res, { playoff })
 }

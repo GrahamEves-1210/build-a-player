@@ -641,10 +641,12 @@ export function cutCost(F, p, { stretch = false } = {}) {
 }
 // waive him: off the roster to the pool; what's owed stays on the cap (team.dead: { n, $ a season, y seasons }).
 // Returns the dead money this league year.
-export function cutMan(F, short, id, { stretch = false } = {}) {
+export function cutMan(F, short, id, { stretch = false, force = false } = {}) {
   const team = F.teams?.[short]
   const p = team?.r.find(x => x.i === id)
   if (!p) return 0
+  // (the roster floor: in the season the GM's team can't go under 13 standard contracts; season.js cutBlock says why)
+  if (!force && short === F.team && F.phase !== 'off' && !p.tw && standardOf(team).length <= ROSTER_MIN - 1) return 0
   const c = cutCost(F, p, { stretch })
   team.dead ??= []
   const cy = capYear(F)

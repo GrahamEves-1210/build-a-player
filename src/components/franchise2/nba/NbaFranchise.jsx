@@ -58,12 +58,14 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   const retry = useCallback(() => { const X = Fr.current; if (!X) return; pend.current = X; flush() }, [flush])
   useEffect(() => { if (!saveBad) return; const t = setInterval(retry, 8000); return () => clearInterval(t) }, [saveBad, retry])
   // every change is saved once it's on screen (changes in a row are one write); leaving writes it straight away
-  const act = useCallback(fn => {
+  // { save: false }: on screen but not written yet (a sim to the end writes now and then and once when it stops)
+  const sched = useRef(false)
+  const act = useCallback((fn, { save = true } = {}) => {
     const X = Fr.current
     if (!X) return
     const out = fn(X)
-    if (!pend.current) requestAnimationFrame(() => setTimeout(flush, 0))
     pend.current = X
+    if (save && !sched.current) { sched.current = true; requestAnimationFrame(() => setTimeout(() => { sched.current = false; flush() }, 0)) }
     bump(n => n + 1)
     return out
   }, [flush])

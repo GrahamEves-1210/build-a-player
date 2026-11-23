@@ -9,6 +9,8 @@
 // back spasms, calves (3-20), groins, the concussion protocol (1-6), hand and wrist; the long ones a broken hand,
 // an MCL sprain (8-25), a torn meniscus (15-45), a stress fracture in the foot, and the season-enders: a torn ACL
 // (about a year) and a ruptured Achilles (more), each about 3 a season league-wide.
+// The playoffs: a man plays through what would cost him a game or two in the season (those aren't rolled), and a man
+// listed day-to-day plays (rotation.js dressed).
 // Rest: a star on the second night of a back-to-back sits now and then (the Player Participation Policy keeps it rare
 // for the young ones; a 33-year-old sits a third of them), never in the playoffs.
 //
@@ -54,6 +56,7 @@ const manIn = (F, s, i) => F.teams[s]?.r.find(p => p.i === i)
 export function rollInjuries(F, game, res) {
   const R = rngOf(`nba-inj-${F.seed}-${F.year}-${game.d ?? F.day}-${game.h}-${game.a}`)
   const hurt = []
+  const po = !!game.po || game.ser != null || F.phase === 'playoffs' || F.phase === 'playin'
   for (const s of teamsOf(F, res)) {
     const T = F.teams[s]; if (!T) continue
     for (const p of T.r) {
@@ -67,6 +70,8 @@ export function rollInjuries(F, game, res) {
       const [k0, , len] = kindsBy(R)
       const k = k0.replace(SIDED, w => `${R.u() < 0.5 ? 'left' : 'right'} ${w}`)
       const g = lengthOf(R, len)
+      // (in the playoffs a man plays through the soreness and the bug that would sit him a game or two in January)
+      if (po && g <= 2) continue
       p.inj = { g, k }
       if (SEASON_ENDERS.has(k0)) p.inj.se = 1
       hurt.push({ i: p.i, s, k, g })
