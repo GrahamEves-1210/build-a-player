@@ -524,6 +524,17 @@ function Draft({ c, setCareer }) {
               <p>{soccer ? 'Four clubs at his level sit him down, one question each. A good answer raises that club\u2019s interest and lifts what the scouts think of him; a bad one does the opposite. A club that liked him is likelier to offer him a contract.' : canSkipTalk ? 'Four teams picking near his projected range sit him down, one question each. A good answer raises that team\'s interest and moves his stock up about two picks. A bad one can take him off that team\'s board. Skipping a meeting tells the team he isn\'t interested, and it cools on him a little.' : 'Four teams picking near his projected range sit him down, one question each. A good answer raises that team\'s interest and moves his stock up about two picks; a bad one does the opposite. On draft day, a team that liked him is likelier to take him when he\'s still on the board at its pick.'}</p>
             </div>
           )}
+          {/* (Sandbox: who drafts him, from the first interview on, not only once they're done: a player didn't find it, 11-22) */}
+          {canPickTeam && (
+            <div className="cr-contract cr-jersey cr-draft-to">
+              <span><span className="ag-eyebrow">SANDBOX · DRAFTED BY</span>{draftTo ? <b className="cr-draft-to-team"><img src={logoFor(draftTo)} alt="" />{teamName(draftTo)}</b> : <b>Wherever the draft takes him</b>}</span>
+              <span className="cr-draft-to-acts">
+                {draftTo && <button type="button" className="cr-jersey-go cr-draft-to-clear" onClick={() => { setDraftTo(null); sfx('tap') }}>CLEAR</button>}
+                <button type="button" className="cr-jersey-go" onClick={() => { setTeamPick(true); sfx('tap') }}>{draftTo ? 'CHANGE' : 'PICK A TEAM'}</button>
+              </span>
+            </div>
+          )}
+          {teamPick && <TeamPickerModal anyTeam teams={pickTeams} eyebrow="Sandbox · The Draft" onCancel={() => setTeamPick(false)} onSelect={t => { setDraftTo(t.short); setTeamPick(false) }} />}
           {!done ? (
             <div className="cr-q ag-pop" key={i}>
               <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
@@ -536,17 +547,7 @@ function Draft({ c, setCareer }) {
               {soccer
                 ? <p className="cr-q-text">The meetings are done. The scouts have {c.name} down as <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => x.a[x.answer].stock > 0).map(x => teamName(x.team)); return fans.length ? `. ${fans.length > 1 ? `${fans.slice(0, -1).join(', ')} and ${fans[fans.length - 1]}` : fans[0]} came away the keenest.` : '. No club came away sold, so it comes down to the trials.' })()}</p>
                 : <p className="cr-q-text">The interviews are done. {c.name} is projected to go <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => !talkSkipped(x) && x.a[x.answer]?.stock > 0).map(x => nick(teamName(x.team))), skipped = list.filter(talkSkipped).map(x => nick(teamName(x.team))), and = l => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0]); return `${fans.length ? `. The ${and(fans)} came away the most interested.` : '. No team came away sold, so it comes down to need.'}${skipped.length ? ` He skipped the ${and(skipped)}.` : ''}` })()}</p>}
-              {canPickTeam && (
-                <div className="cr-contract cr-jersey cr-draft-to">
-                  <span><span className="ag-eyebrow">SANDBOX · DRAFTED BY</span>{draftTo ? <b className="cr-draft-to-team"><img src={logoFor(draftTo)} alt="" />{teamName(draftTo)}</b> : <b>Wherever the draft takes him</b>}</span>
-                  <span className="cr-draft-to-acts">
-                    {draftTo && <button type="button" className="cr-jersey-go cr-draft-to-clear" onClick={() => { setDraftTo(null); sfx('tap') }}>CLEAR</button>}
-                    <button type="button" className="cr-jersey-go" onClick={() => { setTeamPick(true); sfx('tap') }}>{draftTo ? 'CHANGE' : 'PICK A TEAM'}</button>
-                  </span>
-                </div>
-              )}
               <button className="ag-btn ag-btn--gold tk-intro-go" onClick={async () => { if (c.sport === 'nfl') await loadDraftClass(); setCareer(runDraft({ ...c, step: 'day', ...(canPickTeam && draftTo ? { draftTeam: draftTo } : null) })); setStep(soccer ? 'offers' : 'day'); setShown(0); sfx('whistle') }}>{soccer ? 'THE OFFERS' : 'DRAFT DAY'} <IconArrow size={16} /></button>
-              {teamPick && <TeamPickerModal anyTeam teams={pickTeams} eyebrow="Sandbox · The Draft" onCancel={() => setTeamPick(false)} onSelect={t => { setDraftTo(t.short); setTeamPick(false) }} />}
             </div>
           )}
         </div>
