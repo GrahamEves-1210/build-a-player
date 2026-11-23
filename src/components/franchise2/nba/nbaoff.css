@@ -95,8 +95,10 @@
 .fk-actbar.nbo-confirm { grid-auto-flow: row; grid-template-columns: 1fr; gap: 8px; }
 .nbo-confirm-q { display: grid; gap: 2px; margin: 0; font-family: var(--fk-b); font-weight: 700; font-size: 16px; color: #fff; }
 .nbo-confirm-q small { font-weight: 600; font-size: 13px; color: var(--fk-mute); }
-.nbo-two { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
-.nbo-two.is-three { grid-template-columns: 1fr 1fr 1fr; }
+.nbo-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 8px; min-width: 0; }
+.nbo-two.is-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nbo-two > .fk-go { min-width: 0; padding-left: 8px; padding-right: 8px; }
+@media (max-width: 400px) { .nbo-two.is-three .fk-go-arrow { display: none; } }
 
 /* re-sign */
 .nbo-rs { display: grid; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--fk-line); }

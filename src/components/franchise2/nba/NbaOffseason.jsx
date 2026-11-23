@@ -678,7 +678,8 @@ function Wire({ F, all = false }) {
   )
 }
 function FaDone({ F }) {
-  const mine = (F.off?.wire ?? []).filter(x => x[2] === F.team).map(x => manOf(F, x[1])).filter(Boolean)
+  // (the men the summer brought in who are still on the roster)
+  const mine = (F.off?.wire ?? []).filter(x => x[2] === F.team && teamOfMan(F, x[1]) === F.team).map(x => manOf(F, x[1])).filter(Boolean)
   return (
     <section className="nb-fa">
       <Chyron team={F.team} title="Free agency" sub={`${mine.length} ${mine.length === 1 ? 'SIGNING' : 'SIGNINGS'} FOR THE ${nick(F.team).toUpperCase()}`} />
@@ -735,7 +736,7 @@ function Camp({ F, act, go, owner }) {
       {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
       {man ? (
         <ActionBar className="nbo-confirm">
-          <p className="nbo-confirm-q">{`Waive ${man.n}?`}<small>{dead > 0 ? (cost.years > 1 ? `Dead money: ${money(cost.now ?? dead)} this season, ${money(dead)} over ${cost.years} seasons` : `Dead money: ${money(dead)}, this season`) : 'No dead money: nothing left on his deal is guaranteed'}{canStretch ? `. Stretched: ${money(costS.now)} a season for ${costS.years} seasons` : ''}</small></p>
+          <p className="nbo-confirm-q">{`Waive ${man.n}?`}<small>{dead > 0 ? (cost.years > 1 ? `Dead money: ${money(cost.now ?? dead)} this season, ${money(dead)} over ${cost.years} seasons` : `Dead money: ${money(dead)} this season`) : 'No dead money: nothing left on his deal is guaranteed'}{canStretch ? `. Stretched: ${money(costS.now)} a season for ${costS.years} seasons` : ''}</small></p>
           <div className={`nbo-two${canStretch ? ' is-three' : ''}`}>
             <Go ghost onClick={() => { setSel(null); sfx('back') }}>Keep</Go>
             <Go disabled={!armed} onClick={() => cut(false)}>Waive</Go>
