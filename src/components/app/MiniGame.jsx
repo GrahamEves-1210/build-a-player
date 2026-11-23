@@ -45,6 +45,9 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   const v = Math.min(11, (hard ? Math.max(1, real * 0.7) : real) + ease * 0.75)
   const lockKey = lock ? `bap_mg_${lock}` : null
   const unlock = () => { if (lockKey) try { localStorage.removeItem(lockKey) } catch {} }
+  // (read once as it opens: the dev server's StrictMode runs the effects twice, and the second check found the lock this
+  // very run had just set, booking a drill that had only started as a miss)
+  const [leftAtOpen] = useState(() => { if (!lockKey || sim) return false; try { return !!localStorage.getItem(lockKey) } catch { return false } })
   const done = r => {
     if (result) return
     const perfect = !!r.raw && r.raw.of > 0 && r.raw.made === r.raw.of
@@ -74,9 +77,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   }, [sim]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (sim || !lockKey) return
-    let left = false
-    try { left = !!localStorage.getItem(lockKey) } catch {}
-    if (left) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
+    if (leftAtOpen) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!sim && lockKey && stage === 'play') try { localStorage.setItem(lockKey, '1') } catch {} }, [stage]) // eslint-disable-line react-hooks/exhaustive-deps
   // a test hook for the dev server only (a live build has no way to force a score)

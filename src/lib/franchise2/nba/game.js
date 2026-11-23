@@ -346,7 +346,9 @@ const sideOf = (F, s) => ({ short: s, men: dressed(F.teams[s]), set: setOf(F.tea
 export function startGame(F, home, away, { seed = null, playoff = false } = {}) {
   return newGame({ seed: seed ?? `${F.seed}-${F.year}-${F.day}-${home}-${away}`, po: playoff, home: sideOf(F, home), away: sideOf(F, away) })
 }
-export const playTo = (G, left = 0) => run(G, { stop: S => S.per >= 4 && S.clock <= left + 0.01 })
+// (when: a key moment's test at each whistle from there on, season.js momentStart: the ball, the score and the clock
+// decide it; the game plays on, into overtime too, until one fits or it's over)
+export const playTo = (G, left = 0, when = null) => run(G, { stop: S => S.per >= 4 && S.clock <= left + 0.01 && (!when || when(S)) })
 // a moment's possession, in the moment's terms (the header)
 const MID_KINDS = new Set(['mid', 'iso', 'clutch-shot', 'half-court', 'read'])
 export function possession(G, short, o = {}) {
@@ -354,14 +356,15 @@ export function possession(G, short, o = {}) {
   hot(G)
   const k = G.h.short === short ? 'h' : 'a', T = G[k]
   G.poss = k
-  let who = o.by != null && T.by.has(o.by) ? o.by : null
+  // (a man with six fouls is done for the night: the play goes to whoever the sim gives it to)
+  let who = o.by != null && T.by.has(o.by) && G.box[o.by].pf < 6 && !T.out.includes(o.by) ? o.by : null
   // the moment's man is on the floor: in for the man playing the fewest minutes tonight
   if (who != null && !T.floor.includes(who)) {
     const out = [...T.floor].sort((x, y) => (T.rot.min[x] ?? 0) - (T.rot.min[y] ?? 0))[0]
     T.floor[T.floor.indexOf(out)] = who; T.on = T.floor.map(id => T.pr.get(id))
   }
   // (and the man who set it up)
-  if (o.ast != null && o.ast !== who && T.by.has(o.ast) && !T.floor.includes(o.ast)) {
+  if (o.ast != null && o.ast !== who && T.by.has(o.ast) && !T.floor.includes(o.ast) && G.box[o.ast].pf < 6 && !T.out.includes(o.ast)) {
     const out = [...T.floor].filter(id => id !== who).sort((x, y) => (T.rot.min[x] ?? 0) - (T.rot.min[y] ?? 0))[0]
     T.floor[T.floor.indexOf(out)] = o.ast; T.on = T.floor.map(id => T.pr.get(id))
   }
@@ -377,6 +380,32 @@ export function possession(G, short, o = {}) {
   else forced = { who, shot, made: pts > 0, foul: pts === 4 || (pts === 3 && shot !== 'three'), ft1: pts === 4 || (pts === 3 && shot !== 'three') ? true : null, ast, t }
   if (who == null) delete forced.who
   return play(G, forced)
+}
+// After a key moment's possession, the seconds left in it (season.js finishMoment). sealed (his team landed the moment
+// and is ahead: the owner's rule, a landed game-winner wins; lib/inGame.js bkSealed is the Career's): the other side's
+// last look comes up empty and the clock runs out. Otherwise a trip with five seconds or less is a desperation shot
+// (a heave from past half court with a second or so, a hurried look from deep with two or three, a quick one with
+// four or five); the team ahead with the ball runs the clock out. More time than that, the sim plays it as it would.
+// Returns the last trip ({ k, by, made, t, shot }), or null.
+export function momentEnd(G, short, { sealed = false } = {}) {
+  if (G.done) return null
+  hot(G)
+  const us = G.h.short === short ? 'h' : 'a', left = G.clock
+  let trip = null
+  if (sealed) {
+    if (G.poss !== us && left > 0) { const by = actor(G, G.poss); trip = { k: G.poss, by, made: false, t: left, shot: 'three' }; play(G, { who: by, shot: 'three', made: false, foul: false, ast: null, t: left }) }
+    if (!G.done) { G.poss = us; tick(G, G.clock) }
+    return trip
+  }
+  if (left > 5) return null
+  const k = G.poss
+  if (lead(G, k) > 0) { tick(G, left); return null }
+  const by = actor(G, k)
+  const shot = left < 3 || lead(G, k) <= -3 ? 'three' : 'mid'
+  const made = G.R.u() < (left < 1.5 ? 0.03 : left < 3.5 ? 0.1 : 0.3)
+  trip = { k, by, made, t: left, shot }
+  play(G, { who: by, shot, made, foul: false, t: left })
+  return trip
 }
 export function toRes(r) {
   const out = {}

@@ -462,7 +462,7 @@ export default function BucketApp() {
       : { starters: false, oneTeam: null }
   })
   // a reload on the build page lands back on it (lib/buildSave.js); opened fresh, the build waits on Home's CONTINUE card
-  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : 'splash' })
+  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : 'splash' })   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? saved?.gameMode ?? null)
   const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; if (saved) return saved.position; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
   const [build, setBuild]             = useState(() => liveAt?.build ?? saved?.build ?? {})

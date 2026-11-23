@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, nick, manOf, momentPlan, momentDone, momentSim, dateText, ROUND_NAME, seriesText } from '../../../lib/franchise2/nba'
+import { TEAM, nick, manOf, momentPlan, momentDone, momentSim, momentText, dateText, seriesText, poTag } from '../../../lib/franchise2/nba'
+import { markBuildPage } from '../../../lib/buildSave'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { GAMES } from '../../../lib/minigames'
@@ -12,19 +13,31 @@ import { fkVars, KLogo, Scorebug, Stamp, Go, ActionBar, Chyron, LowerThird, redu
 import { photoOf } from '../../../lib/franchise2/nba'
 
 // GAME DAY: the GM's game as a broadcast. The scorebug runs the game a quarter at a time (a tap skips to the end);
-// a close one stops with about 24 seconds left for the key moment, a real possession (moments.js); then the final.
+// a close one stops at a whistle in the last 24 seconds for the key moment, a real possession (moments.js); then the
+// final.
 //   start: { row } a game already played (the log's row) · { pend: true } a moment waiting (F.pend)
+// A mini game left before it finished (a reload, a closed tab) is a miss: MiniGame's lock, and the moment's screen
+// books it the moment it opens again (the game is seeded: a replay would be a free practice run)
+const lockOf = plan => `nba-${plan.seed}`
+const wasLeft = plan => { try { return !!localStorage.getItem(`bap_mg_${lockOf(plan)}`) } catch { return false } }
 export default function NbaGame({ F, act, start, owner, onDone }) {
   const [row, setRow] = useState(start.row ?? null)
-  const [phase, setPhase] = useState(start.pend ? 'moment' : 'live')
   const plan = useMemo(() => (start.pend ? momentPlan(F) : null), []) // eslint-disable-line react-hooks/exhaustive-deps
-  const finish = r => {
+  const [phase, setPhase] = useState(start.pend ? (plan && wasLeft(plan) ? 'left' : 'moment') : 'live')
+  const finish = (r, left = false) => {
     const before = F.log.length
     act(X => { r ? momentDone(X, plan, r) : momentSim(X, plan) })
     const rw = F.log[F.log.length - 1]
-    if (F.log.length > before) { setRow({ ...rw, moment: { plan, hit: !!r?.hit, sim: !r } }); setPhase('final') }
+    if (F.log.length > before) { setRow({ ...rw, moment: { plan, hit: !!r?.hit, sim: !r, left } }); setPhase('final') }
     else onDone()
   }
+  const booked = useRef(false)
+  useEffect(() => {
+    if (phase !== 'left' || booked.current) return
+    booked.current = true
+    try { localStorage.removeItem(`bap_mg_${lockOf(plan)}`) } catch {}
+    finish({ hit: false, raw: null, out: false }, true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return createPortal(
     <div className="fk-root fk nb-gd" style={fkVars(F.team)} role="dialog" aria-label="Game">
       {phase === 'live' && row && <Live F={F} row={row} onEnd={() => setPhase('final')} />}
@@ -62,23 +75,28 @@ function Live({ F, row, onEnd }) {
   )
 }
 
-// the moment: where the game is, who has the ball, the man the play is drawn up for
+// the moment: where the game is (the real clock and period), who has the ball, the man the play is drawn up for, and
+// in the playoffs where the series stands
 function Moment({ F, plan, onPlay, onSim }) {
   const P = F.pend
   const { situation: S } = plan
   const me = manOf(F, plan.man)
   const a = P.h === F.team ? P.a : F.team
   const h = P.h
-  const as = P.h === F.team ? P.them : P.us, hs = P.h === F.team ? P.us : P.them
+  const as = P.h === F.team ? S.opp : S.mine, hs = P.h === F.team ? S.mine : S.opp
+  const ballSide = (plan.def ? h !== F.team : h === F.team) ? 'h' : 'a'
   const mode = F.moments ?? 'advanced'
   const title = (mode === 'simple' ? SIMPLE_GAMES[plan.game]?.title : null) ?? GAMES[plan.game]?.title ?? 'KEY MOMENT'
+  const tag = P.po != null ? (poTag(F) === 'PLAY-IN' ? 'PLAY-IN' : P.n ? `GAME ${P.n}` : 'PLAYOFFS') : 'KEY MOMENT'
+  const role = plan.spot === 'ft' ? 'AT THE LINE' : plan.def ? 'ON THE BALL' : 'LAST SHOT'
   useEffect(() => { sfx('swap'); haptic('medium') }, [])
   return (
     <div className="nb-gd-moment">
-      <Scorebug a={a} h={h} as={as} hs={hs} per="4TH" clock={plan.game === "clutch-shot" ? `0:${P.left ?? 24}` : S.clockText} label="KEY MOMENT" />
-      <Chyron team={F.team} tag="KEY MOMENT" title={title} sub={S.line.toUpperCase()} />
+      <Scorebug a={a} h={h} as={as} hs={hs} per={S.period} clock={S.clockText} poss={ballSide} label="KEY MOMENT" />
+      <Chyron team={F.team} tag={tag} title={title} sub={S.line.toUpperCase()} />
+      {S.series && <p className="nb-gd-tail">{S.series}</p>}
       <p className="nb-gd-tail">{S.tail}</p>
-      {me && <LowerThird name={me.n} pos={me.p} num={me.num} ovr={me.o} photo={manPhoto(F, me)} team={F.team} line={plan.def ? 'ON THE BALL' : 'THE BALL IN HIS HANDS'} />}
+      {me && <LowerThird name={me.n} pos={me.p} num={me.num} ovr={me.o} photo={manPhoto(F, me)} team={F.team} line={role} />}
       <ActionBar>
         <Go onClick={() => { sfx('tap'); mode === 'off' ? onSim() : onPlay() }}>{mode === 'off' ? 'Sim the possession' : 'Play it'}</Go>
         {mode !== 'off' && <button type="button" className="fh-textbtn" onClick={onSim}>Sim it</button>}
@@ -86,10 +104,23 @@ function Moment({ F, plan, onPlay, onSim }) {
     </div>
   )
 }
+// the mini game: the five on the floor on both sides, the real score and clock. The how-to (MiniGame's intro) shows the
+// first time he plays each game here, then it starts straight away. The lock books a run he leaves as a miss, and a
+// reload comes back to basketball Franchise (lib/buildSave.js; main.jsx puts a reload on /minigame back where it was)
+const SEEN = 'bap_nba_mg_seen'
+const seenOf = () => { try { return JSON.parse(localStorage.getItem(SEEN) || '[]') } catch { return [] } }
 function Play({ F, plan, onDone }) {
   const mode = F.moments ?? 'advanced'
-  const p = { game: plan.game, build: plan.build, seed: plan.seed, team: plan.team, opp: plan.opp, pos: plan.g, cast: plan.cast, situation: plan.situation, autoStart: true, home: F.pend?.h === F.team ? 'team' : 'opp' }
-  if (mode === 'simple' && SIMPLE_GAMES[plan.game]) return <MiniGameSimple game={p.game} build={p.build} pos={p.pos} seed={p.seed} situation={p.situation} onDone={onDone} autoStart />
+  const [auto] = useState(() => seenOf().includes(`${mode === 'simple' ? 's:' : ''}${plan.game}`))
+  useEffect(() => {
+    markBuildPage('bucket', 'nbafranchise')
+    try { sessionStorage.setItem('bap_frnba_moment', String(F.slot ?? 0)) } catch {}
+    try { const k = `${mode === 'simple' ? 's:' : ''}${plan.game}`, l = seenOf(); if (!l.includes(k)) localStorage.setItem(SEEN, JSON.stringify([...l, k])) } catch {}
+    return () => { try { sessionStorage.removeItem('bap_frnba_moment') } catch {} }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const lock = lockOf(plan)
+  const p = { game: plan.game, build: plan.build, seed: plan.seed, team: plan.team, opp: plan.opp, pos: plan.g, cast: plan.cast, situation: plan.situation, autoStart: auto, lock, home: F.pend?.h === F.team ? 'team' : 'opp' }
+  if (mode === 'simple' && SIMPLE_GAMES[plan.game]) return <MiniGameSimple game={p.game} build={p.build} pos={p.pos} seed={p.seed} situation={p.situation} onDone={onDone} autoStart={auto} lock={lock} />
   if (!GAMES[plan.game]) return <MiniGame {...p} sim onDone={onDone} />
   return <MiniGame {...p} onDone={onDone} />
 }
@@ -119,11 +150,10 @@ function Final({ F, row, owner, onDone }) {
     </div>
   )
 }
+// the moment's line, from what happened on the board (moments.js momentText)
 function momentLine(F, mo, row) {
-  const p = manOf(F, mo.plan.man)
-  const n = p ? p.n.split(' ').slice(-1)[0] : 'He'
-  if (mo.plan.def) return mo.hit ? `${n} gets the stop` : `${n} can't get the stop`
-  return mo.hit ? `${n} scores on the last possession` : `${n} misses on the last possession`
+  const t = momentText(F, row)
+  return `${mo.left ? 'Left before it finished: counted as a miss. ' : ''}${t ?? ''}`
 }
 
 // the box score (SquadSeason's BoxSheet, basketball): the GM's team's men, their minutes and their lines
