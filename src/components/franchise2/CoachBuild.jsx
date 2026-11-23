@@ -9,7 +9,8 @@ import { sfx, haptic } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
 import { Chyron, LowerThird, BigNum, Go, Meter, KLogo, fkVars, splitName, reduced } from './kit'
 import { coachPhoto, teamMark } from './coachFace'
-import { LeagueRules } from './Rules'
+import { LeagueRules } from './Rules'
+
 import { teamKit } from '../../lib/franchise2/kits'
 
 // THE COACH: built like a player. The wheel is the league's real head coaches (not the player's own team's); it
@@ -212,7 +213,7 @@ export function CoachReveal({ S, owner, onStart, onRules }) {
       <Chyron team={S.team} title={`${TEAM[S.team].nick} hire ${lastOf(name)}`} sub={real ? `REPLACES ${real.name.toUpperCase()}` : 'HEAD COACH'} />
       <CoachCard c={{ ...c, name, r }} team={S.team} from={from} />
       {/* (the league rules, kept for the save and changed any time on the hub: Rules.jsx) */}
-      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true }} nick={TEAM[S.team].nick} onChange={onRules} /></section>}
+      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, sandbox: S.rules?.sandbox ?? !!S.sandbox }} nick={TEAM[S.team].nick} onChange={onRules} /></section>}
       <div className="fsu-acts"><Go onClick={onStart}>Start the season</Go></div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { LeagueRules } from './Rules'
 import { TEAM, buildTeams, calibrate, strength, lineup, replacedBy, sideGrade, POS, POS_LABEL, DIVISIONS, DIV_OF, realHC, coachGrade, newCoachBuild, linesDone } from '../../lib/franchise2'
 import { coachPhoto } from './coachFace'
 import { lastSeason } from '../../lib/franchise2/lastSeason'
@@ -66,14 +67,14 @@ export default function Setup({ setup, owner, put, onBuild, onStart, onBack }) {
       </div>
       <div className="fsu-body" key={naming ? `n-${naming}` : step}>
         {naming ? <NameStep S={S} id={naming} owner={owner} onDone={patch => go({ ...patch, naming: null }, 'claim')} />
-          : step === 'pace' ? <PaceStep pick={S.pace} onPick={p => { go({ pace: p, step: 'team' }, 'tap'); haptic('light') }} />
+          : step === 'pace' ? <PaceStep pick={S.pace} onPick={p => { go({ pace: p, step: 'team' }, 'tap'); haptic('light') }} rules={rulesIn(S)} onRules={r => go({ rules: { ...rulesIn(S), ...r } }, 'tap')} />
           : step === 'team' ? <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} />
             : step === 'card' ? <TeamCard s={S.team} onPick={t => go({ team: t }, 'tap')} onGo={() => { go({ step: 'builds' }, 'whistle'); haptic('medium') }} />
               : step === 'builds' ? <Builds S={S} go={go} owner={owner} onBuild={onBuild} />
                 : step === 'coach' ? (S.cb?.team === S.team ? <CoachSpin S={S} go={go} onDone={() => go({ step: 'style' }, 'whistle')} /> : null)
                   : step === 'style' ? <StylePick S={S} go={go} onDone={() => go({ step: 'who' }, 'tap')} />
                     : step === 'who' ? <CoachWho S={S} go={go} owner={owner} onDone={() => go({ step: 'hire' }, 'whistle')} />
-                      : step === 'hire' && S.cb && linesDone(S.cb) ? <CoachReveal S={S} owner={owner} onStart={onStart} onRules={r => go({ rules: { cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, ...r } })} /> : null}
+                      : step === 'hire' && S.cb && linesDone(S.cb) ? <CoachReveal S={S} owner={owner} onStart={onStart} onRules={r => go({ rules: { ...rulesIn(S), ...r } })} /> : null}
       </div>
     </div>
   )
@@ -85,7 +86,9 @@ const PACES = [
   ['full', 'FULL', 'Play the season week by week and run every offseason step yourself. About 30 minutes a season.'],
   ['light', 'LIGHT', 'The season in three stretches, the offseason in three steps. About 5 minutes a season.'],
 ]
-function PaceStep({ pick, onPick }) {
+// the league rules as the setup holds them (every one on but Sandbox, until he changes them)
+const rulesIn = S => ({ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, sandbox: S.rules?.sandbox ?? !!S.sandbox })
+function PaceStep({ pick, onPick, rules, onRules }) {
   return (
     <div className="fsu-pace">
       <Chyron tone="ink" title="How do you want to run your franchise?" />
@@ -94,6 +97,8 @@ function PaceStep({ pick, onPick }) {
           <b>{name}</b><span>{line}</span>
         </button>
       ))}
+      {/* (the league rules from the start, owner 11-23: the cap off, injuries off, Sandbox; the last screen and the hub have them too) */}
+      <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={rules} onChange={onRules} /></section>
     </div>
   )
 }
