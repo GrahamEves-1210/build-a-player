@@ -477,7 +477,7 @@ function Resign({ F, act, go }) {
       <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${nick(F.team).toUpperCase()} ${men.length === 1 ? 'FREE AGENT' : 'FREE AGENTS'}` : 'NOBODY LEFT TO DECIDE ON'} />
       {men.length > 0 && (
         <p className="nbo-note">
-          {`Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off the ${nick(F.team)} books. Anyone still undecided when re-signing ends is renounced too. A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs. Without it he becomes an unrestricted free agent.`}
+          {`Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off the ${poss(nick(F.team))} books. Anyone still undecided when re-signing ends is renounced too. A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs. Without it he becomes an unrestricted free agent.`}
           {!free && allHolds > 0.05 && ` Renouncing every unrestricted man here clears ${money(allHolds)} in holds${roomIf(allHolds) > 0.05 ? ` (${money(sheet.room + roomIf(allHolds))} in cap room)` : `; the ${nick(F.team)} would still be over the cap`}.`}
         </p>
       )}
@@ -540,6 +540,8 @@ function ResignDone({ F }) {
 // the market as a list he can sort through on a phone: by spot, and by whether he can fit the man; a row opens his
 // offer. With the cap engine's offers (offerSheet: an offer, or an offer sheet to a restricted man, that he answers
 // when the next day opens) the GM bids; once the days are done (or without that call) he signs a man at his ask.
+// (a team's possessive: the Hornets' books, the Heat's)
+const poss = n => (/s$/.test(n) ? `${n}'` : `${n}'s`)
 const VIA = { room: 'cap room', rmle: 'the room mid-level', mle: 'the mid-level exception', tmle: 'the taxpayer mid-level', bae: 'the bi-annual exception', min: 'a minimum deal', bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bird rights', rookie: 'the rookie scale', tw: 'a two-way deal' }
 const SPOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 const faDays = () => CAP_SIM.FA_DAYS ?? 6
@@ -628,7 +630,7 @@ function FreeAgency({ F, act, go }) {
       </div>
       <div className="nbo-fa-list">
         {shown.map(({ p, d, c }) => <FaRow key={p.i} F={F} p={p} d={d} c={c} open={open === p.i} onOpen={() => { setOpen(o => (o === p.i ? null : p.i)); setWhy(null); sfx('tap') }} bids={bids} onSign={sign} onOffer={offer} onPull={pull} />)}
-        {!shown.length && <p className="nbo-note">{fits ? `Nobody on the market fits under the ${nick(F.team)} cap or exceptions now. Tap the filter to see everyone, or look at the minimum deals below.` : 'Nobody left at this spot.'}</p>}
+        {!shown.length && <p className="nbo-note">{fits ? `Nobody on the market fits under the ${poss(nick(F.team))} cap or exceptions now. Tap the filter to see everyone, or look at the minimum deals below.` : 'Nobody left at this spot.'}</p>}
       </div>
       {why && <p className="nb-why">{why}</p>}
       <MinDeals F={F} act={act} />
