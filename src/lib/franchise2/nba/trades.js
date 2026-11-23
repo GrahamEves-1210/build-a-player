@@ -532,11 +532,12 @@ export function checkTrade(F, deal) {
   if (!ra.ok) return ra
   const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa), deal.cut?.[b] ?? 0)
   if (!rb.ok) return rb
-  // (the GM's owner: a deal that adds salary stops at his ceiling; one that cuts payroll always goes. The league's teams have none)
+  // (the GM's owner: a deal that adds salary stops at his ceiling; one that cuts payroll always goes, and a man on the
+  // minimum comes in past it, as he signs past it (contracts.js canSign). The league's teams have none)
   for (const [s, r] of [[a, ra], [b, rb]]) {
-    if (s !== F.team || F.noCap || !(r.I > r.O + 0.001)) continue
+    if (s !== F.team || F.noCap || !(r.IM > r.O + 0.001)) continue
     const o = ownerCap(F)
-    if (r.after > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
+    if (r.after - (r.I - r.IM) > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
   }
   const P = picksAfter(F, deal)
   for (const s of [a, b]) if (!stepienOk(F, s, P)) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
