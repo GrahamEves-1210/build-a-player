@@ -358,7 +358,7 @@ export function play(S, forced = null) {
 //   tied or a possession behind under 24: hold for the last shot (down three: a three; down two: mostly the two to tie)
 //   behind with time: push the pace; four or more down (or three late) look for a three
 function endgame(S, k) {
-  const R = S.R, O = S[k], dk = other(k), up = lead(S, k)
+  const R = S.R, O = S[k], dk = other(k), up = lead(S, k), m0 = S.EV ? S.EV.length : 0
   if (up > 0) {
     const foul = up <= 3 ? S.clock <= 24 && R.u() < 0.92 : up <= 6 ? S.clock <= 35 && R.u() < 0.8 : up <= 8 && S.clock <= 24 && R.u() < 0.4
     if (foul) {
@@ -369,6 +369,7 @@ function endgame(S, k) {
       const inn = freeThrows(S, k, who, 2)
       const reb = inn ? null : miss(S, k, who, 'ft')
       const per = S.per
+      stamp(S, m0, S.clock - t)   // (the play-by-play's clock for the foul and the shots: it never draws the dice)
       tick(S, t)
       if (reb == null && !S.done && S.per === per) S.poss = dk
       return true

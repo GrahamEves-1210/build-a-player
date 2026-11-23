@@ -454,8 +454,10 @@ export function canSign(F, short, p, d) {
   if (after > hc + 0.01) return { ok: false, why: `It would put the ${short} over ${LINE_TEXT[team.exc?.hc] ?? 'their hard cap'} ($${r1(hc)}M), their hard cap this league year`, k: 'hc' }
   // rookies: his scale
   if (d.rs) return { ok: true, via: 'rookie' }
-  // the GM's owner: no new money past his ceiling (a minimum deal always goes)
-  if (short === F.team && !isMin) {
+  // the GM's owner: no new money past his ceiling (a minimum deal always goes, and so does keeping one of his own men at
+  // the taxpayer mid-level's size or less: owners sign off on a role player; a roster can't go short for $5M)
+  const small = (own === 'bird' || own === 'ebird' || own === 'nbird') && first <= excOf('tp', year) + 0.01
+  if (short === F.team && !isMin && !small) {
     const o = ownerCap(F, year)
     if (after > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
   }
