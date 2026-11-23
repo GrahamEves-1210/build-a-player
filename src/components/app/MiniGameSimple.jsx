@@ -242,11 +242,12 @@ export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoSt
   // miss. The game is seeded, so replaying it after a reload was a free practice run
   const lockKey = lock ? `bap_mg_${lock}` : null
   const unlock = () => { if (lockKey) try { localStorage.removeItem(lockKey) } catch {} }
+  // (read once as it opens: the dev server's StrictMode runs the effects twice, and the second check found the lock this
+  // very run had just set, booking a drill that had only started as a miss)
+  const [leftAtOpen] = useState(() => { if (!lockKey) return false; try { return !!localStorage.getItem(lockKey) } catch { return false } })
   useEffect(() => {
     if (!lockKey) return
-    let left = false
-    try { left = !!localStorage.getItem(lockKey) } catch {}
-    if (left) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
+    if (leftAtOpen) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (lockKey && stage === 'play') try { localStorage.setItem(lockKey, '1') } catch {} }, [stage]) // eslint-disable-line react-hooks/exhaustive-deps
   // a test hook for the dev server only (a live build has no way to force a score)

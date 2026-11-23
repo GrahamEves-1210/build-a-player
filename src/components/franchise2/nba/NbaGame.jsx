@@ -31,8 +31,10 @@ export default function NbaGame({ F, act, start, owner, onDone }) {
     if (F.log.length > before) { setRow({ ...rw, moment: { plan, hit: !!r?.hit, sim: !r, left } }); setPhase('final') }
     else onDone()
   }
+  const booked = useRef(false)
   useEffect(() => {
-    if (phase !== 'left') return
+    if (phase !== 'left' || booked.current) return
+    booked.current = true
     try { localStorage.removeItem(`bap_mg_${lockOf(plan)}`) } catch {}
     finish({ hit: false, raw: null, out: false }, true)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -85,8 +87,8 @@ function Moment({ F, plan, onPlay, onSim }) {
   const ballSide = (plan.def ? h !== F.team : h === F.team) ? 'h' : 'a'
   const mode = F.moments ?? 'advanced'
   const title = (mode === 'simple' ? SIMPLE_GAMES[plan.game]?.title : null) ?? GAMES[plan.game]?.title ?? 'KEY MOMENT'
-  const tag = P.po != null ? (poTag(F) === 'PLAY-IN' ? 'PLAY-IN' : `${ROUND_NAME[F.po?.rd] ?? 'PLAYOFFS'}${P.n ? ` · GAME ${P.n}` : ''}`) : 'KEY MOMENT'
-  const role = plan.spot === 'ft' ? 'AT THE LINE' : plan.def ? (plan.g === 'big' ? 'SWITCHED ON THE BALL' : 'ON THE BALL') : 'LAST SHOT'
+  const tag = P.po != null ? (poTag(F) === 'PLAY-IN' ? 'PLAY-IN' : P.n ? `GAME ${P.n}` : 'PLAYOFFS') : 'KEY MOMENT'
+  const role = plan.spot === 'ft' ? 'AT THE LINE' : plan.def ? 'ON THE BALL' : 'LAST SHOT'
   useEffect(() => { sfx('swap'); haptic('medium') }, [])
   return (
     <div className="nb-gd-moment">

@@ -82,13 +82,6 @@ window.addEventListener('vite:preloadError', e => {
   window.location.reload()
 })
 
-// a reload on a mini game's own address (lib/ads.js minigameOpen) goes back to the page it was opened from, this tab's
-// (basketball Franchise's moment came from /bucket: without this it opened football's Home)
-if (window.location.pathname === '/minigame') {
-  let to = '/'
-  try { const s = sessionStorage.getItem('bap_mg_from'); if (s && s[0] === '/' && s[1] !== '/' && !s.startsWith('/minigame')) to = s } catch {}
-  window.history.replaceState(window.history.state, '', to)
-}
 const isBucket = window.location.pathname.startsWith('/bucket')
 if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
 // /soccer while soccer is off: its Home under the COMING SOON board (SOCCER_SOON), or football's Home without it

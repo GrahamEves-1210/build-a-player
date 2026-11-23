@@ -10,7 +10,7 @@ import { NBA_GUARD_PLAYERS } from '../../../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../../../data/nba-bigs'
 import { momentFacts } from '../../situations'
 import { TEAM, manOf } from './league'
-import { finishMoment, momentSpot } from './season'
+import { finishMoment, momentSpot, ROUND_NAME } from './season'
 import { rngOf } from '../rng'
 
 const RAW = new Map([...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].map(r => [r.name, r]))
@@ -23,11 +23,18 @@ export function castMan(p, me = false) {
   const r = RAW.get(p.n)
   return { name: lastOf(p.n), number: p.num ?? r?.number ?? (hashOf(p.n) % 45), skin: r?.skin ?? SKIN[hashOf(p.n) % SKIN.length], speed: Math.max(-1, Math.min(1, ((p.a?.speed ?? 6) - 6) / 5)), ...(me && { me: true }) }
 }
-// the games' shape for five men: { guard: [...], big: [...] } (his man first in his group)
-const castOf = (men, me = null) => ({
-  guard: men.filter(p => p.g === 'guard').map(p => castMan(p, p === me)).sort((x, y) => !!y.me - !!x.me),
-  big: men.filter(p => p.g === 'big').map(p => castMan(p, p === me)).sort((x, y) => !!y.me - !!x.me),
-})
+// the games' shape for five men: three on the perimeter and two bigs, { guard: [...3], big: [...2] } (lib/mg/read.js
+// castMen; a group short of men repeats one, so a five with three bigs sends its forward out to the wing). lead: the
+// man the play is about, first in his group (his own; on their side the man on him goes in the same slot). me: the
+// lead is his man (the games know him by being the same object as cast.me)
+const SPOT = { PG: 0, SG: 1, G: 1, SF: 2, F: 3, PF: 3, C: 4 }
+function castOf(men, lead = null, group = 'guard', me = false) {
+  const at = p => SPOT[p.p] ?? (p.g === 'guard' ? 1 : 3.5)
+  const rest = men.filter(p => p !== lead).sort((a, b) => at(a) - at(b))
+  const g = lead ? group : null, nG = g === 'guard' ? 2 : 3
+  const first = lead ? castMan(lead, me) : null
+  return { guard: [...(g === 'guard' ? [first] : []), ...rest.slice(0, nG).map(p => castMan(p))], big: [...(g === 'big' ? [first] : []), ...rest.slice(nG).map(p => castMan(p))], first }
+}
 // the last possession: one trip, one shot (the pick and roll and the rim are several trips a drill: not a last play)
 const OFF = { guard: ['iso', 'half-court', 'clutch-shot'], big: ['post-up', 'clutch-shot'] }
 const WORD = ['', 'one', 'two', 'three', 'four']
@@ -36,7 +43,7 @@ export const periodTag = per => (per <= 4 ? '4TH' : per === 5 ? 'OT' : `${per - 
 export const secs = t => (t <= 0.05 ? '0.0' : t.toFixed(1))
 // a man's tonight: in uniform, under six fouls
 const okMan = (G, T, id) => (G.box[id]?.pf ?? 0) < 6 && !(T.out ?? []).includes(id)
-// the playoff game's place in its series, the way the broadcast puts it: "Game 6. Celtics lead 3-2."
+// the playoff game's place in its series, the way the broadcast puts it: "Conference semifinals, Game 6. Celtics lead 3-2."
 function seriesLine(F, P) {
   if (P.po == null) return null
   const g = F.po?.cur?.find(x => x.h === P.h && x.a === P.a && x.n === P.n)
@@ -46,7 +53,8 @@ function seriesLine(F, P) {
   const N = TEAM[F.team].nick
   const where = w === l ? `Series tied ${w}-${l}` : w > l ? `${N} lead ${w}-${l}` : `${N} trail ${w}-${l}`
   const stakes = w === 3 && l === 3 ? ' Winner moves on.' : w === 3 ? ' A win closes it out.' : l === 3 ? ' A loss ends the season.' : ''
-  return `Game ${g.n}. ${where}.${stakes}`
+  const rd = { 'FIRST ROUND': 'First round', 'CONFERENCE SEMIFINALS': 'Conference semifinals', 'CONFERENCE FINALS': 'Conference finals', 'NBA FINALS': 'NBA Finals' }[ROUND_NAME[F.po?.rd]]
+  return `${rd ? `${rd}, ` : ''}Game ${g.n}. ${where}.${stakes}`
 }
 
 // The play: the ball, the score and the clock where the sim stopped (F.pend.G), the man the coach draws it up for
@@ -93,7 +101,8 @@ export function momentPlan(F) {
     us: TEAM[F.team].short, them: TEAM[opp].short, mine, opp: theirs, hoops: true, clock: c, clockText, period: periodTag(G.per),
     line: `${where}, ${clockText} seconds left in ${periodName(G.per)}.`, tail, series: seriesLine(F, P),
   }
-  const cast = { us: castOf(five, man), them: castOf(theirFive), me: castMan(man, true) }
+  const us5 = castOf(five, man, man.g, true), them5 = castOf(theirFive, vs, man.g)
+  const cast = { us: { guard: us5.guard, big: us5.big }, them: { guard: them5.guard, big: them5.big }, me: us5.first }
   return {
     game, spot, man: man.i, name: man.n, g: man.g, vs: vs?.i ?? null, build: asBuild(man.a), situation, cast, def, ball: def ? ko : k,
     seed: `${F.seed}-m-${F.year}-${P.d}-${P.h}-${P.n ?? 0}`, team: { short: F.team, color: TEAM[F.team].color, color2: TEAM[F.team].color2 }, opp: { short: opp, color: TEAM[opp].color, color2: TEAM[opp].color2 },
@@ -161,7 +170,8 @@ export function momentText(F, row) {
     const who = last(t.by) ?? `The ${t.us ? us : opp}`
     b = t.made ? `${who} ${t.us && row.w ? 'wins it' : 'answers'} ${t.t < 1.5 ? 'with a heave' : 'at the horn'}` : `${who}${/s$/.test(who) ? "'" : "'s"} ${t.t < 1.5 ? 'heave' : 'last shot'} is off`
   }
-  const end = ot ? `The ${row.w ? us : opp} win it in overtime`
+  const ots = row.ot || 0
+  const end = ot ? `The ${row.w ? us : opp} win it in ${ots === 2 ? 'double overtime' : ots === 3 ? 'triple overtime' : ots > 3 ? `${ots} overtimes` : 'overtime'}`
     : t || mo.left <= 0.05 || (mo.sealed && mo.side === 'off') ? ''
     : row.w ? `The ${us} ${mo.lead > 0 ? 'hold on' : 'win it'}` : `The ${opp} win it`
   return [a, b, end].filter(Boolean).join('. ') + '.'
