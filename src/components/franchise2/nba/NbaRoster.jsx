@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   TEAM, CONF_OF, SHORTS, CONF_DIVS, DIVS, records, recText, confOrder, coachOrder, teamOvr, myGames, nextMine, dateText, seasonText, CAP_SIM,
-  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock, careerView, retiredRow } from '../../../lib/franchise2/nba'
+  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock, careerView, retiredRow, FIRST_YEAR, photoOf } from '../../../lib/franchise2/nba'
 import { GUARD_CATEGORIES } from '../../../data/nba-guards'
 import { BIG_CATEGORIES } from '../../../data/nba-bigs'
 import { BUCKET_ATTR } from '../../../data/nba-attrs'
@@ -264,7 +264,7 @@ function RetiredSheet({ F, r, owner, onClose }) {
     <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fk fk-root nb-sheet" role="dialog" aria-label={r.n} style={fkVars(kit)}>
         <div className="nb-sheet-top"><b>Retired</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
-        <LowerThird name={r.n} ovr={r.o} team={kit} size="l" mine={r.b != null ? owner : null} />
+        <LowerThird name={r.n} ovr={r.o} photo={r.b == null ? photoOf(r.n) : null} team={kit} size="l" mine={r.b != null ? owner : null} />
         <div className="nb-facts">
           <span><small>Retired at</small><b>{r.ag ?? '-'}</b></span>
           <span><small>Seasons</small><b>{r.yrs ?? '-'}</b></span>
@@ -275,10 +275,11 @@ function RetiredSheet({ F, r, owner, onClose }) {
           <h3 className="nb-sec-h">Career{gp > 0 && <span>Per game</span>}</h3>
           {gp > 0 ? (
             <div className="bx-scroll"><table className="nb-car">
-              <thead><tr><th>G</th><th>PTS</th><th>REB</th><th>AST</th><th>TOTAL PTS</th></tr></thead>
-              <tbody><tr><td>{gp}</td><td>{f(pts)}</td><td>{f(reb)}</td><td>{f(ast)}</td><td>{pts.toLocaleString('en-US')}</td></tr></tbody>
+              <thead><tr><th>G</th><th>PTS</th><th>REB</th><th>AST</th></tr></thead>
+              <tbody><tr><td>{gp}</td><td>{f(pts)}</td><td>{f(reb)}</td><td>{f(ast)}</td></tr></tbody>
             </table></div>
           ) : <p className="nb-sec-note">No NBA games on record.</p>}
+          {gp > 0 && (r.yrs ?? 0) > (r.y ?? FIRST_YEAR) - FIRST_YEAR + 1 && <p className="nb-sec-note">{`His numbers here start with the ${seasonText(FIRST_YEAR)} season.`}</p>}
         </section>
         {keys.length > 0 && (
           <section className="nb-sec">
