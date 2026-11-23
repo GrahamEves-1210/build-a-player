@@ -83,10 +83,17 @@ export async function onRequestGet(context) {
     // ── The BAP Pro Discord role: every Pro with Discord linked has it (its own request: discord-pro-sync.js) ──
     let roleLine = ''
     try {
-      const r = await fetch(new URL(`/api/discord-pro-sync?key=${encodeURIComponent(env.CHECK_KEY)}`, context.request.url))
-      const d = await r.json().catch(() => ({}))
+      let from = 0, given = 0, out = 0, d = {}
+      for (let i = 0; i < 40; i++) {
+        const r = await fetch(new URL(`/api/discord-pro-sync?json=1&from=${from}&key=${encodeURIComponent(env.CHECK_KEY)}`, context.request.url))
+        d = await r.json().catch(() => ({ problem: `no answer (${r.status})` }))
+        if (d.problem) break
+        given += d.given ?? 0; out += d.notInServer ?? 0
+        if (d.next == null) break
+        from = d.next
+      }
       if (d.problem) look.push(`BAP Pro Discord role: ${d.problem}`)
-      else roleLine = `\nDiscord Pro role: ${d.given ?? 0} of ${d.linked ?? 0} Pro accounts with Discord have it${d.notInServer ? ` (${d.notInServer} not in the server)` : ''}`
+      else roleLine = `\nDiscord Pro role: ${given} of ${d.linked ?? 0} Pro accounts with Discord have it${out ? ` (${out} not in the server)` : ''}`
     } catch (e) { look.push(`BAP Pro Discord role: the sync didn't run (${e?.message})`) }
 
     const head = (fixed.length || look.length ? '⚠️ **Daily payments check**' : `✅ Daily payments check: all good (${ids.length} Pro accounts)`) + roleLine

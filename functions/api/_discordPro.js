@@ -32,27 +32,21 @@ export async function setProRole(env, discordId, on) {
 
 // Every Pro account with Discord linked gets the role (giving it twice is harmless). It never takes the role off
 // anyone: the payment webhooks do that when Pro ends, and someone given it by hand keeps it.
-// Returns { ok, pro, linked, given, notInServer, problem } (problem: a setup mistake, in words, or null).
-export async function syncProRoles(env, supabase) {
+// Who: supabase/discord_pro.sql's pro_discord_members() (the sign-in links themselves; the admin user list leaves them
+// out). A batch at a time (from, n): Cloudflare allows a request only so many outside calls, so the caller asks for
+// the next batch (discord-pro-sync.js) until done.
+// Returns { ok, pro, linked, from, next (null: done), given, notInServer, problem } (problem: a setup mistake, in
+// words, or null).
+export const BATCH = 25
+export async function syncProRoles(env, supabase, from = 0, n = BATCH) {
   if (!proRoleReady(env)) return { ok: false, problem: 'DISCORD_BOT_TOKEN, DISCORD_GUILD_ID or DISCORD_PRO_ROLE_ID is not set in Cloudflare' }
-  // the Pro accounts
-  const pro = new Set()
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase.from('accounts').select('id').eq('subscription_status', 'active').range(from, from + 999)
-    if (error) return { ok: false, problem: `accounts read: ${error.message}` }
-    data.forEach(r => pro.add(r.id))
-    if (data.length < 1000) break
-  }
-  // their Discord ids (the sign-in list, a thousand at a time: one call for many accounts)
-  const linked = []
-  for (let page = 1; pro.size && linked.length < pro.size; page++) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
-    if (error) return { ok: false, problem: `users read: ${error.message}` }
-    for (const u of data.users) if (pro.has(u.id)) { const d = discordIdOf(u); if (d) linked.push(d) }
-    if (data.users.length < 1000) break
-  }
+  const { count: pro, error: cErr } = await supabase.from('accounts').select('id', { count: 'exact', head: true }).eq('subscription_status', 'active')
+  if (cErr) return { ok: false, problem: `accounts read: ${cErr.message}` }
+  const { data: rows, error } = await supabase.rpc('pro_discord_members')
+  if (error) return { ok: false, pro, problem: /pro_discord_members/.test(error.message) ? 'run supabase/discord_pro.sql in the Supabase SQL Editor first' : `Discord links read: ${error.message}` }
+  const ids = [...new Set((rows ?? []).map(r => r.discord_id).filter(Boolean))]
   let given = 0, notInServer = 0, problem = null
-  for (const d of linked) {
+  for (const d of ids.slice(from, from + n)) {
     const res = await setProRole(env, d, true)
     if (res === 'given') given++
     else if (res === 'not_in_server') notInServer++
@@ -63,5 +57,6 @@ export async function syncProRoles(env, supabase) {
       break
     }
   }
-  return { ok: !problem, pro: pro.size, linked: linked.length, given, notInServer, problem }
+  const next = !problem && from + n < ids.length ? from + n : null
+  return { ok: !problem, pro, linked: ids.length, from, next, given, notInServer, problem }
 }
