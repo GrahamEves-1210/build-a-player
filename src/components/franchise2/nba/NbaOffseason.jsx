@@ -255,19 +255,25 @@ export function AwardTeams({ F, y, title, teams, names, k = 'ALL', me = F.team }
 // ── 2. THE LOTTERY ───────────────────────────────────────────────────────────
 // the odds first (the order the records gave, each team's chance at No. 1 and who owns the pick); then the drawing
 // read out the way the league does it, from the last lottery spot to No. 1, slower once it reaches the drawn picks.
-// It reads whatever system F.lot holds (its teams, each one's odds; L.drawn when the picks drawn aren't four).
+// Every label reads F.lot: its teams, its balls (the 3-2-1 system from 2027: 16 teams, 37 balls, all 16 picks
+// drawn; the 2019 system before it: 14 teams, 1,000 combinations, the top four drawn), each team's odds.
+const is321 = L => L?.sys === '321'
+const drawnOf = L => Math.min(L?.lottery?.length ?? 0, L?.drawn ?? (is321(L) ? L.lottery.length : 4))
 function Lottery({ F, go, done = false }) {
   const L = F.lot
   const list = (L?.lottery ?? []).slice().reverse()
   const n = list.length
-  const drawn = Math.min(n, L?.drawn ?? L?.draws ?? 4)
+  const drawn = drawnOf(L)
+  const all = drawn >= n
+  // (the read-out slows for the last four cards: the drawn picks in the 2019 system, the top four of the 3-2-1)
+  const slow = Math.min(drawn, 4)
   const [k, setK] = useState(() => (done ? n : -1))   // -1: the odds table; then the cards turned (from the last spot)
   useEffect(() => {
     if (k < 0 || k >= n) return
     const left = n - k   // the spot the next card shows
-    const t = setTimeout(() => setK(k + 1), reduced() ? 60 : k === 0 ? 700 : left === drawn ? 2600 : left < drawn ? 2000 : 800)
+    const t = setTimeout(() => setK(k + 1), reduced() ? 60 : k === 0 ? 700 : left === slow ? 2600 : left < slow ? 2000 : 800)
     return () => clearTimeout(t)
-  }, [k, n, drawn])
+  }, [k, n, slow])
   // (the card being turned stays on screen)
   useEffect(() => { if (k > 0 && k <= n && !done) try { document.querySelectorAll('.nbo-lot-slot')[k - 1]?.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' }) } catch { /* (old browsers) */ } }, [k, n, done])
   if (!L) return <p className="nb-why">The lottery hasn't been drawn.</p>
@@ -286,14 +292,15 @@ function Lottery({ F, go, done = false }) {
       <Chyron team={F.team} title={`${L.y} Draft Lottery`} sub={sub} />
       {(k < 0 || done) && (
         <>
-          <Chyron tone="ink" size="s" title="The odds" sub={`${n} TEAMS · THE TOP ${drawn} PICKS DRAWN`} />
+          <Chyron tone="ink" size="s" title="The odds" sub={`${n} TEAMS · ${is321(L) ? `${L.balls ?? L.lottery.reduce((a, x) => a + (x.balls ?? 0), 0)} BALLS` : `${(L.balls ?? 1000).toLocaleString('en-US')} COMBINATIONS`} · ${all ? `ALL ${n} PICKS DRAWN` : `THE TOP ${drawn} PICKS DRAWN`}`} />
+          {is321(L) && <BallsNote L={L} />}
           <ol className="nbo-odds">
-            <li className="nbo-odds-h"><i>SPOT</i><span>TEAM</span><em>NO. 1</em></li>
+            <li className="nbo-odds-h"><i>SPOT</i><span>TEAM</span><em>{is321(L) ? 'BALLS · NO. 1' : 'NO. 1'}</em></li>
             {pre.map(x => (
               <li key={x.s} className={owner(x.s) === F.team ? 'is-me' : ''} style={fkVars(x.s)}>
                 <i>{x.from}</i>
-                <span><KLogo s={x.s} size={22} /><span><b>{TEAM[x.s].nick}</b><small>{[recText(R[x.s]), ownTag(x)].filter(Boolean).join(' · ')}</small></span></span>
-                <em>{`${x.odds.toFixed(1)}%`}</em>
+                <span><KLogo s={x.s} size={22} /><span><b>{TEAM[x.s].nick}</b><small>{[recText(R[x.s]), x.rel ? 'NO LOWER THAN 12' : null, ownTag(x)].filter(Boolean).join(' · ')}</small></span></span>
+                <em>{x.balls != null && is321(L) ? `${x.balls} · ${x.odds.toFixed(1)}%` : `${x.odds.toFixed(1)}%`}</em>
               </li>
             ))}
           </ol>
@@ -306,7 +313,7 @@ function Lottery({ F, go, done = false }) {
             const o = owner(x.s)
             return (
               <div key={x.s} className="nbo-lot-slot">
-                {n - i === drawn && i <= k && <p className="nbo-lot-top">{`THE TOP ${drawn}`}</p>}
+                {!all && n - i === drawn && i <= k && <p className="nbo-lot-top">{`THE TOP ${drawn}`}</p>}
                 <Flip open={i < k} className="nb-lot-card" back={<span className="nb-lot-back">{x.to}</span>}
                   front={(
                     <span className={`nb-lot-face${o === F.team ? ' is-me' : ''}`} style={fkVars(x.s)}>
@@ -324,6 +331,19 @@ function Lottery({ F, go, done = false }) {
       {over && !done && <ActionBar><Go onClick={go}>Draft night</Go></ActionBar>}
     </section>
   )
+}
+
+// the 3-2-1 system's balls as this lottery gave them (F.lot.lottery: balls, rel)
+function BallsNote({ L }) {
+  const c = b => L.lottery.filter(x => x.balls === b && !x.rel).length
+  const rel = L.lottery.filter(x => x.rel)
+  const parts = [
+    rel.length && `the ${rel.length} worst records ${rel[0].balls} each (they fall no lower than No. 12)`,
+    c(3) && `the ${c(3)} other teams that missed the play-in 3 each`,
+    c(2) && `the ${c(2)} play-in teams seeded 9th and 10th 2 each`,
+    c(1) && `the ${c(1)} teams that lost the 7-8 game 1 each`,
+  ].filter(Boolean)
+  return <p className="nbo-note">{`${L.balls ?? L.lottery.reduce((a, x) => a + (x.balls ?? 0), 0)} balls in the drum: ${parts.join('; ')}. Every pick in the lottery is drawn.`}</p>
 }
 
 // ── 3. THE DRAFT ─────────────────────────────────────────────────────────────
