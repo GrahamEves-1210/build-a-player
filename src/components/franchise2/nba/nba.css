@@ -427,3 +427,12 @@ button.nb-st-row.is-me { color: var(--tct); }
 }
 /* (football hides its wide screen's second tab, the scoring, which sits under the field; here it's the box score) */
 @media (min-width: 900px) { .nb-gdl.gd:not(.is-final) .gd-tabs button:nth-child(2) { display: block; } }
+
+/* the season's fate on the hub: a stamp that clears the button under it (rotated, it leans past its box) */
+.fk-stamp.is-big.nb-fate { justify-self: start; margin: 14px 4px 22px; font-size: 40px; }
+.nb-top-abbr { font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .5px; color: var(--tct); }
+.fh-row.nb-trade-shut { cursor: default; box-shadow: inset 4px 0 0 var(--fk-g4); }
+.fh-row.nb-trade-shut b { color: var(--fk-mute); }
+button.nb-sch-row { width: 100%; border: 0; color: inherit; text-align: left; cursor: pointer; }
+button.nb-sch-row:active { background: var(--fk-g3); }
+.nb-sch-go { margin-left: 6px; font-style: normal; font-family: var(--fk-d); font-size: 18px; color: var(--fk-mute); }

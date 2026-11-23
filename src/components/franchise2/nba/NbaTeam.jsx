@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
+import { TEAM, SHORTS, depthOrder, photoOf, dateText, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
@@ -25,7 +25,8 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
   return (
     <div className="nb-team">
       <CapBar F={F} />
-      {canTrade && <button type="button" className="fh-row" onClick={() => { setView('trades'); sfx('tap') }}><span><small>Trades</small><b>{F.phase === 'season' ? `Deadline ${F.ddl - F.day <= 0 ? 'today' : `in ${F.ddl - F.day} days`}` : 'Open for the summer'}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>}
+      {canTrade ? <button type="button" className="fh-row" onClick={() => { setView('trades'); sfx('tap') }}><span><small>Trades</small><b>{F.phase === 'season' ? `Deadline ${F.ddl - F.day <= 0 ? 'today' : `in ${F.ddl - F.day} days`}` : 'Open for the summer'}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
+        : <div className="fh-row nb-trade-shut"><span><small>Trades</small><b>{F.phase === 'season' || F.phase === 'post' ? `Trade deadline passed (${dateText(F, F.ddl)})` : 'Trades open after the Finals'}</b></span></div>}
       {/* (the rotation, its edit and a man's page: NbaRoster.jsx) */}
       <Rotation F={F} act={act} owner={owner} onMan={setMan} />
       {tw.length > 0 && (
