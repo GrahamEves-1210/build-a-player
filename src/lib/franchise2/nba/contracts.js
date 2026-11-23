@@ -516,7 +516,7 @@ export function rookieDeal(F, p, pk) {
   }
   const s = p.dr?.[3] ?? teamOf(F, p.i)
   const team = s ? F.teams[s] : null
-  const st = team ? standardOf(team).filter(x => x !== p).length : 0
+  const st = team ? standardOf(team).filter(x => x !== p && (F.sed === F.year || (x.y ?? 1) >= 2 || (x.rk ?? 0) > F.year)).length : 0
   // (the two-way men whose deals run out this summer don't hold a spot)
   const tw = team ? twoWaysOf(team).filter(x => x !== p && (F.sed === F.year || (x.y ?? 1) >= 2)).length : 0
   // (about a third of the second round signs a standard deal, most of them early in the round; the rest go two-way,

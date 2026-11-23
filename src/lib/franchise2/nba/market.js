@@ -232,7 +232,8 @@ function openMarket(F) {
     for (const p of (F.fa ?? []).filter(x => x.fr === s && !x.rn && x.hy === year).sort((a, b) => rankOf(F, a) - rankOf(F, b))) {
       // (an RFA is kept with his qualifying offer out and the market sets his price, unless he's one of the good ones
       // his team signs before anyone else can)
-      if (p.rfa && rankOf(F, p) > 150) continue
+      // (and not while the GM's offer sheet is in: it goes first)
+      if (p.rfa && (rankOf(F, p) > 150 || F.fao?.[p.i])) continue
       if (wantsOut(F, s, p)) continue
       const ask = keepsOwn(F, s, p)
       if (ask && signMan(F, s, p, ask).ok && (p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s, text: `${p.n} is re-signing with the ${s} on a ${ask.y}-year, ${money(sumOf(p))} deal.` })
@@ -333,6 +334,8 @@ function faRound(F, day) {
   for (const p of men) {
     // (an old man at the end of the line waits for the summer's last calls; a good one is wanted like anyone)
     if ((p.ag ?? 27) >= 38 && day < FA_DAYS && rankOf(F, p) > 150) continue
+    // (a filler (core's camp body, p.fl) isn't bid on: he signs for the minimum at camp, if anyone needs him)
+    if (p.fl) continue
     for (const s of R.shuffle(S)) {
       if (s === F.team || busy[s] >= 3) continue
       // (what it's already offered this round counts against its room)
@@ -535,7 +538,7 @@ export function cpuOffseason(F, { make = null } = {}) {
       const m = make(F, s, { tw: false })
       if (!m || !signMan(F, s, m, { $: minOf(m.ys ?? 0, year), y: 1, r: 0, ng: 1 }).ok) break
     }
-    // two-ways: two or three young men
+    // two-ways: two or three young men (a made-up camp body on one season)
     const tw = 2 + (hash(`${F.seed}-${s}-tw-${year}`) % 2)
     guard = 0
     while (twoWaysOf(team).length < tw && guard++ < 6) {
@@ -545,7 +548,7 @@ export function cpuOffseason(F, { make = null } = {}) {
       if (!make) break
       const m = make(F, s, { tw: true })
       if (!m) break
-      if (!signMan(F, s, m, { ...d, sc: Array(d.y).fill(twoWayOf(year)) }).ok) break
+      if (!signMan(F, s, m, { $: twoWayOf(year), y: 1, r: 0, tw: 1, sc: [twoWayOf(year)] }).ok) break
     }
     news.push(...cpuExtensions(F, s))
   }
@@ -563,7 +566,7 @@ function lateSignings(F) {
   const news = []
   const year = capYear(F)
   const S = shortsOf(F).filter(s => s !== F.team && situationOf(F, s) !== 'reb')
-  const left = [...(F.fa ?? [])].filter(p => rankOf(F, p) <= 300).sort((a, b) => rankOf(F, a) - rankOf(F, b))
+  const left = [...(F.fa ?? [])].filter(p => rankOf(F, p) <= 300 && !p.fl).sort((a, b) => rankOf(F, a) - rankOf(F, b))
   const used = new Set()
   const chan = s => { const m = mleFor(F, s, year); return Math.max(capOf(year) - payroll(F, s, year), m?.$ ?? 0, minOf(0, year)) }
   for (const p of left) {

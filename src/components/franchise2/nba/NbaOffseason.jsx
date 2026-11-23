@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, photoOf, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
-  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin,
+  rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin, tenderQO, pullFA,
 } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
@@ -132,9 +132,10 @@ function Resign({ F, act, go }) {
         const d = CAP_SIM.resignOffer(F, p)
         return (
           <div key={p.i} className="nb-fa-row">
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag}${p.rfa ? ' · RESTRICTED' : ''} · ASKS ${d ? `${money(d.$)} × ${d.y}` : 'TO TEST THE MARKET'}`} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag}${p.rfa ? ` · RESTRICTED · QO ${money(p.qo)}${p.qot ? ' TENDERED' : ''}` : ''} · ASKS ${d ? `${money(d.$)} × ${d.y}` : 'TO TEST THE MARKET'}`} />
             <span className="nb-fa-acts">
               <button type="button" className="is-go" disabled={!d} onClick={() => { const r = act(X => resignMine(X, p.i, true)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>Keep</button>
+              {p.rfa && p.qo && <button type="button" className={p.qot ? 'is-go' : ''} onClick={() => { act(X => { tenderQO(X, p.i, !p.qot) }); sfx('tap') }}>{p.qot ? 'QO tendered' : 'Tender QO'}</button>}
               <button type="button" onClick={() => { act(X => { resignMine(X, p.i, false) }); sfx('tap') }}>Let go</button>
             </span>
           </div>
@@ -164,10 +165,14 @@ function FreeAgency({ F, act, go }) {
       {pool.map(p => {
         const d = CAP_SIM.askOf(F, p)
         const ok = CAP_SIM.canSign(F, F.team, p, d)
+        const mine = F.fao?.[p.i]
+        const bid = day < CAP_SIM.FA_DAYS
         return (
           <div key={p.i} className="nb-fa-row">
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ASKS ${money(d.$)} × ${d.y}${ok.ok && ok.via ? ` · ${VIA[ok.via] ?? ''}` : ''}`} />
-            <span className="nb-fa-acts"><button type="button" className="is-go" disabled={!ok.ok} title={ok.why} onClick={() => { const r = act(X => signFA(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>{ok.ok ? 'Sign' : ok.why ?? 'No room'}</button></span>
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={p.was ?? F.team} size="s" line={`AGE ${p.ag} · ASKS ${money(d.$)} × ${d.y}${mine ? ` · OFFER IN ${money(mine.$)} × ${mine.y}` : ok.ok && ok.via ? ` · ${VIA[ok.via] ?? ''}` : ''}`} />
+            <span className="nb-fa-acts">{mine
+              ? <button type="button" onClick={() => { act(X => { pullFA(X, p.i) }); sfx('tap') }}>Pull offer</button>
+              : <button type="button" className="is-go" disabled={!ok.ok} title={ok.why} onClick={() => { const r = act(X => signFA(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); sfx(r?.ok ? 'claim' : 'deny') }}>{ok.ok ? (bid ? (p.rfa && p.fr && p.fr !== F.team ? 'Offer sheet' : 'Make offer') : 'Sign') : ok.why ?? 'No room'}</button>}</span>
           </div>
         )
       })}

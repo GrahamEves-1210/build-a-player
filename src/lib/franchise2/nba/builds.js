@@ -35,19 +35,34 @@ export function placeBuilds(F) {
   for (let idx = 0; idx < F.builds.length; idx++) {
     const B = F.builds[idx]
     const p = makeBuild(F, idx, B)
-    // the man he replaces: the last man in his group (the two-way men aside), off to the street, his deal off the books
-    const same = t.r.filter(x => !x.tw && x.b == null && x.g === p.g).sort((x, y) => x.o - y.o)[0]
-    if (same) {
-      t.r = t.r.filter(x => x !== same)
-      for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'bird', 'sgn']) delete same[k]
-      same.was = F.team
-      F.fa = [...(F.fa ?? []), same]
-    }
+    // the man he replaces, when the 15 standard spots are full: of the last few men in his group (the two-way men
+    // aside), the one whose release costs least, waived (his guaranteed money stays on the books, as it would)
+    const full = t.r.filter(x => !x.tw).length >= 15
+    const same = full ? t.r.filter(x => !x.tw && x.b == null && x.g === p.g).sort((x, y) => x.o - y.o).slice(0, 3).sort((x, y) => (X.cutCost(F, x).total - X.cutCost(F, y).total) || x.o - y.o)[0] : null
+    const before = X.capSheet(F, F.team)
+    if (same) { X.cutMan(F, F.team, same.i); same.was = F.team }
     t.r.push(p)
     X.rookieDeal(F, p, { n: buildSlot(p.o), r: 1 })
     B.i = p.i
-    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${p.p}, to a rookie-scale deal${same ? `; ${same.n} is released` : ''}` })
+    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${p.p}, to a rookie-scale deal${same ? `; ${same.n} is waived` : ''}` })
+    if (!F.noCap) addNews(F, { k: 'cap', tag: 'PAYROLL', s: F.team, text: buildCapText(F, before, X.capSheet(F, F.team)) })
   }
+}
+// what a build's deal does to the books: the payroll before and after, and the line it now sits past
+const LINE = { under: 'under the cap', cap: 'over the cap', tax: 'in the luxury tax', a1: 'over the first apron', a2: 'over the second apron' }
+export function buildCapText(F, before, after) {
+  const m = v => `$${v.toFixed(1)} million`
+  const moved = after.over !== before.over
+  const apron = after.over === 'a1' || after.over === 'a2'
+  return `The ${TEAM[F.team].nick} payroll goes from ${m(before.pay)} (${LINE[before.over]}) to ${m(after.pay)}${moved ? `, now ${LINE[after.over]}` : ` (${LINE[after.over]})`}${apron ? `: past the ${after.over === 'a1' ? 'first' : 'second'} apron a team can't use the ${after.over === 'a1' ? 'non-taxpayer' : 'taxpayer or non-taxpayer'} mid-level, and its trades are limited` : ''}`
+}
+// the books with a build of this OVR added, for the setup's preview of the GM's team: { before, after, text }
+export function buildCapNote(F, o) {
+  const before = X.capSheet(F, F.team)
+  const pay = Math.round((before.pay + X.rookieScale(buildSlot(o), F.year)[0]) * 10) / 10
+  const over = pay > before.a2 ? 'a2' : pay > before.a1 ? 'a1' : pay > before.tax ? 'tax' : pay > before.cap ? 'cap' : 'under'
+  const after = { ...before, pay, over }
+  return { before, after, text: buildCapText(F, before, after) }
 }
 // a summer older: a young build's grades go up a step at a time (two or three steps at 20-23, one or two to 27),
 // a build past 30 gives back a step of his legs; his OVR follows his grades, his card follows him (F.builds)

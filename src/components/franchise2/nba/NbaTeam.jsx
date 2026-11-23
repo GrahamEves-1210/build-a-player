@@ -60,7 +60,7 @@ export function CapBar({ F, s = F.team }) {
   const holds = F.phase === 'off' ? c.pay - CAP_SIM.payroll(F, s, CAP_SIM.capYear(F), { holds: false }) : 0
   const top = Math.max(c.a2 * 1.06, c.pay * 1.03)
   const at = v => `${Math.min(100, (v / top) * 100)}%`
-  const OVER = { under: `${money(c.room)} in cap room`, cap: 'Over the cap', tax: `In the tax · bill ${money(c.bill)}`, a1: `Over the first apron · bill ${money(c.bill)}`, a2: `Over the second apron · bill ${money(c.bill)}` }
+  const OVER = { under: `${money(c.room)} in cap room`, cap: 'Over the cap', tax: `In the tax · luxury tax ${money(c.bill)}`, a1: `Over the first apron · luxury tax ${money(c.bill)}`, a2: `Over the second apron · luxury tax ${money(c.bill)}` }
   return (
     <section className={`nb-cap is-${c.over}`}>
       <div className="nb-cap-h"><b>{money(c.pay)}</b><span>{F.noCap && s === F.team ? 'No salary cap' : OVER[c.over]}</span></div>
