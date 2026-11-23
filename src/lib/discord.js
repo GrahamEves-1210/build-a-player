@@ -54,9 +54,18 @@ export function getUsername(user) {
 // after the redirect back, so this runs once per sign-in. Resolves the
 // refreshed user when the server gave a Discord account its username, else null.
 let usernameRetried = false
+// BAP Pro's Discord role, checked once a day per account on this device (functions/api/discord-pro-sync.js gives
+// it to a Pro member who doesn't have it: Pro bought before Discord was linked, or Pro turned on by hand). A sign-in
+// that brings a fresh Discord token goes through discord-join, which does the same.
+function proRoleDaily(session) {
+  const key = `bap_pro_role_${session.user.id}`, day = new Date().toISOString().slice(0, 10)
+  try { if (localStorage.getItem(key) === day) return; localStorage.setItem(key, day) } catch { return }
+  fetch(`${import.meta.env.VITE_API_URL || ''}/api/discord-pro-sync`, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` } }).catch(() => {})
+}
 export async function finishDiscordSignIn(session) {
   if (!session?.user || !hasDiscord(session.user)) return null
   const providerToken = session.provider_token
+  if (!providerToken) proRoleDaily(session)
   if (providerToken) {
     const key = `bap_discord_done_${providerToken.slice(-12)}`
     try { if (sessionStorage.getItem(key)) return null; sessionStorage.setItem(key, '1') } catch {}
