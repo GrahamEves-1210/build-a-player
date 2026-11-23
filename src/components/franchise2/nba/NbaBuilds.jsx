@@ -42,7 +42,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
         const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
         return (
           <div key={p.id} className="nb-build-row">
-            <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner} line={`ROOKIE · NO. ${buildSlot(o)} PICK`} size="s" />
+            <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner} line={`NO. ${buildSlot(o)} PICK`} size="s" />
             <span className="nb-fa-acts"><button type="button" onClick={() => build(p, k)}>Rebuild</button><button type="button" onClick={() => drop(p.id)}>Remove</button></span>
           </div>
         )
