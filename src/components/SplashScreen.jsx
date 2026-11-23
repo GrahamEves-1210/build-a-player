@@ -489,7 +489,6 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
             >
               <div className="smode-title smode-title--alltime">
                 All-Time
-                {(position === 'wr' || position === 'db' || position === 'te' || position === 'lb') && <span className="splash-alltime-new-tag">NEW</span>}
               </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">
