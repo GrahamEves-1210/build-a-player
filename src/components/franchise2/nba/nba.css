@@ -23,6 +23,29 @@
 .nb-ser-t b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; }
 .nb-ser-t em { margin-left: auto; font-style: normal; font-family: var(--fk-d); font-size: 20px; }
 .nb-ser-t.is-out { opacity: .42; }
+.nb-seed { flex: none; min-width: 16px; font-style: normal; font-family: var(--fk-b); font-weight: 700; font-size: 13px; text-align: center; opacity: .85; }
+.nb-ser.is-big .nb-ser-t { height: 52px; }
+.nb-ser.is-big .nb-ser-t b { font-size: 21px; }
+.nb-ser.is-big .nb-ser-t em { font-size: 28px; }
+.nb-finals { padding: 10px; background: var(--fk-g1); box-shadow: inset 0 3px 0 var(--fk-gold); }
+.nb-finals > small { color: #fff !important; font-size: 14px !important; }
+.nb-ser-note { margin: 2px 0 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-text); }
+.nb-confs { display: grid; gap: 16px; }
+@media (min-width: 720px) { .nb-confs { grid-template-columns: 1fr 1fr; gap: 18px; } }
+.nb-conf { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.nb-conf-h { margin: 0; padding-bottom: 4px; border-bottom: 1px solid var(--fk-line2); font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .4px; text-transform: uppercase; color: #fff; }
+/* the champions: the Finals game by game, the Finals MVP */
+.nb-champ-fin { display: grid; gap: 6px; }
+.nb-champ-fin > small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; color: var(--fk-mute); }
+.nb-champ-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 3px; }
+.nb-champ-games span { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tc); font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: #fff; white-space: nowrap; }
+.nb-champ-games b { font-family: var(--fk-d); font-weight: 400; font-size: 14px; color: var(--fk-mute); }
+.nb-champ-mvp { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -4px 0 var(--tc2); }
+.nb-champ-mvp span { display: grid; gap: 2px; min-width: 0; line-height: 1.15; }
+.nb-champ-mvp small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; text-transform: uppercase; opacity: .9; }
+.nb-champ-mvp b { font-family: var(--fk-d); font-weight: 400; font-size: 24px; letter-spacing: .3px; text-transform: uppercase; }
+.nb-champ-mvp em { font-style: normal; font-family: var(--fk-b); font-weight: 600; font-size: 14px; }
+.nb-champ-mvp .fk-logo { filter: drop-shadow(0 0 1px rgba(255,255,255,.85)); }
 
 /* game day */
 .nb-gd { position: fixed; inset: 0; z-index: 1060; overflow-y: auto; background: var(--fk-ink); color: var(--fk-text); padding: calc(var(--safe-top, 0px) + 14px) 16px calc(var(--web-rail, 0px) + 16px); }
