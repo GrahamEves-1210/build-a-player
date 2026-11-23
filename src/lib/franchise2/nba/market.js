@@ -249,6 +249,7 @@ function faRound(F, day) {
         if (aiMatches(F, p.fr, p, o.d)) {
           const was = p.fr
           if (signMan(F, was, p, { $: o.d.$, y: o.d.y, r: Math.min(o.d.r ?? 0, raiseMax(rightsOf(p, was))) }).ok) {
+            p.osm = p.sgn
             news.push({ k: 'sign', tag: 'MATCHED', s: was, text: `The ${was} have matched the ${o.s}' offer sheet for ${p.n}: ${o.d.y} years, ${money(sumOf(p))}.` })
             signed = true
             break
@@ -310,7 +311,8 @@ export function matchSheet(F, short, man, yes) {
   if (!q || !p) return { ok: false, why: 'No offer sheet' }
   if (yes) {
     const c = canSign(F, short, p, q.d)
-    if (c.ok) { signMan(F, short, p, q.d); return { ok: true, matched: true, news: [{ k: 'sign', tag: 'MATCHED', s: short, text: `The ${short} have matched the ${q.s}' offer sheet for ${p.n}` }] } }
+    // (a matched offer sheet: he can't be traded for a year, trades.js osm)
+    if (c.ok) { signMan(F, short, p, q.d); p.osm = p.sgn; return { ok: true, matched: true, news: [{ k: 'sign', tag: 'MATCHED', s: short, text: `The ${short} have matched the ${q.s}' offer sheet for ${p.n}` }] } }
   }
   // (not matched, or it can't: he goes to the team that signed him to the sheet)
   delete p.rfa

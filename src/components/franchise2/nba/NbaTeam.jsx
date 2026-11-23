@@ -4,8 +4,11 @@ import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, 
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
-import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar } from '../kit'
+import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar, Stamp } from '../kit'
 import { money } from './NbaHub'
+import { picksOf as tradePicks, tpesOf, availOf } from '../../../lib/franchise2/nba/trades'
+import { hitOf } from '../../../lib/franchise2/nba/cap'
+import '../trades.css'
 
 // THE TEAM: the rotation (the order the coach plays them in: the first five start), the cap, the two-way men,
 // a man's page (his deal, his career, move him in the rotation, waive him) and trades.
@@ -131,9 +134,11 @@ function ManSheet({ F, act, id, owner, onClose }) {
   )
 }
 
+
 // ── TRADES ───────────────────────────────────────────────────────────────────
-// pick a team; the deal on top (what each side sends, the salaries), one side's men and picks at a time under it;
-// the league office checks it (salary matching, the aprons, the Stepien rule: cap.js), then the other GM answers
+// pick a team; the deal on top (what each side sends, its cap hits), the value bar, the other GM's answer, then one
+// side's men and picks at a time; the league office checks it (salary matching, the aprons, the Stepien rule:
+// trades.js), then the other GM answers (yes, no, or a counter to take or work from)
 function Trades({ F, act, onBack }) {
   const [them, setThem] = useState(null)
   const [side, setSide] = useState(0)
@@ -155,59 +160,111 @@ function Trades({ F, act, onBack }) {
       </div>
     )
   }
-  const men = s => F.teams[s].r.filter(p => !p.tw)
-  const pickIdx = s => (F.picks ?? []).map((p, i) => [p, i]).filter(([p]) => p.t === s && p.y > F.year)
+  const year = CAP_SIM.capYear(F)
+  // (everyone under contract, two-way men too: the standard deals by rating, then the two-ways)
+  const men = s => F.teams[s].r.slice().sort((x, y) => (x.tw ? 1 : 0) - (y.tw ? 1 : 0) || y.o - x.o)
+  const manIn = (s, i) => F.teams[s].r.find(p => p.i === i)
+  // (the picks still to be made: a draft that's done is off the list)
+  const pickList = s => tradePicks(F, s)
+  const hit = p => (p ? hitOf(p, year, year) : 0)
+  const sum = (s, ids) => ids.reduce((x, i) => x + hit(manIn(s, i)), 0)
   const S = [[F.team, ga, setGa, pa, setPa], [them, gb, setGb, pb, setPb]]
   const [s0, sel, set, psel, pset] = S[side]
-  const sum = (s, ids) => ids.reduce((x, i) => x + (men(s).find(p => p.i === i)?.$ ?? 0), 0)
-  const list = (s, ids, pids) => [...ids.map(i => men(s).find(p => p.i === i)?.n), ...pids.map(i => pickText(F, F.picks[i]))].filter(Boolean)
+  const list = (s, ids, pids) => [...ids.map(i => manIn(s, i)?.n), ...pids.map(i => pickText(F, F.picks[i]))].filter(Boolean)
   const done = r => { for (const x of r?.news ?? []) addNews(F, x); setGa([]); setGb([]); setPa([]); setPb([]); sfx('claim'); haptic('success') }
   const ask = () => {
     const r = act(X => CAP_SIM.proposeTrade(X, deal))
     setAns(r)
-    if (r?.ok) done(r); else sfx('deny')
+    if (r?.ok) done(r); else sfx(r?.say === 'counter' ? 'flip' : 'deny')
   }
   const takeCounter = () => {
     const c = ans?.counter
     if (!c || !CAP_SIM.checkTrade(F, c).ok) return
     const r = act(X => CAP_SIM.doTrade(X, c))
-    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms` })
+    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms`, line: r?.line })
     done(r)
   }
+  const workFrom = () => { const c = ans?.counter; if (!c) return; setGa(c.ga ?? []); setGb(c.gb ?? []); setPa(c.pa ?? []); setPb(c.pb ?? []); setAns(null); sfx('tap') }
   const g = any && chk?.ok ? CAP_SIM.gauge(F, deal) : null
+  const cs = CAP_SIM.capSheet(F, them)
+  const sit = CAP_SIM.situationOf(F, them)
+  const tpe = tpesOf(F, F.team)
   return (
     <div className="nb-trades">
       <BackBar label="Teams" title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); reset() }} />
+      <div className="nb-twith" style={fkVars(them)}>
+        <KLogo s={them} size={36} />
+        <span><small>{CAP_SIM.SIT_TEXT[sit]} · {CAP_SIM.OVER_TEXT[cs.over]}</small><b>{TEAM[them].name}</b><em>Payroll {money(cs.pay)}{cs.room > 0 ? ` · ${money(cs.room)} in cap room` : cs.over === 'cap' ? ` · ${money(cs.toTax)} under the tax` : cs.over === 'tax' ? ` · ${money(cs.toA1)} under the first apron` : cs.over === 'a1' ? ` · ${money(cs.toA2)} under the second apron` : ''}</em></span>
+      </div>
       <section className="nb-deal">
-        {S.map(([s, ids, , pids], k) => (
+        {S.map(([s, ids, , pids]) => (
           <div key={s} className="nb-deal-side" style={fkVars(s)}>
-            <span className="nb-deal-h"><KLogo s={s} size={22} /><b>{TEAM[s].nick} send</b><em>{money(sum(s, ids))}</em></span>
+            <span className="nb-deal-h"><KLogo s={s} size={22} /><b>{TEAM[s].nick} send</b></span>
             <p>{list(s, ids, pids).join(', ') || 'Nothing yet'}</p>
+            {ids.length > 0 && <small className="nb-deal-cap">{money(sum(s, ids))} in cap hits</small>}
           </div>
         ))}
       </section>
+      {g && <TradeGauge F={F} them={them} g={g} />}
+      {chk && !chk.ok && <p className="nb-why">{teamWords(chk.why)}</p>}
+      {ans && <TradeSaid ok={ans.ok} counter={!!ans.counter} text={teamWords(ans.text ?? `The ${TEAM[them].nick} pass`)} line={ans.ok ? teamWords(ans.line ?? '') : ''} />}
+      {ans?.counter && (
+        <div className="tr-counter">
+          <p className="nb-tcounter">{counterText(F, ans.counter)}</p>
+          <div className="tr-acts tr-acts--2"><Go onClick={takeCounter}>Accept the counter</Go><Go ghost onClick={workFrom}>Work from it</Go></div>
+        </div>
+      )}
+      {tpe.length > 0 && <p className="nb-tnote">{TEAM[F.team].nick} trade exception{tpe.length > 1 ? 's' : ''}: {tpe.map(x => `${money(x.$)} (${x.n})`).join(', ')}. One can take in a player's salary with nothing going back.</p>}
       <div className="nb-by" role="tablist">
-        {S.map(([s], k) => <button key={s} type="button" role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); sfx('tap') }}>{TEAM[s].nick}</button>)}
+        {S.map(([s], k) => <button key={s} type="button" role="tab" aria-selected={side === k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); sfx('tap') }}>{TEAM[s].nick} send</button>)}
       </div>
       <section className="nb-tside">
-        {men(s0).sort((x, y) => y.o - x.o).map(p => {
+        {men(s0).map(p => {
           const no = CAP_SIM.whyNot(F, s0, p)
+          const av = p.inj?.g > 0 ? availOf(F, p, s0) : null
           return (
-            <button key={p.i} type="button" disabled={!!no} className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)}>
-              <b>{p.n}</b><span>{p.p} · {p.o} · {p.ag}</span><em>{no ? teamWords(no) : dealText(p)}</em>
+            <button key={p.i} type="button" disabled={!!no} className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)} aria-pressed={sel.includes(p.i)}>
+              <b>{p.n}</b><span>{p.p} · {p.o} OVR · AGE {p.ag}</span>
+              <em>{no ? teamWords(no) : `${dealText(p)}${!p.tw && p.y > 0 ? ` · CAP HIT ${money(hit(p))}` : ''}`}</em>
+              {av && <em className="is-inj">{av.season ? 'OUT FOR THE SEASON' : CAP_SIM.outText(p)} · {String(p.inj.k).toUpperCase()}</em>}
             </button>
           )
         })}
-        <Fold title="Draft picks" right={`${psel.length || ''}`}>{pickIdx(s0).map(([p, i]) => <button key={i} type="button" className={`nb-tman${psel.includes(i) ? ' is-on' : ''}`} onClick={() => tog(psel, pset, i)}><b>{pickText(F, p)}</b></button>)}</Fold>
+        <Fold title="Draft picks" right={`${psel.length || ''}`}>{pickList(s0).map(k => <button key={k.i} type="button" className={`nb-tman${psel.includes(k.i) ? ' is-on' : ''}`} onClick={() => tog(psel, pset, k.i)} aria-pressed={psel.includes(k.i)}><b>{pickText(F, k)}</b>{k.sw && <em>{k.sw.with ? `May swap with the ${TEAM[k.sw.with]?.nick}` : `The ${TEAM[k.sw.by]?.nick} may swap for it`}</em>}</button>)}</Fold>
       </section>
       <ActionBar className="nb-tact">
-        {g && <div className="nb-gauge" aria-label="How the offer looks to them"><span>Your side</span><i><b style={{ left: `${50 + g.lean * 50}%` }} /></i><span>Their side</span></div>}
-        {chk && !chk.ok && <p className="nb-why">{teamWords(chk.why)}</p>}
-        {ans && !ans.ok && <p className="nb-why">{teamWords(ans.text ?? `The ${TEAM[them].nick} pass`)}</p>}
-        {ans?.counter && <div className="nb-counter"><p>{counterText(F, ans.counter)}</p><button type="button" className="nb-tman is-on" onClick={takeCounter}>Take the counter</button></div>}
-        {ans?.ok && <p className="nb-ok">{teamWords(ans.text ?? 'Deal done')}</p>}
-        <Go disabled={!chk?.ok} onClick={ask}>Propose the trade</Go>
+        <Go disabled={!chk?.ok || !!ans?.counter} onClick={ask}>Propose the trade</Go>
       </ActionBar>
+    </div>
+  )
+}
+
+// the value bar: what each side sends, the way the league values it (the other GM's own read can differ: a
+// contender pays for this season, a rebuilder for youth and picks)
+function TradeGauge({ F, them, g }) {
+  const a = Math.max(0, g.a), b = Math.max(0, g.b), tot = a + b
+  const mine = tot > 0 ? (a / tot) * 100 : 50
+  const even = Math.abs(g.lean) < 0.08
+  const lean = even ? 'Even' : `${TEAM[g.lean > 0 ? F.team : them].nick} ${Math.abs(g.lean) >= 0.35 ? 'win big' : 'come out ahead'}`
+  return (
+    <div className={`tr-gauge${even ? ' is-even' : ''}`} aria-label={`By the league's values: ${lean}`}>
+      <div className="tr-gauge-h"><span>{TEAM[F.team].nick}</span><b>{lean}</b><span>{TEAM[them].nick}</span></div>
+      <div className="tr-gauge-bar" aria-hidden="true">
+        {/* (the GM's side white, theirs in their colour: two teams in the same colour still read apart) */}
+        <i style={{ width: `${mine}%`, background: '#f4f5f7' }} />
+        <i style={{ ...fkVars(them), width: `${100 - mine}%` }} />
+        <em />
+      </div>
+      <div className="tr-gauge-f"><small>VALUE SENT {Math.round(mine)}%</small><small>VALUE SENT {100 - Math.round(mine)}%</small></div>
+    </div>
+  )
+}
+// the other GM's answer (a counter isn't a refusal: it reads as one more offer)
+function TradeSaid({ ok, counter, text, line }) {
+  return (
+    <div className={`tr-said${ok ? ' is-yes' : counter ? ' is-counter' : ' is-no'}`} role="status">
+      <Stamp kind={ok ? 'w' : counter ? 'ink' : 'l'}>{ok ? 'DONE' : counter ? 'COUNTER' : 'NO DEAL'}</Stamp>
+      <span><b>{text}</b>{line && <small>{line}</small>}</span>
     </div>
   )
 }
@@ -217,5 +274,5 @@ function counterText(F, c) {
   const nm = (s, ids) => ids.map(i => F.teams[s].r.find(p => p.i === i)?.n).filter(Boolean)
   const pk = list => (list ?? []).map(e => (typeof e === 'number' ? F.picks[e] : F.picks[e?.i])).filter(Boolean).map(p => pickText(F, p))
   const they = [...nm(c.b, c.gb), ...pk(c.pb)], you = [...nm(c.a, c.ga), ...pk(c.pa)]
-  return `Their counter: ${they.join(', ') || 'nothing'} for ${you.join(', ') || 'nothing'}`
+  return `The ${TEAM[c.b].nick} send ${they.join(', ') || 'nothing'} for ${you.join(', ') || 'nothing'}`
 }

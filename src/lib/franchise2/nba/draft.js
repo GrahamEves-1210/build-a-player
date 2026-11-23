@@ -122,25 +122,44 @@ export function runLottery(F) {
   F.lot = { y: F.year + 1, order, r2, lottery }
   // the picks: a number on each, protections settled
   const y = F.year + 1
-  for (const p of F.picks.filter(p => p.y === y)) {
+  const mine = F.picks.filter(p => p.y === y)
+  for (const p of mine) {
     const slot = (p.r === 1 ? order : r2).indexOf(p.o) + 1
     p.n = p.r === 1 ? slot : 30 + slot
+  }
+  for (const p of mine) {
+    const slot = p.r === 1 ? p.n : p.n - 30
     if (p.r === 1 && p.pr && slot <= p.pr.top && p.t !== p.o) {
-      // protected: it stays home; the debt rolls to next year's first, same protection, until it conveys
-      const owed = p.t
+      // protected: it stays home; the debt rolls to the original team's next first it owns, one step looser (the
+      // protection halved the first time it rolls, gone the second: top-10, then top-5, then unprotected)
+      const owed = p.t, top = p.pr.top
       p.t = p.o
-      const nx = F.picks.find(q => q.y === y + 1 && q.r === 1 && q.o === p.o)
-      if (nx && nx.t === p.o) { nx.t = owed; nx.pr = { top: p.pr.top } }
-      addNews(F, { k: 'pick', tag: 'PROTECTED', s: p.o, text: `The ${nick(p.o)} keep the No. ${slot} pick; it was top-${p.pr.top} protected. The ${nick(owed)} are owed their ${y + 1} first` })
+      const nx = F.picks.filter(q => q.y > y && q.r === 1 && q.o === p.o && q.t === p.o).sort((a, b) => a.y - b.y)[0]
+      const nTop = p.pr.rl ? 0 : Math.floor(top / 2)
+      let owe = ''
+      if (nx) {
+        nx.t = owed
+        nx.pr = nTop >= 1 ? { top: nTop, rl: 1 } : null
+        owe = `The ${nick(owed)} are owed their ${nx.y} first, ${nTop >= 1 ? `top-${nTop} protected` : 'unprotected'}`
+      } else {
+        // (no first of its own left to send: the debt becomes its next two seconds, as the league's deals write it)
+        const sec = F.picks.filter(q => q.y > y && q.r === 2 && q.o === p.o && q.t === p.o).sort((a, b) => a.y - b.y).slice(0, 2)
+        for (const q of sec) q.t = owed
+        owe = sec.length ? `The ${nick(owed)} get their ${sec.map(q => q.y).join(' and ')} second-round picks instead` : ''
+      }
+      addNews(F, { k: 'pick', tag: 'PROTECTED', s: p.o, text: `The ${nick(p.o)} keep the No. ${slot} pick; it was top-${top} protected.${owe ? ` ${owe}` : ''}` })
       p.pr = null
     }
-    // a swap: the owner takes the better of the two
-    if (p.sw) {
-      const q = F.picks.find(x => x.y === y && x.r === p.r && x.o === p.sw.with)
-      if (q && q.n < p.n && q.t === p.sw.with) { const t = p.t; p.t = q.t; q.t = t }
-      delete p.sw
+  }
+  // a swap: the holder of the right (its pick carries sw.with) takes the better of the two, whoever owns the other
+  // pick now (the swap goes with it when it's traded)
+  for (const p of mine) {
+    if (p.sw?.with) {
+      const q = mine.find(x => x.r === p.r && x.o === p.sw.with)
+      if (q && q.n < p.n) { const t = p.t; p.t = q.t; q.t = t }
     }
   }
+  for (const p of mine) delete p.sw
   return F.lot
 }
 export const draftOrder = F => F.picks.filter(p => p.y === F.year + 1).sort((a, b) => a.n - b.n)
