@@ -15,7 +15,7 @@ ok(JSON.stringify(a) === JSON.stringify(b), `same seed, same game (${a.hs}-${a.a
 ok(JSON.stringify(a) !== JSON.stringify(c), `another seed, another game (${c.hs}-${c.as})`)
 
 // 2. 400 games: the arithmetic, fouls, blowouts, the stints
-let fouledOut = 0, maxPf = 0, blowStar = [], closeStar = [], otGames = 0, bad = 0, hiMin = 0
+let fouledOut = 0, maxPf = 0, blowStar = [], closeStar = [], otGames = 0, bad = 0, hiMin = 0, hiReg = 0
 const t0 = performance.now()
 const pairs = Object.keys(F.teams)
 for (let k = 0; k < 400; k++) {
@@ -30,7 +30,7 @@ for (let k = 0; k < 400; k++) {
     if (L.some(l => l.fgm > l.fga || l.tpm > l.tpa || l.ftm > l.fta || l.tpa > l.fga || l.oreb > l.reb)) bad++
     const mins = sum(L, 'min'); if (Math.abs(mins - (240 + 25 * r.ot)) > 5) bad++
     if (L.filter(l => l.st).length !== 5) bad++
-    for (const l of L) { maxPf = Math.max(maxPf, l.pf); if (l.pf >= 6) fouledOut++; hiMin = Math.max(hiMin, l.min) }
+    for (const l of L) { maxPf = Math.max(maxPf, l.pf); if (l.pf >= 6) fouledOut++; hiMin = Math.max(hiMin, l.min); hiReg = Math.max(hiReg, l.min - 5 * r.ot) }
     const star = L.filter(l => l.st).sort((x, y) => y.pts - x.pts)[0]
     const margin = Math.abs(r.hs - r.as)
     if (margin >= 28) blowStar.push(star.min); else if (margin <= 4) closeStar.push(star.min)
@@ -44,7 +44,7 @@ const mean = x => (x.reduce((s, y) => s + y, 0) / (x.length || 1)).toFixed(1)
 ok(bad === 0, `400 games: points, makes, minutes (240 + 25 an overtime), five starters, +/- all add up (${bad} bad)`)
 ok(maxPf <= 6, `nobody past six fouls (most: ${maxPf}); ${fouledOut} foul-outs in 800 team-games (the NBA: about one every ten games)`)
 ok(blowStar.length > 5 && +mean(blowStar) < +mean(closeStar) - 4, `a blowout sits the starters: the top scorer plays ${mean(blowStar)} in 28-point games, ${mean(closeStar)} in games within 4`)
-ok(hiMin <= 53, `the most minutes a man played in regulation or overtime: ${hiMin}`)
+ok(hiReg <= 46, `the most minutes a man played: ${hiReg} past his overtimes' (in any game: ${hiMin}; a triple overtime is 63)`)
 ok(ms < 8, `speed: ${ms.toFixed(2)} ms a game`)
 console.log(`  (${otGames} overtime games in 400: the NBA has about 6%)`)
 

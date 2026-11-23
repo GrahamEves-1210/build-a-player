@@ -6,11 +6,16 @@
 // at the rim or a mid-range jumper, by his game. The make is his skill against the five guarding him. A miss is
 // blocked now and then and rebounded by the men on the floor (about a quarter of misses go back to the offense). A
 // make is assisted about six times in ten, by whoever on the floor passes best. Every point moves the +/- of the ten
-// men on the floor. Home court is worth about 2.5 points.
+// men on the floor. Home court is worth about 2.5 points. The score pulls a little (TUNE.lead: a team well ahead eases
+// off, more so in a close fourth quarter's last minutes), and the last two minutes of a close game run on the score
+// and the clock (endgame: the fouls to stop it, the clock run down or out, the last shot held, the three to tie), so
+// games end 12-13 apart on average, three in ten within five, one in twenty in overtime. The playoffs (TUNE.po): nobody
+// eases off, the ball goes to the stars more, the crowd counts a bit more.
 //
 // The rotation (rotation.js) is the plan; the game moves off it like a real one: two fouls in the first quarter
-// (three in the second, four in the third, five early in the fourth) sit a man, six put him out, a blowout empties
-// the bench, a close fourth quarter and overtime go to the closers.
+// (three in the second, four in the third, five early in the fourth) sit a man, six put him out (the last man to foul
+// out stays in when there's nobody left), a blowout empties the bench, a close fourth quarter and overtime go to the
+// closers, and every five on the floor is shaped like a lineup (rotation.js reshape: no five guards, no 3 PGs and a big).
 //
 // The seam (nba/STATE.md):
 //   simGame(F, home, away, { seed, playoff, b2b }) -> Res   the whole game, tonight's men (hurt and resting men sit)
@@ -25,6 +30,10 @@
 //       pick the spots.
 //   Res = { hs, as, ot, box: { [short]: [Line] }, q: [[h1, a1], ...], lc (lead changes), big: { h, a } (largest leads) }
 //   Line = { i, min, pts, reb, oreb, ast, stl, blk, tov, pf, fgm, fga, tpm, tpa, ftm, fta, pm, st, cp } (cp: clutch points)
+//       every man on the roster has a line; the box's minutes add up to 240 (265 an overtime, toRes boxMinutes). One
+//       who didn't play: min 0, the stats 0, dnp: 'cd' (dressed, coach's decision) | 'inj' (k: the injury) | 'rest' |
+//       'tw' (a two-way man not with the team; k: 'G League' | '50-game limit' | 'not eligible for the playoffs')
+//   Res.ff: the team that forfeited (nobody to play: 2-0; season.js keeps rosters at 13+, so it doesn't happen)
 // Lower level (the checks use these): newGame(G) · run(S, { stop }) · play(S, forced) · finish(S) · playGame(G)
 //   G = { seed, po, home: { short, men, set }, away } (set: rotation.js planRotation's { st, order, min })
 
