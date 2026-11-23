@@ -52,9 +52,13 @@ const tierOf = (F, p) => (rankOf(F, p) <= 60 || (p.o ?? 0) >= 85 ? 2 : rankOf(F,
 // set the first day; each day after it comes down (DECAY), and when no other team has the money for it anymore, down
 // toward what they do have (a star never under 60% of where it started: his own team can still pay it, or he takes a
 // season and tries again; a good player a third). p.ask = { yr, b: the first day's, $: today's, y, d }
+// the market's day an ask is for: the round being played, else the next one to be (the screen between rounds shows
+// the ask the next round weighs offers against; before the first round day 1, once the days are done the last)
+let playing = 0
+export const marketDay = F => playing || clamp(1, FA_DAYS, faDayOf(F) + 1)
 export function askFor(F, p) {
   const year = capYear(F)
-  const day = clamp(1, FA_DAYS, faDayOf(F) || 1)
+  const day = marketDay(F)
   const mn = minOf(p.ys ?? 0, year)
   if (!p.ask || p.ask.yr !== year || p.ask.b == null) {
     const R = rngOf(`${F.seed}-${year}-fa-${p.i}`)
@@ -98,7 +102,7 @@ export function offerScore(F, p, s, d, ctx = null) {
   return (sc[0] / Math.max(0.1, a.$)) * yf * extra
 }
 // the share of his ask he'll take today (seeded: some men wait a day longer than others)
-export function takeOf(F, p, day = clamp(1, FA_DAYS, faDayOf(F) || 1)) {
+export function takeOf(F, p, day = marketDay(F)) {
   const t = tierOf(F, p)
   if (day >= FA_DAYS) return t === 2 ? TAKE[FA_DAYS - 1] : t === 1 ? 0.45 : 0
   const R = rngOf(`${F.seed}-${capYear(F)}-take-${day}-${p.i}`)
@@ -262,8 +266,11 @@ export function faDay(F, day = faDayOf(F) + 1) {
     const d = faDayOf(F) + 1
     F.fad = d
     F.fay = capYear(F)
-    if (d === 1) news.push(...openMarket(F))
-    news.push(...faRound(F, d))
+    playing = d
+    try {
+      if (d === 1) news.push(...openMarket(F))
+      news.push(...faRound(F, d))
+    } finally { playing = 0 }
   }
   return news
 }
@@ -445,7 +452,7 @@ export function pullOffer(F, id) { if (F.fao?.[id]) { const n = { ...F.fao }; de
 export function offerLook(F, id, d) {
   const p = (F.fa ?? []).find(x => x.i === id)
   if (!p) return null
-  const day = clamp(1, FA_DAYS, faDayOf(F) + (faDone(F) ? 0 : 1))
+  const day = marketDay(F)
   const u = offerScore(F, p, F.team, d)
   const take = takeOf(F, p, day)
   return { u: r1(u * 100) / 100, take: r1(take * 100) / 100, chance: u >= take + 0.06 ? 'likely' : u >= take - 0.04 ? 'close' : 'unlikely', ask: askOf(F, p) }
