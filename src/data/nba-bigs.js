@@ -76,6 +76,8 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 3, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
   { name: 'Dereck Lively II', short: 'Lively II', team: 'DAL', starter: false, captain: false, number: 2, height: 85, weight: 230, wingspan: 91, skin: '#ad8271', position: 'C', faceCenter: [50, 44],
     attrs: { jumpShot: 1, finishing: 6, rebounding: 8, playmaking: 2, interiorDefense: 7, speed: 1, bounce: 2, size: 8, basketballIQ: 5, clutch: 3 } },
+  { name: 'Dwight Powell', short: 'Powell', team: 'DAL', starter: false, captain: false, number: 7, height: 82, weight: 230, wingspan: 85, skin: '#d59d84', position: 'PF', faceCenter: [50, 41],
+    attrs: { jumpShot: 1, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
   { name: 'P.J. Washington', short: 'Washington', team: 'DAL', starter: true, captain: false, number: 25, height: 80, weight: 230, wingspan: 87, skin: '#c1886c', position: 'PF', faceCenter: [50, 41],
     attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 5, interiorDefense: 6, speed: 4, bounce: 4, size: 6, basketballIQ: 5, clutch: 4 } },
 
@@ -230,7 +232,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 5, rebounding: 6, playmaking: 5, interiorDefense: 4, speed: 2, bounce: 1, size: 9, basketballIQ: 6, clutch: 6 } },
 
   // ─── PHI ───────────────────────────────────────────────────────
-  { name: 'Johni Broome', short: 'Broome', team: 'MIN', starter: false, captain: false, number: 22, height: 82, weight: 240, wingspan: 84, skin: '#d6a890', position: 'PF', faceCenter: [50, 39],
+  { name: 'Johni Broome', short: 'Broome', team: 'MIL', starter: false, captain: false, number: 22, height: 82, weight: 240, wingspan: 84, skin: '#d6a890', position: 'PF', faceCenter: [50, 39],
     attrs: { jumpShot: 2, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 2, speed: 4, bounce: 3, size: 6, basketballIQ: 3, clutch: 4 } },
   { name: 'Joel Embiid', short: 'Embiid', team: 'PHI', starter: true, captain: true, number: 21, height: 84, weight: 280, wingspan: 89, skin: '#93624a', position: 'C', faceCenter: [49, 40],
     attrs: { jumpShot: 6, finishing: 7, rebounding: 8, playmaking: 7, interiorDefense: 5, speed: 4, bounce: 4, size: 9, basketballIQ: 9, clutch: 6 } },
@@ -318,138 +320,4 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 0, finishing: 4, rebounding: 7, playmaking: 1, interiorDefense: 6, speed: 4, bounce: 6, size: 8, basketballIQ: 4, clutch: 3 } },
   { name: 'Georges Niang', short: 'Niang', team: 'GSW', starter: false, captain: false, number: 32, height: 78, weight: 230, wingspan: 82, skin: '#b98c7c', position: 'PF', faceCenter: [49, 42],
     attrs: { jumpShot: 7, finishing: 2, rebounding: 3, playmaking: 4, interiorDefense: 2, speed: 3, bounce: 2, size: 6, basketballIQ: 5, clutch: 4 } },
-
-  // ─── 2026-27 rosters filled from ESPN (11-23) ──────────────────────
-  // ratings ESTIMATED from their NBA numbers and like players (for the ratings editor to review)
-  // ATL
-  { name: 'Henri Veesaar', short: 'Veesaar', team: 'ATL', starter: false, captain: false, number: 13, height: 84, weight: 227, skin: '#a67c76', position: 'C', faceCenter: [50, 41],
-    attrs: { jumpShot: 5, finishing: 2, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 1, bounce: 1, size: 8, basketballIQ: 3, clutch: 3 } },
-  { name: 'Rafael Castro', short: 'Castro', team: 'ATL', starter: false, captain: false, height: 81, weight: 224, position: 'PF',
-    attrs: { jumpShot: 2, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // BKN
-  { name: 'Grant Nelson', short: 'G. Nelson', team: 'BKN', starter: false, captain: false, number: 16, height: 83, weight: 230, skin: '#bf998a', position: 'PF', faceCenter: [47, 43],
-    attrs: { jumpShot: 2, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tyler Bilodeau', short: 'Bilodeau', team: 'BKN', starter: false, captain: false, number: 34, height: 80, weight: 228, skin: '#a77260', position: 'PF', faceCenter: [50, 40],
-    attrs: { jumpShot: 5, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // BOS
-  { name: 'Amari Williams', short: 'A. Williams', team: 'BOS', starter: false, captain: false, number: 77, height: 84, weight: 262, skin: '#925a43', position: 'C', faceCenter: [50, 44],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 3, speed: 1, bounce: 1, size: 8, basketballIQ: 3, clutch: 3 } },
-  // CHA
-  { name: 'PJ Hall', short: 'Hall', team: 'CHA', starter: false, captain: false, number: 16, height: 80, weight: 245, skin: '#a38174', position: 'C', faceCenter: [46, 47],
-    attrs: { jumpShot: 1, finishing: 3, rebounding: 6, playmaking: 1, interiorDefense: 3, speed: 2, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
-  // CHI
-  { name: 'Orlando Robinson', short: 'O. Robinson', team: 'CHI', starter: false, captain: false, number: '00', height: 82, weight: 235, skin: '#b77f65', position: 'C', faceCenter: [50, 42],
-    attrs: { jumpShot: 5, finishing: 4, rebounding: 5, playmaking: 2, interiorDefense: 2, speed: 2, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tobe Awaka', short: 'Awaka', team: 'CHI', starter: false, captain: false, number: 19, height: 80, weight: 255, skin: '#9e674f', position: 'PF', faceCenter: [49, 42],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 7, playmaking: 1, interiorDefense: 2, speed: 1, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // CLE
-  { name: 'Ernest Udeh Jr.', short: 'Udeh', team: 'CLE', starter: false, captain: false, number: 88, height: 81, weight: 266, skin: '#784c39', position: 'C', faceCenter: [50, 45],
-    attrs: { jumpShot: 0, finishing: 2, rebounding: 6, playmaking: 1, interiorDefense: 3, speed: 1, bounce: 1, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Khalifa Diop', short: 'Diop', team: 'CLE', starter: false, captain: false, number: 18, height: 83, weight: 231, position: 'C',
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Norchad Omier', short: 'Omier', team: 'CLE', starter: false, captain: false, number: 77, height: 79, weight: 248, skin: '#ae6f4d', position: 'PF', faceCenter: [50, 49],
-    attrs: { jumpShot: 2, finishing: 4, rebounding: 6, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 5, basketballIQ: 3, clutch: 3 } },
-  // DAL
-  { name: 'Moussa Cisse', short: 'Cisse', team: 'DAL', starter: false, captain: false, number: 30, height: 83, weight: 220, skin: '#8e6151', position: 'C', faceCenter: [50, 39],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 5, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tobi Lawal', short: 'Lawal', team: 'DAL', starter: false, captain: false, number: 33, height: 80, weight: 215, skin: '#a66845', position: 'PF', faceCenter: [50, 41],
-    attrs: { jumpShot: 2, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
-  // DEN
-  { name: 'Trevon Brazile', short: 'Brazile', team: 'DEN', starter: false, captain: false, number: 7, height: 82, weight: 220, skin: '#c08e71', position: 'PF', faceCenter: [50, 42],
-    attrs: { jumpShot: 4, finishing: 3, rebounding: 4, playmaking: 2, interiorDefense: 3, speed: 3, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  // DET
-  { name: 'Isaac Jones', short: 'I. Jones', team: 'DET', starter: false, captain: false, number: 13, height: 80, weight: 245, skin: '#9d614a', position: 'PF', faceCenter: [53, 48],
-    attrs: { jumpShot: 2, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 3, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tolu Smith', short: 'T. Smith', team: 'DET', starter: false, captain: false, number: 35, height: 83, weight: 250, skin: '#b67d60', position: 'C', faceCenter: [50, 40],
-    attrs: { jumpShot: 0, finishing: 2, rebounding: 5, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Ugonna Onyenso', short: 'Onyenso', team: 'DET', starter: false, captain: false, number: 34, height: 84, weight: 236, skin: '#976f5c', position: 'C', faceCenter: [50, 42],
-    attrs: { jumpShot: 0, finishing: 2, rebounding: 2, playmaking: 1, interiorDefense: 6, speed: 1, bounce: 1, size: 8, basketballIQ: 3, clutch: 3 } },
-  // GSW
-  { name: 'Charles Bassey', short: 'Bassey', team: 'GSW', starter: false, captain: false, number: 28, height: 82, weight: 230, skin: '#a36450', position: 'C', faceCenter: [49, 42],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 6, playmaking: 1, interiorDefense: 4, speed: 3, bounce: 4, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Graham Ike', short: 'Ike', team: 'GSW', starter: false, captain: false, number: 45, height: 81, weight: 250, skin: '#694236', position: 'PF', faceCenter: [51, 44],
-    attrs: { jumpShot: 2, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 3, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  { name: 'Malevy Leons', short: 'Leons', team: 'GSW', starter: false, captain: false, number: 33, height: 81, weight: 203, skin: '#a9765a', position: 'PF', faceCenter: [50, 43],
-    attrs: { jumpShot: 2, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 3, speed: 3, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // HOU
-  { name: 'Oscar Tshiebwe', short: 'Tshiebwe', team: 'HOU', starter: false, captain: false, number: 9, height: 80, weight: 255, skin: '#69463e', position: 'C', faceCenter: [50, 45],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 8, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // LAC
-  { name: 'Baba Miller', short: 'B. Miller', team: 'LAC', starter: false, captain: false, number: 18, height: 83, weight: 208, skin: '#a87561', position: 'PF', faceCenter: [49, 38],
-    attrs: { jumpShot: 2, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  // LAL
-  { name: 'Carson Cooper', short: 'Cooper', team: 'LAL', starter: false, captain: false, height: 83, weight: 245, skin: '#cba28e', position: 'C', faceCenter: [48, 39],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  // MIA
-  { name: 'Vladislav Goldin', short: 'Goldin', team: 'MIA', starter: false, captain: false, number: 50, height: 84, weight: 255, skin: '#b4755a', position: 'C', faceCenter: [50, 42],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 3, speed: 1, bounce: 1, size: 8, basketballIQ: 3, clutch: 3 } },
-  // MIL
-  { name: 'Bogoljub Markovic', short: 'Markovic', team: 'MIL', starter: false, captain: false, number: 23, height: 83, weight: 210, skin: '#d3a088', position: 'PF', faceCenter: [50, 41],
-    attrs: { jumpShot: 2, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Jericho Sims', short: 'Sims', team: 'MIL', starter: false, captain: false, number: '00', height: 82, weight: 250, skin: '#a37152', position: 'C', faceCenter: [49, 46],
-    attrs: { jumpShot: 0, finishing: 4, rebounding: 6, playmaking: 1, interiorDefense: 4, speed: 2, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Pete Nance', short: 'P. Nance', team: 'MIL', starter: false, captain: false, number: 35, height: 81, weight: 225, skin: '#b07f66', position: 'PF', faceCenter: [50, 41],
-    attrs: { jumpShot: 6, finishing: 3, rebounding: 3, playmaking: 2, interiorDefense: 4, speed: 3, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // MIN
-  { name: 'Rocco Zikarsky', short: 'Zikarsky', team: 'MIN', starter: false, captain: false, number: 44, height: 87, weight: 254, skin: '#bc8978', position: 'C', faceCenter: [49, 41],
-    attrs: { jumpShot: 0, finishing: 2, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 1, bounce: 1, size: 10, basketballIQ: 3, clutch: 3 } },
-  // NOP
-  { name: 'Julian Reese', short: 'Reese', team: 'NOP', starter: false, captain: false, number: 13, height: 81, weight: 252, skin: '#a06341', position: 'PF', faceCenter: [50, 43],
-    attrs: { jumpShot: 1, finishing: 4, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 2, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
-  { name: 'Karlo Matkovic', short: 'Matkovic', team: 'NOP', starter: false, captain: false, number: 17, height: 82, weight: 231, skin: '#b8846c', position: 'PF', faceCenter: [50, 42],
-    attrs: { jumpShot: 5, finishing: 4, rebounding: 5, playmaking: 2, interiorDefense: 3, speed: 3, bounce: 3, size: 7, basketballIQ: 4, clutch: 3 } },
-  { name: 'Malik Dia', short: 'Dia', team: 'NOP', starter: false, captain: false, number: 8, height: 81, weight: 250, skin: '#804f38', position: 'PF', faceCenter: [48, 44],
-    attrs: { jumpShot: 2, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // NYK
-  { name: 'James Wiseman', short: 'Wiseman', team: 'NYK', starter: false, captain: false, number: 35, height: 83, weight: 240, skin: '#7b5146', position: 'C', faceCenter: [49, 42],
-    attrs: { jumpShot: 0, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 5, size: 7, basketballIQ: 3, clutch: 3 } },
-  // ORL
-  { name: 'Colin Castleton', short: 'Castleton', team: 'ORL', starter: false, captain: false, number: 14, height: 82, weight: 250, skin: '#b88c7d', position: 'C', faceCenter: [50, 43],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 5, playmaking: 1, interiorDefense: 3, speed: 2, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Izaiyah Nelson', short: 'I. Nelson', team: 'ORL', starter: false, captain: false, number: 25, height: 80, weight: 219, skin: '#a16646', position: 'PF', faceCenter: [49, 42],
-    attrs: { jumpShot: 2, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // PHI
-  { name: 'Adem Bona', short: 'Bona', team: 'PHI', starter: false, captain: false, number: 30, height: 82, weight: 239, skin: '#91614b', position: 'C', faceCenter: [50, 42],
-    attrs: { jumpShot: 1, finishing: 4, rebounding: 6, playmaking: 1, interiorDefense: 6, speed: 3, bounce: 6, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Ariel Hukporti', short: 'Hukporti', team: 'PHI', starter: false, captain: false, number: 55, height: 84, weight: 258, skin: '#85543c', position: 'C', faceCenter: [50, 40],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 2, bounce: 2, size: 8, basketballIQ: 3, clutch: 3 } },
-  { name: 'Dominick Barlow', short: 'Barlow', team: 'PHI', starter: false, captain: false, number: 25, height: 81, weight: 238, skin: '#c78a68', position: 'PF', faceCenter: [50, 44],
-    attrs: { jumpShot: 3, finishing: 4, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 4, bounce: 6, size: 6, basketballIQ: 3, clutch: 3 } },
-  { name: 'Jabari Walker', short: 'J. Walker', team: 'PHI', starter: false, captain: false, number: 33, height: 79, weight: 240, skin: '#ab6f4e', position: 'PF', faceCenter: [49, 41],
-    attrs: { jumpShot: 4, finishing: 4, rebounding: 5, playmaking: 3, interiorDefense: 3, speed: 3, bounce: 3, size: 5, basketballIQ: 4, clutch: 3 } },
-  { name: 'Tacko Fall', short: 'Fall', team: 'PHI', starter: false, captain: false, number: 99, height: 90, weight: 299, skin: '#5a4031', position: 'C', faceCenter: [48, 37],
-    attrs: { jumpShot: 0, finishing: 2, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 0, bounce: 1, size: 11, basketballIQ: 3, clutch: 3 } },
-  // PHX
-  { name: 'Drew Timme', short: 'Timme', team: 'PHX', starter: false, captain: false, number: 2, height: 82, weight: 235, skin: '#b89583', position: 'PF', faceCenter: [48, 44],
-    attrs: { jumpShot: 4, finishing: 3, rebounding: 3, playmaking: 1, interiorDefense: 3, speed: 3, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Duop Reath', short: 'Reath', team: 'PHX', starter: false, captain: false, number: 26, height: 81, weight: 245, skin: '#6c3f34', position: 'C', faceCenter: [50, 42],
-    attrs: { jumpShot: 5, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // POR
-  { name: 'Branden Carlson', short: 'Carlson', team: 'POR', starter: false, captain: false, number: 10, height: 84, weight: 220, skin: '#b78f81', position: 'C', faceCenter: [49, 39],
-    attrs: { jumpShot: 5, finishing: 3, rebounding: 3, playmaking: 1, interiorDefense: 3, speed: 1, bounce: 1, size: 8, basketballIQ: 3, clutch: 3 } },
-  { name: 'Micah Potter', short: 'Potter', team: 'POR', starter: false, captain: false, number: 9, height: 81, weight: 248, skin: '#b99184', position: 'PF', faceCenter: [49, 41],
-    attrs: { jumpShot: 7, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 3, speed: 2, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
-  // SAC
-  { name: 'Dylan Cardwell', short: 'Cardwell', team: 'SAC', starter: false, captain: false, number: 32, height: 82, weight: 255, skin: '#a46043', position: 'C', faceCenter: [50, 43],
-    attrs: { jumpShot: 0, finishing: 4, rebounding: 8, playmaking: 1, interiorDefense: 5, speed: 2, bounce: 3, size: 7, basketballIQ: 4, clutch: 3 } },
-  { name: 'Mason Plumlee', short: 'Plumlee', team: 'SAC', starter: false, captain: false, number: 24, height: 84, weight: 254, skin: '#d39a93', position: 'C', faceCenter: [48, 43],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 5, playmaking: 4, interiorDefense: 4, speed: 1, bounce: 2, size: 8, basketballIQ: 5, clutch: 3 } },
-  // SAS
-  { name: 'Maliq Brown', short: 'M. Brown', team: 'SAS', starter: false, captain: false, number: 15, height: 81, weight: 235, skin: '#955f42', position: 'PF', faceCenter: [49, 42],
-    attrs: { jumpShot: 2, finishing: 4, rebounding: 4, playmaking: 1, interiorDefense: 2, speed: 2, bounce: 2, size: 6, basketballIQ: 3, clutch: 3 } },
-  // TOR
-  { name: 'Allen Graves', short: 'Graves', team: 'TOR', starter: false, captain: false, number: 22, height: 80, weight: 225, skin: '#9f7262', position: 'PF', faceCenter: [50, 39],
-    attrs: { jumpShot: 3, finishing: 3, rebounding: 4, playmaking: 4, interiorDefense: 4, speed: 4, bounce: 4, size: 6, basketballIQ: 4, clutch: 3 } },
-  { name: 'Nate Bittle', short: 'Bittle', team: 'TOR', starter: false, captain: false, height: 84, weight: 250, skin: '#c88b7f', position: 'C', faceCenter: [48, 42],
-    attrs: { jumpShot: 0, finishing: 2, rebounding: 2, playmaking: 1, interiorDefense: 6, speed: 1, bounce: 1, size: 8, basketballIQ: 3, clutch: 3 } },
-  // UTA
-  { name: 'Jonas Aidoo', short: 'Aidoo', team: 'UTA', starter: false, captain: false, height: 83, weight: 240, skin: '#9d6b5a', position: 'C', faceCenter: [50, 42],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tony Bradley', short: 'T. Bradley', team: 'UTA', starter: false, captain: false, number: 13, height: 82, weight: 248, skin: '#aa755a', position: 'C', faceCenter: [51, 47],
-    attrs: { jumpShot: 1, finishing: 3, rebounding: 5, playmaking: 1, interiorDefense: 4, speed: 2, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
-  // WAS
-  { name: 'Anthony Gill', short: 'Gill', team: 'WAS', starter: false, captain: false, number: 16, height: 79, weight: 230, skin: '#b98870', position: 'PF', faceCenter: [50, 41],
-    attrs: { jumpShot: 3, finishing: 4, rebounding: 4, playmaking: 2, interiorDefense: 3, speed: 3, bounce: 3, size: 5, basketballIQ: 5, clutch: 3 } },
-  { name: 'Felix Okpara', short: 'Okpara', team: 'WAS', starter: false, captain: false, number: 34, height: 83, weight: 237, skin: '#795545', position: 'C', faceCenter: [48, 38],
-    attrs: { jumpShot: 0, finishing: 3, rebounding: 4, playmaking: 1, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 3, clutch: 3 } },
 ]

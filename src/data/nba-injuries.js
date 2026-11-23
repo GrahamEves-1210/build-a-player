@@ -6,10 +6,7 @@
 //   se  1 = out for the season
 export const NBA_DAY_ONE_INJURIES = {
   'Ben Simmons':         { g: 82, k: 'ruptured right Achilles', se: 1 },   // SAC, surgery Oct 20
-  'Ariel Hukporti':      { g: 82, k: 'ruptured right Achilles', se: 1 },   // PHI, season-ending
-  'Henri Veesaar':       { g: 82, k: 'torn right ACL', se: 1 },            // ATL, out for 2026-27
   'Donte DiVincenzo':    { g: 76, k: 'ruptured right Achilles' },          // MIN, back about April
-  'Jamir Watkins':       { g: 76, k: 'torn left ACL' },                    // WAS, back about April
   'Shaedon Sharpe':      { g: 66, k: 'torn right meniscus' },              // POR, back about March
   'Jordan Miller':       { g: 66, k: 'torn left rotator cuff' },           // LAC, back about March
   'Mark Williams':       { g: 53, k: 'torn left labrum' },                 // PHX, back about February
