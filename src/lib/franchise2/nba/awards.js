@@ -1,13 +1,19 @@
 // NBA FRANCHISE: the season's awards, the All-Stars, the series MVPs and the records book (part C).
 //
 // Votes the way the real ones go:
-// - MVP: the best production on a winner (a 30-point season on a lottery team doesn't win it).
-// - DPOY: steals, blocks, the glass and the defender he is, on a good defensive team; bigs win most of them.
-// - ROY, Sixth Man (more games off the bench than starting), Most Improved (the biggest jump from last season, not
-//   a man back from an injury year), Clutch Player (points in the last five minutes of a game within five).
-// - All-NBA: fifteen men, positionless (since 2024), by the MVP vote. All-Defense: ten. All-Rookie: ten.
+// - MVP: the best production on a winner (a 30-point season on a lottery team doesn't win it), and voter fatigue: the
+//   reigning MVP needs a clearly better season to win again; three straight is the record and a fourth all but never.
+// - DPOY: steals, blocks, the defensive glass and the defender he is, each measured against the men at his spot
+//   (guards, wings, bigs), on a good defensive team; bigs still win most of them, guards and wings some.
+// - ROY, Sixth Man (more games off the bench than starting, 10+ a game), Most Improved (the biggest jump from last
+//   season, now a real rotation player: 12+ points, 24+ minutes; not a man back from an injury year), Clutch Player
+//   (points in the last five minutes of a game within five, on a winning team).
+// - All-NBA: fifteen men, positionless (since 2024), by the MVP vote (no fatigue). All-Defense: ten, positionless but
+//   as the voters go (three or more guards, two or more wings, five bigs at most). All-Rookie: ten.
 // - The 65-game rule (the 2023 CBA): MVP, DPOY, Sixth Man, MIP, Clutch, All-NBA and All-Defense need 65 games of 20+
-//   minutes (two of 15-20 count). ROY and All-Rookie don't.
+//   minutes (two of 15-20 count; a man who never played 20 minutes has none), or 62 and a season-ending injury.
+//   ROY and All-Rookie don't.
+// - No Coach of the Year: the league has no coaches.
 // - All-Stars: 12 a conference at the break, five of them starters (two guards and three frontcourt men).
 // - Finals MVP (the Bill Russell trophy), the conference finals MVPs (Larry Bird East, Magic Johnson West): the best
 //   series on the winning side.
@@ -72,7 +78,7 @@ function fatigue(p, year) {
   while (won.has(year - 1 - run)) run++
   let recent = 0
   for (let y = year - 10; y < year; y++) if (won.has(y)) recent++
-  return [0, 2.5, 5.5, 12][Math.min(3, run)] + 1.0 * recent
+  return [0, 2.5, 5.5, 12][Math.min(3, run)] + 1.4 * recent
 }
 // defense: steals, blocks, the defensive glass and the defender he is, each against the men who play his spot
 // (a guard's 1.8 steals beside a center's 3 blocks), then the team's defense and his minutes. The bigs still win most

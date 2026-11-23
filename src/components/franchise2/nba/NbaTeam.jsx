@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF } from '../../../lib/franchise2/nba'
+import { TEAM, SHORTS, depthOrder, coachOrder, photoOf, CAP_SIM, nick, picksOf, pickText, seasonText, teamOvr, ROSTER_MAX, addNews, CONF_OF, careerView } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
@@ -93,7 +93,7 @@ function ManSheet({ F, act, id, owner, onClose }) {
   const canStretch = costS && (costS.per ?? costS.$) != null && (costS.years ?? costS.y ?? 0) > (cost?.years ?? cost?.y ?? 0)
   const extOk = CAP_SIM.extensionOk(F, F.team, p)
   const ext = extOk?.ok ? CAP_SIM.extensionAsk(F, F.team, p) : null
-  const car = p.car ?? []
+  const car = careerView(p)   // (a season split by a trade: a row a team, then TOT)
   return createPortal(
     <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="fk fk-root nb-sheet" role="dialog" aria-label={p.n} style={fkVars(F.team)}>
