@@ -145,6 +145,20 @@ export function sheetLockTo(F, p, to) {
 // a man acquired in a trade can't be combined with other salaries in another trade for two months
 const AGG_DAYS = 60
 const aggLocked = (F, p) => p.txd != null && calDay(F) - p.txd < AGG_DAYS
+// a calDay as a date ("February 3"): the season's days by the schedule's calendar, the summer's from the draft
+// (late June) on, the summer before this season's the same way
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+export function calDate(F, cd) {
+  const rel = cd - yearBase(F), DAY = 86400000
+  let t
+  if (rel >= 0 && rel < (F.days ?? 175) && F.cal0 != null) t = F.cal0 + rel * DAY
+  else if (rel >= 0) t = Date.UTC((F.year ?? 2026) + 1, 5, 25) + (rel - DRAFT_DAY) * DAY
+  else t = Date.UTC(F.year ?? 2026, 5, 25) + (rel + 365 - DRAFT_DAY) * DAY
+  const d = new Date(t)
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`
+}
+// the rule, as the league office says it
+const aggText = (F, p) => `${p.n} was acquired in a trade on ${calDate(F, p.txd)} and can't be packaged with other players until ${calDate(F, p.txd + AGG_DAYS)}`
 
 // ── Picks ────────────────────────────────────────────────────────────────────
 // a deal's pick entry: an index into F.picks, or { i, top: N } (a protection put on it as it's traded), or
@@ -450,7 +464,7 @@ function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
       if (after > apron2Of(year) && agg) return { ok: false, why: `The ${s} would be over the second apron: they can't combine salaries in a trade`, k: 'agg' }
       // (a man it traded for in the last two months can't be combined with other salaries yet)
       const lock = agg && !tpe ? outMen.find(p => aggLocked(F, p)) : null
-      if (lock) return { ok: false, why: `${lock.n} was traded for in the last two months: his salary can't be combined with others in a trade yet`, k: 'agg' }
+      if (lock) return { ok: false, why: aggText(F, lock), k: 'agg' }
     }
     // (a hard-capped team keeps room for the minimum deals that fill it out: core fills the league's to 15)
     const st0 = standardOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => !p.tw).length
@@ -461,7 +475,7 @@ function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
   // rosters
   const st = standardOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => !p.tw).length
   const tw = twoWaysOf(team).filter(p => !outMen.includes(p)).length + inMen.filter(p => p.tw).length
-  if (F.phase === 'off' ? st + tw > OFF_MAX : st > ROSTER_MAX + cuts) return { ok: false, why: `The ${s} would have too many players (${F.phase === 'off' ? '21 in the offseason' : '15 standard contracts'})`, k: 'roster' }
+  if (F.phase === 'off' ? st + tw > OFF_MAX : st > ROSTER_MAX + cuts) return { ok: false, why: F.phase === 'off' ? `The ${s} would have ${st + tw} players under contract (21 at most in the offseason)` : `The ${s} would have ${st} players on standard contracts (15 at most)`, k: 'roster' }
   if (F.phase === 'season' && st < 13) return { ok: false, why: `The ${s} would be under 13 players`, k: 'roster' }
   if (tw > TWO_WAY_MAX) return { ok: false, why: `The ${s} would have more than 3 two-way players`, k: 'roster' }
   // frozen pick (over the second apron: its first seven drafts out)
@@ -579,7 +593,8 @@ export function decide(F, deal, { user = true } = {}) {
   if (back) return { yes: false, why: 'back', who: back }
   // a man it just traded for isn't going back out
   const fresh = bm.find(p => p.tx && p.tx[1] === ly && p.tx[2] != null && (F.phase !== 'season' || (F.day ?? 0) - p.tx[2] < 40))
-  if (fresh) return { yes: false, why: 'new', who: fresh }
+  // (packaged with others inside two months of the trade that brought him: the league's rule, not the team's call)
+  if (fresh) return { yes: false, why: bm.length > 1 && aggLocked(F, fresh) ? 'agg' : 'new', who: fresh }
   const inPk = pkList(F, ak, a), outPk = pkList(F, bk, b)
   const side = teamSide(F, b, { pl: am, pk: inPk.filter(k => !k._swap) }, { pl: bm, pk: outPk.filter(k => !k._swap) })
   const sw = inPk.reduce((x, k) => x + (k._swap ?? 0), 0) - outPk.reduce((x, k) => x + (k._swap ?? 0), 0)
@@ -606,7 +621,8 @@ export function sayOf(F, s, d) {
   switch (d.why) {
     case 'done': return `The ${N} are done dealing with the ${F.team} this season.`
     case 'back': return `The ${N} traded ${who} away this season. They won't take him back.`
-    case 'new': return `The ${N} just traded for ${who}. He isn't going anywhere.`
+    case 'new': return d.who?.txd != null ? `The ${N} acquired ${who} on ${calDate(F, d.who.txd)} and aren't trading him again this soon.` : `The ${N} just acquired ${who} and aren't trading him again this soon.`
+    case 'agg': return `${aggText(F, d.who)}.`
     case 'calls': return `The ${N} have stopped taking calls this week.`
     case 'nothing': return `The ${N} want something back.`
     case 'star': return `The ${N} want a front-line player or a high pick for ${who}, not depth.`
