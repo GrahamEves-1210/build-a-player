@@ -76,6 +76,8 @@ export function makeSchedule(F) {
 }
 // game nights greedily: each night the teams furthest behind their share take the games they can play, the ones
 // who rested last night first (a back-to-back only when a team is falling behind)
+// (a pair's 2-4 meetings spread across the season, the way the league's are: a meeting soon after the last one costs,
+// and two in a row happen only as a home-and-home, never a third straight)
 // (a night's size by the day of the week, opening night a Tuesday: the league's busy Wednesdays and Fridays, its
 // light Thursdays)
 const DOW = [0.8, 1.45, 0.55, 1.35, 1.0, 0.95, 0.9].map(x => x * 7 / 7.0)
@@ -85,6 +87,31 @@ function place(pool, nights, R, last) {
   const out = []
   const lastOf = s => played[s][played[s].length - 1]
   const b2b = Object.fromEntries(SHORTS.map(s => [s, 0]))
+  // each pair's meetings so far: [{ d, h }], and how many it has in all
+  const pk = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+  const met = new Map(), total = new Map()
+  for (const g of pool) total.set(pk(g.h, g.a), (total.get(pk(g.h, g.a)) ?? 0) + 1)
+  // (the meeting would follow the last one with no other game between for either team)
+  const straight = (g, d) => {
+    const M = met.get(pk(g.h, g.a))
+    const m = M?.[M.length - 1]
+    return !!m && lastOf(g.h) === m.d && lastOf(g.a) === m.d
+  }
+  // a hard no: a third straight, or two straight at the same building
+  const meetOk = (g, d) => {
+    if (!straight(g, d)) return true
+    const M = met.get(pk(g.h, g.a)), m = M[M.length - 1], m0 = M[M.length - 2]
+    if (m.h === g.h) return false
+    return !(m0 && played[g.h][played[g.h].length - 2] === m0.d && played[g.a][played[g.a].length - 2] === m0.d)
+  }
+  // the cost of meeting again this soon: none past about half the season's share of days between meetings
+  const soon = (g, d) => {
+    const M = met.get(pk(g.h, g.a))
+    if (!M?.length) return 0
+    const gap = d - M[M.length - 1].d, want = (last + 1) / (total.get(pk(g.h, g.a)) ?? 2)
+    return gap >= want * 0.5 ? 0 : 3 * (1 - gap / (want * 0.5))
+  }
+  const meet = (g, d) => { const key = pk(g.h, g.a); if (!met.has(key)) met.set(key, []); met.get(key).push({ d, h: g.h }) }
   for (let k = 0; k < nights.length; k++) {
     const d = nights[k]
     const share = (k + 1) / nights.length
@@ -94,8 +121,8 @@ function place(pool, nights, R, last) {
     const can = s => !(lastOf(s) === d - 1 && played[s][played[s].length - 2] === d - 2)
     // (a back-to-back costs a little; a team with few so far takes one sooner, one with 15 not at all)
     const pen = t => (yest(t) ? (b2b[t] >= 15 ? 4 : b2b[t] < 12 * share ? -0.25 : 0.05) : 0)
-    const score = g => behind(g.h) + behind(g.a) - pen(g.h) - pen(g.a) + R.u() * 0.5
-    const cand = left.filter(g => can(g.h) && can(g.a)).map(g => [score(g), g]).sort((x, y) => y[0] - x[0])
+    const score = g => behind(g.h) + behind(g.a) - pen(g.h) - pen(g.a) - soon(g, d) + R.u() * 0.5
+    const cand = left.filter(g => can(g.h) && can(g.a) && meetOk(g, d)).map(g => [score(g), g]).sort((x, y) => y[0] - x[0])
     const used = new Set()
     let n = 0
     for (const [sc, g] of cand) {
@@ -104,19 +131,44 @@ function place(pool, nights, R, last) {
       used.add(g.h); used.add(g.a)
       for (const t of [g.h, g.a]) { if (lastOf(t) === d - 1) b2b[t]++; played[t].push(d) }
       out.push({ d, h: g.h, a: g.a, k: g.k })
+      meet(g, d)
       left.splice(left.indexOf(g), 1); n++
     }
   }
   // what's left goes on any night both teams are free that keeps them off three nights in a row
   for (const g of left.splice(0)) {
     const free = (s, d) => { const P = played[s]; return !P.includes(d) && !(P.includes(d - 1) && P.includes(d - 2)) && !(P.includes(d + 1) && P.includes(d + 2)) && !(P.includes(d - 1) && P.includes(d + 1)) }
-    const d = nights.find(d => free(g.h, d) && free(g.a, d) && !played[g.h].includes(d - 1) && !played[g.h].includes(d + 1) && !played[g.a].includes(d - 1) && !played[g.a].includes(d + 1))
-      ?? nights.find(d => free(g.h, d) && free(g.a, d))
+    // (and away from the pair's other meetings: a fortnight, else a week, else anywhere)
+    const M = met.get(pk(g.h, g.a)) ?? []
+    const apart = (d, n) => M.every(m => Math.abs(m.d - d) >= n)
+    const rest = d => !played[g.h].includes(d - 1) && !played[g.h].includes(d + 1) && !played[g.a].includes(d - 1) && !played[g.a].includes(d + 1)
+    const d = [14, 7, 0].reduce((got, n) => got ?? nights.find(d => free(g.h, d) && free(g.a, d) && rest(d) && apart(d, n)), null)
+      ?? [14, 7, 0].reduce((got, n) => got ?? nights.find(d => free(g.h, d) && free(g.a, d) && apart(d, n)), null)
     if (d == null) { left.push(g); continue }
     for (const s of [g.h, g.a]) { played[s].push(d); played[s].sort((x, y) => x - y) }
     out.push({ d, h: g.h, a: g.a, k: g.k })
+    meet(g, d); met.get(pk(g.h, g.a)).sort((x, y) => x.d - y.d)
   }
-  return left.length ? null : out
+  if (left.length) return null
+  // (a leftover placed anywhere can still land between two meetings: the whole schedule's straights checked once more)
+  return straightsOf(out).bad ? null : out
+}
+// each team's games in order: the same opponent three straight, or two straight in the same building
+export function straightsOf(sched) {
+  const by = Object.fromEntries(SHORTS.map(s => [s, []]))
+  for (const g of [...sched].sort((x, y) => x.d - y.d)) { by[g.h].push(g); by[g.a].push(g) }
+  const out = []
+  let pairs = 0
+  for (const s of SHORTS) {
+    const G = by[s], opp = g => (g.h === s ? g.a : g.h)
+    for (let i = 1; i < G.length; i++) {
+      if (opp(G[i]) !== opp(G[i - 1])) continue
+      if (s < opp(G[i])) pairs++
+      if (G[i].h === G[i - 1].h) out.push(`${s} plays ${opp(G[i])} twice straight at the same building (day ${G[i].d})`)
+      if (i >= 2 && opp(G[i - 2]) === opp(G[i])) out.push(`${s} plays ${opp(G[i])} three straight (day ${G[i].d})`)
+    }
+  }
+  return { bad: out.length, list: out, pairs }
 }
 export const b2bOf = (F, g) => {
   const was = s => F.sched.some(x => x.d === g.d - 1 && (x.h === s || x.a === s))
@@ -136,5 +188,6 @@ export function scheduleProblems(F) {
     if (x.b2b > 18 || x.b2b < 11) bad.push(`${s} has ${x.b2b} back-to-backs`)
   }
   for (const g of F.sched) if (g.d >= F.asb[0] && g.d <= F.asb[1]) bad.push(`game in the All-Star break ${g.h}-${g.a}`)
+  bad.push(...straightsOf(F.sched).list)
   return { bad, b2b: Object.fromEntries(SHORTS.map(s => [s, n[s].b2b])) }
 }
