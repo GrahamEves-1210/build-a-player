@@ -23,6 +23,29 @@
 .nb-ser-t b { font-family: var(--fk-d); font-weight: 400; font-size: 17px; }
 .nb-ser-t em { margin-left: auto; font-style: normal; font-family: var(--fk-d); font-size: 20px; }
 .nb-ser-t.is-out { opacity: .42; }
+.nb-seed { flex: none; min-width: 16px; font-style: normal; font-family: var(--fk-b); font-weight: 700; font-size: 13px; text-align: center; opacity: .85; }
+.nb-ser.is-big .nb-ser-t { height: 52px; }
+.nb-ser.is-big .nb-ser-t b { font-size: 21px; }
+.nb-ser.is-big .nb-ser-t em { font-size: 28px; }
+.nb-finals { padding: 10px; background: var(--fk-g1); box-shadow: inset 0 3px 0 var(--fk-gold); }
+.nb-finals > small { color: #fff !important; font-size: 14px !important; }
+.nb-ser-note { margin: 2px 0 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-text); }
+.nb-confs { display: grid; gap: 16px; }
+@media (min-width: 720px) { .nb-confs { grid-template-columns: 1fr 1fr; gap: 18px; } }
+.nb-conf { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.nb-conf-h { margin: 0; padding-bottom: 4px; border-bottom: 1px solid var(--fk-line2); font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .4px; text-transform: uppercase; color: #fff; }
+/* the champions: the Finals game by game, the Finals MVP */
+.nb-champ-fin { display: grid; gap: 6px; }
+.nb-champ-fin > small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; color: var(--fk-mute); }
+.nb-champ-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 3px; }
+.nb-champ-games span { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tc); font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: #fff; white-space: nowrap; }
+.nb-champ-games b { font-family: var(--fk-d); font-weight: 400; font-size: 14px; color: var(--fk-mute); }
+.nb-champ-mvp { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -4px 0 var(--tc2); }
+.nb-champ-mvp span { display: grid; gap: 2px; min-width: 0; line-height: 1.15; }
+.nb-champ-mvp small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; text-transform: uppercase; opacity: .9; }
+.nb-champ-mvp b { font-family: var(--fk-d); font-weight: 400; font-size: 24px; letter-spacing: .3px; text-transform: uppercase; }
+.nb-champ-mvp em { font-style: normal; font-family: var(--fk-b); font-weight: 600; font-size: 14px; }
+.nb-champ-mvp .fk-logo { filter: drop-shadow(0 0 1px rgba(255,255,255,.85)); }
 
 /* game day */
 .nb-gd { position: fixed; inset: 0; z-index: 1060; overflow-y: auto; background: var(--fk-ink); color: var(--fk-text); padding: calc(var(--safe-top, 0px) + 14px) 16px calc(var(--web-rail, 0px) + 16px); }
@@ -33,6 +56,84 @@
 .nb-gd-head { margin: 0; text-align: center; font-family: var(--fk-d); font-weight: 400; font-size: 28px; line-height: 1.05; text-transform: uppercase; color: #fff; }
 .nb-gd-sub { margin: 0; text-align: center; font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: var(--fk-mute); }
 .nb-gd-tops { display: grid; gap: 6px; }
+
+/* game day, live and final (NbaGame.jsx GameDay): football's layout (gameday.css .gd), the NBA's pieces */
+.nb-gdl .gd-weekrow { align-items: stretch; }
+@media (max-width: 899px) { .nb-gdl .gd-main { grid-template-columns: minmax(0, 1fr); } }
+.nb-gdl :is(.gd-left, .gd-right) { grid-template-columns: minmax(0, 1fr); }
+.nb-gdl .gd-sheet, .nb-gdl .gd-sheet .ss-sheet.sq-box { min-width: 0; max-width: 100%; }
+.nb-leave { flex: none; height: 30px; padding: 0 12px; border: 0; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line2); color: #fff; font-family: var(--fk-d); font-size: 14px; letter-spacing: .4px; text-transform: uppercase; cursor: pointer; }
+.nb-leave:hover, .nb-leave:focus-visible { background: var(--fk-g3); }
+.nb-bugwrap { display: grid; gap: 0; min-width: 0; }
+.nb-bug .fk-bug-st { min-width: 64px; }
+.nb-bug .fk-bug-final { font-size: 15px !important; letter-spacing: .3px; white-space: nowrap; }
+/* (a logo in its own team's colour on its own bar, HOU's red on red: a thin light edge keeps its shape) */
+.nb-bug .fk-bug-t .fk-logo, .nb-fin-t .fk-logo, .nb-now .fk-logo, .nb-run .fk-logo, .nb-ldr .fk-logo, .nb-seg .fk-logo, .nb-ser-t .fk-logo { filter: drop-shadow(0 0 1px rgba(255,255,255,.85)) drop-shadow(0 0 1px rgba(0,0,0,.35)); }
+.nb-bug .fk-bug-t.is-lost .fk-bug-pts { color: var(--fk-mute); }
+/* the team fouls and the bonus, under each team's half of the bug */
+.nb-tf { display: grid; grid-template-columns: 1fr 1fr 64px; height: 24px; background: var(--fk-g1); box-shadow: 0 0 0 1px var(--fk-line2); }
+.nb-tf > span { display: flex; align-items: center; gap: 6px; padding: 0 8px; min-width: 0; font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); white-space: nowrap; }
+.nb-tf > span + span { border-left: 1px solid var(--fk-line2); }
+.nb-tf em { font-style: normal; text-transform: uppercase; }
+.nb-tf b { margin-left: auto; padding: 1px 5px 0; background: #f2c21b; color: #121006; font-family: var(--fk-d); font-weight: 400; font-size: 13px; letter-spacing: .4px; }
+/* the last basket */
+.nb-now { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 64px; padding: 8px 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -4px 0 var(--tc2); }
+.nb-now-txt { display: grid; gap: 3px; min-width: 0; line-height: 1.2; }
+.nb-now-txt small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .2px; opacity: .9; }
+.nb-now-txt b { font-family: var(--fk-b); font-weight: 700; font-size: 16px; }
+.nb-now-sc { display: grid; justify-items: end; line-height: 1; }
+.nb-now-sc small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; opacity: .85; }
+.nb-now-sc b { font-family: var(--fk-d); font-weight: 400; font-size: 26px; font-variant-numeric: tabular-nums; }
+.nb-run { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; background: var(--tc); color: var(--tct); box-shadow: inset 0 -3px 0 var(--tc2); }
+.nb-run b { font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .4px; text-transform: uppercase; }
+.nb-flow span { font-size: 13px; }
+.nb-ldrs { display: grid; gap: 3px; }
+.nb-ldr { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px; min-height: 38px; padding: 4px 10px; background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tc); }
+.nb-ldr > b { font-family: var(--fk-d); font-weight: 400; font-size: 16px; color: #fff; }
+.nb-ldr > span { min-width: 0; font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-ls { margin: 0; }
+/* the play-by-play */
+.nb-tabs { grid-template-columns: 1fr 1fr; }
+.nb-play { grid-template-columns: 52px minmax(0, 1fr) auto; }
+.nb-play-sc { font-family: var(--fk-d); font-size: 15px; color: var(--fk-mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nb-play-sc i { font-style: normal; }
+.nb-play-sc i.is-up { color: #fff; }
+.nb-pbp-brk { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; padding: 0 12px; background: var(--fk-g3); }
+.nb-pbp-brk b { font-family: var(--fk-d); font-weight: 400; font-size: 15px; letter-spacing: .4px; text-transform: uppercase; color: #fff; }
+.nb-pbp-brk span { font-family: var(--fk-b); font-weight: 600; font-size: 14px; color: var(--fk-mute); }
+.nb-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-bottom: 6px; }
+.nb-seg button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border: 0; background: var(--fk-g2); color: var(--fk-mute); font-family: var(--fk-d); font-size: 15px; letter-spacing: .3px; text-transform: uppercase; cursor: pointer; }
+.nb-seg button.is-on { background: var(--tc); color: var(--tct); box-shadow: inset 0 -3px 0 var(--tc2); }
+/* the final: the bars keep their colours, the loser's numbers go quiet */
+.nb-fin-t.is-lost { filter: none; }
+.nb-fin-t.is-lost > strong { color: var(--fk-mute); background: rgba(0,0,0,.42); }
+.nb-tops { gap: 4px; }
+
+/* the box score's men (NbaGame.jsx MenTable): the name column stays put, the numbers slide under it on a phone */
+.nb-bx-wrap { position: relative; min-width: 0; }
+.nb-bx-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; background: var(--fk-g1); }
+.nb-bx-scroll:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.nb-bx { border-collapse: separate; border-spacing: 0; width: 100%; font-family: var(--fk-b); font-size: 14px; color: #fff; font-variant-numeric: tabular-nums; }
+.nb-bx th, .nb-bx td { height: 36px; padding: 0 7px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--fk-line); }
+.nb-bx thead th { height: 30px; font-weight: 700; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); background: var(--fk-g2); position: sticky; top: 0; }
+.nb-bx td { min-width: 30px; }
+.nb-bx .nb-bx-name { position: sticky; left: 0; z-index: 1; min-width: 118px; max-width: 132px; text-align: left; background: var(--fk-g1); box-shadow: 1px 0 0 var(--fk-line2); }
+.nb-bx thead .nb-bx-name { z-index: 2; background: var(--fk-g2); color: #fff; font-family: var(--fk-d); font-weight: 400; font-size: 15px; letter-spacing: .3px; text-transform: uppercase; }
+.nb-bx tbody .nb-bx-name { display: table-cell; }
+.nb-bx-name b { display: block; overflow: hidden; text-overflow: ellipsis; font-weight: 700; font-size: 14px; }
+.nb-bx-name small { display: block; margin-top: 1px; font-weight: 600; font-size: 13px; color: var(--fk-mute); line-height: 1; }
+.nb-bx tbody th.nb-bx-name { padding-top: 3px; padding-bottom: 3px; }
+.nb-bx tr.is-mine .nb-bx-name { box-shadow: inset 4px 0 0 var(--tca, #fff), 1px 0 0 var(--fk-line2); padding-left: 10px; }
+.nb-bx-sec th, .nb-bx-sec td { height: 26px; background: var(--fk-g3) !important; font-weight: 700; font-size: 13px; letter-spacing: .3px; text-transform: uppercase; color: var(--fk-mute) !important; }
+.nb-bx td.is-pts { font-weight: 800; }
+.nb-bx .nb-bx-dnp { text-align: left; color: var(--fk-mute); font-weight: 600; }
+.nb-bx .nb-bx-dnp span { position: sticky; left: 132px; }
+.nb-bx-tot th, .nb-bx-tot td { background: var(--fk-g2); font-weight: 700; border-bottom: 0; }
+.nb-bx-pct th, .nb-bx-pct td { height: 26px; background: var(--fk-g2); font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+.nb-bx-more { position: absolute; top: 0; right: 0; bottom: 0; width: 28px; display: grid; place-items: center; pointer-events: none; background: linear-gradient(90deg, rgba(11,12,14,0), rgba(11,12,14,.92) 70%); color: #fff; font-family: var(--fk-d); font-size: 22px; }
+/* (the sheet's own pieces in the kit's type: 13px and up) */
+.nb-boxsheet .bx-lead-row { min-height: 44px; }
+.nb-boxsheet .bx-where { font-size: 14px; }
 
 /* the team */
 .nb-team, .nb-trades, .nb-league, .nb-hist, .nb-off, .nb-off > section { display: grid; gap: 12px; min-width: 0; }
@@ -318,3 +419,5 @@ button.nb-st-row.is-me { color: var(--tct); }
   .nb-deal-h b { flex: 1; }
   .nb-deal-h em { flex-basis: 100%; margin-left: 0; }
 }
+/* (football hides its wide screen's second tab, the scoring, which sits under the field; here it's the box score) */
+@media (min-width: 900px) { .nb-gdl.gd:not(.is-final) .gd-tabs button:nth-child(2) { display: block; } }

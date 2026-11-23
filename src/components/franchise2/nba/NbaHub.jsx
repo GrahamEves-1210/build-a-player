@@ -269,36 +269,61 @@ function PoCard({ F, act, play }) {
 }
 export const seedText = (F, s) => { const c = CONF_OF[s], i = (F.po?.final?.[c] ?? F.po?.seeds?.[c] ?? []).indexOf(s); return i >= 0 ? `No. ${i + 1} ${c === 'E' ? 'East' : 'West'}` : '' }
 
+// THE BRACKET, the NBA's way: the Finals on top once they're set, then each conference (East, West) with its rounds,
+// the latest first, every team with its seed (1 v 8, 4 v 5, 3 v 6, 2 v 7), and the play-in under them
 function Bracket({ F }) {
   const P = F.po
   if (!P) return null
-  const rounds = [...(P.all ?? []), ...(P.stage === 'r' && P.S ? [P.S] : [])]
+  const rounds = [...(P.all ?? []), ...(P.stage === 'r' && P.S && !(P.all ?? []).includes(P.S) ? [P.S] : [])]
+  const fin = rounds[3]?.[0] ?? null
+  const now = F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[P.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : P.champ ? `${nick(P.champ)} win the title` : ''
+  const confs = CONF_OF[F.team] === 'W' ? ['W', 'E'] : ['E', 'W']
   return (
     <section className="nb-bracket">
-      <h3 className="fh-h"><b>Bracket</b><span>{F.phase === 'playin' ? 'Play-in' : ''}</span></h3>
-      {P.pi && ['E', 'W'].map(c => (
-        <div key={c} className="nb-pi">
-          <small>{c === 'E' ? 'EAST' : 'WEST'} PLAY-IN</small>
-          {piGames(P, c).map(g => <SeriesRow key={g.k} F={F} hi={g.h} lo={g.a} g={g} txt={g.k === '78' ? '7 v 8' : g.k === '910' ? '9 v 10' : 'For No. 8'} />)}
+      <h3 className="fh-h"><b>Bracket</b><span>{now}</span></h3>
+      {fin && (
+        <div className="nb-round nb-finals">
+          <small>NBA FINALS</small>
+          <SeriesRow F={F} hi={fin.hi} lo={fin.lo} S={fin} big />
+          <p className="nb-ser-note">{fin.done ? `${nick(fin.done)} win the series ${Math.max(fin.wh, fin.wl)}-${Math.min(fin.wh, fin.wl)}` : seriesText(fin)}</p>
         </div>
-      ))}
-      {rounds.map((rd, k) => (
-        <div key={k} className="nb-round">
-          <small>{ROUND_NAME[k]}</small>
-          {rd.map(S => <SeriesRow key={S.hi + S.lo} F={F} hi={S.hi} lo={S.lo} S={S} />)}
-        </div>
-      ))}
+      )}
+      <div className="nb-confs">
+        {confs.map(c => (
+          <div key={c} className="nb-conf">
+            <h4 className="nb-conf-h">{CONF_NAME[c]} Conference</h4>
+            {[2, 1, 0].map(k => {
+              const list = (rounds[k] ?? []).filter(S => S.c === c)
+              return list.length > 0 && (
+                <div key={k} className="nb-round">
+                  <small>{['First round', 'Conference semifinals', 'Conference finals'][k]}</small>
+                  {list.map(S => <SeriesRow key={S.hi + S.lo} F={F} hi={S.hi} lo={S.lo} S={S} />)}
+                </div>
+              )
+            })}
+            {P.pi?.[c] || (P.cur ?? []).some(g => g.c === c && g.k) ? (
+              <div className="nb-pi">
+                <small>Play-in tournament</small>
+                {piGames(P, c).map(g => <SeriesRow key={g.k} F={F} hi={g.h} lo={g.a} g={g} txt={g.k === '78' ? '7 v 8' : g.k === '910' ? '9 v 10' : 'For No. 8'} />)}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
-const piGames = (P, c) => { const x = P.pi?.[c] ?? {}; return [x.g78, x.g910, x.gl, ...(P.cur ?? []).filter(g => g.c === c)].filter((g, i, a) => g && a.indexOf(g) === i) }
-function SeriesRow({ F, hi, lo, S, g, txt }) {
+const piGames = (P, c) => { const x = P.pi?.[c] ?? {}; return [x.g78, x.g910, x.gl, ...(P.cur ?? []).filter(g => g.c === c && g.k)].filter((g, i, a) => g && a.findIndex(y => y && y.k === g.k) === i) }
+// a team's seed in its conference (after the play-in, the seed it plays the playoffs as)
+const seedOf = (F, s) => { const c = CONF_OF[s], i = (F.po?.final?.[c] ?? F.po?.seeds?.[c] ?? []).indexOf(s); return i >= 0 ? i + 1 : null }
+function SeriesRow({ F, hi, lo, S, g, txt, big = false }) {
   const won = s => S?.done === s || (g?.hs != null && (s === g.h ? g.hs > g.as : g.as > g.hs))
   return (
-    <div className={`nb-ser${hi === F.team || lo === F.team ? ' is-me' : ''}`}>
+    <div className={`nb-ser${hi === F.team || lo === F.team ? ' is-me' : ''}${big ? ' is-big' : ''}`}>
       {[hi, lo].map(s => (
         <span key={s} className={`nb-ser-t${(S?.done || g?.hs != null) && !won(s) ? ' is-out' : ''}`} style={fkVars(s)}>
-          <KLogo s={s} size={22} /><b>{TEAM[s].short}</b>{S && <em>{s === hi ? S.wh : S.wl}</em>}{g?.hs != null && <em>{s === g.h ? g.hs : g.as}</em>}
+          {seedOf(F, s) && <i className="nb-seed">{seedOf(F, s)}</i>}
+          <KLogo s={s} size={big ? 30 : 22} /><b>{big ? TEAM[s].nick : TEAM[s].short}</b>{S && <em>{s === hi ? S.wh : S.wl}</em>}{g?.hs != null && <em>{s === g.h ? g.hs : g.as}</em>}
         </span>
       ))}
       {txt && <small>{txt}</small>}
@@ -306,19 +331,44 @@ function SeriesRow({ F, hi, lo, S, g, txt }) {
   )
 }
 
+// THE CHAMPIONS: who won it, the Finals (the series, the games), the Finals MVP and his series; then the GM's own end
 function Champions({ F, act }) {
   const P = F.po
   const champ = P.champ, fin = P.all[3][0]
   const me = champ === F.team
+  const loser = fin.done === fin.hi ? fin.lo : fin.hi
+  const mvp = P.fmvp != null ? NBA.manOf(F, P.fmvp) : null
+  const ml = mvp && (fin.st?.[mvp.i] ?? null)
+  const per = k => (ml?.gp ? (ml[k] / ml.gp).toFixed(1) : null)
+  const n = fin.g.length
+  const finish = finishOf(F, F.team)
+  // (the GM's season in a sentence with its subject: "The Celtics were eliminated in the first round")
+  const mine = me ? null : FINISH_LINE[finish]?.(nick(F.team)) ?? null
   return (
     <section className={`fh-next${me ? ' is-sb' : ''}`}>
-      <div className="fh-next-h"><b>{seasonText(F.year)} NBA champions</b><span>{nick(champ)} win the Finals {Math.max(fin.wh, fin.wl)}-{Math.min(fin.wh, fin.wl)}</span></div>
+      <div className="fh-next-h"><b>{seasonText(F.year)} NBA champions</b><span>{nick(champ)} beat the {nick(loser)} {Math.max(fin.wh, fin.wl)}-{Math.min(fin.wh, fin.wl)}</span></div>
       <TeamSlab s={champ} size="l" sub="NBA CHAMPIONS" />
       {me && <Stamp kind="gold" big>CHAMPIONS</Stamp>}
-      {!me && <p className="fh-next-note">{FINISH_TEXT[finishOf(F, F.team)]}.</p>}
+      <div className="nb-champ-fin">
+        <small>NBA FINALS · {n === 4 ? 'A SWEEP' : `IN ${n} GAMES`}</small>
+        <div className="nb-champ-games">
+          {fin.g.map((x, i) => { const aw = x.h === fin.hi ? fin.lo : fin.hi, wonBy = x.hs > x.as ? x.h : aw; return <span key={i} style={fkVars(wonBy)}><b>G{i + 1}</b>{wonBy} {Math.max(x.hs, x.as)}-{Math.min(x.hs, x.as)}{x.ot ? ` ${x.ot > 1 ? `${x.ot}OT` : 'OT'}` : ''}</span> })}
+        </div>
+      </div>
+      {mvp && (
+        <div className="nb-champ-mvp" style={fkVars(champ)}>
+          <KLogo s={champ} size={36} />
+          <span><small>Finals MVP</small><b>{mvp.n}</b>{ml && <em>{per('pts')} PPG · {per('reb')} RPG · {per('ast')} APG</em>}</span>
+        </div>
+      )}
+      {mine && <p className="fh-next-note">{mine}.</p>}
       <div className="fh-go"><Go onClick={() => { act(X => { closeSeason(X) }); sfx('whistle') }}>Into the offseason</Go></div>
     </section>
   )
+}
+const FINISH_LINE = {
+  finals: t => `The ${t} lost in the NBA Finals`, cf: t => `The ${t} were eliminated in the conference finals`, r2: t => `The ${t} were eliminated in the conference semifinals`,
+  r1: t => `The ${t} were eliminated in the first round`, playin: t => `The ${t} were eliminated in the play-in tournament`, lottery: t => `The ${t} missed the postseason`,
 }
 export { Banner, Chyron, Fold }
 
