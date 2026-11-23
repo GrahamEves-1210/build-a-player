@@ -14,7 +14,8 @@ code wrapped in Capacitor 8 and built on Codemagic (`APP.md`). Launch steps are 
 - **Feedback runs:** a scheduled cloud session reads the in-game feedback twice a day (`supabase/claude_feedback.sql`).
   It fixes reported bugs on its own branch with a PR to `main`, never pushing `main`. Features, ideas, ratings and
   anything else that isn't a clear bug go to the owner first.
-- His terminal is PowerShell 5.1: no `&&`, use `; if ($?) { ... }`.
+- He's on a Mac now (15" MacBook Air M5, zsh): `&&` works. Node lives in `~/.local/node` (no Homebrew); in a tool's shell put
+  `export PATH="$HOME/.local/node/bin:$PATH";` first. (The old Windows PC used PowerShell 5.1 and F:\ paths.)
 
 ## Branches and pushing
 - `main` is production: pushing it deploys build-a-player.com and Railway.
