@@ -20,10 +20,13 @@ code wrapped in Capacitor 8 and built on Codemagic (`APP.md`). Launch steps are 
 ## Branches and pushing
 - `main` is production: pushing it deploys build-a-player.com and Railway.
 - `app` / `app-clean` are the phone app (TestFlight builds `app-clean`). Keep them on the same commit as `main`.
-- **Push only when he says, and only what he named.** Check `git log origin/<b>..<b>` first so nothing else rides along.
+- **Finished work always goes to `main` (owner, 2026-11-23).** Merge the latest `origin/main` in first, run
+  `npm run build`, push `main` and `app` together, then delete any side branch the work was on. Never leave
+  finished work sitting on a side branch.
 - Run `npm run build` before a push to `main`. Otherwise don't run builds unless he asks: the dev server is `npx vite` on 5199.
 - Rosters, ratings and headshots must always be identical on `main` and the app branches.
-- Cloud sessions work on their own `claude/*` branch, which deploys nothing.
+- Cloud sessions may start on a `claude/*` branch; merge it into `main` when the work is done and delete it.
+  The scheduled feedback runs are the exception: their fixes go out as a PR for him to merge.
 - Never commit `.env.local` or generated `android/`/`ios/` output to `main`.
 
 ## Content rules

@@ -80,7 +80,23 @@ export async function onRequestGet(context) {
       else fixed.push(`${kind === 'coins' ? 'Coin pack' : 'Builder Pass'} added for ${uid} (${s.id})`)
     }
 
-    const head = fixed.length || look.length ? '⚠️ **Daily payments check**' : `✅ Daily payments check: all good (${ids.length} Pro accounts)`
+    // ── The BAP Pro Discord role: every Pro with Discord linked has it (its own request: discord-pro-sync.js) ──
+    let roleLine = ''
+    try {
+      let from = 0, given = 0, out = 0, d = {}
+      for (let i = 0; i < 40; i++) {
+        const r = await fetch(new URL(`/api/discord-pro-sync?json=1&from=${from}&key=${encodeURIComponent(env.CHECK_KEY)}`, context.request.url))
+        d = await r.json().catch(() => ({ problem: `no answer (${r.status})` }))
+        if (d.problem) break
+        given += d.given ?? 0; out += d.notInServer ?? 0
+        if (d.next == null) break
+        from = d.next
+      }
+      if (d.problem) look.push(`BAP Pro Discord role: ${d.problem}`)
+      else roleLine = `\nDiscord Pro role: ${given} of ${d.linked ?? 0} Pro accounts with Discord have it${out ? ` (${out} not in the server)` : ''}`
+    } catch (e) { look.push(`BAP Pro Discord role: the sync didn't run (${e?.message})`) }
+
+    const head = (fixed.length || look.length ? '⚠️ **Daily payments check**' : `✅ Daily payments check: all good (${ids.length} Pro accounts)`) + roleLine
     const body = [
       fixed.length ? `**Fixed (${fixed.length}):**\n${fixed.join('\n')}` : '',
       look.length ? `**Needs a look (${look.length}):**\n${look.join('\n')}` : '',
