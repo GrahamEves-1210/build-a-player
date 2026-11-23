@@ -8,7 +8,7 @@
 // retirement is on the wire and his card keeps the year (F.builds[b].done).
 import { TEAM, TYPES, ovrOfAttrs, SPOTS, groupOfSpot } from './league'
 import { rngOf, clamp } from '../rng'
-import { addNews, POS_FULL } from './news'
+import { addNews, POS_FULL, signText } from './news'
 import * as X from './seams'
 
 export const BUILD_MAX = 3
@@ -46,7 +46,7 @@ export function placeBuilds(F) {
     t.r.push(p)
     X.rookieDeal(F, p, { n: buildSlot(p.o), r: 1 })
     B.i = p.i
-    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${POS_FULL[p.p] ?? p.p}, to a rookie-scale deal${same ? `; ${same.n} is waived` : ''}` })
+    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${signText('signs with', { ...p, n: `${p.n}, a ${POS_FULL[p.p] ?? p.p},` }, F.team, { note: ' (rookie scale)' })}${same ? `; ${same.n} is waived` : ''}` })
     if (!F.noCap) addNews(F, { k: 'cap', tag: 'PAYROLL', s: F.team, text: buildCapText(F, before, X.capSheet(F, F.team)) })
   }
 }

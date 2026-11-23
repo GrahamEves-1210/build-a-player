@@ -10,7 +10,7 @@ import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, le
 import { records, recText, confOrder, pct } from './season'
 import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring, pruneDrafts } from './draft'
-import { addNews } from './news'
+import { addNews, signText, millions } from './news'
 import * as X from './seams'
 import { growBuilds } from './builds'
 import { notable } from './aging'
@@ -189,7 +189,7 @@ export function resignMine(F, id, yes) {
   if (!c.ok) { F.off.mine.push(id); return c }
   X.signMan(F, F.team, p, { ...deal, bird: true })
   F.off.kept.push(id)
-  addNews(F, { k: 'sign', tag: 'RE-SIGNED', s: F.team, text: `${p.n} re-signs with the ${nick(F.team)}: ${deal.y} ${deal.y === 1 ? 'year' : 'years'}, $${deal.$.toFixed(1)} million a year` })
+  addNews(F, { k: 'sign', tag: 'RE-SIGNED', s: F.team, text: signText('re-signs with', p, F.team) })
   return { ok: true }
 }
 // the GM's offer to a free agent ({ $, y } or his ask): in free agency it's a bid, weighed with the league's on the
@@ -205,7 +205,7 @@ export function signFA(F, id, deal = null) {
   }
   const r = MK.lateOffer(F, id, d)
   if (!r.ok) return r
-  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} agrees to a ${d.y}-year, $${(d.$ * d.y).toFixed(1)} million deal with the ${nick(F.team)}` })
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: signText('signs with', p, F.team) })
   return { ok: true, deal: d }
 }
 export const faOffer = signFA
@@ -247,7 +247,7 @@ export function tenderQO(F, id, yes = true) {
   if (!p || !p.rfa || !p.qo) return { ok: false, why: 'Not a restricted free agent' }
   if (yes) p.qot = 1
   else delete p.qot
-  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: p.qtw ? `The ${nick(F.team)} extend a two-way qualifying offer to ${p.n}, making him a restricted free agent` : `The ${nick(F.team)} extend a $${p.qo.toFixed(1)} million qualifying offer to ${p.n}, making him a restricted free agent` })
+  if (yes) addNews(F, { k: 'fa', tag: 'QUALIFYING OFFER', s: F.team, text: p.qtw ? `The ${nick(F.team)} extend a two-way qualifying offer to ${p.n}, making him a restricted free agent` : `The ${nick(F.team)} extend a ${millions(p.qo)} qualifying offer to ${p.n}, making him a restricted free agent` })
   return { ok: true }
 }
 export function faNext(F) {
@@ -354,6 +354,6 @@ export function signMin(F, id) {
   const d = minDeal(F, p)
   const r = X.signMan(F, F.team, p, d)
   if (r?.ok === false) return r
-  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${p.n} signs a one-year minimum deal with the ${nick(F.team)}` })
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: signText('signs with', p, F.team, { note: ' (the minimum)' }) })
   return { ok: true }
 }

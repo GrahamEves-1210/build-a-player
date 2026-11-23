@@ -27,6 +27,7 @@
 // free-agent pool with their cap holds, rights and RFA qualifying offers.
 import { rngOf, clamp, r1 } from '../rng'
 import { fixNumbers } from './numbers'
+import { extensionText } from './news'
 import {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, maxPct, twoWayOf, rookieScale, excOf, excYears, indexed,
   payroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hardCapOf, overOf, EXC_TEXT,
@@ -716,7 +717,8 @@ export function extendMan(F, s, p, d) {
   // (the rookie-scale man's option years are behind him; the new deal is a veteran's)
   if (p.rs) { delete p.rs; delete p.opt; delete p.rfa }
   if (p.opt && p.opt.yr < e.start) delete p.opt
-  return { ok: true }
+  // (text: the wire's line for it)
+  return { ok: true, text: extensionText(p, s, add.length) }
 }
 
 // ── Waivers and the stretch provision ────────────────────────────────────────
@@ -808,7 +810,7 @@ export function seasonEndDeals(F) {
     if (k === 'P' || k === 'E') {
       const inn = playerOptsIn(F, p)
       decideOption(F, p, inn)
-      if (!inn && (p.o ?? 0) >= 75) news.push({ k: 'option', tag: 'FREE AGENCY', s, text: `${p.n} declines his player option with the ${s} and will become a free agent.` })
+      if (!inn && (p.o ?? 0) >= 75) news.push({ k: 'option', tag: 'FREE AGENCY', s, text: `${p.n} declines his player option with the ${s} and becomes a free agent` })
     } else {
       if (s === F.team && p.optd != null) { decideOption(F, p, !!p.optd); delete p.optd; continue }
       decideOption(F, p, teamKeeps(F, s, p))

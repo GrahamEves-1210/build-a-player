@@ -16,6 +16,24 @@ export const teamWords = t => String(t ?? '').replace(/\b(the|The) ([A-Z]{3})\b(
   if (!n) return m
   return `${the} ${n}${pos ? (/s$/.test(n) ? "'" : "'s") : ''}`
 })
+// ── Deals as the wire says them ─────────────────────────────────────────────
+// one voice for every signing, re-signing, extension and offer sheet, the way the league's reporters post them:
+// "Caris LeVert re-signs with the Hornets: 1 year, $6.8 million" (the deal's total; a two-way deal by its kind)
+export const millions = v => { const x = Math.round((v ?? 0) * 10) / 10; return `$${Number.isInteger(x) ? x : x.toFixed(1)} million` }
+export const termsText = (y, total) => `${y} ${y === 1 ? 'year' : 'years'}, ${millions(total)}`
+const dealTotal = (p, y = p.y) => [p.$ ?? 0, ...(p.sc ?? [])].slice(0, y ?? 1).reduce((a, v) => a + v, 0)
+// a man's deal on the wire as it stands on him now: verb 'signs with' | 're-signs with' ...; s the team's short;
+// note: words after the terms (' (mid-level exception)')
+export function signText(verb, p, s, { y = null, total = null, note = '' } = {}) {
+  if (p.tw) return `${p.n} ${verb} the ${s} on a two-way contract${note}`
+  return `${p.n} ${verb} the ${s}: ${termsText(y ?? p.y ?? 1, total ?? dealTotal(p, y ?? p.y))}${note}`
+}
+// an extension: the seasons it adds and what they pay (the last `added` seasons of his deal now)
+export function extensionText(p, s, added) {
+  const all = [p.$ ?? 0, ...(p.sc ?? [])].slice(0, p.y ?? 1)
+  const add = all.slice(Math.max(0, all.length - added))
+  return `${p.n} agrees to an extension with the ${s}: ${termsText(add.length, add.reduce((a, v) => a + v, 0))}`
+}
 export const POS_FULL = { PG: 'point guard', SG: 'shooting guard', SF: 'small forward', PF: 'power forward', C: 'center' }
 
 // ── The calendar: when an item happened ─────────────────────────────────────
@@ -79,7 +97,7 @@ export function newsWorthy(F, n) {
   return true
 }
 // the stories that last past their season
-export const LASTING = new Set(['champ', 'award', 'draft', 'trade', 'record', 'retire', 'gm', 'ext', 'sheet', 'as', 'tax'])
+export const LASTING = new Set(['champ', 'award', 'draft', 'trade', 'record', 'retire', 'gm', 'ext', 'sheet', 'as', 'asg', 'tax'])
 const lasting = (F, n) => LASTING.has(n.k) || (n.k === 'sign' && n.tag !== 'QUALIFYING OFFER') || (n.s === F.team && n.k !== 'inj')
 export function trimNews(F, L) {
   if (L.length <= NEWS_MAX) return L
@@ -100,7 +118,7 @@ export const newsFor = (F, s) => (F.news ?? []).filter(x => !s || x.s === s)
 
 // ── The wire's filters (the League screen) ───────────────────────────────────
 export const WIRE_FILTERS = [['all', 'All'], ['trade', 'Trades'], ['sign', 'Signings'], ['inj', 'Injuries'], ['award', 'Awards']]
-const KIND_OF = { trade: 'trade', sign: 'sign', ext: 'sign', sheet: 'sign', option: 'sign', fa: 'sign', cut: 'sign', inj: 'inj', award: 'award', champ: 'award', as: 'award', record: 'award' }
+const KIND_OF = { trade: 'trade', sign: 'sign', ext: 'sign', sheet: 'sign', option: 'sign', fa: 'sign', cut: 'sign', inj: 'inj', award: 'award', champ: 'award', as: 'award', asg: 'award', record: 'award' }
 export const wireKind = n => KIND_OF[n.k] ?? 'other'
 
 // ── An injury as the wire says it ────────────────────────────────────────────
