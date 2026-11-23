@@ -15,11 +15,14 @@
 // SeasonLine: { gp, gs, min, pts, reb, oreb, ast, stl, blk, tov, pf, fgm, fga, tpm, tpa, ftm, fta, pm, s,
 //               cp (clutch points), hi hr ha h3 hs hb (his best night: points, boards, assists, threes, steals, blocks),
 //               dd, td (double- and triple-doubles), g40 (40-point games), g20 / g15 (games of 20+ / 15-19 minutes) }
-// A man who changes teams keeps one line (s: the team he plays for now), as the NBA's own season totals do.
+// A man who changes teams keeps one line (s: the team he plays for now), as the NBA's own season totals do, and the
+// line carries sp: [[team, ...SPLIT_K totals when he left it], ...] so his career can show a row for each team.
+export const SPLIT_K = ['gp', 'min', 'pts', 'reb', 'ast', 'stl', 'blk', 'fgm', 'fga', 'tpm']
 const SUM_K = ['min', 'pts', 'reb', 'oreb', 'ast', 'stl', 'blk', 'tov', 'pf', 'fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'pm', 'cp']
 
 export function addLine(row, l, short = null) {
   if (!l || !(l.min > 0)) return row
+  if (short && row.s && row.s !== short && row.gp) (Array.isArray(row.sp) ? row.sp : (row.sp = [])).push([row.s, ...SPLIT_K.map(k => Math.round(row[k] ?? 0))])
   row.gp = (row.gp ?? 0) + 1
   row.gs = (row.gs ?? 0) + (l.st ? 1 : 0)
   for (const k of SUM_K) row[k] = (row[k] ?? 0) + (l[k] ?? 0)
