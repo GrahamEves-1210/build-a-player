@@ -47,12 +47,12 @@ function Honors({ F, h, open }) {
     <Fold className="nbo-hon" open={open} title={seasonText(h.y)} right={h.champ ? `${nick(h.champ)} champions` : null}>
       <ul className="nbo-hon-list">
         {list.map(([k, w]) => {
-          const line = statLine(F, w.i, h.y, k)
+          const line = statLine(F, w.i, h.y, k, w)
           const p = manOf(F, w.i)
           return (
             <li key={k} className={w.s === F.team ? 'is-me' : ''} style={w.s && TEAM[w.s] ? fkVars(w.s) : undefined} {...tapMan(page, F, w.i)}>
               {w.s && TEAM[w.s] ? <KLogo s={w.s} size={24} /> : <i className="nbo-nologo" />}
-              <span><small>{AW_LABEL[k] ?? k}</small><b>{w.n}</b><em>{[p?.p, TEAM[w.s]?.short, line].filter(Boolean).join(' · ')}</em></span>
+              <span><small>{AW_LABEL[k] ?? k}</small><b>{w.n}</b><em>{[p?.p ?? w.p, TEAM[w.s]?.short, line].filter(Boolean).join(' · ')}</em></span>
             </li>
           )
         })}

@@ -10,7 +10,10 @@ import { fkVars, KLogo, Chyron, LowerThird, Go, Flip, ActionBar, BackBar, Fold, 
 import { CapBar, dealText } from './NbaTeam'
 import { money } from './NbaHub'
 import { PlayerSheet, canOpenMan } from './NbaRoster'
+import { per, f1, seasonOf, statLine } from './awardLine'
 import './nbaoff.css'
+
+export { seasonOf, statLine }
 
 // THE SUMMER, a stop at a time: awards, the lottery, the draft, re-signing, free agency, camp. A stop behind him opens
 // again from its pill, read-only (what happened there), and the next stop's button is always at the bottom.
@@ -156,32 +159,6 @@ function Development({ F, open = false }) {
 // ── 1. AWARDS ────────────────────────────────────────────────────────────────
 const AW_KEYS = ['MVP', 'FMVP', 'DPOY', 'ROY', '6MOY', 'MIP', 'CLUTCH']
 const AW_LABEL = { ...AWARD_FULL, ECF: 'Eastern Conference Finals MVP', WCF: 'Western Conference Finals MVP' }
-const per = (x, k) => (x?.gp ? (x[k] ?? 0) / x.gp : 0)
-const f1 = v => v.toFixed(1)
-// his line for that season: this season's from the box scores (until the new season clears them), else his career row
-export function seasonOf(F, i, y) {
-  if (y === F.year && F.ss?.[i]?.gp) return F.ss[i]
-  return manOf(F, i)?.car?.find(c => c.y === y && !c.y2 && c.gp) ?? null
-}
-export function statLine(F, i, y, k) {
-  if (k === 'FMVP' || k === 'ECF' || k === 'WCF') {
-    // (the series itself while the bracket is still up; his whole postseason from his career row after)
-    const S = y === F.year ? (k === 'FMVP' ? F.po?.all?.[3]?.[0] : (F.po?.all?.[2] ?? []).find(C => C.c === (k === 'ECF' ? 'E' : 'W'))) : null
-    const x = S?.st?.[i]
-    if (x?.gp) return `${f1(per(x, 'pts'))} PTS · ${f1(per(x, 'reb'))} REB · ${f1(per(x, 'ast'))} AST IN THE ${k === 'FMVP' ? 'FINALS' : 'SERIES'}`
-    const po = y === F.year ? F.ps?.[i] : null
-    if (po?.gp) return `${f1(per(po, 'pts'))} PTS · ${f1(per(po, 'reb'))} REB · ${f1(per(po, 'ast'))} AST IN THE PLAYOFFS`
-    const c = seasonOf(F, i, y)?.po
-    return c?.[0] ? `${f1(c[1] / c[0])} PTS · ${f1(c[2] / c[0])} REB · ${f1(c[3] / c[0])} AST IN THE PLAYOFFS` : ''
-  }
-  const x = seasonOf(F, i, y)
-  if (!x?.gp) return ''
-  if (k === 'DPOY' || k === 'DEF') return `${f1(per(x, 'reb'))} REB · ${f1(per(x, 'stl'))} STL · ${f1(per(x, 'blk'))} BLK`
-  const base = `${f1(per(x, 'pts'))} PTS · ${f1(per(x, 'reb'))} REB · ${f1(per(x, 'ast'))} AST`
-  if (k === 'CLUTCH' && x.cp) return `${base} · ${x.cp} CLUTCH PTS`
-  if (k === '6MOY' && x.gs != null) return `${base} · ${x.gp - x.gs} GAMES OFF THE BENCH`
-  return base
-}
 // the conference finals MVPs (kept on the men's awards: { y, k: 'ECF' | 'WCF' }), unless the year's record has them
 export function cfMvps(F, h) {
   const out = []
@@ -206,11 +183,11 @@ function Awards({ F, act, go, done = false }) {
       <div className="nbo-awards">
         {list.map(([k, w]) => {
           const p = manOf(F, w.i)
-          const line = statLine(F, w.i, h.y, k)
+          const line = statLine(F, w.i, h.y, k, w)
           return (
             <div key={k} className={`nbo-aw${w.s === F.team ? ' is-me' : ''}`} style={w.s ? fkVars(w.s) : undefined}>
               <small className="nbo-aw-k">{AW_LABEL[k] ?? k}</small>
-              <LowerThird name={w.n} pos={p?.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={w.s} size="s" line={TEAM[w.s]?.name?.toUpperCase()} onClick={open && canOpenMan(F, w.i) ? () => { open(w.i); sfx('tap') } : undefined} />
+              <LowerThird name={w.n} pos={p?.p ?? w.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={w.s} size="s" line={TEAM[w.s]?.name?.toUpperCase()} onClick={open && canOpenMan(F, w.i) ? () => { open(w.i); sfx('tap') } : undefined} />
               {line && <p className="nbo-aw-line">{line}</p>}
             </div>
           )
@@ -240,8 +217,8 @@ export function AwardTeams({ F, y, title, teams, names, k = 'ALL', me = F.team }
               return (
                 <li key={x.i} className={x.s === me ? 'is-me' : ''} style={x.s ? fkVars(x.s) : undefined} {...tap(x.i)}>
                   {x.s ? <KLogo s={x.s} size={22} /> : <i className="nbo-nologo" />}
-                  <span><b>{x.n}</b><small>{[p?.p, TEAM[x.s]?.short].filter(Boolean).join(' · ')}</small></span>
-                  <em>{statLine(F, x.i, y, k)}</em>
+                  <span><b>{x.n}</b><small>{[p?.p ?? x.p, TEAM[x.s]?.short].filter(Boolean).join(' · ')}</small></span>
+                  <em>{statLine(F, x.i, y, k, x)}</em>
                 </li>
               )
             })}

@@ -26,14 +26,19 @@ export function closeSeason(F) {
   if (F.phase !== 'done') return
   const R = records(F)
   const aw = X.seasonAwards(F) ?? {}
-  const who = i => { const p = manOf(F, i); return p ? { i, n: p.n, s: teamOfMan(F, i) } : null }
+  // (each winner keeps his spot and the line he won it with: l the season's totals [gp, pts, reb, ast, stl, blk, gs, cp],
+  // all his teams together; the Finals and conference finals MVPs' l is the series [gp, pts, reb, ast]. History reads
+  // them after his career rows fold and after he retires.)
+  const line = (x, ks) => (x?.gp ? ks.map(k => Math.round(x[k] ?? 0)) : undefined)
+  const RS = ['gp', 'pts', 'reb', 'ast', 'stl', 'blk', 'gs', 'cp'], SR = ['gp', 'pts', 'reb', 'ast']
+  const who = (i, S) => { const p = manOf(F, i); return p ? { i, n: p.n, s: teamOfMan(F, i), p: p.p, l: S ? line(S.st?.[i], SR) : line(F.ss?.[i], RS) } : null }
   const A = {}
   for (const k of ['MVP', 'ROY', 'DPOY', '6MOY', 'MIP', 'CLUTCH']) if (aw[k] != null) { A[k] = who(aw[k]); const p = manOf(F, aw[k]); if (p) (p.aw ??= []).push({ y: F.year, k }) }
   A.ALL = (aw.ALL ?? []).map((team, k) => team.map(i => { const p = manOf(F, i); if (p) (p.aw ??= []).push({ y: F.year, k: `ALL${k + 1}` }); return who(i) }).filter(Boolean))
   for (const [key, tag] of [['ALLDEF', 'DEF'], ['ROOKIE', 'RK']]) if (aw[key]) A[key] = aw[key].map((t, k) => t.map(i => { const p = manOf(F, i); if (p) (p.aw ??= []).push({ y: F.year, k: `${tag}${k + 1}` }); return who(i) }).filter(Boolean))
-  A.FMVP = F.po?.fmvp != null ? who(F.po.fmvp) : null
+  A.FMVP = F.po?.fmvp != null ? who(F.po.fmvp, F.po?.all?.[3]?.[0]) : null
   // the conference finals MVPs (the Larry Bird and Magic Johnson trophies: season.js put them on man.aw at the Finals)
-  for (const C of F.po?.all?.[2] ?? []) { const m = X.seriesMvp(F, C); if (m != null && C.c) A[C.c === 'E' ? 'ECF' : 'WCF'] = who(m) }
+  for (const C of F.po?.all?.[2] ?? []) { const m = X.seriesMvp(F, C); if (m != null && C.c) A[C.c === 'E' ? 'ECF' : 'WCF'] = who(m, C) }
   if (F.as?.g?.mvp != null) A.ASMVP = who(F.as.g.mvp)
   // the GM's year
   const me = F.team, r = R[me]
