@@ -334,6 +334,9 @@ const _K_LEGENDS = [
 // his better-rated stint). The rest stay in the list above, out of the pool. A kicker has one wheel and no team wheel,
 // so a name must not come up twice.
 const K_HOME = { 'Morten Andersen': 'NO', 'Adam Vinatieri': 'NE', 'Robbie Gould': 'CHI', 'Graham Gano': 'CAR' }
+// A franchise with no kicker over the bar gets a second stint of one who is (owner, 2026-11-23: the Colts had none;
+// Vinatieri kicked for them 2006-19). The wheel can show his name twice; the team drawn first decides which one it is
+const K_ALSO = { 'Adam Vinatieri': ['IND'] }
 const kSum = p => (p.attrs?.power ?? 0) + (p.attrs?.accuracy ?? 0) + (p.attrs?.clutch ?? 0)
 export const K_LEGEND_MIN = 20
 const K_POOL = (() => {
@@ -342,6 +345,6 @@ const K_POOL = (() => {
     const cur = best.get(p.name)
     if (!cur || K_HOME[p.name] === p.team || (K_HOME[p.name] !== cur.team && kSum(p) > kSum(cur))) best.set(p.name, p)
   }
-  return _K_LEGENDS.filter(p => best.get(p.name) === p && kSum(p) >= K_LEGEND_MIN)
+  return _K_LEGENDS.filter(p => (best.get(p.name) === p || K_ALSO[p.name]?.includes(p.team)) && kSum(p) >= K_LEGEND_MIN)
 })()
 export const K_LEGENDS = K_POOL.map(p => ({ ...p, ...TEAM_COLOR[p.team], attrs: { ...p.attrs }, ovr: kOVR(p.attrs) }))
