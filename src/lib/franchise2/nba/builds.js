@@ -6,7 +6,7 @@
 // a veteran's legs go first; a build retires when the GM says so or at 38.
 import { TEAM, TYPES, ovrOfAttrs, SPOTS, groupOfSpot } from './league'
 import { rngOf, clamp } from '../rng'
-import { addNews } from './news'
+import { addNews, POS_FULL } from './news'
 import * as X from './seams'
 
 export const BUILD_MAX = 3
@@ -46,7 +46,7 @@ export function placeBuilds(F) {
     t.r.push(p)
     X.rookieDeal(F, p, { n: buildSlot(p.o), r: 1 })
     B.i = p.i
-    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${p.p}, to a rookie-scale deal${same ? `; ${same.n} is released` : ''}` })
+    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${POS_FULL[p.p] ?? p.p}, to a rookie-scale deal${same ? `; ${same.n} is released` : ''}` })
   }
 }
 // a summer older: a young build's grades go up a step at a time (two or three steps at 20-23, one or two to 27),

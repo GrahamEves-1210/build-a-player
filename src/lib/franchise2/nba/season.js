@@ -4,7 +4,7 @@
 // 2-2-1-1-1, the better record at home in games 1, 2, 5 and 7.
 import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder, makeGen, thinSpot } from './league'
 import { b2bOf, dateText } from './schedule'
-import { addNews } from './news'
+import { addNews, injuryText } from './news'
 import { scoutTick } from './draft'
 import * as X from './seams'
 import { rngOf } from '../rng'
@@ -108,7 +108,8 @@ function settle(F, g, res, { playoff = false } = {}) {
   X.recordGame(F, g, res, { playoff, ...(g.ser && { series: g.ser }) })
   for (const x of X.rollInjuries(F, g, res) ?? []) {
     const p = manOf(F, x.i)
-    if (p && (x.g >= 10 || (x.g >= 3 && p.o >= 82) || (x.g >= 3 && x.s === F.team))) addNews(F, { k: 'inj', tag: 'INJURY', s: x.s, text: `${p.n} (${x.k}) is expected to miss ${x.g >= 14 ? `${Math.round(x.g / 3.5)} weeks` : `${x.g} games`}` })
+    // (the wire picks what's news: news.js newsWorthy; the words: injuryText)
+    if (p && x.g >= 3) addNews(F, { k: 'inj', tag: 'INJURY', s: x.s, i: x.i, g: x.g, text: injuryText(F, p, x) })
   }
   for (const s of [g.h, g.a]) for (const p of F.teams[s].r) delete p.rest
   return res
