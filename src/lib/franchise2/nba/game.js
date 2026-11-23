@@ -47,6 +47,21 @@ function hot(S) {
   return S
 }
 import { prof } from './skills'
+
+// ── The scoring log (game day's play-by-play, NbaGame.jsx): every basket and trip to the line, and every foul (the
+// team fouls and the bonus), with the clock. It never rolls the dice (the game plays the same with it or without it)
+// and it's kept off the saved state: a hidden field on the game, so F.pend doesn't carry it and a game picked up after
+// a reload simply has none. A finished game's log stays in memory for the screens, the last few games (eventsOf).
+//   { p: period, c: seconds left in it, k: 'h'|'a', w: man, y: 'three'|'rim'|'mid'|'ft'|'f', a?: assist, pb?: putback,
+//     n/of: free throws made/taken, hs/as: the score after it, tf: the fouling team's fouls in the period }
+const LOGS = new Map()
+const logKey = (h, a, qh, qa) => `${h}|${a}|${qh.join('.')}|${qa.join('.')}`
+function ev(S, x) { if (S.EV) S.EV.push({ p: S.per, ...x, hs: S.sc.h, as: S.sc.a }) }
+function stamp(S, from, clock) { if (S.EV) for (let j = from; j < S.EV.length; j++) if (S.EV[j].c == null) S.EV[j].c = Math.max(0, Math.round(clock * 10) / 10) }
+let PB = false   // (the shot being played is a putback)
+// a finished game's log, by its box (F.box[i]: { h, a, q: [[h, a], ...] }); the log of a game still going (F.pend.G)
+export const eventsOf = b => (b?.q ? LOGS.get(logKey(b.h, b.a, b.q.map(x => x[0]), b.q.map(x => x[1]))) ?? null : null)
+export const logOf = G => G?.EV ?? null
 import { planRotation, dressed, setOf } from './rotation'
 
 // ── The league's dials (calibrated against the 2024-25 season, scripts/franchise2/nba/calib.mjs) ─────────────────
@@ -80,6 +95,7 @@ function side(T, home, po = false) {
 export function newGame(G) {
   const S = { rs: hashSeed(`nba-game-${G.seed}`), hs: 0, as: 0, po: !!G.po, per: 1, clock: Q, el: 0, sc: { h: 0, a: 0 }, q: { h: [0], a: [0] }, box: {}, lc: 0, big: { h: 0, a: 0 }, last: null, done: false, stop: null, next: STINT }
   S.h = side(G.home, true, !!G.po); S.a = side(G.away, false, !!G.po)
+  hidden(S, 'EV', [])
   hot(S)
   const R = S.R
   for (const k of ['h', 'a']) for (const p of S[k].men) S.box[p.i] = line()
@@ -152,6 +168,7 @@ function freeThrows(S, k, who, n, force = null) {
   let made = 0, lastIn = false
   for (let j = 0; j < n; j++) { b.fta++; lastIn = force != null ? j < force : S.R.u() < ft; if (lastIn) { b.ftm++; made++ } }
   if (made) { b.pts += made; score(S, k, made, who) }
+  ev(S, { k, w: who, y: 'ft', n: made, of: n })
   return lastIn   // (did the last one go: a miss is a live rebound)
 }
 function foulOn(S, d, kind = 'shoot') {
@@ -162,6 +179,7 @@ function foulOn(S, d, kind = 'shoot') {
   const id = wpick(S.R, T.floor, w)
   S.box[id].pf++
   T.fouls++
+  ev(S, { k: d, w: id, y: 'f', tf: T.fouls, ...(kind !== 'off' && { sh: 1 }) })
   if (S.box[id].pf >= 6) { T.out.push(id); lineup(S, d) }   // fouled out
   else if (trouble(S, S.box[id])) S.subDue = true
   return id
@@ -224,13 +242,16 @@ function shoot(S, k, who, forced = null) {
   if (made) {
     b.fgm++; b.pts += pts; if (shot === 'three') b.tpm++
     // the pass that set it up: whoever on the floor passes best, most often
-    if (forced?.ast != null && O.floor.includes(forced.ast) && forced.ast !== who) S.box[forced.ast].ast++
+    let by = null
+    if (forced?.ast != null && O.floor.includes(forced.ast) && forced.ast !== who) { S.box[forced.ast].ast++; by = forced.ast }
     else if (forced?.ast === undefined && R.u() < TUNE.ast[shot]) {
       const mates = O.floor.filter(id => id !== who)
       const w = mates.map(id => { const t = O.pr.get(id); return Math.max(0.3, t.pas) ** 2.2 * (0.6 + t.iq * 0.06) })
-      S.box[wpick(R, mates, w)].ast++
+      by = wpick(R, mates, w)
+      S.box[by].ast++
     }
     score(S, k, pts, who)
+    ev(S, { k, w: who, y: shot, ...(by != null && { a: by }), ...(PB && { pb: 1 }) })
     if (fouled || (!forced && shot === 'rim' && R.u() < TUNE.andOne)) {
       foulOn(S, other(k), shot)
       if (!freeThrows(S, k, who, 1, forced?.ft1 != null ? (forced.ft1 ? 1 : 0) : null)) return miss(S, k, who, 'ft')
@@ -252,6 +273,7 @@ export function play(S, forced = null) {
   if (S.done) return S
   hot(S)
   const k = S.poss, d = other(k), O = S[k], D = S[d], R = S.R
+  const m0 = S.EV ? S.EV.length : 0
   if (S.subDue) { S.subDue = false; lineup(S, k); lineup(S, d) }
   let t = forced?.t ?? Math.max(4, TUNE.pace + (R.u() - 0.5) * 12 + (O.pace ?? 0))
   // the end of a quarter: a last shot as it runs out (a heave from deep with under three seconds)
@@ -269,11 +291,12 @@ export function play(S, forced = null) {
     let made = 0
     for (let j = 0; j < forced.ft; j++) { S.box[who].fta++; if (j < (forced.made ?? 0)) { S.box[who].ftm++; made++ } }
     if (made) { S.box[who].pts += made; score(S, k, made, who) }
+    ev(S, { k, w: who, y: 'ft', n: made, of: forced.ft })
   } else if (!forced && !last && R.u() < TUNE.foulNS) {
     // a foul away from the ball: the bonus (five team fouls in the quarter) is two shots, otherwise the ball inbounded
     foulOn(S, d, 'off')
     if (D.fouls >= 5) { const l = freeThrows(S, k, who, 2); if (!l) reb = miss(S, k, who, 'ft') }
-    else { tick(S, t * 0.4); return play(S) }
+    else { stamp(S, m0, S.clock - t * 0.4); tick(S, t * 0.4); return play(S) }
   } else {
     reb = shoot(S, k, who, forced && (forced.shot || forced.made != null) ? forced : null)
     // offensive boards: a putback or a reset, five or six seconds more
@@ -281,12 +304,16 @@ export function play(S, forced = null) {
     while (reb != null && n++ < 4) {
       const extra = 3 + R.u() * 6
       if (S.clock - t - extra <= 0) break
+      stamp(S, m0, S.clock - t)
       t += extra
       const putback = O.pr.get(reb).big && R.u() < 0.45
       const next = putback ? reb : actor(S, k)
+      PB = putback
       reb = shoot(S, k, next, putback ? { shot: 'rim', made: R.u() < Math.min(0.8, 0.6 + 0.02 * (O.pr.get(reb).fin - 6)), foul: R.u() < 0.1 } : null)
+      PB = false
     }
   }
+  stamp(S, m0, S.clock - t)
   tick(S, t)
   S.poss = d
   return S
@@ -333,6 +360,7 @@ export function finish(S) {
   hot(S)
   const box = {}
   for (const k of ['h', 'a']) for (const p of S[k].men) { const b = S.box[p.i]; b.sec = Math.round(b.sec); box[p.i] = b }
+  if (S.EV && S.done) { LOGS.set(logKey(S.h.short, S.a.short, S.q.h, S.q.a), S.EV); if (LOGS.size > 24) LOGS.delete(LOGS.keys().next().value) }
   return {
     h: S.h.short, a: S.a.short, hs: S.sc.h, as: S.sc.a, ot: Math.max(0, S.per - 4), q: S.q, box,
     team: { h: teamTotals(S, 'h'), a: teamTotals(S, 'a') }, st: { h: S.h.st, a: S.a.st }, ids: { h: S.h.men.map(p => p.i), a: S.a.men.map(p => p.i) },
