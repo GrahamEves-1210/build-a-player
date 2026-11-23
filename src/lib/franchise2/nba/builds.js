@@ -58,13 +58,18 @@ export function buildCapText(F, before, after) {
   const apron = after.over === 'a1' || after.over === 'a2'
   return `The ${TEAM[F.team].nick} payroll goes from ${m(before.pay)} (${LINE[before.over]}) to ${m(after.pay)}${moved ? `, now ${LINE[after.over]}` : ` (${LINE[after.over]})`}${apron ? `: past the ${after.over === 'a1' ? 'first' : 'second'} apron a team can't use the ${after.over === 'a1' ? 'non-taxpayer' : 'taxpayer or non-taxpayer'} mid-level, and its trades are limited` : ''}`
 }
-// the books with a build of this OVR added, for the setup's preview of the GM's team: { before, after, text }
-export function buildCapNote(F, o) {
-  const before = X.capSheet(F, F.team)
-  const pay = Math.round((before.pay + X.rookieScale(buildSlot(o), F.year)[0]) * 10) / 10
-  const over = pay > before.a2 ? 'a2' : pay > before.a1 ? 'a1' : pay > before.tax ? 'tax' : pay > before.cap ? 'cap' : 'under'
-  const after = { ...before, pay, over }
-  return { before, after, text: buildCapText(F, before, after) }
+// the books with a build of this OVR added, for the setup's preview of the GM's team: { before, after, add, text }.
+// prev: the $M of the builds already added ahead of him (the setup adds them in order), so the second and third
+// build's line is read off the payroll the first left. (The man a build replaces is waived: his money stays.)
+export function buildCapNote(F, o, prev = 0) {
+  const sh = X.capSheet(F, F.team)
+  const r1 = v => Math.round(v * 10) / 10
+  const add = X.rookieScale(buildSlot(o), F.year)[0]
+  const p0 = r1(sh.pay + prev), pay = r1(p0 + add)
+  const free = !!sh.free
+  const before = { ...sh, pay: p0, over: free ? 'under' : X.overOf(p0, sh.year) }
+  const after = { ...sh, pay, over: free ? 'under' : X.overOf(pay, sh.year) }
+  return { before, after, add, text: buildCapText(F, before, after) }
 }
 // a summer older (after ageLeague has aged him): a young build's grades go up a step at a time (two or three steps
 // at 20-23, one or two to 27, maybe one at 28); his OVR follows his grades, his card follows him (F.builds)

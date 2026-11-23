@@ -6,7 +6,7 @@ export {
   startGame, playTo, possession, momentEnd, finishGame, seriesMvp, updateRecords, seedPotential, prospect, outText,
   allStars as pickAllStars,
 } from './sim'
-export { capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, rookieScale, payroll, capSheet, assessTax, capYear, OVER_TEXT, EXC_TEXT } from './cap'
-export { dealOnLoad, canSign, signMan, rookieDeal, seasonEndDeals, resignOffer, cutMan, legalRoster, cutCost, rankOf, optionsDue, decideOption, renounce, extensionOk, extensionAsk, extendMan, RIGHTS_TEXT, SIT_TEXT, situationOf } from './contracts'
+export { capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, rookieScale, payroll, capSheet, assessTax, capYear, overOf, OVER_TEXT, EXC_TEXT } from './cap'
+export { dealOnLoad, canSign, signMan, rookieDeal, seasonEndDeals, resignOffer, cutMan, legalRoster, cutCost, rankOf, optionsDue, decideOption, renounce, extensionOk, extensionAsk, extendMan, RIGHTS_TEXT, SIT_TEXT, situationOf, ownerCap, OWNER_LINE_TEXT } from './contracts'
 export { askOf, cpuOffseason, faDay, offerSheet, matchSheet, cpuFill, FA_DAYS, faDayOf, faBoard, placeOffer, pullOffer, offerLook, offerRoom, lateOffer, faDone } from './market'
 export { tradeValue, checkTrade, cpuAnswer, doTrade, cpuDeadline, proposeTrade, gauge, whyNot, tradeWindow } from './trades'

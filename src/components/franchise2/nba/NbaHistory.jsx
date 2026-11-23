@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { TEAM, seasonText, FINISH_TEXT, AWARD_FULL, nick, manOf } from '../../../lib/franchise2/nba'
 import { sfx } from '../../../lib/juice'
 import { Banner, Chyron, BigNum, Fact, Fold, KLogo, fkVars } from '../kit'
-import { AwardTeams, statLine, cfMvps } from './NbaOffseason'
+import { AwardTeams, statLine, cfMvps, ManOpen, ManSheetHost, tapMan } from './NbaOffseason'
 import './nbaoff.css'
 
-// HISTORY: every season on the wall (record, how it ended), the league's award winners by year, the save itself
+// HISTORY: every season on the wall (record, how it ended), the league's award winners by year, the save itself.
+// A tap on a winner opens his page, read-only (ManSheetHost without act).
 const AW_KEYS = ['MVP', 'FMVP', 'DPOY', 'ROY', '6MOY', 'MIP', 'CLUTCH']
 const AW_LABEL = { ...AWARD_FULL, ECF: 'Eastern Conference Finals MVP', WCF: 'Western Conference Finals MVP' }
-export default function NbaHistory({ F, onSlots, onDelete }) {
+export default function NbaHistory({ F, owner, onSlots, onDelete }) {
+  return <ManSheetHost F={F} owner={owner}><History F={F} onSlots={onSlots} onDelete={onDelete} /></ManSheetHost>
+}
+function History({ F, onSlots, onDelete }) {
   const [sure, setSure] = useState(false)
   const H = F.hist ?? []
   const best = H.slice().sort((a, b) => b.w - a.w)[0]
@@ -36,6 +40,7 @@ export default function NbaHistory({ F, onSlots, onDelete }) {
 }
 // one season's honors: the trophies (each winner's team and line), then the All-NBA, All-Defensive and All-Rookie teams
 function Honors({ F, h, open }) {
+  const page = useContext(ManOpen)
   const A = h.aw ?? {}
   const list = [...AW_KEYS.filter(k => A[k]).map(k => [k, A[k]]), ...cfMvps(F, h)]
   return (
@@ -45,7 +50,7 @@ function Honors({ F, h, open }) {
           const line = statLine(F, w.i, h.y, k)
           const p = manOf(F, w.i)
           return (
-            <li key={k} className={w.s === F.team ? 'is-me' : ''} style={w.s && TEAM[w.s] ? fkVars(w.s) : undefined}>
+            <li key={k} className={w.s === F.team ? 'is-me' : ''} style={w.s && TEAM[w.s] ? fkVars(w.s) : undefined} {...tapMan(page, F, w.i)}>
               {w.s && TEAM[w.s] ? <KLogo s={w.s} size={24} /> : <i className="nbo-nologo" />}
               <span><small>{AW_LABEL[k] ?? k}</small><b>{w.n}</b><em>{[p?.p, TEAM[w.s]?.short, line].filter(Boolean).join(' · ')}</em></span>
             </li>

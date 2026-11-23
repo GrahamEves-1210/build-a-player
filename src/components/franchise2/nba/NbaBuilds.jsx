@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
 import { cleanName, nameOk, randomFirstLast } from '../../../lib/franchise2/identity'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../../lib/franchise2/faces'
 import { sfx } from '../../../lib/juice'
@@ -16,8 +16,28 @@ export const faceOf = (B, team) => buildFaceUrl({ pos: 'nba', face: B.face ?? de
 export const manPhoto = (F, p) => (!p ? null : p.b != null && F.builds?.[p.b] ? faceOf(F.builds[p.b], F.team) : p.h ? photoOf(p.n) : null)
 const money = v => `$${(Math.round(v * 10) / 10).toFixed(1)}M`
 
+// a build whose rookie deal takes the payroll past the tax or an apron: one plain line under him (the setup's
+// preview league, the GM's team; each build read off the payroll the ones before him left)
+const PAST = { tax: 'the luxury tax line', a1: 'the first apron', a2: 'the second apron' }
+const LINE_OF = { tax: 'tax', a1: 'a1', a2: 'a2' }
+function capNotes(S) {
+  if (!S.team || S.rules?.cap === false) return {}
+  const F = { ...preview(), team: S.team }
+  const out = {}
+  let prev = 0
+  for (const p of S.picks ?? []) {
+    const B = S.builds?.[p.id]
+    if (!B?.name) continue
+    const N = buildCapNote(F, ovrOfAttrs(B.pos, attrsOfBuild(B.pos, B.build)), prev)
+    prev += N.add
+    const k = N.after.over
+    if (k !== N.before.over && PAST[k]) out[p.id] = `His ${money(N.add)} rookie deal takes the ${TEAM[S.team].nick} payroll to ${money(N.after.pay)}, past ${PAST[k]} (${money(N.after[LINE_OF[k]])}).`
+  }
+  return out
+}
 export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const picks = S.picks ?? []
+  const notes = useMemo(() => capNotes(S), [S.team, S.picks, S.builds, S.rules?.cap]) // eslint-disable-line react-hooks/exhaustive-deps
   const add = pos => { const id = `b${Date.now().toString(36)}`; go({ picks: [...picks, { id, pos }] }, 'tap') }
   const drop = id => { const b = { ...(S.builds ?? {}) }; delete b[id]; go({ picks: picks.filter(p => p.id !== id), builds: b }, 'back') }
   const build = (p, k) => onBuild({ id: p.id, pos: p.pos, n: k + 1, of: picks.length })
@@ -43,6 +63,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
         return (
           <div key={p.id} className="nb-build-row">
             <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner} line={`NO. ${buildSlot(o)} PICK`} size="s" />
+            {notes[p.id] && <p className="nb-build-cap">{notes[p.id]}</p>}
             <span className="nb-fa-acts"><button type="button" onClick={() => build(p, k)}>Rebuild</button><button type="button" onClick={() => drop(p.id)}>Remove</button></span>
           </div>
         )

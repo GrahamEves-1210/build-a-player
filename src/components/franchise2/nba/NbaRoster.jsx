@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   TEAM, CONF_OF, SHORTS, CONF_DIVS, DIVS, records, recText, confOrder, coachOrder, teamOvr, myGames, nextMine, dateText, seasonText, CAP_SIM,
-  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock, careerView } from '../../../lib/franchise2/nba'
+  nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock, careerView, retiredRow } from '../../../lib/franchise2/nba'
 import { GUARD_CATEGORIES } from '../../../data/nba-guards'
 import { BIG_CATEGORIES } from '../../../data/nba-bigs'
 import { BUCKET_ATTR } from '../../../data/nba-attrs'
@@ -121,31 +121,43 @@ export function MinStep({ act, id, v, set }) {
 // ── A man's page ─────────────────────────────────────────────────────────────
 // any man in the league (or on the street): his card, the facts, this season, his ratings as the build page grades
 // them, his contract a season at a time, his career. The GM's own: the rotation, an extension, waive.
+// (read-only unless act is passed and he is on the GM's roster: a free agent, a draft pick, another team's man and
+// a retired man get the page without the Waive, minutes or extension controls)
+export const retiredOf = (F, id) => (F.retired ?? []).find(r => r.i === id) ?? null
+// (can a tap on this id open a page: a man in the league, on the street, in the draft class, or on the retired list)
+export const canOpenMan = (F, id) => id != null && !!(manOf(F, id) || retiredOf(F, id))
 export function PlayerSheet({ F, act, id, owner, onClose }) {
   const p = manOf(F, id)
   const s = teamOfMan(F, id)
   const mine = !!act && s === F.team
-  if (!p) return null
+  const r = !p ? retiredOf(F, id) : null
+  if (!p && !r) return null
+  if (!p) return <RetiredSheet F={F} r={retiredRow(r)} owner={owner} onClose={onClose} />
+  // (a man in the draft class: drafted tonight, or still on the board; he signs when the draft closes)
+  const pros = !s && (F.dc ?? []).includes(p)
+  const kit = s ?? (pros && p.dt) ?? (p.fr && TEAM[p.fr] ? p.fr : null) ?? F.team
+  const head = s ? TEAM[s].name : pros ? (p.dt ? `${TEAM[p.dt].nick} draft pick` : 'Draft prospect') : 'Free agent'
   return createPortal(
     <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="fk fk-root nb-sheet" role="dialog" aria-label={p.n} style={fkVars(s ?? F.team)}>
-        <div className="nb-sheet-top"><b>{s ? TEAM[s].name : 'Free agent'}</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
+      <div className="fk fk-root nb-sheet" role="dialog" aria-label={p.n} style={fkVars(kit)}>
+        <div className="nb-sheet-top"><b>{head}</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
         {/* (no second line on the card: at phone width it wraps under the position; the facts carry it) */}
-        <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={s ?? F.team} size="l" mine={p.b != null ? owner : null} />
+        <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={kit} size="l" mine={p.b != null ? owner : null} />
         <div className="nb-facts">
-          <span><small>Age</small><b>{p.ag}</b></span>
+          <span><small>Age</small><b>{pros ? (p.ag ?? 20) - 1 : p.ag}</b></span>
           <span><small>Height, weight</small><b>{heightText(p.ht)} · {p.wt} LBS</b></span>
           <span><small>Experience</small><b>{p.ys > 0 ? `${p.ys} ${p.ys === 1 ? 'YEAR' : 'YEARS'}` : 'ROOKIE'}</b></span>
           {/* (a real man's draft isn't in the league's data: shown for the men drafted in it) */}
           {p.dr && <span><small>Drafted</small><b>{p.dr[0]} · {p.dr[1] === 1 ? '1ST' : '2ND'} ROUND, NO. {p.dr[2]}</b></span>}
-          <span><small>Contract</small><b>{dealLine(p)}</b></span>
+          <span><small>Contract</small><b>{pros ? 'UNSIGNED' : !s && !(p.y > 0) ? 'FREE AGENT' : dealLine(p)}</b></span>
+          {!s && !pros && p.fr && TEAM[p.fr] && <span><small>Last team</small><b>{TEAM[p.fr].short}</b></span>}
           {p.c && <span><small>From</small><b>{String(p.c).toUpperCase()}</b></span>}
           {p.inj?.g > 0 && <span className="is-wide is-inj"><small>Injury</small><b>{String(p.inj.k).toUpperCase()} · {p.inj.se ? 'OUT FOR THE SEASON' : `OUT ${p.inj.g} ${p.inj.g === 1 ? 'GAME' : 'GAMES'}`}</b></span>}
         </div>
         {perGameLine(F, p) && <p className="nb-sheet-line">{seasonText(F.year)}: {perGameLine(F, p, true)}</p>}
         {mine && <MineActs F={F} act={act} p={p} onClose={onClose} />}
         <Ratings p={p} />
-        <Contract F={F} p={p} />
+        {pros ? <section className="nb-sec"><h3 className="nb-sec-h">Contract</h3><p className="nb-sec-note">{p.dt ? `Drafted by the ${TEAM[p.dt].name}. His first deal is signed when the draft closes.` : `In the ${F.year + 1} draft class.`}</p></section> : <Contract F={F} p={p} />}
         <Career F={F} p={p} s={s} />
         <Honors p={p} />
       </div>
@@ -233,6 +245,50 @@ function Honors({ p }) {
       <h3 className="nb-sec-h">Honors</h3>
       <ul className="nb-honor-list">{keys.map(k => <li key={k}><b>{AW[k]}{by[k].length > 1 ? ` ×${by[k].length}` : ''}</b><small>{[...new Set(by[k])].map(y => seasonText(y)).join(', ')}</small></li>)}</ul>
     </section>
+  )
+}
+
+// a retired man: what the league keeps of him (offseason.js retiredRow): his last team, age, seasons, career totals
+// and honours. Nothing to do here.
+function RetiredSheet({ F, r, owner, onClose }) {
+  const [gp, pts, reb, ast] = r.t ?? [0, 0, 0, 0]
+  const f = v => (gp ? (v / gp).toFixed(1) : '-')
+  // (aw: '2027MVP' strings, plus the All-Star and title counts)
+  const by = {}
+  for (const x of r.aw ?? []) { const k = String(x).slice(4); if (AW[k]) (by[k] ??= []).push(Number(String(x).slice(0, 4))) }
+  if (r.as) by.AS = Array(r.as).fill(null)
+  if (r.ch) by.CHAMP = Array(r.ch).fill(null)
+  const keys = Object.keys(AW).filter(k => by[k])
+  const kit = r.s && TEAM[r.s] ? r.s : F.team
+  return createPortal(
+    <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="fk fk-root nb-sheet" role="dialog" aria-label={r.n} style={fkVars(kit)}>
+        <div className="nb-sheet-top"><b>Retired</b><button className="fk-x" onClick={onClose} aria-label="Close">✕</button></div>
+        <LowerThird name={r.n} ovr={r.o} team={kit} size="l" mine={r.b != null ? owner : null} />
+        <div className="nb-facts">
+          <span><small>Retired at</small><b>{r.ag ?? '-'}</b></span>
+          <span><small>Seasons</small><b>{r.yrs ?? '-'}</b></span>
+          {r.s && TEAM[r.s] && <span><small>Last team</small><b>{TEAM[r.s].short}</b></span>}
+          {r.y != null && <span><small>Last season</small><b>{seasonText(r.y)}</b></span>}
+        </div>
+        <section className="nb-sec">
+          <h3 className="nb-sec-h">Career{gp > 0 && <span>Per game</span>}</h3>
+          {gp > 0 ? (
+            <div className="bx-scroll"><table className="nb-car">
+              <thead><tr><th>G</th><th>PTS</th><th>REB</th><th>AST</th><th>TOTAL PTS</th></tr></thead>
+              <tbody><tr><td>{gp}</td><td>{f(pts)}</td><td>{f(reb)}</td><td>{f(ast)}</td><td>{pts.toLocaleString('en-US')}</td></tr></tbody>
+            </table></div>
+          ) : <p className="nb-sec-note">No NBA games on record.</p>}
+        </section>
+        {keys.length > 0 && (
+          <section className="nb-sec">
+            <h3 className="nb-sec-h">Honors</h3>
+            <ul className="nb-honor-list">{keys.map(k => <li key={k}><b>{AW[k]}{by[k].length > 1 ? ` ×${by[k].length}` : ''}</b>{by[k][0] != null && <small>{[...new Set(by[k])].map(y => seasonText(y)).join(', ')}</small>}</li>)}</ul>
+          </section>
+        )}
+      </div>
+    </div>,
+    document.body,
   )
 }
 

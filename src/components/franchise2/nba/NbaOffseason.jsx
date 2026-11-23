@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
   rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin, tenderQO, pullFA,
@@ -9,11 +9,33 @@ import { sfx, haptic } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird, Go, Flip, ActionBar, BackBar, Fold, reduced } from '../kit'
 import { CapBar, dealText } from './NbaTeam'
 import { money } from './NbaHub'
+import { PlayerSheet, canOpenMan } from './NbaRoster'
 import './nbaoff.css'
 
 // THE SUMMER, a stop at a time: awards, the lottery, the draft, re-signing, free agency, camp. A stop behind him opens
 // again from its pill, read-only (what happened there), and the next stop's button is always at the bottom.
-export default function NbaOffseason({ F, act, owner }) {
+// a tap on a man anywhere on these screens (and the history page) opens his page, PlayerSheet: the provider holds
+// the open id; tapMan gives a row the tap (and the keyboard's Enter) when there is a page to open
+export const ManOpen = createContext(null)
+export function tapMan(open, F, id) {
+  if (!open || !canOpenMan(F, id)) return {}
+  return { role: 'button', tabIndex: 0, 'data-tap': '', onClick: e => { e.stopPropagation(); open(id); sfx('tap') }, onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(id) } } }
+}
+const useTap = F => { const open = useContext(ManOpen); return id => tapMan(open, F, id) }
+const useOpen = () => useContext(ManOpen)
+export function ManSheetHost({ F, act, owner, children }) {
+  const [man, setMan] = useState(null)
+  return (
+    <ManOpen.Provider value={setMan}>
+      {children}
+      {man != null && <PlayerSheet F={F} act={act} id={man} owner={owner} onClose={() => setMan(null)} />}
+    </ManOpen.Provider>
+  )
+}
+export default function NbaOffseason(props) {
+  return <ManSheetHost {...props}><Summer {...props} /></ManSheetHost>
+}
+function Summer({ F, act, owner }) {
   const st = F.off?.step ?? 'awards'
   const at = STEPS.indexOf(st)
   const [look, setLook] = useState(null)
@@ -94,10 +116,11 @@ function devOf(F, was) {
   return { y: F.year, m, up, dn, rt }
 }
 function DevRow({ F, x }) {
+  const tap = useTap(F)
   const p = manOf(F, x[0]), s = p ? teamOfMan(F, p.i) ?? p.fr ?? null : null
   const ch = x[2] - x[1]
   return (
-    <li style={s ? fkVars(s) : undefined}>
+    <li style={s ? fkVars(s) : undefined} {...tap(x[0])}>
       {s ? <KLogo s={s} size={20} /> : <i className="nbo-nologo" />}
       <span><b>{p?.n ?? '-'}</b><small>{p ? `${p.p} · AGE ${p.ag}${s ? ` · ${TEAM[s].short}` : ''}` : ''}</small></span>
       <em className={ch > 0 ? 'is-up' : ch < 0 ? 'is-dn' : ''}>{`${x[1]} → ${x[2]}`}</em>
@@ -106,6 +129,7 @@ function DevRow({ F, x }) {
 }
 // (folded on the re-sign stop, a line saying how the roster moved; open when the stop is looked back at)
 function Development({ F, open = false }) {
+  const tap = useTap(F)
   const D = F.off?.dev
   if (!D) return null
   const ret = (D.rt ?? []).map(i => (F.retired ?? []).find(r => r.i === i)).filter(Boolean)
@@ -122,7 +146,7 @@ function Development({ F, open = false }) {
       {ret.length > 0 && (
         <div className="nbo-dev-box">
           <b>Retired</b>
-          <ol className="nbo-dev-list">{ret.map(r => <li key={r.i} style={r.s ? fkVars(r.s) : undefined}>{r.s ? <KLogo s={r.s} size={20} /> : <i className="nbo-nologo" />}<span><b>{r.n}</b><small>{`AGE ${r.ag} · ${r.yrs} ${r.yrs === 1 ? 'SEASON' : 'SEASONS'}${r.t?.[0] ? ` · ${(r.t[1] / r.t[0]).toFixed(1)} PPG` : ''}`}</small></span><em>{r.o ?? ''}</em></li>)}</ol>
+          <ol className="nbo-dev-list">{ret.map(r => <li key={r.i} style={r.s ? fkVars(r.s) : undefined} {...tap(r.i)}>{r.s ? <KLogo s={r.s} size={20} /> : <i className="nbo-nologo" />}<span><b>{r.n}</b><small>{`AGE ${r.ag} · ${r.yrs} ${r.yrs === 1 ? 'SEASON' : 'SEASONS'}${r.t?.[0] ? ` · ${(r.t[1] / r.t[0]).toFixed(1)} PPG` : ''}`}</small></span><em>{r.o ?? ''}</em></li>)}</ol>
         </div>
       )}
     </Fold>
@@ -169,6 +193,7 @@ export function cfMvps(F, h) {
   return out
 }
 function Awards({ F, act, go, done = false }) {
+  const open = useOpen()
   const h = F.hist[F.hist.length - 1]
   if (!h) return null
   const A = h.aw ?? {}
@@ -185,7 +210,7 @@ function Awards({ F, act, go, done = false }) {
           return (
             <div key={k} className={`nbo-aw${w.s === F.team ? ' is-me' : ''}`} style={w.s ? fkVars(w.s) : undefined}>
               <small className="nbo-aw-k">{AW_LABEL[k] ?? k}</small>
-              <LowerThird name={w.n} pos={p?.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={w.s} size="s" line={TEAM[w.s]?.name?.toUpperCase()} />
+              <LowerThird name={w.n} pos={p?.p} num={p?.num} ovr={p?.o} photo={p ? manPhoto(F, p) : null} team={w.s} size="s" line={TEAM[w.s]?.name?.toUpperCase()} onClick={open && canOpenMan(F, w.i) ? () => { open(w.i); sfx('tap') } : undefined} />
               {line && <p className="nbo-aw-line">{line}</p>}
             </div>
           )
@@ -201,6 +226,7 @@ function Awards({ F, act, go, done = false }) {
 }
 // an award's teams (All-NBA, All-Defensive, All-Rookie): five men a team, each with his club and his line
 export function AwardTeams({ F, y, title, teams, names, k = 'ALL', me = F.team }) {
+  const tap = useTap(F)
   if (!teams?.length) return null
   return (
     <section className="nbo-tl">
@@ -212,7 +238,7 @@ export function AwardTeams({ F, y, title, teams, names, k = 'ALL', me = F.team }
             {t.map(x => {
               const p = manOf(F, x.i)
               return (
-                <li key={x.i} className={x.s === me ? 'is-me' : ''} style={x.s ? fkVars(x.s) : undefined}>
+                <li key={x.i} className={x.s === me ? 'is-me' : ''} style={x.s ? fkVars(x.s) : undefined} {...tap(x.i)}>
                   {x.s ? <KLogo s={x.s} size={22} /> : <i className="nbo-nologo" />}
                   <span><b>{x.n}</b><small>{[p?.p, TEAM[x.s]?.short].filter(Boolean).join(' · ')}</small></span>
                   <em>{statLine(F, x.i, y, k)}</em>
@@ -367,6 +393,7 @@ function Draft({ F, act, go }) {
 }
 // the pick as the commissioner reads it: the team, the slot, the man
 function PickCard({ F, m }) {
+  const tap = useTap(F)
   const p = (F.dc ?? []).find(x => x.i === m.i) ?? manOf(F, m.i)
   if (!p) return null
   const inClass = p.seen != null
@@ -378,7 +405,7 @@ function PickCard({ F, m }) {
         <KLogo s={m.t} size={36} />
         <span><small>{`NO. ${m.n} · ROUND ${m.r}${m.o && m.o !== m.t ? ` · FROM ${TEAM[m.o].short}` : ''}${me ? ' · YOUR PICK' : ''}`}</small><b>{`The ${TEAM[m.t].name} select`}</b></span>
       </div>
-      <div className="nbo-pick-man">
+      <div className="nbo-pick-man" {...tap(m.i)}>
         <span><b>{p.n}</b><small>{`${p.p} · AGE ${inClass ? draftAge(p) : p.ag} · ${htText(p.ht)} · ${p.c ?? ''}`}</small></span>
         <span className="nbo-pick-gr">{R && <b>{R.text}</b>}<small>{`OVR ${p.o}`}</small></span>
       </div>
@@ -386,9 +413,10 @@ function PickCard({ F, m }) {
   )
 }
 function MadeRow({ F, m }) {
+  const tap = useTap(F)
   const p = (F.dc ?? []).find(x => x.i === m.i) ?? manOf(F, m.i)
   return (
-    <li className={m.t === F.team ? 'is-me' : ''} style={fkVars(m.t)}>
+    <li className={m.t === F.team ? 'is-me' : ''} style={fkVars(m.t)} {...tap(m.i)}>
       <i>{m.n}</i><KLogo s={m.t} size={22} />
       <b>{p?.n ?? m.n2}</b>
       <small>{[TEAM[m.t].short, m.o && m.o !== m.t ? `VIA ${TEAM[m.o].short}` : null, p?.p, p?.c].filter(Boolean).join(' · ')}</small>
@@ -433,6 +461,7 @@ const RIGHTS = { bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bi
 const rightsOf = p => (!p.fr || p.rn ? null : (p.bird ?? 0) >= 3 ? 'bird' : p.bird === 2 ? 'ebird' : 'nbird')
 const RIGHTS_SAYS = { bird: 'he can be paid over the cap, up to his max', ebird: 'he can be paid over the cap, up to 175% of his last salary', nbird: 'he can be paid over the cap, up to 120% of his last salary' }
 function Resign({ F, act, go }) {
+  const open = useOpen()
   const ids = F.off?.mine ?? []
   const [why, setWhy] = useState(null)
   const men = ids.map(i => (F.fa ?? []).find(p => p.i === i)).filter(Boolean)
@@ -464,7 +493,7 @@ function Resign({ F, act, go }) {
         const x = seasonOf(F, p.i, F.year)
         return (
           <div key={p.i} className="nbo-rs">
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag}${x ? ` · ${f1(per(x, 'pts'))} PPG` : ''}`} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag}${x ? ` · ${f1(per(x, 'pts'))} PPG` : ''}`} onClick={open ? () => { open(p.i); sfx('tap') } : undefined} />
             <div className="nbo-rs-facts">
               <span><small>Asks</small><b>{d ? `${money(d.$)} × ${yrs(d.y)}` : 'To test the market'}</b></span>
               <span><small>Rights</small><b>{rt ? RIGHTS[rt] : 'None'}</b></span>
@@ -491,10 +520,11 @@ function Resign({ F, act, go }) {
   )
 }
 function KeptList({ F, kept, title }) {
+  const tap = useTap(F)
   return (
     <div className="nbo-dev-box">
       <b>{title}</b>
-      <ol className="nbo-dev-list">{kept.map(p => <li key={p.i} style={fkVars(F.team)}><KLogo s={F.team} size={20} /><span><b>{p.n}</b><small>{`${p.p} · AGE ${p.ag} · OVR ${p.o}`}</small></span><em>{p.y ? `${money(p.$)} × ${p.y}` : ''}</em></li>)}</ol>
+      <ol className="nbo-dev-list">{kept.map(p => <li key={p.i} style={fkVars(F.team)} {...tap(p.i)}><KLogo s={F.team} size={20} /><span><b>{p.n}</b><small>{`${p.p} · AGE ${p.ag} · OVR ${p.o}`}</small></span><em>{p.y ? `${money(p.$)} × ${p.y}` : ''}</em></li>)}</ol>
     </div>
   )
 }
@@ -532,6 +562,7 @@ function nextDay(X) {
   X.off.fres = offers.map(i => [i, left.has(i) ? null : teamOfMan(X, i)])
 }
 function FreeAgency({ F, act, go }) {
+  const tap = useTap(F)
   const [why, setWhy] = useState(null)
   const [open, setOpen] = useState(null)
   const [spot, setSpot] = useState('all')
@@ -578,7 +609,7 @@ function FreeAgency({ F, act, go }) {
       {(F.off?.fres ?? []).length > 0 && (
         <div className="nbo-dev-box">
           <b>{`Your offers on day ${day}`}</b>
-          <ol className="nbo-dev-list">{F.off.fres.map(([i, s]) => { const p = manOf(F, i); return <li key={i} style={s ? fkVars(s) : undefined}>{s ? <KLogo s={s} size={20} /> : <i className="nbo-nologo" />}<span><b>{p?.n ?? '-'}</b><small>{s === F.team ? 'SIGNED WITH YOU' : s ? `CHOSE THE ${TEAM[s].nick.toUpperCase()}` : 'STILL DECIDING · YOUR OFFER STANDS'}</small></span><em>{s && p?.y ? `${money(p.$)} × ${p.y}` : ''}</em></li> })}</ol>
+          <ol className="nbo-dev-list">{F.off.fres.map(([i, s]) => { const p = manOf(F, i); return <li key={i} style={s ? fkVars(s) : undefined} {...tap(i)}>{s ? <KLogo s={s} size={20} /> : <i className="nbo-nologo" />}<span><b>{p?.n ?? '-'}</b><small>{s === F.team ? 'SIGNED WITH YOU' : s ? `CHOSE THE ${TEAM[s].nick.toUpperCase()}` : 'STILL DECIDING · YOUR OFFER STANDS'}</small></span><em>{s && p?.y ? `${money(p.$)} × ${p.y}` : ''}</em></li> })}</ol>
         </div>
       )}
       {sheets.map(({ q, p }) => (
@@ -629,6 +660,7 @@ function FaRow({ F, p, d, c, open, onOpen, bids, onSign, onOffer, onPull }) {
   )
 }
 function OfferPanel({ F, p, ask, c, bids, pend, rfa, onSign, onOffer, onPull }) {
+  const open = useOpen()
   const year = CAP_SIM.capYear ? CAP_SIM.capYear(F) : F.year + 1
   const mn = CAP_SIM.minOf(p.ys ?? 0, year), mx = CAP_SIM.maxOf(p.ys ?? 0, year)
   const [amt, setAmt] = useState(pend?.$ ?? ask.$)
@@ -653,12 +685,14 @@ function OfferPanel({ F, p, ask, c, bids, pend, rfa, onSign, onOffer, onPull }) 
         {bids ? <button type="button" className="is-go" disabled={!cc.ok} onClick={() => onOffer(p, deal)}>{pend ? 'Change the offer' : 'Make the offer'}</button>
           : <button type="button" className="is-go" disabled={!c.ok} onClick={() => onSign(p)}>{`Sign him: ${money(ask.$)} × ${ask.y}`}</button>}
         {pend && <button type="button" onClick={() => onPull(p)}>Pull the offer</button>}
+        {open && <button type="button" onClick={() => { open(p.i); sfx('tap') }}>Player page</button>}
       </span>
     </div>
   )
 }
 // around the league: who signed where, day by day (the GM's own first)
 function Wire({ F, all = false }) {
+  const tap = useTap(F)
   const W = F.off?.wire ?? []
   const days = [...new Set(W.map(x => x[0]))].sort((a, b) => b - a)
   const [d, setD] = useState(null)
@@ -672,7 +706,7 @@ function Wire({ F, all = false }) {
       <Chyron tone="ink" size="s" title="Around the league" sub={`${list.length} ${list.length === 1 ? 'SIGNING' : 'SIGNINGS'} ON ${on === 0 ? 'THE OPENING' : `DAY ${on}`}`} />
       {days.length > 1 && <div className="nb-by">{days.map(k => <button key={k} type="button" className={k === on ? 'is-on' : ''} onClick={() => { setD(k); setMore(false); sfx('tap') }}>{k === 0 ? 'Opening' : `Day ${k}`}</button>)}</div>}
       <ol className="nbo-dev-list">
-        {cut.map(({ x, p }) => <li key={x[1]} className={x[2] === F.team ? 'is-me' : ''} style={fkVars(x[2])}><KLogo s={x[2]} size={20} /><span><b>{p.n}</b><small>{`${TEAM[x[2]].short} · ${p.p} · OVR ${p.o}${p.was && p.was !== x[2] && TEAM[p.was] ? ` · FROM ${TEAM[p.was].short}` : ''}`}</small></span><em>{x[4] ? `${money(x[3])} × ${x[4]}` : ''}</em></li>)}
+        {cut.map(({ x, p }) => <li key={x[1]} className={x[2] === F.team ? 'is-me' : ''} style={fkVars(x[2])} {...tap(x[1])}><KLogo s={x[2]} size={20} /><span><b>{p.n}</b><small>{`${TEAM[x[2]].short} · ${p.p} · OVR ${p.o}${p.was && p.was !== x[2] && TEAM[p.was] ? ` · FROM ${TEAM[p.was].short}` : ''}`}</small></span><em>{x[4] ? `${money(x[3])} × ${x[4]}` : ''}</em></li>)}
       </ol>
       {!all && list.length > 8 && <button type="button" className="fh-textbtn" onClick={() => setMore(v => !v)}>{more ? 'Show fewer' : `Show all ${list.length}`}</button>}
     </section>
@@ -695,6 +729,8 @@ function FaDone({ F }) {
 // the roster down to 15 standard and 3 two-way deals. Waive on a man selects him: what it costs (his dead money, or
 // stretched) and the buttons show in the bar at the foot of the screen, and they arm a moment later.
 function Camp({ F, act, go, owner }) {
+  const open = useOpen()
+  const page = id => (open ? () => { open(id); sfx('tap') } : undefined)
   const t = F.teams[F.team]
   const chk = campCheck(F)
   const std = t.r.filter(p => !p.tw).sort((a, b) => b.o - a.o)
@@ -724,7 +760,7 @@ function Camp({ F, act, go, owner }) {
           const c = CAP_SIM.cutCost(F, p)
           return (
             <div key={p.i} className={`nbo-camp${sel === p.i ? ' is-sel' : ''}`}>
-              <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={`AGE ${p.ag}${p.rk === F.year + 1 ? ' · ROOKIE' : ''}`} />
+              <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={`AGE ${p.ag}${p.rk === F.year + 1 ? ' · ROOKIE' : ''}`} onClick={page(p.i)} />
               <div className="nbo-camp-cost">
                 <span><span>{dealText(p)}</span><b className={c?.total > 0 ? 'is-dead' : ''}>{c?.total > 0 ? `${money(c.total)} DEAD IF WAIVED` : 'NO DEAD MONEY'}</b></span>
                 <button type="button" className={sel === p.i ? 'is-on' : ''} aria-pressed={sel === p.i} onClick={() => { setSel(s => (s === p.i ? null : p.i)); sfx('tap') }}>{sel === p.i ? 'Selected' : 'Waive'}</button>
@@ -734,7 +770,7 @@ function Camp({ F, act, go, owner }) {
         })}
       </div>
       {tw.length > 0 && <Chyron tone="ink" size="s" title="Two-way" sub={`${tw.length} OF 3`} />}
-      {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} />)}
+      {tw.map(p => <LowerThird key={p.i} name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · TWO-WAY`} onClick={page(p.i)} />)}
       {man ? (
         <ActionBar className="nbo-confirm">
           <p className="nbo-confirm-q">{`Waive ${man.n}?`}<small>{dead > 0 ? (cost.years > 1 ? `Dead money: ${money(cost.now ?? dead)} this season, ${money(dead)} over ${cost.years} seasons` : `Dead money: ${money(dead)} this season`) : 'No dead money: nothing left on his deal is guaranteed'}{canStretch ? `. Stretched: ${money(costS.now)} a season for ${costS.years} seasons` : ''}</small></p>
@@ -753,6 +789,7 @@ function Camp({ F, act, go, owner }) {
 
 // team options on next season: the GM picks each up or declines it (any he leaves, the front office decides)
 function TeamOptions({ F, act }) {
+  const open = useOpen()
   const due = teamOptions(F)
   if (!due.length) return null
   return (
@@ -760,7 +797,7 @@ function TeamOptions({ F, act }) {
       <Chyron tone="ink" size="s" title="Team options" sub={`${F.year + 1}-${String((F.year + 2) % 100).padStart(2, '0')} SEASON`} />
       {due.map(({ p }) => (
         <div key={p.i} className="nb-fa-row">
-          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · ${money(p.sc?.[0] ?? p.$)}${p.optd === 1 ? ' · PICKED UP' : p.optd === 0 ? ' · DECLINED' : ''}`} />
+          <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag} · ${money(p.sc?.[0] ?? p.$)}${p.optd === 1 ? ' · PICKED UP' : p.optd === 0 ? ' · DECLINED' : ''}`} onClick={open ? () => { open(p.i); sfx('tap') } : undefined} />
           <span className="nb-fa-acts">
             <button type="button" className={p.optd === 1 ? 'is-go' : ''} onClick={() => { act(X => { setOption(X, p.i, true) }); sfx('tap') }}>Pick it up</button>
             <button type="button" className={p.optd === 0 ? 'is-go' : ''} onClick={() => { act(X => { setOption(X, p.i, false) }); sfx('tap') }}>Decline</button>
@@ -773,6 +810,7 @@ function TeamOptions({ F, act }) {
 
 // the minimum deals: the end of the bench, open to any team (camp lists them while the roster is short of 14)
 function MinDeals({ F, act, open = false }) {
+  const tap = useTap(F)
   const [why, setWhy] = useState(null)
   const [done, setDone] = useState(null)
   const men = minPool(F)
@@ -784,7 +822,7 @@ function MinDeals({ F, act, open = false }) {
       {men.map(p => (
         <div key={p.i} className="nbo-minrow">
           <span className="nbo-ovr">{p.o}</span>
-          <span className="nbo-fa-who"><b>{p.n}</b><small><span>{`${p.p} · AGE ${p.ag} · ${p.ys ?? 0} YRS IN THE LEAGUE${p.was && TEAM[p.was] ? ` · ${TEAM[p.was].short}` : ''}`}</span></small></span>
+          <span className="nbo-fa-who" {...tap(p.i)}><b>{p.n}</b><small><span>{`${p.p} · AGE ${p.ag} · ${p.ys ?? 0} YRS IN THE LEAGUE${p.was && TEAM[p.was] ? ` · ${TEAM[p.was].short}` : ''}`}</span></small></span>
           <button type="button" onClick={() => { const r = act(X => signMin(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); if (r?.ok) setDone(p.n); sfx(r?.ok ? 'claim' : 'deny') }}>Sign</button>
         </div>
       ))}

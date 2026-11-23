@@ -291,8 +291,8 @@ export function closeDraft(F) {
     const keep = rookieOf(p)
     t.r.push(keep)
     // (his deal: the scale for a first-rounder; a second-rounder a standard deal or two-way, the cap engine's call;
-    // m.tw says the team means to sign him two-way)
-    X.rookieDeal(F, keep, { n: m.n, r: m.r, ...(m.tw && { tw: true }) })
+    // m.tw says the team means to sign him two-way, and a second-rounder without it gets a standard deal if there's room)
+    X.rookieDeal(F, keep, { n: m.n, r: m.r, ...(m.r === 2 && { tw: !!m.tw }) })
   }
   F.drafts = { ...(F.drafts ?? {}), [F.year + 1]: made.map(m => ({ ...m, n2: F.dc.find(x => x.i === m.i)?.n })) }
   const top = made.slice(0, 3).map(m => `${m.n}. ${nick(m.t)}: ${F.dc.find(x => x.i === m.i)?.n}`)

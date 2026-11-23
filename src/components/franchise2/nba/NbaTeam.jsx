@@ -115,6 +115,11 @@ function Trades({ F, act, onBack }) {
   const cs = CAP_SIM.capSheet(F, them)
   const sit = CAP_SIM.situationOf(F, them)
   const tpe = tpesOf(F, F.team)
+  // (the GM's own line: his payroll, ownership's ceiling, and where this deal leaves him; a deal that adds salary
+  // can't pass the ceiling: trades.js checkTrade)
+  const own = CAP_SIM.ownerCap(F)
+  const myPay = CAP_SIM.capSheet(F, F.team).pay
+  const myAfter = myPay - sum(F.team, ga) + sum(them, gb)
   return (
     <div className="nb-trades">
       <BackBar label="Teams" title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); reset() }} />
@@ -122,6 +127,11 @@ function Trades({ F, act, onBack }) {
         <KLogo s={them} size={36} />
         <span><small>{CAP_SIM.SIT_TEXT[sit]} · {CAP_SIM.OVER_TEXT[cs.over]}</small><b>{TEAM[them].name}</b><em>Payroll {money(cs.pay)}{cs.room > 0 ? ` · ${money(cs.room)} in cap room` : cs.over === 'cap' ? ` · ${money(cs.toTax)} under the tax` : cs.over === 'tax' ? ` · ${money(cs.toA1)} under the first apron` : cs.over === 'a1' ? ` · ${money(cs.toA2)} under the second apron` : ''}</em></span>
       </div>
+      {Number.isFinite(own.$) && (
+        <p className={`nb-tnote nb-towner${(ga.length || gb.length) && myAfter > own.$ + 0.01 && myAfter > myPay + 0.01 ? ' is-over' : ''}`}>
+          {`${TEAM[F.team].nick} payroll ${money(myPay)}${ga.length || gb.length ? `, ${money(myAfter)} after this deal` : ''}. Ownership's limit: ${money(own.$)}, ${CAP_SIM.OWNER_LINE_TEXT[own.k] ?? 'its line'}.`}
+        </p>
+      )}
       <section className="nb-deal">
         {S.map(([s, ids, , pids]) => (
           <div key={s} className="nb-deal-side" style={fkVars(s)}>

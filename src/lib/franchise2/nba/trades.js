@@ -17,7 +17,8 @@
 //   - rosters: 15 standard deals at most (21 men in the offseason), 13 at least in the season, 3 two-way.
 //   - recently signed men: a free agent (or a man re-signed) can't be traded until December 15 or three months after
 //     he signed, whichever is later; a draft pick's rights can be dealt on draft night, then not for 30 days after he
-//     signs (from camp on); an offer sheet his team matched, not for a year (p.osm); a man traded for can't have his
+//     signs (from camp on); an offer sheet his team matched, not for a year (p.osm), and not to the team that signed
+//     him to the sheet until the next summer's free agency is over; a man traded for can't have his
 //     salary combined with others for two months (p.txd); a man the GM's team traded for can't go back to the team it
 //     got him from this league year (no buy-backs).
 //   - picks: only a team's own (as owned now); a top-N protection may be put on a first as it's traded; a swap right
@@ -25,6 +26,7 @@
 //     it's sold: the holder's pick carries sw.with, the giver's sw.by); the Stepien rule (never without a first
 //     in two drafts running); a team over the second apron can't trade its first seven drafts out (frozen).
 //   - a man with a no-trade clause can't be moved without his say (the league's teams don't ask).
+//   - the GM's owner: a deal that adds salary can't take his payroll past ownership's ceiling (contracts.js ownerCap).
 //
 // WHAT A MAN IS WORTH (manValue, a scale where the No. 1 pick is 160 and the 30th 20): where he ranks in the league
 // on a curve that climbs fast at the top (contracts.js WORTH: the best players are worth more than the max), by his
@@ -60,7 +62,7 @@
 import { rngOf, clamp, r1 } from '../rng'
 import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
-import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf, cutMan } from './contracts'
+import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf, cutMan, ownerCap } from './contracts'
 
 const shortsOf = F => Object.keys(F.teams ?? {})
 // (the league's own deals collect their wire items here while cpuDeadline / salaryDumps run)
@@ -126,9 +128,18 @@ export function tradableFrom(F, p) {
 function lockText(F, p) {
   const from = tradableFrom(F, p)
   if (from < 0 || (from !== Infinity && F.phase === 'season' && (F.day ?? 0) >= from)) return null
-  if (draftedNow(F, p)) return `${p.n} signed his rookie contract this summer and can't be traded until 30 days after he signed`
+  if (draftedNow(F, p)) return `${p.n} signed his ${p.tw ? 'two-way' : p.rs ? 'rookie-scale' : 'first NBA'} contract after the draft and can't be traded until 30 days after he signed`
   if (p.osm != null && (p.osm.y ?? p.osm) === lyOf(F)) return `${p.n}'s offer sheet was matched this summer: he can't be traded for a year`
   return `${p.n} signed recently and can't be traded until ${from === Infinity || from <= dec15(F) ? 'December 15' : 'three months after he signed'}`
+}
+// a matched offer sheet: never to the team that signed him to it within the year (the CBA): through the league year
+// of the match and the next summer's re-signing and free agency, until camp
+export function sheetLockTo(F, p, to) {
+  const y = p?.osm?.y
+  if (y == null || !to || p.osm.s !== to) return null
+  const ly = lyOf(F)
+  if (!(ly === y || (ly === y + 1 && F.phase === 'off' && ['resign', 'fa'].includes(F.off?.step)))) return null
+  return `${p.n} can't be traded to the ${to}: they signed him to the offer sheet his team matched, and a year has to pass`
 }
 // a man acquired in a trade can't be combined with other salaries in another trade for two months
 const AGG_DAYS = 60
@@ -490,8 +501,8 @@ export function checkTrade(F, deal) {
   const n = am.length + bm.length + (deal.pa ?? []).length + (deal.pb ?? []).length
   if (!n) return { ok: false, why: 'Add players or picks', k: 'empty' }
   if (am.length + (deal.pa ?? []).length > TRADE_MAX || bm.length + (deal.pb ?? []).length > TRADE_MAX) return { ok: false, why: `${TRADE_MAX} players and picks a side at most`, k: 'many' }
-  for (const [s, men] of [[a, am], [b, bm]]) for (const p of men) {
-    const w = whyNot(F, s, p)
+  for (const [s, men, to] of [[a, am, b], [b, bm, a]]) for (const p of men) {
+    const w = sheetLockTo(F, p, to) ?? whyNot(F, s, p)
     if (w) return { ok: false, why: w, k: 'man', who: p }
   }
   // picks: owned, real, not twice, protections on firsts only
@@ -521,6 +532,12 @@ export function checkTrade(F, deal) {
   if (!ra.ok) return ra
   const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa), deal.cut?.[b] ?? 0)
   if (!rb.ok) return rb
+  // (the GM's owner: a deal that adds salary stops at his ceiling; one that cuts payroll always goes. The league's teams have none)
+  for (const [s, r] of [[a, ra], [b, rb]]) {
+    if (s !== F.team || F.noCap || !(r.I > r.O + 0.001)) continue
+    const o = ownerCap(F)
+    if (r.after > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
+  }
   const P = picksAfter(F, deal)
   for (const s of [a, b]) if (!stepienOk(F, s, P)) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
   return { ok: true, a: ra, b: rb }
