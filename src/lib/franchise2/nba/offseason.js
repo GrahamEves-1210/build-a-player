@@ -151,7 +151,7 @@ export function signFA(F, id, deal = null) {
   const d = deal ? { $: deal.$, y: deal.y, r: deal.r ?? (deal.$ >= 15 ? 0.05 : 0) } : X.askOf(F, p)
   if (F.off?.step === 'fa' && !MK.faDone(F)) {
     const r = MK.placeOffer(F, id, d)
-    return r.ok ? { ok: true, offer: true, sheet: r.sheet, via: r.via, deal: d } : r
+    return r.ok ? { ok: true, offer: true, pending: true, sheet: r.sheet, via: r.via, deal: d } : r
   }
   const r = MK.lateOffer(F, id, d)
   if (!r.ok) return r

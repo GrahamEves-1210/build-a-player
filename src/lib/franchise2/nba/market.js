@@ -435,7 +435,7 @@ export function placeOffer(F, id, d) {
   const c = canSign(F, F.team, p, deal)
   if (!c.ok) return c
   F.fao = { ...(F.fao ?? {}), [id]: deal }
-  return { ok: true, via: c.via, sheet: !!(p.rfa && p.fr && p.fr !== F.team && !p.rn) }
+  return { ok: true, pending: true, via: c.via, sheet: !!(p.rfa && p.fr && p.fr !== F.team && !p.rn) }
 }
 export const offerSheet = (F, man, d) => placeOffer(F, man.i ?? man, d)
 export function pullOffer(F, id) { if (F.fao?.[id]) { const n = { ...F.fao }; delete n[id]; F.fao = n } }
