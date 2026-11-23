@@ -6,6 +6,7 @@ import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../../../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../../../data/nba-bigs'
 import { BIRTH_NBA } from '../../../data/player-ages'
 import NBA_HEADSHOTS from '../../../data/nba-headshots.json'
+import { NBA_DAY_ONE_INJURIES } from '../../../data/nba-injuries'
 import { calcBucketOVR } from '../../../utils/bucketSimulation'
 import { HEADSHOT_BASE } from '../../../utils/simulation'
 import { nameFor } from '../names'
@@ -123,8 +124,8 @@ export function leagueNames(F) {
 }
 
 // ── The league at the start ──────────────────────────────────────────────────
-// each team: its real men (best fourteen or fifteen on standard deals; a sixteenth and beyond on two-way deals if
-// he's young, else the street), then made-up men to fifteen and two two-way men
+// each team: its real men (the best fifteen on standard deals, the next three on two-way deals as real teams carry
+// them, anyone past eighteen to the street), then made-up men to fifteen and two two-way men
 export function buildTeams(F, { dealOnLoad } = {}) {
   const R = rngOf(`${F.seed}-nba-league`)
   F.teams = {}
@@ -134,10 +135,12 @@ export function buildTeams(F, { dealOnLoad } = {}) {
   for (const s of SHORTS) {
     const real = realPool().filter(r => r.team === s).sort((a, b) => b.o - a.o)
     const men = real.map(r => makeReal(F, r, R))
+    // the real injury report on opening night (data/nba-injuries.js), unless the GM turned injuries off
+    if (!F.noInj) for (const p of men) { const x = NBA_DAY_ONE_INJURIES[p.n]; if (x) p.inj = { g: x.g, k: x.k, ...(x.se && { se: 1 }) } }
     const t = F.teams[s]
     men.forEach((p, k) => {
       if (k < ROSTER_MAX) t.r.push(p)
-      else if (p.ag <= 24 && t.r.filter(x => x.tw).length < TWO_WAY_MAX) { p.tw = 1; t.r.push(p) }
+      else if (t.r.filter(x => x.tw).length < TWO_WAY_MAX) { p.tw = 1; t.r.push(p) }
       else F.fa.push(p)
     })
     fillTeam(F, s, R, taken)
