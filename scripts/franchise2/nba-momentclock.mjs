@@ -8,7 +8,7 @@ const team = process.argv[2] ?? 'BOS', G = +(process.argv[3] ?? 30)
 const tally = {}, clocks = {}, bad = [], lines = {}
 const flag = s => { if (bad.length < 12) bad.push(s); bad.n = (bad.n ?? 0) + 1 }
 let n = 0, sealedN = 0, sealedW = 0, ots = 0, inOT = 0, po = 0
-const one = (F, hit, po) => {
+const one = (F, hit) => {
   const P = F.pend, Gm = P.G
   const k = Gm.h.short === F.team ? 'h' : 'a'
   const plan = N.momentPlan(F)
@@ -52,12 +52,12 @@ for (const hit of [true, false]) for (const sd of ['a', 'b', 'c']) {
   while (F.phase === 'season' && k < G) {
     const o = N.playNext(F, { moments: true })
     if (!o?.pending) { if (!N.nextMine(F)) break; continue }
-    k++; one(F, hit, false)
+    k++; one(F, hit)
   }
   // the playoffs, every game of his a moment if it can be
   if (sd === 'a') {
     N.simTo(F, F.days); N.startPostseason(F)
-    for (let i = 0; i < 120 && (F.phase === 'playin' || F.phase === 'playoffs'); i++) { const o = N.playPoNight(F, { moments: true }); if (o?.pending) one(F, hit, true) }
+    for (let i = 0; i < 120 && (F.phase === 'playin' || F.phase === 'playoffs'); i++) { const o = N.playPoNight(F, { moments: true }); if (o?.pending) one(F, hit) }
   }
 }
 console.log('moments', n, '(in overtime', inOT, '· playoffs', po, ') went to OT after the moment', ots)

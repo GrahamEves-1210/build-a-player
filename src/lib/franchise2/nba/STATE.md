@@ -151,8 +151,9 @@ finalsMvp(F, series) -> manId
 ageLeague(F) -> { retired: [Man], news: [...] }    // offseason: ag+1, o toward pk, decline by group, retirements
 // Moments seam (core moments.js uses it):
 startGame(F, home, away, opts) -> G       // a game state that can stop; G is plain JSON (saved in F.pend while the moment is up), small, no F inside; G.hs / G.as = the score so far
-playTo(G, secondsLeftInQ4)                // sim until that much of the 4th (or OT) is left
-possession(G, short, outcome)             // apply one possession result: { pts: 0..4, by: manId, ast?: manId, kind: 'pnr'|'iso'|'read'|... , tov?: bool }
+playTo(G, secondsLeftInQ4, when?)         // sim until that much of the 4th (or OT) is left; when(G): stop only at a whistle where it's true (season.js momentSpot)
+possession(G, short, outcome)             // apply one possession result: { pts: 0..4, by: manId, ast?: manId, kind: 'pnr'|'iso'|'read'|... , tov?: bool, t?: seconds } (a man with 6 fouls never takes it)
+momentEnd(G, short, { sealed })           // the seconds after a moment: sealed (his team landed it and is ahead) = the other side's last look misses and the clock runs out; else a trip with <=5 s is a desperation shot; returns the trip
 finishGame(G) -> Res                      // sim the rest, give the same Res as simGame
 ```
 
@@ -186,7 +187,8 @@ cpuDeadline(F, day) -> [news]                          // CPU-CPU deals before t
 
 - Setup: `buildTeams` -> `dealOnLoad(F, man, short)` for every rostered man. Two-way men too (B decides their pay).
 - Each night (`season.js playDay`): for each game `restFor` (regular season only) -> `simGame` (or, for the GM's game with
-  moments on, `startGame` -> `playTo(G, 24)` -> maybe a moment -> `possession` -> `finishGame`) -> `recordGame` ->
+  moments on, `startGame` -> `playTo(G, 24, momentSpot)` -> maybe a moment (F.pend: { ..., left: the real clock, per, spot:
+  'off'|'def'|'ft', G }) -> `possession` -> `momentEnd` -> `finishGame`; the log row keeps row.mo for the final's line) -> `recordGame` ->
   `rollInjuries`. After the night: `tickInjuries(F, short)` for every team, then `cpuDeadline(F, day)` (B: return
   [] after `F.ddl`).
 - Postseason nights: the same with `playoff: true`, no `restFor`.
