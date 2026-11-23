@@ -33,7 +33,8 @@ revoke all on function private.claude_key_ok() from public, anon, authenticated;
 --    device = the form's line (device · browser · app or website · screen size), sent since 2026-11-13;
 --    user_agent = the browser's own string (device, OS, browser), sent since 2026-10-06.
 drop function if exists public.claude_feedback_inbox(int);
-create or replace function public.claude_feedback_inbox(p_limit int default 50)
+drop function if exists public.claude_feedback_inbox(int, timestamptz);
+create or replace function public.claude_feedback_inbox(p_limit int default 50, p_since timestamptz default null)
 returns table (id bigint, created_at timestamptz, kind text, message text, app text, "position" text, page text, device text, user_agent text, signed_in boolean)
 language plpgsql stable security definer set search_path = '' as $$
 begin
@@ -42,7 +43,7 @@ begin
     select f.id, f.created_at, f.kind, f.message, f.app, f.position, f.page,
            substring(f.user_agent from '^\[([^\]]*)\]'), regexp_replace(f.user_agent, '^\[[^\]]*\] ?', ''), f.user_id is not null
     from public.feedback f
-    where f.triage is null and not f.resolved
+    where f.triage is null and not f.resolved and (p_since is null or f.created_at >= p_since)
     order by f.created_at
     limit least(greatest(p_limit, 1), 200);
 end $$;
@@ -59,9 +60,9 @@ begin
    where id = p_id;
 end $$;
 
-revoke all on function public.claude_feedback_inbox(int) from public;
+revoke all on function public.claude_feedback_inbox(int, timestamptz) from public;
 revoke all on function public.claude_feedback_triage(bigint, text, text) from public;
-grant execute on function public.claude_feedback_inbox(int) to anon;
+grant execute on function public.claude_feedback_inbox(int, timestamptz) to anon;
 grant execute on function public.claude_feedback_triage(bigint, text, text) to anon;
 
 -- 5. make a key and show it once (copy the value in the result)
