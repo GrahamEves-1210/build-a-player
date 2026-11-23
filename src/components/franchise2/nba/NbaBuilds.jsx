@@ -44,7 +44,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const ready = picks.every(p => S.builds?.[p.id]?.name)
   return (
     <div className="fsu-card nb-builds">
-      <Chyron tone="ink" title="Your players" sub={`UP TO ${BUILD_MAX} OF YOUR OWN`} />
+      <Chyron tone="ink" title={`${owner || 'Guest'}'s players`} sub={`UP TO ${BUILD_MAX} BUILDS`} />
       {picks.map((p, k) => {
         const B = S.builds?.[p.id]
         if (!B?.name) {

@@ -64,7 +64,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
         </header>
         {saveBad && (
           <div className="nb-savebad" role="alert">
-            <span><b>This league isn't saving</b>This device's browser storage is full, so recent changes aren't saved. Delete a save you don't need and it saves again; it keeps trying.</span>
+            <span><b>This league isn't saving</b>This device's browser storage is full, so recent changes aren't saved. Deleting a save that isn't needed frees the space; it keeps trying.</span>
             <button type="button" onClick={onRetry}>Try again</button>
           </div>
         )}

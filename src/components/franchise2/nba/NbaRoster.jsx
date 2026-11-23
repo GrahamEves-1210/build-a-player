@@ -59,7 +59,7 @@ export function Rotation({ F, act, owner, onMan }) {
   return (
     <>
       <Chyron team={F.team} title="Rotation" sub={`TEAM OVR ${teamOvr(F, F.team)} · ${t.r.filter(p => !p.tw).length} OF 15 STANDARD`} right={right} />
-      {edit && <p className="nb-ed-hint">Tap a player, then another, to swap them. Set the minutes you want a player to get; the coach splits the rest of the 240.</p>}
+      {edit && <p className="nb-ed-hint">Tap a player, then another, to swap them. − and + set a player's minutes; the coach splits the rest of the 240.</p>}
       <div className={`nb-rot${edit ? ' is-edit' : ''}`}>
         {order.map((p, k) => (
           <div key={p.i} className="nb-rot-grp">
