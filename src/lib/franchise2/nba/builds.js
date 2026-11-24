@@ -2,11 +2,13 @@
 // named and numbered in the setup, and joins the team as a rookie: 20 years old, a first-round rookie-scale deal at
 // the slot his OVR would have gone, his spot read off his ratings. The man he replaces (the last man in his group on
 // the bench) is released to the street with his deal off the books.
-// Builds grow by the game's own rule, not the sim's dice: each summer a young build's grades go up a step at a time,
-// a veteran's legs go first; a build retires when the GM says so or at 38.
+// Builds grow by the game's own rule, not the sim's dice: each summer a young build's grades go up a step at a time.
+// From 28 he ages the way every man does (aging.js ageBuild: the league's curve, the legs first), and he retires the
+// way they do, a little later (from 35, the same odds x0.6, as football's builds), at 40 at the latest. His
+// retirement is on the wire and his card keeps the year (F.builds[b].done).
 import { TEAM, TYPES, ovrOfAttrs, SPOTS, groupOfSpot } from './league'
 import { rngOf, clamp } from '../rng'
-import { addNews } from './news'
+import { addNews, POS_FULL, signText } from './news'
 import * as X from './seams'
 
 export const BUILD_MAX = 3
@@ -35,22 +37,42 @@ export function placeBuilds(F) {
   for (let idx = 0; idx < F.builds.length; idx++) {
     const B = F.builds[idx]
     const p = makeBuild(F, idx, B)
-    // the man he replaces: the last man in his group (the two-way men aside), off to the street, his deal off the books
-    const same = t.r.filter(x => !x.tw && x.b == null && x.g === p.g).sort((x, y) => x.o - y.o)[0]
-    if (same) {
-      t.r = t.r.filter(x => x !== same)
-      for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'bird', 'sgn']) delete same[k]
-      same.was = F.team
-      F.fa = [...(F.fa ?? []), same]
-    }
+    // the man he replaces, when the 15 standard spots are full: of the last few men in his group (the two-way men
+    // aside), the one whose release costs least, waived (his guaranteed money stays on the books, as it would)
+    const full = t.r.filter(x => !x.tw).length >= 15
+    const same = full ? t.r.filter(x => !x.tw && x.b == null && x.g === p.g).sort((x, y) => x.o - y.o).slice(0, 3).sort((x, y) => (X.cutCost(F, x).total - X.cutCost(F, y).total) || x.o - y.o)[0] : null
+    const before = X.capSheet(F, F.team)
+    if (same) { X.cutMan(F, F.team, same.i); same.was = F.team }
     t.r.push(p)
     X.rookieDeal(F, p, { n: buildSlot(p.o), r: 1 })
     B.i = p.i
-    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `The ${TEAM[F.team].nick} sign ${p.n}, a ${p.p}, to a rookie-scale deal${same ? `; ${same.n} is released` : ''}` })
+    addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${signText('signs with', { ...p, n: `${p.n}, a ${POS_FULL[p.p] ?? p.p},` }, F.team, { note: ' (rookie scale)' })}${same ? `; ${same.n} is waived` : ''}` })
+    if (!F.noCap) addNews(F, { k: 'cap', tag: 'PAYROLL', s: F.team, text: buildCapText(F, before, X.capSheet(F, F.team)) })
   }
 }
-// a summer older: a young build's grades go up a step at a time (two or three steps at 20-23, one or two to 27),
-// a build past 30 gives back a step of his legs; his OVR follows his grades, his card follows him (F.builds)
+// what a build's deal does to the books: the payroll before and after, and the line it now sits past
+const LINE = { under: 'under the cap', cap: 'over the cap', tax: 'in the luxury tax', a1: 'over the first apron', a2: 'over the second apron' }
+export function buildCapText(F, before, after) {
+  const m = v => `$${v.toFixed(1)} million`
+  const moved = after.over !== before.over
+  const apron = after.over === 'a1' || after.over === 'a2'
+  return `The ${TEAM[F.team].nick} payroll goes from ${m(before.pay)} (${LINE[before.over]}) to ${m(after.pay)}${moved ? `, now ${LINE[after.over]}` : ` (${LINE[after.over]})`}${apron ? `: past the ${after.over === 'a1' ? 'first' : 'second'} apron a team can't use the ${after.over === 'a1' ? 'non-taxpayer' : 'taxpayer or non-taxpayer'} mid-level, and its trades are limited` : ''}`
+}
+// the books with a build of this OVR added, for the setup's preview of the GM's team: { before, after, add, text }.
+// prev: the $M of the builds already added ahead of him (the setup adds them in order), so the second and third
+// build's line is read off the payroll the first left. (The man a build replaces is waived: his money stays.)
+export function buildCapNote(F, o, prev = 0) {
+  const sh = X.capSheet(F, F.team)
+  const r1 = v => Math.round(v * 10) / 10
+  const add = X.rookieScale(buildSlot(o), F.year)[0]
+  const p0 = r1(sh.pay + prev), pay = r1(p0 + add)
+  const free = !!sh.free
+  const before = { ...sh, pay: p0, over: free ? 'under' : X.overOf(p0, sh.year) }
+  const after = { ...sh, pay, over: free ? 'under' : X.overOf(pay, sh.year) }
+  return { before, after, add, text: buildCapText(F, before, after) }
+}
+// a summer older (after ageLeague has aged him): a young build's grades go up a step at a time (two or three steps
+// at 20-23, one or two to 27, maybe one at 28); his OVR follows his grades, his card follows him (F.builds)
 export function growBuilds(F) {
   const out = []
   for (const s of Object.keys(F.teams)) for (const p of F.teams[s].r) {
@@ -59,13 +81,12 @@ export function growBuilds(F) {
     const R = rngOf(`${F.seed}-grow-${F.year}-${p.i}`)
     const T = TYPES[p.g] ?? []
     const was = p.o
-    const up = p.ag <= 23 ? R.int(2, 3) : p.ag <= 27 ? R.int(1, 2) : p.ag <= 30 ? R.int(0, 1) : 0
+    const up = p.ag <= 23 ? R.int(2, 3) : p.ag <= 27 ? R.int(1, 2) : p.ag <= 28 ? R.int(0, 1) : 0
     for (let k = 0; k < up; k++) {
       // (the lower grades first, the way a player works on what he can't do)
       const open = T.filter(t => p.a[t] < 11).sort((x, y) => p.a[x] - p.a[y] + (R.u() - 0.5) * 3)
       if (open.length) p.a[open[0]]++
     }
-    if (p.ag >= 31) for (const t of ['speed', 'bounce'].filter(t => T.includes(t) && R.chance(p.ag >= 34 ? 0.9 : 0.5))) p.a[t] = Math.max(0, p.a[t] - 1)
     p.o = ovrOfAttrs(p.g, p.a)
     p.pk = Math.max(p.pk ?? p.o, p.o)
     if (B) { B.age = p.ag; for (const t of T) if (B.build?.[t]) B.build[t] = { ...B.build[t], val: p.a[t] } }

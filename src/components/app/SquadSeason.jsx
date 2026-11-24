@@ -344,11 +344,12 @@ const BK_LEAD = [
   { k: 'Rebounds', ok: x => x.reb, v: x => x.reb ?? 0, line: x => `${x.reb} reb` },
   { k: 'Assists', ok: x => x.ast, v: x => x.ast ?? 0, line: x => `${x.ast} ast` },
 ]
-function Leaders1({ sport, sides }) {
+function Leaders1({ sport, sides, each = false }) {
   const out = []
-  for (const c of sport === 'bucket' ? BK_LEAD : FB_LEAD) {
+  // (each: every team's own leader in each, the way the NBA's box has it; otherwise the game's one)
+  for (const c of sport === 'bucket' ? BK_LEAD : FB_LEAD) for (const pool of each ? sides.map(S => [S]) : [sides]) {
     let best = null
-    for (const S of sides) for (const p of S.roster) { const x = S.s[p.k]; if (x && c.ok(x) && (!best || c.v(x) > best.v)) best = { v: c.v(x), p, x, S } }
+    for (const S of pool) for (const p of S.roster) { const x = S.s[p.k]; if (x && c.ok(x) && (!best || c.v(x) > best.v)) best = { v: c.v(x), p, x, S } }
     if (best && best.v > 0) out.push({ c, ...best })
   }
   if (!out.length) return null
@@ -357,7 +358,7 @@ function Leaders1({ sport, sides }) {
       <h3 className="bx-h">Game leaders</h3>
       <div className="bx-lead">
         {out.map(({ c, p, x, S }) => (
-          <div key={c.k} className={`bx-lead-row${p.s ? ' is-mine' : ''}`}>
+          <div key={`${c.k}-${S.team}`} className={`bx-lead-row${p.s ? ' is-mine' : ''}`}>
             <span className="bx-lead-k">{c.k}</span>
             <img src={logoOf(sport, S.team)} alt="" />
             <span className="bx-lead-who"><b>{p.s ? p.n : shortName(p.n)}<small>{posTag(p, S.roster)} · {S.team}</small></b><span>{c.line(x)}</span></span>
@@ -448,7 +449,9 @@ function BucketBox({ r, game }) {
 // (opp: the other team's men, { r, game } (Franchise); kick: the two kickers' lines [ours, theirs] ({ n, line }: FGA, FGM,
 // XPA, XPM, long); quarters: the points by quarter [ours, theirs]; story: the line under the final, the way the
 // broadcast sums the game up. `all` and `label` are kept for older callers: the builds are always in the tables now)
-export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = true, rows = null, status = null, children = null, className = '', opp = null, kick = null, quarters = null, story = null, live = false }) {
+// (table: draws a team's men in place of the stock table, (side, index) => node; with it a basketball box takes `opp`
+// too, both teams' men and each team's leaders: NBA Franchise. g.where: the header's game, in place of the stock one)
+export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = true, rows = null, status = null, children = null, className = '', opp = null, kick = null, quarters = null, story = null, live = false, table = null }) {
   useEffect(() => {
     if (!onClose) return undefined
     const k = e => { if (e.key === 'Escape') onClose() }
@@ -459,11 +462,11 @@ export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = tru
   const game = (g.po ? box.po : box.reg)[g.i]
   if (!game) return null
   const oppTeam = teamOf(sport, g.opp)
-  const where = sport === 'bucket'
+  const where = g.where ?? (sport === 'bucket'
     ? (g.po ? `${g.round} · GAME ${g.gm}` : `GAME ${g.i + 1}`)
-    : g.label
+    : g.label)
   const otTxt = g.ot ? ` · ${g.ot > 1 ? `${g.ot}OT` : 'OT'}` : ''
-  const sides = [{ team: r.team, roster: r.roster, s: game.s }, ...(opp && sport !== 'bucket' ? [{ team: g.opp, roster: opp.r.roster, s: opp.game.s }] : [])]
+  const sides = [{ team: r.team, roster: r.roster, s: game.s }, ...(opp && (sport !== 'bucket' || table) ? [{ team: g.opp, roster: opp.r.roster, s: opp.game.s }] : [])]
   const mineCount = sport === 'bucket' ? r.roster.filter(p => p.s && game.s[p.k]?.mn).length : r.roster.filter(p => p.s && game.s[p.k]).length
   const teamRows = rows ?? (sport === 'bucket' ? [
     ['Field goals', `${game.us.fgm}-${game.us.fga}`, `${game.them.fgm}-${game.them.fga}`],
@@ -486,7 +489,7 @@ export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = tru
         <LineScore sport={sport} us={r.team} them={g.opp} home={g.home} my={g.my} op={g.op} q={quarters} live={live} story={story}
           status={status ?? `${g.tie ? 'Final · tie' : 'Final'}${otTxt}`} />
         <TeamCompare sport={sport} us={r.team} them={g.opp} rows={teamRows} />
-        <Leaders1 sport={sport} sides={sides} />
+        <Leaders1 sport={sport} sides={sides} each={!!table && sides.length > 1} />
         <section className="bx-sec">
           <h3 className="bx-h">Player stats</h3>
           {sides.length > 1 ? (
@@ -499,7 +502,8 @@ export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = tru
             </div>
           ) : <p className="bx-team1"><img src={logoOf(sport, r.team)} alt="" />{nickOf(sport, r.team)}</p>}
           {side === sides[0] && mineCount > 0 && <p className="bx-key"><i aria-hidden="true" />{owner}&rsquo;s {mineCount === 1 ? 'build' : 'builds'}</p>}
-          {sport === 'bucket'
+          {table ? table(side, sides.indexOf(side))
+            : sport === 'bucket'
             ? <BucketBox r={r} game={game} />
             : <TeamMen key={side.team} side={side} kick={kick?.[side === sides[0] ? 0 : 1] ?? null} />}
         </section>

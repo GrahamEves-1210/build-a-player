@@ -192,11 +192,15 @@ export function useRailOn(key) {
 // ── /minigame: no ads while a mini game is open ─────────────────────────────
 // A video and a rail running beside a canvas game cost it frames, so a mini game gets its own address
 // with nothing on it. The address replaces the current one (no new history entry, so Back never lands
-// on it) and is put back the moment the game closes. A refresh there, or Forward onto it, goes Home.
+// on it) and is put back the moment the game closes. A refresh there goes back to the page the game was opened from;
+// Forward onto it goes Home.
 const GAME_PATH = '/minigame'
 const leaveGameUrl = to => { if (window.location.pathname === GAME_PATH) window.history.replaceState(window.history.state, '', to) }
+// (the page it was opened from: this tab's, kept as the game opened; this runs as the site loads, before main.jsx picks
+// football's or basketball's app by the address, so a reload in basketball Franchise's key moment comes back to /bucket)
+const openedFrom = () => { try { const s = sessionStorage.getItem('bap_mg_from'); return s && s[0] === '/' && s[1] !== '/' && !s.startsWith(GAME_PATH) ? s : '/' } catch { return '/' } }
 if (!IS_APP && typeof window !== 'undefined') {
-  leaveGameUrl('/')
+  leaveGameUrl(openedFrom())
   window.addEventListener('popstate', () => { if (!games) leaveGameUrl('/') })
 }
 let inGame = false, games = 0, cameFrom = '/', adsBack = 0, hidHere = false
@@ -207,6 +211,7 @@ export function minigameOpen() {
   games++
   if (window.location.pathname !== GAME_PATH) {
     cameFrom = window.location.pathname + window.location.search + window.location.hash
+    try { sessionStorage.setItem('bap_mg_from', cameFrom) } catch {}   // (a reload here goes back to it: openedFrom)
     window.history.replaceState(window.history.state, '', GAME_PATH + window.location.search)
   }
   if (!inGame) {

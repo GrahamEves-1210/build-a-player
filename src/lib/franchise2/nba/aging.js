@@ -11,13 +11,18 @@
 // Development: a young man closes part of the gap to his ceiling every year (about a quarter at 19-23, less after),
 // with a good season's minutes speeding it up. The ceiling itself moves while he's young: most picks never reach the
 // one the scouts saw, a few blow past it (the late picks who pop). By 27 he is what he is.
-// Retirement: by age and how good he still is. Role players go at about 32-35, stars play to 36-40.
+// Retirement: by age, how good he still is and his deal. Role players go at about 32-35, stars play to 36-40; a man
+// signed for next season almost never retires before 33, and a role player's career mostly ends when nobody signs him.
 //
-//   ageLeague(F) -> { retired: [Man], news: [...] }   the seam: retirements (into F.retired), then every man a year
+//   ageLeague(F) -> { retired: [Man], news: [...], builds: [{ i, n, from, to }] }   the seam: retirements (into
+//                               F.retired; the wire for the GM's men, his builds and the notable careers), then every
+//                               man a year older (ag, ys, a, o, pk); builds: the GM's builds who lost a step
 //                                                       older (ag, ys, a, o, pk). Core has written car by then.
 //   careerRow(y, s, line)       a SeasonLine as a car row (the checks use it; core writes its own)
 //   ageMan(p, R, { mpg })       one man's year (mutates p); returns the OVR change
-//   retireChance(p)             the chance he retires this summer
+//   retireChance(p, { under })  the chance he retires this summer (under: signed for next season)
+//   ageBuild(p, R, { mpg })     the GM's build a year older (the decline from 28; builds.js grows the young ones)
+//   notable(p)                  a career the wire and the history page keep
 //   prospect(R, { rank, spot, ag })   a draft prospect's grades: { p, g, o, pk, a, ag, ht, wt } (rank 1 = the best)
 //   attrsFor(spot, o, R)        ten grades for a spot that come to this overall
 //   seedPotential(p, R)         a real man's ceiling when he has none (core's league.js sets pk at setup)
@@ -28,7 +33,8 @@ const ATH = new Set(['speed', 'bounce'])
 const TOUCH = new Set(['jumpShot', 'passing', 'playmaking', 'basketballIQ', 'clutch'])
 const kindOf = t => (t === 'size' ? 'size' : ATH.has(t) ? 'ath' : TOUCH.has(t) ? 'touch' : 'body')
 // the decline, grade points a year by age: [legs, body, touch]
-const DECL = { 26: [0.1, 0, 0], 27: [0.2, 0.04, 0], 28: [0.32, 0.1, 0], 29: [0.45, 0.18, 0.02], 30: [0.6, 0.28, 0.05], 31: [0.75, 0.38, 0.08], 32: [0.95, 0.52, 0.14], 33: [1.1, 0.66, 0.2], 34: [1.25, 0.8, 0.28], 35: [1.4, 0.95, 0.36], 36: [1.55, 1.1, 0.45] }
+// (the league's curve: about flat from 26 to 30, the slide from 31, steeper past 33)
+const DECL = { 26: [0, 0, 0], 27: [0.04, 0, 0], 28: [0.1, 0.02, 0], 29: [0.17, 0.05, 0], 30: [0.28, 0.1, 0.02], 31: [0.48, 0.2, 0.04], 32: [0.66, 0.33, 0.08], 33: [0.86, 0.5, 0.14], 34: [1.2, 0.75, 0.26], 35: [1.4, 0.95, 0.36], 36: [1.55, 1.1, 0.45] }
 const declAt = ag => (ag < 26 ? [0, 0, 0] : DECL[Math.min(36, ag)])
 // the share of the gap to his ceiling a young man closes in a year
 const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.21, 25: 0.18, 26: 0.14, 27: 0.08 }
@@ -39,16 +45,25 @@ export function ageMan(p, R, { mpg = null } = {}) {
   const ag = p.ag, g = p.g ?? groupOfPos(p.p), types = typesOf(g), a = p.a
   const o0 = p.o ?? ovrOf(p)
   // the ceiling moves while he's young: a bust's sinks, a riser's climbs (now and then a big jump: the pick who pops)
+  // (and now and then a young man stalls: the jumper never comes, the body breaks down, the ceiling drops)
   if (ag <= 24) {
-    p.pk = (p.pk ?? o0) + R.n() * 1.7 - 0.3 + (R.u() < 0.03 ? 4 + R.u() * 6 : 0)
-    p.pk = clamp(o0 - 2, 99, p.pk)
+    const pk0 = p.pk ?? o0
+    p.pk = pk0 + R.n() * 1.7 - 0.3 + (R.u() < 0.03 ? 4 + R.u() * 6 : 0) - (ag <= 23 && R.u() < 0.03 ? 4 + R.u() * 5 : 0)
+    p.pk = clamp(Math.min(o0 - 2, pk0), 99, p.pk)
   }
+  // the breakout summer (one young man in a hundred a year): the jumper comes, the body fills out, he's a different
+  // player in camp (the late pick or the undrafted man who becomes a starter, now and then a star)
+  let pop = 0
+  if (ag >= 20 && ag <= 24 && R.u() < 0.012) { pop = 3 + R.u() * 3; p.pk = Math.max(p.pk ?? o0, o0) + 10 + R.u() * 10 }
   // growth: part of the gap, faster for a young man who played real minutes
   let G = 0
   if (ag <= 27) {
     const gap = Math.max(0, (p.pk ?? o0) - o0)
     const play = mpg == null ? 1 : 0.8 + 0.35 * Math.min(1, mpg / 28)
-    G = gap * (RATE[ag] ?? 0.3) * play + R.n() * (ag <= 24 ? 1.1 : 0.6)
+    G = gap * (RATE[ag] ?? 0.3) * play + R.n() * (ag <= 24 ? 1.1 : 0.6) + pop
+    // (a bust: a ceiling under what he is now; he loses his place in the rotation and slides back toward it)
+    const neg = (p.pk ?? o0) - o0
+    if (neg < -1 && ag <= 25) G += neg * 0.5
   }
   // the legs grow only while he's young; the head grows into his late twenties
   const grow = t => { const k = kindOf(t); return k === 'size' ? (ag <= 22 ? 0.25 : 0) : k === 'ath' ? (ag <= 23 ? 0.6 : 0.1) : 1 }
@@ -69,24 +84,30 @@ export function ageMan(p, R, { mpg = null } = {}) {
     a[t] = Math.round(clamp(0, 11, (a[t] ?? 5) + d) * 100) / 100
   }
   p.o = ovrOf(p)
-  if (ag >= 27 || p.o > (p.pk ?? 0)) p.pk = Math.max(p.o, ag >= 27 ? p.o : p.pk)
+  // (his ceiling follows him up when he passes it; a bust's, under what he is, stays there until 27)
+  if (ag >= 27) p.pk = p.o
+  else if (p.o > (p.pk ?? 0) && (p.pk ?? 0) >= o0 - 2) p.pk = p.o
   p.pk = Math.round(p.pk)
   p.ag = ag + 1
   p.ys = (p.ys ?? 0) + 1
   return p.o - o0
 }
 
-// Retirement: his age, moved by how good he still is (a star plays years longer than a role player)
+// Retirement: his age, moved by how good he still is (a star plays years longer than a role player). A man under
+// contract for next season plays it out: before 33 almost nobody walks away from guaranteed money, after it he's
+// half as likely to as a free agent. The role players' careers end when nobody signs them (the street's cut at camp,
+// offseason.js pruneStreet), not by retiring at 27.
 const RET = { 30: 0.01, 31: 0.04, 32: 0.08, 33: 0.14, 34: 0.22, 35: 0.33, 36: 0.46, 37: 0.6, 38: 0.72, 39: 0.82, 40: 0.9 }
-export function retireChance(p) {
+export function retireChance(p, { under = false } = {}) {
   const o = p.o ?? 70, ag = p.ag
   const shift = o >= 90 ? -3.5 : o >= 86 ? -2.5 : o >= 82 ? -1.5 : o >= 78 ? -0.5 : o >= 74 ? 0.5 : 1.5
   const eff = ag + shift
   let c = eff < 30 ? 0 : eff >= 41 ? 0.95 : RET[Math.floor(eff)] + (RET[Math.min(40, Math.floor(eff) + 1)] - RET[Math.floor(eff)]) * (eff % 1)
-  // a man out of the league's level (the end of a bench, nobody's rotation) leaves earlier
-  if (o < 70 && ag >= 27) c = Math.max(c, 0.12 + (ag - 27) * 0.06)
+  // a veteran out of the league's level (the end of a bench, nobody's rotation), his deal done, calls it
+  if (!under && o < 70 && ag >= 31) c = Math.max(c, 0.1 + (ag - 31) * 0.08)
   // (the forties: almost nobody; LeBron, Vince Carter and a handful of others)
   if (ag >= 40) c = Math.max(c, 0.5 + (ag - 40) * 0.2)
+  if (under) c = ag < 33 ? Math.min(c, 0.003) : c * 0.5
   return clamp(0, 1, c)
 }
 
@@ -103,34 +124,69 @@ function teamOfId(F) {
   return m
 }
 
+// a notable career: the wire reports his retirement (and the history page keeps him: offseason.js)
+export function notable(p, tot = careerTot(p)) {
+  const aw = p.aw ?? []
+  return (p.o ?? 0) >= 82 || tot.pts >= 12000 || (p.ys ?? 0) >= 15 || aw.some(a => ['MVP', 'DPOY', 'FMVP', 'ALL1', 'ALL2', 'ALL3', 'ROY', '6MOY'].includes(a.k)) || aw.filter(a => a.k === 'AS').length >= 2
+}
+const careerTot = p => (p.car ?? []).reduce((s, r) => ({ gp: s.gp + (r.gp ?? 0), pts: s.pts + (r.pts ?? 0), reb: s.reb + (r.reb ?? 0), ast: s.ast + (r.ast ?? 0) }), { gp: 0, pts: 0, reb: 0, ast: 0 })
 export function ageLeague(F) {
   const R = rngOf(`nba-age-${F.seed}-${F.year}`)
   const where = teamOfId(F)
-  const news = [], retired = []
+  const news = [], retired = [], builds = []
   const all = [...Object.values(F.teams).flatMap(T => T.r), ...(F.fa ?? [])]
-  // the retirements (the GM's own builds are his call, never the dice)
+  // the retirements: his age, his level, his deal. The GM's own builds too, a little later (from 35, the odds x0.6,
+  // the way football's builds go), and none plays past 40.
   for (const p of all) {
-    if (p.b != null) continue
-    if (R.u() < retireChance(p)) retired.push(p)
+    const under = where.has(p.i) && (p.y ?? 0) >= 2
+    const c = retireChance(p, { under })
+    if (p.b != null ? p.ag >= 40 || (p.ag >= 35 && R.u() < c * 0.6) : R.u() < c) retired.push(p)
   }
   const gone = new Set(retired.map(p => p.i))
   for (const T of Object.values(F.teams)) T.r = T.r.filter(p => !gone.has(p.i))
   if (F.fa) F.fa = F.fa.filter(p => !gone.has(p.i))
   for (const p of retired) {
-    const tot = (p.car ?? []).reduce((s, r) => ({ gp: s.gp + r.gp, pts: s.pts + r.pts, reb: s.reb + r.reb, ast: s.ast + r.ast }), { gp: 0, pts: 0, reb: 0, ast: 0 })
-    ;(F.retired ??= []).push({ n: p.n, i: p.i, ag: p.ag, yrs: p.ys ?? (p.car ?? []).length, car: p.car ?? [], aw: p.aw ?? [], o: p.o, s: where.get(p.i) ?? null })
-    if ((p.o ?? 0) >= 84 || tot.pts >= 15000 || (p.aw ?? []).some(a => a.k === 'MVP' || a.k === 'ALL1'))
-      news.push({ k: 'retire', i: p.i, text: `${p.n} has retired after ${p.ys ?? (p.car ?? []).length} seasons${tot.gp ? `, with career averages of ${(tot.pts / tot.gp).toFixed(1)} points, ${(tot.reb / tot.gp).toFixed(1)} rebounds and ${(tot.ast / tot.gp).toFixed(1)} assists` : ''}.` })
+    const tot = careerTot(p), s = where.get(p.i) ?? null, yrs = p.ys ?? (p.car ?? []).length
+    const mine = s != null && s === F.team
+    ;(F.retired ??= []).push({ n: p.n, i: p.i, ag: p.ag, yrs, car: p.car ?? [], aw: p.aw ?? [], o: p.o, s, ...(p.b != null && { b: p.b }), ...((mine || p.b != null || new Set((p.car ?? []).filter(c => c.s === F.team).map(c => c.y)).size >= 3) && { gm: 1 }) })
+    if (p.b != null && F.builds?.[p.b]) F.builds[p.b].done = F.year
+    // the wire: every man off the GM's roster, his builds, and the notable careers
+    if (!(mine || p.b != null || notable(p, tot))) continue
+    const avg = tot.gp ? `, with career averages of ${(tot.pts / tot.gp).toFixed(1)} points, ${(tot.reb / tot.gp).toFixed(1)} rebounds and ${(tot.ast / tot.gp).toFixed(1)} assists` : ''
+    const deal = mine && (p.y ?? 0) >= 2 ? ` He walks away from the final ${p.y - 1 === 1 ? 'year' : `${p.y - 1} years`} of his contract.` : ''
+    news.push({ k: 'retire', i: p.i, ...(mine && { s }), text: `${p.n} has retired at ${p.ag} after ${yrs} ${yrs === 1 ? 'season' : 'seasons'}${avg}.${deal}` })
   }
   // a year older
   for (const p of all) {
     if (gone.has(p.i)) continue
     const l = F.ss?.[p.i]
     const mpg = l?.gp ? l.min / l.gp : 0
-    if (p.b != null) { p.ag++; p.ys = (p.ys ?? 0) + 1; continue }   // the GM's build: core grows it from his own rules
+    if (p.b != null) { const d = ageBuild(p, R, { mpg: l ? mpg : null }); if (d) builds.push(d); continue }
     ageMan(p, R, { mpg: l ? mpg : null })
   }
-  return { retired, news }
+  return { retired, news, builds }
+}
+// The GM's build a year older: while he's young his grades go up a step at a time by the game's own rule
+// (builds.js growBuilds, after this); from 28 he ages the way every man does (the same curve, the legs first), each
+// grade moved by the league's change and rounded by the dice, so a whole grade comes off now and then, not a
+// fraction every year. Returns { i, n, from, to } when his OVR moved down.
+export function ageBuild(p, R, { mpg = null } = {}) {
+  const was = p.o ?? ovrOf(p)
+  if (p.ag >= 28) {
+    const q = { ...p, a: { ...p.a } }
+    ageMan(q, R, { mpg })
+    for (const t of Object.keys(p.a)) {
+      const d = (q.a[t] ?? p.a[t]) - p.a[t]
+      if (d >= 0) continue
+      const whole = Math.trunc(d), frac = d - whole
+      p.a[t] = clamp(0, 11, Math.round(p.a[t]) + whole - (R.u() < -frac ? 1 : 0))
+    }
+    p.o = ovrOf(p)
+  }
+  p.ag++
+  p.ys = (p.ys ?? 0) + 1
+  p.pk = Math.max(p.pk ?? p.o, p.o)
+  return p.o < was ? { i: p.i, n: p.n, from: was, to: p.o } : null
 }
 
 // ── Prospects and the made-up men ───────────────────────────────────────────────
@@ -159,15 +215,24 @@ export function attrsFor(spot, o, R) {
 const pkMean = rank => 86.5 - 2.6 * Math.pow(Math.log(Math.max(1, rank)), 1.4)
 export function prospect(R, { rank = 30, spot = null, ag = null } = {}) {
   const sp = spot ?? R.pick(['PG', 'SG', 'SG', 'SF', 'SF', 'PF', 'PF', 'C'])
-  const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22]))
   // right-skewed: most land near their slot, a few are far better (one pick in twenty)
   let pk = pkMean(rank) + R.n() * 4.5 + (R.u() < 0.04 ? 5 + R.u() * 7 : 0)
-  pk = clamp(60, 97, pk)
+  // what the scouts can't see (hid: the board reads his ceiling without it): about one in six never develops (nearly one in three of the top ten) (his
+  // ceiling is about what he is now or below it, so he slides back: the Bennetts, Thabeets and Okafors, most often the top picks, taken on what they
+  // might become); one in thirty is a late bloomer, 12-24 better than anyone thought (the second-rounder who becomes
+  // a star: the Jokics, Draymonds and Brunsons)
+  const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22]))
+  const pk0 = clamp(60, 97, pk)
   const gap = Math.max(1, (25 - age) * 2 + 1 + R.n() * 2.5)
-  const o = clamp(55, 84, Math.round(pk - gap))
+  const o = clamp(55, 84, Math.round(pk0 - gap))
+  const roll = R.u()
+  if (roll < (rank <= 10 ? 0.3 : 0.14)) pk = Math.min(pk0, o + 1 - R.u() * 13)
+  else if (roll > 0.965) pk = pk0 + 12 + R.u() * 12
+  pk = clamp(60, 97, pk)
+  const hid = Math.round(pk - pk0)
   const [h0, h1] = HT[sp]
   const ht = h0 + R.int(0, h1 - h0)
-  return { p: sp, g: groupOfPos(sp), o, pk: Math.round(Math.max(pk, o)), a: attrsFor(sp, o, R), ag: age, ht, wt: Math.round(ht * 2.85 - 7 + R.n() * 8), ys: 0 }
+  return { p: sp, g: groupOfPos(sp), o, pk: Math.round(pk), a: attrsFor(sp, o, R), ag: age, ht, wt: Math.round(ht * 2.85 - 7 + R.n() * 8), ys: 0, hid: Math.round(hid) }
 }
 export function seedPotential(p, R) {
   if (p.pk != null) return p

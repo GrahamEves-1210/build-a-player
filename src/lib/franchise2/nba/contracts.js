@@ -10,6 +10,11 @@
 //   if he's waived before January) · ext the league year he signed an extension
 //   (in F.fa, as a free agent:) fr the team he left · hy the league year its cap hold is for · $l his last salary
 //   rsl 1 his rookie deal just ended · qo his qualifying offer (an RFA) · rn 1 renounced (no hold, no rights)
+//   qot 1 the GM's team tendered his qualifying offer (the GM's own RFA stays restricted; untendered he walks)
+//   dco $M the rookie-scale option his team declined: it can't pay him more than that to bring him back
+//   wvb { s, t, to } waived by team s at time t (timeOf): s can't sign him again until a year on, or his old deal's end
+//   osm { s, y } his offer sheet from team s was matched in league year y: no trade for a year (none to s)
+//   osh { s, d } an offer sheet the GM's team signed him to, waiting on his team's answer (the next day)
 //
 // THE MARKET (marketOf): what a man would get in free agency, by where he ranks in the league (his OVR, the growth a
 // young man has left, the decline an older one has started), on the real league's pay ladder: the top 12 men at the
@@ -21,9 +26,11 @@
 // decided, every deal ticks a year, years of service and Bird years go up, and the men whose deals are up go to the
 // free-agent pool with their cap holds, rights and RFA qualifying offers.
 import { rngOf, clamp, r1 } from '../rng'
+import { fixNumbers } from './numbers'
+import { extensionText } from './news'
 import {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, maxPct, twoWayOf, rookieScale, excOf, excYears, indexed,
-  payroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hardCapOf, overOf,
+  payroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hardCapOf, overOf, EXC_TEXT,
 } from './cap'
 
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
@@ -124,11 +131,20 @@ export function marketValue(F, p, year = capYear(F)) {
 }
 // what he's worth to a team with no max in the way ($M a year)
 export const worthOf = (F, p, year = capYear(F)) => r1(Math.max(minOf(p.ys ?? 0, year), ladder(WORTH, rankOf(F, p)) * capOf(year)))
-// how long he'd sign for: a young man the longest he can, a veteran shorter
-export function termFor(p) {
+// how long he'd sign for, by his age and where he ranks (rk: his place on the league's ladder): a young man the
+// longest he can; a good player in his prime four years; the real league's stars keep getting three and four years into
+// their thirties (Siakam 4 at 30, George 4 at 34, Thompson and DeRozan 3 at 34, LeBron 2 at 39), a role player past 30
+// one or two. With no rank (the setup's estimates), the older table.
+export function termFor(p, rk = null) {
   const ag = p.ag ?? 27
-  return ag <= 26 ? 4 : ag <= 29 ? 3 : ag <= 32 ? 2 : 1
+  if (rk == null) return ag <= 26 ? 4 : ag <= 29 ? 3 : ag <= 32 ? 2 : 1
+  if (ag <= 24) return rk <= 260 ? 4 : 2
+  if (ag <= 29) return rk <= 60 ? 4 : rk <= 160 ? 3 : 2
+  if (ag <= 32) return rk <= 60 ? (ag <= 31 ? 4 : 3) : rk <= 150 ? 3 : rk <= 250 ? 2 : 1
+  if (ag <= 34) return rk <= 60 ? 3 : rk <= 150 ? 2 : 1
+  return rk <= 60 ? 2 : 1
 }
+export const termOf = (F, p) => termFor(p, rankOf(F, p))
 
 // ── Who qualifies for the supermax (Designated Veteran) ───────────────────────
 // 7-9 years of service, with the team that drafted him (or traded for him on his rookie deal), and the MVP, the DPOY
@@ -166,18 +182,20 @@ export function putDeal(F, p, d, { year = capYear(F) } = {}) {
   if (d.rs || d.tw || (p.ys ?? 0) + s.length <= 3) p.rfa = 1; else delete p.rfa
   p.sgn = year
   p.sgd = dayOf(F)
-  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'rn', 'ask', 'fx', 'wv']) delete p[k]
+  for (const k of ['fr', 'was', 'hy', '$l', 'rsl', 'qo', 'qtw', 'rn', 'ask', 'fx', 'wv', 'qot', 'dco', 'wvb', 'osm', 'osh']) delete p[k]
   return p
 }
 
 // ── Starting deals (setup) ───────────────────────────────────────────────────
-// realRow { $, y, sc?, opt?, rs? } when the data has his real deal; otherwise an estimate: a young first-rounder on
-// his rookie scale (by his draft slot, or the slot his rating would have gone), a second-rounder or an undrafted man
-// on the minimum, a veteran at about his market price when he signed, with a few years left on it.
+// realRow { s: team, $, sc: [$M the seasons after], opt?, rs?, ng?, sg: league year signed, x: extension's league
+// year, b: Bird years, rt } when the data has his real deal (data/nba-contracts.js, through league.js); { s, min: 1 }
+// a made-up man on the minimum; otherwise an estimate: a young first-rounder on his rookie scale (by his draft slot,
+// or the slot his rating would have gone), a second-rounder or an undrafted man on the minimum, a veteran at about
+// his market price when he signed, with a few years left on it.
 // dealOnLoad(F, man, short | realRow): core calls it for every rostered man at setup, and at camp for the made-up
 // men it adds (no deal yet). At camp a man gets what a camp body signs for: the minimum, or a two-way deal.
 export function dealOnLoad(F, p, x = null) {
-  loadOnce(F, p, x)
+  loadOnce(F, p, typeof x === 'string' ? x : x?.s ?? null)
   dealOne(F, p, x)
   runPending()
   return p
@@ -201,13 +219,26 @@ function dealOne(F, p, x) {
   return p
 }
 function estimate(F, p, realRow, year, R) {
-  p.bird = p.bird ?? Math.min(4, Math.max(0, Math.floor(R.u() * Math.min(5, (p.ys ?? 0) + 1))))
+  p.bird = p.bird ?? (realRow ? realRow.b ?? 0 : Math.min(4, Math.max(0, Math.floor(R.u() * Math.min(5, (p.ys ?? 0) + 1)))))
   if (realRow && realRow.$ > 0) {
-    putDeal(F, p, { $: realRow.$, y: realRow.y ?? 1, sc: realRow.sc ? [realRow.$, ...realRow.sc] : null, opt: realRow.opt, rs: realRow.rs, r: 0.05 }, { year })
-    if (!realRow.sc) p.sc = schedOf({ $: realRow.$, y: realRow.y ?? 1, r: 0.05 }).slice(1)
-    p.sgn = year - Math.max(1, Math.min(4, (realRow.ago ?? 1)))
+    // (his real deal: the money by season, the option on it, his Bird years with the team, the year he signed)
+    const sc = realRow.sc ? [realRow.$, ...realRow.sc] : schedOf({ $: realRow.$, y: realRow.y ?? 1, r: 0.05 })
+    putDeal(F, p, { sc: sc.map(v => Math.round(v * 100) / 100), opt: realRow.opt && realRow.opt.yr > year && realRow.opt.yr < year + sc.length ? realRow.opt : null, rs: realRow.rs, ng: realRow.ng }, { year })
+    p.bird = realRow.b ?? p.bird
+    p.sgn = realRow.sg ?? (realRow.rs && p.dr ? p.dr[0] : year - Math.max(1, Math.min(4, (realRow.ago ?? 1))))
     p.sgd = -1
+    if (realRow.x != null) p.ext = realRow.x
+    if (realRow.rt) p.rt = realRow.rt
+    else if (realRow.rs && p.dr) p.rt = p.dr[3]
     p.real = 1
+    return p
+  }
+  if (realRow?.min) {
+    // (a made-up man on a real roster: the end of the bench, on the minimum)
+    p.bird = 0
+    putDeal(F, p, { $: minOf(p.ys ?? 0, year), y: 1 }, { year })
+    p.sgn = year
+    p.sgd = -1
     return p
   }
   const ys = p.ys ?? Math.max(0, (p.ag ?? 25) - 21)
@@ -276,7 +307,9 @@ export function dealsOnLoad(F, real = null) {
   return F
 }
 function normalize(F) {
-  const est = new Set(allMen(F).filter(([s, p]) => s && !p.real).map(([, p]) => p.i))
+  // (a team on its real deals is left as it is: its payroll is the real one; the made-up men on it hold the deals of
+  // the real men the game doesn't carry, or the minimum)
+  const est = new Set(allMen(F).filter(([s, p]) => s && !p.real && !F.teams[s].r.some(x => x.real)).map(([, p]) => p.i))
   // (the estimates are pulled into the real league's range, team by team: the CBA kept every real payroll between
   // about the salary floor and a few million past the second apron, so a team the estimates put far outside it has
   // its veterans' estimated deals scaled in)
@@ -315,21 +348,65 @@ export function excFor(F, short, year = capYear(F)) {
   if (!t.exc || t.exc.yr !== year) t.exc = { yr: year, mk: null, mle: null, bae: excOf('bae', year), baeY: t.exc?.baeY ?? null, hc: null, room: 0 }
   return t.exc
 }
-// the MLE a team can use now, and how much of it is left: { k, $, y } or null
-export function mleFor(F, short, year = capYear(F)) {
+// the mid-level exceptions a team could use now, best first: [{ k, $ (what's left of it), y, line (the payroll it
+// can't pass using it) }]. A team that used its cap room has the room exception and nothing more; a team that never
+// went under the cap has the non-taxpayer MLE below the first apron (it hard-caps the team there) and the taxpayer MLE
+// below the second; past the second apron, neither.
+const MLE_LINE = { nt: apron1Of, tp: apron2Of, room: apron2Of }
+export function mleList(F, short, year = capYear(F)) {
   const e = excFor(F, short, year)
+  const L = k => MLE_LINE[k](year)
+  if (e.mk) return e.mle > 0.05 ? [{ k: e.mk, $: e.mle, y: excYears(e.mk), line: L(e.mk) }] : []
+  if (e.room) return [{ k: 'room', $: excOf('room', year), y: excYears('room'), line: L('room') }]
+  return ['nt', 'tp'].map(k => ({ k, $: excOf(k, year), y: excYears(k), line: L(k) }))
+}
+// the MLE a team can use now and how much of it fits under its line: { k, $, y } or null
+export function mleFor(F, short, year = capYear(F)) {
   const pay = payroll(F, short, year)
-  if (e.mk) return e.mle > 0.05 ? { k: e.mk, $: e.mle, y: excYears(e.mk) } : null
-  // (a team that went under the cap to sign men has the room exception, nothing more)
-  if (e.room) return { k: 'room', $: excOf('room', year), y: excYears('room') }
-  if (pay < apron1Of(year)) return { k: 'nt', $: excOf('nt', year), y: excYears('nt') }
-  if (pay < apron2Of(year)) return { k: 'tp', $: excOf('tp', year), y: excYears('tp') }
+  for (const m of mleList(F, short, year)) {
+    const $ = r1(Math.min(m.$, m.line - pay))
+    if ($ >= minOf(0, year)) return { k: m.k, $, y: m.y }
+  }
   return null
 }
 
+// ── The owner's ceiling (the GM's team) ──────────────────────────────────────
+// ownership sets how far the payroll may go, by its market and where the team is: a rebuilding team stops at the tax
+// line (the first apron in a big market), a team in the mix at the first apron (the second in a big market), a
+// contender at the second apron (a big market's contender a little past it). { $, k, why } (Infinity with no cap)
+export const OWNER_LINE_TEXT = { tax: 'the luxury tax line', a1: 'the first apron', a2: 'the second apron', 'a2+': 'just past the second apron' }
+export function ownerCap(F, year = capYear(F)) {
+  const s = F?.team
+  if (!s || F.noCap) return { $: Infinity, k: null, why: null }
+  const sit = situationOf(F, s)
+  const big = BIG_MARKET.has(s)
+  const k = sit === 'reb' ? (big ? 'a1' : 'tax') : sit === 'mid' ? (big ? 'a2' : 'a1') : big ? 'a2+' : 'a2'
+  const $ = r1(k === 'a2+' ? apron2Of(year) + capOf(year) * 0.08 : lineOf(k, year))
+  return { $, k, sit, why: `Ownership won't take the ${s} payroll past $${$}M (${OWNER_LINE_TEXT[k]}) this league year` }
+}
+
+// ── A man his team waived ────────────────────────────────────────────────────
+// a point in the league's calendar: the league year x 400, plus the day (the summer, the season's nights, the
+// postseason and the draft after them)
+export const timeOf = F => capYear(F) * 400 + (F.phase === 'season' ? 20 + (F.day ?? 0) : F.phase === 'off' ? (F.sed === F.year ? 0 : 300) : 250)
+// the team that waived him can't sign him again for a year (or until the deal it waived would have run out)
+export function waivedBy(F, short, p) {
+  const w = p?.wvb
+  if (!w || w.s !== short) return false
+  return timeOf(F) < w.t + 400 && capYear(F) <= (w.to ?? Infinity)
+}
+// an offer sheet out on him: the GM's (osh, waiting on his team) or his team's to answer (F.rfq)
+export function sheetOf(F, p) {
+  if (p?.osh) return { s: p.osh.s, d: p.osh.d, by: p.osh.s, to: p.fr, mine: true }
+  const q = (F.rfq ?? []).find(x => x.i === p?.i)
+  return q ? { s: q.s, d: q.d, by: q.s, to: p.fr } : null
+}
+
 // ── Can a team sign him, and how ─────────────────────────────────────────────
-// deal { $, y, r?, opt?, tw? }. Returns { ok, via: 'room'|'mle'|'tmle'|'rmle'|'bae'|'min'|'bird'|'ebird'|'nbird'|
-// 'rookie'|'tw', why }
+// deal { $, y, r?, opt?, tw?, sheet? (an offer sheet being matched or signed) }. Returns { ok, via: 'room'|'mle'|
+// 'tmle'|'rmle'|'bae'|'min'|'bird'|'ebird'|'nbird'|'rookie'|'tw', why, k? ('owner': the owner's ceiling) }
+// His own team uses his rights first (a Bird re-signing never spends cap room), then the minimum, then room, then the
+// mid-level, then the bi-annual.
 export function rightsOf(p, short) {
   if (!p || p.fr !== short || p.rn) return null
   const b = p.bird ?? 0
@@ -337,6 +414,7 @@ export function rightsOf(p, short) {
 }
 export const RIGHTS_TEXT = { bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bird rights' }
 const VIA_EXC = { nt: 'mle', tp: 'tmle', room: 'rmle' }
+const LINE_TEXT = { a1: 'the first apron', a2: 'the second apron' }
 export function canSign(F, short, p, d) {
   const team = F.teams?.[short]
   if (!team || !p || !d) return { ok: false, why: 'Nothing to sign' }
@@ -344,6 +422,9 @@ export function canSign(F, short, p, d) {
   const ys = p.ys ?? 0
   const free = F.noCap && short === F.team
   const st = standardOf(team).filter(x => x.i !== p.i).length, tw = twoWaysOf(team).filter(x => x.i !== p.i).length
+  if (waivedBy(F, short, p)) return { ok: false, why: `The ${short} waived him: they can't sign him again until a year has passed` }
+  const sh = d.sheet ? null : sheetOf(F, p)
+  if (sh) return { ok: false, why: sh.mine ? `He has signed the ${sh.s} offer sheet; the ${sh.to} have a day to match it` : `He has signed an offer sheet with the ${sh.s}: match it or let him go` }
   // two-way: three at most, for a man with four years or less
   if (d.tw) {
     if (tw >= TWO_WAY_MAX) return { ok: false, why: 'All three two-way spots are full' }
@@ -363,18 +444,26 @@ export function canSign(F, short, p, d) {
   if (yrs > (own === 'bird' ? 5 : 4)) return { ok: false, why: own === 'bird' ? '5 seasons at most' : '4 seasons at most (5 with Bird rights)' }
   const rise = sc.slice(1).some((v, k) => v - sc[k] > first * raiseMax(own) + 0.11)
   if (rise) return { ok: false, why: `Raises are capped at ${Math.round(raiseMax(own) * 100)}% a season` }
+  // (a rookie-scale option his team declined: it can't pay him more than the option to bring him back)
+  if (own && p.dco && first > p.dco + 0.01) return { ok: false, why: `After declining his option, the ${short} can pay him $${p.dco}M at most` }
   if (free) return { ok: true, via: own ?? 'room' }
   // (his own hold comes off when he signs)
   const hold = own ? holdOf(p, year) : 0
   const pay = payroll(F, short, year) - hold
   const after = pay + first
+  const isMin = first <= mn + 0.01 && yrs <= 2
   const hc = hardCapOf(F, short, year)
-  if (after > hc + 0.01) return { ok: false, why: `It would put the ${short} over their hard cap` }
+  if (after > hc + 0.01) return { ok: false, why: `It would put the ${short} over ${LINE_TEXT[team.exc?.hc] ?? 'their hard cap'} ($${r1(hc)}M), their hard cap this league year`, k: 'hc' }
   // rookies: his scale
   if (d.rs) return { ok: true, via: 'rookie' }
-  // under the cap with room for him
-  if (after <= capOf(year) + 0.01) return { ok: true, via: 'room' }
-  // his own man: Bird rights
+  // the GM's owner: no new money past his ceiling (a minimum deal always goes, and so does keeping one of his own men at
+  // the taxpayer mid-level's size or less: owners sign off on a role player; a roster can't go short for $5M)
+  const small = (own === 'bird' || own === 'ebird' || own === 'nbird') && first <= excOf('tp', year) + 0.01
+  if (short === F.team && !isMin && !small) {
+    const o = ownerCap(F, year)
+    if (after > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
+  }
+  // his own man: Bird rights (over the cap, no room spent)
   if (own === 'bird') return { ok: true, via: 'bird' }
   if (own === 'ebird') {
     const lim = Math.max((p.$l ?? 0) * 1.75, indexed(12.5, year) * 1.05)
@@ -382,18 +471,22 @@ export function canSign(F, short, p, d) {
   }
   if (own === 'nbird' && first <= Math.max((p.$l ?? 0) * 1.2, mn * 1.2) + 0.01) return { ok: true, via: 'nbird' }
   // the minimum: two seasons at most, over any line
-  if (first <= mn + 0.01 && yrs <= 2) return { ok: true, via: 'min' }
-  // the mid-level (it hard-caps a team at the first apron, the taxpayer MLE at the second)
-  const m = mleFor(F, short, year)
-  if (m && first <= m.$ + 0.01 && yrs <= m.y) {
-    const line = m.k === 'tp' ? apron2Of(year) : m.k === 'nt' ? apron1Of(year) : Infinity
-    if (after <= line + 0.01) return { ok: true, via: VIA_EXC[m.k] }
-  }
-  // the bi-annual (not two seasons running; not over the first apron)
+  if (isMin) return { ok: true, via: 'min' }
+  // under the cap with room for him
+  if (after <= capOf(year) + 0.01) return { ok: true, via: 'room' }
+  // the mid-level (the non-taxpayer MLE hard-caps a team at the first apron, the taxpayer MLE at the second)
+  const L = mleList(F, short, year)
+  for (const m of L) if (first <= m.$ + 0.01 && yrs <= m.y && after <= m.line + 0.01) return { ok: true, via: VIA_EXC[m.k] }
+  // the bi-annual (not two seasons running; not over the first apron; not for a team that used its room)
   const e = excFor(F, short, year)
-  if (e.bae > 0.05 && first <= e.bae + 0.01 && yrs <= 2 && e.baeY !== year - 1 && after <= apron1Of(year) + 0.01 && pay > capOf(year)) return { ok: true, via: 'bae' }
-  if (pay < capOf(year)) return { ok: false, why: `Only $${r1(capOf(year) - pay)}M of room` }
-  return { ok: false, why: m ? `Over the cap: the ${m.k === 'tp' ? 'taxpayer ' : m.k === 'room' ? 'room ' : ''}mid-level tops out at $${r1(m.$)}M` : 'Over the second apron: minimum deals only' }
+  if (!e.room && e.bae > 0.05 && first <= e.bae + 0.01 && yrs <= 2 && e.baeY !== year - 1 && after <= apron1Of(year) + 0.01 && pay > capOf(year)) return { ok: true, via: 'bae' }
+  if (pay < capOf(year) && !L.length) return { ok: false, why: `Only $${r1(capOf(year) - pay)}M of room` }
+  // why not: the line the exception would cross, else the most it pays
+  const fits = L.find(m => first <= m.$ + 0.01 && yrs <= m.y)
+  if (fits) return { ok: false, why: `The ${EXC_TEXT[fits.k]} would take the ${short} past ${fits.line === apron1Of(year) ? 'the first apron' : 'the second apron'} ($${r1(fits.line)}M), the hard cap that comes with it`, k: 'apron' }
+  const m = L.find(m => after <= m.line + 0.01) ?? L[0]
+  if (pay < capOf(year)) return { ok: false, why: `Only $${r1(capOf(year) - pay)}M of room${m ? `; the ${EXC_TEXT[m.k]} pays $${r1(m.$)}M at most` : ''}` }
+  return { ok: false, why: m ? `Over the cap: the ${EXC_TEXT[m.k]} pays $${r1(m.$)}M at most, for ${m.y} ${m.y === 1 ? 'season' : 'seasons'}` : 'Over the second apron: minimum deals only' }
 }
 // sign him: off the pool onto the roster, the exception spent, the hard cap triggered. Returns { ok, via, why }
 export function signMan(F, short, p, d, { check = true } = {}) {
@@ -404,7 +497,9 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   const own = rightsOf(p, short)
   const sc = d.sc ?? schedOf(d)
   const e = excFor(F, short, year)
-  if (c.via === 'room') e.room = 1
+  // (only a deal that needed the room uses it: a team that goes under the cap gives up the mid-level for the room
+  // exception)
+  if (c.via === 'room' && !own && sc[0] > minOf(p.ys ?? 0, year) + 0.01 && !(F.noCap && short === F.team)) e.room = 1
   if (c.via === 'mle' || c.via === 'tmle' || c.via === 'rmle') {
     const k = c.via === 'mle' ? 'nt' : c.via === 'tmle' ? 'tp' : 'room'
     if (!e.mk) { e.mk = k; e.mle = excOf(k, year) }
@@ -418,6 +513,7 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   if (!own) p.bird = 0
   putDeal(F, p, { ...d, sc }, { year })
   if (!team.r.includes(p)) team.r.push(p)
+  fixNumbers(F, short)
   return { ok: true, via: c.via }
 }
 
@@ -442,10 +538,15 @@ export function rookieDeal(F, p, pk) {
   }
   const s = p.dr?.[3] ?? teamOf(F, p.i)
   const team = s ? F.teams[s] : null
-  const st = team ? standardOf(team).filter(x => x !== p).length : 0
-  const tw = team ? twoWaysOf(team).filter(x => x !== p).length : 0
-  // (an early second-rounder gets a standard deal when there's room for him; most go two-way)
-  if (team && (pick <= 40 ? st < ROSTER_MAX : st < ROSTER_MAX - 1 && tw >= 2) || tw >= TWO_WAY_MAX) {
+  const st = team ? standardOf(team).filter(x => x !== p && (F.sed === F.year || (x.y ?? 1) >= 2 || (x.rk ?? 0) > F.year)).length : 0
+  // (the two-way men whose deals run out this summer don't hold a spot)
+  const tw = team ? twoWaysOf(team).filter(x => x !== p && (F.sed === F.year || (x.y ?? 1) >= 2)).length : 0
+  // (about a third of the second round signs a standard deal, most of them early in the round; the rest go two-way,
+  // as in the real league)
+  const h = hash(`${F.seed}-r2-${p.i}-${p.n}`) % 100
+  // (the drafting team's intent when it gives one: pk.tw true = a two-way deal, false = a standard deal, as room allows)
+  const std = !!team && st < ROSTER_MAX && (pk?.tw === true ? false : pk?.tw === false ? true : pick <= 35 ? h < 70 : pick <= 45 ? h < 30 : h < 10)
+  if (std || tw >= TWO_WAY_MAX) {
     const sc = [minOf(0, year), minOf(1, year + 1)].map(v => Math.max(v, 0))
     putDeal(F, p, { sc, ng: 1 }, { year })
     return { sc, via: 'min' }
@@ -470,7 +571,7 @@ export function optionsDue(F, short = null) {
 export function playerOptsIn(F, p) {
   const yr = F.year + 1
   const opt = p.sc?.[0] ?? 0
-  const mv = marketValue(F, p, yr), t = termFor(p)
+  const mv = marketValue(F, p, yr), t = termOf(F, p)
   if ((p.ag ?? 27) >= 34) return mv < opt * 1.25
   // (the money he'd lock in elsewhere over the years, a little discounted for the risk of the market)
   return mv * Math.min(t, 4) * 0.92 < opt * Math.min(p.y - 1, 2) + mv * Math.max(0, Math.min(t, 4) - Math.min(p.y - 1, 2)) * 0.85 || mv < opt
@@ -496,6 +597,9 @@ export function decideOption(F, p, keep) {
   }
   // declined: the deal ends with this season
   const k = yr - F.year
+  // (a rookie-scale option declined: he's an unrestricted free agent, and his team can't pay him more than the option
+  // it turned down to bring him back)
+  if (p.opt.k === 'T' && p.rs) { p.dco = r1(p.sc?.[k - 1] ?? p.$ ?? 0); delete p.rfa }
   p.y = Math.min(p.y, k)
   p.sc = (p.sc ?? []).slice(0, Math.max(0, p.y - 1))
   delete p.opt
@@ -576,13 +680,21 @@ export function extensionOk(F, s, p) {
   const own = superMaxOk(F, p, s) ? 0.35 : maxPct((p.ys ?? 0) + p.y)
   return { ok: true, max: r1(Math.min(capOf(start) * own, Math.max((p.$ ?? 0) * 1.4, indexed(12.5, start) * 1.4))), y: 4, start }
 }
-// what he'd extend for: his market then, his max at most
+// what he'd extend for: what he's worth on the league's pay ladder when the new deal starts (his age then; a young
+// man's growth only half paid for: a front office pays for the player he is, with a little of the one he may become),
+// his max at most. Only the league's best young players get the max (the real league's rookie-scale max deals go to
+// All-NBA men and the top 20 or so)
 export function extensionAsk(F, s, p) {
   const e = extensionOk(F, s, p)
   if (!e.ok) return null
-  const mv = marketValue(F, { ...p, ag: (p.ag ?? 25) + p.y, ys: (p.ys ?? 0) + p.y }, e.start)
-  const $ = r1(Math.min(e.max, Math.max(minOf((p.ys ?? 0) + p.y, e.start), mv * (e.rookie ? 0.97 : 1.02))))
-  return { $, y: Math.min(e.y, e.rookie ? 5 : termFor({ ag: p.ag + p.y })), r: 0.08 }
+  const then = { ...p, ag: (p.ag ?? 25) + p.y }
+  let sc = scoreOf(then)
+  if (sc > (p.o ?? 60)) sc = (p.o ?? 60) + (sc - (p.o ?? 60)) * 0.5
+  const rk = rankAt(F, sc)
+  const ys = (p.ys ?? 0) + p.y
+  const mv = clamp(minOf(ys, e.start), maxOf(ys, e.start), ladder(LADDER, rk) * capOf(e.start))
+  const $ = r1(Math.min(e.max, Math.max(minOf(ys, e.start), mv * (e.rookie ? 0.97 : 1.02))))
+  return { $, y: Math.min(e.y, e.rookie ? (rk <= 120 ? 5 : 4) : termFor(then, rk)), r: 0.08 }
 }
 // sign it: the new seasons go on after the ones he has
 export function extendMan(F, s, p, d) {
@@ -593,60 +705,92 @@ export function extendMan(F, s, p, d) {
   const yrs = e.rookie ? Math.min(d.y, e.y) : Math.min(d.y, e.y, 5 - p.y)
   if (yrs < 1) return { ok: false, why: 'No seasons left to add' }
   const add = schedOf({ $: d.$, y: yrs, r: Math.min(d.r ?? 0.08, 0.08) })
+  // (the GM's owner: the payroll the new deal starts on can't pass his ceiling)
+  if (s === F.team && !F.noCap && d.$ > minOf((p.ys ?? 0) + p.y, e.start) + 0.01) {
+    const o = ownerCap(F, e.start)
+    const at = payroll(F, s, e.start, { holds: false }) + d.$
+    if (at > o.$ + 0.01) return { ok: false, why: `${o.why.replace(' this league year', '')} in ${e.start}-${String((e.start + 1) % 100).padStart(2, '0')}`, k: 'owner' }
+  }
   p.sc = [...(p.sc ?? []), ...add]
   p.y += add.length
   p.ext = capYear(F)
   // (the rookie-scale man's option years are behind him; the new deal is a veteran's)
   if (p.rs) { delete p.rs; delete p.opt; delete p.rfa }
   if (p.opt && p.opt.yr < e.start) delete p.opt
-  return { ok: true }
+  // (text: the wire's line for it)
+  return { ok: true, text: extensionText(p, s, add.length) }
 }
 
 // ── Waivers and the stretch provision ────────────────────────────────────────
-// what cutting him would leave on the books: { now (this league year), total, years } (non-guaranteed: nothing
-// before January)
-export function cutCost(F, p, { stretch = false } = {}) {
-  if (!p || p.tw) return { now: 0, total: 0, years: 0 }
-  const day = dayOf(F)
-  if (p.ng && (F.phase === 'off' || day < (F.days ?? 170) * 0.45)) return { now: 0, total: 0, years: 0 }
+// what's guaranteed on his deal from now: his seasons up to a team option (a team option, a rookie scale's third and
+// fourth years among them, is the team's to decline: waived, it owes nothing past it)
+export function guaranteedOf(F, p) {
   const rest = [p.$ ?? 0, ...(p.sc ?? [])].slice(0, p.y ?? 0)
+  if (p.opt?.k !== 'T') return rest
+  const start = p.rk != null && p.rk > capYear(F) ? p.rk : capYear(F)
+  return rest.slice(0, Math.max(0, p.opt.yr - start))
+}
+// what cutting him would leave on the books: { now (this league year), per (a season, as it would sit on the books),
+// total, years, stretch?, later? (in the season: a season of the stretched years) } (non-guaranteed: nothing before
+// January; a team option's seasons: nothing)
+export function cutCost(F, p, { stretch = false } = {}) {
+  const none = { now: 0, per: 0, total: 0, years: 0 }
+  if (!p || p.tw) return none
+  const day = dayOf(F)
+  if (p.ng && (F.phase === 'off' || day < (F.days ?? 170) * 0.45)) return none
+  const rest = guaranteedOf(F, p)
   const total = r1(rest.reduce((a, v) => a + v, 0))
-  if (!stretch || rest.length === 0) return { now: rest[0] ?? 0, total, years: rest.length }
-  // stretched: in the offseason, everything over twice the seasons left plus one; in the season, this season stays,
-  // the seasons after it stretch
-  if (F.phase === 'off') {
+  if (!rest.length || total <= 0) return none
+  if (!stretch) return { now: rest[0] ?? 0, per: r1(total / rest.length), total, years: rest.length }
+  // stretched: in the summer (from July, the books on next season), everything over twice the seasons left plus one;
+  // in the season (June included, the league year not yet over), this season stays, the seasons after it stretch
+  if (summerOf(F)) {
     const yrs = rest.length * 2 + 1
-    return { now: r1(total / yrs), total, years: yrs, stretch: true }
+    return { now: r1(total / yrs), per: r1(total / yrs), total, years: yrs, stretch: true }
   }
   const later = rest.slice(1)
   const yrs = later.length * 2 + 1
-  return { now: rest[0], total, years: later.length ? yrs + 1 : 1, stretch: true, later: later.length ? r1(later.reduce((a, v) => a + v, 0) / yrs) : 0 }
+  const per = later.length ? r1(later.reduce((a, v) => a + v, 0) / yrs) : 0
+  return { now: rest[0], per, total, years: later.length ? yrs + 1 : 1, stretch: true, later: per }
 }
+// the summer's books: the offseason once the deals have ticked over (seasonEndDeals; capYear is next season's)
+const summerOf = F => F.phase === 'off' && F.sed === F.year
+// can he be stretched (it spreads more seasons than a plain waiver would)
+export const canStretch = (F, p) => cutCost(F, p, { stretch: true }).years > cutCost(F, p).years
 // waive him: off the roster to the pool; what's owed stays on the cap (team.dead: { n, $ a season, y seasons }).
 // Returns the dead money this league year.
-export function cutMan(F, short, id, { stretch = false } = {}) {
+export function cutMan(F, short, id, { stretch = false, force = false } = {}) {
   const team = F.teams?.[short]
   const p = team?.r.find(x => x.i === id)
   if (!p) return 0
+  // (the roster floor: in the season the GM's team can't go under 13 standard contracts; season.js cutBlock says why)
+  if (!force && short === F.team && F.phase !== 'off' && !p.tw && standardOf(team).length <= ROSTER_MIN - 1) return 0
   const c = cutCost(F, p, { stretch })
   team.dead ??= []
   const cy = capYear(F)
   const put = (v, from, to, st = 0) => team.dead.push({ n: p.n, $: r1(v), y: to - cy + 1, from, to, ...(st && { st: 1 }) })
+  // (y: the seasons left from the books' season through `to`; offseason.js newSeason resets it from `to` each new
+  // season, so a waiver ages once a league year whenever it was made)
   if (c.total > 0) {
     if (!c.stretch) {
-      // (each season as it was: the per-season average carries the same total)
-      put(c.total / c.years, cy, cy + c.years - 1)
-    } else if (F.phase === 'off') put(c.now, cy, cy + c.years - 1, 1)
+      // (this season as it is, the seasons after it at their average: the same total)
+      put(c.now, cy, cy)
+      if (c.years > 1) put((c.total - c.now) / (c.years - 1), cy + 1, cy + c.years - 1)
+    } else if (summerOf(F)) put(c.now, cy, cy + c.years - 1, 1)
     else {
       put(c.now, cy, cy)
       if (c.later > 0) put(c.later, cy + 1, cy + c.years - 1, 1)
     }
   }
   team.r = team.r.filter(x => x !== p)
+  // (the last league year of the deal he was waived from: the waiving team can sign him again after it, or a year on)
+  const start = p.rk != null && p.rk > cy ? p.rk : cy
+  const to = start + Math.max(0, (p.y ?? 1) - 1)
   // (on the street: any team can sign him; no rights carry with him)
-  for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'rfa', 'tw', 'mh', 'ng', 'ntc', 'ext']) delete p[k]
+  for (const k of ['$', 'y', 'sc', 'opt', 'rs', 'rfa', 'tw', 'mh', 'ng', 'ntc', 'ext', 'fr', 'hy', 'qo', 'qtw', 'qot', 'dco', 'osm']) delete p[k]
   p.$ = 0; p.y = 0; p.bird = 0
   p.wv = capYear(F)
+  p.wvb = { s: short, t: timeOf(F), to }
   ;(F.fa ??= []).push(p)
   return c.now
 }
@@ -666,7 +810,7 @@ export function seasonEndDeals(F) {
     if (k === 'P' || k === 'E') {
       const inn = playerOptsIn(F, p)
       decideOption(F, p, inn)
-      if (!inn && (p.o ?? 0) >= 75) news.push({ k: 'option', tag: 'FREE AGENCY', s, text: `${p.n} declines his player option with the ${s} and will become a free agent.` })
+      if (!inn && (p.o ?? 0) >= 75) news.push({ k: 'option', tag: 'FREE AGENCY', s, text: `${p.n} declines his player option with the ${s} and becomes a free agent` })
     } else {
       if (s === F.team && p.optd != null) { decideOption(F, p, !!p.optd); delete p.optd; continue }
       decideOption(F, p, teamKeeps(F, s, p))
@@ -702,21 +846,23 @@ export function seasonEndDeals(F) {
       fa.$l = p.$ ?? 0
       if (p.rs) fa.rsl = 1
       const restricted = !!p.rfa && !p.tw ? true : !!p.tw
+      const wasTw = !!p.tw
       fa.$ = 0
       fa.y = 0
       for (const k of ['sc', 'opt', 'rs', 'mh', 'ng', 'ntc', 'ext', 'tw', 'rfa']) delete fa[k]
       if (restricted) {
         // the qualifying offer: 130% of a rookie deal's last salary (125% for anyone else), the minimum + $0.2M at least
-        const qo = r1(Math.max(minOf(fa.ys ?? 0, nx) + 0.2, fa.$l * (fa.rsl ? 1.3 : 1.25)))
-        const wants = s === F.team ? true : worthOf(F, fa, nx) >= qo * 0.9
-        if (wants) { fa.rfa = 1; fa.qo = qo }
+        // (a two-way man's qualifying offer is another two-way deal, one season: fa.qtw)
+        const qo = wasTw ? twoWayOf(nx) : r1(Math.max(minOf(fa.ys ?? 0, nx) + 0.2, fa.$l * (fa.rsl ? 1.3 : 1.25)))
+        const wants = s === F.team || wasTw ? true : worthOf(F, fa, nx) >= qo * 0.9
+        if (wants) { fa.rfa = 1; fa.qo = qo; if (wasTw) fa.qtw = 1 }
       }
       ;(F.fa ??= []).push(fa)
     }
     team.r = keep
   }
   // (a man in the pool a year or more with no team: his rights are gone)
-  for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { delete p.fr; delete p.hy; delete p.rfa; delete p.qo; delete p.rsl }
+  for (const p of F.fa ?? []) if (p.hy != null && p.hy < nx) { for (const k of ['fr', 'hy', 'rfa', 'qo', 'qtw', 'qot', 'rsl', 'dco']) delete p[k] }
   return Object.assign(gone, { news })
 }
 // renounce him: his hold off the books, his rights gone (an RFA becomes unrestricted)
@@ -724,8 +870,7 @@ export function renounce(F, short, id) {
   const p = (F.fa ?? []).find(x => x.i === id && x.fr === short)
   if (!p) return false
   p.rn = 1
-  delete p.rfa
-  delete p.qo
+  for (const k of ['rfa', 'qo', 'qtw', 'qot', 'dco']) delete p[k]
   return true
 }
 // what he asks the GM's team to re-sign (his market; a man coming off a rookie deal or with Bird rights may give a
@@ -770,7 +915,14 @@ export function resignOffer(F, p) {
   const sit = situationOf(F, s)
   const tilt = (sit === 'win' ? 0.97 : sit === 'reb' && (p.ag ?? 27) >= 29 ? 1.08 : 1) * (1 + R.n() * 0.04)
   const own = rightsOf(p, s)
-  const y = Math.min(own === 'bird' ? 5 : 4, termFor(p) + ((p.ag ?? 27) <= 27 && rankOf(F, p) <= 60 ? 1 : 0))
-  const $ = r1(clamp(minOf(p.ys ?? 0, year), maxOf(p.ys ?? 0, year, { superMax: own === 'bird' && superMaxOk(F, p, s), last: p.$l ?? 0 }), mv * tilt))
+  const rk = rankOf(F, p)
+  // (with Bird rights a good player in his prime takes the fifth year only his own team can give)
+  const y = Math.min(own === 'bird' ? 5 : 4, termFor(p, rk) + (own === 'bird' && (p.ag ?? 27) <= 31 && rk <= 60 ? 1 : 0))
+  let $ = r1(clamp(minOf(p.ys ?? 0, year), maxOf(p.ys ?? 0, year, { superMax: own === 'bird' && superMaxOk(F, p, s), last: p.$l ?? 0 }), mv * tilt))
+  // (his rookie option declined: his team can pay him the option at most; he takes it if it's close to his price)
+  if (p.dco) { if ($ > p.dco * 1.15) return null; $ = Math.min($, p.dco) }
+  // (a two-way man worth no more than the minimum: he re-signs on another two-way deal, as two-way men do; one who
+  // played his way past it asks for a standard contract)
+  if (p.qtw && $ <= minOf(p.ys ?? 0, year) * 1.05 + 0.01 && (p.ys ?? 0) <= 3) return { $: twoWayOf(year), y: (p.ag ?? 24) <= 23 ? 2 : 1, r: 0, tw: 1, via: 'tw' }
   return { $, y, r: raiseMax(own), via: own }
 }

@@ -41,7 +41,7 @@ F = {
   year: 2026,                       // season start year
   nid: 1,                           // next man id
   noCap: 1?, noInj: 1?,             // the rules switches (franchise2/rules.js meaning; noCap = no cap AND no tax)
-  builds: [{ pos: 'guard'|'big', spot: 'PG'..'C', build, types, name, num, face, age, rk, car: [] }],
+  builds: [{ pos: 'guard'|'big', spot: 'PG'..'C', build, types, name, num, face, age, rk, car: [], i, done? }], // done: the year he retired (aging.js)
   teams: { [short]: Team },
   fa: [Man],                        // free agents / the street
   dc: [Prospect],                   // this year's draft class (core)
@@ -56,12 +56,46 @@ F = {
   ss: { [manId]: SeasonLine },      // this season's stats per man (C writes, core reads)
   ps: { [manId]: SeasonLine },      // this postseason's stats (C writes)
   hist: [SeasonRecord],             // one per finished season (core writes, awards from C)
-  retired: [{ n, i, ag, yrs, car }],// C's retirements land here
-  news: [{ d, y, k, tag, s, text }],// the wire (anyone may add with addNews(F, item) from nba/index.js)
-  log: [ResultSummary],             // the GM's team's results this season (core)
+                                    //   hist[].aw winners also carry p (position) and l (their line, stored at closeSeason:
+                                    //   season awards [gp, pts, reb, ast, stl, blk, gs, cp] totals; FMVP/ECF/WCF the series
+                                    //   [gp, pts, reb, ast]); saves from before 2026-11-23 have neither
+  retired: [RetiredRow],            // C's retirements land here; offseason.js retiredRow/keepRetired pack them (below)
+  news: [{ d, y, t, k, tag, s, text, i?, g? }], // the wire (addNews from nba/news.js): t the calendar day (days since
+                                    //   1970, news.js wireTime), i the man, g games out (an injury: newsWorthy reads it)
+  log: [ResultSummary],             // the GM's team's results this season (core); a row whose game had a moment keeps
+                                    //   mo { side, hit, by, vs, kind, pts, them, tov, at, left, per, lead, sealed } (season.js finishMoment)
   rings: 0, moments: 'adv'|'simple'|'off',
 }
 ```
+
+Fields the 2026-11 fix round added to F (all optional: an older save loads with none):
+
+```
+  pend: { d, h, a, n, po, us, them, left, per, ot?, spot: 'off'|'def'|'ft', G } // a moment up (season.js): per the period,
+                                    //   ot the overtime number (per - 4), spot the kind of moment (momentSpot)
+  fao: { [manId]: deal },           // the GM's offers standing for the next FA day (market.js placeOffer / pullOffer)
+  fan: { y, d, r: [{ i, n, k: 'signed'|'lost'|..., s, d, why }] } // what came of the GM's offers in the last FA round
+  rfq: [{ i, s, d }],               // offer sheets the GM's restricted free agents signed with team s: his to match (matchSheet)
+  thin: { [short]: day },           // a league team under 14 men, and the day it fell under (season.js; deleted when empty)
+  lot: { y, sys: '2019'|'321', order, r2, lottery: [{ s, from, to, odds, balls?, rel? }], balls, drawn }
+                                    //   the draft order (draft.js runLottery): sys '321' from the 2027 draft (16 teams,
+                                    //   37 balls, all 16 drawn, rel = "draft relegated", no lower than 12); '2019' before
+                                    //   (14 teams, balls 1000 = combinations, drawn 4)
+  lotH: { [short]: [[draftYear, slot]] }, // each team's own pick's slot, the last three drafts (the 3-2-1's repeat rules)
+  as: { E: { st, res }, W, g?: { E, W, mvp, s } } | null, // the All-Star teams (5 starters, 7 reserves) and the game
+  asDone: 0..3,                     // All-Star progress: 1 starters named, 2 reserves named, 3 the game played
+  off.dev: { y, m, up, dn, rt },    // the summer's development report (NbaOffseason devOf): rows [id, OVR before, after]
+                                    //   for the GM's men (m), the league's risers (up) and fallers (dn); rt retired ids
+  off.wire: [[day, id, team, $, years]], // free agency's signings, day by day (the screen's Around the league)
+  off.fres: [[id, team | null]],    // what became of the GM's offers on the last day played (null: still deciding)
+  off.ret: [{ i, n, ag, yrs, o, b? }], // the GM's men (his builds first) who retired this summer, for the re-sign stop
+```
+
+RetiredRow (offseason.js retiredRow): `{ i, n, ag, s, yrs, o, y (last season), t: [gp, pts, reb, ast], aw?: ['2027MVP'...],
+as? (All-Star count), ch? (titles), b?, gm?, k? }`. `k` 1 = a notable career, kept forever (the big awards, two
+All-Stars, 15,000 points, 16 seasons, the GM's own); `gm` 1 = retired off the GM's roster or played three seasons
+for him. The rest: the last 120 (RETIRED_REST). A raw row from ageLeague (`car`, `aw` objects) is packed on the next
+keepRetired.
 
 ## Team
 
@@ -71,8 +105,12 @@ Team = {
   r: [Man],                         // everyone under contract: 15 standard + up to 3 two-way (Man.tw = 1)
   rot: [manId] | null,              // GM's rotation order override (starters first five); null = auto (C's rotationOf)
   min: { [manId]: minutes } | null, // GM's minutes targets, optional (C honours if set)
-  exc: { mle: $left, bae: $left, tpe: [{ $, until }] } // B: exceptions this season
-  dead: [{ n, $, y }],              // B: waived salary still on the books (stretch or not)
+  exc: { yr, mk, mle, bae, baeY, hc, room } // B: exceptions used this league year and the hard cap triggered (hc 'a1'|'a2')
+  tpe: [{ $, n, until }],           // trade exceptions: $ left, n the man whose salary made it, until a calDay (trades.js tpesOf)
+  dead: [{ n, $, y, from, to, st? }], // waived salary still on the books: $ a season in every season from..to, y the
+                                    //   seasons left from the books' season through `to` (newSeason resets it from `to`
+                                    //   each new season, so it ages once a league year), st 1 = stretched (contracts.js cutMan)
+  txh: [year],                      // seasons it paid the tax (the repeater rule)
   w: 0, l: 0                        // NOT stored: records are computed from sched (season.js records)
 }
 ```
@@ -95,6 +133,22 @@ rs  1 = on a rookie-scale deal      rfa 1 = restricted at expiry          tw  1 
 bird yrs with this team for Bird rights (0..3+, resets on change of team except by trade)
 ntc 1 (no-trade)                    sgn  year signed (for the Dec 15 / 3-month trade restriction)
 
+-- added in the 2026-11 fix round (all optional) --
+txd  calDay he was traded (two months before his salary can be combined in another trade: trades.js aggLocked)
+osm  { s, y }: his team matched team s's offer sheet in league year y: no trade that league year, and none to s until
+     the next summer's free agency is over (trades.js sheetLockTo)
+osh  { s, d }: an offer sheet the GM's team (s) signed him to, waiting on his old team's answer (market.js)
+qot  1 = his team tendered his qualifying offer (the re-sign stop's Tender QO: he stays restricted)
+dco  $M: his team declined his rookie-scale team option, so it can re-sign him for no more than that salary
+wvb  { s, t, to }: waived by team s at time t (contracts.js timeOf): s can't sign him again for a year (or past `to`)
+ask  { yr, b, $, y, d }: a free agent's ask this league year: b the first day's, $ today's, falling with the days unsigned
+twa  [season, games]: a two-way man's games active this season (the 50-game limit, rotation.js twGames)
+fl   1 = a filler: the end of the bench a team carries because it must (league.js makeFiller; made up: gn)
+real 1 = his real contract from the data (contracts.js dealOnLoad)    rt  the team that drafted or traded for him on his rookie deal (the supermax)
+ext  league year he signed an extension          ud  the draft he went undrafted in (the street after closeDraft)
+nt   the team his number (num) is for (numbers.js fixNumbers: a man who joins keeps his number only if it's free there)
+qtw  1 = his qualifying offer is a two-way deal (a two-way man's RFA: contracts.js seasonEndDeals)
+
 -- health (C) --
 inj { g: games out, k: 'sprained left ankle' }    rest 1 = sitting tonight (load management)
 
@@ -107,6 +161,11 @@ aw  [{ y, k: 'MVP'|'ROY'|'DPOY'|'6MOY'|'MIP'|'FMVP'|'ALL1'|'ALL2'|'ALL3'|'AS'|'C
 
 `{ gp, gs, min, pts, reb, oreb, ast, stl, blk, tov, pf, fgm, fga, tpm, tpa, ftm, fta, pm }` totals, per man id.
 
+Box lines (Res.box, game.js toRes): every man on the roster has one. A man who didn't play has `min: 0`, zeros and
+`dnp: 'cd'` (coach's decision) | `'inj'` | `'rest'` | `'tw'` (a two-way man not with the team), with `k` the reason
+in words (the injury; 'G League', '50-game limit', 'not eligible for the playoffs'). `Res.ff`: the team that
+forfeited (no one to play: 2-0; rosters are kept at 13+, so it shouldn't happen).
+
 ## Game (core)
 
 ```
@@ -117,7 +176,9 @@ aw  [{ y, k: 'MVP'|'ROY'|'DPOY'|'6MOY'|'MIP'|'FMVP'|'ALL1'|'ALL2'|'ALL3'|'AS'|'C
 
 ## Pick (core creates, B trades)
 
-`{ y: draftYear, r: 1|2, o: originalTeam, t: ownerNow, pr: null | { top: N } , sw: null | { with: team } }`
+`{ y: draftYear, r: 1|2, o: originalTeam, t: ownerNow, n?: 1..60, pr: null | { top: N, rl?: 1 } , sw: null | { with: team } | { by: team } }`
+`n` is set at the lottery (the overall pick). A protected pick that rolls over carries `rl: 1` (it rolls once, then
+conveys). A swap: the holder's own first carries `sw.with` (the team it may swap with), the giver's `sw.by`.
 A protected pick that conveys nothing rolls to the next year unprotected-by-one-step (core resolves at the lottery).
 Stepien rule (B checks): a team may not be without a first in two consecutive future drafts.
 
@@ -151,8 +212,9 @@ finalsMvp(F, series) -> manId
 ageLeague(F) -> { retired: [Man], news: [...] }    // offseason: ag+1, o toward pk, decline by group, retirements
 // Moments seam (core moments.js uses it):
 startGame(F, home, away, opts) -> G       // a game state that can stop; G is plain JSON (saved in F.pend while the moment is up), small, no F inside; G.hs / G.as = the score so far
-playTo(G, secondsLeftInQ4)                // sim until that much of the 4th (or OT) is left
-possession(G, short, outcome)             // apply one possession result: { pts: 0..4, by: manId, ast?: manId, kind: 'pnr'|'iso'|'read'|... , tov?: bool }
+playTo(G, secondsLeftInQ4, when?)         // sim until that much of the 4th (or OT) is left; when(G): stop only at a whistle where it's true (season.js momentSpot)
+possession(G, short, outcome)             // apply one possession result: { pts: 0..4, by: manId, ast?: manId, kind: 'pnr'|'iso'|'read'|... , tov?: bool, t?: seconds } (a man with 6 fouls never takes it)
+momentEnd(G, short, { sealed })           // the seconds after a moment: sealed (his team landed it and is ahead) = the other side's last look misses and the clock runs out; else a trip with <=5 s is a desperation shot; returns the trip
 finishGame(G) -> Res                      // sim the rest, give the same Res as simGame
 ```
 
@@ -186,7 +248,8 @@ cpuDeadline(F, day) -> [news]                          // CPU-CPU deals before t
 
 - Setup: `buildTeams` -> `dealOnLoad(F, man, short)` for every rostered man. Two-way men too (B decides their pay).
 - Each night (`season.js playDay`): for each game `restFor` (regular season only) -> `simGame` (or, for the GM's game with
-  moments on, `startGame` -> `playTo(G, 24)` -> maybe a moment -> `possession` -> `finishGame`) -> `recordGame` ->
+  moments on, `startGame` -> `playTo(G, 24, momentSpot)` -> maybe a moment (F.pend: { ..., left: the real clock, per, spot:
+  'off'|'def'|'ft', G }) -> `possession` -> `momentEnd` -> `finishGame`; the log row keeps row.mo for the final's line) -> `recordGame` ->
   `rollInjuries`. After the night: `tickInjuries(F, short)` for every team, then `cpuDeadline(F, day)` (B: return
   [] after `F.ddl`).
 - Postseason nights: the same with `playoff: true`, no `restFor`.

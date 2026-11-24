@@ -16,6 +16,9 @@ const BACK = { card: 'team', builds: 'card', rules: 'builds' }
 export const GAMES_MODES = [['advanced', 'ADVANCED'], ['simple', 'SIMPLE'], ['off', 'NONE']]
 export const GAMES_WHAT = { advanced: 'Play the full mini game', simple: 'One tap to time it', off: 'Sim the play' }
 export const CAP_WHAT = { on: 'The NBA cap and tax', off: 'No cap, no tax' }
+// Key moments in the league rules' look (rules.css .fr-rule: the setup doesn't load the hub's season.css), three across
+export const GAMES_CLS = { root: 'fr-rule', top: 'fr-rule-top', group: 'fr-rule-seg nb-seg3' }
+const rulesIn = S => ({ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true })
 
 let PREVIEW = null
 export function preview() {
@@ -43,7 +46,7 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }
       </div>
       <div className="fsu-body" key={naming ? `n-${naming}` : step}>
         {naming && <NbaNameStep S={S} id={naming} owner={owner} onDone={x => go({ naming: null, builds: { ...S.builds, [naming]: { ...S.builds[naming], ...x } } }, 'claim')} />}
-        {!naming && step === 'team' && <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} />}
+        {!naming && step === 'team' && <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} rules={rulesIn(S)} onRules={r => go({ rules: { ...rulesIn(S), ...r } }, 'tap')} />}
         {!naming && step === 'card' && <TeamCard s={S.team} onPick={t => go({ team: t }, 'tap')} onGo={() => { go({ step: 'builds' }, 'whistle'); haptic('medium') }} />}
         {!naming && step === 'builds' && <NbaBuildsStep S={S} go={go} owner={owner} onBuild={onBuild} onNext={() => go({ step: 'rules' }, 'tap')} />}
         {!naming && step === 'rules' && <Rules S={S} go={go} owner={owner} onStart={onStart} />}
@@ -52,7 +55,7 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }
   )
 }
 
-function TeamWall({ pick, onPick }) {
+function TeamWall({ pick, onPick, rules, onRules }) {
   return (
     <div className="fsu-wall">
       <Chyron tone="ink" title="Pick a team" sub="30 TEAMS · 6 DIVISIONS" />
@@ -69,6 +72,8 @@ function TeamWall({ pick, onPick }) {
           </div>
         </div>
       )))}
+      {/* (the league rules from the start, as football's setup has them: the last step and the hub have them too) */}
+      <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={rules} capWhat={CAP_WHAT} onChange={onRules} /></section>
     </div>
   )
 }
@@ -106,14 +111,14 @@ function TeamCard({ s, onPick, onGo }) {
 const ORD = n => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')
 
 function Rules({ S, go, owner, onStart }) {
-  const rules = { cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true }
+  const rules = rulesIn(S)
   return (
     <div className="fsu-card nb-rules">
       <TeamSlab s={S.team} size="m" sub={`${seasonText(FIRST_YEAR)} · GM ${owner.toUpperCase()}`} />
       <Chyron tone="ink" size="s" title="League rules" />
       <LeagueRules value={rules} nick={TEAM[S.team].nick} capWhat={CAP_WHAT} onChange={r => go({ rules: { ...rules, ...r } })} />
       <GamesSwitch mode={S.games ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
-        onPick={m => go({ games: m })} cls={{ root: 'fh-games', top: 'fh-games-label', group: 'fh-seg' }} />
+        onPick={m => go({ games: m })} cls={GAMES_CLS} />
       <div className="fsu-acts"><Go onClick={onStart}>Tip off</Go></div>
     </div>
   )

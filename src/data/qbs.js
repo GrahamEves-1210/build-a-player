@@ -252,7 +252,6 @@ export const QB_PHYSICALS = {
   'Jalon Daniels':               { height: 72, weight: 205 },
   'Easton Stick':                { height: 74, weight: 224 },
   'Hendon Hooker':               { height: 76, weight: 217 },
-  'Jake Haener':                 { height: 72, weight: 207 },
   'Joshua Dobbs':                { height: 74, weight: 216 },
   'Jacoby Brissett':            { height: 76, weight: 236 },
   'Gardner Minshew':            { height: 73, weight: 225 },

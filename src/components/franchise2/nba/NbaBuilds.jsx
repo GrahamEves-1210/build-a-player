@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
 import { cleanName, nameOk, randomFirstLast } from '../../../lib/franchise2/identity'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../../lib/franchise2/faces'
 import { sfx } from '../../../lib/juice'
@@ -16,15 +16,35 @@ export const faceOf = (B, team) => buildFaceUrl({ pos: 'nba', face: B.face ?? de
 export const manPhoto = (F, p) => (!p ? null : p.b != null && F.builds?.[p.b] ? faceOf(F.builds[p.b], F.team) : p.h ? photoOf(p.n) : null)
 const money = v => `$${(Math.round(v * 10) / 10).toFixed(1)}M`
 
+// a build whose rookie deal takes the payroll past the tax or an apron: one plain line under him (the setup's
+// preview league, the GM's team; each build read off the payroll the ones before him left)
+const PAST = { tax: 'the luxury tax line', a1: 'the first apron', a2: 'the second apron' }
+const LINE_OF = { tax: 'tax', a1: 'a1', a2: 'a2' }
+function capNotes(S) {
+  if (!S.team || S.rules?.cap === false) return {}
+  const F = { ...preview(), team: S.team }
+  const out = {}
+  let prev = 0
+  for (const p of S.picks ?? []) {
+    const B = S.builds?.[p.id]
+    if (!B?.name) continue
+    const N = buildCapNote(F, ovrOfAttrs(B.pos, attrsOfBuild(B.pos, B.build)), prev)
+    prev += N.add
+    const k = N.after.over
+    if (k !== N.before.over && PAST[k]) out[p.id] = `His ${money(N.add)} rookie deal takes the ${TEAM[S.team].nick} payroll to ${money(N.after.pay)}, past ${PAST[k]} (${money(N.after[LINE_OF[k]])}).`
+  }
+  return out
+}
 export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const picks = S.picks ?? []
+  const notes = useMemo(() => capNotes(S), [S.team, S.picks, S.builds, S.rules?.cap]) // eslint-disable-line react-hooks/exhaustive-deps
   const add = pos => { const id = `b${Date.now().toString(36)}`; go({ picks: [...picks, { id, pos }] }, 'tap') }
   const drop = id => { const b = { ...(S.builds ?? {}) }; delete b[id]; go({ picks: picks.filter(p => p.id !== id), builds: b }, 'back') }
   const build = (p, k) => onBuild({ id: p.id, pos: p.pos, n: k + 1, of: picks.length })
   const ready = picks.every(p => S.builds?.[p.id]?.name)
   return (
     <div className="fsu-card nb-builds">
-      <Chyron tone="ink" title="Your players" sub={`UP TO ${BUILD_MAX} OF YOUR OWN`} />
+      <Chyron tone="ink" title={`${owner || 'Guest'}'s players`} sub={`UP TO ${BUILD_MAX} BUILDS`} />
       {picks.map((p, k) => {
         const B = S.builds?.[p.id]
         if (!B?.name) {
@@ -42,7 +62,8 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
         const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
         return (
           <div key={p.id} className="nb-build-row">
-            <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner} line={`ROOKIE · NO. ${buildSlot(o)} PICK DEAL`} size="s" />
+            <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner} line={`NO. ${buildSlot(o)} PICK`} size="s" />
+            {notes[p.id] && <p className="nb-build-cap">{notes[p.id]}</p>}
             <span className="nb-fa-acts"><button type="button" onClick={() => build(p, k)}>Rebuild</button><button type="button" onClick={() => drop(p.id)}>Remove</button></span>
           </div>
         )
@@ -69,8 +90,10 @@ export function NbaNameStep({ S, id, owner, onDone }) {
   const [num, setNum] = useState(() => (B.num != null && !taken.has(B.num) ? B.num : free[(id.length * 7) % free.length]))
   const [all, setAll] = useState(false)
   const [page, setPage] = useState(0)
-  const [face, setFace] = useState(() => B.face ?? defaultFace(`${S.seed}-${id}`, 'nba'))
-  const faces = useMemo(() => Array.from({ length: 8 }, (_, k) => defaultFace(`${S.seed}-${id}-f${page}-${k}`, 'nba')), [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (the face he comes in with is the first of the eight, so one is always lit)
+  const [face0] = useState(() => B.face ?? defaultFace(`${S.seed}-${id}`, 'nba'))
+  const [face, setFace] = useState(face0)
+  const faces = useMemo(() => Array.from({ length: 8 }, (_, k) => (page === 0 && k === 0 ? face0 : defaultFace(`${S.seed}-${id}-f${page}-${k}`, 'nba'))), [page]) // eslint-disable-line react-hooks/exhaustive-deps
   const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
   const slot = buildSlot(o)
   const deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
@@ -79,8 +102,7 @@ export function NbaNameStep({ S, id, owner, onDone }) {
   const same = f => FACE_KEYS.every(k => f[k] === face[k])
   return (
     <div className="fsu-nameform">
-      <LowerThird size="l" name={`${first} ${last}`.trim() || NAME[B.pos]} pos={buildSpot(B.pos, a)} num={num} ovr={o} photo={faceOf({ ...B, face }, S.team)} team={S.team} mine={owner}
-        line={`ROOKIE SCALE · ${money(Array.isArray(deal) ? deal[0] : deal)} A YEAR`} />
+      <LowerThird size="l" name={`${first} ${last}`.trim() || NAME[B.pos]} pos={buildSpot(B.pos, a)} num={num} ovr={o} photo={faceOf({ ...B, face }, S.team)} team={S.team} mine={owner} />
       <span className="fsu-lbl">FACE</span>
       <div className="fsu-faces fsu-faces--build" role="radiogroup" aria-label="Face">
         {faces.map((f, k) => (
@@ -103,7 +125,7 @@ export function NbaNameStep({ S, id, owner, onDone }) {
       </div>
       <div className="fsu-deal">
         <Fact v={`NO. ${slot}`} label="DRAFT SLOT" size={28} />
-        <Fact v="4 YRS" label="ROOKIE SCALE" size={28} />
+        <Fact v={money(Array.isArray(deal) ? deal[0] : deal)} label="ROOKIE SCALE · 4 YRS" size={28} />
       </div>
       <div className="fsu-acts">{!ok && <p className="fsu-hint">Give him a first and last name to sign him.</p>}<Go onClick={() => ok && onDone({ name: `${first.trim()} ${last.trim()}`, num, face })} disabled={!ok}>Sign him</Go></div>
     </div>

@@ -24,7 +24,8 @@ const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line', 'game-win
 // retry (Career, app): a miss can be played again for a video, once
 // labV (the test lab): plays at this grade instead of the build's
 // sim (Career's Mini Games switch): no game, the trait decides, about as an average player would do
-export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, team = null, opp = null, pos = null, cast = null, situation = null, weather = null, labV = null, sim = false, onSkipAll = null, empty = false, children = null }) {
+// demoCast (basketball Franchise): the how-to plays with the real men on the floor (cast), as the game itself will
+export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, team = null, opp = null, pos = null, cast = null, demoCast = false, situation = null, weather = null, labV = null, sim = false, onSkipAll = null, empty = false, children = null }) {
   const def = GAMES[game]
   // its own address, with no ads on it, for as long as it's open
   useEffect(() => (sim ? undefined : minigameOpen()), [sim])
@@ -45,6 +46,9 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   const v = Math.min(11, (hard ? Math.max(1, real * 0.7) : real) + ease * 0.75)
   const lockKey = lock ? `bap_mg_${lock}` : null
   const unlock = () => { if (lockKey) try { localStorage.removeItem(lockKey) } catch {} }
+  // (read once as it opens: the dev server's StrictMode runs the effects twice, and the second check found the lock this
+  // very run had just set, booking a drill that had only started as a miss)
+  const [leftAtOpen] = useState(() => { if (!lockKey || sim) return false; try { return !!localStorage.getItem(lockKey) } catch { return false } })
   const done = r => {
     if (result) return
     const perfect = !!r.raw && r.raw.of > 0 && r.raw.made === r.raw.of
@@ -74,9 +78,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   }, [sim]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (sim || !lockKey) return
-    let left = false
-    try { left = !!localStorage.getItem(lockKey) } catch {}
-    if (left) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
+    if (leftAtOpen) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!sim && lockKey && stage === 'play') try { localStorage.setItem(lockKey, '1') } catch {} }, [stage]) // eslint-disable-line react-hooks/exhaustive-deps
   // a test hook for the dev server only (a live build has no way to force a score)
@@ -96,7 +98,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
       {stage === 'intro' && (
         <div className="mg-intro">
           <p>{how}</p>
-          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} empty={empty} situation={situation} />}
+          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} empty={empty} situation={situation} cast={demoCast ? cast : null} />}
           <button className="ag-btn ag-btn--gold" onClick={() => { setStage('play'); sfx('whistle') }}>READY</button>
           {onSkipAll && <button className="ag-btn ag-btn--ghost mg-skipall" onClick={() => { sfx('tap'); onSkipAll() }}>TURN OFF KEY MOMENTS</button>}
         </div>

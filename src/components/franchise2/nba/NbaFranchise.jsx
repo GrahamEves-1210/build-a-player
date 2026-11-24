@@ -16,6 +16,7 @@ const NbaHub = lazy(() => import('./NbaHub'))
 //   props: user, onHome
 const LAST = 'bap_frnba_last'
 const TRIP = 'bap_frnba_trip'
+const MOMENT = 'bap_frnba_moment'   // (a key moment's mini game was open when the tab reloaded, NbaGame.jsx: straight back to that franchise)
 const newSeed = () => `${Date.now().toString(36)}${Math.floor(performance.now() * 1000).toString(36)}`
 const PHASE = { season: 'REGULAR SEASON', post: 'REGULAR SEASON OVER', playin: 'PLAY-IN', playoffs: 'PLAYOFFS', done: 'SEASON OVER', off: 'OFFSEASON' }
 const LG = { key: NBA_KEY, summary: nbaSlotSummary, clear: i => { clearNba(i); try { if (JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY))?.slot === i) localStorage.removeItem(NBA_FRANCHISE_CARD_KEY) } catch {} }, TEAM, where: s => `${seasonText(s.year)} · ${s.rec} · ${PHASE[s.phase] ?? ''}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}` }
@@ -29,27 +30,44 @@ function leaveNote(F) {
 
 export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTaken }) {
   const owner = getUsername(user) || 'Guest'
-  // the kit draws the NBA's teams while the mode is open (and football's again when it closes)
-  useState(() => setKitLeague(TEAM))
+  // the kit draws the NBA's teams while the mode is open (and football's again when it closes). Set on every render,
+  // not once: a kit reloaded under an open league (the dev server's hot reload) came back on football's teams, and the
+  // Hornets (no football CHA) lost their logos
+  setKitLeague(TEAM)
   useEffect(() => { setKitLeague(TEAM); return () => setKitLeague(null) }, [])
   // (back from the build page: straight into the setup that sent him there; the trip is marked for this tab)
-  const [slot, setSlot] = useState(() => { try { const t = sessionStorage.getItem(TRIP); return t != null ? Number(t) : null } catch { return null } })
+  const [slot, setSlot] = useState(() => { try { const t = sessionStorage.getItem(TRIP) ?? sessionStorage.getItem(MOMENT); return t != null ? Number(t) : null } catch { return null } })
   const slotRef = useRef(slot)
   slotRef.current = slot
-  useEffect(() => { try { sessionStorage.removeItem(TRIP) } catch {} }, [])
-  const [F, setF] = useState(null)
+  useEffect(() => { try { sessionStorage.removeItem(TRIP); sessionStorage.removeItem(MOMENT) } catch {} }, [])
+  const [F, setF] = useState(() => { try { const m = sessionStorage.getItem(MOMENT); return m != null ? loadNba(Number(m)) : null } catch { return null } })
   const [setup, setSetup] = useState(() => (slot != null ? rawNbaSlot(slot)?.setup ?? null : null))
   const [, bump] = useState(0)
   const Fr = useRef(F); Fr.current = F
   const pend = useRef(null)
-  const flush = useCallback(() => { const X = pend.current; if (!X) return; pend.current = null; saveNba(X); leaveNote(X) }, [])
+  // a save that fails (the browser's storage full): the hub says so, and it keeps trying every few seconds and on
+  // every change until one goes through
+  const [saveBad, setSaveBad] = useState(false)
+  const bad = useRef(false)
+  const flush = useCallback(() => {
+    const X = pend.current
+    if (!X) return
+    pend.current = null
+    const ok = saveNba(X)
+    if (ok) leaveNote(X)
+    if (ok !== !bad.current) { bad.current = !ok; setSaveBad(!ok) }
+  }, [])
+  const retry = useCallback(() => { const X = Fr.current; if (!X) return; pend.current = X; flush() }, [flush])
+  useEffect(() => { if (!saveBad) return; const t = setInterval(retry, 8000); return () => clearInterval(t) }, [saveBad, retry])
   // every change is saved once it's on screen (changes in a row are one write); leaving writes it straight away
-  const act = useCallback(fn => {
+  // { save: false }: on screen but not written yet (a sim to the end writes now and then and once when it stops)
+  const sched = useRef(false)
+  const act = useCallback((fn, { save = true } = {}) => {
     const X = Fr.current
     if (!X) return
     const out = fn(X)
-    if (!pend.current) requestAnimationFrame(() => setTimeout(flush, 0))
     pend.current = X
+    if (save && !sched.current) { sched.current = true; requestAnimationFrame(() => setTimeout(() => { sched.current = false; flush() }, 0)) }
     bump(n => n + 1)
     return out
   }, [flush])
@@ -85,7 +103,7 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
     const S = setup
     const builds = (S.picks ?? []).map(p => S.builds?.[p.id]).filter(B => B?.name)
     const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds })
-    saveNba(X); leaveNote(X)
+    if (saveNba(X)) leaveNote(X); else { bad.current = true; setSaveBad(true) }
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')
   }
@@ -94,5 +112,5 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
 
   if (slot == null || (!F && !setup)) return <Slots owner={owner} onOpen={open} onHome={onHome} lg={LG} />
   if (!F) return <NbaSetup setup={setup} owner={owner} put={putSetup} onStart={start} onBack={toSlots} onBuild={buildOut} />
-  return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} /></Suspense>
+  return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} saveBad={saveBad} onRetry={retry} /></Suspense>
 }
