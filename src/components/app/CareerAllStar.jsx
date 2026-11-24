@@ -7,7 +7,6 @@ import { DUNKS } from '../../lib/mg/dunkcontest'
 import { engineFor } from '../../lib/mg'
 import { gamesMode, sportOf } from '../../lib/career'
 import { minigameOpen } from '../../lib/ads'
-import { valToGrade } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { reducedMotion } from '../simFlow'
 import { IconArrow, IconTrophy } from './icons'
@@ -64,16 +63,17 @@ export function AllStarInvite({ c, setCareer, getD }) {
 }
 
 // ── The board: the round's men, the ones who have gone in score order, the rest in the order they go ──
-function Board({ rows, val, through = null, face, title, right = null, sn }) {
+// (bare: the field before a ball is shot, names and teams only)
+function Board({ rows, val, through = null, face, title, right = null, sn, bare = false }) {
   return (
     <div className="asw-board">
       <div className="asw-board-head"><span className="ag-eyebrow">{title}</span>{right}</div>
       {rows.map((r, i) => (
-        <div key={r.name} className={`asw-row${r.me ? ' is-me' : ''}${r.up ? ' is-up' : ''}${through?.includes(r.name) ? ' is-through' : ''}${r.v == null ? ' is-wait' : ''}`}>
-          <span className="asw-row-n">{r.v == null ? '' : i + 1}</span>
+        <div key={r.name} className={`asw-row${r.me ? ' is-me' : ''}${r.up ? ' is-up' : ''}${through?.includes(r.name) ? ' is-through' : ''}${r.v == null && !bare ? ' is-wait' : ''}`}>
+          <span className="asw-row-n">{r.v == null || bare ? '' : i + 1}</span>
           <Head row={r} face={face} />
           <span className="asw-row-name">{r.me ? r.name : sn(r.name)}<small>{r.team}{r.sub ? ` · ${r.sub}` : ''}</small></span>
-          <span className="asw-row-v">{r.v == null ? '—' : val ? val(r) : r.v}</span>
+          {!bare && <span className="asw-row-v">{r.v == null ? '—' : val ? val(r) : r.v}</span>}
         </div>
       ))}
     </div>
@@ -155,7 +155,7 @@ function ThreeContest({ c, setCareer, face, onNext }) {
       <span className="ag-eyebrow">ALL-STAR SATURDAY · 3-POINT CONTEST · THE FIELD</span>
       <h3 className="asw-title">Eight shooters</h3>
       <p className="cr-note">Five racks of five around the arc, four balls worth a point and a two-point money ball on each; one rack, his pick, is all money balls. Two deep shots worth three. The top three go to the final.</p>
-      <Board rows={P.field.map(m => ({ ...m, v: valToGrade(m.js) }))} face={face} title="JUMP SHOT" val={r => r.v} sn={sn} />
+      <Board rows={P.field} face={face} title="THE SHOOTERS" sn={sn} bare />
       <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { R.setShown(1); sfx('whistle') }}>TO THE FLOOR <IconArrow size={16} /></button>
     </div>
   )
@@ -281,7 +281,7 @@ function DunkContest({ c, setCareer, face, onNext }) {
       <span className="ag-eyebrow">ALL-STAR SATURDAY · SLAM DUNK CONTEST · THE FIELD</span>
       <h3 className="asw-title">Four dunkers</h3>
       <p className="cr-note">Two dunks each in the first round, three tries to land each one. Five judges score every dunk from 6 to 10. The top two go to the final, two more dunks, the best total wins.</p>
-      <Board rows={P.field.map(m => ({ ...m, v: `${valToGrade(m.bounce)} · ${valToGrade(m.fin)}` }))} face={face} title="BOUNCE · FINISHING" val={r => r.v} sn={sn} />
+      <Board rows={P.field} face={face} title="THE DUNKERS" sn={sn} bare />
       <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { R.setShown(1); sfx('whistle') }}>TO THE FLOOR <IconArrow size={16} /></button>
     </div>
   )
