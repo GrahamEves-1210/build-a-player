@@ -56,6 +56,10 @@ export const T = {
   gatherSlowJ: 0.25,                 // speed kept while rising for a jumper
   gatherSlowL: 0.75,                 // ...and while going up for a layup
   follow: 0.45,                      // after the release he's this long coming down before he can move freely
+  footIn: 0.75,                      // the man with the ball is out when his centre is this close to a line (his foot on it:
+                                     // the dot reaches radius past the centre, a foot about half that)
+  lineKeep: 0.9,                     // everyone else stays this far inside (eased back, never past the line itself)
+  shootBuffer: 0.5,                  // a SHOOT press this recent starts the shot the moment he can (a catch, a board)
 
   // ── The shot meter (judged on the shooter's own device: only the quality 0-1 is sent) ──────────
   jTotalMs: 900,                     // a jumper's meter runs this long; held past it, the shot goes up late
@@ -174,7 +178,16 @@ export const T = {
   grabReb: 0.9,                      // ...plus this at Rebounding 11 (he's where the ball is going)
   boardReb: 1.6, boardSize: 0.7, boardBnc: 0.7,   // two under it: weights 1 + Rebounding*1.6 + Size*0.7 + Bounce*0.7, the nearer one a bit more
   looseFriction: 0.9,                // a ball on the floor slows by this a tick
-  swatSpeed: 20,                     // a blocked shot leaves at this speed
+  // a block: off the blocker's hand, away from him and down, between these speeds (ft/s); this share he keeps
+  // himself (tipped up to his own side or caught), and none of it rolls far (a dead swat)
+  swatMin: 5, swatMax: 14, swatSpread: 1.45, swatTip: 0.36,
+  swatGrab: 6,                       // nobody can take a swat for this many ticks (it's off the hand), a tip 4; the shooter
+                                     // can't take his own blocked shot until he's down (T.follow)
+  swatBig: 0.15,                     // ...and of the rest this share are sent flying (swatMax to 8 ft/s more, flat)
+  // ── Between plays ───────────────────────────────────────────────────────────────────────────────
+  feedSpeed: 24,                     // a dead ball (through the net, out of bounds) goes back to whoever checks it this fast
+  spotNear: 0.6,                     // the ball goes live when everyone is this close to his spot...
+  checkWait: 1.2,                    // ...or this long past the check, wherever they are
 
   // ── Online (a player on his own device: lib/btlive/net.js, live/src/btlive.js) ───────────────────
   remoteWaitMs: 650,                 // a shot waits this long past the end of the meter for his device's release

@@ -32,7 +32,7 @@ const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'ca
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
 
 // A seat's input as it comes in, and the input the step gets from it each tick
-export const seatNew = () => ({ pend: 0, k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
+export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
 const num = (v, lo, hi, d = 0) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d)
 export function seatMsg(seat, m, now) {
   if (!Number.isInteger(m.k) || m.k <= seat.k) return false                 // old or repeated
@@ -58,12 +58,9 @@ export function seatInput(seat, s, i) {
       // else: up for a tick, so the next one is a new press
     } else if (seat.h & bit && was) bits |= bit                 // still held
   }
-  // a shot pressed on a device that already had the ball, a beat before the referee gave it to him (a catch, a board
-  // still on its way): it goes up when the ball gets there, if that's within half a second
-  const p = s.players[i], mine = s.ball.st === 'held' && s.ball.holder === i
-  if (bits & 1 && !(seat.last & 1) && !mine && p.team === s.poss) seat.pend = s.tick + 15
-  else if (seat.pend && !(bits & 1) && !(seat.last & 1) && mine && p.act === 'free' && p.noAct <= 0) { if (s.tick <= seat.pend) bits |= 1; seat.pend = 0 }
-  if (seat.pend && s.tick > seat.pend) seat.pend = 0
+  // (a shot pressed a beat before the ball got to him, or in the catch: the step starts it when he can, T.shootBuffer,
+  // the same as in practice)
+  const p = s.players[i]
   seat.last = bits
   out.shoot = out.steal = !!(bits & 1); out.pass = out.jump = !!(bits & 2); out.move = !!(bits & 4)
   // his shot: the one that started with his latest A press goes with the quality his device timed

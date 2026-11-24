@@ -40,7 +40,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const keys = new Set()
   // online: what this device has sent and heard, and what it is doing before the referee knows (local)
   const online = !!net
-  const NB = { k: 0, n: [0, 0, 0], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, burst: 0, lt: 0, wasLive: false }
+  const NB = { k: 0, n: [0, 0, 0], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, burst: 0, lt: 0, wasLive: false, aUsed: 0, aOff: false }
   const DELAY = 6                                  // others are drawn this many ticks behind the latest word (200 ms)
   const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
   const EVLOG = [], PFN = 14                       // (PFN: where a snapshot row keeps the act: proto.js snapOf)
@@ -99,7 +99,7 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
-      else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.nc = H.c }
+      else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.nc = H.c; NB.aUsed = NB.n[0] }
       else if (e.e === 'release') { if (e.pid === me) haptic('light') }
       else if (e.e === 'final') {
         const won = e.winner === s.players[me].team
@@ -167,12 +167,15 @@ export function createEngine({ setup, els, on, net = null }) {
     const p = s.players[me], b = s.ball
     NB.lt++
     prev[me * 2] = p.x; prev[me * 2 + 1] = p.y
-    const A = (H.a && !H.na) || H.ta, C = (H.c && !H.nc) || H.tc
+    const C = (H.c && !H.nc) || H.tc
     H.ta = H.tb = H.tc = false
     const live = s.phase === 'live'
     const has = live && b.st === 'held' && b.holder === me
-    // a shot and a move start here, now; the referee's word follows
-    if (has && A && p.act === 'free' && p.noAct <= 0 && !NB.local) {
+    // a shot and a move start here, now; the referee's word follows. A shot goes from a SHOOT press made with his side
+    // on the ball in the last half second that hasn't started one yet, held or not (the step's rule: T.shootBuffer)
+    const aBuf = NB.aOff && NB.aUsed !== NB.n[0] && clockNow - H.aT0 <= T.shootBuffer * 1000
+    if (has && aBuf && p.act === 'free' && p.noAct <= 0 && !NB.local) {
+      NB.aUsed = NB.n[0]
       const kind = shotKindAt(s, me), d = ref.rimDist(p)
       const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team), kind).c
       p.act = 'gather'; p.actT = 0
@@ -507,7 +510,7 @@ export function createEngine({ setup, els, on, net = null }) {
       if (H[key]) return
       H[key] = true; H['t' + key] = true; H['n' + key] = false
       if (key === 'a') H.aT0 = stamp()
-      if (online) { NB.n['abc'.indexOf(key)]++; NB.edge = true }
+      if (online) { NB.n['abc'.indexOf(key)]++; NB.edge = true; if (key === 'a') NB.aOff = s.players[me].team === s.poss }
     } else {
       if (!H[key]) return
       H[key] = false; H['n' + key] = false
