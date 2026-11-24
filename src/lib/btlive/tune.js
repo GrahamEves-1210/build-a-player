@@ -118,7 +118,7 @@ export const T = {
   contestBehind: 0.6,                // ...this much (a man on his hip still bothers it)
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
-  contestSecond: 0.35,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
+  contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
   jsThrough: 0.42,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.85,                 // ...off a layup
@@ -128,7 +128,7 @@ export const T = {
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
   cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
-  cpuRace: 0.45,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
+  cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
   cpuNeed: 0.42,                     // early in the clock a CPU wants a shot worth this (later, less)...
   cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
   twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
