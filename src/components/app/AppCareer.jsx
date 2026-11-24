@@ -7,7 +7,7 @@ import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, TRADE_ODDS, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
-  openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
+  openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf, canPushMoney,
   retire, canRetire, mustRetire, careerTotals, legacyOf, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, awardWord, careerRecordsFor, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, maxedTrait, trainWindow, ladderNote, specialtyNote, specialtyOf, GOAL_POINT_AT, canUpgrade, upgradeCost, trainable, vetWork, bodyWork, canBodyWork, bodyCost, bodyMaxed, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, captainOf, roundOdds, playoffGame, playoffPlan, cardOdds, gameCast,
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
@@ -2090,16 +2090,17 @@ function Talks({ c, setCareer }) {
       {t.lines.length > 0 && <p className="cr-talks-line">{t.lines[t.lines.length - 1]}</p>}
       {t.walked ? (
         <>
-          <p className="cr-note">They pulled the offer. {c.offers?.length ? 'The other teams are still waiting.' : 'What\'s left is whatever the market has late.'}</p>
-          <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(closeTalks(c)); sfx('tap') }}>BACK TO THE OFFERS</button>
+          <p className="cr-note">They pulled the offer. {c.offers?.length ? (soccer ? 'The other clubs are still waiting.' : 'The other teams are still waiting.') : soccer && !c.offers ? `He stays at ${c.fit?.name ?? 'his club'}.` : 'What\'s left is whatever the market has late.'}</p>
+          <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(closeTalks(c)); sfx('tap') }}>{c.offers?.length ? 'BACK TO THE OFFERS' : 'BACK'}</button>
         </>
       ) : (
         <>
           <div className="cr-asks">
             {Object.entries(ASKS).map(([k, a]) => {
-              const used = k === 'money' ? moneyPushes >= 3 : t.asked.includes(k)
+              const capped = k === 'money' && !canPushMoney(c)
+              const used = k === 'money' ? moneyPushes >= 3 || capped : t.asked.includes(k)
               const o = askOdds(c, k)
-              return <button key={k} className="cr-ask" disabled={used} onClick={() => { const n = ask(c, k); setCareer(n); sfx(n.talks?.walked ? 'deny' : 'tap') }}><b>{soccer ? SOCCER_ASK[k][0] : a.label}</b><small>{soccer ? SOCCER_ASK[k][1] : a.sub}</small><small className="cr-ask-cost">costs {o.lo} · {Math.round(o.p * 100)}% it's {o.hi}</small></button>
+              return <button key={k} className="cr-ask" disabled={used} onClick={() => { const n = ask(c, k); setCareer(n); sfx(n.talks?.walked ? 'deny' : 'tap') }}><b>{soccer ? SOCCER_ASK[k][0] : a.label}</b><small>{capped ? 'At the top of his market' : soccer ? SOCCER_ASK[k][1] : a.sub}</small><small className="cr-ask-cost">costs {o.lo} · {Math.round(o.p * 100)}% it's {o.hi}</small></button>
             })}
           </div>
           <div className="cr-actions">

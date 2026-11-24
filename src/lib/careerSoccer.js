@@ -198,12 +198,23 @@ function soccerClub(short) {
 const CLUB_RANK = [...SOCCER_CLUBS].sort((a, b) => (b.ovr ?? (b.att + b.def) / 2) - (a.ovr ?? (a.att + a.def) / 2)).map(c => c.short)
 // money: pounds at a Premier League club, euros everywhere else. Wages the way football says them: a week
 export const soccerCur = short => (CLUB_BY.get(short)?.league === 'eng.1' ? '£' : '€')
+// (the money is kept in euros; a Premier League club's shown in pounds at the rate: before 2026-11-24 only the sign
+// changed, so £575k a week at City was the same number as €575k at Bayern)
+const GBP = 0.85
+const inCur = (eur, short) => (soccerCur(short) === '£' ? eur * GBP : eur)
 export const wageText = (perYear, short) => {
-  const k = (perYear ?? 0) * 1000 / 52
+  const k = inCur(perYear ?? 0, short) * 1000 / 52
   const n = k >= 1000 ? `${(k / 1000).toFixed(2).replace(/0$/, '')}M` : `${k >= 100 ? Math.round(k / 5) * 5 : Math.max(1, Math.round(k))}k`
   return `${soccerCur(short)}${n} a week`
 }
-export const feeText = (fee, short) => `${soccerCur(short)}${fee >= 10 ? Math.round(fee) : r10(fee)}M`
+export const feeText = (fee, short) => { const v = inCur(fee, short); return `${soccerCur(short)}${v >= 10 ? Math.round(v) : r10(v)}M` }
+// what a club can spend, by where it sits among the clubs (0 the richest): the biggest fee it pays and the most it pays a
+// player a year, € millions (a relegation side doesn't bid €78M or pay €400k a week: 2026-11-24)
+const clubPurse = short => {
+  const i = CLUB_RANK.indexOf(short), f = i < 0 ? 0.5 : i / Math.max(1, CLUB_RANK.length - 1)
+  const w = clamp(1.05 - 0.8 * Math.pow(f, 0.75), 0.25, 1)
+  return { fee: Math.round(20 + 180 * Math.pow(w, 2.6)), wage: r10(3 + 22 * Math.pow(w, 2)) }
+}
 // what a club pays for him (Transfermarkt's rough shape: the level, the age, the years left on the deal), € millions
 export const soccerFee = c => {
   const age = c.age ?? 25, m = age <= 21 ? 1.35 : age <= 24 ? 1.2 : age <= 27 ? 1 : age <= 29 ? 0.75 : age <= 31 ? 0.45 : 0.2
@@ -241,7 +252,14 @@ function academyScore(c) {
 }
 // [the scouts' score, what the scouts call him, the clubs that come (by rank, best first), his first wage, € M a year]
 const ACADEMY = [[93, 'Wonderkid', 0, 10, 1.6], [88, 'Top prospect', 5, 26, 1.0], [83, 'First-team prospect', 16, 50, 0.6], [77, 'Academy regular', 38, 74, 0.45], [-99, 'Late bloomer', 62, 96, 0.35]]
-const academyTier = c => { const x = academyScore(c); return ACADEMY.find(([min]) => x >= min) }
+// (the ranges are set on a 96-club ladder and scaled to the clubs there are, at least four in a range: with 58 clubs
+// the Late bloomer's 62-96 was empty, no club came to the trials and Career stopped on a blank screen)
+const academyTier = c => {
+  const x = academyScore(c), t = ACADEMY.find(([min]) => x >= min)
+  const n = CLUB_RANK.length, k = n / 96
+  const hi = Math.min(n, Math.max(4, Math.round(t[3] * k))), lo = Math.min(Math.round(t[2] * k), hi - 4)
+  return [t[0], t[1], Math.max(0, lo), hi, t[4]]
+}
 export const academyText = c => academyTier(c)[1]
 const ACADEMY_ROLE = { Starter: 'A first-team place from day one.', Rotation: 'A squad number and minutes in the cup. The first team is close.', Bench: 'The biggest stage. A long way to the first team.' }
 export function soccerInterviews(c) {
@@ -621,17 +639,20 @@ function soccerWindow(c) {
   const want = perf >= 0.62 ? 3 : perf >= 0.48 ? 2 : perf >= 0.34 || c.lastRole === 'Backup' ? 1 : 0
   const n = [...Array(want)].filter(() => r() < 0.65).length
   if (n) {
-    const up = CLUB_RANK.filter(t => t !== c.team && (perf >= 0.48 ? strength(soccerClub(t)) >= myStr - 0.2 : true))
+    const up = CLUB_RANK.filter(t => t !== c.team && (perf >= 0.48 ? strength(soccerClub(t)) >= myStr - 0.2 : true) && clubPurse(t).fee >= fee * 0.6)
     const picks = up.map(t => ({ t, k: r() * (perf >= 0.48 ? 1 : 0.6 + (CLUB_RANK.indexOf(t) / CLUB_RANK.length)) })).sort((a, b) => b.k - a.k).map(x => x.t).filter(t => perf >= 0.48 || standAt(c, t).role !== 'Bench').slice(0, n)
     for (const t of picks) {
       const yrs = c.age <= 26 ? 5 : c.age <= 29 ? 4 : c.age <= 31 ? 3 : 2
       const stand = standAt(c, t), bigger = strength(soccerClub(t)) > myStr + 0.4
       const pitch = stand.starter ? (bigger ? 'A bigger club, and the No. 9 shirt is his.' : 'They want him to lead the line. Starts every week.') : bigger ? 'A bigger stage and the trophies that come with it, but a fight for the shirt.' : 'More money, and a fight for a place in the team.'
-      offers.push({ kind: 'bid', team: t, fit: fitAt(t), stand, years: yrs, perYear: money(value * (1.08 + r() * 0.25)), fee: Math.round(fee * (0.9 + r() * 0.35)), pitch })
+      const purse = clubPurse(t)
+      offers.push({ kind: 'bid', team: t, fit: fitAt(t), stand, years: yrs, perYear: money(Math.min(value * (1.08 + r() * 0.25), purse.wage)), fee: Math.round(Math.min(fee * (0.9 + r() * 0.35), purse.fee)), pitch })
     }
   }
   // his own club: a new deal with two years left or less, after a good season
-  if (c.contract.left <= 2 && perf >= 0.35 && !c.loan) offers.unshift({ kind: 'renew', team: c.team, fit: fitAt(c.team), stand: standAt(c, c.team), years: clamp(c.contract.left + 2 + (c.age <= 27 ? 1 : 0), 2, 5), perYear: money(Math.max(c.contract.perYear, value * (0.95 + r() * 0.1))), pitch: 'A new deal. They want him for the long run.' })
+  // (a new deal shortens with age: one year at a time from 34; the long run is for a young man)
+  const renewYrs = clamp(c.contract.left + 2 + (c.age <= 27 ? 1 : 0), 1, c.age >= 34 ? 1 : c.age >= 32 ? 2 : c.age >= 30 ? 3 : 5)
+  if (c.contract.left <= 2 && perf >= 0.35 && !c.loan) offers.unshift({ kind: 'renew', team: c.team, fit: fitAt(c.team), stand: standAt(c, c.team), years: renewYrs, perYear: money(Math.min(Math.max(c.contract.perYear, value * (0.95 + r() * 0.1)), Math.max(c.contract.perYear, clubPurse(c.team).wage))), pitch: c.age >= 32 ? (renewYrs === 1 ? 'A one-year extension. They want him for another season.' : 'A new deal to see out the end of his career here.') : c.age >= 29 ? 'A new deal. They want him for the next few seasons.' : 'A new deal. They want him for the long run.' })
   return offers.length ? offers : null
 }
 // turn them all down: he stays on the deal he has
@@ -654,7 +675,7 @@ function soccerSign(c, o) {
   return {
     ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c), europe: null, europeFor: null } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: 'soccer' }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, loan: null, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
     contract: { kind: change ? (o.kind === 'bid' ? 'transfer' : 'fa') : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
-    decisions: [...c.decisions, { year: c.year + 1, text: `${how}: ${o.years} yrs, ${wageText(o.perYear, o.team)}${extras.length ? ` (${extras.join(', ')})` : ''}` }],
+    decisions: [...c.decisions, { year: c.year + 1, text: `${how}: ${o.years} ${o.years === 1 ? 'yr' : 'yrs'}, ${wageText(o.perYear, o.team)}${extras.length ? ` (${extras.join(', ')})` : ''}` }],
   }
 }
 // A transfer request: the club can say no (a release clause in his deal means it can't); granted, he's sold
@@ -732,7 +753,7 @@ SOCCER.x = {
   role: soccerRole, academyText, interviews: soccerInterviews, offers: soccerOffers,
   newCareer: nation => ({ nation: soccerNationOf(nation), caps: 0, intlGoals: 0, europe: null }),
   onFinal: soccerFinal, finishLeague: soccerFinishLeague, round: soccerRound, season: soccerSeason, afterSeason: soccerAfterSeason,
-  news: soccerNews, window: soccerWindow, sign: soccerSign, transferRequest: soccerTransferRequest,
+  news: soccerNews, window: soccerWindow, sign: soccerSign, transferRequest: soccerTransferRequest, wageCap: short => clubPurse(short).wage,
   totals: soccerTotals, legacy: soccerLegacy, resume: soccerResume, icon: soccerIcon,
   born: name => SOCCER_BORN.get(name), castIndex: SOCCER_BY_NAME, castMates: short => SOCCER_STRIKERS.filter(p => p.team === short && !isNine(p)).slice(0, 4),
   compPool: SOCCER_STRIKERS,

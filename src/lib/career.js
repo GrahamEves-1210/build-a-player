@@ -3692,7 +3692,7 @@ function offseasonEvents(c, moved = false) {
 // event named the old team on the offseason screens and in the season's story, and its team changes, a new
 // scheme's -0.5 or a rebuilt defense's +1, went with him to the new team's season.)
 function redealEvent(c, from) {
-  if (sportOf(c).isSoccer || sportOf(c).isBaseball) return c
+  if (sportOf(c).isBaseball) return c   // (soccer too since 2026-11-24: 'Arsenal sell their best winger' under the Bayern header)
   const e = c.offEvent, yr = c.year + 1
   const bank = c.pos === 'k' ? K_EVENTS : EVENTS[c.sport] ?? EVENTS.nfl
   // (a save from before this: no record of the event. Its line is found by the bank's id and taken out; what it
@@ -3832,7 +3832,8 @@ function contractSituation(c, fresh = false) {
   const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : rosterOf(c, short)); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
   // (a payer's premium tops out at the top of his market: the position's range, or past its record for a dominant player, marketTop)
   const top = marketTop(c)
-  const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(clamp(perYear, S.moneyOf(c)[0], top)), years: yrs, pitch, kind, stand: standAt(fit.short) })
+  // (soccer: and never past what the club pays anyone, S.x.wageCap: a small club doesn't pay €265k a week)
+  const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(clamp(perYear, S.moneyOf(c)[0], Math.max(S.moneyOf(c)[0], Math.min(top, S.x?.wageCap?.(fit.short) ?? Infinity)))), years: yrs, pitch, kind, stand: standAt(fit.short) })
   const list = [
     mk(fitAt(c.team), value * (0.92 + r() * .1), cap(years), fresh ? 'Back where he left off. One more run here.' : 'Stay, and finish what he started here.', 'stay'),
     mk(contender, value * (0.68 + r() * .12), cap(Math.max(1, years - 1)), fresh ? (S.isSoccer ? 'A year at a big club. One more shot at a trophy.' : 'A year on a contender. One more shot at a ring.') : S.isSoccer ? 'Lower wages. A real shot at the title.' : skillPitch(c, contender, 'contender') ?? 'Less money. A real shot at a ring.', 'contender'),
@@ -3848,7 +3849,8 @@ function contractSituation(c, fresh = false) {
   return c.pos === 'k' ? kMarket(c, list, { mk, fitAt, value, top, r }) : list
 }
 export function signOffer(c, o) {
-  if (sportOf(c).x?.sign) return sportOf(c).x.sign(c, o)
+  // (a sport with its own signing, soccer: a move to another club takes the summer's news with it too, redealEvent)
+  if (sportOf(c).x?.sign) { const n = sportOf(c).x.sign(c, o); return n.team !== c.team ? redealEvent(n, c.team) : n }
   c = kSigned(c, o)
   const change = o.team !== c.team
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
@@ -3897,8 +3899,12 @@ export function ask(c, kind) {
   if (patience < 0) {
     // they're done: the offer's gone
     const offers = (c.offers ?? []).filter(o => o.team !== t.team)
-    const fallback = offers.length ? offers : [{ ...t, perYear: r10(t.base * 0.85), years: Math.max(1, t.years - 1), kind: 'late', pitch: 'Late in free agency. The market moved on; this is what\'s left.', noTrade: false, starter: false }]
-    return { ...c, offers: fallback, talks: { ...t, walked: true, patience: 0, lines: [...t.lines, 'The GM closes the folder. "We\'re done here."'] }, events: [...c.events, { year: c.year + 1, text: `Talks with the ${t.fit.name} collapsed over a ${a.label.toLowerCase()}.` }] }
+    // (soccer: a player still under contract just stays where he is; the club that walked away doesn't come back as a
+    // late offer. Out of contract, a smaller offer turns up late in the window)
+    const fc = sportOf(c).isSoccer, bound = fc && (c.contract?.left ?? 0) > 0
+    const fallback = offers.length ? offers : bound ? null : [{ ...t, perYear: r10(t.base * 0.85), years: Math.max(1, t.years - 1), kind: 'late', pitch: fc ? 'Late in the window. The market moved on; this is what\'s left.' : 'Late in free agency. The market moved on; this is what\'s left.', noTrade: false, starter: false }]
+    const stay = bound && !offers.length ? { decisions: [...c.decisions, { year: c.year + 1, text: `Talks with ${t.fit.name} broke down. Staying at ${c.fit?.name ?? 'the club'}.` }] } : {}
+    return { ...c, ...stay, offers: fallback, talks: { ...t, walked: true, patience: 0, lines: [...t.lines, fc ? 'The sporting director closes the folder. "We\'re done here."' : 'The GM closes the folder. "We\'re done here."'] }, events: [...c.events, { year: c.year + 1, text: fc ? `Talks with ${t.fit.name} collapsed over ${({ money: 'his wages', years: 'an extra year', notrade: 'a release clause', starter: 'a first-team promise' })[kind] ?? 'the terms'}.` : `Talks with the ${t.fit.name} collapsed over a ${a.label.toLowerCase()}.` }] }
   }
   // (never past the top of his market, marketTop: leverage lifts it a little for a dominant player)
   const pushed = kind === 'money' ? r10(Math.max(t.perYear, Math.min(t.perYear * 1.08, marketTop(c, leverageOf(c))))) : t.perYear
@@ -3906,6 +3912,8 @@ export function ask(c, kind) {
   const tone = (big ? 'That one stung. ' : '') + (patience >= 2 ? 'A nod. "We can do that."' : patience === 1 ? '"…Fine. But that\'s about it."' : 'A long pause. "Last one."')
   return { ...c, talks: { ...t, patience, perYear: pushed, years, noTrade: t.noTrade || kind === 'notrade', starter: t.starter || kind === 'starter', asked: [...t.asked, kind], lines: [...t.lines, tone] } }
 }
+// more money is still on the table: under the top of his market (at it, the ask would cost patience for nothing)
+export const canPushMoney = c => !!c.talks && marketTop(c, leverageOf(c)) > c.talks.perYear + 0.05
 export const closeTalks = c => ({ ...c, talks: null })
 export const acceptTalks = c => (c.talks && !c.talks.walked ? signOffer(c, c.talks) : c)
 // Mid-contract: ask out. Costs reputation either way. Two asks (owner 11-15): ANY TEAM, always granted, anywhere in
@@ -3915,7 +3923,7 @@ export const TRADE_ODDS = { contender: 0.7, any: 1 }
 export function demandTrade(c, aim = 'contender') {
   const S = sportOf(c)
   if (c.tradeAsked) return c
-  if (S.x?.transferRequest) return S.x.transferRequest(c)
+  if (S.x?.transferRequest) { const n = S.x.transferRequest(c); return n.team !== c.team ? redealEvent(n, c.team) : n }
   const r = seeded(`${c.seed}-trade-${c.year}`)
   const any = aim === 'any'
   const granted = any || r() < TRADE_ODDS.contender
