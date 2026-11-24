@@ -54,10 +54,12 @@
         document.body.appendChild(d)
         try { sessionStorage.removeItem(KEY) } catch (e) {}   // the next visit gets the full repair again
       }
-      // a file under /assets/ failed (missing, or served as the HTML page)
+      // a file under /assets/ failed (missing, or served as the HTML page). Once the game is up, a file a later
+      // screen asks for is lib/chunkHeal.js's to repair (a deploy replaced it: reload into the new version), never
+      // this guard's second try, which clears saved data
       window.addEventListener('error', function (e) {
         var t = e.target, u = t && (t.src || t.href)
-        if (u && /\/assets\//.test(u)) { failed.push(u); rescue('asset ' + u.split('/').pop()) }
+        if (u && /\/assets\//.test(u)) { if (window.__bapStarted && booted()) return; failed.push(u); rescue('asset ' + u.split('/').pop()) }
         else if (!firstErr && e.message) firstErr = e.message
       }, true)
       window.addEventListener('unhandledrejection', function (e) { if (!firstErr) firstErr = String((e.reason && e.reason.message) || e.reason) })

@@ -5,22 +5,26 @@
 //
 // Kept quiet on purpose: at most 5 reports a session, the same message once a
 // session (and once a day per device), and the usual browser noise (extensions,
-// cross-origin "Script error.", ResizeObserver, ad scripts) is skipped.
+// cross-origin "Script error.", ResizeObserver, ad scripts) is skipped. A session
+// is the tab's (sessionStorage), so a reload doesn't start the count again, and a
+// part of the game that didn't download counts as one error whatever the file.
 
 import { supabase } from './supabase'
 import { IS_APP, APP_PLATFORM } from './platform'
 import { version as PKG_VERSION } from '../../package.json'
+import { isChunkError } from './chunkHeal'
 
 const MAX_PER_SESSION = 5
 const STACK_MAX = 4000
 const MSG_MAX = 1000
 const SEEN_KEY = 'bap_err_seen'       // { hash: reportedAt } across sessions, 24h
+const TAB_KEY = 'bap_err_tab'         // { sent, seen: [hash] } for this tab, across reloads
 const DAY = 86400000
 
 let started = false
-let sent = 0
 let lastAt = 0
-const sessionSeen = new Set()
+const tab = (() => { try { const t = JSON.parse(sessionStorage.getItem(TAB_KEY) || 'null'); if (t && Array.isArray(t.seen)) return t } catch {} return { sent: 0, seen: [] } })()
+const saveTab = () => { try { sessionStorage.setItem(TAB_KEY, JSON.stringify(tab)) } catch {} }
 let appVersion = PKG_VERSION
 let buildDate = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : ''
 
@@ -75,13 +79,16 @@ export async function reportError(err, kind = 'manual', extra = null) {
     const { message, stack } = describe(err)
     const fullStack = [stack, extra?.componentStack ? `\n-- component stack --${extra.componentStack}` : ''].join('')
     if (!message || isNoise(message, stack)) return
-    if (sent >= MAX_PER_SESSION) return
-    const h = hash(`${kind}|${message}`)
-    if (sessionSeen.has(h)) return
-    sessionSeen.add(h)
-    if (seenRecently(h)) return
+    if (tab.sent >= MAX_PER_SESSION) return
+    const chunk = isChunkError(message)
+    const h = hash(chunk ? 'chunk' : `${kind}|${message}`)
+    if (tab.seen.includes(h)) return
+    tab.seen.push(h)
+    saveTab()
+    if (!chunk && seenRecently(h)) return   // (a file that won't load: once a tab, since each deploy can bring it back)
     if (!supabase) return
-    sent++
+    tab.sent++
+    saveTab()
     let userId = null
     try { userId = (await supabase.auth.getSession()).data.session?.user?.id ?? null } catch {}
     const row = {

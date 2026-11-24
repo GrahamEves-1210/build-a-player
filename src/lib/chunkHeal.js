@@ -3,7 +3,10 @@
 // during a deploy sticks): fetch the game's files again past the browser's cache, then reload. index.html's boot
 // guard does the same when the game never starts; this is for a part that fails once it's running.
 //   isChunkError(err)        a failed code download, by its message (each browser words it its own way)
-//   healAndReload(err)       refetch and reload, at most once a minute (never a loop); false when it held off
+//   healAndReload(err)       refetch and reload, at most once a minute (never a loop); false when it held off.
+//                            The refetch overwrites a bad copy the browser kept (cache: 'reload' stores the new answer).
+//   healing()                a reload is on its way: show nothing, report nothing (ErrorBoundary.jsx)
+// A file that's gone answers 404 now (public/assets/404.html), never the home page, so nothing bad gets cached.
 const CHUNK = /dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|Loading (CSS )?chunk|ChunkLoadError|reading 'default'|_result\.default|error loading dynamically imported/i
 const LAST = 'bap_chunk_reload'
 
@@ -19,11 +22,19 @@ export function assetUrls(err) {
   return [...out]
 }
 
+// a repair already under way in this page: every later failure (the next lazy screen, the preload event, React
+// asking again) waits for that same reload
+let pending = false
+export const healing = () => pending
+
 export function healAndReload(err, { force = false } = {}) {
+  if (pending) return true
   try {
     if (!force && Date.now() - Number(sessionStorage.getItem(LAST) || 0) < 60000) return false
     sessionStorage.setItem(LAST, String(Date.now()))
   } catch { if (!force) return false }
+  pending = true
+  try { window.gtag?.('event', 'chunk_heal', { file: String(err?.message ?? err ?? '').match(/[\w-]+\.(js|css)/)?.[0] ?? 'unknown' }) } catch {}
   const jobs = assetUrls(err).map(u => fetch(u, { cache: 'reload' }).catch(() => {}))
   // never hang on a slow request: reload after 8s either way
   Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 8000))]).then(() => window.location.reload())

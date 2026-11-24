@@ -74,8 +74,9 @@ if ('serviceWorker' in navigator) {
 }
 
 // A deploy replaced the files an open tab still asks for, or the browser kept a bad copy of one: fetch them again past
-// the cache and reload (lib/chunkHeal.js; at most once a minute, never a loop). The error still goes up to the crash
-// screen for the moment before the reload (holding it back left React a missing component: "reading 'default'").
+// the cache and reload (lib/chunkHeal.js; at most once a minute, never a loop). The error still goes up to the error
+// boundary, which shows a plain backdrop until the reload (holding it back left React a missing component: "reading
+// 'default'").
 window.addEventListener('vite:preloadError', e => { healAndReload(e.payload) })
 
 const isBucket = window.location.pathname.startsWith('/bucket')
