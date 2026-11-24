@@ -36,14 +36,14 @@ export const FRANCHISE_TURN = { card: '/franchise/art/football-card-turn', hero:
 
 // ── NBA_FRANCHISE_LIVE: basketball Franchise (components/franchise2/nba, lib/franchise2/nba) ────────────────────────
 // false: nothing about it renders; basketball's Home is as it was. true: a FRANCHISE card on basketball's Home.
-// On the dev server only, ?nbafranchise=1 turns it on for testing (it sticks on this browser until ?nbafranchise=0).
+// On the dev server it's on (the owner, 2026-11-24); ?nbafranchise=0 turns it off on this browser (?nbafranchise=1 back on).
 const NBA_FRANCHISE_DEV = (() => {
   if (typeof location === 'undefined' || !import.meta.env?.DEV) return false
   try {
     if (/[?&]nbafranchise=1\b/.test(location.search)) localStorage.setItem('bap_frnba_dev', '1')
-    if (/[?&]nbafranchise=0\b/.test(location.search)) localStorage.removeItem('bap_frnba_dev')
-    return localStorage.getItem('bap_frnba_dev') === '1'
-  } catch { return /[?&]nbafranchise=1\b/.test(location.search) }
+    if (/[?&]nbafranchise=0\b/.test(location.search)) localStorage.setItem('bap_frnba_dev', '0')
+    return localStorage.getItem('bap_frnba_dev') !== '0'
+  } catch { return true }
 })()
 export const NBA_FRANCHISE_LIVE = false || NBA_FRANCHISE_DEV
 // Home's card note, the same shape as football's (components/franchise2/nba/NbaFranchise.jsx leaveNote)

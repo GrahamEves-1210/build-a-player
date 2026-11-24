@@ -67,7 +67,7 @@ const AppCompete = lazy(() => import('./app/AppCompete'))
 const BT_LOOK = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('btlook') : null
 const BlacktopLook = import.meta.env.DEV ? lazy(() => import('./app/BlacktopLook')) : null
 // DEV only: Blacktop Live, the real-time prototype (/bucket?btlive=1: lib/btLive.js, components/btlive). Never in a production build
-import { BT_LIVE_OPEN } from '../lib/btLive'
+import { BT_LIVE, BT_LIVE_OPEN } from '../lib/btLive'
 const BtLive = import.meta.env.DEV ? lazy(() => import('./btlive/BtLive')) : null
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
 // A 1v1 player's match id starts with their account id when signed in (VersusLobby myId)
@@ -717,7 +717,7 @@ export default function BucketApp() {
         handleStart(String(to).slice(5), p)
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'salarycap') handleStart('salarycap', position)
-      else if (to === 'blacktop') setPage(btPageFor(btPhaseRef.current))
+      else if (to === 'blacktop') { if (import.meta.env.DEV && BT_LIVE) window.location.href = '/bucket?btlive=1'; else setPage(btPageFor(btPhaseRef.current)) }   // (dev server: the new Blacktop, lib/btLive.js)
       else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
@@ -2244,7 +2244,7 @@ export default function BucketApp() {
               user={user}
               onStart={handleStart}
               onVersus={onVersus}
-              onBlacktop={() => setPage(btPageFor(bt.phase))}
+              onBlacktop={() => { if (import.meta.env.DEV && BT_LIVE) window.location.href = '/bucket?btlive=1'; else setPage(btPageFor(bt.phase)) }}
               blacktop={{ phase: bt.phase, queue: bt.seated }}
               onSquad={openSquad}
               squad={squad}
