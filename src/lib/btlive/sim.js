@@ -214,8 +214,10 @@ function release(s, p, q) {
   const b = s.ball, sh = p.shot
   const cs = sh.kind === 'jumper' && p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
   const rushed = s.clock <= T.rushAt * HZ
+  // late in the game (game point, or anyone three from the goal): Clutch counts
+  const late = s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom
   const defs = s.players.filter(o => o.team !== p.team)
-  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp },
+  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp, gp: late },
     { block: defs.map(() => rnd(s)), make: rnd(s) })
   const st = s.stats[p.i]
   p.act = 'follow'; p.actT = 0; p.actN = ticks(T.follow); p.shot = null
@@ -431,7 +433,7 @@ function move(s, p, inp) {
       } else top *= T.gatherSlowL                // going up for a layup: the drive carries him
     } else if (p.act === 'follow') top *= 0.5
     else if (p.act === 'jump' || p.act === 'land') top *= 0.15
-    const a = T.accel * (def ? 0.85 + T.defAccelPer * p.R.per : 1) * DT
+    const a = (def ? p.R.accelDef : p.R.accel) * DT
     const dvx = mx * top - p.vx, dvy = my * top - p.vy, dv = Math.hypot(dvx, dvy)
     if (dv <= a) { p.vx = mx * top; p.vy = my * top } else { p.vx += dvx / dv * a; p.vy += dvy / dv * a }
   }
@@ -462,9 +464,13 @@ function collide(s, walk = false, slip = null) {
     if (d >= R2 || (slip && (slip(a) || slip(b)))) continue
     if (d < 0.001) { dx = 1; dy = 0; d = 1 }
     const nx = dx / d, ny = dy / d, over = R2 - d
-    // (between plays (walk) nobody is set: a man on his spot gives a step to one going by)
-    const set = (p, o) => !walk && (p.act === 'free' || p.act === 'jump' || p.act === 'land') && ((o.i === holder && p.team !== o.team) || Math.hypot(p.vx, p.vy) < 1.2)
-    const ma = a.R.mass * (set(a, b) ? T.ground : 1), mb = b.R.mass * (set(b, a) ? T.ground : 1)
+    // (the man guarding the ball holds a little ground, only while he's set: his weight, his Size, does the rest,
+    // so a big backs a small man down and a small man doesn't move a big; between plays (walk) nobody is set: a man on
+    // his spot gives a step to one going by)
+    const set = (p, o) => walk || !(p.act === 'free' || p.act === 'jump' || p.act === 'land') ? 1
+      : Math.hypot(p.vx, p.vy) < 1.2 && !(o.i === holder && p.team !== o.team) ? T.ground
+      : o.i === holder && p.team !== o.team && Math.hypot(p.vx, p.vy) < T.groundDefSpeed ? T.groundDef : 1
+    const ma = a.R.mass * set(a, b), mb = b.R.mass * set(b, a)
     // a man placed by his own device isn't pushed here (his device does its own bumping); the other one gives way
     let fa = mb / (ma + mb), fb = ma / (ma + mb)
     if (a.remote && b.remote) continue
