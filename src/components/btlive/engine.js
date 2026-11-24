@@ -397,20 +397,18 @@ export function createEngine({ setup, els, on, net = null }) {
     if (has) drawBall(off < 0 ? x0 + nw + 8 + 9 : x0 - 9, y, 0.85, off < 0 ? x0 + nw + 17 : x0 - 9, y, 3)
     if (import.meta.env.DEV) LAY.tabs[i] = [off < 0 ? ex : x0 - 18, y - 13, off < 0 ? x0 + nw + 26 : ex, y + 13]
   }
-  // the ball in a hand: the side away from the nearest man (a crossover goes round the back), so it is never on a face
+  // the ball in a hand: the side away from the men near him (a crossover goes round the back), so it is never on a face
   const HAND = new Float32Array(N).fill(1)
   let lastDraw = 0
   function handTo(i, dt) {
     const P = s.players, p = P[i], px = -p.fy, py = p.fx                // his right hand, facing (fx, fy)
-    let best = 49, tgt = HAND[i] >= 0 ? 1 : -1
+    let sum = 0, tgt = HAND[i] >= 0 ? 1 : -1
     for (const o of P) {
       if (o === p) continue
       const ox = o.x - p.x, oy = o.y - p.y, d2 = ox * ox + oy * oy
-      if (d2 >= best) continue
-      best = d2
-      const side = ox * px + oy * py
-      if (Math.abs(side) > 0.45) tgt = side > 0 ? -1 : 1
+      if (d2 < 64) sum += (ox * px + oy * py) / Math.max(4, d2)          // which side the men near him are on, the nearest counting most
     }
+    if (Math.abs(sum) > 0.06) tgt = sum > 0 ? -1 : 1
     HAND[i] += (tgt - HAND[i]) * (1 - Math.exp(-dt / 70))
     return HAND[i]
   }
@@ -483,7 +481,7 @@ export function createEngine({ setup, els, on, net = null }) {
     }
   }
   let tk0 = 30
-  const BARS = [], DOTS = [], CHOICE = new Int8Array(N)
+  const BARS = [], DOTS = [], CHOICE = new Int8Array(N), TABY = new Int8Array(N)
   function draw(now) {
     const a = clamp(acc / STEP, 0, 1), P = s.players
     const dt = clamp(now - lastDraw, 0, 100); lastDraw = now
@@ -557,7 +555,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const ux = ca * fx0 + sa * -fy0, uy = ca * fy0 + sa * fx0          // that hand's way from his middle
       const hr = (tk / 2 + Math.max(4.5, k * 0.7) * 0.55) * po.sc
       gx = X(holder) + po.dx + ux * hr; gy = Y(holder) + uy * hr
-      bx = gx; by = gy - po.lift - z * k * 0.08; bsc = 0.92 + z * 0.035; bz = z
+      bx = gx; by = gy - po.lift; bsc = 0.92 + z * 0.035; bz = z
       key = 'h' + holder
     } else {
       const q = ballAt(DB[0], DB[1], DB[2])
@@ -640,7 +638,25 @@ export function createEngine({ setup, els, on, net = null }) {
       marks.push(rc)
     }
     // the men cut by the edge of the screen
-    for (const i of order) { const off = cut(i); if (off) drawTab(i, off, clamp(Y(i), 14, h - 14), tk, i === holder) }
+    // (at his height, or the nearest height that isn't on a man near the edge, another name or another tab)
+    const tfs = Math.max(13, Math.round(tk * 0.36))
+    for (const i of order) {
+      const off = cut(i)
+      if (!off) continue
+      ctx.font = `${tfs}px ${FONT}`
+      const tw = 30 + ctx.measureText(setup.looks[i].label.toUpperCase().slice(0, 9)).width + (i === holder ? 20 : 0)
+      const ex = off < 0 ? L : Rr, y0 = clamp(Y(i), 14, h - 14)
+      let best = y0, bc = Infinity
+      for (const st of [0, -1, 1, -2, 2, -3, 3, -4, 4]) {
+        const y = clamp(y0 + st * 30, 14, h - 14), rc = off < 0 ? [ex, y - 14, ex + tw, y + 14] : [ex - tw, y - 14, ex, y + 14]
+        let c = Math.abs(st) * 40 + (TABY[i] === st ? -30 : 0)
+        for (const d of DOTS) c += ovl(rc, d) * 2
+        for (const o of BARS) c += ovl(rc, o) * 2
+        if (c < bc) { bc = c; best = y; TABY[i] = st }
+      }
+      drawTab(i, off, best, tk, i === holder)
+      BARS.push(off < 0 ? [ex, best - 14, ex + tw, best + 14] : [ex - tw, best - 14, ex, best + 14])
+    }
     // meters
     for (let i = 0; i < N; i++) if (P[i].act === 'gather' && P[i].shot && live) drawMeter(i, X(i), Y(i), tk, now)
     // how the release was
