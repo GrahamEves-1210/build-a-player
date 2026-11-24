@@ -113,7 +113,7 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   if (on('equal')) {
     head('Equal builds (target: score on 45-50% of possessions; steals and blocks a few a game)')
     console.log('game          bots     poss%   pts/poss  len    stl/g blk/g oreb% to/g  green  ankles/100g posters deep  close')
-    for (const [name, mkTeam] of [['1v1 guards', o => [G(o)]], ['1v1 bigs', o => [B(o)]], ['2v2 g+b', o => [G(o), B(o)]], ['3v3 g+g+b', o => [G(o), G(o), B(o)]]]) {
+    for (const [name, mkTeam] of [['1v1 guards', o => [G(o)]], ['1v1 bigs', o => [B(o)]], ['2v2 g+b', o => [G(o), B(o)]]]) {
       for (const [bn, bot, ovr] of [['allstar', AS, 80], ['allstar', AS, 92], ['avg human', AVG, 80], ['pro', cpu('pro'), 80]]) {
         const S = series(mkTeam(ovr), mkTeam(ovr), bot, bot, runs, `eq-${name}-${bn}-${ovr}`)
         const pp = (S.scored[0] + S.scored[1]) / (S.poss[0] + S.poss[1]) * 100
@@ -125,7 +125,7 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
 
   if (on('gap')) {
     head('A much better build: 95 OVR against 80 (target: wins 75-80% of games, never close to 100%)')
-    for (const [name, mk] of [['1v1 guards', o => [G(o)]], ['1v1 bigs', o => [B(o)]], ['2v2 g+b', o => [G(o), B(o)]], ['3v3 g+g+b', o => [G(o), G(o), B(o)]]]) {
+    for (const [name, mk] of [['1v1 guards', o => [G(o)]], ['1v1 bigs', o => [B(o)]], ['2v2 g+b', o => [G(o), B(o)]]]) {
       for (const [bn, bot] of [['allstar', AS], ['avg human', AVG]]) {
         const S = series(mk(95), mk(80), bot, bot, runs, `gap-${name}-${bn}`)
         const w = 100 * S.winA / S.n
@@ -257,8 +257,8 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
       console.log(`1v1 guard  ${name.padEnd(30)} wins ${w.toFixed(0)}% ${(w <= 50 ? 'ok' : 'HIGH').padEnd(5)} poss% ${possPct(S, 0)} v ${possPct(S, 1)}`)
     }
     for (const [name, bot] of [['swipe at everything', stealSpam], ['camp in the paint', paintCamp]]) {
-      const S = series([G(82), G(82), B(82)], [G(82), G(82), B(82)], [bot, base, base], base, runs, `tac3-${name}`)
-      console.log(`3v3 one player: ${name.padEnd(25)} his team wins ${pct(S.winA, S.n)}`)
+      const S = series([G(82), B(82)], [G(82), B(82)], [bot, base], base, runs, `tac2-${name}`)
+      console.log(`2v2 one player: ${name.padEnd(25)} his team wins ${pct(S.winA, S.n)}`)
     }
   }
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(0)} s, ${runs} games a line`)

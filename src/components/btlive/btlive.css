@@ -19,7 +19,7 @@
 }
 .btlv *, .btlv *::before, .btlv *::after { box-sizing: border-box; }
 .btlv button { font: inherit; color: inherit; letter-spacing: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
-.btlv .btlv-t0 { --tc: var(--t0); } .btlv .btlv-t1 { --tc: var(--t1); }
+.btlv .btlv-t0 { --tc: var(--t0); } .btlv .btlv-t1 { --tc: var(--t1); } .btlv .btlv-t2 { --tc: var(--t2); }
 .btlv-tag { font-size: 13px; letter-spacing: 2.4px; color: var(--muted); }
 html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavior: none; }
 

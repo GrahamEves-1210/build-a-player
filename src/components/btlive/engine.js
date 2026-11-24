@@ -8,7 +8,7 @@ import { sfx, haptic } from '../../lib/juice'
 
 const STEP = 1000 / HZ
 const FONT = '"BAP Bebas", "Bebas Neue", "BAP Anton", Impact, sans-serif'
-const TEAM = ['#4da3ff', '#ff4d5e']          // Blacktop's two sides (AppBlacktop TEAM_COLORS)
+const TEAM = ['#4da3ff', '#ff4d5e', '#c792ff']   // Blacktop's two sides (AppBlacktop TEAM_COLORS); King of the Hill's third man
 const GREEN = '#3ddc84', AMBER = '#f2b33d', RED = '#ff5a5a', FLOOD = '#fff0cf'
 // the release, by how far off it was: green on time, amber a touch off, red well off (EARLY sits under the window,
 // LATE over it, so the marker's place says which); a shot that never went up is grey
@@ -28,7 +28,7 @@ const reduced = () => document.documentElement.classList.contains('bap-reduce-mo
 //        referee's snapshots, eased between them (setup.levels all null)
 export function createEngine({ setup, els, on, net = null }) {
   const ctx = els.canvas.getContext('2d')
-  let s = createGame({ teams: setup.teams, seed: setup.seed })
+  let s = createGame({ teams: setup.teams, seed: setup.seed, mode: setup.mode })
   const me = setup.me
   const levels = setup.levels.slice()
   const N = s.players.length
@@ -108,6 +108,10 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.nc = H.c }
       else if (e.e === 'release') { if (e.pid !== me || levels[me]) sfx('btrelease', 0.6) }        // his own sounds as he lets go (letGo)
+      // a teammate calling for the ball: his man shows it on every screen (draw), and the man with it hears it
+      else if (e.e === 'call') { if (p.team === P[me].team && e.pid !== me) { sfx('tap'); if (s.ball.holder === me) haptic('medium') } }
+      // King of the Hill: a stop, and he has to take it past the arc
+      else if (e.e === 'clear') say('CLEAR IT', p.x, wordY(p.y), TEAM[p.team])
       else if (e.e === 'final') {
         const won = e.winner === s.players[me].team
         sfx(won ? 'award' : 'deny'); if (won) haptic('success')
@@ -194,7 +198,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const live = s.phase === 'live'
     const has = live && b.st === 'held' && b.holder === me
     // a shot and a move start here, now; the referee's word follows
-    if (has && A && p.act === 'free' && p.noAct <= 0 && !NB.local) {
+    if (has && A && p.act === 'free' && p.noAct <= 0 && !NB.local && s.mustClear !== me) {
       const kind = shotKindAt(s, me), d = ref.rimDist(p)
       const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team), kind).c
       p.act = 'gather'; p.actT = 0
@@ -333,16 +337,16 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     const has = b.st === 'held' && b.holder === me, up = b.st === 'shot' || b.st === 'loose'
     // (between plays nothing is live: no buttons)
-    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? 'ball' : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
+    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? (s.mustClear === me ? 'clear' : 'ball') : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
     if (mode !== shown.mode) {
       shown.mode = mode
       const set = (key, text) => { els.lab[key].textContent = text || ''; els.btn[key].classList.toggle('is-off', !text) }
       set('a', mode === 'ball' ? 'SHOOT' : mode === 'def' ? 'STEAL' : '')
-      set('b', mode === 'none' ? '' : mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
-      set('c', mode === 'ball' ? 'MOVE' : '')
+      set('b', mode === 'none' || mode === 'clear' ? '' : mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
+      set('c', mode === 'ball' || mode === 'clear' ? 'MOVE' : '')
     }
     // cooldowns dim their button
-    const cdA = mode === 'def' ? p.stealCd > 0 : false, cdC = mode === 'ball' ? p.moveCd > 0 : false
+    const cdA = mode === 'def' ? p.stealCd > 0 : false, cdC = mode === 'ball' || mode === 'clear' ? p.moveCd > 0 : false
     if (els.btn.a.classList.contains('is-cd') !== cdA) els.btn.a.classList.toggle('is-cd', cdA)
     if (els.btn.c.classList.contains('is-cd') !== cdC) els.btn.c.classList.toggle('is-cd', cdC)
   }
@@ -522,6 +526,12 @@ export function createEngine({ setup, els, on, net = null }) {
           ctx.beginPath(); ctx.ellipse(tx, ty + tk * 0.42, tk * 0.86, tk * 0.4, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([])
         }
       }
+    }
+    // a teammate calling for the ball: a ring on his man, on every screen, for as long as the call is fresh
+    if (s.call && s.phase === 'live' && s.tick - s.call.tick < 45 && P[s.call.pid]) {
+      const ci = s.call.pid, f = clamp((s.tick - s.call.tick) / 45, 0, 1)
+      ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,255,255,${0.95 - 0.5 * f})`
+      ctx.beginPath(); ctx.arc(X(ci), Y(ci), tk * (0.82 + 0.25 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
     }
     // players, the far ones first
     const order = P.map((_, i) => i).sort((i, j) => P[i].y - P[j].y)
