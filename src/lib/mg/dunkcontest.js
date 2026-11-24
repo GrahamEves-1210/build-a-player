@@ -1,25 +1,30 @@
-// The Slam Dunk Contest: one run is one dunk attempt, picked before it starts (DUNKS). Shot from the side, like the
-// broadcast: the judges' table along the far sideline, the building behind it, the rim on the left and the run-up
-// coming in from the right.
+// The Slam Dunk Contest: one run is one dunk attempt. Shot from the side, like the broadcast: the judges' table along
+// the far sideline, the building behind it, the rim on the left and the run-up coming in from the right.
+//   0. The call (g.phase 'pick'): he stands at the top of his run-up, bouncing it, and calls the dunk off the board on
+//      the court: every dunk, by tier, with what the judges give it landed on the first try. Tap a dunk, then GO; or the
+//      arrows and SPACE. Career's second and third tries at a dunk (def.lock) skip it: it's the same dunk.
 //   1. The takeoff. He runs at the gold mark on the floor; a ring closes on it. Tap as his plant foot hits it.
 //      Early and he's left from too far out: short, off the front of the rim. Late and he's under it: off the back iron.
 //   2. The move in the air (medium and hard dunks): a ring closes on the ball. A hold (the windmill, the rock, the spin,
-//      the split) is let go as it meets the ball; a tap (the leg swap, the pump, the cock) is tapped as it does. Off on
-//      it and he can't hang on to it: the ball comes loose.
+//      the split) is let go as it meets the ball (a plain tap on it counts too); a tap (the leg swap, the pump, the cock)
+//      is tapped as it does. Off on it and he can't hang on to it: the ball comes loose.
 //   3. The finish. A ring closes on the rim: tap as it meets the iron. Early, he jams it into the front rim; late, he's
 //      on the way down and it comes off the back iron.
-// Harder dunks have more steps and tighter windows, and score more with the judges (career's screens judge them from
-// raw: tier, landed, quality, attempt). The window comes from the player's grade: v is the mean of his Finishing and
-// Bounce on 0-11; invitees are 9 to 11. The hard ones go to slow motion at the top of the jump (the rules run on in
-// slow time, and the windows are the same in real time, so it's the look, not a softer window).
-import { clamp, lerp, prog, easeOut, easeIn, easeInOut, rngOf, outcome, layer, text, basketball, nudge, GOOD, BAD, GOLD, DISPLAY, LABEL } from './kit.js'
+// Every ring is up for most of a second before it closes: the next one shows, dim, while he's still on this one, and
+// the medium and hard dunks go to slow motion through the move (the windows are in real time, so slow motion buys
+// reading time, not a softer window). Harder dunks have more steps and tighter windows, and score more with the
+// judges (career's screens judge them from raw: tier, landed, quality, attempt). The window comes from the player's
+// grade: v is the mean of his Finishing and Bounce on 0-11; invitees are 9 to 11.
+// Def: dunk (the one the board opens on; with lock, the one he's on), lock, used (dunks landed tonight, off the board),
+// attempt, label (his name), need (what the dunk needs to move him up, Career), onPick(id) (the call, as he makes it).
+import { clamp, lerp, prog, easeOut, easeIn, easeInOut, rngOf, outcome, layer, text, basketball, nudge, keyCap, rr, GOOD, BAD, GOLD, DISPLAY, LABEL, BODY } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, athlete, athleteFront, paintBowl, crowdUp, camFlashes, boardFlash, lightFx, warmCrowd, FIG_FT, BALL_R, SKINS, R_UP, R_FLEX, R_HEAD, R_HIPS } from './meter.js'
 import { standAt, SCOUT, FOLK_SKIN } from './dash.js'
 import { nameTag } from './art.js'
 import { castMen } from './read.js'
 
 export const how = {
-  'dunk-contest': 'Tap as the ring closes on the takeoff mark. In the air, hold and let go, or tap, as each ring meets the ball. Then tap as the ring meets the rim to throw it down.',
+  'dunk-contest': 'Call the dunk. Tap as the ring closes on the takeoff mark. In the air, tap (or let go) as each ring meets the ball. Then tap as the ring meets the rim to throw it down.',
 }
 
 // ── The dunks ───────────────────────────────────────────────────────────────
@@ -37,6 +42,10 @@ export const DUNKS = [
   { id: 'legs-360', name: 'Between the Legs 360', tier: 'hard', line: 'Spins all the way around and takes it through the legs before he finishes.' },
 ]
 const DUNK_OF = Object.fromEntries(DUNKS.map(d => [d.id, d]))
+// what five judges give a dunk landed on the first try, placed in the range by how clean it was (lib/allStar.js judges
+// it; the board on the court shows it)
+export const JUDGE_RANGE = { easy: [37, 42], medium: [41, 46], hard: [45, 50] }
+export const TIERS = ['easy', 'medium', 'hard']
 
 // ── Timing ──────────────────────────────────────────────────────────────────
 const RUN0 = 1000          // the walk-up's over: he goes
@@ -44,12 +53,14 @@ const T1 = 2600            // his plant foot on the mark, if he's on time
 const RUN_V = 0.0165       // feet a ms at full speed (16.5 ft/s)
 const ACCEL = 420          // ms to full speed
 const STRIDE = 640         // ms for two steps
-const LEAD_TAKE = 820, LEAD_AIR = 480    // how long a ring takes to close (game ms; the air's in slow time on the hard ones)
+const LEAD_TAKE = 820      // how long the takeoff ring takes to close
+const LEAD_AIR = 680       // and a ring in the air, real ms (it shows from takeoff at the soonest)
 const DROP = 320           // off the rim to the floor
 const HOLD_MIN = 130       // a touch this short is a tap, not a hold
-// the half-window in real ms at grade 9, and what each grade either side is worth
-const WIN = { easy: [111, 0.19], medium: [84, 0.1], hard: [79, 0.065] }
-const winOf = (tier, v) => WIN[tier][0] * Math.max(0.32, 1 + WIN[tier][1] * (clamp(v, 0, 11) - 9) * (v < 9 ? 0.55 : 1))
+// the half-window in real ms at grade 9, and what each grade either side is worth (11-24: was 111 / 84 / 79, and the
+// medium dunks' finish ring was up for a fifth of a second; an average thumb landed a medium one try in three)
+const WIN = { easy: [138, 0.08], medium: [108, 0.08], hard: [86, 0.08] }
+const winOf = (tier, v) => WIN[tier][0] * Math.max(0.4, 1 + WIN[tier][1] * (clamp(v, 0, 11) - 9) * (v < 9 ? 0.6 : 1))
 const SLOW_RATE = 0.42, SLOW_RAMP = 100
 
 // ── The poses (the side rig, lib/mg/meter.js: x forward, y up from the floor, 110 to a man) ─────
@@ -99,25 +110,25 @@ const SPEC = {
     keys: [k(0, TAKE1), k(170, RISE1, 'n'), k(390, TCOCK, 'n'), k(520, SLAM1, 'n')] },
   reverse: { stamp: 'REVERSE JAM', take: 3.3, F: 900, H: 3.3, fin: 520, hang: 0, xFin: 0.95, spin: [80, 340, 0.5], moves: [],
     keys: [k(0, TAKE1), k(200, UP2), k(380, AWAY2), k(520, REVSLAM)] },
-  windmill: { stamp: 'WINDMILL', take: 5.2, F: 980, H: 3.45, fin: 560, hang: 200, one: true,
+  windmill: { stamp: 'WINDMILL', take: 5.2, F: 980, H: 3.45, fin: 560, hang: 200, one: true, slow: [220, 560], slowRate: 0.55,
     moves: [{ kind: 'hold', at: 360, hold: 'HOLD TO WIND IT UP', noun: 'WINDMILL' }],
     keys: [k(0, TAKE1), k(120, WMILL, 'n', -40), k(240, WMILL, 'n', -150), k(360, WMILL, 'n', -250), k(470, WMILL, 'n', -292), k(560, SLAM1, 'n')] },
-  cradle: { stamp: 'CRADLE ROCK', take: 5.2, F: 980, H: 3.45, fin: 560, hang: 0, one: true,
+  cradle: { stamp: 'CRADLE ROCK', take: 5.2, F: 980, H: 3.45, fin: 560, hang: 0, one: true, slow: [200, 560], slowRate: 0.55,
     moves: [{ kind: 'hold', at: 330, hold: 'HOLD TO ROCK IT', noun: 'ROCK' }],
     keys: [k(0, TAKE1), k(130, ROCK, 'n', 55), k(330, ROCK, 'n', -112), k(450, ROCK, 'n', 96), k(560, SLAM1, 'n')] },
-  'bounce-legs': { stamp: 'THROUGH THE LEGS', take: 5, F: 1000, H: 3.45, fin: 580, hang: 0, bounce: true,
+  'bounce-legs': { stamp: 'THROUGH THE LEGS', take: 5, F: 1000, H: 3.45, fin: 580, hang: 0, bounce: true, slow: [230, 580], slowRate: 0.55,
     moves: [{ kind: 'tap', at: 370, verb: 'UNDER THE LEG', noun: 'LEG SWAP' }],
     keys: [k(0, CATCH, 'x'), k(150, RISE1, 'n'), k(280, KNEE_N, 'n'), k(345, KNEE_N, 'n'), k(395, UNDER_F, 'f'), k(490, FARUP, 'f'), k(580, SLAMF, 'f')] },
-  'double-clutch': { stamp: 'DOUBLE CLUTCH', take: 5, F: 1020, H: 3.5, fin: 600, hang: 300,
+  'double-clutch': { stamp: 'DOUBLE CLUTCH', take: 5, F: 1020, H: 3.5, fin: 600, hang: 300, slow: [240, 600], slowRate: 0.55,
     moves: [{ kind: 'tap', at: 380, verb: 'PUMP IT BACK UP', noun: 'PUMP' }],
     keys: [k(0, TAKE1), k(150, UP2), k(280, CLUTCH), k(380, CLUTCH_LO), k(500, UP2), k(600, SLAM2)] },
-  '360-windmill': { stamp: '360 WINDMILL', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 240, one: true, spin: [60, 330, 1], slow: [380, 600],
+  '360-windmill': { stamp: '360 WINDMILL', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 240, one: true, spin: [60, 330, 1], slow: [200, 640],
     moves: [{ kind: 'hold', at: 330, hold: 'HOLD THE SPIN', noun: 'SPIN' }, { kind: 'tap', at: 470, verb: 'WINDMILL IT', noun: 'WINDMILL' }],
     keys: [k(0, TAKE1), k(150, CHEST), k(330, CHEST), k(360, WMILL, 'n', -45), k(410, WMILL, 'n', -150), k(470, WMILL, 'n', -250), k(560, WMILL, 'n', -292), k(640, SLAM1, 'n')] },
-  'ft-line': { stamp: 'FROM THE LINE', take: 14.15, F: 1300, H: 3.65, fin: 800, hang: 0, one: true, slow: [420, 780], takeW: 0.96,
+  'ft-line': { stamp: 'FROM THE LINE', take: 14.15, F: 1300, H: 3.65, fin: 800, hang: 0, one: true, slow: [220, 800], takeW: 0.96,
     moves: [{ kind: 'hold', at: 420, hold: 'HOLD THE SPLIT', noun: 'GLIDE' }, { kind: 'tap', at: 620, verb: 'COCK IT BACK', noun: 'COCK' }],
     keys: [k(0, TAKE1), k(180, SPLIT, 'n'), k(420, SPLIT2, 'n'), k(520, RISE1, 'n'), k(620, TCOCK, 'n'), k(800, SLAM1, 'n')] },
-  'legs-360': { stamp: '360 THROUGH THE LEGS', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 200, spin: [60, 330, 1], slow: [380, 600],
+  'legs-360': { stamp: '360 THROUGH THE LEGS', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 200, spin: [60, 330, 1], slow: [200, 640],
     moves: [{ kind: 'hold', at: 330, hold: 'HOLD THE SPIN', noun: 'SPIN' }, { kind: 'tap', at: 470, verb: 'UNDER THE LEG', noun: 'LEG SWAP' }],
     keys: [k(0, TAKE1), k(150, CHEST), k(330, CHEST), k(400, KNEE_N, 'n'), k(445, KNEE_N, 'n'), k(495, UNDER_F, 'f'), k(560, FARUP, 'f'), k(640, SLAMF, 'f')] },
 }
@@ -130,33 +141,33 @@ function rateAt(S, tau) {
   if (!S.slow || tau == null) return 1
   const [a, b] = S.slow
   const f = tau < a - SLOW_RAMP || tau > b + SLOW_RAMP ? 0 : tau < a ? (tau - a + SLOW_RAMP) / SLOW_RAMP : tau > b ? 1 - (tau - b) / SLOW_RAMP : 1
-  return 1 - (1 - SLOW_RATE) * easeInOut(clamp(f, 0, 1))
+  return 1 - (1 - (S.slowRate ?? SLOW_RATE)) * easeInOut(clamp(f, 0, 1))
 }
 // where he is on the run-up (feet from the rim), at game time t
 function runD(s) { return s <= 0 ? 0 : s < ACCEL ? (RUN_V * s * s) / (2 * ACCEL) : RUN_V * (s - ACCEL / 2) }
 const runX = (S, t) => S.take + runD(T1 - RUN0) - runD(t - RUN0)
 
 export function make({ v, seed, def }) {
-  const id = SPEC[def?.dunk] ? def.dunk : 'windmill'
-  const S = SPEC[id], D = DUNK_OF[id]
+  const used = new Set(Array.isArray(def?.used) ? def.used : [])
+  const open = id => !!SPEC[id] && !used.has(id)
+  const lock = !!def?.lock && !!SPEC[def?.dunk]
+  // (the board opens on the dunk he called last, or the Windmill; never one he's already landed tonight)
+  const first = lock ? def.dunk : open(def?.dunk) ? def.dunk : open('windmill') ? 'windmill' : (DUNKS.find(d => open(d.id)) ?? DUNKS[0]).id
   const look = rngOf(`${seed}|look`)   // (what things look like, never what happens)
-  const W = winOf(D.tier, v)
-  const steps = [
-    { kind: 'take', T: T1, W: W * (S.takeW ?? 1), cueAt: T1 - LEAD_TAKE, lead: LEAD_TAKE, rate: 1, liveAt: 0, noun: 'TAKEOFF' },
-    ...S.moves.map(m => ({ ...m, T: null, W: null, cueAt: null, lead: null, rate: 1, liveAt: null })),
-    { kind: 'fin', at: S.fin, T: null, W: null, cueAt: null, lead: null, rate: 1, liveAt: null, noun: 'FINISH' },
-  ]
-  for (const s of steps) { s.res = null; s.e = null; s.q = 0 }
+  let id, S, D, W, steps
   const g = {
     t: 0, game: 'dunk-contest', zones: 'none', fx: [], done: null, outro: 2200, stamp: null, nudge: nudge(),
-    id, dunk: D, S, steps, k: 0, W, v, rate: 1, p1: null, held: false, downAt: null, downK: -1,
+    id: null, dunk: null, S: null, steps: null, k: 0, W: 0, v, rate: 1, p1: null, held: false, downAt: null, downK: -1,
     fail: null, landed: false, tf: null, clank: null, lost: null, doneAt: null, landAt: null,
-    attempt: def?.attempt ?? 1, label: def?.label ?? null,
+    attempt: def?.attempt ?? 1, label: def?.label ?? null, need: def?.need ?? null, used,
+    // the call: the board on the court until he takes one (g.stick: the arrows reach the game as they are)
+    phase: lock ? 'run' : 'pick', pickT: 0, cursor: DUNKS.findIndex(d => d.id === first), menu: null, stick: !lock,
     flair: look(), popDir: look() < 0.5 ? 1 : -1,
-    hud: { prompt: null, dots: steps.map(() => null), hot: false },
+    hud: { prompt: null, dots: null, hot: false },
     ev: [],
     tauNow: () => (g.p1 == null ? null : g.t - g.p1),
     tick(dt) {
+      if (g.phase === 'pick') { g.pickT += dt; return }
       g.rate = rateAt(S, g.tauNow())
       g.t += dt * g.rate
       for (const e of g.ev) if (!e.done && g.t >= e.at) { e.done = true; e.fn() }
@@ -167,15 +178,69 @@ export function make({ v, seed, def }) {
       prompt()
     },
     input(a) {
+      if (g.phase === 'pick') return pickInput(a)
       if (a.kind === 'up') { const was = g.held; g.held = false; if (was) release(); return }
       if (a.kind !== 'down') return
+      const was = g.held
       g.held = true; g.downAt = g.t; g.downK = g.k
       const s = steps[g.k]
       if (!s || g.fail || g.done || s.T == null) return
-      if (s.kind === 'hold') return            // (the grip: it's the letting go that's timed)
       if (g.t < s.cueAt) return               // (nothing to time yet)
+      // a hold: it's the letting go that's timed, and this is the grip; a fresh tap right on the ring counts too
+      if (s.kind === 'hold') { if (!was && Math.abs(g.t - s.T) <= s.W) judge(s, g.t); return }
       if (s.kind === 'take') takeoff(g.t); else judge(s, g.t)
     },
+  }
+  // the dunk on the board's cursor, or the one he's taken: its rules, its steps
+  function load(nid) {
+    id = nid; S = SPEC[id]; D = DUNK_OF[id]; W = winOf(D.tier, v)
+    steps = [
+      { kind: 'take', T: T1, W: W * (S.takeW ?? 1), cueAt: T1 - LEAD_TAKE, showAt: T1 - LEAD_TAKE, lead: LEAD_TAKE, rate: 1, liveAt: 0, noun: 'TAKEOFF' },
+      ...S.moves.map(m => ({ ...m, T: null, W: null, cueAt: null, showAt: null, lead: null, rate: 1, liveAt: null })),
+      { kind: 'fin', at: S.fin, T: null, W: null, cueAt: null, showAt: null, lead: null, rate: 1, liveAt: null, noun: 'FINISH' },
+    ]
+    for (const s of steps) { s.res = null; s.e = null; s.q = 0 }
+    g.id = id; g.dunk = D; g.S = S; g.steps = steps; g.W = W
+  }
+  load(DUNKS[g.cursor].id)
+  if (lock) g.hud.dots = steps.map(() => null)
+  // ── the call ──
+  const openAt = i => open(DUNKS[i]?.id)
+  function moveCursor(dir, tierJump = false) {
+    let i = g.cursor
+    if (tierJump) {
+      // (left / right: the first open dunk of the tier either side)
+      let ti = TIERS.indexOf(DUNKS[i].tier) + dir
+      for (; ti >= 0 && ti < TIERS.length; ti += dir) { const j = DUNKS.findIndex((d, k) => d.tier === TIERS[ti] && openAt(k)); if (j >= 0) { i = j; break } }
+    } else {
+      for (let j = i + dir; j >= 0 && j < DUNKS.length; j += dir) if (openAt(j)) { i = j; break }
+    }
+    if (i !== g.cursor) { g.cursor = i; load(DUNKS[i].id); g.fx.push('tick', 'h:light') }
+  }
+  function takeIt() {
+    if (!openAt(g.cursor)) return
+    g.phase = 'run'; g.stick = false; g.menu = null
+    load(DUNKS[g.cursor].id)
+    g.hud.dots = steps.map(() => null)
+    g.fx.push('whistle', 'h:medium')
+    try { def?.onPick?.(id) } catch {}
+  }
+  function pickInput(a) {
+    if (a.kind === 'key') {
+      if (a.zone === 'U') moveCursor(-1); else if (a.zone === 'D') moveCursor(1)
+      else if (a.zone === 'L') moveCursor(-1, true); else if (a.zone === 'R') moveCursor(1, true)
+      else if (a.zone === 'S') takeIt()
+      return
+    }
+    if (a.kind !== 'down') return
+    const M = g.menu
+    if (!M) return
+    const { x, y } = a
+    if (x >= M.go.x && x <= M.go.x + M.go.w && y >= M.go.y && y <= M.go.y + M.go.h) return takeIt()
+    const row = M.rows.find(r => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h)
+    if (!row || !openAt(row.i)) return
+    if (row.i === g.cursor) return takeIt()   // (a second tap on the dunk he's on takes it)
+    g.cursor = row.i; load(DUNKS[row.i].id); g.fx.push('tap', 'h:light')
   }
   function release() {
     const s = steps[g.k]
@@ -193,10 +258,13 @@ export function make({ v, seed, def }) {
     if (Math.abs(e) <= s.W) {
       s.res = true; s.e = e; s.q = qOf(e, s.W); g.hud.dots[0] = true
       g.fx.push('h:light')
-      // the steps in the air, from the moment he left the floor (so a takeoff a touch off doesn't carry into them)
+      // the steps in the air, from the moment he left the floor (so a takeoff a touch off doesn't carry into them).
+      // Each ring shows LEAD_AIR real ms before it closes (from takeoff at the soonest): dim while the one before it is
+      // still on, live once that one's done
       for (let i = 1; i < steps.length; i++) {
         const st = steps[i]
-        st.T = t + st.at; st.rate = rateAt(S, st.at); st.W = W * st.rate; st.lead = LEAD_AIR * st.rate; st.cueAt = st.T - st.lead
+        st.T = t + st.at; st.rate = rateAt(S, st.at); st.W = W * st.rate
+        st.showAt = Math.max(t, st.T - LEAD_AIR * st.rate); st.cueAt = st.showAt; st.lead = st.T - st.showAt
       }
       advance(t)
     } else fail(s, e < 0 ? 'early' : 'late', t)
@@ -206,7 +274,7 @@ export function make({ v, seed, def }) {
     if (Math.abs(e) > s.W) return fail(s, e < 0 ? 'early' : 'late', t)
     s.res = true; s.e = e; s.q = qOf(e, s.W); g.hud.dots[g.k] = true
     if (s.kind === 'fin') return land(t)
-    g.fx.push('h:light')
+    g.fx.push('h:light', 'tick')
     advance(t)
   }
   function advance(t) { g.k++; const n = steps[g.k]; if (n) n.liveAt = t }
@@ -272,6 +340,8 @@ export function make({ v, seed, def }) {
 export function pilot(g) {
   let pressed = -1, gripped = -1, upAt = Infinity
   return () => {
+    // (the call: the dunk the board opens on)
+    if (g.phase === 'pick') return g.pickT >= 500 ? [{ kind: 'key', zone: 'S' }] : undefined
     const out = []
     if (g.t >= upAt) { upAt = Infinity; out.push({ kind: 'up', zone: null, x: 180, y: 400 }) }
     const s = g.steps[g.k]
@@ -497,19 +567,96 @@ function judges(ctx, V, view, g) {
 }
 
 // a ring that closes on a mark: gold as it closes, green while it's on
-function ringAt(ctx, x, y, r0, s, t, U, flat = 1) {
-  const left = s.T - t, f = clamp(left / s.lead, 0, 1), on = Math.abs(left) <= s.W
+// (dim: the next one, already closing while he's on this one; it lights up once it's his)
+function ringAt(ctx, x, y, r0, s, t, U, flat = 1, dim = false) {
+  const left = s.T - t, f = clamp(left / s.lead, 0, 1), on = !dim && Math.abs(left) <= s.W
+  ctx.globalAlpha = dim ? 0.45 : 1
   ctx.lineWidth = 2 * U; ctx.strokeStyle = 'rgba(255,255,255,.55)'
   ctx.beginPath(); ctx.ellipse(x, y, r0, r0 * flat, 0, 0, Math.PI * 2); ctx.stroke()
-  if (left < -s.W) return
-  const r = r0 + f * 48 * U
-  ctx.lineWidth = (on ? 4 : 3.2) * U; ctx.strokeStyle = on ? GOOD : GOLD
-  ctx.beginPath(); ctx.ellipse(x, y, r, r * flat, 0, 0, Math.PI * 2); ctx.stroke()
+  if (left >= -s.W) {
+    const r = r0 + f * 48 * U
+    ctx.lineWidth = (on ? 4 : dim ? 2.4 : 3.2) * U; ctx.strokeStyle = on ? GOOD : GOLD
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * flat, 0, 0, Math.PI * 2); ctx.stroke()
+  }
+  ctx.globalAlpha = 1
 }
 
 const PB = newPose(), PE = easedState(), PF = newPose(), FE = easedState()
 const BW = { x: 0, y: 0 }
 const TIER_INK = { easy: GOOD, medium: GOLD, hard: BAD }
+const TIER_WORD = { easy: 'EASY', medium: 'MEDIUM', hard: 'HARD' }
+// what he has to time on a dunk, in order: TAKEOFF · WINDMILL · FINISH
+const stepsLine = S => ['TAKEOFF', ...S.moves.map(m => m.noun), 'FINISH'].join('  ·  ')
+// a line of words cut to fit, the broadcast's line under the board (at most n lines)
+function wrapLines(ctx, str, w, n) {
+  const words = String(str).split(' '), out = []
+  let cur = ''
+  for (const wd of words) {
+    const nx = cur ? `${cur} ${wd}` : wd
+    if (ctx.measureText(nx).width <= w || !cur) cur = nx
+    else { out.push(cur); cur = wd; if (out.length === n) break }
+  }
+  if (out.length < n && cur) out.push(cur)
+  else if (out.length === n && cur && !out[n - 1].endsWith(cur)) out[n - 1] = `${out[n - 1].replace(/[.,;:]?$/, '')}…`
+  return out
+}
+// The call: the board on the court. Every dunk by tier, what the judges give each tier landed on the first try, the
+// one on the cursor lit; under it what he'll have to time and how the broadcast would call it, and GO. The rows and
+// the button are kept on g.menu, where a tap is read (in the picture's own 360-wide units).
+function board(ctx, g, view, G) {
+  const { floorY } = G, D = g.dunk, keys = !!view.keys
+  // the strip, top left: the call, and the try (and what it needs, in Career)
+  ctx.fillStyle = 'rgba(6,10,12,.74)'; ctx.fillRect(0, 48, 186, 48)
+  ctx.fillStyle = view.accent; ctx.fillRect(0, 48, 3, 48)
+  text(ctx, 'CALL THE DUNK', 12, 62, { font: DISPLAY, size: 20, align: 'left', color: '#fff' })
+  text(ctx, `ATTEMPT ${g.attempt}${g.need ? `  ·  NEEDS ${g.need}` : ''}`, 12, 84, { font: LABEL, size: 16, align: 'left', color: g.need ? GOLD : 'rgba(255,255,255,.72)', track: 1 })
+  // (on a computer: the keys, top right)
+  if (keys) { keyCap(ctx, view.w - 96, 66, 'ARROWS'); text(ctx, 'CHOOSE', view.w - 68, 72, { font: LABEL, size: 15, align: 'left', color: 'rgba(255,255,255,.8)', track: 1 }) }
+  // the board, down to the floor (a short picture packs it tighter)
+  const top = 102, x = 8, w = 240
+  const tight = floorY - top < 340, hh = tight ? 19 : 22, gap = tight ? 2 : 5
+  const room = floorY - 6 - top - 8 - TIERS.length * hh - (TIERS.length - 1) * gap
+  const rh = clamp(Math.floor(room / DUNKS.length), 22, 34)
+  const H = 8 + TIERS.length * hh + (TIERS.length - 1) * gap + rh * DUNKS.length
+  ctx.fillStyle = 'rgba(6,10,12,.86)'; ctx.fillRect(x, top, w, H)
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x, top, w, 1)
+  const rows = []
+  let y = top + 4
+  const size = rh >= 30 ? 18 : rh >= 26 ? 16 : 15
+  for (const tier of TIERS) {
+    if (tier !== TIERS[0]) y += gap
+    const [lo, hi] = JUDGE_RANGE[tier]
+    text(ctx, TIER_WORD[tier], x + 10, y + hh / 2 + 1, { font: LABEL, size: 15, align: 'left', color: TIER_INK[tier], track: 1.5 })
+    text(ctx, `JUDGES ${lo}-${hi}`, x + w - 10, y + hh / 2 + 1, { font: LABEL, size: 15, align: 'right', color: 'rgba(255,255,255,.72)', track: 1 })
+    y += hh
+    DUNKS.forEach((d, i) => {
+      if (d.tier !== tier) return
+      const on = i === g.cursor, gone = g.used.has(d.id)
+      if (on) { ctx.fillStyle = view.accent; ctx.fillRect(x + 4, y + 1, w - 8, rh - 2) }
+      else { ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(x + 4, y + 1, w - 8, rh - 2) }
+      ctx.fillStyle = gone ? 'rgba(255,255,255,.2)' : TIER_INK[tier]; ctx.fillRect(x + 4, y + 1, 4, rh - 2)
+      text(ctx, d.name.toUpperCase(), x + 16, y + rh / 2 + 1, { font: DISPLAY, size, align: 'left', color: on ? '#10161a' : gone ? 'rgba(255,255,255,.38)' : '#fff' })
+      if (gone) text(ctx, 'LANDED TONIGHT', x + w - 10, y + rh / 2 + 1, { font: LABEL, size: 13, align: 'right', color: 'rgba(255,255,255,.5)', track: 0.5 })
+      rows.push({ i, x: x + 4, y, w: w - 8, h: rh })
+      y += rh
+    })
+  }
+  // under it: what he'll time, the call, and GO
+  const go = { x: 16, w: view.w - 32, h: tight ? 40 : 46, y: view.h - (tight ? 50 : 60) }
+  ctx.fillStyle = 'rgba(6,10,12,.78)'; ctx.fillRect(0, floorY + 2, view.w, go.y - 8 - floorY - 2)
+  let ly = floorY + 12
+  text(ctx, stepsLine(g.S), view.w / 2, ly, { font: LABEL, size: 16, color: GOLD, track: 1.5 })
+  ly += 17
+  ctx.font = `14px ${BODY}`
+  const n = Math.max(0, Math.min(2, Math.floor((go.y - 4 - ly + 8) / 16)))
+  for (const ln of wrapLines(ctx, D.line, view.w - 30, n)) { text(ctx, ln, view.w / 2, ly, { font: BODY, size: 14, color: 'rgba(255,255,255,.86)' }); ly += 16 }
+  ctx.fillStyle = view.accent; rr(ctx, go.x, go.y, go.w, go.h, 6); ctx.fill()
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(go.x + 6, go.y + go.h - 3, go.w - 12, 3)
+  const label = `GO  ·  ${D.name.toUpperCase()}`
+  text(ctx, label, keys ? go.x + 16 : go.x + go.w / 2, go.y + go.h / 2 + 1, { font: DISPLAY, size: label.length > 22 ? 18 : 21, align: keys ? 'left' : 'center', color: '#10161a' })
+  if (keys) keyCap(ctx, go.x + go.w - 46, go.y + go.h / 2, 'SPACE')
+  g.menu = { rows, go }
+}
 export function draw(ctx, g, view) {
   const G = geoOf(view), { U, floorY } = G, c = view.colors, S = g.S, D = g.dunk, t = g.t
   smoothT(g)   // (only for the frame's length: the picture runs on the rules' own clock, slow motion and all)
@@ -534,7 +681,7 @@ export function draw(ctx, g, view) {
     if (t < RUN0 - 160) {
       // the walk-up: on the spot, bouncing it, the building waiting on him
       copyPose(STANDB, P)
-      const f = (t % 560) / 560, by = BALL_RIG + (52 - BALL_RIG) * Math.abs(Math.cos(Math.PI * f))
+      const f = ((g.phase === 'pick' ? g.pickT : t) % 560) / 560, by = BALL_RIG + (52 - BALL_RIG) * Math.abs(Math.cos(Math.PI * f))
       P.hFx = 19; P.hFy = Math.max(46, by + 6); P.hBx = -4; P.hBy = 50
       ball = { rx: 22, ry: by }
     } else if (t < RUN0) { mixPose(STANDB, PLANT, 0.4, P); ballOf(P, '2', BW); ball = { rx: BW.x, ry: BW.y } }
@@ -631,7 +778,7 @@ export function draw(ctx, g, view) {
   }
   if (pop >= 0 && pop < 1100) boardFlash(ctx, view, { wallY: G.wallY }, c.trim, (1 - pop / 1100) * (Math.floor(pop / 90) % 2 ? 0.34 : 0.62))
   // slow motion: the building goes quiet and dark behind him
-  const slowAmt = 1 - (g.rate - SLOW_RATE) / (1 - SLOW_RATE)
+  const sr = S.slowRate ?? SLOW_RATE, slowAmt = 1 - (g.rate - sr) / (1 - sr)
   if (slowAmt > 0.01) { ctx.fillStyle = `rgba(3,6,10,${(0.38 * slowAmt).toFixed(3)})`; ctx.fillRect(0, 0, view.w, G.wallY) }
   courtLines(ctx, V, c)
   judges(ctx, V, view, g)
@@ -699,6 +846,7 @@ export function draw(ctx, g, view) {
 
   // him
   const hipX = SX(bx), PEz = easedPose(PE, P, g, dtG, 22)
+  g.fig = { x: hipX, y: floorY - j * s, s }   // (where he is on the screen: the frame-by-frame checks crop to him)
   PEz.j = j
   if (front) {
     // turned to us (mid-spin, or after: the flex, the hands on his head)
@@ -715,17 +863,21 @@ export function draw(ctx, g, view) {
     ctx.restore()
   }
   if (!behind && !inRim) drawBall()
-  nameTag(ctx, view, clamp(hipX, 34, view.w - 34), floorY + 5 * U, name, 1)
+  if (g.phase !== 'pick') nameTag(ctx, view, clamp(hipX, 34, view.w - 34), floorY + 5 * U, name, 1)
 
   // the rings in the air: on the ball for the move, on the rim for the finish
-  const cur = g.steps[g.k]
-  if (cur && !g.fail && cur.T != null && g.k > 0 && t >= Math.max(cur.cueAt, cur.liveAt ?? 0)) {
-    if (cur.kind === 'fin') ringAt(ctx, SX(0), SY(RIM_FT), RIM_HALF * kk + 5 * U, cur, t, U, 0.3)
-    else if (bwx != null) ringAt(ctx, SX(bwx), SY(bwy), BALL_R * kk + 5 * U, cur, t, U, 1)
+  // (the next one shows too, dim, while he's still on this one: he sees the beat coming)
+  const ringOf = (st, dim) => {
+    if (st.kind === 'fin') ringAt(ctx, SX(0), SY(RIM_FT), RIM_HALF * kk + 5 * U, st, t, U, 0.3, dim)
+    else if (bwx != null) ringAt(ctx, SX(bwx), SY(bwy), BALL_R * kk + 5 * U + (dim ? 7 * U : 0), st, t, U, 1, dim)
   }
+  const cur = g.steps[g.k], nxt = g.steps[g.k + 1]
+  if (cur && !g.fail && !g.done && cur.T != null && g.k > 0 && t >= Math.max(cur.cueAt, cur.liveAt ?? 0)) ringOf(cur, false)
+  if (cur && nxt && !g.fail && !g.done && cur.T != null && nxt.T != null && t >= nxt.showAt) ringOf(nxt, true)
 
   // ── the words: the dunk and the try (top left); how it went (under the stamp) ──
   // (on a strip of its own, like the broadcast's: the banners in the rafters are behind it)
+  if (g.phase === 'pick') { board(ctx, g, view, G); return }
   ctx.font = `20px ${DISPLAY}`
   const nw = ctx.measureText(D.name.toUpperCase()).width
   ctx.fillStyle = 'rgba(6,10,12,.74)'; ctx.fillRect(0, 48, Math.max(nw, 150) + 24, 48)
@@ -735,6 +887,7 @@ export function draw(ctx, g, view) {
   ctx.font = `16px ${LABEL}`
   const tw = ctx.measureText(D.tier.toUpperCase()).width + 2 * D.tier.length
   text(ctx, `ATTEMPT ${g.attempt}`, 20 + tw, 84, { font: LABEL, size: 16, align: 'left', color: 'rgba(255,255,255,.72)', track: 1 })
+  if (g.need) text(ctx, `NEEDS ${g.need}`, view.w - 12, 62, { font: LABEL, size: 16, align: 'right', color: GOLD, track: 1 })
   if (g.stamp && !g.stamp.y) { g.stamp.y = view.h - 132; g.stamp.size = g.stamp.text.length > 13 ? 30 : g.stamp.text.length > 10 ? 34 : 40 }
   if (g.done && t - g.doneAt > 160) {
     const f = g.fail

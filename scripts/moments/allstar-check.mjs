@@ -212,7 +212,7 @@ console.log(`  his dunker over 40 nights: final ${finD}, titles ${wonD}, dunk-of
 console.log(`  rivals' dunks: mean ${(rivD.reduce((a, b) => a + b, 0) / rivD.length).toFixed(1)}, 40-50: ${pct(rivD, x => x >= 40)}%, under 36 (nothing down, or two misses first): ${pct(rivD, x => x < 36)}%`)
 ok(pct(rivD, x => x >= 40) >= 70, 'rivals mostly 40-50 a dunk')
 
-console.log('── balance: a dunk\'s expected total by tier (the engine\'s measured landing rates: easy 86/95%, medium 64/76%, hard 47/58% a try at v 9/11)')
+console.log('── balance: a dunk\'s expected total by tier (the engine\'s measured landing rates, 11-24: easy 93/96%, medium 77/88%, hard 53/64% a try at v 9/11)')
 console.log('  v     tier     mean   landed 1st try   nothing down   47 or more')
 const fmtB = (v, t, b) => `  ${String(v).padEnd(5)} ${t.padEnd(8)} ${String(b.mean).padEnd(6)} ${`${b.first}%`.padEnd(16)} ${`${b.blank}%`.padEnd(14)} ${b.big}%`
 for (const v of [9, 10, 11]) {
@@ -229,6 +229,9 @@ for (const v of [9, 10, 11]) {
   ok(c.active.asw.three.mine.length === 1 && !c.active.asw.three.live && c.active.asw.three.mine[0].sim, 'a 3PT round left open is shot cold')
   c = A.settleLive(A.markLive(c, 'dunk', { dunk: DUNKS[0].id }))
   ok(c.active.asw.dunk.cur?.tries?.length === 1 && !c.active.asw.dunk.cur.tries[0].landed && !c.active.asw.dunk.live, 'a dunk attempt left open is a miss')
+  // (left on the board in the game, before he'd called the dunk: nothing's been tried)
+  const c2 = A.settleLive(A.markLive(A.answerAllStar(c0, { dunk: true }), 'dunk', { dunk: null }))
+  ok(!c2.active.asw.dunk.cur && !c2.active.asw.dunk.live && !(c2.active.asw.dunk.mine ?? []).length, 'a dunk game left before the call books nothing')
 }
 // ── 5. on the season: booked, honors, totals, and no legacy from it ──
 console.log('── the season keeps it')

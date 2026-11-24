@@ -1,7 +1,8 @@
 // The Dunk Contest, dunk by dunk: how often a simulated human lands each one at each grade, through the same rules
 // the browser runs (src/lib/mg/dunkcontest.js) and the same bot as balance.mjs (scripts/mg/bots/dunkcontest.mjs).
 //   node scripts/mg/dunks.mjs [--runs=600] [--v=9,11] [--human=avg,good]
-// Targets for a decent human (avg) at grade 9: easy ~85%, medium ~65%, hard ~45%; about 10 points more at 11.
+// Targets for a decent human (avg) at grade 9 (11-24): easy ~93%, medium ~77%, hard ~53%; about 10 points more at 11.
+// (lib/allStar.js LAND plays the rivals at these rates: keep the two together.)
 import { STEP } from '../../src/lib/mg/kit.js'
 import { ENGINES } from '../../src/lib/mg/index.js'
 import { DUNKS } from '../../src/lib/mg/dunkcontest.js'

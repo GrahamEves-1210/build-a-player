@@ -99,17 +99,6 @@
 .asw-judge-total.is-up { background: var(--ag-a1); color: var(--ag-on); transform: none; }
 .asw-judge-total.is-fifty { background: var(--ag-gold); color: #1a1405; }
 
-/* the dunk list */
-.asw-dunks { display: flex; flex-direction: column; gap: 6px; }
-.asw-dk { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 11px; text-align: left; border: 1.5px solid var(--ag-line-hi); background: rgba(255,255,255,.035); color: var(--ag-text); cursor: pointer; transition: transform var(--press), border-color .2s, opacity .2s; }
-.asw-dk:not(:disabled):active { transform: scale(.98); }
-.asw-dk:disabled { opacity: .4; cursor: default; }
-.asw-dk.is-on { border-color: var(--ag-a1); background: color-mix(in srgb, var(--ag-a1) 12%, transparent); }
-.asw-dk-top { display: flex; align-items: center; gap: 8px; }
-.asw-dk-top > b:not(.asw-tier) { flex: 1; min-width: 0; font-family: var(--ag-font); font-weight: 400; font-size: 19px; letter-spacing: 1.5px; line-height: 1.1; color: #fff; }
-.asw-dk-top em { font-style: normal; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: var(--ag-muted); white-space: nowrap; }
-.asw-dk small { font-family: var(--ag-body); font-size: 13px; font-weight: 500; line-height: 1.35; color: var(--ag-muted); }
-
 /* ── how the night went (the hub, until the next run of games) ── */
 .asw-done { display: flex; flex-direction: column; gap: 8px; padding: 13px 14px; }
 .asw-done > .ag-eyebrow { color: var(--ag-gold-hi); }
