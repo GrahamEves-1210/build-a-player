@@ -212,8 +212,8 @@ function release(s, p, q) {
   const b = s.ball, sh = p.shot
   const cs = sh.kind === 'jumper' && p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
   const rushed = s.clock <= T.rushAt * HZ
-  // late in the game (game point, or either side three from the goal): Clutch counts
-  const late = s.gamePoint || Math.max(s.score[0], s.score[1]) >= s.rules.goal - T.clutchFrom
+  // late in the game (game point, or anyone three from the goal): Clutch counts
+  const late = s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom
   const defs = s.players.filter(o => o.team !== p.team)
   const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp, gp: late },
     { block: defs.map(() => rnd(s)), make: rnd(s) })

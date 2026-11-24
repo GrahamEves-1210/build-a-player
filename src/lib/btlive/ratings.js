@@ -21,7 +21,7 @@ export function derive(build, pos = 'guard') {
   const passing = pas ?? play ?? (iq + handles) / 2
   // a big guards the perimeter on his feet, a guard guards the paint on his size
   const perD = per ?? (int != null ? int * 0.45 + spd * 0.35 : 4)
-  const intD = int ?? (per != null ? per * 0.4 + size * 0.45 : 4)
+  const intD = int ?? (per != null ? per * 0.6 + size * 0.3 : 4)
   const rebounding = reb ?? (big ? size * 0.5 + bnc * 0.3 + 2 : size * 0.45 + bnc * 0.3)
   const R = {
     big,

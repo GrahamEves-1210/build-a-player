@@ -65,7 +65,7 @@ export function contestOf(shooter, defenders, kind) {
     const c = clamp(prox * stance * front * rate * size, 0, 1)
     if (c > best) { second = best; best = c; by = d.id } else if (c > second) second = c
   }
-  return { c: clamp(best + second * 0.35, 0, 1), by }
+  return { c: clamp(best + second * T.contestSecond, 0, 1), by }
 }
 
 // The chance a shot goes in: what the rating gives at that spot x how good the release was x how well it was contested

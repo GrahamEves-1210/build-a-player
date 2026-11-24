@@ -39,15 +39,15 @@ export const T = {
   spread: 0.47,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
-  speedMin: 9.0,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it)
-  speedBand: 0.045,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
+  speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it)
+  speedBand: 0.08,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
   sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
-  ballSpeed: 0.93,                   // with the ball at Handles 1 (x top speed)...
+  ballSpeed: 0.94,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps about 95%: a quick handler beats a slow man)
   defSpeed: 0.95,                    // guarding, at Perimeter D 1 (x top speed)...
   defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (an 80 about 102%: an even man stays in front)
   accel: 34,                         // ft/s² (about a third of a second to top speed)...
-  accelBase: 0.98, accelSpd: 0.045,   // ...x (0.85 + 0.3 x Speed): a quick first step
+  accelBase: 0.97, accelSpd: 0.06,   // ...x (0.85 + 0.3 x Speed): a quick first step
   accelSize: 0.06,                   // ...less this at Size 11
   defAccel: 0.82, defAccelPer: 0.24, // a defender's: x (0.82 + this * Perimeter D)
   walk: 0.25,                        // stick pushed less than this far: ignored (dead zone)
@@ -78,9 +78,9 @@ export const T = {
   slightJ: 0.86,                     // just outside the green: the chance starts from here and falls to relMin
 
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
-  layBase: 0.60, layFin: 0.34,       // layup: 72% at Finishing 1, 95% at 11 (an 80: 83%)
+  layBase: 0.62, layFin: 0.36,       // layup: 72% at Finishing 1, 95% at 11 (an 80: 83%)
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
-  layFar: 0.022,                     // a layup loses this much a foot past 3 ft
+  layFar: 0.012,                     // a layup loses this much a foot past 3 ft
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkBounce: 0.55,                  // Bounce (n) under this: never dunks (a Bounce 1 never does)
   dunkChance: 1.8,                   // how often an able dunker dunks: (Bounce n - dunkBounce) x this (x a touch more with Finishing)
@@ -92,7 +92,7 @@ export const T = {
   deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
   setFeet: 0.14,                     // a jumper taken at a full run loses this much; still: nothing
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
-  csBoost: 0.07,                     // ...and gains up to this much from the passer's Passing/Playmaking
+  csBoost: 0.15,                     // ...and gains up to this much from the passer's Passing/Playmaking
   rushAt: 3.0,                       // a shot in the last 3 s of the shot clock is rushed...
   rushPen: 0.22,                     // ...and loses this much at IQ 1, nothing at IQ 11
 
@@ -110,7 +110,8 @@ export const T = {
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
   contestBehind: 0.2,                // ...this much
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
-  contestSize: 0.6,                  // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
+  contestSize: 0.45,                  // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
+  contestSecond: 0.6,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.6,                 // a perfect contest takes this share off a jumper
   contestMaxL: 0.62,                 // ...off a layup
   contestMaxD: 0.40,                 // ...off a dunk...

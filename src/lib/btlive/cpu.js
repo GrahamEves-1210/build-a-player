@@ -292,7 +292,8 @@ function defend(s, p, m, lvl, out) {
     if (o && (m.roleN !== s.possN || s.tick >= (m.roleT ?? 0))) {
       m.roleN = s.possN; m.roleT = s.tick + HZ
       const dp = Math.hypot(man.x - p.x, man.y - p.y), dq = Math.hypot(man.x - o.x, man.y - o.y)
-      m.help = dp > dq + 0.5 || (Math.abs(dp - dq) <= 0.5 && p.i > o.i)
+      // (an even split, as at the check, goes by a turn that moves on every possession: not always the same seat)
+      m.help = dp > dq + 0.5 || (Math.abs(dp - dq) <= 0.5 && (p.i + s.possN) % 3 > (o.i + s.possN) % 3)
     }
     if (o && m.help) {
       const side = ((p.x - man.x) * uy - (p.y - man.y) * ux) >= 0 ? 1 : -1
