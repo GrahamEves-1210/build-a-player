@@ -41,6 +41,7 @@ export function derive(build, pos = 'guard') {
   R.accelDef = R.accel * (T.defAccel + T.defAccelPer * R.per)                              // ...guarding
   R.mass = 1 + T.massSize * sizeRaw
   R.clutchRaw = raw(clutch)
+  R.jsRaw = raw(js)                                         // (the plain grade: how much of a hand a shooter shoots over)
   R.passSpeed = T.passSpeed + T.passSpeedPas * R.pas
   R.moveCd = T.moveCd - T.moveCdHnd * R.hnd
   R.standReach = T.standReach + T.standReachSize * R.size

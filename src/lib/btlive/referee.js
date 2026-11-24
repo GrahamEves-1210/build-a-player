@@ -92,7 +92,7 @@ export function makeChance(s) {
     if (s.d > T.deepAt) base -= (s.d - T.deepAt) * (T.deepFall - T.deepJs * R.js)
     base *= 1 - T.setFeet * clamp(s.run ?? 0, 0, 1)
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
-    pen = T.contestMaxJ * s.c * (1 - T.jsThrough * R.js)     // a great shooter shoots over a hand
+    pen = T.contestMaxJ * s.c * (1 - T.jsThrough * (R.jsRaw ?? R.js))     // a great shooter shoots over a hand (on the plain grade)
   }
   // a pass that hits him in stride at the rim: the defense is a beat late to it (the passer's Passing)
   if (s.cs != null && s.kind !== 'jumper') pen *= 1 - T.csLay * s.cs
