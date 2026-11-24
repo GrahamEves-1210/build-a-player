@@ -207,13 +207,14 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
   const refs = useRef({})
   const set = k => el => { refs.current[k] = el }
   const [final, setFinal] = useState(null)
+  const [ask, setAsk] = useState(false)          // QUIT asks first
   const caps = useMemo(() => !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches, [])
   useEffect(() => {
     const r = refs.current
     const eng = createEngine({
       setup, net: link?.net ?? null,
-      els: { canvas: r.canvas, court: r.court, clock: r.clock, score: [r.s0, r.s1, r.s2].filter(Boolean), poss: [r.p0, r.p1, r.p2].filter(Boolean), world: r.world, pad: r.pad, base: r.base, knob: r.knob, btn: { a: r.a, b: r.b, c: r.c }, lab: { a: r.la, b: r.lb, c: r.lc } },
-      on: { final: res => setTimeout(() => setFinal(res), 900) },
+      els: { canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, btn: { a: r.a, b: r.b, c: r.c }, lab: { a: r.la, b: r.lb, c: r.lc } },
+      on: { final: res => setTimeout(() => { setAsk(false); setFinal(res) }, 900) },
     })
     link?.attach(eng)
     if (import.meta.env.DEV) window.__btlive = eng
@@ -221,17 +222,25 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
     document.documentElement.classList.add('btlv-playing')
     return () => { eng.destroy(); document.documentElement.classList.remove('btlv-playing'); if (import.meta.env.DEV && window.__btlive === eng) delete window.__btlive }
   }, [setup])
-  const mine = final?.stats[setup.me]
-  const koth = setup.mode === 'koth'
-  const line = mine ? [['PTS', mine.pts], ['FG', `${mine.fgm}/${mine.fga}`], ['TWOS', `${mine.tpm}/${mine.tpa}`], ['AST', mine.ast], ['REB', mine.reb], ['STL', mine.stl], ['BLK', mine.blk]].filter(([k]) => setup.size > 1 || k !== 'AST') : []
+  // Esc: QUIT's question, and away again
+  useEffect(() => {
+    const k = e => { if (e.key === 'Escape' && !final) setAsk(v => !v) }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  }, [final])
+  const koth = setup.mode === 'koth' || final?.mode === 'koth' || (final?.score?.length ?? 0) > 2
+  const mine = final?.stats?.[setup.me]
+  const line = mine ? [['PTS', mine.pts], ['FG', `${mine.fgm}/${mine.fga}`], ['TWOS', `${mine.tpm}/${mine.tpa}`], ['AST', mine.ast], ['REB', mine.reb], ['STL', mine.stl], ['BLK', mine.blk]].filter(([k]) => (setup.size > 1 && !koth) || k !== 'AST') : []
+  // King of the Hill's final: each man and his points, the winner first
+  const men = final && koth ? setup.looks.map((l, i) => ({ i, label: l.label, pts: final.score?.[i] ?? final.stats?.[i]?.pts ?? 0 })).sort((x, y) => (x.i === final.winner ? -1 : y.i === final.winner ? 1 : y.pts - x.pts)) : null
+  const winner = final ? (koth ? setup.looks[final.winner]?.label : setup.names[final.winner]) : ''
   return (
     <div className={`btlv btlv-game${caps ? ' has-keys' : ''}`}>
-      <div className={`btlv-bug${koth ? ' is-koth' : ''}`}>
-        <button className="btlv-quit" onClick={onMenu} aria-label="Leave the game">QUIT</button>
-        <div className="btlv-bug-team btlv-t0"><i ref={set('p0')} className="btlv-bug-poss" /><span className="btlv-bug-name">{setup.names[0]}</span><b ref={set('s0')} className="btlv-bug-score">0</b></div>
-        <div className="btlv-bug-mid"><b ref={set('clock')} className="btlv-bug-clock" /><small>TO {RULES.goal}</small></div>
-        <div className="btlv-bug-team btlv-t1"><b ref={set('s1')} className="btlv-bug-score">0</b><span className="btlv-bug-name">{setup.names[1]}</span><i ref={set('p1')} className="btlv-bug-poss" /></div>
-        {koth && <div className="btlv-bug-team btlv-t2"><b ref={set('s2')} className="btlv-bug-score">0</b><span className="btlv-bug-name">{setup.names[2]}</span><i ref={set('p2')} className="btlv-bug-poss" /></div>}
+      <div className="btlv-bug">
+        <button className="btlv-quit" onClick={() => { sfx('tap'); setAsk(true) }} aria-label="Leave the game">QUIT</button>
+        <div className="btlv-bug-sides" ref={set('sides')} />
+        <div className="btlv-bug-clock"><small>SHOT CLOCK</small><b ref={set('clock')} /></div>
+        <p className="btlv-bug-note"><span ref={set('note')} /><span className="btlv-bug-goal">FIRST TO {RULES.goal} · WIN BY {RULES.winBy}</span></p>
       </div>
       <div className="btlv-stage">
         <div className="btlv-court" ref={set('court')}>
@@ -240,21 +249,37 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
         </div>
       </div>
       <div className="btlv-pad" ref={set('pad')}>
+        <i className="btlv-stick-home" ref={set('home')} />
         <i className="btlv-stick-base" ref={set('base')} /><i className="btlv-stick-knob" ref={set('knob')} />
+        {caps && <div className="btlv-keys"><b>MOVE</b><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><small>OR THE ARROWS</small></div>}
         <div className="btlv-btns">
-          <button className="btlv-btn btlv-btn-a" ref={set('a')}><span ref={set('la')} />{caps && <kbd>J</kbd>}</button>
-          <button className="btlv-btn btlv-btn-b" ref={set('b')}><span ref={set('lb')} />{caps && <kbd>K</kbd>}</button>
-          <button className="btlv-btn btlv-btn-c" ref={set('c')}><span ref={set('lc')} />{caps && <kbd>L</kbd>}</button>
+          <button className="btlv-btn btlv-btn-a" ref={set('a')}>{caps && <kbd>J</kbd>}<span ref={set('la')} /></button>
+          <button className="btlv-btn btlv-btn-b" ref={set('b')}>{caps && <kbd>K</kbd>}<span ref={set('lb')} /></button>
+          <button className="btlv-btn btlv-btn-c" ref={set('c')}>{caps && <kbd>L</kbd>}<span ref={set('lc')} /></button>
         </div>
-        {caps && <p className="btlv-keys">WASD OR ARROWS TO MOVE</p>}
       </div>
+      {ask && !final && (
+        <div className="btlv-confirm" role="dialog" aria-label="Leave the game" onClick={e => { if (e.target === e.currentTarget) setAsk(false) }}>
+          <div className="btlv-confirm-card">
+            <p className="btlv-confirm-q">LEAVE THE GAME?</p>
+            {setup.online && <p className="btlv-confirm-sub">IT COUNTS AS A LOSS</p>}
+            <div className="btlv-final-btns">
+              <button className="btlv-play" onClick={() => { sfx('tap'); setAsk(false) }}>KEEP PLAYING</button>
+              <button className="btlv-ghost btlv-leave" onClick={() => { sfx('back'); onMenu() }}>LEAVE</button>
+            </div>
+          </div>
+        </div>
+      )}
       {final && (
         <div className="btlv-final" role="dialog" aria-label="Final">
           <div className="btlv-final-card">
             <span className="btlv-tag">FINAL</span>
-            <div className="btlv-final-score">{final.score.map((v, t) => <span key={t} style={{ display: 'contents' }}>{t > 0 && <i>-</i>}<b className={`btlv-t${t}`}>{v}</b></span>)}</div>
-            {koth && <p className="btlv-final-names">{setup.names.map((n, t) => `${n} ${final.score[t]}`).join(' · ')}</p>}
-            <p className="btlv-final-who">{setup.names[final.winner]} WINS</p>
+            {men ? (
+              <div className="btlv-final-men">{men.map(x => <div key={x.i} className={x.i === final.winner ? 'is-win' : ''}><span>{x.label}</span><b>{x.pts}</b></div>)}</div>
+            ) : (
+              <div className="btlv-final-score"><b className="btlv-t0">{final.score[0]}</b><i>-</i><b className="btlv-t1">{final.score[1]}</b></div>
+            )}
+            <p className="btlv-final-who">{winner} WINS</p>
             <div className="btlv-final-line"><span className="btlv-final-name">{name}</span>{line.map(([k, v]) => <span key={k}><b>{v}</b><small>{k}</small></span>)}</div>
             <div className="btlv-final-btns">
               <button className="btlv-play" disabled={!!again} onClick={() => { sfx('lock'); onRematch() }}>{again ? (again.need ? `WAITING · ${again.have} OF ${again.need}` : 'WAITING') : 'REMATCH'}</button>

@@ -359,6 +359,12 @@ const SAMPLED = {
   catchball: S => smp(S, 'bt-catch', { gain: 0.26, jitter: 0.04 }),
   make: S => smp(S, 'bt-make', { gain: 0.3, jitter: 0.03 }),
   rimmiss: S => smp(S, 'bt-miss', { gain: 0.28, jitter: 0.04 }),
+  // Blacktop Live: the ball leaving the hand (arg: loudness, another man's release quieter), a green release (the
+  // same, with a pluck on top), a block (a hand slapping the ball) and a steal (the ball poked loose and bouncing)
+  btrelease: (S, g = 1) => smp(S, 'swoosh', { gain: 0.34 * g, rate: 1.2, jitter: 0.05 }),
+  btgreen: S => smp(S, 'swoosh', { gain: 0.34, rate: 1.2 }) && smp(S, 'pluck2', { gain: 0.55, at: 0.03 }),
+  btblock: S => smp(S, 'punchm', { gain: 0.75, jitter: 0.04 }) && smp(S, 'bt-catch', { gain: 0.3, rate: 0.8 }),
+  btsteal: S => smp(S, 'swoosh', { gain: 0.4, rate: 1.5, jitter: 0.05 }) && smp(S, 'bt-dribble', { gain: 0.24, at: 0.06, rate: 1.1 }),
   tap: S => smp(S, pick('tap', 'tap2'), { gain: 0.55, jitter: 0.04 }),
   tick: S => smp(S, 'tick', { gain: 0.42, jitter: 0.07 }),
   back: S => smp(S, 'back', { gain: 0.6, jitter: 0.03 }),
