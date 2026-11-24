@@ -122,6 +122,21 @@ function pickPlan(s, p, m) {
   } else if (m.plan === 'post') m.spot = { x: RIM.x + (p.x < RIM.x ? -5.5 : 5.5), y: 9.5 }
 }
 
+// King of the Hill: where to take it to clear it, a couple of feet past the arc and away from the two defenders
+function pickClear(s, p, m) {
+  m.plan = 'clear'; m.planT = s.tick + Math.round(1.2 * HZ)
+  if (!m.side) m.side = roll(s) < 0.5 ? -1 : 1
+  let best = -99
+  for (const sp of ARC) {
+    const ax = sp.x - COURT.arcC.x, ay = sp.y - COURT.arcC.y, a = Math.hypot(ax, ay) || 1
+    const at = sp.y <= COURT.arcSideY ? { x: sp.x, y: sp.y } : { x: sp.x + ax / a * 2.5, y: sp.y + ay / a * 2.5 }
+    let open = 99
+    for (const o of s.players) if (o.team !== p.team) open = Math.min(open, Math.hypot(o.x - at.x, o.y - at.y))
+    const sc = Math.min(open, 12) - Math.hypot(at.x - p.x, at.y - p.y) * 0.3 + roll(s) * 2
+    if (sc > best) { best = sc; m.spot = at }
+  }
+}
+
 function withBall(s, p, m, lvl, out) {
   const defs = s.players.filter(o => o.team !== p.team).map(fact)
   const clockS = s.clock / HZ
@@ -137,14 +152,18 @@ function withBall(s, p, m, lvl, out) {
   }
   m.rel = null
   m.driveOnly = !!lvl.driveOnly
+  // King of the Hill, off a stop: he has to take it past the arc before he can shoot
+  const clearing = s.mustClear === p.i
+  if (clearing) { if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m) }
+  else if (m.plan === 'clear') m.plan = null
   if (m.plan == null) m.gotT = s.tick
   if (m.plan == null) pickPlan(s, p, m)
-  else if (s.tick >= m.planT) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = s.tick + 2 * HZ } else pickPlan(s, p, m) }
+  else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = s.tick + 2 * HZ } else pickPlan(s, p, m) }
   if (s.tick >= (m.thinkT ?? 0)) { m.thinkT = s.tick + 4; m.noise = (roll(s) - 0.5) * 2 * lvl.ev; m.go = roll(s) }
   const mine = shotValue(s, p, lvl, defs)
   const { def: D, d: dD } = nearestDef(s, p)
   const dRim = mine.d
-  const beat = !D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8
+  const beat = !clearing && (!D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8)
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
   const late = 1.3 + 1.0 * p.R.iq
   let need = clockS <= late ? -1 : clamp(0.6 - Math.max(0, 8 - clockS) * 0.05, 0.3, 0.6)
@@ -154,7 +173,7 @@ function withBall(s, p, m, lvl, out) {
   if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = Math.max(need, T.cpuDriveV)
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
   // a better look for a teammate
-  if (s.size > 1 && p.noAct <= 0) {
+  if (!clearing && s.size > 1 && p.noAct <= 0) {
     let to = null, tv = 0
     const called = s.call && s.tick - s.call.tick < 24 ? s.call.pid : -1
     for (const o of s.players) {
@@ -173,12 +192,13 @@ function withBall(s, p, m, lvl, out) {
       return
     }
   }
-  if (p.noAct <= 0 && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) { out.shoot = true; return }
+  if (!clearing && p.noAct <= 0 && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) { out.shoot = true; return }
   // near the rim with a step on his man, or stuck under it: go up
-  if (dRim <= (beat ? 5.4 : 4.6) && p.noAct <= 0) { out.shoot = true; return }
+  if (!clearing && dRim <= (beat ? 5.4 : 4.6) && p.noAct <= 0) { out.shoot = true; return }
   // otherwise move: the plan's target
   let tx = RIM.x, ty = RIM.y + 1.5
-  if (m.plan === 'three' || m.plan === 'mid') {
+  if (clearing) { tx = m.spot.x; ty = m.spot.y }
+  else if (m.plan === 'three' || m.plan === 'mid') {
     tx = m.spot.x; ty = m.spot.y
     if (Math.hypot(tx - p.x, ty - p.y) < 1.2) {
       // on his spot and still covered: make space with a move, or go
@@ -265,6 +285,28 @@ function defend(s, p, m, lvl, out) {
   const dRimM = Math.hypot(RIM.x - mx, RIM.y - my) || 1
   const ux = (RIM.x - mx) / dRimM, uy = (RIM.y - my) / dRimM
   let tx, ty
+  // King of the Hill: two on the king. The nearer one plays him; the other one sits back between him and the rim
+  // (and goes up with him when he shoots close by)
+  if (s.mode === 'koth' && onBall) {
+    const o = s.players.find(q => q.team !== s.poss && q !== p)
+    if (o && (m.roleN !== s.possN || s.tick >= (m.roleT ?? 0))) {
+      m.roleN = s.possN; m.roleT = s.tick + HZ
+      const dp = Math.hypot(man.x - p.x, man.y - p.y), dq = Math.hypot(man.x - o.x, man.y - o.y)
+      m.help = dp > dq + 0.5 || (Math.abs(dp - dq) <= 0.5 && p.i > o.i)
+    }
+    if (o && m.help) {
+      const side = ((p.x - man.x) * uy - (p.y - man.y) * ux) >= 0 ? 1 : -1
+      const back = Math.min(dRimM * 0.45, Math.max(0, dRimM - 3))
+      tx = mx + ux * back + uy * 2.2 * side; ty = my + uy * back - ux * 2.2 * side
+      if (man.act === 'gather') {
+        const key = s.tick - man.actT, dd = Math.hypot(man.x - p.x, man.y - p.y)
+        if (m.hKey !== key && man.actT >= Math.min(lvl.react, 6)) { m.hKey = key; m.hUp = roll(s) < lvl.contest * 0.6 }
+        if (m.hKey === key && m.hUp && dd <= 5.6 && p.act === 'free') { out.jump = true; m.hUp = false }
+      }
+      steer(p, tx, ty, out, 0.35)
+      return
+    }
+  }
   if (onBall) {
     // up on a shooter in his range, off a man who can't shoot, tight near the rim
     // (a step off a man who can't shoot: more than that only gives him a running start)

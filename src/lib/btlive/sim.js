@@ -5,6 +5,9 @@
 // referee (referee.js) from the facts it is handed and a seeded roll; the simulation moves bodies and the ball.
 //
 //   const s = createGame({ teams: [[p, ...], [p, ...]], seed })      p = { id, name, pos: 'guard' | 'big', build }
+//   King of the Hill (modes.js): three sides of one, teams: [[a], [b], [c]]. Then players[i].team === i, s.score[i]
+//   is his score, s.poss is the king's side (= his index), s.king the king, s.mustClear the man who has to take it
+//   past the arc before he can shoot (or null)
 //   step(s, inputs)                 inputs[i] for s.players[i] (missing: standing still)
 //   input = { mx, my,               the stick, -1..1 each (length <= 1): a little push walks, all the way runs
 //             shoot, pass, move,    held buttons with the ball (pass without it: call for the ball)
@@ -22,6 +25,7 @@ import { derive } from './ratings.js'
 import { rollAt, hashSeed } from './rng.js'
 import { meterSpec, meterQuality } from './meter.js'
 import * as ref from './referee.js'
+import { modeOfTeams } from './modes.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const RIM = COURT.rim
@@ -35,8 +39,10 @@ const rnd = s => rollAt(s.seed, s.rn++)
 const fact = p => ({ id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, fx: p.fx, fy: p.fy, act: p.act, actT: p.actT * DT, burst: p.burst, R: p.R })
 const stat0 = () => ({ pts: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ast: 0, reb: 0, oreb: 0, stl: 0, blk: 0, tov: 0 })
 
-export function createGame({ teams, seed = 'bt', rules = RULES }) {
+export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
   const size = teams[0].length
+  mode = mode === 'koth' || teams.length === 3 ? 'koth' : mode || modeOfTeams(teams)
+  const koth = mode === 'koth'
   const players = []
   teams.forEach((list, team) => list.forEach((p, slot) => players.push({
     id: p.id, i: players.length, team, slot, name: p.name || p.id, pos: p.pos === 'big' ? 'big' : 'guard', R: derive(p.build, p.pos),
@@ -50,15 +56,17 @@ export function createGame({ teams, seed = 'bt', rules = RULES }) {
     man: -1, sx: 0, sy: 0,                   // the man he guards (index), his spot at the check
   })))
   // who guards whom, for the game: bigs on bigs, guards on guards, then whoever is left, in order
-  for (let t = 0; t < 2; t++) {
+  // (King of the Hill: everybody guards the king, set at every change: kingIs)
+  if (!koth) for (let t = 0; t < 2; t++) {
     const mine = players.filter(p => p.team === t), theirs = players.filter(p => p.team !== t)
     const left = new Set(theirs.map(p => p.i))
     const take = p => { const m = theirs.find(o => left.has(o.i) && o.pos === p.pos) ?? theirs.find(o => left.has(o.i)); left.delete(m.i); p.man = m.i }
     mine.forEach(take)
   }
   const s = {
-    v: 1, seed: hashSeed(seed), rn: 0, tick: 0, size, rules,
-    players, score: [0, 0], poss: 0, phase: 'check', phaseT: ticks(rules.checkTime),
+    v: 1, seed: hashSeed(seed), rn: 0, tick: 0, size, rules, mode,
+    players, score: teams.map(() => 0), poss: 0, phase: 'check', phaseT: ticks(rules.checkTime),
+    king: null, mustClear: null,             // King of the Hill: the king (index), the man who must clear it (index)
     clock: 0, next: null, winner: null, gamePoint: false, possN: 0,
     ball: { st: 'held', holder: 0, x: 0, y: 0, z: 3, vx: 0, vy: 0, vz: 0, from: -1, to: -1, t: 0, n: 0, sx: 0, sy: 0, sz: 0, tx: 0, ty: 0, verdict: null, near: [], tried: [], lastTeam: 0, reb: false, grabAt: 0, speed: 0, kind: null,
       fd: -1, fD: 0, fl: false },            // a dead ball on its way to the man who checks it: to whom, from how far; has it hit the floor
@@ -68,7 +76,8 @@ export function createGame({ teams, seed = 'bt', rules = RULES }) {
     cn: 0,                                   // ...and their roll count
     events: [],
   }
-  s.poss = rnd(s) < 0.5 ? 0 : 1
+  s.poss = koth ? Math.min(2, Math.floor(rnd(s) * 3)) : rnd(s) < 0.5 ? 0 : 1
+  if (koth) kingIs(s, pointOf(s, s.poss))
   setSpots(s, s.poss, pointOf(s, s.poss))
   for (const p of players) { p.x = p.sx; p.y = p.sy }
   s.ball.holder = pointOf(s, s.poss)
@@ -96,6 +105,18 @@ function setSpots(s, team, carrier) {
     const at = (p.pos === 'big' ? POSTS : WINGS)[wing++ % 2]
     p.sx = at.x; p.sy = at.y
   }
+  if (s.mode === 'koth') {
+    // both of the others on the king, a step either side of the line to the rim
+    const m = s.players[carrier], d = Math.hypot(RIM.x - m.sx, RIM.y - m.sy) || 1
+    const ux = (RIM.x - m.sx) / d, uy = (RIM.y - m.sy) / d
+    let side = -1
+    for (const p of s.players) {
+      if (p.team === team) continue
+      p.sx = m.sx + ux * 4.6 - uy * 2.4 * side; p.sy = m.sy + uy * 4.6 + ux * 2.4 * side
+      side = -side
+    }
+    return
+  }
   for (const p of s.players) {
     if (p.team === team) continue
     const m = s.players[p.man]
@@ -117,7 +138,7 @@ function endPossession(s, pts, nextTeam, carrier, why) {
   const st = ref.scoreState(s.score, s.rules)
   s.gamePoint = st.gamePoint
   for (const p of s.players) { p.burst = 0; p.shot = null; if (p.act !== 'down') { p.act = 'free'; p.actT = 0 } p.pb = 0 }
-  s.call = null
+  s.call = null; s.mustClear = null
   if (st.over) {
     s.phase = 'over'; s.winner = st.winner
     s.events.push({ e: 'final', winner: st.winner, score: [...s.score] })
@@ -126,9 +147,43 @@ function endPossession(s, pts, nextTeam, carrier, why) {
   s.phase = 'dead'; s.phaseT = ticks(s.rules.deadTime)
   const c = carrier != null && s.players[carrier].team === nextTeam ? carrier : pointOf(s, nextTeam)
   s.next = { team: nextTeam, carrier: c }
+  if (s.mode === 'koth') kingIs(s, c)
   setSpots(s, nextTeam, c)
   // the ball stays in the hands of whoever checks it next; otherwise it's dead where it is
   if (s.ball.st === 'held' && s.ball.holder !== c) { s.ball.st = 'dead'; s.ball.vx = s.ball.vy = s.ball.vz = 0 }
+}
+
+// King of the Hill: he's the king (or about to be: s.mustClear), and the other two guard him
+function kingIs(s, i) {
+  s.king = i
+  for (const p of s.players) p.man = p.i === i ? -1 : i
+}
+
+// King of the Hill: a stop (a defensive board, a steal, a block the defense comes up with). The ball stays live: the
+// man who has it is on the attack at once, but he has to clear it past the arc before he can shoot
+function kothStop(s, p, why) {
+  s.events.push({ e: 'poss', team: s.poss, pts: 0, why })
+  s.possN++
+  s.poss = p.team; kingIs(s, p.i); s.mustClear = p.i
+  s.call = null
+  for (const o of s.players) { o.burst = 0; if (o.act === 'gather') { o.act = 'free'; o.actT = 0; o.shot = null } }
+  s.ball.holder = p.i; holdBall(s)
+  p.noAct = ticks(0.2); p.catchFrom = -1
+  if (p.act === 'jump') { p.act = 'land'; p.actT = 0 }
+  s.clock = ticks(s.rules.shotClock[s.size - 1])
+  s.events.push({ e: 'clear', pid: p.i, why })
+}
+
+// King of the Hill: a dead ball (out of bounds, the shot clock) goes to whichever of the men who didn't touch it
+// last is closer to it (last: the index of the man who did)
+function kothNext(s, last, at) {
+  let best = -1, bd = Infinity
+  for (const p of s.players) {
+    if (p.i === last) continue
+    const d = Math.hypot(p.x - at.x, p.y - at.y)
+    if (d < bd) { bd = d; best = p.i }
+  }
+  return best
 }
 
 // a layup or a dunk: one roll a player a possession, from the seed, so a device can show the right meter before the
@@ -216,7 +271,7 @@ function shotLands(s) {
     const dd = Math.hypot(b.sx - RIM.x, b.sy - RIM.y) || 1
     b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = (b.sx - RIM.x) / dd * 0.9; b.vy = (b.sy - RIM.y) / dd * 0.9; b.vz = -3
     s.events.push({ e: 'make', pid: p.i, pts: v.pts, kind: v.kind, three: v.three, poster: v.poster, deep: v.deep, on: v.by, ast, score: [...s.score] })
-    const keep = s.rules.makeItTakeIt
+    const keep = s.rules.makeItTakeIt || s.mode === 'koth'
     endPossession(s, v.pts, keep ? p.team : 1 - p.team, keep ? p.i : null, 'make')
     return
   }
@@ -282,7 +337,8 @@ function doSteal(s, p) {
     s.stats[p.i].stl++; s.stats[h.i].tov++
     b.holder = p.i; holdBall(s)
     s.events.push({ e: 'steal', pid: p.i, from: h.i })
-    endPossession(s, 0, p.team, p.i, 'steal')
+    if (s.mode === 'koth') kothStop(s, p, 'steal')
+    else endPossession(s, 0, p.team, p.i, 'steal')
     return
   }
   p.act = 'frozen'; p.actT = 0; p.actN = ticks(v.reach ? T.stealReachFreeze : T.stealMiss)
@@ -309,6 +365,8 @@ function act(s, p, inp) {
   if (has) {
     if (p.noAct > 0) return
     // SHOOT pressed in the last half second (on the catch, on the board, a beat before the ball got there) goes now
+    // (King of the Hill: not while he still has to clear it; a press then doesn't wait for it)
+    if (s.mustClear === p.i) p.sq = -1
     if (p.sq >= 0 && s.tick - p.sq <= ticks(T.shootBuffer)) { p.sq = -1; startGather(s, p) }
     else if ((edge & B_PASS) && s.size > 1) doPass(s, p, inp)
     else if ((edge & B_MOVE) && p.moveCd <= 0) doMove(s, p, inp)
@@ -421,6 +479,7 @@ function collide(s, walk = false, slip = null) {
 }
 
 function change(s, p, why, reb) {
+  if (s.mode === 'koth') { kothStop(s, p, why); return }
   s.ball.holder = p.i; holdBall(s)
   endPossession(s, 0, p.team, p.i, why)
   void reb
@@ -476,10 +535,11 @@ function ballStep(s) {
   }
   if (b.z === 0 && b.vz === 0) { b.vx *= T.looseFriction; b.vy *= T.looseFriction }
   if (!ref.inBounds(b.x, b.y, 0.6)) {
-    const to = 1 - b.lastTeam
-    s.events.push({ e: 'oob', team: b.lastTeam, ball: true })
+    const by = s.mode === 'koth' ? kothNext(s, b.lastTeam, b) : -1
+    const to = s.mode === 'koth' ? s.players[by].team : 1 - b.lastTeam
+    s.events.push({ e: 'oob', team: b.lastTeam, ball: true, to })
     b.st = 'dead'
-    endPossession(s, 0, to, null, to === s.poss ? 'oob-keep' : 'oob')
+    endPossession(s, 0, to, by >= 0 ? by : null, to === s.poss ? 'oob-keep' : 'oob')
     return
   }
   if (s.tick < b.grabAt) return
@@ -543,6 +603,7 @@ function betweenPlays(s) {
     s.poss = s.next.team
     const c = s.next.carrier
     s.next = null
+    if (s.mode === 'koth') kingIs(s, c)
     if (b.st === 'held') holdBall(s)                       // (only ever in his hands: endPossession)
     else if (b.fd < 0) feedStart(s, c)                     // still coming down: it goes to him from here
     s.events.push({ e: 'check', team: s.poss, pid: c })
@@ -657,10 +718,14 @@ function tick(s, inputs) {
     // out: his foot on the line (T.footIn), on the floor; a shooter in the air is still in (he lets it go before he lands)
     if (h.act !== 'gather' && !ref.inBounds(h.x, h.y, -T.footIn)) {
       s.stats[h.i].tov++
-      s.events.push({ e: 'oob', team: h.team, pid: h.i })
-      endPossession(s, 0, 1 - h.team, null, 'oob')
+      const by = s.mode === 'koth' ? kothNext(s, h.i, h) : -1
+      const to = by >= 0 ? s.players[by].team : 1 - h.team
+      s.events.push({ e: 'oob', team: h.team, pid: h.i, to })
+      endPossession(s, 0, to, by >= 0 ? by : null, 'oob')
       return s
     }
+    // King of the Hill: past the arc with it, he's the king
+    if (s.mustClear === h.i && ref.isThree(h.x, h.y)) { s.mustClear = null; s.events.push({ e: 'cleared', pid: h.i }) }
   }
   if (b.st === 'held' || b.st === 'pass') {
     if (--s.clock <= 0) {
@@ -668,7 +733,8 @@ function tick(s, inputs) {
       s.stats[h.i].tov++
       s.events.push({ e: 'clock', team: s.poss, pid: h.i })
       if (b.st === 'pass') b.st = 'dead'
-      endPossession(s, 0, 1 - s.poss, null, 'clock')
+      const by = s.mode === 'koth' ? kothNext(s, h.i, b) : -1
+      endPossession(s, 0, by >= 0 ? s.players[by].team : 1 - s.poss, by >= 0 ? by : null, 'clock')
     }
   }
   return s
