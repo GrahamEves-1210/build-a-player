@@ -117,7 +117,7 @@ export const T = {
   contestBehind: 0.6,                // ...this much (a man on his hip still bothers it)
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
-  contestSecond: 0.6,                // a second man in it adds this share of his own contest (help at the rim, two on the king)
+  contestSecond: 0.45,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
   jsThrough: 0.35,                   // Jump Shot 11 shoots over this share of a jumper's contest
   contestMaxL: 0.85,                 // ...off a layup
@@ -145,7 +145,7 @@ export const T = {
   blockIn: 0.10, blockOut: 0.80,     // ...and between these fractions of his jump: on time. Else a quarter the chance
   blockBase: 0.17,                   // on-time chance at average everything
   blockInt: 0.9,                     // x (0.55 + this * Interior D)
-  blockSize: 0.6,                    // x (1 + this * (his Size n - the shooter's))
+  blockSize: 0.45,                   // x (1 + this * (his Size n - the shooter's))
   blockBnc: 0.9,                     // x (1 + this * (his Bounce n - 0.75))
   blockJumper: 0.40, blockDunk: 0.50, // jumpers and dunks are harder to get than layups
   blockMax: 0.62,
@@ -194,10 +194,10 @@ export const T = {
   rebSpreadL: 5.6,                   // ...off a layup, in any direction but straight back at him (radians, the whole fan)
   rebLong: 0.08,                     // ...plus this for every foot of shot (long shots, long boards)
   rebAir: 1.15,                      // seconds from the rim to the floor
-  standReach: 7.6, standReachSize: 1.3,  // the ball can be taken when it's under this (feet on the floor)
+  standReach: 7.9, standReachSize: 0.9,  // the ball can be taken when it's under this (feet on the floor)
   jumpReach: 1.0, jumpReachBnc: 1.2,     // ...and this much higher in a jump
-  grabDist: 2.1,                     // and within this of him (generous: lag)
-  grabReb: 2.6,                      // ...plus this at Rebounding 11 (he's where the ball is going)
+  grabDist: 2.5,                     // and within this of him (generous: lag)
+  grabReb: 2.0,                      // ...plus this at Rebounding 11 (he's where the ball is going)
   boardReb: 4.0, boardSize: 1.2, boardBnc: 1.0,   // two under it: weights 1 + 3 x (Rebounding - 0.75) + 1.2 x (Size - 0.75) + 1 x (Bounce - 0.75), the nearer one a bit more
   looseFriction: 0.9,                // a ball on the floor slows by this a tick
   // a block: off the blocker's hand, away from him and down, between these speeds (ft/s); this share he keeps
