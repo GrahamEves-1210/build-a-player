@@ -33,7 +33,13 @@ export const handUp = d => (beaten(d) ? d : { ...d, act: 'jump' })
 // A late closeout: the contest at the release, but a man who wasn't in the shot as it went up (cUp: the contest at the
 // gather, every hand up) only gets part of it
 // (a layup or a dunk goes up slower and closer: a man flying in at it gets more of his hand on it)
-export const lateContest = (c, cUp, kind = 'jumper') => { const k = kind === 'jumper' ? T.lateShare : T.lateShareL; return cUp == null ? c : c * (1 - k) + Math.min(c, cUp) * k }
+// ...and a man square in it as he went up still bothers a layup he slides by in the air (he has to finish around him)
+export const lateContest = (c, cUp, kind = 'jumper') => {
+  if (cUp == null) return c
+  const k = kind === 'jumper' ? T.lateShare : T.lateShareL
+  const late = c * (1 - k) + Math.min(c, cUp) * k
+  return kind === 'jumper' ? late : Math.max(late, cUp * T.gatherHoldL)
+}
 
 // How much the defense is in the shot, 0..1, and whose hand it is. Players: { id, x, y, vx, vy, act, R }
 // A hand counts for how close he is, where he is (between the shooter and the rim, beside him, or trailing a man
@@ -166,9 +172,10 @@ export function judgeBoard(cands, roll) {
 
 // Where a miss comes off to: mostly the far side of the rim from the shooter, longer off a long shot
 export function reboundSpot(from, d, r1, r2) {
-  const out = T.rebMin + (T.rebMax - T.rebMin) * r1 * r1 + T.rebLong * d
+  const lay = d <= T.layRange
+  const out = lay ? T.rebMinL + (T.rebMax - T.rebMinL) * r1 : T.rebMin + (T.rebMax - T.rebMin) * r1 * r1 + T.rebLong * d
   // (a layup off the rim goes anywhere: up and off the glass, as often back the way he came as long)
-  const a = Math.atan2(RIM.y - from.y, RIM.x - from.x) + (r2 - 0.5) * (d <= T.layRange ? T.rebSpreadL : 3.8)
+  const a = Math.atan2(RIM.y - from.y, RIM.x - from.x) + (r2 - 0.5) * (lay ? T.rebSpreadL : 3.8)
   let x = RIM.x + Math.cos(a) * out, y = RIM.y + Math.sin(a) * out
   const board = RIM.y + 0.6
   if (y < board) y = board + (board - y) * 0.6            // off the backboard, back into play

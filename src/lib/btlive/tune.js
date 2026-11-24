@@ -44,7 +44,7 @@ export const T = {
   sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.94,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps 97%: Speed 11 with it outruns a Speed 1 guarding)
-  defSpeed: 0.95,                    // guarding, at Perimeter D 1 (x top speed)...
+  defSpeed: 0.99,                    // guarding, at Perimeter D 1 (x top speed)...
   defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (an 80 about 100%: an even man stays in front)
   accel: 34,                         // ft/s² (about a third of a second to top speed)...
   accelBase: 0.97, accelSpd: 0.06,   // ...x (0.97 + 0.06 x Speed): a quick first step
@@ -110,6 +110,7 @@ export const T = {
   contestSet: 0.75,                  // ...set in front of a layup, not moving: walls up, but he can be finished on
   lateShare: 0.6,                    // a man who closes out after the shot went up gets this much less of his contest at most
   lateShareL: 0.25,                  // ...on a layup or a dunk (it goes up slower, and he flies at it)
+  gatherHoldL: 0.7,                  // a layup keeps at least this share of the contest he went up into (every hand up), slid by or not
   contestBeat: 0.15,                 // frozen or on the floor
   frontDot: 0.5,                     // square in front: full; beside him (at right angles to the rim)...
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
@@ -126,9 +127,12 @@ export const T = {
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
   cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
-  cpuNeed: 0.5,                      // early in the clock a CPU wants a shot worth this (later, less)
+  cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
+  cpuNeed: 0.5,                      // early in the clock a CPU wants a shot worth this (later, less)...
+  cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
   twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
   cpuDriveV: 0.55,                   // a jumper never has to be worth more than this (a make = 1, a two 1.45) while there's time to go to the rim...
+  cpuBeat: 0.4, cpuBeatR: 0.8,       // ...how often he gets by his man: this, + this x (his Speed and Handles - the man's Speed and Perimeter D) / 2
   cpuDriveRisk: 0.85,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
   cpuJumpEdge: 0.03,                 // ...by this much
 
@@ -185,6 +189,7 @@ export const T = {
 
   // ── Rebounds and loose balls ────────────────────────────────────────────────────────────────────
   rebMin: 2.5, rebMax: 9.5,          // a miss comes off this far from the rim...
+  rebMinL: 4.0,                      // ...off a layup, anywhere from this far out (it comes off the glass with something on it)...
   rebSpreadL: 5.6,                   // ...off a layup, in any direction but straight back at him (radians, the whole fan)
   rebLong: 0.08,                     // ...plus this for every foot of shot (long shots, long boards)
   rebAir: 1.15,                      // seconds from the rim to the floor

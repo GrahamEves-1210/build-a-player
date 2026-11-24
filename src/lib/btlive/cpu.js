@@ -70,17 +70,24 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
 }
 
-// what taking his man to the rim is worth: a layup from 4 ft with the man walled up in front of him, hand up (or
-// an open one if he's beaten), less the risk on the way
-function driveValue(s, p, D, lvl) {
+// what taking his man to the rim is worth: a layup from 4 ft, open if he gets by him (likelier the quicker and
+// better handler he is against the man's feet and Perimeter D; a man already sitting back at the rim isn't got by),
+// walled up with a hand in his face if he doesn't; less the risk on the way
+function driveValue(s, p, D, dD, lvl) {
   const dR = ref.rimDist(p) || 1, ux = (RIM.x - p.x) / dR, uy = (RIM.y - p.y) / dR
   const me = { ...fact(p), x: RIM.x - ux * 4, y: RIM.y - uy * 4, vx: 0, vy: 0 }
   const beaten = !D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dR + 0.8
-  const wall = beaten ? [] : [{ ...fact(D), x: me.x + ux * 3.2, y: me.y + uy * 3.2, vx: 0, vy: 0, act: 'jump' }]
-  const c = ref.contestOf(me, wall, 'layup').c
+  const lay = c => ref.makeChance({ R: p.R, kind: 'layup', d: 4, q: 1, c, run: 0, cs: null, rushed: false })
+  const open = lay(0)
+  let v = open
+  if (!beaten) {
+    const walled = lay(ref.contestOf(me, [{ ...fact(D), x: me.x + ux * 3.2, y: me.y + uy * 3.2, vx: 0, vy: 0, act: 'jump' }], 'layup').c)
+    const by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (dD - 5) / 8, 0.25, 1)
+    v = by * open + (1 - by) * walled
+  }
   const win = meterSpec('layup', p.R, s.gamePoint).win
   const green = clamp(win / (lvl.meterSd * 1.25), 0.12, 0.97)
-  return ref.makeChance({ R: p.R, kind: 'layup', d: 4, q: 1, c, run: 0, cs: null, rushed: false }) * (green + (1 - green) * 0.84) * T.cpuDriveRisk
+  return v * (green + (1 - green) * 0.84) * T.cpuDriveRisk
 }
 
 // is the lane from a to b clear of defenders
@@ -110,7 +117,8 @@ function pickPlan(s, p, m) {
   const R = p.R
   const w = {
     drive: 0.25 + R.fin * 0.6 + R.spd * 0.2 + R.hnd * 0.3 + R.bnc * 0.15,
-    three: Math.max(0.03, (R.js - 0.45) * 2.2),
+    // (a man sitting back off him is giving him the jumper)
+    three: Math.max(0.03, (R.js - 0.45) * 2.2) * (1 + clamp((m.sag ?? 0) - 6, 0, 6) / 2),
     mid: Math.max(0.02, (R.js - 0.5) * 0.6),
     post: R.big ? 0.25 + R.size * 0.7 + R.fin * 0.3 : R.size > 0.7 ? 0.15 : 0,
   }
@@ -169,7 +177,7 @@ function withBall(s, p, m, lvl, out) {
   const clearing = s.mustClear === p.i
   if (clearing) { if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m) }
   else if (m.plan === 'clear') m.plan = null
-  if (m.plan == null) m.gotT = s.tick
+  if (m.plan == null) { m.gotT = s.tick; m.sag = nearestDef(s, p).d }
   if (m.plan == null) pickPlan(s, p, m)
   else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = s.tick + 2 * HZ } else pickPlan(s, p, m) }
   if (s.tick >= (m.thinkT ?? 0)) { m.thinkT = s.tick + 4; m.noise = (roll(s) - 0.5) * 2 * lvl.ev; m.go = roll(s) }
@@ -179,12 +187,13 @@ function withBall(s, p, m, lvl, out) {
   const beat = !clearing && (!D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8)
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
   const late = 1.3 + 1.0 * p.R.iq
-  let need = clockS <= late ? -1 : clamp(T.cpuNeed - Math.max(0, 8 - clockS) * 0.05, 0.3, T.cpuNeed)
+  const held = (s.tick - (m.gotT ?? s.tick)) / HZ
+  let need = clockS <= late ? -1 : clamp(T.cpuNeed - Math.max(0, 8 - clockS) * 0.05 - held * T.cpuHurry, 0.3, T.cpuNeed)
   // a contested jumper is the worst shot there is: with time left to get to the rim, he goes and gets a layup instead
   // (a smart player sees it sooner)
   // (and a jumper better than the drive is the shot: a man who sags off a shooter gets shot over)
   const toRim = Math.max(0, dRim - 4.5) / p.R.topBall + 0.5
-  if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, lvl) + T.cpuJumpEdge, 0.3, T.cpuDriveV)
+  if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, dD, lvl) + T.cpuJumpEdge, 0.3, T.cpuDriveV)
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
   // a better look for a teammate
   if (!clearing && s.size > 1 && p.noAct <= 0) {
@@ -340,6 +349,19 @@ function defend(s, p, m, lvl, out) {
     gap = Math.min(gap, Math.max(0.5, dRimM - 1.2))
     tx = mx + ux * gap; ty = my + uy * gap
     const dd = Math.hypot(man.x - p.x, man.y - p.y)
+    // on his hip as he drives (beside him, not yet in front): don't run into him, race him to a spot down his line
+    // and cut in front there (running into his body only takes the speed off)
+    const mv = Math.hypot(man.vx, man.vy)
+    // (not every time: a read he makes on some drives, more often the better he is)
+    if (m.raceN !== s.possN) { m.raceN = s.possN; m.races = roll(s) < T.cpuRace * lvl.contest }
+    if (m.races && dd < 4.6 && mv > 5 && man.act === 'free' && dRimM > 6) {
+      const vx = man.vx / mv, vy = man.vy / mv
+      const ahead = ((p.x - man.x) * vx + (p.y - man.y) * vy) / (dd || 1)
+      if (ahead < 0.55 && vx * ux + vy * uy > 0.3) {
+        const side = ((p.x - man.x) * -vy + (p.y - man.y) * vx) >= 0 ? 1 : -1
+        tx = man.x + vx * 5.5 - vy * side * 2.4; ty = man.y + vy * 5.5 + vx * side * 2.4
+      }
+    }
     if (man.act === 'gather') {
       // a hand up, timed to the release (decided once a shot, after his reaction)
       const key = s.tick - man.actT
