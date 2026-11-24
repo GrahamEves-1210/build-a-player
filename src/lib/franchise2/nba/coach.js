@@ -42,8 +42,8 @@ export const CTYPES = ['dev', 'off', 'def', 'rot', 'late']
 export const CLABEL = { dev: 'PLAYER DEVELOPMENT', off: 'OFFENSIVE SCHEME', def: 'DEFENSIVE SCHEME', rot: 'ROTATIONS', late: 'GAME MANAGEMENT' }
 export const CSHORT = { dev: 'DEVELOPMENT', off: 'OFFENSE', def: 'DEFENSE', rot: 'ROTATIONS', late: 'GAME MGMT' }
 // the words a staff screen uses: spelled out (full) and one word (a tight list)
-export const CNAME = { dev: 'Player development', off: 'Offensive scheme', def: 'Defensive scheme', rot: 'Rotations', late: 'Late-game management' }
-export const CWORD = { dev: 'Develop', off: 'Offense', def: 'Defense', rot: 'Rotations', late: 'Late game' }
+export const CNAME = { dev: 'Player development', off: 'Offensive scheme', def: 'Defensive scheme', rot: 'Rotations', late: 'Game management' }
+export const CWORD = { dev: 'Develop', off: 'Offense', def: 'Defense', rot: 'Rotations', late: 'Game mgmt' }
 export const STYLES = {
   pace: { name: 'PACE AND SPACE', fx: 'MORE POSSESSIONS, MORE THREES' },
   defense: { name: 'DEFENSE FIRST', fx: 'A SLOWER GAME, A TOUGHER DEFENSE' },
@@ -237,7 +237,7 @@ export function setupCandidates(seed, team, k) {
 export function staffCandidates(F, k, n = 6) {
   ensureStaff(F)
   const J = jobLog(F, k)
-  const fits = F.cpool.filter(c => !c.real && (c.sd === k || (!c.sd && k !== 'pd')) && !J.gone.includes(c.i))
+  const fits = F.cpool.filter(c => !c.real && !c.home && (c.sd === k || (!c.sd && k !== 'pd')) && !J.gone.includes(c.i))
   const R = rngOf(`${F.seed}-${F.year}-buzz-${k}`)
   const list = fits.map(c => ({ c, v: score(c.r, k) + (R.u() - 0.5) * 3 })).sort((a, b) => b.v - a.v).slice(0, n).map(x => x.c)
   return [...list, homeCandidate(F, k)]

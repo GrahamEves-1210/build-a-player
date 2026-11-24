@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createNbaFranchise, loadNba, saveNba, saveNbaSetup, clearNba, rawNbaSlot, nbaSlotSummary, NBA_KEY, TEAM, recText, records, seasonText } from '../../../lib/franchise2/nba'
+import { createNbaFranchise, loadNba, saveNba, saveNbaSetup, clearNba, rawNbaSlot, nbaSlotSummary, NBA_KEY, TEAM, recText, records, seasonText, NC } from '../../../lib/franchise2/nba'
+import { hiresOf } from './NbaHire'
 import { NBA_FRANCHISE_CARD_KEY, NBA_FRANCHISE_ART, NBA_FRANCHISE_TURN } from '../../../lib/franchiseLive'
 import { getUsername } from '../../../lib/discord'
 import { sfx, haptic } from '../../../lib/juice'
@@ -96,13 +97,15 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
     flush()
     try { localStorage.setItem(LAST, String(s)) } catch {}
     const X = loadNba(s)
-    setSlot(s); setF(X); setSetup(X ? null : rawNbaSlot(s)?.setup ?? { slot: s, seed: newSeed(), owner, step: 'team' })
+    setSlot(s); setF(X); setSetup(X ? null : rawNbaSlot(s)?.setup ?? { slot: s, seed: newSeed(), owner, step: 'pace' })
     sfx('tap')
   }
   const start = () => {
     const S = setup
     const builds = (S.picks ?? []).map(p => S.builds?.[p.id]).filter(B => B?.name)
-    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds })
+    // (the coach from the COACH step, his staff from the HIRE step: coach.js; the pick from the MODE step: F.pace)
+    const coach = S.cb && NC.linesDone(S.cb) ? NC.finishCoach(S.cb, { name: `${S.coach?.first ?? ''} ${S.coach?.last ?? ''}`.trim() || owner, face: S.coach?.face ?? null, style: S.coach?.style ?? null }) : null
+    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds, pace: S.pace ?? 'full', ...(coach && { coach, staff: hiresOf(S) }) })
     if (saveNba(X)) leaveNote(X); else { bad.current = true; setSaveBad(true) }
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')

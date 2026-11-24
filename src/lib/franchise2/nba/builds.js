@@ -1,7 +1,7 @@
 // NBA FRANCHISE: the GM's own builds. A build is made on the game's build page (a guard or a big, its ten ratings),
 // named and numbered in the setup, and joins the team as a rookie: 20 years old, a first-round rookie-scale deal at
-// the slot his OVR would have gone, his spot read off his ratings. The man he replaces (the last man in his group on
-// the bench) is released to the street with his deal off the books.
+// the slot his OVR would have gone, his spot read off his ratings. He takes an open roster spot; a full roster makes
+// room at the end of its bench (waiveFor: its camp body first).
 // Builds grow by the game's own rule, not the sim's dice: each summer a young build's grades go up a step at a time.
 // From 28 he ages the way every man does (aging.js ageBuild: the league's curve, the legs first), and he retires the
 // way they do, a little later (from 35, the same odds x0.6, as football's builds), at 40 at the latest. His
@@ -38,10 +38,11 @@ export function placeBuilds(F) {
   for (let idx = 0; idx < F.builds.length; idx++) {
     const B = F.builds[idx]
     const p = makeBuild(F, idx, B)
-    // the man he replaces, when the 15 standard spots are full: of the last few men in his group (the two-way men
-    // aside), the one whose release costs least, waived (his guaranteed money stays on the books, as it would)
+    // his roster spot: an open one; with the 15 standard spots full, the end of the bench makes room: the team's
+    // camp body (a filler on a minimum deal) first, else of the last few men in his group (the two-way men aside) the
+    // one whose release costs least, waived (his guaranteed money stays on the books, as it would)
     const full = t.r.filter(x => !x.tw).length >= 15
-    const same = full ? t.r.filter(x => !x.tw && x.b == null && x.g === p.g).sort((x, y) => x.o - y.o).slice(0, 3).sort((x, y) => (X.cutCost(F, x).total - X.cutCost(F, y).total) || x.o - y.o)[0] : null
+    const same = !full ? null : waiveFor(F, t, p.g)
     const before = X.capSheet(F, F.team)
     if (same) { X.cutMan(F, F.team, same.i); same.was = F.team }
     t.r.push(p)
@@ -50,6 +51,13 @@ export function placeBuilds(F) {
     addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${signText('signs with', { ...p, n: `${p.n}, a ${POS_FULL[p.p] ?? p.p},` }, F.team, { note: ' (rookie scale)' })}${same ? `; ${same.n} is waived` : ''}` })
     if (!F.noCap) addNews(F, { k: 'cap', tag: 'PAYROLL', s: F.team, text: buildCapText(F, before, X.capSheet(F, F.team)) })
   }
+}
+// the man a full roster waives to make room for a build of group g (setup's preview and placeBuilds agree)
+export function waiveFor(F, t, g) {
+  const cost = x => X.cutCost(F, x).total
+  const fill = t.r.filter(x => !x.tw && x.b == null && x.fl).sort((x, y) => cost(x) - cost(y) || x.o - y.o)[0]
+  if (fill) return fill
+  return t.r.filter(x => !x.tw && x.b == null && x.g === g).sort((x, y) => x.o - y.o).slice(0, 3).sort((x, y) => (cost(x) - cost(y)) || x.o - y.o)[0] ?? null
 }
 // what a build's deal does to the books: the payroll before and after, and the line it now sits past
 const LINE = { under: 'under the cap', cap: 'over the cap', tax: 'in the luxury tax', a1: 'over the first apron', a2: 'over the second apron' }

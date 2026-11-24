@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
-import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, waiveFor, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
 import { cleanName, nameOk, randomFirstLast } from '../../../lib/franchise2/identity'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../../lib/franchise2/faces'
-import { sfx } from '../../../lib/juice'
+import { sfx, haptic } from '../../../lib/juice'
 import { IconSpin } from '../../app/icons'
 import { Chyron, LowerThird, Go, Fact, fkVars } from '../kit'
 import { preview } from './NbaSetup'
 
 // BASKETBALL FRANCHISE, the setup's players: up to three of the GM's own builds, each built on the game's build page
-// (a guard or a big), then named, numbered and given a face here. Each one replaces the last man in his group.
+// (a guard or a big), then named, numbered and given a face here. Each takes a roster spot (builds.js).
 //   S.picks [{ id, pos }] the spots in order · S.builds { [id]: { pos, build, types, sandbox, name, num, face } }
 const NAME = { guard: 'GUARD', big: 'BIG' }
 export const faceOf = (B, team) => buildFaceUrl({ pos: 'nba', face: B.face ?? defaultFace(B.name ?? 'build', 'nba'), kit: 'hoops' }, TEAM[team]?.color)
@@ -35,46 +35,92 @@ function capNotes(S) {
   }
   return out
 }
+// THE PLAYERS, football's step in the NBA's terms (Setup.jsx Builds): how many guards and bigs, each built on the build
+// page, then named. They're rookies on the roster: each takes a roster spot (a full roster waives its end of the bench
+// to make room: builds.js waiveFor, its camp body first), signed at the slot his OVR goes at in the draft.
+const GROUPS = [['guard', 'G', 'GUARD', 'PG, SG OR SF'], ['big', 'BIG', 'BIG', 'PF OR C']]
+const POS_SHORT = { guard: 'G', big: 'BIG' }
 export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const picks = S.picks ?? []
   const notes = useMemo(() => capNotes(S), [S.team, S.picks, S.builds, S.rules?.cap]) // eslint-disable-line react-hooks/exhaustive-deps
-  const add = pos => { const id = `b${Date.now().toString(36)}`; go({ picks: [...picks, { id, pos }] }, 'tap') }
-  const drop = id => { const b = { ...(S.builds ?? {}) }; delete b[id]; go({ picks: picks.filter(p => p.id !== id), builds: b }, 'back') }
-  const build = (p, k) => onBuild({ id: p.id, pos: p.pos, n: k + 1, of: picks.length })
-  const ready = picks.every(p => S.builds?.[p.id]?.name)
+  const count = pos => picks.filter(p => p.pos === pos).length
+  const can = () => picks.length < BUILD_MAX
+  const add = pos => { if (!can()) { sfx('deny'); return } go({ picks: [...picks, { id: `b${Date.now().toString(36)}`, pos }] }, 'slot') }
+  const dropOne = pos => {
+    const last = [...picks].reverse().find(p => p.pos === pos)
+    if (!last) return
+    const b = { ...(S.builds ?? {}) }; delete b[last.id]
+    go({ picks: picks.filter(p => p !== last), builds: b }, 'tap')
+  }
+  // (in the order the step lists them: the guards, then the bigs)
+  const ordered = GROUPS.flatMap(([g]) => picks.filter(p => p.pos === g))
+  const built = p => S.builds?.[p.id]
+  const next = ordered.find(p => !built(p))
+  const unnamed = ordered.find(p => built(p) && !built(p).name)
+  const done = !next && !unnamed
+  const build = p => { sfx('tap'); onBuild({ id: p.id, pos: p.pos, n: ordered.indexOf(p) + 1, of: ordered.length }) }
+  const ready = ordered.filter(p => built(p)?.name)
+  // the roster: its standard spots, and who a full one lets go to make room for each build, in order
+  const T = preview().teams[S.team]
+  const std = T.r.filter(x => !x.tw).length
+  const outs = useMemo(() => {
+    const F = { ...preview(), team: S.team }, t = { ...T, r: [...T.r] }, out = {}
+    for (const p of ordered) {
+      if (t.r.filter(x => !x.tw).length >= 15) { const m = waiveFor(F, t, p.pos); if (m) { out[p.id] = m; t.r = t.r.filter(x => x !== m) } }
+      t.r.push({ i: -1, g: p.pos, b: 0 })
+    }
+    return out
+  }, [S.team, ordered.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nick = TEAM[S.team].nick
   return (
-    <div className="fsu-card nb-builds">
-      <Chyron tone="ink" title={`${owner || 'Guest'}'s players`} sub={`UP TO ${BUILD_MAX} BUILDS`} />
-      {picks.map((p, k) => {
-        const B = S.builds?.[p.id]
-        if (!B?.name) {
+    <div className="fsu-builds">
+      <Chyron team={S.team} tag={String(picks.length)} title="Build your players" sub={`ROOKIES · UP TO ${BUILD_MAX} · ${std} OF 15 SPOTS FILLED`} />
+      <div className="fsu-pos">
+        {GROUPS.map(([pos, k, name, spots]) => {
+          const n = count(pos)
           return (
-            <div key={p.id} className="nb-build-row">
-              <button type="button" className="fsu-empty" onClick={() => build(p, k)}>
-                <span className="fsu-empty-pos">{p.pos === 'big' ? 'BIG' : 'G'}</span>
-                <span className="fsu-empty-txt"><b>{B ? 'NAME HIM' : 'NOT BUILT'}</b><small>{NAME[p.pos]}</small></span>
-                <span className="fsu-empty-go">{B ? 'NAME' : 'BUILD'}</span>
-              </button>
-              <button type="button" className="nb-link" onClick={() => drop(p.id)}>Remove</button>
+            <div key={pos} className={`fsu-pos-row${n ? ' is-on' : ''}`}>
+              <span className="fsu-pos-k"><b>{k}</b><small>{name}</small></span>
+              <span className="fsu-pos-st"><small>PLAYS</small><b>{spots}</b></span>
+              <span className="fsu-step">
+                <button type="button" onClick={() => dropOne(pos)} disabled={!n} aria-label={`One fewer ${name.toLowerCase()}`}>-</button>
+                <b>{n}</b>
+                <button type="button" onClick={() => add(pos)} disabled={!can()} aria-label={`One more ${name.toLowerCase()}`}>+</button>
+              </span>
             </div>
           )
-        }
-        const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
-        return (
-          <div key={p.id} className="nb-build-row">
-            <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner} line={`NO. ${buildSlot(o)} PICK`} size="s" />
-            {notes[p.id] && <p className="nb-build-cap">{notes[p.id]}</p>}
-            <span className="nb-fa-acts"><button type="button" onClick={() => build(p, k)}>Rebuild</button><button type="button" onClick={() => drop(p.id)}>Remove</button></span>
-          </div>
-        )
-      })}
-      {picks.length < BUILD_MAX && (
-        <div className="nb-build-add">
-          <button type="button" className="nb-tman" onClick={() => add('guard')}><b>+ Add a guard</b><em>PG, SG or SF</em></button>
-          <button type="button" className="nb-tman" onClick={() => add('big')}><b>+ Add a big</b><em>PF or C</em></button>
-        </div>
-      )}
-      <div className="fsu-acts"><Go onClick={onNext} disabled={!ready}>{picks.length ? 'Next: league rules' : 'No builds: league rules'}</Go></div>
+        })}
+      </div>
+      {ordered.length > 0 && <Chyron tone="ink" size="s" title="The roster spots" right={`${ready.length}/${ordered.length} BUILT`} />}
+      <div className="fsu-blist">
+        {ordered.map((p, k) => {
+          const B = built(p), m = outs[p.id]
+          const room = m ? `The ${nick} waive ${m.n}${m.fl ? '' : ` (${m.o})`} to open a roster spot.` : null
+          if (!B?.name) return (
+            <button key={p.id} type="button" className="fsu-empty" onClick={() => (B ? go({ naming: p.id }, 'tap') : build(p))} style={{ '--d': `${k * 40}ms` }}>
+              <span className="fsu-empty-pos">{POS_SHORT[p.pos]}</span>
+              <span className="fsu-empty-txt"><b>{B ? 'NAME HIM' : 'NOT BUILT'}</b><small>{GROUPS.find(g => g[0] === p.pos)[2]}</small></span>
+              <span className="fsu-empty-go">{B ? 'NAME' : 'BUILD'}</span>
+            </button>
+          )
+          const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
+          const slot = buildSlot(o), deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
+          return (
+            <div key={p.id} className="nb-build-row">
+              <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner}
+                line={`NO. ${slot} PICK · ${money(Array.isArray(deal) ? deal[0] : deal)}`} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
+              {room && <p className="nb-build-cap">{room}</p>}
+              {notes[p.id] && <p className="nb-build-cap">{notes[p.id]}</p>}
+              <span className="nb-fa-acts"><button type="button" onClick={() => build(p)}>Rebuild</button></span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="fsu-acts">
+        {done ? <Go onClick={() => { onNext(); haptic('medium') }}>{ordered.length ? 'Next: your coach' : 'No builds: your coach'}</Go>
+          : unnamed ? <Go onClick={() => go({ naming: unnamed.id }, 'tap')}>Name your {POS_SHORT[unnamed.pos] === 'G' ? 'guard' : 'big'}</Go>
+            : <Go onClick={() => build(next)}>Build your {next.pos === 'big' ? 'big' : 'guard'}</Go>}
+      </div>
     </div>
   )
 }

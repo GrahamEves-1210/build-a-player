@@ -2,9 +2,10 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
   rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin, tenderQO, pullFA,
-  records, recText,
+  records, recText, NC,
 } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
+import { nbaCoachPhoto } from './nbaCoachLg'
 import { sfx, haptic } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird, Go, Flip, ActionBar, BackBar, Fold, reduced } from '../kit'
 import { CapBar, dealText } from './NbaTeam'
@@ -193,11 +194,39 @@ function Awards({ F, act, go, done = false }) {
           )
         })}
       </div>
+      {h.coy && <CoachOfYear F={F} c={h.coy} />}
       <AwardTeams F={F} y={h.y} title="All-NBA" teams={A.ALL} names={['First team', 'Second team', 'Third team']} />
       <AwardTeams F={F} y={h.y} title="All-Defensive" teams={A.ALLDEF} names={['First team', 'Second team']} k="DEF" />
       <AwardTeams F={F} y={h.y} title="All-Rookie" teams={A.ROOKIE} names={['First team', 'Second team']} />
+      <CoachMoves F={F} y={h.y} />
       {!done && <TeamOptions F={F} act={act} />}
       {!done && <ActionBar><Go onClick={go}>The draft lottery</Go></ActionBar>}
+    </section>
+  )
+}
+// Coach of the Year (lib/franchise2/nba/coach.js coachOfYear) and the spring's coaching changes (coachCarousel)
+function CoachOfYear({ F, c }) {
+  const hc = NC.staffMen(F, c.s).hc
+  const man = hc?.n === c.n ? hc : { n: c.n, real: 1 }
+  return (
+    <div className={`nbo-aw${c.s === F.team ? ' is-me' : ''}`} style={fkVars(c.s)}>
+      <small className="nbo-aw-k">Coach of the Year</small>
+      <LowerThird name={c.n} pos="HC" photo={nbaCoachPhoto(man, c.s)} team={c.s} size="s" mine={hc?.mine ? F.owner : undefined} line={`${TEAM[c.s].name.toUpperCase()} · ${c.rec}`} />
+    </div>
+  )
+}
+const MOVE_TAG = { fire: 'FIRED', ret: 'RETIRED', hire: 'HIRED', leave: 'HIRED AWAY' }
+function CoachMoves({ F, y }) {
+  const ev = F.cev?.y === y ? F.cev.ev.filter(e => e.k !== 'leave' || e.mine) : []
+  if (!ev.length) return null
+  const nickOf = s => TEAM[s]?.nick ?? s
+  const text = e => e.k === 'fire' ? `${nickOf(e.s)} fire ${e.n} (${e.rec})` : e.k === 'ret' ? `${nickOf(e.s)} head coach ${e.n} retires` : e.k === 'hire' ? `${nickOf(e.s)} hire ${e.from ? `${e.from} ` : ''}${e.n}` : `${e.n} leaves the ${nickOf(e.s)} staff for the ${nickOf(e.to)} job`
+  return (
+    <section className="nbo-tl">
+      <Chyron tone="ink" size="s" title="Coaching changes" right={String(ev.filter(e => e.k === 'hire').length)} />
+      <ul className="nbo-coach-moves">
+        {ev.map((e, j) => <li key={j} style={fkVars(e.k === 'leave' ? e.to : e.s)}><KLogo s={e.k === 'leave' ? e.to : e.s} size={22} /><span>{text(e)}</span><small>{MOVE_TAG[e.k]}</small></li>)}
+      </ul>
     </section>
   )
 }

@@ -21,9 +21,19 @@ import { teamKit } from '../../lib/franchise2/kits'
 
 const lastOf = n => splitName(n).last
 const SHORT_LABEL = { talentDev: 'TALENT DEV.', offPlaycalling: 'OFF. PLAYCALLING', defPlaycalling: 'DEF. PLAYCALLING', culture: 'CULTURE', situational: 'SITUATIONAL' }
+// The league the builder works on: football's by default; basketball Franchise passes its own (nba/nbaCoachLg.js) the
+// way Slots.jsx takes `lg`: its teams, its five ratings, its styles, its wheel of real head coaches, its faces.
+export const FB_COACH = {
+  TEAM, CTYPES, CLABEL, SHORT_LABEL, STYLES, RESPINS, cLetter, coachGrade, wheelOf, dealSpin, dealRespin, coachByName, takeLine, linesDone, realHC,
+  photo: (c, team, small) => coachPhoto(c, team, small),
+  color: team => teamKit(team) ?? TEAM[team]?.color, mark: team => teamMark(team),
+  faces: (seed, page) => faceChoices(seed, page), randomName: n => randomCoachName(n),
+  hireSub: real => `REPLACES ${real.name.toUpperCase()}`,
+}
 
 // ── 1. The spin ──────────────────────────────────────────────────────────────
-export function CoachSpin({ S, go, onDone }) {
+export function CoachSpin({ S, go, onDone, lg = FB_COACH }) {
+  const { TEAM, CTYPES, CLABEL, RESPINS, cLetter, coachGrade, wheelOf, dealSpin, dealRespin, coachByName, takeLine, linesDone } = lg
   const cb = S.cb
   const team = S.team
   const items = useMemo(() => wheelOf(team), [team])
@@ -68,7 +78,7 @@ export function CoachSpin({ S, go, onDone }) {
           onStop={() => { setSpinning(false); haptic('medium') }} />
       </div>
       {landed && (
-        <LowerThird key={landed.name} className="fsu-landed" name={landed.name} pos="HC" team={landed.team} photo={coachPhoto({ n: landed.name, ag: landed.age }, landed.team)} stat={{ v: coachGrade(landed.attrs), label: 'GRADE' }} line={TEAM[landed.team]?.name.toUpperCase()} />
+        <LowerThird key={landed.name} className="fsu-landed" name={landed.name} pos="HC" team={landed.team} photo={lg.photo({ n: landed.name, ag: landed.age, ...(landed.shot && { shot: landed.espn }), real: 1 }, landed.team)} stat={{ v: coachGrade(landed.attrs), label: 'GRADE' }} line={TEAM[landed.team]?.name.toUpperCase()} />
       )}
       <div className={`fsu-lines${landed ? ' is-choosing' : ''}`} style={fkVars(team)}>
         {CTYPES.map((t, i) => {
@@ -97,7 +107,8 @@ export function CoachSpin({ S, go, onDone }) {
 }
 
 // ── 2. The style ─────────────────────────────────────────────────────────────
-export function StylePick({ S, go, onDone }) {
+export function StylePick({ S, go, onDone, lg = FB_COACH }) {
+  const { STYLES } = lg
   const c = S.coach ?? {}
   return (
     <div className="fsu-style">
@@ -132,20 +143,21 @@ export function faceChoices(seed, page = 0) {
   }
   return out
 }
-export const coachFace = (c, team) => (c?.face ? coachFaceUrl(c.face, teamKit(team) ?? TEAM[team]?.color, null, false, teamMark(team)) : null)
-export function CoachWho({ S, go, owner, onDone }) {
+export const coachFace = (c, team, lg = FB_COACH) => (c?.face ? coachFaceUrl(c.face, lg.color(team), null, false, lg.mark(team)) : null)
+export function CoachWho({ S, go, owner, onDone, lg = FB_COACH }) {
+  const { CTYPES, STYLES, coachGrade } = lg
   const c = S.coach ?? {}
   const [page, setPage] = useState(c.facePage ?? 0)
-  const faces = useMemo(() => faceChoices(S.seed, page), [S.seed, page])
+  const faces = useMemo(() => lg.faces(S.seed, page), [S.seed, page]) // eslint-disable-line react-hooks/exhaustive-deps
   const first = c.first ?? '', last = c.last ?? ''
   const set = (patch, s) => go({ coach: { ...c, ...patch } }, s)
-  const rand = () => { const n = randomCoachName({ first, last }); set(n, 'tap') }
+  const rand = () => { const n = lg.randomName({ first, last }); set(n, 'tap') }
   const ok = nameOk(first, last) && c.face
   const name = `${first} ${last}`.trim()
   return (
     <div className="fsu-who">
       <Chyron team={S.team} title="Your coach" />
-      <LowerThird className="fsu-who-prev" size="l" name={name || 'Head Coach'} pos="HC" team={S.team} photo={coachFace(c, S.team)} stat={{ v: coachGrade(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v]))), label: 'GRADE' }} line={STYLES[c.style]?.name} />
+      <LowerThird className="fsu-who-prev" size="l" name={name || 'Head Coach'} pos="HC" team={S.team} photo={coachFace(c, S.team, lg)} stat={{ v: coachGrade(Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v]))), label: 'GRADE' }} line={STYLES[c.style]?.name} />
       <div className="fsu-name">
         <input className="fsu-in" value={first} onChange={e => set({ first: cleanName(e.target.value) })} placeholder="FIRST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's first name" />
         <input className="fsu-in" value={last} onChange={e => set({ last: cleanName(e.target.value) })} placeholder="LAST" autoComplete="off" autoCapitalize="words" spellCheck={false} aria-label="Coach's last name" />
@@ -154,7 +166,7 @@ export function CoachWho({ S, go, owner, onDone }) {
       <div className="fsu-faces" role="radiogroup" aria-label="Face">
         {faces.map(f => (
           <button key={f.key} type="button" role="radio" aria-checked={c.face?.key === f.key} className={`fsu-face${c.face?.key === f.key ? ' is-on' : ''}`} style={fkVars(S.team)} onClick={() => set({ face: f, facePage: page }, 'tap')}>
-            <img src={coachFaceUrl(f, teamKit(S.team) ?? TEAM[S.team]?.color, null, false, teamMark(S.team))} alt="" draggable={false} />
+            <img src={coachFaceUrl(f, lg.color(S.team), null, false, lg.mark(S.team))} alt="" draggable={false} />
           </button>
         ))}
         <button type="button" className="fsu-face fsu-face-more" onClick={() => { setPage(p => p + 1); sfx('flip') }}><IconSpin size={18} /><small>MORE</small></button>
@@ -168,7 +180,8 @@ export function CoachWho({ S, go, owner, onDone }) {
 // The finished coach as the broadcast puts him up: his face cut against the team's colour, HEAD COACH, the name,
 // one letter grade in the box (no overall number for a coach), his style, then the five ratings, each a meter and its letter, with the coach it came from.
 //   c: the franchise's coach (coach.js finishCoach) or the setup's (lines from cb) · team
-export function CoachCard({ c, team, from, small = false, delay = 0 }) {
+export function CoachCard({ c, team, from, small = false, delay = 0, lg = FB_COACH }) {
+  const { CTYPES, SHORT_LABEL, STYLES, cLetter, coachGrade } = lg
   const { first, last } = splitName(c.name)
   const r = c.r ?? {}
   return (
@@ -176,7 +189,7 @@ export function CoachCard({ c, team, from, small = false, delay = 0 }) {
       <div className="fsu-cc-top">
         <span className="fsu-cc-slab" aria-hidden="true">
           <span className="fsu-cc-hc">HC</span>
-          {coachFace(c, team) ? <img src={coachFace(c, team)} alt="" draggable={false} /> : <b className="fsu-cc-init">{(first[0] ?? '') + (last[0] ?? '')}</b>}
+          {coachFace(c, team, lg) ? <img src={coachFace(c, team, lg)} alt="" draggable={false} /> : <b className="fsu-cc-init">{(first[0] ?? '') + (last[0] ?? '')}</b>}
         </span>
         <span className="fsu-cc-id">
           <small className="fsu-cc-job"><KLogo s={team} size={18} />HEAD COACH</small>
@@ -202,7 +215,8 @@ export function CoachCard({ c, team, from, small = false, delay = 0 }) {
   )
 }
 // the coach card on the setup's last screen: his lines from the spin
-export function CoachReveal({ S, owner, onStart, onRules }) {
+export function CoachReveal({ S, owner, onStart, onRules, lg = FB_COACH, capWhat, children, extra, cta = 'Start the season', canStart = true, hint = null }) {
+  const { TEAM, CTYPES, realHC } = lg
   const c = S.coach ?? {}
   const r = Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t]?.v ?? 5]))
   const from = Object.fromEntries(CTYPES.map(t => [t, S.cb.lines[t] ? [S.cb.lines[t].from, S.cb.lines[t].t] : null]))
@@ -210,11 +224,12 @@ export function CoachReveal({ S, owner, onStart, onRules }) {
   const real = realHC(S.team)
   return (
     <div className="fsu-reveal">
-      <Chyron team={S.team} title={`${TEAM[S.team].nick} hire ${lastOf(name)}`} sub={real ? `REPLACES ${real.name.toUpperCase()}` : 'HEAD COACH'} />
-      <CoachCard c={{ ...c, name, r }} team={S.team} from={from} />
+      <Chyron team={S.team} title={`${TEAM[S.team].nick} hire ${lastOf(name)}`} sub={real ? lg.hireSub(real) : 'HEAD COACH'} />
+      <CoachCard c={{ ...c, name, r }} team={S.team} from={from} lg={lg} />
+      {children}
       {/* (the league rules, kept for the save and changed any time on the hub: Rules.jsx) */}
-      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, sandbox: S.rules?.sandbox ?? !!S.sandbox }} nick={TEAM[S.team].nick} onChange={onRules} /></section>}
-      <div className="fsu-acts"><Go onClick={onStart}>Start the season</Go></div>
+      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, ...(lg === FB_COACH && { sandbox: S.rules?.sandbox ?? !!S.sandbox }) }} nick={TEAM[S.team].nick} capWhat={capWhat} onChange={onRules} />{extra}</section>}
+      <div className="fsu-acts">{hint && <p className="fsu-hint">{hint}</p>}<Go onClick={onStart} disabled={!canStart}>{cta}</Go></div>
     </div>
   )
 }
