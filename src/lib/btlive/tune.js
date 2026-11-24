@@ -36,11 +36,11 @@ export const T = {
   // Every "at a 1" below is really at "1 - spread" of the way down from an 11: the top of each rating is where
   // the brief puts it (a great shooter, a great finisher) and this one number sets how much worse a low grade is,
   // so how often a 95 beats an 80. 1 = the full range below; lower = builds closer together.
-  spread: 0.30,
+  spread: 0.24,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
   speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it; an 80 about 9.7)
-  speedBand: 0.08,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
+  speedBand: 0.06,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
   sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.94,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps 97%: Speed 11 with it outruns a Speed 1 guarding)
@@ -55,7 +55,7 @@ export const T = {
   ground: 3.0,                       // anyone standing still (not the man guarding the ball) is this much harder to move
   groundDef: 1.7,                    // the man guarding the ball, set (slower than this many ft/s), holds this much ground...
   groundDefSpeed: 4.0,
-  massSize: 1.2,                     // ...and the rest is weight: 1 at Size 1, 1 + this at Size 11 (a big backs a guard down)
+  massSize: 0.8,                     // ...and the rest is weight: 1 at Size 1, 1 + this at Size 11 (a big backs a guard down)
   gatherSlowJ: 0.25,                 // speed kept while rising for a jumper
   gatherSlowL: 0.75,                 // ...and while going up for a layup
   follow: 0.45,                      // after the release he's this long coming down before he can move freely
@@ -89,8 +89,8 @@ export const T = {
   dunkBounce: 0.55,                  // Bounce (n) under this: never dunks (a Bounce 1 never does)
   dunkChance: 1.8,                   // how often an able dunker dunks: (Bounce n - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
-  closeBase: 0.04, closeJs: 0.68,    // a jumper from 8 ft: 40% at Jump Shot 1, 72% at 11
-  arcBase: -0.25, arcJs: 0.79,       // a jumper from the arc (25 ft): 17% at Jump Shot 1, 54% at 11 (an 80: 34%)
+  closeBase: -0.58, closeJs: 1.30,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
+  arcBase: -0.66, arcJs: 1.20,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
   deepAt: 27.5,                      // past this it's deep...
   deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
