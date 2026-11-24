@@ -239,7 +239,7 @@ function StrikerLine({ r, title = 'THE SEASON', comps = true }) {
         [r.goals ?? 0, r.goals === 1 ? 'GOAL' : 'GOALS', true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true],
         [`${r.apps ?? 0}`, r.starts != null ? `APPS · ${r.starts} STARTS` : 'APPS'],
         [one(r.xg), 'xG'], [r.shots ?? '–', 'SHOTS'], [pct(r.conversion), 'CONVERSION'],
-        [one(r.avgRating), 'AVG RATING'], [r.motm ?? 0, 'PLAYER OF THE MATCH'],
+        [one(r.avgRating), 'AVG RATING'], [r.motm ?? 0, r.motm === 1 ? 'PLAYER OF THE MATCH AWARD' : 'PLAYER OF THE MATCH AWARDS'],
       ]} />
       {(r.hatTricks > 0 || r.braces > 0 || r.pens > 0 || r.headers > 0) && (
         <p className="ssp-line-notes">
@@ -824,14 +824,15 @@ function UclBracket({ bracket, us, upto = 99, rows = [] }) {
 
 // ── The legacy screen (basketball's GOAT Status) ─────────────────────────────
 // A club season: the Ballon d'Or, counted down to where he finished, then the Golden Shoe
-function ScreenBallon({ r, onNext, userName }) {
+// (seen: shown before, so Back from the final report finds it as it ended, not counted again)
+function ScreenBallon({ r, onNext, userName, seen, onSeen }) {
   const bdo = r.ballonDor, shoe = r.goldenShoe
   const rank = bdo?.rank ?? 99
   const top = bdo?.top ?? []
   const inTop = rank <= Math.max(10, top.length)
-  const [phase, setPhase] = useState('checking')
-  const [tk, setTk] = useState(11)
-  useEffect(() => { const t = setTimeout(() => setPhase(inTop ? 'ticker' : 'miss'), 2200); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [phase, setPhase] = useState(seen ? (inTop ? 'revealed' : 'miss') : 'checking')
+  const [tk, setTk] = useState(seen ? rank : 11)
+  useEffect(() => { onSeen?.(); if (seen) return; const t = setTimeout(() => setPhase(inTop ? 'ticker' : 'miss'), 2200); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (phase !== 'ticker') return
     if (tk <= rank) { const t = setTimeout(() => setPhase('revealed'), 1100); return () => clearTimeout(t) }
@@ -891,9 +892,10 @@ function ScreenBallon({ r, onNext, userName }) {
 }
 
 // A World Cup: the tournament's awards, counted one at a time
-function ScreenWcAwards({ r, onNext, userName }) {
+function ScreenWcAwards({ r, onNext, userName, seen, onSeen }) {
   const gb = r.goldenBoot, ball = r.goldenBall, young = r.bestYoungPlayer
-  const k = useStaged(true, [2200, 2900, 3600, 4300, 4900])
+  const k = useStaged(true, [2200, 2900, 3600, 4300, 4900], !!seen)
+  useEffect(() => { onSeen?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="simp-screen goat-screen ssp-legacy">
       <div className="goat-screen-title">THE AWARDS</div>
@@ -921,9 +923,10 @@ function ScreenWcAwards({ r, onNext, userName }) {
 
 // A Champions League season: UEFA's awards, counted one at a time (the top scorer, the Player of the Season, the Young
 // Player of the Season, the Team of the Season)
-function ScreenUclAwards({ r, onNext, userName }) {
+function ScreenUclAwards({ r, onNext, userName, seen, onSeen }) {
   const gb = r.goldenBoot, poty = r.playerOfSeason, young = r.youngPlayer
-  const k = useStaged(true, [2000, 2700, 3400, 4100, 4700])
+  const k = useStaged(true, [2000, 2700, 3400, 4100, 4700], !!seen)
+  useEffect(() => { onSeen?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="simp-screen goat-screen ssp-legacy">
       <div className="goat-screen-title">THE AWARDS</div>
@@ -1002,7 +1005,7 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
         </div>
       )}
       <div className="simp-stat-section">
-        <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
+        <div className="simp-stat-group-lbl"><NameTag name={userName} self /><span className="un-keep">'s</span> Build</div>
         <BuildRows build={build} types={types} pool={pool} small />
       </div>
       <div className="simp-final-actions">
@@ -1031,7 +1034,8 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const isUcl = !isWc && SoccerSim.isUclResult(result)
   const info = useMemo(() => (isUcl ? UCL_INFO : !isWc && result?.league?.id ? SoccerSim.soccerLeagueInfo?.(result.league.id) : null), [isWc, isUcl, result])
   // what's been watched once plays back straight to its end (Back onto it)
-  const [seen, setSeen] = useState(() => (keptDone ? { season: true, ko: kept.screen > 2 } : reopened ? { season: true, ko: true } : {}))
+  const [seen, setSeen] = useState(() => (keptDone ? { season: true, ko: kept.screen > 2, awards: kept.screen > 3 } : reopened ? { season: true, ko: true, awards: true } : {}))
+  const awardsSeen = useCallback(() => setSeen(s => (s.awards ? s : { ...s, awards: true })), [])
   // the season as played: the result, or the director's booked season once the moments have changed it
   const [live, setLive] = useState(result)
   const r = live ?? result
@@ -1097,7 +1101,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
       : keptDir && !(director && M) ? null   // (the director still loading: never the plain season, which would book the unsteered one)
       : <ScreenSeason key="season" r={r} pool={pool} info={info} onNext={next} onDone={() => { if (!director) book(result) }} userName={userName} adsDisabled={adsDisabled} seen={!!seen.season} />,
     <ScreenKnockouts key="ko" r={r} pool={pool} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.ko} onSeen={() => setSeen(s => ({ ...s, ko: true }))} />,
-    isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} /> : isUcl ? <ScreenUclAwards key="awards" r={r} onNext={next} userName={userName} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} />,
+    isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} /> : isUcl ? <ScreenUclAwards key="awards" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} />,
     <ScreenFinal key="final" r={r} pool={pool} build={build} types={types} arch={arch} onReset={reset} onBack={back} userName={userName} isSalaryMode={isSalaryMode} adsDisabled={adsDisabled} />,
   ]
   const teamStyle = team ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color } : undefined

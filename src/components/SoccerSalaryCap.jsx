@@ -105,12 +105,19 @@ function gradeColor(g) {
 }
 
 // a one-word name (Rodri, Raphinha) is all surname
-const splitName = name => { const [first, ...rest] = String(name).split(' '); return rest.length ? [first, rest.join(' ')] : ['', first] }
+// the name on the card: the name he's known by large (his `short`: Bárcenas, Vinícius Júnior), the rest above it
+// ("Édgar Yoel" over "BÁRCENAS"; it used to split at the first space: "Édgar" over "YOEL BÁRCENAS")
+const splitName = (name, short) => {
+  const n = String(name)
+  if (short && n !== short && n.endsWith(short)) return [n.slice(0, -short.length).trim(), short]
+  const [first, ...rest] = n.split(' ')
+  return rest.length ? [first, rest.join(' ')] : ['', first]
+}
 
 // ─── PlayerCard ───────────────────────────────────────────────────────────────
 function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, shufflePhase, shuffleDelay = 0, scoutGrade = null, shuffleHighlight = null }) {
   const dimmed = colHasSelection && !isSelected
-  const [first, last] = splitName(player.name)
+  const [first, last] = splitName(player.name, player.short)
   const animClass = shufflePhase === 'out' ? ' sc-card--flip-out' : shufflePhase === 'in' ? ' sc-card--flip-in' : ''
   const hlClass = shuffleHighlight === 'col' ? ' sc-card--hl-col' : shuffleHighlight === 'row' ? ' sc-card--hl-row' : ''
   const logo = logoOf(player)
@@ -132,7 +139,7 @@ function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, sh
       </div>
       <div className="sc-card-name-wrap">
         <span className="sc-card-first">{first || ' '}</span>
-        <span className="sc-card-last">{last}</span>
+        <span className={`sc-card-last${last.length > 9 ? ' is-long' : ''}`}>{last}</span>
       </div>
       {scoutGrade && (
         <div className="sc-grade-overlay" style={{ '--gc': gradeColor(scoutGrade) }}>

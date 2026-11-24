@@ -6215,6 +6215,8 @@ html:is(.is-app, .app-look) .sc-card--dim { opacity: .35; }
 html:is(.is-app, .app-look) .sc-card-name-wrap { background: #0b100e; padding: 4px 3px 5px; }
 html:is(.is-app, .app-look) .sc-card-first { font-family: var(--ag-body); font-size: clamp(8px, 1.1vw, 10px); font-weight: 600; color: rgba(255,255,255,.72); }
 html:is(.is-app, .app-look) .sc-card-last { font-family: var(--ag-font); font-weight: 400; font-size: clamp(13px, 1.5vw, 16px); letter-spacing: .4px; line-height: 1.05; }
+/* a long surname (BELLINGHAM) a size down instead of cut off with an ellipsis */
+html:is(.is-app, .app-look) .sc-card-last.is-long { font-size: 13px; letter-spacing: -.2px; }
 /* the bottom bar */
 html:is(.is-app, .app-look) .sc-back-btn { border-radius: 5px !important; border: 1px solid rgba(255,255,255,.16); background: #111816; color: #fff; }
 html:is(.is-app, .app-look) .sc-confirm-btn { border-radius: 5px !important; background: var(--sc-a); box-shadow: none !important; }
@@ -7766,3 +7768,5 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
 }
 /* the team pick's search with no match (SoccerSimPage) */
 .tpm-pick-none { margin: 14px 0 4px; text-align: center; font-size: 14px; color: rgba(255,255,255,.55); }
+/* soccer's KICK OFF button in the game's display type (it fell back to Impact, or a plain sans without it) */
+.ssp-page .tipoff-spin-btn { font-family: var(--ag-font, 'Bebas Neue', sans-serif); letter-spacing: 2px; }
