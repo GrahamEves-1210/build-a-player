@@ -69,6 +69,10 @@ html.bap-reduce-motion .fr-wait-in { animation: none; }
    wide as it can be and keep clear of the title and its NEW tag (phones: about 180 x 120 of a 132 px card), between
    the team bar and the card's edge */
 .ag-mc.ag-mc--fr.ag-mc--fr-wide { display: block; width: 100%; min-height: 150px; margin: 0 0 8px; }
+/* laid out like Career's card (owner 11-24): NEW under the name, the line (BE THE GM, or where the save stands) at the foot */
+.ag-mc--fr-wide .ag-mc-head { right: 12px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; }
+.ag-mc--fr-wide .ag-mc-head b { flex-direction: column; align-items: flex-start; }
+.ag-mc--fr-wide .ag-mc-head small { display: block; max-width: 60%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ag-mc--fr-wide .ag-fr-art { width: 50%; height: auto; top: 3px; right: 4px; bottom: 1px; }
 @media (min-width: 1024px) { html.app-look .ag-mc.ag-mc--fr.ag-mc--fr-wide { margin-bottom: 12px; } html.app-look .ag-mc--fr-wide .ag-fr-art { width: 30%; height: auto; } }
 /* College Football in a grid spot (football's Home with Franchise on): four logos on the band, the band square at

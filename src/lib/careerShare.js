@@ -179,7 +179,14 @@ export async function careerShareCanvas(c, { username } = {}) {
   ctx.font = `116px ${ANTON}`
   const scoreW = ctx.measureText(String(L.score)).width
   text(ctx, String(L.score), IR, PY + 172, { font: `116px ${ANTON}`, color: '#fff', align: 'right' })
-  const ts = fit(ctx, tier, ANTON, 108, IR - IX - scoreW - 40)
+  // his place on the all-time list, small and gold, raised over the points (a top-list career only)
+  let rankW = 0
+  if (L.ranked) {
+    const rk = `#${L.rank}`
+    ctx.font = `46px ${ANTON}`; rankW = ctx.measureText(rk).width + 12
+    text(ctx, rk, IR - scoreW - 10, PY + 124, { font: `46px ${ANTON}`, color: GOLD, align: 'right' })
+  }
+  const ts = fit(ctx, tier, ANTON, 108, IR - IX - scoreW - rankW - 40)
   ctx.font = `${ts}px ${ANTON}`; ctx.textAlign = 'left'; ctx.fillStyle = goldGrad(ctx, IX, IX + ctx.measureText(tier).width); ctx.fillText(tier, IX, PY + 172)
   // the ladder: every tier, lit up to this one
   const TIERS = legacyTiers(c)

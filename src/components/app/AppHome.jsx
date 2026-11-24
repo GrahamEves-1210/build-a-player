@@ -241,7 +241,7 @@ function CBBCard({ onClick, small = false }) {
   const [line] = useState(cbbLine)
   return (
     <button className={`ag-way ag-mc ag-mc--cfb ag-mc--cbb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
-      <span className="ag-mc-head"><b>COLLEGE BASKETBALL<i className="ag-mc-tag">NEW</i></b><small>{line}</small></span>
+      <span className="ag-mc-head"><b>COLLEGE BASKETBALL</b><small>{line}</small></span>
       <span className="ag-cfb-band" aria-hidden="true">
         {(small ? CBB_CARD_LOGOS.slice(0, 4) : CBB_CARD_LOGOS).map(s => <img key={s} src={s} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>
