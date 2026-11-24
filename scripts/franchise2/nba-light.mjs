@@ -46,9 +46,11 @@ for (let y = 0; y < Y; y++) {
   // ── the postseason: a round a tap ──
   let taps = 0
   while ((F.phase === 'playin' || F.phase === 'playoffs') && taps++ < 12) {
+    const ph = F.phase
     const r = N.lightRound(F)
     if (!r) { fail(yr, 'round null'); break }
-    if (!r.out) { const x = N.roundResult(F); if (!x) fail(yr, 'no round result') }
+    // (a top-six seed watches the play-in: nothing of his to show)
+    if (!r.out && !(ph === 'playin' && !r.rows.length)) { const x = N.roundResult(F); if (!x) fail(yr, 'no round result', ph) }
   }
   if (F.phase !== 'done' || !F.po?.champ) { fail(yr, 'no champion', F.phase); break }
   champs[F.po.champ] = (champs[F.po.champ] ?? 0) + 1

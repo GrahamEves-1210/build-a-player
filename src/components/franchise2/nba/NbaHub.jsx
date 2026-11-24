@@ -60,7 +60,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   // today: the day the next night is played (the deadline card's "today"); his game number when he plays tonight
   const ng = F.phase === 'season' ? nextMine(F) : null
   const sub = F.phase === 'season' ? `${dateText(F, Math.min(F.day, F.days - 1))} · ${!ng ? 'Regular season' : ng.d === F.day ? `Game ${gameNo(F, ng)}` : 'No game today'}`
-    : off ? 'Offseason' : F.phase === 'post' ? 'Regular season over' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : 'Season over'
+    : off ? 'Offseason' : F.phase === 'post' ? 'Regular season over' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : 'Season over'
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
       {live && <NbaGame F={F} act={act} start={live} owner={owner} onDone={() => setLive(null)} />}
@@ -208,7 +208,7 @@ function LastGame({ F, owner }) {
   const as = g.home ? g.them : g.us, hs = g.home ? g.us : g.them
   return (
     <section className="fh-last">
-      <h3 className="fh-h"><b>{g.po ? g.po.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : 'Last game'}</b><span className={`fh-res is-${g.w ? 'w' : 'l'}`}>{g.w ? 'Win' : 'Loss'}</span></h3>
+      <h3 className="fh-h"><b>{g.po ? g.po.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : 'Last game'}</b><span className={`fh-res is-${g.w ? 'w' : 'l'}`}>{g.w ? 'Win' : 'Loss'}</span></h3>
       <Scorebug a={a} h={h} as={as} hs={hs} final={g.ot ? (g.ot > 1 ? `F/${g.ot}OT` : 'F/OT') : 'FINAL'} />
       {F.box?.[g.bx] && <button type="button" className="fh-textbtn" onClick={() => { setBox(true); sfx('tap') }}>Box score</button>}
       {box && <NbaBox F={F} b={F.box[g.bx]} owner={owner} onClose={() => setBox(false)} />}
@@ -284,7 +284,7 @@ function PoCard({ F, act, play }) {
   const all = () => { act(X => { simPostseason(X) }); sfx('flip') }
   return (
     <section className="fh-next">
-      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase())}</b><span>{S ? seriesText(S, F.team) : mine ? PI_STAKES[mine.k] ?? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
+      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ')}</b><span>{S ? seriesText(S, F.team) : mine ? PI_STAKES[mine.k] ?? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
       {mine ? (
         <>
           <div className="fh-mu">
@@ -307,7 +307,7 @@ function Bracket({ F }) {
   if (!P) return null
   const rounds = [...(P.all ?? []), ...(P.stage === 'r' && P.S && !(P.all ?? []).includes(P.S) ? [P.S] : [])]
   const fin = rounds[3]?.[0] ?? null
-  const now = F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[P.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : P.champ ? `${nick(P.champ)} win the title` : ''
+  const now = F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[P.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : P.champ ? `${nick(P.champ)} win the title` : ''
   const confs = CONF_OF[F.team] === 'W' ? ['W', 'E'] : ['E', 'W']
   return (
     <section className="nb-bracket">

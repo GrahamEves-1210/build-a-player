@@ -38,7 +38,8 @@ const confWord = c => (c === 'E' ? 'East' : 'West')
 export function StretchCard({ F, play, simToEnd, onTrades }) {
   const L = F.lt
   const R = records(F)
-  const games = stretchGames(F, L.k)
+  // (the games still to play: a stretch picked up partway shows what's left of it)
+  const games = stretchGames(F, L.k).filter(g => g.hs == null)
   const mineDays = new Set(F.sched.filter(g => g.h === F.team || g.a === F.team).map(g => g.d))
   const home = games.filter(g => g.h === F.team).length
   const b2b = games.filter(g => mineDays.has(g.d - 1)).length
@@ -204,7 +205,7 @@ export function PoLight({ F, act, owner }) {
             {[opp, F.team].map(s => <div key={s} className={`fh-mu-t${s === F.team ? ' is-me' : ''}`} style={fkVars(s)}><KLogo s={s} size={56} /><b>{TEAM[s].nick}</b><small>{seedText(F, s)}</small></div>).reduce((a, x, i) => (i ? [...a, <span key="m" className="fh-mu-mid">vs</span>, x] : [x]), [])}
           </div>
         )}
-        {!inIt && <p className="fh-next-note">{`The ${nick(F.team)}' season is over. The rest of the postseason is simmed to the champion.`}</p>}
+        {!inIt && <p className="fh-next-note">{`The ${/s$/.test(nick(F.team)) ? `${nick(F.team)}'` : `${nick(F.team)}'s`} season is over. The rest of the postseason is simmed to the champion.`}</p>}
         <div className="fh-go">
           {inIt ? <Go onClick={sim}>{pi ? 'Sim the play-in' : verb}</Go> : <Go onClick={rest}>Sim to the champion</Go>}
           {inIt && <button type="button" className="fh-textbtn" onClick={rest}>Sim the rest of the postseason</button>}
