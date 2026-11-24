@@ -74,7 +74,7 @@ export const T = {
   lFallMs: 190,
   dunkWin: 1.35,                     // a dunk's window is this much wider
   clutchLo: 0.5, clutchHi: 1.2,      // at game point the green window is this x at Clutch 1 ... this x at Clutch 11
-  clutchMake: 0.30,                  // late in a game the shot's chance is x (1 + this * (Clutch - half)): +15% at 11, -15% at 1...
+  clutchMake: 0.45,                  // late in a game the shot's chance is x (1 + this * (Clutch - half)): +22% at 11, -22% at 1...
   clutchFrom: 3,                     // ...late: game point, or anyone this close to the goal
   minHoldMs: 120,                    // let go sooner than this and it still counts as held this long (a tap is a bad release)
   relMinJ: 0.42,                     // a jumper let go at the worst time keeps this much of its chance (a bad one can still drop)
@@ -97,6 +97,7 @@ export const T = {
   setFeet: 0.14,                     // a jumper taken at a full run loses this much; still: nothing
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
   csBoost: 0.15,                     // ...and gains up to this much from the passer's Passing/Playmaking
+  csLay: 0.35,                       // a layup or a dunk that soon off the catch: the contest counts this much less at the passer's Passing 11
   rushAt: 3.0,                       // a shot in the last 3 s of the shot clock is rushed...
   rushPen: 0.22,                     // ...and loses this much at IQ 1, nothing at IQ 11
 

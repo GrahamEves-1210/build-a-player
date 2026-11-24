@@ -64,7 +64,7 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
   const win = meterSpec(kind, p.R, s.gamePoint).win
   const green = clamp(win / (lvl.meterSd * 1.25), 0.12, 0.97)
   const rel = green + (1 - green) * (kind === 'jumper' ? 0.72 : 0.84)
-  const cs = kind === 'jumper' && p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ * 0.6 ? s.players[p.catchFrom].R.pas : null
+  const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ * 0.6 ? s.players[p.catchFrom].R.pas : null
   const pMake = ref.makeChance({ R: p.R, kind, d, q: 1, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false }) * rel
   // make it, take it: a make is worth its points and the ball back, so a two is worth one and a half ones, not two
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
@@ -200,7 +200,7 @@ function withBall(s, p, m, lvl, out) {
   // (and a jumper better than the drive is the shot: a man who sags off a shooter gets shot over)
   const toRim = Math.max(0, dRim - 4.5) / p.R.topBall + 0.5
   if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, dD, lvl) + T.cpuJumpEdge, 0.3, T.cpuDriveV)
-  if (sitting && mine.kind === 'jumper' && clockS > late) need = Math.min(need, T.cpuSitV)
+  if (sitting && mine.kind === 'jumper' && clockS > late) need = Math.min(need, Math.max(T.cpuSitV, driveValue(s, p, D, dD, lvl)))
   // on his way out to the arc for a three: no long two on the way (unless it's a better shot than the three would be)
   if (m.plan === 'three' && mine.kind === 'jumper' && !mine.three && clockS > 4) need = Math.max(need, Math.min(0.6, mine.v * T.twoValue))
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
@@ -358,6 +358,8 @@ function defend(s, p, m, lvl, out) {
     let gap = (dRimM < 10 ? 3.2 : shooter ? 3.3 : dRimM > 26 ? 4.2 : 3.6) + lvl.gap
     // a man standing still out there is looking to shoot: up on him
     if (dRimM > 19 && Math.hypot(man.vx, man.vy) < 1.5 && man.R.js > 0.5) gap = Math.min(gap, 2.9 + lvl.gap * 0.5)
+    // ...and a great shooter out there gets no air at all: make him put it on the floor
+    if (dRimM > 19 && man.R.js > 0.92 && ref.isThree(man.x, man.y)) gap = Math.min(gap, 2.3 + lvl.gap * 0.5)
     if (man.act === 'gather') gap = 2.5
     gap = Math.min(gap, Math.max(0.5, dRimM - 1.2))
     tx = mx + ux * gap; ty = my + uy * gap

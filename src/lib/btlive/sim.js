@@ -212,7 +212,7 @@ function startGather(s, p) {
 
 function release(s, p, q) {
   const b = s.ball, sh = p.shot
-  const cs = sh.kind === 'jumper' && p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
+  const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
   const rushed = s.clock <= T.rushAt * HZ
   // late in the game (game point, or anyone three from the goal): Clutch counts
   const late = s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom

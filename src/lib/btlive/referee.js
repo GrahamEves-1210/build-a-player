@@ -77,7 +77,7 @@ export function contestOf(shooter, defenders, kind) {
 
 // The chance a shot goes in: what the rating gives at that spot x how good the release was x how well it was contested
 //   s: { R, kind, d (ft from the rim), q (release 0-1), c (contest 0-1), run (0-1 of top speed at the gather),
-//        cs (the passer's Passing 0-1 on a jumper off the catch, else null), rushed, gp (game point: Clutch) }
+//        cs (the passer's Passing 0-1 on a shot off the catch, else null), rushed, gp (game point: Clutch) }
 export function makeChance(s) {
   const R = s.R
   let base, pen
@@ -94,6 +94,8 @@ export function makeChance(s) {
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
     pen = T.contestMaxJ * s.c * (1 - T.jsThrough * R.js)     // a great shooter shoots over a hand
   }
+  // a pass that hits him in stride at the rim: the defense is a beat late to it (the passer's Passing)
+  if (s.cs != null && s.kind !== 'jumper') pen *= 1 - T.csLay * s.cs
   let p = base * releaseMult(s.kind, s.q) * (1 - pen)
   if (s.rushed) p *= 1 - T.rushPen * (1 - R.iq)
   if (s.gp) p *= 1 + T.clutchMake * ((R.clutchRaw ?? 0.5) - 0.5)
