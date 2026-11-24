@@ -2,6 +2,7 @@ import express from 'express'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import cors from 'cors'
+import { startLeaderboardPosts } from './leaderboardPosts.js'
 
 // The site's API (Railway). The website and the app call it through VITE_API_URL:
 // Pro checkout (monthly / yearly) + billing portal, coin packs, the Builder Pass, account
@@ -343,3 +344,5 @@ app.post('/api/delete-account', async (req, res) => {
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`BAP API running on port ${PORT}`))
+// #leaderboards on Discord: the Daily at midnight New York, the Weekly Cup on Mondays (leaderboardPosts.js)
+startLeaderboardPosts(supabase)
