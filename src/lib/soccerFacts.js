@@ -47,7 +47,7 @@ RECORDS.soccer = {
 MILESTONES.soccer = {
   common: [
     { id: 'streak-5', label: 'Five straight wins', test: c => c.streak >= 5 },
-    { id: 'streak-10', label: 'Ten straight wins', test: c => c.streak >= 10, big: true },
+    { id: 'streak-10', label: 'a ten-match winning run', test: c => c.streak >= 10, big: true },
     { id: 'unbeaten-10', label: 'Ten unbeaten from the start', test: c => c.games.length === 10 && c.losses === 0, big: true },
   ],
   st: [...steps('gls', '{n} league goals', 'goals', [10, 20, 30, 40]), ...steps('ast', '{n} assists', 'assists', [5, 10, 15]),

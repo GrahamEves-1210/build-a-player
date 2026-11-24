@@ -49,6 +49,7 @@ function oneOffFinal(f, t, games) {
 // goes on as one: team.domestic)
 export function oneOffDirector({ result, build, types, name = 'Guest', attrMap = {}, seed = null }) {
   const legacy = !isUclResult(result)
-  const simFn = (b, t, seed) => runSoccerSimulation(b, types, legacy ? { ...t, domestic: true } : t, 'current', seed)
+  // (the Champions League's re-runs keep the season's draw: the same eight opponents, result.drawSeed)
+  const simFn = (b, t, seed) => runSoccerSimulation(b, types, legacy ? { ...t, domestic: true } : result.drawSeed ? { ...t, drawSeed: result.drawSeed } : t, 'current', seed)
   return createDirector({ sport: 'soccer', pos: 'st', build, team: result.team, simFn, base: result, name, attrMap, types, onFinal: oneOffFinal, ...(seed ? { seed } : {}) })
 }

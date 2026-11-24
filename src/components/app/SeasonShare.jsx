@@ -18,20 +18,21 @@ const ShareIco = ({ size = 18 }) => (
 
 const FORMATS = [['story', 'STORY'], ['square', 'SQUARE']]
 
-export function ShareSeasonButton({ card, className = '' }) {
+// what: 'season', or 'tournament' for a World Cup (the button's and the sheet's word)
+export function ShareSeasonButton({ card, className = '', what = 'season' }) {
   const [open, setOpen] = useState(false)
   if (!card) return null
   return (
     <>
       <button type="button" className={`ag-btn ss-btn ${className}`} onClick={() => { sfx('tap'); haptic('light'); setOpen(true) }}>
-        <ShareIco /> SHARE SEASON
+        <ShareIco /> SHARE {what.toUpperCase()}
       </button>
-      {open && <SeasonShareSheet card={card} onClose={() => setOpen(false)} />}
+      {open && <SeasonShareSheet card={card} what={what} onClose={() => setOpen(false)} />}
     </>
   )
 }
 
-export function SeasonShareSheet({ card, onClose }) {
+export function SeasonShareSheet({ card, onClose, what = 'season' }) {
   const [format, setFormat] = useState('story')
   const [imgs, setImgs] = useState({})       // format → { blob, url }
   const [busy, setBusy] = useState(false)
@@ -75,9 +76,9 @@ export function SeasonShareSheet({ card, onClose }) {
 
   return createPortal(
     <div className="ss-overlay" onClick={onClose}>
-      <div className="ss-sheet" role="dialog" aria-modal="true" aria-label="Share season" onClick={e => e.stopPropagation()}>
+      <div className="ss-sheet" role="dialog" aria-modal="true" aria-label={`Share ${what}`} onClick={e => e.stopPropagation()}>
         <div className="ss-head">
-          <h2 className="ss-title">SHARE SEASON</h2>
+          <h2 className="ss-title">SHARE {what.toUpperCase()}</h2>
           <button type="button" className="ss-close" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>
         <div className="ss-seg" role="tablist" aria-label="Card size">

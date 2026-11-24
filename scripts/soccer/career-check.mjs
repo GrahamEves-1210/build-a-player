@@ -123,4 +123,15 @@ try {
   o = season(o, 'old save')
 } catch (e) { errs.push('old save: ' + e.stack.split('\n').slice(0, 4).join(' | ')) }
 
+// every level of build gets clubs to the trials and offers (2026-11-24: a Late bloomer's range of clubs was empty:
+// no interviews, no offers, a blank screen after the trials)
+for (const v of [1, 3, 5, 7, 9, 11]) {
+  const w = C.newCareer({ sport: 'soccer', pos: 'st', build: mkBuild(T.map(() => v)), name: `Grade ${v}` })
+  const iv = C.setupInterviews({ ...w, step: 'interview' })
+  const n = iv.draft?.interviews?.filter(x => x.team).length ?? 0
+  const d = C.runDraft(C.skipCombine?.(iv) ?? iv)
+  say(`all ${v}s: OVR ${w.ovr}, ${C.academyText ? C.academyText(iv) : ''}: ${n} clubs at the trials, ${d.draft?.offers?.length ?? 0} offers`)
+  if (n < 3) errs.push(`all ${v}s: only ${n} clubs at the trials`)
+  if (!d.draft?.offers?.length) errs.push(`all ${v}s: no offers`)
+}
 console.log(errs.length ? `ERRORS:\n${errs.join('\n')}` : 'career: OK')

@@ -749,7 +749,7 @@ export function gameMoment(c, g) {
   if (MOMENTS[c.sport]) {
     const card = MOMENTS[c.sport](c, g)
     if (!card) return null
-    return { id: card.id ?? `game-fc-${card.title.split(',')[0].toLowerCase().replace(/[^a-z]+/g, '-')}`, inGame: true, kicker: card.kicker ?? `MATCHWEEK ${g.wk} · ${g.home ? 'VS' : 'AT'} ${String(g.oppName ?? g.opponent).toUpperCase()}`, title: card.title, body: card.body,
+    return { id: card.id ?? `game-fc-${card.title.split(',')[0].toLowerCase().replace(/[^a-z]+/g, '-')}`, inGame: true, kicker: card.kicker ?? `${g.stage === 'md' || g.comp === 'ucl' ? `MATCHDAY ${g.md ?? g.wk}` : g.round ? String(g.round).toUpperCase() : `MATCHWEEK ${g.wk}`} · ${g.home ? 'V' : 'AT'} ${String(g.oppName ?? g.opponent).toUpperCase()}`, title: card.title, body: card.body,
       options: card.options.map(o => ({ id: o.id, label: o.label, sub: o.sub, effect: o.effect ?? { outcomes: o.outcomes } })) }
   }
   const isB = c.isBucket

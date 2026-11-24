@@ -735,8 +735,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     setScoutMode(false)
   }
 
-  // Check localStorage on date/account change; clear sel for unplayed dates
+  // Check localStorage on date/account change; clear sel for unplayed dates (back to a date from Infinite too: its
+  // play comes back, so a played board stays locked)
   useEffect(() => {
+    if (mode === 'infinite') return
     const uid = user?.id
     const savedShuffle = localStorage.getItem(SHUFFLED_KEY(activeDate.str, uid))
     setShufflesLeft(savedShuffle ? 0 : 1)
@@ -760,7 +762,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     } catch {}
     setAlreadyPlayed(null)
     setSel(savedPicks(activeDate.str))
-  }, [activeDate.str, user?.id])
+  }, [activeDate.str, user?.id, mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // For logged-in users: cross-device check via Supabase
   useEffect(() => {

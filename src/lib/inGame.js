@@ -963,8 +963,8 @@ export function playMoment(plan, hit, F = null, raw = null) {
     const legs = b.leg === 1 ? [legNow, [rest.next.u, rest.next.t]] : plan.leg1 ? [plan.leg1, legNow] : [legNow]
     const mine = legs.reduce((s, l) => s + l[0], 0), opp = legs.reduce((s, l) => s + l[1], 0)
     const note = rest.pens ? (rest.pens === 'won' ? 'Won it on penalties.' : 'Lost on penalties.') : rest.et ? (rest.won ? 'Won it in extra time.' : 'Lost it in extra time.')
-      : b.leg === 1 ? (rest.won ? `${ctx.us} saw it out in the second leg.` : `${ctx.them} turned it around in the second leg.`)
-      : rest.t && !rest.won ? `${ctx.them} scored late.` : rest.u && rest.won && !scored ? `${ctx.us} found a late goal.` : null
+      : b.leg === 1 ? (rest.won ? `${ctx.usName ?? ctx.us} saw it out in the second leg.` : `${ctx.themName ?? ctx.them} turned it around in the second leg.`)
+      : rest.t && !rest.won ? `${ctx.themName ?? ctx.them} scored late.` : rest.u && rest.won && !scored ? `${ctx.usName ?? ctx.us} found a late goal.` : null
     return { mine, opp, won: rest.won, note, got: scored, legs, pens: rest.pens, et: rest.et }
   }
   // baseball: the at-bat's or the pitch's own result (the runs and the outs), then the rest

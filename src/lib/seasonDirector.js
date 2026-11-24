@@ -299,7 +299,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       const res = roll < pW ? 'W' : roll < pW + pD ? 'D' : 'L'
       const opp = res === 'W' ? Math.max(0, my - 1 - Math.floor(r() * 2)) : res === 'D' ? my : my + 1 + Math.floor(r() * 2)
       const mine = res === 'W' ? Math.max(1, my) : my, oppSc = res === 'W' ? Math.min(opp, mine - 1) : opp
-      const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc'].includes(k)).map(k => [k, 0]))
+      // (his line zeroed; the match keeps its own numbers: its matchday, leg and round, so it doesn't read MD0)
+      const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc', 'md', 'leg', 'ri', 'pos'].includes(k)).map(k => [k, 0]))
       D.games[i] = { ...g, ...zero, rating: null, motm: false, start: false, won: res === 'W', drawn: res === 'D', lost: res === 'L', result: res, mySc: mine, oppSc, sat: true, ...(tag ? { tags: [tag] } : {}) }
       if (!D.sat.includes(i)) D.sat.push(i)
       return
@@ -497,8 +498,12 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     // headlines for the game just revealed
     const opp = oppName && g ? oppName(g) : isSoccer ? (g?.oppName ?? g?.opponent ?? '') : g?.opponent?.split?.(' ').slice(-1)[0] ?? g?.opponent ?? ''
     if (g && !g.sat) {
-      if (ctx.streak >= 3 && ctx.streak % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'streak', name, team: teamNick, n: ctx.streak, soccer: isSoccer }, r) })
-      else if (ctx.skid >= 3 && ctx.skid % 2 === 1) D.headlines.push({ at: k, text: headlineFor({ type: 'skid', name, team: teamNick, n: ctx.skid, soccer: isSoccer }, r) })
+      // (a run that just ended takes its headlines from the last few games with it: a Career shows games in blocks, and
+      // '5 winless' under a block that ended in a win read wrong)
+      if (ctx.streak === 0) D.headlines = D.headlines.filter(h => h.run !== 'streak' || h.at < k - 4)
+      if (ctx.skid === 0) D.headlines = D.headlines.filter(h => h.run !== 'skid' || h.at < k - 4)
+      if (ctx.streak >= 3 && ctx.streak % 2 === 1) D.headlines.push({ at: k, run: 'streak', text: headlineFor({ type: 'streak', name, team: teamNick, n: ctx.streak, soccer: isSoccer }, r) })
+      else if (ctx.skid >= 3 && ctx.skid % 2 === 1) D.headlines.push({ at: k, run: 'skid', text: headlineFor({ type: 'skid', name, team: teamNick, n: ctx.skid, soccer: isSoccer }, r) })
       else if (BIG_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'big', name, team: teamNick, opp, label: GAME_LINE[pos]?.(g) ?? '', pos, gw: !!g.gw }, r) })
       else if (!g.won && BUST_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'bust', name, team: teamNick, opp, pos }, r) })
     }

@@ -105,7 +105,7 @@ function soccerFinal(sit, won, hit, r, pts) {
   if (won) {
     if (hit) mine += goal
     else if (need >= 0) { if (r() < 0.5) { mine += need + 1; note = 'A teammate won it in stoppage time.' } else { mine += need; note = 'Won it on penalties.' } }
-    else note = `${them} couldn't find an equalizer.`
+    else note = `${them} couldn't find an equaliser.`
     if (mine < opp) { mine = opp; note = 'Won it on penalties.' }
     else if (mine === opp && !note) note = 'Won it on penalties.'
   } else if (hit) {

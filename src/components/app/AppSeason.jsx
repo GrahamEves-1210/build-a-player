@@ -87,7 +87,8 @@ export function RingCeremony({ team, title, score, trophy = '/trophy.webp', art 
 const useCount = (target, run, ms = 900) => countUp(target, { run, ms })
 
 // `result` is the season on screen — the panel only shows that season's rewards
-export function SeasonRewards({ result }) {
+// what (the eyebrow's word): 'season', or 'tournament' for a World Cup
+export function SeasonRewards({ result, what = 'season' }) {
   const p = useProgress()
   const s = p.lastSeason && (!result || p.lastSeason.ref === (result.seasonOf ?? result)) ? p.lastSeason : null
   const [stage, setStage] = useState(0)    // 0 lines → 1 bar fills → 2 level-up callout
@@ -112,9 +113,9 @@ export function SeasonRewards({ result }) {
     return (
       <section className="ag-rewards ag-rewards--guest">
         <div className="ag-rewards-head">
-          <span className="ag-eyebrow">SEASON REWARDS</span>
+          <span className="ag-eyebrow">{what.toUpperCase()} REWARDS</span>
         </div>
-        <div className="ag-rewards-note">This season would have earned <b>{s.xp} XP</b>{s.missedCoins ? <> and <b>{s.missedCoins} coins</b></> : null}. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button> to earn XP and coins, level up and keep your career.</div>
+        <div className="ag-rewards-note">This {what} would have earned <b>{s.xp} XP</b>{s.missedCoins ? <> and <b>{s.missedCoins} coins</b></> : null}. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button> to earn XP and coins, level up and keep your career.</div>
       </section>
     )
   }
@@ -124,7 +125,7 @@ export function SeasonRewards({ result }) {
   return (
     <section className="ag-rewards">
       <div className="ag-rewards-head">
-        <span className="ag-eyebrow">SEASON REWARDS</span>
+        <span className="ag-eyebrow">{what.toUpperCase()} REWARDS</span>
         <span className="ag-rewards-total"><span className="gain"><XpIco sm={false} /> +{total}</span>{s.coins ? <span className="ag-rewards-coins"><span className="coin-ico coin-ico--sm" /> +{coins}</span> : null}</span>
       </div>
       <div className="ag-rewards-lines">

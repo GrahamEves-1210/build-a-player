@@ -433,7 +433,8 @@ const BOARDS = {
   bestOvr: { ok: isSoccer, scope: modeScope, load: ctx => bestOvrBoard(ctx, SOCCER_MODES[0]) },
   bestOvrAll: { ok: isSoccer, scope: () => SOCCER_MODES[1], load: ctx => bestOvrBoard(ctx, SOCCER_MODES[1]) },
   boots: { ok: isSoccer, scope: modeScope, load: ctx => soccerAwardBoard(ctx, SOCCER_MODES[0], 'boot') },
-  ballons: { ok: isSoccer, scope: modeScope, load: ctx => soccerAwardBoard(ctx, SOCCER_MODES[0], 'bdor') },
+  // (a Champions League season's own award: Player of the Season; the id kept for saved links)
+  ballons: { ok: isSoccer, scope: modeScope, load: ctx => soccerAwardBoard(ctx, SOCCER_MODES[0], 'poty') },
   bootsAll: { ok: isSoccer, scope: () => SOCCER_MODES[1], load: ctx => soccerAwardBoard(ctx, SOCCER_MODES[1], 'boot') },
   goldenBalls: { ok: isSoccer, scope: () => SOCCER_MODES[1], load: ctx => soccerAwardBoard(ctx, SOCCER_MODES[1], 'gball') },
 }
@@ -472,11 +473,11 @@ export const blacktopModes = () => [{ id: 'bt', label: 'Total' }, { id: 'bt1', l
 const TD = 'CHAMPIONS LEAGUE', WC = 'WORLD CUP'
 function soccerRecords() {
   return [
-    { id: 'rings', label: 'Most League Titles', unit: 'TITLES', group: TD },
+    { id: 'rings', label: 'Most Champions League Titles', unit: 'TITLES', group: TD },
     { id: 'wins', label: 'Most Wins', unit: 'WINS', group: TD },
     { id: 'bestOvr', label: 'Best OVR', unit: 'OVR', group: TD },
-    { id: 'boots', label: 'Most Golden Boots', unit: 'BOOTS', group: TD },
-    { id: 'ballons', label: 'Most Ballon d\'Ors', unit: 'WINS', group: TD },
+    { id: 'boots', label: 'Most Top Scorer Awards', unit: 'AWARDS', group: TD },
+    { id: 'ballons', label: 'Most Players of the Season', unit: 'AWARDS', group: TD },
     { id: 'perSeason', label: 'Goals a Season', unit: 'GLS', group: TD, note: `${MIN_SEASONS}+ SEASONS` },
     { id: 'assistsSeason', label: 'Assists a Season', unit: 'AST', group: TD, note: `${MIN_SEASONS}+ SEASONS` },
     { id: 'ratingSeason', label: 'Average Match Rating', unit: 'RTG', group: TD, note: `${MIN_SEASONS}+ SEASONS` },

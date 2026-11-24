@@ -54,7 +54,7 @@ const SOCCER_ALL = [
     make: c => ({ kicker: 'THE ARMBAND', title: 'The captain is injured',
       body: `The club captain is out for a month, and the manager hands ${c.name} the armband.`,
       options: [
-        o('lead', 'Lead from the front', { attr: c.R1('nerve', 1), window: 4, tag: 'CAPTAIN' }, 'First to every press, first in the huddle.'),
+        o('lead', 'Lead from the front', { attr: c.R1('nerve', 1), window: 4, tag: 'CAPTAIN' }, 'First to every press, first to the referee.'),
         o('pass', 'Let a senior pro have it', { attr: c.R1('mind', 1), window: 2, tag: 'FOCUSED' }, 'He keeps his mind on his own game.'),
       ] }) },
   { id: 'fc-runin', at: ['late', 'stretch'], w: 5, when: c => !c.ucl && c.contender && c.left >= 4,
@@ -124,6 +124,7 @@ const fin = (my, opp) => ({ won: my > opp, drawn: my === opp })
 const fcWin = (my, opp, add, line, tag) => ({ good: true, line, tag, game: { ...fin(my, opp), my, opp, add } })
 const fcStay = (my, opp, add, line, tag, good = false) => ({ good, line, tag, game: { ...fin(my, opp), my, opp, add } })
 const minute = c => 82 + Math.floor(c.r() * 9)
+const nth = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th'}`   // 82nd, 83rd, 90th
 function soccerMoment(c, g) {
   if (!g || g.sat || !g.app) return null
   const m = g.mySc - g.oppSc, opp = g.oppName ?? g.opponent, at = minute(c)
@@ -132,7 +133,7 @@ function soccerMoment(c, g) {
     // level late: a penalty one time in four, else he's through on goal
     if (c.r() < 0.25) {
       const side = odds(c, 0.76, ['composure', 'finishing'], 0.025), mid = odds(c, 0.72, ['shotPower', 'composure'], 0.03)
-      return { title: `Penalty, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} with ${opp}. He's been brought down in the box, and he wants the ball.`, options: [
+      return { title: `Penalty, ${nth(at)} minute`, body: `${score(g.mySc, g.oppSc)} with ${opp}. He's been brought down in the box, and he wants the ball.`, options: [
         { id: 'corner', label: 'Side-foot it into the corner', outcomes: [{ p: side.p, ...fcWin(g.mySc + 1, g.oppSc, shot, `Keeper the wrong way. ${c.nick} win ${score(g.mySc + 1, g.oppSc)}.`, 'LATE WINNER') }, { p: 1 - side.p, ...fcStay(g.mySc, g.oppSc, miss, `Saved, low to his left. It finishes ${score(g.mySc, g.oppSc)}.`, 'PENALTY SAVED') }],
           sub: sub(side, `the winner, ${score(g.mySc + 1, g.oppSc)}`, 'a draw') },
         { id: 'middle', label: 'Smash it down the middle', outcomes: [{ p: mid.p, ...fcWin(g.mySc + 1, g.oppSc, shot, `The keeper dives, it goes straight in. ${c.nick} win ${score(g.mySc + 1, g.oppSc)}.`, 'LATE WINNER') }, { p: 1 - mid.p, ...fcStay(g.mySc, g.oppSc, miss, `Over the bar. It finishes ${score(g.mySc, g.oppSc)}.`, 'PENALTY MISSED') }],
@@ -140,7 +141,7 @@ function soccerMoment(c, g) {
       ] }
     }
     const early = odds(c, 0.4, ['finishing', 'composure', 'positioning']), round = odds(c, 0.34, ['dribbling', 'composure', 'pace']), square = odds(c, 0.46, ['passing', 'positioning'])
-    return { title: `Level, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} with ${opp}. A ball over the top and he's through, a defender chasing and the keeper coming out.`, options: [
+    return { title: `Level, ${nth(at)} minute`, body: `${score(g.mySc, g.oppSc)} with ${opp}. A ball over the top and he's through, a defender chasing and the keeper coming out.`, options: [
       { id: 'early', label: 'Shoot early, before the keeper sets', outcomes: [{ p: early.p, ...fcWin(g.mySc + 1, g.oppSc, shot, `Low into the far corner. ${c.nick} win ${score(g.mySc + 1, g.oppSc)}.`, 'LATE WINNER') }, { p: 1 - early.p, ...fcStay(g.mySc, g.oppSc, miss, `Wide of the post. It finishes ${score(g.mySc, g.oppSc)}.`, 'CHANCE MISSED') }],
         sub: sub(early, `the winner, ${score(g.mySc + 1, g.oppSc)}`, 'a draw') },
       { id: 'round', label: 'Take it round the keeper', outcomes: [{ p: round.p, ...fcWin(g.mySc + 1, g.oppSc, shot, `Round him and into the empty net. ${c.nick} win ${score(g.mySc + 1, g.oppSc)}.`, 'LATE WINNER') }, { p: 1 - round.p, ...fcStay(g.mySc, g.oppSc, {}, `The keeper gets a hand to it. It finishes ${score(g.mySc, g.oppSc)}.`, 'CHANCE MISSED') }],
@@ -151,7 +152,7 @@ function soccerMoment(c, g) {
   }
   if (m === -1) {
     const first = odds(c, 0.3, ['shotPower', 'finishing']), touch = odds(c, 0.32, ['dribbling', 'finishing', 'composure'])
-    return { title: `A goal down, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} to ${opp}. A clearance drops to him on the edge of the box.`, options: [
+    return { title: `A goal down, ${nth(at)} minute`, body: `${score(g.mySc, g.oppSc)} to ${opp}. A clearance drops to him on the edge of the box.`, options: [
       { id: 'first', label: 'Hit it first time', outcomes: [{ p: first.p, ...fcStay(g.oppSc, g.oppSc, shot, `Volleyed in off the bar. ${score(g.oppSc, g.oppSc)}, a point saved.`, 'LATE EQUALISER', true) }, { p: 1 - first.p, ...fcStay(g.mySc, g.oppSc, miss, `Into the stand. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'CHANCE MISSED') }],
         sub: sub(first, `the equaliser, ${score(g.oppSc, g.oppSc)}`, 'the defeat stands') },
       { id: 'touch', label: 'Take a touch and pick a spot', outcomes: [{ p: touch.p, ...fcStay(g.oppSc, g.oppSc, shot, `One touch, then into the corner. ${score(g.oppSc, g.oppSc)}, a point saved.`, 'LATE EQUALISER', true) }, { p: 1 - touch.p, ...fcStay(g.mySc, g.oppSc, {}, `Closed down before he can shoot. ${c.nick} lose ${score(g.mySc, g.oppSc)}.`, 'CLOSED DOWN') }],
@@ -161,7 +162,7 @@ function soccerMoment(c, g) {
   if (m === 1) {
     const hold = odds(c, 0.7, ['size', 'dribbling'], 0.04), second = odds(c, 0.33, ['pace', 'finishing'])
     const eq = Math.round((1 - second.p) * 0.3 * 100) / 100
-    return { title: `A goal up, ${at}th minute`, body: `${score(g.mySc, g.oppSc)} against ${opp}, and they're throwing everyone forward. The ball is cleared to him.`, options: [
+    return { title: `A goal up, ${nth(at)} minute`, body: `${score(g.mySc, g.oppSc)} against ${opp}, and they're throwing everyone forward. The ball is cleared to him.`, options: [
       { id: 'hold', label: 'Hold it up in the corner', outcomes: [{ p: hold.p, ...fcStay(g.mySc, g.oppSc, {}, `He wins a corner, then a throw, then a free kick. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'SAW IT OUT', true) }, { p: 1 - hold.p, ...fcStay(g.mySc, g.mySc, {}, `Muscled off it, and they break to equalise. ${score(g.mySc, g.mySc)}.`, 'LATE EQUALISER CONCEDED') }],
         sub: `${pc(hold.p)}${hold.why ? ` (his ${hold.why})` : ''}: the win. Otherwise they equalise.` },
       { id: 'second', label: 'Run at goal for the second', outcomes: [{ p: second.p, ...fcWin(g.mySc + 1, g.oppSc, shot, `Away on his own, and he finishes it. ${c.nick} win ${score(g.mySc + 1, g.oppSc)}.`, 'PUT IT AWAY') }, { p: eq, ...fcStay(g.mySc, g.mySc, miss, `Saved, and they go straight up the other end. ${score(g.mySc, g.mySc)}.`, 'LATE EQUALISER CONCEDED') }, { p: Math.max(0, 1 - second.p - eq), ...fcStay(g.mySc, g.oppSc, miss, `Saved, but they can't find an equaliser. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'HELD ON', true) }],

@@ -154,9 +154,15 @@ const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => {
 }))
 function avgAttr(p) { const v = Object.values(p.attrs ?? {}); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0 }
 
+// Squad Builder's header: the spot of the slot being built (a copy of lib/squad.js SOCCER_SHAPES' labels, so Home
+// doesn't load the squad module)
+const SHAPE_SPOTS = { '433': ['LW', 'ST', 'RW'], '4312': ['LS', 'RS', 'CAM'] }
+const squadSpotLabel = (sq, id) => SHAPE_SPOTS[sq?.shape ?? '433']?.[sq?.lineup?.[id]] ?? 'ST'
+
 // ── Home's figure: the striker's traits, colour by colour, falling into the silhouette ──
 const SOCCER_SPLASH_ATTRS = ['heading', 'composure', 'passing', 'finishing', 'dribbling', 'positioning', 'size', 'pace', 'shotPower']
-  .map(t => ({ label: SOCCER_ATTR[t]?.label ?? t, col: SOCCER_ATTR[t]?.hex ?? '#ffffff', tall: t === 'heading', grow: t === 'composure' ? 1.6 : undefined }))
+  // (the card-style short labels, PAC, FIN, DRI...: the full words were cut off by the figure's outline, "INISHING")
+  .map(t => ({ label: SOCCER_ATTR[t]?.shortLabel ?? SOCCER_ATTR[t]?.label ?? t, col: SOCCER_ATTR[t]?.hex ?? '#ffffff', tall: t === 'heading', grow: t === 'composure' ? 1.6 : undefined }))
 function useRevealOnMount(ready) {
   const [visible, setVisible] = useState(false)
   useEffect(() => { if (!ready) return; const t = setTimeout(() => setVisible(true), 360); return () => clearTimeout(t) }, [ready])
@@ -308,7 +314,8 @@ export default function SoccerApp() {
   // a season kept on the device (lib/seasonLive.js): after a reload its build, mode and season wait on CONTINUE
   // (a season saved before the nine ratings, 11-16: its build and types read with the new keys)
   const [liveAt] = useState(() => (SHARED ? null : migrateSoccerKeys(readLive('soccer'))))
-  const [page, setPage]               = useState(SHARED ? 'shared' : 'splash')
+  // (a link to the leaderboard, or a refresh on it, opens it: it needs nothing else set up)
+  const [page, setPage]               = useState(SHARED ? 'shared' : typeof window !== 'undefined' && window.location.pathname === '/soccer/leaderboard' && SOCCER_LIVE ? 'leaderboard' : 'splash')
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)   // 'classic' (Top Divisions) | 'all-time' (World Cup) | 'salarycap'
   const position = 'st'
   const pool = soccerPoolOf(gameMode)
@@ -651,6 +658,7 @@ export default function SoccerApp() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [putSquad])
   const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
+  // the spot the player being built plays (lib/squad.js SOCCER_SHAPES: LW ST RW, or LS RS CAM), not always ST
 
   // ── CAREER (when SOCCER_MODES.career): lib/career.js with sport 'soccer' ──
   const [career, setCareer] = useState(null)
@@ -899,7 +907,7 @@ export default function SoccerApp() {
       {!parked && !competeOn && <Navbar {...navbarProps} />}
       <div className="game-page-scroll">
         {competeOn && <CompeteHud cp={cp} />}
-        {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · ST · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
+        {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {squadSpotLabel(squad, squadBuilding.current)} · PLAYER {Math.min(squad.slots.length, squad.slots.length - squadLeft + 1)} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
         {IS_APP && !drop && <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={SOCCER_ATTR} onFlip={flip} waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
         {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={SOCCER_ATTR} waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
         <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode soccer-wc' : ''}`}>

@@ -513,7 +513,7 @@ function Result({ sport, squad, owner, reveal, onRevealed }) {
   }
   return (
     <SafeView fallback={old}>
-      <TeamResult sport={sport} squad={squad} owner={owner} reveal={reveal} onRevealed={onRevealed} rewards={<SeasonRewards result={squad.last} />} />
+      <TeamResult sport={sport} squad={squad} owner={owner} reveal={reveal} onRevealed={onRevealed} rewards={<SeasonRewards result={squad.last} what={sport === 'soccer' && squad.pool === 'alltime' ? 'tournament' : 'season'} />} />
     </SafeView>
   )
 }
@@ -699,7 +699,7 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
         </div>
         <Strength sport={sport} squad={squad} owner={owner} />
         {sport === 'bucket' ? <LineupBoard squad={squad} setSquad={setSquad} owner={owner} /> : sport === 'baseball' ? <Suspense fallback={null}><BaseballBoard squad={squad} setSquad={setSquad} owner={owner} /></Suspense> : sport === 'soccer' ? <FrontLine squad={squad} setSquad={setSquad} owner={owner} /> : <DepthChart squad={squad} owner={owner} />}
-        <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '120ms' }} onClick={sim}><IconPlay size={16} /> SIM THE SEASON</button>
+        <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '120ms' }} onClick={sim}><IconPlay size={16} /> {sport === 'soccer' && squad.pool === 'alltime' ? 'PLAY THE WORLD CUP' : 'SIM THE SEASON'}</button>
         <button className="ag-btn ag-btn--ghost" onClick={anotherTeam}><IconSwap size={15} /> {sport === 'soccer' ? (squad.pool === 'alltime' ? 'CHANGE NATION' : 'CHANGE CLUB') : 'CHANGE TEAM'}</button>
         <button className="ag-btn ag-btn--ghost" onClick={() => setConfirmNew(true)}>NEW SQUAD</button>
       </>

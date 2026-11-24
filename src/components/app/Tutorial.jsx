@@ -22,7 +22,8 @@ const NEW_UI = IS_APP || APP_LOOK
 
 const isDone = () => { try { return localStorage.getItem(TUTORIAL_KEY) === '1' } catch { return true } }
 const markDone = () => { try { localStorage.setItem(TUTORIAL_KEY, '1') } catch {} }
-const sportNow = () => (document.documentElement.classList.contains('is-bucket') || window.location.pathname.startsWith('/bucket') ? 'bucket' : 'nfl')
+const sportNow = () => (document.documentElement.classList.contains('is-soccer') || window.location.pathname.startsWith('/soccer') ? 'soccer'
+  : document.documentElement.classList.contains('is-bucket') || window.location.pathname.startsWith('/bucket') ? 'bucket' : 'nfl')
 
 // ── tiny store: { phase: 'idle' | 'tour' | 'coach', sport, run } ───────────────
 let state = { phase: 'idle', sport: 'nfl', run: 0 }
@@ -218,6 +219,7 @@ function useTracked(read, deps) {
 
 // ── The tour: Home, a section at a time ───────────────────────────────────────
 function tourSteps(sport) {
+  if (sport === 'soccer') return soccerTour()
   const nba = sport === 'bucket'
   return [
     // the first page: no spotlight yet, just the game in a sentence
@@ -233,6 +235,23 @@ function tourSteps(sport) {
     { id: 'quick', sel: ['.ag-way--quick'], all: true, title: 'Quick games', text: nba ? 'Salary Cap: a new puzzle every day. The best player you can build on a budget.' : 'Salary Cap is a daily puzzle: the best QB you can build on a budget. The Depth Chart: sort the stars by one stat.' },
     { id: 'coins', sel: ['.ag-dock', '.ag-hud-coins'], title: 'Coins and looks', text: 'Every game pays XP and coins, and Daily missions pay more. The Shop turns coins into name colors, effects and avatars everyone sees.' },
     { id: 'go', sel: ['.ag-start'], title: 'Let\'s play one', text: 'A guided Current game: spin, draft, play the season. About two minutes.', last: true },
+  ]
+}
+
+// Soccer's Home: the striker, the Champions League and the World Cup (the same sections, its own words)
+function soccerTour() {
+  return [
+    { id: 'welcome', sel: [], center: true, title: 'Welcome to Build-A-Player',
+      text: `Spin real strikers, take the best trait from each one, and build a No. 9 nobody else has. Then play a season and see how far he goes. Here's a quick look around.` },
+    { id: 'sport', sel: ['.sp-nav', '.ag-sport'], title: 'Pick your sport', text: 'Tap a sport at the top of the stage to switch any time. Each one has its own modes, leaderboards and records.' },
+    { id: 'pos', sel: ['.ag-positions'], title: 'The striker', text: 'Every build is a No. 9: pace, finishing, shot power, dribbling, passing, positioning, heading, size and composure.' },
+    { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a club, then a real player from it, and take the trait you want from him. Fill every slot, then play. Current is today's Champions League clubs; All-Time is the World Cup's legends.` },
+    { id: 'career', sel: ['.ag-way--career'], title: 'Career', text: 'One striker, a whole career: from the academy to a first contract, loans and transfers, season after season, and a legacy.' },
+    { id: 'compete', sel: ['.ag-way--compete'], title: 'Compete', text: 'Online pools of five. Everyone gets the same spins, and the best build takes the pool.' },
+    { id: 'squad', sel: ['.ag-way--squad'], title: 'Squad Builder', text: 'Build a front line, put it in a real club or nation and play a season together. Then run it back.' },
+    { id: 'quick', sel: ['.ag-way--quick'], all: true, title: 'Quick games', text: 'Salary Cap is a daily puzzle: the best striker you can build on a budget.' },
+    { id: 'coins', sel: ['.ag-dock', '.ag-hud-coins'], title: 'Coins and looks', text: 'Every game pays XP and coins, and Daily missions pay more. The Shop turns coins into name colors, effects and avatars everyone sees.' },
+    { id: 'go', sel: ['.ag-start'], title: 'Let\'s play one', text: 'A guided Current game: spin, draft, play the Champions League. About two minutes.', last: true },
   ]
 }
 
@@ -331,13 +350,14 @@ function Tour({ sport }) {
 
 // ── Coach marks for the guided game ───────────────────────────────────────────
 const COPY = sport => {
+  const fc = sport === 'soccer'
   return {
-    spin: { n: 1, title: 'Spin', text: 'Spin for a random team, then a random player from it.', dim: true },
+    spin: { n: 1, title: 'Spin', text: fc ? 'Spin for a random club, then a random player from it.' : 'Spin for a random team, then a random player from it.', dim: true },
     pick: { n: 2, title: 'Take a trait', text: 'Tap the trait you want from this player. Each player fills one slot, so take his best.', dim: true },
     more: { n: 2, title: 'Keep going', text: 'Spin again for the next slot. Spin, pick, repeat until every slot is filled.' },
     sim: { n: 3, title: 'Play the season', text: 'Build complete. Tap this to play a full season.', dim: true },
-    team: { n: 3, title: 'Pick your team', text: 'Spin for a team or choose your own. That\'s who you play the season for.', above: true },
-    season: { n: 4, title: 'The season', text: 'Your grades make your OVR, and your OVR runs the season. Tap through for the record, playoffs and awards, then build again and beat it.', end: true },
+    team: { n: 3, title: fc ? 'Pick your club' : 'Pick your team', text: fc ? 'Spin for a club or choose your own. That\'s who he plays the Champions League for.' : 'Spin for a team or choose your own. That\'s who you play the season for.', above: true },
+    season: { n: 4, title: 'The season', text: fc ? 'His grades make his OVR, and his OVR runs the season. Tap through for the league phase, the knockouts and the awards, then build again and beat it.' : 'Your grades make your OVR, and your OVR runs the season. Tap through for the record, playoffs and awards, then build again and beat it.', end: true },
   }
 }
 

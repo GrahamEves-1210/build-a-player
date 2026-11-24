@@ -49,6 +49,8 @@ const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S'
 
 // how a broadcaster says it: in the Premier League, in the Bundesliga, but in La Liga, in Serie A, in Ligue 1
 const inLeague = name => (/^(la liga|serie a|ligue 1)$/i.test(String(name ?? '').trim()) ? String(name) : `the ${name ?? 'league'}`)
+// a match he didn't play, and why (soccerSimulation.js planOf; a moment's 'sit it out': seasonDirector)
+const DNP_WHY = { inj: 'INJURED', knock: 'KNOCK', bench: 'UNUSED SUB', rest: 'RESTED' }
 const ordinal = n => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return `${n}${s[(v - 20) % 10] || s[v] || s[0]}` }
 const one = v => (v == null || Number.isNaN(+v) ? '–' : (Math.round(v * 10) / 10).toFixed(1))
 const pct = v => (v == null ? '–' : `${Math.round(v)}%`)
@@ -200,6 +202,7 @@ export function SoccerTeamSpin({ pool = 'current', isCustomMode, onTeamSelected,
                     </button>
                   ))}
                 </div>
+                {!shown.length && <p className="tpm-pick-none">No {pool === 'alltime' ? 'nation' : 'club'} matches "{search.trim()}".</p>}
               </>
             )}
           </div>
@@ -236,7 +239,7 @@ function StrikerLine({ r, title = 'THE SEASON', comps = true }) {
         [r.goals ?? 0, r.goals === 1 ? 'GOAL' : 'GOALS', true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true],
         [`${r.apps ?? 0}`, r.starts != null ? `APPS · ${r.starts} STARTS` : 'APPS'],
         [one(r.xg), 'xG'], [r.shots ?? '–', 'SHOTS'], [pct(r.conversion), 'CONVERSION'],
-        [one(r.avgRating), 'AVG RATING'], [r.motm ?? 0, 'PLAYER OF THE MATCH'],
+        [one(r.avgRating), 'AVG RATING'], [r.motm ?? 0, r.motm === 1 ? 'PLAYER OF THE MATCH AWARD' : 'PLAYER OF THE MATCH AWARDS'],
       ]} />
       {(r.hatTricks > 0 || r.braces > 0 || r.pens > 0 || r.headers > 0) && (
         <p className="ssp-line-notes">
@@ -285,7 +288,7 @@ function Fixtures({ list = [], pool, league, initial = 10 }) {
               <span className="ssp-fx-opp"><Crest short={m.opponent} pool={pool} size={18} extra={!!m.oppExtra} /><span>{teamOf(m.opponent, pool)?.name ?? m.oppName ?? m.opponent}</span></span>
               <span className="ssp-fx-score"><i>{res}</i>{scoreOf(m)}</span>
               <span className="ssp-fx-line">
-                {m.app ? <>{Array.from({ length: Math.min(5, m.goals ?? 0) }, (_, k) => <b key={k} className="ssp-ball" aria-label="goal" />)}{m.goals > 5 ? <small>+{m.goals - 5}</small> : null}{m.assists > 0 && <small className="ssp-ast">{m.assists > 1 ? `${m.assists} A` : 'A'}</small>}</> : <small className="ssp-dnp">DNP</small>}
+                {m.app ? <>{Array.from({ length: Math.min(5, m.goals ?? 0) }, (_, k) => <b key={k} className="ssp-ball" aria-label="goal" />)}{m.goals > 5 ? <small>+{m.goals - 5}</small> : null}{m.assists > 0 && <small className="ssp-ast">{m.assists > 1 ? `${m.assists} A` : 'A'}</small>}</> : <small className="ssp-dnp">{DNP_WHY[m.why] ?? 'DNP'}</small>}
               </span>
               <span className={`ssp-fx-rt${m.motm ? ' is-motm' : ''}`}>{m.rating != null ? one(m.rating) : ''}</span>
             </li>
@@ -319,18 +322,21 @@ function Ties({ ties = [], pool }) {
   )
 }
 // an award's race: the top of the list, the build lit
+// the leaders, and him in his place when he's further down (the tag says 8th: his row is there too)
 function Race({ list = [], userName, pool, unit = 'goals', n = 6 }) {
   if (!list.length) return null
+  const at = list.findIndex(e => e.isPlayer)
+  const rows = (at >= n ? [...list.slice(0, n - 1).map((e, i) => [e, i]), [null, -1], [list[at], at]] : list.slice(0, n).map((e, i) => [e, i]))
   return (
     <ol className="ssp-race">
-      {list.slice(0, n).map((e, i) => (
-        <li key={i} className={e.isPlayer ? 'is-us' : ''}>
+      {rows.map(([e, i], k) => (e == null ? <li key="gap" className="ssp-race-gap" aria-hidden="true">···</li> : (
+        <li key={k} className={e.isPlayer ? 'is-us' : ''}>
           <span className="ssp-race-rk">{i + 1}</span>
           <Crest short={e.team} pool={pool} size={18} />
           <span className="ssp-race-name">{who(e, userName)}</span>
           {unit && e[unit] != null && <b className="ssp-race-n">{e[unit]}</b>}
         </li>
-      ))}
+      )))}
     </ol>
   )
 }
@@ -582,7 +588,7 @@ function LegLive({ m, before, label, team, pool, userName, speed, paused, onDone
   const [away, home] = homeMe ? [them, me] : [me, { ...them, neutral: !!m.neutral }]
   const post = m.shootout ? (m.shootout.won ? `✓ Won ${m.shootout.my}–${m.shootout.opp} on penalties` : `✗ Lost ${m.shootout.my}–${m.shootout.opp} on penalties`) : res === 'W' ? '✓ Won' : res === 'D' ? '= Drew' : '✗ Lost'
   return (
-    <LiveBoard
+    <LiveBoard sym="v"
       label={label} away={away} home={home} phase={g.phase}
       badge={res} badgeWin={res === 'W'}
       status={(
@@ -818,14 +824,15 @@ function UclBracket({ bracket, us, upto = 99, rows = [] }) {
 
 // ── The legacy screen (basketball's GOAT Status) ─────────────────────────────
 // A club season: the Ballon d'Or, counted down to where he finished, then the Golden Shoe
-function ScreenBallon({ r, onNext, userName }) {
+// (seen: shown before, so Back from the final report finds it as it ended, not counted again)
+function ScreenBallon({ r, onNext, userName, seen, onSeen }) {
   const bdo = r.ballonDor, shoe = r.goldenShoe
   const rank = bdo?.rank ?? 99
   const top = bdo?.top ?? []
   const inTop = rank <= Math.max(10, top.length)
-  const [phase, setPhase] = useState('checking')
-  const [tk, setTk] = useState(11)
-  useEffect(() => { const t = setTimeout(() => setPhase(inTop ? 'ticker' : 'miss'), 2200); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [phase, setPhase] = useState(seen ? (inTop ? 'revealed' : 'miss') : 'checking')
+  const [tk, setTk] = useState(seen ? rank : 11)
+  useEffect(() => { onSeen?.(); if (seen) return; const t = setTimeout(() => setPhase(inTop ? 'ticker' : 'miss'), 2200); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (phase !== 'ticker') return
     if (tk <= rank) { const t = setTimeout(() => setPhase('revealed'), 1100); return () => clearTimeout(t) }
@@ -885,9 +892,10 @@ function ScreenBallon({ r, onNext, userName }) {
 }
 
 // A World Cup: the tournament's awards, counted one at a time
-function ScreenWcAwards({ r, onNext, userName }) {
+function ScreenWcAwards({ r, onNext, userName, seen, onSeen }) {
   const gb = r.goldenBoot, ball = r.goldenBall, young = r.bestYoungPlayer
-  const k = useStaged(true, [2200, 2900, 3600, 4300, 4900])
+  const k = useStaged(true, [2200, 2900, 3600, 4300, 4900], !!seen)
+  useEffect(() => { onSeen?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="simp-screen goat-screen ssp-legacy">
       <div className="goat-screen-title">THE AWARDS</div>
@@ -915,9 +923,10 @@ function ScreenWcAwards({ r, onNext, userName }) {
 
 // A Champions League season: UEFA's awards, counted one at a time (the top scorer, the Player of the Season, the Young
 // Player of the Season, the Team of the Season)
-function ScreenUclAwards({ r, onNext, userName }) {
+function ScreenUclAwards({ r, onNext, userName, seen, onSeen }) {
   const gb = r.goldenBoot, poty = r.playerOfSeason, young = r.youngPlayer
-  const k = useStaged(true, [2000, 2700, 3400, 4100, 4700])
+  const k = useStaged(true, [2000, 2700, 3400, 4100, 4700], !!seen)
+  useEffect(() => { onSeen?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="simp-screen goat-screen ssp-legacy">
       <div className="goat-screen-title">THE AWARDS</div>
@@ -976,27 +985,27 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
   const bestOpp = best ? (teamOf(best.opponent, pool)?.name ?? best.oppName ?? best.opponent) : null
   return (
     <div className="simp-screen ssp-screen ssp-final">
-      {APP_SIM && <SeasonRewards result={r} />}
+      {APP_SIM && <SeasonRewards result={r} what={isWc ? 'tournament' : 'season'} />}
       <div className={`ssp-hero is-final${r.champion ? ' is-champ' : ''}`}>
         <span className="ssp-eyebrow">{userName} · ST · {isWc ? wcName(r.season) : isUcl ? `${r.team?.name} · Champions League ${r.season}` : `${r.team?.name} ${r.season}`}</span>
         <h2 className="ssp-head">{head}</h2>
         <div className="ssp-final-ovr"><b>{r.ovr}</b><small>OVR</small><span>{arch}</span></div>
         {ribbons.length > 0 && <div className="ssp-ribbons">{ribbons.map(x => <span key={x}>{x}</span>)}</div>}
       </div>
-      {APP_SIM && <ShareSeasonButton card={card} className="ssp-share" />}
+      {APP_SIM && <ShareSeasonButton card={card} className="ssp-share" what={isWc ? 'tournament' : 'season'} />}
       <Tiles items={[[r.goals ?? 0, `${isWc || isUcl ? '' : 'LEAGUE '}${r.goals === 1 ? 'GOAL' : 'GOALS'}`, true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true], isWc || isUcl ? [r.apps ?? 0, 'APPS'] : [r.allComps?.goals ?? r.goals ?? 0, 'ALL COMPS'], [one(r.avgRating), 'AVG RATING']]} />
       {best && (
         <div className="simp-best-game">
           <div className="simp-section-lbl">Best Match</div>
           <div className="simp-best-body">
             <span className="sbg-week">{isWc ? (STAGE_TAG[best.stage] ?? 'WC') : fxTag(best) ?? `MW ${best.wk ?? best.g ?? ''}`}</span>
-            <span className="sbg-opp">{best.neutral ? 'v' : best.home ? 'vs' : '@'} {bestOpp}</span>
+            <span className="sbg-opp">{best.home || best.neutral ? 'v' : 'at'} {bestOpp}</span>
             <span className="sbg-line">{scoreOf(best)} · {best.goals ?? 0} {best.goals === 1 ? 'goal' : 'goals'}{best.assists ? `, ${best.assists} ${best.assists === 1 ? 'assist' : 'assists'}` : ''}{best.rating != null ? ` · ${one(best.rating)}` : ''}</span>
           </div>
         </div>
       )}
       <div className="simp-stat-section">
-        <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
+        <div className="simp-stat-group-lbl"><NameTag name={userName} self /><span className="un-keep">'s</span> Build</div>
         <BuildRows build={build} types={types} pool={pool} small />
       </div>
       <div className="simp-final-actions">
@@ -1025,7 +1034,8 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const isUcl = !isWc && SoccerSim.isUclResult(result)
   const info = useMemo(() => (isUcl ? UCL_INFO : !isWc && result?.league?.id ? SoccerSim.soccerLeagueInfo?.(result.league.id) : null), [isWc, isUcl, result])
   // what's been watched once plays back straight to its end (Back onto it)
-  const [seen, setSeen] = useState(() => (keptDone ? { season: true, ko: kept.screen > 2 } : reopened ? { season: true, ko: true } : {}))
+  const [seen, setSeen] = useState(() => (keptDone ? { season: true, ko: kept.screen > 2, awards: kept.screen > 3 } : reopened ? { season: true, ko: true, awards: true } : {}))
+  const awardsSeen = useCallback(() => setSeen(s => (s.awards ? s : { ...s, awards: true })), [])
   // the season as played: the result, or the director's booked season once the moments have changed it
   const [live, setLive] = useState(result)
   const r = live ?? result
@@ -1091,7 +1101,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
       : keptDir && !(director && M) ? null   // (the director still loading: never the plain season, which would book the unsteered one)
       : <ScreenSeason key="season" r={r} pool={pool} info={info} onNext={next} onDone={() => { if (!director) book(result) }} userName={userName} adsDisabled={adsDisabled} seen={!!seen.season} />,
     <ScreenKnockouts key="ko" r={r} pool={pool} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.ko} onSeen={() => setSeen(s => ({ ...s, ko: true }))} />,
-    isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} /> : isUcl ? <ScreenUclAwards key="awards" r={r} onNext={next} userName={userName} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} />,
+    isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} /> : isUcl ? <ScreenUclAwards key="awards" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} />,
     <ScreenFinal key="final" r={r} pool={pool} build={build} types={types} arch={arch} onReset={reset} onBack={back} userName={userName} isSalaryMode={isSalaryMode} adsDisabled={adsDisabled} />,
   ]
   const teamStyle = team ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color } : undefined
@@ -1116,7 +1126,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
                   <span className="sts-city">{sub}</span>
                   <span className="sts-nickname">{team.name}</span>
                 </div>
-                {sz?.height ? <span className="ssp-strip-size">{Math.floor(sz.height / 12)}'{sz.height % 12}" · {sz.weight} lbs</span> : null}
+                {sz?.height ? <span className="ssp-strip-size">{Math.floor(sz.height / 12)}'{sz.height % 12}"{sz.weight ? ` · ${sz.weight} lbs` : ''}</span> : null}
               </div>
               <div className="sts-grades">
                 {[['ATT', team.att], ['DEF', team.def]].map(([k, v]) => (

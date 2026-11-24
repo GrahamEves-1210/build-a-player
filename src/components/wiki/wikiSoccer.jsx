@@ -22,7 +22,7 @@ export function SoccerPage({ go }) {
   const sz = SOCCER_SIZE_SCALE
   return (
     <>
-      <p className="wk-lead"><b>Soccer</b> builds a striker out of real forwards and midfielders and plays him through a Champions League campaign or a World Cup. Pick it on Home with the soccer ball.</p>
+      <p className="wk-lead"><b>Soccer</b> builds a striker out of real forwards and midfielders and plays him through a Champions League campaign or a World Cup. Pick SOCCER on Home's sport switch.</p>
 
       <h2 id="ratings">The nine ratings</h2>
       <div className="wk-table-wrap">
@@ -46,7 +46,7 @@ export function SoccerPage({ go }) {
       <h3 id="ucl">Champions League</h3>
       <p>His season is his club's campaign: eight league phase matches, two against teams from each of four pots. The top eight go to the Round of 16; ninth to 24th play two-legged play-offs. Then two-legged knockouts and a one-match final. Awards: the competition's top scorer, Player of the Season and Young Player of the Season.</p>
       <h3 id="wc">World Cup</h3>
-      <p>The 2026 format: 48 nations in twelve groups of four, the top two and the eight best third-placed teams into a Round of 32, then single matches with extra time and penalties. A finalist plays eight matches. Awards: the Golden Boot and the Golden Ball.</p>
+      <p>The 2026 format: 48 nations in twelve groups of four, the top two and the eight best third-placed teams into a Round of 32, then single matches with extra time and penalties. A finalist plays eight matches. Awards: the Golden Boot, the Golden Ball and Best Young Player (born 2005 or later).</p>
 
       <h2 id="modes">Soccer modes</h2>
       <ul>

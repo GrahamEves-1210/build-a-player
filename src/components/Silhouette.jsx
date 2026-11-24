@@ -852,7 +852,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
                 style={{ userSelect: 'none' }}
               >{fmtHeight(heightIn)}  HEIGHT</text>
 
-              {/* WINGSPAN: horizontal bracket near feet */}
+              {/* WINGSPAN: horizontal bracket near feet (basketball's number: not on a striker) */}
+              {!isSoccer && (<>
               <line x1={leftX} y1={wy} x2={rightX} y2={wy} stroke={col} strokeWidth={lw} strokeDasharray="7 5" opacity={op} />
               <line x1={leftX} y1={wy - tickW} x2={leftX} y2={wy + tickW} stroke={col} strokeWidth={lw * 1.3} opacity={op2} />
               <line x1={rightX} y1={wy - tickW} x2={rightX} y2={wy + tickW} stroke={col} strokeWidth={lw * 1.3} opacity={op2} />
@@ -865,6 +866,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
                 opacity={op2}
                 style={{ userSelect: 'none' }}
               >{fmtHeight(wingspanIn)} WINGSPAN</text>
+              </>)}
             </svg>
           )
         })()}
