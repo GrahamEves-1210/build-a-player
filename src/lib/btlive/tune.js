@@ -84,7 +84,7 @@ export const T = {
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
   layBase: 0.62, layFin: 0.36,       // layup: 81% at Finishing 1, 98% at 11 (an 80: 89%): the best shot there is
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
-  layFar: 0.012,                     // a layup loses this much a foot past 3 ft
+  layFar: 0.035,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 14% less)
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkBounce: 0.55,                  // Bounce (n) under this: never dunks (a Bounce 1 never does)
   dunkChance: 1.8,                   // how often an able dunker dunks: (Bounce n - dunkBounce) x this (x a touch more with Finishing)
@@ -103,30 +103,33 @@ export const T = {
   // ── Contest: how close, where (in front / beside / beaten), how he stands, who he is ───────────────────────────────────────
   contestRange: 7.0,                 // a defender farther than this doesn't bother a jumper...
   contestNear: 2.5,                  // ...and at this distance he's all the way in it (a straight line between)
-  contestRangeL: 6.0, contestNearL: 2.0,   // ...at a layup or a dunk
+  contestRangeL: 6.5, contestNearL: 3.3,   // ...at a layup or a dunk (bodies touch at 3.1: a man on him is all the way in it)
   contestCurve: 1.3,                 // in between it bends (1 = a straight line)
   contestStand: 0.6,                 // feet on the floor
   contestJump: 0.82, contestJumpBnc: 0.22,   // a hand up: this + Bounce (an 80 about 1.0)
   contestSet: 0.75,                  // ...set in front of a layup, not moving: walls up, but he can be finished on
   lateShare: 0.6,                    // a man who closes out after the shot went up gets this much less of his contest at most
+  lateShareL: 0.25,                  // ...on a layup or a dunk (it goes up slower, and he flies at it)
   contestBeat: 0.15,                 // frozen or on the floor
   frontDot: 0.5,                     // square in front: full; beside him (at right angles to the rim)...
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
-  contestBehind: 0.2,                // ...this much
+  contestBehind: 0.5,                // ...this much (a man on his hip still bothers it)
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.45,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.6,                // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
   jsThrough: 0.35,                   // Jump Shot 11 shoots over this share of a jumper's contest
-  contestMaxL: 0.62,                 // ...off a layup
+  contestMaxL: 0.85,                 // ...off a layup
   contestMaxD: 0.40,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
   cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
-  twoValue: 1.3,                     // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
-  cpuDriveV: 0.55,                   // a jumper has to be worth this (a make = 1, a two 1.3) while there's time to go to the rim
+  twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
+  cpuDriveV: 0.55,                   // a jumper never has to be worth more than this (a make = 1, a two 1.45) while there's time to go to the rim...
+  cpuDriveRisk: 0.85,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
+  cpuJumpEdge: 0.03,                 // ...by this much
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
   jumpTime: 0.50,                    // off the floor this long...
@@ -181,10 +184,11 @@ export const T = {
 
   // ── Rebounds and loose balls ────────────────────────────────────────────────────────────────────
   rebMin: 2.5, rebMax: 9.5,          // a miss comes off this far from the rim...
+  rebSpreadL: 5.6,                   // ...off a layup, in any direction but straight back at him (radians, the whole fan)
   rebLong: 0.08,                     // ...plus this for every foot of shot (long shots, long boards)
   rebAir: 1.15,                      // seconds from the rim to the floor
   standReach: 7.6, standReachSize: 1.3,  // the ball can be taken when it's under this (feet on the floor)
-  jumpReach: 2.0, jumpReachBnc: 2.2,     // ...and this much higher in a jump
+  jumpReach: 1.0, jumpReachBnc: 1.2,     // ...and this much higher in a jump
   grabDist: 2.1,                     // and within this of him (generous: lag)
   grabReb: 2.6,                      // ...plus this at Rebounding 11 (he's where the ball is going)
   boardReb: 4.0, boardSize: 1.2, boardBnc: 1.0,   // two under it: weights 1 + 3 x (Rebounding - 0.75) + 1.2 x (Size - 0.75) + 1 x (Bounce - 0.75), the nearer one a bit more

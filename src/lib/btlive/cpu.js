@@ -60,7 +60,7 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
     const k = Math.min(run, Math.max(0, dd - T.contestNear)) / (dd || 1)
     return { ...o, x: o.x + (p.x - o.x) * k, y: o.y + (p.y - o.y) * k, act: 'jump' }
   })
-  const c = ref.lateContest(ref.contestOf(me, closed, kind).c, ref.contestOf(me, defs.map(ref.handUp), kind).c)
+  const c = ref.lateContest(ref.contestOf(me, closed, kind).c, ref.contestOf(me, defs.map(ref.handUp), kind).c, kind)
   const win = meterSpec(kind, p.R, s.gamePoint).win
   const green = clamp(win / (lvl.meterSd * 1.25), 0.12, 0.97)
   const rel = green + (1 - green) * (kind === 'jumper' ? 0.72 : 0.84)
@@ -68,6 +68,19 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
   const pMake = ref.makeChance({ R: p.R, kind, d, q: 1, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false }) * rel
   // make it, take it: a make is worth its points and the ball back, so a two is worth one and a half ones, not two
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
+}
+
+// what taking his man to the rim is worth: a layup from 4 ft with the man walled up in front of him, hand up (or
+// an open one if he's beaten), less the risk on the way
+function driveValue(s, p, D, lvl) {
+  const dR = ref.rimDist(p) || 1, ux = (RIM.x - p.x) / dR, uy = (RIM.y - p.y) / dR
+  const me = { ...fact(p), x: RIM.x - ux * 4, y: RIM.y - uy * 4, vx: 0, vy: 0 }
+  const beaten = !D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dR + 0.8
+  const wall = beaten ? [] : [{ ...fact(D), x: me.x + ux * 3.2, y: me.y + uy * 3.2, vx: 0, vy: 0, act: 'jump' }]
+  const c = ref.contestOf(me, wall, 'layup').c
+  const win = meterSpec('layup', p.R, s.gamePoint).win
+  const green = clamp(win / (lvl.meterSd * 1.25), 0.12, 0.97)
+  return ref.makeChance({ R: p.R, kind: 'layup', d: 4, q: 1, c, run: 0, cs: null, rushed: false }) * (green + (1 - green) * 0.84) * T.cpuDriveRisk
 }
 
 // is the lane from a to b clear of defenders
@@ -160,8 +173,8 @@ function withBall(s, p, m, lvl, out) {
   if (m.plan == null) pickPlan(s, p, m)
   else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = s.tick + 2 * HZ } else pickPlan(s, p, m) }
   if (s.tick >= (m.thinkT ?? 0)) { m.thinkT = s.tick + 4; m.noise = (roll(s) - 0.5) * 2 * lvl.ev; m.go = roll(s) }
-  const mine = shotValue(s, p, lvl, defs)
   const { def: D, d: dD } = nearestDef(s, p)
+  const mine = shotValue(s, p, lvl, defs)
   const dRim = mine.d
   const beat = !clearing && (!D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8)
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
@@ -169,8 +182,9 @@ function withBall(s, p, m, lvl, out) {
   let need = clockS <= late ? -1 : clamp(0.6 - Math.max(0, 8 - clockS) * 0.05, 0.3, 0.6)
   // a contested jumper is the worst shot there is: with time left to get to the rim, he goes and gets a layup instead
   // (a smart player sees it sooner)
+  // (and a jumper better than the drive is the shot: a man who sags off a shooter gets shot over)
   const toRim = Math.max(0, dRim - 4.5) / p.R.topBall + 0.5
-  if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = Math.max(need, T.cpuDriveV)
+  if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, lvl) + T.cpuJumpEdge, 0.3, T.cpuDriveV)
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
   // a better look for a teammate
   if (!clearing && s.size > 1 && p.noAct <= 0) {
@@ -248,7 +262,14 @@ function withBall(s, p, m, lvl, out) {
 function chaseBall(s, p, m, lvl, out) {
   const b = s.ball
   if (b.st === 'shot') {
-    // get inside position: bigs under it, guards a step out
+    // get inside position: bigs under it, guards a step out; a defender boxes out, between his man and the rim
+    const man = p.team !== s.poss && p.man >= 0 ? s.players[p.man] : null
+    if (man) {
+      const ax = man.x - RIM.x, ay = Math.max(1, man.y - RIM.y), a = Math.hypot(ax, ay) || 1
+      const r = clamp(a - 2.6, 3.0, 7.5)
+      steer(p, RIM.x + ax / a * r, RIM.y + ay / a * r, out, 0.5)
+      return true
+    }
     const r = p.pos === 'big' ? 4.5 : 8.5
     const ax = p.x - RIM.x, ay = Math.max(1, p.y - RIM.y), a = Math.hypot(ax, ay) || 1
     steer(p, RIM.x + ax / a * r, RIM.y + ay / a * r, out, 1)
