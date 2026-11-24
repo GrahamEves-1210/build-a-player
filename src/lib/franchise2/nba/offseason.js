@@ -13,6 +13,7 @@ import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring, p
 import { addNews, signText, millions } from './news'
 import * as X from './seams'
 import { growBuilds } from './builds'
+import { coachOfYear, coachCarousel, fillStaff } from './coach'
 import { notable } from './aging'
 import { rngOf } from '../rng'
 import { numberAll } from './numbers'
@@ -53,6 +54,11 @@ export function closeSeason(F) {
   }
   for (const k of ['MVP', 'ROY', 'DPOY', '6MOY', 'MIP', 'CLUTCH']) if (A[k]) addNews(F, { k: 'award', tag: k === '6MOY' ? 'SIXTH MAN' : k === 'CLUTCH' ? 'CLUTCH PLAYER' : k, s: A[k].s, text: `${A[k].n} (${nick(A[k].s)}) is the ${AWARD_FULL[k]}` })
   for (const x of X.updateRecords(F) ?? []) addNews(F, { tag: 'RECORD', ...x, k: 'record' })
+  // the coaches (coach.js): Coach of the Year, then the spring's carousel (firings, hires, the assistants moving)
+  const po = new Set((F.po?.all?.[0] ?? []).flatMap(S => [S.hi, S.lo]).filter(Boolean))
+  const coy = coachOfYear(F, R)
+  if (coy) { F.hist[F.hist.length - 1].coy = { n: coy.n, s: coy.s, rec: coy.rec }; addNews(F, { k: 'award', tag: 'COACH OF THE YEAR', s: coy.s, text: `${coy.n} (${nick(coy.s)}) is the Coach of the Year after a ${coy.rec} season` }) }
+  coachCarousel(F, R, po)
   F.phase = 'off'
   F.off = { step: 'awards' }
 }
@@ -321,6 +327,7 @@ export function newSeason(F) {
   pruneDrafts(F)
   numberAll(F)   // (camp's new men, and anyone a save left without one)
   F.picks = (F.picks ?? []).filter(p => p.y > F.year + 1)
+  fillStaff(F)   // (a job on the GM's staff still open: promoted from within)
   F.year++
   F.phase = 'season'
   F.off = null

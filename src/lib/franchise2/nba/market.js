@@ -24,6 +24,7 @@
 // team fills its roster to at least 14 standard deals (the minimum, from the pool; core's `make` makes a man when the
 // pool runs dry), cuts down to 15, signs two-way men to two or three spots, and extends the young men and veterans it
 // wants to keep.
+import { coachPull } from './coach'
 import { rngOf, clamp, r1 } from '../rng'
 import { signText, termsText } from './news'
 import { capOf, minOf, maxOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
@@ -99,7 +100,7 @@ export function offerScore(F, p, s, d, ctx = null) {
   const role = roleOn(F, s, p)
   const mkt = BIG_MARKET.has(s) ? 1 : 0
   const home = p.fr === s ? 1 : 0
-  const extra = 1 + W.win * win + W.role * (role - 0.5) * 2 + W.mkt * mkt + W.home * home
+  const extra = 1 + W.win * win + W.role * (role - 0.5) * 2 + W.mkt * mkt + W.home * home + coachPull(F, s)
   return (sc[0] / Math.max(0.1, a.$)) * yf * extra
 }
 // the share of his ask he'll take today (seeded: some men wait a day longer than others)

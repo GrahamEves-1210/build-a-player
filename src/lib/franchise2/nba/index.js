@@ -9,6 +9,7 @@ import { addNews } from './news'
 import { placeBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
+import { ensureStaff } from './coach'
 
 export * from './league'
 export * from './schedule'
@@ -18,21 +19,28 @@ export * from './offseason'
 export * from './news'
 export * from './moments'
 export * from './builds'
+export * as NC from './coach'
 export { X as CAP_SIM }
 
 export const NBA_SAVE_V = 1
 export const SLOTS_N = 3
 
-// setup: { seed, team, slot, owner, sandbox, builds: [{ spot, build, types, name, num, face }], rules: { cap, inj } }
+// setup: { seed, team, slot, owner, sandbox, builds: [{ spot, build, types, name, num, face }], rules: { cap, inj }, pace: 'light' | 'full',
+//         coach: coach.js finishCoach (the GM's head coach), staff: { oc, dc, pd } (the men hired in the setup's HIRE step) }
 export function createNbaFranchise(setup) {
   const F = {
     v: NBA_SAVE_V, sport: 'nba', seed: setup.seed, slot: setup.slot ?? 0, owner: setup.owner ?? 'Guest', sandbox: !!setup.sandbox,
     team: setup.team, year: FIRST_YEAR, nid: 1, builds: [], hist: [], retired: [], rings: 0, news: [], board: [], sp: 4,
     moments: setup.moments ?? 'advanced',
+    // the setup's MODE: 'full' (every night, every offseason stop) or 'light' (the season and the summer in a few steps)
+    pace: setup.pace === 'light' ? 'light' : 'full',
+    // the GM's head coach, built in the setup (coach.js finishCoach); none from an older setup
+    ...(setup.coach && { coach: setup.coach }),
   }
   if (setup.rules?.cap === false) F.noCap = 1
   if (setup.rules?.inj === false) F.noInj = 1
   buildTeams(F, { dealOnLoad: X.dealOnLoad })
+  ensureStaff(F, { mine: setup.staff ?? null })   // the league's coaching staffs, the GM's hires in his (coach.js)
   F.phase = 'season'
   // the GM's own builds: named in the setup, onto the roster as rookies (builds.js)
   F.builds = (setup.builds ?? []).slice(0, BUILD_MAX).map(B => ({ pos: B.pos, build: B.build, types: B.types ?? null, name: B.name, num: B.num, face: B.face ?? null, age: 20, ...(B.sandbox && { sandbox: 1 }) }))
@@ -127,7 +135,14 @@ export function unpackNba(json) {
 }
 export function saveNba(F) { try { F.at = Date.now(); localStorage.setItem(KEY(F.slot ?? 0), packNba(F)); queueFranchiseCloud(KEY(F.slot ?? 0)); return true } catch { return false } }
 export function loadNba(slot) {
-  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackNba(s); if (!(F && F.v === NBA_SAVE_V && F.sport === 'nba' && F.teams)) return null; if (needsNumbers(F)) numberAll(F); return F } catch { return null }
+  try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackNba(s); if (!(F && F.v === NBA_SAVE_V && F.sport === 'nba' && F.teams)) return null; if (needsNumbers(F)) numberAll(F); upgradeNba(F); return F } catch { return null }
+}
+// an older save: the pace it was played at (every save before the setup's MODE step was full), the league's staffs
+// (a save from before coaches: its team keeps its real head coach, coach.js ensureStaff)
+export function upgradeNba(F) {
+  if (F.pace !== 'light' && F.pace !== 'full') F.pace = 'full'
+  ensureStaff(F)
+  return F
 }
 export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }
 export const rawNbaSlot = slot => { try { const s = localStorage.getItem(KEY(slot)); return s ? JSON.parse(s) : null } catch { return null } }

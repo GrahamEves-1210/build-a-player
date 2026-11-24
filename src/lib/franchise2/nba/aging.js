@@ -28,6 +28,7 @@
 //   seedPotential(p, R)         a real man's ceiling when he has none (core's league.js sets pk at setup)
 import { rngOf, clamp } from '../rng'
 import { ovrOf, groupOfPos, GUARD_TYPES, BIG_TYPES } from './skills'
+import { coachDev } from './coach'
 
 const ATH = new Set(['speed', 'bounce'])
 const TOUCH = new Set(['jumpShot', 'passing', 'playmaking', 'basketballIQ', 'clutch'])
@@ -41,7 +42,7 @@ const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.2
 const typesOf = g => (g === 'big' ? BIG_TYPES : GUARD_TYPES)
 const OVR_PER_GRADE = 44 / 9
 
-export function ageMan(p, R, { mpg = null } = {}) {
+export function ageMan(p, R, { mpg = null, coach = 0 } = {}) {
   const ag = p.ag, g = p.g ?? groupOfPos(p.p), types = typesOf(g), a = p.a
   const o0 = p.o ?? ovrOf(p)
   // the ceiling moves while he's young: a bust's sinks, a riser's climbs (now and then a big jump: the pick who pops)
@@ -61,6 +62,8 @@ export function ageMan(p, R, { mpg = null } = {}) {
     const gap = Math.max(0, (p.pk ?? o0) - o0)
     const play = mpg == null ? 1 : 0.8 + 0.35 * Math.min(1, mpg / 28)
     G = gap * (RATE[ag] ?? 0.3) * play + R.n() * (ag <= 24 ? 1.1 : 0.6) + pop
+    // (his coaches: the head coach's player development and the development coach's, coach.js coachDev)
+    if (ag <= 25) G += coach
     // (a bust: a ceiling under what he is now; he loses his place in the rotation and slides back toward it)
     const neg = (p.pk ?? o0) - o0
     if (neg < -1 && ag <= 25) G += neg * 0.5
@@ -162,7 +165,7 @@ export function ageLeague(F) {
     const l = F.ss?.[p.i]
     const mpg = l?.gp ? l.min / l.gp : 0
     if (p.b != null) { const d = ageBuild(p, R, { mpg: l ? mpg : null }); if (d) builds.push(d); continue }
-    ageMan(p, R, { mpg: l ? mpg : null })
+    ageMan(p, R, { mpg: l ? mpg : null, coach: where.has(p.i) ? coachDev(F, where.get(p.i), p) : 0 })
   }
   return { retired, news, builds }
 }

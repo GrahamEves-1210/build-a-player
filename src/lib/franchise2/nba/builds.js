@@ -10,6 +10,7 @@ import { TEAM, TYPES, ovrOfAttrs, SPOTS, groupOfSpot } from './league'
 import { rngOf, clamp } from '../rng'
 import { addNews, POS_FULL, signText } from './news'
 import * as X from './seams'
+import { coachDev } from './coach'
 
 export const BUILD_MAX = 3
 // his spot: a guard who runs the offence is a point guard, a big wing a small forward; a big with size a center
@@ -81,7 +82,11 @@ export function growBuilds(F) {
     const R = rngOf(`${F.seed}-grow-${F.year}-${p.i}`)
     const T = TYPES[p.g] ?? []
     const was = p.o
-    const up = p.ag <= 23 ? R.int(2, 3) : p.ag <= 27 ? R.int(1, 2) : p.ag <= 28 ? R.int(0, 1) : 0
+    let up = p.ag <= 23 ? R.int(2, 3) : p.ag <= 27 ? R.int(1, 2) : p.ag <= 28 ? R.int(0, 1) : 0
+    // (his coaches: a staff that develops players well is a step more now and then, a poor one a step less; coach.js)
+    const dv = coachDev(F, s, { ...p, ag: p.ag - 1 })
+    if (dv > 0 && R.u() < Math.min(0.6, dv * 0.5)) up++
+    else if (dv < 0 && up > 0 && R.u() < Math.min(0.4, -dv * 0.5)) up--
     for (let k = 0; k < up; k++) {
       // (the lower grades first, the way a player works on what he can't do)
       const open = T.filter(t => p.a[t] < 11).sort((x, y) => p.a[x] - p.a[y] + (R.u() - 0.5) * 3)
