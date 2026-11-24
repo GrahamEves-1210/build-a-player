@@ -43,6 +43,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const NB = { k: 0, n: [0, 0, 0], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, burst: 0, lt: 0, wasLive: false }
   const DELAY = 6                                  // others are drawn this many ticks behind the latest word (200 ms)
   const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
+  const LAY = { dots: [], bars: [], ball: null, words: [] }   // DEV: what was drawn where on the last frame (px, world)
   const EVLOG = [], PFN = 14                       // (PFN: where a snapshot row keeps the act: proto.js snapOf)
 
   // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
@@ -277,6 +278,7 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.beginPath(); ctx.ellipse(x, y + tk * 0.5, tk * 0.56 * (1 - lift / tk * 0.5), tk * 0.2, 0, 0, 6.283); ctx.fill()
     ctx.save()
     ctx.translate(x + dx, y - lift)
+    if (import.meta.env.DEV) LAY.dots[i] = [x + dx, y - lift, tk / 2 + 3.5]
     if (rot) { ctx.translate(0, tk * 0.2); ctx.rotate(rot) }
     if (sc !== 1) ctx.scale(sc, sc)
     const r = tk * 0.3, o = -tk / 2
@@ -312,6 +314,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // under the dot; over it when someone is right under him (the bar would sit on that man's face)
     const py = above ? y - tk * 0.5 - 5 - fs * 0.62 : y + tk * 0.5 + 4 + fs * 0.62
     rr(x - tw / 2 - 4, py - fs * 0.62, tw + 8, fs * 1.24, 2); ctx.fillStyle = 'rgba(5,7,10,.82)'; ctx.fill()
+    if (import.meta.env.DEV) LAY.bars[i] = [x - tw / 2 - 4, py - fs * 0.62, x + tw / 2 + 4, py + fs * 0.62]
     ctx.fillStyle = col; ctx.fillRect(x - tw / 2 - 4, py - fs * 0.62, 2, fs * 1.24)
     ctx.fillStyle = i === me ? '#fff' : 'rgba(243,246,248,.86)'; ctx.fillText(name, x + 1, py + 0.5)
   }
@@ -321,6 +324,7 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.fillStyle = `rgba(0,0,0,${clamp(0.5 - z * 0.025, 0.14, 0.5)})`
     ctx.beginPath(); ctx.ellipse(x, gy + r * 0.5, r * (1 + z * 0.02), r * 0.42, 0, 0, 6.283); ctx.fill()
     const by = gy - z * k * 0.42
+    if (import.meta.env.DEV) LAY.ball = [x, by, r]
     ctx.beginPath(); ctx.arc(x, by, r, 0, 6.283); ctx.fillStyle = '#e9772c'; ctx.fill()
     ctx.lineWidth = Math.max(1, r * 0.14); ctx.strokeStyle = '#4a1e08'
     ctx.beginPath(); ctx.moveTo(x - r, by); ctx.lineTo(x + r, by); ctx.moveTo(x, by - r); ctx.lineTo(x, by + r); ctx.stroke()
@@ -369,6 +373,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const L = camPx, Rr = camPx + w                                  // the screen's edges, in them
     const tk = clamp(k * T.radius * 2, 18, 52)                       // a dot is as big as the body the game collides
     places(a)
+    if (import.meta.env.DEV) { LAY.dots.length = LAY.bars.length = LAY.words.length = 0; LAY.ball = null; LAY.k = k; LAY.tk = tk; LAY.L = L; LAY.R = Rr; LAY.h = h }
     const X = i => DX[i] * k, Y = i => DY[i] * k
     const b = s.ball
     // the rim taking a make, a miss, a dunk
@@ -447,6 +452,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const x = clamp(f.x * k, L + tw / 2 + 8, Rr - tw / 2 - 8), y = clamp(f.y * k - (reduced() ? 0 : t * 8), fs, h - fs)
       ctx.globalAlpha = t < 0.08 ? t / 0.08 : t > 0.75 ? (1 - t) / 0.25 : 1
       ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, fs * 0.16); ctx.strokeStyle = 'rgba(5,7,10,.92)'; ctx.strokeText(f.text, x, y)
+      if (import.meta.env.DEV) LAY.words.push([x - tw / 2, y - fs / 2, x + tw / 2, y + fs / 2, f.text])
       ctx.fillStyle = f.color; ctx.fillText(f.text, x, y)
       ctx.globalAlpha = 1
     }
@@ -568,6 +574,8 @@ export function createEngine({ setup, els, on, net = null }) {
     resync() { NB.wasLive = false; NB.local = null; NB.burst = 0 },
     // DEV: where each player was drawn on the last frame (feet)
     get evlog() { return EVLOG },
+    // DEV: the last frame's drawing (px in the world: dots [x, y, half], name bars, ball [x, y, r], words)
+    get layout() { return LAY },
     get drawn() { return Array.from(DX, (x, i) => [x, DY[i]]) },
     get netInfo() { return { k: NB.lastK, buf: NB.buf.length, off: NB.off, rel: NB.rel, local: NB.local?.act ?? null, lt: NB.lt, n: NB.n } },
     pause(on = true) { pausedBy = on; paused = on || document.hidden; last = performance.now() },
