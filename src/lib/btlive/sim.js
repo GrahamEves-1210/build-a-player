@@ -267,9 +267,9 @@ function shotLands(s) {
     st.pts += v.pts; st.fgm++; if (v.three) st.tpm++
     let ast = -1
     if (p.catchFrom >= 0 && s.tick - p.catchT <= 4 * HZ && s.players[p.catchFrom].team === p.team) { ast = p.catchFrom; s.stats[ast].ast++ }
-    // through the net: it drops under the rim, a touch toward where it came from, and bounces (betweenPlays)
-    const dd = Math.hypot(b.sx - RIM.x, b.sy - RIM.y) || 1
-    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = (b.sx - RIM.x) / dd * 0.9; b.vy = (b.sy - RIM.y) / dd * 0.9; b.vz = -3
+    // through the net: it drops straight down under the rim (the screen draws it through the net while it's right
+    // under it), bounces, and from the bounce it goes out to whoever checks it (betweenPlays)
+    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = b.vy = 0; b.vz = -3
     s.events.push({ e: 'make', pid: p.i, pts: v.pts, kind: v.kind, three: v.three, poster: v.poster, deep: v.deep, on: v.by, ast, score: [...s.score] })
     const keep = s.rules.makeItTakeIt || s.mode === 'koth'
     endPossession(s, v.pts, keep ? p.team : 1 - p.team, keep ? p.i : null, 'make')
@@ -454,7 +454,7 @@ function keepIn(p, keep) {
 
 // Bodies: nobody walks through anybody. A set defender in the handler's path, or anyone standing still, holds his ground
 function collide(s, walk = false, slip = null) {
-  const P = s.players, R2 = T.radius * 2, holder = s.ball.st === 'held' && !walk ? s.ball.holder : -1, n = P.length
+  const P = s.players, R2 = T.radius * 2, hb = s.ball.st === 'held' ? s.ball.holder : -1, holder = walk ? -1 : hb, n = P.length
   // (pairs in a different order every other tick: with three or more in a crowd nobody always goes first)
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     const a = P[s.tick & 1 ? n - 1 - i : i], b = P[s.tick & 1 ? n - 1 - j : j]
@@ -469,6 +469,9 @@ function collide(s, walk = false, slip = null) {
     let fa = mb / (ma + mb), fb = ma / (ma + mb)
     if (a.remote && b.remote) continue
     if (a.remote) { fa = 0; fb = 1 } else if (b.remote) { fa = 1; fb = 0 }
+    // nobody bumps the man with the ball out of bounds (that's a foul, not his foot): at the line he holds his ground
+    else if (a.i === hb && !ref.inBounds(a.x - nx * over * fa, a.y - ny * over * fa, -T.footIn - 0.05)) { fa = 0; fb = 1 }
+    else if (b.i === hb && !ref.inBounds(b.x + nx * over * fb, b.y + ny * over * fb, -T.footIn - 0.05)) { fa = 1; fb = 0 }
     a.x -= nx * over * fa; a.y -= ny * over * fa
     b.x += nx * over * fb; b.y += ny * over * fb
     // the speed into each other is lost (he has to go around)
