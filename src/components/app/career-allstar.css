@@ -1,0 +1,109 @@
+/* ALL-STAR SATURDAY (basketball Career): the invitation, the boards, the money rack, the dunks and the judges'
+   cards (components/app/CareerAllStar.jsx). Career's own pieces underneath: ag-card, sm-moment, cr-note. */
+.asw-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.asw-card > .ag-eyebrow { color: var(--ag-gold-hi); }
+.asw-title { margin: 0; font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; text-transform: uppercase; color: #fff; }
+.asw-card .cr-note { margin: 0; }
+.asw-card .tk-intro-go { margin-top: 2px; }
+.asw-card .tk-intro-go:disabled { opacity: .45; }
+.asw-skip { align-self: stretch; min-height: 42px; font-size: 15px; letter-spacing: 2px; }
+.asw-sim { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
+
+/* ── the board: the round as it stands ── */
+.asw-board { border-radius: 12px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.28); padding: 4px 10px 2px; }
+.asw-board-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 4px; }
+.asw-board-head .ag-eyebrow { color: var(--ag-muted); }
+.asw-row { display: grid; grid-template-columns: 18px 34px 1fr auto; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); transition: background .3s; }
+.asw-row-n { font-family: var(--ag-display); font-size: 15px; color: var(--ag-muted); text-align: center; }
+.asw-row-name { min-width: 0; font-family: var(--ag-body); font-size: 14px; font-weight: 700; color: var(--ag-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asw-row-name small { margin-left: 7px; font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.2px; color: rgba(255,255,255,.6); }
+.asw-row-v { font-family: var(--ag-display); font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; color: #fff; }
+.asw-row.is-wait .asw-row-v { color: rgba(255,255,255,.3); }
+.asw-row.is-wait .asw-row-name { color: var(--ag-muted); }
+.asw-row.is-me { margin: 0 -10px; padding: 6px 10px; border-top-color: transparent; background: color-mix(in srgb, var(--ag-a1) 14%, transparent); box-shadow: inset 3px 0 0 var(--ag-a1); }
+.asw-row.is-up { background: rgba(255,255,255,.07); }
+.asw-row.is-me.is-up { background: color-mix(in srgb, var(--ag-a1) 22%, transparent); }
+.asw-row.is-through .asw-row-v { color: var(--ag-a1); }
+.asw-row.is-through .asw-row-name::after { content: 'FINAL'; margin-left: 8px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--ag-a1); font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.2px; color: var(--ag-a1); vertical-align: 1px; }
+.asw-head { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #1b1d20; border: 1px solid rgba(255,255,255,.12); }
+.asw-head img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.asw-head b { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: var(--ag-muted); }
+.asw-head.is-me { border-color: var(--ag-a1); }
+.asw-head.is-me .cr-me-face { width: 34px !important; height: 34px !important; border: 0; }
+
+/* ── the call: the latest from the floor, a lower third ── */
+.asw-call { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: #0f1113; border: 1px solid rgba(255,255,255,.1); animation: asw-in .28s ease-out both; }
+.asw-call p { margin: 0; font-family: var(--ag-body); font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--ag-text); }
+.asw-call-pts { flex: none; min-width: 52px; height: 52px; display: grid; place-items: center; border-radius: 10px; background: #fff; color: #0b0d0e; font-family: var(--ag-display); font-size: 30px; line-height: 1; }
+.asw-call-pts.is-gold { background: var(--ag-gold); color: #1a1405; }
+.asw-call.is-me { border-color: var(--ag-a1); }
+.asw-call.is-me .asw-call-pts { background: var(--ag-a1); color: var(--ag-on); }
+.asw-call.is-champ { border-color: var(--ag-gold); }
+.asw-call.is-champ .asw-call-pts { background: var(--ag-gold); color: #1a1405; }
+.asw-dunk-line.is-wait { color: var(--ag-muted); }
+@keyframes asw-in { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+/* ── his turn ── */
+.asw-turn { display: flex; flex-direction: column; gap: 9px; padding-top: 12px; border-top: 1px solid var(--ag-line-hi); }
+.asw-turn > .ag-eyebrow { color: var(--ag-a1); }
+
+/* the money rack: the five racks round the arc, as they sit on the floor */
+.asw-arc { position: relative; height: 178px; width: calc(100% - 12px); max-width: 520px; margin: 4px auto 0; }
+.asw-arc svg { position: absolute; inset: 6px 0 0; width: 100%; height: calc(100% - 6px); fill: none; stroke: rgba(255,255,255,.22); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.asw-arc svg path, .asw-arc svg rect { vector-effect: non-scaling-stroke; }
+.asw-rack { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 6px 4px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.16); background: #121416; color: var(--ag-text); cursor: pointer; transition: transform var(--press), border-color .2s; }
+.asw-rack:active { transform: translate(-50%, -50%) scale(.95); }
+.asw-rack i { display: flex; gap: 2px; }
+.asw-rack em { width: 9px; height: 9px; border-radius: 50%; background: #d9772b; }
+.asw-rack em.is-money { background: #f2f2f2; box-shadow: inset 0 0 0 2px #c8102e, inset 0 0 0 3.5px #1d3f8f; }
+.asw-rack small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1; white-space: nowrap; color: var(--ag-muted); }
+.asw-rack.is-on { border-color: var(--ag-a1); background: color-mix(in srgb, var(--ag-a1) 16%, #121416); }
+.asw-rack.is-on small { color: #fff; }
+
+/* ── a dunk: who, the dunk, the tries, the judges ── */
+.asw-dunk { display: flex; flex-direction: column; gap: 6px; padding: 11px 12px 12px; border-radius: 12px; background: #0f1113; border: 1px solid rgba(255,255,255,.1); animation: asw-in .28s ease-out both; }
+.asw-dunk.is-me { border-color: var(--ag-a1); }
+.asw-dunk-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.asw-dunk-who { font-family: var(--ag-font); font-size: 19px; letter-spacing: 1.5px; color: #fff; }
+.asw-dunk-name { font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; text-transform: uppercase; color: #fff; }
+.asw-dunk-line { margin: 2px 0 0; font-family: var(--ag-body); font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--ag-text); }
+.asw-tier { padding: 2px 7px 1px; border-radius: 5px; border: 1.5px solid currentColor; font-family: var(--ag-font); font-weight: 400; font-size: 13px; letter-spacing: 1.5px; line-height: 1.2; }
+.asw-tier.is-easy { color: #4ade80; }
+.asw-tier.is-medium { color: #fbbf24; }
+.asw-tier.is-hard { color: #f87171; }
+.asw-tries { display: inline-flex; gap: 4px; margin-left: auto; }
+.asw-tries i { min-width: 40px; padding: 2px 0 1px; border-radius: 5px; background: rgba(255,255,255,.06); font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; text-align: center; color: transparent; }
+.asw-tries i.is-land { background: #16a34a; color: #fff; }
+.asw-tries i.is-miss { background: rgba(239,68,68,.22); color: #fca5a5; }
+.asw-judges { display: grid; grid-template-columns: repeat(5, 1fr) 1.25fr; gap: 6px; margin-top: 4px; }
+.asw-judge, .asw-judge-total { height: 54px; display: grid; place-items: center; border-radius: 8px; background: #1a1c1f; border: 1px solid rgba(255,255,255,.08); font-family: var(--ag-display); font-size: 30px; line-height: 1; color: #0b0d0e; transition: transform .2s cubic-bezier(.3,1.5,.5,1), background .15s; transform: scaleY(.9); }
+.asw-judge.is-up { background: #f4f2ec; transform: none; }
+.asw-judge.is-ten { color: #b91c1c; }
+.asw-judge-total { color: #fff; }
+.asw-judge-total.is-up { background: var(--ag-a1); color: var(--ag-on); transform: none; }
+.asw-judge-total.is-fifty { background: var(--ag-gold); color: #1a1405; }
+
+/* the dunk list */
+.asw-dunks { display: flex; flex-direction: column; gap: 6px; }
+.asw-dk { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 11px; text-align: left; border: 1.5px solid var(--ag-line-hi); background: rgba(255,255,255,.035); color: var(--ag-text); cursor: pointer; transition: transform var(--press), border-color .2s, opacity .2s; }
+.asw-dk:not(:disabled):active { transform: scale(.98); }
+.asw-dk:disabled { opacity: .4; cursor: default; }
+.asw-dk.is-on { border-color: var(--ag-a1); background: color-mix(in srgb, var(--ag-a1) 12%, transparent); }
+.asw-dk-top { display: flex; align-items: center; gap: 8px; }
+.asw-dk-top > b:not(.asw-tier) { flex: 1; min-width: 0; font-family: var(--ag-font); font-weight: 400; font-size: 19px; letter-spacing: 1.5px; line-height: 1.1; color: #fff; }
+.asw-dk-top em { font-style: normal; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: var(--ag-muted); white-space: nowrap; }
+.asw-dk small { font-family: var(--ag-body); font-size: 13px; font-weight: 500; line-height: 1.35; color: var(--ag-muted); }
+
+/* ── how the night went (the hub, until the next run of games) ── */
+.asw-done { display: flex; flex-direction: column; gap: 8px; padding: 13px 14px; }
+.asw-done > .ag-eyebrow { color: var(--ag-gold-hi); }
+.asw-done-row { display: flex; gap: 10px; align-items: flex-start; }
+.asw-done-row svg { flex: none; margin-top: 18px; color: var(--ag-gold); }
+.asw-done-row span { display: flex; flex-direction: column; gap: 2px; }
+.asw-done-row small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.asw-done-row b { font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1.05; text-transform: uppercase; color: #fff; }
+.asw-done-row.is-won b { color: var(--ag-gold-hi); }
+.asw-done-row em { font-style: normal; font-family: var(--ag-body); font-size: 13.5px; line-height: 1.4; color: var(--ag-muted); }
+
+@media (prefers-reduced-motion: reduce) { .asw-call, .asw-dunk { animation: none; } .asw-judge, .asw-judge-total { transition: none; } }
+html.bap-reduce-motion .asw-call, html.bap-reduce-motion .asw-dunk { animation: none; }

@@ -37,6 +37,10 @@ import * as pitchGame from './pitch.js'
 import * as steal from './steal.js'
 import * as dash60 from './dash60.js'
 import * as ofarm from './ofarm.js'
+// All-Star Saturday's Three-Point Contest (basketball Career): spot-up's shot, five racks and two deep balls on a clock
+import * as threecontest from './threecontest.js'
+// All-Star Saturday's Slam Dunk Contest (basketball Career): one dunk, picked from DUNKS, timed on the way up and at the rim
+import * as dunkcontest from './dunkcontest.js'
 import { useCamera } from './art.js'
 
 // (make sets the game's camera first, so the layout it works out goes through the same one as the picture.
@@ -93,6 +97,8 @@ export const ENGINES = {
   ...map(goalline, 'goalline', ['fr-fade'], 'goal-line'),
   ...map(kickret, 'kickret', ['fr-run'], 'kick-return'),
   ...map(hitstick, 'hitstick', ['fr-stop'], 'run-stuff'),
+  ...map(threecontest, 'threecontest', ['three-contest']),
+  ...map(dunkcontest, 'dunkcontest', ['dunk-contest']),
 }
 export const engineFor = game => ENGINES[game] ?? null
 export const GAME_IDS = Object.keys(ENGINES)
@@ -101,4 +107,4 @@ export const GAME_IDS = Object.keys(ENGINES)
 export const SOCCER_GAMES = new Set(['penalty', 'one-on-one', 'header', 'volley', 'sprint30', 'slalom', 'finishing', 'free-kick', 'two-on-one', 'first-touch'])
 // the games played at the ballpark: the batter's and the pitcher's key moments and their showcase
 export const BASEBALL_GAMES = new Set(['at-bat', 'walk-off', 'steal-second', 'strike-out', 'escape-jam', 'sixty', 'exit-velo', 'arm-strength', 'pitch-velo', 'spin', 'bullpen'])
-export const BUCKET_GAMES = new Set(['pnr', 'rim-protect', 'iso', 'post-up', 'clutch-shot', 'free-throws', 'spot', 'vert', 'board', 'sprint', 'lane', 'nbench', 'lockdown', 'fast-break', 'alley-oop', 'half-court'])
+export const BUCKET_GAMES = new Set(['pnr', 'rim-protect', 'iso', 'post-up', 'clutch-shot', 'free-throws', 'spot', 'vert', 'board', 'sprint', 'lane', 'nbench', 'lockdown', 'fast-break', 'alley-oop', 'half-court', 'three-contest', 'dunk-contest'])

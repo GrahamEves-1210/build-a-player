@@ -63,7 +63,7 @@ export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = nu
     const seedNow = () => { const b = bad.get(key) ?? 0; seedI = Math.min(b, SEEDS.length - 1); return SEEDS[seedI] }
     const start = () => {
       g = engine.make({ v: V, arm: V, seed: seedNow(), def, game, sport, pos, cast, situation })   // (the moment's own score and clock, when the card is for one)
-      step = pilotFor(engine.botName, g, game)
+      step = engine.pilot ? engine.pilot(g, game) : pilotFor(engine.botName, g, game)   // (a game can bring its own perfect thumb: the Dunk Contest)
       marks = []; res = null; resAt = 0; endAt = Infinity; firstIn = null; phase = 'still'; clock = 0
       lastPlan = plan.length ? plan : lastPlan; plan = []; cur = null
     }
@@ -98,9 +98,9 @@ export default function MgDemo({ game, def, pos = null, sport = 'nfl', team = nu
       g.tick(STEP)
       g.fx.length = 0
       if (res == null) {
-        const r = firstRep(game, g)
+        const r = engine.demoRep ? engine.demoRep(g) : firstRep(game, g)
         if (r != null) {
-          res = r; resAt = g.t; endAt = g.t + (AFTER[game] ?? AFTER.default)
+          res = r; resAt = g.t; endAt = g.t + (engine.demoAfter ?? AFTER[game] ?? AFTER.default)
           if (!r) bad.set(key, seedI + 1)
           if (import.meta.env.DEV) (window.__mgDemo ??= { runs: [] }).runs.push({ game, pos, seed: SEEDS[seedI], hit: r, t: Math.round(g.t) })
         } else if (g.t > CAP) { res = false; endAt = g.t }

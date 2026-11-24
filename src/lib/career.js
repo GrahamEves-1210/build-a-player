@@ -49,6 +49,7 @@ import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { BIRTH } from '../data/player-ages'
+import { allStarBeat, allStarSkip, allStarSeason } from './allStarBreak.js'   // (basketball's All-Star Saturday: the 3-Point and Slam Dunk Contests)
 import { LEGENDS, QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGENDS, RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGENDS, WR_LEGEND_PHYSICALS } from '../data/wr-legends'
@@ -2566,6 +2567,7 @@ const withSnap = (c, D, more = {}) => ({ ...c, active: { ...c.active, ...more, s
 // Returns what happened for the screen (sounds, haptics).
 export function advanceWeek(c, D) {
   const S = sportOf(c)
+  if (S.isBucket) c = allStarSkip(c)   // (All-Star Saturday left open: he passed. The screen settles it before it lets the season go on)
   const a = c.active
   if (a.moment || a.injury) return [c, null]
   if (a.k >= D.total) return [c, null]
@@ -2593,6 +2595,9 @@ export function advanceWeek(c, D) {
     }
     const bt = S.x?.beat ? S.x.beat({ ...c, active: { ...a, ...beats } }, D, k) : null
     if (bt) { for (const x of bt.notes ?? []) told.push({ k, ...x }); Object.assign(beats, bt.set ?? {}); if (bt.stop) halt = true }
+    // (basketball: All-Star Saturday at the break, an invitation stops the run there: lib/allStar.js)
+    const ab = S.isBucket ? allStarBeat({ ...c, active: { ...a, ...beats } }, D, k) : null
+    if (ab) { for (const x of ab.notes ?? []) told.push({ k, ...x }); Object.assign(beats, ab.set ?? {}); if (ab.stop) halt = true }
     if (S.step === 1) feed.push({ k, g, hits, headline })
     else { chunk.games.push(g); chunk.hits.push(...hits); chunk.headline.push(...headline) }
     last = { g, hits }
@@ -3251,6 +3256,9 @@ export function bookSeason(c) {
   })()
   // the bye week, as he spent it (seasons from before the bye have none)
   const bw = c.active.bye
+  // All-Star Saturday, as it went (basketball: the 3-Point and Slam Dunk Contests he was in; lib/allStar.js)
+  const asw = allStarSeason(c)
+  if (asw) s.asw = asw
   if (bw) s.bye = { wk: bw.wk, pick: bw.done?.pick ?? null, ...(bw.done?.gain ? { gain: bw.done.gain } : {}), ...(bw.done?.pick === 'rest' ? { dur: r10((bw.done.to ?? 0) - (bw.done.from ?? 0)) } : {}) }
   // the career records (a lineman's: Pro Bowls, All-Pros, starts): set the season he passes the mark
   const careerRecs = (RECORDS[c.sport]?.[c.pos] ?? []).filter(x => x.career)
@@ -4226,6 +4234,8 @@ export function careerTotals(c) {
     playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: c.pos === 'ol' ? 0 : Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy), cpoys: Ss.filter(s => s.cpoy).length, smoys: Ss.filter(s => s.smoy).length,
     // records: the all-time records he holds (one each, however many times he raised his own)
     proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
+    // (All-Star Saturday's titles: on the resume to read, never in the legacy score, as no real great's counts one)
+    threeTitles: Ss.filter(s => s.asw?.three?.won).length, dunkTitles: Ss.filter(s => s.asw?.dunk?.won).length,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
     ...(S.x?.totals ? S.x.totals(c) : {}),
   }

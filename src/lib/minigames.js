@@ -75,6 +75,8 @@ export const GAMES = {
   'alley-oop':   { kind: 'timing', traits: ['bounce', 'finishing'], title: 'ALLEY-OOP', how: 'The lob comes in from the wing. Go up to meet it at the top, then throw it down.' },
   'half-court':  { kind: 'reaction', traits: ['handles', 'jumpShot', 'finishing'], title: 'GET A BUCKET', how: 'Five on five, one possession, the shot clock running. Beat the man, read the help, and score.' },
   'rim-protect': { kind: 'reaction', traits: ['interiorDefense', 'bounce'], title: 'PROTECT THE RIM', how: 'Four trips, three drivers. One attacks the rim in green: meet him there. Red is a pump fake: stay down.', rounds: 4 },
+  // All-Star Saturday (lib/mg/threecontest.js): Career's All-Star screens pass their own def (moneyRack, round, label, toBeat)
+  'three-contest': { kind: 'aim', traits: ['jumpShot'], title: '3-POINT CONTEST', how: 'Five racks round the arc and two deep balls, 70 seconds on the clock. Hold, let go in the green at the top of the jump. One point a ball, two for a money ball, three from deep.', noun: 'SHOT' },
   // ── Basketball combine ──
   'sprint':      { kind: 'dash', traits: ['speed'], title: '3/4-COURT SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as possible. Same foot twice is a stumble. Speed makes every step longer.', unit: 'FT', dist: 75 },
   'lane':        { kind: 'cone', traits: ['speed', 'perimeterDefense'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },

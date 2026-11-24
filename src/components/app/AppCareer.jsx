@@ -36,6 +36,10 @@ import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconM
 import './career-legacy.css'
 import { CFB_LIVE } from '../../lib/cfbLive'
 import { CBB_LIVE } from '../../lib/cbbLive'
+import { aswOpen } from '../../lib/allStarBreak'
+// ALL-STAR SATURDAY (basketball): the 3-Point and Slam Dunk Contests at the break, their own screens and their engines
+const AllStarSaturday = lazy(() => import('./CareerAllStar'))
+const AllStarResult = lazy(() => import('./CareerAllStar').then(m => ({ default: m.AllStarResult })))
 // START IN COLLEGE: the college phase and College Football's data load only for a career that's in it
 const CareerCollege = lazy(() => import('../cfb/CareerCollege'))
 const CareerCollegeHoops = lazy(() => import('../cbb/CareerCollegeHoops'))   // (basketball's: College Basketball's data, guard and big)
@@ -930,11 +934,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             {(canDeadlineTrade(c) || (a.deadline && a.deadline.k === a.k)) && <Deadline c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} setD={d => { D.current = d }} />}
             {byeNow(c) && <ByeWeek key={`bye-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} />}
             {a.bye?.done && a.k === a.bye.wk - 1 && !a.moment && !a.injury && <ByeResult c={c} done={a.bye.done} />}
+            {aswOpen(c) && !a.moment && !a.injury && <Suspense fallback={null}><AllStarSaturday key={`asw-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} face={<CareerFace c={c} size={34} />} /></Suspense>}
+            {a.asw?.done && !a.asw.skipped && a.k === a.asw.at && (a.asw.res?.three || a.asw.res?.dunk) && !a.moment && !a.injury && <Suspense fallback={null}><AllStarResult c={c} /></Suspense>}
             {hotHandOn(c) &&<div className="cr-hot ag-pop"><IconFlame size={15} /> HOT HAND · two grades up through {S.isSoccer ? 'match' : S.gameWord.toLowerCase()} {a.hot.to}</div>}
-            {!hotHandOn(c) && boosts.hot > 0 && !byeNow(c) && canHotHand(c, D.current) && (
+            {!hotHandOn(c) && boosts.hot > 0 && !byeNow(c) && !aswOpen(c) && canHotHand(c, D.current) && (
               <button className="cr-hot cr-hot--go ag-pop" onClick={goHot}><IconFlame size={15} /> USE HOT HAND <small>+2 every trait, next {Math.min(hotGames(c), total - a.k)} {S.isSoccer ? 'matches' : `${S.gameWord.toLowerCase()}s`} · {boosts.hot} left</small></button>
             )}
-            {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
+            {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && !aswOpen(c) && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
             {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
             {seasonOver && (
               <div className="ag-card cr-over ag-pop">
@@ -1311,6 +1317,8 @@ function Recap({ c, last, user }) {
         {last.smoy && <span className="cr-badge is-gold"><IconTrophy size={12} /> SIXTH MAN OF THE YEAR</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
         {last.proBowl && !last.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
+        {last.asw?.three?.won && <span className="cr-badge"><IconTrophy size={12} /> 3-POINT CONTEST CHAMPION</span>}
+        {last.asw?.dunk?.won && <span className="cr-badge"><IconTrophy size={12} /> SLAM DUNK CHAMPION</span>}
         {last.benched > 0 && <span className="cr-badge">{c.sport === 'bucket' ? 'OFF THE BENCH' : last.benched >= last.wins + last.losses ? 'BACKUP ALL YEAR' : `${last.benched} GAMES AS THE BACKUP`}</span>}
         {last.records.map((r, i) => <span key={i} className="cr-badge is-rec"><IconFlame size={12} /> {r}</span>)}
       </div>
@@ -1614,6 +1622,9 @@ const SEASON_COLS = {
 }
 const COL_LABEL = { tfl: 'TFL', ff: 'FF' }
 const gamesIn = s => s.stats.gp ?? (s.wins + s.losses - (s.missed ?? 0))
+// All-Star Saturday, a season's line (lib/allStar.js finishAllStar)
+const placeWord = n => (n === 1 ? 'champion' : n === 2 ? 'runner-up' : `${ordinalOf(n)}`)
+const aswText = a => [a.three && `3-Point Contest, ${placeWord(a.three.place)} (${a.three.final != null ? `${a.three.final} in the final` : `${a.three.r1} in the first round`})`, a.dunk && `Slam Dunk Contest, ${placeWord(a.dunk.place)}${a.dunk.best ? ` (best dunk ${a.dunk.best.total})` : ''}`].filter(Boolean).join(' · ')
 // a season's hardware, in words
 export const honorsOf = (s, S, pos) => (S.honorsOf ? S.honorsOf(s, pos) : S.isSoccer ? [
   ...(s.trophies ?? []),
@@ -1636,6 +1647,8 @@ export const honorsOf = (s, S, pos) => (S.honorsOf ? S.honorsOf(s, pos) : S.isSo
   // (both, when he made both: an MVP season showed only "All-Pro" and read as no Pro Bowl. The owner, 2026-11-12)
   (s.proBowl || s.award || s.allPro) && (S.isBucket ? 'All-Star' : 'Pro Bowl'),
   s.allPro && (S.isBucket ? 'All-NBA' : 'All-Pro'),
+  s.asw?.three?.won && '3-Point Contest champion',
+  s.asw?.dunk?.won && 'Slam Dunk champion',
 ].filter(Boolean))
 function SeasonTable({ c, t }) {
   const S = sportOf(c)
@@ -1699,7 +1712,7 @@ function CareerTab({ c, L, onDelete }) {
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
         {S.isBaseball ? <Suspense fallback={null}><BaseballTotals c={c} t={t} /></Suspense> : S.isSoccer ? <div className="cr-kv">{[[t.stats.goals, 'GOALS'], [t.stats.assists, 'ASSISTS'], [t.stats.apps, 'APPS'], [t.trophies, 'TROPHIES'], [t.leagueTitles, 'LEAGUE TITLES'], [t.ucl, 'CHAMPIONS LEAGUES'], [t.awards, `${S.awardName.st}S`], [t.allPros, 'GOLDEN BOOTS'], [t.proBowls, 'TEAM OF THE SEASON'], [t.caps, 'CAPS'], [t.intlGoals, 'INTERNATIONAL GOALS']].map(([v, k]) => <span key={k}><b>{fmt(v ?? 0)}</b><small>{k}</small></span>)}</div>
-        : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'k' && <span><b>{t.awards}</b><small>{awardWord(c.pos, t.awards)}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>}
+        : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'k' && <span><b>{t.awards}</b><small>{awardWord(c.pos, t.awards)}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span>{t.threeTitles > 0 && <span><b>{t.threeTitles}</b><small>3-POINT CONTESTS</small></span>}{t.dunkTitles > 0 && <span><b>{t.dunkTitles}</b><small>DUNK CONTESTS</small></span>}</div>}
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">{S.isSoccer ? `GREATEST ATTACKERS · TOP ${L.of}` : `GREATEST ${S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP ${L.of}`}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />
@@ -1773,7 +1786,7 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
       <div className="cl-big cl-big--sm">{keys.map(k => <span key={k}><b>{fmtK(S, k, s.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>
       {rest.length > 0 && <div className="cl-small cl-small--season">{rest.map(k => <span key={k}><b>{fmtK(S, k, s.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>}
       {(S.isSoccer || S.isBaseball) && honorsOf(s, S, c.pos).length > 0 && <div className="cr-badges">{honorsOf(s, S, c.pos).map(h => <span key={h} className="cr-badge is-gold"><IconTrophy size={12} /> {h.toUpperCase()}</span>)}</div>}
-      {!S.isSoccer && !S.isBaseball && (s.award || s.allPro || s.proBowl || s.champion || s.cpoy || s.smoy) && (
+      {!S.isSoccer && !S.isBaseball && (s.award || s.allPro || s.proBowl || s.champion || s.cpoy || s.smoy || s.asw?.three?.won || s.asw?.dunk?.won) && (
         <div className="cr-badges">
           {s.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
           {s.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {s.awardName === 'PROTECTOR' ? 'PROTECTOR OF THE YEAR' : s.awardName}</span>}
@@ -1783,6 +1796,8 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
           {s.smoy && <span className="cr-badge is-gold"><IconTrophy size={12} /> SIXTH MAN OF THE YEAR</span>}
           {s.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
           {s.proBowl && !s.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
+          {s.asw?.three?.won && <span className="cr-badge"><IconTrophy size={12} /> 3-POINT CONTEST</span>}
+          {s.asw?.dunk?.won && <span className="cr-badge"><IconTrophy size={12} /> SLAM DUNK CONTEST</span>}
         </div>
       )}
       <Analytics key={s.year} c={c} s={s} />
@@ -1793,6 +1808,7 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
         {(s.goals ?? []).length > 0 && <p><b>Goals</b> {met} of {s.goals.length} met</p>}
         {s.records?.length > 0 && <p><b>Records</b> {s.records.join(' · ')}</p>}
         {hurt.length > 0 && <p><b>Injuries</b> {hurt.map(i => `${i.kind}, ${i.games} ${i.games === 1 ? 'game' : 'games'}${i.played ? ' (played through)' : ''}`).join(' · ')}</p>}
+        {s.asw && <p><b>All-Star Saturday</b> {aswText(s.asw)}</p>}
         {s.bye?.pick && <p><b>Bye</b> Week {s.bye.wk}: {s.bye.pick === 'rest' ? 'rested' : s.bye.gain ? `extra work, ${s.bye.gain.label} ${s.bye.gain.from} → ${s.bye.gain.to}` : 'extra work, no gain'}</p>}
         {s.missed > 0 && !hurt.length && <p><b>Missed</b> {s.missed} {S.isSoccer ? (s.missed === 1 ? 'match' : 'matches') : s.missed === 1 ? 'game' : 'games'}</p>}
       </div>
@@ -1853,6 +1869,8 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
     [t.smoys ?? 0, 'SIXTH MAN OF THE YEAR', IconTrophy, false],
     [t.allPros, S.first.toUpperCase(), IconMedal, false],
     [t.proBowls, t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, IconStar, false],
+    [t.threeTitles ?? 0, t.threeTitles === 1 ? '3-POINT CONTEST' : '3-POINT CONTESTS', IconTrophy, false],
+    [t.dunkTitles ?? 0, t.dunkTitles === 1 ? 'SLAM DUNK TITLE' : 'SLAM DUNK TITLES', IconTrophy, false],
     [t.records, t.records === 1 ? 'RECORD' : 'RECORDS', IconFlame, false],
   ].filter(([n]) => n > 0)
   const marks = [...new Set(c.seasons.flatMap(s => marksOf(s).slice(0, 2)))]
