@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createNbaFranchise, loadNba, saveNba, saveNbaSetup, clearNba, rawNbaSlot, nbaSlotSummary, NBA_KEY, TEAM, recText, records, seasonText } from '../../../lib/franchise2/nba'
-import { NBA_FRANCHISE_CARD_KEY } from '../../../lib/franchiseLive'
+import { NBA_FRANCHISE_CARD_KEY, NBA_FRANCHISE_ART, NBA_FRANCHISE_TURN } from '../../../lib/franchiseLive'
 import { getUsername } from '../../../lib/discord'
 import { sfx, haptic } from '../../../lib/juice'
 import { setKitLeague } from '../kit'
@@ -19,7 +19,7 @@ const TRIP = 'bap_frnba_trip'
 const MOMENT = 'bap_frnba_moment'   // (a key moment's mini game was open when the tab reloaded, NbaGame.jsx: straight back to that franchise)
 const newSeed = () => `${Date.now().toString(36)}${Math.floor(performance.now() * 1000).toString(36)}`
 const PHASE = { season: 'REGULAR SEASON', post: 'REGULAR SEASON OVER', playin: 'PLAY-IN', playoffs: 'PLAYOFFS', done: 'SEASON OVER', off: 'OFFSEASON' }
-const LG = { key: NBA_KEY, summary: nbaSlotSummary, clear: i => { clearNba(i); try { if (JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY))?.slot === i) localStorage.removeItem(NBA_FRANCHISE_CARD_KEY) } catch {} }, TEAM, where: s => `${seasonText(s.year)} · ${s.rec} · ${PHASE[s.phase] ?? ''}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}` }
+const LG = { art: NBA_FRANCHISE_ART, turn: NBA_FRANCHISE_TURN, key: NBA_KEY, summary: nbaSlotSummary, clear: i => { clearNba(i); try { if (JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY))?.slot === i) localStorage.removeItem(NBA_FRANCHISE_CARD_KEY) } catch {} }, TEAM, where: s => `${seasonText(s.year)} · ${s.rec} · ${PHASE[s.phase] ?? ''}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}` }
 
 function leaveNote(F) {
   try {

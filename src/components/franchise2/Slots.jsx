@@ -11,7 +11,7 @@ import './setup.css'
 
 // The mode's first screen: the three save slots, each a team's slab (its record, the year, rings) or an empty one.
 // A save that's there (a franchise or a setup) has DELETE SAVE under it, asked twice (owner 11-15: it was only in History).
-// lg: another league's saves (basketball Franchise, components/franchise2/nba): { summary, clear, TEAM, hero, where }
+// lg: another league's saves (basketball Franchise, components/franchise2/nba): { summary, clear, TEAM, where, art, turn }
 export function Slots({ owner, onOpen, onHome, lg = null }) {
   const [sure, setSure] = useState(null)
   const [, redraw] = useState(0)
@@ -20,6 +20,7 @@ export function Slots({ owner, onOpen, onHome, lg = null }) {
   const keyOf = lg?.key ?? FR_KEY
   useEffect(() => { let on = true; pullFranchiseCloud(Array.from({ length: SLOTS_N }, (_, i) => keyOf(i))).then(ch => { if (ch && on) redraw(n => n + 1) }); return () => { on = false } }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const T = lg?.TEAM ?? TEAM
+  const ART = lg ? lg.art ?? {} : FRANCHISE_ART, TURN = lg ? lg.turn ?? {} : FRANCHISE_TURN   // the league's ball: the football, or basketball's
   const rows = Array.from({ length: SLOTS_N }, (_, i) => ({ i, s: (lg?.summary ?? slotSummary)(i) }))
   const del = i => {
     if (lg) lg.clear(i)
@@ -38,10 +39,10 @@ export function Slots({ owner, onOpen, onHome, lg = null }) {
       <div className="fsu-body">
         <div>
           {/* the trophy, and over it the same trophy turning slowly (TrophyTurn: a square in the middle; a tap turns it again once it rests) */}
-          {!lg && FRANCHISE_ART.hero && (
+          {ART.hero && (
             <div className="fsu-hero-box" ref={hero}>
-              <img className="fsu-hero" src={FRANCHISE_ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} />
-              <TrophyTurn base={FRANCHISE_TURN.hero} turns={24} className="fsu-hero-turn" replay={hero} />
+              <img className="fsu-hero" src={ART.hero} alt="" width="1280" height="720" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} />
+              <TrophyTurn base={TURN.hero} turns={24} className="fsu-hero-turn" replay={hero} />
             </div>
           )}
           <Chyron tone="ink" size="l" title="Franchise" sub="THREE SAVE SLOTS" />

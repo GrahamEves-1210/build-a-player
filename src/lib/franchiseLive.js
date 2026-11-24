@@ -33,6 +33,11 @@ export const FRANCHISE_ART = { card: '/franchise/art/football-card.webp', hero: 
 // 11-15), 5 s a turn, its first frame the card's still; the hero's is the whole trophy turning, the middle of the
 // 16:9 still. (null: the still only)
 export const FRANCHISE_TURN = { card: '/franchise/art/football-card-turn', hero: '/franchise/art/football-card-turn' }
+// basketball Franchise's twin of the football: a chrome basketball with gold seams on the same near-black, spinning
+// about its own axis (a ball spun on a finger), 6 s a turn, its first frame the still; on Home's card and the save slots
+// (owner 11-24). Made in Blender (scratch script ball.py: Cycles, 450x300, 20 fps).
+export const NBA_FRANCHISE_ART = { card: '/franchise/art/basketball-card.webp', hero: '/franchise/art/basketball-card.webp' }
+export const NBA_FRANCHISE_TURN = { card: '/franchise/art/basketball-card-turn', hero: '/franchise/art/basketball-card-turn' }
 
 // ── NBA_FRANCHISE_LIVE: basketball Franchise (components/franchise2/nba, lib/franchise2/nba) ────────────────────────
 // false: nothing about it renders; basketball's Home is as it was. true: a FRANCHISE card on basketball's Home.

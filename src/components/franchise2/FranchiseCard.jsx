@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { franchiseCard, nbaFranchiseCard, FRANCHISE_ART, FRANCHISE_TURN } from '../../lib/franchiseLive'
+import { franchiseCard, nbaFranchiseCard, FRANCHISE_ART, FRANCHISE_TURN, NBA_FRANCHISE_ART, NBA_FRANCHISE_TURN } from '../../lib/franchiseLive'
 import TrophyTurn from './TrophyTurn'
 import './franchise-card.css'
 
@@ -49,8 +49,8 @@ export function FranchiseWait({ kind = 'slots' }) {
 // the mode's own picture (FRANCHISE_ART.card: the trophy's football, 3:2); its box goes if the file isn't there. Over
 // it, the ball spinning like a slow spiral, 5 s a turn, a minute at a time (TrophyTurn: asked for only once the card
 // is on screen; if it can't play, the still stays)
-const Art = () => (FRANCHISE_ART.card
-  ? <span className="ag-fr-art" aria-hidden="true"><img src={FRANCHISE_ART.card} alt="" width="450" height="300" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={FRANCHISE_TURN.card} turns={24} className="ag-fr-turn" /></span>
+const Art = ({ art = FRANCHISE_ART, turn = FRANCHISE_TURN }) => (art.card
+  ? <span className="ag-fr-art" aria-hidden="true"><img src={art.card} alt="" width="450" height="300" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.parentNode.style.display = 'none' }} /><TrophyTurn base={turn.card} turns={24} className="ag-fr-turn" /></span>
   : null)
 
 export default function FranchiseCard({ onClick, wide = false }) {
@@ -78,34 +78,15 @@ export function FranchiseCardClassic({ onClick }) {
   )
 }
 
-// FRANCHISE on basketball's Home (NBA_FRANCHISE_LIVE): the same card, the NBA mode's note, no art yet
+// FRANCHISE on basketball's Home (NBA_FRANCHISE_LIVE): the same card, the NBA mode's note, the chrome basketball spinning
 const warmNba = () => { import('./nba/NbaFranchise').catch(() => {}) }
 export function NbaFranchiseCard({ onClick }) {
   const [c] = useState(nbaFranchiseCard)
   return (
     <button className="ag-way ag-mc ag-mc--fr ag-mc--fr-wide" style={c?.color ? { '--fr-team': c.color } : undefined} onClick={onClick} onPointerDown={warmNba} onFocus={warmNba}>
       <span className="ag-mc-head"><b>FRANCHISE<i className="ag-mc-tag">NEW</i></b><small>{c?.line ?? OPEN}</small></span>
-      <NbaArt team={c?.team} />
+      <Art art={NBA_FRANCHISE_ART} turn={NBA_FRANCHISE_TURN} />
     </button>
   )
 }
 
-// the basketball card's picture, in the football card's place: the GM's team's logo once there's a franchise, else a
-// flat ball (drawn: no photo), in the same box the trophy's football sits in
-function NbaArt({ team }) {
-  return (
-    <span className="ag-fr-art ag-fr-art--nba" aria-hidden="true">
-      {team ? <img src={`/logos/nba/${team}.png`} alt="" width="300" height="300" loading="lazy" decoding="async" draggable={false} />
-        : (
-          <svg viewBox="0 0 100 100" width="100%" height="100%">
-            <circle cx="50" cy="50" r="40" fill="#e1702b" />
-            <g fill="none" stroke="#1a0f08" strokeWidth="2.6">
-              <circle cx="50" cy="50" r="40" />
-              <path d="M10 50h80M50 10v80" />
-              <path d="M22 21c12 9 14 49 0 58M78 21c-12 9-14 49 0 58" />
-            </g>
-          </svg>
-        )}
-    </span>
-  )
-}
