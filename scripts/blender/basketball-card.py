@@ -128,7 +128,7 @@ mat = bpy.data.materials.new('ball'); mat.use_nodes = True; nt = mat.node_tree
 for n in list(nt.nodes): nt.nodes.remove(n)
 outn = nt.nodes.new('ShaderNodeOutputMaterial')
 chrome = nt.nodes.new('ShaderNodeBsdfPrincipled'); goldn = nt.nodes.new('ShaderNodeBsdfPrincipled')
-chrome.inputs['Base Color'].default_value = (0.82, 0.84, 0.87, 1); chrome.inputs['Metallic'].default_value = 1.0; chrome.inputs['Roughness'].default_value = 0.16
+chrome.inputs['Base Color'].default_value = (0.6, 0.62, 0.65, 1); chrome.inputs['Metallic'].default_value = 1.0; chrome.inputs['Roughness'].default_value = 0.25
 goldn.inputs['Base Color'].default_value = (1.0, 0.70, 0.26, 1); goldn.inputs['Metallic'].default_value = 1.0; goldn.inputs['Roughness'].default_value = 0.32
 goldn.inputs['Emission Color'].default_value = (1.0, 0.62, 0.2, 1); goldn.inputs['Emission Strength'].default_value = 0.35   # (a touch of its own glow so the inlay reads on the dark side of the ball)
 tc = nt.nodes.new('ShaderNodeTexCoord'); nz = nt.nodes.new('ShaderNodeTexNoise'); bump = nt.nodes.new('ShaderNodeBump')
@@ -172,11 +172,13 @@ def area(name, loc, size, energy, sx=None, color=(1, 1, 1)):
     o = bpy.data.objects.new(name, l); sc.collection.objects.link(o); o.location = loc
     d = Vector((0, 0, 0)) - Vector(loc); o.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
     return o
-area('key', (-3.2, -4.0, 3.4), 2.6, 900, 1.4)
-area('fill', (4.2, -2.8, 0.6), 1.2, 240, 3.2)
-area('rim', (2.0, 3.5, 3.0), 2.0, 700)
-area('top', (0, -0.8, 5.0), 3.0, 260, 0.8)
-area('low', (-2.0, -3.0, -3.0), 3.5, 70, 0.6)
+# (the football's studio: mostly dark mirror, a few soft rounded highlights; ellipse lights, never boxes)
+def soft(name, loc, sx, sy, energy):
+    o = area(name, loc, sx, energy, sy); o.data.shape = 'ELLIPSE'; return o
+soft('key', (-2.6, -4.2, 2.9), 3.2, 1.8, 280)      # the main highlight, upper left of centre
+soft('top', (0.6, 1.0, 5.2), 5.5, 1.2, 300)        # a band along the top edge
+soft('low', (1.8, -3.4, -2.6), 4.2, 1.2, 110)      # a long soft band low on the right
+soft('rim', (3.2, 3.5, 0.4), 1.2, 4.0, 170)        # the right edge
 
 # a dark studio: almost no world light, only what the boxes give (the background is laid in after)
 w = bpy.data.worlds.new('w'); sc.world = w; w.use_nodes = True
@@ -189,10 +191,10 @@ mr.inputs['From Min'].default_value = -1; mr.inputs['From Max'].default_value = 
 wt.links.new(mr.outputs['Result'], ramp.inputs['Fac'])
 el = ramp.color_ramp.elements
 el[0].position = 0.0; el[0].color = (0.004, 0.005, 0.007, 1)
-el[1].position = 1.0; el[1].color = (0.75, 0.77, 0.8, 1)
+el[1].position = 1.0; el[1].color = (0.30, 0.31, 0.33, 1)
 e = el.new(0.47); e.color = (0.02, 0.022, 0.026, 1)
-e = el.new(0.53); e.color = (0.22, 0.23, 0.25, 1)
-e = el.new(0.70); e.color = (0.08, 0.085, 0.095, 1)
+e = el.new(0.53); e.color = (0.10, 0.105, 0.115, 1)
+e = el.new(0.70); e.color = (0.035, 0.037, 0.042, 1)
 wt.links.new(ramp.outputs['Color'], bgn.inputs['Color']); bgn.inputs['Strength'].default_value = 1.0
 
 # ── compositor: the card's own near-black under the ball, exact ──
