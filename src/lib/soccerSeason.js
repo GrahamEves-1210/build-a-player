@@ -54,7 +54,7 @@ const SOCCER_ALL = [
     make: c => ({ kicker: 'THE ARMBAND', title: 'The captain is injured',
       body: `The club captain is out for a month, and the manager hands ${c.name} the armband.`,
       options: [
-        o('lead', 'Lead from the front', { attr: c.R1('nerve', 1), window: 4, tag: 'CAPTAIN' }, 'First to every press, first in the huddle.'),
+        o('lead', 'Lead from the front', { attr: c.R1('nerve', 1), window: 4, tag: 'CAPTAIN' }, 'First to every press, first to the referee.'),
         o('pass', 'Let a senior pro have it', { attr: c.R1('mind', 1), window: 2, tag: 'FOCUSED' }, 'He keeps his mind on his own game.'),
       ] }) },
   { id: 'fc-runin', at: ['late', 'stretch'], w: 5, when: c => !c.ucl && c.contender && c.left >= 4,

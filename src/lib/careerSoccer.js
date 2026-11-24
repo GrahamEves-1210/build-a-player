@@ -108,12 +108,13 @@ const SOCCER = {
   // wages, in millions a year (a top No. 9 about €25-30M a year in 2026; an academy graduate's first deal under €1M)
   money: { st: [0.4, 30] },
   moneyOf: () => [0.4, 30],
-  primeNote: () => 'Pace and strength can be trained until 27 (the last year at double the cost) and start to fade at 30; shot power, heading, dribbling and first touch until 32; finishing, the runs, link-up play and composure for good. Composure and link-up play never fade. Big injuries and a fragile body can cost him a grade.',
+  // (the nine traits since 2026-11-16: lib/ageLadder.js soccer, physical pace, Size fixed, composure and passing ageless)
+  primeNote: () => 'Pace can be trained until 27 (the last year at double the cost) and starts to fade at 30. Size is his frame: it never changes. Shot power, heading and dribbling until 32; finishing, positioning, passing and composure for good, and passing and composure never fade. Big injuries and a fragile body can cost him a grade.',
 }
 
 // soccer: the academy's scouts and coaches, and the first-team staff watching
 const INTERVIEWS_SOCCER = [
-  { who: 'Chief scout', q: 'There\'s a senior striker ahead in the queue here. A year in the under-21s: happy with that?', a: [
+  { who: 'Chief scout', q: 'There\'s a senior striker ahead in the queue here. A year with the under-21s first: happy with that?', a: [
     { t: 'Whatever it takes. I\'ll earn my chance in training.', stock: 1, persona: 'grinder' },
     { t: 'I\'ll push him every day until the manager has to pick me.', stock: 2, persona: 'confident' },
     { t: 'I didn\'t come here to play youth football.', stock: -1, persona: 'cocky' } ] },
@@ -616,7 +617,14 @@ function soccerAfterSeason(n, s) {
 // the summer's biggest movers around Europe
 function soccerNews(league, was, now) {
   return SOCCER_CLUBS.map(t => ({ t, d: now(t.short) - was(t.short) })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3)
-    .map(({ t, d }) => `${t.name} ${d > 0 ? (d > 2 ? 'spend big all summer: the winners of the window' : 'strengthen in the window') : (d < -2 ? 'sell their best players. A long season ahead' : 'take a step back')}.`)
+    // (the words by the club's size: a giant spends big and rebuilds when it loses players; a smaller club has a busy
+    // window and sells its best ones. 'Málaga spend big all summer' and 'Manchester City sell their best players' read wrong)
+    .map(({ t, d }) => {
+      const big = CLUB_RANK.indexOf(t.short) < 12
+      const what = d > 0 ? (d > 2 ? (big ? 'spend big all summer: the winners of the window' : 'have the busiest window in their history: a stronger squad on paper') : (big ? 'strengthen in the window' : 'bring in a few smart signings'))
+        : d < -2 ? (big ? 'lose key players over the summer: a squad in transition' : 'sell their best players. A long season ahead') : (big ? 'look short of a striker after the window' : 'take a step back')
+      return `${t.name} ${what}.`
+    })
 }
 
 // ── The transfer window (mid-contract): bids from other clubs, a new deal, a loan for a young sub ──

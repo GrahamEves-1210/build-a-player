@@ -1024,7 +1024,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
           {complete && (
             <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
-              All {types.length} slots filled — {isSoccer && isAllTime ? 'play the World Cup' : isSoccer ? 'play the Champions League' : 'simulate your season'}
+              {/* (soccer: the button under it says what's next, the season, the career or the next player) */}
+              All {types.length} slots filled{isSoccer ? '' : ' — simulate your season'}
             </div>
           )}
         </div>

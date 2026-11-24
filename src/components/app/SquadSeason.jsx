@@ -18,7 +18,15 @@ export const fmt = v => (typeof v === 'number' ? (Number.isInteger(v) ? v.toLoca
 const r1 = v => Math.round((v ?? 0) * 10) / 10
 const pct1 = (m, a) => (a ? ((100 * m) / a).toFixed(1) : '0.0')
 // the last name (a suffix rides along: Pittman III)
-export const lastName = n => { const w = (n || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
+// (football's family suffixes: Vinícius Júnior is Vinícius Júnior, not Júnior; a Korean name puts the family name first,
+// Son Heung-min is Son, not Heung-min)
+export const lastName = n => {
+  const w = (n || '').split(' ')
+  if (w.length === 2 && /^(j[uú]nior|neto|filho|sobrinho)$/i.test(w[1])) return n
+  if (w.length === 3 && /^(j[uú]nior|neto|filho|sobrinho)$/i.test(w[2])) return w.slice(-2).join(' ')
+  if (w.length === 2 && /^[A-Z][a-z]+-[a-z]+$/.test(w[1]) && w[0].length <= 5) return w[0]
+  return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1]
+}
 // a face: the ESPN headshot, or the initial when there's none
 export const Face = ({ src, name, mine = false, size = 44 }) => (
   <span className={`tk-hs sq-face${mine ? ' is-mine' : ''}`} style={{ width: size, height: size }}>{src ? <img src={src} alt="" loading="lazy" draggable={false} /> : (name || '?').slice(0, 1)}</span>
@@ -795,7 +803,7 @@ function SoccerGameRow({ g, r, onOpen }) {
     <Tag className={`sq-game${g.won ? ' is-w' : g.drawn ? ' is-d' : ' is-l'}${g.po ? ' is-po' : ''}`} {...(onOpen && { onClick: () => onOpen(g), 'aria-label': `${g.label}, ${g.home ? 'vs' : 'at'} ${g.oppName ?? g.opp}, ${g.my} to ${g.op}` })}>
       <span className="sq-game-lbl">{g.comp === 'league' ? g.label : (SOCCER_ROUND[g.comp] === 'WORLD CUP' ? g.label : `${g.comp === 'cup' ? 'CUP' : g.comp.toUpperCase()} · ${g.label}`).replace('LEAGUE PHASE', 'LP').replace('MATCHDAY ', 'MD')}</span>
       <TeamCrest sport="soccer" short={g.opp} pool={r.pool} />
-      <span className="sq-game-opp">{g.neutral ? 'v' : g.home ? 'vs' : '@'} {g.oppName ?? g.opp}</span>
+      <span className="sq-game-opp">{g.neutral || g.home ? 'v' : 'at'} {g.oppName ?? g.opp}</span>
       <b className="sq-game-res"><i>{res}</i> {g.my}-{g.op}{g.sh ? ` (${g.sh[0]}-${g.sh[1]} P)` : g.et ? ' AET' : ''}</b>
       {onOpen && <IconCaret dir="right" size={11} className="sq-game-go" />}
     </Tag>

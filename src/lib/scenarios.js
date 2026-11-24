@@ -334,7 +334,7 @@ export const INJURY = [
       ] }) },
   { id: 'wear', at: ['late', 'stretch'], w: 2, when: c => c.alive && c.roleHas('legs'),
     make: c => ({ kicker: 'STRETCH RUN', title: 'The body is wearing down',
-      body: c.isSoccer ? `Match after match, and every defender in the league kicking him. Nothing's torn, everything hurts. Manage it game by game, or rest now and be right for the knockouts.`
+      body: c.isSoccer ? `Match after match, and every defender in the league kicking him. Nothing's torn, everything hurts. Manage it match by match, or rest now and be right for the knockouts.`
         : `${c.isBucket ? 'Sixty games' : 'Thirteen weeks'} of hits. Nothing's torn, everything hurts. Manage it week to week, or rest now and be right for the playoffs.`,
       options: [
         o('manage', 'Manage it, keep playing', { attr: c.R('legs', -2), tag: 'WORN DOWN' }, c.isSoccer ? 'Slower the rest of the way, the knockouts included.' : 'Slower the rest of the way, playoffs included.'),

@@ -2953,7 +2953,7 @@ function momentCtx(c, po, allow, only = null) {
   if (!pool.length) pool = momentsOf(c.pos)
   const st = rd.series ? seriesState(c, po.idx, rd) : null
   const ctx = { sport, seed: `${c.seed}-${c.year}-${po.idx}`, pGame: Math.round((st ? st.g : rd.p) * 1000) / 1000, pool, used: po.line.map(x => x.game).filter(Boolean), hOf: g => momentHitRate(c, g), us: c.team, them: rd.opp }
-  if (sport === 'soccer') { ctx.legs = rd.legs ?? 1; ctx.home = rd.home ?? null }
+  if (sport === 'soccer') { ctx.legs = rd.legs ?? 1; ctx.home = rd.home ?? null; ctx.usName = S.teamOf?.(c.team)?.name ?? null; ctx.themName = S.teamOf?.(rd.opp)?.name ?? null }   // (the tie's line names the clubs: 'Brighton scored late', not 'BHA')
   if (st) { const n = st.a + st.b + 1, hosts = SERIES_HOSTS[seriesLen(rd)] ?? SERIES_HOSTS[7]; ctx.gameNo = n; if (sport === 'baseball') ctx.home = rd.home === false ? !hosts.includes(n) : hosts.includes(n) }
   return { ctx, st }
 }

@@ -3788,6 +3788,10 @@ html.bap-reduce-motion .cr-tabs-pill { transition: none; }
 .cr-drill-txt { display: flex; flex-direction: column; min-width: 0; } .cr-drill-txt b { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.3px; font-weight: 400; } .cr-drill-txt small { font-family: var(--ag-body); font-size: 11px; color: var(--ag-muted); }
 .cr-drill-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; } .cr-drill-bar span { display: block; height: 100%; border-radius: 4px; }
 .cr-drill-n { font-family: var(--ag-display); font-size: 22px; font-weight: 400; min-width: 70px; text-align: right; }
+/* a long result ("9 keep-ups · 2/3 controlled") wraps in its own column instead of squeezing the drill's name under the bar */
+.cr-drill { grid-template-columns: minmax(96px, 1fr) minmax(56px, 90px) minmax(0, max-content); }
+.cr-drill-n { overflow-wrap: anywhere; line-height: 1.05; max-width: 42vw; }
+.cr-drill-txt small { font-size: 13px; }
 .cr-q { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); }
 .cr-q-text { margin: 0; font-family: var(--ag-body); font-size: 16px; line-height: 1.4; color: var(--ag-text); }
 .cr-q-opts { display: flex; flex-direction: column; gap: 7px; }
@@ -5358,6 +5362,8 @@ html:is(.is-app, .app-look) [data-sport="bucket"] .cz-drop-hint { border-color: 
 html:is(.is-app, .app-look) .sc-confirm-btn { white-space: nowrap; padding-left: 12px !important; padding-right: 12px !important; font-size: clamp(13px, 4vw, 17px) !important; letter-spacing: 1.2px !important; }
 @media (min-width: 769px) and (max-width: 1499px) {   /* (to 1499: at 1280 it still sat over the MENTAL tab) */
   html.app-look .sil-sandbox-outer--app { top: 62px !important; }   /* under the tabs, not over SKILL */
+  /* soccer's figure has its SIZE card in the top-right corner: the Sandbox card goes bottom-left, where nothing is */
+  html.app-look.is-soccer .sil-sandbox-outer--app { top: auto !important; bottom: 14px !important; left: 14px !important; right: auto !important; }
 }
 
 

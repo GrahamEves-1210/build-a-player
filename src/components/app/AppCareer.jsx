@@ -393,7 +393,8 @@ function Model({ c, devPick }) {
 // the small extras on top of the resume: camp wins, shoe deals, money earned
 function Extras({ c }) {
   const x = legacyExtras(c)
-  const rows = [['Camp', x.camp], ['Shoe deals', x.shoe], ['Earnings', x.earnings]].filter(([, n]) => n > 0)
+  const fc = c.sport === 'soccer'
+  const rows = [[fc ? 'Pre-season' : 'Camp', x.camp], [fc ? 'Boot deals' : 'Shoe deals', x.shoe], ['Earnings', x.earnings]].filter(([, n]) => n > 0)
   if (!rows.length) return null
   return <p className="cr-legacy-extras">{rows.map(([k, n]) => <span key={k} className="gain">{k} +{n} <LegacyIco /></span>)}</p>
 }
@@ -758,7 +759,7 @@ const SPOT_WORD = { PG: 'point', SG: 'two', SF: 'three', PF: 'four', C: 'five' }
 function SpotMove({ c, m, onAnswer }) {
   return (
     <div className="sm-moment cr-spotmove ag-pop">
-      <span className="ag-eyebrow">TRAINING CAMP · {m.from} TO {m.to}</span>
+      <span className="ag-eyebrow">{c.sport === 'soccer' ? 'PRE-SEASON' : 'TRAINING CAMP'} · {m.from} TO {m.to}</span>
       <h3 className="sm-moment-title">A move to {m.to}</h3>
       <p className="sm-moment-body">{m.starter ? `${m.starter.name} has the ${m.from} job. ` : ''}The coach calls {c.name} into his office before camp: "I want you in the starting five. Play the {SPOT_WORD[m.to]} for us and the job is yours."</p>
       <div className="sm-options">
@@ -940,7 +941,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 <span className="ag-eyebrow">{S.isSoccer ? `THE LEAGUE IS DONE · ${recText} · ${wins * 3 + draws} PTS` : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
                 {S.isSoccer ? <>
                   <p className="cr-note">{(wins * 3 + draws) / Math.max(1, played.length) >= 2 ? 'Up at the top of the table. Now the finals and the European nights, if the club got there.' : 'The league is in. The cup final and the European knockouts, if the club got there.'}</p>
-                  <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>THE FINAL TABLE <IconArrow size={16} /></button>
+                  <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>THE CUPS AND EUROPE <IconArrow size={16} /></button>
                 </> : (() => { const pct = teamRec ? teamRec.wins / Math.max(1, teamRec.wins + teamRec.losses) : wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
                   <p className="cr-note">{teamRec ? `The ${teamNick} finish ${teamRec.wins}–${teamRec.losses}. ` : ''}{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>{pct >= 0.45 ? 'INTO THE PLAYOFFS' : 'WRAP THE SEASON'} <IconArrow size={16} /></button>
@@ -1176,7 +1177,7 @@ function Offseason({ c, setCareer, last, setTab, user }) {
       )}
       {showActions && (
         <div className="cr-actions ag-pop" style={{ '--d': '150ms' }}>
-          {!forced && !(c.offers?.length) && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(nextSeason(c)); setTab('season'); sfx('tap'); document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>ON TO {c.season + 1} <IconArrow size={16} /></button>}
+          {!forced && !(c.offers?.length) && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(nextSeason(c)); setTab('season'); sfx('tap'); document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>ON TO {c.sport === 'soccer' ? seasonOf(c.season + 1) : c.season + 1} <IconArrow size={16} /></button>}
           {(canRetire(c) || forced) && <RetireButton c={c} setCareer={setCareer} forced={forced} />}
         </div>
       )}
@@ -1502,7 +1503,7 @@ function Camp({ c, setCareer }) {
   const done = c.off?.camp
   return (
     <div className="ag-card cr-camp ag-pop">
-      <span className="ag-eyebrow">TRAINING CAMP · {gameTitle(c, game)}</span>
+      <span className="ag-eyebrow">{c.sport === 'soccer' ? 'PRE-SEASON' : 'TRAINING CAMP'} · {gameTitle(c, game)}</span>
       {done
         ? <p className="cr-note">{(done.won ?? done.bonus) ? <>Won the drill in front of the coaches: <span className="gain">+{done.legacy ?? 0} <LegacyIco /> legacy</span>{done.bonus ? ', and +1 development point.' : '. No development point this time.'}</> : 'Lost the drill. Nothing this year.'}</p>
         : <>

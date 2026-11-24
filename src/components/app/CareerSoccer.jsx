@@ -158,7 +158,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
               ))}
             </div>
             <b>{x.won ? (x.final ? `${x.compName} winners.` : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
-            <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? (x.won ? 'never in doubt' : 'never close') : x.hit ? 'he scored when it mattered' : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
+            <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? (x.won ? 'never in doubt' : 'never close') : x.hit ? (x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough') : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
           </div>
         )}
         {po.stage === 'done'
