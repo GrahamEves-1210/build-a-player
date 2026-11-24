@@ -200,8 +200,10 @@
 .fk-slab {
   --sh: 92px;
   position: relative; display: flex; align-items: center; min-width: 0; height: var(--sh); padding: 0 12px; border: 0; overflow: hidden; text-align: left;
-  background: var(--tc); box-shadow: inset 0 -4px 0 var(--tc2); color: var(--tct); font: inherit;
+  background: var(--tc); color: var(--tct); font: inherit;
 }
+/* the team's second colour along the foot, drawn over the logo (an inset shadow sat under it) */
+.fk-slab::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; height: 4px; background: var(--tc2); pointer-events: none; }
 .fk-slab--s { --sh: 60px; } .fk-slab--l { --sh: 128px; }
 .fk-slab-logo { position: absolute; top: 50%; width: calc(var(--sh) * 1.25); height: calc(var(--sh) * 1.25); object-fit: contain; transform: translateY(-50%); opacity: .95; }
 .fk-slab--l .fk-slab-logo, .fk-slab--m .fk-slab-logo { right: calc(var(--sh) * -.22); }
