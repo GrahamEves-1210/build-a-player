@@ -69,7 +69,7 @@ function Board({ rows, val, through = null, face, title, right = null, sn, bare 
     <div className="asw-board">
       <div className="asw-board-head"><span className="ag-eyebrow">{title}</span>{right}</div>
       {rows.map((r, i) => (
-        <div key={r.name} className={`asw-row${r.me ? ' is-me' : ''}${r.up ? ' is-up' : ''}${through?.includes(r.name) ? ' is-through' : ''}${r.v == null && !bare ? ' is-wait' : ''}`}>
+        <div key={r.name} className={`asw-row${r.me ? ' is-me' : ''}${r.up ? ' is-up' : ''}${through?.includes(r.name) ? ' is-through' : ''}${through && !through.includes(r.name) ? ' is-out' : ''}${through && i === through.length ? ' is-cutline' : ''}${r.v == null && !bare ? ' is-wait' : ''}`}>
           <span className="asw-row-n">{r.v == null || bare ? '' : i + 1}</span>
           <Head row={r} face={face} />
           <span className="asw-row-name">{r.me ? r.name : sn(r.name)}<small>{r.team}{r.sub ? ` · ${r.sub}` : ''}</small></span>
@@ -79,9 +79,41 @@ function Board({ rows, val, through = null, face, title, right = null, sn, bare 
     </div>
   )
 }
-const boardRows = (men, scores, cur) => {
-  const done = men.filter(m => scores.has(m.name)).map(m => ({ ...m, v: scores.get(m.name), up: m.name === cur })).sort((a, b) => b.v - a.v)
-  return [...done, ...men.filter(m => !scores.has(m.name)).map(m => ({ ...m, v: null }))]
+// (equal scores: the man who went through, the winner of the shoot-off or the dunk-off, above the man who didn't)
+const boardRows = (men, scores, cur, through = null, subs = null) => {
+  const up = n => (through?.includes(n) ? 1 : 0)
+  const done = men.filter(m => scores.has(m.name)).map(m => ({ ...m, v: scores.get(m.name), up: m.name === cur, sub: subs?.get(m.name) ?? null })).sort((a, b) => b.v - a.v || up(b.name) - up(a.name))
+  return [...done, ...men.filter(m => !scores.has(m.name)).map(m => ({ ...m, v: null, sub: subs?.get(m.name) ?? null }))]
+}
+
+// ── The final standings (lib/allStar.js standingsOf): everyone in the order he finished, the first round's score and
+// the final's, his row marked. The dunk contest lists each man's dunks under his name, the judges' totals that make
+// up his last number.
+const PLACE_WORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth']
+function finishLine(rows, name, sn) {
+  const me = rows.find(r => r.me)
+  if (!me || me.champ) return ''
+  return `${sn(name)} ${me.tied ? `ties for ${PLACE_WORD[me.place] ?? ord(me.place)}` : `finishes ${PLACE_WORD[me.place] ?? ord(me.place)}`}.`
+}
+function Standings({ rows, face, sn, dunk = false }) {
+  const cut = rows.findIndex(r => !r.through)
+  return (
+    <div className="asw-board asw-stand">
+      <div className="asw-board-head"><span className="ag-eyebrow">FINAL STANDINGS</span><span className="asw-stand-cols"><i>1ST RD</i><i>FINAL</i></span></div>
+      {rows.map((r, i) => {
+        const dunks = dunk ? (r.through ? r.finalDunks : r.r1Dunks) : null
+        return (
+          <div key={r.name} className={`asw-row asw-srow${r.me ? ' is-me' : ''}${r.champ ? ' is-champ' : ''}${r.through ? '' : ' is-out'}${i === cut && cut > 0 ? ' is-cutline' : ''}`}>
+            <span className="asw-row-n">{r.champ ? <IconTrophy size={16} /> : r.tied ? `T${r.place}` : r.place}</span>
+            <Head row={r} face={face} />
+            <span className="asw-srow-name"><b>{r.me ? r.name : sn(r.name)}</b><small>{r.team}{dunks?.length ? ` · ${dunks.join(' + ')}` : ''}</small></span>
+            <span className="asw-srow-v is-r1">{r.r1 ?? '—'}</span>
+            <span className="asw-srow-v">{r.final ?? ''}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 // the reveal: one event at a time, on its own clock; SKIP AHEAD goes straight to the next thing that needs him
@@ -106,18 +138,21 @@ function Stage({ c, game, def, v, seed, onDone }) {
 
 // ════ The 3-Point Contest ════
 const THREE_PACE = e => (e.kind === 'cut' ? 3200 : e.kind === 'round' ? 1100 : 2000)
-function threeEvText(e, sn) {
+function threeEvText(e, sn, P = null) {
   if (e.kind === 'round') return e.round === 'final' ? 'The final. The lowest first-round score shoots first.' : 'Eight shooters. 27 balls, 70 seconds, 40 points on the rack.'
   if (e.kind === 'shoot') return threeLine(e.res, e.who.name, e.round, sn(e.who.name))
   if (e.kind === 'cut') {
     const t = e.tie
     const so = t?.rounds?.length ? ` ${andList(t.rounds[0].map(x => sn(x.name)))} tie for the last spot; the shoot-off goes ${t.rounds[t.rounds.length - 1].map(x => `${sn(x.name)} ${x.pts}`).join(', ')}.` : ''
-    return `${andList(e.through.map(sn))} go through to the final.${so}`
+    const me = e.board?.find(x => x.me)
+    const miss = me && !e.through.includes(me.name) ? ` ${sn(me.name)} misses the cut with ${me.pts}.` : ''
+    return `${andList(e.through.map(sn))} go through to the final.${so}${miss}`
   }
   if (e.kind === 'champ') {
     const t = e.tie
     const so = t?.rounds?.length ? ` It took a 30-second shoot-off: ${t.rounds[t.rounds.length - 1].map(x => `${sn(x.name)} ${x.pts}`).join(', ')}.` : ''
-    return `${e.who.name} wins the 3-Point Contest with ${e.res.points} in the final.${so}`
+    const fl = P?.standings ? finishLine(P.standings, P.field.find(x => x.me)?.name, sn) : ''
+    return `${e.who.name} wins the 3-Point Contest with ${e.res.points} in the final.${so}${fl ? ` ${fl}` : ''}`
   }
   return ''
 }
@@ -135,8 +170,11 @@ function ThreeContest({ c, setCareer, face, onNext }) {
   const round = e?.round === 'final' ? 'final' : 'r1'
   const men = round === 'final' ? (P.finalists ?? []) : P.field
   const scores = new Map(P.ev.slice(0, R.shown).filter(x => x.kind === 'shoot' && x.round === round).map(x => [x.who.name, x.res.points]))
-  const rows = boardRows(men, scores, e?.kind === 'shoot' ? e.who.name : null)
   const through = P.ev.slice(0, R.shown).find(x => x.kind === 'cut')?.through ?? null
+  // (the final: each man's first round under his name)
+  const subs = round === 'final' && P.r1 ? new Map(P.r1.map(x => [x.name, `1ST RD ${x.pts}`])) : null
+  const rows = boardRows(men, scores, e?.kind === 'shoot' ? e.who.name : null, round === 'r1' ? through : null, subs)
+  const champ = e?.kind === 'champ'
   useEffect(() => {
     if (e?.kind === 'champ' && e.who.me && !cheered.current) { cheered.current = true; victory({ big: true }); haptic('success') }
     else if (e?.kind === 'shoot' && e.me) sfx(e.res.points >= 24 ? 'claim' : 'pop')
@@ -163,19 +201,20 @@ function ThreeContest({ c, setCareer, face, onNext }) {
   return (
     <div className="ag-card asw-card ag-pop">
       <span className="ag-eyebrow">ALL-STAR SATURDAY · 3-POINT CONTEST · {round === 'final' ? 'FINAL' : 'FIRST ROUND'}</span>
-      <Board rows={rows} face={face} through={round === 'r1' ? through : null} title={round === 'final' ? 'THE FINAL' : 'FIRST ROUND · TOP 3 GO THROUGH'} sn={sn} />
+      {champ && P.standings ? <Standings rows={P.standings} face={face} sn={sn} />
+        : <Board rows={rows} face={face} through={round === 'r1' ? through : null} title={round === 'final' ? 'THE FINAL' : 'FIRST ROUND · TOP 3 GO THROUGH'} sn={sn} />}
       {e && e.kind !== 'turn' && (
         <div key={R.shown} className={`asw-call${e.me ? ' is-me' : ''}${e.kind === 'champ' ? ' is-champ' : ''}`}>
           {e.kind === 'shoot' && <span className="asw-call-pts">{e.res.points}</span>}
           {e.kind === 'champ' && <span className="asw-call-pts is-gold"><IconTrophy size={26} /></span>}
-          <p>{threeEvText(e, sn)}</p>
+          <p>{threeEvText(e, sn, P)}</p>
         </div>
       )}
       {need && (
         <div className="asw-turn">
           <span className="ag-eyebrow">{need.label} · {c.name.toUpperCase()} SHOOTS</span>
           <h3 className="asw-title">Pick the money rack</h3>
-          <p className="cr-note">{need.round === 'final' ? (need.toBeat != null ? `${need.toBeat} is the score to beat for the title.` : 'He shoots first in the final. Set the number.') : need.toBeat != null ? `Third place has ${need.toBeat}. ${need.toBeat + 1} puts him in the final outright; a tie means a shoot-off.` : 'Nobody has a score in yet. Set the number.'}</p>
+          <p className="cr-note">{need.round === 'final' ? (need.toBeat != null ? `${need.toBeat} is the score to beat for the title.` : 'He shoots first in the final. Set the number.') : need.toBeat != null ? `Third place has ${need.toBeat}. ${need.toBeat + 1} puts him in the final outright; a tie means a shoot-off.` : rows[0]?.v != null ? `${sn(rows[0].name)} leads with ${rows[0].v}. The top three go to the final.` : 'He shoots first. Set the number.'}</p>
           <RackPick value={rack} onPick={i => { setRack(i); sfx('tap') }} />
           <button className="ag-btn ag-btn--gold tk-intro-go" onClick={shoot}>SHOOT · MONEY RACK {RACKS[rack]} <IconArrow size={16} /></button>
           {live ? <button className="ag-btn ag-btn--ghost asw-skip" onClick={() => { sfx('tap'); setCareer(recordThree(c, simThreeFor(c, rack, need.round), rack, true)) }}>SKIP · SIMULATE HIS ROUND</button>
@@ -206,11 +245,17 @@ function RackPick({ value, onPick }) {
 
 // ════ The Slam Dunk Contest ════
 const DUNK_PACE = e => (e.kind === 'dunk' ? 1100 + 5 * 380 + 1500 : e.kind === 'cut' ? 3200 : 1100)
-function dunkEvText(e, sn) {
+function dunkEvText(e, sn, P = null) {
   if (e.kind === 'round') return e.round === 'final' ? 'The final: two dunks each, the scores start over.' : e.round.includes('off') ? `${andList(e.tie.map(sn))} are tied. A dunk-off decides it: one dunk each.` : 'Four dunkers, two dunks each. The top two go to the final.'
   if (e.kind === 'dunk') return dunkLine(e, e.who.name, sn(e.who.name))
-  if (e.kind === 'cut') return `${andList(e.through.map(sn))} move on to the final.`
-  if (e.kind === 'champ') return `${e.who.name} wins the Slam Dunk Contest, ${e.board[0].sum} in the final.`
+  if (e.kind === 'cut') {
+    const me = e.board?.find(x => x.me)
+    return `${andList(e.through.map(sn))} move on to the final.${me && !e.through.includes(me.name) ? ` ${sn(me.name)} goes out with ${me.sum}.` : ''}`
+  }
+  if (e.kind === 'champ') {
+    const fl = P?.standings ? finishLine(P.standings, P.field.find(x => x.me)?.name, sn) : ''
+    return `${e.who.name} wins the Slam Dunk Contest, ${e.who.sum} in the final.${fl ? ` ${fl}` : ''}`
+  }
   return ''
 }
 // the five judges' cards, turned over one at a time
@@ -228,6 +273,18 @@ function Judges({ x, instant, onUp }) {
       <span className={`asw-judge-total${n >= 5 ? ' is-up' : ''}${x.perfect ? ' is-fifty' : ''}`}>{n >= 5 ? x.total : ''}</span>
     </div>
   )
+}
+// what his next dunk needs (a dunk scores 30 even with nothing down, 50 at most, so the number only means something
+// between the two)
+// (still: the men with a dunk to come after his, who can pass him yet)
+function dunkNeedText(need, still = []) {
+  const fin = need.round.startsWith('final'), where = fin ? 'in front' : 'into the top two', t = need.toBeat
+  const yet = still.length ? ` ${andList(still)} ${still.length > 1 ? 'have' : 'has'} a dunk to come.` : ''
+  if (t > 50) return `Even a 50 can't move him ${where}.`
+  if (t > 30) return `He needs ${t} on this one to move ${where}.${yet}`
+  if (t > 0 && need.n === 2) return `Any score puts him ${fin ? 'in front' : 'in the top two'}${still.length ? ' for now' : ''}.${yet}`
+  if (t === 0 && need.n === 2) return fin ? 'He is in front. Another good one puts it away.' : 'He is in the top two. Another good one keeps him there.'
+  return 'The harder the dunk, the higher it scores if it goes down. Every miss before it lands costs about a point from each judge.'
 }
 const Tries = ({ tries }) => <span className="asw-tries">{Array.from({ length: DUNK_TRIES }, (_, i) => <i key={i} className={i < tries.length ? (tries[i].landed ? 'is-land' : 'is-miss') : ''}>{i < tries.length ? (tries[i].landed ? 'MADE' : 'MISS') : ''}</i>)}</span>
 const Tier = ({ t }) => <b className={`asw-tier is-${t}`}>{TIER_WORD[t] ?? 'MEDIUM'}</b>
@@ -251,10 +308,13 @@ function DunkContest({ c, setCareer, face, onNext }) {
   const [judged, setJudged] = useState(0)
   const pending = e?.kind === 'dunk' && judged !== R.shown
   const evs = P.ev.slice(0, pending ? R.shown - 1 : R.shown)
-  const scores = new Map()
-  for (const x of evs) if (x.kind === 'dunk' && roundOf(x) === round && !x.round.includes('off')) scores.set(x.who.name, (scores.get(x.who.name) ?? 0) + x.total)
-  const rows = boardRows(men, scores, e?.kind === 'dunk' ? e.who.name : null)
+  const scores = new Map(), subs = new Map()
+  for (const x of evs) if (x.kind === 'dunk' && roundOf(x) === round && !x.round.includes('off')) { scores.set(x.who.name, (scores.get(x.who.name) ?? 0) + x.total); subs.set(x.who.name, [...(subs.get(x.who.name) ?? []), x.total]) }
+  const cnt = new Map([...subs].map(([k, v]) => [k, v.length]))
+  for (const [k, v] of subs) subs.set(k, v.join(' + '))
   const through = evs.find(x => x.kind === 'cut')?.through ?? null
+  const rows = boardRows(men, scores, e?.kind === 'dunk' ? e.who.name : null, round === 'r1' ? through : null, subs)
+  const champ = e?.kind === 'champ'
   useEffect(() => {
     if (e?.kind === 'champ' && e.who.me && !cheered.current) { cheered.current = true; victory({ big: true }); haptic('success') }
   }, [R.shown]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -290,7 +350,8 @@ function DunkContest({ c, setCareer, face, onNext }) {
   return (
     <div className="ag-card asw-card ag-pop">
       <span className="ag-eyebrow">ALL-STAR SATURDAY · SLAM DUNK CONTEST · {round === 'final' ? 'FINAL' : 'FIRST ROUND'}</span>
-      <Board rows={rows} face={face} through={round === 'r1' ? through : null} title={round === 'final' ? 'THE FINAL · TWO DUNKS' : 'FIRST ROUND · TOP 2 GO THROUGH'} sn={sn} />
+      {champ && P.standings ? <Standings rows={P.standings} face={face} sn={sn} dunk />
+        : <Board rows={rows} face={face} through={round === 'r1' ? through : null} title={round === 'final' ? 'THE FINAL · TWO DUNKS' : 'FIRST ROUND · TOP 2 GO THROUGH'} sn={sn} />}
       {e && e.kind === 'dunk' && (
         <div key={R.shown} className={`asw-dunk${e.me ? ' is-me' : ''}`}>
           <div className="asw-dunk-top"><span className="asw-dunk-who">{e.me ? e.who.name : sn(e.who.name)}</span><Tier t={e.tier} /><Tries tries={e.tries} /></div>
@@ -302,14 +363,14 @@ function DunkContest({ c, setCareer, face, onNext }) {
       {e && (e.kind === 'round' || e.kind === 'cut' || e.kind === 'champ') && (
         <div key={R.shown} className={`asw-call${e.kind === 'champ' ? ' is-champ' : ''}${e.kind === 'champ' && e.who.me ? ' is-me' : ''}`}>
           {e.kind === 'champ' && <span className="asw-call-pts is-gold"><IconTrophy size={26} /></span>}
-          <p>{dunkEvText(e, sn)}</p>
+          <p>{dunkEvText(e, sn, P)}</p>
         </div>
       )}
       {need && !cur && (
         <div className="asw-turn">
           <span className="ag-eyebrow">{need.label} · DUNK {need.round.includes('off') ? '' : `${need.n} OF 2 · `}{c.name.toUpperCase()}</span>
           <h3 className="asw-title">Pick his dunk</h3>
-          <p className="cr-note">{need.toBeat > 0 ? `He needs ${need.toBeat} on this one to move ${need.round === 'final' ? 'in front' : 'into the top two'}.` : need.n === 2 ? 'He is in front. Another good one puts it away.' : 'The harder the dunk, the higher it scores if it goes down. Every miss before it lands costs about a point from each judge.'}</p>
+          <p className="cr-note">{dunkNeedText(need, need.round.includes('off') ? [] : men.filter(m => !m.me && (cnt.get(m.name) ?? 0) < need.n).map(m => sn(m.name)))}</p>
           <div className="asw-dunks" role="radiogroup" aria-label="Dunks">
             {DUNKS.map(d => {
               const t = tierOf(d), gone = used.has(d.id)
@@ -364,8 +425,8 @@ export default function AllStarSaturday({ c, setCareer, getD, face }) {
 export function AllStarResult({ c }) {
   const res = c.active.asw.res ?? {}
   const rows = [
-    res.three && { k: '3-POINT CONTEST', won: res.three.won, head: res.three.won ? '3-Point Contest champion' : res.three.final != null ? `${ord(res.three.place)} in the 3-Point Contest` : 'Out in the first round', sub: res.three.won ? `${res.three.r1} in the first round, ${res.three.final} in the final.` : `${res.three.r1} in the first round${res.three.final != null ? `, ${res.three.final} in the final` : ''}. ${res.three.champ} won it with ${res.three.champPts}.` },
-    res.dunk && { k: 'SLAM DUNK CONTEST', won: res.dunk.won, head: res.dunk.won ? 'Slam Dunk champion' : res.dunk.final != null ? 'Runner-up in the Dunk Contest' : 'Out in the first round', sub: `${res.dunk.best ? `Best dunk: the ${res.dunk.best.name}, ${res.dunk.best.total}. ` : ''}${res.dunk.won ? `${res.dunk.final} in the final.` : `${res.dunk.champ} won it.`}` },
+    res.three && { k: '3-POINT CONTEST', won: res.three.won, head: res.three.won ? '3-Point Contest champion' : res.three.place ? `${ord(res.three.place)} in the 3-Point Contest` : 'Out in the first round', sub: res.three.won ? `${res.three.r1} in the first round, ${res.three.final} in the final.` : `${res.three.r1} in the first round${res.three.final != null ? `, ${res.three.final} in the final` : ''}. ${res.three.champ} won it with ${res.three.champPts}.` },
+    res.dunk && { k: 'SLAM DUNK CONTEST', won: res.dunk.won, head: res.dunk.won ? 'Slam Dunk champion' : res.dunk.final != null ? 'Runner-up in the Dunk Contest' : res.dunk.place ? `${ord(res.dunk.place)} in the Dunk Contest` : 'Out in the first round', sub: `${res.dunk.best ? `Best dunk: the ${res.dunk.best.name}, ${res.dunk.best.total}. ` : ''}${res.dunk.won ? `${res.dunk.final} in the final.` : `${res.dunk.champ} won it with ${res.dunk.champPts} in the final.`}` },
   ].filter(Boolean)
   if (!rows.length) return null
   return (

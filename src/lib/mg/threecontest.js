@@ -335,9 +335,11 @@ function geoOf(view) {
 const WHERE = { th: 0, D: 24, run: false, f: 0 }
 function whereOf(g, t) {
   const mv = g.move
-  if (mv && t >= mv.at) {
-    const a = SPOTS[mv.from], b = SPOTS[mv.to], f = easeInOut(prog(t, mv.at, mv.until))
-    WHERE.th = lerp(thOf(a, a.n - 1), b.th, f); WHERE.D = lerp(a.D, b.D, f); WHERE.run = f < 1; WHERE.f = f
+  if (mv) {
+    // (the beat after the last ball of a spot, before he sets off: still where he shot it. g.rep is already the next
+    // spot's first ball, and reading it here snapped the camera, and the ball in the air, to the next rack and back)
+    const a = SPOTS[mv.from], b = SPOTS[mv.to], f = t >= mv.at ? easeInOut(prog(t, mv.at, mv.until)) : 0
+    WHERE.th = lerp(thOf(a, a.n - 1), b.th, f); WHERE.D = lerp(a.D, b.D, f); WHERE.run = t >= mv.at && f < 1; WHERE.f = f
     return WHERE
   }
   const m = g.rep, s = SPOTS[m.si]
@@ -476,17 +478,21 @@ function afterPose(m, t, out) {
 const P_STAND = pose({ hy: 45, fFx: 12, fBx: -12, hFx: 17, hFy: 43, hBx: -17, hBy: 43 })
 const SP = newPose(), EASE = easedState()
 // what he's doing: the pose goes in out, and back comes the ball in his hands (or null)
-function bodyOf(g, t, T, out) {
+const BASE = newPose()
+function bodyOf(g, t, T, out, live = false) {
   const m = g.rep, L = g.last, since = L ? t - L.relAt : Infinity
-  if (g.done) {
-    // it's over: the arms go up, or the hands go to his head or his hips
+  if (g.done && !live) {
+    // it's over: the arms go up, or the hands go to his head or his hips, from wherever he was when it ended (the
+    // follow-through held on the last ball, standing at the horn) so nothing snaps
     const at = Math.max(L?.landed ? L.landAt + 300 : 0, g.hornAt != null ? g.hornAt + 750 : 0)
-    if (t > at) { mixPose(P_LANDED, g.done.hit ? R_UP : g.look < 0.5 ? R_HEAD : R_HIPS, smooth01(prog(t, at, at + 220)), out); return null }
+    if (t > at) { bodyOf(g, at, at, BASE, true); mixPose(BASE, g.done.hit ? R_UP : g.look < 0.5 ? R_HEAD : R_HIPS, smooth01(prog(t, at, at + 260)), out); return null }
   }
   if (g.move && t >= g.move.at && t < g.move.until) { frontRun(t / 62, out); return null }
   if (m.phase === 'hold') { holdPose(m, T - m.at, out); return m }
   if (m.res || m.phase === 'dead') {
-    if (L && since < 1400) { afterPose(L, t, out); return since < PUSH ? L : null }
+    // (the last ball of the round: he holds his follow-through while it's in the air, never drops it and puts it back)
+    const holdIt = L && L === m && m.i === g.balls.length - 1
+    if (L && (since < 1400 || holdIt)) { afterPose(L, t, out); return since < PUSH ? L : null }
     copyPose(m.heldAtHorn ? P_SET : P_STAND, out)
     return m.heldAtHorn ? m : null
   }
@@ -703,7 +709,8 @@ function drawMeter(ctx, G, g, view, T) {
   // what this one's worth, over the bar
   const tag = m.kind === 'deep' ? '3 PTS' : m.kind === 'money' ? '2 PTS' : '1 PT'
   const tagCol = m.kind === 'deep' ? GOLD : m.kind === 'money' ? '#ff6b7d' : 'rgba(255,255,255,.75)'
-  if (m.res && t - m.relAt < 520) {
+  // (the round's last ball keeps its word: there's no next ball's worth to show)
+  if (m.res && (t - m.relAt < 520 || m.i === g.balls.length - 1)) {
     const word = m.res.in ? 'GREEN' : m.res.off < 0 ? 'EARLY' : 'LATE'
     ctx.fillStyle = 'rgba(6,10,12,.86)'; ctx.fillRect(x - 6, top - 32 * U, 74 * U, 26 * U)
     text(ctx, word, x - 3, top - 18 * U, { font: DISPLAY, size: Math.max(16, 22 * U), color: m.res.in ? GOOD : BAD, align: 'left' })

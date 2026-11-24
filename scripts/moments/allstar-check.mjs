@@ -110,6 +110,23 @@ const play3 = c0 => {
   return [c, A.threePlan(c)]
 }
 let won3 = 0, finals3 = 0, so3 = 0
+const riv3 = [], rivD = []
+// the final standings: the champion first, then the rest of the final, then the first round; his place is his row's;
+// places go in order and only equal scores share one
+function checkStandings(P, key, tag) {
+  const S = P.standings
+  ok(Array.isArray(S) && S.length === P.r1.length, `${tag} standings: everyone once`, S?.length)
+  ok(S[0].name === P.champ.name && S[0].champ && S[0].place === 1, `${tag} standings: the champion on top`, S[0]?.name, P.champ.name)
+  ok(S.slice(0, P.finalists.length).every(r => r.through) && S.slice(P.finalists.length).every(r => !r.through), `${tag} standings: the finalists, then the rest`)
+  ok(S.filter(r => r.place === 1).length === 1, `${tag} standings: one champion`)
+  for (let i = 1; i < S.length; i++) {
+    const a = S[i - 1], b = S[i]
+    ok(a.place <= b.place, `${tag} standings: places in order`, a.place, b.place)
+    if (a.through === b.through && i > 1) { const va = a.through ? a.final : a.r1, vb = b.through ? b.final : b.r1; ok(va >= vb && (va === vb) === (a.place === b.place), `${tag} standings: scores in order, ties share`, a.name, va, a.place, b.name, vb, b.place) }
+  }
+  ok(S.find(r => r.me)?.place === P.place, `${tag} standings: his place`, P.place)
+  for (const r of S) ok(r.r1 === P.r1.find(x => x.name === r.name)[key], `${tag} standings: first-round score`, r.name)
+}
 for (let i = 0; i < 40; i++) {
   const c1 = { ...c0, seed: `${c0.seed}-n${i}` }
   const [c, P] = play3(c1)
@@ -121,9 +138,15 @@ for (let i = 0; i < 40; i++) {
   if (P.champ.me) won3++
   if (P.meIn) finals3++
   if (P.ev.some(e => (e.kind === 'cut' || e.kind === 'champ') && e.tie)) so3++
+  checkStandings(P, 'pts', '3PT')
+  for (const x of P.r1) if (!x.me) riv3.push(x.pts)
   if (i === 0) for (const e of P.ev) if (e.kind === 'shoot' || e.kind === 'cut' || e.kind === 'champ') console.log(`   ${e.kind === 'shoot' ? `${e.round} ${e.me ? 'HIM' : e.who.name}: ${e.res.points} · ${A.threeLine(e.res, e.who.name, e.round)}` : e.kind === 'cut' ? `cut: ${e.through.join(', ')}${e.tie ? ' (shoot-off)' : ''}` : `champion: ${e.who.name} ${e.res.points}`}`)
 }
 console.log(`  his A+ shooter over 40 nights: final ${finals3}, titles ${won3}, nights with a shoot-off ${so3}`)
+const pct = (a, f) => Math.round(a.filter(f).length / a.length * 100)
+const sorted3 = [...riv3].sort((a, b) => a - b), q = (a, p) => a[Math.floor(p * (a.length - 1))]
+console.log(`  rivals' first rounds: mean ${(riv3.reduce((a, b) => a + b, 0) / riv3.length).toFixed(1)}, 10th-90th ${q(sorted3, 0.1)}-${q(sorted3, 0.9)}, 15-30: ${pct(riv3, x => x >= 15 && x <= 30)}%`)
+ok(pct(riv3, x => x >= 15 && x <= 30) >= 80, 'rivals mostly 15-30 in the 3-Point Contest')
 
 // ── 4. the Slam Dunk Contest: the list, the judges, the rounds, the balance ──
 console.log('── Slam Dunk Contest')
@@ -175,6 +198,9 @@ for (let i = 0; i < 40; i++) {
   // no dunk landed twice by one man
   const by = new Map()
   for (const e of P.ev.filter(e => e.kind === 'dunk' && e.landed)) { const k = `${e.who.name}|${e.dunk.id}`; ok(!by.has(k), 'no repeat of a landed dunk', k); by.set(k, 1) }
+  checkStandings(P, 'sum', 'DUNK')
+  for (const r of P.standings) { ok((r.r1Dunks ?? []).reduce((a, b) => a + b, 0) === r.r1, 'dunk standings: the first round\'s dunks add up', r.name); if (r.through) ok(r.finalDunks.reduce((a, b) => a + b, 0) === r.final, 'dunk standings: the final\'s dunks add up', r.name) }
+  for (const e of P.ev) if (e.kind === 'dunk' && !e.me) rivD.push(e.total)
   if (P.champ.me) wonD++
   if (P.meIn) finD++
   if (P.ev.some(e => e.kind === 'round' && e.round.includes('off'))) offs++
@@ -183,6 +209,8 @@ for (let i = 0; i < 40; i++) {
   ok(done.active.asw.done && done.active.asw.res.dunk, 'the night is booked')
 }
 console.log(`  his dunker over 40 nights: final ${finD}, titles ${wonD}, dunk-offs ${offs}, 50s ${fifties} of ${dunks} dunks`)
+console.log(`  rivals' dunks: mean ${(rivD.reduce((a, b) => a + b, 0) / rivD.length).toFixed(1)}, 40-50: ${pct(rivD, x => x >= 40)}%, under 36 (nothing down, or two misses first): ${pct(rivD, x => x < 36)}%`)
+ok(pct(rivD, x => x >= 40) >= 70, 'rivals mostly 40-50 a dunk')
 
 console.log('── balance: a dunk\'s expected total by tier (the engine\'s measured landing rates: easy 86/95%, medium 64/76%, hard 47/58% a try at v 9/11)')
 console.log('  v     tier     mean   landed 1st try   nothing down   47 or more')
