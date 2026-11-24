@@ -54,7 +54,7 @@ export function CareerPage({ go }) {
         <li><b>Goals.</b> Three goals a season, sized to his overall and his role. Meeting {word(C.GOAL_POINT_AT)} of them earns a development point.</li>
         <li><b>Key moments.</b> A close game late can stop on a mini game, played as the real play: make it and the game goes his way. Every playoff game in football and every series in basketball has one.</li>
         <li><b>The bye week</b> (football). It falls between Weeks {C.BYE_FIRST} and {C.BYE_LAST}, like the NFL's. He can put in extra work on a drill for a shot at a trait upgrade, or rest for a sure durability boost.</li>
-        <li><b>Injuries and durability.</b> Durability starts from his frame, his weight for his height. The lower it is, the more often he gets hurt, and the chance rises after 31. He can sit or play through it; playing through costs durability. Most knocks heal over the offseason.</li>
+        <li><b>Injuries and durability.</b> Durability starts from his frame, his weight for his height. The lower it is, the more often he gets hurt; an A body is hurt about a quarter as often as an average one, an S body rarely. The chance rises after 31. He can sit or play through it; playing through costs durability. Most knocks heal over the offseason.</li>
         <li><b>Hot Hand.</b> A boost from the Shop or the Builder Pass: {third(BOOSTS.hot.desc.replace(/^Career: \+/, 'plus '))}</li>
         <li><b>Seasons vary.</b> Form comes and goes. A hot streak or a cold stretch runs four games in football and eight in basketball, and it shows in the stats.</li>
       </ul>

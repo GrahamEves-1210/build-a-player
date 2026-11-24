@@ -2408,10 +2408,13 @@ function shareGame(g, u, key) {
 const shareSim = (sim, u, weeks) => (b, t, seed) => { const r = sim(b, t, seed); return { ...r, games: r.games.map((g, i) => (i < weeks ? shareGame(g, u, `${seed}-${i}`) : g)) } }
 const simFor = c => (c.active?.share ? shareSim(sportOf(c).sim(c.pos), c.active.share.u, c.active.share.weeks) : sportOf(c).sim(c.pos))
 // a career injury's odds a game (×S.injScale), and how much durability moves them: advanceWeek
-const INJ_RATE = 0.019, INJ_PULL = 0.15
+const INJ_RATE = 0.019
+// the body's pull on the odds (2026-11-24: durability counts much more, most of all at the top: x1 at durability 5,
+// about half at an A-, a quarter at an A, under a fifth at an A+, an eighth at S; a fragile body up to 1.8x)
+const bodyRisk = d => clamp(Math.exp(-0.42 * ((d ?? 5) - 5)), 0.12, 1.8)
 // the injury cards a season can deal (sit or play hurt): one at most, more likely on a fragile body.
-// ~35% a season at durability 2, ~21% at 6, ~7% at 10; the playoffs, half that
-const injuryOdds = c => { const d = clamp(c.durability ?? 5, 1, 10), season = clamp(0.42 - 0.035 * d, 0.07, 0.4) * (c.age >= 31 ? 1.2 : 1); return { season, playoffs: season / 2 } }
+// ~38% a season at durability 2, ~25% at 5, ~13% at an A-, ~8% at an A, ~3% at S; the playoffs, half that
+const injuryOdds = c => { const season = clamp(0.25 * bodyRisk(c.durability ?? 5) ** 0.85, 0.03, 0.4) * (c.age >= 31 ? 1.2 : 1); return { season, playoffs: season / 2 } }
 // What the season's event cards (scenarios.js, the LIFE bank) know about the career, so a card only comes up
 // where it is true: where he is in it (rookie, contract year, his age), his place on the depth chart, the
 // men on his roster and on the next opponent's, the summer's news. k: games played (the next game is game k).
@@ -2609,7 +2612,7 @@ export function advanceWeek(c, D) {
     // not under one.) Football: about one season in three has an injury at a C+, one in four at a B+,
     // one in eight at 10; one in about twelve of them ends the season (S.injSerious)
     // (soccer and baseball keep the odds from before: S.oldInjuries)
-    const perGame = S.oldInjuries ? 0.013 * (1 + clamp(5.5 - c.durability, -5.5, 5.5) * 0.1) : INJ_RATE * clamp(1 + (5.5 - c.durability) * INJ_PULL, 0.3, 1.8)
+    const perGame = (S.oldInjuries ? 0.013 : INJ_RATE) * bodyRisk(c.durability)
     const risk = perGame * (c.age >= 31 ? 1.25 : 1) * (g?.sat ? 0 : 1) * S.injScale * (S.noInjury?.(c) ? 0 : 1)
     if (k < D.total && r() < risk && !c.injuries.some(i => i.year === c.year + 1 && i.at > k - 4 / S.injScale)) {
       // what it is (the common ones more often), and how long; one in about twenty is a season-ender (an ACL, an Achilles)
@@ -2618,7 +2621,8 @@ export function advanceWeek(c, D) {
       for (const x of INJ) { roll -= x[3] ?? 1; if (roll <= 0) { pick = x; break } }
       const [kind0, lo, hi] = pick
       let games = lo + Math.floor(r() * (hi - lo + 1))
-      const serious = r() < (S.injSerious ?? (S.oldInjuries ? 0.05 : 0.08))
+      // (a durable body is less likely to blow out a knee: the season-ender's share falls with durability too)
+      const serious = r() < (S.injSerious ?? (S.oldInjuries ? 0.05 : 0.08)) * clamp(1.6 - 0.12 * c.durability, 0.4, 1.5)
       const kind = serious ? ENDERS[Math.floor(r() * ENDERS.length)] : kind0
       if (!serious) games = Math.min(games, D.total - k)   // (a long one late in the year: out the rest of it, but not a season-ender)
       injury = { kind, games: serious ? D.total - k : games, serious, at: k }
