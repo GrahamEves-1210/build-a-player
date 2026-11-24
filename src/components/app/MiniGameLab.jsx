@@ -4,7 +4,6 @@ import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
 import MgStage from './MgStage'
 import { DUNKS } from '../../lib/mg/dunkcontest'
-import { allStarUnlocked } from '../../lib/allStarBreak'
 import { GAMES, PLAYOFF_GAMES, COMBINE_GAMES, momentsOf } from '../../lib/minigames'
 import { GAME_IDS } from '../../lib/mg'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
@@ -201,8 +200,8 @@ export default function MiniGameLab({ onClose }) {
         </div>
         <section className="pr-sec"><h2>Key Moments</h2>{lists.moments.map(g => <Row key={g.id + (g.role ?? '')} {...g} />)}</section>
         <section className="pr-sec"><h2>{sport === 'soccer' ? 'Academy Trial' : sport === 'baseball' ? 'Showcase' : 'Combine'}</h2>{lists.combine.map(g => <Row key={g.id} {...g} />)}</section>
-        {/* (Career unlocks it: a player who has taken part in All-Star Saturday, lib/allStarBreak.js; the dev server always) */}
-        {lists.allStar.length > 0 && (import.meta.env.DEV || allStarUnlocked()) && <section className="pr-sec"><h2>All-Star Saturday</h2>{lists.allStar.map(g => <Row key={g.id} {...g} />)}</section>}
+        {/* (always listed, so the contests can be played any time: owner, 11-24) */}
+        {lists.allStar.length > 0 && <section className="pr-sec"><h2>All-Star Saturday</h2>{lists.allStar.map(g => <Row key={g.id} {...g} />)}</section>}
       </div>
     </div>
   )
