@@ -322,8 +322,8 @@ export const WC_LEGENDS = [
     attrs: { pace: 10, finishing: 10, shotPower: 11, dribbling: 9, passing: 7, positioning: 10, heading: 7, size: 4, composure: 10 } },
   { name: "Luís Figo", short: "Figo", team: 'POR', nation: 'POR', number: 7, height: 71, weight: 165, age: 28, foot: 'right', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'RW', years: '1991–2006', peak: 2000,
     attrs: { pace: 8, finishing: 8, shotPower: 8, dribbling: 10, passing: 10, positioning: 7, heading: 5, size: 6, composure: 10 } },
-  { name: "Bruno Fernandes", short: "B. Fernandes", team: 'POR', nation: 'POR', number: 8, height: 72, weight: 139, age: 27, foot: 'right', skin: '#a67f6b', espn: 124091, starter: false, position: 'ST', role: 'AM', years: '2017–2026', peak: 2021,
-    attrs: { pace: 6, finishing: 8, shotPower: 9, dribbling: 7, passing: 10, positioning: 8, heading: 5, size: 3, composure: 10 } },
+  { name: "Bruno Fernandes", short: "B. Fernandes", team: 'POR', nation: 'POR', number: 8, height: 72, weight: null, age: 27, foot: 'right', skin: '#a67f6b', espn: 124091, starter: false, position: 'ST', role: 'AM', years: '2017–2026', peak: 2021,
+    attrs: { pace: 6, finishing: 8, shotPower: 9, dribbling: 7, passing: 10, positioning: 8, heading: 5, size: 6, composure: 10 } },
 
   // ─── POL ────────────────────────────────────────────────────────────────────
   { name: "Robert Lewandowski", short: "Lewandowski", team: 'POL', nation: 'POL', number: 9, height: 73, weight: 179, age: 32, foot: 'right', skin: '#dfac9c', espn: null, starter: true, position: 'ST', role: 'ST', years: '2008–2026', peak: 2020,
