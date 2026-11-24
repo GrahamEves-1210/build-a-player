@@ -37,6 +37,7 @@ import { SOCCER_LIVE, SOCCER_SOON } from './lib/soccerLive'
 const BaseballApp = lazy(() => import('./components/BaseballApp.jsx'))
 import { BASEBALL_LIVE } from './lib/baseballLive'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { healAndReload } from './lib/chunkHeal'
 import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
 import { IS_APP, APP_LOOK, APP_PLATFORM, APP_ART } from './lib/platform'
 // App shell (dock, Daily, Cards, shop, toasts). The website loads it too for
@@ -72,15 +73,10 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-// A deploy replaced the files an open tab still asks for: reload onto the new ones (at most once a minute, never a loop)
-window.addEventListener('vite:preloadError', e => {
-  try {
-    if (Date.now() - Number(sessionStorage.getItem('bap_chunk_reload') || 0) < 60000) return
-    sessionStorage.setItem('bap_chunk_reload', String(Date.now()))
-  } catch { return }
-  e.preventDefault()
-  window.location.reload()
-})
+// A deploy replaced the files an open tab still asks for, or the browser kept a bad copy of one: fetch them again past
+// the cache and reload (lib/chunkHeal.js; at most once a minute, never a loop). The error still goes up to the crash
+// screen for the moment before the reload (holding it back left React a missing component: "reading 'default'").
+window.addEventListener('vite:preloadError', e => { healAndReload(e.payload) })
 
 const isBucket = window.location.pathname.startsWith('/bucket')
 if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
