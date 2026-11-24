@@ -82,12 +82,13 @@ rr = R - 0.003   # the gold just proud of the ball, half sunk into it
 # the two great circles: round the middle (z = 0) and over the top through the front and back (x = 0)
 seam([Vector((math.cos(t), math.sin(t), 0)) * rr for t in (2 * math.pi * i / N for i in range(N))], 'equator')
 seam([Vector((0, math.cos(t), math.sin(t))) * rr for t in (2 * math.pi * i / N for i in range(N))], 'meridian')
-# the two side seams: ovals round the ±x poles, reaching further toward the top and bottom than toward the middle
+# the two side seams: a long curve each side of the cross, out by the edge at the middle and bending in toward the
+# centre line at the top and bottom, like ) ( : the real ball's eight panels
 for sgn in (1, -1):
     pts = []
     for i in range(N):
         th = 2 * math.pi * i / N
-        a = 0.74 - 0.17 * math.cos(2 * th)     # angle from the x pole: 0.57 at the middle line, 0.91 toward top/bottom
+        a = 0.98 - 0.30 * math.cos(2 * th)     # angle from the x pole: 0.68 at the middle line (near the edge), 1.28 at the top and bottom (bent in toward the centre line, never touching it)
         d = Vector((sgn * math.cos(a), math.sin(a) * math.cos(th), math.sin(a) * math.sin(th)))
         pts.append(d.normalized() * rr)
     seam(pts, f'side{sgn}')
@@ -95,11 +96,11 @@ for sgn in (1, -1):
 # the ball's own pose: its axis tipped toward the camera and to the side so the seams draw a basketball, then it
 # spins about that axis (a ball spun on a finger)
 piv.rotation_mode = 'XYZ'
-TILT = (math.radians(-22), math.radians(14), 0)
+TILT = (math.radians(-14), math.radians(8), 0)
 axis = bpy.data.objects.new('axis', None); sc.collection.objects.link(axis)
 axis.rotation_euler = TILT
 piv.parent = axis
-YAW0 = math.radians(28)
+YAW0 = math.radians(0)
 piv.rotation_euler = (0, 0, YAW0)
 
 # ── camera ──
