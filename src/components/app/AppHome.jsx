@@ -237,13 +237,13 @@ const cbbLine = () => {
   } catch {}
   return 'Conference spin · March Madness'
 }
-function CBBCard({ onClick }) {
+function CBBCard({ onClick, small = false }) {
   const [line] = useState(cbbLine)
   return (
-    <button className="ag-way ag-mc ag-mc--cfb ag-mc--cbb" onClick={onClick}>
+    <button className={`ag-way ag-mc ag-mc--cfb ag-mc--cbb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
       <span className="ag-mc-head"><b>COLLEGE BASKETBALL<i className="ag-mc-tag">NEW</i></b><small>{line}</small></span>
       <span className="ag-cfb-band" aria-hidden="true">
-        {CBB_CARD_LOGOS.map(s => <img key={s} src={s} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
+        {(small ? CBB_CARD_LOGOS.slice(0, 4) : CBB_CARD_LOGOS).map(s => <img key={s} src={s} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>
     </button>
   )
@@ -560,6 +560,13 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
   const sp = isBucket ? 'bucket' : 'nfl'
   // Soccer and baseball: Career, Compete, Salary Cap and Squad Builder (no Blacktop, no Depth Chart)
+  // Salary Cap's card: in the card grid on football, the bottom row on basketball (beside Compete)
+  const salary = (
+    <button className={`ag-way ag-mc ag-mc--salary ag-way--quick${isBucket ? ' is-small' : ''}`} onClick={() => startRef.current('salarycap')}>
+      <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily grid</small></span>
+      <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
+    </button>
+  )
   const modes = useMemo(() => isSoccer || isBaseball ? (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
@@ -589,10 +596,11 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   ) : (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
-      {/* football: Franchise on top, College Football in Compete's spot, Compete in the small row (owner 11-14) */}
+      {/* football: Franchise on top, College Football in Compete's spot, Compete in the small row (owner 11-14).
+          Basketball the same (owner 11-24): Franchise, Career, then Blacktop and College Basketball, then Compete and
+          Salary Cap; no Squad Builder */}
       {!isBucket && (hasFranchise ? <FranchiseCard wide onClick={() => frRef.current?.()} /> : hasCFB && <CFBCard onClick={() => cfbRef.current?.()} />)}
       {isBucket && onNbaFranchise && <NbaFranchiseCard onClick={() => nbaRef.current?.()} />}
-      {isBucket && hasCBB && <CBBCard onClick={() => cbbRef.current?.()} />}
       <div className="ag-cards">
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" tag="POPULAR" line={crLine} color={career?.fit?.color} onClick={onCareer}>
@@ -616,10 +624,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <Pool />
             </ModeArt>
           ))}
-        <button className="ag-way ag-mc ag-mc--salary ag-way--quick" onClick={() => startRef.current('salarycap')}>
-          <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily grid</small></span>
-          <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
-        </button>
+        {isBucket ? hasCBB && <CBBCard small onClick={() => cbbRef.current?.()} /> : salary}
       </div>
       <div className="ag-more">
         {isBucket && onCompete && (
@@ -627,7 +632,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <Pool />
           </ModeArt>
         )}
-        {hasFranchise ? (hasCFB && onCompete && (
+        {isBucket ? salary : hasFranchise ? (hasCFB && onCompete && (
           <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
             <Pool />
           </ModeArt>

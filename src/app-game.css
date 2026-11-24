@@ -6136,6 +6136,9 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
   html.app-look .ag-mc.is-small { min-height: 128px; }
   html.app-look .ag-mc-head b { font-size: 36px; }
   html.app-look .ag-mc-shot { top: 96px; left: 26px; right: 26px; }
+  /* basketball's Salary Cap in the short bottom row (beside Compete): the board beside the title, its cards showing */
+  html.app-look .ag-more .ag-mc--salary .ag-mc-shot { top: 14px; left: 40%; right: 18px; }
+  html.app-look .ag-more .ag-mc--salary .ag-mc-shot img { margin-top: -16%; }
   html.app-look .ag-more { gap: 12px; }
   /* the wide second row: the art beside the words */
   html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 104%; bottom: -16%; justify-content: flex-end; }
