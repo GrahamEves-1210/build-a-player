@@ -458,16 +458,17 @@ export function createEngine({ setup, els, on, net = null }) {
       return
     }
     const lo = spec.ideal - spec.win, hi = spec.ideal + spec.win
-    // the clutch rating at game point: the window it would be on any other play, as an outline
-    const base = meter.base, clutch = base && Math.abs(base.win - spec.win) > 0.5
-    if (clutch) {
-      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.75)'
-      ctx.strokeRect(bx - 6.5, yAt(base.ideal + base.win), bw + 13, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
-    }
+    // game point: the window it would be on any other play, as an outline, when the pressure (or his Clutch rating)
+    // has moved it by a few ms or more; CLUTCH under the bar when his rating has made it wider
+    const base = meter.base, clutch = base && Math.abs(base.win - spec.win) >= 3
     // the green window: across the bar and past both its edges, never thinner than 8px
     const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(8, wy1 - wy0)
     ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 7, wc - wh / 2 - 1.5, bw + 14, wh + 3)
     ctx.fillStyle = GREEN; ctx.fillRect(bx - 6, wc - wh / 2, bw + 12, wh)
+    if (clutch) {                                                     // (dark dashes inside a wider window, light ones round a narrower)
+      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'
+      ctx.strokeRect(bx - 6.5, yAt(base.ideal + base.win), bw + 13, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
+    }
     // the fill, inside the bar's edges: white on the way up, green in the window, red past it
     const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > hi
     const col = rel ? GRADE_COL[meter.grade] ?? '#fff' : inWin ? GREEN : past ? RED : '#f3f6f8'
@@ -498,7 +499,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
       if (read) put(read, by + bh - fs * 0.65, [GREEN, AMBER, RED][meter.read])
     }
-    if (clutch) chip('CLUTCH', bx + bw / 2, wordBeside || overY < by ? by + bh + fs * 0.95 : by - fs * 0.95, spec.win > base.win ? GREEN : AMBER, 'center')
+    if (clutch && spec.win > base.win) chip('CLUTCH', bx + bw / 2, wordBeside || overY < by ? by + bh + fs * 0.95 : by - fs * 0.95, GREEN, 'center')
     ctx.globalAlpha = 1
   }
   function draw(now) {
