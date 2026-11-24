@@ -23,7 +23,8 @@ export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.m
 // A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk)
 export function shotKind(R, d, roll) {
   if (d > T.layRange) return 'jumper'
-  if (d <= T.dunkRange && R.bnc > T.dunkBounce && roll < (R.bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin)) return 'dunk'
+  const bnc = R.bncRaw ?? R.bnc                              // (who can get up: the plain grade)
+  if (d <= T.dunkRange && bnc > T.dunkBounce && roll < (bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin)) return 'dunk'
   return 'layup'
 }
 
@@ -32,7 +33,14 @@ const beaten = p => p.act === 'frozen' || p.act === 'down'
 export const handUp = d => (beaten(d) ? d : { ...d, act: 'jump' })
 // A late closeout: the contest at the release, but a man who wasn't in the shot as it went up (cUp: the contest at the
 // gather, every hand up) only gets part of it
-export const lateContest = (c, cUp) => (cUp == null ? c : c * (1 - T.lateShare) + Math.min(c, cUp) * T.lateShare)
+// (a layup or a dunk goes up slower and closer: a man flying in at it gets more of his hand on it)
+// ...and a man square in it as he went up still bothers a layup he slides by in the air (he has to finish around him)
+export const lateContest = (c, cUp, kind = 'jumper') => {
+  if (cUp == null) return c
+  const k = kind === 'jumper' ? T.lateShare : T.lateShareL
+  const late = c * (1 - k) + Math.min(c, cUp) * k
+  return kind === 'jumper' ? late : Math.max(late, cUp * T.gatherHoldL)
+}
 
 // How much the defense is in the shot, 0..1, and whose hand it is. Players: { id, x, y, vx, vy, act, R }
 // A hand counts for how close he is, where he is (between the shooter and the rim, beside him, or trailing a man
@@ -70,7 +78,7 @@ export function contestOf(shooter, defenders, kind) {
 
 // The chance a shot goes in: what the rating gives at that spot x how good the release was x how well it was contested
 //   s: { R, kind, d (ft from the rim), q (release 0-1), c (contest 0-1), run (0-1 of top speed at the gather),
-//        cs (the passer's Passing 0-1 on a jumper off the catch, else null), rushed, gp (game point: Clutch) }
+//        cs (the passer's Passing 0-1 on a shot off the catch, else null), rushed, gp (game point: Clutch) }
 export function makeChance(s) {
   const R = s.R
   let base, pen
@@ -85,8 +93,10 @@ export function makeChance(s) {
     if (s.d > T.deepAt) base -= (s.d - T.deepAt) * (T.deepFall - T.deepJs * R.js)
     base *= 1 - T.setFeet * clamp(s.run ?? 0, 0, 1)
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
-    pen = T.contestMaxJ * s.c * (1 - T.jsThrough * R.js)     // a great shooter shoots over a hand
+    pen = T.contestMaxJ * s.c * (1 - T.jsThrough * (R.jsRaw ?? R.js))     // a great shooter shoots over a hand (on the plain grade)
   }
+  // a pass that hits him in stride at the rim: the defense is a beat late to it (the passer's Passing)
+  if (s.cs != null && s.kind !== 'jumper') pen *= 1 - T.csLay * s.cs
   let p = base * releaseMult(s.kind, s.q) * (1 - pen)
   if (s.rushed) p *= 1 - T.rushPen * (1 - R.iq)
   if (s.gp) p *= 1 + T.clutchMake * ((R.clutchRaw ?? 0.5) - 0.5)
@@ -116,7 +126,7 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     }
   }
   const cr = contestOf(shooter, defenders, shot.kind), by = cr.by
-  const c = lateContest(cr.c, shot.cUp)
+  const c = lateContest(cr.c, shot.cUp, shot.kind)
   const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, q: shot.q, c, run: shot.run, cs: shot.cs, rushed: shot.rushed, gp: shot.gp })
   const made = rolls.make < p
   return {
@@ -165,8 +175,10 @@ export function judgeBoard(cands, roll) {
 
 // Where a miss comes off to: mostly the far side of the rim from the shooter, longer off a long shot
 export function reboundSpot(from, d, r1, r2) {
-  const out = T.rebMin + (T.rebMax - T.rebMin) * r1 * r1 + T.rebLong * d
-  const a = Math.atan2(RIM.y - from.y, RIM.x - from.x) + (r2 - 0.5) * 3.8
+  const lay = d <= T.layRange
+  const out = lay ? T.rebMinL + (T.rebMax - T.rebMinL) * r1 : T.rebMin + (T.rebMax - T.rebMin) * r1 * r1 + T.rebLong * d
+  // (a layup off the rim goes anywhere: up and off the glass, as often back the way he came as long)
+  const a = Math.atan2(RIM.y - from.y, RIM.x - from.x) + (r2 - 0.5) * (lay ? T.rebSpreadL : 3.8)
   let x = RIM.x + Math.cos(a) * out, y = RIM.y + Math.sin(a) * out
   const board = RIM.y + 0.6
   if (y < board) y = board + (board - y) * 0.6            // off the backboard, back into play
