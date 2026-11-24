@@ -179,7 +179,7 @@ function withBall(s, p, m, lvl, out) {
   const beat = !clearing && (!D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8)
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
   const late = 1.3 + 1.0 * p.R.iq
-  let need = clockS <= late ? -1 : clamp(0.6 - Math.max(0, 8 - clockS) * 0.05, 0.3, 0.6)
+  let need = clockS <= late ? -1 : clamp(T.cpuNeed - Math.max(0, 8 - clockS) * 0.05, 0.3, T.cpuNeed)
   // a contested jumper is the worst shot there is: with time left to get to the rim, he goes and gets a layup instead
   // (a smart player sees it sooner)
   // (and a jumper better than the drive is the shot: a man who sags off a shooter gets shot over)

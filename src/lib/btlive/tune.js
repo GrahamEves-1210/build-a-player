@@ -25,8 +25,8 @@ export const RULES = {
   goal: 11, winBy: 2, cap: 15,       // first to 11 by ones and twos, win by 2, capped at 15 (today's Blacktop; King of the Hill too)
   shotClock: [12, 14],               // seconds, by players a side (1v1 and King of the Hill, 2v2)
   orebClock: 8,                      // the clock after an offensive rebound
-  checkTime: 1.0,                    // the ball is checked: nobody moves for this long
-  deadTime: 1.5,                     // after a basket or a turnover, before the next check
+  checkTime: 0.8,                    // the ball is checked: nobody moves for this long
+  deadTime: 1.1,                     // after a basket or a turnover, before the next check
   makeItTakeIt: true,                // score and keep the ball (today's Blacktop)
   // Fouls: none. A reach is its own punishment (the defender is frozen), bodies just collide.
 }
@@ -82,15 +82,15 @@ export const T = {
   slightJ: 0.86,                     // just outside the green: the chance starts from here and falls to relMin
 
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
-  layBase: 0.62, layFin: 0.36,       // layup: 81% at Finishing 1, 98% at 11 (an 80: 89%): the best shot there is
+  layBase: 0.58, layFin: 0.38,       // layup: 81% at Finishing 1, 98% at 11 (an 80: 89%): the best shot there is
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
-  layFar: 0.035,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 14% less)
+  layFar: 0.045,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 14% less)
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkBounce: 0.55,                  // Bounce (n) under this: never dunks (a Bounce 1 never does)
   dunkChance: 1.8,                   // how often an able dunker dunks: (Bounce n - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
   closeBase: 0.04, closeJs: 0.68,    // a jumper from 8 ft: 40% at Jump Shot 1, 72% at 11
-  arcBase: -0.29, arcJs: 0.79,       // a jumper from the arc (25 ft): 13% at Jump Shot 1, 50% at 11 (an 80: 30%)
+  arcBase: -0.25, arcJs: 0.79,       // a jumper from the arc (25 ft): 17% at Jump Shot 1, 54% at 11 (an 80: 34%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
   deepAt: 27.5,                      // past this it's deep...
   deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
@@ -113,19 +113,20 @@ export const T = {
   contestBeat: 0.15,                 // frozen or on the floor
   frontDot: 0.5,                     // square in front: full; beside him (at right angles to the rim)...
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
-  contestBehind: 0.5,                // ...this much (a man on his hip still bothers it)
+  contestBehind: 0.6,                // ...this much (a man on his hip still bothers it)
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.45,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.6,                // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
   jsThrough: 0.35,                   // Jump Shot 11 shoots over this share of a jumper's contest
   contestMaxL: 0.85,                 // ...off a layup
-  contestMaxD: 0.40,                 // ...off a dunk...
+  contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
   cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
+  cpuNeed: 0.5,                      // early in the clock a CPU wants a shot worth this (later, less)
   twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
   cpuDriveV: 0.55,                   // a jumper never has to be worth more than this (a make = 1, a two 1.45) while there's time to go to the rim...
   cpuDriveRisk: 0.85,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
@@ -202,7 +203,7 @@ export const T = {
   // ── Between plays ───────────────────────────────────────────────────────────────────────────────
   feedSpeed: 24,                     // a dead ball (through the net, out of bounds) goes back to whoever checks it this fast
   spotNear: 0.6,                     // the ball goes live when everyone is this close to his spot...
-  checkWait: 1.2,                    // ...or this long past the check, wherever they are
+  checkWait: 0.6,                    // ...or this long past the check, wherever they are
 
   // ── Online (a player on his own device: lib/btlive/net.js, live/src/btlive.js) ───────────────────
   remoteWaitMs: 650,                 // a shot waits this long past the end of the meter for his device's release
