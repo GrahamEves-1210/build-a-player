@@ -162,6 +162,26 @@ for (const r of wall) champs[r.worldChampion] = (champs[r.worldChampion] ?? 0) +
 console.log('world champions:', Object.entries(champs).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${k} ${(v / wall.length * 100).toFixed(0)}%`).join(', '))
 
 // determinism
+// World Cup knockouts: how often the star doesn't play one, and why (2026-11-24: club-season injuries fell on the
+// tournament's weeks and he sat out ~9% of knockout matches, the final included)
+{
+  for (const bk of ['elite', 'good']) {
+  let ko = 0, out = 0, fin = 0, finOut = 0; const why = {}
+  for (let i = 0; i < N; i++) {
+    const r = S.runSoccerSimulation(BUILDS[bk], T, NTOP, 'alltime', `wc-avail-${bk}-${i}`)
+    for (const g of r.games) {
+      if (!g.stage || g.stage === 'group') continue
+      ko++; if (g.stage === 'final') fin++
+      if (!g.app) { out++; why[g.why ?? 'none'] = (why[g.why ?? 'none'] ?? 0) + 1; if (g.stage === 'final') finOut++ }
+      if (!g.app && !g.why) errs.push(`wc-avail: a knockout DNP with no reason (${g.round})`)
+    }
+  }
+  const rate = out / Math.max(1, ko), hurt = ((why.inj ?? 0) + (why.knock ?? 0)) / Math.max(1, ko)
+  console.log(`WC knockouts, ${bk} at ${NTOP.short}: missed ${(rate * 100).toFixed(1)}% of ${ko} (${JSON.stringify(why)}), ${finOut} of ${fin} finals`)
+  if (hurt > 0.04) errs.push(`wc-avail: ${bk} misses ${(hurt * 100).toFixed(1)}% of World Cup knockout matches hurt (more than 4%)`)
+  }
+  
+}
 console.log('\n=== Checks ===')
 const a = JSON.stringify(S.runSoccerSimulation(BUILDS.elite, T, TOP, 'current', 12345))
 const b = JSON.stringify(S.runSoccerSimulation(BUILDS.elite, T, TOP, 'current', 12345))

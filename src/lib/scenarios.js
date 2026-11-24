@@ -210,14 +210,16 @@ export function describe(e, c, scope = '') {
   // a Career deal: the team's grades, recalculated with him on the roster
   if (e.trade) for (const g of e.trade.grades ?? []) parts.push(`${g.k.toLowerCase()} ${g.from} → ${g.to}`)
   for (const [t, d] of Object.entries(e.attr || {})) if (d) parts.push(`${sign(d)} ${c.L(t)}`)
-  if (e.team?.off) parts.push(`team offense ${sign(e.team.off)}`)
-  if (e.team?.def) parts.push(`team defense ${sign(e.team.def)}`)
+  // (soccer in football's words: a match, the attack, the defence)
+  const fc = !!c?.isSoccer, game1 = fc ? 'match' : 'game', games = fc ? 'matches' : 'games'
+  if (e.team?.off) parts.push(`${fc ? 'team attack' : 'team offense'} ${sign(e.team.off)}`)
+  if (e.team?.def) parts.push(`${fc ? 'team defence' : 'team defense'} ${sign(e.team.def)}`)
   let s = parts.join(', ')
-  if (e.trade && !s) s = 'joins the roster; the team grades hold'
-  if (s && e.window) s += ` for ${e.window} ${e.window === 1 ? 'game' : 'games'}`
+  if (e.trade && !s) s = fc ? 'joins the squad; the team grades hold' : 'joins the roster; the team grades hold'
+  if (s && e.window) s += ` for ${e.window} ${e.window === 1 ? game1 : games}`
   else if (s && !scope) s += ' for the rest of the season'
   if (s && scope) s += ` ${scope}`
-  if (e.sit) s += `${s ? '; ' : ''}miss ${e.sit === 1 ? 'the next game' : `the next ${e.sit} games`}`
+  if (e.sit) s += `${s ? '; ' : ''}miss ${e.sit === 1 ? `the next ${game1}` : `the next ${e.sit} ${games}`}`
   if (e.then) s += `${s ? ', then ' : ''}${lc(describe(e.then, c))}`
   if (e.dur) s += `${s ? ' · ' : ''}${sign(e.dur)} durability (for good)`
   if (e.xp) s += `${s ? ' · ' : ''}+${e.xp} XP`
@@ -317,7 +319,7 @@ export const INJURY = [
         kicker: 'INJURY REPORT', title: inj.name,
         body: `The ${c.isSoccer ? 'physios' : 'trainers'} say ${c.isBucket || c.isSoccer ? `${out} ${c.isSoccer ? 'matches' : 'games'}` : out === 1 ? 'a week' : `${out} weeks`} and it heals clean. ${c.name} can play on it, but it won't be right, and it could get worse.`,
         options: [
-          o('sit', 'Sit until it heals', { sit: out, tag }, `The ${c.nick} play without him.`),
+          o('sit', 'Sit until it heals', { sit: out, tag }, `${c.isSoccer ? '' : 'The '}${c.nick} play without him.`),
           o('play', 'Play through it', gam(0.65, { attr: inj.hit, window: hurt, tag: `PLAYING HURT`, dur: -0.3 }, `It held. Not right, but he played every ${c.isBucket || c.isSoccer ? 'minute' : 'snap'}.`,
             { attr: inj.hit, window: 1, tag: 'PLAYING HURT', dur: -0.6, then: { sit: out + (c.isBucket ? 3 : 1), tag } }, 'It gave out. Now he\'s out longer than if he\'d sat.')),
         ],
@@ -332,21 +334,22 @@ export const INJURY = [
       ] }) },
   { id: 'wear', at: ['late', 'stretch'], w: 2, when: c => c.alive && c.roleHas('legs'),
     make: c => ({ kicker: 'STRETCH RUN', title: 'The body is wearing down',
-      body: `${c.isSoccer ? 'Thirty matches' : c.isBucket ? 'Sixty games' : 'Thirteen weeks'} of hits. Nothing's torn, everything hurts. Manage it week to week, or rest now and be right for the playoffs.`,
+      body: c.isSoccer ? `Match after match, and every defender in the league kicking him. Nothing's torn, everything hurts. Manage it game by game, or rest now and be right for the knockouts.`
+        : `${c.isBucket ? 'Sixty games' : 'Thirteen weeks'} of hits. Nothing's torn, everything hurts. Manage it week to week, or rest now and be right for the playoffs.`,
       options: [
-        o('manage', 'Manage it, keep playing', { attr: c.R('legs', -2), tag: 'WORN DOWN' }, 'Slower the rest of the way, playoffs included.'),
-        o('rest', 'Rest now', { sit: c.g(1), tag: 'RESTED', then: { attr: c.R('legs', 1) } }, 'A week off, then the legs come back.'),
+        o('manage', 'Manage it, keep playing', { attr: c.R('legs', -2), tag: 'WORN DOWN' }, c.isSoccer ? 'Slower the rest of the way, the knockouts included.' : 'Slower the rest of the way, playoffs included.'),
+        o('rest', 'Rest now', { sit: c.g(1), tag: 'RESTED', then: { attr: c.R('legs', 1) } }, c.isSoccer ? 'A match off, then the legs come back.' : 'A week off, then the legs come back.'),
       ] }) },
 ]
 export const PO_INJURY = [
   { id: 'po-hurt', at: ['playoffs'], w: 3, when: c => !!c.injury(),
     make: c => {
       const inj = c.injury()
-      return { kicker: 'PLAYOFF INJURY REPORT', title: inj.name,
-        body: `Nobody sits in the playoffs. The question is how ${c.name} plays on it.`,
+      return { kicker: c.isSoccer ? 'KNOCKOUT INJURY REPORT' : 'PLAYOFF INJURY REPORT', title: inj.name,
+        body: c.isSoccer ? `Nobody sits out a knockout tie. The question is how ${c.name} plays on it.` : `Nobody sits in the playoffs. The question is how ${c.name} plays on it.`,
         options: [
           o('straight', 'Play on it, no shortcuts', { attr: half(inj.hit) }, 'Not right, but nothing gets worse.'),
-          o('shot', 'Take the shot and go', gam(0.6, {}, 'He felt nothing until Monday.', { attr: inj.hit }, 'It wore off by halftime.')),
+          o('shot', c.isSoccer ? 'Take the injection and play' : 'Take the shot and go', gam(0.6, {}, 'He felt nothing until Monday.', { attr: inj.hit }, c.isSoccer ? 'It wore off by half-time.' : 'It wore off by halftime.')),
         ] }
     } },
 ]
@@ -1319,7 +1322,7 @@ export function pickScenario(args) {
     if (gm && c.r() < 0.8) return { id: gm.id, inGame: true, kicker: gm.kicker, title: gm.title, body: gm.body, options: gm.options }
   }
   const seen = recent()
-  const scope = ph === 'playoffs' ? 'for the playoffs' : ''
+  const scope = ph === 'playoffs' ? (c.isSoccer ? 'for the knockouts' : 'for the playoffs') : ''
   const weight = s => (s.w ?? 1) * (seen.includes(s.id) ? 0.25 + 0.75 * (seen.indexOf(s.id) / 30) : 1)
   // a card is only worth showing if at least two of its choices actually do something
   const real = s => { try { return s.make(c).options.filter(op => !hollow(op.effect) || op.id === 'cover' || op.id === 'no').length >= 2 } catch { return false } }

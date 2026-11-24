@@ -299,7 +299,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       const res = roll < pW ? 'W' : roll < pW + pD ? 'D' : 'L'
       const opp = res === 'W' ? Math.max(0, my - 1 - Math.floor(r() * 2)) : res === 'D' ? my : my + 1 + Math.floor(r() * 2)
       const mine = res === 'W' ? Math.max(1, my) : my, oppSc = res === 'W' ? Math.min(opp, mine - 1) : opp
-      const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc'].includes(k)).map(k => [k, 0]))
+      // (his line zeroed; the match keeps its own numbers: its matchday, leg and round, so it doesn't read MD0)
+      const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc', 'md', 'leg', 'ri', 'pos'].includes(k)).map(k => [k, 0]))
       D.games[i] = { ...g, ...zero, rating: null, motm: false, start: false, won: res === 'W', drawn: res === 'D', lost: res === 'L', result: res, mySc: mine, oppSc, sat: true, ...(tag ? { tags: [tag] } : {}) }
       if (!D.sat.includes(i)) D.sat.push(i)
       return

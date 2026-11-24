@@ -9401,6 +9401,8 @@ html.is-x-browser .mobile-tab-bar {
   flex-direction: column;
   gap: 6px;
 }
+/* the name in "GUEST'S BUILD" in capitals like the rest (it read "Guest'S BUILD") */
+.simp-stat-group-lbl .nt { text-transform: uppercase; }
 .simp-stat-group-lbl {
   font-size: 9px;
   font-weight: 700;

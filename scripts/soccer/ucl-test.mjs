@@ -190,7 +190,7 @@ function checkLine(r, tag) {
 
 const t0 = Date.now()
 const R = []
-const winners = {}, topScorer = [], same = [], three = []
+const winners = {}, topScorer = [], same = [], three = [], big = [], ties = []
 const keys = Object.keys(BUILDS)
 for (let i = 0; i < N; i++) {
   const bk = keys[i % keys.length], club = CLUBS[Math.floor(i / keys.length) % CLUBS.length]
@@ -202,9 +202,17 @@ for (let i = 0; i < N; i++) {
   checkLine(r, tag)
   winners[r.uclWinner] = (winners[r.uclWinner] ?? 0) + 1
   topScorer.push(Math.max(r.goals, ...r.book.boot.map(x => x.goals)))
+  // the scorelines (2026-11-24: 13-0 in a Round of 16 and 15-20 goal ties had turned up): no side scores more than 9 in
+  // a match (8 is the engine's limit; extra time can add one), ties of 15+ goals (the real record: 13, Barcelona 7-6 Inter, 2025) fewer than one in 200
+  for (const m of r.leaguePhase) { big.push(Math.max(m[2], m[3])); if (Math.max(m[2], m[3]) > 9) err(tag, `a league phase match ${m[2]}-${m[3]}`) }
+  for (const f of r.fixtures) { big.push(Math.max(f.mySc, f.oppSc)); if (Math.max(f.mySc, f.oppSc) > 9) err(tag, `${f.round ?? 'his match'} ${f.mySc}-${f.oppSc}`) }
+  for (const t of [...r.bracket.po, ...r.bracket.r16, ...r.bracket.qf, ...r.bracket.sf]) ties.push(t.sa + t.sb)
   R.push({ bk, club: club.short, wild: !!r.team.inPlaceOf, r: { seed: r.seed, finish: r.finish, goals: r.goals, assists: r.assists, apps: r.apps, boot: r.goldenBoot.won, poty: r.playerOfSeason.won, tots: r.teamOfSeason, gpg: r.leaguePhase.reduce((s, m) => s + m[2] + m[3], 0) / 144, koGpg: [...r.bracket.po, ...r.bracket.r16, ...r.bracket.qf, ...r.bracket.sf].reduce((s, t) => s + t.sa + t.sb, 0) / 46 } })
 }
 const ms = (Date.now() - t0) / N
+{ const share = (xs, n) => (100 * xs.filter(x => x >= n).length / xs.length).toFixed(2)
+  if (ties.filter(x => x >= 15).length / ties.length > 0.005) err('ties', `${share(ties, 15)}% of ties have 15+ goals (more than one in 200)`)
+  console.log(`scorelines: a side scores 6+ in ${share(big, 6)}% of matches, 8+ in ${share(big, 8)}%; ties with 9+ goals ${share(ties, 9)}%, 12+ ${share(ties, 12)}%; most ${Math.max(...big)} in a match, ${Math.max(...ties)} in a tie`) }
 console.log(`\n${N} campaigns, ${ms.toFixed(1)} ms each`)
 
 // determinism

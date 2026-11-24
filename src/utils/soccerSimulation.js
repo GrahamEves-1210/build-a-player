@@ -339,6 +339,10 @@ const G_ATT = avg(CLUBS.map(c => c.att)), G_DEF = avg(CLUBS.map(c => c.def))
 const H_DOM = 0.078            // ln(1.17) / 2
 const H_EURO = 0.09
 const RHO = -0.10              // Dixon-Coles
+// the most goals a side can expect in a match (the strongest attack at home to the weakest defence: Bayern 8-2, not
+// 13-0; before 2026-11-24 the rate had no ceiling and a side with a great build ran up 10s and 13s), his side a little
+// more with the build's lift
+const LAM_MAX = 3.2, LAM_MAX_U = 3.6, GOALS_MAX = 8   // (8: the most a side has scored in a Champions League match)
 const ET_F = 0.30              // extra time: a third of a match at ~90% of the rate
 const PEN_RATE = 0.115         // penalties awarded per team-match
 // the World Cup: one pool of 48, a wider spread (Spain against Curaçao); its W_* are the field's (wcField below)
@@ -516,10 +520,11 @@ function dcScore(lh, la, rand) {
   const t00 = 1 - lh * la * RHO, t11 = 1 - RHO, tmax = Math.max(t00, t11, 1)
   for (let i = 0; i < 12; i++) {
     const h = poisson(lh, rand), a = poisson(la, rand)
+    if (h > GOALS_MAX || a > GOALS_MAX) continue
     const tau = h > 1 || a > 1 ? 1 : h === 0 && a === 0 ? t00 : h === 0 ? 1 + lh * RHO : a === 0 ? 1 + la * RHO : t11
     if (rand() * tmax <= tau) return [h, a]
   }
-  return [poisson(lh, rand), poisson(la, rand)]
+  return [Math.min(GOALS_MAX, poisson(lh, rand)), Math.min(GOALS_MAX, poisson(la, rand))]
 }
 // A shootout: five each, then sudden death. kickH / kickA: the striker's own chance if he takes one (first kick)
 function shootout(rand, kickH, kickA, base = 0.75) {
@@ -546,7 +551,7 @@ function makeWorld({ rand, hook, U, rate, base, mA, mD, kA, kD, H, hostAdv = nul
   const A = new Map(), Dm = new Map()
   const atk = x => { let v = A.get(x); if (v === undefined) { v = term(kA, rate(x).att - mA, sA); A.set(x, v) } return v }
   const dfn = y => { let v = Dm.get(y); if (v === undefined) { v = term(kD, rate(y).def - mD, sD); Dm.set(y, v) } return v }
-  const lam = (x, y, h) => base * Math.exp(atk(x) - dfn(y) + h + (hostAdv ? hostAdv(x, y) : 0))
+  const lam = (x, y, h) => Math.min(LAM_MAX, base * Math.exp(atk(x) - dfn(y) + h + (hostAdv ? hostAdv(x, y) : 0)))
   return { rand, hook, U, rate, lam, H, out }
 }
 // One match. ko: a knockout (extra time and penalties); agg: the first leg's goals [this home side, this away side]
@@ -560,7 +565,7 @@ function playFx(W, { comp, wk, home: hS, away: aS, neutral = false, ko = false, 
   if (uH || uA) {
     lamC = uH ? lh : la
     fx = W.hook({ comp, wk, kind: meta.kind ?? comp, lamC })
-    if (uH) lh = lamC * fx.mult; else la = lamC * fx.mult
+    if (uH) lh = Math.min(LAM_MAX_U, lamC * fx.mult); else la = Math.min(LAM_MAX_U, lamC * fx.mult)
   }
   let [hs, as] = dcScore(lh, la, W.rand)
   let et = false, pens = null
@@ -606,16 +611,30 @@ function spellsOf(rand, prof) {
   if (u[3] < p1 * 0.3) { const from = 1 + u[4] * 36; out.push([from, from + 1 + Math.floor(u[5] * u[5] * 6)]) }
   return out
 }
+// A World Cup is eight matches in five weeks, not a club season: his chance of an injury spell is a tournament's
+// (about one in seventeen, a match or two), the knocks rarer (a nation's star plays through them). Before 2026-11-24 the
+// club season's spells (weeks 1-37) fell on the tournament's weeks 1-8: a star sat out a knockout match in about one
+// World Cup in five, the final included, and nothing said why.
+function wcSpellsOf(rand, prof) {
+  const p = clamp(0.06 - 0.004 * ((prof.size ?? 6) - 6), 0.03, 0.09)
+  const u = [rand(), rand(), rand()]
+  if (u[0] >= p) return []
+  const from = 1 + u[1] * 7
+  return [[from, from + 1 + Math.floor(u[2] * u[2] * 2)]]
+}
+// his availability for one match; why he didn't play, when he didn't: 'inj' (a spell out), 'knock', 'bench' (unused)
 function planOf(rand, S, wk, kind) {
   const u1 = rand(), u2 = rand(), u3 = rand(), u4 = rand()
-  if (S.spells.some(([a, b]) => wk >= a && wk < b) || u1 < 0.04) return { avail: false, start: false, mins: 0, onEnd: false }
+  const wc = kind === 'wc'
+  const hurt = (wc ? S.wcSpells ?? [] : S.spells).some(([a, b]) => wk >= a && wk < b)
+  if (hurt || u1 < (wc ? 0.015 : 0.04)) return { avail: false, start: false, mins: 0, onEnd: false, why: hurt ? 'inj' : 'knock' }
   const pStart = clamp(S.startP * (kind === 'cupEarly' ? 0.55 : kind === 'ucl' || kind === 'uel' || kind === 'wc' ? 1.04 : 1), 0, 0.99)
   if (u2 < pStart) {
     const full = u3 < S.p90 * (kind === 'wc' ? 1.2 : 1)
     return { avail: true, start: true, mins: full ? 90 : 60 + Math.floor(Math.pow(u4, 0.8) * 30), onEnd: full }
   }
   if (u3 < S.subP) return { avail: true, start: false, mins: 5 + Math.floor(u4 * 28), onEnd: true }
-  return { avail: true, start: false, mins: 0, onEnd: false }
+  return { avail: true, start: false, mins: 0, onEnd: false, why: 'bench' }
 }
 
 // ─── The striker in his side: the lift, his share, his streams ───────────────
@@ -653,6 +672,7 @@ function strikerSide({ build, prof, team, mates, lamAvg, base, script }) {
     subP: benchRole ? 0.78 : 0.7,
     p90: clamp(0.40 + 0.03 * ((prof.size ?? 6) - 6) + (ovr - 85) * 0.01, 0.2, 0.72),
     spells: spellsOf(stream(base, 'injury'), prof),
+    wcSpells: wcSpellsOf(stream(base, 'injury:wc'), prof),
     // a hot or a cold year
     formF: Math.exp(0.03 * gauss(fr)), formV: Math.exp(0.03 * gauss(fr)),
     replaced, backup,
@@ -702,7 +722,7 @@ function lineFor(rand, S, fx) {
     app: mins > 0 ? 1 : 0, gs: plan.start ? 1 : 0, start: plan.start, mins,
     goals: 0, assists: 0, shots: 0, sot: 0, xg: 0, npxg: 0, bcm: 0, pens: 0, pensTaken: 0, headers: 0, outside: 0, rating: null, motm: false,
   }
-  if (!mins) return line
+  if (!mins) { if (plan.why) line.why = plan.why; return line }
   const unit = plan.mins / 90 + (etOn ? ET_F : 0)                      // his time on, in matches
   const X = fx.lamC / S.den                                            // the team's chances (xG) a match
   const lamT = fx.lamC * fx.mult + (fx.et ? fx.lamC * ET_F * fx.etMult : 0)
@@ -1857,7 +1877,10 @@ function uclSeason(build, types, team, base, gameMode) {
   // (his side's goals a game, against the other 35)
   const lamAvg = clamp(avg(entrants.filter(e => e.short !== U).map(o => EURO_BASE * Math.exp(aT(uRate.att - G_ATT) - dT(o.def - G_DEF)) * Math.cosh(H_EURO))), 0.5, 3.5)
   const S = strikerSide({ build, prof, team, mates, lamAvg, base, script: false })
-  const world = uclWorld({ U, uRate, entrants, hook: hookFor(S, base), rand: stream(base, 'world'), drawRand: stream(base, 'ucl:draw'), koRand: stream(base, 'ucl:ko') })
+  // the draw (who he meets in the league phase, the knockout pairings) comes from the season's first seed: a moment
+  // re-simulates the season on another seed (lib/seasonDirector.js) and must meet the same clubs (team.drawSeed)
+  const drawBase = team?.drawSeed ?? base
+  const world = uclWorld({ U, uRate, entrants, hook: hookFor(S, base), rand: stream(base, 'world'), drawRand: stream(drawBase, 'ucl:draw'), koRand: stream(drawBase, 'ucl:ko') })
   const nameOf = s => world.names.get(s) ?? clubName(s)
   const ls = stream(base, 'line:ucl')
   const fixtures = world.fixtures.slice().sort((a, b) => a.wk - b.wk).map((f, k) => ({
@@ -1888,7 +1911,7 @@ function uclSeason(build, types, team, base, gameMode) {
   const booked = uclBooked(fixtures, book, finish)
   const table = world.table
   return {
-    sport: 'soccer', mode: 'current', comp: 'ucl', position: 'st', gameMode, season: SEASON,
+    sport: 'soccer', mode: 'current', comp: 'ucl', position: 'st', gameMode, season: SEASON, drawSeed: drawBase,
     ovr, archetype: getSoccerArchetype(ovr, build, types),
     team: { ...src, ...(team ?? {}), short: U, name: entry.name, color: src.color ?? team?.color ?? null, color2: src.color2 ?? team?.color2 ?? null, att: r1(uRate.att), def: r1(uRate.def), comp: 'ucl', pot: entry.pot, ...(entry.wildcard ? { inPlaceOf: entry.wildcard } : {}) },
     league: { ...UCL_LEAGUE },
@@ -1914,6 +1937,18 @@ export function soccerUclRebook(result, games) {
   const was = result.standings.find(r => r.isUs)?.pos ?? result.seed
   const band = p => (p <= 8 ? 0 : p <= 24 ? 1 : 2)
   const rows = result.standings.map(r => (r.isUs ? { ...r, wins: W, draws: D, losses: L, points: W * 3 + D, gf, ga, gd: gf - ga } : { ...r }))
+  // the clubs he played: each changed match comes off their row as it was and goes on as it is now, so the table
+  // still adds up (every win someone's loss, every draw two draws, the goals the same both ways)
+  const by = new Map(rows.map(r => [r.short, r]))
+  const theirs = (g, sign) => {
+    const r = by.get(g?.opponent)
+    if (!r || r.isUs || g.mySc == null || g.oppSc == null) return
+    r.gf += sign * g.oppSc; r.ga += sign * g.mySc
+    if (g.mySc > g.oppSc) r.losses += sign; else if (g.mySc < g.oppSc) r.wins += sign; else r.draws += sign
+  }
+  const before = (result.games ?? []).filter(g => !g.stage || g.stage === 'md')
+  lp.forEach((g, k) => { const o = before[k]; if (o && o.opponent === g.opponent && o.mySc === g.mySc && o.oppSc === g.oppSc) return; theirs(o, -1); theirs(g, 1) })
+  for (const r of rows) if (!r.isUs) { r.points = r.wins * 3 + r.draws; r.gd = r.gf - r.ga }
   rows.sort((x, y) => y.points - x.points || y.gd - x.gd || y.gf - x.gf || x.pos - y.pos)
   let i = rows.findIndex(r => r.isUs)
   const lo = [0, 8, 24][band(was)], hi = [7, 23, 35][band(was)]

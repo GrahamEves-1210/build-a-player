@@ -490,6 +490,7 @@ export default function SoccerSalaryCap({ onConfirm, onBack, user, initialDateSt
 
   // the date's or the account's power-ups and play, from this device
   useEffect(() => {
+    if (mode === 'infinite') return   // (back to a date from Infinite: its play comes back, so a played board stays locked)
     const uid = user?.id
     const savedShuffle = ls.get(SHUFFLED_KEY(activeDate.str, uid))
     setShufflesLeft(savedShuffle ? 0 : 1)
@@ -510,7 +511,7 @@ export default function SoccerSalaryCap({ onConfirm, onBack, user, initialDateSt
     } catch {}
     setAlreadyPlayed(null)
     setSel({})
-  }, [activeDate.str, user?.id])
+  }, [activeDate.str, user?.id, mode])
 
   // signed in: a play from another device counts too
   useEffect(() => {

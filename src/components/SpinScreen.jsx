@@ -1016,7 +1016,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             )
           )}
 
-          {!isDone && (
+          {!isDone && !complete && (
             <div className="spin-hint-text" style={{ marginBottom: '40px' }}>
               Spin to select an attribute for your build.
             </div>
@@ -1024,7 +1024,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
           {complete && (
             <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
-              All {types.length} slots filled — simulate your season
+              All {types.length} slots filled — {isSoccer && isAllTime ? 'play the World Cup' : isSoccer ? 'play the Champions League' : 'simulate your season'}
             </div>
           )}
         </div>

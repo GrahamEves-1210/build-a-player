@@ -159,7 +159,8 @@ export function useLiveGame({ events, myFinal, oppFinal, speed = 1, paused = fal
 
 // The scoreboard: the away side on the left, the home side on the right (a neutral ground: his side on the left)
 // side: { short, name, logo (node), color, seed, score }
-export function LiveBoard({ label, away, home, phase, badge, badgeWin, status, progress, post, postWin, postScore, evt = null, className = '' }) {
+// sym: what sits between the sides (soccer writes 'v'; the American sports '@' for away, 'v' on neutral ground)
+export function LiveBoard({ label, away, home, phase, badge, badgeWin, status, progress, post, postWin, postScore, evt = null, className = '', sym = null }) {
   const side = (s, right) => (
     <div className={`plf-score-side${right ? ' plf-score-opp' : ''}`}>
       {s.logo}
@@ -174,7 +175,7 @@ export function LiveBoard({ label, away, home, phase, badge, badgeWin, status, p
       <div className="plf-scoreboard">
         {side(away, false)}
         <div className="plf-score-mid">
-          <span className="plf-at-sym">{home.neutral ? 'v' : '@'}</span>
+          <span className="plf-at-sym">{sym ?? (home.neutral ? 'v' : '@')}</span>
           {phase === 'live' ? <div className="plf-live-pill"><span className="plf-live-dot" />LIVE</div>
             : phase === 'post' ? <div className={`plf-result-badge ${badgeWin ? 'plf-rb-win' : 'plf-rb-loss'}`}>{badge}</div> : null}
         </div>

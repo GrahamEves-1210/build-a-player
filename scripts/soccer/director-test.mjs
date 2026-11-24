@@ -15,7 +15,7 @@ const outDir = join(process.env.SOCCER_TEST_OUT ?? tmpdir(), 'bap-soccer-test')
 mkdirSync(outDir, { recursive: true })
 const outfile = join(outDir, `dir-${Date.now()}.mjs`)
 await build({
-  stdin: { contents: `export * from './src/utils/soccerSimulation.js'\nexport { createDirector } from './src/lib/seasonDirector.js'`, resolveDir: ROOT, loader: 'js' },
+  stdin: { contents: `export * from './src/utils/soccerSimulation.js'\nexport { createDirector } from './src/lib/seasonDirector.js'\nexport { oneOffDirector } from './src/lib/soccerDirector.js'`, resolveDir: ROOT, loader: 'js' },
   bundle: true, format: 'esm', platform: 'node', outfile, plugins: [plugin], logLevel: 'error', loader: { '.jsx': 'jsx', '.json': 'json' }, define: { 'import.meta.env': '{}' },
 })
 globalThis.localStorage = { getItem: () => null, setItem: () => {} }
@@ -48,5 +48,31 @@ for (const [label, team] of [['Champions League', { short: 'BOU', name: 'Bournem
   console.log(`${label} director: ${D.total} matches, stops at ${D.stops.map(s => s.at).join(', ')}; spliced games carry tags ${D.games.filter(g => g.tags).length}`)
   console.log(`  final: ${fin.wins}-${fin.draws}-${fin.losses}, ${fin.seed}${S.isUclResult(fin) ? ` of 36, ${fin.finish}` : ''}; his games ${goals} goals, season ${fin.goals}; awards again: top scorer rank ${awards.goldenBoot.rank}${awards.ballonDor ? `, BdO ${awards.ballonDor.finish ?? '-'}` : `, Player of the Season #${awards.playerOfSeason.rank}`}`)
 }
+// The one-off page's own director (soccerDirector.js oneOffDirector) on a Champions League season, the way the page
+// plays it: its own seed (not the season's), a hot stretch, two matches sat out. The league phase must keep its eight
+// opponents and matchdays, and the booked table must add up for every club (2026-11-24: a moment re-drew the
+// league phase against other clubs, and the table's other rows kept the old results).
+for (let n = 0; n < 30; n++) {
+  const base = S.runSoccerSimulation(b, T, { short: 'BOU', name: 'Bournemouth' }, 'current', `dir-ucl-${n}`)
+  const D = S.oneOffDirector({ result: base, build: b, types: T, seed: `page-${n}` })
+  for (let k = 1; k <= D.total; k++) {
+    D.observe(k)
+    if (k === 2) D.nudge({ attr: { finishing: 2 }, team: { off: 1 } }, 2, D.total, 'HOT STREAK')
+    if (k === 3) { D.sitOut(4, 'INJURED'); D.sitOut(5, 'INJURED') }
+  }
+  D.finalize()
+  const fin = S.soccerUclRebook(base, D.games)
+  const bad = []
+  base.games.forEach((g, i) => { const x = fin.games[i]; if (!x || x.opponent !== g.opponent || !!x.home !== !!g.home) bad.push(`MD${i + 1} was ${g.opponent}, now ${x?.opponent}`) })
+  if (fin.games.some(g => !g.md)) bad.push('a match reads MD0')
+  if (new Set(fin.games.map(g => g.opponent)).size !== fin.games.length) bad.push('an opponent twice')
+  const sum = k => fin.standings.reduce((s2, r) => s2 + r[k], 0)
+  if (sum('wins') !== sum('losses')) bad.push(`wins ${sum('wins')} vs losses ${sum('losses')}`)
+  if (sum('draws') % 2) bad.push(`draws ${sum('draws')} (odd)`)
+  if (sum('gf') !== sum('ga') || sum('gd') !== 0) bad.push(`goals ${sum('gf')}-${sum('ga')}, gd ${sum('gd')}`)
+  if (fin.standings.some(r => r.points !== r.wins * 3 + r.draws || r.wins + r.draws + r.losses !== 8)) bad.push('a row with wrong points or not 8 matches')
+  if (bad.length) { ok = false; console.log(`  !! ucl ${n}: ${bad.join('; ')}`) }
+}
+console.log('one-off Champions League director, 30 seasons with moments: fixtures kept, table adds up' + (ok ? '' : ' (see above)'))
 console.log(ok ? 'director contract: OK' : 'director contract: FAILED')
 process.exitCode = ok ? 0 : 1

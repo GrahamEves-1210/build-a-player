@@ -29,9 +29,9 @@ const FEATURES = {
     { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
   soccer: [
-    { Icon: IconSpin, title: 'Build a striker', text: "Spin a club, land on one of its real players and take one trait from him. Haaland's finishing, Messi's dribbling, whatever the wheel gives you. Keep going until every slot is full." },
-    { Icon: IconTrophy, title: 'Play the season', text: "He plays a full league season, the cup and Europe, and you find out if he wins the Golden Boot, the title or the Ballon d'Or." },
-    { Icon: IconLive, title: 'Play the World Cup', text: 'Spin the World Cup pool instead and build him from the 48 nations of 2026. Then take a nation through the group and the knockouts.' },
+    { Icon: IconSpin, title: 'Build a striker', text: "Spin a club, land on one of its real players and take one trait from him. Haaland's finishing, Mbappé's pace, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: "He plays a Champions League season for his club, the league phase and the knockouts, and you find out if he lifts the trophy and wins the top scorer award. Or start a Career and take him from the academy to the Ballon d'Or." },
+    { Icon: IconLive, title: 'Play the World Cup', text: "Spin the All-Time pool instead and build him from the World Cup's legends, 48 nations across history. Then take a nation through the group and the knockouts." },
     { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
   baseball: [
