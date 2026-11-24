@@ -8,9 +8,7 @@ import { sfx, haptic } from '../../lib/juice'
 
 const STEP = 1000 / HZ
 const FONT = '"BAP Bebas", "Bebas Neue", "BAP Anton", Impact, sans-serif'
-const TEAM = ['#4da3ff', '#ff4d5e']          // Blacktop's two sides (AppBlacktop TEAM_COLORS)
-// King of the Hill: each of the three men his own colour (by seat), the first two the same as the sides'
-export const KOTH_COLORS = ['#4da3ff', '#ff4d5e', '#3ddc84']
+const TEAM = ['#4da3ff', '#ff4d5e', '#c792ff']   // Blacktop's two sides (AppBlacktop TEAM_COLORS); King of the Hill's third man
 const GREEN = '#3ddc84', AMBER = '#f2b33d', RED = '#ff5a5a', FLOOD = '#fff0cf'
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -24,7 +22,7 @@ const reduced = () => document.documentElement.classList.contains('bap-reduce-mo
 //        referee's snapshots, eased between them (setup.levels all null)
 export function createEngine({ setup, els, on, net = null }) {
   const ctx = els.canvas.getContext('2d')
-  let s = createGame({ teams: setup.teams, seed: setup.seed })
+  let s = createGame({ teams: setup.teams, seed: setup.seed, mode: setup.mode })
   const me = setup.me
   const levels = setup.levels.slice()
   const N = s.players.length
@@ -104,6 +102,9 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.nc = H.c }
       else if (e.e === 'release') { if (e.pid === me) haptic('light') }
+      // a teammate calling for the ball: his man shows it on every screen (draw), and the man with it hears it
+      else if (e.e === 'call') { if (p.team === P[me].team && e.pid !== me) { sfx('tap'); if (s.ball.holder === me) haptic('medium') } }
+      // King of the Hill: a stop, and he has to take it past the arc (CLEAR IT shows over his man until he has: draw)
       else if (e.e === 'final') {
         const won = e.winner === s.players[me].team
         sfx(won ? 'award' : 'deny'); if (won) haptic('success')
@@ -175,7 +176,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const live = s.phase === 'live'
     const has = live && b.st === 'held' && b.holder === me
     // a shot and a move start here, now; the referee's word follows
-    if (has && A && p.act === 'free' && p.noAct <= 0 && !NB.local) {
+    if (has && A && p.act === 'free' && p.noAct <= 0 && !NB.local && s.mustClear !== me) {
       const kind = shotKindAt(s, me), d = ref.rimDist(p)
       const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team), kind).c
       p.act = 'gather'; p.actT = 0
@@ -253,21 +254,21 @@ export function createEngine({ setup, els, on, net = null }) {
     const p = s.players[me], b = s.ball
     const sec = s.phase === 'live' ? Math.ceil(s.clock / HZ) : null
     if (sec !== shown.clock) { shown.clock = sec; els.clock.textContent = sec == null ? '' : String(sec); els.clock.classList.toggle('is-low', sec != null && sec <= 3) }
-    if (s.score[0] !== shown.s0) { shown.s0 = s.score[0]; els.score[0].textContent = String(s.score[0]) }
-    if (s.score[1] !== shown.s1) { shown.s1 = s.score[1]; els.score[1].textContent = String(s.score[1]) }
-    if (s.poss !== shown.poss) { shown.poss = s.poss; els.poss[0].classList.toggle('is-on', s.poss === 0); els.poss[1].classList.toggle('is-on', s.poss === 1) }
+    const sk = s.score.join('-')
+    if (sk !== shown.s0) { shown.s0 = sk; s.score.forEach((v, t) => { if (els.score[t]) els.score[t].textContent = String(v) }) }
+    if (s.poss !== shown.poss) { shown.poss = s.poss; els.poss.forEach((el, t) => el?.classList.toggle('is-on', s.poss === t)) }
     const has = b.st === 'held' && b.holder === me, up = b.st === 'shot' || b.st === 'loose'
     // (between plays nothing is live: no buttons)
-    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? 'ball' : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
+    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? (s.mustClear === me ? 'clear' : 'ball') : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
     if (mode !== shown.mode) {
       shown.mode = mode
       const set = (key, text) => { els.lab[key].textContent = text || ''; els.btn[key].classList.toggle('is-off', !text) }
       set('a', mode === 'ball' ? 'SHOOT' : mode === 'def' ? 'STEAL' : '')
-      set('b', mode === 'none' ? '' : mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
-      set('c', mode === 'ball' ? 'MOVE' : '')
+      set('b', mode === 'none' || mode === 'clear' ? '' : mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
+      set('c', mode === 'ball' || mode === 'clear' ? 'MOVE' : '')
     }
     // cooldowns dim their button
-    const cdA = mode === 'def' ? p.stealCd > 0 : false, cdC = mode === 'ball' ? p.moveCd > 0 : false
+    const cdA = mode === 'def' ? p.stealCd > 0 : false, cdC = mode === 'ball' || mode === 'clear' ? p.moveCd > 0 : false
     if (els.btn.a.classList.contains('is-cd') !== cdA) els.btn.a.classList.toggle('is-cd', cdA)
     if (els.btn.c.classList.contains('is-cd') !== cdC) els.btn.c.classList.toggle('is-cd', cdC)
   }
@@ -281,10 +282,10 @@ export function createEngine({ setup, els, on, net = null }) {
   const LIFT = 0.2                                                   // feet up the screen per foot of height
   const TOPY = 3.4                                                   // the backboard's front: a ball is never drawn above it
   const koth = () => s.mode === 'koth'
-  const colOf = i => (koth() ? KOTH_COLORS[i % 3] : TEAM[s.players[i].team] ?? '#fff')
+  const colOf = i => TEAM[s.players[i].team] ?? '#fff'           // (King of the Hill: each man is his own side)
   const idxOf = v => (v == null || v === false ? -1 : typeof v === 'number' ? (v >= 0 && v < N ? v : -1) : s.players.findIndex(p => p.id === v))
   // King of the Hill (state.king, state.mustClear, read with care until the mode is in): the king, and the man who has to clear it
-  const kingOf = () => (koth() ? idxOf(s.king) : -1)
+  const kingOf = () => (koth() && idxOf(s.mustClear) < 0 ? idxOf(s.king) : -1)   // (not while he still has to clear it)
   function clearerOf() {
     const m = s.mustClear, b = s.ball
     let i = -1
@@ -527,6 +528,12 @@ export function createEngine({ setup, els, on, net = null }) {
           ctx.beginPath(); ctx.ellipse(tx, ty + tk * 0.42, tk * 0.86, tk * 0.4, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([])
         }
       }
+    }
+    // a teammate calling for the ball: a ring on his man, on every screen, for as long as the call is fresh
+    if (s.call && s.phase === 'live' && s.tick - s.call.tick < 45 && P[s.call.pid] && !cut(s.call.pid)) {
+      const ci = s.call.pid, f = clamp((s.tick - s.call.tick) / 45, 0, 1)
+      ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,255,255,${0.95 - 0.5 * f})`
+      ctx.beginPath(); ctx.arc(X(ci), Y(ci), tk * (0.82 + 0.25 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
     }
     // players, the far ones first (a man in the air over the rest)
     const order = P.map((_, i) => i).sort((i, j) => (P[i].y + (P[i].act === 'jump' ? 99 : 0)) - (P[j].y + (P[j].act === 'jump' ? 99 : 0)))
