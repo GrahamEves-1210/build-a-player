@@ -57,6 +57,11 @@ new_sqlite_classes = ["Games"]
 [define]
 "import.meta.env" = '{"DEV":false,"PROD":true}'
 
+# The Discord posts to #leaderboards (src/leaderboards.js): just after midnight New York, summer time (4 AM UTC) and
+# winter time (5 AM UTC), and a few runs after in case one fails. Secret: npx wrangler secret put LEADERBOARD_DISCORD_WEBHOOK
+[triggers]
+crons = ["5,25,45 4,5,6 * * *"]
+
 # Supabase, for checking results before they reach the boards (src/submit.js). Both are public;
 # the service key is a secret: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 [vars]

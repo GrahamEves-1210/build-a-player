@@ -26,6 +26,7 @@ import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
 import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
 import { competeQueue } from '../../src/lib/competeCore.js'
 import { Games } from './games.js'
+import { postLeaderboards } from './leaderboards.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
 import { playOut } from '../../src/lib/blacktopPlay.js'
 import { blacktopDelta } from '../../src/lib/rating.js'
@@ -78,6 +79,8 @@ const keyOk = (keys, vid, k) => !keys?.[vid] || keys[vid] === k
 const reject = ws => { send(ws, { t: 'taken', why: 'seat' }); try { ws.close(1000, 'seat taken') } catch {} }
 
 export default {
+  // #leaderboards on Discord: the Daily at midnight New York, the Weekly Cup on Mondays (leaderboards.js, wrangler.toml [triggers])
+  async scheduled(event, env, ctx) { ctx.waitUntil(postLeaderboards(env, new Date(event.scheduledTime))) },
   async fetch(req, env) {
     const url = new URL(req.url)
     if (url.pathname === '/health') return new Response('ok')
