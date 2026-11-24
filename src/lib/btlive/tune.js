@@ -36,26 +36,26 @@ export const T = {
   // Every "at a 1" below is really at "1 - spread" of the way down from an 11: the top of each rating is where
   // the brief puts it (a great shooter, a great finisher) and this one number sets how much worse a low grade is,
   // so how often a 95 beats an 80. 1 = the full range below; lower = builds closer together.
-  spread: 0.20,
+  spread: 0.24,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
   speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it; an 80 about 9.7)
-  speedBand: 0.045,                  // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
+  speedBand: 0.06,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
   sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.94,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps 97%: Speed 11 with it outruns a Speed 1 guarding)
-  defSpeed: 1.03,                    // guarding, at Perimeter D 1 (x top speed)...
-  defSpeedPer: 0.05,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
+  defSpeed: 1.02,                    // guarding, at Perimeter D 1 (x top speed)...
+  defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
   accel: 34,                         // ft/s² (about a third of a second to top speed)...
-  accelBase: 0.98, accelSpd: 0.04,   // ...x (0.97 + 0.06 x Speed): a quick first step
+  accelBase: 0.97, accelSpd: 0.06,   // ...x (0.97 + 0.06 x Speed, the plain grade): a quick first step
   accelSize: 0.06,                   // ...less this at Size 11
-  defAccel: 0.96, defAccelPer: 0.16, // a defender's: x (0.96 + this * Perimeter D, the plain grade)
+  defAccel: 0.92, defAccelPer: 0.24, // a defender's: x (0.92 + this * Perimeter D, the plain grade)
   walk: 0.25,                        // stick pushed less than this far: ignored (dead zone)
   radius: 1.55,                      // a body's radius (the dot on the screen is this big): nobody walks through anybody
   ground: 3.0,                       // anyone standing still (not the man guarding the ball) is this much harder to move
   groundDef: 1.7,                    // the man guarding the ball, set (slower than this many ft/s), holds this much ground...
   groundDefSpeed: 4.0,
-  massSize: 0.6,                     // ...and the rest is weight: 1 at Size 1, 1 + this at Size 11 (a big backs a guard down)
+  massSize: 0.8,                     // ...and the rest is weight: 1 at Size 1, 1 + this at Size 11 (a big backs a guard down)
   gatherSlowJ: 0.25,                 // speed kept while rising for a jumper
   gatherSlowL: 0.75,                 // ...and while going up for a layup
   follow: 0.45,                      // after the release he's this long coming down before he can move freely
@@ -82,15 +82,15 @@ export const T = {
   slightJ: 0.86,                     // just outside the green: the chance starts from here and falls to relMin
 
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
-  layBase: 0.58, layFin: 0.38,       // layup: 81% at Finishing 1, 98% at 11 (an 80: 89%): the best shot there is
+  layBase: 0.58, layFin: 0.38,       // layup: 87% at Finishing 1, 96% at 11 (an 80: 91%) open at the rim: the best shot there is
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
-  layFar: 0.045,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 14% less)
+  layFar: 0.045,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 18% less)
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkBounce: 0.25,                  // Bounce (the plain grade, 0-1) under this: never dunks (a Bounce 3 or lower never does)
-  dunkChance: 0.9,                   // how often an able dunker dunks: (Bounce n - dunkBounce) x this (x a touch more with Finishing)
+  dunkChance: 0.9,                   // how often an able dunker dunks: (plain Bounce - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
-  closeBase: -0.83, closeJs: 1.55,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
-  arcBase: -0.91, arcJs: 1.45,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
+  closeBase: -0.58, closeJs: 1.30,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
+  arcBase: -0.66, arcJs: 1.20,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
   deepAt: 27.5,                      // past this it's deep...
   deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
@@ -122,13 +122,13 @@ export const T = {
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
   jsThrough: 0.42,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.85,                 // ...off a layup
-  contestMaxD: 0.70,                 // ...off a dunk...
+  contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
   cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
-  cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
+  cpuRace: 0.45,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
   cpuNeed: 0.42,                     // early in the clock a CPU wants a shot worth this (later, less)...
   cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
   twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
@@ -172,7 +172,7 @@ export const T = {
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
-  moveHnd: 0.40,                     // ...plus this * (Handles n - his Perimeter D n)
+  moveHnd: 0.50,                     // ...plus this * (Handles n - his Perimeter D n)
   moveIq: 0.30,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
   moveFreeze: 0.38,                  // frozen this long
   ankleBase: 0.02,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
