@@ -67,11 +67,12 @@ export const T = {
   // ── The shot meter (judged on the shooter's own device: only the quality 0-1 is sent) ──────────
   jTotalMs: 900,                     // a jumper's meter runs this long; held past it, the shot goes up late
   jIdealMs: 500,                     // the middle of the green window
-  jWinMs: 12, jWinJs: 58,            // green half-width: 12 + 58 x (Jump Shot n)²: 70 ms at 11, about 30 at a 1 (the square: a great shooter's green is much bigger)
+  jWinMs: 11, jWinJs: 31,            // green half-width: 11 + 31 x (plain Jump Shot)²: 42 ms at 11, 11 at a 1 (a green always goes in)
   jFallMs: 170,                      // past the green, quality runs down to 0 over this long
   lTotalMs: 620, lIdealMs: 300,      // layups and dunks: a quicker meter
-  lWinMs: 30, lWinFin: 54,           // green half-width from Finishing: 30 + 54 x n²: 84 ms at 11
+  lWinMs: 24, lWinFin: 32,           // green half-width from Finishing: 24 + 32 x (plain Finishing)²: 56 ms at 11, 24 at a 1
   lFallMs: 190,
+  greenWallL: 0.55,                  // a green layup or dunk goes in unless the contest on it is this much or more (walled up)
   dunkWin: 1.35,                     // a dunk's window is this much wider
   clutchLo: 0.5, clutchHi: 1.2,      // at game point the green window is this x at Clutch 1 ... this x at Clutch 11
   clutchMake: 0.45,                  // late in a game the shot's chance is x (1 + this * (Clutch - half)): +22% at 11, -22% at 1...

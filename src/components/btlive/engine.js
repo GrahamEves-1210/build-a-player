@@ -152,7 +152,7 @@ export function createEngine({ setup, els, on, net = null }) {
   function meterWatch() {
     const p = s.players[me]
     if (p.act === 'gather' && !meter.on && !levels[me]) {
-      meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0
+      meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
       meter.base = meterSpec(p.shot.spec.kind ?? p.shot.kind, p.R, false)   // the window without game point (the clutch rating moves it)
       meter.t0 = clockNow - H.aT0 < 220 ? H.aT0 : clockNow - STEP
       if (!H.a && H.aUp >= H.aT0) letGo(H.aUp)                    // pressed and let go inside one tick
@@ -527,81 +527,81 @@ export function createEngine({ setup, els, on, net = null }) {
     const spec = mine ? meter.spec : p.shot.spec
     if (!spec) return
     const held = rel ? rel.held : mine && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + acc / STEP) * STEP
-    const f = clamp(held / spec.total, 0, 1)
-    const bw = mine ? Math.round(clamp(tk * 0.6, 20, 30)) : Math.round(clamp(tk * 0.24, 7, 12))
-    const bh = mine ? Math.round(clamp(tk * 3.4, 118, 176)) : Math.round(clamp(tk * 1.7, 46, 80))
+    // the bar's top is a little past the green: it fills toward the window near its top (a late release runs it full)
+    const top = spec.ideal / 0.8
+    const f = clamp(held / top, 0, 1)
+    const bw = mine ? Math.round(clamp(tk * 0.34, 12, 16)) : Math.round(clamp(tk * 0.22, 7, 10))
+    const bh = mine ? Math.round(clamp(tk * 2.7, 96, 136)) : Math.round(clamp(tk * 1.6, 44, 72))
     const L = camPx + 6, Rr = camPx + w - 6
-    const fs = Math.round(clamp(tk * 0.42, 13, 20))
-    ctx.font = `${fs}px ${FONT}`
-    // the room it needs beside him: the bar and the window's overhang; (his own) and the widest word that goes next to it
-    const word = mine ? 9 + ctx.measureText('SLIGHTLY EARLY').width + 12 : 0
-    const at = sd => x + sd * (tk * 0.5 + 14) - (sd < 0 ? bw : 0)
-    const fits = (sd, extra = 0) => (sd > 0 ? at(1) - 8 >= L && at(1) + bw + 8 + extra <= Rr : at(-1) + bw + 8 <= Rr && at(-1) - 8 - extra >= L)
-    // on the side away from the nearest defender (so it's never under him), kept for the whole shot; the other side
-    // when that one hasn't the room on the screen
-    let side = mine ? meter.side : 0
-    if (!side) {
-      let nd = 99; side = 1
-      for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < nd) { nd = d; side = o.x > p.x ? -1 : 1 } }
-      if (!fits(side) && fits(-side)) side = -side
-      if (mine) meter.side = side
+    const fs = Math.round(clamp(tk * 0.42, 13, 18))
+    const at = sd => x + sd * (tk * 0.5 + 10) - (sd < 0 ? bw : 0)
+    const fits = sd => (sd > 0 ? at(1) + bw + 4 <= Rr : at(-1) - 4 >= L)
+    // the side (and a nudge up or down) where it covers nobody: no other man, no name tag (BARS, DOTS: this frame's);
+    // his own is kept while it stays as clear as the other (so it doesn't hop about), the other side when that one
+    // hasn't the room on the screen
+    const yOf = dy => clamp(y - bh * 0.7 + dy * bh, fs * 1.6 + 4, h - bh - 4)
+    const mineBar = BAR_OF[i]
+    const costOf = (sd, dy) => {
+      if (!fits(sd)) return 1e6
+      const x0 = at(sd), y0 = yOf(dy), rc = [x0 - 6, y0 - fs * 1.6, x0 + bw + 6, y0 + bh + 2]
+      let c = Math.abs(dy) * 400
+      for (const o of BARS) c += ovl(rc, o) * (o === mineBar ? 0.5 : 3)   // (his own name under it matters least)
+      for (const d of DOTS) if (d[4] !== i) c += ovl(rc, d) * 3
+      return c
     }
-    if (!fits(side) && fits(-side)) side = -side
-    const wordBeside = fits(side, word)                               // else the words go over (or under) the bar
-    const bx = at(side), by = clamp(y - bh * 0.6, 4, h - bh - 4)
-    const yAt = v => by + bh * (1 - clamp(v / spec.total, 0, 1))     // a time on the meter -> its height on the screen
+    const keep = mine ? meter.side : 0, keepDy = mine ? meter.dy ?? 0 : 0
+    let side = keep || 1, dy = keepDy, bc = keep ? costOf(keep, keepDy) - 60 : Infinity
+    for (const sd of [1, -1]) for (const d of [0, -0.25, 0.25, -0.5]) { const c = costOf(sd, d); if (c < bc) { bc = c; side = sd; dy = d } }
+    if (mine) { meter.side = side; meter.dy = dy }
+    const bx = at(side), by = yOf(dy)
+    const yAt = v => by + bh * (1 - clamp(v / top, 0, 1))           // a time on the meter -> its height on the screen
     ctx.globalAlpha = a
     // the track
-    rr(bx - 2, by - 2, bw + 4, bh + 4, 4); ctx.fillStyle = 'rgba(5,7,10,.92)'; ctx.fill()
-    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.5)'; ctx.stroke()
+    rr(bx - 2, by - 2, bw + 4, bh + 4, 3); ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fill()
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.55)'; ctx.stroke()
     if (!mine) {
-      ctx.fillStyle = 'rgba(243,246,248,.85)'; ctx.fillRect(bx + 1, by + bh * (1 - f), bw - 2, bh * f)
+      ctx.fillStyle = 'rgba(243,246,248,.85)'; ctx.fillRect(bx, by + bh * (1 - f), bw, bh * f)
       ctx.globalAlpha = 1
       return
     }
     const lo = spec.ideal - spec.win, hi = spec.ideal + spec.win
     // game point: the window it would be on any other play, as an outline, when the pressure (or his Clutch rating)
-    // has moved it by a few ms or more; CLUTCH under the bar when his rating has made it wider
+    // has moved it by a few ms or more; CLUTCH over the bar when his rating has made it wider
     const base = meter.base, clutch = base && Math.abs(base.win - spec.win) >= 3
-    // the green window: across the bar and past both its edges, never thinner than 8px
-    const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(8, wy1 - wy0)
-    ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 7, wc - wh / 2 - 1.5, bw + 14, wh + 3)
-    ctx.fillStyle = GREEN; ctx.fillRect(bx - 6, wc - wh / 2, bw + 12, wh)
-    if (clutch) {                                                     // (dark dashes inside a wider window, light ones round a narrower)
-      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'
-      ctx.strokeRect(bx - 6.5, yAt(base.ideal + base.win), bw + 13, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
-    }
-    // the fill, inside the bar's edges: white on the way up, green in the window, red past it
+    // the fill: white on the way up, green in the window, red past it (the grade's colour once he let go)
     const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > hi
     const col = rel ? GRADE_COL[meter.grade] ?? '#fff' : inWin ? GREEN : past ? RED : '#f3f6f8'
     const fy = by + bh * (1 - f)
-    ctx.fillStyle = col; ctx.fillRect(bx + 4, fy, bw - 8, by + bh - fy)
-    // the window's edges stay readable over a green fill
-    ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(bx + 4, wc - wh / 2 - 1, bw - 8, 1.5); ctx.fillRect(bx + 4, wc + wh / 2 - 0.5, bw - 8, 1.5)
+    ctx.fillStyle = col; ctx.fillRect(bx, fy, bw, by + bh - fy)
+    // the green window, inside the bar, with a white tick each side of it (never thinner than 5px)
+    const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(5, wy1 - wy0)
+    ctx.fillStyle = inWin && !rel ? 'rgba(255,255,255,.35)' : GREEN; ctx.fillRect(bx, wc - wh / 2, bw, wh)
+    ctx.fillStyle = '#f3f6f8'; ctx.fillRect(bx - 5, wc - wh / 2 - 1, 4, wh + 2); ctx.fillRect(bx + bw + 1, wc - wh / 2 - 1, 4, wh + 2)
+    if (clutch) {                                                     // (dark dashes inside a wider window, light ones round a narrower)
+      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'
+      ctx.strokeRect(bx + 0.5, yAt(base.ideal + base.win), bw - 1, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
+    }
     ctx.font = `${fs}px ${FONT}`; ctx.textBaseline = 'middle'
-    const chip = (text, cx, cy, color, align) => {
+    const chip = (text, cx, cy, color) => {
       const tw = ctx.measureText(text).width, pw = tw + 12, ph = Math.round(fs * 1.3)
-      const x0 = clamp(align === 'left' ? cx : align === 'right' ? cx - pw : cx - pw / 2, L, Rr - pw)
-      const y0 = clamp(cy - ph / 2, 2, h - ph - 2)
+      const x0 = clamp(cx - pw / 2, L, Rr - pw), y0 = clamp(cy - ph / 2, 2, h - ph - 2)
       ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(x0, y0, pw, ph)
       ctx.fillStyle = color; ctx.fillRect(x0, y0, 3, ph)
       ctx.textAlign = 'left'; ctx.fillText(text, x0 + 7, y0 + ph / 2 + 0.5)
     }
-    const out = side > 0 ? bx + bw + 9 : bx - 9, align = side > 0 ? 'left' : 'right'
-    const overY = by > fs * 1.8 ? by - fs * 0.95 : by + bh + fs * 0.95
-    const put = (text, y, color) => (wordBeside ? chip(text, out, y, color, align) : chip(text, bx + bw / 2, overY, color, 'center'))
+    // the words go over the bar (never beside it, over a man's name)
+    const overY = by - fs * 0.95
     if (rel) {
-      // where he stopped it: a marker across, in the grade's colour, and the grade beside it
-      ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 9, fy - 3.5, bw + 18, 7)
-      ctx.fillStyle = col; ctx.fillRect(bx - 8, fy - 2.5, bw + 16, 5)
-      ctx.fillStyle = '#fff'; ctx.fillRect(bx - 8, fy - 0.75, bw + 16, 1.5)
-      put(meter.grade, fy, col)
+      // where he stopped it: a white line across, just past the bar's edges
+      ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 4, fy - 2.5, bw + 8, 5)
+      ctx.fillStyle = '#fff'; ctx.fillRect(bx - 3, fy - 1, bw + 6, 2)
+      chip(meter.grade, bx + bw / 2, overY, col)
     } else {
-      // how open he is (as well as his IQ reads it), beside the foot of the meter
+      // how open he is (as well as his IQ reads it)
       const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
-      if (read) put(read, by + bh - fs * 0.65, [GREEN, AMBER, RED][meter.read])
+      if (read) chip(read, bx + bw / 2, overY, [GREEN, AMBER, RED][meter.read])
     }
-    if (clutch && spec.win > base.win) chip('CLUTCH', bx + bw / 2, wordBeside || overY < by ? by + bh + fs * 0.95 : by - fs * 0.95, GREEN, 'center')
+    if (clutch && spec.win > base.win) chip('CLUTCH', bx + bw / 2, by + bh + fs * 0.95, GREEN)
     ctx.globalAlpha = 1
   }
   // two men in contact never overlap on the screen: the bodies are circles but the dots are rounded squares (wider
@@ -620,7 +620,7 @@ export function createEngine({ setup, els, on, net = null }) {
     }
   }
   let tk0 = 30
-  const BARS = [], DOTS = [], CHOICE = new Int8Array(N), TABY = new Int8Array(N)
+  const BARS = [], BAR_OF = [], DOTS = [], CHOICE = new Int8Array(N), TABY = new Int8Array(N)
   function draw(now) {
     const a = clamp(acc / STEP, 0, 1), P = s.players
     const dt = clamp(now - lastDraw, 0, 100); lastDraw = now
@@ -729,7 +729,7 @@ export function createEngine({ setup, els, on, net = null }) {
       marks.push([x + tk / 2 + 12, y0, x + tk / 2 + 16 + mw, y1], [x - tk / 2 - 16 - mw, y0, x - tk / 2 - 12, y1])
     }
     // the names: under each man, or over him, or beside him: wherever they don't sit on another man or name
-    BARS.length = 0
+    BARS.length = 0; BAR_OF.length = 0
     const names = [me, ...order.filter(i => i !== me)]
     ctx.font = `${fsN}px ${FONT}`
     const bh = Math.round(fsN * 1.24)
@@ -763,7 +763,7 @@ export function createEngine({ setup, els, on, net = null }) {
       CHOICE[i] = pick
       const x0 = clamp(C[pick][0], L + 2, Rr - 2 - bw), y0 = clamp(C[pick][1], 1, h - bh - 1)
       const rc = [x0, y0, x0 + bw, y0 + bh]
-      BARS.push(rc)
+      BARS.push(rc); BAR_OF[i] = rc
       drawTag(rc, nm, fsN, colOf(i), i === me, i === me)
       if (import.meta.env.DEV) LAY.bars[i] = rc
     }

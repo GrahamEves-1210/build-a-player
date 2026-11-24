@@ -128,7 +128,10 @@ export function judgeShot(shooter, defenders, shot, rolls) {
   const cr = contestOf(shooter, defenders, shot.kind), by = cr.by
   const c = lateContest(cr.c, shot.cUp, shot.kind)
   const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, q: shot.q, c, run: shot.run, cs: shot.cs, rushed: shot.rushed, gp: shot.gp })
-  const made = rolls.make < p
+  // a green jumper goes in (a block is the only answer to it); a green at the rim does too unless a man is walled up
+  // in front of it; anything else rolls its chance
+  const green = shot.q >= 1 && (shot.kind === 'jumper' || c < T.greenWallL)
+  const made = green || rolls.make < p
   return {
     blocked: null, made, pts: made ? (shot.three ? 2 : 1) : 0, c, by, p,
     // a poster: a dunk made on a man who went up to stop it, square in it

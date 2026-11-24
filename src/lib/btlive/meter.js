@@ -10,8 +10,10 @@ const clampN = v => Math.min(1, Math.max(0, v))
 export function meterSpec(kind, R, gamePoint = false) {
   // at game point the green window shrinks for a man who isn't clutch and grows for one who is
   const clutch = gamePoint ? T.clutchLo + (T.clutchHi - T.clutchLo) * (R.clutchRaw ?? clampN((R.clutch - (1 - T.spread)) / T.spread)) : 1
-  if (kind === 'jumper') return { kind, total: T.jTotalMs, ideal: T.jIdealMs, win: (T.jWinMs + T.jWinJs * R.js * R.js) * clutch, fall: T.jFallMs }
-  const w = (T.lWinMs + T.lWinFin * R.fin * R.fin) * (kind === 'dunk' ? T.dunkWin : 1) * clutch
+  // (on the plain grades: a green always goes in, so a great shooter's window is earned, a poor one's is a sliver)
+  const js = R.jsRaw ?? clampN((R.js - (1 - T.spread)) / T.spread), fin = clampN((R.fin - (1 - T.spread)) / T.spread)
+  if (kind === 'jumper') return { kind, total: T.jTotalMs, ideal: T.jIdealMs, win: (T.jWinMs + T.jWinJs * js * js) * clutch, fall: T.jFallMs }
+  const w = (T.lWinMs + T.lWinFin * fin * fin) * (kind === 'dunk' ? T.dunkWin : 1) * clutch
   return { kind, total: T.lTotalMs, ideal: T.lIdealMs, win: w, fall: T.lFallMs }
 }
 

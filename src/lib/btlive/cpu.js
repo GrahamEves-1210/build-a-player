@@ -21,10 +21,10 @@ const MS = 1000 / HZ
 // he comes over when a teammate is beaten. ev: how far off his judgment of a shot is. move: how often he uses
 // a dribble move on a set defender. gap: extra feet he gives his man.
 export const LEVELS = {
-  rookie:  { label: 'ROOKIE',   meterSd: 85, react: 11, contest: 0.40, steal: 0.10, help: 0.15, ev: 0.20, move: 0.30, gap: 1.2 },
-  pro:     { label: 'PRO',      meterSd: 56, react: 7,  contest: 0.66, steal: 0.16, help: 0.35, ev: 0.12, move: 0.60, gap: 0.5 },
-  allstar: { label: 'ALL-STAR', meterSd: 38, react: 5,  contest: 0.84, steal: 0.20, help: 0.50, ev: 0.06, move: 0.85, gap: 0.2 },
-  legend:  { label: 'LEGEND',   meterSd: 24, react: 3,  contest: 0.95, steal: 0.24, help: 0.65, ev: 0.03, move: 0.95, gap: 0 },
+  rookie:  { label: 'ROOKIE',   meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
+  pro:     { label: 'PRO',      meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
+  allstar: { label: 'ALL-STAR', meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
+  legend:  { label: 'LEGEND',   meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
 }
 
 const roll = s => rollAt(s.seed ^ 0x5bd1e995, s.cn++)
@@ -62,10 +62,10 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
   })
   const c = ref.lateContest(ref.contestOf(me, closed, kind).c, ref.contestOf(me, defs.map(ref.handUp), kind).c, kind)
   const win = meterSpec(kind, p.R, s.gamePoint).win
-  const green = clamp(win / (lvl.meterSd * 1.25), 0.12, 0.97)
-  const rel = green + (1 - green) * (kind === 'jumper' ? 0.72 : 0.84)
+  const green = clamp(win / (lvl.meterSd * 1.25), 0.05, 0.97)
   const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ * 0.6 ? s.players[p.catchFrom].R.pas : null
-  const pMake = ref.makeChance({ R: p.R, kind, d, q: 1, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false }) * rel
+  // a green goes in; otherwise the shot's chance on a release just off it
+  const pMake = green + (1 - green) * ref.makeChance({ R: p.R, kind, d, q: 1, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false }) * (kind === 'jumper' ? 0.72 : 0.84)
   // make it, take it: a make is worth its points and the ball back, so a two is worth one and a half ones, not two
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
 }
@@ -79,17 +79,18 @@ function driveValue(s, p, D, dD, lvl) {
   const beaten = !D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dR + 0.8
   const lay = c => ref.makeChance({ R: p.R, kind: 'layup', d: 4, q: 1, c, run: 0, cs: null, rushed: false })
   const open = lay(0)
-  let v = open
+  let by = 1, walled = 0
   if (!beaten) {
-    const walled = lay(ref.contestOf(me, [{ ...fact(D), x: me.x + ux * 3.2, y: me.y + uy * 3.2, vx: 0, vy: 0, act: 'jump' }], 'layup').c)
+    walled = lay(ref.contestOf(me, [{ ...fact(D), x: me.x + ux * 3.2, y: me.y + uy * 3.2, vx: 0, vy: 0, act: 'jump' }], 'layup').c)
     // (a man already a long way back toward the rim, sagging or getting back, isn't got by: he's waiting there)
     const back = dR - ref.rimDist(D)
-    const by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (back - 3.5) / 4, 0.2, 1)
-    v = by * open + (1 - by) * walled
+    by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (back - 3.5) / 4, 0.2, 1)
   }
   const win = meterSpec('layup', p.R, s.gamePoint).win
-  const green = clamp(win / (lvl.meterSd * 1.25), 0.12, 0.97)
-  return v * (green + (1 - green) * 0.84) * T.cpuDriveRisk
+  const green = clamp(win / (lvl.meterSd * 1.25), 0.05, 0.97)
+  const rel = x => green + (1 - green) * x * 0.84             // got by him: a green goes in
+  if (beaten) return rel(open) * T.cpuDriveRisk
+  return (by * rel(open) + (1 - by) * walled * (green + (1 - green) * 0.84)) * T.cpuDriveRisk
 }
 
 // is the lane from a to b clear of defenders
