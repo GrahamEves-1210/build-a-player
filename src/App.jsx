@@ -64,6 +64,9 @@ import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getAr
 import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
 const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
+// START IN COLLEGE is QB, WR and RB only (College Football's rosters, AppCareer.jsx COLLEGE_POS): a switch on the build page to
+// another position after picking it goes to the draft (it crashed CareerCollege, which has no other positions)
+const collegeStartFor = (cn, pos) => CFB_LIVE && cn.start === 'college' && ['qb', 'wr', 'rb'].includes(pos)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import { readLive, startLive, bookLive, clearLive } from './lib/seasonLive'
 import { buildPageAtLoad, markBuildPage } from './lib/buildSave'
@@ -825,7 +828,7 @@ export default function App() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('./lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: careerNew.current.start === 'college' ? 'college' : 'draft' }), sandbox: !!isCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
+    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: collegeStartFor(careerNew.current, position) ? 'college' : 'draft' }), sandbox: !!isCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -1637,7 +1640,7 @@ export default function App() {
           <ReportCard
             build={build}
             onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'franchise-build' ? franchiseBuilt : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'franchise-build' ? (frJob.current?.id === 'prospect' ? 'ADD TO THE DRAFT CLASS' : 'ADD TO THE ROSTER') : page === 'career-build' ? (careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'franchise-build' ? (frJob.current?.id === 'prospect' ? 'ADD TO THE DRAFT CLASS' : 'ADD TO THE ROSTER') : page === 'career-build' ? (collegeStartFor(careerNew.current, position) ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}

@@ -142,7 +142,16 @@ function stockNudge(sums) {
   return clamp(-7, 7, n)
 }
 
-export default function CareerCollege({ c, setCareer, onExit }) {
+// a save in college at a position College Football has no rosters for (TE, a defender: the position was switched on the
+// build page after START IN COLLEGE, and every open crashed): on to the draft, the way a career that skipped college goes
+export default function CareerCollege(props) {
+  return POS[props.c.pos] ? <CareerCollegeIn {...props} /> : <NoCollege {...props} />
+}
+function NoCollege({ c, setCareer }) {
+  useEffect(() => { const { college, ...rest } = c; setCareer({ ...rest, phase: 'draft' }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+function CareerCollegeIn({ c, setCareer, onExit }) {
   const [data, setData] = useState(null)
   const [picked, setPicked] = useState(null)
   const [moving, setMoving] = useState(null)   // the transfer screen's pick: stay, or a portal school
