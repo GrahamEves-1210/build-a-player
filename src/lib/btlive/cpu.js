@@ -199,7 +199,7 @@ function withBall(s, p, m, lvl, out) {
   // (a smart player sees it sooner)
   // (and a jumper better than the drive is the shot: a man who sags off a shooter gets shot over)
   const toRim = Math.max(0, dRim - 4.5) / p.R.topBall + 0.5
-  if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, dD, lvl) + T.cpuJumpEdge, 0.3, T.cpuDriveV)
+  if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, dD, lvl) + T.cpuJumpEdge - Math.max(0, held - 2) * T.cpuHurry, 0.3, T.cpuDriveV)
   if (sitting && mine.kind === 'jumper' && clockS > late) need = Math.min(need, Math.max(T.cpuSitV, driveValue(s, p, D, dD, lvl)))
   // on his way out to the arc for a three: no long two on the way (unless it's a better shot than the three would be)
   if (m.plan === 'three' && mine.kind === 'jumper' && !mine.three && clockS > 4) need = Math.max(need, Math.min(0.6, mine.v * T.twoValue))

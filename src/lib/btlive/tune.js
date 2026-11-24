@@ -128,8 +128,8 @@ export const T = {
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
   cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
-  cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
-  cpuNeed: 0.5,                      // early in the clock a CPU wants a shot worth this (later, less)...
+  cpuRace: 0.5,                      // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
+  cpuNeed: 0.42,                     // early in the clock a CPU wants a shot worth this (later, less)...
   cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
   twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
   cpuDriveV: 0.55,                   // a jumper never has to be worth more than this (a make = 1, a two 1.45) while there's time to go to the rim...
@@ -170,11 +170,11 @@ export const T = {
   moveSpeed: 1.6,                    // ...at this much of top speed
   moveCd: 3.4, moveCdHnd: 1.0,       // cooldown: 3.4 s at Handles 1, 2.4 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
-  moveBase: 0.20,                    // chance to freeze him...
+  moveBase: 0.15,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
-  moveHnd: 0.25,                     // ...plus this * (Handles n - his Perimeter D n)
+  moveHnd: 0.60,                     // ...plus this * (Handles n - his Perimeter D n)
   moveIq: 0.30,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
-  moveFreeze: 0.45,                  // frozen this long
+  moveFreeze: 0.38,                  // frozen this long
   ankleBase: 0.02,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
   ankleDown: 1.25,                   // on the floor this long
 
