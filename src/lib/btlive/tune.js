@@ -36,7 +36,7 @@ export const T = {
   // Every "at a 1" below is really at "1 - spread" of the way down from an 11: the top of each rating is where
   // the brief puts it (a great shooter, a great finisher) and this one number sets how much worse a low grade is,
   // so how often a 95 beats an 80. 1 = the full range below; lower = builds closer together.
-  spread: 0.47,
+  spread: 0.30,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
   speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it; an 80 about 9.7)
@@ -116,7 +116,7 @@ export const T = {
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
   contestBehind: 0.6,                // ...this much (a man on his hip still bothers it)
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
-  contestSize: 0.45,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
+  contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.6,                // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
   jsThrough: 0.35,                   // Jump Shot 11 shoots over this share of a jumper's contest
@@ -135,6 +135,7 @@ export const T = {
   cpuBeat: 0.4, cpuBeatR: 0.8,       // ...how often he gets by his man: this, + this x (his Speed and Handles - the man's Speed and Perimeter D) / 2
   cpuDriveRisk: 0.85,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
   cpuJumpEdge: 0.03,                 // ...by this much
+  cpuSitV: 0.33,                     // an open look over a man sitting back at the rim: worth taking from this
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
   jumpTime: 0.50,                    // off the floor this long...

@@ -82,7 +82,9 @@ function driveValue(s, p, D, dD, lvl) {
   let v = open
   if (!beaten) {
     const walled = lay(ref.contestOf(me, [{ ...fact(D), x: me.x + ux * 3.2, y: me.y + uy * 3.2, vx: 0, vy: 0, act: 'jump' }], 'layup').c)
-    const by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (dD - 5) / 8, 0.25, 1)
+    // (a man already a long way back toward the rim, sagging or getting back, isn't got by: he's waiting there)
+    const back = dR - ref.rimDist(D)
+    const by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (back - 3.5) / 4, 0.2, 1)
     v = by * open + (1 - by) * walled
   }
   const win = meterSpec('layup', p.R, s.gamePoint).win
@@ -113,7 +115,7 @@ function nearestDef(s, p) {
   return { def: best, d: bd }
 }
 
-function pickPlan(s, p, m) {
+function pickPlan(s, p, m, only = null) {
   const R = p.R
   const w = {
     drive: 0.25 + R.fin * 0.6 + R.spd * 0.2 + R.hnd * 0.3 + R.bnc * 0.15,
@@ -123,6 +125,7 @@ function pickPlan(s, p, m) {
     post: R.big ? 0.25 + R.size * 0.7 + R.fin * 0.3 : R.size > 0.7 ? 0.15 : 0,
   }
   if (m.driveOnly) w.three = w.mid = w.post = 0             // (a balance-script bot: drives only)
+  if (only) for (const k in w) if (k !== only) w[k] = 0
   let t = roll(s) * (w.drive + w.three + w.mid + w.post)
   m.plan = 'drive'
   for (const k of ['drive', 'three', 'mid', 'post']) { t -= w[k]; if (t <= 0) { m.plan = k; break } }
@@ -184,6 +187,9 @@ function withBall(s, p, m, lvl, out) {
   const { def: D, d: dD } = nearestDef(s, p)
   const mine = shotValue(s, p, lvl, defs)
   const dRim = mine.d
+  // his man sitting back at the rim (camped in the paint, or sagged way off him): he isn't driven on, he's shot over
+  const sitting = !clearing && D && dD > 6.5 && ref.rimDist(D) < Math.min(10, dRim - 5) && D.act !== 'frozen' && D.act !== 'down'
+  if (sitting && m.plan !== 'three' && m.plan !== 'mid') pickPlan(s, p, m, p.R.js > 0.45 ? 'three' : 'mid')
   const beat = !clearing && (!D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8)
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
   const late = 1.3 + 1.0 * p.R.iq
@@ -194,6 +200,9 @@ function withBall(s, p, m, lvl, out) {
   // (and a jumper better than the drive is the shot: a man who sags off a shooter gets shot over)
   const toRim = Math.max(0, dRim - 4.5) / p.R.topBall + 0.5
   if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, dD, lvl) + T.cpuJumpEdge, 0.3, T.cpuDriveV)
+  if (sitting && mine.kind === 'jumper' && clockS > late) need = Math.min(need, T.cpuSitV)
+  // on his way out to the arc for a three: no long two on the way (unless it's a better shot than the three would be)
+  if (m.plan === 'three' && mine.kind === 'jumper' && !mine.three && clockS > 4) need = Math.max(need, Math.min(0.6, mine.v * T.twoValue))
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
   // a better look for a teammate
   if (!clearing && s.size > 1 && p.noAct <= 0) {
@@ -215,7 +224,11 @@ function withBall(s, p, m, lvl, out) {
       return
     }
   }
-  if (!clearing && p.noAct <= 0 && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) { out.shoot = true; return }
+  if (!clearing && p.noAct <= 0 && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) {
+    // a jumper on the run with his man not on him yet: he squares up and sets his feet first (a beat to stop)
+    if (mine.kind === 'jumper' && Math.hypot(p.vx, p.vy) > 0.45 * p.R.topBall && dD > 4.5 && clockS > 2.5) { out.mx = 0; out.my = 0; return }
+    out.shoot = true; return
+  }
   // near the rim with a step on his man, or stuck under it: go up
   if (!clearing && dRim <= (beat ? 5.4 : 4.6) && p.noAct <= 0) { out.shoot = true; return }
   // otherwise move: the plan's target
