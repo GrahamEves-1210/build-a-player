@@ -302,106 +302,102 @@ export function meterTag(ctx, view, x, y, name, s) {
   const k = clamp(s * 1.05, 0.8, 1.4)
   nameTag(ctx, view, clamp(x, 34, view.w - 34), Math.min(y, view.h - 13 * k), name, k)
 }
-// The man side-on in his uniform (the Dunk Contest, the vertical jump): the front figure's build turned side-on, in
-// the same two flat tones and ink. A real profile (brow, nose, lips, chin, the ear, a short cut with a hairline), a
-// chest and a back under the singlet with the shoulder showing through the armhole, an athlete's arms and legs, long
-// shorts to just over the knee, crew socks and high-tops. Facing +x; flip turns him round.
-const S_TORSO = 37
+// The man side-on in his uniform (the Dunk Contest, the vertical jump): athleteFront turned 90 degrees, on its numbers.
+// The same head (8.6 round, the jaw coming in to the chin, a short flat crop with a straight hairline, the ear in the
+// shade tone, dot eyes and a bar brow, a line for the mouth), the same short neck in the shade tone with no ink, the
+// same singlet (deep armhole, trim on its edge and at the neck), the same arms (5.5 at the shoulder, 3.5 at the
+// elbow, 2 at the wrist) and legs (6.9 / 5 / 3.1, the calf swelling), shorts cut flat at 0.8 of the thigh with the
+// white hem and a stripe, low white socks and the white shoe with its heel counter and toe panel in the trim colour.
+// Facing +x; flip turns him round.
 const sideLooks = new Map()
 function sideLook(jersey, trim, skin) {
   const id = `${jersey}|${trim}|${skin}`
   let c = sideLooks.get(id)
   if (!c) {
     const skinD = shadeFor(skin)
-    c = { skin, skinD, skinDD: darker(skinD), top: jersey, topD: darker(jersey), trim, shorts: jersey, shortsD: darker(jersey), sock: '#f3f3f0', sockD: '#b9bcba', shoe: '#f4f4f1', shoeD: '#c4c7c5', sole: '#14181c' }
+    c = { skin, skinD, skinDD: darker(skinD), top: jersey, trim, shortsD: darker(jersey) }
     sideLooks.set(id, c)
   }
   return c
 }
-// an arm, shoulder to hand: a deltoid, the biceps and the forearm swelling, a hand with the thumb
-function sideArm(ctx, sx, sy, tx, ty, far, c) {
-  armIK(sx, sy, tx, ty, UARM, FARM, -0.62, 0.78)
-  const jx = IK.jx, jy = IK.jy, ex = IK.ex, ey = IK.ey, fl = Math.hypot(ex - jx, ey - jy) || 1, ux = (ex - jx) / fl, uy = (ey - jy) / fl
-  const skin = far ? c.skinD : c.skin, dark = far ? c.skinDD : c.skinD, hx = ex + ux * 4.8, hy = ey + uy * 4.8
-  const bx = ex + ux * 1.3 - uy * 2.7, by = ey + uy * 1.3 + ux * 2.7
-  const path = d => {
-    limb(ctx, sx, sy, 6.3 + d, jx, jy, 4.3 + d, 1.3, 1.1); limb(ctx, jx, jy, 4.4 + d, ex, ey, 2.9 + d, 1.1, 0.7)
-    limb(ctx, ex + ux * 0.8, ey + uy * 0.8, 3.6 + d, hx, hy, 3.1 + d); limb(ctx, bx, by, 1.3 + d, bx + ux * 2.4, by + uy * 2.4, 1.05 + d)
-  }
-  ctx.fillStyle = INK; ctx.beginPath(); path(1); ctx.fill()
-  ctx.fillStyle = skin; ctx.beginPath(); path(0); ctx.fill()
-  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, sx, sy, 6.3, jx, jy, 4.3, 1.3, 1.1); limbShade(ctx, jx, jy, 4.4, ex, ey, 2.9, 1.1, 0.7); ctx.fill()
+// an arm, the front figure's, side-on (d: the ink's extra width)
+function sideArmPath(ctx, A, d) {
+  const dx = A.ex - A.jx, dy = A.ey - A.jy, fl = Math.hypot(dx, dy) || 1, ux = dx / fl, uy = dy / fl
+  limb(ctx, A.sx, A.sy, 5.5 + d, A.jx, A.jy, 3.5 + d, 0.8, 0.8)
+  limb(ctx, A.jx, A.jy, 3.5 + d, A.ex, A.ey, 2 + d, 1.5, 1.5)
+  limb(ctx, A.ex + ux * 0.8, A.ey + uy * 0.8, 2.8 + d, A.ex + ux * 4.6, A.ey + uy * 4.6, 2.3 + d)
+  const bx = A.ex + ux - uy * 2.4, by = A.ey + uy + ux * 2.4
+  limb(ctx, bx, by, 1.05 + d, bx + ux * 2.4, by + uy * 2.4, 0.85 + d)
 }
-// a leg, hip to ankle, the knee forward: the quad and the calf, a crew sock and a high-top pivoting on the ball of the foot
-const LEG = { hx: 0, hy: 0, jx: 0, jy: 0, ex: 0, ey: 0 }
-function sideLeg(ctx, hx, hy, fx, fy, far, c, toe) {
-  const skin = far ? c.skinD : c.skin, dark = far ? c.skinDD : c.skinD
-  const lift = toe * 6.5
-  ik(hx, hy, fx - toe * 2.5, fy - 5.2 - lift, THIGH, SHIN, -1)
+const S_ARM = { sx: 0, sy: 0, jx: 0, jy: 0, ex: 0, ey: 0 }
+function sideArm(ctx, sx, sy, tx, ty, skin, dark) {
+  armIK(sx, sy, tx, ty, UARM, FARM, -0.62, 0.78)
+  S_ARM.sx = sx; S_ARM.sy = sy; S_ARM.jx = IK.jx; S_ARM.jy = IK.jy; S_ARM.ex = IK.ex; S_ARM.ey = IK.ey
+  ctx.fillStyle = INK; ctx.beginPath(); sideArmPath(ctx, S_ARM, 1); ctx.fill()
+  ctx.fillStyle = skin; ctx.beginPath(); sideArmPath(ctx, S_ARM, 0); ctx.fill()
+  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, sx, sy, 5.5, S_ARM.jx, S_ARM.jy, 3.5, 0.8, 0.8); limbShade(ctx, S_ARM.jx, S_ARM.jy, 3.5, S_ARM.ex, S_ARM.ey, 2, 1.5, 1.5); ctx.fill()
+}
+// a leg, hip to ankle, the knee forward; the sock and the shoe on it (toe: up on the ball of the foot)
+const S_LEG = { hx: 0, hy: 0, jx: 0, jy: 0, ex: 0, ey: 0 }
+function sideLeg(ctx, hx, hy, fx, fy, skin, dark, trim, toe) {
+  ik(hx, hy, fx - toe * 2.5, fy - 4.4 - toe * 6.5, THIGH, SHIN, -1)
   const jx = IK.jx, jy = IK.jy, ex = IK.ex, ey = IK.ey
-  LEG.hx = hx; LEG.hy = hy; LEG.jx = jx; LEG.jy = jy; LEG.ex = ex; LEG.ey = ey
-  // (the calf swells to the back of the leg, whichever way the shin points)
-  const back = (ex - jx) * 0 + ((jy - ey) >= 0 ? 1 : -1)
-  const path = d => { limb(ctx, hx, hy, 8.2 + d, jx, jy, 5.6 + d, 1.4, 0.6); limb(ctx, jx, jy, 5.5 + d, ex, ey, 3.5 + d, back > 0 ? 0.3 : 2.0, back > 0 ? 2.0 : 0.3) }
-  ctx.fillStyle = INK; ctx.beginPath(); path(1); ctx.fill()
-  ctx.fillStyle = skin; ctx.beginPath(); path(0); ctx.fill()
-  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, jx, jy, 5.5, ex, ey, 3.5, 0.3, 2.0); ctx.fill()
-  // the crew sock, from a little under the calf
-  const sl = Math.hypot(ex - jx, ey - jy) || 1, nx = -(ey - jy) / sl, ny = (ex - jx) / sl, sa = lerp(jx, ex, 0.58), sb = lerp(jy, ey, 0.58)
-  ctx.fillStyle = far ? c.sockD : c.sock; ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.beginPath()
-  ctx.moveTo(sa + nx * 4.4, sb + ny * 4.4); ctx.lineTo(ex + nx * 3.7, ey + ny * 3.7); ctx.lineTo(ex - nx * 3.7, ey - ny * 3.7); ctx.lineTo(sa - nx * 4.4, sb - ny * 4.4); ctx.closePath(); ctx.fill(); ctx.stroke()
-  // the high-top: heel counter, a collar up round the ankle, the toe, a thick sole
+  S_LEG.hx = hx; S_LEG.hy = hy; S_LEG.jx = jx; S_LEG.jy = jy; S_LEG.ex = ex; S_LEG.ey = ey
+  // (the calf on the back of the shin, whichever way it's pointing)
+  const cb = ex - jx >= 0 ? [0.3, 1.7] : [1.7, 0.3]
+  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, hx, hy, 7.9, jx, jy, 6, 1, 1); limb(ctx, jx, jy, 6.1, ex, ey, 4.1, cb[0], cb[1]); ctx.fill()
+  ctx.fillStyle = skin; ctx.beginPath(); limb(ctx, hx, hy, 6.9, jx, jy, 5, 1, 1); limb(ctx, jx, jy, 5.1, ex, ey, 3.1, cb[0], cb[1]); ctx.fill()
+  ctx.fillStyle = dark; ctx.beginPath(); limbShade(ctx, hx, hy, 6.9, jx, jy, 5, 1, 1); limbShade(ctx, jx, jy, 5.1, ex, ey, 3.1, cb[0], cb[1]); ctx.fill()
+  // the sock, cut square at the top
+  const sl = Math.hypot(ex - jx, ey - jy) || 1, nx = -(ey - jy) / sl, ny = (ex - jx) / sl, a = lerp(jx, ex, 0.62), b = lerp(jy, ey, 0.62)
+  ctx.fillStyle = '#f3f3f0'; ctx.beginPath(); ctx.moveTo(a + nx * 3.9, b + ny * 3.9); ctx.lineTo(ex + nx * 3.1, ey + ny * 3.1); ctx.lineTo(ex - nx * 3.1, ey - ny * 3.1); ctx.lineTo(a - nx * 3.9, b - ny * 3.9); ctx.closePath(); ctx.fill()
+  // the shoe side-on: heel, a low collar, the toe; the heel counter and a panel over the toe in the trim, the sole
   ctx.save(); ctx.translate(ex, ey); ctx.rotate(toe * 0.62)
-  ctx.fillStyle = far ? c.shoeD : c.shoe; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.beginPath()
-  ctx.moveTo(-5, 4.6); ctx.lineTo(-5.4, -2.6); ctx.quadraticCurveTo(-3.6, -4.4, -0.4, -3.6); ctx.quadraticCurveTo(1.6, -1.2, 4, -0.4); ctx.quadraticCurveTo(10, 0.6, 12, 3); ctx.quadraticCurveTo(12.6, 4.6, 11.2, 4.6); ctx.closePath(); ctx.fill(); ctx.stroke()
-  ctx.fillStyle = far ? c.shortsD : c.trim === '#fff' || c.trim === '#ffffff' ? c.top : c.trim; ctx.beginPath()
-  ctx.moveTo(-5.2, 2.6); ctx.lineTo(-5.3, -1.6); ctx.lineTo(-2.2, -1.2); ctx.lineTo(-1.4, 2.6); ctx.closePath()
-  ctx.moveTo(1.2, 2.8); ctx.quadraticCurveTo(4.6, 0.6, 9.4, 1.6); ctx.lineTo(8.6, 2.8); ctx.closePath(); ctx.fill()
-  ctx.fillStyle = c.sole; ctx.fillRect(-5, 4.2, 16.4, 1.7)
+  ctx.fillStyle = '#f7f7f4'; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath()
+  ctx.moveTo(-3.8, 4.5); ctx.lineTo(-4.1, 0.2); ctx.quadraticCurveTo(-1.4, -2.4, 2, -0.8); ctx.quadraticCurveTo(6.6, 0.2, 9.4, 2); ctx.quadraticCurveTo(10.4, 4, 9.2, 4.5); ctx.closePath(); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = trim; ctx.beginPath()
+  ctx.moveTo(-3.8, 3.4); ctx.lineTo(-4, 0.6); ctx.lineTo(-1.6, -0.6); ctx.lineTo(-1.2, 3.4); ctx.closePath()
+  ctx.moveTo(4.4, 3.4); ctx.lineTo(5.4, 0.1); ctx.quadraticCurveTo(7.8, 0.8, 9.2, 2.2); ctx.lineTo(9.3, 3.4); ctx.closePath(); ctx.fill()
+  ctx.fillStyle = '#14181c'; ctx.fillRect(-3.8, 4, 13.6, 1.2)
   ctx.restore()
 }
-// the shorts' leg over a thigh: wide, to just over the knee, the hem cut flat
-function shortsLeg(L, d) {
-  const tl = Math.hypot(L.jx - L.hx, L.jy - L.hy) || 1
-  return [L.hx, L.hy, 10 + d, lerp(L.hx, L.jx, 0.86), lerp(L.hy, L.jy, 0.86), 8.4 + d, tl]
+// the shorts' leg over a thigh: the front's, straight sides, cut flat at 0.8 of the way to the knee
+function shortsSide(ctx, L, d) {
+  const tl = Math.hypot(L.jx - L.hx, L.jy - L.hy) || 1, tx = (L.jx - L.hx) / tl, ty = (L.jy - L.hy) / tl
+  const mx = lerp(L.hx, L.jx, 0.8), my = lerp(L.hy, L.jy, 0.8), w0 = 7.6 + d, w1 = 7.6 + d
+  ctx.moveTo(L.hx - ty * w0 - tx * d, L.hy + tx * w0 - ty * d); ctx.lineTo(mx - ty * w1 + tx * d, my + tx * w1 + ty * d); ctx.lineTo(mx + ty * w1 + tx * d, my - tx * w1 + ty * d); ctx.lineTo(L.hx + ty * w0 - tx * d, L.hy - tx * w0 - ty * d); ctx.closePath()
+  return { mx, my, tx, ty }
 }
-// the head in profile, looking along +x: the skull, a brow, the nose, the lips, the chin; the jaw back to the ear;
-// a short cut with a hairline and a sideburn; one eye and the brow over it
-function profileHead(ctx, x, y, r, skin, shade, hair, turn) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(turn)
-  const face = () => {
-    ctx.moveTo(-r * 0.62, r * 0.8)
-    ctx.arc(0, 0, r, Math.PI * 0.72, Math.PI * 1.9)
-    ctx.quadraticCurveTo(r * 1.02, -r * 0.34, r * 1.0, -r * 0.1)                 // forehead to the brow
-    ctx.quadraticCurveTo(r * 0.94, r * 0.02, r * 1.06, r * 0.16)                 // the eye's hollow
-    ctx.quadraticCurveTo(r * 1.32, r * 0.36, r * 1.07, r * 0.43)                 // the nose
-    ctx.quadraticCurveTo(r * 1.13, r * 0.53, r * 1.05, r * 0.6)                  // the top lip
-    ctx.quadraticCurveTo(r * 1.1, r * 0.68, r * 1.02, r * 0.75)                  // the bottom lip
-    ctx.quadraticCurveTo(r * 1.06, r * 0.98, r * 0.74, r * 1.02)                 // the chin
-    ctx.quadraticCurveTo(r * 0.28, r * 1.02, -r * 0.02, r * 0.74)                // under the jaw, to its corner
-    ctx.closePath()
-  }
-  ctx.fillStyle = skin; ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); face(); ctx.fill(); ctx.stroke()
-  // the shade down the jaw and the back of the head (the light's up front)
-  ctx.fillStyle = shade; ctx.beginPath()
-  ctx.moveTo(-r * 0.02, r * 0.74); ctx.quadraticCurveTo(r * 0.3, r * 0.98, r * 0.7, r * 0.97); ctx.quadraticCurveTo(r * 0.3, r * 0.8, r * 0.2, r * 0.4); ctx.closePath(); ctx.fill()
-  // the hair: close on top, a clean hairline at the temple, a sideburn, faded down the back
+// the head in profile, the front's turned: the same skull (a circle on hy - 0.6), the jaw down to the chin at hy + 8.8,
+// the crop's straight hairline, the ear in the shade tone, one dot eye under a bar brow, the mouth a short line
+function profileHead(ctx, hx, hy, skin, shade, hair, turn) {
+  const hr = 8.6
+  ctx.save(); ctx.translate(hx, hy); ctx.rotate(turn)
+  ctx.fillStyle = skin; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.beginPath()
+  ctx.moveTo(-5.6, 6.6)
+  ctx.arc(0, -0.6, hr, Math.PI * 0.8, Math.PI * 1.97)                       // the back of the skull, over the top
+  ctx.quadraticCurveTo(hr + 0.4, -2.4, hr + 0.1, -1.4)                        // the forehead to the brow
+  ctx.quadraticCurveTo(hr - 0.5, -0.4, hr + 0.2, 0.6)                         // under the brow
+  ctx.quadraticCurveTo(hr + 2.2, 2.8, hr + 0.4, 3.4)                          // the nose
+  ctx.quadraticCurveTo(hr + 0.9, 4.4, hr + 0.2, 5.4)                          // the lips
+  ctx.quadraticCurveTo(hr + 0.4, 8.4, hr - 2.2, 8.8)                          // the chin
+  ctx.quadraticCurveTo(1.6, 8.6, -1, 5.6)                                     // the jaw back under the ear
+  ctx.closePath(); ctx.fill(); ctx.stroke()
+  // the jaw's shade, as the front's far cheek
+  ctx.fillStyle = shade; ctx.beginPath(); ctx.moveTo(-1, 5.6); ctx.quadraticCurveTo(1.6, 8.6, hr - 2.2, 8.8); ctx.quadraticCurveTo(2.6, 6.6, 1.4, 2.4); ctx.closePath(); ctx.fill()
+  // the crop: close all over the top, the straight hairline at the front, square in front of the ear, down to the nape
   ctx.fillStyle = hair; ctx.beginPath()
-  ctx.arc(0, 0, r + 0.7, Math.PI * 0.82, Math.PI * 1.83)
-  ctx.quadraticCurveTo(r * 0.62, -r * 0.62, r * 0.5, -r * 0.42)
-  ctx.quadraticCurveTo(r * 0.3, -r * 0.34, r * 0.24, -r * 0.08)
-  ctx.lineTo(r * 0.12, r * 0.26); ctx.lineTo(-r * 0.02, r * 0.24)
-  ctx.quadraticCurveTo(-r * 0.12, -r * 0.18, -r * 0.4, -r * 0.08)
-  ctx.quadraticCurveTo(-r * 0.62, r * 0.18, -r * 0.6, r * 0.6)
+  ctx.arc(0, -0.6, hr + 0.3, Math.PI * 0.86, Math.PI * 1.9)
+  ctx.lineTo(hr * 0.6, -4.8); ctx.lineTo(1.6, -4.4); ctx.lineTo(1.4, -1.6); ctx.lineTo(-1.2, -1.6)
+  ctx.quadraticCurveTo(-4.6, 0.2, -6.6, 3.4)
   ctx.closePath(); ctx.fill()
-  // the ear
-  ctx.fillStyle = skin; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(-r * 0.2, r * 0.2, r * 0.19, r * 0.27, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
-  ctx.fillStyle = shade; ctx.beginPath(); ctx.ellipse(-r * 0.18, r * 0.22, r * 0.08, r * 0.14, 0.1, 0, Math.PI * 2); ctx.fill()
-  // the brow, the eye, the corner of the mouth
-  ctx.fillStyle = '#17120e'; ctx.beginPath()
-  ctx.moveTo(r * 0.52, -r * 0.2); ctx.lineTo(r * 0.96, -r * 0.16); ctx.lineTo(r * 0.94, -r * 0.07); ctx.lineTo(r * 0.54, -r * 0.1); ctx.closePath()
-  ctx.ellipse(r * 0.76, r * 0.07, r * 0.13, r * 0.075, 0, 0, Math.PI * 2)
-  ctx.rect(r * 0.86, r * 0.665, r * 0.18, r * 0.06)
+  // the ear, the front's: a disc in the shade tone, behind the jaw
+  ctx.fillStyle = shade; ctx.beginPath(); ctx.ellipse(-0.6, 0.8, 1.7, 2.3, 0, 0, Math.PI * 2); ctx.fill()
+  // the brow, the eye, the mouth
+  ctx.fillStyle = hair; ctx.beginPath()
+  ctx.rect(hr - 3.6, -2.1, 3.2, 0.8)
+  ctx.moveTo(hr - 1.8, 0.3); ctx.arc(hr - 2.6, 0.3, 0.9, 0, 6.3)
+  ctx.rect(hr - 1.6, 4.4, 1.9, 0.7)
   ctx.fill()
   ctx.restore()
 }
@@ -410,63 +406,64 @@ export function athlete(ctx, x, floorY, P, o = {}) {
   const skin = warmSkin(skinIn)
   const c = sideLook(jersey, trim, skin), dir = flip ? -1 : 1
   const hipX = P.hx, hipY = -(P.hy + P.j), lean = P.lean, sl = Math.sin(lean), cl = Math.cos(lean)
-  const sx = hipX + sl * S_TORSO, sy = hipY - cl * S_TORSO, ay = sy + 4
-  // the floor under him: a shadow, smaller as he leaves it
+  const sx = hipX + sl * TORSO, sy = hipY - cl * TORSO, ay = sy + 2.5
+  // the floor under him: the front's shadow, smaller as he leaves it
   if (shadow) {
     const up = clamp(P.j / 60, 0, 1)
     ctx.fillStyle = 'rgba(0,0,0,.3)'
-    ctx.beginPath(); ctx.ellipse(x + dir * hipX * s, floorY + 2, (30 - up * 12) * s, (4.5 - up * 2) * s, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.ellipse(x + dir * hipX * s, floorY + 2, (26 - up * 10) * s, (5 - up * 2) * s, 0, 0, Math.PI * 2); ctx.fill()
   }
   ctx.save(); ctx.translate(x, floorY); ctx.scale(dir * s, s)
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  // the far side: his arm and his leg, a shade darker, the shorts' far leg over it
-  sideArm(ctx, sx + 1.5, ay, P.hBx, -(P.hBy + P.j), true, c)
-  sideLeg(ctx, hipX - 1.5, hipY, P.fBx, -(P.fBy + P.j), true, c, P.toeB)
-  const far = shortsLeg(LEG, 0), farI = shortsLeg(LEG, 1.1)
-  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, farI[0], farI[1], farI[2], farI[3], farI[4], farI[5], 1, 0.6, true); ctx.fill()
-  ctx.fillStyle = c.shortsD; ctx.beginPath(); limb(ctx, far[0], far[1], far[2], far[3], far[4], far[5], 1, 0.6, true); ctx.fill()
+  // the far side, a tone down: his arm, his leg, the shorts over it
+  sideArm(ctx, sx + 1, ay, P.hBx, -(P.hBy + P.j), c.skinD, c.skinDD)
+  sideLeg(ctx, hipX - 1.5, hipY, P.fBx, -(P.fBy + P.j), c.skinD, c.skinDD, trim, P.toeB)
+  const farL = { ...S_LEG }
+  ctx.fillStyle = c.shortsD; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); shortsSide(ctx, farL, 0); ctx.fill(); ctx.stroke()
   // the near leg
-  sideLeg(ctx, hipX + 1.5, hipY, P.fFx, -(P.fFy + P.j), false, c, P.toeF)
-  const nearL = { ...LEG }
-  // the neck, then the singlet: a flat back, the chest out in front, the trim at the neck
-  const hx = sx + sl * 14.5 + 1.6, hy = sy - cl * 14.5
-  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, sx - 0.5, sy + 2, 6.4, hx - 1.2, hy + 3, 5.2); ctx.fill()
-  ctx.fillStyle = c.skinD; ctx.beginPath(); limb(ctx, sx - 0.5, sy + 2, 5.4, hx - 1.2, hy + 3, 4.3); ctx.fill()
+  sideLeg(ctx, hipX + 1.5, hipY, P.fFx, -(P.fFy + P.j), skin, c.skinD, trim, P.toeF)
+  const nearL = { ...S_LEG }
+  // the seat of the shorts: round behind him (the front's seat across both hips, side-on), under the singlet's hem
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(hipX - sl * 1.5 - cl * 1.2, hipY + 1.5, 9.4, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = jersey; ctx.beginPath(); ctx.arc(hipX - sl * 1.5 - cl * 1.2, hipY + 1.5, 8.4, 0, Math.PI * 2); ctx.fill()
+  // the neck: the front's, the shade tone, no ink
+  const hx = sx + sl * 13.5 + 1.2, hy = sy - cl * 13.5
+  ctx.fillStyle = c.skinD; ctx.beginPath(); limb(ctx, sx - 0.6, sy + 1, 5.6, hx - 1, hy + 2, 4.4); ctx.fill()
+  // the singlet side-on: the back, the chest, the strap over the shoulder; its armhole cut deep, the trim on the edge
   ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(lean)
-  const T = -S_TORSO
+  const T = -TORSO
   const shirt = () => {
-    ctx.moveTo(-9, 4); ctx.quadraticCurveTo(-12.4, T * 0.5, -9.6, T + 5); ctx.quadraticCurveTo(-8, T - 1.4, -3.2, T - 1.6)
-    ctx.lineTo(2.2, T - 1.8); ctx.quadraticCurveTo(9.4, T + 0.6, 10.8, T + 9); ctx.quadraticCurveTo(12, T * 0.55, 9, T * 0.24); ctx.quadraticCurveTo(7.8, -2, 9, 4); ctx.closePath()
+    ctx.moveTo(-8.8, 2); ctx.quadraticCurveTo(-11.2, T * 0.5, -8.8, T + 4); ctx.quadraticCurveTo(-7.4, T - 1.6, -3.4, T - 1.8)
+    ctx.lineTo(2.8, T - 1.8); ctx.quadraticCurveTo(8.8, T + 0.4, 10, T + 8.6); ctx.quadraticCurveTo(10.8, T * 0.55, 8.4, T * 0.26); ctx.quadraticCurveTo(7.4, -2, 8.8, 2); ctx.closePath()
   }
-  ctx.fillStyle = jersey; ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); shirt(); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = jersey; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.beginPath(); shirt(); ctx.fill(); ctx.stroke()
   ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.beginPath()
-  ctx.moveTo(-9, 4); ctx.quadraticCurveTo(-12.4, T * 0.5, -9.6, T + 5); ctx.quadraticCurveTo(-9, T + 0.6, -6.6, T - 0.6); ctx.quadraticCurveTo(-5.6, T * 0.5, -4.4, 4); ctx.closePath(); ctx.fill()
-  // the armhole, cut deep: the side of his chest shows through it, the trim round its back edge (the arm covers the rest)
-  ctx.fillStyle = c.skinD; ctx.beginPath(); ctx.ellipse(0.4, T + 9, 4.6, 8.4, 0.08, 0, Math.PI * 2); ctx.fill()
-  ctx.strokeStyle = trim; ctx.lineWidth = 1.7; ctx.beginPath(); ctx.ellipse(0.4, T + 9, 5.1, 8.9, 0.08, Math.PI * 0.55, Math.PI * 1.5)
-  ctx.moveTo(2.2, T - 1.6); ctx.quadraticCurveTo(6.4, T + 0.4, 8.6, T + 3.6)
+  ctx.moveTo(-8.8, 2); ctx.quadraticCurveTo(-11.2, T * 0.5, -8.8, T + 4); ctx.quadraticCurveTo(-8.2, T, -6, T - 1.2); ctx.quadraticCurveTo(-4.8, T * 0.5, -3.8, 2); ctx.closePath(); ctx.fill()
+  // the armhole: the side of his chest through it, the trim round it, and the neckline's trim up front
+  ctx.fillStyle = c.skinD; ctx.beginPath(); ctx.moveTo(-3.4, T - 1.6); ctx.quadraticCurveTo(-6.6, T + 8, -1.6, T + 14.6); ctx.quadraticCurveTo(3.4, T + 9, 2.8, T - 1.6); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = trim; ctx.lineWidth = 1.9; ctx.beginPath()
+  ctx.moveTo(-3.4, T - 1.6); ctx.quadraticCurveTo(-6.6, T + 8, -1.6, T + 14.6); ctx.quadraticCurveTo(3.4, T + 9, 2.8, T - 1.6)
+  ctx.moveTo(2.8, T - 1.4); ctx.quadraticCurveTo(7, T + 0.2, 9.2, T + 4.6)
   ctx.stroke()
-  // (side-on, the number's round the front: a sliver of it shows on the chest)
-  if (num != null) { ctx.save(); ctx.beginPath(); shirt(); ctx.clip(); ctx.translate(10.6, T * 0.5); ctx.scale(flip ? -0.5 : 0.5, 1); text(ctx, String(num), 0, 0, { font: DISPLAY, size: 13, color: inkOn(jersey, trim) }); ctx.restore() }
+  // (side-on, the number's round the front: a sliver of it on the chest)
+  if (num != null) { ctx.save(); ctx.beginPath(); shirt(); ctx.clip(); ctx.translate(9.8, 18 + T); ctx.scale(flip ? -0.45 : 0.45, 1); text(ctx, String(num), 0, 0, { font: DISPLAY, size: String(num).length > 1 ? 18 : 20, color: inkOn(jersey, trim) }); ctx.restore() }
+  // the waistband over the singlet's hem, its trim line, square to his hips
+  ctx.fillStyle = jersey; ctx.fillRect(-9.2, -3.2, 18.4, 6.4)
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-9.2, -3.2); ctx.lineTo(9.2, -3.2); ctx.stroke()
   ctx.restore()
-  // the shorts: the near leg, and the waistband over the singlet's hem (square, no wider than his hips), a stripe down
-  // the side of the leg and the hem a shade darker
-  const nr = shortsLeg(nearL, 0), nrI = shortsLeg(nearL, 1.1)
-  ctx.fillStyle = INK; ctx.beginPath(); limb(ctx, nrI[0], nrI[1], nrI[2], nrI[3], nrI[4], nrI[5], 0.6, 1, true); ctx.fill()
-  ctx.fillStyle = jersey; ctx.beginPath(); limb(ctx, nr[0], nr[1], nr[2], nr[3], nr[4], nr[5], 0.6, 1, true); ctx.fill()
-  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(lean)
-  ctx.fillStyle = jersey; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.rect(-9.4, -2.6, 18.8, 6.4); ctx.fill()
-  ctx.beginPath(); ctx.moveTo(-9.4, -2.6); ctx.lineTo(9.4, -2.6); ctx.stroke()
-  ctx.strokeStyle = trim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-8.8, 0.2); ctx.lineTo(8.8, 0.2); ctx.stroke()
-  ctx.restore()
-  const tx = (nearL.jx - nearL.hx) / nr[6], ty = (nearL.jy - nearL.hy) / nr[6]
-  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath()
-  ctx.moveTo(nr[3] - ty * 8.4, nr[4] + tx * 8.4); ctx.lineTo(nr[3] + ty * 8.4, nr[4] - tx * 8.4); ctx.lineTo(nr[3] + ty * 8.5 - tx * 2.4, nr[4] - tx * 8.5 - ty * 2.4); ctx.lineTo(nr[3] - ty * 8.5 - tx * 2.4, nr[4] + tx * 8.5 - ty * 2.4); ctx.closePath(); ctx.fill()
-  ctx.strokeStyle = trim; ctx.lineWidth = 1.4; ctx.lineCap = 'butt'; ctx.beginPath()
-  ctx.moveTo(nearL.hx + tx * 4, nearL.hy + ty * 4); ctx.lineTo(nr[3] - tx * 2.6, nr[4] - ty * 2.6)
+  // the near leg of the shorts: the front's cut, the shade on its back half, the white hem and the stripe
+  ctx.fillStyle = jersey; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); const sh = shortsSide(ctx, nearL, 0); ctx.fill(); ctx.stroke()
+  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(lean); ctx.fillStyle = jersey; ctx.fillRect(-9.2, -3.2, 18.4, 5.2); ctx.restore()
+  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath()
+  const bk = sh.ty >= 0 ? 1 : -1   // (the back of the thigh, whichever way it points)
+  ctx.moveTo(nearL.hx + bk * (-sh.ty * 7.4), nearL.hy + bk * (sh.tx * 7.4)); ctx.lineTo(sh.mx + bk * (-sh.ty * 7.6), sh.my + bk * (sh.tx * 7.6)); ctx.lineTo(sh.mx + bk * (-sh.ty * 2.4), sh.my + bk * (sh.tx * 2.4)); ctx.lineTo(nearL.hx + bk * (-sh.ty * 2), nearL.hy + bk * (sh.tx * 2)); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = trim; ctx.lineWidth = 1.7; ctx.lineCap = 'butt'; ctx.beginPath()
+  ctx.moveTo(sh.mx - sh.ty * 7.6 - sh.tx * 1.9, sh.my + sh.tx * 7.6 - sh.ty * 1.9); ctx.lineTo(sh.mx + sh.ty * 7.6 - sh.tx * 1.9, sh.my - sh.tx * 7.6 - sh.ty * 1.9)
+  ctx.moveTo(nearL.hx + sh.tx * 3, nearL.hy + sh.ty * 3); ctx.lineTo(sh.mx - sh.tx * 2.8, sh.my - sh.ty * 2.8)
+  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(lean); ctx.moveTo(-9, -0.6); ctx.lineTo(9, -0.6); ctx.restore()
   ctx.stroke(); ctx.lineCap = 'round'
-  profileHead(ctx, hx, hy, HEAD_R, skin, c.skinD, hair, lean * 0.3)
-  sideArm(ctx, sx - 1.5, ay, P.hFx, -(P.hFy + P.j), false, c)
+  profileHead(ctx, hx, hy, skin, c.skinD, hair, lean * 0.3)
+  sideArm(ctx, sx - 0.5, ay, P.hFx, -(P.hFy + P.j), skin, c.skinD)
   ctx.restore()
 }
 // a slightly darker version of a colour, for what's on the far side (remembered: asked for every frame)
