@@ -49,7 +49,7 @@ import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { BIRTH } from '../data/player-ages'
-import { allStarBeat, allStarSkip, allStarSeason } from './allStarBreak.js'   // (basketball's All-Star Saturday: the 3-Point and Slam Dunk Contests)
+import { allStarBeat, allStarSkip, allStarSeason, ASW_LEGACY } from './allStarBreak.js'   // (basketball's All-Star Saturday: the 3-Point and Slam Dunk Contests)
 import { LEGENDS, QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGENDS, RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGENDS, WR_LEGEND_PHYSICALS } from '../data/wr-legends'
@@ -4238,7 +4238,7 @@ export function careerTotals(c) {
     playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length, fmvps: c.pos === 'ol' ? 0 : Ss.filter(s => s.fmvp).length, roy: Ss.some(s => s.roy), cpoys: Ss.filter(s => s.cpoy).length, smoys: Ss.filter(s => s.smoy).length,
     // records: the all-time records he holds (one each, however many times he raised his own)
     proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
-    // (All-Star Saturday's titles: on the resume to read, never in the legacy score, as no real great's counts one)
+    // (All-Star Saturday's titles: on the resume, and a legacy point each, ASW_LEGACY: the owner, 2026-11-24)
     threeTitles: Ss.filter(s => s.asw?.three?.won).length, dunkTitles: Ss.filter(s => s.asw?.dunk?.won).length,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
     ...(S.x?.totals ? S.x.totals(c) : {}),
@@ -4276,14 +4276,19 @@ export function legacyScore(S, pos, r) {
 // earnings (contracts and shoe money), never more than 5
 export const EARN_LEGACY = { per: 25, max: 5 }
 export const earnLegacy = c => Math.min(EARN_LEGACY.max, Math.floor((c.earnings ?? 0) / EARN_LEGACY.per))
-// the small extras on top of the resume: camp wins, shoe deals and earnings
-export const legacyExtras = c => ({ camp: c.legacyCamp ?? 0, shoe: (c.legacyBonus ?? 0) - (c.legacyCamp ?? 0), earnings: earnLegacy(c) })
-// a career's resume, from its booked seasons (bonus: camp wins, shoe deals and
+// A title at All-Star Saturday (basketball: the 3-Point Contest, the Slam Dunk Contest) is a legacy point, each one
+// (ASW_LEGACY, lib/allStarBreak.js: the owner, 2026-11-24). Read off the booked seasons, so a save from before it
+// counts its titles too.
+export { ASW_LEGACY }
+export const aswLegacy = (c, t = careerTotals(c)) => ((t.threeTitles ?? 0) + (t.dunkTitles ?? 0)) * ASW_LEGACY
+// the small extras on top of the resume: camp wins, shoe deals, All-Star Saturday titles and earnings
+export const legacyExtras = c => ({ camp: c.legacyCamp ?? 0, shoe: (c.legacyBonus ?? 0) - (c.legacyCamp ?? 0), allStar: aswLegacy(c), earnings: earnLegacy(c) })
+// a career's resume, from its booked seasons (bonus: camp wins, shoe deals, All-Star Saturday titles and
 // earnings, the legacy points with no real-career counterpart; all kept minor)
 export function resumeOf(c) {
   const t = careerTotals(c)
   if (sportOf(c).x?.resume) return sportOf(c).x.resume(c, t)
-  return { seasons: t.seasons, honors: t.proBowls, firsts: t.allPros, awards: t.awards, rings: t.rings, playoffs: t.playoffs, records: t.records, stats: t.stats, bonus: (c.legacyBonus ?? 0) + earnLegacy(c) }
+  return { seasons: t.seasons, honors: t.proBowls, firsts: t.allPros, awards: t.awards, rings: t.rings, playoffs: t.playoffs, records: t.records, stats: t.stats, bonus: (c.legacyBonus ?? 0) + earnLegacy(c) + aswLegacy(c, t) }
 }
 export const LEGACY_TIERS = [[0, 'Starter'], [80, 'Star'], [170, 'Superstar'], [280, 'All-Time Great']]
 export function legacyOf(c) {

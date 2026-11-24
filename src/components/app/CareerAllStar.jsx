@@ -12,6 +12,7 @@ import { reducedMotion } from '../simFlow'
 import { IconArrow, IconTrophy } from './icons'
 import MgStage from './MgStage'
 import './career-allstar.css'
+import { ASW_LEGACY } from '../../lib/allStarBreak'
 
 // ALL-STAR SATURDAY (basketball Career): the invitation, then the night: the 3-Point Contest, then the Slam Dunk
 // Contest. The contests themselves are lib/allStar.js (the field, the rivals, the judges); the games his rounds are
@@ -435,7 +436,7 @@ export function AllStarResult({ c }) {
       {rows.map(r => (
         <div key={r.k} className={`asw-done-row${r.won ? ' is-won' : ''}`}>
           {r.won && <IconTrophy size={18} />}
-          <span><small>{r.k}</small><b>{r.head}</b><em>{r.sub}</em></span>
+          <span><small>{r.k}{r.won ? ` · +${ASW_LEGACY} LEGACY` : ''}</small><b>{r.head}</b><em>{r.sub}</em></span>
         </div>
       ))}
     </div>

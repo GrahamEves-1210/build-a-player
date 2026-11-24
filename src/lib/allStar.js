@@ -6,13 +6,13 @@
 // with Mini Games OFF) and are kept on the season (c.active.asw), so a reload picks the night back up where it was.
 // The hooks in lib/career.js: advanceWeek deals the night at the break (allStarBeat) and moves past a night left open
 // (allStarSkip, the checks' path; the screen never leaves one open); bookSeason keeps the results (allStarSeason).
-// The titles count for nothing in legacy: no real great's resume counts a contest win (LEGACY_W), so neither does his.
+// A title is a legacy point (ASW_LEGACY: the owner, 2026-11-24), counted off the booked season (lib/career.js aswLegacy).
 import { seeded } from './rng.js'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs.js'
 import { BIRTH_NBA } from '../data/player-ages.js'
 import { DUNKS } from './mg/dunkcontest.js'
-import { aswOpen } from './allStarBreak.js'
+import { aswOpen, ASW_LEGACY } from './allStarBreak.js'
 export * from './allStarBreak.js'
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
@@ -477,7 +477,7 @@ export function finishAllStar(c) {
         : f ? `${c.name} reaches the final of the 3-Point Contest with ${me.pts}, then scores ${f.pts}. ${P.champ.name} wins it with ${P.champ.pts}.`
         : `${c.name} scores ${me?.pts ?? 0} in the first round of the 3-Point Contest and misses the final. ${P.champ.name} wins it with ${P.champ.pts}.`
       notes.push({ k, note: text, noteKind: '3-POINT CONTEST' })
-      events.push({ year: yr, season: true, text: P.champ.me ? `Won the 3-Point Contest at All-Star Saturday: ${P.champ.pts} in the final.` : `In the 3-Point Contest at All-Star Saturday: ${f ? 'reached the final' : `${me?.pts ?? 0} in the first round`}.` })
+      events.push({ year: yr, season: true, text: P.champ.me ? `Won the 3-Point Contest at All-Star Saturday: ${P.champ.pts} in the final. +${ASW_LEGACY} legacy.` : `In the 3-Point Contest at All-Star Saturday: ${f ? 'reached the final' : `${me?.pts ?? 0} in the first round`}.` })
     }
   }
   if (p.dunk && w.dunk) {
@@ -492,7 +492,7 @@ export function finishAllStar(c) {
         : f ? `${c.name} makes the Slam Dunk final and scores ${f.sum}. ${P.champ.name} takes the title with ${P.champ.sum}.`
         : `${c.name} scores ${me?.sum ?? 0} in the first round of the Slam Dunk Contest and doesn't make the final. ${P.champ.name} wins it.`
       notes.push({ k, note: text, noteKind: 'SLAM DUNK CONTEST' })
-      events.push({ year: yr, season: true, text: P.champ.me ? `Won the Slam Dunk Contest at All-Star Saturday${best ? `: his ${best.dunk.name} scored ${best.total}` : ''}.` : `In the Slam Dunk Contest at All-Star Saturday: ${f ? 'reached the final' : `${me?.sum ?? 0} in the first round`}.` })
+      events.push({ year: yr, season: true, text: P.champ.me ? `Won the Slam Dunk Contest at All-Star Saturday${best ? `: his ${best.dunk.name} scored ${best.total}` : ''}. +${ASW_LEGACY} legacy.` : `In the Slam Dunk Contest at All-Star Saturday: ${f ? 'reached the final' : `${me?.sum ?? 0} in the first round`}.` })
     }
   }
   return { ...c, events: [...(c.events ?? []), ...events], active: { ...c.active, asw: { ...w, done: true, res }, feed: [...c.active.feed, ...notes] } }
