@@ -9,6 +9,7 @@ argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 OUT = argv[0] if argv else '/tmp/bball'
 MODE = argv[1] if len(argv) > 1 else 'still'
 SAMPLES = int(argv[2]) if len(argv) > 2 else 96
+F0, F1 = (int(argv[3]), int(argv[4])) if len(argv) > 4 else (None, None)   # a part of the film (two Blenders at once)
 os.makedirs(OUT, exist_ok=True)
 
 W, H, FPS, SECS = 450, 300, 20, 6
@@ -82,13 +83,14 @@ rr = R - 0.003   # the gold just proud of the ball, half sunk into it
 # the two great circles: round the middle (z = 0) and over the top through the front and back (x = 0)
 seam([Vector((math.cos(t), math.sin(t), 0)) * rr for t in (2 * math.pi * i / N for i in range(N))], 'equator')
 seam([Vector((0, math.cos(t), math.sin(t))) * rr for t in (2 * math.pi * i / N for i in range(N))], 'meridian')
-# the two side seams: a long curve each side of the cross, out by the edge at the middle and bending in toward the
-# centre line at the top and bottom, like ) ( : the real ball's eight panels
+# the two side seams (checked against photos of a Spalding NBA game ball): a loop round each side pole that runs
+# into the cross where the two great circles meet (tangent to the over-the-top circle there), and arches up over and
+# down under the logo panel in between, about 50 degrees out from the pole: eight panels
 for sgn in (1, -1):
     pts = []
     for i in range(N):
         th = 2 * math.pi * i / N
-        a = 0.98 - 0.30 * math.cos(2 * th)     # angle from the x pole: 0.68 at the middle line (near the edge), 1.28 at the top and bottom (bent in toward the centre line, never touching it)
+        a = 1.2254 + 0.3454 * math.cos(2 * th)   # angle from the side pole: 90 degrees at the cross, about 50 over and under
         d = Vector((sgn * math.cos(a), math.sin(a) * math.cos(th), math.sin(a) * math.sin(th)))
         pts.append(d.normalized() * rr)
     seam(pts, f'side{sgn}')
@@ -100,7 +102,7 @@ TILT = (math.radians(-14), math.radians(8), 0)
 axis = bpy.data.objects.new('axis', None); sc.collection.objects.link(axis)
 axis.rotation_euler = TILT
 piv.parent = axis
-YAW0 = math.radians(0)
+YAW0 = math.radians(-42)
 piv.rotation_euler = (0, 0, YAW0)
 
 # ── camera ──
@@ -166,4 +168,5 @@ if MODE in ('still', 'both'):
 if MODE in ('film', 'both'):
     sc.render.image_settings.file_format = 'PNG'; sc.render.image_settings.color_mode = 'RGB'
     sc.render.filepath = os.path.join(OUT, 'f/')
+    if F0 is not None: sc.frame_start, sc.frame_end = F0, F1
     bpy.ops.render.render(animation=True)
