@@ -4278,9 +4278,11 @@ export const EARN_LEGACY = { per: 25, max: 5 }
 export const earnLegacy = c => Math.min(EARN_LEGACY.max, Math.floor((c.earnings ?? 0) / EARN_LEGACY.per))
 // A title at All-Star Saturday (basketball: the 3-Point Contest, the Slam Dunk Contest) is a legacy point, each one
 // (ASW_LEGACY, lib/allStarBreak.js: the owner, 2026-11-24). Read off the booked seasons, so a save from before it
-// counts its titles too.
+// counts its titles too. The night's titles count from the night itself (c.active.asw, until bookSeason moves them
+// onto the season and clears it), so the meter moves when he wins, not at the end of the year.
 export { ASW_LEGACY }
-export const aswLegacy = (c, t = careerTotals(c)) => ((t.threeTitles ?? 0) + (t.dunkTitles ?? 0)) * ASW_LEGACY
+const aswTonight = c => { const r = c?.active?.asw?.done ? c.active.asw.res ?? {} : {}; return (r.three?.won ? 1 : 0) + (r.dunk?.won ? 1 : 0) }
+export const aswLegacy = (c, t = careerTotals(c)) => ((t.threeTitles ?? 0) + (t.dunkTitles ?? 0) + aswTonight(c)) * ASW_LEGACY
 // the small extras on top of the resume: camp wins, shoe deals, All-Star Saturday titles and earnings
 export const legacyExtras = c => ({ camp: c.legacyCamp ?? 0, shoe: (c.legacyBonus ?? 0) - (c.legacyCamp ?? 0), allStar: aswLegacy(c), earnings: earnLegacy(c) })
 // a career's resume, from its booked seasons (bonus: camp wins, shoe deals, All-Star Saturday titles and

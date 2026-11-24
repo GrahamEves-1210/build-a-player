@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
@@ -44,6 +44,8 @@ function listFor(sport) {
   return { moments: rows, combine: COMBINE[sport].map(g => ({ id: g, tag: null })), allStar: (ALL_STAR[sport] ?? []).map(g => ({ id: g, tag: null })) }
 }
 const gameSport = game => (COMBINE.soccer.includes(game) || PLAYOFF_GAMES.st?.includes(game) ? 'soccer' : COMBINE.baseball.includes(game) || PLAYOFF_GAMES.bat?.includes(game) || PLAYOFF_GAMES.pit?.includes(game) ? 'baseball' : COMBINE.bucket.includes(game) || ALL_STAR.bucket.includes(game) || POS.bucket.some(([, p]) => PLAYOFF_GAMES[p]?.includes(game)) ? 'bucket' : 'nfl')
+// the All-Star Saturday contests in practice: the whole contest, field, final and standings, as Career plays it
+const PracticeContest = lazy(() => import('./CareerAllStar').then(m => ({ default: m.PracticeContest })))
 // who plays a game: the first position that has it
 const posFor = (game, sport, role) => role ?? POS[sport].map(([, p]) => p).find(p => PLAYOFF_GAMES[p]?.includes(game) || COMBINE_GAMES[p]?.includes(game)) ?? POS[sport][0][1]
 
@@ -127,6 +129,8 @@ export default function MiniGameLab({ onClose }) {
     return () => { live = false }
   }, [game, run, gs]) // eslint-disable-line react-hooks/exhaustive-deps
   if (bbGo) Object.assign(go, bbGo)
+  // (a ?mg= link, the test tools', still opens the bare game)
+  if ((game === 'three-contest' || game === 'dunk-contest') && !(game === start && q.has('mg'))) return <Suspense fallback={null}><PracticeContest game={game} v={v} team={go.team} name={getUsername(getProgress().user) || 'Guest'} onBack={() => { setGame(null); sfx('back') }} /></Suspense>
   const { team, opp } = go
   const res = game ? log[`${game}-${run}`] : null
   const back = () => { setGame(null); setAuto(false); sfx('back') }

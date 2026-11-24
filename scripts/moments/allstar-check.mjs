@@ -255,7 +255,10 @@ console.log('── the season keeps it')
   // (a title is a legacy point each: the owner, 2026-11-24)
   ok(C.ASW_LEGACY === 1 && C.legacyOf(x).score === C.legacyOf(noAsw).score + 2, 'a legacy point for each contest title', C.legacyOf(x).score, C.legacyOf(noAsw).score)
   ok(C.legacyExtras(x).allStar === 2 && C.legacyExtras(noAsw).allStar === 0, 'the legacy extras list the titles', C.legacyExtras(x).allStar)
-  const oneT = { ...x, seasons: x.seasons.map(q => (q.asw ? { ...q, asw: { ...q.asw, dunk: { ...q.asw.dunk, won: false } } } : q)) }
+  // (the night's titles count from the night, before the season is booked; once booked, from the season, not twice)
+  const tNone = { ...t, active: { ...t.active, asw: { ...t.active.asw, res: {} } } }
+  ok(C.legacyOf(t).score === C.legacyOf(tNone).score + 2, 'the meter moves the night he wins', C.legacyOf(t).score, C.legacyOf(tNone).score)
+  const oneT ={ ...x, seasons: x.seasons.map(q => (q.asw ? { ...q, asw: { ...q.asw, dunk: { ...q.asw.dunk, won: false } } } : q)) }
   ok(C.legacyOf(oneT).score === C.legacyOf(noAsw).score + 1, 'one title, one point', C.legacyOf(oneT).score, C.legacyOf(noAsw).score)
   // (the story line of a title says so)
   let story = null

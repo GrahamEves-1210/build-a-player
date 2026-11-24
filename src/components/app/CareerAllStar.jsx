@@ -13,6 +13,7 @@ import { IconArrow, IconTrophy } from './icons'
 import MgStage from './MgStage'
 import './career-allstar.css'
 import { ASW_LEGACY } from '../../lib/allStarBreak'
+import { IconClose } from './icons'
 
 // ALL-STAR SATURDAY (basketball Career): the invitation, then the night: the 3-Point Contest, then the Slam Dunk
 // Contest. The contests themselves are lib/allStar.js (the field, the rivals, the judges); the games his rounds are
@@ -443,3 +444,35 @@ export function AllStarResult({ c }) {
   )
 }
 const ord = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+
+// ════ Practice (MiniGameLab): one contest, the whole night of it ════
+// The Career contest itself, on a stand-in career that only lives on this screen: the league's real field for the
+// night (threeField / dunkField), every rival's round simulated the same way, his rounds played on the stage at the
+// grade picked, through the final to the standings. Nothing is kept. GO AGAIN draws a new field.
+const PRACTICE_NAME = { 'three-contest': '3-Point Contest', 'dunk-contest': 'Slam Dunk Contest' }
+function practiceCareer(game, v, name, team) {
+  const three = game === 'three-contest'
+  return {
+    sport: 'bucket', seed: `practice-asw-${Math.random().toString(36).slice(2, 10)}`, year: 0, season: 2026, name, owner: name, pos: 'guard',
+    team: team?.short ?? '', fit: team ?? null, games: 'advanced', roster: null, gone: [],
+    build: { jumpShot: { val: v }, finishing: { val: v }, bounce: { val: v } },
+    active: { k: 0, feed: [], asw: { at: 0, inv: { three, dunk: !three }, pick: { three, dunk: !three }, three: three ? { mine: [] } : null, dunk: three ? null : { mine: [] }, done: false } },
+  }
+}
+export function PracticeContest({ game, v, team, name, onBack }) {
+  const [run, setRun] = useState(0)
+  const [c, setC] = useState(() => practiceCareer(game, v, name, team))
+  const again = Object.assign(() => { setC(practiceCareer(game, v, name, team)); setRun(n => n + 1); sfx('tap') }, { label: 'GO AGAIN' })
+  const Contest = game === 'three-contest' ? ThreeContest : DunkContest
+  return (
+    <div className="ag-screen pr-screen asw-practice">
+      <div className="pr-wrap">
+        <header className="pr-top">
+          <h1 className="ag-h1">{PRACTICE_NAME[game]}</h1>
+          <button className="ag-round-btn" onClick={onBack} aria-label="Back to Practice"><IconClose size={16} /></button>
+        </header>
+        <Contest key={run} c={c} setCareer={setC} face={<b>{initials(name)}</b>} onNext={again} />
+      </div>
+    </div>
+  )
+}
