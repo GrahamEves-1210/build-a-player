@@ -23,7 +23,8 @@ export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.m
 // A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk)
 export function shotKind(R, d, roll) {
   if (d > T.layRange) return 'jumper'
-  if (d <= T.dunkRange && R.bnc > T.dunkBounce && roll < (R.bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin)) return 'dunk'
+  const bnc = R.bncRaw ?? R.bnc                              // (who can get up: the plain grade)
+  if (d <= T.dunkRange && bnc > T.dunkBounce && roll < (bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin)) return 'dunk'
   return 'layup'
 }
 
