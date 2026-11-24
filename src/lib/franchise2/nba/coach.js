@@ -401,7 +401,7 @@ export function coachCarousel(F, recs, po = new Set()) {
   const taken = takenNames(F)
   for (const s of R.shuffle(open)) {
     const cands = []
-    for (const c of F.cpool) if (c.hy && c.fb !== s && !c.home) cands.push({ c, v: score(c.r, 'hc') + (c.ag >= 66 ? -1.2 : 0) - (c.out ?? 0) * 0.3 - (c.fired === F.year ? 1.2 : 0) + (R.u() - 0.5) * 2.2 })
+    for (const c of F.cpool) if (c.hy && c.fb !== s && !c.home) cands.push({ c, v: score(c.r, 'hc') + (c.ag >= 66 ? -1.2 : 0) - (c.out ?? 0) * 0.3 - (c.fired === F.year ? 2.6 : 0) + (R.u() - 0.5) * 2.2 })
     for (const o of SHORTS) { if (o === s) continue; const T = staffOf(F, o); for (const k of ['oc', 'dc']) { const c = T[k]; if (c && c.ag <= 58) cands.push({ c, from: [o, k], v: score(c.r, 'hc') + 0.35 + (R.u() - 0.5) * 2.2 }) } }
     const out = genAssistant(R, R.u() < 0.5 ? 'oc' : 'dc', { taken, kind: 'pool' })
     out.r = out.r.map(v => clamp(1, 10, v + R.int(0, 1)))

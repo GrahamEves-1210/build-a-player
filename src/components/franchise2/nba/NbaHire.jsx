@@ -37,7 +37,7 @@ export default function NbaHire({ S, go, owner, onStart, rules, onRules, games }
           return (
             <div key={k} className="fst-keep" data-job={k}>
               <StaffL3 c={c} role={k} team={S.team} size="s" full={false} lg={NBA_STAFF} delay={i * 60}
-                line={isNew ? `${JOB_LONG[k]} · NEW HIRE` : `${JOB_LONG[k]} · SINCE ${c.st}`} stamp={isNew ? <Stamp kind="w" quiet>HIRED</Stamp> : null} />
+                line={isNew ? `NEW · ${JOB_LONG[k]}` : JOB_LONG[k]} stamp={isNew ? <Stamp kind="w" quiet>HIRED</Stamp> : null} />
               <button type="button" className="fst-fire" onClick={() => go({ hk: k, hsel: null }, 'tap')}>{isNew ? 'CHANGE' : 'INTERVIEW CANDIDATES'}</button>
             </div>
           )
