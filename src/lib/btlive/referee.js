@@ -173,11 +173,15 @@ export function reboundSpot(from, d, r1, r2) {
   return { x: clamp(x, COURT.minX + 1.5, COURT.maxX - 1.5), y: clamp(y, COURT.minY + 1.2, COURT.maxY - 2) }
 }
 
-// The score: is it over, who won, is it game point
+// The score: is it over, who won, is it game point. score: one number a side (two sides, or three men in King of
+// the Hill). Win by 2 means 2 clear of the next best: in King of the Hill, 11-9-10 isn't over.
 export function scoreState(score, rules = RULES) {
-  const hi = Math.max(score[0], score[1]), lead = Math.abs(score[0] - score[1])
-  const over = hi >= rules.cap || (hi >= rules.goal && lead >= rules.winBy)
+  const lead = t => score[t] - Math.max(...score.filter((_, j) => j !== t))
+  let top = 0
+  for (let t = 1; t < score.length; t++) if (score[t] > score[top]) top = t
+  const hi = score[top]
+  const over = hi >= rules.cap || (hi >= rules.goal && lead(top) >= rules.winBy)
   // game point: the next basket (a two counts) can end it
-  const can = t => { const s = score[t] + 2, o = score[1 - t]; return s >= rules.cap || (s >= rules.goal && s - o >= rules.winBy) }
-  return { over, winner: over ? (score[0] > score[1] ? 0 : 1) : null, gamePoint: !over && (can(0) || can(1)) }
+  const can = t => { const s = score[t] + 2, o = Math.max(...score.filter((_, j) => j !== t)); return s >= rules.cap || (s >= rules.goal && s - o >= rules.winBy) }
+  return { over, winner: over ? top : null, gamePoint: !over && score.some((_, t) => can(t)) }
 }

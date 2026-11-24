@@ -22,8 +22,8 @@ export const COURT = {
 }
 
 export const RULES = {
-  goal: 11, winBy: 2, cap: 15,       // first to 11 by ones and twos, win by 2, capped at 15 (today's Blacktop)
-  shotClock: [12, 14, 14],           // seconds, by players a side (1v1, 2v2, 3v3)
+  goal: 11, winBy: 2, cap: 15,       // first to 11 by ones and twos, win by 2, capped at 15 (today's Blacktop; King of the Hill too)
+  shotClock: [12, 14],               // seconds, by players a side (1v1 and King of the Hill, 2v2)
   orebClock: 8,                      // the clock after an offensive rebound
   checkTime: 1.0,                    // the ball is checked: nobody moves for this long
   deadTime: 1.5,                     // after a basket or a turnover, before the next check

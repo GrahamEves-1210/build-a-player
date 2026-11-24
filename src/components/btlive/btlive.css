@@ -4,7 +4,7 @@
   --ink: #05070a; --asphalt: #0c1016; --panel: #141a22; --panel-hi: #1c242e;
   --line: rgba(255, 255, 255, .1); --line-hi: rgba(255, 255, 255, .2);
   --text: #f3f6f8; --muted: rgba(243, 246, 248, .62); --faint: rgba(243, 246, 248, .38);
-  --acc: var(--ag-a1, #f08a3c); --t0: #4da3ff; --t1: #ff4d5e;
+  --acc: var(--ag-a1, #f08a3c); --t0: #4da3ff; --t1: #ff4d5e; --t2: #c792ff;
   --num: var(--ag-display, 'BAP Anton', 'Anton', Impact, sans-serif);
   --cap: var(--ag-font, 'BAP Bebas', 'Bebas Neue', Impact, sans-serif);
   --rail: calc(var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px));
@@ -16,7 +16,7 @@
 }
 .btlv *, .btlv *::before, .btlv *::after { box-sizing: border-box; }
 .btlv button { font: inherit; color: inherit; letter-spacing: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
-.btlv .btlv-t0 { --tc: var(--t0); } .btlv .btlv-t1 { --tc: var(--t1); }
+.btlv .btlv-t0 { --tc: var(--t0); } .btlv .btlv-t1 { --tc: var(--t1); } .btlv .btlv-t2 { --tc: var(--t2); }
 .btlv-tag { font-size: 12px; letter-spacing: 2.4px; color: var(--muted); }
 html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavior: none; }
 
@@ -50,6 +50,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-game.has-keys { --pad-min: 132px; }
 .btlv-bug { flex: none; height: var(--bug); display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; background: var(--asphalt); border-bottom: 1px solid var(--line); position: relative; }
 .btlv .btlv-quit { position: absolute; left: 0; top: 0; height: 100%; padding: 0 10px; font-size: 12px; letter-spacing: 1.6px; color: var(--faint); z-index: 1; }
+.btlv-bug.is-koth { grid-template-columns: 1fr auto 1fr 1fr; }
 .btlv-bug-team { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 10px; }
 .btlv-bug-team.btlv-t0 { justify-content: flex-end; padding-left: 50px; }
 .btlv-bug-name { font-size: 15px; letter-spacing: 1px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; min-width: 0; }
@@ -114,6 +115,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-final-score { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 2px; font-family: var(--num); font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
 .btlv-final-score b { font-weight: 400; color: var(--tc); }
 .btlv-final-score i { font-style: normal; color: var(--faint); font-size: 40px; }
+.btlv-final-names { margin: 0 0 6px; font-size: 14px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .btlv-final-who { margin: 0 0 14px; font-size: 20px; letter-spacing: 1.4px; text-transform: uppercase; }
 .btlv-final-line { display: flex; align-items: flex-end; justify-content: center; flex-wrap: wrap; gap: 4px 14px; padding: 11px 0 12px; margin-bottom: 14px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .btlv-final-line > span { display: flex; flex-direction: column; align-items: center; }
