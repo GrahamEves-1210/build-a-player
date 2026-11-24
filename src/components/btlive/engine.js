@@ -429,16 +429,23 @@ export function createEngine({ setup, els, on, net = null }) {
     const bw = mine ? Math.round(clamp(tk * 0.6, 20, 30)) : Math.round(clamp(tk * 0.24, 7, 12))
     const bh = mine ? Math.round(clamp(tk * 3.4, 118, 176)) : Math.round(clamp(tk * 1.7, 46, 80))
     const L = camPx + 6, Rr = camPx + w - 6
-    // on the side away from the nearest defender (so it's never under him), kept for the whole shot; the other side
-    // if that's off the screen
+    const fs = Math.round(clamp(tk * 0.42, 13, 20))
+    ctx.font = `${fs}px ${FONT}`
+    // the room it needs beside him: the bar and the window's overhang; (his own) and the widest word that goes next to it
+    const word = mine ? 9 + ctx.measureText('SLIGHTLY EARLY').width + 12 : 0
     const at = sd => x + sd * (tk * 0.5 + 14) - (sd < 0 ? bw : 0)
+    const fits = (sd, extra = 0) => (sd > 0 ? at(1) - 8 >= L && at(1) + bw + 8 + extra <= Rr : at(-1) + bw + 8 <= Rr && at(-1) - 8 - extra >= L)
+    // on the side away from the nearest defender (so it's never under him), kept for the whole shot; the other side
+    // when that one hasn't the room on the screen
     let side = mine ? meter.side : 0
     if (!side) {
       let nd = 99; side = 1
       for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < nd) { nd = d; side = o.x > p.x ? -1 : 1 } }
+      if (!fits(side) && fits(-side)) side = -side
       if (mine) meter.side = side
     }
-    if (at(side) < L || at(side) + bw > Rr) side = -side
+    if (!fits(side) && fits(-side)) side = -side
+    const wordBeside = fits(side, word)                               // else the words go over (or under) the bar
     const bx = at(side), by = clamp(y - bh * 0.6, 4, h - bh - 4)
     const yAt = v => by + bh * (1 - clamp(v / spec.total, 0, 1))     // a time on the meter -> its height on the screen
     ctx.globalAlpha = a
@@ -468,7 +475,6 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.fillStyle = col; ctx.fillRect(bx + 4, fy, bw - 8, by + bh - fy)
     // the window's edges stay readable over a green fill
     ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(bx + 4, wc - wh / 2 - 1, bw - 8, 1.5); ctx.fillRect(bx + 4, wc + wh / 2 - 0.5, bw - 8, 1.5)
-    const fs = Math.round(clamp(tk * 0.42, 13, 20))
     ctx.font = `${fs}px ${FONT}`; ctx.textBaseline = 'middle'
     const chip = (text, cx, cy, color, align) => {
       const tw = ctx.measureText(text).width, pw = tw + 12, ph = Math.round(fs * 1.3)
@@ -479,18 +485,20 @@ export function createEngine({ setup, els, on, net = null }) {
       ctx.textAlign = 'left'; ctx.fillText(text, x0 + 7, y0 + ph / 2 + 0.5)
     }
     const out = side > 0 ? bx + bw + 9 : bx - 9, align = side > 0 ? 'left' : 'right'
+    const overY = by > fs * 1.8 ? by - fs * 0.95 : by + bh + fs * 0.95
+    const put = (text, y, color) => (wordBeside ? chip(text, out, y, color, align) : chip(text, bx + bw / 2, overY, color, 'center'))
     if (rel) {
       // where he stopped it: a marker across, in the grade's colour, and the grade beside it
       ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 9, fy - 3.5, bw + 18, 7)
       ctx.fillStyle = col; ctx.fillRect(bx - 8, fy - 2.5, bw + 16, 5)
       ctx.fillStyle = '#fff'; ctx.fillRect(bx - 8, fy - 0.75, bw + 16, 1.5)
-      chip(meter.grade, out, fy, col, align)
+      put(meter.grade, fy, col)
     } else {
       // how open he is (as well as his IQ reads it), beside the foot of the meter
       const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
-      if (read) chip(read, out, by + bh - fs * 0.65, [GREEN, AMBER, RED][meter.read], align)
+      if (read) put(read, by + bh - fs * 0.65, [GREEN, AMBER, RED][meter.read])
     }
-    if (clutch) chip('CLUTCH', bx + bw / 2, by + bh + fs * 0.9, spec.win > base.win ? GREEN : AMBER, 'center')
+    if (clutch) chip('CLUTCH', bx + bw / 2, wordBeside || overY < by ? by + bh + fs * 0.95 : by - fs * 0.95, spec.win > base.win ? GREEN : AMBER, 'center')
     ctx.globalAlpha = 1
   }
   function draw(now) {
