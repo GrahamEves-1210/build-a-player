@@ -11,7 +11,7 @@ import { seeded } from './rng.js'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs.js'
 import { BIRTH_NBA } from '../data/player-ages.js'
-import { DUNKS } from './mg/dunkcontest.js'
+import { DUNKS, JUDGE_RANGE } from './mg/dunkcontest.js'
 import { aswOpen } from './allStarBreak.js'
 export * from './allStarBreak.js'
 
@@ -125,11 +125,15 @@ const SHOOTOFF = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], ['d', 0], [4, 0], [4, 
 const simShootoff = (v, r) => simThree(v, r, { rack: 4, balls: SHOOTOFF, clock: 30 })
 
 // ── The Dunk Contest: a dunk's attempts and the five judges ──
-// The landing rates the engine plays at an A (v 9): easy 86%, medium 64%, hard 47% a try; 95, 76 and 58 at an S (11)
-export const LAND = { easy: [0.86, 0.045], medium: [0.64, 0.06], hard: [0.47, 0.055] }   // (the engine's average bot, measured: 86/64/47% at v 9, 95/76/58% at 11)
+// A rival dunks the way an average thumb plays the engine at his grade (scripts/mg/dunks.mjs, measured 11-24 once the
+// dunks were made fairer): a try lands 93% (easy), 77% (medium), 53% (hard) at an A (v 9), 96 / 88 / 64% at an S (11);
+// landed, it's about as clean as that thumb gets it (QUAL, the mean of its steps' timing, give or take 0.11)
+export const LAND = { easy: [0.93, 0.015], medium: [0.77, 0.055], hard: [0.53, 0.055] }
 export const landRate = (tier, v) => clamp(LAND[tier][0] + (v - 9) * LAND[tier][1], 0.25, 0.97)
-// what five judges give a dunk landed on the first try, placed in the range by how clean it was
-export const RANGE = { easy: [37, 42], medium: [41, 46], hard: [45, 50] }
+const QUAL = { easy: 0.82, medium: 0.79, hard: 0.75 }
+// what five judges give a dunk landed on the first try, placed in the range by how clean it was (the dunks' own table,
+// lib/mg/dunkcontest.js: the board on the court shows it)
+export const RANGE = JUDGE_RANGE
 export const tierOf = d => String(d?.tier ?? 'medium').toLowerCase()
 export const dunkById = id => DUNKS.find(d => d.id === id) ?? null
 // one dunk simulated: up to three tries, stopping at the first one down
@@ -137,7 +141,7 @@ export function simDunk(tier, v, r) {
   const tries = []
   for (let i = 0; i < DUNK_TRIES; i++) {
     const landed = r() < landRate(tier, v)
-    const q = clamp(0.5 + (v - 9) * 0.06 + gauss(r) * 0.18, 0.05, 1)
+    const q = clamp((QUAL[tier] ?? QUAL.medium) + (v - 9) * 0.01 + gauss(r) * 0.11, 0.05, 1)
     tries.push({ landed, quality: Math.round((landed ? q : q * 0.6) * 100) / 100 })
     if (landed) break
   }
@@ -262,8 +266,8 @@ function standingsOf(r1, fin, champ, key) {
 // the dunk itself from the list, never one he already landed tonight
 function rivalPick(s, round, behind, used, r) {
   const v = s.v
-  const pHard = clamp(0.25 + (v - 9) * 0.12 + (round === 'final' ? 0.15 : 0) + (behind > 4 ? 0.2 : 0) + (round.includes('off') ? 0.1 : 0), 0.05, 0.85)
-  const pEasy = clamp(0.18 - (v - 9) * 0.06 - (round === 'final' ? 0.08 : 0), 0.02, 0.35)
+  const pHard = clamp(0.4 + (v - 9) * 0.12 + (round === 'final' ? 0.15 : 0) + (behind > 4 ? 0.2 : 0) + (round.includes('off') ? 0.1 : 0), 0.05, 0.88)
+  const pEasy = clamp(0.1 - (v - 9) * 0.04 - (round === 'final' ? 0.06 : 0), 0.02, 0.3)
   const x = r(), tier = x < pHard ? 'hard' : x < pHard + pEasy ? 'easy' : 'medium'
   const open = DUNKS.filter(d => tierOf(d) === tier && !used.has(d.id))
   const list = open.length ? open : DUNKS.filter(d => !used.has(d.id))
@@ -424,7 +428,8 @@ export function settleLive(c) {
   if (!w) return c
   let n = c
   if (w.three?.live) { const L = w.three.live; n = recordThree(n, simThree(threeV(c) - 2, seeded(`${c.seed}-asw3-left-${c.year}-${L.round}`), { rack: L.rack }), L.rack, true) }
-  if (w.dunk?.live) { const L = w.dunk.live; n = recordAttempt(withAsw(n, x => ({ ...x, dunk: { ...x.dunk, live: null } })), L.dunk, { landed: false, quality: 0.2 }) }
+  // (left before he'd called the dunk, on the board in the game: nothing's been tried yet)
+  if (w.dunk?.live) { const L = w.dunk.live; n = withAsw(n, x => ({ ...x, dunk: { ...x.dunk, live: null } })); if (L.dunk) n = recordAttempt(n, L.dunk, { landed: false, quality: 0.2 }) }
   return n
 }
 

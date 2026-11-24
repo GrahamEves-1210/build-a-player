@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
@@ -30,9 +30,8 @@ const POS = { nfl: [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['DB
 const COMBINE = { nfl: ['forty', 'cone', 'gauntlet', 'bench', 'velo', 'acc'], bucket: ['sprint', 'lane', 'spot', 'vert', 'nbench'], soccer: ['sprint30', 'slalom', 'finishing', 'first-touch'], baseball: ['sixty', 'exit-velo', 'arm-strength', 'pitch-velo', 'spin', 'bullpen'] }
 // basketball's All-Star Saturday (Career): the Three-Point Contest
 const ALL_STAR = { bucket: ['three-contest', 'dunk-contest'] }
-// the Slam Dunk Contest plays one dunk: practice picks it first (?dunk=<id> opens on one), then plays it on its own stage
+// the Slam Dunk Contest plays one dunk, called on the board in the game (?dunk=<id> opens the board on one)
 const DUNK_DEF = { title: 'SLAM DUNK CONTEST', traits: ['finishing', 'bounce'] }
-const TIER_LABEL = { easy: 'EASY', medium: 'MEDIUM', hard: 'HARD' }
 
 // each game once, under the first position that plays it
 function listFor(sport) {
@@ -207,33 +206,19 @@ export default function MiniGameLab({ onClose }) {
   )
 }
 
-// The Slam Dunk Contest in practice: pick the dunk (each with its tier), then go. AGAIN plays the same one.
+// The Slam Dunk Contest in practice: the dunk's called on the board in the game; AGAIN opens the board on the last one
 function DunkLab({ v, go, cast, run, q, back, again, onDone, res }) {
-  const [dunk, setDunk] = useState(() => (DUNKS.some(d => d.id === q.get('dunk')) ? q.get('dunk') : null))
+  const last = useRef(DUNKS.some(d => d.id === q.get('dunk')) ? q.get('dunk') : null)
   const label = String(getUsername(getProgress().user) || 'Guest').toUpperCase()
-  if (!dunk) return (
-    <div className="ag-screen pr-screen">
-      <div className="pr-wrap">
-        <header className="pr-top">
-          <h1 className="ag-h1">Dunk Contest</h1>
-          <button className="ag-round-btn" onClick={back} aria-label="Back"><IconClose size={16} /></button>
-        </header>
-        <section className="pr-sec"><h2>Pick the dunk</h2>
-          {DUNKS.map(d => <button key={d.id} className="pr-row" onClick={() => { setDunk(d.id); sfx('tap') }}><b>{d.name}</b><i>{TIER_LABEL[d.tier]}</i></button>)}
-        </section>
-      </div>
-    </div>
-  )
-  const def = { ...DUNK_DEF, dunk, attempt: Number(q.get('attempt')) || 1, label }
+  const def = { ...DUNK_DEF, dunk: last.current, attempt: Number(q.get('attempt')) || 1, label, onPick: id => { last.current = id } }
   return (
     <div className="ag-screen pr-screen">
       <div className="pr-wrap">
-        <MgStage key={`${dunk}-${v}-${run}`} game="dunk-contest" def={def} v={v} seed={`practice-dunk-${dunk}-${run}`} sport="bucket" team={go.team} opp={go.opp} home={go.home} cast={cast ?? go.cast} onDone={onDone}>
-          <div className="pr-stagebar"><button onClick={() => { setDunk(null); sfx('back') }}>DUNKS</button><button onClick={again}>AGAIN</button></div>
+        <MgStage key={`${v}-${run}`} game="dunk-contest" def={def} v={v} seed={`practice-dunk-${run}`} sport="bucket" team={go.team} opp={go.opp} home={go.home} cast={cast ?? go.cast} onDone={onDone}>
+          <div className="pr-stagebar"><button onClick={back}>EXIT</button><button onClick={again}>AGAIN</button></div>
         </MgStage>
         <div className="pr-after">
           {res && <button className="ag-btn" onClick={again}>GO AGAIN</button>}
-          <button className="ag-btn ag-btn--ghost" onClick={() => { setDunk(null); sfx('back') }}>ALL DUNKS</button>
           <button className="ag-btn ag-btn--ghost" onClick={back}>ALL GAMES</button>
         </div>
       </div>

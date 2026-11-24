@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   threePlan, dunkPlan, answerAllStar, withdrawAllStar, recordThree, simThreeFor, recordAttempt, simDunkFor, markLive, settleLive, finishAllStar, aswHurt,
-  unlockAllStar, threeLine, dunkLine, threeV, dunkV, tierOf, dunkById, shortNamer, RACKS, RANGE, DUNK_TRIES,
+  unlockAllStar, threeLine, dunkLine, threeV, dunkV, tierOf, dunkById, shortNamer, RACKS, DUNK_TRIES,
 } from '../../lib/allStar'
 import { DUNKS } from '../../lib/mg/dunkcontest'
 import { engineFor } from '../../lib/mg'
@@ -288,6 +288,14 @@ function dunkNeedText(need, still = []) {
 }
 const Tries = ({ tries }) => <span className="asw-tries">{Array.from({ length: DUNK_TRIES }, (_, i) => <i key={i} className={i < tries.length ? (tries[i].landed ? 'is-land' : 'is-miss') : ''}>{i < tries.length ? (tries[i].landed ? 'MADE' : 'MISS') : ''}</i>)}</span>
 const Tier = ({ t }) => <b className={`asw-tier is-${t}`}>{TIER_WORD[t] ?? 'MEDIUM'}</b>
+// The dunk is called in the game, on the board on the court (lib/mg/dunkcontest.js). A dunk simulated (Mini Games OFF,
+// or SKIP) is called for him: the hard ones once his Bounce and Finishing are up to them or he needs a big one, the
+// medium ones otherwise, never one he's already landed tonight
+function autoDunk(c, need) {
+  const used = new Set(need?.used ?? [])
+  const tier = dunkV(c) >= 10 || (need?.toBeat ?? 0) > 46 ? 'hard' : 'medium'
+  return (DUNKS.find(d => tierOf(d) === tier && !used.has(d.id)) ?? DUNKS.find(d => !used.has(d.id)) ?? DUNKS[0]).id
+}
 
 function DunkContest({ c, setCareer, face, onNext }) {
   const P = useMemo(() => dunkPlan(c), [c.active.asw.dunk]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -296,8 +304,8 @@ function DunkContest({ c, setCareer, face, onNext }) {
   const mine = W.mine ?? []
   const lastMe = P.ev.reduce((k, e, i) => (e.kind === 'dunk' && e.me ? i + 1 : k), 0)
   const R = useReveal(P.ev, mine.length || W.cur ? Math.max(1, lastMe || P.ev.length) : 0, DUNK_PACE)
-  const [pick, setPick] = useState(W.cur?.dunk ?? null)
   const [playing, setPlaying] = useState(null)
+  const lastCall = useRef(null)   // (the board opens on the dunk he called last)
   const mode = gamesMode(c), live = mode !== 'off' && !!engineFor('dunk-contest')
   const cheered = useRef(false)
   const e = R.cur
@@ -321,22 +329,32 @@ function DunkContest({ c, setCareer, face, onNext }) {
   const need = R.at && e?.kind === 'turn' ? P.need : null
   const cur = W.cur
   const attempt = (cur?.tries?.length ?? 0) + 1
+  // (the first try: he calls the dunk in the game; the live mark gets the dunk as he calls it, so a game left after
+  // the call is a miss on that dunk, and one left before it is nothing)
   const go = () => {
-    const d = dunkById(pick)
-    if (!d) return
-    sfx('whistle')
-    if (!live) { setCareer(simDunkFor(c, d.id, `${need.round}-${need.n}`)); setPick(null); return }
-    setCareer(markLive(c, 'dunk', { dunk: d.id }))
-    setPlaying({ dunk: d, attempt, round: need.round, n: need.n })
+    if (!live) { sfx('whistle'); setCareer(simDunkFor(c, autoDunk(c, need), `${need.round}-${need.n}`)); return }
+    sfx('tap')
+    const c1 = markLive(c, 'dunk', { dunk: null })
+    setCareer(c1)
+    setPlaying({ dunk: null, attempt, round: need.round, n: need.n, used: need.used, toBeat: need.toBeat, c1 })
   }
+  const again = () => { setCareer(markLive(c, 'dunk', { dunk: cur.dunk })); setPlaying({ dunk: cur.dunk, attempt, round: need.round, n: need.n }); sfx('whistle') }
   const done = res => {
     const p = playing; setPlaying(null)
-    const n = recordAttempt(c, p.dunk.id, res?.raw ?? { landed: false, quality: 0.2 })
+    const id = res?.raw?.dunk ?? p.dunk
+    if (!id) return
+    lastCall.current = id
+    const n = recordAttempt(c, id, res?.raw ?? { landed: false, quality: 0.2 })
     setCareer(n)
-    if (!n.active.asw.dunk.cur) setPick(null)
     sfx(res?.raw?.landed ? 'claim' : 'deny')
   }
-  if (playing) return <Stage c={c} game="dunk-contest" v={dunkV(c)} seed={`${c.seed}-aswd-${c.year}-${playing.round}-${playing.n}-${playing.attempt}`} def={{ title: 'SLAM DUNK CONTEST', dunk: playing.dunk.id, attempt: playing.attempt, label: c.name }} onDone={done} />
+  if (playing) {
+    const def = playing.dunk
+      ? { title: 'SLAM DUNK CONTEST', dunk: playing.dunk, lock: true, attempt: playing.attempt, label: c.name }
+      : { title: 'SLAM DUNK CONTEST', dunk: lastCall.current, used: playing.used, attempt: 1, label: c.name, need: playing.toBeat > 30 && playing.toBeat <= 50 ? playing.toBeat : null,
+        onPick: id => setCareer(markLive(playing.c1, 'dunk', { dunk: id })) }
+    return <Stage c={c} game="dunk-contest" v={dunkV(c)} seed={`${c.seed}-aswd-${c.year}-${playing.round}-${playing.n}-${playing.attempt}`} def={def} onDone={done} />
+  }
   if (R.shown === 0) return (
     <div className="ag-card asw-card ag-pop">
       <span className="ag-eyebrow">ALL-STAR SATURDAY · SLAM DUNK CONTEST · THE FIELD</span>
@@ -346,7 +364,6 @@ function DunkContest({ c, setCareer, face, onNext }) {
       <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { R.setShown(1); sfx('whistle') }}>TO THE FLOOR <IconArrow size={16} /></button>
     </div>
   )
-  const used = new Set(need?.used ?? [])
   return (
     <div className="ag-card asw-card ag-pop">
       <span className="ag-eyebrow">ALL-STAR SATURDAY · SLAM DUNK CONTEST · {round === 'final' ? 'FINAL' : 'FIRST ROUND'}</span>
@@ -369,22 +386,11 @@ function DunkContest({ c, setCareer, face, onNext }) {
       {need && !cur && (
         <div className="asw-turn">
           <span className="ag-eyebrow">{need.label} · DUNK {need.round.includes('off') ? '' : `${need.n} OF 2 · `}{c.name.toUpperCase()}</span>
-          <h3 className="asw-title">Pick his dunk</h3>
+          <h3 className="asw-title">{`${c.name} is up`}</h3>
           <p className="cr-note">{dunkNeedText(need, need.round.includes('off') ? [] : men.filter(m => !m.me && (cnt.get(m.name) ?? 0) < need.n).map(m => sn(m.name)))}</p>
-          <div className="asw-dunks" role="radiogroup" aria-label="Dunks">
-            {DUNKS.map(d => {
-              const t = tierOf(d), gone = used.has(d.id)
-              return (
-                <button key={d.id} type="button" role="radio" aria-checked={pick === d.id} disabled={gone} className={`asw-dk${pick === d.id ? ' is-on' : ''}`} onClick={() => { setPick(d.id); sfx('tap') }}>
-                  <span className="asw-dk-top"><Tier t={t} /><b>{d.name}</b><em>{gone ? 'LANDED TONIGHT' : `${RANGE[t][0]}–${RANGE[t][1]}`}</em></span>
-                  <small>{d.line}</small>
-                </button>
-              )
-            })}
-          </div>
-          <button className="ag-btn ag-btn--gold tk-intro-go" disabled={!pick} onClick={go}>{pick ? `${dunkById(pick).name.toUpperCase()} · ATTEMPT 1` : 'PICK A DUNK'} <IconArrow size={16} /></button>
-          {live ? <button className="ag-btn ag-btn--ghost asw-skip" disabled={!pick} onClick={() => { sfx('tap'); setCareer(simDunkFor(c, pick, `${need.round}-${need.n}`)); setPick(null) }}>{pick ? 'SKIP · SIMULATE THE DUNK' : 'PICK A DUNK TO SIMULATE IT'}</button>
-            : <small className="asw-sim">Mini Games are off: his dunks are simulated from his Bounce and Finishing.</small>}
+          <button className="ag-btn ag-btn--gold tk-intro-go" onClick={go}>{live ? 'TO THE FLOOR' : 'SIMULATE THE DUNK'} <IconArrow size={16} /></button>
+          {live ? <button className="ag-btn ag-btn--ghost asw-skip" onClick={() => { sfx('tap'); setCareer(simDunkFor(c, autoDunk(c, need), `${need.round}-${need.n}`)) }}>SKIP · SIMULATE THE DUNK</button>
+            : <small className="asw-sim">Mini Games are off: his dunks are called and simulated from his Bounce and Finishing.</small>}
         </div>
       )}
       {need && cur && (
@@ -393,8 +399,8 @@ function DunkContest({ c, setCareer, face, onNext }) {
           <div className="asw-dunk-top"><Tier t={tierOf(dunkById(cur.dunk))} /><Tries tries={cur.tries} /></div>
           <h3 className="asw-title">{cur.tries.length === 1 ? 'Off the rim. Two tries left.' : 'Missed again. One try left.'}</h3>
           <p className="cr-note">{cur.tries.length === 1 ? 'Land it now and the judges take about a point each off what it would have scored.' : 'Nothing down in three and the judges score his best try, low 30s.'}</p>
-          <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setPick(cur.dunk); setCareer(markLive(c, 'dunk', { dunk: cur.dunk })); setPlaying({ dunk: dunkById(cur.dunk), attempt, round: need.round, n: need.n }); sfx('whistle') }}>ATTEMPT {attempt} OF {DUNK_TRIES} <IconArrow size={16} /></button>
-          <button className="ag-btn ag-btn--ghost asw-skip" onClick={() => { sfx('tap'); setCareer(simDunkFor(c, cur.dunk, `${need.round}-${need.n}`)); setPick(null) }}>SKIP · SIMULATE THE TRIES LEFT</button>
+          <button className="ag-btn ag-btn--gold tk-intro-go" onClick={again}>ATTEMPT {attempt} OF {DUNK_TRIES} <IconArrow size={16} /></button>
+          <button className="ag-btn ag-btn--ghost asw-skip" onClick={() => { sfx('tap'); setCareer(simDunkFor(c, cur.dunk, `${need.round}-${need.n}`)) }}>SKIP · SIMULATE THE TRIES LEFT</button>
         </div>
       )}
       {!need && e?.kind !== 'champ' && R.shown < P.ev.length && <button className="ag-btn ag-btn--ghost asw-skip" onClick={R.skip}>SKIP AHEAD</button>}

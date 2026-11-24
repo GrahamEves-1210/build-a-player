@@ -39,7 +39,7 @@ import * as dash60 from './dash60.js'
 import * as ofarm from './ofarm.js'
 // All-Star Saturday's Three-Point Contest (basketball Career): spot-up's shot, five racks and two deep balls on a clock
 import * as threecontest from './threecontest.js'
-// All-Star Saturday's Slam Dunk Contest (basketball Career): one dunk, picked from DUNKS, timed on the way up and at the rim
+// All-Star Saturday's Slam Dunk Contest (basketball Career): one dunk, called on the board in the game, timed on the way up and at the rim
 import * as dunkcontest from './dunkcontest.js'
 import { useCamera } from './art.js'
 
