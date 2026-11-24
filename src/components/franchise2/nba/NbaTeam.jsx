@@ -10,6 +10,7 @@ import { picksOf as tradePicks, tpesOf, availOf } from '../../../lib/franchise2/
 import { hitOf } from '../../../lib/franchise2/nba/cap'
 import '../trades.css'
 import { Rotation, PlayerSheet } from './NbaRoster'
+import NbaStaffScreen, { NbaStaffStrip } from './NbaStaff'
 
 // THE TEAM: the rotation (the order the coach plays them in: the first five start), the cap, the two-way men,
 // a man's page (his deal, his career, move him in the rotation, waive him) and trades.
@@ -19,6 +20,7 @@ export const dealText = p => (p.tw ? 'TWO-WAY' : p.y > 0 ? `${money(p.$)} · ${p
 export default function NbaTeam({ F, act, owner, view, setView }) {
   const [man, setMan] = useState(null)
   if (view === 'trades') return <Trades F={F} act={act} onBack={() => setView(null)} />
+  if (view === 'staff') return <NbaStaffScreen F={F} act={act} owner={owner} onBack={() => setView(null)} />
   const t = F.teams[F.team]
   const tw = t.r.filter(p => p.tw)
   const canTrade = F.phase === 'off' || (F.phase === 'season' && F.day <= F.ddl)
@@ -27,6 +29,8 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
       <CapBar F={F} />
       {canTrade ? <button type="button" className="fh-row" onClick={() => { setView('trades'); sfx('tap') }}><span><small>Trades</small><b>{F.phase === 'season' ? `Deadline ${F.ddl - F.day <= 0 ? 'today' : `in ${F.ddl - F.day} days`}` : 'Open for the summer'}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
         : <div className="fh-row nb-trade-shut"><span><small>Trades</small><b>{F.phase === 'season' || F.phase === 'post' ? `Trade deadline passed (${dateText(F, F.ddl)})` : 'Trades open after the Finals'}</b></span></div>}
+      {/* (the coaching staff: NbaStaff.jsx) */}
+      <NbaStaffStrip F={F} onOpen={() => { setView('staff'); sfx('tap') }} />
       {/* (the rotation, its edit and a man's page: NbaRoster.jsx) */}
       <Rotation F={F} act={act} owner={owner} onMan={setMan} />
       {tw.length > 0 && (

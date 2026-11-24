@@ -30,8 +30,11 @@ const fiveOf = (F, c) => (c?.mine ? F.coach?.r : rOf(c)) ?? null
 // in a tight list (a candidate list, the league's new hires)
 const CNAME = { talentDev: 'Develops players', offPlaycalling: 'Offense play-calling', defPlaycalling: 'Defense play-calling', culture: 'Team culture', situational: 'Game management' }
 const CWORD = { talentDev: 'Develop', offPlaycalling: 'Offense', defPlaycalling: 'Defense', culture: 'Culture', situational: 'Game mgmt' }
+// the league these draw: football's, or basketball Franchise's (nba/nbaCoachLg.js NBA_STAFF) passed as `lg`
+export const FB_STAFF = { CTYPES, CNAME, CWORD, cLetter, coachGrade, JOB, five: fiveOf, photo: (c, team, small) => coachPhoto(c, team, small) }
 // The five grades under a coach's lower-third. on: the rating in use (his play-calling, when he calls a side)
-export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0, full = true }) {
+export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0, full = true, lg = FB_STAFF }) {
+  const { CTYPES, CNAME, CWORD, cLetter } = lg
   return (
     <div className={`fst-g${full ? ' fst-g--full' : ''}${reveal ? ' is-reveal' : ''}`} role="list">
       {CTYPES.map((t, i) => (
@@ -44,15 +47,16 @@ export function Grades({ r, on = [], hidden = false, reveal = false, delay = 0, 
 }
 // A coach as a lower-third, his grades under it.
 //   c: staff man / myHC / a pool man · role 'hc' | 'oc' | 'dc' · team · line · calls: ['off'] the sides he calls
-export function StaffL3({ F, c, role, team, line, calls = [], size = 'm', mine, hidden = false, reveal = false, onClick, delay = 0, stamp, full = size !== 's' }) {
-  const r = fiveOf(F, c)
+export function StaffL3({ F, c, role, team, line, calls = [], size = 'm', mine, hidden = false, reveal = false, onClick, delay = 0, stamp, full = size !== 's', lg = FB_STAFF }) {
+  const { JOB, coachGrade } = lg
+  const r = lg.five(F, c)
   const on = calls.map(s => (s === 'off' ? 'offPlaycalling' : 'defPlaycalling'))
   return (
     <div className={`fst-man fst-man--${size}`} style={{ '--d': `${delay}ms` }}>
-      <LowerThird name={c?.n ?? c?.name} pos={JOB[role]} team={team} photo={coachPhoto(c, team, size === 's')} size={size} mine={mine} line={line} onClick={onClick} delay={delay}
+      <LowerThird name={c?.n ?? c?.name} pos={JOB[role]} team={team} photo={lg.photo(c, team, size === 's')} size={size} mine={mine} line={line} onClick={onClick} delay={delay}
         stat={hidden || !r ? { v: c?.ag ?? '-', label: 'AGE' } : { v: coachGrade(r, role), label: 'GRADE' }} />
       {stamp}
-      <Grades r={r} on={on} hidden={hidden} reveal={reveal} delay={delay} full={full} />
+      <Grades r={r} on={on} hidden={hidden} reveal={reveal} delay={delay} full={full} lg={lg} />
     </div>
   )
 }

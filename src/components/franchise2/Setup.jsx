@@ -88,17 +88,18 @@ const PACES = [
 ]
 // the league rules as the setup holds them (every one on but Sandbox, until he changes them)
 const rulesIn = S => ({ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, sandbox: S.rules?.sandbox ?? !!S.sandbox })
-function PaceStep({ pick, onPick, rules, onRules }) {
+// (basketball Franchise's setup uses it too, with its own cap wording and its Key moments switch: nba/NbaSetup.jsx)
+export function PaceStep({ pick, onPick, rules, onRules, capWhat, extra = null, paces = PACES }) {
   return (
     <div className="fsu-pace">
       <Chyron tone="ink" title="How do you want to run your franchise?" />
-      {PACES.map(([k, name, line]) => (
+      {paces.map(([k, name, line]) => (
         <button key={k} type="button" className={`fsu-pace-row${pick === k ? ' is-on' : ''}`} onClick={() => onPick(k)} aria-pressed={pick === k}>
           <b>{name}</b><span>{line}</span>
         </button>
       ))}
       {/* (the league rules from the start, owner 11-23: the cap off, injuries off, Sandbox; the last screen and the hub have them too) */}
-      <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={rules} onChange={onRules} /></section>
+      <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={rules} capWhat={capWhat} onChange={onRules} />{extra}</section>
     </div>
   )
 }

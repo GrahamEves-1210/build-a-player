@@ -437,3 +437,8 @@ button.nb-st-row.is-me { color: var(--tct); }
 button.nb-sch-row { width: 100%; border: 0; color: inherit; text-align: left; cursor: pointer; }
 button.nb-sch-row:active { background: var(--fk-g3); }
 .nb-sch-go { margin-left: 6px; font-style: normal; font-family: var(--fk-d); font-size: 18px; color: var(--fk-mute); }
+
+/* the coaching staff strip (NbaStaff.jsx): four jobs; a real coach with no ESPN headshot shows his initials */
+.nb-fst-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nb-fst-init { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--fk-d); font-weight: 400; font-size: 15px; color: var(--tct, #fff); }
+@media (max-width: 520px) { .nb-fst-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

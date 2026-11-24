@@ -72,6 +72,7 @@ let PB = false   // (the shot being played is a putback)
 export const eventsOf = b => (b?.q ? LOGS.get(logKey(b.h, b.a, b.q.map(x => x[0]), b.q.map(x => x[1]))) ?? null : null)
 export const logOf = G => G?.EV ?? null
 import { planRotation, dressed, setOf, reshape, spotOf, twGames, TW_GAMES } from './rotation'
+import { coachSide } from './coach'
 
 // ── The league's dials (calibrated against the 2024-25 season, scripts/franchise2/nba/calib.mjs) ─────────────────
 export const TUNE = {
@@ -103,7 +104,7 @@ const mean = (a, f) => a.reduce((s, x) => s + f(x), 0) / (a.length || 1)
 function side(T, home, po = false) {
   const men = (T.men ?? []).filter(p => !(p.inj?.g > 0) || T.hurtOk).map(p => ({ i: p.i, p: p.p, g: p.g, a: { ...p.a }, ht: p.ht, o: p.o, sp: spotOf(p) }))
   const rot = planRotation(men, { ...(T.set ?? {}), po })
-  return { short: T.short, men, rot, floor: [], home, fouls: 0, out: [], ...(T.dnp?.length && { dnp: T.dnp }) }
+  return { short: T.short, men, rot, floor: [], home, fouls: 0, out: [], ...(T.dnp?.length && { dnp: T.dnp }), ...(T.co && { co: T.co, ...(T.co.pace && { pace: T.co.pace }) }) }
 }
 
 export function newGame(G) {
@@ -232,7 +233,7 @@ function shoot(S, k, who, forced = null, want = null) {
   const R = S.R
   let shot = forced?.shot ?? want?.shot
   if (!shot) {
-    const f3 = Math.min(0.6, Math.max(0.02, TUNE.three + 0.03 * (s.sh - 6) - (s.big ? 0.15 : 0) - 0.02 * (s.fin - 6) - (s.sh < 3.5 ? 0.15 : 0)))
+    const f3 = Math.min(0.6, Math.max(0.02, TUNE.three + 0.03 * (s.sh - 6) - (s.big ? 0.15 : 0) - 0.02 * (s.fin - 6) - (s.sh < 3.5 ? 0.15 : 0) + (O.co?.three ?? 0)))
     const fRim = Math.min(0.85, Math.max(0.25, TUNE.rimBase + 0.045 * (s.fin - 6) + (s.big ? 0.14 : 0) - 0.025 * (s.sh - 6)))
     const x = R.u()
     shot = x < f3 ? 'three' : x < f3 + (1 - f3) * fRim ? 'rim' : 'mid'
@@ -251,7 +252,7 @@ function shoot(S, k, who, forced = null, want = null) {
   // NBA leads shrink like this, a blowout comes back toward 20 and a close game stays close (forced: a moment's own make)
   const up = forced ? 0 : Math.max(-TUNE.leadCap, Math.min(TUNE.leadCap, S.sc[k] - S.sc[other(k)]))
   const pull = tn(S, 'lead') + (S.per >= 4 && S.clock <= TUNE.lateT && Math.abs(up) <= 12 ? tn(S, 'lead4') : 0)
-  p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up))
+  p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up + staffEdge(S, O, D)))
   if (want?.heave) p *= S.clock <= 1.5 ? 0.35 : 0.6
   const pts = shot === 'three' ? 3 : 2
   // fouled on the shot: a miss is two (three) free throws, a make an and-one now and then
@@ -284,6 +285,18 @@ function shoot(S, k, who, forced = null, want = null) {
   return miss(S, k, who, shot)
 }
 
+// the coaches (coach.js coachSide): the offense's scheme against the defense's, a bench unit's minutes (three or more
+// of the starters sitting), the last five minutes of a game within five
+function staffEdge(S, O, D) {
+  const a = O.co, b = D.co
+  if (!a && !b) return 0
+  let e = (a?.off ?? 0) - (b?.def ?? 0)
+  const bench = T => T.st && T.floor.filter(id => !T.st.includes(id)).length >= 3
+  if (a?.rot && bench(O)) e += a.rot
+  if (b?.rot && bench(D)) e -= b.rot
+  if (S.per >= 4 && S.clock <= 300 && Math.abs(S.sc.h - S.sc.a) <= 5) e += (a?.late ?? 0) - (b?.late ?? 0)
+  return e
+}
 // the possession's man: the usage weights of the five on the floor
 function actor(S, k) {
   const O = S[k]
@@ -451,7 +464,8 @@ function sideOf(F, s, po = false) {
   }
   if (men.some(p => p.inj?.g > 0)) hurtOk = 1
   const dnp = T.r.filter(p => !men.includes(p)).map(p => (p.inj?.g > 0 ? { i: p.i, r: 'inj', k: p.inj.k } : p.rest ? { i: p.i, r: 'rest' } : { i: p.i, r: 'tw', k: po ? 'not eligible for the playoffs' : twGames(p, F.year) >= TW_GAMES ? '50-game limit' : 'G League' }))
-  return { short: s, men, set: setOf(T), dnp, ...(hurtOk && { hurtOk }) }
+  const co = coachSide(F, s)
+  return { short: s, men, set: setOf(T), dnp, ...(hurtOk && { hurtOk }), ...(co && { co }) }
 }
 export function startGame(F, home, away, { seed = null, playoff = false } = {}) {
   return newGame({ seed: seed ?? `${F.seed}-${F.year}-${F.day}-${home}-${away}`, po: playoff, home: sideOf(F, home, playoff), away: sideOf(F, away, playoff) })

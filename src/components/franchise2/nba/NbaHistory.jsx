@@ -56,6 +56,12 @@ function Honors({ F, h, open }) {
             </li>
           )
         })}
+        {h.coy && (
+          <li className={h.coy.s === F.team ? 'is-me' : ''} style={TEAM[h.coy.s] ? fkVars(h.coy.s) : undefined}>
+            <KLogo s={h.coy.s} size={24} />
+            <span><small>Coach of the Year</small><b>{h.coy.n}</b><em>{`HC · ${h.coy.s} · ${h.coy.rec}`}</em></span>
+          </li>
+        )}
       </ul>
       <AwardTeams F={F} y={h.y} title="All-NBA" teams={A.ALL} names={['First team', 'Second team', 'Third team']} />
       <AwardTeams F={F} y={h.y} title="All-Defensive" teams={A.ALLDEF} names={['First team', 'Second team']} k="DEF" />

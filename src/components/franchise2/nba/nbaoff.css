@@ -187,3 +187,9 @@
 [data-tap] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 [data-tap]:active { filter: brightness(1.25); }
 [data-tap]:focus-visible { outline: 2px solid var(--fk-text, #fff); outline-offset: -2px; }
+
+/* the spring's coaching changes on the awards stop (NbaOffseason.jsx CoachMoves) */
+.nbo-coach-moves { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.nbo-coach-moves li { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 6px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc, var(--fk-g4)); font-family: var(--fk-b); font-size: 14px; line-height: 1.2; }
+.nbo-coach-moves li span { flex: 1; min-width: 0; }
+.nbo-coach-moves li small { flex: none; font-family: var(--fk-f); font-size: 13px; letter-spacing: .6px; color: var(--fk-mute); }
