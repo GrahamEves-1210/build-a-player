@@ -2230,7 +2230,7 @@ export default function BucketApp() {
   )
   const withGame = el => (IS_APP && gameMode && gameMode !== 'salarycap' && KEEP_GAME_ON.has(page) ? shell(el) : el)
 
-  if (BT_LIVE_OPEN) return <Suspense fallback={null}><BtLive pools={LIVE_POOLS} user={user} /></Suspense>
+  if (import.meta.env.DEV && BT_LIVE_OPEN) return <Suspense fallback={null}><BtLive pools={LIVE_POOLS} user={user} /></Suspense>
   if (import.meta.env.DEV && BT_LOOK) return <Suspense fallback={null}><BlacktopLook look={BT_LOOK} pools={LIVE_POOLS} types={LIVE_TYPES} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} /></Suspense>
   if (page === 'splash') {
     return withGame(

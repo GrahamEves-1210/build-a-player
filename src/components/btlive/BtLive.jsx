@@ -1,4 +1,4 @@
-// (BucketApp mounts it behind lib/btLive.js BT_LIVE_OPEN: only at /bucket?btlive=1, on since 2026-11-24): BLACKTOP LIVE,
+// DEV ONLY (BucketApp mounts it behind import.meta.env.DEV and lib/btLive.js, so it never ships): BLACKTOP LIVE,
 // the real-time prototype of Blacktop. Practice against the CPU, on this device: nothing here touches the live
 // server, an account, a record or today's Blacktop.
 //   /bucket?btlive=1                      the practice menu

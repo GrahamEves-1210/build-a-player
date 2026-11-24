@@ -45,7 +45,7 @@ const NBA_FRANCHISE_DEV = (() => {
     return localStorage.getItem('bap_frnba_dev') === '1'
   } catch { return /[?&]nbafranchise=1\b/.test(location.search) }
 })()
-export const NBA_FRANCHISE_LIVE = true || NBA_FRANCHISE_DEV   // on (the owner, 2026-11-24)
+export const NBA_FRANCHISE_LIVE = false || NBA_FRANCHISE_DEV
 // Home's card note, the same shape as football's (components/franchise2/nba/NbaFranchise.jsx leaveNote)
 export const NBA_FRANCHISE_CARD_KEY = 'bap_frnba_card'
 export const nbaFranchiseCard = () => { try { const c = JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY)); return c && typeof c.line === 'string' && c.line ? c : null } catch { return null } }
