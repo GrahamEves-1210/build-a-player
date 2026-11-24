@@ -13,7 +13,7 @@ const GREEN = '#3ddc84', AMBER = '#f2b33d', RED = '#ff5a5a', FLOOD = '#fff0cf'
 // the release, by how far off it was: green on time, amber a touch off, red well off (EARLY sits under the window,
 // LATE over it, so the marker's place says which); a shot that never went up is grey
 const GRADE_COL = { PERFECT: GREEN, 'SLIGHTLY EARLY': AMBER, 'SLIGHTLY LATE': AMBER, EARLY: RED, LATE: RED, 'NO SHOT': '#aab4be' }
-const SIDE_COL = ['#4da3ff', '#ff4d5e', '#f2b33d']   // the scorebug's colours by side (a third man in King of the Hill)
+const SIDE_COL = ['#4da3ff', '#ff4d5e', '#c792ff']   // the scorebug's colours by side (the third man in King of the Hill: --t2)
 const METER_HOLD = 600, METER_FADE = 250       // after the release the meter stays this long where he stopped it, then fades
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -261,8 +261,8 @@ export function createEngine({ setup, els, on, net = null }) {
   }
 
   // ── the HUD: only what changed, straight to the DOM ─────────────────────────────────────────────
-  // The scorebug's sides: the two teams, or in King of the Hill each man (the modes' state: s.mode 'koth', s.king,
-  // per-man scores, s.mustClear; read as each may come)
+  // The scorebug's sides: the two teams, or in King of the Hill each man (s.mode 'koth'; s.score[i] per man, his
+  // team is his index; s.king: the man attacking; s.mustClear: the man who must still take it past the arc, or null)
   const koth = () => s.mode === 'koth' || setup.mode === 'koth'
   const sideScore = i => {
     if (!koth()) return s.score?.[i] ?? 0
@@ -285,12 +285,12 @@ export function createEngine({ setup, els, on, net = null }) {
     box.className = `btlv-bug-sides is-${n === 2 ? 'two' : 'many'}`
     shown.sc = []
     for (let i = 0; i < n; i++) {
-      const el = document.createElement('div'), ball = document.createElement('i'), nm = document.createElement('span'), sc = document.createElement('b')
+      const el = document.createElement('div'), ball = document.createElement('i'), nm = document.createElement('span'), sc = document.createElement('b'), tag = document.createElement('em')
       el.className = 'btlv-bug-side'; el.style.setProperty('--tc', setup.colors?.[i] ?? SIDE_COL[i] ?? '#fff')
-      ball.className = 'btlv-bug-ball'; nm.className = 'btlv-bug-name'; sc.className = 'btlv-bug-score'
+      ball.className = 'btlv-bug-ball'; nm.className = 'btlv-bug-name'; sc.className = 'btlv-bug-score'; tag.className = 'btlv-bug-tag'
       nm.textContent = nameOf(i); sc.textContent = '0'
-      el.append(ball, nm, sc); box.append(el)
-      shown.sc.push({ el, sc, v: null, on: null })
+      el.append(ball, nm, tag, sc); box.append(el)
+      shown.sc.push({ el, sc, tag, v: null, on: null, t: '' })
     }
     shown.bug = koth()
   }
@@ -310,20 +310,23 @@ export function createEngine({ setup, els, on, net = null }) {
     const K = koth(), hold = b.st === 'held' || b.st === 'dead' ? b.holder : -1
     const team = s.phase === 'dead' && s.next ? s.next.team : s.poss
     const on = K ? (s.phase === 'dead' && s.next?.carrier != null ? s.next.carrier : hold >= 0 ? hold : s.king ?? -1) : team
+    const cl = K ? clearer() : -1
     shown.sc.forEach((c, i) => {
       const v = sideScore(i)
       if (v !== c.v) { c.v = v; c.sc.textContent = String(v) }
       const lit = i === on, king = K && s.king === i
       if (lit !== c.on || king !== c.king) { c.on = lit; c.king = king; c.el.classList.toggle('is-on', lit); c.el.classList.toggle('is-king', king) }
+      // King of the Hill: the king marked, and the man who has to take it back past the arc first
+      const t = !K ? '' : i === cl ? 'CLEAR IT' : king ? 'KING' : ''
+      if (t !== c.t) { c.t = t; c.tag.textContent = t; c.tag.classList.toggle('is-clear', t === 'CLEAR IT') }
     })
     let note = ''
     if (s.phase !== 'over') {
       if (K) {
-        const cl = clearer()
         note = cl >= 0 ? `${nameOf(cl)} MUST CLEAR IT` : s.king != null && s.king >= 0 ? `${nameOf(s.king)} IS KING` : on >= 0 ? `${nameOf(on)}'S BALL` : ''
       } else if (team != null && team >= 0) note = `${nameOf(team)}'S BALL`
     }
-    const nc = K ? (clearer() >= 0 ? clearer() : s.king ?? on) : team
+    const nc = K ? (cl >= 0 ? cl : s.king ?? on) : team
     if (note !== shown.note || nc !== shown.nc) {
       shown.note = note; shown.nc = nc
       if (els.note) { els.note.textContent = note.toUpperCase(); els.note.style.color = nc != null && nc >= 0 ? setup.colors?.[nc] ?? SIDE_COL[nc] ?? '' : '' }
@@ -561,7 +564,9 @@ export function createEngine({ setup, els, on, net = null }) {
       const fs = Math.round(clamp(tk * 0.42, 13, 20)), t = (now - meter.gradeAt) / 900
       ctx.font = `${fs}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       ctx.globalAlpha = t > 0.7 ? (1 - t) / 0.3 : 1
-      const tw = ctx.measureText('NO SHOT').width, gx = clamp(X(me), L + tw / 2 + 10, Rr - tw / 2 - 10), gy = clamp(Y(me) - tk * 1.3, fs, h - fs)
+      // beside him, where his meter was (not on the man guarding him)
+      const tw = ctx.measureText('NO SHOT').width, sd = meter.side || 1
+      const gx = clamp(X(me) + sd * (tk * 0.5 + 14 + tw / 2), L + tw / 2 + 10, Rr - tw / 2 - 10), gy = clamp(Y(me), fs, h - fs)
       ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(gx - tw / 2 - 6, gy - fs * 0.65, tw + 12, fs * 1.3)
       ctx.fillStyle = GRADE_COL['NO SHOT']; ctx.fillText('NO SHOT', gx, gy + 0.5)
       ctx.globalAlpha = 1
