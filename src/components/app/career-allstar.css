@@ -25,6 +25,22 @@
 .asw-row.is-me.is-up { background: color-mix(in srgb, var(--ag-a1) 22%, transparent); }
 .asw-row.is-through .asw-row-v { color: var(--ag-a1); }
 .asw-row.is-through .asw-row-name::after { content: 'FINAL'; margin-left: 8px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--ag-a1); font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.2px; color: var(--ag-a1); vertical-align: 1px; }
+.asw-row.is-out .asw-row-v { color: rgba(255,255,255,.55); }
+.asw-row.is-cutline { border-top: 2px solid rgba(255,255,255,.28); }
+
+/* ── the final standings: place, the man, his first round, his final ── */
+.asw-stand-cols { display: flex; }
+.asw-stand-cols i { width: 44px; font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; text-align: right; color: var(--ag-muted); }
+.asw-srow { grid-template-columns: 26px 34px 1fr 44px 44px; }
+.asw-srow .asw-row-n { display: grid; place-items: center; font-size: 16px; color: rgba(255,255,255,.8); }
+.asw-srow-name { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.asw-srow-name b { font-family: var(--ag-body); font-size: 14px; font-weight: 700; color: var(--ag-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asw-srow-name small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.1px; color: rgba(255,255,255,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asw-srow-v { font-family: var(--ag-display); font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; text-align: right; color: #fff; }
+.asw-srow-v.is-r1 { color: rgba(255,255,255,.6); }
+.asw-srow.is-out .asw-srow-v.is-r1 { color: #fff; }
+.asw-srow.is-champ .asw-row-n { color: var(--ag-gold); }
+.asw-srow.is-champ .asw-srow-v:not(.is-r1) { color: var(--ag-gold-hi); }
 .asw-head { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #1b1d20; border: 1px solid rgba(255,255,255,.12); }
 .asw-head img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
 .asw-head b { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: var(--ag-muted); }

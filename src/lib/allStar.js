@@ -239,14 +239,23 @@ export function threePlan(c) {
   const title = cutTies(fin, 1, 'pts', shootoff('final'))
   const champ = title.through[0]
   ev.push({ kind: 'champ', round: 'final', who: champ, res: champ.res, tie: title.tie, board: rankBy(fin, 'pts') })
-  return { field, ev, need: null, r1, finalists, meIn, fin, champ, stage: 'done', place: placeOf(c, r1, fin, champ, finalists) }
+  const standings = standingsOf(r1, fin, champ, 'pts')
+  return { field, ev, need: null, r1, finalists, meIn, fin, champ, stage: 'done', standings, place: standings.find(x => x.me)?.place ?? null }
 }
-function placeOf(c, r1, fin, champ, finalists) {
-  if (champ?.me) return 1
-  const f = fin.find(x => x.me)
-  if (f) { const above = fin.filter(x => !x.me && (x.name === champ.name || x.pts > f.pts)).length; return Math.min(finalists.length, 1 + above) }
-  const m = r1.find(x => x.me)
-  return m ? finalists.length + 1 + r1.filter(x => !x.me && !finalists.some(y => y.name === x.name) && x.pts > m.pts).length : null
+// ── The final standings, the way the league lists them: the champion, the rest of the final by their final score, then
+// everyone else by his first-round score. Equal scores share a place (a tie on the cut line or for the title went to a
+// shoot-off or a dunk-off, and the winner of it is listed first). The boards and his place both read this one list.
+// rows: { name, team, me, place, tied, r1, final, champ, through }
+function standingsOf(r1, fin, champ, key) {
+  const inFinal = new Set(fin.map(x => x.name)), first = new Map(r1.map(x => [x.name, x[key]]))
+  const finRows = [...fin].sort((a, b) => (b.name === champ.name) - (a.name === champ.name) || b[key] - a[key])
+  const out = r1.filter(x => !inFinal.has(x.name)).sort((a, b) => b[key] - a[key])
+  const rows = [
+    ...finRows.map((x, i) => ({ name: x.name, team: x.team, me: !!x.me, r1: first.get(x.name) ?? null, final: x[key], champ: i === 0, through: true, place: i === 0 ? 1 : 1 + finRows.filter(y => y.name !== x.name && (y.name === champ.name || y[key] > x[key])).length })),
+    ...out.map(x => ({ name: x.name, team: x.team, me: !!x.me, r1: x[key], final: null, champ: false, through: false, place: fin.length + 1 + out.filter(y => y[key] > x[key]).length })),
+  ]
+  for (const r of rows) r.tied = rows.some(y => y !== r && y.place === r.place)
+  return rows
 }
 
 // A rival's dunk: the tier by how high he gets and where he stands (the final, or a deficit, brings out the hard ones),
@@ -261,6 +270,7 @@ function rivalPick(s, round, behind, used, r) {
   const d = list[Math.floor(r() * list.length)] ?? DUNKS[0]
   return d
 }
+const P_DUNKS = (ev, name, round) => ev.filter(e => e.kind === 'dunk' && e.who.name === name && e.round === round).map(e => e.total)
 export function dunkPlan(c) {
   const Dk = c.active?.asw?.dunk ?? {}, mine = Dk.mine ?? []
   const field = dunkField(c)
@@ -355,8 +365,11 @@ export function dunkPlan(c) {
   const champ = c2.through[0]
   ev.push({ kind: 'champ', round: 'final', who: champ, board: rankBy(fin, 'sum') })
   const meIn = finalists.some(x => x.me)
-  const place = champ.me ? 1 : meIn ? 2 : 2 + 1 + r1.filter(x => !x.me && !finalists.some(y => y.name === x.name) && x.sum > r1.find(y => y.me).sum).length
-  return { field, ev, need: null, r1, finalists, meIn, fin, champ, stage: 'done', place }
+  const standings = standingsOf(r1, fin, champ, 'sum')
+  // (each man's dunks, the judges' totals in the order he took them: the first round's two, the final's two)
+  const totals = (name, round) => P_DUNKS(ev, name, round)
+  for (const r of standings) { r.r1Dunks = totals(r.name, 'r1'); r.finalDunks = r.through ? totals(r.name, 'final') : null }
+  return { field, ev, need: null, r1, finalists, meIn, fin, champ, stage: 'done', standings, place: standings.find(x => x.me)?.place ?? null }
 }
 
 // ── His rounds, kept on the season ──
