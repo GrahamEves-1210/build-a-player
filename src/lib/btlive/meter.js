@@ -4,9 +4,12 @@
 // the referee to check a quality against the press and release stamps. Pure.
 import { T } from './tune.js'
 
+const clampN = v => Math.min(1, Math.max(0, v))
+
 // kind: 'jumper' | 'layup' | 'dunk'. R: the shooter's ratings (ratings.js). gamePoint: either side a basket from winning.
 export function meterSpec(kind, R, gamePoint = false) {
-  const clutch = gamePoint ? 1 - T.clutchShrink * (1 - R.clutch) : 1
+  // at game point the green window shrinks for a man who isn't clutch and grows for one who is
+  const clutch = gamePoint ? T.clutchLo + (T.clutchHi - T.clutchLo) * (R.clutchRaw ?? clampN((R.clutch - (1 - T.spread)) / T.spread)) : 1
   if (kind === 'jumper') return { kind, total: T.jTotalMs, ideal: T.jIdealMs, win: (T.jWinMs + T.jWinJs * R.js * R.js) * clutch, fall: T.jFallMs }
   const w = (T.lWinMs + T.lWinFin * R.fin * R.fin) * (kind === 'dunk' ? T.dunkWin : 1) * clutch
   return { kind, total: T.lTotalMs, ideal: T.lIdealMs, win: w, fall: T.lFallMs }

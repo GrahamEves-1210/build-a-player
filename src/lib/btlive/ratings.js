@@ -28,13 +28,19 @@ export function derive(build, pos = 'guard') {
     js: n(js), fin: n(fin), pas: n(passing), hnd: n(handles), per: n(perD), int: n(intD), reb: n(rebounding),
     spd: n(spd), bnc: n(bnc), size: n(size), iq: n(iq), clutch: n(clutch),
   }
-  // top speed runs on the plain grade (not squeezed by spread): the band itself is narrow on purpose
-  const spdRaw = clamp((spd - 1) / 10, 0, 1)
-  const top = T.speedMin * (1 + T.speedBand * spdRaw) * (1 - T.sizeSlow * R.size)
+  // the body runs on the plain grades (not squeezed by spread): Speed is how fast and how quick he is, Size how
+  // heavy and how much slower. With the ball he keeps most of it (Handles keeps more), so a quick handler beats a
+  // slow defender and a quick defender stays in front of a slow handler
+  const raw = g => clamp((g - 1) / 10, 0, 1)
+  const spdRaw = raw(spd), sizeRaw = raw(size)
+  const top = T.speedMin * (1 + T.speedBand * spdRaw) * (1 - T.sizeSlow * sizeRaw)
   R.top = top                                               // ft/s without the ball
-  R.topBall = T.speedMin * (1 + T.speedBand * T.speedBall * spdRaw) * (1 - T.sizeSlow * R.size) * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
+  R.topBall = top * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
   R.topDef = top * (T.defSpeed + T.defSpeedPer * R.per)     // guarding
-  R.mass = 1 + T.massSize * R.size
+  R.accel = T.accel * (T.accelBase + T.accelSpd * spdRaw) * (1 - T.accelSize * sizeRaw)   // ft/s²
+  R.accelDef = R.accel * (T.defAccel + T.defAccelPer * R.per)                              // ...guarding
+  R.mass = 1 + T.massSize * sizeRaw
+  R.clutchRaw = raw(clutch)
   R.passSpeed = T.passSpeed + T.passSpeedPas * R.pas
   R.moveCd = T.moveCd - T.moveCdHnd * R.hnd
   R.standReach = T.standReach + T.standReachSize * R.size

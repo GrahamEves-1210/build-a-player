@@ -34,26 +34,33 @@ export const handUp = d => (beaten(d) ? d : { ...d, act: 'jump' })
 // gather, every hand up) only gets part of it
 export const lateContest = (c, cUp) => (cUp == null ? c : c * (1 - T.lateShare) + Math.min(c, cUp) * T.lateShare)
 
-// How much the defense is in the shot, 0..1, and whose hand it is. Players: { id, x, y, act, R }
+// How much the defense is in the shot, 0..1, and whose hand it is. Players: { id, x, y, vx, vy, act, R }
+// A hand counts for how close he is, where he is (between the shooter and the rim, beside him, or trailing a man
+// who beat him), how he's standing (in the air, set, on his heels, frozen), and who he is: his defense (Perimeter D
+// on jumpers, Interior D in the paint and at the rim), his IQ (a smart man is in the right spot with the right hand),
+// his Bounce in the air and his Size against the shooter's
 export function contestOf(shooter, defenders, kind) {
   const sd = rimDist(shooter)
-  const paint = kind !== 'jumper' || inPaint(shooter.x, shooter.y)
+  const jumper = kind === 'jumper'
+  const paint = !jumper || inPaint(shooter.x, shooter.y)
+  const near = jumper ? T.contestNear : T.contestNearL, range = jumper ? T.contestRange : T.contestRangeL
   let best = 0, second = 0, by = null
   for (const d of defenders) {
     const dd = dist(d, shooter)
-    if (dd > T.contestRange) continue
-    const near = kind === 'jumper' ? T.contestNear : T.contestNearL
-    const prox = Math.pow(clamp(1 - (dd - near) / (T.contestRange - near), 0, 1), T.contestCurve)
-    // between the shooter and the rim, or beside/behind him
+    if (dd > range) continue
+    const prox = Math.pow(clamp(1 - (dd - near) / (range - near), 0, 1), T.contestCurve)
+    // where he is: in front (between him and the rim), beside, or behind (beaten: trailing the play)
     let front = 1
     if (sd > 2 && dd > 0.01) {
       const dot = ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd)
-      if (dot < 0.2) front = T.contestSide
+      front = dot >= T.frontDot ? 1
+        : dot >= 0 ? T.contestSide + (1 - T.contestSide) * dot / T.frontDot
+        : T.contestSide + (T.contestSide - T.contestBehind) * Math.max(dot, -1)
     }
-    // a hand up, or feet on the floor; a man set in front of a layup (straight up, not moving) is almost as good as a jump
-    const set = kind !== 'jumper' && front === 1 && Math.hypot(d.vx || 0, d.vy || 0) < 3
-    const stance = beaten(d) ? T.contestBeat : d.act === 'jump' ? 1 : set ? T.contestSet : T.contestStand
-    const rate = T.contestRate + T.contestRateDef * (paint ? d.R.int : d.R.per)
+    // a hand up, or feet on the floor; a man set in front of a layup (straight up, not moving) is nearly a hand up
+    const set = !jumper && front === 1 && Math.hypot(d.vx || 0, d.vy || 0) < 3
+    const stance = beaten(d) ? T.contestBeat : d.act === 'jump' ? T.contestJump + T.contestJumpBnc * d.R.bnc : set ? T.contestSet : T.contestStand
+    const rate = T.contestRate + T.contestRateDef * (paint ? d.R.int : d.R.per) + T.contestRateIq * d.R.iq
     const size = 1 + T.contestSize * (d.R.size - shooter.R.size)
     const c = clamp(prox * stance * front * rate * size, 0, 1)
     if (c > best) { second = best; best = c; by = d.id } else if (c > second) second = c
@@ -63,11 +70,11 @@ export function contestOf(shooter, defenders, kind) {
 
 // The chance a shot goes in: what the rating gives at that spot x how good the release was x how well it was contested
 //   s: { R, kind, d (ft from the rim), q (release 0-1), c (contest 0-1), run (0-1 of top speed at the gather),
-//        cs (the passer's Passing 0-1 on a jumper off the catch, else null), rushed }
+//        cs (the passer's Passing 0-1 on a jumper off the catch, else null), rushed, gp (game point: Clutch) }
 export function makeChance(s) {
   const R = s.R
   let base, pen
-  if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin; pen = T.contestMaxD * s.c }
+  if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin; pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
   else if (s.kind === 'layup') {
     base = T.layBase + T.layFin * R.fin - T.layFar * Math.max(0, s.d - 3)
     pen = T.contestMaxL * s.c * (1 - T.finThrough * R.fin)
@@ -82,6 +89,7 @@ export function makeChance(s) {
   }
   let p = base * releaseMult(s.kind, s.q) * (1 - pen)
   if (s.rushed) p *= 1 - T.rushPen * (1 - R.iq)
+  if (s.gp) p *= 1 + T.clutchMake * ((R.clutchRaw ?? 0.5) - 0.5)
   return clamp(p, 0.02, 0.98)
 }
 
@@ -101,7 +109,7 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : 0.25
     const kind = shot.kind === 'jumper' ? T.blockJumper : shot.kind === 'dunk' ? T.blockDunk : 1
     const p = clamp(T.blockBase * onTime * (0.55 + T.blockInt * d.R.int) * (1 + T.blockSize * (d.R.size - shooter.R.size))
-      * (1 + T.blockBnc * (d.R.bnc - 0.5)) * kind * (1 - 0.4 * dd / reach), 0, T.blockMax)
+      * (1 + T.blockBnc * (d.R.bnc - 0.75)) * kind * (1 - 0.4 * dd / reach), 0, T.blockMax)
     if (roll < p) {
       const dot = sd > 2 && dd > 0.01 ? ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd) : 1
       return { blocked: d.id, chase: dot < -T.chaseAngle && Math.hypot(shooter.vx, shooter.vy) > 3, made: false, pts: 0, c: 1, p: 0 }
@@ -109,7 +117,7 @@ export function judgeShot(shooter, defenders, shot, rolls) {
   }
   const cr = contestOf(shooter, defenders, shot.kind), by = cr.by
   const c = lateContest(cr.c, shot.cUp)
-  const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, q: shot.q, c, run: shot.run, cs: shot.cs, rushed: shot.rushed })
+  const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, q: shot.q, c, run: shot.run, cs: shot.cs, rushed: shot.rushed, gp: shot.gp })
   const made = rolls.make < p
   return {
     blocked: null, made, pts: made ? (shot.three ? 2 : 1) : 0, c, by, p,
@@ -124,7 +132,7 @@ export function judgeSteal(def, handler, roll) {
   const dd = dist(def, handler)
   if (dd > T.stealReach) return { ok: false, reach: true }
   const behind = dd > 0.01 && ((def.x - handler.x) * handler.fx + (def.y - handler.y) * handler.fy) / dd < -0.25
-  const p = clamp(T.stealBase * (0.55 + T.stealPer * def.R.per) * (1.3 - T.stealHnd * handler.R.hnd) * (1.12 - T.stealIq * handler.R.iq)
+  const p = clamp(T.stealBase * (0.55 + T.stealPer * def.R.per) * (1.3 - T.stealHnd * handler.R.hnd) * (1 + T.stealIq * (0.75 - handler.R.iq))
     * (handler.burst > 0 ? T.stealBurst : 1) * (handler.act === 'gather' ? T.stealGather : 1) * (behind ? T.stealBehind : 1), 0, T.stealMax)
   const ok = roll < p
   return { ok, reach: !ok && behind }
@@ -149,7 +157,7 @@ export function judgePick(def, passerR, near, roll) {
 // Two or more under the same ball: who comes down with it. cands: [{ id, R, d (ft from the ball), jump }]
 export function judgeBoard(cands, roll) {
   if (cands.length === 1) return cands[0].id
-  const w = cands.map(c => (1 + T.boardReb * c.R.reb + T.boardSize * c.R.size + T.boardBnc * c.R.bnc) * (1.3 - 0.3 * clamp(c.d / T.grabDist, 0, 1)) * (c.jump ? 1.25 : 1))
+  const w = cands.map(c => Math.max(0.2, 1 + T.boardReb * (c.R.reb - 0.75) + T.boardSize * (c.R.size - 0.75) + T.boardBnc * (c.R.bnc - 0.75)) * (1.3 - 0.3 * clamp(c.d / T.grabDist, 0, 1)) * (c.jump ? 1.25 : 1))
   let t = roll * w.reduce((s, x) => s + x, 0)
   for (let i = 0; i < cands.length; i++) { t -= w[i]; if (t <= 0) return cands[i].id }
   return cands[cands.length - 1].id
