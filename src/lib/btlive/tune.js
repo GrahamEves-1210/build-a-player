@@ -120,7 +120,7 @@ export const T = {
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.45,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
-  jsThrough: 0.60,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
+  jsThrough: 0.42,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.85,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
@@ -140,7 +140,7 @@ export const T = {
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
   jumpTime: 0.50,                    // off the floor this long...
-  jumpLand: 0.22,                    // ...then this long to land before he can move again
+  jumpLand: 0.10,                    // ...then this long to land before he can move again
   blockReach: 3.6,                   // within this of the shooter at the release (plus Bounce and Size)...
   blockReachBnc: 0.9, blockReachSize: 0.7,
   blockIn: 0.10, blockOut: 0.80,     // ...and between these fractions of his jump: on time. Else a quarter the chance
