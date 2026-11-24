@@ -4,7 +4,9 @@
 //
 // Messages are JSON, { t: type, ... }.
 //   device -> referee
-//     hello  { vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, humans }   take a seat (or take it back)
+//     hello  { vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
+//                                                              take a seat (or take it back). The first one in sets the
+//                                                              mode; humans (dev): start before every seat has a person
 //     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, c], rel: { sn, q } | null }
 //            k: his own count of messages (old ones are dropped). mx/my: the stick. x..vy: where his device has him.
 //            h: the buttons held now (bits: 1 A, 2 B, 4 C). n: how many times each button has been pressed, ever:
@@ -12,12 +14,15 @@
 //            shot as his own device timed it (sn: his A-press count when that shot started, q: quality 0-1); sent
 //            again with every message until the referee says it has it (ack)
 //     ping   { c }                                             (pong { c, k }: the round trip, and the referee's tick)
-//     start  {}                                                the first one in starts with CPUs in the empty seats
+//     start  {}                                                practice: start now, CPUs in the empty seats
+//     again  {}                                                a rematch: same seats, same people, same CPUs, a new
+//                                                              seed. It starts when every person still in has asked
 //   referee -> device
-//     seat   { i, size, seats: [{ name, pos, team, cpu, look }], seed, teams }   your seat and the game's setup
+//     seat   { i, size, mode, seats: [{ name, pos, team, cpu, look, build }], seed }   your seat and the game's setup
 //     wait   { need, have }                                    not enough players yet
 //     s      snapshot (snapOf), about 15 a second; carries the last second and a half of what happened (events with
 //            a running number e.sq), so a dropped snapshot loses nothing
+//     again  { have, need }                                    rematch asks so far
 //     gone   {}                                                no such game
 import { HZ, T } from './tune.js'
 import { meterSpec } from './meter.js'
@@ -32,7 +37,7 @@ const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'ca
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
 
 // A seat's input as it comes in, and the input the step gets from it each tick
-export const seatNew = () => ({ pend: 0, k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
+export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
 const num = (v, lo, hi, d = 0) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d)
 export function seatMsg(seat, m, now) {
   if (!Number.isInteger(m.k) || m.k <= seat.k) return false                 // old or repeated
@@ -58,12 +63,9 @@ export function seatInput(seat, s, i) {
       // else: up for a tick, so the next one is a new press
     } else if (seat.h & bit && was) bits |= bit                 // still held
   }
-  // a shot pressed on a device that already had the ball, a beat before the referee gave it to him (a catch, a board
-  // still on its way): it goes up when the ball gets there, if that's within half a second
-  const p = s.players[i], mine = s.ball.st === 'held' && s.ball.holder === i
-  if (bits & 1 && !(seat.last & 1) && !mine && p.team === s.poss) seat.pend = s.tick + 15
-  else if (seat.pend && !(bits & 1) && !(seat.last & 1) && mine && p.act === 'free' && p.noAct <= 0) { if (s.tick <= seat.pend) bits |= 1; seat.pend = 0 }
-  if (seat.pend && s.tick > seat.pend) seat.pend = 0
+  // (a shot pressed a beat before the ball got to him, or in the catch: the step starts it when he can, T.shootBuffer,
+  // the same as in practice)
+  const p = s.players[i]
   seat.last = bits
   out.shoot = out.steal = !!(bits & 1); out.pass = out.jump = !!(bits & 2); out.move = !!(bits & 4)
   // his shot: the one that started with his latest A press goes with the quality his device timed
@@ -85,7 +87,7 @@ export function snapOf(s, events, acks) {
   const b = s.ball
   return {
     t: 's', k: s.tick, ph: s.phase, pT: s.phaseT, po: s.poss, pn: s.possN, cl: s.clock, sc: s.score, gp: s.gamePoint ? 1 : 0, w: s.winner,
-    nx: s.next, call: s.call, p,
+    nx: s.next, call: s.call, kg: s.king, mc: s.mustClear, p,
     b: { st: b.st, holder: b.holder, x: r2(b.x), y: r2(b.y), z: r2(b.z), vx: r2(b.vx), vy: r2(b.vy), vz: r2(b.vz), from: b.from, to: b.to, t: b.t, n: b.n,
       sx: r2(b.sx), sy: r2(b.sy), sz: r2(b.sz), tx: r2(b.tx), ty: r2(b.ty), kind: b.kind, speed: b.speed, lastTeam: b.lastTeam, reb: b.reb, d: b.verdict ? r2(b.verdict.d) : 0 },
     e: events, a: acks, st: s.phase === 'over' ? s.stats : undefined,
@@ -98,7 +100,7 @@ export function snapOf(s, events, acks) {
 // device moves (me) keeps his own position; everything else is the referee's word.
 export function applySnap(s, m, me) {
   s.tick = m.k; s.phase = m.ph; s.phaseT = m.pT; s.poss = m.po; s.possN = m.pn; s.clock = m.cl; s.score = m.sc; s.gamePoint = !!m.gp; s.winner = m.w
-  s.next = m.nx; s.call = m.call
+  s.next = m.nx; s.call = m.call; s.king = m.kg ?? null; s.mustClear = m.mc ?? null
   m.p.forEach((a, i) => {
     const o = s.players[i]
     if (i !== me) PF.forEach((f, j) => { o[f] = a[j] })

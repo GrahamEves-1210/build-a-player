@@ -21,20 +21,29 @@ export function derive(build, pos = 'guard') {
   const passing = pas ?? play ?? (iq + handles) / 2
   // a big guards the perimeter on his feet, a guard guards the paint on his size
   const perD = per ?? (int != null ? int * 0.45 + spd * 0.35 : 4)
-  const intD = int ?? (per != null ? per * 0.4 + size * 0.45 : 4)
+  const intD = int ?? (per != null ? per * 0.6 + size * 0.3 : 4)
   const rebounding = reb ?? (big ? size * 0.5 + bnc * 0.3 + 2 : size * 0.45 + bnc * 0.3)
   const R = {
     big,
     js: n(js), fin: n(fin), pas: n(passing), hnd: n(handles), per: n(perD), int: n(intD), reb: n(rebounding),
     spd: n(spd), bnc: n(bnc), size: n(size), iq: n(iq), clutch: n(clutch),
   }
-  // top speed runs on the plain grade (not squeezed by spread): the band itself is narrow on purpose
-  const spdRaw = clamp((spd - 1) / 10, 0, 1)
-  const top = T.speedMin * (1 + T.speedBand * spdRaw) * (1 - T.sizeSlow * R.size)
+  // the body runs on the plain grades (not squeezed by spread): Speed is how fast and how quick he is, Size how
+  // heavy and how much slower. With the ball he keeps most of it (Handles keeps more), so a quick handler beats a
+  // slow defender and a quick defender stays in front of a slow handler
+  const raw = g => clamp((g - 1) / 10, 0, 1)
+  const spdRaw = raw(spd), sizeRaw = raw(size)
+  const top = T.speedMin * (1 + T.speedBand * spdRaw) * (1 - T.sizeSlow * sizeRaw)
   R.top = top                                               // ft/s without the ball
-  R.topBall = T.speedMin * (1 + T.speedBand * T.speedBall * spdRaw) * (1 - T.sizeSlow * R.size) * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
-  R.topDef = top * (T.defSpeed + T.defSpeedPer * R.per)     // guarding
-  R.mass = 1 + T.massSize * R.size
+  R.topBall = top * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
+  const perRaw = raw(perD)
+  R.topDef = top * (T.defSpeed + T.defSpeedPer * perRaw)    // guarding (Perimeter D on the plain grade: feet)
+  R.accel = T.accel * (T.accelBase + T.accelSpd * spdRaw) * (1 - T.accelSize * sizeRaw)   // ft/s²
+  R.accelDef = R.accel * (T.defAccel + T.defAccelPer * perRaw)                             // ...guarding
+  R.mass = 1 + T.massSize * sizeRaw
+  R.clutchRaw = raw(clutch)
+  R.bncRaw = raw(bnc)                                       // (the plain grade: who can dunk)
+  R.jsRaw = raw(js)                                         // (the plain grade: how much of a hand a shooter shoots over)
   R.passSpeed = T.passSpeed + T.passSpeedPas * R.pas
   R.moveCd = T.moveCd - T.moveCdHnd * R.hnd
   R.standReach = T.standReach + T.standReachSize * R.size
