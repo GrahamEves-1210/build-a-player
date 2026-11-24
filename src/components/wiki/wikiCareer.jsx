@@ -129,6 +129,7 @@ export function CareerPage({ go }) {
        + All-Pro/All-NBA × ${C.LEGACY_W.firsts} + awards (below) + rings × ${C.LEGACY_W.rings}
        + playoff years × ${C.LEGACY_W.playoffs} + records × ${C.LEGACY_W.records} + career stats
        + small camp, shoe deal and earnings bonuses (earnings: 1 a $${C.EARN_LEGACY.per}M, ${C.EARN_LEGACY.max} at most)
+       + basketball: ${C.ASW_LEGACY} for each 3-Point Contest or Slam Dunk Contest title
 
 football awards: MVP and DPOY ${awards.top.join(', ')}, then ${awards.top[awards.top.length - 1]} each
                  OPOY${OL_LIVE ? ' and Protector of the Year' : ''} ${awards.skill.join(', ')}, then ${awards.skill[awards.skill.length - 1]} each

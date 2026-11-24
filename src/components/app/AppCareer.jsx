@@ -394,11 +394,11 @@ function Model({ c, devPick }) {
     </div>
   )
 }
-// the small extras on top of the resume: camp wins, shoe deals, money earned
+// the small extras on top of the resume: camp wins, shoe deals, All-Star Saturday titles, money earned
 function Extras({ c }) {
   const x = legacyExtras(c)
   const fc = c.sport === 'soccer'
-  const rows = [[fc ? 'Pre-season' : 'Camp', x.camp], [fc ? 'Boot deals' : 'Shoe deals', x.shoe], ['Earnings', x.earnings]].filter(([, n]) => n > 0)
+  const rows = [[fc ? 'Pre-season' : 'Camp', x.camp], [fc ? 'Boot deals' : 'Shoe deals', x.shoe], ['All-Star Saturday', x.allStar], ['Earnings', x.earnings]].filter(([, n]) => n > 0)
   if (!rows.length) return null
   return <p className="cr-legacy-extras">{rows.map(([k, n]) => <span key={k} className="gain">{k} +{n} <LegacyIco /></span>)}</p>
 }

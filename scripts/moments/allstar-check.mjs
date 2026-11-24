@@ -233,7 +233,7 @@ for (const v of [9, 10, 11]) {
   const c2 = A.settleLive(A.markLive(A.answerAllStar(c0, { dunk: true }), 'dunk', { dunk: null }))
   ok(!c2.active.asw.dunk.cur && !c2.active.asw.dunk.live && !(c2.active.asw.dunk.mine ?? []).length, 'a dunk game left before the call books nothing')
 }
-// ── 5. on the season: booked, honors, totals, and no legacy from it ──
+// ── 5. on the season: booked, honors, totals, and a legacy point a title ──
 console.log('── the season keeps it')
 {
   let [c] = play3({ ...c0, seed: 'champ-try' })
@@ -255,7 +255,18 @@ console.log('── the season keeps it')
   const tt = C.careerTotals(x)
   ok(tt.threeTitles === 1 && tt.dunkTitles === 1, 'career totals count them', tt.threeTitles, tt.dunkTitles)
   const noAsw = { ...x, seasons: x.seasons.map(q => { const { asw, ...rest } = q; return rest }) }
-  ok(C.legacyOf(x).score === C.legacyOf(noAsw).score, 'no legacy from a contest title', C.legacyOf(x).score, C.legacyOf(noAsw).score)
+  // (a title is a legacy point each: the owner, 2026-11-24)
+  ok(C.ASW_LEGACY === 1 && C.legacyOf(x).score === C.legacyOf(noAsw).score + 2, 'a legacy point for each contest title', C.legacyOf(x).score, C.legacyOf(noAsw).score)
+  ok(C.legacyExtras(x).allStar === 2 && C.legacyExtras(noAsw).allStar === 0, 'the legacy extras list the titles', C.legacyExtras(x).allStar)
+  // (the night's titles count from the night, before the season is booked; once booked, from the season, not twice)
+  const tNone = { ...t, active: { ...t.active, asw: { ...t.active.asw, res: {} } } }
+  ok(C.legacyOf(t).score === C.legacyOf(tNone).score + 2, 'the meter moves the night he wins', C.legacyOf(t).score, C.legacyOf(tNone).score)
+  const oneT ={ ...x, seasons: x.seasons.map(q => (q.asw ? { ...q, asw: { ...q.asw, dunk: { ...q.asw.dunk, won: false } } } : q)) }
+  ok(C.legacyOf(oneT).score === C.legacyOf(noAsw).score + 1, 'one title, one point', C.legacyOf(oneT).score, C.legacyOf(noAsw).score)
+  // (the story line of a title says so)
+  let story = null
+  for (let i = 0; i < 40 && !story; i++) { const [w, P] = play3({ ...c0, seed: `title-${i}` }); if (P.champ.me) story = A.finishAllStar(w).events.filter(e => /^Won the/.test(e.text)) }
+  ok(story?.length === 1 && /\+1 legacy\.$/.test(story[0].text), 'a title\'s story line carries the legacy point', story?.map(e => e.text))
   console.log(`  booked: ${JSON.stringify(s.asw)} · legacy ${C.legacyOf(x).score} with the titles, ${C.legacyOf(noAsw).score} without (before the season ${L0})`)
 }
 

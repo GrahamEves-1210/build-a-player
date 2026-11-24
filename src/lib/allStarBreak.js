@@ -7,6 +7,8 @@ const gradeVal = (c, t) => Math.round(c.build?.[t]?.val ?? 0)
 export const THREE_GRADE = 9          // A
 export const DUNK_SUM = 18            // Finishing + Bounce, 0-11 each
 export const aswOpen = c => !!c?.active?.asw && !c.active.asw.done
+// a title (either contest) is worth a legacy point (lib/career.js aswLegacy: the owner, 2026-11-24)
+export const ASW_LEGACY = 1
 
 // ── When: mid-February, the same weekend for the whole league (seeded by the season, like the bye table) ──
 // The NBA's break falls after a team's 53rd to 56th game; the trade deadline (lib/career.js deadlineGame) is a week before
