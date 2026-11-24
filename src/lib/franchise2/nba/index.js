@@ -9,6 +9,7 @@ import { addNews } from './news'
 import { placeBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
+import { lightInit } from './light'
 
 export * from './league'
 export * from './schedule'
@@ -18,6 +19,7 @@ export * from './offseason'
 export * from './news'
 export * from './moments'
 export * from './builds'
+export * from './light'
 export { X as CAP_SIM }
 
 export const NBA_SAVE_V = 1
@@ -44,6 +46,8 @@ export function createNbaFranchise(setup) {
   makePicks(F)
   makeClass(F)
   addNews(F, { k: 'gm', tag: 'FRONT OFFICE', s: F.team, text: `The ${TEAM[F.team].name} have named ${F.owner} general manager` })
+  // FULL or LIGHT, for the life of the save (setup.pace: the setup's MODE step; a save without F.pace is FULL: light.js)
+  if (setup.pace === 'light') lightInit(F); else F.pace = 'full'
   return F
 }
 
@@ -138,7 +142,7 @@ export function nbaSlotSummary(slot) {
   if (raw.setup) return { slot, setup: true, team: raw.setup.team ?? null }
   const F = loadNba(slot)
   if (!F) return null
-  return { slot, team: F.team, year: F.year, rec: recText(records(F)[F.team]), rings: F.rings ?? 0, phase: F.phase, at: F.at }
+  return { slot, team: F.team, year: F.year, rec: recText(records(F)[F.team]), rings: F.rings ?? 0, phase: F.phase, at: F.at, ...(F.pace === 'light' && { light: true }) }
 }
 export const nbaSaveSize = F => packNba(F).length
 export { records, teamOvr, SHORTS, TEAM, ROSTER_MAX }
