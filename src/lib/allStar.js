@@ -398,7 +398,9 @@ export function recordAttempt(c, dunkId, raw, sim = false) {
 // a dunk simulated from his grades (Mini Games OFF): all its tries at once
 export function simDunkFor(c, dunkId, tag) {
   const d = dunkById(dunkId)
-  const tries = simDunk(tierOf(d), dunkV(c), seeded(`${c.seed}-aswd-me-${c.year}-${tag}`))
+  // (a dunk he's already missed and then skips: the misses stand, the tries left are simulated)
+  const had = c.active?.asw?.dunk?.cur?.dunk === dunkId ? c.active.asw.dunk.cur.tries ?? [] : []
+  const tries = [...had, ...simDunk(tierOf(d), dunkV(c), seeded(`${c.seed}-aswd-me-${c.year}-${tag}-${had.length}`))].slice(0, DUNK_TRIES)
   return withAsw(c, w => ({ ...w, dunk: { ...w.dunk, cur: null, mine: [...(w.dunk?.mine ?? []), { dunk: dunkId, tries, sim: true }] } }))
 }
 // a game left before it finished (a reload, a closed app): the Career rule, it counts as a miss. A 3-Point round is

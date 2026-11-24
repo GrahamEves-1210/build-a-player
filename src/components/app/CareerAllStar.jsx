@@ -178,7 +178,8 @@ function ThreeContest({ c, setCareer, face, onNext }) {
           <p className="cr-note">{need.round === 'final' ? (need.toBeat != null ? `${need.toBeat} is the score to beat for the title.` : 'He shoots first in the final. Set the number.') : need.toBeat != null ? `Third place has ${need.toBeat}. ${need.toBeat + 1} puts him in the final outright; a tie means a shoot-off.` : 'Nobody has a score in yet. Set the number.'}</p>
           <RackPick value={rack} onPick={i => { setRack(i); sfx('tap') }} />
           <button className="ag-btn ag-btn--gold tk-intro-go" onClick={shoot}>SHOOT · MONEY RACK {RACKS[rack]} <IconArrow size={16} /></button>
-          {!live && <small className="asw-sim">Mini Games are off: his round is simulated from his Jump Shot.</small>}
+          {live ? <button className="ag-btn ag-btn--ghost asw-skip" onClick={() => { sfx('tap'); setCareer(recordThree(c, simThreeFor(c, rack, need.round), rack, true)) }}>SKIP · SIMULATE HIS ROUND</button>
+            : <small className="asw-sim">Mini Games are off: his round is simulated from his Jump Shot.</small>}
         </div>
       )}
       {!need && e?.kind !== 'champ' && R.shown < P.ev.length && <button className="ag-btn ag-btn--ghost asw-skip" onClick={R.skip}>SKIP AHEAD</button>}
@@ -321,7 +322,8 @@ function DunkContest({ c, setCareer, face, onNext }) {
             })}
           </div>
           <button className="ag-btn ag-btn--gold tk-intro-go" disabled={!pick} onClick={go}>{pick ? `${dunkById(pick).name.toUpperCase()} · ATTEMPT 1` : 'PICK A DUNK'} <IconArrow size={16} /></button>
-          {!live && <small className="asw-sim">Mini Games are off: his dunks are simulated from his Bounce and Finishing.</small>}
+          {live ? <button className="ag-btn ag-btn--ghost asw-skip" disabled={!pick} onClick={() => { sfx('tap'); setCareer(simDunkFor(c, pick, `${need.round}-${need.n}`)); setPick(null) }}>{pick ? 'SKIP · SIMULATE THE DUNK' : 'PICK A DUNK TO SIMULATE IT'}</button>
+            : <small className="asw-sim">Mini Games are off: his dunks are simulated from his Bounce and Finishing.</small>}
         </div>
       )}
       {need && cur && (
@@ -331,6 +333,7 @@ function DunkContest({ c, setCareer, face, onNext }) {
           <h3 className="asw-title">{cur.tries.length === 1 ? 'Off the rim. Two tries left.' : 'Missed again. One try left.'}</h3>
           <p className="cr-note">{cur.tries.length === 1 ? 'Land it now and the judges take about a point each off what it would have scored.' : 'Nothing down in three and the judges score his best try, low 30s.'}</p>
           <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setPick(cur.dunk); setCareer(markLive(c, 'dunk', { dunk: cur.dunk })); setPlaying({ dunk: dunkById(cur.dunk), attempt, round: need.round, n: need.n }); sfx('whistle') }}>ATTEMPT {attempt} OF {DUNK_TRIES} <IconArrow size={16} /></button>
+          <button className="ag-btn ag-btn--ghost asw-skip" onClick={() => { sfx('tap'); setCareer(simDunkFor(c, cur.dunk, `${need.round}-${need.n}`)); setPick(null) }}>SKIP · SIMULATE THE TRIES LEFT</button>
         </div>
       )}
       {!need && e?.kind !== 'champ' && R.shown < P.ev.length && <button className="ag-btn ag-btn--ghost asw-skip" onClick={R.skip}>SKIP AHEAD</button>}
