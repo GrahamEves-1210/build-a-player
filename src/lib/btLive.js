@@ -12,7 +12,7 @@ const BT_DEV = (() => {
     return localStorage.getItem('bap_btlive_dev') === '1'
   } catch { return /[?&]btlive=1\b/.test(location.search) }
 })()
-export const BT_LIVE = false || BT_DEV
+export const BT_LIVE = true || BT_DEV   // on (the owner, 2026-11-24): the practice page at /bucket?btlive=1, against the CPU
 // The practice page itself opens only on an address that asks for it (/bucket?btlive=1), so the switch being on
-// from an earlier visit never takes the rest of the site away. Dev server only.
+// from an earlier visit never takes the rest of the site away.
 export const BT_LIVE_OPEN = BT_LIVE && typeof location !== 'undefined' && /[?&]btlive=1\b/.test(location.search)
