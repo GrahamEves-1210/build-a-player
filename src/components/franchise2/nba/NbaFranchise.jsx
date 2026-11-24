@@ -19,7 +19,7 @@ const TRIP = 'bap_frnba_trip'
 const MOMENT = 'bap_frnba_moment'   // (a key moment's mini game was open when the tab reloaded, NbaGame.jsx: straight back to that franchise)
 const newSeed = () => `${Date.now().toString(36)}${Math.floor(performance.now() * 1000).toString(36)}`
 const PHASE = { season: 'REGULAR SEASON', post: 'REGULAR SEASON OVER', playin: 'PLAY-IN', playoffs: 'PLAYOFFS', done: 'SEASON OVER', off: 'OFFSEASON' }
-const LG = { art: NBA_FRANCHISE_ART, turn: NBA_FRANCHISE_TURN, key: NBA_KEY, summary: nbaSlotSummary, clear: i => { clearNba(i); try { if (JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY))?.slot === i) localStorage.removeItem(NBA_FRANCHISE_CARD_KEY) } catch {} }, TEAM, where: s => `${seasonText(s.year)} · ${s.rec} · ${PHASE[s.phase] ?? ''}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}` }
+const LG = { art: NBA_FRANCHISE_ART, turn: NBA_FRANCHISE_TURN, key: NBA_KEY, summary: nbaSlotSummary, clear: i => { clearNba(i); try { if (JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY))?.slot === i) localStorage.removeItem(NBA_FRANCHISE_CARD_KEY) } catch {} }, TEAM, where: s => `${seasonText(s.year)} · ${s.rec} · ${PHASE[s.phase] ?? ''}${s.rings ? ` · ${s.rings} RING${s.rings > 1 ? 'S' : ''}` : ''}${s.light ? ' · LIGHT' : ''}` }
 
 function leaveNote(F) {
   try {
@@ -102,7 +102,7 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   const start = () => {
     const S = setup
     const builds = (S.picks ?? []).map(p => S.builds?.[p.id]).filter(B => B?.name)
-    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds })
+    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', pace: S.pace, builds })
     if (saveNba(X)) leaveNote(X); else { bad.current = true; setSaveBad(true) }
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')

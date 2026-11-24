@@ -210,11 +210,13 @@ function settle(F, g, res, { playoff = false } = {}) {
   for (const s of [g.h, g.a]) for (const p of F.teams[s].r) delete p.rest
   return res
 }
+// (a LIGHT save keeps a stretch's boxes: its recap opens every game's; FULL keeps the last 12)
+export const BOX_LIGHT = 36
 function logMine(F, g, res, po = null) {
   const home = g.h === F.team
   const us = home ? res.hs : res.as, them = home ? res.as : res.hs
   const row = { d: g.d, opp: home ? g.a : g.h, home, us, them, w: us > them, ot: res.ot || 0, q: res.q, ...(po && { po }) }
-  F.box = [...(F.box ?? []), { d: g.d, h: g.h, a: g.a, hs: res.hs, as: res.as, ot: res.ot, q: res.q, box: res.box, ...(po && { po }) }].slice(-12)
+  F.box = [...(F.box ?? []), { d: g.d, h: g.h, a: g.a, hs: res.hs, as: res.as, ot: res.ot, q: res.q, box: res.box, ...(po && { po }) }].slice(-(F.pace === 'light' ? BOX_LIGHT : 12))
   row.bx = F.box.length - 1
   F.log = [...(F.log ?? []), row]
   return row

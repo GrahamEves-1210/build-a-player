@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, CONF_OF, CONF_NAME, DIV_OF, SHORTS, records, recText, pct, confOrder, gamesBack, streakText, nextMine, myGames, gameNo, dateText,
   playNext, simTo, startPostseason, playPoNight, simPostseason, mySeries, myPoGame, seriesText, ROUND_NAME, closeSeason, teamOvr,
-  seasonText, CAP_SIM, nick, FINISH_TEXT, finishOf, nextStep,
+  seasonText, CAP_SIM, nick, FINISH_TEXT, finishOf, nextStep, isLight, stretchOk, stretchOf, openStretch, lightSettle, lightPlay, lightSimAll,
 } from '../../../lib/franchise2/nba'
 import * as NBA from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
@@ -16,7 +16,8 @@ import NbaGame, { NbaBox } from './NbaGame'
 import NbaTeam from './NbaTeam'
 import NbaLeague from './NbaLeague'
 import NbaHistory from './NbaHistory'
-import NbaOffseason, { Prospect } from './NbaOffseason'
+import NbaOffseason, { Prospect, ManSheetHost } from './NbaOffseason'
+import { StretchCard, StretchRecap, PoLight, RoundDone, LightOffseason } from './NbaLight'
 import { createPortal } from 'react-dom'
 import '../season.css'
 import '../gameday.css'
@@ -28,7 +29,9 @@ export const momentOpts = F => ({ moments: (F.moments ?? 'advanced') !== 'off' }
 
 export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveBad, onRetry }) {
   const [tab, setTab] = useState('season')
-  const [live, setLive] = useState(() => (F.pend ? { pend: true } : null))
+  // (LIGHT never goes into a game: a save waiting on a moment is simmed on, lightSettle)
+  const light = isLight(F)
+  const [live, setLive] = useState(() => (F.pend && !light ? { pend: true } : null))
   const [teamView, setTeamView] = useState(null)
   const [run, setRun] = useState(null)   // (a stretch of nights being simmed, a few at a time: SimRun)
   const scroll = useRef(null)
@@ -36,6 +39,13 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   const R = records(F)
   const off = F.phase === 'off'
   if (import.meta.env.DEV) window.__nba = { F, act, L: NBA }   // (dev: the headless checks read the league)
+  // LIGHT: a game left on its moment is simmed to its final; a season card that lost its stretch (or a FULL save made
+  // LIGHT) opens the stretch it's in
+  useEffect(() => {
+    if (!light || live || run) return
+    if (F.pend) act(X => { lightSettle(X) })
+    else if (F.phase === 'season' && !stretchOk(F) && F.lt?.ph !== 'done') act(X => { openStretch(X, stretchOf(X)) })
+  }, [light, F.phase, F.year, F.lt?.k, F.lt?.ph, F.pend]) // eslint-disable-line react-hooks/exhaustive-deps
   // (after a sim the hub starts again at the top: the header, the date, the next game)
   const toTop = () => { scroll.current?.scrollTo(0, 0); window.scrollTo(0, 0) }
   const toTab = (id, view = null) => { setTeamView(view); if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
@@ -50,7 +60,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   // today: the day the next night is played (the deadline card's "today"); his game number when he plays tonight
   const ng = F.phase === 'season' ? nextMine(F) : null
   const sub = F.phase === 'season' ? `${dateText(F, Math.min(F.day, F.days - 1))} · ${!ng ? 'Regular season' : ng.d === F.day ? `Game ${gameNo(F, ng)}` : 'No game today'}`
-    : off ? 'Offseason' : F.phase === 'post' ? 'Regular season over' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : 'Season over'
+    : off ? 'Offseason' : F.phase === 'post' ? 'Regular season over' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : 'Season over'
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
       {live && <NbaGame F={F} act={act} start={live} owner={owner} onDone={() => setLive(null)} />}
@@ -60,7 +70,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
           <span className="fh-top-logo"><TopLogo s={F.team} /></span>
           <span className="fh-top-txt">
             <b>{t.name}</b>
-            <small>{seasonText(F.year)} · {sub}</small>
+            <small>{seasonText(F.year)} · {sub}{light ? ' · Light' : ''}</small>
           </span>
           <button className="fh-x" onClick={onHome} aria-label="Leave Franchise"><IconClose size={16} /><span>Exit</span></button>
         </header>
@@ -77,7 +87,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
-          {tab === 'season' && (off ? <NbaOffseason F={F} act={act} owner={owner} /> : <Season F={F} R={R} act={act} play={play} owner={owner} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
+          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} /> : <NbaOffseason F={F} act={act} owner={owner} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
           {tab === 'team' && <NbaTeam F={F} act={act} owner={owner} view={teamView} setView={setTeamView} />}
           {tab === 'league' && <NbaLeague F={F} act={act} owner={owner} />}
           {tab === 'history' && <NbaHistory F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
@@ -108,14 +118,21 @@ function LeagueTicker({ F }) {
 }
 
 // ── SEASON ───────────────────────────────────────────────────────────────────
-function Season({ F, R, act, play, owner, onTrades, onSim }) {
+function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
   const ph = F.phase
+  // (LIGHT: the stretch simmed to its recap, a postseason round simmed to its result: NbaLight.jsx; never a game on screen)
+  const lplay = () => { act(X => { lightPlay(X) }); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
+  const lsim = () => { act(X => { lightSimAll(X) }); sfx('flip') }
   return (
+    <ManSheetHost F={F} act={act} owner={owner}>
     <div className="fh-grid">
       <div className="fh-main">
-        {ph === 'season' && <NextGame F={F} R={R} act={act} play={play} onTrades={onTrades} onSim={onSim} />}
-        {ph === 'post' && <SeasonOver F={F} R={R} act={act} />}
-        {(ph === 'playin' || ph === 'playoffs') && <PoCard F={F} act={act} play={play} />}
+        {ph === 'season' && !light && <NextGame F={F} R={R} act={act} play={play} onTrades={onTrades} onSim={onSim} />}
+        {(ph === 'season' || ph === 'post') && light && F.lt?.ph === 'recap' && F.lt.y === F.year && <StretchRecap F={F} act={act} owner={owner} onTrades={onTrades} />}
+        {ph === 'season' && light && F.lt?.ph === 'card' && stretchOk(F) && <StretchCard F={F} play={lplay} simToEnd={lsim} onTrades={onTrades} />}
+        {ph === 'post' && !(light && F.lt?.ph === 'recap' && F.lt.y === F.year) && <SeasonOver F={F} R={R} act={act} />}
+        {(ph === 'playin' || ph === 'playoffs') && (light ? <PoLight F={F} act={act} owner={owner} /> : <PoCard F={F} act={act} play={play} />)}
+        {ph === 'done' && light && <RoundDone F={F} owner={owner} />}
         {ph === 'done' && <Champions F={F} act={act} />}
         {(ph === 'season' || ph === 'post') && <Glance F={F} R={R} />}
         {(ph === 'playin' || ph === 'playoffs' || ph === 'done') && <Bracket F={F} />}
@@ -125,12 +142,13 @@ function Season({ F, R, act, play, owner, onTrades, onSim }) {
         {(ph === 'season' || ph === 'post') && <ConfLadder F={F} R={R} />}
         {ph === 'season' && <Strip F={F} owner={owner} />}
         <ScoutRow F={F} act={act} />
-        <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
-          onPick={m => act(X => { X.moments = m })} cls={GAMES_CLS} />
+        {!light && <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
+          onPick={m => act(X => { X.moments = m })} cls={GAMES_CLS} />}
         <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
           onChange={r => act(X => { if (r.cap != null) { if (r.cap) delete X.noCap; else X.noCap = 1 } if (r.inj != null) { if (r.inj) delete X.noInj; else { X.noInj = 1; for (const s of SHORTS) for (const p of X.teams[s].r) delete p.inj } } })} />
       </aside>
     </div>
+    </ManSheetHost>
   )
 }
 
@@ -190,7 +208,7 @@ function LastGame({ F, owner }) {
   const as = g.home ? g.them : g.us, hs = g.home ? g.us : g.them
   return (
     <section className="fh-last">
-      <h3 className="fh-h"><b>{g.po ? g.po.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : 'Last game'}</b><span className={`fh-res is-${g.w ? 'w' : 'l'}`}>{g.w ? 'Win' : 'Loss'}</span></h3>
+      <h3 className="fh-h"><b>{g.po ? g.po.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : 'Last game'}</b><span className={`fh-res is-${g.w ? 'w' : 'l'}`}>{g.w ? 'Win' : 'Loss'}</span></h3>
       <Scorebug a={a} h={h} as={as} hs={hs} final={g.ot ? (g.ot > 1 ? `F/${g.ot}OT` : 'F/OT') : 'FINAL'} />
       {F.box?.[g.bx] && <button type="button" className="fh-textbtn" onClick={() => { setBox(true); sfx('tap') }}>Box score</button>}
       {box && <NbaBox F={F} b={F.box[g.bx]} owner={owner} onClose={() => setBox(false)} />}
@@ -266,7 +284,7 @@ function PoCard({ F, act, play }) {
   const all = () => { act(X => { simPostseason(X) }); sfx('flip') }
   return (
     <section className="fh-next">
-      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase())}</b><span>{S ? seriesText(S, F.team) : mine ? PI_STAKES[mine.k] ?? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
+      <div className="fh-next-h"><b>{title.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ')}</b><span>{S ? seriesText(S, F.team) : mine ? PI_STAKES[mine.k] ?? 'Win or go home' : bye ? 'Into the first round' : 'Out of the postseason'}</span></div>
       {mine ? (
         <>
           <div className="fh-mu">
@@ -289,7 +307,7 @@ function Bracket({ F }) {
   if (!P) return null
   const rounds = [...(P.all ?? []), ...(P.stage === 'r' && P.S && !(P.all ?? []).includes(P.S) ? [P.S] : [])]
   const fin = rounds[3]?.[0] ?? null
-  const now = F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[P.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()) : P.champ ? `${nick(P.champ)} win the title` : ''
+  const now = F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[P.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : P.champ ? `${nick(P.champ)} win the title` : ''
   const confs = CONF_OF[F.team] === 'W' ? ['W', 'E'] : ['E', 'W']
   return (
     <section className="nb-bracket">

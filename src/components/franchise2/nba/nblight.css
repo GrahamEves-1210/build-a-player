@@ -1,0 +1,32 @@
+/* BASKETBALL FRANCHISE LIGHT (NbaLight.jsx): football's light.css carries the look (the stretch card, the recap, the
+   three-step summer); this is what the NBA's calendar and calls add. Every line 13px or more. */
+
+/* the stretch card's games to watch: a date in the week's column (wider than "Wk 12") */
+.nl-opps .lt-opp { grid-template-columns: 56px minmax(0, 1fr) auto; grid-template-areas: 'w t r'; }
+.nl-card .lt-rec { gap: 14px 22px; }
+.nl-card .fh-h, .nl-recap .fh-h { margin-top: 2px; }
+/* the recap's results: the date, the opponent, the final */
+.nl-game { grid-template-columns: 60px 86px minmax(0, 1fr) 14px; min-height: 46px; }
+.nl-results .lt-games { margin-top: 6px; }
+.nl-fate { justify-self: start; }
+.nl-recap .fh-ladder { display: grid; gap: 2px; }
+/* the summer's three steps: a pill each, the number and the name */
+.nbo-steps.nl-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nl-steps > span { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 6px; background: var(--fk-g1); color: var(--fk-dim); font-family: var(--fk-b); font-weight: 700; font-size: 14px; box-shadow: inset 0 -2px 0 rgba(255,255,255,.18); white-space: nowrap; }
+.nl-steps > span i { font-style: normal; font-family: var(--fk-d); font-size: 17px; }
+.nl-steps > span.is-done { color: var(--fk-text); box-shadow: inset 0 -2px 0 var(--fk-w); }
+.nl-steps > span.is-on { background: #f4f5f7; color: #0b0c0e; box-shadow: none; }
+/* a restricted man's three calls: KEEP / TENDER QO / LET GO */
+.lt-seg.nl-seg3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lt-seg button span { display: block; }
+/* an offer's years */
+.nl-step { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; background: var(--fk-g2); box-shadow: inset 0 0 0 1px var(--fk-line); }
+.nl-step button { height: 44px; border: 0; background: var(--fk-g3); color: #fff; font-family: var(--fk-d); font-size: 22px; cursor: pointer; }
+.nl-step button:disabled { opacity: .4; cursor: default; }
+.nl-step b { text-align: center; font-family: var(--fk-d); font-weight: 400; font-size: 17px; letter-spacing: .3px; color: #fff; }
+.nl-cuts .fk-go { justify-self: start; }
+.nl-po .fh-mu { margin-top: 4px; }
+.nl-nw { white-space: nowrap; }
+/* the re-sign calls and the market's fits: one column on a phone, two on a wide screen */
+.nl-list { display: grid; gap: 12px; min-width: 0; }
+@media (min-width: 900px) { .nl-list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 20px; align-items: start; } }

@@ -103,8 +103,8 @@ const lastName = n => String(n).split(' ').filter(w => !/^(jr\.?|sr\.?|ii|iii|iv
 const allMen = F => [...Object.values(F.teams).flatMap(t => t.r), ...(F.fa ?? [])]
 
 // ── Player development: the summer's rating changes ──────────────────────────
-const snapLeague = F => { const m = {}; for (const p of allMen(F)) m[p.i] = p.o; return m }
-function devOf(F, was) {
+export const snapLeague = F => { const m = {}; for (const p of allMen(F)) m[p.i] = p.o; return m }
+export function devOf(F, was) {
   const now = allMen(F)
   const seen = now.filter(p => was[p.i] != null)
   const d = x => x[2] - x[1]
@@ -131,7 +131,7 @@ function DevRow({ F, x }) {
   )
 }
 // (folded on the re-sign stop, a line saying how the roster moved; open when the stop is looked back at)
-function Development({ F, open = false }) {
+export function Development({ F, open = false }) {
   const tap = useTap(F)
   const D = F.off?.dev
   if (!D) return null
@@ -169,7 +169,7 @@ export function cfMvps(F, h) {
   }
   return out
 }
-function Awards({ F, act, go, done = false }) {
+export function Awards({ F, act, go, done = false, next = 'The draft lottery' }) {
   const open = useOpen()
   const h = F.hist[F.hist.length - 1]
   if (!h) return null
@@ -197,7 +197,7 @@ function Awards({ F, act, go, done = false }) {
       <AwardTeams F={F} y={h.y} title="All-Defensive" teams={A.ALLDEF} names={['First team', 'Second team']} k="DEF" />
       <AwardTeams F={F} y={h.y} title="All-Rookie" teams={A.ROOKIE} names={['First team', 'Second team']} />
       {!done && <TeamOptions F={F} act={act} />}
-      {!done && <ActionBar><Go onClick={go}>The draft lottery</Go></ActionBar>}
+      {!done && <ActionBar><Go onClick={go}>{next}</Go></ActionBar>}
     </section>
   )
 }
@@ -327,7 +327,7 @@ function BallsNote({ L }) {
 const rows = (F, ids) => ids.map(i => (F.dc ?? []).find(p => p.i === i)).filter(Boolean)
 // (a prospect's age on draft night: the class keeps his rookie-season age, and the draft stores him a year younger)
 export const draftAge = p => (p.ag ?? 20) - 1
-function Draft({ F, act, go }) {
+export function Draft({ F, act, go, next = 'Re-sign' }) {
   const pk = onClock(F)
   const mine = pk?.t === F.team
   const made = F.dn?.made ?? []
@@ -384,7 +384,7 @@ function Draft({ F, act, go }) {
       )}
       {pk && mine && !selP && best && <ActionBar><Go onClick={() => { setSel(best.i); sfx('tap') }}>{`Best available: ${lastName(best.n)}`}</Go></ActionBar>}
       {pk && !mine && <ActionBar><Go onClick={simTo}>{mineLeft.length ? `Sim to pick ${mineLeft[0].n}` : 'Sim the rest'}</Go></ActionBar>}
-      {!pk && <ActionBar><Go onClick={go}>Re-sign</Go></ActionBar>}
+      {!pk && <ActionBar><Go onClick={go}>{next}</Go></ActionBar>}
     </section>
   )
 }
@@ -516,7 +516,7 @@ function Resign({ F, act, go }) {
     </section>
   )
 }
-function KeptList({ F, kept, title }) {
+export function KeptList({ F, kept, title }) {
   const tap = useTap(F)
   return (
     <div className="nbo-dev-box">
@@ -691,7 +691,7 @@ function OfferPanel({ F, p, ask, c, bids, pend, rfa, onSign, onOffer, onPull }) 
   )
 }
 // around the league: who signed where, day by day (the GM's own first)
-function Wire({ F, all = false }) {
+export function Wire({ F, all = false }) {
   const tap = useTap(F)
   const W = F.off?.wire ?? []
   const days = [...new Set(W.map(x => x[0]))].sort((a, b) => b - a)
@@ -728,7 +728,7 @@ function FaDone({ F }) {
 // ── 6. TRAINING CAMP ─────────────────────────────────────────────────────────
 // the roster down to 15 standard and 3 two-way deals. Waive on a man selects him: what it costs (his dead money, or
 // stretched) and the buttons show in the bar at the foot of the screen, and they arm a moment later.
-function Camp({ F, act, go, owner }) {
+export function Camp({ F, act, go, owner }) {
   const open = useOpen()
   const page = id => (open ? () => { open(id); sfx('tap') } : undefined)
   const t = F.teams[F.team]
