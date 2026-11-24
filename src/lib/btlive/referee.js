@@ -85,7 +85,7 @@ export function makeChance(s) {
     if (s.d > T.deepAt) base -= (s.d - T.deepAt) * (T.deepFall - T.deepJs * R.js)
     base *= 1 - T.setFeet * clamp(s.run ?? 0, 0, 1)
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
-    pen = T.contestMaxJ * s.c
+    pen = T.contestMaxJ * s.c * (1 - T.jsThrough * R.js)     // a great shooter shoots over a hand
   }
   let p = base * releaseMult(s.kind, s.q) * (1 - pen)
   if (s.rushed) p *= 1 - T.rushPen * (1 - R.iq)

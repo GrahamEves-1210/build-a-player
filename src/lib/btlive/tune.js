@@ -39,15 +39,15 @@ export const T = {
   spread: 0.47,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
-  speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it)
+  speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it; an 80 about 9.7)
   speedBand: 0.08,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
   sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.94,                   // with the ball at Handles 1 (x top speed)...
-  ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps about 95%: a quick handler beats a slow man)
+  ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps 97%: Speed 11 with it outruns a Speed 1 guarding)
   defSpeed: 0.95,                    // guarding, at Perimeter D 1 (x top speed)...
-  defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (an 80 about 102%: an even man stays in front)
+  defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (an 80 about 100%: an even man stays in front)
   accel: 34,                         // ft/s² (about a third of a second to top speed)...
-  accelBase: 0.97, accelSpd: 0.06,   // ...x (0.85 + 0.3 x Speed): a quick first step
+  accelBase: 0.97, accelSpd: 0.06,   // ...x (0.97 + 0.06 x Speed): a quick first step
   accelSize: 0.06,                   // ...less this at Size 11
   defAccel: 0.82, defAccelPer: 0.24, // a defender's: x (0.82 + this * Perimeter D)
   walk: 0.25,                        // stick pushed less than this far: ignored (dead zone)
@@ -69,24 +69,24 @@ export const T = {
   lWinMs: 30, lWinFin: 54,           // green half-width from Finishing: 30 + 54 x n²: 84 ms at 11
   lFallMs: 190,
   dunkWin: 1.35,                     // a dunk's window is this much wider
-  clutchLo: 0.5, clutchHi: 1.2,     // at game point the green window is this x at Clutch 1 ... this x at Clutch 11
+  clutchLo: 0.5, clutchHi: 1.2,      // at game point the green window is this x at Clutch 1 ... this x at Clutch 11
   clutchMake: 0.30,                  // late in a game the shot's chance is x (1 + this * (Clutch - half)): +15% at 11, -15% at 1...
-  clutchFrom: 3,                     // ...late: game point, or either side this close to the goal
+  clutchFrom: 3,                     // ...late: game point, or anyone this close to the goal
   minHoldMs: 120,                    // let go sooner than this and it still counts as held this long (a tap is a bad release)
   relMinJ: 0.42,                     // a jumper let go at the worst time keeps this much of its chance (a bad one can still drop)
   relMinL: 0.62,                     // ...a layup this much
   slightJ: 0.86,                     // just outside the green: the chance starts from here and falls to relMin
 
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
-  layBase: 0.62, layFin: 0.36,       // layup: 72% at Finishing 1, 95% at 11 (an 80: 83%)
+  layBase: 0.62, layFin: 0.36,       // layup: 81% at Finishing 1, 98% at 11 (an 80: 89%): the best shot there is
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
   layFar: 0.012,                     // a layup loses this much a foot past 3 ft
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkBounce: 0.55,                  // Bounce (n) under this: never dunks (a Bounce 1 never does)
   dunkChance: 1.8,                   // how often an able dunker dunks: (Bounce n - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
-  closeBase: 0.04, closeJs: 0.68,    // a jumper from 8 ft: 40% at Jump Shot 1, 62% at 11
-  arcBase: -0.29, arcJs: 0.79,       // a jumper from the arc (25 ft): 15% at Jump Shot 1, 43% at 11 (an 80: 28%)
+  closeBase: 0.04, closeJs: 0.68,    // a jumper from 8 ft: 40% at Jump Shot 1, 72% at 11
+  arcBase: -0.29, arcJs: 0.79,       // a jumper from the arc (25 ft): 13% at Jump Shot 1, 50% at 11 (an 80: 30%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
   deepAt: 27.5,                      // past this it's deep...
   deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
@@ -96,7 +96,7 @@ export const T = {
   rushAt: 3.0,                       // a shot in the last 3 s of the shot clock is rushed...
   rushPen: 0.22,                     // ...and loses this much at IQ 1, nothing at IQ 11
 
-  // ── Contest: the nearest hand takes a share of the chance ───────────────────────────────────────
+  // ── Contest: how close, where (in front / beside / beaten), how he stands, who he is ───────────────────────────────────────
   contestRange: 7.0,                 // a defender farther than this doesn't bother a jumper...
   contestNear: 2.5,                  // ...and at this distance he's all the way in it (a straight line between)
   contestRangeL: 6.0, contestNearL: 2.0,   // ...at a layup or a dunk
@@ -110,18 +110,19 @@ export const T = {
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
   contestBehind: 0.2,                // ...this much
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
-  contestSize: 0.45,                  // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
-  contestSecond: 0.6,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
-  contestMaxJ: 0.6,                 // a perfect contest takes this share off a jumper
+  contestSize: 0.45,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
+  contestSecond: 0.6,                // a second man in it adds this share of his own contest (help at the rim, two on the king)
+  contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
+  jsThrough: 0.35,                   // Jump Shot 11 shoots over this share of a jumper's contest
   contestMaxL: 0.62,                 // ...off a layup
   contestMaxD: 0.40,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
-  cpuRespect: 12,                     // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
-  twoValue: 1.6,                     // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
-  cpuDriveV: 0.45,                   // a jumper has to be worth this (a make = 1, a two 1.5) while there's time to go to the rim
+  cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
+  twoValue: 1.3,                     // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
+  cpuDriveV: 0.55,                   // a jumper has to be worth this (a make = 1, a two 1.3) while there's time to go to the rim
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
   jumpTime: 0.50,                    // off the floor this long...
