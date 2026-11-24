@@ -62,7 +62,6 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const ready = ordered.filter(p => built(p)?.name)
   // the roster: its standard spots, and who a full one lets go to make room for each build, in order
   const T = preview().teams[S.team]
-  const std = T.r.filter(x => !x.tw).length
   const outs = useMemo(() => {
     const F = { ...preview(), team: S.team }, t = { ...T, r: [...T.r] }, out = {}
     for (const p of ordered) {
@@ -74,7 +73,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const nick = TEAM[S.team].nick
   return (
     <div className="fsu-builds">
-      <Chyron team={S.team} tag={String(picks.length)} title="Build your players" sub={`ROOKIES · UP TO ${BUILD_MAX} · ${std} OF 15 SPOTS FILLED`} />
+      <Chyron team={S.team} tag={String(picks.length)} title="Build your players" sub={`ROOKIES · UP TO ${BUILD_MAX} · EACH TAKES A ROSTER SPOT`} />
       <div className="fsu-pos">
         {GROUPS.map(([pos, k, name, spots]) => {
           const n = count(pos)

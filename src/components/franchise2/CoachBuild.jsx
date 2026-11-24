@@ -78,7 +78,7 @@ export function CoachSpin({ S, go, onDone, lg = FB_COACH }) {
           onStop={() => { setSpinning(false); haptic('medium') }} />
       </div>
       {landed && (
-        <LowerThird key={landed.name} className="fsu-landed" name={landed.name} pos="HC" team={landed.team} photo={lg.photo({ n: landed.name, ag: landed.age, ...(landed.shot && { shot: landed.espn }), real: 1 }, landed.team)} stat={{ v: coachGrade(landed.attrs), label: 'GRADE' }} line={TEAM[landed.team]?.name.toUpperCase()} />
+        <LowerThird key={landed.name} className="fsu-landed" name={landed.name} pos="HC" team={landed.team} photo={lg.photo({ n: landed.name, ag: landed.age, ...(landed.shot && { shot: `${landed.espn}.${landed.shot === 'png' ? 'png' : 'jpg'}` }), real: 1 }, landed.team)} stat={{ v: coachGrade(landed.attrs), label: 'GRADE' }} line={TEAM[landed.team]?.name.toUpperCase()} />
       )}
       <div className={`fsu-lines${landed ? ' is-choosing' : ''}`} style={fkVars(team)}>
         {CTYPES.map((t, i) => {

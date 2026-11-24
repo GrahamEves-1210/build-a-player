@@ -134,7 +134,7 @@ function TeamCard({ s, onPick, onGo }) {
       {hc && (
         <>
           <Chyron tone="ink" size="s" title="Head coach" />
-          <LowerThird name={hc.name} pos="HC" team={s} photo={nbaCoachPhoto({ n: hc.name, real: 1, ...(hc.shot && { shot: hc.espn }) }, s)} stat={{ v: NC.coachGrade(hc.attrs), label: 'GRADE' }} line={hc.since >= FIRST_YEAR ? 'FIRST SEASON' : `SINCE ${hc.since}`} delay={60} />
+          <LowerThird name={hc.name} pos="HC" team={s} photo={nbaCoachPhoto({ n: hc.name, real: 1, ...(hc.shot && { shot: `${hc.espn}.${hc.shot === 'png' ? 'png' : 'jpg'}` }) }, s)} stat={{ v: NC.coachGrade(hc.attrs), label: 'GRADE' }} line={hc.since >= FIRST_YEAR ? 'FIRST SEASON' : `SINCE ${hc.since}`} delay={60} />
         </>
       )}
       <Chyron tone="ink" size="s" title="Best players" />

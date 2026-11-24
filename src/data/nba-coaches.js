@@ -6,7 +6,9 @@
 //   `since` = the first season (its start year) he ran this team, interim stretches included (Adelman, Christie,
 //   Keefe, Iisalo took over mid-season). `age` this season, from his birth year where ESPN or his public biography
 //   has one (approximate by a year for a few). `espn` = his ESPN coach id; `shot` = ESPN's studio headshot exists
-//   for him (public/headshots/nba-coaches/<espn>.jpg, ESPN's own file); the rest show their initials.
+//   for him (public/headshots/nba-coaches/<espn>.jpg, ESPN's own 65px coach file; shot: 'png' = ESPN's full-size
+//   600x436 headshot, <espn>.png, from its player headshots: a coach who played, or one ESPN filed there); the rest
+//   show their initials.
 //
 // RATINGS, 0-11 (shown as letters: 11 S, 10 A, 9 A-, 8 B+, 7 B, 6 B-, 5 C+, 4 C, 3 C-, 2 D, 1 D-, 0 F). Opinion, the
 // way the league talks about each man going into 2026-27: titles and deep runs, the units his teams have put up
@@ -22,7 +24,7 @@ export const NBA_COACHES = [
   { team: 'BOS', name: 'Joe Mazzulla', age: 38, since: 2022, espn: 2232684, shot: 1, attrs: { dev: 7, off: 9, def: 8, rot: 7, late: 7 } },
   { team: 'BKN', name: 'Jordi Fernández', age: 44, since: 2024, espn: 4058088, attrs: { dev: 8, off: 5, def: 6, rot: 6, late: 5 } },
   { team: 'CHA', name: 'Charles Lee', age: 42, since: 2024, espn: 3062, attrs: { dev: 7, off: 6, def: 6, rot: 5, late: 5 } },
-  { team: 'CHI', name: 'Tiago Splitter', age: 41, since: 2026, espn: 3233, attrs: { dev: 6, off: 6, def: 6, rot: 5, late: 5 } },
+  { team: 'CHI', name: 'Tiago Splitter', age: 41, since: 2026, espn: 3233, shot: 'png', attrs: { dev: 6, off: 6, def: 6, rot: 5, late: 5 } },
   { team: 'CLE', name: 'Kenny Atkinson', age: 59, since: 2024, espn: 6809, shot: 1, attrs: { dev: 8, off: 9, def: 7, rot: 7, late: 6 } },
   { team: 'DAL', name: 'Dusty May', age: 50, since: 2026, espn: 4391222, attrs: { dev: 7, off: 7, def: 6, rot: 5, late: 5 } },
   { team: 'DEN', name: 'David Adelman', age: 45, since: 2025, espn: 3067059, attrs: { dev: 6, off: 8, def: 5, rot: 5, late: 6 } },
@@ -31,18 +33,18 @@ export const NBA_COACHES = [
   { team: 'HOU', name: 'Ime Udoka', age: 49, since: 2023, espn: 866, attrs: { dev: 7, off: 5, def: 10, rot: 6, late: 6 } },
   { team: 'IND', name: 'Rick Carlisle', age: 67, since: 2021, espn: 4661, shot: 1, attrs: { dev: 6, off: 9, def: 6, rot: 8, late: 9 } },
   { team: 'LAC', name: 'Tyronn Lue', age: 49, since: 2020, espn: 489, shot: 1, attrs: { dev: 5, off: 7, def: 8, rot: 8, late: 10 } },
-  { team: 'LAL', name: 'JJ Redick', age: 42, since: 2024, espn: 3024, attrs: { dev: 5, off: 7, def: 5, rot: 6, late: 6 } },
+  { team: 'LAL', name: 'JJ Redick', age: 42, since: 2024, espn: 3024, shot: 'png', attrs: { dev: 5, off: 7, def: 5, rot: 6, late: 6 } },
   { team: 'MEM', name: 'Tuomas Iisalo', age: 43, since: 2024, espn: 5277133, attrs: { dev: 6, off: 7, def: 5, rot: 5, late: 5 } },
-  { team: 'MIA', name: 'Erik Spoelstra', age: 56, since: 2008, espn: 6749, shot: 1, attrs: { dev: 11, off: 8, def: 10, rot: 9, late: 9 } },
+  { team: 'MIA', name: 'Erik Spoelstra', age: 56, since: 2008, espn: 6749, shot: 'png', attrs: { dev: 11, off: 8, def: 10, rot: 9, late: 9 } },
   { team: 'MIL', name: 'Taylor Jenkins', age: 42, since: 2026, espn: 3044495, attrs: { dev: 8, off: 6, def: 7, rot: 6, late: 5 } },
   { team: 'MIN', name: 'Chris Finch', age: 57, since: 2020, espn: 2613479, attrs: { dev: 6, off: 8, def: 8, rot: 6, late: 7 } },
   { team: 'NOP', name: 'Jamahl Mosley', age: 48, since: 2026, espn: 2529241, attrs: { dev: 7, off: 4, def: 8, rot: 5, late: 5 } },
   { team: 'NYK', name: 'Mike Brown', age: 56, since: 2025, espn: 3612, shot: 1, attrs: { dev: 6, off: 7, def: 8, rot: 7, late: 6 } },
   { team: 'OKC', name: 'Mark Daigneault', age: 41, since: 2020, espn: 4356384, attrs: { dev: 10, off: 7, def: 10, rot: 9, late: 7 } },
-  { team: 'ORL', name: 'Sean Sweeney', age: 41, since: 2026, espn: 2142798, attrs: { dev: 6, off: 5, def: 7, rot: 5, late: 5 } },
+  { team: 'ORL', name: 'Sean Sweeney', age: 41, since: 2026, espn: 2142798, shot: 'png', attrs: { dev: 6, off: 5, def: 7, rot: 5, late: 5 } },
   { team: 'PHI', name: 'Nick Nurse', age: 59, since: 2023, espn: 52085, shot: 1, attrs: { dev: 7, off: 7, def: 8, rot: 6, late: 8 } },
   { team: 'PHX', name: 'Jordan Ott', age: 41, since: 2025, espn: 4061667, attrs: { dev: 6, off: 7, def: 6, rot: 6, late: 5 } },
-  { team: 'POR', name: 'Micah Nori', age: 52, since: 2026, espn: 2487822, attrs: { dev: 6, off: 6, def: 5, rot: 5, late: 5 } },
+  { team: 'POR', name: 'Micah Nori', age: 52, since: 2026, espn: 2487822, shot: 'png', attrs: { dev: 6, off: 6, def: 5, rot: 5, late: 5 } },
   { team: 'SAC', name: 'Doug Christie', age: 56, since: 2024, espn: 147, attrs: { dev: 5, off: 4, def: 5, rot: 4, late: 4 } },
   { team: 'SAS', name: 'Mitch Johnson', age: 40, since: 2024, espn: 4401170, attrs: { dev: 9, off: 7, def: 8, rot: 7, late: 6 } },
   { team: 'TOR', name: 'Darko Rajaković', age: 47, since: 2023, espn: 3116516, attrs: { dev: 7, off: 6, def: 6, rot: 6, late: 5 } },

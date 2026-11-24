@@ -80,8 +80,9 @@ export const STAFF_TEAMS = SHORTS.filter(s => BY_TEAM[s])
 // the real league's average on each line (a rating is measured against it)
 const MID = Object.fromEntries(CTYPES.map(t => [t, NBA_COACHES.reduce((a, c) => a + c.attrs[t], 0) / NBA_COACHES.length]))
 const AMID = 6   // (a made-up assistant's line he was hired for: genAssistant's middle)
-export const coachShot = c => (c?.shot ? `${HEADSHOT_BASE}/nba-coaches/${c.shot}.jpg` : null)
-const realMan = (F, c, team) => ({ i: F.cid++, n: c.name, ag: c.age ?? 50, r: toArr(c.attrs), st: c.since ?? F.year, real: 1, ...(c.shot && { shot: c.espn }), ...(team == null && c.cv && { cv: c.cv }), ...(team == null && { hy: 1 }) })
+// (c.shot: the file, '<espn>.png' or '<espn>.jpg'; a save from before: the bare id, a .jpg)
+export const coachShot = c => (c?.shot ? `${HEADSHOT_BASE}/nba-coaches/${/\./.test(String(c.shot)) ? c.shot : `${c.shot}.jpg`}` : null)
+const realMan = (F, c, team) => ({ i: F.cid++, n: c.name, ag: c.age ?? 50, r: toArr(c.attrs), st: c.since ?? F.year, real: 1, ...(c.shot && { shot: `${c.espn}.${c.shot === 'png' ? 'png' : 'jpg'}` }), ...(team == null && c.cv && { cv: c.cv }), ...(team == null && { hy: 1 }) })
 
 // ── Made-up assistants ───────────────────────────────────────────────────────
 // NBA benches: about half white, two in five Black, a few others (the name and the drawn face follow it)
