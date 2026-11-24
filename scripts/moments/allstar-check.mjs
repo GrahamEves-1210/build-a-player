@@ -229,6 +229,9 @@ for (const v of [9, 10, 11]) {
   ok(c.active.asw.three.mine.length === 1 && !c.active.asw.three.live && c.active.asw.three.mine[0].sim, 'a 3PT round left open is shot cold')
   c = A.settleLive(A.markLive(c, 'dunk', { dunk: DUNKS[0].id }))
   ok(c.active.asw.dunk.cur?.tries?.length === 1 && !c.active.asw.dunk.cur.tries[0].landed && !c.active.asw.dunk.live, 'a dunk attempt left open is a miss')
+  // (left on the board in the game, before he'd called the dunk: nothing's been tried)
+  const c2 = A.settleLive(A.markLive(A.answerAllStar(c0, { dunk: true }), 'dunk', { dunk: null }))
+  ok(!c2.active.asw.dunk.cur && !c2.active.asw.dunk.live && !(c2.active.asw.dunk.mine ?? []).length, 'a dunk game left before the call books nothing')
 }
 // ── 5. on the season: booked, honors, totals, and no legacy from it ──
 console.log('── the season keeps it')

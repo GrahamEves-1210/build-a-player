@@ -846,6 +846,7 @@ export function draw(ctx, g, view) {
 
   // him
   const hipX = SX(bx), PEz = easedPose(PE, P, g, dtG, 22)
+  g.fig = { x: hipX, y: floorY - j * s, s }   // (where he is on the screen: the frame-by-frame checks crop to him)
   PEz.j = j
   if (front) {
     // turned to us (mid-spin, or after: the flex, the hands on his head)
