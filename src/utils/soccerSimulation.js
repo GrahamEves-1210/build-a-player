@@ -89,6 +89,7 @@
 //   (Career, Squad Builder); team.bench: a backup (few starts); team.age: Best Young Player eligibility;
 //   team.europe ('ucl' | 'uel' | 'uecl' | null) or team.lastPos (1-20): where he plays in Europe this season.
 //   team.sched (Career): a seed for his league's fixture list, the same through every re-run of one season.
+//   team.yrs / team.world (Career): seasons since 2026 and the career's seed: the award field's players age out.
 //   team.tier2 (Career): his club plays its country's second tier this season (result.league.tier 2, promoted).
 //   team.field (mode 'alltime', Career): a tournament field of its own (soccerNationField).
 // rngSeed: a number or a string. The same build, team, mode and seed always play the same season.
@@ -1370,6 +1371,21 @@ function shareGoals(sc, goals, rand, taken = 0) {
   let left = goals, used = taken
   return sc.map(x => { const g = binom(left, clamp(x.pr / Math.max(0.05, 1 - used), 0, 0.95), rand); left -= g; used += x.pr; return g })
 }
+// Career, years on (team.yrs: seasons since 2026; team.world: the career's seed). The award field's real players
+// don't play for ever: one who would be 35 has gone, and the man in his place has a made-up name and the same level
+// (his club replaced him like for like; a successor lasts nine seasons, then the next). The younger ones keep their
+// 2026 level until then. (Before 2026-11-24 the field was 2026's for ever: Harry Kane, 47, the Ballon d'Or's runner-up.)
+const GEN_FIRST = ['Lucas', 'Mateo', 'Luca', 'Noah', 'Rafael', 'João', 'Kai', 'Leon', 'Théo', 'Marco', 'Diego', 'Youssef', 'Ibrahim', 'Bruno', 'Emil', 'Nico', 'Hugo', 'Adam', 'Tomás', 'Rayan', 'Jonas', 'Samuel', 'Elias', 'Enzo', 'Victor', 'Julián', 'Malik', 'Dani']
+const GEN_LAST = ['Moreau', 'Brandt', 'Ferreira', 'Okoro', 'Lindqvist', 'Varga', 'Mensah', 'Herrera', 'Dubois', 'Jansen', 'Romano', 'Novak', 'Haddad', 'Petersen', 'Costa', 'Lopes', 'Keller', 'Diallo', 'Sorensen', 'Navas', 'Marchetti', 'Achterberg', 'Ibarra', 'Kourouma', 'Vidal', 'Hartmann', 'Sarr', 'Castillo']
+function yearsOn(p, era, team = p.team) {
+  const yrs = era?.yrs ?? 0
+  if (!yrs) return p
+  const age = (p.age ?? 27) + yrs
+  if (age < 35) return { ...p, age }
+  const gen = Math.floor((age - 35) / 9)
+  const r = seeded(`next|${era.world ?? ''}|${team}|${p.name}|${gen}`)
+  return { ...p, name: `${GEN_FIRST[Math.floor(r() * GEN_FIRST.length)]} ${GEN_LAST[Math.floor(r() * GEN_LAST.length)]}`, age: 23 + ((age - 35) % 9) + Math.floor(r() * 3), nation: null, gen: true }
+}
 const POS_BONUS = (pos, size) => (pos === 1 ? 7 : pos === 2 ? 4 : pos <= 4 ? 2.5 : pos <= 7 ? 1 : pos > size - 3 ? -2 : 0)
 const EURO_PTS = { ucl: { Winners: 14, Final: 6, 'Semi-finals': 3, 'Quarter-finals': 1 }, uel: { Winners: 5, Final: 2, 'Semi-finals': 1 }, uecl: { Winners: 2 } }
 function trophyPts({ league, ucl, uel, uecl, cup }) {
@@ -1378,14 +1394,14 @@ function trophyPts({ league, ucl, uel, uecl, cup }) {
 // a Ballon d'Or case: goals and half the assists (all competitions), and the trophies, weighed by how big a
 // part of them he was (a 12-goal striker on a title side gets about a third of the credit, a 35-goal one all of it)
 const bdoCase = (goals, assists, trophies, value = 0) => { const own = goals + 0.5 * assists + value; return own + trophies * clamp((own - 10) / 25, 0.2, 1) }
-function clubField(world, rand, exclude, mine) {
+function clubField(world, rand, exclude, mine, era = null) {
   // mine: the build's league goals (his club's other starting striker scores from what's left)
   const field = []
   for (const L of LEAGUES) {
     const lg = world.leagues[L.id]
     const size = lg.table.length
     for (const row of lg.table) {
-      const list = (CLUB_STRIKERS.get(row.short) ?? []).filter(p => !exclude.has(p.name)).slice(0, 5)
+      const list = (CLUB_STRIKERS.get(row.short) ?? []).filter(p => !exclude.has(p.name)).slice(0, 5).map(p => yearsOn(p, era))
       if (!list.length) continue
       const isU = row.short === world.U
       // (his club: the build scored `mine` of its goals; the others share the rest)
@@ -1412,8 +1428,9 @@ function clubField(world, rand, exclude, mine) {
   return field
 }
 // stars: a seeded season around their real level, and their club's year
-function clubStars(world, rand) {
-  return STARS_CLUB.map(s => {
+function clubStars(world, rand, era = null) {
+  return STARS_CLUB.map(s0 => {
+    const s = yearsOn(s0, era)
     const lg = world.leagues[s.lid], row = lg?.table.find(r => r.short === s.team)
     const pos = row?.pos ?? 10, size = lg?.table.length ?? 20
     const u = s.lvl + 4.5 * gauss(rand)
@@ -1692,8 +1709,9 @@ function clubSeason(build, types, team, base, gameMode, script) {
   // the award field
   const fr = stream(base, 'field')
   const exclude = new Set(script ? mates.filter(p => p.role === 'ST').map(p => p.name) : S.replaced ? [S.replaced.name] : [])
-  const field = script?.field ?? clubField(world, fr, exclude, t.goals)
-  const stars = script?.stars ?? clubStars(world, stream(base, 'stars'))
+  const era = team?.yrs ? { yrs: team.yrs, world: team.world ?? '' } : null
+  const field = script?.field ?? clubField(world, fr, exclude, t.goals, era)
+  const stars = script?.stars ?? clubStars(world, stream(base, 'stars'), era)
   const book = {
     meta: { boot: meta.boot, poty: meta.poty },
     league: field.filter(x => x.lid === L.id && x.fwd).map(x => ({ name: x.name, team: x.team, goals: x.goals, assists: x.assists, pots: r1(x.pots) })),

@@ -66,7 +66,7 @@ const SOCCER = {
     const usage = clamp(0.9 + (Math.min(o, 92) - 85) * 0.01 - Math.max(0, o - 92) * USAGE_TOP, 0.75, 1) * (age <= 19 ? 0.86 : age <= 21 ? 0.94 : age >= 31 ? 1 - (age - 30) * 0.03 : 1) * (role === 'Starter' ? 1 : role === 'Rotation' ? 0.8 : 0.9)
     // (a relegated club he stayed with plays the second tier, and nothing in Europe: c.down)
     const down = c.down?.team === t.short
-    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
+    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, yrs: Math.max(0, (c.season ?? FIRST_SEASON) - FIRST_SEASON), world: c.seed, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
   },
   // the attack around him: the forwards beside him (wingers and a No. 10 count) and the club itself
   // (years on, the real ones age: past 30 they fade, at 35 they're gone)
@@ -640,10 +640,15 @@ const BDO_WC = { Winners: 12, 'Runners-up': 5, 'Third place': 2, 'Fourth place':
 // Messi's 2021, Rodri's 2024; times the tournament's weight, CONT_MAJOR)
 const BDO_CONT = { Winners: 8, 'Runners-up': 3, 'Semi-finals': 1 }
 // The year's best rival for the Ballon d'Or, as a case on this scale (goals, half the assists, the trophies he was a
-// big part of). The best case that wasn't the winner's own generation-defining pair, 2008-2025: about 45 (Rodri 2024,
-// van Dijk 2019, Modrić 2018) to 84 (Haaland's 52-goal treble, 2023), most years 55-70 (Lewandowski 2021 about 62,
-// Benzema 2022 about 75, Dembélé 2025 about 70). So: a median, and a spread on a logistic.
-export const BDO_RIVAL = { mid: 61, spread: 7 }
+// big part of). Real years, 2008-2025, the best case that wasn't Messi's or Ronaldo's own (the careers a build like
+// his stands in for): about 45 (Rodri 2024, van Dijk 2019, Modrić 2018) to 84 (Haaland's 52-goal treble, 2023), most
+// years 55-70 (Lewandowski 2021 about 62, Benzema 2022 about 75, Dembélé 2025 about 70): a median near 61.
+// The rival is the best man in the engine's field that season, brought onto that scale (shift: the field runs high,
+// the best of five hundred cases each with a voter's swing: about 71 in a median year), and never less than a
+// seeded floor (mid, spread: a logistic) so a thin year still has a winner's case in it.
+// (Before 2026-11-24: the field as it came and a floor of 66, together about 73 in a median year: a 45-goal season
+// with the league or the Champions League won it 14 times in 22, a 99 striker's career about twice.)
+export const BDO_RIVAL = { mid: 55, spread: 6, shift: 10 }
 // what usually wins a league's Golden Boot (Transfermarkt, 2015-16 to 2024-25; see utils/soccerSimulation.js)
 const BOOT_TOP = { 'eng.1': 26, 'esp.1': 27, 'ita.1': 26, 'ger.1': 27, 'fra.1': 25 }
 // how much of his share of the chances a striker past 92 gives back, a point at a time (tuned: an elite career
@@ -712,12 +717,13 @@ function soccerSeason(c, f, po) {
   const mine = r10(bdoCase(goals * k2 + (wc?.goals ?? 0) + (cont?.goals ?? 0), assists * k2 + (wc?.assists ?? 0) + (cont?.assists ?? 0), tp) + (boot && !tier2 ? 2 : 0))
   // (and the year's best rival: most years a ~66 case, a 50-goal treble now and then, so it isn't his every year
   // he scores 40; the best man in the engine's field has that season)
-  const field = (f.book?.bdo ?? f.ballonDor?.top ?? []).filter(x => !x.isPlayer).map(x => ({ ...x })).sort((a, b) => b.score - a.score)
+  const field = (f.book?.bdo ?? f.ballonDor?.top ?? []).filter(x => !x.isPlayer).map(x => ({ ...x, score: r10(x.score - BDO_RIVAL.shift) })).sort((a, b) => b.score - a.score)
   const ru = clamp(seeded(`${c.seed}-bdo-${c.year}`)(), 0.001, 0.999), rival = BDO_RIVAL.mid + BDO_RIVAL.spread * Math.log(ru / (1 - ru))
   if (field[0] && field[0].score < rival) field[0].score = r10(rival)
   const rank = 1 + field.filter(x => x.score > mine).length
   const winner = rank === 1 ? null : field[0] ?? null
-  const bdo = { rank, finish: rank === 1 ? 'winner' : rank <= 3 ? 'top3' : rank <= 10 ? 'top10' : rank <= 30 ? 'nominated' : null, score: mine, winner: winner ? { name: winner.name, team: winner.team } : null }
+  // (rival: the best other case that year, and whose it was, so the screens can say who he beat or lost to)
+  const bdo = { rank, finish: rank === 1 ? 'winner' : rank <= 3 ? 'top3' : rank <= 10 ? 'top10' : rank <= 30 ? 'nominated' : null, score: mine, winner: winner ? { name: winner.name, team: winner.team } : null, rival: field[0] ? { name: field[0].name, team: field[0].team, score: field[0].score } : null }
   const award = rank === 1
   const s = {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role,

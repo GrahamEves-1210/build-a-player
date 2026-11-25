@@ -21,6 +21,8 @@ await build({
 })
 const C = await import(pathToFileURL(outfile).href)
 const T = C.SPORT.soccer.types.st
+if (process.env.BDO_SHIFT) C.BDO_RIVAL.shift = +process.env.BDO_SHIFT
+if (process.env.BDO_MID) C.BDO_RIVAL.mid = +process.env.BDO_MID   // (the Ballon d'Or's rival bar, to compare)
 const CLUB = new Map(C.SOCCER_CLUBS.map(c => [c.short, c]))
 const mkBuild = vals => Object.fromEntries(T.map((t, i) => [t, { type: t, val: vals[i], qb: 'Test', qbFull: 'Test Player', team: 'ARS', height: 72, weight: 165 }]))
 const N = +(process.env.N || 6), LVL = (process.env.LVL || '9,7,5').split(',').map(Number)
@@ -68,9 +70,9 @@ for (let i = 0; i < N; i++) {
     const st = s.stats
     const eu = s.europe ? `${s.europe.comp}:${s.europe.result}` : '-'
     const wc = s.wc ? (s.wc.called ? `WC${s.wc.year}:${s.wc.finish}/${s.wc.goals}g/${s.wc.apps}a` : `WC${s.wc.year}:not called`) : ''
-    const line = `${s.season}-${String((s.season + 1) % 100).padStart(2, '0')} age ${s.age} ${s.team}(${CLUB.get(s.team)?.league}) ovr ${s.ovr} ${s.role} | lg ${st.lgGoals}g/${st.lgAssists}a in ${st.lgApps} (starts ${st.starts}) | all ${st.goals}g ${st.assists}a ${st.apps}apps cup ${st.cupGoals} eu ${st.euroGoals} | pos ${s.pos}/${s.size} ${s.wins}-${s.draws}-${s.losses} ${s.points}pts | cup ${s.cupName}:${s.cupResult} | ${eu} | BdO ${s.bdo?.rank}${s.award ? '*WIN*' : ''} boot ${s.allPro ? 'Y' : '-'} poty ${s.poty ? 'Y' : '-'} tots ${s.proBowl ? 'Y' : '-'} shoe ${s.shoe ? 'Y' : '-'} kopa ${s.roy ? 'Y' : '-'} | caps ${s.caps}/${s.intlGoals} ${s.intlRole ?? ''} ${wc} | rec ${s.records.join(';')} | rel ${s.relegated ? 'Y' : '-'}${s.tier === 2 ? ` T2${s.promoted ? ' UP' : ''}` : ''}${s.moved ? ` JAN<-${s.moved.from}` : ''} q ${s.qualified} | intl #${s.intlRank ?? '-'} ${s.cont ? `${s.cont.short}${s.cont.year}:${s.cont.qualified === false ? 'dnq' : s.cont.called ? `${s.cont.finish}/${s.cont.goals}g` : 'not called'}` : ''} | rounds ${s.rounds.map(r => `${r.round}:${r.won ? 'W' : 'L'}${r.mySc}-${r.oppSc} v ${r.opponent}`).join(', ')}`
+    const line = `${s.season}-${String((s.season + 1) % 100).padStart(2, '0')} age ${s.age} ${s.team}(${CLUB.get(s.team)?.league}) ovr ${s.ovr} ${s.role} | lg ${st.lgGoals}g/${st.lgAssists}a in ${st.lgApps} (starts ${st.starts}) | all ${st.goals}g ${st.assists}a ${st.apps}apps cup ${st.cupGoals} eu ${st.euroGoals} | pos ${s.pos}/${s.size} ${s.wins}-${s.draws}-${s.losses} ${s.points}pts | cup ${s.cupName}:${s.cupResult} | ${eu} | BdO ${s.bdo?.rank}${s.award ? '*WIN*' : ''} (${s.bdo?.score} v ${s.bdo?.rival?.score} ${s.bdo?.rival?.name}) boot ${s.allPro ? 'Y' : '-'} poty ${s.poty ? 'Y' : '-'} tots ${s.proBowl ? 'Y' : '-'} shoe ${s.shoe ? 'Y' : '-'} kopa ${s.roy ? 'Y' : '-'} | caps ${s.caps}/${s.intlGoals} ${s.intlRole ?? ''} ${wc} | rec ${s.records.join(';')} | rel ${s.relegated ? 'Y' : '-'}${s.tier === 2 ? ` T2${s.promoted ? ' UP' : ''}` : ''}${s.moved ? ` JAN<-${s.moved.from}` : ''} q ${s.qualified} | intl #${s.intlRank ?? '-'} ${s.cont ? `${s.cont.short}${s.cont.year}:${s.cont.qualified === false ? 'dnq' : s.cont.called ? `${s.cont.finish}/${s.cont.goals}g` : 'not called'}` : ''} | rounds ${s.rounds.map(r => `${r.round}:${r.won ? 'W' : 'L'}${r.mySc}-${r.oppSc} v ${r.opponent}`).join(', ')}`
     console.log(line)
-    agg.push({ lv, age: s.age, ovr: s.ovr, lg: st.lgGoals, all: st.goals, apps: st.apps, lgApps: st.lgApps, as: st.assists, bdo: s.award, boot: s.allPro, role: s.role, league: CLUB.get(s.team)?.league, eu: s.europe?.comp, euRes: s.europe?.result, ucl: s.uclWon, champ: s.champion, cupWon: s.cupWon, wc: s.wc, caps: s.caps, trophies: s.trophies, sat: s.missed })
+    agg.push({ car: i, lv, age: s.age, ovr: s.ovr, lg: st.lgGoals, all: st.goals, apps: st.apps, lgApps: st.lgApps, as: st.assists, bdo: s.award, boot: s.allPro, role: s.role, league: CLUB.get(s.team)?.league, eu: s.europe?.comp, euRes: s.europe?.result, ucl: s.uclWon, champ: s.champion, cupWon: s.cupWon, wc: s.wc, caps: s.caps, trophies: s.trophies, sat: s.missed })
     // offseason
     if (c.phase === 'retired') break
     const ev = (c.events ?? []).filter(e => e.year === c.year + 1 || e.year === s.year).map(e => e.text)
@@ -106,6 +108,9 @@ const by = f => { const m = {}; for (const a of agg) { const k = f(a); (m[k] ??=
 const avg = (l, k) => (l.reduce((s, a) => s + (a[k] ?? 0), 0) / l.length).toFixed(1)
 console.log('\nBY OVR BAND (starter seasons):')
 for (const [k, l] of Object.entries(by(a => (a.role === 'Starter' ? Math.floor(a.ovr / 4) * 4 : 'non-start')))) console.log(`  ${k}: n ${l.length} lg ${avg(l, 'lg')} all ${avg(l, 'all')} apps ${avg(l, 'apps')} lgApps ${avg(l, 'lgApps')} assists ${avg(l, 'as')} bdo ${l.filter(a => a.bdo).length} boot ${l.filter(a => a.boot).length}`)
+{ const el = agg.filter(a => a.lv >= 11), n = new Set(el.map(a => a.car)).size || 1
+  const big = el.filter(a => a.all >= 50 && a.champ && a.ucl), big2 = el.filter(a => a.all >= 45 && (a.champ || a.ucl))
+  console.log(`BDO (elite): ${el.filter(a => a.bdo).length} in ${n} careers (${(el.filter(a => a.bdo).length / n).toFixed(1)} a career; by career ${[...new Set(el.map(a => a.car))].map(k => el.filter(a => a.car === k && a.bdo).length).join(',')}); 50-goal league+UCL seasons: ${big.filter(a => a.bdo).length}/${big.length} won; 45-goal seasons with a league or a UCL: ${big2.filter(a => a.bdo).length}/${big2.length} won`) }
 console.log('max lg goals', Math.max(...agg.map(a => a.lg)), 'max all', Math.max(...agg.map(a => a.all)), 'max apps', Math.max(...agg.map(a => a.apps)))
 console.log('TALLY', JSON.stringify({ ...tally, bidders: undefined }), 'bid summers', (tally.bidSummers / Math.max(1, tally.summers)).toFixed(2))
 console.log('BIDDERS', Object.entries(tally.bidders).sort((a, b) => b[1] - a[1]).map(x => x.join(':')).join(' '))
