@@ -53,7 +53,7 @@ html:is(.is-app, .app-look).is-baseball .navbar { background: #0b1019 !important
 html:is(.is-app, .app-look).is-baseball .nav-pos-menu { background: #111724 !important; }
 html.app-look.is-baseball .navbar .logo-text.logo-text--small em, [data-sport="baseball"] .navbar .logo-text.logo-text--small em { color: #c8102e; }
 /* the dock's fan: baseball's other sport (football) in its own colour */
-.ag-dock--baseball .ag-fan-item.is-sport .ag-fan-dot, html.is-baseball .ag-fan-item.is-sport .ag-fan-dot { color: #5edbd8; border-color: rgba(94,219,216,.5); }
+.ag-dock--baseball .ag-fan-item.is-sport .ag-fan-dot, html.is-baseball .ag-fan-item.is-sport .ag-fan-dot { color: #8BD5A6; border-color: rgba(139,213,166,.5); }
 
 /* Home, baseball: cream on navy, the stitch red for what's picked, where basketball is orange on brown.
    The stage is the night ballpark, drawn half again as tall from the top so the infield's arc and second
@@ -181,7 +181,7 @@ html:is(.is-app, .app-look).is-baseball .spin-respin-half { font-size: 15px !imp
 [data-sport="baseball"] .wm-htp-num { background: rgba(200,16,46,.3); border-color: rgba(200,16,46,.6); }
 [data-sport="baseball"] .wm-about-disclaimer { border-top-color: rgba(243,238,227,.14); }
 /* sign-in keeps the main app's colours, as on basketball and soccer */
-[data-sport="baseball"] .auth-modal { --accent: #95D5B2; --accent-hi: #B7E4C7; --btn-start: #5EDBD8; --btn-end: #1fc98a; --btn-glow: rgba(94,219,216,0.30); --btn-txt: #07120a; --text: #D8F3DC; --text-2: #95D5B2; --text-3: #52B788; --text-4: #2D6A4F; }
+[data-sport="baseball"] .auth-modal { --accent: #95D5B2; --accent-hi: #B7E4C7; --btn-start: #8BD5A6; --btn-end: #4FB57A; --btn-glow: rgba(139,213,166,0.30); --btn-txt: #07120a; --text: #D8F3DC; --text-2: #95D5B2; --text-3: #52B788; --text-4: #2D6A4F; }
 /* the about page and the old sim results */
 [data-sport="baseball"] .about-header { border-bottom-color: rgba(243,238,227,.2); }
 [data-sport="baseball"] .about-coming-card.active { border-color: rgba(200,16,46,.6); background: rgba(200,16,46,.08); }

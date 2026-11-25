@@ -658,8 +658,8 @@ export function confetti(amount = 140) {
   const g = c.getContext('2d')
   // Build-A-Player's own colours: the button gradient, the accent, gold and white
   const css = getComputedStyle(document.documentElement)
-  const a1 = css.getPropertyValue('--btn-start').trim() || '#5EDBD8'
-  const a2 = css.getPropertyValue('--btn-end').trim() || '#1fc98a'
+  const a1 = css.getPropertyValue('--btn-start').trim() || '#8BD5A6'
+  const a2 = css.getPropertyValue('--btn-end').trim() || '#4FB57A'
   const COLORS = [a1, a2, '#D4AF37', '#f2d675', '#ffffff', '#95D5B2']
   const n = big ? amount : Math.round(amount * 0.85)
   // grouped by colour, so the fill changes six times a frame instead of once a piece
@@ -720,7 +720,7 @@ function runFx(draw, ms = VFX_MS) {
   requestAnimationFrame(frame)
 }
 const rnd = (a, b) => a + Math.random() * (b - a)
-const accent = () => { const css = getComputedStyle(document.documentElement); return [css.getPropertyValue('--btn-start').trim() || '#5EDBD8', css.getPropertyValue('--btn-end').trim() || '#1fc98a'] }
+const accent = () => { const css = getComputedStyle(document.documentElement); return [css.getPropertyValue('--btn-start').trim() || '#8BD5A6', css.getPropertyValue('--btn-end').trim() || '#4FB57A'] }
 const FX = {
   'fx-confetti': () => confetti(180),
   'fx-streamers': () => runFx(({ g, W, H }, t, k, st) => {

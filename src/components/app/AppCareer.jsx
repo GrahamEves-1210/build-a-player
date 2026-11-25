@@ -96,7 +96,7 @@ const clauseText = (fee, short) => (fee >= 1000 ? `${soccerCur(short)}${r1(fee /
 const RUN_DATE = { month: 'short', day: 'numeric' }
 // a roster photo: a full URL (or, in a football career saved before, the headshot id)
 const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null)
-const LEGACY_COLOR = { Starter: '#b9c4bd', Star: '#5edbd8', Superstar: '#b79bff', 'All-Time Great': '#f5dc8a', 'Squad Player': '#b9c4bd', 'World Class': '#b79bff', Legend: '#f5dc8a' }
+const LEGACY_COLOR = { Starter: '#b9c4bd', Star: '#8BD5A6', Superstar: '#b79bff', 'All-Time Great': '#f5dc8a', 'Squad Player': '#b9c4bd', 'World Class': '#b79bff', Legend: '#f5dc8a' }
 export const legacyColor = c => LEGACY_COLOR[legacyOf(c).tier] ?? '#b9c4bd'
 // his own drawn face (lib/careerFace.js), in his club's colour: never the account's avatar, never a real man's photo
 function CareerFace({ c, size = 34 }) {
