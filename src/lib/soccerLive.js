@@ -9,10 +9,11 @@
 const SOCCER_DEV = (() => {
   if (typeof location === 'undefined' || !import.meta.env?.DEV) return false
   try {
+    // (on by default on the dev server since 11-25, owner: "no separate url"; ?soccer=0 turns it off here, ?soccer=1 back on)
     if (/[?&]soccer=1\b/.test(location.search)) localStorage.setItem('bap_soccer_dev', '1')
-    if (/[?&]soccer=0\b/.test(location.search)) localStorage.removeItem('bap_soccer_dev')
-    return localStorage.getItem('bap_soccer_dev') === '1'
-  } catch { return /[?&]soccer=1\b/.test(location.search) }
+    if (/[?&]soccer=0\b/.test(location.search)) localStorage.setItem('bap_soccer_dev', '0')
+    return localStorage.getItem('bap_soccer_dev') !== '0'
+  } catch { return true }
 })()
 export const SOCCER_LIVE = false || SOCCER_DEV   // off again, shown as COMING SOON (the owner, 2026-11-17: "disable soccer for now (coming soon)")
 // While it's off, soccer still sits on Home's sport switch: /soccer opens its Home as it is, under a COMING SOON
