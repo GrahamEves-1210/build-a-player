@@ -308,7 +308,9 @@ export function finishMoment(F, out) {
     const at = G.clock, per = G.per
     if (out.side === 'def' || (out.side == null && out.them != null)) X.possession(G, opp, { pts: out.them ?? 0, kind: out.kind ?? 'iso', ...(out.vs != null && { by: out.vs }), ...(out.t != null && { t: out.t }) })
     else X.possession(G, F.team, { pts: out.pts ?? 0, by: out.by, kind: out.side === 'ft' ? 'ft' : out.kind, ...(out.tov && { tov: true }), ...(out.t != null && { t: out.t }) })
-    const left = G.done ? 0 : G.per > per ? 0 : G.clock
+    // (left: the clock when the moment's own play ended, the shot in the air. An offensive rebound and a second look
+    // can run the possession on past it; the final's line and the checks read the shot's clock)
+    const left = out.t != null ? Math.max(0, at - out.t) : G.done ? 0 : G.per > per ? 0 : G.clock
     const lead = G.sc[k] - G.sc[k === 'h' ? 'a' : 'h']
     const sealed = !!out.hit && lead > 0
     const trip = X.momentEnd(G, F.team, { sealed })

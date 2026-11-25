@@ -353,7 +353,7 @@ entries at `seasonEndDeals`.
   situation and its ownership (`ownerTier`); `strengthRank(F, s)`. `taxTolerance` / `lineOf` are kept for old callers.
 - Team: `a2h: [year]` the seasons it finished past the second apron (cap.js assessTax).
 - trades.js: `sellDown(F)` is the league's sell-down pass (the first day of free agency, the end of the
-  summer, the deadline's last two days; `salaryDumps` is no longer called); `shedTo(F, s, target)`; a league team's unused non-taxpayer mid-level can
+  summer, the deadline's last two days: there only a team within 5% of the cap of its line, one move a day; `salaryDumps` is gone); `shedTo(F, s, target)`; a league team's unused non-taxpayer mid-level can
   take a contract in by trade (sideRules `mle`); cap room in a trade counts the summer's holds, the aprons don't.
 - market.js: `lateOffer` (the GM) and the league's late signings follow one rule (lateDeal / lateBest); the wire has
   a `SIGN-AND-TRADE` tag (k 'sign').
