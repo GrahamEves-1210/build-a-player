@@ -98,9 +98,6 @@ const LASHES = [
   ['M745.6 244.8 Q751 245.8 756.2 243.6 L756.2 245.2 Q751 248.4 745.8 246.6 Z', 0.78],
 ]
 const IRISES = [[719.5, 246.4, 3.9, 1.7], [751.5, 247.3, 1.9, 0.95]]   // the sliver of iris under each lid
-  ['M716 278.4 Q724 282.2 732 279.4', 1.6, 0.3],      // under the nose
-  ['M699 290 Q712 292.8 725 290.6', 1.7, 0.38],       // mouth
-]
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
 // before turning back to the point of the sideburn
