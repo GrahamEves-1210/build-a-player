@@ -260,6 +260,8 @@ export function assessTax(F, year = F.year) {
       team.txh = [...taxYearsOf(team).filter(y => y >= year - 5 && y !== year), year]
       out.push({ s, pay, over, bill, repeater: rep })
     }
+    // (the seasons it finished past the second apron: a front office doesn't stay there two years running)
+    if (pay > exact(year, 3)) team.a2h = [...(team.a2h ?? []).filter(y => y >= year - 3 && y !== year), year]
   }
   const short = Object.keys(F.teams ?? {}).map(s => ({ s, $: r1(floorOf(year) - payroll(F, s, year)) })).filter(x => x.$ > 0)
   const pot = out.reduce((a, x) => a + x.bill, 0)

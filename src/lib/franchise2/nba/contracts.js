@@ -30,7 +30,7 @@ import { fixNumbers } from './numbers'
 import { extensionText, teamWords } from './news'
 import {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, maxPct, twoWayOf, rookieScale, excOf, excYears, indexed,
-  payroll, capPayroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hardCapOf, overOf, EXC_TEXT,
+  payroll, capPayroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hitOf, hardCapOf, overOf, EXC_TEXT,
 } from './cap'
 
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
@@ -57,9 +57,18 @@ export function legalRoster(F, short, { min = ROSTER_MIN, season = F?.phase !== 
     if (st > ROSTER_MAX) return { ok: false, why: `${st} standard contracts (15 at most)`, st, tw }
     if (st < min) return { ok: false, why: `${st} standard contracts (${min} at least)`, st, tw }
   }
+  // (the hard cap, less the minimum deals that brought the roster to 14: the roster minimum comes first, canSign)
   const hc = hardCapOf(F, short)
-  if (payroll(F, short) > hc + 0.05 && !(F.noCap && short === F.team)) return { ok: false, why: 'Over its hard cap', st, tw }
+  if (payroll(F, short) - fillSlack(F, team) > hc + 0.05 && !(F.noCap && short === F.team)) return { ok: false, why: 'Over its hard cap', st, tw }
   return { ok: true, st, tw }
+}
+// the cap hits of the minimum deals a roster needed to reach 14 (its two cheapest, when it carries no more than 14)
+function fillSlack(F, team) {
+  const year = capYear(F)
+  const std = standardOf(team)
+  if (std.length > ROSTER_MIN) return 0
+  const mins = std.filter(p => (p.$ ?? 0) <= minOf(p.ys ?? 0, year) + 0.05).map(p => hitOf(p, year, year)).sort((a, b) => a - b)
+  return mins.slice(0, 2).reduce((a, v) => a + v, 0)
 }
 export const openSpots = (F, short) => (F.phase === 'off' ? Math.max(0, ROSTER_MAX - standardOf(F.teams[short]).length) : ROSTER_MAX - standardOf(F.teams[short]).length)
 
@@ -466,7 +475,13 @@ function canSignOf(F, short, p, d) {
   const capPay = capPayroll(F, short, year) - (own ? holdOf(p, year) : 0)
   const isMin = first <= mn + 0.01 && yrs <= 2
   const hc = hardCapOf(F, short, year)
-  if (after > hc + 0.01) return { ok: false, why: `It would put the ${short} over ${LINE_TEXT[team.exc?.hc] ?? 'their hard cap'} ($${r1(hc)}M), their hard cap this league year`, k: 'hc' }
+  // THE ROSTER MINIMUM COMES FIRST. A hard cap can't leave a team unable to field 14 men: a deal under one (or one
+  // whose exception brings one) has to leave room for the minimum deals the roster still needs (`need`); and a
+  // minimum deal for a roster under 14 always goes, whatever the line (legalRoster allows for it).
+  const need = Math.max(0, ROSTER_MIN - (st + 1)) * minOf(2, year)
+  const fills = isMin && st < ROSTER_MIN
+  if (!fills && after > hc + 0.01) return { ok: false, why: `It would put the ${short} over ${LINE_TEXT[team.exc?.hc] ?? 'their hard cap'} ($${r1(hc)}M), their hard cap this league year`, k: 'hc' }
+  if (!fills && after + need > hc + 0.01) return { ok: false, why: `It would leave the ${short} no room under ${LINE_TEXT[team.exc?.hc] ?? 'their hard cap'} ($${r1(hc)}M), their hard cap this league year, for the minimum deals a 14-man roster still needs ($${r1(need)}M)`, k: 'hc' }
   // rookies: his scale
   if (d.rs) return { ok: true, via: 'rookie' }
   // the GM's owner: no new money past his ceiling (a minimum deal always goes, and so does keeping one of his own men at
@@ -490,10 +505,12 @@ function canSignOf(F, short, p, d) {
   if (capPay + first <= capOf(year) + 0.01) return { ok: true, via: 'room' }
   // the mid-level (the non-taxpayer MLE hard-caps a team at the first apron, the taxpayer MLE at the second)
   const L = mleList(F, short, year)
-  for (const m of L) if (first <= m.$ + 0.01 && yrs <= m.y && after <= m.line + 0.01) return { ok: true, via: VIA_EXC[m.k] }
+  // (the hard cap it brings has to leave room for the minimum deals the roster still needs)
+  const under = m => after + (m.k === 'room' ? 0 : need) <= m.line + 0.01
+  for (const m of L) if (first <= m.$ + 0.01 && yrs <= m.y && under(m)) return { ok: true, via: VIA_EXC[m.k] }
   // the bi-annual (not two seasons running; not over the first apron; not for a team that used its room)
   const e = excFor(F, short, year)
-  if (!e.room && e.bae > 0.05 && first <= e.bae + 0.01 && yrs <= 2 && e.baeY !== year - 1 && after <= apron1Of(year) + 0.01 && capPay > capOf(year)) return { ok: true, via: 'bae' }
+  if (!e.room && e.bae > 0.05 && first <= e.bae + 0.01 && yrs <= 2 && e.baeY !== year - 1 && after + need <= apron1Of(year) + 0.01 && capPay > capOf(year)) return { ok: true, via: 'bae' }
   // why not. His own team with Non-Bird rights (fewer than two seasons with it): 120% of his last salary is all his rights allow;
   // past that it needs room or an exception like any other team
   const ebLim = r1(Math.max((p.$l ?? 0) * 1.75, indexed(12.5, year) * 1.05))
@@ -504,8 +521,10 @@ function canSignOf(F, short, p, d) {
   if (capPay < capOf(year) && !L.length) return say(`Only $${r1(capOf(year) - capPay)}M of room`)
   // (the line the exception would cross, else the most it pays)
   const fits = L.find(m => first <= m.$ + 0.01 && yrs <= m.y)
-  if (fits) return { ok: false, why: `${nb}The ${EXC_TEXT[fits.k]} would take the ${short} past ${fits.line === apron1Of(year) ? 'the first apron' : 'the second apron'} ($${r1(fits.line)}M), the hard cap that comes with it`, k: 'apron' }
-  const m = L.find(m => after <= m.line + 0.01) ?? L[0]
+  const apron = fits && (fits.line === apron1Of(year) ? 'the first apron' : 'the second apron')
+  if (fits && after <= fits.line + 0.01) return { ok: false, why: `${nb}The ${EXC_TEXT[fits.k]} hard-caps the ${short} at ${apron} ($${r1(fits.line)}M): this deal would leave no room under it for the minimum deals a 14-man roster still needs ($${r1(need)}M). Fill out the roster first, or offer less`, k: 'apron' }
+  if (fits) return { ok: false, why: `${nb}The ${EXC_TEXT[fits.k]} would take the ${short} past ${apron} ($${r1(fits.line)}M), the hard cap that comes with it`, k: 'apron' }
+  const m = L.find(m => under(m)) ?? L[0]
   if (capPay < capOf(year)) return say(`Only $${r1(capOf(year) - capPay)}M of room${m ? `; the ${EXC_TEXT[m.k]} pays $${r1(m.$)}M at most` : ''}`)
   return say(m ? `Over the cap: the ${EXC_TEXT[m.k]} pays $${r1(m.$)}M at most, for ${m.y} ${m.y === 1 ? 'season' : 'seasons'}` : 'Over the second apron: minimum deals only')
 }
@@ -535,6 +554,7 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   putDeal(F, p, { ...d, sc }, { year })
   if (!team.r.includes(p)) team.r.push(p)
   fixNumbers(F, short)
+  globalThis.__DBG?.('sign ' + c.via, short, p)
   return { ok: true, via: c.via }
 }
 
@@ -663,23 +683,50 @@ export function situationOf(F, s) {
       const sc = (live ? (wp - 0.5) * 2.4 : 0) + ((n + 1) / 2 - rank[x]) / (n / 2)
       m[x] = sc >= 0.5 ? 'win' : sc <= -0.45 ? 'reb' : 'mid'
     }
-    c = { key, m }
+    c = { key, m, rank }
     SIT.set(F, c)
   }
   return c.m[s] ?? 'mid'
 }
+// where its roster ranks in the league (1 the strongest), as the front offices read it
+export const strengthRank = (F, s) => { situationOf(F, s); return SIT.get(F)?.rank?.[s] ?? 15 }
 export const SIT_TEXT = { win: 'CONTENDING', mid: 'IN THE MIX', reb: 'REBUILDING' }
 // the big markets: some free agents want the lights
 export const BIG_MARKET = new Set(['LAL', 'LAC', 'NYK', 'BKN', 'GSW', 'MIA', 'CHI', 'BOS', 'PHI', 'DAL', 'HOU', 'TOR'])
-// how far an AI front office will spend: the line it won't cross for a new man ('cap', 'tax', 'a1', 'a2') and the one
-// it will cross to keep its own (Bird rights)
+// HOW FAR AN AI FRONT OFFICE SPENDS (spendLines): the payroll it runs to ($M). The real league's habits: the luxury
+// tax is for contenders. A team in the mix or rebuilding stays under the tax line (it lets a good-but-not-great
+// player walk, or moves salary at the deadline, rather than pay it). A contender pays by its ownership (SPENDERS:
+// the owners who have run tax bills under this CBA go to the second apron for one of the league's eight best
+// rosters; FRUGAL: the owners who never pay the tax don't start now; the rest pay to the first apron when theirs is
+// one of the five best). A league's owners differ a little from save to save (seeded: one in four a step looser or
+// tighter). Past the second apron only a spender with one of the three best rosters goes, a little, and never two
+// seasons running (the frozen pick and the repeater bills see to that: team.a2h, the seasons it finished past it).
+//   keep: the line it re-signs and extends its own men to, and sells down to (trades.js salaryDumps)
+//   add:  the line it won't cross for a new man
+const SPENDERS = new Set(['BOS', 'GSW', 'LAC', 'PHX', 'NYK', 'MIN', 'DEN', 'MIL', 'LAL', 'CLE', 'PHI', 'MIA', 'DAL'])
+const FRUGAL = new Set(['CHI', 'CHA', 'NOP', 'IND', 'UTA', 'WAS'])
+// 2 a spender, 1 the middle, 0 frugal
+export function ownerTier(F, s) {
+  const base = SPENDERS.has(s) ? 2 : FRUGAL.has(s) ? 0 : 1
+  const u = rngOf(`${F.seed}-owner-${s}`).u()
+  return clamp(0, 2, base + (u < 0.13 ? -1 : u > 0.87 ? 1 : 0))
+}
+export function spendLines(F, s, year = capYear(F)) {
+  const sit = situationOf(F, s)
+  const cap = capOf(year), tax = taxOf(year), a1 = apron1Of(year), a2 = apron2Of(year)
+  if (sit === 'win') {
+    const o = ownerTier(F, s), rank = strengthRank(F, s)
+    const top = o === 2 && rank <= 3 && !(F.teams[s]?.a2h ?? []).includes(year - 1)
+    const keep = top ? a2 + cap * 0.04 : o === 2 && rank <= 8 ? a2 - 1 : o === 1 && rank <= 5 ? a1 - 1 : tax - 2.5
+    return { sit, keep: r1(keep), add: r1(Math.min(keep, a1 - 1)) }
+  }
+  if (sit === 'mid') return { sit, keep: r1(tax - 2.5), add: r1(tax - 4) }
+  return { sit, keep: r1(tax - 6), add: r1(Math.min(tax - 8, cap + excOf('nt', year))) }
+}
+// (the same lines by name, for the code that still reads them that way)
 export function taxTolerance(F, s) {
   const sit = situationOf(F, s)
-  const big = BIG_MARKET.has(s)
-  const h = hash(`${F.seed}-own-${s}`) % 3
-  if (sit === 'win') return { add: h === 0 && !big ? 'tax' : 'a1', keep: big || h === 2 ? 'a2+' : 'a2' }
-  if (sit === 'mid') return { add: h === 2 ? 'cap' : 'tax', keep: big ? 'a1' : 'tax' }
-  return { add: 'cap', keep: 'tax' }
+  return sit === 'win' ? { add: 'a1', keep: 'a2' } : sit === 'mid' ? { add: 'tax', keep: 'tax' } : { add: 'cap', keep: 'tax' }
 }
 export const lineOf = (k, year) => (k === 'cap' ? capOf(year) : k === 'tax' ? taxOf(year) : k === 'a1' ? apron1Of(year) : k === 'a2' ? apron2Of(year) : apron2Of(year) + 4)
 
@@ -714,7 +761,11 @@ export function extensionAsk(F, s, p) {
   const rk = rankAt(F, sc)
   const ys = (p.ys ?? 0) + p.y
   const mv = clamp(minOf(ys, e.start), maxOf(ys, e.start), ladder(LADDER, rk) * capOf(e.start))
-  const $ = r1(Math.min(e.max, Math.max(minOf(ys, e.start), mv * (e.rookie ? 0.97 : 1.02))))
+  // (a rookie-scale man: the max for a real star only, one of the league's twenty best or an All-NBA man; the next
+  // tier signs just under it, and a good young starter for 15-22% of the cap, the real league's $25-35M extensions:
+  // he gives up some of his price for the security a year early)
+  const rookie$ = rk <= 20 || roseOk(p) ? e.max : Math.min(e.max * 0.94, ladder(LADDER, rk) * capOf(e.start) * (rk <= 35 ? 0.86 : 0.8))
+  const $ = r1(Math.min(e.max, Math.max(minOf(ys, e.start), e.rookie ? rookie$ : mv * 1.02)))
   return { $, y: Math.min(e.y, e.rookie ? (rk <= 120 ? 5 : 4) : termFor(then, rk)), r: 0.08 }
 }
 // sign it: the new seasons go on after the ones he has

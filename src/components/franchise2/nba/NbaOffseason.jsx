@@ -485,7 +485,7 @@ function DraftDone({ F }) {
 // ── 4. RE-SIGN ───────────────────────────────────────────────────────────────
 const RIGHTS = { bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bird rights' }
 const rightsOf = p => (!p.fr || p.rn ? null : (p.bird ?? 0) >= 3 ? 'bird' : p.bird === 2 ? 'ebird' : 'nbird')
-const RIGHTS_SAYS = { bird: 'he can be paid over the cap, up to his max', ebird: 'he can be paid over the cap, up to 175% of his last salary', nbird: 'he can be paid over the cap, up to 120% of his last salary' }
+const RIGHTS_SAYS = { bird: 'he can be paid over the cap, up to his max', ebird: 'he can be paid over the cap, up to 175% of his last salary or 105% of the average salary, for two seasons or more', nbird: 'he can be paid over the cap, up to 120% of his last salary' }
 function Resign({ F, act, go }) {
   const open = useOpen()
   const ids = F.off?.mine ?? []
@@ -496,7 +496,7 @@ function Resign({ F, act, go }) {
   const kept = (F.off?.kept ?? []).map(i => F.teams[F.team].r.find(p => p.i === i)).filter(Boolean)
   const free = !!F.noCap
   // (the room a renounced hold opens: how far under the cap the payroll comes without it)
-  const roomIf = off => (free ? 0 : Math.max(0, sheet.cap - (sheet.pay - off)) - sheet.room)
+  const roomIf = off => (free ? 0 : Math.max(0, sheet.cap - ((sheet.capPay ?? sheet.pay) - off)) - sheet.room)
   const ufa = men.filter(p => !p.rfa)
   const allHolds = ufa.reduce((a, p) => a + holdOf(p), 0)
   return (
@@ -506,7 +506,7 @@ function Resign({ F, act, go }) {
       <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${nick(F.team).toUpperCase()} ${men.length === 1 ? 'FREE AGENT' : 'FREE AGENTS'}` : 'NOBODY LEFT TO DECIDE ON'} />
       {men.length > 0 && (
         <p className="nbo-note">
-          {`Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off the ${poss(nick(F.team))} books. Anyone still undecided when re-signing ends is renounced too. A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs. Without it he becomes an unrestricted free agent.`}
+          {`Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off the ${poss(nick(F.team))} books. Holds count against cap room only, never the tax or the aprons. Anyone still undecided when re-signing ends is renounced too. A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs. Without it he becomes an unrestricted free agent.`}
           {!free && allHolds > 0.05 && ` Renouncing every unrestricted man here clears ${money(allHolds)} in holds${roomIf(allHolds) > 0.05 ? ` (${money(sheet.room + roomIf(allHolds))} in cap room)` : `; the ${nick(F.team)} would still be over the cap`}.`}
         </p>
       )}
