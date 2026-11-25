@@ -143,7 +143,7 @@ const calcOvr = (b, types) => Math.round(SoccerSim.calcSoccerOVR?.(b, types) ?? 
 const archOf = (ovr, b, types) => (SoccerSim.getSoccerArchetype ?? soccerArchetype)(ovr, b, types)
 
 // Home's pool cards: three stars each. ESPN has no photo for most of them, so these cards (only these) use FotMob's
-// studio photos, framed like ESPN's, a little smaller and raised (public/headshots/soccer/fm-<FotMob id>.webp: 320px on 600x436, its bottom 36px up, the neck fading out over its last 46px), Messi's too so the six match
+// studio photos, framed like ESPN's, a little smaller (public/headshots/soccer/fm-<FotMob id>.webp: 300px on 600x436), Messi's too so the six match
 // (the owner, 2026-11-25). The middle face is the big one.
 const FACE_PICKS = {
   current: [['Lamine Yamal', 'soccer/fm-1467236'], ['Erling Haaland', 'soccer/fm-737066'], ['Kylian Mbappé', 'soccer/fm-701154']],
