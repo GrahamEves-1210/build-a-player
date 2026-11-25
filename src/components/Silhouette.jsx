@@ -521,20 +521,19 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const figH   = isStriker ? ST_FIG_H : isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
   const zones  = isStriker ? STRIKER_ZONES : isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
-  const fitBounds = useFigureBounds(silRef, figW, figH)
+  const bounds = useFigureBounds(silRef, figW, figH)
+  const boundsRef = useRef(bounds)
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
   )
   // the striker is placed by his own fit, not the contain-fit + CSS scale the other figures use: the art's px size
-  // and corner come from strikerFit, and `bounds` carries them, so the dots and the drop test read the same numbers
+  // and corner come from strikerFit (`bounds` still gives the wrap's W and H). The drop test reads them off boundsRef.
   const stMode = !isStriker ? null : modelOnly ? 'model' : !isMobile ? 'desk' : (IS_APP || APP_LOOK) ? 'app' : 'phone'
-  const stFit = useMemo(() => (stMode && fitBounds ? strikerFit(fitBounds.W, fitBounds.H, stMode) : null), [stMode, fitBounds])
-  const bounds = useMemo(() => (stFit ? { W: fitBounds.W, H: fitBounds.H, scale: stFit.s, fx: stFit.ox, fy: stFit.oy } : fitBounds), [stFit, fitBounds])
-  const boundsRef = useRef(bounds)
+  const stFit = useMemo(() => (stMode && bounds ? strikerFit(bounds.W, bounds.H, stMode) : null), [stMode, bounds])
   const activeDragRef = useRef(activeDrag)
   const onDropRef = useRef(onDrop)
   const zonesRef = useRef(zones)
-  useLayoutEffect(() => { boundsRef.current = bounds }, [bounds])
+  useLayoutEffect(() => { boundsRef.current = stFit ? { ...bounds, scale: stFit.s, fx: stFit.ox, fy: stFit.oy } : bounds }, [bounds, stFit])
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
   useLayoutEffect(() => { onDropRef.current = onDrop }, [onDrop])
   useLayoutEffect(() => { zonesRef.current = zones }, [zones])
@@ -676,8 +675,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
     if (isStriker) {
       // the striker: every number from strikerFit (px in the wrap), handed on as % of the wrap
       const { W, H } = bounds
+      if (!stFit?.L) return null   // (a model has no cards or dots)
       const { s, k, ox, oy, xL, xR, L } = stFit
-      if (!L) return null
       const left = zone.side === 'left'
       const cx = left ? xL : xR                                   // the card's inner edge
       const cyPx = oy + L[zone.side][zone.row] * s                // its middle
@@ -1013,8 +1012,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
-          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} /></div>
-          : <BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} />)}
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} /></div>
+          : <BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100
