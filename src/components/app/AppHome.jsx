@@ -243,13 +243,7 @@ const Art = ({ src, cls }) => <img className={`ag-art ${cls}`} src={`/modes/${sr
 // College Football, a football mode: first in MORE WAYS TO PLAY, on its own row, in NCAA blue. A few
 // school logos only (lib/cfbLive.js): the college rosters never load on Home. The line is where the last
 // season ended, read off this device (components/cfb/cfbShared.js keeps it)
-const cfbLine = () => {
-  try {
-    const s = JSON.parse(localStorage.getItem('bap_cfb_seasons'))?.[0]
-    if (s?.teamName) return `${s.teamName} ${s.record}${s.title ? ', national champs' : s.finalRank ? ` · No. ${s.finalRank}` : ''}`
-  } catch {}
-  return ''   // (no line until there's a season: owner 11-25)
-}
+const cfbLine = () => 'All FBS schools · Spin by conference'   // (always: owner 11-25)
 function CFBCard({ onClick, small = false }) {
   const [line] = useState(cfbLine)
   return (
@@ -579,9 +573,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : career.phase === 'offseason' ? `Year ${career.year + 1} · offseason`
     : career.phase === 'retired' ? `Retired after ${career.seasons.length}`
     : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`
-  const cpLine = cs?.played
-    ? `${ol.played ? `${tierFor(ol.rating)[1]} ${ol.rating} · ` : ''}${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
-    : ''   // (no line until he's played: owner 11-25)
+  const cpLine = ''   // (Compete's card shows only how many are playing right now: owner 11-25)
   const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'Building' : 'Game on'
   const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
   const sqLine = !squad ? (isBaseball ? 'Build the lineup' : isSoccer ? 'Build the front line' : 'Build your whole team')
@@ -596,7 +588,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   // Salary Cap's card: in the card grid on football, the bottom row on basketball (beside Compete)
   const salary = (
     <button className={`ag-way ag-mc ag-mc--salary ag-way--quick${isBucket ? ' is-small' : ''}`} onClick={() => startRef.current('salarycap')}>
-      <span className="ag-mc-head"><b>SALARY CAP</b></span>
+      <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily grid</small></span>
       <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
     </button>
   )
@@ -616,7 +608,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
         {/* (soccer: Career on its own line, then Salary Cap and Compete side by side, owner 11-25) */}
         {!isSoccer && competeCard}
-        <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
+        <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="Daily grid" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
           {isBaseball ? <BaseballFees /> : <Fees />}
         </ModeArt>
         {isSoccer && competeCard}
@@ -680,7 +672,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </ModeArt>
         )}
         {!isBucket && (
-          <ModeArt small kind="quick" tone="depth" title="DEPTH CHART" line="" onClick={onDepthChart}><DepthArt /></ModeArt>
+          <ModeArt small kind="quick" tone="depth" title="DEPTH CHART" line="Mini game" onClick={onDepthChart}><DepthArt /></ModeArt>
         )}
       </div>
     </section>
