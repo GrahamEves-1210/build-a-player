@@ -425,14 +425,15 @@ function ResignLines({ F }) {
     const n = p?.n ?? ''
     if (k === 'kept') return p ? `${n} re-signs: ${money(p.$)} a season for ${p.y} ${p.y === 1 ? 'year' : 'years'}.` : null
     if (k === 'qo') return `${n} is a restricted free agent: his qualifying offer is tendered.`
-    if (why) return `${n} couldn't be kept (${String(why).replace(/\.$/, '').toLowerCase()}) and is a free agent.`
+    // (the reason as the league office gave it, its first sentence: it names the team and the money in its own case)
+    if (why) return `${n} couldn't be kept and is a free agent. ${String(why).split(/(?<=\.)\s+(?=[A-Z])/)[0].replace(/\.?$/, '.')}`
     return null
   }
   const rows = r.map(x => [x, line(x)]).filter(x => x[1])
-  const gone = r.filter(x => x[1] === 'gone' && !x[2]).length
+  const gone = r.filter(x => x[1] === 'gone' && !x[2]).length, lost = r.filter(x => x[1] === 'gone' && x[2]).length
   return (
     <section className="lt-sec">
-      <h3 className="fh-h"><b>Re-sign</b><span>{`${r.filter(x => x[1] === 'kept').length} kept · ${gone} let go`}</span></h3>
+      <h3 className="fh-h"><b>Re-sign</b><span>{`${r.filter(x => x[1] === 'kept').length} kept · ${gone} let go${lost ? ` · ${lost} couldn't be kept` : ''}`}</span></h3>
       {rows.map(([x, t]) => <p key={x[0]} className="lt-line">{t}</p>)}
     </section>
   )
