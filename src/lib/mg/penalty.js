@@ -265,7 +265,7 @@ function keeperAt(g) {
     const pose = { ...POSE.set, hy: lerp(44, y > 1.5 ? 53 : 48, f), hlx: lerp(-22, hx - 7, f), hly: lerp(-62, hy, f), hrx: lerp(22, hx + 7, f), hry: lerp(-62, hy, f) }
     const me = { x: (g.kx0 ?? 0) + shift * f, z: KEEP_Z, lift: y > 2 ? Math.sin(f * Math.PI) * 0.25 : 0, pose }
     if (goal) { const kb = keeperBeaten(g.cel, t - g.endAt, { ...me, rot: 0, lift: 0, ball: ballIn }); g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null; return kb }
-    if (g.res && t - g.resAt > 380) { const u = keeperUp(t - g.resAt - 380, { rot: 0, pose }); return { ...me, lift: 0, pose: u.pose } }
+    if (g.res && t - g.resAt > 380) { const u = keeperUp(t - g.resAt - 380, { rot: 0, pose }, true, !!g.shot?.save?.held); return { ...me, lift: 0, pose: u.pose } }
     return me
   }
   const d = diveNow(g), landAt = d.t0 + d.end + 80
@@ -274,7 +274,7 @@ function keeperAt(g) {
   // beaten: down where he landed, then up and into the net for it
   if (goal) { const kb = keeperBeaten(g.cel, t - Math.max(landAt, g.endAt), { ...at, ball: ballIn }); g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null; return kb }
   // a save or a miss: up off the grass, and his roar
-  const u = keeperUp(t - Math.max(landAt, g.resAt + 300), at)
+  const u = keeperUp(t - Math.max(landAt, g.resAt + 300), at, true, !!g.shot?.save?.held)
   return { x: at.x, z: KEEP_Z, lift: u.lift, pose: u.pose }
 }
 function ballNow(g) {

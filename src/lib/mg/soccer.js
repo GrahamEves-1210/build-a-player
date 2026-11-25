@@ -1114,15 +1114,19 @@ export function handsOf(p, lift = 0) {
 export function keeperLanded(K, o = {}) { const d = keeperDive(1e6, K, o); return { dx: d.dx, rot: d.pose.rot, lift: d.lift } }
 // A keeper who's made the save, off the grass: a moment down, on to his knees, up, then the roar. from: { rot, lift }
 // where his dive left him (on his feet: straight to the roar). age: ms since the save. → { pose, lift }
-export function keeperUp(age, from = {}, roar = true) {
+// (held: the ball's in his arms: he clutches it to his chest and roars over it, no fist)
+const CLUTCH = { ...POSE.stand, hlx: -6, hly: -77, hrx: 6, hry: -77, elbow: 0.7, face: 1, tilt: 0.4 }
+export function keeperUp(age, from = {}, roar = true, held = false) {
   const r0 = from.rot ?? 0, l0 = from.lift ?? 0
-  if (Math.abs(r0) < 0.5) return { pose: roar ? keeperRoar(age - 200, from.pose ?? POSE.set) : mix(from.pose ?? POSE.set, POSE.stand, ease(prog(age, 0, 400))), lift: l0 * (1 - prog(age, 0, 200)) }
+  if (held) roar = false
+  const end = held ? CLUTCH : POSE.stand
+  if (Math.abs(r0) < 0.5) return { pose: roar ? keeperRoar(age - 200, from.pose ?? POSE.set) : mix(from.pose ?? POSE.set, end, ease(prog(age, 0, 400))), lift: l0 * (1 - prog(age, 0, 200)) }
   const lying = { ...POSE.dive, rot: r0, hlx: -12, hrx: 12, hly: -64, hry: -64 }
   const kneel = { ...KNEEL, face: 0, tilt: 0.2, hlx: -16, hrx: 16, hly: -40, hry: -40 }
   if (age < 380) return { pose: mix({ ...POSE.dive, rot: r0 }, lying, ease(prog(age, 160, 380))), lift: l0 }
   if (age < 680) { const f = ease(prog(age, 380, 680)); return { pose: mix(lying, kneel, f), lift: l0 * (1 - f) } }
-  if (age < 920) return { pose: mix(kneel, POSE.stand, ease(prog(age, 680, 920))), lift: 0 }
-  return { pose: roar ? keeperRoar(age - 920 + 280, POSE.stand) : POSE.stand, lift: 0 }
+  if (age < 920) return { pose: mix(held ? { ...kneel, hlx: -6, hrx: 6, hly: -46, hry: -46 } : kneel, end, ease(prog(age, 680, 920))), lift: 0 }
+  return { pose: roar ? keeperRoar(age - 920 + 280, POSE.stand) : end, lift: 0 }
 }
 // A keeper set on his line and a shot coming: the whole of it, from set to what he does after. One near him he takes
 // on his feet, his hands to it; one away from him he dives for (keeperDive): on to it when he saves it, short of it
@@ -1130,7 +1134,7 @@ export function keeperUp(age, from = {}, roar = true) {
 // (keeperBeaten); a save, he's up and roaring (keeperUp); off target, he just gets up.
 // o: { x0, z (where he stood), go (when he moves), cross (when the ball reaches him), ball: { x, y } (where it crosses
 // him), saved, res ('goal' 'saved' or anything else once it's over), resAt, cel (the celebration, for keeperBeaten),
-// ballIn: { x, z } (the ball in the net), base (his pose before he goes) }
+// ballIn: { x, z } (the ball in the net), base (his pose before he goes), held (he's caught it) }
 // → { x, z, lift, pose, front, holds }
 export function keeperShot(t, o) {
   const off = o.ball.x - o.x0, K = Math.sign(off) || 1, dist = Math.abs(off), z = o.z
@@ -1152,7 +1156,7 @@ export function keeperShot(t, o) {
   if (!o.res || t < landAt) return me
   const at = { ...from, z, ball: o.ballIn }
   if (o.res === 'goal' && o.cel) return keeperBeaten(o.cel, t - Math.max(landAt, o.resAt ?? 0), at)
-  const u = keeperUp(t - Math.max(landAt, (o.resAt ?? 0) + 300), at, o.res === 'saved')
+  const u = keeperUp(t - Math.max(landAt, (o.resAt ?? 0) + 300), at, o.res === 'saved', !!o.held)
   return { x: at.x, z, lift: u.lift, pose: u.pose, front: true }
 }
 // A saved ball that isn't held: palmed round the post from out wide, tipped over the bar from the middle or from

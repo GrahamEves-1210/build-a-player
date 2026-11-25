@@ -209,7 +209,7 @@ function keeperAt(g) {
   }
   // the dive: on to it when he saves it, short of it when he's beaten, and after
   const sv = g.save ?? { x: s.to.x, y: s.to.y, saved: false, f: 1 }
-  return keeperShot(t, { x0, z: KZ, go, cross: s.at + (sv.f ?? 1) * s.T, ball: { x: sv.x, y: sv.y }, saved: !!sv.saved, res: g.res, resAt: g.endAt, cel: g.cel, ballIn: { x: s.to.x, z: NET_D - 0.4 } })
+  return keeperShot(t, { x0, z: KZ, go, cross: s.at + (sv.f ?? 1) * s.T, ball: { x: sv.x, y: sv.y }, saved: !!sv.saved, held: !!sv.held, res: g.res, resAt: g.endAt, cel: g.cel, ballIn: { x: s.to.x, z: NET_D - 0.4 } })
 }
 function ballNow(g) {
   const s = g.shot

@@ -14,7 +14,7 @@ import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, kickPose, runPose, kitsOf, dress, POST, BAR, NET_D,
   shooter, strikeOf, shotAt, shotHud, aimMark, scout, skipOutro, padCtl, padInput, padStick, drawPads,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar } from './soccer.js'
-import { tip } from './soccerPads.js'
+import { tip, promptY } from './soccerPads.js'
 
 export const how = {
   finishing: 'Five balls from five spots. Draw each one from the ball to the lit target: the quicker the stroke the harder it’s hit, bend it to curl it. Three of five in the target. On a keyboard: aim with the arrows, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',

@@ -14,6 +14,7 @@ import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, GOOD, GOLD, pa
 import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
   shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+import { promptY } from './soccerPads.js'
 
 export const how = {
   header: 'Lose the marker: move when he turns to watch the winger. Make the run near post or far post, get under the ring, and press HEAD as it closes. Aim with the stick on the way up.',
@@ -264,7 +265,7 @@ function keeperNow(g) {
 const EXTRAS = [{ x: 3.1, z: -3.4, side: 'them', n: 5 }, { x: -3.4, z: -6.6, side: 'them', n: 6 }, { x: -5.4, z: -10.6, side: 'us', n: 11 }]
 const manB = (ctx, C, X, Z, pose, look, o = {}) => man(ctx, C, X, Z, pose, look, { ...o, size: BIG })
 export function draw(ctx, g, view) {
-  g.vh = view.h
+  g.vh = view.h; g.hud.y = promptY(view)
   const C = camFor(g, view), K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
   stadium(ctx, view, C, { team, away, board: boardWords(g) })
   if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, 2400, away); flashes(ctx, C, view, g.t - g.popAt) }

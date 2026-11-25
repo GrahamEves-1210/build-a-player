@@ -12,6 +12,7 @@ import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, GOOD, GOLD, pa
 import { placeStamp } from './read.js'
 import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
   shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+import { promptY } from './soccerPads.js'
 
 export const how = {
   volley: 'It drops on the edge of the box. Get in line with the stick, then hold SHOOT and let go as it arrives to volley it first time. Or TOUCH it as it arrives, the stick pointing at the target, and shoot before the defender closes in.',
@@ -265,7 +266,7 @@ function keeperAt(g) {
 // the box after a corner: a few of theirs and ours, all eyes on it
 const EXTRAS = [{ x: 0.6, z: -6.2, side: 'them', n: 15, header: true }, { x: -3.4, z: -4.2, side: 'them', n: 3 }, { x: 3.6, z: -5.1, side: 'us', n: 5 }, { x: -5.6, z: -8.1, side: 'us', n: 10 }, { x: 4.4, z: -3.0, side: 'them', n: 2 }]
 export function draw(ctx, g, view) {
-  g.vh = view.h
+  g.vh = view.h; g.hud.y = promptY(view)
   const C = camFor(view), K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
   staticStadium(ctx, view, C, 'volley', { team, away, board: boardWords(g) })
   if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
