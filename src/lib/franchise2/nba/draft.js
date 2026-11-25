@@ -2,6 +2,7 @@
 // clubs abroad, a few out of the NBL's Next Stars, Overtime Elite and the G League), scouted through the season (a
 // season's reports are for that class: SCOUT_CARRY at most carry over); the lottery; two rounds, 60 picks.
 // Every team's picks for the next seven drafts are in F.picks (B's trades move them): { y, r, o, t, pr, sw, n }.
+import { recruits } from './coach'
 import { SHORTS, TEAM, attrsFor, ovrOfAttrs, groupOfSpot, leagueNames, realNames, freshName, manOf, nick, ROSTER_MAX } from './league'
 import { records, pct, leagueOrder } from './season'
 import { addNews } from './news'
@@ -162,7 +163,8 @@ export function scout(F, id) {
 // carry to the next one (a staff's notes on the underclassmen who stayed in school), the rest are gone. (SCOUT_MAX: a
 // season's reports with the carry, the most a staff can hold; a save from before the limit comes down to it.)
 export const SCOUT_CARRY = 2, SCOUT_MAX = 20
-export function scoutTick(F, was, now) { const m = d => Math.floor(d / 30); if (m(now) > m(was)) F.sp = Math.min(SCOUT_MAX, (F.sp ?? 0) + 2) }
+// (a recruiter's staff: a point more each month, coach.js recruits)
+export function scoutTick(F, was, now) { const m = d => Math.floor(d / 30); if (m(now) > m(was)) F.sp = Math.min(SCOUT_MAX, (F.sp ?? 0) + 2 + (recruits(F) ? 1 : 0)) }
 export const scoutSpring = F => { F.sp = Math.min(SCOUT_MAX, (F.sp ?? 0) + 3) }
 export const starProspect = (F, id) => { F.board = (F.board ?? []).includes(id) ? F.board.filter(x => x !== id) : [...(F.board ?? []), id] }
 

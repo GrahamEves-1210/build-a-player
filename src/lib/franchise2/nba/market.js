@@ -105,7 +105,7 @@ export function offerScore(F, p, s, d, ctx = null) {
   const role = roleOn(F, s, p)
   const mkt = BIG_MARKET.has(s) ? 1 : 0
   const home = p.fr === s ? 1 : 0
-  const extra = 1 + W.win * win + W.role * (role - 0.5) * 2 + W.mkt * mkt + W.home * home + coachPull(F, s)
+  const extra = 1 + W.win * win + W.role * (role - 0.5) * 2 + W.mkt * mkt + W.home * home + coachPull(F, s, !!home)
   return (sc[0] / Math.max(0.1, a.$)) * yf * extra
 }
 // the share of his ask he'll take today (seeded: some men wait a day longer than others)

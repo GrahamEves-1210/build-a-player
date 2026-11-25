@@ -12,7 +12,8 @@ import { addNews, POS_FULL, signText } from './news'
 import * as X from './seams'
 import { coachDev } from './coach'
 
-export const BUILD_MAX = 3
+// one at each spot, PG to C (the setup's PLAYERS step)
+export const BUILD_MAX = 5
 // his spot: a guard who runs the offence is a point guard, a big wing a small forward; a big with size a center
 export function buildSpot(pos, a) {
   if (pos === 'big') return (a.size ?? 5) + (a.interiorDefense ?? 5) >= (a.jumpShot ?? 5) + (a.speed ?? 5) + 2 ? 'C' : 'PF'
@@ -77,7 +78,8 @@ export const attrsOfBuild = (pos, build) => Object.fromEntries((TYPES[pos] ?? []
 
 export function makeBuild(F, idx, B) {
   const a = attrsOfBuild(B.pos, B.build)
-  const spot = buildSpot(B.pos, a)
+  // (his spot: the one the GM built him for in the setup; a build from before, the one his ratings read as)
+  const spot = SPOTS.includes(B.spot) && groupOfSpot(B.spot) === B.pos ? B.spot : buildSpot(B.pos, a)
   const o = ovrOfAttrs(B.pos, a)
   const p = { i: F.nid++, n: B.name, p: spot, g: groupOfSpot(spot) === B.pos ? B.pos : B.pos, o, ag: B.age ?? 20, a, ht: HT[spot], wt: WT[spot], num: B.num, ys: 0, b: idx, rk: F.year, pk: Math.min(99, o + 4) }
   p.dr = [F.year, 1, buildSlot(o), F.team]   // (placeBuilds seats him: seatBuilds gives every build his own pick)

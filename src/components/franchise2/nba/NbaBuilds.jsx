@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildSlots, buildCapNote, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
-import { buildWaives } from '../../../lib/franchise2/nba/setup'
+import { TEAM, SPOTS, groupOfSpot, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildSlots, buildCapNote, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { buildWaives, setupStarters } from '../../../lib/franchise2/nba/setup'
 import { cleanName, nameOk, randomFirstLast } from '../../../lib/franchise2/identity'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../../lib/franchise2/faces'
 import { sfx, haptic } from '../../../lib/juice'
@@ -8,9 +8,9 @@ import { IconSpin } from '../../app/icons'
 import { Chyron, LowerThird, Go, Fact, fkVars } from '../kit'
 import { preview } from './NbaSetup'
 
-// BASKETBALL FRANCHISE, the setup's players: up to three of the GM's own builds, each built on the game's build page
-// (a guard or a big), then named, numbered and given a face here. Each takes a roster spot (builds.js).
-//   S.picks [{ id, pos }] the spots in order · S.builds { [id]: { pos, build, types, sandbox, name, num, face } }
+// BASKETBALL FRANCHISE, the setup's players: up to five of the GM's own builds, one at each spot, each built on the
+// game's build page (a guard or a big), then named, numbered and given a face here. Each takes a roster spot (builds.js).
+//   S.picks [{ id, pos, spot }] the spots in order · S.builds { [id]: { pos, build, types, sandbox, name, num, face } }
 const NAME = { guard: 'GUARD', big: 'BIG' }
 export const faceOf = (B, team) => buildFaceUrl({ pos: 'nba', face: B.face ?? defaultFace(B.name ?? 'build', 'nba'), kit: 'hoops' }, TEAM[team]?.color)
 // a man's picture: his ESPN headshot, a build's drawn face, or none (the initials)
@@ -44,25 +44,28 @@ function capNotes(S) {
   }
   return out
 }
-// THE PLAYERS, football's step in the NBA's terms (Setup.jsx Builds): how many guards and bigs, each built on the build
-// page, then named. They're rookies on the roster: each takes a roster spot (a full roster waives its end of the bench
-// to make room: builds.js waiveFor, its camp body first), signed at the slot his OVR goes at in the draft.
-const GROUPS = [['guard', 'G', 'GUARD', 'PG, SG OR SF'], ['big', 'BIG', 'BIG', 'PF OR C']]
-const POS_SHORT = { guard: 'G', big: 'BIG' }
+// THE PLAYERS, football's step in the NBA's terms (Setup.jsx Builds): one build at a spot, PG to C, each built on the
+// build page (a PG, SG or SF on the guard builder, a PF or C on the big builder), then named. Each replaces the
+// starter at his spot: he starts from opening night (rotation.js planRotation, the builds' bst) and the man he
+// replaces goes to the bench. They're rookies on the roster: each takes a roster spot (a full roster waives its end of
+// the bench to make room: builds.js waiveFor, its camp body first), signed at the slot his OVR goes at in the draft.
+//   S.picks [{ id, pos: 'guard' | 'big', spot: 'PG'..'C' }]
+const SPOT_NAME = { PG: 'POINT GUARD', SG: 'SHOOTING GUARD', SF: 'SMALL FORWARD', PF: 'POWER FORWARD', C: 'CENTER' }
+const lastName = n => String(n ?? '').replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/i, '').trim().split(/\s+/).slice(-1)[0]
+const replText = m => (m ? `${lastName(m.n).toUpperCase()} ${m.o}` : null)
 export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const picks = S.picks ?? []
   const notes = useMemo(() => capNotes(S), [S.team, S.picks, S.builds, S.rules?.cap]) // eslint-disable-line react-hooks/exhaustive-deps
-  const count = pos => picks.filter(p => p.pos === pos).length
-  const can = () => picks.length < BUILD_MAX
-  const add = pos => { if (!can()) { sfx('deny'); return } go({ picks: [...picks, { id: `b${Date.now().toString(36)}`, pos }] }, 'slot') }
-  const dropOne = pos => {
-    const last = [...picks].reverse().find(p => p.pos === pos)
-    if (!last) return
-    const b = { ...(S.builds ?? {}) }; delete b[last.id]
-    go({ picks: picks.filter(p => p !== last), builds: b }, 'tap')
+  const at = spot => picks.find(p => p.spot === spot)
+  const add = spot => { if (at(spot) || picks.length >= BUILD_MAX) { sfx('deny'); return } go({ picks: [...picks, { id: `b${Date.now().toString(36)}`, pos: groupOfSpot(spot), spot }] }, 'slot') }
+  const drop = spot => {
+    const p = at(spot)
+    if (!p) return
+    const b = { ...(S.builds ?? {}) }; delete b[p.id]
+    go({ picks: picks.filter(x => x !== p), builds: b }, 'tap')
   }
-  // (in the order the step lists them: the guards, then the bigs)
-  const ordered = GROUPS.flatMap(([g]) => picks.filter(p => p.pos === g))
+  // (in the order the step lists them: PG to C)
+  const ordered = SPOTS.map(at).filter(Boolean)
   const built = p => S.builds?.[p.id]
   const next = ordered.find(p => !built(p))
   const unnamed = ordered.find(p => built(p) && !built(p).name)
@@ -74,21 +77,23 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   // rules: lib/franchise2/nba/setup.js), in the order the franchise puts the builds on, so the men named here are the
   // men the wire says were waived at tip-off
   const outs = useMemo(() => buildWaives(S), [S.seed, S.team, S.rules?.cap, S.rules?.inj, picks.map(p => `${p.id}${p.pos}`).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  // the starter at each spot, the man a build there replaces (he goes to the bench)
+  const five = useMemo(() => setupStarters(S), [S.seed, S.team, S.rules?.cap, S.rules?.inj, picks.map(p => `${p.id}${p.pos}`).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const nick = TEAM[S.team].nick
   return (
     <div className="fsu-builds">
-      <Chyron team={S.team} title="Build your players" right={`${picks.length} OF ${BUILD_MAX}`} sub="ROOKIES · EACH TAKES A ROSTER SPOT" />
+      <Chyron team={S.team} tag={picks.length ? String(picks.length) : undefined} title="Build your players" sub="ROOKIES · REPLACE A STARTER AT EACH POSITION" />
       <div className="fsu-pos">
-        {GROUPS.map(([pos, k, name, spots]) => {
-          const n = count(pos)
+        {SPOTS.map(spot => {
+          const on = !!at(spot), m = five[spot]
           return (
-            <div key={pos} className={`fsu-pos-row${n ? ' is-on' : ''}`}>
-              <span className="fsu-pos-k"><b>{k}</b><small>{name}</small></span>
-              <span className="fsu-pos-st"><small>PLAYS</small><b>{spots}</b></span>
+            <div key={spot} className={`fsu-pos-row${on ? ' is-on' : ''}`}>
+              <span className="fsu-pos-k"><b>{spot}</b><small>{SPOT_NAME[spot]}</small></span>
+              <span className="fsu-pos-st">{m && <><small>REPLACES</small><b>{replText(m)}</b></>}</span>
               <span className="fsu-step">
-                <button type="button" onClick={() => dropOne(pos)} disabled={!n} aria-label={`One fewer ${name.toLowerCase()}`}>-</button>
-                <b>{n}</b>
-                <button type="button" onClick={() => add(pos)} disabled={!can()} aria-label={`One more ${name.toLowerCase()}`}>+</button>
+                <button type="button" onClick={() => drop(spot)} disabled={!on} aria-label={`No ${SPOT_NAME[spot].toLowerCase()}`}>-</button>
+                <b>{on ? 1 : 0}</b>
+                <button type="button" onClick={() => add(spot)} disabled={on} aria-label={`Build a ${SPOT_NAME[spot].toLowerCase()}`}>+</button>
               </span>
             </div>
           )
@@ -97,12 +102,12 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
       {ordered.length > 0 && <Chyron tone="ink" size="s" title="The roster spots" right={`${ready.length}/${ordered.length} BUILT`} />}
       <div className="fsu-blist">
         {ordered.map((p, k) => {
-          const B = built(p), m = outs[p.id]
+          const B = built(p), m = outs[p.id], r = replText(five[p.spot])
           const room = m ? `The ${nick} waive ${m.n}${m.fl ? '' : ` (${m.o})`} to open a roster spot.` : null
           if (!B?.name) return (
             <button key={p.id} type="button" className="fsu-empty" onClick={() => (B ? go({ naming: p.id }, 'tap') : build(p))} style={{ '--d': `${k * 40}ms` }}>
-              <span className="fsu-empty-pos">{POS_SHORT[p.pos]}</span>
-              <span className="fsu-empty-txt"><b>{B ? 'NAME HIM' : 'NOT BUILT'}</b><small>{GROUPS.find(g => g[0] === p.pos)[2]}</small></span>
+              <span className="fsu-empty-pos">{p.spot}</span>
+              <span className="fsu-empty-txt"><b>{B ? 'NAME HIM' : 'NOT BUILT'}</b><small>{r ? `REPLACES ${r}` : SPOT_NAME[p.spot]}</small></span>
               <span className="fsu-empty-go">{B ? 'NAME' : 'BUILD'}</span>
             </button>
           )
@@ -110,8 +115,8 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
           const slot = slots[p.id] ?? buildSlot(o), deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
           return (
             <div key={p.id} className="nb-build-row">
-              <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner}
-                line={`PICK ${slot} · ${money(Array.isArray(deal) ? deal[0] : deal)}`} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
+              <LowerThird name={B.name} pos={p.spot} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner}
+                line={`${r ? `REPLACES ${r} · ` : ''}PICK ${slot} · ${money(Array.isArray(deal) ? deal[0] : deal)}`} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
               {room && <p className="nb-build-cap">{room}</p>}
               {notes[p.id] && <p className="nb-build-cap">{notes[p.id]}</p>}
               <span className="nb-fa-acts"><button type="button" onClick={() => build(p)}>Rebuild</button></span>
@@ -120,9 +125,9 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
         })}
       </div>
       <div className="fsu-acts">
-        {done ? <Go onClick={() => { onNext(); haptic('medium') }}>{ordered.length ? 'Next: your coach' : 'No builds: your coach'}</Go>
-          : unnamed ? <Go onClick={() => go({ naming: unnamed.id }, 'tap')}>Name your {POS_SHORT[unnamed.pos] === 'G' ? 'guard' : 'big'}</Go>
-            : <Go onClick={() => build(next)}>Build your {next.pos === 'big' ? 'big' : 'guard'}</Go>}
+        {done ? <Go onClick={() => { onNext(); haptic('medium') }}>{ordered.length ? 'Next: your coach' : 'No builds · to your coach'}</Go>
+          : unnamed ? <Go onClick={() => go({ naming: unnamed.id }, 'tap')}>Name your {unnamed.spot}</Go>
+            : <Go onClick={() => build(next)}>Build your {next.spot}</Go>}
       </div>
     </div>
   )
@@ -132,6 +137,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
 const COMMON = { guard: [1, 3, 0, 2, 5, 4, 7, 8, 11, 10, 13, 12, 14, 15, 20, 22, 23, 24, 30], big: [21, 32, 33, 34, 35, 12, 13, 15, 20, 22, 23, 24, 40, 41, 42, 44, 45, 50, 55] }
 export function NbaNameStep({ S, id, owner, onDone }) {
   const B = S.builds[id]
+  const spot = (S.picks ?? []).find(p => p.id === id)?.spot
   const F = preview()
   const taken = useMemo(() => new Set([...F.teams[S.team].r.map(p => p.num), ...Object.entries(S.builds ?? {}).filter(([k]) => k !== id).map(([, x]) => x.num)].filter(n => n != null)), [S.team, id]) // eslint-disable-line react-hooks/exhaustive-deps
   const free = useMemo(() => Array.from({ length: 100 }, (_, n) => n).filter(n => !taken.has(n)), [taken])
@@ -154,7 +160,7 @@ export function NbaNameStep({ S, id, owner, onDone }) {
   const same = f => FACE_KEYS.every(k => f[k] === face[k])
   return (
     <div className="fsu-nameform">
-      <LowerThird size="l" name={`${first} ${last}`.trim() || NAME[B.pos]} pos={buildSpot(B.pos, a)} num={num} ovr={o} photo={faceOf({ ...B, face }, S.team)} team={S.team} mine={owner} />
+      <LowerThird size="l" name={`${first} ${last}`.trim() || NAME[B.pos]} pos={spot ?? buildSpot(B.pos, a)} num={num} ovr={o} photo={faceOf({ ...B, face }, S.team)} team={S.team} mine={owner} />
       <span className="fsu-lbl">FACE</span>
       <div className="fsu-faces fsu-faces--build" role="radiogroup" aria-label="Face">
         {faces.map((f, k) => (

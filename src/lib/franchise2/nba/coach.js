@@ -9,7 +9,7 @@
 //   (seeded by the team, not the save), so the setup's HIRE step shows the men the save will have.
 //   The GM's team: his built coach is F.coach (finishCoach) and the staff's hc is { mine: 1 }; the real head coach he
 //   took over from is out of work (F.cpool). A save from before coaches existed keeps its team's real head coach.
-//   A coach: { i, n, ag, r: [dev, off, def, rot, late] (0-11), st (the season he took this job), cv (his résumé while
+//   A coach: { i, n, ag, r: [dev, off, def, cul, late] (0-11; cul was rot, ROTATIONS, before 2026-11-25: the same place), st (the season he took this job), cv (his résumé while
 //   out of work), g (a made-up man's background, for his drawn face), real (a real coach), shot (his ESPN id when ESPN
 //   has his studio headshot), hy / hw / hl (his seasons and record as a head coach in this league) }
 //
@@ -17,14 +17,24 @@
 // as a whole plays as it did before coaches; the numbers are a shot's chance to go in, home court being 0.012):
 //   off    the team's shots: the head coach (v - mid) x 0.0011, the lead assistant (v - 6) x 0.0005
 //   def    the shots it gives up: the head coach and the defensive coordinator, the same weights
-//   rot    a bench unit (three or more of the starters sitting): the head coach (v - mid) x 0.002 each way
+//   cul    CULTURE BUILDING, the head coach's: the men he has want to stay and the market wants in, and the young
+//          ones buy in. His team's own free agents weigh its offer (v - mid) x 0.012 higher (market.js offerScore: a
+//          re-signing), every free agent (v - mid) x 0.004; a man 23 and under (v - mid) x 0.04 OVR a summer more
+//          (coachDev). (The bench units' minutes, which ROTATIONS fed, play the league's average: no edge either way.)
 //   late   the last five minutes of a game within five: the head coach (v - mid) x 0.004, his two coordinators a
 //          little (x 0.0012)
 //   dev    a young man's growth (25 and under), OVR a summer: the head coach (v - mid) x 0.15, the player
 //          development coach (v - 6) x 0.1
-//   STYLE (the GM's coach): PACE AND SPACE half a second quicker a trip and more threes · DEFENSE FIRST half a second
-//   slower, the defense a little better and the offense a little worse · DEVELOPER young players +0.8 a summer ·
-//   PLAYERS' COACH free agents weigh an offer from his team a little higher (market.js offerScore)
+//   STYLE (the GM's coach, football's four): PLAYERS' COACH the team's chemistry builds through the season (each game
+//   played adds a little to both ends, up to +0.002 a shot by the 50th game: a roster that has played together) ·
+//   DEVELOPER young players +0.8 a summer · MOTIVATOR the playoffs (+0.0015 a shot both ends) and the last five
+//   minutes of a close game (+0.0015) · RECRUITER free agents weigh an offer from his team higher (+0.04, market.js
+//   offerScore) and the scouts cover more of the draft (a scouting point more each month, draft.js scoutTick).
+//   Culture (a rating, any team's head coach) is the men staying and the young buying in; Players' Coach is how the
+//   GM's team plays together in a season; Recruiter is the market and the draft. No two of them touch the same thing
+//   but free agency, where culture is a head coach's standing and the Recruiter's pull is on top of it.
+//   A save from before the four (pace / defense, 2026-11-25) maps PACE AND SPACE to MOTIVATOR and DEFENSE FIRST to
+//   RECRUITER (styleOf).
 //   (scripts/franchise2/nba-coach.mjs measures it: the best staff against the worst over many seasons)
 //
 // No overall NUMBER for a coach on any screen (football's rule): his five grades and at most one letter (coachGrade).
@@ -38,17 +48,26 @@ import { addNews } from './news'
 import { HEADSHOT_BASE } from '../../../utils/simulation'
 
 export { cLetter }
-export const CTYPES = ['dev', 'off', 'def', 'rot', 'late']
-export const CLABEL = { dev: 'PLAYER DEVELOPMENT', off: 'OFFENSIVE SCHEME', def: 'DEFENSIVE SCHEME', rot: 'ROTATIONS', late: 'GAME MANAGEMENT' }
-export const CSHORT = { dev: 'DEVELOPMENT', off: 'OFFENSE', def: 'DEFENSE', rot: 'ROTATIONS', late: 'GAME MGMT' }
+export const CTYPES = ['dev', 'off', 'def', 'cul', 'late']
+export const CLABEL = { dev: 'PLAYER DEVELOPMENT', off: 'OFFENSIVE SCHEME', def: 'DEFENSIVE SCHEME', cul: 'CULTURE BUILDING', late: 'GAME MANAGEMENT' }
+export const CSHORT = { dev: 'DEVELOPMENT', off: 'OFFENSE', def: 'DEFENSE', cul: 'CULTURE', late: 'GAME MGMT' }
 // the words a staff screen uses: spelled out (full) and one word (a tight list)
-export const CNAME = { dev: 'Player development', off: 'Offensive scheme', def: 'Defensive scheme', rot: 'Rotations', late: 'Game management' }
-export const CWORD = { dev: 'Develop', off: 'Offense', def: 'Defense', rot: 'Rotations', late: 'Game mgmt' }
+export const CNAME = { dev: 'Player development', off: 'Offensive scheme', def: 'Defensive scheme', cul: 'Culture building', late: 'Game management' }
+export const CWORD = { dev: 'Develop', off: 'Offense', def: 'Defense', cul: 'Culture', late: 'Game mgmt' }
+// (football's four, its names and lines: lib/franchise2/coach.js STYLES)
 export const STYLES = {
-  pace: { name: 'PACE AND SPACE', fx: 'MORE POSSESSIONS, MORE THREES' },
-  defense: { name: 'DEFENSE FIRST', fx: 'A SLOWER GAME, A TOUGHER DEFENSE' },
+  players: { name: "PLAYERS' COACH", fx: 'CHEMISTRY BUILDS FASTER' },
   developer: { name: 'DEVELOPER', fx: 'YOUNG PLAYERS GROW FASTER' },
-  players: { name: "PLAYERS' COACH", fx: 'FREE AGENTS LEAN HIS WAY' },
+  motivator: { name: 'MOTIVATOR', fx: 'PLAYOFFS AND BIG MOMENTS' },
+  recruiter: { name: 'RECRUITER', fx: 'FREE AGENTS AND PROSPECTS' },
+}
+// a style from before the four: PACE AND SPACE (the game's tempo, its big runs) to MOTIVATOR, DEFENSE FIRST to RECRUITER
+const OLD_STYLE = { pace: 'motivator', defense: 'recruiter' }
+export const styleOf = st => OLD_STYLE[st] ?? st ?? null
+// a coach's five from an older save or setup: ROTATIONS (rot) is CULTURE BUILDING's place (cul)
+export function fixFive(r) {
+  if (r && !Array.isArray(r) && typeof r === 'object' && r.cul == null && r.rot != null) { const { rot, ...x } = r; return { ...x, cul: rot } }
+  return r
 }
 // the staff's jobs below the head coach
 export const JOBS = ['oc', 'dc', 'pd']
@@ -59,7 +78,7 @@ const OWN = { oc: 1, dc: 2, pd: 0 }   // (the line a job is hired for, in the fi
 
 // ── Grades (never a number on screen) ────────────────────────────────────────
 const W = { hc: [0.22, 0.24, 0.24, 0.12, 0.18], oc: [0.15, 0.55, 0.1, 0.08, 0.12], dc: [0.15, 0.1, 0.55, 0.08, 0.12], pd: [0.7, 0.1, 0.1, 0.05, 0.05] }
-const arrOf = r => (Array.isArray(r) ? r : r && typeof r === 'object' ? CTYPES.map(t => r[t]) : null)
+const arrOf = r => (Array.isArray(r) ? r : r && typeof r === 'object' ? (x => CTYPES.map(t => x[t]))(fixFive(r)) : null)
 function blend(r, role = 'hc') {
   const a = arrOf(r)
   if (!a) return null
@@ -70,7 +89,7 @@ function blend(r, role = 'hc') {
 }
 export const coachGrade = (r, role = 'hc') => { const b = blend(r, role); return b == null ? null : cLetter(b) }
 const score = (r, role) => blend(r, role) ?? 5
-export const toArr = a => CTYPES.map(t => clamp(0, 11, Math.round(a?.[t] ?? 5)))
+export const toArr = a => (x => CTYPES.map(t => clamp(0, 11, Math.round(x?.[t] ?? 5))))(fixFive(a))
 export const rOf = c => (!c || c.mine ? null : Array.isArray(c.r) ? Object.fromEntries(CTYPES.map((t, j) => [t, c.r[j]])) : c.r ?? null)
 
 // ── The real head coaches ────────────────────────────────────────────────────
@@ -186,34 +205,43 @@ export function staffMen(F, s) {
 const line = (c, t) => (Array.isArray(c?.r) ? c.r[CTYPES.indexOf(t)] : null)
 
 // ── The effects ──────────────────────────────────────────────────────────────
-export const K = { hc: 0.0011, as: 0.0005, rot: 0.002, late: 0.004, lateAs: 0.0012, devHc: 0.15, devPd: 0.1, devStyle: 0.8 }
+export const K = { hc: 0.0011, as: 0.0005, late: 0.004, lateAs: 0.0012, devHc: 0.15, devPd: 0.1, devStyle: 0.8, culOwn: 0.012, culAll: 0.004, culDev: 0.04, chem: 0.00005, chemMax: 0.003, motPo: 0.003, motLate: 0.002, recPull: 0.04 }
 const r4 = v => Math.round(v * 10000) / 10000
 // what a team's staff does in a game (game.js side(): shot chances, its pace and shot mix)
-//   { off, def, rot, late, pace (seconds a trip), three (share of shots from three) }
-export function coachSide(F, s) {
+//   { off, def, late } (po: a playoff game)
+const myStyle = (F, s) => (s === F.team && staffMen(F, s).hc?.mine ? styleOf(F.coach?.style) : null)
+export function coachSide(F, s, { po = false } = {}) {
   if (!F?.teams?.[s]) return null
   const M = staffMen(F, s)
   const v = (c, t, mid) => (line(c, t) ?? mid) - mid
   const off = v(M.hc, 'off', MID.off) * K.hc + v(M.oc, 'off', AMID) * K.as
   const def = v(M.hc, 'def', MID.def) * K.hc + v(M.dc, 'def', AMID) * K.as
-  const rot = v(M.hc, 'rot', MID.rot) * K.rot
   const asLate = (((line(M.oc, 'late') ?? 4.6) + (line(M.dc, 'late') ?? 4.6)) / 2 - 4.6) * K.lateAs
   const late = v(M.hc, 'late', MID.late) * K.late + asLate
-  const st = s === F.team && M.hc?.mine ? F.coach?.style : null
-  const out = { off: r4(off - (st === 'defense' ? 0.001 : 0)), def: r4(def + (st === 'defense' ? 0.002 : 0)), rot: r4(rot), late: r4(late) }
-  if (st === 'pace') { out.pace = -0.5; out.three = 0.035 }
-  if (st === 'defense') out.pace = 0.5
-  return out
+  const st = myStyle(F, s)
+  // (a players' coach: the chemistry of a roster playing together, game by game through the season; a motivator: the playoffs)
+  const lift = (st === 'players' ? Math.min(K.chemMax, (F.log?.length ?? 0) * K.chem) : 0) + (st === 'motivator' && po ? K.motPo : 0)
+  return { off: r4(off + lift), def: r4(def + lift), late: r4(late + (st === 'motivator' ? K.motLate : 0)) }
 }
+// CULTURE BUILDING: the head coach's culture rating against the league's (staffMen; the GM's coach his own)
+export const cultureOf = (F, s) => (F?.teams?.[s] ? (line(staffMen(F, s).hc, 'cul') ?? MID.cul) - MID.cul : 0)
 // OVR a summer added to a young man's growth (25 and under) on this team
 export function coachDev(F, s, p) {
   if (!p || (p.ag ?? 30) > 25 || !F.teams?.[s]) return 0
   const M = staffMen(F, s)
-  const st = s === F.team && M.hc?.mine && F.coach?.style === 'developer' ? K.devStyle : 0
-  return Math.round((((line(M.hc, 'dev') ?? MID.dev) - MID.dev) * K.devHc + ((line(M.pd, 'dev') ?? AMID) - AMID) * K.devPd + st) * 100) / 100
+  const st = myStyle(F, s) === 'developer' ? K.devStyle : 0
+  // (the young buy in to a culture: 23 and under)
+  const cu = (p.ag ?? 30) <= 23 ? ((line(M.hc, 'cul') ?? MID.cul) - MID.cul) * K.culDev : 0
+  return Math.round((((line(M.hc, 'dev') ?? MID.dev) - MID.dev) * K.devHc + ((line(M.pd, 'dev') ?? AMID) - AMID) * K.devPd + st + cu) * 100) / 100
 }
-// free agency: a players' coach's team (market.js offerScore adds it to the offer's pull)
-export const coachPull = (F, s) => (s === F.team && F.coach?.style === 'players' ? 0.04 : 0)
+// free agency (market.js offerScore adds it to the offer's pull): the head coach's culture (his own men, re-signing,
+// most of all) and a recruiter's team
+export const coachPull = (F, s, own = false) => {
+  const cu = cultureOf(F, s)
+  return cu * (own ? K.culOwn : K.culAll) + (myStyle(F, s) === 'recruiter' ? K.recPull : 0)
+}
+// the scouts: a recruiter's staff covers more of the draft (a point more each month, draft.js scoutTick)
+export const recruits = F => styleOf(F.coach?.style) === 'recruiter'
 
 // ── The spin (football's rules, on the NBA's head coaches) ───────────────────
 export const RESPINS = 1

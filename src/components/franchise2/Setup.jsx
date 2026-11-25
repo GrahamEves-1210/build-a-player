@@ -187,7 +187,8 @@ function Builds({ S, go, owner, onBuild }) {
   const built = p => S.builds?.[p.id]
   const next = ordered.find(p => !built(p))
   const unnamed = ordered.find(p => built(p) && !built(p).name)
-  const done = ordered.length > 0 && !next && !unnamed
+  // (no builds is a franchise too: the team as it is, on to the coach, as basketball's)
+  const done = !next && !unnamed
   const build = p => { sfx('tap'); onBuild({ id: p.id, pos: p.pos, n: ordered.indexOf(p) + 1, of: ordered.length }) }
   // the rookie slot each one signs at (identity.js rookieSlots: by his OVR, no two at one pick)
   const ready = ordered.filter(built)
@@ -241,10 +242,9 @@ function Builds({ S, go, owner, onBuild }) {
         })}
       </div>
       <div className="fsu-acts">
-        {done ? <Go onClick={() => { go({ step: 'coach' }, 'whistle'); haptic('medium') }}>Next: your coach</Go>
+        {done ? <Go onClick={() => { go({ step: 'coach' }, 'whistle'); haptic('medium') }}>{ordered.length ? 'Next: your coach' : 'No builds · to your coach'}</Go>
           : unnamed ? <Go onClick={() => go({ naming: unnamed.id }, 'tap')}>Name your {POS_LABEL[unnamed.pos]}</Go>
-            : next ? <Go onClick={() => build(next)}>Build your {POS_LABEL[next.pos]}</Go>
-              : <Go disabled>Add a player</Go>}
+            : <Go onClick={() => build(next)}>Build your {POS_LABEL[next.pos]}</Go>}
       </div>
     </div>
   )
