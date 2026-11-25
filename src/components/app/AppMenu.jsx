@@ -92,7 +92,7 @@ function ProView({ onVault }) {
         <div className="ag-pro-plans" role="radiogroup" aria-label="Plan">
           <button role="radio" aria-checked={plan === 'month'} className={`ag-pro-plan${plan === 'month' ? ' is-on' : ''}`} onClick={() => setPlan('month')}>
             {/* Black Friday (the pass sale's days): the first month half off on Stripe; Google Play has no sale */}
-            {!PLAY_BILLING && passSale(dayKey()) && <i>FIRST MONTH 50% OFF</i>}
+            {!PLAY_BILLING && passSale(dayKey()) && <i className="is-sale">FIRST MONTH 50% OFF</i>}
             <small>MONTHLY</small><b>{price.month}</b><span>{!PLAY_BILLING && passSale(dayKey()) ? 'a month after your first' : 'a month'}</span>
           </button>
           <button role="radio" aria-checked={plan === 'year'} className={`ag-pro-plan${plan === 'year' ? ' is-on' : ''}`} onClick={() => setPlan('year')}>

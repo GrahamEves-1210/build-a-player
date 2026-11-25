@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useProgress } from '../../lib/progress'
+import { useProgress, dayKey } from '../../lib/progress'
+import { passSale } from '../../lib/pass'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { PRO_PRICE, perMonth } from '../../lib/webCheckout'
-import { IS_APP } from '../../lib/platform'
+import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { IconArrow, IconCrown } from './icons'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import './pass.css'
@@ -33,6 +34,8 @@ export function ProCard({ delay }) {
   return (
     <div className="pro-card-wrap">
       <button className="pro-card ag-pop" style={delay ? { '--d': delay } : undefined} onClick={() => nav('pro')}>
+        {/* Black Friday (the pass sale's days): monthly Pro's first month half off on Stripe; Google Play has no sale */}
+        {!PLAY_BILLING && passSale(dayKey()) && <i className="pc-sale">BLACK FRIDAY · 1ST MONTH 50% OFF</i>}
         <span className="pc-main">
           <span className="pc-title"><IconCrown size={20} />BAP PRO</span>
           <ul className="pc-perks">{PERKS.map(t => <li key={t}>{t}</li>)}</ul>
