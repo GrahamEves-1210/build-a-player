@@ -59,6 +59,8 @@ function harvest(F) {
     ones.push({ s, w: R[s].w, fin, lost })
   }
 }
+// the playoff teams' three best men: out as round one opens, games missed in the playoffs and in the regular season
+const INJ = { open: 0, openOut: 0, openHurt: 0, poG: 0, poMiss: 0, rsG: 0, rsMiss: 0 }
 const rows = { with: [], without: [] }
 const awards = { ROY: 0, MVP: 0, DPOY: 0, '6MOY': 0, MIP: 0, ALL1: 0, ALL2: 0, ALL3: 0, DEF1: 0, DEF2: 0, RK1: 0, RK2: 0, AS: 0 }
 const lines = []
@@ -71,7 +73,24 @@ for (let k = 0; k < SEEDS; k++) {
     N.simTo(F, F.days)
     const mine = F.teams[TEAM].r.filter(p => p.b != null)
     const asIds = new Set(['E', 'W'].flatMap(c => [...(F.as?.[c]?.st ?? []), ...(F.as?.[c]?.res ?? [])]))
-    N.startPostseason(F); N.simPostseason(F)
+    // (the postseason a night at a time: as round one opens, each playoff team's three best men and who's out; then
+    // their games played against their team's)
+    N.startPostseason(F)
+    let top3 = null, guard = 0
+    while (F.po && F.po.stage !== 'done' && guard++ < 220) {
+      if (!top3 && F.po.rd === 0) {
+        top3 = {}
+        for (const c of ['E', 'W']) for (const t of F.po.final[c]) {
+          top3[t] = F.teams[t].r.filter(p => !p.tw).sort((x, y) => y.o - x.o).slice(0, 3).map(p => p.i)
+          for (const id of top3[t]) { const p = F.teams[t].r.find(x => x.i === id); INJ.open++; if (!N.CAP_SIM.rotationOf(F, t, { playoff: true }).some(r => r.i === id)) INJ.openOut++; if ((p.inj?.g ?? 0) > 0) INJ.openHurt++ }
+        }
+      }
+      N.playPoNight(F)
+    }
+    for (const t in top3 ?? {}) {
+      const tg = F.po.all.flat().filter(x => x.hi === t || x.lo === t).reduce((n, x) => n + x.g.length, 0)
+      for (const id of top3[t]) { INJ.poG += tg; INJ.poMiss += tg - (F.ps?.[id]?.gp ?? 0); INJ.rsG += 82; INJ.rsMiss += 82 - Math.min(82, F.ss?.[id]?.gp ?? 0) }
+    }
     harvest(F)
     N.closeSeason(F)
     const h = F.hist.at(-1)
@@ -106,6 +125,11 @@ for (const [lo, hi] of [[-99, 0], [1, 5], [6, 10], [11, 15], [16, 99]]) { const 
 const big = series.filter(x => x.rd === 1 && x.hiW >= 58)
 console.log(`  a 58+ win team in the second round: ${big.filter(x => x.won).length}/${big.length} won it (records say ${(100 * avg(big.map(x => x.exp))).toFixed(0)}%)`)
 console.log(`No. 1 seeds (${ones.length}, ${f1(avg(ones.map(x => x.w)))} wins on average): ${JSON.stringify(cnt(ones, x => x.fin))}`)
+const r2 = (lo, hi = 99) => { const a = series.filter(x => x.rd === 1 && x.hiW >= lo && x.hiW <= hi); return `${a.filter(x => x.won).length}/${a.length}${a.length ? ` = ${(100 * a.filter(x => x.won).length / a.length).toFixed(0)}%` : ''}` }
+console.log(`  second-round series won by the team with home court, by its wins: 60+ ${r2(60)} · 57-59 ${r2(57, 59)} · 53-56 ${r2(53, 56)} · under 53 ${r2(0, 52)}`)
+const ones2 = ones.filter(x => x.w >= 60 && x.fin !== 'r1')
+console.log(`  60+ win No. 1 seeds in the second round: ${ones2.filter(x => x.fin !== 'r2').length}/${ones2.length} won it`)
+if (INJ.open) console.log(`Playoff teams' three best men: ${(100 * INJ.openOut / INJ.open).toFixed(1)}% not in uniform as round one opens (${(100 * INJ.openHurt / INJ.open).toFixed(1)}% carrying an injury) · games missed: playoffs ${(100 * INJ.poMiss / INJ.poG).toFixed(1)}%, regular season ${(100 * INJ.rsMiss / INJ.rsG).toFixed(1)}%`)
 const o60 = ones.filter(x => x.w >= 60)
 console.log(`  60+ win No. 1 seeds (${o60.length}): ${JSON.stringify(cnt(o60, x => x.fin))}`)
 console.log(`  out in the second round: ${ones.filter(x => x.fin === 'r2').map(x => `${x.s} ${x.w}W ${x.lost}`).join(' · ')}`)

@@ -27,10 +27,12 @@ export const perGameLine = (F, p, all = false) => {
 }
 const dealLine = p => (p.tw ? 'TWO-WAY' : p.y > 0 ? `${money(p.$)} · ${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` : 'DEAL UP')
 // an injury in a few words for a row: the part, the games ("ANKLE · 8 G"); the whole of it on his page
-export const injShort = inj => {
+// (po: the playoffs, where a short one is played through: he's probable, not out, lib injury.js playsHurt)
+export const injShort = (inj, po = false) => {
   if (!inj) return ''
   const part = String(inj.k ?? '').replace(/^(sprained|strained|torn|broken|ruptured|sore|bruised)\s+/i, '').replace(/^stress fracture in his\s+/i, '')
     .replace(/^(left|right)\s+/i, '').replace(/\s+(soreness|spasms|contusion|protocol)$/i, '')
+  if (CAP_SIM.playsHurt({ inj }, po)) return `PROBABLE · ${part.toUpperCase()}`
   return `${part.toUpperCase()} · ${inj.se ? 'SEASON' : `${inj.g} G`}`
 }
 const heightText = ht => (ht ? `${Math.floor(ht / 12)}'${ht % 12}"` : '')
@@ -47,7 +49,7 @@ export function Rotation({ F, act, owner, onMan }) {
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
   // (one order, shown and stored: rotOrder.js)
   const order = rotOrder(F, opts)
-  const hurt = t.r.filter(p => p.inj?.g && !p.tw)
+  const hurt = t.r.filter(p => p.inj?.g && !p.tw && !CAP_SIM.playsHurt(p, opts.playoff))
   const custom = !!(t.rot || (t.min && Object.keys(t.min).length))
   const swap = (a, b) => act(X => swapRot(X, a, b, opts))
   const tap = id => {
@@ -73,7 +75,7 @@ export function Rotation({ F, act, owner, onMan }) {
               : (
                 <div className="nb-rot-row">
                   <MinCell v={mins[p.i]} set={t.min?.[p.i] != null} />
-                  <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={(p.b != null ? perGameLine(F, p)?.split(' · ')[0] : perGameLine(F, p)) ?? `AGE ${p.ag} · ${dealLine(p)}`} onClick={() => { onMan(p.i); sfx('tap') }} />
+                  <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={CAP_SIM.playsHurt(p, opts.playoff) ? injShort(p.inj, true) : (p.b != null ? perGameLine(F, p)?.split(' · ')[0] : perGameLine(F, p)) ?? `AGE ${p.ag} · ${dealLine(p)}`} onClick={() => { onMan(p.i); sfx('tap') }} />
                 </div>
               )}
           </div>
@@ -155,7 +157,7 @@ export function PlayerSheet({ F, act, id, owner, onClose }) {
           <span><small>Contract</small><b>{pros ? 'UNSIGNED' : !s && !(p.y > 0) ? 'FREE AGENT' : dealLine(p)}</b></span>
           {!s && !pros && p.fr && TEAM[p.fr] && <span><small>Last team</small><b>{TEAM[p.fr].short}</b></span>}
           {p.c && <span><small>From</small><b>{String(p.c).toUpperCase()}</b></span>}
-          {p.inj?.g > 0 && <span className="is-wide is-inj"><small>Injury</small><b>{String(p.inj.k).toUpperCase()} · {p.inj.se ? 'OUT FOR THE SEASON' : `OUT ${p.inj.g} ${p.inj.g === 1 ? 'GAME' : 'GAMES'}`}</b></span>}
+          {p.inj?.g > 0 && <span className="is-wide is-inj"><small>Injury</small><b>{String(p.inj.k).toUpperCase()} · {p.inj.se ? 'OUT FOR THE SEASON' : CAP_SIM.playsHurt(p, isPo(F)) ? 'PROBABLE, PLAYING THROUGH IT' : `OUT ${p.inj.g} ${p.inj.g === 1 ? 'GAME' : 'GAMES'}`}</b></span>}
         </div>
         {perGameLine(F, p) && <p className="nb-sheet-line">{seasonText(F.year)}: {perGameLine(F, p, true)}</p>}
         {mine && <MineActs F={F} act={act} p={p} onClose={onClose} />}
@@ -371,7 +373,7 @@ export function TeamPage({ F, s, onBack, onMan, backLabel = 'League' }) {
   const mins = Object.fromEntries(rot.map(x => [x.i, x.min]))
   const T = F.teams[s]
   const order = s === F.team ? rotOrder(F, opts) : coachOrder(F, s, CAP_SIM.rotationOf, opts).filter(p => !p.tw)
-  const hurt = T.r.filter(p => p.inj?.g && !p.tw), tw = T.r.filter(p => p.tw)
+  const hurt = T.r.filter(p => p.inj?.g && !p.tw && !CAP_SIM.playsHurt(p, opts.playoff)), tw = T.r.filter(p => p.tw)
   const cap = CAP_SIM.capSheet(F, s)
   const OVER = { under: 'Under the cap', cap: 'Over the cap', tax: 'In the luxury tax', a1: 'Over the first apron', a2: 'Over the second apron' }
   const rank = SHORTS.slice().sort((a, b) => teamOvr(F, b) - teamOvr(F, a)).indexOf(s) + 1
@@ -390,7 +392,7 @@ export function TeamPage({ F, s, onBack, onMan, backLabel = 'League' }) {
             {(k === 0 || k === 5) && <span className="nb-rot-sh">{k === 0 ? 'Starters' : 'Bench'}</span>}
             <div className="nb-rot-row">
               <MinCell v={mins[p.i]} />
-              <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={s} size="s" line={perGameLine(F, p) ?? `AGE ${p.ag} · ${dealLine(p)}`} onClick={() => { onMan(p.i); sfx('tap') }} />
+              <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={s} size="s" line={CAP_SIM.playsHurt(p, opts.playoff) ? injShort(p.inj, true) : perGameLine(F, p) ?? `AGE ${p.ag} · ${dealLine(p)}`} onClick={() => { onMan(p.i); sfx('tap') }} />
             </div>
           </div>
         ))}

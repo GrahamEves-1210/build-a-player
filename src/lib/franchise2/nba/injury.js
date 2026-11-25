@@ -9,8 +9,11 @@
 // back spasms, calves (3-20), groins, the concussion protocol (1-6), hand and wrist; the long ones a broken hand,
 // an MCL sprain (8-25), a torn meniscus (15-45), a stress fracture in the foot, and the season-enders: a torn ACL
 // (about a year) and a ruptured Achilles (more), each about 3 a season league-wide.
-// The playoffs: a man plays through what would cost him a game or two in the season (those aren't rolled), and a man
-// listed day-to-day plays (rotation.js dressed).
+// The playoffs: a man plays through what would sit him a week in January. A knock of PO_PLAY games or fewer isn't
+// rolled, and a man carrying one that short into the postseason plays (rotation.js dressed; playsHurt: the screens
+// list him as probable, not out). The rate is a little lower too (PO_RATE: nobody is run into the ground on the
+// second night of a back-to-back in May). And the calendar heals: the days between the regular season's last night
+// and Game 1, a night a team sits while the other series finish, the days between rounds (season.js: healTeam).
 // Rest: a star on the second night of a back-to-back sits now and then (the Player Participation Policy keeps it rare
 // for the young ones; a 33-year-old sits a third of them), never in the playoffs.
 //
@@ -21,6 +24,7 @@
 //   tickInjuries(F, short)      after the night (core calls it for every team): a man who missed a game tonight is a
 //                               game closer. Games out are games, so a team's idle night heals nobody.
 //   tickInjuries(F, days)       with a number: time off with no games (the summer): days of healing, ~2.1 a game
+//   healTeam(F, short, games)   time off for one team (the postseason's off days): that many games' worth of healing
 //   restFor(F, short, game, b2b) -> [ids]           tonight's load management (sets man.rest = 1; cleared after the game)
 //   outText(p, gamesLeft)       'OUT 3 GAMES' · 'OUT FOR SEASON' · 'DAY-TO-DAY'
 //   TALLY                       the checks count every injury here (scripts/franchise2/nba)
@@ -28,6 +32,10 @@ import { rngOf } from '../rng'
 
 export const TALLY = { on: false, rows: [] }
 export const RATE = 0.00109          // injuries a minute played
+export const PO_PLAY = 4             // the playoffs: games out at or under which a man plays through it
+export const PO_RATE = 0.85          // the playoffs: the rate against the regular season's
+// in the playoffs, hurt but playing: a knock short enough to play through
+export const playsHurt = (p, po) => !!po && (p?.inj?.g ?? 0) > 0 && p.inj.g <= PO_PLAY && !p.inj.se
 const DAYS_PER_GAME = 2.1
 // [what the report says, share of injuries %, games out: [min, max] (skewed short) ]
 export const KINDS = [
@@ -66,12 +74,13 @@ export function rollInjuries(F, game, res) {
     for (const l of res.box[s]) {
       if (!(l.min > 0)) continue
       const p = manIn(F, s, l.i); if (!p) continue
-      if (R.u() >= injuryChance(p, l.min)) continue
+      if (R.u() >= injuryChance(p, l.min) * (po ? PO_RATE : 1)) continue
       const [k0, , len] = kindsBy(R)
       const k = k0.replace(SIDED, w => `${R.u() < 0.5 ? 'left' : 'right'} ${w}`)
       const g = lengthOf(R, len)
-      // (in the playoffs a man plays through the soreness and the bug that would sit him a game or two in January)
-      if (po && g <= 2) continue
+      // (in the playoffs a man plays through the soreness, the bug and the mild sprain that would sit him a week in
+      // January)
+      if (po && g <= PO_PLAY) continue
       p.inj = { g, k }
       if (SEASON_ENDERS.has(k0)) p.inj.se = 1
       hurt.push({ i: p.i, s, k, g })
@@ -97,6 +106,15 @@ export function tickInjuries(F, x) {
   for (const p of F.fa ?? []) if (p.inj) { p.inj.g -= n; if (p.inj.g <= 0) delete p.inj; else p.inj.g = Math.ceil(p.inj.g) }
 }
 
+// time off for one team, in games' worth of healing (the postseason's off days)
+export function healTeam(F, short, games = 1) {
+  for (const p of F.teams[short]?.r ?? []) if (p.inj) {
+    delete p.inj.m
+    p.inj.g -= games
+    if (p.inj.g <= 0 || F.noInj) delete p.inj
+  }
+}
+
 // Load management: the second night of a back-to-back, the stars; a team rests one man a night at most
 export function restFor(F, short, game, b2b) {
   const T = F.teams[short]; if (!T) return []
@@ -112,9 +130,10 @@ export function restFor(F, short, game, b2b) {
   return []
 }
 
-export function outText(p, gamesLeft = 82) {
+export function outText(p, gamesLeft = 82, po = false) {
   if (p.rest) return 'REST'
   if (!p.inj) return ''
+  if (playsHurt(p, po)) return 'PROBABLE'
   if (p.inj.g >= gamesLeft) return 'OUT FOR SEASON'
   if (p.inj.g <= 1) return 'DAY-TO-DAY'
   if (p.inj.g >= 12) return `OUT ${Math.round(p.inj.g / 3.5)} WEEKS`
