@@ -349,3 +349,26 @@ entries at `seasonEndDeals`.
 8. **Injuries:** `tickInjuries(F, short)` heals only a man who missed a game that night (`rollInjuries` marks him `inj.m`), so `inj.g` counts games. Call `tickInjuries(F, days)` with a number over the summer (130 is about right): an ACL torn in March then runs into the next season.
 9. **Ceilings:** `league.js peakFor` (room x 1.1-2.7 a year) inflated the league in C's 10-season runs (88+ men went 29 to 47). `aging.js seedPotential` (room x 0.6-2.0) and `prospect(R, { rank })` for the class hold it level (88+ men: 29 at the start, 27-31 on average). Please use them, or match their numbers.
 10. **Playoffs:** pass `{ playoff: true }` to `rotationOf` for the screen too. Playoff rotations shorten to eight, and stars play 38-40.
+
+### League (awards, records, history, the wire), 2026-11-24
+
+- `nba/realCareers.js` (new): `REAL_CAREER` (372 real men's careers through 2025-26, from ESPN's player stats), `realCareer(p)`,
+  `careerTotals(p, cur)`, `predates(p)`, `savedSeasons(p)`, `fixRetired(F)` (the upgrade for an older save's retired rows),
+  `realCareerBest(k)`. A real man's retirement line, his page's Career table and the career records count these seasons.
+- `F.rec.fr = { s, game, season, career }`: the GM's team's own records book (awards.js updateRecords; a save from before
+  it gets one at its next closeSeason, its season marks backfilled from the men's career rows). `F.rec.career` now holds
+  whole careers (real seasons counted). Records' wire lines: awards.js recordText.
+- `F.wv = 1`: the wire is in the one style (news.js wireText: every item a sentence ending in a period; fixWire brings an
+  older save's wire to it at load and drops the bare matchup lines and the second item a coaching hire posted).
+- RetiredRow: `rc: 1` = `t` is his whole career (his real seasons before the save included), `num` = his number (the
+  History screen's retired numbers); `yrs` counts the season just played and a real man's real service (aging.js seasonsOf).
+  A raw row carries `rc: [gp, pts, reb, ast]` until keepRetired packs it.
+- awards.js: `hallOfFamer(row)`, `hallClass(row)` (his last season + 4: the Hall's two-season wait), `RECORD_ROWS`,
+  `realRecord(book, key)`, `recordValue(key, v)`. The votes: All-NBA on the season with the record as a factor
+  (allNbaScore), MVP from winners (mvpTeam), All-Rookie from rookies with a role.
+- rotation.js `setOf(T)` carries `dev: { [id]: OVR bonus }` for a first-round pick's first two seasons (devBonus: 6 / 4 /
+  2.5 by slot, halved in year two, none in the playoffs or for the GM's builds); planRotation adds it when the bench's
+  minutes are handed out. It rides on G.set, so a saved moment (F.pend.G) may hold it.
+- news.js: `roundSetText(rd, series, seedOf)`, `champText(series, mvpName)` (season.js calls them for the round-is-set and
+  title items), `wireText(text)`.
+- cloud.js: `cloudLands({ raw, owner, uid, cloudAt })` decides a pull (an unfinished setup never blocks the account's save).

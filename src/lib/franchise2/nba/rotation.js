@@ -18,6 +18,7 @@
 //         { order: [ids] }     his order for the bench
 //         { po: true }         the playoffs' shorter rotation
 //         { min: { id: m } }   minutes he wants for a man (0 = out of the rotation); the rest are scaled to fill 240
+//         { dev: { id: ovr } } a young first-round pick's development minutes (setOf fills it: devBonus)
 //   startersOf(players)        the coach's best five: the best men who fit the five spots
 //   dressed(T, { po, year })   tonight's men: healthy (the playoffs: day-to-day plays), not resting; a two-way man only in the regular season, 50 games
 //                              at most (p.twa = [season, games active]), and only when the team needs him (to make 13
@@ -56,7 +57,9 @@ export function dressed(T, { po = false, year = null } = {}) {
   return out
 }
 // (st: his whole order; planRotation starts the first five of it who can play tonight)
-export const setOf = T => ({ st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null })
+// (dev: the team's young first-round picks and what each is worth in the bench's minutes, devBonus below; the game
+// plays stripped copies of the men, so it rides on the set)
+export const setOf = T => { const dev = devOf(T); return { st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null, ...(dev && { dev }) } }
 export function rotationOf(F, short, { playoff = false } = {}) {
   const T = F.teams[short], L = planRotation(dressed(T, { po: playoff, year: F.year }), { ...setOf(T), po: playoff })
   return L.order.filter(i => L.min[i] > 0).map(i => ({ i, st: L.st.includes(i), min: L.min[i] }))
@@ -120,6 +123,16 @@ export function reshape(pick, pool, val) {
   return pick
 }
 
+// A first-round pick's first two seasons: a team plays the man it drafted to find out what it has, a lottery pick
+// most of all (a top-five pick plays 25-30 minutes on a losing team whatever the veterans ahead of him are rated).
+// Worth this much OVR when the bench's minutes are handed out; a good team's bench is too good for it to matter.
+const devBonus = p => {
+  const n = p.dr?.[1] === 1 ? p.dr[2] : 0
+  if (!n || p.b != null || (p.ys ?? 9) > 1) return 0
+  const b = n <= 5 ? 6 : n <= 14 ? 4 : 2.5
+  return (p.ys ?? 0) <= 0 ? b : b / 2
+}
+const devOf = T => { let m = null; for (const p of T.r ?? []) { const b = devBonus(p); if (b) (m ??= {})[p.i] = b } return m }
 export function planRotation(players, set = {}) {
   const ids = new Set(players.map(p => p.i))
   const byId = new Map(players.map(p => [p.i, p]))
@@ -171,7 +184,7 @@ export function planRotation(players, set = {}) {
   // (eight), not twelve.
   const ENTRY = po ? 7 : 3.5
   const capOf = p => (tgt.has(p) ? Math.min(CAP, tgt.get(p) + 2.5) : CAP - 6)
-  const M = order.filter(p => !fixed.has(p)).map(p => ({ p, sp: spot.get(p), o: ovr(p), t: tgt.get(p), cap: capOf(p), bonus: 0 }))
+  const M = order.filter(p => !fixed.has(p)).map(p => ({ p, sp: spot.get(p), o: ovr(p), t: tgt.get(p), cap: capOf(p), bonus: po ? 0 : set.dev?.[p.i] ?? 0 }))
   const util = (x, j, loose) => {
     const d = Math.abs(x.sp - j)
     if (d > (loose ? 4 : 2)) return -Infinity

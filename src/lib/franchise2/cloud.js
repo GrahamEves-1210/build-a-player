@@ -6,7 +6,8 @@
 //   push: a few seconds after a save (a burst of saves is one upsert), and when the page is hidden
 //   pull: the slot screen asks for the account's copies; one lands only where the slot is empty, or where it's this
 //         account's own save and the cloud copy is newer (another device played on). Someone else's save on a shared
-//         device is never written over.
+//         device is never written over. A slot holding only an unfinished setup (a team picked, no season begun: it
+//         has no save time and was never sent) isn't a save: the account's real one lands over it (cloudLands).
 // Every failure is silent: signed out, offline, or no table just means the device copy carries on alone.
 import { supabase } from '../supabase'
 
@@ -19,6 +20,20 @@ const pending = new Map()                      // storage key → timer
 const owners = () => { try { return JSON.parse(localStorage.getItem(MINE)) ?? {} } catch { return {} } }
 const setOwner = (key, uid) => { try { const o = owners(); if (uid) o[key] = uid; else delete o[key]; localStorage.setItem(MINE, JSON.stringify(o)) } catch { /* */ } }
 const atOf = raw => { try { const x = JSON.parse(raw); return x?.setup ? null : Number(x?.at) || 0 } catch { return null } }
+// Does the account's copy (saved at cloudAt) go onto this device's slot? raw: what the slot holds; owner: the account
+// that last saved it here (none for a setup: a setup is never sent); uid: the account signed in.
+//   an empty slot: yes
+//   this account's save, older than the cloud's: yes (another device played on)
+//   an unfinished setup, or something that can't be read (no save time): older than any real save, so yes, unless
+//   the slot is marked as another account's
+//   another account's save, or one nobody is marked for: never
+export function cloudLands({ raw, owner, uid, cloudAt }) {
+  if (!uid || !cloudAt) return false
+  if (!raw) return true
+  const at = atOf(raw)
+  if (at == null) return !owner || owner === uid
+  return owner === uid && cloudAt > at
+}
 async function uidNow() {
   if (!supabase) return null
   try { const { data } = await supabase.auth.getSession(); return data?.session?.user?.id ?? null } catch { return null }
@@ -81,8 +96,7 @@ export async function pullFranchiseCloud(keys) {
       if (!cloud?.raw || !cloud.at) continue
       let raw = null
       try { raw = localStorage.getItem(key) } catch { /* */ }
-      const empty = !raw, mine = own[key] === uid, newer = cloud.at > (atOf(raw ?? '') ?? Infinity)
-      if (empty || (mine && newer)) {
+      if (cloudLands({ raw, owner: own[key], uid, cloudAt: cloud.at })) {
         try { localStorage.setItem(key, cloud.raw); setOwner(key, uid); changed = true } catch { /* */ }
       }
     }

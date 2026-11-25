@@ -23,12 +23,15 @@
 //   retireChance(p, { under })  the chance he retires this summer (under: signed for next season)
 //   ageBuild(p, R, { mpg })     the GM's build a year older (the decline from 28; builds.js grows the young ones)
 //   notable(p)                  a career the wire and the history page keep
+//   seasonsOf(p, { on })        the seasons he played (a real man's NBA service before the save counted)
+//   retireText(p, opts)         the wire's retirement line; retiredFacts(p): what the retired list keeps
 //   prospect(R, { rank, spot, ag })   a draft prospect's grades: { p, g, o, pk, a, ag, ht, wt } (rank 1 = the best)
 //   attrsFor(spot, o, R)        ten grades for a spot that come to this overall
 //   seedPotential(p, R)         a real man's ceiling when he has none (core's league.js sets pk at setup)
 import { rngOf, clamp } from '../rng'
 import { ovrOf, groupOfPos, GUARD_TYPES, BIG_TYPES } from './skills'
 import { coachDev } from './coach'
+import { realCareer, careerTotals, savedSeasons, predates } from './realCareers'
 
 const ATH = new Set(['speed', 'bounce'])
 const TOUCH = new Set(['jumpShot', 'passing', 'playmaking', 'basketballIQ', 'clutch'])
@@ -128,11 +131,38 @@ function teamOfId(F) {
 }
 
 // a notable career: the wire reports his retirement (and the history page keeps him: offseason.js)
+// (tot: his whole career, the real seasons before the save included: careerTot)
 export function notable(p, tot = careerTot(p)) {
   const aw = p.aw ?? []
-  return (p.o ?? 0) >= 82 || tot.pts >= 12000 || (p.ys ?? 0) >= 15 || aw.some(a => ['MVP', 'DPOY', 'FMVP', 'ALL1', 'ALL2', 'ALL3', 'ROY', '6MOY'].includes(a.k)) || aw.filter(a => a.k === 'AS').length >= 2
+  return (p.o ?? 0) >= 82 || tot.pts >= 12000 || seasonsOf(p) >= 15 || aw.some(a => ['MVP', 'DPOY', 'FMVP', 'ALL1', 'ALL2', 'ALL3', 'ROY', '6MOY'].includes(a.k)) || aw.filter(a => a.k === 'AS').length >= 2
 }
-const careerTot = p => (p.car ?? []).reduce((s, r) => ({ gp: s.gp + (r.gp ?? 0), pts: s.pts + (r.pts ?? 0), reb: s.reb + (r.reb ?? 0), ast: s.ast + (r.ast ?? 0) }), { gp: 0, pts: 0, reb: 0, ast: 0 })
+const careerTot = p => careerTotals(p)
+// The seasons he played, the way a retirement is written ("after 19 seasons"): a real man's NBA service before the
+// save (realCareers.js) and his seasons in it; a man whose whole career is in this league, the seasons on his line;
+// anyone else, his years of service and the one just played. on: he was on a roster this season (a year on a roster
+// counts even when an injury took all of it).
+export function seasonsOf(p, { on = false, aged = false } = {}) {
+  const base = realCareer(p)
+  const here = savedSeasons(p)
+  if (base) return base.yrs + Math.max(here, on ? 1 : 0)
+  if (!predates(p)) return Math.max(1, here)
+  // (aged: the summer has already added the season just played to his years, as it has for a man cut from the street at camp)
+  return (p.ys ?? 0) + (!aged && (on || here > 0) ? 1 : 0)
+}
+// The retirement as the wire reports it: his age, his seasons, his career averages (a real man's from his real
+// career; a man whose earlier seasons the league has no numbers for gets none: no line is better than a false one),
+// and what he leaves on the table. street: he went unsigned all summer first.
+export function retireText(p, { on = false, street = false, deal = '' } = {}) {
+  const tot = careerTot(p), yrs = seasonsOf(p, { on, aged: street })
+  const avg = tot.whole && tot.gp >= 20 ? `, with career averages of ${(tot.pts / tot.gp).toFixed(1)} points, ${(tot.reb / tot.gp).toFixed(1)} rebounds and ${(tot.ast / tot.gp).toFixed(1)} assists` : ''
+  return `${p.n}${street ? ', unsigned through the summer,' : ''} has retired at ${p.ag} after ${yrs} ${yrs === 1 ? 'season' : 'seasons'}${avg}.${deal}`
+}
+// what the retired list keeps of him beyond his rows (offseason.js retiredRow): his seasons, and his real career
+// before the save as [games, points, rebounds, assists] (rc), so his page shows the whole of it
+export function retiredFacts(p, { on = false, aged = false } = {}) {
+  const base = realCareer(p)
+  return { yrs: seasonsOf(p, { on, aged }), ...(base && { rc: [base.gp, base.pts, base.reb, base.ast] }), ...(p.num != null && { num: p.num }) }
+}
 export function ageLeague(F) {
   const R = rngOf(`nba-age-${F.seed}-${F.year}`)
   const where = teamOfId(F)
@@ -149,15 +179,15 @@ export function ageLeague(F) {
   for (const T of Object.values(F.teams)) T.r = T.r.filter(p => !gone.has(p.i))
   if (F.fa) F.fa = F.fa.filter(p => !gone.has(p.i))
   for (const p of retired) {
-    const tot = careerTot(p), s = where.get(p.i) ?? null, yrs = p.ys ?? (p.car ?? []).length
+    const tot = careerTot(p), s = where.get(p.i) ?? null
     const mine = s != null && s === F.team
-    ;(F.retired ??= []).push({ n: p.n, i: p.i, ag: p.ag, yrs, car: p.car ?? [], aw: p.aw ?? [], o: p.o, s, ...(p.b != null && { b: p.b }), ...((mine || p.b != null || new Set((p.car ?? []).filter(c => c.s === F.team).map(c => c.y)).size >= 3) && { gm: 1 }) })
+    const on = s != null
+    ;(F.retired ??= []).push({ n: p.n, i: p.i, ag: p.ag, ...retiredFacts(p, { on }), car: p.car ?? [], aw: p.aw ?? [], o: p.o, s, ...(p.b != null && { b: p.b }), ...((mine || p.b != null || new Set((p.car ?? []).filter(c => c.s === F.team).map(c => c.y)).size >= 3) && { gm: 1 }) })
     if (p.b != null && F.builds?.[p.b]) F.builds[p.b].done = F.year
     // the wire: every man off the GM's roster, his builds, and the notable careers
     if (!(mine || p.b != null || notable(p, tot))) continue
-    const avg = tot.gp ? `, with career averages of ${(tot.pts / tot.gp).toFixed(1)} points, ${(tot.reb / tot.gp).toFixed(1)} rebounds and ${(tot.ast / tot.gp).toFixed(1)} assists` : ''
     const deal = mine && (p.y ?? 0) >= 2 ? ` He walks away from the final ${p.y - 1 === 1 ? 'year' : `${p.y - 1} years`} of his contract.` : ''
-    news.push({ k: 'retire', i: p.i, ...(mine && { s }), text: `${p.n} has retired at ${p.ag} after ${yrs} ${yrs === 1 ? 'season' : 'seasons'}${avg}.${deal}` })
+    news.push({ k: 'retire', i: p.i, ...(mine && { s }), text: retireText(p, { on, deal }) })
   }
   // a year older
   for (const p of all) {

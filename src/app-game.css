@@ -2805,11 +2805,16 @@ html.app-look .ag-bc { padding-bottom: 0; }
 html.has-rail:not(.is-app) :is(.ag-menu-overlay, .bt-sheet-overlay, .sh-sheet-overlay, .auth-overlay, .ag-levelup, .ag-ring, .ag-bc, .ag-complete, .ll-overlay, .ag-fan-back, .cfbd-overlay,
   .modal-overlay, .share-overlay, .htp-overlay, .htp-backdrop, .mvp-overlay, .tpm-overlay, .cr-overlay, .nba-tpk-backdrop, .bsim-team-modal, .dc-lb-backdrop, .dc-prompt-backdrop,
   .sc-shuffle-backdrop, .sc-power-backdrop, .sc-date-backdrop, .sc-lb-backdrop, .leave-confirm-overlay, .vs-prompt-overlay, .opp-disconnect-overlay, .vlf-backdrop, .vlf-panel,
-  .tut-tour, .tut-coach, .inf-crash, html:not(.app-look) .splash-screen) {   /* (the classic look's Home is a full-screen layer over the rail too) */
+  .tut-tour, .tut-coach, .inf-crash, .fg, .nb-sheet-ov, .nb-gd, .fk-root.nb-run, html:not(.app-look) .splash-screen) {   /* (the classic look's Home is a full-screen layer over the rail too; .fg: Franchise's live game, football's and basketball's; .nb-*: basketball Franchise's player sheets, game and sim layers) */
   border-bottom: var(--web-rail, 0px) solid transparent;
   clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0,
     var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) calc(100% - var(--web-rail-box, 0px)), var(--web-rail-r, 100%) 100%, var(--web-rail-l, 0px) 100%, var(--web-rail-l, 0px) calc(100% - var(--web-rail-box, 0px)));
 }
+/*    (Franchise's live game and basketball's game screen pad for the rail themselves: with the layer's border taking
+      that room, their own allowance comes off, and the bar pinned to the bottom of a final sits on the border) */
+html.has-rail:not(.is-app) .fg, html.has-rail:not(.is-app) .fg.is-play { padding-bottom: 18px; }
+html.has-rail:not(.is-app) .nb-gd { padding-bottom: 16px; }
+html.has-rail:not(.is-app) .gd-final .fk-actbar.gd-go { bottom: 8px; }
 /* 2. A card centred in an overlay, too tall for the room above the rail (a phone 568 tall): the overlay scrolls and
       the card starts at its top. Auto margins centre it whenever it fits, as before. Only with a rail on the page
       (html.has-rail, set by lib/railWatch.js) */

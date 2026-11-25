@@ -8,8 +8,12 @@
 // - ROY, Sixth Man (more games off the bench than starting, 10+ a game), Most Improved (the biggest jump from last
 //   season, now a real rotation player: 12+ points, 24+ minutes; not a man back from an injury year), Clutch Player
 //   (points in the last five minutes of a game within five, on a winning team).
-// - All-NBA: fifteen men, positionless (since 2024), by the MVP vote (no fatigue). All-Defense: ten, positionless but
-//   as the voters go (three or more guards, two or more wings, five bigs at most). All-Rookie: ten.
+// - All-NBA: fifteen men, positionless (since 2024), on the season itself: production first, then his defense, then
+//   his team's record as one factor among them (a 33-point scorer on a losing team still makes a team; a 16-point
+//   role player on the league's best team doesn't). The MVP vote weighs winning far more: nearly every MVP comes
+//   from a 50-win team (Westbrook in 2017 and Jokic in 2022 are the exceptions, on historic seasons).
+//   All-Defense: ten, positionless but as the voters go (three or more guards, two or more wings, five bigs at most).
+//   All-Rookie: ten, the rookies who played a real part (games and minutes count, not a per-game line off the bench).
 // - The 65-game rule (the 2023 CBA): MVP, DPOY, Sixth Man, MIP, Clutch, All-NBA and All-Defense need 65 games of 20+
 //   minutes (two of 15-20 count; a man who never played 20 minutes has none), or 62 and a season-ending injury.
 //   ROY and All-Rookie don't.
@@ -25,10 +29,13 @@
 // And:
 //   allStars(F) -> { E: [12 ids], W: [12 ids], st: { E: [5], W: [5] } }   at the break, from the stats so far
 //   eligible(row)          the 65-game rule
-//   updateRecords(F) -> [news]   the season's marks into F.rec (single game, season, career, since the save began)
-//   REAL_RECORDS            the NBA's own records, for the copy ("the NBA record is 100, Wilt Chamberlain in 1962")
+//   updateRecords(F) -> [news]   the season's marks into F.rec (the league's single game, season and career books, and
+//                           the GM's team's own), the wire's lines for the marks that fell
+//   REAL_RECORDS            the NBA's own records going into 2026-27; realRecord(book, key), RECORD_ROWS, recordValue
+//   hallOfFamer(row), hallClass(row), hallScore(row)   the Hall of Fame, off a retired man's row
 import { perGame } from './stats'
 import { prof } from './skills'
+import { careerTotals, realCareerBest } from './realCareers'
 
 export const EAST = new Set(['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DET', 'IND', 'MIA', 'MIL', 'NYK', 'ORL', 'PHI', 'TOR', 'WAS'])
 export const AWARD_NAME = {
@@ -66,9 +73,19 @@ export const eligible = (r, need = 65, p = null) => ruleGames(r) >= need || (nee
 // production a game: points, boards, assists, stocks, less turnovers, and efficiency (true shooting over the league's 57%)
 export function prod(r) {
   const s = perGame(r)
-  return s.ppg + 0.42 * s.rpg + 0.9 * s.apg + 1.3 * s.spg + 1.1 * s.bpg - 0.9 * s.tpg + 0.3 * (s.ts - 57) * Math.min(1, s.ppg / 20)
+  return s.ppg + 0.42 * s.rpg + 0.75 * s.apg + 1.3 * s.spg + 1.1 * s.bpg - 0.9 * s.tpg + 0.3 * (s.ts - 57) * Math.min(1, s.ppg / 20)
 }
-const mvpScore = (r, wp) => prod(r) + 34 * (wp - 0.5) + (wp >= 0.68 ? 2 : 0)
+// the voters' read of a season: what he produced, and the defender he was (the box score's stocks are in prod; this is
+// the rest of it, the All-Defensive vote's own measure, for the men who stand out there)
+const seasonValue = (x, zf) => prod(x.r) + 0.45 * Math.max(0, Math.min(6, zf(x)))
+// All-NBA: the season first, his team's record a factor: about four points of production from a .500 team to a
+// 60-win team, and a losing record costs more (the voters name a man off a losing team about once a year: Doncic's
+// 32 a game for a 38-win team in 2023 made the first team, most 25-point scorers on lottery teams make none)
+const allNbaScore = (x, zf) => seasonValue(x, zf) + 17 * (x.wp - 0.5) - 26 * Math.max(0, 0.5 - x.wp)
+// MVP: the best season on a team that won. The record counts for much more than it does for All-NBA, a top seed for a
+// little more again, and under 50 wins the case falls away fast (the voters have gone there twice in forty years)
+const mvpTeam = wp => 34 * (wp - 0.5) + (wp >= 0.68 ? 2 : 0) - 70 * Math.max(0, 0.61 - wp)
+const mvpScore = (x, zf) => seasonValue(x, zf) + mvpTeam(x.wp)
 // voter fatigue: the voters look for a new story. The reigning MVP needs a clearly better season to win again, a
 // third straight is rare and a fourth all but never happens (the record is three: Russell, Chamberlain, Bird); a man
 // with a shelf of them in the last few years gives a little back too
@@ -130,12 +147,19 @@ export function seasonAwards(F) {
   const rows = Object.entries(F.ss ?? {}).map(([id, r]) => ({ i: +id, r, p: men.get(+id), wp: winPct(W, r.s) }))
   const ok = rows.filter(x => eligible(x.r, 65, x.p))
   const rookie = x => x.p && (x.p.rk === F.year || (x.p.rk == null && (x.p.ys ?? 1) === 0))
-  const mvpAll = top(ok.map(x => ({ i: x.i, v: mvpScore(x.r, x.wp) })), 15)
-  // (All-NBA is the season, no fatigue: the MVP's own vote carries it)
-  const mvp = top(mvpAll.map(x => ({ i: x.i, v: x.v - fatigue(men.get(x.i), F.year) })), 15)
   const zf = defNorm(ok)
+  const allNba = top(ok.map(x => ({ i: x.i, v: allNbaScore(x, zf) })), 15)
+  // (the MVP vote: the season and the record, then voter fatigue)
+  const mvp = top(ok.map(x => ({ i: x.i, v: mvpScore(x, zf) - fatigue(x.p, F.year) })), 15)
   const dpoy = top(ok.map(x => ({ i: x.i, v: defScore(x, x.wp, zf) })), 40)
-  const roy = top(rows.filter(rookie).filter(x => x.r.gp >= 30).map(x => ({ i: x.i, v: prod(x.r) * Math.min(1, x.r.gp / 60) })), 10)
+  // the rookies: the vote goes to the men who played a part all season (a starter's 12 points over a deep-bench man's
+  // tidy line in 9 minutes): production, weighed by his games and his minutes. The men with a real role first (half
+  // the season, 14 minutes a night); a thin class is filled out from the rest who played.
+  const tg = Math.max(1, ...rows.map(x => x.r.gp ?? 0))
+  const rkScore = x => { const s = perGame(x.r); return (prod(x.r) + 6) * Math.min(1, x.r.gp / (tg * 0.73)) * Math.sqrt(Math.min(1, s.mpg / 26)) }
+  const rks = rows.filter(rookie).filter(x => x.r.gp >= tg * 0.3)
+  const role = x => x.r.gp >= tg * 0.5 && x.r.min / x.r.gp >= 14
+  const roy = [...top(rks.filter(role).map(x => ({ i: x.i, v: rkScore(x) })), 10), ...top(rks.filter(x => !role(x)).map(x => ({ i: x.i, v: rkScore(x) })), 10)].slice(0, 10)
   // (Sixth Man: a real scorer off the bench, ten a game or more)
   const sixth = top(ok.filter(x => x.r.gs * 2 < x.r.gp && perGame(x.r).ppg >= 10).map(x => ({ i: x.i, v: prod(x.r) + 6 * (x.wp - 0.5) })), 5)
   // the jump: this season against his last (a real season last year: 40+ games), never a rookie or a man who won MVP before
@@ -163,7 +187,7 @@ export function seasonAwards(F) {
   const clutch = top((cl.length >= 5 ? cl : ok).map(x => ({ i: x.i, v: (x.r.cp ?? 0) * (0.7 + 0.6 * x.wp) + 60 * (x.wp - 0.5) })), 5)
   const out = {
     MVP: mvp[0]?.i ?? null, DPOY: dpoy[0]?.i ?? null, ROY: roy[0]?.i ?? null, '6MOY': sixth[0]?.i ?? null, MIP: mip[0]?.i ?? null, CLUTCH: clutch[0]?.i ?? null,
-    ALL: fives(mvpAll, 3), ALLDEF: allDefense(dpoy, men), ROOKIE: fives(roy, 2),
+    ALL: fives(allNba, 3), ALLDEF: allDefense(dpoy, men), ROOKIE: fives(roy, 2),
     votes: { MVP: mvp.slice(0, 5), DPOY: dpoy.slice(0, 5), ROY: roy.slice(0, 5), '6MOY': sixth, MIP: mip, CLUTCH: clutch },
   }
   return out
@@ -201,37 +225,139 @@ export function seriesMvp(F, series) {
 export const finalsMvp = seriesMvp
 
 // ── The records book ────────────────────────────────────────────────────────────
+// F.rec = { from (the first season on the books), game: {}, season: {}, career: {}, fr: { s, game, season, career } }
+//   game / season: the league's marks since the save began; each { v, i, n, y, s? (his team) }
+//   career: the active record holders, their real seasons before the save counted (realCareers.js), so the points
+//           record is LeBron James's real total and whatever is added to it here
+//   fr: the same three books for the GM's team alone (s), from its men's seasons with it
+// REAL_RECORDS: the NBA's own records going into 2026-27, the measure for every one of them. game and season:
+// [value, holder, when]. career: the record among men no longer playing (the men still playing are in the league and
+// carry their real totals).
 export const REAL_RECORDS = {
   game: { pts: [100, 'Wilt Chamberlain', 1962], reb: [55, 'Wilt Chamberlain', 1960], ast: [30, 'Scott Skiles', 1990], tpm: [14, 'Klay Thompson', 2018], stl: [11, 'Larry Kenon', 1976], blk: [17, 'Elmore Smith', 1973] },
   season: { ppg: [50.4, 'Wilt Chamberlain', '1961-62'], rpg: [27.2, 'Wilt Chamberlain', '1960-61'], apg: [14.5, 'John Stockton', '1989-90'], tpm: [402, 'Stephen Curry', '2015-16'], spg: [3.67, 'Alvin Robertson', '1985-86'], bpg: [5.56, 'Mark Eaton', '1984-85'] },
+  career: { pts: [38387, 'Kareem Abdul-Jabbar', '1969-89'], reb: [23924, 'Wilt Chamberlain', '1959-73'], ast: [15806, 'John Stockton', '1984-2003'], stl: [3265, 'John Stockton', '1984-2003'], blk: [3830, 'Hakeem Olajuwon', '1984-2002'], tpm: [2973, 'Ray Allen', '1996-2014'], gp: [1611, 'Robert Parish', '1976-97'] },
 }
 const GAME_K = { pts: 'hi', reb: 'hr', ast: 'ha', tpm: 'h3', stl: 'hs', blk: 'hb' }
 const SEASON_K = ['ppg', 'rpg', 'apg', 'spg', 'bpg']
 const CAREER_K = ['pts', 'reb', 'ast', 'stl', 'blk', 'tpm', 'gp']
-const LABEL = { pts: 'points', reb: 'rebounds', ast: 'assists', tpm: 'threes', stl: 'steals', blk: 'blocks', gp: 'games', ppg: 'points a game', rpg: 'rebounds a game', apg: 'assists a game', spg: 'steals a game', bpg: 'blocks a game', tpmS: 'threes in a season' }
+// the books' rows, in the order a records page shows them: [key, label]
+export const RECORD_ROWS = {
+  game: [['pts', 'Points'], ['reb', 'Rebounds'], ['ast', 'Assists'], ['tpm', 'Threes'], ['stl', 'Steals'], ['blk', 'Blocks']],
+  season: [['ppg', 'Points a game'], ['rpg', 'Rebounds a game'], ['apg', 'Assists a game'], ['tpmS', 'Threes made'], ['spg', 'Steals a game'], ['bpg', 'Blocks a game']],
+  career: [['pts', 'Points'], ['reb', 'Rebounds'], ['ast', 'Assists'], ['tpm', 'Threes'], ['stl', 'Steals'], ['blk', 'Blocks'], ['gp', 'Games']],
+}
+// the NBA's own record for a row of a book, or null: [value, holder, when]. A career record is the higher of the
+// retired men's (REAL_RECORDS.career) and the active men's going into 2026-27 (realCareers.js: James's points and
+// games, Curry's threes)
+const CAREER_REAL = {}
+export function realRecord(book, k) {
+  const r = REAL_RECORDS[book]?.[k === 'tpmS' ? 'tpm' : k] ?? null
+  if (book !== 'career' || !r) return r
+  return (CAREER_REAL[k] ??= (() => { const a = realCareerBest(k); return a && a[0] > r[0] ? a : r })())
+}
+// a mark as it's written: an average to a tenth (the NBA's own steals and blocks records to the hundredth they're
+// kept at), a count with its commas
+export const recordValue = (k, v) => (SEASON_K.includes(k) ? (Math.round(v * 10) / 10 === v ? v.toFixed(1) : String(v)) : Math.round(v).toLocaleString('en-US'))
+const seasonTxt = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
+const NOUN = { pts: 'points', reb: 'rebounds', ast: 'assists', tpm: 'threes', stl: 'steals', blk: 'blocks', ppg: 'points', rpg: 'rebounds', apg: 'assists', spg: 'steals', bpg: 'blocks', tpmS: 'threes' }
+const WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+const poss = n => `${n}'${/s$/.test(n) ? '' : 's'}`
+// A record as a beat writer files it: the man, the number, what it's the most of, and whose mark it passed.
+//   an NBA record (past the real one, or past the record a man set in this league after breaking the real one):
+//     "Luka Doncic's 429 threes are the most in a season in NBA history, past Stephen Curry's 402 in 2015-16."
+//   the league's best since the save began (never said as "since": the seasons counted are the ones on the books):
+//     "Ausar Thompson's 3.1 steals a game are the most in a season in the last three years, past Cooper Flagg's 2.9 in 2026-27."
+//     "Victor Wembanyama's 12 blocks in a game are the most in the last four years, past Rudy Gobert's 10 in 2026-27."
+function recordText(F, book, k, b, was, from) {
+  const real = realRecord(book, k)
+  const num = recordValue(k, b.v), per = SEASON_K.includes(k)
+  const what = `${poss(b.n)} ${num} ${NOUN[k]}${per ? ' a game' : book === 'game' ? ' in a game' : ''}`
+  const are = `${what} ${per || num !== '1' ? 'are' : 'is'}`
+  // (a game mark already says "in a game")
+  const span = book === 'game' ? '' : ' in a season'
+  // (whose mark he passed: the old holder, his own said as his own; a mark set in this league by its season, the
+  // NBA's own by the year or season the book gives)
+  const old = (w, when) => `${w.i != null && w.i === b.i ? 'his own' : poss(w.n)} ${recordValue(k, w.v)} in ${when}`
+  if (real && b.v > real[0]) return `${are} the most${span} in NBA history, past ${was && was.v > real[0] ? old(was, seasonTxt(was.y)) : old({ n: real[1], v: real[0] }, real[2])}.`
+  if (!was) return null
+  const n = F.year - from + 1
+  return `${are} the most${span} in the last ${WORDS[n] ?? n} years, past ${old(was, seasonTxt(was.y))}.`
+}
 export function updateRecords(F) {
   const men = menOf(F), rec = (F.rec ??= { game: {}, season: {}, career: {} })
   const news = []
-  const beat = (book, k, v, i, n = men.get(i)?.n ?? '') => {
-    const was = book[k]
-    if (was && v <= was.v) return
-    book[k] = { v, i, n, y: F.year }
-    if (was && was.y < F.year && book !== rec.career) news.push({ k: 'record', i, text: `${n} set the league's mark since ${rec.from ?? F.year} for ${LABEL[k] ?? k}: ${v} (the old one: ${was.v}, ${was.n}).` })
-  }
-  rec.from ??= F.year
-  const W = Math.max(1, ...Object.values(F.ss ?? {}).map(r => r.gp ?? 0))
+  const from = (rec.from ??= F.year)
+  // the season's best in every mark first: when two men pass the old mark in one season, the book and the wire name
+  // the man who finished with it
+  const best = new Map()
+  const put = (B, book, k, v, i, n, s) => { if (!(v > 0)) return; const key = `${book}.${k}`, m = (best.get(B) ?? best.set(B, {}).get(B)); if (!m[key] || v > m[key].v) m[key] = { book, k, v, i, n, s } }
+  const mine = F.team
+  // (the GM's team's own book; a save from before it starts from its men's seasons on their career lines)
+  const fresh = !rec.fr || rec.fr.s !== mine
+  const fr = fresh ? (rec.fr = { s: mine, game: {}, season: {}, career: {} }) : rec.fr
+  const tg = Math.max(1, ...Object.values(F.ss ?? {}).map(r => r.gp ?? 0))
   for (const [id, r] of Object.entries(F.ss ?? {})) {
-    for (const [k, f] of Object.entries(GAME_K)) if (r[f]) beat(rec.game, k, r[f], +id)
-    if ((r.gp ?? 0) >= W * 0.7) { const s = perGame(r); for (const k of SEASON_K) beat(rec.season, k, s[k], +id) }
-    if (r.tpm) beat(rec.season, 'tpmS', r.tpm, +id)
+    const p = men.get(+id), n = p?.n ?? ''
+    if (!n) continue
+    // (his whole season with the GM's team: a man traded in or out has his best nights on one line, whoever he played them for)
+    const allHere = r.s === mine && !(Array.isArray(r.sp) && r.sp.length)
+    for (const [k, f] of Object.entries(GAME_K)) if (r[f]) { put(rec, 'game', k, r[f], +id, n, r.s); if (allHere) put(fr, 'game', k, r[f], +id, n, r.s) }
+    if ((r.gp ?? 0) >= tg * 0.7) { const s = perGame(r); for (const k of SEASON_K) { put(rec, 'season', k, s[k], +id, n, r.s); if (allHere) put(fr, 'season', k, s[k], +id, n, r.s) } }
+    if (r.tpm) { put(rec, 'season', 'tpmS', r.tpm, +id, n, r.s); if (allHere) put(fr, 'season', 'tpmS', r.tpm, +id, n, r.s) }
   }
-  // careers: what each man has done in this league (his rows since the save began, this season's included)
-  for (const p of [...men.values(), ...(F.retired ?? [])]) {
-    const rows = [...(p.car ?? [])]
+  // careers: every man's whole career, his real seasons before the save and his seasons here (this one included)
+  for (const p of men.values()) {
     const cur = F.ss?.[p.i]
-    if (cur && !rows.some(c => c.y === F.year)) rows.push(cur)
+    const t = careerTotals(p, cur && !(p.car ?? []).some(c => c.y === F.year) ? cur : null)
+    if (!t.gp) continue
+    // (a made-up veteran's earlier seasons aren't numbers anyone has: his career is what he's done here)
+    for (const k of CAREER_K) put(rec, 'career', k, t[k], p.i, p.n, null)
+  }
+  // (a retired man's whole career, where his row has it: an older save's book was kept on the save's seasons alone)
+  for (const r of F.retired ?? []) if (r.rc === 1 && Array.isArray(r.t)) ['gp', 'pts', 'reb', 'ast'].forEach((k, j) => put(rec, 'career', k, r.t[j], r.i, r.n, null))
+  // the franchise's careers: what each man has done for this team since the save began (his rows with it)
+  const hereRows = p => { const rows = (p.car ?? []).filter(c => c.s === mine && !c.y2), cur = F.ss?.[p.i]; if (cur?.gp && cur.s === mine && !(Array.isArray(cur.sp) && cur.sp.length) && !rows.some(c => c.y === F.year)) rows.push({ ...cur, y: F.year }); return rows }
+  for (const p of men.values()) {
+    const rows = hereRows(p)
     if (!rows.length) continue
-    for (const k of CAREER_K) { const v = rows.reduce((s, c) => s + (c[k] ?? 0), 0); if (v) beat(rec.career, k, v, p.i, p.n) }
+    for (const k of CAREER_K) put(fr, 'career', k, rows.reduce((a, c) => a + (c[k] ?? 0), 0), p.i, p.n, mine)
+    // (the first time: his earlier seasons with the team go in the season book too)
+    if (fresh) for (const c of rows) if (c.y < F.year && c.gp >= 57) {
+      const old = fr.season
+      for (const [k, f] of [['ppg', 'pts'], ['rpg', 'reb'], ['apg', 'ast'], ['spg', 'stl'], ['bpg', 'blk']]) { const v = Math.round((c[f] ?? 0) / c.gp * 10) / 10; if (v > (old[k]?.v ?? 0)) old[k] = { v, i: p.i, n: p.n, y: c.y, s: mine } }
+      if ((c.tpm ?? 0) > (old.tpmS?.v ?? 0)) old.tpmS = { v: c.tpm, i: p.i, n: p.n, y: c.y, s: mine }
+    }
+  }
+  for (const [B, m] of best) for (const b of Object.values(m)) {
+    const book = B[b.book], was = book[b.k]
+    if (was && b.v <= was.v) continue
+    book[b.k] = { v: b.v, i: b.i, n: b.n, y: F.year, ...(b.s && { s: b.s }) }
+    // the wire: the league's game and season marks (a career mark grows every night: the book shows it)
+    if (B !== rec || b.book === 'career') continue
+    if (was && was.y >= F.year) continue
+    // (a mark over the one season before it isn't a story: an NBA record always is, the league's own from its third season)
+    const real = realRecord(b.book, b.k)
+    if (!(real && b.v > real[0]) && F.year - from < 2) continue
+    const text = recordText(F, b.book, b.k, b, was, from)
+    if (text) news.push({ k: 'record', i: b.i, ...(b.s && { s: b.s }), text })
   }
   return news
 }
+// ── The Hall of Fame ─────────────────────────────────────────────────────────────
+// Who goes in, off a retired man's row (offseason.js retiredRow): an MVP, or a career that adds up to one: his points,
+// boards and assists (his real seasons counted), his All-NBA teams, All-Star Games, titles and trophies in this league.
+// A real man's honors before the save aren't in the league's data, so the men who had a Hall of Fame career before
+// 2026-27 go in on it (HALL_RESUME: the league MVPs, the Finals MVPs with a second title, the NBA's 75th Anniversary
+// Team's active members, and the multi-time champions and All-NBA regulars beside them).
+// The wait is the Hall's own: two full seasons retired, so a man whose last season was 2026-27 is in the class of 2030.
+export const HALL_RESUME = new Set(['LeBron James', 'Stephen Curry', 'Kevin Durant', 'James Harden', 'Russell Westbrook', 'Chris Paul', 'Kawhi Leonard', 'Giannis Antetokounmpo', 'Anthony Davis', 'Damian Lillard', 'Nikola Jokic', 'Joel Embiid', 'Shai Gilgeous-Alexander', 'Luka Doncic', 'Jayson Tatum', 'Kyrie Irving', 'Klay Thompson', 'Draymond Green', 'Paul George', 'Jimmy Butler III', 'Jimmy Butler', 'Rudy Gobert'])
+const HALL_PTS = { MVP: 8, FMVP: 5, DPOY: 4, ALL1: 3, ALL2: 2, ALL3: 1.5, ROY: 1, DEF1: 1, '6MOY': 0.5 }
+export function hallScore(r) {
+  const [, pts = 0, reb = 0, ast = 0] = r.t ?? []
+  let v = pts / 1000 + 0.6 * reb / 1000 + 0.9 * ast / 1000 + 1.5 * (r.as ?? 0) + 1.5 * (r.ch ?? 0)
+  for (const a of r.aw ?? []) v += HALL_PTS[String(a).slice(4)] ?? 0
+  return v
+}
+export const hallOfFamer = r => !!r && r.t != null && ((r.b == null && HALL_RESUME.has(r.n)) || (r.aw ?? []).some(a => String(a).slice(4) === 'MVP') || hallScore(r) >= 32)
+export const hallClass = r => (r.y != null ? r.y + 4 : null)
