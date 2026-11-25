@@ -27,8 +27,8 @@ const D = Object.fromEntries(['jersey', 'collar', 'neck', 'sleeve', 'cuff', 'han
 // came out as light as a light one). So the tone goes on flat (soccerSkin below: the sampled skin colour, the deeper
 // tones taken back down), and the art's own light and shade are laid back over it in soft-light (SHADE: the art in grey, levelled
 // per part so its middle grey leaves the tone as it is, its shadows darken it and its lights lift it). The face's
-// features (the art's eyes are lost in the shadow of his brow: he is looking down at the ball) are drawn on: brows,
-// downcast eyelids, the nose's underside and the mouth line, flat, in the skin's own darkest shade.
+// features (the art's eyes are lost in the shadow of his brow: he is looking down at the ball) are drawn on, small and
+// soft, at the render's own scale: lowered lids in the shadow under the brow, subtle brows, the nose's underside and the mouth.
 // Every layer is cut to the art's own outline (the mask), so the flat fills never spill past him.
 // html.low-power drops SVG filters (app-game.css): the filtered layers (.st-fx) are hidden there, the flat tone stays.
 const SHADE = {   // [slope, intercept] of the grey ramp, measured off the art in each part (its 10th to 90th percentile)
@@ -55,9 +55,15 @@ export function soccerSkin(hex) {
 }
 // the features' colour: the tone taken well down (a dark brown on light skin, near-black on dark skin)
 const featureOf = tone => { const c = hexRgb(tone); return rgbHex(c.map(v => v * 0.25)) }
-// the eye's white, in the skin's light (never a bright white in the shadow of his brow), and the iris
-const scleraOf = tone => { const c = hexRgb(tone); return rgbHex(c.map(v => v * 0.5 + 0.4 * 230)) }
+// the lash line and the iris, near-black brown
+const LASH = '#120c09'
 const IRIS = '#20140f'
+// the brows: hair, a little lighter than the hair itself and taken toward the skin so they sit in the face's light
+// (the curls' own colour for a player with tight-curled hair, the art's dark brown otherwise)
+const browOf = (tone, curl) => {
+  const s = hexRgb(tone), h = hexRgb(curl ? '#17110e' : '#1a1411')
+  return rgbHex(h.map((v, i) => v * 0.35 + s[i] * 0.3))
+}
 
 // Hair. The art's hair is a combed quiff, its comb lines drawn in. On a player with tight-curled hair (whose:
 // lib/soccerHair.js, from the players' photos) those lines look wrong, so his hair is drawn over the art's: solid,
@@ -86,32 +92,70 @@ const Group = ({ ids, fill, opacity }) => (
 const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }
 const ART = '/st-silhouette.webp'
 
-// the face's features, on the art's own face (art pixels). He looks down at the ball: the near eye is a lowered
-// lid over a sliver of the eye under the brow's shadow, the far eye a short one past the bridge of the nose
-const BROWS = [
-  'M685 223 Q703 211 736 229 Q735 232 731 233 Q705 218 687 226 Z',   // near brow (its head by the nose, thicker)
-  'M745 236 Q754 229 767 228 L767 231 Q757 231 748 238 Z',           // far brow
+// the face's features, on the art's own face (art pixels), kept to the scale and softness of the render: he looks
+// down at the ball, so each eye is a lowered lid, a thin dark lash line in a soft shadow under the brow, and the
+// far eye only a short one past the bridge of the nose (x 740). The brows are short, tapered and low-contrast, on
+// the brow ridge. The softness comes from gradients and low opacity (the brows' slight blur is the one filter, and
+// html.low-power only loses that blur).
+const SOCKETS = [[716, 239, 20, 8.5, 8], [753, 242, 8, 5, -12]]   // [cx, cy, rx, ry, rotate]: the shadow round each eye
+const LASHES = [
+  // [the lowered upper lid's lash line, as a tapered fill; its opacity]
+  ['M703 240.6 Q716 244.4 731 243.2 Q716 246.6 703.4 241.8 Z', 0.72],
+  ['M746.2 245.4 Q751 246.4 755.6 244.4 Q751 247.6 746.4 246.2 Z', 0.5],
 ]
-const EYES = [
-  // [the eye's opening (upper lid, then lower lid), the upper lid's line, the iris (cx, cy, r)]
-  ['M695 237 Q715 238 737 243 Q718 247.5 698 240 Z', 'M692 235 Q714 236 738 243', [718, 246.5, 5.2]],
-  ['M745 246 Q752 242 759 240 Q753 247 746 247 Z', 'M743 246 Q752 241 761 238', [752, 246, 3.6]],
+const IRISES = [[719.5, 245.6, 3.4, 1.1], [751.5, 246.9, 1.6, 0.7]]   // the sliver of iris under each lid
+const BROWS = [
+  // [d, opacity]: each brow twice, a wider soft one under a narrower core, so its edges fade into the skin.
+  // The near brow's head is by the nose (thicker), its tail thins out toward the temple
+  ['M692 232 Q712 220.6 738.8 227.6 Q740 232.6 737 234.6 Q714 228.2 692.6 233.2 Z', 0.22],
+  ['M695 231.4 Q713 223 737.8 228.8 Q738.8 232.4 736.4 233.6 Q714 227 695.4 232.4 Z', 0.34],
+  ['M722 227.4 Q731 226.6 737.4 229.2 Q738 232 736.2 232.8 Q730 230.4 722 229.6 Z', 0.22],   // the brow's fuller head
+  ['M743 236.6 Q752 229.8 763 230.4 L762.8 233.6 Q752 234.2 744 238 Z', 0.18],      // far brow
+  ['M744 236.2 Q752 231 762.4 231.2 L762.2 233 Q752 233.4 744.6 237.2 Z', 0.32],
 ]
 const LINES = [
   // [d, stroke width, opacity]
-  ['M714 277 Q724 283 734 279', 2.2, 0.55],          // under the nose
-  ['M697 289 Q712 293 727 290', 2.3, 0.7],           // mouth
+  ['M716 278.4 Q724 282.2 732 279.4', 1.6, 0.3],      // under the nose
+  ['M699 290 Q712 292.8 725 290.6', 1.7, 0.38],       // mouth
 ]
-// the sideburn between the ear and the temple (inside the face's path; the hair's path stops at the hairline)
-const SIDEBURN = 'M650 183 L701 176 L692 187 L682 201 L668 222 L662 212 L658 198 Z'
+// the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
+// path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
+// before turning back to the point of the sideburn
+const SIDEBURN = 'M650 183 L700.5 175.5 L699 183 L698 191 L696.6 197.6 L691.6 201.8 L684 204.4 L677.4 208.4 L672.4 213.4 L668.6 219 L667 222.6 L662 212 L658 198 Z'
 
 // the chest's plane, for the crest and the number: he is turned into the strike, his chest facing the right of the
 // picture, so his left breast (the right of the picture) is foreshortened and the shirt's horizontals there climb
-// toward his far side. Each is drawn flat at its spot and set into that plane (narrowed across, sheared up).
+// toward his far side (about 5 degrees, off the folds across his chest). Each is drawn flat at its spot and set into
+// that plane (narrowed across, sheared up), the crest at a real kit crest's size.
 const plane = (cx, cy, sx, skew, rot = 0) => `translate(${cx} ${cy}) rotate(${rot}) skewY(${skew}) scale(${sx} 1) translate(${-cx} ${-cy})`
-const CREST = { cx: 716, cy: 402, size: 46, tf: plane(716, 402, 0.74, -14, 4) }
+const CREST = { cx: 714, cy: 400, size: 36, tf: plane(714, 400, 0.8, -9, 4), shade: [2.0, 0.22] }
 const NUMBER = { cx: 662, y: 548, size: 118, tf: plane(662, 505, 0.9, -7, 4) }
-const SHORTS_CREST = { cx: 735, cy: 818, size: 32, tf: plane(735, 818, 0.86, 14) }
+// the crest on the front of the shorts, on the leg he strikes with (his left), low by the hem: the leg runs down to
+// the right, so the crest leans with it (its uprights about 17 degrees off), and its horizontals sit level, between the hem's
+// slight climb and the folds' fall. `shade`: the art's folds laid back over it ([slope, intercept] of the grey ramp, as SHADE)
+const SHORTS_CREST = { cx: 760, cy: 850, size: 24, tf: 'translate(760 850) rotate(-3) skewX(14) scale(0.9 1) translate(-760 -850)', shade: [2.2, 0.3] }
+
+// a crest (or flag) set into the cloth at `at`: drawn flat, put in the cloth's plane, and the art's own folds and
+// shading laid back over it in soft-light (that layer is .st-fx: html.low-power drops it with the filters)
+function Badge({ src, at, id, url, name }) {
+  const img = <image href={src} x={at.cx - at.size / 2} y={at.cy - at.size / 2} width={at.size} height={at.size} transform={at.tf} preserveAspectRatio="xMidYMid meet" />
+  const [m, b] = at.shade
+  return (
+    <>
+      <defs>
+        <mask id={id(`m-${name}`)} style={{ maskType: 'alpha' }}>{img}</mask>
+        <filter id={id(`f-${name}`)} colorInterpolationFilters="sRGB" x="0" y="0" width="1" height="1">
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer><feFuncR type="linear" slope={m} intercept={b} /><feFuncG type="linear" slope={m} intercept={b} /><feFuncB type="linear" slope={m} intercept={b} /></feComponentTransfer>
+        </filter>
+      </defs>
+      <g style={{ opacity: 0.94 }}>{img}</g>
+      <g className="st-fx" mask={url(`m-${name}`)} style={{ mixBlendMode: 'soft-light' }}>
+        <image href={ART} width={ST_FIG_W} height={ST_FIG_H} filter={url(`f-${name}`)} />
+      </g>
+    </>
+  )
+}
 
 // `box`: where the art is drawn in its wrap ({ left, top, width, height }, the same box the <img> gets), so both
 // layers sit on it exactly. They are placed, not wrapped or scaled: the colour layer has to stay in the picture's
@@ -195,15 +239,18 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           </g>
           {head && (
             <g clipPath={url('c-face')}>
-              <g fill={featureOf(face)}>{BROWS.map(d => <path key={d} d={d} />)}</g>
-              {EYES.map(([open, lid, [cx, cy, r]], i) => (
-                <g key={i}>
-                  <clipPath id={id(`eye${i}`)}><path d={open} /></clipPath>
-                  <path d={open} fill={scleraOf(face)} />
-                  <circle cx={cx} cy={cy} r={r} fill={IRIS} clipPath={url(`eye${i}`)} />
-                  <path d={lid} fill="none" stroke={featureOf(face)} strokeWidth={i ? 2.4 : 3} strokeLinecap="round" />
-                </g>
+              <radialGradient id={id('sock')}>
+                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0.42" />
+                <stop offset="0.6" stopColor={featureOf(face)} stopOpacity="0.18" />
+                <stop offset="1" stopColor={featureOf(face)} stopOpacity="0" />
+              </radialGradient>
+              {SOCKETS.map(([cx, cy, rx, ry, rot]) => (
+                <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${rot} ${cx} ${cy})`} fill={url('sock')} />
               ))}
+              {IRISES.map(([cx, cy, rx, ry]) => <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} fill={IRIS} opacity="0.4" />)}
+              {LASHES.map(([d, o]) => <path key={d} d={d} fill={LASH} opacity={o} />)}
+              <filter id={id('soft')} x="-0.1" y="-0.5" width="1.2" height="2"><feGaussianBlur stdDeviation="0.6" /></filter>
+              <g filter={url('soft')}>{BROWS.map(([d, o]) => <path key={d} d={d} fill={browOf(face, curl)} opacity={o} />)}</g>
               <g fill="none" stroke={featureOf(face)} strokeLinecap="round">{LINES.map(([d, w, o]) => <path key={d} d={d} strokeWidth={w} opacity={o} />)}</g>
               {/* the sideburn is hair: the art's own, or the curls below */}
               {!curl && <g clipPath={url('c-burn')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} /></g>}
@@ -233,8 +280,7 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           {/* the crest on his left breast and the number on the front, each set into the chest's plane (CREST, NUMBER) */}
           {shirt && (
             <g clipPath={url('c-jersey')} style={{ pointerEvents: 'none' }}>
-              <image href={`${dir}${shirt.team}.png`} x={CREST.cx - CREST.size / 2} y={CREST.cy - CREST.size / 2} width={CREST.size} height={CREST.size}
-                transform={CREST.tf} preserveAspectRatio="xMidYMid meet" style={{ opacity: 0.95 }} />
+              <Badge src={`${dir}${shirt.team}.png`} at={CREST} id={id} url={url} name="chest" />
               {shirt.number != null && (
                 <text x={NUMBER.cx} y={NUMBER.y} transform={NUMBER.tf} textAnchor="middle" fontFamily="'Bebas Neue', Impact, 'Arial Black', sans-serif" fontSize={NUMBER.size} letterSpacing="-1"
                   fill={numFill} stroke={lightHex(numFill) ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.3)'} strokeWidth="3" paintOrder="stroke"
@@ -242,11 +288,10 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               )}
             </g>
           )}
-          {/* the crest again on the shorts, on the leg he strikes with */}
+          {/* the crest again, on the front of the shorts (SHORTS_CREST) */}
           {legs && (
             <g clipPath={url('c-shorts')} style={{ pointerEvents: 'none' }}>
-              <image href={`${dir}${legs.team}.png`} x={SHORTS_CREST.cx - SHORTS_CREST.size / 2} y={SHORTS_CREST.cy - SHORTS_CREST.size / 2} width={SHORTS_CREST.size} height={SHORTS_CREST.size}
-                transform={SHORTS_CREST.tf} preserveAspectRatio="xMidYMid meet" style={{ opacity: 0.9 }} />
+              <Badge src={`${dir}${legs.team}.png`} at={SHORTS_CREST} id={id} url={url} name="shorts" />
             </g>
           )}
         </svg>
