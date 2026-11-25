@@ -275,3 +275,7 @@
 
 /* the strip among the Home / Shop promos: the promo list spaces it */
 .ag-promos .ps { margin: 0; }
+/* (the sale tag sits in the strip's top-right corner, owner 11-25) */
+.ps { position: relative; }
+.ps .ps-sale { position: absolute; top: 12px; right: 12px; z-index: 2; }
+@media (min-width: 700px) { .ps .ps-sale { top: 14px; right: 18px; } .ps:has(.ps-sale) .ps-head-side { margin-top: 34px; } }   /* (wide: the level and OPEN step down under it) */
