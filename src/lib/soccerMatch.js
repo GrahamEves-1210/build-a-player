@@ -205,14 +205,14 @@ export function matchStory(m, ctx) {
     events.push({ ...e, b: Math.max(0, beatAt(e.mm, e.x)), my, opp: op })
   }
   const themHome = !m.home && !m.neutral
-  for (const e of events) e.text = say(e, { N, usName, themName, rand, events, before, themHome })
+  for (const e of events) e.text = say(e, { N, usName, themName, rand, events, before, themHome, pens: !!m.shootout })
   const shootout = m.shootout ? shootoutOf(m.shootout, { rand, mates, foes, N, usName, themName }) : null
   const box = boxOf(m, ctx, rand, events)
   return { beats, events, len, st, shootout, box, cap: cap ? beatAt(cap) : null, on, off }
 }
 
 // what the broadcast says
-function say(e, { N, usName, themName, rand, themHome = false }) {
+function say(e, { N, usName, themName, rand, themHome = false, pens = false }) {
   // (a scoreline the broadcast way: the home side first)
   const line = themHome ? `${themName} ${e.opp}–${e.my} ${usName}` : `${usName} ${e.my}–${e.opp} ${themName}`
   const team = e.side === 'me' ? usName : themName
@@ -256,7 +256,7 @@ function say(e, { N, usName, themName, rand, themHome = false }) {
   if (e.kind === 'ht') return `Half time. ${line}.`
   if (e.kind === 'ft90') return `Ninety minutes up: ${line}. Extra time.`
   if (e.kind === 'etht') return `Half time in extra time: ${line}.`
-  if (e.kind === 'ft') return `Full time. ${line}.`
+  if (e.kind === 'ft') return pens ? `120 minutes up: ${line}. Penalties.` : `Full time. ${line}.`
   return ''
 }
 

@@ -206,10 +206,12 @@ export function MatchCentre({ item, ctx, play, speed, paused, onSpeed, onPause, 
             <div key={side} className="smd-pens-row">
               <span className="smd-pens-team">{crest(t.short, 18, '', side === 'opp' && !!m.oppExtra)}<b>{t.short}</b></span>
               <span className="smd-pens-kicks">
-                {story.shootout.kicks.filter(k => k.side === side).map((k, j) => {
-                  const taken = kicks.includes(k)
-                  return <i key={j} className={`smd-pk${taken ? (k.scored ? ' is-in' : ' is-out') : ''}${k.his ? ' is-his' : ''}`} title={taken ? k.text : ''} />
-                })}
+                {(() => {
+                  // (five a side to come, then one at a time in sudden death: never how many there'll be)
+                  const took = kicks.filter(k => k.side === side)
+                  const n = ft ? Math.max(took.length, 1) : Math.max(5, took.length + (took.length >= 5 ? 1 : 0))
+                  return Array.from({ length: n }, (_, j) => { const k = took[j]; return <i key={j} className={`smd-pk${k ? (k.scored ? ' is-in' : ' is-out') : ''}${k?.his ? ' is-his' : ''}`} title={k?.text ?? ''} /> })
+                })()}
               </span>
               <b className="smd-pens-n">{kicks.filter(k => k.side === side && k.scored).length}</b>
             </div>
