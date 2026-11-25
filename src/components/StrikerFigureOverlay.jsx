@@ -92,12 +92,13 @@ const ART = '/st-silhouette.webp'
 // the brow ridge. The softness comes from gradients and low opacity (the brows' slight blur is the one filter, and
 // html.low-power only loses that blur).
 const SOCKETS = [[715, 239.5, 26, 11, 8], [752, 242.5, 10, 6.5, -12]]   // [cx, cy, rx, ry, rotate]: the shadow round each eye
-const LASHES = [
-  // [each eye as a dark almond, the upper lid heavy and lowered over it (he looks down at the ball); its opacity]
-  ['M701.6 240.4 Q715 235.6 731.8 242 Q717 247.8 701.6 240.4 Z', 0.82],
-  ['M745.4 245 Q750.6 242.4 756.4 243.4 Q751 247.6 745.4 245 Z', 0.7],
+// each eye, as the owner's reference (a player looking down at the ball): an almond opening with a hint of white,
+// the dark iris half under a heavy lowered upper lid (its lash line the darkest stroke), a faint lower lid and a soft
+// crease above. [opening, iris [cx, cy, r], upper lid, lower lid, crease]
+const EYES = [
+  ['M702 241 Q716 233.6 732 241.6 Q717 249.4 702 241 Z', [718.2, 243.6, 4.7], 'M700.8 241.2 Q716 232.4 733.2 241.8', 'M705 244 Q717 249.2 729.4 243.6', 'M703.6 236.2 Q716 229.4 730.4 236.6'],
+  ['M745 245 Q750.8 241.6 757 243.2 Q751.4 247.8 745 245 Z', [750.6, 244.8, 2.1], 'M744.4 245.2 Q750.8 240.8 757.6 243', 'M746.4 246.2 Q751.4 248.4 755.8 244.6', 'M745 241.6 Q750.6 238.4 756.4 239.8'],
 ]
-const IRISES = [[719, 242.6, 3.6, 2.1], [751, 244.6, 1.7, 1.2]]   // the sliver of iris under each lid
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
 // before turning back to the point of the sideburn
@@ -229,8 +230,18 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               {SOCKETS.map(([cx, cy, rx, ry, rot]) => (
                 <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${rot} ${cx} ${cy})`} fill={url('sock')} />
               ))}
-              {IRISES.map(([cx, cy, rx, ry]) => <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} fill={IRIS} opacity="0.72" />)}
-              {LASHES.map(([d, o]) => <path key={d} d={d} fill={LASH} opacity={o} />)}
+              {EYES.map(([open, [ix, iy, ir], lid, low, crease], n) => (
+                <g key={n}>
+                  <clipPath id={id(`eye-${n}`)}><path d={open} /></clipPath>
+                  <path d={open} fill="#ece2d8" opacity={n ? 0.24 : 0.32} />
+                  <circle cx={ix} cy={iy} r={ir} fill={IRIS} opacity="0.92" clipPath={url(`eye-${n}`)} />
+                  <g fill="none" strokeLinecap="round">
+                    <path d={lid} stroke={LASH} strokeWidth={n ? 1.5 : 2.3} opacity="0.92" />
+                    <path d={low} stroke={featureOf(face)} strokeWidth={n ? 0.7 : 1} opacity="0.4" />
+                    <path d={crease} stroke={featureOf(face)} strokeWidth={n ? 0.8 : 1.1} opacity="0.28" />
+                  </g>
+                </g>
+              ))}
               {/* (only the eyes are drawn: no brows, nose or mouth lines, owner 11-25) */}
               {/* the sideburn is hair: the art's own, or the curls below */}
               {!curl && <g clipPath={url('c-burn')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} /></g>}
