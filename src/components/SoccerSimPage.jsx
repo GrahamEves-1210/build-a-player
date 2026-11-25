@@ -651,7 +651,10 @@ function ScreenMatchDay({ r, pool, onNext, onDone, userName, seen, director = nu
   useEffect(() => { setHeld(false); setOutcome(null) }, [k])
   useEffect(() => { if (drv.done) onDone?.() }, [drv.done]) // eslint-disable-line react-hooks/exhaustive-deps
   const mds = useMemo(() => (!isWc && r.leaguePhase ? uclMatchdays(r.leaguePhase, us) : []), [r.leaguePhase, us, isWc])
-  const shown = games.slice(0, k)
+  // the record counts a match from its full time (the table after it shows then too)
+  const [ftK, setFtK] = useState(-1)
+  const counted = Math.min(total, ftK === k ? k + 1 : k)
+  const shown = games.slice(0, counted)
   const W = shown.filter(g => resultOf(g) === 'W').length, D = shown.filter(g => resultOf(g) === 'D').length, L = shown.length - W - D
   const compLine = isWc ? `${wcName(r.season)} · Group ${r.conference}` : `Champions League ${r.season} · League phase`
   const tableAt = n => (isWc ? wcTableAt(r.groupGames, r.standings, n, director ? games.slice(0, n) : null, us) : uclTableAt(r.leaguePhase, mds, n, r.standings, director ? games.slice(0, n) : null, us))
@@ -720,13 +723,13 @@ function ScreenMatchDay({ r, pool, onNext, onDone, userName, seen, director = nu
       <div className="smd-top">
         <span className="smd-top-comp">{compLine}</span>
         <span className="smd-top-rec"><b>{W}</b>W <b>{D}</b>D <b>{L}</b>L · <b>{W * 3 + D}</b> PTS</span>
-        <span className="smd-top-dots" aria-hidden="true">{games.slice(0, total).map((g, i) => <i key={i} className={i < k ? `is-${resultOf(g).toLowerCase()}` : i === k ? 'is-now' : ''} />)}</span>
+        <span className="smd-top-dots" aria-hidden="true">{games.slice(0, total).map((g, i) => <i key={i} className={i < counted ? `is-${resultOf(g).toLowerCase()}` : i === k ? 'is-now' : ''} />)}</span>
       </div>
       {drv.moment && !inGame ? momentsLayer : (
         <MatchCentre key={`${k}-${director ? 'd' : 'r'}`} item={{ m, label, kicker: isWc ? wcName(r.season, true) : `Champions League · ${m.home ? 'Home' : 'Away'}`, before, cap: inGame ? momentMinute(drv.moment) : null }}
           ctx={ctxFor(m)} play={drv.moment ? 'live' : play} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)}
           onNext={() => drv.played()} nextLabel={k + 1 >= total ? (isWc ? 'The group table' : 'The final table') : 'Next match'}
-          after={after} onHeld={() => setHeld(true)} moment={inGame && held ? momentsLayer : (!drv.moment ? momentsLayer : null)} outcome={outcome}
+          after={after} onHeld={() => setHeld(true)} onFullTime={() => setFtK(k)} moment={inGame && held ? momentsLayer : (!drv.moment ? momentsLayer : null)} outcome={outcome}
           simAll={k + 1 < total ? <button type="button" className="smd-simall" onClick={drv.simOn}>{isWc ? 'Sim the rest of the group' : 'Sim the rest of the league phase'}</button> : null} />
       )}
     </div>

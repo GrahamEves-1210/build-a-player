@@ -104,7 +104,7 @@ function FeedRow({ e, beats, themHome = false }) {
 // item: { m (the engine's match), label ("MATCHDAY 3"), kicker (the competition line), before ([his, theirs] first leg),
 // final (the final: an occasion), tieLine (two legs: the aggregate line under the result) }
 // ctx: { userName, pool, us, them (team objects: short, name, color, color2, att, def), crest (short, size) => node, key }
-export function MatchCentre({ item, ctx, play, speed, paused, onSpeed, onPause, onNext, nextLabel = 'Next match', after = null, moment = null, outcome = null, onHeld = null, simAll = null, autoNext = true }) {
+export function MatchCentre({ item, ctx, play, speed, paused, onSpeed, onPause, onNext, nextLabel = 'Next match', after = null, moment = null, outcome = null, onHeld = null, simAll = null, autoNext = true, onFullTime = null }) {
   // (the match as it kicked off: a moment rewrites it part way, outcome.to, and the story carries on from there)
   const m0 = useRef(item.m).current
   const m = outcome?.to ?? m0
@@ -121,6 +121,9 @@ export function MatchCentre({ item, ctx, play, speed, paused, onSpeed, onPause, 
   }, [outcome?.to]) // eslint-disable-line react-hooks/exhaustive-deps
   const quick = play === 'quick'
   const [stage, setStage] = useState(quick ? 'ft' : 'pre')   // pre · live · ft
+  // (full time: the page counts the result in its record at the same moment the table takes it)
+  const ftRef = useRef(onFullTime); ftRef.current = onFullTime
+  useEffect(() => { if (stage === 'ft') ftRef.current?.() }, [stage])
   const [skip, setSkip] = useState(0)
   const [box, setBox] = useState(false)
   const shown = useRef(false)
@@ -148,7 +151,9 @@ export function MatchCentre({ item, ctx, play, speed, paused, onSpeed, onPause, 
   const homeMe = !!m.home && !m.neutral
   const [away, home] = homeMe ? [they, me] : [me, { ...they, neutral: !!m.neutral }]
   const pensLine = story.shootout ? `${story.shootout.my}–${story.shootout.opp} on penalties` : ''
-  const post = m.shootout ? `${m.shootout.won ? 'Won' : 'Lost'} ${pensLine}` : res === 'W' ? 'Won' : res === 'D' ? 'Drew' : 'Lost'
+  // the line under the score: FT and the score as the board reads it (left side first), extra time and penalties after
+  const post = m.shootout ? `FT · ${pensLine}` : m.et ? 'FT · after extra time' : 'FT'
+  const ftScore = homeMe ? `${m.oppSc}–${m.mySc}` : `${m.mySc}–${m.oppSc}`
   const live = stage === 'live' && !ft
   const statusTxt = inPens ? 'PENALTIES' : clock.phase === 'pre' ? 'KICK-OFF' : period === 1 ? '1ST HALF' : period === 2 ? '2ND HALF' : 'EXTRA TIME'
   const nP = story.len > 90 ? 4 : 2
@@ -197,7 +202,7 @@ export function MatchCentre({ item, ctx, play, speed, paused, onSpeed, onPause, 
         )}
         progress={inPens ? 1 : Math.max(0, i) / Math.max(1, story.beats.length - 1)}
         evt={live ? (inPens ? lastKick?.text ?? 'The shootout' : lastGoal ? `${story.beats[lastGoal.b]?.lbl} GOAL · ${lastGoal.his ? N : lastGoal.who ?? (lastGoal.side === 'me' ? us.name : them.name)}` : null) : null}
-        post={post} postWin={res === 'D' ? null : res === 'W'} postScore={`${m.mySc} – ${m.oppSc}${m.et && !m.shootout ? ' aet' : ''}`}
+        post={post} postWin={res === 'D' ? null : res === 'W'} postScore={ftScore}
       />
       {story.shootout && (inPens || ft) && (
         <div className="smd-pens" aria-label="Penalty shootout">
