@@ -252,9 +252,9 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               {/* the right side of his face in shadow (the light is on his left): a soft fall-off across the face, in a
                   dark of his own skin, no edge anywhere (owner 11-25) */}
               <linearGradient id={id('fshade')} x1="686" y1="0" x2="776" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="rotate(12 730 250)">
-                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0" />
-                <stop offset="0.55" stopColor={featureOf(face)} stopOpacity="0.36" />
-                <stop offset="1" stopColor={featureOf(face)} stopOpacity="0.62" />
+                <stop offset="0" stopColor={shadeOf(face, 0.3)} stopOpacity="0" />
+                <stop offset="0.55" stopColor={shadeOf(face, 0.3)} stopOpacity="0.36" />
+                <stop offset="1" stopColor={shadeOf(face, 0.3)} stopOpacity="0.62" />
               </linearGradient>
               <rect x="620" y="170" width="170" height="160" fill={url('fshade')} />
               {/* the eyes: small, narrow and soft, deep in the shadow under his brow (EYES) */}
