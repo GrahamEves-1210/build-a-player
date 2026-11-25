@@ -214,7 +214,7 @@ export const NBA_LORE = {
       SAS: 'Lakers and Spurs won nine of the 12 championships between 1999 and 2010.',
     },
     g: {
-      guard: [L('Magic Johnson', 'won five championships and three MVP awards', { n: 32, ret: true, rings: 5, dr: 'with the first pick in 1979' }), L('Kobe Bryant', 'won five championships and scored 81 points in a game', { n: 24, ret: true, rings: 5 }), L('Jerry West', 'was the Finals MVP in 1969 on the losing team', { n: 44, ret: true, rings: 1 })],
+      guard: [L('Magic Johnson', 'won five championships and three MVP awards', { n: 32, ret: true, rings: 5, dr: 'with the first pick in 1979' }), L('Kobe Bryant', 'won five championships and scored 81 points in a game', { n: 24, ret: true, rings: 5 }), L('Jerry West', 'made the All-Star team in all 14 of his seasons and is the figure on the league\'s logo', { n: 44, ret: true, rings: 1 })],
       wing: [L('Elgin Baylor', 'scored 61 points in a Finals game in 1962', { n: 22, ret: true }), L('James Worthy', 'was the MVP of the 1988 Finals', { n: 42, ret: true, rings: 3, dr: 'with the first pick in 1982' }), L('LeBron James', 'won the 2020 championship and became the league\'s all-time leading scorer in a Lakers uniform', { n: 23, rings: 1, on: 'has won a championship and become the league\'s all-time leading scorer here' })],
       big: [L('Kareem Abdul-Jabbar', 'won five championships and three MVP awards as a Laker', { n: 33, ret: true, rings: 5 }), L('Shaquille O\'Neal', 'was the Finals MVP three years in a row', { n: 34, ret: true, rings: 3 }), L('George Mikan', 'won five championships in Minneapolis', { n: 99, ret: true, rings: 5 }), L('Pau Gasol', 'won two championships here', { n: 16, ret: true, rings: 2 })],
     },

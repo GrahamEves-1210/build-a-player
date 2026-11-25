@@ -289,8 +289,9 @@ function besideQs(x) {
 function starQs(x) {
   const s = x.star
   if (!s || x.now.some(l => l.name === s.name)) return []
-  if (ONE_JOB.has(x.pos)) return x.ahead ? [Q(`job|${s.name}`, 'star', 2, `${s.name} is the ${x.sport === 'soccer' ? 'first-choice striker' : `starter at ${x.P[0]}`} here. Are you here to learn behind him or to take the job?`, [s.name], 'job')] : []
-  return [Q(`fit|${s.name}`, 'star', 2, `You are joining a ${ROOM_WORD[x.key] ?? 'lineup'} that already has ${s.name}. How do the two of you fit?`, [s.name], 'fit')]
+  // (one man starts at his spot: a quarterback, a left tackle, a point guard. The best man there is the job, not a partner)
+  if (s.rival ?? ONE_JOB.has(x.pos)) return x.ahead ? [Q(`job|${s.name}`, 'star', 2, `${s.name} is the ${x.sport === 'soccer' ? 'first-choice striker' : `starter at ${x.spotWord ?? (x.key === 'big' ? 'center' : x.P[0])}`} here. Are you here to learn behind him or to take the job?`, [s.name], 'job')] : []
+  return [Q(`fit|${s.name}`, 'star', 2, `You are joining ${/^[aeiou]/.test(ROOM_WORD[x.key] ?? 'lineup') ? 'an' : 'a'} ${ROOM_WORD[x.key] ?? 'lineup'} that already has ${s.name}. How do the two of you fit?`, [s.name], 'fit')]
 }
 function markQs(x, { faced = false } = {}) {
   const out = []
@@ -357,7 +358,7 @@ function pressCandidates(x, sit) {
     for (const l of x.past) {
       if (!major(l)) { if (!x.away(l)) out.push(Q(`recall|${l.name}`, 'veteran', 1, `${cap(fansOf(x))} still talk about ${l.name}, who ${l.did}. You have been here ${num(x.here)} seasons. How do you want to be remembered here?`, [l.name], 'remember')); continue }
       if (l.ret && l.n != null && x.us) out.push(Q(`own-number|${l.name}`, 'veteran', 3, `${x.sport === 'bucket' ? `${x.The} hung No. ${l.n} in the rafters for ${l.name}.` : `${x.The} retired No. ${l.n} for ${l.name}.`} You have played ${num(x.here)} seasons here. Do you think about your own number going up one day?`, [l.name], 'ownNumber'))
-      out.push(Q(`list|${l.name}`, 'veteran', 2, `When ${fansOf(x)} name the great ${P[1]}, they start with ${l.name}. You have been here ${num(x.here)} seasons. Where do you want your name on that list?`, [l.name], 'list'))
+      out.push(Q(`list|${l.name}`, 'veteran', 2, `When ${fansOf(x)} name the great ${P[1]}, ${l.name === x.lead ? `they start with ${l.name}` : `${l.name} is one of the first names they say`}. You have been here ${num(x.here)} seasons. Where do you want your name on that list?`, [l.name], 'list'))
     }
     return out
   }
@@ -433,13 +434,14 @@ function roomCandidates(x) {
   const who = ROOM_WHO[x.sport], out = [], add = (who2, q) => out.push({ ...q, who: who2 })
   const s = x.star
   // the man at his position there now
-  if (s && ONE_JOB.has(x.pos) && x.ahead) add(who.gm, Q(`room-star|${s.name}`, 'star', 3, x.sport === 'soccer' ? `${s.name} is our first-choice striker. A year behind him, learning: happy with that?` : `We have ${s.name} at ${x.P[0]}. A year ${x.sport === 'bucket' ? 'coming off the bench' : 'of sitting'} behind him: is that a problem?`, [s.name], 'star'))
-  if (s && !ONE_JOB.has(x.pos)) add(who.coach, Q(`room-beside|${s.name}`, 'star', 2, `You would line up ${ROOM_IN[x.key] ?? 'in'} the same ${ROOM_WORD[x.key] ?? 'lineup'} as ${s.name}. What does he get from having you next to him?`, [s.name], 'beside'))
+  const rival = s ? s.rival ?? ONE_JOB.has(x.pos) : false
+  if (s && rival && x.ahead) add(who.gm, Q(`room-star|${s.name}`, 'star', 3, x.sport === 'soccer' ? `${s.name} is our first-choice striker. A year behind him, learning: happy with that?` : `We have ${s.name} at ${x.spotWord ?? (x.key === 'big' ? 'center' : x.P[0])}. A year ${x.sport === 'bucket' ? 'coming off the bench' : 'of sitting'} behind him: is that a problem?`, [s.name], 'star'))
+  if (s && !rival) add(who.coach, Q(`room-beside|${s.name}`, 'star', 2, `You would line up ${ROOM_IN[x.key] ?? 'in'} the same ${ROOM_WORD[x.key] ?? 'lineup'} as ${s.name}. What does he get from having you next to him?`, [s.name], 'beside'))
   // last season, as it really went (football, a career's first draft)
   if (x.real?.w <= 6) add(who.coach, Q('room-bad', 'last', 3, `We went ${x.real.rec} last year. Why would you want to come here?`, [], 'bad'))
   if (x.real?.w >= 11) add(who.coach, Q('room-good', 'last', 2, `We went ${x.real.rec} last year. Where does a rookie fit on this team?`, [], 'good'))
   // the standard at his position (a first-round name is asked; a late pick is not)
-  if (x.top) for (const l of x.past.filter(major).slice(0, 2)) add(who.gm, Q(`room-legacy|${l.name}`, 'legacy', 3, `The standard ${x.us ? 'at your position' : 'for a striker'} here is ${l.name}. He ${l.did}. Why should we believe you belong in that conversation one day?`, [l.name], 'legacy'))
+  if (x.top) for (const l of x.past.filter(major).slice(0, 1)) add(who.gm, Q(`room-legacy|${l.name}`, 'legacy', 3, `The standard ${x.us ? 'at your position' : 'for a striker'} here is ${l.name}. He ${l.did}. Why should we believe you belong in that conversation one day?`, [l.name], 'legacy'))
   if (x.wait) add(who.owner, Q('room-wait', 'wait', 2, `${x.wait} Our ${x.W.fans} have waited a long time. What do you tell them?`, [], 'wait'))
   if (x.lore.mark) add(who.club ?? who.owner, Q('room-mark', 'mark', 2, `${x.lore.mark} What does this ${x.W.here} mean to you?`, [], 'mark'))
   const rv = Object.entries(x.lore.rivals ?? {})

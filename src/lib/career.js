@@ -2180,7 +2180,9 @@ function pressView(c, team = c.team) {
   const real = c.sport === 'nfl' && rookie ? lastSeason(team) : null
   return {
     sport: c.sport, team, name: t.name, nick: nickOf(S, team), pos: c.pos, spot: S.isBucket ? hoopSpot(c) : null, player: c.name, league: t.league ?? null,
-    year: yr(c.season), roster: names, active: activeNames(c), star: best && best.ovr >= 84 ? { name: best.name, ovr: best.ovr } : null, ahead: !dc.starter, starter: dc.starter,
+    // (the best man at his own spot: where one man starts there, a point guard, a left tackle, he is the job, not a partner)
+    year: yr(c.season), roster: names, active: activeNames(c), star: best && best.ovr >= 84 ? { name: best.name, ovr: best.ovr, rival: dc.starters === 1 } : null, ahead: !dc.starter, starter: dc.starter,
+    spotWord: S.isBucket ? { PG: 'point guard', SG: 'shooting guard', SF: 'small forward', PF: 'power forward', C: 'center' }[hoopSpot(c)] : c.pos === 'ol' ? { LT: 'left tackle', LG: 'left guard', C: 'center', RG: 'right guard', RT: 'right tackle' }[olSpot(c)] ?? null : null,
     ovr: c.ovr, rep: c.rep ?? 5, here: here.length, proYears: (c.seasons ?? []).length, first: !here.length, how, top,
     titlesHere: here.filter(s => s.champion).map(s => yr(s.season)), alsoWon,
     lastHere: lastHere ? { wins: lastHere.wins, losses: lastHere.losses, champion: !!lastHere.champion } : null,

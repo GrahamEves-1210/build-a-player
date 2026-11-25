@@ -79,7 +79,7 @@ function viewOf(sport, t, pos, spot, { empty = false, sit = 'arrive' } = {}) {
   const room = empty ? [] : (C.makeRoster(t.short, sport, 0)?.[pos] ?? []).slice().sort((a, b) => b.ovr - a.ovr)
   return {
     sport, team: t.short, name: S.teamOf(t.short).name, nick: nickOf(S, t.short), pos, spot, player: 'Cole Norwood', league: S.teamOf(t.short).league ?? null,
-    year, roster: names, active: empty ? [] : ACTIVE[sport], star: room[0] && room[0].ovr >= 84 ? { name: room[0].name, ovr: room[0].ovr } : null, ahead: true, starter: false,
+    year, roster: names, active: empty ? [] : ACTIVE[sport], star: room[0] && room[0].ovr >= 84 ? { name: room[0].name, ovr: room[0].ovr, rival: sport !== 'nfl' || ['qb', 'rb', 'te', 'k', 'ol'].includes(pos) } : null, ahead: true, starter: false,
     ovr: 90, rep: 8, here: sit === 'arrive' || sit === 'drafted' ? 0 : 8, proYears: sit === 'drafted' ? 0 : 5, first: sit === 'arrive' || sit === 'drafted', how: sit === 'drafted' ? 'draft' : 'trade', top: true,
     titlesHere: sit === 'champion' || sit === 'passed' ? [year - 1] : [], alsoWon: [], lastHere: sit === 'champion' || sit === 'passed' ? { wins: 13, losses: 4, champion: true } : null,
     real: sport === 'nfl' ? { w: 4, l: 13, rec: '4-13' } : null, chase,
