@@ -8131,3 +8131,13 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 .ag-home :is(.ps, .ps-tile, .pro-card, .ag-potd, .ag-potd-row, .ag-mc-shot, .pp-claim, .pp-banner) { border-radius: 10px !important; }
 .pp-wrap { padding-bottom: 22px; }   /* (more room under the partner offer before the footer, owner 11-25) */
 @media (max-width: 1023px) { .ag-home .ag-sport { height: 64px !important; } }   /* (the sport bar a little taller on a phone, owner 11-25) */
+/* Phone Home (owner 11-25): the BAP mark up in the header, centred on the screen, and the BUILD-A-PLAYER wordmark a
+   size larger on its own line under it */
+@media (max-width: 520px) {
+  .ag-home .ag-home-inner { position: relative; }
+  .ag-home .ag-hud > :first-child { flex: 0 1 auto; width: auto; max-width: 38%; }
+  .ag-home .ag-brand .ag-brand-mark { position: absolute; top: 12px; left: 50%; transform: translateX(-50%) !important; height: 36px !important; width: auto; z-index: 3; }
+  .ag-home .ag-brand { position: static !important; justify-content: center; padding: 0 12px; }
+  .ag-home .ag-hud .coin-pill, .ag-home .ag-hud .ag-hud-coins { margin-left: auto; }
+  .ag-home .ag-wordmark { font-size: 36px !important; }
+}
