@@ -7,7 +7,7 @@
 .fsu {
   height: 100dvh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: var(--fk-ink); color: var(--fk-text);
-  padding: 0 16px calc(28px + var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px));
+  padding: 0 var(--fk-gut, 16px) calc(28px + var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px));
   font-family: var(--fk-f);
 }
 /* the face creator holds his face under the top bar while its choices scroll (FacePick, face.css) */
@@ -42,7 +42,7 @@
 .fsu-body { max-width: 600px; margin: 0 auto; padding-top: 14px; animation: fsu-in .26s cubic-bezier(.2,.9,.25,1) both; }
 .fsu-body > div { display: flex; flex-direction: column; gap: 12px; }
 @keyframes fsu-in { from { opacity: 0; transform: translateY(8px); } }
-.fsu-acts { position: sticky; bottom: 0; z-index: 4; display: grid; gap: 8px; margin: 6px -16px 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ag-rule) left top / 100% 1px no-repeat, var(--fk-ink); }
+.fsu-acts { position: sticky; bottom: 0; z-index: 4; display: grid; gap: 8px; margin: 6px calc(var(--fk-gut, 16px) * -1) 0; padding: 10px var(--fk-gut, 16px) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--fk-ag-rule) left top / 100% 1px no-repeat, var(--fk-ink); }
 .fsu-lbl { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; font-size: 15px; letter-spacing: 0.6px; color: var(--fk-mute); }
 .fsu-lbl small { font-size: 14px; letter-spacing: 0.6px; color: var(--fk-dim); }
 

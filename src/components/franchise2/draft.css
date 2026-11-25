@@ -2,10 +2,10 @@
 
 /* ── The scouting room: a full sheet over the hub ─────────────────────────── */
 .dr-room { position: fixed; inset: 0; z-index: 1200; padding-bottom: var(--web-rail, 0px); display: flex; flex-direction: column; background: var(--fk-ink); color: var(--fk-text); }
-.dr-head { position: relative; flex: none; display: grid; padding: max(12px, env(safe-area-inset-top)) 16px 8px; background: var(--fk-ink); }
+.dr-head { position: relative; flex: none; display: grid; padding: max(12px, env(safe-area-inset-top)) var(--fk-gut, 16px) 8px; background: var(--fk-ink); }
 .dr-head > .fk-chy { width: 100%; max-width: 720px; justify-self: center; }
 .dr-close { position: absolute; right: 12px; top: max(12px, env(safe-area-inset-top)); width: 40px; height: 40px; border: 0; background: var(--fk-g3); color: #fff; font-size: 16px; cursor: pointer; }
-.dr-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(40px + env(safe-area-inset-bottom)); display: grid; align-content: start; gap: 12px; }
+.dr-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px var(--fk-gut, 16px) calc(40px + env(safe-area-inset-bottom)); display: grid; align-content: start; gap: 12px; }
 .dr-body > *, .dr-day > * { max-width: 720px; width: 100%; justify-self: center; }
 
 /* the budget, big */
@@ -23,7 +23,7 @@
 .dr-tabs button i { position: absolute; top: 3px; right: 4px; font-style: normal; font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: inherit; opacity: .7; }
 .dr-tabs.is-small button { height: 32px; font-size: 14px; }
 
-.dr-filters { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.dr-filters { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(var(--fk-gut, 16px) * -1); padding: 0 var(--fk-gut, 16px); }
 .dr-filters::-webkit-scrollbar { display: none; }
 .dr-filters button { flex: none; height: 30px; padding: 0 11px; border: 0; background: var(--fk-g2); color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 15px; letter-spacing: .2px; cursor: pointer; }
 .dr-filters button.is-on { background: var(--tc, #fff); color: var(--tct, #0b0c0e); }
