@@ -927,7 +927,8 @@ export function goalMood(sit) {
   return after >= 3 ? 'calm' : null
 }
 // seed: anything (the same goal always gets the same one). o: { from {x, z}, side (+1: he peels off to the screen's
-// right), athletic (a backflip's allowed), mates [{x, z, who}], toward {x, z} (where he runs, else off to the side), kind }
+// right), athletic (a backflip's allowed), mates [{x, z, who}], toward {x, z} (where he runs, else off to the side), kind,
+// back (how far back up the pitch he can jog with no celebration, when the camera's close behind him: 3.4 m) }
 export function celebration(seed, o = {}) {
   let h = 0; for (const ch of String(seed)) h = (h * 33 + ch.charCodeAt(0)) % 1000003
   const mood = o.mood ?? goalMood(o.sit)
@@ -937,7 +938,7 @@ export function celebration(seed, o = {}) {
   const side = o.side ?? (h % 2 ? 1 : -1), from = o.from ?? { x: 0, z: -10 }
   const dist = kind === 'bench' ? 9 : kind === 'plane' ? 7.5 : 6
   // (no celebration: back up the pitch, toward halfway, whatever the game asked for)
-  const to = kind === 'restart' ? { x: from.x * 0.8, z: from.z - 3.4 } : o.toward ?? { x: from.x + side * dist * 0.78, z: from.z - dist * 0.45 }
+  const to = kind === 'restart' ? { x: from.x * 0.8, z: from.z - (o.back ?? 3.4) } : o.toward ?? { x: from.x + side * dist * 0.78, z: from.z - dist * 0.45 }
   const roles = ['back', 'ruffle', 'point']
   const mates = (o.mates ?? []).map((m, i) => ({ ...m, role: kind === 'restart' ? 'jog' : roles[(i + (h >> 3)) % 3], delay: 260 + i * 190 }))
   return { kind, mood, side, from, to, mates, seed: h, keeper: h % 3 === 0 ? 'sit' : 'down', run: kind === 'restart' ? 2300 : kind === 'bench' ? 1900 : kind === 'plane' ? 1500 : 950 }
