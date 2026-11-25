@@ -87,6 +87,38 @@ for (let y = 0; y < 8; y++) {
   ok(fd.length === 4 && new Set(fd.map(x => x.name)).size === 4 && fd.filter(x => x.me).length === 1, 'dunk field: 4, unique, him once', fd.map(x => x.name).join(', '))
   if (y < 2) console.log(`  ${c.season} 3PT: ${f3.map(x => (x.me ? 'HIM' : `${x.name} (${x.js})`)).join(', ')}\n  ${c.season} DUNK: ${fd.map(x => (x.me ? 'HIM' : `${x.name} (B${x.bounce} F${x.fin})`)).join(', ')}`)
 }
+// the dunk field (owner, 11-25: less obvious names, the way the real one fills up): men in the league that season, on
+// the team the data (or a trade) has them on, never retired or past their years; a new field every season; the league's
+// top players only now and then
+{
+  const { BIRTH_NBA } = await server.ssrLoadModule('/src/data/player-ages.js')
+  const data = new Map([...S.pool.guard, ...S.pool.big].filter(p => p.attrs).map(p => [p.name, p]))
+  const fields = new Set(), seen = new Map()
+  let slots = 0, stars = 0
+  const ovrs = new Map([...S.pool.guard.map(p => [p.name, S.realOvr('guard', p)]), ...S.pool.big.map(p => [p.name, S.realOvr('big', p)])].reverse())
+  for (let y = 0; y < 12; y++) {
+    const c = { ...c0, year: y, season: 2026 + y }
+    const fd = A.dunkField(c).filter(x => !x.me)
+    fields.add(fd.map(x => x.name).sort().join('|'))
+    for (const x of fd) {
+      const p = data.get(x.name)
+      ok(!!p, 'dunk field: a real man in the data', x.name)
+      ok(x.team === (c.dealt?.[x.name] ?? p?.team), 'dunk field: on the team he is on', x.name, x.team, p?.team)
+      ok(!(c.gone ?? []).includes(x.name), 'dunk field: never a retired man', x.name)
+      ok(!BIRTH_NBA[x.name] || c.season - BIRTH_NBA[x.name] <= 33, 'dunk field: never a man past his years', x.name, c.season)
+    }
+  }
+  ok(fields.size >= 10, 'dunk field: a new field most seasons', fields.size, 'of 12')
+  // a man retired out of the league never comes back for it
+  const gone0 = A.dunkField({ ...c0, year: 0, season: 2026 }).find(x => !x.me).name
+  for (let y = 0; y < 12; y++) ok(!A.dunkField({ ...c0, year: y, season: 2026 + y, gone: [...(c0.gone ?? []), gone0] }).some(x => x.name === gone0), 'dunk field: a retired man stays out', gone0)
+  for (let i = 0; i < 1500; i++) for (const x of A.dunkField({ ...c0, seed: `fd-${i}`, year: i % 6, season: 2026 + (i % 6) })) if (!x.me) { slots++; seen.set(x.name, (seen.get(x.name) ?? 0) + 1); if ((ovrs.get(x.name) ?? 0) >= 87) stars++ }
+  const top = [...seen].sort((a, b) => b[1] - a[1])
+  console.log(`  dunk fields: ${fields.size} different in 12 seasons; ${top.length} men over 1500 nights, ${(stars / slots * 100).toFixed(1)}% of spots to an overall of 87+; most often: ${top.slice(0, 8).map(([k, v]) => `${k} ${(v / slots * 100).toFixed(0)}%`).join(', ')}`)
+  ok(stars / slots <= 0.12, 'dunk field: the league\'s top players only now and then', stars / slots)
+  ok(stars > 0, 'dunk field: a star now and then', stars)
+  ok(top[0][1] / slots <= 0.12, 'dunk field: no one man in most of them', top[0])
+}
 
 // ── 3. the 3-Point Contest: rivals' scores, rounds, a full night with his rounds simulated ──
 console.log('── 3-Point Contest')

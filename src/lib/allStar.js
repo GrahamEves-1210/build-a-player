@@ -8,8 +8,9 @@
 // (allStarSkip, the checks' path; the screen never leaves one open); bookSeason keeps the results (allStarSeason).
 // A title is a legacy point (ASW_LEGACY: the owner, 2026-11-24), counted off the booked season (lib/career.js aswLegacy).
 import { seeded } from './rng.js'
-import { NBA_GUARD_PLAYERS } from '../data/nba-guards.js'
-import { NBA_BIG_PLAYERS } from '../data/nba-bigs.js'
+import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards.js'
+import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs.js'
+import { calcBucketOVR } from '../utils/bucketSimulation.js'
 import { BIRTH_NBA } from '../data/player-ages.js'
 import { DUNKS, JUDGE_RANGE } from './mg/dunkcontest.js'
 import { aswOpen, ASW_LEGACY } from './allStarBreak.js'
@@ -42,6 +43,17 @@ const pool = () => {
   return (POOL = [...seen.values()])
 }
 const ageIn = (name, season) => (BIRTH_NBA[name] ? season - BIRTH_NBA[name] : 27)
+// his overall, as the league's ratings have it (career.js realOvr: the data's own, or worked out from his grades)
+const OVR = new Map()
+const ovrOf = p => {
+  if (!OVR.has(p.name)) {
+    const big = NBA_BIG_PLAYERS.includes(p) && !NBA_GUARD_PLAYERS.some(g => g.name === p.name), types = big ? BIG_TYPES : GUARD_TYPES
+    let o = p.ovr
+    if (o == null) { try { o = calcBucketOVR(Object.fromEntries(types.map(t => [t, { val: p.attrs?.[t] ?? 5 }])), types, big ? 'big' : 'guard') } catch { o = 80 } }
+    OVR.set(p.name, Math.round(o ?? 80))
+  }
+  return OVR.get(p.name)
+}
 const teamOf = (c, p) => c.dealt?.[p.name] ?? p.team
 const mates = c => new Set([...(c.roster?.guard ?? []), ...(c.roster?.big ?? [])].map(p => p.name))
 // a seeded draw without replacement, weighted
@@ -76,17 +88,33 @@ export function threeField(c) {
   rows.splice(at, 0, meRow(c, { js: gradeVal(c, 'jumpShot') }))
   return rows
 }
-// The Dunk Contest's: young high-flyers, Bounce first (the real field is athletes, rarely the stars)
+// The Dunk Contest's: the way the real one fills up, young high-flyers, role players and dunk specialists (a Derrick
+// Jones Jr., an Obi Toppin, a Matas Buzelis), now and then a star. Bounce first, then Finishing; the younger the more
+// likely; the league's top players rarely (an overall in the high 80s or more counts against him, hard). Only men in
+// the league that season: never one retired (c.gone) or past his years (under 34), on the team he's on (traded: his
+// new one; a man who has left the player's own team isn't on it). Drawn fresh every season.
+const DUNK_AGE = [[24, 1.5], [27, 1.1], [30, 0.8], [33, 0.25]]
+const DUNK_STAR = [[90, 0.05], [87, 0.15], [84, 0.45], [81, 0.85], [0, 1.15]]
+export const dunkWeight = (p, age) => {
+  const hops = Math.min(4.5, Math.max(0.35, p.attrs.bounce * 1.5 + p.attrs.finishing - 19))
+  const young = DUNK_AGE.find(([a]) => age <= a)?.[1] ?? 0
+  const o = ovrOf(p), star = DUNK_STAR.find(([v]) => o >= v)?.[1] ?? 1
+  return hops ** 1.3 * young * star
+}
 export function dunkField(c) {
   const r = seeded(`${c.seed}-aswd-field-${c.year}`)
   const M = mates(c), gone = new Set(c.gone ?? [])
-  let cands = []
-  for (const age of [25, 28, 34, 99]) {
-    cands = pool().filter(p => p.attrs.bounce + p.attrs.finishing >= 14 && p.attrs.bounce >= 7 && !gone.has(p.name) && p.name !== c.name && ageIn(p.name, c.season) <= age)
-    if (cands.length >= 8) break
-  }
-  const w = p => Math.max(0.2, p.attrs.bounce * 1.5 + p.attrs.finishing - 19) ** 2
-  const picks = draw(cands, DUNK_FIELD - 1, w, r, oneMate(c, M))
+  const mine = c.roster ? c.team : null
+  const season = c.season ?? 2026
+  const cands = pool().filter(p => {
+    const { bounce: b, finishing: f } = p.attrs
+    if (!(b >= 8 || (b >= 7 && f >= 8)) || b + f < 13) return false
+    if (gone.has(p.name) || p.name === c.name || ageIn(p.name, season) > 33) return false
+    // (his own team's man only while he's still on its roster)
+    if (mine && teamOf(c, p) === mine && !M.has(p.name)) return false
+    return true
+  })
+  const picks = draw(cands, DUNK_FIELD - 1, p => dunkWeight(p, ageIn(p.name, season)), r, oneMate(c, M))
   const rows = picks.map(p => ({ name: p.name, team: teamOf(c, p), v: (p.attrs.bounce + p.attrs.finishing) / 2, bounce: p.attrs.bounce, fin: p.attrs.finishing, me: false }))
   const at = Math.floor(r() * DUNK_FIELD)
   rows.splice(at, 0, meRow(c, { v: dunkV(c), bounce: gradeVal(c, 'bounce'), fin: gradeVal(c, 'finishing') }))
