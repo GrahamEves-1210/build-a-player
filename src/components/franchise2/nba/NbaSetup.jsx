@@ -7,10 +7,9 @@ import { IconClose, IconCaret } from '../../app/icons'
 import { GamesSwitch } from '../../simFlow'
 import { Chyron, KLogo, fkVars, TeamSlab, BigNum, Fact, LowerThird, Go } from '../kit'
 import { PaceStep } from '../Setup'
-import { CoachSpin, StylePick, CoachWho } from '../CoachBuild'
+import { CoachSpin, StylePick, CoachWho, CoachReveal } from '../CoachBuild'
 import { NBA_COACH, nbaCoachPhoto } from './nbaCoachLg'
 import { NbaBuildsStep, NbaNameStep } from './NbaBuilds'
-import NbaHire from './NbaHire'
 import '../setup.css'
 
 // BASKETBALL FRANCHISE, the setup: football's five steps (Setup.jsx), in the NBA's terms.
@@ -20,7 +19,8 @@ import '../setup.css'
 //   2 PLAYERS     up to five of the GM's own builds, one at each spot (PG..C), each replacing the starter there, built
 //                 on the build page (PG/SG/SF the guard builder, PF/C the big builder) and named here
 //   3 THE COACH   spun from the league's real head coaches (CoachBuild.jsx with nbaCoachLg.js), a style, a name, a face
-//   4 THE HIRE    the coach card and his staff: keep the men in the jobs or interview and hire others (NbaHire.jsx)
+//   4 THE HIRE    the coach card, the league rules, tip-off (his staff is the team's own: staff changes are an
+//                 offseason job, NbaStaff.jsx)
 // The setup is saved in its slot after every change (NbaFranchise putSetup).
 const STEPS = [['pace', 'MODE'], ['team', 'TEAM'], ['builds', 'PLAYERS'], ['coach', 'COACH'], ['hire', 'HIRE']]
 const GROUP = { pace: 'pace', team: 'team', card: 'team', builds: 'builds', coach: 'coach', style: 'coach', who: 'coach', hire: 'hire' }
@@ -59,8 +59,6 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }
   }, [step, S.team]) // eslint-disable-line react-hooks/exhaustive-deps
   const back = () => {
     if (naming) return go({ naming: null }, 'back')
-    if (step === 'hire' && S.hsel != null) return go({ hsel: null }, 'back')
-    if (step === 'hire' && S.hk) return go({ hk: null, hsel: null, hlast: S.hk }, 'back')
     if (firstStep(S)) return onBack()
     go({ step: BACK[step] }, 'back')
   }
@@ -77,7 +75,7 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }
           {STEPS.map(([k, label], i) => <li key={k} className={i < at ? 'is-done' : i === at ? 'is-on' : ''}><b>{i + 1}</b>{label}</li>)}
         </ol>
       </div>
-      <div className="fsu-body" key={naming ? `n-${naming}` : `${step}${S.hk ?? ''}${S.hsel ?? ''}`}>
+      <div className="fsu-body" key={naming ? `n-${naming}` : step}>
         {naming ? <NbaNameStep S={S} id={naming} owner={owner} onDone={x => go({ naming: null, builds: { ...S.builds, [naming]: { ...S.builds[naming], ...x } } }, 'claim')} />
           : step === 'pace' ? <PaceStep pick={S.pace} paces={NBA_PACES} onPick={p => { go({ pace: p, step: 'team' }, 'tap'); haptic('light') }} rules={rulesIn(S)} capWhat={CAP_WHAT} onRules={r => go({ rules: { ...rulesIn(S), ...r } }, 'tap')} extra={games} />
             : step === 'team' ? <TeamWall pick={S.team} onPick={t => go({ team: t, step: 'card' }, 'tap')} />
@@ -86,7 +84,7 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }
                   : step === 'coach' ? (S.cb?.team === S.team ? <CoachSpin S={S} go={go} lg={NBA_COACH} onDone={() => go({ step: 'style' }, 'whistle')} /> : null)
                     : step === 'style' ? <StylePick S={S} go={go} lg={NBA_COACH} onDone={() => go({ step: 'who' }, 'tap')} />
                       : step === 'who' ? <CoachWho S={S} go={go} owner={owner} lg={NBA_COACH} onDone={() => go({ step: 'hire' }, 'whistle')} />
-                        : step === 'hire' && S.cb && NC.linesDone(S.cb) ? <NbaHire S={S} go={go} owner={owner} onStart={onStart} rules={rulesIn(S)} onRules={r => go({ rules: { ...rulesIn(S), ...r } })} games={games} /> : null}
+                        : step === 'hire' && S.cb && NC.linesDone(S.cb) ? <CoachReveal S={S} owner={owner} onStart={onStart} onRules={r => go({ rules: { ...rulesIn(S), ...r } })} lg={NBA_COACH} capWhat={CAP_WHAT} extra={games} cta="Tip off" /> : null}
       </div>
     </div>
   )

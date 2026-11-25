@@ -1,6 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createNbaFranchise, loadNba, saveNba, saveNbaSetup, clearNba, rawNbaSlot, nbaSlotSummary, NBA_KEY, TEAM, recText, records, seasonText, NC } from '../../../lib/franchise2/nba'
-import { hiresOf } from './NbaHire'
 import { NBA_FRANCHISE_CARD_KEY, NBA_FRANCHISE_ART, NBA_FRANCHISE_TURN } from '../../../lib/franchiseLive'
 import { getUsername } from '../../../lib/discord'
 import { sfx, haptic } from '../../../lib/juice'
@@ -103,9 +102,9 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   const start = () => {
     const S = setup
     const builds = (S.picks ?? []).map(p => S.builds?.[p.id] && { ...S.builds[p.id], ...(p.spot && { spot: p.spot }) }).filter(B => B?.name)
-    // (the coach from the COACH step, his staff from the HIRE step: coach.js; the pick from the MODE step: F.pace)
+    // (the coach from the COACH step: coach.js, his staff the team's own; the pick from the MODE step: F.pace)
     const coach = S.cb && NC.linesDone(S.cb) ? NC.finishCoach(S.cb, { name: `${S.coach?.first ?? ''} ${S.coach?.last ?? ''}`.trim() || owner, face: S.coach?.face ?? null, style: S.coach?.style ?? null }) : null
-    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds, pace: S.pace ?? 'full', ...(coach && { coach, staff: hiresOf(S) }) })
+    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds, pace: S.pace ?? 'full', ...(coach && { coach }) })
     if (saveNba(X)) leaveNote(X); else { bad.current = true; setSaveBad(true) }
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')

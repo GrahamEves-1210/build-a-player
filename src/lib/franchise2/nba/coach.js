@@ -6,7 +6,7 @@
 // THE STAFFS (F.staff[short] = { hc, oc, dc, pd, rec: [[w, l, playoffs]] })
 //   Year one is the real league's head coaches (src/data/nba-coaches.js). The assistants are made-up men (the league's
 //   real assistants change every summer and aren't tracked anywhere reliable), the same for every new franchise
-//   (seeded by the team, not the save), so the setup's HIRE step shows the men the save will have.
+//   (seeded by the team, not the save). The setup keeps the team's staff; hiring is an offseason job (NbaStaff.jsx).
 //   The GM's team: his built coach is F.coach (finishCoach) and the staff's hc is { mine: 1 }; the real head coach he
 //   took over from is out of work (F.cpool). A save from before coaches existed keeps its team's real head coach.
 //   A coach: { i, n, ag, r: [dev, off, def, cul, late] (0-11; cul was rot, ROTATIONS, before 2026-11-25: the same place), st (the season he took this job), cv (his résumé while
@@ -275,7 +275,7 @@ export function finishCoach(cb, { name, face, style }) {
   return { name, face, style, r, from }
 }
 
-// ── Hiring the staff: the setup's HIRE step and the offseason ────────────────
+// ── Hiring the staff: the offseason (setupCandidates: an engine check's, no longer the setup's) ──
 // Each opening: the man in the job now (a known quantity), and candidates from around the game (assistants on other
 // benches, G League and overseas head coaches). A candidate's grades show once he's interviewed: IV_N a job.
 export const IV_N = 3
