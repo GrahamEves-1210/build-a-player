@@ -44,6 +44,7 @@ import KFigureOverlay from './KFigureOverlay'
 import { useFigureFace, usesDrawnHead } from '../lib/useFigureFace'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
+import StrikerFigureOverlay, { ST_FIG_W, ST_FIG_H } from './StrikerFigureOverlay'
 import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
@@ -263,7 +264,7 @@ function useFigureBounds(ref, figW, figH) {
   return bounds
 }
 
-function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, attrMap = ATTR, logoDir = '/logos/' }) {
+function CZCard({ zone, cardY, cardStyle = null, build, activeDrag, hidden, invisible, isMobile, attrMap = ATTR, logoDir = '/logos/' }) {
   const meta  = attrMap[zone.type]
   const data  = build[zone.type]
   const filled = !!data
@@ -276,7 +277,7 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
         hidden    && 'cz-hidden',
         invisible && 'cz-invisible',
       ].filter(Boolean).join(' ')}
-      style={{ top: `${cardY ?? 50}%` }}
+      style={{ top: `${cardY ?? 50}%`, ...cardStyle }}
     >
       <div className="cz-tag">{meta.label}</div>
       {filled && (
@@ -389,6 +390,72 @@ const BUCKET_ZONES = [
   { type: 'bounce',          ax: 390, ay:  820, side: 'left',  cy: 0.87 },
 ]
 
+// ── The striker's own figure and layout (soccer; lib/soccerUi.js SOCCER_SILHOUETTE.striker, the parts:
+// src/assets/st-figure-color.svg). He is through the ball: head and body right of the art's centre, the trailing
+// leg out to the left edge at hip height, the standing leg and the ball in the bottom right corner. So his cards
+// don't run down two full columns like the basketball figure's: the left column stops above the trailing leg and
+// starts again under it, and the right column stands off his standing leg. Everything is placed from the art:
+// ax/ay is the dot (art px), `row` the card's place in its column (ST_ROWS: the art-y of each card's middle).
+// The build arrives under the basketball keys (SOCCER_AS_BUCKET).
+//   right, top to bottom: Heading (his head), Composure (the shirt), Dribbling (the knee of the leg on the ball),
+//                         Pace (that leg's sock), Finishing (the ball)
+//   left:                 Positioning (the lead shoulder), Passing (the trailing leg, from the card above it),
+//                         Shot Power (the trailing boot, from the card under it), Size (no dot: the frame)
+const STRIKER_ZONES = [
+  { type: 'basketballIQ',     ax: 726, ay:  172, side: 'right', row: 0 },
+  { type: 'clutch',           ax: 716, ay:  590, side: 'right', row: 1 },
+  { type: 'handles',          ax: 786, ay:  978, side: 'right', row: 2 },
+  { type: 'speed',            ax: 800, ay: 1190, side: 'right', row: 3 },
+  { type: 'finishing',        ax: 902, ay: 1372, side: 'right', row: 4 },
+  { type: 'perimeterDefense', ax: 480, ay:  405, side: 'left',  row: 0 },
+  { type: 'passing',          ax: 318, ay:  928, side: 'left',  row: 1 },
+  { type: 'bounce',           ax:  98, ay:  868, side: 'left',  row: 2 },
+  { type: 'size',             ax: 410, ay:  765, side: 'left',  row: 3, noDot: true },
+]
+const ST_BOX = { l: 13, r: 971, t: 106, b: 1459 }   // the figure inside its art
+// desk: the website from a tablet up (cards scale with the figure, 2.1x its px-per-art-px, up to 1.1), the right
+// column clear of the ball; deskTight: the same on a narrow stage (an iPad, a small window), the columns closer in
+// and the right one ending above the ball, which lets him stand larger: whichever draws him bigger is used;
+// app: a phone in the app's look (100px cards, like the basketball figure's; a size down on a narrow phone so
+// they never stack onto each other, a size up on a wide one); phone: a phone in the classic look.
+// colL / colR: the art-x of the left column's inner edge and the right column's; cardW / cardH: a card's CSS size
+// (empty and filled heights); the rows: the art-y of each card's middle.
+const ST_LAYOUT = {
+  desk:  { colL: 300, colR: 1000, cardW: 211, cardH: [100, 92], k: 2.1, kMax: 1.1, padX: 6, padY: 6,
+           left: [330, 600, 1122, 1352], right: [185, 477, 769, 1061, 1353] },
+  deskTight: { colL: 346, colR: 880, cardW: 211, cardH: [100, 92], k: 2.1, kMax: 1.1, padX: 6, padY: 6,
+           left: [330, 600, 1122, 1352], right: [176, 424, 672, 920, 1168] },
+  app:   { colL: 346, colR: 880, cardW: 100, cardH: [48, 46], k: 3.07, kMax: 1.2, padX: 3, padY: 4,
+           left: [300, 590, 1105, 1330], right: [176, 430, 684, 938, 1192] },
+  phone: { colL: 346, colR: 880, cardW: 86, cardH: [54, 62], k: 2.9, kMax: 1.1, padX: 3, padY: 4,
+           left: [300, 590, 1105, 1330], right: [176, 430, 684, 938, 1192] },
+}
+// where the art sits in the wrap (W x H): `s` px per art px, the art's corner at (ox, oy); `k` the cards' scale,
+// xL / xR the columns' inner edges in px
+function strikerFit(W, H, mode) {
+  const fh = ST_BOX.b - ST_BOX.t, fw = ST_BOX.r - ST_BOX.l
+  if (mode === 'model') {   // just him, as large as his box allows
+    const s = Math.min(W / fw, H / fh)
+    return { s, k: 1, ox: (W - fw * s) / 2 - ST_BOX.l * s, oy: (H - fh * s) / 2 - ST_BOX.t * s, xL: 0, xR: W, L: null }
+  }
+  const fit = L => {
+    const gap = L.colR - L.colL, w = W - 2 * L.padX
+    // (the cards scale with him, so they are a fixed size in art px: the top right card can stand a little above
+    // his head. Once they reach their largest size, the room they'd have grown into is his)
+    const half = L.k * L.cardH[0] / 2, top = Math.min(ST_BOX.t, L.right[0] - half)
+    return Math.min((H - 2 * L.padY) / (ST_BOX.b - top), Math.max(w / (2 * L.k * L.cardW + gap), (w - 2 * L.kMax * L.cardW) / gap))
+  }
+  const L = mode === 'desk' && fit(ST_LAYOUT.deskTight) > fit(ST_LAYOUT.desk) * 1.02 ? ST_LAYOUT.deskTight : ST_LAYOUT[mode]
+  const s = Math.max(fit(L), 0.12), k = Math.min(L.kMax, L.k * s)
+  const top = Math.min(ST_BOX.t, L.right[0] - L.k * L.cardH[0] / 2)
+  // the columns and the figure, centred as one block (his boot and the ball can reach past a column's outer edge)
+  const spanL = Math.min(L.colL * s - k * L.cardW, ST_BOX.l * s), spanR = Math.max(L.colR * s + k * L.cardW, ST_BOX.r * s)
+  const ox = (W - (spanR - spanL)) / 2 - spanL
+  // a tall stage (a tablet held upright): he stays near the top, under the tabs
+  const oy = L.padY + Math.min((H - 2 * L.padY - (ST_BOX.b - top) * s) / 2, 48) - top * s
+  return { s, k, ox, oy, xL: ox + L.colL * s, xR: ox + L.colR * s, L }
+}
+
 const BUCKET_BIG_ZONES = [
   { type: 'basketballIQ',   ax: 415, ay:   -5, side: 'left',  cy: 0.015 },
   { type: 'clutch',         ax: 440, ay:  180, side: 'left',  cy: 0.690 },
@@ -415,10 +482,9 @@ function getDominantPlayer(build) {
 // `modelOnly`: just the player — figure, jersey overlay and face — with no
 // dots, cards, measurement lines or backdrop, sized to its container (the app's
 // Career model). Nothing else changes when it's off.
-// SOCCER PLACEHOLDER: a striker is drawn on the basketball figure (SOCCER_SILHOUETTE in lib/soccerUi.js)
-// until his own art lands. Each striker trait rides on one basketball trait's spot and body part
-// (SOCCER_AS_BUCKET), so the build screen runs the basketball figure unchanged: the build, the
-// traits, the labels, the tabs and the drag are handed in under the basketball keys.
+// SOCCER: the striker has his own art, overlay and card layout (STRIKER_ZONES / strikerFit above), but the build
+// screen's plumbing was built on the basketball figure's keys: each striker trait is handed in under one of them
+// (SOCCER_AS_BUCKET), with the build, the traits, the labels, the tabs and the drag.
 const toBkt = t => SOCCER_AS_BUCKET[t] ?? t
 export default function Silhouette(props) {
   const { isSoccer = false, build, types = TYPES, attrMap = ATTR, categoriesData = CATEGORIES, activeDrag } = props
@@ -450,9 +516,10 @@ function BaseballSilhouette(props) {
 function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false, kitTeam = null }) {
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
-  const figW   = isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
-  const zones  = isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+  const isStriker = isSoccer && !isBaseball   // the striker's own art and his own layout (STRIKER_ZONES, strikerFit)
+  const figW   = isStriker ? ST_FIG_W : isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isStriker ? ST_FIG_H : isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const zones  = isStriker ? STRIKER_ZONES : isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   // kitTeam ({ short, color, color2 }, basketball): the figure wears that one team's uniform, whoever the traits came
   // from (a Franchise build is the franchise team's player: BucketApp's nbafranchise-build). The cards keep their men.
@@ -462,10 +529,14 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
   )
+  // the striker is placed by his own fit, not the contain-fit + CSS scale the other figures use: the art's px size
+  // and corner come from strikerFit (`bounds` still gives the wrap's W and H). The drop test reads them off boundsRef.
+  const stMode = !isStriker ? null : modelOnly ? 'model' : !isMobile ? 'desk' : (IS_APP || APP_LOOK) ? 'app' : 'phone'
+  const stFit = useMemo(() => (stMode && bounds ? strikerFit(bounds.W, bounds.H, stMode) : null), [stMode, bounds])
   const activeDragRef = useRef(activeDrag)
   const onDropRef = useRef(onDrop)
   const zonesRef = useRef(zones)
-  useLayoutEffect(() => { boundsRef.current = bounds }, [bounds])
+  useLayoutEffect(() => { boundsRef.current = stFit ? { ...bounds, scale: stFit.s, fx: stFit.ox, fy: stFit.oy } : bounds }, [bounds, stFit])
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
   useLayoutEffect(() => { onDropRef.current = onDrop }, [onDrop])
   useLayoutEffect(() => { zonesRef.current = zones }, [zones])
@@ -495,7 +566,9 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
       const zone = zonesRef.current.find(z => z.type === ad.type)
       if (!zone) return
       const dist = Math.sqrt((figX - zone.ax) ** 2 + (figY - zone.ay) ** 2)
-      if (dist <= 80) onDropRef.current(ad.type)
+      // (the striker: a drop on the trait's own card counts too. Size has no dot to aim at, and his dots are small targets)
+      const onOwnCard = zonesRef.current === STRIKER_ZONES && !!e.target?.closest?.(`.cz-type-${zone.type}`)
+      if ((dist <= 80 && !zone.noDot) || onOwnCard || (zone.noDot && zonesRef.current !== STRIKER_ZONES && dist <= 80)) onDropRef.current(ad.type)
     }
     el.addEventListener('dragover', onDragOver)
     el.addEventListener('drop', onDropNative)
@@ -513,13 +586,15 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
 
   // Headshot only from basketballIQ slot for bucket builds
   // (the app shows no photos: a drawn face in his skin tone instead, lib/useFigureFace.js)
-  const drawnHead = useFigureFace(isBucket ? build['basketballIQ'] : null)
-  const bucketPhoto = isBucket ? (usesDrawnHead(build['basketballIQ']?.photo) ? drawnHead : (build['basketballIQ']?.photo || null)) : null
+  const drawnHead = useFigureFace(isBucket && !isStriker ? build['basketballIQ'] : null)
+  const bucketPhoto = isStriker ? null : isBucket ? (usesDrawnHead(build['basketballIQ']?.photo) ? drawnHead : (build['basketballIQ']?.photo || null)) : null
   // the figure scales that make it fill the build screen; a model fits its box as-is
   const appBucket = (IS_APP || APP_LOOK) && isBucket && isMobile && !modelOnly
   // (the model keeps the build screen's bucket scale: the jersey overlay and the face
   // are drawn against the figure at that size, so changing it alone splits the layers)
   const bucketScale = appBucket ? APP_BKT.scale : BUCKET_FIGURE_SCALE
+  // (the striker's art and its colour layer share one px box in the wrap)
+  const stBox = stFit ? { left: `${stFit.ox}px`, top: `${stFit.oy}px`, width: `${ST_FIG_W * stFit.s}px`, height: `${ST_FIG_H * stFit.s}px` } : null
   const rbScale = modelOnly ? 1 : RB_FIGURE_SCALE
   const dbScale = modelOnly ? 1 : DB_FIGURE_SCALE
   const dlScale = modelOnly ? 1 : DL_FIGURE_SCALE
@@ -580,7 +655,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   // top to bottom, so the lines fan out and never cross; the top card's line runs
   // from its top edge (its dot is out on the hand, past the card's side).
   const appRows = useMemo(() => {
-    if (!appBucket) return null
+    if (!appBucket || isStriker) return null
     const rows = {}, top = new Set()
     const arm = z => (z.side === 'left' ? z.ax < 300 : z.ax > BUCKET_FIG_W - 300)
     for (const side of ['left', 'right']) {
@@ -595,11 +670,42 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
     }
     rows.top = top
     return rows
-  }, [appBucket, zones, types])
+  }, [appBucket, isStriker, zones, types])
 
   // Convert figure-space (ax, ay) → sil-wrap percentage coords
   const pos = (zone) => {
     if (!bounds) return null
+    if (isStriker) {
+      // the striker: every number from strikerFit (px in the wrap), handed on as % of the wrap
+      const { W, H } = bounds
+      if (!stFit?.L) return null   // (a model has no cards or dots)
+      const { s, k, ox, oy, xL, xR, L } = stFit
+      const left = zone.side === 'left'
+      const cx = left ? xL : xR                                   // the card's inner edge
+      const cyPx = oy + L[zone.side][zone.row] * s                // its middle
+      const cw = L.cardW * k, ch = L.cardH[build[zone.type] ? 1 : 0] * k
+      const cardStyle = left ? { left: 'auto', right: `${W - cx}px` } : { right: 'auto', left: `${cx}px` }
+      const cardY = cyPx / H * 100
+      if (zone.noDot) return { cardY, cardStyle }
+      const dx = ox + zone.ax * s, dy = oy + zone.ay * s
+      const pc = (x, y) => `${(x / W * 100).toFixed(3)} ${(y / H * 100).toFixed(3)}`
+      // a dot over or under its own card: the line drops (or rises) from the card's edge; otherwise it leaves the
+      // card's inner edge level, then runs to the dot. The level stretch stops short of the dot, so it never folds back.
+      // (a dot just past the card's corner, well above or below it, counts as over or under it)
+      const off = Math.abs(dy - cyPx) > ch / 2 + 10 ? 0.14 * cw : -4
+      const within = left ? dx < cx + off : dx > cx - off
+      let d
+      if (within) {
+        const x0 = left ? Math.max(cx - cw + 8 * k, Math.min(dx, cx - 12 * k)) : Math.min(cx + cw - 8 * k, Math.max(dx, cx + 12 * k))
+        const y0 = cyPx + (dy > cyPx ? ch / 2 : -ch / 2)
+        d = `M ${pc(x0, y0)} L ${pc(dx, dy)}`
+      } else {
+        const reach = Math.abs(dx - cx)
+        const stub = Math.min(reach * 0.4, Math.max(0, reach - 6))
+        d = `M ${pc(cx, cyPx)} L ${pc(left ? cx + stub : cx - stub, cyPx)} L ${pc(dx, dy)}`
+      }
+      return { dotX: dx / W * 100, dotY: dy / H * 100, cardY, cardStyle, d }
+    }
     if (appBucket) {
       const { W, H, fx, fy, scale } = bounds
       const dotX = ((fx + zone.ax * scale) / W * 100 - 50) * bucketScale + 50
@@ -710,7 +816,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
     const map = {}
     zones.forEach(z => { map[z.type] = pos(z) })
     return map
-  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, isDL, zones, appRows])
+  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, isDL, zones, appRows, stFit, isStriker && build])
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
@@ -789,8 +895,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
         </div>
       )}
 
-      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}${modelOnly ? ' sil-wrap--model' : ''}${appBucket ? ' sil-wrap--app-bkt' : ''}`} ref={silRef}>
-        {isBucket && !modelOnly && !isMobile && (
+      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}${modelOnly ? ' sil-wrap--model' : ''}${appBucket ? ' sil-wrap--app-bkt' : ''}${isStriker ? ` sil-wrap--st sil-wrap--st-${stMode}` : ''}`} ref={silRef} style={stFit ? { '--st-k': stFit.k } : undefined}>
+        {isBucket && !isStriker && !modelOnly && !isMobile && (
           <div style={{
             position: 'absolute',
             left: '50%', top: 'calc(15% + 42px)',
@@ -803,7 +909,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
         )}
 
         {/* Measurement outlines — height + wingspan derived from size val (not baseball's: a wingspan is a basketball number) */}
-        {isBucket && !isBaseball && !modelOnly && (build?.['size'] || build?.['heightLength']) && (() => {
+        {isBucket && !isBaseball && !isStriker && !modelOnly && (build?.['size'] || build?.['heightLength']) && (() => {
           const chip = build['size'] || build['heightLength']
           const val  = chip.val ?? 5
           const col  = '#ffffff'
@@ -878,7 +984,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
         <img
           src={
             isBucket
-              ? (isBaseball ? (bucketPhoto ? BASEBALL_SILHOUETTE.headless : BASEBALL_SILHOUETTE.src) : isSoccer ? (bucketPhoto ? SOCCER_SILHOUETTE.headless : SOCCER_SILHOUETTE.src) : bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              ? (isBaseball ? (bucketPhoto ? BASEBALL_SILHOUETTE.headless : BASEBALL_SILHOUETTE.src) : isStriker ? SOCCER_SILHOUETTE.src : bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
               : isK ? K_SILHOUETTE
               : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
@@ -892,7 +998,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           className={`sil-img${(isRB || isWR || isTE) ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
           style={
-            isBucket   ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
+            isStriker  ? (stFit ? { position: 'absolute', ...stBox, objectFit: 'fill' } : { visibility: 'hidden' })
+            : isBucket ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
             : (isWR || isTE) ? { transform: wrTransform, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
             : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
             : isLB     ? { transform: lbTransform, transformOrigin: 'center center' }
@@ -903,7 +1010,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             : undefined
           }
         />
-        {isBucket && (appBucket
+        {isStriker && stFit && <StrikerFigureOverlay build={build} logoDir={logoDirProp} box={stBox} />}
+        {isBucket && !isStriker && (appBucket
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
@@ -1027,7 +1135,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             const cardTopY = p.cardY - p.cardHalfH
             const anchorX = p.cardCenterX - 25 + (zone.lineAnchorOffsetX ?? 0) + (p.anchorNudgeX ?? 0)
             const anchorY = cardTopY + 10 + (p.anchorNudgeY ?? 0)
-            const d = p.topY != null
+            const d = p.d ? p.d : p.topY != null
               ? `M ${p.cardCenterX} ${p.topY} L ${p.dotX} ${p.dotY}`
               : zone.lineAnchor === 'top' && !p.side
               ? `M ${anchorX} ${anchorY} L ${anchorX} ${anchorY - 8} L ${p.dotX} ${p.dotY}`
@@ -1064,6 +1172,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
                 <CZCard
                   zone={zone}
                   cardY={p?.cardY}
+                  cardStyle={p?.cardStyle}
                   build={build}
                   activeDrag={activeDrag}
                   hidden={!p}

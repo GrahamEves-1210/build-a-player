@@ -4,8 +4,8 @@ import { POS_ATTR, inTeamColors, captainOf, ensureSport, sportReady, jerseyOf } 
 
 // Home's Career card: the career's own player, the same model as in Career.
 // Its own file, so home loads this (and the career code) only once there is a career.
-// (soccer: the basketball figure for now, lib/soccerUi.js SOCCER_SILHOUETTE, until the striker's own art lands;
-// its traits' labels arrive with lib/careerSoccer.js, which this asks for)
+// (soccer: the striker's own figure, lib/soccerUi.js SOCCER_SILHOUETTE; its traits' labels arrive with
+// lib/careerSoccer.js, which this asks for)
 export default function CareerFigure({ c }) {
   const [, bump] = useState(0)
   const ready = sportReady(c.sport ?? 'nfl')

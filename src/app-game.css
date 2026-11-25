@@ -7791,3 +7791,41 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
 .tpm-pick-none { margin: 14px 0 4px; text-align: center; font-size: 14px; color: rgba(255,255,255,.55); }
 /* soccer's KICK OFF button in the game's display type (it fell back to Impact, or a plain sans without it) */
 .ssp-page .tipoff-spin-btn { font-family: var(--ag-font, 'Bebas Neue', sans-serif); letter-spacing: 2px; }
+
+/* ═══ The striker's figure on the build screen (Silhouette.jsx STRIKER_ZONES / strikerFit) ═══
+   His art and his cards are placed in px from the art itself, so the wrap isn't scaled (the basketball figure's is)
+   and every card takes one scale (--st-k, set on the wrap) about its inner edge: the edge that faces him stays put. */
+.sil-wrap.sil-wrap--st.sil-wrap--st { transform: none !important; }
+.sil-wrap.sil-wrap--st .cz-card.cz-card { transform: translateY(-50%) scale(var(--st-k, 1)) !important; }
+.sil-wrap.sil-wrap--st .cz-card.cz-left { left: auto !important; transform-origin: 100% 50%; }
+.sil-wrap.sil-wrap--st .cz-card.cz-right { right: auto !important; transform-origin: 0 50%; }
+.sil-wrap.sil-wrap--st .cz-card.cz-left:is(.cz-hidden, .cz-invisible) { transform: translateY(-50%) translateX(-10px) scale(var(--st-k, 1)) !important; }
+.sil-wrap.sil-wrap--st .cz-card.cz-right:is(.cz-hidden, .cz-invisible) { transform: translateY(-50%) translateX(10px) scale(var(--st-k, 1)) !important; }
+@media (min-width: 769px) {
+  /* the website from a tablet up: the stage between the tabs and the ad rail, the full width of the field (the
+     field's 90px side padding is the basketball figure's) */
+  .sil-wrap.sil-wrap--st-desk { width: calc(100% + 164px); height: calc(100dvh - 229px); min-height: 380px; margin-top: 15px; }
+  /* (an iPad in the classic look: the short stage with no cards; the ball stays inside it) */
+  html.is-tablet:not(.app-look) .sil-wrap.sil-wrap--st-desk { width: 100%; height: calc(100% - 78px); min-height: 0; }
+}
+@media (max-width: 768px) {
+  .mobile-build .sil-wrap.sil-wrap--st { width: 100%; margin: 0; }
+}
+/* (the face's shading layer needs its filter: weak machines, where figure filters are off, go without the layer) */
+html.low-power .sil-wrap svg.st-face-detail { display: none; }
+
+/* ═══ Soccer's Home: the striker's banded figure (SoccerApp.jsx SOCCER_SPLASH_ATTRS) ═══
+   His art has empty margins round him, so his box reaches a little past the stage's figure box and he stands as
+   tall as the other sports' figures. */
+.st-home-fig { position: absolute; left: -6%; right: -6%; top: -9%; bottom: -3%; }
+/* the classic Home (Settings → Classic Home) draws its figure 2.15x on a desktop: his head met the stage's top edge */
+@media (min-width: 1024px) {
+  html.app-look .ag-home.ag-home--soccer.ag-home--classic.ag-home--classic.ag-home--classic .agc-figure { transform: scale(1.95); }
+}
+/* the classic look's splash (Settings → Classic look): his box in the stage figure's proportions, and the words in
+   the same type and the same size against him as on Home (11 / 9 / 8px on a 208px box) */
+.soccer-splash .splash-figure-wrap.bucket-figure-wrap { aspect-ratio: 186 / 214 !important; width: clamp(190px, 26vw, 320px) !important; margin-top: 54px !important; }
+.soccer-splash .st-home-fig { container-type: inline-size; }
+.soccer-splash .st-home-fig .splash-stack-band-label { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; letter-spacing: 0; font-size: 5.28cqw; }
+.soccer-splash .st-home-fig .splash-stack-band-label.is-sm { font-size: 4.32cqw; }
+.soccer-splash .st-home-fig .splash-stack-band-label.is-xs { font-size: 3.84cqw; }
