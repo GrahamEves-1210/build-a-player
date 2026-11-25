@@ -13,7 +13,7 @@
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, GOOD, GOLD, particles, nudge, manOf, text, rr, lightMode, LABEL } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperShot, heldBall, parried, defenderBeaten, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
 import { promptY } from './soccerPads.js'
 
 export const how = {
@@ -45,7 +45,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     me: { x: ME0.x, z: ME0.z, vx: 0, vz: 0, cycle: 0 }, mk: { x: ME0.x + 0.5, z: ME0.z + 0.85, vx: 0, vz: 0, cycle: 0, turn: 0, hist: [] },
     wing: { x: WING0.x, z: WING0.z, cycle: 0 }, gk: { x: 1.4, z: KEEP_Z, vx: 0 },
     crossAt: null, flight: 0, arriveAt: null, to: null, jumpAt: null, shot: null, res: null, why: '', endAt: null, popAt: null, doneAt: null,
-    sep: 0, free: false, ctl: padCtl(), vh: 640, cam: 0,
+    sep: 0, free: false, ctl: padCtl(), vh: 640, cam: 0, camX: CAM.x + ME0.x * 0.7, mkJumpAt: null,
     who: { me: manOf(cast, 'us', 'st', 0), gk: manOf(cast, 'them', 'gk', 0), mark: manOf(cast, 'them', 'cb', 0), mate: manOf(cast, 'us', 'st', 1) },
     dirt: particles(24, 3), nudge: nudge(),
     hud: { prompt: 'LOSE THE MARKER' },
@@ -70,8 +70,16 @@ export function make({ v, seed, cast = null, situation = null }) {
       g.me.cycle += Math.hypot(g.me.vx, g.me.vz) * s / 2.4
       marker(s)
       keeper(s)
-      // the lens: tight on the box, then out wide as the winger shapes to cross it
-      if (g.phase === 'cross' && g.jumpAt == null && g.t > g.arriveAt + W) settle('missed', g.sep < 0.9 ? 'Marker got in front of him and headed it clear' : 'Never got there: it flashed across the box')
+      // the lens goes across the box with him (and with the scorer, once it's in): he's never out of the picture
+      const fx = g.res === 'goal' && g.cel ? scorerAt(g.cel, g.t - g.endAt).x : g.me.x
+      g.camX += (CAM.x + clamp(fx * 0.7, -4.2, 2.4) - g.camX) * (1 - Math.exp(-dt / 220))
+      // nobody went up for it. A marker who's tight goes up on his own and heads it clear (he's off the ground as the
+      // ring closes: what's seen is what's given); with nobody near it, it flashes across the box
+      if (g.phase === 'cross' && g.jumpAt == null && !g.res) {
+        if (g.mkJumpAt == null && g.sep < 0.9 && g.t >= g.arriveAt - RISE) g.mkJumpAt = g.t
+        if (g.mkJumpAt != null && g.t >= g.arriveAt) settle('cleared', 'Stood and watched it: his marker went up and headed it clear')
+        else if (g.t > g.arriveAt + W) settle('missed', 'Never got there: it flashed across the box')
+      }
       if (g.shot && !g.res) shotTick()
       if (g.endAt != null && !g.done && g.t >= g.endAt) finish()
     },
@@ -147,7 +155,11 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (o.y < -0.4) { s.to.y = Math.min(s.to.y, 0.5); s.bounce = true }
     g.shot = { ...s, at: g.arriveAt }
     const K = g.gk
-    g.shot.save = s.onTarget ? keeperSave(g.shot, { x: K.x, z: KEEP_Z, react: s.bounce ? 290 : 230, reach: 0.8, up: 2.45, dive: 3.8, read: Math.sign(K.vx) * 0.4 }, r) : null
+    const react = s.bounce ? 290 : 230
+    g.shot.save = s.onTarget ? keeperSave(g.shot, { x: K.x, z: KEEP_Z, react, reach: 0.8, up: 2.45, dive: 3.8, read: Math.sign(K.vx) * 0.4 }, r) : null
+    // the keeper goes for one on target: soccer.js's keeperShot draws it (on to it for a save, short of it when beaten)
+    const sv = g.shot.save
+    if (sv) g.kShot = { x0: K.x, z: KEEP_Z, go: g.arriveAt + react, cross: g.arriveAt + sv.f * s.T, ball: { x: sv.x, y: sv.y }, saved: !!sv.saved, held: !!sv.held }
     g.q = q
   }
   function shotTick() {
@@ -166,7 +178,6 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (now ? 380 : kind === 'goal' ? 120 : 60)
     if (kind === 'goal') {
       g.cel = celebration(`${seed}|head`, { sit: g.sit, from: { x: g.to.x, z: g.to.z }, toward: { x: clamp(g.to.x + 2, -3, 3.6), z: g.to.z - 3.4 }, side: 1, athletic: v >= 8, mates: [{ x: -5.2, z: -9.4 }, { x: CROSS.x - 4, z: CROSS.z + 1 }, { x: -2, z: -16 }] })
-      g.kAt = { x: g.gk.x + (Math.sign(g.shot.to.x - g.gk.x) || 1) * 1.3, z: KEEP_Z, rot: (Math.sign(g.shot.to.x - g.gk.x) || 1) * 1.4, ball: { x: clamp(g.shot.to.x, -3, 3), z: 1.5 } }
     }
   }
   function finish() {
@@ -185,7 +196,7 @@ export function make({ v, seed, cast = null, situation = null }) {
 // The camera behind the box, turned a touch to the right where the cross comes from; and, as on TV, a small picture
 // of the winger in the corner from when he gets his head up till the ball's on its way, so you see it leave his foot
 const CAM = { x: 0.6, y: 3.7, z: -20.5, yaw: 0.08, F: 520, hzAt: 0.19 }, BIG = 1
-const camFor = (g, view) => camOf(view, CAM)
+const camFor = (g, view) => camOf(view, { ...CAM, x: g.camX ?? CAM.x })
 const INSET = { w: 148, h: 92 }
 function wingInset(ctx, view, g, team, away, K) {
   const on = g.t > g.runMs - 1400 && (g.crossAt == null || g.t < g.crossAt + 650) && !g.res
@@ -206,8 +217,8 @@ function wingInset(ctx, view, g, team, away, K) {
   ctx.restore()
   ctx.globalAlpha = Math.max(0, a)
   ctx.strokeStyle = 'rgba(242,242,238,.7)'; ctx.lineWidth = 1.5; ctx.strokeRect(x0 + 0.5, y0 + 0.5, INSET.w - 1, INSET.h - 1)
-  ctx.fillStyle = 'rgba(6,8,10,.82)'; ctx.fillRect(x0, y0 + INSET.h - 15, 58, 15)
-  text(ctx, 'THE CROSS', x0 + 5, y0 + INSET.h - 7, { size: 11, align: 'left', track: 1, color: '#f2f2ee' })
+  ctx.fillStyle = 'rgba(6,8,10,.82)'; ctx.fillRect(x0, y0 + INSET.h - 17, 70, 17)
+  text(ctx, 'THE CROSS', x0 + 5, y0 + INSET.h - 8, { size: 13, align: 'left', track: 1, color: '#f2f2ee' })
   ctx.globalAlpha = 1
 }
 function ballNow(g) {
@@ -220,7 +231,7 @@ function ballNow(g) {
     return arc(Math.min(f, 1.6))
   }
   const a = g.t - s.at
-  if (s.save?.saved && a >= s.save.f * s.T) { if (s.save.held) return { x: g.gk.x, y: 1.0, z: KEEP_Z - 0.4, spin: 0, held: true }; const p = shotAt(s, s.save.f * s.T), b = clamp((a - s.save.f * s.T) / 500, 0, 1); return { x: p.x + Math.sign(p.x - g.gk.x || 1) * b * 2.6, y: Math.max(0.11, p.y + Math.sin(b * Math.PI) * 0.8), z: lerp(p.z, 2.2, b), spin: a / 30 } }
+  if (s.save?.saved && a >= s.save.f * s.T) { const p = shotAt(s, s.save.f * s.T), age = a - s.save.f * s.T; return s.save.held ? { x: p.x, y: p.y, z: KEEP_Z - 0.3, spin: 0, held: true, age } : parried(p, age, KEEP_Z) }
   if (a < s.T) { const p = shotAt(s, a); if (s.bounce) { const ff = a / s.T; p.y = ff < 0.55 ? lerp(2.3, 0.11, ff / 0.55) : 0.11 + Math.sin((ff - 0.55) / 0.45 * Math.PI) * 0.6 + (s.to.y - 0.11) * (ff - 0.55) / 0.45 } return p }
   const af = a - s.T
   if (g.res === 'goal') { if (g.kHold) return { x: g.kHold.x, y: 0.85, z: g.kHold.z - 0.25, spin: 0, held: true }; const b = clamp(af / 220, 0, 1), drop = clamp((af - 200) / 420, 0, 1); return { x: s.to.x * (1 + b * 0.1), y: Math.max(0.11, s.to.y - drop * drop * s.to.y), z: lerp(0, NET_D - 0.3, easeOut(b)), spin: 20 } }
@@ -242,7 +253,8 @@ function meNow(g) {
 function markNow(g) {
   const m = g.mk, sp = Math.hypot(m.vx, m.vz)
   if (g.res === 'goal') return { x: m.x, z: m.z, lift: 0, turn: 0, pose: defenderBeaten(1, g.t - g.endAt, POSE.stand) }
-  if (g.jumpAt != null && g.sep < 1.6 && !g.res) { const a = g.t - g.jumpAt - 40, up = a < 0 ? 0 : a < RISE ? easeOut(a / RISE) : 1 - easeIn(clamp((a - RISE) / RISE, 0, 1)); return { x: m.x, z: m.z, lift: up * 0.5, turn: 0, pose: { ...POSE.jump, head: 0.4 } } }
+  if (g.jumpAt != null && g.sep < 1.6 && !g.res) { const a = g.t - (g.mkJumpAt ?? g.jumpAt + 40), up = a < 0 ? 0 : a < RISE ? easeOut(a / RISE) : 1 - easeIn(clamp((a - RISE) / RISE, 0, 1)); return { x: m.x, z: m.z, lift: up * 0.5, turn: 0, pose: { ...POSE.jump, head: 0.4 } } }
+  if (g.mkJumpAt != null && g.jumpAt == null) { const a = g.t - g.mkJumpAt, up = a < RISE ? easeOut(a / RISE) : 1 - easeIn(clamp((a - RISE - 60) / RISE, 0, 1)); if (a < RISE * 2 + 60) return { x: m.x, z: m.z, lift: up * 0.55, turn: 0, pose: { ...POSE.jump, head: 0.4, tilt: a > RISE - 40 ? -0.5 : 0.5 } } }
   if (g.res === 'cleared') return { x: m.x, z: m.z, lift: 0, turn: 0, pose: mix(POSE.jump, POSE.stand, prog(g.t - g.resAt, 0, 400)) }
   // ball-watching: turned side-on to the winger, head round, arms down. Tight on you: square to you, an arm on you
   const turned = m.turn
@@ -251,15 +263,12 @@ function markNow(g) {
 }
 function keeperNow(g) {
   const K = g.gk, s = g.shot, t = g.t
-  if (g.res === 'goal' && g.cel) return null
-  if (s && t >= s.at) {
-    const a = prog(t, s.at, s.at + Math.max(200, (s.save?.f ?? 1) * s.T)), dir = Math.sign((s.save?.x ?? s.to.x) - K.x) || 1
-    const pose = g.res === 'saved' && t - g.resAt > 450 ? keeperRoar(t - g.resAt - 450, POSE.stand) : s.save?.held ? mix(POSE.set, { ...POSE.set, hlx: -8, hly: -66, hrx: 8, hry: -66 }, a) : { ...POSE.dive, rot: dir * 1.35 * easeOut(a) }
-    return { x: K.x + (s.save?.held ? 0 : dir * 1.2 * easeOut(a)), lift: s.save?.held || g.res === 'saved' && t - g.resAt > 450 ? 0 : Math.sin(a * Math.PI) * 0.4, pose }
-  }
-  if (g.res && g.res !== 'goal') return { x: K.x, lift: 0, pose: mix(POSE.set, POSE.stand, prog(t - g.resAt, 0, 500)) }
+  if (g.kShot) return keeperShot(t, { ...g.kShot, res: g.res, resAt: g.resAt, cel: g.cel, ballIn: { x: clamp(s.to.x, -3, 3), z: 1.5 }, base: { ...POSE.set, head: 0.6 } })
+  // (beaten by one that wasn't his to save, or it's off target: where he stood)
+  if (g.res === 'goal' && g.cel) return keeperBeaten(g.cel, t - g.endAt, { x: K.x, z: KEEP_Z, rot: 0, ball: { x: clamp(s.to.x, -3, 3), z: 1.5 } })
+  if (g.res && g.res !== 'goal') return { x: K.x, z: KEEP_Z, lift: 0, pose: mix(POSE.set, POSE.stand, prog(t - g.resAt, 0, 500)) }
   const bob = Math.abs(Math.sin(t / 170)) * 2.5
-  return { x: K.x, lift: 0, pose: { ...(g.phase === 'cross' ? POSE.set : POSE.ready), hy: (g.phase === 'cross' ? 44 : 49) + bob, head: 0.6 } }
+  return { x: K.x, z: KEEP_Z, lift: 0, pose: { ...(g.phase === 'cross' ? POSE.set : POSE.ready), hy: (g.phase === 'cross' ? 44 : 49) + bob, head: 0.6 } }
 }
 // the others in the box: a defender at the near post, one on the six, a teammate at the back post
 const EXTRAS = [{ x: 3.1, z: -3.4, side: 'them', n: 5 }, { x: -3.4, z: -6.6, side: 'them', n: 6 }, { x: -5.4, z: -10.6, side: 'us', n: 11 }]
@@ -277,16 +286,15 @@ export function draw(ctx, g, view) {
   const gkLook = dress(K.gk, g.who.gk ?? { number: 1, skin: '#f0c4a0' }, { front: true, sleeves: true }), meLook = dress(K.us, g.who.me ?? { number: 9 })
   const mkLook = dress(K.them, g.who.mark ?? { number: 4, skin: '#7a5030' }, { front: true })
   const list = [], age = g.endAt != null ? g.t - g.endAt : 0
+  const kp = keeperNow(g)
+  g.kHold = kp.holds ? { x: kp.x, z: kp.z } : null
+  if (b.held && b.age != null) { const h = heldBall(kp, b.age); b.x = h.x; b.y = h.y }
+  list.push({ z: kp.z, fn: () => manB(ctx, C, kp.x, kp.z, kp.pose, kp.front === false ? { ...gkLook, front: false } : gkLook, { lift: kp.lift ?? 0 }) })
   if (g.res === 'goal' && g.cel) {
-    const kb = keeperBeaten(g.cel, age, g.kAt)
-    g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null
-    list.push({ z: kb.z, fn: () => manB(ctx, C, kb.x, kb.z, kb.pose, { ...gkLook, front: kb.front }) })
     const sc = scorerAt(g.cel, age)
     list.push({ z: sc.z, fn: () => manB(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn, name: g.who.me?.name }) })
     g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => manB(ctx, C, at.x, at.z, at.pose, dress(K.us, i === 0 ? { number: 11, skin: '#c09060' } : i === 1 ? { number: 7, skin: '#5e3c22' } : { number: 8, skin: '#f0c4a0' }), { lift: at.lift, turn: at.turn }) }) })
   } else {
-    const kp = keeperNow(g)
-    list.push({ z: KEEP_Z, fn: () => manB(ctx, C, kp.x, KEEP_Z, kp.pose, gkLook, { lift: kp.lift }) })
     const me = meNow(g)
     list.push({ z: me.z, fn: () => manB(ctx, C, me.x, me.z, me.pose, meLook, { lift: me.lift, name: g.who.me?.name }) })
     // the winger, in from the right with it, and his cross
