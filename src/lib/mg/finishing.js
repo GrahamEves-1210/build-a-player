@@ -17,7 +17,7 @@ import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, kickPose, runP
 import { tip, promptY } from './soccerPads.js'
 
 export const how = {
-  finishing: 'Five balls from five spots. Draw each one from the ball to the lit target: the quicker the stroke the harder it’s hit, bend it to curl it. Three of five in the target. On a keyboard: aim with the arrows, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
+  finishing: 'Five balls from five spots, a target lit in the goal for each. Draw a line from the ball to the target; bend it to curl it. Three of five in the target. On a keyboard: arrows to aim, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
 }
 
 const N = 5, NEED = 3, GAP = 900, JOG = 600   // (the gap between balls; its last JOG ms he's jogging to the next one)
@@ -30,7 +30,7 @@ export const TARGETS = [[-(POST - 0.7), 1.9], [POST - 0.7, 1.9], [-(POST - 0.7),
 
 export function make({ v, seed }) {
   const r = rngOf(seed)
-  const R = byV(v, 0.34, 0.6)
+  const R = byV(v, 0.5, 0.7)
   // the order of the spots (the first-time ball always last but one), and a target for each, not the same twice
   const order = [0, 1, 2, 3].sort(() => r() - 0.5); order.splice(3, 0, 4)
   let last = -1
@@ -85,7 +85,7 @@ export function make({ v, seed }) {
     if (rd.tap || rd.back) return true
     // (a stroke that ends by the lit target is drawn onto it, the more so the better the finisher: the stick's
     // corners are the targets, and a finger's never that exact)
-    const [tx, ty] = TARGETS[shots[g.i].k], d = Math.hypot(rd.x - tx, rd.y - ty), pull = lerp(0.25, 0.65, clamp((v - 1) / 10, 0, 1)) * clamp(1 - d / 1.1, 0, 1)
+    const [tx, ty] = TARGETS[shots[g.i].k], d = Math.hypot(rd.x - tx, rd.y - ty), pull = lerp(0.4, 0.7, clamp((v - 1) / 10, 0, 1)) * clamp(1 - d / 1.1, 0, 1)
     if (rd.type !== 'chip') { rd.x = lerp(rd.x, tx, pull); rd.y = lerp(rd.y, ty, pull) }
     drawnShot(k, rd, g.t, 180)
     g.fx.push('h:light')

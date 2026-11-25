@@ -22,7 +22,7 @@ import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose,
 import { tip } from './soccerPads.js'
 
 export const how = {
-  penalty: 'Draw it from the ball to your spot: the quicker the stroke, the harder it’s hit (too quick and it’s over the bar), bend it to curl it, a soft one up the middle to chip it. STUTTER in the run-up and a keeper who’s guessing goes early: draw it again the other way. On a keyboard: aim with the arrows, hold SPACE to run up and let go to set the power, then tap it again at the strike.',
+  penalty: 'Draw a line from the ball to your spot: where it ends is where it goes, a quicker line is a harder shot, a bend in it curls it. STUTTER in the run-up and a keeper who’s guessing goes early: draw it again the other way. On a keyboard: arrows to aim, hold SPACE to run up, let go to set the power, tap SPACE again as he strikes it.',
 }
 
 const WHISTLE = 900
@@ -202,7 +202,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.done = outcome(q, goal, g.why); g.doneAt = g.t
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2300
     const word = { goal: 'GOAL', saved: 'SAVED', wide: 'MISSED', over: 'OVER THE BAR' }[g.res]
-    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 8 ? 40 : 50 }
+    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 8 ? 40 : 50, sub: g.why }
     if (goal) { g.popAt = g.t; g.fx.push('h:success') } else g.fx.push(g.res === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g

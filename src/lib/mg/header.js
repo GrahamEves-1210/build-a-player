@@ -17,7 +17,7 @@ import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, kickP
 import { promptY } from './soccerPads.js'
 
 export const how = {
-  header: 'Lose the marker: move when he turns to watch the winger. Make the run near post or far post, get under the ring, and press HEAD as it closes. Aim with the stick on the way up.',
+  header: 'Your marker’s touch-tight. When he turns to watch the winger, make your run: near post or back post. Get under the ring and press HEAD as it closes, the stick aiming it on the way up.',
 }
 
 const RISE = 250                    // ms from leaving the ground to the top of the jump

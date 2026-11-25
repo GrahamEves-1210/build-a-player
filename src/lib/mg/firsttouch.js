@@ -4,7 +4,7 @@
 //             and quicker. The wrong foot, or off it, and it's on the floor.
 //   CONTROL: the coach drives three balls in along the ground, to your left foot or your right. Press that foot as it
 //            gets to you: kill it dead, or at least keep it in the square. Wrong foot or off it and it's away from you.
-// The coach's mark: a point a keep-up, three a ball controlled in the square. 15 passes.
+// The coach’s mark: a point a keep-up, three a ball controlled in the square. 13 passes.
 // First touch is the windows. Everything a player (or a bot) needs is on the screen: the ball, its shadow, the coach.
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, GOOD, BAD, text, LABEL, particles } from './kit.js'
 import { placeStamp } from './read.js'
@@ -14,7 +14,7 @@ export const how = {
   'first-touch': 'Keep it up: LEFT or RIGHT, the foot it drops to, as it gets there. Then kill the coach’s passes dead, the foot it comes to.',
 }
 
-const MAX_UPS = 12, BALLS = 3, NEED = 15, PER_BALL = 3
+const MAX_UPS = 12, BALLS = 3, NEED = 13, PER_BALL = 3
 const FOOT_Y = 0.26          // where a touch meets it, m
 const FOOT_X = 0.26, PASS_X = 0.3   // how far off his middle a keep-up comes down, and a pass comes to: far enough to see which foot
 const SET = 1100
@@ -23,8 +23,8 @@ const GRAV = 9.8
 
 export function make({ v, seed }) {
   const r = rngOf(seed)
-  const W = byV(v, 62, 135)          // ms either side of a keep-up
-  const W2 = byV(v, 64, 128)         // ms either side of a pass arriving
+  const W = byV(v, 100, 160)         // ms either side of a keep-up
+  const W2 = byV(v, 105, 165)        // ms either side of a pass arriving
   const sides = Array.from({ length: MAX_UPS + 1 }, () => (r() < 0.5 ? -1 : 1))
   const passes = Array.from({ length: BALLS }, (_, k) => ({ side: r() < 0.5 ? -1 : 1, travel: (1080 - k * 70) * (0.92 + r() * 0.16), wait: 450 + r() * 350, res: null }))
   const g = {

@@ -29,7 +29,7 @@ import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribb
 import { tip, promptY } from './soccerPads.js'
 
 export const how = {
-  'one-on-one': 'Through on goal. Run at him with the stick (up to sprint: the touches get heavier) and draw your shot on the right of the screen: where it points is where it’s going, the quicker the harder, bend it to curl it, soft and high to dink it. Drawn back across with a man arriving, it’s the cut-back. Cut sharply as the keeper commits to go round him. On a keyboard: hold SPACE and aim, let go to strike it; E to chip or curl.',
+  'one-on-one': 'Through on goal. Steer with the stick on the left and draw your shot on the right: where the line points is where it’s going, bend it to curl it, soft and high to dink it. Take it too close and he’ll come out and smother it. With a man arriving, draw it back across for the cut-back. On a keyboard: arrows to run, hold SPACE and aim, let go to shoot; E to chip or curl.',
 }
 
 const FRICTION = 10.5        // m/s²: how fast a touched ball slows on the grass (a touch is a push, not a pass)

@@ -15,7 +15,7 @@ import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose,
 import { promptY } from './soccerPads.js'
 
 export const how = {
-  volley: 'It drops on the edge of the box. Get in line with the stick, then hold SHOOT and let go as it arrives to volley it first time. Or TOUCH it as it arrives, the stick pointing at the target, and shoot before the defender closes in.',
+  volley: 'It drops on the edge of the box. Get in line with the stick, hold SHOOT as it comes down and let go as it arrives to hit it first time. Or TOUCH it as it arrives, the stick at the target, and shoot before the defender closes in.',
 }
 
 const ME = { x: -1.5, z: -15.4 }, KEEP_Z = -0.7, RING = 620, HOLD = 900
