@@ -72,6 +72,8 @@ function liveCareers(F) {
     if (!t.gp) continue
     for (const [k] of RECORD_ROWS.career) if (t[k] > (out[k]?.v ?? 0)) out[k] = { v: t[k], i: p.i, n: p.n }
   }
+  // (a retired man's whole career, where his row has it)
+  for (const r of F.retired ?? []) if (r.rc === 1 && Array.isArray(r.t)) ['gp', 'pts', 'reb', 'ast'].forEach((k, j) => { if (r.t[j] > (out[k]?.v ?? 0)) out[k] = { v: r.t[j], i: r.i, n: r.n } })
   return out
 }
 function Records({ F }) {
@@ -98,7 +100,7 @@ function Records({ F }) {
               <small>{label}</small>
               <b>{x ? recordValue(k, x.v) : '-'}</b>
               <em><span>{x ? x.n : 'No mark yet'}</span>{x && when(book, x.y) && <i>{when(book, x.y)}</i>}</em>
-              {real && <u>{past ? `NBA record · past ${real[1]}'s ${recordValue(k, real[0])}` : `NBA record ${recordValue(k, real[0])} · ${real[1]}, ${real[2]}`}</u>}
+              {real && <u>{past ? (x.n === real[1] ? `NBA record · ${recordValue(k, real[0])} going into ${seasonText(FIRST_YEAR)}` : `NBA record · past ${real[1]}'s ${recordValue(k, real[0])}`) : `NBA record ${recordValue(k, real[0])} · ${real[1]}, ${real[2]}`}</u>}
             </div>
           )
         })}
@@ -154,7 +156,7 @@ function Hall({ F }) {
       <Chyron team={F.team} size="s" title="Retired numbers" right={jerseys.length || null} />
       {jerseys.length ? (
         <div className="fd-jerseys">
-          {jerseys.map(r => <span key={r.i} className="fd-jersey" style={fkVars(F.team)} {...tapMan(page, F, r.i)}><b>{r.num}</b><small>{splitName(r.n).last.toUpperCase()}</small><em>{r.yrs} {r.yrs === 1 ? 'SEASON' : 'SEASONS'}</em></span>)}
+          {jerseys.map(r => <span key={r.i} className="fd-jersey" style={fkVars(F.team)} {...tapMan(page, F, r.i)}><b>{r.num}</b><small>{splitName(r.n).last.toUpperCase()}</small><em>{r.yrs} {r.yrs === 1 ? 'YR' : 'YRS'}</em></span>)}
         </div>
       ) : <div className="fd-none">NO NUMBERS RETIRED YET</div>}
     </>

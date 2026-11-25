@@ -35,7 +35,7 @@
 //   hallOfFamer(row), hallClass(row), hallScore(row)   the Hall of Fame, off a retired man's row
 import { perGame } from './stats'
 import { prof } from './skills'
-import { careerTotals } from './realCareers'
+import { careerTotals, realCareerBest } from './realCareers'
 
 export const EAST = new Set(['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DET', 'IND', 'MIA', 'MIL', 'NYK', 'ORL', 'PHI', 'TOR', 'WAS'])
 export const AWARD_NAME = {
@@ -247,8 +247,15 @@ export const RECORD_ROWS = {
   season: [['ppg', 'Points a game'], ['rpg', 'Rebounds a game'], ['apg', 'Assists a game'], ['tpmS', 'Threes made'], ['spg', 'Steals a game'], ['bpg', 'Blocks a game']],
   career: [['pts', 'Points'], ['reb', 'Rebounds'], ['ast', 'Assists'], ['tpm', 'Threes'], ['stl', 'Steals'], ['blk', 'Blocks'], ['gp', 'Games']],
 }
-// the NBA's own record for a row of a book, or null: [value, holder, when]
-export const realRecord = (book, k) => REAL_RECORDS[book]?.[k === 'tpmS' ? 'tpm' : k] ?? null
+// the NBA's own record for a row of a book, or null: [value, holder, when]. A career record is the higher of the
+// retired men's (REAL_RECORDS.career) and the active men's going into 2026-27 (realCareers.js: James's points and
+// games, Curry's threes)
+const CAREER_REAL = {}
+export function realRecord(book, k) {
+  const r = REAL_RECORDS[book]?.[k === 'tpmS' ? 'tpm' : k] ?? null
+  if (book !== 'career' || !r) return r
+  return (CAREER_REAL[k] ??= (() => { const a = realCareerBest(k); return a && a[0] > r[0] ? a : r })())
+}
 // a mark as it's written: an average to a tenth (the NBA's own steals and blocks records to the hundredth they're
 // kept at), a count with its commas
 export const recordValue = (k, v) => (SEASON_K.includes(k) ? (Math.round(v * 10) / 10 === v ? v.toFixed(1) : String(v)) : Math.round(v).toLocaleString('en-US'))
@@ -261,19 +268,21 @@ const poss = n => `${n}'${/s$/.test(n) ? '' : 's'}`
 //     "Luka Doncic's 429 threes are the most in a season in NBA history, past Stephen Curry's 402 in 2015-16."
 //   the league's best since the save began (never said as "since": the seasons counted are the ones on the books):
 //     "Ausar Thompson's 3.1 steals a game are the most in a season in the last three years, past Cooper Flagg's 2.9 in 2026-27."
+//     "Victor Wembanyama's 12 blocks in a game are the most in the last four years, past Rudy Gobert's 10 in 2026-27."
 function recordText(F, book, k, b, was, from) {
   const real = realRecord(book, k)
   const num = recordValue(k, b.v), per = SEASON_K.includes(k)
   const what = `${poss(b.n)} ${num} ${NOUN[k]}${per ? ' a game' : book === 'game' ? ' in a game' : ''}`
   const are = `${what} ${per || num !== '1' ? 'are' : 'is'}`
-  const span = book === 'game' ? 'in a game' : 'in a season'
+  // (a game mark already says "in a game")
+  const span = book === 'game' ? '' : ' in a season'
   // (whose mark he passed: the old holder, his own said as his own; a mark set in this league by its season, the
   // NBA's own by the year or season the book gives)
   const old = (w, when) => `${w.i != null && w.i === b.i ? 'his own' : poss(w.n)} ${recordValue(k, w.v)} in ${when}`
-  if (real && b.v > real[0]) return `${are} the most ${span} in NBA history, past ${was && was.v > real[0] ? old(was, seasonTxt(was.y)) : old({ n: real[1], v: real[0] }, real[2])}.`
+  if (real && b.v > real[0]) return `${are} the most${span} in NBA history, past ${was && was.v > real[0] ? old(was, seasonTxt(was.y)) : old({ n: real[1], v: real[0] }, real[2])}.`
   if (!was) return null
   const n = F.year - from + 1
-  return `${are} the most ${span} in the last ${WORDS[n] ?? n} years, past ${old(was, seasonTxt(was.y))}.`
+  return `${are} the most${span} in the last ${WORDS[n] ?? n} years, past ${old(was, seasonTxt(was.y))}.`
 }
 export function updateRecords(F) {
   const men = menOf(F), rec = (F.rec ??= { game: {}, season: {}, career: {} })
@@ -305,6 +314,8 @@ export function updateRecords(F) {
     // (a made-up veteran's earlier seasons aren't numbers anyone has: his career is what he's done here)
     for (const k of CAREER_K) put(rec, 'career', k, t[k], p.i, p.n, null)
   }
+  // (a retired man's whole career, where his row has it: an older save's book was kept on the save's seasons alone)
+  for (const r of F.retired ?? []) if (r.rc === 1 && Array.isArray(r.t)) ['gp', 'pts', 'reb', 'ast'].forEach((k, j) => put(rec, 'career', k, r.t[j], r.i, r.n, null))
   // the franchise's careers: what each man has done for this team since the save began (his rows with it)
   const hereRows = p => { const rows = (p.car ?? []).filter(c => c.s === mine && !c.y2), cur = F.ss?.[p.i]; if (cur?.gp && cur.s === mine && !(Array.isArray(cur.sp) && cur.sp.length) && !rows.some(c => c.y === F.year)) rows.push({ ...cur, y: F.year }); return rows }
   for (const p of men.values()) {

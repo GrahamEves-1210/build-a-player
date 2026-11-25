@@ -406,3 +406,26 @@ export function careerTotals(p, cur = null) {
   for (const r of [...(p?.car ?? []), ...(cur ? [cur] : [])]) for (const k of K) t[k] += r[k] ?? 0
   return { ...t, base: !!base, whole: !!base || !predates(p) }
 }
+// An older save's retired list: a real man's row there holds only his seasons in the save (and his years of service
+// as the save had them). His real career goes onto it, once (rc marks the row): the totals, and his seasons as the
+// real ones before the save and the save's through his last.
+export function fixRetired(F) {
+  for (const r of F?.retired ?? []) {
+    if (r.rc || r.car || r.b != null || !Array.isArray(r.t)) continue
+    const c = REAL_CAREER[r.n], here = Math.max(0, (r.y ?? REAL_THROUGH) - REAL_THROUGH)
+    // (his career has to predate the save: a made-up man who shares a real name doesn't)
+    if (!c || !((r.yrs ?? 0) > here)) continue
+    r.t = [(r.t[0] ?? 0) + c[2], (r.t[1] ?? 0) + c[4], (r.t[2] ?? 0) + c[5], (r.t[3] ?? 0) + c[6]]
+    r.yrs = c[1] + here
+    r.rc = 1
+  }
+}
+// the real career record in a stat going into 2026-27 among the men in the table: [value, name, 'first-last'], or null
+const COL = { gp: 2, pts: 4, reb: 5, ast: 6, stl: 7, blk: 8, tpm: 9 }
+export function realCareerBest(k) {
+  const j = COL[k]
+  if (j == null) return null
+  let best = null
+  for (const n in REAL_CAREER) { const c = REAL_CAREER[n]; if (!best || c[j] > best[0]) best = [c[j], n, `${c[0]}-${String(REAL_THROUGH + 1).slice(2)}`] }
+  return best
+}

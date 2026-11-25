@@ -11,6 +11,7 @@ import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
 import { lightInit } from './light'
 import { ensureStaff } from './coach'
+import { fixRetired } from './realCareers'
 
 export * from './league'
 export * from './schedule'
@@ -147,6 +148,7 @@ export function upgradeNba(F) {
   if (F.pace !== 'light' && F.pace !== 'full') F.pace = 'full'
   ensureStaff(F)
   fixWire(F)   // (the wire's one style: news.js)
+  fixRetired(F)   // (the retired list: a real man's real career on his row, realCareers.js)
   return F
 }
 export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }
