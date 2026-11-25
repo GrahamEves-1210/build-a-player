@@ -50,7 +50,7 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
 export function CapBar({ F, s = F.team }) {
   const c = CAP_SIM.capSheet(F, s)
   // (the payroll is salaries; the summer's cap holds count against cap room only, never the tax or the aprons)
-  const holds = F.phase === 'off' && !(F.noCap && s === F.team) ? c.hold ?? 0 : 0
+  const holds = F.phase === 'off' && !(F.noCap && s === F.team) ? (c.holds ?? []).reduce((a, h) => a + h.$, 0) : 0
   const top = Math.max(c.a2 * 1.06, c.pay * 1.03)
   const at = v => `${Math.min(100, (v / top) * 100)}%`
   const OVER = { under: `${money(c.room)} in cap room`, cap: 'Over the cap', tax: `In the tax · ${money(c.bill)} luxury tax`, a1: `Over the first apron · ${money(c.bill)} luxury tax`, a2: `Over the second apron · ${money(c.bill)} luxury tax` }
