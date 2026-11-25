@@ -8111,3 +8111,8 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 /* Phone Home: COLLEGE FOOTBALL on one line on its half-width card (owner 11-25) */
 @media (max-width: 520px) { .ag-mc--cfb .ag-mc-head b { white-space: nowrap; font-size: 27px !important; letter-spacing: 0 !important; } }
 @media (max-width: 370px) { .ag-mc--cfb .ag-mc-head b { font-size: 25px !important; } }
+/* Home's position bar (owner 11-25): no lines between the positions, no line along its top, and the picked block
+   rounded, inset a little so its corners show */
+.ag-stage .ag-positions { border-top: 0 !important; }
+.ag-stage .ag-pos, .ag-stage .ag-side-panel > .ag-pos { border-left: 0 !important; }
+.ag-stage .ag-positions::before, .ag-side-panel::before { border-radius: 8px; background-clip: content-box; padding: 5px; box-sizing: border-box; }
