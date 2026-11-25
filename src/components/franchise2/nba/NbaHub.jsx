@@ -489,6 +489,7 @@ function ScoutRow({ F, act }) {
         <div className="ss-overlay nb-sheet-ov" onClick={e => e.target === e.currentTarget && setOpen(false)}>
           <div className="fk fk-root nb-sheet" role="dialog" aria-label="Draft board" style={fkVars(F.team)}>
             <div className="nb-sheet-top"><b>{F.year + 1} big board · {F.sp ?? 0} reports</b><button className="fk-x" onClick={() => setOpen(false)} aria-label="Close">✕</button></div>
+            <p className="nb-sec-note">{`Reports are for the ${F.year + 1} class. Only ${NBA.SCOUT_CARRY} carry over past the draft, and the staff holds ${NBA.SCOUT_MAX} at most.`}</p>
             <div className="nb-board">{(F.dc ?? []).slice(0, 40).map(p => <Prospect key={p.i} F={F} p={p} act={act} />)}</div>
           </div>
         </div>, document.body)}

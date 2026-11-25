@@ -2,7 +2,7 @@
 // the game sim (C: game.js, stats.js, injury.js, aging.js, awards.js). The names are fixed in STATE.md. Until those
 // branches land these come from stubs.js; at the merge each line points at its real file.
 export {
-  rotationOf, simGame, recordGame, rollInjuries, tickInjuries, restFor, leaders, seasonAwards, finalsMvp, ageLeague,
+  rotationOf, simGame, recordGame, rollInjuries, tickInjuries, healTeam, playsHurt, restFor, leaders, seasonAwards, finalsMvp, ageLeague,
   startGame, playTo, possession, momentEnd, finishGame, seriesMvp, updateRecords, seedPotential, prospect, outText,
   allStars as pickAllStars,
 } from './sim'

@@ -127,7 +127,7 @@ export const NBA_DEALS = {
   "Ernest Udeh Jr.": { t: 'CLE', tw: 1, ys: 0, b: 0, sg: 2026, g: 0 },
   "Norchad Omier": { t: 'CLE', tw: 1, ys: 1, b: 0, sg: 2026, g: 0 },
   // ─── DAL
-  "Kyrie Irving": { t: 'DAL', s: [39.491,42.417], o: 'P2027', ys: 15, b: 0, sg: 2025 },
+  "Kyrie Irving": { t: 'DAL', s: [39.491,42.417], o: 'P2027', ys: 15, b: 7, sg: 2025 },
   "P.J. Washington": { t: 'DAL', s: [19.813,21.398,22.983,24.568], ys: 7, b: 7, sg: 2025, x: 2025, dr: [2019,1,12,"CHA"] },
   "Daniel Gafford": { t: 'DAL', s: [17.264,18.127,18.99], ys: 7, b: 3, sg: 2025, x: 2025, dr: [2019,2,38,"CHI"] },
   "Santi Aldama": { t: 'DAL', s: [17.007,17.007], o: 'T2027', ys: 5, b: 1, sg: 2025, dr: [2021,1,30,"UTA"] },
@@ -204,7 +204,7 @@ export const NBA_DEALS = {
   // ─── HOU
   "Kevin Durant": { t: 'HOU', s: [43.902,46.098], o: 'P2027', ys: 19, b: 3, sg: 2025, x: 2025 },
   "Alperen Sengun": { t: 'HOU', s: [35.642,37.339,39.037,39.037], o: 'P2029', ys: 5, b: 5, sg: 2024, x: 2024, dr: [2021,1,16,"OKC"], rt: 'HOU' },
-  "Fred VanVleet": { t: 'HOU', s: [25.0], ys: 10, b: 0, sg: 2025 },
+  "Fred VanVleet": { t: 'HOU', s: [25.0], ys: 10, b: 3, sg: 2025 },
   "Jabari Smith Jr.": { t: 'HOU', s: [23.643,21.752,23.643,25.535,27.426], ys: 4, b: 4, sg: 2025, x: 2025, dr: [2022,1,3,"HOU"] },
   "Tari Eason": { t: 'HOU', s: [14.052,15.176,16.3,17.424,18.548], o: 'P2030', ys: 4, b: 3, sg: 2026, dr: [2022,1,17,"HOU"] },
   "Steven Adams": { t: 'HOU', s: [13.0,11.87], ys: 13, b: 4, sg: 2024, x: 2024 },

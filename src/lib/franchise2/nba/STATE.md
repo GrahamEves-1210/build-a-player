@@ -353,7 +353,7 @@ entries at `seasonEndDeals`.
   situation and its ownership (`ownerTier`); `strengthRank(F, s)`. `taxTolerance` / `lineOf` are kept for old callers.
 - Team: `a2h: [year]` the seasons it finished past the second apron (cap.js assessTax).
 - trades.js: `sellDown(F)` is the league's sell-down pass (the first day of free agency, the end of the
-  summer, the deadline's last two days; `salaryDumps` is no longer called); `shedTo(F, s, target)`; a league team's unused non-taxpayer mid-level can
+  summer, the deadline's last two days: there only a team within 5% of the cap of its line, one move a day; `salaryDumps` is gone); `shedTo(F, s, target)`; a league team's unused non-taxpayer mid-level can
   take a contract in by trade (sideRules `mle`); cap room in a trade counts the summer's holds, the aprons don't.
 - market.js: `lateOffer` (the GM) and the league's late signings follow one rule (lateDeal / lateBest); the wire has
   a `SIGN-AND-TRADE` tag (k 'sign').
@@ -436,3 +436,43 @@ No new fields on F or on a man. What changed behind the same shapes:
 - **Data**: `ys` in data/nba-contracts.js is years of NBA service (a season lost to injury counts); `rk: 1` there = still
   a rookie; `NBA_FRANCHISE_SERVICE` (data/nba-franchise-roster.js) for the real men with no contract row. Team colours
   newer than data/nba-teams.js: `COLORS_NOW` in league.js (Franchise only).
+
+### The final pass (round 9, 2026-11-25)
+
+Fields (all optional: an older save loads with none):
+- `F.sit = { key, m: { [short]: 'win'|'mid'|'reb' }, rank: { [short]: 1..30 } }`: the front offices' read of every team
+  (contracts.js situationOf / strengthRank), taken once a week in the season and once at each summer stop and kept on
+  the save, so a save loaded again plays on with the read it had. The record in it is the one through the last night
+  before the week began, whenever in the week it is first asked for.
+- `F.chn = { key, m: { [short]: $M } }`: what each team could pay a free agent as the day of free agency opened
+  (contracts.js channels, read by outsideBest), kept on the save for the same reason.
+- `F.trl[].k = 'sell'`: a trade the league made to move salary (trades.js sellDown / shedTo).
+- contracts.js marketOf's cache is keyed on the street's length too (a signing off a long street moves every rank a
+  little). Nothing the engine keeps off the save may change what happens: scripts/franchise2/nba-seed.mjs plays one
+  seed straight through, then saved and loaded at every stop, then with the screens' reads at every stop.
+
+Rules that changed:
+- **Trades**: a top-dozen player aged 30 or younger carries the cornerstone premium when his own team values him
+  (trades.js outValue: 1.3, with the top twenty aged 27 or younger). At the deadline a team ducks its spending line
+  only when it is within 5% of the cap of it, one move a day (sellDown); in the summer as before. `salaryDumps` is gone.
+- **A moment's clock**: `row.mo.left` is the clock when the moment's own play ended (the shot in the air), not the end
+  of the possession (an offensive rebound can run it on).
+- **Playoff injuries** (injury.js): `PO_PLAY` (4) games or fewer is played through (`playsHurt(p, po)`: dressed, and
+  PROBABLE on the roster screens; `outText(p, left, po)`), such a knock isn't rolled in a playoff game, the rate is
+  `PO_RATE` (0.85) of the regular season's, and the calendar heals: `healTeam(F, short, games)` a game's worth for
+  every team as the play-in opens, for a team on a night it doesn't play, and for the teams going on between rounds
+  (season.js startPostseason / poEnd / startRound).
+- **A star with nobody's rights on him** (market.js clearRoom): tried on the market's first morning before anyone
+  re-signs or spends an exception (`early`), then after every day's round. The buyer renounces its own free agents,
+  moves contracts (`shedTo(..., { give })`: it lets more go for a star), and waives and stretches one or two contracts
+  if that finishes it. A franchise player (top twelve, 30 or younger) is worth a longer reach and a rebuilding team
+  takes the call. He signs for three or four seasons at about his market.
+- **A waived veteran-minimum deal** counts at its cap hit (contracts.js cutCost: `p.mh`), as it did on the roster.
+- **Camp under a hard cap**: nba-classcheck follows the money round's rule (a minimum deal for a roster under 14
+  always goes); `campCheck().short` stays for a roster with truly nobody to add.
+
+Checks: every `scripts/franchise2/nba-*.mjs` passes. `nba-oldsave.mjs` makes its own old-shape save when no file is
+given. `nba-buildbalance.mjs` also counts the playoff teams' three best men out as round one opens and their games
+missed. `nba-dynasty.mjs` prints a season's health line (taxpayers, the top payroll against the second apron, trades,
+85+ and 90+ men, the best and worst records, the GM's team) and the averages.
+

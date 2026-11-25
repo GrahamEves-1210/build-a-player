@@ -17,8 +17,9 @@
 //      his old team, which matches a good young player nearly always. A sheet the GM's team signed (p.osh) is answered
 //      the next day; a sheet on the GM's own RFA (F.rfq) is his to match or not (matchSheet) before the next day
 //      (unanswered: matched when his team can). A matched sheet: no trade for a year (p.osm).
-//   4. from the third day, sign-and-trades between the league's teams (signAndTrades); from the second to the fourth,
-//      a team clears the room for a star nobody holds the rights to (clearRoom).
+//   4. from the third day, sign-and-trades between the league's teams (signAndTrades); every day, a team clears the
+//      room for a star nobody holds the rights to (clearRoom: its own free agents renounced, contracts moved, one
+//      or two waived and stretched if it takes that).
 //   An RFA with no offer by the last day settles with his team (rfaDeal), or signs his qualifying offer (the end of
 //   the bench, and the few who bet on themselves).
 // THE GM'S TEAM: F.fao { [manId]: deal } its offers (and offer sheets) standing; F.rfq [{ i, s, d }] the offer sheets
@@ -37,7 +38,7 @@ import {
   spendLines, strengthRank, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
   ROSTER_MAX, ROSTER_MIN, TWO_WAY_MAX, OFF_MAX, raiseMax, schedOf, legalRoster, outsideBest, sheetOf, superMaxOk,
 } from './contracts'
-import { sellDown, shedTo, summerTrades, doTrade, matchLimit, teamSide, whyNot } from './trades'
+import { sellDown, shedTo, summerTrades, doTrade, matchLimit, teamSide, whyNot, manValue } from './trades'
 
 export const FA_DAYS = 6
 // his ask comes down each day he goes unsigned (the market drying up), and toward what the league can still pay
@@ -316,6 +317,8 @@ function openMarket(F) {
   const news = []
   const year = capYear(F)
   for (const p of F.fa ?? []) askFor(F, p)
+  // (the summer's first call: a star with nobody's rights on him, and the team that makes the room for him)
+  news.push(...clearRoom(F, 1, { sit: Object.fromEntries(shortsOf(F).map(s => [s, situationOf(F, s)])) }, { early: true }))
   // the league's teams keep their own (the GM's team does that on its screen): most of the men they want re-sign; a
   // few want to see what's out there first (their team can still bring them back with his rights, in the rounds)
   for (const s of shortsOf(F)) {
@@ -508,10 +511,10 @@ function faRound(F, day) {
       else if (signMan(F, was, p, { $: qo, y: 1, r: 0, sheet: 1 }).ok) { delete p.rfa; news.push({ k: 'sign', tag: 'QUALIFYING OFFER', s: was, text: `${p.n} signs his qualifying offer with the ${was}: ${termsText(1, qo)}; he can be an unrestricted free agent next summer` }) }
     }
   }
-  // (from the third day: the sign-and-trades, for the good players no team could sign outright; from the second to
-  // the fourth, a team clears the room for a star nobody holds the rights to)
+  // (from the third day: the sign-and-trades, for the good players no team could sign outright; every day, a team
+  // clears the room for a star nobody holds the rights to)
   if (day >= 3) news.push(...signAndTrades(F, day, ctx))
-  if (day >= 2 && day <= 5) news.push(...clearRoom(F, day, ctx))
+  news.push(...clearRoom(F, day, ctx))
   return news
 }
 // a restricted free agent no team signed to a sheet, and his own team, on the last day. They settle: his price as it
@@ -634,33 +637,74 @@ function signAndTrades(F, day, ctx) {
 }
 // ── A team clears the room (the league's teams) ──────────────────────────────
 // A star on the market with no team holding his rights (his old team renounced him), and nobody with the cap room
-// for him: a team that wants him makes the room, the way the Knicks did for Brunson and the Sixers for George. It
-// renounces its own free agents and moves contracts to teams that can take them (trades.js shedTo: into room, a
-// trade exception or a mid-level, a pick attached when the contract needs one), then signs him at about his market
-// price. Tried on a copy of the league first: nobody guts a roster for a star it then can't fit. From the second day
-// to the fourth, one a day.
-function clearRoom(F, day, ctx) {
+// for him: a team that wants him makes the room, the way the Knicks did for Brunson, the Sixers for George and the
+// Bucks for Turner. It renounces its own free agents, moves contracts to teams that can take them (trades.js shedTo:
+// into room, a trade exception or a mid-level, a pick attached when the contract needs one), and if that leaves it
+// short, waives and stretches a contract or two it can live without (the Bucks and Lillard's, 2025). Then it signs
+// him at about his market price, for three or four seasons. Tried on a copy of the league first: nobody guts a roster
+// for a star it then can't fit. Every day of the market, the best such man first, one signing a day. One of the
+// league's dozen best in his prime is worth more of a roster (a longer reach), and a rebuilding team takes the call
+// too: he's the rebuild.
+// THE FIRST MORNING (early): a star with no team's rights on him (renounced, or off the street) is the summer's
+// first call. The teams within reach move before they've re-signed anyone or spent an exception: the league still
+// has its room and its mid-levels to take the contracts, and the men to move aren't freshly signed. Later in the
+// week the same door is far narrower.
+const franchiseMan = (F, p) => rankOf(F, p) <= 12 && (p.ag ?? 27) <= 30
+function clearRoom(F, day, ctx, { early = false } = {}) {
   const news = []
   const year = capYear(F), cap = capOf(year)
   const S = shortsOf(F).filter(s => s !== F.team)
-  // (a star nobody holds the rights to, or one his own team can't keep)
-  const loose = p => !(p.fr && !p.rn && p.fr !== F.team) || (day >= 3 && !!keepCheck(F, p.fr, p).no)
+  // (a star nobody holds the rights to, or one his own team can't keep; the first morning, only the men with no
+  // rights on them: the GM's own free agents are his to offer first)
+  const loose = p => (early ? !p.fr || !!p.rn : !(p.fr && !p.rn && p.fr !== F.team) || (day >= 3 && !!keepCheck(F, p.fr, p).no))
   const stars = (F.fa ?? []).filter(p => isStar(F, p) && !p.fl && !p.rfa && !sheetOf(F, p) && !F.fao?.[p.i] && loose(p))
     .sort((a, b) => rankOf(F, a) - rankOf(F, b))
   const drop = (G, B) => { for (const x of G.fa ?? []) if (x.fr === B && !x.rn && !x.rfa && !isStar(G, x)) renounce(G, B, x.i) }
+  // (the contracts a team would waive and stretch to finish the job: not its three best men, not a man it signed or
+  // traded for this summer, not a young man on his rookie deal, nobody the league would give much for; the ones that
+  // free the most room first)
+  let worthless = 12
+  const stretchable = (G, B) => {
+    const std = standardOf(G.teams[B])
+    const core = new Set(std.slice().sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 3).map(q => q.i))
+    return std.filter(q => !core.has(q.i) && q.b == null && !q.rs && q.sgn !== year && !(q.tx && q.tx[1] === year) && (q.$ ?? 0) >= 6 && manValue(G, q) <= worthless)
+      .map(q => ({ q, free: (q.$ ?? 0) - cutCost(G, q, { stretch: true }).now })).filter(x => x.free >= 3).sort((x, y) => y.free - x.free || x.q.i - y.q.i)
+  }
   for (const p of stars.slice(0, 2)) {
     const mv = marketValue(F, p, year), w = worthOf(F, p, year)
+    const top = franchiseMan(F, p)
     // (his price: what he asks today; a man with no team behind him still gets most of his market from a team
     // that makes the room for him)
     const held = !!(p.fr && !p.rn && p.fr !== F.team)
-    const d = { $: r1(held ? askFor(F, p).$ : Math.min(mv, Math.max(askFor(F, p).$, mv * 0.85))), y: Math.min(4, Math.max(2, termOf(F, p))), r: 0.05 }
+    const d = { $: r1(held ? askFor(F, p).$ : Math.min(mv, Math.max(askFor(F, p).$, mv * 0.85))), y: Math.min(4, Math.max(top ? 3 : 2, termOf(F, p))), r: 0.05 }
     // (a team with the room already will bid for him in the round)
     if (S.some(B => capPayroll(F, B, year) + d.$ <= cap + 0.01)) continue
-    const buyers = S.filter(B => roleOn(F, B, p) === 1 && !(ctx.sit[B] === 'reb' && (p.ag ?? 27) >= 28) && w * 1.1 >= d.$ && !pendingOf(F, B))
-      .map(B => ({ B, gap: payroll(F, B, year) + reserveOf(F, B, 1) + d.$ - cap })).filter(x => x.B !== p.fr && x.gap > 0 && x.gap <= cap * 0.25).sort((x, y) => x.gap - y.gap || (x.B < y.B ? -1 : 1))
-    for (const { B, gap } of buyers.slice(0, 3)) {
+    const reach = cap * (top ? 0.42 : 0.28)
+    // (what it will let go to make the room: more for a franchise player)
+    const give = top ? 2.5 : 1.5
+    worthless = top ? 30 : 15
+    const buyers = S.filter(B => roleOn(F, B, p) === 1 && (top || !(ctx.sit[B] === 'reb' && (p.ag ?? 27) >= 28)) && w * 1.1 >= d.$ && !pendingOf(F, B))
+      .map(B => ({ B, gap: payroll(F, B, year) + reserveOf(F, B, 1) + d.$ - cap })).filter(x => x.B !== p.fr && x.gap > 0 && x.gap <= reach).sort((x, y) => x.gap - y.gap || (x.B < y.B ? -1 : 1))
+    for (const { B } of buyers.slice(0, 4)) {
       // (the room is counted with the empty-roster charges in: a second and third pass move what the first left)
-      const clear = X => { drop(X, B); const out = []; for (let k = 0; k < 3; k++) { const need = capPayroll(X, B, year) + d.$ - cap; if (need <= 0.01) break; out.push(...shedTo(X, B, payroll(X, B, year) - need - 0.3)) } return out }
+      const need = X => capPayroll(X, B, year) + d.$ - cap
+      const clear = X => {
+        drop(X, B)
+        const out = []
+        for (let k = 0; k < 3; k++) { const n = need(X); if (n <= 0.01) break; out.push(...shedTo(X, B, payroll(X, B, year) - n - 0.3, { held: heldBy(X), give })) }
+        // (still short: a contract or two waived and stretched, when that finishes it)
+        if (need(X) > 0.01) {
+          const L = stretchable(X, B).slice(0, 2)
+          // (an open roster spot costs a rookie minimum of cap room: counted in what each waiver frees)
+          const spot = standardOf(X.teams[B]).length <= 12 ? minOf(0, year) : 0
+          if (L.reduce((a, x) => a + x.free - spot, 0) >= need(X) - 0.01) for (const { q } of L) {
+            if (need(X) <= 0.01) break
+            cutMan(X, B, q.i, { stretch: true })
+            out.push({ k: 'cut', tag: 'WAIVED', s: B, text: `The ${B} have waived ${q.n} and stretched what he's owed to clear cap room` })
+          }
+        }
+        return out
+      }
       const G = JSON.parse(JSON.stringify(F))
       clear(G)
       const pc = (G.fa ?? []).find(x => x.i === p.i)

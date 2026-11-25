@@ -170,6 +170,11 @@
 .fsu-opt.is-on small { color: inherit; opacity: .78; }
 @media (hover: hover) { .fsu-opt:not(.is-on):hover { background: var(--fk-g2); } }
 .fsu-who-prev { --h: 104px; }
+/* (a phone: the head coach's style on a row of its own; a long one wrapped under HC and led with a stray dot) */
+@media (max-width: 520px) {
+  .fsu-who-prev.fk-l3--l .fk-l3-line { flex-basis: 100%; }
+  .fsu-who-prev.fk-l3--l .fk-l3-meta > .fk-l3-line::before { content: none; }
+}
 .fsu-faces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 /* a build's faces (NameForm): eight and MORE, three across on a phone; on a computer as many as fit at about 120 px */
 @media (min-width: 700px) { .fsu-faces--build { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); } }

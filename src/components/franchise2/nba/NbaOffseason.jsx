@@ -544,7 +544,7 @@ function Resign({ F, act, go, owner }) {
         const x = seasonOf(F, p.i, F.year)
         return (
           <div key={p.i} className="nbo-rs">
-            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" line={`AGE ${p.ag}${x ? ` · ${f1(per(x, 'pts'))} PPG` : ''}`} onClick={open ? () => { open(p.i); sfx('tap') } : undefined} />
+            <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={F.team} size="s" mine={p.b != null ? owner : null} line={`AGE ${p.ag}${x ? ` · ${f1(per(x, 'pts'))} PPG` : ''}`} onClick={open ? () => { open(p.i); sfx('tap') } : undefined} />
             <div className="nbo-rs-facts">
               <span><small>Asks</small><b>{d ? `${money(d.$)} × ${yrs(d.y)}` : 'To test the market'}</b></span>
               <span><small>Rights</small><b>{rt ? RIGHTS[rt] : 'None'}</b></span>

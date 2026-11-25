@@ -308,7 +308,9 @@ export function finishMoment(F, out) {
     const at = G.clock, per = G.per
     if (out.side === 'def' || (out.side == null && out.them != null)) X.possession(G, opp, { pts: out.them ?? 0, kind: out.kind ?? 'iso', ...(out.vs != null && { by: out.vs }), ...(out.t != null && { t: out.t }) })
     else X.possession(G, F.team, { pts: out.pts ?? 0, by: out.by, kind: out.side === 'ft' ? 'ft' : out.kind, ...(out.tov && { tov: true }), ...(out.t != null && { t: out.t }) })
-    const left = G.done ? 0 : G.per > per ? 0 : G.clock
+    // (left: the clock when the moment's own play ended, the shot in the air. An offensive rebound and a second look
+    // can run the possession on past it; the final's line and the checks read the shot's clock)
+    const left = out.t != null ? Math.max(0, at - out.t) : G.done ? 0 : G.per > per ? 0 : G.clock
     const lead = G.sc[k] - G.sc[k === 'h' ? 'a' : 'h']
     const sealed = !!out.hit && lead > 0
     const trip = X.momentEnd(G, F.team, { sealed })
@@ -412,6 +414,10 @@ export function startPostseason(F) {
   F.po = { live: 1, stage: 'pi1', seeds, pi: {}, rd: -1, all: [], champ: null, cur: [], night: 0 }
   F.phase = 'playin'
   F.ps = {}
+  // (the calendar heals. The regular season ends on a Sunday and the play-in starts on Tuesday: two days off for
+  // everyone, a game's worth. From here a night a team doesn't play is another, poEnd: the top six seeds reach Game 1
+  // on about a week's rest, as they do)
+  for (const s of SHORTS) X.healTeam(F, s, 1)
   for (const c of ['E', 'W']) addNews(F, { k: 'po', tag: 'PLAY-IN', text: `The ${CONF_NAME_SHORT[c]}'s play-in is set: the ${nick(seeds[c][6])} host the ${nick(seeds[c][7])} for the No. 7 seed, and the ${nick(seeds[c][8])} host the ${nick(seeds[c][9])}` })
   piNight(F)
   return F.po
@@ -467,7 +473,10 @@ const CONF_NAME_LONG = { E: 'Eastern', W: 'Western' }
 function poEnd(F, mine) {
   const P = F.po
   P.night++
-  for (const s of SHORTS) X.tickInjuries(F, s)
+  // (a team that played is a game closer for its hurt men; a team that sat the night, waiting on the play-in or on
+  // the other series of its round, heals a game's worth too)
+  const played = new Set(P.cur.flatMap(g => [g.h, g.a]))
+  for (const s of SHORTS) { if (played.has(s)) X.tickInjuries(F, s); else X.healTeam(F, s, 1) }
   if (P.stage === 'pi1' || P.stage === 'pi2') {
     for (const g of P.cur) {
       const w = g.hs > g.as ? g.h : g.a, l = w === g.h ? g.a : g.h
@@ -517,6 +526,8 @@ function startRound(F, rd) {
   const P = F.po, R = records(F)
   P.rd = rd; P.stage = 'r'
   F.phase = 'playoffs'
+  // (the two or three days between rounds: a game's worth of healing for everyone still playing)
+  if (rd > 0) for (const S of P.all[rd - 1] ?? []) if (S.done) X.healTeam(F, S.done, 1)
   const mk = (hi, lo, c) => ({ hi, lo, c, g: [], wh: 0, wl: 0, done: null })
   if (rd === 0) {
     P.S = []

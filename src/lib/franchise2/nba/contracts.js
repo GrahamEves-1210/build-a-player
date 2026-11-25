@@ -110,9 +110,13 @@ export function marketOf(F) {
   // (checked on every read without building a list or a string: this is read for every man in every trade the league
   // weighs)
   const c = MK.get(F.teams ?? F)   // (keyed by the league's teams: a trade's look-ahead hands in a copy of F)
-  let count = (F.fa ?? []).length
+  // (the men on rosters and the men on the street, each counted: the ladder's length is the rostered men and the
+  // street's best hundred and fifty, so a signing off a long street changes every rank a little. Both are in the
+  // version, so the market is the same whenever it's first read, in a save loaded again too)
+  const street = (F.fa ?? []).length
+  let count = street
   for (const s in F.teams ?? {}) count += F.teams[s].r.length
-  if (c && c.n === count && c.y === F.year && c.ph === F.phase && c.st === F.off?.step && c.sed === F.sed && c.v === VER) return c.m
+  if (c && c.n === count && c.fa === street && c.y === F.year && c.ph === F.phase && c.st === F.off?.step && c.sed === F.sed && c.v === VER) return c.m
   const men = allMen(F)
   const sc = men.map(([, p]) => [p.i, scoreOf(p)]).sort((a, b) => b[1] - a[1] || a[0] - b[0])
   // (the ladder is as long as the league: its rostered men and the street's best hundred and fifty; any more on the
@@ -121,7 +125,7 @@ export function marketOf(F) {
   const k = 450 / Math.max(300, n)
   const m = {}
   sc.forEach(([i, s], j) => { m[i] = { sc: s, rk: 1 + j * k } })
-  MK.set(F.teams ?? F, { m, desc: sc.map(x => x[1]), k, n: count, y: F.year, ph: F.phase, st: F.off?.step, sed: F.sed, v: VER })
+  MK.set(F.teams ?? F, { m, desc: sc.map(x => x[1]), k, n: count, fa: street, y: F.year, ph: F.phase, st: F.off?.step, sed: F.sed, v: VER })
   return m
 }
 export const rankOf = (F, p) => marketOf(F)[p.i]?.rk ?? 300
@@ -652,8 +656,11 @@ export function decideOption(F, p, keep) {
 
 // ── A team's situation (contending, in the mix, rebuilding) ──────────────────
 // by its top eight men (the core's teamOvr is the screen's; this is the front office's own read), its record this
-// season once it's 20 games in, and its age
-const SIT = new WeakMap()
+// season once it's 20 games in, and its age.
+// The read is taken once a week in the season (and once at each of the summer's stops) and kept on the save (F.sit =
+// { key, m: { [short]: 'win'|'mid'|'reb' }, rank: { [short]: 1..30 } }): a save reloaded in the middle of a week plays
+// on with the read it had, so the same save always plays out the same way. The record it's taken on is the one
+// through the last night before the week began, whenever in the week it's first asked for.
 export function teamStrength(F, s) {
   // (in the summer, its own free agents it still holds the rights to count: it can bring them back)
   const own = F.phase === 'off' ? (F.fa ?? []).filter(p => p.fr === s && !p.rn) : []
@@ -661,25 +668,26 @@ export function teamStrength(F, s) {
   const w = [1, 1, 0.9, 0.8, 0.7, 0.55, 0.45, 0.35]
   return w.reduce((a, x, k) => a + x * (r[k] ?? 55), 0) / w.reduce((a, x) => a + x, 0)
 }
-function recordOf(F, s) {
+function recordOf(F, s, before = Infinity) {
   let w = 0, l = 0
   for (const g of F.sched ?? []) {
-    if (g.hs == null) continue
+    if (g.hs == null || g.d >= before) continue
     if (g.h === s) { if (g.hs > g.as) w++; else l++ }
     else if (g.a === s) { if (g.as > g.hs) w++; else l++ }
   }
   return { w, l }
 }
-export function situationOf(F, s) {
-  const key = `${F.year}|${F.phase}|${F.off?.step ?? ''}|${Math.floor((F.day ?? 0) / 7)}`
-  let c = SIT.get(F)
+function sitRead(F) {
+  const wk = Math.floor((F.day ?? 0) / 7)
+  const key = `${F.year}|${F.phase}|${F.off?.step ?? ''}|${wk}`
+  let c = F.sit
   if (c?.key !== key) {
     const S = shortsOf(F)
-    const str = S.map(x => [x, teamStrength(F, x)]).sort((a, b) => b[1] - a[1])
+    const str = S.map(x => [x, teamStrength(F, x)]).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
     const rank = Object.fromEntries(str.map(([x], i) => [x, i + 1]))
     const m = {}
     for (const x of S) {
-      const rec = F.phase === 'season' || F.phase === 'off' ? recordOf(F, x) : { w: 0, l: 0 }
+      const rec = F.phase === 'season' ? recordOf(F, x, wk * 7) : F.phase === 'off' ? recordOf(F, x) : { w: 0, l: 0 }
       const g = rec.w + rec.l
       const wp = g ? rec.w / g : 0.5
       const live = g >= 20
@@ -688,12 +696,13 @@ export function situationOf(F, s) {
       m[x] = sc >= 0.5 ? 'win' : sc <= -0.45 ? 'reb' : 'mid'
     }
     c = { key, m, rank }
-    SIT.set(F, c)
+    F.sit = c
   }
-  return c.m[s] ?? 'mid'
+  return c
 }
+export const situationOf = (F, s) => sitRead(F).m[s] ?? 'mid'
 // where its roster ranks in the league (1 the strongest), as the front offices read it
-export const strengthRank = (F, s) => { situationOf(F, s); return SIT.get(F)?.rank?.[s] ?? 15 }
+export const strengthRank = (F, s) => sitRead(F).rank?.[s] ?? 15
 export const SIT_TEXT = { win: 'CONTENDING', mid: 'IN THE MIX', reb: 'REBUILDING' }
 // the big markets: some free agents want the lights
 export const BIG_MARKET = new Set(['LAL', 'LAC', 'NYK', 'BKN', 'GSW', 'MIA', 'CHI', 'BOS', 'PHI', 'DAL', 'HOU', 'TOR'])
@@ -815,6 +824,9 @@ export function cutCost(F, p, { stretch = false } = {}) {
   const day = dayOf(F)
   if (p.ng && (F.phase === 'off' || day < (F.days ?? 170) * 0.45)) return none
   const rest = guaranteedOf(F, p)
+  // (a veteran's one-year minimum counts on the cap as the two-year man's minimum, on the roster or waived: the league
+  // pays the difference, so waiving him doesn't raise the payroll)
+  if (p.mh && rest.length) rest[0] = Math.min(rest[0], hitOf(p, capYear(F), capYear(F)) || rest[0])
   const total = r1(rest.reduce((a, v) => a + v, 0))
   if (!rest.length || total <= 0) return none
   if (!stretch) return { now: rest[0] ?? 0, per: r1(total / rest.length), total, years: rest.length }
@@ -954,11 +966,12 @@ export function renounce(F, short, id) {
 // THE MARKET THIS SUMMER: the most any other team could pay him now (its cap room, else its mid-level or
 // bi-annual, else the minimum), the best of the league's. A free agent's price can't outrun it: when the room is gone,
 // so is the money, and he takes what's there or goes back to his own team for less than his rating says.
-const CH = new WeakMap()
+// (read once for each day of free agency and kept on the save, F.chn = { key, m: { [short]: $M } }: the asks a day's
+// round weighs are set against the market as that day opened, in a save loaded again too)
 function channels(F) {
   const year = capYear(F)
   const key = `${year}|${F.phase}|${F.off?.step ?? ''}|${F.fay === year ? F.fad ?? 0 : 0}`
-  const c = CH.get(F)
+  const c = F.chn
   if (c?.key === key) return c.m
   const m = {}
   for (const s of shortsOf(F)) {
@@ -968,9 +981,9 @@ function channels(F) {
     const e = excFor(F, s, year)
     const mle = e.mk ? e.mle ?? 0 : pay < apron1Of(year) ? excOf('nt', year) : pay < apron2Of(year) ? excOf('tp', year) : 0
     const full = standardOf(F.teams[s]).length >= ROSTER_MAX
-    m[s] = full ? 0 : Math.max(room, mle, e.bae > 0.05 && e.baeY !== year - 1 && pay < apron1Of(year) ? e.bae : 0)
+    m[s] = full ? 0 : r1(Math.max(room, mle, e.bae > 0.05 && e.baeY !== year - 1 && pay < apron1Of(year) ? e.bae : 0))
   }
-  CH.set(F, { key, m })
+  F.chn = { key, m }
   return m
 }
 export function outsideBest(F, p) {
