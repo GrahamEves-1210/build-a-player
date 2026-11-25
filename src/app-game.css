@@ -8208,3 +8208,10 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 /* the soccer build screen's striker, the whole figure (the art and its colour layers together) a little darker (owner 11-25) */
 .sil-wrap--st > div:has(> .sil-img) { filter: brightness(.82); }
 .ag-banner small, .ag-banner b { text-align: center; }   /* (a two-line word, BALLON D'ORS, centred in its banner) */
+/* desktop Home: the wordmark is its cut-out picture (the letters' height: the type's caps, 0.70em; BUCKET's ball rises above) */
+.ag-wordmark-img { display: none; }
+@media (min-width: 1024px) {
+  .ag-home .ag-wordmark > .bap-wm { display: none; }
+  .ag-home .ag-wordmark-img { display: block; height: .704em; width: auto; margin: .16em auto .2em; }
+  .ag-home .ag-wordmark-img--bucket { height: .838em; margin-top: .03em; }
+}
