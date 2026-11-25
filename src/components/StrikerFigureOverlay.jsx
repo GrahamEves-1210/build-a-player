@@ -36,6 +36,8 @@ const SHADE = {   // [slope, intercept] of the grey ramp, measured off the art i
 }
 // the grey ramp's curve: the shadows go deep, the lights lift only a little (a dark-skinned player's lit cheek
 // stays dark skin, not a beige highlight)
+// the face's shadows (the grey ramp's dark end down to this, its middle and lights up to white: no effect)
+const FACE_DARK = '0.22 0.55 0.88 1 1 1'
 const SHADE_CURVE = '0.03 0.27 0.5 0.57 0.61'
 const KIT_OPACITY = 0.78
 const TRIM_OPACITY = 0.82
@@ -91,15 +93,9 @@ const ART = '/st-silhouette.webp'
 // far eye only a short one past the bridge of the nose (x 740). The brows are short, tapered and low-contrast, on
 // the brow ridge. The softness comes from gradients and low opacity (the brows' slight blur is the one filter, and
 // html.low-power only loses that blur).
-const SOCKETS = [[715, 239.5, 26, 11, 8], [752, 242.5, 10, 6.5, -12]]   // [cx, cy, rx, ry, rotate]: the shadow round each eye
 // each eye, as the owner's reference (a player looking down at the ball): an almond opening with a hint of white,
 // the dark iris half under a heavy lowered upper lid (its lash line the darkest stroke), a faint lower lid and a soft
 // crease above. [opening, iris [cx, cy, r], upper lid, lower lid, crease]
-const EYES = [
-  // hooded and nearly closed, the line of each eye sloping down to the nose with the tilt of his head
-  ['M701.4 237.6 Q716 236.2 731.6 244.6 Q716 243 701.4 237.6 Z', [717.6, 242.6, 4], 'M700.6 237.4 Q716 234.8 732.4 244.6', 'M705 239.8 Q717 244 729.6 245.4', 'M702.6 233.6 Q716 230.6 730.8 238.8'],
-  ['M745.4 243.8 Q750.8 241.8 756.8 244.2 Q751 245.2 745.4 243.8 Z', [750.8, 245, 1.8], 'M744.8 243.8 Q750.8 241.2 757.4 244.2', 'M746.6 245 Q751.4 246.2 755.8 245', 'M745.2 240.4 Q750.8 238.2 756.6 240.8'],
-]
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
 // before turning back to the point of the sideburn
@@ -194,6 +190,10 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               <feComponentTransfer in="shade" result="shade2">{['R', 'G', 'B'].map(c => { const F = `feFunc${c}`; return <F key={c} type="table" tableValues={SHADE_CURVE} /> })}</feComponentTransfer>
               <feBlend in="shade2" in2="tone" mode="soft-light" result="lit1" />
               <feBlend in="shade2" in2="lit1" mode="soft-light" result="lit" />
+              {/* the face: the art's own shadows (the eyes deep in the shade of his brow, under the cheekbone) multiplied
+                  back in, its lights left alone, so the face is shaded as the art draws it */}
+              {k === 'face' && <feComponentTransfer in="shade" result="dark">{['R', 'G', 'B'].map(c => { const F = `feFunc${c}`; return <F key={c} type="table" tableValues={FACE_DARK} /> })}</feComponentTransfer>}
+              {k === 'face' && <feBlend in="dark" in2="lit" mode="multiply" result="lit" />}
               <feComposite in="lit" in2="SourceAlpha" operator="in" />
             </filter>
           ))}
@@ -223,27 +223,7 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           </g>
           {head && (
             <g clipPath={url('c-face')}>
-              <radialGradient id={id('sock')}>
-                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0.78" />
-                <stop offset="0.6" stopColor={featureOf(face)} stopOpacity="0.32" />
-                <stop offset="1" stopColor={featureOf(face)} stopOpacity="0" />
-              </radialGradient>
-              {SOCKETS.map(([cx, cy, rx, ry, rot]) => (
-                <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${rot} ${cx} ${cy})`} fill={url('sock')} />
-              ))}
-              <filter id={id('eyeblur')} x="-0.2" y="-0.5" width="1.4" height="2"><feGaussianBlur stdDeviation="0.45" /></filter>
-              {EYES.map(([open, [ix, iy, ir], lid, low, crease], n) => (
-                <g key={n} filter={url('eyeblur')}>
-                  <clipPath id={id(`eye-${n}`)}><path d={open} /></clipPath>
-                  <path d={open} fill="#ece2d8" opacity="0.1" />
-                  <circle cx={ix} cy={iy} r={ir} fill={IRIS} opacity="0.75" clipPath={url(`eye-${n}`)} />
-                  <g fill="none" strokeLinecap="round">
-                    <path d={lid} stroke={LASH} strokeWidth={n ? 1.2 : 1.8} opacity="0.78" />
-                    <path d={low} stroke={featureOf(face)} strokeWidth={n ? 0.6 : 0.8} opacity="0.22" />
-                    <path d={crease} stroke={featureOf(face)} strokeWidth={n ? 1 : 1.6} opacity="0.2" />
-                  </g>
-                </g>
-              ))}
+              {/* (no eye drawn: only the shadow of the socket under his brow, owner 11-25) */}
               {/* (only the eyes are drawn: no brows, nose or mouth lines, owner 11-25) */}
               {/* the sideburn is hair: the art's own, or the curls below */}
               {!curl && <g clipPath={url('c-burn')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} /></g>}
