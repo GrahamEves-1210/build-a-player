@@ -342,8 +342,8 @@ function useRevealOnMount(ready) {
 const STACK_MASK = {
   qb: { src: '/qb-silhouette.webp', scale: 1 },
   rb: { src: '/rb-silhouette.webp', scale: 1 },
-  wr: { src: '/wr-silhouette.png',  scale: 1.18 },
-  te: { src: '/wr-silhouette.png',  scale: 1.18 },
+  wr: { src: '/wr-silhouette.png',  scale: 1 },
+  te: { src: '/wr-silhouette.png',  scale: 1 },
   db: { src: '/db-silhouette.png',  scale: 1.05 },
   dl: { src: '/dl-silhouette.webp',  scale: 1 },
   lb: { src: '/lb-silhouette.webp',  scale: 1 },

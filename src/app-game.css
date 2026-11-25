@@ -5946,7 +5946,7 @@ html.ag-sport-leaving .ag-home-inner > *:not(.ag-sport):not(.ag-hud) { opacity: 
     height: var(--fig-h); width: calc(var(--fig-h) * .869); margin-left: calc(var(--fig-h) * -.4345);
     bottom: calc(62px + var(--fig-h) * var(--fig-o, 0));
   }
-  .ag-figure--wr, .ag-figure--te { --fig-k: .847; --fig-o: .09; }
+  .ag-figure--wr, .ag-figure--te { --fig-k: .9; --fig-o: -.06; }   /* (drawn at its true size since 11-25: down onto the circle) */
   .ag-figure--db { --fig-k: .952; --fig-o: .025; }
 }
 @keyframes ag-fig-in { from { opacity: 0; translate: var(--from, 14px) 0; } }
