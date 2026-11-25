@@ -1485,7 +1485,8 @@ export function readStroke(st, C, o = {}) {
   let x = G.x, y = G.y, short = false
   if (y < DRAW.yLow) { const den = G.y - B.y; if (den > 0.01) x = B.x + ((DRAW.yLow - B.y) / den) * (G.x - B.x); y = DRAW.yLow; short = true }
   x = clamp(x, -(POST + 3), POST + 3); y = clamp(y, 0.12, BAR + 2.5)
-  const foot = o.foot ?? 1, pen = o.base === 'pen', power = pace.power
+  // (o.power: a game whose power is set, the free kick's: the stroke is only the spot and the shape)
+  const foot = o.foot ?? 1, pen = o.base === 'pen', power = o.power ?? pace.power
   const curl = Math.abs(bend) >= DRAW.dead, outside = curl && Math.sign(bend) === -foot
   // (o.base: the game's plain strike: 'driven', 'pen' for a penalty, 'volley' for one hit first time)
   const base = o.base ?? 'driven'
@@ -1524,8 +1525,9 @@ export function strokeTrail(ctx, st, t, o = {}) {
   // (the band for the shot it is so far: o.k, the shooter, and o.base, the game's own strike)
   let lo = (o.over ?? 0.8) - 0.18, hi = o.over ?? 0.8
   if (o.k && o.C) { const rd = readStroke(st, o.C, o); if (rd.type) [lo, hi] = rd.type === 'chip' ? [9, 9] : o.k.band(rd.type) }
-  const col = pace.power > hi ? '#ff5a48' : pace.power >= lo ? '#f7cf55' : '#f2f2ee'
-  const w = 3 + 2.6 * clamp(pace.power, 0, 1)
+  // (o.power: the power's set, so the line's plain chalk at one weight)
+  const col = o.power != null ? '#f2f2ee' : pace.power > hi ? '#ff5a48' : pace.power >= lo ? '#f7cf55' : '#f2f2ee'
+  const w = o.power != null ? 4.5 : 3 + 2.6 * clamp(pace.power, 0, 1)
   ctx.save()
   ctx.globalAlpha = st.on ? 1 : 1 - age / 520
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
@@ -1533,7 +1535,7 @@ export function strokeTrail(ctx, st, t, o = {}) {
   path(); ctx.strokeStyle = 'rgba(6,8,10,.62)'; ctx.lineWidth = w + 4; ctx.stroke()
   path(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke()
   const E = pts[n - 1]
-  if (o.C && st.on && o.origin) {
+  if (o.C && st.on && (o.origin || o.ring)) {
     // drawn away from the ball: the ring on the goal where it's going
     const rd = readStroke(st, o.C, o)
     if (rd.type) { ctx.globalAlpha = 1; aimMark(ctx, o.C, rd.x, rd.y) }

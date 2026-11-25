@@ -12,6 +12,8 @@
 //        the more pace it has; straight and quick it's driven, along the grass if it ends short of the goal line.
 // Finishing and composure set the scatter and the strike's window. Everything a player (or a bot) needs is on the
 // screen: the wall, the man behind it, the keeper, the aim.
+// (the owner, 2026-11-25: the free kick is drawn, and only drawn, and the power's set: the stroke picks the spot and
+// the shape, nothing else. Mouse or finger, the same)
 import { clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manOf } from './kit.js'
 import { placeStamp } from './read.js'
 import {
@@ -20,19 +22,22 @@ import {
   strikerDenied, celebMs, skipOutro, POST, BAR, NET_D, P,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar,
 } from './soccer.js'
-import { newCtl, control, stickOf, drawControls, tip } from './soccerPads.js'
+import { tip } from './soccerPads.js'
 
 export const how = {
-  'free-kick': 'Draw it from the ball to your spot. Bend the line and it’s curled up over the wall; straight and quick, it’s driven; short and quick, it’s along the grass, under the wall when it jumps. Too quick and it’s over the bar. On a keyboard: aim with the arrows, hold E to curl it or SPACE to drive it, and let go to set the power.',
+  'free-kick': 'Draw a line from the ball to the spot you want, with a finger or the mouse. Bend the line and it’s curled up over the wall; keep it straight and it’s driven; stop it short of the goal and it’s along the grass, under the wall when it jumps. The pace is set: pick the spot and the shape.',
 }
 
 const WHISTLE = 1300
 const WALL_D = 9.15, WALL_H = 1.86, JUMP = 0.42, JUMP_MS = 560
 const KZ = -0.35
-const LATE = 11000           // the ref's had enough: he strikes it whatever's on the bar
+const LATE = 25000          // the ref's had enough: he takes it as it is
+// the strike's set pace (the stroke's speed doesn't count), the wall's height to clear
+export const FK_POWER = 0.72
+const CLEAR = WALL_H + JUMP * 0.75 + 0.3
 export const FILL = 900, RUNUP = 420
 // the keeper: what he covers standing, how quick across, how late he picks up one coming over the wall
-const K_REACH = 1.25, K_DIVE = 3.5, K_SPAN = 0.95, K_REACT = 210, K_BLIND = 270
+const K_REACH = 1.0, K_DIVE = 2.9, K_SPAN = 0.9, K_REACT = 240, K_BLIND = 330
 
 export function make({ v, seed, cast = null, situation = null }) {
   const r = rngOf(seed)
@@ -57,35 +62,20 @@ export function make({ v, seed, cast = null, situation = null }) {
     who: { me: manOf(cast, 'us', 'st', 0), gk: manOf(cast, 'them', 'gk', 0), mates: [manOf(cast, 'us', 'st', 1), manOf(cast, 'us', 'st', 2)] },
     bx, bz, sgn, wall, wz, fw, span, sleeper, kx0, v, k, foot: sgn < 0 ? 1 : -1,
     phase: 'set', btn: null, shot: null, res: null, endAt: null, popAt: null, cel: null, save: null,
-    ctl: newCtl(), vh: 640, st: stroke(), lastView: null, keysView: false,
+    vh: 640, hint: null, st: stroke(), lastView: null, keysView: false,
     dirt: particles(24, 3), nudge: nudge(),
     hud: { prompt: null },
     tick(dt) {
       g.t += dt
       if (g.phase === 'set' && g.t >= WHISTLE) { g.phase = 'aim'; g.fx.push('whistle') }
-      // the aim: where the stick points, until his foot's through it
-      const s = stickOf(g.ctl)
-      if (!g.shot && k.phase !== 'done') k.aimAt(s.x, s.y)
-      if (g.phase === 'aim' && k.phase === 'idle' && !g.st.on && g.t >= LATE) { k.press(g.t - FILL * 0.4, 'driven'); k.release(g.t) }
+      if (g.phase === 'aim' && k.phase === 'idle' && !g.st.on && g.t >= LATE) { k.press(g.t - FILL * FK_POWER, 'driven'); k.release(g.t) }
       if (k.phase !== 'idle' && !g.shot && k.tick(g.t)) strike()
       if (g.shot && !g.res && g.t - g.shot.at >= (g.shot.block ? g.shot.blockAt : g.shot.T)) land()
     },
     input(a) {
       if (g.done) { skipOutro(g, a); return }
-      if (drawIn(a)) return
-      control(g.ctl, a, g.vh, g.t, { a: down => press('S', down), b: down => press('P', down) })
+      drawIn(a)
     },
-  }
-  function press(btn, down) {
-    if (g.shot) return
-    if (down) {
-      if (g.phase === 'aim' && k.phase === 'idle') {
-        const type = btn === 'P' ? 'finesse' : stickOf(g.ctl).y < -0.5 ? 'low' : 'driven'
-        if (k.press(g.t, type)) { g.btn = btn; g.fx.push('h:light') }
-      } else if (k.phase === 'strike' && k.tap(g.t)) g.fx.push('tap')
-      return
-    }
-    if (k.phase === 'power' && btn === g.btn) k.release(g.t)
   }
   // ── drawing it: from the ball ──
   g.aimView = () => { const C = lensOf(g, g.lastView ?? { w: 360, h: g.vh }); return { C, ball: P(C, bx, 0.11, bz) } }
@@ -93,16 +83,18 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (a.kind !== 'down' && a.kind !== 'move' && a.kind !== 'up') return false
     const id = a.id ?? 0, st = g.st
     if (a.kind === 'down') {
-      if (g.phase === 'aim' && k.phase === 'idle' && !g.shot) strokeDown(st, a.x, a.y, g.t, id, g.aimView().ball)
+      if (g.phase === 'aim' && k.phase === 'idle' && !g.shot && strokeDown(st, a.x, a.y, g.t, id, g.aimView().ball)) g.hint = null
       return true
     }
     if (id !== st.id) return false
     if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
     strokeUp(st, a.x, a.y, g.t, id)
     if (k.phase !== 'idle' || g.shot) return true
-    const rd = readStroke(st, g.aimView().C, { foot: g.foot })
+    const rd = readStroke(st, g.aimView().C, { foot: g.foot, power: FK_POWER })
     if (rd.tap || rd.back) { g.hint = g.t; return true }
     drawnShot(k, rd, g.t, RUNUP)
+    // (the pace is set: a clean strike is a smooth line)
+    k.timed = rd.wobble < 0.03 ? 'green' : 'none'
     g.fx.push('h:light')
     return true
   }
@@ -114,7 +106,13 @@ export function make({ v, seed, cast = null, situation = null }) {
     // finesse is the open-play one, side-footed low). It swings less than one bent round a defender, and his foot sets
     // the way: whoever's on the ball is the one whose curl takes it in over the wall and out to the near post
     // (drawn, the bend is the stroke's own, either way)
-    if (s.type === 'finesse') { s.apex = lerp(1.05, 2.45, clamp(s.power / 0.85, 0, 1)) * clamp(L / 22, 0.85, 1.2); if (!s.drawn) s.curve = -sgn * Math.abs(s.curve) * 0.5 }
+    // (the power's set, so the height's in where he's putting it: one aimed up at the corner is struck to clear the
+    // wall with room to spare, one aimed low into the wall's side isn't)
+    if (s.type === 'finesse') {
+      const want = k.drawn ? k.drawn.y : s.to.y, f = fw
+      const dip = (f - f * f * f) / 0.3849, base = lerp(0.11, s.to.y, f)
+      s.apex = Math.max(0.6, ((CLEAR - base) / dip) * lerp(0.72, 1.12, clamp((want - 0.6) / 0.9, 0, 1)))
+    }
     s.at = g.t
     for (const m of wall) m.jumpAt = s.at + m.delay
     // at the wall: over it, round it, under the jump, or into it
@@ -137,7 +135,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     else if (!s.onTarget) { kind = 'off'; why = s.to.y > BAR ? (s.over ? 'Too much on it: over the bar' : 'Just over the bar') : 'Wide of the post' }
     else {
       // (floated up and over from twenty-five yards, he's watched it all the way and has all day to get across)
-      const sv = keeperSave(s, s.chip ? { x: kx0, z: KZ, reach: K_REACH + 1.6, dive: K_DIVE, react: K_REACT, up: 2.9 } : { x: kx0, z: KZ, reach: K_REACH, dive: K_DIVE, span: K_SPAN, react: s.blind ? tw + K_BLIND : K_REACT, up: 2.75 }, r)
+      const sv = keeperSave(s, s.chip ? { x: kx0, z: KZ, reach: K_REACH + 1.6, dive: K_DIVE, react: K_REACT, up: 2.9 } : { x: kx0, z: KZ, reach: K_REACH, dive: K_DIVE, span: K_SPAN, react: s.blind ? tw + K_BLIND : K_REACT, up: 2.45 }, r)
       g.save = sv
       if (sv.saved) { kind = 'saved'; why = sv.y > 1.9 ? 'Tipped over the bar' : sv.stretch > 0.8 ? 'Fingertip save' : sv.stretch > 0.45 ? 'The keeper got across to it' : 'Straight at the keeper' }
       else {
@@ -154,7 +152,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.res = s.kind; g.endAt = g.t; g.doneAt = g.t
     const score = goal ? clamp(0.62 + (s.timed === 'green' ? 0.3 : s.timed === 'ok' ? 0.18 : 0.08) + (s.blind ? 0.06 : 0), 0, 1) : s.kind === 'saved' || s.kind === 'wood' ? 0.32 : 0.15
     g.done = outcome(score, goal, s.why)
-    g.stamp = { text: goal ? 'GOAL' : s.kind === 'wall' ? 'BLOCKED' : s.kind === 'saved' ? 'SAVED' : s.kind === 'wood' ? (s.why === 'Off the bar' ? 'OFF THE BAR' : 'OFF THE POST') : 'MISSED', good: goal, at: g.t, size: 50 }
+    g.stamp = { text: goal ? 'GOAL' : s.kind === 'wall' ? 'BLOCKED' : s.kind === 'saved' ? 'SAVED' : s.kind === 'wood' ? (s.why === 'Off the bar' ? 'OFF THE BAR' : 'OFF THE POST') : 'MISSED', good: goal, at: g.t, size: 50, sub: s.kind === 'wood' ? null : s.why }
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)
       // away to the corner on his side, his teammates after him
@@ -275,22 +273,23 @@ export function draw(ctx, g, view) {
     const m = mateAt(g.cel, i, g.t - g.endAt)
     man(ctx, C, m.x, m.z, m.pose, dress(K.us, g.cel.mates[i].who ?? { number: i ? 7 : 8, skin: i ? '#f0c4a0' : '#5e3c22' }), { lift: m.lift, turn: m.turn })
   }
-  // the aim, the shot's bar, the controls
+  // where it's going, the line as it's drawn (the power's set: the line's only the spot and the shape)
   const dr = g.k.drawn
-  if (!g.shot && dr) aimMark(ctx, C, dr.x, dr.y)
-  else if (!g.shot && g.phase !== 'set' && (view.keys || g.k.phase !== 'idle')) { const a = aimTo(g.k.aim.x, g.k.aim.y); aimMark(ctx, C, a.x, a.y, { alpha: g.k.phase === 'idle' ? 0.75 : 1 }) }
-  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: g.foot })
-  shotHud(ctx, view, g.k, { t: g.t, y: view.h - (view.keys ? 64 : 104) })
-  // (on a phone the shot's drawn: no stick, no buttons)
-  if (view.keys) drawControls(ctx, view, g.ctl, { stick: 'AIM', a: 'SHOOT', b: 'CURL' }, !g.done, g.t)
-  // (on a phone there's nothing under the picture: the words sit low, clear of the taker)
-  const tipY = view.keys ? undefined : view.h - 96
+  if (dr && (!g.shot || g.t - g.shot.at < 300)) aimMark(ctx, C, dr.x, dr.y, { alpha: g.shot ? 1 - (g.t - g.shot.at) / 300 : 1 })
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: g.foot, power: FK_POWER, ring: true })
+  // (the words sit low, clear of the taker)
+  const tipY = view.h - 70
   if (g.phase === 'set') tip(ctx, view, 'WAIT FOR THE WHISTLE', tipY)
-  else if (g.k.phase === 'idle' && !g.st.on) {
-    // the first one: a curler drawn off the ball over the wall into the corner on its side, and the line under it
+  else if (dr && !g.res) tip(ctx, view, g.k.timed === 'green' ? `${dr.label} · CLEAN STRIKE` : dr.label, tipY, 15)
+  else if (g.k.phase === 'idle' && g.st.on) {
+    const rd = readStroke(g.st, C, { foot: g.foot, power: FK_POWER })
+    if (rd.type) tip(ctx, view, rd.label, tipY, 15)
+  } else if (g.k.phase === 'idle') {
+    // a curler drawn off the ball over the wall into the corner on its side, the first two goes, and again after a miss-draw
     const b = P(C, g.bx, 0.11, g.bz), to = P(C, g.sgn * (POST - 0.55), 1.9, 0)
-    if (drawnSoFar() < 2) ghostStroke(ctx, { x: b.x, y: b.y }, { x: to.x, y: to.y }, g.foot * 0.18, g.t - WHISTLE - 300)
-    tip(ctx, view, view.keys ? 'OR DRAW IT WITH THE MOUSE · BEND IT TO CURL IT' : 'DRAW IT FROM THE BALL · BEND IT TO CURL IT', tipY, 14)
+    const hinted = g.hint != null && g.t - g.hint < 2400
+    if (drawnSoFar() < 2 || hinted) ghostStroke(ctx, { x: b.x, y: b.y }, { x: to.x, y: to.y }, g.foot * 0.18, hinted ? (g.t - g.hint) % 1700 : g.t - WHISTLE - 300)
+    tip(ctx, view, hinted ? 'DRAW IT FROM THE BALL UP TO THE GOAL' : 'DRAW IT TO YOUR SPOT · BEND IT TO CURL IT', tipY, 14)
   }
   placeStamp(g.stamp, view)
 }
