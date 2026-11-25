@@ -8142,3 +8142,8 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home .ag-wordmark { font-size: 36px !important; }
 }
 @media (max-width: 375px) { .ag-home .ag-brand .ag-brand-mark { height: 28px !important; top: 15px; } }
+/* Phone Home's header (owner 11-25): SIGN IN without the gold coin, and the settings gear a little larger */
+@media (max-width: 520px) {
+  .ag-home .ag-hud .coin-pill--signin .coin-ico { display: none; }
+  .ag-home .ag-hud .ag-icon-btn svg { width: 26px; height: 26px; }
+}
