@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 
 import { TEAM } from '../../lib/franchise2'
 import {
   FACE_EXPR, FACE_SKIN, FACE_HEAD, FACE_EYES, FACE_IRIS, FACE_BROWS, FACE_NOSE, FACE_MOUTH, PLAYER_HAIR, PLAYER_HC, FACE_BEARD, FACE_STACHE,
-  PLAYER_GEAR, FACE_EB, FACE_EAR, FACE_CHAIN, FACE_SLIDERS, defaultFace, normFace, buildFaceUrl,
+  PLAYER_GEAR, FACE_EB, FACE_EAR, FACE_CHAIN, FACE_SLIDERS, defaultFace, normFace, buildFaceUrl, skinFits,
 } from '../../lib/franchise2/faces'
 import { sfx } from '../../lib/juice'
 import { IconSpin } from '../app/icons'
@@ -40,6 +40,7 @@ const CATS = [
   ['gear', 'GEAR', [['HEAD', [['pick', 'gear', 'HEAD', PLAYER_GEAR, 'hair']]], ['EYE BLACK', [['pick', 'eb', 'EYE BLACK', FACE_EB, 'eyes']]],
     ['EARRINGS', [['pick', 'ear', 'EARRINGS', FACE_EAR, 'ear']]], ['CHAIN', [['pick', 'chain', 'CHAIN', FACE_CHAIN, 'low']]]]],
 ]
+const lumOf = h => { const x = parseInt(String(h).slice(1, 7), 16); return 0.299 * ((x >> 16) & 255) + 0.587 * ((x >> 8) & 255) + 0.114 * (x & 255) }
 const labelOf = (list, v) => list.find(x => x[0] === v)?.[1] ?? ''
 const signed = v => { const n = Math.round(v * 10); return n > 0 ? `+${n}` : String(n) }
 // the box that scrolls the page the creator is on (the setup's page, a sheet, the document)
@@ -109,13 +110,18 @@ function Slider({ k, value, onLive, onEnd }) {
   )
 }
 
-export default function FacePick({ face: given, pos, team, color: given2 = null, kit = 'fb', shuffleKey, onChange }) {
+//   mix: the backgrounds a new random look is drawn from (a soccer Career's country, faceNations.js; null: his position's
+//   room) · onChange(face, how): how 'random' when RANDOM made it, else a pick
+export default function FacePick({ face: given, pos, team, color: given2 = null, kit = 'fb', mix = null, shuffleKey, onChange }) {
   const [cat, setCat] = useState('hair')
   const [part, setPart] = useState(0)
   const [n, setN] = useState(0)
   const color = given2 ?? teamKit(team) ?? TEAM[team]?.color
+  // (a kit's own colours, a soccer shirt's: its body colour behind the face; a white or pale shirt's on its second
+  // colour, or the graphite, so the shirt never sits on a backdrop of itself)
+  const tc = color && typeof color === 'object' ? (lumOf(color.c1) < 200 ? color.c1 : color.c2 && lumOf(color.c2) < 170 ? color.c2 : '#3a4048') : color
   // (a face saved before today's parts: the rest filled from his default look, its old parts mapped)
-  const [face, setFace] = useState(() => normFace(given, defaultFace(shuffleKey ?? pos, pos)))
+  const [face, setFace] = useState(() => normFace(given, defaultFace(shuffleKey ?? pos, pos, mix)))
   const [tf, setTf] = useState(face)              // the face the thumbnails are built from (settles after a drag)
   const [gen, setGen] = useState(0)
   const pend = useRef(null), raf = useRef(0), cur = useRef(face), out = useRef(onChange)
@@ -137,6 +143,8 @@ export default function FacePick({ face: given, pos, team, color: given2 = null,
   const set = useCallback((k, v) => {
     if (cur.current[k] === v) return
     const f = { ...cur.current, [k]: v }
+    // (a skin far off his background's: the drawing reads his background from the skin again)
+    if (k === 'skin' && f.g && !skinFits(f.g, v)) delete f.g
     cur.current = f; setFace(f); setTf(f); out.current(f); sfx('tap')
   }, [])
   // a slider: only the big face follows the drag, its newest value once a frame; the thumbnails and the lower-third
@@ -147,8 +155,8 @@ export default function FacePick({ face: given, pos, team, color: given2 = null,
   }, [])
   const settle = useCallback(() => { requestAnimationFrame(() => { const f = cur.current; setTf(f); out.current(f) }) }, [])
   const shuffle = () => {
-    const k = n + 1, f = normFace(defaultFace(`${shuffleKey}-${k}`, pos), defaultFace(`${shuffleKey}-${k}`, pos))
-    cur.current = f; setN(k); setFace(f); setTf(f); onChange(f); setGen(g => g + 1); sfx('flip')
+    const k = n + 1, d = defaultFace(`${shuffleKey}-${k}`, pos, mix), f = normFace(d, d)
+    cur.current = f; setN(k); setFace(f); setTf(f); onChange(f, 'random'); setGen(g => g + 1); sfx('flip')
   }
   const C = CATS.find(c => c[0] === cat)
   // (eye black is football's: off a basketball or soccer kit)
@@ -158,7 +166,7 @@ export default function FacePick({ face: given, pos, team, color: given2 = null,
   const hero = buildFaceUrl({ pos, kit, face }, color, 'hero')
   const go = (c, p) => { moved.current = true; setCat(c); setPart(p); sfx('tap') }
   return (
-    <div className="ffp fk-root" style={team && TEAM[team] ? fkVars(team) : { '--tc': color, '--tca': color }}>
+    <div className="ffp fk-root" style={team && TEAM[team] ? fkVars(team) : { '--tc': tc, '--tca': tc }}>
       <div className="ffp-stage" ref={stage}>
         <div className="ffp-top">
           <div className="ffp-hero"><img src={hero} alt="His face" draggable={false} /></div>

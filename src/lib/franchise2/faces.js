@@ -208,13 +208,13 @@ function extras(key, L, pos) {
   // (a headshot: eye black is rare, strips never; a stud now and then; a chain now and then)
   if (x.ear === 'none' && g !== 'w' && u > 0.94) x.ear = u > 0.98 ? 'stud' : 'studs'
   if (r() < 0.04) x.chain = r() < 0.75 ? 'gold' : 'silver'
-  if (r() < 0.25 && SKIN_NEXT[L.skin]) x.skin = SKIN_NEXT[L.skin]
+  if (r() < 0.25 && SKIN_NEXT[L.skin] && !OWN_SKIN.has(g)) x.skin = SKIN_NEXT[L.skin]
   if (r() < 0.12) x.head = 'chiseled'
   const v = r()
   if (v < 0.08) x.nose = g === 'w' ? 'boxer' : 'wide'
   if (v > 0.9) x.mouth = v > 0.95 ? 'stern' : 'wide'
   const w = r()
-  if (w < 0.1) x.eyes = 'deep'
+  if (w < 0.1 && !NO_DEEP.has(g)) x.eyes = 'deep'
   else if (w > 0.94) x.eyes = 'upturn'
   if (r() < 0.08 && L.brows === 'thick') x.brows = 'bushy'
   if (L.hair === 'fade' && (g === 'b' || g === 'm') && r() < 0.06) x.hair = 'frohawk'
@@ -222,6 +222,10 @@ function extras(key, L, pos) {
   // (his bones, faceArt.js: a seed for where his jaw turns, his chin, cheekbones and the set of his eyes)
   x.bone = Math.floor(r() * 1000)
   x.expr = exprOf(key)
+  // (a background's lean on the shape sliders: an East Asian man's smaller eyes and higher brows, a Horn of Africa man's
+  // narrower nose)
+  const lean2 = SL_OF[g]
+  if (lean2) for (const k in lean2) x[k] = r2(clamp(x[k] + lean2[k], -1, 1))
   return x
 }
 
@@ -232,6 +236,109 @@ function extras(key, L, pos) {
 const SKILL = new Set(['qb', 'rb', 'wr', 'cb', 's', 'db', 'k'])
 const NOT_BALD = { b: [['fade', 50], ['waves', 22], ['buzz', 18], ['twists', 10]], m: [['fade', 50], ['curly', 30], ['buzz', 20]], p: [['fade', 40], ['curly', 35], ['buzz', 25]], l: [['fade', 50], ['crew', 30], ['buzz', 20]], w: [['crew', 40], ['textured', 40], ['buzz', 20]] }
 const LIGHT = [['none', 46], ['stubble', 24], ['chin', 12], ['goatee', 12], ['patch', 6]]
+
+// ── Backgrounds beyond an NFL room (soccer Career's nationality, faceNations.js) ──
+// Football and basketball draw from the five above (b w m p l), weighted by position; a soccer Career's man is drawn
+// from his country's mix of these as well (faceNations.js). Each one is the people as they look in their own league's
+// photos at 21: skin, hair and its colour, beard, head, nose, mouth, eyes, brows and a lean on the shape sliders.
+// (like: the background whose tables fill the parts a background doesn't set)
+//   bd  West African, Sahel and Central African (Senegal, Mali, Sudan): darker skin than b's
+//   h   Horn of Africa (Ethiopia, Eritrea, Somalia): long faces, narrower noses, curls
+//   wc  Western European and British, Anglo North American and Australian: w's people in a footballer's cuts (fewer
+//       grown-out flows and mullets than an NFL room's, so fewer long-hair-and-beard looks at 21)
+//   wn  Nordic and Baltic (Norway, Iceland, Finland): fair, light hair common, blue eyes
+//   we  Central and Eastern European, Balkan (Poland, Croatia, Serbia)
+//   ws  Southern European, Mediterranean (Spain, Italy, Greece; Argentina's and Uruguay's European roots)
+//   n   North African, Arab, Turkish, Persian, Armenian (Morocco, Egypt, Iran)
+//   s   South Asian (India, Pakistan, Bangladesh, Sri Lanka)
+//   a   East Asian (Japan, Korea, China; Kazakh and Mongolian)
+//   e   Southeast Asian (Thailand, Vietnam, Indonesia, the Philippines; Malagasy roots)
+//   i   Indigenous American (Bolivia, Peru, Guatemala)
+const MORE = {
+  bd: { like: 'b', skin: ['#8a5634', '#7a4a2c', '#6a4128', '#6a4128', '#5e3a22', '#5e3a22', '#5e3a22', '#4e2f1e', '#4e2f1e', '#4e2f1e', '#432818', '#432818', '#432818', '#33201a', '#33201a'],
+    hair: [['fade', 30], ['buzz', 18], ['waves', 8], ['twists', 8], ['cornrows', 4], ['locs', 4], ['starter', 3], ['afro', 3], ['shaved', 8], ['curly', 4], ['hightop', 2]], sl: { lip: 0.2, nsw: 0.1 } },
+  h: { like: 'b', skin: ['#ae7a56', '#a06c44', '#a06c44', '#9c6440', '#9c6440', '#8a5634', '#8a5634', '#8a5634', '#7a4a2c', '#7a4a2c', '#7a4a2c', '#6a4128', '#6a4128', '#5e3a22'],
+    hair: [['fade', 30], ['curly', 20], ['buzz', 14], ['afro', 8], ['twists', 8], ['waves', 6], ['shaved', 6], ['starter', 4], ['locs', 4]],
+    beard: [['none', 44], ['stubble', 20], ['goatee', 12], ['short', 14], ['chin', 6], ['full', 4]],
+    head: [['long', 34], ['oval', 36], ['square', 18], ['round', 12]], nose: [['straight', 44], ['narrow', 30], ['broad', 18], ['short', 8]],
+    mouth: [['neutral', 44], ['full', 40], ['smirk', 12], ['thin', 4]], iris: [['#2b1a10', 76], ['#4a2c16', 24]],
+    eyes: [['almond', 50], ['round', 24], ['hooded', 18], ['narrow', 8]], bald: [['fade', 50], ['curly', 30], ['buzz', 20]], sl: { nsw: -0.15, chk: 0.2, lip: 0.1 } },
+  wc: { like: 'w', skin: SKIN.w,
+    hair: [['textured', 28], ['crew', 16], ['fade', 16], ['sidepart', 12], ['curly', 10], ['buzz', 8], ['flow', 6], ['mullet', 2], ['bun', 2]] },
+  wn: { like: 'w', skin: ['#f6dccb', '#f6dccb', '#f6dccb', '#f4d2b6', '#f4d2b6', '#f4d2b6', '#f4d2b6', '#eab996', '#eab996', '#eab996', '#deae84'],
+    hair: [['textured', 26], ['crew', 16], ['sidepart', 12], ['flow', 12], ['fade', 10], ['buzz', 8], ['curly', 8], ['mullet', 4], ['bun', 4]],
+    hc: [['#c9a46c', 22], ['#a8824e', 28], ['#5a3b24', 30], ['#2a1d15', 10], ['#86492a', 6], ['#9a4526', 4]],
+    iris: [['#47698c', 46], ['#6a7783', 14], ['#56683a', 14], ['#6e5226', 10], ['#4a2c16', 16]] },
+  we: { like: 'w', skin: ['#f6dccb', '#f4d2b6', '#f4d2b6', '#f4d2b6', '#eab996', '#eab996', '#eab996', '#eab996', '#deae84', '#deae84', '#d9a582', '#d9a582'],
+    hair: [['textured', 22], ['crew', 20], ['fade', 18], ['buzz', 16], ['sidepart', 12], ['flow', 6], ['curly', 6]],
+    hc: [['#5a3b24', 36], ['#2a1d15', 30], ['#a8824e', 16], ['#16110e', 10], ['#c9a46c', 6], ['#86492a', 2]],
+    beard: [['none', 50], ['stubble', 26], ['short', 14], ['full', 6], ['goatee', 4]],
+    iris: [['#47698c', 30], ['#4a2c16', 32], ['#6e5226', 14], ['#56683a', 12], ['#6a7783', 8], ['#2b1a10', 4]] },
+  ws: { like: 'w', skin: ['#eab996', '#eab996', '#deae84', '#deae84', '#deae84', '#d9a582', '#d9a582', '#d9a582', '#cfa27c', '#cfa27c', '#cfa27c', '#c99064'],
+    hair: [['textured', 22], ['fade', 20], ['curly', 16], ['sidepart', 12], ['crew', 10], ['flow', 8], ['buzz', 8], ['bun', 4]],
+    hc: [['#16110e', 30], ['#2a1d15', 44], ['#5a3b24', 22], ['#a8824e', 4]],
+    beard: [['none', 36], ['stubble', 30], ['short', 20], ['full', 8], ['goatee', 6]],
+    nose: [['straight', 50], ['narrow', 14], ['broad', 14], ['short', 12]],
+    iris: [['#4a2c16', 44], ['#2b1a10', 26], ['#6e5226', 20], ['#56683a', 8], ['#47698c', 2]] },
+  n: { like: 'w', skin: ['#deae84', '#d9a582', '#d9a582', '#cfa27c', '#cfa27c', '#cfa27c', '#c99064', '#c99064', '#c99064', '#b98058', '#b98058', '#ae7a56', '#ae7a56'],
+    hair: [['fade', 26], ['curly', 20], ['textured', 18], ['crew', 12], ['buzz', 12], ['sidepart', 6], ['waves', 3], ['flow', 3]],
+    hc: [['#16110e', 66], ['#2a1d15', 30], ['#5a3b24', 4]],
+    beard: [['none', 26], ['stubble', 30], ['short', 24], ['full', 12], ['goatee', 6], ['chin', 2]],
+    head: [['oval', 30], ['square', 26], ['long', 22], ['round', 12], ['broad', 10]], nose: [['straight', 48], ['narrow', 20], ['broad', 18], ['short', 14]],
+    mouth: [['neutral', 46], ['full', 24], ['thin', 16], ['smirk', 14]], iris: [['#2b1a10', 46], ['#4a2c16', 40], ['#6e5226', 10], ['#56683a', 4]],
+    eyes: [['almond', 46], ['hooded', 24], ['round', 18], ['narrow', 12]], brows: [['thick', 40], ['straight', 28], ['angled', 16], ['arched', 10], ['bushy', 6]],
+    bald: [['fade', 50], ['crew', 25], ['buzz', 25]], sl: { nsl: 0.15 } },
+  s: { like: 'w', skin: ['#c99064', '#b98058', '#b98058', '#ae7a56', '#ae7a56', '#ae7a56', '#a06c44', '#a06c44', '#a06c44', '#9c6440', '#9c6440', '#8a5634', '#8a5634', '#7a4a2c'],
+    hair: [['textured', 22], ['fade', 20], ['sidepart', 18], ['crew', 14], ['curly', 10], ['buzz', 10], ['flow', 6]],
+    hc: [['#16110e', 80], ['#2a1d15', 20]],
+    beard: [['none', 40], ['stubble', 26], ['short', 18], ['full', 8], ['goatee', 6], ['chin', 2]],
+    head: [['oval', 36], ['long', 20], ['square', 20], ['round', 16], ['broad', 8]], nose: [['straight', 44], ['broad', 26], ['short', 18], ['narrow', 12]],
+    mouth: [['neutral', 46], ['full', 28], ['smirk', 14], ['thin', 12]], iris: [['#2b1a10', 76], ['#4a2c16', 24]],
+    eyes: [['almond', 44], ['round', 26], ['hooded', 22], ['narrow', 8]], brows: [['thick', 36], ['straight', 32], ['angled', 14], ['arched', 12], ['thin', 6]],
+    bald: [['fade', 40], ['crew', 30], ['textured', 30]] },
+  a: { like: 'w', skin: ['#f4d2b6', '#f4d2b6', '#deae84', '#deae84', '#deae84', '#deae84', '#deae84', '#d9a582', '#d9a582', '#d9a582', '#cfa27c', '#cfa27c'],
+    hair: [['textured', 32], ['sidepart', 22], ['crew', 14], ['fade', 16], ['flow', 6], ['buzz', 8], ['curly', 2]],
+    hc: [['#16110e', 82], ['#2a1d15', 14], ['#5a3b24', 4]],
+    beard: [['none', 78], ['stubble', 16], ['goatee', 4], ['short', 2]],
+    head: [['oval', 30], ['round', 26], ['square', 26], ['broad', 12], ['long', 6]], nose: [['short', 44], ['straight', 30], ['broad', 22], ['narrow', 4]],
+    mouth: [['neutral', 50], ['thin', 26], ['full', 12], ['smirk', 12]], iris: [['#2b1a10', 80], ['#4a2c16', 20]],
+    eyes: [['narrow', 42], ['hooded', 30], ['upturn', 20], ['almond', 8]], brows: [['straight', 46], ['thin', 20], ['thick', 18], ['angled', 10], ['arched', 6]],
+    bald: [['textured', 50], ['crew', 30], ['fade', 20]], sl: { esz: -0.35, brh: 0.3, nsl: -0.2, chk: 0.2, lip: -0.1 } },
+  e: { like: 'w', skin: ['#d9a582', '#cfa27c', '#cfa27c', '#c99064', '#c99064', '#c99064', '#b98058', '#b98058', '#b98058', '#ae7a56', '#ae7a56', '#a06c44'],
+    hair: [['textured', 24], ['fade', 24], ['sidepart', 16], ['crew', 14], ['buzz', 12], ['curly', 6], ['flow', 4]],
+    hc: [['#16110e', 80], ['#2a1d15', 18], ['#5a3b24', 2]],
+    beard: [['none', 68], ['stubble', 18], ['goatee', 8], ['chin', 4], ['short', 2]],
+    head: [['oval', 32], ['round', 28], ['square', 26], ['broad', 14]], nose: [['short', 36], ['broad', 34], ['straight', 26], ['narrow', 4]],
+    mouth: [['neutral', 46], ['full', 30], ['thin', 12], ['smirk', 12]], iris: [['#2b1a10', 80], ['#4a2c16', 20]],
+    eyes: [['hooded', 30], ['almond', 30], ['narrow', 26], ['upturn', 14]], brows: [['straight', 40], ['thick', 22], ['thin', 18], ['angled', 12], ['arched', 8]],
+    bald: [['fade', 40], ['crew', 30], ['textured', 30]], sl: { esz: -0.15, nsw: 0.15, chk: 0.15 } },
+  i: { like: 'l', skin: ['#c99064', '#c99064', '#b98058', '#b98058', '#b98058', '#ae7a56', '#ae7a56', '#ae7a56', '#a06c44', '#a06c44', '#9c6440'],
+    hair: [['fade', 26], ['crew', 22], ['textured', 16], ['buzz', 16], ['sidepart', 10], ['flow', 6], ['mullet', 4]],
+    hc: [['#16110e', 85], ['#2a1d15', 15]],
+    beard: [['none', 56], ['stubble', 20], ['goatee', 14], ['short', 6], ['chin', 4]],
+    head: [['broad', 30], ['round', 28], ['square', 28], ['oval', 14]], nose: [['straight', 44], ['broad', 30], ['short', 18], ['narrow', 8]],
+    iris: [['#2b1a10', 70], ['#4a2c16', 30]], eyes: [['narrow', 30], ['hooded', 30], ['almond', 30], ['upturn', 10]],
+    bald: [['fade', 50], ['crew', 30], ['buzz', 20]], sl: { chk: 0.3, esz: -0.1, nsw: 0.1 } },
+}
+const BROWS_OF = {}, SL_OF = {}
+for (const [g, d] of Object.entries(MORE)) {
+  SKIN[g] = d.skin; HAIR[g] = d.hair ?? HAIR[d.like]; HC[g] = d.hc ?? HC[d.like]; BEARD[g] = d.beard ?? BEARD[d.like]
+  HEAD[g] = d.head ?? HEAD[d.like]; NOSE[g] = d.nose ?? NOSE[d.like]; MOUTH[g] = d.mouth ?? MOUTH[d.like]; IRIS[g] = d.iris ?? IRIS[d.like]
+  EYES[g] = d.eyes ?? EYES[d.like]; NOT_BALD[g] = d.bald ?? NOT_BALD[d.like]
+  if (d.brows) BROWS_OF[g] = d.brows
+  if (d.sl) SL_OF[g] = d.sl
+}
+// every background a face can be drawn from, and whether a skin tone still fits his (FacePick: a skin picked far off
+// his background's range drops it, and the drawing reads his background from the skin again)
+export const FACE_GROUPS = new Set(Object.keys(SKIN))
+export const skinFits = (g, skin) => {
+  const L = SKIN[g]?.map(lum)
+  return !!L && lum(skin) >= Math.min(...L) - 22 && lum(skin) <= Math.max(...L) + 22
+}
+// (a background whose skins are its own list exactly: no step to a neighbouring tone, extras)
+const OWN_SKIN = new Set(Object.keys(MORE).filter(g => g !== 'wc'))
+// (an East or Southeast Asian or Indigenous man's eyes are never deep set)
+const NO_DEEP = new Set(['a', 'e', 'i'])
 function byPosition(key, L, pos) {
   const r = seeded(`face4|${key}`), room = roomOf(pos), skill = SKILL.has(room)
   if (L.hair === 'shaved' && r() > (BIG.has(room) ? 0.9 : 0.4)) L.hair = pickW(r, NOT_BALD[L.g] ?? NOT_BALD.w)
@@ -246,10 +353,11 @@ function byPosition(key, L, pos) {
   L.beard = nb
   L.stache = nb === 'goatee' ? 'full' : nb === 'full' || nb === 'short' ? 'full' : 'none'
 }
-export function lookOf(key, pos = 'wr', ag = null) {
+// mix: the backgrounds to draw him from in place of his position's room, as [background, weight] (a soccer Career's
+// country, faceNations.js)
+export function lookOf(key, pos = 'wr', ag = null, mix = null) {
   const r = seeded(`face|${key}`)
-  const mix = MIX[roomOf(pos)]
-  const g = pickW(r, Object.entries(mix).map(([k, v]) => [k, v * 100]))
+  const g = pickW(r, mix ?? Object.entries(MIX[roomOf(pos)]).map(([k, v]) => [k, v * 100]))
   const skin = SKIN[g][Math.floor(r() * SKIN[g].length)]
   const hair = pickW(r, HAIR[g])
   let hc = pickW(r, HC[g])
@@ -274,7 +382,7 @@ export function lookOf(key, pos = 'wr', ag = null) {
   // (owner 11-17: "less headbands": rare, and only on longer hair, the way it shows in real headshots)
   const gear = u < 0.02 ? 'eyeblack' : u < 0.026 && LONGISH.has(hair) ? 'headband' : u < 0.09 && g !== 'w' ? 'studs' : 'none'
   const L = {
-    g, skin, head, eyes: pickW(r, EYES[g] ?? EYES.w), brows: pickW(r, BROWS), nose: pickW(r, NOSE[g]), mouth: pickW(r, MOUTH[g]),
+    g, skin, head, eyes: pickW(r, EYES[g] ?? EYES.w), brows: pickW(r, BROWS_OF[g] ?? BROWS), nose: pickW(r, NOSE[g]), mouth: pickW(r, MOUTH[g]),
     hair, hc, brow: hc === '#b8893c' ? '#16110e' : hc, beard, stache, gear, wide: wideOf(pos),
   }
   byPosition(key, L, pos)
@@ -388,10 +496,13 @@ export const genFace = (p, color, small = false) => (p ? faceUrl(p.fk ?? p.n, fa
 export const FACE_KEYS = ['skin', 'head', 'eyes', 'iris', 'brows', 'nose', 'mouth', 'hair', 'hc', 'beard', 'stache', 'gear', 'eb', 'ear', 'chain', ...SL, 'bone', 'expr']
 const near = (list, c) => list.reduce((a, x) => (Math.abs(lum(x[0]) - lum(c)) < Math.abs(lum(a[0]) - lum(c)) ? x : a))[0]
 const ok = (list, v) => list.some(x => x[0] === v)
-export function defaultFace(key, pos) {
-  const L = lookOf(`build|${key}`, pos)
+// (mix: a soccer Career's country, lookOf; his background is then kept on the face as g, so the drawing's hair texture
+// and bones follow it rather than his skin's shade alone)
+export function defaultFace(key, pos, mix = null) {
+  const L = lookOf(`build|${key}`, pos, null, mix)
   const f = {}
   for (const k of FACE_KEYS) f[k] = L[k]
+  if (mix) f.g = L.g
   f.skin = ok(FACE_SKIN, L.skin) ? L.skin : near(FACE_SKIN, L.skin)
   f.hc = ok(FACE_HC, L.hc) ? L.hc : near(FACE_HC, L.hc)
   return f
@@ -415,13 +526,14 @@ export function normFace(face, base) {
   if (f.gear === 'visor') f.gear = 'none'
   if (OLD_HAIR[f.hair]) f.hair = groupOfSkin(f.skin) === 'b' && f.hair === 'receding' ? 'fade' : OLD_HAIR[f.hair]
   for (const k of SL) f[k] = Number.isFinite(+f[k]) ? clamp(+f[k], -1, 1) : 0
+  if (f.g != null && !FACE_GROUPS.has(f.g)) delete f.g
   // (a face saved before his bones had a seed takes his default's)
   f.bone = Number.isFinite(+f.bone) && f.bone !== null && f.bone !== '' ? Math.floor(+f.bone) % 1000 : (base.bone ?? 0)
   return f
 }
 // what a man wears under his face: fb a football jersey's V-neck (the default) · hoops a basketball tank · crew a
-// crew-neck shirt (soccer, baseball)
-export const KITS = ['fb', 'hoops', 'crew']
+// crew-neck shirt (baseball) · soccer a soccer shirt (no pads: a footballer's own shoulders, a ribbed collar)
+export const KITS = ['fb', 'hoops', 'crew', 'soccer']
 export function buildLook(B) {
   const pos = B?.pos ?? 'wr'
   const f = normFace(B?.face, defaultFace(B?.name ?? 'build', pos))
@@ -429,13 +541,13 @@ export function buildLook(B) {
   const hc = f.hc === '#b8893c' && !TIPPED.has(f.hair) ? '#16110e' : f.hc
   // B.kit: what he wears under his face (KITS; eye black is football's only)
   const kit = KITS.includes(B?.kit) ? B.kit : 'fb'
-  return { ...f, g: groupOfSkin(f.skin), hc, brow: f.hc === '#b8893c' ? '#16110e' : hc, wide: wideOf(pos), ag: ageStep(B?.age), kit, ...(kit !== 'fb' ? { eb: 'none' } : null) }
+  return { ...f, g: FACE_GROUPS.has(f.g) ? f.g : groupOfSkin(f.skin), hc, brow: f.hc === '#b8893c' ? '#16110e' : hc, wide: wideOf(pos), ag: ageStep(B?.age), kit, ...(kit !== 'fb' ? { eb: 'none' } : null) }
 }
 const BCACHE = new Map()
 export function buildFaceUrl(B, color, view = 'full') {
   if (!B) return null
   const L = buildLook(B)
-  const k = `${FACE_KEYS.map(x => L[x]).join('|')}|${L.wide}|${L.ag}|${L.kit}|${ck(color)}|${view}`
+  const k = `${FACE_KEYS.map(x => L[x]).join('|')}|${L.g}|${L.wide}|${L.ag}|${L.kit}|${ck(color)}|${view}`
   let u = BCACHE.get(k)
   if (!u) {
     u = toUrl(faceSvg(L, { color, view }))

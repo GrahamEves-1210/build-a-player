@@ -310,6 +310,8 @@ const soccerNationOf = n => (NATION_BY.has(n) ? n : lastNation() ?? 'ENG')
 export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name, conf: n.conf ?? null }))
 export const nationName = short => NATION_BY.get(short)?.name ?? short
 export const nationFlag = short => `/logos/nations/${short}.png`
+// his country's shirt colours (his face wears them on the New Career screen, before he has a club)
+export const nationColors = short => { const n = NATION_BY.get(short); return n?.color ? [n.color, n.color2 ?? null] : null }
 // a country in a sentence: the United States, the Netherlands, the Ivory Coast, the Faroe Islands (England, Brazil and
 // the rest as they are)
 export const theNation = short => { const n = nationName(short); return /^(United States|Netherlands|Ivory Coast|Republic of Ireland|United Arab Emirates|Dominican Republic|Gambia|Comoros|Bahamas|Central African Republic|Philippines|Maldives|Faroe Islands|Solomon Islands|Cook Islands|Cayman Islands|British Virgin Islands|US Virgin Islands|Turks and Caicos Islands)$/.test(n) ? `the ${n}` : n }
@@ -1212,7 +1214,7 @@ SOCCER.x = {
   // (a striker is compared with strikers: before 2026-11-24 the pool was every attacker and midfielder)
   compPool: SOCCER_STRIKERS.filter(isNine),
   // (for the screens: money, the country, the window)
-  wageText, feeText, soccerCur, nationName, theNation, nationFlag, SOCCER_NATIONS, rememberNation, lastNation, signAcademy, stayPut,
+  wageText, feeText, soccerCur, nationName, theNation, nationFlag, nationColors, SOCCER_NATIONS, rememberNation, lastNation, signAcademy, stayPut,
   // (2026-11-24, for the screens)
   // money: what he's worth (€M), what his club can pay; the clause in his deal and in the deal on the table
   value: soccerValue, purse: clubPurse, releaseFee, talksRelease, releaseText: c => { const f = releaseFee(c); return f == null ? null : `${feeText(f, c.team)} release clause` },

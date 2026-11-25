@@ -48,7 +48,7 @@ const COLLEGE_POS = ['qb', 'wr', 'rb', 'te', 'dl', 'db']   // the positions Coll
 const CLASS_WORD = { FR: 'Freshman', SO: 'Sophomore' }
 import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
-import { careerFace, careerFaceUrl, careerKit, careerColor, careerFacePos, newCareerFace } from '../../lib/careerFace'
+import { careerFace, careerFaceUrl, careerKit, careerColor, careerShirt, careerFacePos, careerMix, newCareerFace, soccerShirt } from '../../lib/careerFace'
 // his face's creator (Franchise's): loaded only when a name step or the face editor opens
 const FacePick = lazy(() => import('../franchise2/FacePick'))
 
@@ -118,7 +118,7 @@ function FaceSheet({ c, onDone, onClose, setCareer = null }) {
       <div className="cr-face-box">
         <div className="cr-face-top"><span className="ag-eyebrow">HIS FACE</span><button type="button" className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button></div>
         <Suspense fallback={<div className="cr-face-wait" />}>
-          <FacePick face={face} pos={careerFacePos(c)} color={careerColor(c)} kit={careerKit(c)} shuffleKey={`career|${c.seed ?? c.name}-face`} onChange={setFace} />
+          <FacePick face={face} pos={careerFacePos(c)} color={careerShirt(c)} kit={careerKit(c)} mix={careerMix(c)} shuffleKey={`career|${c.seed ?? c.name}-face`} onChange={setFace} />
         </Suspense>
         {/* (his number, here too: owner 11-18; the league's rule holds, a change after the signing or in an offseason) */}
         {n != null && (
@@ -238,8 +238,16 @@ function NewSlot({ S, onStart, onCancel }) {
   const [nationOpen, setNationOpen] = useState(false)
   // his face: a coherent random man to start, keyed by this name step (lib/careerFace.js)
   const [faceKey] = useState(() => Math.random().toString(36).slice(2, 10))
-  const fc = { sport: S.id, pos: S.isBucket ? hoopGroupOf(spot) : pos }
-  const [face, setFace] = useState(() => newCareerFace(faceKey, fc))
+  const fc = { sport: S.id, pos: S.isBucket ? hoopGroupOf(spot) : pos, nation }
+  // (soccer: keyed by his country too, so each country deals its own man rather than one man re-coloured)
+  const keyOf = n => (S.isSoccer ? `${faceKey}-${n}` : faceKey)
+  const [face, setFace] = useState(() => newCareerFace(keyOf(nation), fc))
+  // (soccer: his random look is drawn from his country's people, so a new country deals a new one, until he has made the
+  // face his own with a pick; RANDOM isn't one)
+  const [made, setMade] = useState(false)
+  const pickNation = n => { if (S.isSoccer && n !== nation && !made) setFace(newCareerFace(keyOf(n), { ...fc, nation: n })); setNation(n) }
+  const nat = S.isSoccer ? sx().nationColors?.(nation) : null
+  const shirt = nat ? soccerShirt(`nat-${nation}`, nat[0], nat[1]) : '#3a4048'
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
     <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (!ok) return; if (S.isSoccer) rememberNation(nation); if (S.isBucket) { try { localStorage.setItem('bucketCareerSpot', spot) } catch {} } onStart(`${first.trim()} ${last.trim()}`, S.isBucket ? hoopGroupOf(spot) : pos, games, nation, college ? start : 'draft', S.isBucket ? spot : null, face) }}>
@@ -265,7 +273,7 @@ function NewSlot({ S, onStart, onCancel }) {
             <b>{nationName(nation)}</b>
             <span className="cr-nation-go">CHANGE</span>
           </button>
-          {nationOpen && <NationSheet value={nation} onPick={n => { setNation(n); setNationOpen(false); sfx('tap') }} onClose={() => setNationOpen(false)} />}
+          {nationOpen && <NationSheet value={nation} onPick={n => { pickNation(n); setNationOpen(false); sfx('tap') }} onClose={() => setNationOpen(false)} />}
         </>
       )}
       <span className="ag-eyebrow">NAME YOUR PLAYER</span>
@@ -277,7 +285,7 @@ function NewSlot({ S, onStart, onCancel }) {
       <span className="ag-eyebrow">HIS FACE</span>
       <div className="cr-face-new">
         <Suspense fallback={<div className="cr-face-wait" />}>
-          <FacePick face={face} pos={careerFacePos(fc)} color="#3a4048" kit={careerKit(fc)} shuffleKey={`career|${faceKey}`} onChange={setFace} />
+          <FacePick key={S.isSoccer ? nation : 'face'} face={face} pos={careerFacePos(fc)} color={shirt} kit={careerKit(fc)} mix={careerMix(fc)} shuffleKey={`career|${keyOf(nation)}`} onChange={(f, how) => { setFace(f); if (how !== 'random') setMade(true) }} />
         </Suspense>
       </div>
       {/* the career's mini games, for the whole career (it can still be changed on the career screen) */}
