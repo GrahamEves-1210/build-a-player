@@ -13,6 +13,7 @@ import {
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, byeTarget, stepCost, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
+  breakNow, januaryNow, januaryOffers,
   canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, loadDraftClass, draftCall, SKIP_TALK, talkSkipped, raceNow } from '../../lib/career'
 import { RACE_SHORT, RACE_NAME } from '../../lib/careerAwards'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
@@ -63,6 +64,7 @@ const money = n => `$${n}M`
 // soccer's helpers live in lib/careerSoccer.js (loaded only for soccer); these reach them once it's in
 const sx = () => SPORT.soccer?.x ?? {}
 const wageText = (n, short) => sx().wageText(n, short), soccerCur = short => sx().soccerCur(short), nationName = n => sx().nationName?.(n) ?? n, nationFlag = n => sx().nationFlag(n)
+const theNation = n => sx().theNation?.(n) ?? nationName(n)
 const signAcademy = (c, o) => sx().signAcademy(c, o), soccerRole = c => sx().role(c), rememberNation = n => sx().rememberNation?.(n), lastNation = () => sx().lastNation?.()
 // a sport whose module loads on its own (soccer): the screen waits for it
 function useSport(sport) {
@@ -157,9 +159,41 @@ export function CareerGame({ c, setCareer, skipAll = true, ...p }) {
   if (mode === 'simple' && SIMPLE_GAMES[p.game]) return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} redo={p.redo} situation={p.situation} onDone={p.onDone} onSkipAll={onSkipAll} />
   return <MiniGame {...p} sim={mode === 'off'} onSkipAll={onSkipAll} />
 }
-const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
+export const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
 // his position on a card: a basketball career's spot (PG to C), everyone else's position
 const posTag = c => (c.sport === 'bucket' ? hoopSpot(c) : POS_LABEL[c.pos])
+// Soccer's nationality: seventy countries, so a sheet in place of a long menu: a search box, then every country under
+// its confederation, flag and name, two to a row on a phone (the one picked marked)
+const CONF_ORDER = [['UEFA', 'EUROPE'], ['CONMEBOL', 'SOUTH AMERICA'], ['CAF', 'AFRICA'], ['AFC', 'ASIA'], ['CONCACAF', 'NORTH AND CENTRAL AMERICA'], ['OFC', 'OCEANIA']]
+const plainText = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+function NationSheet({ value, onPick, onClose }) {
+  const [q, setQ] = useState('')
+  const all = sx().SOCCER_NATIONS ?? []
+  const want = plainText(q.trim())
+  const hits = want ? all.filter(n => plainText(n.name).includes(want) || n.short.toLowerCase() === want) : all
+  const groups = [...CONF_ORDER, [null, 'OTHER']].map(([id, label]) => ({ label, list: hits.filter(n => (id ? n.conf === id : !CONF_ORDER.some(([k]) => k === n.conf))) })).filter(g => g.list.length)
+  useEffect(() => { const esc = e => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return createPortal(
+    <div className="cr-face-sheet cr-nat-sheet" role="dialog" aria-modal="true" aria-label="Nationality" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="cr-face-box cr-nat-box">
+        <div className="cr-nat-top">
+          <div className="cr-face-top"><span className="ag-eyebrow">NATIONALITY · {all.length} COUNTRIES</span><button type="button" className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button></div>
+          <input className="cr-name-in cr-nat-find" type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search a country" aria-label="Search a country" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" />
+        </div>
+        {groups.map(g => (
+          <section key={g.label} className="cr-nat-group">
+            <span className="ag-eyebrow">{g.label} · {g.list.length}</span>
+            <div className="cr-nat-grid">
+              {g.list.map(n => <button key={n.short} type="button" className={`cr-nat${n.short === value ? ' is-on' : ''}`} aria-pressed={n.short === value} onClick={() => onPick(n.short)}><img src={nationFlag(n.short)} alt="" loading="lazy" /><b>{n.name}</b></button>)}
+            </div>
+          </section>
+        ))}
+        {!groups.length && <p className="cr-note cr-nat-none">No country by that name. Career has the {all.length} with players in the game.</p>}
+      </div>
+    </div>,
+    document.body,
+  )
+}
 function NewSlot({ S, onStart, onCancel }) {
   const [first, setFirst] = useState(''), [last, setLast] = useState('')
   // opens on the position last played; changing it here is all a new career needs
@@ -184,6 +218,7 @@ function NewSlot({ S, onStart, onCancel }) {
   const [start, setStart] = useState('draft')   // football QB, WR, RB: straight to the draft, or college first
   const college = (CFB_LIVE && S.id === 'nfl' && COLLEGE_POS.includes(pos)) || (CBB_LIVE && S.id === 'bucket')
   const [nation, setNation] = useState(() => (S.isSoccer ? lastNation() ?? 'ENG' : null))
+  const [nationOpen, setNationOpen] = useState(false)
   // his face: a coherent random man to start, keyed by this name step (lib/careerFace.js)
   const [faceKey] = useState(() => Math.random().toString(36).slice(2, 10))
   const fc = { sport: S.id, pos: S.isBucket ? hoopGroupOf(spot) : pos }
@@ -208,12 +243,12 @@ function NewSlot({ S, onStart, onCancel }) {
       {S.isSoccer && (
         <>
           <span className="ag-eyebrow">NATIONALITY</span>
-          <label className="cr-nation">
+          <button type="button" className="cr-nation cr-name-in" onClick={() => { setNationOpen(true); sfx('tap') }} aria-label={`Nationality: ${nationName(nation)}. Change`} aria-haspopup="dialog">
             <img src={nationFlag(nation)} alt="" />
-            <select className="cr-name-in" value={nation} onChange={e => { setNation(e.target.value); sfx('tap') }} aria-label="Nationality">
-              {(sx().SOCCER_NATIONS ?? []).map(n => <option key={n.short} value={n.short}>{n.name}</option>)}
-            </select>
-          </label>
+            <b>{nationName(nation)}</b>
+            <span className="cr-nation-go">CHANGE</span>
+          </button>
+          {nationOpen && <NationSheet value={nation} onPick={n => { setNation(n); setNationOpen(false); sfx('tap') }} onClose={() => setNationOpen(false)} />}
         </>
       )}
       <span className="ag-eyebrow">NAME YOUR PLAYER</span>
@@ -818,6 +853,24 @@ function SpotMove({ c, m, onAnswer }) {
   )
 }
 
+// his country's continental titles in a word: 2 EUROS, 1 COPA AMÉRICA (all the same tournament), else CONTINENTAL TITLES
+const contWord = t => { const l = t.contTitles ?? [], one = l.length && l.every(x => x.short === l[0].short) ? String(l[0].short ?? l[0].name).toUpperCase() : null; return !one ? (l.length === 1 ? 'CONTINENTAL TITLE' : 'CONTINENTAL TITLES') : l.length === 1 || /S$/.test(one) ? one : one === 'COPA AMÉRICA' ? 'COPAS AMÉRICA' : `${one}S` }
+// soccer, before a ball is kicked: what the season holds. The second tier (how a club gets out of it), Europe this
+// season, and the tournament the summer ends with (the World Cup, the Euros, the Copa América: S.x.summer)
+const EURO_COMP = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League' }
+// a continental title, the way it's said (the trophy overlay)
+const CONT_TITLE = { euro: 'EUROPEAN CHAMPIONS', copa: 'COPA AMÉRICA WINNERS', afcon: 'CHAMPIONS OF AFRICA', asian: 'ASIAN CUP WINNERS', gold: 'GOLD CUP WINNERS' }
+function soccerAhead(c) {
+  const x = sx(), out = []
+  if (x.isDown?.(c)) out.push(`${c.fit.name} are in ${x.tier2Name(c.team)} this season. The top two go up, and the next four play off for the last place.`)
+  if (c.europe && c.europeFor === c.team && EURO_COMP[c.europe]) out.push(`${EURO_COMP[c.europe]} football this season.`)
+  let sum = null
+  try { sum = x.summer?.(c) ?? null } catch { sum = null }
+  if (sum?.wc) out.push(`The season ends with the ${sum.wc} World Cup: a place in the ${nationName(c.nation)} squad is there to be won.`)
+  if (sum?.cont) out.push(`The season ends with the ${sum.cont.year} ${sum.cont.name}: a place in the ${nationName(c.nation)} squad is there to be won.`)
+  return out
+}
+
 // ── Hub ─────────────────────────────────────────────────────────────────────
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
@@ -870,11 +923,11 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     const s = n.seasons[n.seasons.length - 1]
     window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: c.sport, pos: c.pos, mode: 'career', localOnly: true, sandbox: !!c.sandbox, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: c.active?.final ?? null } }))
     setCareer(n); setTab('season')
-    if (S.isSoccer && (s.trophies?.length || s.award || s.wc?.champion)) setHonor({
-      colors: s.trophies?.length || s.wc?.champion ? [c.fit?.color, c.fit?.color2, '#ffffff'] : null,
+    if (S.isSoccer && (s.trophies?.length || s.award || s.wc?.champion || s.cont?.champion)) setHonor({
+      colors: s.trophies?.length || s.wc?.champion || s.cont?.champion ? [c.fit?.color, c.fit?.color2, '#ffffff'] : null,
       season: seasonOf(s.season), team: (s.teamName ?? '').toUpperCase(),
-      title: s.award ? s.awardName : s.wc?.champion ? 'WORLD CHAMPIONS' : s.uclWon ? 'CHAMPIONS OF EUROPE' : s.champion ? `${String(s.league ?? 'LEAGUE').toUpperCase()} CHAMPIONS` : `${String(s.trophies[0]).toUpperCase()} WINNERS`,
-      sub: [s.award ? 'The best player in the world' : null, ...(s.trophies ?? []), s.wc?.champion ? `The World Cup with ${nationName(c.nation)}` : null].filter(Boolean).join(' · '),
+      title: s.award ? s.awardName : s.wc?.champion ? 'WORLD CHAMPIONS' : s.uclWon ? 'CHAMPIONS OF EUROPE' : s.cont?.champion ? CONT_TITLE[s.cont.id] ?? `${String(s.cont.name).toUpperCase()} WINNERS` : s.champion ? `${String(s.league ?? 'LEAGUE').toUpperCase()} CHAMPIONS` : `${String(s.trophies[0]).toUpperCase()} WINNERS`,
+      sub: [s.award ? 'The best player in the world' : null, ...(s.trophies ?? []), s.wc?.champion ? `The World Cup with ${theNation(c.nation)}` : null, s.cont?.champion ? `The ${s.cont.year} ${s.cont.name} with ${theNation(c.nation)}` : null].filter(Boolean).join(' · '),
       line: `${s.stats.goals} goals · ${s.stats.assists} assists · ${s.stats.apps} apps`,
     })
     else if (s.champion || s.award) setHonor({
@@ -895,6 +948,14 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const recText = S.isSoccer ? `${wins}–${draws}–${losses}` : `${wins}–${losses}`
   // traded at the deadline: the new team's record (its games before he got there, then his), the one the playoffs go by
   const teamRec = a ? teamRecord(c, played) : null
+  // soccer: the club's own line, from the table (S.x.table: after a January move his matches aren't all its matches)
+  let row = null
+  if (S.isSoccer && a && c.phase === 'season') { try { row = S.x.table?.(c)?.find(r => r.isUs) ?? null } catch { row = null } }
+  const clubRec = row && row.played ? `${row.wins}–${row.draws}–${row.losses}` : recText, clubPts = row && row.played ? row.points : wins * 3 + draws
+  // soccer's two stops: the international break (a choice when he isn't called up) and the January window (offers on the table)
+  const brkOn = S.isSoccer && breakNow(c), janOn = S.isSoccer && januaryNow(c) && (januaryOffers(c).length > 0 || !!c.talks)
+  const soccerStop = (brkOn && !a.brk.called) || janOn
+  const getD = () => { if (!D.current) D.current = resumeSeason(c); return D.current }
   const teamNick = (c.fit?.name ?? '').split(' ').pop()
   const seasonOver = a && a.k >= total && !a.moment && !a.injury && !a.po
   const last = c.seasons[c.seasons.length - 1]
@@ -967,7 +1028,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
 
         {tab === 'season' && c.phase === 'preseason' && (
           <section className="ag-card cr-sec ag-pop">
-            <div className="ag-card-head"><span className="ag-eyebrow">SEASON {S.isSoccer ? seasonOf(c.season) : c.season} · {c.fit.status.toUpperCase()}</span></div>
+            <div className="ag-card-head"><span className="ag-eyebrow">SEASON {S.isSoccer ? seasonOf(c.season) : c.season} · {(S.x?.isDown?.(c) ? S.x.tier2Name(c.team) : c.fit.status).toUpperCase()}</span></div>
             {/* (soccer: his place and the kick-off first, above the fold; the goals, the ageing and the deal under them) */}
             {lead && preDepth}
             {lead && preGo}
@@ -975,6 +1036,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS{S.isSoccer || S.isBaseball ? '' : ` · MEET ${GOAL_POINT_AT} FOR A DEV POINT`}</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             {!lead && preDepth}
             <p className="cr-note">{c.loan ? `On loan from ${S.teamOf(c.loan.from).name} for the season. ` : ''}{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({pay(c, c.contract.perYear)}{S.isSoccer && !c.loan && (c.contract.noTrade || dealClause(c) != null) ? `, release clause${dealClause(c) != null ? ` ${clauseText(dealClause(c), c.team)}` : ''}` : ''}). {c.contract.left === 1 && !c.loan ? (S.isSoccer ? 'The last year of the deal: play for the next one.' : 'Contract year: play for the next one.') : ''}</p>
+            {S.isSoccer && soccerAhead(c).map((t, i) => <p key={i} className="cr-note">{t}</p>)}
             {!lead && preGo}
           </section>
         )}
@@ -982,7 +1044,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'season' && a && (
           <section className="cr-sec">
             <div className="cr-season-bar ag-pop">
-              <span className="cr-rec"><b>{recText}</b>{teamRec && <em className="cr-rec-team">{teamNick.toUpperCase()} {teamRec.wins}–{teamRec.losses}</em>}<small>{S.isSoccer ? `${wins * 3 + draws} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : a.bye ? (byeNow(c) ? `BYE · WEEK ${a.bye.wk} OF ${seasonWeeks(c)}` : `WEEK ${weekOfGame(c, Math.min(a.k + 1, total))} OF ${seasonWeeks(c)}`) : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
+              <span className="cr-rec"><b>{clubRec}</b>{teamRec && <em className="cr-rec-team">{teamNick.toUpperCase()} {teamRec.wins}–{teamRec.losses}</em>}{S.isSoccer && a.moved && <em className="cr-rec-team">{String(c.fit?.name ?? '').toUpperCase()}</em>}<small>{S.isSoccer ? `${clubPts} PTS · MATCH ${Math.min(a.k + 1, total)} OF ${total}` : a.bye ? (byeNow(c) ? `BYE · WEEK ${a.bye.wk} OF ${seasonWeeks(c)}` : `WEEK ${weekOfGame(c, Math.min(a.k + 1, total))} OF ${seasonWeeks(c)}`) : `${S.gameWord} ${Math.min(a.k + 1, total)} OF ${total}`}</small></span>
               <div className="cr-goals cr-goals--inline">{c.goals.map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             </div>
             {/* (the award race: a thin bar that opens, above the schedule; owner 11-18) */}
@@ -1003,6 +1065,9 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             )}
             {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={a.moment} onPick={pick} />}
             {(canDeadlineTrade(c) || (a.deadline && a.deadline.k === a.k)) && <Deadline c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} setD={d => { D.current = d }} />}
+            {brkOn && <Suspense fallback={null}><SoccerBreak key={`brk-${c.year}`} c={c} setCareer={setCareer} getD={getD} /></Suspense>}
+            {S.isSoccer && a.brk?.done && a.k === a.brk.k && !a.moment && !a.injury && <Suspense fallback={null}><SoccerBreakDone c={c} /></Suspense>}
+            {janOn && <Suspense fallback={null}><SoccerJanuary key={`jan-${c.year}`} c={c} setCareer={setCareer} getD={getD} setD={d => { D.current = d }} /></Suspense>}
             {byeNow(c) && <ByeWeek key={`bye-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} />}
             {a.bye?.done && a.k === a.bye.wk - 1 && !a.moment && !a.injury && <ByeResult c={c} done={a.bye.done} />}
             {aswOpen(c) && !a.moment && !a.injury && <Suspense fallback={null}><AllStarSaturday key={`asw-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} face={<CareerFace c={c} size={34} />} /></Suspense>}
@@ -1011,13 +1076,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             {!hotHandOn(c) && boosts.hot > 0 && !byeNow(c) && !aswOpen(c) && canHotHand(c, D.current) && (
               <button className="cr-hot cr-hot--go ag-pop" onClick={goHot}><IconFlame size={15} /> USE HOT HAND <small>+2 every trait, next {Math.min(hotGames(c), total - a.k)} {S.isSoccer ? 'matches' : `${S.gameWord.toLowerCase()}s`} · {boosts.hot} left</small></button>
             )}
-            {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && !aswOpen(c) && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
+            {!a.moment && !a.injury && !seasonOver && !a.po && !byeNow(c) && !aswOpen(c) && !soccerStop && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.isSoccer ? (Math.min(total, a.k + S.step) > a.k + 1 ? `PLAY MATCHES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `PLAY MATCH ${a.k + 1}`) : S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${weekOfGame(c, a.k + 1)}`} <IconArrow size={16} /></button>}
             {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
             {seasonOver && (
               <div className="ag-card cr-over ag-pop">
-                <span className="ag-eyebrow">{S.isSoccer ? <>THE LEAGUE IS DONE · <span className="cr-nb">{recText}</span> · <span className="cr-nb">{wins * 3 + draws} PTS</span></> : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
+                <span className="ag-eyebrow">{S.isSoccer ? <>THE LEAGUE IS DONE · <span className="cr-nb">{clubRec}</span> · <span className="cr-nb">{clubPts} PTS</span></> : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
                 {S.isSoccer ? <>
-                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.champion ? ': champions' : fin.relegated ? ' and go down' : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}</p>
+                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.promotedHow === 'playoff' ? ' and go up through the play-offs' : fin.seed === 1 ? ' and go up as champions' : ' and go up') : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>{nights && !a.out ? nights.go : 'WRAP THE SEASON'} <IconArrow size={16} /></button>
                 </> : (() => { const pct = teamRec ? teamRec.wins / Math.max(1, teamRec.wins + teamRec.losses) : wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
                   <p className="cr-note">{teamRec ? `The ${teamNick} finish ${teamRec.wins}–${teamRec.losses}. ` : ''}{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>
@@ -1549,7 +1614,7 @@ function Moves({ c, setCareer, forced }) {
   return (
     <>
       {askTrade && (c.sport === 'soccer'
-        ? <AskSheet eyebrow="TRANSFER REQUEST" title="Hand in a transfer request?" body={c.contract.noTrade ? 'His release clause means the club has to let him go. His reputation takes a hit.' : 'His reputation takes a hit, and the club can say no.'} yes="HAND IT IN" no="STAY PUT" danger onYes={() => doTrade()} onNo={() => setAskTrade(false)} />
+        ? <AskSheet eyebrow="TRANSFER REQUEST" title="Hand in a transfer request?" body={`${c.contract.noTrade ? 'His release clause means the club has to let him go. His reputation takes a hit.' : 'His reputation takes a hit, and the club can say no.'}${c.off?.rejected?.[0] ? ` ${c.off.rejected[0].name} had a ${feeText(c.off.rejected[0].fee, c.team)} bid turned down this summer: granted, that is where he goes.` : ''}`} yes="HAND IT IN" no="STAY PUT" danger onYes={() => doTrade()} onNo={() => setAskTrade(false)} />
         : <TradeAsk onPick={doTrade} onNo={() => setAskTrade(false)} />)}
       {tradeRes && <TradeOverlay res={tradeRes} onClose={() => setTradeRes(null)} />}
       {ev.map((e, i) => <div key={i} className="ag-card cr-event ag-pop"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()}</span><p>{withLegacy(e.text)}</p></div>)}
@@ -1791,7 +1856,7 @@ function CareerTab({ c, L, onDelete }) {
       {c.seasons.length > 0 && (S.isSoccer ? <Suspense fallback={null}><SoccerSeasonTable c={c} t={t} /></Suspense> : S.isBaseball ? <Suspense fallback={null}><BaseballSeasonTable c={c} t={t} /></Suspense> : <SeasonTable c={c} t={t} />)}
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
-        {S.isBaseball ? <Suspense fallback={null}><BaseballTotals c={c} t={t} /></Suspense> : S.isSoccer ? <div className="cr-kv">{[[t.stats.goals, 'GOALS'], [t.stats.assists, 'ASSISTS'], [t.stats.apps, 'APPS'], [t.trophies, 'TROPHIES'], [t.leagueTitles, 'LEAGUE TITLES'], [t.ucl, 'CHAMPIONS LEAGUES'], [t.awards, `${S.awardName.st}S`], [t.allPros, 'GOLDEN BOOTS'], [t.proBowls, 'TEAM OF THE SEASON'], [t.caps, 'CAPS'], [t.intlGoals, 'INTERNATIONAL GOALS']].map(([v, k]) => <span key={k}><b>{fmt(v ?? 0)}</b><small>{k}</small></span>)}</div>
+        {S.isBaseball ? <Suspense fallback={null}><BaseballTotals c={c} t={t} /></Suspense> : S.isSoccer ? <div className="cr-kv">{[[t.stats.goals, 'GOALS'], [t.stats.assists, 'ASSISTS'], [t.stats.apps, 'APPS'], [t.trophies, 'TROPHIES'], [t.leagueTitles, 'LEAGUE TITLES'], [t.ucl, 'CHAMPIONS LEAGUES'], ...(t.uel ? [[t.uel, 'EUROPA LEAGUES']] : []), ...(t.uecl ? [[t.uecl, 'CONFERENCE LEAGUES']] : []), ...(t.wc ? [[t.wc, 'WORLD CUPS']] : []), ...(t.contTitles?.length ? [[t.contTitles.length, contWord(t)]] : []), [t.awards, `${S.awardName.st}S`], [t.allPros, 'GOLDEN BOOTS'], [t.proBowls, 'TEAM OF THE SEASON'], [t.caps, 'CAPS'], [t.intlGoals, 'INTERNATIONAL GOALS']].map(([v, k]) => <span key={k}><b>{fmt(v ?? 0)}</b><small>{k}</small></span>)}</div>
         : <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'k' && <span><b>{t.awards}</b><small>{awardWord(c.pos, t.awards)}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span>{t.threeTitles > 0 && <span><b>{t.threeTitles}</b><small>3-POINT CONTESTS</small></span>}{t.dunkTitles > 0 && <span><b>{t.dunkTitles}</b><small>DUNK CONTESTS</small></span>}</div>}
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">{S.isSoccer ? `GREATEST ATTACKERS · TOP ${L.of}` : `GREATEST ${S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP ${L.of}`}</span><small>LEGACY PTS</small></div>
@@ -1885,6 +1950,9 @@ function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
         {s.from && <p><b>Traded</b> {`At the deadline, from the ${s.from.teamName}: ${s.from.wins}–${s.from.losses} there, ${s.wins - s.from.wins}–${s.losses - s.from.losses} with the ${(s.teamName ?? '').split(' ').pop()}, who went ${s.from.teamWins}–${s.from.teamLosses}`}</p>}
         {s.rounds?.length > 0 && <p><b>{S.isSoccer ? 'The big nights' : 'Playoffs'}</b> {s.rounds.map(r => (S.isSoccer ? `${r.won ? 'W' : 'L'} ${tieText(r)} ${r.opponent}` : `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${String(r.opponent ?? '').split(' ').pop()}`)).join(' · ')}</p>}
         {S.isSoccer && s.wc?.called && <p><b>World Cup {s.wc.year}</b> {s.wc.champion ? 'Winners' : s.wc.finish}, {s.wc.goals} {s.wc.goals === 1 ? 'goal' : 'goals'}</p>}
+        {S.isSoccer && s.cont?.called && <p><b>{s.cont.short ?? s.cont.name} {s.cont.year}</b> {s.cont.champion ? 'Winners' : s.cont.finish}, {s.cont.goals} {s.cont.goals === 1 ? 'goal' : 'goals'}</p>}
+        {S.isSoccer && s.moved && <p><b>January</b> {s.moved.loan ? `On loan at ${s.moved.toName} from ${s.moved.fromName}` : `Signed for ${s.moved.toName} from ${s.moved.fromName}`}</p>}
+        {S.isSoccer && s.tier === 2 && <p><b>{s.league}</b> {s.promoted ? `Promoted${s.promotedHow === 'playoff' ? ' through the play-offs' : s.pos === 1 ? ' as champions' : ''}` : 'Not promoted'}</p>}
         {(s.goals ?? []).length > 0 && <p><b>Goals</b> {met} of {s.goals.length} met</p>}
         {s.records?.length > 0 && <p><b>Records</b> {s.records.join(' · ')}</p>}
         {hurt.length > 0 && <p><b>Injuries</b> {hurt.map(i => `${i.kind}, ${i.games} ${i.games === 1 ? 'game' : 'games'}${i.played ? ' (played through)' : ''}`).join(' · ')}</p>}
@@ -1923,7 +1991,7 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
   const story = [
     S.isSoccer ? (pick?.team ? `Signed his first contract at ${S.teamOf(pick.team).name}, aged ${c.seasons[0]?.age ?? 17}.` : null) : pick ? `Drafted No. ${pick.o} overall in ${c.seasons[0]?.season ?? c.season}.` : null,
     S.isSoccer ? (teams.length === 1 ? `One club, start to finish: ${S.teamOf(teams[0].s).name}.` : `${teams.length} clubs.`) : teams.length === 1 ? `One team, start to finish: the ${S.teamOf(teams[0].s).name}.` : `${teams.length} teams.`,
-    S.isSoccer && t.caps ? `${t.caps} caps and ${t.intlGoals} goals for ${nationName(c.nation)}.` : null,
+    S.isSoccer && t.caps ? `${t.caps} caps and ${t.intlGoals} goals for ${theNation(c.nation)}.` : null,
     c.unretired && cb ? `Came out of retirement at ${c.unretired.age} for ${cb.played} more ${cb.played === 1 ? 'season' : 'seasons'}.` : null,
     `Retired${c.unretired ? ' for good' : ''} at ${c.age}.`,
   ].filter(Boolean).join(' ')
@@ -1935,7 +2003,7 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
     [t.cups, t.cups === 1 ? 'CUP' : 'CUPS', IconTrophy, false],
     [t.uel, 'EUROPA LEAGUE', IconTrophy, false],
     [t.uecl ?? 0, 'CONFERENCE LEAGUE', IconTrophy, false],
-    [t.contTitles?.length ?? 0, t.contTitles?.length === 1 ? String(t.contTitles[0].name ?? 'CONTINENTAL TITLE').toUpperCase() : 'CONTINENTAL TITLES', IconTrophy, true],
+    [t.contTitles?.length ?? 0, contWord(t), IconTrophy, true],
     [t.allPros, t.allPros === 1 ? 'GOLDEN BOOT' : 'GOLDEN BOOTS', IconMedal, false],
     [t.shoes, t.shoes === 1 ? 'GOLDEN SHOE' : 'GOLDEN SHOES', IconMedal, false],
     [t.poty, 'PLAYER OF THE SEASON', IconStar, false],
@@ -2171,8 +2239,9 @@ function Playoffs({ c, setCareer, onBook }) {
 }
 
 // ── Talks: one offer on the table; push, sign, or walk ───────────────────────
-function Talks({ c, setCareer }) {
+export function Talks({ c, setCareer, onSign = null, onClose = null }) {
   const t = c.talks
+  const close = () => { if (onClose) onClose(); else setCareer(closeTalks(c)); sfx('tap') }
   const lev = leverageOf(c)
   const moneyPushes = t.asked.filter(k => k === 'money').length
   const soccer = c.sport === 'soccer'
@@ -2186,13 +2255,14 @@ function Talks({ c, setCareer }) {
           ? <><span className="cr-offer-money"><b>{wageText(t.perYear, t.team).replace(' a week', '')}</b><small>A WEEK</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{dealTotal(t)}</b><small>TOTAL</small></span></>
           : <><span className="cr-offer-money"><b>{money(t.perYear)}</b><small>A YEAR</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{money(r1(t.perYear * t.years))}</b><small>TOTAL</small></span></>}
       </div>
+      {soccer && t.kind === 'bid' && t.fee != null && <p className="cr-note cr-talks-fee">{t.clause === 'release' ? `${t.fit.name} have met his release clause, ${feeText(t.fee, c.team)}. ${c.fit?.name ?? 'His club'} cannot turn it down: the move is his call.` : t.clause === 'relegation' ? `${t.fit.name} have triggered his relegation clause: ${feeText(t.fee, c.team)}. The move is his call.` : `A ${feeText(t.fee, c.team)} fee is agreed with ${c.fit?.name ?? 'his club'}. The terms are his to settle.`}</p>}
       <div className="cr-badges">{(t.noTrade || (soccer && talksClause(c, t) != null)) && <span className="cr-badge is-gold"><IconShield size={12} /> {soccer ? `RELEASE CLAUSE${talksClause(c, t) != null ? ` · ${clauseText(talksClause(c, t), t.team)}` : ''}` : 'NO-TRADE'}</span>}{t.starter && <span className="cr-badge is-gold"><IconStar size={12} /> {soccer ? 'FIRST-TEAM PROMISE' : 'STARTER'}</span>}</div>
       <div className="cr-patience"><span className="ag-eyebrow">THEIR PATIENCE · LEVERAGE {['NONE', 'LOW', 'SOME', 'REAL', 'ALL OF IT'][lev]}</span><span className="cr-patience-dots">{Array.from({ length: t.max }, (_, i) => <i key={i} className={i < t.patience ? 'is-on' : ''} />)}</span></div>
       {t.lines.length > 0 && <p className="cr-talks-line">{t.lines[t.lines.length - 1]}</p>}
       {t.walked ? (
         <>
           <p className="cr-note">They pulled the offer. {c.offers?.length ? (soccer ? 'The other clubs are still waiting.' : 'The other teams are still waiting.') : soccer && !c.offers ? `He stays at ${c.fit?.name ?? 'his club'}.` : 'What\'s left is whatever the market has late.'}</p>
-          <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(closeTalks(c)); sfx('tap') }}>{c.offers?.length ? 'BACK TO THE OFFERS' : 'BACK'}</button>
+          <button className="ag-btn ag-btn--ghost" onClick={close}>{c.offers?.length ? 'BACK TO THE OFFERS' : 'BACK'}</button>
         </>
       ) : (
         <>
@@ -2205,8 +2275,8 @@ function Talks({ c, setCareer }) {
             })}
           </div>
           <div className="cr-actions">
-            <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(acceptTalks(c)); sfx('purchase'); haptic('success') }}>SIGN · {soccer ? wageText(t.perYear, t.team).replace(' a week', ' A WEEK') : money(t.perYear)} × {t.years} {t.years === 1 ? 'YR' : 'YRS'}</button>
-            <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(closeTalks(c)); sfx('tap') }}>WALK AWAY</button>
+            <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { if (onSign) onSign(); else setCareer(acceptTalks(c)); sfx('purchase'); haptic('success') }}>SIGN · {soccer ? wageText(t.perYear, t.team).replace(' a week', ' A WEEK') : money(t.perYear)} × {t.years} {t.years === 1 ? 'YR' : 'YRS'}</button>
+            <button className="ag-btn ag-btn--ghost" onClick={close}>WALK AWAY</button>
           </div>
         </>
       )}
@@ -2226,7 +2296,7 @@ const dealTotal = t => {
 // SOCCER's own screens: the season recap, the transfer window, the season-by-season table
 // ═════════════════════════════════════════════════════════════════════════════
 // (the Premier League and the Bundesliga take 'the'; La Liga, Serie A and Ligue 1 don't)
-export const inLeague = n => (/^(Premier League|Bundesliga)$/.test(n ?? '') ? `the ${n}` : n ?? 'the league')
+export const inLeague = n => (/^(Premier League|Bundesliga|Championship|Segunda División|2\. Bundesliga)$/.test(n ?? '') ? `the ${n}` : n ?? 'the league')
 export const ordinalOf = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 // a season the way football writes it: 2026-27
 export const seasonOf = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
@@ -2245,7 +2315,7 @@ export const tieText = x => {
 }
 // soccer's own screens (components/app/CareerSoccer.jsx): loaded only for a soccer career
 const soccerScreen = name => lazy(() => import('./CareerSoccer').then(m => ({ default: m[name] })))
-const SoccerRecap = soccerScreen('SoccerRecap'), SoccerWindow = soccerScreen('SoccerWindow'), SoccerSeasonTable = soccerScreen('SoccerSeasonTable'), AwardBanners = soccerScreen('AwardBanners'), SoccerNights = soccerScreen('SoccerNights'), SoccerTable = soccerScreen('SoccerTable')
+const SoccerRecap = soccerScreen('SoccerRecap'), SoccerWindow = soccerScreen('SoccerWindow'), SoccerSeasonTable = soccerScreen('SoccerSeasonTable'), AwardBanners = soccerScreen('AwardBanners'), SoccerNights = soccerScreen('SoccerNights'), SoccerTable = soccerScreen('SoccerTable'), SoccerBreak = soccerScreen('SoccerBreak'), SoccerBreakDone = soccerScreen('SoccerBreakDone'), SoccerJanuary = soccerScreen('SoccerJanuary')
 // baseball's own screens (components/app/CareerBaseball.jsx): loaded only for a baseball career
 const bbScreen = name => lazy(() => import('./CareerBaseball').then(m => ({ default: m[name] })))
 const BaseballRecap = bbScreen('BaseballRecap'), BaseballContract = bbScreen('BaseballContract'), BaseballSeasonTable = bbScreen('BaseballSeasonTable'), BaseballTotals = bbScreen('BaseballTotals'), BaseballBanners = bbScreen('BaseballBanners'), BaseballPostseason = bbScreen('BaseballPostseason'), BaseballLineup = bbScreen('BaseballLineup'), BaseballChunk = bbScreen('BaseballChunk')

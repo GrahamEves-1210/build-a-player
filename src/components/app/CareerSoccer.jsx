@@ -1,12 +1,13 @@
 // CAREER, SOCCER's own screens: the season recap (the World Cup, his country), the transfer window, the
 // season-by-season table, the Ballon d'Or banners and the big nights. Loaded only for a soccer career
 // (AppCareer.jsx lazy-loads them), so football and basketball never download them.
-import { useEffect, useRef, useState } from 'react'
-import { sportOf, openTalks, acceptTalks, roundOdds, playoffRound, combinePos, gameCast, gamesMode } from '../../lib/career'
-import { wageText, feeText, nationName, stayPut } from '../../lib/careerSoccer'
-import { sfx } from '../../lib/juice'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { sportOf, openTalks, acceptTalks, closeTalks, roundOdds, playoffRound, combinePos, gameCast, gamesMode, POS_ATTR, breakDrill, breakTrain, breakRest, januaryOffers, januaryStay, januaryMove, byeTraits, byeTarget, byeHurt, stepCost, bodyMaxed, BYE_REST } from '../../lib/career'
+import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
+import { wageText, feeText, nationName, theNation, nationFlag, stayPut } from '../../lib/careerSoccer'
+import { sfx, haptic } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck, IconCaret } from './icons'
-import { Analytics, CareerGame, honorsOf, fmt, ClubLogo, tieText, seasonOf, ordinalOf, inLeague } from './AppCareer'
+import { Analytics, CareerGame, Talks, gameTitle, honorsOf, fmt, ClubLogo, tieText, seasonOf, ordinalOf, inLeague } from './AppCareer'
 import './squad-soccer.css'   // (the league table's rows: Squad Builder's soccer season, .sq-table)
 
 // ── The league table ─────────────────────────────────────────────────────────
@@ -85,9 +86,11 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
   const st = last.stats
   const wc = last.wc
   const bdo = last.bdo
+  // (his club's trophies, and his country's: the World Cup, the continental championship)
+  const won = (last.trophies?.length ?? 0) + (wc?.champion ? 1 : 0) + (last.cont?.champion ? 1 : 0)
   return (
-    <div className={`ag-card cr-wrap ag-pop${last.trophies?.length ? ' is-ring' : ''}`}>
-      <div className="ag-card-head"><span className="ag-eyebrow"><span className="cr-nb">{seasonOf(last.season)}</span> · {ordinalOf(last.pos).toUpperCase()} IN {inLeague(last.league).toUpperCase()} · <span className="cr-nb">{last.wins}–{last.draws}–{last.losses}</span></span>{last.trophies?.length > 0 && <span className="cr-ring"><IconTrophy size={13} /> {last.trophies.length === 1 ? 'TROPHY' : `${last.trophies.length} TROPHIES`}</span>}</div>
+    <div className={`ag-card cr-wrap ag-pop${won ? ' is-ring' : ''}`}>
+      <div className="ag-card-head"><span className="ag-eyebrow"><span className="cr-nb">{seasonOf(last.season)}</span> · {ordinalOf(last.pos).toUpperCase()} IN {inLeague(last.league).toUpperCase()} · <span className="cr-nb">{last.wins}–{last.draws}–{last.losses}</span></span>{won > 0 && <span className="cr-ring"><IconTrophy size={13} /> {won === 1 ? 'TROPHY' : `${won} TROPHIES`}</span>}</div>
       <div className="cr-wrap-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         {[[st.goals, 'GOALS'], [st.assists, 'ASSISTS'], [st.apps, 'APPS'], [st.lgGoals, 'LEAGUE G'], [st.xg, 'LEAGUE xG'], [st.avgRating ? st.avgRating.toFixed(2) : '—', 'RATING']].map(([v, k]) => <span key={k}><b>{typeof v === 'number' ? fmt(v) : v}</b><small>{k}</small></span>)}
       </div>
@@ -102,17 +105,20 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
         {last.shoe && <span className="cr-badge is-gold"><IconMedal size={12} /> GOLDEN SHOE</span>}
         {last.roy && <span className="cr-badge is-gold"><IconStar size={12} /> KOPA TROPHY</span>}
         {last.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> MAN OF THE MATCH IN THE FINAL</span>}
+        {last.promoted && <span className="cr-badge is-gold"><IconTrophy size={12} /> PROMOTED{last.promotedHow === 'playoff' ? ' · THE PLAY-OFFS' : last.pos === 1 ? ' AS CHAMPIONS' : ''}</span>}
         {last.role !== 'Starter' && <span className="cr-badge">{String(last.role ?? '').toUpperCase()}</span>}
         {last.records.map((r, i) => <span key={i} className="cr-badge is-rec"><IconFlame size={12} /> {r}</span>)}
       </div>
       <div className="cl-season-notes">
+        {last.moved && <p><b>January</b> {last.moved.loan ? `Joined ${last.moved.toName} on loan from ${last.moved.fromName} until the end of the season` : `Signed for ${last.moved.toName} from ${last.moved.fromName}${last.moved.fee ? ` for ${feeText(last.moved.fee, last.moved.from)}` : ''}`}</p>}
         {last.cupName && <p><b>{last.cupName}</b> {last.cupResult === 'Winners' ? 'Winners' : last.cupResult === 'Runners-up' ? 'Beaten in the final' : last.cupResult ? `Out in the ${String(last.cupResult).toLowerCase()}` : '—'}</p>}
         {last.europe && <p><b>{last.europe.name}</b> {last.europe.result === 'Winners' ? 'Winners' : last.europe.result === 'Runners-up' ? 'Beaten in the final' : `Out in the ${String(last.europe.result ?? 'league phase').toLowerCase()}`}</p>}
         {last.rounds?.length > 0 && <p><b>The big nights</b> {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${tieText(r)} ${r.opponent}`).join(' · ')}</p>}
         {bdo && !last.award && bdo.winner && bdo.rank <= 10 && <p><b>Ballon d'Or</b> {ordinalOf(bdo.rank)}. Won by {bdo.winner.name}.</p>}
-        {last.relegated && <p><b>Relegated</b> {last.teamName} go down.</p>}
+        {last.relegated && <p><b>Relegated</b> {last.teamName} go down to {S.x?.tier2Name?.(last.team) ?? 'the second tier'}.</p>}
+        {last.tier === 2 && <p><b>{last.promoted ? 'Promoted' : 'Not promoted'}</b> {last.promoted ? `${last.teamName} go up${last.promotedHow === 'playoff' ? ' through the play-offs' : last.pos === 1 ? ' as champions' : ' in second place'}.` : `${last.teamName} stay in ${inLeague(last.league)} for another season.`}</p>}
         {last.qualified && <p><b>Next season</b> {last.qualified === 'ucl' ? 'The Champions League' : last.qualified === 'uel' ? 'The Europa League' : 'The Conference League'}</p>}
-        <p><b>{nationName(c.nation)}</b> {last.caps ? `${last.caps} ${last.caps === 1 ? 'cap' : 'caps'}, ${last.intlGoals} ${last.intlGoals === 1 ? 'goal' : 'goals'}${last.intlRole && last.intlRole !== 'Starter' ? ` (${last.intlRole.toLowerCase()})` : ''}` : 'Not called up'}</p>
+        <p><b>{nationName(c.nation)}</b> {last.caps ? `${last.caps} ${last.caps === 1 ? 'cap' : 'caps'}, ${last.intlGoals} ${last.intlGoals === 1 ? 'goal' : 'goals'}${last.intlRole && last.intlRole !== 'Starter' ? ` (${last.intlRole.toLowerCase()})` : ''}` : `Not called up${last.intlRank ? `: ${ordinalOf(last.intlRank)} in the manager's order of strikers` : ''}`}</p>
         {last.missed > 0 && <p><b>Missed</b> {last.missed} {last.missed === 1 ? 'match' : 'matches'}</p>}
       </div>
       {[wc, last.cont].filter(Boolean).map(t => <Tournament key={t.name ?? 'wc'} t={t} />)}
@@ -138,7 +144,7 @@ function Tournament({ t }) {
   return (
     <div className={`ag-card cr-wc${t.champion ? ' is-ring' : ''}`}>
       <span className="ag-eyebrow">{/^the /i.test(name) ? '' : 'THE '}{t.year} {name.toUpperCase()} · {nationName(t.nation).toUpperCase()}</span>
-      {t.qualified === false ? <p className="cr-note">{nationName(t.nation)} didn't qualify.</p>
+      {t.qualified === false ? <p className="cr-note">{theNation(t.nation).replace(/^t/, 'T')} didn't qualify.</p>
         : !t.called ? <p className="cr-note">Left out of the squad. He watches it at home.</p> : <>
           <b className="cr-wc-finish">{t.champion ? (t.name ? 'WINNERS' : 'WORLD CHAMPIONS') : String(t.finish ?? '').toUpperCase()}</b>
           <p className="cr-note">{t.goals} {t.goals === 1 ? 'goal' : 'goals'}, {t.assists} {t.assists === 1 ? 'assist' : 'assists'} in {t.apps} {t.apps === 1 ? 'match' : 'matches'}{t.boot?.won ? '. The Golden Boot.' : t.boot?.winner ? `. The Golden Boot went to ${t.boot.winner}.` : '.'}{t.ball ? ` The ${t.ball}.` : ''}{t.young ? ' Best Young Player.' : ''}</p>
@@ -149,22 +155,148 @@ function Tournament({ t }) {
 }
 // The summer window: bids from other clubs, a new deal, a loan; out of contract, the clubs that want him on a free
 const OFFER_TAG = { bid: 'BID', loan: 'LOAN', renew: 'NEW DEAL', stay: 'STAY', contender: 'CONTENDER', payer: 'TOP WAGES', late: 'LATE OFFER' }
+// One offer: the club, its pitch, then the facts in a line: what it is and the fee (a bid at his release clause, or
+// his relegation clause, says so: his club can't refuse it), his place there, the club's league and, in January, where
+// it stands in it (offer.place)
+function OfferRow({ c, o, onPick }) {
+  const S = sportOf(c)
+  const what = o.clause === 'release' ? `RELEASE CLAUSE MET · ${feeText(o.fee, c.team)}` : o.clause === 'relegation' ? `RELEGATION CLAUSE · ${feeText(o.fee, c.team)}` : o.kind === 'loan' && o.half ? 'LOAN TO THE END OF THE SEASON' : `${OFFER_TAG[o.kind] ?? 'OFFER'}${o.fee ? ` · ${feeText(o.fee, c.team)} fee` : ''}`
+  const stand = o.stand ? (o.stand.starter ? 'First choice' : `${o.stand.role ? `${o.stand.role}, b` : 'B'}ehind ${o.stand.behind}`) : o.fit.status
+  return (
+    <button className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={onPick}>
+      <ClubLogo S={S} short={o.team} />
+      <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{what} · {stand} · {o.place?.league ?? o.fit.conf}{o.place ? ` · ${ordinalOf(o.place.pos)}` : ''}</i></span>
+      <span className="cr-offer-money"><b>{wageText(o.perYear, o.team).replace(' a week', '')}</b><small>A WEEK · {o.kind === 'loan' && o.half ? 'LOAN' : `${o.years} ${o.years === 1 ? 'YR' : 'YRS'}`}</small></span>
+    </button>
+  )
+}
+// the bids his own club turned down this summer (c.off.rejected): said plainly, under the offers
+function Rejected({ c }) {
+  const list = c.off?.rejected ?? []
+  if (!list.length || !(c.contract?.left > 0)) return null
+  const S = sportOf(c)
+  return (
+    <div className="ag-card cr-rejected">
+      <span className="ag-eyebrow">{list.length === 1 ? 'A BID TURNED DOWN' : 'BIDS TURNED DOWN'}</span>
+      {list.map(x => <p key={x.team} className="cr-rejected-row"><ClubLogo S={S} short={x.team} className="cr-lt-crest" /><span>{c.fit?.name} turned down a <b>{feeText(x.fee, c.team)}</b> bid from <b>{x.name}</b>. {c.name} was not for sale at that price.</span></p>)}
+    </div>
+  )
+}
 export function SoccerWindow({ c, setCareer, noCalls }) {
   const S = sportOf(c)
+  const down = !!S.x?.isDown?.(c), tier2 = S.x?.tier2Name?.(c.team) ?? 'the second tier'
   if (noCalls) return <div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">OUT OF CONTRACT</span><p className="cr-note">Out of contract at {c.age}, and no club calls. That's a career.</p></div>
-  if (!c.offers?.length) return <div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">THE WINDOW SHUTS</span><p className="cr-note">{c.decisions[c.decisions.length - 1]?.text ?? `Staying at ${c.fit?.name}.`}</p></div>
+  if (!c.offers?.length) return <><div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">THE WINDOW SHUTS</span><p className="cr-note">{c.decisions[c.decisions.length - 1]?.text ?? `Staying at ${c.fit?.name}.`}</p></div><Rejected c={c} /></>
   const free = c.contract.left <= 0
   return (
     <div className="cr-offers ag-pop">
-      <span className="ag-eyebrow">{free ? 'OUT OF CONTRACT' : 'THE TRANSFER WINDOW'} · {c.offers.length} {c.offers.length === 1 ? 'OFFER' : 'OFFERS'} · TAP ONE TO TALK</span>
-      {c.offers.map(o => (
-        <button key={`${o.kind}-${o.team}`} className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={() => { setCareer(o.kind === 'loan' ? signOfferNow(c, o) : openTalks(c, o)); sfx('tap') }}>
-          <ClubLogo S={S} short={o.team} />
-          <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{OFFER_TAG[o.kind] ?? 'OFFER'}{o.fee ? ` · ${feeText(o.fee, c.team)} fee` : ''} · {o.stand ? (o.stand.starter ? 'First choice' : `${o.stand.role ? `${o.stand.role}, b` : 'B'}ehind ${o.stand.behind}`) : o.fit.status} · {o.fit.conf}</i></span>
-          <span className="cr-offer-money"><b>{wageText(o.perYear, o.team).replace(' a week', '')}</b><small>A WEEK · {o.years} {o.years === 1 ? 'YR' : 'YRS'}</small></span>
+      <span className="ag-eyebrow">{free ? 'OUT OF CONTRACT' : down ? 'RELEGATED · THE TRANSFER WINDOW' : 'THE TRANSFER WINDOW'} · {c.offers.length} {c.offers.length === 1 ? 'OFFER' : 'OFFERS'} · TAP ONE TO TALK</span>
+      {down && !free && <p className="cr-note">{c.down?.clause ? `${c.fit?.name} are down, and the relegation clause in his contract is live: a top-flight club can sign him for ${feeText(c.down.fee, c.team)}.` : `${c.fit?.name} are down. With no relegation clause in his contract, the club decides who it sells to.`}</p>}
+      {c.offers.map(o => <OfferRow key={`${o.kind}-${o.team}`} c={c} o={o} onPick={() => { setCareer(o.kind === 'loan' ? signOfferNow(c, o) : openTalks(c, o)); sfx('tap') }} />)}
+      {!free && <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(stayPut(c)); sfx('tap') }}>STAY PUT · {c.contract.left} {c.contract.left === 1 ? 'YEAR' : 'YEARS'} LEFT AT {String(c.fit?.name ?? '').toUpperCase()}{down ? ` IN ${tier2.toUpperCase()}` : ''}</button>}
+      <Rejected c={c} />
+    </div>
+  )
+}
+// ── The January window (lib/career.js januaryNow): the bids and the loan on the table half-way through the season,
+// the summer window's look. A bid opens talks (the summer's table); signed, he finishes the season at the new club
+// (januaryMove: the season goes on from a new director). A loan runs to the end of the season. STAY PUT closes it.
+export function SoccerJanuary({ c, setCareer, getD, setD }) {
+  const a = c.active, offers = januaryOffers(c)
+  const move = o => {
+    const [n, d] = januaryMove(c, getD(), o)
+    if (n === c || n.team === c.team) { setCareer(closeTalks(c)); sfx('deny'); return }
+    setD(d); setCareer({ ...n, talks: null }); sfx('purchase'); haptic('success')
+    requestAnimationFrame(() => document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }))
+  }
+  // (talks that broke down: that club is gone from the window)
+  const closed = () => { const t = c.talks; setCareer({ ...closeTalks(c), offers: null, ...(t?.walked ? { active: { ...a, jan: { ...a.jan, offers: (a.jan.offers ?? []).filter(o => o.team !== t.team) } } } : {}) }) }
+  if (c.talks) return <Talks c={c} setCareer={setCareer} onSign={() => move(c.talks)} onClose={closed} />
+  if (!offers.length) return null
+  return (
+    <div className="cr-offers cr-jan ag-pop">
+      <span className="ag-eyebrow">THE JANUARY WINDOW · {offers.length} {offers.length === 1 ? 'OFFER' : 'OFFERS'} · TAP ONE TO TALK</span>
+      <p className="cr-note">Half-way through the season. A move now, and {c.name} finishes it at the new club.</p>
+      {offers.map(o => <OfferRow key={`${o.kind}-${o.team}`} c={c} o={o} onPick={() => { if (o.kind === 'loan') move(o); else { setCareer(openTalks(c, o)); sfx('tap') } }} />)}
+      <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(januaryStay(c, getD())); sfx('tap') }}>STAY PUT · {c.contract.left} {c.contract.left === 1 ? 'YEAR' : 'YEARS'} LEFT AT {String(c.fit?.name ?? '').toUpperCase()}</button>
+    </div>
+  )
+}
+// ── The international break (lib/career.js breakNow): November, two weeks without a league match. Called up, he's
+// away with his country (his place in the manager's order of strikers: S.x.callUp); left out, the bye week's choice:
+// extra work on the training ground (one drill, a shot at a grade) or rest.
+const orderWord = ['', 'first choice', 'second in line', 'third in line', 'fourth in line', 'fifth in line', 'sixth in line']
+function StrikerOrder({ c, call }) {
+  if (!call?.order?.length) return null
+  return (
+    <div className="crl-bench cr-brk-order">
+      <span className="ag-eyebrow">{nationName(c.nation).toUpperCase()} · THE STRIKERS</span>
+      {call.order.map((p, i) => <span key={p.name + i} className={`crl-depth${p.me ? ' is-you' : ''}`}><i>{i + 1}</i><b>{p.name}</b><small>{p.ovr} OVR · age {p.age}</small></span>)}
+    </div>
+  )
+}
+export function SoccerBreak({ c, setCareer, getD }) {
+  const S = sportOf(c), a = c.active, brk = a.brk, mode = gamesMode(c)
+  const call = useMemo(() => { try { return S.x.callUp(c) } catch { return null } }, [c.seed, c.year, c.ovr, c.nation]) // eslint-disable-line react-hooks/exhaustive-deps
+  const game = useMemo(() => breakDrill(c, mode === 'simple' ? g => !!SIMPLE_GAMES[g] : null), [c.seed, c.year, c.pos, mode]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nation = nationName(c.nation), the = theNation(c.nation)
+  const Head = <span className="cr-brk-head"><img src={nationFlag(c.nation)} alt="" className="cr-brk-flag" onError={e => { e.currentTarget.style.display = 'none' }} /><span className="ag-eyebrow">NOVEMBER · THE INTERNATIONAL BREAK</span></span>
+  if (brk.called) return (
+    <div className="ag-card cr-brk ag-pop">
+      {Head}
+      <h3 className="sm-moment-title">Called up by {the}</h3>
+      <p className="sm-moment-body">{call?.role === 'Starter' ? `${c.name} leads the line for ${the} in this month's internationals.` : call?.role === 'Rotation' ? `${c.name} is in the ${nation} squad, second choice up front: minutes off the bench, and a start if the manager rotates.` : `${c.name} is in the ${nation} squad as the third striker. He travels, and waits for his chance.`} The league is back in a fortnight.</p>
+      <StrikerOrder c={c} call={call} />
+    </div>
+  )
+  const D = getD(), hurt = byeHurt(c, D)
+  const playing = brk.training && !hurt ? brk.training : null
+  const label = t => POS_ATTR[c.pos]?.[t]?.label ?? t
+  const listOf = l => (l.length > 1 ? `${l.slice(0, -1).join(', ')} or ${l[l.length - 1]}` : l[0] ?? '')
+  const done = (g, res) => { const n = breakTrain(c, getD(), g, res.score, res.hit, mode === 'off'); setCareer(n); if (n.active.brk?.done?.gain) { sfx('claim'); haptic('success') } else sfx('tap') }
+  if (playing) return (
+    <div className="ag-card cr-camp cr-bye ag-pop">
+      <span className="ag-eyebrow">THE INTERNATIONAL BREAK · {gameTitle(c, playing)}</span>
+      <p className="cr-note">Extra work with the coaches while the internationals are away. A good session can raise {listOf(byeTraits(c, playing).map(label))} a grade.</p>
+      <CareerGame c={c} setCareer={setCareer} empty team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={playing} game={playing} build={c.build} seed={`${c.seed}-brk-${c.year}`} lock={`${c.seed}-brk-${c.year}`} onDone={res => done(playing, res)} />
+    </div>
+  )
+  const tgt = game ? byeTarget(c, game) : null, top = !!tgt && !(c.build[tgt].faded > 0) && stepCost(c.build[tgt].val, c) > 1
+  const why = !call ? '' : c.age < 19 && call.rank <= 3 ? ` The manager has him down as ${orderWord[call.rank] ?? 'one for later'}, and wants another year in him first.` : call.rank > 3 ? ` He is ${orderWord[call.rank] ?? 'well down the order'} among ${nation}'s strikers, and the manager takes three.` : ' The manager wants more from his season first.'
+  return (
+    <div className="sm-moment cr-bye cr-brk ag-pop">
+      {Head}
+      <h3 className="sm-moment-title">No call from {the}</h3>
+      <p className="sm-moment-body">{c.name} isn't in the {nation} squad this month.{why}</p>
+      <div className="sm-options">
+        <button className="sm-option" disabled={hurt || !game} onClick={() => { setCareer({ ...c, active: { ...a, brk: { ...brk, training: game } } }); sfx('tap') }}>
+          <b>Extra work{game ? `: ${String(gameTitle(c, game) ?? '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase())}` : ''}</b>
+          <small>{hurt ? 'Not this fortnight: he is in the treatment room.' : !game ? `Nothing left to train at ${c.age}.` : `One drill with the coaches. A good session can raise ${listOf(byeTraits(c, game).map(label))} a grade: the cleaner it is, the better the chance.${top ? ' This close to the top, a fortnight rarely moves a grade.' : ''}${mode === 'off' ? ' Simulated from his ratings.' : ''}`}</small>
         </button>
-      ))}
-      {!free && <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(stayPut(c)); sfx('tap') }}>STAY PUT · {c.contract.left} {c.contract.left === 1 ? 'YEAR' : 'YEARS'} LEFT AT {String(c.fit?.name ?? '').toUpperCase()}</button>}
+        <button className="sm-option" onClick={() => { setCareer(breakRest(c, getD())); sfx('claim'); haptic('success') }}>
+          <b>Rest and recover</b>
+          <small>{bodyMaxed(c) ? 'Durability is already as high as it goes.' : `Durability +${BYE_REST}, guaranteed.`}{hurt && !a.out ? ' He is back from the injury a match sooner.' : ''}</small>
+        </button>
+      </div>
+      <StrikerOrder c={c} call={call} />
+    </div>
+  )
+}
+// how the fortnight went, until the next match
+export function SoccerBreakDone({ c }) {
+  const d = c.active?.brk?.done
+  // (it comes into view: after the drill the page is left wherever the game's READY button was)
+  const box = useRef(null)
+  useEffect(() => { const r = box.current?.getBoundingClientRect(); if (r && (r.top < 64 || r.bottom > window.innerHeight - 140)) box.current.scrollIntoView({ block: 'center' }) }, [])
+  if (!d) return null
+  const gain = d.gain
+  const head = d.pick === 'rest' ? (d.to > d.from ? `Durability +${Math.round((d.to - d.from) * 10) / 10}` : 'Rested') : gain ? `${gain.label} ${gain.from} → ${gain.to}` : 'No new grade'
+  const sub = d.pick === 'rest' ? (d.healed ? `Back from the ${d.healed.kind} a match sooner.` : 'Two weeks off his feet while the internationals were away.') : gain ? 'The extra work paid off: he plays the rest of the season at the new grade.' : d.hit ? 'A good session, no new grade this time.' : 'Not his best session. Back to it after the weekend.'
+  return (
+    <div className="ag-card cr-bye-done ag-pop" ref={box}>
+      <span className="ag-eyebrow">THE INTERNATIONAL BREAK · {d.pick === 'rest' ? 'REST' : 'EXTRA WORK'}{d.sim ? ' · SIMULATED' : ''}</span>
+      <b className={`cr-bye-head${gain || (d.pick === 'rest' && d.to > d.from) ? ' is-up' : ''}`}>{head}</b>
+      <p className="cr-note">{sub}</p>
     </div>
   )
 }

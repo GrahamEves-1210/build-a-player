@@ -310,6 +310,8 @@ const soccerNationOf = n => (NATION_BY.has(n) ? n : lastNation() ?? 'ENG')
 export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name, conf: n.conf ?? null }))
 export const nationName = short => NATION_BY.get(short)?.name ?? short
 export const nationFlag = short => `/logos/nations/${short}.png`
+// a country in a sentence: the United States, the Netherlands, the Ivory Coast (England, Brazil and the rest as they are)
+export const theNation = short => { const n = nationName(short); return /^(United States|Netherlands|Ivory Coast|Republic of Ireland|United Arab Emirates|Dominican Republic|Gambia|Comoros)$/.test(n) ? `the ${n}` : n }
 
 // His place at the club: first choice, in the rotation (close behind, or a teenager they want to play), or on the bench
 export function soccerRole(c) {
@@ -774,6 +776,8 @@ function soccerSeason(c, f, po) {
 // the second tiers' names (the engine's own, for the words here)
 const TIER2_NAME = { 'eng.1': 'the Championship', 'esp.1': 'the Segunda División', 'ita.1': 'Serie B', 'ger.1': 'the 2. Bundesliga', 'fra.1': 'Ligue 2' }
 const topFlight = short => soccerLeagueInfo(CLUB_BY.get(short)?.league)?.name ?? 'the top flight'
+// (the Premier League and the Bundesliga take 'the'; La Liga, Serie A and Ligue 1 don't)
+const theLeague = n => (/^(Premier League|Bundesliga)$/.test(n ?? '') ? `the ${n}` : n)
 // after the season: next year's Europe, the caps, relegation and promotion, a loan that's over
 function soccerAfterSeason(n, s) {
   let next = { ...n, europe: s.qualified ?? null, europeFor: s.team, caps: (n.caps ?? 0) + (s.caps ?? 0), intlGoals: (n.intlGoals ?? 0) + (s.intlGoals ?? 0) }
@@ -791,7 +795,7 @@ function soccerAfterSeason(n, s) {
   }
   // a season in the second tier: promoted (back in the top flight), or another year down there
   if (s.tier === 2 && next.down?.team === s.team && !next.loan) {
-    if (s.promoted) { next = { ...next, down: null }; ev(`${s.teamName} are promoted${s.promotedHow === 'playoff' ? ' through the play-offs' : s.pos === 1 ? ' as champions' : ''}. Back in ${topFlight(s.team)}.`) }
+    if (s.promoted) { next = { ...next, down: null }; ev(`${s.teamName} are promoted${s.promotedHow === 'playoff' ? ' through the play-offs' : s.pos === 1 ? ' as champions' : ''}. Back in ${theLeague(topFlight(s.team))}.`) }
     else ev(`${s.teamName} finish ${ordinal(s.pos)} and miss out on promotion. Another season in ${TIER2_NAME[CLUB_BY.get(s.team)?.league] ?? 'the second tier'}.`)
   }
   if (next.loan && s.year >= next.loan.until) {
@@ -1070,18 +1074,32 @@ function soccerMovedLine(c, k, D) {
   const sum = (list, key) => list.reduce((a, g) => a + (g[key] ?? 0), 0)
   return { wk, before: { cupGoals: sum(cup, 'goals'), euroGoals: sum(euro, 'goals'), assists: sum(cup, 'assists') + sum(euro, 'assists'), apps: sum(cup, 'app') + sum(euro, 'app') } }
 }
+// where a club stands in its own league as the January window opens: his league's from the table as it stands, another
+// league's from the season's own run (base.places). → { pos, league } or null
+function placeNow(c, D, k, short) {
+  const a = c.active, club = CLUB_BY.get(short)
+  if (!club) return null
+  const league = soccerLeagueInfo(club.league)?.name ?? null
+  if (club.league === a.base?.league?.id && a.base?.form) {
+    const row = soccerTableAt(a.base.form, k, { short: c.team, games: (D?.games ?? []).slice(0, k) })?.find(r => r.short === short)
+    return row ? { pos: row.pos, league } : null
+  }
+  const pos = a.base?.places?.[short]
+  return pos ? { pos, league } : null
+}
 function soccerBeat(c, D, k) {
   const a = c.active, total = D.total
   if (total < 20 || a.out) return null
   if (k === breakAt(total) && !a.brk) {
     const call = soccerCallUp(c, null)
-    return { stop: true, set: { brk: { k, called: !!call.called, nation: c.nation } }, notes: [{ note: call.called ? `The November international break. ${c.name} is away with ${nationName(c.nation)}.` : `The November international break. ${c.name} stays at the training ground with the players who weren't called up.`, noteKind: 'INTERNATIONAL BREAK' }] }
+    return { stop: true, set: { brk: { k, called: !!call.called, nation: c.nation } }, notes: [{ note: call.called ? `The November international break. ${c.name} is away with ${theNation(c.nation)}.` : `The November international break. ${c.name} stays at the training ground with the players who weren't called up.`, noteKind: 'INTERNATIONAL BREAK' }] }
   }
   if (k === janAt(total) && !a.jan) {
-    const offers = januaryOffers(c, D, k)
+    // (each offer says where its club stands in its league: offer.place)
+    const offers = januaryOffers(c, D, k).map(o => { const place = placeNow(c, D, k, o.team); return place ? { ...o, place } : o })
     const bids = offers.filter(o => o.kind === 'bid'), loans = offers.filter(o => o.kind === 'loan')
     const names = list => list.map(o => o.fit.name).join(' and ')
-    return { stop: true, set: { jan: { k, offers } }, notes: offers.length ? [{ note: bids.length ? `The January window. ${names(bids)} ${bids.length === 1 ? 'has' : 'have'} made ${bids.length === 1 ? 'a bid' : 'bids'} for ${c.name}.` : `The January window. ${names(loans)} ${loans.length === 1 ? 'wants' : 'want'} ${c.name} on loan until the end of the season.`, noteKind: 'JANUARY WINDOW' }] : [] }
+    return { stop: true, set: { jan: { k, offers } }, notes: offers.length ? [{ note: bids.length ? `The January window. ${names(bids)} have made ${bids.length === 1 ? 'a bid' : 'bids'} for ${c.name}.` : `The January window. ${names(loans)} want ${c.name} on loan until the end of the season.`, noteKind: 'JANUARY WINDOW' }] : [] }
   }
   return null
 }
@@ -1183,7 +1201,7 @@ SOCCER.x = {
   // (a striker is compared with strikers: before 2026-11-24 the pool was every attacker and midfielder)
   compPool: SOCCER_STRIKERS.filter(isNine),
   // (for the screens: money, the country, the window)
-  wageText, feeText, soccerCur, nationName, nationFlag, SOCCER_NATIONS, rememberNation, lastNation, signAcademy, stayPut,
+  wageText, feeText, soccerCur, nationName, theNation, nationFlag, SOCCER_NATIONS, rememberNation, lastNation, signAcademy, stayPut,
   // (2026-11-24, for the screens)
   // money: what he's worth (€M), what his club can pay; the clause in his deal and in the deal on the table
   value: soccerValue, purse: clubPurse, releaseFee, talksRelease, releaseText: c => { const f = releaseFee(c); return f == null ? null : `${feeText(f, c.team)} release clause` },

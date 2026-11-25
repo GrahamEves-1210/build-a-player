@@ -175,6 +175,21 @@ button.cl-yr { width: 100%; color: inherit; font: inherit; cursor: pointer; }
 .cr-nation { display: flex; align-items: center; gap: 10px; }
 .cr-nation img { width: 34px; height: 24px; object-fit: cover; border-radius: 4px; flex: none; }
 .cr-nation select { flex: 1; min-width: 0; }
+/* the nationality: a button that opens the sheet of countries (2026-11-25) */
+button.cr-nation { width: 100%; min-height: 46px; text-align: left; cursor: pointer; color: inherit; }
+button.cr-nation b { flex: 1; min-width: 0; font-family: var(--ag-body); font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-nation-go { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; color: var(--ag-a1); }
+.cr-nat-box { align-content: start; height: min(86dvh, 760px); padding-top: 0; }
+.cr-nat-top { position: sticky; top: 0; z-index: 2; display: grid; gap: 8px; padding: 12px 0 10px; background: #0d1013; }
+.cr-nat-find { width: 100%; height: 46px; font-size: 16px; box-sizing: border-box; }
+.cr-nat-group { display: grid; gap: 6px; padding-bottom: 10px; }
+.cr-nat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.cr-nat { display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.04); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.cr-nat img { width: 30px; height: 21px; object-fit: cover; border-radius: 3px; flex: none; background: rgba(255,255,255,.08); }
+.cr-nat b { min-width: 0; font-family: var(--ag-body); font-weight: 600; font-size: 14px; line-height: 1.15; }
+.cr-nat.is-on { border-color: var(--ag-a1); background: color-mix(in srgb, var(--ag-a1) 14%, transparent); }
+.cr-nat-none { margin: 4px 0 16px; }
+@media (min-width: 700px) { .cr-nat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .cr-chunk-strip .is-d { background: rgba(255,255,255,.08); color: var(--ag-text); }
 .cr-club-init { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--ag-line-hi); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--ag-text); flex: none; }
 .cr-po-side .cr-club-init { width: 72px; height: 72px; font-size: 20px; }
@@ -253,3 +268,17 @@ button.cr-devnote--go { width: 100%; min-height: 44px; text-align: left; cursor:
 /* THE NUMBERS BY YEAR: room for a season (2026-27) in the first column */
 .crs-yr--wide { grid-template-columns: 62px repeat(3, minmax(0, 1fr)); }
 .cr-lt .sq-table-head > span:nth-child(2) { text-align: left; padding-left: 26px; }
+
+/* ── Soccer Career's two stops in a season (2026-11-25): the international break and the January window ── */
+.cr-brk { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+.cr-brk-head { display: flex; align-items: center; gap: 10px; }
+.cr-brk-flag { width: 34px; height: 34px; object-fit: contain; flex: none; }
+.cr-brk-order { margin: 2px 0 4px; }
+.cr-brk .sm-moment-title { margin: 0; }
+.cr-brk .sm-moment-body { margin: 0; }
+/* a bid his club turned down: a plain line under the window */
+.cr-rejected { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; }
+.cr-rejected-row { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-family: var(--ag-body); font-size: 14px; line-height: 1.4; color: var(--ag-text-2); }
+.cr-rejected-row b { color: var(--ag-text); }
+.cr-rejected-row .cr-lt-crest { width: 26px; height: 26px; margin-top: 1px; }
+.cr-talks-fee { margin: 0; }
