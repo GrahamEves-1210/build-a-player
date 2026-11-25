@@ -314,7 +314,7 @@ function LineScore({ sport, us, them, home, my, op, q, status, live, story, nick
 }
 
 // The two teams' lines, side by side; the better number of each pair stands out
-const LOWER_BETTER = /turnover|sack|penalt|interception/i
+const LOWER_BETTER = /turnover|sack|penalt|interception|foul|yellow card/i
 const numOf = v => (typeof v === 'number' ? v : /^\d+:\d\d$/.test(String(v)) ? (([m, s]) => +m * 60 + +s)(String(v).split(':')) : /%$/.test(String(v)) ? parseFloat(v) : null)
 function TeamCompare({ sport, us, them, rows, logo = null }) {
   return (

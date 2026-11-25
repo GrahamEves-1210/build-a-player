@@ -245,7 +245,7 @@ function say(e, { N, usName, themName, rand, themHome = false, pens = false }) {
     return e.saved ? one(rand, [`${N} forces a save from the keeper.`, `${N} tests the keeper from the edge of the box.`]) : one(rand, [`${N} fires over.`, `${N} shoots wide.`, `${N}'s shot is blocked.`])
   }
   if (e.kind === 'penmiss') return `Penalty to ${usName}. ${N}'s spot kick is saved.`
-  if (e.kind === 'kp') return e.mate ? `${N} picks out ${e.mate}, who can't keep it down.` : `${N} lays it back. The shot is blocked.`
+  if (e.kind === 'kp') return e.mate ? one(rand, [`${N} picks out ${e.mate}, who can't keep it down.`, `${N} squares it for ${e.mate}. Blocked on the line.`, `${N}'s cross finds ${e.mate}, who heads over.`, `${N} lays it off to ${e.mate}. Saved.`]) : `${N} lays it back. The shot is blocked.`
   if (e.kind === 'subon') return `Substitution: ${N} comes on for ${usName}.`
   if (e.kind === 'suboff') return e.scored ? `${N} makes way. A standing ovation.` : `${N} makes way.`
   if (e.kind === 'chance') {

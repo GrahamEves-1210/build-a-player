@@ -8040,3 +8040,5 @@ html:not(#_) .ssp-tile.is-big { grid-column: span 6; }
 .ssp-legacy .goat-eyebrow { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 16px; letter-spacing: 2px; color: rgba(255,255,255,.6); }
 .smd-ctrl .plf-seg-btn { flex: 1 1 0; width: auto; min-height: 44px; font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 16px; letter-spacing: 1.2px; }
 .smd-ctrl .plf-seg-btn-skip { font-size: 13.5px; line-height: 1.05; }
+html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px 28px 32px 40px; }
+.smd-bx-dnp { grid-column: 2 / -1; text-align: right; font-family: var(--ag-font, 'Bebas Neue', sans-serif); letter-spacing: 1px; color: var(--ag-text-2, rgba(255,255,255,.6)); }
