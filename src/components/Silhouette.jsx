@@ -416,7 +416,8 @@ const ST_BOX = { l: 13, r: 971, t: 106, b: 1459 }   // the figure inside its art
 // desk: the website from a tablet up (cards scale with the figure, 2.1x its px-per-art-px, up to 1.1), the right
 // column clear of the ball; deskTight: the same on a narrow stage (an iPad, a small window), the columns closer in
 // and the right one ending above the ball, which lets him stand larger: whichever draws him bigger is used;
-// app: a phone in the app's look (100px cards, like the basketball figure's); phone: a phone in the classic look.
+// app: a phone in the app's look (100px cards, like the basketball figure's; a size down on a narrow phone so
+// they never stack onto each other, a size up on a wide one); phone: a phone in the classic look.
 // colL / colR: the art-x of the left column's inner edge and the right column's; cardW / cardH: a card's CSS size
 // (empty and filled heights); the rows: the art-y of each card's middle.
 const ST_LAYOUT = {
@@ -424,9 +425,9 @@ const ST_LAYOUT = {
            left: [330, 600, 1122, 1352], right: [185, 477, 769, 1061, 1353] },
   deskTight: { colL: 346, colR: 880, cardW: 211, cardH: [100, 92], k: 2.1, kMax: 1.1, padX: 6, padY: 6,
            left: [330, 600, 1122, 1352], right: [176, 424, 672, 920, 1168] },
-  app:   { colL: 346, colR: 880, cardW: 100, cardH: [48, 46], k: 0, kMax: 1, padX: 3, padY: 4,
+  app:   { colL: 346, colR: 880, cardW: 100, cardH: [48, 46], k: 3.07, kMax: 1.2, padX: 3, padY: 4,
            left: [300, 590, 1105, 1330], right: [176, 430, 684, 938, 1192] },
-  phone: { colL: 346, colR: 880, cardW: 86, cardH: [54, 62], k: 0, kMax: 1, padX: 3, padY: 4,
+  phone: { colL: 346, colR: 880, cardW: 86, cardH: [54, 62], k: 2.9, kMax: 1.1, padX: 3, padY: 4,
            left: [300, 590, 1105, 1330], right: [176, 430, 684, 938, 1192] },
 }
 // where the art sits in the wrap (W x H): `s` px per art px, the art's corner at (ox, oy); `k` the cards' scale,
@@ -438,15 +439,15 @@ function strikerFit(W, H, mode) {
     return { s, k: 1, ox: (W - fw * s) / 2 - ST_BOX.l * s, oy: (H - fh * s) / 2 - ST_BOX.t * s, xL: 0, xR: W, L: null }
   }
   const fit = L => {
-    const gap = L.colR - L.colL
-    if (!L.k) return Math.min((H - 2 * L.padY) / fh, (W - 2 * L.padX - 2 * L.kMax * L.cardW) / gap)
-    // (cards that scale with him are a fixed size in art px: the top right card can stand a little above his head)
+    const gap = L.colR - L.colL, w = W - 2 * L.padX
+    // (the cards scale with him, so they are a fixed size in art px: the top right card can stand a little above
+    // his head. Once they reach their largest size, the room they'd have grown into is his)
     const half = L.k * L.cardH[0] / 2, top = Math.min(ST_BOX.t, L.right[0] - half)
-    return Math.min((H - 2 * L.padY) / (ST_BOX.b - top), (W - 2 * L.padX) / (2 * L.k * L.cardW + gap))
+    return Math.min((H - 2 * L.padY) / (ST_BOX.b - top), Math.max(w / (2 * L.k * L.cardW + gap), (w - 2 * L.kMax * L.cardW) / gap))
   }
   const L = mode === 'desk' && fit(ST_LAYOUT.deskTight) > fit(ST_LAYOUT.desk) * 1.02 ? ST_LAYOUT.deskTight : ST_LAYOUT[mode]
-  const s = Math.max(fit(L), 0.12), k = L.k ? Math.min(L.kMax, L.k * s) : L.kMax
-  const top = L.k ? Math.min(ST_BOX.t, L.right[0] - L.k * L.cardH[0] / 2) : ST_BOX.t
+  const s = Math.max(fit(L), 0.12), k = Math.min(L.kMax, L.k * s)
+  const top = Math.min(ST_BOX.t, L.right[0] - L.k * L.cardH[0] / 2)
   // the columns and the figure, centred as one block (his boot and the ball can reach past a column's outer edge)
   const spanL = Math.min(L.colL * s - k * L.cardW, ST_BOX.l * s), spanR = Math.max(L.colR * s + k * L.cardW, ST_BOX.r * s)
   const ox = (W - (spanR - spanL)) / 2 - spanL
