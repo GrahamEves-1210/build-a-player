@@ -8175,3 +8175,6 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 /* Home's player chip (owner 11-25): no level title tag beside the name, and a shorter XP bar */
 .ag-home .ag-hud .ag-player-title { display: none; }
 .ag-home .ag-hud .ag-xpbar { width: 84px; max-width: 84px; }
+/* Home's position bar: its top corners rounded like the sport bar's (owner 11-25), and on desktop as tall as on a phone */
+.ag-home .ag-stage .ag-positions { border-radius: var(--hm-r) var(--hm-r) 0 0; }
+@media (min-width: 1024px) { .ag-home .ag-stage .ag-positions { height: 53px !important; } }
