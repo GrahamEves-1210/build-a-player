@@ -7803,3 +7803,5 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
 @media (max-width: 768px) {
   .mobile-build .sil-wrap.sil-wrap--st { width: 100%; margin: 0; }
 }
+/* (the face's shading layer needs its filter: weak machines, where figure filters are off, go without the layer) */
+html.low-power .sil-wrap svg.st-face-detail { display: none; }

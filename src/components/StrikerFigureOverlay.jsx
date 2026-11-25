@@ -6,7 +6,8 @@ import { warmSkin } from '../utils/footballSkin'
 // so the left leg is his trailing leg and the right leg is the one on the ball). The hair and the ball in the art
 // are left as they are.
 // The build arrives under the basketball keys (lib/soccerUi.js SOCCER_AS_BUCKET), like the figure it replaced:
-//   basketballIQ  HEADING      his face and neck (the skin of the player the trait came from)
+//   basketballIQ  HEADING      his face and neck (the skin of the player the trait came from); the art's own
+//                              shading of the face is drawn back over the skin (FACE_DETAIL below)
 //   clutch        COMPOSURE    the shirt and its long sleeve in the club's colour, the collar and the cuff in its
 //                              second colour, the crest on the chest and the number under it
 //   speed         PACE         the shorts (the second colour; white when the shirt is), the socks (the club's colour)
@@ -22,6 +23,12 @@ const D = Object.fromEntries(['jersey', 'collar', 'neck', 'sleeve', 'cuff', 'han
 
 // Every bare-skin area uses the shared football skin treatment at one opacity (as the kicker's figure does)
 const SKIN_OPACITY = 0.58
+// The face: flat skin screened over the art leaves him with no features (the art's face is nearly black, so its
+// brow, nose and mouth barely move the result). So the art is drawn once more over the face and neck, lifted so
+// its mid-tones sit near mid-grey, and soft-lit onto the skin: the shadows under the brow and the jaw come back
+// and the skin keeps its tone (the face's average colour is the flat fill's). The hand and the thighs are lit
+// well enough in the art to read without it. html.low-power drops filters (app-game.css): the layer is hidden there.
+const FACE_DETAIL = { filter: 'grayscale(1) brightness(6)', mixBlendMode: 'soft-light', opacity: 0.7 }
 const KIT_OPACITY = 0.78
 const TRIM_OPACITY = 0.82
 
@@ -71,6 +78,12 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
         {legs && <Group ids={['left sock top', 'right sock top']} fill={sockTop} opacity={TRIM_OPACITY} />}
         {boots && <Group ids={['left boot', 'right boot']} fill={boots.teamColor ?? '#111111'} opacity={KIT_OPACITY} />}
       </svg>
+      {head && (
+        <svg className="st-face-detail" viewBox={`0 0 ${ST_FIG_W} ${ST_FIG_H}`} preserveAspectRatio="xMidYMid meet" style={{ ...SVG_STYLE, ...tf, ...FACE_DETAIL, zIndex: 6 }} aria-hidden="true">
+          <defs><clipPath id="st-face-clip"><path d={D.face} /><path d={D.neck} /></clipPath></defs>
+          <image href="/st-silhouette.webp" width={ST_FIG_W} height={ST_FIG_H} clipPath="url(#st-face-clip)" />
+        </svg>
+      )}
       {(shirt || legs) && (
         <svg viewBox={`0 0 ${ST_FIG_W} ${ST_FIG_H}`} preserveAspectRatio="xMidYMid meet" style={{ ...SVG_STYLE, ...tf, zIndex: 7, overflow: 'visible' }} aria-hidden="true">
           <defs>
