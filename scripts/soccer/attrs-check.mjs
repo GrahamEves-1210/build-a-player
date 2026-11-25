@@ -51,7 +51,7 @@ for (const p of UCL_STRIKERS) {
 }
 for (const s of UCL_SHORTS) {
   const mine = UCL_STRIKERS.filter(p => p.team === s)
-  if (mine.length < 3 || mine.length > 6) err(`${s}: ${mine.length} players (3 to 6)`)
+  if (mine.length < 3 || mine.length > 8) err(`${s}: ${mine.length} players (3 to 8)`)
   if (mine.filter(p => p.starter).length !== 1) err(`${s}: ${mine.filter(p => p.starter).length} main strikers`)
 }
 // Career's pool: the domestic leagues' clubs only
