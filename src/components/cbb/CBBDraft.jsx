@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { valToGrade } from '../../utils/simulation'
 import { IconClose } from '../app/icons'
 import { sfx } from '../../lib/juice'
+import { accountId } from '../../lib/supabase'
 import { CBB_POS, collegeGap, draftProj, projText } from './cbbShared'
 import { CLASS_NAME } from './cbbClass'
 
@@ -31,7 +32,7 @@ export default function CBBDraft({ build, types, pos, result, user, userName, pl
   const [slots, setSlots] = useState(null)
   const [slot, setSlot] = useState(null)
   const [busy, setBusy] = useState(false)
-  const uid = user?.id ?? null
+  const uid = accountId(user)   // (the stored session's account while `user` is still coming back: lib/supabase.js)
   useEffect(() => {
     let live = true
     import('../../lib/career').then(m => {

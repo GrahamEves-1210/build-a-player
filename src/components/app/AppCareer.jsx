@@ -904,14 +904,21 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const boosts = useProgress().boosts ?? {}
   const ready = useSport(c?.sport ?? 'nfl')
   // the player's own name (picked when the career began); never "You"
-  useEffect(() => { if (c && ready) saveCareer(c) }, [c, ready])
+  // every change is saved as it lands. A save this device can't keep (its storage full, lib/career.js saveCareer):
+  // the screen says so and keeps trying, every few seconds and on every change, until one goes in
+  const [saveBad, setSaveBad] = useState(false)
+  const cRef = useRef(c); cRef.current = c
+  useEffect(() => { if (c && ready) setSaveBad(!saveCareer(c)) }, [c, ready])
+  const retrySave = () => { if (cRef.current) setSaveBad(!saveCareer(cRef.current)) }
+  useEffect(() => { if (!saveBad) return; const t = setInterval(retrySave, 8000); return () => clearInterval(t) }, [saveBad]) // eslint-disable-line
   useEffect(() => { if (ready && c?.phase === 'season' && c.active && !D.current) D.current = resumeSeason(c) }, [c?.phase, ready]) // eslint-disable-line
   if (!c || !ready) return null
   const S = sportOf(c), logoFor = S.logo
-  if (c.phase === 'college') return <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>{c.sport === 'bucket' ? <CareerCollegeHoops c={c} setCareer={setCareer} onExit={onExit} /> : <CareerCollege c={c} setCareer={setCareer} onExit={onExit} />}</Suspense>
-  if (c.phase === 'draft') return <Draft c={c} setCareer={setCareer} />
+  const bad = saveBad && <SaveBad signedIn={!!c.uid} onRetry={retrySave} />
+  if (c.phase === 'college') return <>{bad}<Suspense fallback={<div className="ag-screen ag-screen--wait" />}>{c.sport === 'bucket' ? <CareerCollegeHoops c={c} setCareer={setCareer} onExit={onExit} /> : <CareerCollege c={c} setCareer={setCareer} onExit={onExit} />}</Suspense></>
+  if (c.phase === 'draft') return <>{bad}<Draft c={c} setCareer={setCareer} /></>
   // the comeback (BAP Pro): back into the offseason he retired in, on the season tab
-  if (c.phase === 'retired') return <Legacy c={c} setCareer={setCareer} user={user} onUnretire={() => { setCareer(unretire(c)); setTab('season'); sfx('whistle'); haptic('success') }} onNewBuild={onNewBuild} onExit={onExit} />
+  if (c.phase === 'retired') return <>{bad}<Legacy c={c} setCareer={setCareer} user={user} onUnretire={() => { setCareer(unretire(c)); setTab('season'); sfx('whistle'); haptic('success') }} onNewBuild={onNewBuild} onExit={onExit} /></>
 
   const L = legacyOf(c)
   const begin = () => { const [n, d] = startSeason(c); D.current = d; setCareer(n); sfx('whistle'); haptic('medium') }
@@ -1012,6 +1019,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   </>
 
   return (
+    <>{bad}
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team${lead ? ' cr-hub--lead' : ''}`} style={teamVars(c.fit)}>
       {recHit && <RecordOverlay record={recHit} name={c.name || 'Guest'} onClose={() => setRecHit(null)} />}
       {faceOpen && <FaceSheet c={c} setCareer={setCareer} onClose={() => setFaceOpen(false)} onDone={face => { setCareer({ ...c, face }); setFaceOpen(false); sfx('claim') }} />}
@@ -1148,6 +1156,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'career' && <>{lead && <LegacyMeter c={c} />}<CareerTab c={c} L={L} onDelete={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onExit() }} /></>}
       </div>
     </div>
+    </>
   )
 }
 
@@ -1176,6 +1185,15 @@ function Schedule({ c }) {
         const i = w < a.bye.wk ? w - 1 : w - 2, g = games[i], done = i < a.k && !!g
         return <span key={w} className={`ag-week${done ? (g.won ? ' is-w' : ' is-l') : ''}`} title={g ? `Week ${w} ${g.home ? 'vs' : 'at'} ${g.opponent}${done ? ` · ${g.won ? 'W' : 'L'} ${g.mySc}–${g.oppSc}` : ''}` : undefined}><span className="ag-week-n">{w}</span><span className="ag-week-r">{done ? (g.won ? 'W' : 'L') : ''}</span></span>
       })}
+    </div>
+  )
+}
+// the save didn't go in on this device (Franchise's note, nb-savebad): what happened, and a way to try again
+function SaveBad({ signedIn, onRetry }) {
+  return (
+    <div className="cr-savebad" role="alert">
+      <span><b>This career isn't saving on this device</b>{signedIn ? 'The browser\'s storage is full. Progress still goes to the account; deleting a save that isn\'t needed frees the space here. It keeps trying.' : 'The browser\'s storage is full, so recent progress isn\'t kept. Deleting a save that isn\'t needed frees the space. It keeps trying.'}</span>
+      <button type="button" onClick={onRetry}>TRY AGAIN</button>
     </div>
   )
 }
