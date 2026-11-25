@@ -389,102 +389,109 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
 @media (max-width: 560px) {
   .fk, .fk-root { --fk-gut: clamp(16px, 5vw, 20px); }
   /* the hub's frame: the top bar, the tabs, the gaps between sections */
-  .fk-root .fh-top { height: 52px; gap: 10px; }
-  .fk-root .fh-top-logo { width: 38px; height: 38px; }
-  .fk-root .fh-top-logo img { max-width: 30px; max-height: 30px; }
-  .fk-root .fh-top-txt b { font-size: 19px; }
-  .fk-root .fh-top-txt small { font-size: 13px; }
-  .fk-root .fh-x { padding: 0 var(--fk-gut); font-size: 14px; }
+  :is(.fk-root, .fk) .fh-top { height: 52px; gap: 10px; }
+  :is(.fk-root, .fk) .fh-top-logo { width: 38px; height: 38px; }
+  :is(.fk-root, .fk) .fh-top-logo img { max-width: 30px; max-height: 30px; }
+  :is(.fk-root, .fk) .fh-top-txt b { font-size: 19px; }
+  :is(.fk-root, .fk) .fh-top-txt small { font-size: 13px; }
+  :is(.fk-root, .fk) .fh-x { padding: 0 var(--fk-gut); font-size: 14px; }
   .fk-root.fh { --fk-stick: 44px; }
-  .fk-root .fh-tabs-in { padding: 0 calc(var(--fk-gut) - 6px); }
-  .fk-root .fh-tabs button { height: 44px; font-size: 15px; }
-  .fk-root .fk-tick { height: 30px; }
-  .fk-root .fk-ti { font-size: 15px; padding: 0 12px; }
-  .fk-root .fh-grid { gap: 20px; }
-  .fk-root :is(.fh-main, .fh-side) { gap: 16px; }
+  :is(.fk-root, .fk) .fh-tabs-in { padding: 0 calc(var(--fk-gut) - 6px); }
+  :is(.fk-root, .fk) .fh-tabs button { height: 44px; font-size: 15px; }
+  :is(.fk-root, .fk) .fk-tick { height: 30px; }
+  :is(.fk-root, .fk) .fk-ti { font-size: 15px; padding: 0 12px; }
+  :is(.fk-root, .fk) .fh-grid { gap: 20px; }
+  :is(.fk-root, .fk) :is(.fh-main, .fh-side) { gap: 16px; }
   /* headers */
-  .fk-root .fk-chy-slab { height: 34px; }
-  .fk-root .fk-chy-title { font-size: 19px; }
-  .fk-root .fk-chy-tag, .fk-root .fk-chy-right { font-size: 15px; }
-  .fk-root .fk-chy-sub { font-size: 13px; }
-  .fk-root .fk-chy--l .fk-chy-slab { height: 44px; --fk-cut: 16px; }
-  .fk-root .fk-chy--l .fk-chy-title { font-size: 26px; }
-  .fk-root .fk-chy--l .fk-chy-tag { font-size: 17px; padding: 0 12px 3px; }
-  .fk-root .fk-chy--s .fk-chy-slab { height: 30px; }
-  .fk-root .fk-chy--s .fk-chy-title { font-size: 17px; }
-  .fk-root .fk-chy--ink.fk-chy--s .fk-chy-slab { height: auto; min-height: 26px; }
-  .fk-root .fk-chy--ink.fk-chy--s .fk-chy-title { font-size: 17px; }
-  .fk-root .fh-h b { font-size: 17px; }
-  .fk-root .fk-back { min-height: 44px; }
-  .fk-root .fk-back > button { height: 36px; font-size: 14px; }
-  .fk-root .fk-back > b { font-size: 18px; }
-  .fk-root .fk-fold-h { min-height: 44px; padding: 0 12px; }
-  .fk-root .fk-fold-h b { font-size: 17px; }
-  .fk-root .fd-seg button { height: 36px; font-size: 15px; }
-  .fk-root .fd-seg--4 button { font-size: 14px; }
+  :is(.fk-root, .fk) .fk-chy-slab { height: 34px; }
+  :is(.fk-root, .fk) .fk-chy-title { font-size: 19px; }
+  :is(.fk-root, .fk) .fk-chy-tag, :is(.fk-root, .fk) .fk-chy-right { font-size: 15px; }
+  :is(.fk-root, .fk) .fk-chy-sub { font-size: 13px; }
+  :is(.fk-root, .fk) .fk-chy--l .fk-chy-slab { height: 44px; --fk-cut: 16px; }
+  :is(.fk-root, .fk) .fk-chy--l .fk-chy-title { font-size: 26px; }
+  :is(.fk-root, .fk) .fk-chy--l .fk-chy-tag { font-size: 17px; padding: 0 12px 3px; }
+  :is(.fk-root, .fk) .fk-chy--s .fk-chy-slab { height: 30px; }
+  :is(.fk-root, .fk) .fk-chy--s .fk-chy-title { font-size: 17px; }
+  :is(.fk-root, .fk) .fk-chy--ink.fk-chy--s .fk-chy-slab { height: auto; min-height: 26px; }
+  :is(.fk-root, .fk) .fk-chy--ink.fk-chy--s .fk-chy-title { font-size: 17px; }
+  :is(.fk-root, .fk) .fh-h b { font-size: 17px; }
+  :is(.fk-root, .fk) .fk-back { min-height: 44px; }
+  :is(.fk-root, .fk) .fk-back > button { height: 36px; font-size: 14px; }
+  :is(.fk-root, .fk) .fk-back > b { font-size: 18px; }
+  :is(.fk-root, .fk) .fk-fold-h { min-height: 44px; padding: 0 12px; }
+  :is(.fk-root, .fk) .fk-fold-h b { font-size: 17px; }
+  :is(.fk-root, .fk) .fd-seg button { height: 36px; font-size: 15px; }
+  :is(.fk-root, .fk) .fd-seg--4 button { font-size: 14px; }
   /* rows, lower thirds, slabs, numbers */
-  .fk-root .fk-l3 { --h: 62px; --sw: 72px; }
-  .fk-root .fk-l3--s { --h: 50px; --sw: 56px; }
-  .fk-root .fk-l3--l { --h: 100px; --sw: 112px; }
-  .fk-root .fk-l3--s .fk-l3-name b { font-size: 17px; }
-  .fk-root .fk-l3--l .fk-l3-name b { font-size: 29px; } .fk-root .fk-l3--l .fk-l3-name small { font-size: 17px; }
-  .fk-root .fk-l3--l .fk-l3-name.is-long b { font-size: 21px; } .fk-root .fk-l3--l .fk-l3-name.is-xlong b { font-size: 17px; }
-  .fk-root .fk-l3--s .fk-l3-name.is-long b { font-size: 15px; } .fk-root .fk-l3--s .fk-l3-name.is-xlong b { font-size: 14px; }
-  .fk-root .fk-slab { --sh: 80px; }
-  .fk-root .fk-slab--s { --sh: 54px; } .fk-root .fk-slab--l { --sh: 110px; }
-  .fk-root .fk-vs .fk-slab { --sh: 124px; }
-  .fk-root .fk-vs .fk-slab-logo { width: 50px; height: 50px; }
-  .fk-root .fk-vs .fk-slab-txt > b { font-size: 21px; }
-  .fk-root .fk-vs--l .fk-slab { --sh: 144px; } .fk-root .fk-vs--l .fk-slab-logo { width: 68px; height: 68px; } .fk-root .fk-vs--l .fk-slab-txt > b { font-size: 28px; }
-  .fk-root .fk-slab-rec { font-size: 18px; }
-  .fk-root .fk-big b { font-size: calc(var(--s, 56px) * .86); }
-  .fk-root .fk-fact b { font-size: calc(var(--s, 34px) * .88); }
-  .fk-root .fk-tape { min-height: 38px; }
-  .fk-root .fk-tape > b { font-size: 20px; }
-  .fk-root .fk-meter-top b { font-size: 19px; }
-  .fk-root .fk-stamp.is-big { font-size: 54px; }
-  .fk-root .fk-bug { height: 36px; }
-  .fk-root .fh-row { padding: 10px 12px; }
-  .fk-root .fh-row b { font-size: 18px; }
-  .fk-root .fh-row-go { font-size: 24px; }
-  .fk-root .fh-scout-pts b { font-size: 24px; }
-  .fk-root .fh-rung { height: 40px; }
-  .fk-root .fh-rung b { font-size: 16px; } .fk-root .fh-rung span { font-size: 17px; } .fk-root .fh-rung i { font-size: 15px; }
+  :is(.fk-root, .fk) .fk-l3 { --h: 62px; --sw: 72px; }
+  :is(.fk-root, .fk) .fk-l3--s { --h: 50px; --sw: 56px; }
+  :is(.fk-root, .fk) .fk-l3--l { --h: 100px; --sw: 112px; }
+  :is(.fk-root, .fk) .fk-l3--s .fk-l3-name b { font-size: 17px; }
+  :is(.fk-root, .fk) .fk-l3--l .fk-l3-name b { font-size: 29px; } :is(.fk-root, .fk) .fk-l3--l .fk-l3-name small { font-size: 17px; }
+  :is(.fk-root, .fk) .fk-l3--l .fk-l3-name.is-long b { font-size: 21px; } :is(.fk-root, .fk) .fk-l3--l .fk-l3-name.is-xlong b { font-size: 17px; }
+  :is(.fk-root, .fk) .fk-l3--s .fk-l3-name.is-long b { font-size: 15px; } :is(.fk-root, .fk) .fk-l3--s .fk-l3-name.is-xlong b { font-size: 14px; }
+  :is(.fk-root, .fk) .fk-slab { --sh: 80px; }
+  :is(.fk-root, .fk) .fk-slab--s { --sh: 54px; } :is(.fk-root, .fk) .fk-slab--l { --sh: 110px; }
+  :is(.fk-root, .fk) .fk-vs .fk-slab { --sh: 124px; }
+  :is(.fk-root, .fk) .fk-vs .fk-slab-logo { width: 50px; height: 50px; }
+  :is(.fk-root, .fk) .fk-vs .fk-slab-txt > b { font-size: 21px; }
+  :is(.fk-root, .fk) .fk-vs--l .fk-slab { --sh: 144px; } :is(.fk-root, .fk) .fk-vs--l .fk-slab-logo { width: 68px; height: 68px; } :is(.fk-root, .fk) .fk-vs--l .fk-slab-txt > b { font-size: 28px; }
+  :is(.fk-root, .fk) .fk-slab-rec { font-size: 18px; }
+  :is(.fk-root, .fk) .fk-big b { font-size: calc(var(--s, 56px) * .86); }
+  :is(.fk-root, .fk) .fk-fact b { font-size: calc(var(--s, 34px) * .88); }
+  :is(.fk-root, .fk) .fk-tape { min-height: 38px; }
+  :is(.fk-root, .fk) .fk-tape > b { font-size: 20px; }
+  :is(.fk-root, .fk) .fk-meter-top b { font-size: 19px; }
+  :is(.fk-root, .fk) .fk-stamp.is-big { font-size: 54px; }
+  :is(.fk-root, .fk) .fk-bug { height: 36px; }
+  :is(.fk-root, .fk) .fh-row { padding: 10px 12px; }
+  :is(.fk-root, .fk) .fh-row b { font-size: 18px; }
+  :is(.fk-root, .fk) .fh-row-go { font-size: 24px; }
+  :is(.fk-root, .fk) .fh-scout-pts b { font-size: 24px; }
+  :is(.fk-root, .fk) .fh-rung { height: 40px; }
+  :is(.fk-root, .fk) .fh-rung b { font-size: 16px; } :is(.fk-root, .fk) .fh-rung span { font-size: 17px; } :is(.fk-root, .fk) .fh-rung i { font-size: 15px; }
   /* the season's cards */
-  .fk-root .fh-next { padding: 12px; gap: 10px; }
-  .fk-root .fh-next-h b { font-size: 22px; }
-  .fk-root .fh-next-h span { font-size: 14px; }
-  .fk-root .fh-next-note { font-size: 15px; }
-  .fk-root .fh-mu-t { padding: 10px 6px; }
-  .fk-root .fh-mu-t b { font-size: 21px; }
-  .fk-root .fh-mu-t span { font-size: 18px; }
-  .fk-root .fh-glance b { font-size: 26px; }
-  .fk-root .fh-cmp-h b { font-size: 17px; }
-  .fk-root .fh-keys-h { font-size: 16px; }
-  .fk-root .fh-event-title { font-size: 23px; }
+  :is(.fk-root, .fk) .fh-next { padding: 12px; gap: 10px; }
+  :is(.fk-root, .fk) .fh-next-h b { font-size: 22px; }
+  :is(.fk-root, .fk) .fh-next-h span { font-size: 14px; }
+  :is(.fk-root, .fk) .fh-next-note { font-size: 15px; }
+  :is(.fk-root, .fk) .fh-mu-t { padding: 10px 6px; }
+  :is(.fk-root, .fk) .fh-mu-t b { font-size: 21px; }
+  :is(.fk-root, .fk) .fh-mu-t span { font-size: 18px; }
+  :is(.fk-root, .fk) .fh-glance b { font-size: 26px; }
+  :is(.fk-root, .fk) .fh-cmp-h b { font-size: 17px; }
+  :is(.fk-root, .fk) .fh-keys-h { font-size: 16px; }
+  :is(.fk-root, .fk) .fh-event-title { font-size: 23px; }
   /* buttons */
-  .fk-root .fk-go { height: 50px; font-size: 19px; padding: 0 18px; }
-  .fk-root .fk-go.is-ghost { height: 44px; font-size: 16px; }
-  .fk-root .fk-actbar { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-  .fk-root .fk-actbar .fk-go.is-ghost { height: 50px; }
-  .fk-root .fk-go small { font-size: 13px; }
+  :is(.fk-root, .fk) .fk-go { height: 50px; font-size: 19px; padding: 0 18px; }
+  :is(.fk-root, .fk) .fk-go.is-ghost { height: 44px; font-size: 16px; }
+  :is(.fk-root, .fk) .fk-actbar { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  :is(.fk-root, .fk) .fk-actbar .fk-go.is-ghost { height: 50px; }
+  :is(.fk-root, .fk) .fk-go small { font-size: 13px; }
   /* the setup and the save slots */
-  .fk-root .fsu-pace-row { padding: 14px 14px 15px; }
-  .fk-root .fsu-pace-row b { font-size: 26px; }
-  .fk-root .fsu-pace-row span { font-size: 15px; }
-  .fk-root .fsu-step button { width: 38px; height: 38px; font-size: 26px; }
-  .fk-root .fsu-step b { font-size: 23px; }
-  .fk-root .fsu-pos-k b { font-size: 24px; }
-  .fk-root .fsu-line-v b { font-size: 26px; }
-  .fk-root .fsu-empty-pos { width: 62px; font-size: 23px; }
-  .fk-root .fsu-chy-ovr { font-size: 21px; }
-  .fk-root .fsu-slot { height: 90px; }
-  .fk-root .fsu-slot-txt b { font-size: 31px; }
-  .fk-root .fsu-slot-txt em { font-size: 14px; }
+  :is(.fk-root, .fk) .fsu-pace-row { padding: 14px 14px 15px; }
+  :is(.fk-root, .fk) .fsu-pace-row b { font-size: 26px; }
+  :is(.fk-root, .fk) .fsu-pace-row span { font-size: 15px; }
+  :is(.fk-root, .fk) .fsu-step button { width: 38px; height: 38px; font-size: 26px; }
+  :is(.fk-root, .fk) .fsu-step b { font-size: 23px; }
+  :is(.fk-root, .fk) .fsu-pos-k b { font-size: 24px; }
+  :is(.fk-root, .fk) .fsu-line-v b { font-size: 26px; }
+  :is(.fk-root, .fk) .fsu-empty-pos { width: 62px; font-size: 23px; }
+  :is(.fk-root, .fk) .fsu-chy-ovr { font-size: 21px; }
+  :is(.fk-root, .fk) .fsu-slot { height: 90px; }
+  :is(.fk-root, .fk) .fsu-slot-txt b { font-size: 31px; }
+  :is(.fk-root, .fk) .fsu-slot-txt em { font-size: 14px; }
   /* the big numbers on the team, cap and history screens */
-  .fk-root .fd-cap-room b { font-size: 30px; }
-  .fk-root .fd-hall-txt b { font-size: 39px; }
-  .fk-root .fd-plaque b { font-size: 26px; }
-  .fk-root .fd-year b { font-size: 23px; }
-  .fk-root :is(.fd-offers button b, .fd-offer-v) { font-size: 21px; }
+  :is(.fk-root, .fk) .fd-cap-room b { font-size: 30px; }
+  :is(.fk-root, .fk) .fd-hall-txt b { font-size: 39px; }
+  :is(.fk-root, .fk) .fd-plaque b { font-size: 26px; }
+  :is(.fk-root, .fk) .fd-year b { font-size: 23px; }
+  :is(.fk-root, .fk) :is(.fd-offers button b, .fd-offer-v) { font-size: 21px; }
+  /* game day and the draft room */
+  :is(.fk-root, .fk) .gd-poss b { font-size: 29px; }
+  :is(.fk-root, .fk) :is(.gd-spot b, .gd-flash b) { font-size: 21px !important; }
+  :is(.fk-root, .fk) .gd-play-txt b { font-size: 19px; }
+  :is(.fk-root, .fk) .gd-fin-t > strong { font-size: 29px; }
+  :is(.fk-root, .fk) :is(.dr-hero-name b, .dr-rv-name b) { font-size: 29px; }
+  :is(.fk-root, .fk) .dr-pc-name b { font-size: 27px; }
 }
