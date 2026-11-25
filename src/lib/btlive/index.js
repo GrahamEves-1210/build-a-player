@@ -7,6 +7,7 @@
 //   sim.js      the fixed-step simulation: step(state, inputs)
 //   cpu.js      the CPU players and their levels (practice, and a seat whose person is away)
 //   modes.js    the games: 1v1, 2v2, King of the Hill
+//   gesture.js  the dribble moves off the one stick (a snap, a pump, a half circle) and the keyboard's double tap
 export * from './tune.js'
 export * from './ratings.js'
 export * from './meter.js'
@@ -14,4 +15,5 @@ export * as referee from './referee.js'
 export * from './sim.js'
 export * from './cpu.js'
 export * from './modes.js'
+export { createGesture, createTaps, GEST, TAPS } from './gesture.js'
 export { hashSeed, rollAt, gauss } from './rng.js'

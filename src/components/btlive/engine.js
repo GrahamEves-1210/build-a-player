@@ -2,7 +2,7 @@
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
-import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks } from '../../lib/btlive/index.js'
+import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
 import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
 import { createPoser } from './pose.js'
@@ -32,6 +32,10 @@ export function createEngine({ setup, els, on, net = null }) {
   const ctx = els.canvas.getContext('2d')
   let s = createGame({ teams: setup.teams, seed: setup.seed, mode: setup.mode })
   const me = setup.me
+  // the dribble moves: on the move stick (the default: a snap, a pump or a half circle of it, gesture.js; on a keyboard a
+  // direction tapped twice, SHIFT the spin), or on a second stick (the right pad, the arrow keys) as before (setup.stick 'two')
+  const ONE = setup.stick !== 'two'
+  const G = createGesture(), TP = createTaps()
   const levels = setup.levels.slice()
   const N = s.players.length
   const prev = new Float32Array(N * 2), prevBall = [0, 0, 0]
@@ -175,6 +179,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const P = s.players
     for (let i = 0; i < N; i++) { prev[i * 2] = P[i].x; prev[i * 2 + 1] = P[i].y }
     prevBall[0] = s.ball.x; prevBall[1] = s.ball.y; prevBall[2] = s.ball.z
+    gesture()
     for (let i = 0; i < N; i++) inputs[i] = levels[i] ? cpuInput(s, i, levels[i]) : myInput()
     step(s, inputs)
     onEvents()
@@ -225,6 +230,7 @@ export function createEngine({ setup, els, on, net = null }) {
   function onlineTick() {
     const p = s.players[me], b = s.ball
     NB.lt++
+    gesture()
     prev[me * 2] = p.x; prev[me * 2 + 1] = p.y
     H.ta = H.tb = H.ts = H.tj = false
     const live = s.phase === 'live'
@@ -416,7 +422,9 @@ export function createEngine({ setup, els, on, net = null }) {
       els.btn.b.classList.toggle('is-dim', !(ball || mode === 'off' || mode === 'board'))
       els.btn.b.classList.toggle('is-two', bl !== 'PASS')
       // the right pad: a plain stick for the dribble moves with the ball; on defense it's the STEAL button; else idle
-      const k = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
+      // (the dribble moves on the move stick: no pad with the ball, SHOOT and PASS take the right side)
+      const k = ball ? (ONE ? 'hide' : 'ball') : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
+      if (els.base) els.base.dataset.l = ball && ONE ? 'MOVE\nSNAP FOR A MOVE' : 'MOVE'
       if (els.ds) { els.ds.dataset.k = k; els.ds.classList.toggle('is-dim', mode === 'dboard') }
       if (els.steal) els.steal.textContent = k === 'steal' ? 'STEAL' : ''
       if (els.root) { els.root.dataset.mode = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'def' : mode === 'none' || mode === 'sit' ? 'none' : 'off'; els.root.dataset.clear = mode === 'clear' ? '1' : '' }
@@ -428,12 +436,13 @@ export function createEngine({ setup, els, on, net = null }) {
         if (K2.shootRow) K2.shootRow.classList.toggle('is-dim', mode === 'none' || mode === 'sit' || mode === 'off')
         if (K2.pass) K2.pass.textContent = ball ? 'PASS' : 'CALL FOR IT'
         if (K2.passRow) K2.passRow.classList.toggle('is-off', !(ball || mode === 'off' || mode === 'board'))
-        // the arrows: the dribble moves with the ball (moveNames), STEAL on defense (any arrow), nothing else
+        // the dribble moves with the ball (moveNames: W A S D tapped twice, or the arrows), STEAL (E) on defense
         const st = mode === 'def' || mode === 'dboard'
         if (K2.stealRow) { K2.stealRow.classList.toggle('is-off', !st); K2.stealRow.classList.toggle('is-dim', mode === 'dboard') }
         if (!ball) {
           K2.title.textContent = st ? 'ON DEFENSE' : mode === 'sit' ? 'SITTING OUT' : ''
           K2.rows.forEach(r => r.classList.add('is-off'))
+          K2.spinRow?.classList.add('is-off')
           K2.box?.classList.toggle('is-empty', !st && mode !== 'sit')
           MV.keys = ''
         } else K2.box?.classList.remove('is-empty')
@@ -455,6 +464,14 @@ export function createEngine({ setup, els, on, net = null }) {
   const NAME_KEY = { hesi: 'HESITATION', cross: 'CROSSOVER', btl: 'BETWEEN THE LEGS', btb: 'BEHIND THE BACK', back: 'STEP-BACK', inout: 'IN AND OUT', spin: 'SPIN' }
   const WAY = Array.from({ length: 8 }, (_, i) => ({ x: Math.sin(i * Math.PI / 4), y: -Math.cos(i * Math.PI / 4) }))
   const KEYWAY = [WAY[0], WAY[6], WAY[2], WAY[4]]
+  // the keyboard's ways (WASD), in the panel's order (up, left, right, down); a key with the others held with it
+  const DIR = { w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }, OPP = { w: 's', s: 'w', a: 'd', d: 'a' }, KEYS1 = ['w', 'a', 'd', 's']
+  const heldWay = k => {
+    let x = DIR[k][0], y = DIR[k][1]
+    for (const o of keys) if (o !== k && o !== OPP[k] && DIR[o]) { x += DIR[o][0]; y += DIR[o][1] }
+    const m = Math.hypot(x, y) || 1
+    return { x: x / m, y: y / m }
+  }
   function moveNames(p) {
     const kinds = WAY.map(d => ref.moveKind(p, d))
     const key = kinds.join()
@@ -475,10 +492,12 @@ export function createEngine({ setup, els, on, net = null }) {
       if (kinds.every(k => k === kinds[0])) out[0] = kinds[0]
       out.forEach((kd, i) => { els.slots[i].textContent = kd ? (i === 0 ? NAME[kd] : NAME_SIDE[kd] ?? NAME[kd]) : '' })
     }
-    const kk = KEYWAY.map(d => ref.moveKind(p, d)).join()
+    // (on the move stick: each key tapped twice with the other keys he's holding: W held and A tapped twice is up and left)
+    const kk = (ONE ? KEYS1.map(heldWay) : KEYWAY).map(d => ref.moveKind(p, d)).join()
     if (els.keys?.title && kk !== MV.keys) {
       MV.keys = kk
-      els.keys.title.textContent = 'DRIBBLE MOVES'
+      els.keys.title.textContent = ONE ? 'TAP TWICE' : 'DRIBBLE MOVES'
+      els.keys.spinRow?.classList.toggle('is-off', !ONE)
       kk.split(',').forEach((kd, i) => { els.keys.arrows[i].textContent = NAME_KEY[kd]; els.keys.subs[i].textContent = ''; els.keys.rows[i].classList.remove('is-off') })
       if (els.keys.stealRow) els.keys.stealRow.classList.add('is-off')
     }
@@ -1122,15 +1141,40 @@ export function createEngine({ setup, els, on, net = null }) {
     e.preventDefault()
     stick.id = e.pointerId; stick.rect = r; stick.ox = e.clientX - r.left; stick.oy = e.clientY - r.top
     els.pad.setPointerCapture?.(e.pointerId)
+    G.reset()
     setKnob(stick.ox, stick.oy, 0, 0, true)
   }
   const padMove = e => {
     if (e.pointerId !== stick.id) return
+    // (the thumb's in-between places this frame too: a quick pump or snap can fall between two frames)
+    if (ONE) {
+      const co = e.getCoalescedEvents?.()
+      if (co && co.length > 1) for (let i = 0; i < co.length - 1; i++) {
+        let cx = co[i].clientX - stick.rect.left - stick.ox, cy = co[i].clientY - stick.rect.top - stick.oy
+        const cd = Math.hypot(cx, cy); if (cd > R) { cx *= R / cd; cy *= R / cd }
+        feedG(co[i].timeStamp, cx / R, cy / R)
+      }
+    }
     let dx = e.clientX - stick.rect.left - stick.ox, dy = e.clientY - stick.rect.top - stick.oy
     const d = Math.hypot(dx, dy)
     if (d > R) { dx *= R / d; dy *= R / d }
     H.mx = dx / R; H.my = dy / R
     setKnob(stick.ox, stick.oy, dx, dy, true)
+    gesture()
+  }
+  // the dribble moves on the move stick: what the thumb has done, read as it goes (on every move of it and every tick)
+  const GLOG = []                                   // DEV: the move stick as the gesture reader saw it
+  const hasBall = () => s.phase === 'live' && s.ball.st === 'held' && s.ball.holder === me
+  let gT = 0
+  function gesture() { if (ONE && stick.id != null) feedG(performance.now(), H.mx, H.my) }
+  function feedG(t, x, y) {
+    gT = Math.max(gT, t)
+    const g = G.feed(gT, x, y)
+    if (import.meta.env.DEV) { GLOG.push([Math.round(gT), +x.toFixed(2), +y.toFixed(2), g ? g.kind + (hasBall() ? '' : ' (no ball)') : '']); if (GLOG.length > 600) GLOG.shift() }
+    if (!g || !hasBall()) return
+    // a spin: the flick it rolls out of, then the way it ends (the game's spin: a second flick round from the first)
+    if (g.kind === 'spin') flick(g.via[0], g.via[1])
+    flick(g.dir[0], g.dir[1])
   }
   // where the stick rests: the layout's marker for it (btlive.css .btlv-stick-home), else a quarter across
   const rest = () => {
@@ -1140,7 +1184,7 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   const padUp = e => {
     if (e.pointerId !== stick.id) return
-    stick.id = null; H.mx = H.my = 0
+    stick.id = null; H.mx = H.my = 0; G.reset()
     rest()                                                           // back to its resting place
   }
   // the moment of a press, on the game's clock but to the millisecond (not to the frame): the meter is timed with it
@@ -1185,7 +1229,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const p = s.players[me], b = s.ball
     if (b.st === 'held' && b.holder === me) { flick(ux, uy); return }
     if (s.phase !== 'live' || p.out) return
-    // without the ball the pad (the arrows) is STEAL on defense, any way; there's no jump on it (BLOCK is the jump)
+    // without the ball the pad (E on a keyboard) is STEAL on defense; there's no jump on it (BLOCK is the jump)
     if (p.team !== s.poss && b.st === 'held') tap(true)
   }
   function dribbleAt(x, y) {
@@ -1223,9 +1267,10 @@ export function createEngine({ setup, els, on, net = null }) {
     if (e.pointerId !== DS.id) return
     DS.id = null; els.dk.style.transform = ''; els.ds.classList.remove('is-on'); dribbleAt(0, 0)
   }
-  // the keyboard: WASD the left stick, the arrows the right one, SPACE shoots, E passes (calls for it off the ball)
+  // the keyboard: WASD moves, SPACE shoots, E passes (calls for it off the ball) and is STEAL on defense. The dribble
+  // moves: a WASD key tapped twice (with the other keys held: the way he goes) and SHIFT the spin; or, on a second
+  // stick (setup.stick 'two'), the arrows as the right stick
   const KEY = { ' ': 'a', e: 'b' }
-  const DIR = { w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }
   const ARROW = { arrowup: [0, -1], arrowdown: [0, 1], arrowleft: [-1, 0], arrowright: [1, 0] }
   const arrows = new Set(), tapped = new Set()
   const readKeys = () => {
@@ -1235,13 +1280,37 @@ export function createEngine({ setup, els, on, net = null }) {
     if (stick.id == null) { H.mx = m ? x / m : 0; H.my = m ? y / m : 0 }
   }
   const arrowVec = set => { let x = 0, y = 0; for (const kk of set) { x += ARROW[kk][0]; y += ARROW[kk][1] } const m = Math.hypot(x, y); dribbleAt(m ? x / m : 0, m ? y / m : 0) }
+  // SHIFT: a spin, round to the way WASD points (or at the basket), rolled out of a flick toward the ball hand
+  function keySpin() {
+    const p = s.players[me]
+    let ex = H.mx, ey = H.my, m = Math.hypot(ex, ey)
+    if (m < 0.3) { ex = COURT.rim.x - p.x; ey = COURT.rim.y - p.y; m = Math.hypot(ex, ey) || 1 }
+    ex /= m; ey /= m
+    const d = ref.rimDist(p), fx = d > 0.5 ? (COURT.rim.x - p.x) / d : 0, fy = d > 0.5 ? (COURT.rim.y - p.y) / d : -1
+    const hs = p.hand || 1, side = v => (v[0] * -fy + v[1] * fx) * hs
+    const a = [-ey, ex], b = [ey, -ex], via = side(a) >= side(b) ? a : b
+    flick(via[0], via[1]); flick(ex, ey)
+  }
+  // E on defense: STEAL (the STEAL row beside the court lights as it goes)
+  const onDef = () => shown.mode === 'def' || shown.mode === 'dboard'
+  function stealKey() {
+    rightFlick(0, 1)
+    const row = els.keys?.stealRow
+    if (row) { row.classList.add('is-hit'); clearTimeout(DS.kh); DS.kh = setTimeout(() => row.classList.remove('is-hit'), 140) }
+  }
   const keyDown = e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return
     const kk = e.key.toLowerCase()
-    if (DIR[kk]) { e.preventDefault(); keys.add(kk); readKeys() }
+    if (DIR[kk]) {
+      e.preventDefault(); keys.add(kk); readKeys()
+      // tapped twice: the move that way
+      if (ONE && !e.repeat && TP.down(kk, performance.now()) && hasBall()) { const v = heldWay(kk); flick(v.x, v.y) }
+    } else if (kk === 'shift') { if (ONE && !e.repeat && hasBall()) keySpin() }
+    else if (kk === 'e') { e.preventDefault(); if (e.repeat) return; if (onDef()) stealKey(); else press('b', true) }
     else if (ARROW[kk]) {
       e.preventDefault()
-      if (e.repeat) return
+      // (the arrows are the dribble stick only on a second stick, and only with the ball)
+      if (e.repeat || ONE || !hasBall()) return
       arrows.add(kk); tapped.add(kk)
       // two arrows pressed together are one diagonal flick: the first waits a moment for the second. With a flick
       // already out, the next arrow is the roll round to it at once
@@ -1251,11 +1320,11 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   const keyUp = e => {
     const kk = e.key.toLowerCase()
-    if (DIR[kk]) { keys.delete(kk); readKeys() }
-    else if (ARROW[kk]) { arrows.delete(kk); if (!DS.kt) { tapped.clear(); arrowVec(arrows) } }
+    if (DIR[kk]) { keys.delete(kk); readKeys(); TP.up(kk, performance.now()) }
+    else if (ARROW[kk]) { if (!arrows.delete(kk)) return; if (!DS.kt) { tapped.clear(); arrowVec(arrows) } }
     else if (KEY[kk]) press(KEY[kk], false)
   }
-  const blur = () => { keys.clear(); readKeys(); arrows.clear(); tapped.clear(); dribbleAt(0, 0); for (const key of ['a', 'b']) press(key, false) }
+  const blur = () => { keys.clear(); readKeys(); arrows.clear(); tapped.clear(); TP.reset(); dribbleAt(0, 0); for (const key of ['a', 'b']) press(key, false) }
   const vis = () => { paused = !online && (document.hidden || pausedBy); last = performance.now() }
   let pausedBy = false
 
@@ -1267,6 +1336,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const ro = new ResizeObserver(() => { resize(); camera(1e6); if (stick.id == null) rest() }); ro.observe(els.court)
   resize(); camera(1e6)
   rest()
+  if (els.root) els.root.dataset.stick = ONE ? 'one' : 'two'
   document.fonts?.load?.(`16px ${FONT}`).catch(() => {})
   for (let i = 0; i < N; i++) { prev[i * 2] = s.players[i].x; prev[i * 2 + 1] = s.players[i].y }
   hud()
@@ -1294,7 +1364,7 @@ export function createEngine({ setup, els, on, net = null }) {
     run(n = 1, until = null) { let i = 0; for (; i < n; i++) { clockNow += STEP; tick(); if (until && until(s)) break } acc = 0; camera(1e6); draw(clockNow); return i },
     press, stick(x, y) { H.mx = x; H.my = y },
     // DEV: the small stick: a flick that way (a dribble move), or where it points now (dstick: 0, 0 lets it go)
-    flick, dstick: dribbleAt, tap, right: rightFlick,
+    flick, dstick: dribbleAt, tap, right: rightFlick, get stickMode() { return ONE ? 'one' : 'two' }, get glog() { return GLOG },
     // DEV: each man's pose on the last frame (figure.js), and his animation's notes (pose.js)
     get figs() { return FIG }, get anim() { return poser.anim },
     // DEV: where a man is on the page (px)
@@ -1309,7 +1379,7 @@ export function createEngine({ setup, els, on, net = null }) {
       els.pad.removeEventListener('pointerdown', padDown); els.pad.removeEventListener('pointermove', padMove)
       els.pad.removeEventListener('pointerup', padUp); els.pad.removeEventListener('pointercancel', padUp)
       if (els.ds) { els.ds.removeEventListener('pointerdown', dsDown); els.ds.removeEventListener('pointermove', dsMove); els.ds.removeEventListener('pointerup', dsUp); els.ds.removeEventListener('pointercancel', dsUp) }
-      clearTimeout(DS.kt); clearTimeout(DS.ht)
+      clearTimeout(DS.kt); clearTimeout(DS.ht); clearTimeout(DS.kh)
       window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur)
       document.removeEventListener('visibilitychange', vis)
       for (const [el, d, u] of btnHandlers) { el.removeEventListener('pointerdown', d); el.removeEventListener('pointerup', u); el.removeEventListener('pointercancel', u) }
