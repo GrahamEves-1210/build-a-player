@@ -8155,3 +8155,9 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home .ag-hud .ag-hud-sound { display: inline-grid !important; margin-left: auto; }
   .ag-home .ag-hud .ag-hud-sound + .ag-icon-btn { margin-left: 0; }
 }
+/* Phone soccer Home (owner 11-25): the photo cropped past the roof's light strip and the pitch's goal-area lines, and
+   the striker's ghost back to the other figures' size */
+@media (max-width: 1023px) {
+  .ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
+  .ag-home--soccer .st-home-fig { left: 6%; right: 6%; top: 6%; bottom: -1%; }
+}
