@@ -18,7 +18,11 @@ import { sfx } from '../lib/juice'
 import { NameTag } from './app/NameTag'
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { TrophyArt, TrophyDefs } from './app/TrophyArt'
-import { useOnLeave, momentsOn, MomentsToggle, LeadersBoard, readable, Pulse, ProgressDots, SimLoading, useSeasonReveal, useStaged, useTimerBar, TimerBar, SpeedSeg, useLiveGame, LiveBoard, ChampCard, OverCard, MissCard, WireLine, Checking } from './simFlow'
+import { useOnLeave, momentsOn, MomentsToggle, LeadersBoard, Pulse, ProgressDots, SimLoading, useSeasonReveal, useStaged, ChampCard, OverCard, MissCard, WireLine, Checking } from './simFlow'
+import { MatchCentre, PlaySwitch, readSpeed, readPlay } from './SoccerMatchDay'
+import { wcTableAt, wcOtherGame, uclMatchdays, uclTableAt, uclRoundOf } from '../lib/soccerMatch'
+// (lib/seasonDirector.js setMomentsOff, without loading the director)
+const setMomentsOff = off => { try { localStorage.setItem('bap_moments_off', off ? '1' : '0') } catch {} }
 // The app's season screens run on the website too (as basketball's: BucketSimPage APP_SIM)
 const APP_SIM = IS_APP || APP_LOOK
 
@@ -224,9 +228,10 @@ function Section({ title, aside = null, children, className = '' }) {
     </section>
   )
 }
-function Tiles({ items }) {
+// (big: two to a row; the small ones `small` to a row, so no row is left half full)
+function Tiles({ items, small = 4 }) {
   return (
-    <div className="ssp-tiles">
+    <div className="ssp-tiles" style={{ '--sm': 12 / small }}>
       {items.filter(Boolean).map(([v, k, big]) => (
         <div key={k} className={`ssp-tile${big ? ' is-big' : ''}`}><b>{v}</b><small>{k}</small></div>
       ))}
@@ -238,7 +243,7 @@ function StrikerLine({ r, title = 'THE SEASON', comps = true }) {
   const all = r.allComps ?? {}
   return (
     <Section title={title} aside={comps && all.goals != null && all.goals !== r.goals ? `${all.goals} in all competitions` : null}>
-      <Tiles items={[
+      <Tiles small={3} items={[
         [r.goals ?? 0, r.goals === 1 ? 'GOAL' : 'GOALS', true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true],
         [`${r.apps ?? 0}`, r.starts != null ? `APPS · ${r.starts} STARTS` : 'APPS'],
         [one(r.xg), 'xG'], [r.shots ?? '–', 'SHOTS'], [pct(r.conversion), 'CONVERSION'],
@@ -354,7 +359,7 @@ function Award({ title, won, tag, children }) {
 
 // ─── Screens ─────────────────────────────────────────────────────────────────
 // (basketball's order and buttons: the build · the season · the knockouts · the legacy · the final report)
-function ScreenBuild({ result, build, types, onNext, pool, arch, team }) {
+function ScreenBuild({ result, build, types, onNext, pool, arch, team, play = 'live', setPlay = null }) {
   const ovr = useCountUp(result?.ovr ?? 0, { ms: 900 })
   const [rows, setRows] = useState(0)
   const filled = types.filter(t => build[t])
@@ -369,13 +374,18 @@ function ScreenBuild({ result, build, types, onNext, pool, arch, team }) {
   const kitNick = useCallback(c => (teamOf(c?.team, pool)?.name ?? c?.team ?? '').toUpperCase(), [pool])
   return (
     <div className="simp-screen ssp-build">
-      <div className="simp-ovr-hero"><div className="simp-ovr-num">{ovr || '–'}</div><div className="simp-ovr-lbl">OVR</div></div>
-      <div className="simp-archetype">{arch}</div>
-      <button className="simp-cta" onClick={onNext}>{pool === 'alltime' ? 'Simulate World Cup' : 'Simulate Season'}</button>
-      <div className="cr-model cr-model--bucket ssp-model">
-        <Silhouette isSoccer modelOnly build={mono} types={types} attrMap={SOCCER_ATTR} categoriesData={SOCCER_CATEGORIES} logoDir={LOGO[pool]} kitNick={kitNick} />
+      <div className="ssp-build-head">
+        <div className="ssp-build-ovr"><b>{ovr || '–'}</b><small>OVR</small></div>
+        <div className="ssp-build-id"><span className="ssp-build-pos">Striker · {pool === 'alltime' ? 'All-Time World Cup' : `Champions League ${result?.season ?? ''}`}</span><span className="ssp-build-arch">{arch}</span></div>
       </div>
-      <BuildRows build={build} types={types} pool={pool} rows={rows} />
+      <button className="simp-cta" onClick={onNext}>{pool === 'alltime' ? 'Simulate World Cup' : 'Simulate Season'}</button>
+      {setPlay && <PlaySwitch mode={play} onPick={setPlay} />}
+      <div className="ssp-build-body">
+        <div className="cr-model cr-model--bucket ssp-model">
+          <Silhouette isSoccer modelOnly build={mono} types={types} attrMap={SOCCER_ATTR} categoriesData={SOCCER_CATEGORIES} logoDir={LOGO[pool]} kitNick={kitNick} />
+        </div>
+        <BuildRows build={build} types={types} pool={pool} rows={rows} />
+      </div>
     </div>
   )
 }
@@ -541,229 +551,312 @@ function GroupLine({ ms, title = 'THE GROUP STAGE' }) {
   )
 }
 
-// ── The knockouts: every tie played leg by leg, live ─────────────────────────
-// A match as it happened: the goals at their minutes (his by name), level after 90 when it went to extra time
-// (on aggregate in a second leg), the shootout after 120.
-function matchTimeline(m, before, { userName, mine, opp }) {
-  const len = m.et ? 120 : 90
-  let my90 = m.mySc ?? 0, opp90 = m.oppSc ?? 0
-  if (m.et && !m.shootout) {
-    // extra time decided it: level after 90 (the tie level on aggregate, in a second leg)
-    const base = before ? before[0] - before[1] : 0
-    const x = -base - (m.mySc ?? 0) + (m.oppSc ?? 0)   // their extra-time goals minus his side's
-    const etOpp = Math.max(0, x), etMy = Math.max(0, -x)
-    if (etMy <= (m.mySc ?? 0) && etOpp <= (m.oppSc ?? 0) && etMy + etOpp > 0) { my90 = (m.mySc ?? 0) - etMy; opp90 = (m.oppSc ?? 0) - etOpp }
+// ── The match day: the group (the league phase), match by match, live ────────
+// The season director (the moments on: a Champions League season on the app's look) is driven a match at a time:
+// before each match its stops are opened (lib/seasonDirector.js; a story card comes up before kick-off, an in-match
+// moment at its minute inside the live match), and after each one it looks at the match for the milestones.
+// Without a director the matches are the result's. A kept season (lib/seasonLive.js) saves its place as it goes.
+const momentMinute = mo => { const t = `${mo?.title ?? ''} ${mo?.body ?? ''}`; const x = /(\d{2,3})(?:st|nd|rd|th)\s+minute/i.exec(t) ?? /(\d{2,3})'/.exec(t); const v = x ? Number(x[1]) : 84; return Math.max(60, Math.min(89, v)) }
+function useMatchDriver({ director, total, live = null, onFinal = null, start = 0 }) {
+  const [k, setK] = useState(() => {
+    if (!director) return start
+    if (!live) return 0
+    const k0 = Math.min(Math.max(0, live.k | 0), director.total)
+    for (let i = (live.snapK | 0) + 1; i <= k0; i++) director.observe(i)
+    return k0
+  })
+  const [moment, setMoment] = useState(() => (live && director ? live.moment ?? null : null))
+  const [fresh, setFresh] = useState([])
+  const [record, setRecord] = useState(null)
+  const [done, setDone] = useState(false)
+  const [tick, setTick] = useState(0)
+  const stopIdx = useRef(live && director ? live.stopIdx | 0 : 0)
+  const fin = useRef(onFinal); fin.current = onFinal
+  const keep = (at, mo) => { if (live && director) saveStop(live, { snap: director.snapshot(), snapK: at, stopIdx: stopIdx.current, moment: mo }) }
+  // the stops due before match k is played (and, after the last match, the knockouts' stop, then the season booked)
+  useEffect(() => {
+    if (!director || moment || done) return
+    let stop = director.stops[stopIdx.current]
+    while (stop && k >= stop.at) {
+      const mo = director.open(stop)
+      stopIdx.current++
+      keep(k, mo || null)
+      if (mo) { setMoment(mo); return }
+      stop = director.stops[stopIdx.current]
+    }
+    if (k >= director.total) { const f = director.finalize(); setDone(true); fin.current?.(f) }
+  }, [k, moment, done, tick]) // eslint-disable-line react-hooks/exhaustive-deps
+  const step = next => {
+    if (director) {
+      const hits = director.observe(next)
+      if (hits.length) {
+        setFresh(f => [...f, ...hits])
+        if (hits.find(h => h.record)) setRecord(director.records[director.records.length - 1])
+        else if (hits.some(h => h.big)) sfx('chime')
+      }
+      if (live) savePos(live, { k: next })
+    }
   }
-  const mins = (n, lo, hi) => Array.from({ length: n }, () => lo + Math.floor(Math.random() * (hi - lo + 1)))
-  const myMins = [...mins(my90, 2, 90), ...mins((m.mySc ?? 0) - my90, 92, 120)].sort((a, b) => a - b)
-  const oppMins = [...mins(opp90, 2, 90), ...mins((m.oppSc ?? 0) - opp90, 92, 120)].sort((a, b) => a - b)
-  // which of his side's goals are his
-  const his = new Set()
-  const order = myMins.map((_, i) => i).sort(() => Math.random() - 0.5)
-  for (let i = 0; i < Math.min(m.goals ?? 0, myMins.length); i++) his.add(order[i])
-  const ev = [
-    ...myMins.map((mn, i) => ({ min: mn, side: 'me', pts: 1, text: `${mn}' GOAL · ${his.has(i) ? userName : mine}` })),
-    ...oppMins.map(mn => ({ min: mn, side: 'opp', pts: 1, text: `${mn}' GOAL · ${opp}` })),
-  ].sort((a, b) => a.min - b.min).map(e => ({ ...e, t: (e.min / len) * 0.95 }))
-  if (m.shootout) ev.push({ t: 0.985, side: null, pts: 0, text: `Penalties: ${m.shootout.my}–${m.shootout.opp}` })
-  return { events: ev, len }
+  const played = () => { const next = Math.min(total, k + 1); step(next); setK(next) }
+  // straight on: to the next moment (the moments still stop it), or to the end
+  const simOn = () => {
+    let to = total
+    if (director) { const s = director.stops[stopIdx.current]; if (s && s.at > k) to = Math.min(total, s.at) }
+    for (let i = k + 1; i <= to; i++) step(i)
+    setK(to)
+  }
+  const choose = option => { const out = director.choose(moment, option); keep(k, null); return out }
+  const clear = () => { setMoment(null); setTick(t => t + 1) }
+  const turnOff = () => { setMomentsOff(true); window.dispatchEvent(new Event('bap:moments-off')); keep(k, null); clear() }
+  return { k, moment, fresh, record, clearRecord: () => setRecord(null), done: director ? done : k >= total, played, simOn, choose, clear, turnOff }
 }
-const legRes = m => resultOf(m)
-function tieLine(t) {
+
+// the table part way through: his row and the rows around it (the Champions League's 36), the whole of it a tap away
+function TableNow({ rows, pool, info = null, title, aside = null, around = 0, notes = null }) {
+  const [all, setAll] = useState(false)
+  if (!rows?.length) return null
+  const at = rows.findIndex(x => x.isUs)
+  const cut = around && !all && rows.length > around * 2 + 3
+  const shown = cut ? rows.filter((x, i) => Math.abs(i - at) <= around || i === 0) : rows
+  return (
+    <Section title={title} aside={aside} className="smd-table">
+      <LeagueTable rows={shown} pool={pool} info={info} compact />
+      {notes}
+      {cut || all ? <button className="ssp-more" onClick={() => setAll(a => !a)}>{all ? 'AROUND THEM ONLY' : `ALL ${rows.length} CLUBS`}</button> : null}
+    </Section>
+  )
+}
+// another match's line: Japan 1–1 Ghana
+function OtherLine({ h, a, hs, as, pool, note = null }) {
+  return (
+    <li className="smd-other">
+      <span className="smd-other-t"><Crest short={h} pool={pool} size={16} /><span>{teamOf(h, pool)?.name ?? h}</span></span>
+      <b>{hs}–{as}{note ? <small className="smd-other-note">{note}</small> : null}</b>
+      <span className="smd-other-t is-r"><span>{teamOf(a, pool)?.name ?? a}</span><Crest short={a} pool={pool} size={16} /></span>
+    </li>
+  )
+}
+const ctxTeam = (short, pool, extra = {}) => { const t = teamOf(short, pool); return { short, name: t?.name ?? extra.name ?? short, color: t?.color ?? extra.color, color2: t?.color2 ?? extra.color2, att: t?.att ?? extra.att, def: t?.def ?? extra.def } }
+const crestNode = pool => (short, size, className = '', extra = false) => <Crest short={short} pool={pool} size={size} className={className} extra={extra} />
+const logoUrl = pool => short => (teamOf(short, pool) ? `${LOGO[pool]}${short}.png` : null)
+
+function ScreenMatchDay({ r, pool, onNext, onDone, userName, seen, director = null, M = null, kept = null, onFinal = null, play, speed, setSpeed, paused, setPaused }) {
+  const isWc = pool === 'alltime'
+  const team = r.team
+  const us = team?.short
+  const games0 = useMemo(() => (isWc ? (r.games ?? []).filter(g => g.stage === 'group') : (r.games ?? [])), [r, isWc])
+  const total = director ? director.total : games0.length
+  const drv = useMatchDriver({ director, total, live: kept, onFinal, start: seen ? games0.length : 0 })
+  const k = drv.k
+  const games = director ? director.games : games0
+  const [held, setHeld] = useState(false)
+  const [outcome, setOutcome] = useState(null)
+  useEffect(() => { setHeld(false); setOutcome(null) }, [k])
+  useEffect(() => { if (drv.done) onDone?.() }, [drv.done]) // eslint-disable-line react-hooks/exhaustive-deps
+  const mds = useMemo(() => (!isWc && r.leaguePhase ? uclMatchdays(r.leaguePhase, us) : []), [r.leaguePhase, us, isWc])
+  // the record counts a match from its full time (the table after it shows then too)
+  const [ftK, setFtK] = useState(-1)
+  const counted = Math.min(total, ftK === k ? k + 1 : k)
+  const shown = games.slice(0, counted)
+  const W = shown.filter(g => resultOf(g) === 'W').length, D = shown.filter(g => resultOf(g) === 'D').length, L = shown.length - W - D
+  const compLine = isWc ? `${wcName(r.season)} · Group ${r.conference}` : `Champions League ${r.season} · League phase`
+  const tableAt = n => (isWc ? wcTableAt(r.groupGames, r.standings, n, director ? games.slice(0, n) : null, us) : uclTableAt(r.leaguePhase, mds, n, r.standings, director ? games.slice(0, n) : null, us))
+  const ctxFor = m => ({ key: `${r.season}|${us}|${isWc ? 'wc' : 'ucl'}|${m.g ?? ''}`, userName, pool, us: ctxTeam(us, pool, team), them: ctxTeam(m.opponent, pool, { name: m.oppName }), crest: crestNode(pool), logo: logoUrl(pool) })
+  const momentsLayer = M && (drv.moment || drv.fresh.length || drv.record) ? (
+    <M.MomentsLayer userName={userName} dr={{
+      moment: drv.moment && (!drv.moment.inGame || held || k >= total) ? drv.moment : null, fresh: drv.fresh, record: drv.record, clearRecord: drv.clearRecord, turnOff: () => { const mo = drv.moment; drv.turnOff(); if (mo?.inGame) setOutcome({ to: games[k], line: null }) },
+      choose: o => {
+        const mo = drv.moment
+        const out = drv.choose(o)
+        setTimeout(() => { if (mo?.inGame) setOutcome({ to: director.games[k], line: out?.line ?? null }); drv.clear() }, out ? 1900 : 700)
+        return out
+      },
+    }} />
+  ) : null
+
+  // ── the group (the league phase) played out: where they finished ──
+  if (k >= total) {
+    const head = isWc
+      ? (r.seed === 1 ? 'TOP OF THE GROUP' : r.madePlayoffs ? `THROUGH IN ${ordinal(r.seed).toUpperCase()}` : `${ordinal(r.seed).toUpperCase()} · OUT IN THE GROUP`)
+      : (r.seed === 1 ? 'TOP OF THE LEAGUE PHASE' : `${ordinal(r.seed ?? 0)} in the league phase`.toUpperCase())
+    const band = !isWc ? (r.seed <= 8 ? 'Through to the Round of 16' : r.seed <= 24 ? 'Into the knockout play-offs' : 'Out of the competition') : null
+    const waiting = director && !drv.done
+    return (
+      <div className="simp-screen ssp-season smd-screen">
+        {momentsLayer}
+        {!waiting && (
+          <>
+            <div className={`ssp-hero${(isWc ? r.seed <= 2 : r.seed <= 8) ? ' is-champ' : ''}`}>
+              <span className="ssp-eyebrow">{compLine}</span>
+              <h2 className="ssp-head">{head}</h2>
+              <div className="ssp-record"><b>{r.wins}</b>W<b>{r.draws}</b>D<b>{r.losses}</b>L<em>·</em><b>{r.points}</b>PTS<em>·</em><b>{r.gf}</b>–<b>{r.ga}</b></div>
+              {band && <span className="ssp-band">{band}</span>}
+            </div>
+            <button className="simp-cta smd-cta" onClick={onNext}>{r.madePlayoffs ? 'Enter the Knockouts' : isWc ? 'The Knockouts' : 'The Knockouts'}</button>
+            {isWc
+              ? <Section title={`GROUP ${r.conference}`}><LeagueTable rows={r.standings} pool="alltime" compact /></Section>
+              : <TableNow rows={r.standings} pool="current" info={UCL_INFO} title="THE TABLE" aside={`${r.standings?.length ?? 36} clubs`} around={4}
+                  notes={<p className="ssp-zone-key"><span className="is-ucl">1–8 Round of 16</span><span className="is-uel">9–24 knockout play-offs</span><span className="is-down">25–36 out</span></p>} />}
+            <GroupLine ms={games} title={isWc ? 'THE GROUP STAGE' : 'THE LEAGUE PHASE'} />
+            <Section title={isWc ? 'THE GROUP GAMES' : 'MATCH BY MATCH'}><Fixtures list={games} pool={pool} initial={8} /></Section>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // ── a match ──
+  const m = games[k]
+  const label = isWc ? `Group ${r.conference} · Matchday ${k + 1}` : `League phase · Matchday ${m.md ?? k + 1}`
+  const inGame = drv.moment?.inGame
+  const before = !isWc ? null : null
+  const tAfter = tableAt(k + 1)
+  const other = isWc ? wcOtherGame(r.groupGames, k + 1, us) : null
+  const round = !isWc ? uclRoundOf(r.leaguePhase, mds, k + 1, r.standings) : []
+  const after = (
+    <>
+      {isWc
+        ? tAfter && <Section title={`GROUP ${r.conference} · AFTER MATCHDAY ${k + 1}`} className="smd-table"><LeagueTable rows={tAfter} pool="alltime" compact />{other && <ul className="smd-others"><li className="smd-others-h">Elsewhere in Group {r.conference}</li><OtherLine h={other[1]} a={other[2]} hs={other[3]} as={other[4]} pool={pool} /></ul>}</Section>
+        : tAfter && <TableNow rows={tAfter} pool="current" info={UCL_INFO} title={`THE TABLE · AFTER MATCHDAY ${k + 1}`} around={3}
+            notes={round.length > 0 && <ul className="smd-others"><li className="smd-others-h">Around Europe</li>{round.map((x, i) => <OtherLine key={i} h={x[0]} a={x[1]} hs={x[2]} as={x[3]} pool={pool} />)}</ul>} />}
+    </>
+  )
+  return (
+    <div className="simp-screen smd-screen">
+      <div className="smd-top">
+        <span className="smd-top-comp">{compLine}</span>
+        <span className="smd-top-rec"><b>{W}</b>W <b>{D}</b>D <b>{L}</b>L · <b>{W * 3 + D}</b> PTS</span>
+        <span className="smd-top-dots" aria-hidden="true">{games.slice(0, total).map((g, i) => <i key={i} className={i < counted ? `is-${resultOf(g).toLowerCase()}` : i === k ? 'is-now' : ''} />)}</span>
+      </div>
+      {drv.moment && !inGame ? momentsLayer : (
+        <MatchCentre key={`${k}-${director ? 'd' : 'r'}`} item={{ m, label, kicker: isWc ? wcName(r.season, true) : `Champions League · ${m.home ? 'Home' : 'Away'}`, before, cap: inGame ? momentMinute(drv.moment) : null }}
+          ctx={ctxFor(m)} play={drv.moment ? 'live' : play} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)}
+          onNext={() => drv.played()} nextLabel={k + 1 >= total ? (isWc ? 'The group table' : 'The final table') : 'Next match'}
+          after={after} onHeld={() => setHeld(true)} onFullTime={() => setFtK(k)} moment={inGame && held ? momentsLayer : (!drv.moment ? momentsLayer : null)} outcome={outcome}
+          simAll={k + 1 < total ? <button type="button" className="smd-simall" onClick={drv.simOn}>{isWc ? 'Sim the rest of the group' : 'Sim the rest of the league phase'}</button> : null} />
+      )}
+    </div>
+  )
+}
+
+// ── The knockouts: every match he plays, live, over the bracket ──────────────
+const tieLine = t => {
   const legs = t.legs ?? []
   if (legs.length === 1) return scoreOf(legs[0])
   return t.agg ? `${t.agg[0]}–${t.agg[1]} on aggregate${t.shootout ? ` (${t.shootout.my}–${t.shootout.opp} pens)` : ''}` : legs.map(scoreOf).join(', ')
 }
-
-function LegLive({ m, before, label, team, pool, userName, speed, paused, onDone }) {
-  const oppT = teamOf(m.opponent, pool)
-  const oppName = oppT?.name ?? m.oppName ?? m.opponent
-  const [tl] = useState(() => matchTimeline(m, before, { userName, mine: team?.name ?? team?.short, opp: oppName }))
-  const g = useLiveGame({ events: tl.events, myFinal: m.mySc, oppFinal: m.oppSc, speed, paused, onDone })
-  const res = legRes(m)
-  const min = Math.min(tl.len, Math.round(g.t * tl.len))
-  const half = min <= 45 ? 0 : min <= 90 ? 1 : min <= 105 ? 2 : 3
-  const halves = tl.len > 90 ? 4 : 2
-  const me = { short: team?.short, color: readable(team?.color, team?.color2), logo: <Crest short={team?.short} pool={pool} size={56} className="plf-team-logo-img" />, score: g.my }
-  const them = { short: m.opponent, color: readable(oppT?.color, oppT?.color2, '#9aa3a0'), logo: <Crest short={m.opponent} pool={pool} size={56} className="plf-team-logo-img" extra={!!m.oppExtra} />, score: g.opp }
-  // home on the right; a neutral ground (a final, the World Cup) puts his side on the left
-  const homeMe = !!m.home && !m.neutral
-  const [away, home] = homeMe ? [them, me] : [me, { ...them, neutral: !!m.neutral }]
-  const post = m.shootout ? (m.shootout.won ? `✓ Won ${m.shootout.my}–${m.shootout.opp} on penalties` : `✗ Lost ${m.shootout.my}–${m.shootout.opp} on penalties`) : res === 'W' ? '✓ Won' : res === 'D' ? '= Drew' : '✗ Lost'
-  return (
-    <LiveBoard sym="v"
-      label={label} away={away} home={home} phase={g.phase}
-      badge={res} badgeWin={res === 'W'}
-      status={(
-        <div className="plf-status-row">
-          <div className="plf-qtr-dots">{Array.from({ length: halves }, (_, i) => <div key={i} className={`plf-qtr-dot${i < half ? ' plf-qd-done' : i === half ? ' plf-qd-active' : ''}`} />)}</div>
-          <div className="plf-clock-box"><span className="plf-qtr-lbl">{half === 0 ? '1ST HALF' : half === 1 ? '2ND HALF' : 'EXTRA TIME'}</span><span className="plf-clk-sep">·</span><span className="plf-clock-time">{min}'</span></div>
-        </div>
-      )}
-      progress={g.t} evt={g.last?.text ?? null}
-      post={post} postWin={res === 'D' && !m.shootout ? null : res === 'W'} postScore={`${m.mySc} – ${m.oppSc}${m.et && !m.shootout ? ' aet' : ''}`}
-    />
-  )
-}
-
-function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen }) {
+function ScreenKnockouts({ r, pool, onNext, userName, adsDisabled, seen, onSeen, play, speed, setSpeed, paused, setPaused }) {
   const isWc = pool === 'alltime'
   const isUcl = !isWc && SoccerSim.isUclResult(r)
   const ties = useMemo(() => (r.playoffRounds ?? []).filter(t => t?.legs?.length), [r])
+  const legs = useMemo(() => ties.flatMap((t, ti) => t.legs.map((m, li) => ({ t, ti, li, m }))), [ties])
   const team = r.team
+  const us = team?.short
   const compName = t => (isWc ? 'World Cup' : isUcl ? 'Champions League' : t.comp === 'cup' ? (r.cup?.name ?? 'The Cup') : (r.europe?.name ?? 'Europe'))
   const roundName = t => (isWc ? (STAGE_NAME[t.legs?.[0]?.stage] ?? t.name) : t.name)
   const title = t => (isWc || isUcl ? roundName(t) : `${compName(t)} ${roundName(t)}`)
   const oppOf = t => teamOf(t.opponent?.short, pool)?.name ?? t.opponent?.name ?? t.opponent?.short
   const last = ties[ties.length - 1]
   const champ = isWc ? !!r.champion : !!(last?.final && last.won)
-  const seen0 = useRef(seen).current   // (watched before: it opens on the end, no ceremony again)
-  const [started, setStarted] = useState(!!seen)
-  const [ti, setTi] = useState(seen ? Math.max(0, ties.length - 1) : 0)
-  const [li, setLi] = useState(0)
-  const [status, setStatus] = useState(seen ? 'end' : 'playing')   // playing · between · end
-  const [log, setLog] = useState(() => (seen ? ties.flatMap(t => t.legs) : []))
-  const [speed, setSpeed] = useState(1)
-  const [paused, setPaused] = useState(false)
-  const [showLog, setShowLog] = useState(false)
+  const seen0 = useRef(seen).current
+  const [j, setJ] = useState(seen ? legs.length : 0)
   const [popped, setPopped] = useState(!!seen)
   const [ringOpen, setRingOpen] = useState(false)
-  useEffect(() => { if (status === 'end') onSeen?.() }, [status]) // eslint-disable-line react-hooks/exhaustive-deps
+  const end = j >= legs.length
+  useEffect(() => { if (end) onSeen?.() }, [end]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!APP_SIM || !popped || seen0) return
+    if (!APP_SIM || !popped || seen0) return undefined
     const t = setTimeout(() => setRingOpen(true), 1300)
     return () => clearTimeout(t)
   }, [popped]) // eslint-disable-line react-hooks/exhaustive-deps
-  const pct = useTimerBar(status === 'between', 2500, () => { setTi(x => x + 1); setLi(0); setStatus('playing') })
-  useEffect(() => { if (showLog && !adsDisabled && window.innerWidth <= 768) rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf-log' }]) }, [showLog]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const t = ties[ti]
-  const legDone = () => {
-    setLog(l => [...l, t.legs[li]])
-    if (li < t.legs.length - 1) setLi(li + 1)
-    else if (ti < ties.length - 1) setStatus('between')
-    else setStatus('end')
-  }
-  const skip = () => {
-    setLog(ties.flatMap(x => x.legs))
-    setTi(ties.length - 1); setLi(0); setStatus('end')
-  }
-  const tiesDone = status === 'end' ? ties.length : status === 'between' ? ti + 1 : ti
-  const nextLbl = isWc || isUcl ? 'The Awards →' : 'Ballon d\'Or →'
-  // (the Champions League's bracket: the rounds before his current tie have their scores, his round its pairings)
-  const uclUpto = status === 'end' ? 99 : (ties[tiesDone]?.roundIndex ?? 99)
-  const uclRoad = isUcl && (
-    <Section title="THE BRACKET" aside={`${ordinal(r.seed ?? 0)} of ${r.standings?.length ?? 36} in the league phase`}>
-      <UclBracket bracket={r.bracket} us={team?.short} upto={uclUpto} rows={r.standings} />
-    </Section>
-  )
-
-  // out in the group: no knockouts (basketball's Missed the Playoffs)
-  if (isWc && !r.madePlayoffs) {
-    return <MissCard eyebrow="The Knockouts" title="Out in the Group Stage" sub={`${ordinal(r.seed ?? 0)} in Group ${r.conference}`} onNext={onNext} />
-  }
-  // out after the league phase: the competition goes on without them (its bracket, played to the final)
-  if (isUcl && (!r.madePlayoffs || !ties.length)) {
-    return (
-      <div className="ssp-ucl-out">
-        <MissCard eyebrow="The Knockouts" title="Out in the League Phase" sub={`${ordinal(r.seed ?? 0)} of ${r.standings?.length ?? 36}. The top 24 go through.`} cta={nextLbl} onNext={onNext} />
-        <div className="simp-screen">{uclRoad}</div>
-      </div>
-    )
-  }
-  if (!ties.length) return <MissCard eyebrow="Cups & Europe" title="No Cup Run" sub="No knockout football this season." onNext={onNext} />
-
-  const road = isWc
-    ? <Section title="THE BRACKET"><Bracket bracket={r.bracket} us={team?.short} upto={status === 'end' ? 99 : tiesDone} /></Section>
-    : isUcl ? uclRoad
+  const nextLbl = isWc || isUcl ? 'The Awards' : 'Ballon d\'Or'
+  const tiesDone = end ? ties.length : legs.slice(0, j).filter(x => x.li === x.t.legs.length - 1).length
+  const uclUpto = end ? 99 : (ties[tiesDone]?.roundIndex ?? 99)
+  const bracket = isWc
+    ? <Section title="THE BRACKET" className="smd-bracket"><Bracket bracket={r.bracket} us={us} upto={end ? 99 : tiesDone} /></Section>
+    : isUcl ? <Section title="THE BRACKET" className="smd-bracket" aside={`${ordinal(r.seed ?? 0)} of ${r.standings?.length ?? 36} in the league phase`}><UclBracket bracket={r.bracket} us={us} upto={uclUpto} rows={r.standings} /></Section>
     : (
       <Section title="THE ROAD">
         {r.europe && <p className="ssp-europe-pos"><b>{r.europe.name}</b>: {ordinal(r.europe.position ?? 0)} in the league phase{r.europe.table?.length ? ` of ${r.europe.table.length}` : ''}{r.europe.result === 'League phase' ? ', out' : ''}</p>}
-        {!r.europe && <p className="ssp-none">No European football this season.</p>}
         <Ties ties={ties.slice(0, tiesDone).map(x => ({ ...x, name: title(x) }))} pool={pool} />
       </Section>
     )
 
-  // the start: basketball's tip-off, the road (the bracket) under it
-  if (!started) {
+  if (isWc && !r.madePlayoffs) return <MissCard eyebrow="The Knockouts" title="Out in the Group Stage" sub={`${ordinal(r.seed ?? 0)} in Group ${r.conference}`} cta={nextLbl} onNext={onNext} />
+  if (isUcl && (!r.madePlayoffs || !ties.length)) {
     return (
-      <div className="simp-screen">
-        <div className="simp-eyebrow" style={{ textAlign: 'center' }}>{isWc || isUcl ? 'The Knockouts' : 'Cups & Europe'}</div>
-        <div className="tipoff-header ssp-kickoff">
-          <div className="tipoff-sub">{isWc ? `Group ${r.conference} · ${ordinal(r.seed ?? 0)}` : isUcl ? `Champions League · ${ordinal(r.seed ?? 0)} in the league phase` : [r.cup?.name, r.europe?.name].filter(Boolean).join(' · ')}</div>
-          <div className="ssp-first">First up: {title(ties[0])} vs {oppOf(ties[0])}</div>
-          <button className="tipoff-spin-btn" onClick={() => setStarted(true)}>KICK OFF</button>
-        </div>
-        {road}
+      <div className="ssp-ucl-out">
+        <MissCard eyebrow="The Knockouts" title="Out in the League Phase" sub={`${ordinal(r.seed ?? 0)} of ${r.standings?.length ?? 36}. The top 24 go through.`} cta={nextLbl} onNext={onNext} />
+        <div className="simp-screen">{bracket}</div>
+      </div>
+    )
+  }
+  if (!ties.length) return <MissCard eyebrow="Cups & Europe" title="No Cup Run" sub="No knockout football this season." cta={nextLbl} onNext={onNext} />
+
+  if (end) {
+    const wonFinals = ties.filter(x => x.final && x.won && x !== last).map(compName)
+    const endTitle = isWc
+      ? ({ 'Runners-up': 'Lost the Final', 'Third place': 'Third Place', 'Fourth place': 'Fourth Place' }[r.finish] ?? 'Knocked Out')
+      : last?.final ? 'Lost the Final' : 'Knocked Out'
+    return (
+      <div className="simp-screen smd-screen">
+        <div className="simp-eyebrow-row"><div className="simp-eyebrow">{isWc ? 'The Knockouts' : isUcl ? 'Champions League' : 'Cups & Europe'}</div></div>
+        {champ
+          ? <ChampCard title={isWc ? 'World Champions' : `${compName(last)} Winners`} sub={`${tieLine(last)} v ${oppOf(last)} · ${roundName(last)}`}
+              trophy={<span className="ssp-trophy-art"><TrophyDefs /><TrophyArt kind="mvp" shine={1} /></span>} popped={popped} onPop={() => { setPopped(true); sfx('claim') }} cta={nextLbl} onNext={onNext} />
+          : <OverCard eyebrow={isWc ? 'Tournament Over' : 'Season Over'} title={endTitle} round={title(last)} line={`${last?.won ? 'Won' : 'Lost'} ${tieLine(last)} v ${oppOf(last)}`} cta={nextLbl} onNext={onNext}>
+              {wonFinals.length > 0 && <div className="ssp-trophies ssp-end-won">{wonFinals.map(x => <span key={x} className="ssp-trophy">{x.toUpperCase()} WINNERS</span>)}</div>}
+            </OverCard>}
+        {bracket}
+        <Section title="MATCH BY MATCH"><Fixtures list={legs.map(x => x.m)} pool={pool} initial={20} /></Section>
+        {ringOpen && (
+          <RingCeremony team={{ name: team?.name, color: team?.color, color2: team?.color2 }} title={isWc ? 'World Champions' : `${compName(last)} Winners`}
+            score={`${tieLine(last)} v ${oppOf(last)}`} art={<span className="ag-ring-trophy ssp-ring-art"><TrophyDefs /><TrophyArt kind="mvp" shine={1} /></span>}
+            onClose={() => setRingOpen(false)} />
+        )}
       </div>
     )
   }
 
-  const legsShown = t ? t.legs.slice(0, status === 'playing' ? li : t.legs.length) : []
-  const agg = legsShown.reduce((a, m) => [a[0] + (m.mySc ?? 0), a[1] + (m.oppSc ?? 0)], [0, 0])
-  const before = t && li > 0 ? t.legs.slice(0, li).reduce((a, m) => [a[0] + (m.mySc ?? 0), a[1] + (m.oppSc ?? 0)], [0, 0]) : null
-  const next = status === 'between' ? ties[ti + 1] : null
-  const wonFinals = ties.filter(x => x.final && x.won && x !== last).map(compName)
-  const endTitle = isWc
-    ? ({ 'Runners-up': 'Lost the Final', 'Third place': 'Third Place', 'Fourth place': 'Fourth Place' }[r.finish] ?? 'Knocked Out')
-    : last?.final ? 'Lost the Final' : 'Knocked Out'
-  const matchLog = <Section title="MATCH BY MATCH"><Fixtures list={log} pool={pool} initial={20} /></Section>
+  const { t, li, m } = legs[j]
+  const two = t.legs.length > 1
+  const lastLeg = li === t.legs.length - 1
+  const first = two && li > 0 ? t.legs[0] : null
+  const final = !!t.final || m.stage === 'final'
+  const label = `${title(t)}${two ? ` · ${li === 0 ? 'First' : 'Second'} leg` : ''}`
+  const usName = team?.name ?? us
+  const oppName = oppOf(t)
+  const beforeLine = first ? `First leg: ${first.home ? `${usName} ${first.mySc}–${first.oppSc} ${oppName}` : `${oppName} ${first.oppSc}–${first.mySc} ${usName}`}` : null
+  const outLine = lastLeg ? `${t.won ? (t.final ? `${usName} win the ${compName(t)}` : `${usName} go through`) : `${usName} are out`}${two || m.shootout || m.et ? `, ${tieLine(t)}` : ''}.` : (two ? `First leg to ${m.mySc > m.oppSc ? usName : m.mySc < m.oppSc ? oppName : 'neither side'}. The tie is ${m.mySc}–${m.oppSc} at half-way.` : null)
+  // the rest of his round, once his match is done (the World Cup's, the Champions League's ties)
+  const stage = m.stage ?? (isUcl ? ['po', 'r16', 'qf', 'sf', 'final'][t.roundIndex] : null)
+  const others = lastLeg && r.bracket && stage && stage !== 'final' && stage !== 'third'
+    ? (r.bracket[stage] ?? []).filter(x => (x.home ?? x.a) !== us && (x.away ?? x.b) !== us).slice(0, 8)
+    : []
+  const after = (
+    <>
+      {others.length > 0 && (
+        <ul className="smd-others smd-others--ko">
+          <li className="smd-others-h">The rest of the {roundName(t)}</li>
+          {others.map((x, i) => <OtherLine key={i} h={x.home ?? x.a} a={x.away ?? x.b} hs={x.hs ?? x.sa} as={x.as ?? x.sb} pool={pool} note={x.pens ? `${x.pens[0]}–${x.pens[1]} pens` : x.et ? 'aet' : x.legs ? 'agg' : null} />)}
+        </ul>
+      )}
+    </>
+  )
+  const ctx = { key: `${r.season}|${us}|ko|${j}`, userName, pool, us: ctxTeam(us, pool, team), them: ctxTeam(m.opponent, pool, { name: m.oppName }), crest: crestNode(pool), logo: logoUrl(pool) }
+  const before = first ? [first.mySc, first.oppSc] : null
   return (
-    <div className="simp-screen">
-      <div className="simp-eyebrow-row"><div className="simp-eyebrow">{isWc ? 'The Knockouts' : isUcl ? 'Champions League' : 'Cups & Europe'}</div></div>
-      {status === 'end' && (
-        <>
-          {champ
-            ? <ChampCard title={isWc ? 'World Champions!' : `${compName(last)} Winners!`} sub={`${tieLine(last)} vs ${oppOf(last)} · ${roundName(last)}`}
-                trophy={<span className="ssp-trophy-art"><TrophyDefs /><TrophyArt kind="mvp" shine={1} /></span>} popped={popped} onPop={() => { setPopped(true); sfx('claim') }} cta={nextLbl} onNext={onNext} />
-            : <OverCard eyebrow={isWc ? 'Tournament Over' : 'Season Over'} title={endTitle} round={title(last)} line={`${last?.won ? 'Won' : 'Lost'} ${tieLine(last)} vs ${oppOf(last)}`} cta={nextLbl} onNext={onNext}>
-                {wonFinals.length > 0 && <div className="ssp-trophies ssp-end-won">{wonFinals.map(x => <span key={x} className="ssp-trophy">{x.toUpperCase()} WINNERS</span>)}</div>}
-              </OverCard>}
-          {matchLog}
-          {ringOpen && (
-            <RingCeremony team={{ name: team?.name, color: team?.color, color2: team?.color2 }} title={isWc ? 'World Champions' : `${compName(last)} Winners`}
-              score={`${tieLine(last)} vs ${oppOf(last)}`} art={<span className="ag-ring-trophy ssp-ring-art"><TrophyDefs /><TrophyArt kind="mvp" shine={1} /></span>}
-              onClose={() => setRingOpen(false)} />
-          )}
-        </>
-      )}
-      {status !== 'end' && t && (
-        <>
-          <div className="bsim-series-header">
-            <span className="bsim-sh-round">{title(t)}</span>
-            <span className="bsim-sh-opp">vs {oppOf(t)}</span>
-          </div>
-          {t.legs.length > 1 && (
-            <div className="bsim-mini-series">
-              {t.legs.map((m, i) => (i < legsShown.length
-                ? <span key={i} className={`bsim-ms-dot bsim-ms-dot--${legRes(m) === 'W' ? 'w' : legRes(m) === 'D' ? 'd' : 'l'}`}>{legRes(m)}</span>
-                : <span key={i} className="bsim-ms-dot bsim-ms-dot--empty" />))}
-              <span className="bsim-ms-score">{legsShown.length ? `${agg[0]}–${agg[1]} agg` : 'Two legs'}</span>
-            </div>
-          )}
-          {status === 'between' ? (
-            <div className={`plf-game ${t.won ? 'plf-game-won' : 'plf-game-lost'}`}>
-              <div className="plf-round-row"><div className="plf-round-lbl">{title(t)} · {t.won ? (t.final ? 'Winners' : 'Through') : 'Out'}</div></div>
-              <div className="plf-bw-inner">
-                <div className="plf-bw-result"><span className={`plf-bw-w${t.won ? '' : ' is-l'}`}>{t.won ? 'W' : 'L'}</span><span className="plf-bw-score">{tieLine(t)}</span></div>
-                <div className="plf-bw-adv">{t.won ? (t.final ? `${compName(t)} winners` : 'Through to the next round') : `Out of the ${compName(t)}`}</div>
-                {next && <div className="plf-bw-next">Next up · {title(next)} vs {oppOf(next)}</div>}
-              </div>
-              <TimerBar pct={pct} />
-            </div>
-          ) : (
-            <LegLive key={`${ti}-${li}`} m={t.legs[li]} before={before} pool={pool} team={team} userName={userName} speed={speed} paused={paused} onDone={legDone}
-              label={`${title(t)}${t.legs.length > 1 ? ` · ${li === 0 ? 'First' : 'Second'} Leg` : ''}`} />
-          )}
-          <div className="po-log-toggle-row">
-            <SpeedSeg speed={speed} paused={paused} onSpeed={v => { setSpeed(v); setPaused(false) }} onPause={() => setPaused(true)} onSkip={skip} skipLabel={['Skip', isWc || isUcl ? 'Knockouts' : 'Cups']} />
-            {log.length > 0 ? <button className="po-log-toggle-btn" onClick={() => setShowLog(s => !s)}>{showLog ? 'Hide' : 'View'} Match Log</button> : <div />}
-          </div>
-          {showLog && matchLog}
-          {showLog && !adsDisabled && <div id="ramp-cntr1-plf-log" className="plf-banner-ad" />}
-        </>
-      )}
-      {road}
+    <div className="simp-screen smd-screen">
+      <div className="smd-top">
+        <span className="smd-top-comp">{isWc ? wcName(r.season, true) : isUcl ? `Champions League ${r.season}` : compName(t)} · The Knockouts</span>
+        <span className="smd-top-rec">{title(t)}{two ? ` · ${li === 0 ? 'first' : 'second'} leg` : ''}</span>
+      </div>
+      <MatchCentre key={j} item={{ m, label, kicker: final ? `${isWc ? wcName(r.season, true) : compName(t)}` : compName(t), before, final, beforeLine, tieLine: outLine }}
+        ctx={ctx} play={final ? 'live' : play} speed={speed} paused={paused} onSpeed={v => { setSpeed(v); setPaused(false) }} onPause={() => setPaused(p => !p)}
+        onNext={() => setJ(x => x + 1)} nextLabel={j + 1 >= legs.length ? (champ ? 'The trophy' : isWc ? 'Tournament over' : 'Season over') : lastLeg ? 'Next round' : 'Second leg'}
+        autoNext={j + 1 < legs.length} after={after}
+        simAll={j + 1 < legs.length ? <button type="button" className="smd-simall" onClick={() => setJ(legs.length)}>Sim to the end</button> : null} />
+      {bracket}
     </div>
   )
 }
@@ -996,7 +1089,7 @@ function ScreenFinal({ r, pool, build, types, arch, onReset, onBack, userName, i
         {ribbons.length > 0 && <div className="ssp-ribbons">{ribbons.map(x => <span key={x}>{x}</span>)}</div>}
       </div>
       {APP_SIM && <ShareSeasonButton card={card} className="ssp-share" what={isWc ? 'tournament' : 'season'} />}
-      <Tiles items={[[r.goals ?? 0, `${isWc || isUcl ? '' : 'LEAGUE '}${r.goals === 1 ? 'GOAL' : 'GOALS'}`, true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true], isWc || isUcl ? [r.apps ?? 0, 'APPS'] : [r.allComps?.goals ?? r.goals ?? 0, 'ALL COMPS'], [one(r.avgRating), 'AVG RATING']]} />
+      <Tiles items={[[r.goals ?? 0, `${isWc || isUcl ? '' : 'LEAGUE '}${r.goals === 1 ? 'GOAL' : 'GOALS'}`, true], [r.assists ?? 0, r.assists === 1 ? 'ASSIST' : 'ASSISTS', true], isWc || isUcl ? [r.apps ?? 0, 'APPS'] : [r.allComps?.goals ?? r.goals ?? 0, 'ALL COMPS'], [one(r.xg), 'xG'], [one(r.avgRating), 'AVG RATING']]} small={3} />
       {best && (
         <div className="simp-best-game">
           <div className="simp-section-lbl">Best Match</div>
@@ -1041,6 +1134,10 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const awardsSeen = useCallback(() => setSeen(s => (s.awards ? s : { ...s, awards: true })), [])
   // the season as played: the result, or the director's booked season once the moments have changed it
   const [live, setLive] = useState(result)
+  // how the matches play (every one live, or the results only), the clock's speed, the pause: kept across the screens
+  const [play, setPlay] = useState(readPlay)
+  const [speed, setSpeed] = useState(readSpeed)
+  const [paused, setPaused] = useState(false)
   const r = live ?? result
 
   // The moments (basketball's): a club season on the app's look, while they're on. The director and its story cards
@@ -1095,15 +1192,24 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
   const team = result.team
   const reset = () => { setScreen(0); onReset() }
   const back = () => { setScreen(0); onBack() }
+  // the Champions League and the World Cup are played a match at a time (SoccerMatchDay.jsx); a domestic season kept
+  // from before 2026-11-16 plays out as it always did
+  const matchDay = isWc || isUcl
+  const live1 = { play, speed, setSpeed, paused, setPaused }
   const screens = [
-    <ScreenBuild key="build" result={result} build={build} types={types} onNext={next} pool={pool} arch={arch} team={team} />,
-    director && M && !seen.season
+    <ScreenBuild key="build" result={result} build={build} types={types} onNext={next} pool={pool} arch={arch} team={team} play={play} setPlay={setPlay} />,
+    matchDay
+      ? (director && M && !seen.season
+        ? <ScreenMatchDay key="season-dr" r={r} pool={pool} onNext={next} userName={userName} seen={false} director={director} M={M} kept={kept && !keptDone ? kept : null} onFinal={handleFinal} {...live1} />
+        : keptDir && !(director && M) ? null
+        : <ScreenMatchDay key="season" r={r} pool={pool} onNext={next} onDone={() => { if (!director) book(result) }} userName={userName} seen={!!seen.season} M={M} {...live1} />)
+    : director && M && !seen.season
       ? <M.DirectedReveal key="season-dr" director={director} pace={150} onFinal={handleFinal} live={kept && !keptDone ? kept : null}>
           {dr => <ScreenSeason r={r} pool={pool} info={info} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={false} dr={{ ...dr, all: director.games }} M={M} />}
         </M.DirectedReveal>
       : keptDir && !(director && M) ? null   // (the director still loading: never the plain season, which would book the unsteered one)
       : <ScreenSeason key="season" r={r} pool={pool} info={info} onNext={next} onDone={() => { if (!director) book(result) }} userName={userName} adsDisabled={adsDisabled} seen={!!seen.season} />,
-    <ScreenKnockouts key="ko" r={r} pool={pool} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.ko} onSeen={() => setSeen(s => ({ ...s, ko: true }))} />,
+    <ScreenKnockouts key="ko" r={r} pool={pool} onNext={next} userName={userName} adsDisabled={adsDisabled} seen={!!seen.ko} onSeen={() => setSeen(s => ({ ...s, ko: true }))} {...live1} />,
     isWc ? <ScreenWcAwards key="awards" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} /> : isUcl ? <ScreenUclAwards key="awards" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} /> : <ScreenBallon key="ballon" r={r} onNext={next} userName={userName} seen={!!seen.awards} onSeen={awardsSeen} />,
     <ScreenFinal key="final" r={r} pool={pool} build={build} types={types} arch={arch} onReset={reset} onBack={back} userName={userName} isSalaryMode={isSalaryMode} adsDisabled={adsDisabled} />,
   ]
@@ -1120,7 +1226,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
         </div>
         {/* the moments switch sits above the team card (basketball's), while a club season can have them */}
         {canMoments && screen < 2 && <div className="sts-moments-row"><MomentsToggle /></div>}
-        {team && screen !== 3 && (
+        {team && screen === 0 && (
           <div className="simp-team-strip ssp-strip">
             <div className="sts-top-row">
               <Crest short={team.short} pool={pool} size={62} className="sts-logo" />
@@ -1144,7 +1250,8 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
           </div>
         )}
         {screens[screen]}
-        <SiteFooter sport="soccer" />
+        {/* (the site's footer and its partner offer only once it's all played: never under a match) */}
+        {screen === LAST && <SiteFooter sport="soccer" />}
       </div>
     </div>
   )

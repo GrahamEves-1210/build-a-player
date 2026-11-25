@@ -286,7 +286,7 @@ export function FbTable({ head, rows }) {
 }
 
 // The final: both teams, the score by quarter when the game kept it, who won
-function LineScore({ sport, us, them, home, my, op, q, status, live, story }) {
+function LineScore({ sport, us, them, home, my, op, q, status, live, story, nick = null, logo = null }) {
   // (the away team on top, the home team under it, as every scoreboard has it)
   const rows = [{ s: us, pts: my, q: q?.[0] }, { s: them, pts: op, q: q?.[1] }]
   if (home) rows.reverse()
@@ -302,7 +302,7 @@ function LineScore({ sport, us, them, home, my, op, q, status, live, story }) {
         </div>
         {rows.map(x => (
           <div key={x.s} className={`bx-ls-row${win === x.s ? ' is-win' : win ? ' is-lose' : ''}`}>
-            <span className="bx-ls-team"><img src={logoOf(sport, x.s)} alt="" /><b>{nickOf(sport, x.s)}</b>{win === x.s && <i className="bx-ls-w" aria-label="won" />}</span>
+            <span className="bx-ls-team"><img src={logo ? logo(x.s) : logoOf(sport, x.s)} alt="" /><b>{nick ? nick(x.s) : nickOf(sport, x.s)}</b>{win === x.s && <i className="bx-ls-w" aria-label="won" />}</span>
             {Array.from({ length: nq }, (_, i) => <span key={i} className="bx-ls-q">{x.q?.[i] ?? 0}</span>)}
             <span className="bx-ls-pts">{x.pts}</span>
           </div>
@@ -314,14 +314,14 @@ function LineScore({ sport, us, them, home, my, op, q, status, live, story }) {
 }
 
 // The two teams' lines, side by side; the better number of each pair stands out
-const LOWER_BETTER = /turnover|sack|penalt|interception/i
+const LOWER_BETTER = /turnover|sack|penalt|interception|foul|yellow card/i
 const numOf = v => (typeof v === 'number' ? v : /^\d+:\d\d$/.test(String(v)) ? (([m, s]) => +m * 60 + +s)(String(v).split(':')) : /%$/.test(String(v)) ? parseFloat(v) : null)
-function TeamCompare({ sport, us, them, rows }) {
+function TeamCompare({ sport, us, them, rows, logo = null }) {
   return (
     <section className="bx-sec">
       <h3 className="bx-h">Team stats</h3>
       <div className="bx-tc" role="table">
-        <div className="bx-tc-row bx-tc-head" role="row"><span /><span><img src={logoOf(sport, us)} alt="" />{us}</span><span><img src={logoOf(sport, them)} alt="" />{them}</span></div>
+        <div className="bx-tc-row bx-tc-head" role="row"><span /><span><img src={logo ? logo(us) : logoOf(sport, us)} alt="" />{us}</span><span><img src={logo ? logo(them) : logoOf(sport, them)} alt="" />{them}</span></div>
         {rows.map(([k, a, b]) => {
           const x = numOf(a), y = numOf(b)
           const lead = x == null || y == null || x === y ? 0 : (LOWER_BETTER.test(k) ? x < y : x > y) ? 1 : 2
@@ -459,7 +459,7 @@ function BucketBox({ r, game }) {
 // broadcast sums the game up. `all` and `label` are kept for older callers: the builds are always in the tables now)
 // (table: draws a team's men in place of the stock table, (side, index) => node; with it a basketball box takes `opp`
 // too, both teams' men and each team's leaders: NBA Franchise. g.where: the header's game, in place of the stock one)
-export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = true, rows = null, status = null, children = null, className = '', opp = null, kick = null, quarters = null, story = null, live = false, table = null }) {
+export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = true, rows = null, status = null, children = null, className = '', opp = null, kick = null, quarters = null, story = null, live = false, table = null, nick = null, logo = null }) {
   useEffect(() => {
     if (!onClose) return undefined
     const k = e => { if (e.key === 'Escape') onClose() }
@@ -491,12 +491,12 @@ export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = tru
     <div className={`ss-overlay sq-box-overlay ${className}`} onClick={e => e.target === e.currentTarget && onClose?.()}>
       <div className="ss-sheet sq-box" role={portal ? 'dialog' : 'region'} aria-modal={portal ? 'true' : undefined} aria-labelledby="sq-box-title">
         <div className="ss-head">
-          <span className="bx-where" id="sq-box-title">{where} · {g.home ? 'vs' : 'at'} {oppTeam?.name ?? g.oppName ?? g.opp}</span>
+          <span className="bx-where" id="sq-box-title">{where} · {g.vs ?? (g.home ? 'vs' : 'at')} {oppTeam?.name ?? g.oppName ?? g.opp}</span>
           {onClose && <button className="ss-close" onClick={onClose} aria-label="Close"><IconClose size={15} /></button>}
         </div>
-        <LineScore sport={sport} us={r.team} them={g.opp} home={g.home} my={g.my} op={g.op} q={quarters} live={live} story={story}
+        <LineScore sport={sport} us={r.team} them={g.opp} home={g.home} my={g.my} op={g.op} q={quarters} live={live} story={story} nick={nick} logo={logo}
           status={status ?? `${g.tie ? 'Final · tie' : 'Final'}${otTxt}`} />
-        <TeamCompare sport={sport} us={r.team} them={g.opp} rows={teamRows} />
+        <TeamCompare sport={sport} us={r.team} them={g.opp} rows={teamRows} logo={logo} />
         <Leaders1 sport={sport} sides={sides} each={!!table && sides.length > 1} />
         <section className="bx-sec">
           <h3 className="bx-h">Player stats</h3>
@@ -504,7 +504,7 @@ export function BoxSheet({ r, sport, g, box, owner, onClose = null, portal = tru
             <div className="bx-seg" role="tablist" aria-label="Team">
               {sides.map((x, i) => (
                 <button key={x.team} type="button" role="tab" aria-selected={side === x} className={side === x ? 'is-on' : ''} onClick={() => { setTab(i); sfx('tap') }}>
-                  <img src={logoOf(sport, x.team)} alt="" />{nickOf(sport, x.team)}
+                  <img src={logo ? logo(x.team) : logoOf(sport, x.team)} alt="" />{nick ? nick(x.team) : nickOf(sport, x.team)}
                 </button>
               ))}
             </div>

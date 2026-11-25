@@ -148,7 +148,8 @@
 // The same fields where they apply: wins/draws/losses/points/gf/ga are the group's, seed = group place,
 // conference = the group letter, standings = his group, games = every match he played (3 group games, then
 // the knockouts), playoffRounds = his knockout ties, champion = won the World Cup, madePlayoffs = reached the
-// Round of 32, finalsOpp/finalsSeries = the final. Plus: groups: { A: [row] … }, bracket: { r32, r16, qf, sf,
+// Round of 32, finalsOpp/finalsSeries = the final. Plus: groups: { A: [row] … }, groupGames (his group's six matches,
+// [matchday, home, away, hs, as]; the all-time World Cup only), bracket: { r32, r16, qf, sf,
 // third, final } (every knockout match), finish ('Winners' | 'Runners-up' | 'Third place' | 'Fourth place' |
 // 'Quarter-finals' | 'Round of 16' | 'Round of 32' | 'Group stage'), goldenBoot, goldenBall ({ won, rank,
 // medal: 'Golden Ball' | 'Silver Ball' | 'Bronze Ball' | null, winner }), bestYoungPlayer ({ eligible, won,
@@ -1239,15 +1240,20 @@ function wcWorld({ U, uRate, hook, rand }) {
   const groups = wcGroups()
   const gf = Object.fromEntries(NATIONS.map(n => [n.short, 0]))
   const tables = {}
+  // (every group match as it was played, [matchday, home, away, home goals, away goals]: the season page plays the group
+  // out a matchday at a time with the other match's result; kept only, it draws nothing)
+  const played = {}
   const MD = [[[0, 1], [2, 3]], [[0, 2], [3, 1]], [[3, 0], [1, 2]]]
   for (const l of GROUP_LETTERS) {
     const g = groups[l]
     const rows = Object.fromEntries(g.map(n => [n.short, rowOf(n, rand)]))
+    played[l] = []
     MD.forEach((pairs, md) => {
       for (const [i, j] of pairs) {
         if (!g[i] || !g[j]) continue
         const m = playFx(W, { comp: 'wc', wk: md + 1, home: g[i].short, away: g[j].short, neutral: true, meta: { round: `Group ${l} · Matchday ${md + 1}`, stage: 'group', group: l } })
         addResult(rows, g[i].short, g[j].short, m.hs, m.as); gf[g[i].short] += m.hs; gf[g[j].short] += m.as
+        played[l].push([md + 1, g[i].short, g[j].short, m.hs, m.as])
       }
     })
     tables[l] = sortRows(Object.values(rows))
@@ -1284,7 +1290,7 @@ function wcWorld({ U, uRate, hook, rand }) {
   const groupsOut = Object.fromEntries(GROUP_LETTERS.map(l => [l, tableOut(tables[l], U)]))
   const matches = Object.fromEntries(NATIONS.map(n => [n.short, 0]))
   for (const n of NATIONS) matches[n.short] = 3 + ({ 'Group stage': 0, 'Round of 32': 1, 'Round of 16': 2, 'Quarter-finals': 3, 'Fourth place': 5, 'Third place': 5, 'Runners-up': 5, 'Winners': 5 })[reached[n.short]]
-  return { U, uRate, groups: groupsOut, bracket, reached, gf, matches, champion: bracket.final.winner, fixtures: out }
+  return { U, uRate, groups: groupsOut, groupGames: played, bracket, reached, gf, matches, champion: bracket.final.winner, fixtures: out }
 }
 
 // A continental championship (Career: the Euros, the Copa América, AFCON, the Asian Cup, the Gold Cup). G groups of
@@ -1818,7 +1824,7 @@ function wcSeason(build, types, team, base, gameMode, script) {
     ovr, archetype: getSoccerArchetype(ovr, build, types),
     team: { ...nat, ...(team ?? {}), field: undefined, att: r1(uRate.att), def: r1(uRate.def) },
     wins: row.wins, draws: row.draws, losses: row.losses, points: row.points, gf: row.gf, ga: row.ga, gd: row.gd,
-    seed: row.pos, conference: group, standings: table, groups: world.groups, bracket: world.bracket,
+    seed: row.pos, conference: group, standings: table, groups: world.groups, bracket: world.bracket, groupGames: world.groupGames?.[group] ?? null,
     champion: finish === 'Winners', madePlayoffs: finish !== 'Group stage', playoffs: finish !== 'Group stage', finish,
     playoffRounds: kos, games, gameLog: games.map(g => g.result), bestGame: bestOf(games), fixtures: games,
     finalsOpp: fin?.opponent ?? null, finalsSeries: scoreLine(fin),
