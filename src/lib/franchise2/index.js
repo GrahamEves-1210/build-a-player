@@ -39,6 +39,8 @@ export { clockText, periodOf, spotText, normalRate, simSnap, SNAP_KIND } from '.
 export * from './moments'
 export * from './light'
 export * from './trades'
+export * from './finder'
+export * from './street'
 export * from './rules'
 
 // (7: every man keeps his potential for life, the deals' state; a 6 is brought up to date on load: potential.js)

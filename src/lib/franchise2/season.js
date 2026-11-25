@@ -25,6 +25,7 @@ import { rollInjuries } from './injury'
 import { syncScouts } from './draft'
 import { tradeWeek, eventTrade, eventTradeOk } from './trades'
 import { restructureMine } from './market'
+import { streetDeal } from './street'
 
 export const REG_WEEKS = 18
 export const TRADE_DEADLINE = 9   // (the NFL's: after Week 9; no event offers a deal past it)
@@ -438,7 +439,8 @@ const EVENTS = [
       if (p.b != null || p.ag > 34) continue
       const k = groupOf(p), worst = Object.entries(L).filter(([s]) => s.replace(/\d$/, '') === k).map(([, x]) => x).sort((a, b) => a.o - b.o)[0]
       if (!worst || worst.b != null || p.o < worst.o + 3) continue
-      const cost = r1(Math.min(p.$ ?? 1.2, 4))
+      // (a street deal's price: street.js, the same one the free-agent list signs him at)
+      const cost = streetDeal(F, p).$
       // (a kicker in: the one there now is released, a team carries one)
       const cut = k === 'k' ? worst : F.teams[F.team].r.filter(x => groupOf(x) === k && x.b == null && !x.fl && x !== worst).sort((a, b) => a.o - b.o)[0] ?? null
       // (the room after the release that makes his spot: a release with dead money can cost room)

@@ -54,7 +54,7 @@ import { rngOf, clamp, r1 } from './rng'
 const REG = 18
 export const TRADE_MAX = 5            // (assets a side)
 const CALLS = 6                       // (turned-down proposals a team hears from the player's team in a week)
-const DEALS_WITH = 3                  // (trades with the player's team a league year, a team)
+export const DEALS_WITH = 3                  // (trades with the player's team a league year, a team)
 const ROUND_WORD = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
 const nick = s => TEAM[s]?.nick ?? s
 
@@ -253,7 +253,7 @@ function roomOf(F, s, g, gone) {
   return depthChart(F, s)[g].filter(x => !x.fl && !x.in && !gone.has(x.i)).map(x => x.o)
 }
 const recentTx = (F, p) => p.tx?.[2] === winKey(F) && (F.phase !== 'season' || F.wk - (p.tx[3] ?? 0) < 6)
-function inValue(F, s, p, gone, sit) {
+export function inValue(F, s, p, gone, sit) {
   const g = groupOf(p), n = GROUP[g].n
   const room = roomOf(F, s, g, gone)
   const ahead = room.filter(o => o > p.o).length
@@ -269,7 +269,7 @@ function inValue(F, s, p, gone, sit) {
   if (p.tx?.[4] != null && s !== F.team && recentTx(F, p)) v = Math.min(v, p.tx[4] * 0.95)
   return { v, role, m }
 }
-function outValue(F, s, p, sit) {
+export function outValue(F, s, p, sit) {
   const g = groupOf(p), n = GROUP[g].n
   const room = depthChart(F, s)[g].filter(x => !x.fl && !x.in)
   const at = room.indexOf(p)
@@ -282,7 +282,7 @@ function outValue(F, s, p, sit) {
   if (p.o >= 90 && p.ag <= 27) m *= 1.3   // (a cornerstone)
   return valueOf(F, p) * m * (starts || s === F.team ? 1 : 0.85)
 }
-const pickMod = sit => (sit === 'reb' ? 1.12 : sit === 'win' ? 0.95 : 1)
+export const pickMod = sit => (sit === 'reb' ? 1.12 : sit === 'win' ? 0.95 : 1)
 export function teamSide(F, s, inn, out) {
   const sit = s === F.team ? 'mid' : sitOf(F, s)
   const gone = new Set(out.pl.map(p => p.i))
@@ -331,7 +331,7 @@ export function capAfter(F, s, outMen, inMen, cut = []) {
   const extra = s === F.team && F.phase === 'off' && F.stage === 'fa' ? committed(F) : 0
   return { before: r1(c.room - extra), after: r1(c.cap - pay - dead - rest - extra), dead: r1(dead - c.dead), deadBy }
 }
-const capOk = x => x.after >= 0 || x.after >= x.before - 1e-9
+export const capOk = x => x.after >= 0 || x.after >= x.before - 1e-9
 
 // ── A deal: is it legal, and does the other team take it ─────────────────────
 // give: what the player's team sends { pl: [ids], pk: [keys] }; get: what team s sends
@@ -359,14 +359,14 @@ export function checkTrade(F, s, give, get) {
   return { ok: true, cap, cut }
 }
 // what the trades this league year say about the player's team and team s
-const dealsWith = (F, s) => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u && (d.a === s || d.b === s)).length
+export const dealsWith = (F, s) => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u && (d.a === s || d.b === s)).length
 const dealsAll = F => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u).length
 const weekKey = F => `${winKey(F)}-${F.phase === 'off' ? F.stage : F.wk}`
-const callsLeft = (F, s) => { const c = F.trc?.[s]; return c && c[0] === weekKey(F) ? CALLS - c[1] : CALLS }
+export const callsLeft = (F, s) => { const c = F.trc?.[s]; return c && c[0] === weekKey(F) ? CALLS - c[1] : CALLS }
 // the margin team s wants on a deal with the player's team
 // (7% of what it gives; on a small deal a few points more, never more than a quarter of what it gives: a sixth for a
 // sixth and a seventh is a deal, not a 25-point ask)
-function marginOf(F, s, out) {
+export function marginOf(F, s, out) {
   return Math.max(Math.min(25, 4 + out * 0.25), out * 0.07) * (1 + 0.6 * dealsWith(F, s) + 0.1 * dealsAll(F))
 }
 // what the player's team sends, the league's way (the gauge), with a man it just traded for counted at what he cost
@@ -635,7 +635,7 @@ export function answerOffer(F, id, yes) {
   return acceptDeal(F, o.s, o.give, o.get)
 }
 // the best few picks of a team that add up to about `want` (its own value of them), never more than three
-function picksFor(F, s, want, sit, avoid = []) {
+export function picksFor(F, s, want, sit, avoid = []) {
   const pk = picksBy(F)[s].filter(k => !avoid.includes(k)).map(k => [k, pickWorth(F, k) * pickMod(sit)]).sort((a, b) => b[1] - a[1])
   let best = null
   const consider = ks => { const v = ks.reduce((a, k) => a + pk.find(x => x[0] === k)[1], 0); if (v <= want && (!best || v > best.v)) best = { ks, v } }
