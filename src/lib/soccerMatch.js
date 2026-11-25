@@ -204,14 +204,17 @@ export function matchStory(m, ctx) {
     if (e.kind === 'goal') { if (e.side === 'me') my++; else op++ }
     events.push({ ...e, b: Math.max(0, beatAt(e.mm, e.x)), my, opp: op })
   }
-  for (const e of events) e.text = say(e, { N, usName, themName, rand, events, before })
+  const themHome = !m.home && !m.neutral
+  for (const e of events) e.text = say(e, { N, usName, themName, rand, events, before, themHome })
   const shootout = m.shootout ? shootoutOf(m.shootout, { rand, mates, foes, N, usName, themName }) : null
   const box = boxOf(m, ctx, rand, events)
   return { beats, events, len, st, shootout, box, cap: cap ? beatAt(cap) : null, on, off }
 }
 
 // what the broadcast says
-function say(e, { N, usName, themName, rand }) {
+function say(e, { N, usName, themName, rand, themHome = false }) {
+  // (a scoreline the broadcast way: the home side first)
+  const line = themHome ? `${themName} ${e.opp}–${e.my} ${usName}` : `${usName} ${e.my}–${e.opp} ${themName}`
   const team = e.side === 'me' ? usName : themName
   const who = e.who
   const lead = e.side === 'me' ? e.my - e.opp : e.opp - e.my
@@ -250,10 +253,10 @@ function say(e, { N, usName, themName, rand }) {
     return e.post ? `${who ?? themName} hits the post.` : `${themName} go close${who ? `: ${who}'s shot is saved` : ''}.`
   }
   if (e.kind === 'yellow') return who ? `Yellow card: ${who} (${team}).` : `Yellow card for ${team}.`
-  if (e.kind === 'ht') return `Half time. ${usName} ${e.my}–${e.opp} ${themName}.`
-  if (e.kind === 'ft90') return `Ninety minutes up: ${e.my}–${e.opp}. Extra time.`
-  if (e.kind === 'etht') return `Half time in extra time: ${e.my}–${e.opp}.`
-  if (e.kind === 'ft') return `Full time. ${usName} ${e.my}–${e.opp} ${themName}.`
+  if (e.kind === 'ht') return `Half time. ${line}.`
+  if (e.kind === 'ft90') return `Ninety minutes up: ${line}. Extra time.`
+  if (e.kind === 'etht') return `Half time in extra time: ${line}.`
+  if (e.kind === 'ft') return `Full time. ${line}.`
   return ''
 }
 
@@ -342,11 +345,9 @@ export function extendStory(story, from, to, ctx, line = null) {
   const rand = seeded(`soccer-moment|${ctx.key}|${to.mySc}-${to.oppSc}|${to.goals ?? 0}`)
   const b0 = story.cap ?? story.beats.findIndex(b => b.m === 84)
   const last = story.beats.findIndex(b => b.m === 90 && b.x === (story.st?.[1] ?? 0))
-  const keep = story.events.filter(e => e.b <= b0 && e.kind !== 'ft')
-  let my = keep.length ? keep[keep.length - 1].my : 0, op = keep.length ? keep[keep.length - 1].opp : 0
   // (the score at the moment: every goal before it)
-  my = story.events.filter(e => e.kind === 'goal' && e.side === 'me').length
-  op = story.events.filter(e => e.kind === 'goal' && e.side === 'opp').length
+  const my = story.events.filter(e => e.kind === 'goal' && e.side === 'me').length
+  const op = story.events.filter(e => e.kind === 'goal' && e.side === 'opp').length
   const add = []
   if (line) add.push({ b: b0, kind: 'moment', side: 'me', his: true, text: line })
   const dMy = Math.max(0, (to.mySc ?? 0) - my), dOp = Math.max(0, (to.oppSc ?? 0) - op)
@@ -365,8 +366,8 @@ export function extendStory(story, from, to, ctx, line = null) {
     if (e.kind === 'goal') { if (e.side === 'me') a++; else c++ }
     e.my = a; e.opp = c
     if (!e.text || e.kind === 'goal' || e.kind === 'ft') {
-      if (e.kind === 'goal' && !e.text) e.text = e.side === 'me' ? (e.his ? `${N} scores. The ground goes up.` : `${usName} score.`) : `${themName} score.`
-      if (e.kind === 'ft') e.text = `Full time. ${usName} ${a}–${c} ${themName}.`
+      if (e.kind === 'goal' && !e.text) e.text = e.side === 'me' ? (e.his ? `${N} scores.` : `${usName} score.`) : `${themName} score.`
+      if (e.kind === 'ft') e.text = `Full time. ${ctx.themHome ? `${themName} ${c}–${a} ${usName}` : `${usName} ${a}–${c} ${themName}`}.`
     }
   }
   return { ...story, events: evs, cap: null }
