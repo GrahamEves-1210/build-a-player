@@ -1,6 +1,6 @@
 // NBA FRANCHISE: the GM's own builds. A build is made on the game's build page (a guard or a big, its ten ratings),
 // named and numbered in the setup, and joins the team as a rookie: 20 years old, a first-round rookie-scale deal at
-// the slot his OVR would have gone, his spot read off his ratings. He takes an open roster spot; a full roster makes
+// the slot his OVR would have gone (a pick of his own: seatBuilds), his spot read off his ratings. He takes an open roster spot; a full roster makes
 // room at the end of its bench (waiveFor: its camp body first).
 // Builds grow by the game's own rule, not the sim's dice: each summer a young build's grades go up a step at a time.
 // From 28 he ages the way every man does (aging.js ageBuild: the league's curve, the legs first), and he retires the
@@ -20,8 +20,43 @@ export function buildSpot(pos, a) {
   return pg >= 15 && pg >= wing ? 'PG' : wing >= 13 && (a.size ?? 5) >= 7 ? 'SF' : 'SG'
 }
 const HT = { PG: 75, SG: 77, SF: 79, PF: 81, C: 83 }, WT = { PG: 190, SG: 205, SF: 220, PF: 235, C: 255 }
-// the draft slot his OVR goes at (a 90 the first pick, a 75 late in the first round)
-export const buildSlot = o => clamp(1, 30, Math.round(31 - (o - 72) * 1.6))
+// the draft slot his OVR goes at: a 90 or better is the first pick, an 85 goes ninth, an 80 in the middle of the
+// round, a 75 late in it, a 72 or less last (No. 30)
+export const buildSlot = o => clamp(1, 30, Math.round(1 + (90 - o) * 1.6))
+// the builds' slots together (their OVRs in the setup's order): no two share one. The better build keeps his OVR's
+// slot and the next takes the pick after it (two 90s go first and second); past No. 30 the slot before.
+export function buildSlots(os) {
+  const out = os.map(() => 0), used = new Set()
+  for (const k of os.map((o, k) => k).sort((a, b) => os[b] - os[a] || a - b)) {
+    let n = buildSlot(os[k])
+    while (used.has(n) && n < 30) n++
+    while (used.has(n) && n > 1) n--
+    used.add(n); out[k] = n
+  }
+  return out
+}
+// The 2026 first round with the builds in it, a man a pick: each build at his slot (buildSlots), and the real 2026
+// first-rounders from there on one pick later, as far as the first pick whose man the game doesn't carry (a 95 build
+// goes first, the real first pick reads as the second, and so on down; the real men stay in their order). With no
+// such pick left before No. 30 the men ahead move one earlier instead. Only the pick number moves: a real man's
+// team, deal and money stay his own.
+export function seatBuilds(F, men) {
+  const slots = buildSlots(men.map(p => p.o))
+  const B = new Set(slots)
+  const all = [...Object.values(F.teams).flatMap(t => t.r), ...(F.fa ?? [])]
+  const seen = new Set()
+  const real = all.filter(p => p.b == null && p.dr?.[0] === F.year && p.dr[1] === 1 && p.dr[2] >= 1 && p.dr[2] <= 30 && !seen.has(p.dr[2]) && seen.add(p.dr[2])).sort((x, y) => x.dr[2] - y.dr[2])
+  // (down the round: a man keeps his pick unless a build or the man ahead of him has it; then back up it, should the
+  // round have run out)
+  const pos = []
+  let prev = 0
+  for (const p of real) { let n = Math.max(p.dr[2], prev + 1); while (B.has(n)) n++; pos.push(n); prev = n }
+  let next = 31
+  for (let k = real.length - 1; k >= 0; k--) { let n = Math.min(pos[k], next - 1); while (n >= 1 && B.has(n)) n--; pos[k] = n; next = n }
+  real.forEach((p, k) => { if (pos[k] >= 1 && pos[k] !== p.dr[2]) p.dr = [p.dr[0], p.dr[1], pos[k], p.dr[3]] })
+  men.forEach((p, k) => { p.dr = [p.dr[0], p.dr[1], slots[k], p.dr[3]] })
+  return slots
+}
 export const attrsOfBuild = (pos, build) => Object.fromEntries((TYPES[pos] ?? []).map(t => [t, clamp(0, 11, Math.round(build?.[t]?.val ?? 0))]))
 
 export function makeBuild(F, idx, B) {
@@ -29,15 +64,18 @@ export function makeBuild(F, idx, B) {
   const spot = buildSpot(B.pos, a)
   const o = ovrOfAttrs(B.pos, a)
   const p = { i: F.nid++, n: B.name, p: spot, g: groupOfSpot(spot) === B.pos ? B.pos : B.pos, o, ag: B.age ?? 20, a, ht: HT[spot], wt: WT[spot], num: B.num, ys: 0, b: idx, rk: F.year, pk: Math.min(99, o + 4) }
-  p.dr = [F.year, 1, buildSlot(o), F.team]
+  p.dr = [F.year, 1, buildSlot(o), F.team]   // (placeBuilds seats him: seatBuilds gives every build his own pick)
   return p
 }
 // the builds onto the GM's roster at the start of the franchise (F.builds already filled in)
 export function placeBuilds(F) {
   const t = F.teams[F.team]
+  // (every build made first, so each gets his own pick in the 2026 first round and the real rookies move around them)
+  const made = F.builds.map((B, idx) => makeBuild(F, idx, B))
+  seatBuilds(F, made)
   for (let idx = 0; idx < F.builds.length; idx++) {
     const B = F.builds[idx]
-    const p = makeBuild(F, idx, B)
+    const p = made[idx]
     // his roster spot: an open one; with the 15 standard spots full, the end of the bench makes room: the team's
     // camp body (a filler on a minimum deal) first, else of the last few men in his group (the two-way men aside) the
     // one whose release costs least, waived (his guaranteed money stays on the books, as it would)
@@ -46,7 +84,7 @@ export function placeBuilds(F) {
     const before = X.capSheet(F, F.team)
     if (same) { X.cutMan(F, F.team, same.i); same.was = F.team }
     t.r.push(p)
-    X.rookieDeal(F, p, { n: buildSlot(p.o), r: 1 })
+    X.rookieDeal(F, p, { n: p.dr[2], r: 1 })
     B.i = p.i
     addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${signText('signs with', { ...p, n: `${p.n}, a ${POS_FULL[p.p] ?? p.p},` }, F.team, { note: ' (rookie scale)' })}${same ? `; ${same.n} is waived` : ''}` })
     if (!F.noCap) addNews(F, { k: 'cap', tag: 'PAYROLL', s: F.team, text: buildCapText(F, before, X.capSheet(F, F.team)) })
@@ -70,10 +108,11 @@ export function buildCapText(F, before, after) {
 // the books with a build of this OVR added, for the setup's preview of the GM's team: { before, after, add, text }.
 // prev: the $M of the builds already added ahead of him (the setup adds them in order), so the second and third
 // build's line is read off the payroll the first left. (The man a build replaces is waived: his money stays.)
-export function buildCapNote(F, o, prev = 0) {
+// slot: his pick when the builds are seated together (buildSlots); his OVR's own slot without it.
+export function buildCapNote(F, o, prev = 0, slot = buildSlot(o)) {
   const sh = X.capSheet(F, F.team)
   const r1 = v => Math.round(v * 10) / 10
-  const add = X.rookieScale(buildSlot(o), F.year)[0]
+  const add = X.rookieScale(slot, F.year)[0]
   const p0 = r1(sh.pay + prev), pay = r1(p0 + add)
   const free = !!sh.free
   const before = { ...sh, pay: p0, over: free ? 'under' : X.overOf(p0, sh.year) }

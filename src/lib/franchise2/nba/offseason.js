@@ -6,7 +6,7 @@
 //           (B's seasonEndDeals); the GM's own free agents: re-sign or let go (B's resignOffer)
 //   fa      free agency (B: askOf, canSign, signMan, faDay; the other 29 teams at the end, cpuOffseason)
 //   camp    the GM's roster down to 15 standard and 3 two-way contracts (B's legalRoster, cutMan), then a new season
-import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeFiller, thinSpot, keepRoster } from './league'
+import { SHORTS, TEAM, nick, manOf, teamOfMan, fillTeam, ROSTER_MAX, CONF_OF, leagueNames, makeFiller, makeGen, thinSpot, keepRoster } from './league'
 import { records, recText, confOrder, pct } from './season'
 import { makeSchedule } from './schedule'
 import { makeClass, makePicks, runLottery, openDraft, closeDraft, scoutSpring, pruneDrafts } from './draft'
@@ -15,7 +15,7 @@ import * as X from './seams'
 import { growBuilds } from './builds'
 import { coachOfYear, coachCarousel, fillStaff } from './coach'
 import { notable } from './aging'
-import { rngOf } from '../rng'
+import { rngOf, clamp } from '../rng'
 import { numberAll } from './numbers'
 import * as MK from './market'
 import { holdOf, hardCapOf } from './cap'
@@ -160,7 +160,10 @@ function enter(F, step) {
     // (ageLeague files the retired men in F.retired and writes their news; the wall keeps a man's totals, not his rows)
     for (const x of A.news ?? []) addNews(F, { tag: 'RETIRES', ...x })
     // the GM's men who retired: the re-sign stop tells him (F.off.ret), his builds first
-    F.off.ret = (A.retired ?? []).filter(p => p.b != null || F.retired.some(r => r.i === p.i && r.s === F.team)).map(p => ({ i: p.i, n: p.n, ag: p.ag, yrs: p.ys ?? 0, o: p.o, ...(p.b != null && { b: p.b }) }))
+    // (his seasons as the retired list has them: the wire's count)
+    const rowOf = i => (F.retired ?? []).find(r => r.i === i)
+    F.off.ret = (A.retired ?? []).filter(p => p.b != null || rowOf(p.i)?.s === F.team).map(p => ({ i: p.i, n: p.n, ag: p.ag, yrs: rowOf(p.i)?.yrs ?? p.ys ?? 0, o: p.o, ...(p.b != null && { b: p.b }) }))
+      .sort((a, b) => (b.b != null) - (a.b != null))
     for (const g of A.builds ?? []) addNews(F, { k: 'grow', tag: 'DEVELOPMENT', s: F.team, text: `${g.n} has lost a step: down from a ${g.from} to a ${g.to} this summer` })
     for (const g of growBuilds(F)) if (g.to > g.from) addNews(F, { k: 'grow', tag: 'DEVELOPMENT', s: F.team, text: `${g.n} worked his way from a ${g.from} to a ${g.to} this summer` })
     keepRetired(F)
@@ -265,8 +268,17 @@ export function faNext(F) {
   F.off.day = (F.off.day ?? 0) + 1
   for (const x of X.faDay(F, F.off.day) ?? []) addNews(F, x)
 }
-// camp: the GM's roster has to be legal before the season (the CPU teams make theirs legal themselves)
-export const campCheck = F => X.legalRoster(F, F.team, { season: true })
+// camp: the GM's roster has to be legal before the season (the CPU teams make theirs legal themselves). It can always
+// get there: short of 14 standard contracts, the minimum deals (minPool) list every man left who can sign, then camp
+// invites (campInvite). The one roster that can't add a man is a hard-capped one with no room for even a rookie's
+// minimum: it opens the season a man short (short: 1), as the league allows for two weeks (season.js rosterFloor
+// signs the fourteenth then).
+export function campCheck(F) {
+  const r = X.legalRoster(F, F.team, { season: true })
+  if (r.ok || !(r.st < 14) || (r.tw ?? 0) > 3) return r
+  if (minPool(F, 1).length || campInviteOk(F).ok) return r
+  return { ok: true, short: 1, st: r.st, tw: r.tw, why: `No room under the hard cap for another minimum deal: the ${nick(F.team)} open the season with ${r.st} standard contracts` }
+}
 
 // a retired man, kept for the history page: his name, team, age, seasons, totals and honours (not every season's row)
 export function retiredRow(r) {
@@ -294,6 +306,13 @@ export function keepRetired(F) {
 export function pruneStreet(F) {
   const fa = (F.fa ?? []).slice().sort((a, b) => b.o - a.o)
   for (const p of fa.slice(55)) {
+    // (the GM's own build, unsigned and out of the league: his card keeps the year, the wire says so)
+    if (p.b != null) {
+      if (F.builds?.[p.b]) F.builds[p.b].done = F.year
+      F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs: p.ys ?? (p.car ?? []).length, s: p.was ?? p.fr ?? null, gm: 1 })]
+      addNews(F, { k: 'retire', tag: 'RETIRES', i: p.i, text: `${p.n}, unsigned through the summer, has retired at ${p.ag} after ${p.ys ?? (p.car ?? []).length} ${(p.ys ?? (p.car ?? []).length) === 1 ? 'season' : 'seasons'}` })
+      continue
+    }
     if (p.gn || !(p.car ?? []).some(c => c.gp > 0)) continue
     const gm = new Set((p.car ?? []).filter(c => c.s === F.team).map(c => c.y)).size >= 3
     F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs: p.ys, s: p.was ?? p.fr ?? null, ...(gm && { gm: 1 }) })]
@@ -357,9 +376,21 @@ export function answerSheet(F, id, yes) {
 }
 
 // the men on the street who'd sign for the minimum (a veteran's minimum by his years in the league): the end of the
-// bench any team can add, over the cap or the aprons
+// bench any team can add, over the cap or the aprons. Only men the GM's team can sign today are listed (not a man it
+// waived inside the year, not one whose deal would break its hard cap). At camp, short of 14 standard contracts with
+// too few of them to get there, the list opens to everyone still unsigned: this late a man with no deal takes the
+// minimum.
 const minDeal = (F, p) => ({ $: X.minOf(p.ys ?? 0, X.capYear(F)), y: 1, r: 0 })
-export const minPool = (F, n = 12) => (F.fa ?? []).filter(p => (!p.fr || p.fr !== F.team || p.rn) && X.rankOf(F, p) > 60 && p.o < 85).filter(p => (X.askOf(F, p)?.$ ?? 99) <= minDeal(F, p).$ * 1.8).sort((a, b) => b.o - a.o).slice(0, n)
+const canMin = (F, p) => X.canSign(F, F.team, p, minDeal(F, p)).ok
+export function minPool(F, n = 12) {
+  const street = (F.fa ?? []).filter(p => (!p.fr || p.fr !== F.team || p.rn) && p.o < 85).sort((a, b) => b.o - a.o)
+  const takes = p => X.rankOf(F, p) > 60 && (X.askOf(F, p)?.$ ?? 99) <= minDeal(F, p).$ * 1.8
+  const out = []
+  for (const p of street) { if (out.length >= n) break; if (takes(p) && canMin(F, p)) out.push(p) }
+  const short = F.off?.step === 'camp' ? 14 - F.teams[F.team].r.filter(p => !p.tw).length : 0
+  if (out.length < short) for (const p of street) { if (out.length >= Math.max(n, short)) break; if (!out.includes(p) && canMin(F, p)) out.push(p) }
+  return out.sort((a, b) => b.o - a.o)
+}
 export function signMin(F, id) {
   const p = (F.fa ?? []).find(x => x.i === id)
   if (!p) return { ok: false }
@@ -368,4 +399,24 @@ export function signMin(F, id) {
   if (r?.ok === false) return r
   addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: signText('signs with', p, F.team, { note: ' (the minimum)' }) })
   return { ok: true }
+}
+// A camp invite: with nobody left on the street to sign and the roster short of 14, an undrafted man on a one-year,
+// non-guaranteed rookie minimum (the end of the bench every team brings to camp). campInviteOk: whether one fits.
+const inviteDeal = F => ({ $: X.minOf(0, X.capYear(F)), y: 1, r: 0, ng: 1 })
+export function campInviteOk(F) {
+  const T = F.teams[F.team]
+  if (F.off?.step !== 'camp' || T.r.filter(p => !p.tw).length >= 14) return { ok: false, why: 'The roster has its 14' }
+  return X.canSign(F, F.team, { i: -1, ys: 0, o: 60 }, inviteDeal(F))
+}
+export function campInvite(F) {
+  const c = campInviteOk(F)
+  if (!c.ok) return c
+  const T = F.teams[F.team]
+  const R = rngOf(`${F.seed}-invite-${F.year}-${T.r.length}-${F.nid}`)
+  const p = makeGen(F, thinSpot(T.r.filter(x => !x.tw)), R, { o: clamp(58, 65, Math.round(61 + R.n() * 2)), ag: R.int(22, 24) })
+  p.fl = 1; p.pk = p.o; p.ys = 0
+  const r = X.signMan(F, F.team, p, inviteDeal(F))
+  if (r?.ok === false) return r
+  addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: signText('signs with', p, F.team, { note: ' (a camp invite, non-guaranteed)' }) })
+  return { ok: true, man: p }
 }

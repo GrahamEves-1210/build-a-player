@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
   rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin, tenderQO, pullFA,
-  records, recText, NC,
+  records, recText, NC, campInvite, campInviteOk, SCOUT_CARRY,
 } from '../../../lib/franchise2/nba'
 import { manPhoto } from './NbaBuilds'
 import { nbaCoachPhoto } from './nbaCoachLg'
@@ -72,7 +72,7 @@ function Summer({ F, act, owner }) {
           {view === 'awards' && <Awards F={F} done />}
           {view === 'lottery' && <Lottery F={F} done />}
           {view === 'draft' && <DraftDone F={F} />}
-          {view === 'resign' && <ResignDone F={F} />}
+          {view === 'resign' && <ResignDone F={F} owner={owner} />}
           {view === 'fa' && <FaDone F={F} />}
         </>
       ) : (
@@ -80,7 +80,7 @@ function Summer({ F, act, owner }) {
           {st === 'awards' && <Awards F={F} act={act} go={go} />}
           {st === 'lottery' && <Lottery F={F} go={go} />}
           {st === 'draft' && <Draft F={F} act={act} go={go} />}
-          {st === 'resign' && <Resign F={F} act={act} go={go} />}
+          {st === 'resign' && <Resign F={F} act={act} go={go} owner={owner} />}
           {st === 'fa' && <FreeAgency F={F} act={act} go={go} />}
           {st === 'camp' && <Camp F={F} act={act} go={go} owner={owner} />}
         </>
@@ -154,6 +154,28 @@ export function Development({ F, open = false }) {
         </div>
       )}
     </Fold>
+  )
+}
+
+// the GM's own men who retired this summer (F.off.ret: his builds first, then the men off his roster), on the
+// re-sign stop: a roster spot each has opened
+export function MyRetired({ F, owner }) {
+  const tap = useTap(F)
+  const ret = F.off?.ret ?? []
+  if (!ret.length) return null
+  return (
+    <div className="nbo-dev-box nbo-ret">
+      <b>{`Retired: ${ret.length} ${nick(F.team)} ${ret.length === 1 ? 'player' : 'players'}`}</b>
+      <ol className="nbo-dev-list">
+        {ret.map(r => (
+          <li key={r.i} style={fkVars(F.team)} {...tap(r.i)}>
+            <KLogo s={F.team} size={20} />
+            <span><b>{r.n}</b><small>{`AGE ${r.ag} · ${r.yrs} ${r.yrs === 1 ? 'SEASON' : 'SEASONS'}${r.b != null ? ` · ${String(owner || F.owner || 'Guest').toUpperCase()}'S BUILD` : ''}`}</small></span>
+            <em>{r.o ?? ''}</em>
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }
 
@@ -354,8 +376,9 @@ function BallsNote({ L }) {
 
 // ── 3. THE DRAFT ─────────────────────────────────────────────────────────────
 const rows = (F, ids) => ids.map(i => (F.dc ?? []).find(p => p.i === i)).filter(Boolean)
-// (a prospect's age on draft night: the class keeps his rookie-season age, and the draft stores him a year younger)
-export const draftAge = p => (p.ag ?? 20) - 1
+// (a prospect's age on the board: the age he turns in his draft year, the one he plays his rookie season at. A
+// freshman reads 19, a senior 22 or 23. The draft stores him a year younger until the summer's birthday.)
+export const draftAge = p => p.ag ?? 20
 export function Draft({ F, act, go, next = 'Re-sign' }) {
   const pk = onClock(F)
   const mine = pk?.t === F.team
@@ -389,7 +412,7 @@ export function Draft({ F, act, go, next = 'Re-sign' }) {
           <ol className="nb-made">{earlier.slice().reverse().map(m => <MadeRow key={m.n} F={F} m={m} />)}</ol>
         </details>
       )}
-      {pk && mine && <p className="nbo-note">{`The ${nick(F.team)} are on the clock. ${(F.sp ?? 0) > 0 ? `${F.sp} scouting ${F.sp === 1 ? 'report' : 'reports'} left. ` : ''}Pick a man from the board, or take the best available: ${starred.length ? 'the top of the starred board' : 'the top of the consensus board (star men to set a board of the team’s own)'}.`}</p>}
+      {pk && mine && <p className="nbo-note">{`The ${nick(F.team)} are on the clock. ${(F.sp ?? 0) > 0 ? `${F.sp} scouting ${F.sp === 1 ? 'report' : 'reports'} left${F.sp > SCOUT_CARRY ? ` (only ${SCOUT_CARRY} carry over to next year's class)` : ''}. ` : ''}Pick a man from the board, or take the best available: ${starred.length ? 'the top of the starred board' : 'the top of the consensus board (star men to set a board of the team’s own)'}.`}</p>}
       <div className="nb-by" role="tablist">
         {pk && <button type="button" role="tab" aria-selected={show === 'board'} className={show === 'board' ? 'is-on' : ''} onClick={() => setShow('board')}>Big board</button>}
         <button type="button" role="tab" aria-selected={show === 'mine'} className={show === 'mine' ? 'is-on' : ''} onClick={() => setShow('mine')}>{`Starred${starred.length ? ` (${starred.length})` : ''}`}</button>
@@ -401,7 +424,8 @@ export function Draft({ F, act, go, next = 'Re-sign' }) {
           {show === 'mine' && !starred.length && <p className="nbo-note">Star men on the Big board. Best available takes the top of the starred list, in the order they were starred.</p>}
         </div>
       )}
-      {show === 'made' && <ol className="nb-made">{made.slice().reverse().map(m => <MadeRow key={m.n} F={F} m={m} />)}</ol>}
+      {/* (the latest pick first while the draft is on; once it's over, the round in pick order, No. 1 at the top) */}
+      {show === 'made' && <ol className="nb-made">{(pk ? made.slice().reverse() : made.slice().sort((a, b) => a.n - b.n)).map(m => <MadeRow key={m.n} F={F} m={m} />)}</ol>}
       {pk && mine && selP && (
         <ActionBar className="nbo-confirm">
           <p className="nbo-confirm-q">{`No. ${pk.n}: ${selP.n}`}<small>{`${selP.p} · AGE ${draftAge(selP)} · ${htText(selP.ht)} · ${selP.c} · OVR ${selP.o} · ${rangeOf(selP).text}`}</small></p>
@@ -460,7 +484,7 @@ export function Prospect({ F, p, act, onPick, sel = false }) {
     <div className={`nb-pros${sel ? ' is-sel' : ''}`}>
       <span className="nb-pros-rk">{p.rank}</span>
       <span className="nb-pros-txt"><b>{p.n}</b><small>{p.p} · {draftAge(p)} · {htText(p.ht)} · {p.c}</small></span>
-      <span className="nb-pros-gr"><b>{R.text}</b><small>{`${p.sc >= 2 ? p.tg : p.sc === 1 ? 'SCOUTED' : 'CEILING'} · OVR ${p.o}`}</small></span>
+      <span className="nb-pros-gr"><b>{R.text}</b><small>{`${p.sc >= 2 ? R.tag : p.sc === 1 ? 'SCOUTED' : 'CEILING'} · OVR ${p.o}`}</small></span>
       <span className="nb-pros-acts">
         <button type="button" aria-pressed={star} className={star ? 'is-on' : ''} onClick={() => { act(X => { starProspect(X, p.i) }); sfx('tap') }} aria-label="Star">★</button>
         {canScout && p.sc < 2 && (F.sp ?? 0) > 0 && <button type="button" onClick={() => { act(X => { scout(X, p.i) }); sfx('flip') }}>Scout</button>}
@@ -486,7 +510,7 @@ function DraftDone({ F }) {
 const RIGHTS = { bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bird rights' }
 const rightsOf = p => (!p.fr || p.rn ? null : (p.bird ?? 0) >= 3 ? 'bird' : p.bird === 2 ? 'ebird' : 'nbird')
 const RIGHTS_SAYS = { bird: 'he can be paid over the cap, up to his max', ebird: 'he can be paid over the cap, up to 175% of his last salary', nbird: 'he can be paid over the cap, up to 120% of his last salary' }
-function Resign({ F, act, go }) {
+function Resign({ F, act, go, owner }) {
   const open = useOpen()
   const ids = F.off?.mine ?? []
   const [why, setWhy] = useState(null)
@@ -502,6 +526,7 @@ function Resign({ F, act, go }) {
   return (
     <section className="nb-resign">
       <Development F={F} />
+      <MyRetired F={F} owner={owner} />
       <CapBar F={F} />
       <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${nick(F.team).toUpperCase()} ${men.length === 1 ? 'FREE AGENT' : 'FREE AGENTS'}` : 'NOBODY LEFT TO DECIDE ON'} />
       {men.length > 0 && (
@@ -554,11 +579,12 @@ export function KeptList({ F, kept, title }) {
     </div>
   )
 }
-function ResignDone({ F }) {
+function ResignDone({ F, owner }) {
   const kept = (F.off?.kept ?? []).map(i => manOf(F, i)).filter(Boolean)
   return (
     <section className="nb-resign">
       <Development F={F} open />
+      <MyRetired F={F} owner={owner} />
       <Chyron team={F.team} title="Re-sign" sub={`${kept.length} RE-SIGNED`} />
       {kept.length > 0 ? <KeptList F={F} kept={kept} title="Re-signed" /> : <p className="nbo-note">Nobody was re-signed this summer.</p>}
     </section>
@@ -783,7 +809,8 @@ export function Camp({ F, act, go, owner }) {
       <Chyron team={F.team} title="Training camp" sub={`${std.length} STANDARD · ${tw.length} TWO-WAY · ${ROSTER_MAX} AND 3 ON OPENING NIGHT`} />
       <CapBar F={F} />
       {!chk.ok && <p className="nb-why">{over > 0 ? `${std.length} standard contracts: waive ${over} ${over === 1 ? 'man' : 'men'} to get to ${ROSTER_MAX}.` : chk.why}</p>}
-      {std.length < 14 && <MinDeals F={F} act={act} open />}
+      {chk.short && <p className="nbo-note">{`${chk.why}. The league allows a roster under 14 for two weeks; the front office signs a man then.`}</p>}
+      {std.length < 14 && !chk.short && <MinDeals F={F} act={act} open />}
       <div className="nbo-camp-list">
         {std.map(p => {
           const c = CAP_SIM.cutCost(F, p)
@@ -843,7 +870,9 @@ function MinDeals({ F, act, open = false }) {
   const [why, setWhy] = useState(null)
   const [done, setDone] = useState(null)
   const men = minPool(F)
-  if (!men.length && !done) return null
+  // (camp, short of 14 and nobody left on the street who can sign: a camp invite, so the roster can always get there)
+  const invite = open && !men.length && campInviteOk(F).ok
+  if (!men.length && !done && !invite) return null
   return (
     <section className="nbo-min">
       <Chyron tone="ink" size="s" title="Minimum deals" sub={open ? `${F.teams[F.team].r.filter(p => !p.tw).length} OF 14 SIGNED: FILL THE ROSTER` : 'VETERANS WHO TAKE THE MINIMUM · THEY SIGN ON THE SPOT'} />
@@ -855,6 +884,13 @@ function MinDeals({ F, act, open = false }) {
           <button type="button" onClick={() => { const r = act(X => signMin(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); if (r?.ok) setDone(p.n); sfx(r?.ok ? 'claim' : 'deny') }}>Sign</button>
         </div>
       ))}
+      {invite && (
+        <div className="nbo-minrow">
+          <span className="nbo-ovr">+</span>
+          <span className="nbo-fa-who"><b>Camp invite</b><small><span>NO FREE AGENT LEFT CAN SIGN · AN UNDRAFTED MAN, ONE YEAR, NON-GUARANTEED MINIMUM</span></small></span>
+          <button type="button" onClick={() => { const r = act(X => campInvite(X)); setWhy(r?.ok ? null : r?.why ?? null); if (r?.ok) setDone(r.man?.n ?? 'A camp invite'); sfx(r?.ok ? 'claim' : 'deny') }}>Sign</button>
+        </div>
+      )}
       {why && <p className="nb-why">{why}</p>}
     </section>
   )

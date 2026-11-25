@@ -3,11 +3,15 @@
 //   s   salary by season from 2026-27 ($M), through the last season of the deal (option seasons in it)
 //   o   the next option on it: 'P2028' a player option on 2028-29, 'T' a team option, 'E' an early termination
 //   rs  on his rookie-scale deal · tw on a two-way deal · ng this season isn't fully guaranteed
-//   ys  years of NBA service before this season · b seasons his team has held his Bird rights (3+ = full Bird)
+//   ys  years of NBA service before this season: every season on an NBA roster, one lost to injury included (Thompson
+//       15, Isaac 9, Embiid 12), not the seasons he played; a season out of the league doesn't count (Bridges, Lyles)
+//   rk  1: still a rookie this season (he missed his first one: Sorber)
+//   b   seasons his team has held his Bird rights (3+ = full Bird)
 //   sg  the league year the deal was signed (a rookie: his draft year) · x the league year of the extension it runs on
 //   dr  [draft year, round, pick, team with his rights after draft night] · rt traded to his team on his rookie deal
-//   t   his team (Basketball-Reference's) · g 0: a man the game doesn't carry (yet): the made-up man in his roster spot
-//   takes his deal, so a payroll matches the real one, and the man gets it once the game carries him
+//   t   his team (Basketball-Reference's) · g 0: a man the game doesn't carry (yet). His deal waits here for the day the
+//   game carries him: a made-up man never takes a real man's money (owner, 11-23; the filler in his roster spot is on a
+//   one-year minimum, lib/franchise2/nba/league.js buildTeams), so a payroll can sit under the real one by his salary
 // NBA_DEAD: waived men still on a team's books [name, $M by season].
 export const NBA_DEALS = {
   // ─── ATL
@@ -30,7 +34,7 @@ export const NBA_DEALS = {
   "RayJ Dennis": { t: 'ATL', tw: 1, ys: 2, b: 1, sg: 2025, g: 0 },
   "Rafael Castro": { t: 'ATL', tw: 1, ys: 0, b: 0, sg: 2026, g: 0 },
   // ─── BKN
-  "Michael Porter Jr.": { t: 'BKN', s: [40.806], ng: 1, ys: 7, b: 7, sg: 2021, x: 2021, dr: [2018,1,14,"DEN"] },
+  "Michael Porter Jr.": { t: 'BKN', s: [40.806], ng: 1, ys: 8, b: 7, sg: 2021, x: 2021, dr: [2018,1,14,"DEN"] },
   "Julius Randle": { t: 'BKN', s: [33.333,35.802], o: 'P2027', ys: 12, b: 1, sg: 2025 },
   "Terance Mann": { t: 'BKN', s: [15.5,16.0], ys: 7, b: 4, sg: 2024, x: 2024, dr: [2019,2,48,"LAC"] },
   "Day'Ron Sharpe": { t: 'BKN', s: [10.0,10.0], o: 'T2027', ys: 5, b: 3, sg: 2026, dr: [2021,1,29,"PHX"] },
@@ -94,7 +98,7 @@ export const NBA_DEALS = {
   "Caleb Wilson": { t: 'CHI', s: [10.684,11.218,11.752,14.867], o: 'T2028', rs: 1, ys: 0, b: 0, sg: 2026, dr: [2026,1,4,"CHI"] },
   "Buddy Hield": { t: 'CHI', s: [9.659,10.098], o: 'P2027', ys: 10, b: 2, sg: 2024, dr: [2016,1,6,"NOP"] },
   "Jalen Smith": { t: 'CHI', s: [9.429], ys: 6, b: 2, sg: 2024, dr: [2020,1,10,"PHX"] },
-  "Zach Collins": { t: 'CHI', s: [8.293,8.707], ys: 8, b: 8, sg: 2025, x: 2025, dr: [2017,1,10,"SAC"] },
+  "Zach Collins": { t: 'CHI', s: [8.293,8.707], ys: 9, b: 8, sg: 2025, x: 2025, dr: [2017,1,10,"SAC"] },
   "Tre Jones": { t: 'CHI', s: [8.0,8.0], o: 'T2027', ys: 6, b: 2, sg: 2025, dr: [2020,2,41,"SAS"], g: 0 },
   "Matas Buzelis": { t: 'CHI', s: [5.715,7.584], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,11,"CHI"] },
   "Noa Essengue": { t: 'CHI', s: [5.701,5.973,8.23], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2025, dr: [2025,1,12,"CHI"] },
@@ -115,7 +119,7 @@ export const NBA_DEALS = {
   "Thomas Bryant": { t: 'CLE', s: [2.449], ys: 9, b: 1, sg: 2026, dr: [2017,2,42,"UTA"] },
   "Mario Hezonja": { t: 'CLE', s: [2.449], ys: 5, b: 0, sg: 2026, g: 0 },
   "Nae'Qwan Tomlin": { t: 'CLE', s: [2.411], ys: 2, b: 2, sg: 2025, g: 0 },
-  "Craig Porter Jr.": { t: 'CLE', s: [2.406], ys: 3, b: 3, sg: 2023, g: 0 },
+  "Craig Porter Jr.": { t: 'CLE', s: [2.406], ys: 3, b: 3, sg: 2023 },
   "Tyrese Proctor": { t: 'CLE', s: [2.151,2.526,2.736], o: 'T2028', ys: 1, b: 1, sg: 2025, dr: [2025,2,49,"CLE"] },
   "Khalifa Diop": { t: 'CLE', s: [1.358,2.294,2.694,2.918], o: 'T2029', ys: 0, b: 0, sg: 2026, dr: [2022,2,39,"CLE"], g: 0 },
   "Meleek Thomas": { t: 'CLE', s: [1.358,2.294,2.694,2.918], o: 'T2029', ys: 0, b: 0, sg: 2026, dr: [2026,2,34,"SAC"], g: 0 },
@@ -123,7 +127,7 @@ export const NBA_DEALS = {
   "Ernest Udeh Jr.": { t: 'CLE', tw: 1, ys: 0, b: 0, sg: 2026, g: 0 },
   "Norchad Omier": { t: 'CLE', tw: 1, ys: 1, b: 0, sg: 2026, g: 0 },
   // ─── DAL
-  "Kyrie Irving": { t: 'DAL', s: [39.491,42.417], o: 'P2027', ys: 14, b: 0, sg: 2025 },
+  "Kyrie Irving": { t: 'DAL', s: [39.491,42.417], o: 'P2027', ys: 15, b: 0, sg: 2025 },
   "P.J. Washington": { t: 'DAL', s: [19.813,21.398,22.983,24.568], ys: 7, b: 7, sg: 2025, x: 2025, dr: [2019,1,12,"CHA"] },
   "Daniel Gafford": { t: 'DAL', s: [17.264,18.127,18.99], ys: 7, b: 3, sg: 2025, x: 2025, dr: [2019,2,38,"CHI"] },
   "Santi Aldama": { t: 'DAL', s: [17.007,17.007], o: 'T2027', ys: 5, b: 1, sg: 2025, dr: [2021,1,30,"UTA"] },
@@ -143,14 +147,14 @@ export const NBA_DEALS = {
   "Walter Clayton Jr.": { t: 'DAL', tw: 1, ys: 1, b: 0, sg: 2026, dr: [2025,1,18,"WAS"] },
   // ─── DEN
   "Nikola Jokic": { t: 'DEN', s: [59.033,62.842], o: 'P2027', ys: 11, b: 6, sg: 2022, x: 2022 },
-  "Jamal Murray": { t: 'DEN', s: [50.106,53.817,57.529], ys: 9, b: 9, sg: 2024, x: 2024, dr: [2016,1,7,"DEN"] },
+  "Jamal Murray": { t: 'DEN', s: [50.106,53.817,57.529], ys: 10, b: 9, sg: 2024, x: 2024, dr: [2016,1,7,"DEN"] },
   "Aaron Gordon": { t: 'DEN', s: [33.658,36.351,39.043], o: 'P2028', ys: 12, b: 4, sg: 2024, x: 2024 },
   "Cameron Johnson": { t: 'DEN', s: [23.062], ys: 7, b: 3, sg: 2023, dr: [2019,1,11,"MIN"] },
   "Christian Braun": { t: 'DEN', s: [21.552,23.276,25.0,26.724,28.448], ys: 4, b: 4, sg: 2025, x: 2025, dr: [2022,1,21,"DEN"] },
   "Zeke Nnaji": { t: 'DEN', s: [7.467,7.467], o: 'P2027', ys: 6, b: 6, sg: 2023, x: 2023, dr: [2020,1,22,"DEN"] },
   "Spencer Jones": { t: 'DEN', s: [6.0,5.75], ys: 2, b: 2, sg: 2026, g: 0 },
   "Julian Strawther": { t: 'DEN', s: [4.827], rs: 1, ys: 3, b: 3, sg: 2023, dr: [2023,1,29,"IND"], rt: 'DEN' },
-  "DaRon Holmes II": { t: 'DEN', s: [3.372,5.547], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2024, dr: [2024,1,22,"PHX"], rt: 'DEN' },
+  "DaRon Holmes II": { t: 'DEN', s: [3.372,5.547], o: 'T2027', rs: 1, ys: 2, b: 1, sg: 2024, dr: [2024,1,22,"PHX"], rt: 'DEN' },
   "DeMar DeRozan": { t: 'DEN', s: [2.449], ys: 17, b: 0, sg: 2026 },
   "Tyus Jones": { t: 'DEN', s: [2.449], ys: 11, b: 1, sg: 2026 },
   "Marvin Bagley III": { t: 'DEN', s: [2.449], ys: 8, b: 0, sg: 2026, dr: [2018,1,2,"SAC"] },
@@ -166,7 +170,7 @@ export const NBA_DEALS = {
   "Duncan Robinson": { t: 'DET', s: [15.993,15.151], ys: 8, b: 1, sg: 2025 },
   "Isaiah Joe": { t: 'DET', s: [11.323,11.323], o: 'T2027', ys: 6, b: 2, sg: 2024, dr: [2020,2,49,"PHI"] },
   "Ausar Thompson": { t: 'DET', s: [11.118,26.724,28.862,31.0,33.138,35.276], ys: 3, b: 3, sg: 2023, x: 2026, dr: [2023,1,5,"DET"] },
-  "Ron Holland": { t: 'DET', s: [9.07,11.491], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,5,"DET"], g: 0 },
+  "Ronald Holland II": { t: 'DET', s: [9.07,11.491], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,5,"DET"] },
   "Kevin Huerter": { t: 'DET', s: [8.333,9.0,9.667], ys: 8, b: 1, sg: 2026, dr: [2018,1,19,"ATL"] },
   "Paul Reed": { t: 'DET', s: [5.603], ys: 6, b: 2, sg: 2025, dr: [2020,2,58,"PHI"] },
   "Ebuka Okorie": { t: 'DET', s: [4.481,4.705,4.929,7.571], o: 'T2028', rs: 1, ys: 0, b: 0, sg: 2026, dr: [2026,1,17,"DET"], g: 0 },
@@ -182,7 +186,7 @@ export const NBA_DEALS = {
   "Stephen Curry": { t: 'GSW', s: [62.587,55.7,60.156], o: 'P2028', ys: 17, b: 3, sg: 2024, x: 2026 },
   "Jimmy Butler III": { t: 'GSW', s: [56.833], ys: 15, b: 5, sg: 2021, x: 2024 },
   "Draymond Green": { t: 'GSW', s: [27.679], ys: 14, b: 3, sg: 2026 },
-  "Kristaps Porzingis": { t: 'GSW', s: [19.512,20.488], o: 'P2027', ys: 10, b: 3, sg: 2025, x: 2025 },
+  "Kristaps Porzingis": { t: 'GSW', s: [19.512,20.488], o: 'P2027', ys: 11, b: 3, sg: 2025, x: 2025 },
   "Moses Moody": { t: 'GSW', s: [12.5,13.426], ys: 5, b: 5, sg: 2024, x: 2024, dr: [2021,1,14,"GSW"] },
   "Al Horford": { t: 'GSW', s: [6.822,7.163], ys: 19, b: 1, sg: 2026 },
   "Yaxel Lendeborg": { t: 'GSW', s: [6.096,6.401,6.706,8.899], o: 'T2028', rs: 1, ys: 0, b: 0, sg: 2026, dr: [2026,1,11,"GSW"] },
@@ -190,7 +194,7 @@ export const NBA_DEALS = {
   "De'Anthony Melton": { t: 'GSW', s: [5.477,5.751], o: 'P2027', ys: 8, b: 2, sg: 2026, dr: [2018,2,46,"HOU"] },
   "Gui Santos": { t: 'GSW', s: [4.63,5.0,5.37], o: 'P2028', ys: 3, b: 3, sg: 2025, x: 2025, dr: [2022,2,55,"GSW"] },
   "Charles Bassey": { t: 'GSW', s: [2.449], ys: 5, b: 1, sg: 2026, dr: [2021,2,53,"PHI"], g: 0 },
-  "Georges Niang": { t: 'GSW', s: [2.449], ys: 9, b: 0, sg: 2026, dr: [2016,2,50,"IND"] },
+  "Georges Niang": { t: 'GSW', s: [2.449], ys: 10, b: 0, sg: 2026, dr: [2016,2,50,"IND"] },
   "Gary Payton II": { t: 'GSW', s: [2.449], ys: 10, b: 3, sg: 2026 },
   "Brandon Williams": { t: 'GSW', s: [2.449], ys: 4, b: 0, sg: 2026 },
   "Will Richard": { t: 'GSW', s: [2.151,2.526,2.736], o: 'T2028', ys: 1, b: 1, sg: 2025, dr: [2025,2,56,"MEM"], g: 0 },
@@ -198,12 +202,12 @@ export const NBA_DEALS = {
   "Graham Ike": { t: 'GSW', tw: 1, ys: 0, b: 0, sg: 2026, g: 0 },
   "LJ Cryer": { t: 'GSW', tw: 1, ys: 1, b: 1, sg: 2025, g: 0 },
   // ─── HOU
-  "Kevin Durant": { t: 'HOU', s: [43.902,46.098], o: 'P2027', ys: 18, b: 3, sg: 2025, x: 2025 },
+  "Kevin Durant": { t: 'HOU', s: [43.902,46.098], o: 'P2027', ys: 19, b: 3, sg: 2025, x: 2025 },
   "Alperen Sengun": { t: 'HOU', s: [35.642,37.339,39.037,39.037], o: 'P2029', ys: 5, b: 5, sg: 2024, x: 2024, dr: [2021,1,16,"OKC"], rt: 'HOU' },
-  "Fred VanVleet": { t: 'HOU', s: [25.0], ys: 9, b: 0, sg: 2025 },
+  "Fred VanVleet": { t: 'HOU', s: [25.0], ys: 10, b: 0, sg: 2025 },
   "Jabari Smith Jr.": { t: 'HOU', s: [23.643,21.752,23.643,25.535,27.426], ys: 4, b: 4, sg: 2025, x: 2025, dr: [2022,1,3,"HOU"] },
   "Tari Eason": { t: 'HOU', s: [14.052,15.176,16.3,17.424,18.548], o: 'P2030', ys: 4, b: 3, sg: 2026, dr: [2022,1,17,"HOU"] },
-  "Steven Adams": { t: 'HOU', s: [13.0,11.87], ys: 12, b: 4, sg: 2024, x: 2024 },
+  "Steven Adams": { t: 'HOU', s: [13.0,11.87], ys: 13, b: 4, sg: 2024, x: 2024 },
   "Amen Thompson": { t: 'HOU', s: [12.259,35.862,38.731,41.6,44.469,47.338], ys: 3, b: 3, sg: 2023, x: 2026, dr: [2023,1,4,"HOU"] },
   "Reed Sheppard": { t: 'HOU', s: [11.109,14.042], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,3,"HOU"] },
   "Clint Capela": { t: 'HOU', s: [7.035,7.37], ys: 12, b: 1, sg: 2025 },
@@ -216,7 +220,7 @@ export const NBA_DEALS = {
   "Julian Phillips": { t: 'HOU', tw: 1, ys: 3, b: 0, sg: 2026, dr: [2023,2,35,"BOS"], g: 0 },
   "Oscar Tshiebwe": { t: 'HOU', tw: 1, ys: 3, b: 0, sg: 2026, g: 0 },
   // ─── IND
-  "Tyrese Haliburton": { t: 'IND', s: [48.925,52.299,55.673], ys: 5, b: 5, sg: 2023, x: 2023, dr: [2020,1,12,"SAC"], rt: 'IND' },
+  "Tyrese Haliburton": { t: 'IND', s: [48.925,52.299,55.673], ys: 6, b: 5, sg: 2023, x: 2023, dr: [2020,1,12,"SAC"], rt: 'IND' },
   "Pascal Siakam": { t: 'IND', s: [48.925,52.299], ys: 10, b: 3, sg: 2024, dr: [2016,1,27,"TOR"] },
   "Ivica Zubac": { t: 'IND', s: [20.342,21.79], ys: 10, b: 4, sg: 2024, x: 2024, dr: [2016,2,32,"LAL"] },
   "Andrew Nembhard": { t: 'IND', s: [19.55,20.998], ys: 4, b: 4, sg: 2024, x: 2024, dr: [2022,2,31,"IND"] },
@@ -300,7 +304,7 @@ export const NBA_DEALS = {
   "Bobby Portis": { t: 'MIA', s: [14.521,15.597], o: 'P2027', ys: 11, b: 1, sg: 2025 },
   "Davion Mitchell": { t: 'MIA', s: [12.4], ys: 5, b: 2, sg: 2025, dr: [2021,1,9,"SAC"] },
   "Tim Hardaway Jr.": { t: 'MIA', s: [6.5], ys: 13, b: 0, sg: 2026 },
-  "Klay Thompson": { t: 'MIA', s: [5.6,5.88], o: 'P2027', ys: 13, b: 0, sg: 2026 },
+  "Klay Thompson": { t: 'MIA', s: [5.6,5.88], o: 'P2027', ys: 15, b: 0, sg: 2026 },
   "Dru Smith": { t: 'MIA', s: [2.585,2.935], o: 'T2027', ys: 4, b: 3, sg: 2025 },
   "Simone Fontecchio": { t: 'MIA', s: [2.449], ys: 4, b: 1, sg: 2026 },
   "Nick Richards": { t: 'MIA', s: [2.449], ys: 6, b: 0, sg: 2026, dr: [2020,2,42,"NOP"] },
@@ -349,14 +353,14 @@ export const NBA_DEALS = {
   "Johni Broome": { t: 'MIN', tw: 1, ys: 1, b: 0, sg: 2026, dr: [2025,2,35,"PHI"] },
   "Rocco Zikarsky": { t: 'MIN', tw: 1, ys: 1, b: 1, sg: 2025, dr: [2025,2,45,"CHI"], g: 0 },
   // ─── NOP
-  "Zion Williamson": { t: 'NOP', s: [42.167,44.887], ys: 6, b: 6, sg: 2022, x: 2022, dr: [2019,1,1,"NOP"] },
+  "Zion Williamson": { t: 'NOP', s: [42.167,44.887], ys: 7, b: 6, sg: 2022, x: 2022, dr: [2019,1,1,"NOP"] },
   "Jordan Poole": { t: 'NOP', s: [34.045], ys: 7, b: 7, sg: 2022, x: 2022, dr: [2019,1,28,"GSW"] },
-  "Dejounte Murray": { t: 'NOP', s: [32.785,30.752], o: 'P2027', ys: 9, b: 9, sg: 2023, x: 2023, dr: [2016,1,29,"SAS"] },
+  "Dejounte Murray": { t: 'NOP', s: [32.785,30.752], o: 'P2027', ys: 10, b: 9, sg: 2023, x: 2023, dr: [2016,1,29,"SAS"] },
   "Trey Murphy III": { t: 'NOP', s: [27.0,29.0,31.0], ys: 5, b: 5, sg: 2024, x: 2024, dr: [2021,1,17,"MEM"], rt: 'NOP' },
   "Herbert Jones": { t: 'NOP', s: [14.899,20.858,22.527,24.196], o: 'P2029', ys: 5, b: 3, sg: 2025, dr: [2021,2,35,"NOP"] },
   "Jeremiah Fears": { t: 'NOP', s: [7.896,8.272,10.505], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2025, dr: [2025,1,7,"NOP"] },
   "Bennedict Mathurin": { t: 'NOP', s: [7.805,8.195], o: 'P2027', ys: 4, b: 0, sg: 2026, dr: [2022,1,6,"IND"] },
-  "Saddiq Bey": { t: 'NOP', s: [6.441,17.13,18.5,19.87], ys: 5, b: 2, sg: 2024, x: 2026, dr: [2020,1,19,"BKN"] },
+  "Saddiq Bey": { t: 'NOP', s: [6.441,17.13,18.5,19.87], ys: 6, b: 2, sg: 2024, x: 2026, dr: [2020,1,19,"BKN"] },
   "Derik Queen": { t: 'NOP', s: [5.416,5.674,8.108], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2025, dr: [2025,1,13,"ATL"], rt: 'NOP' },
   "DeAndre Jordan": { t: 'NOP', s: [3.877,4.07], ys: 18, b: 1, sg: 2026 },
   "Yves Missi": { t: 'NOP', s: [3.513,5.596], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,21,"NOP"] },
@@ -387,16 +391,16 @@ export const NBA_DEALS = {
   "Jaden Akins": { t: 'NYK', tw: 1, ys: 0, b: 0, sg: 2026, g: 0 },
   // ─── OKC
   "Jalen Williams": { t: 'OKC', s: [41.5,44.82,48.14,51.46,54.78], ys: 4, b: 4, sg: 2025, x: 2025, dr: [2022,1,12,"OKC"] },
-  "Chet Holmgren": { t: 'OKC', s: [41.5,44.82,48.14,51.46,54.78], ys: 3, b: 3, sg: 2025, x: 2025, dr: [2022,1,2,"OKC"] },
+  "Chet Holmgren": { t: 'OKC', s: [41.5,44.82,48.14,51.46,54.78], ys: 4, b: 3, sg: 2025, x: 2025, dr: [2022,1,2,"OKC"] },
   "Shai Gilgeous-Alexander": { t: 'OKC', s: [40.806,61.005,65.885,70.766,75.646], o: 'P2030', ys: 8, b: 8, sg: 2021, x: 2021, dr: [2018,1,11,"CHA"], rt: 'OKC' },
   "Isaiah Hartenstein": { t: 'OKC', s: [23.148,25.0,26.852], ys: 8, b: 2, sg: 2026, dr: [2017,2,43,"HOU"] },
   "Alex Caruso": { t: 'OKC', s: [19.55,20.998,22.446], ys: 9, b: 4, sg: 2024, x: 2024 },
   "Jaylin Williams": { t: 'OKC', s: [7.775,7.775], o: 'T2027', ys: 4, b: 4, sg: 2024, x: 2024, dr: [2022,2,34,"OKC"] },
   "Cason Wallace": { t: 'OKC', s: [7.421,23.966,25.883,27.8,29.717,31.634], ys: 3, b: 3, sg: 2023, x: 2026, dr: [2023,1,10,"DAL"], rt: 'OKC' },
   "Aday Mara": { t: 'OKC', s: [5.792,6.081,6.371,8.779], o: 'T2028', rs: 1, ys: 0, b: 0, sg: 2026, dr: [2026,1,12,"OKC"] },
-  "Nikola Topic": { t: 'OKC', s: [5.43], rs: 1, ys: 1, b: 1, sg: 2024, dr: [2024,1,12,"OKC"] },
+  "Nikola Topic": { t: 'OKC', s: [5.43], rs: 1, ys: 2, b: 1, sg: 2024, dr: [2024,1,12,"OKC"] },
   "Kenrich Williams": { t: 'OKC', s: [5.0], ys: 8, b: 3, sg: 2026 },
-  "Thomas Sorber": { t: 'OKC', s: [4.888,5.12,7.85], o: 'T2027', rs: 1, ys: 0, b: 0, sg: 2025, dr: [2025,1,15,"OKC"] },
+  "Thomas Sorber": { t: 'OKC', s: [4.888,5.12,7.85], o: 'T2027', rs: 1, ys: 1, rk: 1, b: 0, sg: 2025, dr: [2025,1,15,"OKC"] },
   "Bennett Stirtz": { t: 'OKC', s: [4.717,4.953,5.189,7.961], o: 'T2028', rs: 1, ys: 0, b: 0, sg: 2026, dr: [2026,1,16,"OKC"] },
   "Jared McCain": { t: 'OKC', s: [4.423,6.784], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,16,"PHI"], rt: 'OKC' },
   "Nique Clifford": { t: 'OKC', s: [3.263,3.419,5.979], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2025, dr: [2025,1,24,"OKC"] },
@@ -410,7 +414,7 @@ export const NBA_DEALS = {
   "Desmond Bane": { t: 'ORL', s: [39.446,42.167,44.887], ys: 6, b: 6, sg: 2023, x: 2023, dr: [2020,1,30,"BOS"] },
   "Jalen Suggs": { t: 'ORL', s: [32.4,29.6,26.8,26.7], o: 'T2029', ys: 5, b: 5, sg: 2024, x: 2024, dr: [2021,1,5,"ORL"] },
   "Wendell Carter Jr.": { t: 'ORL', s: [18.102,19.55,20.998], o: 'T2028', ys: 8, b: 8, sg: 2024, x: 2024, dr: [2018,1,7,"CHI"] },
-  "Jonathan Isaac": { t: 'ORL', s: [10.449], ys: 7, b: 7, sg: 2024, x: 2024, dr: [2017,1,6,"ORL"] },
+  "Jonathan Isaac": { t: 'ORL', s: [10.449], ys: 9, b: 7, sg: 2024, x: 2024, dr: [2017,1,6,"ORL"] },
   "Anthony Black": { t: 'ORL', s: [10.106], rs: 1, ys: 3, b: 3, sg: 2023, dr: [2023,1,6,"ORL"] },
   "Goga Bitadze": { t: 'ORL', s: [7.609], ys: 7, b: 3, sg: 2024, dr: [2019,1,18,"IND"] },
   "Tristan da Silva": { t: 'ORL', s: [3.991,6.138], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,18,"ORL"] },
@@ -423,7 +427,7 @@ export const NBA_DEALS = {
   "Alex Morales": { t: 'ORL', tw: 1, ys: 1, b: 1, sg: 2025, g: 0 },
   "Izaiyah Nelson": { t: 'ORL', tw: 1, ys: 0, b: 0, sg: 2026, dr: [2026,2,51,"WAS"], g: 0 },
   // ─── PHI
-  "Joel Embiid": { t: 'PHI', s: [58.1,62.748,67.396], o: 'P2028', ys: 10, b: 4, sg: 2024, x: 2024 },
+  "Joel Embiid": { t: 'PHI', s: [58.1,62.748,67.396], o: 'P2028', ys: 12, b: 4, sg: 2024, x: 2024 },
   "Jaylen Brown": { t: 'PHI', s: [57.079,61.015,64.952], ys: 10, b: 10, sg: 2023, x: 2023, dr: [2016,1,3,"BOS"] },
   "Tyrese Maxey": { t: 'PHI', s: [40.771,43.582,46.394], ys: 6, b: 3, sg: 2024, dr: [2020,1,21,"PHI"] },
   "VJ Edgecombe": { t: 'PHI', s: [11.664,12.22,15.446], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2025, dr: [2025,1,3,"PHI"] },
@@ -465,7 +469,7 @@ export const NBA_DEALS = {
   "Toumani Camara": { t: 'POR', s: [18.08,19.527,20.973,22.42], ys: 3, b: 3, sg: 2025, x: 2025, dr: [2023,2,52,"PHX"] },
   "Robert Williams III": { t: 'POR', s: [13.968,14.667,15.365], ys: 8, b: 8, sg: 2025, x: 2025, dr: [2018,1,27,"BOS"] },
   "Scoot Henderson": { t: 'POR', s: [13.586], rs: 1, ys: 3, b: 3, sg: 2023, dr: [2023,1,3,"POR"] },
-  "Damian Lillard": { t: 'POR', s: [13.399,14.104], o: 'P2027', ys: 13, b: 0, sg: 2025 },
+  "Damian Lillard": { t: 'POR', s: [13.399,14.104], o: 'P2027', ys: 14, b: 0, sg: 2025 },
   "Deni Avdija": { t: 'POR', s: [13.125,11.875], ys: 6, b: 6, sg: 2023, x: 2023, dr: [2020,1,9,"WAS"] },
   "Donovan Clingan": { t: 'POR', s: [7.52,9.55], o: 'T2027', rs: 1, ys: 2, b: 2, sg: 2024, dr: [2024,1,7,"POR"] },
   "Yang Hansen": { t: 'POR', s: [4.644,4.865,7.463], o: 'T2027', rs: 1, ys: 1, b: 1, sg: 2025, dr: [2025,1,16,"MEM"], rt: 'POR' },
@@ -486,7 +490,7 @@ export const NBA_DEALS = {
   "Precious Achiuwa": { t: 'SAC', s: [5.477,5.751], ys: 6, b: 1, sg: 2026, dr: [2020,1,20,"MIA"] },
   "Alex Karaban": { t: 'SAC', s: [2.948,3.096,3.243,5.854], o: 'T2028', rs: 1, ys: 0, b: 0, sg: 2026, dr: [2026,1,29,"SAC"] },
   "Daeqwon Plowden": { t: 'SAC', s: [2.449,2.664], ys: 2, b: 1, sg: 2026, g: 0 },
-  "Ben Simmons": { t: 'SAC', s: [2.449], ys: 7, b: 0, sg: 2026, dr: [2016,1,1,"PHI"] },
+  "Ben Simmons": { t: 'SAC', s: [2.449], ys: 9, b: 0, sg: 2026, dr: [2016,1,1,"PHI"] },
   "Maxime Raynaud": { t: 'SAC', s: [2.151,2.526], o: 'T2027', ys: 1, b: 1, dr: [2025,2,42,"SAC"] },
   "Mason Plumlee": { t: 'SAC', s: [2.14], ys: 13, b: 0, sg: 2026, g: 0 },
   "Emanuel Sharp": { t: 'SAC', s: [1.358,2.294,2.694], o: 'T2028', ys: 0, b: 0, sg: 2026, dr: [2026,2,45,"SAC"], g: 0 },
@@ -513,7 +517,7 @@ export const NBA_DEALS = {
   "David Jones García": { t: 'SAS', tw: 1, ys: 1, b: 1, sg: 2026, g: 0 },
   "Maliq Brown": { t: 'SAS', tw: 1, ys: 0, b: 0, sg: 2026, dr: [2026,2,44,"SAS"], g: 0 },
   // ─── TOR
-  "Kawhi Leonard": { t: 'TOR', s: [50.3,56.098,58.902], o: 'P2028', ys: 14, b: 3, sg: 2023, x: 2026 },
+  "Kawhi Leonard": { t: 'TOR', s: [50.3,56.098,58.902], o: 'P2028', ys: 15, b: 3, sg: 2023, x: 2026 },
   "Scottie Barnes": { t: 'TOR', s: [41.755,44.848,47.941,51.034], ys: 5, b: 3, sg: 2024, dr: [2021,1,4,"TOR"] },
   "Immanuel Quickley": { t: 'TOR', s: [32.5,32.5,32.5], ys: 6, b: 3, sg: 2024, dr: [2020,1,25,"OKC"] },
   "RJ Barrett": { t: 'TOR', s: [29.616], ys: 7, b: 7, sg: 2022, x: 2022, dr: [2019,1,3,"NYK"] },

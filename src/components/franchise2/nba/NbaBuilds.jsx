@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, waiveFor, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildSlots, buildCapNote, waiveFor, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
 import { cleanName, nameOk, randomFirstLast } from '../../../lib/franchise2/identity'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../../lib/franchise2/faces'
 import { sfx, haptic } from '../../../lib/juice'
@@ -20,15 +20,23 @@ const money = v => `$${(Math.round(v * 10) / 10).toFixed(1)}M`
 // preview league, the GM's team; each build read off the payroll the ones before him left)
 const PAST = { tax: 'the luxury tax line', a1: 'the first apron', a2: 'the second apron' }
 const LINE_OF = { tax: 'tax', a1: 'a1', a2: 'a2' }
+// each build's own pick (builds.js buildSlots: no two share one), in the order the franchise makes them
+const ovrOfBuild = B => ovrOfAttrs(B.pos, attrsOfBuild(B.pos, B.build))
+function slotsOf(S) {
+  const L = (S.picks ?? []).filter(p => S.builds?.[p.id])
+  const n = buildSlots(L.map(p => ovrOfBuild(S.builds[p.id])))
+  return Object.fromEntries(L.map((p, k) => [p.id, n[k]]))
+}
 function capNotes(S) {
   if (!S.team || S.rules?.cap === false) return {}
   const F = { ...preview(), team: S.team }
   const out = {}
+  const slots = slotsOf(S)
   let prev = 0
   for (const p of S.picks ?? []) {
     const B = S.builds?.[p.id]
     if (!B?.name) continue
-    const N = buildCapNote(F, ovrOfAttrs(B.pos, attrsOfBuild(B.pos, B.build)), prev)
+    const N = buildCapNote(F, ovrOfBuild(B), prev, slots[p.id])
     prev += N.add
     const k = N.after.over
     if (k !== N.before.over && PAST[k]) out[p.id] = `His ${money(N.add)} rookie deal takes the ${TEAM[S.team].nick} payroll to ${money(N.after.pay)}, past ${PAST[k]} (${money(N.after[LINE_OF[k]])}).`
@@ -60,6 +68,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const done = !next && !unnamed
   const build = p => { sfx('tap'); onBuild({ id: p.id, pos: p.pos, n: ordered.indexOf(p) + 1, of: ordered.length }) }
   const ready = ordered.filter(p => built(p)?.name)
+  const slots = slotsOf(S)
   // the roster: its standard spots, and who a full one lets go to make room for each build, in order
   const T = preview().teams[S.team]
   const outs = useMemo(() => {
@@ -103,7 +112,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
             </button>
           )
           const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
-          const slot = buildSlot(o), deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
+          const slot = slots[p.id] ?? buildSlot(o), deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
           return (
             <div key={p.id} className="nb-build-row">
               <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner}
@@ -140,7 +149,7 @@ export function NbaNameStep({ S, id, owner, onDone }) {
   const [face, setFace] = useState(face0)
   const faces = useMemo(() => Array.from({ length: 8 }, (_, k) => (page === 0 && k === 0 ? face0 : defaultFace(`${S.seed}-${id}-f${page}-${k}`, 'nba'))), [page]) // eslint-disable-line react-hooks/exhaustive-deps
   const a = attrsOfBuild(B.pos, B.build), o = ovrOfAttrs(B.pos, a)
-  const slot = buildSlot(o)
+  const slot = slotsOf(S)[id] ?? buildSlot(o)
   const deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
   const ok = nameOk(first, last)
   const shown = all ? free : free.slice(0, 18)

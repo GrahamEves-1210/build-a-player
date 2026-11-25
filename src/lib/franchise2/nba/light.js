@@ -32,7 +32,7 @@
 import { CONF_OF, DIV_OF, manOf, teamOfMan } from './league'
 import { records, confOrder, divOrder, playDay, simTo, startPostseason, playPoNight, simPostseason, finishMoment, alive } from './season'
 import { dateText } from './schedule'
-import { nextStep, resignMine, tenderQO, faNext } from './offseason'
+import { nextStep, resignMine, tenderQO, faNext, campCheck } from './offseason'
 import { draftOrder, available, scout } from './draft'
 import * as X from './seams'
 import { keeperOf, roleOn } from './market'
@@ -370,7 +370,7 @@ export function campCuts(F) {
 // 3. CAMP done: a new season, its first stretch open
 export function lightNewSeason(F) {
   if (F.phase !== 'off' || F.off?.step !== 'camp') return false
-  if (!X.legalRoster(F, F.team, { season: true }).ok) return false
+  if (!campCheck(F).ok) return false   // (offseason.js: legal, or a hard-capped roster that can't add its 14th)
   nextStep(F)
   if (F.phase === 'season') openStretch(F, 0)
   return true

@@ -1,10 +1,10 @@
-// NBA FRANCHISE: the draft. A made-up class each year (about 80 men: freshmen at 19, seniors at 22, international men
-// from the pro leagues), scouted through the season; the lottery with the 2019 odds; two rounds, 60 picks.
+// NBA FRANCHISE: the draft. A made-up class each year (about 80 men: freshmen at 19, seniors at 22 or 23, men from the
+// clubs abroad, a few out of the NBL's Next Stars, Overtime Elite and the G League), scouted through the season (a
+// season's reports are for that class: SCOUT_CARRY at most carry over); the lottery; two rounds, 60 picks.
 // Every team's picks for the next seven drafts are in F.picks (B's trades move them): { y, r, o, t, pr, sw, n }.
-import { SHORTS, TEAM, attrsFor, ovrOfAttrs, groupOfSpot, leagueNames, realNames, manOf, nick, ROSTER_MAX } from './league'
+import { SHORTS, TEAM, attrsFor, ovrOfAttrs, groupOfSpot, leagueNames, realNames, freshName, manOf, nick, ROSTER_MAX } from './league'
 import { records, pct, leagueOrder } from './season'
 import { addNews } from './news'
-import { nameFor } from '../names'
 import { rngOf, clamp } from '../rng'
 import { fixNumbers } from './numbers'
 import * as X from './seams'
@@ -27,17 +27,66 @@ const COLLEGES = ['Duke', 'Kentucky', 'Kansas', 'North Carolina', 'UCLA', 'Arizo
   'Florida', 'LSU', 'USC', 'Oregon', 'Virginia', 'Syracuse', 'Creighton', 'Marquette', 'Iowa State', 'Texas Tech', 'Miami', 'Memphis',
   'San Diego State', 'Saint Mary\'s', 'Wake Forest', 'Georgetown', 'St. John\'s', 'Xavier', 'Maryland', 'Wisconsin', 'Iowa', 'BYU', 'Utah',
   'Washington', 'Colorado', 'Ole Miss', 'Mississippi State', 'Georgia', 'Clemson', 'NC State', 'Pittsburgh', 'Seton Hall', 'Dayton', 'VCU', 'Davidson']
-const ABROAD = [['France', 'Paris Basketball'], ['France', 'ASVEL'], ['Spain', 'Real Madrid'], ['Spain', 'Barcelona'], ['Serbia', 'Mega Basket'], ['Serbia', 'Partizan'],
-  ['Germany', 'Ratiopharm Ulm'], ['Australia', 'NBL Next Stars'], ['Lithuania', 'Zalgiris'], ['Turkey', 'Anadolu Efes'], ['Greece', 'Olympiacos'],
-  ['Italy', 'Olimpia Milano'], ['Slovenia', 'Cedevita Olimpija'], ['Israel', 'Maccabi Tel Aviv'], ['Canada', 'G League Ignite'], ['Brazil', 'Flamengo']]
-const INTL_FIRST = { France: ['Mathis', 'Noah', 'Theo', 'Hugo', 'Ilan', 'Bastien', 'Rayan', 'Yanis', 'Killian', 'Mael'], Spain: ['Pablo', 'Hugo', 'Izan', 'Mario', 'Alvaro', 'Unai'],
-  Serbia: ['Nikola', 'Stefan', 'Lazar', 'Uros', 'Vuk', 'Ognjen'], Germany: ['Jonas', 'Lukas', 'Moritz', 'Elias', 'Malik'], Australia: ['Jack', 'Lachlan', 'Riley', 'Mitchell', 'Kai'],
-  Lithuania: ['Matas', 'Domas', 'Arnas', 'Rokas', 'Kajus'], Turkey: ['Emir', 'Alperen', 'Kerem', 'Yigit'], Greece: ['Giorgos', 'Nikos', 'Kostas', 'Dimitris'],
-  Italy: ['Matteo', 'Luca', 'Leonardo', 'Gabriele'], Slovenia: ['Jaka', 'Luka', 'Zan', 'Gasper'], Israel: ['Yam', 'Noam', 'Ido', 'Omer'], Canada: ['Liam', 'Ethan', 'Owen', 'Jaylen'], Brazil: ['Gabriel', 'Lucas', 'Mateus', 'Davi'] }
-const INTL_LAST = { France: ['Moreau', 'Lefevre', 'Diallo', 'Traore', 'Camara', 'Girard', 'Mendy', 'Ndiaye'], Spain: ['Garcia', 'Navarro', 'Ortega', 'Romero', 'Iglesias'],
-  Serbia: ['Petrovic', 'Jankovic', 'Milosevic', 'Stojanovic', 'Markovic', 'Lazic'], Germany: ['Becker', 'Hoffmann', 'Schulz', 'Krause', 'Okafor'], Australia: ['Harris', 'Kennedy', 'Walsh', 'Baker'],
-  Lithuania: ['Kazlauskas', 'Petrauskas', 'Jankunas', 'Vaitkus'], Turkey: ['Yilmaz', 'Demir', 'Sahin', 'Aydin'], Greece: ['Papadopoulos', 'Nikolaou', 'Georgiou'],
-  Italy: ['Rossi', 'Ferrari', 'Esposito', 'Ricci'], Slovenia: ['Kovac', 'Novak', 'Horvat', 'Krajnc'], Israel: ['Cohen', 'Levi', 'Mizrahi', 'Peretz'], Canada: ['Tremblay', 'Gagnon', 'Roy', 'Clarke'], Brazil: ['Silva', 'Santos', 'Oliveira', 'Souza'] }
+// Where a prospect who isn't at an American college plays: the clubs abroad that send men to the draft, the NBL's Next
+// Stars programme (Australia and New Zealand: an American or a European a year out of school), Overtime Elite, and a
+// G League club. (The G League Ignite folded in 2024.)
+const ABROAD = [['France', 'Paris Basketball'], ['France', 'ASVEL'], ['France', 'Cholet'], ['France', 'Le Mans'], ['France', 'JL Bourg'], ['France', 'Saint-Quentin'],
+  ['Spain', 'Real Madrid'], ['Spain', 'Barcelona'], ['Spain', 'Joventut Badalona'], ['Spain', 'Valencia Basket'], ['Spain', 'Baskonia'],
+  ['Serbia', 'Mega Basket'], ['Serbia', 'Partizan'], ['Serbia', 'Crvena zvezda'], ['Germany', 'Ratiopharm Ulm'], ['Germany', 'Bayern Munich'], ['Germany', 'Alba Berlin'],
+  ['Australia', 'Perth Wildcats'], ['Australia', 'Sydney Kings'], ['Australia', 'Melbourne United'], ['Lithuania', 'Zalgiris'], ['Lithuania', 'Rytas Vilnius'],
+  ['Turkey', 'Anadolu Efes'], ['Turkey', 'Fenerbahce'], ['Greece', 'Olympiacos'], ['Greece', 'Panathinaikos'], ['Italy', 'Olimpia Milano'], ['Italy', 'Virtus Bologna'],
+  ['Slovenia', 'Cedevita Olimpija'], ['Israel', 'Maccabi Tel Aviv'], ['Israel', 'Hapoel Tel Aviv'], ['Brazil', 'Flamengo'], ['Brazil', 'Franca'],
+  ['Croatia', 'Cibona'], ['Croatia', 'Split'], ['Croatia', 'Zadar'], ['Latvia', 'VEF Riga']]
+const NBL_CLUBS = ['Perth Wildcats', 'Illawarra Hawks', 'Sydney Kings', 'Adelaide 36ers', 'Brisbane Bullets', 'Melbourne United', 'New Zealand Breakers']
+const G_CLUBS = ['Mexico City Capitanes', 'Rip City Remix', 'Salt Lake City Stars', 'Stockton Kings', 'Santa Cruz Warriors', 'Long Island Nets', 'Delaware Blue Coats', 'Maine Celtics']
+// each country's names: twenty-odd first names and as many surnames (some 500 pairs a country), so a league decades in
+// still finds a new one (never a real player's: the famous surnames are left out, and the league's names are checked)
+const INTL_FIRST = {
+  France: ['Mathis', 'Noah', 'Theo', 'Hugo', 'Ilan', 'Bastien', 'Rayan', 'Yanis', 'Killian', 'Mael', 'Enzo', 'Lucas', 'Nathan', 'Maxime', 'Adama', 'Ousmane', 'Moussa', 'Ismael', 'Sekou', 'Mamadou', 'Timothe', 'Axel', 'Melvin', 'Joan', 'Malcolm', 'Yoan', 'Noa', 'Sacha'],
+  Spain: ['Pablo', 'Hugo', 'Izan', 'Mario', 'Alvaro', 'Unai', 'Sergio', 'Carlos', 'Marc', 'Pol', 'Jordi', 'Iker', 'Adrian', 'Dani', 'Javier', 'Guillem', 'Miguel', 'Ruben', 'Aitor', 'Jaime', 'Lucas', 'Diego', 'Marcos', 'Alex'],
+  Serbia: ['Nikola', 'Stefan', 'Lazar', 'Uros', 'Vuk', 'Ognjen', 'Marko', 'Luka', 'Filip', 'Aleksa', 'Dusan', 'Milos', 'Nemanja', 'Bogdan', 'Vasilije', 'Andrija', 'Matija', 'Petar', 'Mihailo', 'Pavle', 'Vukasin', 'Strahinja', 'Danilo', 'Aleksandar'],
+  Germany: ['Jonas', 'Lukas', 'Moritz', 'Elias', 'Malik', 'Leon', 'Paul', 'Felix', 'Maximilian', 'Tim', 'Niklas', 'Finn', 'Julian', 'Jannik', 'Luis', 'David', 'Johannes', 'Tobias', 'Linus', 'Henrik', 'Noah', 'Ben', 'Emil', 'Kilian'],
+  Australia: ['Jack', 'Lachlan', 'Riley', 'Mitchell', 'Kai', 'Cooper', 'Angus', 'Harry', 'Oscar', 'Flynn', 'Hamish', 'Callum', 'Jai', 'Darcy', 'Lewis', 'Archie', 'Xavier', 'Bailey', 'Tom', 'Luke', 'Ethan', 'Zac', 'Josh', 'Will'],
+  Lithuania: ['Matas', 'Domas', 'Arnas', 'Rokas', 'Kajus', 'Lukas', 'Mantas', 'Tomas', 'Paulius', 'Ignas', 'Augustas', 'Titas', 'Nojus', 'Jonas', 'Gytis', 'Motiejus', 'Marius', 'Karolis', 'Dovydas', 'Edgaras', 'Martynas', 'Tadas'],
+  Turkey: ['Emir', 'Alperen', 'Kerem', 'Yigit', 'Berk', 'Can', 'Efe', 'Mert', 'Arda', 'Omer', 'Furkan', 'Onur', 'Burak', 'Deniz', 'Kaan', 'Baris', 'Tarik', 'Selim', 'Ege', 'Cem', 'Emre', 'Tolga'],
+  Greece: ['Giorgos', 'Nikos', 'Kostas', 'Dimitris', 'Yannis', 'Vasilis', 'Thanasis', 'Panagiotis', 'Alexandros', 'Stavros', 'Christos', 'Michalis', 'Lefteris', 'Antonis', 'Petros', 'Stelios', 'Ioannis', 'Spyros', 'Andreas', 'Manolis', 'Nikolaos', 'Theodoros'],
+  Italy: ['Matteo', 'Luca', 'Leonardo', 'Gabriele', 'Alessandro', 'Lorenzo', 'Davide', 'Federico', 'Simone', 'Andrea', 'Riccardo', 'Tommaso', 'Francesco', 'Giovanni', 'Nicolo', 'Marco', 'Pietro', 'Edoardo', 'Stefano', 'Giacomo', 'Filippo', 'Diego'],
+  Slovenia: ['Jaka', 'Luka', 'Zan', 'Gasper', 'Matic', 'Rok', 'Aljaz', 'Blaz', 'Miha', 'Urban', 'Tilen', 'Nejc', 'Jan', 'Ziga', 'Klemen', 'Jure', 'Vid', 'Anze', 'Domen', 'Tim', 'Gregor', 'Bine'],
+  Israel: ['Yam', 'Noam', 'Ido', 'Omer', 'Tomer', 'Roi', 'Yuval', 'Itay', 'Amit', 'Gal', 'Daniel', 'Eitan', 'Lior', 'Nadav', 'Ori', 'Shahar', 'Yonatan', 'Ben', 'Eyal', 'Guy', 'Tal', 'Rom'],
+  Brazil: ['Gabriel', 'Lucas', 'Mateus', 'Davi', 'Joao', 'Pedro', 'Rafael', 'Bruno', 'Caio', 'Felipe', 'Gustavo', 'Thiago', 'Vinicius', 'Yago', 'Marcio', 'Henrique', 'Matheus', 'Samuel', 'Igor', 'Danilo', 'Andre', 'Vitor'],
+  Croatia: ['Ivan', 'Luka', 'Marko', 'Karlo', 'Mateo', 'Roko', 'Ante', 'Josip', 'Lovro', 'Toni', 'Filip', 'Duje', 'Borna', 'Tomislav', 'Petar', 'Niko', 'Fran', 'Leon', 'Mislav', 'Hrvoje', 'Jakov', 'Domagoj'],
+  Latvia: ['Roberts', 'Rihards', 'Arturs', 'Janis', 'Martins', 'Karlis', 'Toms', 'Edgars', 'Klavs', 'Marcis', 'Ricards', 'Emils', 'Gustavs', 'Ralfs', 'Niks', 'Kristers', 'Oskars', 'Mareks', 'Andris', 'Renars', 'Valters', 'Eriks'],
+}
+const INTL_LAST = {
+  France: ['Moreau', 'Lefevre', 'Diallo', 'Traore', 'Camara', 'Girard', 'Mendy', 'Ndiaye', 'Dubois', 'Laurent', 'Fofana', 'Diarra', 'Sylla', 'Kone', 'Bamba', 'Sissoko', 'Cisse', 'Leroy', 'Marchand', 'Rousseau', 'Fontaine', 'Kante', 'Doumbia', 'Gomis', 'Lacombe', 'Perrin', 'Bah', 'Sow', 'Dembele', 'Faure'],
+  Spain: ['Garcia', 'Navarro', 'Ortega', 'Romero', 'Iglesias', 'Fernandez', 'Lopez', 'Martin', 'Sanchez', 'Ruiz', 'Vidal', 'Serrano', 'Molina', 'Castro', 'Prieto', 'Vazquez', 'Herrero', 'Pascual', 'Soler', 'Ferrer', 'Bosch', 'Dominguez', 'Alonso', 'Gil', 'Cabrera', 'Rey'],
+  Serbia: ['Petrovic', 'Jankovic', 'Milosevic', 'Stojanovic', 'Markovic', 'Lazic', 'Nikolic', 'Jovanovic', 'Djordjevic', 'Ilic', 'Pavlovic', 'Popovic', 'Stankovic', 'Kovacevic', 'Zivkovic', 'Todorovic', 'Ristic', 'Savic', 'Vukovic', 'Simic', 'Mitrovic', 'Lukic', 'Radovic', 'Tomic', 'Milutinovic', 'Obradovic', 'Vasic', 'Babic'],
+  Germany: ['Becker', 'Hoffmann', 'Schulz', 'Krause', 'Okafor', 'Schmidt', 'Weber', 'Fischer', 'Keller', 'Braun', 'Hartmann', 'Lange', 'Vogel', 'Richter', 'Koch', 'Bauer', 'Kraft', 'Lorenz', 'Brandt', 'Albrecht', 'Osei', 'Mensah', 'Sommer', 'Winkler', 'Seidel', 'Berger'],
+  Australia: ['Harris', 'Kennedy', 'Walsh', 'Baker', 'Campbell', 'Murray', 'McDonald', 'Ryan', 'Sullivan', 'Hughes', 'Kelly', 'Fraser', 'Cameron', 'Henderson', 'Marshall', 'Graham', 'Reid', 'Stewart', 'Robertson', 'Paterson', 'Dunn', 'Hawkins', 'Sinclair', 'Doyle', 'Gallagher', 'Burke', 'Dawson'],
+  Lithuania: ['Kazlauskas', 'Petrauskas', 'Jankunas', 'Vaitkus', 'Butkus', 'Stankevicius', 'Zukauskas', 'Paulauskas', 'Urbonas', 'Navickas', 'Rimkus', 'Kavaliauskas', 'Gudaitis', 'Grigonis', 'Masiulis', 'Juskevicius', 'Bieliauskas', 'Mockevicius', 'Ramanauskas', 'Balciunas', 'Zemaitis', 'Adomaitis', 'Kairys', 'Giedraitis'],
+  Turkey: ['Yilmaz', 'Demir', 'Sahin', 'Aydin', 'Kaya', 'Celik', 'Yildiz', 'Ozturk', 'Arslan', 'Dogan', 'Kilic', 'Aslan', 'Cetin', 'Kara', 'Koc', 'Kurt', 'Ozdemir', 'Polat', 'Erdem', 'Gunes', 'Tekin', 'Akin', 'Bulut', 'Toprak'],
+  Greece: ['Papadopoulos', 'Nikolaou', 'Georgiou', 'Dimitriou', 'Vasileiou', 'Karagiannis', 'Makris', 'Economou', 'Pappas', 'Angelopoulos', 'Kostopoulos', 'Stavropoulos', 'Christodoulou', 'Athanasiou', 'Mavridis', 'Zafeiris', 'Lazaridis', 'Samaras', 'Vlachos', 'Katsaros', 'Alexiou', 'Raptis', 'Tsakiris', 'Konstantinou'],
+  Italy: ['Rossi', 'Ferrari', 'Esposito', 'Ricci', 'Bianchi', 'Romano', 'Colombo', 'Marino', 'Greco', 'Bruno', 'Conti', 'De Luca', 'Costa', 'Giordano', 'Mancini', 'Rizzo', 'Lombardi', 'Moretti', 'Barbieri', 'Fontana', 'Santoro', 'Mariani', 'Rinaldi', 'Caruso', 'Ferrara', 'Galli'],
+  Slovenia: ['Kovac', 'Novak', 'Horvat', 'Krajnc', 'Zupan', 'Kovacic', 'Potocnik', 'Mlakar', 'Kos', 'Vidmar', 'Golob', 'Turk', 'Bozic', 'Kralj', 'Zupancic', 'Bizjak', 'Hribar', 'Kotnik', 'Rozman', 'Petek', 'Kastelic', 'Jerman', 'Zagar', 'Pirc'],
+  Israel: ['Cohen', 'Levi', 'Mizrahi', 'Peretz', 'Biton', 'Dahan', 'Avraham', 'Friedman', 'Katz', 'Azoulay', 'Shapira', 'Golan', 'Segal', 'Ben-David', 'Malka', 'Ohayon', 'Amar', 'Gabay', 'Hadad', 'Yosef', 'Zohar', 'Sharon', 'Tzur', 'Navon'],
+  Brazil: ['Silva', 'Santos', 'Oliveira', 'Souza', 'Lima', 'Pereira', 'Costa', 'Ferreira', 'Almeida', 'Ribeiro', 'Carvalho', 'Gomes', 'Martins', 'Rocha', 'Araujo', 'Cardoso', 'Teixeira', 'Moreira', 'Nascimento', 'Batista', 'Freitas', 'Vieira', 'Mendes', 'Correia'],
+  Croatia: ['Horvat', 'Kovacevic', 'Babic', 'Maric', 'Juric', 'Novak', 'Knezevic', 'Vukovic', 'Matic', 'Bozic', 'Tomic', 'Pavic', 'Blazevic', 'Grgic', 'Peric', 'Radic', 'Lovric', 'Baric', 'Vidovic', 'Klaric', 'Brkic', 'Galic', 'Jelavic', 'Perkovic'],
+  Latvia: ['Ozols', 'Berzins', 'Kalnins', 'Liepins', 'Krumins', 'Zarins', 'Balodis', 'Eglitis', 'Petersons', 'Vitols', 'Jansons', 'Kalejs', 'Lacis', 'Abols', 'Strautins', 'Silins', 'Dzenis', 'Rozitis', 'Sprogis', 'Grinbergs', 'Vanags', 'Celms', 'Skuja', 'Lusis'],
+}
+// a man from abroad: a pair from his country's lists the league doesn't have. The lists run dry only decades in; then
+// every pair in turn, then another country's (it never hands back a name in use)
+function intlName(R, cty, taken) {
+  const from = c => {
+    const A = INTL_FIRST[c], B = INTL_LAST[c], n = A.length * B.length
+    for (let i = 0; i < 30; i++) { const x = `${R.pick(A)} ${R.pick(B)}`; if (!taken.has(x)) return x }
+    const at = R.int(0, n - 1)
+    for (let k = 0; k < n; k++) { const j = (at + k) % n, x = `${A[j % A.length]} ${B[Math.floor(j / A.length)]}`; if (!taken.has(x)) return x }
+    return null
+  }
+  const n = from(cty) ?? Object.keys(INTL_FIRST).map(from).find(Boolean) ?? freshName(R, taken)
+  taken.add(n)
+  return n
+}
 const SPOT_W = [['PG', 15], ['SG', 21], ['SF', 22], ['PF', 21], ['C', 21]]
 const HT = { PG: [72, 77], SG: [75, 79], SF: [77, 81], PF: [79, 83], C: [81, 87] }
 const WT = { PG: [175, 200], SG: [185, 210], SF: [200, 225], PF: [215, 240], C: [225, 265] }
@@ -50,24 +99,26 @@ export function makeClass(F) {
   const out = []
   for (let k = 0; k < CLASS_N; k++) {
     // the man (aging.js prospect: his ceiling by where he'd go, a few far better than their slot; his age, body and
-    // ratings now); the international men are a little younger
-    const intl = R.chance(0.24)
-    const x = X.prospect(R, { rank: k + 1, ...(intl && { ag: R.int(19, 21) }) })
+    // ratings now). About one in seven plays abroad; a few Americans skipped college (a year out of high school)
+    const intl = R.chance(0.15)
+    const alt = !intl && R.chance(0.06) ? R.pick(['nbl', 'nbl', 'ote', 'gl']) : null
+    const x = X.prospect(R, { rank: k + 1, ...(intl && { ag: R.pick([19, 19, 20, 20, 21, 21, 22]) }), ...(alt && { ag: R.pick([19, 19, 20]) }) })
     const { p: spot, g, a, ag, pk } = x
     let n, c
     if (intl) {
       const [cty, club] = R.pick(ABROAD)
-      for (let i = 0; i < 20; i++) { n = `${R.pick(INTL_FIRST[cty])} ${R.pick(INTL_LAST[cty])}`; if (!taken.has(n)) break }
+      n = intlName(R, cty, taken)
       c = `${club} (${cty})`
-    } else { n = nameFor(R, 'nba', { taken, real: realNames() }); c = R.pick(COLLEGES) }
-    taken.add(n)
+    } else {
+      n = freshName(R, taken)
+      c = alt === 'nbl' ? `${R.pick(NBL_CLUBS)} (NBL Next Stars)` : alt === 'ote' ? 'Overtime Elite' : alt === 'gl' ? `${R.pick(G_CLUBS)} (G League)` : R.pick(COLLEGES)
+    }
     const p = { i: F.nid++, n, p: spot, g, o: ovrOfAttrs(g, a), a, ag, pk,   // (pk under o: a bust)
       ht: x.ht, wt: x.wt, c, yr: ag - 18 }
-    // what the scouts see is his ceiling give or take; GEM: he's well past that read, BUST: well short of it
-    // (the scouts read the ceiling he shows, not what's hidden: the late bloomer's jump, the top pick who won't
-    // develop; aging.js prospect's hid)
+    // what the scouts see is his ceiling give or take (the ceiling he shows, not what's hidden: the late bloomer's
+    // jump, the top pick who won't develop; aging.js prospect's hid). His tag: tagOf.
     p.seen = clamp(55, 99, Math.round(p.pk - (x.hid ?? 0) + R.n() * 3.5))   // the consensus read of his ceiling (what the board ranks by)
-    p.tg = p.pk >= p.seen + 4 ? 'GEM' : p.pk <= p.seen - 4 ? 'BUST' : 'SOLID'
+    p.tg = tagOf(p)
     p.w = R.int(3, 6)                                     // how wide his range shows before he's scouted
     p.sc = 0
     out.push(p)
@@ -79,11 +130,19 @@ export function makeClass(F) {
   F.sp = F.sp ?? 0
   return out
 }
+// What a full report says of him, beside his true ceiling:
+//   BUST   he won't develop: his ceiling is about what he is now (two points or less above it) while the board read
+//          one well above (five or more). About three in ten of the top ten, one in seven after: the rate they bust at.
+//   GEM    a ceiling far past the board's read (eight or more): the late bloomer nobody saw
+//   SOLID  everyone else. A man the board had a few points high is SOLID: a 90 ceiling read as a 94 is no bust.
+// (read off the man, not stored: a class from an older save carries the old tag, which called anyone the board had
+// four points high a bust, over half of the men at the top of it)
+export const tagOf = p => (p.pk >= p.seen + 8 ? 'GEM' : p.pk <= p.o + 2 && p.seen >= p.pk + 5 ? 'BUST' : 'SOLID')
 // the grade he shows: a letter for the ceiling, a range until he's scouted
 const LETTERS = [[94, 'A+'], [90, 'A'], [87, 'A-'], [84, 'B+'], [81, 'B'], [78, 'B-'], [75, 'C+'], [72, 'C'], [69, 'C-'], [65, 'D+'], [0, 'D']]
 export const gradeOf = v => LETTERS.find(([lo]) => v >= lo)[1]
 export function rangeOf(p) {
-  if (p.sc >= 2) return { lo: p.pk, hi: p.pk, text: gradeOf(p.pk), tag: p.tg }
+  if (p.sc >= 2) return { lo: p.pk, hi: p.pk, text: gradeOf(p.pk), tag: tagOf(p) }
   const w = p.sc === 1 ? 2 : p.w
   const mid = p.sc === 1 ? Math.round((p.seen + p.pk) / 2) : p.seen
   const lo = mid - w, hi = mid + w
@@ -97,9 +156,13 @@ export function scout(F, id) {
   F.sp--; p.sc++
   return true
 }
-// scouting points: two a month through the season (handed out as the days pass), three more in the spring
-export function scoutTick(F, was, now) { const m = d => Math.floor(d / 30); if (m(now) > m(was)) F.sp = (F.sp ?? 0) + 2 }
-export const scoutSpring = F => { F.sp = (F.sp ?? 0) + 3 }
+// scouting points: two a month through the season (handed out as the days pass), three more in the spring: about
+// fifteen a year, seven full reports. They're for that year's class: once the draft is over, SCOUT_CARRY at most
+// carry to the next one (a staff's notes on the underclassmen who stayed in school), the rest are gone. (SCOUT_MAX: a
+// season's reports with the carry, the most a staff can hold; a save from before the limit comes down to it.)
+export const SCOUT_CARRY = 2, SCOUT_MAX = 20
+export function scoutTick(F, was, now) { const m = d => Math.floor(d / 30); if (m(now) > m(was)) F.sp = Math.min(SCOUT_MAX, (F.sp ?? 0) + 2) }
+export const scoutSpring = F => { F.sp = Math.min(SCOUT_MAX, (F.sp ?? 0) + 3) }
 export const starProspect = (F, id) => { F.board = (F.board ?? []).includes(id) ? F.board.filter(x => x !== id) : [...(F.board ?? []), id] }
 
 // ── The lottery ──────────────────────────────────────────────────────────────
@@ -309,6 +372,8 @@ export function closeDraft(F) {
   F.fa = [...(F.fa ?? []), ...und]
   F.dc = []
   F.dn = null
+  // (the reports not spent on this class: a couple carry over, the rest expire)
+  F.sp = Math.min(F.sp ?? 0, SCOUT_CARRY)
 }
 // a prospect as a man: the board's fields off, a year younger (the summer's ageLeague makes it his rookie-season age)
 function rookieOf(p) {

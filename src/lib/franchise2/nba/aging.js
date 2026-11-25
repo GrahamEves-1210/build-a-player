@@ -224,7 +224,9 @@ export function prospect(R, { rank = 30, spot = null, ag = null } = {}) {
   // ceiling is about what he is now or below it, so he slides back: the Bennetts, Thabeets and Okafors, most often the top picks, taken on what they
   // might become); one in thirty is a late bloomer, 12-24 better than anyone thought (the second-rounder who becomes
   // a star: the Jokics, Draymonds and Brunsons)
-  const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22]))
+  // (his age in his rookie season, the age he turns in his draft year: one-and-done freshmen at the top of the board, more
+  // upperclassmen after the lottery, a fifth-year senior now and then)
+  const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22, 22, 23]))
   const pk0 = clamp(60, 97, pk)
   const gap = Math.max(1, (25 - age) * 2 + 1 + R.n() * 2.5)
   const o = clamp(55, 84, Math.round(pk0 - gap))
