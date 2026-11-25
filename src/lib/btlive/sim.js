@@ -54,7 +54,9 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
     act: 'free', actT: 0, actN: 0,           // 'free' | 'gather' | 'follow' | 'jump' | 'land' | 'frozen' | 'down'
     burst: 0, bdx: 0, bdy: 0,                // a dribble move in progress: ticks left, the way it goes (a spin: ends up going)
     mv: 0, bn: 0, bs: 0,                     // ...which one (MOVES[..].n), how many ticks it lasts, a spin's turn (radians, signed)
-    moveCd: 0, stealCd: 0, noAct: 0, pb: 0,  // cooldowns (ticks), the buttons held last tick
+    moveCd: 0, stealCd: 0, noAct: 0, pb: 0,  // cooldowns (ticks: till the next move can start, a swipe...), the buttons held last tick
+    hand: 1, frzCd: 0,                       // the hand the ball is in (1 his right, -1 his left); till a move can freeze his man again
+    fkx: 0, fky: -1, mqx: 0, mqy: 0, mqT: -1,  // the flick that made the move on now; a flick waiting for it to end (until tick mqT)
     sq: -1,                                  // the tick of his latest SHOOT press that hasn't started a shot (-1: none)
     shot: null,                              // going up: { kind, spec, d, three, run, read }
     catchT: -999, catchFrom: -1,             // the last catch: when, from whom (index)
@@ -142,7 +144,7 @@ function endPossession(s, pts, nextTeam, carrier, why) {
   s.possN++
   const st = ref.scoreState(s.score, s.rules)
   s.gamePoint = st.gamePoint
-  for (const p of s.players) { p.burst = 0; p.mv = 0; p.bs = 0; p.shot = null; if (p.act !== 'down') { p.act = 'free'; p.actT = 0 } p.pb = 0 }
+  for (const p of s.players) { p.burst = 0; p.mv = 0; p.bs = 0; p.mqT = -1; p.shot = null; if (p.act !== 'down') { p.act = 'free'; p.actT = 0 } p.pb = 0 }
   s.call = null; s.mustClear = null
   if (st.over) {
     s.phase = 'over'; s.winner = st.winner
@@ -171,7 +173,7 @@ function kothStop(s, p, why) {
   s.possN++
   s.poss = p.team; kingIs(s, p.i); s.mustClear = p.i
   s.call = null
-  for (const o of s.players) { o.burst = 0; o.mv = 0; o.bs = 0; if (o.act === 'gather') { o.act = 'free'; o.actT = 0; o.shot = null } }
+  for (const o of s.players) { o.burst = 0; o.mv = 0; o.bs = 0; o.mqT = -1; if (o.act === 'gather') { o.act = 'free'; o.actT = 0; o.shot = null } }
   s.ball.holder = p.i; holdBall(s)
   p.noAct = ticks(0.2); p.catchFrom = -1
   if (p.act === 'jump') { p.act = 'land'; p.actT = 0 }
@@ -211,7 +213,7 @@ function startGather(s, p) {
   if (r > 0.45 + 0.55 * p.R.iq) read = clamp(read + (r > 0.8 ? 1 : -1), 0, 2)
   const top = p.R.topBall
   p.shot = { kind, spec, d, three: kind === 'jumper' && ref.isThree(p.x, p.y), run: clamp(Math.hypot(p.vx, p.vy) / top, 0, 1), read, cUp }
-  p.act = 'gather'; p.actT = 0; p.burst = 0; p.mv = 0; p.bs = 0
+  p.act = 'gather'; p.actT = 0; p.burst = 0; p.mv = 0; p.bs = 0; p.mqT = -1
   s.events.push({ e: 'gather', pid: p.i, kind })
 }
 
@@ -318,17 +320,21 @@ function doPass(s, p, inp) {
   const to = s.players[ti]
   b.st = 'pass'; b.from = p.i; b.to = to.i; b.x = p.x; b.y = p.y; b.z = 4.5; b.t = 0; b.speed = p.R.passSpeed
   b.near = s.players.map(() => null); b.tried = s.players.map(() => false); b.lastTeam = p.team
-  p.act = 'follow'; p.actT = 0; p.actN = ticks(0.15); p.burst = 0; p.mv = 0; p.bs = 0
+  p.act = 'follow'; p.actT = 0; p.actN = ticks(0.15); p.burst = 0; p.mv = 0; p.bs = 0; p.mqT = -1
   s.call = null
   s.events.push({ e: 'pass', pid: p.i, to: to.i })
 }
 
-// A dribble move starts: which one (where the flick points), its burst. No roll in here: a device calls it too, to
-// move its own man before the referee has heard (moveLocal). dir: the flick (unit). Returns the move's key
+// A dribble move starts: which one (where the flick points, and the hand the ball is in), its burst. No roll in here:
+// a device calls it too, to move its own man before the referee has heard (moveLocal). dir: the flick (unit).
+// Returns the move's key
 export function moveBegin(p, dir) {
-  const kind = ref.moveKind(p, dir), M = MOVES[kind]
-  p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = dir.x; p.bdy = dir.y; p.bs = 0
-  return kind
+  const m = ref.moveOf(p, dir), M = MOVES[m.kind]
+  p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = m.x; p.bdy = m.y; p.bs = 0; p.fkx = dir.x; p.fky = dir.y
+  if (m.swap) p.hand = -(p.hand || 1)
+  p.moveCd = p.bn + ticks(T.chainRec - T.chainRecHnd * p.R.hnd)
+  p.mqT = -1
+  return m.kind
 }
 // ...and turns into a spin: the burst bends round from the way it was going to the new way, over the spin's time
 export function moveSpin(p, dir) {
@@ -340,7 +346,24 @@ export function moveSpin(p, dir) {
     const m = a0 + turn / 2
     if (Math.cos(m) * (RIM.x - p.x) + Math.sin(m) * (RIM.y - p.y) > 0) turn += turn > 0 ? -2 * Math.PI : 2 * Math.PI
   }
-  p.mv = MOVES.spin.n; p.bn = p.burst = ticks(MOVES.spin.time); p.bdx = dir.x; p.bdy = dir.y; p.bs = turn
+  p.mv = MOVES.spin.n; p.bn = p.burst = ticks(MOVES.spin.time); p.bdx = dir.x; p.bdy = dir.y; p.bs = turn; p.fkx = dir.x; p.fky = dir.y
+  p.moveCd = p.bn + ticks(T.chainRec - T.chainRecHnd * p.R.hnd)
+  p.mqT = -1
+}
+// A flick from the stick with the ball: a move now, the spin (rolled round early in a move), or one that waits for
+// the move on now to end (the chain). tick: now. Returns 'spin', the move's key, or null (waiting). The device runs it
+// too (moveLocal), so it has no roll in it
+export function moveInput(p, dir, tick) {
+  if (p.burst > 0 && p.mv !== MOVES.spin.n && p.bn - p.burst <= p.bn * T.spinWithin && ref.spinTurn(p, dir)) { moveSpin(p, dir); return 'spin' }
+  if (p.burst > 0 || p.moveCd > 0) { p.mqx = dir.x; p.mqy = dir.y; p.mqT = tick + ticks(T.moveBuffer); return null }
+  return moveBegin(p, dir)
+}
+// the flick that was waiting, now the move before it is done (null: none, or not yet)
+export function moveQueued(p, tick) {
+  if (p.mqT < 0) return null
+  if (tick > p.mqT) { p.mqT = -1; return null }
+  if (p.burst > 0 || p.moveCd > 0) return null
+  return moveBegin(p, { x: p.mqx, y: p.mqy })
 }
 // a tick of a move's clock; the step-back ends with his feet set
 function burstTick(p) {
@@ -350,15 +373,24 @@ function burstTick(p) {
   if (M?.set != null) { p.vx *= M.set; p.vy *= M.set }
   p.mv = 0; p.bs = 0
 }
-// how fast and which way a move has him going this tick: [x, y] of top speed
+// how fast and which way a move has him going this tick: [x, y] of top speed. The burst builds, holds and eases off;
+// a hesitation and an in-and-out start with a beat nearly standing (the in-and-out's a lean the other way: the fake)
 const BV = [0, 0]
 function burstVel(p) {
   const M = MOVES[MOVE_KEYS[p.mv]] ?? MOVES.cross, done = p.bn - p.burst
-  let sp = M.speed, x = p.bdx, y = p.bdy
-  if (M.stall && done < ticks(M.stall)) sp = M.stallSpeed
+  const f = p.bn > 1 ? done / (p.bn - 1) : 1
+  let sp = M.speed * (f < 0.18 ? 0.5 + 0.5 * f / 0.18 : f > 0.65 ? 1 - 0.3 * (f - 0.65) / 0.35 : 1), x = p.bdx, y = p.bdy
+  if (M.stall && done < ticks(M.stall)) {
+    sp = M.stallSpeed
+    if (M.fake) {
+      // the fake: his weight to the other side (the burst's way mirrored across the line to the basket)
+      const d = ref.rimDist(p) || 1, fx = (RIM.x - p.x) / d, fy = (RIM.y - p.y) / d, k = 2 * (x * fx + y * fy)
+      x = k * fx - x; y = k * fy - y
+    }
+  }
   if (p.bs) {
     // a spin: from the way it was going round to the way it ends up
-    const f = p.bn > 1 ? done / (p.bn - 1) : 1, a = Math.atan2(p.bdy, p.bdx) - p.bs * (1 - f)
+    const a = Math.atan2(p.bdy, p.bdx) - p.bs * (1 - f)
     x = Math.cos(a); y = Math.sin(a)
   }
   BV[0] = x * sp; BV[1] = y * sp
@@ -366,22 +398,21 @@ function burstVel(p) {
 }
 
 function doMove(s, p, dir) {
-  if (p.burst > 0) {
-    // a second flick while a move is on: a quarter turn or more round, and it's a spin (once a move)
-    if (p.mv !== MOVES.spin.n && ref.spinTurn(p, dir)) { moveSpin(p, dir); s.events.push({ e: 'move', pid: p.i, def: -1, freeze: false, ankles: false, kind: 'spin' }) }
-    return
-  }
-  if (p.moveCd > 0) return
-  const kind = moveBegin(p, dir)
-  p.moveCd = ticks(p.R.moveCd)
-  // his man: the nearest defender
+  const kind = dir ? moveInput(p, dir, s.tick) : moveQueued(p, s.tick)
+  if (!kind) return
+  if (kind === 'spin') { s.events.push({ e: 'move', pid: p.i, def: -1, freeze: false, ankles: false, kind: 'spin', hand: p.hand }); return }
+  // his man: the nearest defender (he can only be frozen so often: T.moveCd)
   let def = null, dd = T.moveRange
   for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d <= dd) { dd = d; def = o } }
-  const v = ref.judgeMove(fact(p), def && fact(def), dir, rnd(s), rnd(s))
+  let v = { freeze: false, ankles: false }
+  if (p.frzCd <= 0 && def) {
+    v = ref.judgeMove(fact(p), fact(def), { x: p.bdx, y: p.bdy }, rnd(s), rnd(s))
+    p.frzCd = ticks(p.R.moveCd)
+  }
   if (v.freeze) {
     def.act = v.ankles ? 'down' : 'frozen'; def.actT = 0; def.actN = ticks(v.ankles ? T.ankleDown : T.moveFreeze); def.vx = def.vy = 0
   }
-  s.events.push({ e: 'move', pid: p.i, def: def ? def.i : -1, freeze: v.freeze, ankles: v.ankles, kind })
+  s.events.push({ e: 'move', pid: p.i, def: def ? def.i : -1, freeze: v.freeze, ankles: v.ankles, kind, hand: p.hand })
 }
 
 function doSteal(s, p) {
@@ -427,6 +458,7 @@ function act(s, p, inp) {
     else {
       const dl = Math.hypot(+inp.dx || 0, +inp.dy || 0)
       if (dl >= T.moveAt) doMove(s, p, { x: inp.dx / dl, y: inp.dy / dl })
+      else if (p.mqT >= 0) doMove(s, p, null)
     }
     return
   }
@@ -442,6 +474,7 @@ function act(s, p, inp) {
 
 function timers(p) {
   if (p.moveCd > 0) p.moveCd--
+  if (p.frzCd > 0) p.frzCd--
   if (p.stealCd > 0) p.stealCd--
   if (p.noAct > 0) p.noAct--
   burstTick(p)

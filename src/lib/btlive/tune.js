@@ -178,15 +178,18 @@ export const T = {
   stealMiss: 0.34,                   // frozen this long after any miss...
   stealReachFreeze: 0.62,            // ...this long after a reach (out of range or from behind)
 
-  // ── Dribble moves (the small stick, or the arrow keys: a flick picks the move; MOVES below) ──────
-  // Every move is a burst that may freeze his man (referee.judgeMove), and they share one cooldown.
-  moveAt: 0.5,                       // the small stick pushed this far is a flick (the screen and the CPU send it once)
-  // which move: the angle between the flick and the way to the basket, in degrees (referee.moveKind). Toward the
-  // basket: a hesitation. Across: a crossover that way. Back and across: behind the back. Straight back: a step-back.
-  hesiTo: 40, crossTo: 105, btbTo: 150,
-  spinTurn: 60,                      // a second flick this far round from the first, while the burst is on: a spin to there
+  // ── Dribble moves (the right stick, or the arrow keys: a flick picks the move; MOVES below) ──────
+  // NBA 2K's pro stick, read from the basket and the hand the ball is in (referee.moveOf). Every move is a burst that
+  // may freeze his man (referee.judgeMove); moves chain, a short recovery apart, and his man can be frozen once a while.
+  moveAt: 0.5,                       // the stick pushed this far is a flick (the screen and the CPU send it once)
+  // which move: the angle between the flick and the way to the basket, in degrees, and which hand it's toward
+  hesiTo: 22.5, crossTo: 67.5, btlTo: 112.5, btbTo: 157.5,
+  spinTurn: 60, spinMax: 150,        // a second flick this far round from the first (and no farther), early in the move: a spin
+  spinWithin: 0.5,                   // ...inside this share of the first move
+  moveBuffer: 0.32,                  // a flick made while a move is still on goes the moment it can (the chain), this long at most
+  chainRec: 0.12, chainRecHnd: 0.06, // after a move, this long (less at Handles 11) before the next one starts
   moveSpeed: 1.75,                   // the fastest any move goes, x top speed (what a device's own position is held to)
-  moveCd: 3.4, moveCdHnd: 1.0,       // cooldown: 3.4 s at Handles 1, 2.4 s at 11
+  moveCd: 3.4, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 3.4 s at Handles 1, 2.4 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
@@ -241,20 +244,26 @@ export const T = {
   chaseAngle: 0.2,                   // a block from behind the shooter (his back to the blocker) is a chase-down
 }
 
-// The dribble moves. time: the burst (s). speed: x top speed with the ball. All go about as far (half a second of
-// running in a third of one), so which one is a matter of where it takes him, not of which is strongest.
-//   cross  the crossover: a hard step across, the ball switched in front of him
-//   hesi   the hesitation: a beat almost standing (stall, at stallSpeed), then gone toward the basket
-//   back   the step-back: a hop away from the basket, and he lands with his feet set (he keeps `set` of the speed):
-//          the jumper after it isn't a jumper on the run
-//   btb    behind the back: back and across with the ball out of reach (a swipe at it lands `steal` as often)
-//   spin   a move turned a quarter turn or more while it's on: the burst bends round to the new way over `time`
+// The dribble moves (NBA 2K's pro stick; "toward" a hand is that side of him as he faces the basket). time: the burst
+// (s). speed: x top speed with the ball at the burst's peak (it builds, holds, and eases off: about 0.8 of it on
+// average), so each goes about the floor the real move covers. swap: the ball changes hands.
+//   hesi   flick at the basket: the hesitation. A beat almost standing (stall), then gone at the rim
+//   cross  forward and toward the off hand: the crossover, in front of him, to the other side
+//   btl    straight toward the off hand: between the legs, across, a shorter step
+//   btb    back and toward the off hand: behind the back, the ball out of reach (a swipe at it lands `steal` as often)
+//   inout  forward or across toward the ball hand: the in-and-out, a fake at the cross (stall, the other way), then
+//          gone with it in the same hand
+//   back   straight back (or back toward the ball hand: the side step-back): a hop away, landing with his feet set
+//          (he keeps `set` of the speed): the jumper after it isn't a jumper on the run
+//   spin   the stick rolled a quarter turn round early in a move: the burst bends round to the new way over `time`
 // n: the number a move goes by in the state and on the wire (player.mv; 0: none)
 export const MOVES = {
-  cross: { n: 1, time: 0.30, speed: 1.6 },
-  hesi: { n: 2, time: 0.34, speed: 1.75, stall: 0.09, stallSpeed: 0.3 },
-  back: { n: 3, time: 0.26, speed: 1.3, set: 0.25 },
-  btb: { n: 4, time: 0.30, speed: 1.5, steal: 0.6 },
-  spin: { n: 5, time: 0.34, speed: 1.5 },
+  cross: { n: 1, time: 0.30, speed: 1.4, swap: true },
+  hesi: { n: 2, time: 0.38, speed: 1.55, stall: 0.12, stallSpeed: 0.2 },
+  back: { n: 3, time: 0.28, speed: 1.35, set: 0.2 },
+  btb: { n: 4, time: 0.32, speed: 1.35, swap: true, steal: 0.6 },
+  spin: { n: 5, time: 0.36, speed: 1.4 },
+  inout: { n: 6, time: 0.34, speed: 1.45, stall: 0.11, stallSpeed: 0.4, fake: true },
+  btl: { n: 7, time: 0.26, speed: 1.3, swap: true },
 }
-export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin']
+export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl']
