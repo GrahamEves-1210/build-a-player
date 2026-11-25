@@ -14,7 +14,7 @@ import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manO
 import { placeStamp } from './read.js'
 import {
   camOf, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribblePose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, aimTo, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, aimTo, celebration, scorerAt, mateAt, keeperBeaten, keeperShot, keeperDive, keeperLanded, heldBall, defenderBeaten,
   strikerDenied, celebMs, skipOutro, POST, BAR, NET_D, P,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar,
 } from './soccer.js'
@@ -33,6 +33,7 @@ const SHOW = 330             // a fake: the step he sells you
 const PASS_MS = 430          // the square ball across
 const TAP_MS = 420           // the runner's side-foot into the net
 const KZ_OUT = -4.2          // the keeper comes off his line to here
+const RUNNER_X = 6.2         // the runner's line, wide of you: in the picture from the first second
 
 export function make({ v, seed, cast = null, situation = null }) {
   const r = rngOf(seed)
@@ -48,7 +49,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     sit: situation ?? null, seed,
     who: { me: manOf(cast, 'us', 'st', 0), mate: manOf(cast, 'us', 'st', 1), cb: manOf(cast, 'them', 'cb', 0), gk: manOf(cast, 'them', 'gk', 0) },
     rs, W, v, goes, fake, commitGap, k,
-    me: { x: x0, z: START_Z, cyc: 0 }, mate: { x: rs * 7.2, z: START_Z + 0.6, cyc: 0.4 },
+    me: { x: x0, z: START_Z, cyc: 0 }, mate: { x: rs * RUNNER_X, z: START_Z + 0.6, cyc: 0.4 },
     cb: { x: rs * 1.1, z: -25, cyc: 0, side: 0 }, gk: { x: 0, z: -0.4 },
     chase: [{ x: -rs * 7.5, z: START_Z - 4.5, cyc: 0.2 }, { x: rs * 10.5, z: START_Z - 6, cyc: 0.7 }],
     commitAt: null, showAt: null, showTo: null, act: null, actAt: null, read: null,
@@ -69,7 +70,7 @@ export function make({ v, seed, cast = null, situation = null }) {
         g.me.z += mySp * s; g.me.x += -g.me.x * 0.25 * s; g.me.cyc += (mySp * s) / 2.5
         const mSp = g.res ? Math.max(0, RUN * (1 - (g.t - g.endAt) / 700)) : RUN * 1.02
         // the runner holds his line wide, then bends in toward the back post
-        const wantX = rs * lerp(7.2, 3.2, clamp((g.mate.z + 24) / 18, 0, 1))
+        const wantX = rs * lerp(RUNNER_X, 3.2, clamp((g.mate.z + 24) / 18, 0, 1))
         g.mate.z += mSp * s; g.mate.x += (wantX - g.mate.x) * 1.2 * s; g.mate.cyc += (mSp * s) / 2.5
       }
       // (the men chasing back pull up once it's done: never on into the lens)
@@ -85,11 +86,11 @@ export function make({ v, seed, cast = null, situation = null }) {
       // too long: he's on you, or back across to block it
       if (live && g.commitAt != null && g.t > g.commitAt + W) settle('late', goes === 'ball' ? 'He got a foot in: took too long' : 'Took too long: he got back across to block it')
       if (k.phase !== 'idle' && !g.shot && !g.res && k.tick(g.t)) strike()
-      if (g.shot && !g.res && g.t >= g.shot.at + (g.shot.block ? 180 : g.shot.T)) land()
+      if (g.shot && !g.res && g.t >= g.shot.at + (g.shot.block ? 180 : g.shot.kind === 'saved' && g.save ? g.save.f * g.shot.T : g.shot.T)) land()
       if (g.pass && !g.res && g.t >= g.pass.at + PASS_MS + (g.pass.ok ? TAP_MS : 260)) finishPass()
       // the camera rides behind you, a little to the runner's side, and stops once it's done
       const kk = g.res ? 1 - Math.exp(-dt / 300) : 1
-      g.camZ += (Math.min(g.me.z - 14, -17) - g.camZ) * kk; g.camX += ((g.me.x + rs * 1.4) * 0.6 - g.camX) * kk
+      g.camZ += (Math.min(g.me.z - 14, -17) - g.camZ) * kk; g.camX += ((g.me.x + rs * 1.9) * 0.6 - g.camX) * kk
     },
     input(a) {
       if (g.done) { skipOutro(g, a); return }
@@ -194,6 +195,8 @@ export function make({ v, seed, cast = null, situation = null }) {
       }
     }
     if (s.block) s.kind = 'blocked'
+    // the keeper goes for one on target (and one off the woodwork): soccer.js's keeperShot draws it
+    if (!s.block && (g.save || s.kind === 'wood')) { const sv = s.kind === 'wood' ? null : g.save; g.kShot = { x0: g.gk.x, z: g.gk.z, go: s.at + 230, cross: s.at + (sv?.f ?? 1) * s.T, ball: sv ? { x: sv.x, y: sv.y } : { x: s.to.x, y: s.to.y }, saved: !!sv?.saved, held: !!sv?.held } }
     g.shot = s
     g.fx.push('stamp', 'h:medium')
   }
@@ -257,12 +260,16 @@ function ballNow(g) {
     const b = clamp((a - 180) / 700, 0, 1)
     return { x: c.x + g.rs * b * 2.5, y: Math.max(0.11, 0.6 + Math.sin(b * Math.PI) * 1.2 - b * 0.6), z: c.z - b * 5, spin: 10 + b * 6 }
   }
-  if (a < s.T) return shotAt(s, a)
-  const after = a - s.T, end = shotAt(s, s.T)
+  // (a save is made where the keeper is, off his line: the ball never goes on through him)
+  const endMs = s.kind === 'saved' && g.save ? g.save.f * s.T : s.T
+  if (a < endMs) return shotAt(s, a)
+  const after = a - endMs, end = shotAt(s, endMs)
   if (s.kind === 'goal') { const f = clamp(after / 200, 0, 1), drop = clamp((after - 200) / 420, 0, 1); return { x: end.x, y: Math.max(0.11, end.y - drop * drop * end.y), z: lerp(0, NET_D - 0.25, easeOut(f)), spin: 15 } }
   if (s.kind === 'saved') {
     const f = clamp(after / 600, 0, 1), q = g.save ?? end
-    return { x: q.x + Math.sign(q.x || 1) * f * 2.4, y: Math.max(0.11, q.y + Math.sin(f * Math.PI) * 0.6 - f * q.y), z: lerp(g.gk.z, g.gk.z + 2.2, f), spin: 15 }
+    if (g.save?.held) return { x: q.x, y: q.y, z: g.gk.z - 0.25, spin: 0, held: true, age: after }
+    // palmed away to the side and back out into play
+    return { x: q.x + (Math.sign(q.x - g.gk.x) || 1) * f * 2.8, y: Math.max(0.11, q.y + Math.sin(f * Math.PI) * 0.6 - f * q.y), z: g.gk.z - 0.2 - f * 1.2, spin: 15 }
   }
   const f = clamp(after / 600, 0, 1)
   return { x: end.x * (1 + f * 0.25), y: Math.max(0.11, end.y + (s.kind === 'wood' ? -f * 1.2 : f * 0.4)), z: s.kind === 'wood' ? -f * 3 : f * 7, spin: 15 }
@@ -293,22 +300,19 @@ export function draw(ctx, g, view) {
   // back to front: the keeper, the last man, the runner, you, the men chasing back
   const men = []
   const q = g.gk
-  let kpose = g.me.z > -22 ? POSE.set : POSE.ready, klift = 0, kx = q.x, kz = q.z, kfront = true
-  const sv = g.save
-  if (s && !s.block && s.kind !== 'off' && g.t > s.at + 230) {
-    const to = sv ?? { x: s.to.x, y: s.to.y }, dir = Math.sign(to.x - q.x) || 1, d = prog(g.t, s.at + 230, s.at + 650)
-    const far = Math.abs(to.x - q.x) > 0.9
-    kx = q.x + dir * Math.max(0, Math.abs(to.x - q.x) - (sv?.saved ? 0.5 : 1.1)) * easeOut(d)
-    kpose = far ? { ...POSE.dive, rot: dir * lerp(0.3, 1.4, easeOut(d)) } : { ...POSE.set, hlx: dir * 28 - 8, hly: -50, hrx: dir * 28 + 8, hry: -50 }
-    klift = far ? Math.sin(d * Math.PI) * 0.3 : 0
-  } else if (g.pass?.ok && g.t > g.pass.at + 200) {
-    const d = prog(g.t, g.pass.at + 200, g.pass.at + 800), dir = g.rs
-    kx = q.x + dir * 1.8 * easeOut(d); kpose = { ...POSE.dive, rot: dir * 1.3 * easeOut(d) }; klift = Math.sin(d * Math.PI) * 0.3
-  }
-  if (g.res === 'goal') { const kb = keeperBeaten(g.cel, age, { x: kx, z: kz, rot: kpose.rot || (g.assist ? g.rs : 1) * 1.3, ball: { x: g.assist ? g.rs * -1.6 : s.to.x, z: NET_D - 0.4 } }); kx = kb.x; kz = kb.z; kpose = kb.pose; kfront = kb.front ?? true; klift = age < 300 ? klift : 0 }
-  else if (g.res === 'saved' && age > 600) { kpose = mix({ ...kpose, rot: (kpose.rot ?? 0) * (1 - prog(age, 600, 1000)) }, keeperRoar(Math.max(0, age - 1000)), easeOut(prog(age, 600, 1000))); klift *= 1 - prog(age, 600, 1000) }
-  else if (g.res && age > 500) kpose = mix(kpose, POSE.stand, easeOut(prog(age, 500, 900)))
-  men.push({ x: kx, z: kz, pose: { ...kpose, hy: (kpose.hy ?? 50) + (g.res ? 0 : Math.abs(Math.sin(g.t / 160)) * 2) }, look: dress(K.gk, g.who.gk ?? { number: 1, skin: '#c09060' }, { front: kfront, sleeves: true }), o: { lift: klift } })
+  const ballIn = { x: g.assist ? g.rs * -1.6 : s?.to.x ?? 0, z: NET_D - 0.4 }
+  let kp = { x: q.x, z: q.z, lift: 0, front: true, pose: g.me.z > -22 ? POSE.set : POSE.ready }
+  if (g.kShot) kp = keeperShot(g.t, { ...g.kShot, res: g.res, resAt: g.endAt, cel: g.cel, ballIn })
+  else if (g.pass?.ok && g.t > g.pass.at + 200) {
+    // squared across him: he throws himself at the runner's side, and it's rolled in behind him
+    const t0 = g.pass.at + 200, D = { hx: 2, hy: 0.45, at: 520 }, d = keeperDive(g.t - t0, g.rs, D), landAt = t0 + d.end + 80
+    if (g.res === 'goal' && g.t >= landAt) { const L = keeperLanded(g.rs, D); kp = keeperBeaten(g.cel, g.t - Math.max(landAt, g.endAt), { x: q.x + L.dx, z: q.z, rot: L.rot, lift: L.lift, ball: ballIn }) }
+    else kp = { x: q.x + d.dx, z: q.z, lift: d.lift, pose: d.pose, front: true }
+  } else if (g.res === 'goal') kp = keeperBeaten(g.cel, age, { x: q.x, z: q.z, rot: 0, ball: ballIn })
+  else if (g.res && age > 500) kp = { ...kp, pose: mix(kp.pose, POSE.stand, easeOut(prog(age, 500, 900))) }
+  else if (!g.res && !s) kp = { ...kp, pose: { ...kp.pose, hy: kp.pose.hy + Math.abs(Math.sin(g.t / 160)) * 2 } }
+  if (b.held) { const h = heldBall(kp, b.age); b.x = h.x; b.y = h.y }
+  men.push({ x: kp.x, z: kp.z, pose: kp.pose, look: dress(K.gk, g.who.gk ?? { number: 1, skin: '#c09060' }, { front: kp.front ?? true, sleeves: true }), o: { lift: kp.lift ?? 0 } })
   const c = g.cb
   let cpose
   if (g.res === 'goal') cpose = defenderBeaten(0, age, runPose(c.cyc % 1, 0.4))
@@ -348,7 +352,7 @@ export function draw(ctx, g, view) {
   else if (!g.act && !g.res && !g.k.drawing && g.t < 4600) {
     // the first one: the stroke that's a shot, and the line under it
     if (drawnSoFar() < 2) { const from = view.keys ? P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) : { x: 250, y: view.h - 170 }; ghostStroke(ctx, from, { x: from.x - g.rs * 30, y: from.y - 120 }, 0.1, g.t - 1900) }
-    tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE · E TO PASS' : 'DRAW YOUR SHOT · PASS TO SQUARE IT', view.keys ? view.h - 100 : undefined, 14)
+    tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE · E TO PASS' : 'DRAW YOUR SHOT · PASS TO SQUARE IT', undefined, 14)
   }
   placeStamp(g.stamp, view)
 }
