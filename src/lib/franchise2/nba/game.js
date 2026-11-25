@@ -7,10 +7,13 @@
 // blocked now and then and rebounded by the men on the floor (about a quarter of misses go back to the offense). A
 // make is assisted about six times in ten, by whoever on the floor passes best. Every point moves the +/- of the ten
 // men on the floor. Home court is worth about 2.5 points. The score pulls a little (TUNE.lead: a team well ahead eases
-// off, more so in a close fourth quarter's last minutes), and the last two minutes of a close game run on the score
-// and the clock (endgame: the fouls to stop it, the clock run down or out, the last shot held, the three to tie), so
-// games end 12-13 apart on average, three in ten within five, one in twenty in overtime. The playoffs (TUNE.po): nobody
-// eases off, the ball goes to the stars more, the crowd counts a bit more.
+// off, more so in a close fourth quarter's last minutes; past 20 points more again, TUNE.leadBig, and the team ahead
+// sits its starters, TUNE.restAt), and the last two minutes of a close game run on the score and the clock (endgame:
+// the fouls to stop it, the clock run down or out, the last shot held, the three to tie: early when there's time), so
+// games end 12 apart on average, three in ten within five, one in twenty in overtime, 60-70 a season by 30 or more.
+// The playoffs (TUNE.po): nobody eases off, the ball goes to the stars more, the crowd counts a bit more.
+// Who gets the assists and the boards goes by role (role(): TUNE.ast*, TUNE.reb*), who gets the shots by TUNE.usage*:
+// about 140 triple-doubles a season, 40 men at 20 points a game, a dozen or so at 25.
 //
 // The rotation (rotation.js) is the plan; the game moves off it like a real one: two fouls in the first quarter
 // (three in the second, four in the third, five early in the fourth) sit a man, six put him out (the last man to foul
@@ -50,12 +53,24 @@ function hot(S) {
   for (const k of ['h', 'a']) {
     const T = S[k]; if (!T || T.by) continue
     hidden(T, 'by', new Map(T.men.map(p => [p.i, p])))
-    hidden(T, 'pr', new Map(T.men.map(p => [p.i, prof(p)])))
+    hidden(T, 'pr', new Map(T.men.map(p => [p.i, role(prof(p), p)])))
     T.on = T.floor.map(id => T.pr.get(id))
   }
   return S
 }
 import { prof } from './skills'
+// a man's share of his team's assists and boards, from his skills and the spot he plays (TUNE.ast*, TUNE.reb*): the
+// ball is in the point guard's hands, the glass belongs to the bigs; a wing who passes or rebounds well still gets
+// his, but not a point guard's assists and a center's boards at once
+function role(s, p) {
+  const sp = p.sp ?? (s.big ? 4 : 1)
+  s.aw = Math.max(0.3, s.pas) ** TUNE.astExp * Math.max(0.3, 1 + TUNE.astIq * (s.iq - 6)) * (TUNE.astSpot[sp] ?? 1) * Math.max(0.3, 1 + TUNE.astHnd * (s.hnd - 6)) * Math.max(0.3, 1 + TUNE.astOff * (s.off - 6))
+  const r = Math.max(0.2, s.reb)
+  s.dw = r ** TUNE.rebExpD * (s.big ? 1 : TUNE.rebWing)
+  s.ow = r ** TUNE.rebExpO * (s.big ? 1 : TUNE.rebWing)
+  s.r3 = s.big ? 1 : TUNE.reb3
+  return s
+}
 
 // ── The scoring log (game day's play-by-play, NbaGame.jsx): every basket and trip to the line, and every foul (the
 // team fouls and the bonus), with the clock. It never rolls the dice (the game plays the same with it or without it)
@@ -80,9 +95,18 @@ export const TUNE = {
   tov: 0.136,             // turnovers a possession, an average handler against an average defense
   stealShare: 0.56,       // turnovers that are steals (8.2 of 14.4)
   foulNS: 0.09,          // a non-shooting foul on the defense, a possession (two shots in the bonus)
-  usage: 0.108,            // how hard the ball finds the creators (the weight is exp(usage * (off - 6)))
+  // how hard the ball finds the creators: the weight is exp(usage * (off - 6)) up to the knee, where a first or
+  // second option sits; past it the slope is usage * usageTop (a star's share of the shots has a ceiling), and under
+  // 6 it is usage * usageLo. About 40 men average 20, a dozen or so 25, two or three 30.
+  usage: 0.24, usageKnee: 7.3, usageTop: 0.1, usageLo: 0.75, usageBig: 0.9,
+  // the assist's man: his passing (to a power), his head, how much of the offense runs through him, and his spot
+  // (PG..C: the ball is in the guards' hands). A point guard leads the league near 11; a forward or a center who
+  // passes gets 5 to 8, and only the very best passer among them 9 or 10.
+  astExp: 1.4, astSpot: [1.15, 1, 0.8, 0.68, 0.68], astIq: 0.12, astHnd: 0, astOff: 0.12,
+  // the board's man: his rebounding (to a power), a wing's share against a big's, a long carom off a three
+  rebExpD: 1.02, rebExpO: 1.2, rebWing: 0.87, reb3: 1.15,
   three: 0.5, rimBase: 0.6,   // the shot mix, an average player
-  p3: 0.335, pRim: 0.595, pMid: 0.39,   // makes, an average shooter against an average defense
+  p3: 0.332, pRim: 0.59, pMid: 0.385,   // makes, an average shooter against an average defense
   skill3: 0.017, skillRim: 0.021, skillMid: 0.017,
   def3: 0.014, defRim: 0.025, defMid: 0.012,
   foulRim: 0.22, foulMid: 0.05, foul3: 0.014, andOne: 0.055,
@@ -90,9 +114,14 @@ export const TUNE = {
   ast: { three: 0.82, rim: 0.56, mid: 0.4 },
   home: 0.012,            // the home team's make, every shot (about 2.5 points a game)
   lead: 0.0012, leadCap: 20,   // the score's pull: each point of lead off the leader's make (to 20 points)
+  // past 20 the game is decided and both teams play like it: each point more of lead, this much more off the leader's
+  // make (to 60 points); restAt: the lead that sits the leader's starters (lineup()); slack: a decided fourth quarter
+  // (22 apart), nobody guards anybody, every shot this much likelier. A season has 60-70 games decided by 30 or more
+  // and 10-15 by 40 or more; a team's worst night is in the 60s.
+  leadBig: 0.001, leadBigCap: 60, restAt: 27, slack: 0.03,
   lead4: 0.009, lateT: 360,    // and more in a close fourth quarter's last minutes (the leader slows it down, the other team pushes)
   // the playoffs: nobody eases off, the ball goes to the stars more, the crowd counts a bit more
-  po: { lead: 0.0006, lead4: 0.006, usage: 0.15, home: 0.016 },
+  po: { lead: 0.0006, lead4: 0.006, leadBig: 0.0006, usage: 0.25, usageTop: 0.4, home: 0.016 },
 }
 const tn = (S, k) => (S.po && TUNE.po?.[k] != null ? TUNE.po[k] : TUNE[k])
 const Q = 720, OT = 300, STINT = 120
@@ -135,7 +164,11 @@ function lineup(S, k, start = false) {
   for (let j = T.out.length - 1; j >= 0 && avail.length < 5; j--) { const p = T.by.get(T.out[j]); if (p && !avail.includes(p)) avail.push(p) }
   const margin = lead(S, k), left = S.per >= 4 ? S.clock : 99999
   const absM = Math.abs(margin)
+  // a game that's decided: both benches empty in the fourth (30 apart, 22 with nine minutes left, 17 with five); the
+  // team ahead sits its starters sooner (TUNE.restAt: that far up late in the third, or any time in the fourth), and
+  // they come back if the lead goes
   const garbage = !S.po && S.per >= 4 && ((absM >= 30) || (absM >= 22 && left <= 540) || (absM >= 17 && left <= 300)) || S.po && S.per >= 4 && absM >= 25 && left <= 360
+    || !S.po && TUNE.restAt > 0 && margin >= TUNE.restAt && (S.per >= 4 || (S.per === 3 && S.clock <= 300))
   const close = (S.per >= 4 && left <= 330 && absM <= 12) || S.per > 4
   const ok = p => !trouble(S, S.box[p.i]) || (S.per >= 4 && left <= 360)
   const total = 2880, upTo = Math.min(total, S.el + STINT)
@@ -215,14 +248,14 @@ function miss(S, k, shooterId, shot) {
   const oR = mean(O.on, s => s.reb), dR = mean(D.on, s => s.reb)
   const pO = Math.min(0.4, Math.max(0.06, (shot === 'ft' ? 0.13 : TUNE.oreb) + (oR - dR) * 0.025))
   if (S.R.u() < pO) {
-    const w = O.on.map((s, j) => (O.floor[j] === shooterId ? 0.55 : 1) * Math.max(0.2, s.reb) ** 1.3 * (shot === 'three' && !s.big ? 1.3 : 1))
+    const w = O.on.map((s, j) => (O.floor[j] === shooterId ? 0.55 : 1) * s.ow * (shot === 'three' ? s.r3 : 1))
     const id = wpick(S.R, O.floor, w)
     S.box[id].orb++
     return id
   }
   // (about one miss in eight is a team rebound: out of bounds, a quarter's last shot; nobody's credited)
   if (S.R.u() < 0.12) return null
-  const w = D.on.map(s => Math.max(0.2, s.reb) ** 1.2 * (shot === 'three' && !s.big ? 1.25 : 1))
+  const w = D.on.map(s => s.dw * (shot === 'three' ? s.r3 : 1))
   S.box[wpick(S.R, D.floor, w)].drb++
   return null
 }
@@ -250,9 +283,12 @@ function shoot(S, k, who, forced = null, want = null) {
   else { p = TUNE.pMid + TUNE.skillMid * (sh - 6) - TUNE.defMid * dPer; pFoul = TUNE.foulMid }
   // the score: a team well ahead eases off (its bench, a slower pace, the stops it doesn't need), the one behind presses;
   // NBA leads shrink like this, a blowout comes back toward 20 and a close game stays close (forced: a moment's own make)
-  const up = forced ? 0 : Math.max(-TUNE.leadCap, Math.min(TUNE.leadCap, S.sc[k] - S.sc[other(k)]))
+  const gap = forced ? 0 : S.sc[k] - S.sc[other(k)]
+  const up = Math.max(-TUNE.leadCap, Math.min(TUNE.leadCap, gap))
+  const far = Math.sign(gap) * Math.max(0, Math.min(TUNE.leadBigCap, Math.abs(gap)) - TUNE.leadCap)
   const pull = tn(S, 'lead') + (S.per >= 4 && S.clock <= TUNE.lateT && Math.abs(up) <= 12 ? tn(S, 'lead4') : 0)
-  p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up + staffEdge(S, O, D)))
+  const slack = !S.po && !forced && S.per === 4 && Math.abs(gap) >= 22 ? TUNE.slack : 0
+  p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up - tn(S, 'leadBig') * far + slack + staffEdge(S, O, D)))
   if (want?.heave) p *= S.clock <= 1.5 ? 0.35 : 0.6
   const pts = shot === 'three' ? 3 : 2
   // fouled on the shot: a miss is two (three) free throws, a make an and-one now and then
@@ -271,7 +307,7 @@ function shoot(S, k, who, forced = null, want = null) {
     if (forced?.ast != null && O.floor.includes(forced.ast) && forced.ast !== who) { S.box[forced.ast].ast++; by = forced.ast }
     else if (forced?.ast === undefined && R.u() < TUNE.ast[shot]) {
       const mates = O.floor.filter(id => id !== who)
-      const w = mates.map(id => { const t = O.pr.get(id); return Math.max(0.3, t.pas) ** 2.2 * (0.6 + t.iq * 0.06) })
+      const w = mates.map(id => O.pr.get(id).aw)
       if (mates.length) { by = wpick(R, mates, w); S.box[by].ast++ }
     }
     score(S, k, pts, who)
@@ -301,7 +337,8 @@ function staffEdge(S, O, D) {
 function actor(S, k) {
   const O = S[k]
   const u = tn(S, 'usage')
-  const w = O.on.map(s => Math.exp(u * (s.off - 6)) * (s.big ? 0.9 : 1))
+  const kn = TUNE.usageKnee, top = tn(S, 'usageTop'), lo = TUNE.usageLo
+  const w = O.on.map(s => Math.exp(u * (s.off < 6 ? lo * (s.off - 6) : Math.min(s.off, kn) - 6 + top * Math.max(0, s.off - kn))) * (s.big ? TUNE.usageBig : 1))
   return wpick(S.R, O.floor, w)
 }
 
@@ -368,7 +405,8 @@ export function play(S, forced = null) {
 //   ahead: the defense fouls to stop the clock when it's within reach (a possession behind once the shot clock is off,
 //          four to six under 35 seconds, seven or eight now and then), else the offense runs the shot clock down, and
 //          with under 24 left and the other team not fouling, the clock runs out
-//   tied or a possession behind under 24: hold for the last shot (down three: a three; down two: mostly the two to tie)
+//   tied or a possession behind under 24: hold for the last shot (down two: mostly the two to tie); down three with
+//          more than eight seconds: the three goes up early, with time left to foul and get the ball back
 //   behind with time: push the pace; four or more down (or three late) look for a three
 function endgame(S, k) {
   const R = S.R, O = S[k], dk = other(k), up = lead(S, k), m0 = S.EV ? S.EV.length : 0
@@ -393,6 +431,9 @@ function endgame(S, k) {
   if (S.clock <= 24) {
     // (a few seconds left: a catch and a quick shot, a three if it takes one)
     if (S.clock <= 4.5) return { t: S.clock, want: { shot: up === -3 || R.u() < 0.5 ? 'three' : 'mid', heave: true } }
+    // (down three with time: the three goes up early, four to ten seconds in, so a miss still leaves time to foul and
+    // get the ball back; level or down one or two, the last shot is held)
+    if (up === -3 && S.clock > 8) return { t: Math.min(S.clock - 3, 4 + R.u() * 6), want: { shot: 'three' } }
     if (up >= -3) return { t: Math.max(0.5, S.clock - 1 - R.u() * 3), want: up === -3 ? { shot: 'three' } : up === -2 && R.u() < 0.7 ? { shot: R.u() < 0.6 ? 'rim' : 'mid' } : null }
     return { t: Math.min(S.clock, 4 + R.u() * 4), want: R.u() < 0.8 ? { shot: 'three' } : null }
   }
