@@ -167,10 +167,10 @@ function NextGame({ F, R, act, play, onTrades, onSim, asStop = null }) {
   // (his team's 82 are played and the league has nights left: an old save's schedule; the season still has to finish)
   if (!g) return (
     <section className="fh-next">
-      <div className="fh-next-h"><b>{dateText(F, Math.min(F.day, F.days - 1))}</b><span>{recText(R[F.team])} · {R[F.team].g} games played</span></div>
-      <p className="fh-next-note">The {nick(F.team)} have no games left. The regular season ends {dateText(F, F.days - 1)}.</p>
+      <div className="fh-next-h"><b>{dateText(F, Math.min(F.day, F.days - 1))}</b><span>{recText(R[F.team])} · Regular season</span></div>
+      <p className="fh-next-note">The {nick(F.team)} have played all {R[F.team].g} games. The league's regular season ends {dateText(F, F.days - 1)}.</p>
       <div className="fh-go">
-        <Go onClick={() => onSim(F.days, 'Sim to the end of the regular season')}>Sim to the end of the regular season</Go>
+        <Go onClick={() => onSim(F.days, 'Sim to the end of the regular season')}>Sim to the end</Go>
         <button type="button" className="fh-textbtn" onClick={() => onSim(F.day + 1, 'Next night')}>Next night</button>
       </div>
     </section>
@@ -219,8 +219,8 @@ function AllStarCard({ F, onPlay = null }) {
   const lines = []
   for (const c of ['E', 'W']) {
     const st = A[c].st.filter(mine).map(i => manOf(F, i)?.n).filter(Boolean), res = (A[c].res ?? []).filter(mine).map(i => manOf(F, i)?.n).filter(Boolean)
-    if (st.length) lines.push(`${list(st)} ${st.length > 1 ? 'start' : 'starts'} for the ${AS_CONF[c]}.`)
-    if (res.length) lines.push(`${list(res)} ${res.length > 1 ? `are ${AS_CONF[c]} reserves` : `is ${/^[AEIOU]/.test(AS_CONF[c]) ? 'an' : 'a'} ${AS_CONF[c]} reserve`}.`)
+    if (st.length) lines.push(`${list(st)} ${g ? 'started' : st.length > 1 ? 'start' : 'starts'} for the ${AS_CONF[c]}.`)
+    if (res.length) lines.push(`${list(res)} ${res.length > 1 ? `${g ? 'were' : 'are'} ${AS_CONF[c]} reserves` : `${g ? 'was' : 'is'} ${/^[AEIOU]/.test(AS_CONF[c]) ? 'an' : 'a'} ${AS_CONF[c]} reserve`}.`)
   }
   const mvp = g?.mvp != null ? manOf(F, g.mvp) : null, mvpT = mvp ? teamOfMan(F, mvp.i) : null
   const row = (i, k) => {
@@ -230,7 +230,7 @@ function AllStarCard({ F, onPlay = null }) {
       <div key={i} className={`nb-asg-row${t === F.team ? ' is-me' : ''}${g?.mvp === i ? ' is-mvp' : ''}`} style={t ? fkVars(t) : undefined} {...tapMan(open, F, i)}>
         {t ? <KLogo s={t} size={22} /> : <i />}
         <b>{p.n}</b>
-        <span>{g?.mvp === i ? 'MVP · ' : ''}{p.p}{r?.gp ? ` · ${(r.pts / r.gp).toFixed(1)}` : ''}</span>
+        <span>{g?.mvp === i ? 'MVP · ' : ''}{p.p}{r?.gp ? ` · ${(r.pts / r.gp).toFixed(1)} PPG` : ''}</span>
       </div>
     )
   }
@@ -243,7 +243,7 @@ function AllStarCard({ F, onPlay = null }) {
         </div>
       )}
       {mvp && <p className="fh-next-note">{mvp.n}{mvpT ? ` (${nick(mvpT)})` : ''} is the All-Star Game MVP with {g.pts} points.</p>}
-      <p className="fh-next-note">{lines.length ? lines.join(' ') : `No ${nick(F.team)} were named to the All-Star teams.`}</p>
+      <p className="fh-next-note">{lines.length ? lines.join(' ') : `No ${nick(F.team)} player was named an All-Star.`}</p>
       {!g && onPlay && <div className="fh-go"><Go onClick={onPlay}>Sim the All-Star Game</Go></div>}
       <div className="nb-asg-confs">
         {confs.map(c => (

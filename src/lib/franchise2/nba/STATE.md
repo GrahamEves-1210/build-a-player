@@ -349,3 +349,23 @@ entries at `seasonEndDeals`.
 8. **Injuries:** `tickInjuries(F, short)` heals only a man who missed a game that night (`rollInjuries` marks him `inj.m`), so `inj.g` counts games. Call `tickInjuries(F, days)` with a number over the summer (130 is about right): an ACL torn in March then runs into the next season.
 9. **Ceilings:** `league.js peakFor` (room x 1.1-2.7 a year) inflated the league in C's 10-season runs (88+ men went 29 to 47). `aging.js seedPotential` (room x 0.6-2.0) and `prospect(R, { rank })` for the class hold it level (88+ men: 29 at the start, 27-31 on average). Please use them, or match their numbers.
 10. **Playoffs:** pass `{ playoff: true }` to `rotationOf` for the screen too. Playoff rotations shorten to eight, and stars play 38-40.
+
+### Season and game day, 2026-11-24 (the last fix round)
+
+- `schedule.js`: the last day has all 30 teams (15 games, one interconference), so every team's 82nd game is on
+  `F.days - 1`; a schedule with a team outside 11-18 back-to-backs is drawn again. Saves keep the schedule they have
+  (an older one can end a team's season days early: the hub's NextGame then offers Sim to the end / Next night).
+- `season.js endDay`: the league's deadline-day deals and "the deadline has passed" are written before the day turns
+  over (dated the deadline's day). The All-Star Game is played, and dated, the break's Sunday (`allStarDay(F)` =
+  `F.asb[0] + AS_SUNDAY`); `F.as.g = { E, W, s, mvp, pts }`. `allStars` never names a man to both teams (a starter
+  traded across conferences stays on the team he was voted onto). `allStarStop(F)` ('to' | 'game' | null) and
+  `allStarOn(F)` drive the hub's All-Star card (FULL). `seriesText`: "sweep the Magic", "win the series 4-3",
+  "Best of seven" before Game 1.
+- `rotation.js planRotation`: a man whose minutes the GM set to 0 is `sat` (returned as `sat: [ids]`): he can't start
+  and game.js `lineup` keeps him off the floor while five others can play. The Team screen benches a starter set to
+  DNP (`rotOrder.js benchDnp`); swapping him back into the five takes the DNP off.
+- `game.js TUNE`: who gets the shots (`usage*`), the assists (`ast*`, by spot and how much of the offense runs through
+  a man) and the boards (`reb*`) goes by role; a decided game eases off (`leadBig`, `restAt`, `slack`) and a team that
+  can't score gets easier looks (`cold*`); down three with more than eight seconds the three goes up early (the sim's
+  `endgame` and the moment, `momentPlan().early`). Measured by `scripts/franchise2/nba-balance.mjs`.
+- `moments.js nameIn(p, men)`: a last name with a first initial when another man in the game shares it.

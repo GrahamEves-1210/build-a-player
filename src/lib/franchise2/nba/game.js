@@ -119,6 +119,10 @@ export const TUNE = {
   // (22 apart), nobody guards anybody, every shot this much likelier. A season has 60-70 games decided by 30 or more
   // and 10-15 by 40 or more; a team's worst night is in the 60s.
   leadBig: 0.001, leadBigCap: 60, restAt: 27, slack: 0.03,
+  // a team that can't score at all (on pace for under coldAt from halftime on) gets the looks a real one finds: the
+  // defense in front of it has stopped working that hard, and its coach runs everything for whoever can make a shot.
+  // Each point of pace under the line, this much likelier (to coldMax). Nobody finishes in the 50s.
+  coldAt: 80, coldK: 0.005, coldMax: 0.08,
   lead4: 0.009, lateT: 360,    // and more in a close fourth quarter's last minutes (the leader slows it down, the other team pushes)
   // the playoffs: nobody eases off, the ball goes to the stars more, the crowd counts a bit more
   po: { lead: 0.0006, lead4: 0.006, leadBig: 0.0006, usage: 0.25, usageTop: 0.4, home: 0.016 },
@@ -290,7 +294,9 @@ function shoot(S, k, who, forced = null, want = null) {
   const far = Math.sign(gap) * Math.max(0, Math.min(TUNE.leadBigCap, Math.abs(gap)) - TUNE.leadCap)
   const pull = tn(S, 'lead') + (S.per >= 4 && S.clock <= TUNE.lateT && Math.abs(up) <= 12 ? tn(S, 'lead4') : 0)
   const slack = !S.po && !forced && S.per === 4 && Math.abs(gap) >= 22 ? TUNE.slack : 0
-  p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up - tn(S, 'leadBig') * far + slack + staffEdge(S, O, D)))
+  const pace = !forced && TUNE.coldAt && S.el >= 1440 ? S.sc[k] * 2880 / Math.min(2880, S.el) : 999
+  const cold = pace < TUNE.coldAt ? Math.min(TUNE.coldMax, (TUNE.coldAt - pace) * TUNE.coldK) : 0
+  p = Math.min(0.85, Math.max(0.1, p + home + cl + 0.004 * (s.iq - 6) - pull * up - tn(S, 'leadBig') * far + slack + cold + staffEdge(S, O, D)))
   if (want?.heave) p *= S.clock <= 1.5 ? 0.35 : 0.6
   const pts = shot === 'three' ? 3 : 2
   // fouled on the shot: a miss is two (three) free throws, a make an and-one now and then
