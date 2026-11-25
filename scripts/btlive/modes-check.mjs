@@ -57,16 +57,35 @@ head('King of the Hill: the rules, one at a time')
   ok(s.phase === 'live' && s.ball.holder === a && s.poss === a && s.king === a && s.mustClear === a, 'a defensive board: still live, his ball, he must clear (mustClear = him)')
   ok(P.every(p => p.i === a || p.man === a), '...and the other two guard him at once')
   for (let n = 0; n < 12; n++) step(s, idle(s))
-  const press = s.players.map(IDLE); press[a] = { mx: 0, my: 0, shoot: true }
-  step(s, press)
-  ok(P[a].act === 'free' && !s.events.some(e => e.e === 'gather'), 'inside the arc with it before clearing: SHOOT does nothing')
+  put(P[a], 28, 31)
   step(s, idle(s))
+  ok(s.mustClear === a, 'on the line, not behind it with both feet: not taken back yet')
   put(P[a], 28, 33)
   step(s, idle(s))
   ok(s.events.some(e => e.e === 'cleared' && e.pid === a) && s.mustClear === null, 'past the arc with it: cleared, he is the king')
   put(P[a], 28, 14)
+  const press = s.players.map(IDLE); press[a] = { mx: 0, my: 0, shoot: true }
   step(s, idle(s)); step(s, press)
   ok(P[a].act === 'gather', '...and now he can shoot, from anywhere')
+}
+{
+  // a make before he takes it back: waved off, and the closer of the other two checks it
+  const s = toLive(koth('wave')), P = s.players, k = s.king
+  const [a, b] = P.filter(p => p.i !== k).map(p => p.i)
+  put(P[k], 45, 30); put(P[a], 28, 12); put(P[b], 12, 30)
+  Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: k })
+  step(s, idle(s))
+  const sc = [...s.score]
+  for (let n = 0; n < 12; n++) step(s, idle(s))
+  const press = s.players.map(IDLE); press[a] = { mx: 0, my: 0, shoot: true }
+  step(s, press)
+  ok(P[a].act === 'gather', 'inside the arc before taking it back: the shot still goes up')
+  P[a].act = 'free'; P[a].shot = null
+  Object.assign(s.ball, { st: 'shot', from: a, sx: 28, sy: 12, sz: 8, t: 0, n: 3, kind: 'jumper', verdict: { made: true, pts: 1, three: false, kind: 'jumper', d: 7.5, c: 0, p: 1, q: 1, by: null, uncl: true } })
+  let ev = null
+  for (let n = 0; n < 10 && !ev; n++) { step(s, idle(s)); ev = s.events.find(e => e.e === 'waved' || e.e === 'make') }
+  ok(ev?.e === 'waved' && s.score.join() === sc.join(), 'it goes in before he took it back: no basket')
+  ok(s.phase === 'dead' && s.next && s.next.carrier !== a && s.mustClear === null, '...and the other side (here the closer of the other two) checks it')
 }
 {
   // out of bounds: the king steps out with it
@@ -95,6 +114,119 @@ head('King of the Hill: the rules, one at a time')
   s.clock = 1
   step(s, idle(s))
   ok(s.events.some(e => e.e === 'clock') && s.next?.carrier === a, 'the shot clock runs out: the closer of the other two checks it')
+}
+
+// ── 1v1 and 2v2: no check after a stop, take it back ─────────────────────────────────────────────
+head('1v1 and 2v2: a stop is a live ball; take it back past the arc before a basket counts')
+const duo = (seed, size = 1) => createGame({ teams: [0, 1].map(t => [...Array(size).keys()].map(i => man(`d${t}${i}`, 80, i ? 'big' : 'guard'))), seed })
+const holderOf = s => (s.ball.st === 'held' ? s.ball.holder : -1)
+{
+  // a defensive board
+  const s = toLive(duo('dreb')), P = s.players, o = s.poss, d = 1 - o
+  const D = P.find(p => p.team === d), O = P.find(p => p.team === o)
+  put(O, 40, 25); put(D, 28, 12)
+  Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: o })
+  step(s, idle(s))
+  ok(s.phase === 'live' && holderOf(s) === D.i && s.poss === d && s.mustClear === d, '1v1, a defensive board: no check, still live, his ball, his side must take it back')
+  ok(s.events.some(e => e.e === 'clear' && e.pid === D.i), '...the screen is told (a clear event)')
+  // a make before he takes it back
+  const sc = [...s.score]
+  Object.assign(s.ball, { st: 'shot', from: D.i, sx: 28, sy: 12, sz: 8, t: 0, n: 3, kind: 'layup', verdict: { made: true, pts: 1, three: false, kind: 'layup', d: 7.5, c: 0, p: 1, q: 1, by: null, uncl: true } })
+  let ev = null
+  for (let n = 0; n < 10 && !ev; n++) { step(s, idle(s)); ev = s.events.find(e => e.e === 'waved' || e.e === 'make') }
+  ok(ev?.e === 'waved' && s.score.join() === sc.join() && s.next?.team === o, '1v1, a make before taking it back: waved off, the other side checks it')
+  toLive(s)
+  ok(s.poss === o && s.mustClear === null, '...from the top, nothing to clear')
+}
+{
+  // a real release before taking it back: the verdict carries it
+  const s = toLive(duo('rel')), P = s.players, o = s.poss, d = 1 - o
+  const D = P.find(p => p.team === d), O = P.find(p => p.team === o)
+  put(O, 45, 30); put(D, 28, 12)
+  Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: o })
+  step(s, idle(s))
+  for (let n = 0; n < 12; n++) step(s, idle(s))
+  const press = idle(s); press[D.i] = { mx: 0, my: 0, shoot: true }
+  step(s, press)
+  ok(D.act === 'gather', '1v1: inside the arc before taking it back, SHOOT still shoots')
+  let rel = false
+  for (let n = 0; n < 60 && !rel; n++) { const q = idle(s); q[D.i] = { mx: 0, my: 0, shoot: n < 20 }; step(s, q); rel = s.events.some(e => e.e === 'release' || e.e === 'block') }
+  ok(rel && (s.ball.st !== 'shot' || s.ball.verdict?.uncl === true), '...and the shot in the air is marked as not taken back')
+}
+{
+  // taking it back, then a make counts
+  const s = toLive(duo('back')), P = s.players, o = s.poss, d = 1 - o
+  const D = P.find(p => p.team === d), O = P.find(p => p.team === o)
+  put(O, 40, 12); put(D, 28, 12)
+  Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: o })
+  step(s, idle(s))
+  put(D, 28, 33); step(s, idle(s))
+  ok(s.mustClear === null && s.events.some(e => e.e === 'cleared' && e.pid === D.i), '1v1: behind the arc with it, both feet: taken back')
+  const sc = s.score[d]
+  put(D, 28, 9)
+  Object.assign(s.ball, { st: 'shot', from: D.i, sx: 28, sy: 9, sz: 8, t: 0, n: 3, kind: 'layup', verdict: { made: true, pts: 1, three: false, kind: 'layup', d: 4.5, c: 0, p: 1, q: 1, by: null, uncl: false } })
+  let ev = null
+  for (let n = 0; n < 10 && !ev; n++) { step(s, idle(s)); ev = s.events.find(e => e.e === 'waved' || e.e === 'make') }
+  ok(ev?.e === 'make' && s.score[d] === sc + 1 && s.next?.team === d, '...then a make counts, and he checks it again (make it, take it)')
+}
+{
+  // a steal: live, take it back; an offensive board: nothing to take back
+  const s = toLive(duo('stl')), P = s.players, o = s.poss, d = 1 - o
+  const D = P.find(p => p.team === d), O = P.find(p => p.team === o)
+  s.events.length = 0
+  put(O, 28, 20); put(D, 28, 18.5); O.fx = 0; O.fy = -1
+  let got = false
+  for (let n = 0; n < 400 && !got; n++) { const q = idle(s); q[D.i] = { mx: 0, my: 0, steal: n % 2 === 0 }; D.stealCd = 0; D.act = 'free'; put(O, 28, 20); put(D, 28, 18.6); step(s, q); got = s.events.some(e => e.e === 'steal') }
+  ok(got && s.phase === 'live' && holderOf(s) === D.i && s.mustClear === d, '1v1, a steal: no check, his ball, take it back')
+}
+{
+  const s = toLive(duo('oreb')), P = s.players, o = s.poss
+  const O = P.find(p => p.team === o), D = P.find(p => p.team !== o)
+  put(O, 28, 12); put(D, 45, 30)
+  Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: o })
+  step(s, idle(s))
+  ok(holderOf(s) === O.i && s.poss === o && s.mustClear === null, 'an offensive board: his own miss, nothing to take back')
+}
+{
+  // 2v2: a pass out to a teammate behind the arc takes it back
+  const s = toLive(duo('pass', 2)), P = s.players, o = s.poss, d = 1 - o
+  const [D1, D2] = P.filter(p => p.team === d), Os = P.filter(p => p.team === o)
+  put(Os[0], 40, 30); put(Os[1], 14, 30); put(D1, 28, 12); put(D2, 44.5, 27)
+  Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: o })
+  step(s, idle(s))
+  ok(s.mustClear === d && holderOf(s) === D1.i, '2v2, a defensive board: his side must take it back')
+  for (let n = 0; n < 12; n++) step(s, idle(s))
+  const q = idle(s); q[D1.i] = { mx: (D2.x - D1.x), my: (D2.y - D1.y), pass: true }
+  const l = Math.hypot(q[D1.i].mx, q[D1.i].my); q[D1.i].mx /= l; q[D1.i].my /= l
+  step(s, q)
+  let caught = false
+  for (let n = 0; n < 60 && !caught; n++) { step(s, idle(s)); caught = s.events.some(e => e.e === 'catch' && e.pid === D2.i) }
+  ok(caught && s.mustClear === null, '...a pass out to his teammate behind the arc does it')
+}
+// the CPU takes it back too: 1v1 and 2v2 games, every stop cleared before any shot, no basket waved off
+function playDuo(size, seed) {
+  const s = duo(seed, size), bad = [], inp = []
+  let stops = 0, clears = 0, waved = 0
+  while (s.phase !== 'over' && s.tick < 40 * 60 * HZ) {
+    for (let i = 0; i < s.players.length; i++) inp[i] = cpuInput(s, i, 'pro')
+    const mc = s.mustClear
+    step(s, inp)
+    for (const e of s.events) {
+      if (e.e === 'gather' && mc != null && s.players[e.pid].team === mc) bad.push(`t${s.tick} gather before taking it back`)
+      if (e.e === 'clear') stops++
+      if (e.e === 'cleared') clears++
+      if (e.e === 'waved') waved++
+      if (e.e === 'poss' && (e.why === 'dreb' || e.why === 'steal' || e.why === 'pick') && s.phase !== 'live' && s.phase !== 'over') bad.push(`t${s.tick} a check after a ${e.why}`)
+    }
+  }
+  return { s, bad, stops, clears, waved, stuck: s.phase !== 'over' }
+}
+for (const size of [1, 2]) {
+  let bad = [], stops = 0, clears = 0, waved = 0, stuck = 0
+  const n = Math.max(40, RUNS / 5)
+  for (let g = 0; g < n; g++) { const r = playDuo(size, `duo${size}-${g}`); bad = bad.concat(r.bad); stops += r.stops; clears += r.clears; waved += r.waved; if (r.stuck) stuck++ }
+  console.log(`${size}v${size}: ${n} CPU games, ${(stops / n).toFixed(1)} stops a game, ${(clears / n).toFixed(1)} taken back`)
+  ok(!stuck && !bad.length && waved === 0, `${size}v${size}: the CPU never shoots before taking it back, no check after a stop, nothing waved off${bad.length ? ': ' + bad.slice(0, 4).join('; ') : ''}`)
 }
 
 // ── King of the Hill, played: invariants and win rates ─────────────────────────────────────────────
@@ -395,6 +527,22 @@ head('2v2 with four people: each one moves his own man, and only his')
   const inp2 = r.tickOnce(late)
   ok(!inp2[mine[2]].pos && ws.every((_, j) => j === 2 || inp2[mine[j]].pos), 'a quiet line: his seat (only his) is the CPU\'s until he is back')
   void hj
+}
+head('The room: online plays the same take-it-back rule (the referee runs the same step)')
+{
+  const { r, ws } = room('1v1', ['guard'])
+  r.onMessage(ws[0], JSON.stringify({ t: 'start' })); r.stop()
+  const g = r.g
+  while (g.phase !== 'live') r.tickOnce(Date.now())
+  const o = g.poss, d = 1 - o, D = g.players.find(p => p.team === d), O = g.players.find(p => p.team === o)
+  put(O, 40, 25); put(D, 28, 12)
+  Object.assign(g.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: o })
+  r.tickOnce(Date.now())
+  const live = g.phase === 'live' && g.mustClear === d
+  r.broadcast()
+  const snap = last(ws[0], 's')
+  ok(live && g.mustClear === d && snap?.mc === d && snap.ph === 'live', 'online, a defensive board: no check, and every screen is told his side must take it back (mc)')
+  ok((snap?.e || []).some(e => e.e === 'clear'), '...with the clear in the snapshot\'s events')
 }
 head('Practice: a missing person is a CPU')
 {
