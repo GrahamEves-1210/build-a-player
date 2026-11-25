@@ -1659,9 +1659,49 @@ const ALL_STRIKERS = [
 // (Career's clubs: data/soccer-clubs.js SOCCER_LIVE_LEAGUES. The others' players stay in the list above)
 const LIVE_CLUBS = new Set(SOCCER_CLUBS.map(c => c.short))
 export const SOCCER_STRIKERS = ALL_STRIKERS.filter(p => LIVE_CLUBS.has(p.team))
-// The wheel and the card binder: every player of the 36 Champions League clubs (the owner, 2026-11-16)
+// The wheel and the card binder: the 36 Champions League clubs' best-known 3 to 6 each, always with the club's main striker (the owner, 2026-11-25: every
+// club's top three, and up to three more where they've earned it; 2026-11-16 it was all eight). The rest stay in the
+// data above for Career's leagues and the season engine; only the Champions League pool leaves them out.
+const UCL_PICKS = {
+  ARS: ['Bukayo Saka', 'Viktor Gyökeres', 'Martin Ødegaard', 'Declan Rice', 'Kai Havertz', 'Eberechi Eze'],
+  AVL: ['Nicolas Jackson', 'John McGinn', 'Amadou Onana'],
+  LIV: ['Florian Wirtz', 'Alexander Isak', 'Hugo Ekitiké', 'Dominik Szoboszlai', 'Cody Gakpo', 'Alexis Mac Allister'],
+  MCI: ['Erling Haaland', 'Phil Foden', 'Rayan Cherki', 'Jérémy Doku', 'Antoine Semenyo'],
+  MUN: ['Bruno Fernandes', 'Matheus Cunha', 'Benjamin Šeško', 'Bryan Mbeumo', 'Marcus Rashford', 'Amad Diallo'],
+  ATM: ['Julián Álvarez', 'Ademola Lookman', 'Álex Baena', 'Giuliano Simeone', 'Jonathan David'],
+  BAR: ['Lamine Yamal', 'Raphinha', 'Pedri', 'Dani Olmo', 'Fermín López', 'Anthony Gordon'],
+  BET: ['Isco', 'Antony', 'Cucho Hernández', 'Abde Ezzalzouli'],
+  RMA: ['Kylian Mbappé', 'Vinícius Júnior', 'Jude Bellingham', 'Federico Valverde', 'Arda Güler', 'Aurélien Tchouaméni'],
+  VIL: ['Georges Mikautadze', 'Alberto Moleiro', 'Ayoze Pérez'],
+  ROM: ['Paulo Dybala', 'Matìas Soulè', 'Donyell Malen'],
+  COM: ['Nico Paz', 'Moise Kean', 'Assane Diao', 'Tasos Douvikas'],
+  INT: ['Lautaro Martínez', 'Marcus Thuram', 'Nicolò Barella', 'Federico Dimarco', 'Pio Esposito'],
+  NAP: ['Kevin De Bruyne', 'Scott McTominay', 'Rasmus Højlund', 'Frank Anguissa'],
+  FCB: ['Harry Kane', 'Michael Olise', 'Jamal Musiala', 'Luis Díaz', 'Joshua Kimmich'],
+  BVB: ['Serhou Guirassy', 'Maximilian Beier', 'Felix Nmecha', 'Jobe Bellingham'],
+  RBL: ['Antonio Nusa', 'Christopher Nkunku', 'Christoph Baumgartner', 'Rômulo'],
+  VFB: ['Deniz Undav', 'Ermedin Demirovic', 'Jamie Leweling'],
+  RCL: ['Florian Thauvin', 'Odsonne Édouard', 'Abdallah Sima'],
+  LIL: ['Olivier Giroud', 'Hákon Haraldsson', 'Ethan Mbappé'],
+  PSG: ['Ousmane Dembélé', 'Khvicha Kvaratskhelia', 'Vitinha', 'Désiré Doué', 'João Neves', 'Ferran Torres'],
+  FCP: ['Samu Aghehowa', 'Gabri Veiga', 'Pepê'],
+  CLB: ['Hans Vanaken', 'Nicolò Tresoldi', 'Carlos Forbs'],
+  SPO: ['Luis Suárez', 'Rodrigo Zalazar', 'Geny Catamo'],
+  PSV: ['Ivan Perisic', 'Ricardo Pepi', 'Guus Til'],
+  BOD: ['Jens Petter Hauge', 'Ola Brynhildsen', 'Patrick Berg'],
+  GAL: ['Victor Osimhen', 'Rafael Leão', 'Leroy Sané', 'Baris Alper Yilmaz'],
+  FEN: ['Mason Greenwood', "N'Golo Kanté", 'Marco Asensio', 'Romelu Lukaku'],
+  SHA: ['Alisson Santana', 'Kauã Elias', 'Marlon Gomes'],
+  FEY: ['Anis Hadj Moussa', 'Nacho Ferri', 'Luciano Valente'],
+  SLA: ['Tomás Chorý', 'Lukás Provod', 'Mojmír Chytil'],
+  SBR: ['Andraž Šporar', 'Tigran Barseghyan', 'Nino Marcelli'],
+  AEK: ['Luka Jović', 'Lovro Majer', 'Oleksandr Zubkov'],
+  LSK: ['Saša Kalajdžić', 'Samuel Adeniran', 'Christoph Lang'],
+  VIK: ['Zlatko Tripić', 'Peter Christiansen', 'Henrik Bjørdal'],
+  SAB: ['Joy-Lance Mickels', 'Orphé Mbina', 'Kaheem Parris'],
+}
 const UCL_SET = new Set(UCL_SHORTS)
-export const UCL_STRIKERS = ALL_STRIKERS.filter(p => UCL_SET.has(p.team))
+export const UCL_STRIKERS = ALL_STRIKERS.filter(p => UCL_SET.has(p.team) && UCL_PICKS[p.team]?.includes(p.name))
 // every club player in the data (the season engine's award field, photos, the checks)
 export const SOCCER_ALL_STRIKERS = ALL_STRIKERS
 

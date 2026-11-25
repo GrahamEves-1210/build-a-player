@@ -75,7 +75,7 @@ async function loadSoccer() {
     pools: { st: { classic: pl.UCL_STRIKERS, 'all-time': pl.WC_STRIKERS } },
     posLabel: { st: 'ST' },
     tagOf: p => p.role || 'ST',
-    poolSet: { classic: ['CHAMPIONS LEAGUE', 'Every player in this season’s Champions League'], 'all-time': ['WORLD CUP', 'The legends of the 48 greatest World Cup nations'] },
+    poolSet: { classic: ['CHAMPIONS LEAGUE', 'The stars of this season’s 36 Champions League clubs'], 'all-time': ['WORLD CUP', 'The legends of the 48 greatest World Cup nations'] },
     teams: [...clubs.UCL_CLUBS, ...nations.WC_NATIONS],
     logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
     photo: (name, p) => { const k = hs.soccerFaceKey(p); return k ? `${HEADSHOT_BASE}/${k}.webp` : null },
