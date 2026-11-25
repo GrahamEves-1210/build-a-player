@@ -7836,7 +7836,7 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
   .mobile-build .sil-wrap.sil-wrap--st { width: 100%; margin: 0; }
 }
 /* (the face's shading layer needs its filter: weak machines, where figure filters are off, go without the layer) */
-html.low-power .sil-wrap svg.st-face-detail { display: none; }
+html.low-power .sil-wrap .st-fx { display: none; }
 
 /* ═══ Soccer's Home: the striker's banded figure (SoccerApp.jsx SOCCER_SPLASH_ATTRS) ═══
    His art has empty margins round him, so his box reaches a little past the stage's figure box and he stands as

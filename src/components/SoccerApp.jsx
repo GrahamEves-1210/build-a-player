@@ -135,8 +135,9 @@ const kitNickFor = pool => chip => {
   return t ? String(t.kit ?? t.name).toUpperCase() : chip?.team ?? null
 }
 const teamSub = t => t.name
-// the World Cup wheel shows a nation's flag in place of its code (the owner, 2026-11-25); a club keeps its code
-const teamFlag = t => { const f = flagEmoji(t.short); return f ? <span className="flag-emoji">{f}</span> : t.short }
+// the World Cup wheel shows a nation's flag before its code (the owner, 2026-11-25: the flag, but keep both lines,
+// the code over the name, as the wheel always had them); a club keeps its code alone
+const teamFlag = t => { const f = flagEmoji(t.short); return f ? <><span className="flag-emoji">{f}</span>{' '}{t.short}</> : t.short }
 
 // OVR and the striker's name for him (the sim's own, when it has one)
 const calcOvr = (b, types) => Math.round(SoccerSim.calcSoccerOVR?.(b, types) ?? 0)
