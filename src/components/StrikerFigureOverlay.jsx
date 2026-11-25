@@ -39,12 +39,13 @@ const Group = ({ ids, fill, opacity }) => (
   </g>
 )
 
-const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }
+const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }
 
-// `scale`: the figure's CSS scale on the page (the art is scaled the same way), applied to both layers here so the
-// colour layer still screens over the art (a scaled wrapper would cut it off from the picture under it)
-export default function StrikerFigureOverlay({ build, logoDir = null, scale = 1 }) {
-  const tf = scale !== 1 ? { transform: `scale(${scale})`, transformOrigin: 'center center' } : null
+// `box`: where the art is drawn in its wrap ({ left, top, width, height }, the same box the <img> gets), so both
+// layers sit on it exactly. They are placed, not wrapped or scaled: the colour layer has to stay in the picture's
+// own stacking context to screen over it. Left out, the layers fill the wrap.
+export default function StrikerFigureOverlay({ build, logoDir = null, box = null }) {
+  const tf = box ? { inset: 'auto', ...box } : null
   const chip = s => build?.[s] ?? null
   const shirt = chip('clutch'), legs = chip('speed'), boots = chip('bounce'), size = chip('size'), head = chip('basketballIQ')
   const dir = logoDir ?? '/logos/soccer/'

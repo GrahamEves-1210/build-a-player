@@ -7784,3 +7784,22 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
 .tpm-pick-none { margin: 14px 0 4px; text-align: center; font-size: 14px; color: rgba(255,255,255,.55); }
 /* soccer's KICK OFF button in the game's display type (it fell back to Impact, or a plain sans without it) */
 .ssp-page .tipoff-spin-btn { font-family: var(--ag-font, 'Bebas Neue', sans-serif); letter-spacing: 2px; }
+
+/* ═══ The striker's figure on the build screen (Silhouette.jsx STRIKER_ZONES / strikerFit) ═══
+   His art and his cards are placed in px from the art itself, so the wrap isn't scaled (the basketball figure's is)
+   and every card takes one scale (--st-k, set on the wrap) about its inner edge: the edge that faces him stays put. */
+.sil-wrap.sil-wrap--st.sil-wrap--st { transform: none !important; }
+.sil-wrap.sil-wrap--st .cz-card.cz-card { transform: translateY(-50%) scale(var(--st-k, 1)) !important; }
+.sil-wrap.sil-wrap--st .cz-card.cz-left { left: auto !important; transform-origin: 100% 50%; }
+.sil-wrap.sil-wrap--st .cz-card.cz-right { right: auto !important; transform-origin: 0 50%; }
+.sil-wrap.sil-wrap--st .cz-card.cz-left:is(.cz-hidden, .cz-invisible) { transform: translateY(-50%) translateX(-10px) scale(var(--st-k, 1)) !important; }
+.sil-wrap.sil-wrap--st .cz-card.cz-right:is(.cz-hidden, .cz-invisible) { transform: translateY(-50%) translateX(10px) scale(var(--st-k, 1)) !important; }
+@media (min-width: 769px) {
+  /* the website from a tablet up: the stage between the tabs and the ad rail, the full width of the field (the
+     field's 90px side padding is the basketball figure's) */
+  .sil-wrap.sil-wrap--st-desk { width: calc(100% + 164px); height: calc(100dvh - 229px); min-height: 380px; margin-top: 15px; }
+  html.is-tablet:not(.app-look) .sil-wrap.sil-wrap--st-desk { width: 100%; }
+}
+@media (max-width: 768px) {
+  .mobile-build .sil-wrap.sil-wrap--st { width: 100%; margin: 0; }
+}
