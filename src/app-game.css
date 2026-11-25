@@ -8168,12 +8168,12 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home--soccer .st-home-fig { left: 10%; right: 10%; top: 12%; bottom: -1%; }
 }
 /* Phone Home: MORE WAYS TO PLAY's line, on its own, between the game modes and the Builder Pass (owner 11-25) */
-@media (max-width: 1023px) { .ag-home .ag-promos { position: relative; padding-top: 22px !important; margin-top: 10px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px; background: rgba(255,255,255,.28); } }
+@media (max-width: 1023px) { .ag-home .ag-promos { position: relative; padding-top: 28px !important; margin-top: 18px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px; background: rgba(255,255,255,.28); } }
 
 /* soccer Home on desktop too: the photo cropped to the stands (no roof strip, no goal-area lines) */
 .ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
 /* desktop too: MORE WAYS TO PLAY's line between the game modes and the Builder Pass */
-@media (min-width: 1024px) { .ag-home .ag-promos { position: relative; padding-top: 24px !important; margin-top: 12px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,.28); } }
+@media (min-width: 1024px) { .ag-home .ag-promos { position: relative; padding-top: 30px !important; margin-top: 20px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,.28); } }
 @media (min-width: 1024px) {
   .ag-home--soccer .ag-stage-photo { background-size: auto 320% !important; background-position: center 14% !important; }   /* (the wide stage: stands only) */
   .ag-home .ag-sport { height: 56px !important; }   /* (the sport bar as tall as the phone's, owner 11-25) */
@@ -8184,3 +8184,17 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 /* Home's position bar: its top corners rounded like the sport bar's (owner 11-25), and on desktop as tall as on a phone */
 .ag-home .ag-stage .ag-positions { border-radius: var(--hm-r) var(--hm-r) 0 0; }
 @media (min-width: 1024px) { .ag-home .ag-stage .ag-positions { height: 62px !important; } }
+/* The wordmark's B and P as the real logo draws them (owner 11-25): the upper bowl open at the back, the upright cut
+   away between the top bar and the middle one. Measured off the wordmark face (BAP Wordmark): with line-height 1 the
+   letter's box is 1em tall, its ink 0.145em down; B's upper counter runs 0.296-0.41em, P's 0.319-0.459em, the
+   upright 0.32em from the box's left. The cut is a mask hole, so it shows whatever is behind, on every sport. */
+.wm-cb, .wm-cp {
+  display: inline-block; line-height: 1; font-style: normal;
+  -webkit-mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000); mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%, .33em .124em; mask-size: 100% 100%, .33em .124em;
+  -webkit-mask-position: 0 0, -.01em .292em; mask-position: 0 0, -.01em .292em;
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.wm-cp { -webkit-mask-size: 100% 100%, .33em .148em; mask-size: 100% 100%, .33em .148em; -webkit-mask-position: 0 0, -.01em .315em; mask-position: 0 0, -.01em .315em; }
+.wm-cb, .wm-cp { text-shadow: none !important; }   /* (the glow would be cut square at the mask's edge) */

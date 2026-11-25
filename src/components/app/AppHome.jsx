@@ -683,7 +683,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         <div className="ag-brand">
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
           <div className="ag-wordmark">
-            <Wordmark tail={isBucket ? <>B<HoopU />CKET</> : null} />
+            <Wordmark tail={isBucket ? <><i className="wm-cb">B</i><HoopU />CKET</> : null} />
           </div>
         </div>
 

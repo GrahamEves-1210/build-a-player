@@ -3,11 +3,13 @@
 // sets the size and the colours. tail: what follows -A- (basketball's B<HoopU />CKET), else PLAYER. emStyle: -A-'s own colour
 // (wm-a: -A- without its own colour, which app-game.css colours by sport. Not :not([style]): any rule that reads the style
 // attribute made every inline style the page writes, each frame of a wheel or an animation, cost a style match)
+// (the B and the P have the real logo's cut: the upper bowl open at the back, no upright between the top bar and
+// the middle one: .wm-cb / .wm-cp in app-game.css, owner 11-25)
 export default function Wordmark({ tail = null, emStyle }) {
   return (
     <span className="bap-wm">
-      BUI<i className="wm-k wm-k2">L</i>D<em className={emStyle ? undefined : 'wm-a'} style={emStyle}><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>
-      {tail ?? <><i className="wm-k wm-p">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-e">E</i>R</>}
+      <i className="wm-cb">B</i>UI<i className="wm-k wm-k2">L</i>D<em className={emStyle ? undefined : 'wm-a'} style={emStyle}><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>
+      {tail ?? <><i className="wm-k wm-p wm-cp">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-e">E</i>R</>}
     </span>
   )
 }
