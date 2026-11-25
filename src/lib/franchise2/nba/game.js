@@ -125,7 +125,8 @@ export const TUNE = {
   coldAt: 80, coldK: 0.005, coldMax: 0.08,
   lead4: 0.009, lateT: 360,    // and more in a close fourth quarter's last minutes (the leader slows it down, the other team pushes)
   // the playoffs: nobody eases off, the ball goes to the stars more, the crowd counts a bit more
-  po: { lead: 0.0006, lead4: 0.006, leadBig: 0.0006, usage: 0.25, usageTop: 0.4, home: 0.016 },
+  // (usageTop: a star's share goes up in the playoffs; with his 39-40 minutes the scoring leaders run 31 to 36 a game)
+  po: { lead: 0.0006, lead4: 0.006, leadBig: 0.0006, usage: 0.24, usageTop: 0.25, home: 0.016 },
 }
 const tn = (S, k) => (S.po && TUNE.po?.[k] != null ? TUNE.po[k] : TUNE[k])
 const Q = 720, OT = 300, STINT = 120
