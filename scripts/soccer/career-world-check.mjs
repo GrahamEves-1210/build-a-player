@@ -334,6 +334,27 @@ for (const [from, to, kind] of [['BHA', 'FCB', 'bid'], ['SEV', 'BET', 'bid'], ['
   say(`England's No. 9s, 2029: ${elite.order.map(p => `${p.name} ${p.ovr}${p.me ? ' (him)' : ''}`).join(', ')}`)
   say(`call-ups: an 86 with 5 goals for a side in 16th: ${hull.called ? `called (#${hull.rank})` : `not called (#${hull.rank})`}; the same player with 22: ${hot.called ? `called (#${hot.rank})` : `not called (#${hot.rank})`}; a Brazil 88 with no goals off the bench: ${benchBra.called ? 'called' : 'not called'}; a 97 with 26: ${elite.role}`)
   ok(!hull.called && !benchBra.called && elite.called && elite.role === 'Starter' && hot.rank < hull.rank, 'call-up: form and minutes')
+  // every FIFA nation (2026-11-25): 211, by confederation; a minnow caps a pro easily and rarely qualifies
+  const byConf = {}
+  for (const n of C.CAREER_NATIONS) byConf[n.conf] = (byConf[n.conf] ?? 0) + 1
+  say(`nations by confederation: ${Object.entries(byConf).map(x => x.join(' ')).join(', ')}`)
+  ok(C.CAREER_NATIONS.length === 211 && new Set(C.CAREER_NATIONS.map(n => n.short)).size === 211 && picks.length === 211, 'nations: not FIFA\'s 211')
+  ok(byConf.UEFA === 55 && byConf.CONMEBOL === 10 && byConf.CAF === 54 && byConf.AFC === 46 && byConf.CONCACAF === 35 && byConf.OFC === 11, 'nations: a confederation count is off')
+  ok(C.CAREER_NATIONS.every(n => n.name && n.conf && /^#[0-9A-F]{6}$/i.test(n.color) && /^#[0-9A-F]{6}$/i.test(n.color2) && n.ovr > 0 && n.att > 0 && n.def > 0), 'nations: an entry is missing a field')
+  const minnow = (nat, ovr) => SX.soccerCallUp({ ...fresh(7, 'HUL', nat, `world-${nat}`), season: 2027, ovr, age: 22 }, { goals: 6, mins: 1800, apps: 25 })
+  const qual = { FRO: 0, TGA: 0, SMR: 0, FIJ: 0, NZL: 0, RUS: 0, KEN: 0 }, contIn = { FRO: 0, KEN: 0, AIA: 0, CUB: 0 }
+  for (let i = 0; i < 40; i++) {
+    const W = INTL.worldCupOf(2030, `minnow${i}`)
+    for (const n of Object.keys(qual)) if (W.nations.includes(n)) qual[n]++
+    for (const [n, y] of [['FRO', 2028], ['KEN', 2028], ['AIA', 2029], ['CUB', 2029]]) if (INTL.continentalField(INTL.continentalOf(n, y), y, `minnow${i}`).nations.includes(n)) contIn[n]++
+  }
+  const fro = minnow('FRO', 74), tga = minnow('TGA', 70), bra = minnow('BRA', 74)
+  say(`minnows: a 74 from the Faroe Islands ${fro.called ? `called (${fro.role})` : 'not called'}; a 70 from Tonga ${tga.called ? `called (${tga.role})` : 'not called'}; a 74 from Brazil ${bra.called ? 'called' : 'not called'}`)
+  say(`World Cup 2030 over 40 worlds: ${Object.entries(qual).map(x => x.join(' ')).join(', ')}; their continental finals: ${Object.entries(contIn).map(x => x.join(' ')).join(', ')}`)
+  ok(fro.called && tga.called && tga.role === 'Starter' && !bra.called, 'call-up: a minnow should cap a decent pro, Brazil shouldn\'t')
+  ok(qual.TGA === 0 && qual.SMR === 0 && qual.RUS === 0 && qual.FRO <= 2 && qual.NZL >= 36 && contIn.AIA === 0 && contIn.CUB <= 32, 'qualifying: a minnow went too often')
+  ok(INTL.continentalOf('FIJ', 2028) == null && INTL.continentalOf('TGA', 2031) == null && INTL.continentalOf('FRO', 2028)?.id === 'euro' && INTL.continentalOf('AIA', 2027)?.id === 'gold' && INTL.continentalOf('TPE', 2027)?.id === 'asian' && INTL.continentalOf('KEN', 2027)?.id === 'afcon', 'cycles: the new nations\' confederations')
+  ok(X.theNation('FRO') === 'the Faroe Islands' && X.theNation('BAH') === 'the Bahamas' && X.theNation('TGA') === 'Tonga', 'theNation')
 }
 
 // ── 8. Size is his frame ──

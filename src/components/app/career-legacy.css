@@ -182,6 +182,10 @@ button.cr-nation b { flex: 1; min-width: 0; font-family: var(--ag-body); font-we
 .cr-nat-box { align-content: start; height: min(86dvh, 760px); padding-top: 0; }
 .cr-nat-top { position: sticky; top: 0; z-index: 2; display: grid; gap: 8px; padding: 12px 0 10px; background: #0d1013; }
 .cr-nat-find { width: 100%; height: 46px; font-size: 16px; box-sizing: border-box; }
+.cr-nat-jump { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 0 2px; }
+.cr-nat-jump::-webkit-scrollbar { display: none; }
+.cr-nat-jump button { flex: none; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--ag-line); background: transparent; color: var(--ag-text); font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.2px; cursor: pointer; }
+.cr-nat-jump button:active { background: rgba(255,255,255,.08); }
 .cr-nat-group { display: grid; gap: 6px; padding-bottom: 10px; }
 .cr-nat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .cr-nat { display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.04); color: inherit; font: inherit; text-align: left; cursor: pointer; }

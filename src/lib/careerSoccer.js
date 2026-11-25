@@ -305,13 +305,14 @@ const NATION_KEY = 'bap_soccer_nation'
 export const lastNation = () => { try { const n = localStorage.getItem(NATION_KEY); return NATION_BY.has(n) ? n : null } catch { return null } }
 export const rememberNation = n => { try { if (NATION_BY.has(n)) localStorage.setItem(NATION_KEY, n) } catch {} }
 const soccerNationOf = n => (NATION_BY.has(n) ? n : lastNation() ?? 'ENG')
-// (the countries a career can be started with: the 48 of the 2026 World Cup and the ones that stayed at home, Italy,
-// Denmark, Poland, Nigeria, Wales, Ireland, Serbia...; the rest of CAREER_NATIONS are opponents)
+// (the countries a career can be started with: every one of FIFA's 211 since 2026-11-25, England, Scotland, Wales and
+// Northern Ireland each their own; before, the 70 with players in the club data)
 export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name, conf: n.conf ?? null }))
 export const nationName = short => NATION_BY.get(short)?.name ?? short
 export const nationFlag = short => `/logos/nations/${short}.png`
-// a country in a sentence: the United States, the Netherlands, the Ivory Coast (England, Brazil and the rest as they are)
-export const theNation = short => { const n = nationName(short); return /^(United States|Netherlands|Ivory Coast|Republic of Ireland|United Arab Emirates|Dominican Republic|Gambia|Comoros)$/.test(n) ? `the ${n}` : n }
+// a country in a sentence: the United States, the Netherlands, the Ivory Coast, the Faroe Islands (England, Brazil and
+// the rest as they are)
+export const theNation = short => { const n = nationName(short); return /^(United States|Netherlands|Ivory Coast|Republic of Ireland|United Arab Emirates|Dominican Republic|Gambia|Comoros|Bahamas|Central African Republic|Philippines|Maldives|Faroe Islands|Solomon Islands|Cook Islands|Cayman Islands|British Virgin Islands|US Virgin Islands|Turks and Caicos Islands)$/.test(n) ? `the ${n}` : n }
 
 // His place at the club: first choice, in the rotation (close behind, or a teenager they want to play), or on the bench
 export function soccerRole(c) {

@@ -163,33 +163,49 @@ export function CareerGame({ c, setCareer, skipAll = true, ...p }) {
 export const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
 // his position on a card: a basketball career's spot (PG to C), everyone else's position
 const posTag = c => (c.sport === 'bucket' ? hoopSpot(c) : POS_LABEL[c.pos])
-// Soccer's nationality: seventy countries, so a sheet in place of a long menu: a search box, then every country under
+// Soccer's nationality: all 211 of FIFA's countries, so a sheet in place of a long menu: a search box, then every country under
 // its confederation, flag and name, two to a row on a phone (the one picked marked)
 const CONF_ORDER = [['UEFA', 'EUROPE'], ['CONMEBOL', 'SOUTH AMERICA'], ['CAF', 'AFRICA'], ['AFC', 'ASIA'], ['CONCACAF', 'NORTH AND CENTRAL AMERICA'], ['OFC', 'OCEANIA']]
+// (the jump row under the search: a long list, so each confederation a tap away)
+const CONF_JUMP = { EUROPE: 'EUROPE', 'SOUTH AMERICA': 'S. AMERICA', AFRICA: 'AFRICA', ASIA: 'ASIA', 'NORTH AND CENTRAL AMERICA': 'N. AMERICA', OCEANIA: 'OCEANIA' }
 const plainText = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+// the other names a country is searched by
+const NATION_ALIAS = { TPE: 'taiwan', CIV: "cote d'ivoire", TUR: 'turkey', CZE: 'czech republic', USA: 'usa america us', NED: 'holland',
+  SWZ: 'swaziland', TLS: 'east timor', MYA: 'burma', MAC: 'macao', KOR: 'korea republic', PRK: 'korea dpr', COD: 'congo dr democratic republic',
+  CGO: 'republic of the congo', IRL: 'ireland', UAE: 'emirates', KSA: 'saudi', CPV: 'cabo verde', MKD: 'macedonia', BIH: 'bosnia',
+  TAH: 'french polynesia', ASA: 'samoa', VIR: 'virgin islands', VGB: 'virgin islands', STP: 'sao tome' }
 function NationSheet({ value, onPick, onClose }) {
   const [q, setQ] = useState('')
+  const boxRef = useRef(null), topRef = useRef(null)
   const all = sx().SOCCER_NATIONS ?? []
   const want = plainText(q.trim())
-  const hits = want ? all.filter(n => plainText(n.name).includes(want) || n.short.toLowerCase() === want) : all
+  const hits = want ? all.filter(n => plainText(n.name).includes(want) || n.short.toLowerCase() === want || (NATION_ALIAS[n.short] ?? '').includes(want)) : all
   const groups = [...CONF_ORDER, [null, 'OTHER']].map(([id, label]) => ({ label, list: hits.filter(n => (id ? n.conf === id : !CONF_ORDER.some(([k]) => k === n.conf))) })).filter(g => g.list.length)
   useEffect(() => { const esc = e => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return createPortal(
     <div className="cr-face-sheet cr-nat-sheet" role="dialog" aria-modal="true" aria-label="Nationality" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="cr-face-box cr-nat-box">
-        <div className="cr-nat-top">
+      <div className="cr-face-box cr-nat-box" ref={boxRef}>
+        <div className="cr-nat-top" ref={topRef}>
           <div className="cr-face-top"><span className="ag-eyebrow">NATIONALITY · {all.length} COUNTRIES</span><button type="button" className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button></div>
           <input className="cr-name-in cr-nat-find" type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search a country" aria-label="Search a country" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" />
+          {groups.length > 1 && (
+            <div className="cr-nat-jump" role="group" aria-label="Jump to a confederation">
+              {groups.map(g => <button key={g.label} type="button" onClick={() => {
+                const box = boxRef.current, sec = box?.querySelector(`[data-conf="${g.label}"]`)
+                if (sec) box.scrollTo({ top: box.scrollTop + sec.getBoundingClientRect().top - box.getBoundingClientRect().top - (topRef.current?.offsetHeight ?? 0) - 4 })
+              }}>{CONF_JUMP[g.label] ?? g.label}</button>)}
+            </div>
+          )}
         </div>
         {groups.map(g => (
-          <section key={g.label} className="cr-nat-group">
+          <section key={g.label} className="cr-nat-group" data-conf={g.label}>
             <span className="ag-eyebrow">{g.label} · {g.list.length}</span>
             <div className="cr-nat-grid">
               {g.list.map(n => <button key={n.short} type="button" className={`cr-nat${n.short === value ? ' is-on' : ''}`} aria-pressed={n.short === value} onClick={() => onPick(n.short)}><img src={nationFlag(n.short)} alt="" loading="lazy" /><b>{n.name}</b></button>)}
             </div>
           </section>
         ))}
-        {!groups.length && <p className="cr-note cr-nat-none">No country by that name. Career has the {all.length} with players in the game.</p>}
+        {!groups.length && <p className="cr-note cr-nat-none">No country by that name. Career has every FIFA nation, all {all.length} of them.</p>}
       </div>
     </div>,
     document.body,
