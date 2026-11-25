@@ -481,10 +481,9 @@ function getDominantPlayer(build) {
 // `modelOnly`: just the player — figure, jersey overlay and face — with no
 // dots, cards, measurement lines or backdrop, sized to its container (the app's
 // Career model). Nothing else changes when it's off.
-// SOCCER PLACEHOLDER: a striker is drawn on the basketball figure (SOCCER_SILHOUETTE in lib/soccerUi.js)
-// until his own art lands. Each striker trait rides on one basketball trait's spot and body part
-// (SOCCER_AS_BUCKET), so the build screen runs the basketball figure unchanged: the build, the
-// traits, the labels, the tabs and the drag are handed in under the basketball keys.
+// SOCCER: the striker has his own art, overlay and card layout (STRIKER_ZONES / strikerFit above), but the build
+// screen's plumbing was built on the basketball figure's keys: each striker trait is handed in under one of them
+// (SOCCER_AS_BUCKET), with the build, the traits, the labels, the tabs and the drag.
 const toBkt = t => SOCCER_AS_BUCKET[t] ?? t
 export default function Silhouette(props) {
   const { isSoccer = false, build, types = TYPES, attrMap = ATTR, categoriesData = CATEGORIES, activeDrag } = props
