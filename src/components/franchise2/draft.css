@@ -195,7 +195,7 @@
 .dr-sandbox { display: grid; gap: 8px; margin-bottom: 28px; }
 
 /* ── Draft day ────────────────────────────────────────────────────────────── */
-.dr-day { display: grid; align-content: start; gap: 12px; min-width: 0; color: var(--fk-text); }
+.dr-day { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px; min-width: 0; color: var(--fk-text); }
 .dr-picks-strip { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }
 .dr-chip { flex: none; display: flex; flex-direction: column; align-items: center; min-width: 52px; padding: 6px 8px; background: var(--fk-g2); line-height: 1; }
 .dr-chip small { font-family: var(--fk-b); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }

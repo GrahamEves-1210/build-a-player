@@ -494,4 +494,10 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
   :is(.fk-root, .fk) .gd-fin-t > strong { font-size: 29px; }
   :is(.fk-root, .fk) :is(.dr-hero-name b, .dr-rv-name b) { font-size: 29px; }
   :is(.fk-root, .fk) .dr-pc-name b { font-size: 27px; }
+  /* a button with a line beside its label: the label on one line, the line wraps beside it */
+  :is(.fk-root, .fk) .fk-go:has(> small) { gap: 8px; padding: 0 12px; font-size: 17px; }
+  :is(.fk-root, .fk) .fk-go:has(> small) > .fk-go-txt { flex: none; white-space: nowrap; }
+  :is(.fk-root, .fk) .fk-go > small { min-width: 0; line-height: 1.15; text-align: left; }
+  /* the draft's picks: seven across inside the gutter */
+  :is(.fk-root, .fk) .dr-picks-strip { min-width: 0; } :is(.fk-root, .fk) .dr-picks-strip .dr-chip { flex: 1 0 40px; min-width: 40px; padding: 6px 2px; }
 }
