@@ -15,7 +15,7 @@ const PASS_SEASONS = {
 const nyDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
 // A sale on the pass (src/lib/pass.js PASS_SALE: the same days and price): from `start` up to (not including) `end`,
 // New York days. Black Friday 2026: half price, Nov 27 through Nov 30.
-const PASS_SALE = { name: 'Black Friday, 50% off', cents: 449, start: '2026-11-27', end: '2026-12-01' }
+const PASS_SALE = { name: 'Black Friday, 50% off', cents: 449, start: '2026-11-25', end: '2026-12-01' }
 const passSale = () => { const d = nyDay(); return d >= PASS_SALE.start && d < PASS_SALE.end ? PASS_SALE : null }
 
 export async function onRequestPost({ request, env }) {
