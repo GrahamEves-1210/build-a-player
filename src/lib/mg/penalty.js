@@ -159,7 +159,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     let K
     if (!dived && stay) K = { x: 0, z: KEEP_Z, react: byV(v, 150, 230), reach: 0.9, up: 2.4, dive: 3.6, read: 0 }
     else if (!dived) { g.kdive = g.kgoes; g.kAt = g.t; g.kx0 = swayX(g); K = { x: 0, z: KEEP_Z, react: 90, reach: 0.6, up: 2.3, dive: 3.9, read: g.kgoes * 1.2 } }
-    else K = { x: 0, z: KEEP_Z, react: 0, reach: 0.6, up: 2.25, dive: g.kgoes === side || (Math.abs(s.to.x) < 0.9 && g.kgoes) ? 3.15 : 0.4, read: g.kgoes }
+    else K = { x: 0, z: KEEP_Z, react: 0, reach: 0.6, up: 2.25, dive: g.kgoes === side || (Math.abs(s.to.x) < 0.9 && g.kgoes) ? 3.0 : 0.4, read: g.kgoes }
     // gone early the other way: he can't get back
     if (dived && g.kgoes && g.kgoes !== side && Math.abs(s.to.x) > 0.9) K.reach = 0.2
     if (dived && g.kgoes && Math.abs(s.to.x) <= 0.9) K.reach = 0.25   // (down the middle as he goes)
@@ -334,12 +334,14 @@ export function draw(ctx, g, view) {
   }
   if (g.res === 'goal' && g.done && !g.kicked) { g.kicked = true; g.nudge.kick(g.t, 2.5, 0, 1, 180) }
   strokeTrail(ctx, g.st, g.t, { C, k: g.k, base: 'pen', foot: 1 })
+  // (the words: under the taker's feet and over the STUTTER button on a phone, whatever its height; over the keys on a computer)
+  const tipY = view.keys ? undefined : Math.min(P(C, START.x, 0, START.z).y + 32, view.h - 106)
   // the first one: how it's done, a stroke drawn off the ball into the top corner, and the line under it
   if (g.phase === 'wait' && !g.st.on && !dr && g.k.phase === 'idle') {
     const b = P(C, BALL_X, 0.11, SPOT_Z), to = P(C, 2.75, 1.75, 0)
     if (drawnSoFar() < 2) ghostStroke(ctx, { x: b.x, y: b.y }, { x: to.x, y: to.y }, 0.1, g.t - g.readyAt - 300)
-    tip(ctx, view, g.say && g.t - g.sayAt < 1600 ? g.say : view.keys ? 'DRAW IT WITH THE MOUSE · OR AIM AND SPACE' : 'DRAW IT FROM THE BALL TO YOUR SPOT', undefined, 14)
-  } else if (g.phase === 'set' && g.say) tip(ctx, view, g.say, undefined, 14)
+    tip(ctx, view, g.say && g.t - g.sayAt < 1600 ? g.say : view.keys ? 'DRAW IT WITH THE MOUSE · OR AIM AND SPACE' : 'DRAW IT FROM THE BALL TO YOUR SPOT', tipY, 14)
+  } else if (g.phase === 'set' && g.say) tip(ctx, view, g.say, tipY, 14)
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
   drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'STUTTER' } : { stick: false, S: null, P: 'STUTTER' }, !g.done)
   placeStamp(g.stamp, view)

@@ -94,7 +94,8 @@ export function make({ v, seed }) {
   function start() {
     g.phase = 'aim'; g.at = g.t; g.shot = null; k.reset(); k.type = 'driven'
     const sh = shots[g.i]
-    g.hud.prompt = sh.spot.roll ? 'FIRST TIME: HIT IT AS IT COMES' : sh.spot.name
+    // (where it's from is on the count's line; the HUD's own line is kept for the one that needs saying)
+    g.hud.prompt = sh.spot.roll ? 'FIRST TIME: HIT IT AS IT COMES' : null
     g.rollAt = sh.spot.roll ? g.t + 1500 : null
     if (sh.spot.roll) g.fx.push('tap')
   }
@@ -204,15 +205,15 @@ export function draw(ctx, g, view) {
   if (b && b.z <= 0.05) ball(ctx, C, b.x, b.y, b.z, b.spin)
   if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
   else if (g.phase === 'aim' && (g.k.phase === 'power' || g.k.phase === 'strike')) { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
-  text(ctx, `BALL ${Math.min(g.i + 1, N)} OF ${N}`, 12, 60, { font: LABEL, size: 16, align: 'left', color: 'rgba(255,255,255,.8)' })
+  text(ctx, `BALL ${Math.min(g.i + 1, N)} OF ${N} · ${sh.spot.name}`, 12, 60, { font: LABEL, size: 16, align: 'left', track: 0.6, color: 'rgba(255,255,255,.85)' })
   strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven' })
   // the first ball: a stroke drawn off the ball to the lit target, and the line under it
   if (g.phase === 'aim' && g.i === 0 && g.k.phase === 'idle' && !g.st.on) {
     const bp = P(C, sh.spot.x, 0.11, sh.spot.z), [tx, ty] = TARGETS[sh.k], to = P(C, tx, ty, 0)
     if (drawnSoFar() < 2) ghostStroke(ctx, { x: bp.x, y: bp.y }, { x: to.x, y: to.y }, 0, g.t - g.at - 200)
-    tip(ctx, view, view.keys ? 'DRAW IT TO THE TARGET WITH THE MOUSE' : 'DRAW IT FROM THE BALL TO THE TARGET', view.keys ? view.h - 100 : undefined, 14)
+    tip(ctx, view, view.keys ? 'DRAW IT TO THE TARGET WITH THE MOUSE' : 'DRAW IT FROM THE BALL TO THE TARGET', view.keys ? undefined : view.h - 96, 14)
   }
-  shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
+  shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 104 })
   drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'CURL' } : { stick: false, S: null, P: null }, !g.done)
   placeStamp(g.stamp, view)
 }

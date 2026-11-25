@@ -69,7 +69,7 @@ export function drawControls(ctx, view, ctl, labels, live = true, t = 0) {
     ctx.fillStyle = ctl.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#e9eef0' : 'rgba(233,238,240,.7)'
     circle(ctx, ax + s.x * R, ay - s.y * R, 19); ctx.fill()
     ctx.strokeStyle = 'rgba(6,10,12,.5)'; ctx.lineWidth = 1.5; ctx.stroke()
-    if (ctl.tid == null) text(ctx, labels.stick, ax, ay + R + 18, { size: 12, track: 1.2, color: 'rgba(255,255,255,.62)' })
+    if (ctl.tid == null) text(ctx, labels.stick, ax, ay + R + 18, { size: 13, track: 1.2, color: 'rgba(255,255,255,.62)' })
   }
   const btn = (c, lit, label, size) => {
     ctx.fillStyle = lit ? view.accent : 'rgba(28,38,43,.9)'; circle(ctx, c.x, c.y, c.r); ctx.fill()

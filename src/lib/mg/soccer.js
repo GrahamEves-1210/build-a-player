@@ -1342,7 +1342,7 @@ export function shotHud(ctx, view, k, o = {}) {
   if (k.drawing) return   // (the stroke's trail shows its own pace while it's being drawn)
   const D = SHOT_TYPES[k.type] ?? SHOT_TYPES.driven, p = Math.min(1, k.powerAt(t))
   ctx.fillStyle = 'rgba(6,8,10,.8)'; rr(ctx, x0 - 8, y - 20, w + 16, h + 28, 4); ctx.fill()
-  text(ctx, k.drawn ? k.drawn.label : D.label, x0, y - 10, { font: LABEL, size: 12, align: 'left', track: 1.2, color: '#c6c7cb' })
+  text(ctx, k.drawn ? k.drawn.label : D.label, x0, y - 10, { font: LABEL, size: 13, align: 'left', track: 1.2, color: '#c6c7cb' })
   // (a drawn one in its clean-strike band: said over the bar, in gold)
   if (k.drawn && k.timed === 'green') {
     ctx.fillStyle = 'rgba(6,8,10,.8)'; rr(ctx, x0 + w - 98, y - 46, 106, 22, 4); ctx.fill()
@@ -1365,7 +1365,7 @@ export function shotHud(ctx, view, k, o = {}) {
     ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.2832); ctx.stroke()
     if (k.phase === 'strike' && f < 1.2) { ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(cx, cy, 4 + (1 - Math.min(1, f)) * 12, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1 }
     const word = k.drawn ? null : k.timed === 'green' ? 'PERFECT' : k.timed === 'ok' ? 'GOOD' : k.timed === 'red' ? 'MISTIMED' : null
-    if (word) text(ctx, word, cx - 12, cy, { font: LABEL, size: 12, align: 'right', track: 1, color: k.timed === 'green' ? '#f7cf55' : k.timed === 'red' ? '#ff8a7a' : '#f2f2ee' })
+    if (word) text(ctx, word, cx - 12, cy, { font: LABEL, size: 13, align: 'right', track: 1, color: k.timed === 'green' ? '#f7cf55' : k.timed === 'red' ? '#ff8a7a' : '#f2f2ee' })
   }
 }
 // where he's aiming: a small ring on the goal face (z = 0)

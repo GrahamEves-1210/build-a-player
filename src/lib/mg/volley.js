@@ -314,10 +314,10 @@ export function draw(ctx, g, view) {
       if (p.ok) { ctx.strokeStyle = late ? GOLD : 'rgba(255,255,255,.92)'; ctx.lineWidth = late ? 2.5 : 2; ctx.beginPath(); ctx.arc(p.x, p.y, lerp(1.3, 0.34, easeOut(f)) * p.s, 0, 6.2832); ctx.stroke() }
     }
   }
-  if (g.k.phase !== 'idle' && !g.shot) { const o = padStick(g.ctl); aimMark(ctx, C, (o.x || 0.6) * (POST - 0.7), lerp(0.3, BAR - 0.45, (o.y + 1) / 2), { alpha: 0.85 }) }
+  if (g.k.phase !== 'idle' && !g.shot && !g.res) { const o = padStick(g.ctl); aimMark(ctx, C, (o.x || 0.6) * (POST - 0.7), lerp(0.3, BAR - 0.45, (o.y + 1) / 2), { alpha: 0.85 }) }
   if (g.res === 'goal' && g.done && !g.kicked) { g.kicked = true; g.nudge.kick(g.t, 2.5, 0, 1, 180) }
   if (g.phase === 'touched' || g.choice === 'touch') shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
   else if (g.k.phase === 'power') shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
-  drawPads(ctx, view, g.ctl, { move: 'MOVE · AIM', S: 'SHOOT', P: 'TOUCH' }, !g.done)
+  drawPads(ctx, view, g.ctl, { move: 'MOVE', S: 'SHOOT', P: 'TOUCH' }, !g.done)
   placeStamp(g.stamp, view)
 }
