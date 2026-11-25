@@ -23,8 +23,9 @@ for (const seed of ['su-a', 'su-b', 'su-c']) for (const team of N.SHORTS) for (c
   ms += Date.now() - t0
   // the franchise, the way NbaFranchise starts it (the builds in S.picks' order)
   const F = N.createNbaFranchise({ seed, team, owner: 'G', rules, builds: picks.map(p => builds[p.id]) })
-  // (the wire's signing item for each build: "Test Build0, a ... signs with ...; X is waived")
-  const real = Object.fromEntries(picks.map((p, k) => { const x = F.news.find(n => n.k === 'sign' && n.s === team && n.text.startsWith(`Test Build${k},`)); return [p.id, x?.text.match(/; (.+) is waived$/)?.[1] ?? null] }))
+  // (the wire's signing item for each build: "Test Build0, a ... signs with ...; X is waived", with or without the
+  // wire's full stop)
+  const real = Object.fromEntries(picks.map((p, k) => { const x = F.news.find(n => n.k === 'sign' && n.s === team && n.text.startsWith(`Test Build${k},`)); return [p.id, x?.text.match(/; (.+) is waived\.?$/)?.[1] ?? null] }))
   for (const p of picks) if ((out[p.id]?.n ?? null) !== real[p.id]) fail(seed, team, order.join('/'), p.id, 'the setup says', out[p.id]?.n ?? 'nobody', '· the league waived', real[p.id] ?? 'nobody')
   for (const p of picks) { const m = out[p.id]; if (m && F.teams[team].r.some(x => x.n === m.n)) fail(seed, team, m.n, 'named as waived but still on the roster') }
   if (F.teams[team].r.filter(x => x.b != null).length !== picks.length) fail(seed, team, 'builds on the roster', F.teams[team].r.filter(x => x.b != null).length)
