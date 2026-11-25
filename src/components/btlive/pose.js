@@ -181,8 +181,9 @@ export function createPoser(N) {
       const t = c01((p.actT + env.a) / gticks(T.jumpTime)), up = Math.sin(Math.PI * t)
       z.air = 0.9 * up; a.gAir = z.air
       const board = (b.st === 'shot' || b.st === 'loose') && !guarding
-      if (board || p.team === s.poss) { set3(TL, 0.24, -0.2, 1); set3(TR, 0.24, 0.2, 1) }
-      else { set3(TR, 0.36, 0.14, 1); set3(TL, 0.3, -0.2, 0.95) }
+      // (straight up, a touch forward: from above an arm reaching up is short, the hand over the shoulder)
+      if (board || p.team === s.poss) { set3(TL, 0.13, -0.24, 1); set3(TR, 0.13, 0.24, 1) }
+      else { set3(TR, 0.2, 0.17, 1); set3(TL, 0.15, -0.23, 0.95) }
       z.lf[0] = -0.08; z.rf[0] = -0.1; z.lf[1] = -0.13; z.rf[1] = 0.13
       a.land = now; fast = true
     } else if (p.act === 'land' || (a.land && now - a.land < 150)) {

@@ -135,7 +135,8 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.dq.length = 0; NB.aUsed = NB.n[0] }
       // a stop: no check, his side takes it back past the arc (the arc pulses for a few seconds, then stays lit till
       // it's done; not if he secured it behind the arc already, the same tick)
-      else if (e.e === 'clear') { if (s.mustClear === e.team) say('TAKE IT BACK', COURT.rim.x, 37.6, '#fff', false, 1300) }
+      else if (e.e === 'clear') { if (s.mustClear === e.team) { say('TAKE IT BACK', COURT.rim.x, 37.6, '#fff', false, 1300); fx[fx.length - 1].clr = true } }
+      else if (e.e === 'cleared') { for (const f of fx) if (f.clr) f.dur = Math.min(f.dur, clockNow - f.t0 + 250) }
       // in before his side took it back: waved off
       else if (e.e === 'waved') { sfx('whistle'); fx.push({ rim: 'make', t0: clockNow, dur: 300 }); say('NO BASKET', COURT.rim.x, 1.6, '#fff', true, 1500); say('DIDN\'T TAKE IT BACK', COURT.rim.x, 22, 'rgba(255,255,255,.85)', false, 1600) }
       else if (e.e === 'release') { if (e.pid !== me || levels[me]) sfx('btrelease', 0.6) }        // his own sounds as he lets go (letGo)
@@ -398,11 +399,11 @@ export function createEngine({ setup, els, on, net = null }) {
       els.lab.a.textContent = 'SHOOT'
       if (els.lab.sa) els.lab.sa.textContent = mode === 'clear' ? 'TAKE IT BACK' : ball ? 'HOLD, LET GO' : ''
       // PASS (a team game): to a teammate with the ball, a call for it without
-      const bl = ball ? 'PASS' : mode === 'off' || mode === 'board' ? 'CALL FOR IT' : 'PASS'
+      const bl = ball ? 'PASS' : mode === 'off' || mode === 'board' ? 'CALL\nFOR IT' : 'PASS'
       els.lab.b.textContent = bl
       els.btn.b.classList.toggle('is-off', !team)
       els.btn.b.classList.toggle('is-dim', !(ball || mode === 'off' || mode === 'board'))
-      els.btn.b.classList.toggle('is-two', bl === 'CALL FOR IT')
+      els.btn.b.classList.toggle('is-two', bl !== 'PASS')
       // the right pad: the moves round it with the ball; without it, JUMP on top and STEAL underneath
       const k = ball ? 'ball' : mode === 'none' ? 'none' : 'def'
       if (els.ds) els.ds.dataset.k = k
@@ -415,7 +416,7 @@ export function createEngine({ setup, els, on, net = null }) {
       // the keys beside the court
       const K2 = els.keys?.title ? els.keys : null
       if (K2) {
-        if (K2.shootSub) { K2.shootSub.textContent = mode === 'clear' ? 'TAKE IT BACK FIRST' : 'HOLD, LET GO'; K2.shootSub.classList.toggle('is-warn', mode === 'clear') }
+        if (K2.shootSub) { K2.shootSub.textContent = mode === 'clear' ? 'TAKE IT BACK' : 'HOLD, LET GO'; K2.shootSub.classList.toggle('is-warn', mode === 'clear') }
         if (K2.pass) K2.pass.textContent = ball ? 'PASS' : 'CALL FOR IT'
         if (!ball) {
           const L = mode === 'def' ? ['JUMP', '', '', 'STEAL'] : mode === 'none' ? null : ['JUMP', '', '', '']
